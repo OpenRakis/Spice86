@@ -743,11 +743,13 @@ public class DosFileManager {
         return DosFileOperationResult.Value16(writeLength);
     }
 
+    private const byte MaxDosDriveIndex = 25;
+
     private void NotifyDriveActivity(byte driveIndex, bool isWrite) {
         if (_activityNotifier == null) {
             return;
         }
-        if (driveIndex > 25) {
+        if (driveIndex > MaxDosDriveIndex) {
             return;
         }
         char letter = (char)('A' + driveIndex);

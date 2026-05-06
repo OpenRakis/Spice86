@@ -7,6 +7,7 @@
 		xmlns:local="clr-namespace:Spice86.Views;assembly=Spice86"
 		xmlns:b="clr-namespace:Spice86.Views.Behaviors"
 		xmlns:userControls="clr-namespace:Spice86.Views.UserControls"
+		xmlns:viewControls="clr-namespace:Spice86.Views.Controls"
 		xmlns:factory="clr-namespace:Spice86.Views.Factory"
 		xmlns:fluent="clr-namespace:FluentIcons.Avalonia;assembly=FluentIcons.Avalonia"
 		xmlns:controls="clr-namespace:Spice86.Views.Controls"
@@ -127,7 +128,10 @@
 						<DataTemplate DataType="vm:DriveMenuItemViewModel">
 							<StackPanel Orientation="Horizontal" Spacing="6">
 								<ToolTip.Tip>
-									<TextBlock Text="{Binding TooltipText}" />
+									<StackPanel Orientation="Vertical" Spacing="4">
+										<TextBlock Text="{Binding TooltipText}" />
+										<viewControls:DriveContentVisualization ContentMap="{Binding ContentMap}" />
+									</StackPanel>
 								</ToolTip.Tip>
 								<fluent:SymbolIcon Symbol="Save" IsVisible="{Binding IsFloppy}"
 								                  Width="16" Height="16" VerticalAlignment="Center" />

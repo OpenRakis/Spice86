@@ -33,7 +33,7 @@ using System.Text;
 /// <summary>
 /// Represents the DOS kernel.
 /// </summary>
-public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService {
+public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService, IDriveContentMapProvider {
     private readonly BiosDataArea _biosDataArea;
     private readonly IVgaFunctionality _vgaFunctionality;
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
@@ -618,4 +618,42 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         }
         return true;
     }
+
+    /// <inheritdoc />
+    public bool TryGetContentMap(char driveLetter, out DriveContentMap? map) {
+        char upper = char.ToUpperInvariant(driveLetter);
+        if (DosDriveManager.TryGetFloppyDrive(upper, out FloppyDiskDrive? floppy) && floppy.Image != null) {
+            DriveClusterState[] states = floppy.Image.GetClusterUsageBitmap(MaxVisualizationClusters);
+            List<DriveClusterInfo> clusterInfos = new(states.Length);
+            for (int i = 0; i < states.Length; i++) {
+                clusterInfos.Add(new DriveClusterInfo(i, states[i]));
+            }
+            int totalClusters = floppy.Image.Bpb.SectorsPerCluster == 0
+                ? states.Length
+                : floppy.Image.Bpb.TotalSectors / floppy.Image.Bpb.SectorsPerCluster;
+            map = DriveContentMap.ForFat(upper, clusterInfos, totalClusters);
+            return true;
+        }
+        for (int i = 0; i < _mscdex.Drives.Count; i++) {
+            MscdexDriveEntry entry = _mscdex.Drives[i];
+            if (entry.DriveLetter != upper) {
+                continue;
+            }
+            ICdRomImage image = entry.Drive.Image;
+            IReadOnlyList<CdTrack> rawTracks = image.Tracks;
+            List<DriveCdTrackInfo> tracks = new(rawTracks.Count);
+            for (int t = 0; t < rawTracks.Count; t++) {
+                CdTrack track = rawTracks[t];
+                int endLba = t + 1 < rawTracks.Count ? rawTracks[t + 1].StartLba : image.TotalSectors;
+                int length = endLba > track.StartLba ? endLba - track.StartLba : 0;
+                tracks.Add(new DriveCdTrackInfo(track.Number, (uint)track.StartLba, (uint)length, track.IsAudio));
+            }
+            map = DriveContentMap.ForCdRom(upper, (uint)image.TotalSectors, tracks);
+            return true;
+        }
+        map = null;
+        return false;
+    }
+
+    private const int MaxVisualizationClusters = 4096;
 }

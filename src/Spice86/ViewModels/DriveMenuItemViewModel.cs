@@ -26,6 +26,7 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
     private readonly IHostStorageProvider _hostStorageProvider;
     private readonly IDriveEventNotifier _driveEventNotifier;
     private readonly IDriveActivityNotifier? _activityNotifier;
+    private readonly IDriveContentMapProvider? _contentMapProvider;
     private readonly DispatcherTimer? _readTimer;
     private readonly DispatcherTimer? _writeTimer;
     private readonly List<string> _allImagePaths;
@@ -83,6 +84,10 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
     [ObservableProperty]
     private bool _isWriteActive;
 
+    /// <summary>Gets the on-disk content layout snapshot, when available, used for hover visualisation.</summary>
+    [ObservableProperty]
+    private DriveContentMap? _contentMap;
+
     private bool _suppressSelectionHandling;
 
     /// <summary>
@@ -108,7 +113,7 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
         IHostStorageProvider hostStorageProvider,
         IDriveEventNotifier driveEventNotifier)
         : this(driveLetter, driveType, allImagePaths, currentImagePath, volumeLabel,
-            discSwapper, mountService, hostStorageProvider, driveEventNotifier, null) {
+            discSwapper, mountService, hostStorageProvider, driveEventNotifier, null, null) {
     }
 
     /// <summary>
@@ -134,7 +139,37 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
         IDriveMountService mountService,
         IHostStorageProvider hostStorageProvider,
         IDriveEventNotifier driveEventNotifier,
-        IDriveActivityNotifier? activityNotifier) {
+        IDriveActivityNotifier? activityNotifier)
+        : this(driveLetter, driveType, allImagePaths, currentImagePath, volumeLabel,
+            discSwapper, mountService, hostStorageProvider, driveEventNotifier, activityNotifier, null) {
+    }
+
+    /// <summary>
+    /// Initialises a new <see cref="DriveMenuItemViewModel"/> with an activity notifier and content provider.
+    /// </summary>
+    /// <param name="driveLetter">The DOS drive letter.</param>
+    /// <param name="driveType">The drive type.</param>
+    /// <param name="allImagePaths">All registered image paths for this drive.</param>
+    /// <param name="currentImagePath">The currently active image path.</param>
+    /// <param name="volumeLabel">The volume label of the mounted media.</param>
+    /// <param name="discSwapper">The disc swapper service.</param>
+    /// <param name="mountService">The drive mount service.</param>
+    /// <param name="hostStorageProvider">The host storage provider for file picker dialogs.</param>
+    /// <param name="driveEventNotifier">The notifier used to surface mount errors as toast notifications.</param>
+    /// <param name="activityNotifier">Optional notifier for per-drive read/write activity flashes.</param>
+    /// <param name="contentMapProvider">Optional provider used to populate <see cref="ContentMap"/>.</param>
+    public DriveMenuItemViewModel(
+        char driveLetter,
+        DosVirtualDriveType driveType,
+        IReadOnlyList<string> allImagePaths,
+        string currentImagePath,
+        string volumeLabel,
+        IDiscSwapper discSwapper,
+        IDriveMountService mountService,
+        IHostStorageProvider hostStorageProvider,
+        IDriveEventNotifier driveEventNotifier,
+        IDriveActivityNotifier? activityNotifier,
+        IDriveContentMapProvider? contentMapProvider) {
         DriveLetter = driveLetter;
         DriveType = driveType;
         _volumeLabel = volumeLabel;
@@ -143,6 +178,7 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
         _hostStorageProvider = hostStorageProvider;
         _driveEventNotifier = driveEventNotifier;
         _activityNotifier = activityNotifier;
+        _contentMapProvider = contentMapProvider;
         _allImagePaths = new List<string>(allImagePaths);
         if (_activityNotifier != null) {
             _readTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(200), DispatcherPriority.Background,
@@ -155,6 +191,18 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
             _activityNotifier.Write += OnActivityWrite;
         }
         RebuildOptions(currentImagePath);
+        RefreshContentMap();
+    }
+
+    private void RefreshContentMap() {
+        if (_contentMapProvider == null) {
+            return;
+        }
+        if (_contentMapProvider.TryGetContentMap(DriveLetter, out DriveContentMap? map)) {
+            ContentMap = map;
+        } else {
+            ContentMap = null;
+        }
     }
 
     private void OnActivityRead(object? sender, DriveActivityEventArgs e) {
@@ -240,6 +288,7 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
             VolumeLabel = status.VolumeLabel;
         }
         RebuildOptions(status.CurrentImagePath);
+        RefreshContentMap();
     }
 
     partial void OnSelectedOptionChanged(string value) {

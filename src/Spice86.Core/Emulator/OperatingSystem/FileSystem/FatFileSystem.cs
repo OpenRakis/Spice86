@@ -6,6 +6,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
+using Spice86.Shared.Emulator.Storage;
+
 /// <summary>
 /// Provides read-only access to a FAT12, FAT16, or FAT32 filesystem stored in a disk image.
 /// </summary>
@@ -138,6 +140,51 @@ public sealed class FatFileSystem {
     /// </summary>
     public bool Exists(string dosPath) {
         return TryGetEntry(dosPath, out _);
+    }
+
+    /// <summary>
+    /// Returns a snapshot of the cluster allocation states for visualisation.
+    /// Reserved entries (0 and 1) are omitted; the returned array is indexed from cluster 2 upwards.
+    /// The result is capped at <paramref name="maxClusters"/> entries, regardless of the actual cluster count.
+    /// </summary>
+    /// <param name="maxClusters">The maximum number of cluster entries to include in the result.</param>
+    /// <returns>An array of <see cref="DriveClusterState"/> values, one per cluster from index 2 onwards.</returns>
+    public DriveClusterState[] GetClusterUsageBitmap(int maxClusters) {
+        if (_fat.Length <= 2 || maxClusters <= 0) {
+            return Array.Empty<DriveClusterState>();
+        }
+        uint badCluster;
+        uint endOfChainMin;
+        switch (FatType) {
+            case FatType.Fat32:
+                badCluster = Fat32BadCluster;
+                endOfChainMin = Fat32EndOfChainMin;
+                break;
+            case FatType.Fat16:
+                badCluster = Fat16BadCluster;
+                endOfChainMin = Fat16EndOfChainMin;
+                break;
+            default:
+                badCluster = Fat12BadCluster;
+                endOfChainMin = Fat12EndOfChainMin;
+                break;
+        }
+        int totalClusters = _fat.Length - 2;
+        int count = Math.Min(totalClusters, maxClusters);
+        DriveClusterState[] result = new DriveClusterState[count];
+        for (int i = 0; i < count; i++) {
+            uint entry = _fat[i + 2];
+            if (entry == 0) {
+                result[i] = DriveClusterState.Free;
+            } else if (entry == badCluster) {
+                result[i] = DriveClusterState.Bad;
+            } else if (entry >= endOfChainMin && entry < badCluster) {
+                result[i] = DriveClusterState.Used;
+            } else {
+                result[i] = DriveClusterState.Used;
+            }
+        }
+        return result;
     }
 
     private int GetDataStartSector() {

@@ -23,6 +23,7 @@ public sealed partial class DrivesMenuViewModel : ObservableObject {
     private readonly IHostStorageProvider _hostStorageProvider;
     private IDriveEventNotifier _driveEventNotifier;
     private readonly IDriveActivityNotifier? _activityNotifier;
+    private readonly IDriveContentMapProvider? _contentMapProvider;
     private readonly Dictionary<char, string> _lastKnownImagePath = new();
 
     /// <summary>Gets all drive entries (floppy and CD-ROM) available in the menu.</summary>
@@ -42,7 +43,7 @@ public sealed partial class DrivesMenuViewModel : ObservableObject {
         IDriveMountService mountService,
         IHostStorageProvider hostStorageProvider,
         IDriveEventNotifier driveEventNotifier)
-        : this(driveStatusProvider, discSwapper, mountService, hostStorageProvider, driveEventNotifier, null) {
+        : this(driveStatusProvider, discSwapper, mountService, hostStorageProvider, driveEventNotifier, null, null) {
     }
 
     /// <summary>
@@ -60,13 +61,35 @@ public sealed partial class DrivesMenuViewModel : ObservableObject {
         IDriveMountService mountService,
         IHostStorageProvider hostStorageProvider,
         IDriveEventNotifier driveEventNotifier,
-        IDriveActivityNotifier? activityNotifier) {
+        IDriveActivityNotifier? activityNotifier)
+        : this(driveStatusProvider, discSwapper, mountService, hostStorageProvider, driveEventNotifier, activityNotifier, null) {
+    }
+
+    /// <summary>
+    /// Initialises a new <see cref="DrivesMenuViewModel"/> with an activity notifier and content map provider.
+    /// </summary>
+    /// <param name="driveStatusProvider">The provider that returns the current drive snapshot.</param>
+    /// <param name="discSwapper">The disc swapper service.</param>
+    /// <param name="mountService">The drive mount service.</param>
+    /// <param name="hostStorageProvider">The host storage provider for file picker dialogs.</param>
+    /// <param name="driveEventNotifier">The notifier used to show toast notifications for drive events.</param>
+    /// <param name="activityNotifier">The notifier used to surface per-drive read/write activity (may be null).</param>
+    /// <param name="contentMapProvider">The provider used by drive items for hover visualisation (may be null).</param>
+    public DrivesMenuViewModel(
+        IDriveStatusProvider driveStatusProvider,
+        IDiscSwapper discSwapper,
+        IDriveMountService mountService,
+        IHostStorageProvider hostStorageProvider,
+        IDriveEventNotifier driveEventNotifier,
+        IDriveActivityNotifier? activityNotifier,
+        IDriveContentMapProvider? contentMapProvider) {
         _driveStatusProvider = driveStatusProvider;
         _discSwapper = discSwapper;
         _mountService = mountService;
         _hostStorageProvider = hostStorageProvider;
         _driveEventNotifier = driveEventNotifier;
         _activityNotifier = activityNotifier;
+        _contentMapProvider = contentMapProvider;
         Refresh();
     }
 
@@ -132,7 +155,8 @@ public sealed partial class DrivesMenuViewModel : ObservableObject {
                         _mountService,
                         _hostStorageProvider,
                         _driveEventNotifier,
-                        _activityNotifier);
+                        _activityNotifier,
+                        _contentMapProvider);
                     AllDrives.Insert(i, item);
                 }
             }
