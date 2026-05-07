@@ -1325,7 +1325,7 @@ internal sealed class EmulatorMcpTools {
                     FileSizeBytes = fileInfo.Length
                 };
 
-                JsonNode? metadataNode = JsonSerializer.SerializeToNode(metadata, typeof(ScreenshotResponse), SerializerOptions);
+                JsonElement structuredContent = JsonSerializer.SerializeToElement(metadata, typeof(ScreenshotResponse), SerializerOptions);
 
                 return new CallToolResult {
                     Content = [
@@ -1334,7 +1334,7 @@ internal sealed class EmulatorMcpTools {
                             MimeType = "image/png"
                         }
                     ],
-                    StructuredContent = metadataNode is null ? null : JsonSerializer.SerializeToElement(metadata, typeof(ScreenshotResponse), SerializerOptions)
+                    StructuredContent = structuredContent
                 };
             }
         } catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or FormatException) {
