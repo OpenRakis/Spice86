@@ -32,8 +32,22 @@ public class IOPortDispatcher : DefaultIOPortHandler {
     /// </summary>
     /// <param name="port">The port number.</param>
     /// <param name="ioPortHandler">The I/O port handler to add.</param>
+    /// <exception cref="ArgumentException">A handler is already registered for <paramref name="port"/>.</exception>
     public void AddIOPortHandler(int port, IIOPortHandler ioPortHandler) {
         _ioPortHandlers.Add(port, ioPortHandler);
+    }
+
+    /// <summary>
+    /// Registers an I/O port handler, replacing any handler previously registered for the same port.
+    /// </summary>
+    /// <remarks>
+    /// Intended for use by <see cref="IIOPortHandlerSupplier"/> implementations that need to substitute a
+    /// built-in handler (for example, a custom keyboard controller for a non-PC machine).
+    /// </remarks>
+    /// <param name="port">The port number.</param>
+    /// <param name="ioPortHandler">The I/O port handler to register.</param>
+    public void OverrideIOPortHandler(int port, IIOPortHandler ioPortHandler) {
+        _ioPortHandlers[port] = ioPortHandler;
     }
 
     /// <inheritdoc/>

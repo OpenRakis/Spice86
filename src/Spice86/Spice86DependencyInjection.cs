@@ -643,6 +643,15 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Machine created...");
         }
 
+        if (configuration.IOPortHandlerSupplier != null) {
+            if (loggerService.IsEnabled(LogEventLevel.Information)) {
+                loggerService.Information("Registering custom I/O port handlers from {Supplier}...",
+                    configuration.IOPortHandlerSupplier.GetType().FullName);
+            }
+            configuration.IOPortHandlerSupplier.RegisterIOPortHandlers(
+                ioPortDispatcher, loggerService, configuration, machine);
+        }
+
         if (configuration.HttpApiPort != 0) {
             _httpApiServer = new Spice86HttpApiServer(state, memory, pauseHandler, loggerService, configuration.HttpApiPort);
         }

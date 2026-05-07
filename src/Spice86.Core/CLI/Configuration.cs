@@ -65,6 +65,18 @@ public sealed class Configuration : CommandSettings {
     [CommandOption("-o|--OverrideSupplierClassName <OVERRIDESUPPLIERCLASSNAME>")]
     public string? OverrideSupplierClassName { get; init; }
 
+    /// <summary>
+    /// Fully qualified name (assembly-qualified) of a class implementing
+    /// <see cref="Spice86.Core.Emulator.IOPorts.IIOPortHandlerSupplier"/> used to plug custom I/O port
+    /// handlers into the emulator (for example, to emulate machine-specific hardware that Spice86 does not
+    /// support out of the box).
+    /// </summary>
+    [CommandOption("--IOPortHandlerSupplierClassName <IOPORTHANDLERSUPPLIERCLASSNAME>")]
+    public string? IOPortHandlerSupplierClassName { get; init; }
+
+    /// <summary> Instantiated <see cref="IOPortHandlerSupplierClassName"/>. Created by <see cref="CommandLineParser"/>. </summary>
+    public Spice86.Core.Emulator.IOPorts.IIOPortHandlerSupplier? IOPortHandlerSupplier { get; set; }
+
     /// <summary> If false it will use the names provided by <see cref="OverrideSupplierClassName"/> but not the code. Use this in the code for <see cref="UseCodeOverride"/>. </summary>
     [CommandOption("-u|--UseCodeOverride <USECODEOVERRIDE>")]
     public bool? UseCodeOverride { get; set; }
