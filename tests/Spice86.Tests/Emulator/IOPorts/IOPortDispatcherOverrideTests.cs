@@ -1,5 +1,7 @@
 namespace Spice86.Tests.Emulator.IOPorts;
 
+using System;
+
 using FluentAssertions;
 
 using NSubstitute;
@@ -24,36 +26,41 @@ public class IOPortDispatcherOverrideTests {
 
     [Fact]
     public void AddIOPortHandlerThrowsOnDuplicatePort() {
+        // Arrange
         StubHandler first = new(0x11);
         StubHandler second = new(0x22);
-
         _dispatcher.AddIOPortHandler(TestPort, first);
 
-        FluentActions.Invoking(() => _dispatcher.AddIOPortHandler(TestPort, second))
-            .Should().Throw<System.ArgumentException>();
+        // Act
+        Action act = () => _dispatcher.AddIOPortHandler(TestPort, second);
+
+        // Assert
+        act.Should().Throw<System.ArgumentException>();
     }
 
     [Fact]
     public void OverrideIOPortHandlerReplacesExistingHandler() {
-        StubHandler builtIn = new(0x11);
+        // Arrange
         StubHandler plugin = new(0x22);
-        _dispatcher.AddIOPortHandler(TestPort, builtIn);
-
         _dispatcher.ReplaceIOPortHandler(TestPort, plugin);
 
+        // Act
         byte read = _dispatcher.ReadByte(TestPort);
 
+        // Assert
         read.Should().Be(0x22);
     }
 
     [Fact]
     public void OverrideIOPortHandlerRegistersWhenNoBuiltInHandlerExists() {
+        // Arrange
         StubHandler plugin = new(0x42);
-
         _dispatcher.ReplaceIOPortHandler(TestPort, plugin);
 
+        // Act
         byte read = _dispatcher.ReadByte(TestPort);
 
+        // Assert
         read.Should().Be(0x42);
     }
 
