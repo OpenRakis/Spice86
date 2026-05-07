@@ -95,6 +95,17 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
     }
 
     /// <summary>
+    /// Attempts to get the zero-based drive index associated with the given DOS drive letter.
+    /// </summary>
+    /// <param name="value">The DOS drive letter. Valid drive letters are uppercase and lowercase ASCII letters.</param>
+    /// <param name="driveIndex">The zero-based index associated with the drive letter or -1 on failure.</param>
+    /// <returns><see langword="true"/> if the drive letter and associated drive index is valid; otherwise, <see langword="false"/>.</returns>
+    public static bool TryGetDriveLetterIndex(char value, out int driveIndex) {
+        driveIndex = GetDriveLetterIndex(value);
+        return driveIndex != -1;
+    }
+
+    /// <summary>
     /// Gets the DOS drive letter from a zero-based drive index.
     /// </summary>
     /// <param name="index">Must be a zero-based drive index between 0 (inclusive) and <see cref="MaxDriveCount"/> (exclusive).</param>
@@ -182,7 +193,7 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
     /// </summary>
     public byte CurrentDriveIndex => (byte)GetDriveLetterIndexOrThrow(CurrentDrive.DriveLetter);
 
-    internal bool HasDriveAtIndex(ushort zeroBasedIndex) => zeroBasedIndex is >= 0 and < MaxDriveCount &&
+    internal bool HasDriveAtIndex(int zeroBasedIndex) => zeroBasedIndex is >= 0 and < MaxDriveCount &&
         _driveMap[zeroBasedIndex] is not null;
 
     /// <summary>
