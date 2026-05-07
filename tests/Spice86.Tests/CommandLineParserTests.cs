@@ -132,6 +132,19 @@ public class CommandLineParserTests {
         }
     }
 
+    [Fact]
+    public void ParseIOPortHandlerSupplierClassName_ReturnsNullForNull() {
+        // Arrange
+        string? typeName = null;
+
+        // Act
+        Spice86.Core.Emulator.IOPorts.IIOPortHandlerSupplier? supplier =
+            CommandLineParser.ParseIOPortHandlerSupplierClassName(typeName);
+
+        // Assert
+        supplier.Should().BeNull();
+    }
+
     private static Configuration? Parse(string[] args) {
         CommandLineParser parser = new();
         return parser.ParseCommandLine(args);
