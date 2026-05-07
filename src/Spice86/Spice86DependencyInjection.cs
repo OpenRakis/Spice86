@@ -508,13 +508,13 @@ public class Spice86DependencyInjection : IDisposable {
             // Subscribe to video mode changes for dynamic aspect ratio correction
             vgaFunctionality.VideoModeChanged += mainWindowViewModel.OnVideoModeChanged;
 
-            inputEventHub = new(mainWindowViewModel, mainWindowViewModel);
+            inputEventHub = new(mainWindowViewModel, mainWindowViewModel, mainWindowViewModel);
 
             _gui = mainWindowViewModel;
         } else {
             HeadlessGui headlessGui = new HeadlessGui();
             _gui = headlessGui;
-            inputEventHub = new InputEventHub(headlessGui, headlessGui);
+            inputEventHub = new InputEventHub(headlessGui, headlessGui, headlessGui);
         }
 
         EmulationLoop emulationLoop = new(
@@ -548,9 +548,8 @@ public class Spice86DependencyInjection : IDisposable {
             vgaFunctionality, loggerService,
             _gui as IGuiMouseEvents);
 
-        IGameportInputSource gameportInputSource = new NullJoystickInput();
         Gameport gameport = new(state, ioPortDispatcher,
-            gameportInputSource, new SystemTimeProvider(), rumbleSink: null,
+            inputEventHub, new SystemTimeProvider(), rumbleSink: null,
             configuration.FailOnUnhandledPort, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {

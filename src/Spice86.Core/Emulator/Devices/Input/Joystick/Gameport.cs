@@ -11,37 +11,43 @@ using System;
 
 /// <summary>
 /// Emulates the IBM PC gameport at I/O port
-/// <see cref="GameportConstants.Port201"/>, replacing the previous
-/// stub <c>Joystick</c> handler. Behaviour is modelled after
-/// DOSBox Staging's <c>read_p201_timed</c>/<c>write_p201_timed</c>.
+/// <see cref="GameportConstants.Port201"/>. Behaviour matches DOSBox
+/// Staging's <c>read_p201_timed</c>/<c>write_p201_timed</c>.
 /// </summary>
 /// <remarks>
-/// The device is intentionally free of UI/SDL dependencies: the
-/// per-frame stick state comes from an injected
-/// <see cref="IGameportInputSource"/>. In headless mode the source
-/// is a <see cref="NullJoystickInput"/>; in the Avalonia UI it is
-/// an SDL-backed adapter; in tests it is a fake. Force-feedback
-/// requests can optionally be forwarded via <see cref="IRumbleSink"/>.
+/// Input flows through the same pipeline as keyboard and mouse:
+/// the UI raises logical <c>IGuiJoystickEvents</c> (raw SDL events
+/// translated through the active <c>JoystickProfile</c> on the UI
+/// thread), <c>InputEventHub</c> queues them, and they are replayed
+/// on the emulator thread where this device subscribes. The Core
+/// is therefore independent of SDL/Avalonia; in headless mode the
+/// same events are produced by <c>HeadlessGui</c> or a scripted
+/// harness.
 /// </remarks>
-public sealed class Gameport : DefaultIOPortHandler, IGameportPortReader {
-    private readonly IGameportInputSource _inputSource;
+public sealed class Gameport : DefaultIOPortHandler, IGameportPortReader, IDisposable {
+    private readonly IGuiJoystickEvents _joystickEvents;
     private readonly IRumbleSink? _rumbleSink;
     private readonly ITimeProvider _timeProvider;
     private readonly DateTime _epoch;
+    private readonly object _stateLock = new();
+
+    private VirtualStickState _stickA = VirtualStickState.Disconnected;
+    private VirtualStickState _stickB = VirtualStickState.Disconnected;
 
     /// <summary>
     /// Initializes the gameport, registers the
-    /// <see cref="GameportConstants.Port201"/> handler, and starts
-    /// in a disarmed state.
+    /// <see cref="GameportConstants.Port201"/> handler and
+    /// subscribes to the supplied joystick event source.
     /// </summary>
     /// <param name="state">CPU state, forwarded to
     /// <see cref="DefaultIOPortHandler"/>.</param>
     /// <param name="ioPortDispatcher">Dispatcher this device
     /// registers itself with.</param>
-    /// <param name="inputSource">Source of the live virtual stick
-    /// state. Use <see cref="NullJoystickInput"/> when no UI/SDL
-    /// adapter is available.</param>
-    /// <param name="timeProvider">Time provider, used as the
+    /// <param name="joystickEvents">Source of logical joystick
+    /// events. In production this is the <c>InputEventHub</c>
+    /// (queued, emulator-thread); in tests it is a fake that
+    /// raises events synchronously.</param>
+    /// <param name="timeProvider">Time provider used as the
     /// monotonic clock for the RC decay timer.</param>
     /// <param name="rumbleSink">Optional sink for force-feedback
     /// requests. Pass <see langword="null"/> to silently drop them.</param>
@@ -51,38 +57,34 @@ public sealed class Gameport : DefaultIOPortHandler, IGameportPortReader {
     public Gameport(
         State state,
         IOPortDispatcher ioPortDispatcher,
-        IGameportInputSource inputSource,
+        IGuiJoystickEvents joystickEvents,
         ITimeProvider timeProvider,
         IRumbleSink? rumbleSink,
         bool failOnUnhandledPort,
         ILoggerService loggerService)
         : base(state, failOnUnhandledPort, loggerService) {
-        _inputSource = inputSource;
+        _joystickEvents = joystickEvents;
         _timeProvider = timeProvider;
         _rumbleSink = rumbleSink;
         _epoch = timeProvider.Now;
         Timer = new GameportTimer();
+        _joystickEvents.JoystickAxisChanged += OnAxisChanged;
+        _joystickEvents.JoystickButtonChanged += OnButtonChanged;
+        _joystickEvents.JoystickHatChanged += OnHatChanged;
+        _joystickEvents.JoystickConnectionChanged += OnConnectionChanged;
         ioPortDispatcher.AddIOPortHandler(GameportConstants.Port201, this);
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information(
-                "JOYSTICK: gameport device installed at 0x{Port:X4} (input source: {Source})",
-                GameportConstants.Port201,
-                inputSource.DisplayName);
+                "JOYSTICK: gameport device installed at 0x{Port:X4}",
+                GameportConstants.Port201);
         }
     }
 
     /// <summary>
-    /// The internal RC-decay timer. Exposed so that the mapper UI
-    /// and MCP tools can render its current state for diagnostics.
+    /// The internal RC-decay timer. Exposed so the mapper UI and
+    /// MCP tools can render its current state for diagnostics.
     /// </summary>
     public GameportTimer Timer { get; }
-
-    /// <summary>
-    /// The currently-attached input source. Exposed so that the
-    /// mapper UI can display the source name and the MCP layer can
-    /// route <c>joystick_*</c> tool calls to it.
-    /// </summary>
-    public IGameportInputSource InputSource => _inputSource;
 
     /// <summary>
     /// Optional rumble sink. <see langword="null"/> when no haptic
@@ -90,6 +92,16 @@ public sealed class Gameport : DefaultIOPortHandler, IGameportPortReader {
     /// without rumble support).
     /// </summary>
     public IRumbleSink? RumbleSink => _rumbleSink;
+
+    /// <summary>
+    /// Returns an immutable snapshot of the current two-stick state
+    /// as built up from the joystick event stream.
+    /// </summary>
+    public VirtualJoystickState GetCurrentState() {
+        lock (_stateLock) {
+            return new VirtualJoystickState(_stickA, _stickB);
+        }
+    }
 
     /// <inheritdoc />
     public override byte ReadByte(ushort port) {
@@ -105,8 +117,7 @@ public sealed class Gameport : DefaultIOPortHandler, IGameportPortReader {
             base.WriteByte(port, value);
             return;
         }
-        VirtualJoystickState state = _inputSource.GetCurrentState();
-        Timer.Arm(state, ElapsedMs());
+        Timer.Arm(GetCurrentState(), ElapsedMs());
     }
 
     /// <inheritdoc />
@@ -114,8 +125,102 @@ public sealed class Gameport : DefaultIOPortHandler, IGameportPortReader {
         return ComputePort201Byte();
     }
 
+    /// <inheritdoc />
+    public void Dispose() {
+        _joystickEvents.JoystickAxisChanged -= OnAxisChanged;
+        _joystickEvents.JoystickButtonChanged -= OnButtonChanged;
+        _joystickEvents.JoystickHatChanged -= OnHatChanged;
+        _joystickEvents.JoystickConnectionChanged -= OnConnectionChanged;
+    }
+
+    private void OnAxisChanged(object? sender, JoystickAxisEventArgs e) {
+        lock (_stateLock) {
+            if (e.StickIndex == 0) {
+                _stickA = ApplyAxis(_stickA, e.Axis, e.Value);
+            } else if (e.StickIndex == 1) {
+                _stickB = ApplyAxis(_stickB, e.Axis, e.Value);
+            }
+        }
+    }
+
+    private void OnButtonChanged(object? sender, JoystickButtonEventArgs e) {
+        if (e.ButtonIndex < 0 || e.ButtonIndex > 3) {
+            return;
+        }
+        lock (_stateLock) {
+            if (e.StickIndex == 0) {
+                _stickA = ApplyButton(_stickA, e.ButtonIndex, e.IsPressed);
+            } else if (e.StickIndex == 1) {
+                _stickB = ApplyButton(_stickB, e.ButtonIndex, e.IsPressed);
+            }
+        }
+    }
+
+    private void OnHatChanged(object? sender, JoystickHatEventArgs e) {
+        lock (_stateLock) {
+            if (e.StickIndex == 0) {
+                _stickA = _stickA with { Hat = e.Direction };
+            } else if (e.StickIndex == 1) {
+                _stickB = _stickB with { Hat = e.Direction };
+            }
+        }
+    }
+
+    private void OnConnectionChanged(object? sender, JoystickConnectionEventArgs e) {
+        lock (_stateLock) {
+            if (e.StickIndex == 0) {
+                if (e.IsConnected) {
+                    _stickA = _stickA with { IsConnected = true };
+                } else {
+                    _stickA = VirtualStickState.Disconnected;
+                }
+            } else if (e.StickIndex == 1) {
+                if (e.IsConnected) {
+                    _stickB = _stickB with { IsConnected = true };
+                } else {
+                    _stickB = VirtualStickState.Disconnected;
+                }
+            }
+        }
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            string transition;
+            if (e.IsConnected) {
+                transition = "connected";
+            } else {
+                transition = "disconnected";
+            }
+            _loggerService.Information(
+                "JOYSTICK: stick {Index} {State} (device: {Name})",
+                e.StickIndex, transition, e.DeviceName);
+        }
+    }
+
+    private static VirtualStickState ApplyAxis(VirtualStickState stick, JoystickAxis axis, float value) {
+        if (axis == JoystickAxis.X) {
+            return stick with { X = value };
+        }
+        if (axis == JoystickAxis.Y) {
+            return stick with { Y = value };
+        }
+        if (axis == JoystickAxis.Z) {
+            return stick with { Z = value };
+        }
+        return stick with { R = value };
+    }
+
+    private static VirtualStickState ApplyButton(VirtualStickState stick, int buttonIndex, bool pressed) {
+        byte mask = (byte)(1 << buttonIndex);
+        byte newButtons;
+        if (pressed) {
+            newButtons = (byte)(stick.Buttons | mask);
+        } else {
+            newButtons = (byte)(stick.Buttons & ~mask);
+        }
+        return stick with { Buttons = newButtons };
+    }
+
     private byte ComputePort201Byte() {
-        VirtualJoystickState state = _inputSource.GetCurrentState();
+        VirtualJoystickState state = GetCurrentState();
         double nowMs = ElapsedMs();
         if (!Timer.IsInsideArmedWindow(nowMs)) {
             Timer.Disarm();

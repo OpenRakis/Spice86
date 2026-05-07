@@ -24,17 +24,42 @@ internal sealed class FakeTimeProvider : ITimeProvider {
 }
 
 /// <summary>
-/// Mutable <see cref="IGameportInputSource"/> stub for the joystick
-/// tests. Tests set <see cref="Current"/> and assert what the
-/// gameport observes.
+/// Fake <see cref="IGuiJoystickEvents"/> used by the joystick tests
+/// to drive the Core <c>Gameport</c> device through the same
+/// pathway as the production UI: the test calls a <c>Raise*</c>
+/// helper, which fires the event handler synchronously (i.e. as if
+/// <c>InputEventHub</c> had just dequeued the event onto the
+/// emulator thread).
 /// </summary>
-internal sealed class FakeJoystickInput : IGameportInputSource {
-    public string DisplayName => "Fake (test)";
+internal sealed class FakeJoystickEventSource : IGuiJoystickEvents {
+    public event EventHandler<JoystickAxisEventArgs>? JoystickAxisChanged;
+    public event EventHandler<JoystickButtonEventArgs>? JoystickButtonChanged;
+    public event EventHandler<JoystickHatEventArgs>? JoystickHatChanged;
+    public event EventHandler<JoystickConnectionEventArgs>? JoystickConnectionChanged;
 
-    public VirtualJoystickState Current { get; set; } =
-        VirtualJoystickState.Disconnected;
+    public void RaiseConnect(int stickIndex, string name = "Test Stick") {
+        JoystickConnectionChanged?.Invoke(this,
+            new JoystickConnectionEventArgs(stickIndex, true, name));
+    }
 
-    public VirtualJoystickState GetCurrentState() {
-        return Current;
+    public void RaiseDisconnect(int stickIndex) {
+        JoystickConnectionChanged?.Invoke(this,
+            new JoystickConnectionEventArgs(stickIndex, false, string.Empty));
+    }
+
+    public void RaiseAxis(int stickIndex, JoystickAxis axis, float value) {
+        JoystickAxisChanged?.Invoke(this,
+            new JoystickAxisEventArgs(stickIndex, axis, value));
+    }
+
+    public void RaiseButton(int stickIndex, int buttonIndex, bool pressed) {
+        JoystickButtonChanged?.Invoke(this,
+            new JoystickButtonEventArgs(stickIndex, buttonIndex, pressed));
+    }
+
+    public void RaiseHat(int stickIndex, JoystickHatDirection direction) {
+        JoystickHatChanged?.Invoke(this,
+            new JoystickHatEventArgs(stickIndex, direction));
     }
 }
+
