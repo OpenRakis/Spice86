@@ -979,7 +979,7 @@ public class DosFileManager {
         VirtualDrive targetDrive = ResolveDriveFromFileSpec(fileSpec);
         string driveLabel = targetDrive.Label.ToUpperInvariant();
         if (isFcbSearch) {
-            byte driveIndex = DosDriveManager.DriveLetters[targetDrive.DriveLetter];
+            byte driveIndex = (byte)DosDriveManager.GetDriveLetterIndexOrThrow(targetDrive.DriveLetter, fileSpec);
             WriteFcbVolumeLabelToDta(dta, driveLabel, driveIndex);
         } else {
             WriteExtendedVolumeLabelToDta(dta, driveLabel);
@@ -1045,7 +1045,7 @@ public class DosFileManager {
         string extOnly = Path.GetExtension(entryInfo.ShortName).TrimStart('.');
 
         VirtualDrive targetDrive = ResolveDriveFromFileSpec(fileSpec);
-        byte driveNumber = (byte)(DosDriveManager.DriveLetters[targetDrive.DriveLetter] + 1);
+        byte driveNumber = (byte)(DosDriveManager.GetDriveLetterIndexOrThrow(targetDrive.DriveLetter, fileSpec) + 1);
         UpdateDosTransferAreaWithFcbResult(dta, nameOnly, extOnly, (byte)entryInfo.Attributes,
             ToDosDate(creationLocalDate), ToDosTime(creationLocalDate), entryInfo.FileSize, driveNumber);
     }

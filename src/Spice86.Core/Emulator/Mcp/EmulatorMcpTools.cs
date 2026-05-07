@@ -1532,12 +1532,10 @@ internal sealed class EmulatorMcpTools {
             throw new ArgumentException("Drive letter must be empty or a single character between A and Z");
         }
 
-        char normalizedDriveLetter = char.ToUpperInvariant(driveLetter[0]);
-        if (!DosDriveManager.DriveLetters.TryGetValue(normalizedDriveLetter, out byte driveIndex)) {
-            throw new ArgumentException($"Drive letter '{normalizedDriveLetter}' is invalid");
-        }
-        if (!dos.DosDriveManager.TryGetValue(normalizedDriveLetter, out VirtualDrive? virtualDrive) || virtualDrive == null) {
-            throw new InvalidOperationException($"Drive '{normalizedDriveLetter}' is not mounted");
+        char driveLetterChar = driveLetter[0];
+        int driveIndex = DosDriveManager.GetDriveLetterIndexOrThrow(driveLetterChar, nameof(driveLetter));
+        if (!dos.DosDriveManager.TryGetValue(driveLetterChar, out VirtualDrive? virtualDrive) || virtualDrive == null) {
+            throw new InvalidOperationException($"Drive '{driveLetterChar}' is not mounted");
         }
 
         resolvedDrive = virtualDrive.DosVolume;

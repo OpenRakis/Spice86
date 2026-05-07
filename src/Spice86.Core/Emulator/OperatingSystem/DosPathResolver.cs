@@ -41,9 +41,8 @@ internal class DosPathResolver {
             currentDir = virtualDrive.CurrentDosDirectory;
             return DosFileOperationResult.NoValue();
         } else {
-            char driveLetter = DosDriveManager.DriveLetters.Keys.ElementAtOrDefault(driveNumber - 1);
-            if (_dosDriveManager.TryGetValue(driveLetter,
-                        out VirtualDrive? virtualDrive)) {
+            if (DosDriveManager.TryGetDriveLetterFromIndex(driveNumber - 1, out char driveLetter) &&
+                _dosDriveManager.TryGetValue(driveLetter, out VirtualDrive? virtualDrive)) {
                 currentDir = virtualDrive.CurrentDosDirectory;
                 return DosFileOperationResult.NoValue();
             }
@@ -449,7 +448,7 @@ internal class DosPathResolver {
 
     private bool StartsWithDosDriveAndVolumeSeparator(string dosPath) =>
         dosPath.Length >= 2 &&
-        DosDriveManager.DriveLetters.Keys.Contains(char.ToUpperInvariant(dosPath[0])) &&
+        DosDriveManager.GetDriveLetterIndex(dosPath[0]) != -1 &&
         dosPath[1] == VolumeSeparatorChar;
 
     private bool IsPathRooted(string path) =>
