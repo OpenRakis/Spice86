@@ -41,6 +41,7 @@ public class CommandLineParser {
         initialConfig.CDrive ??= Path.GetDirectoryName(initialConfig.Exe);
         initialConfig.ExpectedChecksumValue = string.IsNullOrWhiteSpace(initialConfig.ExpectedChecksum) ? Array.Empty<byte>() : ConvertUtils.HexToByteArray(initialConfig.ExpectedChecksum);
         initialConfig.OverrideSupplier = ParseFunctionInformationSupplierClassName(initialConfig.OverrideSupplierClassName);
+        initialConfig.IOPortHandlerSupplier = ParseIOPortHandlerSupplierClassName(initialConfig.IOPortHandlerSupplierClassName);
         initialConfig.ExeArgs = exeArgs;
         if (initialConfig.Cycles != null) {
             initialConfig.InstructionTimeScale = null;
@@ -76,18 +77,32 @@ public class CommandLineParser {
     }
 
     public static IOverrideSupplier? ParseFunctionInformationSupplierClassName(string? supplierClassName) {
+        return InstantiateSupplier<IOverrideSupplier>(supplierClassName);
+    }
+
+    /// <summary>
+    /// Resolves and instantiates an <see cref="Spice86.Core.Emulator.IOPorts.IIOPortHandlerSupplier"/>
+    /// implementation by assembly-qualified type name.
+    /// </summary>
+    /// <param name="supplierClassName">The assembly-qualified type name, or <c>null</c>.</param>
+    /// <returns>The instantiated supplier, or <c>null</c> if <paramref name="supplierClassName"/> is <c>null</c>.</returns>
+    public static Spice86.Core.Emulator.IOPorts.IIOPortHandlerSupplier? ParseIOPortHandlerSupplierClassName(string? supplierClassName) {
+        return InstantiateSupplier<Spice86.Core.Emulator.IOPorts.IIOPortHandlerSupplier>(supplierClassName);
+    }
+
+    private static T? InstantiateSupplier<T>(string? supplierClassName) where T : class {
         if (supplierClassName == null) {
             return null;
         }
 
         try {
             Type? supplierClass = Type.GetType(supplierClassName);
-            if (!typeof(IOverrideSupplier).IsAssignableFrom(supplierClass)) {
-                string error = $"Provided class {supplierClassName} does not implement the {typeof(IOverrideSupplier).FullName} interface ";
+            if (!typeof(T).IsAssignableFrom(supplierClass)) {
+                string error = $"Provided class {supplierClassName} does not implement the {typeof(T).FullName} interface ";
                 throw new UnrecoverableException(error);
             }
 
-            return (IOverrideSupplier?)Activator.CreateInstance(supplierClass);
+            return (T?)Activator.CreateInstance(supplierClass);
         } catch (MethodAccessException exception) {
             throw new UnrecoverableException($"Could not load provided class {supplierClassName}", exception);
         } catch (TargetInvocationException exception) {

@@ -32,6 +32,7 @@ public class IOPortDispatcher : DefaultIOPortHandler {
     /// </summary>
     /// <param name="port">The port number.</param>
     /// <param name="ioPortHandler">The I/O port handler to add.</param>
+    /// <exception cref="ArgumentException">A handler is already registered for <paramref name="port"/>.</exception>
     public void AddIOPortHandler(int port, IIOPortHandler ioPortHandler) {
         _ioPortHandlers.Add(port, ioPortHandler);
     }

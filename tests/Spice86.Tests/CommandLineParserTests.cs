@@ -132,6 +132,31 @@ public class CommandLineParserTests {
         }
     }
 
+    [Fact]
+    public void ParseIOPortHandlerSupplierClassName_ReturnsNullForNull() {
+        CommandLineParser.ParseIOPortHandlerSupplierClassName(null).Should().BeNull();
+    }
+
+    [Fact]
+    public void ParseIOPortHandlerSupplierClassName_InstantiatesValidSupplier() {
+        string typeName = typeof(TestIOPortHandlerSupplier).AssemblyQualifiedName
+            ?? throw new InvalidOperationException("Type has no assembly-qualified name.");
+
+        Spice86.Core.Emulator.IOPorts.IIOPortHandlerSupplier? supplier =
+            CommandLineParser.ParseIOPortHandlerSupplierClassName(typeName);
+
+        supplier.Should().BeOfType<TestIOPortHandlerSupplier>();
+    }
+
+    [Fact]
+    public void ParseIOPortHandlerSupplierClassName_ThrowsWhenTypeDoesNotImplementInterface() {
+        string typeName = typeof(System.String).AssemblyQualifiedName
+            ?? throw new InvalidOperationException("Type has no assembly-qualified name.");
+
+        FluentActions.Invoking(() => CommandLineParser.ParseIOPortHandlerSupplierClassName(typeName))
+            .Should().Throw<Spice86.Shared.Emulator.Errors.UnrecoverableException>();
+    }
+
     private static Configuration? Parse(string[] args) {
         CommandLineParser parser = new();
         return parser.ParseCommandLine(args);
