@@ -58,4 +58,11 @@ public sealed class JoystickReplayStep {
     /// <see cref="JoystickReplayStepType.Connect"/>. Empty when
     /// unset.</summary>
     public string DeviceName { get; set; } = string.Empty;
+
+    /// <summary>SDL joystick GUID reported on connect; only
+    /// meaningful when <see cref="Type"/> is
+    /// <see cref="JoystickReplayStepType.Connect"/>. Empty when
+    /// unset. Allows replay scripts to drive GUID-based profile
+    /// matching the same way a real SDL hot-plug would.</summary>
+    public string DeviceGuid { get; set; } = string.Empty;
 }

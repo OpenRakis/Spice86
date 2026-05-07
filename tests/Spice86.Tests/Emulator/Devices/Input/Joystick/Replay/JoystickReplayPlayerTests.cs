@@ -247,4 +247,26 @@ public sealed class JoystickReplayPlayerTests {
 
         _connectionEvents.Should().ContainSingle();
     }
+
+    [Fact]
+    public void ConnectStep_ForwardsDeviceGuidToConnectionEvent() {
+        JoystickReplayScript script = ScriptOf(
+            new JoystickReplayStep {
+                DelayMs = 0,
+                Type = JoystickReplayStepType.Connect,
+                StickIndex = 1,
+                DeviceName = "Xbox 360 Controller",
+                DeviceGuid = "030000005e040000130b000017050000",
+            });
+        JoystickReplayPlayer player = new(_hub, script, _loggerService);
+
+        player.AdvanceTo(0);
+        Pump();
+
+        _connectionEvents.Should().ContainSingle();
+        _connectionEvents[0].StickIndex.Should().Be(1);
+        _connectionEvents[0].DeviceName.Should().Be("Xbox 360 Controller");
+        _connectionEvents[0].DeviceGuid.Should().Be("030000005e040000130b000017050000");
+        _connectionEvents[0].IsConnected.Should().BeTrue();
+    }
 }

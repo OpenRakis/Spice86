@@ -49,6 +49,7 @@ public sealed class JoystickReplayJsonStoreTests : System.IDisposable {
                     Type = JoystickReplayStepType.Connect,
                     StickIndex = 0,
                     DeviceName = "Replay",
+                    DeviceGuid = "030000005e040000130b000017050000",
                 },
                 new JoystickReplayStep {
                     DelayMs = 100,
@@ -88,6 +89,7 @@ public sealed class JoystickReplayJsonStoreTests : System.IDisposable {
         loaded.Steps.Should().HaveCount(5);
         loaded.Steps[0].Type.Should().Be(JoystickReplayStepType.Connect);
         loaded.Steps[0].DeviceName.Should().Be("Replay");
+        loaded.Steps[0].DeviceGuid.Should().Be("030000005e040000130b000017050000");
         loaded.Steps[1].Value.Should().BeApproximately(0.75f, 1e-6f);
         loaded.Steps[2].ButtonIndex.Should().Be(1);
         loaded.Steps[2].Pressed.Should().BeTrue();

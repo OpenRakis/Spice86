@@ -143,7 +143,7 @@ public sealed class JoystickReplayPlayer {
         }
         if (step.Type == JoystickReplayStepType.Connect) {
             _hub.PostJoystickConnectionEvent(
-                new JoystickConnectionEventArgs(step.StickIndex, true, step.DeviceName));
+                new JoystickConnectionEventArgs(step.StickIndex, true, step.DeviceName, step.DeviceGuid));
             return true;
         }
         if (step.Type == JoystickReplayStepType.Disconnect) {

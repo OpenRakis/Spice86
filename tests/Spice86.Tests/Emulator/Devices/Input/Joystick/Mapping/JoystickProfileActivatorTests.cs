@@ -111,4 +111,45 @@ public sealed class JoystickProfileActivatorTests {
         activator.Dispose();
         activator.Dispose();
     }
+
+    [Fact]
+    public void Connect_PrefersGuidMatchOverDeviceName() {
+        JoystickProfile guidProfile = new() {
+            Name = "Guid Profile",
+            DeviceGuid = "030000005e040000130b000017050000",
+            DeviceName = "WrongName",
+            MidiOnGameport = new MidiOnGameportSettings { Enabled = true, Mpu401BasePort = 0x310 },
+            Rumble = new RumbleMapping { Enabled = false, AmplitudeScale = 0.5 },
+        };
+        JoystickProfile nameProfile = new() {
+            Name = "Name Profile",
+            DeviceGuid = string.Empty,
+            DeviceName = "Xbox",
+            MidiOnGameport = new MidiOnGameportSettings { Enabled = true, Mpu401BasePort = 0x320 },
+            Rumble = new RumbleMapping { Enabled = true, AmplitudeScale = 1.0 },
+        };
+        (FakeJoystickEventSource events, MidiOnGameportRouter midi,
+            RumbleRouter rumble, _) = BuildActivator(new[] { guidProfile, nameProfile });
+
+        events.RaiseConnect(0, "Xbox 360 Controller", "030000005e040000130b000017050000");
+
+        midi.Mpu401BasePort.Should().Be(0x310);
+        rumble.AmplitudeScale.Should().Be(0.5);
+    }
+
+    [Fact]
+    public void Connect_FallsBackToDeviceNameWhenGuidIsEmpty() {
+        JoystickProfile nameProfile = new() {
+            Name = "Name Profile",
+            DeviceGuid = string.Empty,
+            DeviceName = "Xbox",
+            MidiOnGameport = new MidiOnGameportSettings { Enabled = true, Mpu401BasePort = 0x340 },
+        };
+        (FakeJoystickEventSource events, MidiOnGameportRouter midi,
+            _, _) = BuildActivator(new[] { nameProfile });
+
+        events.RaiseConnect(0, "Xbox 360 Controller", string.Empty);
+
+        midi.Mpu401BasePort.Should().Be(0x340);
+    }
 }
