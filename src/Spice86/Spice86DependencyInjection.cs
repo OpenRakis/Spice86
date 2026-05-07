@@ -53,6 +53,7 @@ using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Core.Emulator.VM.DeviceScheduler;
 using Spice86.Logging;
 using Spice86.Shared.Diagnostics;
+using Spice86.Shared.Emulator.Input.Joystick;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.VM.Breakpoint.Serializable;
 using Spice86.Shared.Interfaces;
@@ -547,7 +548,9 @@ public class Spice86DependencyInjection : IDisposable {
             vgaFunctionality, loggerService,
             _gui as IGuiMouseEvents);
 
-        Joystick joystick = new(state, ioPortDispatcher,
+        IGameportInputSource gameportInputSource = new NullJoystickInput();
+        Gameport gameport = new(state, ioPortDispatcher,
+            gameportInputSource, new SystemTimeProvider(), rumbleSink: null,
             configuration.FailOnUnhandledPort, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -628,7 +631,7 @@ public class Spice86DependencyInjection : IDisposable {
             biosKeyboardInt9Handler,
             callbackHandler,
             cfgCpu, state, stack, dos, gravisUltraSound, ioPortDispatcher,
-            joystick, intel8042Controller, interruptVectorTable, keyboardInt16Handler,
+            gameport, intel8042Controller, interruptVectorTable, keyboardInt16Handler,
             emulatorBreakpointsManager, memory, midiDevice, pcSpeaker,
             dualPic, soundBlaster, systemBiosInt12Handler,
             systemBiosInt15Handler, systemClockInt1AHandler, realTimeClock,
