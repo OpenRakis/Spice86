@@ -82,9 +82,9 @@ public sealed class Machine : IDisposable {
     public IOPortDispatcher IoPortDispatcher { get; }
 
     /// <summary>
-    /// A gameport joystick
+    /// The IBM PC gameport (port 0x201) joystick device.
     /// </summary>
-    public Joystick Joystick { get; }
+    public Gameport Gameport { get; }
 
     /// <summary>
     /// Gets the controller used to manage keyboard input via the Intel 8042 interface.
@@ -244,7 +244,7 @@ public sealed class Machine : IDisposable {
         Dos dos,
         GravisUltraSound gravisUltraSound,
         IOPortDispatcher ioPortDispatcher,
-        Joystick joystick,
+        Gameport gameport,
         Intel8042Controller keyboardController,
         InterruptVectorTable interruptVectorTable,
         KeyboardInt16Handler keyboardInt16Handler,
@@ -283,7 +283,7 @@ public sealed class Machine : IDisposable {
         Dos = dos;
         GravisUltraSound = gravisUltraSound;
         IoPortDispatcher = ioPortDispatcher;
-        Joystick = joystick;
+        Gameport = gameport;
         KeyboardController = keyboardController;
         InterruptVectorTable = interruptVectorTable;
         KeyboardInt16Handler = keyboardInt16Handler;
