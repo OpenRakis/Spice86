@@ -48,6 +48,24 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         set => SetProperty(ref _mcpStatusViewModel, value);
     }
 
+    private IDiscSwapper? _discSwapper;
+
+    /// <summary>
+    /// Gets or sets the disc-swapper used to advance drives to the next disc image on Ctrl-F4.
+    /// </summary>
+    public IDiscSwapper? DiscSwapper {
+        get => _discSwapper;
+        set => SetProperty(ref _discSwapper, value);
+    }
+
+    private DrivesMenuViewModel? _drivesMenuViewModel;
+
+    /// <summary>Gets or sets the drives menu view model for disc switching and drive mounting.</summary>
+    public DrivesMenuViewModel? DrivesMenuViewModel {
+        get => _drivesMenuViewModel;
+        set => SetProperty(ref _drivesMenuViewModel, value);
+    }
+
     private int? _targetCyclesPerMs;
 
     public int? TargetCyclesPerMs {
@@ -214,6 +232,12 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
     internal void OnKeyDown(KeyEventArgs e) {
         if (_pauseHandler.IsPaused) {
+            return;
+        }
+
+        // Ctrl-F4: swap disc images on all drives (cycles through registered image lists)
+        if (e.Key == Avalonia.Input.Key.F4 && e.KeyModifiers.HasFlag(KeyModifiers.Control)) {
+            _discSwapper?.SwapDiscImages();
             return;
         }
 

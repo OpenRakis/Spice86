@@ -1,5 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.OperatingSystem;
 
+using Spice86.Core.Emulator.Boot;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.LoadableFile.Dos;
@@ -16,6 +17,7 @@ internal class DosProgramLoader : DosFileLoader {
     private readonly Configuration _configuration;
     protected readonly DosProcessManager _processManager;
     protected readonly DosFileManager _fileManager;
+    private readonly FloppyBootService _floppyBootService;
 
     public DosProgramLoader(Configuration configuration, IMemory memory,
         State state, DosInt21Handler int21Handler,
@@ -24,6 +26,7 @@ internal class DosProgramLoader : DosFileLoader {
         _configuration = configuration;
         _processManager = int21Handler.ProcessManager;
         _fileManager = int21Handler.FileManager;
+        _floppyBootService = new FloppyBootService(memory, state, loggerService);
     }
 
     public override byte[] LoadFile(string file, string? arguments) {
@@ -52,7 +55,7 @@ internal class DosProgramLoader : DosFileLoader {
 
         DosExecParameterBlock paramBlock = new(new ByteArrayReaderWriter(new byte[DosExecParameterBlock.Size]), 0);
         if (_processManager.BatchExecutionEngine.TryStart(out LaunchRequest launchRequest)) {
-            if (!_processManager.BatchExecutionEngine.TryApplyRedirectionForLaunch(launchRequest)) {
+            if (!_processManager.BatchExecutionEngine.ApplyRedirectionForLaunch(launchRequest)) {
                 _state.IsRunning = false;
                 return File.ReadAllBytes(file);
             }
@@ -65,7 +68,7 @@ internal class DosProgramLoader : DosFileLoader {
                 return File.ReadAllBytes(file);
             }
 
-            string? launchedHostPath = TryGetHostPathForLaunchedProgram(launchRequest);
+            string? launchedHostPath = GetHostPathForLaunchedProgram(launchRequest);
             if (!string.IsNullOrWhiteSpace(launchedHostPath) && File.Exists(launchedHostPath)) {
                 return File.ReadAllBytes(launchedHostPath);
             }
@@ -78,6 +81,10 @@ internal class DosProgramLoader : DosFileLoader {
 
     protected virtual DosExecResult LoadLaunchRequest(LaunchRequest launchRequest,
         DosExecParameterBlock paramBlock) {
+        if (launchRequest is BootFloppyLaunchRequest bootFloppy) {
+            return ExecuteFloppyBoot(bootFloppy);
+        }
+
         if (launchRequest is not ProgramLaunchRequest programLaunchRequest) {
             return DosExecResult.Fail(DosErrorCode.InvalidDrive);
         }
@@ -86,11 +93,26 @@ internal class DosProgramLoader : DosFileLoader {
             programLaunchRequest.CommandTail, paramBlock.EnvironmentSegment);
     }
 
-    protected virtual string? TryGetHostPathForLaunchedProgram(LaunchRequest launchRequest) {
+    private DosExecResult ExecuteFloppyBoot(BootFloppyLaunchRequest request) {
+        char upper = char.ToUpperInvariant(request.DriveLetter);
+        if (upper != 'A' && upper != 'B') {
+            return DosExecResult.Fail(DosErrorCode.InvalidDrive);
+        }
+        if (!_processManager.TryGetFloppyImageForBoot(upper, out byte[]? imageData, out string imagePath)) {
+            return DosExecResult.Fail(DosErrorCode.InvalidDrive);
+        }
+        byte driveNumber = (byte)(upper - 'A');
+        if (!_floppyBootService.TryBootFromFloppyImage(imageData, driveNumber, imagePath)) {
+            return DosExecResult.Fail(DosErrorCode.InvalidDrive);
+        }
+        return DosExecResult.SuccessExecute(_state.CS, _state.IP, _state.SS, _state.SP);
+    }
+
+    protected virtual string? GetHostPathForLaunchedProgram(LaunchRequest launchRequest) {
         if (launchRequest is not ProgramLaunchRequest programLaunchRequest) {
             return null;
         }
 
-        return _fileManager.TryGetFullHostExecutablePathFromDos(programLaunchRequest.ProgramName);
+        return _fileManager.GetFullHostExecutablePathFromDos(programLaunchRequest.ProgramName);
     }
 }

@@ -1261,7 +1261,7 @@ public class DosBatchRoutingIntegrationTests {
             RunBatchScript(tempDir, "CD SUBDIR\r\nCD > OUT.TXT\r\n");
 
             // Assert
-            string output = File.ReadAllText(Path.Join(tempDir, "OUT.TXT")).Trim();
+            string output = File.ReadAllText(Path.Join(tempDir, "SUBDIR", "OUT.TXT")).Trim();
             output.Should().Contain("SUBDIR", "CD should have changed to the subdirectory");
         });
     }
@@ -1297,7 +1297,7 @@ public class DosBatchRoutingIntegrationTests {
             RunBatchScript(tempDir, "CD SUB\r\nCD.\r\nCD > OUT.TXT\r\n");
 
             // Assert: should still be in SUB
-            string output = File.ReadAllText(Path.Join(tempDir, "OUT.TXT")).Trim();
+            string output = File.ReadAllText(Path.Join(tempDir, "SUB", "OUT.TXT")).Trim();
             output.Should().Contain("SUB", "CD. should stay in the current directory");
         });
     }
@@ -1628,7 +1628,7 @@ public class DosBatchRoutingIntegrationTests {
             RunBatchScript(tempDir, "MD NEWDIR\r\nCD NEWDIR\r\nCD > OUT.TXT\r\n");
 
             // Assert
-            string output = File.ReadAllText(Path.Join(tempDir, "OUT.TXT")).Trim();
+            string output = File.ReadAllText(Path.Join(tempDir, "NEWDIR", "OUT.TXT")).Trim();
             output.Should().Contain("NEWDIR", "MD should have created the directory");
         });
     }
@@ -1643,7 +1643,7 @@ public class DosBatchRoutingIntegrationTests {
             RunBatchScript(tempDir, "MKDIR SUBDIR\r\nCD SUBDIR\r\nCD > OUT.TXT\r\n");
 
             // Assert
-            string output = File.ReadAllText(Path.Join(tempDir, "OUT.TXT")).Trim();
+            string output = File.ReadAllText(Path.Join(tempDir, "SUBDIR", "OUT.TXT")).Trim();
             output.Should().Contain("SUBDIR");
         });
     }

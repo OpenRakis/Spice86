@@ -2,7 +2,11 @@ namespace Spice86.Core.Emulator.OperatingSystem.Batch;
 
 using Serilog.Events;
 
+using Spice86.Core.Emulator.Devices.CdRom;
+using Spice86.Core.Emulator.Devices.CdRom.Image;
+using Spice86.Core.Emulator.InterruptHandlers.Mscdex;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
+using Spice86.Core.Emulator.OperatingSystem.FileSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 
 using System;
@@ -12,7 +16,7 @@ using System.IO;
 using System.Text;
 
 internal sealed partial class DosBatchExecutionEngine {
-    internal bool TryHandleSet(string arguments) {
+    internal bool HandleSet(string arguments) {
         string trimmedArguments = arguments.TrimStart();
         if (trimmedArguments.StartsWith("/P ", StringComparison.OrdinalIgnoreCase) ||
             trimmedArguments.StartsWith("/P:", StringComparison.OrdinalIgnoreCase)) {
@@ -59,7 +63,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return false;
     }
 
-    internal bool TryHandleEcho(string arguments) {
+    internal bool HandleEcho(string arguments) {
         string rawArguments = arguments;
         string trimmedArguments = rawArguments.TrimStart();
         string normalizedArguments = trimmedArguments.TrimEnd();
@@ -108,13 +112,13 @@ internal sealed partial class DosBatchExecutionEngine {
         return false;
     }
 
-    internal bool TryHandlePath(string arguments) {
+    internal bool HandlePath(string arguments) {
         string trimmed = arguments.TrimStart();
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("BATCH: PATH {Args}", trimmed);
         }
         if (trimmed.Length == 0) {
-            string? pathValue = _host.TryGetEnvironmentVariable("PATH");
+            string? pathValue = _host.GetEnvironmentVariable("PATH");
             if (!string.IsNullOrEmpty(pathValue)) {
                 WriteToStandardOutput($"PATH={pathValue}\r\n");
             } else {
@@ -134,7 +138,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return false;
     }
 
-    internal void TryHandleCls() {
+    internal void HandleCls() {
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("BATCH: CLS - clearing screen");
         }
@@ -242,7 +246,7 @@ internal sealed partial class DosBatchExecutionEngine {
             _loggerService.Verbose("BATCH: Cleaning up {Count} temporary files", temporaryDosFiles.Length);
         }
         for (int i = 0; i < temporaryDosFiles.Length; i++) {
-            string? hostPath = _dosFileManager.TryGetFullHostPathFromDos(temporaryDosFiles[i]);
+            string? hostPath = _dosFileManager.GetFullHostPathFromDos(temporaryDosFiles[i]);
             if (string.IsNullOrWhiteSpace(hostPath)) {
                 continue;
             }
@@ -302,7 +306,7 @@ internal sealed partial class DosBatchExecutionEngine {
         output.Write(bytes, 0, bytes.Length);
     }
 
-    internal bool TryHandleType(string arguments) {
+    internal bool HandleType(string arguments) {
         string remaining = arguments.Trim();
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("BATCH: TYPE {Args}", remaining);
@@ -342,7 +346,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return false;
     }
 
-    internal bool TryHandleChdir(string arguments) {
+    internal bool HandleChdir(string arguments) {
         string trimmed = arguments.Trim();
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("BATCH: CD/CHDIR args={Args}", trimmed);
@@ -369,67 +373,14 @@ internal sealed partial class DosBatchExecutionEngine {
             return false;
         }
 
-        // Resolve relative "." and ".." against the current directory before
-        // passing to SetCurrentDir, because the path resolver skips these
-        // elements when they appear alone without a preceding directory.
-        string resolved = ResolveRelativeDosPath(trimmed);
-        DosFileOperationResult setResult = _dosFileManager.SetCurrentDir(resolved);
+        // The path resolver natively honors the drive's current directory and
+        // applies '.' / '..' segments, so a relative path can be passed through.
+        DosFileOperationResult setResult = _dosFileManager.SetCurrentDir(trimmed);
         if (setResult.IsError) {
             WriteToStandardOutput("Invalid directory\r\n");
         }
 
         return false;
-    }
-
-    /// <summary>
-    /// Resolves a relative DOS path (e.g. ".", "..", "..\SUBDIR") against the
-    /// current drive and directory to produce an absolute DOS path.
-    /// </summary>
-    private string ResolveRelativeDosPath(string dosPath) {
-        if (dosPath.Length == 0) {
-            return dosPath;
-        }
-
-        // Already absolute (starts with drive letter or backslash)
-        char first = dosPath[0];
-        if (dosPath.Length >= 2 && dosPath[1] == ':') {
-            return dosPath;
-        }
-        if (first == '\\') {
-            return dosPath;
-        }
-
-        // Build the current directory prefix
-        char driveLetter = _driveManager.CurrentDrive.DriveLetter;
-        DosFileOperationResult result = _dosFileManager.GetCurrentDir(0, out string currentDir);
-        if (result.IsError) {
-            return dosPath;
-        }
-
-        string basePath = string.IsNullOrEmpty(currentDir)
-            ? $"{driveLetter}:\\"
-            : $"{driveLetter}:\\{currentDir}";
-
-        // Split into segments and apply . / .. navigation
-        string combined = $"{basePath}\\{dosPath}";
-        string[] parts = combined.Split(['\\'], StringSplitOptions.RemoveEmptyEntries);
-        List<string> resolved = new();
-
-        for (int i = 0; i < parts.Length; i++) {
-            string part = parts[i];
-            if (part == ".") {
-                continue;
-            }
-            if (part == "..") {
-                if (resolved.Count > 1) {
-                    resolved.RemoveAt(resolved.Count - 1);
-                }
-                continue;
-            }
-            resolved.Add(part);
-        }
-
-        return string.Join("\\", resolved);
     }
 
     internal void HandleExit() {
@@ -442,7 +393,7 @@ internal sealed partial class DosBatchExecutionEngine {
         }
     }
 
-    internal bool TryHandleMkdir(string arguments) {
+    internal bool HandleMkdir(string arguments) {
         string trimmed = arguments.Trim();
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("BATCH: MKDIR {Path}", trimmed);
@@ -463,7 +414,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return false;
     }
 
-    internal bool TryHandleRmdir(string arguments) {
+    internal bool HandleRmdir(string arguments) {
         string trimmed = arguments.Trim();
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("BATCH: RMDIR {Path}", trimmed);
@@ -484,7 +435,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return false;
     }
 
-    internal bool TryHandleDel(string arguments) {
+    internal bool HandleDel(string arguments) {
         string trimmed = arguments.Trim();
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("BATCH: DEL {FileSpec}", trimmed);
@@ -527,7 +478,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return string.Empty;
     }
 
-    internal bool TryHandleRen(string arguments) {
+    internal bool HandleRen(string arguments) {
         string trimmed = arguments.Trim();
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("BATCH: REN {Args}", trimmed);
@@ -610,7 +561,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return targetPattern;
     }
 
-    internal bool TryHandleDir(string arguments) {
+    internal bool HandleDir(string arguments) {
         string[] tokens = ParseArguments(arguments);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("BATCH: DIR {Args}", arguments);
@@ -762,7 +713,7 @@ internal sealed partial class DosBatchExecutionEngine {
         internal bool IsDirectory => (FileAttributes & 0x10) != 0;
     }
 
-    internal bool TryHandleCopy(string arguments) {
+    internal bool HandleCopy(string arguments) {
         string trimmed = arguments.Trim();
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("BATCH: COPY {Args}", trimmed);
@@ -793,7 +744,7 @@ internal sealed partial class DosBatchExecutionEngine {
         string destination = nonSwitchArguments[1];
 
         if (source.Contains('+')) {
-            return TryHandleCopyConcat(source, destination);
+            return HandleCopyConcat(source, destination);
         }
 
         bool sourceHasWildcard = source.Contains('*') || source.Contains('?');
@@ -869,7 +820,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return true;
     }
 
-    private bool TryHandleCopyConcat(string sourcesWithPlus, string destination) {
+    private bool HandleCopyConcat(string sourcesWithPlus, string destination) {
         string[] sources = sourcesWithPlus.Split('+');
 
         DosFileOperationResult createResult = _dosFileManager.CreateFileUsingHandle(destination, 0);
@@ -916,7 +867,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return false;
     }
 
-    internal bool TryHandleMove(string arguments) {
+    internal bool HandleMove(string arguments) {
         string trimmed = arguments.Trim();
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("BATCH: MOVE {Args}", trimmed);
@@ -976,7 +927,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return false;
     }
 
-    internal bool TryHandleDate(string arguments) {
+    internal bool HandleDate(string arguments) {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("BATCH: DATE {Args}", arguments);
         }
@@ -1035,7 +986,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return false;
     }
 
-    internal bool TryHandleTime(string arguments) {
+    internal bool HandleTime(string arguments) {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("BATCH: TIME {Args}", arguments);
         }
@@ -1115,7 +1066,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return TimeSpan.TryParseExact(timeToken, formats, CultureInfo.InvariantCulture, out parsedTime);
     }
 
-    internal bool TryHandleVer() {
+    internal bool HandleVer() {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("BATCH: VER");
         }
@@ -1123,7 +1074,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return false;
     }
 
-    internal bool TryHandleVol(string arguments) {
+    internal bool HandleVol(string arguments) {
         string trimmed = arguments.Trim();
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("BATCH: VOL {Args}", trimmed);
@@ -1138,5 +1089,442 @@ internal sealed partial class DosBatchExecutionEngine {
 
         WriteToStandardOutput($" Volume in drive {driveLetter} is {label}\r\n");
         return false;
+    }
+
+    /// <summary>
+    /// Handles the MOUNT command which mounts a host folder as a DOS drive.
+    /// Syntax: MOUNT &lt;driveLetter&gt; &lt;hostPath&gt; [-t cdrom|floppy|hdd]
+    /// The host path may be an absolute host path, a relative path (resolved against the
+    /// process working directory), or a path starting with a mounted DOS drive letter
+    /// (e.g. <c>C:\games</c> where C: is already mounted — resolved via the drive table).
+    /// Paths that contain spaces must be surrounded by double-quotes.
+    /// </summary>
+    internal bool HandleMount(string arguments) {
+        string trimmed = arguments.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed)) {
+            WriteToStandardOutput("Usage: MOUNT <drive> <path> [-t cdrom|floppy|hdd]\r\n");
+            return false;
+        }
+
+        string[] parts = BatchArgumentParser.SplitWithQuotes(trimmed);
+        if (parts.Length < 2) {
+            WriteToStandardOutput("MOUNT: missing path argument\r\n");
+            return false;
+        }
+
+        string driveSpec = parts[0];
+        if (driveSpec.Length < 1 || !char.IsLetter(driveSpec[0])) {
+            WriteToStandardOutput($"MOUNT: invalid drive letter '{driveSpec}'\r\n");
+            return false;
+        }
+
+        char driveLetter = char.ToUpperInvariant(driveSpec[0]);
+        string hostPath;
+        try {
+            hostPath = HostPathResolver.Resolve(parts[1], _driveManager);
+        } catch (ArgumentException ex) {
+            WriteToStandardOutput($"MOUNT: invalid path '{parts[1]}': {ex.Message}\r\n");
+            return false;
+        } catch (NotSupportedException ex) {
+            WriteToStandardOutput($"MOUNT: invalid path format '{parts[1]}': {ex.Message}\r\n");
+            return false;
+        } catch (PathTooLongException ex) {
+            WriteToStandardOutput($"MOUNT: path too long '{parts[1]}': {ex.Message}\r\n");
+            return false;
+        }
+
+        // Parse optional -t type flag
+        string driveType = "hdd";
+        for (int i = 2; i < parts.Length - 1; i++) {
+            if (parts[i].Equals("-t", StringComparison.OrdinalIgnoreCase)) {
+                driveType = parts[i + 1].ToLowerInvariant();
+                break;
+            }
+        }
+
+        if (!Directory.Exists(hostPath)) {
+            WriteToStandardOutput($"MOUNT: path not found: {hostPath}\r\n");
+            return false;
+        }
+
+        if (driveType == "floppy") {
+            _driveManager.MountFloppyFolder(driveLetter, hostPath);
+        } else if (driveType == "cdrom") {
+            if (!MountCdRomFolder(driveLetter, hostPath)) {
+                return false;
+            }
+        } else {
+            _driveManager.MountFolderDrive(driveLetter, hostPath);
+        }
+
+        WriteToStandardOutput($"Drive {driveLetter}: mounted as {hostPath}\r\n");
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("BATCH: MOUNT {Drive}: = {Path} (type={Type})", driveLetter, hostPath, driveType);
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Handles the IMGMOUNT command which mounts one or more disk image files as a DOS drive.
+    /// Syntax: IMGMOUNT &lt;driveLetter&gt; &lt;image1&gt; [&lt;image2&gt; ...] [-t floppy|iso|cue]
+    /// Image paths may be absolute host paths, relative paths (resolved against the process
+    /// working directory), or paths starting with a mounted DOS drive letter
+    /// (e.g. <c>C:\games\disc.iso</c> resolved via the drive table).
+    /// Paths that contain spaces must be surrounded by double-quotes.
+    /// Multiple images enable Ctrl-F4 disc switching.
+    /// </summary>
+    internal bool HandleImgMount(string arguments) {
+        string trimmed = arguments.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed)) {
+            WriteToStandardOutput("Usage: IMGMOUNT <drive> <image> [-t floppy|iso|cue]\r\n");
+            return false;
+        }
+
+        string[] parts = BatchArgumentParser.SplitWithQuotes(trimmed);
+        if (parts.Length < 2) {
+            WriteToStandardOutput("IMGMOUNT: missing image path\r\n");
+            return false;
+        }
+
+        string driveSpec = parts[0];
+        if (driveSpec.Length < 1 || !char.IsLetter(driveSpec[0])) {
+            WriteToStandardOutput($"IMGMOUNT: invalid drive letter '{driveSpec}'\r\n");
+            return false;
+        }
+
+        char driveLetter = char.ToUpperInvariant(driveSpec[0]);
+
+        // Collect image paths: all tokens between the drive letter and an optional -t flag
+        string imageType = string.Empty;
+        List<string> imagePaths = new();
+        for (int i = 1; i < parts.Length; i++) {
+            if (parts[i].Equals("-t", StringComparison.OrdinalIgnoreCase)) {
+                if (i + 1 < parts.Length) {
+                    imageType = parts[i + 1].ToLowerInvariant();
+                }
+                break;
+            }
+            string resolved;
+            try {
+                resolved = HostPathResolver.Resolve(parts[i], _driveManager);
+            } catch (ArgumentException ex) {
+                WriteToStandardOutput($"IMGMOUNT: invalid path '{parts[i]}': {ex.Message}\r\n");
+                return false;
+            } catch (NotSupportedException ex) {
+                WriteToStandardOutput($"IMGMOUNT: invalid path format '{parts[i]}': {ex.Message}\r\n");
+                return false;
+            } catch (PathTooLongException ex) {
+                WriteToStandardOutput($"IMGMOUNT: path too long '{parts[i]}': {ex.Message}\r\n");
+                return false;
+            }
+            imagePaths.Add(resolved);
+        }
+
+        if (imagePaths.Count == 0) {
+            WriteToStandardOutput("IMGMOUNT: missing image path\r\n");
+            return false;
+        }
+
+        // Auto-detect type from the first image if not specified
+        if (string.IsNullOrEmpty(imageType)) {
+            string ext = Path.GetExtension(imagePaths[0]).ToLowerInvariant();
+            if (ext == ".img" || ext == ".ima" || ext == ".vfd") {
+                imageType = "floppy";
+            } else if (ext == ".iso") {
+                imageType = "iso";
+            } else if (ext == ".cue") {
+                imageType = "cue";
+            } else {
+                WriteToStandardOutput($"IMGMOUNT: cannot detect image type for '{imagePaths[0]}'. Use -t floppy|iso|cue.\r\n");
+                return false;
+            }
+        }
+
+        // Validate that all image files exist
+        foreach (string path in imagePaths) {
+            if (!File.Exists(path)) {
+                WriteToStandardOutput($"IMGMOUNT: image file not found: {path}\r\n");
+                return false;
+            }
+        }
+
+        if (imageType == "floppy") {
+            MountFloppyImages(driveLetter, imagePaths);
+        } else if (imageType == "iso" || imageType == "cue") {
+            MountCdRomImages(driveLetter, imagePaths, imageType);
+        } else {
+            WriteToStandardOutput($"IMGMOUNT: unsupported image type '{imageType}'\r\n");
+        }
+
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("BATCH: IMGMOUNT {Drive}: = [{Paths}] (type={Type})",
+                driveLetter, string.Join(", ", imagePaths), imageType);
+        }
+        return false;
+    }
+
+    private void MountFloppyImages(char driveLetter, IReadOnlyList<string> imagePaths) {
+        byte[] firstImageData = File.ReadAllBytes(imagePaths[0]);
+        _driveManager.MountFloppyImage(driveLetter, firstImageData, imagePaths[0]);
+        for (int i = 1; i < imagePaths.Count; i++) {
+            byte[] extraData = File.ReadAllBytes(imagePaths[i]);
+            _driveManager.AddFloppyImage(driveLetter, extraData, imagePaths[i]);
+        }
+        string paths = string.Join(", ", imagePaths);
+        WriteToStandardOutput($"Drive {driveLetter}: mounted {imagePaths.Count} floppy image(s): {paths}\r\n");
+    }
+
+    private void MountCdRomImages(char driveLetter, IReadOnlyList<string> imagePaths, string imageType) {
+        try {
+            List<ICdRomImage> images = new();
+            foreach (string path in imagePaths) {
+                ICdRomImage image;
+                if (imageType == "cue") {
+                    image = new CueBinImage(path);
+                } else {
+                    image = new IsoImage(path);
+                }
+                images.Add(image);
+            }
+            CdRomDrive drive = new CdRomDrive(images);
+            CdAudioPlayer audioPlayer = new CdAudioPlayer(_channelCreator);
+            audioPlayer.SetDrive(drive);
+            drive.SetAudioPlayer(audioPlayer);
+            byte driveIndex = DosDriveManager.DriveLetters.TryGetValue(driveLetter, out byte idx) ? idx : (byte)3;
+            MscdexDriveEntry entry = new MscdexDriveEntry(driveLetter, driveIndex, drive);
+            _mscdex.AddDrive(entry);
+            _driveManager.RegisterCdRomDriveLetter(driveLetter, string.Empty);
+            string paths = string.Join(", ", imagePaths);
+            WriteToStandardOutput($"Drive {driveLetter}: mounted {imagePaths.Count} CD-ROM image(s): {paths}\r\n");
+        } catch (IOException ex) {
+            WriteToStandardOutput($"IMGMOUNT: failed to open image: {ex.Message}\r\n");
+        }
+    }
+
+    private bool MountCdRomFolder(char driveLetter, string hostPath) {
+        string volumeLabel = Path.GetFileName(hostPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        if (string.IsNullOrEmpty(volumeLabel)) {
+            volumeLabel = driveLetter.ToString();
+        }
+        try {
+            VirtualIsoImage image = new VirtualIsoImage(hostPath, volumeLabel);
+            CdRomDrive drive = new CdRomDrive(image);
+            CdAudioPlayer audioPlayer = new CdAudioPlayer(_channelCreator);
+            audioPlayer.SetDrive(drive);
+            drive.SetAudioPlayer(audioPlayer);
+            byte driveIndex = DosDriveManager.DriveLetters.TryGetValue(driveLetter, out byte idx) ? idx : (byte)3;
+            MscdexDriveEntry entry = new MscdexDriveEntry(driveLetter, driveIndex, drive);
+            _mscdex.AddDrive(entry);
+            _driveManager.RegisterCdRomDriveLetter(driveLetter, hostPath);
+            return true;
+        } catch (IOException ex) {
+            WriteToStandardOutput($"MOUNT: failed to create CD-ROM drive from folder: {ex.Message}\r\n");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Handles the <c>BOOT</c> internal command, matching DOSBox Staging's
+    /// <c>BOOT [image] [-l A|B]</c> for booting from a floppy image. The first
+    /// 512 bytes of the floppy image are loaded at physical 0x7C00 and the CPU
+    /// is set to <c>CS:IP = 0000:7C00</c> with <c>DL</c> = drive number (0 or 1).
+    /// Booting from hard disk drive images is intentionally unsupported.
+    /// </summary>
+    /// <param name="arguments">Argument tail after the BOOT token.</param>
+    /// <param name="launchRequest">Receives a <see cref="BootFloppyLaunchRequest"/> on success or <see cref="ContinueBatchExecutionLaunchRequest.Instance"/> on failure.</param>
+    /// <returns><c>true</c> when boot setup is requested (caller must yield to host); <c>false</c> on parse/validation failure.</returns>
+    internal bool TryHandleBoot(string arguments, out LaunchRequest launchRequest) {
+        launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
+        string trimmed = arguments.Trim();
+        string[] parts = BatchArgumentParser.SplitWithQuotes(trimmed);
+
+        char driveLetter = 'A';
+        bool driveExplicit = false;
+        List<string> imagePaths = new();
+        for (int i = 0; i < parts.Length; i++) {
+            if (parts[i].Equals("-l", StringComparison.OrdinalIgnoreCase)) {
+                if (i + 1 >= parts.Length) {
+                    WriteToStandardOutput("BOOT: missing drive letter after -l\r\n");
+                    return false;
+                }
+                string driveSpec = parts[i + 1];
+                if (driveSpec.Length < 1 || !char.IsLetter(driveSpec[0])) {
+                    WriteToStandardOutput($"BOOT: invalid drive letter '{driveSpec}'\r\n");
+                    return false;
+                }
+                driveLetter = char.ToUpperInvariant(driveSpec[0]);
+                driveExplicit = true;
+                i++;
+                continue;
+            }
+            string resolved;
+            try {
+                resolved = HostPathResolver.Resolve(parts[i], _driveManager);
+            } catch (ArgumentException ex) {
+                WriteToStandardOutput($"BOOT: invalid path '{parts[i]}': {ex.Message}\r\n");
+                return false;
+            } catch (NotSupportedException ex) {
+                WriteToStandardOutput($"BOOT: invalid path format '{parts[i]}': {ex.Message}\r\n");
+                return false;
+            } catch (PathTooLongException ex) {
+                WriteToStandardOutput($"BOOT: path too long '{parts[i]}': {ex.Message}\r\n");
+                return false;
+            }
+            imagePaths.Add(resolved);
+        }
+
+        if (driveLetter != 'A' && driveLetter != 'B') {
+            WriteToStandardOutput($"BOOT: only floppy drives A: and B: are supported (got '{driveLetter}')\r\n");
+            return false;
+        }
+
+        if (imagePaths.Count > 0) {
+            foreach (string path in imagePaths) {
+                if (!File.Exists(path)) {
+                    WriteToStandardOutput($"BOOT: image file not found: {path}\r\n");
+                    return false;
+                }
+            }
+            byte[] firstImageData = File.ReadAllBytes(imagePaths[0]);
+            _driveManager.MountFloppyImage(driveLetter, firstImageData, imagePaths[0]);
+            for (int i = 1; i < imagePaths.Count; i++) {
+                byte[] extra = File.ReadAllBytes(imagePaths[i]);
+                _driveManager.AddFloppyImage(driveLetter, extra, imagePaths[i]);
+            }
+        }
+
+        if (!_driveManager.TryGetFloppyDrive(driveLetter, out FloppyDiskDrive? floppy) ||
+            floppy.GetCurrentImageData() is not byte[] imageData) {
+            WriteToStandardOutput($"BOOT: no floppy image mounted on {driveLetter}:\r\n");
+            return false;
+        }
+
+        if (imageData.Length < 512) {
+            WriteToStandardOutput($"BOOT: image on {driveLetter}: is smaller than one sector\r\n");
+            return false;
+        }
+
+        if (imageData[510] != 0x55 || imageData[511] != 0xAA) {
+            WriteToStandardOutput($"BOOT: image on {driveLetter}: has no valid boot signature (0xAA55)\r\n");
+            return false;
+        }
+
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+            _loggerService.Information("BATCH: BOOT from {Drive}: image='{Path}' (explicit={Explicit})",
+                driveLetter, floppy.ImagePath, driveExplicit);
+        }
+        launchRequest = new BootFloppyLaunchRequest(driveLetter, default);
+        return true;
+    }
+
+    /// <summary>
+    /// Handles the <c>SUBST</c> internal command, matching DOSBox Staging's
+    /// <c>SUBST [drive: path]</c> / <c>SUBST drive: /D</c>:
+    /// <list type="bullet">
+    ///   <item><c>SUBST</c> with no arguments lists active SUBST drives.</item>
+    ///   <item><c>SUBST X: \DOS\PATH</c> creates a virtual drive X: that maps
+    ///     to the specified path. The path is resolved through <see cref="HostPathResolver"/>,
+    ///     so DOS-style paths like <c>C:\GAMES</c> as well as host paths work.</item>
+    ///   <item><c>SUBST X: /D</c> removes a previously-created SUBST drive.</item>
+    /// </list>
+    /// </summary>
+    /// <param name="arguments">Argument tail after the SUBST token.</param>
+    /// <returns><c>false</c> — SUBST never yields a launch request.</returns>
+    internal bool HandleSubst(string arguments) {
+        string trimmed = arguments.Trim();
+        if (string.IsNullOrEmpty(trimmed)) {
+            IReadOnlyDictionary<char, string> subst = _driveManager.SubstDrives;
+            if (subst.Count == 0) {
+                WriteToStandardOutput("No SUBSTitutions in effect\r\n");
+                return false;
+            }
+            foreach (KeyValuePair<char, string> entry in subst) {
+                if (_driveManager.TryGetValue(entry.Key, out VirtualDrive? drive)) {
+                    WriteToStandardOutput($"{entry.Key}:\\: => {drive.MountedHostDirectory}\r\n");
+                }
+            }
+            return false;
+        }
+
+        string[] parts = BatchArgumentParser.SplitWithQuotes(trimmed);
+        if (parts.Length < 1) {
+            WriteToStandardOutput("Usage: SUBST drive: path | SUBST drive: /D\r\n");
+            return false;
+        }
+
+        string driveSpec = parts[0];
+        if (driveSpec.Length < 2 || !char.IsLetter(driveSpec[0]) || driveSpec[1] != ':') {
+            WriteToStandardOutput($"SUBST: invalid drive specification '{driveSpec}'\r\n");
+            return false;
+        }
+        char driveLetter = char.ToUpperInvariant(driveSpec[0]);
+
+        if (parts.Length >= 2 && parts[1].Equals("/D", StringComparison.OrdinalIgnoreCase)) {
+            if (!_driveManager.UnmountSubstDrive(driveLetter)) {
+                WriteToStandardOutput($"SUBST: drive {driveLetter}: is not SUBSTed\r\n");
+                return false;
+            }
+            WriteToStandardOutput($"Drive {driveLetter}: un-SUBSTed\r\n");
+            return false;
+        }
+
+        if (parts.Length < 2) {
+            WriteToStandardOutput("Usage: SUBST drive: path | SUBST drive: /D\r\n");
+            return false;
+        }
+
+        if (driveLetter == 'A' || driveLetter == 'B') {
+            WriteToStandardOutput($"SUBST: cannot SUBST a floppy drive ({driveLetter}:)\r\n");
+            return false;
+        }
+        if (_driveManager.TryGetValue(driveLetter, out VirtualDrive? existing)
+            && !_driveManager.IsSubstDrive(driveLetter)
+            && !string.IsNullOrEmpty(existing.MountedHostDirectory)) {
+            WriteToStandardOutput($"SUBST: drive {driveLetter}: is already in use\r\n");
+            return false;
+        }
+
+        string hostPath;
+        try {
+            hostPath = HostPathResolver.Resolve(parts[1], _driveManager);
+        } catch (ArgumentException ex) {
+            WriteToStandardOutput($"SUBST: invalid path '{parts[1]}': {ex.Message}\r\n");
+            return false;
+        } catch (NotSupportedException ex) {
+            WriteToStandardOutput($"SUBST: invalid path format '{parts[1]}': {ex.Message}\r\n");
+            return false;
+        } catch (PathTooLongException ex) {
+            WriteToStandardOutput($"SUBST: path too long '{parts[1]}': {ex.Message}\r\n");
+            return false;
+        }
+
+        if (!Directory.Exists(hostPath)) {
+            WriteToStandardOutput($"SUBST: path not found: {hostPath}\r\n");
+            return false;
+        }
+
+        _driveManager.MountSubstDrive(driveLetter, hostPath, parts[1]);
+        WriteToStandardOutput($"Drive {driveLetter}: SUBSTed to {hostPath}\r\n");
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("BATCH: SUBST {Drive}: = {Path}", driveLetter, hostPath);
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Changes the current DOS drive to the specified letter.
+    /// Mirrors COMMAND.COM's internal drive-change handling in DOSBox Staging:
+    /// typing <c>X:</c> at a prompt (or in a batch file) switches the default drive.
+    /// </summary>
+    /// <param name="driveLetter">The upper-case drive letter to select.</param>
+    internal void ChangeDrive(char driveLetter) {
+        if (_driveManager.TryGetValue(driveLetter, out VirtualDrive? drive)) {
+            _driveManager.CurrentDrive = drive;
+            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                _loggerService.Debug("BATCH: Changed drive to {Drive}:", driveLetter);
+            }
+        } else {
+            WriteToStandardOutput($"Invalid drive specification\r\n");
+        }
     }
 }

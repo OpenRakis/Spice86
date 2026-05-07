@@ -100,12 +100,12 @@ internal static class InternalBatchProgramBuilder {
                 break;
             }
 
-            if (TryConsumeFlagSwitch(ref remaining, 'N')) {
+            if (ConsumeFlagSwitch(ref remaining, 'N')) {
                 suppressPrompt = true;
                 continue;
             }
 
-            if (TryConsumeFlagSwitch(ref remaining, 'S')) {
+            if (ConsumeFlagSwitch(ref remaining, 'S')) {
                 caseSensitive = true;
                 continue;
             }
@@ -135,7 +135,7 @@ internal static class InternalBatchProgramBuilder {
             choiceKeys, promptBuilder.ToString(), defaultChoice);
     }
 
-    private static bool TryConsumeFlagSwitch(ref string remaining, char optionLetter) {
+    private static bool ConsumeFlagSwitch(ref string remaining, char optionLetter) {
         if (!remaining.StartsWith($"/{optionLetter}", StringComparison.OrdinalIgnoreCase)) {
             return false;
         }

@@ -375,8 +375,6 @@ public class Spice86DependencyInjection : IDisposable {
 
         SystemClockInt1AHandler systemClockInt1AHandler = new(memory, biosDataArea,
             realTimeClock, cfgCpu, stack, state, loggerService);
-        SystemBiosInt13Handler systemBiosInt13Handler = new(memory,
-            cfgCpu, stack, state, loggerService);
         RtcInt70Handler rtcInt70Handler = new(memory, cfgCpu, stack, state,
             dualPic, biosDataArea, ioPortDispatcher, loggerService);
 
@@ -385,6 +383,8 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         SoftwareMixer mixer = new(configuration.AudioEngine, pauseHandler);
+        FloppySoundEmulator floppySoundEmulator = new(mixer);
+        DriveActivityNotifier driveActivityNotifier = new();
         var midiDevice = new Midi(configuration, mixer, state,
             ioPortDispatcher, configuration.Mt32RomsPath,
             configuration.FailOnUnhandledPort, loggerService);
@@ -460,6 +460,8 @@ public class Spice86DependencyInjection : IDisposable {
             keyboardInt16Handler, biosDataArea, vgaFunctionality,
             new Dictionary<string, string> {
                 { "BLASTER", soundBlaster.BlasterString } }, ioPortDispatcher, loggerService,
+            mixer,
+            driveActivityNotifier,
             xms);
 
         MainWindowViewModel? mainWindowViewModel = null;
@@ -577,11 +579,18 @@ public class Spice86DependencyInjection : IDisposable {
             interruptInstaller.InstallInterruptHandler(systemBiosInt15Handler);
             interruptInstaller.InstallInterruptHandler(keyboardInt16Handler);
             interruptInstaller.InstallInterruptHandler(systemClockInt1AHandler);
-            interruptInstaller.InstallInterruptHandler(systemBiosInt13Handler);
             interruptInstaller.InstallInterruptHandler(rtcInt70Handler);
             mouseIrq12Handler = new BiosMouseInt74Handler(dualPic, memory);
             interruptInstaller.InstallInterruptHandler(mouseIrq12Handler);
             InstallDefaultInterruptHandlers(interruptInstaller, dualPic, biosDataArea, loggerService);
+        }
+
+        // INT 13h is created after Dos so it can receive DosDriveManager as IFloppyDriveAccess.
+        // BIOS does not depend on DOS — the interface keeps the dependency arrow pointing the right way.
+        SystemBiosInt13Handler int13WithFloppy = new(memory, cfgCpu, stack, state,
+            dos.DosDriveManager, floppySoundEmulator, driveActivityNotifier, loggerService);
+        if (configuration.InitializeDOS is not false) {
+            interruptInstaller.InstallInterruptHandler(int13WithFloppy);
         }
 
         emulatorMcpServices.Intel8042Controller = intel8042Controller;
@@ -594,6 +603,15 @@ public class Spice86DependencyInjection : IDisposable {
         emulatorMcpServices.BiosDataArea = biosDataArea;
         emulatorMcpServices.InterruptVectorTable = interruptVectorTable;
         emulatorMcpServices.Dos = dos;
+
+        if (mainWindowViewModel != null) {
+            mainWindowViewModel.DiscSwapper = dos;
+            if (hostStorageProvider != null) {
+                ViewModels.DrivesMenuViewModel drivesMenuViewModel = new ViewModels.DrivesMenuViewModel(dos, dos, dos, hostStorageProvider, new NullDriveEventNotifier(), driveActivityNotifier, dos);
+                drivesMenuViewModel.StartPolling();
+                mainWindowViewModel.DrivesMenuViewModel = drivesMenuViewModel;
+            }
+        }
 
         if (configuration.InitializeDOS is not false) {
             // Register the DOS interrupt handlers

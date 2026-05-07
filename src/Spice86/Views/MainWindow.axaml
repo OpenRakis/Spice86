@@ -7,9 +7,11 @@
 		xmlns:local="clr-namespace:Spice86.Views;assembly=Spice86"
 		xmlns:b="clr-namespace:Spice86.Views.Behaviors"
 		xmlns:userControls="clr-namespace:Spice86.Views.UserControls"
+		xmlns:viewControls="clr-namespace:Spice86.Views.Controls"
 		xmlns:factory="clr-namespace:Spice86.Views.Factory"
 		xmlns:fluent="clr-namespace:FluentIcons.Avalonia;assembly=FluentIcons.Avalonia"
 		xmlns:controls="clr-namespace:Spice86.Views.Controls"
+		xmlns:storage="using:Spice86.Shared.Emulator.Storage"
 		mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
 		x:Class="Spice86.Views.MainWindow"
 		Icon="/Views/Assets/Spice86.ico"
@@ -26,6 +28,7 @@
 	</Window.DataTemplates>
 	<Window.Resources>
 		<converters:NullableToBooleanConverter x:Key="NullableToBooleanConverter" />
+		<converters:BoolToOpacityConverter x:Key="BoolToOpacityConverter" />
 		<b:ShowAdditionnalWindowBehavior x:Key="ShowAdditionnalWindowBehavior" />
 	</Window.Resources>
 	<Design.DataContext>
@@ -116,6 +119,50 @@
 							</StackPanel>
 						</MenuItem.Header>
 					</MenuItem>
+				</MenuItem>
+				<MenuItem Header="Drives"
+				          IsEnabled="{Binding IsEmulatorRunning}"
+				          IsVisible="{Binding DrivesMenuViewModel, Converter={StaticResource NullableToBooleanConverter}}"
+				          ItemsSource="{Binding DrivesMenuViewModel.AllDrives}">
+					<MenuItem.ItemTemplate>
+						<DataTemplate DataType="vm:DriveMenuItemViewModel">
+							<StackPanel Orientation="Horizontal" Spacing="6">
+								<ToolTip.Tip>
+									<StackPanel Orientation="Vertical" Spacing="4">
+										<TextBlock Text="{Binding TooltipText}" />
+										<viewControls:DriveContentVisualization ContentMap="{Binding ContentMap}" />
+									</StackPanel>
+								</ToolTip.Tip>
+								<fluent:SymbolIcon Symbol="Save" IsVisible="{Binding IsFloppy}"
+								                  Width="16" Height="16" VerticalAlignment="Center" />
+								<fluent:SymbolIcon Symbol="Record" IsVisible="{Binding IsCdRom}"
+								                  Width="16" Height="16" VerticalAlignment="Center" />
+								<fluent:SymbolIcon Symbol="Storage" IsVisible="{Binding IsHdd}"
+								                  Width="16" Height="16" VerticalAlignment="Center" />
+								<TextBlock Text="{Binding DriveLetter, StringFormat={}{0}:}" VerticalAlignment="Center" />
+								<Ellipse Width="8" Height="8" Fill="LimeGreen" VerticalAlignment="Center"
+								         ToolTip.Tip="Read activity"
+								         Opacity="{Binding IsReadActive, Converter={StaticResource BoolToOpacityConverter}}" />
+								<Ellipse Width="8" Height="8" Fill="OrangeRed" VerticalAlignment="Center"
+								         ToolTip.Tip="Write activity"
+								         Opacity="{Binding IsWriteActive, Converter={StaticResource BoolToOpacityConverter}}" />
+								<ComboBox ItemsSource="{Binding ComboboxOptions}"
+								          SelectedItem="{Binding SelectedOption}"
+								          IsEnabled="{Binding !IsHdd}"
+								          MinWidth="160" />
+								<Button IsVisible="{Binding !IsHdd}"
+								        Command="{Binding MountFolderCommand}"
+								        ToolTip.Tip="Mount folder">
+									<fluent:SymbolIcon Symbol="FolderOpen" Width="14" Height="14" />
+								</Button>
+								<Button IsVisible="{Binding !IsHdd}"
+								        Command="{Binding MountImageCommand}"
+								        ToolTip.Tip="Mount image">
+									<fluent:SymbolIcon Symbol="DocumentAdd" Width="14" Height="14" />
+								</Button>
+							</StackPanel>
+						</DataTemplate>
+					</MenuItem.ItemTemplate>
 				</MenuItem>
 			</Menu>
 			<StackPanel Grid.Column="1" Focusable="False" IsTabStop="False" IsEnabled="{Binding IsEmulatorRunning}" Grid.Row="0" Margin="160,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">

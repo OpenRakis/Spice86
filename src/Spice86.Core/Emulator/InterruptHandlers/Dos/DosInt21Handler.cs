@@ -185,7 +185,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x55, CreateChildPsp);
         AddAction(0x58, () => AllocationStrategyOrUpperMemoryLinkState(true));
         AddAction(0x62, GetPspAddress);
-        AddAction(0x63, GetLeadByteTable);
+        AddAction(0x63, () => GetLeadByteTable(true));
         AddAction(0x66, () => GetSetGlobalLoadedCodePageTable(true));
     }
 
@@ -443,7 +443,7 @@ public class DosInt21Handler : InterruptHandler {
     /// If AL was not 0:<br/>
     /// - AL = 0xFF<br/>
     /// </summary>
-    private void GetLeadByteTable() {
+    private void GetLeadByteTable(bool calledFromVm) {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("INT 21h AH=63h - Get DBCS Lead Byte Table, AL={AL:X2}", State.AL);
         }
@@ -456,7 +456,7 @@ public class DosInt21Handler : InterruptHandler {
             State.DS = segment;
             State.SI = offset;
             State.AL = 0;
-            SetCarryFlag(false, true);
+            SetCarryFlag(false, calledFromVm);
 
             if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
                 LoggerService.Verbose("Returning DBCS table pointer at {Segment:X4}:{Offset:X4}", segment, offset);
@@ -1217,7 +1217,7 @@ public class DosInt21Handler : InterruptHandler {
                 returnCode, paragraphsToKeep, currentPspSegment);
         }
 
-        DosErrorCode errorCode = _dosMemoryManager.TryModifyBlock(
+        DosErrorCode errorCode = _dosMemoryManager.ModifyBlock(
             currentPspSegment,
             paragraphsToKeep,
             out DosMemoryControlBlock resizedBlock);
@@ -1429,7 +1429,7 @@ public class DosInt21Handler : InterruptHandler {
             LoggerService.Verbose("MODIFY MEMORY BLOCK {Size} at {BlockSegment}",
                 requestedSizeInParagraphs, ConvertUtils.ToHex16(blockSegment));
         }
-        DosErrorCode errorCode = _dosMemoryManager.TryModifyBlock(blockSegment,
+        DosErrorCode errorCode = _dosMemoryManager.ModifyBlock(blockSegment,
             requestedSizeInParagraphs, out DosMemoryControlBlock mcb);
         if (errorCode == DosErrorCode.NoError) {
             // Undocumented MS-DOS behaviour expected by BRUN45!
@@ -1906,7 +1906,7 @@ public class DosInt21Handler : InterruptHandler {
     public void GetSetFileAttributes(bool calledFromVm) {
         byte op = State.AL;
         string dosFileName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
-        string? fileName = _dosFileManager.TryGetFullHostPathFromDos(dosFileName);
+        string? fileName = _dosFileManager.GetFullHostPathFromDos(dosFileName);
         if (!File.Exists(fileName)) {
             LogDosError(calledFromVm);
             SetCarryFlag(true, calledFromVm);

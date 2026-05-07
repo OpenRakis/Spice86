@@ -301,7 +301,7 @@ public class DosMemoryManagerTests {
     public void ReduceSizeOfFreeBlock() {
         // Act
         DosMemoryControlBlock block;
-        DosErrorCode errorCode = _memoryManager.TryModifyBlock(0xFF0, 16300, out block);
+        DosErrorCode errorCode = _memoryManager.ModifyBlock(0xFF0, 16300, out block);
 
         // Assert
         errorCode.Should().Be(DosErrorCode.NoError);
@@ -330,7 +330,7 @@ public class DosMemoryManagerTests {
     public void ExtendSizeOfFreeBlock() {
         // Act
         DosMemoryControlBlock block;
-        DosErrorCode errorCode = _memoryManager.TryModifyBlock(0xFF0, 36881, out block);
+        DosErrorCode errorCode = _memoryManager.ModifyBlock(0xFF0, 36881, out block);
 
         // Assert
         errorCode.Should().Be(DosErrorCode.InsufficientMemory);
@@ -377,7 +377,7 @@ public class DosMemoryManagerTests {
     public void ExtendToAllocateFullConventionalMemory() {
         // Act
         DosMemoryControlBlock block;
-        DosErrorCode errorCode = _memoryManager.TryModifyBlock(0xFF0, 36880, out block);
+        DosErrorCode errorCode = _memoryManager.ModifyBlock(0xFF0, 36880, out block);
 
         // Assert
         errorCode.Should().Be(DosErrorCode.NoError);
@@ -401,9 +401,9 @@ public class DosMemoryManagerTests {
         // Act
         DosMemoryControlBlock block1;
         // Simulate allocating a block for the program image first.
-        DosErrorCode errorCode1 = _memoryManager.TryModifyBlock(0xFF0, 1234, out block1);
+        DosErrorCode errorCode1 = _memoryManager.ModifyBlock(0xFF0, 1234, out block1);
         // Get the remaining free space.
-        DosErrorCode errorCode2 = _memoryManager.TryModifyBlock(0xFF0, 0xFFFF, out _);
+        DosErrorCode errorCode2 = _memoryManager.ModifyBlock(0xFF0, 0xFFFF, out _);
 
         // Assert
         errorCode1.Should().Be(DosErrorCode.NoError);
@@ -426,7 +426,7 @@ public class DosMemoryManagerTests {
     public void ModifySizeOfInvalidBlock() {
         // Act
         DosMemoryControlBlock block;
-        DosErrorCode errorCode = _memoryManager.TryModifyBlock(0x1000, 20, out block);
+        DosErrorCode errorCode = _memoryManager.ModifyBlock(0x1000, 20, out block);
 
         // Assert
         errorCode.Should().Be(DosErrorCode.MemoryControlBlockDestroyed);
@@ -441,7 +441,7 @@ public class DosMemoryManagerTests {
         // Act
         DosMemoryControlBlock? orignalBlock = _memoryManager.AllocateMemoryBlock(16300);
         DosMemoryControlBlock modifiedBlock;
-        DosErrorCode errorCode = _memoryManager.TryModifyBlock(0xFF0, 20, out modifiedBlock);
+        DosErrorCode errorCode = _memoryManager.ModifyBlock(0xFF0, 20, out modifiedBlock);
 
         // Assert
         orignalBlock.Should().NotBeNull();
@@ -464,7 +464,7 @@ public class DosMemoryManagerTests {
         // Act
         DosMemoryControlBlock? orignalBlock = _memoryManager.AllocateMemoryBlock(9572);
         DosMemoryControlBlock modifiedBlock;
-        DosErrorCode errorCode = _memoryManager.TryModifyBlock(0xFF0, 9815, out modifiedBlock);
+        DosErrorCode errorCode = _memoryManager.ModifyBlock(0xFF0, 9815, out modifiedBlock);
 
         // Assert
         orignalBlock.Should().NotBeNull();
@@ -493,7 +493,7 @@ public class DosMemoryManagerTests {
         // Act
         DosMemoryControlBlock? orignalBlock = _memoryManager.AllocateMemoryBlock(16300);
         DosMemoryControlBlock modifiedBlock;
-        DosErrorCode errorCode = _memoryManager.TryModifyBlock(0xFF0, 16300, out modifiedBlock);
+        DosErrorCode errorCode = _memoryManager.ModifyBlock(0xFF0, 16300, out modifiedBlock);
 
         // Assert
         orignalBlock.Should().NotBeNull();
@@ -524,12 +524,12 @@ public class DosMemoryManagerTests {
     public void ExtendSizeOfPreviouslyModifiedBlock() {
         // Act
         DosMemoryControlBlock originalBlock;
-        DosErrorCode originalErrorCode = _memoryManager.TryModifyBlock(0xFF0, 9572, out originalBlock);
+        DosErrorCode originalErrorCode = _memoryManager.ModifyBlock(0xFF0, 9572, out originalBlock);
         if (originalErrorCode == DosErrorCode.NoError) {
             FillMemoryBlock(originalBlock);
         }
         DosMemoryControlBlock modifiedBlock;
-        DosErrorCode modifiedErrorCode = _memoryManager.TryModifyBlock(0xFF0, 9815, out modifiedBlock);
+        DosErrorCode modifiedErrorCode = _memoryManager.ModifyBlock(0xFF0, 9815, out modifiedBlock);
         if (modifiedErrorCode == DosErrorCode.NoError) {
             FillMemoryBlock(modifiedBlock);
         }
@@ -558,7 +558,7 @@ public class DosMemoryManagerTests {
         DosMemoryControlBlock? secondBlock = _memoryManager.AllocateMemoryBlock(300);
         FillMemoryBlock(secondBlock);
         DosMemoryControlBlock modifiedBlock;
-        DosErrorCode errorCode = _memoryManager.TryModifyBlock(0xFF0, 16400, out modifiedBlock);
+        DosErrorCode errorCode = _memoryManager.ModifyBlock(0xFF0, 16400, out modifiedBlock);
 
         // Assert
         orignalBlock.Should().NotBeNull();
@@ -591,7 +591,7 @@ public class DosMemoryManagerTests {
             isSecondBlockFreed = _memoryManager.FreeMemoryBlock(secondBlock);
         }
         DosMemoryControlBlock modifiedBlock;
-        DosErrorCode errorCode = _memoryManager.TryModifyBlock(0xFF0, 16500, out modifiedBlock);
+        DosErrorCode errorCode = _memoryManager.ModifyBlock(0xFF0, 16500, out modifiedBlock);
 
         // Assert
         orignalBlock.Should().NotBeNull();

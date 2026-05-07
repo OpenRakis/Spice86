@@ -10,28 +10,38 @@ using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
+using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.InterruptHandlers.Mscdex;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Batch;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
+using Spice86.Core.Emulator.Devices.CdRom;
+using Spice86.Core.Emulator.Devices.CdRom.Image;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Emulator.Storage;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 
 /// <summary>
 /// Represents the DOS kernel.
 /// </summary>
-public sealed class Dos {
+public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService, IDriveContentMapProvider {
     private readonly BiosDataArea _biosDataArea;
     private readonly IVgaFunctionality _vgaFunctionality;
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
     private readonly IMemory _memory;
     private readonly ILoggerService _loggerService;
+    private readonly Mscdex _mscdex;
+    private readonly ISoundChannelCreator _channelCreator;
+    private readonly IDriveActivityNotifier? _activityNotifier;
 
     /// <summary>
     /// Gets the INT 20h DOS services.
@@ -84,7 +94,7 @@ public sealed class Dos {
     public DosInt28Handler DosInt28Handler { get; }
 
     /// <summary>
-    /// The class that handles DOS drives, as a sorted dictionnary.
+    /// The class that handles DOS drives, as a sorted dictionary.
     /// </summary>
     public DosDriveManager DosDriveManager { get; }
 
@@ -168,14 +178,49 @@ public sealed class Dos {
     /// <param name="envVars">The DOS environment variables.</param>
     /// <param name="ioPortDispatcher">The I/O port dispatcher for accessing hardware ports.</param>
     /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="channelCreator">The sound channel creator, used to stream CD audio when an image is mounted.</param>
     /// <param name="xms">Optional XMS manager to expose through DOS.</param>
     public Dos(Configuration configuration, IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,
         BiosDataArea biosDataArea, IVgaFunctionality vgaFunctionality,
         IDictionary<string, string> envVars, IOPortDispatcher ioPortDispatcher, ILoggerService loggerService,
-        ExtendedMemoryManager? xms = null) {
+        ISoundChannelCreator channelCreator,
+        ExtendedMemoryManager? xms = null)
+        : this(configuration, memory, functionHandlerProvider, stack, state,
+            biosKeyboardBuffer, keyboardInt16Handler, biosDataArea, vgaFunctionality,
+            envVars, ioPortDispatcher, loggerService, channelCreator, null, xms) {
+    }
+
+    /// <summary>
+    /// Initializes a new instance with an activity notifier that surfaces per-drive read/write activity.
+    /// </summary>
+    /// <param name="configuration">An object that describes what to run and how.</param>
+    /// <param name="memory">The emulator memory.</param>
+    /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
+    /// <param name="stack">The CPU stack.</param>
+    /// <param name="state">The CPU state.</param>
+    /// <param name="biosKeyboardBuffer">The BIOS keyboard buffer structure in emulated memory.</param>
+    /// <param name="keyboardInt16Handler">The BIOS interrupt handler that writes/reads the BIOS Keyboard Buffer.</param>
+    /// <param name="biosDataArea">The memory mapped BIOS values and settings.</param>
+    /// <param name="vgaFunctionality">The high-level VGA functions.</param>
+    /// <param name="envVars">The DOS environment variables.</param>
+    /// <param name="ioPortDispatcher">The I/O port dispatcher for accessing hardware ports.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="channelCreator">The sound channel creator, used to stream CD audio when an image is mounted.</param>
+    /// <param name="activityNotifier">Notifier that surfaces per-drive read/write activity to the UI (may be null).</param>
+    /// <param name="xms">Optional XMS manager to expose through DOS.</param>
+    public Dos(Configuration configuration, IMemory memory,
+        IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
+        BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,
+        BiosDataArea biosDataArea, IVgaFunctionality vgaFunctionality,
+        IDictionary<string, string> envVars, IOPortDispatcher ioPortDispatcher, ILoggerService loggerService,
+        ISoundChannelCreator channelCreator,
+        IDriveActivityNotifier? activityNotifier,
+        ExtendedMemoryManager? xms) {
         _loggerService = loggerService;
+        _channelCreator = channelCreator;
+        _activityNotifier = activityNotifier;
         Xms = xms;
         _biosKeyboardBuffer = biosKeyboardBuffer;
         _memory = memory;
@@ -203,7 +248,7 @@ public sealed class Dos {
 
         CountryInfo = new();
         FileManager = new DosFileManager(_memory, dosStringDecoder, DosDriveManager,
-            _loggerService, Devices);
+            _loggerService, Devices, _activityNotifier);
 
         // Calculate initial PSP segment from configuration (PSP is 16 paragraphs before entry point)
         ushort initialPspSegment = (ushort)(configuration.ProgramEntryPointSegment - 0x10);
@@ -218,7 +263,8 @@ public sealed class Dos {
 
         FcbManager = new(_memory, FileManager, DosDriveManager, _loggerService);
         IBatchDisplayCommandHandler batchDisplayCommandHandler = new DosBatchDisplayCommandHandler(_vgaFunctionality);
-        ProcessManager = new(_memory, stack, state, MemoryManager, FileManager, DosDriveManager, batchDisplayCommandHandler, envVars, _loggerService);
+        _mscdex = new Mscdex(state, memory, loggerService, _activityNotifier);
+        ProcessManager = new(_memory, stack, state, MemoryManager, FileManager, DosDriveManager, _mscdex, channelCreator, batchDisplayCommandHandler, envVars, _loggerService);
         DosInt22Handler = new DosInt22Handler(_memory, functionHandlerProvider, stack, state, ProcessManager, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state,
             keyboardInt16Handler, CountryInfo, dosStringDecoder,
@@ -229,7 +275,7 @@ public sealed class Dos {
         DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, DosInt21Handler, _loggerService);
         DosInt2aHandler = new DosInt2aHandler(_memory, functionHandlerProvider, stack, state, _loggerService);
         DosInt2FHandler = new DosInt2fHandler(_memory,
-            functionHandlerProvider, stack, state, _loggerService, xms);
+            functionHandlerProvider, stack, state, _loggerService, _mscdex, xms);
         DosInt25Handler = new DosDiskInt25Handler(_memory, DosDriveManager,
             functionHandlerProvider, stack, state, _loggerService);
         DosInt26Handler = new DosDiskInt26Handler(_memory, DosDriveManager,
@@ -372,4 +418,242 @@ public sealed class Dos {
         };
         DosDriveManager.MountMemoryDrive(zDrive);
     }
+
+    /// <summary>
+    /// Gets the MSCDEX CD-ROM handler owned by this DOS kernel.
+    /// Use <see cref="Mscdex.AddDrive"/> to register CD-ROM drives at runtime (e.g. from IMGMOUNT).
+    /// </summary>
+    public Mscdex Mscdex => _mscdex;
+
+    /// <inheritdoc/>
+    public IReadOnlyList<DosVirtualDriveStatus> GetDriveStatuses() {
+        List<DosVirtualDriveStatus> statuses = new();
+
+        // Drive letters owned by MSCDEX (CD-ROM drives) must not also surface as Fixed
+        // entries via the drive map iteration, otherwise GetDriveStatuses would return
+        // two statuses for the same letter (one Fixed, one CdRom). Each polling tick
+        // would then alternate between them and emit duplicate mount/eject toasts.
+        HashSet<char> cdRomLetters = new();
+        foreach (MscdexDriveEntry cdrom in _mscdex.Drives) {
+            cdRomLetters.Add(char.ToUpperInvariant(cdrom.DriveLetter));
+        }
+
+        foreach (KeyValuePair<char, VirtualDrive> kvp in DosDriveManager) {
+            VirtualDrive vd = kvp.Value;
+            if (cdRomLetters.Contains(char.ToUpperInvariant(vd.DriveLetter))) {
+                continue;
+            }
+            // By DOS convention A: and B: are always floppy drives.
+            DosVirtualDriveType driveType;
+            if (vd.DriveLetter == 'A' || vd.DriveLetter == 'B') {
+                driveType = DosVirtualDriveType.Floppy;
+            } else {
+                driveType = DosVirtualDriveType.Fixed;
+            }
+
+            // An image-backed floppy drive overrides the folder-backed status.
+            if (DosDriveManager.TryGetFloppyDrive(vd.DriveLetter, out FloppyDiskDrive? floppy)) {
+                statuses.Add(new DosVirtualDriveStatus(
+                    floppy.DriveLetter, DosVirtualDriveType.Floppy,
+                    hasMedia: true, floppy.Label,
+                    currentImagePath: floppy.ImagePath,
+                    imageCount: floppy.ImageCount,
+                    allImagePaths: floppy.AllImagePaths));
+                continue;
+            }
+
+            bool hasMedia = !string.IsNullOrEmpty(vd.MountedHostDirectory);
+            // Surface the mounted host folder path as the "current image" for folder-backed
+            // floppy drives so the UI combobox shows the mount and the poll-based notifier
+            // fires a toast when the path transitions from empty to set. The trailing
+            // slash that ConvertUtils.ToSlashFolderPath added is stripped so Path.GetFileName
+            // returns the folder name instead of an empty string.
+            if (hasMedia && driveType == DosVirtualDriveType.Floppy) {
+                string folderPath = vd.MountedHostDirectory.TrimEnd('/', '\\');
+                IReadOnlyList<string> folderPaths = new[] { folderPath };
+                statuses.Add(new DosVirtualDriveStatus(
+                    vd.DriveLetter, driveType, hasMedia, vd.Label,
+                    currentImagePath: folderPath,
+                    imageCount: 1,
+                    allImagePaths: folderPaths));
+            } else {
+                statuses.Add(new DosVirtualDriveStatus(vd.DriveLetter, driveType, hasMedia, vd.Label));
+            }
+        }
+
+        foreach (KeyValuePair<char, MemoryDrive> kvp in DosDriveManager.MemoryDrives) {
+            MemoryDrive md = kvp.Value;
+            statuses.Add(new DosVirtualDriveStatus(md.DriveLetter, DosVirtualDriveType.Memory, hasMedia: true, md.Label));
+        }
+
+        foreach (MscdexDriveEntry cdrom in _mscdex.Drives) {
+            bool hasCdMedia = !cdrom.Drive.MediaState.IsDoorOpen;
+            string volumeLabel = hasCdMedia ? (cdrom.Drive.Image.PrimaryVolume.VolumeIdentifier ?? string.Empty) : string.Empty;
+            string imagePath = hasCdMedia ? cdrom.Drive.Image.ImagePath : string.Empty;
+            statuses.Add(new DosVirtualDriveStatus(
+                cdrom.DriveLetter, DosVirtualDriveType.CdRom, hasCdMedia, volumeLabel,
+                currentImagePath: imagePath,
+                imageCount: cdrom.Drive.ImageCount,
+                allImagePaths: cdrom.Drive.AllImagePaths));
+        }
+
+        return statuses.OrderBy(s => s.DriveLetter).ToList();
+    }
+
+    /// <inheritdoc/>
+    public void SwapDiscImages() {
+        DosDriveManager.SwapFloppyDiscs();
+        foreach (MscdexDriveEntry entry in _mscdex.Drives) {
+            entry.Drive.SwapToNextDisc();
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _loggerService.Information("MOUNT: Swapping drive {Drive}: to image {Image}", entry.DriveLetter, entry.Drive.Image.ImagePath);
+            }
+        }
+    }
+
+    /// <inheritdoc/>
+    public void SwapToImageIndex(char driveLetter, int imageIndex) {
+        char upper = char.ToUpperInvariant(driveLetter);
+        if (DosDriveManager.TryGetFloppyDrive(upper, out FloppyDiskDrive? floppy)) {
+            floppy.SwapToIndex(imageIndex);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _loggerService.Information("MOUNT: Drive {Drive}: switched to image {Image}", upper, floppy.ImagePath);
+            }
+            return;
+        }
+        foreach (MscdexDriveEntry entry in _mscdex.Drives) {
+            if (char.ToUpperInvariant(entry.DriveLetter) == upper) {
+                entry.Drive.SwapToIndex(imageIndex);
+                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                    _loggerService.Information("MOUNT: Drive {Drive}: switched to image {Image}", upper, entry.Drive.Image.ImagePath);
+                }
+                return;
+            }
+        }
+    }
+
+    /// <inheritdoc/>
+    public bool MountFolderAsFloppy(char driveLetter, string hostPath) {
+        if (string.IsNullOrWhiteSpace(hostPath) || !Directory.Exists(hostPath)) {
+            _loggerService.Error("MOUNT: Could not mount folder {Path} as floppy {Drive}: directory does not exist", hostPath, char.ToUpperInvariant(driveLetter));
+            return false;
+        }
+        DosDriveManager.MountFloppyFolder(driveLetter, hostPath);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("MOUNT: Drive {Drive}: is now backed by folder {Path}", char.ToUpperInvariant(driveLetter), hostPath);
+        }
+        return true;
+    }
+
+    /// <inheritdoc/>
+    public bool MountImageAsFloppy(char driveLetter, string imagePath) {
+        byte[] imageData;
+        try {
+            imageData = File.ReadAllBytes(imagePath);
+        } catch (IOException ex) {
+            _loggerService.Error("IMGMOUNT: Could not read image file {Path}: {Message}", imagePath, ex.Message);
+            return false;
+        }
+        try {
+            DosDriveManager.MountFloppyImage(driveLetter, imageData, imagePath);
+        } catch (InvalidDataException ex) {
+            _loggerService.Error("IMGMOUNT: Image {Path} is not a valid FAT disk image: {Message}", imagePath, ex.Message);
+            return false;
+        }
+        return true;
+    }
+
+    /// <inheritdoc/>
+    public bool MountFolderAsCdRom(char driveLetter, string hostPath) {
+        try {
+            string volumeLabel = Path.GetFileName(hostPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+            VirtualIsoImage image = new VirtualIsoImage(hostPath, volumeLabel);
+            CdRomDrive drive = new CdRomDrive(image);
+            CdAudioPlayer audioPlayer = new CdAudioPlayer(_channelCreator, _activityNotifier);
+            audioPlayer.SetDrive(drive);
+            audioPlayer.SetDriveLetter(char.ToUpperInvariant(driveLetter));
+            drive.SetAudioPlayer(audioPlayer);
+            char upper = char.ToUpperInvariant(driveLetter);
+            byte driveIndex = DosDriveManager.DriveLetters.TryGetValue(upper, out byte idx) ? idx : (byte)3;
+            MscdexDriveEntry entry = new MscdexDriveEntry(upper, driveIndex, drive);
+            _mscdex.AddDrive(entry);
+            DosDriveManager.RegisterCdRomDriveLetter(upper, hostPath);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _loggerService.Information("MOUNT: Drive {Drive}: is now backed by folder {Path}", upper, hostPath);
+            }
+            return true;
+        } catch (IOException ex) {
+            _loggerService.Error("MOUNT: Could not mount folder {Path} as CD-ROM: {Message}", hostPath, ex.Message);
+            return false;
+        }
+    }
+
+    /// <inheritdoc/>
+    public bool MountImageAsCdRom(char driveLetter, string imagePath) {
+        ICdRomImage image;
+        try {
+            image = CdRomImageFactory.Open(imagePath);
+        } catch (ArgumentException ex) {
+            _loggerService.Error("IMGMOUNT: Unsupported CD image format for {Path}: {Message}", imagePath, ex.Message);
+            return false;
+        } catch (InvalidDataException ex) {
+            _loggerService.Error("IMGMOUNT: CD image {Path} is not a valid disc image: {Message}", imagePath, ex.Message);
+            return false;
+        } catch (IOException ex) {
+            _loggerService.Error("IMGMOUNT: Could not read CD image {Path}: {Message}", imagePath, ex.Message);
+            return false;
+        }
+        CdRomDrive drive = new CdRomDrive(image);
+        CdAudioPlayer audioPlayer = new CdAudioPlayer(_channelCreator, _activityNotifier);
+        audioPlayer.SetDrive(drive);
+        audioPlayer.SetDriveLetter(char.ToUpperInvariant(driveLetter));
+        drive.SetAudioPlayer(audioPlayer);
+        char upper = char.ToUpperInvariant(driveLetter);
+        byte driveIndex = DosDriveManager.DriveLetters.TryGetValue(upper, out byte idx) ? idx : (byte)3;
+        MscdexDriveEntry entry = new MscdexDriveEntry(upper, driveIndex, drive);
+        _mscdex.AddDrive(entry);
+        DosDriveManager.RegisterCdRomDriveLetter(upper, string.Empty);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("IMGMOUNT: Mounted image {Image} on drive {Drive}:", imagePath, upper);
+        }
+        return true;
+    }
+
+    /// <inheritdoc />
+    public bool TryGetContentMap(char driveLetter, out DriveContentMap? map) {
+        char upper = char.ToUpperInvariant(driveLetter);
+        if (DosDriveManager.TryGetFloppyDrive(upper, out FloppyDiskDrive? floppy) && floppy.Image != null) {
+            DriveClusterState[] states = floppy.Image.GetClusterUsageBitmap(MaxVisualizationClusters);
+            List<DriveClusterInfo> clusterInfos = new(states.Length);
+            for (int i = 0; i < states.Length; i++) {
+                clusterInfos.Add(new DriveClusterInfo(i, states[i]));
+            }
+            int totalClusters = floppy.Image.Bpb.SectorsPerCluster == 0
+                ? states.Length
+                : floppy.Image.Bpb.TotalSectors / floppy.Image.Bpb.SectorsPerCluster;
+            map = DriveContentMap.ForFat(upper, clusterInfos, totalClusters);
+            return true;
+        }
+        for (int i = 0; i < _mscdex.Drives.Count; i++) {
+            MscdexDriveEntry entry = _mscdex.Drives[i];
+            if (entry.DriveLetter != upper) {
+                continue;
+            }
+            ICdRomImage image = entry.Drive.Image;
+            IReadOnlyList<CdTrack> rawTracks = image.Tracks;
+            List<DriveCdTrackInfo> tracks = new(rawTracks.Count);
+            for (int t = 0; t < rawTracks.Count; t++) {
+                CdTrack track = rawTracks[t];
+                int endLba = t + 1 < rawTracks.Count ? rawTracks[t + 1].StartLba : image.TotalSectors;
+                int length = endLba > track.StartLba ? endLba - track.StartLba : 0;
+                tracks.Add(new DriveCdTrackInfo(track.Number, (uint)track.StartLba, (uint)length, track.IsAudio));
+            }
+            map = DriveContentMap.ForCdRom(upper, (uint)image.TotalSectors, tracks);
+            return true;
+        }
+        map = null;
+        return false;
+    }
+
+    private const int MaxVisualizationClusters = 4096;
 }
