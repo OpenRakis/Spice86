@@ -89,6 +89,12 @@ internal class ShowAdditionnalWindowBehavior : Behavior<Control> {
         ShowRegisteredWindow<McpToolsView>(ref _mcpToolsDataContext, nameof(McpStatusViewModel));
     }
 
+    private object? _joystickMapperDataContext;
+
+    internal void ShowJoystickMapper() {
+        ShowRegisteredWindow<JoystickMapperWindow>(ref _joystickMapperDataContext, nameof(JoystickMapperViewModel));
+    }
+
     private void OnPointerPressed(object? sender, Avalonia.Input.PointerPressedEventArgs e) {
         ShowInternalDebugger();
     }

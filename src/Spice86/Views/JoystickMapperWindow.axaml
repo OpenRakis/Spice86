@@ -1,0 +1,222 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:Spice86.ViewModels"
+        x:Class="Spice86.Views.JoystickMapperWindow"
+        x:CompileBindings="True"
+        x:DataType="vm:JoystickMapperViewModel"
+        Width="980"
+        Height="720"
+        MinWidth="720"
+        MinHeight="520"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="True"
+        CanResize="True"
+        Title="Joystick Mapper"
+        Icon="/Views/Assets/Spice86.ico"
+        mc:Ignorable="d">
+    <Grid RowDefinitions="Auto,*,Auto" Margin="10">
+
+        <!-- Toolbar -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="0,0,0,8">
+            <Button Content="New" Command="{Binding NewMappingCommand}" />
+            <Button Content="Load..." Command="{Binding LoadCommand}" />
+            <Button Content="Save" Command="{Binding SaveCommand}" />
+            <Button Content="Save As..." Command="{Binding SaveAsCommand}" />
+            <Border Width="1" Margin="6,2" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+            <Button Content="Add Profile" Command="{Binding AddProfileCommand}" />
+            <Button Content="Remove Profile" Command="{Binding RemoveProfileCommand}" />
+            <TextBlock VerticalAlignment="Center" Margin="20,0,4,0" Text="Default profile name:" />
+            <TextBox Width="180" Text="{Binding DefaultProfileName}" />
+            <TextBlock VerticalAlignment="Center" Margin="12,0,4,0" Text="Schema:" />
+            <NumericUpDown Width="90" Minimum="1" Maximum="999" Value="{Binding SchemaVersion}" />
+        </StackPanel>
+
+        <!-- Profiles list + selected-profile editor -->
+        <Grid Grid.Row="1" ColumnDefinitions="240,*">
+            <Border Grid.Column="0" BorderThickness="1" CornerRadius="4"
+                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" FontWeight="SemiBold"
+                               Margin="6,4" Text="Profiles" />
+                    <ListBox ItemsSource="{Binding Profiles}"
+                             SelectedItem="{Binding SelectedProfile}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="vm:JoystickProfileEditorViewModel">
+                                <TextBlock Text="{Binding Name}" />
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+            <Border Grid.Column="1" Margin="8,0,0,0" BorderThickness="1" CornerRadius="4"
+                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+                <ScrollViewer>
+                    <ContentControl Content="{Binding SelectedProfile}">
+                        <ContentControl.DataTemplates>
+                            <DataTemplate DataType="vm:JoystickProfileEditorViewModel">
+                                <StackPanel Margin="10" Spacing="10">
+                                    <TextBlock FontSize="16" FontWeight="SemiBold" Text="Profile" />
+                                    <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                                          ColumnSpacing="8" RowSpacing="6">
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Name" VerticalAlignment="Center" />
+                                        <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Name}" />
+
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Device GUID" VerticalAlignment="Center" />
+                                        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding DeviceGuid}"
+                                                 PlaceholderText="Optional SDL joystick GUID (32 hex chars)" />
+
+                                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Device name" VerticalAlignment="Center" />
+                                        <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding DeviceName}"
+                                                 PlaceholderText="Substring matched against SDL_JoystickName" />
+
+                                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Type" VerticalAlignment="Center" />
+                                        <ComboBox Grid.Row="3" Grid.Column="1" Width="200" HorizontalAlignment="Left"
+                                                  ItemsSource="{x:Static vm:JoystickProfileEditorViewModel.JoystickTypes}"
+                                                  SelectedItem="{Binding Type}" />
+
+                                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Deadzone (%)" VerticalAlignment="Center" />
+                                        <NumericUpDown Grid.Row="4" Grid.Column="1" Width="120" HorizontalAlignment="Left"
+                                                       Minimum="0" Maximum="100" Value="{Binding DeadzonePercent}" />
+
+                                        <CheckBox Grid.Row="5" Grid.Column="1" Content="Use circular deadzone"
+                                                  IsChecked="{Binding UseCircularDeadzone}" />
+
+                                        <CheckBox Grid.Row="6" Grid.Column="1" Content="Swap stick B X/Y axes"
+                                                  IsChecked="{Binding SwapStickBAxes}" />
+                                    </Grid>
+
+                                    <!-- Axes -->
+                                    <Border BorderThickness="1" CornerRadius="4" Padding="8"
+                                            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+                                        <StackPanel Spacing="6">
+                                            <DockPanel>
+                                                <TextBlock FontWeight="SemiBold" Text="Axes" VerticalAlignment="Center" />
+                                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4">
+                                                    <Button Content="Add" Command="{Binding AddAxisCommand}" />
+                                                    <Button Content="Remove" Command="{Binding RemoveAxisCommand}" />
+                                                </StackPanel>
+                                            </DockPanel>
+                                            <DataGrid ItemsSource="{Binding Axes}"
+                                                      SelectedItem="{Binding SelectedAxis}"
+                                                      AutoGenerateColumns="False"
+                                                      CanUserResizeColumns="True"
+                                                      MinHeight="120" MaxHeight="220">
+                                                <DataGrid.Columns>
+                                                    <DataGridTextColumn Header="Raw axis"
+                                                                        Binding="{Binding RawAxisIndex}" />
+                                                    <DataGridTemplateColumn Header="Target" Width="160">
+                                                        <DataGridTemplateColumn.CellTemplate>
+                                                            <DataTemplate DataType="vm:JoystickAxisMappingEditorViewModel">
+                                                                <ComboBox ItemsSource="{x:Static vm:JoystickAxisMappingEditorViewModel.VirtualAxes}"
+                                                                          SelectedItem="{Binding Target}" />
+                                                            </DataTemplate>
+                                                        </DataGridTemplateColumn.CellTemplate>
+                                                    </DataGridTemplateColumn>
+                                                    <DataGridCheckBoxColumn Header="Invert"
+                                                                            Binding="{Binding Invert}" />
+                                                    <DataGridTextColumn Header="Scale"
+                                                                        Binding="{Binding Scale}" />
+                                                    <DataGridTextColumn Header="Deadzone (override)"
+                                                                        Binding="{Binding DeadzonePercent}" />
+                                                </DataGrid.Columns>
+                                            </DataGrid>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Buttons -->
+                                    <Border BorderThickness="1" CornerRadius="4" Padding="8"
+                                            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+                                        <StackPanel Spacing="6">
+                                            <DockPanel>
+                                                <TextBlock FontWeight="SemiBold" Text="Buttons" VerticalAlignment="Center" />
+                                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4">
+                                                    <Button Content="Add" Command="{Binding AddButtonCommand}" />
+                                                    <Button Content="Remove" Command="{Binding RemoveButtonCommand}" />
+                                                </StackPanel>
+                                            </DockPanel>
+                                            <DataGrid ItemsSource="{Binding Buttons}"
+                                                      SelectedItem="{Binding SelectedButton}"
+                                                      AutoGenerateColumns="False"
+                                                      CanUserResizeColumns="True"
+                                                      MinHeight="120" MaxHeight="220">
+                                                <DataGrid.Columns>
+                                                    <DataGridTextColumn Header="Raw button"
+                                                                        Binding="{Binding RawButtonIndex}" />
+                                                    <DataGridTemplateColumn Header="Target" Width="180">
+                                                        <DataGridTemplateColumn.CellTemplate>
+                                                            <DataTemplate DataType="vm:JoystickButtonMappingEditorViewModel">
+                                                                <ComboBox ItemsSource="{x:Static vm:JoystickButtonMappingEditorViewModel.VirtualButtons}"
+                                                                          SelectedItem="{Binding Target}" />
+                                                            </DataTemplate>
+                                                        </DataGridTemplateColumn.CellTemplate>
+                                                    </DataGridTemplateColumn>
+                                                    <DataGridCheckBoxColumn Header="Auto-fire"
+                                                                            Binding="{Binding AutoFire}" />
+                                                </DataGrid.Columns>
+                                            </DataGrid>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Hat / Rumble / MIDI-on-gameport -->
+                                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                                        <Border Grid.Column="0" BorderThickness="1" CornerRadius="4" Padding="8"
+                                                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+                                            <StackPanel Spacing="6">
+                                                <TextBlock FontWeight="SemiBold" Text="Hat" />
+                                                <CheckBox Content="Enabled" IsChecked="{Binding HatEnabled}" />
+                                                <DockPanel>
+                                                    <TextBlock Width="120" VerticalAlignment="Center" Text="Raw hat index" />
+                                                    <NumericUpDown Minimum="0" Maximum="7" Value="{Binding HatRawIndex}" />
+                                                </DockPanel>
+                                                <DockPanel>
+                                                    <TextBlock Width="120" VerticalAlignment="Center" Text="Target stick" />
+                                                    <NumericUpDown Minimum="0" Maximum="1" Value="{Binding HatTargetStickIndex}" />
+                                                </DockPanel>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <Border Grid.Column="1" BorderThickness="1" CornerRadius="4" Padding="8"
+                                                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+                                            <StackPanel Spacing="6">
+                                                <TextBlock FontWeight="SemiBold" Text="Rumble" />
+                                                <CheckBox Content="Enabled" IsChecked="{Binding RumbleEnabled}" />
+                                                <DockPanel>
+                                                    <TextBlock Width="120" VerticalAlignment="Center" Text="Amplitude scale" />
+                                                    <NumericUpDown Minimum="0" Maximum="2" Increment="0.1"
+                                                                   Value="{Binding RumbleAmplitudeScale}" />
+                                                </DockPanel>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <Border Grid.Column="2" BorderThickness="1" CornerRadius="4" Padding="8"
+                                                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+                                            <StackPanel Spacing="6">
+                                                <TextBlock FontWeight="SemiBold" Text="MIDI on gameport" />
+                                                <CheckBox Content="Enabled" IsChecked="{Binding MidiOnGameportEnabled}" />
+                                                <DockPanel>
+                                                    <TextBlock Width="120" VerticalAlignment="Center" Text="MPU-401 base port" />
+                                                    <NumericUpDown Minimum="0" Maximum="65535"
+                                                                   Value="{Binding Mpu401BasePort}" />
+                                                </DockPanel>
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ContentControl.DataTemplates>
+                    </ContentControl>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+
+        <!-- Status bar -->
+        <Grid Grid.Row="2" Margin="0,8,0,0" ColumnDefinitions="Auto,*">
+            <TextBlock Grid.Column="0" Text="File: " Opacity="0.7" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="1" Text="{Binding CurrentFilePath, FallbackValue='(unsaved)'}"
+                       VerticalAlignment="Center" Margin="0,0,12,0" TextTrimming="CharacterEllipsis" />
+        </Grid>
+    </Grid>
+</Window>

@@ -117,6 +117,16 @@
 						</MenuItem.Header>
 					</MenuItem>
 				</MenuItem>
+				<MenuItem Header="Joystick">
+					<MenuItem Command="{Binding ShowJoystickMapperCommand}" CommandParameter="{StaticResource ShowAdditionnalWindowBehavior}">
+						<MenuItem.Header>
+							<StackPanel Orientation="Horizontal">
+								<fluent:SymbolIcon Symbol="Games" />
+								<Label Content="Mapper..." />
+							</StackPanel>
+						</MenuItem.Header>
+					</MenuItem>
+				</MenuItem>
 			</Menu>
 			<StackPanel Grid.Column="1" Focusable="False" IsTabStop="False" IsEnabled="{Binding IsEmulatorRunning}" Grid.Row="0" Margin="160,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
 				<Label IsVisible="{Binding ShowCyclesLimitingUI}" Focusable="False" IsTabStop="False" VerticalAlignment="Center" Content="Cycles/ms:" />
