@@ -29,6 +29,9 @@ public class BreakPointHolder {
     internal IEnumerable<AddressBreakPoint> SerializableBreakpoints => GetAllBreakpoints().Where
         (x => x.IsUserBreakpoint).OfType<AddressBreakPoint>();
 
+    internal IEnumerable<UnconditionalBreakPoint> SerializableWildcardBreakpoints =>
+        _unconditionalBreakPoints.Where(x => x.IsUserBreakpoint).OfType<UnconditionalBreakPoint>();
+
     /// <summary>
     /// Toggles the specified breakpoint on or off.
     /// </summary>

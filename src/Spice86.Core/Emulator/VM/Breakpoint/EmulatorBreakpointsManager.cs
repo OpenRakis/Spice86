@@ -145,7 +145,25 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
         AddBreakpointsToCollection(serializableBreakpoints, _cycleBreakPoints.SerializableBreakpoints);
         AddBreakpointsToCollection(serializableBreakpoints, MemoryReadWriteBreakpoints);
         AddBreakpointsToCollection(serializableBreakpoints, IoReadWriteBreakpoints.SerializableBreakpoints);
+        AddWildcardBreakpointsToCollection(serializableBreakpoints, _executionBreakPoints.SerializableWildcardBreakpoints);
+        AddWildcardBreakpointsToCollection(serializableBreakpoints, InterruptBreakPoints.SerializableWildcardBreakpoints);
+        AddWildcardBreakpointsToCollection(serializableBreakpoints, _cycleBreakPoints.SerializableWildcardBreakpoints);
+        AddWildcardBreakpointsToCollection(serializableBreakpoints, MemoryReadWriteBreakpoints.SerializableWildcardBreakpoints);
+        AddWildcardBreakpointsToCollection(serializableBreakpoints, IoReadWriteBreakpoints.SerializableWildcardBreakpoints);
         return serializableBreakpoints;
+    }
+
+    private static void AddWildcardBreakpointsToCollection(SerializableUserBreakpointCollection collection,
+        IEnumerable<UnconditionalBreakPoint> wildcards) {
+        foreach (UnconditionalBreakPoint bp in wildcards) {
+            collection.Breakpoints.Add(new SerializableUserBreakpoint {
+                Trigger = -1,
+                EndTrigger = -1,
+                Type = bp.BreakPointType,
+                IsEnabled = bp.IsEnabled,
+                IsWildcard = true
+            });
+        }
     }
 
     private void AddBreakpointsToCollection(SerializableUserBreakpointCollection serializableBreakpoints,
@@ -214,6 +232,15 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
     }
     public void RestoreBreakpoints(SerializableUserBreakpointCollection serializableUserBreakpointCollection) {
         foreach (SerializableUserBreakpoint serializableBreakpoint in serializableUserBreakpointCollection.Breakpoints) {
+            if (serializableBreakpoint.IsWildcard) {
+                Action<BreakPoint> wildcardOnReached = b => _pauseHandler.RequestPause($"Breakpoint {b.BreakPointType} reached");
+                UnconditionalBreakPoint wildcard = new(serializableBreakpoint.Type, wildcardOnReached, removeOnTrigger: false) {
+                    IsEnabled = serializableBreakpoint.IsEnabled,
+                    IsUserBreakpoint = true
+                };
+                ToggleBreakPoint(wildcard, serializableBreakpoint.IsEnabled);
+                continue;
+            }
             IEnumerable<AddressBreakPoint> breakpoints = FromSerializedBreakpoints(serializableBreakpoint);
             foreach (AddressBreakPoint breakpoint in breakpoints) {
                 ToggleBreakPoint(breakpoint, serializableBreakpoint.IsEnabled);

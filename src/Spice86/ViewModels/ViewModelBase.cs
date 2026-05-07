@@ -29,6 +29,46 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
             propertyName));
     }
 
+    /// <summary>
+    /// Clears any validation error registered for the specified property name and
+    /// notifies the binding infrastructure. Use this when a special-case value (such as
+    /// a wildcard) is inherently valid and should not be subjected to the normal address
+    /// validation pipeline.
+    /// </summary>
+    protected void ClearValidationError([CallerMemberName] string? propertyName = null) {
+        if (string.IsNullOrWhiteSpace(propertyName)) {
+            return;
+        }
+        _validationErrors.Remove(propertyName);
+        OnErrorsChanged(propertyName);
+    }
+
+    /// <summary>
+    /// If <paramref name="value"/> parses to a valid address but exceeds
+    /// <paramref name="maxInclusive"/>, surface an out-of-range validation error on the
+    /// given property. When the value is out of range, this overwrites the current error
+    /// list for the property with a single out-of-range message; when the value is in
+    /// range it leaves any existing errors alone (call <see cref="ValidateAddressProperty"/>
+    /// first to clear stale parse errors).
+    /// </summary>
+    protected void ValidateAddressInRange(string? value, State state, uint maxInclusive,
+        [CallerMemberName] string? propertyName = null) {
+        if (string.IsNullOrWhiteSpace(propertyName)) {
+            return;
+        }
+        if (AddressAndValueParser.TryParseAddressString(value, state, out uint? parsed)
+            && parsed > maxInclusive) {
+            string error = $"Value must be in 0..0x{maxInclusive:X}";
+            if (!_validationErrors.TryGetValue(propertyName, out List<string>? values)) {
+                values = new List<string>();
+                _validationErrors[propertyName] = values;
+            }
+            values.Clear();
+            values.Add(error);
+            OnErrorsChanged(propertyName);
+        }
+    }
+
     protected void ValidateMemoryAddressIsWithinLimit(State state, string? value,
         uint limit = A20Gate.EndOfHighMemoryArea,
         [CallerMemberName] string? bindedPropertyName = null) {

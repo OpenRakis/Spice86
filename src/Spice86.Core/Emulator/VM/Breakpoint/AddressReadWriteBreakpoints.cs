@@ -34,6 +34,9 @@ public class AddressReadWriteBreakpoints {
     internal IEnumerable<AddressBreakPoint> SerializableBreakpoints => _readBreakPoints.
         SerializableBreakpoints.Concat(_writeBreakPoints.SerializableBreakpoints);
 
+    internal IEnumerable<UnconditionalBreakPoint> SerializableWildcardBreakpoints => _readBreakPoints.
+        SerializableWildcardBreakpoints.Concat(_writeBreakPoints.SerializableWildcardBreakpoints);
+
     /// <summary>
     /// Triggers all the breakpoints matching the specified address, if the memory was read.
     /// </summary>

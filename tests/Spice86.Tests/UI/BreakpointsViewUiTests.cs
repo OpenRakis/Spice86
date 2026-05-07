@@ -7,6 +7,7 @@ using Avalonia.Threading;
 using FluentAssertions;
 
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.ViewModels;
 using Spice86.Views;
 
@@ -411,6 +412,213 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
         }
 
         // Cleanup
+        window.Close();
+    }
+
+    /// <summary>
+    /// Verifies that an interrupt breakpoint with a valid condition can be created.
+    /// </summary>
+    [AvaloniaFact]
+    public void BreakpointsView_CanCreateInterruptBreakpointWithCondition() {
+        // Arrange
+        (_, BreakpointsViewModel viewModel, Window window) = ArrangeBreakpointsView();
+        BeginCreateOnTab(viewModel, "Interrupt");
+
+        // Act
+        viewModel.InterruptNumber = "0x21";
+        viewModel.InterruptConditionExpression = "ah == 0x09";
+        ProcessUiEvents();
+        viewModel.ConfirmBreakpointCreationCommand.Execute(null);
+        ProcessUiEvents();
+
+        // Assert
+        viewModel.CreatingBreakpoint.Should().BeFalse();
+        viewModel.Breakpoints.Should().ContainSingle(bp =>
+            bp.Type == BreakPointType.CPU_INTERRUPT && bp.ConditionExpression == "ah == 0x09");
+
+        window.Close();
+    }
+
+    /// <summary>
+    /// Verifies that an interrupt breakpoint with an invalid condition cannot be confirmed
+    /// and that the dialog stays open when the user clicks OK.
+    /// </summary>
+    [AvaloniaFact]
+    public void BreakpointsView_InterruptBreakpoint_InvalidCondition_KeepsDialogOpen() {
+        // Arrange
+        (_, BreakpointsViewModel viewModel, Window window) = ArrangeBreakpointsView();
+        BeginCreateOnTab(viewModel, "Interrupt");
+        int initialCount = viewModel.Breakpoints.Count;
+
+        // Act
+        viewModel.InterruptNumber = "0x21";
+        viewModel.InterruptConditionExpression = "this is not a valid expression !!!";
+        ProcessUiEvents();
+        viewModel.ConfirmBreakpointCreationCommand.Execute(null);
+        ProcessUiEvents();
+
+        // Assert
+        viewModel.Breakpoints.Count.Should().Be(initialCount);
+        viewModel.CreatingBreakpoint.Should().BeTrue();
+
+        window.Close();
+    }
+
+    /// <summary>
+    /// Verifies that an I/O port breakpoint with a condition can be created.
+    /// </summary>
+    [AvaloniaFact]
+    public void BreakpointsView_CanCreateIoPortBreakpointWithCondition() {
+        // Arrange
+        (_, BreakpointsViewModel viewModel, Window window) = ArrangeBreakpointsView();
+        BeginCreateOnTab(viewModel, "I/O Port");
+
+        // Act
+        viewModel.IoPortNumber = "0x388";
+        viewModel.IoPortConditionExpression = "al == 0x01";
+        ProcessUiEvents();
+        viewModel.ConfirmBreakpointCreationCommand.Execute(null);
+        ProcessUiEvents();
+
+        // Assert
+        viewModel.CreatingBreakpoint.Should().BeFalse();
+        viewModel.Breakpoints.Should().ContainSingle(bp =>
+            bp.Type == BreakPointType.IO_ACCESS && bp.ConditionExpression == "al == 0x01");
+
+        window.Close();
+    }
+
+    /// <summary>
+    /// Verifies that an out-of-range interrupt vector (above 0xFF) is rejected, and that the
+    /// validation error self-clears when the value moves back into range.
+    /// </summary>
+    [AvaloniaFact]
+    public void BreakpointsView_InterruptBreakpoint_OutOfRange_BlocksConfirmation() {
+        // Arrange
+        (_, BreakpointsViewModel viewModel, Window window) = ArrangeBreakpointsView();
+        BeginCreateOnTab(viewModel, "Interrupt");
+
+        // Act + Assert: out-of-range blocks confirmation
+        viewModel.InterruptNumber = "0x100";
+        ProcessUiEvents();
+        viewModel.ConfirmBreakpointCreationCommand.CanExecute(null).Should().BeFalse();
+
+        // Act + Assert: in-range recovers confirmation
+        viewModel.InterruptNumber = "0x21";
+        ProcessUiEvents();
+        viewModel.ConfirmBreakpointCreationCommand.CanExecute(null).Should().BeTrue();
+
+        window.Close();
+    }
+
+    /// <summary>
+    /// Verifies that an out-of-range I/O port (above 0xFFFF) is rejected, and that the validation
+    /// error self-clears when the value moves back into range.
+    /// </summary>
+    [AvaloniaFact]
+    public void BreakpointsView_IoPortBreakpoint_OutOfRange_BlocksConfirmation() {
+        // Arrange
+        (_, BreakpointsViewModel viewModel, Window window) = ArrangeBreakpointsView();
+        BeginCreateOnTab(viewModel, "I/O Port");
+
+        // Act + Assert: out-of-range blocks confirmation
+        viewModel.IoPortNumber = "0x10000";
+        ProcessUiEvents();
+        viewModel.ConfirmBreakpointCreationCommand.CanExecute(null).Should().BeFalse();
+
+        // Act + Assert: in-range recovers confirmation
+        viewModel.IoPortNumber = "0x388";
+        ProcessUiEvents();
+        viewModel.ConfirmBreakpointCreationCommand.CanExecute(null).Should().BeTrue();
+
+        window.Close();
+    }
+
+    /// <summary>
+    /// Verifies that the wildcard "*" creates a single interrupt breakpoint with the
+    /// IsWildcard flag set, and that editing it round-trips back to "*" rather than
+    /// some bogus address derived from -1.
+    /// </summary>
+    [AvaloniaFact]
+    public void BreakpointsView_InterruptBreakpoint_Wildcard_CreatesAndRoundTrips() {
+        // Arrange
+        (_, BreakpointsViewModel viewModel, Window window) = ArrangeBreakpointsView();
+        BeginCreateOnTab(viewModel, "Interrupt");
+
+        // Act: create a wildcard interrupt breakpoint
+        viewModel.InterruptNumber = "*";
+        ProcessUiEvents();
+        viewModel.ConfirmBreakpointCreationCommand.Execute(null);
+        ProcessUiEvents();
+
+        // Assert: a single wildcard breakpoint was created
+        viewModel.Breakpoints.Should().ContainSingle();
+        BreakpointViewModel created = viewModel.Breakpoints[0];
+        created.IsWildcard.Should().BeTrue();
+        created.Parameter.Should().Be("*");
+
+        // Act: edit the breakpoint
+        viewModel.SelectedBreakpoint = created;
+        viewModel.EditSelectedBreakpointCommand.Execute(null);
+        ProcessUiEvents();
+
+        // Assert: edit restores "*" instead of casting -1 to 0xFFFFFFFF
+        viewModel.InterruptNumber.Should().Be("*");
+
+        window.Close();
+    }
+
+    /// <summary>
+    /// Verifies that the wildcard "*" creates a single I/O port breakpoint and round-trips correctly.
+    /// </summary>
+    [AvaloniaFact]
+    public void BreakpointsView_IoPortBreakpoint_Wildcard_CreatesAndRoundTrips() {
+        // Arrange
+        (_, BreakpointsViewModel viewModel, Window window) = ArrangeBreakpointsView();
+        BeginCreateOnTab(viewModel, "I/O Port");
+
+        // Act: create a wildcard I/O port breakpoint
+        viewModel.IoPortNumber = "*";
+        ProcessUiEvents();
+        viewModel.ConfirmBreakpointCreationCommand.Execute(null);
+        ProcessUiEvents();
+
+        // Assert: a single wildcard breakpoint was created
+        viewModel.Breakpoints.Should().ContainSingle();
+        BreakpointViewModel created = viewModel.Breakpoints[0];
+        created.IsWildcard.Should().BeTrue();
+        created.Parameter.Should().Be("*");
+
+        // Act: edit the breakpoint
+        viewModel.SelectedBreakpoint = created;
+        viewModel.EditSelectedBreakpointCommand.Execute(null);
+        ProcessUiEvents();
+
+        // Assert: edit restores "*" instead of casting -1 to 0xFFFFFFFF
+        viewModel.IoPortNumber.Should().Be("*");
+
+        window.Close();
+    }
+
+    /// <summary>
+    /// Verifies that opening the New... dialog after previously setting INT/IO conditions
+    /// resets those condition fields, so stale conditions don't leak into the next breakpoint.
+    /// </summary>
+    [AvaloniaFact]
+    public void BreakpointsView_BeginCreateBreakpoint_ClearsInterruptAndIoConditions() {
+        // Arrange
+        (_, BreakpointsViewModel viewModel, Window window) = ArrangeBreakpointsView();
+        viewModel.InterruptConditionExpression = "ah == 0x09";
+        viewModel.IoPortConditionExpression = "al == 0x01";
+
+        // Act
+        viewModel.BeginCreateBreakpointCommand.Execute(null);
+        ProcessUiEvents();
+
+        // Assert
+        viewModel.InterruptConditionExpression.Should().BeNull();
+        viewModel.IoPortConditionExpression.Should().BeNull();
+
         window.Close();
     }
 }
