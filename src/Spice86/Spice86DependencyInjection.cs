@@ -781,6 +781,8 @@ public class Spice86DependencyInjection : IDisposable {
                     mixerViewModel;
                 Application.Current.Resources[nameof(McpStatusViewModel)] =
                     mainWindowViewModel?.McpStatusViewModel;
+                Application.Current.Resources[nameof(JoystickMapperViewModel)] =
+                    new JoystickMapperViewModel(joystickMappingStore, hostStorageProvider, loggerService);
             }
             mainWindow.DataContext = mainWindowViewModel;
         }
