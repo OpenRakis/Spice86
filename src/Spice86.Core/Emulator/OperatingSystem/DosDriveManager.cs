@@ -373,7 +373,6 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
         for (int i = 0; i < MaxDriveCount; i++) {
             DosDriveBase? entry = entries[i];
             if (entry is not null) {
-                Debug.Assert(arrayIndex < itemCount);
                 array[arrayIndex++] = new(entry.DriveLetter, entry);
             }
         }
@@ -563,7 +562,6 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
             for (int i = 0; i < itemCount; i++) {
                 DosDriveBase? entry = entries[i];
                 if (entry is not null) {
-                    Debug.Assert(arrayIndex < itemCount);
                     array[arrayIndex++] = entry.DriveLetter;
                 }
             }
@@ -691,7 +689,6 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
             for (int i = 0; i < itemCount; i++) {
                 DosDriveBase? entry = entries[i];
                 if (entry is not null) {
-                    Debug.Assert(arrayIndex < itemCount);
                     array[arrayIndex++] = entry;
                 }
             }
