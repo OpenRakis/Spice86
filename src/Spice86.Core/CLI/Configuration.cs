@@ -193,6 +193,15 @@ public sealed class Configuration : CommandSettings {
     public MouseType Mouse { get; init; }
 
     /// <summary>
+    /// Directory scanned at startup for joystick mapping profiles
+    /// (<c>*.json</c>, <see cref="Spice86.Shared.Emulator.Input.Joystick.Mapping.JoystickMapping"/>
+    /// schema). When unset or pointing at a missing directory the
+    /// emulator still works: the embedded default profile is used.
+    /// </summary>
+    [CommandOption("--JoystickProfilesDirectory <JOYSTICKPROFILESDIRECTORY>")]
+    public string? JoystickProfilesDirectory { get; init; }
+
+    /// <summary>
     /// Specify a C header file to be used for structure information
     /// </summary>
     [CommandOption("--StructureFile <STRUCTUREFILE>")]

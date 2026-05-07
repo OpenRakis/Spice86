@@ -19,6 +19,7 @@ using Spice86.Core.Emulator.Devices.Cmos;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
+using Spice86.Core.Emulator.Devices.Input.Joystick.Mapping;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Sound;
@@ -53,6 +54,7 @@ using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Core.Emulator.VM.DeviceScheduler;
 using Spice86.Logging;
 using Spice86.Shared.Diagnostics;
+using Spice86.Shared.Emulator.Input.Joystick;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.VM.Breakpoint.Serializable;
 using Spice86.Shared.Interfaces;
@@ -94,6 +96,7 @@ public class Spice86DependencyInjection : IDisposable {
     private readonly McpHttpHost? _mcpHttpTransport;
     private readonly DeviceSchedulerThread? _vgaTimingThread;
     private readonly CfgNodeExecutionCompiler _cfgNodeExecutionCompiler;
+    private readonly JoystickProfileActivator _joystickProfileActivator;
     private bool _disposed;
     private bool _machineDisposedAfterRun;
 
@@ -507,13 +510,13 @@ public class Spice86DependencyInjection : IDisposable {
             // Subscribe to video mode changes for dynamic aspect ratio correction
             vgaFunctionality.VideoModeChanged += mainWindowViewModel.OnVideoModeChanged;
 
-            inputEventHub = new(mainWindowViewModel, mainWindowViewModel);
+            inputEventHub = new(mainWindowViewModel, mainWindowViewModel, mainWindowViewModel);
 
             _gui = mainWindowViewModel;
         } else {
             HeadlessGui headlessGui = new HeadlessGui();
             _gui = headlessGui;
-            inputEventHub = new InputEventHub(headlessGui, headlessGui);
+            inputEventHub = new InputEventHub(headlessGui, headlessGui, headlessGui);
         }
 
         EmulationLoop emulationLoop = new(
@@ -547,8 +550,23 @@ public class Spice86DependencyInjection : IDisposable {
             vgaFunctionality, loggerService,
             _gui as IGuiMouseEvents);
 
-        Joystick joystick = new(state, ioPortDispatcher,
+        JoystickMappingJsonStore joystickMappingStore = new(loggerService);
+        JoystickProfileAutoLoader joystickProfileAutoLoader =
+            new(joystickMappingStore, loggerService);
+        LoadedProfiles loadedJoystickProfiles =
+            joystickProfileAutoLoader.LoadAll(configuration.JoystickProfilesDirectory);
+        MidiOnGameportRouter midiOnGameportRouter = new(sink: null, loggerService);
+        RumbleRouter rumbleRouter = new(sink: null, loggerService);
+
+        Gameport gameport = new(state, ioPortDispatcher,
+            inputEventHub, new SystemTimeProvider(),
+            rumbleRouter, midiOnGameportRouter,
             configuration.FailOnUnhandledPort, loggerService);
+
+        JoystickProfileActivator joystickProfileActivator = new(
+            inputEventHub, joystickProfileAutoLoader, loadedJoystickProfiles,
+            midiOnGameportRouter, rumbleRouter, loggerService);
+        _joystickProfileActivator = joystickProfileActivator;
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Input devices created...");
@@ -628,7 +646,7 @@ public class Spice86DependencyInjection : IDisposable {
             biosKeyboardInt9Handler,
             callbackHandler,
             cfgCpu, state, stack, dos, gravisUltraSound, ioPortDispatcher,
-            joystick, intel8042Controller, interruptVectorTable, keyboardInt16Handler,
+            gameport, intel8042Controller, interruptVectorTable, keyboardInt16Handler,
             emulatorBreakpointsManager, memory, midiDevice, pcSpeaker,
             dualPic, soundBlaster, systemBiosInt12Handler,
             systemBiosInt15Handler, systemClockInt1AHandler, realTimeClock,
@@ -763,6 +781,8 @@ public class Spice86DependencyInjection : IDisposable {
                     mixerViewModel;
                 Application.Current.Resources[nameof(McpStatusViewModel)] =
                     mainWindowViewModel?.McpStatusViewModel;
+                Application.Current.Resources[nameof(JoystickMapperViewModel)] =
+                    new JoystickMapperViewModel(joystickMappingStore, hostStorageProvider, loggerService);
             }
             mainWindow.DataContext = mainWindowViewModel;
         }
@@ -882,6 +902,7 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         _machineDisposedAfterRun = true;
+        _joystickProfileActivator.Dispose();
         _vgaTimingThread?.Dispose();
         _emulatedClock.Dispose();
         _httpApiServer?.Dispose();

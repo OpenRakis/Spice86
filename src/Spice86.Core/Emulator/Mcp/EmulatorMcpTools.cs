@@ -2015,4 +2015,154 @@ internal sealed class EmulatorMcpTools {
             }
         });
     }
+
+    [McpServerTool(Name = "send_joystick_axis", UseStructuredContent = true), Description("Post a joystick axis event to the InputEventHub on behalf of stick stickIndex (0=A, 1=B). axis is one of X, Y, Throttle, Rudder. value is in [-1.0, 1.0] and is clamped to that range. Useful for end-to-end tests of the gameport / MIDI-on-gameport / rumble pipeline without a real stick attached.")]
+    public CallToolResult SendJoystickAxis(int stickIndex, string axis, double value) {
+        return ExecuteTool(() => {
+            lock (_services.ToolsLock) {
+                if (!Enum.TryParse(axis, true, out Spice86.Shared.Emulator.Input.Joystick.JoystickAxis parsedAxis)) {
+                    throw new ArgumentException($"Invalid JoystickAxis: '{axis}'. Use X, Y, Throttle, or Rudder.");
+                }
+                InputEventHub? hub = _services.InputEventHub;
+                if (hub == null) {
+                    throw new InvalidOperationException("InputEventHub is not wired");
+                }
+                float clamped = (float)Math.Clamp(value, -1.0, 1.0);
+                hub.PostJoystickAxisEvent(
+                    new Spice86.Shared.Emulator.Input.Joystick.JoystickAxisEventArgs(stickIndex, parsedAxis, clamped));
+                return new EmulatorControlResponse {
+                    Success = true,
+                    Message = $"Stick {stickIndex} axis {parsedAxis} = {clamped:F3}"
+                };
+            }
+        });
+    }
+
+    [McpServerTool(Name = "send_joystick_button", UseStructuredContent = true), Description("Post a joystick button event. stickIndex is 0 or 1. buttonIndex must be 0..3 (gameport supports four buttons total across both sticks). isPressed=true for press, false for release.")]
+    public CallToolResult SendJoystickButton(int stickIndex, int buttonIndex, bool isPressed) {
+        return ExecuteTool(() => {
+            lock (_services.ToolsLock) {
+                if (buttonIndex < 0 || buttonIndex > 3) {
+                    throw new ArgumentException($"buttonIndex must be in 0..3, got {buttonIndex}");
+                }
+                InputEventHub? hub = _services.InputEventHub;
+                if (hub == null) {
+                    throw new InvalidOperationException("InputEventHub is not wired");
+                }
+                hub.PostJoystickButtonEvent(
+                    new Spice86.Shared.Emulator.Input.Joystick.JoystickButtonEventArgs(stickIndex, buttonIndex, isPressed));
+                string action;
+                if (isPressed) {
+                    action = "pressed";
+                } else {
+                    action = "released";
+                }
+                return new EmulatorControlResponse {
+                    Success = true,
+                    Message = $"Stick {stickIndex} button {buttonIndex} {action}"
+                };
+            }
+        });
+    }
+
+    [McpServerTool(Name = "send_joystick_hat", UseStructuredContent = true), Description("Post a joystick hat (POV) event. direction is one of: Centered, Up, UpRight, Right, DownRight, Down, DownLeft, Left, UpLeft.")]
+    public CallToolResult SendJoystickHat(int stickIndex, string direction) {
+        return ExecuteTool(() => {
+            lock (_services.ToolsLock) {
+                if (!Enum.TryParse(direction, true, out Spice86.Shared.Emulator.Input.Joystick.JoystickHatDirection parsedDirection)) {
+                    throw new ArgumentException($"Invalid JoystickHatDirection: '{direction}'.");
+                }
+                InputEventHub? hub = _services.InputEventHub;
+                if (hub == null) {
+                    throw new InvalidOperationException("InputEventHub is not wired");
+                }
+                hub.PostJoystickHatEvent(
+                    new Spice86.Shared.Emulator.Input.Joystick.JoystickHatEventArgs(stickIndex, parsedDirection));
+                return new EmulatorControlResponse {
+                    Success = true,
+                    Message = $"Stick {stickIndex} hat -> {parsedDirection}"
+                };
+            }
+        });
+    }
+
+    [McpServerTool(Name = "send_joystick_connect", UseStructuredContent = true), Description("Simulate a joystick hot-plug connect event. deviceName is the friendly name (e.g. 'Xbox 360 Controller'); deviceGuid is the optional 32-character lowercase SDL GUID used by the profile resolver. Both are forwarded to JoystickProfileActivator so the matching profile's MIDI-on-gameport and rumble settings activate immediately.")]
+    public CallToolResult SendJoystickConnect(int stickIndex, string deviceName, string deviceGuid) {
+        return ExecuteTool(() => {
+            lock (_services.ToolsLock) {
+                InputEventHub? hub = _services.InputEventHub;
+                if (hub == null) {
+                    throw new InvalidOperationException("InputEventHub is not wired");
+                }
+                hub.PostJoystickConnectionEvent(
+                    new Spice86.Shared.Emulator.Input.Joystick.JoystickConnectionEventArgs(
+                        stickIndex, true, deviceName ?? string.Empty, deviceGuid ?? string.Empty));
+                return new EmulatorControlResponse {
+                    Success = true,
+                    Message = $"Stick {stickIndex} connected: '{deviceName}' (GUID '{deviceGuid}')"
+                };
+            }
+        });
+    }
+
+    [McpServerTool(Name = "send_joystick_disconnect", UseStructuredContent = true), Description("Simulate a joystick hot-plug disconnect event. Resets MIDI-on-gameport and rumble routing for that stick.")]
+    public CallToolResult SendJoystickDisconnect(int stickIndex) {
+        return ExecuteTool(() => {
+            lock (_services.ToolsLock) {
+                InputEventHub? hub = _services.InputEventHub;
+                if (hub == null) {
+                    throw new InvalidOperationException("InputEventHub is not wired");
+                }
+                hub.PostJoystickConnectionEvent(
+                    new Spice86.Shared.Emulator.Input.Joystick.JoystickConnectionEventArgs(
+                        stickIndex, false, string.Empty, string.Empty));
+                return new EmulatorControlResponse {
+                    Success = true,
+                    Message = $"Stick {stickIndex} disconnected"
+                };
+            }
+        });
+    }
+
+    [McpServerTool(Name = "set_keyboard_joystick_enabled", UseStructuredContent = true), Description("Enable or disable the hardware-free keyboard-as-joystick fallback. When enabled, arrow keys drive the X/Y axes, Space is button 0 and Enter is button 1, mirroring DOSBox-Staging's keyboard joystick fallback. Disabling re-centres any non-zero axis to avoid a stuck stick.")]
+    public CallToolResult SetKeyboardJoystickEnabled(bool enabled) {
+        return ExecuteTool(() => {
+            lock (_services.ToolsLock) {
+                Spice86.Core.Emulator.Devices.Input.Joystick.Keyboard.KeyboardJoystickMapper? mapper =
+                    _services.KeyboardJoystickMapper;
+                if (mapper == null) {
+                    throw new InvalidOperationException("KeyboardJoystickMapper is not wired");
+                }
+                mapper.Enabled = enabled;
+                string state;
+                if (enabled) {
+                    state = "enabled";
+                } else {
+                    state = "disabled";
+                }
+                return new EmulatorControlResponse {
+                    Success = true,
+                    Message = $"Keyboard joystick fallback {state}"
+                };
+            }
+        });
+    }
+
+    [McpServerTool(Name = "play_joystick_replay", UseStructuredContent = true), Description("Advance the wired JoystickReplayPlayer to the given elapsed-ms timestamp. Returns posted/nextStepIndex/stepCount/isFinished/totalDurationMs. Call repeatedly with monotonically increasing elapsedMs to play the script through. The host is expected to wire a JoystickReplayPlayer via EmulatorMcpServices.JoystickReplayPlayer; without one this tool returns an error.")]
+    public CallToolResult PlayJoystickReplay(double elapsedMs) {
+        return ExecuteTool(() => {
+            lock (_services.ToolsLock) {
+                Spice86.Core.Emulator.Devices.Input.Joystick.Replay.JoystickReplayPlayer? player =
+                    _services.JoystickReplayPlayer;
+                if (player == null) {
+                    throw new InvalidOperationException("JoystickReplayPlayer is not wired");
+                }
+                int posted = player.AdvanceTo(elapsedMs);
+                return new EmulatorControlResponse {
+                    Success = true,
+                    Message = $"Posted {posted} step(s); next={player.NextStepIndex}/{player.StepCount}; finished={player.IsFinished}; totalMs={player.TotalDurationMs}"
+                };
+            }
+        });
+    }
 }

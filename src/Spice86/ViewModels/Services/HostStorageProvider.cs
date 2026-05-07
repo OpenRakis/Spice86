@@ -31,6 +31,11 @@ public class HostStorageProvider(
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<IStorageFile>> OpenFilePickerAsync(FilePickerOpenOptions options) {
+        return await storageProvider.OpenFilePickerAsync(options);
+    }
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<IStorageFolder>> OpenFolderPickerAsync(FolderPickerOpenOptions options) {
         return await storageProvider.OpenFolderPickerAsync(options);
     }
@@ -133,6 +138,13 @@ public interface IHostStorageProvider {
     /// Saved Avalonia.Platform.Storage.IStorageFile or null if user canceled the dialog.
     /// </returns>
     Task<IStorageFile?> SaveFilePickerAsync(FilePickerSaveOptions options);
+
+    /// <summary>
+    /// Opens an open-file picker dialog.
+    /// </summary>
+    /// <param name="options">The file picker configuration.</param>
+    /// <returns>The list of selected files (empty if the user cancelled).</returns>
+    Task<IReadOnlyList<IStorageFile>> OpenFilePickerAsync(FilePickerOpenOptions options);
 
     /// <summary>
     /// Gets the path to a well known folder.

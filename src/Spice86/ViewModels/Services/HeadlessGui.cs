@@ -1,5 +1,6 @@
 ﻿namespace Spice86.ViewModels.Services;
 
+using Spice86.Shared.Emulator.Input.Joystick;
 using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Emulator.Video;
@@ -7,7 +8,7 @@ using Spice86.Shared.Interfaces;
 
 /// <inheritdoc cref="IGuiVideoPresentation" />
 public sealed class HeadlessGui : IGuiVideoPresentation, IGuiMouseEvents,
-    IGuiKeyboardEvents, IDisposable {
+    IGuiKeyboardEvents, IGuiJoystickEvents, IDisposable {
     private const double ScreenRefreshHz = 60;
     private static readonly TimeSpan RefreshInterval = TimeSpan.FromMilliseconds(1000.0 / ScreenRefreshHz);
 
@@ -46,6 +47,18 @@ public sealed class HeadlessGui : IGuiVideoPresentation, IGuiMouseEvents,
     public event Action? UserInterfaceInitialized;
 #pragma warning restore CS0067
 
+    /// <inheritdoc />
+    public event EventHandler<JoystickAxisEventArgs>? JoystickAxisChanged;
+
+    /// <inheritdoc />
+    public event EventHandler<JoystickButtonEventArgs>? JoystickButtonChanged;
+
+    /// <inheritdoc />
+    public event EventHandler<JoystickHatEventArgs>? JoystickHatChanged;
+
+    /// <inheritdoc />
+    public event EventHandler<JoystickConnectionEventArgs>? JoystickConnectionChanged;
+
     /// <summary>
     /// Simulates a key press event, firing <see cref="KeyDown"/> into the full input pipeline.
     /// </summary>
@@ -60,6 +73,51 @@ public sealed class HeadlessGui : IGuiVideoPresentation, IGuiMouseEvents,
     /// <param name="key">The physical key to release.</param>
     public void SimulateKeyRelease(PhysicalKey key) {
         KeyUp?.Invoke(this, new KeyboardEventArgs(key, IsPressed: false));
+    }
+
+    /// <summary>
+    /// Simulates a joystick axis event, firing <see cref="JoystickAxisChanged"/> into the
+    /// input pipeline. Used by headless integration tests and scripted-input replay.
+    /// </summary>
+    /// <param name="stickIndex">Zero-based stick index (0 or 1).</param>
+    /// <param name="axis">Logical axis being moved.</param>
+    /// <param name="value">Normalized axis value in <c>[-1.0, 1.0]</c>.</param>
+    public void SimulateJoystickAxis(int stickIndex, JoystickAxis axis, float value) {
+        JoystickAxisChanged?.Invoke(this, new JoystickAxisEventArgs(stickIndex, axis, value));
+    }
+
+    /// <summary>
+    /// Simulates a joystick button event, firing <see cref="JoystickButtonChanged"/>.
+    /// </summary>
+    /// <param name="stickIndex">Zero-based stick index (0 or 1).</param>
+    /// <param name="buttonIndex">Zero-based logical button index (0..3).</param>
+    /// <param name="isPressed">Whether the button is being pressed.</param>
+    public void SimulateJoystickButton(int stickIndex, int buttonIndex, bool isPressed) {
+        JoystickButtonChanged?.Invoke(this,
+            new JoystickButtonEventArgs(stickIndex, buttonIndex, isPressed));
+    }
+
+    /// <summary>
+    /// Simulates a joystick hat (POV) direction change.
+    /// </summary>
+    /// <param name="stickIndex">Zero-based stick index (0 or 1).</param>
+    /// <param name="direction">New hat direction.</param>
+    public void SimulateJoystickHat(int stickIndex, JoystickHatDirection direction) {
+        JoystickHatChanged?.Invoke(this, new JoystickHatEventArgs(stickIndex, direction));
+    }
+
+    /// <summary>
+    /// Simulates a virtual stick connect/disconnect event.
+    /// </summary>
+    /// <param name="stickIndex">Zero-based stick index (0 or 1).</param>
+    /// <param name="isConnected"><see langword="true"/> for connect.</param>
+    /// <param name="deviceName">Friendly device name; empty when disconnecting.</param>
+    /// <param name="deviceGuid">SDL joystick GUID; empty when unknown
+    /// or disconnecting. Forwarded to <c>JoystickProfileActivator</c>
+    /// so GUID-based profile matching can take precedence.</param>
+    public void SimulateJoystickConnection(int stickIndex, bool isConnected, string deviceName, string deviceGuid = "") {
+        JoystickConnectionChanged?.Invoke(this,
+            new JoystickConnectionEventArgs(stickIndex, isConnected, deviceName, deviceGuid));
     }
 
     public int Width { get; private set; }

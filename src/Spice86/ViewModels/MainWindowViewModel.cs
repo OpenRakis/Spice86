@@ -19,8 +19,10 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Shared.Emulator.Dos;
+using Spice86.Shared.Emulator.Input.Joystick;
 using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Emulator.Mouse;
+using Spice86.Native;
 using Spice86.Shared.Emulator.Video;
 using Spice86.Shared.Interfaces;
 using Spice86.ViewModels.Services;
@@ -29,7 +31,7 @@ using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
 
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IGuiVideoPresentation" />
 public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGuiVideoPresentation,
-    IGuiMouseEvents, IGuiKeyboardEvents, IDisposable {
+    IGuiMouseEvents, IGuiKeyboardEvents, IGuiJoystickEvents, IDisposable {
     private readonly SharedMouseData _sharedMouseData;
     private const double ScreenRefreshHz = 60;
     private readonly ILoggerService _loggerService;
@@ -85,6 +87,9 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     private bool _isAppClosing;
 
     private DispatcherTimer? _drawTimer;
+    private DispatcherTimer? _joystickPollTimer;
+    private DispatcherTimer? _joystickRescanTimer;
+    private SdlJoystickInput? _joystickInput;
 
     public event EventHandler<KeyboardEventArgs>? KeyUp;
     public event EventHandler<KeyboardEventArgs>? KeyDown;
@@ -92,6 +97,14 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     public event EventHandler<MouseButtonEventArgs>? MouseButtonDown;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
     public event EventHandler<UIRenderEventArgs>? RenderScreen;
+    /// <inheritdoc />
+    public event EventHandler<JoystickAxisEventArgs>? JoystickAxisChanged;
+    /// <inheritdoc />
+    public event EventHandler<JoystickButtonEventArgs>? JoystickButtonChanged;
+    /// <inheritdoc />
+    public event EventHandler<JoystickHatEventArgs>? JoystickHatChanged;
+    /// <inheritdoc />
+    public event EventHandler<JoystickConnectionEventArgs>? JoystickConnectionChanged;
     internal event EventHandler? CloseMainWindow;
 
     public sealed class MainWindowViewModelDependencies {
@@ -163,6 +176,59 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
     [RelayCommand]
     public void SetLogLevelToFatal() => SetLogLevel("Fatal");
+
+    private void InitializeJoystickInput() {
+        if (_joystickInput is not null) {
+            return;
+        }
+
+        SdlJoystickInput input = new SdlJoystickInput();
+        bool initialized;
+        try {
+            initialized = input.TryInitialize();
+        } catch (InvalidOperationException) {
+            input.Dispose();
+            return;
+        }
+
+        if (!initialized) {
+            input.Dispose();
+            return;
+        }
+
+        input.JoystickAxisChanged += OnSdlJoystickAxis;
+        input.JoystickButtonChanged += OnSdlJoystickButton;
+        input.JoystickHatChanged += OnSdlJoystickHat;
+        input.JoystickConnectionChanged += OnSdlJoystickConnection;
+        _joystickInput = input;
+
+        // Poll axes/buttons/hats at the refresh rate the gameport timing
+        // already uses; rescan attached devices once per second to pick up
+        // hot-plug events without flooding SDL with enumeration calls.
+        _joystickPollTimer = new DispatcherTimer(
+            TimeSpan.FromMilliseconds(1000.0 / ScreenRefreshHz),
+            DispatcherPriority.Input,
+            (_, _) => _joystickInput?.Poll());
+        _joystickPollTimer.Start();
+
+        _joystickRescanTimer = new DispatcherTimer(
+            TimeSpan.FromSeconds(1),
+            DispatcherPriority.Background,
+            (_, _) => _joystickInput?.RescanDevices());
+        _joystickRescanTimer.Start();
+    }
+
+    private void OnSdlJoystickAxis(object? sender, JoystickAxisEventArgs e) =>
+        JoystickAxisChanged?.Invoke(this, e);
+
+    private void OnSdlJoystickButton(object? sender, JoystickButtonEventArgs e) =>
+        JoystickButtonChanged?.Invoke(this, e);
+
+    private void OnSdlJoystickHat(object? sender, JoystickHatEventArgs e) =>
+        JoystickHatChanged?.Invoke(this, e);
+
+    private void OnSdlJoystickConnection(object? sender, JoystickConnectionEventArgs e) =>
+        JoystickConnectionChanged?.Invoke(this, e);
 
     internal void OnMainWindowClosing() => _isAppClosing = true;
 
@@ -432,6 +498,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         };
         SetLogLevel(Configuration.SilencedLogs ? "Silent" : _loggerService.LogLevelSwitch.MinimumLevel.ToString());
         SetMainTitle(_performanceViewModel.InstructionsPerMillisecond);
+        InitializeJoystickInput();
         StartEmulatorThread();
     }
 
@@ -454,6 +521,19 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
                 _drawTimer?.Stop();
                 _drawTimer = null;
+
+                _joystickPollTimer?.Stop();
+                _joystickPollTimer = null;
+                _joystickRescanTimer?.Stop();
+                _joystickRescanTimer = null;
+                if (_joystickInput is not null) {
+                    _joystickInput.JoystickAxisChanged -= OnSdlJoystickAxis;
+                    _joystickInput.JoystickButtonChanged -= OnSdlJoystickButton;
+                    _joystickInput.JoystickHatChanged -= OnSdlJoystickHat;
+                    _joystickInput.JoystickConnectionChanged -= OnSdlJoystickConnection;
+                    _joystickInput.Dispose();
+                    _joystickInput = null;
+                }
 
                 // Dispose of UI-related resources in the UI thread
                 _uiDispatcher.Post(() => {

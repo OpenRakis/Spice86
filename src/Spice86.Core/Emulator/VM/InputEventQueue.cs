@@ -2,6 +2,7 @@
 
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 
+using Spice86.Shared.Emulator.Input.Joystick;
 using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Interfaces;
@@ -9,22 +10,26 @@ using Spice86.Shared.Interfaces;
 using System;
 
 /// <summary>
-/// Represents a queue for handling and processing keyboard and mouse events. <br/>
-/// Used by the emulation loop thread to avoid the UI thread modifying keyboard state via events,
-/// while the emulator thread is reading the keyboard via the same instance of the <see cref="Intel8042Controller"/> class. <br/>
-/// Same deal for the Mouse event. If Joystick support is implemented, joystick UI events will also pass through here.
+/// Represents a queue for handling and processing keyboard, mouse and joystick events. <br/>
+/// Used by the emulation loop thread to avoid the UI thread modifying device state via events,
+/// while the emulator thread is reading the same instance of <see cref="Intel8042Controller"/> /
+/// the gameport device. <br/>
+/// All UI input (keyboard, mouse, joystick) flows through this hub so that events are replayed
+/// on the emulator thread in the order they happened on the UI thread.
 /// </summary>
 /// <remarks>This class provides a mechanism to enqueue and process input events in a controlled manner. It wraps 
-/// around implementations of <see cref="IGuiKeyboardEvents"/> and <see cref="IGuiMouseEvents"/> to capture  and queue
-/// their events. The queued events can then be processed one at a time using the  <see cref="ProcessAllPendingInputEvents"/> method.
+/// around implementations of <see cref="IGuiKeyboardEvents"/>, <see cref="IGuiMouseEvents"/> and
+/// <see cref="IGuiJoystickEvents"/> to capture and queue their events. The queued events can then
+/// be processed one at a time using the <see cref="ProcessAllPendingInputEvents"/> method.
 /// The <see cref="InputEventHub"/> also exposes properties and methods for interacting with mouse  coordinates and
 /// cursor visibility, delegating these operations to the underlying implementation, if available.</remarks>
-public class InputEventHub : IGuiKeyboardEvents, IGuiMouseEvents {
+public class InputEventHub : IGuiKeyboardEvents, IGuiMouseEvents, IGuiJoystickEvents {
     private readonly Queue<Action> _eventQueue = new();
     // a thread-safe queue, accessed by both UI thread and emulation thread, requires a lock.
     private readonly object _lock = new();
     private readonly IGuiMouseEvents? _mouseEvents;
     private readonly IGuiKeyboardEvents? _keyboardEvents;
+    private readonly IGuiJoystickEvents? _joystickEvents;
 
     public event EventHandler<KeyboardEventArgs>? KeyUp;
     public event EventHandler<KeyboardEventArgs>? KeyDown;
@@ -32,8 +37,21 @@ public class InputEventHub : IGuiKeyboardEvents, IGuiMouseEvents {
     public event EventHandler<MouseButtonEventArgs>? MouseButtonDown;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
 
+    /// <inheritdoc />
+    public event EventHandler<JoystickAxisEventArgs>? JoystickAxisChanged;
+
+    /// <inheritdoc />
+    public event EventHandler<JoystickButtonEventArgs>? JoystickButtonChanged;
+
+    /// <inheritdoc />
+    public event EventHandler<JoystickHatEventArgs>? JoystickHatChanged;
+
+    /// <inheritdoc />
+    public event EventHandler<JoystickConnectionEventArgs>? JoystickConnectionChanged;
+
     public InputEventHub(IGuiKeyboardEvents? keyboardEvents = null,
-        IGuiMouseEvents? mouseEvents = null) {
+        IGuiMouseEvents? mouseEvents = null,
+        IGuiJoystickEvents? joystickEvents = null) {
         if (keyboardEvents is not null) {
             _keyboardEvents = keyboardEvents;
             _keyboardEvents.KeyDown += OnKeyDown;
@@ -44,6 +62,13 @@ public class InputEventHub : IGuiKeyboardEvents, IGuiMouseEvents {
             _mouseEvents.MouseMoved += OnMouseMoved;
             _mouseEvents.MouseButtonDown += OnMouseButtonDown;
             _mouseEvents.MouseButtonUp += OnMouseButtonUp;
+        }
+        if (joystickEvents is not null) {
+            _joystickEvents = joystickEvents;
+            _joystickEvents.JoystickAxisChanged += OnJoystickAxisChanged;
+            _joystickEvents.JoystickButtonChanged += OnJoystickButtonChanged;
+            _joystickEvents.JoystickHatChanged += OnJoystickHatChanged;
+            _joystickEvents.JoystickConnectionChanged += OnJoystickConnectionChanged;
         }
     }
 
@@ -92,6 +117,32 @@ public class InputEventHub : IGuiKeyboardEvents, IGuiMouseEvents {
         }
     }
 
+    /// <summary>
+    /// Enqueues a joystick axis event to be fired on the emulator thread, following the
+    /// same path as UI joystick events (raw SDL input -> profile mapping -> logical event).
+    /// </summary>
+    public void PostJoystickAxisEvent(JoystickAxisEventArgs e) =>
+        Enqueue(() => JoystickAxisChanged?.Invoke(null, e));
+
+    /// <summary>
+    /// Enqueues a joystick button event to be fired on the emulator thread.
+    /// </summary>
+    public void PostJoystickButtonEvent(JoystickButtonEventArgs e) =>
+        Enqueue(() => JoystickButtonChanged?.Invoke(null, e));
+
+    /// <summary>
+    /// Enqueues a joystick hat (POV) event to be fired on the emulator thread.
+    /// </summary>
+    public void PostJoystickHatEvent(JoystickHatEventArgs e) =>
+        Enqueue(() => JoystickHatChanged?.Invoke(null, e));
+
+    /// <summary>
+    /// Enqueues a joystick connection event (hot-plug, profile change, or simulated
+    /// connect/disconnect) to be fired on the emulator thread.
+    /// </summary>
+    public void PostJoystickConnectionEvent(JoystickConnectionEventArgs e) =>
+        Enqueue(() => JoystickConnectionChanged?.Invoke(null, e));
+
     private void OnMouseMoved(object? sender, MouseMoveEventArgs e) =>
         Enqueue(() => MouseMoved?.Invoke(sender, e));
 
@@ -106,6 +157,18 @@ public class InputEventHub : IGuiKeyboardEvents, IGuiMouseEvents {
 
     private void OnKeyDown(object? sender, KeyboardEventArgs e) =>
         Enqueue(() => KeyDown?.Invoke(sender, e));
+
+    private void OnJoystickAxisChanged(object? sender, JoystickAxisEventArgs e) =>
+        Enqueue(() => JoystickAxisChanged?.Invoke(sender, e));
+
+    private void OnJoystickButtonChanged(object? sender, JoystickButtonEventArgs e) =>
+        Enqueue(() => JoystickButtonChanged?.Invoke(sender, e));
+
+    private void OnJoystickHatChanged(object? sender, JoystickHatEventArgs e) =>
+        Enqueue(() => JoystickHatChanged?.Invoke(sender, e));
+
+    private void OnJoystickConnectionChanged(object? sender, JoystickConnectionEventArgs e) =>
+        Enqueue(() => JoystickConnectionChanged?.Invoke(sender, e));
 
     internal void ProcessAllPendingInputEvents() {
         if (_eventQueue.Count == 0) {
