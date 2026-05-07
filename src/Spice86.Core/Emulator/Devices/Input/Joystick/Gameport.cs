@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.Devices.Input.Joystick;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.Input.Joystick.Mapping;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Shared.Emulator.Input.Joystick;
 using Spice86.Shared.Interfaces;
@@ -26,7 +27,8 @@ using System;
 /// </remarks>
 public sealed class Gameport : DefaultIOPortHandler, IGameportPortReader, IDisposable {
     private readonly IGuiJoystickEvents _joystickEvents;
-    private readonly IRumbleSink? _rumbleSink;
+    private readonly RumbleRouter? _rumbleRouter;
+    private readonly MidiOnGameportRouter? _midiRouter;
     private readonly ITimeProvider _timeProvider;
     private readonly DateTime _epoch;
     private readonly object _stateLock = new();
@@ -49,8 +51,13 @@ public sealed class Gameport : DefaultIOPortHandler, IGameportPortReader, IDispo
     /// raises events synchronously.</param>
     /// <param name="timeProvider">Time provider used as the
     /// monotonic clock for the RC decay timer.</param>
-    /// <param name="rumbleSink">Optional sink for force-feedback
-    /// requests. Pass <see langword="null"/> to silently drop them.</param>
+    /// <param name="rumbleRouter">Optional router for force-feedback
+    /// requests. Pass <see langword="null"/> when no haptic stack is
+    /// wired (headless mode, tests, controller without rumble).</param>
+    /// <param name="midiRouter">Optional MIDI-on-gameport router.
+    /// When non-null, every byte written to port <c>0x201</c> is
+    /// forwarded after the timer-arm step; the router itself decides
+    /// whether to deliver based on the active profile.</param>
     /// <param name="failOnUnhandledPort">Whether unhandled port
     /// accesses throw.</param>
     /// <param name="loggerService">Logger service implementation.</param>
@@ -59,13 +66,15 @@ public sealed class Gameport : DefaultIOPortHandler, IGameportPortReader, IDispo
         IOPortDispatcher ioPortDispatcher,
         IGuiJoystickEvents joystickEvents,
         ITimeProvider timeProvider,
-        IRumbleSink? rumbleSink,
+        RumbleRouter? rumbleRouter,
+        MidiOnGameportRouter? midiRouter,
         bool failOnUnhandledPort,
         ILoggerService loggerService)
         : base(state, failOnUnhandledPort, loggerService) {
         _joystickEvents = joystickEvents;
         _timeProvider = timeProvider;
-        _rumbleSink = rumbleSink;
+        _rumbleRouter = rumbleRouter;
+        _midiRouter = midiRouter;
         _epoch = timeProvider.Now;
         Timer = new GameportTimer();
         _joystickEvents.JoystickAxisChanged += OnAxisChanged;
@@ -87,11 +96,17 @@ public sealed class Gameport : DefaultIOPortHandler, IGameportPortReader, IDispo
     public GameportTimer Timer { get; }
 
     /// <summary>
-    /// Optional rumble sink. <see langword="null"/> when no haptic
-    /// output is wired (headless mode, tests, or a controller
-    /// without rumble support).
+    /// Optional rumble router. <see langword="null"/> when no haptic
+    /// stack is wired (headless mode, tests, or a controller without
+    /// rumble support).
     /// </summary>
-    public IRumbleSink? RumbleSink => _rumbleSink;
+    public RumbleRouter? RumbleRouter => _rumbleRouter;
+
+    /// <summary>
+    /// Optional MIDI-on-gameport router. <see langword="null"/> when
+    /// no MPU-401 sink is wired.
+    /// </summary>
+    public MidiOnGameportRouter? MidiRouter => _midiRouter;
 
     /// <summary>
     /// Returns an immutable snapshot of the current two-stick state
@@ -118,6 +133,7 @@ public sealed class Gameport : DefaultIOPortHandler, IGameportPortReader, IDispo
             return;
         }
         Timer.Arm(GetCurrentState(), ElapsedMs());
+        _midiRouter?.OnGameportWrite(value);
     }
 
     /// <inheritdoc />
