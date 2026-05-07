@@ -65,15 +65,7 @@ internal sealed class EmulatorMcpTools {
     public EmulatorMcpTools(EmulatorMcpServices services) => _services = services;
 
     private CallToolResult Success(object response) {
-        JsonNode? responseNode = JsonSerializer.SerializeToNode(response, response.GetType(), SerializerOptions);
-        JsonObject structuredContent;
-        if (responseNode is JsonObject responseObject) {
-            structuredContent = responseObject;
-        } else {
-            structuredContent = new JsonObject {
-                ["value"] = responseNode
-            };
-        }
+        JsonElement structuredContent = JsonSerializer.SerializeToElement(response, response.GetType(), SerializerOptions);
 
         return new CallToolResult {
             StructuredContent = structuredContent
@@ -81,10 +73,10 @@ internal sealed class EmulatorMcpTools {
     }
 
     private CallToolResult Error(string message) {
-        JsonObject structuredContent = new JsonObject {
-            ["success"] = false,
-            ["message"] = message
-        };
+        JsonElement structuredContent = JsonSerializer.SerializeToElement(new {
+            success = false,
+            message
+        }, SerializerOptions);
 
         return new CallToolResult {
             IsError = true,
@@ -1333,16 +1325,16 @@ internal sealed class EmulatorMcpTools {
                     FileSizeBytes = fileInfo.Length
                 };
 
-                JsonNode? metadataNode = JsonSerializer.SerializeToNode(metadata, typeof(ScreenshotResponse), SerializerOptions);
+                JsonElement structuredContent = JsonSerializer.SerializeToElement(metadata, typeof(ScreenshotResponse), SerializerOptions);
 
                 return new CallToolResult {
                     Content = [
                         new ImageContentBlock {
-                            Data = Convert.ToBase64String(pngBytes),
+                            Data = pngBytes,
                             MimeType = "image/png"
                         }
                     ],
-                    StructuredContent = metadataNode as JsonObject
+                    StructuredContent = structuredContent
                 };
             }
         } catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or FormatException) {
