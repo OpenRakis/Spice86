@@ -967,7 +967,7 @@ public class DosFileManager {
     private VirtualDrive ResolveDriveFromFileSpec(string fileSpec) {
         if (fileSpec.Length >= 2 && fileSpec[1] == DosPathResolver.VolumeSeparatorChar) {
             char driveLetter = char.ToUpperInvariant(fileSpec[0]);
-            if (_dosDriveManager.TryGetValue(driveLetter, out VirtualDrive? drive)) {
+            if (_dosDriveManager.TryGetDrive(driveLetter, out VirtualDrive? drive)) {
                 return drive;
             }
         }
@@ -1467,13 +1467,13 @@ public class DosFileManager {
                 return DosFileOperationResult.NoValue();
 
             case IoctlSubfunction.GenericBlockDeviceRequest:
-                if (drive < 2 && _dosDriveManager.ElementAtOrDefault(drive).Value is null) {
+                if (!_dosDriveManager.TryGetDriveAtIndex(drive, out DosDriveBase? mountedDrive)) {
                     if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                         _loggerService.Warning("IOCTL: Access denied for drive {Drive} - drive not available", drive);
                     }
                     return DosFileOperationResult.Error(DosErrorCode.AccessDenied);
                 }
-                if (state.CH != 0x08 || _dosDriveManager.ElementAtOrDefault(drive).Value.IsRemovable) {
+                if (state.CH != 0x08 || mountedDrive.IsRemovable) {
                     if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                         _loggerService.Warning("IOCTL: Invalid or unsupported command 0x{Command:X2} for drive {Drive}",
                             state.CH, drive);
@@ -1502,10 +1502,9 @@ public class DosFileManager {
 
                     case IoctlGenericBlockCommand.GetVolumeInformation:
                         {
-                            VirtualDrive vDrive = _dosDriveManager.ElementAtOrDefault(drive).Value;
                             DosVolumeInfo dosVolumeInfo = new(_memory, parameterBlock.Linear);
                             dosVolumeInfo.SerialNumber = 0x1234;
-                            dosVolumeInfo.VolumeLabel = vDrive.Label.ToUpperInvariant();
+                            dosVolumeInfo.VolumeLabel = mountedDrive.Label.ToUpperInvariant();
                             dosVolumeInfo.FileSystemType = drive < 2 ? "FAT12" : "FAT16";
                             break;
                         }

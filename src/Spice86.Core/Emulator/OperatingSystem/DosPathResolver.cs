@@ -42,7 +42,7 @@ internal class DosPathResolver {
             return DosFileOperationResult.NoValue();
         } else {
             if (DosDriveManager.TryGetDriveLetterFromIndex(driveNumber - 1, out char driveLetter) &&
-                _dosDriveManager.TryGetValue(driveLetter, out VirtualDrive? virtualDrive)) {
+                _dosDriveManager.TryGetDrive(driveLetter, out VirtualDrive? virtualDrive)) {
                 currentDir = virtualDrive.CurrentDosDirectory;
                 return DosFileOperationResult.NoValue();
             }
@@ -63,7 +63,8 @@ internal class DosPathResolver {
         return string.IsNullOrWhiteSpace(parent) ? fallbackValue : ConvertUtils.ToSlashFolderPath(parent);
     }
 
-    private static bool IsWithinMountPoint(string hostFullPath, VirtualDrive virtualDrive) => hostFullPath.StartsWith(virtualDrive.MountedHostDirectory);
+    private static bool IsWithinMountPoint(string hostFullPath, VirtualDrive? virtualDrive) =>
+        virtualDrive is not null && hostFullPath.StartsWith(virtualDrive.MountedHostDirectory);
 
     /// <summary>
     /// Sets the current DOS folder.
@@ -96,7 +97,7 @@ internal class DosPathResolver {
 
     private DosFileOperationResult SetCurrentDirValue(char driveLetter, string? hostFullPath, string fullDosPath) {
         if (string.IsNullOrWhiteSpace(hostFullPath) ||
-            !IsWithinMountPoint(hostFullPath, _dosDriveManager[driveLetter]) ||
+            !IsWithinMountPoint(hostFullPath, _dosDriveManager.TryGetDrive(driveLetter, out VirtualDrive? vDrive) ? vDrive : null) ||
             Encoding.ASCII.GetByteCount(fullDosPath) > MaxPathLength) {
             return DosFileOperationResult.Error(DosErrorCode.PathNotFound);
         }
@@ -176,7 +177,7 @@ internal class DosPathResolver {
         }
 
         return StartsWithDosDriveAndVolumeSeparator(dosPath)
-            ? (_dosDriveManager[dosPath[0]].MountedHostDirectory, dosPath[2..])
+            ? (_dosDriveManager.GetDrive<VirtualDrive>(dosPath[0]).MountedHostDirectory, dosPath[2..])
             : (_dosDriveManager.CurrentDrive.MountedHostDirectory, dosPath);
     }
 
