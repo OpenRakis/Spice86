@@ -20,13 +20,12 @@ using System;
 /// <see cref="JoystickProfileAutoLoader.Resolve"/> with the
 /// catalogue obtained from
 /// <see cref="JoystickProfileAutoLoader.LoadAll"/> at startup.
-/// GUID-based matching is left to the SDL-aware UI adapter, which
-/// will eventually surface the joystick GUID through a richer
-/// connection event; for now only the device name is available, so
-/// only name / DefaultProfileName / embedded fallback matching
-/// participates here. On disconnect both routers are reset so a
-/// previously-connected stick cannot leave MIDI-on-gameport or
-/// rumble enabled.
+/// The connect event surfaces both the SDL joystick GUID
+/// (<see cref="JoystickConnectionEventArgs.DeviceGuid"/>) and the
+/// friendly device name; the resolver tries GUID first, then name,
+/// then DefaultProfileName, then the embedded fallback. On
+/// disconnect both routers are reset so a previously-connected
+/// stick cannot leave MIDI-on-gameport or rumble enabled.
 /// </remarks>
 public sealed class JoystickProfileActivator : IDisposable {
     private readonly IGuiJoystickEvents _events;
@@ -79,13 +78,13 @@ public sealed class JoystickProfileActivator : IDisposable {
 
     private void OnConnectionChanged(object? sender, JoystickConnectionEventArgs e) {
         if (e.IsConnected) {
-            JoystickProfile profile = _autoLoader.Resolve(_loaded, string.Empty, e.DeviceName);
+            JoystickProfile profile = _autoLoader.Resolve(_loaded, e.DeviceGuid, e.DeviceName);
             _midiRouter.Configure(profile.MidiOnGameport);
             _rumbleRouter.Configure(profile.Rumble);
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                 _loggerService.Verbose(
-                    "JOYSTICK: profile activated for stick {Stick} (device='{Device}', profile='{Profile}')",
-                    e.StickIndex, e.DeviceName, profile.Name);
+                    "JOYSTICK: profile activated for stick {Stick} (device='{Device}', guid='{Guid}', profile='{Profile}')",
+                    e.StickIndex, e.DeviceName, e.DeviceGuid, profile.Name);
             }
         } else {
             _midiRouter.Configure(null);

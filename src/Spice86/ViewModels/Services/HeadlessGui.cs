@@ -112,9 +112,12 @@ public sealed class HeadlessGui : IGuiVideoPresentation, IGuiMouseEvents,
     /// <param name="stickIndex">Zero-based stick index (0 or 1).</param>
     /// <param name="isConnected"><see langword="true"/> for connect.</param>
     /// <param name="deviceName">Friendly device name; empty when disconnecting.</param>
-    public void SimulateJoystickConnection(int stickIndex, bool isConnected, string deviceName) {
+    /// <param name="deviceGuid">SDL joystick GUID; empty when unknown
+    /// or disconnecting. Forwarded to <c>JoystickProfileActivator</c>
+    /// so GUID-based profile matching can take precedence.</param>
+    public void SimulateJoystickConnection(int stickIndex, bool isConnected, string deviceName, string deviceGuid = "") {
         JoystickConnectionChanged?.Invoke(this,
-            new JoystickConnectionEventArgs(stickIndex, isConnected, deviceName));
+            new JoystickConnectionEventArgs(stickIndex, isConnected, deviceName, deviceGuid));
     }
 
     public int Width { get; private set; }

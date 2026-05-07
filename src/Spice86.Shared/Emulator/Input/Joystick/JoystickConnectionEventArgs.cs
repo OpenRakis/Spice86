@@ -12,7 +12,12 @@ namespace Spice86.Shared.Emulator.Input.Joystick;
 /// <param name="DeviceName">Friendly device name for diagnostics
 /// and logging (e.g. <c>"Xbox 360 Controller"</c>). Empty string
 /// when disconnected.</param>
+/// <param name="DeviceGuid">SDL joystick GUID (32-character
+/// lowercase hex) when reported by the UI adapter, otherwise
+/// empty. Used by <c>JoystickProfileAutoLoader.Resolve</c> to
+/// match a profile before falling back to <see cref="DeviceName"/>.</param>
 public readonly record struct JoystickConnectionEventArgs(
     int StickIndex,
     bool IsConnected,
-    string DeviceName);
+    string DeviceName,
+    string DeviceGuid = "");

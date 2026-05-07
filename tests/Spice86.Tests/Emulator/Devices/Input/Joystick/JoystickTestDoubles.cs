@@ -37,9 +37,9 @@ internal sealed class FakeJoystickEventSource : IGuiJoystickEvents {
     public event EventHandler<JoystickHatEventArgs>? JoystickHatChanged;
     public event EventHandler<JoystickConnectionEventArgs>? JoystickConnectionChanged;
 
-    public void RaiseConnect(int stickIndex, string name = "Test Stick") {
+    public void RaiseConnect(int stickIndex, string name = "Test Stick", string guid = "") {
         JoystickConnectionChanged?.Invoke(this,
-            new JoystickConnectionEventArgs(stickIndex, true, name));
+            new JoystickConnectionEventArgs(stickIndex, true, name, guid));
     }
 
     public void RaiseDisconnect(int stickIndex) {

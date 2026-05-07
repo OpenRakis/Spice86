@@ -118,6 +118,20 @@ public sealed class EmulatorMcpServices(
     /// </summary>
     public Dos? Dos { get; set; }
 
+    /// <summary>
+    /// Gets or sets the keyboard-as-joystick fallback used by the
+    /// <c>set_keyboard_joystick_enabled</c> MCP tool. When unset
+    /// the tool returns an "not wired" error.
+    /// </summary>
+    public Spice86.Core.Emulator.Devices.Input.Joystick.Keyboard.KeyboardJoystickMapper? KeyboardJoystickMapper { get; set; }
+
+    /// <summary>
+    /// Gets or sets the joystick replay player driven by the
+    /// <c>play_joystick_replay</c> MCP tool. The host loads the
+    /// script and constructs the player; the tool then advances it.
+    /// </summary>
+    public Spice86.Core.Emulator.Devices.Input.Joystick.Replay.JoystickReplayPlayer? JoystickReplayPlayer { get; set; }
+
     // Shared MCP breakpoint tracking state (survives transient tool instances)
     private readonly object _mcpBreakpointsLock = new();
     private readonly Lock _toolsLock = new();
