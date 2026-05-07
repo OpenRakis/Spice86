@@ -93,6 +93,7 @@
 							<StackPanel Orientation="Vertical" Spacing="4">
 								<controls:GroupBox Header="Interrupt Number (hex, or * for all)">
 									<AutoCompleteBox
+										x:Name="InterruptAutoCompleteBox"
 										Text="{Binding InterruptNumber, Mode=TwoWay}"
 										ItemsSource="{Binding KnownInterruptSuggestions}"
 										ItemFilter="{Binding InterruptSuggestionFilter}"
@@ -124,6 +125,7 @@
 							<StackPanel Orientation="Vertical" Spacing="4">
 								<controls:GroupBox Header="I/O Port Number (hex, or * for all)">
 									<AutoCompleteBox
+										x:Name="IoPortAutoCompleteBox"
 										Text="{Binding IoPortNumber, Mode=TwoWay}"
 										ItemsSource="{Binding KnownIoPortSuggestions}"
 										ItemFilter="{Binding IoPortSuggestionFilter}"

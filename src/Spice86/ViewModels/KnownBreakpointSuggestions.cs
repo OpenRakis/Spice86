@@ -18,7 +18,7 @@ public static class KnownBreakpointSuggestions {
         (0x11, "BIOS Equipment List"),
         (0x12, "BIOS Conventional Memory Size"),
         (0x13, "BIOS Disk Services (AH=function)"),
-        (0x15, "BIOS Miscellaneous Services / PS2 Pointing Device (AH=function)"),
+        (0x15, "BIOS Miscellaneous Services / PS/2 Pointing Device (AH=function)"),
         (0x16, "BIOS Keyboard Services (AH=function)"),
         (0x1A, "BIOS Time / Date Services (AH=function)"),
         (0x1C, "BIOS Timer Tick User Handler"),

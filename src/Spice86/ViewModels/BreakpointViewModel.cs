@@ -55,7 +55,6 @@ public partial class BreakpointViewModel : ViewModelBase {
     /// <paramref name="type"/> (e.g. every interrupt or every I/O access).
     /// </summary>
     internal BreakpointViewModel(
-        BreakpointsViewModel breakpointsViewModel,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         BreakPointType type,
         Action onReached,
@@ -65,6 +64,7 @@ public partial class BreakpointViewModel : ViewModelBase {
         EndAddress = -1;
         Type = type;
         IsRemovedOnTrigger = false;
+        IsWildcard = true;
         _onReached = onReached;
         Comment = comment;
         Parameter = "*";
@@ -100,6 +100,14 @@ public partial class BreakpointViewModel : ViewModelBase {
     }
 
     public bool IsRemovedOnTrigger { get; }
+
+    /// <summary>
+    /// True when this breakpoint was created as a wildcard ("*") and triggers on every
+    /// event of its <see cref="Type"/> (e.g. every interrupt or every I/O port access).
+    /// In that case, <see cref="Address"/> / <see cref="EndAddress"/> are not meaningful
+    /// and <see cref="Parameter"/> is "*".
+    /// </summary>
+    public bool IsWildcard { get; }
 
     public long Address { get; }
 

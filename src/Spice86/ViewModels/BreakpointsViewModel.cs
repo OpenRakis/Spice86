@@ -141,12 +141,17 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
                     SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "Cycles");
                     break;
                 case BreakPointType.CPU_INTERRUPT:
-
-                    InterruptNumber = ConvertUtils.ToHex32((uint)SelectedBreakpoint.Address);
+                    InterruptNumber = SelectedBreakpoint.IsWildcard
+                        ? WildcardValue
+                        : ConvertUtils.ToHex32((uint)SelectedBreakpoint.Address);
+                    InterruptConditionExpression = SelectedBreakpoint.ConditionExpression;
                     SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "Interrupt");
                     break;
                 case BreakPointType.IO_ACCESS:
-                    IoPortNumber = ConvertUtils.ToHex32((uint)SelectedBreakpoint.Address);
+                    IoPortNumber = SelectedBreakpoint.IsWildcard
+                        ? WildcardValue
+                        : ConvertUtils.ToHex32((uint)SelectedBreakpoint.Address);
+                    IoPortConditionExpression = SelectedBreakpoint.ConditionExpression;
                     SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "I/O Port");
                     break;
                 case BreakPointType.MEMORY_ACCESS:
@@ -219,6 +224,8 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
         CyclesValue = _state.Cycles;
         ExecutionAddressValue = State.IpSegmentedAddress.ToString();
         ExecutionConditionExpression = null;
+        InterruptConditionExpression = null;
+        IoPortConditionExpression = null;
         MemoryBreakpointStartAddress = State.IpSegmentedAddress.ToString();
         MemoryBreakpointEndAddress = State.IpSegmentedAddress.ToString();
     }
@@ -256,6 +263,7 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
         set {
             if (value != WildcardValue) {
                 ValidateAddressProperty(value, _state);
+                ValidateAddressIsInRange(value, ushort.MaxValue, nameof(IoPortNumber));
             } else {
                 ClearValidationError(nameof(IoPortNumber));
             }
@@ -275,6 +283,7 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
         set {
             if (value != WildcardValue) {
                 ValidateAddressProperty(value, _state);
+                ValidateAddressIsInRange(value, byte.MaxValue, nameof(InterruptNumber));
             } else {
                 ClearValidationError(nameof(InterruptNumber));
             }
@@ -286,6 +295,26 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ConfirmBreakpointCreationCommand))]
     private string? _interruptConditionExpression;
+
+    /// <summary>
+    /// Adds a validation error on <paramref name="propertyName"/> if <paramref name="value"/>
+    /// parses to an address greater than <paramref name="maxValue"/>. Used to enforce that
+    /// interrupt vectors fit in a byte and I/O ports fit in a ushort.
+    /// </summary>
+    private void ValidateAddressIsInRange(string? value, uint maxValue, string propertyName) {
+        if (!AddressAndValueParser.TryParseAddressString(value, _state, out uint? parsed) || parsed is null) {
+            return;
+        }
+        if (parsed.Value > maxValue) {
+            if (!_validationErrors.TryGetValue(propertyName, out List<string>? values)) {
+                values = [];
+                _validationErrors[propertyName] = values;
+            }
+            values.Clear();
+            values.Add($"Value must be in range 0..0x{maxValue:X}");
+            OnErrorsChanged(propertyName);
+        }
+    }
 
     [RelayCommand(CanExecute = nameof(ConfirmBreakpointCreationCanExecute))]
     private void ConfirmBreakpointCreation() {
@@ -541,7 +570,7 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
     /// </summary>
     public BreakpointViewModel AddWildcardBreakpoint(BreakPointType type, Action onReached, string comment) {
         RemoveFirstIfEdited();
-        BreakpointViewModel vm = new(this, _emulatorBreakpointsManager, type, onReached, comment);
+        BreakpointViewModel vm = new(_emulatorBreakpointsManager, type, onReached, comment);
         AddBreakpointInternal(vm);
         return vm;
     }
