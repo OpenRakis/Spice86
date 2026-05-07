@@ -21,7 +21,7 @@ public class DosDiskInt26Handler : InterruptHandler {
         if (LoggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
             LoggerService.Warning("DOS INT26H was called, hope for the best!");
         }
-        if (State.AL >= DosDriveManager.MaxDriveCount || !_dosDriveManager.HasDriveAtIndex(State.AL)) {
+        if (!_dosDriveManager.HasDriveAtIndex(State.AL)) {
             State.AX = 0x8002;
             SetCarryFlag(true, true);
         } else {

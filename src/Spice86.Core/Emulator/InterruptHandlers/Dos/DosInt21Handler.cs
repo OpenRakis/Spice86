@@ -662,12 +662,7 @@ public class DosInt21Handler : InterruptHandler {
             driveIndex = (byte)(driveRequest - 1);
         }
 
-        if (driveIndex >= DosDriveManager.MaxDriveCount) {
-            return false;
-        }
-
-        char driveLetter = (char)('A' + driveIndex);
-        if (!_dosDriveManager.TryGetDrive(driveLetter, out VirtualDrive? resolvedDrive)) {
+        if (!_dosDriveManager.TryGetDriveAtIndex(driveIndex, out VirtualDrive? resolvedDrive)) {
             return false;
         }
 
@@ -1781,8 +1776,7 @@ public class DosInt21Handler : InterruptHandler {
     public void SelectDefaultDrive() {
         byte driveIndex = State.DL;
         if (driveIndex < DosDriveManager.MaxDriveCount) {
-            char driveLetter = (char)('A' + driveIndex);
-            if (_dosDriveManager.TryGetDrive(driveLetter, out VirtualDrive? mountedDrive)) {
+            if (_dosDriveManager.TryGetDriveAtIndex(driveIndex, out VirtualDrive? mountedDrive)) {
                 _dosDriveManager.CurrentDrive = mountedDrive;
             }
         } else if (LoggerService.IsEnabled(LogEventLevel.Error)) {

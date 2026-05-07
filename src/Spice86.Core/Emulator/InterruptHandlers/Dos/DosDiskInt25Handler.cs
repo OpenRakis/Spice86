@@ -25,7 +25,7 @@ public class DosDiskInt25Handler : InterruptHandler {
         ushort startingLogicalSector = State.DX;
         SegmentedAddress bufferForData = new(State.DS, State.BX);
 
-        if (driveNumber >= DosDriveManager.MaxDriveCount || !_dosDriveManager.HasDriveAtIndex(State.AL)) {
+        if (!_dosDriveManager.HasDriveAtIndex(State.AL)) {
             State.AX = 0x8002;
             SetCarryFlag(true, true);
         } else {

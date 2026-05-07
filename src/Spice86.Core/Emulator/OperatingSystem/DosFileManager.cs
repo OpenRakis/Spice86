@@ -858,7 +858,7 @@ public class DosFileManager {
         byte driveIndex = dosFile.Drive == 0xff ? _dosDriveManager.CurrentDriveIndex : dosFile.Drive;
         bool isRemovable = driveIndex <= 1;
         bool isRemote = false;
-        if (_dosDriveManager.ElementAtOrDefault(driveIndex).Value is { } drive) {
+        if (_dosDriveManager.TryGetDriveAtIndex(driveIndex, out DosDriveBase? drive)) {
             isRemovable = drive.IsRemovable;
             isRemote = drive.IsRemote;
         }
@@ -1314,6 +1314,7 @@ public class DosFileManager {
             return DosFileOperationResult.Error(DosErrorCode.FunctionNumberInvalid);
         }
 
+        DosDriveBase? mountedDrive;
         switch (subfunction) {
             case IoctlSubfunction.GetDeviceInformation:
                 VirtualFileBase? fileOrDevice = OpenFiles[handle];
@@ -1436,8 +1437,8 @@ public class DosFileManager {
                 //* cdrom drives and drive A and B are removable */
                 if (drive < 2) {
                     state.AX = 0;
-                } else if (!_dosDriveManager.ElementAtOrDefault(drive).Value.IsRemovable) {
-                    state.AX = 1;
+                } else if (_dosDriveManager.TryGetDriveAtIndex(drive, out mountedDrive)) {
+                    state.AX = mountedDrive.IsRemovable ? (ushort)1 : (ushort)0;
                 } else {
                     if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                         _loggerService.Warning("IOCTL: Unable to determine if drive {Drive} is removable", drive);
@@ -1447,7 +1448,7 @@ public class DosFileManager {
                 return DosFileOperationResult.NoValue();
 
             case IoctlSubfunction.IsDeviceRemote:
-                if ((drive >= 2) && _dosDriveManager.ElementAt(drive).Value.IsRemote) {
+                if ((drive >= 2) && _dosDriveManager.TryGetDriveAtIndex(drive, out mountedDrive) && mountedDrive.IsRemote) {
                     state.DX = 0x1000;  // device is remote
                                         // undocumented bits always clear
                 } else {
@@ -1467,7 +1468,7 @@ public class DosFileManager {
                 return DosFileOperationResult.NoValue();
 
             case IoctlSubfunction.GenericBlockDeviceRequest:
-                if (!_dosDriveManager.TryGetDriveAtIndex(drive, out DosDriveBase? mountedDrive)) {
+                if (!_dosDriveManager.TryGetDriveAtIndex(drive, out mountedDrive)) {
                     if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                         _loggerService.Warning("IOCTL: Access denied for drive {Drive} - drive not available", drive);
                     }
@@ -1527,7 +1528,7 @@ public class DosFileManager {
                     } else {
                         state.AL = 1;
                     }
-                } else if (_dosDriveManager.ElementAtOrDefault(drive).Value.IsRemovable) {
+                } else if (_dosDriveManager.TryGetDriveAtIndex(drive, out mountedDrive) && mountedDrive.IsRemovable) {
                     if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                         _loggerService.Warning("IOCTL: Get Logical Drive Map not supported for removable drive {Drive}", drive);
                     }
