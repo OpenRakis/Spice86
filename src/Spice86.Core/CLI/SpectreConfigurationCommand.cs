@@ -2,10 +2,12 @@ namespace Spice86.Core.CLI;
 
 using Spectre.Console.Cli;
 
+using System.Threading;
+
 internal sealed class SpectreConfigurationCommand : Command<Configuration> {
     public static Configuration? LastParsedConfiguration { get; set; }
 
-    public override int Execute(CommandContext context, Configuration settings) {
+    protected override int Execute(CommandContext context, Configuration settings, CancellationToken cancellationToken) {
         LastParsedConfiguration = settings;
         return 0;
     }
