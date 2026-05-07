@@ -29,6 +29,20 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
             propertyName));
     }
 
+    /// <summary>
+    /// Clears any validation error registered for the specified property name and
+    /// notifies the binding infrastructure. Use this when a special-case value (such as
+    /// a wildcard) is inherently valid and should not be subjected to the normal address
+    /// validation pipeline.
+    /// </summary>
+    protected void ClearValidationError([CallerMemberName] string? propertyName = null) {
+        if (string.IsNullOrWhiteSpace(propertyName)) {
+            return;
+        }
+        _validationErrors.Remove(propertyName);
+        OnErrorsChanged(propertyName);
+    }
+
     protected void ValidateMemoryAddressIsWithinLimit(State state, string? value,
         uint limit = A20Gate.EndOfHighMemoryArea,
         [CallerMemberName] string? bindedPropertyName = null) {
