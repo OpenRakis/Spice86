@@ -30,6 +30,11 @@ public abstract class DosDriveBase {
     public string DosVolume => $"{DriveLetter}{DosPathResolver.VolumeSeparatorChar}";
 
     /// <summary>
+    /// Gets the absolute path to the current DOS directory in use on the drive.
+    /// </summary>
+    public string CurrentDosDirectory { get; set; } = "";
+
+    /// <summary>
     /// Gets if it is a network drive. Not supported, always <see langword="false" />
     /// </summary>
     public bool IsRemote { get; }
