@@ -24,7 +24,7 @@ public sealed class JoystickMappingJsonStoreTests : IDisposable {
 
     public JoystickMappingJsonStoreTests() {
         _tempDir = Path.Combine(Path.GetTempPath(),
-            "spice86-joystick-mapping-tests-" + Guid.NewGuid().ToString("N"));
+            $"spice86-joystick-mapping-tests-{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempDir);
         _logger = Substitute.For<ILoggerService>();
         _logger.IsEnabled(Arg.Any<LogEventLevel>()).Returns(true);
