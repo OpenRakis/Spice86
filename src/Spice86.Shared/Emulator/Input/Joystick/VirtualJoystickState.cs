@@ -2,8 +2,9 @@ namespace Spice86.Shared.Emulator.Input.Joystick;
 
 /// <summary>
 /// Immutable snapshot of the full two-stick gameport input layer.
-/// Produced by an <see cref="IGameportInputSource"/> and consumed by
-/// the Core <c>Gameport</c> device on every port-<c>0x201</c> access.
+/// Built up on the emulator thread from <c>IGuiJoystickEvents</c>
+/// drained out of <c>InputEventHub</c>, and consumed by the Core
+/// <c>Gameport</c> device on every port-<c>0x201</c> access.
 /// </summary>
 /// <param name="StickA">State of the first virtual stick (DOSBox
 /// Staging <c>stick[0]</c>).</param>

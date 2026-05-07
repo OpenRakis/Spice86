@@ -1,9 +1,9 @@
 namespace Spice86.Shared.Emulator.Input.Joystick;
 
 /// <summary>
-/// Immutable snapshot of one virtual stick's normalized state, as
-/// produced by an <see cref="IGameportInputSource"/> after applying
-/// calibration, deadzone and a <see cref="Mapping.JoystickProfile"/>.
+/// Immutable snapshot of one virtual stick's normalized state, after
+/// applying calibration, deadzone and a
+/// <see cref="Mapping.JoystickProfile"/> on the UI thread.
 /// </summary>
 /// <remarks>
 /// Axis values are normalized to the range <c>[-1.0, 1.0]</c>. A
@@ -33,9 +33,9 @@ public readonly record struct VirtualStickState(
     bool IsConnected) {
 
     /// <summary>
-    /// A centred, fully released, disconnected stick. Returned by
-    /// sources such as <c>NullJoystickInput</c> and used as the
-    /// default state for unmapped slots.
+    /// A centred, fully released, disconnected stick. Used as the
+    /// initial state of every slot in <c>Gameport</c> until a
+    /// connection event arrives.
     /// </summary>
     public static VirtualStickState Disconnected { get; } = new(
         0f, 0f, 0f, 0f, 0, JoystickHatDirection.Centered, false);

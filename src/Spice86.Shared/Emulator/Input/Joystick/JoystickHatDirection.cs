@@ -1,8 +1,8 @@
 namespace Spice86.Shared.Emulator.Input.Joystick;
 
 /// <summary>
-/// Eight-way digital hat (POV) direction reported by an
-/// <see cref="IGameportInputSource"/>. Matches the SDL
+/// Eight-way digital hat (POV) direction carried in
+/// <see cref="JoystickHatEventArgs"/>. Matches the SDL
 /// <c>SDL_HAT_*</c> bitmask values and DOSBox Staging's hat handling.
 /// </summary>
 public enum JoystickHatDirection {

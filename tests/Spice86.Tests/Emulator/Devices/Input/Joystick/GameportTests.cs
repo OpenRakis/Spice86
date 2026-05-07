@@ -16,7 +16,7 @@ using System;
 using Xunit;
 
 public sealed class GameportTests {
-    private readonly FakeJoystickInput _input;
+    private readonly FakeJoystickEventSource _events;
     private readonly FakeTimeProvider _timeProvider;
     private readonly Gameport _gameport;
     private readonly IOPortDispatcher _dispatcher;
@@ -26,16 +26,14 @@ public sealed class GameportTests {
         State state = new(CpuModel.INTEL_80286);
         _dispatcher = new IOPortDispatcher(new AddressReadWriteBreakpoints(),
             state, logger, false);
-        _input = new FakeJoystickInput();
+        _events = new FakeJoystickEventSource();
         _timeProvider = new FakeTimeProvider(new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc));
-        _gameport = new Gameport(state, _dispatcher, _input, _timeProvider,
+        _gameport = new Gameport(state, _dispatcher, _events, _timeProvider,
             rumbleSink: null, failOnUnhandledPort: false, loggerService: logger);
     }
 
     [Fact]
-    public void NoStickConnected_Port201_Reads0xFF() {
-        _input.Current = VirtualJoystickState.Disconnected;
-
+    public void NoConnectionEventEverRaised_Port201_Reads0xFF() {
         byte read = _dispatcher.ReadByte(GameportConstants.Port201);
 
         read.Should().Be(0xFF);
@@ -43,74 +41,69 @@ public sealed class GameportTests {
 
     [Fact]
     public void StickAConnectedNoButtonsBeforeAnyWrite_LowNibbleAxesCleared() {
-        // Before any write the timer is disarmed -> axes are inactive,
-        // so their bits are cleared. Buttons not pressed -> their bits stay set.
-        VirtualStickState a = new(0f, 0f, 0f, 0f, Buttons: 0,
-            JoystickHatDirection.Centered, IsConnected: true);
-        _input.Current = new VirtualJoystickState(a, VirtualStickState.Disconnected);
+        _events.RaiseConnect(0);
 
         byte read = _dispatcher.ReadByte(GameportConstants.Port201);
 
-        // Stick A bits: AX (0x01) and AY (0x02) cleared -> 0xFC for those.
-        // Stick A buttons not pressed: 0x10, 0x20 stay set.
-        // Stick B disconnected: 0x04, 0x08, 0x40, 0x80 stay set.
+        // Stick A axes inactive (0x01, 0x02 cleared); buttons not pressed (0x10, 0x20 set);
+        // stick B disconnected (its bits stay set). 0xFF & ~0x01 & ~0x02 = 0xFC.
         read.Should().Be(0xFC);
     }
 
     [Fact]
-    public void StickAButtonsPressed_TheirBitsCleared() {
-        VirtualStickState a = new(0f, 0f, 0f, 0f,
-            Buttons: 0b0011, // button 1 + button 2 pressed
-            JoystickHatDirection.Centered, IsConnected: true);
-        _input.Current = new VirtualJoystickState(a, VirtualStickState.Disconnected);
+    public void StickAButtonEvents_FlipTheirBits() {
+        _events.RaiseConnect(0);
+        _events.RaiseButton(0, 0, true);
+        _events.RaiseButton(0, 1, true);
 
         byte read = _dispatcher.ReadByte(GameportConstants.Port201);
 
-        // Axes inactive (cleared) + buttons pressed (cleared) -> 0xCC
-        // 0xFF & ~0x01 & ~0x02 & ~0x10 & ~0x20 = 0xCC
+        // Axes inactive + buttons pressed -> 0xFF & ~0x01 & ~0x02 & ~0x10 & ~0x20 = 0xCC.
         read.Should().Be(0xCC);
+
+        // Releasing button 0 brings 0x10 back.
+        _events.RaiseButton(0, 0, false);
+        _dispatcher.ReadByte(GameportConstants.Port201).Should().Be(0xDC);
     }
 
     [Fact]
     public void WriteToPort201_ArmsTimer_AxesBecomeActive() {
-        VirtualStickState a = new(0f, 0f, 0f, 0f, 0,
-            JoystickHatDirection.Centered, IsConnected: true);
-        _input.Current = new VirtualJoystickState(a, VirtualStickState.Disconnected);
+        _events.RaiseConnect(0);
+        // Stick A centred (X=0, Y=0).
 
         _dispatcher.WriteByte(GameportConstants.Port201, 0x00);
-        // No time advance: deadlines are in the future -> axes active.
+
+        // No time advance: deadlines are in the future -> axes active = bits set.
         byte readImmediate = _dispatcher.ReadByte(GameportConstants.Port201);
 
-        // Axes active -> their bits stay set. Buttons not pressed -> stay set.
-        // Stick B disconnected -> its bits stay set. Result: 0xFF.
+        // Axes active, buttons not pressed, B disconnected -> 0xFF.
         readImmediate.Should().Be(0xFF);
     }
 
     [Fact]
     public void WriteToPort201_ThenAdvancePastDeadline_AxesBecomeInactive() {
-        VirtualStickState a = new(-1f, -1f, 0f, 0f, 0,
-            JoystickHatDirection.Centered, IsConnected: true);
-        _input.Current = new VirtualJoystickState(a, VirtualStickState.Disconnected);
+        _events.RaiseConnect(0);
+        _events.RaiseAxis(0, JoystickAxis.X, -1f);
+        _events.RaiseAxis(0, JoystickAxis.Y, -1f);
 
         _dispatcher.WriteByte(GameportConstants.Port201, 0x00);
-        // axis = -1 -> deadline = 0 + 0 + offset = ~0.02 ms; advance 1ms.
+        // axis = -1 -> deadline = 0 + 0 + offset (~0.02 ms); advance 1 ms.
         _timeProvider.AdvanceMs(1.0);
 
         byte read = _dispatcher.ReadByte(GameportConstants.Port201);
 
-        // Axes inactive (low nibble cleared for stick A), B disconnected -> 0xFC.
+        // Axes inactive, B disconnected -> 0xFC.
         read.Should().Be(0xFC);
     }
 
     [Fact]
-    public void WriteToPort201_ArmedWindowExpires_AxesGoInactive() {
-        VirtualStickState a = new(1f, 1f, 0f, 0f, 0,
-            JoystickHatDirection.Centered, IsConnected: true);
-        _input.Current = new VirtualJoystickState(a, VirtualStickState.Disconnected);
+    public void ArmedWindowExpires_AxesGoInactive() {
+        _events.RaiseConnect(0);
+        _events.RaiseAxis(0, JoystickAxis.X, 1f);
+        _events.RaiseAxis(0, JoystickAxis.Y, 1f);
 
         _dispatcher.WriteByte(GameportConstants.Port201, 0x00);
-        // Advance past the 10ms legacy reset window: even though axis = +1
-        // would normally still be firing, the watchdog disarms the timer.
+        // Even though axis = +1 would normally still be firing, the 10 ms watchdog disarms.
         _timeProvider.AdvanceMs(GameportConstants.LegacyResetTimeoutTicks + 1);
 
         byte read = _dispatcher.ReadByte(GameportConstants.Port201);
@@ -120,9 +113,9 @@ public sealed class GameportTests {
 
     [Fact]
     public void PeekPort201_DoesNotRearmTimer() {
-        VirtualStickState a = new(-1f, -1f, 0f, 0f, 0,
-            JoystickHatDirection.Centered, IsConnected: true);
-        _input.Current = new VirtualJoystickState(a, VirtualStickState.Disconnected);
+        _events.RaiseConnect(0);
+        _events.RaiseAxis(0, JoystickAxis.X, -1f);
+        _events.RaiseAxis(0, JoystickAxis.Y, -1f);
 
         _dispatcher.WriteByte(GameportConstants.Port201, 0x00);
         _timeProvider.AdvanceMs(1.0);
@@ -136,23 +129,71 @@ public sealed class GameportTests {
 
     [Fact]
     public void StickBConnectedAndButtons_RoutedToHighNibble() {
-        VirtualStickState b = new(0f, 0f, 0f, 0f,
-            Buttons: 0b0011,
-            JoystickHatDirection.Centered, IsConnected: true);
-        _input.Current = new VirtualJoystickState(VirtualStickState.Disconnected, b);
+        _events.RaiseConnect(1);
+        _events.RaiseButton(1, 0, true);
+        _events.RaiseButton(1, 1, true);
 
         byte read = _dispatcher.ReadByte(GameportConstants.Port201);
 
         // Stick A disconnected: 0x01, 0x02, 0x10, 0x20 stay set.
         // Stick B axes inactive (0x04, 0x08 cleared); buttons pressed (0x40, 0x80 cleared).
-        // 0xFF & ~0x04 & ~0x08 & ~0x40 & ~0x80 = 0x33
         read.Should().Be(0x33);
     }
 
     [Fact]
-    public void Gameport_ExposesInputSource_AndTimer() {
-        _gameport.InputSource.Should().BeSameAs(_input);
+    public void HatEvent_UpdatesSnapshot() {
+        _events.RaiseConnect(0);
+        _events.RaiseHat(0, JoystickHatDirection.Up);
+
+        _gameport.GetCurrentState().StickA.Hat.Should().Be(JoystickHatDirection.Up);
+    }
+
+    [Fact]
+    public void DisconnectEvent_FullyResetsStickState() {
+        _events.RaiseConnect(0);
+        _events.RaiseAxis(0, JoystickAxis.X, 0.5f);
+        _events.RaiseButton(0, 0, true);
+
+        _events.RaiseDisconnect(0);
+
+        VirtualJoystickState snapshot = _gameport.GetCurrentState();
+        snapshot.StickA.Should().Be(VirtualStickState.Disconnected);
+    }
+
+    [Fact]
+    public void EventForOutOfRangeStickIndex_IsIgnored() {
+        _events.RaiseConnect(0);
+        _events.RaiseAxis(stickIndex: 5, JoystickAxis.X, 1f);
+        _events.RaiseButton(stickIndex: -1, buttonIndex: 0, pressed: true);
+
+        VirtualJoystickState snapshot = _gameport.GetCurrentState();
+        snapshot.StickA.X.Should().Be(0f);
+        snapshot.StickA.Buttons.Should().Be(0);
+    }
+
+    [Fact]
+    public void OutOfRangeButtonIndex_IsIgnored() {
+        _events.RaiseConnect(0);
+        _events.RaiseButton(0, 7, true);
+
+        _gameport.GetCurrentState().StickA.Buttons.Should().Be(0);
+    }
+
+    [Fact]
+    public void Dispose_StopsConsumingEvents() {
+        _events.RaiseConnect(0);
+
+        _gameport.Dispose();
+        // After dispose, further events must not change observable state.
+        _events.RaiseAxis(0, JoystickAxis.X, 1f);
+
+        _gameport.GetCurrentState().StickA.X.Should().Be(0f);
+    }
+
+    [Fact]
+    public void Gameport_ExposesTimerAndOptionalRumbleSink() {
         _gameport.Timer.Should().NotBeNull();
         _gameport.RumbleSink.Should().BeNull();
     }
 }
+

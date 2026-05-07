@@ -19,6 +19,7 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Shared.Emulator.Dos;
+using Spice86.Shared.Emulator.Input.Joystick;
 using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Emulator.Video;
@@ -29,7 +30,7 @@ using MouseButton = Spice86.Shared.Emulator.Mouse.MouseButton;
 
 /// <inheritdoc cref="Spice86.Shared.Interfaces.IGuiVideoPresentation" />
 public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGuiVideoPresentation,
-    IGuiMouseEvents, IGuiKeyboardEvents, IDisposable {
+    IGuiMouseEvents, IGuiKeyboardEvents, IGuiJoystickEvents, IDisposable {
     private readonly SharedMouseData _sharedMouseData;
     private const double ScreenRefreshHz = 60;
     private readonly ILoggerService _loggerService;
@@ -92,6 +93,16 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     public event EventHandler<MouseButtonEventArgs>? MouseButtonDown;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
     public event EventHandler<UIRenderEventArgs>? RenderScreen;
+#pragma warning disable CS0067 // raised once a UI-side joystick adapter (SDL/keyboard fallback) is wired in a later slice
+    /// <inheritdoc />
+    public event EventHandler<JoystickAxisEventArgs>? JoystickAxisChanged;
+    /// <inheritdoc />
+    public event EventHandler<JoystickButtonEventArgs>? JoystickButtonChanged;
+    /// <inheritdoc />
+    public event EventHandler<JoystickHatEventArgs>? JoystickHatChanged;
+    /// <inheritdoc />
+    public event EventHandler<JoystickConnectionEventArgs>? JoystickConnectionChanged;
+#pragma warning restore CS0067
     internal event EventHandler? CloseMainWindow;
 
     public sealed class MainWindowViewModelDependencies {
