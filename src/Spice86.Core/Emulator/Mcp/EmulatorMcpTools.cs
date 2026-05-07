@@ -1535,7 +1535,7 @@ internal sealed class EmulatorMcpTools {
         }
 
         char driveLetterChar = driveLetter[0];
-        int driveIndex = DosDriveManager.GetDriveLetterIndexOrThrow(driveLetterChar, nameof(driveLetter));
+        int driveIndex = DosDriveManager.GetDriveIndexOrThrow(driveLetterChar, nameof(driveLetter));
         if (!dos.DosDriveManager.TryGetDrive(driveLetterChar, out VirtualDrive? virtualDrive) || virtualDrive == null) {
             throw new InvalidOperationException($"Drive '{driveLetterChar}' is not mounted");
         }

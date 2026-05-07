@@ -449,7 +449,7 @@ internal class DosPathResolver {
 
     private bool StartsWithDosDriveAndVolumeSeparator(string dosPath) =>
         dosPath.Length >= 2 &&
-        DosDriveManager.GetDriveLetterIndex(dosPath[0]) != -1 &&
+        DosDriveManager.GetDriveIndex(dosPath[0]) != -1 &&
         dosPath[1] == VolumeSeparatorChar;
 
     private bool IsPathRooted(string path) =>

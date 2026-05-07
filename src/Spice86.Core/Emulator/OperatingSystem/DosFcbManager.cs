@@ -85,7 +85,7 @@ public class DosFcbManager {
         // Check for drive specification
         if (pos + 1 < filename.Length && filename[pos + 1] == ':' && !TestFieldSeps(filename[pos])) {
             char driveChar = filename[pos];
-            if (DosDriveManager.TryGetDriveLetterIndex(driveChar, out int driveNum)) {
+            if (DosDriveManager.TryGetLetterIndex(driveChar, out int driveNum)) {
                 // Undocumented behavior: should keep parsing even if drive is invalid
                 if (!_dosDriveManager.HasDriveAtIndex(driveNum)) {
                     retCodeDrive = true;

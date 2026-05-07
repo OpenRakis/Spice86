@@ -39,10 +39,10 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
             cDriveFolderPath = DosPathResolver.GetExeParentFolder(executablePath);
         }
         cDriveFolderPath = ConvertUtils.ToSlashFolderPath(cDriveFolderPath);
-        _driveMap[GetDriveLetterIndex('A')] = new VirtualDrive() { DriveLetter = 'A', MountedHostDirectory = "" };
-        _driveMap[GetDriveLetterIndex('B')] = new VirtualDrive() { DriveLetter = 'B', MountedHostDirectory = "" };
+        _driveMap[GetDriveIndex('A')] = new VirtualDrive() { DriveLetter = 'A', MountedHostDirectory = "" };
+        _driveMap[GetDriveIndex('B')] = new VirtualDrive() { DriveLetter = 'B', MountedHostDirectory = "" };
         var cDrive = new VirtualDrive { DriveLetter = 'C', MountedHostDirectory = cDriveFolderPath };
-        _driveMap[GetDriveLetterIndex('C')] = cDrive;
+        _driveMap[GetDriveIndex('C')] = cDrive;
         CurrentDrive = cDrive;
         InitializeMediaDescriptors();
         if (loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
@@ -55,9 +55,9 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
     /// <summary>
     /// Gets the zero-based drive index associated with the given DOS drive letter.
     /// </summary>
-    /// <param name="value">The DOS drive letter. Valid drive letters are uppercase and lowercase ASCII letters.</param>
+    /// <param name="driveLetter">The DOS drive letter. Valid drive letters are uppercase and lowercase ASCII letters.</param>
     /// <returns>The zero-based drive index associated with the drive letter or -1 if the drive letter is invalid.</returns>
-    public static int GetDriveLetterIndex(char value) {
+    public static int GetDriveIndex(char driveLetter) {
         // Since only ASCII letters are valid here, this could be further optimized by using the "bitwise OR by 0x20"
         // trick to force letters into lowercase, then subtract it by 'a' (into an int), and finally perform an
         // unsigned comparison check to validate that it's in the range [A-Z] or [a-z] to determine whether it should
@@ -66,12 +66,12 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
         //   int result = (value | 0x20) - 'a';
         //   return ((uint)result <= 'z' - 'a') ? result : -1;
 
-        if (char.IsBetween(value, 'A', 'Z')) {
-            return value - 'A';
+        if (char.IsBetween(driveLetter, 'A', 'Z')) {
+            return driveLetter - 'A';
         }
 
-        if (char.IsBetween(value, 'a', 'z')) {
-            return value - 'a';
+        if (char.IsBetween(driveLetter, 'a', 'z')) {
+            return driveLetter - 'a';
         }
 
         return -1;
@@ -80,14 +80,14 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
     /// <summary>
     /// Gets the zero-based drive index associated with the given DOS drive letter.
     /// </summary>
-    /// <param name="value">The DOS drive letter. Valid drive letters are uppercase and lowercase ASCII letters.</param>
-    /// <param name="paramName">The parameter name to pass into the <see cref="ArgumentException"/> if <paramref name="value"/> is invalid.</param>
+    /// <param name="driveLetter">The DOS drive letter. Valid drive letters are uppercase and lowercase ASCII letters.</param>
+    /// <param name="paramName">The parameter name to pass into the <see cref="ArgumentException"/> if <paramref name="driveLetter"/> is invalid.</param>
     /// <returns>The zero-based index associated with the drive letter.</returns>
-    /// <exception cref="ArgumentException"><paramref name="value"/> is not a valid drive letter.</exception>
-    internal static int GetDriveLetterIndexOrThrow(char value, [CallerArgumentExpression(nameof(value))] string? paramName = null) {
-        int driveIndex = GetDriveLetterIndex(value);
+    /// <exception cref="ArgumentException"><paramref name="driveLetter"/> is not a valid drive letter.</exception>
+    internal static int GetDriveIndexOrThrow(char driveLetter, [CallerArgumentExpression(nameof(driveLetter))] string? paramName = null) {
+        int driveIndex = GetDriveIndex(driveLetter);
         if (driveIndex == -1) {
-            throw new ArgumentException($"Drive letter '{(!char.IsControl(value) ? value : '?')}' (0x{(int)value:x}) is invalid. It must be an ASCII uppercase or lowercase character between 'A' and 'Z' (inclusive).", paramName);
+            throw new ArgumentException($"Drive letter '{(!char.IsControl(driveLetter) ? driveLetter : '?')}' (0x{(int)driveLetter:x}) is invalid. It must be an ASCII uppercase or lowercase character between 'A' and 'Z' (inclusive).", paramName);
         }
 
         Debug.Assert(driveIndex is >= 0 and < MaxDriveCount);
@@ -97,51 +97,51 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
     /// <summary>
     /// Attempts to get the zero-based drive index associated with the given DOS drive letter.
     /// </summary>
-    /// <param name="value">The DOS drive letter. Valid drive letters are uppercase and lowercase ASCII letters.</param>
+    /// <param name="driveLetter">The DOS drive letter. Valid drive letters are uppercase and lowercase ASCII letters.</param>
     /// <param name="driveIndex">The zero-based index associated with the drive letter or -1 on failure.</param>
     /// <returns><see langword="true"/> if the drive letter and associated drive index is valid; otherwise, <see langword="false"/>.</returns>
-    public static bool TryGetDriveLetterIndex(char value, out int driveIndex) {
-        driveIndex = GetDriveLetterIndex(value);
+    public static bool TryGetLetterIndex(char driveLetter, out int driveIndex) {
+        driveIndex = GetDriveIndex(driveLetter);
         return driveIndex != -1;
     }
 
     /// <summary>
     /// Gets the DOS drive letter from a zero-based drive index.
     /// </summary>
-    /// <param name="index">Must be a zero-based drive index between 0 (inclusive) and <see cref="MaxDriveCount"/> (exclusive).</param>
+    /// <param name="driveIndex">Must be a zero-based drive index between 0 (inclusive) and <see cref="MaxDriveCount"/> (exclusive).</param>
     /// <returns>An uppercase ASCII letter representing the drive letter.</returns>
     /// <remarks>
     /// For performance reasons (fast and efficient inlining), this will not throw an <see cref="ArgumentException"/>
-    /// if the index is out of range. Thus <paramref name="index"/> must always be validated by the caller prior to
+    /// if the index is out of range. Thus <paramref name="driveIndex"/> must always be validated by the caller prior to
     /// calling this method (and is the reason why it is an internal method).
     /// </remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static char GetDriveLetterFromIndexFast(int index) {
-        Debug.Assert(index is >= 0 and < MaxDriveCount);
-        return (char)(index + 'A'); // Only works as long as MaxDriveCount is <= 26.
+    internal static char GetDriveLetterFromIndexFast(int driveIndex) {
+        Debug.Assert(driveIndex is >= 0 and < MaxDriveCount);
+        return (char)(driveIndex + 'A'); // Only works as long as MaxDriveCount is <= 26.
     }
 
     /// <summary>
     /// Gets the DOS drive letter from a zero-based drive index.
     /// </summary>
-    /// <param name="index">A zero-based drive index between 0 (inclusive) and <see cref="MaxDriveCount"/> (exclusive).</param>
+    /// <param name="driveIndex">A zero-based drive index between 0 (inclusive) and <see cref="MaxDriveCount"/> (exclusive).</param>
     /// <returns>An uppercase ASCII letter representing the drive letter.</returns>
-    /// <exception cref="ArgumentOutOfRangeException"><paramref name="index"/> is negative or greater than or equal to <see cref="MaxDriveCount"/>.</exception>
-    public static char GetDriveLetterFromIndex(int index) {
-        ArgumentOutOfRangeException.ThrowIfNegative(index);
-        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, MaxDriveCount);
-        return GetDriveLetterFromIndexFast(index);
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="driveIndex"/> is negative or greater than or equal to <see cref="MaxDriveCount"/>.</exception>
+    public static char GetDriveLetterFromIndex(int driveIndex) {
+        ArgumentOutOfRangeException.ThrowIfNegative(driveIndex);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(driveIndex, MaxDriveCount);
+        return GetDriveLetterFromIndexFast(driveIndex);
     }
 
     /// <summary>
     /// Attempts to get the DOS drive letter from a zero-based drive index.
     /// </summary>
-    /// <param name="index">A zero-based drive index between 0 (inclusive) and <see cref="MaxDriveCount"/> (exclusive).</param>
+    /// <param name="driveIndex">A zero-based drive index between 0 (inclusive) and <see cref="MaxDriveCount"/> (exclusive).</param>
     /// <param name="driveIndex">If successful, then it is the uppercase ASCII letter representing the drive letter.</param>
     /// <returns><see langword="true"/> if the drive index is valid; otherwise, <see langword="false"/>.</returns>
-    public static bool TryGetDriveLetterFromIndex(int index, out char driveLetter) {
-        if (index is >= 0 and < MaxDriveCount) {
-            driveLetter = GetDriveLetterFromIndexFast(index);
+    public static bool TryGetDriveLetterFromIndex(int driveIndex, out char driveLetter) {
+        if (driveIndex is >= 0 and < MaxDriveCount) {
+            driveLetter = GetDriveLetterFromIndexFast(driveIndex);
             return true;
         }
 
@@ -152,26 +152,26 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
     /// <summary>
     /// Validates and normalizes the given drive letter.
     /// </summary>
-    /// <param name="value">The DOS drive letter. Valid drive letters are uppercase and lowercase ASCII letters.</param>
+    /// <param name="driveLetter">The DOS drive letter. Valid drive letters are uppercase and lowercase ASCII letters.</param>
     /// <returns>The normalized (uppercase) drive letter.</returns>
-    /// <exception cref="ArgumentException"><paramref name="value"/> is not a valid drive letter.</exception>
-    public static char NormalizeDriveLetter(char value) {
+    /// <exception cref="ArgumentException"><paramref name="driveLetter"/> is not a valid drive letter.</exception>
+    public static char NormalizeDriveLetter(char driveLetter) {
         // The conversion to an index will validate the char value and the conversion from index to letter will
         // normalize the value to an uppercase drive letter.
-        int driveIndex = GetDriveLetterIndexOrThrow(value);
+        int driveIndex = GetDriveIndexOrThrow(driveLetter);
         return GetDriveLetterFromIndexFast(driveIndex);
     }
 
     /// <summary>
     /// Attempts to validate and normalize the given drive letter.
     /// </summary>
-    /// <param name="value">The DOS drive letter. Valid drive letters are uppercase and lowercase ASCII letters.</param>
+    /// <param name="driveLetter">The DOS drive letter. Valid drive letters are uppercase and lowercase ASCII letters.</param>
     /// <param name="normalizedDriveLetter">The normalized (uppercase) drive letter or a default <see cref="char"/> value on failure.</param>
     /// <returns><see langword="true"/> if drive letter is valid and successfully normalized; otherwise, <see langword="false"/>.</returns>
-    public static bool TryNormalizeDriveLetter(char value, out char normalizedDriveLetter) {
+    public static bool TryNormalizeDriveLetter(char driveLetter, out char normalizedDriveLetter) {
         // The conversion to an index will validate the char value and the conversion from index to letter will
         // normalize the value to an uppercase drive letter.
-        int driveIndex = GetDriveLetterIndex(value);
+        int driveIndex = GetDriveIndex(driveLetter);
         if (driveIndex != -1) {
             normalizedDriveLetter = GetDriveLetterFromIndexFast(driveIndex);
             return true;
@@ -191,7 +191,7 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
     /// <summary>
     /// Gets the current DOS drive zero based index.
     /// </summary>
-    public byte CurrentDriveIndex => (byte)GetDriveLetterIndexOrThrow(CurrentDrive.DriveLetter);
+    public byte CurrentDriveIndex => (byte)GetDriveIndexOrThrow(CurrentDrive.DriveLetter);
 
     internal bool HasDriveAtIndex(int zeroBasedIndex) => zeroBasedIndex is >= 0 and < MaxDriveCount &&
         _driveMap[zeroBasedIndex] is not null;
@@ -270,7 +270,7 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
     [AllowNull]
     public DosDriveBase this[char key] {
         get {
-            return _driveMap[GetDriveLetterIndexOrThrow(key)]
+            return _driveMap[GetDriveIndexOrThrow(key)]
                 ?? throw new KeyNotFoundException($"Drive '{key}' is not mounted.");
         }
 
@@ -279,7 +279,7 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
                 throw new ArgumentException("Key must match value's drive letter.");
             }
 
-            int driveIndex = GetDriveLetterIndexOrThrow(key);
+            int driveIndex = GetDriveIndexOrThrow(key);
             DosDriveBase? existingDrive = _driveMap[driveIndex];
             if (existingDrive is not null && existingDrive != value) {
                 // Unmount the existing drive first.
@@ -307,7 +307,7 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
     }
 
     public bool ContainsKey(char key) {
-        int driveIndex = GetDriveLetterIndex(key);
+        int driveIndex = GetDriveIndex(key);
         if (driveIndex != -1) {
             Debug.Assert(driveIndex is >= 0 and < MaxDriveCount);
             return _driveMap[driveIndex] is not null;
@@ -322,7 +322,7 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
     /// <see cref="Unmount(char)"/> or <see cref="UnmountAsync(char)"/> instead.
     /// </remarks>
     bool IDictionary<char, DosDriveBase>.Remove(char key) {
-        int driveIndex = GetDriveLetterIndex(key);
+        int driveIndex = GetDriveIndex(key);
         if (driveIndex != -1) {
             Debug.Assert(driveIndex is >= 0 and < MaxDriveCount);
             DosDriveBase? drive = _driveMap[driveIndex];
@@ -389,7 +389,7 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
             throw new ArgumentException("Item value must not be null.", nameof(item));
         }
 
-        int driveIndex = GetDriveLetterIndex(item.Key);
+        int driveIndex = GetDriveIndex(item.Key);
         if (driveIndex != -1) {
             Debug.Assert(driveIndex is >= 0 and < MaxDriveCount);
             if (_driveMap[driveIndex] == item.Value) {
@@ -829,7 +829,7 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
     /// <param name="drive">The DOS drive to mount.</param>
     /// <exception cref="InvalidOperationException">A DOS drive with the same drive letter has already been mounted.</exception>
     public void Mount(DosDriveBase drive) {
-        int driveIndex = GetDriveLetterIndexOrThrow(drive.DriveLetter, nameof(drive));
+        int driveIndex = GetDriveIndexOrThrow(drive.DriveLetter, nameof(drive));
         if (_driveMap[driveIndex] is not null) {
             throw new InvalidOperationException($"A DOS drive with the same drive letter '{drive.DriveLetter}' has already been mounted.");
         }
@@ -845,7 +845,7 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
     /// <param name="driveLetter">The DOS drive letter. Valid drive letters are uppercase and lowercase ASCII letters.</param>
     /// <exception cref="InvalidOperationException">Drive is not mounted.</exception>
     public void Unmount(char driveLetter) {
-        int driveIndex = GetDriveLetterIndexOrThrow(driveLetter);
+        int driveIndex = GetDriveIndexOrThrow(driveLetter);
         Debug.Assert(driveIndex is >= 0 and < MaxDriveCount);
         DosDriveBase? drive = _driveMap[driveIndex]
             ?? throw new InvalidOperationException($"No DOS drive has been mounted with the drive letter '{driveLetter}'.");
@@ -865,7 +865,7 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
     /// Avoid using the drive letter for any other operations until the asynchronous task completes.
     /// </remarks>
     public ValueTask UnmountAsync(char driveLetter) {
-        int driveIndex = GetDriveLetterIndexOrThrow(driveLetter);
+        int driveIndex = GetDriveIndexOrThrow(driveLetter);
         Debug.Assert(driveIndex is >= 0 and < MaxDriveCount);
         DosDriveBase? drive = _driveMap[driveIndex]
             ?? throw new InvalidOperationException($"No DOS drive has been mounted with the drive letter '{driveLetter}'.");
@@ -920,7 +920,7 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
     /// <param name="drive">The mounted drive if found; otherwise, <see langword="null"/>.</param>
     /// <returns><see langword="true"/> if a drive exists with the given DOS drive letter; otherwise, <see langword="false"/>.</returns>
     public bool TryGetDrive(char driveLetter, [MaybeNullWhen(false)] out DosDriveBase drive) {
-        int driveIndex = GetDriveLetterIndex(driveLetter);
+        int driveIndex = GetDriveIndex(driveLetter);
         if (driveIndex != -1) {
             Debug.Assert(driveIndex is >= 0 and < MaxDriveCount);
             DosDriveBase? mountedDrive = _driveMap[driveIndex];
@@ -942,7 +942,7 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
     /// <param name="drive">The mounted drive of the specified type if found; otherwise, <see langword="null"/>.</param>
     /// <returns><see langword="true"/> if a drive of the specified type exists with the given DOS drive letter; otherwise, <see langword="false"/>.</returns>
     public bool TryGetDrive<T>(char driveLetter, [NotNullWhen(true)] out T? drive) where T : DosDriveBase {
-        int driveIndex = GetDriveLetterIndex(driveLetter);
+        int driveIndex = GetDriveIndex(driveLetter);
         if (driveIndex != -1) {
             Debug.Assert(driveIndex is >= 0 and < MaxDriveCount);
             DosDriveBase? mountedDrive = _driveMap[driveIndex];
