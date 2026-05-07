@@ -842,10 +842,10 @@ public class DosFileManager {
         return DosFileOperationResult.Error(DosErrorCode.TooManyOpenFiles);
     }
 
-    internal string? TryGetFullHostPathFromDos(string dosPath) => _dosPathResolver.
+    internal string? GetFullHostPathFromDos(string dosPath) => _dosPathResolver.
         GetFullHostPathFromDosOrDefault(dosPath);
 
-    internal string? TryGetFullHostExecutablePathFromDos(string dosPath) => _dosPathResolver.
+    internal string? GetFullHostExecutablePathFromDos(string dosPath) => _dosPathResolver.
         GetFullHostExecutablePathFromDosOrDefault(dosPath);
 
     internal bool FileOrDeviceExists(string dosPath) {

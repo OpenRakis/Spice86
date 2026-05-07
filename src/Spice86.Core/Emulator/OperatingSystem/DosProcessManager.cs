@@ -117,7 +117,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     public DosProcessManager(IMemory memory, Stack stack, State state,
         DosMemoryManager dosMemoryManager,
         DosFileManager dosFileManager, DosDriveManager dosDriveManager,
-        MscdexService mscdex,
+        Mscdex mscdex,
         ISoundChannelCreator channelCreator,
         IBatchDisplayCommandHandler batchDisplayCommandHandler,
         IDictionary<string, string> envVars, ILoggerService loggerService) {
@@ -205,7 +205,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         return false;
     }
 
-    internal string? TryGetEnvironmentVariable(string variableName) {
+    internal string? GetEnvironmentVariable(string variableName) {
         if (string.IsNullOrWhiteSpace(variableName)) {
             return null;
         }
@@ -269,8 +269,8 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         return true;
     }
 
-    string? IDosBatchExecutionHost.TryGetEnvironmentVariable(string variableName) {
-        return TryGetEnvironmentVariable(variableName);
+    string? IDosBatchExecutionHost.GetEnvironmentVariable(string variableName) {
+        return GetEnvironmentVariable(variableName);
     }
 
     IReadOnlyList<KeyValuePair<string, string>> IDosBatchExecutionHost.GetEnvironmentVariablesSnapshot() {
@@ -294,7 +294,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         // Programs that read the parent (COMMAND.COM) PSP[0x02] to compute their TSR resident
         // size (DX for INT 21h/31h) must receive a realistic small value, not LastFreeSegment
         // (0x9FFF = 40959 decimal). Using 0x9FFF caused games like Maupiti Island to pass 0x9FFF
-        // as DX, which made TryModifyBlock fail after expanding the block to maximum, leaving
+        // as DX, which made ModifyBlock fail after expanding the block to maximum, leaving
         // all conventional memory consumed and subsequent allocations impossible.
         rootPsp.CurrentSize = (ushort)(CommandComSegment + DosProgramSegmentPrefix.PspSizeInParagraphs);
 
@@ -400,7 +400,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
                 parentPspSegment);
         }
 
-        string? hostPath = _fileManager.TryGetFullHostExecutablePathFromDos(programName) ?? programName;
+        string? hostPath = _fileManager.GetFullHostExecutablePathFromDos(programName) ?? programName;
         if (string.IsNullOrWhiteSpace(hostPath) || !File.Exists(hostPath)) {
             return DosExecResult.Fail(DosErrorCode.FileNotFound);
         }
@@ -611,7 +611,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     /// <param name="relocationFactor">Relocation adjustment applied to each relocation entry.</param>
     /// <returns>A result indicating success or the DOS error encountered.</returns>
     public DosExecResult LoadOverlay(string programName, ushort loadSegment, ushort relocationFactor) {
-        string? hostPath = _fileManager.TryGetFullHostExecutablePathFromDos(programName) ?? programName;
+        string? hostPath = _fileManager.GetFullHostExecutablePathFromDos(programName) ?? programName;
         if (string.IsNullOrWhiteSpace(hostPath) || !File.Exists(hostPath)) {
             return DosExecResult.Fail(DosErrorCode.FileNotFound);
         }
@@ -716,7 +716,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         if (parentIsRootCommandCom) {
             _batchExecutionEngine.RestoreStandardHandlesAfterLaunch();
 
-            if (!TryResumeBatchExecutionFromRoot()) {
+            if (!ResumeBatchExecutionFromRoot()) {
                 // Halt emulation; COMMAND.COM has no execution context.
                 _state.AX = (ushort)(LastChildReturnCode & 0x00FF);
                 _state.IsRunning = false;
@@ -724,9 +724,9 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         }
     }
 
-    private bool TryResumeBatchExecutionFromRoot() {
+    private bool ResumeBatchExecutionFromRoot() {
         while (_batchExecutionEngine.TryContinue(LastChildReturnCode, out LaunchRequest launchRequest)) {
-            if (!_batchExecutionEngine.TryApplyRedirectionForLaunch(launchRequest)) {
+            if (!_batchExecutionEngine.ApplyRedirectionForLaunch(launchRequest)) {
                 LastChildReturnCode = (ushort)(((ushort)DosTerminationType.CriticalError << 8) | (byte)DosErrorCode.PathNotFound);
                 continue;
             }

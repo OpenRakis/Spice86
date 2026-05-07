@@ -26,7 +26,7 @@ using Xunit;
 public class MountBatchCommandTests : IDisposable {
     private readonly string _tempDir;
     private readonly DosDriveManager _driveManager;
-    private readonly MscdexService _mscdex;
+    private readonly Mscdex _mscdex;
     private readonly DosBatchExecutionEngineAccessor _accessor;
     private readonly StringBuilder _output;
 
@@ -39,10 +39,10 @@ public class MountBatchCommandTests : IDisposable {
         _output = new StringBuilder();
         _accessor = new DosBatchExecutionEngineAccessor(_driveManager, _output);
 
-        // Create a mock State + Memory for MscdexService
+        // Create a mock State + Memory for Mscdex
         IMemory memory = Substitute.For<IMemory>();
         Spice86.Core.Emulator.CPU.State state = new(Spice86.Core.Emulator.CPU.CpuModel.INTEL_80386);
-        _mscdex = new MscdexService(state, memory, logger);
+        _mscdex = new Mscdex(state, memory, logger);
     }
 
     public void Dispose() {
@@ -54,61 +54,61 @@ public class MountBatchCommandTests : IDisposable {
     }
 
     [Fact]
-    public void TryHandleMount_WithValidFolder_MountsDrive() {
+    public void HandleMount_WithValidFolder_MountsDrive() {
         // Arrange
         string subFolder = Path.Combine(_tempDir, "floppy");
         Directory.CreateDirectory(subFolder);
 
         // Act
-        _accessor.TryHandleMount($"A {subFolder}");
+        _accessor.HandleMount($"A {subFolder}");
 
         // Assert
         _driveManager['A'].MountedHostDirectory.Should().Contain("floppy");
     }
 
     [Fact]
-    public void TryHandleMount_WithMissingFolder_WritesErrorMessage() {
+    public void HandleMount_WithMissingFolder_WritesErrorMessage() {
         // Arrange
         string missing = Path.Combine(_tempDir, "does-not-exist");
 
         // Act
-        _accessor.TryHandleMount($"D {missing}");
+        _accessor.HandleMount($"D {missing}");
 
         // Assert
         _output.ToString().Should().Contain("path not found");
     }
 
     [Fact]
-    public void TryHandleMount_WithNoArguments_WritesUsageMessage() {
+    public void HandleMount_WithNoArguments_WritesUsageMessage() {
         // Act
-        _accessor.TryHandleMount(string.Empty);
+        _accessor.HandleMount(string.Empty);
 
         // Assert
         _output.ToString().Should().Contain("Usage");
     }
 
     [Fact]
-    public void TryHandleMount_WithFloppyType_MountsFolderToFloppyDrive() {
+    public void HandleMount_WithFloppyType_MountsFolderToFloppyDrive() {
         // Arrange
         string subFolder = Path.Combine(_tempDir, "flp");
         Directory.CreateDirectory(subFolder);
 
         // Act
-        _accessor.TryHandleMount($"A {subFolder} -t floppy");
+        _accessor.HandleMount($"A {subFolder} -t floppy");
 
         // Assert
         _driveManager['A'].MountedHostDirectory.Should().Contain("flp");
     }
 
     [Fact]
-    public void TryHandleImgMount_WithValidFloppyImage_MountsFloppyDrive() {
+    public void HandleImgMount_WithValidFloppyImage_MountsFloppyDrive() {
         // Arrange
         byte[] imageBytes = new Fat12ImageBuilder().Build();
         string imagePath = Path.Combine(_tempDir, "floppy.img");
         File.WriteAllBytes(imagePath, imageBytes);
 
         // Act
-        _accessor.TryHandleImgMount($"A {imagePath} -t floppy", _mscdex);
+        _accessor.HandleImgMount($"A {imagePath} -t floppy", _mscdex);
 
         // Assert
         bool mounted = _driveManager.TryGetFloppyDrive('A', out FloppyDiskDrive? floppy);
@@ -117,35 +117,35 @@ public class MountBatchCommandTests : IDisposable {
     }
 
     [Fact]
-    public void TryHandleImgMount_WithMissingImage_WritesErrorMessage() {
+    public void HandleImgMount_WithMissingImage_WritesErrorMessage() {
         // Arrange
         string missing = Path.Combine(_tempDir, "missing.img");
 
         // Act
-        _accessor.TryHandleImgMount($"A {missing} -t floppy", _mscdex);
+        _accessor.HandleImgMount($"A {missing} -t floppy", _mscdex);
 
         // Assert
         _output.ToString().Should().Contain("not found");
     }
 
     [Fact]
-    public void TryHandleImgMount_WithNoArguments_WritesUsageMessage() {
+    public void HandleImgMount_WithNoArguments_WritesUsageMessage() {
         // Act
-        _accessor.TryHandleImgMount(string.Empty, _mscdex);
+        _accessor.HandleImgMount(string.Empty, _mscdex);
 
         // Assert
         _output.ToString().Should().Contain("Usage");
     }
 
     [Fact]
-    public void TryHandleImgMount_AutoDetectFloppyByExtension_MountsImage() {
+    public void HandleImgMount_AutoDetectFloppyByExtension_MountsImage() {
         // Arrange — .img extension should auto-detect as floppy
         byte[] imageBytes = new Fat12ImageBuilder().Build();
         string imagePath = Path.Combine(_tempDir, "disk.img");
         File.WriteAllBytes(imagePath, imageBytes);
 
         // Act — no -t flag, let extension detection work
-        _accessor.TryHandleImgMount($"A {imagePath}", _mscdex);
+        _accessor.HandleImgMount($"A {imagePath}", _mscdex);
 
         // Assert
         bool mounted = _driveManager.TryGetFloppyDrive('A', out FloppyDiskDrive? floppy);
@@ -154,7 +154,7 @@ public class MountBatchCommandTests : IDisposable {
     }
 
     [Fact]
-    public void TryHandleMount_WithRelativePath_ResolvedAgainstCwd() {
+    public void HandleMount_WithRelativePath_ResolvedAgainstCwd() {
         // Arrange — create a subfolder inside _tempDir
         string subFolder = Path.Combine(_tempDir, "reltest");
         Directory.CreateDirectory(subFolder);
@@ -163,7 +163,7 @@ public class MountBatchCommandTests : IDisposable {
         string relativePath = Path.GetRelativePath(Environment.CurrentDirectory, subFolder);
 
         // Act
-        _accessor.TryHandleMount($"A {relativePath}");
+        _accessor.HandleMount($"A {relativePath}");
 
         // Assert — the drive should be mounted even though the path was relative
         _driveManager['A'].MountedHostDirectory.Should().NotBeNullOrWhiteSpace();
@@ -171,13 +171,13 @@ public class MountBatchCommandTests : IDisposable {
     }
 
     [Fact]
-    public void TryHandleMount_WithQuotedAbsolutePathContainingSpaces_MountsDrive() {
+    public void HandleMount_WithQuotedAbsolutePathContainingSpaces_MountsDrive() {
         // Arrange — create a subfolder whose name contains a space
         string spacyFolder = Path.Combine(_tempDir, "my games");
         Directory.CreateDirectory(spacyFolder);
 
         // Act — pass the path surrounded by double-quotes
-        _accessor.TryHandleMount($"A \"{spacyFolder}\"");
+        _accessor.HandleMount($"A \"{spacyFolder}\"");
 
         // Assert
         _driveManager['A'].MountedHostDirectory.Should().NotBeNullOrWhiteSpace();
@@ -185,7 +185,7 @@ public class MountBatchCommandTests : IDisposable {
     }
 
     [Fact]
-    public void TryHandleImgMount_WithRelativePath_MountsImage() {
+    public void HandleImgMount_WithRelativePath_MountsImage() {
         // Arrange
         byte[] imageBytes = new Fat12ImageBuilder().Build();
         string imagePath = Path.Combine(_tempDir, "rel.img");
@@ -195,7 +195,7 @@ public class MountBatchCommandTests : IDisposable {
         string relativePath = Path.GetRelativePath(Environment.CurrentDirectory, imagePath);
 
         // Act
-        _accessor.TryHandleImgMount($"A {relativePath} -t floppy", _mscdex);
+        _accessor.HandleImgMount($"A {relativePath} -t floppy", _mscdex);
 
         // Assert
         bool mounted = _driveManager.TryGetFloppyDrive('A', out FloppyDiskDrive? floppy);
@@ -205,7 +205,7 @@ public class MountBatchCommandTests : IDisposable {
     }
 
     [Fact]
-    public void TryHandleImgMount_WithQuotedPathContainingSpaces_MountsImage() {
+    public void HandleImgMount_WithQuotedPathContainingSpaces_MountsImage() {
         // Arrange — image file whose directory contains a space
         string spacyDir = Path.Combine(_tempDir, "my discs");
         Directory.CreateDirectory(spacyDir);
@@ -214,7 +214,7 @@ public class MountBatchCommandTests : IDisposable {
         File.WriteAllBytes(imagePath, imageBytes);
 
         // Act — pass the path surrounded by double-quotes
-        _accessor.TryHandleImgMount($"A \"{imagePath}\" -t floppy", _mscdex);
+        _accessor.HandleImgMount($"A \"{imagePath}\" -t floppy", _mscdex);
 
         // Assert
         bool mounted = _driveManager.TryGetFloppyDrive('A', out FloppyDiskDrive? floppy);
@@ -223,13 +223,13 @@ public class MountBatchCommandTests : IDisposable {
     }
 
     [Fact]
-    public void TryHandleMount_WithDosDrivePath_MountsDrive() {
+    public void HandleMount_WithDosDrivePath_MountsDrive() {
         // Arrange — C: is already mounted to _tempDir; create a subdirectory inside it
         string subFolder = Path.Combine(_tempDir, "dossubdir");
         Directory.CreateDirectory(subFolder);
 
         // Act — pass the path using the DOS C: drive letter
-        _accessor.TryHandleMount("A C:\\dossubdir");
+        _accessor.HandleMount("A C:\\dossubdir");
 
         // Assert — A: should be mounted to the host path under _tempDir
         _driveManager['A'].MountedHostDirectory.Should().NotBeNullOrWhiteSpace();
@@ -237,7 +237,7 @@ public class MountBatchCommandTests : IDisposable {
     }
 
     [Fact]
-    public void TryHandleMount_RelativePathResolvesAgainstCurrentDosDirectory() {
+    public void HandleMount_RelativePathResolvesAgainstCurrentDosDirectory() {
         // Arrange — C: is already mounted to _tempDir
         // Simulate "CD games" by updating the current DOS directory on C:
         string gamesFolder = Path.Combine(_tempDir, "games");
@@ -247,7 +247,7 @@ public class MountBatchCommandTests : IDisposable {
         _driveManager['C'].CurrentDosDirectory = "games";
 
         // Act — relative path "music" should resolve to _tempDir/games/music
-        _accessor.TryHandleMount("A music");
+        _accessor.HandleMount("A music");
 
         // Assert
         _driveManager['A'].MountedHostDirectory.Should().NotBeNullOrWhiteSpace();
@@ -255,14 +255,14 @@ public class MountBatchCommandTests : IDisposable {
     }
 
     [Fact]
-    public void TryHandleImgMount_WithDosDrivePath_MountsImage() {
+    public void HandleImgMount_WithDosDrivePath_MountsImage() {
         // Arrange — C: is already mounted to _tempDir; place a floppy image there
         byte[] imageBytes = new Fat12ImageBuilder().Build();
         string imagePath = Path.Combine(_tempDir, "dos_drive.img");
         File.WriteAllBytes(imagePath, imageBytes);
 
         // Act — pass the path using the DOS C: drive letter
-        _accessor.TryHandleImgMount("A C:\\dos_drive.img -t floppy", _mscdex);
+        _accessor.HandleImgMount("A C:\\dos_drive.img -t floppy", _mscdex);
 
         // Assert
         bool mounted = _driveManager.TryGetFloppyDrive('A', out FloppyDiskDrive? floppy);
@@ -272,7 +272,7 @@ public class MountBatchCommandTests : IDisposable {
     }
 
     [Fact]
-    public void TryHandleImgMount_RelativePathResolvesAgainstCurrentDosDirectory() {
+    public void HandleImgMount_RelativePathResolvesAgainstCurrentDosDirectory() {
         // Arrange — C: mounted to _tempDir; simulate "CD discs"
         string discsFolder = Path.Combine(_tempDir, "discs");
         Directory.CreateDirectory(discsFolder);
@@ -282,7 +282,7 @@ public class MountBatchCommandTests : IDisposable {
         _driveManager['C'].CurrentDosDirectory = "discs";
 
         // Act — relative path "game.img" should resolve to _tempDir/discs/game.img
-        _accessor.TryHandleImgMount("A game.img -t floppy", _mscdex);
+        _accessor.HandleImgMount("A game.img -t floppy", _mscdex);
 
         // Assert
         bool mounted = _driveManager.TryGetFloppyDrive('A', out FloppyDiskDrive? floppy);
@@ -359,7 +359,7 @@ public class MountBatchCommandTests : IDisposable {
             _output = output;
         }
 
-        public void TryHandleMount(string arguments) {
+        public void HandleMount(string arguments) {
             string trimmed = arguments.Trim();
             if (string.IsNullOrWhiteSpace(trimmed)) {
                 _output.Append("Usage: MOUNT <drive> <path> [-t cdrom|floppy|hdd]\r\n");
@@ -409,7 +409,7 @@ public class MountBatchCommandTests : IDisposable {
             _output.Append($"Drive {driveLetter}: mounted as {hostPath}\r\n");
         }
 
-        public void TryHandleImgMount(string arguments, MscdexService mscdex) {
+        public void HandleImgMount(string arguments, Mscdex mscdex) {
             string trimmed = arguments.Trim();
             if (string.IsNullOrWhiteSpace(trimmed)) {
                 _output.Append("Usage: IMGMOUNT <drive> <image> -t floppy|iso|cue\r\n");

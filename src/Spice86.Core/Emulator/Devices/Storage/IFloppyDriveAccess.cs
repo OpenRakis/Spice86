@@ -26,7 +26,7 @@ public interface IFloppyDriveAccess {
     /// <param name="destOffset">Offset within <paramref name="destination"/> to start writing.</param>
     /// <param name="byteCount">Number of bytes to read.</param>
     /// <returns><see langword="true"/> on success; <see langword="false"/> when the drive is not present or the offset is out of range.</returns>
-    bool TryRead(byte driveNumber, int imageByteOffset, byte[] destination, int destOffset, int byteCount);
+    bool ReadFromImage(byte driveNumber, int imageByteOffset, byte[] destination, int destOffset, int byteCount);
 
     /// <summary>
     /// Writes bytes from a caller-supplied buffer into a floppy image.
@@ -37,5 +37,5 @@ public interface IFloppyDriveAccess {
     /// <param name="srcOffset">Offset within <paramref name="source"/> to start reading from.</param>
     /// <param name="byteCount">Number of bytes to write.</param>
     /// <returns><see langword="true"/> on success; <see langword="false"/> when the drive is not present or the offset is out of range.</returns>
-    bool TryWrite(byte driveNumber, int imageByteOffset, byte[] source, int srcOffset, int byteCount);
+    bool WriteToImage(byte driveNumber, int imageByteOffset, byte[] source, int srcOffset, int byteCount);
 }

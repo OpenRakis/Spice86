@@ -182,7 +182,7 @@ public class DosMemoryManager {
     /// <param name="requestedSizeInParagraphs">The new size for the MCB, in paragraphs.</param>
     /// <param name="block">The mcb from the blockSegment, or the largest mcb found.</param>
     /// <returns>Whether the operation was successful.</returns>
-    public DosErrorCode TryModifyBlock(in ushort blockSegment, in ushort requestedSizeInParagraphs,
+    public DosErrorCode ModifyBlock(in ushort blockSegment, in ushort requestedSizeInParagraphs,
         out DosMemoryControlBlock block) {
         block = GetDosMemoryControlBlockFromSegment((ushort)(blockSegment - 1));
         ushort newSizeInParagraphs = requestedSizeInParagraphs;
@@ -425,7 +425,7 @@ public class DosMemoryManager {
     /// </summary>
     /// <remarks>
     /// The requested MCB <em>must</em> be free! If it is already allocated, it will not be resized
-    /// and merged with the free space following it like <see cref="TryModifyBlock"/> would do. The
+    /// and merged with the free space following it like <see cref="ModifyBlock"/> would do. The
     /// allocation request will be rejected, and this function will return <c>null</c>.
     /// </remarks>
     /// <param name="blockSegment">The segment number of the MCB to allocate.</param>

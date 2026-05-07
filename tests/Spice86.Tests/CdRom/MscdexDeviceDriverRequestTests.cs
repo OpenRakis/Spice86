@@ -19,7 +19,7 @@ using System.Collections.Generic;
 
 using Xunit;
 
-/// <summary>Tests for <see cref="MscdexService.Dispatch"/> AL=0x10 (SendDeviceDriverRequest) path.</summary>
+/// <summary>Tests for <see cref="Mscdex.Dispatch"/> AL=0x10 (SendDeviceDriverRequest) path.</summary>
 public sealed class MscdexDeviceDriverRequestTests {
     // Request packet field offsets within the DOS device driver header
     private const uint SubunitOffset = 1;
@@ -68,7 +68,7 @@ public sealed class MscdexDeviceDriverRequestTests {
     private sealed class TestContext {
         public Memory Memory { get; }
         public State State { get; }
-        public MscdexService Mscdex { get; }
+        public Mscdex Mscdex { get; }
         public ICdRomDrive Drive { get; }
         public uint RequestBase { get; }
 
@@ -80,7 +80,7 @@ public sealed class MscdexDeviceDriverRequestTests {
             State = new State(CpuModel.INTEL_80386);
 
             ILoggerService logger = Substitute.For<ILoggerService>();
-            Mscdex = new MscdexService(State, Memory, logger);
+            Mscdex = new Mscdex(State, Memory, logger);
 
             Drive = new CdRomDrive(new FakeImage());
 
@@ -273,7 +273,7 @@ public sealed class MscdexDeviceDriverRequestTests {
     private sealed class TestContextWithTracks {
         public Memory Memory { get; }
         public State State { get; }
-        public MscdexService Mscdex { get; }
+        public Mscdex Mscdex { get; }
         public ICdRomDrive Drive { get; }
         public uint RequestBase { get; }
 
@@ -285,7 +285,7 @@ public sealed class MscdexDeviceDriverRequestTests {
             State = new State(CpuModel.INTEL_80386);
 
             ILoggerService logger = Substitute.For<ILoggerService>();
-            Mscdex = new MscdexService(State, Memory, logger);
+            Mscdex = new Mscdex(State, Memory, logger);
 
             Drive = new CdRomDrive(new FakeImageWithTracks());
             MscdexDriveEntry entry = new('D', driveIndex: 3, Drive);

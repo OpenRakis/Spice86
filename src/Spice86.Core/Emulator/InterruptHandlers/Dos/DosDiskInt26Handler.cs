@@ -111,7 +111,7 @@ public class DosDiskInt26Handler : InterruptHandler {
             buffer[i] = Memory.UInt8[bufferAddress + (uint)i];
         }
 
-        if (!_dosDriveManager.TryWrite(driveIndex, byteOffset, buffer, 0, byteCount)) {
+        if (!_dosDriveManager.WriteToImage(driveIndex, byteOffset, buffer, 0, byteCount)) {
             State.AX = 0x0408;
             SetCarryFlag(true, calledFromVm);
             return;

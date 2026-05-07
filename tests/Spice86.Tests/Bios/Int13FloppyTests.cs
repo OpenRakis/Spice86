@@ -189,7 +189,7 @@ public sealed class Int13FloppyTests {
 
         // Verify the image bytes were updated through IFloppyDriveAccess
         byte[] readback = new byte[3];
-        ctx.FloppyAccess.TryRead(DriveA, 0, readback, 0, 3).Should().BeTrue();
+        ctx.FloppyAccess.ReadFromImage(DriveA, 0, readback, 0, 3).Should().BeTrue();
         readback[0].Should().Be(0xDE);
         readback[1].Should().Be(0xAD);
         readback[2].Should().Be(0xBE);
@@ -335,7 +335,7 @@ public sealed class Int13FloppyTests {
         ctx.State.AH.Should().Be(0x00);
         ctx.State.CarryFlag.Should().BeFalse();
         byte[] readback = new byte[512];
-        ctx.FloppyAccess.TryRead(DriveA, trackStart, readback, 0, 512).Should().BeTrue();
+        ctx.FloppyAccess.ReadFromImage(DriveA, trackStart, readback, 0, 512).Should().BeTrue();
         readback.Should().AllBeEquivalentTo(0x00, "format track must zero the sector data");
     }
 

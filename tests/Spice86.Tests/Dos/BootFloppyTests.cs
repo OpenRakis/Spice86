@@ -176,7 +176,7 @@ public class BootFloppyTests {
             DosMemoryManager memoryManager = new(memory, 0x100, logger);
             DosFileManager fileManager = new(memory, new DosStringDecoder(memory, state), driveManager, logger, new List<IVirtualDevice>());
             IBatchDisplayCommandHandler batchDisplayCommandHandler = new DosBatchDisplayCommandHandler(vgaFunctionality);
-            MscdexService mscdex = new(state, memory, logger);
+            Mscdex mscdex = new(state, memory, logger);
 
             ISoundChannelCreator channelCreator = Substitute.For<ISoundChannelCreator>();
             channelCreator.AddChannel(Arg.Any<Action<int>>(), Arg.Any<int>(), Arg.Any<string>(), Arg.Any<HashSet<ChannelFeature>>())

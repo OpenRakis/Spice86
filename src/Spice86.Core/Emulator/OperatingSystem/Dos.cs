@@ -39,7 +39,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
     private readonly IMemory _memory;
     private readonly ILoggerService _loggerService;
-    private readonly MscdexService _mscdex;
+    private readonly Mscdex _mscdex;
     private readonly ISoundChannelCreator _channelCreator;
     private readonly IDriveActivityNotifier? _activityNotifier;
 
@@ -263,7 +263,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
 
         FcbManager = new(_memory, FileManager, DosDriveManager, _loggerService);
         IBatchDisplayCommandHandler batchDisplayCommandHandler = new DosBatchDisplayCommandHandler(_vgaFunctionality);
-        _mscdex = new MscdexService(state, memory, loggerService, _activityNotifier);
+        _mscdex = new Mscdex(state, memory, loggerService, _activityNotifier);
         ProcessManager = new(_memory, stack, state, MemoryManager, FileManager, DosDriveManager, _mscdex, channelCreator, batchDisplayCommandHandler, envVars, _loggerService);
         DosInt22Handler = new DosInt22Handler(_memory, functionHandlerProvider, stack, state, ProcessManager, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state,
@@ -421,9 +421,9 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
 
     /// <summary>
     /// Gets the MSCDEX CD-ROM handler owned by this DOS kernel.
-    /// Use <see cref="MscdexService.AddDrive"/> to register CD-ROM drives at runtime (e.g. from IMGMOUNT).
+    /// Use <see cref="Mscdex.AddDrive"/> to register CD-ROM drives at runtime (e.g. from IMGMOUNT).
     /// </summary>
-    public MscdexService Mscdex => _mscdex;
+    public Mscdex Mscdex => _mscdex;
 
     /// <inheritdoc/>
     public IReadOnlyList<DosVirtualDriveStatus> GetDriveStatuses() {

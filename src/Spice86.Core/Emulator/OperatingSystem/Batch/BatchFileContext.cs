@@ -58,7 +58,7 @@ internal sealed class BatchFileContext {
         }
     }
 
-    internal bool TryGoto(string label) {
+    internal bool GoToLabel(string label) {
         string target = label.Trim();
         for (int i = 0; i < _lines.Length; i++) {
             string line = _lines[i].TrimStart();
@@ -76,7 +76,7 @@ internal sealed class BatchFileContext {
         return false;
     }
 
-    internal string? TryGetContainingDirectory() {
+    internal string? GetContainingDirectory() {
         if (string.IsNullOrWhiteSpace(_filePath) || _filePath.StartsWith('<')) {
             return null;
         }

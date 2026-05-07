@@ -16,7 +16,7 @@ using System.IO;
 using System.Text;
 
 internal sealed partial class DosBatchExecutionEngine {
-    internal bool TryHandleSet(string arguments) {
+    internal bool HandleSet(string arguments) {
         string trimmedArguments = arguments.TrimStart();
         if (trimmedArguments.StartsWith("/P ", StringComparison.OrdinalIgnoreCase) ||
             trimmedArguments.StartsWith("/P:", StringComparison.OrdinalIgnoreCase)) {
@@ -63,7 +63,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return false;
     }
 
-    internal bool TryHandleEcho(string arguments) {
+    internal bool HandleEcho(string arguments) {
         string rawArguments = arguments;
         string trimmedArguments = rawArguments.TrimStart();
         string normalizedArguments = trimmedArguments.TrimEnd();
@@ -112,13 +112,13 @@ internal sealed partial class DosBatchExecutionEngine {
         return false;
     }
 
-    internal bool TryHandlePath(string arguments) {
+    internal bool HandlePath(string arguments) {
         string trimmed = arguments.TrimStart();
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("BATCH: PATH {Args}", trimmed);
         }
         if (trimmed.Length == 0) {
-            string? pathValue = _host.TryGetEnvironmentVariable("PATH");
+            string? pathValue = _host.GetEnvironmentVariable("PATH");
             if (!string.IsNullOrEmpty(pathValue)) {
                 WriteToStandardOutput($"PATH={pathValue}\r\n");
             } else {
@@ -138,7 +138,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return false;
     }
 
-    internal void TryHandleCls() {
+    internal void HandleCls() {
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("BATCH: CLS - clearing screen");
         }
@@ -246,7 +246,7 @@ internal sealed partial class DosBatchExecutionEngine {
             _loggerService.Verbose("BATCH: Cleaning up {Count} temporary files", temporaryDosFiles.Length);
         }
         for (int i = 0; i < temporaryDosFiles.Length; i++) {
-            string? hostPath = _dosFileManager.TryGetFullHostPathFromDos(temporaryDosFiles[i]);
+            string? hostPath = _dosFileManager.GetFullHostPathFromDos(temporaryDosFiles[i]);
             if (string.IsNullOrWhiteSpace(hostPath)) {
                 continue;
             }
@@ -306,7 +306,7 @@ internal sealed partial class DosBatchExecutionEngine {
         output.Write(bytes, 0, bytes.Length);
     }
 
-    internal bool TryHandleType(string arguments) {
+    internal bool HandleType(string arguments) {
         string remaining = arguments.Trim();
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("BATCH: TYPE {Args}", remaining);
@@ -346,7 +346,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return false;
     }
 
-    internal bool TryHandleChdir(string arguments) {
+    internal bool HandleChdir(string arguments) {
         string trimmed = arguments.Trim();
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("BATCH: CD/CHDIR args={Args}", trimmed);
@@ -393,7 +393,7 @@ internal sealed partial class DosBatchExecutionEngine {
         }
     }
 
-    internal bool TryHandleMkdir(string arguments) {
+    internal bool HandleMkdir(string arguments) {
         string trimmed = arguments.Trim();
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("BATCH: MKDIR {Path}", trimmed);
@@ -414,7 +414,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return false;
     }
 
-    internal bool TryHandleRmdir(string arguments) {
+    internal bool HandleRmdir(string arguments) {
         string trimmed = arguments.Trim();
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("BATCH: RMDIR {Path}", trimmed);
@@ -435,7 +435,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return false;
     }
 
-    internal bool TryHandleDel(string arguments) {
+    internal bool HandleDel(string arguments) {
         string trimmed = arguments.Trim();
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("BATCH: DEL {FileSpec}", trimmed);
@@ -478,7 +478,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return string.Empty;
     }
 
-    internal bool TryHandleRen(string arguments) {
+    internal bool HandleRen(string arguments) {
         string trimmed = arguments.Trim();
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("BATCH: REN {Args}", trimmed);
@@ -561,7 +561,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return targetPattern;
     }
 
-    internal bool TryHandleDir(string arguments) {
+    internal bool HandleDir(string arguments) {
         string[] tokens = ParseArguments(arguments);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("BATCH: DIR {Args}", arguments);
@@ -713,7 +713,7 @@ internal sealed partial class DosBatchExecutionEngine {
         internal bool IsDirectory => (FileAttributes & 0x10) != 0;
     }
 
-    internal bool TryHandleCopy(string arguments) {
+    internal bool HandleCopy(string arguments) {
         string trimmed = arguments.Trim();
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("BATCH: COPY {Args}", trimmed);
@@ -744,7 +744,7 @@ internal sealed partial class DosBatchExecutionEngine {
         string destination = nonSwitchArguments[1];
 
         if (source.Contains('+')) {
-            return TryHandleCopyConcat(source, destination);
+            return HandleCopyConcat(source, destination);
         }
 
         bool sourceHasWildcard = source.Contains('*') || source.Contains('?');
@@ -820,7 +820,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return true;
     }
 
-    private bool TryHandleCopyConcat(string sourcesWithPlus, string destination) {
+    private bool HandleCopyConcat(string sourcesWithPlus, string destination) {
         string[] sources = sourcesWithPlus.Split('+');
 
         DosFileOperationResult createResult = _dosFileManager.CreateFileUsingHandle(destination, 0);
@@ -867,7 +867,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return false;
     }
 
-    internal bool TryHandleMove(string arguments) {
+    internal bool HandleMove(string arguments) {
         string trimmed = arguments.Trim();
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("BATCH: MOVE {Args}", trimmed);
@@ -927,7 +927,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return false;
     }
 
-    internal bool TryHandleDate(string arguments) {
+    internal bool HandleDate(string arguments) {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("BATCH: DATE {Args}", arguments);
         }
@@ -986,7 +986,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return false;
     }
 
-    internal bool TryHandleTime(string arguments) {
+    internal bool HandleTime(string arguments) {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("BATCH: TIME {Args}", arguments);
         }
@@ -1066,7 +1066,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return TimeSpan.TryParseExact(timeToken, formats, CultureInfo.InvariantCulture, out parsedTime);
     }
 
-    internal bool TryHandleVer() {
+    internal bool HandleVer() {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("BATCH: VER");
         }
@@ -1074,7 +1074,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return false;
     }
 
-    internal bool TryHandleVol(string arguments) {
+    internal bool HandleVol(string arguments) {
         string trimmed = arguments.Trim();
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             _loggerService.Verbose("BATCH: VOL {Args}", trimmed);
@@ -1099,7 +1099,7 @@ internal sealed partial class DosBatchExecutionEngine {
     /// (e.g. <c>C:\games</c> where C: is already mounted — resolved via the drive table).
     /// Paths that contain spaces must be surrounded by double-quotes.
     /// </summary>
-    internal bool TryHandleMount(string arguments) {
+    internal bool HandleMount(string arguments) {
         string trimmed = arguments.Trim();
         if (string.IsNullOrWhiteSpace(trimmed)) {
             WriteToStandardOutput("Usage: MOUNT <drive> <path> [-t cdrom|floppy|hdd]\r\n");
@@ -1173,7 +1173,7 @@ internal sealed partial class DosBatchExecutionEngine {
     /// Paths that contain spaces must be surrounded by double-quotes.
     /// Multiple images enable Ctrl-F4 disc switching.
     /// </summary>
-    internal bool TryHandleImgMount(string arguments) {
+    internal bool HandleImgMount(string arguments) {
         string trimmed = arguments.Trim();
         if (string.IsNullOrWhiteSpace(trimmed)) {
             WriteToStandardOutput("Usage: IMGMOUNT <drive> <image> [-t floppy|iso|cue]\r\n");
@@ -1430,7 +1430,7 @@ internal sealed partial class DosBatchExecutionEngine {
     /// </summary>
     /// <param name="arguments">Argument tail after the SUBST token.</param>
     /// <returns><c>false</c> — SUBST never yields a launch request.</returns>
-    internal bool TryHandleSubst(string arguments) {
+    internal bool HandleSubst(string arguments) {
         string trimmed = arguments.Trim();
         if (string.IsNullOrEmpty(trimmed)) {
             IReadOnlyDictionary<char, string> subst = _driveManager.SubstDrives;
@@ -1517,7 +1517,7 @@ internal sealed partial class DosBatchExecutionEngine {
     /// typing <c>X:</c> at a prompt (or in a batch file) switches the default drive.
     /// </summary>
     /// <param name="driveLetter">The upper-case drive letter to select.</param>
-    internal void TryChangeDrive(char driveLetter) {
+    internal void ChangeDrive(char driveLetter) {
         if (_driveManager.TryGetValue(driveLetter, out VirtualDrive? drive)) {
             _driveManager.CurrentDrive = drive;
             if (_loggerService.IsEnabled(LogEventLevel.Debug)) {

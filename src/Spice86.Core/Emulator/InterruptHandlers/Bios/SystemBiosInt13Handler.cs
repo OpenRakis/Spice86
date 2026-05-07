@@ -204,7 +204,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
         uint destAddress = MemoryUtils.ToPhysicalAddress(State.ES, State.BX);
         byte[] transferBuffer = new byte[byteCount];
 
-        if (!_floppyAccess.TryRead(driveNumber, byteOffset, transferBuffer, 0, byteCount)) {
+        if (!_floppyAccess.ReadFromImage(driveNumber, byteOffset, transferBuffer, 0, byteCount)) {
             SetFloppyError(driveNumber, ErrorSectorNotFound, calledFromVm);
             return;
         }
@@ -253,7 +253,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
             transferBuffer[i] = Memory.UInt8[srcAddress + (uint)i];
         }
 
-        if (!_floppyAccess.TryWrite(driveNumber, byteOffset, transferBuffer, 0, byteCount)) {
+        if (!_floppyAccess.WriteToImage(driveNumber, byteOffset, transferBuffer, 0, byteCount)) {
             SetFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
             return;
         }
@@ -383,7 +383,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
         int byteOffset = lbaStart * bytesPerSector;
         int byteCount = sectorsPerTrack * bytesPerSector;
         byte[] zeros = new byte[byteCount];
-        if (!_floppyAccess.TryWrite(driveNumber, byteOffset, zeros, 0, byteCount)) {
+        if (!_floppyAccess.WriteToImage(driveNumber, byteOffset, zeros, 0, byteCount)) {
             SetFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
             return;
         }

@@ -311,7 +311,7 @@ public class DosFcbManager {
             fcb.FileSize = (uint)dosFile.Length;
 
             // Get file's last write time from the file system
-            string? hostPath = _dosFileManager.TryGetFullHostPathFromDos(fileSpec);
+            string? hostPath = _dosFileManager.GetFullHostPathFromDos(fileSpec);
             if (!string.IsNullOrWhiteSpace(hostPath) && File.Exists(hostPath)) {
                 FileInfo fileInfo = new FileInfo(hostPath);
                 DateTime lastWrite = fileInfo.LastWriteTime;
@@ -968,7 +968,7 @@ public class DosFcbManager {
 
             LogFcbDebug("RENAME FILE", baseAddr, $"{sourceDos} -> {destDos}", FcbStatus.Success);
 
-            string? srcHost = _dosFileManager.TryGetFullHostPathFromDos(sourceDos);
+            string? srcHost = _dosFileManager.GetFullHostPathFromDos(sourceDos);
             if (string.IsNullOrWhiteSpace(srcHost)) {
                 LogFcbWarning("RENAME", baseAddr, $"Unable to resolve source path: {sourceDos}");
                 return FcbStatus.Error;

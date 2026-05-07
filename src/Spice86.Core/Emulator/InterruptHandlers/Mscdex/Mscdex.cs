@@ -17,7 +17,7 @@ using System.Linq;
 /// Handles MSCDEX INT 2Fh AH=15h subfunctions, dispatching on the AL register.
 /// This handler is owned by the <c>Dos</c> class and must not be treated as a standalone service.
 /// </summary>
-public sealed class MscdexService {
+public sealed class Mscdex {
     private const ushort MscdexVersionMajor = 2;
     private const ushort MscdexVersionMinor = 23;
 
@@ -172,25 +172,25 @@ public sealed class MscdexService {
     public IReadOnlyList<MscdexDriveEntry> Drives => _drives;
 
     /// <summary>
-    /// Initialises a new <see cref="MscdexService"/> with no registered drives.
+    /// Initialises a new <see cref="Mscdex"/> with no registered drives.
     /// Call <see cref="AddDrive"/> to register CD-ROM drives after construction.
     /// </summary>
     /// <param name="state">The CPU register state.</param>
     /// <param name="memory">The memory bus.</param>
     /// <param name="loggerService">The logger service.</param>
-    public MscdexService(State state, IMemory memory, ILoggerService loggerService)
+    public Mscdex(State state, IMemory memory, ILoggerService loggerService)
         : this(state, memory, loggerService, null) {
     }
 
     /// <summary>
-    /// Initialises a new <see cref="MscdexService"/> with no registered drives and an activity notifier.
+    /// Initialises a new <see cref="Mscdex"/> with no registered drives and an activity notifier.
     /// Call <see cref="AddDrive"/> to register CD-ROM drives after construction.
     /// </summary>
     /// <param name="state">The CPU register state.</param>
     /// <param name="memory">The memory bus.</param>
     /// <param name="loggerService">The logger service.</param>
     /// <param name="activityNotifier">Notifier that surfaces per-drive read activity to the UI (may be null).</param>
-    public MscdexService(State state, IMemory memory, ILoggerService loggerService,
+    public Mscdex(State state, IMemory memory, ILoggerService loggerService,
         IDriveActivityNotifier? activityNotifier) {
         _state = state;
         _memory = memory;

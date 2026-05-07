@@ -29,11 +29,11 @@ internal sealed class DosBatchProgramLoader : DosProgramLoader {
         return DosExecResult.Fail(DosErrorCode.FormatInvalid);
     }
 
-    protected override string? TryGetHostPathForLaunchedProgram(LaunchRequest launchRequest) {
+    protected override string? GetHostPathForLaunchedProgram(LaunchRequest launchRequest) {
         if (launchRequest is not ProgramLaunchRequest programLaunchRequest) {
             return null;
         }
 
-        return _fileManager.TryGetFullHostExecutablePathFromDos(programLaunchRequest.ProgramName);
+        return _fileManager.GetFullHostExecutablePathFromDos(programLaunchRequest.ProgramName);
     }
 }

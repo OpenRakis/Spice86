@@ -374,7 +374,7 @@ public sealed class FloppyDiskController : DefaultIOPortHandler {
         byte[] buffer = new byte[byteCount];
 
         if (isRead) {
-            bool ok = _floppyAccess.TryRead(driveNumber, byteOffset, buffer, 0, byteCount);
+            bool ok = _floppyAccess.ReadFromImage(driveNumber, byteOffset, buffer, 0, byteCount);
             if (ok) {
                 // Write sector data from disk into DMA-mapped memory.
                 _dmaChannel.Write(byteCount, buffer);
@@ -384,7 +384,7 @@ public sealed class FloppyDiskController : DefaultIOPortHandler {
         } else {
             // Read data from DMA-mapped memory into the transfer buffer.
             _dmaChannel.Read(byteCount, buffer);
-            bool ok = _floppyAccess.TryWrite(driveNumber, byteOffset, buffer, 0, byteCount);
+            bool ok = _floppyAccess.WriteToImage(driveNumber, byteOffset, buffer, 0, byteCount);
             if (ok) {
                 _activityNotifier?.NotifyWrite((char)('A' + driveNumber));
             }

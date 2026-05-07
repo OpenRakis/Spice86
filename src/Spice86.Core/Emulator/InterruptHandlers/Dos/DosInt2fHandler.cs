@@ -16,7 +16,7 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public class DosInt2fHandler : InterruptHandler {
     private readonly ExtendedMemoryManager? _xms;
-    private readonly MscdexService _mscdexService;
+    private readonly Mscdex _mscdexService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DosInt2fHandler"/> class.
@@ -30,7 +30,7 @@ public class DosInt2fHandler : InterruptHandler {
     /// <param name="xms">The extended memory manager. Can be <c>null</c> if XMS was not enabled.</param>
     public DosInt2fHandler(IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack,
-        State state, ILoggerService loggerService, MscdexService mscdexService,
+        State state, ILoggerService loggerService, Mscdex mscdexService,
         ExtendedMemoryManager? xms = null)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _xms = xms;
@@ -154,7 +154,7 @@ public class DosInt2fHandler : InterruptHandler {
     }
 
     /// <summary>
-    /// Handles MSCDEX INT 2Fh AH=15h subfunctions. Delegates to <see cref="MscdexService"/>.
+    /// Handles MSCDEX INT 2Fh AH=15h subfunctions. Delegates to <see cref="Mscdex"/>.
     /// </summary>
     public void MscdexServices(bool calledFromVm) {
         _mscdexService.Dispatch();

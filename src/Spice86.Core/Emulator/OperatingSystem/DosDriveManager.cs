@@ -438,7 +438,7 @@ public class DosDriveManager : IDictionary<char, VirtualDrive>, IFloppyDriveAcce
     }
 
     /// <inheritdoc/>
-    public bool TryRead(byte driveNumber, int imageByteOffset, byte[] destination, int destOffset, int byteCount) {
+    public bool ReadFromImage(byte driveNumber, int imageByteOffset, byte[] destination, int destOffset, int byteCount) {
         if (!TryResolveFloppyImage(driveNumber, out FloppyDiskDrive? _, out byte[]? imageData)) {
             return false;
         }
@@ -450,7 +450,7 @@ public class DosDriveManager : IDictionary<char, VirtualDrive>, IFloppyDriveAcce
     }
 
     /// <inheritdoc/>
-    public bool TryWrite(byte driveNumber, int imageByteOffset, byte[] source, int srcOffset, int byteCount) {
+    public bool WriteToImage(byte driveNumber, int imageByteOffset, byte[] source, int srcOffset, int byteCount) {
         if (!TryResolveFloppyImage(driveNumber, out FloppyDiskDrive? floppy, out byte[]? imageData)) {
             return false;
         }

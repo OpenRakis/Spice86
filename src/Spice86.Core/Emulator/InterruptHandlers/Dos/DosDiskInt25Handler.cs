@@ -108,7 +108,7 @@ public class DosDiskInt25Handler : InterruptHandler {
         int byteCount = sectorCount * bytesPerSector;
         byte[] buffer = new byte[byteCount];
 
-        if (!_dosDriveManager.TryRead(driveIndex, byteOffset, buffer, 0, byteCount)) {
+        if (!_dosDriveManager.ReadFromImage(driveIndex, byteOffset, buffer, 0, byteCount)) {
             State.AX = 0x0408;
             SetCarryFlag(true, calledFromVm);
             return;

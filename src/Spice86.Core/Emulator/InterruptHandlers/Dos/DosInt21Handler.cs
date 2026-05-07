@@ -1217,7 +1217,7 @@ public class DosInt21Handler : InterruptHandler {
                 returnCode, paragraphsToKeep, currentPspSegment);
         }
 
-        DosErrorCode errorCode = _dosMemoryManager.TryModifyBlock(
+        DosErrorCode errorCode = _dosMemoryManager.ModifyBlock(
             currentPspSegment,
             paragraphsToKeep,
             out DosMemoryControlBlock resizedBlock);
@@ -1429,7 +1429,7 @@ public class DosInt21Handler : InterruptHandler {
             LoggerService.Verbose("MODIFY MEMORY BLOCK {Size} at {BlockSegment}",
                 requestedSizeInParagraphs, ConvertUtils.ToHex16(blockSegment));
         }
-        DosErrorCode errorCode = _dosMemoryManager.TryModifyBlock(blockSegment,
+        DosErrorCode errorCode = _dosMemoryManager.ModifyBlock(blockSegment,
             requestedSizeInParagraphs, out DosMemoryControlBlock mcb);
         if (errorCode == DosErrorCode.NoError) {
             // Undocumented MS-DOS behaviour expected by BRUN45!
@@ -1906,7 +1906,7 @@ public class DosInt21Handler : InterruptHandler {
     public void GetSetFileAttributes(bool calledFromVm) {
         byte op = State.AL;
         string dosFileName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
-        string? fileName = _dosFileManager.TryGetFullHostPathFromDos(dosFileName);
+        string? fileName = _dosFileManager.GetFullHostPathFromDos(dosFileName);
         if (!File.Exists(fileName)) {
             LogDosError(calledFromVm);
             SetCarryFlag(true, calledFromVm);

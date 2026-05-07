@@ -110,7 +110,7 @@ internal static class BatchCommandHandlers {
         protected override bool Execute(DosBatchExecutionEngine engine, CommandExecutionContext context,
             out LaunchRequest launchRequest) {
             launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
-            return engine.TryHandleGoto(context.ArgumentPart);
+            return engine.HandleGoto(context.ArgumentPart);
         }
     }
 
@@ -121,7 +121,7 @@ internal static class BatchCommandHandlers {
         protected override bool Execute(DosBatchExecutionEngine engine, CommandExecutionContext context,
             out LaunchRequest launchRequest) {
             launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
-            return engine.TryHandleShift();
+            return engine.HandleShift();
         }
     }
 
@@ -152,7 +152,7 @@ internal static class BatchCommandHandlers {
         protected override bool Execute(DosBatchExecutionEngine engine, CommandExecutionContext context,
             out LaunchRequest launchRequest) {
             launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
-            return engine.ExecuteInternalCommandWithArgument(context, engine.TryHandleSet);
+            return engine.ExecuteInternalCommandWithArgument(context, engine.HandleSet);
         }
     }
 
@@ -163,7 +163,7 @@ internal static class BatchCommandHandlers {
         protected override bool Execute(DosBatchExecutionEngine engine, CommandExecutionContext context,
             out LaunchRequest launchRequest) {
             launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
-            return engine.ExecuteInternalCommandWithArgument(context, engine.TryHandleEcho);
+            return engine.ExecuteInternalCommandWithArgument(context, engine.HandleEcho);
         }
     }
 
@@ -174,7 +174,7 @@ internal static class BatchCommandHandlers {
         protected override bool Execute(DosBatchExecutionEngine engine, CommandExecutionContext context,
             out LaunchRequest launchRequest) {
             launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
-            return engine.ExecuteInternalCommandWithArgument(context, engine.TryHandlePath);
+            return engine.ExecuteInternalCommandWithArgument(context, engine.HandlePath);
         }
     }
 
@@ -197,7 +197,7 @@ internal static class BatchCommandHandlers {
         protected override bool Execute(DosBatchExecutionEngine engine, CommandExecutionContext context,
             out LaunchRequest launchRequest) {
             launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
-            engine.TryHandleCls();
+            engine.HandleCls();
             return false;
         }
     }
@@ -221,7 +221,7 @@ internal static class BatchCommandHandlers {
         protected override bool Execute(DosBatchExecutionEngine engine, CommandExecutionContext context,
             out LaunchRequest launchRequest) {
             launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
-            return engine.ExecuteInternalCommandWithArgument(context, engine.TryHandleType);
+            return engine.ExecuteInternalCommandWithArgument(context, engine.HandleType);
         }
     }
 
@@ -232,7 +232,7 @@ internal static class BatchCommandHandlers {
         protected override bool Execute(DosBatchExecutionEngine engine, CommandExecutionContext context,
             out LaunchRequest launchRequest) {
             launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
-            return engine.ExecuteInternalCommandWithArgument(context, engine.TryHandleChdir);
+            return engine.ExecuteInternalCommandWithArgument(context, engine.HandleChdir);
         }
     }
 
@@ -255,7 +255,7 @@ internal static class BatchCommandHandlers {
         protected override bool Execute(DosBatchExecutionEngine engine, CommandExecutionContext context,
             out LaunchRequest launchRequest) {
             launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
-            return engine.ExecuteInternalCommandWithArgument(context, engine.TryHandleMkdir);
+            return engine.ExecuteInternalCommandWithArgument(context, engine.HandleMkdir);
         }
     }
 
@@ -266,7 +266,7 @@ internal static class BatchCommandHandlers {
         protected override bool Execute(DosBatchExecutionEngine engine, CommandExecutionContext context,
             out LaunchRequest launchRequest) {
             launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
-            return engine.ExecuteInternalCommandWithArgument(context, engine.TryHandleRmdir);
+            return engine.ExecuteInternalCommandWithArgument(context, engine.HandleRmdir);
         }
     }
 
@@ -277,7 +277,7 @@ internal static class BatchCommandHandlers {
         protected override bool Execute(DosBatchExecutionEngine engine, CommandExecutionContext context,
             out LaunchRequest launchRequest) {
             launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
-            return engine.ExecuteInternalCommandWithArgument(context, engine.TryHandleDel);
+            return engine.ExecuteInternalCommandWithArgument(context, engine.HandleDel);
         }
     }
 
@@ -288,7 +288,7 @@ internal static class BatchCommandHandlers {
         protected override bool Execute(DosBatchExecutionEngine engine, CommandExecutionContext context,
             out LaunchRequest launchRequest) {
             launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
-            return engine.ExecuteInternalCommandWithArgument(context, engine.TryHandleRen);
+            return engine.ExecuteInternalCommandWithArgument(context, engine.HandleRen);
         }
     }
 
@@ -299,7 +299,7 @@ internal static class BatchCommandHandlers {
         protected override bool Execute(DosBatchExecutionEngine engine, CommandExecutionContext context,
             out LaunchRequest launchRequest) {
             launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
-            return engine.ExecuteInternalCommandWithArgument(context, engine.TryHandleDir);
+            return engine.ExecuteInternalCommandWithArgument(context, engine.HandleDir);
         }
     }
 
@@ -310,7 +310,7 @@ internal static class BatchCommandHandlers {
         protected override bool Execute(DosBatchExecutionEngine engine, CommandExecutionContext context,
             out LaunchRequest launchRequest) {
             launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
-            return engine.ExecuteInternalCommandWithArgument(context, engine.TryHandleCopy);
+            return engine.ExecuteInternalCommandWithArgument(context, engine.HandleCopy);
         }
     }
 
@@ -321,7 +321,7 @@ internal static class BatchCommandHandlers {
         protected override bool Execute(DosBatchExecutionEngine engine, CommandExecutionContext context,
             out LaunchRequest launchRequest) {
             launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
-            return engine.ExecuteInternalCommandWithArgument(context, engine.TryHandleMove);
+            return engine.ExecuteInternalCommandWithArgument(context, engine.HandleMove);
         }
     }
 
@@ -332,7 +332,7 @@ internal static class BatchCommandHandlers {
         protected override bool Execute(DosBatchExecutionEngine engine, CommandExecutionContext context,
             out LaunchRequest launchRequest) {
             launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
-            return engine.ExecuteInternalCommandWithArgument(context, engine.TryHandleDate);
+            return engine.ExecuteInternalCommandWithArgument(context, engine.HandleDate);
         }
     }
 
@@ -343,7 +343,7 @@ internal static class BatchCommandHandlers {
         protected override bool Execute(DosBatchExecutionEngine engine, CommandExecutionContext context,
             out LaunchRequest launchRequest) {
             launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
-            return engine.ExecuteInternalCommandWithArgument(context, engine.TryHandleTime);
+            return engine.ExecuteInternalCommandWithArgument(context, engine.HandleTime);
         }
     }
 
@@ -354,7 +354,7 @@ internal static class BatchCommandHandlers {
         protected override bool Execute(DosBatchExecutionEngine engine, CommandExecutionContext context,
             out LaunchRequest launchRequest) {
             launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
-            return engine.ExecuteInternalCommandNoArgument(context, engine.TryHandleVer);
+            return engine.ExecuteInternalCommandNoArgument(context, engine.HandleVer);
         }
     }
 
@@ -365,7 +365,7 @@ internal static class BatchCommandHandlers {
         protected override bool Execute(DosBatchExecutionEngine engine, CommandExecutionContext context,
             out LaunchRequest launchRequest) {
             launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
-            return engine.ExecuteInternalCommandWithArgument(context, engine.TryHandleVol);
+            return engine.ExecuteInternalCommandWithArgument(context, engine.HandleVol);
         }
     }
 
@@ -389,8 +389,8 @@ internal static class BatchCommandHandlers {
             out LaunchRequest launchRequest) {
             launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
             string echoArguments = context.PreprocessedLine.TrimStart()[4..];
-            return engine.TryExecuteInternalCommandWithRedirection(context.Redirection,
-                () => engine.TryHandleEcho(echoArguments));
+            return engine.ExecuteInternalCommandWithRedirection(context.Redirection,
+                () => engine.HandleEcho(echoArguments));
         }
     }
 
@@ -401,7 +401,7 @@ internal static class BatchCommandHandlers {
         protected override bool Execute(DosBatchExecutionEngine engine, CommandExecutionContext context,
             out LaunchRequest launchRequest) {
             launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
-            return engine.ExecuteInternalCommandWithArgument(context, engine.TryHandleMount);
+            return engine.ExecuteInternalCommandWithArgument(context, engine.HandleMount);
         }
     }
 
@@ -412,7 +412,7 @@ internal static class BatchCommandHandlers {
         protected override bool Execute(DosBatchExecutionEngine engine, CommandExecutionContext context,
             out LaunchRequest launchRequest) {
             launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
-            return engine.ExecuteInternalCommandWithArgument(context, engine.TryHandleImgMount);
+            return engine.ExecuteInternalCommandWithArgument(context, engine.HandleImgMount);
         }
     }
 
@@ -446,7 +446,7 @@ internal static class BatchCommandHandlers {
         protected override bool Execute(DosBatchExecutionEngine engine, CommandExecutionContext context,
             out LaunchRequest launchRequest) {
             launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
-            return engine.ExecuteInternalCommandWithArgument(context, engine.TryHandleSubst);
+            return engine.ExecuteInternalCommandWithArgument(context, engine.HandleSubst);
         }
     }
 
@@ -465,7 +465,7 @@ internal static class BatchCommandHandlers {
             out LaunchRequest launchRequest) {
             launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
             char driveLetter = char.ToUpperInvariant(context.ResolvedCommandToken[0]);
-            engine.TryChangeDrive(driveLetter);
+            engine.ChangeDrive(driveLetter);
             return false;
         }
     }

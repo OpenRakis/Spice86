@@ -55,7 +55,7 @@ internal class DosProgramLoader : DosFileLoader {
 
         DosExecParameterBlock paramBlock = new(new ByteArrayReaderWriter(new byte[DosExecParameterBlock.Size]), 0);
         if (_processManager.BatchExecutionEngine.TryStart(out LaunchRequest launchRequest)) {
-            if (!_processManager.BatchExecutionEngine.TryApplyRedirectionForLaunch(launchRequest)) {
+            if (!_processManager.BatchExecutionEngine.ApplyRedirectionForLaunch(launchRequest)) {
                 _state.IsRunning = false;
                 return File.ReadAllBytes(file);
             }
@@ -68,7 +68,7 @@ internal class DosProgramLoader : DosFileLoader {
                 return File.ReadAllBytes(file);
             }
 
-            string? launchedHostPath = TryGetHostPathForLaunchedProgram(launchRequest);
+            string? launchedHostPath = GetHostPathForLaunchedProgram(launchRequest);
             if (!string.IsNullOrWhiteSpace(launchedHostPath) && File.Exists(launchedHostPath)) {
                 return File.ReadAllBytes(launchedHostPath);
             }
@@ -108,11 +108,11 @@ internal class DosProgramLoader : DosFileLoader {
         return DosExecResult.SuccessExecute(_state.CS, _state.IP, _state.SS, _state.SP);
     }
 
-    protected virtual string? TryGetHostPathForLaunchedProgram(LaunchRequest launchRequest) {
+    protected virtual string? GetHostPathForLaunchedProgram(LaunchRequest launchRequest) {
         if (launchRequest is not ProgramLaunchRequest programLaunchRequest) {
             return null;
         }
 
-        return _fileManager.TryGetFullHostExecutablePathFromDos(programLaunchRequest.ProgramName);
+        return _fileManager.GetFullHostExecutablePathFromDos(programLaunchRequest.ProgramName);
     }
 }

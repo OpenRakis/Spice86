@@ -44,7 +44,7 @@ public sealed class MscdexSubfunctionTests {
     private sealed class TestContext {
         public Memory Memory { get; }
         public State State { get; }
-        public MscdexService Mscdex { get; }
+        public Mscdex Mscdex { get; }
 
         public TestContext() {
             IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
@@ -53,7 +53,7 @@ public sealed class MscdexSubfunctionTests {
             Memory = new Memory(breakpoints, ram, a20Gate, initializeResetVector: false);
             State = new State(CpuModel.INTEL_80386);
             ILoggerService logger = Substitute.For<ILoggerService>();
-            Mscdex = new MscdexService(State, Memory, logger);
+            Mscdex = new Mscdex(State, Memory, logger);
         }
 
         public void AddDriveAtIndex(char letter, byte driveIndex) {

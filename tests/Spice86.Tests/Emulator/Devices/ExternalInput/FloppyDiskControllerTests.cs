@@ -39,8 +39,8 @@ public sealed class FloppyDiskControllerTests {
 
     private static IFloppyDriveAccess CreateFloppyAccess() {
         IFloppyDriveAccess access = Substitute.For<IFloppyDriveAccess>();
-        access.TryRead(Arg.Any<byte>(), Arg.Any<int>(), Arg.Any<byte[]>(), Arg.Any<int>(), Arg.Any<int>()).Returns(true);
-        access.TryWrite(Arg.Any<byte>(), Arg.Any<int>(), Arg.Any<byte[]>(), Arg.Any<int>(), Arg.Any<int>()).Returns(true);
+        access.ReadFromImage(Arg.Any<byte>(), Arg.Any<int>(), Arg.Any<byte[]>(), Arg.Any<int>(), Arg.Any<int>()).Returns(true);
+        access.WriteToImage(Arg.Any<byte>(), Arg.Any<int>(), Arg.Any<byte[]>(), Arg.Any<int>(), Arg.Any<int>()).Returns(true);
         return access;
     }
 
@@ -186,7 +186,7 @@ public sealed class FloppyDiskControllerTests {
     public void ReadData_Failure_SetsSt0ErrorBit() {
         // Arrange
         IFloppyDriveAccess access = Substitute.For<IFloppyDriveAccess>();
-        access.TryRead(Arg.Any<byte>(), Arg.Any<int>(), Arg.Any<byte[]>(), Arg.Any<int>(), Arg.Any<int>()).Returns(false);
+        access.ReadFromImage(Arg.Any<byte>(), Arg.Any<int>(), Arg.Any<byte[]>(), Arg.Any<int>(), Arg.Any<int>()).Returns(false);
         FloppyDiskController fdc = CreateFdc(access, out List<byte> _);
 
         // Act
@@ -287,7 +287,7 @@ public sealed class FloppyDiskControllerTests {
 
         // Track the byte offset that TryRead is called with
         int capturedByteOffset = -1;
-        access.TryRead(Arg.Any<byte>(), Arg.Do<int>(off => capturedByteOffset = off),
+        access.ReadFromImage(Arg.Any<byte>(), Arg.Do<int>(off => capturedByteOffset = off),
             Arg.Any<byte[]>(), Arg.Any<int>(), Arg.Any<int>()).Returns(true);
 
         FloppyDiskController fdc = CreateFdc(access, out List<byte> _);

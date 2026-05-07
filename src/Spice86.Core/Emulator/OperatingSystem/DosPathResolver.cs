@@ -331,11 +331,11 @@ internal class DosPathResolver {
             return ConvertUtils.ToSlashPath(firstMatch);
         }
 
-        string? extensionProbeMatch = TryResolveExecutableWithoutExtension(resolvedHostDir, lastSegment, options);
+        string? extensionProbeMatch = ResolveExecutableWithoutExtension(resolvedHostDir, lastSegment, options);
         return string.IsNullOrWhiteSpace(extensionProbeMatch) ? null : ConvertUtils.ToSlashPath(extensionProbeMatch);
     }
 
-    private string? TryResolveExecutableWithoutExtension(string resolvedHostDir, string lastSegment, EnumerationOptions options) {
+    private string? ResolveExecutableWithoutExtension(string resolvedHostDir, string lastSegment, EnumerationOptions options) {
         if (string.IsNullOrWhiteSpace(lastSegment)) {
             return null;
         }

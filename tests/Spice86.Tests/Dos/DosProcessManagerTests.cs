@@ -134,7 +134,7 @@ public class DosProcessManagerTests {
 
             // Shrink parent's memory to PSP + small code, freeing space for child
             const ushort parentMinimumSize = DosProgramSegmentPrefix.PspSizeInParagraphs + 0x10;
-            DosErrorCode shrinkResult = context.MemoryManager.TryModifyBlock(
+            DosErrorCode shrinkResult = context.MemoryManager.ModifyBlock(
                 parentSegment,
                 parentMinimumSize,
                 out DosMemoryControlBlock _);
@@ -201,7 +201,7 @@ public class DosProcessManagerTests {
             ushort requestedResidentSize = (ushort)(residentBlock.Size - 4);
             requestedResidentSize.Should().BeGreaterThan(DosProgramSegmentPrefix.PspSizeInParagraphs);
 
-            DosErrorCode resizeResult = context.MemoryManager.TryModifyBlock(tsrSegment, requestedResidentSize, out DosMemoryControlBlock resizedBlock);
+            DosErrorCode resizeResult = context.MemoryManager.ModifyBlock(tsrSegment, requestedResidentSize, out DosMemoryControlBlock resizedBlock);
             resizeResult.Should().Be(DosErrorCode.NoError);
             resizedBlock.Size.Should().Be(requestedResidentSize);
 
@@ -236,7 +236,7 @@ public class DosProcessManagerTests {
             DosProgramSegmentPrefix tsrPsp = new(context.Memory, MemoryUtils.ToPhysicalAddress(tsrSegment, 0));
 
             ushort paragraphsToKeep = DosProgramSegmentPrefix.PspSizeInParagraphs + 0x10;
-            DosErrorCode resizeResult = context.MemoryManager.TryModifyBlock(
+            DosErrorCode resizeResult = context.MemoryManager.ModifyBlock(
                 tsrSegment,
                 paragraphsToKeep,
                 out DosMemoryControlBlock resizedBlock);
@@ -420,7 +420,7 @@ public class DosProcessManagerTests {
         DosMemoryManager memoryManager = new(memory, initialPspSegment, loggerService);
         DosFileManager fileManager = new(memory, new DosStringDecoder(memory, state), driveManager, loggerService, new List<IVirtualDevice>());
         IBatchDisplayCommandHandler batchDisplayCommandHandler = new DosBatchDisplayCommandHandler(vgaFunctionality);
-        MscdexService mscdex = new(state, memory, loggerService);
+        Mscdex mscdex = new(state, memory, loggerService);
 
         ISoundChannelCreator channelCreator = Substitute.For<ISoundChannelCreator>();
         channelCreator.AddChannel(Arg.Any<Action<int>>(), Arg.Any<int>(), Arg.Any<string>(), Arg.Any<HashSet<ChannelFeature>>())

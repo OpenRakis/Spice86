@@ -70,7 +70,7 @@ public sealed class AbsoluteDiskWriteTests {
 
         ctx.State.CarryFlag.Should().BeFalse();
         byte[] readback = new byte[2];
-        ctx.DriveManager.TryRead(0, 0, readback, 0, 2);
+        ctx.DriveManager.ReadFromImage(0, 0, readback, 0, 2);
         readback[0].Should().Be(0xDE);
         readback[1].Should().Be(0xAD);
     }
@@ -125,7 +125,7 @@ public sealed class AbsoluteDiskWriteTests {
 
         ctx.State.CarryFlag.Should().BeFalse();
         byte[] readback = new byte[1];
-        ctx.DriveManager.TryRead(0, 5 * BytesPerSector, readback, 0, 1);
+        ctx.DriveManager.ReadFromImage(0, 5 * BytesPerSector, readback, 0, 1);
         readback[0].Should().Be(0xEE, "written byte must appear at sector 5");
     }
 }
