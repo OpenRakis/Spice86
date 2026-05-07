@@ -298,20 +298,30 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
 
     /// <summary>
     /// Adds a validation error on <paramref name="propertyName"/> if <paramref name="value"/>
-    /// parses to an address greater than <paramref name="maxValue"/>. Used to enforce that
-    /// interrupt vectors fit in a byte and I/O ports fit in a ushort.
+    /// parses to an address greater than <paramref name="maxValue"/>; clears the
+    /// range-related error otherwise. Used to enforce that interrupt vectors fit in a byte
+    /// and I/O ports fit in a ushort. This runs after <c>ValidateAddressProperty</c>
+    /// and only manages its own range-related error to avoid clobbering format errors.
     /// </summary>
     private void ValidateAddressIsInRange(string? value, uint maxValue, string propertyName) {
         if (!AddressAndValueParser.TryParseAddressString(value, _state, out uint? parsed) || parsed is null) {
             return;
         }
+        string rangeError = $"Value must be in range 0..0x{maxValue:X}";
         if (parsed.Value > maxValue) {
             if (!_validationErrors.TryGetValue(propertyName, out List<string>? values)) {
                 values = [];
                 _validationErrors[propertyName] = values;
             }
             values.Clear();
-            values.Add($"Value must be in range 0..0x{maxValue:X}");
+            values.Add(rangeError);
+            OnErrorsChanged(propertyName);
+        } else if (_validationErrors.TryGetValue(propertyName, out List<string>? existing)
+                   && existing.Contains(rangeError)) {
+            existing.Remove(rangeError);
+            if (existing.Count == 0) {
+                _validationErrors.Remove(propertyName);
+            }
             OnErrorsChanged(propertyName);
         }
     }
