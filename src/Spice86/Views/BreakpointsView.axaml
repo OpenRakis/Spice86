@@ -90,23 +90,67 @@
 						</controls:GroupBox>
 						<controls:GroupBox Grid.Row="0" Header="Interrupt"
 										   IsVisible="{Binding IsInterruptBreakpointSelected}">
-							<controls:GroupBox Header="Interrupt Number">
-								<TextBox
-								Text="{Binding InterruptNumber,
-								Mode=TwoWay}"
-								Margin="5,0,0,0"
-								PlaceholderText="hexadecimal number"/>
-							</controls:GroupBox>
+							<StackPanel Orientation="Vertical" Spacing="4">
+								<controls:GroupBox Header="Interrupt Number (hex, or * for all)">
+									<AutoCompleteBox
+										x:Name="InterruptAutoCompleteBox"
+										Text="{Binding InterruptNumber, Mode=TwoWay}"
+										ItemsSource="{Binding KnownInterruptSuggestions}"
+										ItemFilter="{Binding InterruptSuggestionFilter}"
+										ItemSelector="{Binding InterruptSuggestionSelector}"
+										MinimumPrefixLength="0"
+										MinimumPopulateDelay="0"
+										PlaceholderText="e.g. 0x21, or * for all"
+										Margin="5,0,0,0">
+										<AutoCompleteBox.ItemTemplate>
+											<DataTemplate DataType="viewModels:KnownBreakpointSuggestion">
+												<StackPanel Orientation="Horizontal" Spacing="8">
+													<TextBlock Text="{Binding HexValue}" FontWeight="Bold" FontFamily="Consolas,Menlo,Monaco,monospace" />
+													<TextBlock Text="{Binding Description}" Opacity="0.7" />
+												</StackPanel>
+											</DataTemplate>
+										</AutoCompleteBox.ItemTemplate>
+									</AutoCompleteBox>
+								</controls:GroupBox>
+								<controls:GroupBox Header="Condition (optional, leave empty to always break)">
+									<TextBox
+										Text="{Binding InterruptConditionExpression, Mode=TwoWay}"
+										PlaceholderText="e.g., ax == 0x21"
+										Margin="5,0,0,0" />
+								</controls:GroupBox>
+							</StackPanel>
 						</controls:GroupBox>
 						<controls:GroupBox Grid.Row="0" Header="I/O Port"
 										   IsVisible="{Binding IsIoPortBreakpointSelected}">
-							<controls:GroupBox Header="I/O Port Number">
-								<TextBox
-								Text="{Binding IoPortNumber,
-								Mode=TwoWay}"
-								Margin="5,0,0,0"
-								PlaceholderText="hexadecimal number"/>
-							</controls:GroupBox>
+							<StackPanel Orientation="Vertical" Spacing="4">
+								<controls:GroupBox Header="I/O Port Number (hex, or * for all)">
+									<AutoCompleteBox
+										x:Name="IoPortAutoCompleteBox"
+										Text="{Binding IoPortNumber, Mode=TwoWay}"
+										ItemsSource="{Binding KnownIoPortSuggestions}"
+										ItemFilter="{Binding IoPortSuggestionFilter}"
+										ItemSelector="{Binding IoPortSuggestionSelector}"
+										MinimumPrefixLength="0"
+										MinimumPopulateDelay="0"
+										PlaceholderText="e.g. 0x21, 0x388, or * for all"
+										Margin="5,0,0,0">
+										<AutoCompleteBox.ItemTemplate>
+											<DataTemplate DataType="viewModels:KnownBreakpointSuggestion">
+												<StackPanel Orientation="Horizontal" Spacing="8">
+													<TextBlock Text="{Binding HexValue}" FontWeight="Bold" FontFamily="Consolas,Menlo,Monaco,monospace" />
+													<TextBlock Text="{Binding Description}" Opacity="0.7" />
+												</StackPanel>
+											</DataTemplate>
+										</AutoCompleteBox.ItemTemplate>
+									</AutoCompleteBox>
+								</controls:GroupBox>
+								<controls:GroupBox Header="Condition (optional, leave empty to always break)">
+									<TextBox
+										Text="{Binding IoPortConditionExpression, Mode=TwoWay}"
+										PlaceholderText="e.g., ax == 0x01"
+										Margin="5,0,0,0" />
+								</controls:GroupBox>
+							</StackPanel>
 						</controls:GroupBox>
 						<StackPanel
 						Grid.Row="1"

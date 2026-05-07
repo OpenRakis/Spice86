@@ -1,6 +1,7 @@
 namespace Spice86.ViewModels;
 
 using Avalonia.Collections;
+using Avalonia.Controls;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -22,6 +23,7 @@ using System.Collections.ObjectModel;
 public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBreakpoints {
     private const string ExecutionBreakpoint = "Execution breakpoint";
     private const string MemoryRangeBreakpoint = "Memory range breakpoint";
+    private const string WildcardValue = "*";
     private readonly BreakpointConditionService _conditionService;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IMessenger _messenger;
@@ -40,7 +42,81 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
         _conditionService = new BreakpointConditionService(state, memory);
         SelectedBreakpointTypeTab = BreakpointTabs.FirstOrDefault();
         NotifySelectedBreakpointTypeChanged();
+        KnownInterruptSuggestions = BuildInterruptSuggestions();
+        KnownIoPortSuggestions = BuildIoPortSuggestions();
     }
+
+    private static IReadOnlyList<KnownBreakpointSuggestion> BuildInterruptSuggestions() {
+        IReadOnlyList<(byte Vector, string Description)> known = KnownBreakpointSuggestions.Interrupts;
+        List<KnownBreakpointSuggestion> list = new(known.Count);
+        foreach ((byte vector, string description) in known) {
+            list.Add(new KnownBreakpointSuggestion($"0x{vector:X2}", description));
+        }
+        return list;
+    }
+
+    private static IReadOnlyList<KnownBreakpointSuggestion> BuildIoPortSuggestions() {
+        IReadOnlyList<(ushort FirstPort, ushort LastPort, string Description)> known = KnownBreakpointSuggestions.IoPorts;
+        List<KnownBreakpointSuggestion> list = new(known.Count);
+        foreach ((ushort first, ushort last, string description) in known) {
+            string hexValue = $"0x{first:X4}";
+            string rangeLabel = first == last ? $"0x{first:X4}" : $"0x{first:X4}-0x{last:X4}";
+            list.Add(new KnownBreakpointSuggestion(hexValue, $"{rangeLabel} - {description}"));
+        }
+        return list;
+    }
+
+    /// <summary>
+    /// Autocomplete suggestions for known interrupt vectors.
+    /// </summary>
+    public IReadOnlyList<KnownBreakpointSuggestion> KnownInterruptSuggestions { get; }
+
+    /// <summary>
+    /// Autocomplete suggestions for known I/O port ranges.
+    /// </summary>
+    public IReadOnlyList<KnownBreakpointSuggestion> KnownIoPortSuggestions { get; }
+
+    /// <summary>
+    /// Filter predicate for the interrupt autocomplete box.
+    /// Matches on the hex value prefix or the description text.
+    /// </summary>
+    public AutoCompleteFilterPredicate<object?> InterruptSuggestionFilter => (search, item) => {
+        if (string.IsNullOrWhiteSpace(search)) {
+            return true;
+        }
+        if (item is KnownBreakpointSuggestion suggestion) {
+            return suggestion.HexValue.StartsWith(search, StringComparison.OrdinalIgnoreCase)
+                || suggestion.Description.Contains(search, StringComparison.OrdinalIgnoreCase);
+        }
+        return false;
+    };
+
+    /// <summary>
+    /// Item selector for the interrupt autocomplete box: inserts just the hex value
+    /// into the text box when the user picks a suggestion.
+    /// </summary>
+    public AutoCompleteSelector<object>? InterruptSuggestionSelector { get; } = (_, item) =>
+        item is KnownBreakpointSuggestion s ? s.HexValue : item?.ToString() ?? string.Empty;
+
+    /// <summary>
+    /// Filter predicate for the I/O port autocomplete box.
+    /// </summary>
+    public AutoCompleteFilterPredicate<object?> IoPortSuggestionFilter => (search, item) => {
+        if (string.IsNullOrWhiteSpace(search)) {
+            return true;
+        }
+        if (item is KnownBreakpointSuggestion suggestion) {
+            return suggestion.HexValue.StartsWith(search, StringComparison.OrdinalIgnoreCase)
+                || suggestion.Description.Contains(search, StringComparison.OrdinalIgnoreCase);
+        }
+        return false;
+    };
+
+    /// <summary>
+    /// Item selector for the I/O port autocomplete box.
+    /// </summary>
+    public AutoCompleteSelector<object>? IoPortSuggestionSelector { get; } = (_, item) =>
+        item is KnownBreakpointSuggestion s ? s.HexValue : item?.ToString() ?? string.Empty;
 
     protected override void NotifyMemoryBreakpointCanExecuteChanged() {
         ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
@@ -65,12 +141,17 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
                     SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "Cycles");
                     break;
                 case BreakPointType.CPU_INTERRUPT:
-
-                    InterruptNumber = ConvertUtils.ToHex32((uint)SelectedBreakpoint.Address);
+                    InterruptNumber = SelectedBreakpoint.IsWildcard
+                        ? WildcardValue
+                        : ConvertUtils.ToHex32((uint)SelectedBreakpoint.Address);
+                    InterruptConditionExpression = SelectedBreakpoint.ConditionExpression;
                     SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "Interrupt");
                     break;
                 case BreakPointType.IO_ACCESS:
-                    IoPortNumber = ConvertUtils.ToHex32((uint)SelectedBreakpoint.Address);
+                    IoPortNumber = SelectedBreakpoint.IsWildcard
+                        ? WildcardValue
+                        : ConvertUtils.ToHex32((uint)SelectedBreakpoint.Address);
+                    IoPortConditionExpression = SelectedBreakpoint.ConditionExpression;
                     SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "I/O Port");
                     break;
                 case BreakPointType.MEMORY_ACCESS:
@@ -143,6 +224,8 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
         CyclesValue = _state.Cycles;
         ExecutionAddressValue = State.IpSegmentedAddress.ToString();
         ExecutionConditionExpression = null;
+        InterruptConditionExpression = null;
+        IoPortConditionExpression = null;
         MemoryBreakpointStartAddress = State.IpSegmentedAddress.ToString();
         MemoryBreakpointEndAddress = State.IpSegmentedAddress.ToString();
     }
@@ -178,20 +261,68 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
     public string? IoPortNumber {
         get => _ioPortNumber;
         set {
-            ValidateAddressProperty(value, _state);
+            if (value != WildcardValue) {
+                ValidateAddressProperty(value, _state);
+                ValidateAddressIsInRange(value, ushort.MaxValue, nameof(IoPortNumber));
+            } else {
+                ClearValidationError(nameof(IoPortNumber));
+            }
             SetProperty(ref _ioPortNumber, value);
             ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
         }
     }
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ConfirmBreakpointCreationCommand))]
+    private string? _ioPortConditionExpression;
 
     private string? _interruptNumber = "0x0";
 
     public string? InterruptNumber {
         get => _interruptNumber;
         set {
-            ValidateAddressProperty(value, _state);
+            if (value != WildcardValue) {
+                ValidateAddressProperty(value, _state);
+                ValidateAddressIsInRange(value, byte.MaxValue, nameof(InterruptNumber));
+            } else {
+                ClearValidationError(nameof(InterruptNumber));
+            }
             SetProperty(ref _interruptNumber, value);
             ConfirmBreakpointCreationCommand.NotifyCanExecuteChanged();
+        }
+    }
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ConfirmBreakpointCreationCommand))]
+    private string? _interruptConditionExpression;
+
+    /// <summary>
+    /// Adds a validation error on <paramref name="propertyName"/> if <paramref name="value"/>
+    /// parses to an address greater than <paramref name="maxValue"/>; clears the
+    /// range-related error otherwise. Used to enforce that interrupt vectors fit in a byte
+    /// and I/O ports fit in a ushort. This runs after <c>ValidateAddressProperty</c>
+    /// and only manages its own range-related error to avoid clobbering format errors.
+    /// </summary>
+    private void ValidateAddressIsInRange(string? value, uint maxValue, string propertyName) {
+        if (!AddressAndValueParser.TryParseAddressString(value, _state, out uint? parsed) || parsed is null) {
+            return;
+        }
+        string rangeError = $"Value must be in range 0..0x{maxValue:X}";
+        if (parsed.Value > maxValue) {
+            if (!_validationErrors.TryGetValue(propertyName, out List<string>? values)) {
+                values = [];
+                _validationErrors[propertyName] = values;
+            }
+            values.Clear();
+            values.Add(rangeError);
+            OnErrorsChanged(propertyName);
+        } else if (_validationErrors.TryGetValue(propertyName, out List<string>? existing)
+                   && existing.Contains(rangeError)) {
+            existing.Remove(rangeError);
+            if (existing.Count == 0) {
+                _validationErrors.Remove(propertyName);
+            }
+            OnErrorsChanged(propertyName);
         }
     }
 
@@ -232,31 +363,59 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
                 }, null, "Cycles breakpoint", null);
             BreakpointCreated?.Invoke(cyclesVm);
         } else if (IsInterruptBreakpointSelected) {
-            if (!AddressAndValueParser.TryParseAddressString(InterruptNumber, _state, out uint? interruptNumber)) {
-                return;
+            BreakpointViewModel? interruptVm = CreateInterruptBreakpoint();
+            if (interruptVm != null) {
+                BreakpointCreated?.Invoke(interruptVm);
             }
-            BreakpointViewModel interruptVm = AddAddressBreakpoint(
-                interruptNumber.Value,
-                BreakPointType.CPU_INTERRUPT,
-                false,
-                () => {
-                    PauseAndReportInterrupt(interruptNumber.Value);
-                }, null, "Interrupt breakpoint", null);
-            BreakpointCreated?.Invoke(interruptVm);
         } else if (IsIoPortBreakpointSelected) {
-            if (!AddressAndValueParser.TryParseAddressString(IoPortNumber, _state, out uint? ioPortNumber)) {
-                return;
+            BreakpointViewModel? ioPortVm = CreateIoPortBreakpoint();
+            if (ioPortVm != null) {
+                BreakpointCreated?.Invoke(ioPortVm);
             }
-            BreakpointViewModel ioPortVm = AddAddressBreakpoint(
-                ioPortNumber.Value,
-                BreakPointType.IO_ACCESS,
-                false,
-                () => {
-                    PauseAndReportIoPort((ushort)ioPortNumber.Value);
-                }, null, "I/O Port breakpoint", null);
-            BreakpointCreated?.Invoke(ioPortVm);
         }
         CreatingBreakpoint = false;
+    }
+
+    private BreakpointViewModel? CreateInterruptBreakpoint() {
+        if (InterruptNumber == WildcardValue) {
+            return AddWildcardBreakpoint(
+                BreakPointType.CPU_INTERRUPT,
+                PauseAndReportAnyInterrupt,
+                "Interrupt breakpoint (*)");
+        }
+        if (!AddressAndValueParser.TryParseAddressString(InterruptNumber, _state, out uint? interruptNumber)) {
+            return null;
+        }
+        if (!TryCompileConditionWithErrorHandling(InterruptConditionExpression, out Func<long, bool>? condition, out string? conditionExpression)) {
+            return null;
+        }
+        return AddAddressBreakpoint(
+            interruptNumber.Value,
+            BreakPointType.CPU_INTERRUPT,
+            false,
+            () => PauseAndReportInterrupt(interruptNumber.Value),
+            condition, "Interrupt breakpoint", conditionExpression);
+    }
+
+    private BreakpointViewModel? CreateIoPortBreakpoint() {
+        if (IoPortNumber == WildcardValue) {
+            return AddWildcardBreakpoint(
+                BreakPointType.IO_ACCESS,
+                PauseAndReportAnyIoPort,
+                "I/O Port breakpoint (*)");
+        }
+        if (!AddressAndValueParser.TryParseAddressString(IoPortNumber, _state, out uint? ioPortNumber)) {
+            return null;
+        }
+        if (!TryCompileConditionWithErrorHandling(IoPortConditionExpression, out Func<long, bool>? condition, out string? conditionExpression)) {
+            return null;
+        }
+        return AddAddressBreakpoint(
+            ioPortNumber.Value,
+            BreakPointType.IO_ACCESS,
+            false,
+            () => PauseAndReportIoPort((ushort)ioPortNumber.Value),
+            condition, "I/O Port breakpoint", conditionExpression);
     }
 
     internal void CreateMemoryBreakpointAtAddress(uint startAddress, uint endAddress, BreakPointType type, Func<long, bool>? additionalTriggerCondition) {
@@ -273,8 +432,14 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
 
     private bool ConfirmBreakpointCreationCanExecute() {
         if (IsInterruptBreakpointSelected) {
+            if (InterruptNumber == WildcardValue) {
+                return true;
+            }
             return !ScanForValidationErrors(nameof(InterruptNumber));
         } else if (IsIoPortBreakpointSelected) {
+            if (IoPortNumber == WildcardValue) {
+                return true;
+            }
             return !ScanForValidationErrors(nameof(IoPortNumber));
         } else if (IsCyclesBreakpointSelected) {
             return !ScanForValidationErrors(nameof(CyclesValue));
@@ -306,9 +471,17 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
         Pause(message);
     }
 
+    private void PauseAndReportAnyInterrupt() {
+        Pause("Interrupt breakpoint (*) was reached on an interrupt.");
+    }
+
     private void PauseAndReportIoPort(ushort ioPortAddress) {
         string message = $"I/O Port breakpoint was reached at 0x{ioPortAddress:X2}.";
         Pause(message);
+    }
+
+    private void PauseAndReportAnyIoPort() {
+        Pause("I/O Port breakpoint (*) was reached on an I/O port access.");
     }
 
     private void Pause(string message) {
@@ -398,6 +571,18 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
                     trigger, endTrigger, type, isRemovedOnTrigger, onReached, additionalTriggerCondition, comment, conditionExpression);
         AddBreakpointInternal(breakpointViewModel);
         return breakpointViewModel;
+    }
+
+    /// <summary>
+    /// Adds a wildcard (unconditional) breakpoint that fires on every event of the
+    /// given <paramref name="type"/> regardless of address. Used to implement the
+    /// "stop on ALL INTs" and "stop on ALL I/O accesses" feature.
+    /// </summary>
+    public BreakpointViewModel AddWildcardBreakpoint(BreakPointType type, Action onReached, string comment) {
+        RemoveFirstIfEdited();
+        BreakpointViewModel vm = new(_emulatorBreakpointsManager, type, onReached, comment);
+        AddBreakpointInternal(vm);
+        return vm;
     }
 
     private void RemoveFirstIfEdited() {

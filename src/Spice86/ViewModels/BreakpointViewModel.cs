@@ -49,6 +49,33 @@ public partial class BreakpointViewModel : ViewModelBase {
         _isEnabled = true;
     }
 
+    /// <summary>
+    /// Creates a wildcard <see cref="BreakpointViewModel"/> backed by a single
+    /// <see cref="UnconditionalBreakPoint"/> that fires on every event of the given
+    /// <paramref name="type"/> (e.g. every interrupt or every I/O access).
+    /// </summary>
+    internal BreakpointViewModel(
+        EmulatorBreakpointsManager emulatorBreakpointsManager,
+        BreakPointType type,
+        Action onReached,
+        string comment) {
+        _emulatorBreakpointsManager = emulatorBreakpointsManager;
+        Address = -1;
+        EndAddress = -1;
+        Type = type;
+        IsRemovedOnTrigger = false;
+        IsWildcard = true;
+        _onReached = onReached;
+        Comment = comment;
+        Parameter = "*";
+        _conditionExpression = null;
+        UnconditionalBreakPoint bp = new(type, _ => onReached(), removeOnTrigger: false) { IsUserBreakpoint = true };
+        bp.IsEnabled = true;
+        _emulatorBreakpointsManager.ToggleBreakPoint(bp, on: true);
+        _breakpoints.Add(bp);
+        _isEnabled = true;
+    }
+
     [ObservableProperty]
     private string _parameter;
 
@@ -73,6 +100,14 @@ public partial class BreakpointViewModel : ViewModelBase {
     }
 
     public bool IsRemovedOnTrigger { get; }
+
+    /// <summary>
+    /// True when this breakpoint was created as a wildcard ("*") and triggers on every
+    /// event of its <see cref="Type"/> (e.g. every interrupt or every I/O port access).
+    /// In that case, <see cref="Address"/> / <see cref="EndAddress"/> are not meaningful
+    /// and <see cref="Parameter"/> is "*".
+    /// </summary>
+    public bool IsWildcard { get; }
 
     public long Address { get; }
 
