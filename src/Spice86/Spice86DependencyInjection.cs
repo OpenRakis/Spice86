@@ -19,6 +19,7 @@ using Spice86.Core.Emulator.Devices.Cmos;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
+using Spice86.Core.Emulator.Devices.Input.Joystick.Mapping;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Sound;
@@ -95,6 +96,7 @@ public class Spice86DependencyInjection : IDisposable {
     private readonly McpHttpHost? _mcpHttpTransport;
     private readonly DeviceSchedulerThread? _vgaTimingThread;
     private readonly CfgNodeExecutionCompiler _cfgNodeExecutionCompiler;
+    private readonly JoystickProfileActivator _joystickProfileActivator;
     private bool _disposed;
     private bool _machineDisposedAfterRun;
 
@@ -548,9 +550,23 @@ public class Spice86DependencyInjection : IDisposable {
             vgaFunctionality, loggerService,
             _gui as IGuiMouseEvents);
 
+        JoystickMappingJsonStore joystickMappingStore = new(loggerService);
+        JoystickProfileAutoLoader joystickProfileAutoLoader =
+            new(joystickMappingStore, loggerService);
+        LoadedProfiles loadedJoystickProfiles =
+            joystickProfileAutoLoader.LoadAll(configuration.JoystickProfilesDirectory);
+        MidiOnGameportRouter midiOnGameportRouter = new(sink: null, loggerService);
+        RumbleRouter rumbleRouter = new(sink: null, loggerService);
+
         Gameport gameport = new(state, ioPortDispatcher,
-            inputEventHub, new SystemTimeProvider(), rumbleSink: null,
+            inputEventHub, new SystemTimeProvider(),
+            rumbleRouter, midiOnGameportRouter,
             configuration.FailOnUnhandledPort, loggerService);
+
+        JoystickProfileActivator joystickProfileActivator = new(
+            inputEventHub, joystickProfileAutoLoader, loadedJoystickProfiles,
+            midiOnGameportRouter, rumbleRouter, loggerService);
+        _joystickProfileActivator = joystickProfileActivator;
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Input devices created...");
@@ -884,6 +900,7 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         _machineDisposedAfterRun = true;
+        _joystickProfileActivator.Dispose();
         _vgaTimingThread?.Dispose();
         _emulatedClock.Dispose();
         _httpApiServer?.Dispose();

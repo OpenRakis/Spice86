@@ -29,7 +29,8 @@ public sealed class GameportTests {
         _events = new FakeJoystickEventSource();
         _timeProvider = new FakeTimeProvider(new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc));
         _gameport = new Gameport(state, _dispatcher, _events, _timeProvider,
-            rumbleSink: null, failOnUnhandledPort: false, loggerService: logger);
+            rumbleRouter: null, midiRouter: null,
+            failOnUnhandledPort: false, loggerService: logger);
     }
 
     [Fact]
@@ -191,9 +192,10 @@ public sealed class GameportTests {
     }
 
     [Fact]
-    public void Gameport_ExposesTimerAndOptionalRumbleSink() {
+    public void Gameport_ExposesTimerAndOptionalRouters() {
         _gameport.Timer.Should().NotBeNull();
-        _gameport.RumbleSink.Should().BeNull();
+        _gameport.RumbleRouter.Should().BeNull();
+        _gameport.MidiRouter.Should().BeNull();
     }
 }
 

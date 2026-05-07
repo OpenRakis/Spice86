@@ -34,7 +34,8 @@ public sealed class InputEventHubJoystickFlowTests {
         InputEventHub hub = new(keyboardEvents: null, mouseEvents: null,
             joystickEvents: ui);
         FakeTimeProvider time = new(new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc));
-        Gameport gameport = new(state, dispatcher, hub, time, rumbleSink: null,
+        Gameport gameport = new(state, dispatcher, hub, time,
+            rumbleRouter: null, midiRouter: null,
             failOnUnhandledPort: false, loggerService: logger);
 
         // UI raises events. They must be queued, NOT applied immediately.
@@ -63,7 +64,8 @@ public sealed class InputEventHubJoystickFlowTests {
         InputEventHub hub = new(keyboardEvents: null, mouseEvents: null,
             joystickEvents: null); // no UI source -- only PostJoystickAxisEvent
         FakeTimeProvider time = new(new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc));
-        Gameport gameport = new(state, dispatcher, hub, time, rumbleSink: null,
+        Gameport gameport = new(state, dispatcher, hub, time,
+            rumbleRouter: null, midiRouter: null,
             failOnUnhandledPort: false, loggerService: logger);
 
         hub.PostJoystickConnectionEvent(new JoystickConnectionEventArgs(0, true, "MCP"));
