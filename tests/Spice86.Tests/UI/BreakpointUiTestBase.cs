@@ -7,6 +7,8 @@ using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.Messaging;
 
+using FluentAssertions;
+
 using NSubstitute;
 
 using Spice86.Core.Emulator.CPU;
@@ -164,6 +166,25 @@ public abstract class BreakpointUiTestBase : IDisposable {
         };
 
         return (view, viewModel);
+    }
+
+    /// <summary>
+    /// One-shot Arrange helper: creates a view + view model, hosts them in a window, and shows it.
+    /// </summary>
+    protected (BreakpointsView view, BreakpointsViewModel viewModel, Window window) ArrangeBreakpointsView() {
+        (BreakpointsView view, BreakpointsViewModel viewModel) = CreateBreakpointsViewWithViewModel();
+        Window window = new() { Content = view };
+        ShowWindowAndWait(window);
+        return (view, viewModel, window);
+    }
+
+    /// <summary>
+    /// Opens the New... dialog and selects the named breakpoint tab. Asserts that the tab exists.
+    /// </summary>
+    protected static void BeginCreateOnTab(BreakpointsViewModel viewModel, string tabName) {
+        viewModel.BeginCreateBreakpointCommand.Execute(null);
+        ProcessUiEvents();
+        SelectBreakpointTab(viewModel, tabName).Should().BeTrue($"the '{tabName}' tab should exist");
     }
     
     /// <summary>
