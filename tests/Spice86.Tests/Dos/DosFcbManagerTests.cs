@@ -107,7 +107,7 @@ public class DosFcbManagerTests : IDisposable {
     [Fact]
     public void ParseFilename_InvalidDrive_ContinuesParsing() {
         // Arrange
-        _fixture.Memory.SetZeroTerminatedString(StringAddr, "Z:TEST.TXT", 128);
+        _fixture.Memory.SetZeroTerminatedString(StringAddr, "Q:TEST.TXT", 128);
 
         // Act - Undocumented behavior: should keep parsing even if drive specification is invalid
         (FcbParseResult result, uint bytesAdvanced) = _fixture.DosFcbManager.ParseFilename(StringAddr, FcbAddr, 0);
@@ -118,7 +118,7 @@ public class DosFcbManagerTests : IDisposable {
         DosFileControlBlock fcb = new DosFileControlBlock(_fixture.Memory, FcbAddr);
         fcb.FileName.Should().Be("TEST    ");
         fcb.FileExtension.Should().Be("TXT");
-        fcb.DriveNumber.Should().Be(26); // Z: = 26
+        fcb.DriveNumber.Should().Be(('Q' - 'A') + 1); // Q: drive, one-based index
     }
 
     [Fact]

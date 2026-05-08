@@ -143,7 +143,7 @@ public class DriveAbstractionTests {
         // zDrive is not null and retrieved == zDrive, so assert properties on zDrive directly.
         zDrive.DriveLetter.Should().Be('Z');
         zDrive.IsReadOnlyMedium.Should().BeTrue();
-        manager['C'].MountedHostDirectory.Should().NotBeEmpty("C: drive must remain unaffected");
+        manager.GetDrive<VirtualDrive>('C').MountedHostDirectory.Should().NotBeEmpty("C: drive must remain unaffected");
     }
 
 }

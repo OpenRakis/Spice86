@@ -1162,6 +1162,8 @@ internal sealed class EmulatorMcpTools {
             lock (_services.ToolsLock) {
                 Dos dos = GetDos();
                 List<DosDriveResponse> drives = dos.DosDriveManager.Values
+                    .Where(static drive => drive is VirtualDrive)
+                    .Cast<VirtualDrive>()
                     .Select(static drive => new DosDriveResponse {
                         Drive = drive.DosVolume,
                         CurrentDosDirectory = drive.CurrentDosDirectory,
@@ -1172,7 +1174,7 @@ internal sealed class EmulatorMcpTools {
                 return new DosStateResponse {
                     CurrentDrive = dos.DosDriveManager.CurrentDrive.DosVolume,
                     CurrentDriveIndex = dos.DosDriveManager.CurrentDriveIndex,
-                    PotentialDriveLetters = dos.DosDriveManager.NumberOfPotentiallyValidDriveLetters,
+                    PotentialDriveLetters = dos.DosDriveManager.Count,
                     CurrentProgramSegmentPrefix = dos.DosSwappableDataArea.CurrentProgramSegmentPrefix,
                     DeviceCount = dos.Devices.Count,
                     HasEms = dos.Ems != null,
@@ -1246,7 +1248,7 @@ internal sealed class EmulatorMcpTools {
                 }
 
                 char normalizedDriveLetter = char.ToUpperInvariant(driveLetter[0]);
-                if (!dos.DosDriveManager.TryGetValue(normalizedDriveLetter, out VirtualDrive? mountedDrive) || mountedDrive == null) {
+                if (!dos.DosDriveManager.TryGetDrive(normalizedDriveLetter, out VirtualDrive? mountedDrive) || mountedDrive == null) {
                     throw new InvalidOperationException($"Drive '{normalizedDriveLetter}' is not mounted");
                 }
 
@@ -1532,12 +1534,10 @@ internal sealed class EmulatorMcpTools {
             throw new ArgumentException("Drive letter must be empty or a single character between A and Z");
         }
 
-        char normalizedDriveLetter = char.ToUpperInvariant(driveLetter[0]);
-        if (!DosDriveManager.DriveLetters.TryGetValue(normalizedDriveLetter, out byte driveIndex)) {
-            throw new ArgumentException($"Drive letter '{normalizedDriveLetter}' is invalid");
-        }
-        if (!dos.DosDriveManager.TryGetValue(normalizedDriveLetter, out VirtualDrive? virtualDrive) || virtualDrive == null) {
-            throw new InvalidOperationException($"Drive '{normalizedDriveLetter}' is not mounted");
+        char driveLetterChar = driveLetter[0];
+        int driveIndex = DosDriveManager.GetDriveIndexOrThrow(driveLetterChar, nameof(driveLetter));
+        if (!dos.DosDriveManager.TryGetDrive(driveLetterChar, out VirtualDrive? virtualDrive) || virtualDrive == null) {
+            throw new InvalidOperationException($"Drive '{driveLetterChar}' is not mounted");
         }
 
         resolvedDrive = virtualDrive.DosVolume;

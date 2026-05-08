@@ -973,11 +973,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
             return false;
         }
 
-        if (driveByte > DosDriveManager.MaxDriveCount) {
-            return false;
-        }
-
-        ushort zeroBasedIndex = (ushort)(driveByte - 1);
+        int zeroBasedIndex = driveByte - 1;
         return _driveManager.HasDriveAtIndex(zeroBasedIndex);
     }
 
