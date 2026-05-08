@@ -1174,7 +1174,7 @@ internal sealed class EmulatorMcpTools {
                 return new DosStateResponse {
                     CurrentDrive = dos.DosDriveManager.CurrentDrive.DosVolume,
                     CurrentDriveIndex = dos.DosDriveManager.CurrentDriveIndex,
-                    PotentialDriveLetters = dos.DosDriveManager.NumberOfPotentiallyValidDriveLetters,
+                    PotentialDriveLetters = dos.DosDriveManager.Count,
                     CurrentProgramSegmentPrefix = dos.DosSwappableDataArea.CurrentProgramSegmentPrefix,
                     DeviceCount = dos.Devices.Count,
                     HasEms = dos.Ems != null,

@@ -44,6 +44,7 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
         var cDrive = new VirtualDrive { DriveLetter = 'C', MountedHostDirectory = cDriveFolderPath };
         _driveMap[GetDriveIndex('C')] = cDrive;
         CurrentDrive = cDrive;
+        _mappedDriveCount = 3; // A:, B:, C:
         InitializeMediaDescriptors();
         if (loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
             loggerService.Verbose("DOS Drives initialized: {@Drives}", Values);
@@ -195,16 +196,6 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
 
     internal bool HasDriveAtIndex(int zeroBasedIndex) => zeroBasedIndex is >= 0 and < MaxDriveCount &&
         _driveMap[zeroBasedIndex] is not null;
-
-    /// <summary>
-    /// Gets the number of DOS drive letters assigned.
-    /// </summary>
-    public byte NumberOfPotentiallyValidDriveLetters {
-        get {
-            // At least A: and B:
-            return (byte)Count;
-        }
-    }
 
     private const byte FloppyMediaDescriptor = 0xF0;
     private const byte FixedDiskMediaDescriptor = 0xF8;

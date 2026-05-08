@@ -1297,9 +1297,8 @@ public class DosFileManager {
             }
         } else if (subfunction <= IoctlSubfunction.QueryIoctlDevice) {
             if (subfunction != IoctlSubfunction.SetSharingRetryCount) {
-                drive = (byte)(state.BX == 0 ? _dosDriveManager.CurrentDriveIndex : state.BX - 1);
-                if (drive >= 2 && (drive >= _dosDriveManager.NumberOfPotentiallyValidDriveLetters ||
-                    _dosDriveManager.Count < (drive + 1))) {
+                drive = (byte)(state.BX == 0 ? _dosDriveManager.CurrentDriveIndex : (state.BX - 1));
+                if (drive >= _dosDriveManager.Count) {
                     if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                         _loggerService.Warning("IOCTL: Invalid drive {Drive} for {Operation}",
                             drive, operationName);
