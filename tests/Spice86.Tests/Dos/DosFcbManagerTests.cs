@@ -118,7 +118,7 @@ public class DosFcbManagerTests : IDisposable {
         DosFileControlBlock fcb = new DosFileControlBlock(_fixture.Memory, FcbAddr);
         fcb.FileName.Should().Be("TEST    ");
         fcb.FileExtension.Should().Be("TXT");
-        fcb.DriveNumber.Should().Be(26); // Z: = 26
+        fcb.DriveNumber.Should().Be(('Q' - 'A') + 1); // Q: drive, one-based index
     }
 
     [Fact]
