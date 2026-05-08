@@ -339,10 +339,11 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
         Mount(item.Value);
     }
 
-    /// <inheritdoc/>
+    /// <summary>Removes all mounted drives from the collection.</summary>
     /// <exception cref="AggregateException">One or more exceptions were thrown while drives were being unmounted.</exception>
     /// <remarks>
-    /// This will always dispose of the drives before removing them from the collection.
+    /// This will always dispose of the drives before removing them from the collection. (Equivalent to calling
+    /// <see cref="Clear(bool)"/> with the dispose drives parameter set to <see langword="true"/>.)
     /// </remarks>
     public void Clear() => Clear(disposeDrives: true);
 
@@ -778,8 +779,18 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
 
     #endregion
 
+    /// <summary>Removes all mounted drives from the collection.</summary>
+    /// <param name="disposeDrives">
+    /// If <see langword="true"/>, then all currently mounted drives will be disposed (if applicable); otherwise,
+    /// drives will only be removed from the collection.
+    /// </param>
     /// <exception cref="AggregateException">One or more exceptions were thrown while drives were being unmounted.</exception>
-    public void Clear(bool disposeDrives = true) {
+    /// <remarks>
+    /// Removing drives from this collection without disposing may result in unexpected behavior or memory leaks. It is
+    /// up to the caller to make sure that any drives that are currently mounted are disposed before clearing the
+    /// collection.
+    /// </remarks>
+    public void Clear(bool disposeDrives) {
         if (!disposeDrives) {
             Array.Clear(_driveMap);
             _mappedDriveCount--;
