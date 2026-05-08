@@ -16,7 +16,7 @@ public class CpuGeneralProtectionFaultException : CpuException {
     /// </summary>
     /// <param name="message">The message describing the error.</param>
     /// <param name="errorCode">Some exceptions may have an error code pushed on the stack.</param>
-    public CpuGeneralProtectionFaultException(string message, ushort errorCode = 0)
+    public CpuGeneralProtectionFaultException(string message, ushort? errorCode = null)
         : base(message, 0x0D, CpuExceptionType.Fault, "#GP", errorCode) {
     }
 }

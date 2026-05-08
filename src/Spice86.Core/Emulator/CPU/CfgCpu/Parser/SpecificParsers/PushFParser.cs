@@ -21,7 +21,10 @@ public class PushFParser : BaseInstructionParser {
         IVisitableAstNode execAst;
         if (bitWidth == BitWidth.DWORD_32) {
             ValueNode flagsRegister = _astBuilder.Flag.FlagsRegister(DataType.UINT32);
-            ValueNode maskedFlags = new BinaryOperationNode(_astBuilder.UType(BitWidth.DWORD_32), flagsRegister, BinaryOperation.BITWISE_AND, _astBuilder.Constant.ToNode(0x00FCFFFFu));
+            // PUSHFD pushes the lower 16 bits of EFLAGS unchanged and the upper 16 bits
+            // as all zeros per Intel SDM and validated by hardware reference tests.
+            // VM (bit 17) and RF (bit 16) are naturally zeroed as part of this.
+            ValueNode maskedFlags = new BinaryOperationNode(_astBuilder.UType(BitWidth.DWORD_32), flagsRegister, BinaryOperation.BITWISE_AND, _astBuilder.Constant.ToNode(0x0000FFFFu));
             IVisitableAstNode pushNode = _astBuilder.Stack.Push(BitWidth.DWORD_32, maskedFlags);
             displayAst = new InstructionNode(InstructionOperation.PUSHFD);
             execAst = _astBuilder.WithIpAdvancement(instr, pushNode);

@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Parser;
 using Spice86.Core.Emulator.CPU.CfgCpu.Logging;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.VM.Breakpoint;
 
 using Xunit;
@@ -26,7 +27,7 @@ public class LogExpressionCompilerTests {
         AddressReadWriteBreakpoints breakpoints = new();
         Ram ram = new(A20Gate.EndOfHighMemoryArea);
         A20Gate a20Gate = new();
-        _memory = new Memory(breakpoints, ram, a20Gate);
+        _memory = new Memory(breakpoints, ram, a20Gate, new RealModeMmu386(), false);
         _compiler = new LogExpressionCompiler(_state, _memory);
     }
 

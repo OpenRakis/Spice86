@@ -8,6 +8,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -45,7 +46,7 @@ public class EmsUnitTests {
         // Arrange - Setup memory and state
         _state = new State(CpuModel.INTEL_80286);
         A20Gate a20Gate = new A20Gate(false);
-        _memory = new Memory(new(), new Ram(A20Gate.EndOfHighMemoryArea), a20Gate);
+        _memory = new Memory(new(), new Ram(A20Gate.EndOfHighMemoryArea), a20Gate, new RealModeMmu386(), false);
         _loggerService = Substitute.For<ILoggerService>();
         _stack = new Stack(_memory, _state);
         _functionHandlerProvider = Substitute.For<IFunctionHandlerProvider>();

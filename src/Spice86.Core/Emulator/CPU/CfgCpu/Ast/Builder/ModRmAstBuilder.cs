@@ -107,9 +107,6 @@ public class ModRmAstBuilder(RegisterAstBuilder register, InstructionFieldAstBui
     public SegmentedAddressNode ToSegmentedAddressNode(BitWidth operandBitWidth, ModRmContext modRmContext) {
         DataType offsetType = DataType.UnsignedFromBitWidth(operandBitWidth);
         ValueNode ipNode = ToMemoryAddressNode(offsetType, modRmContext);
-        if (operandBitWidth == BitWidth.DWORD_32) {
-            ipNode = _typeConversion.Convert(DataType.UINT16, ipNode);
-        }
         ValueNode csNode = ToMemoryAddressNodeWithOffsetAdjustment(
             DataType.UINT16, modRmContext, Constant.ToNode((ushort)operandBitWidth.ToBytes()));
         return new SegmentedAddressNode(csNode, ipNode);

@@ -14,7 +14,7 @@ public class SimpleInstructionParser : BaseInstructionParser {
     }
 
     public CfgInstruction ParseHlt(ParsingContext context) {
-        CfgInstruction instr = new(context.Address, context.OpcodeField, 0);
+        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 0);
         InstructionNode displayAst = new InstructionNode(InstructionOperation.HLT);
         IVisitableAstNode execAst = new HltNode(instr);
         instr.AttachAsts(displayAst, execAst);
@@ -22,7 +22,7 @@ public class SimpleInstructionParser : BaseInstructionParser {
     }
 
     public CfgInstruction ParseNop(ParsingContext context) {
-        CfgInstruction instr = new(context.Address, context.OpcodeField, 1);
+        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
         InstructionNode displayAst = new InstructionNode(InstructionOperation.NOP);
         IVisitableAstNode execAst = _astBuilder.WithIpAdvancement(instr);
         instr.AttachAsts(displayAst, execAst);
@@ -30,7 +30,7 @@ public class SimpleInstructionParser : BaseInstructionParser {
     }
 
     public CfgInstruction ParseFwait(ParsingContext context) {
-        CfgInstruction instr = new(context.Address, context.OpcodeField, 1);
+        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
         InstructionNode displayAst = new InstructionNode(InstructionOperation.FWAIT);
         IVisitableAstNode execAst = _astBuilder.WithIpAdvancement(instr);
         instr.AttachAsts(displayAst, execAst);
@@ -41,6 +41,18 @@ public class SimpleInstructionParser : BaseInstructionParser {
         CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
         InstructionNode displayAst = new InstructionNode(InstructionOperation.CPUID);
         IVisitableAstNode execAst = new CpuidNode(instr);
+        instr.AttachAsts(displayAst, execAst);
+        return instr;
+    }
+
+    /// <summary>
+    /// CLTS — Clear Task-Switched flag in CR0. Treated as NOP since CR0 is not emulated in real mode.
+    /// Encoded as a 2-byte 0F 06 instruction.
+    /// </summary>
+    public CfgInstruction ParseClts(ParsingContext context) {
+        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        InstructionNode displayAst = new InstructionNode(InstructionOperation.CLTS);
+        IVisitableAstNode execAst = _astBuilder.WithIpAdvancement(instr);
         instr.AttachAsts(displayAst, execAst);
         return instr;
     }

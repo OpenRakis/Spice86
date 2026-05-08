@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.Memory;
 
 using Spice86.Core.Emulator.Memory.Indexable;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 
 /// <summary>
@@ -16,6 +17,11 @@ public interface IMemory : IIndexable, IByteReaderWriter {
     /// Represents the optional 20th address line suppression feature for legacy 8086 programs.
     /// </summary>
     A20Gate A20Gate { get; }
+
+    /// <summary>
+    /// Translates and validates segmented memory accesses.
+    /// </summary>
+    IMmu Mmu { get; }
 
     /// <summary>
     /// Gets a copy of the current memory state, not triggering any breakpoints.
@@ -46,6 +52,24 @@ public interface IMemory : IIndexable, IByteReaderWriter {
     /// <param name="address"></param>
     /// <param name="value"></param>
     public void SneakilyWrite(uint address, byte value);
+
+    /// <summary>
+    /// Writes a 16-bit value using per-byte MMU translation, without segment-boundary validation.
+    /// Each byte lane is independently translated through the MMU, allowing correct wrapping within the segment.
+    /// </summary>
+    /// <param name="segment">The segment selector.</param>
+    /// <param name="offset">The offset within the segment.</param>
+    /// <param name="value">The 16-bit value to write.</param>
+    void WriteUInt16Segmented(ushort segment, ushort offset, ushort value);
+
+    /// <summary>
+    /// Writes a 32-bit value using per-byte MMU translation, without segment-boundary validation.
+    /// Each byte lane is independently translated through the MMU, allowing correct wrapping within the segment.
+    /// </summary>
+    /// <param name="segment">The segment selector.</param>
+    /// <param name="offset">The offset within the segment.</param>
+    /// <param name="value">The 32-bit value to write.</param>
+    void WriteUInt32Segmented(ushort segment, ushort offset, uint value);
 
     /// <summary>
     /// Returns a <see cref="IList{T}"/> that represents the specified range of memory.

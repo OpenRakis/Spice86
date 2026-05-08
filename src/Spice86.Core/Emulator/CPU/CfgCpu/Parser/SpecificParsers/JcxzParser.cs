@@ -21,8 +21,8 @@ public class JcxzParser : BaseInstructionParser {
         CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
         instr.AddField(offsetField);
         instr.MaxSuccessorsCount = 2;
-        ushort targetIp = (ushort)(instr.NextInMemoryAddress.Offset + offsetValue);
-        ValueNode targetIpNode = _astBuilder.Constant.ToNearAddressNode(targetIp, instr.NextInMemoryAddress);
+        ushort targetIp = (ushort)(instr.NextInMemoryAddress32.Offset + offsetValue);
+        ValueNode targetIpNode = _astBuilder.Constant.ToNearAddressNode(targetIp, instr.NextInMemoryAddress32.ToSegmentedAddress());
         DataType counterType = _astBuilder.UType(context.AddressWidthFromPrefixes);
         ValueNode counter = _astBuilder.Register.Reg(counterType, RegisterIndex.CxIndex);
         ValueNode condition = new BinaryOperationNode(

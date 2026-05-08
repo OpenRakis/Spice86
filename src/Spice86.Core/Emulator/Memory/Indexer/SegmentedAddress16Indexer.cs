@@ -1,7 +1,7 @@
 namespace Spice86.Core.Emulator.Memory.Indexer;
 
 using Spice86.Shared.Emulator.Memory;
-using Spice86.Shared.Utils;
+using Spice86.Core.Emulator.Memory.Mmu;
 
 /// <summary>
 /// <para>Retrieves Segment / Offset pairs stored in Memory.</para>
@@ -18,7 +18,8 @@ public class SegmentedAddress16Indexer : MemoryIndexer<SegmentedAddress> {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="uInt16Indexer">The class that provides indexed unsigned 16-byte integer access over memory.</param>
-    public SegmentedAddress16Indexer(UInt16Indexer uInt16Indexer) {
+    /// <param name="mmu">The MMU for access checks.</param>
+    public SegmentedAddress16Indexer(UInt16Indexer uInt16Indexer, IMmu mmu) : base(mmu, 4) {
         _uInt16Indexer = uInt16Indexer;
     }
 
@@ -31,29 +32,17 @@ public class SegmentedAddress16Indexer : MemoryIndexer<SegmentedAddress> {
         }
     }
 
-    /// <summary>
-    /// Gets or sets the data at the specified segment and offset in the memory.
-    /// </summary>
-    /// <param name="segment">The segment of the element to get or set.</param>
-    /// <param name="offset">The offset of the element to get or set.</param>
-    public override SegmentedAddress this[ushort segment, ushort offset] {
-        get {
-            // Read using the physical addressing to get proper little-endian ordering
-            uint offsetAddr = MemoryUtils.ToPhysicalAddress(segment, offset);
-            uint segmentAddr = MemoryUtils.ToPhysicalAddress(segment, (ushort)(offset + 2));
-            
-            ushort offsetValue = _uInt16Indexer[offsetAddr];
-            ushort segmentValue = _uInt16Indexer[segmentAddr];
-            return new(segmentValue, offsetValue);
-        }
-        set {
-            // Write using the physical addressing to get proper little-endian ordering
-            uint offsetAddr = MemoryUtils.ToPhysicalAddress(segment, offset);
-            uint segmentAddr = MemoryUtils.ToPhysicalAddress(segment, (ushort)(offset + 2));
-            
-            _uInt16Indexer[offsetAddr] = value.Offset;
-            _uInt16Indexer[segmentAddr] = value.Segment;
-        }
+    /// <inheritdoc />
+    internal override SegmentedAddress ReadSegmented(ushort segment, uint offset) {
+        ushort offsetValue = _uInt16Indexer.ReadSegmented(segment, offset);
+        ushort segmentValue = _uInt16Indexer.ReadSegmented(segment, offset + 2u);
+        return new(segmentValue, offsetValue);
+    }
+
+    /// <inheritdoc />
+    internal override void WriteSegmented(ushort segment, uint offset, SegmentedAddress value) {
+        _uInt16Indexer.WriteSegmented(segment, offset, value.Offset);
+        _uInt16Indexer.WriteSegmented(segment, offset + 2u, value.Segment);
     }
 
     /// <inheritdoc/>

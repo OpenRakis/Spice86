@@ -72,11 +72,9 @@ public class AstBuilder {
     /// <param name="statements">Statements for the block</param>
     /// <returns>A BlockNode with instruction logic + IP advancement</returns>
     public IVisitableAstNode WithIpAdvancement(CfgInstruction instruction, params IVisitableAstNode[] statements) {
-        ValueNode nextIpOffset = Constant.ToNode(instruction.NextInMemoryAddress.Offset);
-        MoveIpNextNode moveIp = new MoveIpNextNode(nextIpOffset);
         List<IVisitableAstNode> allStatements = new();
         allStatements.AddRange(statements);
-        allStatements.Add(moveIp);
+        allStatements.Add(new MoveIpNextNode(Constant.ToNode(instruction.NextInMemoryAddress32.Offset)));
         return new BlockNode(allStatements.ToArray());
     }
 

@@ -12,6 +12,6 @@ public class UInt32FieldReader : InstructionFieldReader<uint> {
     }
 
     public override uint PeekValue() {
-        return Memory.UInt32[CurrentAddress];
+        return PeekUInt32(0);
     }
 }

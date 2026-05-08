@@ -6,9 +6,10 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser.FieldReader;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.Mmu;
 
 public class ModRmHelper {
-    public Memory Memory { get; private set; } = new(new(), new Ram(64), new());
+    public Memory Memory { get; private set; } = new(new(), new Ram(64), new(), new RealModeMmu386(), false);
     public InstructionFieldValueRetriever InstructionFieldValueRetriever { get; private set; }
     public State State { get; private set; } = new(CpuModel.INTEL_80286);
 
@@ -17,7 +18,7 @@ public class ModRmHelper {
     }
 
     private void Init() {
-        Memory = new(new(), new Ram(64), new A20Gate());
+        Memory = new(new(), new Ram(64), new A20Gate(), new RealModeMmu386(), false);
         InstructionFieldValueRetriever = new(Memory);
         State = new(CpuModel.INTEL_80286);
     }

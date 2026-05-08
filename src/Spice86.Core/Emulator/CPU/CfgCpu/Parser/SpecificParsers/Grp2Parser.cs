@@ -24,7 +24,10 @@ public class Grp2Parser : BaseGrpOperationParser {
         ("Rcr", InstructionOperation.RCR),
         ("Shl", InstructionOperation.SHL),
         ("Shr", InstructionOperation.SHR),
-        ("", InstructionOperation.NOP),  // groupIndex 6 is invalid
+        // groupIndex 6 is an undocumented alias of SHL/SAL (groupIndex 4) on
+        // 80186/286/386. The real CPU executes it identically. Tests in the
+        // SingleStep suite include this encoding, so we map /6 -> SHL.
+        ("Shl", InstructionOperation.SHL),
         ("Sar", InstructionOperation.SAR),
     };
 
@@ -35,7 +38,7 @@ public class Grp2Parser : BaseGrpOperationParser {
     }
 
     protected override CfgInstruction Parse(ParsingContext context, ModRmContext modRmContext, int groupIndex) {
-        if (groupIndex == 6 || groupIndex > 7) {
+        if (groupIndex < 0 || groupIndex > 7) {
             throw new InvalidGroupIndexException(_state, groupIndex);
         }
         (string operation, InstructionOperation displayOp) = Operations[groupIndex];

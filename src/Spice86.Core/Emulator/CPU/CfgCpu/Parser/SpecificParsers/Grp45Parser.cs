@@ -87,6 +87,7 @@ public class Grp45Parser : BaseGrpOperationParser {
         RegisterModRmFields(instr, modRmContext);
         ValueNode targetIp = _astBuilder.ModRm.RmToNode(dataType, modRmContext);
         if (operandBitWidth == BitWidth.DWORD_32) {
+            // Real mode: EIP is truncated to 16-bit IP for near call targets
             targetIp = _astBuilder.TypeConversion.Convert(DataType.UINT16, targetIp);
         }
         InstructionNode displayAst = new InstructionNode(InstructionOperation.CALL_NEAR,
@@ -111,6 +112,7 @@ public class Grp45Parser : BaseGrpOperationParser {
     private CfgInstruction ParseJumpNear(ParsingContext context, ModRmContext modRmContext) {
         CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, null);
         RegisterModRmFields(instr, modRmContext);
+        // Real mode: indirect jump target is read as 16-bit IP
         ValueNode targetIp = _astBuilder.ModRm.RmToNode(DataType.UINT16, modRmContext);
         InstructionNode displayAst = new InstructionNode(InstructionOperation.JMP_NEAR, targetIp);
         IVisitableAstNode execAst = new JumpNearNode(instr, targetIp);

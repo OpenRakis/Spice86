@@ -16,7 +16,7 @@ public class FlagTransferParser : BaseInstructionParser {
     }
 
     public CfgInstruction ParseSahf(ParsingContext context) {
-        CfgInstruction instr = new(context.Address, context.OpcodeField, 1);
+        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
         ValueNode ah = _astBuilder.Register.Reg8H(RegisterIndex.AxIndex);
         ValueNode flags32 = _astBuilder.Flag.FlagsRegister(DataType.UINT32);
         ValueNode preservedUpperFlags = new BinaryOperationNode(DataType.UINT32, flags32,
@@ -32,7 +32,7 @@ public class FlagTransferParser : BaseInstructionParser {
     }
 
     public CfgInstruction ParseLahf(ParsingContext context) {
-        CfgInstruction instr = new(context.Address, context.OpcodeField, 1);
+        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
         ValueNode ah = _astBuilder.Register.Reg8H(RegisterIndex.AxIndex);
         ValueNode flags = _astBuilder.Flag.FlagsRegister(DataType.UINT16);
         ValueNode flagsAsByte = _astBuilder.TypeConversion.Convert(DataType.UINT8, flags);
@@ -44,7 +44,7 @@ public class FlagTransferParser : BaseInstructionParser {
     }
 
     public CfgInstruction ParseSalc(ParsingContext context) {
-        CfgInstruction instr = new(context.Address, context.OpcodeField, 1);
+        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
         ValueNode al = _astBuilder.Register.Reg8(RegisterIndex.AxIndex);
         IfElseNode ternaryAssign = _astBuilder.ControlFlow.TernaryAssign(DataType.UINT8, al,
             _astBuilder.Flag.Carry(),
