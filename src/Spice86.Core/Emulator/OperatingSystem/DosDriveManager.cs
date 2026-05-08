@@ -340,10 +340,11 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
     }
 
     /// <summary>Removes all mounted drives from the collection.</summary>
-    /// <exception cref="AggregateException">One or more exceptions were thrown while drives were being unmounted.</exception>
     /// <remarks>
     /// This will always dispose of the drives before removing them from the collection. (Equivalent to calling
     /// <see cref="Clear(bool)"/> with the dispose drives parameter set to <see langword="true"/>.)
+    /// 
+    /// This may fail and result in an incomplete drive manager if a drive throws an exception while being disposed.
     /// </remarks>
     public void Clear() => Clear(disposeDrives: true);
 
@@ -781,14 +782,15 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
 
     /// <summary>Removes all mounted drives from the collection.</summary>
     /// <param name="disposeDrives">
-    /// If <see langword="true"/>, then all currently mounted drives will be disposed (if applicable); otherwise,
-    /// drives will only be removed from the collection.
+    /// If <see langword="true"/>, then all currently mounted drives will be disposed (if applicable). If
+    /// <see langword="false"/>, then drives will only be removed from the collection and will not be disposed.
     /// </param>
-    /// <exception cref="AggregateException">One or more exceptions were thrown while drives were being unmounted.</exception>
     /// <remarks>
     /// Removing drives from this collection without disposing may result in unexpected behavior or memory leaks. It is
     /// up to the caller to make sure that any drives that are currently mounted are disposed before clearing the
     /// collection.
+    /// 
+    /// This may fail and result in an incomplete drive manager if a drive throws an exception while being disposed.
     /// </remarks>
     public void Clear(bool disposeDrives) {
         if (!disposeDrives) {
@@ -799,15 +801,10 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
         }
 
         // Keep track of exceptions that occur while removing drives.
-        List<Exception> exceptions = [];
         for (int i = 0; i < MaxDriveCount; i++) {
             DosDriveBase? drive = _driveMap[i];
             if (drive is not null) {
-                try {
-                    RemoveDriveInternal(drive, i);
-                } catch (Exception ex) {
-                    exceptions.Add(ex);
-                }
+                RemoveDriveInternal(drive, i);
             }
         }
 
@@ -815,11 +812,6 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
 
         // Always increment the version, even if no drives were unmounted.
         _version++;
-
-        // Throw any exceptions that occurred while clearing the collection.
-        if (exceptions.Count > 0) {
-            throw new AggregateException(exceptions);
-        }
     }
 
     /// <summary>
@@ -987,7 +979,7 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
     /// <param name="driveIndex">A zero-based drive index between 0 (inclusive) and <see cref="MaxDriveCount"/> (exclusive).</param>
     /// <param name="value">The mounted drive of the specified type if found; otherwise, <see langword="null"/>.</param>
     /// <returns><see langword="true"/> if a drive of the specified type exists with the given DOS drive letter; otherwise, <see langword="false"/>.</returns>
-    public bool TryGetDriveAtIndex<T>(int driveIndex, [NotNullWhen(true)] out T? value) where T : DosDriveBase{
+    public bool TryGetDriveAtIndex<T>(int driveIndex, [NotNullWhen(true)] out T? value) where T : DosDriveBase {
         if (driveIndex is >= 0 and < MaxDriveCount) {
             DosDriveBase? mountedDrive = _driveMap[driveIndex];
             if (mountedDrive is T mountedDriveType) {
