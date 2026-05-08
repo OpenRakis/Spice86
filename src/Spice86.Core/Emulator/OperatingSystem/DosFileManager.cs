@@ -1437,7 +1437,7 @@ public class DosFileManager {
                 if (drive < 2) {
                     state.AX = 0;
                 } else if (_dosDriveManager.TryGetDriveAtIndex(drive, out mountedDrive)) {
-                    state.AX = mountedDrive.IsRemovable ? (ushort)1 : (ushort)0;
+                    state.AX = mountedDrive.IsRemovable ? (ushort)0 : (ushort)1;
                 } else {
                     if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                         _loggerService.Warning("IOCTL: Unable to determine if drive {Drive} is removable", drive);
