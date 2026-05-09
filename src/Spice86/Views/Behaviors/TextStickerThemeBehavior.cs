@@ -1,8 +1,5 @@
 namespace Spice86.Views.Behaviors;
 
-using System;
-using System.Runtime.CompilerServices;
-
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Reactive;
@@ -10,6 +7,9 @@ using Avalonia.Reactive;
 using AvaloniaGraphControl;
 
 using Spice86.Views.Converters;
+
+using System;
+using System.Runtime.CompilerServices;
 
 /// <summary>
 /// Provides theme-aware styling for TextSticker controls from AvaloniaGraphControl.
@@ -54,7 +54,7 @@ public static class TextStickerThemeBehavior {
             // Create and store new event handler
             WeakEventHandler handler = new(textSticker, application);
             _eventHandlers.Add(textSticker, handler);
-            
+
             // Subscribe to events
             handler.Subscribe();
 
@@ -117,4 +117,3 @@ public static class TextStickerThemeBehavior {
         }
     }
 }
-

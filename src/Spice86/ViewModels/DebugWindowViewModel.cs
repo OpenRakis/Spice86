@@ -12,7 +12,8 @@ using Spice86.ViewModels.Services;
 
 public partial class DebugWindowViewModel : ViewModelBase,
     IRecipient<AddViewModelMessage<DisassemblyViewModel>>, IRecipient<AddViewModelMessage<MemoryViewModel>>,
-    IRecipient<RemoveViewModelMessage<DisassemblyViewModel>>, IRecipient<RemoveViewModelMessage<MemoryViewModel>> {
+    IRecipient<RemoveViewModelMessage<DisassemblyViewModel>>, IRecipient<RemoveViewModelMessage<MemoryViewModel>>
+{
 
     private readonly IMessenger _messenger;
     private readonly IUIDispatcher _uiDispatcher;
@@ -51,31 +52,33 @@ public partial class DebugWindowViewModel : ViewModelBase,
     private readonly IPauseHandler _pauseHandler;
 
     public DebugWindowViewModel(IMessenger messenger, IUIDispatcher uiDispatcher,
-        IPauseHandler pauseHandler, IDebuggerTabRegistry tabRegistry) {
+        IPauseHandler pauseHandler, IDebuggerTabRegistry tabRegistry)
+    {
         messenger.Register<AddViewModelMessage<DisassemblyViewModel>>(this);
         messenger.Register<AddViewModelMessage<MemoryViewModel>>(this);
         messenger.Register<RemoveViewModelMessage<DisassemblyViewModel>>(this);
         messenger.Register<RemoveViewModelMessage<MemoryViewModel>>(this);
         _messenger = messenger;
         _uiDispatcher = uiDispatcher;
-        BreakpointsViewModel = tabRegistry.Get<BreakpointsViewModel>(DebuggerTabIds.Breakpoints);
+        BreakpointsViewModel = tabRegistry.Get<BreakpointsViewModel>(DebuggerTabId.Breakpoints);
         StatusMessageViewModel = new(_uiDispatcher, _messenger);
         _pauseHandler = pauseHandler;
         IsPaused = pauseHandler.IsPaused;
         pauseHandler.Paused += () => uiDispatcher.Post(() => IsPaused = true);
         pauseHandler.Resumed += () => uiDispatcher.Post(() => IsPaused = false);
-        DisassemblyViewModel disassemblyVm = tabRegistry.Get<DisassemblyViewModel>(DebuggerTabIds.Disassembly);
+        DisassemblyViewModel disassemblyVm = tabRegistry.Get<DisassemblyViewModel>(DebuggerTabId.Disassembly);
         DisassemblyViewModels.Add(disassemblyVm);
-        CpuViewModel = tabRegistry.Get<CpuViewModel>(DebuggerTabIds.Cpu);
-        MemoryViews.AddRange(tabRegistry.Get<IReadOnlyList<IDebuggerTabContentViewModel>>(DebuggerTabIds.MemoryViews));
+        CpuViewModel = tabRegistry.Get<CpuViewModel>(DebuggerTabId.Cpu);
+        MemoryViews.AddRange(tabRegistry.Get<IReadOnlyList<IDebuggerTabContentViewModel>>(DebuggerTabId.MemoryViews));
         SelectedMemoryView = MemoryViews.FirstOrDefault();
-        CfgCpuViewModel = tabRegistry.Get<CfgCpuViewModel>(DebuggerTabIds.CfgCpu);
-        DeviceSubTabs.AddRange(tabRegistry.GetSubTabs(DebuggerTabIds.DevicesGroup));
+        CfgCpuViewModel = tabRegistry.Get<CfgCpuViewModel>(DebuggerTabId.CfgCpu);
+        DeviceSubTabs.AddRange(tabRegistry.GetSubTabs(DebuggerTabId.DevicesGroup));
         SelectedDeviceSubTab = DeviceSubTabs.FirstOrDefault();
     }
 
     [RelayCommand]
-    private void Pause() => _uiDispatcher.Post(() => {
+    private void Pause() => _uiDispatcher.Post(() =>
+    {
         _pauseHandler.RequestPause("Pause button pressed in debug window");
     });
 
@@ -83,14 +86,17 @@ public partial class DebugWindowViewModel : ViewModelBase,
     private void Continue() => _uiDispatcher.Post(_pauseHandler.Resume);
 
     public void Receive(AddViewModelMessage<DisassemblyViewModel> message) => DisassemblyViewModels.Add(message.ViewModel);
-    public void Receive(AddViewModelMessage<MemoryViewModel> message) {
+    public void Receive(AddViewModelMessage<MemoryViewModel> message)
+    {
         MemoryViews.Add(message.ViewModel);
         SelectedMemoryView = message.ViewModel;
     }
     public void Receive(RemoveViewModelMessage<DisassemblyViewModel> message) => DisassemblyViewModels.Remove(message.ViewModel);
-    public void Receive(RemoveViewModelMessage<MemoryViewModel> message) {
+    public void Receive(RemoveViewModelMessage<MemoryViewModel> message)
+    {
         MemoryViews.Remove(message.ViewModel);
-        if (ReferenceEquals(SelectedMemoryView, message.ViewModel)) {
+        if (ReferenceEquals(SelectedMemoryView, message.ViewModel))
+        {
             SelectedMemoryView = MemoryViews.FirstOrDefault();
         }
     }

@@ -5,11 +5,12 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.Devices.Sound.Midi;
-using Spice86.ViewModels.ValueViewModels.Debugging;
 using Spice86.ViewModels.PropertiesMappers;
 using Spice86.ViewModels.Services;
+using Spice86.ViewModels.ValueViewModels.Debugging;
 
-public partial class MidiViewModel : ViewModelBase, IEmulatorObjectViewModel {
+public partial class MidiViewModel : ViewModelBase, IEmulatorObjectViewModel, IDebuggerTabContentViewModel {
+    public string Header => "General MIDI / MT-32";
     [ObservableProperty]
     private MidiInfo _midi = new();
 

@@ -3,8 +3,8 @@ namespace Spice86.ViewModels;
 using Avalonia.Collections;
 using Avalonia.Controls;
 
-using Spice86.ViewModels.ValueViewModels.Debugging;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.ViewModels.ValueViewModels.Debugging;
 
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -15,7 +15,8 @@ using System.Diagnostics.CodeAnalysis;
 ///     This interface defines the contract between the View and ViewModel, allowing for
 ///     better testability and decoupling.
 /// </summary>
-public interface IDisassemblyViewModel : INotifyPropertyChanged, IDisassemblyCommands {
+public interface IDisassemblyViewModel : INotifyPropertyChanged, IDisassemblyCommands
+{
     /// <summary>
     ///     The address of the current instruction. This is updated when the emulator pauses.
     /// </summary>

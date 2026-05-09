@@ -1,13 +1,13 @@
 namespace Spice86.Views;
 
-using System;
-using System.Diagnostics;
-
 using Avalonia.Controls;
-using Avalonia.Interactivity;
 using Avalonia.Input.Platform;
+using Avalonia.Interactivity;
 
 using Spice86.ViewModels;
+
+using System;
+using System.Diagnostics;
 
 /// <summary>Code-behind for the HTTP API launcher window.</summary>
 public sealed partial class HttpApiWindow : Window {

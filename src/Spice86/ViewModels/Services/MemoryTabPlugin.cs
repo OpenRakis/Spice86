@@ -76,6 +76,6 @@ internal sealed class MemoryTabPlugin : IDebuggerTabPlugin {
             memoryViews.Add(new XmsViewModel(_extendedMemoryManager, _pauseHandler));
         }
 
-        registry.Add(DebuggerTabIds.MemoryViews, memoryViews);
+        registry.Add(DebuggerTabId.MemoryViews, memoryViews);
     }
 }

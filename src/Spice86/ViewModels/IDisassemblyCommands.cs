@@ -83,12 +83,12 @@ public interface IDisassemblyCommands {
     ///     Command to move the CS:IP to the current instruction.
     /// </summary>
     IRelayCommand MoveCsIpHereCommand { get; }
-    
+
     /// <summary>
     ///     Command to confirm breakpoint creation from the dialog.
     /// </summary>
     IRelayCommand ConfirmBreakpointCreationCommand { get; }
-    
+
     /// <summary>
     ///     Command to cancel breakpoint creation from the dialog.
     /// </summary>

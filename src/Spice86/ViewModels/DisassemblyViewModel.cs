@@ -9,14 +9,13 @@ using CommunityToolkit.Mvvm.Messaging;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Parser;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.ViewModels.Messages;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
+using Spice86.ViewModels.Messages;
 using Spice86.ViewModels.Services;
 using Spice86.ViewModels.ValueViewModels.Debugging;
 
@@ -28,7 +27,8 @@ using System.Diagnostics.CodeAnalysis;
 /// <summary>
 ///     Implementation of the disassembly view model.
 /// </summary>
-public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemblyViewModel, IDisposable {
+public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemblyViewModel, IDisposable
+{
     private readonly BreakpointsViewModel _breakpointsViewModel;
     private readonly BreakpointConditionService _conditionService;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
@@ -108,10 +108,13 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     /// <summary>
     /// Whether jump indicator lines are displayed in the disassembly view.
     /// </summary>
-    public bool ShowJumpLines {
+    public bool ShowJumpLines
+    {
         get => _showJumpLines;
-        set {
-            if (_showJumpLines == value) {
+        set
+        {
+            if (_showJumpLines == value)
+            {
                 return;
             }
             _showJumpLines = value;
@@ -123,11 +126,13 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
 
     public DisassemblyViewModel(EmulatorBreakpointsManager emulatorBreakpointsManager, IMemory memory, State state, IDictionary<SegmentedAddress, FunctionInformation> functionsInformation,
         BreakpointsViewModel breakpointsViewModel, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher, IMessenger messenger, ITextClipboard textClipboard, ILoggerService loggerService,
-        bool canCloseTab = false) : base(uiDispatcher, textClipboard) {
+        bool canCloseTab = false) : base(uiDispatcher, textClipboard)
+    {
         _logger = loggerService;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _functionsInformation = functionsInformation;
-        Functions = new AvaloniaList<FunctionInfo>(functionsInformation.Select(x => new FunctionInfo {
+        Functions = new AvaloniaList<FunctionInfo>(functionsInformation.Select(x => new FunctionInfo
+        {
             Name = x.Value.Name,
             Address = x.Key
         }).OrderBy(x => x.Address));
@@ -153,30 +158,39 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     /// Gets or sets a value indicating whether the disassembly view is active/visible.
     /// When true, the view model will react to pause events.
     /// </summary>
-    public bool IsActive {
+    public bool IsActive
+    {
         get => _isActive;
-        set {
-            if (_isActive == value) {
+        set
+        {
+            if (_isActive == value)
+            {
                 return;
             }
             _isActive = value;
 
-            if (_isActive) {
+            if (_isActive)
+            {
                 // Subscribe to pause events when the view becomes active
                 _pauseHandler.Paused += OnPaused;
                 _pauseHandler.Resumed += OnResumed;
 
                 // If already paused, update the view
-                if (_pauseHandler.IsPaused) {
+                if (_pauseHandler.IsPaused)
+                {
                     OnPaused();
-                } else {
+                }
+                else
+                {
                     // Ensure paused state is synchronized even if resume happened while inactive.
                     IsPaused = false;
                     // If not paused, still set the current instruction address to show something
                     // but only when the view becomes active
                     CurrentInstructionAddress = State.IpSegmentedAddress;
                 }
-            } else {
+            }
+            else
+            {
                 // Unsubscribe from pause events when the view becomes inactive
                 _pauseHandler.Paused -= OnPaused;
                 _pauseHandler.Resumed -= OnResumed;
@@ -187,25 +201,33 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     /// <summary>
     ///     Gets a sorted view of the debugger lines for UI display.
     /// </summary>
-    public ObservableCollection<DebuggerLineViewModel> SortedDebuggerLinesView {
-        get {
-            if (_sortedDebuggerLinesView != null && !_sortedViewNeedsUpdate) {
+    public ObservableCollection<DebuggerLineViewModel> SortedDebuggerLinesView
+    {
+        get
+        {
+            if (_sortedDebuggerLinesView != null && !_sortedViewNeedsUpdate)
+            {
                 return _sortedDebuggerLinesView;
             }
             // Create or update the sorted view
-            if (_sortedDebuggerLinesView == null) {
+            if (_sortedDebuggerLinesView == null)
+            {
                 _sortedDebuggerLinesView = [];
-            } else {
+            }
+            else
+            {
                 _sortedDebuggerLinesView.Clear();
             }
 
             // Add all items in sorted order
-            foreach (KeyValuePair<uint, DebuggerLineViewModel> item in DebuggerLines.OrderBy(kvp => kvp.Key)) {
+            foreach (KeyValuePair<uint, DebuggerLineViewModel> item in DebuggerLines.OrderBy(kvp => kvp.Key))
+            {
                 _sortedDebuggerLinesView.Add(item.Value);
             }
 
             // Compute jump arc segments for branch visualization when enabled
-            if (ShowJumpLines) {
+            if (ShowJumpLines)
+            {
                 JumpLineCalculator.ComputeJumpArcs(_sortedDebuggerLinesView);
             }
 
@@ -218,15 +240,19 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     /// <summary>
     ///     The physical address of the current instruction. This is updated when the emulator pauses.
     /// </summary>
-    public SegmentedAddress? CurrentInstructionAddress {
+    public SegmentedAddress? CurrentInstructionAddress
+    {
         get => _currentInstructionAddress;
-        set {
-            if (value != _currentInstructionAddress) {
+        set
+        {
+            if (value != _currentInstructionAddress)
+            {
                 _currentInstructionAddress = value;
                 OnPropertyChanged();
                 UpdateHeader(value);
 
-                if (_isActive) {
+                if (_isActive)
+                {
                     UpdateCpuInstructionHighlighting();
                 }
             }
@@ -235,11 +261,13 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
 
     IRegistersViewModel IDisassemblyViewModel.Registers => Registers;
 
-    public bool TryGetLineByAddress(uint address, [NotNullWhen(true)] out DebuggerLineViewModel? debuggerLine) {
+    public bool TryGetLineByAddress(uint address, [NotNullWhen(true)] out DebuggerLineViewModel? debuggerLine)
+    {
         return DebuggerLines.TryGetValue(address, out debuggerLine);
     }
 
-    public bool TryGetLineByAddress(SegmentedAddress address, [NotNullWhen(true)] out DebuggerLineViewModel? debuggerLine) {
+    public bool TryGetLineByAddress(SegmentedAddress address, [NotNullWhen(true)] out DebuggerLineViewModel? debuggerLine)
+    {
         return TryGetLineByAddress(address.Linear, out debuggerLine);
     }
 
@@ -252,8 +280,10 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     /// <summary>
     ///     Create the text that is displayed in the textbox when a function is selected.
     /// </summary>
-    public AutoCompleteSelector<object>? FunctionItemSelector { get; } = (_, item) => {
-        if (item is not FunctionInfo functionInfo) {
+    public AutoCompleteSelector<object>? FunctionItemSelector { get; } = (_, item) =>
+    {
+        if (item is not FunctionInfo functionInfo)
+        {
             return "???";
         }
 
@@ -263,7 +293,8 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     /// <summary>
     ///     Clean up event handlers when the view model is disposed.
     /// </summary>
-    public void Dispose() {
+    public void Dispose()
+    {
         // Make sure to unsubscribe from all events
         IsActive = false;
         _breakpointsViewModel.Breakpoints.CollectionChanged -= Breakpoints_CollectionChanged;
@@ -274,21 +305,27 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     ///     Updates the debugger lines in batch to avoid multiple collection change notifications.
     /// </summary>
     /// <param name="enrichedInstructions">The dictionary of instructions to add.</param>
-    private void UpdateDebuggerLinesInBatch(Dictionary<uint, EnrichedInstruction> enrichedInstructions) {
+    private void UpdateDebuggerLinesInBatch(Dictionary<uint, EnrichedInstruction> enrichedInstructions)
+    {
         // Ensure we're on the UI thread
-        if (!_uiDispatcher.CheckAccess()) {
+        if (!_uiDispatcher.CheckAccess())
+        {
             _uiDispatcher.Post(() => UpdateDebuggerLinesInBatch(enrichedInstructions));
 
             return;
         }
-        try {
+        try
+        {
             _isBatchUpdating = true;
 
             // Add all new items at once
-            foreach (KeyValuePair<uint, EnrichedInstruction> item in enrichedInstructions) {
+            foreach (KeyValuePair<uint, EnrichedInstruction> item in enrichedInstructions)
+            {
                 DebuggerLines[item.Key] = new DebuggerLineViewModel(item.Value, _breakpointsViewModel);
             }
-        } finally {
+        }
+        finally
+        {
             _isBatchUpdating = false;
 
             // Mark the sorted view as needing an update
@@ -301,34 +338,42 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     }
 
     // Override OnPropertyChanged to track when the dictionary changes
-    protected override void OnPropertyChanged(PropertyChangedEventArgs e) {
+    protected override void OnPropertyChanged(PropertyChangedEventArgs e)
+    {
         base.OnPropertyChanged(e);
 
         // If the DebuggerLines property changed, and we're not in a batch update,
         // mark the sorted view as needing an update
-        if (!_isBatchUpdating && e.PropertyName == nameof(DebuggerLines)) {
+        if (!_isBatchUpdating && e.PropertyName == nameof(DebuggerLines))
+        {
             _sortedViewNeedsUpdate = true;
             OnPropertyChanged(nameof(SortedDebuggerLinesView));
         }
     }
 
-    private void Breakpoints_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) {
+    private void Breakpoints_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
         // Ensure we're on the UI thread
-        if (!_uiDispatcher.CheckAccess()) {
+        if (!_uiDispatcher.CheckAccess())
+        {
             _uiDispatcher.Post(() => Breakpoints_CollectionChanged(sender, e));
 
             return;
         }
 
         // Update all debugger lines that might be affected by the change
-        foreach (DebuggerLineViewModel line in DebuggerLines.Values) {
+        foreach (DebuggerLineViewModel line in DebuggerLines.Values)
+        {
             line.UpdateBreakpointFromViewModel();
         }
     }
 
-    private void OnResumed() {
-        _uiDispatcher.Post(() => {
-            if (_pauseHandler.IsPaused) {
+    private void OnResumed()
+    {
+        _uiDispatcher.Post(() =>
+        {
+            if (_pauseHandler.IsPaused)
+            {
                 return;
             }
             ClearEvaluatedOperands();
@@ -336,26 +381,31 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
         });
     }
 
-    private void OnPaused() {
+    private void OnPaused()
+    {
         // Only process if the view is active
-        if (!_isActive) {
+        if (!_isActive)
+        {
             return;
         }
 
         // Ensure we're on the UI thread
-        if (!_uiDispatcher.CheckAccess()) {
+        if (!_uiDispatcher.CheckAccess())
+        {
             _uiDispatcher.Post(OnPaused);
 
             return;
         }
 
-        if (!_pauseHandler.IsPaused) {
+        if (!_pauseHandler.IsPaused)
+        {
             return;
         }
 
         // Capture the current CPU instruction pointer at the moment of pausing
         SegmentedAddress currentInstructionAddress = State.IpSegmentedAddress;
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+        if (_logger.IsEnabled(LogEventLevel.Debug))
+        {
             _logger.Debug("Pausing: Captured instruction pointer at {CurrentInstructionAddress}", currentInstructionAddress);
         }
 
@@ -374,79 +424,99 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
         IsPaused = true;
     }
 
-    private void EvaluateOperands() {
+    private void EvaluateOperands()
+    {
         int first = _firstVisibleIndex;
         int last = _lastVisibleIndex;
         ObservableCollection<DebuggerLineViewModel> sortedLines = SortedDebuggerLinesView;
         int count = sortedLines.Count;
-        if (count == 0) {
+        if (count == 0)
+        {
             return;
         }
-        if (first < 0 || last < 0) {
+        if (first < 0 || last < 0)
+        {
             first = 0;
             last = count - 1;
         }
         int clampedFirst = Math.Max(0, first);
         int clampedLast = Math.Min(last, count - 1);
-        for (int i = clampedFirst; i <= clampedLast; i++) {
+        for (int i = clampedFirst; i <= clampedLast; i++)
+        {
             DebuggerLineViewModel line = sortedLines[i];
             line.EvaluatedOperands = _evaluationService.FormatOperandValues(line.InstructionInfo);
         }
     }
 
     /// <inheritdoc/>
-    public void OnVisibleRangeChanged(int firstVisibleIndex, int lastVisibleIndex) {
-        if (_firstVisibleIndex == firstVisibleIndex && _lastVisibleIndex == lastVisibleIndex) {
+    public void OnVisibleRangeChanged(int firstVisibleIndex, int lastVisibleIndex)
+    {
+        if (_firstVisibleIndex == firstVisibleIndex && _lastVisibleIndex == lastVisibleIndex)
+        {
             return;
         }
         _firstVisibleIndex = firstVisibleIndex;
         _lastVisibleIndex = lastVisibleIndex;
-        if (_pauseHandler.IsPaused) {
+        if (_pauseHandler.IsPaused)
+        {
             EvaluateOperands();
         }
     }
 
-    private void ClearEvaluatedOperands() {
-        foreach (DebuggerLineViewModel line in DebuggerLines.Values) {
+    private void ClearEvaluatedOperands()
+    {
+        foreach (DebuggerLineViewModel line in DebuggerLines.Values)
+        {
             line.EvaluatedOperands = null;
         }
     }
 
-    private DebuggerLineViewModel EnsureAddressIsLoaded(SegmentedAddress address) {
+    private DebuggerLineViewModel EnsureAddressIsLoaded(SegmentedAddress address)
+    {
         // Check if the current instruction address is in our collection
-        if (TryGetLineByAddress(address, out DebuggerLineViewModel? debuggerLine)) {
+        if (TryGetLineByAddress(address, out DebuggerLineViewModel? debuggerLine))
+        {
             return debuggerLine;
         }
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+        if (_logger.IsEnabled(LogEventLevel.Debug))
+        {
             _logger.Debug("Current address {CurrentInstructionAddress} not found in DebuggerLines, loading instructions", address);
         }
 
-        try {
+        try
+        {
             IsLoading = true;
 
             // Decode the instructions
-            if (_logger.IsEnabled(LogEventLevel.Debug)) {
+            if (_logger.IsEnabled(LogEventLevel.Debug))
+            {
                 _logger.Debug("Decoding instructions for address {Address}", address);
             }
             Dictionary<uint, EnrichedInstruction> instructions = _instructionsDecoder.DecodeInstructions(address, 256, 512);
-            if (_logger.IsEnabled(LogEventLevel.Debug)) {
+            if (_logger.IsEnabled(LogEventLevel.Debug))
+            {
                 _logger.Debug("Decoded {Count} instructions", instructions.Count);
             }
 
             UpdateDebuggerLinesInBatch(instructions);
-            if (_logger.IsEnabled(LogEventLevel.Debug)) {
+            if (_logger.IsEnabled(LogEventLevel.Debug))
+            {
                 _logger.Debug("Instructions loaded, now contains {DebuggerLinesCount} instructions", DebuggerLines.Count);
             }
 
             // Verify that the current instruction is now in the collection
-            if (!TryGetLineByAddress(address, out debuggerLine)) {
-                if (_logger.IsEnabled(LogEventLevel.Error)) {
+            if (!TryGetLineByAddress(address, out debuggerLine))
+            {
+                if (_logger.IsEnabled(LogEventLevel.Error))
+                {
                     _logger.Error("Address {Address} still not found after loading instructions", address);
                 }
 
                 throw new InvalidOperationException($"Current address {address} still not found in DebuggerLines after update");
             }
-        } finally {
+        }
+        finally
+        {
             IsLoading = false;
         }
 
@@ -456,23 +526,28 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     /// <summary>
     ///     Updates the highlighting for the current instruction based on the current CPU state.
     /// </summary>
-    private void UpdateCpuInstructionHighlighting() {
+    private void UpdateCpuInstructionHighlighting()
+    {
         // Ensure we're on the UI thread
-        if (!_uiDispatcher.CheckAccess()) {
+        if (!_uiDispatcher.CheckAccess())
+        {
             _uiDispatcher.Post(UpdateCpuInstructionHighlighting);
 
             return;
         }
 
         // Skip if we're already updating the highlighting to prevent recursive calls
-        if (_isUpdatingHighlighting) {
+        if (_isUpdatingHighlighting)
+        {
             return;
         }
 
         _isUpdatingHighlighting = true;
 
-        try {
-            if (_logger.IsEnabled(LogEventLevel.Debug)) {
+        try
+        {
+            if (_logger.IsEnabled(LogEventLevel.Debug))
+            {
                 _logger.Debug("Updating highlighting: CPU instruction address={CpuInstructionAddress}, Previous={PreviousInstructionAddress}", State.IpSegmentedAddress, _previousInstructionAddress);
             }
 
@@ -482,24 +557,30 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
             // If the previous address is in our collection, update its highlighting
             if (_previousInstructionAddress.HasValue
                 && _previousInstructionAddress != currentLine.SegmentedAddress
-                && TryGetLineByAddress(_previousInstructionAddress.Value, out DebuggerLineViewModel? previousLine)) {
+                && TryGetLineByAddress(_previousInstructionAddress.Value, out DebuggerLineViewModel? previousLine))
+            {
                 previousLine.IsCurrentInstruction = false;
             }
 
             // Update the previous IP address for the next time
             _previousInstructionAddress = State.IpSegmentedAddress;
-        } finally {
+        }
+        finally
+        {
             _isUpdatingHighlighting = false;
         }
     }
 
-    private void UpdateHeader(SegmentedAddress? address) {
+    private void UpdateHeader(SegmentedAddress? address)
+    {
         Header = address?.ToString() ?? "Disassembly";
     }
 
-    private void Pause(string message) {
+    private void Pause(string message)
+    {
         _pauseHandler.RequestPause(message);
-        _uiDispatcher.Post(() => {
+        _uiDispatcher.Post(() =>
+        {
             _messenger.Send(new StatusMessage(DateTime.Now, this, message));
         });
     }
@@ -509,8 +590,10 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     /// </summary>
     /// <param name="debuggerLine">The debugger line where the breakpoint should be created.</param>
     /// <param name="conditionExpression">Optional condition expression for the breakpoint.</param>
-    public void CreateExecutionBreakpointWithCondition(DebuggerLineViewModel debuggerLine, string? conditionExpression) {
-        if (debuggerLine.Breakpoint != null) {
+    public void CreateExecutionBreakpointWithCondition(DebuggerLineViewModel debuggerLine, string? conditionExpression)
+    {
+        if (debuggerLine.Breakpoint != null)
+        {
             return;
         }
 
@@ -524,7 +607,8 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
             debuggerLine.Address,
             Shared.Emulator.VM.Breakpoint.BreakPointType.CPU_EXECUTION_ADDRESS,
             false,
-            () => {
+            () =>
+            {
                 Pause(message);
             },
             condition,
@@ -538,20 +622,24 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     /// <param name="conditionExpression">The condition expression to compile.</param>
     /// <param name="validatedExpression">The validated expression (null if compilation failed).</param>
     /// <returns>The compiled condition function, or null if the expression is empty or compilation failed.</returns>
-    private Func<long, bool>? TryCompileCondition(string? conditionExpression, out string? validatedExpression) {
+    private Func<long, bool>? TryCompileCondition(string? conditionExpression, out string? validatedExpression)
+    {
         BreakpointConditionService.ConditionCompilationResult result = _conditionService.TryCompile(conditionExpression);
 
         validatedExpression = result.ValidatedExpression;
 
-        if (!result.Success && result.Error is not null) {
+        if (!result.Success && result.Error is not null)
+        {
             LogConditionCompilationWarning(result.Error, conditionExpression);
         }
 
         return result.Condition;
     }
 
-    private void LogConditionCompilationWarning(Exception ex, string? conditionExpression) {
-        if (_logger.IsEnabled(LogEventLevel.Warning)) {
+    private void LogConditionCompilationWarning(Exception ex, string? conditionExpression)
+    {
+        if (_logger.IsEnabled(LogEventLevel.Warning))
+        {
             _logger.Warning(ex, "Failed to compile breakpoint condition: {ConditionExpression}", conditionExpression);
         }
     }
@@ -560,7 +648,8 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     /// Activates the view model, subscribing to pause events and loading initial data if needed.
     /// This should be called when the view becomes visible.
     /// </summary>
-    public void Activate() {
+    public void Activate()
+    {
         IsActive = true;
     }
 
@@ -568,7 +657,8 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     /// Deactivates the view model, unsubscribing from pause events to prevent unnecessary updates.
     /// This should be called when the view is hidden.
     /// </summary>
-    public void Deactivate() {
+    public void Deactivate()
+    {
         IsActive = false;
     }
 }

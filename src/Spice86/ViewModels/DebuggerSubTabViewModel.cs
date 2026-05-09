@@ -1,13 +1,14 @@
 namespace Spice86.ViewModels;
 
-public sealed class DebuggerSubTabViewModel {
-    public string Id { get; }
-    public string Header { get; }
-    public object ViewModel { get; }
+using Spice86.ViewModels.Services;
 
-    public DebuggerSubTabViewModel(string id, string header, object viewModel) {
+public sealed class DebuggerSubTabViewModel {
+    public DebuggerTabId Id { get; }
+    public IDebuggerTabContentViewModel ViewModel { get; }
+    public string Header => ViewModel.Header;
+
+    public DebuggerSubTabViewModel(DebuggerTabId id, IDebuggerTabContentViewModel viewModel) {
         Id = id;
-        Header = header;
         ViewModel = viewModel;
     }
 }

@@ -100,31 +100,31 @@ mc:Ignorable="d">
 					<dockModel:Document Id="Memory" Title="Memory (Alt-F4)" HotKeyManager.HotKey="Alt+F4">
 						<Grid RowDefinitions="Auto,*">
 							<TabStrip Grid.Row="0"
-									  ItemsSource="{ReflectionBinding $parent[Window].DataContext.MemoryViews}"
-									  SelectedItem="{ReflectionBinding $parent[Window].DataContext.SelectedMemoryView}">
+									  ItemsSource="{Binding $parent[Window].DataContext.MemoryViews}"
+									  SelectedItem="{Binding $parent[Window].DataContext.SelectedMemoryView}">
 								<TabStrip.ItemTemplate>
-									<DataTemplate x:CompileBindings="False">
-										<TextBlock Text="{ReflectionBinding Header}" />
+									<DataTemplate DataType="{x:Type vm:IDebuggerTabContentViewModel}">
+										<TextBlock Text="{Binding Header}" />
 									</DataTemplate>
 								</TabStrip.ItemTemplate>
 							</TabStrip>
 							<ContentControl Grid.Row="1"
-											Content="{ReflectionBinding $parent[Window].DataContext.SelectedMemoryView}" />
+											Content="{Binding $parent[Window].DataContext.SelectedMemoryView}" />
 						</Grid>
 					</dockModel:Document>
 					<dockModel:Document Id="Devices" Title="Devices (Alt-F5)" HotKeyManager.HotKey="Alt+F5">
 						<Grid RowDefinitions="Auto,*">
 							<TabStrip Grid.Row="0"
-									  ItemsSource="{ReflectionBinding $parent[Window].DataContext.DeviceSubTabs}"
-									  SelectedItem="{ReflectionBinding $parent[Window].DataContext.SelectedDeviceSubTab}">
+									  ItemsSource="{Binding $parent[Window].DataContext.DeviceSubTabs}"
+									  SelectedItem="{Binding $parent[Window].DataContext.SelectedDeviceSubTab}">
 								<TabStrip.ItemTemplate>
-									<DataTemplate x:CompileBindings="False">
-										<TextBlock Text="{ReflectionBinding Header}" />
+									<DataTemplate DataType="{x:Type vm:DebuggerSubTabViewModel}">
+										<TextBlock Text="{Binding Header}" />
 									</DataTemplate>
 								</TabStrip.ItemTemplate>
 							</TabStrip>
 							<ContentControl Grid.Row="1"
-											Content="{ReflectionBinding $parent[Window].DataContext.SelectedDeviceSubTab.ViewModel}" />
+											Content="{Binding $parent[Window].DataContext.SelectedDeviceSubTab.ViewModel}" />
 						</Grid>
 					</dockModel:Document>
 					<dockModel:Document

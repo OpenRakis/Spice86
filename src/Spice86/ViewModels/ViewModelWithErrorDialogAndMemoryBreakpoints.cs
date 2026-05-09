@@ -162,12 +162,12 @@ public abstract partial class ViewModelWithErrorDialogAndMemoryBreakpoints : Vie
 
         return (long address) => {
             long index = address - startAddress;
-            
+
             // Bounds checking to prevent IndexOutOfRangeException
             if (index < 0 || index >= triggerValueCondition.Length) {
                 return false;
             }
-            
+
             byte expectedValue = triggerValueCondition[index];
 
             // Add explicit parentheses to clarify operator precedence

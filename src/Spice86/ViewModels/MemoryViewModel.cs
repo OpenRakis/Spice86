@@ -12,15 +12,15 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
-using Spice86.ViewModels.Messages;
+using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Utils;
 using Spice86.ViewModels.DataModels;
+using Spice86.ViewModels.Messages;
 using Spice86.ViewModels.Services;
 using Spice86.Views;
 
 using System.Text;
 using System.Windows.Input;
-using Spice86.Shared.Emulator.VM.Breakpoint;
 
 public partial class MemoryViewModel : ViewModelWithErrorDialogAndMemoryBreakpoints, IMemorySearchViewModel, IDebuggerTabContentViewModel {
     private readonly IStructureViewModelFactory _structureViewModelFactory;

@@ -19,6 +19,6 @@ internal sealed class CpuTabPlugin : IDebuggerTabPlugin {
     }
 
     public void Register(IDebuggerTabRegistry registry) {
-        registry.Add(DebuggerTabIds.Cpu, new CpuViewModel(_state, _memory, _pauseHandler, _uiDispatcher));
+        registry.Add(DebuggerTabId.Cpu, new CpuViewModel(_state, _memory, _pauseHandler, _uiDispatcher));
     }
 }

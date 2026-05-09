@@ -5,6 +5,9 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
+using Spice86.Core.Emulator.Mcp;
+using Spice86.ViewModels.Services;
+
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -12,9 +15,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
-
-using Spice86.Core.Emulator.Mcp;
-using Spice86.ViewModels.Services;
 
 public sealed partial class McpStatusViewModel : ViewModelBase {
     private const string OfflineColor = "#D14D4D";

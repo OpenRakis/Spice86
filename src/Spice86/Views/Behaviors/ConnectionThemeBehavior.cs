@@ -1,9 +1,5 @@
 namespace Spice86.Views.Behaviors;
 
-using System;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
@@ -14,6 +10,10 @@ using AvaloniaGraphControl;
 
 using Spice86.ViewModels;
 using Spice86.Views.Converters;
+
+using System;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 /// <summary>
 /// Provides theme-aware coloring for <see cref="Connection"/> controls based on

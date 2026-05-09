@@ -10,7 +10,9 @@ using Spice86.ViewModels.Services;
 
 using System.Text.Json;
 
-public partial class VideoCardViewModel  : ViewModelBase, IEmulatorObjectViewModel {
+public partial class VideoCardViewModel : ViewModelBase, IEmulatorObjectViewModel, IDebuggerTabContentViewModel
+{
+    public string Header => "Video Card";
     [ObservableProperty]
     private VideoCardInfo _videoCard = new();
     private readonly IVgaRenderer _vgaRenderer;
@@ -19,7 +21,8 @@ public partial class VideoCardViewModel  : ViewModelBase, IEmulatorObjectViewMod
     private readonly IHostStorageProvider _storageProvider;
 
     public VideoCardViewModel(IVgaRenderer vgaRenderer, IVideoState videoState,
-        VgaTimingEngine vgaTimingEngine, IHostStorageProvider storageProvider) {
+        VgaTimingEngine vgaTimingEngine, IHostStorageProvider storageProvider)
+    {
         _vgaRenderer = vgaRenderer;
         _videoState = videoState;
         _vgaTimingEngine = vgaTimingEngine;
@@ -29,12 +32,15 @@ public partial class VideoCardViewModel  : ViewModelBase, IEmulatorObjectViewMod
     public bool IsVisible { get; set; }
 
     [RelayCommand]
-    public async Task SaveVideoCardInfo() {
+    public async Task SaveVideoCardInfo()
+    {
         await _storageProvider.SaveVideoCardInfoFile(JsonSerializer.Serialize(VideoCard));
     }
 
-    public void UpdateValues(object? sender, EventArgs e) {
-        if (!IsVisible) {
+    public void UpdateValues(object? sender, EventArgs e)
+    {
+        if (!IsVisible)
+        {
             return;
         }
         VisitVgaRenderer(_vgaRenderer);
@@ -42,11 +48,13 @@ public partial class VideoCardViewModel  : ViewModelBase, IEmulatorObjectViewMod
         VideoCard.LastFrameDuration = _vgaTimingEngine.LastFrameDuration;
     }
 
-    private void VisitVgaRenderer(IVgaRenderer vgaRenderer) {
+    private void VisitVgaRenderer(IVgaRenderer vgaRenderer)
+    {
         vgaRenderer.CopyToVideoCardInfo(VideoCard);
     }
 
-    private void VisitVideoState(IVideoState videoState) {
+    private void VisitVideoState(IVideoState videoState)
+    {
         videoState.CopyToVideoCardInfo(VideoCard);
     }
 }

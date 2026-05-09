@@ -15,7 +15,8 @@ using System.Reflection;
 using Spice86.ViewModels.PropertiesMappers;
 using Spice86.ViewModels.Services;
 
-public partial class CpuViewModel : ViewModelBase, IEmulatorObjectViewModel {
+public partial class CpuViewModel : ViewModelBase, IEmulatorObjectViewModel
+{
     private readonly State _cpuState;
     private readonly IMemory _memory;
 
@@ -28,7 +29,8 @@ public partial class CpuViewModel : ViewModelBase, IEmulatorObjectViewModel {
     [ObservableProperty]
     private RegistersViewModel _registers;
 
-    public CpuViewModel(State state, IMemory memory, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher) {
+    public CpuViewModel(State state, IMemory memory, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher)
+    {
         _cpuState = state;
         _memory = memory;
         _registers = new RegistersViewModel(state);
@@ -40,8 +42,10 @@ public partial class CpuViewModel : ViewModelBase, IEmulatorObjectViewModel {
 
     public bool IsVisible { get; set; }
 
-    public void UpdateValues(object? sender, EventArgs e) {
-        if (!IsVisible) {
+    public void UpdateValues(object? sender, EventArgs e)
+    {
+        if (!IsVisible)
+        {
             return;
         }
         VisitCpuState(_cpuState);
@@ -49,24 +53,31 @@ public partial class CpuViewModel : ViewModelBase, IEmulatorObjectViewModel {
 
     private bool _isPaused;
 
-    private void VisitCpuState(State state) {
+    private void VisitCpuState(State state)
+    {
         UpdateCpuState(state);
 
-        if (_isPaused) {
+        if (_isPaused)
+        {
             State.PropertyChanged += OnStatePropertyChanged;
             Flags.PropertyChanged += OnStatePropertyChanged;
-        } else {
+        }
+        else
+        {
             State.PropertyChanged -= OnStatePropertyChanged;
             Flags.PropertyChanged -= OnStatePropertyChanged;
         }
 
-        void OnStatePropertyChanged(object? sender, PropertyChangedEventArgs e) {
-            if (sender is null || e.PropertyName == null || !_isPaused) {
+        void OnStatePropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (sender is null || e.PropertyName == null || !_isPaused)
+            {
                 return;
             }
             PropertyInfo? originalPropertyInfo = state.GetType().GetProperty(e.PropertyName);
             PropertyInfo? propertyInfo = sender.GetType().GetProperty(e.PropertyName);
-            if (propertyInfo is not null && originalPropertyInfo is not null && originalPropertyInfo.CanWrite) {
+            if (propertyInfo is not null && originalPropertyInfo is not null && originalPropertyInfo.CanWrite)
+            {
                 originalPropertyInfo.SetValue(state, propertyInfo.GetValue(sender));
             }
         }
@@ -82,7 +93,8 @@ public partial class CpuViewModel : ViewModelBase, IEmulatorObjectViewModel {
     private string? _dsDxString;
 
 
-    private void UpdateCpuState(State state) {
+    private void UpdateCpuState(State state)
+    {
         state.CopyToStateInfo(this.State);
         state.CopyFlagsToStateInfo(this.Flags);
         // Update the registers view model
