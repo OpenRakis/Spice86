@@ -7,9 +7,14 @@
 			 xmlns:behaviors="clr-namespace:Spice86.Views.Behaviors"
 			 xmlns:controls="clr-namespace:Spice86.Views.Controls;assembly=Spice86"
 			 xmlns:userControls="clr-namespace:Spice86.Views.UserControls;assembly=Spice86"
+			 xmlns:converters="clr-namespace:Spice86.Views.Converters;assembly=Spice86"
+			 xmlns:fluent="clr-namespace:FluentIcons.Avalonia;assembly=FluentIcons.Avalonia"
 			 mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
 			 x:Class="Spice86.Views.BreakpointsView"
 			 x:DataType="viewModels:BreakpointsViewModel">
+	<UserControl.Resources>
+		<converters:BreakPointTypeToSymbolConverter x:Key="BreakPointTypeToSymbolConverter" />
+	</UserControl.Resources>
 	<Grid>
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
@@ -34,6 +39,16 @@
 				  CanUserSortColumns="True"
 				  DoubleTapped="DataGrid_DoubleTapped">
 			<DataGrid.Columns>
+				<DataGridTemplateColumn Header="" IsReadOnly="True" CanUserSort="False" CanUserReorder="False" CanUserResize="False">
+					<DataGridTemplateColumn.CellTemplate>
+						<DataTemplate DataType="viewModels:BreakpointViewModel">
+							<fluent:SymbolIcon Symbol="{Binding Type, Converter={StaticResource BreakPointTypeToSymbolConverter}}"
+											   FontSize="16"
+											   HorizontalAlignment="Center"
+											   VerticalAlignment="Center" />
+						</DataTemplate>
+					</DataGridTemplateColumn.CellTemplate>
+				</DataGridTemplateColumn>
 				<DataGridCheckBoxColumn IsReadOnly="False" Binding="{Binding IsEnabled}" Header="Is Enabled ?" />
 				<DataGridCheckBoxColumn IsReadOnly="True" Binding="{Binding IsRemovedOnTrigger}" Header="Is removed on trigger ?" />
 				<DataGridTextColumn IsReadOnly="True" Binding="{Binding Parameter}" Header="Parameter" />
