@@ -43,6 +43,30 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
         OnErrorsChanged(propertyName);
     }
 
+    /// <summary>
+    /// If <paramref name="value"/> parses to a valid address but exceeds
+    /// <paramref name="maxInclusive"/>, surface an out-of-range validation error on the
+    /// given property. Does not remove existing errors set by other validators (call
+    /// <see cref="ValidateAddressProperty"/> first to clear stale parse errors).
+    /// </summary>
+    protected void ValidateAddressInRange(string? value, State state, uint maxInclusive,
+        [CallerMemberName] string? propertyName = null) {
+        if (string.IsNullOrWhiteSpace(propertyName)) {
+            return;
+        }
+        if (AddressAndValueParser.TryParseAddressString(value, state, out uint? parsed)
+            && parsed > maxInclusive) {
+            string error = $"Value must be in 0..0x{maxInclusive:X}";
+            if (!_validationErrors.TryGetValue(propertyName, out List<string>? values)) {
+                values = new List<string>();
+                _validationErrors[propertyName] = values;
+            }
+            values.Clear();
+            values.Add(error);
+            OnErrorsChanged(propertyName);
+        }
+    }
+
     protected void ValidateMemoryAddressIsWithinLimit(State state, string? value,
         uint limit = A20Gate.EndOfHighMemoryArea,
         [CallerMemberName] string? bindedPropertyName = null) {

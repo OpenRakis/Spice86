@@ -65,6 +65,7 @@ public partial class BreakpointViewModel : ViewModelBase {
         EndAddress = -1;
         Type = type;
         IsRemovedOnTrigger = false;
+        IsWildcard = true;
         _onReached = onReached;
         Comment = comment;
         Parameter = "*";
@@ -100,6 +101,13 @@ public partial class BreakpointViewModel : ViewModelBase {
     }
 
     public bool IsRemovedOnTrigger { get; }
+
+    /// <summary>
+    /// True when this breakpoint is a wildcard breakpoint that fires on every event of
+    /// its <see cref="Type"/> regardless of address. <see cref="Address"/> is <c>-1</c>
+    /// in this case and must not be interpreted as a real address.
+    /// </summary>
+    public bool IsWildcard { get; }
 
     public long Address { get; }
 

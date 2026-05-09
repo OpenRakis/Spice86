@@ -141,12 +141,17 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
                     SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "Cycles");
                     break;
                 case BreakPointType.CPU_INTERRUPT:
-
-                    InterruptNumber = ConvertUtils.ToHex32((uint)SelectedBreakpoint.Address);
+                    InterruptNumber = SelectedBreakpoint.IsWildcard
+                        ? WildcardValue
+                        : ConvertUtils.ToHex32((uint)SelectedBreakpoint.Address);
+                    InterruptConditionExpression = SelectedBreakpoint.ConditionExpression;
                     SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "Interrupt");
                     break;
                 case BreakPointType.IO_ACCESS:
-                    IoPortNumber = ConvertUtils.ToHex32((uint)SelectedBreakpoint.Address);
+                    IoPortNumber = SelectedBreakpoint.IsWildcard
+                        ? WildcardValue
+                        : ConvertUtils.ToHex32((uint)SelectedBreakpoint.Address);
+                    IoPortConditionExpression = SelectedBreakpoint.ConditionExpression;
                     SelectedBreakpointTypeTab = BreakpointTabs.First(x => x.Header == "I/O Port");
                     break;
                 case BreakPointType.MEMORY_ACCESS:
@@ -219,6 +224,10 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
         CyclesValue = _state.Cycles;
         ExecutionAddressValue = State.IpSegmentedAddress.ToString();
         ExecutionConditionExpression = null;
+        InterruptNumber = "0x0";
+        InterruptConditionExpression = null;
+        IoPortNumber = "0x0";
+        IoPortConditionExpression = null;
         MemoryBreakpointStartAddress = State.IpSegmentedAddress.ToString();
         MemoryBreakpointEndAddress = State.IpSegmentedAddress.ToString();
     }
@@ -256,6 +265,7 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
         set {
             if (value != WildcardValue) {
                 ValidateAddressProperty(value, _state);
+                ValidateAddressInRange(value, _state, 0xFFFF);
             } else {
                 ClearValidationError(nameof(IoPortNumber));
             }
@@ -275,6 +285,7 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
         set {
             if (value != WildcardValue) {
                 ValidateAddressProperty(value, _state);
+                ValidateAddressInRange(value, _state, 0xFF);
             } else {
                 ClearValidationError(nameof(InterruptNumber));
             }
@@ -325,14 +336,16 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
             BreakpointCreated?.Invoke(cyclesVm);
         } else if (IsInterruptBreakpointSelected) {
             BreakpointViewModel? interruptVm = CreateInterruptBreakpoint();
-            if (interruptVm != null) {
-                BreakpointCreated?.Invoke(interruptVm);
+            if (interruptVm == null) {
+                return;
             }
+            BreakpointCreated?.Invoke(interruptVm);
         } else if (IsIoPortBreakpointSelected) {
             BreakpointViewModel? ioPortVm = CreateIoPortBreakpoint();
-            if (ioPortVm != null) {
-                BreakpointCreated?.Invoke(ioPortVm);
+            if (ioPortVm == null) {
+                return;
             }
+            BreakpointCreated?.Invoke(ioPortVm);
         }
         CreatingBreakpoint = false;
     }
