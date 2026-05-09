@@ -320,10 +320,13 @@ public partial class MemoryViewModel : ViewModelWithErrorDialogAndMemoryBreakpoi
                 searchStartAddress = 0;
                 searchLength = (int)(AddressOFoundOccurence.Value - 1);
             }
-            if (SearchDataType == MemorySearchDataType.Binary && ConvertUtils.TryParseHexToByteArray(MemorySearchValue, out byte[]? searchBytes)) {
-                AddressOFoundOccurence = await PerformMemorySearchAsync(searchStartAddress, searchLength, searchBytes, token);
+            if (SearchDataType == MemorySearchDataType.Binary) {
+                byte[]? searchBytes = MemorySearchParser.ParseBinarySearchValue(MemorySearchValue);
+                if (searchBytes is not null && searchBytes.Length > 0) {
+                    AddressOFoundOccurence = await PerformMemorySearchAsync(searchStartAddress, searchLength, searchBytes, token);
+                }
             } else if (SearchDataType == MemorySearchDataType.Ascii) {
-                searchBytes = Encoding.ASCII.GetBytes(MemorySearchValue);
+                byte[] searchBytes = Encoding.ASCII.GetBytes(MemorySearchValue);
                 AddressOFoundOccurence = await PerformMemorySearchAsync(searchStartAddress, searchLength, searchBytes, token);
             }
         } catch (OperationCanceledException) when (token.IsCancellationRequested) {

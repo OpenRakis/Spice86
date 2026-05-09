@@ -12,6 +12,7 @@ using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 using Spice86.ViewModels.DataModels;
+using Spice86.ViewModels.Services;
 
 using System.Text;
 using System.Windows.Input;
@@ -386,8 +387,7 @@ public partial class EmsViewModel : ViewModelBase, IEmulatorObjectViewModel, IMe
         }
 
         if (SearchDataType == MemorySearchDataType.Binary) {
-            bool parsed = ConvertUtils.TryParseHexToByteArray(MemorySearchValue, out byte[]? searchBytes);
-            return parsed ? searchBytes : null;
+            return MemorySearchParser.ParseBinarySearchValue(MemorySearchValue);
         }
 
         return Encoding.ASCII.GetBytes(MemorySearchValue);
