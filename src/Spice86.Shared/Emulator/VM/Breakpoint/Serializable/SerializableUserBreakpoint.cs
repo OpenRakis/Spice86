@@ -32,4 +32,12 @@ public record SerializableUserBreakpoint {
     /// </summary>
     /// <remarks>When null or empty, the breakpoint is unconditional.</remarks>
     public string? ConditionExpression { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether this is a wildcard (unconditional) breakpoint
+    /// that fires on every event of the given <see cref="Type"/> regardless of address.
+    /// </summary>
+    /// <remarks>When true, <see cref="Trigger"/> and <see cref="EndTrigger"/> are not
+    /// meaningful and the breakpoint is restored as a single unconditional breakpoint.</remarks>
+    public bool IsWildcard { get; init; }
 }

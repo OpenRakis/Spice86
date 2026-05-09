@@ -55,7 +55,6 @@ public partial class BreakpointViewModel : ViewModelBase {
     /// <paramref name="type"/> (e.g. every interrupt or every I/O access).
     /// </summary>
     internal BreakpointViewModel(
-        BreakpointsViewModel breakpointsViewModel,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         BreakPointType type,
         Action onReached,

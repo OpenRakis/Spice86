@@ -46,8 +46,10 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
     /// <summary>
     /// If <paramref name="value"/> parses to a valid address but exceeds
     /// <paramref name="maxInclusive"/>, surface an out-of-range validation error on the
-    /// given property. Does not remove existing errors set by other validators (call
-    /// <see cref="ValidateAddressProperty"/> first to clear stale parse errors).
+    /// given property. When the value is out of range, this overwrites the current error
+    /// list for the property with a single out-of-range message; when the value is in
+    /// range it leaves any existing errors alone (call <see cref="ValidateAddressProperty"/>
+    /// first to clear stale parse errors).
     /// </summary>
     protected void ValidateAddressInRange(string? value, State state, uint maxInclusive,
         [CallerMemberName] string? propertyName = null) {

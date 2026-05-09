@@ -554,7 +554,7 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
     /// </summary>
     public BreakpointViewModel AddWildcardBreakpoint(BreakPointType type, Action onReached, string comment) {
         RemoveFirstIfEdited();
-        BreakpointViewModel vm = new(this, _emulatorBreakpointsManager, type, onReached, comment);
+        BreakpointViewModel vm = new(_emulatorBreakpointsManager, type, onReached, comment);
         AddBreakpointInternal(vm);
         return vm;
     }
@@ -628,6 +628,10 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
     }
 
     private void RestoreBreakpoint(SerializableUserBreakpoint breakpointData) {
+        if (breakpointData.IsWildcard) {
+            RestoreWildcardBreakpoint(breakpointData);
+            return;
+        }
         Action onReached = () => { };
 
         switch (breakpointData.Type) {
@@ -667,6 +671,29 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
 
         if (!breakpointData.IsEnabled) {
             breakpointVm.Disable();
+        }
+    }
+
+    private void RestoreWildcardBreakpoint(SerializableUserBreakpoint breakpointData) {
+        Action onReached;
+        string comment;
+        switch (breakpointData.Type) {
+            case BreakPointType.CPU_INTERRUPT:
+                onReached = PauseAndReportAnyInterrupt;
+                comment = "Interrupt breakpoint (*)";
+                break;
+            case BreakPointType.IO_ACCESS:
+            case BreakPointType.IO_READ:
+            case BreakPointType.IO_WRITE:
+                onReached = PauseAndReportAnyIoPort;
+                comment = "I/O Port breakpoint (*)";
+                break;
+            default:
+                return;
+        }
+        BreakpointViewModel vm = AddWildcardBreakpoint(breakpointData.Type, onReached, comment);
+        if (!breakpointData.IsEnabled) {
+            vm.Disable();
         }
     }
 
