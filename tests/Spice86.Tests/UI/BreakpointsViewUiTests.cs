@@ -420,22 +420,18 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
     /// </summary>
     [AvaloniaFact]
     public void BreakpointsView_CanCreateInterruptBreakpointWithCondition() {
-        (BreakpointsView view, BreakpointsViewModel viewModel) = CreateBreakpointsViewWithViewModel();
-        Window window = new() { Content = view };
-        ShowWindowAndWait(window);
+        // Arrange
+        (_, BreakpointsViewModel viewModel, Window window) = ArrangeBreakpointsView();
+        BeginCreateOnTab(viewModel, "Interrupt");
 
-        viewModel.BeginCreateBreakpointCommand.Execute(null);
-        ProcessUiEvents();
-        SelectBreakpointTab(viewModel, "Interrupt").Should().BeTrue();
-
+        // Act
         viewModel.InterruptNumber = "0x21";
         viewModel.InterruptConditionExpression = "ah == 0x09";
         ProcessUiEvents();
-
-        viewModel.ConfirmBreakpointCreationCommand.CanExecute(null).Should().BeTrue();
         viewModel.ConfirmBreakpointCreationCommand.Execute(null);
         ProcessUiEvents();
 
+        // Assert
         viewModel.CreatingBreakpoint.Should().BeFalse();
         viewModel.Breakpoints.Should().ContainSingle(bp =>
             bp.Type == BreakPointType.CPU_INTERRUPT && bp.ConditionExpression == "ah == 0x09");
@@ -449,22 +445,19 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
     /// </summary>
     [AvaloniaFact]
     public void BreakpointsView_InterruptBreakpoint_InvalidCondition_KeepsDialogOpen() {
-        (BreakpointsView view, BreakpointsViewModel viewModel) = CreateBreakpointsViewWithViewModel();
-        Window window = new() { Content = view };
-        ShowWindowAndWait(window);
+        // Arrange
+        (_, BreakpointsViewModel viewModel, Window window) = ArrangeBreakpointsView();
+        BeginCreateOnTab(viewModel, "Interrupt");
+        int initialCount = viewModel.Breakpoints.Count;
 
-        viewModel.BeginCreateBreakpointCommand.Execute(null);
-        ProcessUiEvents();
-        SelectBreakpointTab(viewModel, "Interrupt").Should().BeTrue();
-
+        // Act
         viewModel.InterruptNumber = "0x21";
         viewModel.InterruptConditionExpression = "this is not a valid expression !!!";
         ProcessUiEvents();
-
-        int initialCount = viewModel.Breakpoints.Count;
         viewModel.ConfirmBreakpointCreationCommand.Execute(null);
         ProcessUiEvents();
 
+        // Assert
         viewModel.Breakpoints.Count.Should().Be(initialCount);
         viewModel.CreatingBreakpoint.Should().BeTrue();
 
@@ -476,22 +469,18 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
     /// </summary>
     [AvaloniaFact]
     public void BreakpointsView_CanCreateIoPortBreakpointWithCondition() {
-        (BreakpointsView view, BreakpointsViewModel viewModel) = CreateBreakpointsViewWithViewModel();
-        Window window = new() { Content = view };
-        ShowWindowAndWait(window);
+        // Arrange
+        (_, BreakpointsViewModel viewModel, Window window) = ArrangeBreakpointsView();
+        BeginCreateOnTab(viewModel, "I/O Port");
 
-        viewModel.BeginCreateBreakpointCommand.Execute(null);
-        ProcessUiEvents();
-        SelectBreakpointTab(viewModel, "I/O Port").Should().BeTrue();
-
+        // Act
         viewModel.IoPortNumber = "0x388";
         viewModel.IoPortConditionExpression = "al == 0x01";
         ProcessUiEvents();
-
-        viewModel.ConfirmBreakpointCreationCommand.CanExecute(null).Should().BeTrue();
         viewModel.ConfirmBreakpointCreationCommand.Execute(null);
         ProcessUiEvents();
 
+        // Assert
         viewModel.CreatingBreakpoint.Should().BeFalse();
         viewModel.Breakpoints.Should().ContainSingle(bp =>
             bp.Type == BreakPointType.IO_ACCESS && bp.ConditionExpression == "al == 0x01");
@@ -500,24 +489,21 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
     }
 
     /// <summary>
-    /// Verifies that an out-of-range interrupt vector (above 0xFF) is rejected.
+    /// Verifies that an out-of-range interrupt vector (above 0xFF) is rejected, and that the
+    /// validation error self-clears when the value moves back into range.
     /// </summary>
     [AvaloniaFact]
     public void BreakpointsView_InterruptBreakpoint_OutOfRange_BlocksConfirmation() {
-        (BreakpointsView view, BreakpointsViewModel viewModel) = CreateBreakpointsViewWithViewModel();
-        Window window = new() { Content = view };
-        ShowWindowAndWait(window);
+        // Arrange
+        (_, BreakpointsViewModel viewModel, Window window) = ArrangeBreakpointsView();
+        BeginCreateOnTab(viewModel, "Interrupt");
 
-        viewModel.BeginCreateBreakpointCommand.Execute(null);
-        ProcessUiEvents();
-        SelectBreakpointTab(viewModel, "Interrupt").Should().BeTrue();
-
+        // Act + Assert: out-of-range blocks confirmation
         viewModel.InterruptNumber = "0x100";
         ProcessUiEvents();
-
         viewModel.ConfirmBreakpointCreationCommand.CanExecute(null).Should().BeFalse();
 
-        // Recovers when value moves back into range.
+        // Act + Assert: in-range recovers confirmation
         viewModel.InterruptNumber = "0x21";
         ProcessUiEvents();
         viewModel.ConfirmBreakpointCreationCommand.CanExecute(null).Should().BeTrue();
@@ -526,23 +512,21 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
     }
 
     /// <summary>
-    /// Verifies that an out-of-range I/O port (above 0xFFFF) is rejected.
+    /// Verifies that an out-of-range I/O port (above 0xFFFF) is rejected, and that the validation
+    /// error self-clears when the value moves back into range.
     /// </summary>
     [AvaloniaFact]
     public void BreakpointsView_IoPortBreakpoint_OutOfRange_BlocksConfirmation() {
-        (BreakpointsView view, BreakpointsViewModel viewModel) = CreateBreakpointsViewWithViewModel();
-        Window window = new() { Content = view };
-        ShowWindowAndWait(window);
+        // Arrange
+        (_, BreakpointsViewModel viewModel, Window window) = ArrangeBreakpointsView();
+        BeginCreateOnTab(viewModel, "I/O Port");
 
-        viewModel.BeginCreateBreakpointCommand.Execute(null);
-        ProcessUiEvents();
-        SelectBreakpointTab(viewModel, "I/O Port").Should().BeTrue();
-
+        // Act + Assert: out-of-range blocks confirmation
         viewModel.IoPortNumber = "0x10000";
         ProcessUiEvents();
-
         viewModel.ConfirmBreakpointCreationCommand.CanExecute(null).Should().BeFalse();
 
+        // Act + Assert: in-range recovers confirmation
         viewModel.IoPortNumber = "0x388";
         ProcessUiEvents();
         viewModel.ConfirmBreakpointCreationCommand.CanExecute(null).Should().BeTrue();
@@ -557,28 +541,28 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
     /// </summary>
     [AvaloniaFact]
     public void BreakpointsView_InterruptBreakpoint_Wildcard_CreatesAndRoundTrips() {
-        (BreakpointsView view, BreakpointsViewModel viewModel) = CreateBreakpointsViewWithViewModel();
-        Window window = new() { Content = view };
-        ShowWindowAndWait(window);
+        // Arrange
+        (_, BreakpointsViewModel viewModel, Window window) = ArrangeBreakpointsView();
+        BeginCreateOnTab(viewModel, "Interrupt");
 
-        viewModel.BeginCreateBreakpointCommand.Execute(null);
-        ProcessUiEvents();
-        SelectBreakpointTab(viewModel, "Interrupt").Should().BeTrue();
-
+        // Act: create a wildcard interrupt breakpoint
         viewModel.InterruptNumber = "*";
         ProcessUiEvents();
-        viewModel.ConfirmBreakpointCreationCommand.CanExecute(null).Should().BeTrue();
         viewModel.ConfirmBreakpointCreationCommand.Execute(null);
         ProcessUiEvents();
 
+        // Assert: a single wildcard breakpoint was created
         viewModel.Breakpoints.Should().ContainSingle();
         BreakpointViewModel created = viewModel.Breakpoints[0];
         created.IsWildcard.Should().BeTrue();
         created.Parameter.Should().Be("*");
 
+        // Act: edit the breakpoint
         viewModel.SelectedBreakpoint = created;
         viewModel.EditSelectedBreakpointCommand.Execute(null);
         ProcessUiEvents();
+
+        // Assert: edit restores "*" instead of casting -1 to 0xFFFFFFFF
         viewModel.InterruptNumber.Should().Be("*");
 
         window.Close();
@@ -589,28 +573,28 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
     /// </summary>
     [AvaloniaFact]
     public void BreakpointsView_IoPortBreakpoint_Wildcard_CreatesAndRoundTrips() {
-        (BreakpointsView view, BreakpointsViewModel viewModel) = CreateBreakpointsViewWithViewModel();
-        Window window = new() { Content = view };
-        ShowWindowAndWait(window);
+        // Arrange
+        (_, BreakpointsViewModel viewModel, Window window) = ArrangeBreakpointsView();
+        BeginCreateOnTab(viewModel, "I/O Port");
 
-        viewModel.BeginCreateBreakpointCommand.Execute(null);
-        ProcessUiEvents();
-        SelectBreakpointTab(viewModel, "I/O Port").Should().BeTrue();
-
+        // Act: create a wildcard I/O port breakpoint
         viewModel.IoPortNumber = "*";
         ProcessUiEvents();
-        viewModel.ConfirmBreakpointCreationCommand.CanExecute(null).Should().BeTrue();
         viewModel.ConfirmBreakpointCreationCommand.Execute(null);
         ProcessUiEvents();
 
+        // Assert: a single wildcard breakpoint was created
         viewModel.Breakpoints.Should().ContainSingle();
         BreakpointViewModel created = viewModel.Breakpoints[0];
         created.IsWildcard.Should().BeTrue();
         created.Parameter.Should().Be("*");
 
+        // Act: edit the breakpoint
         viewModel.SelectedBreakpoint = created;
         viewModel.EditSelectedBreakpointCommand.Execute(null);
         ProcessUiEvents();
+
+        // Assert: edit restores "*" instead of casting -1 to 0xFFFFFFFF
         viewModel.IoPortNumber.Should().Be("*");
 
         window.Close();
@@ -622,16 +606,16 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
     /// </summary>
     [AvaloniaFact]
     public void BreakpointsView_BeginCreateBreakpoint_ClearsInterruptAndIoConditions() {
-        (BreakpointsView view, BreakpointsViewModel viewModel) = CreateBreakpointsViewWithViewModel();
-        Window window = new() { Content = view };
-        ShowWindowAndWait(window);
-
+        // Arrange
+        (_, BreakpointsViewModel viewModel, Window window) = ArrangeBreakpointsView();
         viewModel.InterruptConditionExpression = "ah == 0x09";
         viewModel.IoPortConditionExpression = "al == 0x01";
 
+        // Act
         viewModel.BeginCreateBreakpointCommand.Execute(null);
         ProcessUiEvents();
 
+        // Assert
         viewModel.InterruptConditionExpression.Should().BeNull();
         viewModel.IoPortConditionExpression.Should().BeNull();
 
