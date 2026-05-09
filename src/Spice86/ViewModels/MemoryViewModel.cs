@@ -64,6 +64,10 @@ public partial class MemoryViewModel : ViewModelWithErrorDialogAndMemoryBreakpoi
     [ObservableProperty]
     private string? _title;
 
+    partial void OnTitleChanged(string? value) {
+        UpdateHeaderPresentation();
+    }
+
     public enum MemorySearchDataType {
         Binary,
         Ascii,
@@ -120,8 +124,20 @@ public partial class MemoryViewModel : ViewModelWithErrorDialogAndMemoryBreakpoi
     private void TryUpdateHeaderAndMemoryDocument() {
         if (UpdateBinaryDocumentCommand.CanExecute(null)) {
             UpdateBinaryDocumentCommand.Execute(null);
-            Header = $"{StartAddress:X} - {EndAddress:X}";
+            UpdateHeaderPresentation();
         }
+    }
+
+    private void UpdateHeaderPresentation() {
+        string addressRange = BuildAddressRange();
+        HeaderToolTip = addressRange;
+        Header = string.IsNullOrWhiteSpace(Title) ? addressRange : Title;
+    }
+
+    private string BuildAddressRange() {
+        string start = string.IsNullOrWhiteSpace(StartAddress) ? "?" : StartAddress;
+        string end = string.IsNullOrWhiteSpace(EndAddress) ? "?" : EndAddress;
+        return $"{start} - {end}";
     }
 
     private string? _endAddress = "0x0";
@@ -342,6 +358,9 @@ public partial class MemoryViewModel : ViewModelWithErrorDialogAndMemoryBreakpoi
 
     [ObservableProperty]
     private string _header = "Memory View";
+
+    [ObservableProperty]
+    private string? _headerToolTip;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(NewMemoryViewCommand))]

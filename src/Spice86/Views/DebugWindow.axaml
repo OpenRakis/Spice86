@@ -104,7 +104,7 @@ mc:Ignorable="d">
 									  SelectedItem="{Binding $parent[Window].DataContext.SelectedMemoryView}">
 								<TabStrip.ItemTemplate>
 									<DataTemplate DataType="{x:Type vm:IDebuggerTabContentViewModel}">
-										<TextBlock Text="{Binding Header}" />
+										<TextBlock Text="{Binding Header}" ToolTip.Tip="{Binding HeaderToolTip}" />
 									</DataTemplate>
 								</TabStrip.ItemTemplate>
 							</TabStrip>

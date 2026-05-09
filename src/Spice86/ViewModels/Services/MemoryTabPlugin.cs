@@ -51,6 +51,7 @@ internal sealed class MemoryTabPlugin : IDebuggerTabPlugin {
             _breakpointsViewModel, _pauseHandler, _messenger, _uiDispatcher,
             _textClipboard, _storageProvider, _structureViewModelFactory,
             canCloseTab: false);
+        memoryViewModel.Title = "Memory";
 
         StackMemoryViewModel stackMemoryViewModel = new(_memory, _memoryDataExporter, _state, _stack,
             _breakpointsViewModel, _pauseHandler, _messenger, _uiDispatcher,
