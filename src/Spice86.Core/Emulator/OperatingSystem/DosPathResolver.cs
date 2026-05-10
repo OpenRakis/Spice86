@@ -42,8 +42,7 @@ internal class DosPathResolver {
             currentDir = virtualDrive.CurrentDosDirectory;
             return DosFileOperationResult.NoValue();
         } else {
-            if (DosDriveManager.TryGetDriveLetterFromIndex(driveNumber - 1, out char driveLetter) &&
-                _dosDriveManager.TryGetDrive(driveLetter, out VirtualDrive? virtualDrive)) {
+            if (_dosDriveManager.TryGetDriveAtIndex(driveNumber - 1, out VirtualDrive? virtualDrive)) {
                 currentDir = virtualDrive.CurrentDosDirectory;
                 return DosFileOperationResult.NoValue();
             }
