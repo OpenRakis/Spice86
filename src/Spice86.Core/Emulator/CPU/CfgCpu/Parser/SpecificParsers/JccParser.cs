@@ -10,7 +10,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Shared.Emulator.Memory;
 
 public class JccParser : BaseInstructionParser {
-    private static readonly InstructionOperation[] ShortDisplayOps = {
+    private static readonly InstructionOperation[] ShortDisplayOps = [
         InstructionOperation.JO_SHORT,
         InstructionOperation.JNO_SHORT,
         InstructionOperation.JB_SHORT,
@@ -26,10 +26,10 @@ public class JccParser : BaseInstructionParser {
         InstructionOperation.JL_SHORT,
         InstructionOperation.JGE_SHORT,
         InstructionOperation.JLE_SHORT,
-        InstructionOperation.JG_SHORT,
-    };
+        InstructionOperation.JG_SHORT
+    ];
 
-    private static readonly InstructionOperation[] NearDisplayOps = {
+    private static readonly InstructionOperation[] NearDisplayOps = [
         InstructionOperation.JO_NEAR,
         InstructionOperation.JNO_NEAR,
         InstructionOperation.JB_NEAR,
@@ -45,8 +45,8 @@ public class JccParser : BaseInstructionParser {
         InstructionOperation.JL_NEAR,
         InstructionOperation.JGE_NEAR,
         InstructionOperation.JLE_NEAR,
-        InstructionOperation.JG_NEAR,
-    };
+        InstructionOperation.JG_NEAR
+    ];
 
     public JccParser(ParsingTools parsingTools) : base(parsingTools) {
     }
@@ -66,8 +66,8 @@ public class JccParser : BaseInstructionParser {
         CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
         instr.AddField(offsetField);
         instr.MaxSuccessorsCount = 2;
-        ushort targetIp = (ushort)(instr.NextInMemoryAddress.Offset + offsetValue);
-        ValueNode targetIpNode = _astBuilder.Constant.ToNearAddressNode(targetIp, instr.NextInMemoryAddress);
+        ushort targetIp = (ushort)(instr.NextInMemoryAddress32.Offset + offsetValue);
+        ValueNode targetIpNode = _astBuilder.Constant.ToNearAddressNode(targetIp, instr.NextInMemoryAddress32.ToSegmentedAddress());
         ValueNode conditionNode = _astBuilder.Flag.BuildSetCondition(conditionCode);
         InstructionNode displayAst = new InstructionNode(displayOps[conditionCode], targetIpNode);
         IfElseNode execAst = _astBuilder.ControlFlow.ConditionalNearJump(instr, conditionNode, targetIpNode);

@@ -16,7 +16,7 @@ public class InterruptParser : BaseInstructionParser {
     }
 
     public CfgInstruction ParseInterrupt3(ParsingContext context) {
-        CfgInstruction instr = new(context.Address, context.OpcodeField, null) { Kind = InstructionKind.Call };
+        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, null) { Kind = InstructionKind.Call };
         InstructionNode displayAst = new InstructionNode(InstructionOperation.INT, _astBuilder.Constant.ToNode((byte)3));
         IVisitableAstNode execAst = new InterruptCallNode(instr, _astBuilder.Constant.ToNode((byte)3));
         instr.AttachAsts(displayAst, execAst);
@@ -24,7 +24,7 @@ public class InterruptParser : BaseInstructionParser {
     }
 
     public CfgInstruction ParseInterruptWithVector(ParsingContext context) {
-        CfgInstruction instr = new(context.Address, context.OpcodeField, null) { Kind = InstructionKind.Call };
+        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, null) { Kind = InstructionKind.Call };
         InstructionField<byte> vectorField = _instructionReader.UInt8.NextField(true);
         instr.AddField(vectorField);
         ValueNode vectorNode = _astBuilder.InstructionField.ToNode(vectorField);
@@ -35,7 +35,7 @@ public class InterruptParser : BaseInstructionParser {
     }
 
     public CfgInstruction ParseInterruptOverflow(ParsingContext context) {
-        CfgInstruction instr = new(context.Address, context.OpcodeField, null) { Kind = InstructionKind.Call };
+        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, null) { Kind = InstructionKind.Call };
         ValueNode overflowFlag = _astBuilder.Flag.Overflow();
         ValueNode vectorNumber = _astBuilder.Constant.ToNode((byte)4);
         InstructionNode displayAst = new InstructionNode(InstructionOperation.INTO);
@@ -45,10 +45,10 @@ public class InterruptParser : BaseInstructionParser {
     }
 
     public CfgInstruction ParseRetInterrupt(ParsingContext context) {
-        CfgInstruction instr = new(context.Address, context.OpcodeField, null) { Kind = InstructionKind.Return };
+        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, null) { Kind = InstructionKind.Return };
         instr.EnableCanCauseContextRestore();
         InstructionNode displayAst = new InstructionNode(InstructionOperation.IRET);
-        IVisitableAstNode execAst = new ReturnInterruptNode(instr);
+        IVisitableAstNode execAst = new ReturnInterruptNode(instr, context.HasOperandSize32 ? BitWidth.DWORD_32 : BitWidth.WORD_16);
         instr.AttachAsts(displayAst, execAst);
         return instr;
     }

@@ -94,4 +94,10 @@ public class ConstantAstBuilder {
         ValueNode offset = ToNode(segmentedAddress.Offset);
         return new SegmentedAddressNode(segment, offset);
     }
+
+    public SegmentedAddressNode ToNode(SegmentedAddress32 segmentedAddress) {
+        ValueNode segment = ToNode(segmentedAddress.Segment);
+        ValueNode offset = ToNode(segmentedAddress.Offset);
+        return new SegmentedAddressNode(segment, offset);
+    }
 }

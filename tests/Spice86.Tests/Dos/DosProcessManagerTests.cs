@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Indexable;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.OperatingSystem;
@@ -397,7 +398,7 @@ public class DosProcessManagerTests {
         AddressReadWriteBreakpoints ioPortBreakpoints = new();
         A20Gate a20Gate = new(enabled: false);
         State state = new(CpuModel.INTEL_80386);
-        Memory memory = new(memoryBreakpoints, ram, a20Gate, initializeResetVector: true);
+        Memory memory = new(memoryBreakpoints, ram, a20Gate, new RealModeMmu386(), true);
         Stack stack = new(memory, state);
         IOPortDispatcher ioPortDispatcher = new(ioPortBreakpoints, state, loggerService, false);
 

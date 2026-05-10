@@ -103,7 +103,7 @@ public class NodeLinker : InstructionReplacer {
     }
 
     private InstructionSuccessorType ComputeSuccessorTypeForRet(CfgInstruction call, ICfgNode nextAfterRet) {
-        if (call.NextInMemoryAddress != nextAfterRet.Address) {
+        if (call.NextInMemoryAddress32.ToSegmentedAddress() != nextAfterRet.Address) {
             // Instruction executed after ret is not the next instruction in memory from the call.
             return InstructionSuccessorType.CallToMisalignedReturn;
         }

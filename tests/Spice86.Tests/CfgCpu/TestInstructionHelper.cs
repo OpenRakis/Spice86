@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
@@ -18,7 +19,7 @@ public class TestInstructionHelper {
     private readonly AstInstructionRenderer _renderer;
 
     public TestInstructionHelper() {
-        _memory = new Memory(new(), new Ram(0x100000), new A20Gate());
+        _memory = new Memory(new(), new Ram(0x100000), new A20Gate(), new RealModeMmu386(), false);
         _state = new State(CpuModel.INTEL_80286);
         _parser = new InstructionParser(_memory, _state);
         _renderer = new AstInstructionRenderer(AsmRenderingConfig.CreateSpice86Style());

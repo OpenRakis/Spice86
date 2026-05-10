@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -34,7 +35,7 @@ public class XmsUnitTests {
         // Setup memory and state
         _state = new State(CpuModel.INTEL_80286);
         _a20Gate = new A20Gate(false);
-        _memory = new Memory(new(), new Ram(A20Gate.EndOfHighMemoryArea), _a20Gate);
+        _memory = new Memory(new(), new Ram(A20Gate.EndOfHighMemoryArea), _a20Gate, new RealModeMmu386(), false);
         _loggerService = Substitute.For<ILoggerService>();
         _callbackHandler = new CallbackHandler(_state, _loggerService);
         _dosTables = new DosTables(_memory);
@@ -136,7 +137,7 @@ public class XmsUnitTests {
         // Arrange - Create a new XMS manager with A20 already enabled
         State state = new State(CpuModel.INTEL_80286);
         A20Gate a20Gate = new A20Gate(true); // A20 is ALREADY enabled at startup
-        Memory memory = new Memory(new(), new Ram(A20Gate.EndOfHighMemoryArea), a20Gate);
+        Memory memory = new Memory(new(), new Ram(A20Gate.EndOfHighMemoryArea), a20Gate, new RealModeMmu386(), false);
         ILoggerService loggerService = Substitute.For<ILoggerService>();
         CallbackHandler callbackHandler = new CallbackHandler(state, loggerService);
         DosTables dosTables = new DosTables(memory);

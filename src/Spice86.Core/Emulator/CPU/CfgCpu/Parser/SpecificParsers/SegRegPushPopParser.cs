@@ -18,7 +18,9 @@ public class SegRegPushPopParser : BaseInstructionParser {
     public CfgInstruction ParsePushSReg(ParsingContext context, int segRegIndex) {
         CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
         ValueNode regNode = _astBuilder.Register.SReg(segRegIndex);
-        MethodCallNode pushBlock = _astBuilder.Stack.Push(DataType.UINT16, regNode);
+        DataType pushType = context.HasOperandSize32 ? DataType.UINT32 : DataType.UINT16;
+        ValueNode pushValue = _astBuilder.TypeConversion.Convert(pushType, regNode);
+        MethodCallNode pushBlock = _astBuilder.Stack.Push(pushType, pushValue);
         InstructionNode displayAst = new InstructionNode(InstructionOperation.PUSH, regNode);
         IVisitableAstNode execAst = _astBuilder.WithIpAdvancement(instr, pushBlock);
         instr.AttachAsts(displayAst, execAst);
@@ -28,10 +30,15 @@ public class SegRegPushPopParser : BaseInstructionParser {
     public CfgInstruction ParsePopSReg(ParsingContext context, int segRegIndex) {
         CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
         ValueNode regNode = _astBuilder.Register.SReg(segRegIndex);
-        ValueNode popValue = _astBuilder.Stack.Pop(BitWidth.WORD_16);
+        DataType addressType = DataType.UINT16;
+        ushort slotSize = context.HasOperandSize32 ? (ushort)4 : (ushort)2;
+        ValueNode stackPointer = _astBuilder.Register.StackPointer(addressType);
+        ValueNode popValue = _astBuilder.Pointer.ToSegmentedPointer(DataType.UINT16, SegmentRegisterIndex.SsIndex, stackPointer);
+        ValueNode nextSp = _astBuilder.Constant.AddConstant(addressType, stackPointer, slotSize);
         BinaryOperationNode assign = new BinaryOperationNode(DataType.UINT16, regNode, BinaryOperation.ASSIGN, popValue);
+        BinaryOperationNode advanceStackPointer = _astBuilder.Assign(addressType, stackPointer, nextSp);
         InstructionNode displayAst = new InstructionNode(InstructionOperation.POP, regNode);
-        IVisitableAstNode execAst = _astBuilder.WithIpAdvancement(instr, assign);
+        IVisitableAstNode execAst = _astBuilder.WithIpAdvancement(instr, assign, advanceStackPointer);
         instr.AttachAsts(displayAst, execAst);
         return instr;
     }

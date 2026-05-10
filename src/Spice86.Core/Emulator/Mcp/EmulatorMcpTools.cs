@@ -271,7 +271,7 @@ internal sealed class EmulatorMcpTools {
                         Bytes = Convert.ToHexString(bytes),
                         Assembly = assembly
                     });
-                    current = instruction.NextInMemoryAddress;
+                    current = instruction.NextInMemoryAddress32.ToSegmentedAddress();
                 }
 
                 return new { Instructions = lines, Truncated = truncated };

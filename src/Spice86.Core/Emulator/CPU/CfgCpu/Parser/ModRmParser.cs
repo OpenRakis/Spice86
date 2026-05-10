@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.Parser;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser.FieldReader;
+using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Shared.Emulator.Memory;
 
@@ -219,7 +220,8 @@ public class ModRmParser {
     
     public ModRmContext EnsureNotMode3(ModRmContext context) {
         if (context.MemoryAddressType == MemoryAddressType.NONE) {
-            throw new MemoryAddressMandatoryException(_state);
+            throw new CpuInvalidOpcodeException(
+                "Instruction requires a memory operand but encoding selects a register (modrm mod=3)");
         }
 
         return context;

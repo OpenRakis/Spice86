@@ -4,37 +4,47 @@ using NSubstitute;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Logging;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
+using Spice86.Shared.Utils;
 
 using Xunit;
 
 public class InstructionsFeederTest : IDisposable {
     private const ushort MovRegImm16OpcodeAx = 0xB8;
+    private const ushort JmpFarImmOpcode = 0xEA;
     private static readonly SegmentedAddress ZeroAddress = new(0, 0);
     private static readonly SegmentedAddress TwoAddress = new(0, 2);
+    private static readonly SegmentedAddress BoundaryMovAddress = new(0, 0xFFFE);
     private static readonly SegmentedAddress SixteenAddressViaOffset = new(0, 16);
     private static readonly SegmentedAddress SixteenAddressViaSegment = new(1, 0);
     private readonly TestInstructionHelper _helper = new();
     private readonly AstInstructionRenderer _renderer = new(AsmRenderingConfig.CreateSpice86Style());
-    private Memory _memory = new(new(), new Ram(64), new A20Gate());
+    private Memory _memory = new(new(), new Ram(128 * 1024), new A20Gate(), new RealModeMmu8086(), false);
     private InstructionReplacerRegistry _instructionReplacer = new();
     private CfgNodeExecutionCompiler? _compiler;
 
     private InstructionsFeeder CreateInstructionsFeeder() {
+        return CreateInstructionsFeeder(new RealModeMmu8086());
+    }
+
+    private InstructionsFeeder CreateInstructionsFeeder(IMmu mmu) {
         ILoggerService loggerService = Substitute.For<LoggerService>();
         State state = new(CpuModel.INTEL_80286);
         AddressReadWriteBreakpoints memoryBreakpoints = new();
         AddressReadWriteBreakpoints ioBreakpoints = new();
-        _memory = new(memoryBreakpoints, new Ram(64), new A20Gate());
+        _memory = new(memoryBreakpoints, new Ram(128 * 1024), new A20Gate(), mmu, false);
         _instructionReplacer = new();
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(new PauseHandler(loggerService), state, _memory, memoryBreakpoints, ioBreakpoints);
         _compiler?.Dispose();
@@ -45,18 +55,41 @@ public class InstructionsFeederTest : IDisposable {
     }
 
     private void WriteJumpNear(SegmentedAddress address) {
-        _memory.UInt8[address] = 0xEB;
-        _memory.Int8[address + 1] = -2;
+        _memory.UInt8[ToPhysicalAddress(address)] = 0xEB;
+        _memory.Int8[ToPhysicalAddress(address + 1)] = -2;
     }
 
     private void WriteMovAx(SegmentedAddress address) {
-        _memory.UInt8[address] = 0xB8;
-        _memory.UInt16[address + 1] = 0xFFFF;
+        _memory.UInt8[ToPhysicalAddress(address)] = 0xB8;
+        _memory.UInt16[ToPhysicalAddress(address + 1)] = 0xFFFF;
+    }
+
+    private void WriteMovAxSplitAcrossSegmentBoundary() {
+        _memory.UInt8[0xFFFE] = 0xB8;
+        _memory.UInt8[0xFFFF] = 0x34;
+        _memory.UInt8[0x0000] = 0x12;
+    }
+
+    private void WriteFarJumpSplitAcrossSegmentBoundary() {
+        _memory.UInt8[0xFFF8] = 0x3E;
+        _memory.UInt8[0xFFF9] = 0x66;
+        _memory.UInt8[0xFFFA] = 0xEA;
+        _memory.UInt8[0xFFFB] = 0x86;
+        _memory.UInt8[0xFFFC] = 0xFB;
+        _memory.UInt8[0xFFFD] = 0x00;
+        _memory.UInt8[0xFFFE] = 0x00;
+        _memory.UInt8[0xFFFF] = 0xB5;
+        // Byte at CS:0x10000 wraps to CS:0x0000 on 8086 (physical address 0 for segment 0)
+        _memory.UInt8[0x0000] = 0xCF;
     }
 
     private void WriteLoop(SegmentedAddress address, sbyte relativeOffset) {
-        _memory.UInt8[address] = 0xE2;
-        _memory.Int8[address + 1] = relativeOffset;
+        _memory.UInt8[ToPhysicalAddress(address)] = 0xE2;
+        _memory.Int8[ToPhysicalAddress(address + 1)] = relativeOffset;
+    }
+
+    private static uint ToPhysicalAddress(SegmentedAddress address) {
+        return MemoryUtils.ToPhysicalAddress(address.Segment, address.Offset);
     }
 
     private CfgInstruction CreateReplacementInstruction() {
@@ -123,6 +156,39 @@ public class InstructionsFeederTest : IDisposable {
 
         // Assert
         Assert.Equal(MovRegImm16OpcodeAx, instruction2.OpcodeField.Value);
+    }
+
+    [Fact]
+    public void ReadWordImmediateSplitAcrossSegmentBoundary() {
+        // Arrange
+        InstructionsFeeder instructionsFeeder = CreateInstructionsFeeder();
+        WriteMovAxSplitAcrossSegmentBoundary();
+
+        // Act
+        CfgInstruction instruction = instructionsFeeder.GetInstructionFromMemory(BoundaryMovAddress);
+
+        // Assert
+        InstructionField<ushort> immediate = (InstructionField<ushort>)instruction.FieldsInOrder[^1];
+        Assert.Equal(0x1234, immediate.Value);
+        Assert.Equal(3, instruction.Length);
+        Assert.Equal(new SegmentedAddress32(0, 0x10001u), instruction.NextInMemoryAddress32);
+    }
+
+    [Fact]
+    public void ReadFarPointerImmediateSplitAcrossSegmentBoundary() {
+        // Arrange
+        InstructionsFeeder instructionsFeeder = CreateInstructionsFeeder();
+        WriteFarJumpSplitAcrossSegmentBoundary();
+
+        // Act
+        CfgInstruction instruction = instructionsFeeder.GetInstructionFromMemory(new SegmentedAddress(0, 0xFFF8));
+
+        // Assert
+        InstructionField<SegmentedAddress32> immediate = (InstructionField<SegmentedAddress32>)instruction.FieldsInOrder[^1];
+        Assert.Equal(JmpFarImmOpcode, instruction.OpcodeField.Value);
+        Assert.Equal(new SegmentedAddress32(0xCFB5, 0xFB86u), immediate.Value);
+        Assert.Equal(9, instruction.Length);
+        Assert.Equal(new SegmentedAddress32(0, 0x10001u), instruction.NextInMemoryAddress32);
     }
 
     [Fact]
@@ -273,6 +339,36 @@ public class InstructionsFeederTest : IDisposable {
 
         // Assert
         Assert.NotEqual(instruction1, instruction2);
+    }
+
+    [Fact]
+    public void ReadWordImmediateSplitAcrossSegmentBoundaryThrowsOn386() {
+        // Arrange
+        InstructionsFeeder instructionsFeeder = CreateInstructionsFeeder(new RealModeMmu386());
+        WriteMovAxSplitAcrossSegmentBoundary();
+
+        // Act
+        CfgInstruction instruction = instructionsFeeder.GetInstructionFromMemory(BoundaryMovAddress);
+
+        // Assert
+        Assert.True(instruction.IsInvalid);
+        InvalidInstructionNode invalidNode = Assert.IsType<InvalidInstructionNode>(instruction.ExecutionAst);
+        Assert.IsType<CpuGeneralProtectionFaultException>(invalidNode.CpuException);
+    }
+
+    [Fact]
+    public void ReadFarPointerImmediateSplitAcrossSegmentBoundaryThrowsOn386() {
+        // Arrange
+        InstructionsFeeder instructionsFeeder = CreateInstructionsFeeder(new RealModeMmu386());
+        WriteFarJumpSplitAcrossSegmentBoundary();
+
+        // Act
+        CfgInstruction instruction = instructionsFeeder.GetInstructionFromMemory(new SegmentedAddress(0, 0xFFF8));
+
+        // Assert
+        Assert.True(instruction.IsInvalid);
+        InvalidInstructionNode invalidNode = Assert.IsType<InvalidInstructionNode>(instruction.ExecutionAst);
+        Assert.IsType<CpuGeneralProtectionFaultException>(invalidNode.CpuException);
     }
 
     public void Dispose() {

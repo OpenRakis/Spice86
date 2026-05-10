@@ -5,6 +5,7 @@ using FluentAssertions;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Parser;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.VM.Breakpoint;
 
 using Xunit;
@@ -40,7 +41,7 @@ public class BreakpointConditionCompilerTests {
         IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
         AddressReadWriteBreakpoints memoryBreakpoints = new();
         A20Gate a20Gate = new(enabled: false);
-        Memory memory = new(memoryBreakpoints, ram, a20Gate, initializeResetVector: true);
+        Memory memory = new(memoryBreakpoints, ram, a20Gate, new RealModeMmu386(), true);
 
         // Set up some test data in memory
         memory.UInt8[0x100] = 0x42;

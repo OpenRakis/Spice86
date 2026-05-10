@@ -25,12 +25,17 @@ public class JmpParser : BaseInstructionParser {
     }
 
     public CfgInstruction ParseJmpFarImm(ParsingContext context) {
-        InstructionField<SegmentedAddress> addrField = context.HasOperandSize32
-            ? _instructionReader.SegmentedAddress32.NextField(true)
-            : _instructionReader.SegmentedAddress16.NextField(true);
         CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1) { Kind = InstructionKind.Jump };
-        instr.AddField(addrField);
-        SegmentedAddress targetAddress = addrField.Value;
+        SegmentedAddress targetAddress;
+        if (context.HasOperandSize32) {
+            InstructionField<SegmentedAddress32> addrField32 = _instructionReader.SegmentedAddress32.NextField(true);
+            instr.AddField(addrField32);
+            targetAddress = addrField32.Value.ToSegmentedAddress();
+        } else {
+            InstructionField<SegmentedAddress> addrField = _instructionReader.SegmentedAddress16.NextField(true);
+            instr.AddField(addrField);
+            targetAddress = addrField.Value;
+        }
         SegmentedAddressNode targetAddressNode = _astBuilder.Constant.ToNode(targetAddress);
         instr.AttachAsts(
             new InstructionNode(InstructionOperation.JMP_FAR, targetAddressNode),
@@ -42,8 +47,9 @@ public class JmpParser : BaseInstructionParser {
         CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1) { Kind = InstructionKind.Jump };
         (int offsetValue, FieldWithValue offsetField) = ReadSignedOffset(offsetWidth);
         instr.AddField(offsetField);
-        ushort targetIp = (ushort)(instr.NextInMemoryAddress.Offset + offsetValue);
-        ValueNode targetIpNode = _astBuilder.Constant.ToNearAddressNode(targetIp, instr.NextInMemoryAddress);
+        // Real mode: jump target is truncated to 16-bit IP
+        ushort targetIp = (ushort)(instr.NextInMemoryAddress32.Offset + offsetValue);
+        ValueNode targetIpNode = _astBuilder.Constant.ToNearAddressNode(targetIp, instr.NextInMemoryAddress32.ToSegmentedAddress());
         instr.AttachAsts(
             new InstructionNode(displayOp, targetIpNode),
             new JumpNearNode(instr, targetIpNode));

@@ -38,23 +38,15 @@ public class BitTestImmediateParser : BaseGrpOperationParser {
         instr.AddField(immField);
         ValueNode immNode = _astBuilder.InstructionField.ToNode(immField);
         ValueNode bitIndexNode = _astBuilder.TypeConversion.Convert(dataType, immNode);
+        // Intel SDM (BT/BTS/BTR/BTC mem,imm8): the bit offset is masked to the
+        // operand size (low 4 bits for 16-bit, low 5 bits for 32-bit) and the
+        // memory address is NOT shifted. Only the register-source form
+        // (0F A3/AB/B3/BB) treats the bit offset as a signed integer that can
+        // span adjacent words; for the immediate form there is no offset
+        // adjustment to apply.
         BinaryOperationNode bitInElement = new BinaryOperationNode(dataType, bitIndexNode,
             BinaryOperation.MODULO, _astBuilder.Constant.ToNode(dataType, (ulong)(int)bitWidth));
-        ValueNode targetNode;
-        bool isMemory = modRmContext.MemoryAddressType != MemoryAddressType.NONE;
-        if (!isMemory) {
-            targetNode = _astBuilder.ModRm.RmToNode(dataType, modRmContext);
-        } else {
-            uint elementSize = (uint)(int)bitWidth;
-            uint elementBytes = (uint)bitWidth.ToBytes();
-            ValueNode bitIndexUInt32 = _astBuilder.TypeConversion.Convert(DataType.UINT32, bitIndexNode);
-            BinaryOperationNode elementIndex = new BinaryOperationNode(DataType.UINT32, bitIndexUInt32,
-                BinaryOperation.DIVIDE, _astBuilder.Constant.ToNode(elementSize));
-            BinaryOperationNode offsetAdjustment = new BinaryOperationNode(DataType.UINT32, elementIndex,
-                BinaryOperation.MULTIPLY, _astBuilder.Constant.ToNode(elementBytes));
-            targetNode = _astBuilder.ModRm.ToMemoryAddressNodeWithOffsetAdjustment(dataType, modRmContext,
-                offsetAdjustment);
-        }
+        ValueNode targetNode = _astBuilder.ModRm.RmToNode(dataType, modRmContext);
         (IVisitableAstNode setCarry, IVisitableAstNode? assignMutated) = BuildBitTestCarryAndMutation(dataType, targetNode, bitInElement, mutation);
         InstructionNode displayAst = new InstructionNode(displayOp,
             _astBuilder.ModRm.RmToNode(dataType, modRmContext),

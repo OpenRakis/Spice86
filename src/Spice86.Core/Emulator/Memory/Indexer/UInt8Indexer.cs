@@ -1,8 +1,8 @@
 ﻿namespace Spice86.Core.Emulator.Memory.Indexer;
 
 using Spice86.Core.Emulator.Memory.ReaderWriter;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Shared.Emulator.Memory;
-using Spice86.Shared.Utils;
 
 /// <summary>
 /// Provides indexed byte access over memory.
@@ -14,7 +14,9 @@ public class UInt8Indexer : MemoryIndexer<byte> {
     /// Initializes a new instance of the <see cref="UInt8Indexer"/> class with the specified byteReadeWriter.
     /// </summary>
     /// <param name="byteReaderWriter">Where data is read and written.</param>
-    public UInt8Indexer(IByteReaderWriter byteReaderWriter) => _byteReaderWriter = byteReaderWriter;
+    public UInt8Indexer(IByteReaderWriter byteReaderWriter, IMmu mmu) : base(mmu, 1) {
+        _byteReaderWriter = byteReaderWriter;
+    }
 
     /// <inheritdoc/>
     public override byte this[uint address] {
@@ -22,14 +24,14 @@ public class UInt8Indexer : MemoryIndexer<byte> {
         set => _byteReaderWriter[address] = value;
     }
 
-    /// <summary>
-    /// Gets or sets the data at the specified segment and offset in the memory.
-    /// </summary>
-    /// <param name="segment">The segment of the element to get or set.</param>
-    /// <param name="offset">The offset of the element to get or set.</param>
-    public override byte this[ushort segment, ushort offset] {
-        get => _byteReaderWriter[MemoryUtils.ToPhysicalAddress(segment, offset)];
-        set => _byteReaderWriter[MemoryUtils.ToPhysicalAddress(segment, offset)] = value;
+    /// <inheritdoc />
+    internal override byte ReadSegmented(ushort segment, uint offset) {
+        return _byteReaderWriter[Mmu.TranslateAddress(segment, offset)];
+    }
+
+    /// <inheritdoc />
+    internal override void WriteSegmented(ushort segment, uint offset, byte value) {
+        _byteReaderWriter[Mmu.TranslateAddress(segment, offset)] = value;
     }
 
     /// <inheritdoc/>

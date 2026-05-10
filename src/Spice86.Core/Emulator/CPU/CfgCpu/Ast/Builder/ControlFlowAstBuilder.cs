@@ -78,7 +78,7 @@ public class ControlFlowAstBuilder {
     /// <returns>An IfElseNode representing jump-or-fallthrough behavior.</returns>
     public IfElseNode ConditionalNearJump(CfgInstruction instruction, ValueNode condition, ValueNode targetIp) {
         JumpNearNode jumpNode = new JumpNearNode(instruction, targetIp);
-        MoveIpNextNode fallthroughNode = new MoveIpNextNode(_constant.ToNode(instruction.NextInMemoryAddress.Offset));
+        MoveIpNextNode fallthroughNode = new MoveIpNextNode(_constant.ToNode(instruction.NextInMemoryAddress32.Offset));
         return new IfElseNode(condition, jumpNode, fallthroughNode);
     }
 
@@ -92,7 +92,7 @@ public class ControlFlowAstBuilder {
     /// <returns>An IfElseNode representing interrupt-or-fallthrough behavior.</returns>
     public IfElseNode ConditionalInterrupt(CfgInstruction instruction, ValueNode condition, ValueNode vectorNumber) {
         InterruptCallNode interruptNode = new InterruptCallNode(instruction, vectorNumber);
-        MoveIpNextNode fallthroughNode = new MoveIpNextNode(_constant.ToNode(instruction.NextInMemoryAddress.Offset));
+        MoveIpNextNode fallthroughNode = new MoveIpNextNode(_constant.ToNode(instruction.NextInMemoryAddress32.Offset));
         return new IfElseNode(condition, interruptNode, fallthroughNode);
     }
 

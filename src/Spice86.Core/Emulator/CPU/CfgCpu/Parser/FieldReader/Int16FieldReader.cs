@@ -12,6 +12,6 @@ public class Int16FieldReader : InstructionFieldReader<short> {
     }
 
     public override short PeekValue() {
-        return Memory.Int16[CurrentAddress];
+        return (short)PeekUInt16(0);
     }
 }

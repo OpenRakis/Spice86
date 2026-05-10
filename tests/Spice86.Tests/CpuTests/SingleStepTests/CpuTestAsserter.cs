@@ -14,7 +14,10 @@ public class CpuTestAsserter {
     /// </summary>
     /// <param name="expected">The expected register values</param>
     /// <param name="state">The actual CPU state</param>
-    public void AssertRegistersMatch(CpuRegisters expected, State state) {
+    /// <param name="flagsMask">Bitmask applied when comparing EFLAGS. Bits set
+    /// to 1 are compared, bits set to 0 are ignored (used to skip flag bits that
+    /// are documented as undefined for the executed opcode).</param>
+    public void AssertRegistersMatch(CpuRegisters expected, State state, uint flagsMask) {
         CompareReg(nameof(state.EAX), expected.EAX, state.EAX);
         CompareReg(nameof(state.EBX), expected.EBX, state.EBX);
         CompareReg(nameof(state.ECX), expected.ECX, state.ECX);
@@ -32,7 +35,7 @@ public class CpuTestAsserter {
         CompareReg(nameof(state.GS), expected.GS, state.GS);
 
         CompareReg(nameof(state.IP), expected.EIP, state.IP);
-        CompareReg(nameof(state.Flags), expected.EFlags, state.Flags.FlagRegister, isFlags: true);
+        CompareFlags(expected.EFlags, state.Flags.FlagRegister, flagsMask);
     }
 
     /// <summary>
@@ -40,51 +43,77 @@ public class CpuTestAsserter {
     /// </summary>
     /// <param name="ram">The expected RAM entries</param>
     /// <param name="memory">The actual memory state</param>
-    public void AssertMemoryMatches(RamEntry[] ram, Memory memory) {
+    /// <param name="exception">Optional exception metadata describing the
+    /// linear address at which a 16-bit FLAGS image was pushed by the faulting
+    /// instruction. When set, the bytes at that address and the next one are
+    /// compared with <paramref name="flagsMask"/> applied to mask out flag bits
+    /// that are documented as undefined for the executed opcode.</param>
+    /// <param name="flagsMask">Bitmask used when comparing the pushed FLAGS
+    /// image bytes. Only the lower 16 bits are relevant.</param>
+    public void AssertMemoryMatches(RamEntry[] ram, Memory memory, CpuTestException? exception, uint flagsMask) {
+        byte lowFlagMask = (byte)(flagsMask & 0xFF);
+        byte highFlagMask = (byte)((flagsMask >> 8) & 0xFF);
         foreach (RamEntry entry in ram) {
             byte actual = memory.UInt8[entry.Address];
-            if (entry.Value == actual) {
+            byte byteMask = 0xFF;
+            if (exception is not null) {
+                if (entry.Address == exception.FlagAddress) {
+                    byteMask = lowFlagMask;
+                } else if (entry.Address == exception.FlagAddress + 1) {
+                    byteMask = highFlagMask;
+                }
+            }
+            if ((entry.Value & byteMask) == (actual & byteMask)) {
                 continue;
             }
             string expectedHex = ConvertUtils.ToHex8(entry.Value);
             string actualHex = ConvertUtils.ToHex8(actual);
             string address = ConvertUtils.ToHex32(entry.Address);
-            Assert.Fail($"Byte at address {address} differs. Expected {expectedHex} Actual {actualHex}");
+            string maskInfo = byteMask == 0xFF ? "" : $" (compared bits mask: {ConvertUtils.ToHex8(byteMask)})";
+            Assert.Fail($"Byte at address {address} differs. Expected {expectedHex} Actual {actualHex}{maskInfo}");
         }
     }
 
-    private void CompareReg(string register, uint expected, uint actual, bool isFlags = false) {
+    private void CompareReg(string register, uint expected, uint actual) {
         if (expected == actual) {
             return;
         }
 
-        string expectedStr;
-        string actualStr;
-        string additionalInfo = "";
-        if (isFlags) {
-            expectedStr = ConvertUtils.ToBin32(expected);
-            actualStr = ConvertUtils.ToBin32(actual);
-            IList<string?> flagsDiffering = [
-                CompareFlag(nameof(Flags.Carry), Flags.Carry, expected, actual),
-                CompareFlag(nameof(Flags.Parity), Flags.Parity, expected, actual),
-                CompareFlag(nameof(Flags.Auxiliary), Flags.Auxiliary, expected, actual),
-                CompareFlag(nameof(Flags.Zero), Flags.Zero, expected, actual),
-                CompareFlag(nameof(Flags.Sign), Flags.Sign, expected, actual),
-                CompareFlag(nameof(Flags.Trap), Flags.Trap, expected, actual),
-                CompareFlag(nameof(Flags.Interrupt), Flags.Interrupt, expected, actual),
-                CompareFlag(nameof(Flags.Direction), Flags.Direction, expected, actual),
-                CompareFlag(nameof(Flags.Overflow), Flags.Overflow, expected, actual),
-            ];
-            additionalInfo = ". " + string.Join(",", flagsDiffering.Where(x => x is not null));
-        } else {
-            expectedStr = ConvertUtils.ToHex32(expected);
-            actualStr = ConvertUtils.ToHex32(actual);
-        }
-        Assert.Fail($"Expected and actual are not the same for register {register}. Expected: {expectedStr} Actual: {actualStr}{additionalInfo}");
+        string expectedStr = ConvertUtils.ToHex32(expected);
+        string actualStr = ConvertUtils.ToHex32(actual);
+        Assert.Fail($"Expected and actual are not the same for register {register}. Expected: {expectedStr} Actual: {actualStr}");
     }
 
-    private string? CompareFlag(string flagname, uint mask, uint expected, uint actual) {
-        if ((expected & mask) == (actual & mask)) {
+    private void CompareFlags(uint expected, uint actual, uint mask) {
+        uint maskedExpected = expected & mask;
+        uint maskedActual = actual & mask;
+        if (maskedExpected == maskedActual) {
+            return;
+        }
+
+        string expectedStr = ConvertUtils.ToBin32(expected);
+        string actualStr = ConvertUtils.ToBin32(actual);
+        string maskStr = ConvertUtils.ToHex32(mask);
+        IList<string?> flagsDiffering = [
+            CompareFlag(nameof(Flags.Carry), Flags.Carry, expected, actual, mask),
+            CompareFlag(nameof(Flags.Parity), Flags.Parity, expected, actual, mask),
+            CompareFlag(nameof(Flags.Auxiliary), Flags.Auxiliary, expected, actual, mask),
+            CompareFlag(nameof(Flags.Zero), Flags.Zero, expected, actual, mask),
+            CompareFlag(nameof(Flags.Sign), Flags.Sign, expected, actual, mask),
+            CompareFlag(nameof(Flags.Trap), Flags.Trap, expected, actual, mask),
+            CompareFlag(nameof(Flags.Interrupt), Flags.Interrupt, expected, actual, mask),
+            CompareFlag(nameof(Flags.Direction), Flags.Direction, expected, actual, mask),
+            CompareFlag(nameof(Flags.Overflow), Flags.Overflow, expected, actual, mask),
+        ];
+        string additionalInfo = ". " + string.Join(",", flagsDiffering.Where(x => x is not null));
+        Assert.Fail($"Expected and actual are not the same for register {nameof(Flags)}. Expected: {expectedStr} Actual: {actualStr} (compared bits mask: {maskStr}){additionalInfo}");
+    }
+
+    private string? CompareFlag(string flagname, uint flagMask, uint expected, uint actual, uint comparisonMask) {
+        if ((flagMask & comparisonMask) == 0) {
+            return null;
+        }
+        if ((expected & flagMask) == (actual & flagMask)) {
             return null;
         }
 

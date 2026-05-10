@@ -36,6 +36,16 @@ public class IOPortDispatcher : DefaultIOPortHandler {
         _ioPortHandlers.Add(port, ioPortHandler);
     }
 
+    /// <summary>
+    /// Replaces (or adds) an I/O port handler for the given port.
+    /// Used by test harnesses to override device handlers.
+    /// </summary>
+    /// <param name="port">The port number.</param>
+    /// <param name="ioPortHandler">The I/O port handler to set.</param>
+    public void ReplaceIOPortHandler(int port, IIOPortHandler ioPortHandler) {
+        _ioPortHandlers[port] = ioPortHandler;
+    }
+
     /// <inheritdoc/>
     public override byte ReadByte(ushort port) {
         UpdateLastPortRead(port);

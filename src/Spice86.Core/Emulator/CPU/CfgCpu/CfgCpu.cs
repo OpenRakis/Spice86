@@ -30,7 +30,7 @@ public class CfgCpu : IFunctionHandlerProvider, IClearable {
     public CfgCpu(IMemory memory, State state, IOPortDispatcher ioPortDispatcher, CallbackHandler callbackHandler,
         DualPic dualPic, EmulatorBreakpointsManager emulatorBreakpointsManager,
         FunctionCatalogue functionCatalogue,
-        bool useCodeOverride, bool failOnInvalidOpcode, ILoggerService loggerService, CfgNodeExecutionCompiler executionCompiler, CpuHeavyLogger? cpuHeavyLogger = null) {
+        bool useCodeOverride, bool failOnInvalidOpcode, bool allowIvtAddress0, ILoggerService loggerService, CfgNodeExecutionCompiler executionCompiler, CpuHeavyLogger? cpuHeavyLogger = null) {
         _loggerService = loggerService;
         _state = state;
         _dualPic = dualPic;
@@ -38,7 +38,7 @@ public class CfgCpu : IFunctionHandlerProvider, IClearable {
 
         CfgNodeFeeder = new(memory, state, emulatorBreakpointsManager, _replacerRegistry, executionCompiler);
         _executionContextManager = new(memory, state, CfgNodeFeeder, _replacerRegistry, functionCatalogue, useCodeOverride, loggerService, cpuHeavyLogger);
-        _instructionExecutionHelper = new(state, memory, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager, _executionContextManager, failOnInvalidOpcode, loggerService);
+        _instructionExecutionHelper = new(state, memory, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager, _executionContextManager, failOnInvalidOpcode, allowIvtAddress0, loggerService);
     }
     
     /// <summary>

@@ -12,6 +12,7 @@ using Spice86.Shared.Interfaces;
 /// Abstract base class for all classes that handle port reads and writes. Provides a default implementation for handling unhandled ports.
 /// </summary>
 public abstract class DefaultIOPortHandler : IIOPortHandler {
+
     /// <summary>
     /// Contains the argument of the last <see cref="ReadByte"/> operation.
     /// </summary>

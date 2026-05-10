@@ -41,7 +41,7 @@ public class ExecutionContext {
     /// Next node to execute according to the CFG Graph.
     /// </summary>
     public ICfgNode? NodeToExecuteNextAccordingToGraph { get; set; }
-    
+
     /// <summary>
     /// True when last executed triggered a CPU fault
     /// </summary>

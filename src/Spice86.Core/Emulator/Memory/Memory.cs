@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Memory;
 
 using Spice86.Core.Emulator.Memory.Indexer;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Utils;
 
@@ -20,20 +21,27 @@ public sealed class Memory : Indexable.Indexable, IMemory {
     /// </summary>
     public A20Gate A20Gate { get; }
 
+    /// <inheritdoc />
+    public IMmu Mmu { get; }
+
     /// <summary>
     /// Instantiate a new memory bus.
     /// </summary>
     /// <param name="memoryBreakpoints">The class that holds breakpoints based on memory access.</param>
     /// <param name="baseMemory">The memory device that should provide the default memory implementation</param>
     /// <param name="a20gate">The class that implements A20 Gate on/off support.</param>
+    /// <param name="mmu">The MMU used for segmented access validation and translation.</param>
     /// <param name="initializeResetVector">Whether to initialize the reset vector with a HLT instruction.</param>
-    public Memory(AddressReadWriteBreakpoints memoryBreakpoints, IMemoryDevice baseMemory, A20Gate a20gate, bool initializeResetVector = false) {
+    public Memory(AddressReadWriteBreakpoints memoryBreakpoints, IMemoryDevice baseMemory, A20Gate a20gate, IMmu mmu,
+        bool initializeResetVector) {
         _memoryBreakpoints = memoryBreakpoints;
+        Mmu = mmu;
         uint memorySize = baseMemory.Size;
         _memoryDevices = new IMemoryDevice[memorySize];
         Ram = baseMemory;
         RegisterMapping(0, memorySize, Ram);
-        (UInt8, UInt16, UInt16BigEndian, UInt32, Int8, Int16, Int32, SegmentedAddress16, SegmentedAddress32) = InstantiateIndexersFromByteReaderWriter(this);
+        (UInt8, UInt16, UInt16BigEndian, UInt32, Int8, Int16, Int32, SegmentedAddress16, SegmentedAddress32) =
+            InstantiateIndexersFromByteReaderWriter(this, Mmu);
         A20Gate = a20gate;
     }
 
@@ -42,14 +50,16 @@ public sealed class Memory : Indexable.Indexable, IMemory {
         if (length == 0) {
             length = (uint)_memoryDevices.Length;
         }
+
         length = Math.Min(length, (uint)_memoryDevices.Length - offset);
         byte[] copy = new byte[length];
         for (uint address = 0; address < copy.Length; address++) {
             copy[address] = _memoryDevices[address + offset].Read(address + offset);
         }
+
         return copy;
     }
-    
+
     /// <inheritdoc />
     public void WriteRam(byte[] array, uint offset = 0) {
         var length = Math.Min(array.Length, (uint)_memoryDevices.Length - offset);
@@ -68,6 +78,20 @@ public sealed class Memory : Indexable.Indexable, IMemory {
         _memoryDevices[address].Write(address, value);
     }
 
+    /// <inheritdoc />
+    public void WriteUInt16Segmented(ushort segment, ushort offset, ushort value) {
+        this[Mmu.TranslateAddress(segment, offset)] = (byte)value;
+        this[Mmu.TranslateAddress(segment, (uint)offset + 1u)] = (byte)(value >> 8);
+    }
+
+    /// <inheritdoc />
+    public void WriteUInt32Segmented(ushort segment, ushort offset, uint value) {
+        this[Mmu.TranslateAddress(segment, offset)] = (byte)value;
+        this[Mmu.TranslateAddress(segment, (uint)offset + 1u)] = (byte)(value >> 8);
+        this[Mmu.TranslateAddress(segment, (uint)offset + 2u)] = (byte)(value >> 16);
+        this[Mmu.TranslateAddress(segment, (uint)offset + 3u)] = (byte)(value >> 24);
+    }
+
     /// <inheritdoc/>
     public byte this[uint address] {
         get {
@@ -79,7 +103,8 @@ public sealed class Memory : Indexable.Indexable, IMemory {
             address = A20Gate.TransformAddress(address);
             CurrentlyWritingByte = value;
             _memoryBreakpoints.MonitorWriteAccess(address);
-            SneakilyWrite(address, value);        }
+            SneakilyWrite(address, value);
+        }
     }
 
     /// <summary>
@@ -138,7 +163,7 @@ public sealed class Memory : Indexable.Indexable, IMemory {
     public override UInt16Indexer UInt16 {
         get;
     }
-    
+
     /// <inheritdoc/>
     public override UInt16BigEndianIndexer UInt16BigEndian {
         get;
@@ -168,7 +193,7 @@ public sealed class Memory : Indexable.Indexable, IMemory {
     public override SegmentedAddress16Indexer SegmentedAddress16 {
         get;
     }
-    
+
     /// <inheritdoc/>
     public override SegmentedAddress32Indexer SegmentedAddress32 {
         get;

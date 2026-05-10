@@ -4,7 +4,6 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
-using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.Registers;
@@ -21,25 +20,20 @@ public class PushaParser : BaseInstructionParser {
         DataType addressType = _astBuilder.UType(BitWidth.WORD_16);
         CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
 
-        List<IVisitableAstNode> statements = new();
+        string methodName = bitWidth == BitWidth.DWORD_32 ? nameof(Stack.PushAll32) : nameof(Stack.PushAll16);
 
-        ValueNode originalSp = _astBuilder.Register.StackPointer(addressType);
-        VariableDeclarationNode savedSpDeclaration = _astBuilder.DeclareVariable(addressType, "savedSp", originalSp);
-        VariableReferenceNode savedSp = savedSpDeclaration.Reference;
-        statements.Add(savedSpDeclaration);
-
-        _astBuilder.Stack.PushValues(statements, dataType,
+        MethodCallNode pushAll = new("Stack", methodName,
             _astBuilder.Register.Reg(dataType, RegisterIndex.AxIndex),
             _astBuilder.Register.Reg(dataType, RegisterIndex.CxIndex),
             _astBuilder.Register.Reg(dataType, RegisterIndex.DxIndex),
             _astBuilder.Register.Reg(dataType, RegisterIndex.BxIndex),
-            savedSp,
+            _astBuilder.Register.StackPointer(addressType),
             _astBuilder.Register.Reg(dataType, RegisterIndex.BpIndex),
             _astBuilder.Register.Reg(dataType, RegisterIndex.SiIndex),
             _astBuilder.Register.Reg(dataType, RegisterIndex.DiIndex));
 
         InstructionNode displayAst = new InstructionNode(bitWidth == BitWidth.DWORD_32 ? InstructionOperation.PUSHAD : InstructionOperation.PUSHA);
-        IVisitableAstNode execAst = _astBuilder.WithIpAdvancement(instr, statements.ToArray());
+        IVisitableAstNode execAst = _astBuilder.WithIpAdvancement(instr, pushAll);
         instr.AttachAsts(displayAst, execAst);
         return instr;
     }

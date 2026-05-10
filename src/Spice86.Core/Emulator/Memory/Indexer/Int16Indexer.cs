@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Memory.Indexer;
 
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.Mmu;
 
 /// <summary>
 /// Provides indexed signed short access over memory.
@@ -12,7 +13,7 @@ public class Int16Indexer : MemoryIndexer<short> {
     /// Initializes a new instance of the <see cref="Int16Indexer"/> class with the specified uInt16Indexer.
     /// </summary>
     /// <param name="uInt16Indexer">Where data is read and written.</param>
-    public Int16Indexer(UInt16Indexer uInt16Indexer) => _uInt16Indexer = uInt16Indexer;
+    public Int16Indexer(UInt16Indexer uInt16Indexer, IMmu mmu) : base(mmu, 2) => _uInt16Indexer = uInt16Indexer;
 
     /// <inheritdoc/>
     public override short this[uint address] {
@@ -20,14 +21,14 @@ public class Int16Indexer : MemoryIndexer<short> {
         set => _uInt16Indexer[address] = (ushort)value;
     }
 
-    /// <summary>
-    /// Gets or sets the data at the specified segment and offset in the memory.
-    /// </summary>
-    /// <param name="segment">The segment of the element to get or set.</param>
-    /// <param name="offset">The offset of the element to get or set.</param>
-    public override short this[ushort segment, ushort offset] {
-        get => (short)_uInt16Indexer[segment, offset];
-        set => _uInt16Indexer[segment, offset] = (ushort)value;
+    /// <inheritdoc />
+    internal override short ReadSegmented(ushort segment, uint offset) {
+        return (short)_uInt16Indexer.ReadSegmented(segment, offset);
+    }
+
+    /// <inheritdoc />
+    internal override void WriteSegmented(ushort segment, uint offset, short value) {
+        _uInt16Indexer.WriteSegmented(segment, offset, (ushort)value);
     }
     
     /// <inheritdoc/>

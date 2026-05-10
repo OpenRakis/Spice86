@@ -12,6 +12,6 @@ public class UInt16FieldReader : InstructionFieldReader<ushort> {
     }
 
     public override ushort PeekValue() {
-        return Memory.UInt16[CurrentAddress];
+        return PeekUInt16(0);
     }
 }
