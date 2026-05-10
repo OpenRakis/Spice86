@@ -161,7 +161,7 @@ internal class DosPathResolver {
 
         // Handle relative paths for mounted drives.
         // It does not matter whether the input has a drive specification or not; the path is a relative path if the
-        // first character (after the optional drive specification) is a directory separator. If the path is empty,
+        // first character (after the optional drive specification) is not a directory separator. If the path is empty,
         // then it is treated as a relative path to the current directory on the chosen drive.
         // See: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#fully-qualified-vs-relative-paths
         bool isRelativePath = dosPathSpan.IsEmpty || dosPathSpan[0] is not (DirectorySeparatorChar or AltDirectorySeparatorChar);
