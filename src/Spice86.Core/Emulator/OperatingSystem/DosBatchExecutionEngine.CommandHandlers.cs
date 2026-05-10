@@ -362,10 +362,10 @@ internal sealed partial class DosBatchExecutionEngine {
         }
 
         if (trimmed.Length == 2 && trimmed[1] == ':') {
-            int driveIndex = DosDriveManager.GetDriveIndex(trimmed[0]) + 1;
+            int driveIndex = DosDriveManager.GetDriveIndex(trimmed[0]);
             if (driveIndex != -1) {
                 Debug.Assert(driveIndex is >= byte.MinValue and < byte.MaxValue);
-                DosFileOperationResult result = _dosFileManager.GetCurrentDir((byte)(driveIndex - 1), out string currentDir);
+                DosFileOperationResult result = _dosFileManager.GetCurrentDir((byte)(driveIndex + 1), out string currentDir);
                 if (!result.IsError) {
                     WriteToStandardOutput($"{DosDriveManager.GetDriveLetterFromIndexFast(driveIndex)}:\\{currentDir}\r\n");
                 } else {
