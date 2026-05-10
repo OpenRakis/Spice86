@@ -29,13 +29,18 @@ public class DosDriveManagerTests {
             // Assert
             dosDriveManager.Count.Should().Be(3);
             mountedDriveEntries.Should().AllSatisfy(static entry => {
-                entry.Should().NotBeNull();
+                entry.Value.Should().NotBeNull();
                 entry.Key.Should().Be(entry.Value.DriveLetter);
             });
             mountedDriveLetters.Should().BeEquivalentTo(mountedDriveEntries
                 .Select(static entry => entry.Key));
             mountedDrives.Should().BeEquivalentTo(mountedDriveEntries
                 .Select(static entry => entry.Value));
+
+            mountedDriveEntries.Should().BeEquivalentTo(
+                dosDriveManager.As<IEnumerable<KeyValuePair<char, DosDriveBase>>>());
+            mountedDriveLetters.Should().BeEquivalentTo(dosDriveManager.Keys);
+            mountedDrives.Should().BeEquivalentTo(dosDriveManager.Values);
         } finally {
             Directory.Delete(tempDir, true);
         }
@@ -61,13 +66,18 @@ public class DosDriveManagerTests {
             dosDriveManager.Count.Should().Be(4);
             dosDriveManager['Z'].Should().BeOfType<MemoryDrive>();
             mountedDriveEntries.Should().AllSatisfy(static entry => {
-                entry.Should().NotBeNull();
+                entry.Value.Should().NotBeNull();
                 entry.Key.Should().Be(entry.Value.DriveLetter);
             });
             mountedDriveLetters.Should().BeEquivalentTo(mountedDriveEntries
                 .Select(static entry => entry.Key));
             mountedDrives.Should().BeEquivalentTo(mountedDriveEntries
                 .Select(static entry => entry.Value));
+
+            mountedDriveEntries.Should().BeEquivalentTo(
+                dosDriveManager.As<IEnumerable<KeyValuePair<char, DosDriveBase>>>());
+            mountedDriveLetters.Should().BeEquivalentTo(dosDriveManager.Keys);
+            mountedDrives.Should().BeEquivalentTo(dosDriveManager.Values);
         } finally {
             Directory.Delete(tempDir, true);
         }
@@ -145,6 +155,12 @@ public class DosDriveManagerTests {
             dictEntryEnumerator.MoveNext().Should().BeFalse();
             keyEnumerator.MoveNext().Should().BeFalse();
             valueEnumerator.MoveNext().Should().BeFalse();
+
+            kvpEnumerator.MoveNext().Should().BeFalse();
+            kvpEnumeratorExplicit.MoveNext().Should().BeFalse();
+            dictEntryEnumerator.MoveNext().Should().BeFalse();
+            keyEnumerator.MoveNext().Should().BeFalse();
+            valueEnumerator.MoveNext().Should().BeFalse();
         } finally {
             Directory.Delete(tempDir, true);
         }
@@ -171,6 +187,7 @@ public class DosDriveManagerTests {
 
             int index = 0;
             foreach (KeyValuePair<char, DosDriveBase> kvp in dosDriveManager) {
+                index.Should().BeInRange(0, 3);
                 KeyValuePair<char, DosDriveBase> expected = index switch {
                     0 => new('A', aDrive),
                     1 => new('B', bDrive),
@@ -181,9 +198,11 @@ public class DosDriveManagerTests {
                 kvp.Should().Be(expected);
                 index++;
             }
+            index.Should().Be(4);
 
             index = 0;
             foreach (char driveLetter in dosDriveManager.Keys) {
+                index.Should().BeInRange(0, 3);
                 char expected = index switch {
                     0 => 'A',
                     1 => 'B',
@@ -194,9 +213,11 @@ public class DosDriveManagerTests {
                 driveLetter.Should().Be(expected);
                 index++;
             }
+            index.Should().Be(4);
 
             index = 0;
             foreach (DosDriveBase drive in dosDriveManager.Values) {
+                index.Should().BeInRange(0, 3);
                 DosDriveBase? expected = index switch {
                     0 => aDrive,
                     1 => bDrive,
@@ -207,6 +228,7 @@ public class DosDriveManagerTests {
                 drive.Should().Be(expected);
                 index++;
             }
+            index.Should().Be(4);
         } finally {
             Directory.Delete(tempDir, true);
         }
