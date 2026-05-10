@@ -28,7 +28,7 @@ internal ref struct DosPathBuilder {
     /// <a href="https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file"/>. Note that this contains
     /// <see cref="VolumeSeparatorChar"/>, <see cref="DirectorySeparatorChar"/>, and
     /// <see cref="AltDirectorySeparatorChar"/>. The list has also been expanded to include all currently defined
-    /// Unicode control characters (including 0x7F), to prevent potential problems with host operation system file
+    /// Unicode control characters (including 0x7F), to prevent potential problems with host operating system file
     /// systems and user interfaces.
     /// </remarks>
     internal static ReadOnlySpan<char> InvalidFileNameChars => [
@@ -105,17 +105,19 @@ internal ref struct DosPathBuilder {
     }
 
     /// <summary>Gets a value indicating whether the path builder has been frozen (immutable).</summary>
-    /// <remarks>
-    /// The contents may still and should never be accessed after the path builder has been disposed.
-    /// </remarks>
+    /// <remarks>This property will be reset to <see langword="false"/> (mutable) when the builder disposed.</remarks>
     public readonly bool IsFrozen => _isFrozen;
 
     /// <summary>Releases internal memory associated with the path builder.</summary>
-    /// <remarks><strong>Do not access memory previously retrieved via <see cref="AsSpan()"/> after calling this method!</strong></remarks>
+    /// <remarks>
+    /// <para><strong>Do not access memory previously retrieved via <see cref="AsSpan()"/> after calling this method!</strong></para>
+    /// <para>This will also reset the frozen state and make the path builder mutable again.</para>
+    /// </remarks>
     public void Dispose() {
-        // These dispose methods will clear the value internal value list instances and set their lengths to zero. This
-        // allows more data to be appended (though any stack allocated scratch buffer will be lost--so it will only use
-        // pooled memory). Because of this, the path builder will become mutable again (so path builder can be reused).
+        // These dispose methods will clear the internal value list instances, release the internal memory used, and
+        // set their lengths to zero. This allows more data to be appended (though any stack allocated scratch buffer
+        // will be lost--so it will only use pooled memory). Because of this, the path builder will become mutable
+        // again (so path builder can be reused).
         _pathBuilder.Dispose();
         _pathStack.Dispose();
         _isFrozen = false;
@@ -140,8 +142,8 @@ internal ref struct DosPathBuilder {
     /// </summary>
     /// <returns>A string representing the current path.</returns>
     /// <remarks>
-    /// This may not be valid if the drive letter has not been set or it has not been successfully frozen.
-    /// <strong>Do not access memory previously retrieved via <see cref="AsSpan()"/> after calling this method!</strong>
+    /// <para><strong>Do not access memory previously retrieved via <see cref="AsSpan()"/> after calling this method!</strong></para>
+    /// <para>This may not be valid if the drive letter has not been set or it has not been successfully frozen.</para>
     /// </remarks>
     public string ToStringWithDispose() {
         string result = _pathBuilder.AsSpan().ToString();
@@ -153,12 +155,12 @@ internal ref struct DosPathBuilder {
     /// <returns>A result indicating success or an error.</returns>
     /// <remarks>
     /// A directory separator character will be automatically appended if the current path only contains a drive
-    /// specification and no valid path elements have been appended (thus the minimum number of character in the path
-    /// builder after calling this will always be three: drive letter, volume separator, and directory separator). This
-    /// method can be called multiple times and can be called after calling
+    /// specification and no valid path elements have been appended (thus the minimum number of characters in the path
+    /// builder after calling this with a successful result will always be three: drive letter, volume separator, and
+    /// directory separator). This method can be called multiple times and can also be called after calling
     /// <see cref="AppendFinalDirectorySeparator()"/>. The drive letter must be assigned prior to freezing the path
-    /// builder (<see cref="SetDriveIndex(int)"/> or <see cref="SetDriveLetter(char)"/> must be called at least one
-    /// time for the path to be valid).
+    /// builder (<see cref="SetDriveIndex(int)"/> or <see cref="SetDriveLetter(char)"/> must be called at least once
+    /// for the path to be valid).
     /// </remarks>
     public DosPathBuilderResult Freeze() {
         // Do nothing if the path builder has already been frozen.
@@ -179,12 +181,12 @@ internal ref struct DosPathBuilder {
         }
 
         _isFrozen = true;
-        _pathStack.Dispose(); // no longer necessary
+        _pathStack.Dispose(); // path element stack is no longer necessary
         return DosPathBuilderResult.Success;
     }
 
     /// <summary>Attempts to set the drive index.</summary>
-    /// <param name="driveIndex">A zero-based DOS drive index that will be converted into a drive letter.</param>
+    /// <param name="driveIndex">A valid zero-based DOS drive index that will be converted into a drive letter.</param>
     /// <returns>A result indicating success or an error.</returns>
     /// <remarks>This can be called multiple times and also after appending other path elements.</remarks>
     public DosPathBuilderResult SetDriveIndex(int driveIndex) {
@@ -224,8 +226,8 @@ internal ref struct DosPathBuilder {
     /// <remarks>
     /// This can only be called once (as the path builder will be frozen and become immutable). This cannot be called
     /// if the path builder has already been frozen or a drive letter has not been assigned
-    /// (<see cref="SetDriveIndex(int)"/> or <see cref="SetDriveLetter(char)"/> must be called at least one time for
-    /// the path to be valid).
+    /// (<see cref="SetDriveIndex(int)"/> or <see cref="SetDriveLetter(char)"/> must be called at least once for the
+    /// path to be valid).
     /// </remarks>
     public DosPathBuilderResult AppendFinalDirectorySeparator() {
         // Make sure a drive specification has been set.
@@ -240,11 +242,12 @@ internal ref struct DosPathBuilder {
 
         DebugValidateState();
 
-        // If the last character is already a directory separator character, then there is no need to append.
+        // A valid unfrozen path builder instance should never end with a directory separator character. So it should
+        // be safe to append the final directory separator here.
         _pathBuilder.Append(DirectorySeparatorChar);
 
         _isFrozen = true;
-        _pathStack.Dispose(); // no longer necessary
+        _pathStack.Dispose(); // path element stack is no longer necessary
         return DosPathBuilderResult.Success;
     }
 
@@ -253,10 +256,10 @@ internal ref struct DosPathBuilder {
     /// <returns>A result indicating success or an error.</returns>
     /// <remarks>
     /// Any leading white space is always ignored. The file name cannot contain any invalid file name characters,
-    /// cannot be empty, invalid, reserved, directory traversal (e.g., "." or ".."), or end with white space or a
-    /// period. This cannot be called if the path builder has already been frozen or a drive letter has not been
-    /// assigned (<see cref="SetDriveIndex(int)"/> or <see cref="SetDriveLetter(char)"/> must be called at least one
-    /// time for the path to be valid).
+    /// cannot be empty, an invalid or reserved name, directory traversal (e.g., "." or ".."), or end with white space
+    /// or a period. This cannot be called if the path builder has already been frozen or a drive letter has not been
+    /// assigned (<see cref="SetDriveIndex(int)"/> or <see cref="SetDriveLetter(char)"/> must be called at least once
+    /// for the path to be valid).
     /// </remarks>
     public DosPathBuilderResult AppendFileName(ReadOnlySpan<char> fileName) {
         // Make sure a drive specification has been set.
@@ -301,10 +304,10 @@ internal ref struct DosPathBuilder {
     /// <remarks>
     /// All empty path elements are ignored. This will always append to the existing path, even if the path starts with
     /// a directory separator. Any leading white space in individual path elements are always ignored. The individual
-    /// path elements cannot contain any invalid file name characters, invalid, reserved, or end with white space or a
-    /// period. This cannot be called if the path builder has already been frozen or a drive letter has not been
-    /// assigned (<see cref="SetDriveIndex(int)"/> or <see cref="SetDriveLetter(char)"/> must be called at least one
-    /// time for the path to be valid).
+    /// path elements cannot contain any invalid file name characters, invalid or reserved names, or end with white
+    /// space or a period. This cannot be called if the path builder has already been frozen or a drive letter has not
+    /// been assigned (<see cref="SetDriveIndex(int)"/> or <see cref="SetDriveLetter(char)"/> must be called at least
+    /// once for the path to be valid).
     /// </remarks>
     public DosPathBuilderResult AppendRelativePath(ReadOnlySpan<char> relativePath,
             out bool endsWithDirectorySeparator) {
@@ -406,9 +409,10 @@ internal ref struct DosPathBuilder {
     /// All empty path elements are ignored. This will always remove all path characters after the drive letter and
     /// volume separator, even if the path is empty or does not start with a directory separator. Any leading white
     /// space in individual path elements are always ignored. The individual path elements cannot contain any invalid
-    /// file name characters, invalid, reserved, or end with white space or a period. This cannot be called if the path
-    /// builder has already been frozen or a drive letter has not been assigned (<see cref="SetDriveIndex(int)"/> or
-    /// <see cref="SetDriveLetter(char)"/> must be called at least one time for the path to be valid).
+    /// file name characters, invalid or reserved names, or end with white space or a period. This cannot be called if
+    /// the path builder has already been frozen or a drive letter has not been assigned
+    /// (<see cref="SetDriveIndex(int)"/> or <see cref="SetDriveLetter(char)"/> must be called at least once for the
+    /// path to be valid).
     /// </remarks>
     public DosPathBuilderResult AppendRootedPath(ReadOnlySpan<char> rootedPath, out bool endsWithDirectorySeparator) {
         // Make sure a drive specification has been set.
@@ -634,8 +638,8 @@ internal ref struct DosPathBuilder {
 
     /// <summary>Performs debug assertions to validate the state of the path builder.</summary>
     /// <remarks>
-    /// This is only called in debug builds. Though passing these checks does not mean that that path builder contains
-    /// a valid DOS full path specification.
+    /// This is only executed when using debug builds. Passing these state checks does not necessarily mean that that
+    /// path builder contains a valid DOS full path specification.
     /// </remarks>
     [Conditional("DEBUG")]
     internal readonly void DebugValidateState() {
