@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.OperatingSystem.Structures;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -343,14 +344,17 @@ internal sealed partial class DosBatchExecutionEngine {
     }
 
     internal bool TryHandleChdir(string arguments) {
-        string trimmed = arguments.Trim();
+        ReadOnlySpan<char> trimmed = arguments.AsSpan().Trim();
+        string? trimmedString = null;
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: CD/CHDIR args={Args}", trimmed);
+            trimmedString ??= trimmed.Length == arguments.Length ? arguments : trimmed.ToString();
+            _loggerService.Debug("BATCH: CD/CHDIR args={Args}", trimmedString);
         }
         if (trimmed.Length == 0) {
             DosFileOperationResult result = _dosFileManager.GetCurrentDir(0, out string currentDir);
             if (!result.IsError) {
                 char driveLetter = _driveManager.CurrentDrive.DriveLetter;
+                Debug.Assert(DosDriveManager.GetDriveIndex(driveLetter) != -1);
                 WriteToStandardOutput($"{driveLetter}:\\{currentDir}\r\n");
             }
 
@@ -358,10 +362,15 @@ internal sealed partial class DosBatchExecutionEngine {
         }
 
         if (trimmed.Length == 2 && trimmed[1] == ':') {
-            byte driveNumber = (byte)(char.ToUpperInvariant(trimmed[0]) - 'A' + 1);
-            DosFileOperationResult result = _dosFileManager.GetCurrentDir(driveNumber, out string currentDir);
-            if (!result.IsError) {
-                WriteToStandardOutput($"{char.ToUpperInvariant(trimmed[0])}:\\{currentDir}\r\n");
+            int driveIndex = DosDriveManager.GetDriveIndex(trimmed[0]) + 1;
+            if (driveIndex != -1) {
+                Debug.Assert(driveIndex is >= byte.MinValue and < byte.MaxValue);
+                DosFileOperationResult result = _dosFileManager.GetCurrentDir((byte)(driveIndex - 1), out string currentDir);
+                if (!result.IsError) {
+                    WriteToStandardOutput($"{DosDriveManager.GetDriveLetterFromIndexFast(driveIndex)}:\\{currentDir}\r\n");
+                } else {
+                    WriteToStandardOutput($"Invalid drive specification\r\n");
+                }
             } else {
                 WriteToStandardOutput($"Invalid drive specification\r\n");
             }
@@ -369,7 +378,9 @@ internal sealed partial class DosBatchExecutionEngine {
             return false;
         }
 
-        DosFileOperationResult setResult = _dosFileManager.SetCurrentDir(trimmed);
+        // Avoid extra string allocation by only creating a new string if the trimmed span has a different length.
+        trimmedString ??= trimmed.Length == arguments.Length ? arguments : trimmed.ToString();
+        DosFileOperationResult setResult = _dosFileManager.SetCurrentDir(trimmedString);
         if (setResult.IsError) {
             WriteToStandardOutput("Invalid directory\r\n");
         }
