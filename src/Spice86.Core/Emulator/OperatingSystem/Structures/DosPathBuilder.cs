@@ -22,7 +22,7 @@ internal ref struct DosPathBuilder {
     /// <summary>The initial number of elements the caller should stack allocate for the path stack buffer.</summary>
     public const int DefaultStackLength = 16;
 
-    /// <summary>The file name characters that are not allowed, as a search values object.</summary>
+    /// <summary>The file name characters that are not allowed.</summary>
     /// <remarks>
     /// The list of disallowed characters is partially derived from:
     /// <a href="https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file"/>. Note that this contains
