@@ -51,8 +51,6 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
         }
     }
 
-    #region Drive Letter Helpers
-
     /// <summary>
     /// Gets the zero-based drive index associated with the given DOS drive letter.
     /// </summary>
@@ -182,8 +180,6 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
         return false;
     }
 
-    #endregion
-
     /// <summary>
     /// The currently selected drive.
     /// </summary>
@@ -219,8 +215,6 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
         }
         return FixedDiskMediaDescriptor;
     }
-
-    #region Dictionary
 
     /// <summary>
     /// Gets a read only collection of all mapped DOS drive letters in sorted order.
@@ -774,8 +768,6 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
         }
     }
 
-    #endregion
-
     /// <summary>Removes all mounted drives from the collection.</summary>
     /// <param name="disposeDrives">
     /// If <see langword="true"/>, then all currently mounted drives will be disposed (if applicable). If
@@ -988,8 +980,6 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
         return false;
     }
 
-    #region MemoryDrive
-
     /// <summary>
     /// Mounts a memory-backed drive (typically Z: for AUTOEXEC.BAT).
     /// </summary>
@@ -1005,6 +995,4 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
     public bool TryGetMemoryDrive(char driveLetter, [MaybeNullWhen(false)] out MemoryDrive drive) {
         return TryGetDrive(driveLetter, out drive);
     }
-
-    #endregion
 }
