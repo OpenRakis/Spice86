@@ -545,14 +545,12 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
             ArgumentNullException.ThrowIfNull(array);
             ArgumentOutOfRangeException.ThrowIfNegative(arrayIndex);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(arrayIndex, array.Length);
-
-            int itemCount = Count;
-            if (array.Length - arrayIndex < itemCount) {
+            if (array.Length - arrayIndex < Count) {
                 throw new ArgumentException("Destination array is not long enough to copy all the items in the collection. Check array index and length.");
             }
 
             DosDriveBase?[] entries = _dictionary._driveMap;
-            for (int i = 0; i < itemCount; i++) {
+            for (int i = 0; i < MaxDriveCount; i++) {
                 DosDriveBase? entry = entries[i];
                 if (entry is not null) {
                     array[arrayIndex++] = entry.DriveLetter;
@@ -672,14 +670,12 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
             ArgumentNullException.ThrowIfNull(array);
             ArgumentOutOfRangeException.ThrowIfNegative(arrayIndex);
             ArgumentOutOfRangeException.ThrowIfGreaterThan(arrayIndex, array.Length);
-
-            int itemCount = Count;
-            if (array.Length - arrayIndex < itemCount) {
+            if (array.Length - arrayIndex < Count) {
                 throw new ArgumentException("Destination array is not long enough to copy all the items in the collection. Check array index and length.");
             }
 
             DosDriveBase?[] entries = _dictionary._driveMap;
-            for (int i = 0; i < itemCount; i++) {
+            for (int i = 0; i < MaxDriveCount; i++) {
                 DosDriveBase? entry = entries[i];
                 if (entry is not null) {
                     array[arrayIndex++] = entry;
