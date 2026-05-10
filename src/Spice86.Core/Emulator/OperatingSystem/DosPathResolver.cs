@@ -293,9 +293,15 @@ internal class DosPathResolver {
         if (string.IsNullOrWhiteSpace(dosPath)) {
             return null;
         }
-        dosPath = GetFullDosPathIncludingRoot(dosPath);
 
-        (string hostPrefix, string dosRelativePath) = DeconstructDosPath(dosPath);
+        DosPathBuilderResult result = GetFullDosPathIncludingRoot(dosPath, out string? fullDosPath);
+        if (result != DosPathBuilderResult.Success) {
+            Debug.Assert(fullDosPath is null);
+            return null;
+        }
+
+        Debug.Assert(fullDosPath is not null);
+        (string hostPrefix, string dosRelativePath) = DeconstructDosPath(fullDosPath);
 
         if (string.IsNullOrWhiteSpace(dosRelativePath)) {
             return ConvertUtils.ToSlashPath(hostPrefix);
