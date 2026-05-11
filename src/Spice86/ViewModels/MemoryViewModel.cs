@@ -335,6 +335,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialogAndMemoryBreakpoi
             await _uiDispatcher.InvokeAsync(() => {
                 IsBusy = false;
                 IsAddressOfFoundOccurrenceValid = AddressOFoundOccurence is not null;
+                OnPropertyChanged(nameof(AddressOFoundOccurence));
             });
         }
     }

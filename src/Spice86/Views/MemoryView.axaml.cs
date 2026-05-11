@@ -1,5 +1,6 @@
 namespace Spice86.Views;
 
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
@@ -78,12 +79,38 @@ public partial class MemoryView : UserControl {
             return;
         }
 
+        if (!AddressAndValueParser.TryParseAddressString(viewModel.EndAddress, viewModel.State, out uint? endAddress)) {
+            return;
+        }
+
         if (startAddress is not uint startAddressValue) {
             return;
         }
 
-        if (foundAddress < startAddressValue) {
+        if (endAddress is not uint endAddressValue) {
             return;
+        }
+
+        if (foundAddress < startAddressValue || foundAddress > endAddressValue) {
+            uint visibleWindowLength = endAddressValue >= startAddressValue ? endAddressValue - startAddressValue : 0;
+            ulong reframedEndAddress = (ulong)foundAddress + visibleWindowLength;
+            if (reframedEndAddress > uint.MaxValue) {
+                reframedEndAddress = uint.MaxValue;
+            }
+
+            viewModel.StartAddress = ConvertUtils.ToHex32(foundAddress);
+            viewModel.EndAddress = ConvertUtils.ToHex32((uint)reframedEndAddress);
+
+            if (!AddressAndValueParser.TryParseAddressString(viewModel.StartAddress, viewModel.State,
+                    out uint? reframedStartAddress) || reframedStartAddress is not uint reframedStartAddressValue) {
+                return;
+            }
+
+            startAddressValue = reframedStartAddressValue;
+
+            if (foundAddress < startAddressValue) {
+                return;
+            }
         }
 
         ulong relativeByteIndex = foundAddress - startAddressValue;
@@ -98,7 +125,22 @@ public partial class MemoryView : UserControl {
             BitLocation end = new(relativeByteIndex + 1);
             hexEditor.Selection.Range = new BitRange(start, end);
             hexEditor.Caret.Location = start;
-            hexEditor.HexView.BringIntoView(start);
+
+            MoveViewportToFoundByte(hexEditor, start, relativeByteIndex);
+
+            Dispatcher.UIThread.Post(() => {
+                MoveViewportToFoundByte(hexEditor, start, relativeByteIndex);
+            }, DispatcherPriority.Loaded);
         }, DispatcherPriority.Background);
+    }
+
+    private static void MoveViewportToFoundByte(HexEditor hexEditor, BitLocation start, ulong relativeByteIndex) {
+        double bytesPerLine = hexEditor.HexView.ActualBytesPerLine;
+        if (bytesPerLine > 0) {
+            Vector scrollOffset = new(0.0, relativeByteIndex / bytesPerLine);
+            hexEditor.Caret.HexView.ScrollOffset = scrollOffset;
+        }
+
+        hexEditor.HexView.BringIntoView(start);
     }
 }

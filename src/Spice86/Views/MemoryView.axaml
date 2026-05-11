@@ -20,7 +20,7 @@ mc:Ignorable="d">
 	<UserControl.Resources>
 		<converters:InvalidNumberToQuestionMarkConverter x:Key="InvalidNumberToQuestionMarkConverter" />
 	</UserControl.Resources>
-	<ScrollViewer IsEnabled="{Binding IsPaused}">
+	<ScrollViewer x:Name="MemoryViewScrollViewer" IsEnabled="{Binding IsPaused}">
 		<Grid RowDefinitions="Auto,Auto,*">
 			<StackPanel Orientation="Horizontal" Grid.Row="0"
 						HorizontalAlignment="Left"

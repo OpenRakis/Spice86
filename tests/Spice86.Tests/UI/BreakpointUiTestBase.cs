@@ -5,18 +5,22 @@ using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Threading;
 
+using AvaloniaHex;
+
 using CommunityToolkit.Mvvm.Messaging;
 
 using FluentAssertions;
 
 using NSubstitute;
 
+using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Mmu;
+using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Logging;
 using Spice86.Shared.Interfaces;
 using Spice86.ViewModels;
 using Spice86.ViewModels.Services;
@@ -186,6 +190,85 @@ public abstract class BreakpointUiTestBase : IDisposable {
         viewModel.BeginCreateBreakpointCommand.Execute(null);
         ProcessUiEvents();
         SelectBreakpointTab(viewModel, tabName).Should().BeTrue($"the '{tabName}' tab should exist");
+    }
+
+    /// <summary>
+    /// Aggregates the components produced by <see cref="ArrangeMemoryView"/> for use by MemoryView UI tests.
+    /// </summary>
+    protected sealed record MemoryViewHarness(
+        MemoryView View,
+        MemoryViewModel ViewModel,
+        Window Window,
+        HexEditor HexEditor,
+        State State,
+        Memory Memory);
+
+    /// <summary>
+    /// One-shot Arrange helper for MemoryView UI tests: builds the full DI graph, seeds memory,
+    /// configures the search bar, shows the hosting window, and resolves the HexEditor.
+    /// </summary>
+    protected MemoryViewHarness ArrangeMemoryView(
+        string startAddress,
+        string endAddress,
+        uint searchPayloadAddress,
+        byte[] searchPayload,
+        string memorySearchValue,
+        bool useAsciiSearch) {
+        State state = CreateState();
+        ILoggerService loggerService = CreateMockLoggerService();
+        PauseHandler pauseHandler = CreatePauseHandler(loggerService);
+        pauseHandler.RequestPause("UI test");
+
+        (Memory memory, AddressReadWriteBreakpoints memoryBreakpoints, AddressReadWriteBreakpoints ioBreakpoints) = CreateMemory();
+
+        CallbackHandler callbackHandler = new(state, loggerService);
+        Configuration configuration = new() { HttpApiPort = 0 };
+        MemoryDataExporter memoryDataExporter = new(memory, callbackHandler, configuration, loggerService);
+
+        EmulatorBreakpointsManager breakpointsManager = CreateBreakpointsManager(
+            pauseHandler, state, memory, memoryBreakpoints, ioBreakpoints);
+        UIDispatcher uiDispatcher = CreateUIDispatcher();
+        IMessenger messenger = CreateMessenger();
+        ITextClipboard textClipboard = Substitute.For<ITextClipboard>();
+        IHostStorageProvider storageProvider = Substitute.For<IHostStorageProvider>();
+        IStructureViewModelFactory structureViewModelFactory = Substitute.For<IStructureViewModelFactory>();
+        BreakpointsViewModel breakpointsViewModel = BreakpointsTabPlugin.CreateViewModel(
+            state, pauseHandler, messenger, breakpointsManager, uiDispatcher, textClipboard, memory);
+
+        memory.WriteRam(searchPayload, searchPayloadAddress);
+
+        MemoryViewModel viewModel = new(
+            memory,
+            memoryDataExporter,
+            state,
+            breakpointsViewModel,
+            pauseHandler,
+            messenger,
+            uiDispatcher,
+            textClipboard,
+            storageProvider,
+            structureViewModelFactory,
+            canCloseTab: false,
+            startAddress: startAddress,
+            endAddress: endAddress);
+        viewModel.MemorySearchValue = memorySearchValue;
+        if (useAsciiSearch) {
+            viewModel.SetSearchDataTypeToAsciiCommand.Execute(null);
+        } else {
+            viewModel.SetSearchDataTypeToBinaryCommand.Execute(null);
+        }
+
+        MemoryView view = new() { DataContext = viewModel };
+        Window window = new() { Content = view };
+        ShowWindowAndWait(window);
+
+        HexEditor? hexEditor = view.FindControl<HexEditor>("HexViewer");
+        hexEditor.Should().NotBeNull();
+        if (hexEditor is null) {
+            throw new InvalidOperationException("HexViewer was not found in MemoryView.");
+        }
+
+        return new MemoryViewHarness(view, viewModel, window, hexEditor, state, memory);
     }
 
     /// <summary>
