@@ -46,7 +46,7 @@ mc:Ignorable="d">
 					HotKey="Ctrl+F4"
 					ToolTip.Tip="Ctrl-F4"
 					Content="Close View"
-					IsEnabled="{Binding CanCloseTab}" />
+					IsVisible="{Binding CanCloseTab}" />
 				</StackPanel>
 				<Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,Auto">
 					<Label Grid.Row="0" Grid.Column="0" Content="Start" />

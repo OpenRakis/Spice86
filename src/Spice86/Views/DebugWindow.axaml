@@ -42,27 +42,29 @@ mc:Ignorable="d">
 		<StyleInclude Source="avares://AvaloniaHex/Themes/Simple/AvaloniaHex.axaml" />
 	</Window.Styles>
 	<Grid RowDefinitions="Auto,*,Auto">
-		<StackPanel Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Top" Orientation="Horizontal">
-			<Button
-			Margin="5,0,0,0"
-			ToolTip.Tip="Pause (Ctrl+Shift+F5)"
-			HotKey="Ctrl+Shift+F5"
-			Command="{Binding PauseCommand}"
-			IsVisible="{Binding !IsPaused}">
-				<Button.Content>
-					<fluent:SymbolIcon Symbol="Pause" />
-				</Button.Content>
-			</Button>
-			<Button
-			Margin="5,0,0,0"
-			ToolTip.Tip="Continue (F5)"
-			HotKey="F5"
-			Command="{Binding ContinueCommand}"
-			IsVisible="{Binding IsPaused}">
-				<Button.Content>
-					<fluent:SymbolIcon Symbol="Play" />
-				</Button.Content>
-			</Button>
+		<StackPanel Grid.Row="0" Orientation="Vertical">
+			<StackPanel HorizontalAlignment="Center" VerticalAlignment="Top" Orientation="Horizontal">
+				<Button
+				Margin="5,0,0,0"
+				ToolTip.Tip="Pause (Ctrl+Shift+F5)"
+				HotKey="Ctrl+Shift+F5"
+				Command="{Binding PauseCommand}"
+				IsVisible="{Binding !IsPaused}">
+					<Button.Content>
+						<fluent:SymbolIcon Symbol="Pause" />
+					</Button.Content>
+				</Button>
+				<Button
+				Margin="5,0,0,0"
+				ToolTip.Tip="Continue (F5)"
+				HotKey="F5"
+				Command="{Binding ContinueCommand}"
+				IsVisible="{Binding IsPaused}">
+					<Button.Content>
+						<fluent:SymbolIcon Symbol="Play" />
+					</Button.Content>
+				</Button>
+			</StackPanel>
 		</StackPanel>
 		<dock:DockControl Grid.Row="1" InitializeLayout="True" InitializeFactory="True">
 			<dock:DockControl.Factory>
@@ -70,7 +72,7 @@ mc:Ignorable="d">
 			</dock:DockControl.Factory>
 			<dockModel:RootDock IsCollapsable="False">
 				<dockModel:DocumentDock CanCreateDocument="False">
-					<dockModel:Document Id="Disassembly" Title="Disassembly" HotKeyManager.HotKey="Alt+F1">
+					<dockModel:Document Id="Disassembly" Title="Disassembly" HotKeyManager.HotKey="Alt+F1" CanClose="False">
 						<TabControl ItemsSource="{Binding $parent[Window].DataContext.DisassemblyViewModels}">
 							<TabControl.ItemTemplate>
 								<DataTemplate DataType="{x:Type vm:DisassemblyViewModel}">
@@ -87,17 +89,19 @@ mc:Ignorable="d">
 					<dockModel:Document
 					Id="CodeFlow"
 					Title="Code Flow (Alt-F2)"
-					HotKeyManager.HotKey="Alt+F2">
+					HotKeyManager.HotKey="Alt+F2"
+					CanClose="False">
 						<ContentPresenter
 						Content="{Binding $parent[Window].DataContext.CfgCpuViewModel}" />
 					</dockModel:Document>
 					<dockModel:Document
 					Id="Cpu"
 					Title="CPU (Alt-F3)"
-					HotKeyManager.HotKey="Alt+F3">
+					HotKeyManager.HotKey="Alt+F3"
+					CanClose="False">
 						<ContentPresenter Content="{Binding $parent[Window].DataContext.CpuViewModel}" />
 					</dockModel:Document>
-					<dockModel:Document Id="Memory" Title="Memory (Alt-F4)" HotKeyManager.HotKey="Alt+F4">
+					<dockModel:Document Id="Memory" Title="Memory (Alt-F4)" HotKeyManager.HotKey="Alt+F4" CanClose="False">
 						<Grid RowDefinitions="Auto,*">
 							<TabStrip Grid.Row="0"
 									  ItemsSource="{Binding $parent[Window].DataContext.MemoryViews}"
@@ -112,7 +116,7 @@ mc:Ignorable="d">
 											Content="{Binding $parent[Window].DataContext.SelectedMemoryView}" />
 						</Grid>
 					</dockModel:Document>
-					<dockModel:Document Id="Devices" Title="Devices (Alt-F5)" HotKeyManager.HotKey="Alt+F5">
+					<dockModel:Document Id="Devices" Title="Devices (Alt-F5)" HotKeyManager.HotKey="Alt+F5" CanClose="False">
 						<Grid RowDefinitions="Auto,*">
 							<TabStrip Grid.Row="0"
 									  ItemsSource="{Binding $parent[Window].DataContext.DeviceSubTabs}"
@@ -130,7 +134,8 @@ mc:Ignorable="d">
 					<dockModel:Document
 					Id="Breakpoints"
 					Title="Breakpoints (Alt-F6)"
-					HotKeyManager.HotKey="Alt+F6">
+					HotKeyManager.HotKey="Alt+F6"
+					CanClose="False">
 						<ContentPresenter Content="{Binding $parent[Window].DataContext.BreakpointsViewModel}" />
 					</dockModel:Document>
 				</dockModel:DocumentDock>
