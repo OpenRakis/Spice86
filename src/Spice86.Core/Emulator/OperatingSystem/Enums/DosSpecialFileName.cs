@@ -96,47 +96,47 @@ internal enum DosSpecialFileName {
     SerialPort9,
 
     /// <summary>
-    /// COM port #1, <c>COM1</c> or <c>COM¹</c>.
+    /// Parallel port #1, <c>LPT1</c> or <c>LPT¹</c>.
     /// </summary>
     ParallelPort1,
 
     /// <summary>
-    /// COM port #2, <c>COM2</c> or <c>COM²</c>.
+    /// Parallel port #2, <c>LPT2</c> or <c>LPT²</c>.
     /// </summary>
     ParallelPort2,
 
     /// <summary>
-    /// COM port #3, <c>COM3</c> or <c>COM³</c>.
+    /// Parallel port #3, <c>LPT3</c> or <c>LPT³</c>.
     /// </summary>
     ParallelPort3,
 
     /// <summary>
-    /// COM port #4, <c>COM4</c>.
+    /// Parallel port #4, <c>LPT4</c>.
     /// </summary>
     ParallelPort4,
 
     /// <summary>
-    /// COM port #5, <c>COM5</c>.
+    /// Parallel port #5, <c>LPT5</c>.
     /// </summary>
     ParallelPort5,
 
     /// <summary>
-    /// COM port #6, <c>COM6</c>.
+    /// Parallel port #6, <c>LPT6</c>.
     /// </summary>
     ParallelPort6,
 
     /// <summary>
-    /// COM port #7, <c>COM7</c>.
+    /// Parallel port #7, <c>LPT7</c>.
     /// </summary>
     ParallelPort7,
 
     /// <summary>
-    /// COM port #8, <c>COM8</c>.
+    /// Parallel port #8, <c>LPT8</c>.
     /// </summary>
     ParallelPort8,
 
     /// <summary>
-    /// COM port #9, <c>COM9</c>.
+    /// Parallel port #9, <c>LPT9</c>.
     /// </summary>
     ParallelPort9,
 }
