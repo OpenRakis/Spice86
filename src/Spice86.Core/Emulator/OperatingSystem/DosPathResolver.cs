@@ -148,7 +148,6 @@ internal class DosPathResolver {
         // Try to set drive specification on path builder (this should always succeed as long as the path builder is
         // in a valid state).
         DosPathBuilderResult appendResult = pathBuilder.SetDriveIndex(driveIndex);
-        Debug.Assert(appendResult == DosPathBuilderResult.Success);
         if (appendResult != DosPathBuilderResult.Success) {
             return appendResult;
         }
