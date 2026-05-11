@@ -88,7 +88,7 @@ mc:Ignorable="d">
 					</dockModel:Document>
 					<dockModel:Document
 					Id="CodeFlow"
-					Title="Code Flow (Alt-F2)"
+					Title="Code Flow"
 					HotKeyManager.HotKey="Alt+F2"
 					CanClose="False">
 						<ContentPresenter
@@ -96,12 +96,12 @@ mc:Ignorable="d">
 					</dockModel:Document>
 					<dockModel:Document
 					Id="Cpu"
-					Title="CPU (Alt-F3)"
+					Title="CPU"
 					HotKeyManager.HotKey="Alt+F3"
 					CanClose="False">
 						<ContentPresenter Content="{Binding $parent[Window].DataContext.CpuViewModel}" />
 					</dockModel:Document>
-					<dockModel:Document Id="Memory" Title="Memory (Alt-F4)" HotKeyManager.HotKey="Alt+F4" CanClose="False">
+					<dockModel:Document Id="Memory" Title="Memory" HotKeyManager.HotKey="Alt+F4" CanClose="False">
 						<Grid RowDefinitions="Auto,*">
 							<TabStrip Grid.Row="0"
 									  ItemsSource="{Binding $parent[Window].DataContext.MemoryViews}"
@@ -116,7 +116,7 @@ mc:Ignorable="d">
 											Content="{Binding $parent[Window].DataContext.SelectedMemoryView}" />
 						</Grid>
 					</dockModel:Document>
-					<dockModel:Document Id="Devices" Title="Devices (Alt-F5)" HotKeyManager.HotKey="Alt+F5" CanClose="False">
+					<dockModel:Document Id="Devices" Title="Devices" HotKeyManager.HotKey="Alt+F5" CanClose="False">
 						<Grid RowDefinitions="Auto,*">
 							<TabStrip Grid.Row="0"
 									  ItemsSource="{Binding $parent[Window].DataContext.DeviceSubTabs}"
@@ -133,7 +133,7 @@ mc:Ignorable="d">
 					</dockModel:Document>
 					<dockModel:Document
 					Id="Breakpoints"
-					Title="Breakpoints (Alt-F6)"
+					Title="Breakpoints"
 					HotKeyManager.HotKey="Alt+F6"
 					CanClose="False">
 						<ContentPresenter Content="{Binding $parent[Window].DataContext.BreakpointsViewModel}" />
