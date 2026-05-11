@@ -21,7 +21,7 @@ mc:Ignorable="d">
 			<TextBlock Grid.Column="0" Margin="0,0,8,0" VerticalAlignment="Center" Text="Memory search" FontWeight="Bold" />
 			<RadioButton Grid.Column="1" GroupName="SearchDataType" Content="Binary" IsChecked="{Binding SearchDataTypeIsBinary}" Command="{Binding SetSearchDataTypeToBinaryAction}" />
 			<RadioButton Grid.Column="2" Margin="8,0,0,0" GroupName="SearchDataType" Content="ASCII" IsChecked="{Binding SearchDataTypeIsAscii}" Command="{Binding SetSearchDataTypeToAsciiAction}" />
-			<TextBox x:Name="SearchTextBox" Grid.Column="3" Margin="8,0,8,0" Watermark="binary: 0x... or 01010101..., or ASCII text" Text="{Binding MemorySearchValue, Mode=TwoWay}" FontFamily="RobotoMonoFont" AcceptsReturn="True" TextWrapping="Wrap" KeyDown="OnSearchTextBoxKeyDown" />
+			<TextBox x:Name="SearchTextBox" Grid.Column="3" Margin="8,0,8,0" PlaceholderText="binary: 0x... or 01010101..., or ASCII text" Text="{Binding MemorySearchValue, Mode=TwoWay}" FontFamily="RobotoMonoFont" AcceptsReturn="True" TextWrapping="Wrap" KeyDown="OnSearchTextBoxKeyDown" />
 			<Button Grid.Column="4" Command="{Binding FirstOccurrenceAction}" IsEnabled="{Binding !IsBusy}" Content="Find first" />
 			<Button Grid.Column="5" Margin="8,0,0,0" Command="{Binding NextOccurrenceAction}" IsEnabled="{Binding !IsBusy}" Content="Find next" />
 			<Button Grid.Column="6" Margin="8,0,0,0" Command="{Binding PreviousOccurrenceAction}" IsEnabled="{Binding !IsBusy}" Content="Find previous" />

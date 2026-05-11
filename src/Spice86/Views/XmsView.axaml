@@ -35,11 +35,11 @@
 		<Grid Grid.Row="1" Grid.ColumnSpan="2" Margin="8" ColumnDefinitions="*,16,*,16,Auto">
 			<Grid Grid.Column="0" ColumnDefinitions="Auto,*" VerticalAlignment="Center">
 				<TextBlock Grid.Column="0" Margin="0,0,8,0" VerticalAlignment="Center" Text="Handle search" />
-				<TextBox Grid.Column="1" Watermark="decimal or hex handle" Text="{Binding HandleSearchText, Mode=TwoWay}" />
+				<TextBox Grid.Column="1" PlaceholderText="decimal or hex handle" Text="{Binding HandleSearchText, Mode=TwoWay}" />
 			</Grid>
 			<Grid Grid.Column="2" ColumnDefinitions="Auto,*" VerticalAlignment="Center">
 				<TextBlock Grid.Column="0" Margin="0,0,8,0" VerticalAlignment="Center" Text="Block search" />
-				<TextBox Grid.Column="1" Watermark="state, handle, offset" Text="{Binding BlockSearchText, Mode=TwoWay}" />
+				<TextBox Grid.Column="1" PlaceholderText="state, handle, offset" Text="{Binding BlockSearchText, Mode=TwoWay}" />
 			</Grid>
 			<Button Grid.Column="4" Command="{Binding StartMemorySearchCommand}" HotKey="Ctrl+F" ToolTip.Tip="Ctrl-F" Content="Search bytes..." />
 		</Grid>
