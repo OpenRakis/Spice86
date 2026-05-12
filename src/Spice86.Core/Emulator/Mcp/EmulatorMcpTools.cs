@@ -1240,7 +1240,7 @@ internal sealed class EmulatorMcpTools {
                 }
 
                 char normalizedDriveLetter = char.ToUpperInvariant(driveLetter[0]);
-                if (!dos.DosDriveManager.TryGetDrive(normalizedDriveLetter, out VirtualDrive? mountedDrive) || mountedDrive == null) {
+                if (!dos.DosDriveManager.TryGetDrive(normalizedDriveLetter, out VirtualDrive? mountedDrive)) {
                     throw new InvalidOperationException($"Drive '{normalizedDriveLetter}' is not mounted");
                 }
 
@@ -1528,7 +1528,7 @@ internal sealed class EmulatorMcpTools {
 
         char driveLetterChar = driveLetter[0];
         int driveIndex = DosDriveManager.GetDriveIndexOrThrow(driveLetterChar, nameof(driveLetter));
-        if (!dos.DosDriveManager.TryGetDrive(driveLetterChar, out VirtualDrive? virtualDrive) || virtualDrive == null) {
+        if (!dos.DosDriveManager.TryGetDrive(driveLetterChar, out VirtualDrive? virtualDrive)) {
             throw new InvalidOperationException($"Drive '{driveLetterChar}' is not mounted");
         }
 

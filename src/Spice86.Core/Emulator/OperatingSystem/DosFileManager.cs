@@ -966,7 +966,7 @@ public class DosFileManager {
     /// </summary>
     private VirtualDrive ResolveDriveFromFileSpec(string fileSpec) {
         if (fileSpec.Length >= 2 && fileSpec[1] == DosPathResolver.VolumeSeparatorChar) {
-            char driveLetter = char.ToUpperInvariant(fileSpec[0]);
+            char driveLetter = fileSpec[0];
             if (_dosDriveManager.TryGetDrive(driveLetter, out VirtualDrive? drive)) {
                 return drive;
             }
@@ -979,7 +979,7 @@ public class DosFileManager {
         VirtualDrive targetDrive = ResolveDriveFromFileSpec(fileSpec);
         string driveLabel = targetDrive.Label.ToUpperInvariant();
         if (isFcbSearch) {
-            byte driveIndex = (byte)DosDriveManager.GetDriveIndexOrThrow(targetDrive.DriveLetter, fileSpec);
+            byte driveIndex = (byte)DosDriveManager.GetDriveIndexOrThrow(targetDrive.DriveLetter, nameof(fileSpec));
             WriteFcbVolumeLabelToDta(dta, driveLabel, driveIndex);
         } else {
             WriteExtendedVolumeLabelToDta(dta, driveLabel);
@@ -1045,7 +1045,7 @@ public class DosFileManager {
         string extOnly = Path.GetExtension(entryInfo.ShortName).TrimStart('.');
 
         VirtualDrive targetDrive = ResolveDriveFromFileSpec(fileSpec);
-        byte driveNumber = (byte)(DosDriveManager.GetDriveIndexOrThrow(targetDrive.DriveLetter, fileSpec) + 1);
+        byte driveNumber = (byte)(DosDriveManager.GetDriveIndexOrThrow(targetDrive.DriveLetter, nameof(fileSpec)) + 1);
         UpdateDosTransferAreaWithFcbResult(dta, nameOnly, extOnly, (byte)entryInfo.Attributes,
             ToDosDate(creationLocalDate), ToDosTime(creationLocalDate), entryInfo.FileSize, driveNumber);
     }
@@ -1097,7 +1097,11 @@ public class DosFileManager {
             return FileAccessDeniedError(dosDirectory);
         }
 
-        string prefixedDosDirectory = _dosPathResolver.PrefixWithHostDirectory(dosDirectory);
+        string? prefixedDosDirectory = _dosPathResolver.PrefixWithHostDirectory(dosDirectory);
+        if (prefixedDosDirectory is null) {
+            return PathNotFoundError(dosDirectory);
+        }
+
         try {
             Directory.CreateDirectory(prefixedDosDirectory);
             if (_loggerService.IsEnabled(LogEventLevel.Information)) {

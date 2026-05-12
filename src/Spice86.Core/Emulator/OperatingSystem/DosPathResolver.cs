@@ -4,6 +4,7 @@ using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Utils;
 
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
@@ -41,8 +42,7 @@ internal class DosPathResolver {
             currentDir = virtualDrive.CurrentDosDirectory;
             return DosFileOperationResult.NoValue();
         } else {
-            if (DosDriveManager.TryGetDriveLetterFromIndex(driveNumber - 1, out char driveLetter) &&
-                _dosDriveManager.TryGetDrive(driveLetter, out VirtualDrive? virtualDrive)) {
+            if (_dosDriveManager.TryGetDriveAtIndex(driveNumber - 1, out VirtualDrive? virtualDrive)) {
                 currentDir = virtualDrive.CurrentDosDirectory;
                 return DosFileOperationResult.NoValue();
             }
@@ -72,9 +72,9 @@ internal class DosPathResolver {
     /// <param name="dosPath">The new DOS path to use as the current DOS folder.</param>
     /// <returns>A <see cref="DosFileOperationResult"/> that details the result of the operation.</returns>
     public DosFileOperationResult SetCurrentDir(string dosPath) {
-        string fullDosPath = GetFullDosPathIncludingRoot(dosPath);
+        string? fullDosPath = GetFullDosPathIncludingRoot(dosPath);
 
-        if (!StartsWithDosDriveAndVolumeSeparator(fullDosPath)) {
+        if (fullDosPath is null || !StartsWithDosDriveAndVolumeSeparator(fullDosPath)) {
             return DosFileOperationResult.Error(DosErrorCode.PathNotFound);
         }
 
@@ -86,13 +86,41 @@ internal class DosPathResolver {
         }
     }
 
-    private string GetDosDrivePathFromDosPath(string absoluteOrRelativeDosPath) {
-        if (IsPathRooted(absoluteOrRelativeDosPath)) {
-            if (StartsWithDosDriveAndVolumeSeparator(absoluteOrRelativeDosPath)) {
-                return $"{absoluteOrRelativeDosPath[0]}{VolumeSeparatorChar}";
+    /// <summary>Gets the associated drive letter from the specified DOS path.</summary>
+    /// <param name="path">The DOS path to resolve.</param>
+    /// <param name="driveIndex">The zero-based DOS drive index or -1 on failure.</param>
+    /// <param name="isDrivePath">
+    /// <see langword="true"/> if the specified path starts with a drive letter and volume separator; otherwise,
+    /// <see langword="false"/>.
+    /// </param>
+    /// <returns>
+    /// <see langword="true"/> if the path has a valid drive letter or references the current drive (with a valid drive
+    /// index); otherwise, <see langword="false"/>.
+    /// </returns>
+    public bool TryGetDosDriveIndexFromDosPath(ReadOnlySpan<char> path, out int driveIndex, out bool isDrivePath) {
+        if (path.Length >= 2 && path[1] == VolumeSeparatorChar) {
+            // DOS path with drive specification.
+            isDrivePath = true;
+
+            driveIndex = DosDriveManager.GetDriveIndex(path[0]);
+            if (driveIndex == -1) {
+                // Invalid DOS path (bad drive letter).
+                return false;
+            }
+        } else {
+            // DOS path without drive specification (current drive).
+            isDrivePath = false;
+
+            // Perform a defensive check and avoid throwing an exception if the current drive letter/index is invalid.
+            driveIndex = DosDriveManager.GetDriveIndex(_dosDriveManager.CurrentDrive.DriveLetter);
+            if (driveIndex == -1) {
+                // Current drive has a bad drive letter.
+                return false;
             }
         }
-        return _dosDriveManager.CurrentDrive.DosVolume;
+
+        Debug.Assert(driveIndex is >= 0 and < DosDriveManager.MaxDriveCount);
+        return true;
     }
 
     private DosFileOperationResult SetCurrentDirValue(char driveLetter, string? hostFullPath, string fullDosPath) {
@@ -106,48 +134,115 @@ internal class DosPathResolver {
         return DosFileOperationResult.NoValue();
     }
 
-    private string GetFullDosPathIncludingRoot(string absoluteOrRelativeDosPath) {
-        if (string.IsNullOrWhiteSpace(absoluteOrRelativeDosPath)) {
-            return absoluteOrRelativeDosPath;
-        }
-        StringBuilder normalizedDosPath = new();
+    internal DosPathBuilderResult GetFullDosPathIncludingRoot(ReadOnlySpan<char> dosPath,
+            ref DosPathBuilder pathBuilder) {
+        Debug.Assert(!pathBuilder.IsFrozen);
+        Debug.Assert(pathBuilder.Length == 0);
+        pathBuilder.DebugValidateState();
 
-        string backslashedDosPath = ConvertUtils.ToBackSlashPath(absoluteOrRelativeDosPath);
-
-        string driveRoot = $"{GetDosDrivePathFromDosPath(backslashedDosPath)}{DirectorySeparatorChar}";
-        normalizedDosPath.Append(driveRoot);
-
-        if (backslashedDosPath.StartsWith(driveRoot)) {
-            backslashedDosPath = backslashedDosPath[3..];
-        } else if (backslashedDosPath.StartsWith(driveRoot[..2])) {
-            backslashedDosPath = backslashedDosPath[2..];
+        ReadOnlySpan<char> dosPathSpan = dosPath.TrimStart();
+        if (!TryGetDosDriveIndexFromDosPath(dosPathSpan, out int driveIndex, out bool isDrivePath)) {
+            return DosPathBuilderResult.InvalidDriveSpecification;
         }
 
-        IEnumerable<string> pathElements = backslashedDosPath.Split(DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        // Try to set drive specification on path builder (this should always succeed as long as the path builder is
+        // in a valid state).
+        DosPathBuilderResult appendResult = pathBuilder.SetDriveIndex(driveIndex);
+        if (appendResult != DosPathBuilderResult.Success) {
+            return appendResult;
+        }
 
-        bool moveNext = false;
-        bool appendedFolder = false;
-        bool mustPrependDirectorySeparator = false;
-        foreach (string pathElement in pathElements) {
-            if (pathElement == ".." && appendedFolder) {
-                moveNext = true;
-            } else {
-                if (moveNext) {
-                    moveNext = false;
-                    continue;
-                }
-                if (pathElement != "." && pathElement != ".." && !pathElement.Contains(VolumeSeparatorChar)) {
-                    appendedFolder = true;
-                    if (mustPrependDirectorySeparator) {
-                        normalizedDosPath.Append(DirectorySeparatorChar);
-                    }
-                    normalizedDosPath.Append(pathElement.ToUpperInvariant());
-                    mustPrependDirectorySeparator = true;
-                }
+        // Remove drive specification from input path (if specified).
+        if (isDrivePath) {
+            dosPathSpan = dosPathSpan[2..];
+        }
+
+        // Handle relative paths for mounted drives.
+        // It does not matter whether the input has a drive specification or not; the path is a relative path if the
+        // first character (after the optional drive specification) is not a directory separator. If the path is empty,
+        // then it is treated as a relative path to the current directory on the chosen drive.
+        // See: https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#fully-qualified-vs-relative-paths
+        bool isRelativePath = dosPathSpan.IsEmpty || dosPathSpan[0] is not (DirectorySeparatorChar or AltDirectorySeparatorChar);
+
+        // Try to append current DOS directory on specified drive if resolving a relative path.
+        if (isRelativePath && _dosDriveManager.TryGetDriveAtIndex(driveIndex, out DosDriveBase? drive)) {
+            appendResult = pathBuilder.AppendRelativePath(drive.CurrentDosDirectory, out _);
+            if (appendResult != DosPathBuilderResult.Success) {
+                return appendResult;
             }
         }
 
-        return ConvertUtils.ToBackSlashPath(normalizedDosPath.ToString());
+        // Handle remaining path elements.
+        appendResult = pathBuilder.AppendRelativePath(dosPathSpan, out bool endsWithSlash);
+        if (appendResult != DosPathBuilderResult.Success) {
+            return appendResult;
+        }
+
+        // Make sure full path ends with a directory separator or file name. Also freeze the path builder to prevent
+        // further modifications to the path.
+        if (endsWithSlash) {
+            // This will implicitly freeze the path builder (no need to call Freeze() after this).
+            pathBuilder.AppendFinalDirectorySeparator();
+        } else {
+            pathBuilder.Freeze();
+        }
+
+        Debug.Assert(pathBuilder.IsFrozen);
+        pathBuilder.DebugValidateState();
+        return DosPathBuilderResult.Success;
+    }
+
+    internal DosPathBuilderResult GetFullDosPathIncludingRoot(ReadOnlySpan<char> dosPath, out string? fullDosPath) {
+        // NOTE: Make sure the path builder is disposed before returning from this method.
+        // TODO: Set path builder special file name settings?
+        DosPathBuilder pathBuilder = new(
+            stackalloc char[MaxPathLength],
+            stackalloc int[DosPathBuilder.DefaultStackLength]);
+
+        DosPathBuilderResult result = GetFullDosPathIncludingRoot(dosPath, ref pathBuilder);
+        if (result != DosPathBuilderResult.Success) {
+            fullDosPath = null;
+            pathBuilder.Dispose();
+            return result;
+        }
+
+        fullDosPath = pathBuilder.ToStringWithDispose();
+        return DosPathBuilderResult.Success;
+    }
+
+    internal DosPathBuilderResult GetFullDosPathIncludingRoot(string? dosPath, out string? fullDosPath) {
+        // NOTE: Make sure the path builder is disposed before returning from this method.
+        // TODO: Set path builder special file name settings?
+        DosPathBuilder pathBuilder = new(
+            stackalloc char[MaxPathLength],
+            stackalloc int[DosPathBuilder.DefaultStackLength]);
+
+        DosPathBuilderResult result = GetFullDosPathIncludingRoot(dosPath, ref pathBuilder);
+        if (result != DosPathBuilderResult.Success) {
+            fullDosPath = null;
+            pathBuilder.Dispose();
+            return result;
+        }
+
+        // Slight memory optimization if original input string is not null and is an exact match to the path builder.
+        // There is a slight time-memory tradeoff here (prefer keeping the memory heap smaller by not allocating).
+        ReadOnlySpan<char> pathBuilderSpan = pathBuilder.AsSpan();
+        if (dosPath is not null && pathBuilderSpan.SequenceEqual(dosPath)) {
+            fullDosPath = dosPath;
+            pathBuilder.Dispose();
+            return DosPathBuilderResult.Success;
+        }
+
+        fullDosPath = pathBuilderSpan.ToString();
+        pathBuilder.Dispose();
+        return DosPathBuilderResult.Success;
+    }
+
+    internal string? GetFullDosPathIncludingRoot(string? dosPath) {
+        DosPathBuilderResult result = GetFullDosPathIncludingRoot(dosPath, out string? fullDosPath);
+        // It's either successful with a non-null string or failure with a null string.
+        Debug.Assert((result != DosPathBuilderResult.Success) ^ (fullDosPath is not null));
+        return result == DosPathBuilderResult.Success ? fullDosPath : null;
     }
 
     /// <summary>
@@ -167,32 +262,43 @@ internal class DosPathResolver {
         return ConvertUtils.ToSlashFolderPath(fullHostPath);
     }
 
-    private (string hostPrefixPath, string dosRelativePath) DeconstructDosPath(string dosPath) {
-        if (IsPathRooted(dosPath)) {
-            int length = 1;
-            if (StartsWithDosDriveAndVolumeSeparator(dosPath)) {
-                length = 3;
-            }
-            return (_dosDriveManager.CurrentDrive.MountedHostDirectory, dosPath[length..]);
+    private (string? hostPrefixPath, string dosRelativePath) DeconstructDosPath(string dosPath) {
+        // This method is currently only called with paths that have been processed via GetFullDosPathIncludingRoot.
+        // Thus the input path here should always be a full rooted path with a drive specification.
+        if (dosPath.Length < 3 || !char.IsAsciiLetter(dosPath[0]) || dosPath[1] != VolumeSeparatorChar ||
+                dosPath[2] != DirectorySeparatorChar) {
+            throw new ArgumentException("Given DOS path is not a full rooted path with a drive specification.", nameof(dosPath));
         }
 
-        return StartsWithDosDriveAndVolumeSeparator(dosPath)
-            ? (_dosDriveManager.GetDrive<VirtualDrive>(dosPath[0]).MountedHostDirectory, dosPath[2..])
-            : (_dosDriveManager.CurrentDrive.MountedHostDirectory, dosPath);
+        // Avoid throwing an exception if the drive does not exist. Let the caller figure out what to do by setting the
+        // host prefix path to null. Technically the drive letter will always be a valid in the drive manager, but it
+        // is not always guaranteed to be a VirtualDrive.
+        if (!_dosDriveManager.TryGetDrive(dosPath[0], out VirtualDrive? drive)) {
+            return (null, dosPath[3..]);
+        }
+
+        return (drive.MountedHostDirectory, dosPath[3..]);
     }
 
     /// <summary>
-    /// Converts the DOS path to a full host path.<br/>
+    /// Converts the DOS path to a full host path.
     /// </summary>
     /// <param name="dosPath">The DOS path to convert.</param>
-    /// <returns>A string containing the full file path in the host file system, or <c>null</c> if nothing was found.</returns>
-    public string? GetFullHostPathFromDosOrDefault(string dosPath) {
+    /// <returns>A string containing the full file path in the host file system, or <see langword="null"/> if nothing was found or the DOS path cannot be resolved.</returns>
+    public string? GetFullHostPathFromDosOrDefault(string? dosPath) {
         if (string.IsNullOrWhiteSpace(dosPath)) {
             return null;
         }
-        dosPath = GetFullDosPathIncludingRoot(dosPath);
 
-        (string hostPrefix, string dosRelativePath) = DeconstructDosPath(dosPath);
+        dosPath = GetFullDosPathIncludingRoot(dosPath);
+        if (dosPath is null) {
+            return null;
+        }
+
+        (string? hostPrefix, string dosRelativePath) = DeconstructDosPath(dosPath);
+        if (hostPrefix is null) {
+            return null;
+        }
 
         if (string.IsNullOrWhiteSpace(dosRelativePath)) {
             return ConvertUtils.ToSlashPath(hostPrefix);
@@ -227,14 +333,21 @@ internal class DosPathResolver {
     /// The parent directory must exist; the filename is appended as-is.
     /// </summary>
     /// <param name="dosPath">The DOS path of the new file.</param>
-    /// <returns>A host file path, or <c>null</c> if the parent directory cannot be resolved.</returns>
-    public string? ResolveNewFilePath(string dosPath) {
+    /// <returns>A host file path, or <see langword="null"/> if the parent directory or the DOS path cannot be resolved.</returns>
+    public string? ResolveNewFilePath(string? dosPath) {
         if (string.IsNullOrWhiteSpace(dosPath)) {
             return null;
         }
 
         dosPath = GetFullDosPathIncludingRoot(dosPath);
-        (string hostPrefix, string dosRelativePath) = DeconstructDosPath(dosPath);
+        if (dosPath is null) {
+            return null;
+        }
+
+        (string? hostPrefix, string dosRelativePath) = DeconstructDosPath(dosPath);
+        if (hostPrefix is null) {
+            return null;
+        }
 
         if (string.IsNullOrWhiteSpace(dosRelativePath)) {
             return null;
@@ -262,14 +375,21 @@ internal class DosPathResolver {
     /// when the path has no extension. Use this only for execution-related path resolution.
     /// </summary>
     /// <param name="dosPath">The DOS path to convert.</param>
-    /// <returns>A string containing the full file path in the host file system, or <c>null</c> if nothing was found.</returns>
-    public string? GetFullHostExecutablePathFromDosOrDefault(string dosPath) {
+    /// <returns>A string containing the full file path in the host file system, or <see langword="null"/> if nothing was found or the DOS path cannot be resolved.</returns>
+    public string? GetFullHostExecutablePathFromDosOrDefault(string? dosPath) {
         if (string.IsNullOrWhiteSpace(dosPath)) {
             return null;
         }
-        dosPath = GetFullDosPathIncludingRoot(dosPath);
 
-        (string hostPrefix, string dosRelativePath) = DeconstructDosPath(dosPath);
+        dosPath = GetFullDosPathIncludingRoot(dosPath);
+        if (dosPath is null) {
+            return null;
+        }
+
+        (string? hostPrefix, string dosRelativePath) = DeconstructDosPath(dosPath);
+        if (hostPrefix is null) {
+            return null;
+        }
 
         if (string.IsNullOrWhiteSpace(dosRelativePath)) {
             return ConvertUtils.ToSlashPath(hostPrefix);
@@ -437,14 +557,23 @@ internal class DosPathResolver {
     /// Does not search for the file or folder on disk.
     /// </summary>
     /// <param name="dosPath">The DOS path to convert.</param>
-    /// <returns>A string containing the combination of the host path and the DOS path.</returns>
-    public string PrefixWithHostDirectory(string dosPath) {
+    /// <returns>A string containing the combination of the host path and the DOS path, or <see langword="null"/> if the DOS path cannot be resolved.</returns>
+    public string? PrefixWithHostDirectory(string? dosPath) {
         if (string.IsNullOrWhiteSpace(dosPath)) {
             return dosPath;
         }
+
         dosPath = GetFullDosPathIncludingRoot(dosPath);
-        (string HostPrefix, string DosRelativePath) = DeconstructDosPath(dosPath);
-        return ConvertUtils.ToSlashPath(Path.Join(HostPrefix, DosRelativePath));
+        if (dosPath is null) {
+            return null;
+        }
+
+        (string? hostPrefix, string dosRelativePath) = DeconstructDosPath(dosPath);
+        if (hostPrefix is null) {
+            return null;
+        }
+
+        return ConvertUtils.ToSlashPath(Path.Join(hostPrefix, dosRelativePath));
     }
 
     private bool StartsWithDosDriveAndVolumeSeparator(string dosPath) =>

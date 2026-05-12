@@ -783,7 +783,7 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
     public void Clear(bool disposeDrives) {
         if (!disposeDrives) {
             Array.Clear(_driveMap);
-            _mappedDriveCount--;
+            _mappedDriveCount = 0;
             _version++;
             return;
         }
