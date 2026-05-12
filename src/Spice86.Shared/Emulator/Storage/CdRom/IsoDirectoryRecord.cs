@@ -1,6 +1,8 @@
 using System.Text;
 
-namespace Spice86.Core.Emulator.Devices.CdRom.Image;
+using System.Buffers.Binary;
+
+namespace Spice86.Shared.Emulator.Storage.CdRom;
 
 /// <summary>Represents a single entry in an ISO 9660 directory.</summary>
 public sealed class IsoDirectoryRecord {

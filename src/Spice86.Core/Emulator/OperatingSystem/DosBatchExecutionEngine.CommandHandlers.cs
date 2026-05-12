@@ -3,10 +3,10 @@ namespace Spice86.Core.Emulator.OperatingSystem.Batch;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.Devices.CdRom;
-using Spice86.Core.Emulator.Devices.CdRom.Image;
+using Spice86.Shared.Emulator.Storage.CdRom;
 using Spice86.Core.Emulator.InterruptHandlers.Mscdex;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
-using Spice86.Core.Emulator.OperatingSystem.FileSystem;
+using Spice86.Shared.Emulator.Storage.FileSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 
 using System;

@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.Devices.CdRom.Image;
+namespace Spice86.Shared.Emulator.Storage.CdRom;
 
 /// <summary>Describes a single track on a CD-ROM image.</summary>
 public sealed class CdTrack {

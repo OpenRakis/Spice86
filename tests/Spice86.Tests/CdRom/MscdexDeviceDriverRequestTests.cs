@@ -6,7 +6,7 @@ using NSubstitute;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.CdRom;
-using Spice86.Core.Emulator.Devices.CdRom.Image;
+using Spice86.Shared.Emulator.Storage.CdRom;
 using Spice86.Core.Emulator.InterruptHandlers.Mscdex;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Mmu;

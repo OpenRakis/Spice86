@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.Devices.CdRom.Image;
+namespace Spice86.Shared.Emulator.Storage.CdRom;
 
 /// <summary>Creates an <see cref="ICdRomImage"/> from an image file path.</summary>
 public static class CdRomImageFactory {

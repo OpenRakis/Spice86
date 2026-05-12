@@ -4,7 +4,7 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Sound;
-using Spice86.Core.Emulator.Devices.Storage;
+using Spice86.Shared.Emulator.Storage;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;

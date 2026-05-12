@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.Devices.Storage;
+namespace Spice86.Shared.Emulator.Storage;
 
 /// <summary>
 /// Provides low-level sector access to emulated floppy drives.

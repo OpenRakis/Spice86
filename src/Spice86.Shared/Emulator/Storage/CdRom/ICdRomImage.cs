@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Spice86.Core.Emulator.Devices.CdRom.Image;
+namespace Spice86.Shared.Emulator.Storage.CdRom;
 
 /// <summary>Represents a mountable CD-ROM image (ISO or CUE/BIN).</summary>
 public interface ICdRomImage : IDisposable {

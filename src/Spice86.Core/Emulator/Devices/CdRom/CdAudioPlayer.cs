@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.Devices.CdRom;
 
-using Spice86.Core.Emulator.Devices.CdRom.Image;
+using Spice86.Shared.Emulator.Storage.CdRom;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Shared.Interfaces;
 

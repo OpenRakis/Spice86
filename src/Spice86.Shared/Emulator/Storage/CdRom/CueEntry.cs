@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.Devices.CdRom.Image;
+namespace Spice86.Shared.Emulator.Storage.CdRom;
 
 /// <summary>Represents a single parsed directive from a CUE sheet file.</summary>
 public sealed class CueEntry {

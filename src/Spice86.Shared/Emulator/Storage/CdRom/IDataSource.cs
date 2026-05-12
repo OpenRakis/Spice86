@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.Devices.CdRom.Image;
+namespace Spice86.Shared.Emulator.Storage.CdRom;
 
 /// <summary>Abstracts raw byte access to a backing data store (file, memory buffer, etc.).</summary>
 public interface IDataSource {

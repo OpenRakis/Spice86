@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Spice86.Core.Emulator.Devices.CdRom.Image;
+using System.Buffers.Binary;
+
+namespace Spice86.Shared.Emulator.Storage.CdRom;
 
 /// <summary>Reads and exposes a plain ISO 9660 image file as an <see cref="ICdRomImage"/>.</summary>
 public sealed class IsoImage : ICdRomImage {

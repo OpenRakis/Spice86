@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.OperatingSystem.FileSystem;
+namespace Spice86.Shared.Emulator.Storage.FileSystem;
 
 using System;
 using System.Collections.Generic;

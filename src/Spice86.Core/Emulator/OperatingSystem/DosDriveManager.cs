@@ -1,9 +1,11 @@
-﻿namespace Spice86.Core.Emulator.OperatingSystem;
+namespace Spice86.Core.Emulator.OperatingSystem;
 
-using Spice86.Core.Emulator.Devices.Storage;
+using Spice86.Shared.Emulator.Storage;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
+
+using ImageBiosParameterBlock = Spice86.Shared.Emulator.Storage.FileSystem.BiosParameterBlock;
 
 using System;
 using System.Collections;
@@ -1195,11 +1197,11 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
         sectorsPerTrack = 0;
         bytesPerSector = 0;
 
-        if (!TryResolveFloppyImage(driveNumber, out FloppyDiskDrive? _, out byte[]? imageData)) {
+        if (!TryResolveFloppyImage(driveNumber, out FloppyDiskDrive? _, out byte[]? imageData) || imageData == null) {
             return false;
         }
 
-        FileSystem.BiosParameterBlock bpb = ParseBpb(imageData!);
+        ImageBiosParameterBlock bpb = ParseBpb(imageData);
         bytesPerSector = bpb.BytesPerSector;
         sectorsPerTrack = bpb.SectorsPerTrack;
         headsPerCylinder = bpb.NumberOfHeads;
@@ -1260,7 +1262,7 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
         return imageData != null;
     }
 
-    private static FileSystem.BiosParameterBlock ParseBpb(byte[] imageData) {
-        return FileSystem.BiosParameterBlock.Parse(imageData.AsSpan(0, Math.Min(512, imageData.Length)));
+    private static ImageBiosParameterBlock ParseBpb(byte[] imageData) {
+        return ImageBiosParameterBlock.Parse(imageData.AsSpan(0, Math.Min(512, imageData.Length)));
     }
 }

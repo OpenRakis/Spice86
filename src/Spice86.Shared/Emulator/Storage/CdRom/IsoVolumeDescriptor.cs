@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.Devices.CdRom.Image;
+namespace Spice86.Shared.Emulator.Storage.CdRom;
 
 /// <summary>Holds the fields from an ISO 9660 Primary Volume Descriptor relevant to DOS emulation.</summary>
 public sealed class IsoVolumeDescriptor {

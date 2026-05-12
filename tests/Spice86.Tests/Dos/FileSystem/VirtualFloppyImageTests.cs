@@ -4,7 +4,7 @@ using FluentAssertions;
 
 using NSubstitute;
 
-using Spice86.Core.Emulator.OperatingSystem.FileSystem;
+using Spice86.Shared.Emulator.Storage.FileSystem;
 using Spice86.Shared.Interfaces;
 
 using System;

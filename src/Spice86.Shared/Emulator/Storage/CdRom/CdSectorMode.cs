@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.Devices.CdRom.Image;
+namespace Spice86.Shared.Emulator.Storage.CdRom;
 
 /// <summary>Describes the sector encoding mode of a CD-ROM track.</summary>
 public enum CdSectorMode {

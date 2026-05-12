@@ -6,7 +6,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
-using Spice86.Core.Emulator.OperatingSystem.FileSystem;
+using Spice86.Shared.Emulator.Storage.FileSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
@@ -938,7 +938,7 @@ public class DosFileManager {
         }
 
         string pathInImage = ExtractPathInImage(dosFileName);
-        if (!floppyDrive.Image.TryGetEntry(pathInImage, out FileSystem.FatDirectoryEntry? entry) || entry == null) {
+        if (!floppyDrive.Image.TryGetEntry(pathInImage, out FatDirectoryEntry? entry) || entry == null) {
             return FileNotFoundError(dosFileName);
         }
 
@@ -1605,8 +1605,7 @@ public class DosFileManager {
                         }
                         break;
 
-                    case IoctlGenericBlockCommand.GetVolumeInformation:
-                        {
+                    case IoctlGenericBlockCommand.GetVolumeInformation: {
                             DosVolumeInfo dosVolumeInfo = new(_memory, parameterBlock.Linear);
                             dosVolumeInfo.SerialNumber = 0x1234;
                             dosVolumeInfo.VolumeLabel = mountedDrive.Label.ToUpperInvariant();

@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.OperatingSystem.Structures;
 
-using Spice86.Core.Emulator.OperatingSystem.FileSystem;
+using Spice86.Shared.Emulator.Storage.FileSystem;
 
 using System.Collections.Generic;
 using System.IO;

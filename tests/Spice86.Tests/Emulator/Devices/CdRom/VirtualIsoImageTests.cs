@@ -2,7 +2,7 @@ namespace Spice86.Tests.Emulator.Devices.CdRom;
 
 using FluentAssertions;
 
-using Spice86.Core.Emulator.Devices.CdRom.Image;
+using Spice86.Shared.Emulator.Storage.CdRom;
 
 using System;
 using System.IO;

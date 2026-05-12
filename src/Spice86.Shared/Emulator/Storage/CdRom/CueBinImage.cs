@@ -3,7 +3,9 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace Spice86.Core.Emulator.Devices.CdRom.Image;
+using System.Buffers.Binary;
+
+namespace Spice86.Shared.Emulator.Storage.CdRom;
 
 /// <summary>Reads a CUE/BIN disc image and exposes it as an <see cref="ICdRomImage"/>.</summary>
 public sealed class CueBinImage : ICdRomImage {

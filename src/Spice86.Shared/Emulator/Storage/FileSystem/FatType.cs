@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.OperatingSystem.FileSystem;
+namespace Spice86.Shared.Emulator.Storage.FileSystem;
 
 /// <summary>Identifies the type of File Allocation Table used in a volume.</summary>
 public enum FatType {

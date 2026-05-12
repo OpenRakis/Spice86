@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace Spice86.Core.Emulator.Devices.CdRom.Image;
+namespace Spice86.Shared.Emulator.Storage.CdRom;
 
 /// <summary>Provides <see cref="IDataSource"/> access backed by a file on disk.</summary>
 public sealed class FileBackedDataSource : IDataSource, IDisposable {

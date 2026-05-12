@@ -2,7 +2,7 @@ namespace Spice86.Tests.Dos.FileSystem;
 
 using FluentAssertions;
 
-using Spice86.Core.Emulator.OperatingSystem.FileSystem;
+using Spice86.Shared.Emulator.Storage.FileSystem;
 
 using System;
 using System.Text;

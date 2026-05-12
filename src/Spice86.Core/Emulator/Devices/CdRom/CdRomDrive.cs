@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-using Spice86.Core.Emulator.Devices.CdRom.Image;
+using Spice86.Shared.Emulator.Storage.CdRom;
 
 namespace Spice86.Core.Emulator.Devices.CdRom;
 
