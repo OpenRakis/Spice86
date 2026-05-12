@@ -130,7 +130,9 @@ internal ref partial struct ValueListStack<T> {
         // Clear all elements from the underlying list if the backing storage is in an array. (This is what
         // ValueListBuilder<T> does when calling Dispose() or when it grows. Since ValueListBuilder<T> does not have a
         // concept of removing items explicitly, it is technically up to the caller: this method.)
-        if (_list.IsArrayBacked && !typeof(T).IsPrimitive) {
+        // The length check isn't strictly necessary here due to how ValueListBuilder works, but it provides extra
+        // safety for a negligible cost.
+        if (_list.IsArrayBacked && !typeof(T).IsPrimitive && _list.Length > 0) {
             MemoryMarshal.CreateSpan(ref _list[0], _list.Length).Clear();
         }
 

@@ -501,34 +501,37 @@ internal ref struct DosPathBuilder {
         DosSpecialFileName deviceName = DosSpecialFileName.None;
         if (fileName.Length == 3) {
             switch (fileName[0]) {
-                case 'C':
-                case 'c':
+                case 'C' or 'c':
                     // "CON"
                     if (fileName[1] is 'O' or 'o' && fileName[2] is 'N' or 'n') {
                         deviceName = DosSpecialFileName.Console;
                     }
                     break;
 
-                case 'P':
-                case 'p':
+                case 'P' or 'p':
                     // "PRN"
                     if (fileName[1] is 'R' or 'r' && fileName[2] is 'N' or 'n') {
                         deviceName = DosSpecialFileName.Printer;
                     }
                     break;
 
-                case 'A':
-                case 'a':
+                case 'A' or 'a':
                     // "AUX"
                     if (fileName[1] is 'U' or 'u' && fileName[2] is 'X' or 'x') {
                         deviceName = DosSpecialFileName.Auxiliary;
                     }
                     break;
+
+                case 'N' or 'n':
+                    // "NUL"
+                    if (fileName[1] is 'U' or 'u' && fileName[2] is 'L' or 'l') {
+                        deviceName = DosSpecialFileName.Null;
+                    }
+                    break;
             }
         } else if (fileName.Length == 4) {
             switch (fileName[0]) {
-                case 'C':
-                case 'c':
+                case 'C' or 'c':
                     // "COM1" thru "COM9", "COM¹", "COM²", "COM³"
                     if (fileName[1] is 'O' or 'o' && fileName[2] is 'M' or 'm') {
                         switch (fileName[3]) {
@@ -579,8 +582,7 @@ internal ref struct DosPathBuilder {
                     }
                     break;
 
-                case 'L':
-                case 'l':
+                case 'L' or 'l':
                     // "LPT1" thru "LPT9", "LPT¹", "LPT²", "LPT³"
                     if (fileName[1] is 'P' or 'p' && fileName[2] is 'T' or 't') {
                         switch (fileName[3]) {
@@ -694,4 +696,19 @@ internal ref struct DosPathBuilder {
             lastPathIndex = pathIndex;
         }
     }
+
+    /// <summary>Gets a default error message from a result to use for logging or throwing exceptions.</summary>
+    /// <param name="result">The DOS path builder result.</param>
+    /// <returns>
+    /// <see langword="null"/> if the result is <see cref="DosPathBuilderResult.Success"/>; otherwise, a string
+    /// containing the interpreted error message.
+    /// </returns>
+    public static string? GetResultErrorMessage(DosPathBuilderResult result) => result switch {
+        DosPathBuilderResult.Success => null,
+        DosPathBuilderResult.PathBuilderFrozen => "DOS path builder is frozen and cannot be modified.",
+        DosPathBuilderResult.InvalidDriveSpecification => "DOS drive specification is invalid.",
+        DosPathBuilderResult.InvalidFileNameCharacters => "DOS path contains invalid file name characters.",
+        DosPathBuilderResult.InvalidReservedFileName => "DOS path contains a reserved file name.",
+        _ => $"DOS path builder unspecified error: {result}"
+    };
 }

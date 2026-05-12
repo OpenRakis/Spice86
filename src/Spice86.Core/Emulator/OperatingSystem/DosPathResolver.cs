@@ -141,7 +141,7 @@ internal class DosPathResolver {
         pathBuilder.DebugValidateState();
 
         ReadOnlySpan<char> dosPathSpan = dosPath.TrimStart();
-        if (!TryGetDosDriveIndexFromDosPath(dosPath, out int driveIndex, out bool isDrivePath)) {
+        if (!TryGetDosDriveIndexFromDosPath(dosPathSpan, out int driveIndex, out bool isDrivePath)) {
             return DosPathBuilderResult.InvalidDriveSpecification;
         }
 
