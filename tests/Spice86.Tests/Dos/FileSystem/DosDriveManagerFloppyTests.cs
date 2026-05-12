@@ -79,7 +79,7 @@ public class DosDriveManagerFloppyTests {
         _driveManager.MountFloppyFolder('A', "/tmp/floppy-root");
 
         // Assert
-        _driveManager['A'].MountedHostDirectory.Should().Contain("floppy-root");
+        _driveManager.GetDrive<Spice86.Core.Emulator.OperatingSystem.Structures.VirtualDrive>('A').MountedHostDirectory.Should().Contain("floppy-root");
     }
 
     [Fact]

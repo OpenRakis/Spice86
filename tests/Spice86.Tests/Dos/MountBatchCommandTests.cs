@@ -63,7 +63,7 @@ public class MountBatchCommandTests : IDisposable {
         _accessor.HandleMount($"A {subFolder}");
 
         // Assert
-        _driveManager['A'].MountedHostDirectory.Should().Contain("floppy");
+        _driveManager.GetDrive<Spice86.Core.Emulator.OperatingSystem.Structures.VirtualDrive>('A').MountedHostDirectory.Should().Contain("floppy");
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public class MountBatchCommandTests : IDisposable {
         _accessor.HandleMount($"A {subFolder} -t floppy");
 
         // Assert
-        _driveManager['A'].MountedHostDirectory.Should().Contain("flp");
+        _driveManager.GetDrive<Spice86.Core.Emulator.OperatingSystem.Structures.VirtualDrive>('A').MountedHostDirectory.Should().Contain("flp");
     }
 
     [Fact]
@@ -166,7 +166,7 @@ public class MountBatchCommandTests : IDisposable {
         _accessor.HandleMount($"A {relativePath}");
 
         // Assert — the drive should be mounted even though the path was relative
-        _driveManager['A'].MountedHostDirectory.Should().NotBeNullOrWhiteSpace();
+        _driveManager.GetDrive<Spice86.Core.Emulator.OperatingSystem.Structures.VirtualDrive>('A').MountedHostDirectory.Should().NotBeNullOrWhiteSpace();
         _output.ToString().Should().NotContain("path not found");
     }
 
@@ -180,7 +180,7 @@ public class MountBatchCommandTests : IDisposable {
         _accessor.HandleMount($"A \"{spacyFolder}\"");
 
         // Assert
-        _driveManager['A'].MountedHostDirectory.Should().NotBeNullOrWhiteSpace();
+        _driveManager.GetDrive<Spice86.Core.Emulator.OperatingSystem.Structures.VirtualDrive>('A').MountedHostDirectory.Should().NotBeNullOrWhiteSpace();
         _output.ToString().Should().NotContain("path not found");
     }
 
@@ -232,7 +232,7 @@ public class MountBatchCommandTests : IDisposable {
         _accessor.HandleMount("A C:\\dossubdir");
 
         // Assert — A: should be mounted to the host path under _tempDir
-        _driveManager['A'].MountedHostDirectory.Should().NotBeNullOrWhiteSpace();
+        _driveManager.GetDrive<Spice86.Core.Emulator.OperatingSystem.Structures.VirtualDrive>('A').MountedHostDirectory.Should().NotBeNullOrWhiteSpace();
         _output.ToString().Should().NotContain("path not found");
     }
 
@@ -250,7 +250,7 @@ public class MountBatchCommandTests : IDisposable {
         _accessor.HandleMount("A music");
 
         // Assert
-        _driveManager['A'].MountedHostDirectory.Should().NotBeNullOrWhiteSpace();
+        _driveManager.GetDrive<Spice86.Core.Emulator.OperatingSystem.Structures.VirtualDrive>('A').MountedHostDirectory.Should().NotBeNullOrWhiteSpace();
         _output.ToString().Should().NotContain("path not found");
     }
 
@@ -311,7 +311,7 @@ public class MountBatchCommandTests : IDisposable {
         _driveManager.RegisterCdRomDriveLetter('D', cdFolder);
 
         // Assert — the host path is set so normal DOS file access (DIR D:) can work
-        _driveManager.TryGetValue('D', out Spice86.Core.Emulator.OperatingSystem.Structures.VirtualDrive? drive).Should().BeTrue();
+        _driveManager.TryGetDrive<VirtualDrive>('D', out Spice86.Core.Emulator.OperatingSystem.Structures.VirtualDrive? drive).Should().BeTrue();
         drive!.MountedHostDirectory.Should().NotBeNullOrEmpty();
     }
 

@@ -439,8 +439,10 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
             cdRomLetters.Add(char.ToUpperInvariant(cdrom.DriveLetter));
         }
 
-        foreach (KeyValuePair<char, VirtualDrive> kvp in DosDriveManager) {
-            VirtualDrive vd = kvp.Value;
+        foreach (KeyValuePair<char, DosDriveBase> kvp in DosDriveManager) {
+            if (kvp.Value is not VirtualDrive vd) {
+                continue;
+            }
             if (cdRomLetters.Contains(char.ToUpperInvariant(vd.DriveLetter))) {
                 continue;
             }
@@ -575,7 +577,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
             audioPlayer.SetDriveLetter(char.ToUpperInvariant(driveLetter));
             drive.SetAudioPlayer(audioPlayer);
             char upper = char.ToUpperInvariant(driveLetter);
-            byte driveIndex = DosDriveManager.DriveLetters.TryGetValue(upper, out byte idx) ? idx : (byte)3;
+            byte driveIndex = DosDriveManager.TryGetLetterIndex(upper, out int idx) ? (byte)idx : (byte)3;
             MscdexDriveEntry entry = new MscdexDriveEntry(upper, driveIndex, drive);
             _mscdex.AddDrive(entry);
             DosDriveManager.RegisterCdRomDriveLetter(upper, hostPath);
@@ -610,7 +612,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         audioPlayer.SetDriveLetter(char.ToUpperInvariant(driveLetter));
         drive.SetAudioPlayer(audioPlayer);
         char upper = char.ToUpperInvariant(driveLetter);
-        byte driveIndex = DosDriveManager.DriveLetters.TryGetValue(upper, out byte idx) ? idx : (byte)3;
+        byte driveIndex = DosDriveManager.TryGetLetterIndex(upper, out int idx) ? (byte)idx : (byte)3;
         MscdexDriveEntry entry = new MscdexDriveEntry(upper, driveIndex, drive);
         _mscdex.AddDrive(entry);
         DosDriveManager.RegisterCdRomDriveLetter(upper, string.Empty);
@@ -679,7 +681,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         }
 
         // Folder-backed drive (HDD, folder floppy, folder CD).
-        if (DosDriveManager.TryGetValue(upper, out VirtualDrive? vd) && !string.IsNullOrEmpty(vd.MountedHostDirectory)) {
+        if (DosDriveManager.TryGetDrive<VirtualDrive>(upper, out VirtualDrive? vd) && !string.IsNullOrEmpty(vd.MountedHostDirectory)) {
             string hostRoot = vd.MountedHostDirectory.TrimEnd('/', '\\');
             entries = BuildHostEntries(hostRoot);
             return true;

@@ -59,7 +59,7 @@ public sealed class SubstBatchCommandTests : IDisposable {
         bool launched = _ctx.Engine.TryExecuteCommandLine("SUBST D: C:\\games", out LaunchRequest _);
 
         launched.Should().BeFalse();
-        _ctx.DriveManager.TryGetValue('D', out VirtualDrive? drive).Should().BeTrue();
+        _ctx.DriveManager.TryGetDrive<VirtualDrive>('D', out VirtualDrive? drive).Should().BeTrue();
         drive!.MountedHostDirectory.Should().Contain("games");
         _ctx.DriveManager.IsSubstDrive('D').Should().BeTrue();
     }

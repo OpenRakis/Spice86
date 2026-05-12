@@ -1301,7 +1301,7 @@ internal sealed partial class DosBatchExecutionEngine {
             CdAudioPlayer audioPlayer = new CdAudioPlayer(_channelCreator);
             audioPlayer.SetDrive(drive);
             drive.SetAudioPlayer(audioPlayer);
-            byte driveIndex = DosDriveManager.DriveLetters.TryGetValue(driveLetter, out byte idx) ? idx : (byte)3;
+            byte driveIndex = DosDriveManager.TryGetLetterIndex(driveLetter, out int idx) ? (byte)idx : (byte)3;
             MscdexDriveEntry entry = new MscdexDriveEntry(driveLetter, driveIndex, drive);
             _mscdex.AddDrive(entry);
             _driveManager.RegisterCdRomDriveLetter(driveLetter, string.Empty);
@@ -1323,7 +1323,7 @@ internal sealed partial class DosBatchExecutionEngine {
             CdAudioPlayer audioPlayer = new CdAudioPlayer(_channelCreator);
             audioPlayer.SetDrive(drive);
             drive.SetAudioPlayer(audioPlayer);
-            byte driveIndex = DosDriveManager.DriveLetters.TryGetValue(driveLetter, out byte idx) ? idx : (byte)3;
+            byte driveIndex = DosDriveManager.TryGetLetterIndex(driveLetter, out int idx) ? (byte)idx : (byte)3;
             MscdexDriveEntry entry = new MscdexDriveEntry(driveLetter, driveIndex, drive);
             _mscdex.AddDrive(entry);
             _driveManager.RegisterCdRomDriveLetter(driveLetter, hostPath);
@@ -1450,7 +1450,7 @@ internal sealed partial class DosBatchExecutionEngine {
                 return false;
             }
             foreach (KeyValuePair<char, string> entry in subst) {
-                if (_driveManager.TryGetValue(entry.Key, out VirtualDrive? drive)) {
+                if (_driveManager.TryGetDrive<VirtualDrive>(entry.Key, out VirtualDrive? drive)) {
                     WriteToStandardOutput($"{entry.Key}:\\: => {drive.MountedHostDirectory}\r\n");
                 }
             }
@@ -1488,7 +1488,7 @@ internal sealed partial class DosBatchExecutionEngine {
             WriteToStandardOutput($"SUBST: cannot SUBST a floppy drive ({driveLetter}:)\r\n");
             return false;
         }
-        if (_driveManager.TryGetValue(driveLetter, out VirtualDrive? existing)
+        if (_driveManager.TryGetDrive<VirtualDrive>(driveLetter, out VirtualDrive? existing)
             && !_driveManager.IsSubstDrive(driveLetter)
             && !string.IsNullOrEmpty(existing.MountedHostDirectory)) {
             WriteToStandardOutput($"SUBST: drive {driveLetter}: is already in use\r\n");
@@ -1529,7 +1529,7 @@ internal sealed partial class DosBatchExecutionEngine {
     /// </summary>
     /// <param name="driveLetter">The upper-case drive letter to select.</param>
     internal void ChangeDrive(char driveLetter) {
-        if (_driveManager.TryGetValue(driveLetter, out VirtualDrive? drive)) {
+        if (_driveManager.TryGetDrive<VirtualDrive>(driveLetter, out VirtualDrive? drive)) {
             _driveManager.CurrentDrive = drive;
             if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                 _loggerService.Debug("BATCH: Changed drive to {Drive}:", driveLetter);

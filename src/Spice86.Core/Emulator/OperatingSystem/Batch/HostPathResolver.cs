@@ -43,7 +43,7 @@ internal static class HostPathResolver {
         // not exist and we fall through to host/absolute-path handling below.
         if (path.Length >= 2 && char.IsLetter(path[0]) && path[1] == ':') {
             char driveLetter = char.ToUpperInvariant(path[0]);
-            if (driveManager.TryGetValue(driveLetter, out VirtualDrive? drive)
+            if (driveManager.TryGetDrive<VirtualDrive>(driveLetter, out VirtualDrive? drive)
                 && !string.IsNullOrEmpty(drive.MountedHostDirectory)) {
                 string dosRelative = path.Length >= 3 && (path[2] == '\\' || path[2] == '/')
                     ? path.Substring(3)

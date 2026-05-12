@@ -37,7 +37,7 @@ public class DosDriveManagerCdRomTests {
         _driveManager.RegisterCdRomDriveLetter('D', "/some/folder");
 
         // Assert
-        _driveManager.TryGetValue('D', out Spice86.Core.Emulator.OperatingSystem.Structures.VirtualDrive? drive).Should().BeTrue();
+        _driveManager.TryGetDrive<Spice86.Core.Emulator.OperatingSystem.Structures.VirtualDrive>('D', out Spice86.Core.Emulator.OperatingSystem.Structures.VirtualDrive? drive).Should().BeTrue();
         drive!.MountedHostDirectory.Should().NotBeNullOrEmpty();
     }
 
@@ -47,7 +47,7 @@ public class DosDriveManagerCdRomTests {
         _driveManager.RegisterCdRomDriveLetter('E', string.Empty);
 
         // Assert
-        _driveManager.TryGetValue('E', out Spice86.Core.Emulator.OperatingSystem.Structures.VirtualDrive? drive).Should().BeTrue();
+        _driveManager.TryGetDrive<Spice86.Core.Emulator.OperatingSystem.Structures.VirtualDrive>('E', out Spice86.Core.Emulator.OperatingSystem.Structures.VirtualDrive? drive).Should().BeTrue();
         drive!.MountedHostDirectory.Should().BeNullOrEmpty();
     }
 
@@ -60,7 +60,7 @@ public class DosDriveManagerCdRomTests {
         _driveManager.RegisterCdRomDriveLetter('D', "/second/path");
 
         // Assert – new path wins
-        _driveManager.TryGetValue('D', out Spice86.Core.Emulator.OperatingSystem.Structures.VirtualDrive? drive).Should().BeTrue();
+        _driveManager.TryGetDrive<Spice86.Core.Emulator.OperatingSystem.Structures.VirtualDrive>('D', out Spice86.Core.Emulator.OperatingSystem.Structures.VirtualDrive? drive).Should().BeTrue();
         drive!.MountedHostDirectory.Should().Contain("second");
     }
 }
