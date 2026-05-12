@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.Devices.CdRom;
 using Spice86.Core.Emulator.Devices.CdRom.Image;
 using Spice86.Core.Emulator.InterruptHandlers.Mscdex;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
@@ -76,7 +77,7 @@ public sealed class MscdexDeviceDriverRequestTests {
             IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
             AddressReadWriteBreakpoints breakpoints = new();
             A20Gate a20Gate = new(enabled: false);
-            Memory = new Memory(breakpoints, ram, a20Gate, initializeResetVector: false);
+            Memory = new Memory(breakpoints, ram, a20Gate, new RealModeMmu386(), initializeResetVector: false);
             State = new State(CpuModel.INTEL_80386);
 
             ILoggerService logger = Substitute.For<ILoggerService>();
@@ -281,7 +282,7 @@ public sealed class MscdexDeviceDriverRequestTests {
             IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
             AddressReadWriteBreakpoints breakpoints = new();
             A20Gate a20Gate = new(enabled: false);
-            Memory = new Memory(breakpoints, ram, a20Gate, initializeResetVector: false);
+            Memory = new Memory(breakpoints, ram, a20Gate, new RealModeMmu386(), initializeResetVector: false);
             State = new State(CpuModel.INTEL_80386);
 
             ILoggerService logger = Substitute.For<ILoggerService>();

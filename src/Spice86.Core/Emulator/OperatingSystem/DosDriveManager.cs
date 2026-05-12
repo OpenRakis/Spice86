@@ -10,7 +10,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 /// <summary>
 /// The class responsible for centralizing all the mounted DOS drives.
@@ -95,6 +97,121 @@ public class DosDriveManager : IDictionary<char, VirtualDrive>, IFloppyDriveAcce
             return false;
         }
         return true;
+    }
+
+    /// <summary>
+    /// Returns whether a drive is mapped at the given zero-based index. Tolerates int callers.
+    /// </summary>
+    internal bool HasDriveAtIndex(int zeroBasedIndex) {
+        if (zeroBasedIndex < 0 || zeroBasedIndex >= MaxDriveCount) {
+            return false;
+        }
+        return HasDriveAtIndex((ushort)zeroBasedIndex);
+    }
+
+    /// <summary>
+    /// Gets the zero-based drive index for a DOS drive letter (case-insensitive).
+    /// Returns -1 when the letter is not a valid ASCII letter.
+    /// </summary>
+    public static int GetDriveIndex(char driveLetter) {
+        if (char.IsBetween(driveLetter, 'A', 'Z')) {
+            return driveLetter - 'A';
+        }
+        if (char.IsBetween(driveLetter, 'a', 'z')) {
+            return driveLetter - 'a';
+        }
+        return -1;
+    }
+
+    /// <summary>
+    /// Gets the zero-based drive index for a drive letter, throwing if invalid.
+    /// </summary>
+    internal static int GetDriveIndexOrThrow(char driveLetter, [CallerArgumentExpression(nameof(driveLetter))] string? paramName = null) {
+        int driveIndex = GetDriveIndex(driveLetter);
+        if (driveIndex == -1) {
+            throw new ArgumentException($"Drive letter '{(!char.IsControl(driveLetter) ? driveLetter : '?')}' (0x{(int)driveLetter:x}) is invalid. It must be an ASCII letter between 'A' and 'Z'.", paramName);
+        }
+        Debug.Assert(driveIndex is >= 0 and < MaxDriveCount);
+        return driveIndex;
+    }
+
+    /// <summary>
+    /// Tries to get the zero-based drive index for a drive letter.
+    /// </summary>
+    public static bool TryGetLetterIndex(char driveLetter, out int driveIndex) {
+        driveIndex = GetDriveIndex(driveLetter);
+        return driveIndex != -1;
+    }
+
+    /// <summary>
+    /// Returns the uppercase ASCII drive letter for a validated zero-based index. The caller is responsible for range validation.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static char GetDriveLetterFromIndexFast(int driveIndex) {
+        Debug.Assert(driveIndex is >= 0 and < MaxDriveCount);
+        return (char)(driveIndex + 'A');
+    }
+
+    /// <summary>
+    /// Returns the uppercase ASCII drive letter for a zero-based index, validating the input.
+    /// </summary>
+    public static char GetDriveLetterFromIndex(int driveIndex) {
+        ArgumentOutOfRangeException.ThrowIfNegative(driveIndex);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(driveIndex, MaxDriveCount);
+        return GetDriveLetterFromIndexFast(driveIndex);
+    }
+
+    /// <summary>
+    /// Tries to get the uppercase ASCII drive letter for a zero-based index.
+    /// </summary>
+    public static bool TryGetDriveLetterFromIndex(int driveIndex, out char driveLetter) {
+        if (driveIndex is >= 0 and < MaxDriveCount) {
+            driveLetter = GetDriveLetterFromIndexFast(driveIndex);
+            return true;
+        }
+        driveLetter = default;
+        return false;
+    }
+
+    /// <summary>
+    /// Tries to get the drive at a zero-based index as the concrete <see cref="VirtualDrive"/> type.
+    /// </summary>
+    public bool TryGetDriveAtIndex(int driveIndex, [MaybeNullWhen(false)] out VirtualDrive drive) {
+        if (driveIndex < 0 || driveIndex >= MaxDriveCount) {
+            drive = null;
+            return false;
+        }
+        char letter = GetDriveLetterFromIndexFast(driveIndex);
+        return _driveMap.TryGetValue(letter, out drive);
+    }
+
+    /// <summary>
+    /// Tries to get the drive at a zero-based index as a <see cref="DosDriveBase"/>.
+    /// </summary>
+    public bool TryGetDriveAtIndex(int driveIndex, [MaybeNullWhen(false)] out DosDriveBase drive) {
+        bool found = TryGetDriveAtIndex(driveIndex, out VirtualDrive? virtualDrive);
+        drive = virtualDrive;
+        return found;
+    }
+
+    /// <summary>
+    /// Tries to get the drive associated with a drive letter as the concrete <see cref="VirtualDrive"/> type.
+    /// </summary>
+    public bool TryGetDrive(char driveLetter, [MaybeNullWhen(false)] out VirtualDrive drive) {
+        if (!TryGetLetterIndex(driveLetter, out int driveIndex)) {
+            drive = null;
+            return false;
+        }
+        return TryGetDriveAtIndex(driveIndex, out drive);
+    }
+
+    /// <summary>
+    /// Tries to get the drive associated with a drive letter as a <see cref="DosDriveBase"/>.
+    /// </summary>
+    public bool TryGetDrive(char driveLetter, [MaybeNullWhen(false)] out DosDriveBase drive) {
+        bool found = TryGetDrive(driveLetter, out VirtualDrive? virtualDrive);
+        drive = virtualDrive;
+        return found;
     }
 
     /// <suummary>
@@ -283,6 +400,27 @@ public class DosDriveManager : IDictionary<char, VirtualDrive>, IFloppyDriveAcce
     /// <returns>True if memory drive exists; false otherwise.</returns>
     public bool TryGetMemoryDrive(char driveLetter, [MaybeNullWhen(false)] out MemoryDrive drive) {
         return _memoryDriveMap.TryGetValue(driveLetter, out drive);
+    }
+
+    /// <summary>
+    /// Gets the mounted drive for the given letter as the requested concrete subtype.
+    /// </summary>
+    /// <typeparam name="T">A <see cref="DosDriveBase"/>-derived type.</typeparam>
+    /// <param name="driveLetter">The drive letter.</param>
+    /// <returns>The drive instance cast to <typeparamref name="T"/>.</returns>
+    /// <exception cref="InvalidOperationException">No drive is mounted at <paramref name="driveLetter"/> or the drive is not assignable to <typeparamref name="T"/>.</exception>
+    public T GetDrive<T>(char driveLetter) where T : DosDriveBase {
+        char upper = char.ToUpperInvariant(driveLetter);
+        if (_memoryDriveMap.TryGetValue(upper, out MemoryDrive? memoryDrive) && memoryDrive is T mt) {
+            return mt;
+        }
+        if (_floppyDriveMap.TryGetValue(upper, out FloppyDiskDrive? floppyDrive) && floppyDrive is T ft) {
+            return ft;
+        }
+        if (_driveMap.TryGetValue(upper, out VirtualDrive? virtualDrive) && virtualDrive is T vt) {
+            return vt;
+        }
+        throw new InvalidOperationException($"No drive of type {typeof(T).Name} mounted at '{upper}:'.");
     }
 
     /// <summary>

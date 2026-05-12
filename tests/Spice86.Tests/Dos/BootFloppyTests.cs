@@ -13,6 +13,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Mscdex;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Batch;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
@@ -164,7 +165,7 @@ public class BootFloppyTests {
             AddressReadWriteBreakpoints ioPortBreakpoints = new();
             A20Gate a20Gate = new(enabled: false);
             State state = new(CpuModel.INTEL_80386);
-            Memory memory = new(memoryBreakpoints, ram, a20Gate, initializeResetVector: true);
+            Memory memory = new(memoryBreakpoints, ram, a20Gate, new RealModeMmu386(), initializeResetVector: true);
             Stack stack = new(memory, state);
             IOPortDispatcher ioPortDispatcher = new(ioPortBreakpoints, state, logger, false);
             BiosDataArea biosDataArea = new(memory, 640);
