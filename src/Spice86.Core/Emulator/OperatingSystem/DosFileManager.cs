@@ -1097,7 +1097,11 @@ public class DosFileManager {
             return FileAccessDeniedError(dosDirectory);
         }
 
-        string prefixedDosDirectory = _dosPathResolver.PrefixWithHostDirectory(dosDirectory);
+        string? prefixedDosDirectory = _dosPathResolver.PrefixWithHostDirectory(dosDirectory);
+        if (prefixedDosDirectory is null) {
+            return PathNotFoundError(dosDirectory);
+        }
+
         try {
             Directory.CreateDirectory(prefixedDosDirectory);
             if (_loggerService.IsEnabled(LogEventLevel.Information)) {
