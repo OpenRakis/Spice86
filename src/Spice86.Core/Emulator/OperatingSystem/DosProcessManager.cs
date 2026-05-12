@@ -3,6 +3,8 @@ namespace Spice86.Core.Emulator.OperatingSystem;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.InterruptHandlers.Mscdex;
 using Spice86.Core.Emulator.LoadableFile.Dos;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
@@ -107,12 +109,16 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     /// <param name="dosMemoryManager">Allocates and frees DOS memory control blocks for PSPs and environments.</param>
     /// <param name="dosFileManager">Resolves DOS paths and manages open file tables shared across processes.</param>
     /// <param name="dosDriveManager">Provides drive metadata and current drive context for path resolution.</param>
+    /// <param name="mscdex">The MSCDEX CD-ROM handler owned by the DOS kernel, used for IMGMOUNT batch commands.</param>
+    /// <param name="mixer">The software audio mixer, used to stream CD audio when an image is mounted.</param>
     /// <param name="batchDisplayCommandHandler">Batch-specific display command handler used by screen-related builtins such as CLS.</param>
     /// <param name="envVars">The initial host environment variables to seed the master environment block.</param>
     /// <param name="loggerService">Logger for emitting diagnostic information during process lifecycle changes.</param>
     public DosProcessManager(IMemory memory, Stack stack, State state,
         DosMemoryManager dosMemoryManager,
         DosFileManager dosFileManager, DosDriveManager dosDriveManager,
+        Mscdex mscdex,
+        ISoundChannelCreator channelCreator,
         IBatchDisplayCommandHandler batchDisplayCommandHandler,
         IDictionary<string, string> envVars, ILoggerService loggerService) {
         _sda = new(memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
@@ -125,6 +131,8 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         _loggerService = loggerService;
         _batchExecutionEngine = new DosBatchExecutionEngine(_fileManager,
             _driveManager,
+            mscdex,
+            channelCreator,
             batchDisplayCommandHandler,
             this,
             _loggerService);
@@ -173,7 +181,31 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
 
     internal DosBatchExecutionEngine BatchExecutionEngine => _batchExecutionEngine;
 
-    internal string? TryGetEnvironmentVariable(string variableName) {
+    /// <summary>
+    /// Resolves a floppy drive letter to its currently mounted image bytes and
+    /// path, used by <see cref="DosProgramLoader"/> when dispatching a
+    /// <see cref="BootFloppyLaunchRequest"/> to the BIOS-level
+    /// <see cref="Boot.FloppyBootService"/>.
+    /// </summary>
+    /// <param name="driveLetter">DOS drive letter (case-insensitive).</param>
+    /// <param name="imageData">Receives the raw image bytes when found.</param>
+    /// <param name="imagePath">Receives the host image path (or empty).</param>
+    /// <returns><c>true</c> when a floppy with image data is mounted; otherwise <c>false</c>.</returns>
+    internal bool TryGetFloppyImageForBoot(char driveLetter,
+        [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out byte[]? imageData,
+        out string imagePath) {
+        char upper = char.ToUpperInvariant(driveLetter);
+        if (_driveManager.TryGetFloppyDrive(upper, out FloppyDiskDrive? floppy)) {
+            imageData = floppy.GetCurrentImageData();
+            imagePath = floppy.ImagePath ?? string.Empty;
+            return imageData is not null;
+        }
+        imageData = null;
+        imagePath = string.Empty;
+        return false;
+    }
+
+    internal string? GetEnvironmentVariable(string variableName) {
         if (string.IsNullOrWhiteSpace(variableName)) {
             return null;
         }
@@ -237,8 +269,8 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         return true;
     }
 
-    string? IDosBatchExecutionHost.TryGetEnvironmentVariable(string variableName) {
-        return TryGetEnvironmentVariable(variableName);
+    string? IDosBatchExecutionHost.GetEnvironmentVariable(string variableName) {
+        return GetEnvironmentVariable(variableName);
     }
 
     IReadOnlyList<KeyValuePair<string, string>> IDosBatchExecutionHost.GetEnvironmentVariablesSnapshot() {
@@ -262,7 +294,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         // Programs that read the parent (COMMAND.COM) PSP[0x02] to compute their TSR resident
         // size (DX for INT 21h/31h) must receive a realistic small value, not LastFreeSegment
         // (0x9FFF = 40959 decimal). Using 0x9FFF caused games like Maupiti Island to pass 0x9FFF
-        // as DX, which made TryModifyBlock fail after expanding the block to maximum, leaving
+        // as DX, which made ModifyBlock fail after expanding the block to maximum, leaving
         // all conventional memory consumed and subsequent allocations impossible.
         rootPsp.CurrentSize = (ushort)(CommandComSegment + DosProgramSegmentPrefix.PspSizeInParagraphs);
 
@@ -368,7 +400,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
                 parentPspSegment);
         }
 
-        string? hostPath = _fileManager.TryGetFullHostExecutablePathFromDos(programName) ?? programName;
+        string? hostPath = _fileManager.GetFullHostExecutablePathFromDos(programName) ?? programName;
         if (string.IsNullOrWhiteSpace(hostPath) || !File.Exists(hostPath)) {
             return DosExecResult.Fail(DosErrorCode.FileNotFound);
         }
@@ -579,7 +611,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     /// <param name="relocationFactor">Relocation adjustment applied to each relocation entry.</param>
     /// <returns>A result indicating success or the DOS error encountered.</returns>
     public DosExecResult LoadOverlay(string programName, ushort loadSegment, ushort relocationFactor) {
-        string? hostPath = _fileManager.TryGetFullHostExecutablePathFromDos(programName) ?? programName;
+        string? hostPath = _fileManager.GetFullHostExecutablePathFromDos(programName) ?? programName;
         if (string.IsNullOrWhiteSpace(hostPath) || !File.Exists(hostPath)) {
             return DosExecResult.Fail(DosErrorCode.FileNotFound);
         }
@@ -684,7 +716,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         if (parentIsRootCommandCom) {
             _batchExecutionEngine.RestoreStandardHandlesAfterLaunch();
 
-            if (!TryResumeBatchExecutionFromRoot()) {
+            if (!ResumeBatchExecutionFromRoot()) {
                 // Halt emulation; COMMAND.COM has no execution context.
                 _state.AX = (ushort)(LastChildReturnCode & 0x00FF);
                 _state.IsRunning = false;
@@ -692,9 +724,9 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         }
     }
 
-    private bool TryResumeBatchExecutionFromRoot() {
+    private bool ResumeBatchExecutionFromRoot() {
         while (_batchExecutionEngine.TryContinue(LastChildReturnCode, out LaunchRequest launchRequest)) {
-            if (!_batchExecutionEngine.TryApplyRedirectionForLaunch(launchRequest)) {
+            if (!_batchExecutionEngine.ApplyRedirectionForLaunch(launchRequest)) {
                 LastChildReturnCode = (ushort)(((ushort)DosTerminationType.CriticalError << 8) | (byte)DosErrorCode.PathNotFound);
                 continue;
             }

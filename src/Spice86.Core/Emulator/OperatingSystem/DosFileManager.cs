@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
+using Spice86.Core.Emulator.OperatingSystem.FileSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
@@ -13,6 +14,7 @@ using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Linq;
 using System.Text;
 
@@ -67,6 +69,8 @@ public class DosFileManager {
 
     private readonly IList<IVirtualDevice> _dosVirtualDevices;
 
+    private readonly IDriveActivityNotifier? _activityNotifier;
+
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
@@ -76,13 +80,29 @@ public class DosFileManager {
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="dosVirtualDevices">The virtual devices from the DOS kernel.</param>
     public DosFileManager(IMemory memory, DosStringDecoder dosStringDecoder,
-        DosDriveManager dosDriveManager, ILoggerService loggerService, IList<IVirtualDevice> dosVirtualDevices) {
+        DosDriveManager dosDriveManager, ILoggerService loggerService, IList<IVirtualDevice> dosVirtualDevices)
+        : this(memory, dosStringDecoder, dosDriveManager, loggerService, dosVirtualDevices, null) {
+    }
+
+    /// <summary>
+    /// Initializes a new instance with an activity notifier.
+    /// </summary>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="dosStringDecoder">A helper class to encode/decode DOS strings.</param>
+    /// <param name="dosDriveManager">The class used to manage folders mounted as DOS drives.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="dosVirtualDevices">The virtual devices from the DOS kernel.</param>
+    /// <param name="activityNotifier">Notifier that surfaces per-drive read/write activity to the UI (may be null).</param>
+    public DosFileManager(IMemory memory, DosStringDecoder dosStringDecoder,
+        DosDriveManager dosDriveManager, ILoggerService loggerService, IList<IVirtualDevice> dosVirtualDevices,
+        IDriveActivityNotifier? activityNotifier) {
         _loggerService = loggerService;
         _dosStringDecoder = dosStringDecoder;
         _dosPathResolver = new DosPathResolver(dosDriveManager);
         _memory = memory;
         _dosDriveManager = dosDriveManager;
         _dosVirtualDevices = dosVirtualDevices;
+        _activityNotifier = activityNotifier;
     }
 
     /// <summary>
@@ -566,6 +586,14 @@ public class DosFileManager {
             return OpenDevice(device);
         }
 
+        // Check whether the target drive is an image-backed floppy drive.
+        char? floppyLetter = ExtractDriveLetter(fileName);
+        if (floppyLetter.HasValue &&
+            _dosDriveManager.TryGetFloppyDrive(floppyLetter.Value, out FloppyDiskDrive? floppyDrive) &&
+            floppyDrive.HasImage) {
+            return OpenFloppyImageFile(fileName, floppyDrive, accessMode);
+        }
+
         string? hostFileName = _dosPathResolver.GetFullHostPathFromDosOrDefault(fileName);
         if (string.IsNullOrWhiteSpace(hostFileName)) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
@@ -653,6 +681,7 @@ public class DosFileManager {
             if (file is DosFile actualFile) {
                 actualFile.AddMemoryRange(new MemoryRange(targetAddress,
                     (uint)(targetAddress + actualReadLength - 1), file.Name));
+                NotifyDriveActivity(actualFile.Drive, isWrite: false);
             }
         }
 
@@ -704,11 +733,31 @@ public class DosFileManager {
             }
 
             file.Write(data);
+            if (file is DosFile dosFile) {
+                NotifyDriveActivity(dosFile.Drive, isWrite: true);
+            }
         } catch (IOException e) {
             throw new UnrecoverableException("IOException while writing file", e);
         }
 
         return DosFileOperationResult.Value16(writeLength);
+    }
+
+    private const byte MaxDosDriveIndex = 25;
+
+    private void NotifyDriveActivity(byte driveIndex, bool isWrite) {
+        if (_activityNotifier == null) {
+            return;
+        }
+        if (driveIndex > MaxDosDriveIndex) {
+            return;
+        }
+        char letter = (char)('A' + driveIndex);
+        if (isWrite) {
+            _activityNotifier.NotifyWrite(letter);
+        } else {
+            _activityNotifier.NotifyRead(letter);
+        }
     }
 
     private bool TryUpdateDosTransferAreaWithFileMatch(DosDiskTransferArea dta,
@@ -793,10 +842,10 @@ public class DosFileManager {
         return DosFileOperationResult.Error(DosErrorCode.TooManyOpenFiles);
     }
 
-    internal string? TryGetFullHostPathFromDos(string dosPath) => _dosPathResolver.
+    internal string? GetFullHostPathFromDos(string dosPath) => _dosPathResolver.
         GetFullHostPathFromDosOrDefault(dosPath);
 
-    internal string? TryGetFullHostExecutablePathFromDos(string dosPath) => _dosPathResolver.
+    internal string? GetFullHostExecutablePathFromDos(string dosPath) => _dosPathResolver.
         GetFullHostExecutablePathFromDosOrDefault(dosPath);
 
     internal bool FileOrDeviceExists(string dosPath) {
@@ -874,6 +923,58 @@ public class DosFileManager {
         }
 
         return info;
+    }
+
+    private static char? ExtractDriveLetter(string dosPath) {
+        if (dosPath.Length >= 2 && dosPath[1] == DosPathResolver.VolumeSeparatorChar) {
+            return char.ToUpperInvariant(dosPath[0]);
+        }
+        return null;
+    }
+
+    private DosFileOperationResult OpenFloppyImageFile(string dosFileName, FloppyDiskDrive floppyDrive, FileAccessMode accessMode) {
+        if (floppyDrive.Image == null) {
+            return FileNotFoundError(dosFileName);
+        }
+
+        string pathInImage = ExtractPathInImage(dosFileName);
+        if (!floppyDrive.Image.TryGetEntry(pathInImage, out FileSystem.FatDirectoryEntry? entry) || entry == null) {
+            return FileNotFoundError(dosFileName);
+        }
+
+        if (entry.IsDirectory) {
+            return FileNotFoundError(dosFileName);
+        }
+
+        if (accessMode != FileAccessMode.ReadOnly) {
+            return FileAccessDeniedError(dosFileName);
+        }
+
+        int? freeIndex = FindNextFreeFileIndex();
+        if (freeIndex == null) {
+            return NoFreeHandleError();
+        }
+
+        ushort dosIndex = (ushort)freeIndex.Value;
+        byte[] fileData = floppyDrive.Image.ReadFile(entry);
+        DosFile dosFile = new(dosFileName, dosIndex, new System.IO.MemoryStream(fileData, writable: false)) {
+            Drive = _dosDriveManager.CurrentDriveIndex
+        };
+        dosFile.DeviceInformation = ComputeDefaultDeviceInformation(dosFile);
+        SetOpenFile(dosIndex, dosFile);
+
+        return DosFileOperationResult.Value16(dosIndex);
+    }
+
+    private static string ExtractPathInImage(string dosPath) {
+        // Strip the drive prefix (e.g. "A:\DIR\FILE.TXT" → "DIR\FILE.TXT").
+        if (dosPath.Length >= 3 && dosPath[1] == DosPathResolver.VolumeSeparatorChar) {
+            return dosPath.Substring(3);
+        }
+        if (dosPath.Length >= 2 && dosPath[1] == DosPathResolver.VolumeSeparatorChar) {
+            return dosPath.Substring(2);
+        }
+        return dosPath;
     }
 
     private DosFileOperationResult OpenFileInternal(string dosFileName, string? hostFileName, FileAccessMode openMode) {

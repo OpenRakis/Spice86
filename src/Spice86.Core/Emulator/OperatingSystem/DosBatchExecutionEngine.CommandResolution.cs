@@ -30,7 +30,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return path.EndsWith(".BAT", StringComparison.OrdinalIgnoreCase);
     }
 
-    private bool TryResolveBatchCommandPath(string commandToken, out string batchPath) {
+    private bool ResolveBatchCommandPath(string commandToken, out string batchPath) {
         batchPath = commandToken;
 
         if (IsBatchPath(commandToken)) {
@@ -76,7 +76,7 @@ internal sealed partial class DosBatchExecutionEngine {
     private string ResolveCommandTokenForCurrentBatchContext(string commandToken) {
         if (!IsRelativeCommandToken(commandToken)) {
             if (!Path.HasExtension(commandToken)) {
-                string? resolvedNonRelative = TryResolveExecutablePath(commandToken);
+                string? resolvedNonRelative = ResolveExecutablePath(commandToken);
                 if (resolvedNonRelative != null) {
                     return resolvedNonRelative;
                 }
@@ -87,10 +87,10 @@ internal sealed partial class DosBatchExecutionEngine {
 
         if (_batchFileContexts.Count > 0) {
             BatchFileContext context = _batchFileContexts.Peek();
-            string? directoryPath = context.TryGetContainingDirectory();
+            string? directoryPath = context.GetContainingDirectory();
             if (!string.IsNullOrWhiteSpace(directoryPath)) {
                 string candidate = NormalizeDosPath($"{directoryPath}\\{commandToken}");
-                string? resolvedInBatchDirectory = TryResolveExecutablePath(candidate);
+                string? resolvedInBatchDirectory = ResolveExecutablePath(candidate);
                 if (resolvedInBatchDirectory != null) {
                     if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                         _loggerService.Verbose("BATCH: Resolved relative command {Token} -> {Candidate} (from batch dir)",
@@ -102,7 +102,7 @@ internal sealed partial class DosBatchExecutionEngine {
         }
 
         // Search PATH directories with .COM -> .EXE -> .BAT probe order.
-        string? pathResolved = TryResolveCommandFromPath(commandToken);
+        string? pathResolved = ResolveCommandFromPath(commandToken);
         if (pathResolved != null) {
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                 _loggerService.Verbose("BATCH: Resolved command {Token} -> {Path} (from PATH)", commandToken, pathResolved);
@@ -116,8 +116,8 @@ internal sealed partial class DosBatchExecutionEngine {
         return commandToken;
     }
 
-    private string? TryResolveCommandFromPath(string commandToken) {
-        string? pathEnv = _host.TryGetEnvironmentVariable("PATH");
+    private string? ResolveCommandFromPath(string commandToken) {
+        string? pathEnv = _host.GetEnvironmentVariable("PATH");
         if (string.IsNullOrWhiteSpace(pathEnv)) {
             return null;
         }
@@ -126,7 +126,7 @@ internal sealed partial class DosBatchExecutionEngine {
         for (int d = 0; d < pathDirs.Length; d++) {
             string dir = pathDirs[d].TrimEnd('\\');
             string candidatePrefix = $"{dir}\\{commandToken}";
-            string? resolvedCandidate = TryResolveExecutablePath(candidatePrefix);
+            string? resolvedCandidate = ResolveExecutablePath(candidatePrefix);
             if (resolvedCandidate != null) {
                 return resolvedCandidate;
             }
@@ -135,7 +135,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return null;
     }
 
-    private string? TryResolveExecutablePath(string candidatePrefix) {
+    private string? ResolveExecutablePath(string candidatePrefix) {
         if (DosFileExists(candidatePrefix)) {
             return candidatePrefix;
         }
@@ -165,7 +165,7 @@ internal sealed partial class DosBatchExecutionEngine {
             return true;
         }
 
-        string? hostPath = _dosFileManager.TryGetFullHostPathFromDos(normalizedPath);
+        string? hostPath = _dosFileManager.GetFullHostPathFromDos(normalizedPath);
         return !string.IsNullOrWhiteSpace(hostPath) && File.Exists(hostPath);
     }
 
