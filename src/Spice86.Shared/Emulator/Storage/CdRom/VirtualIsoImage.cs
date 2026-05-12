@@ -6,9 +6,8 @@ using System.IO;
 using System.Text;
 
 /// <summary>
-/// Builds an ISO 9660 CD-ROM image in memory from the files in a host directory
-/// and exposes it as an <see cref="ICdRomImage"/>.
-/// Only the root directory is populated; subdirectories are not traversed.
+/// Builds an ISO 9660 CD-ROM image in memory from a host directory tree
+/// (files and subdirectories, recursively) and exposes it as an <see cref="ICdRomImage"/>.
 /// </summary>
 public sealed class VirtualIsoImage : ICdRomImage {
     private const int SectorSize = 2048;
@@ -18,7 +17,6 @@ public sealed class VirtualIsoImage : ICdRomImage {
     private const int PathTableLeLba = 18;
     private const int PathTableBeLba = 19;
     private const int RootDirLba = 20;
-    private const int FirstFileLba = 21;
 
     private readonly byte[] _imageData;
     private readonly MemoryDataSource _source;
@@ -26,9 +24,10 @@ public sealed class VirtualIsoImage : ICdRomImage {
     private readonly string _sourceDirectory;
 
     /// <summary>
-    /// Builds a virtual ISO image from all files in <paramref name="sourceDirectory"/>.
+    /// Builds a virtual ISO image from <paramref name="sourceDirectory"/>, traversing
+    /// subdirectories recursively.
     /// </summary>
-    /// <param name="sourceDirectory">Host directory whose root-level files are added to the image.</param>
+    /// <param name="sourceDirectory">Host directory whose contents (files and subdirectories) are added to the image.</param>
     /// <param name="volumeLabel">Volume label written into the PVD (up to 32 characters).</param>
     /// <exception cref="ArgumentException">Thrown when <paramref name="sourceDirectory"/> does not exist.</exception>
     public VirtualIsoImage(string sourceDirectory, string volumeLabel) {
@@ -79,69 +78,154 @@ public sealed class VirtualIsoImage : ICdRomImage {
     }
 
     private static byte[] BuildImage(string sourceDirectory, string volumeLabel) {
-        string[] files = Directory.GetFiles(sourceDirectory);
+        DirNode root = ScanDirectory(sourceDirectory, parent: null, name: string.Empty);
+        AssignDirectorySizes(root);
 
-        int totalLbas = FirstFileLba;
-        List<(string Path, int Lba, int Length)> fileEntries = new();
-        foreach (string file in files) {
-            int fileLength = (int)new FileInfo(file).Length;
-            fileEntries.Add((file, totalLbas, fileLength));
-            int fileSectors = (fileLength + SectorSize - 1) / SectorSize;
-            totalLbas += fileSectors == 0 ? 1 : fileSectors;
+        List<DirNode> allDirs = new();
+        CollectDirsBreadthFirst(root, allDirs);
+        for (int i = 0; i < allDirs.Count; i++) {
+            allDirs[i].DirNumber = i + 1;
         }
+
+        int currentLba = RootDirLba;
+        foreach (DirNode dir in allDirs) {
+            dir.Lba = currentLba;
+            currentLba += dir.SizeBytes / SectorSize;
+        }
+        foreach (DirNode dir in allDirs) {
+            foreach (FileEntry file in dir.Files) {
+                file.Lba = currentLba;
+                int fileSectors = (file.Length + SectorSize - 1) / SectorSize;
+                currentLba += fileSectors == 0 ? 1 : fileSectors;
+            }
+        }
+        int totalLbas = currentLba;
+
+        int pathTableSize = ComputePathTableSize(allDirs);
 
         byte[] image = new byte[totalLbas * SectorSize];
 
-        // Root directory at LBA 20
-        int rootDirSize = BuildRootDirectory(image, fileEntries);
+        foreach (DirNode dir in allDirs) {
+            WriteDirectoryContents(image, dir);
+        }
 
-        // Path table (LE) at LBA 18
-        int pathTableSize = BuildPathTableLe(image, PathTableLeLba * SectorSize);
+        WritePathTableLe(image, PathTableLeLba * SectorSize, allDirs);
+        WritePathTableBe(image, PathTableBeLba * SectorSize, allDirs);
 
-        // Path table (BE) at LBA 19
-        BuildPathTableBe(image, PathTableBeLba * SectorSize);
-
-        // PVD at LBA 16
-        BuildPvd(image, volumeLabel, totalLbas, rootDirSize, pathTableSize);
-
-        // Volume Descriptor Set Terminator at LBA 17
+        BuildPvd(image, volumeLabel, totalLbas, root.SizeBytes, pathTableSize);
         BuildVdst(image);
 
-        // File data
-        foreach ((string filePath, int lba, int fileLength) in fileEntries) {
-            byte[] fileData = File.ReadAllBytes(filePath);
-            fileData.AsSpan().CopyTo(image.AsSpan(lba * SectorSize, fileData.Length));
+        foreach (DirNode dir in allDirs) {
+            foreach (FileEntry file in dir.Files) {
+                byte[] data = File.ReadAllBytes(file.SourcePath);
+                data.AsSpan().CopyTo(image.AsSpan(file.Lba * SectorSize, data.Length));
+            }
         }
 
         return image;
     }
 
-    private static int BuildRootDirectory(byte[] image, List<(string Path, int Lba, int Length)> fileEntries) {
-        int offset = RootDirLba * SectorSize;
-        int written = 0;
-
-        // "." entry (current directory)
-        written += WriteDirectoryRecord(image, offset + written, "\0", RootDirLba, SectorSize, isDirectory: true);
-        // ".." entry (parent directory)
-        written += WriteDirectoryRecord(image, offset + written, "\x01", RootDirLba, SectorSize, isDirectory: true);
-
-        foreach ((string filePath, int lba, int fileLength) in fileEntries) {
-            string name = Path.GetFileName(filePath).ToUpperInvariant() + ";1";
-            written += WriteDirectoryRecord(image, offset + written, name, lba, fileLength, isDirectory: false);
+    private static DirNode ScanDirectory(string path, DirNode? parent, string name) {
+        DirNode node = new DirNode {
+            Name = name,
+            Parent = parent
+        };
+        foreach (string filePath in Directory.GetFiles(path)) {
+            int length = (int)new FileInfo(filePath).Length;
+            string isoName = Path.GetFileName(filePath).ToUpperInvariant() + ";1";
+            node.Files.Add(new FileEntry {
+                SourcePath = filePath,
+                IsoName = isoName,
+                Length = length
+            });
         }
-
-        return written;
+        foreach (string subDirPath in Directory.GetDirectories(path)) {
+            string subName = Path.GetFileName(subDirPath).ToUpperInvariant();
+            node.Subdirs.Add(ScanDirectory(subDirPath, node, subName));
+        }
+        return node;
     }
 
-    private static int WriteDirectoryRecord(byte[] image, int offset, string identifier, int lba, int dataLength, bool isDirectory) {
+    private static void AssignDirectorySizes(DirNode root) {
+        Stack<DirNode> stack = new();
+        stack.Push(root);
+        while (stack.Count > 0) {
+            DirNode dir = stack.Pop();
+            dir.SizeBytes = ComputeDirectorySize(dir);
+            foreach (DirNode child in dir.Subdirs) {
+                stack.Push(child);
+            }
+        }
+    }
+
+    private static int ComputeDirectorySize(DirNode dir) {
+        int posInSector = 0;
+        int sectors = 1;
+        foreach (int recLen in EnumerateRecordLengths(dir)) {
+            if (posInSector + recLen > SectorSize) {
+                sectors++;
+                posInSector = recLen;
+            } else {
+                posInSector += recLen;
+            }
+        }
+        return sectors * SectorSize;
+    }
+
+    private static IEnumerable<int> EnumerateRecordLengths(DirNode dir) {
+        yield return RoundUpEven(33 + 1); // "."
+        yield return RoundUpEven(33 + 1); // ".."
+        foreach (DirNode sub in dir.Subdirs) {
+            yield return RoundUpEven(33 + Encoding.ASCII.GetByteCount(sub.Name));
+        }
+        foreach (FileEntry file in dir.Files) {
+            yield return RoundUpEven(33 + Encoding.ASCII.GetByteCount(file.IsoName));
+        }
+    }
+
+    private static int RoundUpEven(int value) {
+        return (value & 1) == 0 ? value : value + 1;
+    }
+
+    private static void CollectDirsBreadthFirst(DirNode root, List<DirNode> output) {
+        Queue<DirNode> queue = new();
+        queue.Enqueue(root);
+        while (queue.Count > 0) {
+            DirNode dir = queue.Dequeue();
+            output.Add(dir);
+            foreach (DirNode sub in dir.Subdirs) {
+                queue.Enqueue(sub);
+            }
+        }
+    }
+
+    private static void WriteDirectoryContents(byte[] image, DirNode dir) {
+        int baseOffset = dir.Lba * SectorSize;
+        int sector = 0;
+        int posInSector = 0;
+        int parentLba = dir.Parent != null ? dir.Parent.Lba : dir.Lba;
+        int parentSize = dir.Parent != null ? dir.Parent.SizeBytes : dir.SizeBytes;
+
+        WriteRecord(image, ref sector, ref posInSector, baseOffset, "\0", dir.Lba, dir.SizeBytes, isDirectory: true);
+        WriteRecord(image, ref sector, ref posInSector, baseOffset, "\x01", parentLba, parentSize, isDirectory: true);
+
+        foreach (DirNode sub in dir.Subdirs) {
+            WriteRecord(image, ref sector, ref posInSector, baseOffset, sub.Name, sub.Lba, sub.SizeBytes, isDirectory: true);
+        }
+        foreach (FileEntry file in dir.Files) {
+            WriteRecord(image, ref sector, ref posInSector, baseOffset, file.IsoName, file.Lba, file.Length, isDirectory: false);
+        }
+    }
+
+    private static void WriteRecord(byte[] image, ref int sector, ref int posInSector, int baseOffset,
+        string identifier, int lba, int dataLength, bool isDirectory) {
         byte[] nameBytes = Encoding.ASCII.GetBytes(identifier);
-        int recordLength = 33 + nameBytes.Length;
-        if ((recordLength & 1) != 0) {
-            recordLength++;
+        int recordLength = RoundUpEven(33 + nameBytes.Length);
+        if (posInSector + recordLength > SectorSize) {
+            sector++;
+            posInSector = 0;
         }
-        if (offset + recordLength > image.Length) {
-            return 0;
-        }
+        int offset = baseOffset + sector * SectorSize + posInSector;
         Span<byte> record = image.AsSpan(offset, recordLength);
         record.Clear();
         record[0] = (byte)recordLength;
@@ -152,29 +236,74 @@ public sealed class VirtualIsoImage : ICdRomImage {
         WriteBothEndian16(record.Slice(28), 1);
         record[32] = (byte)nameBytes.Length;
         nameBytes.AsSpan().CopyTo(record.Slice(33));
-        return recordLength;
+        posInSector += recordLength;
     }
 
-    private static int BuildPathTableLe(byte[] image, int offset) {
-        // Minimal path table: one entry for the root directory
-        // Entry: length(1) + extended(1) + LBA LE(4) + parent dir number LE(2) + dir ID(1) + padding(1)
-        image[offset] = 1;
-        image[offset + 1] = 0;
-        BitConverter.GetBytes(RootDirLba).CopyTo(image, offset + 2);
-        BitConverter.GetBytes((ushort)1).CopyTo(image, offset + 6);
-        image[offset + 8] = 0x00;
-        image[offset + 9] = 0x00;
-        return 10;
+    private static int ComputePathTableSize(List<DirNode> dirs) {
+        int total = 0;
+        foreach (DirNode dir in dirs) {
+            total += PathTableEntrySize(dir);
+        }
+        return total;
     }
 
-    private static void BuildPathTableBe(byte[] image, int offset) {
-        image[offset] = 1;
-        image[offset + 1] = 0;
-        WriteUint32Be(image, offset + 2, RootDirLba);
-        image[offset + 6] = 0x00;
-        image[offset + 7] = 0x01;
-        image[offset + 8] = 0x00;
-        image[offset + 9] = 0x00;
+    private static int PathTableEntrySize(DirNode dir) {
+        int nameLen = dir.Parent == null ? 1 : Encoding.ASCII.GetByteCount(dir.Name);
+        return RoundUpEven(8 + nameLen);
+    }
+
+    private static void WritePathTableLe(byte[] image, int offset, List<DirNode> dirs) {
+        int pos = offset;
+        foreach (DirNode dir in dirs) {
+            byte[] nameBytes = dir.Parent == null ? new byte[] { 0x00 } : Encoding.ASCII.GetBytes(dir.Name);
+            int parentDirNumber = dir.Parent == null ? 1 : dir.Parent.DirNumber;
+            image[pos] = (byte)nameBytes.Length;
+            image[pos + 1] = 0;
+            BitConverter.GetBytes(dir.Lba).CopyTo(image, pos + 2);
+            BitConverter.GetBytes((ushort)parentDirNumber).CopyTo(image, pos + 6);
+            nameBytes.AsSpan().CopyTo(image.AsSpan(pos + 8, nameBytes.Length));
+            int entrySize = RoundUpEven(8 + nameBytes.Length);
+            if (entrySize > 8 + nameBytes.Length) {
+                image[pos + 8 + nameBytes.Length] = 0;
+            }
+            pos += entrySize;
+        }
+    }
+
+    private static void WritePathTableBe(byte[] image, int offset, List<DirNode> dirs) {
+        int pos = offset;
+        foreach (DirNode dir in dirs) {
+            byte[] nameBytes = dir.Parent == null ? new byte[] { 0x00 } : Encoding.ASCII.GetBytes(dir.Name);
+            int parentDirNumber = dir.Parent == null ? 1 : dir.Parent.DirNumber;
+            image[pos] = (byte)nameBytes.Length;
+            image[pos + 1] = 0;
+            WriteUint32Be(image, pos + 2, dir.Lba);
+            image[pos + 6] = (byte)((parentDirNumber >> 8) & 0xFF);
+            image[pos + 7] = (byte)(parentDirNumber & 0xFF);
+            nameBytes.AsSpan().CopyTo(image.AsSpan(pos + 8, nameBytes.Length));
+            int entrySize = RoundUpEven(8 + nameBytes.Length);
+            if (entrySize > 8 + nameBytes.Length) {
+                image[pos + 8 + nameBytes.Length] = 0;
+            }
+            pos += entrySize;
+        }
+    }
+
+    private sealed class DirNode {
+        public string Name = string.Empty;
+        public DirNode? Parent;
+        public List<DirNode> Subdirs = new();
+        public List<FileEntry> Files = new();
+        public int Lba;
+        public int SizeBytes;
+        public int DirNumber;
+    }
+
+    private sealed class FileEntry {
+        public string SourcePath = string.Empty;
+        public string IsoName = string.Empty;
+        public int Lba;
+        public int Length;
     }
 
     private static void BuildPvd(byte[] image, string volumeLabel, int volumeSpaceSize, int rootDirSize, int pathTableSize) {

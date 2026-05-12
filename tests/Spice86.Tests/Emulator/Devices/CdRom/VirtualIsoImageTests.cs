@@ -134,4 +134,126 @@ public sealed class VirtualIsoImageTests : IDisposable {
         // Assert
         iso.ImagePath.Should().Be(_testDir);
     }
+
+    [Fact]
+    public void RootDirectory_ContainsSubdirectoryEntry_WithDirectoryFlag() {
+        // Arrange
+        string subDir = Path.Combine(_testDir, "SUBDIR");
+        Directory.CreateDirectory(subDir);
+        VirtualIsoImage iso = new(_testDir, "DISC");
+
+        // Act
+        DirectoryRecord? sub = FindRecord(iso, lba: 20, name: "SUBDIR");
+
+        // Assert
+        sub.Should().NotBeNull("the root directory must list SUBDIR as an entry");
+        sub.IsDirectory.Should().BeTrue("byte 25 bit 0x02 must be set for directory entries");
+        sub.Lba.Should().BeGreaterThan(20, "subdirectory contents are stored after the root directory sector");
+    }
+
+    [Fact]
+    public void Subdirectory_ContainsDotAndDotDotEntries_PointingToSelfAndParent() {
+        // Arrange
+        string subDir = Path.Combine(_testDir, "SUBDIR");
+        Directory.CreateDirectory(subDir);
+        VirtualIsoImage iso = new(_testDir, "DISC");
+        DirectoryRecord? sub = FindRecord(iso, lba: 20, name: "SUBDIR");
+        sub.Should().NotBeNull();
+
+        // Act
+        byte[] subSector = new byte[SectorSize];
+        iso.Read(sub.Lba, subSector, CdSectorMode.CookedData2048);
+
+        // Assert — first two records are "." (self) and ".." (parent = root LBA 20)
+        int dotNameLen = subSector[32];
+        dotNameLen.Should().Be(1);
+        subSector[33].Should().Be(0x00, "'.' record uses identifier 0x00");
+        int dotLba = ReadLeInt32(subSector, 2);
+        dotLba.Should().Be(sub.Lba, "the '.' entry must point at the subdirectory itself");
+
+        int dotRecLen = subSector[0];
+        int dotDotNameLen = subSector[dotRecLen + 32];
+        dotDotNameLen.Should().Be(1);
+        subSector[dotRecLen + 33].Should().Be(0x01, "'..' record uses identifier 0x01");
+        int dotDotLba = ReadLeInt32(subSector, dotRecLen + 2);
+        dotDotLba.Should().Be(20, "the '..' entry of a top-level subdirectory must point at the root directory");
+    }
+
+    [Fact]
+    public void FileInsideSubdirectory_IsReadableViaSubdirectoryRecord() {
+        // Arrange
+        string subDir = Path.Combine(_testDir, "SUBDIR");
+        Directory.CreateDirectory(subDir);
+        byte[] expected = Encoding.ASCII.GetBytes("NESTED FILE CONTENT");
+        File.WriteAllBytes(Path.Combine(subDir, "INNER.TXT"), expected);
+        VirtualIsoImage iso = new(_testDir, "DISC");
+        DirectoryRecord? sub = FindRecord(iso, lba: 20, name: "SUBDIR");
+        sub.Should().NotBeNull();
+
+        // Act
+        DirectoryRecord? inner = FindRecord(iso, lba: sub.Lba, name: "INNER.TXT");
+
+        // Assert
+        inner.Should().NotBeNull("the subdirectory must list INNER.TXT");
+        inner.IsDirectory.Should().BeFalse();
+        byte[] sector = new byte[SectorSize];
+        iso.Read(inner.Lba, sector, CdSectorMode.CookedData2048);
+        sector[..expected.Length].Should().Equal(expected);
+    }
+
+    [Fact]
+    public void NestedSubdirectory_IsTraversable_AtDepthTwo() {
+        // Arrange
+        string level1 = Path.Combine(_testDir, "LEVEL1");
+        string level2 = Path.Combine(level1, "LEVEL2");
+        Directory.CreateDirectory(level2);
+        byte[] expected = Encoding.ASCII.GetBytes("DEEP");
+        File.WriteAllBytes(Path.Combine(level2, "DEEP.TXT"), expected);
+        VirtualIsoImage iso = new(_testDir, "DISC");
+
+        // Act
+        DirectoryRecord? l1 = FindRecord(iso, lba: 20, name: "LEVEL1");
+        l1.Should().NotBeNull();
+        DirectoryRecord? l2 = FindRecord(iso, lba: l1.Lba, name: "LEVEL2");
+        l2.Should().NotBeNull();
+        DirectoryRecord? deep = FindRecord(iso, lba: l2.Lba, name: "DEEP.TXT");
+
+        // Assert
+        deep.Should().NotBeNull();
+        byte[] sector = new byte[SectorSize];
+        iso.Read(deep.Lba, sector, CdSectorMode.CookedData2048);
+        sector[..expected.Length].Should().Equal(expected);
+    }
+
+    private static DirectoryRecord? FindRecord(VirtualIsoImage iso, int lba, string name) {
+        byte[] sector = new byte[SectorSize];
+        iso.Read(lba, sector, CdSectorMode.CookedData2048);
+        int pos = 0;
+        while (pos < sector.Length) {
+            int recLen = sector[pos];
+            if (recLen == 0) {
+                break;
+            }
+            int nameLen = sector[pos + 32];
+            string recordName = Encoding.ASCII.GetString(sector, pos + 33, nameLen);
+            // Strip trailing ";1" version suffix on files.
+            int semicolon = recordName.IndexOf(';');
+            if (semicolon >= 0) {
+                recordName = recordName[..semicolon];
+            }
+            if (string.Equals(recordName, name, StringComparison.OrdinalIgnoreCase)) {
+                int recordLba = ReadLeInt32(sector, pos + 2);
+                bool isDir = (sector[pos + 25] & 0x02) != 0;
+                return new DirectoryRecord(recordLba, isDir);
+            }
+            pos += recLen;
+        }
+        return null;
+    }
+
+    private static int ReadLeInt32(byte[] data, int offset) {
+        return data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24);
+    }
+
+    private sealed record DirectoryRecord(int Lba, bool IsDirectory);
 }

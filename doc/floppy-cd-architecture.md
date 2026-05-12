@@ -182,6 +182,7 @@ byteOffset = LBA * bytesPerSector
 ### Error propagation
 
 On failure, `SystemBiosInt13Handler`:
+
 1. Sets `AH` to the BIOS error code (e.g. `0x80` = drive not ready).
 2. Sets Carry Flag (CF = 1).
 3. Stores the same code in `_lastStatus[driveNumber]` (returned by AH=0x01).
@@ -390,6 +391,7 @@ FAT32:     root dir is a normal cluster chain starting at RootCluster
 ### FatDirectoryEntry parsing
 
 Each entry is 32 bytes. The parser skips:
+
 - entries where `Name[0] == 0xE5` (deleted)
 - entries where `Name[0] == 0x00` (end of directory)
 - entries where `Attributes == 0x0F` (Long File Name entry)
@@ -487,8 +489,9 @@ Memory layout (2048-byte sectors):
   Sector 17         Volume Descriptor Set Terminator (TypeCode = 0xFF)
   Sector 18         Path Table (LE byte order)
   Sector 19         Path Table (BE byte order)
-  Sector 20         Root directory records (2048 bytes, all files)
-  Sectors 21+       File data (one contiguous region per file)
+  Sector 20+        Root directory records (variable size, files + subdirectories)
+  Following sectors Subdirectory contents (one or more sectors per directory, BFS order)
+  Then              File data (one contiguous region per file)
 
 ISO 9660 Directory Record structure (variable length):
   Byte  0: LEN_DR (record length, including padding to even boundary)
@@ -826,6 +829,7 @@ Initialisation sequence:
 ```
 
 Toast content:
+
 - **Mount**: `"Drive A: mounted"` / `"DISK1 — disk1.img"`
 - **Disc swap**: `"Drive A: disc swapped"` / `"DISK2 — disk2.img"`
 - **Eject**: `"Drive A: ejected"` / `"No media in drive A:"`
