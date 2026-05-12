@@ -99,6 +99,45 @@ public sealed class VirtualFloppyImageTests : IDisposable {
     }
 
     [Fact]
+    public void Build_WithNestedSubdirectories_NestedFileIsAccessible() {
+        // Arrange
+        string level1 = Path.Combine(_testDir, "LEVEL1");
+        string level2 = Path.Combine(level1, "LEVEL2");
+        Directory.CreateDirectory(level2);
+        byte[] content = Encoding.ASCII.GetBytes("DEEP FILE");
+        File.WriteAllBytes(Path.Combine(level2, "DEEP.TXT"), content);
+        VirtualFloppyImage builder = new(_testDir, CreateLogger());
+
+        // Act
+        byte[] image = builder.Build();
+        FatFileSystem fs = new(image);
+        bool found = fs.TryGetEntry("LEVEL1\\LEVEL2\\DEEP.TXT", out FatDirectoryEntry? entry);
+
+        // Assert
+        found.Should().BeTrue();
+        entry.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Build_WithNestedSubdirectory_NestedDirectoryIsAccessible() {
+        // Arrange
+        string level1 = Path.Combine(_testDir, "LEVEL1");
+        string level2 = Path.Combine(level1, "LEVEL2");
+        Directory.CreateDirectory(level2);
+        VirtualFloppyImage builder = new(_testDir, CreateLogger());
+
+        // Act
+        byte[] image = builder.Build();
+        FatFileSystem fs = new(image);
+        bool found = fs.TryGetEntry("LEVEL1\\LEVEL2", out FatDirectoryEntry? entry);
+
+        // Assert
+        found.Should().BeTrue();
+        entry.Should().NotBeNull();
+        entry.IsDirectory.Should().BeTrue();
+    }
+
+    [Fact]
     public void Build_OversizeFile_LogsWarningAndSkipsFile() {
         // Arrange
         ILoggerService logger = Substitute.For<ILoggerService>();

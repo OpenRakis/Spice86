@@ -10,7 +10,7 @@ using System.Text;
 /// <summary>
 /// Builds a FAT12 1.44 MB floppy disk image from a host directory.
 /// Files in the root of the source directory are added to the image root.
-/// One level of subdirectories is also supported.
+/// Subdirectories are traversed recursively.
 /// Files that do not fit in the remaining clusters are skipped with a warning.
 /// </summary>
 public sealed class VirtualFloppyImage {
@@ -104,17 +104,40 @@ public sealed class VirtualFloppyImage {
         int maxEntriesInCluster = BytesPerSector * SectorsPerCluster / 32;
         int slot = 0;
 
-        foreach (string filePath in Directory.EnumerateFiles(hostDirPath)) {
+        foreach (string entryPath in Directory.EnumerateFileSystemEntries(hostDirPath)) {
+            string entryName = Path.GetFileName(entryPath);
             if (slot >= maxEntriesInCluster) {
-                LogSkipWarning(Path.GetFileName(filePath), "subdirectory cluster full");
+                LogSkipWarning(entryName, "subdirectory cluster full");
                 continue;
             }
-            byte[] content = File.ReadAllBytes(filePath);
+
+            if (Directory.Exists(entryPath)) {
+                int childDirCluster = nextCluster;
+                if (childDirCluster >= TotalDataClusters + 2) {
+                    LogSkipWarning(entryName, "not enough clusters remaining");
+                    continue;
+                }
+                nextCluster++;
+                fat[childDirCluster] = 0xFFF;
+
+                string dosDir = ToDosBaseName(entryName);
+                WriteDirectoryEntry(image, dirByteOffset + slot * 32, dosDir, childDirCluster, 0, isDirectory: true);
+                slot++;
+
+                WriteSubdirEntries(image, fat, entryPath, childDirCluster, ref nextCluster);
+                continue;
+            }
+
+            if (!File.Exists(entryPath)) {
+                continue;
+            }
+
+            byte[] content = File.ReadAllBytes(entryPath);
             if (!TryAllocateAndWriteFile(image, fat, content, ref nextCluster, out int firstCluster)) {
-                LogSkipWarning(Path.GetFileName(filePath), "not enough clusters remaining");
+                LogSkipWarning(entryName, "not enough clusters remaining");
                 continue;
             }
-            string dosName = ToDosFileName(Path.GetFileName(filePath));
+            string dosName = ToDosFileName(entryName);
             WriteDirectoryEntry(image, dirByteOffset + slot * 32, dosName, firstCluster, content.Length, isDirectory: false);
             slot++;
         }
