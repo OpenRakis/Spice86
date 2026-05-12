@@ -396,6 +396,9 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
 
     /// <inheritdoc/>
     public void OnVisibleRangeChanged(int firstVisibleIndex, int lastVisibleIndex) {
+        if (_firstVisibleIndex == firstVisibleIndex && _lastVisibleIndex == lastVisibleIndex) {
+            return;
+        }
         _firstVisibleIndex = firstVisibleIndex;
         _lastVisibleIndex = lastVisibleIndex;
         if (_pauseHandler.IsPaused) {

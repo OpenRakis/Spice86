@@ -16,6 +16,7 @@ public partial class DisassemblyView : UserControl {
     private IDisassemblyViewModel? _viewModel;
     private bool _isAttachedToVisualTree;
     private ScrollViewer? _scrollViewer;
+    private ListBox? _listBox;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DisassemblyView"/> class.
@@ -68,14 +69,14 @@ public partial class DisassemblyView : UserControl {
     }
 
     private void SubscribeToScrollViewer() {
-        ListBox? listBox = this.FindControl<ListBox>("DisassemblyListBox");
-        if (listBox == null) {
+        _listBox = this.FindControl<ListBox>("DisassemblyListBox");
+        if (_listBox == null) {
             return;
         }
-        _scrollViewer = listBox.FindDescendantOfType<ScrollViewer>();
+        _scrollViewer = _listBox.FindDescendantOfType<ScrollViewer>();
         if (_scrollViewer != null) {
             _scrollViewer.ScrollChanged += OnScrollChanged;
-            ReportVisibleRange(_scrollViewer, listBox.ItemCount);
+            ReportVisibleRange(_scrollViewer, _listBox.ItemCount);
         }
     }
 
@@ -84,17 +85,14 @@ public partial class DisassemblyView : UserControl {
             _scrollViewer.ScrollChanged -= OnScrollChanged;
             _scrollViewer = null;
         }
+        _listBox = null;
     }
 
     private void OnScrollChanged(object? sender, ScrollChangedEventArgs e) {
-        if (sender is not ScrollViewer scrollViewer || _viewModel == null) {
+        if (sender is not ScrollViewer scrollViewer || _viewModel == null || _listBox == null) {
             return;
         }
-        ListBox? listBox = this.FindControl<ListBox>("DisassemblyListBox");
-        if (listBox == null) {
-            return;
-        }
-        ReportVisibleRange(scrollViewer, listBox.ItemCount);
+        ReportVisibleRange(scrollViewer, _listBox.ItemCount);
     }
 
     private void ReportVisibleRange(ScrollViewer scrollViewer, int itemCount) {
