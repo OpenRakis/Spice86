@@ -14,6 +14,7 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.DebuggerKnowledgeBase;
 using Spice86.ViewModels.Messages;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -31,6 +32,7 @@ using System.Diagnostics.CodeAnalysis;
 public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemblyViewModel, IDisposable {
     private readonly BreakpointsViewModel _breakpointsViewModel;
     private readonly BreakpointConditionService _conditionService;
+    private readonly DebuggerDecoderService _debuggerDecoderService;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly ExpressionEvaluationService _evaluationService;
     private readonly IDictionary<SegmentedAddress, FunctionInformation> _functionsInformation;
@@ -123,8 +125,9 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
 
     public DisassemblyViewModel(EmulatorBreakpointsManager emulatorBreakpointsManager, IMemory memory, State state, IDictionary<SegmentedAddress, FunctionInformation> functionsInformation,
         BreakpointsViewModel breakpointsViewModel, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher, IMessenger messenger, ITextClipboard textClipboard, ILoggerService loggerService,
-        bool canCloseTab = false) : base(uiDispatcher, textClipboard) {
+        DebuggerDecoderService debuggerDecoderService, bool canCloseTab = false) : base(uiDispatcher, textClipboard) {
         _logger = loggerService;
+        _debuggerDecoderService = debuggerDecoderService;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _functionsInformation = functionsInformation;
         Functions = new AvaloniaList<FunctionInfo>(functionsInformation.Select(x => new FunctionInfo {
@@ -286,7 +289,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
 
             // Add all new items at once
             foreach (KeyValuePair<uint, EnrichedInstruction> item in enrichedInstructions) {
-                DebuggerLines[item.Key] = new DebuggerLineViewModel(item.Value, _breakpointsViewModel);
+                DebuggerLines[item.Key] = new DebuggerLineViewModel(item.Value, _breakpointsViewModel, _debuggerDecoderService);
             }
         } finally {
             _isBatchUpdating = false;
