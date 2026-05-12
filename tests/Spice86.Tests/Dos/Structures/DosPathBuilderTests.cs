@@ -1,0 +1,135 @@
+﻿namespace Spice86.Tests.Dos.Structures;
+
+using FluentAssertions;
+
+using Spice86.Core.Emulator.OperatingSystem.Enums;
+using Spice86.Core.Emulator.OperatingSystem.Structures;
+
+using System;
+
+using Xunit;
+
+public class DosPathBuilderTests {
+    [Theory]
+    [InlineData("", DosSpecialFileName.Empty)]
+    [InlineData("foo", DosSpecialFileName.None)]
+    [InlineData(" foo", DosSpecialFileName.None)]
+    [InlineData(".foo", DosSpecialFileName.None)]
+    [InlineData("foo ", DosSpecialFileName.Invalid)]
+    [InlineData("foo.", DosSpecialFileName.Invalid)]
+    [InlineData(".", DosSpecialFileName.CurrentDirectory)]
+    [InlineData("..", DosSpecialFileName.ParentDirectory)]
+    [InlineData("NUL", DosSpecialFileName.Null)]
+    [InlineData("Nul", DosSpecialFileName.Null)]
+    [InlineData("NUL.TXT", DosSpecialFileName.Null)]
+    [InlineData("NUL .TXT", DosSpecialFileName.Null)]
+    [InlineData("NULL", DosSpecialFileName.None)]
+    [InlineData("con", DosSpecialFileName.Console)]
+    [InlineData("CoN.TAR.GZ", DosSpecialFileName.Console)]
+    [InlineData("AUx", DosSpecialFileName.Auxiliary)]
+    [InlineData("PRN", DosSpecialFileName.Printer)]
+    [InlineData("COM", DosSpecialFileName.None)]
+    [InlineData("COM1", DosSpecialFileName.SerialPort1)]
+    [InlineData("cOM2", DosSpecialFileName.SerialPort2)]
+    [InlineData("coM3", DosSpecialFileName.SerialPort3)]
+    [InlineData("com4", DosSpecialFileName.SerialPort4)]
+    [InlineData("cOm5", DosSpecialFileName.SerialPort5)]
+    [InlineData("COm6", DosSpecialFileName.SerialPort6)]
+    [InlineData("COM7", DosSpecialFileName.SerialPort7)]
+    [InlineData("COM8", DosSpecialFileName.SerialPort8)]
+    [InlineData("COM9", DosSpecialFileName.SerialPort9)]
+    [InlineData("COM¹", DosSpecialFileName.SerialPort1)]
+    [InlineData("COM²", DosSpecialFileName.SerialPort2)]
+    [InlineData("COM³", DosSpecialFileName.SerialPort3)]
+    [InlineData("LPT", DosSpecialFileName.None)]
+    [InlineData("LPT1", DosSpecialFileName.ParallelPort1)]
+    [InlineData("lPT2", DosSpecialFileName.ParallelPort2)]
+    [InlineData("lpT3", DosSpecialFileName.ParallelPort3)]
+    [InlineData("lpt4", DosSpecialFileName.ParallelPort4)]
+    [InlineData("lPt5", DosSpecialFileName.ParallelPort5)]
+    [InlineData("LPt6", DosSpecialFileName.ParallelPort6)]
+    [InlineData("LPT7", DosSpecialFileName.ParallelPort7)]
+    [InlineData("LPT8", DosSpecialFileName.ParallelPort8)]
+    [InlineData("LPT9", DosSpecialFileName.ParallelPort9)]
+    [InlineData("LPT¹", DosSpecialFileName.ParallelPort1)]
+    [InlineData("LPT²", DosSpecialFileName.ParallelPort2)]
+    [InlineData("LPT³", DosSpecialFileName.ParallelPort3)]
+    internal void SpecialFileNames_DefaultSettings(string fileName, DosSpecialFileName expectedSpecialFileName) {
+        // Arrange
+        using DosPathBuilder builder = new();
+
+        // Act
+        // Documentation for ParseSpecialFileName() indicates that leading white space must always be trimmed.
+        ReadOnlySpan<char> fileNameTrimmed = fileName.AsSpan().TrimStart();
+        DosSpecialFileName result = builder.ParseSpecialFileName(fileNameTrimmed);
+
+        // Assert
+        result.Should().Be(expectedSpecialFileName);
+    }
+
+    [Theory]
+    [InlineData("COM¹", DosSpecialFileName.Invalid)]
+    [InlineData("COM²", DosSpecialFileName.Invalid)]
+    [InlineData("COM³", DosSpecialFileName.Invalid)]
+    [InlineData("LPT¹", DosSpecialFileName.Invalid)]
+    [InlineData("LPT²", DosSpecialFileName.Invalid)]
+    [InlineData("LPT³", DosSpecialFileName.Invalid)]
+    internal void SpecialFileNames_NoDeviceSuperscriptSetting(string fileName, DosSpecialFileName expectedSpecialFileName) {
+        // Arrange
+        using DosPathBuilder builder = new() {
+            SpecialFileNameSettings = DosSpecialFileNameSettings.NoDeviceSuperscriptDigits
+        };
+
+        // Act
+        // Documentation for ParseSpecialFileName() indicates that leading white space must always be trimmed.
+        ReadOnlySpan<char> fileNameTrimmed = fileName.AsSpan().TrimStart();
+        DosSpecialFileName result = builder.ParseSpecialFileName(fileNameTrimmed);
+
+        // Assert
+        result.Should().Be(expectedSpecialFileName);
+    }
+
+    [Theory]
+    [InlineData('A', null, null, null, @"A:\")]
+    [InlineData('Z', null, null, null, @"Z:\")]
+    [InlineData('c', "FOO", null, null, @"C:\FOO")]
+    [InlineData('C', "/foo", null, null, @"C:\foo")]
+    [InlineData('c', "/foo", "bar", null, @"C:\bar")]
+    [InlineData('c', " /foo", null, "bar", @"C:\foo\bar")]
+    [InlineData('z', "// foo", null, null, @"Z:\foo")]
+    [InlineData('z', @"//.foo\ \\bar\", null, null, @"Z:\.foo\bar")]
+    [InlineData('Q', "foo", "/baz", "bar", @"Q:\baz\bar")]
+    [InlineData('B', null, null, "'[f00]_", @"B:\'[f00]_")]
+    [InlineData('B', null, "'[f00]_", null, @"B:\'[f00]_")]
+    [InlineData('r', "foo;bar", null, null, @"R:\foo;bar")]
+    public void BuildPath_Drive_Relative_Rooted_FileName(char driveLetter, string? appendRelativePath, string? appendRootedPathAfterRelative,
+            string? appendFileName, string expectedPath) {
+        // Arrange
+        using DosPathBuilder builder = new();
+
+        // Act
+        DosPathBuilderResult resultSetDriveLetter = builder.SetDriveLetter(driveLetter);
+        DosPathBuilderResult resultAppendRelativePath = appendRelativePath is not null
+            ? builder.AppendRelativePath(appendRelativePath, out _)
+            : DosPathBuilderResult.Success;
+        DosPathBuilderResult resultAppendAbsolutePath = appendRootedPathAfterRelative is not null
+            ? builder.AppendRootedPath(appendRootedPathAfterRelative, out _)
+            : DosPathBuilderResult.Success;
+        DosPathBuilderResult resultAppendFileName = appendFileName is not null
+            ? builder.AppendFileName(appendFileName)
+            : DosPathBuilderResult.Success;
+        DosPathBuilderResult resultFreeze = builder.Freeze();
+        string resultPath = builder.ToString();
+        DosPathBuilderResult resultFreeze2 = builder.Freeze();
+
+        // Assert
+        resultSetDriveLetter.Should().Be(DosPathBuilderResult.Success);
+        resultAppendRelativePath.Should().Be(DosPathBuilderResult.Success);
+        resultAppendAbsolutePath.Should().Be(DosPathBuilderResult.Success);
+        resultAppendFileName.Should().Be(DosPathBuilderResult.Success);
+        resultFreeze.Should().Be(DosPathBuilderResult.Success);
+        resultFreeze2.Should().Be(DosPathBuilderResult.Success);
+        resultPath.Should().Be(expectedPath);
+        builder.IsFrozen.Should().BeTrue();
+    }
+}
