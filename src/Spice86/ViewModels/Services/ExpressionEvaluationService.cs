@@ -18,8 +18,22 @@ using System.Text;
 public class ExpressionEvaluationService {
     private readonly BreakpointConditionCompiler _compiler;
 
+    // Cache compiled Func<uint> by expression string.
+    // Expression.Compile() invokes the JIT and can take 2-10ms per call; caching makes
+    // repeated evaluations (across instructions and scroll events) effectively free.
+    private readonly Dictionary<string, Func<uint>> _compiledValueCache = new();
+
     public ExpressionEvaluationService(State state, IMemory memory) {
         _compiler = new BreakpointConditionCompiler(state, memory);
+    }
+
+    private Func<uint> GetOrCompileValue(string expression) {
+        if (_compiledValueCache.TryGetValue(expression, out Func<uint>? cached)) {
+            return cached;
+        }
+        Func<uint> compiled = _compiler.CompileValue(expression);
+        _compiledValueCache[expression] = compiled;
+        return compiled;
     }
 
     /// <summary>
@@ -58,7 +72,7 @@ public class ExpressionEvaluationService {
         if (expression == null) {
             return;
         }
-        uint value = _compiler.CompileValue(expression)();
+        uint value = GetOrCompileValue(expression)();
         if (segments.Count > 0) {
             AddSeparator(segments);
         }
@@ -75,7 +89,7 @@ public class ExpressionEvaluationService {
 
     private void EvaluateLeaOperand(List<FormattedTextToken> segments, Instruction instruction) {
         string addressExpression = BuildAddressExpressionCore(instruction);
-        uint value = _compiler.CompileValue(addressExpression)();
+        uint value = GetOrCompileValue(addressExpression)();
         if (segments.Count > 0) {
             AddSeparator(segments);
         }
@@ -87,7 +101,7 @@ public class ExpressionEvaluationService {
         if (memoryExpression == null) {
             return;
         }
-        uint value = _compiler.CompileValue(memoryExpression)();
+        uint value = GetOrCompileValue(memoryExpression)();
         if (segments.Count > 0) {
             AddSeparator(segments);
         }

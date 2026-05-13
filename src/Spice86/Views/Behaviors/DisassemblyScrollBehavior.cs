@@ -8,15 +8,13 @@ using Avalonia.VisualTree;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.ViewModels;
 
-using System.Timers;
+
 
 /// <summary>
 /// Attached behavior for handling scrolling in the disassembly view.
 /// This behavior encapsulates the UI-specific scrolling logic to improve separation of concerns.
 /// </summary>
 public class DisassemblyScrollBehavior {
-    private const int AnimationFramesPerSecond = 60;
-
     // Attached property for enabling the behavior
     public static readonly AttachedProperty<bool> IsEnabledProperty = AvaloniaProperty.RegisterAttached<DisassemblyScrollBehavior, Control, bool>("IsEnabled");
 
@@ -25,9 +23,6 @@ public class DisassemblyScrollBehavior {
 
     // Static field to track if we're currently processing a scroll operation
     private static bool _isScrollingInProgress;
-
-    // Configuration properties for smooth scrolling
-    private static readonly TimeSpan AnimationDuration = TimeSpan.FromMilliseconds(250);
 
     // Static constructor to register property changed handlers
     static DisassemblyScrollBehavior() {
@@ -141,7 +136,7 @@ public class DisassemblyScrollBehavior {
                 }
 
                 // Scroll to the target item
-                Dispatcher.UIThread.Post(() => ScrollToPosition(listBox, scrollViewer, targetIndex), DispatcherPriority.Loaded);
+                Dispatcher.UIThread.Post(() => ScrollToPosition(listBox, scrollViewer, targetIndex), DispatcherPriority.Normal);
             }
         } finally {
             // Release the lock
@@ -188,55 +183,9 @@ public class DisassemblyScrollBehavior {
         double maxOffset = Math.Max(0, scrollViewer.Extent.Height - viewportHeight);
         double finalOffset = Math.Min(targetOffset, maxOffset);
 
-        // Use smooth scrolling with configurable parameters
-        AnimateSmoothScroll(scrollViewer, finalOffset);
-    }
-
-    private static void AnimateSmoothScroll(ScrollViewer scrollViewer, double targetOffsetY) {
-        // Get the current offset
-        double startOffsetY = scrollViewer.Offset.Y;
-
-        // If we're already at the target, no need to animate
-        if (Math.Abs(startOffsetY - targetOffsetY) < 0.1) {
-            return;
-        }
-
-        // Ensure we're on the UI thread
-        if (!Dispatcher.UIThread.CheckAccess()) {
-            Dispatcher.UIThread.Post(() => AnimateSmoothScroll(scrollViewer, targetOffsetY));
-
-            return;
-        }
-
-        // Use a timer to animate the scroll
-        var timer = new Timer(1000.0 / AnimationFramesPerSecond);
-        int currentFrame = 0;
-        int totalFrames = (int)(AnimationDuration.TotalMilliseconds / (1000.0 / AnimationFramesPerSecond));
-
-        timer.Elapsed += (_, _) => {
-            // Calculate progress (0.0 to 1.0)
-            currentFrame++;
-            double progress = Math.Min(1.0, currentFrame / (double)totalFrames);
-
-            // Apply easing function
-            double easedProgress = progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.Pow(-2 * progress + 2, 3) / 2;
-
-            // Calculate new offset
-            double newOffsetY = startOffsetY + (targetOffsetY - startOffsetY) * easedProgress;
-
-            // Apply the new offset on the UI thread
-            Dispatcher.UIThread.Post(() => {
-                scrollViewer.Offset = new Vector(scrollViewer.Offset.X, newOffsetY);
-            });
-
-            // Stop the timer when animation is complete
-            if (progress >= 1.0) {
-                timer.Stop();
-                timer.Dispose();
-            }
-        };
-
-        // Start the timer
-        timer.Start();
+        // Instant scroll: set the offset directly.
+        // Smooth animation was removed because each render frame of SelectableTextBlock rows with
+        // inline Runs is too expensive on Linux (Skia/FreeType), turning a 250ms animation into 20s.
+        scrollViewer.Offset = new Vector(scrollViewer.Offset.X, finalOffset);
     }
 }

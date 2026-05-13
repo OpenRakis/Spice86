@@ -17,9 +17,6 @@
              x:DataType="viewModels:IDisassemblyViewModel">
     <UserControl.Resources>
         <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceInclude Source="avares://Spice86/Views/Styles/DisassemblyResources.axaml" />
-            </ResourceDictionary.MergedDictionaries>
             <converters:SegmentedAddressConverter x:Key="SegmentedAddressConverter" />
             <converters:FormattedTextOffsetsConverter x:Key="FormattedTextOffsetsConverter" />
             <converters:BreakpointColorConverter x:Key="BreakpointColorConverter" />
@@ -129,7 +126,6 @@
                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
                      ScrollViewer.VerticalScrollBarVisibility="Visible"
                      SelectedItem="{Binding SelectedDebuggerLine}"
-                     Grid.IsSharedSizeScope="True"
                      behaviors:DisassemblyScrollBehavior.IsEnabled="True"
                      behaviors:DisassemblyScrollBehavior.TargetAddress="{Binding CurrentInstructionAddress}">
                 <ListBox.ContextMenu>
@@ -178,24 +174,20 @@
                                         behaviors:InstructionPointerBehavior.IsEnabled="True">
                             <ContentControl.Styles>
                                 <Style Selector="SelectableTextBlock">
-                                    <Setter Property="Foreground"
-                                            Value="{Binding RelativeSource={RelativeSource AncestorType=ContentControl}, Path=Foreground}" />
-                                    <Setter Property="Background"
-                                            Value="{Binding RelativeSource={RelativeSource AncestorType=ContentControl}, Path=Background}" />
                                     <Setter Property="behaviors:UseParentListBoxContextMenuBehavior.UseParentContextMenu" Value="True" />
                                 </Style>
                             </ContentControl.Styles>
 
                             <Grid Margin="0">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Breakpoint" />
-                                    <ColumnDefinition Width="Auto" SharedSizeGroup="JumpLines" />
-                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Address" />
-                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Bytes" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" SharedSizeGroup="EvalOperands" />
-                                    <ColumnDefinition Width="Auto" SharedSizeGroup="BranchTarget" />
-                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Function" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <!-- Breakpoint indicator -->
                                 <Border Grid.Column="0"
