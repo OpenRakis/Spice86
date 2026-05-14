@@ -5,9 +5,9 @@ using Avalonia.Input;
 using Avalonia.Markup.Xaml;
 using Avalonia.VisualTree;
 
-using System.ComponentModel;
-
 using Spice86.ViewModels;
+
+using System.ComponentModel;
 
 /// <summary>
 /// View for the disassembly interface.

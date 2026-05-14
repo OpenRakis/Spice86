@@ -91,7 +91,7 @@
                 HotKey="Ctrl+F4"
                 ToolTip.Tip="Close view (Ctrl-F4)"
                 Command="{Binding CloseTabCommand}"
-                IsEnabled="{Binding CanCloseTab}">
+                IsVisible="{Binding CanCloseTab}">
                     <fluent:SymbolIcon Symbol="DocumentDismiss" Width="20" Height="20" />
                 </Button>
                 <Button

@@ -12,16 +12,17 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
-using Spice86.ViewModels.Messages;
+using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Utils;
 using Spice86.ViewModels.DataModels;
+using Spice86.ViewModels.Messages;
 using Spice86.ViewModels.Services;
 using Spice86.Views;
 
 using System.Text;
-using Spice86.Shared.Emulator.VM.Breakpoint;
+using System.Windows.Input;
 
-public partial class MemoryViewModel : ViewModelWithErrorDialogAndMemoryBreakpoints {
+public partial class MemoryViewModel : ViewModelWithErrorDialogAndMemoryBreakpoints, IMemorySearchViewModel, IDebuggerTabContentViewModel {
     private readonly IStructureViewModelFactory _structureViewModelFactory;
     private readonly IMessenger _messenger;
     private readonly IPauseHandler _pauseHandler;
@@ -63,13 +64,17 @@ public partial class MemoryViewModel : ViewModelWithErrorDialogAndMemoryBreakpoi
     [ObservableProperty]
     private string? _title;
 
+    partial void OnTitleChanged(string? value) {
+        UpdateHeaderPresentation();
+    }
+
     public enum MemorySearchDataType {
         Binary,
         Ascii,
     }
 
     [ObservableProperty]
-    private MemorySearchDataType _searchDataType;
+    private MemorySearchDataType _searchDataType = MemorySearchDataType.Binary;
 
     public bool SearchDataTypeIsBinary => SearchDataType == MemorySearchDataType.Binary;
 
@@ -119,8 +124,20 @@ public partial class MemoryViewModel : ViewModelWithErrorDialogAndMemoryBreakpoi
     private void TryUpdateHeaderAndMemoryDocument() {
         if (UpdateBinaryDocumentCommand.CanExecute(null)) {
             UpdateBinaryDocumentCommand.Execute(null);
-            Header = $"{StartAddress:X} - {EndAddress:X}";
+            UpdateHeaderPresentation();
         }
+    }
+
+    private void UpdateHeaderPresentation() {
+        string addressRange = BuildAddressRange();
+        HeaderToolTip = addressRange;
+        Header = string.IsNullOrWhiteSpace(Title) ? addressRange : Title;
+    }
+
+    private string BuildAddressRange() {
+        string start = string.IsNullOrWhiteSpace(StartAddress) ? "?" : StartAddress;
+        string end = string.IsNullOrWhiteSpace(EndAddress) ? "?" : EndAddress;
+        return $"{start} - {end}";
     }
 
     private string? _endAddress = "0x0";
@@ -224,7 +241,19 @@ public partial class MemoryViewModel : ViewModelWithErrorDialogAndMemoryBreakpoi
 
     [RelayCommand]
     private void StartMemorySearch() {
+        if (IsSearchingMemory) {
+            OnPropertyChanged(nameof(IsSearchingMemory));
+            return;
+        }
         IsSearchingMemory = true;
+    }
+
+    [RelayCommand]
+    private void StopMemorySearch() {
+        if (IsBusy && SearchMemoryCancelCommand.CanExecute(null)) {
+            SearchMemoryCancelCommand.Execute(null);
+        }
+        IsSearchingMemory = false;
     }
 
     [ObservableProperty]
@@ -236,6 +265,43 @@ public partial class MemoryViewModel : ViewModelWithErrorDialogAndMemoryBreakpoi
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(GoToFoundOccurenceCommand))]
     private bool _isAddressOfFoundOccurrenceValid;
+
+    public string FoundOccurrenceDisplay => AddressOFoundOccurence is null ? "-" : ConvertUtils.ToHex32(AddressOFoundOccurence.Value);
+
+    public ICommand SearchCancelCommand => SearchMemoryCancelCommand;
+
+    public ICommand SetSearchDataTypeToBinaryAction => SetSearchDataTypeToBinaryCommand;
+
+    public ICommand SetSearchDataTypeToAsciiAction => SetSearchDataTypeToAsciiCommand;
+
+    public ICommand FirstOccurrenceAction => FirstOccurrenceCommand;
+
+    public ICommand NextOccurrenceAction => NextOccurrenceCommand;
+
+    public ICommand PreviousOccurrenceAction => PreviousOccurrenceCommand;
+
+    public ICommand SearchCancelAction => SearchCancelCommand;
+
+    public ICommand StartMemorySearchAction => StartMemorySearchCommand;
+
+    public ICommand StopMemorySearchAction => StopMemorySearchCommand;
+
+    public bool CanOpenFoundOccurrence => IsAddressOfFoundOccurrenceValid;
+
+    public bool ShowOpenFoundOccurrenceAction => true;
+
+    public ICommand OpenFoundOccurrenceCommand => GoToFoundOccurenceCommand;
+
+    public ICommand OpenFoundOccurrenceAction => OpenFoundOccurrenceCommand;
+
+    partial void OnAddressOFoundOccurenceChanged(uint? value) {
+        OnPropertyChanged(nameof(FoundOccurrenceDisplay));
+        OnPropertyChanged(nameof(CanOpenFoundOccurrence));
+    }
+
+    partial void OnIsAddressOfFoundOccurrenceValidChanged(bool value) {
+        OnPropertyChanged(nameof(CanOpenFoundOccurrence));
+    }
 
     [RelayCommand(CanExecute = nameof(IsPaused), FlowExceptionsToTaskScheduler = true, IncludeCancelCommand = true)]
     private async Task SearchMemory(CancellationToken token) {
@@ -254,17 +320,22 @@ public partial class MemoryViewModel : ViewModelWithErrorDialogAndMemoryBreakpoi
                 searchStartAddress = 0;
                 searchLength = (int)(AddressOFoundOccurence.Value - 1);
             }
-            if (SearchDataType == MemorySearchDataType.Binary && ConvertUtils.TryParseHexToByteArray(MemorySearchValue, out byte[]? searchBytes)) {
-                AddressOFoundOccurence = await PerformMemorySearchAsync(searchStartAddress, searchLength, searchBytes, token);
+            if (SearchDataType == MemorySearchDataType.Binary) {
+                byte[]? searchBytes = MemorySearchParser.ParseBinarySearchValue(MemorySearchValue);
+                if (searchBytes is not null && searchBytes.Length > 0) {
+                    AddressOFoundOccurence = await PerformMemorySearchAsync(searchStartAddress, searchLength, searchBytes, token);
+                }
             } else if (SearchDataType == MemorySearchDataType.Ascii) {
-                searchBytes = Encoding.ASCII.GetBytes(MemorySearchValue);
+                byte[] searchBytes = Encoding.ASCII.GetBytes(MemorySearchValue);
                 AddressOFoundOccurence = await PerformMemorySearchAsync(searchStartAddress, searchLength, searchBytes, token);
             }
-        } catch (TaskCanceledException) {
+        } catch (OperationCanceledException) when (token.IsCancellationRequested) {
+            return;
         } finally {
             await _uiDispatcher.InvokeAsync(() => {
                 IsBusy = false;
                 IsAddressOfFoundOccurrenceValid = AddressOFoundOccurence is not null;
+                OnPropertyChanged(nameof(AddressOFoundOccurence));
             });
         }
     }
@@ -291,6 +362,9 @@ public partial class MemoryViewModel : ViewModelWithErrorDialogAndMemoryBreakpoi
 
     [ObservableProperty]
     private string _header = "Memory View";
+
+    [ObservableProperty]
+    private string? _headerToolTip;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(NewMemoryViewCommand))]

@@ -11,7 +11,8 @@ using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Shared.Emulator.Video;
 using Spice86.ViewModels.Services;
 
-public partial class PaletteViewModel : ViewModelBase, IEmulatorObjectViewModel {
+public partial class PaletteViewModel : ViewModelBase, IEmulatorObjectViewModel, IDebuggerTabContentViewModel {
+    public string Header => "Color Palette";
     private readonly ArgbPalette _argbPalette;
 
     private readonly Dictionary<uint, Color> ColorsCache = new();
@@ -34,7 +35,7 @@ public partial class PaletteViewModel : ViewModelBase, IEmulatorObjectViewModel 
     private AvaloniaList<Rectangle> _palette = new();
 
     private void UpdateColors(ArgbPalette palette) {
-        if(Palette.Count == 0) {
+        if (Palette.Count == 0) {
             for (int i = 0; i < 256; i++) {
                 Palette.Add(new() { Fill = new SolidColorBrush() });
             }
@@ -53,7 +54,7 @@ public partial class PaletteViewModel : ViewModelBase, IEmulatorObjectViewModel 
                     Rgb rgb = Rgb.FromUint(source);
                     Color color = Color.FromRgb(rgb.R, rgb.G, rgb.B);
                     ColorsCache.Add(source, color);
-                    if(brush?.Color != color) {
+                    if (brush?.Color != color) {
                         brush!.Color = color;
                     }
                 }

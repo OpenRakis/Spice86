@@ -176,7 +176,7 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
         }
         OnErrorsChanged(propertyName);
     }
-    
+
     protected void ValidateHexProperty(object? value, int length, [CallerMemberName] string? propertyName = null) {
         if (string.IsNullOrWhiteSpace(propertyName)) {
             return;
@@ -185,7 +185,7 @@ public abstract partial class ViewModelBase : ObservableObject, INotifyDataError
         string? valueAsString = value as string;
         // Always remove any existing validation errors first
         _validationErrors.Remove(propertyName);
-        
+
         if (string.IsNullOrWhiteSpace(valueAsString)) {
             // Value is empty, which is valid for optional fields - trigger error changed event
             OnErrorsChanged(propertyName);
