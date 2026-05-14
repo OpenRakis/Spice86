@@ -232,4 +232,81 @@ public class DosFileManagerTests {
             Directory.Delete(mountPoint, recursive: true);
         }
     }
+
+    [Fact]
+    public void OpenFile_TrailingDot_OpensExtensionlessFile() {
+        // Regression: The Summoning calls INT 21h AH=3D with "V." to open a host file
+        // literally named "V" (no extension). DOS semantics: "FILE." == "FILE" with empty
+        // extension. FreeDOS truename strips a single trailing dot.
+
+        // Arrange
+        string mountPoint = CreateTempMountWithExtensionlessFile("V");
+        try {
+            using DosTestFixture fixture = new(mountPoint);
+
+            // Act
+            DosFileOperationResult result = fixture.DosFileManager.OpenFileOrDevice("V.", FileAccessMode.ReadOnly);
+
+            // Assert
+            result.IsError.Should().BeFalse(
+                "a DOS trailing-dot filename must resolve to the same on-disk file as the bare name");
+            CloseIfOpen(fixture, result);
+        } finally {
+            Directory.Delete(mountPoint, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void OpenFile_BareNameMatchesExtensionlessFile() {
+        // Regression guard for the reverse direction: opening "V" must continue to work
+        // when the host file is literally "V" (no extension).
+
+        // Arrange
+        string mountPoint = CreateTempMountWithExtensionlessFile("V");
+        try {
+            using DosTestFixture fixture = new(mountPoint);
+
+            // Act
+            DosFileOperationResult result = fixture.DosFileManager.OpenFileOrDevice("V", FileAccessMode.ReadOnly);
+
+            // Assert
+            result.IsError.Should().BeFalse("a bare DOS name must open an extension-less host file");
+            CloseIfOpen(fixture, result);
+        } finally {
+            Directory.Delete(mountPoint, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void OpenFile_DoubleTrailingDotIsRejected() {
+        // FreeDOS rejects multiple trailing dots (PNE_DOT). Ensure we surface a DOS error
+        // rather than silently matching or crashing.
+
+        // Arrange
+        string mountPoint = CreateTempMountWithExtensionlessFile("V");
+        try {
+            using DosTestFixture fixture = new(mountPoint);
+
+            // Act
+            DosFileOperationResult result = fixture.DosFileManager.OpenFileOrDevice("V..", FileAccessMode.ReadOnly);
+
+            // Assert
+            result.IsError.Should().BeTrue("multiple trailing dots are ill-formed in DOS file names");
+        } finally {
+            Directory.Delete(mountPoint, recursive: true);
+        }
+    }
+
+    private static string CreateTempMountWithExtensionlessFile(string fileName) {
+        string mountPoint = Path.Join(Path.GetTempPath(), $"Spice86_FM_Tests_{Guid.NewGuid()}");
+        Directory.CreateDirectory(mountPoint);
+        File.WriteAllText(Path.Join(mountPoint, fileName), "payload");
+        return mountPoint;
+    }
+
+    private static void CloseIfOpen(DosTestFixture fixture, DosFileOperationResult result) {
+        if (result.Value is uint handle) {
+            fixture.DosFileManager.CloseFileOrDevice((ushort)handle);
+        }
+    }
 }

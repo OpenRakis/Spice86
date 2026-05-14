@@ -16,7 +16,13 @@ public class DosPathBuilderTests {
     [InlineData(" foo", DosSpecialFileName.None)]
     [InlineData(".foo", DosSpecialFileName.None)]
     [InlineData("foo ", DosSpecialFileName.Invalid)]
-    [InlineData("foo.", DosSpecialFileName.Invalid)]
+    // DOS semantics: a single trailing dot means "no extension" (FreeDOS truename strips it).
+    // It is a valid file name, not an "Invalid"/reserved one. See kernel/kernel/newstuff.c "strip trailing dot".
+    [InlineData("foo.", DosSpecialFileName.None)]
+    [InlineData("foo.bar", DosSpecialFileName.None)]
+    // Two or more trailing dots are still ill-formed (matches FreeDOS PNE_DOT multi-dot rejection).
+    [InlineData("foo..", DosSpecialFileName.Invalid)]
+    [InlineData("foo...", DosSpecialFileName.Invalid)]
     [InlineData(".", DosSpecialFileName.CurrentDirectory)]
     [InlineData("..", DosSpecialFileName.ParentDirectory)]
     [InlineData("NUL", DosSpecialFileName.Null)]
@@ -102,6 +108,12 @@ public class DosPathBuilderTests {
     [InlineData('B', null, null, "'[f00]_", @"B:\'[f00]_")]
     [InlineData('B', null, "'[f00]_", null, @"B:\'[f00]_")]
     [InlineData('r', "foo;bar", null, null, @"R:\foo;bar")]
+    // DOS semantics: a single trailing dot on a path segment means "no extension"
+    // and is stripped during canonicalization (FreeDOS truename "strip trailing dot").
+    [InlineData('C', @"GAME\V.", null, null, @"C:\GAME\V")]
+    [InlineData('C', @"V.", null, null, @"C:\V")]
+    [InlineData('C', null, null, "V.", @"C:\V")]
+    [InlineData('C', @"FOO.\BAR.", null, null, @"C:\FOO\BAR")]
     public void BuildPath_Drive_Relative_Rooted_FileName(char driveLetter, string? appendRelativePath, string? appendRootedPathAfterRelative,
             string? appendFileName, string expectedPath) {
         // Arrange
