@@ -292,6 +292,11 @@ internal ref struct DosPathBuilder {
         // DOS empty-extension marker: "NAME." canonicalizes to "NAME" (FreeDOS truename behavior).
         // ParseSpecialFileName has already validated that no more than one trailing dot is present.
         fileName = TrimTrailingEmptyExtensionDot(fileName);
+        if (fileName.Length >= 1 && fileName[^1] == '.') {
+            // Normalization exposed another trailing dot (for example "foo. ." -> "foo.").
+            // Keep this invalid to match FreeDOS multi-dot rejection semantics.
+            return DosPathBuilderResult.InvalidReservedFileName;
+        }
 
         // Append directory separator and file name.
         Debug.Assert(_pathBuilder.Length >= 2);
@@ -361,6 +366,12 @@ internal ref struct DosPathBuilder {
                 case DosSpecialFileName.None: {
                         // DOS empty-extension marker: "NAME." canonicalizes to "NAME" (FreeDOS truename).
                         ReadOnlySpan<char> appendElement = TrimTrailingEmptyExtensionDot(lastPathElement);
+                        if (appendElement.Length >= 1 && appendElement[^1] == '.') {
+                            // Normalization exposed another trailing dot (for example "foo. ." -> "foo.").
+                            // Keep this invalid to match FreeDOS multi-dot rejection semantics.
+                            endsWithDirectorySeparator = default;
+                            return DosPathBuilderResult.InvalidReservedFileName;
+                        }
                         // Append normal file name element.
                         Debug.Assert(_pathBuilder.Length >= 2);
                         _pathStack.Push(_pathBuilder.Length);

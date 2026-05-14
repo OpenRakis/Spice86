@@ -124,6 +124,7 @@ public class DosPathBuilderTests {
     [InlineData('C', null, null, "Info.cc1            ", @"C:\Info.cc1")]
     [InlineData('C', "GAME", null, "Info.cc1            ", @"C:\GAME\Info.cc1")]
     [InlineData('C', @"FOO  \BAR  ", null, null, @"C:\FOO\BAR")]
+    [InlineData('C', null, null, "foo .", @"C:\foo")]
     public void BuildPath_Drive_Relative_Rooted_FileName(char driveLetter, string? appendRelativePath, string? appendRootedPathAfterRelative,
             string? appendFileName, string expectedPath) {
         // Arrange
@@ -153,5 +154,38 @@ public class DosPathBuilderTests {
         resultFreeze2.Should().Be(DosPathBuilderResult.Success);
         resultPath.Should().Be(expectedPath);
         builder.IsFrozen.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("foo. .")]
+    [InlineData("foo.. .")]
+    public void AppendFileName_TrailingDotExposedByWhitespace_IsRejected(string fileName) {
+        // Arrange
+        using DosPathBuilder builder = new();
+        DosPathBuilderResult resultSetDriveLetter = builder.SetDriveLetter('C');
+
+        // Act
+        DosPathBuilderResult result = builder.AppendFileName(fileName);
+
+        // Assert
+        resultSetDriveLetter.Should().Be(DosPathBuilderResult.Success);
+        result.Should().Be(DosPathBuilderResult.InvalidReservedFileName);
+    }
+
+    [Theory]
+    [InlineData("foo. .")]
+    [InlineData("foo.. .")]
+    public void AppendRelativePath_TrailingDotExposedByWhitespace_IsRejected(string relativePath) {
+        // Arrange
+        using DosPathBuilder builder = new();
+        DosPathBuilderResult resultSetDriveLetter = builder.SetDriveLetter('C');
+
+        // Act
+        DosPathBuilderResult result = builder.AppendRelativePath(relativePath, out bool endsWithDirectorySeparator);
+
+        // Assert
+        resultSetDriveLetter.Should().Be(DosPathBuilderResult.Success);
+        result.Should().Be(DosPathBuilderResult.InvalidReservedFileName);
+        endsWithDirectorySeparator.Should().BeFalse();
     }
 }
