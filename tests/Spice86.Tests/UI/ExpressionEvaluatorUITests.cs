@@ -1,7 +1,5 @@
 namespace Spice86.Tests.UI;
 
-using Avalonia.Headless.XUnit;
-
 using FluentAssertions;
 
 using Iced.Intel;
@@ -59,7 +57,7 @@ public class ExpressionEvaluatorUITests : BreakpointUiTestBase {
     /// Verifies that register operands are evaluated for MOV reg, reg.
     /// ASM: mov ax, bx (opcode 89 D8)
     /// </summary>
-    [AvaloniaFact]
+    [Fact]
     public void EvaluateOperands_MovAxBx_ShowsBothRegisterValues() {
         // Arrange
         State state = CreateState();
@@ -95,7 +93,7 @@ public class ExpressionEvaluatorUITests : BreakpointUiTestBase {
     /// Verifies that memory operands are evaluated for MOV reg, [mem].
     /// ASM: mov ax, [bx] (opcode 8B 07) with DS:BX pointing to 0xABCD.
     /// </summary>
-    [AvaloniaFact]
+    [Fact]
     public void EvaluateOperands_MovAxMemBx_ShowsMemoryValue() {
         // Arrange
         State state = CreateState();
@@ -134,7 +132,7 @@ public class ExpressionEvaluatorUITests : BreakpointUiTestBase {
     /// Verifies that immediates are NOT evaluated (they are already visible in disassembly text).
     /// ASM: mov ax, 0x1234 (opcode B8 34 12) - only AX should appear in evaluation.
     /// </summary>
-    [AvaloniaFact]
+    [Fact]
     public void EvaluateOperands_MovAxImm_OnlyShowsDestRegister() {
         // Arrange
         State state = CreateState();
@@ -165,7 +163,7 @@ public class ExpressionEvaluatorUITests : BreakpointUiTestBase {
     /// Verifies that memory with displacement is correctly evaluated.
     /// ASM: mov ax, word ptr [bx+0x10] (opcode 8B 47 10)
     /// </summary>
-    [AvaloniaFact]
+    [Fact]
     public void EvaluateOperands_MovAxMemBxDisp_ShowsMemoryValue() {
         // Arrange
         State state = CreateState();
@@ -203,7 +201,7 @@ public class ExpressionEvaluatorUITests : BreakpointUiTestBase {
     /// Verifies that LEA computes the effective address instead of reading memory.
     /// ASM: lea ax, [bp-8] (opcode 8D 46 F8) - should show computed address, not memory contents.
     /// </summary>
-    [AvaloniaFact]
+    [Fact]
     public void EvaluateOperands_LeaAxBpMinus8_ShowsEffectiveAddress() {
         // Arrange
         State state = CreateState();
@@ -244,7 +242,7 @@ public class ExpressionEvaluatorUITests : BreakpointUiTestBase {
     /// Verifies LEA with base+index computes the effective address.
     /// ASM: lea ax, [bx+si] (opcode 8D 00)
     /// </summary>
-    [AvaloniaFact]
+    [Fact]
     public void EvaluateOperands_LeaAxBxSi_ShowsEffectiveAddress() {
         // Arrange
         State state = CreateState();
@@ -277,7 +275,7 @@ public class ExpressionEvaluatorUITests : BreakpointUiTestBase {
     /// Verifies that LDS evaluates the far pointer memory operand (dword containing offset:segment).
     /// ASM: lds si, ss:[bp+0x10] (opcode C5 76 10) - should show the dword value at memory.
     /// </summary>
-    [AvaloniaFact]
+    [Fact]
     public void EvaluateOperands_LdsSiBpPlus10_ShowsFarPointerValue() {
         // Arrange
         State state = CreateState();
@@ -318,7 +316,7 @@ public class ExpressionEvaluatorUITests : BreakpointUiTestBase {
     /// ASM: div word [bp-0xE] (opcode F7 76 F2) with SS=0, BP=0x0100 and divisor 0xE4C3 at SS:BP-0xE.
     /// The display label must show BP-0xE, not BP+0xFFF2.
     /// </summary>
-    [AvaloniaFact]
+    [Fact]
     public void EvaluateOperands_DivWordBpMinusE_ShowsNegativeDisplacementAndCorrectValue() {
         // Arrange
         State state = CreateState();
@@ -359,7 +357,7 @@ public class ExpressionEvaluatorUITests : BreakpointUiTestBase {
     /// Verifies that CALL dword ptr [mem] evaluates the far pointer memory operand.
     /// ASM: call dword ptr ss:[bp-4] (opcode FF 5E FC) - should show the target address.
     /// </summary>
-    [AvaloniaFact]
+    [Fact]
     public void EvaluateOperands_CallFarPtrBpMinus4_ShowsFarPointerValue() {
         // Arrange
         State state = CreateState();
