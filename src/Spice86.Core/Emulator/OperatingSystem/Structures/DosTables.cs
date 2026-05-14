@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.OperatingSystem.Structures;
 
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
+using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
@@ -27,6 +28,11 @@ public class DosTables {
     public CurrentDirectoryStructure CurrentDirectoryStructure { get; private set; }
 
     /// <summary>
+    /// Gets the segmented address where the CDS is allocated.
+    /// </summary>
+    public SegmentedAddress CdsSegmentedAddress { get; private set; }
+
+    /// <summary>
     /// Gets the Double Byte Character Set (DBCS) lead-byte table.
     /// </summary>
     public DosDoubleByteCharacterSet DoubleByteCharacterSet { get; private set; }
@@ -36,8 +42,13 @@ public class DosTables {
     /// </summary>
     /// <param name="memory">The memory interface to write structures to.</param>
     public DosTables(IByteReaderWriter memory) {
-        uint cdsAddress = MemoryUtils.ToPhysicalAddress(MemoryMap.DosCdsSegment, 0);
-        CurrentDirectoryStructure = new CurrentDirectoryStructure(memory, cdsAddress);
+        // CDS needs one entry per drive (A-Z), rounded up to the nearest paragraph.
+        const int bytesPerParagraph = 16;
+        int cdsSizeInBytes = DosDriveManager.MaxDriveCount * CurrentDirectoryStructure.CdsEntrySize;
+        ushort cdsParagraphs = (ushort)((cdsSizeInBytes + bytesPerParagraph - 1) / bytesPerParagraph);
+        ushort cdsSegment = ReserveDosPrivateSegment(cdsParagraphs);
+        CdsSegmentedAddress = new SegmentedAddress(cdsSegment, 0);
+        CurrentDirectoryStructure = new CurrentDirectoryStructure(memory, CdsSegmentedAddress.Linear);
 
         ushort currentMemorySegment = ReserveDosPrivateSegment(DosDoubleByteCharacterSet.DbcsTableSizeInParagraphs);
         ushort doubleByteCharacterSetSegment = (ushort)(currentMemorySegment + 1);

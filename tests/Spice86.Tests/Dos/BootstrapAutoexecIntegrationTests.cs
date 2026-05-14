@@ -17,7 +17,7 @@ public class BootstrapAutoexecIntegrationTests {
 
     [Fact]
     public void Bootstrap_HostRequestedExe_ExecutesThroughAutoexecBat() {
-        WithTempDirectory("boot_exe", tempDir => {
+        WithTempFile("boot_exe", tempDir => {
             // Arrange: .EXE extension with flat-binary (COM-format) content.
             // The program loader falls back to COM loading when the MZ header is absent,
             // but the bootstrap routing still uses the .EXE path in AUTOEXEC.BAT.
@@ -33,7 +33,7 @@ public class BootstrapAutoexecIntegrationTests {
 
     [Fact]
     public void Bootstrap_HostRequestedExeInSubdirectory_ExecutesThroughAutoexecBat() {
-        WithTempDirectory("boot_exe_subdir", tempDir => {
+        WithTempFile("boot_exe_subdir", tempDir => {
             // Arrange: program living in a subdirectory, like C:\GAMES\DUNE\DUNE.EXE
             string subDir = Path.Join(tempDir, "GAMES", "DUNE");
             Directory.CreateDirectory(subDir);
@@ -49,7 +49,7 @@ public class BootstrapAutoexecIntegrationTests {
 
     [Fact]
     public void Bootstrap_HostRequestedProgramWithSpacesInPath_IsProperlyQuotedInAutoexecBat() {
-        WithTempDirectory("boot spaces", tempDir => {
+        WithTempFile("boot spaces", tempDir => {
             // Arrange: directory with a space in its name.
             // BuildCallLine uses EscapeIfNeeded which wraps the DOS path in quotes.
             string spacedDir = Path.Join(tempDir, "MY GAMES");
@@ -66,7 +66,7 @@ public class BootstrapAutoexecIntegrationTests {
 
     [Fact]
     public void Bootstrap_HostRequestedBatch_UsesCallToRouteAndReturnsToBatchEngine() {
-        WithTempDirectory("boot_bat", tempDir => {
+        WithTempFile("boot_bat", tempDir => {
             // Arrange: host-requested file is a BAT that chains into a COM.
             // The bootstrap generates: CALL C:\START.BAT
             // The batch engine then processes START.BAT, which calls WRITER.COM.
@@ -83,7 +83,7 @@ public class BootstrapAutoexecIntegrationTests {
 
     [Fact]
     public void Bootstrap_ArgumentsPassedFromHost_ArePreservedThroughAutoexecBat() {
-        WithTempDirectory("boot_args", tempDir => {
+        WithTempFile("boot_args", tempDir => {
             // Arrange: the host provides ExeArgs that flow into AUTOEXEC.BAT via BuildCallLine.
             // The batch file receives them as %1, %2 etc. A route batch dispatches based on %1.
             CreateBinaryFile(tempDir, "W_YES.COM", BuildVideoWriterCom('Y', 0));
@@ -100,7 +100,7 @@ public class BootstrapAutoexecIntegrationTests {
 
     [Fact]
     public void Bootstrap_ErrorlevelFromProgram_PropagatesThroughAutoexecBatChain() {
-        WithTempDirectory("boot_errorlevel", tempDir => {
+        WithTempFile("boot_errorlevel", tempDir => {
             // Arrange: host-requested batch chains exit-code + errorlevel check.
             // The autoexec routing preserves the errorlevel across the CALL chain.
             CreateBinaryFile(tempDir, "EXIT3.COM", BuildExitCodeCom(3));

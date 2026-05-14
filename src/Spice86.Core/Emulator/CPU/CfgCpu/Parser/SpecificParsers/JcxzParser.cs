@@ -18,7 +18,7 @@ public class JcxzParser : BaseInstructionParser {
 
     public CfgInstruction Parse(ParsingContext context) {
         (int offsetValue, FieldWithValue offsetField) = ReadSignedOffset(BitWidth.BYTE_8);
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1) { Kind = InstructionKind.Jump };
         instr.AddField(offsetField);
         instr.MaxSuccessorsCount = 2;
         ushort targetIp = (ushort)(instr.NextInMemoryAddress32.Offset + offsetValue);

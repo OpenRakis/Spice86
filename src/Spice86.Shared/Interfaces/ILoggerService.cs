@@ -35,11 +35,6 @@ public interface ILoggerService : ILogger {
     LoggerConfiguration CreateLoggerConfiguration();
 
     /// <summary>
-    /// Returns a new <see cref="ILoggerService"/> with the specified minimum log level.
-    /// </summary>
-    ILoggerService WithLogLevel(LogEventLevel minimumLevel);
-
-    /// <summary>
     /// Redirects console log output to stderr, freeing stdout for protocol transports (e.g., MCP stdio).
     /// </summary>
     void UseStderrForConsoleOutput();

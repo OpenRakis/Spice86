@@ -138,11 +138,12 @@ public class MachineTest
     {
         // 0x4001 in little endian
         byte[] expected = new byte[] { 0x01, 0x40 };
-        Machine emulator = TestOneBin("jmpmov", expected, jitMode);
-        State state = emulator.CpuState;
-        uint endAddress = MemoryUtils.ToPhysicalAddress(state.CS, state.IP);
-        // Last instruction HLT is one byte long and is at 0xF400C
-        Assert.Equal((uint)0xF400D, endAddress);
+        TestOneBin("jmpmov", expected, jitMode, machine => {
+            State state = machine.CpuState;
+            uint endAddress = MemoryUtils.ToPhysicalAddress(state.CS, state.IP);
+            // Last instruction HLT is one byte long and is at 0xF400C
+            Assert.Equal((uint)0xF400D, endAddress);
+        });
     }
 
     [Theory]
@@ -186,27 +187,29 @@ public class MachineTest
     [MemberData(nameof(JitModes))]
     public void TestSegpr(JitMode jitMode)
     {
-        Machine machine = TestOneBin("segpr", jitMode);
-        // Here, a division by 0 occurred causing a CPU fault. It is handled by an interrupt handler.
-        CurrentInstructions currentInstructions = machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
-        CfgInstruction? divBy0 = currentInstructions.GetAtAddress(new(0xF000, 0x005F));
-        CfgInstruction? divBy0HandlerEntry = currentInstructions.GetAtAddress(new(0xF000, 0x1100));
-        CfgInstruction? divBy0HandlerIret = currentInstructions.GetAtAddress(new(0xF000, 0x1111));
-        CfgInstruction? divBy0NextInstruction = currentInstructions.GetAtAddress(new(0xF000, 0x0065));
-        Assert.NotNull(divBy0);
-        Assert.NotNull(divBy0HandlerEntry);
-        Assert.NotNull(divBy0HandlerIret);
-        Assert.NotNull(divBy0NextInstruction);
-        // Check that the int handler is linked to the division by 0 as a cpu fault type successor
-        Assert.Contains(divBy0HandlerEntry, divBy0.Successors);
-        Assert.Contains(divBy0HandlerEntry, divBy0.SuccessorsPerType[InstructionSuccessorType.CpuFault]);
-        // Check that the instruction next to the div by 0 to which the handler returned to  is linked to the division by 0 as a regular "Call to return" link.
-        // Side-note, normally, div by 0 int handler should return to the div instruction. However, here the handler edits the call stack making it return to the next instruction which is how a regular function call in a high level language would behave
-        Assert.Contains(divBy0NextInstruction, divBy0.Successors);
-        Assert.Contains(divBy0NextInstruction, divBy0.SuccessorsPerType[InstructionSuccessorType.CallToReturn]);
-        // Check that IRET is normally connected to the return target
-        Assert.Contains(divBy0NextInstruction, divBy0HandlerIret.Successors);
-        Assert.Contains(divBy0NextInstruction, divBy0HandlerIret.SuccessorsPerType[InstructionSuccessorType.Normal]);
+        byte[] expected = GetExpected("segpr");
+        TestOneBin("segpr", expected, jitMode, machine => {
+            // Here, a division by 0 occurred causing a CPU fault. It is handled by an interrupt handler.
+            CurrentInstructions currentInstructions = machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
+            CfgInstruction? divBy0 = currentInstructions.GetAtAddress(new(0xF000, 0x005F));
+            CfgInstruction? divBy0HandlerEntry = currentInstructions.GetAtAddress(new(0xF000, 0x1100));
+            CfgInstruction? divBy0HandlerIret = currentInstructions.GetAtAddress(new(0xF000, 0x1111));
+            CfgInstruction? divBy0NextInstruction = currentInstructions.GetAtAddress(new(0xF000, 0x0065));
+            Assert.NotNull(divBy0);
+            Assert.NotNull(divBy0HandlerEntry);
+            Assert.NotNull(divBy0HandlerIret);
+            Assert.NotNull(divBy0NextInstruction);
+            // Check that the int handler is linked to the division by 0 as a cpu fault type successor
+            Assert.Contains(divBy0HandlerEntry, divBy0.Successors);
+            Assert.Contains(divBy0HandlerEntry, divBy0.SuccessorsPerType[InstructionSuccessorType.CpuFault]);
+            // Check that the instruction next to the div by 0 to which the handler returned to  is linked to the division by 0 as a regular "Call to return" link.
+            // Side-note, normally, div by 0 int handler should return to the div instruction. However, here the handler edits the call stack making it return to the next instruction which is how a regular function call in a high level language would behave
+            Assert.Contains(divBy0NextInstruction, divBy0.Successors);
+            Assert.Contains(divBy0NextInstruction, divBy0.SuccessorsPerType[InstructionSuccessorType.CallToReturn]);
+            // Check that IRET is normally connected to the return target
+            Assert.Contains(divBy0NextInstruction, divBy0HandlerIret.Successors);
+            Assert.Contains(divBy0NextInstruction, divBy0HandlerIret.SuccessorsPerType[InstructionSuccessorType.Normal]);
+        });
     }
 
     /// <summary>
@@ -226,15 +229,17 @@ public class MachineTest
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestLockPrefixValidation(JitMode jitMode) {
-        IMemory memory = TestOneBin("lockprefix", [], jitMode).Memory;
+        TestOneBin("lockprefix", [], jitMode, machine => {
+            IMemory memory = machine.Memory;
 
-        // [0x0000] = invalid_lock_count: LOCK MOV [mem], LOCK ADD reg, LOCK INC reg
-        ushort invalidCount = memory.UInt16[0, 0x0000];
-        // [0x0002] = valid_lock_count: set to 3 after the three valid tests complete
-        ushort validCount = memory.UInt16[0, 0x0002];
+            // [0x0000] = invalid_lock_count: LOCK MOV [mem], LOCK ADD reg, LOCK INC reg
+            ushort invalidCount = memory.UInt16[0, 0x0000];
+            // [0x0002] = valid_lock_count: set to 3 after the three valid tests complete
+            ushort validCount = memory.UInt16[0, 0x0002];
 
-        invalidCount.Should().Be(3, "three invalid LOCK uses should each trigger INT 6");
-        validCount.Should().Be(3, "three valid LOCK uses should complete without triggering INT 6");
+            invalidCount.Should().Be(3, "three invalid LOCK uses should each trigger INT 6");
+            validCount.Should().Be(3, "three valid LOCK uses should complete without triggering INT 6");
+        });
     }
 
     [Theory]
@@ -274,15 +279,16 @@ public class MachineTest
         expected[0x01] = 0x00;
         expected[0x02] = 0xff;
         expected[0x03] = 0xff;
-        Machine machine = TestOneBin("selfmodifyvalue", expected, jitMode);
-        CurrentInstructions currentInstructions = machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
-        CfgInstruction? instruction = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x00D));
-        Assert.NotNull(instruction);
-        // The immediate value field is the last field in a MOV reg, imm16 instruction
-        InstructionField<ushort> immField = (InstructionField<ushort>)instruction.FieldsInOrder[^1];
-        // Code should have been modified so instruction should use memory and not stored value
-        Assert.False(immField.UseValue);
-        Assert.Equal(instruction.Address.Linear + 1, immField.PhysicalAddress);
+        TestOneBin("selfmodifyvalue", expected, jitMode, machine => {
+            CurrentInstructions currentInstructions = machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
+            CfgInstruction? instruction = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x00D));
+            Assert.NotNull(instruction);
+            // The immediate value field is the last field in a MOV reg, imm16 instruction
+            InstructionField<ushort> immField = (InstructionField<ushort>)instruction.FieldsInOrder[^1];
+            // Code should have been modified so instruction should use memory and not stored value
+            Assert.False(immField.UseValue);
+            Assert.Equal(instruction.Address.Linear + 1, immField.PhysicalAddress);
+        });
     }
 
     [Theory]
@@ -329,7 +335,8 @@ public class MachineTest
     [MemberData(nameof(JitModes))]
     public void TestCallbacks(JitMode jitMode) {
         string comFileName = Path.GetFullPath("Resources/cpuTests/intchain.com");
-        Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(binName: comFileName, maxCycles: 1000, enablePit: false, installInterruptVectors: true, enableA20Gate: false, jitMode: jitMode).Create();
+        using Spice86Creator creator = new Spice86Creator(binName: comFileName, maxCycles: 1000, enablePit: false, installInterruptVectors: true, enableA20Gate: false, jitMode: jitMode);
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
         Machine machine = spice86DependencyInjection.Machine;
         IMemory memory = machine.Memory;
         SegmentedAddress entryPoint = machine.CpuState.IpSegmentedAddress;
@@ -399,22 +406,33 @@ public class MachineTest
     }
 
     [AssertionMethod]
-    private Machine TestOneBin(string binName, JitMode jitMode)
+    private void TestOneBin(string binName, JitMode jitMode)
     {
         byte[] expected = GetExpected(binName);
-        return TestOneBin(binName, expected, jitMode);
+        TestOneBin(binName, expected, jitMode);
     }
 
     [AssertionMethod]
-    private Machine TestOneBin(string binName, byte[] expected, JitMode jitMode, long maxCycles = 100000L, bool enablePit = false, bool enableA20Gate = false)
+    private void TestOneBin(string binName, byte[] expected, JitMode jitMode, long maxCycles = 100000L, bool enablePit = false, bool enableA20Gate = false)
     {
-        Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(binName: binName, maxCycles: maxCycles, enablePit: enablePit, enableA20Gate: enableA20Gate, jitMode: jitMode).Create();
+        using Spice86Creator creator = new Spice86Creator(binName: binName, maxCycles: maxCycles, enablePit: enablePit, enableA20Gate: enableA20Gate, jitMode: jitMode);
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
         spice86DependencyInjection.ProgramExecutor.Run();
         Machine machine = spice86DependencyInjection.Machine;
-        IMemory memory = machine.Memory;
-        CompareMemoryWithExpected(memory, expected);
+        CompareMemoryWithExpected(machine.Memory, expected);
         CompareListingWithExpected(binName, machine);
-        return machine;
+    }
+
+    [AssertionMethod]
+    private void TestOneBin(string binName, byte[] expected, JitMode jitMode, Action<Machine> assertions)
+    {
+        using Spice86Creator creator = new Spice86Creator(binName: binName, maxCycles: 100000L, enablePit: false, enableA20Gate: false, jitMode: jitMode);
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
+        spice86DependencyInjection.ProgramExecutor.Run();
+        Machine machine = spice86DependencyInjection.Machine;
+        CompareMemoryWithExpected(machine.Memory, expected);
+        CompareListingWithExpected(binName, machine);
+        assertions(machine);
     }
 
     private void CompareListingWithExpected(string binName, Machine machine) {
@@ -440,13 +458,15 @@ public class MachineTest
     public void Test386ButNotProtectedMode(JitMode jitMode) {
         //Arrange
         string binName = "test386";
-        Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
+        using Spice86Creator creator = new Spice86Creator(
             binName: binName,
             enablePit: false, maxCycles: long.MaxValue,
-            failOnUnhandledPort: true, jitMode: jitMode).Create();
+            failOnUnhandledPort: true, jitMode: jitMode);
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
         Machine machine = spice86DependencyInjection.Machine;
         IMemory memory = machine.Memory;
-        Test386ButNotProtectedModeHandler debugPortsHandler = new Test386ButNotProtectedModeHandler(machine.CpuState, new LoggerService(), machine.IoPortDispatcher);
+        using LoggerService loggerService = new();
+        Test386ButNotProtectedModeHandler debugPortsHandler = new(machine.CpuState, loggerService, machine.IoPortDispatcher);
 
         //Act
         try {

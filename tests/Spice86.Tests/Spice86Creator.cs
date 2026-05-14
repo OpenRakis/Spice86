@@ -13,9 +13,10 @@ using Spice86.Shared.Emulator.VM.Breakpoint;
 using Xunit;
 using Spice86.Audio.Filters;
 
-public class Spice86Creator {
+public sealed class Spice86Creator : IDisposable {
     private readonly Configuration _configuration;
     private readonly long _maxCycles;
+    private readonly string _exportFolder;
 
     public Spice86Creator(string binName, bool enablePit = false,
         long maxCycles = 100000, bool installInterruptVectors = false, bool failOnUnhandledPort = false, bool enableA20Gate = false,
@@ -35,6 +36,7 @@ public class Spice86Creator {
             Path.GetTempPath(),
             Guid.NewGuid().ToString()
         );
+        _exportFolder = exportFolder;
         _configuration = new Configuration {
             Exe = executablePath,
             // Don't expect any hash for the exe
@@ -46,8 +48,6 @@ public class Spice86Creator {
             TimeMultiplier = enablePit ? 1 : 0,
             //Don"t need nor want to instantiate the UI in emulator unit tests
             HeadlessMode = HeadlessType.Minimal,
-            // Use Cycles for proper CpuCycleLimiter + EmulatedClock timing tests for sound
-            Cycles = enablePit ? ICyclesLimiter.RealModeCpuCyclesPerMs : null,
             AudioEngine = AudioEngine.Dummy,
             SbType = sbType,
             SbBase = sbBase,
@@ -65,7 +65,10 @@ public class Spice86Creator {
             RecordedDataDirectory = exportFolder,
             SilencedLogs = true,
             HttpApiPort = 0,
-            InstructionTimeScale = instructionTimeScale,
+            // Deterministic cycle-based clock (CyclesClock) to avoid
+            // wall-clock non-determinism in tests.
+            // 333333 is the value that allowed most wall clock based tests to pass without changing all the expected values.
+            InstructionTimeScale = instructionTimeScale ?? 333333,
             JitMode = jitMode,
             FailOnInvalidOpcode = failOnInvalidOpcode,
         };
@@ -83,5 +86,12 @@ public class Spice86Creator {
         res.Machine.IoPortDispatcher.WriteByte(Ports.GraphicsControllerAddress, 0x6);
         res.Machine.IoPortDispatcher.WriteByte(Ports.GraphicsControllerData, 0xE);
         return res;
+    }
+
+    /// <inheritdoc />
+    public void Dispose() {
+        if (Directory.Exists(_exportFolder)) {
+            Directory.Delete(_exportFolder, recursive: true);
+        }
     }
 }

@@ -9,7 +9,7 @@ using static BatchTestHelpers;
 public class KeyboardInt16EnhancedIntegrationTests {
     [Fact]
     public void Int16Ah10h_ReturnsExtendedKeyScanCode() {
-        WithTempDirectory("dos_int16_ah10", tempDir => {
+        WithTempFile("dos_int16_ah10", tempDir => {
             // Arrange: AH=10h (enhanced get keystroke), copy returned scan code (AH) into AL.
             CreateBinaryFile(tempDir, "READ10.COM", new byte[] {
                 0xB4, 0x10,                                                     // MOV AH, 10h
@@ -41,7 +41,7 @@ public class KeyboardInt16EnhancedIntegrationTests {
 
     [Fact]
     public void Int16Ah11h_ReturnsExtendedKeyScanCodeWithoutDequeuingUnexpectedData() {
-        WithTempDirectory("dos_int16_ah11", tempDir => {
+        WithTempFile("dos_int16_ah11", tempDir => {
             // Arrange: AH=11h (enhanced keystroke status), copy returned scan code (AH) into AL.
             CreateBinaryFile(tempDir, "READ11.COM", new byte[] {
                 0xB4, 0x11,                                                     // MOV AH, 11h

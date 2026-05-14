@@ -5,6 +5,7 @@ using FluentAssertions;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Utils;
+using Spice86.Tests.Utility;
 
 using System;
 using System.IO;
@@ -16,46 +17,32 @@ public class DosExecIntegrationTests {
     [Fact]
     public void ExecModesAndOverlays_ShouldReportSuccessViaVideoMemory() {
         // Arrange
-        string tempDir = CreateTempDirectory("dos_exec");
-        CopyResourceFiles("DosExecTests", tempDir,
+        using TempFile tempFile = new("dos_exec");
+        CopyResourceFiles("DosExecTests", tempFile.Path,
             new[] { "dos_exec_master.com", "child.com", "tsr_hook.com", "overlay_driver.bin" });
-        File.Move(Path.Join(tempDir, "overlay_driver.bin"), Path.Join(tempDir, "dos_exec_master.000"));
+        File.Move(Path.Join(tempFile.Path, "overlay_driver.bin"), Path.Join(tempFile.Path, "dos_exec_master.000"));
 
-        try {
-            // Act
-            string output = RunProgramAndReadVideoOutput(
-                Path.Join(tempDir, "dos_exec_master.com"), tempDir, expectedLength: 10);
+        // Act
+        string output = RunProgramAndReadVideoOutput(
+            Path.Join(tempFile.Path, "dos_exec_master.com"), tempFile.Path, expectedLength: 10);
 
-            // Assert
-            output.Should().Be("SEMJCTLOAV");
-        } finally {
-            TryDeleteDirectory(tempDir);
-        }
+        // Assert
+        output.Should().Be("SEMJCTLOAV");
     }
 
     [Fact]
     public void FcbProcessIsolation_ParentFcbSurvivesChildTermination() {
         // Arrange
-        string tempDir = CreateTempDirectory("dos_fcb");
-        CopyResourceFiles("DosFcbTests", tempDir,
+        using TempFile tempFile = new("dos_fcb");
+        CopyResourceFiles("DosFcbTests", tempFile.Path,
             new[] { "fcb_process_isolation.com", "fcbchild.com" });
 
-        try {
-            // Act
-            string output = RunProgramAndReadVideoOutput(
-                Path.Join(tempDir, "fcb_process_isolation.com"), tempDir, expectedLength: 7);
+        // Act
+        string output = RunProgramAndReadVideoOutput(
+            Path.Join(tempFile.Path, "fcb_process_isolation.com"), tempFile.Path, expectedLength: 7);
 
-            // Assert
-            output.Should().Be("SCWOXER");
-        } finally {
-            TryDeleteDirectory(tempDir);
-        }
-    }
-
-    private static string CreateTempDirectory(string prefix) {
-        string tempDir = Path.Join(Path.GetTempPath(), $"{prefix}_{Guid.NewGuid()}");
-        Directory.CreateDirectory(tempDir);
-        return tempDir;
+        // Assert
+        output.Should().Be("SCWOXER");
     }
 
     private static void CopyResourceFiles(string resourceSubDir, string tempDir, string[] files) {
@@ -66,7 +53,7 @@ public class DosExecIntegrationTests {
     }
 
     private static string RunProgramAndReadVideoOutput(string programPath, string cDrive, int expectedLength) {
-        Spice86DependencyInjection spice86 = new Spice86Creator(
+        using Spice86Creator creator = new Spice86Creator(
             binName: programPath,
             enablePit: true,
             maxCycles: 300000,
@@ -75,11 +62,11 @@ public class DosExecIntegrationTests {
             enableXms: true,
             enableEms: true,
             cDrive: cDrive
-        ).Create();
+        );
+        using Spice86DependencyInjection spice86 = creator.Create();
 
         spice86.Machine.CpuState.Flags.CpuModel = CpuModel.INTEL_80286;
         spice86.ProgramExecutor.Run();
-
         return ReadVideoMemory(spice86.Machine.Memory, expectedLength);
     }
 
@@ -91,12 +78,5 @@ public class DosExecIntegrationTests {
             output.Append((char)character);
         }
         return output.ToString();
-    }
-
-    private static void TryDeleteDirectory(string directoryPath) {
-        if (!Directory.Exists(directoryPath)) {
-            return;
-        }
-        Directory.Delete(directoryPath, true);
     }
 }

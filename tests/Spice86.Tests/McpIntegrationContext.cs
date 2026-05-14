@@ -20,10 +20,12 @@ internal sealed class McpIntegrationContext : IAsyncDisposable {
     private readonly HttpClient _httpClient;
     private readonly Uri _baseEndpoint;
     private readonly Uri _endpoint;
+    private readonly Spice86Creator _creator;
     private long _requestId = 1;
     private string? _sessionId;
 
     private McpIntegrationContext(
+        Spice86Creator creator,
         Spice86DependencyInjection spice86,
         EmulatorMcpServices services,
         McpHttpHost host,
@@ -36,6 +38,7 @@ internal sealed class McpIntegrationContext : IAsyncDisposable {
         _httpClient = httpClient;
         _baseEndpoint = baseEndpoint;
         _endpoint = endpoint;
+        _creator = creator;
     }
 
     public Spice86DependencyInjection Spice86 { get; }
@@ -114,7 +117,7 @@ internal sealed class McpIntegrationContext : IAsyncDisposable {
         Uri baseEndpoint = new($"http://localhost:{port}/");
         Uri endpoint = new($"http://localhost:{port}/mcp");
 
-        McpIntegrationContext context = new(spice86, services, host, httpClient, baseEndpoint, endpoint);
+        McpIntegrationContext context = new(creator, spice86, services, host, httpClient, baseEndpoint, endpoint);
 
         await WaitForPortAsync(port);
         return context;
@@ -201,6 +204,7 @@ internal sealed class McpIntegrationContext : IAsyncDisposable {
         _httpClient.Dispose();
         Host.Dispose();
         Spice86.Dispose();
+        _creator.Dispose();
         await Task.CompletedTask;
     }
 

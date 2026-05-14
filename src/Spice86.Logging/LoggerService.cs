@@ -8,7 +8,7 @@ using Serilog.Events;
 using Spice86.Shared.Interfaces;
 
 /// <inheritdoc cref="ILoggerService" />
-public class LoggerService : ILoggerService {
+public class LoggerService : ILoggerService, IDisposable {
     private const string LogFormat =
         "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u4}] [{ContextIndex}/{IP:j}] {Message:lj}{NewLine}{Exception}";
 
@@ -17,6 +17,7 @@ public class LoggerService : ILoggerService {
     private LoggerConfiguration _loggerConfiguration;
     private Logger? _logger;
     private LoggingLevelSwitch _logLevelSwitch;
+    private bool _disposed;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="LoggerService" /> class.
@@ -68,16 +69,6 @@ public class LoggerService : ILoggerService {
             .WriteTo.Async(conf3 =>
                 conf3.File("logs/log-.txt", outputTemplate: LogFormat, rollingInterval: RollingInterval.Day));
         _loggerConfiguration.MinimumLevel.ControlledBy(_logLevelSwitch);
-    }
-
-    /// <inheritdoc />
-    public ILoggerService WithLogLevel(LogEventLevel minimumLevel) {
-        var logger = new LoggerService {
-            LogLevelSwitch = {
-                MinimumLevel = minimumLevel
-            }
-        };
-        return logger;
     }
 
     public void Write(LogEventLevel level, string messageTemplate) {
@@ -137,13 +128,23 @@ public class LoggerService : ILoggerService {
         return LogLevelSwitch.MinimumLevel <= level;
     }
 
+    /// <inheritdoc />
+    public void Dispose() {
+        _disposed = true;
+        _logger?.Dispose();
+        _logger = null;
+        GC.SuppressFinalize(this);
+    }
+
     private void ResetLogger() {
         _logger?.Dispose();
         _logger = null;
+        _loggerConfiguration = CreateLoggerConfiguration();
+        _loggerConfiguration.MinimumLevel.ControlledBy(_logLevelSwitch);
     }
 
     private Logger? GetLoggerForLevel(LogEventLevel level) {
-        if (AreLogsSilenced || !IsEnabled(level)) {
+        if (_disposed || AreLogsSilenced || !IsEnabled(level)) {
             return null;
         }
 

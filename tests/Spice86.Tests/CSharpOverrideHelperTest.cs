@@ -18,18 +18,12 @@ using Xunit;
 public class CSharpOverrideHelperTest {
     private readonly ILoggerService _loggerServiceMock = Substitute.For<ILoggerService>();
 
-    private Spice86DependencyInjection CreateDummyProgramExecutor(string? overrideSupplierClassName = null) {
-        Spice86DependencyInjection res =
-            new Spice86Creator(binName: "jump2", overrideSupplierClassName: overrideSupplierClassName).Create();
-        // Setup stack
-        res.Machine.CpuState.SS = 0x3000;
-        res.Machine.CpuState.SP = 0x100;
-        return res;
-    }
-
     [Fact]
     public void TestJumpReturns() {
-        using Spice86DependencyInjection res = CreateDummyProgramExecutor();
+        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection res = creator.Create();
+        res.Machine.CpuState.SS = 0x3000;
+        res.Machine.CpuState.SP = 0x100;
         Machine machine = res.Machine;
         RecursiveJumps recursiveJumps =
             new RecursiveJumps(new Dictionary<SegmentedAddress, FunctionInformation>(),
@@ -42,8 +36,10 @@ public class CSharpOverrideHelperTest {
 
     [Fact]
     public void TestSimpleCallsJumps() {
-        using Spice86DependencyInjection spice86DependencyInjection =
-            CreateDummyProgramExecutor(typeof(SimpleCallsJumpsOverrideSupplier).AssemblyQualifiedName);
+        using Spice86Creator creator = new Spice86Creator(binName: "jump2", overrideSupplierClassName: typeof(SimpleCallsJumpsOverrideSupplier).AssemblyQualifiedName);
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
+        spice86DependencyInjection.Machine.CpuState.SS = 0x3000;
+        spice86DependencyInjection.Machine.CpuState.SP = 0x100;
         // Get the instance spice86 created. No elegant way of doing this from outside...
         SimpleCallsJumps? callsJumps = SimpleCallsJumps.CurrentInstance;
         // Reset it right away
@@ -59,8 +55,10 @@ public class CSharpOverrideHelperTest {
 
     [Fact]
     public void TestActualInCodeOverrides() {
-        using Spice86DependencyInjection spice86DependencyInjection =
-            CreateDummyProgramExecutor(typeof(VariousOverrideSupplier).AssemblyQualifiedName);
+        using Spice86Creator creator = new Spice86Creator(binName: "jump2", overrideSupplierClassName: typeof(VariousOverrideSupplier).AssemblyQualifiedName);
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
+        spice86DependencyInjection.Machine.CpuState.SS = 0x3000;
+        spice86DependencyInjection.Machine.CpuState.SP = 0x100;
         // Get the instance spice86 created. No elegant way of doing this from outside...
         VariousOverrides? overrides = VariousOverrides.CurrentInstance;
         // Reset it right away

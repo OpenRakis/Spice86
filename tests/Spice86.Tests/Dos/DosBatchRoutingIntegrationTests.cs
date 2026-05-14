@@ -11,7 +11,7 @@ using static BatchTestHelpers;
 public class DosBatchRoutingIntegrationTests {
     [Fact]
     public void HostRequestedCom_StillExecutesThroughBatchRoutingPipeline() {
-        WithTempDirectory("dos_host_com", tempDir => {
+        WithTempFile("dos_host_com", tempDir => {
             // Arrange
             string writerComPath = CreateBinaryFile(tempDir, "WRITER.COM", BuildVideoWriterCom('C', 0));
 
@@ -25,7 +25,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_UsesInternalCallAndLaunchesComProgram() {
-        WithTempDirectory("dos_batch_call", tempDir => {
+        WithTempFile("dos_batch_call", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "WRITER.COM", BuildVideoWriterCom('A', 0));
             string startBatchPath = CreateTextFile(tempDir, "START.BAT", "CALL WRITER.COM\r\n");
@@ -40,7 +40,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_CallWithoutExtension_PrefersComOverBat() {
-        WithTempDirectory("dos_batch_call_noext_bat_first", tempDir => {
+        WithTempFile("dos_batch_call_noext_bat_first", tempDir => {
             // Arrange
             CreateTextFile(tempDir, "TOOL.BAT", "CALL BATWIN.COM\r\n");
             CreateBinaryFile(tempDir, "TOOL.COM", BuildVideoWriterCom('C', 0));
@@ -57,7 +57,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_CallWithoutExtension_FallsBackToComThenExe() {
-        WithTempDirectory("dos_batch_call_noext_com_then_exe", tempDir => {
+        WithTempFile("dos_batch_call_noext_com_then_exe", tempDir => {
             // Arrange
             string toolComPath = CreateBinaryFile(tempDir, "TOOL.COM", BuildVideoWriterCom('C', 0));
             CreateBinaryFile(tempDir, "TOOL.EXE", BuildVideoWriterCom('E', 0));
@@ -76,7 +76,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_MaupitiTatouBat_RunsFromNestedJeuxDirectory() {
-        WithTempDirectory("dos_batch_maupiti_tatou", tempDir => {
+        WithTempFile("dos_batch_maupiti_tatou", tempDir => {
             // Arrange
             string maupitiDirectoryPath = CreateDirectoryPath(tempDir, "JEUX", "MAUPITI");
             string tatouBatchPath = CreateTextFile(maupitiDirectoryPath, "TATOU.BAT",
@@ -95,7 +95,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_AitdTatouWithoutExtension_PrefersComOverBatAndExe() {
-        WithTempDirectory("dos_batch_aitd_tatou_noext", tempDir => {
+        WithTempFile("dos_batch_aitd_tatou_noext", tempDir => {
             // Arrange
             string aitdDirectoryPath = CreateDirectoryPath(tempDir, "JEUX", "AITD");
             CreateTextFile(aitdDirectoryPath, "TATOU.BAT", "ECHO BAT> C:\\JEUX\\AITD\\WINNER.TXT\r\n");
@@ -117,7 +117,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_CanCallNestedBatch() {
-        WithTempDirectory("dos_nested_batch", tempDir => {
+        WithTempFile("dos_nested_batch", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "WRITER.COM", BuildVideoWriterCom('B', 0));
             CreateTextFile(tempDir, "CHILD.BAT", "CALL WRITER.COM\r\n");
@@ -133,7 +133,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_GotoSkipsCommands() {
-        WithTempDirectory("dos_batch_goto", tempDir => {
+        WithTempFile("dos_batch_goto", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "SKIP.COM", BuildVideoWriterCom('S', 2));
             CreateBinaryFile(tempDir, "PASS.COM", BuildVideoWriterCom('G', 0));
@@ -151,7 +151,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_IfErrorLevelDispatchesCommand() {
-        WithTempDirectory("dos_batch_if_errorlevel", tempDir => {
+        WithTempFile("dos_batch_if_errorlevel", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "RET5.COM", BuildExitCodeCom(5));
             CreateBinaryFile(tempDir, "W5.COM", BuildVideoWriterCom('E', 0));
@@ -164,7 +164,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_IfErrorLevelWithEqualsSyntaxDispatchesCommand() {
-        WithTempDirectory("dos_batch_if_errorlevel_equals", tempDir => {
+        WithTempFile("dos_batch_if_errorlevel_equals", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "RET10.COM", BuildExitCodeCom(10));
             CreateBinaryFile(tempDir, "W10.COM", BuildVideoWriterCom('X', 0));
@@ -180,7 +180,7 @@ public class DosBatchRoutingIntegrationTests {
     [InlineData(0x3C00, 'E')]
     [InlineData(0x3D00, 'D')]
     public void HostRequestedBatch_AlphaWavesTestfkeyStyleRoutesF1ToF3(ushort keyCode, char expectedMainAction) {
-        WithTempDirectory("dos_batch_alpha_waves_testfkey", tempDir => {
+        WithTempFile("dos_batch_alpha_waves_testfkey", tempDir => {
             // Arrange: TESTFKEY.COM is the real fixture used by Alpha Waves style scripts.
             CreateBinaryFile(tempDir, "TESTFKEY.COM", LoadDosBatchResourceBinary("TESTFKEY.COM"));
 
@@ -225,7 +225,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_AlphaWavesTestfkeyStyleF10JumpsToFinWithoutF1F2F3Branch() {
-        WithTempDirectory("dos_batch_alpha_waves_testfkey_f10", tempDir => {
+        WithTempFile("dos_batch_alpha_waves_testfkey_f10", tempDir => {
             // Arrange: TESTFKEY.COM is the real fixture used by Alpha Waves style scripts.
             CreateBinaryFile(tempDir, "TESTFKEY.COM", LoadDosBatchResourceBinary("TESTFKEY.COM"));
 
@@ -278,7 +278,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_EchoPreservesLeadingSpacesInOutput() {
-        WithTempDirectory("dos_batch_echo_leading_spaces", tempDir => {
+        WithTempFile("dos_batch_echo_leading_spaces", tempDir => {
             // Arrange
             string outPath = Path.Join(tempDir, "OUT.TXT");
 
@@ -294,7 +294,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_IfNotErrorLevelSkipsCommand() {
-        WithTempDirectory("dos_batch_if_not_errorlevel", tempDir => {
+        WithTempFile("dos_batch_if_not_errorlevel", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "RET5.COM", BuildExitCodeCom(5));
             CreateBinaryFile(tempDir, "SKIP.COM", BuildVideoWriterCom('S', 0));
@@ -313,7 +313,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_IfNotStringComparisonExecutesExpectedBranch() {
-        WithTempDirectory("dos_batch_if_not_string", tempDir => {
+        WithTempFile("dos_batch_if_not_string", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "SKIP.COM", BuildVideoWriterCom('S', 0));
             CreateBinaryFile(tempDir, "PASS.COM", BuildVideoWriterCom('N', 2));
@@ -331,7 +331,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_IfExistAndIfNotExistUseCorrectBranch() {
-        WithTempDirectory("dos_batch_if_exist", tempDir => {
+        WithTempFile("dos_batch_if_exist", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "EXISTS.COM", BuildVideoWriterCom('E', 0));
             CreateBinaryFile(tempDir, "MISSING.COM", BuildVideoWriterCom('M', 2));
@@ -350,7 +350,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_ShiftUpdatesArguments() {
-        WithTempDirectory("dos_batch_shift", tempDir => {
+        WithTempFile("dos_batch_shift", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "W1.COM", BuildVideoWriterCom('1', 0));
             CreateBinaryFile(tempDir, "W2.COM", BuildVideoWriterCom('2', 2));
@@ -369,7 +369,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_ForIteratesAndCallsBatch() {
-        WithTempDirectory("dos_batch_for", tempDir => {
+        WithTempFile("dos_batch_for", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "W1.COM", BuildVideoWriterCom('O', 0));
             CreateBinaryFile(tempDir, "W2.COM", BuildVideoWriterCom('T', 2));
@@ -389,7 +389,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_ForSupportsCommaAndSemicolonDelimiters() {
-        WithTempDirectory("dos_batch_for_delimiters", tempDir => {
+        WithTempFile("dos_batch_for_delimiters", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "W1.COM", BuildVideoWriterCom('A', 0));
             CreateBinaryFile(tempDir, "W2.COM", BuildVideoWriterCom('B', 2));
@@ -411,7 +411,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_ForSupportsEqualsDelimiter() {
-        WithTempDirectory("dos_batch_for_equals_delimiter", tempDir => {
+        WithTempFile("dos_batch_for_equals_delimiter", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "W1.COM", BuildVideoWriterCom('A', 0));
             CreateBinaryFile(tempDir, "W2.COM", BuildVideoWriterCom('B', 2));
@@ -433,7 +433,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_OutputRedirectionWritesToFile() {
-        WithTempDirectory("dos_batch_redirection", tempDir => {
+        WithTempFile("dos_batch_redirection", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "OUT.COM", BuildStdoutWriterCom("OK"));
 
@@ -454,7 +454,7 @@ public class DosBatchRoutingIntegrationTests {
     [InlineData("ECHO TEST>OUT.TXT  ", "TEST  \r\n")]
     [InlineData("ECHO TEST > OUT.TXT ", "TEST  \r\n")]
     public void HostRequestedBatch_OutputRedirectionPreservesEchoSpacing(string batchLine, string expectedOutput) {
-        WithTempDirectory("dos_batch_redirection_spacing", tempDir => {
+        WithTempFile("dos_batch_redirection_spacing", tempDir => {
             // Act
             RunBatchScript(tempDir, batchLine + "\r\n");
 
@@ -466,7 +466,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_AppendRedirectionAppendsToFile() {
-        WithTempDirectory("dos_batch_append_redirection", tempDir => {
+        WithTempFile("dos_batch_append_redirection", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "FIRST.COM", BuildStdoutWriterCom("AA"));
             CreateBinaryFile(tempDir, "SECOND.COM", BuildStdoutWriterCom("BB"));
@@ -485,7 +485,7 @@ public class DosBatchRoutingIntegrationTests {
     [InlineData("CALL PROD.COM|CALL CONS.COM")]
     [InlineData("CALL PROD.COM| CALL CONS.COM")]
     public void HostRequestedBatch_PipeTransfersStdoutToStdin(string batchLine) {
-        WithTempDirectory("dos_batch_pipe", tempDir => {
+        WithTempFile("dos_batch_pipe", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "PROD.COM", BuildStdoutWriterCom("P"));
             CreateBinaryFile(tempDir, "CONS.COM", BuildStdinToVideoWriterCom(0));
@@ -497,7 +497,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_PipelineSupportsInputRedirectionOnFirstSegment() {
-        WithTempDirectory("dos_batch_pipe_input_first", tempDir => {
+        WithTempFile("dos_batch_pipe_input_first", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "PASS.COM", BuildStdinToStdoutCom());
             CreateBinaryFile(tempDir, "CONS.COM", BuildStdinToVideoWriterCom(0));
@@ -511,7 +511,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_InputRedirectionFeedsStdIn() {
-        WithTempDirectory("dos_batch_input_redirection", tempDir => {
+        WithTempFile("dos_batch_input_redirection", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "READ.COM", BuildStdinToVideoWriterCom(0));
             CreateTextFile(tempDir, "IN.TXT", "R");
@@ -525,7 +525,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_SetUpdatesDosEnvironmentForExpansion() {
-        WithTempDirectory("dos_batch_set_env", tempDir => {
+        WithTempFile("dos_batch_set_env", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "WENV.COM", BuildVideoWriterCom('V', 0));
             string startBatchPath = CreateTextFile(tempDir, "START.BAT",
@@ -538,7 +538,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_SetEmptyAssignmentClearsEnvironmentVariable() {
-        WithTempDirectory("dos_batch_set_clear_env", tempDir => {
+        WithTempFile("dos_batch_set_clear_env", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "WCLEAR.COM", BuildVideoWriterCom('C', 0));
             string startBatchPath = CreateTextFile(tempDir, "START.BAT",
@@ -551,7 +551,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_EchoWritesToRedirectedFile() {
-        WithTempDirectory("dos_batch_echo_redirect", tempDir => {
+        WithTempFile("dos_batch_echo_redirect", tempDir => {
             // Act
             RunBatchScript(tempDir, "ECHO HELLO > OUT.TXT\r\n");
 
@@ -563,7 +563,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_InvalidRedirectionSyntaxDoesNotExecuteCommand() {
-        WithTempDirectory("dos_batch_invalid_redirect", tempDir => {
+        WithTempFile("dos_batch_invalid_redirect", tempDir => {
             // Act
             RunBatchScript(tempDir, "ECHO BAD > > OUT.TXT\r\n");
 
@@ -581,7 +581,7 @@ public class DosBatchRoutingIntegrationTests {
     [InlineData("ECHO BAD <| IN.TXT")]
     [InlineData("ECHO BAD | > OUT.TXT")]
     public void HostRequestedBatch_InvalidRedirectionSyntaxCases_DoNotCreateOutput(string batchLine) {
-        WithTempDirectory("dos_batch_invalid_redirect_matrix", tempDir => {
+        WithTempFile("dos_batch_invalid_redirect_matrix", tempDir => {
             // Act
             RunBatchScript(tempDir, batchLine + "\r\n");
 
@@ -595,7 +595,7 @@ public class DosBatchRoutingIntegrationTests {
     [InlineData("ECHO VALUE>    OUT1.TXT>     OUT2.TXT", "VALUE\r\n")]
     [InlineData("ECHO VALUE>OUT1.TXT  >OUT2.TXT", "VALUE  \r\n")]
     public void HostRequestedBatch_MultipleOutputRedirections_LastOneWins(string batchLine, string expectedOutput) {
-        WithTempDirectory("dos_batch_multi_output", tempDir => {
+        WithTempFile("dos_batch_multi_output", tempDir => {
             // Act
             RunBatchScript(tempDir, batchLine + "\r\n");
 
@@ -610,7 +610,7 @@ public class DosBatchRoutingIntegrationTests {
     [InlineData("CALL READ.COM < IN1.TXT < IN2.TXT")]
     [InlineData("CALL READ.COM<IN1.TXT<IN2.TXT")]
     public void HostRequestedBatch_MultipleInputRedirections_LastOneWins(string batchLine) {
-        WithTempDirectory("dos_batch_multi_input", tempDir => {
+        WithTempFile("dos_batch_multi_input", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "READ.COM", BuildStdinToVideoWriterCom(0));
             CreateTextFile(tempDir, "IN1.TXT", "A");
@@ -623,7 +623,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_DoubleInputOperator_LastOneWins() {
-        WithTempDirectory("dos_batch_double_input_operator", tempDir => {
+        WithTempFile("dos_batch_double_input_operator", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "READ.COM", BuildStdinToVideoWriterCom(0));
             CreateTextFile(tempDir, "IN1.TXT", "X");
@@ -642,7 +642,7 @@ public class DosBatchRoutingIntegrationTests {
     [InlineData("CALL WRITE.COM| < IN.TXT")]
     [InlineData("CALL WRITE.COM < > IN.TXT")]
     public void HostRequestedBatch_InvalidRedirectionSyntaxCases_DoNotLaunchExternalCommand(string batchLine) {
-        WithTempDirectory("dos_batch_invalid_redirect_launch_matrix", tempDir => {
+        WithTempFile("dos_batch_invalid_redirect_launch_matrix", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "WRITE.COM", BuildVideoWriterCom('Z', 0));
             CreateTextFile(tempDir, "IN.TXT", "I");
@@ -655,7 +655,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_EchoOffSetsStatusOutput() {
-        WithTempDirectory("dos_batch_echo_off_status", tempDir => {
+        WithTempFile("dos_batch_echo_off_status", tempDir => {
             // Act
             RunBatchScript(tempDir, "ECHO OFF\r\nECHO > STATUS.TXT\r\n");
 
@@ -667,7 +667,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_EchoOnAfterOffRestoresStatusOutput() {
-        WithTempDirectory("dos_batch_echo_on_status", tempDir => {
+        WithTempFile("dos_batch_echo_on_status", tempDir => {
             // Act
             RunBatchScript(tempDir, "ECHO OFF\r\nECHO ON\r\nECHO > STATUS.TXT\r\n");
 
@@ -682,7 +682,7 @@ public class DosBatchRoutingIntegrationTests {
     [InlineData("ECHO.HELLO > OUT.TXT", "HELLO \r\n")]
     [InlineData("ECHO.  HELLO > OUT.TXT", "  HELLO \r\n")]
     public void HostRequestedBatch_EchoDotSeparatorOutputsCorrectText(string batchLine, string expectedOutput) {
-        WithTempDirectory("dos_batch_echo_dot", tempDir => {
+        WithTempFile("dos_batch_echo_dot", tempDir => {
             // Act
             RunBatchScript(tempDir, batchLine + "\r\n");
 
@@ -694,7 +694,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_IfUnquotedComparisonExecutesCommand() {
-        WithTempDirectory("dos_batch_if_unquoted", tempDir => {
+        WithTempFile("dos_batch_if_unquoted", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "WRITE.COM", BuildVideoWriterCom('Q', 0));
 
@@ -710,7 +710,7 @@ public class DosBatchRoutingIntegrationTests {
     [InlineData("FOR %C IN ONE TWO DO ECHO %C")]
     [InlineData("FOR %C IN (ONE TWO) DO")]
     public void HostRequestedBatch_ForMalformedSyntaxSilentlySkips(string batchLine) {
-        WithTempDirectory("dos_batch_for_malformed", tempDir => {
+        WithTempFile("dos_batch_for_malformed", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "WRITE.COM", BuildVideoWriterCom('Z', 0));
 
@@ -721,7 +721,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_SetWithoutArgumentsEnumeratesEnvironment() {
-        WithTempDirectory("dos_batch_set_enumerate", tempDir => {
+        WithTempFile("dos_batch_set_enumerate", tempDir => {
             // Act
             RunBatchScript(tempDir, "SET MYVAR=MYVALUE\r\nSET > VARS.TXT\r\n");
 
@@ -733,7 +733,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_ErrorlevelPropagatesFromCalledProgram() {
-        WithTempDirectory("dos_batch_errorlevel_propagate", tempDir => {
+        WithTempFile("dos_batch_errorlevel_propagate", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "EXIT42.COM", BuildExitCodeCom(42));
             CreateBinaryFile(tempDir, "WRITE.COM", BuildVideoWriterCom('E', 0));
@@ -746,7 +746,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_CallNestedBatchPreservesContext() {
-        WithTempDirectory("dos_batch_nested_call", tempDir => {
+        WithTempFile("dos_batch_nested_call", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "WRITE1.COM", BuildVideoWriterCom('A', 0));
             CreateBinaryFile(tempDir, "WRITE2.COM", BuildVideoWriterCom('B', 2));
@@ -765,7 +765,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_CallLabel_InvokesInternalSubroutineAndReturns() {
-        WithTempDirectory("dos_batch_call_label", tempDir => {
+        WithTempFile("dos_batch_call_label", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "W1.COM", BuildVideoWriterCom('X', 0));
             CreateBinaryFile(tempDir, "W2.COM", BuildVideoWriterCom('Y', 2));
@@ -783,7 +783,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_CallLabel_NestedSubroutineCalls() {
-        WithTempDirectory("dos_batch_call_label_nested", tempDir => {
+        WithTempFile("dos_batch_call_label_nested", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "W1.COM", BuildVideoWriterCom('A', 0));
             CreateBinaryFile(tempDir, "W2.COM", BuildVideoWriterCom('B', 2));
@@ -803,7 +803,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_CallLabel_WithArguments() {
-        WithTempDirectory("dos_batch_call_label_args", tempDir => {
+        WithTempFile("dos_batch_call_label_args", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "P1.COM", BuildVideoWriterCom('A', 0));
             CreateBinaryFile(tempDir, "P2.COM", BuildVideoWriterCom('B', 2));
@@ -822,7 +822,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_CallLabel_UnknownLabelReturnsToNextLine() {
-        WithTempDirectory("dos_batch_call_label_unknown", tempDir => {
+        WithTempFile("dos_batch_call_label_unknown", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "W1.COM", BuildVideoWriterCom('A', 0));
             CreateBinaryFile(tempDir, "W2.COM", BuildVideoWriterCom('B', 2));
@@ -840,7 +840,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_ForWithWildcardExpandsMatchingFiles() {
-        WithTempDirectory("dos_batch_for_wildcard", tempDir => {
+        WithTempFile("dos_batch_for_wildcard", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "W1.COM", BuildVideoWriterCom('A', 0));
             CreateBinaryFile(tempDir, "W2.COM", BuildVideoWriterCom('B', 2));
@@ -861,7 +861,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_ForWithWildcardTypeRedirect() {
-        WithTempDirectory("dos_batch_for_type_redir", tempDir => {
+        WithTempFile("dos_batch_for_type_redir", tempDir => {
             // Arrange
             CreateTextFile(tempDir, "A.TXT", "aaa");
             CreateTextFile(tempDir, "B.TXT", "bbb");
@@ -882,7 +882,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_PathCommandSetsEnvironmentAndExpandsInIf() {
-        WithTempDirectory("dos_batch_path_cmd", tempDir => {
+        WithTempFile("dos_batch_path_cmd", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "WPATH.COM", BuildVideoWriterCom('P', 0));
 
@@ -894,7 +894,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_PauseDoesNotBlockWithRedirectedStdinAndContinues() {
-        WithTempDirectory("dos_batch_pause", tempDir => {
+        WithTempFile("dos_batch_pause", tempDir => {
             // Arrange
             CreateTextFile(tempDir, "KEY.TXT", " ");
 
@@ -910,7 +910,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_ForWildcardWithNoMatches_Skips() {
-        WithTempDirectory("dos_batch_for_wildcard_nomatch", tempDir => {
+        WithTempFile("dos_batch_for_wildcard_nomatch", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "WRITE.COM", BuildVideoWriterCom('Z', 0));
 
@@ -922,7 +922,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_ForMixesLiteralsAndWildcards() {
-        WithTempDirectory("dos_batch_for_mixed", tempDir => {
+        WithTempFile("dos_batch_for_mixed", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "W1.COM", BuildVideoWriterCom('M', 0));
             CreateBinaryFile(tempDir, "W2.COM", BuildVideoWriterCom('N', 2));
@@ -939,7 +939,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_VariableExpansionWorksAcrossBatchCalls() {
-        WithTempDirectory("dos_batch_var_expand_across", tempDir => {
+        WithTempFile("dos_batch_var_expand_across", tempDir => {
             // Arrange
             CreateTextFile(tempDir, "CHILD.BAT", "ECHO %SHAREDVAR% > OUTPUT.TXT\r\n");
 
@@ -954,7 +954,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_ClsClearsScreenAndContinuesExecution() {
-        WithTempDirectory("dos_batch_cls", tempDir => {
+        WithTempFile("dos_batch_cls", tempDir => {
             // Arrange: write 'X' at cell 0, then CLS clears screen, then write 'Y' at cell 2.
             CreateBinaryFile(tempDir, "WRITE_X.COM", BuildVideoWriterCom('X', 0));
             CreateBinaryFile(tempDir, "WRITE_Y.COM", BuildVideoWriterCom('Y', 4));
@@ -974,7 +974,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_ChoiceDefaultYn_SelectsY_SetsErrorlevel1() {
-        WithTempDirectory("dos_batch_choice_y", tempDir => {
+        WithTempFile("dos_batch_choice_y", tempDir => {
             // Arrange: stdin contains 'Y', CHOICE /C:YN should set ERRORLEVEL=1
             CreateBinaryFile(tempDir, "W1.COM", BuildVideoWriterCom('Y', 0));
             CreateTextFile(tempDir, "KEY.TXT", "Y");
@@ -987,7 +987,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_ChoiceDefaultYn_SelectsN_SetsErrorlevel2() {
-        WithTempDirectory("dos_batch_choice_n", tempDir => {
+        WithTempFile("dos_batch_choice_n", tempDir => {
             // Arrange: stdin contains 'N', CHOICE /C:YN should set ERRORLEVEL=2
             CreateBinaryFile(tempDir, "W2.COM", BuildVideoWriterCom('N', 0));
             CreateBinaryFile(tempDir, "SKIP.COM", BuildVideoWriterCom('S', 2));
@@ -1009,7 +1009,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_ChoiceCustomKeys_SelectsThirdOption() {
-        WithTempDirectory("dos_batch_choice_custom", tempDir => {
+        WithTempFile("dos_batch_choice_custom", tempDir => {
             // Arrange: CHOICE /C:ABC with 'C' → ERRORLEVEL=3
             CreateBinaryFile(tempDir, "W3.COM", BuildVideoWriterCom('3', 0));
             CreateTextFile(tempDir, "KEY.TXT", "C");
@@ -1022,7 +1022,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_ChoiceCaseInsensitiveByDefault() {
-        WithTempDirectory("dos_batch_choice_case_insensitive", tempDir => {
+        WithTempFile("dos_batch_choice_case_insensitive", tempDir => {
             // Arrange: lowercase 'b' should match 'B' in /C:ABC (default is case-insensitive)
             CreateBinaryFile(tempDir, "W2.COM", BuildVideoWriterCom('2', 0));
             CreateTextFile(tempDir, "KEY.TXT", "b");
@@ -1035,7 +1035,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_ChoiceWithSFlag_IsCaseSensitive() {
-        WithTempDirectory("dos_batch_choice_case_sensitive", tempDir => {
+        WithTempFile("dos_batch_choice_case_sensitive", tempDir => {
             // Arrange: /S makes CHOICE case-sensitive; 'a' should NOT match 'A'
             // Preload 'a' (no match) then 'B' (matches choice #2) → ERRORLEVEL=2
             CreateBinaryFile(tempDir, "W1.COM", BuildVideoWriterCom('1', 0));
@@ -1059,7 +1059,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_ChoiceNoChoiceArg_DefaultsToYN() {
-        WithTempDirectory("dos_batch_choice_default_yn", tempDir => {
+        WithTempFile("dos_batch_choice_default_yn", tempDir => {
             // Arrange: CHOICE without /C defaults to Y,N choices
             CreateBinaryFile(tempDir, "W1.COM", BuildVideoWriterCom('1', 0));
             CreateTextFile(tempDir, "KEY.TXT", "Y");
@@ -1072,7 +1072,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_ChoiceWithNFlag_PromptWrittenToRedirectedFile() {
-        WithTempDirectory("dos_batch_choice_n_flag", tempDir => {
+        WithTempFile("dos_batch_choice_n_flag", tempDir => {
             // Arrange: /N suppresses the [Y,N]? prompt, but text message should still show
             CreateTextFile(tempDir, "KEY.TXT", "Y");
 
@@ -1088,7 +1088,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_ChoiceWithPromptText_WritesPrompt() {
-        WithTempDirectory("dos_batch_choice_prompt", tempDir => {
+        WithTempFile("dos_batch_choice_prompt", tempDir => {
             // Arrange
             CreateTextFile(tempDir, "KEY.TXT", "Y");
 
@@ -1108,7 +1108,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_ChoiceTimeout_SelectsDefaultOnEof() {
-        WithTempDirectory("dos_batch_choice_timeout", tempDir => {
+        WithTempFile("dos_batch_choice_timeout", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "W1.COM", BuildVideoWriterCom('T', 0));
 
@@ -1128,7 +1128,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_ChoiceTimeout_KeypressTakesPrecedence() {
-        WithTempDirectory("dos_batch_choice_timeout_key", tempDir => {
+        WithTempFile("dos_batch_choice_timeout_key", tempDir => {
             // Arrange: stdin has 'A', so CHOICE should pick 'A' (ERRORLEVEL=1), not timeout default 'B'
             CreateBinaryFile(tempDir, "WA.COM", BuildVideoWriterCom('A', 0));
             CreateBinaryFile(tempDir, "WB.COM", BuildVideoWriterCom('B', 2));
@@ -1150,7 +1150,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_JillMenuStyle_ChoiceRoutesViaErrorlevelGotoChain() {
-        WithTempDirectory("dos_batch_jill_menu", tempDir => {
+        WithTempFile("dos_batch_jill_menu", tempDir => {
             // Arrange: simulate a classic DOS game batch menu like Jill of the Jungle
             CreateBinaryFile(tempDir, "GAME.COM", BuildVideoWriterCom('G', 0));
             CreateBinaryFile(tempDir, "STORY.COM", BuildVideoWriterCom('S', 2));
@@ -1200,7 +1200,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Type_DisplaysFileContents() {
-        WithTempDirectory("dos_batch_type", tempDir => {
+        WithTempFile("dos_batch_type", tempDir => {
             // Arrange
             CreateTextFile(tempDir, "HELLO.TXT", "Hello World");
 
@@ -1219,7 +1219,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Type_MissingFile_WritesError() {
-        WithTempDirectory("dos_batch_type_missing", tempDir => {
+        WithTempFile("dos_batch_type_missing", tempDir => {
             // Arrange — no file created
 
             // Act
@@ -1237,7 +1237,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Cd_NoArgs_PrintsCurrentDirectory() {
-        WithTempDirectory("dos_batch_cd_noargs", tempDir => {
+        WithTempFile("dos_batch_cd_noargs", tempDir => {
             // Act
             RunBatchScript(tempDir, "CD > OUT.TXT\r\n");
 
@@ -1253,7 +1253,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Cd_ChangesDirectory_ThenPrintsNew() {
-        WithTempDirectory("dos_batch_cd_change", tempDir => {
+        WithTempFile("dos_batch_cd_change", tempDir => {
             // Arrange
             CreateDirectoryPath(tempDir, "SUBDIR");
 
@@ -1271,7 +1271,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_CdDotDot_NavigatesToParent() {
-        WithTempDirectory("dos_batch_cd_dotdot", tempDir => {
+        WithTempFile("dos_batch_cd_dotdot", tempDir => {
             // Arrange
             CreateDirectoryPath(tempDir, "CHILD");
 
@@ -1289,7 +1289,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_CdDot_StaysInCurrentDirectory() {
-        WithTempDirectory("dos_batch_cd_dot", tempDir => {
+        WithTempFile("dos_batch_cd_dot", tempDir => {
             // Arrange
             CreateDirectoryPath(tempDir, "SUB");
 
@@ -1307,7 +1307,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_CdBackslash_NavigatesToRoot() {
-        WithTempDirectory("dos_batch_cd_backslash", tempDir => {
+        WithTempFile("dos_batch_cd_backslash", tempDir => {
             // Arrange
             CreateDirectoryPath(tempDir, "DEEP");
 
@@ -1327,7 +1327,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_IfStringComparison_IsCaseSensitive() {
-        WithTempDirectory("dos_batch_if_case", tempDir => {
+        WithTempFile("dos_batch_if_case", tempDir => {
             // Arrange — MISS.COM writes 'M' at offset 0 if the case-insensitive match wrongly fires.
             // EXACT.COM writes 'E' at offset 0 if the exact-case match correctly fires.
             CreateBinaryFile(tempDir, "MISS.COM", BuildVideoWriterCom('M', 0));
@@ -1356,7 +1356,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_IfStringComparison_PreservesQuotes() {
-        WithTempDirectory("dos_batch_if_quotes", tempDir => {
+        WithTempFile("dos_batch_if_quotes", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "WRITE.COM", BuildVideoWriterCom('W', 0));
 
@@ -1373,7 +1373,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_GotoMissingLabel_StopsBatchExecution() {
-        WithTempDirectory("dos_batch_goto_missing", tempDir => {
+        WithTempFile("dos_batch_goto_missing", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "NEVER.COM", BuildVideoWriterCom('N', 0));
 
@@ -1389,7 +1389,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Type_StopsAtCtrlZEof() {
-        WithTempDirectory("dos_batch_type_eof", tempDir => {
+        WithTempFile("dos_batch_type_eof", tempDir => {
             // Arrange — file has "AB" then 0x1A then "CD"
             byte[] content = new byte[] { 0x41, 0x42, 0x1A, 0x43, 0x44 };
             CreateBinaryFile(tempDir, "DATA.TXT", content);
@@ -1409,7 +1409,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_ChoiceSkipsInvalidKeysAndAcceptsFirstValid() {
-        WithTempDirectory("dos_batch_choice_retry", tempDir => {
+        WithTempFile("dos_batch_choice_retry", tempDir => {
             // Arrange: stdin contains 'X' (invalid), then 'N' (valid for YN choices)
             CreateBinaryFile(tempDir, "W2.COM", BuildVideoWriterCom('2', 0));
             CreateTextFile(tempDir, "KEY.TXT", "XN");
@@ -1426,7 +1426,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_EchoOffInInnerBatchDoesNotAffectOuter() {
-        WithTempDirectory("dos_batch_echo_per_batch", tempDir => {
+        WithTempFile("dos_batch_echo_per_batch", tempDir => {
             // Arrange: INNER.BAT sets ECHO OFF
             CreateTextFile(tempDir, "INNER.BAT", "@ECHO OFF\r\n");
 
@@ -1446,7 +1446,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_BatchFileReadingStopsAtCtrlZ() {
-        WithTempDirectory("dos_batch_read_eof", tempDir => {
+        WithTempFile("dos_batch_read_eof", tempDir => {
             // Arrange: batch file has ECHO HELLO, then 0x1A, then ECHO WORLD
             CreateBinaryFile(tempDir, "W1.COM", BuildVideoWriterCom('H', 0));
             CreateBinaryFile(tempDir, "W2.COM", BuildVideoWriterCom('W', 2));
@@ -1472,7 +1472,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Exit_StopsExecution() {
-        WithTempDirectory("dos_batch_exit", tempDir => {
+        WithTempFile("dos_batch_exit", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "W1.COM", BuildVideoWriterCom('A', 0));
             CreateBinaryFile(tempDir, "W2.COM", BuildVideoWriterCom('B', 2));
@@ -1494,7 +1494,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Exit_InsideCall_StopsAllBatches() {
-        WithTempDirectory("dos_batch_exit_call", tempDir => {
+        WithTempFile("dos_batch_exit_call", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "W1.COM", BuildVideoWriterCom('A', 0));
             CreateBinaryFile(tempDir, "W2.COM", BuildVideoWriterCom('B', 2));
@@ -1519,7 +1519,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_BareBatInvocation_ReplacesCurrentBatch() {
-        WithTempDirectory("dos_batch_tailcall", tempDir => {
+        WithTempFile("dos_batch_tailcall", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "W1.COM", BuildVideoWriterCom('A', 0));
             CreateBinaryFile(tempDir, "W2.COM", BuildVideoWriterCom('B', 2));
@@ -1547,7 +1547,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_BareMissingBat_DoesNotDropCurrentContext() {
-        WithTempDirectory("dos_batch_tailcall_missing", tempDir => {
+        WithTempFile("dos_batch_tailcall_missing", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "PASS.COM", BuildVideoWriterCom('P', 0));
             string startBat = CreateTextFile(tempDir, "START.BAT",
@@ -1567,7 +1567,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_ForList_QuotedRightParenthesis_IsParsedCorrectly() {
-        WithTempDirectory("dos_batch_for_quoted_paren", tempDir => {
+        WithTempFile("dos_batch_for_quoted_paren", tempDir => {
             // Act
             RunBatchScript(tempDir, "FOR %%I IN (\"A B\" \"C,D\" \"E;F\" \"A)B\") DO ECHO %%I>>OUT.TXT\r\n");
 
@@ -1586,7 +1586,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Lh_PassesThrough() {
-        WithTempDirectory("dos_batch_lh", tempDir => {
+        WithTempFile("dos_batch_lh", tempDir => {
             // Arrange
             CreateTextFile(tempDir, "SRC.TXT", "lh content");
 
@@ -1604,7 +1604,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Loadhigh_PassesThrough() {
-        WithTempDirectory("dos_batch_loadhigh", tempDir => {
+        WithTempFile("dos_batch_loadhigh", tempDir => {
             // Arrange
             CreateTextFile(tempDir, "SRC.TXT", "loadhigh content");
 
@@ -1623,7 +1623,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Md_CreatesDirectory() {
-        WithTempDirectory("dos_batch_md", tempDir => {
+        WithTempFile("dos_batch_md", tempDir => {
             // Act
             RunBatchScript(tempDir, "MD NEWDIR\r\nCD NEWDIR\r\nCD > OUT.TXT\r\n");
 
@@ -1638,7 +1638,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Mkdir_IsAliasForMd() {
-        WithTempDirectory("dos_batch_mkdir", tempDir => {
+        WithTempFile("dos_batch_mkdir", tempDir => {
             // Act
             RunBatchScript(tempDir, "MKDIR SUBDIR\r\nCD SUBDIR\r\nCD > OUT.TXT\r\n");
 
@@ -1653,7 +1653,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Md_ExistingDirectory_PrintsError() {
-        WithTempDirectory("dos_batch_md_exists", tempDir => {
+        WithTempFile("dos_batch_md_exists", tempDir => {
             // Arrange
             CreateDirectoryPath(tempDir, "EXISTING");
 
@@ -1672,7 +1672,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Rd_RemovesEmptyDirectory() {
-        WithTempDirectory("dos_batch_rd", tempDir => {
+        WithTempFile("dos_batch_rd", tempDir => {
             // Arrange
             CreateDirectoryPath(tempDir, "TODEL");
 
@@ -1690,7 +1690,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Rmdir_IsAliasForRd() {
-        WithTempDirectory("dos_batch_rmdir", tempDir => {
+        WithTempFile("dos_batch_rmdir", tempDir => {
             // Arrange
             CreateDirectoryPath(tempDir, "GONE");
 
@@ -1707,7 +1707,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Rd_NonExistent_PrintsError() {
-        WithTempDirectory("dos_batch_rd_missing", tempDir => {
+        WithTempFile("dos_batch_rd_missing", tempDir => {
             // Act
             RunBatchScript(tempDir, "RD NOPE > OUT.TXT\r\n");
 
@@ -1723,7 +1723,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Del_RemovesSingleFile() {
-        WithTempDirectory("dos_batch_del", tempDir => {
+        WithTempFile("dos_batch_del", tempDir => {
             // Arrange
             CreateTextFile(tempDir, "KILL.TXT", "doomed");
 
@@ -1741,7 +1741,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Erase_IsAliasForDel() {
-        WithTempDirectory("dos_batch_erase", tempDir => {
+        WithTempFile("dos_batch_erase", tempDir => {
             // Arrange
             CreateTextFile(tempDir, "GONE.TXT", "bye");
 
@@ -1758,7 +1758,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Del_Wildcard_RemovesMatchingFiles() {
-        WithTempDirectory("dos_batch_del_wild", tempDir => {
+        WithTempFile("dos_batch_del_wild", tempDir => {
             // Arrange
             CreateTextFile(tempDir, "A.TMP", "a");
             CreateTextFile(tempDir, "B.TMP", "b");
@@ -1780,7 +1780,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Del_NonExistent_PrintsError() {
-        WithTempDirectory("dos_batch_del_missing", tempDir => {
+        WithTempFile("dos_batch_del_missing", tempDir => {
             // Act
             RunBatchScript(tempDir, "DEL NOFILE.TXT > OUT.TXT\r\n");
 
@@ -1795,7 +1795,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Del_SkipsDirectories() {
-        WithTempDirectory("dos_batch_del_skipdir", tempDir => {
+        WithTempFile("dos_batch_del_skipdir", tempDir => {
             // Arrange
             CreateDirectoryPath(tempDir, "SUBDIR");
             CreateTextFile(tempDir, "FILE.TXT", "file");
@@ -1817,7 +1817,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Del_SkipsReadonlyFiles() {
-        WithTempDirectory("dos_batch_del_readonly", tempDir => {
+        WithTempFile("dos_batch_del_readonly", tempDir => {
             // Arrange
             string roFile = CreateTextFile(tempDir, "LOCKED.TXT", "protected");
             File.SetAttributes(roFile, FileAttributes.ReadOnly);
@@ -1847,7 +1847,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Ren_RenamesSingleFile() {
-        WithTempDirectory("dos_batch_ren", tempDir => {
+        WithTempFile("dos_batch_ren", tempDir => {
             // Arrange
             CreateTextFile(tempDir, "OLD.TXT", "content");
 
@@ -1866,7 +1866,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Rename_IsAliasForRen() {
-        WithTempDirectory("dos_batch_rename", tempDir => {
+        WithTempFile("dos_batch_rename", tempDir => {
             // Arrange
             CreateTextFile(tempDir, "A.TXT", "data");
 
@@ -1884,7 +1884,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Ren_NonExistent_PrintsError() {
-        WithTempDirectory("dos_batch_ren_missing", tempDir => {
+        WithTempFile("dos_batch_ren_missing", tempDir => {
             // Act
             RunBatchScript(tempDir, "REN NOFILE.TXT NEW.TXT > OUT.TXT\r\n");
 
@@ -1899,7 +1899,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Ren_MissingTarget_PrintsError() {
-        WithTempDirectory("dos_batch_ren_noarg", tempDir => {
+        WithTempFile("dos_batch_ren_noarg", tempDir => {
             // Arrange
             CreateTextFile(tempDir, "FILE.TXT", "data");
 
@@ -1919,7 +1919,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Ren_WildcardSourceTarget() {
-        WithTempDirectory("dos_batch_ren_wildcard", tempDir => {
+        WithTempFile("dos_batch_ren_wildcard", tempDir => {
             // Arrange — create three .TXT files
             CreateTextFile(tempDir, "A.TXT", "aaa");
             CreateTextFile(tempDir, "B.TXT", "bbb");
@@ -1942,7 +1942,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Ren_WildcardNoMatches() {
-        WithTempDirectory("dos_batch_ren_wild_none", tempDir => {
+        WithTempFile("dos_batch_ren_wild_none", tempDir => {
             // Arrange
             CreateTextFile(tempDir, "DATA.DAT", "data");
 
@@ -1962,7 +1962,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Vol_WithDriveArgument() {
-        WithTempDirectory("dos_batch_vol_drive", tempDir => {
+        WithTempFile("dos_batch_vol_drive", tempDir => {
             // Act
             RunBatchScript(tempDir, "VOL C: > VOL.TXT\r\n");
 
@@ -1979,7 +1979,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_For_WildcardExpansion() {
-        WithTempDirectory("dos_batch_for_wildcard", tempDir => {
+        WithTempFile("dos_batch_for_wildcard", tempDir => {
             // Arrange — create three .TXT files and a .DAT file (shouldn't match)
             CreateTextFile(tempDir, "A.TXT", "aaa");
             CreateTextFile(tempDir, "B.TXT", "bbb");
@@ -2002,7 +2002,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_For_WildcardNoMatches() {
-        WithTempDirectory("dos_batch_for_wild_none", tempDir => {
+        WithTempFile("dos_batch_for_wild_none", tempDir => {
             // Arrange — no .TXT files
             CreateTextFile(tempDir, "SKIP.DAT", "data");
 
@@ -2023,7 +2023,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Dir_ListsFiles() {
-        WithTempDirectory("dos_batch_dir", tempDir => {
+        WithTempFile("dos_batch_dir", tempDir => {
             // Arrange
             CreateTextFile(tempDir, "HELLO.TXT", "Hello World");
 
@@ -2042,7 +2042,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Dir_BareFormat() {
-        WithTempDirectory("dos_batch_dir_bare", tempDir => {
+        WithTempFile("dos_batch_dir_bare", tempDir => {
             // Arrange
             CreateTextFile(tempDir, "A.TXT", "a");
             CreateTextFile(tempDir, "B.DAT", "b");
@@ -2068,7 +2068,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Dir_WithPattern() {
-        WithTempDirectory("dos_batch_dir_pattern", tempDir => {
+        WithTempFile("dos_batch_dir_pattern", tempDir => {
             // Arrange
             CreateTextFile(tempDir, "A.TXT", "a");
             CreateTextFile(tempDir, "B.TXT", "b");
@@ -2092,7 +2092,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Copy_SingleFile() {
-        WithTempDirectory("dos_batch_copy", tempDir => {
+        WithTempFile("dos_batch_copy", tempDir => {
             // Arrange
             CreateTextFile(tempDir, "SRC.TXT", "hello copy");
 
@@ -2110,7 +2110,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Copy_Wildcard() {
-        WithTempDirectory("dos_batch_copy_wild", tempDir => {
+        WithTempFile("dos_batch_copy_wild", tempDir => {
             // Arrange
             string subDir = Path.Join(tempDir, "SUB");
             Directory.CreateDirectory(subDir);
@@ -2132,7 +2132,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_Copy_YAndVSwitches_AreAccepted() {
-        WithTempDirectory("dos_batch_copy_switches", tempDir => {
+        WithTempFile("dos_batch_copy_switches", tempDir => {
             // Arrange
             CreateTextFile(tempDir, "SRC.TXT", "copy switches");
 
@@ -2149,7 +2149,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Copy_NonexistentSource() {
-        WithTempDirectory("dos_batch_copy_missing", tempDir => {
+        WithTempFile("dos_batch_copy_missing", tempDir => {
             // Act
             RunBatchScript(tempDir, "COPY NOSRC.TXT DST.TXT > OUT.TXT\r\n");
 
@@ -2165,7 +2165,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Copy_SingleFileToDirectory() {
-        WithTempDirectory("dos_batch_copy_to_dir", tempDir => {
+        WithTempFile("dos_batch_copy_to_dir", tempDir => {
             // Arrange
             string subDir = Path.Join(tempDir, "DEST");
             Directory.CreateDirectory(subDir);
@@ -2188,7 +2188,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Date_PrintsDate() {
-        WithTempDirectory("dos_batch_date", tempDir => {
+        WithTempFile("dos_batch_date", tempDir => {
             // Act
             RunBatchScript(tempDir, "DATE /T > OUT.TXT\r\n");
 
@@ -2202,7 +2202,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_Date_SetValue_ChangesDisplayedDate() {
-        WithTempDirectory("dos_batch_date_set", tempDir => {
+        WithTempFile("dos_batch_date_set", tempDir => {
             // Act
             RunBatchScript(tempDir, "DATE 02-29-2024\r\nDATE /T > OUT.TXT\r\n");
 
@@ -2215,7 +2215,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_Date_HostSyncSwitch_ProducesDateOutput() {
-        WithTempDirectory("dos_batch_date_host_sync", tempDir => {
+        WithTempFile("dos_batch_date_host_sync", tempDir => {
             // Act
             RunBatchScript(tempDir, "DATE /H\r\nDATE /T > OUT.TXT\r\n");
 
@@ -2230,7 +2230,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Time_PrintsTime() {
-        WithTempDirectory("dos_batch_time", tempDir => {
+        WithTempFile("dos_batch_time", tempDir => {
             // Act
             RunBatchScript(tempDir, "TIME /T > OUT.TXT\r\n");
 
@@ -2243,7 +2243,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_Time_SetValue_ChangesDisplayedTime() {
-        WithTempDirectory("dos_batch_time_set", tempDir => {
+        WithTempFile("dos_batch_time_set", tempDir => {
             // Act
             RunBatchScript(tempDir, "TIME 13:14:15\r\nTIME /T > OUT.TXT\r\n");
 
@@ -2255,7 +2255,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_Time_HostSyncSwitch_ProducesTimeOutput() {
-        WithTempDirectory("dos_batch_time_host_sync", tempDir => {
+        WithTempFile("dos_batch_time_host_sync", tempDir => {
             // Act
             RunBatchScript(tempDir, "TIME /H\r\nTIME /T > OUT.TXT\r\n");
 
@@ -2270,7 +2270,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Ver_PrintsVersion() {
-        WithTempDirectory("dos_batch_ver", tempDir => {
+        WithTempFile("dos_batch_ver", tempDir => {
             // Act
             RunBatchScript(tempDir, "VER > OUT.TXT\r\n");
 
@@ -2285,7 +2285,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Vol_PrintsVolumeLabel() {
-        WithTempDirectory("dos_batch_vol", tempDir => {
+        WithTempFile("dos_batch_vol", tempDir => {
             // Act
             RunBatchScript(tempDir, "VOL > OUT.TXT\r\n");
 
@@ -2297,7 +2297,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_Date_HelpSwitch_PrintsUsage() {
-        WithTempDirectory("dos_batch_date_help", tempDir => {
+        WithTempFile("dos_batch_date_help", tempDir => {
             // Act
             RunBatchScript(tempDir, "DATE /? > OUT.TXT\r\n");
 
@@ -2309,7 +2309,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_Time_HelpSwitch_PrintsUsage() {
-        WithTempDirectory("dos_batch_time_help", tempDir => {
+        WithTempFile("dos_batch_time_help", tempDir => {
             // Act
             RunBatchScript(tempDir, "TIME /? > OUT.TXT\r\n");
 
@@ -2321,7 +2321,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_Dir_Ad_ListsDirectoriesOnly() {
-        WithTempDirectory("dos_batch_dir_ad", tempDir => {
+        WithTempFile("dos_batch_dir_ad", tempDir => {
             // Arrange
             CreateDirectoryPath(tempDir, "SUBDIR");
             CreateTextFile(tempDir, "FILE.TXT", "x");
@@ -2338,7 +2338,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_Dir_AminusD_ListsFilesOnly() {
-        WithTempDirectory("dos_batch_dir_a_minus_d", tempDir => {
+        WithTempFile("dos_batch_dir_a_minus_d", tempDir => {
             // Arrange
             CreateDirectoryPath(tempDir, "SUBDIR");
             CreateTextFile(tempDir, "FILE.TXT", "x");
@@ -2355,7 +2355,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_Dir_On_SortsByNameAscending() {
-        WithTempDirectory("dos_batch_dir_sort_on", tempDir => {
+        WithTempFile("dos_batch_dir_sort_on", tempDir => {
             // Arrange
             CreateTextFile(tempDir, "B.TXT", "b");
             CreateTextFile(tempDir, "A.TXT", "a");
@@ -2376,7 +2376,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_Dir_OminusN_SortsByNameDescending() {
-        WithTempDirectory("dos_batch_dir_sort_o_minus_n", tempDir => {
+        WithTempFile("dos_batch_dir_sort_o_minus_n", tempDir => {
             // Arrange
             CreateTextFile(tempDir, "B.TXT", "b");
             CreateTextFile(tempDir, "A.TXT", "a");
@@ -2397,7 +2397,7 @@ public class DosBatchRoutingIntegrationTests {
 
     [Fact]
     public void HostRequestedBatch_Set_PromptOption_PrintsUnsupportedMessage() {
-        WithTempDirectory("dos_batch_set_prompt_unsupported", tempDir => {
+        WithTempFile("dos_batch_set_prompt_unsupported", tempDir => {
             // Act
             RunBatchScript(tempDir, "SET /P MYVAR=QUESTION? > OUT.TXT\r\n");
 
@@ -2412,7 +2412,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_ForBareStarMatchesAllFiles() {
-        WithTempDirectory("dos_batch_for_bare_star", tempDir => {
+        WithTempFile("dos_batch_for_bare_star", tempDir => {
             // Arrange
             CreateTextFile(tempDir, "A.TXT", "aaa");
             CreateTextFile(tempDir, "B.DAT", "bbb");
@@ -2434,7 +2434,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_PathSearchFindsExternalBat() {
-        WithTempDirectory("dos_batch_path_search", tempDir => {
+        WithTempFile("dos_batch_path_search", tempDir => {
             // Arrange — put TOOL.BAT in a subdirectory and add that dir to PATH
             string toolDir = Path.Join(tempDir, "TOOLS");
             Directory.CreateDirectory(toolDir);
@@ -2457,7 +2457,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Move_RenamesFileInSameDirectory() {
-        WithTempDirectory("dos_batch_move_rename", tempDir => {
+        WithTempFile("dos_batch_move_rename", tempDir => {
             // Arrange
             CreateTextFile(tempDir, "SRC.TXT", "hello");
 
@@ -2477,7 +2477,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Move_FileIntoSubdirectory() {
-        WithTempDirectory("dos_batch_move_to_dir", tempDir => {
+        WithTempFile("dos_batch_move_to_dir", tempDir => {
             // Arrange
             CreateTextFile(tempDir, "DATA.TXT", "payload");
             string subDir = Path.Join(tempDir, "SUB");
@@ -2499,7 +2499,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Move_WildcardIntoDirectory() {
-        WithTempDirectory("dos_batch_move_wild", tempDir => {
+        WithTempFile("dos_batch_move_wild", tempDir => {
             // Arrange
             CreateTextFile(tempDir, "A.TXT", "aaa");
             CreateTextFile(tempDir, "B.TXT", "bbb");
@@ -2524,7 +2524,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Move_NonexistentSource() {
-        WithTempDirectory("dos_batch_move_missing", tempDir => {
+        WithTempFile("dos_batch_move_missing", tempDir => {
             // Act — should not throw
             RunBatchScript(tempDir, "MOVE NOPE.TXT DEST.TXT\r\nECHO OK > DONE.TXT\r\n");
 
@@ -2541,7 +2541,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Copy_ConcatTwoFiles() {
-        WithTempDirectory("dos_batch_copy_concat2", tempDir => {
+        WithTempFile("dos_batch_copy_concat2", tempDir => {
             // Arrange
             CreateTextFile(tempDir, "A.TXT", "Hello");
             CreateTextFile(tempDir, "B.TXT", "World");
@@ -2560,7 +2560,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Copy_ConcatThreeFiles() {
-        WithTempDirectory("dos_batch_copy_concat3", tempDir => {
+        WithTempFile("dos_batch_copy_concat3", tempDir => {
             // Arrange
             CreateTextFile(tempDir, "X.TXT", "One");
             CreateTextFile(tempDir, "Y.TXT", "Two");
@@ -2585,7 +2585,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Redirect_CreateFileInCaseMismatchedSubdirectory() {
-        WithTempDirectory("dos_batch_case_subdir", tempDir => {
+        WithTempFile("dos_batch_case_subdir", tempDir => {
             // Arrange — create host directory with mixed case "Sub"
             string subDir = Path.Join(tempDir, "Sub");
             Directory.CreateDirectory(subDir);
@@ -2608,7 +2608,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Delete_IsAliasForDel() {
-        WithTempDirectory("dos_batch_delete_alias", tempDir => {
+        WithTempFile("dos_batch_delete_alias", tempDir => {
             // Arrange
             CreateTextFile(tempDir, "VICTIM.TXT", "bye");
 
@@ -2631,7 +2631,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_JillOfTheJungle_ChoiceDispatchesToExeStub() {
-        WithTempDirectory("dos_batch_jill", tempDir => {
+        WithTempFile("dos_batch_jill", tempDir => {
             // Arrange: EXE stubs that write a character to video memory to prove they ran
             CreateBinaryFile(tempDir, "JILL1.EXE", BuildVideoWriterCom('1', 0));
             CreateBinaryFile(tempDir, "JILL2.EXE", BuildVideoWriterCom('2', 0));
@@ -2685,7 +2685,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_ChoiceWithoutColon_ParsesChoiceKeys() {
-        WithTempDirectory("dos_batch_choice_no_colon", tempDir => {
+        WithTempFile("dos_batch_choice_no_colon", tempDir => {
             // Arrange: CHOICE /c123 with '2' → ERRORLEVEL=2
             CreateBinaryFile(tempDir, "W2.COM", BuildVideoWriterCom('2', 0));
             CreateTextFile(tempDir, "KEY.TXT", "2");
@@ -2702,7 +2702,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_ChoiceNFlagAfterText_SuppressesDefaultPrompt() {
-        WithTempDirectory("dos_batch_choice_n_after_text", tempDir => {
+        WithTempFile("dos_batch_choice_n_after_text", tempDir => {
             // Arrange
             CreateTextFile(tempDir, "KEY.TXT", "Y");
 
@@ -2724,7 +2724,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_ChoiceWithPreloadedKey_SetsErrorlevel() {
-        WithTempDirectory("dos_batch_choice_key", tempDir => {
+        WithTempFile("dos_batch_choice_key", tempDir => {
             // Arrange: EXE stubs that write a character to video memory
             CreateBinaryFile(tempDir, "W1.COM", BuildVideoWriterCom('1', 0));
             CreateBinaryFile(tempDir, "W2.COM", BuildVideoWriterCom('2', 0));
@@ -2751,7 +2751,7 @@ public class DosBatchRoutingIntegrationTests {
     /// </summary>
     [Fact]
     public void HostRequestedBatch_PauseWithPreloadedKey_ContinuesExecution() {
-        WithTempDirectory("dos_batch_pause_key", tempDir => {
+        WithTempFile("dos_batch_pause_key", tempDir => {
             // Arrange: COM stub that writes to video
             CreateBinaryFile(tempDir, "MARK.COM", BuildVideoWriterCom('P', 0));
 

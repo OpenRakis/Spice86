@@ -11,11 +11,12 @@ using Xunit;
 public sealed class DualPicIntegrationTests {
     [Fact]
     public void ExternalInterruptProgramRaisesHardwareIrq() {
-        using Spice86DependencyInjection spice86 = new Spice86Creator(
+        using Spice86Creator creator = new Spice86Creator(
             "externalint",
             enablePit: true,
             maxCycles: 0x0FFFFFFF,
-            installInterruptVectors: false).Create();
+            installInterruptVectors: false);
+        using Spice86DependencyInjection spice86 = creator.Create();
 
         spice86.ProgramExecutor.Run();
 
