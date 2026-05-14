@@ -15,7 +15,12 @@ public class DosPathBuilderTests {
     [InlineData("foo", DosSpecialFileName.None)]
     [InlineData(" foo", DosSpecialFileName.None)]
     [InlineData(".foo", DosSpecialFileName.None)]
-    [InlineData("foo ", DosSpecialFileName.Invalid)]
+    // DOS semantics: trailing whitespace on a file name is silently stripped during canonicalization
+    // (FreeDOS 8.3 entries are space-padded; trailing spaces match naturally). It is a valid file name,
+    // not an "Invalid"/reserved one. AITD's TATOU.COM uses an FCB-padded buffer for AH=3Dh Open.
+    [InlineData("foo ", DosSpecialFileName.None)]
+    [InlineData("Info.cc1            ", DosSpecialFileName.None)]
+    [InlineData("FILE.EXT  ", DosSpecialFileName.None)]
     // DOS semantics: a single trailing dot means "no extension" (FreeDOS truename strips it).
     // It is a valid file name, not an "Invalid"/reserved one. See kernel/kernel/newstuff.c "strip trailing dot".
     [InlineData("foo.", DosSpecialFileName.None)]
@@ -114,6 +119,11 @@ public class DosPathBuilderTests {
     [InlineData('C', @"V.", null, null, @"C:\V")]
     [InlineData('C', null, null, "V.", @"C:\V")]
     [InlineData('C', @"FOO.\BAR.", null, null, @"C:\FOO\BAR")]
+    // DOS semantics: trailing whitespace on a path segment is stripped during canonicalization.
+    // AITD passes FCB-padded ASCIIZ filenames (e.g. "Info.cc1            ") to AH=3Dh Open.
+    [InlineData('C', null, null, "Info.cc1            ", @"C:\Info.cc1")]
+    [InlineData('C', "GAME", null, "Info.cc1            ", @"C:\GAME\Info.cc1")]
+    [InlineData('C', @"FOO  \BAR  ", null, null, @"C:\FOO\BAR")]
     public void BuildPath_Drive_Relative_Rooted_FileName(char driveLetter, string? appendRelativePath, string? appendRootedPathAfterRelative,
             string? appendFileName, string expectedPath) {
         // Arrange

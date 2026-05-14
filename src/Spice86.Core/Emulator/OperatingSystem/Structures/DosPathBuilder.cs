@@ -443,16 +443,19 @@ internal ref struct DosPathBuilder {
     }
 
     /// <summary>
-    /// Strips a single trailing dot from a path segment. Matches FreeDOS <c>truename</c> behavior:
-    /// the trailing dot is the DOS empty-extension marker and is dropped during canonicalization.
+    /// Strips trailing whitespace and a single trailing empty-extension dot from a path segment.
+    /// Matches FreeDOS <c>truename</c> behavior: 8.3 directory entries are space-padded so trailing
+    /// spaces in a query naturally match the on-disk name, and a single trailing dot is the DOS
+    /// empty-extension marker which is dropped during canonicalization.
     /// </summary>
     /// <remarks>
     /// Callers must have already validated the segment via <see cref="ParseSpecialFileName"/>, so any
     /// double-trailing-dot case has been rejected before reaching this method.
     /// </remarks>
     private static ReadOnlySpan<char> TrimTrailingEmptyExtensionDot(ReadOnlySpan<char> fileName) {
+        fileName = fileName.TrimEnd();
         if (fileName.Length >= 1 && fileName[^1] == '.') {
-            return fileName[..^1];
+            fileName = fileName[..^1].TrimEnd();
         }
         return fileName;
     }
@@ -483,9 +486,13 @@ internal ref struct DosPathBuilder {
 
         Debug.Assert(!char.IsWhiteSpace(fileName[0]));
 
-        // Do not allow file names that end with white space.
-        if (char.IsWhiteSpace(fileName[^1])) {
-            return DosSpecialFileName.Invalid;
+        // Tolerate trailing whitespace: FreeDOS-style 8.3 directory entries are space-padded and
+        // callers commonly pass FCB-padded ASCIIZ buffers (e.g. AITD's TATOU.COM AH=3Dh Open).
+        // Strip it for the special-name classification below; the canonicalization step also
+        // strips it via TrimTrailingEmptyExtensionDot before appending to the path.
+        fileName = fileName.TrimEnd();
+        if (fileName.IsEmpty) {
+            return DosSpecialFileName.Empty;
         }
 
         // Ignore file extension if defined. Reserved names include file extensions. Also handle special/reserved file

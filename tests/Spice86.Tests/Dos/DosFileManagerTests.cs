@@ -278,6 +278,31 @@ public class DosFileManagerTests {
     }
 
     [Fact]
+    public void OpenFile_TrailingSpaces_OpensSpacePaddedFile() {
+        // Regression: Alone in the Dark's TATOU.COM (launched by GO.BAT) passes an FCB-style
+        // space-padded ASCIIZ buffer ("Info.cc1            ") to INT 21h AH=3D. DOS semantics:
+        // trailing whitespace on a file name is silently tolerated (FreeDOS 8.3 entries are
+        // space-padded so trailing spaces match the padding). The canonicalized name must
+        // resolve to the same host file as the bare name.
+
+        // Arrange
+        string mountPoint = CreateTempMountWithExtensionlessFile("INFO.CC1");
+        try {
+            using DosTestFixture fixture = new(mountPoint);
+
+            // Act
+            DosFileOperationResult result = fixture.DosFileManager.OpenFileOrDevice("Info.cc1            ", FileAccessMode.ReadOnly);
+
+            // Assert
+            result.IsError.Should().BeFalse(
+                "a DOS filename with trailing spaces must resolve to the same on-disk file as the unpadded name");
+            CloseIfOpen(fixture, result);
+        } finally {
+            Directory.Delete(mountPoint, recursive: true);
+        }
+    }
+
+    [Fact]
     public void OpenFile_DoubleTrailingDotIsRejected() {
         // FreeDOS rejects multiple trailing dots (PNE_DOT). Ensure we surface a DOS error
         // rather than silently matching or crashing.
