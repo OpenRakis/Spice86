@@ -15,8 +15,19 @@ public class DosPathBuilderTests {
     [InlineData("foo", DosSpecialFileName.None)]
     [InlineData(" foo", DosSpecialFileName.None)]
     [InlineData(".foo", DosSpecialFileName.None)]
-    [InlineData("foo ", DosSpecialFileName.Invalid)]
-    [InlineData("foo.", DosSpecialFileName.Invalid)]
+    // DOS semantics: trailing whitespace on a file name is silently stripped during canonicalization
+    // (FreeDOS 8.3 entries are space-padded; trailing spaces match naturally). It is a valid file name,
+    // not an "Invalid"/reserved one. AITD's TATOU.COM uses an FCB-padded buffer for AH=3Dh Open.
+    [InlineData("foo ", DosSpecialFileName.None)]
+    [InlineData("Info.cc1            ", DosSpecialFileName.None)]
+    [InlineData("FILE.EXT  ", DosSpecialFileName.None)]
+    // DOS semantics: a single trailing dot means "no extension" (FreeDOS truename strips it).
+    // It is a valid file name, not an "Invalid"/reserved one. See kernel/kernel/newstuff.c "strip trailing dot".
+    [InlineData("foo.", DosSpecialFileName.None)]
+    [InlineData("foo.bar", DosSpecialFileName.None)]
+    // Two or more trailing dots are still ill-formed (matches FreeDOS PNE_DOT multi-dot rejection).
+    [InlineData("foo..", DosSpecialFileName.Invalid)]
+    [InlineData("foo...", DosSpecialFileName.Invalid)]
     [InlineData(".", DosSpecialFileName.CurrentDirectory)]
     [InlineData("..", DosSpecialFileName.ParentDirectory)]
     [InlineData("NUL", DosSpecialFileName.Null)]
@@ -102,6 +113,18 @@ public class DosPathBuilderTests {
     [InlineData('B', null, null, "'[f00]_", @"B:\'[f00]_")]
     [InlineData('B', null, "'[f00]_", null, @"B:\'[f00]_")]
     [InlineData('r', "foo;bar", null, null, @"R:\foo;bar")]
+    // DOS semantics: a single trailing dot on a path segment means "no extension"
+    // and is stripped during canonicalization (FreeDOS truename "strip trailing dot").
+    [InlineData('C', @"GAME\V.", null, null, @"C:\GAME\V")]
+    [InlineData('C', @"V.", null, null, @"C:\V")]
+    [InlineData('C', null, null, "V.", @"C:\V")]
+    [InlineData('C', @"FOO.\BAR.", null, null, @"C:\FOO\BAR")]
+    // DOS semantics: trailing whitespace on a path segment is stripped during canonicalization.
+    // AITD passes FCB-padded ASCIIZ filenames (e.g. "Info.cc1            ") to AH=3Dh Open.
+    [InlineData('C', null, null, "Info.cc1            ", @"C:\Info.cc1")]
+    [InlineData('C', "GAME", null, "Info.cc1            ", @"C:\GAME\Info.cc1")]
+    [InlineData('C', @"FOO  \BAR  ", null, null, @"C:\FOO\BAR")]
+    [InlineData('C', null, null, "foo .", @"C:\foo")]
     public void BuildPath_Drive_Relative_Rooted_FileName(char driveLetter, string? appendRelativePath, string? appendRootedPathAfterRelative,
             string? appendFileName, string expectedPath) {
         // Arrange
@@ -131,5 +154,38 @@ public class DosPathBuilderTests {
         resultFreeze2.Should().Be(DosPathBuilderResult.Success);
         resultPath.Should().Be(expectedPath);
         builder.IsFrozen.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("foo. .")]
+    [InlineData("foo.. .")]
+    public void AppendFileName_TrailingDotExposedByWhitespace_IsRejected(string fileName) {
+        // Arrange
+        using DosPathBuilder builder = new();
+        DosPathBuilderResult resultSetDriveLetter = builder.SetDriveLetter('C');
+
+        // Act
+        DosPathBuilderResult result = builder.AppendFileName(fileName);
+
+        // Assert
+        resultSetDriveLetter.Should().Be(DosPathBuilderResult.Success);
+        result.Should().Be(DosPathBuilderResult.InvalidReservedFileName);
+    }
+
+    [Theory]
+    [InlineData("foo. .")]
+    [InlineData("foo.. .")]
+    public void AppendRelativePath_TrailingDotExposedByWhitespace_IsRejected(string relativePath) {
+        // Arrange
+        using DosPathBuilder builder = new();
+        DosPathBuilderResult resultSetDriveLetter = builder.SetDriveLetter('C');
+
+        // Act
+        DosPathBuilderResult result = builder.AppendRelativePath(relativePath, out bool endsWithDirectorySeparator);
+
+        // Assert
+        resultSetDriveLetter.Should().Be(DosPathBuilderResult.Success);
+        result.Should().Be(DosPathBuilderResult.InvalidReservedFileName);
+        endsWithDirectorySeparator.Should().BeFalse();
     }
 }

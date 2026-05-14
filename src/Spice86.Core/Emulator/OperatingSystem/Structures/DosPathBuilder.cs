@@ -289,6 +289,15 @@ internal ref struct DosPathBuilder {
             return DosPathBuilderResult.InvalidReservedFileName;
         }
 
+        // DOS empty-extension marker: "NAME." canonicalizes to "NAME" (FreeDOS truename behavior).
+        // ParseSpecialFileName has already validated that no more than one trailing dot is present.
+        fileName = TrimTrailingEmptyExtensionDot(fileName);
+        if (fileName.Length >= 1 && fileName[^1] == '.') {
+            // Normalization exposed another trailing dot (for example "foo. ." -> "foo.").
+            // Keep this invalid to match FreeDOS multi-dot rejection semantics.
+            return DosPathBuilderResult.InvalidReservedFileName;
+        }
+
         // Append directory separator and file name.
         Debug.Assert(_pathBuilder.Length >= 2);
         _pathStack.Push(_pathBuilder.Length);
@@ -355,11 +364,19 @@ internal ref struct DosPathBuilder {
             DosSpecialFileName specialFileName = ParseSpecialFileName(lastPathElement);
             switch (specialFileName) {
                 case DosSpecialFileName.None: {
+                        // DOS empty-extension marker: "NAME." canonicalizes to "NAME" (FreeDOS truename).
+                        ReadOnlySpan<char> appendElement = TrimTrailingEmptyExtensionDot(lastPathElement);
+                        if (appendElement.Length >= 1 && appendElement[^1] == '.') {
+                            // Normalization exposed another trailing dot (for example "foo. ." -> "foo.").
+                            // Keep this invalid to match FreeDOS multi-dot rejection semantics.
+                            endsWithDirectorySeparator = default;
+                            return DosPathBuilderResult.InvalidReservedFileName;
+                        }
                         // Append normal file name element.
                         Debug.Assert(_pathBuilder.Length >= 2);
                         _pathStack.Push(_pathBuilder.Length);
                         _pathBuilder.Append(DirectorySeparatorChar);
-                        _pathBuilder.Append(lastPathElement);
+                        _pathBuilder.Append(appendElement);
                         break;
                     }
 
@@ -436,6 +453,24 @@ internal ref struct DosPathBuilder {
         return AppendRelativePath(rootedPath, out endsWithDirectorySeparator);
     }
 
+    /// <summary>
+    /// Strips trailing whitespace and a single trailing empty-extension dot from a path segment.
+    /// Matches FreeDOS <c>truename</c> behavior: 8.3 directory entries are space-padded so trailing
+    /// spaces in a query naturally match the on-disk name, and a single trailing dot is the DOS
+    /// empty-extension marker which is dropped during canonicalization.
+    /// </summary>
+    /// <remarks>
+    /// Callers must have already validated the segment via <see cref="ParseSpecialFileName"/>, so any
+    /// double-trailing-dot case has been rejected before reaching this method.
+    /// </remarks>
+    private static ReadOnlySpan<char> TrimTrailingEmptyExtensionDot(ReadOnlySpan<char> fileName) {
+        fileName = fileName.TrimEnd();
+        if (fileName.Length >= 1 && fileName[^1] == '.') {
+            fileName = fileName[..^1].TrimEnd();
+        }
+        return fileName;
+    }
+
     /// <summary>Attempts to parse special file names and performs basic sanity checks.</summary>
     /// <param name="fileName">File name to parse.</param>
     /// <returns>
@@ -462,9 +497,13 @@ internal ref struct DosPathBuilder {
 
         Debug.Assert(!char.IsWhiteSpace(fileName[0]));
 
-        // Do not allow file names that end with white space.
-        if (char.IsWhiteSpace(fileName[^1])) {
-            return DosSpecialFileName.Invalid;
+        // Tolerate trailing whitespace: FreeDOS-style 8.3 directory entries are space-padded and
+        // callers commonly pass FCB-padded ASCIIZ buffers (e.g. AITD's TATOU.COM AH=3Dh Open).
+        // Strip it for the special-name classification below; the canonicalization step also
+        // strips it via TrimTrailingEmptyExtensionDot before appending to the path.
+        fileName = fileName.TrimEnd();
+        if (fileName.IsEmpty) {
+            return DosSpecialFileName.Empty;
         }
 
         // Ignore file extension if defined. Reserved names include file extensions. Also handle special/reserved file
@@ -481,15 +520,26 @@ internal ref struct DosPathBuilder {
                 }
             }
 
-            // Do not allow file names that end with a period (pedantic Windows naming convention). Special file names
-            // "." and ".." are handled above, so this should be safe.
+            // Do not allow file names that end with a period unless that period is the empty-extension marker.
+            // DOS semantics: a single trailing dot means "no extension" (FreeDOS truename strips it; see
+            // kernel/kernel/newstuff.c "strip trailing dot"). Multiple trailing dots remain ill-formed
+            // (FreeDOS PNE_DOT multi-dot rejection). Special file names "." and ".." are handled above.
             if (fileName[^1] == '.') {
-                return DosSpecialFileName.Invalid;
+                if (fileName.Length >= 2 && fileName[^2] == '.') {
+                    return DosSpecialFileName.Invalid;
+                }
+                // Single trailing dot: strip it and re-evaluate. If an inner dot remains, the prefix
+                // before it is the name segment (for reserved device-name detection). Otherwise the
+                // whole stripped value is the name segment.
+                fileName = fileName[..^1];
+                dotIndex = fileName.IndexOf('.');
             }
 
-            // Trim white space to be more pedantic by not allowing any reserved names that have white space at the end
-            // (before the file extension).
-            fileName = fileName[..dotIndex].TrimEnd();
+            if (dotIndex >= 0) {
+                // Trim white space to be more pedantic by not allowing any reserved names that have
+                // white space at the end (before the file extension).
+                fileName = fileName[..dotIndex].TrimEnd();
+            }
         }
 
         // Note that "COM¹", "COM²", "COM³", "LPT¹", "LPT²", and "LPT³" (using ISO/IEC 8859-1 superscript numbers) are
