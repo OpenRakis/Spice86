@@ -1,0 +1,564 @@
+version=1
+
+# This file caches language service data to improve the performance of C# Dev Kit.
+# It is not intended for manual editing. It can safely be deleted and will be
+# regenerated automatically. For more information, see https://aka.ms/lscache
+#
+# To control where cache files are stored, use the following VS Code setting:
+#   "dotnet.projectsystem.cacheInProjectFolder": true
+
+[project]
+language=C#
+primary
+lastDtbSucceeded
+
+[properties]
+AssemblyName=Spice86.MicroBenchmarkTemplate
+CommandLineArgsForDesignTimeEvaluation=-langversion:14.0 -define:TRACE -doc:"obj\Debug\net10.0\Spice86.MicroBenchmarkTemplate.xml"
+CompilerGeneratedFilesOutputPath=
+MaxSupportedLangVersion=14.0
+ProjectAssetsFile=<PATH>obj/project.assets.json
+RootNamespace=Spice86.MicroBenchmarkTemplate
+RunAnalyzers=
+RunAnalyzersDuringLiveAnalysis=
+SolutionPath=*Undefined*
+TargetFrameworkIdentifier=.NETCoreApp
+TargetPath=<PATH>bin/Debug/net10.0/Spice86.MicroBenchmarkTemplate.dll
+TargetRefPath=<PATH>obj/Debug/net10.0/ref/Spice86.MicroBenchmarkTemplate.dll
+TemporaryDependencyNodeTargetIdentifier=net10.0
+
+[commandLineArguments]
+/noconfig
+/unsafe+
+/checked-
+/nowarn:1591,NU1507,1701,1702,8002
+/fullpaths
+/nostdlib+
+/errorreport:prompt
+/warn:10
+/doc:obj\Debug\net10.0\Spice86.MicroBenchmarkTemplate.xml
+/define:TRACE;DEBUG;NET;NET10_0;NETCOREAPP;NET5_0_OR_GREATER;NET6_0_OR_GREATER;NET7_0_OR_GREATER;NET8_0_OR_GREATER;NET9_0_OR_GREATER;NET10_0_OR_GREATER;NETCOREAPP1_0_OR_GREATER;NETCOREAPP1_1_OR_GREATER;NETCOREAPP2_0_OR_GREATER;NETCOREAPP2_1_OR_GREATER;NETCOREAPP2_2_OR_GREATER;NETCOREAPP3_0_OR_GREATER;NETCOREAPP3_1_OR_GREATER
+/highentropyva+
+/nullable:enable
+/features:"InterceptorsNamespaces=;Microsoft.Extensions.Validation.Generated"
+/debug+
+/debug:portable
+/filealign:512
+/optimize-
+/out:obj\Debug\net10.0\Spice86.MicroBenchmarkTemplate.dll
+/refout:obj\Debug\net10.0\refint\Spice86.MicroBenchmarkTemplate.dll
+/target:exe
+/warnaserror-
+/utf8output
+/deterministic+
+/langversion:14.0
+/warnaserror+:false,SYSLIB0011
+
+[sourceFiles]
+BreakpointCheckBenchmark.cs
+GlobalUsings.cs
+HasActiveBreakpointsBenchmark.cs
+obj/Debug/net10.0/
+ .NETCoreApp,Version=v10.0.AssemblyAttributes.cs
+ Spice86.MicroBenchmarkTemplate.AssemblyInfo.cs
+ Spice86.MicroBenchmarkTemplate.GlobalUsings.g.cs
+Program.cs
+
+[metadataReferences]
+../
+ ../tests/Spice86.Tests/obj/Debug/net10.0/ref/Spice86.Tests.dll
+ Spice86.Core/obj/Debug/net10.0/ref/Spice86.Core.dll
+ Spice86.Logging/obj/Debug/net10.0/ref/Spice86.Logging.dll
+ Spice86.Shared/obj/Debug/net10.0/ref/Spice86.Shared.dll
+ Spice86.Storage.Cd/obj/Debug/net10.0/ref/Spice86.Storage.Cd.dll
+ Spice86.Storage.Fat/obj/Debug/net10.0/ref/Spice86.Storage.Fat.dll
+ Spice86/obj/Debug/net10.0/ref/Spice86.dll
+<DOTNET>/packs/Microsoft.AspNetCore.App.Ref/10.0.8/ref/net10.0/
+ Microsoft.AspNetCore.Antiforgery.dll
+ Microsoft.AspNetCore.Authentication.Abstractions.dll
+ Microsoft.AspNetCore.Authentication.BearerToken.dll
+ Microsoft.AspNetCore.Authentication.Cookies.dll
+ Microsoft.AspNetCore.Authentication.Core.dll
+ Microsoft.AspNetCore.Authentication.dll
+ Microsoft.AspNetCore.Authentication.OAuth.dll
+ Microsoft.AspNetCore.Authorization.dll
+ Microsoft.AspNetCore.Authorization.Policy.dll
+ Microsoft.AspNetCore.Components.Authorization.dll
+ Microsoft.AspNetCore.Components.dll
+ Microsoft.AspNetCore.Components.Endpoints.dll
+ Microsoft.AspNetCore.Components.Forms.dll
+ Microsoft.AspNetCore.Components.Server.dll
+ Microsoft.AspNetCore.Components.Web.dll
+ Microsoft.AspNetCore.Connections.Abstractions.dll
+ Microsoft.AspNetCore.CookiePolicy.dll
+ Microsoft.AspNetCore.Cors.dll
+ Microsoft.AspNetCore.Cryptography.Internal.dll
+ Microsoft.AspNetCore.Cryptography.KeyDerivation.dll
+ Microsoft.AspNetCore.DataProtection.Abstractions.dll
+ Microsoft.AspNetCore.DataProtection.dll
+ Microsoft.AspNetCore.DataProtection.Extensions.dll
+ Microsoft.AspNetCore.Diagnostics.Abstractions.dll
+ Microsoft.AspNetCore.Diagnostics.dll
+ Microsoft.AspNetCore.Diagnostics.HealthChecks.dll
+ Microsoft.AspNetCore.dll
+ Microsoft.AspNetCore.HostFiltering.dll
+ Microsoft.AspNetCore.Hosting.Abstractions.dll
+ Microsoft.AspNetCore.Hosting.dll
+ Microsoft.AspNetCore.Hosting.Server.Abstractions.dll
+ Microsoft.AspNetCore.Html.Abstractions.dll
+ Microsoft.AspNetCore.Http.Abstractions.dll
+ Microsoft.AspNetCore.Http.Connections.Common.dll
+ Microsoft.AspNetCore.Http.Connections.dll
+ Microsoft.AspNetCore.Http.dll
+ Microsoft.AspNetCore.Http.Extensions.dll
+ Microsoft.AspNetCore.Http.Features.dll
+ Microsoft.AspNetCore.Http.Results.dll
+ Microsoft.AspNetCore.HttpLogging.dll
+ Microsoft.AspNetCore.HttpOverrides.dll
+ Microsoft.AspNetCore.HttpsPolicy.dll
+ Microsoft.AspNetCore.Identity.dll
+ Microsoft.AspNetCore.Localization.dll
+ Microsoft.AspNetCore.Localization.Routing.dll
+ Microsoft.AspNetCore.Metadata.dll
+ Microsoft.AspNetCore.Mvc.Abstractions.dll
+ Microsoft.AspNetCore.Mvc.ApiExplorer.dll
+ Microsoft.AspNetCore.Mvc.Core.dll
+ Microsoft.AspNetCore.Mvc.Cors.dll
+ Microsoft.AspNetCore.Mvc.DataAnnotations.dll
+ Microsoft.AspNetCore.Mvc.dll
+ Microsoft.AspNetCore.Mvc.Formatters.Json.dll
+ Microsoft.AspNetCore.Mvc.Formatters.Xml.dll
+ Microsoft.AspNetCore.Mvc.Localization.dll
+ Microsoft.AspNetCore.Mvc.Razor.dll
+ Microsoft.AspNetCore.Mvc.RazorPages.dll
+ Microsoft.AspNetCore.Mvc.TagHelpers.dll
+ Microsoft.AspNetCore.Mvc.ViewFeatures.dll
+ Microsoft.AspNetCore.OutputCaching.dll
+ Microsoft.AspNetCore.RateLimiting.dll
+ Microsoft.AspNetCore.Razor.dll
+ Microsoft.AspNetCore.Razor.Runtime.dll
+ Microsoft.AspNetCore.RequestDecompression.dll
+ Microsoft.AspNetCore.ResponseCaching.Abstractions.dll
+ Microsoft.AspNetCore.ResponseCaching.dll
+ Microsoft.AspNetCore.ResponseCompression.dll
+ Microsoft.AspNetCore.Rewrite.dll
+ Microsoft.AspNetCore.Routing.Abstractions.dll
+ Microsoft.AspNetCore.Routing.dll
+ Microsoft.AspNetCore.Server.HttpSys.dll
+ Microsoft.AspNetCore.Server.IIS.dll
+ Microsoft.AspNetCore.Server.IISIntegration.dll
+ Microsoft.AspNetCore.Server.Kestrel.Core.dll
+ Microsoft.AspNetCore.Server.Kestrel.dll
+ Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes.dll
+ Microsoft.AspNetCore.Server.Kestrel.Transport.Quic.dll
+ Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.dll
+ Microsoft.AspNetCore.Session.dll
+ Microsoft.AspNetCore.SignalR.Common.dll
+ Microsoft.AspNetCore.SignalR.Core.dll
+ Microsoft.AspNetCore.SignalR.dll
+ Microsoft.AspNetCore.SignalR.Protocols.Json.dll
+ Microsoft.AspNetCore.StaticAssets.dll
+ Microsoft.AspNetCore.StaticFiles.dll
+ Microsoft.AspNetCore.WebSockets.dll
+ Microsoft.AspNetCore.WebUtilities.dll
+ Microsoft.Extensions.Caching.Abstractions.dll
+ Microsoft.Extensions.Caching.Memory.dll
+ Microsoft.Extensions.Configuration.Abstractions.dll
+ Microsoft.Extensions.Configuration.Binder.dll
+ Microsoft.Extensions.Configuration.CommandLine.dll
+ Microsoft.Extensions.Configuration.dll
+ Microsoft.Extensions.Configuration.EnvironmentVariables.dll
+ Microsoft.Extensions.Configuration.FileExtensions.dll
+ Microsoft.Extensions.Configuration.Ini.dll
+ Microsoft.Extensions.Configuration.Json.dll
+ Microsoft.Extensions.Configuration.KeyPerFile.dll
+ Microsoft.Extensions.Configuration.UserSecrets.dll
+ Microsoft.Extensions.Configuration.Xml.dll
+ Microsoft.Extensions.DependencyInjection.Abstractions.dll
+ Microsoft.Extensions.DependencyInjection.dll
+ Microsoft.Extensions.Diagnostics.Abstractions.dll
+ Microsoft.Extensions.Diagnostics.dll
+ Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions.dll
+ Microsoft.Extensions.Diagnostics.HealthChecks.dll
+ Microsoft.Extensions.Features.dll
+ Microsoft.Extensions.FileProviders.Abstractions.dll
+ Microsoft.Extensions.FileProviders.Composite.dll
+ Microsoft.Extensions.FileProviders.Embedded.dll
+ Microsoft.Extensions.FileProviders.Physical.dll
+ Microsoft.Extensions.FileSystemGlobbing.dll
+ Microsoft.Extensions.Hosting.Abstractions.dll
+ Microsoft.Extensions.Hosting.dll
+ Microsoft.Extensions.Http.dll
+ Microsoft.Extensions.Identity.Core.dll
+ Microsoft.Extensions.Identity.Stores.dll
+ Microsoft.Extensions.Localization.Abstractions.dll
+ Microsoft.Extensions.Localization.dll
+ Microsoft.Extensions.Logging.Abstractions.dll
+ Microsoft.Extensions.Logging.Configuration.dll
+ Microsoft.Extensions.Logging.Console.dll
+ Microsoft.Extensions.Logging.Debug.dll
+ Microsoft.Extensions.Logging.dll
+ Microsoft.Extensions.Logging.EventLog.dll
+ Microsoft.Extensions.Logging.EventSource.dll
+ Microsoft.Extensions.Logging.TraceSource.dll
+ Microsoft.Extensions.ObjectPool.dll
+ Microsoft.Extensions.Options.ConfigurationExtensions.dll
+ Microsoft.Extensions.Options.DataAnnotations.dll
+ Microsoft.Extensions.Options.dll
+ Microsoft.Extensions.Primitives.dll
+ Microsoft.Extensions.Validation.dll
+ Microsoft.Extensions.WebEncoders.dll
+ Microsoft.JSInterop.dll
+ Microsoft.Net.Http.Headers.dll
+ System.Diagnostics.EventLog.dll
+ System.Formats.Cbor.dll
+ System.Security.Cryptography.Xml.dll
+ System.Threading.RateLimiting.dll
+<DOTNET>/packs/Microsoft.NETCore.App.Ref/10.0.8/ref/net10.0/
+ Microsoft.CSharp.dll
+ Microsoft.VisualBasic.Core.dll
+ Microsoft.VisualBasic.dll
+ Microsoft.Win32.Primitives.dll
+ Microsoft.Win32.Registry.dll
+ mscorlib.dll
+ netstandard.dll
+ System.AppContext.dll
+ System.Buffers.dll
+ System.Collections.Concurrent.dll
+ System.Collections.dll
+ System.Collections.Immutable.dll
+ System.Collections.NonGeneric.dll
+ System.Collections.Specialized.dll
+ System.ComponentModel.Annotations.dll
+ System.ComponentModel.DataAnnotations.dll
+ System.ComponentModel.dll
+ System.ComponentModel.EventBasedAsync.dll
+ System.ComponentModel.Primitives.dll
+ System.ComponentModel.TypeConverter.dll
+ System.Configuration.dll
+ System.Console.dll
+ System.Core.dll
+ System.Data.Common.dll
+ System.Data.DataSetExtensions.dll
+ System.Data.dll
+ System.Diagnostics.Contracts.dll
+ System.Diagnostics.Debug.dll
+ System.Diagnostics.DiagnosticSource.dll
+ System.Diagnostics.FileVersionInfo.dll
+ System.Diagnostics.Process.dll
+ System.Diagnostics.StackTrace.dll
+ System.Diagnostics.TextWriterTraceListener.dll
+ System.Diagnostics.Tools.dll
+ System.Diagnostics.TraceSource.dll
+ System.Diagnostics.Tracing.dll
+ System.dll
+ System.Drawing.dll
+ System.Drawing.Primitives.dll
+ System.Dynamic.Runtime.dll
+ System.Formats.Asn1.dll
+ System.Formats.Tar.dll
+ System.Globalization.Calendars.dll
+ System.Globalization.dll
+ System.Globalization.Extensions.dll
+ System.IO.Compression.Brotli.dll
+ System.IO.Compression.dll
+ System.IO.Compression.FileSystem.dll
+ System.IO.Compression.ZipFile.dll
+ System.IO.dll
+ System.IO.FileSystem.AccessControl.dll
+ System.IO.FileSystem.dll
+ System.IO.FileSystem.DriveInfo.dll
+ System.IO.FileSystem.Primitives.dll
+ System.IO.FileSystem.Watcher.dll
+ System.IO.IsolatedStorage.dll
+ System.IO.MemoryMappedFiles.dll
+ System.IO.Pipelines.dll
+ System.IO.Pipes.AccessControl.dll
+ System.IO.Pipes.dll
+ System.IO.UnmanagedMemoryStream.dll
+ System.Linq.AsyncEnumerable.dll
+ System.Linq.dll
+ System.Linq.Expressions.dll
+ System.Linq.Parallel.dll
+ System.Linq.Queryable.dll
+ System.Memory.dll
+ System.Net.dll
+ System.Net.Http.dll
+ System.Net.Http.Json.dll
+ System.Net.HttpListener.dll
+ System.Net.Mail.dll
+ System.Net.NameResolution.dll
+ System.Net.NetworkInformation.dll
+ System.Net.Ping.dll
+ System.Net.Primitives.dll
+ System.Net.Quic.dll
+ System.Net.Requests.dll
+ System.Net.Security.dll
+ System.Net.ServerSentEvents.dll
+ System.Net.ServicePoint.dll
+ System.Net.Sockets.dll
+ System.Net.WebClient.dll
+ System.Net.WebHeaderCollection.dll
+ System.Net.WebProxy.dll
+ System.Net.WebSockets.Client.dll
+ System.Net.WebSockets.dll
+ System.Numerics.dll
+ System.Numerics.Vectors.dll
+ System.ObjectModel.dll
+ System.Reflection.DispatchProxy.dll
+ System.Reflection.dll
+ System.Reflection.Emit.dll
+ System.Reflection.Emit.ILGeneration.dll
+ System.Reflection.Emit.Lightweight.dll
+ System.Reflection.Extensions.dll
+ System.Reflection.Metadata.dll
+ System.Reflection.Primitives.dll
+ System.Reflection.TypeExtensions.dll
+ System.Resources.Reader.dll
+ System.Resources.ResourceManager.dll
+ System.Resources.Writer.dll
+ System.Runtime.CompilerServices.Unsafe.dll
+ System.Runtime.CompilerServices.VisualC.dll
+ System.Runtime.dll
+ System.Runtime.Extensions.dll
+ System.Runtime.Handles.dll
+ System.Runtime.InteropServices.dll
+ System.Runtime.InteropServices.JavaScript.dll
+ System.Runtime.InteropServices.RuntimeInformation.dll
+ System.Runtime.Intrinsics.dll
+ System.Runtime.Loader.dll
+ System.Runtime.Numerics.dll
+ System.Runtime.Serialization.dll
+ System.Runtime.Serialization.Formatters.dll
+ System.Runtime.Serialization.Json.dll
+ System.Runtime.Serialization.Primitives.dll
+ System.Runtime.Serialization.Xml.dll
+ System.Security.AccessControl.dll
+ System.Security.Claims.dll
+ System.Security.Cryptography.Algorithms.dll
+ System.Security.Cryptography.Cng.dll
+ System.Security.Cryptography.Csp.dll
+ System.Security.Cryptography.dll
+ System.Security.Cryptography.Encoding.dll
+ System.Security.Cryptography.OpenSsl.dll
+ System.Security.Cryptography.Primitives.dll
+ System.Security.Cryptography.X509Certificates.dll
+ System.Security.dll
+ System.Security.Principal.dll
+ System.Security.Principal.Windows.dll
+ System.Security.SecureString.dll
+ System.ServiceModel.Web.dll
+ System.ServiceProcess.dll
+ System.Text.Encoding.CodePages.dll
+ System.Text.Encoding.dll
+ System.Text.Encoding.Extensions.dll
+ System.Text.Encodings.Web.dll
+ System.Text.Json.dll
+ System.Text.RegularExpressions.dll
+ System.Threading.AccessControl.dll
+ System.Threading.Channels.dll
+ System.Threading.dll
+ System.Threading.Overlapped.dll
+ System.Threading.Tasks.Dataflow.dll
+ System.Threading.Tasks.dll
+ System.Threading.Tasks.Extensions.dll
+ System.Threading.Tasks.Parallel.dll
+ System.Threading.Thread.dll
+ System.Threading.ThreadPool.dll
+ System.Threading.Timer.dll
+ System.Transactions.dll
+ System.Transactions.Local.dll
+ System.ValueTuple.dll
+ System.Web.dll
+ System.Web.HttpUtility.dll
+ System.Windows.dll
+ System.Xml.dll
+ System.Xml.Linq.dll
+ System.Xml.ReaderWriter.dll
+ System.Xml.Serialization.dll
+ System.Xml.XDocument.dll
+ System.Xml.XmlDocument.dll
+ System.Xml.XmlSerializer.dll
+ System.Xml.XPath.dll
+ System.Xml.XPath.XDocument.dll
+ WindowsBase.dll
+<NUGET>/
+ avalonia.controls.colorpicker/12.0.0/lib/net10.0/Avalonia.Controls.ColorPicker.dll
+ avalonia.desktop/12.0.3/lib/net10.0/Avalonia.Desktop.dll
+ avalonia.fonts.inter/12.0.3/lib/net10.0/Avalonia.Fonts.Inter.dll
+ avalonia.freedesktop.atspi/12.0.3/lib/net10.0/Avalonia.FreeDesktop.AtSpi.dll
+ avalonia.freedesktop/12.0.3/lib/net10.0/Avalonia.FreeDesktop.dll
+ avalonia.harfbuzz/12.0.3/lib/net10.0/Avalonia.HarfBuzz.dll
+ avalonia.headless/12.0.3/lib/net10.0/Avalonia.Headless.dll
+ avalonia.native/12.0.3/lib/net10.0/Avalonia.Native.dll
+ avalonia.remote.protocol/12.0.3/lib/net10.0/Avalonia.Remote.Protocol.dll
+ avalonia.skia/12.0.3/lib/net10.0/Avalonia.Skia.dll
+ avalonia.win32/12.0.3/lib/net10.0/
+  Avalonia.Win32.Automation.dll
+  Avalonia.Win32.dll
+ avalonia.x11/12.0.3/lib/net10.0/Avalonia.X11.dll
+ avalonia/12.0.3/ref/net10.0/
+  Avalonia.Base.dll
+  Avalonia.Controls.dll
+  Avalonia.DesignerSupport.dll
+  Avalonia.Dialogs.dll
+  Avalonia.dll
+  Avalonia.Markup.dll
+  Avalonia.Markup.Xaml.dll
+  Avalonia.Metal.dll
+  Avalonia.MicroCom.dll
+  Avalonia.OpenGL.dll
+  Avalonia.Vulkan.dll
+ avaloniagraphcontrol/0.8.0/lib/net8.0/
+  AutomaticGraphLayout.dll
+  AutomaticGraphLayout.Drawing.dll
+  AvaloniaGraphControl.dll
+ avaloniahex/0.1.13/lib/net10.0/AvaloniaHex.dll
+ avaloniaui.diagnosticssupport/2.2.1/lib/net10.0/AvaloniaUI.DiagnosticsSupport.Avalonia.dll
+ benchmarkdotnet.annotations/0.15.8/lib/netstandard2.0/BenchmarkDotNet.Annotations.dll
+ benchmarkdotnet/0.15.8/lib/net8.0/BenchmarkDotNet.dll
+ bodong.avalonia.propertygrid/12.0.0/lib/net10.0/Avalonia.PropertyGrid.dll
+ bodong.propertymodels/12.0.0/lib/net10.0/PropertyModels.dll
+ castle.core/5.1.1/lib/net6.0/Castle.Core.dll
+ commandlineparser/2.9.1/lib/netstandard2.0/CommandLine.dll
+ communitytoolkit.highperformance/8.4.2/lib/net8.0/CommunityToolkit.HighPerformance.dll
+ communitytoolkit.mvvm/8.4.2/lib/net8.0/CommunityToolkit.Mvvm.dll
+ deadpikle.avaloniaprogressring/0.11.0/lib/net10.0/AvaloniaProgressRing.dll
+ dialoghost.avalonia/0.12.2/lib/net8.0/DialogHost.Avalonia.dll
+ dock.avalonia.themes.fluent/12.0.0.2/lib/net10.0/Dock.Avalonia.Themes.Fluent.dll
+ dock.avalonia/12.0.0.2/lib/net10.0/Dock.Avalonia.dll
+ dock.controls.deferredcontentcontrol/12.0.0.2/lib/net10.0/Dock.Controls.DeferredContentControl.dll
+ dock.controls.proportionalstackpanel/12.0.0.2/lib/net10.0/Dock.Controls.ProportionalStackPanel.dll
+ dock.controls.recycling.model/12.0.0.2/lib/net10.0/Dock.Controls.Recycling.Model.dll
+ dock.controls.recycling/12.0.0.2/lib/net10.0/Dock.Controls.Recycling.dll
+ dock.markupextension/12.0.0.2/lib/net10.0/Dock.MarkupExtension.dll
+ dock.model.avalonia/12.0.0.2/lib/net10.0/Dock.Model.Avalonia.dll
+ dock.model.mvvm/12.0.0.2/lib/net10.0/Dock.Model.Mvvm.dll
+ dock.model/12.0.0.2/lib/net10.0/Dock.Model.dll
+ dock.settings/12.0.0.2/lib/net10.0/Dock.Settings.dll
+ fluentassertions/8.10.0/lib/net6.0/FluentAssertions.dll
+ fluenticons.avalonia/2.1.326/lib/net10.0/FluentIcons.Avalonia.dll
+ fluenticons.common/2.1.326/lib/netstandard2.1/FluentIcons.Common.dll
+ fluenticons.resources.avalonia/2.0.326/lib/netstandard2.0/FluentIcons.Resources.Avalonia.dll
+ gee.external.capstone/2.3.0/lib/net7.0/Gee.External.Capstone.dll
+ harfbuzzsharp/8.3.1.3/lib/net8.0/HarfBuzzSharp.dll
+ iced/1.21.0/lib/netstandard2.1/Iced.dll
+ irihi.avalonia.shared/0.4.0/lib/net10.0/Irihi.Avalonia.Shared.dll
+ jetbrains.annotations/2025.2.4/lib/netstandard2.0/JetBrains.Annotations.dll
+ jve.structurizer/1.2.0/lib/netstandard2.1/Structurizer.dll
+ meltysynth/2.4.1/lib/netstandard2.1/MeltySynth.dll
+ microcom.runtime/0.11.4/lib/net5.0/MicroCom.Runtime.dll
+ microsoft.aspnetcore.openapi/10.0.8/lib/net10.0/Microsoft.AspNetCore.OpenApi.dll
+ microsoft.codeanalysis.common/4.14.0/lib/net9.0/Microsoft.CodeAnalysis.dll
+ microsoft.codeanalysis.csharp/4.14.0/lib/net9.0/Microsoft.CodeAnalysis.CSharp.dll
+ microsoft.codecoverage/18.5.1/lib/net8.0/Microsoft.VisualStudio.CodeCoverage.Shim.dll
+ microsoft.diagnostics.netcore.client/0.2.510501/lib/net6.0/Microsoft.Diagnostics.NETCore.Client.dll
+ microsoft.diagnostics.runtime/3.1.512801/lib/net6.0/Microsoft.Diagnostics.Runtime.dll
+ microsoft.diagnostics.tracing.traceevent/3.1.21/lib/netstandard2.0/
+  Dia2Lib.dll
+  Microsoft.Diagnostics.FastSerialization.dll
+  Microsoft.Diagnostics.Tracing.TraceEvent.dll
+  TraceReloggerLib.dll
+ microsoft.dotnet.platformabstractions/3.1.6/lib/netstandard2.0/Microsoft.DotNet.PlatformAbstractions.dll
+ microsoft.extensions.ai.abstractions/10.5.2/lib/net10.0/Microsoft.Extensions.AI.Abstractions.dll
+ microsoft.extensions.dependencymodel/9.0.9/lib/net9.0/Microsoft.Extensions.DependencyModel.dll
+ microsoft.io.recyclablememorystream/3.0.1/lib/net6.0/Microsoft.IO.RecyclableMemoryStream.dll
+ microsoft.openapi/2.4.1/lib/net8.0/Microsoft.OpenApi.dll
+ microsoft.testplatform.testhost/18.5.1/lib/net8.0/
+  Microsoft.TestPlatform.CommunicationUtilities.dll
+  Microsoft.TestPlatform.CoreUtilities.dll
+  Microsoft.TestPlatform.CrossPlatEngine.dll
+  Microsoft.TestPlatform.PlatformAbstractions.dll
+  Microsoft.TestPlatform.Utilities.dll
+  Microsoft.VisualStudio.TestPlatform.Common.dll
+  Microsoft.VisualStudio.TestPlatform.ObjectModel.dll
+  testhost.dll
+ modelcontextprotocol.aspnetcore/1.3.0/lib/net10.0/ModelContextProtocol.AspNetCore.dll
+ modelcontextprotocol.core/1.3.0/lib/net10.0/ModelContextProtocol.Core.dll
+ modelcontextprotocol/1.3.0/lib/net10.0/ModelContextProtocol.dll
+ mt32emu.net/1.0.0/lib/net10.0/Mt32emu.dll
+ newtonsoft.json/13.0.3/lib/net6.0/Newtonsoft.Json.dll
+ nsubstitute/5.3.0/lib/net6.0/NSubstitute.dll
+ nukedopl3sharp/1.1.0/lib/net10.0/NukedOPL3Sharp.dll
+ panandzoom/12.0.0.1/lib/net10.0/PanAndZoom.dll
+ perfolizer/0.6.1/lib/net6.0/Perfolizer.dll
+ pragmastat/3.2.4/lib/net6.0/Pragmastat.dll
+ semi.avalonia.dock/12.0.0.2/lib/net10.0/Semi.Avalonia.Dock.dll
+ semi.avalonia/12.0.1/lib/net10.0/Semi.Avalonia.dll
+ serilog.extensions.hosting/10.0.0/lib/net10.0/Serilog.Extensions.Hosting.dll
+ serilog.extensions.logging/10.0.0/lib/net10.0/Serilog.Extensions.Logging.dll
+ serilog.sinks.async/2.1.0/lib/net8.0/Serilog.Sinks.Async.dll
+ serilog.sinks.console/6.1.1/lib/net8.0/Serilog.Sinks.Console.dll
+ serilog.sinks.debug/3.0.0/lib/net8.0/Serilog.Sinks.Debug.dll
+ serilog.sinks.file/7.0.0/lib/net9.0/Serilog.Sinks.File.dll
+ serilog/4.3.1/lib/net10.0/Serilog.dll
+ silk.net.core/2.23.0/lib/net6.0/Silk.NET.Core.dll
+ silk.net.maths/2.23.0/lib/net5.0/Silk.NET.Maths.dll
+ silk.net.sdl/2.23.0/lib/net6.0/Silk.NET.SDL.dll
+ skiasharp/3.119.4-preview.1.1/ref/net10.0/SkiaSharp.dll
+ spectre.console.ansi/0.55.0/lib/net10.0/Spectre.Console.Ansi.dll
+ spectre.console.cli/0.55.0/lib/net10.0/Spectre.Console.Cli.dll
+ spectre.console/0.55.0/lib/net10.0/Spectre.Console.dll
+ spice86.audio/11.4.0/lib/net10.0/Spice86.Audio.dll
+ spice86.datagrid/0.1.1/lib/net10.0/Spice86.DataGrid.dll
+ swashbuckle.aspnetcore.swagger/10.1.7/lib/net10.0/Swashbuckle.AspNetCore.Swagger.dll
+ swashbuckle.aspnetcore.swaggergen/10.1.7/lib/net10.0/Swashbuckle.AspNetCore.SwaggerGen.dll
+ swashbuckle.aspnetcore.swaggerui/10.1.7/lib/net10.0/Swashbuckle.AspNetCore.SwaggerUI.dll
+ system.codedom/9.0.5/lib/net9.0/System.CodeDom.dll
+ system.management/9.0.5/lib/net9.0/System.Management.dll
+ tmds.dbus.protocol/0.92.0/lib/net9.0/Tmds.DBus.Protocol.dll
+ xaml.behaviors.interactions.custom/12.0.0/lib/net10.0/Xaml.Behaviors.Interactions.Custom.dll
+ xaml.behaviors.interactions.draganddrop/12.0.0/lib/net10.0/Xaml.Behaviors.Interactions.DragAndDrop.dll
+ xaml.behaviors.interactions.draggable/12.0.0/lib/net10.0/Xaml.Behaviors.Interactions.Draggable.dll
+ xaml.behaviors.interactions.events/12.0.0/lib/net10.0/Xaml.Behaviors.Interactions.Events.dll
+ xaml.behaviors.interactions.responsive/12.0.0/lib/net10.0/Xaml.Behaviors.Interactions.Responsive.dll
+ xaml.behaviors.interactions/12.0.0/lib/net10.0/Xaml.Behaviors.Interactions.dll
+ xaml.behaviors.interactivity/12.0.0/lib/net10.0/Xaml.Behaviors.Interactivity.dll
+ xunit.abstractions/2.0.3/lib/netstandard2.0/xunit.abstractions.dll
+ xunit.assert/2.9.3/lib/net6.0/xunit.assert.dll
+ xunit.extensibility.core/2.9.3/lib/netstandard1.1/xunit.core.dll
+ xunit.extensibility.execution/2.9.3/lib/netstandard1.1/xunit.execution.dotnet.dll
+ xunit.skippablefact/1.5.61/lib/netstandard2.0/Xunit.SkippableFact.dll
+
+[analyzerReferences]
+<DOTNET>/packs/Microsoft.AspNetCore.App.Ref/10.0.8/analyzers/dotnet/cs/
+ Microsoft.AspNetCore.App.Analyzers.dll
+ Microsoft.AspNetCore.App.CodeFixes.dll
+ Microsoft.AspNetCore.App.SourceGenerators.dll
+ Microsoft.AspNetCore.Components.Analyzers.dll
+ Microsoft.Extensions.Logging.Generators.dll
+ Microsoft.Extensions.Options.SourceGeneration.dll
+ Microsoft.Extensions.Validation.ValidationsGenerator.dll
+<DOTNET>/packs/Microsoft.NETCore.App.Ref/10.0.8/analyzers/dotnet/cs/
+ Microsoft.Interop.ComInterfaceGenerator.dll
+ Microsoft.Interop.JavaScript.JSImportGenerator.dll
+ Microsoft.Interop.LibraryImportGenerator.dll
+ Microsoft.Interop.SourceGeneration.dll
+ System.Text.Json.SourceGeneration.dll
+ System.Text.RegularExpressions.Generator.dll
+<DOTNET>/sdk/10.0.300/Sdks/Microsoft.NET.Sdk/analyzers/
+ Microsoft.CodeAnalysis.CSharp.NetAnalyzers.dll
+ Microsoft.CodeAnalysis.NetAnalyzers.dll
+<NUGET>/avalonia/12.0.3/analyzers/dotnet/cs/
+ Avalonia.Analyzers.CodeFixes.CSharp.dll
+ Avalonia.Analyzers.CSharp.dll
+ Avalonia.Analyzers.VisualBasic.dll
+ Avalonia.Generators.dll
+<NUGET>/
+ benchmarkdotnet.annotations/0.15.8/analyzers/dotnet/roslyn4.8/cs/BenchmarkDotNet.Analyzers.dll
+ communitytoolkit.mvvm/8.4.2/analyzers/dotnet/roslyn5.0/cs/
+  CommunityToolkit.Mvvm.CodeFixers.dll
+  CommunityToolkit.Mvvm.SourceGenerators.dll
+ microsoft.aspnetcore.openapi/10.0.8/analyzers/dotnet/cs/Microsoft.AspNetCore.OpenApi.SourceGenerators.dll
+ microsoft.codeanalysis.analyzers/3.11.0/analyzers/dotnet/cs/
+  Microsoft.CodeAnalysis.Analyzers.dll
+  Microsoft.CodeAnalysis.CSharp.Analyzers.dll
+ modelcontextprotocol.core/1.3.0/analyzers/dotnet/cs/ModelContextProtocol.Analyzers.dll
+ xunit.analyzers/1.18.0/analyzers/dotnet/cs/
+  xunit.analyzers.dll
+  xunit.analyzers.fixes.dll
+
+[analyzerConfigFiles]
+../../.editorconfig
+<DOTNET>/sdk/10.0.300/Sdks/Microsoft.NET.Sdk/analyzers/build/config/analysislevel_10_default.globalconfig
+obj/Debug/net10.0/Spice86.MicroBenchmarkTemplate.GeneratedMSBuildEditorConfig.editorconfig

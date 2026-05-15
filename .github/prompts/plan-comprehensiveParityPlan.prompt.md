@@ -11,12 +11,12 @@
 - Phase 1d: Completed (MBR codec/model, partition validator, partition-aware FAT dispatcher).
 - Phase 1e: Completed (`MutableFatFileSystem` real FAT12/16/32 read+write integration via `FatTable.AllocateCluster`/`LinkClusters`/`MarkAsEof`, `FatBootSectorCodec`, and `MutableFatDirectoryEntry.Serialize`; `FatFileSystemWriter` now delegates to `CommitChanges`; 10/10 builder-based integration tests green using `Fat12ImageBuilder`).
 - Phase 2 (LFN/VFAT): Skipped (out of current scope per maintainer decision).
-- Phase 6 (FAT write-back integration): In progress (99%) — atom 1: `FileBackedFatImage` (load + auto-flush + dispose) landed with 4 builder-based tests. Atom 2: `DosDriveManager.FlushDirtyFloppyImages()` landed with 2 RED→GREEN tests, returns count of drives flushed. Atom 3: `FloppyDiskDrive : IDisposable` landed — dispose now writes every dirty image back to its host path, so `DosDriveManager.Unmount(letter)` persists guest writes before clearing the slot. Atom 4: shutdown lifecycle wiring landed (`Spice86DependencyInjection.DisposeMachineAfterRun` now calls `Machine.Dos.DosDriveManager.FlushDirtyFloppyImages()` before `Machine.Dispose()`) with RED→GREEN integration coverage (`ShutdownWriteBackTests`). Atom 5: multi-image shutdown parity landed — dirty non-current floppy images are now flushed too (`FloppyDiskDrive.FlushDirtyImagesToDisk` + `HasDirtyImages` in `DosDriveManager.FlushDirtyFloppyImages`) with RED→GREEN integration coverage. Atom 6: pause lifecycle wiring landed (`pauseHandler.Pausing` now flushes dirty floppy images) with RED→GREEN integration coverage (`RequestPause_WithDirtyMountedFloppy_PersistsImageBytesToDisk`). Atom 7: absolute disk parity for mounted image-backed non-floppy drives landed (INT 26h writes + INT 25h reads now work for image-backed C: while non-image HDD folder stubs remain compatible). Atom 8: BIOS INT 13h CHS read/write parity landed for mounted image-backed HDD drives (`DL=0x80` maps to image-backed `C:`), with RED→GREEN tests. Remaining major scope to 100%: true HDD image mount lifecycle write-back integration tests.
+- Phase 6 (FAT write-back integration): Completed (100%) — atom 1: `FileBackedFatImage` (load + auto-flush + dispose) landed with 4 builder-based tests. Atom 2: `DosDriveManager.FlushDirtyFloppyImages()` landed with 2 RED→GREEN tests, returns count of drives flushed. Atom 3: `FloppyDiskDrive : IDisposable` landed — dispose now writes every dirty image back to its host path, so `DosDriveManager.Unmount(letter)` persists guest writes before clearing the slot. Atom 4: shutdown lifecycle wiring landed (`Spice86DependencyInjection.DisposeMachineAfterRun` now calls `Machine.Dos.DosDriveManager.FlushDirtyFloppyImages()` before `Machine.Dispose()`) with RED→GREEN integration coverage (`ShutdownWriteBackTests`). Atom 5: multi-image shutdown parity landed — dirty non-current floppy images are now flushed too (`FloppyDiskDrive.FlushDirtyImagesToDisk` + `HasDirtyImages` in `DosDriveManager.FlushDirtyFloppyImages`) with RED→GREEN integration coverage. Atom 6: pause lifecycle wiring landed (`pauseHandler.Pausing` now flushes dirty floppy images) with RED→GREEN integration coverage (`RequestPause_WithDirtyMountedFloppy_PersistsImageBytesToDisk`). Atom 7: absolute disk parity for mounted image-backed non-floppy drives landed (INT 26h writes + INT 25h reads now work for image-backed C: while non-image HDD folder stubs remain compatible). Atom 8: BIOS INT 13h CHS read/write parity landed for mounted image-backed HDD drives (`DL=0x80` maps to image-backed `C:`), with RED→GREEN tests. Atom 9: true HDD image mount lifecycle write-back integration test landed (`HddImageMount_FullLifecycle_PausesAndShutdownPersistAllWritesToDisk`) — exercises mount on C: → write → pause-flush → write → dispose-flush, asserting both writes persist to the host image file.
 - Phase 7 (BOOT.COM): Final step, integrated with batch engine.
 
 ### Progress Tracking
 
-- **Overall progress (effort-weighted, excluding skipped Phase 2): 97%**.
+- **Overall progress (effort-weighted, excluding skipped Phase 2): 98%**.
 - **Per-phase progression:**
   - Phase 0: **100%**
   - Phase 1a: **100%**
@@ -25,7 +25,7 @@
   - Phase 1d: **100%**
   - Phase 1e: **100%**
   - Phase 2: **N/A (skipped by maintainer decision)**
-  - Phase 6: **99%**
+  - Phase 6: **100%**
   - Phase 7: **55%**
 
 ---
@@ -677,7 +677,7 @@ Spice86.Storage.Tests:
 
 ### 13.3 Progression
 
-- Progress: **99%** (7.5/8 major milestones complete).
+- Progress: **100%** (8/8 major milestones complete).
 - Completed milestone 1: file-backed FAT image write-back object (`FileBackedFatImage`) with auto-flush semantics.
 - Completed milestone 2: dirty-drive flush coordinator (`DosDriveManager.FlushDirtyFloppyImages`).
 - Completed milestone 3: unmount-time persistence (`FloppyDiskDrive.Dispose` flushes dirty images).
@@ -685,8 +685,7 @@ Spice86.Storage.Tests:
 - Completed milestone 5: multi-image shutdown parity (dirty non-current images on a mounted floppy stack are persisted on shutdown, not only the currently selected image).
 - Completed milestone 6: pause-time persistence parity (dirty floppy images are flushed when pause is requested, not only on shutdown/dispose).
 - Completed milestone 7: INT 26h writes and INT 25h reads support mounted image-backed drives beyond A/B (including C:), while preserving existing success semantics for non-image HDD folder drives.
-- Milestone 8 in progress: BIOS INT 13h read/write supports mounted image-backed HDD drives (`DL=0x80` mapped to image-backed `C:`).
-- Remaining to close milestone 8: complete true HDD image mount lifecycle write-back integration tests.
+- Completed milestone 8: BIOS INT 13h read/write supports mounted image-backed HDD drives (`DL=0x80` mapped to image-backed `C:`); end-to-end HDD lifecycle write-back integration test (`HddImageMount_FullLifecycle_PausesAndShutdownPersistAllWritesToDisk`) verifies pause-flush and shutdown-flush both persist guest writes to the host image file.
 
 ---
 
