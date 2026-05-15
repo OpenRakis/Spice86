@@ -5,6 +5,8 @@ using System.Text;
 
 using System.Buffers.Binary;
 
+using Spice86.Shared.Emulator.Storage.CdRom.Audio;
+
 namespace Spice86.Shared.Emulator.Storage.CdRom;
 
 /// <summary>Reads a CUE/BIN disc image and exposes it as an <see cref="ICdRomImage"/>.</summary>
@@ -23,12 +25,26 @@ public sealed class CueBinImage : ICdRomImage {
     private readonly List<CdTrack> _tracks = new List<CdTrack>();
     private readonly Dictionary<string, IDataSource> _sources = new Dictionary<string, IDataSource>(StringComparer.OrdinalIgnoreCase);
     private readonly List<IDisposable> _ownedDisposables = new List<IDisposable>();
+    private readonly CompositeAudioCodecFactory _codecFactory;
 
-    /// <summary>Opens and parses a CUE/BIN disc image.</summary>
+    /// <summary>Opens and parses a CUE/BIN disc image using the default audio codec factory.</summary>
     /// <param name="cueFilePath">Path to the .cue file.</param>
     /// <exception cref="IOException">Thrown when a BIN file cannot be opened.</exception>
     /// <exception cref="InvalidDataException">Thrown when the CUE sheet is malformed.</exception>
-    public CueBinImage(string cueFilePath) {
+    public CueBinImage(string cueFilePath)
+        : this(cueFilePath, DefaultAudioCodecFactory.Create()) {
+    }
+
+    /// <summary>Opens and parses a CUE/BIN disc image using the supplied audio codec factory.</summary>
+    /// <param name="cueFilePath">Path to the .cue file.</param>
+    /// <param name="codecFactory">Composite factory used to decode non-BINARY audio file references.</param>
+    /// <exception cref="IOException">Thrown when a BIN file cannot be opened.</exception>
+    /// <exception cref="InvalidDataException">Thrown when the CUE sheet is malformed.</exception>
+    public CueBinImage(string cueFilePath, CompositeAudioCodecFactory codecFactory) {
+        if (codecFactory == null) {
+            throw new ArgumentNullException(nameof(codecFactory));
+        }
+        _codecFactory = codecFactory;
         ImagePath = cueFilePath;
         CueSheetParser parser = new CueSheetParser();
         CueSheet sheet = parser.Parse(cueFilePath);
@@ -138,15 +154,16 @@ public sealed class CueBinImage : ICdRomImage {
     }
 
     private IDataSource CreateSource(string filePath, CueFileType fileType) {
-        if (fileType == CueFileType.Wave) {
-            WavAudioFile wav = new WavAudioFile(filePath);
-            FileBackedDataSource backing = new FileBackedDataSource(filePath);
-            _ownedDisposables.Add(backing);
-            return new WindowedDataSource(backing, wav.PcmDataOffset, wav.PcmDataLength);
+        if (fileType == CueFileType.Binary) {
+            FileBackedDataSource fileSource = new FileBackedDataSource(filePath);
+            _ownedDisposables.Add(fileSource);
+            return fileSource;
         }
-        FileBackedDataSource fileSource = new FileBackedDataSource(filePath);
-        _ownedDisposables.Add(fileSource);
-        return fileSource;
+        IAudioCodec codec = _codecFactory.CreateFor(fileType, filePath);
+        if (codec is IDisposable disposableCodec) {
+            _ownedDisposables.Add(disposableCodec);
+        }
+        return codec.OpenAsCdda(filePath);
     }
 
     private static int MapSectorSize(string trackMode) {
