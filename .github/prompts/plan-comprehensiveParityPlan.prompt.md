@@ -18,7 +18,7 @@
 
 ### Progress Tracking
 
-- **Overall progress (effort-weighted, all in-scope phases): 91%** (Phases 0, 1a-e, 2, 3, 4, 6, 7 done; Phase 5 MDS/MDF not started; Phase 8 IMGMAKE + overlay not started).
+- **Overall progress (effort-weighted, all in-scope phases): 91%** (Phases 0, 1a-e, 2, 3, 4, 6, 7 done; Phase 5 MDS/MDF not started; Phase 8 overlay drive not started).
 - **Per-phase progression:**
   - Phase 0: **100%**
   - Phase 1a: **100%**
@@ -32,7 +32,7 @@
   - Phase 5: **0%** (MDS/MDF: NOT STARTED. dosbox-staging `LoadMdsFile` parity gap — see section 12.)
   - Phase 6: **100%**
   - Phase 7: **100%**
-  - Phase 8: **0%** (IMGMAKE + overlay drive: NOT STARTED. dosbox-staging `makeimg.cpp` and `drive_overlay.cpp` parity gaps — see section 14.5.)
+  - Phase 8: **0%** (overlay drive: NOT STARTED. dosbox-staging `drive_overlay.cpp` parity gap — see section 14.5. IMGMAKE explicitly OUT OF SCOPE.)
 
 ### Parity Audit vs dosbox-staging (May 2026)
 
@@ -54,7 +54,6 @@ Cross-checked against `dosbox-staging/src/dos/` to confirm scope completeness.
 | Capability | dosbox-staging source | Spice86 status | Plan section |
 | --- | --- | --- | --- |
 | MDS/MDF (Alcohol 120%) image format | `cdrom_image.cpp` `LoadMdsFile` + `cdrom_mds.h` | NOT started | Section 12 (Phase 5). |
-| IMGMAKE (create blank disk image) | `dos/programs/makeimg.cpp` | NOT started | Section 14.5 (Phase 8). |
 | Overlay drive (read-write overlay on read-only base) | `dos/drive_overlay.cpp` | NOT started | Section 14.5 (Phase 8). |
 
 **Out of scope (dosbox-staging does not have these either, so no parity gap):**
@@ -65,7 +64,11 @@ Cross-checked against `dosbox-staging/src/dos/` to confirm scope completeness.
 - exFAT — confirmed absent.
 - MSCDEX IOCTL completeness beyond the subset already implemented in Phase 4d.
 
-**Net conclusion:** The PR scope is **complete** for 7 of the 8 in-scope phases at **strict dosbox-staging parity** (no beyond-parity bonuses). Three previously-shipped beyond-parity capabilities were intentionally removed in May 2026 to enforce strict parity: VFAT LFN write, Rock Ridge SUSP, and LibVLC compressed-audio codec dispatch. Two real parity gaps remain: Phase 5 (MDS/MDF) and Phase 8 (IMGMAKE + overlay drive). Both are listed in this plan and tracked below; neither is required for v0.2 release per section 1.3.
+**Out of scope by project decision (dosbox-staging has these, but Spice86 deliberately omits):**
+
+- IMGMAKE (`dos/programs/makeimg.cpp`) — blank-image creation is a host-side authoring task; users can produce images with any external tool (`dd`, `mkfs.fat`, WinImage, etc.) and mount them via existing `IMGMOUNT`. Not a runtime emulation gap.
+
+**Net conclusion:** The PR scope is **complete** for 7 of the 8 in-scope phases at **strict dosbox-staging parity** (no beyond-parity bonuses). Three previously-shipped beyond-parity capabilities were intentionally removed in May 2026 to enforce strict parity: VFAT LFN write, Rock Ridge SUSP, and LibVLC compressed-audio codec dispatch. Two real parity gaps remain: Phase 5 (MDS/MDF) and Phase 8 (overlay drive). Neither is required for v0.2 release per section 1.3.
 
 ---
 
@@ -116,7 +119,7 @@ Phase 4a (Codec IF)  →  Phase 4b (CUE FILE type)  →  Phase 4c (INDEX 00)  �
 Phase 5 (MDS/MDF, v0.3+)
 Phase 6 (Write-back, v0.3+)
 Phase 7 (BOOT.COM HDD Integration, v0.3+) ← batch engine + full HDD image support
-Phase 8 (IMGMAKE + Overlay drive, v0.3+) ← remaining dosbox-staging parity gaps
+Phase 8 (Overlay drive, v0.3+) ← remaining dosbox-staging parity gap (IMGMAKE explicitly out of scope)
 ```
 
 Each phase is independently shippable as prerelease NuGet. Phases 0–4 form v0.2 release.
@@ -918,31 +921,26 @@ Spice86.Storage.Tests:
 
 ---
 
-## 14.5 Phase 8: IMGMAKE & Overlay Drive (v0.3+)
+## 14.5 Phase 8: Overlay Drive (v0.3+)
 
-**Goal:** Close the remaining dosbox-staging parity gaps outside the storage codec layer: blank-image creation (`IMGMAKE`) and read-write overlays on read-only mounts (`drive_overlay.cpp`).
+**Goal:** Close the remaining dosbox-staging runtime parity gap outside the storage codec layer: read-write overlays on read-only mounts (`drive_overlay.cpp`).
+
+**Out of scope:** IMGMAKE (`dos/programs/makeimg.cpp`) is explicitly excluded. Blank-image authoring is a host-side task; users produce images with external tools (`dd`, `mkfs.fat`, WinImage, etc.) and mount via existing `IMGMOUNT`. Not a runtime emulation gap.
 
 ### 14.5.1 Design (summary)
 
-- **`ImgMakeService`** sealed class (in `Spice86.Storage.Fat`).
-  - `CreateBlankFloppy(path, FloppyKind kind) -> void` — emits zero-initialized image + freshly formatted FAT12 BPB matching one of the canonical floppy geometries (160k/180k/320k/360k/720k/1.2M/1.44M/2.88M).
-  - `CreateBlankHardDisk(path, HddGeometry geom, FatType type) -> void` — emits MBR with single bootable partition + formatted FAT12/16/32.
-  - Reuses `FatBootSectorCodec`, `FatTable`, `MbrCodec` (no parallel format engine).
 - **`OverlayDrive`** sealed class (in `Spice86.Core` DOS layer).
   - Wraps an `IDosDrive` base + per-file shadow folder on host.
   - Read order: shadow first, fall through to base. Write/Delete go to shadow (with whiteouts for base deletions).
   - Tracks rename/move via shadow metadata file.
-- **Batch wiring:** new `IMGMAKE` command in `Spice86.Core` batch engine; `MOUNT letter base -t overlay shadow` registers an `OverlayDrive`.
+- **Batch wiring:** `MOUNT letter base -t overlay shadow` registers an `OverlayDrive`.
 
 ### 14.5.2 TDD Spec
 
-1. `ImgMakeService_CreateBlank144Floppy_ProducesValidFat12`.
-2. `ImgMakeService_CreateBlankHdd_ProducesValidMbrAndPartition`.
-3. `OverlayDrive_ReadFile_PrefersShadowOverBase`.
-4. `OverlayDrive_WriteFile_GoesToShadow_BaseUnchanged`.
-5. `OverlayDrive_DeleteFile_CreatesWhiteout_HidesFromBase`.
-6. `BatchEngine_IMGMAKE_FloppyImage_PersistsOnDisk`.
-7. `BatchEngine_MountOverlay_RoundTripsWriteReadDelete`.
+1. `OverlayDrive_ReadFile_PrefersShadowOverBase`.
+2. `OverlayDrive_WriteFile_GoesToShadow_BaseUnchanged`.
+3. `OverlayDrive_DeleteFile_CreatesWhiteout_HidesFromBase`.
+4. `BatchEngine_MountOverlay_RoundTripsWriteReadDelete`.
 
 ### 14.5.3 Tracker & Mini Report
 
@@ -951,9 +949,9 @@ Spice86.Storage.Tests:
 | Status | **NOT STARTED** |
 | Progress | 0% |
 | Atoms shipped | None. |
-| dosbox-staging parity | **Real parity gap.** `dos/programs/makeimg.cpp` (IMGMAKE) and `dos/drive_overlay.cpp` (overlay drive) are present in dosbox-staging and have no Spice86 equivalent. Deferrable for v0.2; required only for full v1.0 parity. |
+| dosbox-staging parity | **Real parity gap.** `dos/drive_overlay.cpp` is present in dosbox-staging and has no Spice86 equivalent. Deferrable for v0.2; required only for full v1.0 parity. |
 | Tests added | None. |
-| Remaining work | Both atoms (IMGMAKE + OverlayDrive) per design above; ~15 RED->GREEN tests across `Spice86.Storage.Tests` + `Spice86.Tests`. |
+| Remaining work | OverlayDrive atom per design above; ~10 RED->GREEN tests across `Spice86.Tests`. |
 
 ---
 
@@ -1000,7 +998,7 @@ Spice86.Storage.Tests:
 | Phase 5 | 2 units | Niche format; lower priority. |
 | Phase 6 | 3 units | Integration with Spice86.Core. |
 | Phase 7 | 2 units | BOOT.COM HDD integration with batch engine. |
-| Phase 8 | 2 units | IMGMAKE + overlay drive (remaining dosbox-staging parity gap). |
+| Phase 8 | 1 unit | Overlay drive (remaining dosbox-staging parity gap; IMGMAKE explicitly out of scope). |
 | **Total** | **36 units** | ~6–9 weeks; 1.5–2 weeks / phase. |
 
 ---
