@@ -182,4 +182,48 @@ public class DosDriveManagerFloppyTests {
         // Assert — still on the same image
         drive.ImagePath.Should().Be("single.img");
     }
+
+    [Fact]
+    public void FlushDirtyFloppyImages_WithDirtyFloppy_PersistsBytesAndClearsDirty() {
+        // Arrange
+        string tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
+            "Spice86_FlushDirtyFloppy_" + System.Guid.NewGuid().ToString("N"));
+        System.IO.Directory.CreateDirectory(tempDir);
+        string imagePath = System.IO.Path.Combine(tempDir, "floppy.img");
+        try {
+            byte[] image = new Fat12ImageBuilder().Build();
+            _driveManager.MountFloppyImage('A', image, imagePath);
+            _driveManager.WriteToImage(driveNumber: 0, imageByteOffset: 0x100, source: new byte[] { 0xAB, 0xCD }, srcOffset: 0, byteCount: 2);
+            _driveManager.TryGetFloppyDrive('A', out FloppyDiskDrive? floppy);
+            floppy!.IsDirty.Should().BeTrue();
+
+            // Act
+            int flushed = _driveManager.FlushDirtyFloppyImages();
+
+            // Assert
+            flushed.Should().Be(1);
+            System.IO.File.Exists(imagePath).Should().BeTrue();
+            byte[] onDisk = System.IO.File.ReadAllBytes(imagePath);
+            onDisk[0x100].Should().Be(0xAB);
+            onDisk[0x101].Should().Be(0xCD);
+            floppy.IsDirty.Should().BeFalse();
+        } finally {
+            if (System.IO.Directory.Exists(tempDir)) {
+                System.IO.Directory.Delete(tempDir, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public void FlushDirtyFloppyImages_WithNoDirtyDrives_ReturnsZero() {
+        // Arrange
+        byte[] image = new Fat12ImageBuilder().Build();
+        _driveManager.MountFloppyImage('A', image, "clean.img");
+
+        // Act
+        int flushed = _driveManager.FlushDirtyFloppyImages();
+
+        // Assert
+        flushed.Should().Be(0);
+    }
 }
