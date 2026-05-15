@@ -10,7 +10,7 @@ using System.Linq;
 /// Represents a floppy disk drive (A: or B:), optionally backed by one or more FAT12 disk images.
 /// When more than one image is registered, Ctrl-F4 disc switching cycles through them.
 /// </summary>
-public class FloppyDiskDrive : DosDriveBase {
+public class FloppyDiskDrive : DosDriveBase, System.IDisposable {
     private readonly List<(byte[] Data, string Path, bool IsDirty)> _images = new();
     private int _currentIndex;
 
@@ -136,5 +136,23 @@ public class FloppyDiskDrive : DosDriveBase {
         (byte[] data, string _, bool _) = _images[_currentIndex];
         Image = new FatFileSystem(data);
         Label = Image.VolumeLabel;
+    }
+
+    /// <summary>
+    /// Flushes any dirty images back to disk so guest-side writes survive an unmount or emulator exit.
+    /// Mirrors dosbox-staging's drive_fat destructor behaviour.
+    /// </summary>
+    public void Dispose() {
+        for (int i = 0; i < _images.Count; i++) {
+            (byte[] data, string path, bool isDirty) = _images[i];
+            if (!isDirty) {
+                continue;
+            }
+            if (string.IsNullOrEmpty(path)) {
+                continue;
+            }
+            File.WriteAllBytes(path, data);
+            _images[i] = (data, path, false);
+        }
     }
 }

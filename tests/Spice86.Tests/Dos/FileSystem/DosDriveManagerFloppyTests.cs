@@ -226,4 +226,35 @@ public class DosDriveManagerFloppyTests {
         // Assert
         flushed.Should().Be(0);
     }
+
+    [Fact]
+    public void Unmount_WithDirtyFloppy_PersistsBytesToDiskBeforeUnmounting() {
+        // Arrange
+        string tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
+            "Spice86_UnmountFlushes_" + System.Guid.NewGuid().ToString("N"));
+        System.IO.Directory.CreateDirectory(tempDir);
+        string imagePath = System.IO.Path.Combine(tempDir, "floppy.img");
+        try {
+            byte[] image = new Fat12ImageBuilder().Build();
+            _driveManager.MountFloppyImage('A', image, imagePath);
+            _driveManager.WriteToImage(driveNumber: 0, imageByteOffset: 0x200, source: new byte[] { 0x42, 0x99 }, srcOffset: 0, byteCount: 2);
+            _driveManager.TryGetFloppyDrive('A', out FloppyDiskDrive? floppy);
+            floppy!.IsDirty.Should().BeTrue();
+
+            // Act
+            _driveManager.Unmount('A');
+
+            // Assert
+            System.IO.File.Exists(imagePath).Should().BeTrue();
+            byte[] onDisk = System.IO.File.ReadAllBytes(imagePath);
+            onDisk[0x200].Should().Be(0x42);
+            onDisk[0x201].Should().Be(0x99);
+            _driveManager.TryGetFloppyDrive('A', out FloppyDiskDrive? afterUnmount).Should().BeFalse();
+            afterUnmount.Should().BeNull();
+        } finally {
+            if (System.IO.Directory.Exists(tempDir)) {
+                System.IO.Directory.Delete(tempDir, recursive: true);
+            }
+        }
+    }
 }

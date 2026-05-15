@@ -11,7 +11,7 @@
 - Phase 1d: Completed (MBR codec/model, partition validator, partition-aware FAT dispatcher).
 - Phase 1e: Completed (`MutableFatFileSystem` real FAT12/16/32 read+write integration via `FatTable.AllocateCluster`/`LinkClusters`/`MarkAsEof`, `FatBootSectorCodec`, and `MutableFatDirectoryEntry.Serialize`; `FatFileSystemWriter` now delegates to `CommitChanges`; 10/10 builder-based integration tests green using `Fat12ImageBuilder`).
 - Phase 2 (LFN/VFAT): Skipped (out of current scope per maintainer decision).
-- Phase 6 (FAT write-back integration): In progress — `FileBackedFatImage` (load + auto-flush + dispose) landed with 4 builder-based tests; next atoms are sector-level dirty tracking and wiring into `Spice86.Core` floppy/HDD write paths.
+- Phase 6 (FAT write-back integration): In progress — atom 1: `FileBackedFatImage` (load + auto-flush + dispose) landed with 4 builder-based tests. Atom 2: `DosDriveManager.FlushDirtyFloppyImages()` landed with 2 RED→GREEN tests, returns count of drives flushed. Atom 3: `FloppyDiskDrive : IDisposable` landed — dispose now writes every dirty image back to its host path, so `DosDriveManager.Unmount(letter)` (which goes through `RemoveDriveInternal` -> `IDisposable.Dispose`) persists guest writes before clearing the slot. Next atom: invoke `FlushDirtyFloppyImages()` from the emulator shutdown/pause lifecycle so writes also persist on process exit (not just on explicit unmount).
 - Phase 7 (BOOT.COM): Final step, integrated with batch engine.
 
 ---
