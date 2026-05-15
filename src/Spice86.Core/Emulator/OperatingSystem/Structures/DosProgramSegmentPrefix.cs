@@ -3,6 +3,7 @@
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
+using Spice86.Shared.Emulator.Memory;
 
 using System.Diagnostics;
 
@@ -51,22 +52,22 @@ public sealed class DosProgramSegmentPrefix : MemoryBasedDataStructure {
     /// </summary>
     public byte FarCall { get => UInt8[0x5]; set => UInt8[0x5] = value; }
 
-    public uint CpmServiceRequestAddress { get => UInt32[0x6]; set => UInt32[0x6] = value; }
+    public SegmentedAddress CpmServiceRequestAddress { get => SegmentedAddress16[0x6]; set => SegmentedAddress16[0x6] = value; }
 
     /// <summary>
     /// On exit, DOS copies this to the INT 0x22 vector.
     /// </summary>
-    public uint TerminateAddress { get => UInt32[0x0A]; set => UInt32[0x0A] = value; }
+    public SegmentedAddress TerminateAddress { get => SegmentedAddress16[0x0A]; set => SegmentedAddress16[0x0A] = value; }
 
     /// <summary>
     /// On exit, DOS copies this to the INT 0x23 vector.
     /// </summary>
-    public uint BreakAddress { get => UInt32[0x0E]; set => UInt32[0x0E] = value; }
+    public SegmentedAddress BreakAddress { get => SegmentedAddress16[0x0E]; set => SegmentedAddress16[0x0E] = value; }
 
     /// <summary>
     /// On exit, DOS copies this to the INT 0x24 vector.
     /// </summary>
-    public uint CriticalErrorAddress { get => UInt32[0x12]; set => UInt32[0x12] = value; }
+    public SegmentedAddress CriticalErrorAddress { get => SegmentedAddress16[0x12]; set => SegmentedAddress16[0x12] = value; }
 
     /// <summary>
     /// Segment of PSP of parent program.
@@ -77,13 +78,13 @@ public sealed class DosProgramSegmentPrefix : MemoryBasedDataStructure {
 
     public ushort EnvironmentTableSegment { get => UInt16[0x2C]; set => UInt16[0x2C] = value; }
 
-    public uint StackPointer { get => UInt32[0x2E]; set => UInt32[0x2E] = value; }
+    public SegmentedAddress StackPointer { get => SegmentedAddress16[0x2E]; set => SegmentedAddress16[0x2E] = value; }
 
     public ushort MaximumOpenFiles { get => UInt16[0x32]; set => UInt16[0x32] = value; }
 
-    public uint FileTableAddress { get => UInt32[0x34]; set => UInt32[0x34] = value; }
+    public SegmentedAddress FileTableAddress { get => SegmentedAddress16[0x34]; set => SegmentedAddress16[0x34] = value; }
 
-    public uint PreviousPspAddress { get => UInt32[0x38]; set => UInt32[0x38] = value; }
+    public SegmentedAddress PreviousPspAddress { get => SegmentedAddress16[0x38]; set => SegmentedAddress16[0x38] = value; }
 
     public byte InterimFlag { get => UInt8[0x3C]; set => UInt8[0x3C] = value; }
 

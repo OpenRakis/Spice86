@@ -2,6 +2,7 @@
 
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
 /// Represents a DOS SDA (Swappable Data Area) in emulated memory.
@@ -71,17 +72,17 @@ public sealed class DosSwappableDataArea : MemoryBasedDataStructure {
     /// <summary>
     /// Gets or sets the ES:DI pointer for the last error.
     /// </summary>
-    public uint LastErrorPointer {
-        get => UInt32[0x8];
-        set => UInt32[0x8] = value;
+    public SegmentedAddress LastErrorPointer {
+        get => SegmentedAddress16[0x8];
+        set => SegmentedAddress16[0x8] = value;
     }
 
     /// <summary>
     /// Gets or sets the current DTA (Disk Transfer Area).
     /// </summary>
-    public uint CurrentDiskTransferArea {
-        get => UInt32[0xC];
-        set => UInt32[0xC] = value;
+    public SegmentedAddress CurrentDiskTransferArea {
+        get => SegmentedAddress16[0xC];
+        set => SegmentedAddress16[0xC] = value;
     }
 
     /// <summary>

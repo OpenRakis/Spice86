@@ -670,7 +670,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler {
 
         uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
         var info = new VideoFunctionalityInfo(Memory, address) {
-            SftAddress = MemoryMap.StaticFunctionalityTableSegment << 16,
+            SftAddress = new SegmentedAddress(MemoryMap.StaticFunctionalityTableSegment, 0),
             VideoMode = _biosDataArea.VideoMode,
             ScreenColumns = _biosDataArea.ScreenColumns,
             VideoBufferLength = _biosDataArea.VideoPageSize,
