@@ -9,17 +9,20 @@ using Spice86.Shared.Emulator.Storage.CdRom;
 
 using Xunit;
 
-public sealed class CueBinImageTests : IDisposable {
+public sealed class CueBinImageTests : IDisposable
+{
     private const int RawSectorSize = 2352;
     private readonly string _tempDirectory;
 
-    public CueBinImageTests() {
+    public CueBinImageTests()
+    {
         _tempDirectory = Path.Combine(Path.GetTempPath(), "Spice86_CueBinImageTests_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_tempDirectory);
     }
 
     [Fact]
-    public void Constructor_MultiTrackCue_UsesIndexFramesForStartAndLength() {
+    public void Constructor_MultiTrackCue_UsesIndexFramesForStartAndLength()
+    {
         string binPath = Path.Combine(_tempDirectory, "disc.bin");
         int totalSectors = 500;
         File.WriteAllBytes(binPath, new byte[totalSectors * RawSectorSize]);
@@ -42,8 +45,10 @@ public sealed class CueBinImageTests : IDisposable {
         image.Tracks[1].LengthSectors.Should().Be(350);
     }
 
-    public void Dispose() {
-        if (Directory.Exists(_tempDirectory)) {
+    public void Dispose()
+    {
+        if (Directory.Exists(_tempDirectory))
+        {
             Directory.Delete(_tempDirectory, recursive: true);
         }
     }

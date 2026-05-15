@@ -9,16 +9,19 @@ using Spice86.Shared.Emulator.Storage.CdRom;
 
 using Xunit;
 
-public sealed class CueSheetParserTests : IDisposable {
+public sealed class CueSheetParserTests : IDisposable
+{
     private readonly string _tempDirectory;
 
-    public CueSheetParserTests() {
+    public CueSheetParserTests()
+    {
         _tempDirectory = Path.Combine(Path.GetTempPath(), "Spice86_CueSheetParserTests_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_tempDirectory);
     }
 
     [Fact]
-    public void Parse_RelativeQuotedFile_ResolvesAgainstCueDirectory() {
+    public void Parse_RelativeQuotedFile_ResolvesAgainstCueDirectory()
+    {
         string binDirectory = Path.Combine(_tempDirectory, "images");
         Directory.CreateDirectory(binDirectory);
         string binPath = Path.Combine(binDirectory, "track 01.bin");
@@ -40,7 +43,8 @@ public sealed class CueSheetParserTests : IDisposable {
     }
 
     [Fact]
-    public void Parse_MalformedMsf_ThrowsInvalidDataException() {
+    public void Parse_MalformedMsf_ThrowsInvalidDataException()
+    {
         string cuePath = Path.Combine(_tempDirectory, "bad.cue");
         string cueText =
             "FILE \"disc.bin\" BINARY" + Environment.NewLine +
@@ -55,8 +59,10 @@ public sealed class CueSheetParserTests : IDisposable {
         act.Should().Throw<InvalidDataException>();
     }
 
-    public void Dispose() {
-        if (Directory.Exists(_tempDirectory)) {
+    public void Dispose()
+    {
+        if (Directory.Exists(_tempDirectory))
+        {
             Directory.Delete(_tempDirectory, recursive: true);
         }
     }

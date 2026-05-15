@@ -34,10 +34,10 @@
         <PackageReference Include="JetBrains.Annotations" />
         <PackageReference Include="Serilog" />
         <PackageReference Include="Serilog.Sinks.File" />
-		<PackageReference Include="Spectre.Console.Cli" />
+        <PackageReference Include="Spectre.Console.Cli" />
         <Reference Include="FastExpressionCompiler">
-          <HintPath>..\..\3rdparty\Release\FastExpressionCompiler.dll</HintPath>
-          <Private>true</Private>
+            <HintPath>..\..\3rdparty\Release\FastExpressionCompiler.dll</HintPath>
+            <Private>true</Private>
         </Reference>
         <PackageReference Include="MeltySynth" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
@@ -49,9 +49,9 @@
         <FrameworkReference Include="Microsoft.AspNetCore.App" />
         <PackageReference Include="Serilog.Extensions.Hosting" />
         <PackageReference Include="SkiaSharp" />
-		<PackageReference Include="ModelContextProtocol.Core"/>
+        <PackageReference Include="ModelContextProtocol.Core"/>
         <PackageReference Include="ModelContextProtocol.AspNetCore" />
-	</ItemGroup>
+    </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
         <ProjectReference Include="..\Spice86.Storage.Cd\Spice86.Storage.Cd.csproj" />
