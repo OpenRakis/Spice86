@@ -14,14 +14,6 @@ public sealed class CueBinImage : ICdRomImage {
     private const int CookedSectorSize = 2048;
     private const int PvdLba = 16;
 
-    /// <summary>
-    /// Red Book pre-gap offset in frames (2 seconds × 75 frames/second).
-    /// CUE INDEX positions are absolute MSF positions that include this offset;
-    /// subtracting it converts them to logical LBAs, matching DOSBox Staging's
-    /// <c>REDBOOK_FRAME_PADDING = 150</c>.
-    /// </summary>
-    private const int RedbookPreGapFrames = 150;
-
     private readonly List<CdTrack> _tracks = new List<CdTrack>();
     private readonly Dictionary<string, IDataSource> _sources = new Dictionary<string, IDataSource>(StringComparer.OrdinalIgnoreCase);
     private readonly List<IDisposable> _ownedDisposables = new List<IDisposable>();
@@ -55,93 +47,40 @@ public sealed class CueBinImage : ICdRomImage {
     }
 
     private void BuildTracks(CueSheet sheet) {
-        // Group INDEX entries by track number.
-        Dictionary<int, List<CueEntry>> byTrack = new Dictionary<int, List<CueEntry>>();
-        foreach (CueEntry entry in sheet.Entries) {
-            if (!byTrack.TryGetValue(entry.TrackNumber, out List<CueEntry>? bucket)) {
-                bucket = new List<CueEntry>();
-                byTrack[entry.TrackNumber] = bucket;
-            }
-            bucket.Add(entry);
-        }
+        CueFrameMapper mapper = new CueFrameMapper();
+        IReadOnlyList<CueTrackLayout> layouts = mapper.BuildLayout(sheet, GetFileLengthBytes);
 
-        List<int> trackNumbers = new List<int>(byTrack.Keys);
-        trackNumbers.Sort();
-
-        // First pass: collect per-track index-01 frames and metadata.
-        List<(int TrackNum, int Index01Frames, int Pregap, int Postgap, string FileName, CueFileType FileType, string TrackMode)> trackMeta =
-            new List<(int, int, int, int, string, CueFileType, string)>();
-
-        foreach (int trackNum in trackNumbers) {
-            List<CueEntry> entries = byTrack[trackNum];
-            int index01Frames = 0;
-            int pregap = 0;
-            int postgap = 0;
-            string fileName = string.Empty;
-            CueFileType fileType = CueFileType.Binary;
-            string trackMode = string.Empty;
-
-            if (entries.Count == 0) {
-                continue;
-            }
-            // All entries for this track share the same file name, type, mode, pregap and postgap.
-            CueEntry firstEntry = entries[0];
-            fileName = firstEntry.FileName;
-            fileType = firstEntry.FileType;
-            trackMode = firstEntry.TrackMode;
-            pregap = firstEntry.Pregap;
-            postgap = firstEntry.Postgap;
-            // Explicitly filter for the INDEX 01 entry which carries the track start position.
-            CueEntry? idx01Entry = entries.FirstOrDefault(e => e.IndexNumber == 1);
-            if (idx01Entry != null) {
-                index01Frames = idx01Entry.IndexMsf;
-            }
-
-            trackMeta.Add((trackNum, index01Frames, pregap, postgap, fileName, fileType, trackMode));
-        }
-
-        // Second pass: build CdTrack objects with lengths derived from next track's start.
-        for (int i = 0; i < trackMeta.Count; i++) {
-            (int trackNum, int index01Frames, int pregap, int postgap, string fileName, CueFileType fileType, string trackMode) = trackMeta[i];
-
-            // Subtract the Red Book pre-gap (150 frames = 2 seconds) to convert the absolute
-            // CUE MSF position to a logical LBA, matching DOSBox Staging's behaviour:
-            // REDBOOK_FRAME_PADDING = 150; lba = msf_frames - REDBOOK_FRAME_PADDING
-            int startLba = Math.Max(0, index01Frames - RedbookPreGapFrames);
-            int nextStartLba;
-            if (i + 1 < trackMeta.Count) {
-                nextStartLba = Math.Max(0, trackMeta[i + 1].Item2 - RedbookPreGapFrames);
-            } else {
-                IDataSource measureSource = OpenSource(fileName, fileType);
-                int sizeForMeasure = MapSectorSize(trackMode);
-                nextStartLba = (int)(measureSource.LengthBytes / sizeForMeasure);
-            }
-
-            int lengthSectors = nextStartLba - startLba;
-            if (lengthSectors <= 0) {
-                lengthSectors = 1;
-            }
-
-            int sectorSize = MapSectorSize(trackMode);
-            CdSectorMode mode = MapMode(trackMode);
-            bool isAudio = IsAudioMode(trackMode);
-
-            IDataSource source = OpenSource(fileName, fileType);
-            long fileOffset = (long)startLba * sectorSize;
+        foreach (CueTrackLayout layout in layouts) {
+            CdSectorMode mode = MapMode(layout.TrackMode);
+            bool isAudio = IsAudioMode(layout.TrackMode);
+            IDataSource source = OpenSource(layout.FileName, layout.FileType);
 
             CdTrack track = new CdTrack(
-                number: trackNum,
-                startLba: startLba,
-                lengthSectors: lengthSectors,
-                sectorSize: sectorSize,
+                number: layout.TrackNumber,
+                startLba: layout.StartLba,
+                lengthSectors: layout.LengthSectors,
+                sectorSize: layout.SectorSize,
                 mode: mode,
                 isAudio: isAudio,
-                pregap: pregap,
-                postgap: postgap,
+                pregap: layout.PregapFrames,
+                postgap: layout.PostgapFrames,
                 source: source,
-                fileOffset: fileOffset);
+                fileOffset: layout.FileByteOffset);
             _tracks.Add(track);
         }
+    }
+
+    private long GetFileLengthBytes(string filePath) {
+        // Reuse already-opened sources so we don't double-decode audio codecs.
+        if (_sources.TryGetValue(filePath, out IDataSource? existing)) {
+            return existing.LengthBytes;
+        }
+        // For BINARY files we can avoid the codec dispatch entirely.
+        if (System.IO.File.Exists(filePath)) {
+            System.IO.FileInfo info = new System.IO.FileInfo(filePath);
+            return info.Length;
+        }
+        return 0L;
     }
 
     private IDataSource OpenSource(string filePath, CueFileType fileType) {
@@ -164,25 +103,6 @@ public sealed class CueBinImage : ICdRomImage {
             _ownedDisposables.Add(disposableCodec);
         }
         return codec.OpenAsCdda(filePath);
-    }
-
-    private static int MapSectorSize(string trackMode) {
-        if (trackMode.Equals("MODE1/2048", StringComparison.OrdinalIgnoreCase)) {
-            return 2048;
-        }
-        if (trackMode.Equals("MODE1/2352", StringComparison.OrdinalIgnoreCase)) {
-            return 2352;
-        }
-        if (trackMode.Equals("MODE2/2336", StringComparison.OrdinalIgnoreCase)) {
-            return 2336;
-        }
-        if (trackMode.Equals("MODE2/2352", StringComparison.OrdinalIgnoreCase)) {
-            return 2352;
-        }
-        if (trackMode.Equals("AUDIO", StringComparison.OrdinalIgnoreCase)) {
-            return 2352;
-        }
-        return 2352;
     }
 
     private static CdSectorMode MapMode(string trackMode) {
