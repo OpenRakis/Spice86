@@ -136,6 +136,15 @@ public abstract class BreakpointUiTestBase : IDisposable {
     }
 
     /// <summary>
+    /// Closes a window and processes any deferred UI events triggered by the close
+    /// (e.g., window state saving) before the test context is torn down.
+    /// </summary>
+    protected static void CloseWindowAndWait(Window window) {
+        window.Close();
+        ProcessUiEvents();
+    }
+
+    /// <summary>
     /// Selects a breakpoint type tab by name and processes UI events.
     /// </summary>
     /// <param name="viewModel">The BreakpointsViewModel containing the tabs.</param>
