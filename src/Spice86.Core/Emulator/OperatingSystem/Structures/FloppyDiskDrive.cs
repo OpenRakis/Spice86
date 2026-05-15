@@ -11,7 +11,7 @@ using System.Linq;
 /// When more than one image is registered, Ctrl-F4 disc switching cycles through them.
 /// </summary>
 public class FloppyDiskDrive : DosDriveBase, System.IDisposable {
-    private readonly List<(byte[] Data, string Path, bool IsDirty)> _images = new();
+    private readonly List<(byte[] Data, string Path, bool IsDirty, int PartitionByteOffset)> _images = new();
     private int _currentIndex;
 
     /// <summary>
@@ -55,8 +55,8 @@ public class FloppyDiskDrive : DosDriveBase, System.IDisposable {
         if (_images.Count == 0) {
             return;
         }
-        (byte[] data, string path, bool _) = _images[_currentIndex];
-        _images[_currentIndex] = (data, path, true);
+        (byte[] data, string path, bool _, int partitionByteOffset) = _images[_currentIndex];
+        _images[_currentIndex] = (data, path, true, partitionByteOffset);
     }
 
     /// <summary>
@@ -75,8 +75,8 @@ public class FloppyDiskDrive : DosDriveBase, System.IDisposable {
             return;
         }
         File.WriteAllBytes(ImagePath, data);
-        (byte[] d, string p, bool _) = _images[_currentIndex];
-        _images[_currentIndex] = (d, p, false);
+        (byte[] d, string p, bool _, int partitionByteOffset) = _images[_currentIndex];
+        _images[_currentIndex] = (d, p, false, partitionByteOffset);
     }
 
     /// <summary>
@@ -86,7 +86,21 @@ public class FloppyDiskDrive : DosDriveBase, System.IDisposable {
     /// <param name="imageData">The raw bytes of the .img floppy disk image.</param>
     /// <param name="imagePath">The host file-system path of the image (used for display).</param>
     public void MountImage(byte[] imageData, string imagePath) {
-        _images.Add((imageData, imagePath, false));
+        MountImage(imageData, imagePath, partitionByteOffset: 0);
+    }
+
+    /// <summary>
+    /// Mounts a FAT image into this drive at the specified partition byte offset.
+    /// Use a non-zero offset when the host file is an MBR-partitioned disk image and the
+    /// active partition's FAT volume begins inside the file rather than at byte 0.
+    /// The full image bytes remain available via <see cref="GetCurrentImageData"/> for INT 13h
+    /// LBA sector access; only the FAT filesystem view (<see cref="Image"/>) is sliced.
+    /// </summary>
+    /// <param name="imageData">The raw bytes of the disk image (entire host file).</param>
+    /// <param name="imagePath">The host file-system path of the image (used for display and flush).</param>
+    /// <param name="partitionByteOffset">Byte offset of the active partition's first sector within <paramref name="imageData"/>.</param>
+    public void MountImage(byte[] imageData, string imagePath, int partitionByteOffset) {
+        _images.Add((imageData, imagePath, false, partitionByteOffset));
         _currentIndex = _images.Count - 1;
         ApplyCurrentImage();
     }
@@ -98,7 +112,7 @@ public class FloppyDiskDrive : DosDriveBase, System.IDisposable {
     /// <param name="imageData">The raw bytes of the .img floppy disk image.</param>
     /// <param name="imagePath">The host file-system path of the image (used for display).</param>
     public void AddImage(byte[] imageData, string imagePath) {
-        _images.Add((imageData, imagePath, false));
+        _images.Add((imageData, imagePath, false, 0));
     }
 
     /// <summary>
@@ -136,8 +150,14 @@ public class FloppyDiskDrive : DosDriveBase, System.IDisposable {
     }
 
     private void ApplyCurrentImage() {
-        (byte[] data, string _, bool _) = _images[_currentIndex];
-        Image = new FatFileSystem(data);
+        (byte[] data, string _, bool _, int partitionByteOffset) = _images[_currentIndex];
+        byte[] fatViewBytes = data;
+        if (partitionByteOffset > 0) {
+            int sliceLength = data.Length - partitionByteOffset;
+            fatViewBytes = new byte[sliceLength];
+            System.Buffer.BlockCopy(data, partitionByteOffset, fatViewBytes, 0, sliceLength);
+        }
+        Image = new FatFileSystem(fatViewBytes);
         Label = Image.VolumeLabel;
     }
 
@@ -156,7 +176,7 @@ public class FloppyDiskDrive : DosDriveBase, System.IDisposable {
     public int FlushDirtyImagesToDisk() {
         int flushedImageCount = 0;
         for (int i = 0; i < _images.Count; i++) {
-            (byte[] data, string path, bool isDirty) = _images[i];
+            (byte[] data, string path, bool isDirty, int partitionByteOffset) = _images[i];
             if (!isDirty) {
                 continue;
             }
@@ -164,7 +184,7 @@ public class FloppyDiskDrive : DosDriveBase, System.IDisposable {
                 continue;
             }
             File.WriteAllBytes(path, data);
-            _images[i] = (data, path, false);
+            _images[i] = (data, path, false, partitionByteOffset);
             flushedImageCount++;
         }
 

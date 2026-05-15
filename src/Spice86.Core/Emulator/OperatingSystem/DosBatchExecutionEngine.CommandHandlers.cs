@@ -1187,7 +1187,7 @@ internal sealed partial class DosBatchExecutionEngine {
     internal bool HandleImgMount(string arguments) {
         string trimmed = arguments.Trim();
         if (string.IsNullOrWhiteSpace(trimmed)) {
-            WriteToStandardOutput("Usage: IMGMOUNT <drive> <image> [-t floppy|iso|cue]\r\n");
+            WriteToStandardOutput("Usage: IMGMOUNT <drive> <image> [-t floppy|hdd|iso|cue]\r\n");
             return false;
         }
 
@@ -1241,12 +1241,14 @@ internal sealed partial class DosBatchExecutionEngine {
             string ext = Path.GetExtension(imagePaths[0]).ToLowerInvariant();
             if (ext == ".img" || ext == ".ima" || ext == ".vfd") {
                 imageType = "floppy";
+            } else if (ext == ".hdd") {
+                imageType = "hdd";
             } else if (ext == ".iso") {
                 imageType = "iso";
             } else if (ext == ".cue") {
                 imageType = "cue";
             } else {
-                WriteToStandardOutput($"IMGMOUNT: cannot detect image type for '{imagePaths[0]}'. Use -t floppy|iso|cue.\r\n");
+                WriteToStandardOutput($"IMGMOUNT: cannot detect image type for '{imagePaths[0]}'. Use -t floppy|hdd|iso|cue.\r\n");
                 return false;
             }
         }
@@ -1261,6 +1263,8 @@ internal sealed partial class DosBatchExecutionEngine {
 
         if (imageType == "floppy") {
             MountFloppyImages(driveLetter, imagePaths);
+        } else if (imageType == "hdd") {
+            MountHardDiskImage(driveLetter, imagePaths);
         } else if (imageType == "iso" || imageType == "cue") {
             MountCdRomImages(driveLetter, imagePaths, imageType);
         } else {
@@ -1283,6 +1287,20 @@ internal sealed partial class DosBatchExecutionEngine {
         }
         string paths = string.Join(", ", imagePaths);
         WriteToStandardOutput($"Drive {driveLetter}: mounted {imagePaths.Count} floppy image(s): {paths}\r\n");
+    }
+
+    private void MountHardDiskImage(char driveLetter, IReadOnlyList<string> imagePaths) {
+        if (imagePaths.Count > 1) {
+            WriteToStandardOutput("IMGMOUNT: only one hard-disk image may be mounted per drive\r\n");
+            return;
+        }
+        byte[] imageData = File.ReadAllBytes(imagePaths[0]);
+        bool mounted = _driveManager.MountHardDiskImage(driveLetter, imageData, imagePaths[0]);
+        if (!mounted) {
+            WriteToStandardOutput($"IMGMOUNT: '{imagePaths[0]}' is not a valid MBR-partitioned hard-disk image\r\n");
+            return;
+        }
+        WriteToStandardOutput($"Drive {driveLetter}: mounted HDD image: {imagePaths[0]}\r\n");
     }
 
     private void MountCdRomImages(char driveLetter, IReadOnlyList<string> imagePaths, string imageType) {
