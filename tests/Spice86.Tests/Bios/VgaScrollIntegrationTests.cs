@@ -4,9 +4,7 @@ using FluentAssertions;
 
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Utils;
-
-using System;
-using System.IO;
+using Spice86.Tests.Utility;
 
 using Xunit;
 
@@ -15,14 +13,10 @@ using Xunit;
 /// Verifies that scroll-up clears the full width of the vacated row.
 /// </summary>
 public class VgaScrollIntegrationTests : IDisposable {
-    private readonly string _tempDir = Path.Join(Path.GetTempPath(), Guid.NewGuid().ToString());
-
-    public VgaScrollIntegrationTests() {
-        Directory.CreateDirectory(_tempDir);
-    }
+    private readonly TempFile _tempFile = new("VgaScrollIntegrationTests");
 
     public void Dispose() {
-        Directory.Delete(_tempDir, true);
+        _tempFile.Dispose();
     }
 
     /// <summary>
@@ -36,45 +30,52 @@ public class VgaScrollIntegrationTests : IDisposable {
     [Fact]
     public void ScrollUp_ShouldClearEntireBottomRow() {
         // Arrange
-        IMemory memory = RunComProgram("scroll_up_clears_full_row.com");
+        VideoMemorySnapshot videoMemory = RunComProgram("scroll_up_clears_full_row.com");
 
         // Assert – copied rows
-        ReadVideoCell(memory, 0, 0).Should().Be(('B', (byte)0x1F),
+        videoMemory.Row0Col0.Should().Be(('B', (byte)0x1F),
             "row 0 col 0 should have 'B' scrolled up from row 1");
-        ReadVideoCell(memory, 0, 79).Should().Be(('B', (byte)0x1F),
+        videoMemory.Row0Col79.Should().Be(('B', (byte)0x1F),
             "row 0 col 79 (rightmost) should have 'B' scrolled up from row 1");
 
-        ReadVideoCell(memory, 1, 0).Should().Be(('C', (byte)0x1F),
+        videoMemory.Row1Col0.Should().Be(('C', (byte)0x1F),
             "row 1 col 0 should have 'C' scrolled up from row 2");
-        ReadVideoCell(memory, 1, 79).Should().Be(('C', (byte)0x1F),
+        videoMemory.Row1Col79.Should().Be(('C', (byte)0x1F),
             "row 1 col 79 (rightmost) should have 'C' scrolled up from row 2");
 
         // Assert – cleared row (every column, not just the first half)
-        ReadVideoCell(memory, 2, 0).Should().Be((' ', (byte)0x07),
+        videoMemory.Row2Col0.Should().Be((' ', (byte)0x07),
             "row 2 col 0 should be cleared to space+0x07");
-        ReadVideoCell(memory, 2, 40).Should().Be((' ', (byte)0x07),
+        videoMemory.Row2Col40.Should().Be((' ', (byte)0x07),
             "row 2 col 40 (middle) should be cleared to space+0x07");
-        ReadVideoCell(memory, 2, 79).Should().Be((' ', (byte)0x07),
+        videoMemory.Row2Col79.Should().Be((' ', (byte)0x07),
             "row 2 col 79 (rightmost) should be cleared to space+0x07");
     }
 
-    private IMemory RunComProgram(string resourceName) {
-        string comPath = Path.Join(_tempDir, resourceName);
+    private VideoMemorySnapshot RunComProgram(string resourceName) {
+        string comPath = Path.Join(_tempFile.Path, resourceName);
         File.Copy(
-            Path.GetFullPath(Path.Join("Resources", "VgaTests", resourceName)),
+            Path.Join(AppContext.BaseDirectory, "Resources", "VgaTests", resourceName),
             comPath);
 
-        Spice86DependencyInjection spice86 = new Spice86Creator(
+        using Spice86Creator creator = new Spice86Creator(
             binName: comPath,
             enablePit: true,
             maxCycles: 300000,
             installInterruptVectors: true,
-            cDrive: _tempDir).Create();
+            cDrive: _tempFile.Path);
+        using Spice86DependencyInjection spice86 = creator.Create();
 
         spice86.ProgramExecutor.Run();
         IMemory memory = spice86.Machine.Memory;
-        spice86.Dispose();
-        return memory;
+        return new VideoMemorySnapshot(
+            ReadVideoCell(memory, 0, 0),
+            ReadVideoCell(memory, 0, 79),
+            ReadVideoCell(memory, 1, 0),
+            ReadVideoCell(memory, 1, 79),
+            ReadVideoCell(memory, 2, 0),
+            ReadVideoCell(memory, 2, 40),
+            ReadVideoCell(memory, 2, 79));
     }
 
     private static (char Character, byte Attribute) ReadVideoCell(IMemory memory, int row, int col) {
@@ -83,4 +84,13 @@ public class VgaScrollIntegrationTests : IDisposable {
         byte attribute = memory.UInt8[address + 1];
         return ((char)character, attribute);
     }
+
+    private sealed record VideoMemorySnapshot(
+        (char Character, byte Attribute) Row0Col0,
+        (char Character, byte Attribute) Row0Col79,
+        (char Character, byte Attribute) Row1Col0,
+        (char Character, byte Attribute) Row1Col79,
+        (char Character, byte Attribute) Row2Col0,
+        (char Character, byte Attribute) Row2Col40,
+        (char Character, byte Attribute) Row2Col79);
 }

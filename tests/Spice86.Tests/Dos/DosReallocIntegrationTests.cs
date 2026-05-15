@@ -69,7 +69,7 @@ public class DosReallocIntegrationTests {
             throw new FileNotFoundException($"Test file not found: {programPath}");
         }
 
-        Spice86DependencyInjection spice86 = new Spice86Creator(
+        using Spice86Creator creator = new Spice86Creator(
             binName: programPath,
             enablePit: false,
             maxCycles: 50000,
@@ -77,7 +77,8 @@ public class DosReallocIntegrationTests {
             enableA20Gate: false,
             enableXms: false,
             enableEms: false
-        ).Create();
+        );
+        using Spice86DependencyInjection spice86 = creator.Create();
 
         bool reallocSucceeded = false;
 

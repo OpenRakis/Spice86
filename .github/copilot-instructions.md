@@ -40,9 +40,11 @@ dotnet build
 # Run with executable
 dotnet run --project src/Spice86 -- -e path\to\program.exe
 
-# Run tests
-dotnet test tests/Spice86.Tests
+# Run tests (excluding SingleStepTest - see note below)
+dotnet test tests/Spice86.Tests --filter "FullyQualifiedName!~SingleStepTest"
 ```
+
+> **SingleStepTest exclusion rule**: `SingleStepTest` runs millions of CPU instruction test cases and take an extremely long time to complete. **Always exclude it** using `--filter "FullyQualifiedName!~SingleStepTest"` unless the change being tested directly touches CPU instruction decoding, execution, or flag handling (e.g. changes to `CfgCpu`, instruction parsers, ALU operations, or flag computation). When in doubt, exclude it.
 
 ### Debugging Workflow
 - **GDB Integration**: Server runs on port 10000 by default (`--GdbPort 10000`)
@@ -158,7 +160,6 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
   }
   ```
   - **NEVER use generic `catch (Exception)`, `catch (Exception e)`, or empty `catch`**
-  - Never use SegmentedAddress.Linear for address computations. Segmented addresses can rollover and Linear doesn't handle this correctly.
   - Each exception type must be caught explicitly
   - This is non-negotiable - the .editorconfig enforces this rule
   
@@ -242,7 +243,7 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 - **Function Tracking**: `FunctionHandler` intercepts calls/rets for CFG building and override dispatch
 
 ## Common Gotchas
-- **Segmented addressing**: Use `SegmentedAddress` not raw offsets; linear address = segment * 16 + offset
+- **Segmented addressing**: Use `SegmentedAddress` not raw offsets; linear address = segment * 16 + offset. Avoid computing addresses from `SegmentedAddress.Linear` because segmented addresses can roll over and `.Linear` does not handle this correctly. Use the `IMmu` (`TranslateAddress`) for address translation instead, as it handles rollover and access validation. Passing `.Linear` to an API that already expects a linear address is fine.
 - **A20 Gate**: Memory wrapping at 1MB boundary controlled by `A20Gate` (toggle via `--A20Gate` flag)
 - **EMS/XMS**: Enabled by default; disable with `--Xms false` / `--Ems false`
 - **Time handling**: Real-time vs instruction-based via `--InstructionTimeScale` or `--TimeMultiplier`

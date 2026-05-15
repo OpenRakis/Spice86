@@ -5,6 +5,7 @@ using FluentAssertions;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Shared.Utils;
+using Spice86.Tests.Utility;
 
 using System;
 using System.IO;
@@ -18,13 +19,14 @@ internal static class BatchTestHelpers {
 
     internal static char[] RunAndCaptureVideoCells(string executablePath, string cDrivePath, int cellCount,
         string? exeArgs = null) {
-        using Spice86DependencyInjection spice86 = new Spice86Creator(
+        using Spice86Creator creator = new Spice86Creator(
             binName: executablePath,
             enablePit: true,
             maxCycles: 300000,
             installInterruptVectors: true,
             cDrive: cDrivePath,
-            exeArgs: exeArgs).Create();
+            exeArgs: exeArgs);
+        using Spice86DependencyInjection spice86 = creator.Create();
 
         spice86.ProgramExecutor.Run();
 
@@ -48,12 +50,13 @@ internal static class BatchTestHelpers {
     }
 
     internal static void RunWithoutVideoRead(string executablePath, string cDrivePath, bool enablePit = true) {
-        using Spice86DependencyInjection spice86 = new Spice86Creator(
+        using Spice86Creator creator = new Spice86Creator(
             binName: executablePath,
             enablePit: enablePit,
             maxCycles: 300000,
             installInterruptVectors: true,
-            cDrive: cDrivePath).Create();
+            cDrive: cDrivePath);
+        using Spice86DependencyInjection spice86 = creator.Create();
 
         spice86.ProgramExecutor.Run();
     }
@@ -65,12 +68,13 @@ internal static class BatchTestHelpers {
 
     internal static byte[] RunWithPreloadedKeysAndCaptureVideoBytes(string executablePath, string cDrivePath,
         int byteCount, ushort[] keyCodes) {
-        using Spice86DependencyInjection spice86 = new Spice86Creator(
+        using Spice86Creator creator = new Spice86Creator(
             binName: executablePath,
             enablePit: true,
             maxCycles: 300000,
             installInterruptVectors: true,
-            cDrive: cDrivePath).Create();
+            cDrive: cDrivePath);
+        using Spice86DependencyInjection spice86 = creator.Create();
 
         BiosKeyboardBuffer buffer = spice86.Machine.BiosKeyboardInt9Handler.BiosKeyboardBuffer;
         for (int i = 0; i < keyCodes.Length; i++) {
@@ -690,17 +694,8 @@ internal static class BatchTestHelpers {
         return existingPath;
     }
 
-    private static string SingleTempPath => Path.GetTempPath();
-
-    internal static void WithTempDirectory(string prefix, Action<string> test) {
-        string tempDir = Path.Join(SingleTempPath, $"{prefix}_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDir);
-        try {
-            test(tempDir);
-        } finally {
-            if (Directory.Exists(tempDir)) {
-                Directory.Delete(tempDir, true);
-            }
-        }
+    internal static void WithTempFile(string prefix, Action<string> test) {
+        using TempFile tempFile = new(prefix);
+        test(tempFile.Path);
     }
 }

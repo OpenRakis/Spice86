@@ -193,7 +193,8 @@ public sealed class Dos {
             MemoryUtils.ToPhysicalAddress(DosSysVars.Segment, 0x0));
 
         DosSysVars.ConsoleDeviceHeaderPointer = ((IVirtualDevice)dosDevices[1]).Header.BaseAddress;
-        DosSysVars.CurrentDirectoryStructureListPointer = DosTables.CurrentDirectoryStructure.BaseAddress;
+        SegmentedAddress cdsAddress = DosTables.CdsSegmentedAddress;
+        DosSysVars.CurrentDirectoryStructureListPointer = (uint)(cdsAddress.Segment << 16 | cdsAddress.Offset);
         DosSysVars.CurrentDirectoryStructureCount = 26;
 
         DosSwappableDataArea = new(_memory,

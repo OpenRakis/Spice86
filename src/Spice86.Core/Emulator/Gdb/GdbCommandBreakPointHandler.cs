@@ -35,7 +35,7 @@ public class GdbCommandBreakpointHandler {
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         IPauseHandler pauseHandler, GdbIo gdbIo, ILoggerService loggerService,
         CPU.State state, IMemory memory) {
-        _loggerService = loggerService.WithLogLevel(LogEventLevel.Verbose);
+        _loggerService = loggerService;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
         _pauseHandler.Paused += OnPauseFromEmulator;

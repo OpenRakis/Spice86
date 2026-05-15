@@ -20,8 +20,9 @@ using Xunit;
 public class InterruptBreakpointIpTests {
     [Fact]
     public void TestInterruptBreakpointIpPointsToIntInstruction() {
-        using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator("interrupt",
-            installInterruptVectors: true).Create();
+        using Spice86Creator creator = new Spice86Creator("interrupt",
+            installInterruptVectors: true);
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
         
         State state = spice86DependencyInjection.Machine.CpuState;
         EmulatorBreakpointsManager emulatorBreakpointsManager = spice86DependencyInjection.Machine.EmulatorBreakpointsManager;
