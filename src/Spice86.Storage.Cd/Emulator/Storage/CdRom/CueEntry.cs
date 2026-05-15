@@ -5,6 +5,13 @@ public sealed class CueEntry {
     /// <summary>Gets or sets the file name referenced by the FILE directive.</summary>
     public string FileName { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Gets or sets the file type token that follows the file name on the
+    /// <c>FILE</c> directive. Defaults to <see cref="CueFileType.Binary"/>
+    /// for legacy CUE sheets that omit the explicit type.
+    /// </summary>
+    public CueFileType FileType { get; set; } = CueFileType.Binary;
+
     /// <summary>Gets or sets the track mode string (e.g. "MODE1/2048", "AUDIO").</summary>
     public string TrackMode { get; set; } = string.Empty;
 

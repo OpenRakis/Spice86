@@ -19,6 +19,7 @@ public sealed class CueSheetParser {
         List<CueEntry> entries = new List<CueEntry>();
         string? catalog = null;
         string currentFile = string.Empty;
+        CueFileType currentFileType = CueFileType.Binary;
         string currentTrackMode = string.Empty;
         int currentTrackNumber = 0;
         int currentPregap = 0;
@@ -29,6 +30,7 @@ public sealed class CueSheetParser {
                 catalog = line.Substring("CATALOG ".Length).Trim();
             } else if (line.StartsWith("FILE ", StringComparison.OrdinalIgnoreCase)) {
                 currentFile = ParseFileName(line, cueDir);
+                currentFileType = ParseFileType(line);
             } else if (line.StartsWith("TRACK ", StringComparison.OrdinalIgnoreCase)) {
                 currentTrackNumber = ParseTrackNumber(line);
                 currentTrackMode = ParseTrackMode(line);
@@ -41,7 +43,7 @@ public sealed class CueSheetParser {
                 string msfPart = line.Substring("POSTGAP ".Length).Trim();
                 currentPostgap = MsfToFrames(msfPart);
             } else if (line.StartsWith("INDEX ", StringComparison.OrdinalIgnoreCase)) {
-                ParseIndexLine(line, currentFile, currentTrackMode, currentTrackNumber, currentPregap, currentPostgap, entries);
+                ParseIndexLine(line, currentFile, currentFileType, currentTrackMode, currentTrackNumber, currentPregap, currentPostgap, entries);
             }
         }
 
@@ -73,6 +75,7 @@ public sealed class CueSheetParser {
     private static void ParseIndexLine(
         string line,
         string currentFile,
+        CueFileType currentFileType,
         string currentTrackMode,
         int currentTrackNumber,
         int currentPregap,
@@ -84,6 +87,7 @@ public sealed class CueSheetParser {
 
         CueEntry entry = new CueEntry {
             FileName = currentFile,
+            FileType = currentFileType,
             TrackMode = currentTrackMode,
             TrackNumber = currentTrackNumber,
             IndexNumber = indexNumber,
@@ -92,6 +96,39 @@ public sealed class CueSheetParser {
             Postgap = currentPostgap,
         };
         entries.Add(entry);
+    }
+
+    private static CueFileType ParseFileType(string line) {
+        Match match = Regex.Match(line, @"FILE\s+(?:""[^""]+""|\S+)\s+(\S+)\s*$", RegexOptions.IgnoreCase);
+        if (!match.Success) {
+            return CueFileType.Binary;
+        }
+        string token = match.Groups[1].Value;
+        if (token.Equals("BINARY", StringComparison.OrdinalIgnoreCase)) {
+            return CueFileType.Binary;
+        }
+        if (token.Equals("MOTOROLA", StringComparison.OrdinalIgnoreCase)) {
+            return CueFileType.Motorola;
+        }
+        if (token.Equals("WAVE", StringComparison.OrdinalIgnoreCase) || token.Equals("WAV", StringComparison.OrdinalIgnoreCase)) {
+            return CueFileType.Wave;
+        }
+        if (token.Equals("AIFF", StringComparison.OrdinalIgnoreCase)) {
+            return CueFileType.Aiff;
+        }
+        if (token.Equals("MP3", StringComparison.OrdinalIgnoreCase)) {
+            return CueFileType.Mp3;
+        }
+        if (token.Equals("FLAC", StringComparison.OrdinalIgnoreCase)) {
+            return CueFileType.Flac;
+        }
+        if (token.Equals("OGG", StringComparison.OrdinalIgnoreCase)) {
+            return CueFileType.Ogg;
+        }
+        if (token.Equals("OPUS", StringComparison.OrdinalIgnoreCase)) {
+            return CueFileType.Opus;
+        }
+        return CueFileType.Binary;
     }
 
     private static int MsfToFrames(string msf) {

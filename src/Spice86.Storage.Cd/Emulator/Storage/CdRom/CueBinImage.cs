@@ -21,7 +21,8 @@ public sealed class CueBinImage : ICdRomImage {
     private const int RedbookPreGapFrames = 150;
 
     private readonly List<CdTrack> _tracks = new List<CdTrack>();
-    private readonly Dictionary<string, FileBackedDataSource> _sources = new Dictionary<string, FileBackedDataSource>(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, IDataSource> _sources = new Dictionary<string, IDataSource>(StringComparer.OrdinalIgnoreCase);
+    private readonly List<IDisposable> _ownedDisposables = new List<IDisposable>();
 
     /// <summary>Opens and parses a CUE/BIN disc image.</summary>
     /// <param name="cueFilePath">Path to the .cue file.</param>
@@ -52,8 +53,8 @@ public sealed class CueBinImage : ICdRomImage {
         trackNumbers.Sort();
 
         // First pass: collect per-track index-01 frames and metadata.
-        List<(int TrackNum, int Index01Frames, int Pregap, int Postgap, string FileName, string TrackMode)> trackMeta =
-            new List<(int, int, int, int, string, string)>();
+        List<(int TrackNum, int Index01Frames, int Pregap, int Postgap, string FileName, CueFileType FileType, string TrackMode)> trackMeta =
+            new List<(int, int, int, int, string, CueFileType, string)>();
 
         foreach (int trackNum in trackNumbers) {
             List<CueEntry> entries = byTrack[trackNum];
@@ -61,14 +62,16 @@ public sealed class CueBinImage : ICdRomImage {
             int pregap = 0;
             int postgap = 0;
             string fileName = string.Empty;
+            CueFileType fileType = CueFileType.Binary;
             string trackMode = string.Empty;
 
             if (entries.Count == 0) {
                 continue;
             }
-            // All entries for this track share the same file name, mode, pregap and postgap.
+            // All entries for this track share the same file name, type, mode, pregap and postgap.
             CueEntry firstEntry = entries[0];
             fileName = firstEntry.FileName;
+            fileType = firstEntry.FileType;
             trackMode = firstEntry.TrackMode;
             pregap = firstEntry.Pregap;
             postgap = firstEntry.Postgap;
@@ -78,12 +81,12 @@ public sealed class CueBinImage : ICdRomImage {
                 index01Frames = idx01Entry.IndexMsf;
             }
 
-            trackMeta.Add((trackNum, index01Frames, pregap, postgap, fileName, trackMode));
+            trackMeta.Add((trackNum, index01Frames, pregap, postgap, fileName, fileType, trackMode));
         }
 
         // Second pass: build CdTrack objects with lengths derived from next track's start.
         for (int i = 0; i < trackMeta.Count; i++) {
-            (int trackNum, int index01Frames, int pregap, int postgap, string fileName, string trackMode) = trackMeta[i];
+            (int trackNum, int index01Frames, int pregap, int postgap, string fileName, CueFileType fileType, string trackMode) = trackMeta[i];
 
             // Subtract the Red Book pre-gap (150 frames = 2 seconds) to convert the absolute
             // CUE MSF position to a logical LBA, matching DOSBox Staging's behaviour:
@@ -93,7 +96,7 @@ public sealed class CueBinImage : ICdRomImage {
             if (i + 1 < trackMeta.Count) {
                 nextStartLba = Math.Max(0, trackMeta[i + 1].Item2 - RedbookPreGapFrames);
             } else {
-                FileBackedDataSource measureSource = OpenSource(fileName);
+                IDataSource measureSource = OpenSource(fileName, fileType);
                 int sizeForMeasure = MapSectorSize(trackMode);
                 nextStartLba = (int)(measureSource.LengthBytes / sizeForMeasure);
             }
@@ -107,7 +110,7 @@ public sealed class CueBinImage : ICdRomImage {
             CdSectorMode mode = MapMode(trackMode);
             bool isAudio = IsAudioMode(trackMode);
 
-            FileBackedDataSource source = OpenSource(fileName);
+            IDataSource source = OpenSource(fileName, fileType);
             long fileOffset = (long)startLba * sectorSize;
 
             CdTrack track = new CdTrack(
@@ -125,13 +128,25 @@ public sealed class CueBinImage : ICdRomImage {
         }
     }
 
-    private FileBackedDataSource OpenSource(string filePath) {
-        if (_sources.TryGetValue(filePath, out FileBackedDataSource? existing)) {
+    private IDataSource OpenSource(string filePath, CueFileType fileType) {
+        if (_sources.TryGetValue(filePath, out IDataSource? existing)) {
             return existing;
         }
-        FileBackedDataSource source = new FileBackedDataSource(filePath);
+        IDataSource source = CreateSource(filePath, fileType);
         _sources[filePath] = source;
         return source;
+    }
+
+    private IDataSource CreateSource(string filePath, CueFileType fileType) {
+        if (fileType == CueFileType.Wave) {
+            WavAudioFile wav = new WavAudioFile(filePath);
+            FileBackedDataSource backing = new FileBackedDataSource(filePath);
+            _ownedDisposables.Add(backing);
+            return new WindowedDataSource(backing, wav.PcmDataOffset, wav.PcmDataLength);
+        }
+        FileBackedDataSource fileSource = new FileBackedDataSource(filePath);
+        _ownedDisposables.Add(fileSource);
+        return fileSource;
     }
 
     private static int MapSectorSize(string trackMode) {
@@ -258,9 +273,10 @@ public sealed class CueBinImage : ICdRomImage {
 
     /// <inheritdoc/>
     public void Dispose() {
-        foreach (FileBackedDataSource source in _sources.Values) {
-            source.Dispose();
+        foreach (IDisposable disposable in _ownedDisposables) {
+            disposable.Dispose();
         }
+        _ownedDisposables.Clear();
         _sources.Clear();
     }
 }
