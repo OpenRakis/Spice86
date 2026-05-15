@@ -5,7 +5,7 @@ public static class CdRomImageFactory {
     /// <summary>
     /// Opens the disc image at <paramref name="imagePath"/>, choosing the implementation based on file extension.
     /// </summary>
-    /// <param name="imagePath">Path to a <c>.iso</c> or <c>.cue</c> file.</param>
+    /// <param name="imagePath">Path to a <c>.iso</c>, <c>.cue</c>, or <c>.mds</c> file.</param>
     /// <returns>An <see cref="ICdRomImage"/> ready for reading.</returns>
     /// <exception cref="ArgumentException">Thrown when the file extension is not recognised.</exception>
     public static ICdRomImage Open(string imagePath) {
@@ -16,6 +16,9 @@ public static class CdRomImageFactory {
         if (extension.Equals(".cue", StringComparison.OrdinalIgnoreCase)) {
             return new CueBinImage(imagePath);
         }
-        throw new ArgumentException($"Unsupported disc image format '{extension}'. Supported formats: .iso, .cue", nameof(imagePath));
+        if (extension.Equals(".mds", StringComparison.OrdinalIgnoreCase)) {
+            return new MdsImage(imagePath);
+        }
+        throw new ArgumentException($"Unsupported disc image format '{extension}'. Supported formats: .iso, .cue, .mds", nameof(imagePath));
     }
 }
