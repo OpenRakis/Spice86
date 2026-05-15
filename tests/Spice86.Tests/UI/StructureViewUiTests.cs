@@ -4,6 +4,8 @@ using Avalonia.Headless.XUnit;
 
 using AvaloniaHex.Document;
 
+using Xunit;
+
 using FluentAssertions;
 
 using NSubstitute;
@@ -42,7 +44,7 @@ typedef struct PlayerState {
     private const ushort SegmentedPlayerOffset = 0x0020;
     private const int SegmentedPlayerLinearAddress = (SegmentedPlayerSegment << 4) + SegmentedPlayerOffset;
 
-    [AvaloniaFact]
+    [Fact]
     public void StructureView_ParsesProvidedHeader_AndExposesStructureInAutoCompleteSource() {
         // Arrange
         byte[] programImage = CreateProgramImage();
@@ -58,20 +60,16 @@ typedef struct PlayerState {
         viewModel.IsAddressableMemory.Should().BeTrue();
     }
 
-    [AvaloniaFact]
+    [Fact]
     public void StructureView_UsesAbsoluteAddress_AndHydratesMembersFromProgramMemory() {
         // Arrange
         byte[] programImage = CreateProgramImage();
         using StructureViewModel viewModel = CreateAddressableViewModel(programImage, out _);
-        StructureView view = new() { DataContext = viewModel };
-        ShowWindowAndWait(view);
-
         StructType playerState = RequireStructure(viewModel, "PlayerState");
 
         // Act
         viewModel.MemoryAddress = $"0x{AbsolutePlayerAddress:X4}";
         viewModel.SelectedStructure = playerState;
-        ProcessUiEvents();
 
         // Assert
         StructureMemberNode nameNode = RequireRootMember(viewModel, "name");
@@ -86,18 +84,13 @@ typedef struct PlayerState {
         scoreNode.Value.Should().Be("123456 [0x0001E240]");
         posNode.Value.Should().Be("0xFF3803E8");
         viewModel.StructureMemory.Length.Should().Be((ulong)PlayerStateSize);
-
-        view.Close();
     }
 
-    [AvaloniaFact]
+    [Fact]
     public void StructureView_UsesSegmentOffsetAddress_AndReadsExpectedRecord() {
         // Arrange
         byte[] programImage = CreateProgramImage();
         using StructureViewModel viewModel = CreateAddressableViewModel(programImage, out State state);
-        StructureView view = new() { DataContext = viewModel };
-        ShowWindowAndWait(view);
-
         state.DS = SegmentedPlayerSegment;
         StructType playerState = RequireStructure(viewModel, "PlayerState");
 
@@ -105,7 +98,6 @@ typedef struct PlayerState {
         viewModel.MemoryAddress =
             $"{SegmentedPlayerSegment:X4}:{SegmentedPlayerOffset:X4}";
         viewModel.SelectedStructure = playerState;
-        ProcessUiEvents();
 
         // Assert
         StructureMemberNode nameNode = RequireRootMember(viewModel, "name");
@@ -117,11 +109,9 @@ typedef struct PlayerState {
         hpNode.Value.Should().Be("255 [0x00FF]");
         scoreNode.Value.Should().Be("98765 [0x000181CD]");
         posNode.Value.Should().Be("0x0309FFF6");
-
-        view.Close();
     }
 
-    [AvaloniaFact]
+    [Fact]
     public void StructureView_RefreshesHydratedValues_WhenPauseEventIsRaised() {
         // Arrange
         byte[] programImage = CreateProgramImage();
@@ -130,7 +120,6 @@ typedef struct PlayerState {
 
         viewModel.MemoryAddress = $"0x{AbsolutePlayerAddress:X4}";
         viewModel.SelectedStructure = playerState;
-        ProcessUiEvents();
 
         StructureMemberNode initialHpNode = RequireRootMember(viewModel, "hp");
         initialHpNode.Value.Should().Be("300 [0x012C]");
@@ -138,14 +127,13 @@ typedef struct PlayerState {
         // Act
         memory.UInt16[(uint)(AbsolutePlayerAddress + 8)] = 512;
         pauseHandler.RequestPause("structure-view-ui-test-refresh");
-        ProcessUiEvents();
 
         // Assert
         StructureMemberNode refreshedHpNode = RequireRootMember(viewModel, "hp");
         refreshedHpNode.Value.Should().Be("512 [0x0200]");
     }
 
-    [AvaloniaFact]
+    [Fact]
     public void StructureView_UsesSelectionSliceProgram_AsNonAddressableDocument() {
         // Arrange
         byte[] programImage = CreateProgramImage();
@@ -153,14 +141,10 @@ typedef struct PlayerState {
         Buffer.BlockCopy(programImage, AbsolutePlayerAddress, slice, 0, slice.Length);
 
         using StructureViewModel viewModel = CreateNonAddressableViewModel(slice);
-        StructureView view = new() { DataContext = viewModel };
-        ShowWindowAndWait(view);
-
         StructType playerState = RequireStructure(viewModel, "PlayerState");
 
         // Act
         viewModel.SelectedStructure = playerState;
-        ProcessUiEvents();
 
         // Assert
         viewModel.IsAddressableMemory.Should().BeFalse();
@@ -168,8 +152,6 @@ typedef struct PlayerState {
         StructureMemberNode hpNode = RequireRootMember(viewModel, "hp");
         nameNode.Value.Should().Be("\"INDYJONE\"");
         hpNode.Value.Should().Be("300 [0x012C]");
-
-        view.Close();
     }
 
     private static StructType RequireStructure(StructureViewModel viewModel, string name) {
