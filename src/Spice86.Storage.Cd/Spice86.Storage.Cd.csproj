@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    </PropertyGroup>
+    <!-- Properties geared towards NuGet -->
+    <PropertyGroup>
+        <PackageId>Spice86.Storage.Cd</PackageId>
+    </PropertyGroup>
+</Project>
