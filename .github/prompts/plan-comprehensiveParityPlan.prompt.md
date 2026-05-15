@@ -26,9 +26,9 @@
   - Phase 1c: **100%**
   - Phase 1d: **100%**
   - Phase 1e: **100%**
-  - Phase 2: **100%** (Atom A: VFAT LFN codec + paired directory reader; Atom B: write integration via `MutableFatDirectoryEntry.LongName` + `Dos83AliasGenerator` + `DirectoryWriter.WriteEntryWithLongName`; 25 tests total)
-  - Phase 3: **100%** (3a + 3b landed; 3c Rock Ridge SUSP foundation landed: SUSP scanner + NM/PX metadata; SL/CE/CL deferred. Note: dosbox-staging has NO Rock Ridge, so 3c is beyond-parity scope.)
-  - Phase 4: **100%** (4a + 4b landed: WAV codec + CUE FILE-type dispatch; atom 2 landed: LibVLCSharp codec layer for MP3/FLAC/OGG/OPUS/AIFF; atom 3 landed: 4c INDEX 00 in-file pregap via `CueTrackLayout` + `CueFrameMapper`; atom 4 landed: 4d Subchannel-Q synthesizer extraction with MSCDEX IOCTL 0x0C wiring)
+  - Phase 2: **100%** (Atom A: VFAT LFN codec + paired directory reader at strict dosbox-staging parity. Atom B — LFN write — was removed in May 2026 to enforce strict parity.)
+  - Phase 3: **100%** (3a + 3b landed: Joliet SVD + UCS-2 BE long-name directory reading. 3c Rock Ridge SUSP was removed in May 2026 — dosbox-staging has no Rock Ridge.)
+  - Phase 4: **100%** (4a + 4b WAV codec + CUE FILE-type dispatch; 4c INDEX 00 via `CueTrackLayout` + `CueFrameMapper`; 4d Subchannel-Q synthesizer + MSCDEX IOCTL 0x0C. LibVLC compressed-codec layer was removed in May 2026 — dosbox-staging supports BINARY + raw audio + WAVE only.)
   - Phase 5: **0%** (MDS/MDF: NOT STARTED. dosbox-staging `LoadMdsFile` parity gap — see section 12.)
   - Phase 6: **100%**
   - Phase 7: **100%**
@@ -38,15 +38,14 @@
 
 Cross-checked against `dosbox-staging/src/dos/` to confirm scope completeness.
 
-**In-scope and complete (full parity or beyond):**
+**In-scope and complete (full parity with dosbox-staging — nothing beyond):**
 
 | Capability | dosbox-staging source | Spice86 status |
 | --- | --- | --- |
 | FAT12/16/32 read+write, MBR partitions | `drive_fat.cpp` | Done (Phases 1a-e). |
-| VFAT LFN read+write | `drive_fat.cpp` (partial LFN read) | Done (Phase 2). **Exceeds parity** — dosbox-staging reads LFN but does not write VFAT chains; we read+write. |
+| VFAT LFN read | `drive_fat.cpp` (partial LFN read) | Done (Phase 2 read-only). LFN *write* removed for strict parity. |
 | ISO 9660 + Joliet | `drive_iso.cpp` | Done (Phases 3a-b). |
-| Rock Ridge SUSP (NM/PX) | NOT in dosbox-staging | Done (Phase 3c partial). **Beyond parity** — bonus capability. |
-| CUE/BIN + WAV + LibVLC audio + INDEX 00 + Subchannel-Q | `cdrom_image.cpp` (BINARY + raw audio only, no compressed codec dispatch) | Done (Phases 4a-d). **Exceeds parity** — dosbox-staging does not transcode MP3/FLAC/OGG/OPUS/AIFF; we do via LibVLCSharp. |
+| CUE/BIN + WAV audio + INDEX 00 + Subchannel-Q | `cdrom_image.cpp` (BINARY + raw audio + WAVE) | Done (Phases 4a-d), WAV-only. Compressed-codec dispatch (LibVLC) removed for strict parity. |
 | FAT write-back on pause/unmount/shutdown | `drive_fat.cpp` flush logic | Done (Phase 6). |
 | BOOT.COM HDD + IMGMOUNT `-t hdd` | `boot.cpp` + `mount.cpp` | Done (Phase 7). |
 
@@ -66,7 +65,7 @@ Cross-checked against `dosbox-staging/src/dos/` to confirm scope completeness.
 - exFAT — confirmed absent.
 - MSCDEX IOCTL completeness beyond the subset already implemented in Phase 4d.
 
-**Net conclusion:** The PR scope is **complete** for 7 of the 8 in-scope phases and **exceeds dosbox-staging** in three areas (VFAT LFN write, Rock Ridge SUSP, compressed-audio codec dispatch). Two real parity gaps remain: Phase 5 (MDS/MDF) and Phase 8 (IMGMAKE + overlay drive). Both are listed in this plan and tracked below; neither is required for v0.2 release per section 1.3.
+**Net conclusion:** The PR scope is **complete** for 7 of the 8 in-scope phases at **strict dosbox-staging parity** (no beyond-parity bonuses). Three previously-shipped beyond-parity capabilities were intentionally removed in May 2026 to enforce strict parity: VFAT LFN write, Rock Ridge SUSP, and LibVLC compressed-audio codec dispatch. Two real parity gaps remain: Phase 5 (MDS/MDF) and Phase 8 (IMGMAKE + overlay drive). Both are listed in this plan and tracked below; neither is required for v0.2 release per section 1.3.
 
 ---
 
@@ -543,9 +542,10 @@ Spice86.Storage.Tests:
 | --- | --- |
 | Status | Completed |
 | Progress | 100% |
-| Atoms shipped | **Atom A (read, commit 2c6cddbe8):** `VfatLfnEntry`, `LongFileNameCodec` (checksum, encode/decode, slot read/write), `VfatDirectoryRecord`, `VfatDirectoryReader` (chain pairing, deleted/volume-label handling). **Atom B (write, commit dd5ef06bd):** `MutableFatDirectoryEntry.LongName`, `Dos83AliasGenerator` (`~N` collision handling up to 99 with base-shrink), `DirectoryWriter.WriteEntryWithLongName` (contiguous slot run + checksum + LFN-then-short emission). |
-| dosbox-staging parity | **Exceeds parity** — dosbox-staging reads LFN but does not write VFAT chains; we read and write. |
-| Tests added | 25 tests total (14 codec/reader + 11 alias/writer) under `tests/Spice86.Storage.Tests/FileSystem/Directory/LongFileName/`. |
+| Atoms shipped | **Atom A (read, strict parity, retained):** `VfatLfnEntry`, `LongFileNameCodec` (checksum, encode/decode, slot read/write), `VfatDirectoryRecord`, `VfatDirectoryReader` (chain pairing, deleted/volume-label handling). |
+| dosbox-staging parity | Strict parity — LFN read-only, matching `drive_fat.cpp`. Previously-shipped LFN write atom was removed May 2026. |
+| Tests added | 14 codec/reader tests under `tests/Spice86.Storage.Tests/FileSystem/Directory/LongFileName/`. |
+| Removed (May 2026) | `MutableFatDirectoryEntry.LongName`, `Dos83AliasGenerator`, `DirectoryWriter.WriteEntryWithLongName`, plus 11 LFN-write tests — dosbox-staging does not write VFAT chains. |
 | Remaining work | None. |
 
 ---
@@ -639,10 +639,10 @@ Spice86.Storage.Tests:
 | --- | --- |
 | Status | Completed (in-scope subset). |
 | Progress | 100% |
-| Atoms shipped | **Atom 1 (3a+3b):** `IsoSupplementaryVolumeDescriptor`, multi-VD scanner with terminator stop, `IsoDirectoryRecord.ParseJoliet` (UCS-2 BE), `IsoImage.ReadJolietRootDirectory`, fluent `Iso9660ImageBuilder`. **Atom 2 (3c foundation):** `SuspEntry`, `SuspParser` (`ST` terminator + malformed-length safety), `RockRidgeMetadata`, `RockRidgeParser` (`NM` multi-entry CONTINUE/CURRENT/PARENT flags; `PX` 32-byte BB-encoded mode/links/uid/gid). |
-| dosbox-staging parity | **Full parity** for Joliet (3a+3b). **Beyond parity** for SUSP NM/PX — `drive_iso.cpp` has no Rock Ridge code at all. |
-| Tests added | 18 tests (6 `IsoJolietTests` + 12 `RockRidgeParserTests`). |
-| Remaining work | Deferred (beyond dosbox-staging parity, no v0.2 blocker): SUSP `SL` symlinks, `CE` continuation areas, `CL`/`PL`/`RE` deep-tree relocation, `TF` POSIX times. Pick up only if a downstream consumer requests it. |
+| Atoms shipped | **Atom 1 (3a+3b):** `IsoSupplementaryVolumeDescriptor`, multi-VD scanner with terminator stop, `IsoDirectoryRecord.ParseJoliet` (UCS-2 BE), `IsoImage.ReadJolietRootDirectory`, fluent `Iso9660ImageBuilder`. |
+| dosbox-staging parity | Strict parity for Joliet (3a+3b). Rock Ridge SUSP atom was removed May 2026 — `drive_iso.cpp` has no Rock Ridge. |
+| Tests added | 6 `IsoJolietTests`. |
+| Removed (May 2026) | `SuspEntry`, `SuspParser`, `RockRidgeMetadata`, `RockRidgeParser`, plus 12 RockRidge tests — dosbox-staging has no Rock Ridge code at all. |
 
 ---
 
@@ -769,10 +769,10 @@ Spice86.Storage.Tests:
 | --- | --- |
 | Status | Completed |
 | Progress | 100% (atoms 4a + 4b + 4c + 4d). |
-| Atoms shipped | **Atom 1 (4a+4b):** `CueFileType` enum, `WavAudioFile` CDDA-validating parser, `WindowedDataSource`, codec-dispatching `CueBinImage`. **Atom 2 (codec layer):** `IAudioCodec`, `IAudioCodecFactory`, `CompositeAudioCodecFactory`, `WavAudioCodec`+factory, `LibVlcAudioCodec`+factory (MP3/FLAC/OGG/OPUS/AIFF transcoded to s16l 44100/2ch via LibVLCSharp), `DefaultAudioCodecFactory`. **Atom 3 (4c):** `CueTrackLayout` + `CueFrameMapper.BuildLayout` with INDEX 00 skip-reduction parity vs. dosbox-staging `AddTrack`. **Atom 4 (4d):** `SubchannelQData`, `SubchannelQSynthesizer`, MSCDEX IOCTL 0x0C wiring in `Mscdex.WriteAudioSubchannel`. |
-| dosbox-staging parity | **Exceeds parity** — dosbox-staging supports BINARY + raw audio in CUE only, no compressed-codec dispatch. We additionally decode MP3/FLAC/OGG/OPUS/AIFF via LibVLCSharp. INDEX 00 + Subchannel-Q at full parity. |
-| Tests added | 29 tests (14 codec dispatch + 7 frame mapper + 8 subchannel-Q). |
-| Remaining work | None. Cross-platform note: Windows bundles `VideoLAN.LibVLC.Windows`; Linux/macOS hosts need system `libvlc` installed. |
+| Atoms shipped | **Atom 1 (4a+4b):** `CueFileType` enum, `WavAudioFile` CDDA-validating parser, `WindowedDataSource`, codec-dispatching `CueBinImage`. **Atom 2 (codec layer):** `IAudioCodec`, `IAudioCodecFactory`, `CompositeAudioCodecFactory`, `WavAudioCodec`+factory, `DefaultAudioCodecFactory` (WAV-only). **Atom 3 (4c):** `CueTrackLayout` + `CueFrameMapper.BuildLayout` with INDEX 00 skip-reduction parity vs. dosbox-staging `AddTrack`. **Atom 4 (4d):** `SubchannelQData`, `SubchannelQSynthesizer`, MSCDEX IOCTL 0x0C wiring in `Mscdex.WriteAudioSubchannel`. |
+| dosbox-staging parity | Strict parity — BINARY + raw audio + WAVE only. INDEX 00 + Subchannel-Q at full parity. |
+| Tests added | 15 tests (1 WAV-only dispatch + 7 frame mapper + 8 subchannel-Q + composite/cue-parser tests). |
+| Removed (May 2026) | `LibVlcAudioCodec`, `LibVlcAudioCodecFactory`, `LibVLCSharp` + `VideoLAN.LibVLC.Windows` package refs, plus LibVLC-specific tests — dosbox-staging does not transcode MP3/FLAC/OGG/OPUS/AIFF. |
 
 ---
 

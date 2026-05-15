@@ -7,7 +7,5 @@
         <PackageId>Spice86.Storage.Cd</PackageId>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="LibVLCSharp" />
-        <PackageReference Include="VideoLAN.LibVLC.Windows" Condition="'$(OS)' == 'Windows_NT'" />
     </ItemGroup>
 </Project>
