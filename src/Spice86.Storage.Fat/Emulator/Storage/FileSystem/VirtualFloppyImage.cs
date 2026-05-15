@@ -1,6 +1,7 @@
 namespace Spice86.Shared.Emulator.Storage.FileSystem;
 
-using Spice86.Shared.Interfaces;
+using Serilog;
+using Serilog.Events;
 
 using System;
 using System.Collections.Generic;
@@ -13,7 +14,8 @@ using System.Text;
 /// Subdirectories are traversed recursively.
 /// Files that do not fit in the remaining clusters are skipped with a warning.
 /// </summary>
-public sealed class VirtualFloppyImage {
+public sealed class VirtualFloppyImage
+{
     private const int TotalSectors = 2880;
     private const int BytesPerSector = 512;
     private const int SectorsPerCluster = 1;
@@ -33,23 +35,25 @@ public sealed class VirtualFloppyImage {
     private static readonly int ImageSize = TotalSectors * BytesPerSector;
 
     private readonly string _sourceDirectory;
-    private readonly ILoggerService _loggerService;
+    private readonly ILogger? _logger;
 
     /// <summary>
     /// Initialises a new <see cref="VirtualFloppyImage"/> that will read from <paramref name="sourceDirectory"/>.
     /// </summary>
     /// <param name="sourceDirectory">Path to the host directory whose contents will be written to the image.</param>
-    /// <param name="loggerService">Logger used to emit warnings for files that do not fit.</param>
-    public VirtualFloppyImage(string sourceDirectory, ILoggerService loggerService) {
+    /// <param name="logger">Optional Serilog logger used to emit warnings for files that do not fit. When <c>null</c>, warnings are suppressed.</param>
+    public VirtualFloppyImage(string sourceDirectory, ILogger? logger = null)
+    {
         _sourceDirectory = sourceDirectory;
-        _loggerService = loggerService;
+        _logger = logger;
     }
 
     /// <summary>
     /// Builds the floppy disk image and returns it as a byte array of <c>1,474,560</c> bytes.
     /// </summary>
     /// <returns>Raw bytes of the 1.44 MB FAT12 floppy image.</returns>
-    public byte[] Build() {
+    public byte[] Build()
+    {
         byte[] image = new byte[ImageSize];
         ushort[] fat = new ushort[TotalDataClusters + 2];
         fat[0] = (ushort)(0xF00 | MediaDescriptor);
@@ -59,16 +63,20 @@ public sealed class VirtualFloppyImage {
 
         WriteBpb(image);
 
-        foreach (string entryPath in Directory.EnumerateFileSystemEntries(_sourceDirectory)) {
-            if (Directory.Exists(entryPath)) {
+        foreach (string entryPath in Directory.EnumerateFileSystemEntries(_sourceDirectory))
+        {
+            if (Directory.Exists(entryPath))
+            {
                 string dirName = Path.GetFileName(entryPath);
                 string dosDir = ToDosBaseName(dirName);
-                if (rootDirSlot >= RootDirEntries) {
+                if (rootDirSlot >= RootDirEntries)
+                {
                     LogSkipWarning(dirName, "no root directory slots available");
                     continue;
                 }
                 int dirCluster = nextCluster;
-                if (dirCluster >= TotalDataClusters + 2) {
+                if (dirCluster >= TotalDataClusters + 2)
+                {
                     LogSkipWarning(dirName, "no clusters available");
                     continue;
                 }
@@ -77,14 +85,18 @@ public sealed class VirtualFloppyImage {
                 WriteRootDirEntry(image, rootDirSlot, dosDir, dirCluster, 0, isDirectory: true);
                 rootDirSlot++;
                 WriteSubdirEntries(image, fat, entryPath, dirCluster, ref nextCluster);
-            } else if (File.Exists(entryPath)) {
+            }
+            else if (File.Exists(entryPath))
+            {
                 string fileName = Path.GetFileName(entryPath);
                 byte[] content = File.ReadAllBytes(entryPath);
-                if (!TryAllocateAndWriteFile(image, fat, content, ref nextCluster, out int firstCluster)) {
+                if (!TryAllocateAndWriteFile(image, fat, content, ref nextCluster, out int firstCluster))
+                {
                     LogSkipWarning(fileName, "not enough clusters remaining");
                     continue;
                 }
-                if (rootDirSlot >= RootDirEntries) {
+                if (rootDirSlot >= RootDirEntries)
+                {
                     LogSkipWarning(fileName, "no root directory slots available");
                     continue;
                 }
@@ -98,22 +110,27 @@ public sealed class VirtualFloppyImage {
         return image;
     }
 
-    private void WriteSubdirEntries(byte[] image, ushort[] fat, string hostDirPath, int dirCluster, ref int nextCluster) {
+    private void WriteSubdirEntries(byte[] image, ushort[] fat, string hostDirPath, int dirCluster, ref int nextCluster)
+    {
         int dirSector = DataStartSector + (dirCluster - 2) * SectorsPerCluster;
         int dirByteOffset = dirSector * BytesPerSector;
         int maxEntriesInCluster = BytesPerSector * SectorsPerCluster / 32;
         int slot = 0;
 
-        foreach (string entryPath in Directory.EnumerateFileSystemEntries(hostDirPath)) {
+        foreach (string entryPath in Directory.EnumerateFileSystemEntries(hostDirPath))
+        {
             string entryName = Path.GetFileName(entryPath);
-            if (slot >= maxEntriesInCluster) {
+            if (slot >= maxEntriesInCluster)
+            {
                 LogSkipWarning(entryName, "subdirectory cluster full");
                 continue;
             }
 
-            if (Directory.Exists(entryPath)) {
+            if (Directory.Exists(entryPath))
+            {
                 int childDirCluster = nextCluster;
-                if (childDirCluster >= TotalDataClusters + 2) {
+                if (childDirCluster >= TotalDataClusters + 2)
+                {
                     LogSkipWarning(entryName, "not enough clusters remaining");
                     continue;
                 }
@@ -128,12 +145,14 @@ public sealed class VirtualFloppyImage {
                 continue;
             }
 
-            if (!File.Exists(entryPath)) {
+            if (!File.Exists(entryPath))
+            {
                 continue;
             }
 
             byte[] content = File.ReadAllBytes(entryPath);
-            if (!TryAllocateAndWriteFile(image, fat, content, ref nextCluster, out int firstCluster)) {
+            if (!TryAllocateAndWriteFile(image, fat, content, ref nextCluster, out int firstCluster))
+            {
                 LogSkipWarning(entryName, "not enough clusters remaining");
                 continue;
             }
@@ -143,14 +162,17 @@ public sealed class VirtualFloppyImage {
         }
     }
 
-    private static bool TryAllocateAndWriteFile(byte[] image, ushort[] fat, byte[] content, ref int nextCluster, out int firstCluster) {
+    private static bool TryAllocateAndWriteFile(byte[] image, ushort[] fat, byte[] content, ref int nextCluster, out int firstCluster)
+    {
         int clustersNeeded = content.Length == 0 ? 1 : (content.Length + BytesPerSector * SectorsPerCluster - 1) / (BytesPerSector * SectorsPerCluster);
-        if (nextCluster + clustersNeeded - 1 >= TotalDataClusters + 2) {
+        if (nextCluster + clustersNeeded - 1 >= TotalDataClusters + 2)
+        {
             firstCluster = 0;
             return false;
         }
         firstCluster = nextCluster;
-        for (int i = 0; i < clustersNeeded; i++) {
+        for (int i = 0; i < clustersNeeded; i++)
+        {
             int cluster = nextCluster++;
             fat[cluster] = i == clustersNeeded - 1 ? (ushort)0xFFF : (ushort)nextCluster;
         }
@@ -158,10 +180,12 @@ public sealed class VirtualFloppyImage {
         return true;
     }
 
-    private static void WriteFileData(byte[] image, byte[] content, int firstCluster) {
+    private static void WriteFileData(byte[] image, byte[] content, int firstCluster)
+    {
         int written = 0;
         int cluster = firstCluster;
-        while (written < content.Length) {
+        while (written < content.Length)
+        {
             int sector = DataStartSector + (cluster - 2) * SectorsPerCluster;
             int byteOffset = sector * BytesPerSector;
             int toCopy = Math.Min(BytesPerSector * SectorsPerCluster, content.Length - written);
@@ -171,12 +195,14 @@ public sealed class VirtualFloppyImage {
         }
     }
 
-    private static void WriteRootDirEntry(byte[] image, int slot, string dosName, int firstCluster, int fileSize, bool isDirectory) {
+    private static void WriteRootDirEntry(byte[] image, int slot, string dosName, int firstCluster, int fileSize, bool isDirectory)
+    {
         int byteOffset = RootDirStartSector * BytesPerSector + slot * 32;
         WriteDirectoryEntry(image, byteOffset, dosName, firstCluster, fileSize, isDirectory);
     }
 
-    private static void WriteDirectoryEntry(byte[] image, int byteOffset, string dosName, int firstCluster, int fileSize, bool isDirectory) {
+    private static void WriteDirectoryEntry(byte[] image, int byteOffset, string dosName, int firstCluster, int fileSize, bool isDirectory)
+    {
         Span<byte> entry = image.AsSpan(byteOffset, 32);
         entry.Clear();
         string[] parts = dosName.Contains('.') ? dosName.Split('.') : new[] { dosName, string.Empty };
@@ -189,20 +215,27 @@ public sealed class VirtualFloppyImage {
         BitConverter.GetBytes(fileSize).CopyTo(entry.Slice(28));
     }
 
-    private static void WriteFatTables(byte[] image, ushort[] fat) {
-        for (int fatIndex = 0; fatIndex < NumberOfFats; fatIndex++) {
+    private static void WriteFatTables(byte[] image, ushort[] fat)
+    {
+        for (int fatIndex = 0; fatIndex < NumberOfFats; fatIndex++)
+        {
             int fatByteOffset = (FatStartSector + fatIndex * SectorsPerFat) * BytesPerSector;
             int fatLimit = fatByteOffset + SectorsPerFat * BytesPerSector;
-            for (int n = 0; n < fat.Length; n++) {
+            for (int n = 0; n < fat.Length; n++)
+            {
                 int byteIndex = fatByteOffset + n * 3 / 2;
-                if (byteIndex + 1 >= fatLimit) {
+                if (byteIndex + 1 >= fatLimit)
+                {
                     break;
                 }
                 ushort value = fat[n];
-                if ((n & 1) == 0) {
+                if ((n & 1) == 0)
+                {
                     image[byteIndex] = (byte)(value & 0xFF);
                     image[byteIndex + 1] = (byte)((image[byteIndex + 1] & 0xF0) | ((value >> 8) & 0x0F));
-                } else {
+                }
+                else
+                {
                     image[byteIndex] = (byte)((image[byteIndex] & 0x0F) | ((value & 0x0F) << 4));
                     image[byteIndex + 1] = (byte)(value >> 4);
                 }
@@ -213,7 +246,8 @@ public sealed class VirtualFloppyImage {
         }
     }
 
-    private static void WriteBpb(byte[] image) {
+    private static void WriteBpb(byte[] image)
+    {
         Span<byte> boot = image.AsSpan(0, BytesPerSector);
         boot[0] = 0xEB;
         boot[1] = 0x3C;
@@ -241,17 +275,21 @@ public sealed class VirtualFloppyImage {
         boot[511] = 0xAA;
     }
 
-    private static string ToDosBaseName(string name) {
+    private static string ToDosBaseName(string name)
+    {
         return name.Length > 8 ? name[..8].ToUpperInvariant() : name.ToUpperInvariant().PadRight(8);
     }
 
-    private static string ToDosFileName(string name) {
+    private static string ToDosFileName(string name)
+    {
         return name.ToUpperInvariant();
     }
 
-    private void LogSkipWarning(string name, string reason) {
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
-            _loggerService.Warning("VirtualFloppyImage: skipping '{Name}' - {Reason}", name, reason);
+    private void LogSkipWarning(string name, string reason)
+    {
+        if (_logger != null && _logger.IsEnabled(LogEventLevel.Warning))
+        {
+            _logger.Warning("VirtualFloppyImage: skipping '{Name}' - {Reason}", name, reason);
         }
     }
 }

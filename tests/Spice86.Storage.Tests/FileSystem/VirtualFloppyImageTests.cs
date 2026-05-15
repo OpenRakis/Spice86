@@ -1,11 +1,13 @@
-namespace Spice86.Tests.Dos.FileSystem;
+namespace Spice86.Storage.Tests.FileSystem;
 
 using FluentAssertions;
 
 using NSubstitute;
 
+using Serilog;
+using Serilog.Events;
+
 using Spice86.Shared.Emulator.Storage.FileSystem;
-using Spice86.Shared.Interfaces;
 
 using System;
 using System.IO;
@@ -14,26 +16,31 @@ using System.Text;
 using Xunit;
 
 /// <summary>
-/// Tests for <see cref="VirtualFloppyImage"/> — builds a FAT12 floppy image from a host directory.
+/// Tests for <see cref="VirtualFloppyImage"/> - builds a FAT12 floppy image from a host directory.
 /// </summary>
-public sealed class VirtualFloppyImageTests : IDisposable {
+public sealed class VirtualFloppyImageTests : IDisposable
+{
     private readonly string _testDir;
 
-    public VirtualFloppyImageTests() {
+    public VirtualFloppyImageTests()
+    {
         _testDir = Path.Combine(AppContext.BaseDirectory, Guid.NewGuid().ToString());
         Directory.CreateDirectory(_testDir);
     }
 
-    public void Dispose() {
-        if (Directory.Exists(_testDir)) {
+    public void Dispose()
+    {
+        if (Directory.Exists(_testDir))
+        {
             Directory.Delete(_testDir, recursive: true);
         }
     }
 
-    private static ILoggerService CreateLogger() => Substitute.For<ILoggerService>();
+    private static ILogger CreateLogger() => Substitute.For<ILogger>();
 
     [Fact]
-    public void Build_EmptyDirectory_ReturnsCorrectImageSize() {
+    public void Build_EmptyDirectory_ReturnsCorrectImageSize()
+    {
         // Arrange
         VirtualFloppyImage builder = new(_testDir, CreateLogger());
 
@@ -41,11 +48,25 @@ public sealed class VirtualFloppyImageTests : IDisposable {
         byte[] image = builder.Build();
 
         // Assert
-        image.Should().HaveCount(2880 * 512, "1.44 MB floppy image is 2880 sectors × 512 bytes");
+        image.Should().HaveCount(2880 * 512, "1.44 MB floppy image is 2880 sectors x 512 bytes");
     }
 
     [Fact]
-    public void Build_WithSingleFile_FilePresentInFatFilesystem() {
+    public void Build_NullLogger_DoesNotThrow()
+    {
+        // Arrange
+        VirtualFloppyImage builder = new(_testDir, logger: null);
+
+        // Act
+        Action act = () => builder.Build();
+
+        // Assert
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void Build_WithSingleFile_FilePresentInFatFilesystem()
+    {
         // Arrange
         byte[] content = Encoding.ASCII.GetBytes("HELLO FAT12");
         File.WriteAllBytes(Path.Combine(_testDir, "TEST.TXT"), content);
@@ -63,7 +84,8 @@ public sealed class VirtualFloppyImageTests : IDisposable {
     }
 
     [Fact]
-    public void Build_WithSingleFile_FileContentIsCorrect() {
+    public void Build_WithSingleFile_FileContentIsCorrect()
+    {
         // Arrange
         byte[] expected = Encoding.ASCII.GetBytes("HELLO FAT12 WORLD");
         File.WriteAllBytes(Path.Combine(_testDir, "HELLO.TXT"), expected);
@@ -80,7 +102,8 @@ public sealed class VirtualFloppyImageTests : IDisposable {
     }
 
     [Fact]
-    public void Build_WithSubdirectory_SubdirAndFileAreAccessible() {
+    public void Build_WithSubdirectory_SubdirAndFileAreAccessible()
+    {
         // Arrange
         string subDir = Path.Combine(_testDir, "SUBDIR");
         Directory.CreateDirectory(subDir);
@@ -99,7 +122,8 @@ public sealed class VirtualFloppyImageTests : IDisposable {
     }
 
     [Fact]
-    public void Build_WithNestedSubdirectories_NestedFileIsAccessible() {
+    public void Build_WithNestedSubdirectories_NestedFileIsAccessible()
+    {
         // Arrange
         string level1 = Path.Combine(_testDir, "LEVEL1");
         string level2 = Path.Combine(level1, "LEVEL2");
@@ -119,7 +143,8 @@ public sealed class VirtualFloppyImageTests : IDisposable {
     }
 
     [Fact]
-    public void Build_WithNestedSubdirectory_NestedDirectoryIsAccessible() {
+    public void Build_WithNestedSubdirectory_NestedDirectoryIsAccessible()
+    {
         // Arrange
         string level1 = Path.Combine(_testDir, "LEVEL1");
         string level2 = Path.Combine(level1, "LEVEL2");
@@ -138,13 +163,14 @@ public sealed class VirtualFloppyImageTests : IDisposable {
     }
 
     [Fact]
-    public void Build_OversizeFile_LogsWarningAndSkipsFile() {
+    public void Build_OversizeFile_LogsWarningAndSkipsFile()
+    {
         // Arrange
-        ILoggerService logger = Substitute.For<ILoggerService>();
-        logger.IsEnabled(Serilog.Events.LogEventLevel.Warning).Returns(true);
+        ILogger logger = Substitute.For<ILogger>();
+        logger.IsEnabled(LogEventLevel.Warning).Returns(true);
 
-        // Create a file that won't fit (bigger than remaining data area: 2847 clusters × 512 bytes = ~1.4 MB)
-        byte[] large = new byte[2880 * 512]; // full disk size in one file — won't fit
+        // Create a file that won't fit (bigger than remaining data area).
+        byte[] large = new byte[2880 * 512];
         File.WriteAllBytes(Path.Combine(_testDir, "BIG.BIN"), large);
         VirtualFloppyImage builder = new(_testDir, logger);
 
@@ -155,6 +181,6 @@ public sealed class VirtualFloppyImageTests : IDisposable {
 
         // Assert
         found.Should().BeFalse("file too large to fit should be skipped");
-        logger.Received().IsEnabled(Serilog.Events.LogEventLevel.Warning);
+        logger.Received().IsEnabled(LogEventLevel.Warning);
     }
 }
