@@ -724,6 +724,7 @@ public class Spice86DependencyInjection : IDisposable {
         McpServices = emulatorMcpServices;
         _mcpHttpTransport = mcpHttpTransport;
         ProgramExecutor.EmulationStopped += OnProgramExecutorEmulationStopped;
+        pauseHandler.Pausing += () => Machine.Dos.DosDriveManager.FlushDirtyFloppyImages();
 
         if (mainWindow != null && uiDispatcher != null &&
             hostStorageProvider != null && textClipboard != null) {

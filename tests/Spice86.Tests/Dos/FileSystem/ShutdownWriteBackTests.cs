@@ -69,6 +69,55 @@ public class ShutdownWriteBackTests
     }
 
     [Fact]
+    public void RequestPause_WithDirtyMountedFloppy_PersistsImageBytesToDisk()
+    {
+        // Arrange
+        string tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
+            "Spice86_PauseWriteBack_" + System.Guid.NewGuid().ToString("N"));
+        System.IO.Directory.CreateDirectory(tempDir);
+        string imagePath = System.IO.Path.Combine(tempDir, "pause-floppy.img");
+
+        try
+        {
+            Spice86DependencyInjection spice86 = new Spice86Creator("add").Create();
+            try
+            {
+                DosDriveManager driveManager = spice86.Machine.Dos.DosDriveManager;
+                byte[] image = new Fat12ImageBuilder().Build();
+                driveManager.MountFloppyImage('A', image, imagePath);
+
+                bool writeSucceeded = driveManager.WriteToImage(0, 0x130, new byte[] { 0x33, 0x44 }, 0, 2);
+                writeSucceeded.Should().BeTrue();
+
+                // Act
+                spice86.Machine.PauseHandler.RequestPause("test pause write-back");
+
+                // Assert
+                System.IO.File.Exists(imagePath).Should().BeTrue();
+                byte[] onDisk = System.IO.File.ReadAllBytes(imagePath);
+                onDisk[0x130].Should().Be(0x33);
+                onDisk[0x131].Should().Be(0x44);
+            }
+            finally
+            {
+                if (spice86.Machine.PauseHandler.IsPaused)
+                {
+                    spice86.Machine.PauseHandler.Resume();
+                }
+
+                spice86.Dispose();
+            }
+        }
+        finally
+        {
+            if (System.IO.Directory.Exists(tempDir))
+            {
+                System.IO.Directory.Delete(tempDir, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public void Dispose_WithDirtyMultiImageFloppy_PersistsAllDirtyImagesToDisk()
     {
         // Arrange
