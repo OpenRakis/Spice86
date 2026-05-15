@@ -896,6 +896,7 @@ public class Spice86DependencyInjection : IDisposable {
         _emulatedClock.Dispose();
         _httpApiServer?.Dispose();
         _cfgNodeExecutionCompiler.Dispose();
+        Machine.Dos.DosDriveManager.FlushDirtyFloppyImages();
         Machine.Dispose();
     }
 }

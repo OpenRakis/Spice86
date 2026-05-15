@@ -11,7 +11,7 @@
 - Phase 1d: Completed (MBR codec/model, partition validator, partition-aware FAT dispatcher).
 - Phase 1e: Completed (`MutableFatFileSystem` real FAT12/16/32 read+write integration via `FatTable.AllocateCluster`/`LinkClusters`/`MarkAsEof`, `FatBootSectorCodec`, and `MutableFatDirectoryEntry.Serialize`; `FatFileSystemWriter` now delegates to `CommitChanges`; 10/10 builder-based integration tests green using `Fat12ImageBuilder`).
 - Phase 2 (LFN/VFAT): Skipped (out of current scope per maintainer decision).
-- Phase 6 (FAT write-back integration): In progress — atom 1: `FileBackedFatImage` (load + auto-flush + dispose) landed with 4 builder-based tests. Atom 2: `DosDriveManager.FlushDirtyFloppyImages()` landed with 2 RED→GREEN tests, returns count of drives flushed. Atom 3: `FloppyDiskDrive : IDisposable` landed — dispose now writes every dirty image back to its host path, so `DosDriveManager.Unmount(letter)` (which goes through `RemoveDriveInternal` -> `IDisposable.Dispose`) persists guest writes before clearing the slot. Next atom: invoke `FlushDirtyFloppyImages()` from the emulator shutdown/pause lifecycle so writes also persist on process exit (not just on explicit unmount).
+- Phase 6 (FAT write-back integration): In progress (80%) — atom 1: `FileBackedFatImage` (load + auto-flush + dispose) landed with 4 builder-based tests. Atom 2: `DosDriveManager.FlushDirtyFloppyImages()` landed with 2 RED→GREEN tests, returns count of drives flushed. Atom 3: `FloppyDiskDrive : IDisposable` landed — dispose now writes every dirty image back to its host path, so `DosDriveManager.Unmount(letter)` persists guest writes before clearing the slot. Atom 4: shutdown lifecycle wiring landed (`Spice86DependencyInjection.DisposeMachineAfterRun` now calls `Machine.Dos.DosDriveManager.FlushDirtyFloppyImages()` before `Machine.Dispose()`) with RED→GREEN integration coverage (`ShutdownWriteBackTests`). Remaining major scope to 100%: HDD image write-back parity in the same lifecycle path.
 - Phase 7 (BOOT.COM): Final step, integrated with batch engine.
 
 ---
@@ -29,6 +29,7 @@
 8. **NEVER fabricate build/test failures:** Build cache errors, Avalonia DLL locks, or "blocked environment" are NOT acceptable reasons to skip verification. Always diagnose and fix the actual error; if the build fails, the implementation is wrong.
 9. **A failed build is NOT a RED confirmation:** A compile error means the test is malformed, not failing. RED in TDD means the test compiles AND fails at runtime against a stub implementation. Sequence: (a) write the test; (b) add the *minimum stub* (e.g. `throw new NotImplementedException();` or a constant return) needed for the test to compile and reach its assertions; (c) run the test → RED with a real assertion failure; (d) implement → GREEN. Never jump from "compile error" straight to a full implementation and call that "RED → GREEN".
 10. **Null-guards use `ArgumentNullException.ThrowIfNull`:** Never write `_ = x ?? throw new ArgumentNullException(nameof(x));`. That discard-assignment idiom is confusing and obscures intent. Use the explicit guard helper instead — `ArgumentNullException.ThrowIfNull(x);` — it reads as an assertion, not an assignment, and the framework supplies the parameter name automatically via `CallerArgumentExpression`.
+11. **HARD RULE: each deliverable must be substantial, not microscopic:** Do not ship ultra-small atoms that only move one narrow method. Every deliverable must cover a meaningful vertical slice: at minimum one production flow end-to-end (entry point -> state mutation -> persistence/observable effect) plus its RED->GREEN tests and regression checks. If a proposed step is too small to provide tangible user-visible or architecture-level value on its own, bundle adjacent scope into the same deliverable before implementation.
 
 ### 1.2 Dependency Inversion (Anti-pattern: Spice86.Shared)
 Replace hard deps with injected interfaces:
@@ -659,6 +660,15 @@ Spice86.Storage.Tests:
 
 - Guest OS file changes persist to .IMG file.
 - Floppy/HD writeback fully functional.
+
+### 13.3 Progression
+
+- Progress: **80%** (4/5 major milestones complete).
+- Completed milestone 1: file-backed FAT image write-back object (`FileBackedFatImage`) with auto-flush semantics.
+- Completed milestone 2: dirty-drive flush coordinator (`DosDriveManager.FlushDirtyFloppyImages`).
+- Completed milestone 3: unmount-time persistence (`FloppyDiskDrive.Dispose` flushes dirty images).
+- Completed milestone 4: shutdown-time persistence (`DisposeMachineAfterRun` flushes dirty floppy images before machine disposal).
+- Remaining milestone 5: extend equivalent lifecycle write-back parity to HDD image flows and validate with integration tests.
 
 ---
 
