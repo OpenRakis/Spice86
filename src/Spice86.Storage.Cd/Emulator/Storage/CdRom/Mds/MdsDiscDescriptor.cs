@@ -8,10 +8,12 @@ namespace Spice86.Shared.Emulator.Storage.CdRom.Mds;
 /// truncated to the first session to mirror dosbox-staging's
 /// <c>LoadMdsFile</c> behaviour.
 /// </summary>
-public sealed class MdsDiscDescriptor {
+public sealed class MdsDiscDescriptor
+{
     /// <summary>Initialises a new <see cref="MdsDiscDescriptor"/>.</summary>
     /// <param name="tracks">Tracks in disc order. Must be contiguous and non-empty.</param>
-    public MdsDiscDescriptor(IReadOnlyList<MdsTrack> tracks) {
+    public MdsDiscDescriptor(IReadOnlyList<MdsTrack> tracks)
+    {
         ArgumentNullException.ThrowIfNull(tracks);
         Tracks = tracks;
     }

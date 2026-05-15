@@ -4,8 +4,8 @@ using Avalonia.Controls;
 
 using Spice86.ViewModels;
 
-using System.Collections.ObjectModel;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 
 /// <summary>

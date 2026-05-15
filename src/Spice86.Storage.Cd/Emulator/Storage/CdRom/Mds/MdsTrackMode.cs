@@ -5,7 +5,8 @@ namespace Spice86.Shared.Emulator.Storage.CdRom.Mds;
 /// modes that dosbox-staging's <c>set_track_mode</c> accepts for CDROM (DVD-only
 /// XA forms 4/5/6 are rejected, not represented here).
 /// </summary>
-public enum MdsTrackMode {
+public enum MdsTrackMode
+{
     /// <summary>Red Book audio track (raw 2352 bytes/sector, attribute 0x00).</summary>
     Audio = 0,
 

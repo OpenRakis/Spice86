@@ -5,7 +5,8 @@ namespace Spice86.Shared.Emulator.Storage.CdRom.Mds;
 /// fields dosbox-staging's <c>LoadMdsFile</c> reads from each
 /// <c>MdsTrackBlock</c> + its associated extra block + footer.
 /// </summary>
-public sealed class MdsTrack {
+public sealed class MdsTrack
+{
     /// <summary>Initialises a new <see cref="MdsTrack"/>.</summary>
     /// <param name="number">Track number (1..99) — the <c>point</c> field from the MDS track block.</param>
     /// <param name="mode">Decoded high-level mode.</param>
@@ -23,7 +24,8 @@ public sealed class MdsTrack {
         int startSector,
         long skipBytes,
         int lengthSectors,
-        string mdfFilename) {
+        string mdfFilename)
+    {
         Number = number;
         Mode = mode;
         SectorSize = sectorSize;

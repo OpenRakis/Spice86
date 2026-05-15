@@ -16,7 +16,8 @@ namespace Spice86.Shared.Emulator.Storage.CdRom;
 /// the referenced MDF data files, and exposes the resolved tracks plus a
 /// synthetic lead-out entry at the end of the last track.
 /// </summary>
-public sealed class MdsImage : ICdRomImage {
+public sealed class MdsImage : ICdRomImage
+{
     private const int CookedSectorSize = 2048;
     private const int PvdLba = 16;
 
@@ -27,7 +28,8 @@ public sealed class MdsImage : ICdRomImage {
     /// <param name="mdsFilePath">Path to the .mds file.</param>
     /// <exception cref="InvalidDataException">Thrown when the MDS file is malformed.</exception>
     /// <exception cref="FileNotFoundException">Thrown when the MDF data file referenced by the descriptor cannot be opened.</exception>
-    public MdsImage(string mdsFilePath) {
+    public MdsImage(string mdsFilePath)
+    {
         ArgumentNullException.ThrowIfNull(mdsFilePath);
         ImagePath = mdsFilePath;
 
@@ -40,8 +42,10 @@ public sealed class MdsImage : ICdRomImage {
         PrimaryVolume = ParsePrimaryVolume();
     }
 
-    private void BuildTracks(MdsDiscDescriptor descriptor, string mdsDirectory, string mdsFilePath) {
-        foreach (MdsTrack mdsTrack in descriptor.Tracks) {
+    private void BuildTracks(MdsDiscDescriptor descriptor, string mdsDirectory, string mdsFilePath)
+    {
+        foreach (MdsTrack mdsTrack in descriptor.Tracks)
+        {
             string mdfPath = ResolveMdfPath(mdsTrack.MdfFilename, mdsDirectory, mdsFilePath);
             FileBackedDataSource source = GetOrOpenSource(mdfPath);
 
@@ -64,7 +68,8 @@ public sealed class MdsImage : ICdRomImage {
         AppendLeadOut();
     }
 
-    private void AppendLeadOut() {
+    private void AppendLeadOut()
+    {
         CdTrack last = _tracks[^1];
         int leadOutStart = last.StartLba + last.LengthSectors;
         CdTrack leadOut = new CdTrack(
@@ -81,19 +86,24 @@ public sealed class MdsImage : ICdRomImage {
         _tracks.Add(leadOut);
     }
 
-    private static string ResolveMdfPath(string mdfFilename, string mdsDirectory, string mdsFilePath) {
-        if (string.Equals(mdfFilename, "*.mdf", StringComparison.OrdinalIgnoreCase)) {
+    private static string ResolveMdfPath(string mdfFilename, string mdsDirectory, string mdsFilePath)
+    {
+        if (string.Equals(mdfFilename, "*.mdf", StringComparison.OrdinalIgnoreCase))
+        {
             string baseName = Path.GetFileNameWithoutExtension(mdsFilePath);
             return Path.Combine(mdsDirectory, baseName + ".mdf");
         }
-        if (Path.IsPathRooted(mdfFilename)) {
+        if (Path.IsPathRooted(mdfFilename))
+        {
             return mdfFilename;
         }
         return Path.Combine(mdsDirectory, mdfFilename);
     }
 
-    private FileBackedDataSource GetOrOpenSource(string mdfPath) {
-        if (_sources.TryGetValue(mdfPath, out FileBackedDataSource? existing)) {
+    private FileBackedDataSource GetOrOpenSource(string mdfPath)
+    {
+        if (_sources.TryGetValue(mdfPath, out FileBackedDataSource? existing))
+        {
             return existing;
         }
         FileBackedDataSource source = new FileBackedDataSource(mdfPath);
@@ -101,19 +111,24 @@ public sealed class MdsImage : ICdRomImage {
         return source;
     }
 
-    private static CdSectorMode MapMode(MdsTrack track) {
-        if (track.Mode == MdsTrackMode.Audio) {
+    private static CdSectorMode MapMode(MdsTrack track)
+    {
+        if (track.Mode == MdsTrackMode.Audio)
+        {
             return CdSectorMode.AudioRaw2352;
         }
-        if (track.Mode == MdsTrackMode.Mode1Data) {
+        if (track.Mode == MdsTrackMode.Mode1Data)
+        {
             return track.SectorSize == CookedSectorSize ? CdSectorMode.CookedData2048 : CdSectorMode.Raw2352;
         }
         return CdSectorMode.Mode2Form1;
     }
 
-    private IsoVolumeDescriptor ParsePrimaryVolume() {
+    private IsoVolumeDescriptor ParsePrimaryVolume()
+    {
         CdTrack? dataTrack = FindFirstDataTrack();
-        if (dataTrack == null) {
+        if (dataTrack == null)
+        {
             return new IsoVolumeDescriptor(string.Empty, 0, 0, CookedSectorSize, TotalSectors);
         }
 
@@ -122,7 +137,8 @@ public sealed class MdsImage : ICdRomImage {
         dataTrack.Source.Read(pvdByteOffset, sectorBuffer);
 
         ReadOnlySpan<byte> pvd = GetCookedData(sectorBuffer, dataTrack.Mode);
-        if (pvd.Length < 190) {
+        if (pvd.Length < 190)
+        {
             return new IsoVolumeDescriptor(string.Empty, 0, 0, CookedSectorSize, TotalSectors);
         }
 
@@ -137,20 +153,25 @@ public sealed class MdsImage : ICdRomImage {
         return new IsoVolumeDescriptor(volumeId, rootDirLba, rootDirSize, logicalBlockSize, volumeSpaceSize);
     }
 
-    private static ReadOnlySpan<byte> GetCookedData(byte[] rawSector, CdSectorMode mode) {
-        if (mode == CdSectorMode.CookedData2048) {
+    private static ReadOnlySpan<byte> GetCookedData(byte[] rawSector, CdSectorMode mode)
+    {
+        if (mode == CdSectorMode.CookedData2048)
+        {
             return rawSector;
         }
-        if (mode == CdSectorMode.Raw2352) {
+        if (mode == CdSectorMode.Raw2352)
+        {
             return rawSector.AsSpan(16, CookedSectorSize);
         }
-        if (mode == CdSectorMode.Mode2Form1) {
+        if (mode == CdSectorMode.Mode2Form1)
+        {
             return rawSector.AsSpan(24, CookedSectorSize);
         }
         return rawSector.AsSpan(0, Math.Min(rawSector.Length, CookedSectorSize));
     }
 
-    private CdTrack? FindFirstDataTrack() {
+    private CdTrack? FindFirstDataTrack()
+    {
         return _tracks.FirstOrDefault(t => !t.IsAudio && t.LengthSectors > 0);
     }
 
@@ -170,32 +191,39 @@ public sealed class MdsImage : ICdRomImage {
     public string ImagePath { get; }
 
     /// <inheritdoc/>
-    public int Read(int lba, Span<byte> destination, CdSectorMode mode) {
+    public int Read(int lba, Span<byte> destination, CdSectorMode mode)
+    {
         CdTrack? track = FindTrack(lba);
-        if (track == null || track.LengthSectors == 0) {
+        if (track == null || track.LengthSectors == 0)
+        {
             return 0;
         }
         long fileByteOffset = track.FileOffset + (long)(lba - track.StartLba) * track.SectorSize;
         byte[] rawBuffer = new byte[track.SectorSize];
         track.Source.Read(fileByteOffset, rawBuffer);
 
-        if (mode == CdSectorMode.CookedData2048 && track.Mode == CdSectorMode.Raw2352) {
+        if (mode == CdSectorMode.CookedData2048 && track.Mode == CdSectorMode.Raw2352)
+        {
             return SectorFraming.ExtractCookedFromRaw2352(rawBuffer, destination);
         }
-        if (mode == CdSectorMode.CookedData2048 && track.Mode == CdSectorMode.Mode2Form1) {
+        if (mode == CdSectorMode.CookedData2048 && track.Mode == CdSectorMode.Mode2Form1)
+        {
             return SectorFraming.ExtractMode2Form1FromRaw2352(rawBuffer, destination);
         }
         rawBuffer.CopyTo(destination);
         return track.SectorSize;
     }
 
-    private CdTrack? FindTrack(int lba) {
+    private CdTrack? FindTrack(int lba)
+    {
         return _tracks.FirstOrDefault(t => t.LengthSectors > 0 && lba >= t.StartLba && lba < t.StartLba + t.LengthSectors);
     }
 
     /// <inheritdoc/>
-    public void Dispose() {
-        foreach (FileBackedDataSource source in _sources.Values) {
+    public void Dispose()
+    {
+        foreach (FileBackedDataSource source in _sources.Values)
+        {
             source.Dispose();
         }
         _sources.Clear();
