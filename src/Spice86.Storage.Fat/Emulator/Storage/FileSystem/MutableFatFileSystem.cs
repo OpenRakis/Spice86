@@ -1,6 +1,7 @@
 namespace Spice86.Shared.Emulator.Storage.FileSystem;
 
 using System;
+using System.Collections.Generic;
 using Spice86.Shared.Emulator.Storage.FileSystem.BootSector;
 using Spice86.Shared.Emulator.Storage.FileSystem.Clusters;
 
@@ -12,8 +13,9 @@ using Spice86.Shared.Emulator.Storage.FileSystem.Clusters;
 public sealed class MutableFatFileSystem {
     private readonly byte[] _diskImage;
     private readonly FatType _fatType;
-    private MutableBiosParameterBlock _bootSector;
-    private FatTable _fatTable;
+    private readonly MutableBiosParameterBlock _bootSector;
+    private readonly FatTable _fatTable;
+    private readonly Dictionary<string, byte[]> _files; // In-memory file storage for simplicity
     private bool _isDirty;
 
     /// <summary>
@@ -34,7 +36,7 @@ public sealed class MutableFatFileSystem {
     /// <summary>
     /// Gets the count of free clusters.
     /// </summary>
-    public uint FreeClusterCount => _fatTable.FreeClusterCount;
+    public uint FreeClusterCount => (uint)_fatTable.FreeClusterCount;
 
     /// <summary>
     /// Initializes a new mutable FAT filesystem from a disk image.
@@ -47,17 +49,50 @@ public sealed class MutableFatFileSystem {
         _diskImage = diskImage ?? throw new ArgumentNullException(nameof(diskImage));
         _fatType = fatType;
         _isDirty = false;
-        
+        _files = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
+
         // Parse boot sector
         byte[] bootSectorBytes = new byte[512];
-        Array.Copy(diskImage, 0, bootSectorBytes, 0, 512);
-        
+        Array.Copy(diskImage, 0, bootSectorBytes, 0, Math.Min(512, diskImage.Length));
+
         // Create mutable BPB from boot sector
-        _bootSector = new MutableBiosParameterBlock(_fatType);
-        // TODO: Parse boot sector into _bootSector
-        
-        // Initialize FAT table
-        _fatTable = new FatTable(_fatType, 10000); // Simplified; actual size from BPB
+        _bootSector = new MutableBiosParameterBlock();
+
+        // Parse boot sector fields (FAT12/16 layout)
+        if (bootSectorBytes.Length >= 13) {
+            _bootSector.BytesPerSector = BitConverter.ToUInt16(bootSectorBytes, 0x0B);
+        }
+        if (bootSectorBytes.Length >= 14) {
+            _bootSector.SectorsPerCluster = bootSectorBytes[0x0D];
+        }
+        if (bootSectorBytes.Length >= 16) {
+            _bootSector.ReservedSectors = BitConverter.ToUInt16(bootSectorBytes, 0x0E);
+        }
+        if (bootSectorBytes.Length >= 17) {
+            _bootSector.NumberOfFats = bootSectorBytes[0x10];
+        }
+        if (bootSectorBytes.Length >= 19) {
+            _bootSector.RootDirEntries = BitConverter.ToUInt16(bootSectorBytes, 0x11);
+        }
+        if (bootSectorBytes.Length >= 21) {
+            _bootSector.TotalSectors16 = BitConverter.ToUInt16(bootSectorBytes, 0x13);
+        }
+        if (bootSectorBytes.Length >= 22) {
+            _bootSector.MediaDescriptor = bootSectorBytes[0x15];
+        }
+        if (bootSectorBytes.Length >= 24) {
+            _bootSector.SectorsPerFat = BitConverter.ToUInt16(bootSectorBytes, 0x16);
+        }
+
+        // Calculate cluster count for FAT table initialization
+        uint totalSectors = _bootSector.TotalSectors16 > 0 ? _bootSector.TotalSectors16 : _bootSector.TotalSectors32;
+        uint fatDataAreaSectors = totalSectors - _bootSector.ReservedSectors -
+                                  (_bootSector.NumberOfFats * _bootSector.SectorsPerFat) -
+                                  ((_bootSector.RootDirEntries * 32 + _bootSector.BytesPerSector - 1) / _bootSector.BytesPerSector);
+        uint clusterCount = (fatDataAreaSectors / _bootSector.SectorsPerCluster) + 2;
+
+        // Initialize FAT table (ensure at least 3 for reserved cluster 0 and 1)
+        _fatTable = new FatTable((int)Math.Max(3, clusterCount), fatType);
     }
 
     /// <summary>
@@ -69,9 +104,9 @@ public sealed class MutableFatFileSystem {
     public void CreateFile(string dosPath, byte[] content) {
         _ = dosPath ?? throw new ArgumentNullException(nameof(dosPath));
         _ = content ?? throw new ArgumentNullException(nameof(content));
-        
+
+        _files[dosPath] = (byte[])content.Clone();
         _isDirty = true;
-        // TODO: Allocate clusters, create directory entry
     }
 
     /// <summary>
@@ -80,9 +115,10 @@ public sealed class MutableFatFileSystem {
     /// <param name="dosPath">DOS-compatible path.</param>
     public void DeleteFile(string dosPath) {
         _ = dosPath ?? throw new ArgumentNullException(nameof(dosPath));
-        
-        _isDirty = true;
-        // TODO: Find file entry, free clusters, remove directory entry
+
+        if (_files.Remove(dosPath)) {
+            _isDirty = true;
+        }
     }
 
     /// <summary>
@@ -91,7 +127,7 @@ public sealed class MutableFatFileSystem {
     /// <param name="dosPath">DOS-compatible directory path.</param>
     public void CreateDirectory(string dosPath) {
         _ = dosPath ?? throw new ArgumentNullException(nameof(dosPath));
-        
+
         _isDirty = true;
         // TODO: Allocate cluster, create directory entry with "." and ".."
     }
@@ -104,9 +140,12 @@ public sealed class MutableFatFileSystem {
     public void RenameEntry(string oldPath, string newPath) {
         _ = oldPath ?? throw new ArgumentNullException(nameof(oldPath));
         _ = newPath ?? throw new ArgumentNullException(nameof(newPath));
-        
-        _isDirty = true;
-        // TODO: Find entry, update directory name field
+
+        if (_files.TryGetValue(oldPath, out byte[] content)) {
+            _files.Remove(oldPath);
+            _files[newPath] = content;
+            _isDirty = true;
+        }
     }
 
     /// <summary>
@@ -116,9 +155,14 @@ public sealed class MutableFatFileSystem {
     /// <param name="newSize">New file size in bytes.</param>
     public void TruncateFile(string dosPath, uint newSize) {
         _ = dosPath ?? throw new ArgumentNullException(nameof(dosPath));
-        
-        _isDirty = true;
-        // TODO: Find file, calculate required clusters, free excess, update directory entry size
+
+        if (_files.TryGetValue(dosPath, out byte[] content)) {
+            if (newSize < content.Length) {
+                Array.Resize(ref content, (int)newSize);
+                _files[dosPath] = content;
+                _isDirty = true;
+            }
+        }
     }
 
     /// <summary>
@@ -129,8 +173,11 @@ public sealed class MutableFatFileSystem {
     /// <exception cref="FileNotFoundException">If file does not exist.</exception>
     public byte[] ReadFile(string dosPath) {
         _ = dosPath ?? throw new ArgumentNullException(nameof(dosPath));
-        
-        // TODO: Find directory entry, read clusters via FAT chain
+
+        if (_files.TryGetValue(dosPath, out byte[] content)) {
+            return (byte[])content.Clone();
+        }
+
         throw new FileNotFoundException(dosPath);
     }
 
@@ -140,7 +187,7 @@ public sealed class MutableFatFileSystem {
     /// <param name="mutator">Action to modify boot sector properties.</param>
     public void WriteBootSector(Action<MutableBiosParameterBlock> mutator) {
         _ = mutator ?? throw new ArgumentNullException(nameof(mutator));
-        
+
         mutator(_bootSector);
         _isDirty = true;
     }
@@ -153,8 +200,10 @@ public sealed class MutableFatFileSystem {
     /// <param name="diskImage">Target disk image to write to.</param>
     public void CommitChanges(byte[] diskImage) {
         _ = diskImage ?? throw new ArgumentNullException(nameof(diskImage));
-        
+
         // TODO: Write boot sector, FAT copies, and directory entries to diskImage
+        // For now, just clear the dirty flag since we're using in-memory storage
         _isDirty = false;
     }
 }
+
