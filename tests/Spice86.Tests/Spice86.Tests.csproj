@@ -49,6 +49,8 @@
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\..\src\Spice86.Core\Spice86.Core.csproj"/>
+		<ProjectReference Include="..\..\src\Spice86.Storage.Cd\Spice86.Storage.Cd.csproj"/>
+		<ProjectReference Include="..\..\src\Spice86.Storage.Fat\Spice86.Storage.Fat.csproj"/>
 		<ProjectReference Include="..\..\src\Spice86.Shared\Spice86.Shared.csproj"/>
 		<ProjectReference Include="..\..\src\Spice86\Spice86.csproj"/>
 	</ItemGroup>

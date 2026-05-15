@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    </PropertyGroup>
+    <!-- Properties geared towards NuGet -->
+    <PropertyGroup>
+        <PackageId>Spice86.Storage.Fat</PackageId>
+    </PropertyGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
+    </ItemGroup>
+</Project>
