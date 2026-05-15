@@ -30,6 +30,9 @@ public sealed class MutableFatFileSystem
     /// <summary>Gets the mutable FAT table.</summary>
     public FatTable FatTable => _fatTable;
 
+    /// <summary>Gets the FAT variant (FAT12 / FAT16 / FAT32) this filesystem was parsed as.</summary>
+    public FatType FatType => _fatType;
+
     /// <summary>Gets whether there are uncommitted changes.</summary>
     public bool IsDirty => _isDirty;
 
@@ -130,8 +133,8 @@ public sealed class MutableFatFileSystem
     /// <param name="content">File content bytes.</param>
     public void CreateFile(string dosPath, byte[] content)
     {
-        _ = dosPath ?? throw new ArgumentNullException(nameof(dosPath));
-        _ = content ?? throw new ArgumentNullException(nameof(content));
+        ArgumentNullException.ThrowIfNull(dosPath);
+        ArgumentNullException.ThrowIfNull(content);
 
         if (_fileChains.ContainsKey(dosPath))
         {
@@ -222,7 +225,7 @@ public sealed class MutableFatFileSystem
     /// <param name="dosPath">DOS file path.</param>
     public void DeleteFile(string dosPath)
     {
-        _ = dosPath ?? throw new ArgumentNullException(nameof(dosPath));
+        ArgumentNullException.ThrowIfNull(dosPath);
 
         string canonical = CanonicaliseDosName(dosPath);
         int idx = FindRootEntryIndex(canonical);
@@ -268,8 +271,8 @@ public sealed class MutableFatFileSystem
     /// <param name="newPath">New DOS path.</param>
     public void RenameEntry(string oldPath, string newPath)
     {
-        _ = oldPath ?? throw new ArgumentNullException(nameof(oldPath));
-        _ = newPath ?? throw new ArgumentNullException(nameof(newPath));
+        ArgumentNullException.ThrowIfNull(oldPath);
+        ArgumentNullException.ThrowIfNull(newPath);
 
         string oldCanonical = CanonicaliseDosName(oldPath);
         int idx = FindRootEntryIndex(oldCanonical);
@@ -302,7 +305,7 @@ public sealed class MutableFatFileSystem
     /// <param name="newSize">New file size in bytes.</param>
     public void TruncateFile(string dosPath, uint newSize)
     {
-        _ = dosPath ?? throw new ArgumentNullException(nameof(dosPath));
+        ArgumentNullException.ThrowIfNull(dosPath);
 
         string canonical = CanonicaliseDosName(dosPath);
         int idx = FindRootEntryIndex(canonical);
@@ -358,7 +361,7 @@ public sealed class MutableFatFileSystem
     /// <exception cref="FileNotFoundException">If the file does not exist.</exception>
     public byte[] ReadFile(string dosPath)
     {
-        _ = dosPath ?? throw new ArgumentNullException(nameof(dosPath));
+        ArgumentNullException.ThrowIfNull(dosPath);
 
         string canonical = CanonicaliseDosName(dosPath);
         int idx = FindRootEntryIndex(canonical);
@@ -401,7 +404,7 @@ public sealed class MutableFatFileSystem
     /// <param name="mutator">Action that mutates BPB fields.</param>
     public void WriteBootSector(Action<MutableBiosParameterBlock> mutator)
     {
-        _ = mutator ?? throw new ArgumentNullException(nameof(mutator));
+        ArgumentNullException.ThrowIfNull(mutator);
         mutator(_bootSector);
         _isDirty = true;
     }
@@ -414,7 +417,7 @@ public sealed class MutableFatFileSystem
     /// <param name="diskImage">Target disk image buffer (must be the same buffer as construction).</param>
     public void CommitChanges(byte[] diskImage)
     {
-        _ = diskImage ?? throw new ArgumentNullException(nameof(diskImage));
+        ArgumentNullException.ThrowIfNull(diskImage);
         if (!ReferenceEquals(diskImage, _diskImage))
         {
             throw new ArgumentException("CommitChanges must be called with the same disk image used to construct the filesystem.", nameof(diskImage));

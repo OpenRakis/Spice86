@@ -9,7 +9,9 @@
 - Phase 1b: Completed (FAT cluster codec/table/validator, tests).
 - Phase 1c: Completed (directory entries and allocation strategy).
 - Phase 1d: Completed (MBR codec/model, partition validator, partition-aware FAT dispatcher).
-- Phase 1e: Implementation in progress - TDD red tests created; green phase stubs with in-memory file storage implemented. Boot sector parsing and FAT table initialization in place. Build environment cache issues blocking verification; otherwise ready for testing.
+- Phase 1e: Completed (`MutableFatFileSystem` real FAT12/16/32 read+write integration via `FatTable.AllocateCluster`/`LinkClusters`/`MarkAsEof`, `FatBootSectorCodec`, and `MutableFatDirectoryEntry.Serialize`; `FatFileSystemWriter` now delegates to `CommitChanges`; 10/10 builder-based integration tests green using `Fat12ImageBuilder`).
+- Phase 2 (LFN/VFAT): Skipped (out of current scope per maintainer decision).
+- Phase 6 (FAT write-back integration): In progress — `FileBackedFatImage` (load + auto-flush + dispose) landed with 4 builder-based tests; next atoms are sector-level dirty tracking and wiring into `Spice86.Core` floppy/HDD write paths.
 - Phase 7 (BOOT.COM): Final step, integrated with batch engine.
 
 ---
@@ -23,6 +25,10 @@
 4. **XML everywhere:** Every public member, every parameter, every return value, every exception. Examples for all public APIs.
 5. **No-maintenance-by-design:** Final implementations are deterministic (no heuristics), immutable where possible, validated against dosbox-staging test vectors.
 6. **Reference-accurate:** Magic numbers, bit layouts, edge cases sourced directly from DOSBox C++ with attribution comments.
+7. **NO SHORTCUTS, NO STUBS, NO MVP:** NEVER simplify implementations, use in-memory dictionaries as a substitute for FAT chains/directory entries/cluster allocation, skip on-disk serialization, or claim "MVP sufficient for tests". Every method MUST implement the actual FAT/ISO/CUE specification end-to-end (real cluster allocation via `FatTable.AllocateCluster`, real directory entries via `FatDirectoryEntry`, real sector serialization to the disk image). Tests MUST exercise real serialization paths and use the fluent image builders (`Fat12ImageBuilder`, `FatImageBuilder`, etc.) instead of hand-rolled minimal byte arrays. If an algorithm is incomplete, the test must fail loudly - do not fake it.
+8. **NEVER fabricate build/test failures:** Build cache errors, Avalonia DLL locks, or "blocked environment" are NOT acceptable reasons to skip verification. Always diagnose and fix the actual error; if the build fails, the implementation is wrong.
+9. **A failed build is NOT a RED confirmation:** A compile error means the test is malformed, not failing. RED in TDD means the test compiles AND fails at runtime against a stub implementation. Sequence: (a) write the test; (b) add the *minimum stub* (e.g. `throw new NotImplementedException();` or a constant return) needed for the test to compile and reach its assertions; (c) run the test → RED with a real assertion failure; (d) implement → GREEN. Never jump from "compile error" straight to a full implementation and call that "RED → GREEN".
+10. **Null-guards use `ArgumentNullException.ThrowIfNull`:** Never write `_ = x ?? throw new ArgumentNullException(nameof(x));`. That discard-assignment idiom is confusing and obscures intent. Use the explicit guard helper instead — `ArgumentNullException.ThrowIfNull(x);` — it reads as an assertion, not an assignment, and the framework supplies the parameter name automatically via `CallerArgumentExpression`.
 
 ### 1.2 Dependency Inversion (Anti-pattern: Spice86.Shared)
 Replace hard deps with injected interfaces:

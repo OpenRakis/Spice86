@@ -15,8 +15,8 @@ public sealed class FatFileSystemWriter
     /// <param name="diskImage">Target disk image buffer to write to.</param>
     public void Serialize(MutableFatFileSystem fileSystem, byte[] diskImage)
     {
-        _ = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
-        _ = diskImage ?? throw new ArgumentNullException(nameof(diskImage));
+        ArgumentNullException.ThrowIfNull(fileSystem);
+        ArgumentNullException.ThrowIfNull(diskImage);
 
         fileSystem.CommitChanges(diskImage);
     }
