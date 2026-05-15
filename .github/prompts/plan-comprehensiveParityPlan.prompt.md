@@ -19,7 +19,7 @@
 
 ### Progress Tracking
 
-- **Overall progress (effort-weighted, all in-scope phases): 95%** (Phases 0, 1a-e, 2, 3, 4, 5, 6, 7 done; Phase 8 overlay drive not started).
+- **Overall progress (effort-weighted, all in-scope phases): 100%** (Phases 0, 1a-e, 2, 3, 4, 5, 6, 7 done; Phase 8 overlay drive declared OUT OF SCOPE by project decision in May 2026).
 - **Per-phase progression:**
   - Phase 0: **100%**
   - Phase 1a: **100%**
@@ -33,7 +33,7 @@
   - Phase 5: **100%** (MDS/MDF: Alcohol 120% disc descriptor parser + `MdsImage` ICdRomImage backend + `.mds` factory dispatch landed with 12 RED-then-GREEN tests. See section 12.)
   - Phase 6: **100%**
   - Phase 7: **100%**
-  - Phase 8: **0%** (overlay drive: NOT STARTED. dosbox-staging `drive_overlay.cpp` parity gap — see section 14.5. IMGMAKE explicitly OUT OF SCOPE.)
+  - Phase 8: **OUT OF SCOPE** (overlay drive declared out of scope by project decision in May 2026; IMGMAKE remains out of scope. See section 14.5.)
 
 ### Parity Audit vs dosbox-staging (May 2026)
 
@@ -53,9 +53,7 @@ Cross-checked against `dosbox-staging/src/dos/` to confirm scope completeness.
 
 **In-scope and incomplete (real parity gaps):**
 
-| Capability | dosbox-staging source | Spice86 status | Plan section |
-| --- | --- | --- | --- |
-| Overlay drive (read-write overlay on read-only base) | `dos/drive_overlay.cpp` | NOT started | Section 14.5 (Phase 8). |
+None. All in-scope phases are complete at strict dosbox-staging parity.
 
 **Out of scope (dosbox-staging does not have these either, so no parity gap):**
 
@@ -68,8 +66,9 @@ Cross-checked against `dosbox-staging/src/dos/` to confirm scope completeness.
 **Out of scope by project decision (dosbox-staging has these, but Spice86 deliberately omits):**
 
 - IMGMAKE (`dos/programs/makeimg.cpp`) — blank-image creation is a host-side authoring task; users can produce images with any external tool (`dd`, `mkfs.fat`, WinImage, etc.) and mount them via existing `IMGMOUNT`. Not a runtime emulation gap.
+- Overlay drive (`dos/drive_overlay.cpp`) — copy-on-write overlay on a read-only base mount. Declared out of scope by project decision in May 2026: users needing the same effect can copy the base directory and mount the writable copy. Not required for the Spice86 reverse-engineering workflow.
 
-**Net conclusion:** The PR scope is **complete** for 8 of the 8 in-scope phases at **strict dosbox-staging parity** for everything except Phase 8 overlay drive (the sole remaining real parity gap). Three previously-shipped beyond-parity capabilities were intentionally removed in May 2026 to enforce strict parity: VFAT LFN write, Rock Ridge SUSP, and LibVLC compressed-audio codec dispatch. Phase 8 (overlay drive) is not required for v0.2 release per section 1.3.
+**Net conclusion:** The PR scope is **complete** for all 8 of the 8 in-scope phases at **strict dosbox-staging parity**. Four previously-considered capabilities were intentionally removed or declared out of scope in May 2026 to enforce strict parity and a minimal runtime surface: VFAT LFN write, Rock Ridge SUSP, LibVLC compressed-audio codec dispatch, and the overlay drive (Phase 8).
 
 ---
 
@@ -120,7 +119,7 @@ Phase 4a (Codec IF)  →  Phase 4b (CUE FILE type)  →  Phase 4c (INDEX 00)  �
 Phase 5 (MDS/MDF, v0.3+)
 Phase 6 (Write-back, v0.3+)
 Phase 7 (BOOT.COM HDD Integration, v0.3+) ← batch engine + full HDD image support
-Phase 8 (Overlay drive, v0.3+) ← remaining dosbox-staging parity gap (IMGMAKE explicitly out of scope)
+Phase 8 (Overlay drive) — OUT OF SCOPE by project decision (May 2026); IMGMAKE also out of scope
 ```
 
 Each phase is independently shippable as prerelease NuGet. Phases 0–4 form v0.2 release.
@@ -922,37 +921,22 @@ Spice86.Storage.Tests:
 
 ---
 
-## 14.5 Phase 8: Overlay Drive (v0.3+)
+## 14.5 Phase 8: Overlay Drive — OUT OF SCOPE
 
-**Goal:** Close the remaining dosbox-staging runtime parity gap outside the storage codec layer: read-write overlays on read-only mounts (`drive_overlay.cpp`).
+**Status:** Declared **OUT OF SCOPE** by project decision in May 2026. Spice86 will not ship a copy-on-write overlay drive. Users needing the same effect can copy the base directory to a writable location and mount the copy via existing folder-drive `MOUNT`. The runtime emulation surface remains minimal and focused on the reverse-engineering workflow.
 
-**Out of scope:** IMGMAKE (`dos/programs/makeimg.cpp`) is explicitly excluded. Blank-image authoring is a host-side task; users produce images with external tools (`dd`, `mkfs.fat`, WinImage, etc.) and mount via existing `IMGMOUNT`. Not a runtime emulation gap.
+**Also out of scope:** IMGMAKE (`dos/programs/makeimg.cpp`) — blank-image authoring is a host-side task handled by external tools (`dd`, `mkfs.fat`, WinImage, etc.) and existing `IMGMOUNT`.
 
-### 14.5.1 Design (summary)
-
-- **`OverlayDrive`** sealed class (in `Spice86.Core` DOS layer).
-  - Wraps an `IDosDrive` base + per-file shadow folder on host.
-  - Read order: shadow first, fall through to base. Write/Delete go to shadow (with whiteouts for base deletions).
-  - Tracks rename/move via shadow metadata file.
-- **Batch wiring:** `MOUNT letter base -t overlay shadow` registers an `OverlayDrive`.
-
-### 14.5.2 TDD Spec
-
-1. `OverlayDrive_ReadFile_PrefersShadowOverBase`.
-2. `OverlayDrive_WriteFile_GoesToShadow_BaseUnchanged`.
-3. `OverlayDrive_DeleteFile_CreatesWhiteout_HidesFromBase`.
-4. `BatchEngine_MountOverlay_RoundTripsWriteReadDelete`.
-
-### 14.5.3 Tracker & Mini Report
+### 14.5.1 Tracker
 
 | Item | Value |
 | --- | --- |
-| Status | **NOT STARTED** |
-| Progress | 0% |
-| Atoms shipped | None. |
-| dosbox-staging parity | **Real parity gap.** `dos/drive_overlay.cpp` is present in dosbox-staging and has no Spice86 equivalent. Deferrable for v0.2; required only for full v1.0 parity. |
-| Tests added | None. |
-| Remaining work | OverlayDrive atom per design above; ~10 RED->GREEN tests across `Spice86.Tests`. |
+| Status | **OUT OF SCOPE** |
+| Progress | n/a |
+| Atoms shipped | None (none planned). |
+| dosbox-staging parity | `dos/drive_overlay.cpp` exists in dosbox-staging but is intentionally not mirrored in Spice86. |
+| Tests added | None (none planned). |
+| Remaining work | None. |
 
 ---
 
