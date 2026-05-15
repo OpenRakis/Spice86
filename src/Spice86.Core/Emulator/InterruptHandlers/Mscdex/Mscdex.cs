@@ -4,6 +4,7 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.CdRom;
+using Spice86.Core.Emulator.Devices.CdRom.Subchannel;
 using Spice86.Shared.Emulator.Storage.CdRom;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -133,14 +134,14 @@ public sealed class Mscdex {
     private const ushort StatusError = 0x8000;
 
     // Device status word bits (per DOSBox Staging dos_mscdex.cpp CMscdex::GetDeviceStatus)
-    private const uint DeviceStatusDoorOpen           = 1u << 0;
-    private const uint DeviceStatusDoorLocked         = 1u << 1;
-    private const uint DeviceStatusSupportsRawCooked  = 1u << 2;
-    private const uint DeviceStatusCanReadAudio       = 1u << 4;
-    private const uint DeviceStatusCanControlAudio    = 1u << 8;
+    private const uint DeviceStatusDoorOpen = 1u << 0;
+    private const uint DeviceStatusDoorLocked = 1u << 1;
+    private const uint DeviceStatusSupportsRawCooked = 1u << 2;
+    private const uint DeviceStatusCanReadAudio = 1u << 4;
+    private const uint DeviceStatusCanControlAudio = 1u << 8;
     private const uint DeviceStatusSupportsRedbookHsg = 1u << 9;
-    private const uint DeviceStatusAudioPlaying       = 1u << 10;
-    private const uint DeviceStatusDriveEmpty         = 1u << 11;
+    private const uint DeviceStatusAudioPlaying = 1u << 10;
+    private const uint DeviceStatusDriveEmpty = 1u << 11;
 
     /// <summary>
     /// Red Book pre-gap offset in frames (2 seconds × 75 frames/second).
@@ -149,13 +150,6 @@ public sealed class Mscdex {
     /// matching DOSBox Staging's <c>REDBOOK_FRAME_PADDING = 150</c>.
     /// </summary>
     private const int RedbookPreGapFrames = 150;
-
-    /// <summary>
-    /// Track number used for the lead-out entry in the table of contents (0xAA per Red Book).
-    /// This sentinel is placed at the end of the TOC list returned by
-    /// <see cref="ICdRomDrive.GetTableOfContents"/> and must not be treated as a playable track.
-    /// </summary>
-    private const int LeadOutTrackNumber = 0xAA;
 
     private readonly List<MscdexDriveEntry> _drives = new();
     private readonly State _state;
@@ -812,47 +806,9 @@ public sealed class Mscdex {
 
     private void WriteAudioSubchannel(uint bufferAddress, ICdRomDrive drive) {
         CdAudioPlayback audioStatus = drive.GetAudioStatus();
-        int currentLba = audioStatus.CurrentLba;
-
-        // Determine which track the current position belongs to and compute
-        // relative and absolute MSF — matching DOSBox Staging MSCDEX_IOCTL_Input case 0x0C
-        // which calls GetAudioSub(attr, track, index, relPos, absPos).
-        byte attribute = 0;
-        byte trackNumber = 0;
-        const byte IndexNumber = 1;
-
         IReadOnlyList<TableOfContentsEntry> toc = drive.GetTableOfContents();
-        TableOfContentsEntry? currentTrack = null;
-        for (int i = 0; i < toc.Count; i++) {
-            TableOfContentsEntry candidate = toc[i];
-            if (candidate.TrackNumber == LeadOutTrackNumber) {
-                break;
-            }
-            TableOfContentsEntry? next = (i + 1 < toc.Count) ? toc[i + 1] : null;
-            if (next == null || currentLba < next.Lba) {
-                if (currentLba >= candidate.Lba) {
-                    currentTrack = candidate;
-                    break;
-                }
-            }
-        }
-        if (currentTrack != null) {
-            attribute = currentTrack.Control;
-            trackNumber = (byte)currentTrack.TrackNumber;
-        }
-
-        // Absolute position: LBA → Red Book MSF (includes 150-frame pre-gap)
-        (byte absMi, byte absSec, byte absFr) = LbaToRedBookMsf(currentLba);
-
-        // Relative position: offset from track start (no pre-gap offset)
-        int relLba = currentTrack != null ? currentLba - currentTrack.Lba : 0;
-        if (relLba < 0) {
-            relLba = 0;
-        }
-        (byte relMin, byte relSec, byte relFr) = LbaToMsf(relLba);
-
-        // Encode track number as BCD, matching DOSBox Staging: ((track/10)<<4)|(track%10)
-        byte trackBcd = (byte)(((trackNumber / 10) << 4) | (trackNumber % 10));
+        SubchannelQSynthesizer synthesizer = new();
+        SubchannelQData q = synthesizer.Compute(toc, audioStatus.CurrentLba);
 
         // Write subchannel response matching DOSBox Staging MSCDEX_IOCTL_Input case 0x0C:
         //   writeb(buffer+1, attr)
@@ -861,16 +817,16 @@ public sealed class Mscdex {
         //   writeb(buffer+4, rel.min)   writeb(buffer+5, rel.sec)   writeb(buffer+6, rel.fr)
         //   writeb(buffer+7, 0x00)       ← padding between rel and abs
         //   writeb(buffer+8, abs.min)   writeb(buffer+9, abs.sec)   writeb(buffer+10, abs.fr)
-        _memory.UInt8[bufferAddress + 1] = attribute;
-        _memory.UInt8[bufferAddress + 2] = trackBcd;
-        _memory.UInt8[bufferAddress + 3] = IndexNumber;
-        _memory.UInt8[bufferAddress + 4] = relMin;
-        _memory.UInt8[bufferAddress + 5] = relSec;
-        _memory.UInt8[bufferAddress + 6] = relFr;
+        _memory.UInt8[bufferAddress + 1] = q.Attribute;
+        _memory.UInt8[bufferAddress + 2] = q.TrackNumberBcd;
+        _memory.UInt8[bufferAddress + 3] = q.IndexNumber;
+        _memory.UInt8[bufferAddress + 4] = q.RelativeMinute;
+        _memory.UInt8[bufferAddress + 5] = q.RelativeSecond;
+        _memory.UInt8[bufferAddress + 6] = q.RelativeFrame;
         _memory.UInt8[bufferAddress + 7] = 0;
-        _memory.UInt8[bufferAddress + 8] = absMi;
-        _memory.UInt8[bufferAddress + 9] = absSec;
-        _memory.UInt8[bufferAddress + 10] = absFr;
+        _memory.UInt8[bufferAddress + 8] = q.AbsoluteMinute;
+        _memory.UInt8[bufferAddress + 9] = q.AbsoluteSecond;
+        _memory.UInt8[bufferAddress + 10] = q.AbsoluteFrame;
     }
 
     private void WriteUpcCode(uint bufferAddress, ICdRomDrive drive) {

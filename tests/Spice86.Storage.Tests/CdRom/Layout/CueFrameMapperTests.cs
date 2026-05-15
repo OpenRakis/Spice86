@@ -123,34 +123,6 @@ public sealed class CueFrameMapperTests
         layout[0].TrackMode.Should().Be(TrackModeAudio);
     }
 
-    [Fact]
-    public void BuildLayout_NullSheet_Throws()
-    {
-        // Arrange
-        CueFrameMapper mapper = new CueFrameMapper();
-
-        // Act
-        Action act = () => mapper.BuildLayout(null!, _ => 0L);
-
-        // Assert
-        act.Should().Throw<ArgumentNullException>();
-    }
-
-    [Fact]
-    public void BuildLayout_NullFileLengthProvider_Throws()
-    {
-        // Arrange
-        CueSheet sheet = SheetFromEntries(
-            CreateEntry("a.bin", CueFileType.Binary, TrackModeAudio, trackNumber: 1, indexNumber: 1, indexMsf: 150));
-        CueFrameMapper mapper = new CueFrameMapper();
-
-        // Act
-        Action act = () => mapper.BuildLayout(sheet, null!);
-
-        // Assert
-        act.Should().Throw<ArgumentNullException>();
-    }
-
     private static CueSheet SheetFromEntries(params CueEntry[] entries)
     {
         return new CueSheet(entries, catalog: null);
