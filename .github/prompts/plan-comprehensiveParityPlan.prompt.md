@@ -4,13 +4,13 @@
 
 **Status:** In progress.
 
-**Implementation status:**
-- Phase 0: Completed (logger decoupling to Serilog in FAT storage + dedicated storage tests).
+**Implementation status:**\n- Phase 0: Completed (logger decoupling to Serilog in FAT storage + dedicated storage tests).
 - Phase 1a: Completed (mutable BPB, boot sector codec, validator, tests).
 - Phase 1b: Completed (FAT cluster codec/table/validator, tests).
 - Phase 1c: Completed (directory entries and allocation strategy).
 - Phase 1d: Completed (MBR codec/model, partition validator, partition-aware FAT dispatcher).
-- Phase 1e: Next (mutable filesystem integration and commit writer).
+- Phase 1e: In progress - TDD red tests created; stub implementations in place. Green phase implementation pending.
+- Phase 7 (BOOT.COM): Final step, integrated with batch engine.
 
 ---
 
@@ -55,6 +55,7 @@ Phase 4a (Codec IF)  →  Phase 4b (CUE FILE type)  →  Phase 4c (INDEX 00)  �
 
 Phase 5 (MDS/MDF, v0.3+)
 Phase 6 (Write-back, v0.3+)
+Phase 7 (BOOT.COM HDD Integration, v0.3+) ← batch engine + full HDD image support
 ```
 
 Each phase is independently shippable as prerelease NuGet. Phases 0–4 form v0.2 release.
@@ -655,7 +656,57 @@ Spice86.Storage.Tests:
 
 ---
 
-## 14. No-Maintenance Strategy
+## 14. Phase 7: BOOT.COM HDD Image Support Integration (v0.3+)
+
+**Goal:** Integrate full HDD image support with batch engine (`BOOT.COM` integration). Enable booting DOS from HDD images with mutable FAT write-back and batch command support.
+
+### 14.1 Design (summary)
+
+- **Batch Engine Integration:**
+  - Extend batch processor to handle full DOS HDD boot sequences.
+  - Support `BOOT.COM` with HDD parameters (drive letters, partition selection, boot flags).
+  - Implement disk image mounting, partition enumeration, and bootable partition selection via batch commands.
+
+- **HDD Image Lifecycle:**
+  - Open raw HDD images (MBR-partitioned).
+  - Enumerate partitions, select bootable via boot indicator or first non-empty.
+  - Load FAT filesystem from partition offset.
+  - Enable read+write ops on HDD via `MutableFatFileSystem`.
+  - On exit/pause, serialize all pending writes back to image file.
+
+- **Batch Command Extensions:**
+  - `BOOT.COM` recognizes HDD image paths; resolves to partition table.
+  - `MOUNT` and `IMGMOUNT` work with HDD images as well as floppies/CDs.
+  - Partition selection logic: boot indicator preferred, fallback to first non-empty.
+  - Full DOS path resolution (C:, D:, etc. via mounted images).
+
+### 14.2 TDD Spec
+
+1. `BootCom_WithHddImage_EnumeratesPartitions`.
+2. `BootCom_BootIndicator_SelectsBootablePartition`.
+3. `BootCom_FirstNonEmpty_FallbackIfNoBootable`.
+4. `BatchEngine_MountHdd_PersistsFilesOnExit`.
+5. `HddImage_WriteFile_RoundTrips`.
+6. `HddImage_DeleteFile_FreesSpace`.
+7. `HddImage_MultiplePartitions_AccessCorrectFilesystem`.
+
+### 14.3 Commits
+
+1. Extend batch engine for `BOOT.COM` HDD support.
+2. Integrate `FatDiskImage` into batch mounting.
+3. Add HDD lifecycle tests.
+4. Add Phase 7 integration tests (~10 tests).
+
+### 14.4 Deliverable
+
+- Full HDD image support end-to-end.
+- `BOOT.COM` works with partitioned hard disk images.
+- Batch engine seamlessly handles HDD persistence.
+- Exact DOSBox parity for HDD boot scenarios.
+
+---
+
+## 15. No-Maintenance Strategy
 
 ### 14.1 Mechanisms
 
@@ -670,7 +721,7 @@ Spice86.Storage.Tests:
 9. **Archived branch for each phase:** Phase end → branch tag + archive. Rollback trivial.
 10. **Companion reference document:** README documents equivalence matrix (FAT12 clusters, CUE INDEX 00, Joliet UCS-2, MBR selection) with C++ ↔ C# side-by-side snippets.
 
-### 14.2 Quality Gates (Phase Complete)
+### 15.2 Quality Gates (Phase Complete)
 
 - [ ] 100% unit test coverage (condition coverage; all branches).
 - [ ] Real image round-trip: image → parse → mutate → serialize → re-parse = identical bytes.
@@ -697,7 +748,8 @@ Spice86.Storage.Tests:
 | Phase 4 | 5 units | WAV parser + codec dispatch + Q-data. |
 | Phase 5 | 2 units | Niche format; lower priority. |
 | Phase 6 | 3 units | Integration with Spice86.Core. |
-| **Total** | **32 units** | ~6–8 weeks; 1.5–2 weeks / phase. |
+| Phase 7 | 2 units | BOOT.COM HDD integration with batch engine. |
+| **Total** | **34 units** | ~6–9 weeks; 1.5–2 weeks / phase. |
 
 ---
 
