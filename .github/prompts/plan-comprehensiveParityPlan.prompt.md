@@ -18,7 +18,7 @@
 
 ### Progress Tracking
 
-- **Overall progress (effort-weighted, including Phase 2): 100%**.
+- **Overall progress (effort-weighted, all in-scope phases): 91%** (Phases 0, 1a-e, 2, 3, 4, 6, 7 done; Phase 5 MDS/MDF not started; Phase 8 IMGMAKE + overlay not started).
 - **Per-phase progression:**
   - Phase 0: **100%**
   - Phase 1a: **100%**
@@ -27,10 +27,46 @@
   - Phase 1d: **100%**
   - Phase 1e: **100%**
   - Phase 2: **100%** (Atom A: VFAT LFN codec + paired directory reader; Atom B: write integration via `MutableFatDirectoryEntry.LongName` + `Dos83AliasGenerator` + `DirectoryWriter.WriteEntryWithLongName`; 25 tests total)
-  - Phase 3: **100%** (3a + 3b landed; 3c Rock Ridge SUSP foundation landed: SUSP scanner + NM/PX metadata; SL/CE/CL deferred)
+  - Phase 3: **100%** (3a + 3b landed; 3c Rock Ridge SUSP foundation landed: SUSP scanner + NM/PX metadata; SL/CE/CL deferred. Note: dosbox-staging has NO Rock Ridge, so 3c is beyond-parity scope.)
   - Phase 4: **100%** (4a + 4b landed: WAV codec + CUE FILE-type dispatch; atom 2 landed: LibVLCSharp codec layer for MP3/FLAC/OGG/OPUS/AIFF; atom 3 landed: 4c INDEX 00 in-file pregap via `CueTrackLayout` + `CueFrameMapper`; atom 4 landed: 4d Subchannel-Q synthesizer extraction with MSCDEX IOCTL 0x0C wiring)
+  - Phase 5: **0%** (MDS/MDF: NOT STARTED. dosbox-staging `LoadMdsFile` parity gap — see section 12.)
   - Phase 6: **100%**
   - Phase 7: **100%**
+  - Phase 8: **0%** (IMGMAKE + overlay drive: NOT STARTED. dosbox-staging `makeimg.cpp` and `drive_overlay.cpp` parity gaps — see section 14.5.)
+
+### Parity Audit vs dosbox-staging (May 2026)
+
+Cross-checked against `dosbox-staging/src/dos/` to confirm scope completeness.
+
+**In-scope and complete (full parity or beyond):**
+
+| Capability | dosbox-staging source | Spice86 status |
+| --- | --- | --- |
+| FAT12/16/32 read+write, MBR partitions | `drive_fat.cpp` | Done (Phases 1a-e). |
+| VFAT LFN read+write | `drive_fat.cpp` (partial LFN read) | Done (Phase 2). **Exceeds parity** — dosbox-staging reads LFN but does not write VFAT chains; we read+write. |
+| ISO 9660 + Joliet | `drive_iso.cpp` | Done (Phases 3a-b). |
+| Rock Ridge SUSP (NM/PX) | NOT in dosbox-staging | Done (Phase 3c partial). **Beyond parity** — bonus capability. |
+| CUE/BIN + WAV + LibVLC audio + INDEX 00 + Subchannel-Q | `cdrom_image.cpp` (BINARY + raw audio only, no compressed codec dispatch) | Done (Phases 4a-d). **Exceeds parity** — dosbox-staging does not transcode MP3/FLAC/OGG/OPUS/AIFF; we do via LibVLCSharp. |
+| FAT write-back on pause/unmount/shutdown | `drive_fat.cpp` flush logic | Done (Phase 6). |
+| BOOT.COM HDD + IMGMOUNT `-t hdd` | `boot.cpp` + `mount.cpp` | Done (Phase 7). |
+
+**In-scope and incomplete (real parity gaps):**
+
+| Capability | dosbox-staging source | Spice86 status | Plan section |
+| --- | --- | --- | --- |
+| MDS/MDF (Alcohol 120%) image format | `cdrom_image.cpp` `LoadMdsFile` + `cdrom_mds.h` | NOT started | Section 12 (Phase 5). |
+| IMGMAKE (create blank disk image) | `dos/programs/makeimg.cpp` | NOT started | Section 14.5 (Phase 8). |
+| Overlay drive (read-write overlay on read-only base) | `dos/drive_overlay.cpp` | NOT started | Section 14.5 (Phase 8). |
+
+**Out of scope (dosbox-staging does not have these either, so no parity gap):**
+
+- NRG (Nero), CCD/IMG (CloneCD), CDI (DiscJuggler) image formats — confirmed absent from dosbox-staging.
+- El Torito bootable-CD catalog — confirmed absent.
+- Rock Ridge SL/CE/CL/PL/RE/TF — confirmed absent.
+- exFAT — confirmed absent.
+- MSCDEX IOCTL completeness beyond the subset already implemented in Phase 4d.
+
+**Net conclusion:** The PR scope is **complete** for 7 of the 8 in-scope phases and **exceeds dosbox-staging** in three areas (VFAT LFN write, Rock Ridge SUSP, compressed-audio codec dispatch). Two real parity gaps remain: Phase 5 (MDS/MDF) and Phase 8 (IMGMAKE + overlay drive). Both are listed in this plan and tracked below; neither is required for v0.2 release per section 1.3.
 
 ---
 
@@ -81,6 +117,7 @@ Phase 4a (Codec IF)  →  Phase 4b (CUE FILE type)  →  Phase 4c (INDEX 00)  �
 Phase 5 (MDS/MDF, v0.3+)
 Phase 6 (Write-back, v0.3+)
 Phase 7 (BOOT.COM HDD Integration, v0.3+) ← batch engine + full HDD image support
+Phase 8 (IMGMAKE + Overlay drive, v0.3+) ← remaining dosbox-staging parity gaps
 ```
 
 Each phase is independently shippable as prerelease NuGet. Phases 0–4 form v0.2 release.
@@ -138,6 +175,17 @@ Spice86.Storage.Tests:
 - Test harness ready for 100+ unit tests.
 - Logger/codec/device injection documented.
 
+### 3.5 Tracker & Mini Report
+
+| Item | Value |
+| --- | --- |
+| Status | Completed |
+| Progress | 100% |
+| Atoms shipped | Logger decoupling to Serilog in FAT/CD storage; `Spice86.Storage.Tests` project bootstrapped; fluent image builders. |
+| dosbox-staging parity | n/a (Spice86-internal architectural prerequisite; no upstream analogue). |
+| Tests added | Storage test scaffold (baseline; full counts roll up under Phase 1a-e). |
+| Remaining work | None. |
+
 ---
 
 ## 4. Phase 1a: Boot Sector & BPB Mutation
@@ -174,6 +222,17 @@ Spice86.Storage.Tests:
 1. Add `MutableBiosParameterBlock` + `FatBootSectorCodec`.
 2. Add `FatBootSectorValidator`.
 3. Add Phase 1a tests.
+
+### 4.4 Tracker & Mini Report
+
+| Item | Value |
+| --- | --- |
+| Status | Completed |
+| Progress | 100% |
+| Atoms shipped | `MutableBiosParameterBlock`, `FatBootSectorCodec`, `FatBootSectorValidator`. |
+| dosbox-staging parity | Full parity with `drive_fat.cpp` BPB read/write for FAT12/16/32. |
+| Tests added | 6 tests in `tests/Spice86.Storage.Tests/FileSystem/BootSector/`. |
+| Remaining work | None. |
 
 ---
 
@@ -219,6 +278,17 @@ Spice86.Storage.Tests:
 2. Add `FatTable` + operations.
 3. Add `FatClusterValidator`.
 4. Add Phase 1b tests (~30 tests).
+
+### 5.4 Tracker & Mini Report
+
+| Item | Value |
+| --- | --- |
+| Status | Completed |
+| Progress | 100% |
+| Atoms shipped | `FatClusterCodec` (FAT12 12-bit packing across byte boundary), `FatTable` (Allocate/Free/Link/Follow/MarkAsEof), `FatClusterValidator`. |
+| dosbox-staging parity | Full parity with `drive_fat.cpp` cluster chain logic; FAT12/16/32 EOF markers match. |
+| Tests added | ~30 tests under `tests/Spice86.Storage.Tests/FileSystem/Fat/`. |
+| Remaining work | None. |
 
 ---
 
@@ -268,6 +338,17 @@ Spice86.Storage.Tests:
 3. Add `FileAllocationStrategy` + implementations.
 4. Add `DirectoryWriter`.
 5. Add Phase 1c tests (~25 tests).
+
+### 6.4 Tracker & Mini Report
+
+| Item | Value |
+| --- | --- |
+| Status | Completed |
+| Progress | 100% |
+| Atoms shipped | `MutableFatDirectoryEntry`, `FatDirectoryEntryCodec`, `DosNameConverter`, `FileAllocationStrategy` (Contiguous + FirstFit), `DirectoryWriter`. |
+| dosbox-staging parity | Full parity with `drive_fat.cpp` directory entry handling for 8.3 names. |
+| Tests added | ~25 tests under `tests/Spice86.Storage.Tests/FileSystem/Directory/`. |
+| Remaining work | None (LFN write integration tracked separately in Phase 2). |
 
 ---
 
@@ -326,6 +407,17 @@ Spice86.Storage.Tests:
 3. Add `FatFileSystemWithPartition` + `FatDiskImage`.
 4. Add Phase 1d tests (~20 tests).
 
+### 7.4 Tracker & Mini Report
+
+| Item | Value |
+| --- | --- |
+| Status | Completed |
+| Progress | 100% |
+| Atoms shipped | `PartitionTableEntry`, `MasterBootRecord`, `MbrCodec`, `PartitionTableValidator`, partition-aware FAT dispatcher. |
+| dosbox-staging parity | Full parity with `boot.cpp` partition selection (bootable indicator -> first non-empty fallback). |
+| Tests added | ~20 tests under `tests/Spice86.Storage.Tests/FileSystem/Mbr/`. |
+| Remaining work | None. |
+
 ---
 
 ## 8. Phase 1e: `MutableFatFileSystem` Integration
@@ -371,6 +463,17 @@ Spice86.Storage.Tests:
 - Cluster allocation automatic and correct.
 - MBR-aware for hard-disk images.
 - Byte-exact round-trip tests.
+
+### 8.5 Tracker & Mini Report
+
+| Item | Value |
+| --- | --- |
+| Status | Completed |
+| Progress | 100% |
+| Atoms shipped | `MutableFatFileSystem` (CreateFile/DeleteFile/CommitChanges via real `FatTable.AllocateCluster`/`LinkClusters`/`MarkAsEof`); `FatFileSystemWriter` delegates to `CommitChanges`; `MutableFatDirectoryEntry.Serialize` real on-disk path. |
+| dosbox-staging parity | Full read+write parity end-to-end with `drive_fat.cpp` for FAT12/16/32. |
+| Tests added | 10 builder-driven integration tests via `Fat12ImageBuilder`. |
+| Remaining work | None. |
 
 ---
 
@@ -433,6 +536,17 @@ Spice86.Storage.Tests:
 - DOS alias auto-generation working.
 - Checksum validation correct.
 - Backward compatible with 8.3-only systems.
+
+### 9.5 Tracker & Mini Report
+
+| Item | Value |
+| --- | --- |
+| Status | Completed |
+| Progress | 100% |
+| Atoms shipped | **Atom A (read, commit 2c6cddbe8):** `VfatLfnEntry`, `LongFileNameCodec` (checksum, encode/decode, slot read/write), `VfatDirectoryRecord`, `VfatDirectoryReader` (chain pairing, deleted/volume-label handling). **Atom B (write, commit dd5ef06bd):** `MutableFatDirectoryEntry.LongName`, `Dos83AliasGenerator` (`~N` collision handling up to 99 with base-shrink), `DirectoryWriter.WriteEntryWithLongName` (contiguous slot run + checksum + LFN-then-short emission). |
+| dosbox-staging parity | **Exceeds parity** — dosbox-staging reads LFN but does not write VFAT chains; we read and write. |
+| Tests added | 25 tests total (14 codec/reader + 11 alias/writer) under `tests/Spice86.Storage.Tests/FileSystem/Directory/LongFileName/`. |
+| Remaining work | None. |
 
 ---
 
@@ -518,6 +632,17 @@ Spice86.Storage.Tests:
 - Long filenames (ISO + Joliet) read correctly.
 - Rock Ridge metadata extracted (optional v0.3).
 - Fallback to primary VD if no Joliet.
+
+### 10.7 Tracker & Mini Report
+
+| Item | Value |
+| --- | --- |
+| Status | Completed (in-scope subset). |
+| Progress | 100% |
+| Atoms shipped | **Atom 1 (3a+3b):** `IsoSupplementaryVolumeDescriptor`, multi-VD scanner with terminator stop, `IsoDirectoryRecord.ParseJoliet` (UCS-2 BE), `IsoImage.ReadJolietRootDirectory`, fluent `Iso9660ImageBuilder`. **Atom 2 (3c foundation):** `SuspEntry`, `SuspParser` (`ST` terminator + malformed-length safety), `RockRidgeMetadata`, `RockRidgeParser` (`NM` multi-entry CONTINUE/CURRENT/PARENT flags; `PX` 32-byte BB-encoded mode/links/uid/gid). |
+| dosbox-staging parity | **Full parity** for Joliet (3a+3b). **Beyond parity** for SUSP NM/PX — `drive_iso.cpp` has no Rock Ridge code at all. |
+| Tests added | 18 tests (6 `IsoJolietTests` + 12 `RockRidgeParserTests`). |
+| Remaining work | Deferred (beyond dosbox-staging parity, no v0.2 blocker): SUSP `SL` symlinks, `CE` continuation areas, `CL`/`PL`/`RE` deep-tree relocation, `TF` POSIX times. Pick up only if a downstream consumer requests it. |
 
 ---
 
@@ -638,6 +763,17 @@ Spice86.Storage.Tests:
 - Subchannel-Q synthesized for MSCDEX calls.
 - Extensible codec architecture (future MP3/FLAC/OGG as separate packages).
 
+### 11.8 Tracker & Mini Report
+
+| Item | Value |
+| --- | --- |
+| Status | Completed |
+| Progress | 100% (atoms 4a + 4b + 4c + 4d). |
+| Atoms shipped | **Atom 1 (4a+4b):** `CueFileType` enum, `WavAudioFile` CDDA-validating parser, `WindowedDataSource`, codec-dispatching `CueBinImage`. **Atom 2 (codec layer):** `IAudioCodec`, `IAudioCodecFactory`, `CompositeAudioCodecFactory`, `WavAudioCodec`+factory, `LibVlcAudioCodec`+factory (MP3/FLAC/OGG/OPUS/AIFF transcoded to s16l 44100/2ch via LibVLCSharp), `DefaultAudioCodecFactory`. **Atom 3 (4c):** `CueTrackLayout` + `CueFrameMapper.BuildLayout` with INDEX 00 skip-reduction parity vs. dosbox-staging `AddTrack`. **Atom 4 (4d):** `SubchannelQData`, `SubchannelQSynthesizer`, MSCDEX IOCTL 0x0C wiring in `Mscdex.WriteAudioSubchannel`. |
+| dosbox-staging parity | **Exceeds parity** — dosbox-staging supports BINARY + raw audio in CUE only, no compressed-codec dispatch. We additionally decode MP3/FLAC/OGG/OPUS/AIFF via LibVLCSharp. INDEX 00 + Subchannel-Q at full parity. |
+| Tests added | 29 tests (14 codec dispatch + 7 frame mapper + 8 subchannel-Q). |
+| Remaining work | None. Cross-platform note: Windows bundles `VideoLAN.LibVLC.Windows`; Linux/macOS hosts need system `libvlc` installed. |
+
 ---
 
 ## 12. Phase 5: MDS/MDF Format Support (v0.3+)
@@ -660,6 +796,17 @@ Spice86.Storage.Tests:
 
 - MDS/MDF images fully supported.
 - Track type auto-detection (MODE1, MODE2, etc.).
+
+### 12.4 Tracker & Mini Report
+
+| Item | Value |
+| --- | --- |
+| Status | **NOT STARTED** |
+| Progress | 0% |
+| Atoms shipped | None. |
+| dosbox-staging parity | **Real parity gap.** `cdrom_image.cpp::LoadMdsFile` + `cdrom_mds.h` implement Alcohol 120% MDS/MDF reading; Spice86 has no equivalent. The CD loader dispatch only handles CUE/BIN + ISO today. |
+| Tests added | None. |
+| Remaining work | (a) 88-byte `MdsHeader` parser (signature `MEDIA DESCRIPTOR`, BCD media type, session/track counts). (b) 80-byte `MdsTrackBlock` (track mode, subchannel mode, sector size, pregap/postgap frames, MDF byte offset). (c) `MdsImage : ICdRomImage` mapping LBA -> MDF byte offset. (d) Wire load dispatch so `IMGMOUNT -t cdrom path.mds` works. (e) ~10 RED->GREEN tests with a synthetic `MdsImageBuilder`. Deferrable for v0.2 release. |
 
 ---
 
@@ -690,6 +837,17 @@ Spice86.Storage.Tests:
 - Completed milestone 6: pause-time persistence parity (dirty floppy images are flushed when pause is requested, not only on shutdown/dispose).
 - Completed milestone 7: INT 26h writes and INT 25h reads support mounted image-backed drives beyond A/B (including C:), while preserving existing success semantics for non-image HDD folder drives.
 - Completed milestone 8: BIOS INT 13h read/write supports mounted image-backed HDD drives (`DL=0x80` mapped to image-backed `C:`); end-to-end HDD lifecycle write-back integration test (`HddImageMount_FullLifecycle_PausesAndShutdownPersistAllWritesToDisk`) verifies pause-flush and shutdown-flush both persist guest writes to the host image file.
+
+### 13.4 Tracker & Mini Report
+
+| Item | Value |
+| --- | --- |
+| Status | Completed |
+| Progress | 100% (9/9 atoms). |
+| Atoms shipped | (1) `FileBackedFatImage` auto-flush + dispose. (2) `DosDriveManager.FlushDirtyFloppyImages` coordinator. (3) `FloppyDiskDrive : IDisposable` dispose-time write-back. (4) Shutdown wiring in `DisposeMachineAfterRun`. (5) Multi-image shutdown parity (non-current dirty images persisted). (6) Pause-time write-back via `pauseHandler.Pausing`. (7) INT 26h writes + INT 25h reads for mounted image-backed C:. (8) BIOS INT 13h CHS read/write for `DL=0x80` mapped to image-backed C:. (9) Full HDD-image lifecycle integration test. |
+| dosbox-staging parity | Full parity with `drive_fat.cpp` flush lifecycle (mount/unmount/pause/shutdown). |
+| Tests added | RED->GREEN coverage per atom (`FileBackedFatImageTests`, `DosDriveManagerFlushTests`, `FloppyDiskDriveDisposeTests`, `ShutdownWriteBackTests`, multi-image shutdown coverage, `RequestPause_WithDirtyMountedFloppy_PersistsImageBytesToDisk`, `HddImageMount_FullLifecycle_PausesAndShutdownPersistAllWritesToDisk`). |
+| Remaining work | None. |
 
 ---
 
@@ -747,6 +905,56 @@ Spice86.Storage.Tests:
 - Batch engine seamlessly handles HDD persistence.
 - Exact DOSBox parity for HDD boot scenarios.
 
+### 14.4.1 Tracker & Mini Report
+
+| Item | Value |
+| --- | --- |
+| Status | Completed |
+| Progress | 100% (2/2 atoms). |
+| Atoms shipped | **Atom 1:** `HardDiskBootService` (MBR parse + partition selection + sector load at 0000:7C00 + DL=0x80 BIOS bootstrap state); `BootHddLaunchRequest`; `DosProgramLoader.ExecuteHddBoot`. **Atom 2:** `DosDriveManager.MountHardDiskImage` (0xAA55 validation + bootable / first-non-empty partition selection); partition-offset-aware `FloppyDiskDrive.MountImage` overload; `HandleImgMount` now supports `-t hdd` and `.hdd` auto-detect. |
+| dosbox-staging parity | Full parity with `boot.cpp` + `mount.cpp` IMGMOUNT/BOOT HDD path (boot indicator priority, first-non-empty fallback, partition-sliced FAT view). |
+| Tests added | 13 tests (7 `BootHardDiskTests` + 6 `HddImgMountTests`). |
+| Remaining work | None. |
+
+---
+
+## 14.5 Phase 8: IMGMAKE & Overlay Drive (v0.3+)
+
+**Goal:** Close the remaining dosbox-staging parity gaps outside the storage codec layer: blank-image creation (`IMGMAKE`) and read-write overlays on read-only mounts (`drive_overlay.cpp`).
+
+### 14.5.1 Design (summary)
+
+- **`ImgMakeService`** sealed class (in `Spice86.Storage.Fat`).
+  - `CreateBlankFloppy(path, FloppyKind kind) -> void` — emits zero-initialized image + freshly formatted FAT12 BPB matching one of the canonical floppy geometries (160k/180k/320k/360k/720k/1.2M/1.44M/2.88M).
+  - `CreateBlankHardDisk(path, HddGeometry geom, FatType type) -> void` — emits MBR with single bootable partition + formatted FAT12/16/32.
+  - Reuses `FatBootSectorCodec`, `FatTable`, `MbrCodec` (no parallel format engine).
+- **`OverlayDrive`** sealed class (in `Spice86.Core` DOS layer).
+  - Wraps an `IDosDrive` base + per-file shadow folder on host.
+  - Read order: shadow first, fall through to base. Write/Delete go to shadow (with whiteouts for base deletions).
+  - Tracks rename/move via shadow metadata file.
+- **Batch wiring:** new `IMGMAKE` command in `Spice86.Core` batch engine; `MOUNT letter base -t overlay shadow` registers an `OverlayDrive`.
+
+### 14.5.2 TDD Spec
+
+1. `ImgMakeService_CreateBlank144Floppy_ProducesValidFat12`.
+2. `ImgMakeService_CreateBlankHdd_ProducesValidMbrAndPartition`.
+3. `OverlayDrive_ReadFile_PrefersShadowOverBase`.
+4. `OverlayDrive_WriteFile_GoesToShadow_BaseUnchanged`.
+5. `OverlayDrive_DeleteFile_CreatesWhiteout_HidesFromBase`.
+6. `BatchEngine_IMGMAKE_FloppyImage_PersistsOnDisk`.
+7. `BatchEngine_MountOverlay_RoundTripsWriteReadDelete`.
+
+### 14.5.3 Tracker & Mini Report
+
+| Item | Value |
+| --- | --- |
+| Status | **NOT STARTED** |
+| Progress | 0% |
+| Atoms shipped | None. |
+| dosbox-staging parity | **Real parity gap.** `dos/programs/makeimg.cpp` (IMGMAKE) and `dos/drive_overlay.cpp` (overlay drive) are present in dosbox-staging and have no Spice86 equivalent. Deferrable for v0.2; required only for full v1.0 parity. |
+| Tests added | None. |
+| Remaining work | Both atoms (IMGMAKE + OverlayDrive) per design above; ~15 RED->GREEN tests across `Spice86.Storage.Tests` + `Spice86.Tests`. |
+
 ---
 
 ## 15. No-Maintenance Strategy
@@ -792,7 +1000,8 @@ Spice86.Storage.Tests:
 | Phase 5 | 2 units | Niche format; lower priority. |
 | Phase 6 | 3 units | Integration with Spice86.Core. |
 | Phase 7 | 2 units | BOOT.COM HDD integration with batch engine. |
-| **Total** | **34 units** | ~6–9 weeks; 1.5–2 weeks / phase. |
+| Phase 8 | 2 units | IMGMAKE + overlay drive (remaining dosbox-staging parity gap). |
+| **Total** | **36 units** | ~6–9 weeks; 1.5–2 weeks / phase. |
 
 ---
 
