@@ -47,6 +47,9 @@ public class FloppyDiskDrive : DosDriveBase, System.IDisposable {
     /// <summary>Gets a value indicating whether the current image has been modified since the last flush.</summary>
     public bool IsDirty => _images.Count > 0 && _images[_currentIndex].IsDirty;
 
+    /// <summary>Gets a value indicating whether any registered image has pending dirty bytes.</summary>
+    public bool HasDirtyImages => _images.Any(static image => image.IsDirty);
+
     /// <summary>Marks the current image as modified so that <see cref="FlushToDisk"/> will persist it.</summary>
     public void MarkDirty() {
         if (_images.Count == 0) {
@@ -143,6 +146,15 @@ public class FloppyDiskDrive : DosDriveBase, System.IDisposable {
     /// Mirrors dosbox-staging's drive_fat destructor behaviour.
     /// </summary>
     public void Dispose() {
+        FlushDirtyImagesToDisk();
+    }
+
+    /// <summary>
+    /// Flushes all dirty registered images back to their host image paths.
+    /// </summary>
+    /// <returns>The number of images that were actually written to disk.</returns>
+    public int FlushDirtyImagesToDisk() {
+        int flushedImageCount = 0;
         for (int i = 0; i < _images.Count; i++) {
             (byte[] data, string path, bool isDirty) = _images[i];
             if (!isDirty) {
@@ -153,6 +165,9 @@ public class FloppyDiskDrive : DosDriveBase, System.IDisposable {
             }
             File.WriteAllBytes(path, data);
             _images[i] = (data, path, false);
+            flushedImageCount++;
         }
+
+        return flushedImageCount;
     }
 }

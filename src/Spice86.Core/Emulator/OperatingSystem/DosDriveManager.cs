@@ -1062,11 +1062,13 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
             if (_driveMap[i] is not FloppyDiskDrive floppy) {
                 continue;
             }
-            if (!floppy.IsDirty) {
+            if (!floppy.HasDirtyImages) {
                 continue;
             }
-            floppy.FlushToDisk();
-            flushedCount++;
+            int flushedImageCount = floppy.FlushDirtyImagesToDisk();
+            if (flushedImageCount > 0) {
+                flushedCount++;
+            }
         }
         return flushedCount;
     }
