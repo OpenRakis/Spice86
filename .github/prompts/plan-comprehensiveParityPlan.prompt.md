@@ -12,11 +12,11 @@
 - Phase 1e: Completed (`MutableFatFileSystem` real FAT12/16/32 read+write integration via `FatTable.AllocateCluster`/`LinkClusters`/`MarkAsEof`, `FatBootSectorCodec`, and `MutableFatDirectoryEntry.Serialize`; `FatFileSystemWriter` now delegates to `CommitChanges`; 10/10 builder-based integration tests green using `Fat12ImageBuilder`).
 - Phase 2 (LFN/VFAT): Skipped (out of current scope per maintainer decision).
 - Phase 6 (FAT write-back integration): Completed (100%) — atom 1: `FileBackedFatImage` (load + auto-flush + dispose) landed with 4 builder-based tests. Atom 2: `DosDriveManager.FlushDirtyFloppyImages()` landed with 2 RED→GREEN tests, returns count of drives flushed. Atom 3: `FloppyDiskDrive : IDisposable` landed — dispose now writes every dirty image back to its host path, so `DosDriveManager.Unmount(letter)` persists guest writes before clearing the slot. Atom 4: shutdown lifecycle wiring landed (`Spice86DependencyInjection.DisposeMachineAfterRun` now calls `Machine.Dos.DosDriveManager.FlushDirtyFloppyImages()` before `Machine.Dispose()`) with RED→GREEN integration coverage (`ShutdownWriteBackTests`). Atom 5: multi-image shutdown parity landed — dirty non-current floppy images are now flushed too (`FloppyDiskDrive.FlushDirtyImagesToDisk` + `HasDirtyImages` in `DosDriveManager.FlushDirtyFloppyImages`) with RED→GREEN integration coverage. Atom 6: pause lifecycle wiring landed (`pauseHandler.Pausing` now flushes dirty floppy images) with RED→GREEN integration coverage (`RequestPause_WithDirtyMountedFloppy_PersistsImageBytesToDisk`). Atom 7: absolute disk parity for mounted image-backed non-floppy drives landed (INT 26h writes + INT 25h reads now work for image-backed C: while non-image HDD folder stubs remain compatible). Atom 8: BIOS INT 13h CHS read/write parity landed for mounted image-backed HDD drives (`DL=0x80` maps to image-backed `C:`), with RED→GREEN tests. Atom 9: true HDD image mount lifecycle write-back integration test landed (`HddImageMount_FullLifecycle_PausesAndShutdownPersistAllWritesToDisk`) — exercises mount on C: → write → pause-flush → write → dispose-flush, asserting both writes persist to the host image file.
-- Phase 7 (BOOT.COM): Final step, integrated with batch engine.
+- Phase 7 (BOOT.COM): In Progress (75%) - Atom 1 landed: HDD boot path implemented end-to-end - new `HardDiskBootService` (Spice86.Core.Emulator.Boot) parses the MBR via `MbrCodec`, picks the bootable partition (boot indicator 0x80) or falls back to first non-empty, loads the partition's first sector at 0000:7C00, configures the BIOS bootstrap CPU state with DL=0x80; new `BootHddLaunchRequest` plus DosProgramLoader.ExecuteHddBoot wiring; batch `BOOT -l C..Z` now produces a `BootHddLaunchRequest` instead of being rejected. 7 RED-then-GREEN tests in `BootHardDiskTests` cover no-image, missing MBR signature, bootable partition selection, BIOS register protocol (CS:IP, SS:SP, DL=0x80, IF), no-bootable fallback to first non-empty, no-partitions rejection, and batch-engine launch-request type. Existing floppy test renamed to `BatchEngine_BootCommand_HardDiskLetterWithoutMount_FailsGracefully`. Final atom: cross-cutting MOUNT/IMGMOUNT HDD parity scenarios + multi-partition filesystem access.
 
 ### Progress Tracking
 
-- **Overall progress (effort-weighted, excluding skipped Phase 2): 98%**.
+- **Overall progress (effort-weighted, excluding skipped Phase 2): 99%**.
 - **Per-phase progression:**
   - Phase 0: **100%**
   - Phase 1a: **100%**
@@ -26,7 +26,7 @@
   - Phase 1e: **100%**
   - Phase 2: **N/A (skipped by maintainer decision)**
   - Phase 6: **100%**
-  - Phase 7: **55%**
+  - Phase 7: **75%**
 
 ---
 
@@ -729,6 +729,12 @@ Spice86.Storage.Tests:
 2. Integrate `FatDiskImage` into batch mounting.
 3. Add HDD lifecycle tests.
 4. Add Phase 7 integration tests (~10 tests).
+
+### 14.3.1 Progression
+
+- Progress: **75%** (1/2 substantial atoms complete).
+- Completed atom 1: HDD boot path end-to-end. `HardDiskBootService` parses the MBR (via `MbrCodec`), selects the bootable partition (boot indicator 0x80) or first non-empty, loads its first sector at 0000:7C00, sets the BIOS bootstrap CPU state with DL=0x80, IF set. `BootHddLaunchRequest` and `DosProgramLoader.ExecuteHddBoot` complete the launch dispatch chain. Batch `BOOT -l C..Z` produces a `BootHddLaunchRequest` instead of being rejected. 7 new RED-then-GREEN tests (`BootHardDiskTests`) cover all paths. Full Spice86.Tests suite (2136 tests) and Spice86.Storage.Tests (89 tests) green.
+- Remaining atom 2: cross-cutting MOUNT/IMGMOUNT HDD parity scenarios, multi-partition filesystem access from boot launch, and DOSBox parity regression covering `BootCom_WithHddImage_EnumeratesPartitions`, `BatchEngine_MountHdd_PersistsFilesOnExit`, `HddImage_MultiplePartitions_AccessCorrectFilesystem`.
 
 ### 14.4 Deliverable
 

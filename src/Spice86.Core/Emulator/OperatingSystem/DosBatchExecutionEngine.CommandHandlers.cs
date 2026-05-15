@@ -1384,8 +1384,8 @@ internal sealed partial class DosBatchExecutionEngine {
             imagePaths.Add(resolved);
         }
 
-        if (driveLetter != 'A' && driveLetter != 'B') {
-            WriteToStandardOutput($"BOOT: only floppy drives A: and B: are supported (got '{driveLetter}')\r\n");
+        if (driveLetter < 'A' || driveLetter > 'Z') {
+            WriteToStandardOutput($"BOOT: invalid drive letter '{driveLetter}'\r\n");
             return false;
         }
 
@@ -1406,7 +1406,7 @@ internal sealed partial class DosBatchExecutionEngine {
 
         if (!_driveManager.TryGetFloppyDrive(driveLetter, out FloppyDiskDrive? floppy) ||
             floppy.GetCurrentImageData() is not byte[] imageData) {
-            WriteToStandardOutput($"BOOT: no floppy image mounted on {driveLetter}:\r\n");
+            WriteToStandardOutput($"BOOT: no disk image mounted on {driveLetter}:\r\n");
             return false;
         }
 
@@ -1424,7 +1424,11 @@ internal sealed partial class DosBatchExecutionEngine {
             _loggerService.Information("BATCH: BOOT from {Drive}: image='{Path}' (explicit={Explicit})",
                 driveLetter, floppy.ImagePath, driveExplicit);
         }
-        launchRequest = new BootFloppyLaunchRequest(driveLetter, default);
+        if (driveLetter == 'A' || driveLetter == 'B') {
+            launchRequest = new BootFloppyLaunchRequest(driveLetter, default);
+        } else {
+            launchRequest = new BootHddLaunchRequest(driveLetter, default);
+        }
         return true;
     }
 

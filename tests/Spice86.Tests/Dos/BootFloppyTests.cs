@@ -141,12 +141,15 @@ public class BootFloppyTests {
     }
 
     [Fact]
-    public void BatchEngine_BootCommand_RejectsHardDiskLetter() {
+    public void BatchEngine_BootCommand_HardDiskLetterWithoutMount_FailsGracefully() {
+        // Arrange
         BootContext ctx = BootContext.Create();
         DosBatchExecutionEngine engine = ctx.ProcessManager.BatchExecutionEngine;
 
+        // Act
         bool launched = engine.TryExecuteCommandLine("BOOT -l C", out LaunchRequest launchRequest);
 
+        // Assert
         launched.Should().BeFalse();
         launchRequest.Should().BeOfType<ContinueBatchExecutionLaunchRequest>();
     }
