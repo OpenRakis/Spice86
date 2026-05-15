@@ -25,6 +25,14 @@ public sealed class MutableFatDirectoryEntry
     /// <summary>Gets or sets the file size in bytes.</summary>
     public uint FileSize { get; set; }
 
+    /// <summary>
+    /// Gets or sets the optional VFAT long file name. When non-empty,
+    /// directory writers emit a preceding LFN slot chain. The short name
+    /// (<see cref="BaseName"/>/<see cref="Extension"/>) remains authoritative
+    /// for legacy DOS callers and FAT chain bookkeeping.
+    /// </summary>
+    public string LongName { get; set; } = string.Empty;
+
     /// <summary>Gets the normalised 8.3 DOS name.</summary>
     public string DosName
     {
