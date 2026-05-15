@@ -118,6 +118,26 @@ public sealed class AbsoluteDiskReadTests {
     }
 
     [Fact]
+    public void ReadSector_HardDiskImageMountedOnC_ReadsFromImage() {
+        // Arrange
+        byte[] image = new Fat12ImageBuilder().Build();
+        Ctx ctx = new(image);
+        byte[] cImage = new Fat12ImageBuilder().Build();
+        cImage[0] = 0x7E;
+        ctx.DriveManager.MountFloppyImage('C', cImage, "c.img");
+        ctx.State.AL = 0x02; // drive C
+        ctx.State.CX = 1;
+        ctx.State.DX = 0;
+
+        // Act
+        ctx.Handler.Run();
+
+        // Assert
+        ctx.State.CarryFlag.Should().BeFalse();
+        ctx.Memory.UInt8[ctx.BufferAddress].Should().Be(0x7E);
+    }
+
+    [Fact]
     public void ReadSector_ExtendedMode_ReadsCorrectSector() {
         byte[] image = new Fat12ImageBuilder().Build();
         image[BytesPerSector * 3] = 0xCC; // sector 3

@@ -92,19 +92,18 @@ public class DosDiskInt25Handler : InterruptHandler {
             bufferAddress = MemoryUtils.ToPhysicalAddress(State.DS, State.BX);
         }
 
-        if (driveIndex >= 2) {
-            if (sectorCount == 1 && startSector == 0) {
-                // Write BPB hidden-sectors field into the buffer for MicroProse installers.
-                Memory.UInt16[bufferAddress + 0x1cu] = 0x3f;
-            } else if (LoggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
-                LoggerService.Warning("Interrupt 25 called but not as disk detection, {DriveIndex}", driveIndex);
-            }
-            SetCarryFlag(false, calledFromVm);
-            State.AX = 0;
-            return;
-        }
-
         if (!_dosDriveManager.TryGetGeometry(driveIndex, out int _, out int _, out int _, out int bytesPerSector)) {
+            if (driveIndex >= 2) {
+                if (sectorCount == 1 && startSector == 0) {
+                    // Write BPB hidden-sectors field into the buffer for MicroProse installers.
+                    Memory.UInt16[bufferAddress + 0x1cu] = 0x3f;
+                } else if (LoggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
+                    LoggerService.Warning("Interrupt 25 called but not as disk detection, {DriveIndex}", driveIndex);
+                }
+                SetCarryFlag(false, calledFromVm);
+                State.AX = 0;
+                return;
+            }
             State.AX = ErrorInvalidDrive;
             SetCarryFlag(true, calledFromVm);
             return;
