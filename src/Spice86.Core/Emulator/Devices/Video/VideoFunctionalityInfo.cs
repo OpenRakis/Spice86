@@ -2,6 +2,7 @@
 
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+using Spice86.Shared.Emulator.Memory;
 
 using System.ComponentModel.DataAnnotations;
 
@@ -21,7 +22,7 @@ public class VideoFunctionalityInfo : MemoryBasedDataStructure {
     /// <summary>
     ///     Gets or sets the address of the Saved Functionality Table (SFT) in memory.
     /// </summary>
-    public uint SftAddress { get => UInt32[0x00]; set => UInt32[0x00] = value; }
+    public SegmentedAddress SftAddress { get => SegmentedAddress16[0x00]; set => SegmentedAddress16[0x00] = value; }
 
     /// <summary>
     ///     Gets or sets the current video mode.

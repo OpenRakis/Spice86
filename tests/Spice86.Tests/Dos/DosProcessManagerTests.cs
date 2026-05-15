@@ -20,6 +20,7 @@ using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 using Spice86.Tests.Utility;
@@ -84,7 +85,7 @@ public class DosProcessManagerTests {
         context.ProcessManager.CreateRootCommandComPsp();
 
         DosProgramSegmentPrefix rootPsp = GetRootPsp(context);
-        rootPsp.StackPointer = 0x12345678;
+        rootPsp.StackPointer = new SegmentedAddress(0x1234, 0x5678);
 
         context.State.SS = 0x3000;
         context.State.SP = 0x00FE;
@@ -101,7 +102,7 @@ public class DosProcessManagerTests {
             environmentSegment: 0);
 
         result.Success.Should().BeTrue();
-        rootPsp.StackPointer.Should().Be(0x12345678);
+        rootPsp.StackPointer.Should().Be(new SegmentedAddress(0x1234, 0x5678));
     }
 
     [Fact]
