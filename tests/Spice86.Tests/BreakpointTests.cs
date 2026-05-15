@@ -15,7 +15,8 @@ using Xunit;
 public class BreakpointTests {
     [Fact]
     public void TestMemoryBreakpoints() {
-        using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator("add").Create();
+        using Spice86Creator creator = new Spice86Creator("add");
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
         EmulatorBreakpointsManager emulatorBreakpointsManager = spice86DependencyInjection.Machine.EmulatorBreakpointsManager;
         IMemory memory = spice86DependencyInjection.Machine.Memory;
 
@@ -125,7 +126,8 @@ public class BreakpointTests {
 
     [Fact]
     public void TestExecutionBreakpoints() {
-        using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator("add").Create();
+        using Spice86Creator creator = new Spice86Creator("add");
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
         State state = spice86DependencyInjection.Machine.CpuState;
         Machine machine = spice86DependencyInjection.Machine;
         ProgramExecutor programExecutor = spice86DependencyInjection.ProgramExecutor;
@@ -151,7 +153,8 @@ public class BreakpointTests {
 
     [Fact]
     public void TestIoBreakpoints() {
-        using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator("externalint", maxCycles: 0xFFFFFFF, enablePit: true).Create();
+        using Spice86Creator creator = new Spice86Creator("externalint", maxCycles: 0xFFFFFFF, enablePit: true);
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
         State state = spice86DependencyInjection.Machine.CpuState;
         EmulatorBreakpointsManager emulatorBreakpointsManager = spice86DependencyInjection.Machine.EmulatorBreakpointsManager;
         IOPortDispatcher ioPortDispatcher = spice86DependencyInjection.Machine.IoPortDispatcher;
@@ -169,7 +172,8 @@ public class BreakpointTests {
 
     [Fact]
     public void TestExternalInterruptBreakpoints() {
-        using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator("externalint", maxCycles: 0xFFFFFFF, enablePit: true).Create();
+        using Spice86Creator creator = new Spice86Creator("externalint", maxCycles: 0xFFFFFFF, enablePit: true);
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
         EmulatorBreakpointsManager emulatorBreakpointsManager = spice86DependencyInjection.Machine.EmulatorBreakpointsManager;
         ProgramExecutor programExecutor = spice86DependencyInjection.ProgramExecutor;
         int triggers = 0;
@@ -183,7 +187,8 @@ public class BreakpointTests {
 
     [Fact]
     public void TestProgrammaticInterruptBreakpoints() {
-        using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator("interrupt").Create();
+        using Spice86Creator creator = new Spice86Creator("interrupt");
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
         EmulatorBreakpointsManager emulatorBreakpointsManager = spice86DependencyInjection.Machine.EmulatorBreakpointsManager;
         ProgramExecutor programExecutor = spice86DependencyInjection.ProgramExecutor;
         int intDtriggers = 0;

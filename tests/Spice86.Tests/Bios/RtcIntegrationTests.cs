@@ -2,11 +2,8 @@ namespace Spice86.Tests.Bios;
 
 using FluentAssertions;
 
-using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.IOPorts;
 using Spice86.Shared.Interfaces;
-
-using System.Runtime.CompilerServices;
+using Spice86.Tests.Utility;
 
 using Xunit;
 
@@ -16,9 +13,6 @@ using Xunit;
 /// would experience it, including CMOS port access, BIOS INT 1A, and DOS INT 21H.
 /// </summary>
 public class RtcIntegrationTests {
-    private const int ResultPort = 0x999;    // Port to write test results
-    private const int DetailsPort = 0x998;   // Port to write test details/error messages
-
     enum TestResult : byte {
         Success = 0x00,
         Failure = 0xFF
@@ -32,7 +26,7 @@ public class RtcIntegrationTests {
     public void CmosDirectPortAccess_ShouldReturnValidBcdValues() {
         // This test runs cmos_ports.asm which directly accesses CMOS registers
         // and validates that they contain proper BCD-encoded time/date values
-        RtcTestHandler testHandler = RunRtcTest("cmos_ports.com");
+        TestIoPortHandler testHandler = RunRtcTest("cmos_ports.com");
 
         testHandler.Results.Should().Contain((byte)TestResult.Success,
             "CMOS registers should return valid BCD time/date values");
@@ -55,7 +49,7 @@ public class RtcIntegrationTests {
         // - 03h: Set RTC Time (stub in emulator)
         // - 04h: Read RTC Date
         // - 05h: Set RTC Date (stub in emulator)
-        RtcTestHandler testHandler = RunRtcTest("bios_int1a.com");
+        TestIoPortHandler testHandler = RunRtcTest("bios_int1a.com");
 
         testHandler.Results.Should().Contain((byte)TestResult.Success,
             "BIOS INT 1A functions should execute successfully");
@@ -76,7 +70,7 @@ public class RtcIntegrationTests {
         // - 2Bh: Set DOS Date (with validation tests)
         // - 2Ch: Get DOS Time
         // - 2Dh: Set DOS Time (with validation tests)
-        RtcTestHandler testHandler = RunRtcTest("dos_int21h.com");
+        TestIoPortHandler testHandler = RunRtcTest("dos_int21h.com");
 
         testHandler.Results.Should().Contain((byte)TestResult.Success,
             "DOS INT 21H date/time functions should execute successfully");
@@ -98,7 +92,7 @@ public class RtcIntegrationTests {
         // - Cancel a wait event (AL=01h)
         // - Set a new wait after canceling (should succeed)
         // - Cancel the second wait
-        RtcTestHandler testHandler = RunRtcTest("bios_int15h_83h.com");
+        TestIoPortHandler testHandler = RunRtcTest("bios_int15h_83h.com");
 
         testHandler.Results.Should().Contain((byte)TestResult.Success,
             "BIOS INT 15h, AH=83h WAIT function should execute successfully");
@@ -120,12 +114,8 @@ public class RtcIntegrationTests {
         // - Stores wait timeout in BIOS data area
         // - Canceling the wait disables the periodic interrupt
         // - Wait flag is properly managed in BIOS data area
-        RtcTestHandler testHandler = RunRtcTest("bios_int70_wait.com", maxCycles: 500000L);
+        TestIoPortHandler testHandler = RunRtcTest("bios_int70_wait.com", maxCycles: 500000L);
 
-        // Debug: Show what was captured
-        Console.WriteLine($"Results: [{string.Join(", ", testHandler.Results.Select(b => $"0x{b:X2}"))}]");
-        Console.WriteLine($"Details: [{string.Join(", ", testHandler.Details.Select(b => $"0x{b:X2}"))}]");
-        
         testHandler.Results.Should().Contain((byte)TestResult.Success,
             "BIOS INT 15h, AH=83h should configure RTC periodic interrupt correctly");
         testHandler.Results.Should().NotContain((byte)TestResult.Failure);
@@ -137,76 +127,30 @@ public class RtcIntegrationTests {
     /// <summary>
     /// Runs an RTC test program and returns a test handler with results.
     /// </summary>
-    private RtcTestHandler RunRtcTest(string comFileName, long maxCycles = 100000L,
-        [CallerMemberName] string unitTestName = "test") {
+    private TestIoPortHandler RunRtcTest(string comFileName, long maxCycles = 100000L) {
+        string resourcePath = Path.Join(AppContext.BaseDirectory, "Resources", "RtcTests", comFileName);
+        string cDrive = Path.GetDirectoryName(resourcePath) ?? AppContext.BaseDirectory;
 
-        // Load the compiled .com file from Resources/RtcTests directory
-        string resourcePath = Path.Join("Resources", "RtcTests", comFileName);
-        string fullPath = Path.GetFullPath(resourcePath);
+        using Spice86Creator creator = new Spice86Creator(
+            binName: resourcePath,
+            enablePit: true,
+            maxCycles: maxCycles,
+            installInterruptVectors: true,
+            enableA20Gate: false,
+            enableXms: false,
+            enableEms: false,
+            cDrive: cDrive
+        );
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
 
-        if (!File.Exists(fullPath)) {
-            throw new FileNotFoundException(
-                $"RTC test program not found: {fullPath}. " +
-                "Please compile the ASM source files in Resources/RtcTests/ using NASM or MASM.");
-        }
+        TestIoPortHandler testHandler = new(
+            spice86DependencyInjection.Machine.CpuState,
+            NSubstitute.Substitute.For<ILoggerService>(),
+            spice86DependencyInjection.Machine.IoPortDispatcher
+        );
+        spice86DependencyInjection.ProgramExecutor.Run();
 
-        // Read the program bytes and write to a temporary file with .com extension
-        byte[] program = File.ReadAllBytes(fullPath);
-        // Clean up any orphaned temp files from previous runs for this test
-        string tempFilePrefix = $"RtcIntegrationTests_{unitTestName}_";
-        string tempDir = Path.GetTempPath();
-        foreach (string file in Directory.GetFiles(tempDir, $"{tempFilePrefix}*.com")) {
-            File.Delete(file);
-        }
-        // Create a unique temp file with deterministic prefix and .com extension
-        string tempFilePath = Path.Join(tempDir, $"{tempFilePrefix}{Guid.NewGuid()}.com");
-        File.WriteAllBytes(tempFilePath, program);
-        try {
-            // Setup emulator with .com extension
-            Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
-                binName: tempFilePath,
-                enablePit: true,
-                maxCycles: maxCycles,
-                installInterruptVectors: true,
-                enableA20Gate: false,
-                enableXms: false,
-                enableEms: false
-            ).Create();
-
-            RtcTestHandler testHandler = new(
-                spice86DependencyInjection.Machine.CpuState,
-                NSubstitute.Substitute.For<ILoggerService>(),
-                spice86DependencyInjection.Machine.IoPortDispatcher
-            );
-            spice86DependencyInjection.ProgramExecutor.Run();
-
-            return testHandler;
-        } finally {
-            if (File.Exists(tempFilePath)) {
-                File.Delete(tempFilePath);
-            }
-        }
+        return testHandler;
     }
 
-    /// <summary>
-    /// Captures RTC test results from designated I/O ports.
-    /// </summary>
-    private class RtcTestHandler : DefaultIOPortHandler {
-        public List<byte> Results { get; } = new();
-        public List<byte> Details { get; } = new();
-
-        public RtcTestHandler(State state, ILoggerService loggerService,
-            IOPortDispatcher ioPortDispatcher) : base(state, true, loggerService) {
-            ioPortDispatcher.AddIOPortHandler(ResultPort, this);
-            ioPortDispatcher.AddIOPortHandler(DetailsPort, this);
-        }
-
-        public override void WriteByte(ushort port, byte value) {
-            if (port == ResultPort) {
-                Results.Add(value);
-            } else if (port == DetailsPort) {
-                Details.Add(value);
-            }
-        }
-    }
 }

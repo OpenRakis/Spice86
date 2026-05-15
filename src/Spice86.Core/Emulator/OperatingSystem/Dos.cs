@@ -238,8 +238,10 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         DosSysVars = new DosSysVars(configuration, (NullDevice)dosDevices[0], memory,
             MemoryUtils.ToPhysicalAddress(DosSysVars.Segment, 0x0));
 
-        DosSysVars.ConsoleDeviceHeaderPointer = ((IVirtualDevice)dosDevices[1]).Header.BaseAddress;
-        DosSysVars.CurrentDirectoryStructureListPointer = DosTables.CurrentDirectoryStructure.BaseAddress;
+        // Item 1 of devices array
+        DosSysVars.ConsoleDeviceHeaderPointer = new SegmentedAddress(MemoryMap.DeviceDriversSegment, (ushort)(1 * DosDeviceHeader.HeaderLength));
+        SegmentedAddress cdsAddress = DosTables.CdsSegmentedAddress;
+        DosSysVars.CurrentDirectoryStructureListPointer = cdsAddress;
         DosSysVars.CurrentDirectoryStructureCount = 26;
 
         DosSwappableDataArea = new(_memory,

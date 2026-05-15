@@ -5,6 +5,7 @@ using FluentAssertions;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Tests.Utility;
 
 using Xunit;
 
@@ -13,20 +14,17 @@ public class DosFcbManagerTests : IDisposable {
     private const uint FcbAddr = 0x2000;
     private const uint DtaAddr = 0x3000;
 
-    private readonly string _mountPoint;
+    private readonly TempFile _tempFile;
     private readonly DosTestFixture _fixture;
 
     public DosFcbManagerTests() {
-        _mountPoint = Path.Join(Path.GetTempPath(), $"Spice86_FCB_Tests_{Guid.NewGuid()}");
-        Directory.CreateDirectory(_mountPoint);
-        _fixture = new DosTestFixture(_mountPoint);
+        _tempFile = new TempFile("Spice86_FCB_Tests");
+        _fixture = new DosTestFixture(_tempFile.Path);
     }
 
     public void Dispose() {
         _fixture.Dispose();
-        if (Directory.Exists(_mountPoint)) {
-            Directory.Delete(_mountPoint, recursive: true);
-        }
+        _tempFile.Dispose();
     }
 
     private static void WriteSpacePaddedField(IMemory memory, uint address, string value, int fieldSize) {
@@ -51,20 +49,20 @@ public class DosFcbManagerTests : IDisposable {
     }
 
     private string CreateTestFile(string fileName, string content = "test") {
-        string fullPath = Path.Join(_mountPoint, fileName);
+        string fullPath = Path.Join(_tempFile.Path, fileName);
         File.WriteAllText(fullPath, content);
         return fullPath;
     }
 
     private string CreateTestFile(string fileName, byte[] content) {
-        string fullPath = Path.Join(_mountPoint, fileName);
+        string fullPath = Path.Join(_tempFile.Path, fileName);
         File.WriteAllBytes(fullPath, content);
         return fullPath;
     }
 
     private void CleanupFilePatterns(params string[] patterns) {
         foreach (string pattern in patterns) {
-            foreach (string file in Directory.GetFiles(_mountPoint, pattern)) {
+            foreach (string file in Directory.GetFiles(_tempFile.Path, pattern)) {
                 File.Delete(file);
             }
         }
@@ -399,13 +397,13 @@ public class DosFcbManagerTests : IDisposable {
         // Assert
         status.Should().Be(FcbStatus.Success);
         // DOS renames files in uppercase
-        File.Exists(Path.Join(_mountPoint, "ONE.OUT")).Should().BeTrue();
-        File.Exists(Path.Join(_mountPoint, "TWO.OUT")).Should().BeTrue();
-        File.Exists(Path.Join(_mountPoint, "THREE.OUT")).Should().BeTrue();
-        File.Exists(Path.Join(_mountPoint, "FOUR.OUT")).Should().BeTrue();
-        File.Exists(Path.Join(_mountPoint, "FIVE.OUT")).Should().BeTrue();
-        File.Exists(Path.Join(_mountPoint, "none.ctl")).Should().BeTrue();
-        File.Exists(Path.Join(_mountPoint, "one.in")).Should().BeFalse();
+        File.Exists(Path.Join(_tempFile.Path, "ONE.OUT")).Should().BeTrue();
+        File.Exists(Path.Join(_tempFile.Path, "TWO.OUT")).Should().BeTrue();
+        File.Exists(Path.Join(_tempFile.Path, "THREE.OUT")).Should().BeTrue();
+        File.Exists(Path.Join(_tempFile.Path, "FOUR.OUT")).Should().BeTrue();
+        File.Exists(Path.Join(_tempFile.Path, "FIVE.OUT")).Should().BeTrue();
+        File.Exists(Path.Join(_tempFile.Path, "none.ctl")).Should().BeTrue();
+        File.Exists(Path.Join(_tempFile.Path, "one.in")).Should().BeFalse();
     }
 
     [Fact]
@@ -437,12 +435,12 @@ public class DosFcbManagerTests : IDisposable {
         // Assert
         status.Should().Be(FcbStatus.Success);
         // DOS renames files in uppercase
-        File.Exists(Path.Join(_mountPoint, "BONE.OUT")).Should().BeTrue();
-        File.Exists(Path.Join(_mountPoint, "BTWO.OUT")).Should().BeTrue();
-        File.Exists(Path.Join(_mountPoint, "BTHREE.OUT")).Should().BeTrue();
-        File.Exists(Path.Join(_mountPoint, "BFOUR.OUT")).Should().BeTrue();
-        File.Exists(Path.Join(_mountPoint, "BFIVE.OUT")).Should().BeTrue();
-        File.Exists(Path.Join(_mountPoint, "xnone.ctl")).Should().BeTrue();
+        File.Exists(Path.Join(_tempFile.Path, "BONE.OUT")).Should().BeTrue();
+        File.Exists(Path.Join(_tempFile.Path, "BTWO.OUT")).Should().BeTrue();
+        File.Exists(Path.Join(_tempFile.Path, "BTHREE.OUT")).Should().BeTrue();
+        File.Exists(Path.Join(_tempFile.Path, "BFOUR.OUT")).Should().BeTrue();
+        File.Exists(Path.Join(_tempFile.Path, "BFIVE.OUT")).Should().BeTrue();
+        File.Exists(Path.Join(_tempFile.Path, "xnone.ctl")).Should().BeTrue();
     }
 
     [Fact]
@@ -474,13 +472,13 @@ public class DosFcbManagerTests : IDisposable {
         // Assert
         status.Should().Be(FcbStatus.Success);
         // DOS renames files in uppercase
-        File.Exists(Path.Join(_mountPoint, "ABC601.TXT")).Should().BeTrue();
-        File.Exists(Path.Join(_mountPoint, "ABC602.TXT")).Should().BeTrue();
-        File.Exists(Path.Join(_mountPoint, "ABC603.TXT")).Should().BeTrue();
-        File.Exists(Path.Join(_mountPoint, "ABC604.TXT")).Should().BeTrue();
-        File.Exists(Path.Join(_mountPoint, "ABC605.TXT")).Should().BeTrue();
-        File.Exists(Path.Join(_mountPoint, "ABC610.TXT")).Should().BeTrue();
-        File.Exists(Path.Join(_mountPoint, "xbc007.txt")).Should().BeTrue();
+        File.Exists(Path.Join(_tempFile.Path, "ABC601.TXT")).Should().BeTrue();
+        File.Exists(Path.Join(_tempFile.Path, "ABC602.TXT")).Should().BeTrue();
+        File.Exists(Path.Join(_tempFile.Path, "ABC603.TXT")).Should().BeTrue();
+        File.Exists(Path.Join(_tempFile.Path, "ABC604.TXT")).Should().BeTrue();
+        File.Exists(Path.Join(_tempFile.Path, "ABC605.TXT")).Should().BeTrue();
+        File.Exists(Path.Join(_tempFile.Path, "ABC610.TXT")).Should().BeTrue();
+        File.Exists(Path.Join(_tempFile.Path, "xbc007.txt")).Should().BeTrue();
     }
 
     [Fact]
@@ -512,13 +510,13 @@ public class DosFcbManagerTests : IDisposable {
         // Assert
         status.Should().Be(FcbStatus.Success);
         // DOS renames files in uppercase
-        File.Exists(Path.Join(_mountPoint, "ABC001.HT")).Should().BeTrue();
-        File.Exists(Path.Join(_mountPoint, "ABC002.HT")).Should().BeTrue();
-        File.Exists(Path.Join(_mountPoint, "ABC003.HT")).Should().BeTrue();
-        File.Exists(Path.Join(_mountPoint, "ABC004.HT")).Should().BeTrue();
-        File.Exists(Path.Join(_mountPoint, "ABC005.HT")).Should().BeTrue();
-        File.Exists(Path.Join(_mountPoint, "ABC010.HT")).Should().BeTrue();
-        File.Exists(Path.Join(_mountPoint, "xbc007.htm")).Should().BeTrue();
+        File.Exists(Path.Join(_tempFile.Path, "ABC001.HT")).Should().BeTrue();
+        File.Exists(Path.Join(_tempFile.Path, "ABC002.HT")).Should().BeTrue();
+        File.Exists(Path.Join(_tempFile.Path, "ABC003.HT")).Should().BeTrue();
+        File.Exists(Path.Join(_tempFile.Path, "ABC004.HT")).Should().BeTrue();
+        File.Exists(Path.Join(_tempFile.Path, "ABC005.HT")).Should().BeTrue();
+        File.Exists(Path.Join(_tempFile.Path, "ABC010.HT")).Should().BeTrue();
+        File.Exists(Path.Join(_tempFile.Path, "xbc007.htm")).Should().BeTrue();
     }
 
     [Fact]
@@ -601,7 +599,7 @@ public class DosFcbManagerTests : IDisposable {
     [Fact]
     public void RandomBlockWrite_ZeroRecords_TruncatesFile() {
         // Arrange
-        string testFile = Path.Join(_mountPoint, "TRUNCATE.DAT");
+        string testFile = Path.Join(_tempFile.Path, "TRUNCATE.DAT");
         byte[] initialData = new byte[100];
         for (int i = 0; i < 100; i++) {
             initialData[i] = (byte)(i & 0xFF);

@@ -286,46 +286,12 @@ internal class DosPathResolver {
     /// <param name="dosPath">The DOS path to convert.</param>
     /// <returns>A string containing the full file path in the host file system, or <see langword="null"/> if nothing was found or the DOS path cannot be resolved.</returns>
     public string? GetFullHostPathFromDosOrDefault(string? dosPath) {
-        if (string.IsNullOrWhiteSpace(dosPath)) {
+        (string resolvedHostDir, string lastSegment)? components = ResolveDosPathComponents(dosPath);
+        if (components is null) {
             return null;
         }
 
-        dosPath = GetFullDosPathIncludingRoot(dosPath);
-        if (dosPath is null) {
-            return null;
-        }
-
-        (string? hostPrefix, string dosRelativePath) = DeconstructDosPath(dosPath);
-        if (hostPrefix is null) {
-            return null;
-        }
-
-        if (string.IsNullOrWhiteSpace(dosRelativePath)) {
-            return ConvertUtils.ToSlashPath(hostPrefix);
-        }
-
-        string slashedRelative = ConvertUtils.ToSlashPath(dosRelativePath);
-        int lastSlash = slashedRelative.LastIndexOf('/');
-        string dirPart = lastSlash >= 0 ? slashedRelative[..lastSlash] : string.Empty;
-        string lastSegment = lastSlash >= 0 ? slashedRelative[(lastSlash + 1)..] : slashedRelative;
-
-        string? resolvedHostDir = ResolveCaseInsensitiveDirectory(hostPrefix, dirPart);
-        if (string.IsNullOrWhiteSpace(resolvedHostDir)) {
-            return null;
-        }
-
-        if (string.IsNullOrWhiteSpace(lastSegment)) {
-            return ConvertUtils.ToSlashPath(resolvedHostDir);
-        }
-
-        EnumerationOptions options = new EnumerationOptions {
-            RecurseSubdirectories = false,
-            MatchCasing = MatchCasing.CaseInsensitive,
-            ReturnSpecialDirectories = false
-        };
-
-        string? firstMatch = FindFilesUsingWildCmp(resolvedHostDir, lastSegment, options).FirstOrDefault();
-        return string.IsNullOrWhiteSpace(firstMatch) ? null : ConvertUtils.ToSlashPath(firstMatch);
+        return ResolveFileInDirectory(components.Value.resolvedHostDir, components.Value.lastSegment);
     }
 
     /// <summary>
@@ -377,6 +343,29 @@ internal class DosPathResolver {
     /// <param name="dosPath">The DOS path to convert.</param>
     /// <returns>A string containing the full file path in the host file system, or <see langword="null"/> if nothing was found or the DOS path cannot be resolved.</returns>
     public string? GetFullHostExecutablePathFromDosOrDefault(string? dosPath) {
+        (string resolvedHostDir, string lastSegment)? components = ResolveDosPathComponents(dosPath);
+        if (components is null) {
+            return null;
+        }
+
+        string resolvedHostDir = components.Value.resolvedHostDir;
+        string lastSegment = components.Value.lastSegment;
+
+        string? result = ResolveFileInDirectory(resolvedHostDir, lastSegment);
+        if (result is not null) {
+            return result;
+        }
+
+        string? extensionProbeMatch = TryResolveExecutableWithoutExtension(resolvedHostDir, lastSegment);
+        return string.IsNullOrWhiteSpace(extensionProbeMatch) ? null : ConvertUtils.ToSlashPath(extensionProbeMatch);
+    }
+
+    /// <summary>
+    /// Resolves the DOS path into its host directory and filename components.
+    /// Returns <see langword="null"/> when the path cannot be resolved (invalid, empty, or missing directory).
+    /// When the path refers to a directory (no filename), <c>lastSegment</c> is empty.
+    /// </summary>
+    private (string resolvedHostDir, string lastSegment)? ResolveDosPathComponents(string? dosPath) {
         if (string.IsNullOrWhiteSpace(dosPath)) {
             return null;
         }
@@ -392,7 +381,7 @@ internal class DosPathResolver {
         }
 
         if (string.IsNullOrWhiteSpace(dosRelativePath)) {
-            return ConvertUtils.ToSlashPath(hostPrefix);
+            return (ConvertUtils.ToSlashPath(hostPrefix), string.Empty);
         }
 
         string slashedRelative = ConvertUtils.ToSlashPath(dosRelativePath);
@@ -405,6 +394,14 @@ internal class DosPathResolver {
             return null;
         }
 
+        return (resolvedHostDir, lastSegment);
+    }
+
+    /// <summary>
+    /// Resolves a filename within a host directory, trying an exact case-insensitive match first
+    /// to avoid 8.3 truncation false positives, then falling back to DOS wildcard comparison.
+    /// </summary>
+    private string? ResolveFileInDirectory(string resolvedHostDir, string lastSegment) {
         if (string.IsNullOrWhiteSpace(lastSegment)) {
             return ConvertUtils.ToSlashPath(resolvedHostDir);
         }
@@ -415,16 +412,20 @@ internal class DosPathResolver {
             ReturnSpecialDirectories = false
         };
 
-        string? firstMatch = FindFilesUsingWildCmp(resolvedHostDir, lastSegment, options).FirstOrDefault();
-        if (!string.IsNullOrWhiteSpace(firstMatch)) {
-            return ConvertUtils.ToSlashPath(firstMatch);
+        // Try exact case-insensitive match first to avoid 8.3 truncation false positives
+        // (e.g. bios_int70_wait.com and bios_int1a.com both truncating to BIOS_INT.COM).
+        string? exactMatch = Directory
+            .EnumerateFileSystemEntries(resolvedHostDir, lastSegment, options)
+            .FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(exactMatch)) {
+            return ConvertUtils.ToSlashPath(exactMatch);
         }
 
-        string? extensionProbeMatch = TryResolveExecutableWithoutExtension(resolvedHostDir, lastSegment, options);
-        return string.IsNullOrWhiteSpace(extensionProbeMatch) ? null : ConvertUtils.ToSlashPath(extensionProbeMatch);
+        string? firstMatch = FindFilesUsingWildCmp(resolvedHostDir, lastSegment, options).FirstOrDefault();
+        return string.IsNullOrWhiteSpace(firstMatch) ? null : ConvertUtils.ToSlashPath(firstMatch);
     }
 
-    private string? TryResolveExecutableWithoutExtension(string resolvedHostDir, string lastSegment, EnumerationOptions options) {
+    private string? TryResolveExecutableWithoutExtension(string resolvedHostDir, string lastSegment) {
         if (string.IsNullOrWhiteSpace(lastSegment)) {
             return null;
         }
@@ -434,7 +435,7 @@ internal class DosPathResolver {
         }
 
         return ExecutableExtensionLookupOrder
-            .Select(extension => FindFilesUsingWildCmp(resolvedHostDir, $"{lastSegment}{extension}", options).FirstOrDefault())
+            .Select(extension => ResolveFileInDirectory(resolvedHostDir, $"{lastSegment}{extension}"))
             .FirstOrDefault(match => !string.IsNullOrWhiteSpace(match));
     }
 

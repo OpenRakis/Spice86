@@ -877,6 +877,7 @@ public class Spice86DependencyInjection : IDisposable {
                 }
 
                 DisposeMachineAfterRun();
+                _loggerService.Dispose();
             }
 
             _disposed = true;

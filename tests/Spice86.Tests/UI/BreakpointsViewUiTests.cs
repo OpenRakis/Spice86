@@ -44,7 +44,7 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
         viewModel.IsExecutionBreakpointSelected.Should().BeTrue();
 
         // Cleanup
-        window.Close();
+        CloseWindowAndWait(window);
     }
 
     /// <summary>
@@ -75,7 +75,7 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
         viewModel.CreatingBreakpoint.Should().BeFalse();
 
         // Cleanup
-        window.Close();
+        CloseWindowAndWait(window);
     }
 
     /// <summary>
@@ -104,7 +104,7 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
         }
 
         // Cleanup
-        window.Close();
+        CloseWindowAndWait(window);
     }
 
     /// <summary>
@@ -130,7 +130,7 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
         viewModel.CreatingBreakpoint.Should().BeFalse();
 
         // Cleanup
-        window.Close();
+        CloseWindowAndWait(window);
     }
 
     /// <summary>
@@ -147,7 +147,7 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
         viewModel.BreakpointTabs.Should().NotBeEmpty();
 
         // Cleanup
-        window.Close();
+        CloseWindowAndWait(window);
     }
 
     /// <summary>
@@ -180,7 +180,7 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
         }
 
         // Cleanup
-        window.Close();
+        CloseWindowAndWait(window);
     }
 
     /// <summary>
@@ -213,7 +213,7 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
         }
 
         // Cleanup
-        window.Close();
+        CloseWindowAndWait(window);
     }
 
     /// <summary>
@@ -241,7 +241,7 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
         }
 
         // Cleanup
-        window.Close();
+        CloseWindowAndWait(window);
     }
 
     /// <summary>
@@ -276,7 +276,7 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
         }
 
         // Cleanup
-        window.Close();
+        CloseWindowAndWait(window);
     }
 
     /// <summary>
@@ -311,7 +311,7 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
         }
 
         // Cleanup
-        window.Close();
+        CloseWindowAndWait(window);
     }
 
     /// <summary>
@@ -346,7 +346,7 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
         }
 
         // Cleanup
-        window.Close();
+        CloseWindowAndWait(window);
     }
 
     /// <summary>
@@ -379,7 +379,7 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
         }
 
         // Cleanup
-        window.Close();
+        CloseWindowAndWait(window);
     }
 
     /// <summary>
@@ -412,7 +412,7 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
         }
 
         // Cleanup
-        window.Close();
+        CloseWindowAndWait(window);
     }
 
     /// <summary>
@@ -436,7 +436,7 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
         viewModel.Breakpoints.Should().ContainSingle(bp =>
             bp.Type == BreakPointType.CPU_INTERRUPT && bp.ConditionExpression == "ah == 0x09");
 
-        window.Close();
+        CloseWindowAndWait(window);
     }
 
     /// <summary>
@@ -461,7 +461,7 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
         viewModel.Breakpoints.Count.Should().Be(initialCount);
         viewModel.CreatingBreakpoint.Should().BeTrue();
 
-        window.Close();
+        CloseWindowAndWait(window);
     }
 
     /// <summary>
@@ -485,7 +485,7 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
         viewModel.Breakpoints.Should().ContainSingle(bp =>
             bp.Type == BreakPointType.IO_ACCESS && bp.ConditionExpression == "al == 0x01");
 
-        window.Close();
+        CloseWindowAndWait(window);
     }
 
     /// <summary>
@@ -508,7 +508,7 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
         ProcessUiEvents();
         viewModel.ConfirmBreakpointCreationCommand.CanExecute(null).Should().BeTrue();
 
-        window.Close();
+        CloseWindowAndWait(window);
     }
 
     /// <summary>
@@ -531,7 +531,7 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
         ProcessUiEvents();
         viewModel.ConfirmBreakpointCreationCommand.CanExecute(null).Should().BeTrue();
 
-        window.Close();
+        CloseWindowAndWait(window);
     }
 
     /// <summary>
@@ -565,7 +565,7 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
         // Assert: edit restores "*" instead of casting -1 to 0xFFFFFFFF
         viewModel.InterruptNumber.Should().Be("*");
 
-        window.Close();
+        CloseWindowAndWait(window);
     }
 
     /// <summary>
@@ -597,7 +597,7 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
         // Assert: edit restores "*" instead of casting -1 to 0xFFFFFFFF
         viewModel.IoPortNumber.Should().Be("*");
 
-        window.Close();
+        CloseWindowAndWait(window);
     }
 
     /// <summary>
@@ -619,6 +619,6 @@ public class BreakpointsViewUiTests : BreakpointUiTestBase {
         viewModel.InterruptConditionExpression.Should().BeNull();
         viewModel.IoPortConditionExpression.Should().BeNull();
 
-        window.Close();
+        CloseWindowAndWait(window);
     }
 }

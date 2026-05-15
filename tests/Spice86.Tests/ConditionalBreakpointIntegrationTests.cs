@@ -26,9 +26,10 @@ public class ConditionalBreakpointIntegrationTests {
     [Fact]
     public void ConditionalBreakpoint_WhenConditionMet_TriggersAndPauses() {
         // Arrange - Use the full emulator with a real test binary
-        using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
+        using Spice86Creator creator = new Spice86Creator(
             "add", 
-            maxCycles: 10000).Create();
+            maxCycles: 10000);
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
         
         Machine machine = spice86DependencyInjection.Machine;
         State state = machine.CpuState;
@@ -86,9 +87,10 @@ public class ConditionalBreakpointIntegrationTests {
     [Fact]
     public void ConditionalBreakpoint_WhenConditionNotMet_DoesNotTrigger() {
         // Arrange
-        using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
+        using Spice86Creator creator = new Spice86Creator(
             "add",
-            maxCycles: 10000).Create();
+            maxCycles: 10000);
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
 
         Machine machine = spice86DependencyInjection.Machine;
         State state = machine.CpuState;
@@ -132,9 +134,10 @@ public class ConditionalBreakpointIntegrationTests {
     [Fact]
     public void ConditionalBreakpoint_WithComplexCondition_TriggersCorrectly() {
         // Arrange
-        using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
+        using Spice86Creator creator = new Spice86Creator(
             "add",
-            maxCycles: 10000).Create();
+            maxCycles: 10000);
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
 
         Machine machine = spice86DependencyInjection.Machine;
         State state = machine.CpuState;
@@ -177,9 +180,10 @@ public class ConditionalBreakpointIntegrationTests {
     [Fact]
     public void ConditionalBreakpoint_Serialization_PreservesCondition() {
         // Arrange
-        using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
+        using Spice86Creator creator = new Spice86Creator(
             "add",
-            maxCycles: 1000).Create();
+            maxCycles: 1000);
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
 
         Machine machine = spice86DependencyInjection.Machine;
         State state = machine.CpuState;
@@ -223,9 +227,10 @@ public class ConditionalBreakpointIntegrationTests {
     [Fact]
     public void ConditionalMemoryBreakpoint_WhenReadAndConditionMet_Triggers() {
         // Arrange
-        using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
+        using Spice86Creator creator = new Spice86Creator(
             "datatrnf",  // Data transfer test binary - does memory operations
-            maxCycles: 10000).Create();
+            maxCycles: 10000);
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
 
         Machine machine = spice86DependencyInjection.Machine;
         State state = machine.CpuState;
@@ -276,9 +281,10 @@ public class ConditionalBreakpointIntegrationTests {
     [Fact]
     public void ConditionalBreakpoint_WhenTriggered_FiresPausedEvent() {
         // Arrange
-        using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
+        using Spice86Creator creator = new Spice86Creator(
             "add",
-            maxCycles: 10000).Create();
+            maxCycles: 10000);
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
 
         Machine machine = spice86DependencyInjection.Machine;
         State state = machine.CpuState;
@@ -328,10 +334,11 @@ public class ConditionalBreakpointIntegrationTests {
     [Fact]
     public void ConditionalInterruptBreakpoint_WithRegisterCondition_TriggersCorrectly() {
         // Arrange - Use the interrupt test binary
-        using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
+        using Spice86Creator creator = new Spice86Creator(
             "interrupt",
             installInterruptVectors: true,
-            maxCycles: 10000).Create();
+            maxCycles: 10000);
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
 
         Machine machine = spice86DependencyInjection.Machine;
         State state = machine.CpuState;
@@ -377,9 +384,10 @@ public class ConditionalBreakpointIntegrationTests {
     [Fact]
     public void ConditionalBreakpoint_WithBitwiseCondition_TriggersCorrectly() {
         // Arrange
-        using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
+        using Spice86Creator creator = new Spice86Creator(
             "bitwise",  // Bitwise test binary
-            maxCycles: 10000).Create();
+            maxCycles: 10000);
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
 
         Machine machine = spice86DependencyInjection.Machine;
         State state = machine.CpuState;
@@ -421,9 +429,10 @@ public class ConditionalBreakpointIntegrationTests {
     [Fact]
     public void ConditionalBreakpoint_With32BitRegisterCondition_TriggersCorrectly() {
         // Arrange
-        using Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
+        using Spice86Creator creator = new Spice86Creator(
             "add",
-            maxCycles: 10000).Create();
+            maxCycles: 10000);
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
 
         Machine machine = spice86DependencyInjection.Machine;
         State state = machine.CpuState;

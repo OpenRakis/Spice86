@@ -37,6 +37,7 @@ public class HeadlessInfrastructureTests {
 
         // Cleanup
         window.Close();
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
     }
 
     /// <summary>

@@ -2,13 +2,10 @@ namespace Spice86.Tests.Emulator.Devices.Sound;
 
 using FluentAssertions;
 
-using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
-using Spice86.Core.Emulator.IOPorts;
 using Spice86.Shared.Interfaces;
-
-using System.Runtime.CompilerServices;
+using Spice86.Tests.Utility;
 
 using Xunit;
 
@@ -19,9 +16,6 @@ using Xunit;
 /// </summary>
 [Trait("Category", "Sound")]
 public class OplIntegrationTests {
-    private const int ResultPort = 0x999;
-    private const int DetailsPort = 0x998;
-
     /// <summary>
     /// Tests that OPL register writes with standard inter-write delays
     /// result in correct Timer 1 operation (classic Adlib detection sequence).
@@ -29,11 +23,10 @@ public class OplIntegrationTests {
     [Fact]
     public void OplWriteDelay_Timer1Fires_AfterHardwareDelay() {
         // Arrange
-        string comPath = Path.Join("Resources", "Sound", "opl_write_delay.com");
-        byte[] program = File.ReadAllBytes(comPath);
+        string comPath = Path.Join(AppContext.BaseDirectory, "Resources", "Sound", "opl_write_delay.com");
 
         // Act
-        SoundTestHandler testHandler = RunSoundTest(program, enablePit: true, maxCycles: 500000L,
+        TestIoPortHandler testHandler = RunSoundTest(comPath, enablePit: true, maxCycles: 500000L,
             oplMode: OplMode.Opl3);
 
         // Assert
@@ -44,8 +37,7 @@ public class OplIntegrationTests {
             "should report low and high byte of iteration count");
         int iterationCount = testHandler.Details[0] | (testHandler.Details[1] << 8);
         iterationCount.Should().Be(1,
-            "Real hardware reports 1 poll iteration " +
-            "(35 post-data IO reads consume most of the 80us timer period)");
+            "OPL Timer 1 should overflow before the first poll iteration completes");
     }
 
     /// <summary>
@@ -55,11 +47,10 @@ public class OplIntegrationTests {
     [Fact]
     public void OplReadDelay_StatusReadCount_MatchesHardware() {
         // Arrange
-        string comPath = Path.Join("Resources", "Sound", "opl_read_delay.com");
-        byte[] program = File.ReadAllBytes(comPath);
+        string comPath = Path.Join(AppContext.BaseDirectory, "Resources", "Sound", "opl_read_delay.com");
 
         // Act
-        SoundTestHandler testHandler = RunSoundTest(program, enablePit: true, maxCycles: 500000L,
+        TestIoPortHandler testHandler = RunSoundTest(comPath, enablePit: true, maxCycles: 500000L,
             oplMode: OplMode.Opl3);
 
         // Assert
@@ -73,23 +64,20 @@ public class OplIntegrationTests {
             "Real hardware reports 2 status reads before Timer 1 overflow");
     }
 
-    private SoundTestHandler RunSoundTest(byte[] program, bool enablePit,
-        long maxCycles, SbType sbType = SbType.None, OplMode oplMode = OplMode.None,
-        [CallerMemberName] string unitTestName = "test") {
-        string filePath = Path.GetFullPath($"{unitTestName}.com");
-        File.WriteAllBytes(filePath, program);
-
-        Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
-            binName: filePath,
+    private TestIoPortHandler RunSoundTest(string comPath, bool enablePit,
+        long maxCycles, SbType sbType = SbType.None, OplMode oplMode = OplMode.None) {
+        using Spice86Creator creator = new Spice86Creator(
+            binName: comPath,
             enablePit: enablePit,
             maxCycles: maxCycles,
             installInterruptVectors: true,
             enableA20Gate: true,
             sbType: sbType,
             oplMode: oplMode
-        ).Create();
+        );
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
 
-        SoundTestHandler testHandler = new(
+        TestIoPortHandler testHandler = new(
             spice86DependencyInjection.Machine.CpuState,
             NSubstitute.Substitute.For<ILoggerService>(),
             spice86DependencyInjection.Machine.IoPortDispatcher
@@ -99,26 +87,4 @@ public class OplIntegrationTests {
         return testHandler;
     }
 
-    private class SoundTestHandler : DefaultIOPortHandler {
-        public List<byte> Results { get; } = new();
-        public List<byte> Details { get; } = new();
-
-        public SoundTestHandler(State state, ILoggerService loggerService,
-            IOPortDispatcher ioPortDispatcher) : base(state, true, loggerService) {
-            ioPortDispatcher.AddIOPortHandler(ResultPort, this);
-            ioPortDispatcher.AddIOPortHandler(DetailsPort, this);
-        }
-
-        public override void WriteByte(ushort port, byte value) {
-            if (port == ResultPort) {
-                Results.Add(value);
-            } else if (port == DetailsPort) {
-                Details.Add(value);
-            }
-        }
-    }
 }
-
-
-
-

@@ -2,31 +2,38 @@ namespace Spice86.Tests.Utility;
 
 public sealed class TempFile : IDisposable {
     public string Path { get; }
-    public string Directory { get; }
 
-    public byte[] Data => File.ReadAllBytes(Path);
-
-    public TempFile(string content = "") {
-        // Create a unique directory inside the system temp folder
-        Directory = System.IO.Path.Join(
-            System.IO.Path.GetTempPath(),
-            Guid.NewGuid().ToString()
-        );
-
-        System.IO.Directory.CreateDirectory(Directory);
-
-        // Create a unique file inside that directory
+    public TempFile(string prefix) {
         Path = System.IO.Path.Join(
-            Directory,
-            Guid.NewGuid().ToString()
-        );
+            System.IO.Path.GetTempPath(),
+            $"{prefix}_{Guid.NewGuid():N}");
+        System.IO.Directory.CreateDirectory(Path);
+    }
 
-        File.WriteAllText(Path, content);
+    public string CreateDirectory(params string[] segments) {
+        string directoryPath = System.IO.Path.Join([Path, .. segments]);
+        System.IO.Directory.CreateDirectory(directoryPath);
+        return directoryPath;
+    }
+
+    public string CreateFile(string fileName, byte[] content) {
+        string filePath = System.IO.Path.Join(Path, fileName);
+        File.WriteAllBytes(filePath, content);
+        return filePath;
+    }
+
+    public string CreateTextFile(string fileName, string content) {
+        string filePath = System.IO.Path.Join(Path, fileName);
+        File.WriteAllText(filePath, content);
+        return filePath;
     }
 
     public void Dispose() {
-        if (System.IO.Directory.Exists(Directory)) {
-            System.IO.Directory.Delete(Directory, recursive: true);
+        if (System.IO.Directory.Exists(Path)) {
+            foreach (string filePath in System.IO.Directory.EnumerateFiles(Path, "*", SearchOption.AllDirectories)) {
+                File.SetAttributes(filePath, FileAttributes.Normal);
+            }
+            System.IO.Directory.Delete(Path, recursive: true);
         }
     }
 }

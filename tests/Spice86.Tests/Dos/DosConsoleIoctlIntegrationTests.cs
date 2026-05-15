@@ -12,7 +12,7 @@ using static BatchTestHelpers;
 public class DosConsoleIoctlIntegrationTests {
     private static void AssertConsoleReadFromPreloadedKey(byte ahFunction, ushort keyCode, char expectedChar,
         string tempDirectoryName) {
-        WithTempDirectory(tempDirectoryName, tempDir => {
+        WithTempFile(tempDirectoryName, tempDir => {
             // Arrange
             string comPath = CreateBinaryFile(tempDir, "READK.COM", BuildConsoleReadToVideoCom(ahFunction, 0));
             ushort[] keys = new ushort[] { keyCode };
@@ -48,7 +48,7 @@ public class DosConsoleIoctlIntegrationTests {
     [InlineData("dos_ioctl06_empty", 0x00, 0x0000)]
     public void Ioctl06_ReportsExpectedInputStatus_ForKeyboardBufferState(string tempDirectoryName,
         byte expectedStatus, ushort keyCode) {
-        WithTempDirectory(tempDirectoryName, tempDir => {
+        WithTempFile(tempDirectoryName, tempDir => {
             // Arrange
             string comPath = CreateBinaryFile(tempDir, "IOST.COM", BuildIoctlInputStatusCom(0));
             ushort[] keys = ToPreloadedKeys(keyCode);
@@ -66,7 +66,7 @@ public class DosConsoleIoctlIntegrationTests {
     /// </summary>
     [Fact]
     public void Ioctl06PollAndRead_ReadsPreloadedKey() {
-        WithTempDirectory("dos_ioctl06_poll_read", tempDir => {
+        WithTempFile("dos_ioctl06_poll_read", tempDir => {
             // Arrange: COM that polls IOCTL 06 then reads via AH=07h
             string comPath = CreateBinaryFile(tempDir, "POLL.COM", BuildIoctlPollAndReadCom(0));
 
@@ -97,7 +97,7 @@ public class DosConsoleIoctlIntegrationTests {
     /// </summary>
     [Fact]
     public void Ioctl00_ReturnsCharacterDeviceBit_ForConsoleStdin() {
-        WithTempDirectory("dos_ioctl00_stdin", tempDir => {
+        WithTempFile("dos_ioctl00_stdin", tempDir => {
             // Arrange: COM that calls IOCTL 00 on handle 0 (stdin) and writes DL to video
             string comPath = CreateBinaryFile(tempDir, "DEVINFO.COM", BuildIoctlDeviceInfoCom(0, 0));
 
@@ -116,7 +116,7 @@ public class DosConsoleIoctlIntegrationTests {
     /// </summary>
     [Fact]
     public void Ioctl06_ReportsDataAvailable_ForRedirectedFileWithData() {
-        WithTempDirectory("dos_ioctl06_file_data", tempDir => {
+        WithTempFile("dos_ioctl06_file_data", tempDir => {
             // Arrange
             CreateTextFile(tempDir, "DATA.TXT", "A");
 
@@ -133,7 +133,7 @@ public class DosConsoleIoctlIntegrationTests {
     /// </summary>
     [Fact]
     public void Ioctl06_ReportsNoData_ForRedirectedEmptyFile() {
-        WithTempDirectory("dos_ioctl06_file_empty", tempDir => {
+        WithTempFile("dos_ioctl06_file_empty", tempDir => {
             // Arrange
             CreateTextFile(tempDir, "EMPTY.TXT", "");
 
@@ -151,7 +151,7 @@ public class DosConsoleIoctlIntegrationTests {
     /// </summary>
     [Fact]
     public void Ioctl06_ReportsNoData_ForRedirectedFileAtEofAfterRead() {
-        WithTempDirectory("dos_ioctl06_file_eof", tempDir => {
+        WithTempFile("dos_ioctl06_file_eof", tempDir => {
             // Arrange
             CreateTextFile(tempDir, "DATA.TXT", "X");
 
@@ -168,7 +168,7 @@ public class DosConsoleIoctlIntegrationTests {
     /// </summary>
     [Fact]
     public void Ioctl07_ReportsOutputReady_ForStdout() {
-        WithTempDirectory("dos_ioctl07_stdout", tempDir => {
+        WithTempFile("dos_ioctl07_stdout", tempDir => {
             // Arrange
             string comPath = CreateBinaryFile(tempDir, "OUTST.COM", BuildIoctlOutputStatusCom(1, 0));
 
@@ -186,7 +186,7 @@ public class DosConsoleIoctlIntegrationTests {
     [InlineData("dos_ah06_input_nokey", 0x0000, 0x00)]
     public void Int21hAh06_InputMode_ReturnsExpectedValue(string tempDirectoryName, ushort keyCode,
         byte expectedAl) {
-        WithTempDirectory(tempDirectoryName, tempDir => {
+        WithTempFile(tempDirectoryName, tempDir => {
             // Arrange
             string comPath = CreateBinaryFile(tempDir, "DCIO.COM", BuildDirectConsoleIoInputCom(0));
             ushort[] keys = ToPreloadedKeys(keyCode);
@@ -203,7 +203,7 @@ public class DosConsoleIoctlIntegrationTests {
     /// </summary>
     [Fact]
     public void Int21hAh06_OutputMode_WritesCharToRedirectedStdout() {
-        WithTempDirectory("dos_ah06_output", tempDir => {
+        WithTempFile("dos_ah06_output", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "DCOUT.COM", BuildDirectConsoleIoOutputCom((byte)'Q'));
 
@@ -226,7 +226,7 @@ public class DosConsoleIoctlIntegrationTests {
     /// </summary>
     [Fact]
     public void Int21hAh02_DoesNotContinue_WhenCtrlCIsPendingInStdin() {
-        WithTempDirectory("dos_ah02_ctrlc", tempDir => {
+        WithTempFile("dos_ah02_ctrlc", tempDir => {
             // Arrange: program calls AH=02h then writes sentinel 'X' directly to video cell 0.
             // If break handling is correct, execution terminates before sentinel write.
             string comPath = CreateBinaryFile(tempDir, "AH02C.COM",
@@ -247,7 +247,7 @@ public class DosConsoleIoctlIntegrationTests {
     [InlineData(0x04)]
     [InlineData(0x05)]
     public void Int21hAh03Ah04Ah05_DoesNotContinue_WhenCtrlCIsPendingInStdin(byte functionAh) {
-        WithTempDirectory($"dos_ah{functionAh:X2}_ctrlc", tempDir => {
+        WithTempFile($"dos_ah{functionAh:X2}_ctrlc", tempDir => {
             // Arrange: if break path executes, sentinel write is never reached.
             string comPath = CreateBinaryFile(tempDir, "BRKCHK.COM",
                 BuildInt21CallThenWriteSentinelCom(functionAh, (byte)'X'));
@@ -268,7 +268,7 @@ public class DosConsoleIoctlIntegrationTests {
     /// </summary>
     [Fact]
     public void Int21hAh09_PrintsStringToRedirectedStdout() {
-        WithTempDirectory("dos_ah09_string", tempDir => {
+        WithTempFile("dos_ah09_string", tempDir => {
             // Arrange
             CreateBinaryFile(tempDir, "PRINT.COM", BuildPrintDollarStringCom("Hello DOS"));
 
@@ -284,7 +284,7 @@ public class DosConsoleIoctlIntegrationTests {
 
     [Fact]
     public void Int21hAh09_DoesNotContinue_WhenCtrlCIsPendingInStdin() {
-        WithTempDirectory("dos_ah09_ctrlc", tempDir => {
+        WithTempFile("dos_ah09_ctrlc", tempDir => {
             // Arrange
             string comPath = CreateBinaryFile(tempDir, "AH09C.COM",
                 BuildPrintStringThenWriteSentinelCom("HELLO", (byte)'X'));
@@ -305,7 +305,7 @@ public class DosConsoleIoctlIntegrationTests {
     /// </summary>
     [Fact]
     public void Int21hAh0B_ReportsInputAvailable_WhenKeyPreloaded() {
-        WithTempDirectory("dos_ah0b_available", tempDir => {
+        WithTempFile("dos_ah0b_available", tempDir => {
             // Arrange
             string comPath = CreateBinaryFile(tempDir, "CHKST.COM", BuildCheckStdinStatusCom(0));
             ushort[] keys = new ushort[] { 0x1F73 }; // 's' key (scan=0x1F, ascii=0x73)
@@ -318,7 +318,7 @@ public class DosConsoleIoctlIntegrationTests {
 
     [Fact]
     public void Int21hAh0C_FlushesKeyboardBuffer_BeforeInvokingAh06() {
-        WithTempDirectory("dos_ah0c_flush", tempDir => {
+        WithTempFile("dos_ah0c_flush", tempDir => {
             // Arrange: AH=0Ch with AL=06h should flush pending keyboard input first.
             string comPath = CreateBinaryFile(tempDir, "AH0C06.COM",
                 BuildAh0CFlushThenAh06InputStatusToVideoCom(0));
@@ -336,7 +336,7 @@ public class DosConsoleIoctlIntegrationTests {
     [InlineData(0x10)]
     [InlineData(0x11)]
     public void Ioctl_OutOfScopeSubfunctions_ReturnConsistentFunctionInvalidError(byte subFunction) {
-        WithTempDirectory($"dos_ioctl_unsupported_{subFunction:X2}", tempDir => {
+        WithTempFile($"dos_ioctl_unsupported_{subFunction:X2}", tempDir => {
             // Arrange
             string comPath = CreateBinaryFile(tempDir, "IOERR.COM",
                 BuildIoctlUnsupportedFunctionProbeCom(subFunction));

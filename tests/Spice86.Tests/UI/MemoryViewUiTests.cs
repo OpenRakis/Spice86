@@ -43,7 +43,7 @@ public class MemoryViewUiTests : BreakpointUiTestBase {
         harness.HexEditor.Selection.Range.Start.ByteIndex.Should().Be(expectedByteIndex);
 
         // Cleanup
-        harness.Window.Close();
+        CloseWindowAndWait(harness.Window);
     }
 
     [AvaloniaFact]
@@ -71,6 +71,6 @@ public class MemoryViewUiTests : BreakpointUiTestBase {
         harness.HexEditor.Selection.Range.Start.ByteIndex.Should().Be(0UL);
 
         // Cleanup
-        harness.Window.Close();
+        CloseWindowAndWait(harness.Window);
     }
 }

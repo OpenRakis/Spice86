@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
 /// <summary>
@@ -37,7 +38,7 @@ public class DosSysVars : MemoryBasedDataStructure {
         : base(byteReaderWriter, baseAddress) {
         _nullDeviceHeader = nullDevice.Header;
         CopyArray(_nullDeviceHeader, OfficialOffset + 0x22);
-        ClockDeviceHeaderPointer = 0x0;
+        ClockDeviceHeaderPointer = SegmentedAddress.ZERO;
         MagicWord = 0x1;
         BootDrive = 0x0;
         if (configuration.Xms is not false) {
@@ -58,20 +59,20 @@ public class DosSysVars : MemoryBasedDataStructure {
         PtrCONInput = 0x0;
         FirstMCB = FirstMcbSegment;
         DirtyDiskBuffers = 0x0;
-        LookaheadBufPt = 0x0;
+        LookaheadBufPt = SegmentedAddress.ZERO;
         LookaheadBufNumber = 0x0;
         BufferLocation = 0x0;
-        WorkspaceBuffer = 0x0;
+        WorkspaceBuffer = SegmentedAddress.ZERO;
         StartOfUMBChain = 0xFFFF;
         ChainingUMB = 0x0;
         DwordMoveFlag386 = 0x1;
         LastProgramPspSegment = 0x0;
         NumberOfBuffers = 0x50;
         NumberOfLookaheadBuffers = 0x50;
-        SetVerTablePointer = 0x0;
+        SetVerTablePointer = SegmentedAddress.ZERO;
         JoinedDriveCount = 0x0;
         DiskParameterBlockCount = 0x1;
-        DiskBufferPointer = 0x0;
+        DiskBufferPointer = SegmentedAddress.ZERO;
         SpecialCodeSegment = 0x0;
     }
 
@@ -123,9 +124,9 @@ public class DosSysVars : MemoryBasedDataStructure {
     /// <summary>
     /// Gets or sets pointer to disk buffer
     /// </summary>
-    public uint DiskBufferPointer {
-        get => UInt32[OfficialOffset - 0x08];
-        set => UInt32[OfficialOffset - 0x08] = value;
+    public SegmentedAddress DiskBufferPointer {
+        get => SegmentedAddress16[OfficialOffset - 0x08];
+        set => SegmentedAddress16[OfficialOffset - 0x08] = value;
     }
 
     /// <summary>
@@ -147,33 +148,33 @@ public class DosSysVars : MemoryBasedDataStructure {
     /// <summary>
     /// Gets or sets the pointer to the Disk Parameter Block (DPB) chain.
     /// </summary>
-    public uint DiskParameterBlockChainPointer {
-        get => UInt32[OfficialOffset + 0x00];
-        set => UInt32[OfficialOffset + 0x00] = value;
+    public SegmentedAddress DiskParameterBlockChainPointer {
+        get => SegmentedAddress16[OfficialOffset + 0x00];
+        set => SegmentedAddress16[OfficialOffset + 0x00] = value;
     }
 
     /// <summary>
     /// Gets or sets the pointer to the System File Table (SFT) chain.
     /// </summary>
-    public uint SystemFileTableChainPointer {
-        get => UInt32[OfficialOffset + 0x04];
-        set => UInt32[OfficialOffset + 0x04] = value;
+    public SegmentedAddress SystemFileTableChainPointer {
+        get => SegmentedAddress16[OfficialOffset + 0x04];
+        set => SegmentedAddress16[OfficialOffset + 0x04] = value;
     }
 
     /// <summary>
     /// Gets or sets the pointer to the CLOCK device header.
     /// </summary>
-    public uint ClockDeviceHeaderPointer {
-        get => UInt32[OfficialOffset + 0x08];
-        set => UInt32[OfficialOffset + 0x08] = value;
+    public SegmentedAddress ClockDeviceHeaderPointer {
+        get => SegmentedAddress16[OfficialOffset + 0x08];
+        set => SegmentedAddress16[OfficialOffset + 0x08] = value;
     }
 
     /// <summary>
     /// Gets or sets the pointer to the CON device header.
     /// </summary>
-    public uint ConsoleDeviceHeaderPointer {
-        get => UInt32[OfficialOffset + 0x0C];
-        set => UInt32[OfficialOffset + 0x0C] = value;
+    public SegmentedAddress ConsoleDeviceHeaderPointer {
+        get => SegmentedAddress16[OfficialOffset + 0x0C];
+        set => SegmentedAddress16[OfficialOffset + 0x0C] = value;
     }
 
     /// <summary>
@@ -187,25 +188,25 @@ public class DosSysVars : MemoryBasedDataStructure {
     /// <summary>
     /// Gets or sets the pointer to the buffer descriptor.
     /// </summary>
-    public uint BufferDescriptorPointer {
-        get => UInt32[OfficialOffset + 0x12];
-        set => UInt32[OfficialOffset + 0x12] = value;
+    public SegmentedAddress BufferDescriptorPointer {
+        get => SegmentedAddress16[OfficialOffset + 0x12];
+        set => SegmentedAddress16[OfficialOffset + 0x12] = value;
     }
 
     /// <summary>
     /// Gets or sets the pointer to the Current Directory Structure (CDS) list.
     /// </summary>
-    public uint CurrentDirectoryStructureListPointer {
-        get => UInt32[OfficialOffset + 0x16];
-        set => UInt32[OfficialOffset + 0x16] = value;
+    public SegmentedAddress CurrentDirectoryStructureListPointer {
+        get => SegmentedAddress16[OfficialOffset + 0x16];
+        set => SegmentedAddress16[OfficialOffset + 0x16] = value;
     }
 
     /// <summary>
     /// Gets or sets the pointer to the FCB System File Table chain.
     /// </summary>
-    public uint FcbSystemFileTableChainPointer {
-        get => UInt32[OfficialOffset + 0x1A];
-        set => UInt32[OfficialOffset + 0x1A] = value;
+    public SegmentedAddress FcbSystemFileTableChainPointer {
+        get => SegmentedAddress16[OfficialOffset + 0x1A];
+        set => SegmentedAddress16[OfficialOffset + 0x1A] = value;
     }
 
     /// <summary>
@@ -270,9 +271,9 @@ public class DosSysVars : MemoryBasedDataStructure {
     /// <remarks>
     /// pointer to SETVER program list or 0000h:0000h
     /// </remarks>>
-    public uint SetVerTablePointer {
-        get => UInt32[OfficialOffset + 0x37];
-        set => UInt32[OfficialOffset + 0x37] = value;
+    public SegmentedAddress SetVerTablePointer {
+        get => SegmentedAddress16[OfficialOffset + 0x37];
+        set => SegmentedAddress16[OfficialOffset + 0x37] = value;
     }
 
     /// <summary>
@@ -340,9 +341,9 @@ public class DosSysVars : MemoryBasedDataStructure {
     /// <summary>
     /// Gets or sets the pointer to least-recently used buffer header
     /// </summary>
-    public uint DiskBufferHeadPt {
-        get => UInt32[OfficialOffset + 0x47];
-        set => UInt32[OfficialOffset + 0x47] = value;
+    public SegmentedAddress DiskBufferHeadPt {
+        get => SegmentedAddress16[OfficialOffset + 0x47];
+        set => SegmentedAddress16[OfficialOffset + 0x47] = value;
     }
 
     /// <summary>
@@ -356,9 +357,9 @@ public class DosSysVars : MemoryBasedDataStructure {
     /// <summary>
     /// Gets or sets the pointer to lookahead buffer
     /// </summary>
-    public uint LookaheadBufPt {
-        get => UInt32[OfficialOffset + 0x4D];
-        set => UInt32[OfficialOffset + 0x4D] = value;
+    public SegmentedAddress LookaheadBufPt {
+        get => SegmentedAddress16[OfficialOffset + 0x4D];
+        set => SegmentedAddress16[OfficialOffset + 0x4D] = value;
     }
 
     /// <summary>
@@ -380,9 +381,9 @@ public class DosSysVars : MemoryBasedDataStructure {
     /// <summary>
     /// Gets or sets the pointer to workspace buffer
     /// </summary>
-    public uint WorkspaceBuffer {
-        get => UInt32[OfficialOffset + 0x54];
-        set => UInt32[OfficialOffset + 0x54] = value;
+    public SegmentedAddress WorkspaceBuffer {
+        get => SegmentedAddress16[OfficialOffset + 0x54];
+        set => SegmentedAddress16[OfficialOffset + 0x54] = value;
     }
 
     /// <summary>

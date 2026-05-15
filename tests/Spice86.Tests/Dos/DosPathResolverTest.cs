@@ -5,6 +5,7 @@ using FluentAssertions;
 using JetBrains.Annotations;
 
 using Spice86.Core.Emulator.OperatingSystem;
+using Spice86.Tests.Utility;
 
 using System;
 using System.IO;
@@ -134,7 +135,7 @@ public class DosPathResolverTest {
 
     [Fact]
     public void GetShortFileName_AlreadyShort_ReturnsUppercased() {
-        using TempDir dir = new();
+        using TempFile dir = new("sfn_test");
         File.Create(Path.Join(dir.Path, "readme.txt")).Dispose();
 
         string result = DosPathResolver.GetShortFileName("readme.txt", dir.Path);
@@ -144,7 +145,7 @@ public class DosPathResolverTest {
 
     [Fact]
     public void GetShortFileName_LongName_TruncatesWithTilde1() {
-        using TempDir dir = new();
+        using TempFile dir = new("sfn_test");
         File.Create(Path.Join(dir.Path, "VeryLongFileName.txt")).Dispose();
 
         string result = DosPathResolver.GetShortFileName("VeryLongFileName.txt", dir.Path);
@@ -154,7 +155,7 @@ public class DosPathResolverTest {
 
     [Fact]
     public void GetShortFileName_TwoLongNames_SameStem_GetTilde1AndTilde2() {
-        using TempDir dir = new();
+        using TempFile dir = new("sfn_test");
         File.Create(Path.Join(dir.Path, "VeryLongFileName1.txt")).Dispose();
         File.Create(Path.Join(dir.Path, "VeryLongFileName2.txt")).Dispose();
 
@@ -167,7 +168,7 @@ public class DosPathResolverTest {
 
     [Fact]
     public void GetShortFileName_ThreeLongNames_SameStem_SequentialTildes() {
-        using TempDir dir = new();
+        using TempFile dir = new("sfn_test");
         File.Create(Path.Join(dir.Path, "LongDocument_Alpha.doc")).Dispose();
         File.Create(Path.Join(dir.Path, "LongDocument_Beta.doc")).Dispose();
         File.Create(Path.Join(dir.Path, "LongDocument_Gamma.doc")).Dispose();
@@ -183,7 +184,7 @@ public class DosPathResolverTest {
 
     [Fact]
     public void GetShortFileName_LongExtension_TruncatesTo3Chars() {
-        using TempDir dir = new();
+        using TempFile dir = new("sfn_test");
         File.Create(Path.Join(dir.Path, "readme.text")).Dispose();
 
         string result = DosPathResolver.GetShortFileName("readme.text", dir.Path);
@@ -193,7 +194,7 @@ public class DosPathResolverTest {
 
     [Fact]
     public void GetShortFileName_SpacesInName_StrippedAndTilde() {
-        using TempDir dir = new();
+        using TempFile dir = new("sfn_test");
         File.Create(Path.Join(dir.Path, "My File.txt")).Dispose();
 
         string result = DosPathResolver.GetShortFileName("My File.txt", dir.Path);
@@ -203,7 +204,7 @@ public class DosPathResolverTest {
 
     [Fact]
     public void GetShortFileName_NoExtension_Handled() {
-        using TempDir dir = new();
+        using TempFile dir = new("sfn_test");
         File.Create(Path.Join(dir.Path, "VeryLongFilenameNoExt")).Dispose();
 
         string result = DosPathResolver.GetShortFileName("VeryLongFilenameNoExt", dir.Path);
@@ -213,7 +214,7 @@ public class DosPathResolverTest {
 
     [Fact]
     public void GetShortFileName_ExactlyEightChars_NoTilde() {
-        using TempDir dir = new();
+        using TempFile dir = new("sfn_test");
         File.Create(Path.Join(dir.Path, "ABCDEFGH.TXT")).Dispose();
 
         string result = DosPathResolver.GetShortFileName("ABCDEFGH.TXT", dir.Path);
@@ -223,7 +224,7 @@ public class DosPathResolverTest {
 
     [Fact]
     public void GetShortFileName_NineChars_GetsTilde() {
-        using TempDir dir = new();
+        using TempFile dir = new("sfn_test");
         File.Create(Path.Join(dir.Path, "ABCDEFGHI.TXT")).Dispose();
 
         string result = DosPathResolver.GetShortFileName("ABCDEFGHI.TXT", dir.Path);
@@ -236,19 +237,6 @@ public class DosPathResolverTest {
         string result = DosPathResolver.GetShortFileName("VeryLongFileName.txt", "");
 
         result.Should().Be("VERYLO~1.TXT");
-    }
-
-    private sealed class TempDir : IDisposable {
-        public string Path { get; }
-        public TempDir() {
-            Path = System.IO.Path.Join(System.IO.Path.GetTempPath(), $"sfn_test_{Guid.NewGuid():N}");
-            Directory.CreateDirectory(Path);
-        }
-        public void Dispose() {
-            if (Directory.Exists(Path)) {
-                Directory.Delete(Path, true);
-            }
-        }
     }
 
     [Fact]

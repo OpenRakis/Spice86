@@ -22,8 +22,10 @@ using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
+using Spice86.Tests.Utility;
 
 using System;
 using System.Collections.Generic;
@@ -62,27 +64,21 @@ public class DosProcessManagerTests {
         DosProgramSegmentPrefix rootPsp = GetRootPsp(context);
         rootPsp.NNFlags = 0xABCD;
 
-        string comFilePath = Path.Join(Path.GetTempPath(), $"dos_proc_{Guid.NewGuid():N}.com");
-        try {
-            File.WriteAllBytes(comFilePath, new byte[] { 0xC3 });
-            DosExecParameterBlock parameterBlock = CreateParameterBlock();
+        using TempFile tempFile = new("DosProcessManagerTests");
+        string comFilePath = tempFile.CreateFile("load_child.com", [0xC3]);
+        DosExecParameterBlock parameterBlock = CreateParameterBlock();
 
-            DosExecResult result = context.ProcessManager.LoadOrLoadAndExecute(
-                comFilePath,
-                parameterBlock,
-                string.Empty,
-                DosExecLoadType.LoadOnly,
-                environmentSegment: 0);
+        DosExecResult result = context.ProcessManager.LoadOrLoadAndExecute(
+            comFilePath,
+            parameterBlock,
+            string.Empty,
+            DosExecLoadType.LoadOnly,
+            environmentSegment: 0);
 
-            result.Success.Should().BeTrue();
-            ushort childSegment = result.InitialCS;
-            DosProgramSegmentPrefix childPsp = new(context.Memory, MemoryUtils.ToPhysicalAddress(childSegment, 0));
-            childPsp.NNFlags.Should().Be(0);
-        } finally {
-            if (File.Exists(comFilePath)) {
-                File.Delete(comFilePath);
-            }
-        }
+        result.Success.Should().BeTrue();
+        ushort childSegment = result.InitialCS;
+        DosProgramSegmentPrefix childPsp = new(context.Memory, MemoryUtils.ToPhysicalAddress(childSegment, 0));
+        childPsp.NNFlags.Should().Be(0);
     }
 
     [Fact]
@@ -91,28 +87,24 @@ public class DosProcessManagerTests {
         context.ProcessManager.CreateRootCommandComPsp();
 
         DosProgramSegmentPrefix rootPsp = GetRootPsp(context);
-        rootPsp.StackPointer = 0x12345678;
+        rootPsp.StackPointer = new SegmentedAddress(0x1234, 0x5678);
 
         context.State.SS = 0x3000;
         context.State.SP = 0x00FE;
 
-        string comFilePath = CreateTemporaryComFile();
-        string expectedDosFileName = Path.GetFileName(comFilePath).ToUpperInvariant();
-        try {
-            DosExecParameterBlock parameterBlock = CreateParameterBlock();
+        using TempFile tempFile = new("DosProcessManagerTests");
+        string comFilePath = CreateTemporaryComFile(tempFile);
+        DosExecParameterBlock parameterBlock = CreateParameterBlock();
 
-            DosExecResult result = context.ProcessManager.LoadOrLoadAndExecute(
-                comFilePath,
-                parameterBlock,
-                string.Empty,
-                DosExecLoadType.LoadOnly,
-                environmentSegment: 0);
+        DosExecResult result = context.ProcessManager.LoadOrLoadAndExecute(
+            comFilePath,
+            parameterBlock,
+            string.Empty,
+            DosExecLoadType.LoadOnly,
+            environmentSegment: 0);
 
-            result.Success.Should().BeTrue();
-            rootPsp.StackPointer.Should().Be(0x12345678);
-        } finally {
-            DeleteIfExists(comFilePath);
-        }
+        result.Success.Should().BeTrue();
+        rootPsp.StackPointer.Should().Be(new SegmentedAddress(0x1234, 0x5678));
     }
 
     [Fact]
@@ -120,18 +112,18 @@ public class DosProcessManagerTests {
         DosProcessManagerTestContext context = CreateContext();
         context.ProcessManager.CreateRootCommandComPsp();
 
-        string comFilePath = CreateTemporaryComFile();
-        try {
-            DosExecParameterBlock parameterBlock = CreateParameterBlock();
-            DosExecResult parentExec = context.ProcessManager.LoadOrLoadAndExecute(
-                comFilePath,
-                parameterBlock,
-                string.Empty,
-                DosExecLoadType.LoadAndExecute,
-                environmentSegment: 0);
+        using TempFile tempFile = new("DosProcessManagerTests");
+        string comFilePath = CreateTemporaryComFile(tempFile);
+        DosExecParameterBlock parameterBlock = CreateParameterBlock();
+        DosExecResult parentExec = context.ProcessManager.LoadOrLoadAndExecute(
+            comFilePath,
+            parameterBlock,
+            string.Empty,
+            DosExecLoadType.LoadAndExecute,
+            environmentSegment: 0);
 
-            parentExec.Success.Should().BeTrue();
-            ushort parentSegment = context.CurrentPspSegment;
+        parentExec.Success.Should().BeTrue();
+        ushort parentSegment = context.CurrentPspSegment;
 
             // Shrink parent's memory to PSP + small code, freeing space for child
             const ushort parentMinimumSize = DosProgramSegmentPrefix.PspSizeInParagraphs + 0x10;
@@ -141,34 +133,31 @@ public class DosProcessManagerTests {
                 out DosMemoryControlBlock _);
             shrinkResult.Should().Be(DosErrorCode.NoError, "parent must shrink memory before loading child");
 
-            context.State.SS = 0xFFFD;
-            context.State.SP = 0xFFFE;
+        context.State.SS = 0xFFFD;
+        context.State.SP = 0xFFFE;
 
-            parameterBlock = CreateParameterBlock();
+        parameterBlock = CreateParameterBlock();
 
-            DosExecResult childExec = context.ProcessManager.LoadOrLoadAndExecute(
-                comFilePath,
-                parameterBlock,
-                string.Empty,
-                DosExecLoadType.LoadAndExecute,
-                environmentSegment: 0);
+        DosExecResult childExec = context.ProcessManager.LoadOrLoadAndExecute(
+            comFilePath,
+            parameterBlock,
+            string.Empty,
+            DosExecLoadType.LoadAndExecute,
+            environmentSegment: 0);
 
-            childExec.Success.Should().BeTrue();
+        childExec.Success.Should().BeTrue();
 
-            context.State.SS = 0x3333;
-            context.State.SP = 0x0100;
+        context.State.SS = 0x3333;
+        context.State.SP = 0x0100;
 
-            context.ProcessManager.TerminateProcess(0, DosTerminationType.Normal);
+        context.ProcessManager.TerminateProcess(0, DosTerminationType.Normal);
 
-            context.CurrentPspSegment.Should().Be(parentSegment);
-            context.State.SS.Should().Be(0xFFFD);
-            // SP is restored to the exact value it had before the EXEC call.
-            // Spice86's CfgCpu has no GP register frame (unlike FreeDOS's PUSH$ALL),
-            // so no IregsFrameSize subtraction is applied.
-            context.State.SP.Should().Be(0xFFFE);
-        } finally {
-            DeleteIfExists(comFilePath);
-        }
+        context.CurrentPspSegment.Should().Be(parentSegment);
+        context.State.SS.Should().Be(0xFFFD);
+        // SP is restored to the exact value it had before the EXEC call.
+        // Spice86's CfgCpu has no GP register frame (unlike FreeDOS's PUSH$ALL),
+        // so no IregsFrameSize subtraction is applied.
+        context.State.SP.Should().Be(0xFFFE);
     }
 
     [Fact]
@@ -176,43 +165,40 @@ public class DosProcessManagerTests {
         DosProcessManagerTestContext context = CreateContext();
         context.ProcessManager.CreateRootCommandComPsp();
 
-        string comFilePath = CreateTemporaryComFile(0x200);
-        try {
-            DosExecParameterBlock parameterBlock = CreateParameterBlock();
+        using TempFile tempFile = new("DosProcessManagerTests");
+        string comFilePath = CreateTemporaryComFile(tempFile, 0x200);
+        DosExecParameterBlock parameterBlock = CreateParameterBlock();
 
-            DosExecResult execResult = context.ProcessManager.LoadOrLoadAndExecute(
-                comFilePath,
-                parameterBlock,
-                string.Empty,
-                DosExecLoadType.LoadAndExecute,
-                environmentSegment: 0);
+        DosExecResult execResult = context.ProcessManager.LoadOrLoadAndExecute(
+            comFilePath,
+            parameterBlock,
+            string.Empty,
+            DosExecLoadType.LoadAndExecute,
+            environmentSegment: 0);
 
-            execResult.Success.Should().BeTrue();
+        execResult.Success.Should().BeTrue();
 
-            ushort tsrSegment = context.CurrentPspSegment;
-            DosProgramSegmentPrefix tsrPsp = new(context.Memory, MemoryUtils.ToPhysicalAddress(tsrSegment, 0));
+        ushort tsrSegment = context.CurrentPspSegment;
+        DosProgramSegmentPrefix tsrPsp = new(context.Memory, MemoryUtils.ToPhysicalAddress(tsrSegment, 0));
 
-            ushort environmentSegment = tsrPsp.EnvironmentTableSegment;
-            environmentSegment.Should().NotBe(0);
+        ushort environmentSegment = tsrPsp.EnvironmentTableSegment;
+        environmentSegment.Should().NotBe(0);
 
-            DosMemoryControlBlock environmentBlock = new(context.Memory, MemoryUtils.ToPhysicalAddress((ushort)(environmentSegment - 1), 0));
-            environmentBlock.IsFree.Should().BeFalse();
+        DosMemoryControlBlock environmentBlock = new(context.Memory, MemoryUtils.ToPhysicalAddress((ushort)(environmentSegment - 1), 0));
+        environmentBlock.IsFree.Should().BeFalse();
 
-            DosMemoryControlBlock residentBlock = new(context.Memory, MemoryUtils.ToPhysicalAddress((ushort)(tsrSegment - 1), 0));
-            ushort requestedResidentSize = (ushort)(residentBlock.Size - 4);
-            requestedResidentSize.Should().BeGreaterThan(DosProgramSegmentPrefix.PspSizeInParagraphs);
+        DosMemoryControlBlock residentBlock = new(context.Memory, MemoryUtils.ToPhysicalAddress((ushort)(tsrSegment - 1), 0));
+        ushort requestedResidentSize = (ushort)(residentBlock.Size - 4);
+        requestedResidentSize.Should().BeGreaterThan(DosProgramSegmentPrefix.PspSizeInParagraphs);
 
             DosErrorCode resizeResult = context.MemoryManager.ModifyBlock(tsrSegment, requestedResidentSize, out DosMemoryControlBlock resizedBlock);
             resizeResult.Should().Be(DosErrorCode.NoError);
             resizedBlock.Size.Should().Be(requestedResidentSize);
 
-            context.ProcessManager.TerminateProcess(0, DosTerminationType.TSR);
+        context.ProcessManager.TerminateProcess(0, DosTerminationType.TSR);
 
-            environmentBlock = new(context.Memory, MemoryUtils.ToPhysicalAddress((ushort)(environmentSegment - 1), 0));
-            environmentBlock.IsFree.Should().BeTrue("TSR termination should free the child environment block");
-        } finally {
-            DeleteIfExists(comFilePath);
-        }
+        environmentBlock = new(context.Memory, MemoryUtils.ToPhysicalAddress((ushort)(environmentSegment - 1), 0));
+        environmentBlock.IsFree.Should().BeTrue("TSR termination should free the child environment block");
     }
 
     [Fact]
@@ -220,21 +206,20 @@ public class DosProcessManagerTests {
         DosProcessManagerTestContext context = CreateContext();
         context.ProcessManager.CreateRootCommandComPsp();
 
-        string comFilePath = CreateTemporaryComFile(0x200);
-        try {
-            DosExecParameterBlock parameterBlock = CreateParameterBlock();
+        using TempFile tempFile = new("DosProcessManagerTests");
+        string comFilePath = CreateTemporaryComFile(tempFile, 0x200);
+        DosExecParameterBlock parameterBlock = CreateParameterBlock();
 
-            DosExecResult execResult = context.ProcessManager.LoadOrLoadAndExecute(
-                comFilePath,
-                parameterBlock,
-                string.Empty,
-                DosExecLoadType.LoadAndExecute,
-                environmentSegment: 0);
+        DosExecResult execResult = context.ProcessManager.LoadOrLoadAndExecute(
+            comFilePath,
+            parameterBlock,
+            string.Empty,
+            DosExecLoadType.LoadAndExecute,
+            environmentSegment: 0);
 
-            execResult.Success.Should().BeTrue();
+        execResult.Success.Should().BeTrue();
 
-            ushort tsrSegment = context.CurrentPspSegment;
-            DosProgramSegmentPrefix tsrPsp = new(context.Memory, MemoryUtils.ToPhysicalAddress(tsrSegment, 0));
+        ushort tsrSegment = context.CurrentPspSegment;
 
             ushort paragraphsToKeep = DosProgramSegmentPrefix.PspSizeInParagraphs + 0x10;
             DosErrorCode resizeResult = context.MemoryManager.ModifyBlock(
@@ -242,18 +227,15 @@ public class DosProcessManagerTests {
                 paragraphsToKeep,
                 out DosMemoryControlBlock resizedBlock);
 
-            resizeResult.Should().Be(DosErrorCode.NoError);
-            context.ProcessManager.TrackResidentBlock(resizedBlock);
+        resizeResult.Should().Be(DosErrorCode.NoError);
+        context.ProcessManager.TrackResidentBlock(resizedBlock);
 
-            context.ProcessManager.TerminateProcess(0x00, DosTerminationType.TSR);
+        context.ProcessManager.TerminateProcess(0x00, DosTerminationType.TSR);
 
-            DosMemoryControlBlock residentBlock = new(context.Memory, MemoryUtils.ToPhysicalAddress((ushort)(tsrSegment - 1), 0));
-            residentBlock.Size.Should().Be(paragraphsToKeep);
-            residentBlock.PspSegment.Should().Be(tsrSegment);
-            residentBlock.Owner.Should().Be(resizedBlock.Owner);
-        } finally {
-            DeleteIfExists(comFilePath);
-        }
+        DosMemoryControlBlock residentBlock = new(context.Memory, MemoryUtils.ToPhysicalAddress((ushort)(tsrSegment - 1), 0));
+        residentBlock.Size.Should().Be(paragraphsToKeep);
+        residentBlock.PspSegment.Should().Be(tsrSegment);
+        residentBlock.Owner.Should().Be(resizedBlock.Owner);
     }
 
     [Fact]
@@ -273,30 +255,27 @@ public class DosProcessManagerTests {
         context.Memory.LoadData(MemoryUtils.ToPhysicalAddress(envBlock.DataBlockSegment, 0), largeEnvironment);
         rootPsp.EnvironmentTableSegment = envBlock.DataBlockSegment;
 
-        string comFilePath = CreateTemporaryComFile();
-        try {
-            DosExecParameterBlock parameterBlock = CreateParameterBlock();
-            string expectedDosFileName = Path.GetFileName(comFilePath).ToUpperInvariant();
+        using TempFile tempFile = new("DosProcessManagerTests");
+        string comFilePath = CreateTemporaryComFile(tempFile);
+        DosExecParameterBlock parameterBlock = CreateParameterBlock();
+        string expectedDosFileName = Path.GetFileName(comFilePath).ToUpperInvariant();
 
-            DosExecResult execResult = context.ProcessManager.LoadOrLoadAndExecute(
-                comFilePath,
-                parameterBlock,
-                string.Empty,
-                DosExecLoadType.LoadAndExecute,
-                environmentSegment: 0);
+        DosExecResult execResult = context.ProcessManager.LoadOrLoadAndExecute(
+            comFilePath,
+            parameterBlock,
+            string.Empty,
+            DosExecLoadType.LoadAndExecute,
+            environmentSegment: 0);
 
-            execResult.Success.Should().BeTrue();
+        execResult.Success.Should().BeTrue();
 
-            ushort childSegment = context.CurrentPspSegment;
-            DosProgramSegmentPrefix childPsp = new(context.Memory, MemoryUtils.ToPhysicalAddress(childSegment, 0));
+        ushort childSegment = context.CurrentPspSegment;
+        DosProgramSegmentPrefix childPsp = new(context.Memory, MemoryUtils.ToPhysicalAddress(childSegment, 0));
 
-            EnvironmentBlockInfo environmentInfo = ReadEnvironmentBlockInfo(context.Memory, childPsp.EnvironmentTableSegment);
-            environmentInfo.TotalLength.Should().BeLessThanOrEqualTo(DosProcessManager.MaximumEnvironmentScanLength);
-            environmentInfo.AdditionalStringCount.Should().Be(AdditionalEnvironmentStringsCount);
-            environmentInfo.ProgramPath.Should().EndWith(expectedDosFileName);
-        } finally {
-            DeleteIfExists(comFilePath);
-        }
+        EnvironmentBlockInfo environmentInfo = ReadEnvironmentBlockInfo(context.Memory, childPsp.EnvironmentTableSegment);
+        environmentInfo.TotalLength.Should().BeLessThanOrEqualTo(DosProcessManager.MaximumEnvironmentScanLength);
+        environmentInfo.AdditionalStringCount.Should().Be(AdditionalEnvironmentStringsCount);
+        environmentInfo.ProgramPath.Should().EndWith(expectedDosFileName);
     }
 
     [Fact]
@@ -309,28 +288,25 @@ public class DosProcessManagerTests {
         context.State.BP = 0x0000;
         context.State.DI = 0xFFFF;
 
-        string exeFilePath = CreateTemporaryExeFile();
-        try {
-            DosExecParameterBlock parameterBlock = CreateParameterBlock();
+        using TempFile tempFile = new("DosProcessManagerTests");
+        string exeFilePath = CreateTemporaryExeFile(tempFile);
+        DosExecParameterBlock parameterBlock = CreateParameterBlock();
 
-            DosExecResult execResult = context.ProcessManager.LoadOrLoadAndExecute(
-                exeFilePath,
-                parameterBlock,
-                string.Empty,
-                DosExecLoadType.LoadAndExecute,
-                environmentSegment: 0);
+        DosExecResult execResult = context.ProcessManager.LoadOrLoadAndExecute(
+            exeFilePath,
+            parameterBlock,
+            string.Empty,
+            DosExecLoadType.LoadAndExecute,
+            environmentSegment: 0);
 
-            execResult.Success.Should().BeTrue();
+        execResult.Success.Should().BeTrue();
 
-            ushort childPspSegment = context.CurrentPspSegment;
+        ushort childPspSegment = context.CurrentPspSegment;
 
-            context.State.DX.Should().Be(childPspSegment);
-            context.State.CX.Should().Be(0x00FF);
-            context.State.BP.Should().Be(0x091E);
-            context.State.DI.Should().Be(0x0000);
-        } finally {
-            DeleteIfExists(exeFilePath);
-        }
+        context.State.DX.Should().Be(childPspSegment);
+        context.State.CX.Should().Be(0x00FF);
+        context.State.BP.Should().Be(0x091E);
+        context.State.DI.Should().Be(0x0000);
     }
 
     [Fact]
@@ -342,27 +318,23 @@ public class DosProcessManagerTests {
         const ushort relocationInitialValue = 0x0042;
         byte[] overlayBytes = BuildOverlayExeImageWithRelocation(relocationTargetOffset, relocationInitialValue);
 
-        string overlayFilePath = Path.Join(Path.GetTempPath(), $"dos_overlay_{Guid.NewGuid():N}.exe");
-        try {
-            File.WriteAllBytes(overlayFilePath, overlayBytes);
+        using TempFile tempFile = new("DosProcessManagerTests");
+        string overlayFilePath = tempFile.CreateFile("overlay.exe", overlayBytes);
 
-            const ushort loadSegment = 0x4000;
-            const ushort relocationFactor = 0x1234;
+        const ushort loadSegment = 0x4000;
+        const ushort relocationFactor = 0x1234;
 
-            DosExecResult execResult = context.ProcessManager.LoadOverlay(
-                overlayFilePath,
-                loadSegment,
-                relocationFactor);
+        DosExecResult execResult = context.ProcessManager.LoadOverlay(
+            overlayFilePath,
+            loadSegment,
+            relocationFactor);
 
-            execResult.Success.Should().BeTrue();
+        execResult.Success.Should().BeTrue();
 
-            uint relocatedWordAddress = MemoryUtils.ToPhysicalAddress(loadSegment, relocationTargetOffset);
-            ushort relocatedWord = context.Memory.UInt16[relocatedWordAddress];
-            relocatedWord.Should().Be((ushort)(relocationInitialValue + relocationFactor));
-            relocatedWord.Should().NotBe((ushort)(relocationInitialValue + loadSegment));
-        } finally {
-            DeleteIfExists(overlayFilePath);
-        }
+        uint relocatedWordAddress = MemoryUtils.ToPhysicalAddress(loadSegment, relocationTargetOffset);
+        ushort relocatedWord = context.Memory.UInt16[relocatedWordAddress];
+        relocatedWord.Should().Be((ushort)(relocationInitialValue + relocationFactor));
+        relocatedWord.Should().NotBe((ushort)(relocationInitialValue + loadSegment));
     }
 
     [Fact]
@@ -375,21 +347,18 @@ public class DosProcessManagerTests {
         const ushort programParagraphsFromHeader = 0x001C; // Derived from BuildExeImage layout.
         const ushort requiredMinAlloc = (ushort)(desiredMinimumParagraphs - (DosProgramSegmentPrefix.PspSizeInParagraphs + programParagraphsFromHeader));
 
-        string exeFilePath = CreateTemporaryExeFile(requiredMinAlloc, requiredMinAlloc);
-        try {
-            DosExecParameterBlock parameterBlock = CreateParameterBlock();
+        using TempFile tempFile = new("DosProcessManagerTests");
+        string exeFilePath = CreateTemporaryExeFile(tempFile, requiredMinAlloc, requiredMinAlloc);
+        DosExecParameterBlock parameterBlock = CreateParameterBlock();
 
-            DosExecResult execResult = context.ProcessManager.LoadOrLoadAndExecute(
-                exeFilePath,
-                parameterBlock,
-                string.Empty,
-                DosExecLoadType.LoadAndExecute,
-                environmentSegment: 0);
+        DosExecResult execResult = context.ProcessManager.LoadOrLoadAndExecute(
+            exeFilePath,
+            parameterBlock,
+            string.Empty,
+            DosExecLoadType.LoadAndExecute,
+            environmentSegment: 0);
 
-            execResult.Success.Should().BeTrue("EXEC should provide {0} paragraphs for the child process", desiredMinimumParagraphs);
-        } finally {
-            DeleteIfExists(exeFilePath);
-        }
+        execResult.Success.Should().BeTrue("EXEC should provide {0} paragraphs for the child process", desiredMinimumParagraphs);
     }
 
     private static DosProcessManagerTestContext CreateContext(ushort? programEntryPointSegment = null) {
@@ -457,30 +426,26 @@ public class DosProcessManagerTests {
         buffer[offset + 1] = (byte)(value >> 8);
     }
 
-    private static string CreateTemporaryComFile(int payloadLength = 1) {
+    private static string CreateTemporaryComFile(TempFile tempFile, int payloadLength = 1) {
         if (payloadLength < 1) {
             payloadLength = 1;
         }
 
-        string comFilePath = Path.Join(Path.GetTempPath(), $"dos_proc_{Guid.NewGuid():N}.com");
         byte[] bytes = new byte[payloadLength];
         for (int i = 0; i < payloadLength - 1; i++) {
             bytes[i] = 0x90;
         }
         bytes[payloadLength - 1] = 0xC3;
-        File.WriteAllBytes(comFilePath, bytes);
-        return comFilePath;
+        return tempFile.CreateFile("program.com", bytes);
     }
 
-    private static string CreateTemporaryExeFile() {
-        return CreateTemporaryExeFile(0, 0xFFFF);
+    private static string CreateTemporaryExeFile(TempFile tempFile) {
+        return CreateTemporaryExeFile(tempFile, 0, 0xFFFF);
     }
 
-    private static string CreateTemporaryExeFile(ushort minExtraParagraphs, ushort maxExtraParagraphs) {
-        string exeFilePath = Path.Join(Path.GetTempPath(), $"dos_proc_{Guid.NewGuid():N}.exe");
+    private static string CreateTemporaryExeFile(TempFile tempFile, ushort minExtraParagraphs, ushort maxExtraParagraphs) {
         byte[] exeBytes = BuildExeImage(minExtraParagraphs, maxExtraParagraphs);
-        File.WriteAllBytes(exeFilePath, exeBytes);
-        return exeFilePath;
+        return tempFile.CreateFile("program.exe", exeBytes);
     }
 
     private static byte[] BuildExeImage(ushort minExtraParagraphs, ushort maxExtraParagraphs) {
@@ -536,12 +501,6 @@ public class DosProcessManagerTests {
         WriteUInt16LittleEndian(image, wordOffset, initialWordValue);
 
         return image;
-    }
-
-    private static void DeleteIfExists(string path) {
-        if (File.Exists(path)) {
-            File.Delete(path);
-        }
     }
 
     private static byte[] BuildLargeEnvironmentBytes(int totalLength) {

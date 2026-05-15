@@ -2,32 +2,25 @@ namespace Spice86.Tests.Emulator.Devices.Sound;
 
 using FluentAssertions;
 
-using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
-using Spice86.Core.Emulator.IOPorts;
 using Spice86.Shared.Interfaces;
-
-using System.Runtime.CompilerServices;
+using Spice86.Tests.Utility;
 
 using Xunit;
 
 [Trait("Category", "Sound")]
 public class SoundIntegrationTests {
-    private const int ResultPort = 0x999;
-    private const int DetailsPort = 0x998;
-
     /// <summary>
     /// Tests that the SB DSP reset produces 0xAA after an expected delay coming from real hardware behavior.
     /// </summary>
     [Fact]
     public void SoundBlasterDspReset_ProducesAA_AfterHardwareDelay() {
         // Arrange
-        string comPath = Path.Join("Resources", "Sound", "sb_reset_delay.com");
-        byte[] program = File.ReadAllBytes(comPath);
+        string comPath = Path.Join(AppContext.BaseDirectory, "Resources", "Sound", "sb_reset_delay.com");
 
         // Act
-        SoundTestHandler testHandler = RunSoundTest(program, enablePit: true, maxCycles: 500000L,
+        TestIoPortHandler testHandler = RunSoundTest(comPath, enablePit: true, maxCycles: 500000L,
             sbType: SbType.SBPro2);
 
         // Assert
@@ -38,23 +31,20 @@ public class SoundIntegrationTests {
         iterationCount.Should().BeGreaterThan(0, "reset delay should require multiple poll iterations (20us hardware delay)");
     }
 
-    private SoundTestHandler RunSoundTest(byte[] program, bool enablePit,
-        long maxCycles, SbType sbType = SbType.None, OplMode oplMode = OplMode.None,
-        [CallerMemberName] string unitTestName = "test") {
-        string filePath = Path.GetFullPath($"{unitTestName}.com");
-        File.WriteAllBytes(filePath, program);
-
-        Spice86DependencyInjection spice86DependencyInjection = new Spice86Creator(
-            binName: filePath,
+    private TestIoPortHandler RunSoundTest(string comPath, bool enablePit,
+        long maxCycles, SbType sbType = SbType.None, OplMode oplMode = OplMode.None) {
+        using Spice86Creator creator = new Spice86Creator(
+            binName: comPath,
             enablePit: enablePit,
             maxCycles: maxCycles,
             installInterruptVectors: true,
             enableA20Gate: true,
             sbType: sbType,
             oplMode: oplMode
-        ).Create();
+        );
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
 
-        SoundTestHandler testHandler = new(
+        TestIoPortHandler testHandler = new(
             spice86DependencyInjection.Machine.CpuState,
             NSubstitute.Substitute.For<ILoggerService>(),
             spice86DependencyInjection.Machine.IoPortDispatcher
@@ -64,26 +54,4 @@ public class SoundIntegrationTests {
         return testHandler;
     }
 
-    private class SoundTestHandler : DefaultIOPortHandler {
-        public List<byte> Results { get; } = new();
-        public List<byte> Details { get; } = new();
-
-        public SoundTestHandler(State state, ILoggerService loggerService,
-            IOPortDispatcher ioPortDispatcher) : base(state, true, loggerService) {
-            ioPortDispatcher.AddIOPortHandler(ResultPort, this);
-            ioPortDispatcher.AddIOPortHandler(DetailsPort, this);
-        }
-
-        public override void WriteByte(ushort port, byte value) {
-            if (port == ResultPort) {
-                Results.Add(value);
-            } else if (port == DetailsPort) {
-                Details.Add(value);
-            }
-        }
-    }
 }
-
-
-
-
