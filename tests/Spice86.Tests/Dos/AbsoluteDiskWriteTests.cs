@@ -103,6 +103,26 @@ public sealed class AbsoluteDiskWriteTests {
     }
 
     [Fact]
+    public void WriteSector_HardDiskImageMountedOnC_PersistsInImage() {
+        // Arrange
+        byte[] image = new Fat12ImageBuilder().Build();
+        Ctx ctx = new(image);
+        byte[] cImage = new Fat12ImageBuilder().Build();
+        ctx.DriveManager.MountFloppyImage('C', cImage, "c.img");
+        ctx.Memory.UInt8[ctx.BufferAddress] = 0x5A;
+        ctx.State.AL = 0x02; // drive C
+        ctx.State.CX = 1;
+        ctx.State.DX = 0;
+
+        // Act
+        ctx.Handler.Run();
+
+        // Assert
+        ctx.State.CarryFlag.Should().BeFalse();
+        cImage[0].Should().Be(0x5A);
+    }
+
+    [Fact]
     public void WriteSector_ExtendedMode_WritesCorrectSector() {
         byte[] image = new Fat12ImageBuilder().Build();
         Ctx ctx = new(image);

@@ -92,13 +92,12 @@ public class DosDiskInt26Handler : InterruptHandler {
             bufferAddress = MemoryUtils.ToPhysicalAddress(State.DS, State.BX);
         }
 
-        if (driveIndex >= 2) {
-            SetCarryFlag(false, calledFromVm);
-            State.AX = 0;
-            return;
-        }
-
         if (!_dosDriveManager.TryGetGeometry(driveIndex, out int _, out int _, out int _, out int bytesPerSector)) {
+            if (driveIndex >= 2) {
+                SetCarryFlag(false, calledFromVm);
+                State.AX = 0;
+                return;
+            }
             State.AX = ErrorInvalidDrive;
             SetCarryFlag(true, calledFromVm);
             return;

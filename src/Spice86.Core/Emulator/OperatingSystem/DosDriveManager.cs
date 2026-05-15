@@ -1224,7 +1224,7 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
         sectorsPerTrack = 0;
         bytesPerSector = 0;
 
-        if (!TryResolveFloppyImage(driveNumber, out FloppyDiskDrive? _, out byte[]? imageData) || imageData == null) {
+        if (!TryResolveImageBackedDrive(driveNumber, out FloppyDiskDrive? _, out byte[]? imageData) || imageData == null) {
             return false;
         }
 
@@ -1241,7 +1241,7 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
 
     /// <inheritdoc/>
     public bool ReadFromImage(byte driveNumber, int imageByteOffset, byte[] destination, int destOffset, int byteCount) {
-        if (!TryResolveFloppyImage(driveNumber, out FloppyDiskDrive? _, out byte[]? imageData)) {
+        if (!TryResolveImageBackedDrive(driveNumber, out FloppyDiskDrive? _, out byte[]? imageData)) {
             return false;
         }
         if (imageByteOffset < 0 || imageByteOffset + byteCount > imageData!.Length) {
@@ -1253,7 +1253,7 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
 
     /// <inheritdoc/>
     public bool WriteToImage(byte driveNumber, int imageByteOffset, byte[] source, int srcOffset, int byteCount) {
-        if (!TryResolveFloppyImage(driveNumber, out FloppyDiskDrive? floppy, out byte[]? imageData)) {
+        if (!TryResolveImageBackedDrive(driveNumber, out FloppyDiskDrive? floppy, out byte[]? imageData)) {
             return false;
         }
         if (imageByteOffset < 0 || imageByteOffset + byteCount > imageData!.Length) {
@@ -1275,10 +1275,13 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
         _version++;
     }
 
-    private bool TryResolveFloppyImage(byte driveNumber, out FloppyDiskDrive? floppy, out byte[]? imageData) {
+    private bool TryResolveImageBackedDrive(byte driveNumber, out FloppyDiskDrive? floppy, out byte[]? imageData) {
         floppy = null;
         imageData = null;
-        char driveLetter = driveNumber == 0 ? 'A' : 'B';
+        char driveLetter = (char)('A' + driveNumber);
+        if (driveLetter < 'A' || driveLetter > 'Z') {
+            return false;
+        }
         if (!TryGetFloppyDrive(driveLetter, out floppy)) {
             return false;
         }
