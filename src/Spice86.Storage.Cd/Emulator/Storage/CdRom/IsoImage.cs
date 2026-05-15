@@ -15,6 +15,11 @@ public sealed class IsoImage : ICdRomImage {
     private const int PvdRootDirRecordOffset = 156;
     private const int PvdVolumeIdentifierOffset = 40;
     private const int PvdVolumeIdentifierLength = 32;
+    private const int SvdEscapeSequenceOffset = 88;
+    private const int VolumeDescriptorTypePvd = 0x01;
+    private const int VolumeDescriptorTypeSvd = 0x02;
+    private const int VolumeDescriptorTypeTerminator = 0xFF;
+    private const int MaxVolumeDescriptorsToScan = 32;
     private static readonly byte[] ExpectedSignature = "CD001"u8.ToArray();
 
     private readonly FileBackedDataSource _source;
@@ -42,6 +47,8 @@ public sealed class IsoImage : ICdRomImage {
 
         PrimaryVolume = new IsoVolumeDescriptor(volumeId, rootDirLba, rootDirSize, logicalBlockSize, volumeSpaceSize);
         TotalSectors = volumeSpaceSize;
+
+        ScanSupplementaryVolumeDescriptors();
 
         CdTrack track = new CdTrack(
             number: 1,
@@ -73,6 +80,110 @@ public sealed class IsoImage : ICdRomImage {
 
     /// <inheritdoc/>
     public IsoVolumeDescriptor PrimaryVolume { get; }
+
+    /// <summary>
+    /// Joliet Supplementary Volume Descriptor when this image contains one, otherwise <c>null</c>.
+    /// </summary>
+    public IsoSupplementaryVolumeDescriptor? JolietVolume { get; private set; }
+
+    /// <summary>
+    /// Reads the Joliet root directory and returns its entries with UCS-2 BE
+    /// decoded names. Throws when no Joliet volume is present.
+    /// </summary>
+    public IReadOnlyList<IsoDirectoryRecord> ReadJolietRootDirectory() {
+        if (JolietVolume is null) {
+            throw new InvalidOperationException("This ISO image does not contain a Joliet supplementary volume descriptor.");
+        }
+        int totalBytes = JolietVolume.RootDirectorySize;
+        int firstLba = JolietVolume.RootDirectoryLba;
+        byte[] buffer = new byte[totalBytes];
+        int sectorsToRead = (totalBytes + SectorSize - 1) / SectorSize;
+        for (int i = 0; i < sectorsToRead; i++) {
+            int bytesRemaining = totalBytes - i * SectorSize;
+            int chunk = bytesRemaining >= SectorSize ? SectorSize : bytesRemaining;
+            byte[] sector = new byte[SectorSize];
+            _source.Read((long)(firstLba + i) * SectorSize, sector);
+            Buffer.BlockCopy(sector, 0, buffer, i * SectorSize, chunk);
+        }
+
+        List<IsoDirectoryRecord> records = new();
+        int offset = 0;
+        while (offset < totalBytes) {
+            byte recordLength = buffer[offset];
+            if (recordLength == 0) {
+                // Records do not span sector boundaries; advance to next sector.
+                int nextSectorStart = ((offset / SectorSize) + 1) * SectorSize;
+                if (nextSectorStart >= totalBytes) {
+                    break;
+                }
+                offset = nextSectorStart;
+                continue;
+            }
+            IsoDirectoryRecord record = IsoDirectoryRecord.ParseJoliet(buffer.AsSpan(offset, recordLength));
+            records.Add(record);
+            offset += recordLength;
+        }
+        return records;
+    }
+
+    private void ScanSupplementaryVolumeDescriptors() {
+        byte[] sector = new byte[SectorSize];
+        for (int i = 1; i < MaxVolumeDescriptorsToScan; i++) {
+            int lba = PvdLba + i;
+            long offset = (long)lba * SectorSize;
+            if (offset + SectorSize > _source.LengthBytes) {
+                return;
+            }
+            _source.Read(offset, sector);
+            byte type = sector[0];
+            if (type == VolumeDescriptorTypeTerminator) {
+                return;
+            }
+            if (!HasCd001Signature(sector)) {
+                return;
+            }
+            if (type != VolumeDescriptorTypeSvd) {
+                continue;
+            }
+            IsoSupplementaryVolumeDescriptor svd = ParseSupplementaryVolumeDescriptor(sector);
+            if (svd.IsJoliet && JolietVolume is null) {
+                JolietVolume = svd;
+            }
+        }
+    }
+
+    private static bool HasCd001Signature(byte[] sector) {
+        for (int i = 0; i < ExpectedSignature.Length; i++) {
+            if (sector[PvdSignatureOffset + i] != ExpectedSignature[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static IsoSupplementaryVolumeDescriptor ParseSupplementaryVolumeDescriptor(byte[] sector) {
+        byte[] escape = new byte[3];
+        escape[0] = sector[SvdEscapeSequenceOffset];
+        escape[1] = sector[SvdEscapeSequenceOffset + 1];
+        escape[2] = sector[SvdEscapeSequenceOffset + 2];
+        int volumeSpaceSize = BinaryPrimitives.ReadInt32LittleEndian(sector.AsSpan(PvdVolumeSpaceSizeOffset, 4));
+        int logicalBlockSize = BinaryPrimitives.ReadUInt16LittleEndian(sector.AsSpan(PvdLogicalBlockSizeOffset, 2));
+        ReadOnlySpan<byte> rootDirSpan = sector.AsSpan(PvdRootDirRecordOffset, 34);
+        int rootDirLba = BinaryPrimitives.ReadInt32LittleEndian(rootDirSpan.Slice(2, 4));
+        int rootDirSize = BinaryPrimitives.ReadInt32LittleEndian(rootDirSpan.Slice(10, 4));
+        string volumeId = DecodeVolumeIdentifier(sector, escape);
+        return new IsoSupplementaryVolumeDescriptor(volumeId, rootDirLba, rootDirSize, logicalBlockSize, volumeSpaceSize, escape);
+    }
+
+    private static string DecodeVolumeIdentifier(byte[] sector, byte[] escapeSequence) {
+        ReadOnlySpan<byte> raw = sector.AsSpan(PvdVolumeIdentifierOffset, PvdVolumeIdentifierLength);
+        bool joliet = escapeSequence[0] == 0x25 && escapeSequence[1] == 0x2F
+            && (escapeSequence[2] == 0x40 || escapeSequence[2] == 0x43 || escapeSequence[2] == 0x45);
+        if (joliet) {
+            return Encoding.BigEndianUnicode.GetString(raw).TrimEnd('\0', ' ');
+        }
+        return Encoding.ASCII.GetString(raw).TrimEnd();
+    }
 
     /// <inheritdoc/>
     public string? UpcEan => null;
