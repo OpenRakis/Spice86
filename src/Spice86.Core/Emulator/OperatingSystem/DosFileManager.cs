@@ -957,8 +957,17 @@ public class DosFileManager {
 
         ushort dosIndex = (ushort)freeIndex.Value;
         byte[] fileData = floppyDrive.Image.ReadFile(entry);
+        // Tag with the drive parsed from the supplied DOS path (e.g. "A:\FILE.TXT")
+        // rather than the current drive, since callers can open files on any drive.
+        byte fileDrive = _dosDriveManager.CurrentDriveIndex;
+        if (dosFileName.Length >= 2 && dosFileName[1] == DosPathResolver.VolumeSeparatorChar) {
+            char letter = char.ToUpperInvariant(dosFileName[0]);
+            if (DosDriveManager.TryGetLetterIndex(letter, out int idx)) {
+                fileDrive = (byte)idx;
+            }
+        }
         DosFile dosFile = new(dosFileName, dosIndex, new System.IO.MemoryStream(fileData, writable: false)) {
-            Drive = _dosDriveManager.CurrentDriveIndex
+            Drive = fileDrive
         };
         dosFile.DeviceInformation = ComputeDefaultDeviceInformation(dosFile);
         SetOpenFile(dosIndex, dosFile);

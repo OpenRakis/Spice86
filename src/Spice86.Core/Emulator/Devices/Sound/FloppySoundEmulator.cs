@@ -46,6 +46,7 @@ public sealed class FloppySoundEmulator {
 
     private readonly SoundChannel _channel;
     private readonly FloppyDiskNoiseDevice _device;
+    private float[] _frameBuffer = Array.Empty<float>();
 
     /// <summary>Gets the underlying sound channel (used by unit tests).</summary>
     internal SoundChannel Channel => _channel;
@@ -128,18 +129,21 @@ public sealed class FloppySoundEmulator {
 
     private void AudioCallback(int framesRequested) {
         // Stereo-interleaved output (L + R per frame)
-        float[] buf = new float[framesRequested * 2];
+        int needed = framesRequested * 2;
+        if (_frameBuffer.Length < needed) {
+            _frameBuffer = new float[needed];
+        }
         for (int i = 0; i < framesRequested; i++) {
             float sample = Math.Clamp(_device.GetNextFrame(), -1f, 1f);
-            buf[i * 2] = sample;
-            buf[i * 2 + 1] = sample;
+            _frameBuffer[i * 2] = sample;
+            _frameBuffer[i * 2 + 1] = sample;
         }
 
         if (!_device.IsActive) {
             _channel.Enable(false);
         }
 
-        _channel.AddSamplesNormalized(framesRequested, buf.AsSpan());
+        _channel.AddSamplesNormalized(framesRequested, _frameBuffer.AsSpan(0, needed));
     }
 
     private void UpdateChannelEnable() {

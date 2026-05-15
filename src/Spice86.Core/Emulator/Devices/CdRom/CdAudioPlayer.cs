@@ -5,6 +5,7 @@ using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Shared.Interfaces;
 
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 
 /// <summary>Manages real-time CD audio streaming through the software mixer.</summary>
@@ -17,6 +18,8 @@ public sealed class CdAudioPlayer {
     private readonly IDriveActivityNotifier? _activityNotifier;
     private ICdRomDrive? _drive;
     private char _driveLetter = '\0';
+    private byte[] _rawAudioBuffer = Array.Empty<byte>();
+    private float[] _floatSampleBuffer = Array.Empty<float>();
 
     /// <summary>Gets the underlying sound channel for test introspection.</summary>
     internal SoundChannel Channel => _soundChannel;
@@ -79,8 +82,12 @@ public sealed class CdAudioPlayer {
             return;
         }
         int sectorsNeeded = (framesRequested + SamplesPerSector - 1) / SamplesPerSector;
-        byte[] rawAudio = new byte[sectorsNeeded * AudioSectorSizeBytes];
-        int bytesRead = _drive.Read(status.CurrentLba, sectorsNeeded, rawAudio.AsSpan(), CdSectorMode.AudioRaw2352);
+        int rawBytesNeeded = sectorsNeeded * AudioSectorSizeBytes;
+        if (_rawAudioBuffer.Length < rawBytesNeeded) {
+            _rawAudioBuffer = new byte[rawBytesNeeded];
+        }
+        Span<byte> rawAudio = _rawAudioBuffer.AsSpan(0, rawBytesNeeded);
+        int bytesRead = _drive.Read(status.CurrentLba, sectorsNeeded, rawAudio, CdSectorMode.AudioRaw2352);
         if (bytesRead <= 0) {
             return;
         }
@@ -88,12 +95,18 @@ public sealed class CdAudioPlayer {
             _activityNotifier?.NotifyRead(_driveLetter);
         }
         int sampleCount = bytesRead / 2;
-        float[] floatSamples = new float[sampleCount];
+        if (_floatSampleBuffer.Length < sampleCount) {
+            _floatSampleBuffer = new float[sampleCount];
+        }
+        // CD-DA on a BIN image is signed 16-bit little-endian PCM (Red Book; mirrors
+        // dosbox-staging cdrom_image.cpp BinaryFile::getEndian returning little-endian).
+        ReadOnlySpan<byte> rawAudioRead = _rawAudioBuffer.AsSpan(0, bytesRead);
         for (int i = 0; i < sampleCount; i++) {
-            floatSamples[i] = BitConverter.ToInt16(rawAudio, i * 2);
+            short sample = BinaryPrimitives.ReadInt16LittleEndian(rawAudioRead.Slice(i * 2, 2));
+            _floatSampleBuffer[i] = sample;
         }
         int numFrames = sampleCount / 2;
-        _soundChannel.AddSamplesFloat(numFrames, floatSamples.AsSpan());
+        _soundChannel.AddSamplesFloat(numFrames, _floatSampleBuffer.AsSpan(0, sampleCount));
         status.CurrentLba += sectorsNeeded;
         if (status.CurrentLba >= status.EndLba) {
             status.Status = CdAudioStatus.Stopped;
