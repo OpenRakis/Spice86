@@ -63,9 +63,9 @@ public sealed class VirtualFloppyImage
 
         WriteBpb(image);
 
-        foreach (string entryPath in Directory.EnumerateFileSystemEntries(_sourceDirectory))
+        foreach (string entryPath in System.IO.Directory.EnumerateFileSystemEntries(_sourceDirectory))
         {
-            if (Directory.Exists(entryPath))
+            if (System.IO.Directory.Exists(entryPath))
             {
                 string dirName = Path.GetFileName(entryPath);
                 string dosDir = ToDosBaseName(dirName);
@@ -86,10 +86,10 @@ public sealed class VirtualFloppyImage
                 rootDirSlot++;
                 WriteSubdirEntries(image, fat, entryPath, dirCluster, ref nextCluster);
             }
-            else if (File.Exists(entryPath))
+            else if (System.IO.File.Exists(entryPath))
             {
                 string fileName = Path.GetFileName(entryPath);
-                byte[] content = File.ReadAllBytes(entryPath);
+                byte[] content = System.IO.File.ReadAllBytes(entryPath);
                 if (!TryAllocateAndWriteFile(image, fat, content, ref nextCluster, out int firstCluster))
                 {
                     LogSkipWarning(fileName, "not enough clusters remaining");
@@ -117,7 +117,7 @@ public sealed class VirtualFloppyImage
         int maxEntriesInCluster = BytesPerSector * SectorsPerCluster / 32;
         int slot = 0;
 
-        foreach (string entryPath in Directory.EnumerateFileSystemEntries(hostDirPath))
+        foreach (string entryPath in System.IO.Directory.EnumerateFileSystemEntries(hostDirPath))
         {
             string entryName = Path.GetFileName(entryPath);
             if (slot >= maxEntriesInCluster)
@@ -126,7 +126,7 @@ public sealed class VirtualFloppyImage
                 continue;
             }
 
-            if (Directory.Exists(entryPath))
+            if (System.IO.Directory.Exists(entryPath))
             {
                 int childDirCluster = nextCluster;
                 if (childDirCluster >= TotalDataClusters + 2)
@@ -145,12 +145,12 @@ public sealed class VirtualFloppyImage
                 continue;
             }
 
-            if (!File.Exists(entryPath))
+            if (!System.IO.File.Exists(entryPath))
             {
                 continue;
             }
 
-            byte[] content = File.ReadAllBytes(entryPath);
+            byte[] content = System.IO.File.ReadAllBytes(entryPath);
             if (!TryAllocateAndWriteFile(image, fat, content, ref nextCluster, out int firstCluster))
             {
                 LogSkipWarning(entryName, "not enough clusters remaining");

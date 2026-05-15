@@ -25,14 +25,14 @@ public sealed class VirtualFloppyImageTests : IDisposable
     public VirtualFloppyImageTests()
     {
         _testDir = Path.Combine(AppContext.BaseDirectory, Guid.NewGuid().ToString());
-        Directory.CreateDirectory(_testDir);
+        System.IO.Directory.CreateDirectory(_testDir);
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(_testDir))
+        if (System.IO.Directory.Exists(_testDir))
         {
-            Directory.Delete(_testDir, recursive: true);
+            System.IO.Directory.Delete(_testDir, recursive: true);
         }
     }
 
@@ -69,7 +69,7 @@ public sealed class VirtualFloppyImageTests : IDisposable
     {
         // Arrange
         byte[] content = Encoding.ASCII.GetBytes("HELLO FAT12");
-        File.WriteAllBytes(Path.Combine(_testDir, "TEST.TXT"), content);
+        System.IO.File.WriteAllBytes(Path.Combine(_testDir, "TEST.TXT"), content);
         VirtualFloppyImage builder = new(_testDir, CreateLogger());
 
         // Act
@@ -88,7 +88,7 @@ public sealed class VirtualFloppyImageTests : IDisposable
     {
         // Arrange
         byte[] expected = Encoding.ASCII.GetBytes("HELLO FAT12 WORLD");
-        File.WriteAllBytes(Path.Combine(_testDir, "HELLO.TXT"), expected);
+        System.IO.File.WriteAllBytes(Path.Combine(_testDir, "HELLO.TXT"), expected);
         VirtualFloppyImage builder = new(_testDir, CreateLogger());
 
         // Act
@@ -106,9 +106,9 @@ public sealed class VirtualFloppyImageTests : IDisposable
     {
         // Arrange
         string subDir = Path.Combine(_testDir, "SUBDIR");
-        Directory.CreateDirectory(subDir);
+        System.IO.Directory.CreateDirectory(subDir);
         byte[] content = Encoding.ASCII.GetBytes("IN SUBDIR");
-        File.WriteAllBytes(Path.Combine(subDir, "FILE.TXT"), content);
+        System.IO.File.WriteAllBytes(Path.Combine(subDir, "FILE.TXT"), content);
         VirtualFloppyImage builder = new(_testDir, CreateLogger());
 
         // Act
@@ -127,9 +127,9 @@ public sealed class VirtualFloppyImageTests : IDisposable
         // Arrange
         string level1 = Path.Combine(_testDir, "LEVEL1");
         string level2 = Path.Combine(level1, "LEVEL2");
-        Directory.CreateDirectory(level2);
+        System.IO.Directory.CreateDirectory(level2);
         byte[] content = Encoding.ASCII.GetBytes("DEEP FILE");
-        File.WriteAllBytes(Path.Combine(level2, "DEEP.TXT"), content);
+        System.IO.File.WriteAllBytes(Path.Combine(level2, "DEEP.TXT"), content);
         VirtualFloppyImage builder = new(_testDir, CreateLogger());
 
         // Act
@@ -148,7 +148,7 @@ public sealed class VirtualFloppyImageTests : IDisposable
         // Arrange
         string level1 = Path.Combine(_testDir, "LEVEL1");
         string level2 = Path.Combine(level1, "LEVEL2");
-        Directory.CreateDirectory(level2);
+        System.IO.Directory.CreateDirectory(level2);
         VirtualFloppyImage builder = new(_testDir, CreateLogger());
 
         // Act
@@ -171,7 +171,7 @@ public sealed class VirtualFloppyImageTests : IDisposable
 
         // Create a file that won't fit (bigger than remaining data area).
         byte[] large = new byte[2880 * 512];
-        File.WriteAllBytes(Path.Combine(_testDir, "BIG.BIN"), large);
+        System.IO.File.WriteAllBytes(Path.Combine(_testDir, "BIG.BIN"), large);
         VirtualFloppyImage builder = new(_testDir, logger);
 
         // Act
