@@ -8,7 +8,8 @@ using Spice86.Shared.Emulator.Storage.FileSystem.Clusters;
 /// <summary>
 /// Base type for FAT file cluster allocation strategies.
 /// </summary>
-public abstract class FileAllocationStrategy {
+public abstract class FileAllocationStrategy
+{
     /// <summary>
     /// Allocates a FAT cluster chain for a file size.
     /// </summary>
@@ -23,16 +24,20 @@ public abstract class FileAllocationStrategy {
     /// <param name="fileSizeBytes">File size in bytes.</param>
     /// <param name="bytesPerCluster">Bytes per cluster.</param>
     /// <returns>Required cluster count.</returns>
-    protected static int ComputeRequiredClusterCount(int fileSizeBytes, int bytesPerCluster) {
-        if (fileSizeBytes < 0) {
+    protected static int ComputeRequiredClusterCount(int fileSizeBytes, int bytesPerCluster)
+    {
+        if (fileSizeBytes < 0)
+        {
             throw new ArgumentOutOfRangeException(nameof(fileSizeBytes));
         }
 
-        if (bytesPerCluster <= 0) {
+        if (bytesPerCluster <= 0)
+        {
             throw new ArgumentOutOfRangeException(nameof(bytesPerCluster));
         }
 
-        if (fileSizeBytes == 0) {
+        if (fileSizeBytes == 0)
+        {
             return 1;
         }
 

@@ -8,7 +8,8 @@ using Spice86.Shared.Emulator.Storage.FileSystem;
 /// <summary>
 /// Mutable representation of a 32-byte FAT directory entry.
 /// </summary>
-public sealed class MutableFatDirectoryEntry {
+public sealed class MutableFatDirectoryEntry
+{
     /// <summary>Gets or sets the 8.3 base name (1 to 8 ASCII characters).</summary>
     public string BaseName { get; set; } = string.Empty;
 
@@ -25,11 +26,14 @@ public sealed class MutableFatDirectoryEntry {
     public uint FileSize { get; set; }
 
     /// <summary>Gets the normalised 8.3 DOS name.</summary>
-    public string DosName {
-        get {
+    public string DosName
+    {
+        get
+        {
             string normalizedBaseName = BaseName.TrimEnd();
             string normalizedExtension = Extension.TrimEnd();
-            if (string.IsNullOrEmpty(normalizedExtension)) {
+            if (string.IsNullOrEmpty(normalizedExtension))
+            {
                 return normalizedBaseName;
             }
             return normalizedBaseName + "." + normalizedExtension;
@@ -41,9 +45,11 @@ public sealed class MutableFatDirectoryEntry {
     /// </summary>
     /// <param name="entryBytes">Raw entry bytes (32 bytes minimum).</param>
     /// <returns>Parsed mutable entry.</returns>
-    public static MutableFatDirectoryEntry Parse(ReadOnlySpan<byte> entryBytes) {
+    public static MutableFatDirectoryEntry Parse(ReadOnlySpan<byte> entryBytes)
+    {
         FatDirectoryEntry entry = FatDirectoryEntry.Parse(entryBytes);
-        MutableFatDirectoryEntry mutableEntry = new MutableFatDirectoryEntry {
+        MutableFatDirectoryEntry mutableEntry = new MutableFatDirectoryEntry
+        {
             BaseName = entry.BaseName.TrimEnd(),
             Extension = entry.Extension.TrimEnd(),
             Attributes = entry.Attributes,
@@ -57,8 +63,10 @@ public sealed class MutableFatDirectoryEntry {
     /// Serialises the entry to the provided destination span.
     /// </summary>
     /// <param name="destination">Destination span with 32 bytes minimum.</param>
-    public void Serialize(Span<byte> destination) {
-        if (destination.Length < FatDirectoryEntry.EntrySize) {
+    public void Serialize(Span<byte> destination)
+    {
+        if (destination.Length < FatDirectoryEntry.EntrySize)
+        {
             throw new ArgumentException("Directory entry destination must be at least 32 bytes.", nameof(destination));
         }
 
@@ -78,13 +86,17 @@ public sealed class MutableFatDirectoryEntry {
         BitConverter.GetBytes(FileSize).CopyTo(destination.Slice(28, 4));
     }
 
-    private static void ValidateNamePart(string value, int maxLength, string parameterName) {
-        if (value.Length > maxLength) {
+    private static void ValidateNamePart(string value, int maxLength, string parameterName)
+    {
+        if (value.Length > maxLength)
+        {
             throw new ArgumentException("Name part exceeds DOS 8.3 limit.", parameterName);
         }
 
-        for (int i = 0; i < value.Length; i++) {
-            if (!DosNameConverter.IsAllowedDosCharacter(value[i])) {
+        for (int i = 0; i < value.Length; i++)
+        {
+            if (!DosNameConverter.IsAllowedDosCharacter(value[i]))
+            {
                 throw new ArgumentException("Name part contains unsupported DOS character.", parameterName);
             }
         }

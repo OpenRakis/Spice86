@@ -11,9 +11,11 @@ using Spice86.Shared.Emulator.Storage.FileSystem.Directory;
 
 using Xunit;
 
-public sealed class DosNameConverterTests {
+public sealed class DosNameConverterTests
+{
     [Fact]
-    public void DosNameConverter_LongNameWith8Chars_ConvertsTo8_3() {
+    public void DosNameConverter_LongNameWith8Chars_ConvertsTo8_3()
+    {
         // Arrange
         string sourceName = "longfilename.txt";
 
@@ -25,7 +27,8 @@ public sealed class DosNameConverterTests {
     }
 
     [Fact]
-    public void DosNameConverter_LowerCase_ConvertsToUpperCase() {
+    public void DosNameConverter_LowerCase_ConvertsToUpperCase()
+    {
         // Arrange
         string sourceName = "readme.doc";
 
@@ -37,7 +40,8 @@ public sealed class DosNameConverterTests {
     }
 
     [Fact]
-    public void DosNameConverter_InvalidChars_ThrowsArgumentException() {
+    public void DosNameConverter_InvalidChars_ThrowsArgumentException()
+    {
         // Arrange
         string sourceName = "bad?name.txt";
         Action act = () => DosNameConverter.Convert(sourceName);
@@ -50,7 +54,8 @@ public sealed class DosNameConverterTests {
     }
 
     [Fact]
-    public void DosNameConverter_IsDosCompatible_RecognisesCompatibility() {
+    public void DosNameConverter_IsDosCompatible_RecognisesCompatibility()
+    {
         // Arrange
         string compatible = "HELLO.TXT";
         string incompatible = "very-long-name.txt";
@@ -65,11 +70,14 @@ public sealed class DosNameConverterTests {
     }
 }
 
-public sealed class MutableFatDirectoryEntryTests {
+public sealed class MutableFatDirectoryEntryTests
+{
     [Fact]
-    public void MutableFatDirectoryEntry_Serialize_RoundTrip() {
+    public void MutableFatDirectoryEntry_Serialize_RoundTrip()
+    {
         // Arrange
-        MutableFatDirectoryEntry original = new MutableFatDirectoryEntry {
+        MutableFatDirectoryEntry original = new MutableFatDirectoryEntry
+        {
             BaseName = "README",
             Extension = "TXT",
             Attributes = 0x20,
@@ -92,9 +100,11 @@ public sealed class MutableFatDirectoryEntryTests {
     }
 
     [Fact]
-    public void MutableFatDirectoryEntry_Serialize_InvalidBaseName_Throws() {
+    public void MutableFatDirectoryEntry_Serialize_InvalidBaseName_Throws()
+    {
         // Arrange
-        MutableFatDirectoryEntry entry = new MutableFatDirectoryEntry {
+        MutableFatDirectoryEntry entry = new MutableFatDirectoryEntry
+        {
             BaseName = "TOO-LONG-NAME",
             Extension = "TXT",
             Attributes = 0x20,
@@ -113,9 +123,11 @@ public sealed class MutableFatDirectoryEntryTests {
     }
 }
 
-public sealed class FileAllocationStrategyTests {
+public sealed class FileAllocationStrategyTests
+{
     [Fact]
-    public void FileAllocationStrategy_FirstFit_FillsFragmentedSpace() {
+    public void FileAllocationStrategy_FirstFit_FillsFragmentedSpace()
+    {
         // Arrange
         FatTable table = new FatTable(12, FatType.Fat16);
         table.SetEntry(3, 0xFFFF);
@@ -133,7 +145,8 @@ public sealed class FileAllocationStrategyTests {
     }
 
     [Fact]
-    public void FileAllocationStrategy_Contiguous_RejectsFragmentedOnlyFreeSpace() {
+    public void FileAllocationStrategy_Contiguous_RejectsFragmentedOnlyFreeSpace()
+    {
         // Arrange
         FatTable table = new FatTable(8, FatType.Fat16);
         table.SetEntry(3, 0xFFFF);
@@ -149,9 +162,11 @@ public sealed class FileAllocationStrategyTests {
     }
 }
 
-public sealed class DirectoryWriterTests {
+public sealed class DirectoryWriterTests
+{
     [Fact]
-    public void DirectoryWriter_FindNextSlot_SkipsDeletedEntry() {
+    public void DirectoryWriter_FindNextSlot_SkipsDeletedEntry()
+    {
         // Arrange
         DirectoryWriter writer = new DirectoryWriter();
         byte[] directory = new byte[FatDirectoryEntry.EntrySize * 4];
@@ -166,14 +181,16 @@ public sealed class DirectoryWriterTests {
     }
 
     [Fact]
-    public void DirectoryWriter_WriteEntry_UpdatesFatAndDirSector() {
+    public void DirectoryWriter_WriteEntry_UpdatesFatAndDirSector()
+    {
         // Arrange
         DirectoryWriter writer = new DirectoryWriter();
         byte[] directory = new byte[FatDirectoryEntry.EntrySize * 4];
         FatTable table = new FatTable(20, FatType.Fat16);
         table.SetEntry(7, 8);
 
-        MutableFatDirectoryEntry entry = new MutableFatDirectoryEntry {
+        MutableFatDirectoryEntry entry = new MutableFatDirectoryEntry
+        {
             BaseName = "FILE",
             Extension = "BIN",
             Attributes = 0x20,

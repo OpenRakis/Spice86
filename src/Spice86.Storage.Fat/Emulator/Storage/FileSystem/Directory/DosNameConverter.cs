@@ -5,7 +5,8 @@ using System;
 /// <summary>
 /// Converts host names to DOS 8.3-compatible names.
 /// </summary>
-public static class DosNameConverter {
+public static class DosNameConverter
+{
     private static readonly char[] InvalidCharacters = new[] {
         '"', '*', '+', ',', '/', ':', ';', '<', '=', '>', '?', '[', '\\', ']', '|'
     };
@@ -15,8 +16,10 @@ public static class DosNameConverter {
     /// </summary>
     /// <param name="name">Source file name.</param>
     /// <returns>Uppercase DOS 8.3 name.</returns>
-    public static string Convert(string name) {
-        if (string.IsNullOrWhiteSpace(name)) {
+    public static string Convert(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
             throw new ArgumentException("Name cannot be null or empty.", nameof(name));
         }
 
@@ -26,14 +29,18 @@ public static class DosNameConverter {
         string basePart;
         string extensionPart;
 
-        if (parts.Length == 0) {
+        if (parts.Length == 0)
+        {
             throw new ArgumentException("Name does not contain valid DOS characters.", nameof(name));
         }
 
-        if (parts.Length == 1) {
+        if (parts.Length == 1)
+        {
             basePart = parts[0];
             extensionPart = string.Empty;
-        } else {
+        }
+        else
+        {
             extensionPart = parts[parts.Length - 1];
             int extensionStartIndex = trimmedName.LastIndexOf('.');
             basePart = trimmedName.Substring(0, extensionStartIndex);
@@ -42,7 +49,8 @@ public static class DosNameConverter {
         basePart = NormalizePart(basePart, 8);
         extensionPart = NormalizePart(extensionPart, 3);
 
-        if (string.IsNullOrEmpty(extensionPart)) {
+        if (string.IsNullOrEmpty(extensionPart))
+        {
             return basePart;
         }
 
@@ -54,15 +62,20 @@ public static class DosNameConverter {
     /// </summary>
     /// <param name="name">Name to validate.</param>
     /// <returns>True when DOS-compatible.</returns>
-    public static bool IsDosCompatible(string name) {
-        if (string.IsNullOrWhiteSpace(name)) {
+    public static bool IsDosCompatible(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
             return false;
         }
 
-        try {
+        try
+        {
             string converted = Convert(name);
             return string.Equals(converted, name.ToUpperInvariant(), StringComparison.Ordinal);
-        } catch (ArgumentException) {
+        }
+        catch (ArgumentException)
+        {
             return false;
         }
     }
@@ -72,13 +85,17 @@ public static class DosNameConverter {
     /// </summary>
     /// <param name="character">Character to validate.</param>
     /// <returns>True when character is valid.</returns>
-    public static bool IsAllowedDosCharacter(char character) {
-        if (character < 0x20 || character > 0x7E) {
+    public static bool IsAllowedDosCharacter(char character)
+    {
+        if (character < 0x20 || character > 0x7E)
+        {
             return false;
         }
 
-        for (int i = 0; i < InvalidCharacters.Length; i++) {
-            if (InvalidCharacters[i] == character) {
+        for (int i = 0; i < InvalidCharacters.Length; i++)
+        {
+            if (InvalidCharacters[i] == character)
+            {
                 return false;
             }
         }
@@ -86,14 +103,18 @@ public static class DosNameConverter {
         return true;
     }
 
-    private static string NormalizePart(string value, int maxLength) {
+    private static string NormalizePart(string value, int maxLength)
+    {
         string uppercaseValue = value.ToUpperInvariant();
-        if (uppercaseValue.Length > maxLength) {
+        if (uppercaseValue.Length > maxLength)
+        {
             uppercaseValue = uppercaseValue.Substring(0, maxLength);
         }
 
-        for (int i = 0; i < uppercaseValue.Length; i++) {
-            if (!IsAllowedDosCharacter(uppercaseValue[i])) {
+        for (int i = 0; i < uppercaseValue.Length; i++)
+        {
+            if (!IsAllowedDosCharacter(uppercaseValue[i]))
+            {
                 throw new ArgumentException("Name contains characters invalid for DOS 8.3 format.", nameof(value));
             }
         }

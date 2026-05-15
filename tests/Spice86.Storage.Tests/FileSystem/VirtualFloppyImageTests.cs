@@ -18,20 +18,16 @@ using Xunit;
 /// <summary>
 /// Tests for <see cref="VirtualFloppyImage"/> - builds a FAT12 floppy image from a host directory.
 /// </summary>
-public sealed class VirtualFloppyImageTests : IDisposable
-{
+public sealed class VirtualFloppyImageTests : IDisposable {
     private readonly string _testDir;
 
-    public VirtualFloppyImageTests()
-    {
+    public VirtualFloppyImageTests() {
         _testDir = Path.Combine(AppContext.BaseDirectory, Guid.NewGuid().ToString());
         System.IO.Directory.CreateDirectory(_testDir);
     }
 
-    public void Dispose()
-    {
-        if (System.IO.Directory.Exists(_testDir))
-        {
+    public void Dispose() {
+        if (System.IO.Directory.Exists(_testDir)) {
             System.IO.Directory.Delete(_testDir, recursive: true);
         }
     }
@@ -39,8 +35,7 @@ public sealed class VirtualFloppyImageTests : IDisposable
     private static ILogger CreateLogger() => Substitute.For<ILogger>();
 
     [Fact]
-    public void Build_EmptyDirectory_ReturnsCorrectImageSize()
-    {
+    public void Build_EmptyDirectory_ReturnsCorrectImageSize() {
         // Arrange
         VirtualFloppyImage builder = new(_testDir, CreateLogger());
 
@@ -52,8 +47,7 @@ public sealed class VirtualFloppyImageTests : IDisposable
     }
 
     [Fact]
-    public void Build_NullLogger_DoesNotThrow()
-    {
+    public void Build_NullLogger_DoesNotThrow() {
         // Arrange
         VirtualFloppyImage builder = new(_testDir, logger: null);
 
@@ -65,8 +59,7 @@ public sealed class VirtualFloppyImageTests : IDisposable
     }
 
     [Fact]
-    public void Build_WithSingleFile_FilePresentInFatFilesystem()
-    {
+    public void Build_WithSingleFile_FilePresentInFatFilesystem() {
         // Arrange
         byte[] content = Encoding.ASCII.GetBytes("HELLO FAT12");
         System.IO.File.WriteAllBytes(Path.Combine(_testDir, "TEST.TXT"), content);
@@ -84,8 +77,7 @@ public sealed class VirtualFloppyImageTests : IDisposable
     }
 
     [Fact]
-    public void Build_WithSingleFile_FileContentIsCorrect()
-    {
+    public void Build_WithSingleFile_FileContentIsCorrect() {
         // Arrange
         byte[] expected = Encoding.ASCII.GetBytes("HELLO FAT12 WORLD");
         System.IO.File.WriteAllBytes(Path.Combine(_testDir, "HELLO.TXT"), expected);
@@ -102,8 +94,7 @@ public sealed class VirtualFloppyImageTests : IDisposable
     }
 
     [Fact]
-    public void Build_WithSubdirectory_SubdirAndFileAreAccessible()
-    {
+    public void Build_WithSubdirectory_SubdirAndFileAreAccessible() {
         // Arrange
         string subDir = Path.Combine(_testDir, "SUBDIR");
         System.IO.Directory.CreateDirectory(subDir);
@@ -122,8 +113,7 @@ public sealed class VirtualFloppyImageTests : IDisposable
     }
 
     [Fact]
-    public void Build_WithNestedSubdirectories_NestedFileIsAccessible()
-    {
+    public void Build_WithNestedSubdirectories_NestedFileIsAccessible() {
         // Arrange
         string level1 = Path.Combine(_testDir, "LEVEL1");
         string level2 = Path.Combine(level1, "LEVEL2");
@@ -143,8 +133,7 @@ public sealed class VirtualFloppyImageTests : IDisposable
     }
 
     [Fact]
-    public void Build_WithNestedSubdirectory_NestedDirectoryIsAccessible()
-    {
+    public void Build_WithNestedSubdirectory_NestedDirectoryIsAccessible() {
         // Arrange
         string level1 = Path.Combine(_testDir, "LEVEL1");
         string level2 = Path.Combine(level1, "LEVEL2");
@@ -163,8 +152,7 @@ public sealed class VirtualFloppyImageTests : IDisposable
     }
 
     [Fact]
-    public void Build_OversizeFile_LogsWarningAndSkipsFile()
-    {
+    public void Build_OversizeFile_LogsWarningAndSkipsFile() {
         // Arrange
         ILogger logger = Substitute.For<ILogger>();
         logger.IsEnabled(LogEventLevel.Warning).Returns(true);

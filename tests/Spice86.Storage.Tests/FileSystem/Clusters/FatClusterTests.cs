@@ -11,9 +11,11 @@ using Spice86.Shared.Emulator.Storage.FileSystem.Clusters;
 
 using Xunit;
 
-public sealed class FatClusterCodecTests {
+public sealed class FatClusterCodecTests
+{
     [Fact]
-    public void WriteFat12_EvenIndex_KeepsHighNibbleOfNextByte() {
+    public void WriteFat12_EvenIndex_KeepsHighNibbleOfNextByte()
+    {
         // Arrange
         byte[] fat = new byte[6];
         fat[1] = 0xF0;
@@ -27,7 +29,8 @@ public sealed class FatClusterCodecTests {
     }
 
     [Fact]
-    public void WriteFat12_OddIndex_KeepsLowNibbleOfPriorByte() {
+    public void WriteFat12_OddIndex_KeepsLowNibbleOfPriorByte()
+    {
         // Arrange
         byte[] fat = new byte[6];
         fat[1] = 0x0A;
@@ -41,7 +44,8 @@ public sealed class FatClusterCodecTests {
     }
 
     [Fact]
-    public void WriteFat12_TwoEntriesSpanningBoundary_PacksCorrectly() {
+    public void WriteFat12_TwoEntriesSpanningBoundary_PacksCorrectly()
+    {
         // Arrange
         byte[] fat = new byte[6];
 
@@ -57,7 +61,8 @@ public sealed class FatClusterCodecTests {
     }
 
     [Fact]
-    public void ReadWriteFat16_RoundTrip() {
+    public void ReadWriteFat16_RoundTrip()
+    {
         // Arrange
         byte[] fat = new byte[16];
 
@@ -73,7 +78,8 @@ public sealed class FatClusterCodecTests {
     }
 
     [Fact]
-    public void WriteFat32_PreservesReservedHighNibble() {
+    public void WriteFat32_PreservesReservedHighNibble()
+    {
         // Arrange
         byte[] fat = new byte[16];
         fat[0] = 0x00;
@@ -91,7 +97,8 @@ public sealed class FatClusterCodecTests {
     }
 
     [Fact]
-    public void WriteFat12_ValueExceedsTwelveBits_Throws() {
+    public void WriteFat12_ValueExceedsTwelveBits_Throws()
+    {
         // Arrange
         byte[] fat = new byte[4];
         Action act = () => FatClusterCodec.Write(fat, 0, 0x1000, FatType.Fat12);
@@ -104,7 +111,8 @@ public sealed class FatClusterCodecTests {
     }
 
     [Fact]
-    public void IsEndOfChain_RecognisesPerType() {
+    public void IsEndOfChain_RecognisesPerType()
+    {
         // Arrange
 
         // Act
@@ -121,7 +129,8 @@ public sealed class FatClusterCodecTests {
     }
 
     [Fact]
-    public void IsBadCluster_RecognisesPerType() {
+    public void IsBadCluster_RecognisesPerType()
+    {
         // Arrange
 
         // Act
@@ -138,9 +147,11 @@ public sealed class FatClusterCodecTests {
     }
 }
 
-public sealed class FatTableTests {
+public sealed class FatTableTests
+{
     [Fact]
-    public void Constructor_TooFewClusters_Throws() {
+    public void Constructor_TooFewClusters_Throws()
+    {
         // Arrange
         Action act = () => new FatTable(2, FatType.Fat16);
 
@@ -152,7 +163,8 @@ public sealed class FatTableTests {
     }
 
     [Fact]
-    public void AllocateCluster_ReturnsFirstFreeCluster() {
+    public void AllocateCluster_ReturnsFirstFreeCluster()
+    {
         // Arrange
         FatTable table = new(10, FatType.Fat16);
 
@@ -165,7 +177,8 @@ public sealed class FatTableTests {
     }
 
     [Fact]
-    public void AllocateCluster_SkipsAlreadyAllocated() {
+    public void AllocateCluster_SkipsAlreadyAllocated()
+    {
         // Arrange
         FatTable table = new(10, FatType.Fat16);
         table.SetEntry(2, 0xFFFF);
@@ -178,7 +191,8 @@ public sealed class FatTableTests {
     }
 
     [Fact]
-    public void AllocateCluster_WhenFull_ThrowsInvalidOperationException() {
+    public void AllocateCluster_WhenFull_ThrowsInvalidOperationException()
+    {
         // Arrange
         FatTable table = new(3, FatType.Fat16);
         table.SetEntry(2, 0xFFFF);
@@ -192,7 +206,8 @@ public sealed class FatTableTests {
     }
 
     [Fact]
-    public void FreeCluster_ZeroesEntry() {
+    public void FreeCluster_ZeroesEntry()
+    {
         // Arrange
         FatTable table = new(10, FatType.Fat16);
         table.MarkAsEof(2);
@@ -205,7 +220,8 @@ public sealed class FatTableTests {
     }
 
     [Fact]
-    public void FreeCluster_ReservedIndex_Throws() {
+    public void FreeCluster_ReservedIndex_Throws()
+    {
         // Arrange
         FatTable table = new(10, FatType.Fat16);
         Action act = () => table.FreeCluster(1);
@@ -218,7 +234,8 @@ public sealed class FatTableTests {
     }
 
     [Fact]
-    public void LinkClusters_BuildsAndFollowsChain() {
+    public void LinkClusters_BuildsAndFollowsChain()
+    {
         // Arrange
         FatTable table = new(10, FatType.Fat16);
         table.LinkClusters(2, 3);
@@ -233,7 +250,8 @@ public sealed class FatTableTests {
     }
 
     [Fact]
-    public void GetChainLength_CountsCorrectly() {
+    public void GetChainLength_CountsCorrectly()
+    {
         // Arrange
         FatTable table = new(10, FatType.Fat16);
         table.LinkClusters(2, 3);
@@ -248,7 +266,8 @@ public sealed class FatTableTests {
     }
 
     [Fact]
-    public void FollowChain_Cycle_ThrowsCorruptionException() {
+    public void FollowChain_Cycle_ThrowsCorruptionException()
+    {
         // Arrange
         FatTable table = new(10, FatType.Fat16);
         table.LinkClusters(2, 3);
@@ -263,7 +282,8 @@ public sealed class FatTableTests {
     }
 
     [Fact]
-    public void FollowChain_FreeEntryInsideChain_ThrowsCorruptionException() {
+    public void FollowChain_FreeEntryInsideChain_ThrowsCorruptionException()
+    {
         // Arrange
         FatTable table = new(10, FatType.Fat16);
         table.LinkClusters(2, 3);
@@ -277,7 +297,8 @@ public sealed class FatTableTests {
     }
 
     [Fact]
-    public void FollowChain_BadClusterInChain_ThrowsCorruptionException() {
+    public void FollowChain_BadClusterInChain_ThrowsCorruptionException()
+    {
         // Arrange
         FatTable table = new(10, FatType.Fat16);
         table.LinkClusters(2, 3);
@@ -292,7 +313,8 @@ public sealed class FatTableTests {
     }
 
     [Fact]
-    public void FollowChain_OutOfRangeLink_ThrowsCorruptionException() {
+    public void FollowChain_OutOfRangeLink_ThrowsCorruptionException()
+    {
         // Arrange
         FatTable table = new(10, FatType.Fat16);
         table.LinkClusters(2, 3);
@@ -307,7 +329,8 @@ public sealed class FatTableTests {
     }
 
     [Fact]
-    public void FreeClusterCount_DoesNotCountReservedEntries() {
+    public void FreeClusterCount_DoesNotCountReservedEntries()
+    {
         // Arrange
         FatTable table = new(5, FatType.Fat16);
 
@@ -319,7 +342,8 @@ public sealed class FatTableTests {
     }
 
     [Fact]
-    public void UsedClusterCount_TracksAllocations() {
+    public void UsedClusterCount_TracksAllocations()
+    {
         // Arrange
         FatTable table = new(5, FatType.Fat16);
 
@@ -335,7 +359,8 @@ public sealed class FatTableTests {
     }
 
     [Fact]
-    public void FromBytes_AndWriteTo_RoundTripsFat12() {
+    public void FromBytes_AndWriteTo_RoundTripsFat12()
+    {
         // Arrange
         FatTable table = new(8, FatType.Fat12);
         table.LinkClusters(2, 3);
@@ -357,9 +382,11 @@ public sealed class FatTableTests {
     }
 }
 
-public sealed class FatClusterValidatorTests {
+public sealed class FatClusterValidatorTests
+{
     [Fact]
-    public void IsValidDataClusterIndex_RejectsReservedAndBadRanges() {
+    public void IsValidDataClusterIndex_RejectsReservedAndBadRanges()
+    {
         // Arrange
 
         // Act
@@ -378,7 +405,8 @@ public sealed class FatClusterValidatorTests {
     }
 
     [Fact]
-    public void ValidateChain_HealthyChain_ReturnsEmpty() {
+    public void ValidateChain_HealthyChain_ReturnsEmpty()
+    {
         // Arrange
         FatTable table = new(8, FatType.Fat16);
         table.LinkClusters(2, 3);
@@ -392,7 +420,8 @@ public sealed class FatClusterValidatorTests {
     }
 
     [Fact]
-    public void ValidateChain_Cycle_ReportsErrorIssue() {
+    public void ValidateChain_Cycle_ReportsErrorIssue()
+    {
         // Arrange
         FatTable table = new(8, FatType.Fat16);
         table.LinkClusters(2, 3);
@@ -408,7 +437,8 @@ public sealed class FatClusterValidatorTests {
     }
 
     [Fact]
-    public void FindOrphanedClusters_ReturnsUnreachableUsedClusters() {
+    public void FindOrphanedClusters_ReturnsUnreachableUsedClusters()
+    {
         // Arrange
         FatTable table = new(10, FatType.Fat16);
         table.LinkClusters(2, 3);
@@ -424,7 +454,8 @@ public sealed class FatClusterValidatorTests {
     }
 
     [Fact]
-    public void FindOrphanedClusters_BadClusterIsNotOrphan() {
+    public void FindOrphanedClusters_BadClusterIsNotOrphan()
+    {
         // Arrange
         FatTable table = new(8, FatType.Fat16);
         table.SetEntry(5, FatClusterCodec.Fat16BadCluster);

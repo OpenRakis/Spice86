@@ -5,13 +5,15 @@ using System;
 /// <summary>
 /// Codec for mutable FAT directory entries.
 /// </summary>
-public static class FatDirectoryEntryCodec {
+public static class FatDirectoryEntryCodec
+{
     /// <summary>
     /// Parses a mutable FAT directory entry.
     /// </summary>
     /// <param name="entryBytes">Raw entry bytes (32 bytes minimum).</param>
     /// <returns>Parsed entry.</returns>
-    public static MutableFatDirectoryEntry Parse(ReadOnlySpan<byte> entryBytes) {
+    public static MutableFatDirectoryEntry Parse(ReadOnlySpan<byte> entryBytes)
+    {
         return MutableFatDirectoryEntry.Parse(entryBytes);
     }
 
@@ -20,8 +22,10 @@ public static class FatDirectoryEntryCodec {
     /// </summary>
     /// <param name="entry">Entry to serialise.</param>
     /// <param name="destination">Destination span (32 bytes minimum).</param>
-    public static void Write(MutableFatDirectoryEntry entry, Span<byte> destination) {
-        if (entry == null) {
+    public static void Write(MutableFatDirectoryEntry entry, Span<byte> destination)
+    {
+        if (entry == null)
+        {
             throw new ArgumentNullException(nameof(entry));
         }
 
