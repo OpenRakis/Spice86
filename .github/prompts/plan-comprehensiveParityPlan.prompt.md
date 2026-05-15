@@ -8,7 +8,9 @@
 - Phase 0: Completed (logger decoupling to Serilog in FAT storage + dedicated storage tests).
 - Phase 1a: Completed (mutable BPB, boot sector codec, validator, tests).
 - Phase 1b: Completed (FAT cluster codec/table/validator, tests).
-- Phase 1c: In progress (directory entries and allocation strategy).
+- Phase 1c: Completed (directory entries and allocation strategy).
+- Phase 1d: Completed (MBR codec/model, partition validator, partition-aware FAT dispatcher).
+- Phase 1e: Next (mutable filesystem integration and commit writer).
 
 ---
 
