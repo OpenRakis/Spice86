@@ -88,6 +88,10 @@ public sealed class Int13FloppyTests {
         public void MountSecondFloppy(byte[] floppyImage) {
             _driveManager.MountFloppyImage('B', floppyImage, "test_b.img");
         }
+
+        public void MountHardDiskImage(byte[] image) {
+            _driveManager.MountFloppyImage('C', image, "hdd.img");
+        }
     }
 
     [Fact]
@@ -456,6 +460,44 @@ public sealed class Int13FloppyTests {
 
         ctx.State.AH.Should().Be(0x00);
         ctx.State.CarryFlag.Should().BeFalse();
+    }
+
+    [Fact]
+    public void WriteSectors_HardDisk80_ImageBackedC_PersistsData() {
+        // Arrange
+        byte[] image = new Fat12ImageBuilder().Build();
+        TestContext ctx = new(image);
+        byte[] hddImage = new Fat12ImageBuilder().Build();
+        ctx.MountHardDiskImage(hddImage);
+        ctx.Memory.UInt8[ctx.BufferAddress] = 0x91;
+        ctx.State.AH = 0x03;
+        ctx.SetupChsRegisters(cylinder: 0, head: 0, sector: 1, driveNumber: 0x80, sectorCount: 1);
+
+        // Act
+        ctx.Handler.Run();
+
+        // Assert
+        ctx.State.CarryFlag.Should().BeFalse();
+        hddImage[0].Should().Be(0x91);
+    }
+
+    [Fact]
+    public void ReadSectors_HardDisk80_ImageBackedC_ReadsData() {
+        // Arrange
+        byte[] image = new Fat12ImageBuilder().Build();
+        TestContext ctx = new(image);
+        byte[] hddImage = new Fat12ImageBuilder().Build();
+        hddImage[0] = 0xA4;
+        ctx.MountHardDiskImage(hddImage);
+        ctx.State.AH = 0x02;
+        ctx.SetupChsRegisters(cylinder: 0, head: 0, sector: 1, driveNumber: 0x80, sectorCount: 1);
+
+        // Act
+        ctx.Handler.Run();
+
+        // Assert
+        ctx.State.CarryFlag.Should().BeFalse();
+        ctx.Memory.UInt8[ctx.BufferAddress].Should().Be(0xA4);
     }
 
     [Fact]

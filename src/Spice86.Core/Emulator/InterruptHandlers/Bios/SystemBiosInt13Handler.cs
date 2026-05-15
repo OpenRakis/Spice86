@@ -185,12 +185,12 @@ public class SystemBiosInt13Handler : InterruptHandler {
             SetFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
             return;
         }
-        if (_floppyAccess == null || !IsFloppyDrive(driveNumber)) {
+        if (_floppyAccess == null || !TryMapBiosDriveToImageDriveNumber(driveNumber, out byte imageDriveNumber)) {
             SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
             return;
         }
 
-        if (!_floppyAccess.TryGetGeometry(driveNumber, out int _, out int heads, out int sectorsPerTrack, out int bytesPerSector)) {
+        if (!_floppyAccess.TryGetGeometry(imageDriveNumber, out int _, out int heads, out int sectorsPerTrack, out int bytesPerSector)) {
             SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
             return;
         }
@@ -204,7 +204,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
         uint destAddress = MemoryUtils.ToPhysicalAddress(State.ES, State.BX);
         byte[] transferBuffer = new byte[byteCount];
 
-        if (!_floppyAccess.ReadFromImage(driveNumber, byteOffset, transferBuffer, 0, byteCount)) {
+        if (!_floppyAccess.ReadFromImage(imageDriveNumber, byteOffset, transferBuffer, 0, byteCount)) {
             SetFloppyError(driveNumber, ErrorSectorNotFound, calledFromVm);
             return;
         }
@@ -212,7 +212,9 @@ public class SystemBiosInt13Handler : InterruptHandler {
         _floppySound?.PlaySeek();
         Memory.LoadData(destAddress, transferBuffer);
 
-        _activityNotifier?.NotifyRead((char)('A' + driveNumber));
+        if (imageDriveNumber < 26) {
+            _activityNotifier?.NotifyRead((char)('A' + imageDriveNumber));
+        }
         State.AH = ErrorNone;
         State.AL = (byte)sectorCount;
         RecordSuccess(driveNumber);
@@ -231,12 +233,12 @@ public class SystemBiosInt13Handler : InterruptHandler {
             SetFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
             return;
         }
-        if (_floppyAccess == null || !IsFloppyDrive(driveNumber)) {
+        if (_floppyAccess == null || !TryMapBiosDriveToImageDriveNumber(driveNumber, out byte imageDriveNumber)) {
             SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
             return;
         }
 
-        if (!_floppyAccess.TryGetGeometry(driveNumber, out int _, out int heads, out int sectorsPerTrack, out int bytesPerSector)) {
+        if (!_floppyAccess.TryGetGeometry(imageDriveNumber, out int _, out int heads, out int sectorsPerTrack, out int bytesPerSector)) {
             SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
             return;
         }
@@ -253,13 +255,15 @@ public class SystemBiosInt13Handler : InterruptHandler {
             transferBuffer[i] = Memory.UInt8[srcAddress + (uint)i];
         }
 
-        if (!_floppyAccess.WriteToImage(driveNumber, byteOffset, transferBuffer, 0, byteCount)) {
+        if (!_floppyAccess.WriteToImage(imageDriveNumber, byteOffset, transferBuffer, 0, byteCount)) {
             SetFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
             return;
         }
 
         _floppySound?.PlaySeek();
-        _activityNotifier?.NotifyWrite((char)('A' + driveNumber));
+        if (imageDriveNumber < 26) {
+            _activityNotifier?.NotifyWrite((char)('A' + imageDriveNumber));
+        }
         State.AH = ErrorNone;
         State.AL = (byte)sectorCount;
         RecordSuccess(driveNumber);
@@ -500,6 +504,22 @@ public class SystemBiosInt13Handler : InterruptHandler {
 
     private static bool IsFloppyDrive(byte driveNumber) {
         return driveNumber < 0x80;
+    }
+
+    private static bool TryMapBiosDriveToImageDriveNumber(byte biosDriveNumber, out byte imageDriveNumber) {
+        if (biosDriveNumber < 0x80) {
+            imageDriveNumber = biosDriveNumber;
+            return true;
+        }
+
+        int mapped = 2 + (biosDriveNumber - 0x80);
+        if (mapped < 0 || mapped > byte.MaxValue) {
+            imageDriveNumber = 0;
+            return false;
+        }
+
+        imageDriveNumber = (byte)mapped;
+        return true;
     }
 
     private int CountMountedFloppyDrives() {
