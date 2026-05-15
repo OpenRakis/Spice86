@@ -91,3 +91,5 @@ Pull Requests are welcome. See the [PR template](https://github.com/OpenRakis/Sp
 
 - Commits to be merged should pass all checks (should build, and pass tests)
 - Comments are important, especially when contributing emulation code. Technical information is hard to find.
+- Tests must use explicit Arrange/Act/Assert structure with `// Arrange`, `// Act`, and `// Assert` comments.
+- When touching existing tests, update them to the explicit Arrange/Act/Assert structure.

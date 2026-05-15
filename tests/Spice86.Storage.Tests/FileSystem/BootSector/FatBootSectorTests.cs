@@ -60,11 +60,14 @@ public sealed class FatBootSectorTests {
 
     [Fact]
     public void MutableBpb_Serialize_ThrowsWhenBufferTooShort() {
+        // Arrange
         MutableBiosParameterBlock bpb = NewFat12FloppyBpb();
         byte[] buffer = new byte[40];
 
+        // Act
         Action act = () => bpb.Serialize(buffer, FatType.Fat12);
 
+        // Assert
         act.Should().Throw<ArgumentException>();
     }
 
@@ -124,17 +127,22 @@ public sealed class FatBootSectorTests {
         sector[511] = 0xAA;
         // bytesPerSector left at 0.
 
+        // Act
         Action act = () => FatBootSectorCodec.Parse(sector, FatType.Fat12);
 
+        // Assert
         act.Should().Throw<InvalidDataException>().WithMessage("*BytesPerSector*");
     }
 
     [Fact]
     public void Codec_Parse_TooShortSector_ThrowsInvalidData() {
+        // Arrange
         byte[] sector = new byte[100];
 
+        // Act
         Action act = () => FatBootSectorCodec.Parse(sector, FatType.Fat12);
 
+        // Assert
         act.Should().Throw<InvalidDataException>();
     }
 
@@ -182,92 +190,126 @@ public sealed class FatBootSectorTests {
 
     [Fact]
     public void Codec_Write_NullBpb_Throws() {
+        // Arrange
         byte[] sector = new byte[512];
+
+        // Act
         Action act = () => FatBootSectorCodec.Write(null!, sector, FatType.Fat12);
+
+        // Assert
         act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Validator_ConsistentFat12_ReturnsNoIssues() {
+        // Arrange
         MutableBiosParameterBlock bpb = NewFat12FloppyBpb();
 
+        // Act
         IReadOnlyList<BpbValidationIssue> issues = FatBootSectorValidator.ValidateBpbConsistency(bpb, FatType.Fat12);
 
+        // Assert
         issues.Should().BeEmpty();
     }
 
     [Fact]
     public void Validator_ConsistentFat32_ReturnsNoIssues() {
+        // Arrange
         MutableBiosParameterBlock bpb = NewFat32Bpb();
 
+        // Act
         IReadOnlyList<BpbValidationIssue> issues = FatBootSectorValidator.ValidateBpbConsistency(bpb, FatType.Fat32);
 
+        // Assert
         issues.Should().BeEmpty();
     }
 
     [Fact]
     public void Validator_BothTotalSectorsSet_ReturnsError() {
+        // Arrange
         MutableBiosParameterBlock bpb = NewFat12FloppyBpb();
         bpb.TotalSectors32 = 9999;
 
+        // Act
         IReadOnlyList<BpbValidationIssue> issues = FatBootSectorValidator.ValidateBpbConsistency(bpb, FatType.Fat12);
 
+        // Assert
         issues.Should().Contain(i => i.Severity == BpbValidationSeverity.Error && i.Field == nameof(MutableBiosParameterBlock.TotalSectors16));
     }
 
     [Fact]
     public void Validator_BothTotalSectorsZero_ReturnsError() {
+        // Arrange
         MutableBiosParameterBlock bpb = NewFat12FloppyBpb();
         bpb.TotalSectors16 = 0;
 
+        // Act
         IReadOnlyList<BpbValidationIssue> issues = FatBootSectorValidator.ValidateBpbConsistency(bpb, FatType.Fat12);
 
+        // Assert
         issues.Should().Contain(i => i.Severity == BpbValidationSeverity.Error);
     }
 
     [Fact]
     public void Validator_Fat32_WithNonZeroSectorsPerFat_ReturnsError() {
+        // Arrange
         MutableBiosParameterBlock bpb = NewFat32Bpb();
         bpb.SectorsPerFat = 1;
 
+        // Act
         IReadOnlyList<BpbValidationIssue> issues = FatBootSectorValidator.ValidateBpbConsistency(bpb, FatType.Fat32);
 
+        // Assert
         issues.Should().Contain(i => i.Field == nameof(MutableBiosParameterBlock.SectorsPerFat));
     }
 
     [Fact]
     public void Validator_Fat32_WithZeroSectorsPerFat32_ReturnsError() {
+        // Arrange
         MutableBiosParameterBlock bpb = NewFat32Bpb();
         bpb.SectorsPerFat32 = 0;
 
+        // Act
         IReadOnlyList<BpbValidationIssue> issues = FatBootSectorValidator.ValidateBpbConsistency(bpb, FatType.Fat32);
 
+        // Assert
         issues.Should().Contain(i => i.Field == nameof(MutableBiosParameterBlock.SectorsPerFat32));
     }
 
     [Fact]
     public void Validator_Fat12_MissingRootDirEntries_ReturnsError() {
+        // Arrange
         MutableBiosParameterBlock bpb = NewFat12FloppyBpb();
         bpb.RootDirEntries = 0;
 
+        // Act
         IReadOnlyList<BpbValidationIssue> issues = FatBootSectorValidator.ValidateBpbConsistency(bpb, FatType.Fat12);
 
+        // Assert
         issues.Should().Contain(i => i.Field == nameof(MutableBiosParameterBlock.RootDirEntries));
     }
 
     [Fact]
     public void Validator_SectorsPerClusterNotPowerOfTwo_ReturnsError() {
+        // Arrange
         MutableBiosParameterBlock bpb = NewFat12FloppyBpb();
         bpb.SectorsPerCluster = 3;
 
+        // Act
         IReadOnlyList<BpbValidationIssue> issues = FatBootSectorValidator.ValidateBpbConsistency(bpb, FatType.Fat12);
 
+        // Assert
         issues.Should().Contain(i => i.Field == nameof(MutableBiosParameterBlock.SectorsPerCluster));
     }
 
     [Fact]
     public void Validator_NullBpb_Throws() {
+        // Arrange
+
+        // Act
         Action act = () => FatBootSectorValidator.ValidateBpbConsistency(null!, FatType.Fat12);
+
+        // Assert
         act.Should().Throw<ArgumentNullException>();
     }
 
@@ -290,7 +332,12 @@ public sealed class FatBootSectorTests {
 
     [Fact]
     public void FromReadOnly_NullSource_Throws() {
+        // Arrange
+
+        // Act
         Action act = () => MutableBiosParameterBlock.FromReadOnly(null!);
+
+        // Assert
         act.Should().Throw<ArgumentNullException>();
     }
 

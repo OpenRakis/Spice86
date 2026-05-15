@@ -121,6 +121,8 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 - **Ignore Machine class** - this is a legacy aggregator class; work directly with specific components (`CfgCpu`, `Memory`, `Stack`, etc.) instead
 - **Enforce TDD** - ensure integration tests are present and not passing at first, then make them pass by updating the implementation.
 - **Clear test code style** use explicit Arrange/Act/Assert structure, avoid long setup blocks, and reduce duplication with small helpers.
+  - Every test method must contain explicit `// Arrange`, `// Act`, and `// Assert` sections in that order.
+  - When modifying existing tests, convert them to explicit Arrange/Act/Assert if they do not already follow it.
 
 ### Avalonia Telemetry
 - **Avalonia telemetry must be disabled** when working on the codebase.
