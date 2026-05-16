@@ -17,13 +17,15 @@ public class PopFParser : BaseInstructionParser {
     public CfgInstruction Parse(ParsingContext context) {
         BitWidth bitWidth = GetBitWidth(false, context.HasOperandSize32);
         DataType dataType = _astBuilder.UType(bitWidth);
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         ValueNode popValue = _astBuilder.Stack.Pop(bitWidth);
         ValueNode flagsRegister = _astBuilder.Flag.FlagsRegister(dataType);
         BinaryOperationNode assign = new BinaryOperationNode(dataType, flagsRegister, BinaryOperation.ASSIGN, popValue);
         InstructionNode displayAst = new InstructionNode(bitWidth == BitWidth.DWORD_32 ? InstructionOperation.POPFD : InstructionOperation.POPF);
         IVisitableAstNode execAst = _astBuilder.WithIpAdvancement(instr, assign);
         instr.AttachAsts(displayAst, execAst);
+        instr.MarkAsBlockStarter();
+        instr.MarkAsBlockTerminator();
         return instr;
     }
 

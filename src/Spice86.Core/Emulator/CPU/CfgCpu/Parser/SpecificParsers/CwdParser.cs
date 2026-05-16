@@ -17,7 +17,7 @@ public class CwdParser : BaseInstructionParser {
 
     public CfgInstruction Parse(ParsingContext context) {
         BitWidth bitWidth = GetBitWidth(false, context.HasOperandSize32);
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         DataType signedType = _astBuilder.SType(bitWidth);
         DataType unsignedType = _astBuilder.UType(bitWidth);
         int shiftAmount = (int)bitWidth - 1;

@@ -15,7 +15,7 @@ public class FlagControlParser : BaseInstructionParser {
     }
 
     public CfgInstruction ParseCmc(ParsingContext context) {
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         CpuFlagNode flagNode = _astBuilder.Flag.Carry();
         UnaryOperationNode notFlag = new UnaryOperationNode(DataType.BOOL, UnaryOperation.NOT, flagNode);
         BinaryOperationNode flagAssignment = _astBuilder.Assign(DataType.BOOL, flagNode, notFlag);
@@ -26,22 +26,30 @@ public class FlagControlParser : BaseInstructionParser {
     }
 
     public CfgInstruction ParseFlagControl(ParsingContext context, CpuFlagNode flagNode, ulong value, InstructionOperation displayOp) {
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         BinaryOperationNode flagAssignment = _astBuilder.Assign(DataType.BOOL, flagNode, _astBuilder.Constant.ToNode(DataType.BOOL, value));
         InstructionNode displayAst = new InstructionNode(displayOp);
         IVisitableAstNode execAst = _astBuilder.WithIpAdvancement(instr, flagAssignment);
         instr.AttachAsts(displayAst, execAst);
+        // CLI (opcode 0xFA) must start a new CfgBlock so external interrupt delivery
+        // happens at the boundary just before interrupts are disabled.
+        if (displayOp == InstructionOperation.CLI) {
+            instr.MarkAsBlockStarter();
+        }
         return instr;
     }
 
     public CfgInstruction ParseSti(ParsingContext context) {
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         CpuFlagNode flagNode = _astBuilder.Flag.Interrupt();
         BinaryOperationNode flagAssignment = _astBuilder.Assign(DataType.BOOL, flagNode, _astBuilder.Constant.ToNode(DataType.BOOL, 1UL));
         IVisitableAstNode setInterruptShadowing = _astBuilder.Flag.SetInterruptShadowingIfInterruptDisabled();
         InstructionNode displayAst = new InstructionNode(InstructionOperation.STI);
         IVisitableAstNode execAst = _astBuilder.WithIpAdvancement(instr, setInterruptShadowing, flagAssignment);
         instr.AttachAsts(displayAst, execAst);
+        // STI must terminate its CfgBlock so external interrupt delivery happens at the
+        // boundary just after interrupts are enabled (after the one-instruction shadow).
+        instr.MarkAsBlockTerminator();
         return instr;
     }
 }

@@ -16,7 +16,7 @@ public class XlatParser : BaseInstructionParser {
     }
 
     public CfgInstruction Parse(ParsingContext context) {
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         int segRegIndex = GetSegmentRegisterOverrideOrDs(context);
         int defaultSegRegIndex = (int)SegmentRegisterIndex.DsIndex;
         DataType addrType = _astBuilder.AddressType(instr);

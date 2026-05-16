@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Visitor;
+using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser.SpecificParsers;
@@ -88,8 +89,8 @@ public class InstructionParser {
     private readonly XchgRmParser _xchgRmParser;
     private readonly XlatParser _xlatParser;
 
-    public InstructionParser(IIndexable memory, State state) {
-        _parsingTools = new(memory, state);
+    public InstructionParser(IIndexable memory, State state, CfgNodeIdAllocator idAllocator) {
+        _parsingTools = new(memory, state, idAllocator);
         _aluOperationParser = new(_parsingTools);
         _bcdAdjustParser = new(_parsingTools);
         _bitScanBsfParser = new(_parsingTools, InstructionOperation.BSF, "BitScanForward");
@@ -174,7 +175,7 @@ public class InstructionParser {
             ValidateLockPrefix(parsed, prefixes);
             return parsed;
         } catch (CpuException e) {
-            CfgInstruction instruction = new(address, opcodeField, prefixes, null) {
+            CfgInstruction instruction = new(_parsingTools.IdAllocator.AllocateId(), address, opcodeField, prefixes, null) {
                 Kind = InstructionKind.Invalid
             };
             instruction.AttachAsts(

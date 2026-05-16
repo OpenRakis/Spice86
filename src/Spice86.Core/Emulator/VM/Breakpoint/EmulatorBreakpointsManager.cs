@@ -119,17 +119,14 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
         _executionBreakPoints.HasActiveBreakpoints || _cycleBreakPoints.HasActiveBreakpoints;
 
     /// <summary>
-    /// Checks the current breakpoints and triggers them if necessary.
+    /// Checks execution breakpoints only for the specified address without chasing IP changes,
+    /// plus cycle breakpoints. Used by CfgCpu per-node execution where each node independently
+    /// checks its own address.
     /// </summary>
-    public void CheckExecutionBreakPoints() {
+    /// <param name="physicalAddress">The physical address of the node about to execute.</param>
+    public void CheckExecutionBreakPointsAt(uint physicalAddress) {
         if (_executionBreakPoints.HasActiveBreakpoints) {
-            uint address;
-            // We do a loop here because if breakpoint action modifies the IP address we may miss other breakpoints.
-            bool triggered;
-            do {
-                address = _state.IpPhysicalAddress;
-                triggered = _executionBreakPoints.TriggerMatchingBreakPoints(address);
-            } while (triggered && address != _state.IpPhysicalAddress);
+            _executionBreakPoints.TriggerMatchingBreakPoints(physicalAddress);
         }
 
         if (_cycleBreakPoints.HasActiveBreakpoints) {

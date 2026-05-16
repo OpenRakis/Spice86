@@ -1,0 +1,131 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "F000:FFF0",
+  "totalEntryPoints": 1,
+  "entryPointAddresses": [
+    "F000:FFF0"
+  ],
+  "lastExecutedAddress": "F000:0036",
+  "lastExecutedBlockId": 32,
+  "blocks": [
+    {
+      "id": 32,
+      "entry": "F000:002A",
+      "term": "F000:0036",
+      "pred": [],
+      "succ": [],
+      "asm": [
+        "2E8B1E0001|mov BX,word ptr CS:[0x0100]",
+        "891E0000|mov word ptr DS:[0],BX",
+        "A30200|mov word ptr DS:[2],AX",
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 2,
+      "entry": "F000:FFF0",
+      "term": "F000:FFF0",
+      "pred": [],
+      "succ": [
+        3
+      ],
+      "asm": [
+        "EB0E|jmp short 0"
+      ]
+    },
+    {
+      "id": 3,
+      "entry": "F000:0000",
+      "term": "F000:0019",
+      "pred": [
+        2
+      ],
+      "succ": [
+        27
+      ],
+      "asm": [
+        "B80000|mov AX,0",
+        "8ED0|mov SS,AX",
+        "BC0002|mov SP,0x0200",
+        "C70600003700|mov word ptr DS:[0],0x0037",
+        "8C0E0200|mov word ptr DS:[2],CS",
+        "2EC70600010000|mov word ptr CS:[0x0100],0",
+        "2EC70602010000|mov word ptr CS:[0x0102],0"
+      ]
+    },
+    {
+      "id": 27,
+      "entry": "F000:0020",
+      "term": "F000:0028",
+      "pred": [
+        3,
+        23,
+        27
+      ],
+      "succ": [
+        14,
+        27
+      ],
+      "asm": [
+        "B80A00|mov AX,0x000A",
+        "2E8B1E0201|mov BX,word ptr CS:[0x0102]",
+        "F7F3|div BX"
+      ]
+    },
+    {
+      "id": 14,
+      "entry": "F000:0037",
+      "term": "F000:0049",
+      "pred": [
+        27
+      ],
+      "succ": [
+        23,
+        29
+      ],
+      "asm": [
+        "55|push BP",
+        "89E5|mov BP,SP",
+        "53|push BX",
+        "2E8B1E0001|mov BX,word ptr CS:[0x0100]",
+        "43|inc BX",
+        "2E891E0001|mov word ptr CS:[0x0100],BX",
+        "83FB03|cmp BX,3",
+        "7507|jne short 0x0052"
+      ]
+    },
+    {
+      "id": 23,
+      "entry": "F000:0052",
+      "term": "F000:0059",
+      "pred": [
+        14,
+        29
+      ],
+      "succ": [
+        27
+      ],
+      "asm": [
+        "C746022000|mov word ptr SS:[BP\u002B2],0x0020",
+        "5B|pop BX",
+        "5D|pop BP",
+        "CF|iret"
+      ]
+    },
+    {
+      "id": 29,
+      "entry": "F000:004B",
+      "term": "F000:004B",
+      "pred": [
+        14
+      ],
+      "succ": [
+        23
+      ],
+      "asm": [
+        "2EC70602010500|mov word ptr CS:[0x0102],5"
+      ]
+    }
+  ],
+  "truncated": false
+}

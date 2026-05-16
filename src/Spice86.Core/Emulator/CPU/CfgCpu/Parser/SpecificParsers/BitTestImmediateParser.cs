@@ -33,7 +33,7 @@ public class BitTestImmediateParser : BaseGrpOperationParser {
         InstructionField<byte> immField = _instructionReader.UInt8.NextField(false);
         BitWidth bitWidth = context.DefaultWordOperandBitWidth;
         DataType dataType = _astBuilder.UType(bitWidth);
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         RegisterModRmFields(instr, modRmContext);
         instr.AddField(immField);
         ValueNode immNode = _astBuilder.InstructionField.ToNode(immField);

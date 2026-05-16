@@ -18,7 +18,7 @@ public class BcdAdjustParser : BaseInstructionParser {
 
     public CfgInstruction ParseDecimalAdjust(ParsingContext context, BinaryOperation adjustOp, InstructionOperation displayOp) {
         bool isSubtract = adjustOp == BinaryOperation.MINUS;
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         ValueNode al = _astBuilder.Register.Reg8(RegisterIndex.AxIndex);
         VariableDeclarationNode initialAlDeclaration = _astBuilder.DeclareVariable(DataType.UINT8, "initialAl", al);
         VariableDeclarationNode initialCfDeclaration = _astBuilder.DeclareVariable(DataType.BOOL, "initialCf", _astBuilder.Flag.Carry());
@@ -77,7 +77,7 @@ public class BcdAdjustParser : BaseInstructionParser {
     }
 
     public CfgInstruction ParseAsciiAdjust(ParsingContext context, BinaryOperation adjustOp, InstructionOperation displayOp) {
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         ValueNode al = _astBuilder.Register.Reg8(RegisterIndex.AxIndex);
         ValueNode ax = _astBuilder.Register.Reg16(RegisterIndex.AxIndex);
         VariableDeclarationNode finalAuxDeclaration = _astBuilder.DeclareVariable(DataType.BOOL, "finalAuxiliaryFlag", _astBuilder.Constant.ToNode(false));
@@ -117,7 +117,7 @@ public class BcdAdjustParser : BaseInstructionParser {
     }
 
     public CfgInstruction ParseAam(ParsingContext context) {
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         InstructionField<byte> valueField = _instructionReader.UInt8.NextField(false);
         instr.AddField(valueField);
         ValueNode valueNode = _astBuilder.InstructionField.ToNode(valueField);
@@ -150,7 +150,7 @@ public class BcdAdjustParser : BaseInstructionParser {
     }
 
     public CfgInstruction ParseAad(ParsingContext context) {
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         InstructionField<byte> valueField = _instructionReader.UInt8.NextField(false);
         instr.AddField(valueField);
         ValueNode valueNode = _astBuilder.InstructionField.ToNode(valueField);

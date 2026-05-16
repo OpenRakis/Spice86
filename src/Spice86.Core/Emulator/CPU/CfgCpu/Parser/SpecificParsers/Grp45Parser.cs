@@ -55,7 +55,7 @@ public class Grp45Parser : BaseGrpOperationParser {
     private CfgInstruction ParseIncDec(ParsingContext context, ModRmContext modRmContext,
         BitWidth bitWidth, string operation, InstructionOperation displayOp) {
         DataType dataType = _astBuilder.UType(bitWidth);
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         RegisterModRmFields(instr, modRmContext);
         ValueNode rmNode = _astBuilder.ModRm.RmToNode(dataType, modRmContext);
         MethodCallValueNode aluCall = _astBuilder.AluCall(dataType, bitWidth, operation, rmNode);
@@ -68,7 +68,7 @@ public class Grp45Parser : BaseGrpOperationParser {
 
     private CfgInstruction ParseCallback(ParsingContext context, ModRmContext modRmContext) {
         InstructionField<ushort> callbackNumber = _instructionReader.UInt16.NextField(true);
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, null);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, null);
         RegisterModRmFields(instr, modRmContext);
         instr.AddField(callbackNumber);
         ValueNode callbackNode = _astBuilder.InstructionField.ToNode(callbackNumber);
@@ -83,7 +83,7 @@ public class Grp45Parser : BaseGrpOperationParser {
         if (operandBitWidth == BitWidth.DWORD_32) {
             dataType = DataType.UINT32;
         }
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, null);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, null);
         RegisterModRmFields(instr, modRmContext);
         ValueNode targetIp = _astBuilder.ModRm.RmToNode(dataType, modRmContext);
         if (operandBitWidth == BitWidth.DWORD_32) {
@@ -99,7 +99,7 @@ public class Grp45Parser : BaseGrpOperationParser {
 
     private CfgInstruction ParseCallFar(ParsingContext context, ModRmContext modRmContext, BitWidth operandBitWidth) {
         ModRmContext ensuredModRm = _modRmParser.EnsureNotMode3(modRmContext);
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, null);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, null);
         RegisterModRmFields(instr, ensuredModRm);
         InstructionNode displayAst = new InstructionNode(InstructionOperation.CALL_FAR,
             _astBuilder.ModRm.ToMemoryAddressNode(DataType.UINT32, ensuredModRm));
@@ -110,7 +110,7 @@ public class Grp45Parser : BaseGrpOperationParser {
     }
 
     private CfgInstruction ParseJumpNear(ParsingContext context, ModRmContext modRmContext) {
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, null);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, null);
         RegisterModRmFields(instr, modRmContext);
         // Real mode: indirect jump target is read as 16-bit IP
         ValueNode targetIp = _astBuilder.ModRm.RmToNode(DataType.UINT16, modRmContext);
@@ -122,7 +122,7 @@ public class Grp45Parser : BaseGrpOperationParser {
 
     private CfgInstruction ParseJumpFar(ParsingContext context, ModRmContext modRmContext) {
         ModRmContext ensuredModRm = _modRmParser.EnsureNotMode3(modRmContext);
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, null);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, null);
         RegisterModRmFields(instr, ensuredModRm);
         InstructionNode displayAst = new InstructionNode(InstructionOperation.JMP_FAR,
             _astBuilder.ModRm.ToMemoryAddressNode(DataType.UINT32, ensuredModRm));
@@ -134,7 +134,7 @@ public class Grp45Parser : BaseGrpOperationParser {
 
     private CfgInstruction ParsePush(ParsingContext context, ModRmContext modRmContext, BitWidth bitWidth) {
         DataType dataType = _astBuilder.UType(bitWidth);
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         RegisterModRmFields(instr, modRmContext);
         ValueNode rmNode = _astBuilder.ModRm.RmToNode(dataType, modRmContext);
         MethodCallNode pushBlock = _astBuilder.Stack.Push(dataType, rmNode);

@@ -10,17 +10,20 @@ using Spice86.Shared.Emulator.Memory;
 using System.Threading;
 
 public abstract class CfgNode : ICfgNode {
-    private static int _nextId;
-    public CfgNode(SegmentedAddress address, int? maxSuccessorsCount) {
+    public CfgNode(int id, SegmentedAddress address, int? maxSuccessorsCount) {
+        Id = id;
         Address = address;
-        Id = _nextId++;
-        MaxSuccessorsCount = maxSuccessorsCount;
+        // Assign the backing field directly: the virtual MaxSuccessorsCount setter is overridden
+        // by CfgBlock to throw NotSupportedException, so going through the property here would
+        // make CfgBlock impossible to construct. Subclasses that override the property are
+        // responsible for ignoring or surfacing this initial value as appropriate.
+        _maxSuccessorsCount = maxSuccessorsCount;
         _compiledExecution = CreateUninitializedCompiledExecution(address, Id);
     }
 
     public int Id { get; }
-    public HashSet<ICfgNode> Predecessors { get; } = new();
-    public HashSet<ICfgNode> Successors { get; } = new();
+    public virtual HashSet<ICfgNode> Predecessors { get; } = new();
+    public virtual HashSet<ICfgNode> Successors { get; } = new();
     public SegmentedAddress Address { get; }
     public virtual bool CanCauseContextRestore => false;
 
@@ -47,18 +50,45 @@ public abstract class CfgNode : ICfgNode {
     /// <summary>
     /// Pre-built Abstract Syntax Tree representing the grammar of the assembly instruction (for display).
     /// </summary>
-    public abstract InstructionNode DisplayAst { get; }
+    public abstract IVisitableAstNode DisplayAst { get; }
 
     /// <summary>
     /// Pre-built Abstract Syntax Tree representing the execution logic of this node.
     /// </summary>
     public abstract IVisitableAstNode ExecutionAst { get; }
 
-    public int? MaxSuccessorsCount { get; set; }
+    private int? _maxSuccessorsCount;
+    public virtual int? MaxSuccessorsCount {
+        get => _maxSuccessorsCount;
+        set => _maxSuccessorsCount = value;
+    }
 
-    public bool CanHaveMoreSuccessors { get; set; } = true;
+    public virtual bool CanHaveMoreSuccessors { get; set; } = true;
     
-    public ICfgNode? UniqueSuccessor { get; set; }
+    public virtual ICfgNode? UniqueSuccessor { get; set; }
+
+    /// <summary>
+    /// Default to <c>false</c>. <see cref="ParsedInstruction.CfgInstruction"/> and
+    /// <see cref="ParsedInstruction.SelfModifying.SelectorNode"/> override this to provide their own logic.
+    /// </summary>
+    public virtual bool IsBlockTerminator => false;
+
+    /// <summary>
+    /// Default to <c>false</c>. <see cref="ParsedInstruction.CfgInstruction"/> overrides this to expose its
+    /// stored explicit starter flag.
+    /// </summary>
+    public virtual bool IsBlockStarter => false;
+
+    /// <summary>
+    /// Containing-<see cref="CfgBlock"/> back-pointer. Defaults to <c>null</c>.
+    /// <see cref="ParsedInstruction.CfgInstruction"/> and
+    /// <see cref="ParsedInstruction.SelfModifying.SelectorNode"/> override this with a settable
+    /// auto-property back-pointer maintained by <see cref="Linker.NodeLinker"/>.
+    /// <see cref="CfgBlock"/> keeps the default <c>null</c> because a block is itself the container,
+    /// not contained.
+    /// <see cref="Linker.NodeLinker"/> is the sole writer of this property.
+    /// </summary>
+    public virtual CfgBlock? ContainingBlock { get; set; }
 
     private static CfgNodeExecutionAction<InstructionExecutionHelper> CreateUninitializedCompiledExecution(
         SegmentedAddress address,

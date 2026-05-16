@@ -15,7 +15,7 @@ public class BswapParser : BaseInstructionParser {
     }
 
     public CfgInstruction Parse(ParsingContext context, int regIndex) {
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         ValueNode reg = _astBuilder.Register.Reg(DataType.UINT32, regIndex);
         ValueNode swapped = _astBuilder.Bitwise.ByteSwap(reg);
         InstructionNode displayAst = new InstructionNode(InstructionOperation.BSWAP, reg);

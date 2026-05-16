@@ -18,7 +18,7 @@ public class RegisterOpParser : BaseInstructionParser {
     public CfgInstruction ParseIncDecReg(ParsingContext context, int regIndex, string aluOperation, InstructionOperation displayOp) {
         BitWidth bitWidth = context.DefaultWordOperandBitWidth;
         DataType dataType = _astBuilder.UType(bitWidth);
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         ValueNode regNode = _astBuilder.Register.Reg(dataType, regIndex);
         MethodCallValueNode aluCall = _astBuilder.AluCall(dataType, bitWidth, aluOperation, regNode);
         InstructionNode displayAst = new InstructionNode(displayOp, regNode);
@@ -30,7 +30,7 @@ public class RegisterOpParser : BaseInstructionParser {
     public CfgInstruction ParsePushReg(ParsingContext context, int regIndex) {
         BitWidth bitWidth = context.DefaultWordOperandBitWidth;
         DataType dataType = _astBuilder.UType(bitWidth);
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         ValueNode regNode = _astBuilder.Register.Reg(dataType, regIndex);
         MethodCallNode pushBlock = _astBuilder.Stack.Push(dataType, regNode);
         InstructionNode displayAst = new InstructionNode(InstructionOperation.PUSH, regNode);
@@ -42,7 +42,7 @@ public class RegisterOpParser : BaseInstructionParser {
     public CfgInstruction ParsePopReg(ParsingContext context, int regIndex) {
         BitWidth bitWidth = context.DefaultWordOperandBitWidth;
         DataType dataType = _astBuilder.UType(bitWidth);
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         ValueNode regNode = _astBuilder.Register.Reg(dataType, regIndex);
         ValueNode popValue = _astBuilder.Stack.Pop(bitWidth);
         BinaryOperationNode assign = new BinaryOperationNode(dataType, regNode, BinaryOperation.ASSIGN, popValue);
@@ -55,7 +55,7 @@ public class RegisterOpParser : BaseInstructionParser {
     public CfgInstruction ParseXchgRegAcc(ParsingContext context, int regIndex) {
         BitWidth bitWidth = context.DefaultWordOperandBitWidth;
         DataType dataType = _astBuilder.UType(bitWidth);
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         ValueNode regNode = _astBuilder.Register.Reg(dataType, regIndex);
         ValueNode accNode = _astBuilder.Register.Accumulator(dataType);
         VariableDeclarationNode tempDecl = _astBuilder.DeclareVariable(dataType, "temp", regNode);

@@ -1,0 +1,118 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "F000:FFF0",
+  "totalEntryPoints": 2,
+  "entryPointAddresses": [
+    "F000:FFF0",
+    "F000:003F"
+  ],
+  "lastExecutedAddress": "F000:003E",
+  "lastExecutedBlockId": 33,
+  "blocks": [
+    {
+      "id": 33,
+      "entry": "F000:0033",
+      "term": "F000:003E",
+      "pred": [
+        24
+      ],
+      "succ": [],
+      "asm": [
+        "81FA0000|cmp DX,0",
+        "0F95C0|setne AL",
+        "0FB6C0|movsz AX,AL",
+        "50|push AX",
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 27,
+      "entry": "F000:003F",
+      "term": "F000:0048",
+      "pred": [],
+      "succ": [],
+      "asm": [
+        "50|push AX",
+        "BA0100|mov DX,1",
+        "B020|mov AL,0x20",
+        "E620|out 0x20,AL",
+        "58|pop AX",
+        "CF|iret"
+      ]
+    },
+    {
+      "id": 2,
+      "entry": "F000:FFF0",
+      "term": "F000:FFF0",
+      "pred": [],
+      "succ": [
+        3
+      ],
+      "asm": [
+        "EB0E|jmp short 0"
+      ]
+    },
+    {
+      "id": 24,
+      "entry": "F000:002C",
+      "term": "F000:0031",
+      "pred": [
+        19,
+        24
+      ],
+      "succ": [
+        24,
+        33
+      ],
+      "asm": [
+        "40|inc AX",
+        "89C3|mov BX,AX",
+        "D1EB|shr BX,1",
+        "E2F9|loop 0x002C"
+      ]
+    },
+    {
+      "id": 3,
+      "entry": "F000:0000",
+      "term": "F000:0025",
+      "pred": [
+        2
+      ],
+      "succ": [
+        19
+      ],
+      "asm": [
+        "B80000|mov AX,0",
+        "8ED0|mov SS,AX",
+        "BC0200|mov SP,2",
+        "BA0000|mov DX,0",
+        "C70620003F00|mov word ptr DS:[0x0020],0x003F",
+        "8C0E2200|mov word ptr DS:[0x0022],CS",
+        "B036|mov AL,0x36",
+        "E643|out 0x43,AL",
+        "B051|mov AL,0x51",
+        "E640|out 0x40,AL",
+        "B022|mov AL,0x22",
+        "E640|out 0x40,AL",
+        "B000|mov AL,0",
+        "E621|out 0x21,AL",
+        "FB|sti"
+      ]
+    },
+    {
+      "id": 19,
+      "entry": "F000:0026",
+      "term": "F000:0026",
+      "pred": [
+        3
+      ],
+      "succ": [
+        24
+      ],
+      "asm": [
+        "66B9FFFFFF00|mov ECX,0x00FFFFFF"
+      ]
+    }
+  ],
+  "truncated": false
+}

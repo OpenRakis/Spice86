@@ -14,15 +14,19 @@ using System.Net.Http.Headers;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 
 internal sealed class McpIntegrationContext : IAsyncDisposable {
+    private static readonly TimeSpan DefaultPauseTimeout = TimeSpan.FromSeconds(30);
+
     private readonly HttpClient _httpClient;
     private readonly Uri _baseEndpoint;
     private readonly Uri _endpoint;
     private readonly Spice86Creator _creator;
     private long _requestId = 1;
     private string? _sessionId;
+    private Thread? _emulationThread;
 
     private McpIntegrationContext(
         Spice86Creator creator,
@@ -45,6 +49,35 @@ internal sealed class McpIntegrationContext : IAsyncDisposable {
     public EmulatorMcpServices Services { get; }
     public McpHttpHost Host { get; }
     public string? SessionId => _sessionId;
+
+    public void StartEmulationLoop() {
+        Services.PauseHandler.RequestPause("Starting paused for test");
+        _emulationThread = new Thread(() => {
+            Spice86.ProgramExecutor.Run();
+        }) { IsBackground = true };
+        _emulationThread.Start();
+    }
+
+    public bool WaitUntilPaused(TimeSpan timeout) {
+        if (Services.PauseHandler.IsPaused) {
+            return true;
+        }
+        using ManualResetEventSlim evt = new(false);
+        void OnPaused() => evt.Set();
+        Services.PauseHandler.Paused += OnPaused;
+        try {
+            if (Services.PauseHandler.IsPaused) {
+                return true;
+            }
+            return evt.Wait(timeout);
+        } finally {
+            Services.PauseHandler.Paused -= OnPaused;
+        }
+    }
+
+    public bool WaitUntilPaused() {
+        return WaitUntilPaused(DefaultPauseTimeout);
+    }
 
     public static async Task<McpIntegrationContext> CreateAsync(
         string testProgramName,
@@ -95,6 +128,7 @@ internal sealed class McpIntegrationContext : IAsyncDisposable {
             emsManager,
             services.XmsManager,
             services.BreakpointsManager,
+            services.CfgBlocksExporter,
             services.LoggerService);
 
         // Always assign optional devices, regardless of EMS/XMS enablement
@@ -203,6 +237,11 @@ internal sealed class McpIntegrationContext : IAsyncDisposable {
     public async ValueTask DisposeAsync() {
         _httpClient.Dispose();
         Host.Dispose();
+        if (_emulationThread is { IsAlive: true }) {
+            Services.State.IsRunning = false;
+            Services.PauseHandler.Resume();
+            _emulationThread.Join(TimeSpan.FromSeconds(5));
+        }
         Spice86.Dispose();
         _creator.Dispose();
         await Task.CompletedTask;

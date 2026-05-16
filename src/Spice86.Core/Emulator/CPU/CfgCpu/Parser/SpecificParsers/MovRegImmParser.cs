@@ -16,7 +16,7 @@ public class MovRegImmParser : BaseInstructionParser {
     public CfgInstruction Parse(ParsingContext context, int regIndex, bool is8Bit) {
         BitWidth bitWidth = GetBitWidth(is8Bit, context.HasOperandSize32);
         DataType dataType = _astBuilder.UType(bitWidth);
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         ValueNode immNode = ReadUnsignedImmediate(instr, bitWidth);
         ValueNode regNode = _astBuilder.Register.Reg(dataType, regIndex);
         InstructionNode displayAst = new InstructionNode(InstructionOperation.MOV, regNode, immNode);

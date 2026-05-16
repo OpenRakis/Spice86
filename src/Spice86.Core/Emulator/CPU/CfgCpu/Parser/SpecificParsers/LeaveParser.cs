@@ -18,7 +18,7 @@ public class LeaveParser : BaseInstructionParser {
 
     public CfgInstruction Parse(ParsingContext context) {
         BitWidth bitWidth = GetBitWidth(false, context.HasOperandSize32);
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         IVisitableAstNode execAst = _astBuilder.WithIpAdvancement(instr, _astBuilder.Stack.Leave(bitWidth));
         InstructionNode displayAst = new InstructionNode(bitWidth == BitWidth.DWORD_32 ? InstructionOperation.LEAVEW : InstructionOperation.LEAVE);
         instr.AttachAsts(displayAst, execAst);

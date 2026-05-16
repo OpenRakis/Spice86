@@ -70,6 +70,7 @@ public static class ConnectionThemeBehavior {
         { CfgEdgeType.Selector, ("CfgEdgeSelectorBrush", new SolidColorBrush(Color.FromRgb(0x28, 0xB4, 0x63))) },
         { CfgEdgeType.CallToReturn, ("CfgEdgeCallToReturnBrush", new SolidColorBrush(Color.FromRgb(0x1A, 0xBC, 0x9C))) },
         { CfgEdgeType.CpuFault, ("CfgEdgeCpuFaultBrush", new SolidColorBrush(Color.FromRgb(0xCB, 0x43, 0x35))) },
+        { CfgEdgeType.IsolatedNodeLoop, (string.Empty, Brushes.Transparent) },
     };
 
     private static void ApplyColor(Connection connection) {

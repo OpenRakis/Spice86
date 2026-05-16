@@ -19,7 +19,7 @@ public class CallParser : BaseInstructionParser {
         BitWidth operandBitWidth = context.DefaultWordOperandBitWidth;
         if (context.HasOperandSize32) {
             InstructionField<SegmentedAddress32> addrField32 = _instructionReader.SegmentedAddress32.NextField(true);
-            CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, null) { Kind = InstructionKind.Call };
+            CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, null) { Kind = InstructionKind.Call };
             instr.AddField(addrField32);
             SegmentedAddressNode targetAddress = _astBuilder.SegmentedAddressBuilder.ToNode(addrField32);
             InstructionNode displayAst = new InstructionNode(InstructionOperation.CALL_FAR, _astBuilder.InstructionField.ToNode(addrField32));
@@ -28,7 +28,7 @@ public class CallParser : BaseInstructionParser {
             return instr;
         }
         InstructionField<SegmentedAddress> addrField = _instructionReader.SegmentedAddress16.NextField(true);
-        CfgInstruction instr16 = new(context.Address, context.OpcodeField, context.Prefixes, null) { Kind = InstructionKind.Call };
+        CfgInstruction instr16 = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, null) { Kind = InstructionKind.Call };
         instr16.AddField(addrField);
         SegmentedAddressNode targetAddress16 = _astBuilder.SegmentedAddressBuilder.ToNode(addrField);
         InstructionNode displayAst16 = new InstructionNode(InstructionOperation.CALL_FAR, _astBuilder.InstructionField.ToNode(addrField));
@@ -40,7 +40,7 @@ public class CallParser : BaseInstructionParser {
     public CfgInstruction ParseCallNearImm(ParsingContext context) {
         BitWidth offsetWidth = context.DefaultWordOperandBitWidth;
         BitWidth operandBitWidth = context.DefaultWordOperandBitWidth;
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, null) { Kind = InstructionKind.Call };
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, null) { Kind = InstructionKind.Call };
         (int offsetValue, FieldWithValue offsetField) = ReadSignedOffset(offsetWidth);
         instr.AddField(offsetField);
         ushort targetIp = (ushort)(instr.NextInMemoryAddress32.Offset + offsetValue);

@@ -333,7 +333,17 @@ public class AstRendererVisitor<TOutput> : IAstVisitor<TOutput> {
     }
 
     public TOutput VisitBlockNode(BlockNode node) {
-        throw CreateUnsupportedNodeException(nameof(BlockNode));
+        if (node.Statements.Count == 0) {
+            return _outputRenderer.Empty();
+        }
+        List<TOutput> result = [];
+        for (int i = 0; i < node.Statements.Count; i++) {
+            if (i > 0) {
+                result.Add(_outputRenderer.Text(Environment.NewLine));
+            }
+            result.Add(node.Statements[i].Accept(this));
+        }
+        return _outputRenderer.Concat([.. result]);
     }
 
     public TOutput VisitIfElseNode(IfElseNode node) {

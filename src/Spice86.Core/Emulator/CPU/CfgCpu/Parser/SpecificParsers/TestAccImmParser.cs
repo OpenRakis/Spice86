@@ -17,7 +17,7 @@ public class TestAccImmParser : BaseInstructionParser {
     public CfgInstruction Parse(ParsingContext context) {
         BitWidth bitWidth = GetBitWidth(context.OpcodeField, context.HasOperandSize32);
         DataType dataType = _astBuilder.UType(bitWidth);
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         ValueNode immNode = ReadUnsignedImmediate(instr, bitWidth);
         ValueNode accNode = _astBuilder.Register.Accumulator(dataType);
         MethodCallValueNode aluCall = _astBuilder.AluCall(dataType, bitWidth, "And", accNode, immNode);

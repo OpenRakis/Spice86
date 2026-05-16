@@ -5,6 +5,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
+using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
@@ -23,12 +24,14 @@ public class BaseInstructionParser {
     protected readonly ModRmParser _modRmParser;
     protected readonly State _state;
     protected readonly AstBuilder _astBuilder;
+    protected readonly CfgNodeIdAllocator _idAllocator;
 
     protected BaseInstructionParser(ParsingTools parsingTools) {
         _instructionReader = parsingTools.InstructionReader;
         _modRmParser = parsingTools.ModRmParser;
         _state = parsingTools.State;
         _astBuilder = parsingTools.AstBuilder;
+        _idAllocator = parsingTools.IdAllocator;
     }
 
     protected bool HasOperandSize8(ushort opcode) {
@@ -64,7 +67,7 @@ public class BaseInstructionParser {
     /// </summary>
     protected (CfgInstruction instr, ModRmContext modRmContext) ParseModRmBase(ParsingContext context, int maxSuccessors) {
         ModRmContext modRmContext = _modRmParser.ParseNext(context);
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, maxSuccessors);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, maxSuccessors);
         RegisterModRmFields(instr, modRmContext);
         return (instr, modRmContext);
     }

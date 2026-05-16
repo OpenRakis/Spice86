@@ -25,7 +25,7 @@ public class JmpParser : BaseInstructionParser {
     }
 
     public CfgInstruction ParseJmpFarImm(ParsingContext context) {
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1) { Kind = InstructionKind.Jump };
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1) { Kind = InstructionKind.Jump };
         SegmentedAddress targetAddress;
         if (context.HasOperandSize32) {
             InstructionField<SegmentedAddress32> addrField32 = _instructionReader.SegmentedAddress32.NextField(true);
@@ -44,7 +44,7 @@ public class JmpParser : BaseInstructionParser {
     }
 
     private CfgInstruction ParseJmpNear(ParsingContext context, BitWidth offsetWidth, InstructionOperation displayOp) {
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1) { Kind = InstructionKind.Jump };
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1) { Kind = InstructionKind.Jump };
         (int offsetValue, FieldWithValue offsetField) = ReadSignedOffset(offsetWidth);
         instr.AddField(offsetField);
         // Real mode: jump target is truncated to 16-bit IP

@@ -21,7 +21,7 @@ public class IoStringParser : BaseInstructionParser {
     public CfgInstruction Parse(ParsingContext context, bool isInput) {
         BitWidth bitWidth = GetBitWidth(context.OpcodeField, context.HasOperandSize32);
         DataType dataType = _astBuilder.UType(bitWidth);
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         DataType addressType = _astBuilder.AddressType(instr);
         ValueNode dx = _astBuilder.Register.Reg16(RegisterIndex.DxIndex);
         BlockNode coreOperation;

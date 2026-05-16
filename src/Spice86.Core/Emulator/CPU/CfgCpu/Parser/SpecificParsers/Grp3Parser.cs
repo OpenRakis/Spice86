@@ -40,7 +40,7 @@ public class Grp3Parser : BaseGrpOperationParser {
 
     private CfgInstruction ParseTest(ParsingContext context, ModRmContext modRmContext,
         BitWidth bitWidth, DataType dataType) {
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         RegisterModRmFields(instr, modRmContext);
         ValueNode immNode = ReadUnsignedImmediate(instr, bitWidth);
         ValueNode rmNode = _astBuilder.ModRm.RmToNode(dataType, modRmContext);
@@ -53,7 +53,7 @@ public class Grp3Parser : BaseGrpOperationParser {
 
     private CfgInstruction ParseNot(ParsingContext context, ModRmContext modRmContext,
         BitWidth bitWidth, DataType dataType) {
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         RegisterModRmFields(instr, modRmContext);
         ValueNode rmNode = _astBuilder.ModRm.RmToNode(dataType, modRmContext);
         UnaryOperationNode notOp = new UnaryOperationNode(dataType, UnaryOperation.BITWISE_NOT, rmNode);
@@ -66,7 +66,7 @@ public class Grp3Parser : BaseGrpOperationParser {
 
     private CfgInstruction ParseNeg(ParsingContext context, ModRmContext modRmContext,
         BitWidth bitWidth, DataType dataType) {
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         RegisterModRmFields(instr, modRmContext);
         ValueNode rmNode = _astBuilder.ModRm.RmToNode(dataType, modRmContext);
         ValueNode zeroNode = _astBuilder.Constant.ToNode(dataType, 0UL);
@@ -87,7 +87,7 @@ public class Grp3Parser : BaseGrpOperationParser {
         DataType unsignedType = _astBuilder.UType(bitWidth);
         DataType signedType = isSigned ? _astBuilder.SType(bitWidth) : _astBuilder.UType(bitWidth);
         DataType wideType = isSigned ? _astBuilder.SType(bitWidth.Double()) : _astBuilder.UType(bitWidth.Double());
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         RegisterModRmFields(instr, modRmContext);
         (ValueNode sourceReg, ValueNode additionalReg) = GetMulDivRegisterNodes(bitWidth);
         ValueNode v1 = _astBuilder.TypeConversion.Convert(signedType, sourceReg);
@@ -109,7 +109,7 @@ public class Grp3Parser : BaseGrpOperationParser {
         DataType unsignedType = _astBuilder.UType(bitWidth);
         DataType signedType = isSigned ? _astBuilder.SType(bitWidth) : _astBuilder.UType(bitWidth);
         DataType wideSignedType = isSigned ? _astBuilder.SType(bitWidth.Double()) : _astBuilder.UType(bitWidth.Double());
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         RegisterModRmFields(instr, modRmContext);
         (ValueNode lowReg, ValueNode highReg) = GetMulDivRegisterNodes(bitWidth);
         ValueNode v1Node;

@@ -47,6 +47,7 @@ using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.StateSerialization;
+using Spice86.Core.Emulator.StateSerialization.ControlFlow;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM.Clock;
@@ -294,7 +295,7 @@ public class Spice86DependencyInjection : IDisposable {
         _cfgNodeExecutionCompiler = cfgNodeExecutionCompiler;
 
         CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler,
-            dualPic, emulatorBreakpointsManager, functionCatalogue,
+            dualPic, emulatorBreakpointsManager, pauseHandler, functionCatalogue,
             configuration.UseCodeOverrideOption, configuration.FailOnInvalidOpcode, configuration.AllowIvtAddress0, loggerService, cfgNodeExecutionCompiler, cpuHeavyLogger);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -432,8 +433,10 @@ public class Spice86DependencyInjection : IDisposable {
         ListingExporter listingExporter = new(cfgCpu, loggerService, nodeToString);
 
         ExecutionAddressesExtractor executionAddressesExtractor = new(cfgCpu, executionAddresses);
+        CfgBlockGraphExporter cfgBlockGraphExporter = new();
+        CfgBlocksJsonExporter cfgBlocksJsonExporter = new(cfgBlockGraphExporter);
         EmulationStateDataWriter emulationStateDataWriter = new(state, executionAddressesExtractor, memoryDataExporter,
-            listingExporter, functionCatalogue, emulatorStateSerializationFolder, emulatorBreakpointsManager,
+            listingExporter, cfgBlocksJsonExporter, cfgCpu.ExecutionContextManager, functionCatalogue, emulatorStateSerializationFolder, emulatorBreakpointsManager,
             loggerService);
         EmulatorStateSerializer emulatorStateSerializer = new(emulatorStateSerializationFolder,
             emulationStateDataReader, emulationStateDataWriter);
@@ -452,7 +455,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         EmulatorMcpServices emulatorMcpServices = new(memory, state, functionCatalogue, cfgCpu,
             ioPortDispatcher, vgaRenderer, pauseHandler, mcpEmsManager, xms,
-            emulatorBreakpointsManager, loggerService);
+            emulatorBreakpointsManager, cfgBlocksJsonExporter, loggerService);
 
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
         KeyboardInt16Handler keyboardInt16Handler = new(
@@ -732,7 +735,8 @@ public class Spice86DependencyInjection : IDisposable {
             cpuTabPlugin.Register(debuggerTabRegistry);
 
             CfgCpuTabPlugin cfgCpuTabPlugin = new(uiDispatcher,
-                cfgCpu.ExecutionContextManager, pauseHandler, nodeToString, asmRenderingConfig);
+                cfgCpu.ExecutionContextManager, pauseHandler, nodeToString, asmRenderingConfig,
+                cfgBlockGraphExporter);
             cfgCpuTabPlugin.Register(debuggerTabRegistry);
 
             StructureViewModelFactory structureViewModelFactory = new(configuration,
