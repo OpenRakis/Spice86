@@ -1,0 +1,125 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "F000:FFF0",
+  "totalEntryPoints": 1,
+  "entryPointAddresses": [
+    "F000:FFF0"
+  ],
+  "lastExecutedAddress": "F000:0057",
+  "lastExecutedBlockId": 36,
+  "blocks": [
+    {
+      "id": 36,
+      "entry": "F000:0057",
+      "term": "F000:0057",
+      "pred": [
+        20,
+        32
+      ],
+      "succ": [],
+      "asm": [
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 2,
+      "entry": "F000:FFF0",
+      "term": "F000:FFF0",
+      "pred": [],
+      "succ": [
+        3
+      ],
+      "asm": [
+        "EB0E|jmp short 0"
+      ]
+    },
+    {
+      "id": 20,
+      "entry": "F000:005A",
+      "term": "F000:0068",
+      "pred": [
+        3,
+        28,
+        32
+      ],
+      "succ": [
+        28,
+        32,
+        36
+      ],
+      "asm": [
+        "55|push BP",
+        "89E5|mov BP,SP",
+        "A10400|mov AX,word ptr DS:[4]",
+        "894602|mov word ptr SS:[BP\u002B2],AX",
+        "5D|pop BP",
+        "FF060000|inc word ptr DS:[0]",
+        "CF|iret"
+      ]
+    },
+    {
+      "id": 32,
+      "entry": "F000:004E",
+      "term": "F000:0054",
+      "pred": [
+        20,
+        28
+      ],
+      "succ": [
+        20,
+        36
+      ],
+      "asm": [
+        "C70604005700|mov word ptr DS:[4],0x0057",
+        "F0FF|invalid"
+      ]
+    },
+    {
+      "id": 3,
+      "entry": "F000:0000",
+      "term": "F000:0040",
+      "pred": [
+        2
+      ],
+      "succ": [
+        20,
+        28
+      ],
+      "asm": [
+        "31C0|xor AX,AX",
+        "8ED8|mov DS,AX",
+        "8ED0|mov SS,AX",
+        "BC0080|mov SP,0x8000",
+        "C70618005A00|mov word ptr DS:[0x0018],0x005A",
+        "8C0E1A00|mov word ptr DS:[0x001A],CS",
+        "C70600000000|mov word ptr DS:[0],0",
+        "C70602000000|mov word ptr DS:[2],0",
+        "C70610000100|mov word ptr DS:[0x0010],1",
+        "F001061000|add word ptr DS:[0x0010],AX",
+        "F0FF061000|inc word ptr DS:[0x0010]",
+        "F0FF0E1000|dec word ptr DS:[0x0010]",
+        "C70602000300|mov word ptr DS:[2],3",
+        "C70604004500|mov word ptr DS:[4],0x0045",
+        "F089|invalid"
+      ]
+    },
+    {
+      "id": 28,
+      "entry": "F000:0045",
+      "term": "F000:004B",
+      "pred": [
+        3,
+        20
+      ],
+      "succ": [
+        20,
+        32
+      ],
+      "asm": [
+        "C70604004E00|mov word ptr DS:[4],0x004E",
+        "F003|invalid"
+      ]
+    }
+  ],
+  "truncated": false
+}

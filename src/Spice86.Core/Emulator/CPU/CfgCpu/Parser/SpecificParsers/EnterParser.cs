@@ -18,7 +18,7 @@ public class EnterParser : BaseInstructionParser {
     public CfgInstruction Parse(ParsingContext context) {
         InstructionField<ushort> storageField = _instructionReader.UInt16.NextField(false);
         InstructionField<byte> levelField = _instructionReader.UInt8.NextField(false);
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         instr.AddField(storageField);
         instr.AddField(levelField);
         BitWidth bitWidth = GetBitWidth(false, context.HasOperandSize32);

@@ -30,7 +30,7 @@ public class CfgNodeExecutionCompiler : IDisposable {
     private readonly JitMode _jitMode;
 
     private readonly BlockingCollection<(Expression<CfgNodeExecutionAction<InstructionExecutionHelper>> Expression,
-        TaskCompletionSource<CfgNodeExecutionAction<InstructionExecutionHelper>> Tcs)> _compilationQueue = new();
+        ICfgNode Node, long Generation)> _compilationQueue = new();
 
     private readonly CancellationTokenSource _cts = new();
     private readonly Thread[] _backgroundThreads;
@@ -55,8 +55,7 @@ public class CfgNodeExecutionCompiler : IDisposable {
             for (int i = 0; i < backgroundCompilerThreadCount; i++) {
                 Thread thread = new Thread(() => RunBackgroundCompiler(token)) {
                     IsBackground = true,
-                    Name = $"CfgNodeBackgroundCompiler-{i}",
-                    Priority = ThreadPriority.BelowNormal
+                    Name = $"CfgNodeBackgroundCompiler-{i}"
                 };
                 _backgroundThreads[i] = thread;
                 thread.Start();
@@ -70,13 +69,13 @@ public class CfgNodeExecutionCompiler : IDisposable {
     private void RunBackgroundCompiler(CancellationToken cancellationToken) {
         try {
             foreach ((Expression<CfgNodeExecutionAction<InstructionExecutionHelper>> Expression,
-                TaskCompletionSource<CfgNodeExecutionAction<InstructionExecutionHelper>> Tcs) item
+                ICfgNode Node, long Generation) item
                 in _compilationQueue.GetConsumingEnumerable(cancellationToken)) {
                 try {
                     CfgNodeExecutionAction<InstructionExecutionHelper> optimized = CompileExpression(item.Expression);
-                    item.Tcs.TrySetResult(optimized);
+                    TrySwapCompiledExecution(item.Node, item.Generation, optimized);
                 } catch (InvalidOperationException ex) {
-                    item.Tcs.TrySetException(ex);
+                    _logger.Error(ex, "CfgNodeExecutionCompiler: background compile error: {Message}", ex.Message);
                 } finally {
                     _monitor.RecordQueuePopped();
                 }
@@ -148,20 +147,15 @@ public class CfgNodeExecutionCompiler : IDisposable {
         long generation = CompileInterpreted(node, exprWithHelper);
         _monitor.RecordInterpreted();
         _monitor.RecordQueuePushed();
-        TaskCompletionSource<CfgNodeExecutionAction<InstructionExecutionHelper>> tcs = new(
-            TaskCreationOptions.RunContinuationsAsynchronously);
-        _compilationQueue.TryAdd((exprWithHelper, tcs));
-        Task<CfgNodeExecutionAction<InstructionExecutionHelper>> task = tcs.Task;
+        _compilationQueue.TryAdd((exprWithHelper, node, generation));
+    }
 
-        // When the compiled delegate is ready, swap it onto the node only if no newer
-        // Compile() call has been made in the meantime.
-        task.ContinueWith(completedTask => {
-            if (completedTask.IsCompletedSuccessfully
-                && node.CompilationGeneration == generation) {
-                AssignExecution(node, completedTask.Result);
-                _monitor.RecordSwapped();
-            }
-        }, TaskContinuationOptions.ExecuteSynchronously);
+    private void TrySwapCompiledExecution(ICfgNode node, long generation,
+        CfgNodeExecutionAction<InstructionExecutionHelper> optimized) {
+        if (node.CompilationGeneration == generation) {
+            AssignExecution(node, optimized);
+            _monitor.RecordSwapped();
+        }
     }
 
     private void AssignExecution(ICfgNode node, CfgNodeExecutionAction<InstructionExecutionHelper> action) {

@@ -314,6 +314,50 @@ An `ExecutionContext` tracks graph state within a single flow of control:
 - **Variant merging** minimizes SelectorNode creation. Most self-modifying code only touches operands (non-final fields), not opcodes.
 - **Null wildcards in signatures** give a uniform matching mechanism that works for both merged instructions and SelectorNode dispatch.
 - **Observer-based replacement** (`InstructionReplacerRegistry`) keeps caches and graph consistent when nodes are merged, without coupling components.
+- **CfgBlock as a structural overlay** - blocks group straight-line instruction sequences without duplicating edge state. Successors/predecessors delegate by reference to the terminator/entry, so they stay in sync with the instruction-level graph automatically.
+- **O(1) block liveness** via a maintained counter rather than iterating all contained instructions on every check.
+- **Block boundary from instruction properties** - the linker determines boundaries exclusively from `IsBlockTerminator` and `IsBlockStarter` flags (set at parse time) plus static memory adjacency, never from `Kind` or `MaxSuccessorsCount` directly.
+- **Monotonic discovery** - `IsDiscoveryComplete` flips from false to true exactly once and never back, simplifying reasoning about block state.
+
+## CfgBlock
+
+A `CfgBlock` groups a contiguous sequence of instructions that always execute together: one entry, one exit, no intermediate join points. It's a structural overlay on the instruction-level CFG - the instruction-level edges remain the single source of truth.
+
+### Structure
+
+- `Entry` - first instruction in the block.
+- `Terminator` - last instruction (may be a `CfgInstruction` or a `SelectorNode`).
+- `Instructions` - ordered list from entry through terminator inclusive.
+- `IsDiscoveryComplete` - true once the linker has finalised the block.
+- `IsLive` - true if every contained instruction is live (O(1) via maintained counter).
+
+### Edge Delegation
+
+Block-level `Successors` returns `Terminator.Successors` by reference. Block-level `Predecessors` returns `Entry.Predecessors` by reference. No separate block-edge state is stored - this eliminates sync bugs.
+
+### Block Construction (NodeLinker)
+
+The linker builds blocks incrementally as instruction-level edges are added:
+
+1. **Bootstrap** - first edge from a node opens a one-node block for it.
+2. **Continuation** - if the predecessor is not a terminator, the next node is not a starter, and they're memory-adjacent, the next node is appended to the predecessor's block.
+3. **Boundary** - otherwise, the predecessor's block is closed and the next node gets its own block (new or split from an existing one).
+4. **Split** - when a new edge targets the interior of an existing block, the block is split at that point.
+
+### Self-Modifying Code and Blocks
+
+When `ReplaceInstruction` fires (variant merging), the replacement happens in-place within the block (`ReplaceInPlace`). The new instruction inherits the block position and back-pointer. Subsequent edge rewires hit the intra-block idempotency check and don't cause spurious splits.
+
+When a `SelectorNode` is injected via `CreateSelectorNodeBetween`, it either absorbed into the predecessor's block as its terminator (if the continuation rule applies) or lands in its own one-node block (if the predecessor is already a terminator).
+
+### Hot-Path Execution
+
+`CfgCpu.ExecuteNext` dispatches two ways depending on the resolved next node:
+
+- **Hot path** – if the next node is the entry of a discovered, live block (`next == block.Entry`), `ExecuteBlock` walks the block's instruction list directly without re-entering the feeder between steps. This skips feeder lookup, linker calls, and memory reconciliation for every non-terminator instruction in the block.
+- **Cold path** – in every other case (incomplete block, non-live block, or next node is an interior node of a complete live block), `ExecuteOneNode` steps exactly that one node.
+
+The interior-node cold-step case is expected and valid. It arises during incremental discovery, selector insertion, instruction replacement, fault edges, and other graph surgery – none of which should be treated as an error. External interrupts fire once per dispatch, after the last node actually executed (block or single node).
 
 ## Core Classes
 

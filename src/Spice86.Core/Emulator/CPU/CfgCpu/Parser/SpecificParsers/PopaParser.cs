@@ -14,7 +14,7 @@ public class PopaParser : BaseInstructionParser {
 
     public CfgInstruction Parse(ParsingContext context) {
         BitWidth bitWidth = GetBitWidth(false, context.HasOperandSize32);
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
 
         string methodName = bitWidth == BitWidth.DWORD_32 ? nameof(Stack.PopAll32) : nameof(Stack.PopAll16);
         MethodCallNode popAll = new("Stack", methodName);

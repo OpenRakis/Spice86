@@ -17,7 +17,7 @@ public class IoAccImmParser : BaseInstructionParser {
         BitWidth bitWidth = GetBitWidth(context.OpcodeField, context.HasOperandSize32);
         DataType dataType = _astBuilder.UType(bitWidth);
         InstructionField<byte> immField = _instructionReader.UInt8.NextField(false);
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         instr.AddField(immField);
         ValueNode portNode = _astBuilder.InstructionField.ToNode(immField);
         ValueNode accumulator = _astBuilder.Register.Accumulator(dataType);

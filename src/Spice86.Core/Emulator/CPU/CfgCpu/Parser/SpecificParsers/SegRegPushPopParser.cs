@@ -16,7 +16,7 @@ public class SegRegPushPopParser : BaseInstructionParser {
     }
 
     public CfgInstruction ParsePushSReg(ParsingContext context, int segRegIndex) {
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         ValueNode regNode = _astBuilder.Register.SReg(segRegIndex);
         DataType pushType = context.HasOperandSize32 ? DataType.UINT32 : DataType.UINT16;
         ValueNode pushValue = _astBuilder.TypeConversion.Convert(pushType, regNode);
@@ -28,7 +28,7 @@ public class SegRegPushPopParser : BaseInstructionParser {
     }
 
     public CfgInstruction ParsePopSReg(ParsingContext context, int segRegIndex) {
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         ValueNode regNode = _astBuilder.Register.SReg(segRegIndex);
         DataType addressType = DataType.UINT16;
         ushort slotSize = context.HasOperandSize32 ? (ushort)4 : (ushort)2;

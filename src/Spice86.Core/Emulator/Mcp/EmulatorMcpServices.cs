@@ -17,6 +17,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
+using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
@@ -38,8 +39,11 @@ public sealed class EmulatorMcpServices(
     ExpandedMemoryManager? emsManager,
     ExtendedMemoryManager? xmsManager,
     EmulatorBreakpointsManager breakpointsManager,
+    CfgBlocksJsonExporter cfgBlocksExporter,
     ILoggerService loggerService) {
     public IMemory Memory { get; } = memory;
+
+    public CfgBlocksJsonExporter CfgBlocksExporter { get; } = cfgBlocksExporter;
 
     public State State { get; } = state;
 

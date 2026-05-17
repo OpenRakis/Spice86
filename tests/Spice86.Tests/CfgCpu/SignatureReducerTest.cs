@@ -2,8 +2,10 @@ namespace Spice86.Tests.CfgCpu;
 
 using FluentAssertions;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
 using Spice86.Shared.Emulator.Memory;
 
 using System.Collections.Immutable;
@@ -13,6 +15,7 @@ using Xunit;
 public class SignatureReducerTest {
     private static readonly SegmentedAddress TestAddress = new(0x1000, 0);
     private const uint DefaultValueAddress = 0x10001;
+    private static readonly CfgNodeIdAllocator _allocator = new();
 
     private static SignatureReducer CreateReducer() {
         InstructionReplacerRegistry replacerRegistry = new();
@@ -42,7 +45,7 @@ public class SignatureReducerTest {
     private static CfgInstruction CreateInstruction(ushort value, uint physicalAddress) {
         InstructionField<ushort> opcodeField = CreateOpcodeField();
         InstructionField<ushort> valueField = CreateValueField(value, physicalAddress);
-        CfgInstruction instruction = new CfgInstruction(TestAddress, opcodeField, maxSuccessorsCount: 1);
+        CfgInstruction instruction = new CfgInstruction(_allocator.AllocateId(), TestAddress, opcodeField, new List<InstructionPrefix>(), maxSuccessorsCount: 1);
         instruction.AddField(valueField);
         return instruction;
     }
@@ -188,7 +191,7 @@ public class SignatureReducerTest {
     private static CfgInstruction CreateInstructionWithOpcode(ushort opcode, ushort value, uint physicalAddress) {
         InstructionField<ushort> opcodeField = CreateOpcodeFieldWithValue(opcode);
         InstructionField<ushort> valueField = CreateValueField(value, physicalAddress);
-        CfgInstruction instruction = new CfgInstruction(TestAddress, opcodeField, maxSuccessorsCount: 1);
+        CfgInstruction instruction = new CfgInstruction(_allocator.AllocateId(), TestAddress, opcodeField, new List<InstructionPrefix>(), maxSuccessorsCount: 1);
         instruction.AddField(valueField);
         return instruction;
     }

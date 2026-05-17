@@ -44,7 +44,7 @@ public class Grp2Parser : BaseGrpOperationParser {
         (string operation, InstructionOperation displayOp) = Operations[groupIndex];
         BitWidth bitWidth = GetBitWidth(context.OpcodeField, context.HasOperandSize32);
         DataType dataType = _astBuilder.UType(bitWidth);
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         RegisterModRmFields(instr, modRmContext);
         ValueNode countNode;
         ValueNode displayCountNode;

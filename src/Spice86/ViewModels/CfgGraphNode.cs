@@ -20,12 +20,23 @@ public sealed class CfgGraphNode : IEquatable<CfgGraphNode> {
     /// <summary>
     /// Whether this node is the last executed instruction.
     /// </summary>
-    public bool IsLastExecuted { get; init; }
+    public bool IsExecuting { get; init; }
 
     /// <summary>
-    /// The type of instruction this node represents, used for visual differentiation.
+    /// Whether the underlying CfgBlock (or instruction) is currently live.
+    /// Defaults to <c>true</c>. When <c>false</c>, the view applies "stale" styling
+    /// to visually distinguish the node from a live block.
     /// </summary>
-    public CfgNodeType NodeType { get; init; }
+    public bool IsLive { get; init; } = true;
+
+    /// <summary>
+    /// Whether the underlying CfgBlock has finished discovery. Defaults to <c>true</c>
+    /// for plain instruction nodes; for CfgBlock nodes this mirrors
+    /// <see cref="Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph.CfgBlock.IsDiscoveryComplete"/>.
+    /// When <c>false</c>, the view applies an in-progress indicator (e.g. trailing "…"
+    /// on the listing and a dashed outline) to distinguish the node from a closed block.
+    /// </summary>
+    public bool IsDiscoveryComplete { get; init; } = true;
 
     public override bool Equals(object? obj) => obj is CfgGraphNode other && NodeId == other.NodeId;
     public bool Equals(CfgGraphNode? other) => other is not null && NodeId == other.NodeId;

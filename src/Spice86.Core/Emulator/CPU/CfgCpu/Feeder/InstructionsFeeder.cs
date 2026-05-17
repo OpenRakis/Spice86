@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
@@ -22,8 +23,8 @@ public class InstructionsFeeder : IClearable {
     private readonly CfgNodeExecutionCompiler _executionCompiler;
 
     public InstructionsFeeder(EmulatorBreakpointsManager emulatorBreakpointsManager, IMemory memory, State cpuState,
-        InstructionReplacerRegistry replacerRegistry, CfgNodeExecutionCompiler executionCompiler) {
-        _instructionParser = new(memory, cpuState);
+        InstructionReplacerRegistry replacerRegistry, CfgNodeExecutionCompiler executionCompiler, CfgNodeIdAllocator idAllocator) {
+        _instructionParser = new(memory, cpuState, idAllocator);
         _executionCompiler = executionCompiler;
         CurrentInstructions = new(memory, emulatorBreakpointsManager, replacerRegistry);
         PreviousInstructions = new(memory, replacerRegistry);

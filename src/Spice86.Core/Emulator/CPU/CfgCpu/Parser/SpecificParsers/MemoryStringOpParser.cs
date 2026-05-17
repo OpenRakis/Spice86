@@ -30,7 +30,7 @@ public class MemoryStringOpParser : BaseInstructionParser {
     public CfgInstruction Parse(ParsingContext context, MemoryStringOpKind kind) {
         BitWidth bitWidth = GetBitWidth(context.OpcodeField, context.HasOperandSize32);
         DataType dataType = _astBuilder.UType(bitWidth);
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         DataType addressType = _astBuilder.AddressType(instr);
         bool usesEqualityRep = kind is MemoryStringOpKind.Cmps or MemoryStringOpKind.Scas;
         RepPrefix? repPrefix = _astBuilder.Rep(instr.RepPrefix, usesEqualityRep);

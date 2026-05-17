@@ -1,0 +1,140 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "F000:FFF0",
+  "totalEntryPoints": 1,
+  "entryPointAddresses": [
+    "F000:FFF0"
+  ],
+  "lastExecutedAddress": "F000:002A",
+  "lastExecutedBlockId": 28,
+  "blocks": [
+    {
+      "id": 28,
+      "entry": "F000:001C",
+      "term": "F000:002A",
+      "pred": [
+        23
+      ],
+      "succ": [],
+      "asm": [
+        "9C|pushf",
+        "5B|pop BX",
+        "B90000|mov CX,0",
+        "8ED9|mov DS,CX",
+        "A30000|mov word ptr DS:[0],AX",
+        "891E0200|mov word ptr DS:[2],BX",
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 2,
+      "entry": "F000:FFF0",
+      "term": "F000:FFF0",
+      "pred": [],
+      "succ": [
+        3
+      ],
+      "asm": [
+        "EB0E|jmp short 0"
+      ]
+    },
+    {
+      "id": 23,
+      "entry": "F000:0018",
+      "term": "F000:001B",
+      "pred": [
+        21
+      ],
+      "succ": [
+        28
+      ],
+      "asm": [
+        "F5|cmc",
+        "F9|stc",
+        "FD|std",
+        "FB|sti"
+      ]
+    },
+    {
+      "id": 3,
+      "entry": "F000:0000",
+      "term": "F000:000B",
+      "pred": [
+        2
+      ],
+      "succ": [
+        9
+      ],
+      "asm": [
+        "B80010|mov AX,0x1000",
+        "8ED0|mov SS,AX",
+        "BC0010|mov SP,0x1000",
+        "B9FFFE|mov CX,0xFEFF",
+        "51|push CX"
+      ]
+    },
+    {
+      "id": 21,
+      "entry": "F000:0017",
+      "term": "F000:0017",
+      "pred": [
+        14
+      ],
+      "succ": [
+        23
+      ],
+      "asm": [
+        "9D|popf"
+      ]
+    },
+    {
+      "id": 9,
+      "entry": "F000:000C",
+      "term": "F000:000C",
+      "pred": [
+        3
+      ],
+      "succ": [
+        11
+      ],
+      "asm": [
+        "9D|popf"
+      ]
+    },
+    {
+      "id": 14,
+      "entry": "F000:000F",
+      "term": "F000:0016",
+      "pred": [
+        11
+      ],
+      "succ": [
+        21
+      ],
+      "asm": [
+        "FA|cli",
+        "90|nop",
+        "9C|pushf",
+        "58|pop AX",
+        "BA0100|mov DX,1",
+        "52|push DX"
+      ]
+    },
+    {
+      "id": 11,
+      "entry": "F000:000D",
+      "term": "F000:000E",
+      "pred": [
+        9
+      ],
+      "succ": [
+        14
+      ],
+      "asm": [
+        "F8|clc",
+        "FC|cld"
+      ]
+    }
+  ],
+  "truncated": false
+}

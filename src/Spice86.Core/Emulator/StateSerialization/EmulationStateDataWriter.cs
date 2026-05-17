@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.StateSerialization;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Function;
 using Spice86.Shared.Emulator.VM.Breakpoint.Serializable;
 using Spice86.Shared.Interfaces;
@@ -18,6 +19,8 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
     private readonly ExecutionAddressesExtractor _executionAddressesExtractor;
     private readonly MemoryDataExporter _memoryDataExporter;
     private readonly ListingExporter _listingExporter;
+    private readonly CfgBlocksJsonExporter _cfgBlocksJsonExporter;
+    private readonly ExecutionContextManager _executionContextManager;
     private readonly FunctionCatalogue _functionCatalogue;
     private readonly ISerializableBreakpointsSource _serializableBreakpointsSource;
 
@@ -27,6 +30,8 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
     /// <param name="executionAddressesExtractor">The class that dumps machine code execution flow.</param>
     /// <param name="memoryDataExporter">The class used to dump main memory data properly.</param>
     /// <param name="listingExporter">The class used to dump asm listing of encountered instructions.</param>
+    /// <param name="cfgBlocksJsonExporter">The class used to dump the CFG block graph as JSON.</param>
+    /// <param name="executionContextManager">The execution context manager for CFG graph export.</param>
     /// <param name="functionCatalogue">The list of functions encountered.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="emulatorStateSerializationFolder">Where to save the data.</param>
@@ -36,6 +41,8 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
         ExecutionAddressesExtractor executionAddressesExtractor,
         MemoryDataExporter memoryDataExporter,
         ListingExporter listingExporter,
+        CfgBlocksJsonExporter cfgBlocksJsonExporter,
+        ExecutionContextManager executionContextManager,
         FunctionCatalogue functionCatalogue,
         EmulatorStateSerializationFolder emulatorStateSerializationFolder,
         ISerializableBreakpointsSource serializableBreakpointsSource,
@@ -44,6 +51,8 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
         _state = state;
         _memoryDataExporter = memoryDataExporter;
         _listingExporter = listingExporter;
+        _cfgBlocksJsonExporter = cfgBlocksJsonExporter;
+        _executionContextManager = executionContextManager;
         _functionCatalogue = functionCatalogue;
         _serializableBreakpointsSource = serializableBreakpointsSource;
     }
@@ -58,6 +67,7 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
         File.WriteAllText(CpuRegistersFile, JsonSerializer.Serialize(_state));
         _memoryDataExporter.Write(MemoryFile);
         _listingExporter.Write(ListingFile);
+        _cfgBlocksJsonExporter.Write(_executionContextManager, CfgBlocksFile);
         ExecutionAddresses executionAddresses = _executionAddressesExtractor.Extract();
         new GhidraSymbolsExporter(LoggerService).Write(executionAddresses, _functionCatalogue, SymbolsFile);
         new ExecutionAddressesExporter(LoggerService).Write(executionAddresses, ExecutionFlowFile);

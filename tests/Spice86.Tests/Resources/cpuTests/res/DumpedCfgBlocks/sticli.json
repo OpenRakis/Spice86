@@ -1,0 +1,69 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "F000:FFF0",
+  "totalEntryPoints": 1,
+  "entryPointAddresses": [
+    "F000:FFF0"
+  ],
+  "lastExecutedAddress": "F000:000C",
+  "lastExecutedBlockId": 9,
+  "blocks": [
+    {
+      "id": 9,
+      "entry": "F000:0009",
+      "term": "F000:000C",
+      "pred": [
+        7
+      ],
+      "succ": [],
+      "asm": [
+        "FA|cli",
+        "8904|mov word ptr DS:[SI],AX",
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 2,
+      "entry": "F000:FFF0",
+      "term": "F000:FFF0",
+      "pred": [],
+      "succ": [
+        3
+      ],
+      "asm": [
+        "EB0E|jmp short 0"
+      ]
+    },
+    {
+      "id": 7,
+      "entry": "F000:0006",
+      "term": "F000:0006",
+      "pred": [
+        3
+      ],
+      "succ": [
+        9
+      ],
+      "asm": [
+        "B83412|mov AX,0x1234"
+      ]
+    },
+    {
+      "id": 3,
+      "entry": "F000:0000",
+      "term": "F000:0005",
+      "pred": [
+        2
+      ],
+      "succ": [
+        7
+      ],
+      "asm": [
+        "B80010|mov AX,0x1000",
+        "8ED8|mov DS,AX",
+        "FB|sti"
+      ]
+    }
+  ],
+  "truncated": false
+}

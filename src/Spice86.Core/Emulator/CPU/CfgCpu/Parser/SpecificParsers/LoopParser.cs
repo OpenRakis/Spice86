@@ -31,7 +31,7 @@ public class LoopParser(ParsingTools parsingTools) : BaseInstructionParser(parsi
         BitWidth addressWidth = context.AddressWidthFromPrefixes;
         (int offsetValue, FieldWithValue offsetField) = ReadSignedOffset(BitWidth.BYTE_8);
 
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1) { Kind = InstructionKind.Jump };
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1) { Kind = InstructionKind.Jump };
         instr.AddField(offsetField);
         instr.MaxSuccessorsCount = 2;
 

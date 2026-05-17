@@ -64,13 +64,36 @@ public sealed class CfgInstruction : CfgNode {
     /// </summary>
     private bool _isLive = true;
 
-    public CfgInstruction(SegmentedAddress address, InstructionField<ushort> opcodeField, int? maxSuccessorsCount) : this(address,
-        opcodeField, new List<InstructionPrefix>(), maxSuccessorsCount) {
-    }
+    /// <summary>
+    /// Explicit block-terminator flag. Set ONLY by the parser via
+    /// <see cref="MarkAsBlockTerminator"/>. Combined with <see cref="Kind"/> and the
+    /// live <see cref="CfgNode.MaxSuccessorsCount"/> in <see cref="IsBlockTerminator"/>.
+    /// </summary>
+    private bool _explicitBlockTerminator;
 
-    public CfgInstruction(SegmentedAddress address, InstructionField<ushort> opcodeField,
+    /// <summary>
+    /// Stored explicit block-starter flag. Set ONLY by the parser via
+    /// <see cref="MarkAsBlockStarter"/> and surfaced by <see cref="IsBlockStarter"/>.
+    /// </summary>
+    private bool _isBlockStarter;
+
+    /// <summary>
+    /// Marks this instruction as forcing the end of its <see cref="CfgBlock"/>.
+    /// Intended to be called by parsers (e.g. for <c>STI</c>) immediately after parsing
+    /// the instruction. Has no effect on already-set state (the flag is monotonic).
+    /// </summary>
+    internal void MarkAsBlockTerminator() => _explicitBlockTerminator = true;
+
+    /// <summary>
+    /// Marks this instruction as forcing the start of a new <see cref="CfgBlock"/>.
+    /// Intended to be called by parsers (e.g. for <c>CLI</c>) immediately after parsing
+    /// the instruction. Has no effect on already-set state (the flag is monotonic).
+    /// </summary>
+    internal void MarkAsBlockStarter() => _isBlockStarter = true;
+
+    public CfgInstruction(int id, SegmentedAddress address, InstructionField<ushort> opcodeField,
         List<InstructionPrefix> prefixes, int? maxSuccessorsCount)
-        : base(address, maxSuccessorsCount) {
+        : base(id, address, maxSuccessorsCount) {
         InstructionPrefixes = prefixes;
         PrefixFields = prefixes.Select(prefix => prefix.PrefixField).ToList();
         foreach (InstructionPrefix prefix in prefixes) {
@@ -123,6 +146,28 @@ public sealed class CfgInstruction : CfgNode {
     }
 
     public override bool IsLive => _isLive;
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Re-evaluated on every read so that any change to <see cref="CfgNode.MaxSuccessorsCount"/>
+    /// (e.g. via <see cref="IncreaseMaxSuccessorsCount"/>) is automatically reflected without
+    /// callers needing to refresh anything. The <see cref="CfgNode.MaxSuccessorsCount"/> portion
+    /// treats <c>null</c> (unbounded) as "not equal to 1" and therefore terminator.
+    /// </remarks>
+    public override bool IsBlockTerminator =>
+        _explicitBlockTerminator
+        || (Kind & (InstructionKind.Jump | InstructionKind.Call | InstructionKind.Return)) != 0
+        || MaxSuccessorsCount != 1;
+
+    /// <inheritdoc />
+    public override bool IsBlockStarter => _isBlockStarter;
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Set exclusively by <see cref="Linker.NodeLinker"/> when this instruction is appended to a
+    /// <see cref="CfgBlock"/>. Never cleared on eviction from the current-instructions cache.
+    /// </remarks>
+    public override CfgBlock? ContainingBlock { get; set; }
 
     public List<FieldWithValue> FieldsInOrder { get; } = new();
 
@@ -191,8 +236,21 @@ public sealed class CfgInstruction : CfgNode {
             .ToImmutableList();
     }
     
+    /// <summary>
+    /// Updates the live state of this instruction.
+    /// </summary>
+    /// <remarks>
+    /// On an actual transition (when <paramref name="isLive"/> differs from the current value),
+    /// notifies the <see cref="ContainingBlock"/> exactly once via
+    /// <see cref="CfgBlock.OnContainedInstructionLiveChanged"/> so the block's non-live
+    /// instruction counter stays in sync. No-op if the live state is unchanged.
+    /// </remarks>
     public void SetLive(bool isLive) {
+        if (_isLive == isLive) {
+            return;
+        }
         _isLive = isLive;
+        ContainingBlock?.OnContainedInstructionLiveChanged(isLive);
     }
 
     /// <summary>

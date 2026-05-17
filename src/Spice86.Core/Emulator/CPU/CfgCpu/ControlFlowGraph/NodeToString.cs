@@ -1,5 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
@@ -32,7 +33,7 @@ public class NodeToString {
     }
 
     public string ToAssemblyString(ICfgNode node) {
-        InstructionNode ast = node.DisplayAst;
+        IVisitableAstNode ast = node.DisplayAst;
         return ast.Accept(_renderer);
     }
 

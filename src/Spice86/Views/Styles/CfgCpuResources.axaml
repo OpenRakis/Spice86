@@ -13,8 +13,14 @@
             <SolidColorBrush x:Key="CfgEdgeCallToReturnBrush" Color="#1ABC9C" />
             <SolidColorBrush x:Key="CfgEdgeCpuFaultBrush" Color="#CB4335" />
 
-            <!-- Node border for last-executed -->
-            <SolidColorBrush x:Key="CfgNodeLastExecutedBorderBrush" Color="#CB4335" />
+            <!-- Node border for the currently executing block -->
+            <SolidColorBrush x:Key="CfgNodeExecutingBorderBrush" Color="#CB4335" />
+
+            <!-- Stale node background (IsLive = false) -->
+            <SolidColorBrush x:Key="CfgNodeStaleBackgroundBrush" Color="#D5D8DC" />
+
+            <!-- In-discovery node border (IsDiscoveryComplete = false) -->
+            <SolidColorBrush x:Key="CfgNodeInDiscoveryBorderBrush" Color="#28B463" />
         </ResourceDictionary>
 
         <!-- Dark theme -->
@@ -28,8 +34,14 @@
             <SolidColorBrush x:Key="CfgEdgeCallToReturnBrush" Color="#48C9B0" />
             <SolidColorBrush x:Key="CfgEdgeCpuFaultBrush" Color="#EC7063" />
 
-            <!-- Node border for last-executed -->
-            <SolidColorBrush x:Key="CfgNodeLastExecutedBorderBrush" Color="#EC7063" />
+            <!-- Node border for the currently executing block -->
+            <SolidColorBrush x:Key="CfgNodeExecutingBorderBrush" Color="#EC7063" />
+
+            <!-- Stale node background (IsLive = false) -->
+            <SolidColorBrush x:Key="CfgNodeStaleBackgroundBrush" Color="#4D5656" />
+
+            <!-- In-discovery node border (IsDiscoveryComplete = false) -->
+            <SolidColorBrush x:Key="CfgNodeInDiscoveryBorderBrush" Color="#58D68D" />
         </ResourceDictionary>
     </ResourceDictionary.ThemeDictionaries>
 </ResourceDictionary>

@@ -23,8 +23,9 @@ public class CfgNodeFeeder {
     public CfgNodeFeeder(IMemory memory, State state, EmulatorBreakpointsManager emulatorBreakpointsManager,
         InstructionReplacerRegistry replacerRegistry, CfgNodeExecutionCompiler executionCompiler) {
         _state = state;
-        InstructionsFeeder = new(emulatorBreakpointsManager, memory, state, replacerRegistry, executionCompiler);
-        _nodeLinker = new(replacerRegistry, executionCompiler);
+        CfgNodeIdAllocator idAllocator = new();
+        InstructionsFeeder = new(emulatorBreakpointsManager, memory, state, replacerRegistry, executionCompiler, idAllocator);
+        _nodeLinker = new(replacerRegistry, executionCompiler, idAllocator);
     }
 
     public InstructionsFeeder InstructionsFeeder { get; }

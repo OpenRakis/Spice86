@@ -46,7 +46,6 @@ public interface ICfgNode {
     /// Needs to be called each time a successor is added
     /// </summary>
     void UpdateSuccessorCache();
-    
 
     /// <summary>
     /// Monotonically increasing counter incremented each time <see cref="CompiledExecution"/> is recompiled.
@@ -73,8 +72,10 @@ public interface ICfgNode {
 
     /// <summary>
     /// Pre-built Abstract Syntax Tree representing the grammar of the assembly instruction (for display).
+    /// For a single instruction this is an <see cref="InstructionNode"/>; for a block it is a
+    /// <see cref="BlockNode"/> wrapping all contained instructions' ASTs.
     /// </summary>
-    InstructionNode DisplayAst { get; }
+    IVisitableAstNode DisplayAst { get; }
 
     /// <summary>
     /// Pre-built Abstract Syntax Tree representing the execution logic of this node.
@@ -97,4 +98,28 @@ public interface ICfgNode {
     /// Direct access to successor for nodes with only one successor
     /// </summary>
     ICfgNode? UniqueSuccessor { get; set; }
+
+    /// <summary>
+    /// True when this node MUST be the last node of its <see cref="CfgBlock"/>.
+    /// For a <see cref="CfgInstruction"/> this is computed from an explicit terminator flag set by the parser,
+    /// the instruction's <c>Kind</c>, and the current value of <c>MaxSuccessorsCount</c>.
+    /// For a <see cref="SelectorNode"/> this is always <c>true</c>.
+    /// <see cref="Linker.NodeLinker"/> is the only consumer of this for boundary decisions; no other
+    /// code SHALL inspect <c>Kind</c> or <c>MaxSuccessorsCount</c> for boundary purposes.
+    /// </summary>
+    bool IsBlockTerminator { get; }
+
+    /// <summary>
+    /// True when this node MUST be the first node of its <see cref="CfgBlock"/>, ending the
+    /// preceding block before it. Stored explicit flag, set by parser only. Defaults to <c>false</c>.
+    /// </summary>
+    bool IsBlockStarter { get; }
+
+    /// <summary>
+    /// <see cref="CfgBlock"/> that contains this node, or <c>null</c> if the node is not (yet) a
+    /// member of any block. <see cref="CfgBlock"/>'s own <c>ContainingBlock</c> returns <c>null</c>
+    /// by definition: a block is itself a block, not a member of one.
+    /// <see cref="Linker.NodeLinker"/> is the sole writer of this property.
+    /// </summary>
+    CfgBlock? ContainingBlock { get; set;  }
 }

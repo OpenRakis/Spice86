@@ -28,7 +28,7 @@ public class ReturnParser : BaseInstructionParser {
     private CfgInstruction ParseRet(ParsingContext context, bool hasImm, InstructionOperation operation,
         Func<CfgInstruction, IVisitableAstNode, BitWidth, IVisitableAstNode> execNodeFactory) {
         BitWidth operandBitWidth = context.DefaultWordOperandBitWidth;
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, null) { Kind = InstructionKind.Return };
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, null) { Kind = InstructionKind.Return };
         ValueNode bytesToPop;
         InstructionNode displayAst;
         if (hasImm) {

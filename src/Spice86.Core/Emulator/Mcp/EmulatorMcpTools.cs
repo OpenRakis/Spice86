@@ -242,7 +242,7 @@ internal sealed class EmulatorMcpTools {
                     throw new InvalidOperationException("instructionCount must be between 1 and 500");
                 }
 
-                InstructionParser parser = new(_services.Memory, _services.State);
+                InstructionParser parser = new(_services.Memory, _services.State, new CfgNodeIdAllocator());
                 AstInstructionRenderer renderer = new(AsmRenderingConfig.CreateSpice86Style());
                 List<DisassemblyLine> lines = new();
                 SegmentedAddress current = new(segment, offset);
@@ -464,81 +464,22 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "read_cfg_cpu_graph", UseStructuredContent = true), Description("Read the Control Flow Graph built by the CPU. Returns execution context depth, entry point addresses, last executed address, and graph nodes with successor/predecessor edges for each instruction. Use nodeLimit to cap BFS traversal; omit or pass null for the full graph.")]
+    [McpServerTool(Name = "read_cfg_cpu_graph", UseStructuredContent = true), Description("Read the CFG as compact basic blocks. Returns context depth, entry points as 'SSSS:OOOO' strings, last executed address/block id, and blocks reachable via BFS. Each block: {id, entry, term, pred, succ, asm} where asm is a string[] of compact entries. Each instruction entry is a single string 'BYTES|assembly' (e.g. 'B83412|mov AX,0x1234') where BYTES is the hex-encoded instruction bytes and assembly is the disassembly text. A selector entry is the single string 'selector': it marks a self-modifying code boundary where multiple instruction variants exist at the block's term address. Optional dead/incomplete flags. Use nodeLimit to cap blocks; truncated indicates cap hit.")]
     public CallToolResult ReadCfgCpuGraph(int? nodeLimit) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
-                ExecutionContextManager contextManager = _services.CfgCpu.ExecutionContextManager;
-                ExecutionContext currentContext = contextManager.CurrentExecutionContext;
-
-                SegmentedAddress[] entryPointAddresses = contextManager.ExecutionContextEntryPoints
-                    .Select(kvp => kvp.Key)
-                    .ToArray();
-
-                ISet<ICfgNode> entryNodes = new HashSet<ICfgNode>();
-                foreach (ISet<CfgInstruction> instructions in contextManager.ExecutionContextEntryPoints.Values) {
-                    foreach (ICfgNode node in instructions) {
-                        entryNodes.Add(node);
-                    }
-                }
-                if (currentContext.LastExecuted != null) {
-                    entryNodes.Add(currentContext.LastExecuted);
-                }
-
-                int? effectiveLimit = nodeLimit.HasValue && nodeLimit.Value > 0 ? nodeLimit.Value : null;
-                (CfgNodeInfo[] nodes, bool truncated) = CollectGraphNodes(entryNodes, effectiveLimit);
-
-                return new CfgCpuGraphResponse {
-                    CurrentContextDepth = currentContext.Depth,
-                    CurrentContextEntryPoint = currentContext.EntryPoint,
-                    TotalEntryPoints = entryPointAddresses.Length,
-                    EntryPointAddresses = entryPointAddresses,
-                    LastExecutedAddress = currentContext.LastExecuted?.Address,
-                    Nodes = nodes,
-                    Truncated = truncated
-                };
+                return _services.CfgBlocksExporter.BuildGraph(
+                    _services.CfgCpu.ExecutionContextManager,
+                    NormalizeNodeLimit(nodeLimit));
             }
         });
     }
 
-    private static (CfgNodeInfo[] Nodes, bool Truncated) CollectGraphNodes(ISet<ICfgNode> seeds, int? limit) {
-        HashSet<int> visited = new();
-        Queue<ICfgNode> queue = new();
-        List<CfgNodeInfo> result = new();
-
-        foreach (ICfgNode seed in seeds) {
-            if (visited.Add(seed.Id)) {
-                queue.Enqueue(seed);
-            }
+    private static int? NormalizeNodeLimit(int? nodeLimit) {
+        if (nodeLimit.HasValue && nodeLimit.Value > 0) {
+            return nodeLimit.Value;
         }
-
-        while (queue.Count > 0) {
-            if (limit.HasValue && result.Count >= limit.Value) {
-                return (result.ToArray(), true);
-            }
-
-            ICfgNode current = queue.Dequeue();
-            result.Add(new CfgNodeInfo {
-                Id = current.Id,
-                Address = current.Address,
-                SuccessorIds = current.Successors.Select(s => s.Id).ToArray(),
-                PredecessorIds = current.Predecessors.Select(p => p.Id).ToArray(),
-                IsLive = current.IsLive
-            });
-
-            foreach (ICfgNode successor in current.Successors) {
-                if (visited.Add(successor.Id)) {
-                    queue.Enqueue(successor);
-                }
-            }
-            foreach (ICfgNode predecessor in current.Predecessors) {
-                if (visited.Add(predecessor.Id)) {
-                    queue.Enqueue(predecessor);
-                }
-            }
-        }
-
-        return (result.ToArray(), false);
+        return null;
     }
 
     [McpServerTool(Name = "read_io_port", UseStructuredContent = true), Description("Read a byte from an x86 IO port (0-65535). Returns the port number and byte value.")]
@@ -1391,24 +1332,21 @@ internal sealed class EmulatorMcpTools {
     }
 
     [McpManualControl]
-    [McpServerTool(Name = "step", UseStructuredContent = true), Description("Execute exactly one CPU instruction and then pause. Returns the updated CPU state (registers, IP, flags, cycles) after the step.")]
+    [McpServerTool(Name = "step", UseStructuredContent = true), Description("Step into: execute exactly one CPU instruction then pause. Returns immediately; call read_cpu_state to inspect post-step state.")]
     public CallToolResult Step() {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
                 if (!_services.PauseHandler.IsPaused) {
                     _services.PauseHandler.RequestPause("Step requested while running");
                     if (!WaitUntilPaused(StepCompletionTimeout)) {
-                        throw new InvalidOperationException("Could not pause emulator before stepping.");
+                        throw new InvalidOperationException("Timed out waiting to pause before stepping.");
                     }
                 }
-
-                _services.CfgCpu.ExecuteNext();
-
-                return new StepResponse {
-                    Success = true,
-                    Message = "Step completed",
-                    CpuState = CpuStateSnapshot.FromState(_services.State)
-                };
+                DebuggerStepHelper.SetupStepIntoBreakpoint(
+                    _services.BreakpointsManager, _services.State,
+                    () => _services.PauseHandler.RequestPause("Step completed"));
+                _services.PauseHandler.Resume();
+                return new EmulatorControlResponse { Success = true, Message = "Step initiated" };
             }
         });
     }
@@ -1564,6 +1502,9 @@ internal sealed class EmulatorMcpTools {
             lock (_services.ToolsLock) {
                 if (!_services.PauseHandler.IsPaused) {
                     _services.PauseHandler.RequestPause("Step over requested while running");
+                    if (!WaitUntilPaused(StepCompletionTimeout)) {
+                        throw new InvalidOperationException("Timed out waiting to pause before stepping over.");
+                    }
                 }
                 if (isCallOrInterrupt) {
                     DebuggerStepHelper.SetupStepOverBreakpoint(_services.BreakpointsManager, nextAddress,

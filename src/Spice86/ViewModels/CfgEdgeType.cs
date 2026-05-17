@@ -10,5 +10,7 @@ public enum CfgEdgeType {
     Return,
     Selector,
     CallToReturn,
-    CpuFault
+    CpuFault,
+    /// <summary>Technical self-loop added to make isolated nodes visible in the graph panel. Rendered invisible.</summary>
+    IsolatedNodeLoop
 }

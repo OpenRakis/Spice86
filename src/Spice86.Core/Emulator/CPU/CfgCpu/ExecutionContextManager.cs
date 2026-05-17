@@ -2,6 +2,7 @@
 
 using Serilog.Events;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.Logging;
@@ -54,6 +55,14 @@ public class ExecutionContextManager : InstructionReplacer, IClearable {
     public Dictionary<SegmentedAddress, ISet<CfgInstruction>> ExecutionContextEntryPoints { get; } = new();
 
     public ExecutionContext CurrentExecutionContext { get; private set; }
+
+    /// <summary>
+    /// The node the CPU is about to execute next. Set in <see cref="CfgCpu.ExecuteNext"/> before
+    /// dispatch (so breakpoint pauses show the correct node) and updated after dispatch to the
+    /// next-to-execute successor (so loop-level pauses also show the next node, not the last one).
+    /// This is global across all execution contexts; only one node is ever executing at a time.
+    /// </summary>
+    public ICfgNode? ExecutingNode { get; set; }
 
     public void SignalEntry() {
         CurrentExecutionContext = NewExecutionContext(_state.IpSegmentedAddress);
@@ -137,5 +146,6 @@ public class ExecutionContextManager : InstructionReplacer, IClearable {
         ExecutionContextEntryPoints.Clear();
         CurrentDepth = 0;
         CurrentExecutionContext = NewExecutionContext(SegmentedAddress.ZERO);
+        ExecutingNode = null;
     }
 }

@@ -1,0 +1,133 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "F000:FFF0",
+  "totalEntryPoints": 1,
+  "entryPointAddresses": [
+    "F000:FFF0"
+  ],
+  "lastExecutedAddress": "F000:1406",
+  "lastExecutedBlockId": 29,
+  "blocks": [
+    {
+      "id": 29,
+      "entry": "F000:1400",
+      "term": "F000:1406",
+      "pred": [
+        22
+      ],
+      "succ": [],
+      "asm": [
+        "B90100|mov CX,1",
+        "41|inc CX",
+        "41|inc CX",
+        "51|push CX",
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 2,
+      "entry": "F000:FFF0",
+      "term": "F000:FFF0",
+      "pred": [],
+      "succ": [
+        3
+      ],
+      "asm": [
+        "EB0E|jmp short 0"
+      ]
+    },
+    {
+      "id": 22,
+      "entry": "F000:1400",
+      "term": "F000:1400",
+      "pred": [
+        19
+      ],
+      "succ": [
+        15,
+        23,
+        29
+      ],
+      "asm": [
+        "selector"
+      ]
+    },
+    {
+      "id": 3,
+      "entry": "F000:0000",
+      "term": "F000:0008",
+      "pred": [
+        2
+      ],
+      "succ": [
+        19
+      ],
+      "asm": [
+        "B80000|mov AX,0",
+        "8ED0|mov SS,AX",
+        "BC0600|mov SP,6",
+        "BE0008|mov SI,0x0800"
+      ]
+    },
+    {
+      "id": 15,
+      "entry": "F000:1400",
+      "dead": true,
+      "term": "F000:1407",
+      "pred": [
+        22
+      ],
+      "succ": [
+        19
+      ],
+      "asm": [
+        "B80100|mov AX,1",
+        "50|push AX",
+        "BE000C|mov SI,0x0C00",
+        "EA0B0000F0|jmp far F000:000B"
+      ]
+    },
+    {
+      "id": 23,
+      "entry": "F000:1400",
+      "dead": true,
+      "term": "F000:1409",
+      "pred": [
+        22
+      ],
+      "succ": [
+        19
+      ],
+      "asm": [
+        "BB0100|mov BX,1",
+        "D1E3|shl BX,1",
+        "53|push BX",
+        "BE0010|mov SI,0x1000",
+        "EA0B0000F0|jmp far F000:000B"
+      ]
+    },
+    {
+      "id": 19,
+      "entry": "F000:000B",
+      "term": "F000:001A",
+      "pred": [
+        3,
+        15,
+        23
+      ],
+      "succ": [
+        22
+      ],
+      "asm": [
+        "B800F0|mov AX,0xF000",
+        "8ED8|mov DS,AX",
+        "8EC0|mov ES,AX",
+        "BF0014|mov DI,0x1400",
+        "B9E803|mov CX,0x03E8",
+        "F3A5|rep movs word ptr ES:[DI],word ptr DS:[SI]",
+        "E9E313|jmp near 0x1400"
+      ]
+    }
+  ],
+  "truncated": false
+}

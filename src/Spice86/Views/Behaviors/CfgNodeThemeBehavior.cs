@@ -65,16 +65,42 @@ public static class CfgNodeThemeBehavior {
         // Apply theme-aware background and border
         border.Background = HighlightingConverter.GetDefaultBackgroundBrush();
 
-        bool isLastExecuted = border.DataContext is CfgGraphNode { IsLastExecuted: true };
-        if (isLastExecuted) {
-            IBrush lastExecutedBrush = ConverterUtilities.GetResourceBrush(
-                "CfgNodeLastExecutedBorderBrush",
+        bool isExecuting = border.DataContext is CfgGraphNode { IsExecuting: true };
+        bool isLive = border.DataContext is not CfgGraphNode { IsLive: false };
+        bool isDiscoveryComplete = border.DataContext is not CfgGraphNode { IsDiscoveryComplete: false };
+
+        if (isExecuting) {
+            IBrush executingBrush = ConverterUtilities.GetResourceBrush(
+                "CfgNodeExecutingBorderBrush",
                 new SolidColorBrush(Color.FromRgb(0xCB, 0x43, 0x35)));
-            border.BorderBrush = lastExecutedBrush;
+            border.BorderBrush = executingBrush;
             border.BorderThickness = new Thickness(2.5);
         } else {
             border.BorderBrush = HighlightingConverter.GetDefaultForegroundBrush();
             border.BorderThickness = new Thickness(1.5);
+        }
+
+        // Stale block styling: grey background makes invalidated nodes immediately
+        // obvious without relying on a subtle opacity change.
+        if (!isLive) {
+            IBrush staleBrush = ConverterUtilities.GetResourceBrush(
+                "CfgNodeStaleBackgroundBrush",
+                new SolidColorBrush(Color.FromRgb(0xD5, 0xD8, 0xDC)));
+            border.Background = staleBrush;
+            border.Opacity = 0.7;
+        } else {
+            border.Opacity = 1.0;
+        }
+
+        // In-discovery block styling: a green border signals the block's terminator
+        // is not yet final ("in birth"). Combined with the trailing "…" marker on
+        // the listing text, this makes in-discovery blocks clearly identifiable.
+        if (!isDiscoveryComplete && !isExecuting) {
+            IBrush inDiscoveryBrush = ConverterUtilities.GetResourceBrush(
+                "CfgNodeInDiscoveryBorderBrush",
+                new SolidColorBrush(Color.FromRgb(0x28, 0xB4, 0x63)));
+            border.BorderBrush = inDiscoveryBrush;
+            border.BorderThickness = new Thickness(2.0);
         }
 
         // Apply syntax-highlighted inlines to the child TextBlock

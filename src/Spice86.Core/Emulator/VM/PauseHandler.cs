@@ -21,6 +21,7 @@ public class PauseHandler : IPauseHandler {
     public delegate void ResumedEventHandler(object sender, EventArgs e);
 
     private readonly ILoggerService _loggerService;
+    private readonly object _pauseLock = new();
     private readonly ManualResetEvent _manualResetEvent = new(false);
     private bool _disposed;
     private volatile bool _pausing;
@@ -38,13 +39,15 @@ public class PauseHandler : IPauseHandler {
 
     /// <inheritdoc />
     public void Dispose() {
-        if (_disposed) {
-            return;
+        lock (_pauseLock) {
+            if (_disposed) {
+                return;
+            }
+            _disposed = true;
+            // Resume all waiting threads before teardown
+            _manualResetEvent.Set();
+            _manualResetEvent.Dispose();
         }
-        _disposed = true;
-        // Resume all waiting threads before teardown
-        _manualResetEvent.Set();
-        _manualResetEvent.Dispose();
         GC.SuppressFinalize(this);
     }
 
@@ -59,25 +62,34 @@ public class PauseHandler : IPauseHandler {
 
     /// <inheritdoc />
     public void RequestPause(string? reason = null) {
-        if (_disposed) {
-            return;
+        lock (_pauseLock) {
+            if (_disposed) {
+                return;
+            }
         }
         _loggerService.Information("Pause requested by thread '{Thread}': {Reason}",
             Thread.CurrentThread.Name ?? Environment.CurrentManagedThreadId.ToString(), reason);
         Pausing?.Invoke();
-        _pausing = true;
-        _manualResetEvent.Reset();
+        lock (_pauseLock) {
+            if (_disposed) {
+                return;
+            }
+            _pausing = true;
+            _manualResetEvent.Reset();
+        }
         Paused?.Invoke();
     }
 
     /// <inheritdoc />
     public void Resume() {
-        if (_disposed) {
-            return;
-        }
         _loggerService.Debug("Pause ended by thread {Thread}", Thread.CurrentThread.Name ?? Environment.CurrentManagedThreadId.ToString());
-        _manualResetEvent.Set();
-        _pausing = false;
+        lock (_pauseLock) {
+            if (_disposed) {
+                return;
+            }
+            _pausing = false;
+            _manualResetEvent.Set();
+        }
         Resumed?.Invoke();
     }
 

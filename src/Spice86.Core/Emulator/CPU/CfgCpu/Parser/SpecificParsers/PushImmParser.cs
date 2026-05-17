@@ -17,7 +17,7 @@ public class PushImmParser : BaseInstructionParser {
     public CfgInstruction Parse(ParsingContext context, bool imm8SignExtended) {
         BitWidth bitWidth = GetBitWidth(false, context.HasOperandSize32);
         DataType dataType = _astBuilder.UType(bitWidth);
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         ValueNode displayImmNode;
         ValueNode pushValueNode;
         if (imm8SignExtended) {

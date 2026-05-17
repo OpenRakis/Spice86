@@ -228,7 +228,7 @@
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
 
-                            <DataGridCheckBoxColumn Header="Is the last executed node ?" Binding="{Binding IsLastExecuted}" />
+                            <DataGridCheckBoxColumn Header="Is the executing node ?" Binding="{Binding IsExecuting}" />
 
                             <!-- Assembly -->
                             <DataGridTemplateColumn Header="Assembly" Width="*">
@@ -267,7 +267,7 @@
                     Padding="8,4"
                     Margin="0,5,5,5">
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                    <TextBlock Text="🔴 Last run" />
+                    <TextBlock Text="🔴 Current" />
                     <TextBlock Text="→ Jump" Foreground="{DynamicResource CfgEdgeJumpBrush}" />
                     <TextBlock Text="⟱ Call" Foreground="{DynamicResource CfgEdgeCallBrush}" />
                     <TextBlock Text="⟰ Return" Foreground="{DynamicResource CfgEdgeReturnBrush}" />

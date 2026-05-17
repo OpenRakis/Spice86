@@ -14,6 +14,9 @@ using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
+using System.Linq.Expressions;
+using System.Threading;
+
 using Xunit;
 
 /// <summary>
@@ -32,10 +35,11 @@ public class CfgNodeExecutionCompilerTest {
     /// The AST is a simple <see cref="SelectorNode"/> which compiles to a no-op like expression.
     /// </summary>
     private sealed class FixedAstNode : CfgNode {
+        private static readonly CfgNodeIdAllocator _allocator = new();
         private IVisitableAstNode _ast;
 
         public FixedAstNode(SegmentedAddress address, IVisitableAstNode ast)
-            : base(address, 1) {
+            : base(_allocator.AllocateId(), address, 1) {
             _ast = ast;
         }
 
@@ -48,6 +52,21 @@ public class CfgNodeExecutionCompilerTest {
             new InstructionNode(InstructionOperation.NOP);
 
         public override IVisitableAstNode ExecutionAst => _ast;
+    }
+
+    private sealed class ExpressionAstNode : IVisitableAstNode {
+        private readonly Expression _expression;
+
+        public ExpressionAstNode(Expression expression) {
+            _expression = expression;
+        }
+
+        public T Accept<T>(IAstVisitor<T> astVisitor) {
+            if (astVisitor is AstExpressionBuilder) {
+                return (T)(object)_expression;
+            }
+            throw new InvalidOperationException($"Unsupported visitor {astVisitor.GetType().Name}");
+        }
     }
 
     [Fact]
@@ -86,35 +105,15 @@ public class CfgNodeExecutionCompilerTest {
     }
 
     [Fact]
-    public void Compile_WaitsForOptimizedDelegate() {
-        // Compile a node and wait briefly for the background compiler to produce the optimized delegate.
-        SelectorNode ast = new SelectorNode();
-        FixedAstNode node = new FixedAstNode(new SegmentedAddress(0x4000, 0), ast);
-        using CfgNodeExecutionCompiler compiler = CreateCompiler();
-        compiler.Compile(node);
-
-        // Store the initially-assigned (interpreted) delegate reference.
-        CfgNodeExecutionAction<InstructionExecutionHelper> initial = node.CompiledExecution;
-
-        // Wait up to 5 seconds for the optimized delegate to be swapped in.
-        int waited = 0;
-        while (ReferenceEquals(node.CompiledExecution, initial) && waited < 5000) {
-            Thread.Sleep(50);
-            waited += 50;
-        }
-
-        // The delegate should have been swapped (it may still be the interpreted one if
-        // compilation is extremely slow, but under normal conditions it should differ).
-        node.CompiledExecution.Should().NotBeNull();
-    }
-
-    [Fact]
     public void Compile_SecondCallPreventsStaleSwap() {
         // Arrange: create two distinct ASTs so we can distinguish which delegate is active.
-        SelectorNode ast1 = new SelectorNode();
-        SelectorNode ast2 = new SelectorNode();
+        IVisitableAstNode ast1 = CreateAssignmentAst(10_000);
+        IVisitableAstNode ast2 = CreateAssignmentAst(1);
         FixedAstNode node = new FixedAstNode(new SegmentedAddress(0x5000, 0), ast1);
-        using CfgNodeExecutionCompiler compiler = CreateCompiler();
+        // Inline monitor creation so we can observe TotalSwapped for reliable synchronisation.
+        ILoggerService loggerService = Substitute.For<ILoggerService>();
+        CfgNodeExecutionCompilerMonitor monitor = new(loggerService);
+        using CfgNodeExecutionCompiler compiler = new(monitor, loggerService, JitMode.InterpretedThenCompiled);
 
         // Act: first Compile() enqueues background task for ast1.
         compiler.Compile(node);
@@ -125,22 +124,29 @@ public class CfgNodeExecutionCompilerTest {
         compiler.Compile(node);
         CfgNodeExecutionAction<InstructionExecutionHelper> afterSecondCompile = node.CompiledExecution;
 
-        // Wait until the background compiler swaps in the optimized delegate for the second AST.
-        int waited = 0;
-        while (ReferenceEquals(node.CompiledExecution, afterSecondCompile) && waited < 5000) {
-            Thread.Sleep(50);
-            waited += 50;
-        }
+        SpinWait.SpinUntil(() => monitor.TotalSwapped >= 1, TimeSpan.FromSeconds(30)).Should().BeTrue(
+            "the second background compilation should complete and swap the delegate within 30 seconds");
 
-        // Assert: the final delegate must be the optimized one from the second Compile() call,
-        // not the stale compiled delegate from the first call.
+        // Assert: the final delegate must be the optimised one from the second Compile() call.
+        // Use ReferenceEquals booleans rather than NotBeSameAs to avoid a FluentAssertions crash
+        // when formatting compiled-expression delegates whose Method.DeclaringType is null.
         CfgNodeExecutionAction<InstructionExecutionHelper> finalDelegate = node.CompiledExecution;
-        finalDelegate.Should().NotBeSameAs(afterFirstCompile,
+        ReferenceEquals(finalDelegate, afterFirstCompile).Should().BeFalse(
             "the first background compilation should not overwrite the second Compile()'s delegate");
-        finalDelegate.Should().NotBeSameAs(afterSecondCompile,
-            "the background compiler should have produced an optimized delegate for the second compile");
+        ReferenceEquals(finalDelegate, afterSecondCompile).Should().BeFalse(
+            "the background compiler should have produced an optimised delegate for the second compile");
 
         // The generation counter should reflect exactly 2 Compile() calls.
         node.CompilationGeneration.Should().Be(2);
+    }
+
+    private static IVisitableAstNode CreateAssignmentAst(int assignmentCount) {
+        ParameterExpression marker = Expression.Variable(typeof(int), "marker");
+        List<Expression> expressions = new(assignmentCount + 1);
+        for (int i = 0; i < assignmentCount; i++) {
+            expressions.Add(Expression.Assign(marker, Expression.Constant(i)));
+        }
+        expressions.Add(Expression.Empty());
+        return new ExpressionAstNode(Expression.Block([marker], expressions));
     }
 }

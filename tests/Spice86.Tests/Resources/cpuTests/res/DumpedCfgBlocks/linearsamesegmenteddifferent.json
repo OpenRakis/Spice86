@@ -1,0 +1,104 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "F000:FFF0",
+  "totalEntryPoints": 1,
+  "entryPointAddresses": [
+    "F000:FFF0"
+  ],
+  "lastExecutedAddress": "FFEF:0116",
+  "lastExecutedBlockId": 20,
+  "blocks": [
+    {
+      "id": 2,
+      "entry": "F000:FFF0",
+      "term": "F000:FFF0",
+      "pred": [],
+      "succ": [
+        3
+      ],
+      "asm": [
+        "EB16|jmp short 8"
+      ]
+    },
+    {
+      "id": 20,
+      "entry": "FFEF:0110",
+      "term": "FFEF:0116",
+      "pred": [
+        18
+      ],
+      "succ": [],
+      "asm": [
+        "B80200|mov AX,2",
+        "A30000|mov word ptr DS:[0],AX",
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 3,
+      "entry": "F000:0008",
+      "term": "F000:0019",
+      "pred": [
+        2
+      ],
+      "succ": [
+        11
+      ],
+      "asm": [
+        "BC0010|mov SP,0x1000",
+        "BB0010|mov BX,0x1000",
+        "8ED3|mov SS,BX",
+        "B80000|mov AX,0",
+        "6800F0|push 0xF000",
+        "68FDFE|push 0xFEFD",
+        "CB|ret far"
+      ]
+    },
+    {
+      "id": 18,
+      "entry": "FFEF:000D",
+      "term": "FFEF:000D",
+      "pred": [
+        13
+      ],
+      "succ": [
+        20
+      ],
+      "asm": [
+        "E90001|jmp near 0x0110"
+      ]
+    },
+    {
+      "id": 11,
+      "entry": "F000:FEFD",
+      "term": "F000:FEFD",
+      "pred": [
+        3
+      ],
+      "succ": [
+        13
+      ],
+      "asm": [
+        "E90001|jmp near 0"
+      ]
+    },
+    {
+      "id": 13,
+      "entry": "F000:0000",
+      "term": "F000:0007",
+      "pred": [
+        11
+      ],
+      "succ": [
+        18
+      ],
+      "asm": [
+        "B80100|mov AX,1",
+        "6AEF|push -17",
+        "6A0D|push 0x0D",
+        "CB|ret far"
+      ]
+    }
+  ],
+  "truncated": false
+}

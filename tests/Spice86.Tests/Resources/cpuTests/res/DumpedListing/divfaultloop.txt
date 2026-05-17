@@ -1,0 +1,24 @@
+F000:0000 mov AX,0
+F000:0003 mov SS,AX
+F000:0005 mov SP,0x0200
+F000:0008 mov word ptr DS:[0],0x0037
+F000:000E mov word ptr DS:[2],CS
+F000:0012 mov word ptr CS:[0x0100],0
+F000:0019 mov word ptr CS:[0x0102],0
+F000:0020 mov AX,0x000A
+F000:0023 mov BX,word ptr CS:[0x0102]
+F000:0028 div BX
+F000:0037 push BP
+F000:0038 mov BP,SP
+F000:003A push BX
+F000:003B mov BX,word ptr CS:[0x0100]
+F000:0040 inc BX
+F000:0041 mov word ptr CS:[0x0100],BX
+F000:0046 cmp BX,3
+F000:0049 jne short 0x0052
+F000:004B mov word ptr CS:[0x0102],5
+F000:0052 mov word ptr SS:[BP+2],0x0020
+F000:0057 pop BX
+F000:0058 pop BP
+F000:0059 iret
+F000:FFF0 jmp short 0

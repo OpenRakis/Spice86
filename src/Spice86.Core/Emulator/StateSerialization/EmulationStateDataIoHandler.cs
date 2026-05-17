@@ -56,6 +56,11 @@ public abstract class EmulationStateDataIoHandler {
     protected string BreakpointsFile => $"{DataDirectory}/Breakpoints.json";
 
     /// <summary>
+    /// Gets name of the file the CFG blocks JSON dump.
+    /// </summary>
+    protected string CfgBlocksFile => GenerateDumpFileName("CfgBlocks.json");
+
+    /// <summary>
     /// Generates a dump file name with the specified suffix.
     /// </summary>
     /// <param name="suffix">The suffix to add to the dump file name.</param>

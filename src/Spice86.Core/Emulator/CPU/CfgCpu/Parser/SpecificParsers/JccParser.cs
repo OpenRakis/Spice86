@@ -63,7 +63,7 @@ public class JccParser : BaseInstructionParser {
 
         (int offsetValue, FieldWithValue offsetField) = ReadSignedOffset(offsetWidth);
 
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1) { Kind = InstructionKind.Jump };
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1) { Kind = InstructionKind.Jump };
         instr.AddField(offsetField);
         instr.MaxSuccessorsCount = 2;
         ushort targetIp = (ushort)(instr.NextInMemoryAddress32.Offset + offsetValue);

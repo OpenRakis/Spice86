@@ -30,7 +30,7 @@ public class Grp1Parser : BaseGrpOperationParser {
         bool signExtendOp2 = opCode is 0x83;
         BitWidth bitWidth = GetBitWidth(context.OpcodeField, context.HasOperandSize32);
         DataType dataType = _astBuilder.UType(bitWidth);
-        CfgInstruction instr = new(context.Address, context.OpcodeField, context.Prefixes, 1);
+        CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         RegisterModRmFields(instr, modRmContext);
         ValueNode displayImmNode;
         ValueNode execImmNode;
