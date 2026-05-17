@@ -1165,17 +1165,24 @@ public class DosFcbManager {
 
     /// <summary>
     /// INT 21h AH=11h FCB Find First using the FCB filename pattern.
-    /// Populates the DTA in FCB format (drive + 8-byte name + 3-byte ext + metadata).
     /// </summary>
+    /// <remarks>
+    /// Matches FreeDOS <c>FcbFindFirstNext</c>: the FCB search delegates to the same
+    /// underlying find routine as the standard (extended) search rather than using a
+    /// separate FCB-specific DTA format. The XFCB attribute is forwarded to the
+    /// underlying find so volume-label/hidden/system searches work via Extended FCBs.
+    /// </remarks>
     /// <param name="fcbAddress">Segmented address of the FCB.</param>
     /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
     public FcbStatus FindFirst(SegmentedAddress fcbAddress) {
-        DosFileControlBlock fcb = GetFcb(fcbAddress, out byte attribute);
+        uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
+        DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
+        GetFcb(fcbAddress, out byte attribute);
         string pattern = fcb.FullFileName;
-        DosFileOperationResult result = _dosFileManager.FcbFindFirstMatchingFile(pattern, attribute);
+        DosFileOperationResult result = _dosFileManager.FindFirstMatchingFile(pattern, attribute);
         FcbStatus status = result.IsError ? FcbStatus.Error : FcbStatus.Success;
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("FCB {Operation} at 0x{Address:X} ({Detail}) -> {Status}", "FIND FIRST", fcb.BaseAddress, pattern, status);
+            _loggerService.Debug("FCB {Operation} at 0x{Address:X} ({Detail}) -> {Status}", "FIND FIRST", baseAddr, pattern, status);
         }
         return status;
     }
