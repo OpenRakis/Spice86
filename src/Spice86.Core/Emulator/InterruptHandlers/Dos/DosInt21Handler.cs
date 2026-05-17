@@ -1963,7 +1963,7 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FCB OPEN FILE at {Address}", fcbAddress);
         }
-        State.AL = (byte)_dosFcbManager.OpenFile(fcbAddress.Linear);
+        State.AL = (byte)_dosFcbManager.OpenFile(fcbAddress);
     }
 
     /// <summary>
@@ -1981,7 +1981,7 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FCB CLOSE FILE at {Address}", fcbAddress);
         }
-        State.AL = (byte)_dosFcbManager.CloseFile(fcbAddress.Linear);
+        State.AL = (byte)_dosFcbManager.CloseFile(fcbAddress);
     }
 
     /// <summary>
@@ -2001,7 +2001,7 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FCB FIND FIRST at {Address}", fcbAddress);
         }
-        State.AL = (byte)_dosFcbManager.FindFirst(fcbAddress.Linear);
+        State.AL = (byte)_dosFcbManager.FindFirst(fcbAddress);
     }
 
     /// <summary>
@@ -2039,7 +2039,7 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FCB DELETE FILE at {Address}", fcbAddress);
         }
-        State.AL = (byte)_dosFcbManager.DeleteFile(fcbAddress.Linear);
+        State.AL = (byte)_dosFcbManager.DeleteFile(fcbAddress);
     }
 
     /// <summary>
@@ -2061,7 +2061,7 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FCB RENAME FILE at {Address}", fcbAddress);
         }
-        State.AL = (byte)_dosFcbManager.RenameFile(fcbAddress.Linear);
+        State.AL = (byte)_dosFcbManager.RenameFile(fcbAddress);
     }
 
     /// <summary>
@@ -2079,7 +2079,7 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FCB SEQUENTIAL READ at {Address}", fcbAddress);
         }
-        State.AL = (byte)_dosFcbManager.SequentialRead(fcbAddress.Linear, GetDtaAddress());
+        State.AL = (byte)_dosFcbManager.SequentialRead(fcbAddress, GetDtaAddress());
     }
 
     /// <summary>
@@ -2097,7 +2097,7 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FCB SEQUENTIAL WRITE at {Address}", fcbAddress);
         }
-        State.AL = (byte)_dosFcbManager.SequentialWrite(fcbAddress.Linear, GetDtaAddress());
+        State.AL = (byte)_dosFcbManager.SequentialWrite(fcbAddress, GetDtaAddress());
     }
 
     /// <summary>
@@ -2115,7 +2115,7 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FCB CREATE FILE at {Address}", fcbAddress);
         }
-        State.AL = (byte)_dosFcbManager.CreateFile(fcbAddress.Linear);
+        State.AL = (byte)_dosFcbManager.CreateFile(fcbAddress);
     }
 
     /// <summary>
@@ -2133,7 +2133,7 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FCB RANDOM READ at {Address}", fcbAddress);
         }
-        State.AL = (byte)_dosFcbManager.RandomRead(fcbAddress.Linear, GetDtaAddress());
+        State.AL = (byte)_dosFcbManager.RandomRead(fcbAddress, GetDtaAddress());
     }
 
     /// <summary>
@@ -2151,7 +2151,7 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FCB RANDOM WRITE at {Address}", fcbAddress);
         }
-        State.AL = (byte)_dosFcbManager.RandomWrite(fcbAddress.Linear, GetDtaAddress());
+        State.AL = (byte)_dosFcbManager.RandomWrite(fcbAddress, GetDtaAddress());
     }
 
     /// <summary>
@@ -2169,7 +2169,7 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FCB GET FILE SIZE at {Address}", fcbAddress);
         }
-        State.AL = (byte)_dosFcbManager.GetFileSize(fcbAddress.Linear);
+        State.AL = (byte)_dosFcbManager.GetFileSize(fcbAddress);
     }
 
     /// <summary>
@@ -2189,7 +2189,7 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FCB SET RANDOM RECORD NUMBER at {Address}", fcbAddress);
         }
-        _dosFcbManager.SetRandomRecord(fcbAddress.Linear);
+        _dosFcbManager.SetRandomRecord(fcbAddress);
     }
 
     /// <summary>
@@ -2209,7 +2209,7 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FCB RANDOM BLOCK READ at {Address}, {Count} records", fcbAddress, State.CX);
         }
-        (FcbStatus status, ushort actualRecordCount) = _dosFcbManager.RandomBlockRead(fcbAddress.Linear, GetDtaAddress(), State.CX);
+        (FcbStatus status, ushort actualRecordCount) = _dosFcbManager.RandomBlockRead(fcbAddress, GetDtaAddress(), State.CX);
         State.AL = (byte)status;
         State.CX = actualRecordCount;
     }
@@ -2231,7 +2231,7 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FCB RANDOM BLOCK WRITE at {Address}, {Count} records", fcbAddress, State.CX);
         }
-        (FcbStatus status, ushort actualRecordCount) = _dosFcbManager.RandomBlockWrite(fcbAddress.Linear, GetDtaAddress(), State.CX);
+        (FcbStatus status, ushort actualRecordCount) = _dosFcbManager.RandomBlockWrite(fcbAddress, GetDtaAddress(), State.CX);
         State.AL = (byte)status;
         State.CX = actualRecordCount;
     }
@@ -2263,7 +2263,7 @@ public class DosInt21Handler : InterruptHandler {
                 stringAddress, fcbAddress, parseControl);
         }
 
-        (FcbParseResult parseStatus, uint bytesAdvanced) = _dosFcbManager.ParseFilename(stringAddress.Linear, fcbAddress.Linear, parseControl);
+        (FcbParseResult parseStatus, uint bytesAdvanced) = _dosFcbManager.ParseFilename(stringAddress, fcbAddress, parseControl);
         State.AL = (byte)parseStatus;
         State.SI += (ushort)bytesAdvanced;
     }
