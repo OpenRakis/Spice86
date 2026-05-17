@@ -18,6 +18,18 @@ NOTE: This is a port, and a continuation from the [original Java Spice86](https:
 
 It requires [.NET 10](https://dotnet.microsoft.com/en-us/download/dotnet/10.0) and runs on Windows, macOS, and Linux.
 
+## Quick navigation
+
+- [Approach](#approach)
+- [Running your exe](#running-your-exe)
+- [Command line options](#command-line-options)
+- [I/O port handlers (replacing IOPortHandler)](#io-port-handlers-replacing-ioporthandler)
+- [Dynamic analysis](#dynamic-analysis)
+- [Overriding emulated code with C# code](#overriding-emulated-code-with-c-code)
+- [HTTP server](#http-server)
+- [How to build on your machine](#how-to-build-on-your-machine)
+- [Some screenshots](#some-screenshots)
+
 ## Approach
 
 Rewriting a program from only the binary is a hard task.
@@ -147,6 +159,22 @@ Spice86 -e program.exe --CpuHeavyLog \
 - SbBase: Sound Blaster base I/O address (hex). Default is 0x220. Common values: 0x220, 0x240, 0x260, 0x280.
 - OplMode: OPL synthesis mode. Values: None, Opl2, DualOpl2, Opl3, Opl3Gold. Default is Opl3.
 - SbMixer: Enable Sound Blaster mixer control of OPL voices. Default is true.
+
+## I/O port handlers (replacing IOPortHandler)
+
+Spice86 routes emulated hardware port I/O through the dispatcher / handler system:
+
+- `IIOPortHandler`: contract implemented by a device that handles one or more I/O ports.
+- `IOPortDispatcher`: central router that maps ports to handlers.
+- `DefaultIOPortHandler`: fallback behavior for unhandled ports.
+
+If you need to replace an `IOPortHandler` implementation in your integration:
+
+1. Implement `IIOPortHandler` in your device class.
+2. Register your handler for the port range in the dispatcher wiring.
+3. Keep `--FailOnUnhandledPort` enabled when validating to catch missing routes early.
+
+This makes it easier to incrementally swap hardware behavior while keeping unsupported ports visible during reverse engineering.
 
 ## Dynamic analysis
 

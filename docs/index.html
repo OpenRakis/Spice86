@@ -20,6 +20,9 @@
       --code-bg:     #1a2236;
       --warn:        #d29922;
       --danger:      #f85149;
+      --info-bg:     rgba(88,166,255,.12);
+      --success-bg:  rgba(63,185,80,.12);
+      --warning-bg:  rgba(210,153,34,.14);
       --nav-width:   240px;
     }
 
@@ -314,6 +317,23 @@
     }
     .callout strong { color: var(--warn); }
 
+    .callout-info {
+      border-left-color: var(--accent);
+      background: var(--info-bg);
+    }
+    .callout-info strong { color: var(--accent); }
+
+    .callout-success {
+      border-left-color: var(--accent2);
+      background: var(--success-bg);
+    }
+    .callout-success strong { color: var(--accent2); }
+
+    .callout-warning {
+      border-left-color: var(--warn);
+      background: var(--warning-bg);
+    }
+
     /* ── Mobile nav toggle ── */
     .mobile-header { display: none; }
     .mobile-overlay {
@@ -397,6 +417,7 @@
   <div class="section-label">Reference</div>
   <ul>
     <li><a href="#cli">CLI Options</a></li>
+    <li><a href="#io-ports">I/O Port Handlers</a></li>
     <li><a href="#gdb">GDB Integration</a></li>
     <li><a href="#debugger">Built-in Debugger</a></li>
     <li><a href="#overrides">Code Overrides</a></li>
@@ -444,6 +465,10 @@
       <a class="btn btn-secondary" href="https://github.com/OpenRakis/Spice86/releases/tag/latest">Pre-release</a>
       <a class="btn btn-secondary" href="https://github.com/OpenRakis/Spice86/wiki/Spice86-internal-debugger">Debugger Wiki</a>
       <a class="btn btn-secondary" href="https://github.com/OpenRakis/Cryogenic">Example project: Cryogenic</a>
+    </div>
+
+    <div class="callout callout-info">
+      <strong>Quick start:</strong> Run <code>Spice86 -e game.exe</code>, inspect with GDB on <code>:10000</code>, then incrementally replace assembly with C# overrides.
     </div>
   </div>
 
@@ -736,6 +761,33 @@ Spice86 -e game.exe</code></pre>
     </div>
   </section>
 
+  <!-- ── I/O Port Handlers ── -->
+  <section id="io-ports">
+    <h2>I/O Port Handlers</h2>
+    <p>
+      Spice86 routes hardware port reads and writes through a dispatcher/handler model.
+      This keeps devices isolated and makes hardware behavior easier to swap during
+      reverse engineering.
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Component</th><th>Role</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>IIOPortHandler</code></td><td>Interface implemented by hardware device handlers.</td></tr>
+          <tr><td><code>IOPortDispatcher</code></td><td>Routes I/O port operations to the correct handler.</td></tr>
+          <tr><td><code>DefaultIOPortHandler</code></td><td>Fallback behavior when no specific handler is registered.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout callout-success">
+      <strong>Replacing IOPortHandler:</strong> Implement <code>IIOPortHandler</code>, register it in the dispatcher wiring, and run with <code>--FailOnUnhandledPort true</code> to catch missing routes early.
+    </div>
+  </section>
+
   <!-- ── GDB ── -->
   <section id="gdb">
     <h2>GDB Integration</h2>
@@ -1020,6 +1072,9 @@ public class MyProgramOverrideSupplier : IOverrideSupplier {
       This list reflects the state as of early 2026. A program crashing usually indicates
       an unimplemented BIOS/DOS interrupt or a video mode that has not been implemented.
     </p>
+    <div class="callout callout-warning">
+      <strong>Reading this table:</strong> Use it as a quick snapshot. For the latest status and detailed notes, prefer <a href="https://github.com/OpenRakis/Spice86/blob/master/COMPATIBILITY.md">COMPATIBILITY.md</a>.
+    </div>
     <div class="table-wrap">
       <table>
         <thead>
