@@ -10,7 +10,7 @@ using Spice86.Tests.Utility;
 
 using Xunit;
 
-public class DosFcbManagerTests : IDisposable {
+public sealed class DosFcbManagerTests : IDisposable {
     private const uint StringAddr = 0x1000;
     private const uint FcbAddr = 0x2000;
     private const uint DtaAddr = 0x3000;
@@ -165,7 +165,7 @@ public class DosFcbManagerTests : IDisposable {
         _fixture.Memory.SetZeroTerminatedString(StringAddr, "  :;,=+  TEST.TXT", 128);
 
         // Act
-        (FcbParseResult result, uint bytesAdvanced) = _fixture.DosFcbManager.ParseFilename(StringPointer, FcbPointer, FcbParseControl.SkipLeadingSeparators | FcbParseControl.LeaveDriveUnchanged);
+        (FcbParseResult result, _) = _fixture.DosFcbManager.ParseFilename(StringPointer, FcbPointer, FcbParseControl.SkipLeadingSeparators | FcbParseControl.LeaveDriveUnchanged);
 
         // Assert
         result.Should().Be(FcbParseResult.NoWildcards);
@@ -180,7 +180,7 @@ public class DosFcbManagerTests : IDisposable {
         _fixture.Memory.SetZeroTerminatedString(StringAddr, "   \t  TEST.TXT", 128);
 
         // Act
-        (FcbParseResult result, uint bytesAdvanced) = _fixture.DosFcbManager.ParseFilename(StringPointer, FcbPointer, 0);
+        (FcbParseResult result, _) = _fixture.DosFcbManager.ParseFilename(StringPointer, FcbPointer, 0);
 
         // Assert
         result.Should().Be(FcbParseResult.NoWildcards);
@@ -241,7 +241,7 @@ public class DosFcbManagerTests : IDisposable {
         _fixture.Memory.SetZeroTerminatedString(StringAddr, "lowercase.ext", 128);
 
         // Act
-        (FcbParseResult result, uint bytesAdvanced) = _fixture.DosFcbManager.ParseFilename(StringPointer, FcbPointer, FcbParseControl.LeaveDriveUnchanged);
+        (FcbParseResult result, _) = _fixture.DosFcbManager.ParseFilename(StringPointer, FcbPointer, FcbParseControl.LeaveDriveUnchanged);
 
         // Assert
         result.Should().Be(FcbParseResult.NoWildcards);
@@ -588,7 +588,7 @@ public class DosFcbManagerTests : IDisposable {
         _fixture.DosFcbManager.OpenFile(FcbPointer);
         fcb.RecordSize = 4;
         fcb.RandomRecord = 0;
-        ushort requestedRecordCount = 3;
+        const ushort requestedRecordCount = 3;
 
         // Act
         (FcbStatus readResult, ushort actualRecordCount) = _fixture.DosFcbManager.RandomBlockRead(FcbPointer, DtaAddr, requestedRecordCount);
@@ -617,7 +617,7 @@ public class DosFcbManagerTests : IDisposable {
         _fixture.DosFcbManager.OpenFile(FcbPointer);
         fcb.RecordSize = 10;
         fcb.RandomRecord = 5;
-        ushort requestedRecordCount = 0;
+        const ushort requestedRecordCount = 0;
 
         // Act
         (FcbStatus writeResult, ushort actualRecordCount) = _fixture.DosFcbManager.RandomBlockWrite(FcbPointer, DtaAddr, requestedRecordCount);
