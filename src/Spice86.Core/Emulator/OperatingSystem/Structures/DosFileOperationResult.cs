@@ -5,9 +5,16 @@ using Spice86.Core.Emulator.OperatingSystem.Enums;
 /// <summary>
 /// Represents the result of a DOS file operation, which could be an error or a value.
 /// </summary>
-public class DosFileOperationResult {
-    private readonly bool _error;
+public sealed class DosFileOperationResult : IEquatable<DosFileOperationResult?> {
+    // Cache the most common error codes into a fast lookup array.
+    private const int ErrorCacheLength = 20;
+    private static readonly DosFileOperationResult?[] s_errorCache = new DosFileOperationResult[ErrorCacheLength];
+
+    // Cache the common "no value" result to avoid extra allocations.
+    private static readonly DosFileOperationResult s_noValue = new(error: false, valueIsUint32: false, value: null);
+
     private readonly uint? _value;
+    private readonly bool _error;
     private readonly bool _valueIsUint32;
     private readonly byte _refCount;
 
@@ -33,7 +40,17 @@ public class DosFileOperationResult {
     /// <param name="errorCode">The error code.</param>
     /// <returns>A new instance of the class indicating an error.</returns>
     public static DosFileOperationResult Error(DosErrorCode errorCode) {
-        return new DosFileOperationResult(true, false, (uint?)errorCode);
+        // Use cache for common error codes.
+        if ((int)errorCode is >= 0 and < ErrorCacheLength) {
+            ref DosFileOperationResult? errorCacheEntry = ref s_errorCache[(uint)errorCode];
+            errorCacheEntry ??= NewErrorResult(errorCode);
+            return errorCacheEntry;
+        }
+
+        return NewErrorResult(errorCode);
+
+        static DosFileOperationResult NewErrorResult(DosErrorCode errorCode)
+            => new(error: true, valueIsUint32: false, value: (uint?)errorCode);
     }
 
     /// <summary>
@@ -41,7 +58,7 @@ public class DosFileOperationResult {
     /// </summary>
     /// <returns>A new instance of the class indicating no value.</returns>
     public static DosFileOperationResult NoValue() {
-        return new DosFileOperationResult(false, false, null);
+        return s_noValue;
     }
 
     /// <summary>
@@ -50,7 +67,7 @@ public class DosFileOperationResult {
     /// <param name="value">The 16-bit value.</param>
     /// <returns>A new instance of the class with a 16-bit value.</returns>
     public static DosFileOperationResult Value16(ushort value) {
-        return new DosFileOperationResult(false, false, value);
+        return new DosFileOperationResult(error: false, valueIsUint32: false, value);
     }
 
     /// <summary>
@@ -59,7 +76,7 @@ public class DosFileOperationResult {
     /// <param name="value">The 32-bit value.</param>
     /// <returns>A new instance of the class with a 32-bit value.</returns>
     public static DosFileOperationResult Value32(uint value) {
-        return new DosFileOperationResult(false, true, value);
+        return new DosFileOperationResult(error: false, valueIsUint32: true, value);
     }
 
     /// <summary>
@@ -68,7 +85,7 @@ public class DosFileOperationResult {
     /// <param name="refCount">The reference count from the System File Table.</param>
     /// <returns>A new instance of the class with a reference count.</returns>
     public static DosFileOperationResult NoValueWithRefCount(byte refCount) {
-        return new DosFileOperationResult(false, false, null, refCount);
+        return new DosFileOperationResult(error: false, valueIsUint32: false, value: null, refCount);
     }
 
     /// <summary>
@@ -90,4 +107,20 @@ public class DosFileOperationResult {
     /// The number of handles associated with the file or device after a successful <see cref="DosFileManager.CloseFileOrDevice(ushort)"/> operation. Defaults to 0 for other DOS operations.
     /// </summary>
     public byte RefCount => _refCount;
+
+    public override bool Equals(object? obj) {
+        return Equals(obj as DosFileOperationResult);
+    }
+
+    public bool Equals(DosFileOperationResult? other) {
+        return other is not null &&
+               Value == other.Value &&
+               IsError == other.IsError &&
+               IsValueIsUint32 == other.IsValueIsUint32 &&
+               RefCount == other.RefCount;
+    }
+
+    public override int GetHashCode() {
+        return HashCode.Combine(Value, IsError, IsValueIsUint32, RefCount);
+    }
 }
