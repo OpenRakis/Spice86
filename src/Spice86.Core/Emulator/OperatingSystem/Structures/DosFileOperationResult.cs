@@ -2,6 +2,8 @@
 
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 
+using System.Diagnostics;
+
 /// <summary>
 /// Represents the result of a DOS file operation, which could be an error or a value.
 /// </summary>
@@ -12,6 +14,9 @@ public sealed class DosFileOperationResult : IEquatable<DosFileOperationResult?>
 
     // Cache the common "no value" result to avoid extra allocations.
     private static readonly DosFileOperationResult s_noValue = new(error: false, valueIsUint32: false, value: null);
+
+    // Cache the last UInt16 result (no error, reference count zero).
+    private static DosFileOperationResult? s_lastResult16;
 
     private readonly uint? _value;
     private readonly bool _error;
@@ -42,8 +47,11 @@ public sealed class DosFileOperationResult : IEquatable<DosFileOperationResult?>
     public static DosFileOperationResult Error(DosErrorCode errorCode) {
         // Use cache for common error codes.
         if ((int)errorCode is >= 0 and < ErrorCacheLength) {
-            ref DosFileOperationResult? errorCacheEntry = ref s_errorCache[(uint)errorCode];
-            errorCacheEntry ??= NewErrorResult(errorCode);
+            DosFileOperationResult? errorCacheEntry = s_errorCache[(int)errorCode];
+            if (errorCacheEntry is null) {
+                errorCacheEntry = NewErrorResult(errorCode);
+                s_errorCache[(int)errorCode] = errorCacheEntry;
+            }
             return errorCacheEntry;
         }
 
@@ -67,7 +75,17 @@ public sealed class DosFileOperationResult : IEquatable<DosFileOperationResult?>
     /// <param name="value">The 16-bit value.</param>
     /// <returns>A new instance of the class with a 16-bit value.</returns>
     public static DosFileOperationResult Value16(ushort value) {
-        return new DosFileOperationResult(error: false, valueIsUint32: false, value);
+        // Use last cached 16-bit result if possible.
+        DosFileOperationResult? lastResult = s_lastResult16;
+        if (lastResult?.Value == value) {
+            Debug.Assert(!lastResult.IsError);
+            Debug.Assert(!lastResult.IsValueIsUint32);
+            return lastResult;
+        }
+
+        lastResult = new DosFileOperationResult(error: false, valueIsUint32: false, value);
+        s_lastResult16 = lastResult;
+        return lastResult;
     }
 
     /// <summary>

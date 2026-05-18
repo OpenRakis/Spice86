@@ -40,8 +40,11 @@ public sealed class DosExecResult : IEquatable<DosExecResult?> {
     public static DosExecResult Fail(DosErrorCode code) {
         // Use cache for common error codes.
         if ((int)code is >= 0 and < ErrorCacheLength) {
-            ref DosExecResult? errorCacheEntry = ref s_errorCache[(uint)code];
-            errorCacheEntry ??= NewErrorResult(code);
+            DosExecResult? errorCacheEntry = s_errorCache[(int)code];
+            if (errorCacheEntry is null) {
+                errorCacheEntry = NewErrorResult(code);
+                s_errorCache[(int)code] = errorCacheEntry;
+            }
             return errorCacheEntry;
         }
 
