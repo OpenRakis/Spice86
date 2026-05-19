@@ -22,7 +22,7 @@ public abstract class Indexable : IIndexable {
     public abstract UInt16Indexer UInt16 {
         get;
     }
-    
+
     /// <summary>
     ///     Allows indexed big endian word access to the memory.
     /// </summary>
@@ -72,7 +72,7 @@ public abstract class Indexable : IIndexable {
     public abstract SegmentedAddress32Indexer SegmentedAddress32 {
         get;
     }
-    
+
     internal static (UInt8Indexer, UInt16Indexer, UInt16BigEndianIndexer, UInt32Indexer, Int8Indexer, Int16Indexer, Int32Indexer, SegmentedAddress16Indexer, SegmentedAddress32Indexer) InstantiateIndexersFromByteReaderWriter(
             IByteReaderWriter byteReaderWriter, IMmu mmu) {
         UInt8Indexer uInt8 = new UInt8Indexer(byteReaderWriter, mmu);
@@ -93,6 +93,9 @@ public abstract class Indexable : IIndexable {
     /// <param name="address">The address in memory from where to read</param>
     /// <param name="maxLength">The maximum string length</param>
     /// <returns>The zero-terminated string retrieved from memory.</returns>
+    /// <remarks>
+    /// This assumes that the string has been encoded as ISO 8859-1.
+    /// </remarks>
     public virtual string GetZeroTerminatedString(uint address, int maxLength) {
         StringBuilder res = new();
         for (int i = 0; i < maxLength; i++) {
@@ -114,21 +117,43 @@ public abstract class Indexable : IIndexable {
     /// <param name="address">The address at which to write the string</param>
     /// <param name="value">The string to write</param>
     /// <param name="maxLength">The maximum length to write</param>
-    /// <exception cref="UnrecoverableException"></exception>
+    /// <exception cref="UnrecoverableException">Encoded string length exceeds <paramref name="maxLength"/>.</exception>
+    /// <remarks>
+    /// The string will be encoded as ISO 8859-1. All characters that are not Basic Latin or Latin-1 Supplement
+    /// (greater than <c>U+00FF</c>) will be replaced with a question mark (<c>?</c>).
+    /// </remarks>
     public virtual void SetZeroTerminatedString(uint address, string value, int maxLength = 0) {
-        if(maxLength == 0) {
-            maxLength = value.Length + 1;
-        }
-        if (value.Length + 1 > maxLength) {
+        SetZeroTerminatedString(address, value.AsSpan(), maxLength);
+    }
+
+    /// <summary>
+    /// Writes a string directly to memory.
+    /// </summary>
+    /// <param name="address">The address at which to write the string</param>
+    /// <param name="value">The span of characters to write</param>
+    /// <param name="maxLength">The maximum length to write</param>
+    /// <exception cref="UnrecoverableException">Encoded string length exceeds <paramref name="maxLength"/>.</exception>
+    /// <remarks>
+    /// The string will be encoded as ISO 8859-1. All characters that are not Basic Latin or Latin-1 Supplement
+    /// (greater than <c>U+00FF</c>) will be replaced with a question mark (<c>?</c>).
+    /// </remarks>
+    public virtual void SetZeroTerminatedString(uint address, ReadOnlySpan<char> value, int maxLength = 0) {
+        int valueByteLength = value.Length + 1;
+        if (maxLength == 0) {
+            maxLength = valueByteLength;
+        } else if (valueByteLength > maxLength) {
             throw new UnrecoverableException(
                 $"String {value} is more than {maxLength} cannot write it at offset {address}");
         }
 
         int i = 0;
-        Span<byte> charBytes = Encoding.ASCII.GetBytes(value);
-        for (; i < charBytes.Length; i++) {
-            byte character = charBytes[i];
-            UInt8[(uint)(address + i)] = character;
+        for (; i < value.Length; i++) {
+            char c = value[i];
+            if (c >= '\u0100') {
+                // Use an ASCII-compatible replacement character for the Unicode character.
+                c = '?';
+            }
+            UInt8[(uint)(address + i)] = (byte)c;
         }
 
         UInt8[(uint)(address + i)] = 0;
@@ -140,8 +165,11 @@ public abstract class Indexable : IIndexable {
     /// <param name="address">The address in memory from where to read</param>
     /// <param name="length">The fixed length of the string field</param>
     /// <returns>The space-padded string retrieved from memory, including trailing spaces.</returns>
+    /// <remarks>
+    /// The string will be encoded as ISO 8859-1.
+    /// </remarks>
     public virtual string GetSpacePaddedString(uint address, int length) {
-        StringBuilder result = new();
+        StringBuilder result = new(length);
         for (int i = 0; i < length; i++) {
             byte b = UInt8[address + (uint)i];
             result.Append((char)b);
@@ -155,10 +183,43 @@ public abstract class Indexable : IIndexable {
     /// <param name="address">The address at which to write the string</param>
     /// <param name="value">The string value to write</param>
     /// <param name="length">The fixed length of the string field</param>
+    /// <exception cref="UnrecoverableException">Encoded string length exceeds <paramref name="length"/>.</exception>
+    /// <remarks>
+    /// The string will be encoded as ISO 8859-1. All characters that are not Basic Latin or Latin-1 Supplement
+    /// (greater than <c>U+00FF</c>) will be replaced with a question mark (<c>?</c>).
+    /// </remarks>
     public virtual void SetSpacePaddedString(uint address, string value, int length) {
-        byte[] bytes = Encoding.ASCII.GetBytes(value.PadRight(length));
-        for (int i = 0; i < length; i++) {
-            UInt8[address + (uint)i] = bytes[i];
+        SetSpacePaddedString(address, value.AsSpan(), length);
+    }
+
+    /// <summary>
+    /// Write a space-padded string to memory.
+    /// </summary>
+    /// <param name="address">The address at which to write the string</param>
+    /// <param name="value">The span of characters to write</param>
+    /// <param name="length">The fixed length of the string field</param>
+    /// <exception cref="UnrecoverableException">Encoded string length exceeds <paramref name="length"/>.</exception>
+    /// <remarks>
+    /// The string will be encoded as ISO 8859-1. All characters that are not Basic Latin or Latin-1 Supplement
+    /// (greater than <c>U+00FF</c>) will be replaced with a question mark (<c>?</c>).
+    /// </remarks>
+    public virtual void SetSpacePaddedString(uint address, ReadOnlySpan<char> value, int length) {
+        if (value.Length > length) {
+            throw new UnrecoverableException(
+                $"String {value} is more than {length} cannot write it at offset {address}");
+        }
+
+        int i = 0;
+        for (; i < value.Length; i++) {
+            char c = value[i];
+            if (c >= '\u0100') {
+                // Use an ASCII-compatible replacement character for the Unicode character.
+                c = '?';
+            }
+            UInt8[address + (uint)i] = (byte)c;
+        }
+        for (; i < length; i++) {
+            UInt8[address + (uint)i] = (byte)' ';
         }
     }
 
@@ -168,7 +229,7 @@ public abstract class Indexable : IIndexable {
     /// <param name="address">The memory address to start writing</param>
     /// <param name="data">The array of bytes to write</param>
     public void LoadData(uint address, byte[] data) {
-        LoadData(address, data, data.Length);
+        LoadData(address, data.AsSpan());
     }
 
     /// <summary>
@@ -178,7 +239,16 @@ public abstract class Indexable : IIndexable {
     /// <param name="data">The array of bytes to write</param>
     /// <param name="length">How many bytes to read from the byte array</param>
     public void LoadData(uint address, byte[] data, int length) {
-        for (int i = 0; i < length; i++) {
+        LoadData(address, data.AsSpan(0, length));
+    }
+
+    /// <summary>
+    ///     Load data from a span of bytes into memory.
+    /// </summary>
+    /// <param name="address">The memory address to start writing</param>
+    /// <param name="data">The span containing bytes to write</param>
+    public virtual void LoadData(uint address, ReadOnlySpan<byte> data) {
+        for (int i = 0; i < data.Length; i++) {
             UInt8[(uint)(address + i)] = data[i];
         }
     }
@@ -189,7 +259,7 @@ public abstract class Indexable : IIndexable {
     /// <param name="address">The memory address to start writing</param>
     /// <param name="data">The array of words to write</param>
     public void LoadData(uint address, ushort[] data) {
-        LoadData(address, data, data.Length);
+        LoadData(address, data.AsSpan());
     }
 
     /// <summary>
@@ -199,7 +269,16 @@ public abstract class Indexable : IIndexable {
     /// <param name="data">The array of words to write</param>
     /// <param name="length">How many words to read from the byte array</param>
     public void LoadData(uint address, ushort[] data, int length) {
-        for (int i = 0; i < length; i++) {
+        LoadData(address, data.AsSpan(0, length));
+    }
+
+    /// <summary>
+    ///     Load data from a span of words into memory.
+    /// </summary>
+    /// <param name="address">The memory address to start writing</param>
+    /// <param name="data">The span containing words to write</param>
+    public virtual void LoadData(uint address, ReadOnlySpan<ushort> data) {
+        for (int i = 0; i < data.Length; i++) {
             UInt16[(uint)(address + i)] = data[i];
         }
     }
@@ -210,7 +289,7 @@ public abstract class Indexable : IIndexable {
     /// <param name="sourceAddress">The address in memory to start reading from</param>
     /// <param name="destinationAddress">The address in memory to start writing to</param>
     /// <param name="length">How many bytes to copy</param>
-    public void MemCopy(uint sourceAddress, uint destinationAddress, uint length) {
+    public virtual void MemCopy(uint sourceAddress, uint destinationAddress, uint length) {
         for (int i = 0; i < length; i++) {
             UInt8[(uint)(destinationAddress + i)] = UInt8[(uint)(sourceAddress + i)];
         }
@@ -222,7 +301,7 @@ public abstract class Indexable : IIndexable {
     /// <param name="address">The memory address to start writing to</param>
     /// <param name="value">The byte value to write</param>
     /// <param name="amount">How many times to write the value</param>
-    public void Memset8(uint address, byte value, uint amount) {
+    public virtual void Memset8(uint address, byte value, uint amount) {
         for (int i = 0; i < amount; i++) {
             UInt8[(uint)(address + i)] = value;
         }
@@ -234,7 +313,7 @@ public abstract class Indexable : IIndexable {
     /// <param name="address">The memory address to start writing to</param>
     /// <param name="value">The ushort value to write</param>
     /// <param name="amount">How many times to write the value</param>
-    public void Memset16(uint address, ushort value, uint amount) {
+    public virtual void Memset16(uint address, ushort value, uint amount) {
         for (int i = 0; i < amount; i += 2) {
             UInt16[(uint)(address + i)] = value;
         }
@@ -247,12 +326,23 @@ public abstract class Indexable : IIndexable {
     /// <param name="address">The start address.</param>
     /// <param name="length">The length of the array.</param>
     /// <returns>The array of bytes, read from RAM.</returns>
-    public byte[] GetData(uint address, uint length) {
+    public virtual byte[] GetData(uint address, uint length) {
         byte[] data = new byte[length];
         for (uint i = 0; i < length; i++) {
             data[i] = UInt8[address + i];
         }
 
         return data;
+    }
+
+    /// <summary>
+    /// Reads data from memory into a span of bytes.
+    /// </summary>
+    /// <param name="address">The start address.</param>
+    /// <param name="data">The span of bytes to containing the read data.</param>
+    public virtual void GetData(uint address, Span<byte> data) {
+        for (int i = 0; i < data.Length; i++) {
+            data[i] = UInt8[address + i];
+        }
     }
 }
