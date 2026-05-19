@@ -1,8 +1,7 @@
 namespace Spice86.Core.Emulator.Memory.Indexer;
 
-using Spice86.Shared.Emulator.Memory;
-using Spice86.Shared.Utils;
 using Spice86.Core.Emulator.Memory.Mmu;
+using Spice86.Shared.Emulator.Memory;
 
 using System.Collections;
 

@@ -1,20 +1,19 @@
 ﻿namespace Spice86.Core.Emulator.Memory.Indexer;
 
-using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.Memory.Mmu;
-using Spice86.Shared.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.ReaderWriter;
 
 /// <summary>
 /// Provides indexed byte access over memory.
 /// </summary>
-public class UInt8Indexer : MemoryIndexer<byte> {
+public sealed class UInt8Indexer : MemoryIndexer<byte> {
     private readonly IByteReaderWriter _byteReaderWriter;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="UInt8Indexer"/> class with the specified byteReadeWriter.
     /// </summary>
     /// <param name="byteReaderWriter">Where data is read and written.</param>
-    public UInt8Indexer(IByteReaderWriter byteReaderWriter, IMmu mmu) : base(mmu, 1) {
+    public UInt8Indexer(IByteReaderWriter byteReaderWriter, IMmu mmu) : base(mmu, sizeof(byte)) {
         _byteReaderWriter = byteReaderWriter;
     }
 
