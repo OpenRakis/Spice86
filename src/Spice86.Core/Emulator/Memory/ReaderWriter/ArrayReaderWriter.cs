@@ -51,8 +51,8 @@ public class ArrayReaderWriter<T> : IReaderWriter<T> {
         T[] array = Array;
         long lengthRemaining = array.Length - startAddress;
         if (lengthRemaining >= length) {
-            // Cast from long to int is safe because length remaining is in the range 0..array.Length (inclusive).
-            span = MemoryMarshal.CreateSpan(ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(array), startAddress), (int)lengthRemaining);
+            // CreateSpan is safe because of above length check (it will always be in the range 0..array.Length).
+            span = MemoryMarshal.CreateSpan(ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(array), startAddress), length);
             return true;
         }
 
