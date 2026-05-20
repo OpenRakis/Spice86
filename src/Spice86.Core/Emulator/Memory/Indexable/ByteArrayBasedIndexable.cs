@@ -122,17 +122,10 @@ public class ByteArrayBasedIndexable : Indexable {
 
     /// <inheritdoc/>
     public override void SetSpacePaddedString(uint address, ReadOnlySpan<char> value, int length) {
-        int valueByteLength = Encoding.Latin1.GetByteCount(value);
-        if (valueByteLength > length) {
-            throw new UnrecoverableException(
-                $"String {value} is more than {length} cannot write it at offset {address}");
-        }
-
         if (ReaderWriter.TryGetSpan(address, length, out Span<byte> span, MemoryAccess.Write) &&
                 span.Length >= length) {
             span = span[..length];
             int bytesWritten = Encoding.Latin1.GetBytes(value, span);
-            Debug.Assert(bytesWritten == valueByteLength);
             span[bytesWritten..].Fill((byte)' ');
             return;
         }

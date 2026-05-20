@@ -183,7 +183,6 @@ public abstract class Indexable : IIndexable {
     /// <param name="address">The address at which to write the string</param>
     /// <param name="value">The string value to write</param>
     /// <param name="length">The fixed length of the string field</param>
-    /// <exception cref="UnrecoverableException">Encoded string length exceeds <paramref name="length"/>.</exception>
     /// <remarks>
     /// The string will be encoded as ISO 8859-1. All characters that are not Basic Latin or Latin-1 Supplement
     /// (greater than <c>U+00FF</c>) will be replaced with a question mark (<c>?</c>).
@@ -198,15 +197,13 @@ public abstract class Indexable : IIndexable {
     /// <param name="address">The address at which to write the string</param>
     /// <param name="value">The span of characters to write</param>
     /// <param name="length">The fixed length of the string field</param>
-    /// <exception cref="UnrecoverableException">Encoded string length exceeds <paramref name="length"/>.</exception>
     /// <remarks>
     /// The string will be encoded as ISO 8859-1. All characters that are not Basic Latin or Latin-1 Supplement
     /// (greater than <c>U+00FF</c>) will be replaced with a question mark (<c>?</c>).
     /// </remarks>
     public virtual void SetSpacePaddedString(uint address, ReadOnlySpan<char> value, int length) {
         if (value.Length > length) {
-            throw new UnrecoverableException(
-                $"String {value} is more than {length} cannot write it at offset {address}");
+            value = value[..length];
         }
 
         int i = 0;
