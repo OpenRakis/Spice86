@@ -67,10 +67,11 @@ public class ByteArrayBasedIndexable : Indexable {
     /// <inheritdoc/>
     public override string GetZeroTerminatedString(uint address, int maxLength) {
         if (ReaderWriter.TryGetSpan(address, maxLength, out Span<byte> span) && span.Length >= maxLength) {
+            span = span[..maxLength];
             // NOTE: Can't use IndexOf as an extension method, because CommunityToolkit.HighPerformance also implements
             // a similarly named & typed extension method, but it uses an "in" parameter instead. This "breaks" the
             // compiler's extension overload resolution algorithm.
-            int zeroIndex = System.MemoryExtensions.IndexOf(span[..maxLength], (byte)0);
+            int zeroIndex = System.MemoryExtensions.IndexOf(span, (byte)0);
             return Encoding.Latin1.GetString(zeroIndex >= 0 ? span[..zeroIndex] : span);
         }
 
@@ -124,10 +125,11 @@ public class ByteArrayBasedIndexable : Indexable {
                 $"String {value} is more than {length} cannot write it at offset {address}");
         }
 
-        if (ReaderWriter.TryGetSpan(address, valueByteLength, out Span<byte> span) && span.Length >= valueByteLength) {
+        if (ReaderWriter.TryGetSpan(address, length, out Span<byte> span) && span.Length >= length) {
+            span = span[..length];
             int bytesWritten = Encoding.Latin1.GetBytes(value, span);
             Debug.Assert(bytesWritten == valueByteLength);
-            span[bytesWritten..length].Fill((byte)' ');
+            span[bytesWritten..].Fill((byte)' ');
             return;
         }
 
@@ -146,27 +148,24 @@ public class ByteArrayBasedIndexable : Indexable {
     }
 
     /// <inheritdoc/>
-    /// <exception cref="UnrecoverableException"><paramref name="data"/> length exceeds maximum possible byte count.</exception>
     public override void LoadData(uint address, ReadOnlySpan<ushort> data) {
-        if (data.Length > int.MaxValue / sizeof(ushort)) {
-            throw new UnrecoverableException(
-                $"Data (length {data.Length}) cannot be converted into bytes ({(long)data.Length * sizeof(ushort)} bytes required) at offset {address}");
-        }
-
-        int bytesRequired = data.Length * sizeof(ushort);
-        if (ReaderWriter.TryGetSpan(address, bytesRequired, out Span<byte> writeSpan) &&
-                writeSpan.Length >= bytesRequired) {
-            if (BitConverter.IsLittleEndian) {
-                // Fast path can copy bytes directly into memory without endian swapping.
-                MemoryMarshal.Cast<ushort, byte>(data).CopyTo(writeSpan);
-            } else {
-                // Slow path requires endian swapping every value written.
-                Span<ushort> writeWords = MemoryMarshal.Cast<byte, ushort>(writeSpan);
-                for (int i = 0; i < data.Length; i++) {
-                    writeWords[i] = BinaryPrimitives.ReverseEndianness(data[i]);
+        // Make sure converting element count into byte count will not overflow for span-optimized path.
+        if (data.Length <= int.MaxValue / sizeof(ushort)) {
+            int byteCount = data.Length * sizeof(ushort);
+            if (ReaderWriter.TryGetSpan(address, byteCount, out Span<byte> writeSpan) && writeSpan.Length >= byteCount) {
+                if (BitConverter.IsLittleEndian) {
+                    // Fast path can copy bytes directly into memory without endian swapping.
+                    MemoryMarshal.Cast<ushort, byte>(data).CopyTo(writeSpan);
+                } else {
+                    // Slow path requires endian swapping every value written. It may be possible to vectorize this,
+                    // but big endian architectures are relatively rare in the .NET world at this time.
+                    Span<ushort> writeWords = MemoryMarshal.Cast<byte, ushort>(writeSpan);
+                    for (int i = 0; i < data.Length; i++) {
+                        writeWords[i] = BinaryPrimitives.ReverseEndianness(data[i]);
+                    }
                 }
+                return;
             }
-            return;
         }
 
         base.LoadData(address, data);
@@ -174,9 +173,10 @@ public class ByteArrayBasedIndexable : Indexable {
 
     /// <inheritdoc/>
     public override byte[] GetData(uint address, uint length) {
-        if ((int)length >= 0 && ReaderWriter.TryGetSpan(address, (int)length, out Span<byte> span) &&
-                span.Length >= (int)length) {
-            return span[..(int)length].ToArray();
+        int byteCount = (int)length;
+        if (byteCount >= 0 && ReaderWriter.TryGetSpan(address, byteCount, out Span<byte> span) &&
+                span.Length >= byteCount) {
+            return span[..byteCount].ToArray();
         }
 
         return base.GetData(address, length);
@@ -221,24 +221,22 @@ public class ByteArrayBasedIndexable : Indexable {
     }
 
     /// <inheritdoc/>
-    /// <exception cref="UnrecoverableException"><paramref name="amount"/> exceeds maximum possible byte count.</exception>
     public override void Memset16(uint address, ushort value, uint amount) {
-        if (amount > int.MaxValue / sizeof(ushort)) {
-            throw new UnrecoverableException($"Cannot set memory at offset {address}");
-        }
-
-        int byteCount = (int)amount * sizeof(ushort);
-        if (byteCount >= 0 && ReaderWriter.TryGetSpan(address, byteCount, out Span<byte> span) &&
-                span.Length >= byteCount) {
-            if (value == 0) {
-                span[..byteCount].Clear();
-            } else {
-                if (!BitConverter.IsLittleEndian) {
-                    value = BinaryPrimitives.ReverseEndianness(value);
+        // Make sure converting element count into byte count will not overflow for span-optimized path.
+        if (amount <= int.MaxValue / sizeof(ushort)) {
+            int byteCount = (int)amount * sizeof(ushort);
+            if (byteCount >= 0 && ReaderWriter.TryGetSpan(address, byteCount, out Span<byte> span) &&
+                    span.Length >= byteCount) {
+                if (value == 0) {
+                    span[..byteCount].Clear();
+                } else {
+                    if (!BitConverter.IsLittleEndian) {
+                        value = BinaryPrimitives.ReverseEndianness(value);
+                    }
+                    MemoryMarshal.Cast<byte, ushort>(span[..byteCount]).Fill(value);
                 }
-                MemoryMarshal.Cast<byte, ushort>(span[..byteCount]).Fill(value);
+                return;
             }
-            return;
         }
 
         base.Memset16(address, value, amount);
