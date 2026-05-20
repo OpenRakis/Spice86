@@ -14,7 +14,11 @@ public class SimdConversionsTest {
 
     public static TheoryData<int> SampleLengths() {
         var testCases = new TheoryData<int>();
-        testCases.AddRange(0, 1, 7, 8, 15, 16, 31, 32, 33, 64, 4096);
+        int[] lengths = [0, 1, 7, 8, 15, 16, 31, 32, 33, 64, 4096];
+        foreach (int length in lengths) {
+            testCases.Add(length);
+        }
+
         return testCases;
     }
 

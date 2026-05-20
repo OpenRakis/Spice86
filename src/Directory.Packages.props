@@ -42,7 +42,7 @@
     <PackageVersion Include="Roslynator.CodeAnalysis.Analyzers" Version="4.15.0" />
     <PackageVersion Include="Semi.Avalonia" Version="12.0.1" />
     <PackageVersion Include="Semi.Avalonia.Dock" Version="12.0.0.2" />
-    <PackageVersion Include="Spice86.DataGrid" Version="0.1.1" />
+    <PackageVersion Include="Spice86.DataGrid" Version="0.1.2" />
     <PackageVersion Include="Serilog" Version="4.3.1" />
     <PackageVersion Include="Serilog.Extensions.Hosting" Version="10.0.0" />
     <PackageVersion Include="Serilog.Sinks.Async" Version="2.1.0" />
@@ -55,7 +55,7 @@
     <PackageVersion Include="System.Memory" Version="4.6.3" />
     <PackageVersion Include="System.Text.Encoding.CodePages" Version="10.0.0" />
     <PackageVersion Include="System.Text.Json" Version="10.0.0" />
-    <PackageVersion Include="Xaml.Behaviors.Avalonia" Version="12.0.0" />
+    <PackageVersion Include="Xaml.Behaviors.Avalonia" Version="12.0.0.1" />
     <PackageVersion Include="Spice86.Audio" Version="11.4.0" />
     <PackageVersion Include="FastExpressionCompiler" Version="5.4.1" />
     <PackageVersion Include="Silk.NET.SDL" Version="2.23.0" />
