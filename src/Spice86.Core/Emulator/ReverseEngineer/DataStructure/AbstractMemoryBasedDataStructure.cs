@@ -5,6 +5,11 @@ using Spice86.Core.Emulator.Memory.Indexer;
 using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
+using Spice86.Shared.Emulator.Errors;
+
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Text;
 
 /// <summary>
 /// Provides a base class for memory-based data structures that have a base address.
@@ -31,7 +36,7 @@ public abstract class AbstractMemoryBasedDataStructure : Indexable, IBaseAddress
     public override UInt16Indexer UInt16 {
         get;
     }
-    
+
     /// <inheritdoc/>
     public override UInt16BigEndianIndexer UInt16BigEndian {
         get;
@@ -61,7 +66,7 @@ public abstract class AbstractMemoryBasedDataStructure : Indexable, IBaseAddress
     public override SegmentedAddress16Indexer SegmentedAddress16 {
         get;
     }
-    
+
     /// <inheritdoc/>
     public override SegmentedAddress32Indexer SegmentedAddress32 {
         get;
@@ -87,8 +92,11 @@ public abstract class AbstractMemoryBasedDataStructure : Indexable, IBaseAddress
     /// </summary>
     /// <param name="offset">The offset to add to the <see cref="BaseAddress"/></param>
     /// <returns>The linear address of <see cref="BaseAddress"/> + offset</returns>
+    /// <remarks>
+    /// If the destination address overflows, it will wrap around.
+    /// </remarks>
     protected uint ComputeAddressFromOffset(uint offset) {
-        return (uint)(BaseAddress + offset);
+        return BaseAddress + offset;
     }
 
     /// <summary>
@@ -129,5 +137,199 @@ public abstract class AbstractMemoryBasedDataStructure : Indexable, IBaseAddress
     /// <returns>The array of uint8 values.</returns>
     public SegmentedAddressArray GetSegmentedAddressArray(uint start, int length) {
         return new SegmentedAddressArray(ByteReaderWriter, ComputeAddressFromOffset(start), length);
+    }
+
+    /// <inheritdoc/>
+    public override string GetZeroTerminatedString(uint address, int maxLength) {
+        ByteReaderWriterWithBaseAddress readerWriter = ByteReaderWriterShiftedToBaseAddress;
+        if (readerWriter.TryGetSpan(address, maxLength, out Span<byte> span) && span.Length >= maxLength) {
+            span = span[..maxLength];
+            // NOTE: Can't use IndexOf as an extension method, because CommunityToolkit.HighPerformance also implements
+            // a similarly named & typed extension method, but it uses an "in" parameter instead. This "breaks" the
+            // compiler's extension overload resolution algorithm.
+            int zeroIndex = System.MemoryExtensions.IndexOf(span, (byte)0);
+            return Encoding.Latin1.GetString(zeroIndex >= 0 ? span[..zeroIndex] : span);
+        }
+
+        return base.GetZeroTerminatedString(address, maxLength);
+    }
+
+    /// <inheritdoc/>
+    public override void SetZeroTerminatedString(uint address, string value, int maxLength = 0) {
+        SetZeroTerminatedString(address, value.AsSpan(), maxLength);
+    }
+
+    /// <inheritdoc/>
+    public override void SetZeroTerminatedString(uint address, ReadOnlySpan<char> value, int maxLength = 0) {
+        int valueByteLength = Encoding.Latin1.GetByteCount(value) + 1;
+        if (maxLength == 0) {
+            maxLength = valueByteLength;
+        } else if (maxLength < valueByteLength) {
+            throw new UnrecoverableException(
+                $"String {value} is more than {maxLength} cannot write it at offset {address}");
+        }
+
+        ByteReaderWriterWithBaseAddress readerWriter = ByteReaderWriterShiftedToBaseAddress;
+        if (readerWriter.TryGetSpan(address, valueByteLength, out Span<byte> span) && span.Length >= valueByteLength) {
+            int bytesWritten = Encoding.Latin1.GetBytes(value, span);
+            span[bytesWritten] = 0;
+            Debug.Assert(bytesWritten + 1 == valueByteLength);
+            return;
+        }
+
+        base.SetZeroTerminatedString(address, value, maxLength);
+    }
+
+    /// <inheritdoc/>
+    public override string GetSpacePaddedString(uint address, int length) {
+        ByteReaderWriterWithBaseAddress readerWriter = ByteReaderWriterShiftedToBaseAddress;
+        if (readerWriter.TryGetSpan(address, length, out Span<byte> span) && span.Length >= length) {
+            return Encoding.Latin1.GetString(span[..length]);
+        }
+
+        return base.GetSpacePaddedString(address, length);
+    }
+
+    /// <inheritdoc/>
+    public override void SetSpacePaddedString(uint address, string value, int length) {
+        SetSpacePaddedString(address, value.AsSpan(), length);
+    }
+
+    /// <inheritdoc/>
+    public override void SetSpacePaddedString(uint address, ReadOnlySpan<char> value, int length) {
+        int valueByteLength = Encoding.Latin1.GetByteCount(value);
+        if (valueByteLength > length) {
+            throw new UnrecoverableException(
+                $"String {value} is more than {length} cannot write it at offset {address}");
+        }
+
+        ByteReaderWriterWithBaseAddress readerWriter = ByteReaderWriterShiftedToBaseAddress;
+        if (readerWriter.TryGetSpan(address, length, out Span<byte> span) && span.Length >= length) {
+            span = span[..length];
+            int bytesWritten = Encoding.Latin1.GetBytes(value, span);
+            Debug.Assert(bytesWritten == valueByteLength);
+            span[bytesWritten..].Fill((byte)' ');
+            return;
+        }
+
+        base.SetSpacePaddedString(address, value, length);
+    }
+
+    /// <inheritdoc/>
+    public override void LoadData(uint address, ReadOnlySpan<byte> data) {
+        ByteReaderWriterWithBaseAddress readerWriter = ByteReaderWriterShiftedToBaseAddress;
+        if (readerWriter.TryGetSpan(address, data.Length, out Span<byte> writeSpan) &&
+                writeSpan.Length >= data.Length) {
+            data.CopyTo(writeSpan);
+            return;
+        }
+
+        base.LoadData(address, data);
+    }
+
+    /// <inheritdoc/>
+    public override void LoadData(uint address, ReadOnlySpan<ushort> data) {
+        // Make sure converting element count into byte count will not overflow for span-optimized path.
+        if (data.Length <= int.MaxValue / sizeof(ushort)) {
+            int byteCount = data.Length * sizeof(ushort);
+            ByteReaderWriterWithBaseAddress readerWriter = ByteReaderWriterShiftedToBaseAddress;
+            if (readerWriter.TryGetSpan(address, byteCount, out Span<byte> writeSpan) &&
+                    writeSpan.Length >= byteCount) {
+                if (BitConverter.IsLittleEndian) {
+                    // Fast path can copy bytes directly into memory without endian swapping.
+                    MemoryMarshal.Cast<ushort, byte>(data).CopyTo(writeSpan);
+                } else {
+                    // Slow path requires endian swapping every value written. It may be possible to vectorize this,
+                    // but big endian architectures are relatively rare in the .NET world at this time.
+                    Span<ushort> writeWords = MemoryMarshal.Cast<byte, ushort>(writeSpan);
+                    for (int i = 0; i < data.Length; i++) {
+                        writeWords[i] = BinaryPrimitives.ReverseEndianness(data[i]);
+                    }
+                }
+                return;
+            }
+        }
+
+        base.LoadData(address, data);
+    }
+
+    /// <inheritdoc/>
+    public override byte[] GetData(uint address, uint length) {
+        int byteCount = (int)length;
+        if (byteCount >= 0) {
+            ByteReaderWriterWithBaseAddress readerWriter = ByteReaderWriterShiftedToBaseAddress;
+            if (readerWriter.TryGetSpan(address, byteCount, out Span<byte> span) && span.Length >= byteCount) {
+                return span[..byteCount].ToArray();
+            }
+        }
+
+        return base.GetData(address, length);
+    }
+
+    /// <inheritdoc/>
+    public override void GetData(uint address, Span<byte> data) {
+        ByteReaderWriterWithBaseAddress readerWriter = ByteReaderWriterShiftedToBaseAddress;
+        if (readerWriter.TryGetSpan(address, data.Length, out Span<byte> span) && span.Length >= data.Length) {
+            span[..data.Length].CopyTo(data);
+            return;
+        }
+
+        base.GetData(address, data);
+    }
+
+    /// <inheritdoc/>
+    public override void MemCopy(uint sourceAddress, uint destinationAddress, uint length) {
+        int byteCount = (int)length;
+        if (byteCount >= 0) {
+            ByteReaderWriterWithBaseAddress readerWriter = ByteReaderWriterShiftedToBaseAddress;
+            if (readerWriter.TryGetSpan(sourceAddress, byteCount, out Span<byte> sourceSpan) &&
+                    sourceSpan.Length >= byteCount &&
+                    readerWriter.TryGetSpan(destinationAddress, byteCount, out Span<byte> destinationSpan) &&
+                    destinationSpan.Length >= byteCount) {
+                sourceSpan[..byteCount].CopyTo(destinationSpan);
+                return;
+            }
+        }
+
+        base.MemCopy(sourceAddress, destinationAddress, length);
+    }
+
+    /// <inheritdoc/>
+    public override void Memset8(uint address, byte value, uint amount) {
+        int byteCount = (int)amount;
+        if (byteCount >= 0) {
+            ByteReaderWriterWithBaseAddress readerWriter = ByteReaderWriterShiftedToBaseAddress;
+            if (readerWriter.TryGetSpan(address, byteCount, out Span<byte> span) && span.Length >= byteCount) {
+                // TODO: Determine whether it's advantageous to use Span<T>.Clear() when value is 0.
+                span[..byteCount].Fill(value);
+                return;
+            }
+        }
+
+        base.Memset8(address, value, amount);
+    }
+
+    /// <inheritdoc/>
+    public override void Memset16(uint address, ushort value, uint amount) {
+        // Make sure converting element count into byte count will not overflow for span-optimized path.
+        if (amount <= int.MaxValue / sizeof(ushort)) {
+            int byteCount = (int)amount * sizeof(ushort);
+            if (byteCount >= 0) {
+                ByteReaderWriterWithBaseAddress readerWriter = ByteReaderWriterShiftedToBaseAddress;
+                if (readerWriter.TryGetSpan(address, byteCount, out Span<byte> span) && span.Length >= byteCount) {
+                    if (value == 0) {
+                        span[..byteCount].Clear();
+                    } else {
+                        if (!BitConverter.IsLittleEndian) {
+                            value = BinaryPrimitives.ReverseEndianness(value);
+                        }
+                        MemoryMarshal.Cast<byte, ushort>(span[..byteCount]).Fill(value);
+                    }
+                    return;
+                }
+            }
+        }
+
+        base.Memset16(address, value, amount);
     }
 }
