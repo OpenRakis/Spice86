@@ -24,19 +24,28 @@ public class ArrayReaderWriter<T> : IReaderWriter<T> {
     public int Length { get => Array.Length; }
 
     /// <inheritdoc/>
-    public bool TryGetSpan(out uint startAddress, out Span<T> span) {
+    public bool TryGetSpan(out uint startAddress, out Span<T> span, MemoryAccess access = MemoryAccess.None) {
         startAddress = 0;
         span = Array;
         return true;
     }
 
     /// <inheritdoc/>
-    public bool TryGetSpan(uint startAddress, out Span<T> span) {
+    public bool TryGetSpan(out uint startAddress, out ReadOnlySpan<T> span, MemoryAccess access = MemoryAccess.None) {
+        startAddress = 0;
+        span = Array;
+        return true;
+    }
+
+    /// <inheritdoc/>
+    public bool TryGetSpan(uint startAddress, out Span<T> span, MemoryAccess access = MemoryAccess.None) {
         T[] array = Array;
         long lengthRemaining = array.Length - startAddress;
         if (lengthRemaining >= 0) {
-            // Cast from long to int is safe because length remaining is in the range 0..array.Length (inclusive).
-            span = MemoryMarshal.CreateSpan(ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(array), startAddress), (int)lengthRemaining);
+            // Cast from long to int is safe because length remaining is in the range 0..array.Length and guaranteed
+            // that adding the start address to it will not go out of bounds of array.
+            span = MemoryMarshal.CreateSpan(
+                ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(array), startAddress), (int)lengthRemaining);
             return true;
         }
 
@@ -45,14 +54,50 @@ public class ArrayReaderWriter<T> : IReaderWriter<T> {
     }
 
     /// <inheritdoc/>
-    public bool TryGetSpan(uint startAddress, int length, out Span<T> span) {
+    public bool TryGetSpan(uint startAddress, out ReadOnlySpan<T> span, MemoryAccess access = MemoryAccess.None) {
+        T[] array = Array;
+        long lengthRemaining = array.Length - startAddress;
+        if (lengthRemaining >= 0) {
+            // Cast from long to int is safe because length remaining is in the range 0..array.Length and guaranteed
+            // that adding the start address to it will not go out of bounds of array.
+            span = MemoryMarshal.CreateSpan(
+                ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(array), startAddress), (int)lengthRemaining);
+            return true;
+        }
+
+        span = [];
+        return false;
+    }
+
+    /// <inheritdoc/>
+    public bool TryGetSpan(uint startAddress, int length, out Span<T> span, MemoryAccess access = MemoryAccess.None) {
         ArgumentOutOfRangeException.ThrowIfNegative(length);
 
         T[] array = Array;
         long lengthRemaining = array.Length - startAddress;
         if (lengthRemaining >= length) {
-            // CreateSpan is safe because of above length check (it will always be in the range 0..array.Length).
-            span = MemoryMarshal.CreateSpan(ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(array), startAddress), length);
+            // CreateSpan is safe because of above length check (length will always be in the range 0..array.Length and
+            // guaranteed that adding the start address to it will not go out of bounds of array.
+            span = MemoryMarshal.CreateSpan(
+                ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(array), startAddress), length);
+            return true;
+        }
+
+        span = [];
+        return false;
+    }
+
+    /// <inheritdoc/>
+    public bool TryGetSpan(uint startAddress, int length, out ReadOnlySpan<T> span, MemoryAccess access = MemoryAccess.None) {
+        ArgumentOutOfRangeException.ThrowIfNegative(length);
+
+        T[] array = Array;
+        long lengthRemaining = array.Length - startAddress;
+        if (lengthRemaining >= length) {
+            // CreateSpan is safe because of above length check (length will always be in the range 0..array.Length and
+            // guaranteed that adding the start address to it will not go out of bounds of array.
+            span = MemoryMarshal.CreateSpan(
+                ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(array), startAddress), length);
             return true;
         }
 

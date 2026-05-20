@@ -1,5 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Core.Emulator.Memory.Indexer;
 using Spice86.Core.Emulator.Memory.Mmu;
@@ -142,7 +143,8 @@ public abstract class AbstractMemoryBasedDataStructure : Indexable, IBaseAddress
     /// <inheritdoc/>
     public override string GetZeroTerminatedString(uint address, int maxLength) {
         ByteReaderWriterWithBaseAddress readerWriter = ByteReaderWriterShiftedToBaseAddress;
-        if (readerWriter.TryGetSpan(address, maxLength, out Span<byte> span) && span.Length >= maxLength) {
+        if (readerWriter.TryGetSpan(address, maxLength, out ReadOnlySpan<byte> span, MemoryAccess.Read) &&
+                span.Length >= maxLength) {
             span = span[..maxLength];
             // NOTE: Can't use IndexOf as an extension method, because CommunityToolkit.HighPerformance also implements
             // a similarly named & typed extension method, but it uses an "in" parameter instead. This "breaks" the
@@ -170,7 +172,8 @@ public abstract class AbstractMemoryBasedDataStructure : Indexable, IBaseAddress
         }
 
         ByteReaderWriterWithBaseAddress readerWriter = ByteReaderWriterShiftedToBaseAddress;
-        if (readerWriter.TryGetSpan(address, valueByteLength, out Span<byte> span) && span.Length >= valueByteLength) {
+        if (readerWriter.TryGetSpan(address, valueByteLength, out Span<byte> span, MemoryAccess.Write) &&
+                span.Length >= valueByteLength) {
             int bytesWritten = Encoding.Latin1.GetBytes(value, span);
             span[bytesWritten] = 0;
             Debug.Assert(bytesWritten + 1 == valueByteLength);
@@ -183,7 +186,8 @@ public abstract class AbstractMemoryBasedDataStructure : Indexable, IBaseAddress
     /// <inheritdoc/>
     public override string GetSpacePaddedString(uint address, int length) {
         ByteReaderWriterWithBaseAddress readerWriter = ByteReaderWriterShiftedToBaseAddress;
-        if (readerWriter.TryGetSpan(address, length, out Span<byte> span) && span.Length >= length) {
+        if (readerWriter.TryGetSpan(address, length, out ReadOnlySpan<byte> span, MemoryAccess.Read) &&
+                span.Length >= length) {
             return Encoding.Latin1.GetString(span[..length]);
         }
 
@@ -204,7 +208,8 @@ public abstract class AbstractMemoryBasedDataStructure : Indexable, IBaseAddress
         }
 
         ByteReaderWriterWithBaseAddress readerWriter = ByteReaderWriterShiftedToBaseAddress;
-        if (readerWriter.TryGetSpan(address, length, out Span<byte> span) && span.Length >= length) {
+        if (readerWriter.TryGetSpan(address, length, out Span<byte> span, MemoryAccess.Write) &&
+                span.Length >= length) {
             span = span[..length];
             int bytesWritten = Encoding.Latin1.GetBytes(value, span);
             Debug.Assert(bytesWritten == valueByteLength);
@@ -218,7 +223,7 @@ public abstract class AbstractMemoryBasedDataStructure : Indexable, IBaseAddress
     /// <inheritdoc/>
     public override void LoadData(uint address, ReadOnlySpan<byte> data) {
         ByteReaderWriterWithBaseAddress readerWriter = ByteReaderWriterShiftedToBaseAddress;
-        if (readerWriter.TryGetSpan(address, data.Length, out Span<byte> writeSpan) &&
+        if (readerWriter.TryGetSpan(address, data.Length, out Span<byte> writeSpan, MemoryAccess.Write) &&
                 writeSpan.Length >= data.Length) {
             data.CopyTo(writeSpan);
             return;
@@ -233,7 +238,7 @@ public abstract class AbstractMemoryBasedDataStructure : Indexable, IBaseAddress
         if (data.Length <= int.MaxValue / sizeof(ushort)) {
             int byteCount = data.Length * sizeof(ushort);
             ByteReaderWriterWithBaseAddress readerWriter = ByteReaderWriterShiftedToBaseAddress;
-            if (readerWriter.TryGetSpan(address, byteCount, out Span<byte> writeSpan) &&
+            if (readerWriter.TryGetSpan(address, byteCount, out Span<byte> writeSpan, MemoryAccess.Write) &&
                     writeSpan.Length >= byteCount) {
                 if (BitConverter.IsLittleEndian) {
                     // Fast path can copy bytes directly into memory without endian swapping.
@@ -258,7 +263,8 @@ public abstract class AbstractMemoryBasedDataStructure : Indexable, IBaseAddress
         int byteCount = (int)length;
         if (byteCount >= 0) {
             ByteReaderWriterWithBaseAddress readerWriter = ByteReaderWriterShiftedToBaseAddress;
-            if (readerWriter.TryGetSpan(address, byteCount, out Span<byte> span) && span.Length >= byteCount) {
+            if (readerWriter.TryGetSpan(address, byteCount, out ReadOnlySpan<byte> span, MemoryAccess.Read) &&
+                    span.Length >= byteCount) {
                 return span[..byteCount].ToArray();
             }
         }
@@ -269,7 +275,8 @@ public abstract class AbstractMemoryBasedDataStructure : Indexable, IBaseAddress
     /// <inheritdoc/>
     public override void GetData(uint address, Span<byte> data) {
         ByteReaderWriterWithBaseAddress readerWriter = ByteReaderWriterShiftedToBaseAddress;
-        if (readerWriter.TryGetSpan(address, data.Length, out Span<byte> span) && span.Length >= data.Length) {
+        if (readerWriter.TryGetSpan(address, data.Length, out ReadOnlySpan<byte> span, MemoryAccess.Read) &&
+                span.Length >= data.Length) {
             span[..data.Length].CopyTo(data);
             return;
         }
@@ -282,11 +289,11 @@ public abstract class AbstractMemoryBasedDataStructure : Indexable, IBaseAddress
         int byteCount = (int)length;
         if (byteCount >= 0) {
             ByteReaderWriterWithBaseAddress readerWriter = ByteReaderWriterShiftedToBaseAddress;
-            if (readerWriter.TryGetSpan(sourceAddress, byteCount, out Span<byte> sourceSpan) &&
-                    sourceSpan.Length >= byteCount &&
-                    readerWriter.TryGetSpan(destinationAddress, byteCount, out Span<byte> destinationSpan) &&
-                    destinationSpan.Length >= byteCount) {
-                sourceSpan[..byteCount].CopyTo(destinationSpan);
+            if (readerWriter.TryGetSpan(sourceAddress, byteCount, out ReadOnlySpan<byte> src, MemoryAccess.Read) &&
+                    src.Length >= byteCount &&
+                    readerWriter.TryGetSpan(destinationAddress, byteCount, out Span<byte> dst, MemoryAccess.Write) &&
+                    dst.Length >= byteCount) {
+                src[..byteCount].CopyTo(dst);
                 return;
             }
         }
@@ -299,7 +306,8 @@ public abstract class AbstractMemoryBasedDataStructure : Indexable, IBaseAddress
         int byteCount = (int)amount;
         if (byteCount >= 0) {
             ByteReaderWriterWithBaseAddress readerWriter = ByteReaderWriterShiftedToBaseAddress;
-            if (readerWriter.TryGetSpan(address, byteCount, out Span<byte> span) && span.Length >= byteCount) {
+            if (readerWriter.TryGetSpan(address, byteCount, out Span<byte> span, MemoryAccess.Write) &&
+                    span.Length >= byteCount) {
                 // TODO: Determine whether it's advantageous to use Span<T>.Clear() when value is 0.
                 span[..byteCount].Fill(value);
                 return;
@@ -316,7 +324,8 @@ public abstract class AbstractMemoryBasedDataStructure : Indexable, IBaseAddress
             int byteCount = (int)amount * sizeof(ushort);
             if (byteCount >= 0) {
                 ByteReaderWriterWithBaseAddress readerWriter = ByteReaderWriterShiftedToBaseAddress;
-                if (readerWriter.TryGetSpan(address, byteCount, out Span<byte> span) && span.Length >= byteCount) {
+                if (readerWriter.TryGetSpan(address, byteCount, out Span<byte> span, MemoryAccess.Write) &&
+                        span.Length >= byteCount) {
                     if (value == 0) {
                         span[..byteCount].Clear();
                     } else {

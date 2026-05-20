@@ -63,7 +63,8 @@ public sealed class UInt32Indexer : MemoryIndexer<uint> {
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private uint ReadValueCore(uint address) {
-        if (_byteReaderWriter.TryGetSpan(address, sizeof(uint), out Span<byte> span) && span.Length >= sizeof(uint)) {
+        if (_byteReaderWriter.TryGetSpan(address, sizeof(uint), out ReadOnlySpan<byte> span, MemoryAccess.Read) &&
+                span.Length >= sizeof(uint)) {
             return ReadValueUnsafe(ref MemoryMarshal.GetReference(span));
         } else {
             return _byteReaderWriter[address]
@@ -75,7 +76,8 @@ public sealed class UInt32Indexer : MemoryIndexer<uint> {
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void WriteValueCore(uint address, uint value) {
-        if (_byteReaderWriter.TryGetSpan(address, sizeof(uint), out Span<byte> span) && span.Length >= sizeof(uint)) {
+        if (_byteReaderWriter.TryGetSpan(address, sizeof(uint), out Span<byte> span, MemoryAccess.Write) &&
+                span.Length >= sizeof(uint)) {
             WriteValueUnsafe(ref MemoryMarshal.GetReference(span), value);
         } else {
             _byteReaderWriter[address] = (byte)value;
