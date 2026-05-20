@@ -11,10 +11,10 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="FluentAssertions"/>
-		<PackageReference Include="JetBrains.Annotations"/>
-		<PackageReference Include="Microsoft.NET.Test.Sdk"/>
-		<PackageReference Include="NSubstitute"/>
+		<PackageReference Include="FluentAssertions" />
+		<PackageReference Include="JetBrains.Annotations" />
+		<PackageReference Include="Microsoft.NET.Test.Sdk" />
+		<PackageReference Include="NSubstitute" />
 		<PackageReference Include="NSubstitute.Analyzers.CSharp">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -27,13 +27,12 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="SingleStepTests.Intel80386.00-65"/>
-		<PackageReference Include="SingleStepTests.Intel80386.66-66"/>
-		<PackageReference Include="SingleStepTests.Intel80386.67.00-67.7F"/>
-		<PackageReference Include="SingleStepTests.Intel80386.67.80-67.FF"/>
-		<PackageReference Include="SingleStepTests.Intel80386.68-FF"/>
-		<PackageReference Include="xunit"/>
-		<PackageReference Include="Xunit.SkippableFact"/>
+		<PackageReference Include="SingleStepTests.Intel80386.00-65" />
+		<PackageReference Include="SingleStepTests.Intel80386.66-66" />
+		<PackageReference Include="SingleStepTests.Intel80386.67.00-67.7F" />
+		<PackageReference Include="SingleStepTests.Intel80386.67.80-67.FF" />
+		<PackageReference Include="SingleStepTests.Intel80386.68-FF" />
+		<PackageReference Include="Xunit.SkippableFact" />
 		<PackageReference Include="xunit.runner.visualstudio">
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 			<PrivateAssets>all</PrivateAssets>
@@ -42,15 +41,16 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 			<PrivateAssets>all</PrivateAssets>
 		</PackageReference>
+		<PackageReference Include="xunit.v3.assert" />
 	</ItemGroup>
 	<ItemGroup>
 		<Compile Remove="UI\**\*.cs" />
 		<AvaloniaXaml Remove="UI\**\*.axaml" />
 	</ItemGroup>
 	<ItemGroup>
-		<ProjectReference Include="..\..\src\Spice86.Core\Spice86.Core.csproj"/>
-		<ProjectReference Include="..\..\src\Spice86.Shared\Spice86.Shared.csproj"/>
-		<ProjectReference Include="..\..\src\Spice86\Spice86.csproj"/>
+		<ProjectReference Include="..\..\src\Spice86.Core\Spice86.Core.csproj" />
+		<ProjectReference Include="..\..\src\Spice86.Shared\Spice86.Shared.csproj" />
+		<ProjectReference Include="..\..\src\Spice86\Spice86.csproj" />
 	</ItemGroup>
 	<ItemGroup>
 		<None Update="Resources\**">
