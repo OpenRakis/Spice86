@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 
 /// <summary>
-/// Implementation of Indexable over a byte array.
+/// Implementation of <see cref="Indexable"/> over a byte array.
 /// </summary>
 public class ByteArrayBasedIndexable : Indexable {
 
@@ -25,32 +25,33 @@ public class ByteArrayBasedIndexable : Indexable {
     public byte[] Array { get => ReaderWriter.Array; }
 
     /// <inheritdoc/>
-    public override UInt8Indexer UInt8 { get; }
+    public sealed override UInt8Indexer UInt8 { get; }
 
     /// <inheritdoc/>
-    public override UInt16Indexer UInt16 { get; }
+    public sealed override UInt16Indexer UInt16 { get; }
 
     /// <inheritdoc/>
-    public override UInt32Indexer UInt32 { get; }
+    public sealed override UInt32Indexer UInt32 { get; }
 
     /// <inheritdoc/>
-    public override Int8Indexer Int8 { get; }
+    public sealed override Int8Indexer Int8 { get; }
 
     /// <inheritdoc/>
-    public override Int16Indexer Int16 { get; }
+    public sealed override Int16Indexer Int16 { get; }
 
     /// <inheritdoc/>
-    public override UInt16BigEndianIndexer UInt16BigEndian { get; }
-    /// <inheritdoc/>
-    public override Int32Indexer Int32 { get; }
+    public sealed override UInt16BigEndianIndexer UInt16BigEndian { get; }
 
     /// <inheritdoc/>
-    public override SegmentedAddress16Indexer SegmentedAddress16 {
+    public sealed override Int32Indexer Int32 { get; }
+
+    /// <inheritdoc/>
+    public sealed override SegmentedAddress16Indexer SegmentedAddress16 {
         get;
     }
 
     /// <inheritdoc/>
-    public override SegmentedAddress32Indexer SegmentedAddress32 {
+    public sealed override SegmentedAddress32Indexer SegmentedAddress32 {
         get;
     }
 
@@ -87,9 +88,7 @@ public class ByteArrayBasedIndexable : Indexable {
     /// <inheritdoc/>
     public override void SetZeroTerminatedString(uint address, ReadOnlySpan<char> value, int maxLength = 0) {
         int valueByteLength = Encoding.Latin1.GetByteCount(value) + 1;
-        if (maxLength == 0) {
-            maxLength = valueByteLength;
-        } else if (maxLength < valueByteLength) {
+        if (maxLength < valueByteLength) {
             throw new UnrecoverableException(
                 $"String {value} is more than {maxLength} cannot write it at offset {address}");
         }
