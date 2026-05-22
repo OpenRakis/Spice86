@@ -100,7 +100,7 @@ public abstract class Indexable : IIndexable {
         }
 
         int valueByteLength = value.Length + 1;
-        if (valueByteLength > maxLength) {
+        if (maxLength != 0 && valueByteLength > maxLength) {
             throw new UnrecoverableException(
                 $"String {value} is more than {maxLength} cannot write it at offset {address}");
         }

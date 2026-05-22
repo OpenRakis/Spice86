@@ -162,8 +162,12 @@ public abstract class AbstractMemoryBasedDataStructure : Indexable, IBaseAddress
 
     /// <inheritdoc/>
     public override void SetZeroTerminatedString(uint address, ReadOnlySpan<char> value, int maxLength = 0) {
+        if (maxLength < 0) {
+            return;
+        }
+
         int valueByteLength = Encoding.Latin1.GetByteCount(value) + 1;
-        if (maxLength < valueByteLength) {
+        if (maxLength != 0 && maxLength < valueByteLength) {
             throw new UnrecoverableException(
                 $"String {value} is more than {maxLength} cannot write it at offset {address}");
         }
