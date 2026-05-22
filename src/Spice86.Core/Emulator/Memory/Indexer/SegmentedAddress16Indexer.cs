@@ -33,14 +33,14 @@ public class SegmentedAddress16Indexer : MemoryIndexer<SegmentedAddress> {
     }
 
     /// <inheritdoc />
-    internal override SegmentedAddress ReadSegmented(ushort segment, uint offset) {
+    protected internal override SegmentedAddress ReadSegmented(ushort segment, uint offset) {
         ushort offsetValue = _uInt16Indexer.ReadSegmented(segment, offset);
         ushort segmentValue = _uInt16Indexer.ReadSegmented(segment, offset + 2u);
         return new(segmentValue, offsetValue);
     }
 
     /// <inheritdoc />
-    internal override void WriteSegmented(ushort segment, uint offset, SegmentedAddress value) {
+    protected internal override void WriteSegmented(ushort segment, uint offset, SegmentedAddress value) {
         _uInt16Indexer.WriteSegmented(segment, offset, value.Offset);
         _uInt16Indexer.WriteSegmented(segment, offset + 2u, value.Segment);
     }

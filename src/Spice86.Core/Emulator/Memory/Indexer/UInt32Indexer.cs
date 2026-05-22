@@ -27,7 +27,7 @@ public sealed class UInt32Indexer : MemoryIndexer<uint> {
     }
 
     /// <inheritdoc />
-    internal override uint ReadSegmented(ushort segment, uint offset) {
+    protected internal override uint ReadSegmented(ushort segment, uint offset) {
         uint address1 = Mmu.TranslateAddress(segment, offset);
         uint address2 = Mmu.TranslateAddress(segment, offset + 1);
         uint address3 = Mmu.TranslateAddress(segment, offset + 2);
@@ -43,7 +43,7 @@ public sealed class UInt32Indexer : MemoryIndexer<uint> {
     }
 
     /// <inheritdoc />
-    internal override void WriteSegmented(ushort segment, uint offset, uint value) {
+    protected internal override void WriteSegmented(ushort segment, uint offset, uint value) {
         uint address1 = Mmu.TranslateAddress(segment, offset);
         uint address2 = Mmu.TranslateAddress(segment, offset + 1);
         uint address3 = Mmu.TranslateAddress(segment, offset + 2);

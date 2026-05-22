@@ -23,15 +23,15 @@ public sealed class Int16Indexer : MemoryIndexer<short> {
     }
 
     /// <inheritdoc />
-    internal override short ReadSegmented(ushort segment, uint offset) {
+    protected internal override short ReadSegmented(ushort segment, uint offset) {
         return (short)_uInt16Indexer.ReadSegmented(segment, offset);
     }
 
     /// <inheritdoc />
-    internal override void WriteSegmented(ushort segment, uint offset, short value) {
+    protected internal override void WriteSegmented(ushort segment, uint offset, short value) {
         _uInt16Indexer.WriteSegmented(segment, offset, (ushort)value);
     }
-    
+
     /// <inheritdoc/>
     public override int Count => _uInt16Indexer.Count;
 }

@@ -24,12 +24,12 @@ public sealed class UInt8Indexer : MemoryIndexer<byte> {
     }
 
     /// <inheritdoc />
-    internal override byte ReadSegmented(ushort segment, uint offset) {
+    protected internal override byte ReadSegmented(ushort segment, uint offset) {
         return _byteReaderWriter[Mmu.TranslateAddress(segment, offset)];
     }
 
     /// <inheritdoc />
-    internal override void WriteSegmented(ushort segment, uint offset, byte value) {
+    protected internal override void WriteSegmented(ushort segment, uint offset, byte value) {
         _byteReaderWriter[Mmu.TranslateAddress(segment, offset)] = value;
     }
 

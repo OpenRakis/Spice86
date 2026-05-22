@@ -23,15 +23,15 @@ public sealed class Int8Indexer : MemoryIndexer<sbyte> {
     }
 
     /// <inheritdoc />
-    internal override sbyte ReadSegmented(ushort segment, uint offset) {
+    protected internal override sbyte ReadSegmented(ushort segment, uint offset) {
         return (sbyte)_uInt8Indexer.ReadSegmented(segment, offset);
     }
 
     /// <inheritdoc />
-    internal override void WriteSegmented(ushort segment, uint offset, sbyte value) {
+    protected internal override void WriteSegmented(ushort segment, uint offset, sbyte value) {
         _uInt8Indexer.WriteSegmented(segment, offset, (byte)value);
     }
-    
+
     /// <inheritdoc/>
     public override int Count => _uInt8Indexer.Count;
 }

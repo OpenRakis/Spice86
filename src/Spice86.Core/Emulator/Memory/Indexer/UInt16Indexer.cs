@@ -28,7 +28,7 @@ public sealed class UInt16Indexer : MemoryIndexer<ushort> {
     }
 
     /// <inheritdoc />
-    internal override ushort ReadSegmented(ushort segment, uint offset) {
+    protected internal override ushort ReadSegmented(ushort segment, uint offset) {
         uint address1 = Mmu.TranslateAddress(segment, offset);
         uint address2 = Mmu.TranslateAddress(segment, offset + 1);
         if (AreAddressesSequential(address1, address2)) {
@@ -39,7 +39,7 @@ public sealed class UInt16Indexer : MemoryIndexer<ushort> {
     }
 
     /// <inheritdoc />
-    internal override void WriteSegmented(ushort segment, uint offset, ushort value) {
+    protected internal override void WriteSegmented(ushort segment, uint offset, ushort value) {
         uint address1 = Mmu.TranslateAddress(segment, offset);
         uint address2 = Mmu.TranslateAddress(segment, offset + 1);
         if (AreAddressesSequential(address1, address2)) {
@@ -49,7 +49,7 @@ public sealed class UInt16Indexer : MemoryIndexer<ushort> {
             _byteReaderWriter[address2] = (byte)(value >>> 8);
         }
     }
-    
+
     /// <inheritdoc/>
     public override int Count => _byteReaderWriter.Length / sizeof(ushort);
 

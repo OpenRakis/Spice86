@@ -23,15 +23,15 @@ public sealed class Int32Indexer : MemoryIndexer<int> {
     }
 
     /// <inheritdoc />
-    internal override int ReadSegmented(ushort segment, uint offset) {
+    protected internal override int ReadSegmented(ushort segment, uint offset) {
         return (int)_uInt32Indexer.ReadSegmented(segment, offset);
     }
 
     /// <inheritdoc />
-    internal override void WriteSegmented(ushort segment, uint offset, int value) {
+    protected internal override void WriteSegmented(ushort segment, uint offset, int value) {
         _uInt32Indexer.WriteSegmented(segment, offset, (uint)value);
     }
-    
+
     /// <inheritdoc/>
     public override int Count => _uInt32Indexer.Count;
 }

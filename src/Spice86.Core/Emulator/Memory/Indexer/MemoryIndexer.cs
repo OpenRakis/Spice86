@@ -67,13 +67,13 @@ public abstract class MemoryIndexer<T> : Indexer<T>, IList<T> {
     /// Translates the segment:offset pair and reads a value without an MMU access check.
     /// Used by composite indexers that perform their own check for the full access range.
     /// </summary>
-    internal abstract T ReadSegmented(ushort segment, uint offset);
+    protected internal abstract T ReadSegmented(ushort segment, uint offset);
 
     /// <summary>
     /// Translates the segment:offset pair and writes a value without an MMU access check.
     /// Used by composite indexers that perform their own check for the full access range.
     /// </summary>
-    internal abstract void WriteSegmented(ushort segment, uint offset, T value);
+    protected internal abstract void WriteSegmented(ushort segment, uint offset, T value);
 
     /// <summary>
     /// Gets or sets the data at the specified segmented address and offset in the memory.
