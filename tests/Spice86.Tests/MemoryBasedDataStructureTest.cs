@@ -23,6 +23,10 @@ public class MemoryBasedDataStructureTest {
     private static readonly uint[] ExpectedUInt32Array = { 0x01010101, 0x02020202 };
     private static readonly SegmentedAddress[] ExpectedSegmentedAddressArray = { new (0x01, 0x02), new (0x03, 0x04) };
 
+    private const string InputStringUnicode = "012345\u2086789";
+    private const string EncodedStringUnicodeLatin1 = "012345?789";
+    private static readonly int StringUnicodeLength = InputStringUnicode.Length + 1;
+
     // Offset in struct for read test
     private const uint ReadOffset = 10;
     // Offset in struct for write test
@@ -102,6 +106,48 @@ public class MemoryBasedDataStructureTest {
         // Write
         memoryBasedDataStructure.SetZeroTerminatedString(WriteOffset, ExpectedString, ExpectedStringLength);
         Assert.Equal(ExpectedString, data.GetZeroTerminatedString(WriteAddress, ExpectedStringLength));
+    }
+
+    [Fact]
+    public void CanMapStringUnicode() {
+        // Arrange
+        (ByteArrayBasedIndexable data, MemoryBasedDataStructure memoryBasedDataStructure) = Init(StructAddress);
+        data.SetZeroTerminatedString(ReadAddress, InputStringUnicode, StringUnicodeLength);
+
+        // Act & Assert
+        // Read
+        Assert.Equal(EncodedStringUnicodeLatin1, memoryBasedDataStructure.GetZeroTerminatedString(ReadOffset, StringUnicodeLength));
+        // Write
+        memoryBasedDataStructure.SetZeroTerminatedString(WriteOffset, InputStringUnicode, StringUnicodeLength);
+        Assert.Equal(EncodedStringUnicodeLatin1, data.GetZeroTerminatedString(WriteAddress, StringUnicodeLength));
+    }
+
+    [Fact]
+    public void CanMapStringPadded() {
+        // Arrange
+        (ByteArrayBasedIndexable data, MemoryBasedDataStructure memoryBasedDataStructure) = Init(StructAddress);
+        data.SetSpacePaddedString(ReadAddress, ExpectedString, ExpectedString.Length);
+
+        // Act & Assert
+        // Read
+        Assert.Equal(ExpectedString, memoryBasedDataStructure.GetSpacePaddedString(ReadOffset, ExpectedString.Length));
+        // Write
+        memoryBasedDataStructure.SetSpacePaddedString(WriteOffset, ExpectedString, ExpectedString.Length);
+        Assert.Equal(ExpectedString, data.GetSpacePaddedString(WriteAddress, ExpectedString.Length));
+    }
+
+    [Fact]
+    public void CanMapStringPaddedTruncated() {
+        // Arrange
+        (ByteArrayBasedIndexable data, MemoryBasedDataStructure memoryBasedDataStructure) = Init(StructAddress);
+        data.SetSpacePaddedString(ReadAddress, ExpectedString, ExpectedString.Length / 2);
+
+        // Act & Assert
+        // Read
+        Assert.Equal(ExpectedString[..(ExpectedString.Length / 2)], memoryBasedDataStructure.GetSpacePaddedString(ReadOffset, ExpectedString.Length / 2));
+        // Write
+        memoryBasedDataStructure.SetSpacePaddedString(WriteOffset, ExpectedString, ExpectedString.Length / 2);
+        Assert.Equal(ExpectedString[..(ExpectedString.Length / 2)], data.GetSpacePaddedString(WriteAddress, ExpectedString.Length / 2));
     }
 
     [Fact]

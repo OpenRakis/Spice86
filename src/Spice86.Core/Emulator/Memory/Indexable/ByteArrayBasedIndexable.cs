@@ -128,7 +128,7 @@ public class ByteArrayBasedIndexable : Indexable {
         if (ReaderWriter.TryGetSpan(address, length, out Span<byte> span, MemoryAccess.Write) &&
                 span.Length >= length) {
             span = span[..length];
-            int bytesWritten = Encoding.Latin1.GetBytes(value, span);
+            int bytesWritten = Encoding.Latin1.GetBytes(value.Length > length ? value[..length] : value, span);
             span[bytesWritten..].Fill((byte)' ');
             return;
         }
