@@ -52,6 +52,13 @@ public abstract partial class ViewModelWithErrorDialog : ViewModelBase {
         }
     }
 
+    [RelayCommand]
+    public void ShowJoystickMapper(object? commandParameter) {
+        if (commandParameter is ShowAdditionnalWindowBehavior showAdditionnalWindowBehavior) {
+            showAdditionnalWindowBehavior.ShowJoystickMapper();
+        }
+    }
+
     protected void ShowError(Exception e) {
         Exception = e.GetBaseException();
         IsDialogVisible = true;
