@@ -29,22 +29,22 @@ public sealed class UInt16BigEndianIndexer : MemoryIndexer<ushort> {
 
     /// <inheritdoc />
     protected internal override ushort ReadSegmented(ushort segment, uint offset) {
-        uint address1 = Mmu.TranslateAddress(segment, offset);
-        uint address2 = Mmu.TranslateAddress(segment, offset + 1);
-        if (AreAddressesSequential(address1, address2)) {
-            return ReadValueCore(address1);
+        if (Mmu.TryTranslateAddressRange(segment, offset, sizeof(ushort), out uint address)) {
+            return ReadValueCore(address);
         } else {
+            uint address1 = Mmu.TranslateAddress(segment, offset);
+            uint address2 = Mmu.TranslateAddress(segment, offset + 1);
             return (ushort)(_byteReaderWriter[address2] | ((uint)_byteReaderWriter[address1] << 8));
         }
     }
 
     /// <inheritdoc />
     protected internal override void WriteSegmented(ushort segment, uint offset, ushort value) {
-        uint address1 = Mmu.TranslateAddress(segment, offset);
-        uint address2 = Mmu.TranslateAddress(segment, offset + 1);
-        if (AreAddressesSequential(address1, address2)) {
-            WriteValueCore(address1, value);
+        if (Mmu.TryTranslateAddressRange(segment, offset, sizeof(ushort), out uint address)) {
+            WriteValueCore(address, value);
         } else {
+            uint address1 = Mmu.TranslateAddress(segment, offset);
+            uint address2 = Mmu.TranslateAddress(segment, offset + 1);
             _byteReaderWriter[address1] = (byte)(value >>> 8);
             _byteReaderWriter[address2] = (byte)value;
         }
@@ -73,9 +73,6 @@ public sealed class UInt16BigEndianIndexer : MemoryIndexer<ushort> {
             _byteReaderWriter[address + 1] = (byte)value;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool AreAddressesSequential(uint address1, uint address2) => address2 - address1 == 1;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static ushort ReadValueUnsafe(ref byte source) => BitConverter.IsLittleEndian

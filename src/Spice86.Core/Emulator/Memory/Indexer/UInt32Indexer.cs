@@ -10,14 +10,14 @@ using System.Runtime.InteropServices;
 /// Provides indexed unsigned 32-bit access over memory.
 /// </summary>
 public sealed class UInt32Indexer : MemoryIndexer<uint> {
-    private readonly IByteReaderWriter _byteReaderWriter;
+    internal IByteReaderWriter ByteReaderWriter { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="UInt32Indexer"/> class with the specified byteReadeWriter.
     /// </summary>
     /// <param name="byteReaderWriter">Where data is read and written.</param>
     public UInt32Indexer(IByteReaderWriter byteReaderWriter, IMmu mmu) : base(mmu, sizeof(uint)) {
-        _byteReaderWriter = byteReaderWriter;
+        ByteReaderWriter = byteReaderWriter;
     }
 
     /// <inheritdoc/>
@@ -28,71 +28,63 @@ public sealed class UInt32Indexer : MemoryIndexer<uint> {
 
     /// <inheritdoc />
     protected internal override uint ReadSegmented(ushort segment, uint offset) {
-        uint address1 = Mmu.TranslateAddress(segment, offset);
-        uint address2 = Mmu.TranslateAddress(segment, offset + 1);
-        uint address3 = Mmu.TranslateAddress(segment, offset + 2);
-        uint address4 = Mmu.TranslateAddress(segment, offset + 3);
-        if (AreAddressesSequential(address1, address2, address3, address4)) {
-            return ReadValueCore(address1);
+        if (Mmu.TryTranslateAddressRange(segment, offset, sizeof(uint), out uint address)) {
+            return ReadValueCore(address);
         } else {
-            return _byteReaderWriter[address1]
-                 | ((uint)_byteReaderWriter[address2] << 8)
-                 | ((uint)_byteReaderWriter[address3] << 16)
-                 | ((uint)_byteReaderWriter[address4] << 24);
+            uint address1 = Mmu.TranslateAddress(segment, offset);
+            uint address2 = Mmu.TranslateAddress(segment, offset + 1);
+            uint address3 = Mmu.TranslateAddress(segment, offset + 2);
+            uint address4 = Mmu.TranslateAddress(segment, offset + 3);
+            return ByteReaderWriter[address1]
+                 | ((uint)ByteReaderWriter[address2] << 8)
+                 | ((uint)ByteReaderWriter[address3] << 16)
+                 | ((uint)ByteReaderWriter[address4] << 24);
         }
     }
 
     /// <inheritdoc />
     protected internal override void WriteSegmented(ushort segment, uint offset, uint value) {
-        uint address1 = Mmu.TranslateAddress(segment, offset);
-        uint address2 = Mmu.TranslateAddress(segment, offset + 1);
-        uint address3 = Mmu.TranslateAddress(segment, offset + 2);
-        uint address4 = Mmu.TranslateAddress(segment, offset + 3);
-        if (AreAddressesSequential(address1, address2, address3, address4)) {
-            WriteValueCore(address1, value);
+        if (Mmu.TryTranslateAddressRange(segment, offset, sizeof(uint), out uint address)) {
+            WriteValueCore(address, value);
         } else {
-            _byteReaderWriter[address1] = (byte)value;
-            _byteReaderWriter[address2] = (byte)(value >>> 8);
-            _byteReaderWriter[address3] = (byte)(value >>> 16);
-            _byteReaderWriter[address4] = (byte)(value >>> 24);
+            uint address1 = Mmu.TranslateAddress(segment, offset);
+            uint address2 = Mmu.TranslateAddress(segment, offset + 1);
+            uint address3 = Mmu.TranslateAddress(segment, offset + 2);
+            uint address4 = Mmu.TranslateAddress(segment, offset + 3);
+            ByteReaderWriter[address1] = (byte)value;
+            ByteReaderWriter[address2] = (byte)(value >>> 8);
+            ByteReaderWriter[address3] = (byte)(value >>> 16);
+            ByteReaderWriter[address4] = (byte)(value >>> 24);
         }
     }
 
     /// <inheritdoc/>
-    public override int Count => _byteReaderWriter.Length / sizeof(uint);
+    public override int Count => ByteReaderWriter.Length / sizeof(uint);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private uint ReadValueCore(uint address) {
-        if (_byteReaderWriter.TryGetSpan(address, sizeof(uint), out ReadOnlySpan<byte> span, MemoryAccess.Read) &&
+        if (ByteReaderWriter.TryGetSpan(address, sizeof(uint), out ReadOnlySpan<byte> span, MemoryAccess.Read) &&
                 span.Length >= sizeof(uint)) {
             return ReadValueUnsafe(ref MemoryMarshal.GetReference(span));
         } else {
-            return _byteReaderWriter[address]
-                 | ((uint)_byteReaderWriter[address + 1] << 8)
-                 | ((uint)_byteReaderWriter[address + 2] << 16)
-                 | ((uint)_byteReaderWriter[address + 3] << 24);
+            return ByteReaderWriter[address]
+                 | ((uint)ByteReaderWriter[address + 1] << 8)
+                 | ((uint)ByteReaderWriter[address + 2] << 16)
+                 | ((uint)ByteReaderWriter[address + 3] << 24);
         }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void WriteValueCore(uint address, uint value) {
-        if (_byteReaderWriter.TryGetSpan(address, sizeof(uint), out Span<byte> span, MemoryAccess.Write) &&
+        if (ByteReaderWriter.TryGetSpan(address, sizeof(uint), out Span<byte> span, MemoryAccess.Write) &&
                 span.Length >= sizeof(uint)) {
             WriteValueUnsafe(ref MemoryMarshal.GetReference(span), value);
         } else {
-            _byteReaderWriter[address] = (byte)value;
-            _byteReaderWriter[address + 1] = (byte)(value >>> 8);
-            _byteReaderWriter[address + 2] = (byte)(value >>> 16);
-            _byteReaderWriter[address + 3] = (byte)(value >>> 24);
+            ByteReaderWriter[address] = (byte)value;
+            ByteReaderWriter[address + 1] = (byte)(value >>> 8);
+            ByteReaderWriter[address + 2] = (byte)(value >>> 16);
+            ByteReaderWriter[address + 3] = (byte)(value >>> 24);
         }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool AreAddressesSequential(uint address1, uint address2, uint address3, uint address4) {
-        // Using bitwise AND instead of logical AND makes this branchless, which is possibly faster.
-        return (address2 - address1 == 1)
-             & (address3 - address1 == 2)
-             & (address4 - address1 == 3);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

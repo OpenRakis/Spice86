@@ -7,32 +7,32 @@ using Spice86.Core.Emulator.Memory.ReaderWriter;
 /// Provides indexed byte access over memory.
 /// </summary>
 public sealed class UInt8Indexer : MemoryIndexer<byte> {
-    private readonly IByteReaderWriter _byteReaderWriter;
+    internal IByteReaderWriter ByteReaderWriter { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="UInt8Indexer"/> class with the specified byteReadeWriter.
     /// </summary>
     /// <param name="byteReaderWriter">Where data is read and written.</param>
     public UInt8Indexer(IByteReaderWriter byteReaderWriter, IMmu mmu) : base(mmu, sizeof(byte)) {
-        _byteReaderWriter = byteReaderWriter;
+        ByteReaderWriter = byteReaderWriter;
     }
 
     /// <inheritdoc/>
     public override byte this[uint address] {
-        get => _byteReaderWriter[address];
-        set => _byteReaderWriter[address] = value;
+        get => ByteReaderWriter[address];
+        set => ByteReaderWriter[address] = value;
     }
 
     /// <inheritdoc />
     protected internal override byte ReadSegmented(ushort segment, uint offset) {
-        return _byteReaderWriter[Mmu.TranslateAddress(segment, offset)];
+        return ByteReaderWriter[Mmu.TranslateAddress(segment, offset)];
     }
 
     /// <inheritdoc />
     protected internal override void WriteSegmented(ushort segment, uint offset, byte value) {
-        _byteReaderWriter[Mmu.TranslateAddress(segment, offset)] = value;
+        ByteReaderWriter[Mmu.TranslateAddress(segment, offset)] = value;
     }
 
     /// <inheritdoc/>
-    public override int Count => _byteReaderWriter.Length;
+    public override int Count => ByteReaderWriter.Length;
 }

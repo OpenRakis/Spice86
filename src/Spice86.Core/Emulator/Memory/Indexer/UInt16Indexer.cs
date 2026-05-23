@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 /// Provides indexed unsigned 16-byte access over memory.
 /// </summary>
 public sealed class UInt16Indexer : MemoryIndexer<ushort> {
-    private readonly IByteReaderWriter _byteReaderWriter;
+    internal IByteReaderWriter ByteReaderWriter { get; }
 
     /// <summary>
     /// Creates a new instance of the <see cref="UInt16Indexer"/> class
@@ -18,7 +18,7 @@ public sealed class UInt16Indexer : MemoryIndexer<ushort> {
     /// </summary>
     /// <param name="byteReaderWriter">Where data is read and written.</param>
     public UInt16Indexer(IByteReaderWriter byteReaderWriter, IMmu mmu) : base(mmu, sizeof(ushort)) {
-        _byteReaderWriter = byteReaderWriter;
+        ByteReaderWriter = byteReaderWriter;
     }
 
     /// <inheritdoc/>
@@ -29,53 +29,50 @@ public sealed class UInt16Indexer : MemoryIndexer<ushort> {
 
     /// <inheritdoc />
     protected internal override ushort ReadSegmented(ushort segment, uint offset) {
-        uint address1 = Mmu.TranslateAddress(segment, offset);
-        uint address2 = Mmu.TranslateAddress(segment, offset + 1);
-        if (AreAddressesSequential(address1, address2)) {
-            return ReadValueCore(address1);
+        if (Mmu.TryTranslateAddressRange(segment, offset, sizeof(ushort), out uint address)) {
+            return ReadValueCore(address);
         } else {
-            return (ushort)(_byteReaderWriter[address1] | (_byteReaderWriter[address2] << 8));
+            uint address1 = Mmu.TranslateAddress(segment, offset);
+            uint address2 = Mmu.TranslateAddress(segment, offset + 1);
+            return (ushort)(ByteReaderWriter[address1] | (ByteReaderWriter[address2] << 8));
         }
     }
 
     /// <inheritdoc />
     protected internal override void WriteSegmented(ushort segment, uint offset, ushort value) {
-        uint address1 = Mmu.TranslateAddress(segment, offset);
-        uint address2 = Mmu.TranslateAddress(segment, offset + 1);
-        if (AreAddressesSequential(address1, address2)) {
-            WriteValueCore(address1, value);
+        if (Mmu.TryTranslateAddressRange(segment, offset, sizeof(ushort), out uint address)) {
+            WriteValueCore(address, value);
         } else {
-            _byteReaderWriter[address1] = (byte)value;
-            _byteReaderWriter[address2] = (byte)(value >>> 8);
+            uint address1 = Mmu.TranslateAddress(segment, offset);
+            uint address2 = Mmu.TranslateAddress(segment, offset + 1);
+            ByteReaderWriter[address1] = (byte)value;
+            ByteReaderWriter[address2] = (byte)(value >>> 8);
         }
     }
 
     /// <inheritdoc/>
-    public override int Count => _byteReaderWriter.Length / sizeof(ushort);
+    public override int Count => ByteReaderWriter.Length / sizeof(ushort);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private ushort ReadValueCore(uint address) {
-        if (_byteReaderWriter.TryGetSpan(address, sizeof(ushort), out ReadOnlySpan<byte> span, MemoryAccess.Read) &&
+        if (ByteReaderWriter.TryGetSpan(address, sizeof(ushort), out ReadOnlySpan<byte> span, MemoryAccess.Read) &&
                 span.Length >= sizeof(ushort)) {
             return ReadValueUnsafe(ref MemoryMarshal.GetReference(span));
         } else {
-            return (ushort)(_byteReaderWriter[address] | (_byteReaderWriter[address + 1] << 8));
+            return (ushort)(ByteReaderWriter[address] | (ByteReaderWriter[address + 1] << 8));
         }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void WriteValueCore(uint address, ushort value) {
-        if (_byteReaderWriter.TryGetSpan(address, sizeof(ushort), out Span<byte> span, MemoryAccess.Write) &&
+        if (ByteReaderWriter.TryGetSpan(address, sizeof(ushort), out Span<byte> span, MemoryAccess.Write) &&
                 span.Length >= sizeof(ushort)) {
             WriteValueUnsafe(ref MemoryMarshal.GetReference(span), value);
         } else {
-            _byteReaderWriter[address] = (byte)value;
-            _byteReaderWriter[address + 1] = (byte)(value >>> 8);
+            ByteReaderWriter[address] = (byte)value;
+            ByteReaderWriter[address + 1] = (byte)(value >>> 8);
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool AreAddressesSequential(uint address1, uint address2) => address2 - address1 == 1;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static ushort ReadValueUnsafe(ref byte source) => BitConverter.IsLittleEndian

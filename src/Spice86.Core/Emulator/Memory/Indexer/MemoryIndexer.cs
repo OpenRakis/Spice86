@@ -5,13 +5,13 @@ using Spice86.Shared.Emulator.Memory;
 
 using System.Collections;
 
-public abstract class MemoryIndexer<T> : Indexer<T>, IList<T> {
+public abstract class MemoryIndexer<T> : Indexer<T>, IList<T>, IReadOnlyList<T> {
     private readonly uint _accessSize;
 
     /// <summary>
     /// The MMU used for segmented access checks and address translation.
     /// </summary>
-    protected IMmu Mmu { get; }
+    protected internal IMmu Mmu { get; }
 
     /// <summary>
     /// Initializes a new instance.
@@ -85,7 +85,7 @@ public abstract class MemoryIndexer<T> : Indexer<T>, IList<T> {
     }
 
     /// <inheritdoc />
-    public IEnumerator<T> GetEnumerator() {
+    public virtual IEnumerator<T> GetEnumerator() {
         for (int i = 0; i < Count; i++) {
             yield return this[i];
         }
@@ -103,12 +103,12 @@ public abstract class MemoryIndexer<T> : Indexer<T>, IList<T> {
     public void Clear() => throw new NotImplementedException();
 
     /// <inheritdoc />
-    public bool Contains(T item) {
+    public virtual bool Contains(T item) {
         return IndexOf(item) != -1;
     }
 
     /// <inheritdoc />
-    public void CopyTo(T[] array, int arrayIndex) {
+    public virtual void CopyTo(T[] array, int arrayIndex) {
         for (int i = 0; i < Count; i++) {
             array[arrayIndex + i] = this[i];
         }
@@ -124,7 +124,7 @@ public abstract class MemoryIndexer<T> : Indexer<T>, IList<T> {
     public bool IsReadOnly => false;
 
     /// <inheritdoc />
-    public int IndexOf(T item) {
+    public virtual int IndexOf(T item) {
         for (int i = 0; i < Count; i++) {
             if (EqualityComparer<T>.Default.Equals(this[i], item)) {
                 return i;
