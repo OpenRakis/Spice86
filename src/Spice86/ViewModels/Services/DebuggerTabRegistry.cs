@@ -22,4 +22,26 @@ internal sealed class DebuggerTabRegistry : IDebuggerTabRegistry {
         }
         return Array.Empty<DebuggerSubTabViewModel>();
     }
+
+    /// <inheritdoc />
+    public void Dispose() {
+        foreach (object value in _items.Values) {
+            if (value is IDisposable disposable) {
+                disposable.Dispose();
+            } else if (value is IEnumerable<object> collection) {
+                foreach (object item in collection) {
+                    if (item is IDisposable disposableItem) {
+                        disposableItem.Dispose();
+                    }
+                }
+            }
+        }
+        foreach (List<DebuggerSubTabViewModel> subTabs in _subTabsByGroup.Values) {
+            foreach (DebuggerSubTabViewModel subTab in subTabs) {
+                if (subTab.ViewModel is IDisposable disposable) {
+                    disposable.Dispose();
+                }
+            }
+        }
+    }
 }

@@ -141,7 +141,11 @@ public class DosMemoryManager {
             .MaxBy(block => block.Size) ?? _start;
     }
 
-    private IEnumerable<DosMemoryControlBlock> EnumerateBlocks() {
+    /// <summary>
+    /// Walks the MCB chain starting from the first block, yielding each MCB in order
+    /// until the last block is reached. Intended for read-only inspection.
+    /// </summary>
+    public IEnumerable<DosMemoryControlBlock> EnumerateBlocks() {
         DosMemoryControlBlock? current = _start;
         while (current != null) {
             yield return current;

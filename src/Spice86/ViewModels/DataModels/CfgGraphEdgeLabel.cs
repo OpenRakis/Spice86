@@ -1,4 +1,6 @@
-namespace Spice86.ViewModels;
+namespace Spice86.ViewModels.DataModels;
+
+using Spice86.ViewModels.Enums;
 
 /// <summary>
 /// View model representing an edge label in the CFG graph, carrying display text

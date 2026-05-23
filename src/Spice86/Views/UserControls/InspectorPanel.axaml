@@ -1,0 +1,19 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:pgc="clr-namespace:Avalonia.PropertyGrid.Controls;assembly=Avalonia.PropertyGrid"
+             xmlns:controls="clr-namespace:Spice86.Views.Controls"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="Spice86.Views.UserControls.InspectorPanel"
+             x:Name="Root">
+    <ScrollViewer>
+        <controls:GroupBox Header="{Binding #Root.Header}">
+            <pgc:PropertyGrid DataContext="{Binding #Root.Data}">
+                <TextElement.FontFamily>
+                    <OnPlatform Default="{StaticResource RobotoMonoFont}" />
+                </TextElement.FontFamily>
+            </pgc:PropertyGrid>
+        </controls:GroupBox>
+    </ScrollViewer>
+</UserControl>

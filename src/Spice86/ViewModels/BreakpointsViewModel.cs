@@ -15,6 +15,7 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.VM.Breakpoint.Serializable;
 using Spice86.Shared.Utils;
+using Spice86.ViewModels.DataModels;
 using Spice86.ViewModels.Messages;
 using Spice86.ViewModels.Services;
 

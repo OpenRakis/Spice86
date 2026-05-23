@@ -24,9 +24,11 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.ViewModels;
+using Spice86.ViewModels.Enums;
 using Spice86.ViewModels.Services;
 
 using Xunit;
+using Spice86.ViewModels.DataModels;
 
 /// <summary>
 /// UI tests for <see cref="CfgCpuViewModel"/> validating block-centric rendering, indicators,

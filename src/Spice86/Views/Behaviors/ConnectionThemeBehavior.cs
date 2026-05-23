@@ -8,7 +8,8 @@ using Avalonia.Styling;
 
 using AvaloniaGraphControl;
 
-using Spice86.ViewModels;
+using Spice86.ViewModels.DataModels;
+using Spice86.ViewModels.Enums;
 using Spice86.Views.Converters;
 
 using System;

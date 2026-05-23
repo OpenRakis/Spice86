@@ -96,6 +96,7 @@ public class Spice86DependencyInjection : IDisposable {
     private readonly McpHttpHost? _mcpHttpTransport;
     private readonly DeviceSchedulerThread? _vgaTimingThread;
     private readonly CfgNodeExecutionCompiler _cfgNodeExecutionCompiler;
+    private readonly DebuggerTabRegistry _debuggerTabRegistry;
     private bool _disposed;
     private bool _machineDisposedAfterRun;
 
@@ -704,6 +705,7 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("BIOS and DOS interrupt handlers created...");
         }
 
+        _debuggerTabRegistry = new DebuggerTabRegistry();
         Machine = machine;
         ProgramExecutor = programExecutor;
         McpServices = emulatorMcpServices;
@@ -713,31 +715,34 @@ public class Spice86DependencyInjection : IDisposable {
         if (mainWindow != null && uiDispatcher != null &&
             hostStorageProvider != null && textClipboard != null) {
             IMessenger messenger = WeakReferenceMessenger.Default;
-            IDebuggerTabRegistry debuggerTabRegistry = new DebuggerTabRegistry();
 
             BreakpointsTabPlugin breakpointsTabPlugin = new(state, pauseHandler, messenger,
                 emulatorBreakpointsManager, uiDispatcher, textClipboard, memory);
-            breakpointsTabPlugin.Register(debuggerTabRegistry);
+            breakpointsTabPlugin.Register(_debuggerTabRegistry);
 
-            BreakpointsViewModel breakpointsViewModel = debuggerTabRegistry.Get<BreakpointsViewModel>(DebuggerTabId.Breakpoints);
+            BreakpointsViewModel breakpointsViewModel = _debuggerTabRegistry.Get<BreakpointsViewModel>(DebuggerTabId.Breakpoints);
             breakpointsViewModel.RestoreBreakpoints(deserializedUserBreakpoints);
 
             DisassemblyTabPlugin disassemblyTabPlugin = new(emulatorBreakpointsManager, memory,
                 state, functionCatalogue.FunctionInformations, breakpointsViewModel, pauseHandler,
                 uiDispatcher, messenger, textClipboard, loggerService);
-            disassemblyTabPlugin.Register(debuggerTabRegistry);
+            disassemblyTabPlugin.Register(_debuggerTabRegistry);
 
             DevicesTabPlugin devicesTabPlugin = new(videoState.DacRegisters.ArgbPalette,
                 uiDispatcher, vgaRenderer, videoState, vgaTimingEngine, hostStorageProvider, midiDevice);
-            devicesTabPlugin.Register(debuggerTabRegistry);
+            devicesTabPlugin.Register(_debuggerTabRegistry);
+
+            DosTabPlugin dosTabPlugin = new(dos.MemoryManager, dos.Ems, dos.Xms,
+                dos.DosSwappableDataArea, memory, pauseHandler);
+            dosTabPlugin.Register(_debuggerTabRegistry);
 
             CpuTabPlugin cpuTabPlugin = new(state, memory, pauseHandler, uiDispatcher);
-            cpuTabPlugin.Register(debuggerTabRegistry);
+            cpuTabPlugin.Register(_debuggerTabRegistry);
 
             CfgCpuTabPlugin cfgCpuTabPlugin = new(uiDispatcher,
                 cfgCpu.ExecutionContextManager, pauseHandler, nodeToString, asmRenderingConfig,
                 cfgBlockGraphExporter);
-            cfgCpuTabPlugin.Register(debuggerTabRegistry);
+            cfgCpuTabPlugin.Register(_debuggerTabRegistry);
 
             StructureViewModelFactory structureViewModelFactory = new(configuration,
                 state, loggerService, pauseHandler);
@@ -745,10 +750,10 @@ public class Spice86DependencyInjection : IDisposable {
             MemoryTabPlugin memoryTabPlugin = new(memory, memoryDataExporter, state, stack,
                 breakpointsViewModel, pauseHandler, messenger, uiDispatcher,
                 textClipboard, hostStorageProvider, structureViewModelFactory, dos.Ems, dos.Xms);
-            memoryTabPlugin.Register(debuggerTabRegistry);
+            memoryTabPlugin.Register(_debuggerTabRegistry);
 
             DebugWindowViewModel debugWindowViewModel = new(
-                WeakReferenceMessenger.Default, uiDispatcher, pauseHandler, debuggerTabRegistry);
+                WeakReferenceMessenger.Default, uiDispatcher, pauseHandler, _debuggerTabRegistry);
 
             SoftwareMixerViewModel mixerViewModel = new(mixer, soundBlaster, opl);
 
@@ -850,6 +855,7 @@ public class Spice86DependencyInjection : IDisposable {
         if (!_disposed) {
             if (disposing) {
                 ProgramExecutor.EmulationStopped -= OnProgramExecutorEmulationStopped;
+                _debuggerTabRegistry.Dispose();
                 _mcpHttpTransport?.Dispose();
 
                 ProgramExecutor.Dispose();

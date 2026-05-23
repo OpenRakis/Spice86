@@ -1,6 +1,7 @@
 namespace Spice86.ViewModels.Services;
 
-public enum DebuggerTabId {
+public enum DebuggerTabId
+{
     Disassembly,
     CfgCpu,
     Cpu,
@@ -9,5 +10,15 @@ public enum DebuggerTabId {
     DevicesGroup,
     DeviceVideoCard,
     DevicePalette,
-    DeviceMidi
+    DeviceMidi,
+    DeviceDualPic,
+    DevicePit,
+    DeviceCmos,
+    DeviceDma,
+    DosGroup,
+    DosMemorySummary,
+    DosPspChain,
+    DosMcbs,
+    DosPspGraph,
+    DosMemoryOverview
 }

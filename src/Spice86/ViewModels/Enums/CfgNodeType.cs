@@ -1,4 +1,4 @@
-namespace Spice86.ViewModels;
+namespace Spice86.ViewModels.Enums;
 
 /// <summary>
 /// Classifies CFG graph nodes by instruction type for visual styling.

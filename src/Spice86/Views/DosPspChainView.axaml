@@ -1,0 +1,29 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewModels="clr-namespace:Spice86.ViewModels"
+             xmlns:userControls="clr-namespace:Spice86.Views.UserControls"
+             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="500"
+             x:Class="Spice86.Views.DosPspChainView"
+             x:DataType="viewModels:DosPspChainViewModel">
+    <Grid ColumnDefinitions="260,*">
+        <ListBox Grid.Column="0"
+                 ItemsSource="{CompiledBinding Items}"
+                 SelectedItem="{CompiledBinding SelectedItem, Mode=TwoWay}">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="{Binding Segment}" FontWeight="Bold" />
+                        <TextBlock Text="(current)" Foreground="OrangeRed"
+                                   IsVisible="{Binding IsCurrent}" />
+                        <TextBlock Text="{Binding OwnerName}" Opacity="0.8" />
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+        <userControls:InspectorPanel Grid.Column="1"
+                                     Header="Selected PSP"
+                                     Data="{CompiledBinding SelectedItem}" />
+    </Grid>
+</UserControl>

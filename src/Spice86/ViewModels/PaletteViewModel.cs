@@ -3,7 +3,6 @@ namespace Spice86.ViewModels;
 using Avalonia.Collections;
 using Avalonia.Controls.Shapes;
 using Avalonia.Media;
-using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
@@ -11,23 +10,16 @@ using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Shared.Emulator.Video;
 using Spice86.ViewModels.Services;
 
-public partial class PaletteViewModel : ViewModelBase, IEmulatorObjectViewModel, IDebuggerTabContentViewModel {
-    public string Header => "Color Palette";
+public partial class PaletteViewModel : TimerRefreshViewModelBase {
+    public override string Header => "Color Palette";
     private readonly ArgbPalette _argbPalette;
 
     private readonly Dictionary<uint, Color> ColorsCache = new();
-    public PaletteViewModel(ArgbPalette argbPalette, IUIDispatcher uiDispatcher) {
+    public PaletteViewModel(ArgbPalette argbPalette, IUIDispatcher uiDispatcher) : base(1000) {
         _argbPalette = argbPalette;
-        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(1000), DispatcherPriority.Background, UpdateValues);
     }
 
-    public bool IsVisible { get; set; }
-
-
-    public void UpdateValues(object? sender, EventArgs e) {
-        if (!IsVisible) {
-            return;
-        }
+    protected override void RefreshCore() {
         UpdateColors(_argbPalette);
     }
 

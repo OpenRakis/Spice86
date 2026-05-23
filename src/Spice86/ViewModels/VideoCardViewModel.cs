@@ -10,9 +10,9 @@ using Spice86.ViewModels.Services;
 
 using System.Text.Json;
 
-public partial class VideoCardViewModel : ViewModelBase, IEmulatorObjectViewModel, IDebuggerTabContentViewModel
+public partial class VideoCardViewModel : TimerRefreshViewModelBase
 {
-    public string Header => "Video Card";
+    public override string Header => "Video Card";
     [ObservableProperty]
     private VideoCardInfo _videoCard = new();
     private readonly IVgaRenderer _vgaRenderer;
@@ -22,6 +22,7 @@ public partial class VideoCardViewModel : ViewModelBase, IEmulatorObjectViewMode
 
     public VideoCardViewModel(IVgaRenderer vgaRenderer, IVideoState videoState,
         VgaTimingEngine vgaTimingEngine, IHostStorageProvider storageProvider)
+        : base(400)
     {
         _vgaRenderer = vgaRenderer;
         _videoState = videoState;
@@ -29,20 +30,13 @@ public partial class VideoCardViewModel : ViewModelBase, IEmulatorObjectViewMode
         _storageProvider = storageProvider;
     }
 
-    public bool IsVisible { get; set; }
-
     [RelayCommand]
     public async Task SaveVideoCardInfo()
     {
         await _storageProvider.SaveVideoCardInfoFile(JsonSerializer.Serialize(VideoCard));
     }
 
-    public void UpdateValues(object? sender, EventArgs e)
-    {
-        if (!IsVisible)
-        {
-            return;
-        }
+    protected override void RefreshCore() {
         VisitVgaRenderer(_vgaRenderer);
         VisitVideoState(_videoState);
         VideoCard.LastFrameDuration = _vgaTimingEngine.LastFrameDuration;

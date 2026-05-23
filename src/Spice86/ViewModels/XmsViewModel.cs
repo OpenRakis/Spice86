@@ -11,28 +11,22 @@ using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Utils;
 using Spice86.ViewModels.DataModels;
+using Spice86.ViewModels.Enums;
 using Spice86.ViewModels.Services;
 
 using System.Text;
 using System.Windows.Input;
 
-public partial class XmsViewModel : ViewModelBase, IEmulatorObjectViewModel, IMemorySearchViewModel, IDebuggerTabContentViewModel {
-
+public partial class XmsViewModel : TimerRefreshViewModelBase, IMemorySearchViewModel {
     private readonly ExtendedMemoryManager _xms;
-    private readonly IPauseHandler _pauseHandler;
-    private List<XmsHandleEntryViewModel> _allHandles = new();
-    private List<XmsBlockEntryViewModel> _allBlocks = new();
+    private readonly List<XmsHandleEntryViewModel> _allHandles = new();
+    private readonly List<XmsBlockEntryViewModel> _allBlocks = new();
 
-    public XmsViewModel(ExtendedMemoryManager xms, IPauseHandler pauseHandler) {
+    public XmsViewModel(ExtendedMemoryManager xms, IPauseHandler pauseHandler) : base(400, pauseHandler) {
         _xms = xms;
-        _pauseHandler = pauseHandler;
-        Refresh();
     }
 
-    public bool IsVisible { get; set; }
-
-    [ObservableProperty]
-    private string _header = "XMS";
+    public override string Header => "XMS";
 
     [ObservableProperty]
     private uint _totalMemoryBytes;
@@ -60,11 +54,6 @@ public partial class XmsViewModel : ViewModelBase, IEmulatorObjectViewModel, IMe
 
     [ObservableProperty]
     private string _blockSearchText = string.Empty;
-
-    public enum MemorySearchDataType {
-        Binary,
-        Ascii,
-    }
 
     [ObservableProperty]
     private MemorySearchDataType _searchDataType = MemorySearchDataType.Binary;
@@ -123,13 +112,9 @@ public partial class XmsViewModel : ViewModelBase, IEmulatorObjectViewModel, IMe
 
     public ICommand OpenFoundOccurrenceAction => OpenFoundOccurrenceCommand;
 
-    private enum SearchDirection {
-        FirstOccurence,
-        Forward,
-        Backward,
-    }
-
     private SearchDirection _searchDirection;
+    private int? _lastSelectedHandle;
+    private (uint Offset, uint Length, int Handle, bool IsFree)? _lastSelectedBlock;
 
     [ObservableProperty]
     private AvaloniaList<XmsHandleEntryViewModel> _handles = new();
@@ -163,7 +148,7 @@ public partial class XmsViewModel : ViewModelBase, IEmulatorObjectViewModel, IMe
 
     [RelayCommand]
     private async Task FirstOccurrence() {
-        _searchDirection = SearchDirection.FirstOccurence;
+        _searchDirection = SearchDirection.FirstOccurrence;
         await SearchSelectedBlockCommand.ExecuteAsync(null);
     }
 
@@ -195,11 +180,29 @@ public partial class XmsViewModel : ViewModelBase, IEmulatorObjectViewModel, IMe
     }
 
     partial void OnSelectedHandleChanged(XmsHandleEntryViewModel? value) {
+        int? selectedHandle = value?.Handle;
+        if (selectedHandle == _lastSelectedHandle) {
+            return;
+        }
+
+        _lastSelectedHandle = selectedHandle;
         uint? selectedOffset = SelectedBlock?.Offset;
         ApplyBlockFilter(selectedOffset);
     }
 
     partial void OnSelectedBlockChanged(XmsBlockEntryViewModel? value) {
+        (uint Offset, uint Length, int Handle, bool IsFree)? selectedBlock;
+        if (value is null) {
+            selectedBlock = null;
+        } else {
+            selectedBlock = (value.Offset, value.Length, value.Handle, value.IsFree);
+        }
+
+        if (selectedBlock == _lastSelectedBlock) {
+            return;
+        }
+
+        _lastSelectedBlock = selectedBlock;
         RefreshSelectedBlockDocument();
     }
 
@@ -209,10 +212,7 @@ public partial class XmsViewModel : ViewModelBase, IEmulatorObjectViewModel, IMe
         OnPropertyChanged(nameof(SearchDataTypeIsAscii));
     }
 
-    public void UpdateValues(object? sender, EventArgs e) {
-        if (!IsVisible || !_pauseHandler.IsPaused) {
-            return;
-        }
+    protected override void RefreshCore() {
         Refresh();
     }
 
@@ -228,14 +228,14 @@ public partial class XmsViewModel : ViewModelBase, IEmulatorObjectViewModel, IMe
         IsA20GloballyEnabled = _xms.IsA20GloballyEnabled;
         A20LocalEnableCount = _xms.A20LocalEnableCount;
 
-        _allHandles = _xms.HandlesSnapshot
-            .Select(static x => new XmsHandleEntryViewModel(x.Key, x.Value))
-            .ToList();
+        _allHandles.Clear();
+        _allHandles.AddRange(_xms.HandlesSnapshot
+            .Select(static x => new XmsHandleEntryViewModel(x.Key, x.Value)));
 
-        _allBlocks = _xms.BlocksSnapshot
+        _allBlocks.Clear();
+        _allBlocks.AddRange(_xms.BlocksSnapshot
             .Select(static x => new XmsBlockEntryViewModel(x.IsFree, x.Handle, x.Offset, x.Length))
-            .OrderBy(static x => x.Offset)
-            .ToList();
+            .OrderBy(static x => x.Offset));
 
         ApplyHandleFilter(selectedHandle);
         ApplyBlockFilter(selectedOffset);
@@ -248,7 +248,7 @@ public partial class XmsViewModel : ViewModelBase, IEmulatorObjectViewModel, IMe
             filteredHandles = filteredHandles.Where(x => HandleMatchesSearch(x, trimmedSearch));
         }
 
-        Handles = new AvaloniaList<XmsHandleEntryViewModel>(filteredHandles);
+        ReplaceItems(Handles, filteredHandles);
         SelectedHandle = Handles.FirstOrDefault(x => x.Handle == selectedHandle) ?? Handles.FirstOrDefault();
     }
 
@@ -265,8 +265,13 @@ public partial class XmsViewModel : ViewModelBase, IEmulatorObjectViewModel, IMe
             filteredBlocks = filteredBlocks.Where(x => BlockMatchesSearch(x, trimmedSearch));
         }
 
-        Blocks = new AvaloniaList<XmsBlockEntryViewModel>(filteredBlocks);
+        ReplaceItems(Blocks, filteredBlocks);
         SelectedBlock = Blocks.FirstOrDefault(x => x.Offset == selectedOffset) ?? Blocks.FirstOrDefault();
+    }
+
+    private static void ReplaceItems<T>(AvaloniaList<T> target, IEnumerable<T> items) {
+        target.Clear();
+        target.AddRange(items);
     }
 
     private void RefreshSelectedBlockDocument() {
@@ -285,7 +290,12 @@ public partial class XmsViewModel : ViewModelBase, IEmulatorObjectViewModel, IMe
         }
 
         SelectedBlockDocument = new XmsBlockBinaryDocument(_xms.XmsRam, SelectedBlock.Offset, SelectedBlock.Length);
-        string handleText = SelectedBlock.IsFree ? "Free" : ConvertUtils.ToHex16((ushort)SelectedBlock.Handle);
+        string handleText;
+        if (SelectedBlock.IsFree) {
+            handleText = "Free";
+        } else {
+            handleText = ConvertUtils.ToHex16((ushort)SelectedBlock.Handle);
+        }
         SelectedBlockTitle = $"{SelectedBlock.State} block - Handle {handleText} - {ConvertUtils.ToHex32(SelectedBlock.Offset)} to {ConvertUtils.ToHex32(SelectedBlock.EndOffset)}";
         ResetSearchResult();
     }

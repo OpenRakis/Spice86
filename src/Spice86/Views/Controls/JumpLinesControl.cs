@@ -3,9 +3,9 @@ namespace Spice86.Views.Controls;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
-using Avalonia.Styling;
 
 using Spice86.ViewModels;
+using Spice86.ViewModels.Enums;
 
 using System.Collections.Generic;
 
