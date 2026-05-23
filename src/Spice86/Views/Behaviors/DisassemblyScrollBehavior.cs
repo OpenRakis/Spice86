@@ -58,12 +58,11 @@ public class DisassemblyScrollBehavior {
             // Subscribe to the Loaded event to handle initial centering
             listBox.Loaded += OnListBoxLoaded;
 
-            // If the ListBox is already loaded, check if we need to scroll
+            // If the ListBox is already loaded, scroll immediately (no deferred dispatch)
             if (listBox.IsLoaded) {
                 uint targetAddress = GetTargetAddress(listBox).Linear;
                 if (targetAddress != 0) {
-                    // Delay the scroll to ensure the UI has fully loaded
-                    Dispatcher.UIThread.Post(() => ScrollToAddress(listBox, targetAddress), DispatcherPriority.Loaded);
+                    ScrollToAddress(listBox, targetAddress);
                 }
             }
         } else {
@@ -83,7 +82,7 @@ public class DisassemblyScrollBehavior {
         // Check if we have a target address for this ListBox
         uint targetAddress = GetTargetAddress(listBox).Linear;
         if (targetAddress != 0) {
-            Dispatcher.UIThread.Post(() => ScrollToAddress(listBox, targetAddress), DispatcherPriority.Loaded);
+            ScrollToAddress(listBox, targetAddress);
         }
     }
 
@@ -135,8 +134,11 @@ public class DisassemblyScrollBehavior {
                     return;
                 }
 
-                // Scroll to the target item
-                Dispatcher.UIThread.Post(() => ScrollToPosition(listBox, scrollViewer, targetIndex), DispatcherPriority.Normal);
+                // Scroll to the target item directly, without an extra Dispatcher.Post
+                // round-trip. The previous indirection caused the view to lag one or two
+                // render frames behind the pause, producing a visible "auto-scroll" delay
+                // when the emulator hit a breakpoint.
+                ScrollToPosition(listBox, scrollViewer, targetIndex);
             }
         } finally {
             // Release the lock
