@@ -16,7 +16,7 @@
 	</PropertyGroup>
 	<!-- Nuget package info-->
 	<PropertyGroup>
-		<Version>14</Version>
+		<Version>14.1</Version>
 		<PackageReleaseNotes>
             <![CDATA[
             # Release Notes - https://github.com/OpenRakis/Spice86/wiki/Spice86-v14-release-notes
