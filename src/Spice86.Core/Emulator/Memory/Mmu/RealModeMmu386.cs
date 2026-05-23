@@ -25,7 +25,7 @@ public sealed class RealModeMmu386 : IMmu {
     }
 
     private static bool IsValidAccess(uint offset, uint length) {
-        return offset <= SegmentLimit && length - 1u <= SegmentLimit - offset;
+        return (ulong)offset + length <= SegmentLimit + 1;
     }
 
     /// <inheritdoc />
