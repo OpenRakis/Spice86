@@ -6,6 +6,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:viewModels="clr-namespace:Spice86.ViewModels"
+    xmlns:dataModels="clr-namespace:Spice86.ViewModels.DataModels"
     xmlns:progRing="clr-namespace:AvaloniaProgressRing;assembly=AvaloniaProgressRing"
     xmlns:behaviors="clr-namespace:Spice86.Views.Behaviors"
     d:DesignHeight="450"
@@ -35,12 +36,12 @@
             <Setter Property="Padding" Value="10,6" />
             <Setter Property="BorderThickness" Value="1.5" />
             <Setter Property="BorderRadius" Value="4" />
-            <Setter Property="behaviors:TextStickerThemeBehavior.EnableTheming" Value="True" />
+            <Setter Property="behaviors:GraphThemeBehavior.EnableTheming" Value="True" />
         </Style>
 
         <!-- Connection coloring via behavior -->
         <Style Selector="agc|Connection">
-            <Setter Property="behaviors:ConnectionThemeBehavior.EnableTheming" Value="True" />
+            <Setter Property="behaviors:GraphThemeBehavior.EnableTheming" Value="True" />
         </Style>
 
         <!-- Edge labels (TextBlock children of GraphPanel) -->
@@ -143,13 +144,13 @@
                                             </Border>
                                         </DataTemplate>
                                         <!-- Colored edge label -->
-                                        <DataTemplate DataType="{x:Type viewModels:CfgGraphEdgeLabel}">
+                                        <DataTemplate DataType="{x:Type dataModels:CfgGraphEdgeLabel}">
                                             <TextBlock
                                             Text="{Binding Text}"
                                             FontSize="14"
                                             Background="{DynamicResource SystemControlBackgroundAltMediumHighBrush}"
                                             Padding="4,2"
-                                            behaviors:EdgeLabelThemeBehavior.EnableTheming="True" />
+                                            behaviors:GraphThemeBehavior.EnableTheming="True" />
                                         </DataTemplate>
                                     </agc:GraphPanel.DataTemplates>
                                 </agc:GraphPanel>

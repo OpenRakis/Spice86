@@ -1,6 +1,7 @@
 namespace Spice86.ViewModels.Services;
 
 using Spice86.Shared.Utils;
+using Spice86.ViewModels.Enums;
 
 using System.Collections.Generic;
 

@@ -116,6 +116,7 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 - **Use `tmp/` for temporary files** - if a temporary file must be written (e.g., captured command output, intermediate data), place it inside the `tmp/` folder at the root of the repository. Never write to `/tmp` or any path outside the workspace.
 - **Avoid complexity** - keep cyclomatic complexity low, prefer simple, linear code over nested conditionals
 - **No optional parameters** - avoid nullable or optional parameters in new code
+- **No ternary expressions** - avoid `condition ? whenTrue : whenFalse`; always use explicit `if/else`
 - **Minimal comments** - write self-documenting code with clear names; avoid obvious comments
 - **Test before submit** - always run tests after code changes to verify functionality
 - **Rebuild and verify** - For any task that changes code or tests, rebuild the project and run the full test suite; do not stop until all tests are green.
@@ -123,6 +124,7 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 - **Ignore Machine class** - this is a legacy aggregator class; work directly with specific components (`CfgCpu`, `Memory`, `Stack`, etc.) instead
 - **Enforce TDD** - ensure integration tests are present and not passing at first, then make them pass by updating the implementation.
 - **Clear test code style** use explicit Arrange/Act/Assert structure, avoid long setup blocks, and reduce duplication with small helpers.
+- **Pause-refresh rule for new ViewModels** - view models that refresh from a dispatcher timer must refresh at most once per pause cycle. Gate updates on `IPauseHandler.IsPaused`, track a per-pause boolean flag, and reset it on resume.
 
 ### Avalonia Telemetry
 - **Avalonia telemetry must be disabled** when working on the codebase.
@@ -180,6 +182,7 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
   - **Avoid non-ASCII Unicode characters**: Prefer plain ASCII in source code and documentation; only use Unicode when necessary for languages that require characters outside the ASCII range (for example, Chinese). Some editors or tools may not assume UTF-8 and can render or save these characters incorrectly.
 - **Do not use `#region`**: Avoid `#region`/`#endregion` blocks; keep code organized via clear structure and namespaces
 - **Do not suppress warnings with pragmas**: Never disable warnings using preprocessor directives (e.g., `#pragma warning disable`). Fix the underlying issue instead.
+- **No ternary operator**: Do not use the ternary conditional operator (`?:`). Use explicit `if/else` blocks for all conditional assignments and returns.
 - **Async usage restrictions**:
   - **Do NOT let async "infect" the `Spice86.Core` assembly**
   - Keep async code in the UI layer (`Spice86` project) only

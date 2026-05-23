@@ -1,0 +1,76 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewModels="clr-namespace:Spice86.ViewModels"
+             xmlns:dataModels="clr-namespace:Spice86.ViewModels.DataModels"
+             xmlns:agc="clr-namespace:AvaloniaGraphControl;assembly=AvaloniaGraphControl"
+             xmlns:behaviors="clr-namespace:Spice86.Views.Behaviors"
+             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="560"
+             x:Class="Spice86.Views.DosPspGraphView"
+             x:DataType="viewModels:DosPspGraphViewModel">
+    <UserControl.Styles>
+        <Style Selector="agc|TextSticker">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontFamily" Value="Cascadia Mono, Consolas, Courier New, monospace" />
+            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="BorderThickness" Value="1.5" />
+            <Setter Property="BorderRadius" Value="4" />
+            <Setter Property="behaviors:GraphThemeBehavior.EnableTheming" Value="True" />
+        </Style>
+
+        <Style Selector="agc|Connection">
+            <Setter Property="behaviors:GraphThemeBehavior.EnableTheming" Value="True" />
+        </Style>
+
+        <Style Selector="agc|GraphPanel > TextBlock">
+            <Setter Property="behaviors:GraphThemeBehavior.EnableTheming" Value="True" />
+            <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundAltMediumHighBrush}" />
+            <Setter Property="Padding" Value="4,2" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid RowDefinitions="Auto,*">
+        <TextBlock Grid.Row="0" Margin="6,4,6,2" Text="{CompiledBinding StatusMessage}" />
+        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Visible">
+            <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}">
+                <ZoomBorder
+                Name="ZoomBorder"
+                ToolTip.Tip="Middle click to pan, mouse wheel to zoom/dezoom"
+                Stretch="None"
+                ZoomSpeed="1.5"
+                EnableConstrains="True"
+                ClipToBounds="True"
+                Focusable="True"
+                VerticalAlignment="Stretch"
+                HorizontalAlignment="Stretch">
+                    <agc:GraphPanel Graph="{CompiledBinding Graph}" LayoutMethod="SugiyamaScheme">
+                        <agc:GraphPanel.DataTemplates>
+                            <DataTemplate DataType="{x:Type dataModels:DosGraphNode}">
+                                <Border
+                                CornerRadius="4"
+                                Padding="8,6"
+                                behaviors:GraphThemeBehavior.EnableTheming="True">
+                                    <TextBlock
+                                    Text="{Binding}"
+                                    FontSize="13"
+                                    FontFamily="Cascadia Mono, Consolas, Courier New, monospace"
+                                    TextWrapping="Wrap"
+                                    MaxWidth="520" />
+                                </Border>
+                            </DataTemplate>
+                            <DataTemplate DataType="{x:Type dataModels:CfgGraphEdgeLabel}">
+                                <TextBlock
+                                Text="{Binding Text}"
+                                FontSize="13"
+                                Background="{DynamicResource SystemControlBackgroundAltMediumHighBrush}"
+                                Padding="4,2"
+                                behaviors:GraphThemeBehavior.EnableTheming="True" />
+                            </DataTemplate>
+                        </agc:GraphPanel.DataTemplates>
+                    </agc:GraphPanel>
+                </ZoomBorder>
+            </Border>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

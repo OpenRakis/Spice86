@@ -16,13 +16,13 @@
 	</PropertyGroup>
 	<!-- Nuget package info-->
 	<PropertyGroup>
-		<Version>14.1</Version>
+		<Version>14.2</Version>
 		<PackageReleaseNotes>
             <![CDATA[
             # Release Notes - https://github.com/OpenRakis/Spice86/wiki/Spice86-v14-release-notes
             ]]>
 		</PackageReleaseNotes>
-		<Authors>Alberto Marnetto, Ales Teska, Artjom Vejsel, Edu Garcia, Ivan Kuzmenko, John Källén, Joris van Eijden, Karl Lenz, Kevin Ferrare, LowLevelMahn, Maximilien Noal, Stefan Hueg</Authors>
+		<Authors>Alberto Marnetto, Ales Teska, Artjom Vejsel, Bruno Martinez, Edu Garcia, Ievgenii Meshcheriakov, Ivan Kuzmenko, John Källén, Joris van Eijden, Karl Lenz, Kevin Ferrare, LowLevelMahn, Maximilien Noal, Stefan Hueg, Thomas Kaiser</Authors>
 		<PackageTags>reverse-engineering;avalonia;debugger;assembly;emulator;cross-platform</PackageTags>
 		<Description>Reverse engineer and rewrite real mode dos programs</Description>
 		<PackageProjectUrl>https://github.com/OpenRakis/Spice86</PackageProjectUrl>

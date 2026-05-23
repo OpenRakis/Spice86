@@ -1,4 +1,4 @@
-namespace Spice86.ViewModels;
+namespace Spice86.ViewModels.DataModels;
 
 /// <summary>
 /// An autocomplete suggestion for a breakpoint targeting a specific interrupt vector or

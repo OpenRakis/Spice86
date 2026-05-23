@@ -1,4 +1,4 @@
-namespace Spice86.ViewModels;
+namespace Spice86.ViewModels.Enums;
 
 /// <summary>
 /// Describes the role of a jump arc segment at a specific disassembly line.

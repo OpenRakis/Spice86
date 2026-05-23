@@ -15,6 +15,7 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Utils;
 using Spice86.ViewModels.DataModels;
+using Spice86.ViewModels.Enums;
 using Spice86.ViewModels.Messages;
 using Spice86.ViewModels.Services;
 using Spice86.Views;
@@ -66,11 +67,6 @@ public partial class MemoryViewModel : ViewModelWithErrorDialogAndMemoryBreakpoi
 
     partial void OnTitleChanged(string? value) {
         UpdateHeaderPresentation();
-    }
-
-    public enum MemorySearchDataType {
-        Binary,
-        Ascii,
     }
 
     [ObservableProperty]
@@ -131,12 +127,26 @@ public partial class MemoryViewModel : ViewModelWithErrorDialogAndMemoryBreakpoi
     private void UpdateHeaderPresentation() {
         string addressRange = BuildAddressRange();
         HeaderToolTip = addressRange;
-        Header = string.IsNullOrWhiteSpace(Title) ? addressRange : Title;
+        if (string.IsNullOrWhiteSpace(Title)) {
+            Header = addressRange;
+        } else {
+            Header = Title;
+        }
     }
 
     private string BuildAddressRange() {
-        string start = string.IsNullOrWhiteSpace(StartAddress) ? "?" : StartAddress;
-        string end = string.IsNullOrWhiteSpace(EndAddress) ? "?" : EndAddress;
+        string start;
+        if (string.IsNullOrWhiteSpace(StartAddress)) {
+            start = "?";
+        } else {
+            start = StartAddress;
+        }
+        string end;
+        if (string.IsNullOrWhiteSpace(EndAddress)) {
+            end = "?";
+        } else {
+            end = EndAddress;
+        }
         return $"{start} - {end}";
     }
 
@@ -204,12 +214,6 @@ public partial class MemoryViewModel : ViewModelWithErrorDialogAndMemoryBreakpoi
     [ObservableProperty]
     private string? _memorySearchValue;
 
-    private enum SearchDirection {
-        FirstOccurence,
-        Forward,
-        Backward,
-    }
-
     private SearchDirection _searchDirection;
 
     [RelayCommand]
@@ -231,7 +235,7 @@ public partial class MemoryViewModel : ViewModelWithErrorDialogAndMemoryBreakpoi
     [RelayCommand]
     private async Task FirstOccurrence() {
         if (SearchMemoryCommand.CanExecute(null)) {
-            _searchDirection = SearchDirection.FirstOccurence;
+            _searchDirection = SearchDirection.FirstOccurrence;
             await SearchMemoryCommand.ExecuteAsync(null);
         }
     }
@@ -266,7 +270,14 @@ public partial class MemoryViewModel : ViewModelWithErrorDialogAndMemoryBreakpoi
     [NotifyCanExecuteChangedFor(nameof(GoToFoundOccurenceCommand))]
     private bool _isAddressOfFoundOccurrenceValid;
 
-    public string FoundOccurrenceDisplay => AddressOFoundOccurence is null ? "-" : ConvertUtils.ToHex32(AddressOFoundOccurence.Value);
+    public string FoundOccurrenceDisplay {
+        get {
+            if (AddressOFoundOccurence is null) {
+                return "-";
+            }
+            return ConvertUtils.ToHex32(AddressOFoundOccurence.Value);
+        }
+    }
 
     public ICommand SearchCancelCommand => SearchMemoryCancelCommand;
 

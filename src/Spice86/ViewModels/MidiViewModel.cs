@@ -1,33 +1,23 @@
 namespace Spice86.ViewModels;
 
-using Avalonia.Threading;
-
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.Devices.Sound.Midi;
 using Spice86.ViewModels.PropertiesMappers;
-using Spice86.ViewModels.Services;
 using Spice86.ViewModels.ValueViewModels.Debugging;
 
-public partial class MidiViewModel : ViewModelBase, IEmulatorObjectViewModel, IDebuggerTabContentViewModel {
-    public string Header => "General MIDI / MT-32";
+public partial class MidiViewModel : TimerRefreshViewModelBase {
+    public override string Header => "General MIDI / MT-32";
     [ObservableProperty]
     private MidiInfo _midi = new();
 
     private readonly Midi _externalMidiDevice;
 
-    public MidiViewModel(Midi externalMidiDevice) {
+    public MidiViewModel(Midi externalMidiDevice) : base(400) {
         _externalMidiDevice = externalMidiDevice;
-        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Background, UpdateValues);
     }
 
-    public bool IsVisible { get; set; }
-
-
-    public void UpdateValues(object? sender, EventArgs e) {
-        if (!IsVisible) {
-            return;
-        }
+    protected override void RefreshCore() {
         _externalMidiDevice.CopyToMidiInfo(Midi);
     }
 }

@@ -1,7 +1,5 @@
 namespace Spice86.ViewModels;
 
-using Avalonia.Threading;
-
 using CommunityToolkit.Mvvm.ComponentModel;
 
 using Spice86.Core.Emulator.CPU;
@@ -15,7 +13,7 @@ using System.Reflection;
 using Spice86.ViewModels.PropertiesMappers;
 using Spice86.ViewModels.Services;
 
-public partial class CpuViewModel : ViewModelBase, IEmulatorObjectViewModel
+public partial class CpuViewModel : TimerRefreshViewModelBase
 {
     private readonly State _cpuState;
     private readonly IMemory _memory;
@@ -30,6 +28,7 @@ public partial class CpuViewModel : ViewModelBase, IEmulatorObjectViewModel
     private RegistersViewModel _registers;
 
     public CpuViewModel(State state, IMemory memory, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher)
+        : base(400)
     {
         _cpuState = state;
         _memory = memory;
@@ -37,17 +36,11 @@ public partial class CpuViewModel : ViewModelBase, IEmulatorObjectViewModel
         pauseHandler.Paused += () => uiDispatcher.Post(() => _isPaused = pauseHandler.IsPaused);
         _isPaused = pauseHandler.IsPaused;
         pauseHandler.Resumed += () => uiDispatcher.Post(() => _isPaused = pauseHandler.IsPaused);
-        DispatcherTimerStarter.StartNewDispatcherTimer(TimeSpan.FromMilliseconds(400), DispatcherPriority.Background, UpdateValues);
     }
 
-    public bool IsVisible { get; set; }
+    public override string Header => "CPU";
 
-    public void UpdateValues(object? sender, EventArgs e)
-    {
-        if (!IsVisible)
-        {
-            return;
-        }
+    protected override void RefreshCore() {
         VisitCpuState(_cpuState);
     }
 

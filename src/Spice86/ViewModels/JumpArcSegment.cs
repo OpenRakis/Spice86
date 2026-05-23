@@ -1,5 +1,7 @@
 namespace Spice86.ViewModels;
 
+using Spice86.ViewModels.Enums;
+
 /// <summary>
 /// Represents a segment of a jump arc that passes through a specific disassembly line.
 /// </summary>

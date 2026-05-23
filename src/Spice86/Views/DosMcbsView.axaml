@@ -1,0 +1,43 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewModels="clr-namespace:Spice86.ViewModels"
+             xmlns:userControls="clr-namespace:Spice86.Views.UserControls"
+             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="560"
+             x:Class="Spice86.Views.DosMcbsView"
+             x:DataType="viewModels:DosMcbsViewModel">
+    <Grid RowDefinitions="Auto,Auto,*">
+        <TextBlock Grid.Row="0"
+                   Margin="6,4,6,2"
+                   FontFamily="{StaticResource RobotoMonoFont}"
+                   Text="{CompiledBinding LayoutSummary}" />
+        <Border Grid.Row="1"
+                Margin="6,2,6,6"
+                Height="32"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                BorderThickness="1"
+                ClipToBounds="True">
+            <Grid x:Name="BarHost" />
+        </Border>
+        <Grid Grid.Row="2" ColumnDefinitions="280,*">
+            <ListBox Grid.Column="0"
+                     ItemsSource="{CompiledBinding Items}"
+                     SelectedItem="{CompiledBinding SelectedItem, Mode=TwoWay}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="{Binding HeaderSegment}" FontWeight="Bold" />
+                            <TextBlock Text="{Binding Type}" Opacity="0.7" />
+                            <TextBlock Text="(free)" Foreground="Gray" IsVisible="{Binding IsFree}" />
+                            <TextBlock Text="{Binding OwnerName}" Opacity="0.85" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <userControls:InspectorPanel Grid.Column="1"
+                                         Header="Selected MCB"
+                                         Data="{CompiledBinding SelectedItem}" />
+        </Grid>
+    </Grid>
+</UserControl>

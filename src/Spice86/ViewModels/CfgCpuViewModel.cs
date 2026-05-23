@@ -21,6 +21,8 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
 using Spice86.Core.Emulator.StateSerialization.ControlFlow;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.ViewModels.DataModels;
+using Spice86.ViewModels.Enums;
 using Spice86.ViewModels.Services;
 using Spice86.ViewModels.TextPresentation;
 

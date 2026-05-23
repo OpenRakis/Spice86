@@ -1,4 +1,4 @@
-namespace Spice86.ViewModels;
+namespace Spice86.ViewModels.DataModels;
 
 /// <summary>
 /// Static catalog of well-known interrupt vectors and I/O port ranges used to populate

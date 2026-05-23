@@ -5,7 +5,8 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Reactive;
 
-using Spice86.ViewModels;
+using Spice86.ViewModels.DataModels;
+using Spice86.ViewModels.Enums;
 using Spice86.Views.Converters;
 
 using System;

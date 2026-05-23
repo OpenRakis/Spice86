@@ -12,8 +12,7 @@ using Spice86.ViewModels.Services;
 
 public partial class DebugWindowViewModel : ViewModelBase,
     IRecipient<AddViewModelMessage<DisassemblyViewModel>>, IRecipient<AddViewModelMessage<MemoryViewModel>>,
-    IRecipient<RemoveViewModelMessage<DisassemblyViewModel>>, IRecipient<RemoveViewModelMessage<MemoryViewModel>>
-{
+    IRecipient<RemoveViewModelMessage<DisassemblyViewModel>>, IRecipient<RemoveViewModelMessage<MemoryViewModel>> {
 
     private readonly IMessenger _messenger;
     private readonly IUIDispatcher _uiDispatcher;
@@ -27,6 +26,12 @@ public partial class DebugWindowViewModel : ViewModelBase,
 
     [ObservableProperty]
     private DebuggerSubTabViewModel? _selectedDeviceSubTab;
+
+    [ObservableProperty]
+    private AvaloniaList<DebuggerSubTabViewModel> _dosSubTabs = new();
+
+    [ObservableProperty]
+    private DebuggerSubTabViewModel? _selectedDosSubTab;
 
     [ObservableProperty]
     private AvaloniaList<IDebuggerTabContentViewModel> _memoryViews = new();
@@ -52,8 +57,7 @@ public partial class DebugWindowViewModel : ViewModelBase,
     private readonly IPauseHandler _pauseHandler;
 
     public DebugWindowViewModel(IMessenger messenger, IUIDispatcher uiDispatcher,
-        IPauseHandler pauseHandler, IDebuggerTabRegistry tabRegistry)
-    {
+        IPauseHandler pauseHandler, IDebuggerTabRegistry tabRegistry) {
         messenger.Register<AddViewModelMessage<DisassemblyViewModel>>(this);
         messenger.Register<AddViewModelMessage<MemoryViewModel>>(this);
         messenger.Register<RemoveViewModelMessage<DisassemblyViewModel>>(this);
@@ -74,11 +78,12 @@ public partial class DebugWindowViewModel : ViewModelBase,
         CfgCpuViewModel = tabRegistry.Get<CfgCpuViewModel>(DebuggerTabId.CfgCpu);
         DeviceSubTabs.AddRange(tabRegistry.GetSubTabs(DebuggerTabId.DevicesGroup));
         SelectedDeviceSubTab = DeviceSubTabs.FirstOrDefault();
+        DosSubTabs.AddRange(tabRegistry.GetSubTabs(DebuggerTabId.DosGroup));
+        SelectedDosSubTab = DosSubTabs.FirstOrDefault();
     }
 
     [RelayCommand]
-    private void Pause() => _uiDispatcher.Post(() =>
-    {
+    private void Pause() => _uiDispatcher.Post(() => {
         _pauseHandler.RequestPause("Pause button pressed in debug window");
     });
 
@@ -86,17 +91,14 @@ public partial class DebugWindowViewModel : ViewModelBase,
     private void Continue() => _uiDispatcher.Post(_pauseHandler.Resume);
 
     public void Receive(AddViewModelMessage<DisassemblyViewModel> message) => DisassemblyViewModels.Add(message.ViewModel);
-    public void Receive(AddViewModelMessage<MemoryViewModel> message)
-    {
+    public void Receive(AddViewModelMessage<MemoryViewModel> message) {
         MemoryViews.Add(message.ViewModel);
         SelectedMemoryView = message.ViewModel;
     }
     public void Receive(RemoveViewModelMessage<DisassemblyViewModel> message) => DisassemblyViewModels.Remove(message.ViewModel);
-    public void Receive(RemoveViewModelMessage<MemoryViewModel> message)
-    {
+    public void Receive(RemoveViewModelMessage<MemoryViewModel> message) {
         MemoryViews.Remove(message.ViewModel);
-        if (ReferenceEquals(SelectedMemoryView, message.ViewModel))
-        {
+        if (ReferenceEquals(SelectedMemoryView, message.ViewModel)) {
             SelectedMemoryView = MemoryViews.FirstOrDefault();
         }
     }

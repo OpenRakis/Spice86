@@ -12,27 +12,22 @@ using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 using Spice86.ViewModels.DataModels;
+using Spice86.ViewModels.Enums;
 using Spice86.ViewModels.Services;
 
 using System.Text;
 using System.Windows.Input;
 
-public partial class EmsViewModel : ViewModelBase, IEmulatorObjectViewModel, IMemorySearchViewModel, IDebuggerTabContentViewModel {
+public partial class EmsViewModel : TimerRefreshViewModelBase, IMemorySearchViewModel {
     private readonly ExpandedMemoryManager _ems;
-    private readonly IPauseHandler _pauseHandler;
-    private List<EmsHandleEntryViewModel> _allHandles = new();
-    private List<EmsPhysicalPageEntryViewModel> _allPhysicalPages = new();
+    private readonly List<EmsHandleEntryViewModel> _allHandles = new();
+    private readonly List<EmsPhysicalPageEntryViewModel> _allPhysicalPages = new();
 
-    public EmsViewModel(ExpandedMemoryManager ems, IPauseHandler pauseHandler) {
+    public EmsViewModel(ExpandedMemoryManager ems, IPauseHandler pauseHandler) : base(400, pauseHandler) {
         _ems = ems;
-        _pauseHandler = pauseHandler;
-        Refresh();
     }
 
-    public bool IsVisible { get; set; }
-
-    [ObservableProperty]
-    private string _header = "EMS";
+    public override string Header => "EMS";
 
     [ObservableProperty]
     private ushort _totalPages;
@@ -51,11 +46,6 @@ public partial class EmsViewModel : ViewModelBase, IEmulatorObjectViewModel, IMe
 
     [ObservableProperty]
     private string _logicalPageSearchText = string.Empty;
-
-    public enum MemorySearchDataType {
-        Binary,
-        Ascii,
-    }
 
     [ObservableProperty]
     private MemorySearchDataType _searchDataType = MemorySearchDataType.Binary;
@@ -114,13 +104,9 @@ public partial class EmsViewModel : ViewModelBase, IEmulatorObjectViewModel, IMe
 
     public ICommand OpenFoundOccurrenceAction => OpenFoundOccurrenceCommand;
 
-    private enum SearchDirection {
-        FirstOccurence,
-        Forward,
-        Backward,
-    }
-
     private SearchDirection _searchDirection;
+    private ushort? _lastSelectedHandleNumber;
+    private (ushort HandleNumber, int LogicalPageIndex, ushort PageNumber)? _lastSelectedLogicalPage;
 
     [ObservableProperty]
     private AvaloniaList<EmsHandleEntryViewModel> _handles = new();
@@ -157,7 +143,7 @@ public partial class EmsViewModel : ViewModelBase, IEmulatorObjectViewModel, IMe
 
     [RelayCommand]
     private async Task FirstOccurrence() {
-        _searchDirection = SearchDirection.FirstOccurence;
+        _searchDirection = SearchDirection.FirstOccurrence;
         await SearchSelectedPageCommand.ExecuteAsync(null);
     }
 
@@ -188,19 +174,34 @@ public partial class EmsViewModel : ViewModelBase, IEmulatorObjectViewModel, IMe
         ApplyLogicalPageFilter(selectedPageNumber);
     }
 
-    public void UpdateValues(object? sender, EventArgs e) {
-        if (!IsVisible || !_pauseHandler.IsPaused) {
-            return;
-        }
+    protected override void RefreshCore() {
         Refresh();
     }
 
     partial void OnSelectedHandleChanged(EmsHandleEntryViewModel? value) {
+        ushort? selectedHandleNumber = value?.HandleNumber;
+        if (selectedHandleNumber == _lastSelectedHandleNumber) {
+            return;
+        }
+
+        _lastSelectedHandleNumber = selectedHandleNumber;
         ushort? selectedPageNumber = SelectedLogicalPage?.PageNumber;
         ApplyLogicalPageFilter(selectedPageNumber);
     }
 
     partial void OnSelectedLogicalPageChanged(EmsLogicalPageEntryViewModel? value) {
+        (ushort HandleNumber, int LogicalPageIndex, ushort PageNumber)? selectedLogicalPage;
+        if (value is null) {
+            selectedLogicalPage = null;
+        } else {
+            selectedLogicalPage = (value.HandleNumber, value.LogicalPageIndex, value.PageNumber);
+        }
+
+        if (selectedLogicalPage == _lastSelectedLogicalPage) {
+            return;
+        }
+
+        _lastSelectedLogicalPage = selectedLogicalPage;
         RefreshSelectedPageDocument();
     }
 
@@ -219,21 +220,21 @@ public partial class EmsViewModel : ViewModelBase, IEmulatorObjectViewModel, IMe
         PageSize = ExpandedMemoryManager.EmmPageSize;
         PageFrameSegment = ConvertUtils.ToHex16(ExpandedMemoryManager.EmmPageFrameSegment);
 
-        _allHandles = _ems.EmmHandles
+        _allHandles.Clear();
+        _allHandles.AddRange(_ems.EmmHandles
             .OrderBy(static x => x.Key)
             .Select(static x => new EmsHandleEntryViewModel(
                 (ushort)x.Key,
                 x.Value.ToString(),
                 x.Value.LogicalPages.Count,
-                x.Value.SavedPageMap))
-            .ToList();
+                x.Value.SavedPageMap)));
 
-        _allPhysicalPages = _ems.EmmPageFrame
+        _allPhysicalPages.Clear();
+        _allPhysicalPages.AddRange(_ems.EmmPageFrame
             .OrderBy(static x => x.Key)
-            .Select(x => CreatePhysicalPageEntry(x.Key, x.Value))
-            .ToList();
+            .Select(x => CreatePhysicalPageEntry(x.Key, x.Value)));
 
-        PhysicalPages = new AvaloniaList<EmsPhysicalPageEntryViewModel>(_allPhysicalPages);
+        ReplaceItems(PhysicalPages, _allPhysicalPages);
         ApplyHandleFilter(selectedHandleNumber);
         ApplyLogicalPageFilter(selectedPageNumber);
     }
@@ -245,13 +246,13 @@ public partial class EmsViewModel : ViewModelBase, IEmulatorObjectViewModel, IMe
             filteredHandles = filteredHandles.Where(x => HandleMatchesSearch(x, trimmedSearch));
         }
 
-        Handles = new AvaloniaList<EmsHandleEntryViewModel>(filteredHandles);
+        ReplaceItems(Handles, filteredHandles);
         SelectedHandle = Handles.FirstOrDefault(x => x.HandleNumber == selectedHandleNumber) ?? Handles.FirstOrDefault();
     }
 
     private void ApplyLogicalPageFilter(ushort? selectedPageNumber) {
         if (SelectedHandle is null || !_ems.EmmHandles.TryGetValue(SelectedHandle.HandleNumber, out EmmHandle? emmHandle)) {
-            LogicalPages = new AvaloniaList<EmsLogicalPageEntryViewModel>();
+            LogicalPages.Clear();
             SelectedLogicalPage = null;
             RefreshSelectedPageDocument();
             return;
@@ -265,9 +266,14 @@ public partial class EmsViewModel : ViewModelBase, IEmulatorObjectViewModel, IMe
             logicalPages = logicalPages.Where(x => LogicalPageMatchesSearch(x, trimmedSearch));
         }
 
-        LogicalPages = new AvaloniaList<EmsLogicalPageEntryViewModel>(logicalPages);
+        ReplaceItems(LogicalPages, logicalPages);
 
         SelectedLogicalPage = LogicalPages.FirstOrDefault(x => x.PageNumber == selectedPageNumber) ?? LogicalPages.FirstOrDefault();
+    }
+
+    private static void ReplaceItems<T>(AvaloniaList<T> target, IEnumerable<T> items) {
+        target.Clear();
+        target.AddRange(items);
     }
 
     private void RefreshSelectedPageDocument() {
@@ -328,10 +334,18 @@ public partial class EmsViewModel : ViewModelBase, IEmulatorObjectViewModel, IMe
 
     private EmsPhysicalPageEntryViewModel CreatePhysicalPageEntry(ushort physicalPageNumber, EmmRegister emmRegister) {
         int? owningHandleNumber = FindOwningHandleNumber(emmRegister.PhysicalPage);
-        string handleNumber = owningHandleNumber is null ? "Unmapped" : ConvertUtils.ToHex16((ushort)owningHandleNumber.Value);
-        string logicalPageNumber = emmRegister.PhysicalPage.PageNumber == ExpandedMemoryManager.EmmNullPage
-            ? "Unmapped"
-            : ConvertUtils.ToHex16(emmRegister.PhysicalPage.PageNumber);
+        string handleNumber;
+        if (owningHandleNumber is null) {
+            handleNumber = "Unmapped";
+        } else {
+            handleNumber = ConvertUtils.ToHex16((ushort)owningHandleNumber.Value);
+        }
+        string logicalPageNumber;
+        if (emmRegister.PhysicalPage.PageNumber == ExpandedMemoryManager.EmmNullPage) {
+            logicalPageNumber = "Unmapped";
+        } else {
+            logicalPageNumber = ConvertUtils.ToHex16(emmRegister.PhysicalPage.PageNumber);
+        }
         SegmentedAddress pageAddress = new(ExpandedMemoryManager.EmmPageFrameSegment,
             (ushort)(physicalPageNumber * ExpandedMemoryManager.EmmPageSize));
         return new EmsPhysicalPageEntryViewModel(

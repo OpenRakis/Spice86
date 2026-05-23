@@ -1,0 +1,89 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewModels="clr-namespace:Spice86.ViewModels"
+             xmlns:converters="clr-namespace:Spice86.Views.Converters"
+             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
+             x:Class="Spice86.Views.DosMemoryOverviewView"
+             x:DataType="viewModels:DosMemoryOverviewViewModel">
+    <Grid RowDefinitions="*,Auto,*">
+        <!-- Top: vertical bar graph of MCBs -->
+        <DockPanel Grid.Row="0" LastChildFill="True" Margin="8,8,8,4">
+            <TextBlock DockPanel.Dock="Top" Margin="0,0,0,4"
+                       FontWeight="SemiBold"
+                       Text="Conventional Memory (MCBs)" />
+            <TextBlock DockPanel.Dock="Top" Margin="0,0,0,6"
+                       Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                       Text="{CompiledBinding ConventionalSummary}" />
+            <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="14" Margin="0,6,0,0">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <Border Width="14" Height="14" Background="#2E7D32" />
+                    <TextBlock Text="Free" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <Border Width="14" Height="14" Background="#C62828" />
+                    <TextBlock Text="Allocated" />
+                </StackPanel>
+            </StackPanel>
+            <Border BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                    BorderThickness="1" Padding="4">
+                <Canvas x:Name="BarCanvas" ClipToBounds="True" />
+            </Border>
+        </DockPanel>
+
+        <GridSplitter Grid.Row="1" Height="4"
+                      HorizontalAlignment="Stretch"
+                      Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+
+        <!-- Bottom: structured report -->
+        <DockPanel Grid.Row="2" LastChildFill="True" Margin="8,4,8,8">
+            <TextBlock DockPanel.Dock="Top" Margin="0,0,0,6"
+                       FontWeight="SemiBold"
+                       Text="System Memory Summary" />
+            <Grid DockPanel.Dock="Bottom" Margin="0,8,0,0"
+                  ColumnDefinitions="Auto,*,Auto,*,Auto,*"
+                  RowDefinitions="Auto,Auto">
+                <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,8,4"
+                           FontWeight="SemiBold" Text="XMS driver:" />
+                <TextBlock Grid.Row="0" Grid.Column="1" Margin="0,0,16,4"
+                           Text="{CompiledBinding XmsLoaded, Converter={x:Static converters:LoadedConverter.Instance}}" />
+                <TextBlock Grid.Row="0" Grid.Column="2" Margin="0,0,8,4"
+                           FontWeight="SemiBold" Text="EMS driver:" />
+                <TextBlock Grid.Row="0" Grid.Column="3" Margin="0,0,16,4"
+                           Text="{CompiledBinding EmsLoaded, Converter={x:Static converters:LoadedConverter.Instance}}" />
+                <TextBlock Grid.Row="0" Grid.Column="4" Margin="0,0,8,4"
+                           FontWeight="SemiBold" Text="HMA:" />
+                <TextBlock Grid.Row="0" Grid.Column="5" Margin="0,0,0,4"
+                           Text="{CompiledBinding HmaStatus}" />
+
+                <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,0,8,0"
+                           FontWeight="SemiBold" Text="XMS handles:" />
+                <TextBlock Grid.Row="1" Grid.Column="1" Margin="0,0,16,0"
+                           Text="{CompiledBinding XmsHandlesAllocated}" />
+                <TextBlock Grid.Row="1" Grid.Column="2" Margin="0,0,8,0"
+                           FontWeight="SemiBold" Text="EMS handles:" />
+                <TextBlock Grid.Row="1" Grid.Column="3" Margin="0,0,16,0"
+                           Text="{CompiledBinding EmsHandlesAllocated}" />
+                <TextBlock Grid.Row="1" Grid.Column="4" Margin="0,0,8,0"
+                           FontWeight="SemiBold" Text="Largest free XMS:" />
+                <TextBlock Grid.Row="1" Grid.Column="5"
+                           Text="{CompiledBinding LargestFreeXmsBytes, StringFormat='{}{0:N0} bytes'}" />
+            </Grid>
+            <DataGrid ItemsSource="{CompiledBinding Rows}"
+                      IsReadOnly="True"
+                      AutoGenerateColumns="False"
+                      GridLinesVisibility="Horizontal"
+                      CanUserResizeColumns="True"
+                      HeadersVisibility="Column">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Memory Type" Binding="{CompiledBinding Category}" Width="180" />
+                    <DataGridTextColumn Header="Total" Binding="{CompiledBinding TotalBytes, StringFormat='{}{0:N0} B'}" Width="140" />
+                    <DataGridTextColumn Header="Used" Binding="{CompiledBinding UsedBytes, StringFormat='{}{0:N0} B'}" Width="140" />
+                    <DataGridTextColumn Header="Free" Binding="{CompiledBinding FreeBytes, StringFormat='{}{0:N0} B'}" Width="140" />
+                    <DataGridTextColumn Header="Notes" Binding="{CompiledBinding Notes}" Width="*" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </DockPanel>
+    </Grid>
+</UserControl>

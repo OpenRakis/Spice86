@@ -131,6 +131,21 @@ mc:Ignorable="d">
 											Content="{Binding $parent[Window].DataContext.SelectedDeviceSubTab.ViewModel}" />
 						</Grid>
 					</dockModel:Document>
+					<dockModel:Document Id="Dos" Title="DOS" CanClose="False">
+						<Grid RowDefinitions="Auto,*">
+							<TabStrip Grid.Row="0"
+									  ItemsSource="{Binding $parent[Window].DataContext.DosSubTabs}"
+									  SelectedItem="{Binding $parent[Window].DataContext.SelectedDosSubTab}">
+								<TabStrip.ItemTemplate>
+									<DataTemplate DataType="{x:Type vm:DebuggerSubTabViewModel}">
+										<TextBlock Text="{Binding Header}" />
+									</DataTemplate>
+								</TabStrip.ItemTemplate>
+							</TabStrip>
+							<ContentControl Grid.Row="1"
+											Content="{Binding $parent[Window].DataContext.SelectedDosSubTab.ViewModel}" />
+						</Grid>
+					</dockModel:Document>
 					<dockModel:Document
 					Id="Breakpoints"
 					Title="Breakpoints"
