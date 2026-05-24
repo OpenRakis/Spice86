@@ -1343,6 +1343,57 @@ public abstract class RendererTestsBase {
             "panning=0: pixel 0 shows bit 7 of addr 0 normally");
     }
 
+    [SkippableFact]
+    public void HorizontalPixelPanning_TextMode_AR13_8OrAbove_ResultsInNoShift() {
+        EnsureSupported();
+        VideoState state = ConfigureTextMode(1);
+        (Renderer renderer, VideoMemory vram) = CreateRenderer(state);
+        SetIdentityAttributeMap(state);
+
+        // Character 0: font byte 0xFF (all pixels set) = foreground color
+        vram.Planes[2, 0] = 0xFF;
+        byte attribute = 0x07; // foreground index 7, background index 0
+        vram.Planes[0, 0] = 0x00; // char code 0
+        vram.Planes[1, 0] = attribute;
+
+        // AR13=8 is above the valid text-mode range (0-7); hardware clamps to no pan
+        state.AttributeControllerRegisters.HorizontalPixelPanning = 8;
+        state.IsRenderingDirty = true;
+        uint[] frame = RenderAndCapture(renderer, state);
+
+        frame[0].Should().Be(state.DacRegisters.AttributeMap[7],
+            "text mode AR13>=8 must produce no shift; first pixel = foreground");
+    }
+
+    [SkippableFact]
+    public void HorizontalPixelPanning_TextMode_9DotWithLineGraphics_AddsOnePan() {
+        EnsureSupported();
+        VideoState state = ConfigureTextMode(1);
+        (Renderer renderer, VideoMemory vram) = CreateRenderer(state);
+        SetIdentityAttributeMap(state);
+
+        // Enable 9-dot character clock
+        state.SequencerRegisters.ClockingModeRegister.DotsPerClock = 9;
+        // Enable line graphics so the 9th dot repeats the 8th for box-drawing characters
+        state.AttributeControllerRegisters.AttributeControllerModeRegister.LineGraphicsEnabled = true;
+
+        // Character 0 font: only bit 6 set (pixel 1 when unshifted)
+        vram.Planes[2, 0] = 0x40;
+        vram.Planes[0, 0] = 0x00; // char code 0
+        vram.Planes[1, 0] = 0x07; // attribute: fg=7, bg=0
+
+        // AR13=1 in 9-dot text mode with LineGraphicsEnabled shifts by panUnits+1=2 pixels
+        state.AttributeControllerRegisters.HorizontalPixelPanning = 1;
+        state.IsRenderingDirty = true;
+        uint[] frame = RenderAndCapture(renderer, state);
+
+        // Unshifted: pixel 0 = bg (bit 7=0), pixel 1 = fg (bit 6=1)
+        // With pan=1 and +1 for 9-dot LineGraphics: effective shift=2
+        // pixel 0 now corresponds to bit 5 of font byte 0x40 = 0 => background
+        frame[0].Should().Be(state.DacRegisters.AttributeMap[0],
+            "9-dot text mode with LineGraphicsEnabled: pan=1 becomes effective shift 2, pixel 0 = background");
+    }
+
     // -------------------------------------------------- Helper Methods --------------------------------------------------
 
     /// <summary>

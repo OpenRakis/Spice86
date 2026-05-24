@@ -436,14 +436,22 @@ public class Renderer : IVgaRenderer {
         }
         // In 256-color mode the hardware only honours bits 0-2 of AR13.
         // In planar modes all 4 bits are valid.
-        int panUnits = in256ColorMode ? _framePanShift & 0x07 : _framePanShift & 0x0F;
+        int panUnits;
+        if (in256ColorMode) {
+            panUnits = _framePanShift & 0x07;
+        } else {
+            panUnits = _framePanShift & 0x0F;
+        }
         if (panUnits == 0) {
             return 0;
         }
         if (_framePixelPanningCompatibility && !_frameAboveLineCompare) {
             return 0;
         }
-        return in256ColorMode ? panUnits * 2 : panUnits;
+        if (in256ColorMode) {
+            return panUnits * 2;
+        }
+        return panUnits;
     }
 
     /// <summary>
