@@ -175,6 +175,7 @@ public sealed class SubstBatchCommandTests : IDisposable {
             DosFileManager fileManager = new(memory, new DosStringDecoder(memory, state, DosCodePageState.CreateForCurrentCulture()), driveManager, logger, new List<IVirtualDevice>());
             IBatchDisplayCommandHandler batchDisplayCommandHandler = new DosBatchDisplayCommandHandler(vgaFunctionality);
             Mscdex mscdex = new(state, memory, logger);
+            DosDriveStatusProvider driveStatusProvider = new(driveManager, mscdex);
             ISoundChannelCreator channelCreator = Substitute.For<ISoundChannelCreator>();
             channelCreator.AddChannel(Arg.Any<Action<int>>(), Arg.Any<int>(), Arg.Any<string>(), Arg.Any<HashSet<ChannelFeature>>())
                 .Returns(callInfo => new SoundChannel((Action<int>)callInfo[0], (string)callInfo[2], (HashSet<ChannelFeature>)callInfo[3]));
@@ -182,7 +183,7 @@ public sealed class SubstBatchCommandTests : IDisposable {
             DosProcessManager processManager = new(
                 memory, stack, state,
                 memoryManager, fileManager, driveManager,
-                mscdex, channelCreator, batchDisplayCommandHandler,
+                driveStatusProvider, mscdex, channelCreator, batchDisplayCommandHandler,
                 new Dictionary<string, string>(), logger);
 
             return new SubstContext {

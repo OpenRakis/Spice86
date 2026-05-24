@@ -44,6 +44,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
     private readonly Mscdex _mscdex;
     private readonly ISoundChannelCreator _channelCreator;
     private readonly IDriveActivityNotifier _activityNotifier;
+    private readonly IDriveStatusProvider _driveStatusProvider;
 
     /// <summary>
     /// Gets the INT 20h DOS services.
@@ -253,7 +254,8 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         FcbManager = new(_memory, FileManager, DosDriveManager, _loggerService);
         IBatchDisplayCommandHandler batchDisplayCommandHandler = new DosBatchDisplayCommandHandler(_vgaFunctionality);
         _mscdex = new Mscdex(state, memory, loggerService, _activityNotifier);
-        ProcessManager = new(_memory, stack, state, MemoryManager, FileManager, DosDriveManager, _mscdex, channelCreator, batchDisplayCommandHandler, envVars, _loggerService);
+        _driveStatusProvider = new DosDriveStatusProvider(DosDriveManager, _mscdex);
+        ProcessManager = new(_memory, stack, state, MemoryManager, FileManager, DosDriveManager, _driveStatusProvider, _mscdex, channelCreator, batchDisplayCommandHandler, envVars, _loggerService);
         DosInt22Handler = new DosInt22Handler(_memory, functionHandlerProvider, stack, state, ProcessManager, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state,
             keyboardInt16Handler, CountryInfo, dosCodePageState, dosStringDecoder,
@@ -408,87 +410,8 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         DosDriveManager.MountMemoryDrive(zDrive);
     }
 
-    /// <summary>
-    /// Gets the MSCDEX CD-ROM handler owned by this DOS kernel.
-    /// Use <see cref="Mscdex.AddDrive"/> to register CD-ROM drives at runtime (e.g. from IMGMOUNT).
-    /// </summary>
-    public Mscdex Mscdex => _mscdex;
-
-    /// <inheritdoc/>
     public IReadOnlyList<DosVirtualDriveStatus> GetDriveStatuses() {
-        List<DosVirtualDriveStatus> statuses = new();
-
-        // Drive letters owned by MSCDEX (CD-ROM drives) must not also surface as Fixed
-        // entries via the drive map iteration, otherwise GetDriveStatuses would return
-        // two statuses for the same letter (one Fixed, one CdRom). Each polling tick
-        // would then alternate between them and emit duplicate mount/eject toasts.
-        HashSet<char> cdRomLetters = new();
-        foreach (MscdexDriveEntry cdrom in _mscdex.Drives) {
-            cdRomLetters.Add(char.ToUpperInvariant(cdrom.DriveLetter));
-        }
-
-        foreach (KeyValuePair<char, DosDriveBase> kvp in DosDriveManager) {
-            if (kvp.Value is not VirtualDrive vd) {
-                continue;
-            }
-            if (cdRomLetters.Contains(char.ToUpperInvariant(vd.DriveLetter))) {
-                continue;
-            }
-            // By DOS convention A: and B: are always floppy drives.
-            DosVirtualDriveType driveType;
-            if (vd.DriveLetter == 'A' || vd.DriveLetter == 'B') {
-                driveType = DosVirtualDriveType.Floppy;
-            } else {
-                driveType = DosVirtualDriveType.Fixed;
-            }
-
-            // An image-backed floppy drive overrides the folder-backed status.
-            if (DosDriveManager.TryGetFloppyDrive(vd.DriveLetter, out FloppyDiskDrive? floppy)) {
-                statuses.Add(new DosVirtualDriveStatus(
-                    floppy.DriveLetter, DosVirtualDriveType.Floppy,
-                    hasMedia: true, floppy.Label,
-                    currentImagePath: floppy.ImagePath,
-                    imageCount: floppy.ImageCount,
-                    allImagePaths: floppy.AllImagePaths));
-                continue;
-            }
-
-            bool hasMedia = !string.IsNullOrEmpty(vd.MountedHostDirectory);
-            // Surface the mounted host folder path as the "current image" for folder-backed
-            // floppy drives so the UI combobox shows the mount and the poll-based notifier
-            // fires a toast when the path transitions from empty to set. The trailing
-            // slash that ConvertUtils.ToSlashFolderPath added is stripped so Path.GetFileName
-            // returns the folder name instead of an empty string.
-            if (hasMedia && driveType == DosVirtualDriveType.Floppy) {
-                string folderPath = vd.MountedHostDirectory.TrimEnd('/', '\\');
-                IReadOnlyList<string> folderPaths = new[] { folderPath };
-                statuses.Add(new DosVirtualDriveStatus(
-                    vd.DriveLetter, driveType, hasMedia, vd.Label,
-                    currentImagePath: folderPath,
-                    imageCount: 1,
-                    allImagePaths: folderPaths));
-            } else {
-                statuses.Add(new DosVirtualDriveStatus(vd.DriveLetter, driveType, hasMedia, vd.Label));
-            }
-        }
-
-        foreach (KeyValuePair<char, MemoryDrive> kvp in DosDriveManager.MemoryDrives) {
-            MemoryDrive md = kvp.Value;
-            statuses.Add(new DosVirtualDriveStatus(md.DriveLetter, DosVirtualDriveType.Memory, hasMedia: true, md.Label));
-        }
-
-        foreach (MscdexDriveEntry cdrom in _mscdex.Drives) {
-            bool hasCdMedia = !cdrom.Drive.MediaState.IsDoorOpen;
-            string volumeLabel = hasCdMedia ? (cdrom.Drive.Image.PrimaryVolume.VolumeIdentifier ?? string.Empty) : string.Empty;
-            string imagePath = hasCdMedia ? cdrom.Drive.Image.ImagePath : string.Empty;
-            statuses.Add(new DosVirtualDriveStatus(
-                cdrom.DriveLetter, DosVirtualDriveType.CdRom, hasCdMedia, volumeLabel,
-                currentImagePath: imagePath,
-                imageCount: cdrom.Drive.ImageCount,
-                allImagePaths: cdrom.Drive.AllImagePaths));
-        }
-
-        return statuses.OrderBy(s => s.DriveLetter).ToList();
+        return _driveStatusProvider.GetDriveStatuses();
     }
 
     /// <inheritdoc/>
