@@ -36,7 +36,7 @@ public sealed class DosDriveStatusProvider : IDriveStatusProvider {
         }
 
         foreach (KeyValuePair<char, DosDriveBase> kvp in _dosDriveManager) {
-            if (kvp.Value is not VirtualDrive virtualDrive) {
+            if (kvp.Value is not VirtualDrive virtualDrive || kvp.Value is MemoryDrive) {
                 continue;
             }
             if (cdRomLetters.Contains(char.ToUpperInvariant(virtualDrive.DriveLetter))) {

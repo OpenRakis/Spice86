@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.OperatingSystem.Structures;
 
+using System.Diagnostics.CodeAnalysis;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -7,10 +8,18 @@ using System.Linq;
 /// <summary>
 /// Represents an in-memory read-only virtual drive (typically Z: for AUTOEXEC.BAT).
 /// </summary>
-public class MemoryDrive : DosDriveBase {
+public class MemoryDrive : VirtualDrive {
     private readonly Dictionary<string, byte[]> _files = new(StringComparer.OrdinalIgnoreCase);
 
     private static string NormalizePath(string path) => path.Replace('/', '\\');
+
+    /// <summary>
+    /// Initializes a memory drive with no host-backed mount point.
+    /// </summary>
+    [SetsRequiredMembers]
+    public MemoryDrive() {
+        MountedHostDirectory = string.Empty;
+    }
 
     /// <summary>
     /// Adds a file to the memory drive.
