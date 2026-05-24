@@ -201,7 +201,7 @@ public class Renderer : IVgaRenderer {
                 _frameScanLineBit0ForAddressBit14,
                 _frameCharRowScanline & 1);
 
-            int effectivePanShift = ComputeEffectivePanShift(in256ColorMode);
+            int effectivePanShift = ComputeEffectivePanShift(in256ColorMode, inGraphicsMode, pixelsPerChar);
             int visibleChars = _frameHorizontalDisplayEnd - _frameSkew;
 
             if (in256ColorMode && !_frameVerticalBlanking) {
@@ -424,15 +424,18 @@ public class Renderer : IVgaRenderer {
     }
 
     /// <summary>
-    ///     Computes the effective pixel-panning shift for the current scanline.
-    ///     In 256-color mode, each AR13 unit represents 2 displayed pixels (pixel-doubling
-    ///     granularity) and the hardware-valid range is 0–7 (3 bits), giving a max of 14 pixels.
-    ///     In all other modes the valid range is 0–15 (4 bits), one unit = one pixel.
-    ///     Returns 0 when below the line-compare boundary and PixelPanningCompatibility is set.
+    ///     Computes the effective AR13 horizontal panning shift for the current scanline.
     /// </summary>
-    private int ComputeEffectivePanShift(bool in256ColorMode) {
-        // In 256-color mode the hardware only honours bits 0-2 of AR13 (matches DOSBox-staging).
-        // In planar/text modes all 4 bits are valid.
+    /// <param name="in256ColorMode">Whether the current graphics mode uses the 256-color shift path.</param>
+    /// <param name="inGraphicsMode">Whether the current mode is graphics or text.</param>
+    /// <param name="pixelsPerChar">The number of output pixels generated for each text character cell.</param>
+    /// <returns>The number of output pixels to skip from the rendered scratch row.</returns>
+    private int ComputeEffectivePanShift(bool in256ColorMode, bool inGraphicsMode, int pixelsPerChar) {
+        if (!inGraphicsMode) {
+            return ComputeTextPanShift(pixelsPerChar);
+        }
+        // In 256-color mode the hardware only honours bits 0-2 of AR13.
+        // In planar modes all 4 bits are valid.
         int panUnits = in256ColorMode ? _framePanShift & 0x07 : _framePanShift & 0x0F;
         if (panUnits == 0) {
             return 0;
@@ -441,6 +444,25 @@ public class Renderer : IVgaRenderer {
             return 0;
         }
         return in256ColorMode ? panUnits * 2 : panUnits;
+    }
+
+    /// <summary>
+    ///     Computes the effective AR13 horizontal panning shift for text mode.
+    /// </summary>
+    /// <param name="pixelsPerChar">The number of output pixels generated for each text character cell.</param>
+    /// <returns>The number of output pixels to skip from the rendered scratch row.</returns>
+    private int ComputeTextPanShift(int pixelsPerChar) {
+        int panUnits = _framePanShift & 0x0F;
+        if (panUnits > 7) {
+            return 0;
+        }
+        if (_framePixelPanningCompatibility && !_frameAboveLineCompare) {
+            return 0;
+        }
+        if (pixelsPerChar == 9 && _state.AttributeControllerRegisters.AttributeControllerModeRegister.LineGraphicsEnabled) {
+            return panUnits + 1;
+        }
+        return panUnits;
     }
 
     /// <summary>
