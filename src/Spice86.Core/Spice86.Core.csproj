@@ -15,9 +15,20 @@
         <PackageId>Spice86.Core</PackageId>
     </PropertyGroup>
 
-    <ItemGroup>
-        <None Remove="Resources\2MGM.sf2" />
-    </ItemGroup>
+	<ItemGroup>
+		<None Remove="Resources\2MGM.sf2" />
+		<None Remove="Resources\DiskNoises\fdd_spinup.wav" />
+		<None Remove="Resources\DiskNoises\fdd_spin.wav" />
+		<None Remove="Resources\DiskNoises\fdd_seek1.wav" />
+		<None Remove="Resources\DiskNoises\fdd_seek2.wav" />
+		<None Remove="Resources\DiskNoises\fdd_seek3.wav" />
+		<None Remove="Resources\DiskNoises\fdd_seek4.wav" />
+		<None Remove="Resources\DiskNoises\fdd_seek5.wav" />
+		<None Remove="Resources\DiskNoises\fdd_seek6.wav" />
+		<None Remove="Resources\DiskNoises\fdd_seek7.wav" />
+		<None Remove="Resources\DiskNoises\fdd_seek8.wav" />
+		<None Remove="Resources\DiskNoises\fdd_seek9.wav" />
+	</ItemGroup>
     <ItemGroup>
         <PackageReference Include="CommunityToolkit.HighPerformance" />
         <PackageReference Include="JetBrains.Annotations" />
