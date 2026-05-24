@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
+namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
 
 using Serilog.Events;
 
@@ -1952,9 +1952,9 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Gets the FCB segmented address from DS:DX.
+    /// Gets the FCB linear address from DS:DX.
     /// </summary>
-    private SegmentedAddress GetFcbAddress() => new SegmentedAddress(State.DS, State.DX);
+    private uint GetFcbAddress() => MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
 
     /// <summary>
     /// Gets the DTA address for FCB operations.
@@ -1972,7 +1972,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <para>AL = 00h if file opened/found, FFh if file not found</para>
     /// </remarks>
     private void FcbOpenFile() {
-        SegmentedAddress fcbAddress = GetFcbAddress();
+        uint fcbAddress = GetFcbAddress();
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FCB OPEN FILE at {Address}", fcbAddress);
         }
@@ -1990,7 +1990,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <para>AL = 00h if file closed, FFh if file not found</para>
     /// </remarks>
     private void FcbCloseFile() {
-        SegmentedAddress fcbAddress = GetFcbAddress();
+        uint fcbAddress = GetFcbAddress();
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FCB CLOSE FILE at {Address}", fcbAddress);
         }
@@ -2010,7 +2010,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <para>The DTA is filled with the directory entry of the matching file.</para>
     /// </remarks>
     private void FcbFindFirst() {
-        SegmentedAddress fcbAddress = GetFcbAddress();
+        uint fcbAddress = GetFcbAddress();
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FCB FIND FIRST at {Address}", fcbAddress);
         }
@@ -2048,7 +2048,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <para>AL = 00h on success, FFh if no files matched or error</para>
     /// </remarks>
     private void FcbDeleteFile() {
-        SegmentedAddress fcbAddress = GetFcbAddress();
+        uint fcbAddress = GetFcbAddress();
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FCB DELETE FILE at {Address}", fcbAddress);
         }
@@ -2070,7 +2070,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <para>Supports wildcards: '?' in new name takes character from old filename</para>
     /// </remarks>
     private void FcbRenameFile() {
-        SegmentedAddress fcbAddress = GetFcbAddress();
+        uint fcbAddress = GetFcbAddress();
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FCB RENAME FILE at {Address}", fcbAddress);
         }
@@ -2088,7 +2088,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <para>AL = 00h if successful, 01h if EOF and no data read, 02h if segment wrap, 03h if EOF with partial read</para>
     /// </remarks>
     private void FcbSequentialRead() {
-        SegmentedAddress fcbAddress = GetFcbAddress();
+        uint fcbAddress = GetFcbAddress();
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FCB SEQUENTIAL READ at {Address}", fcbAddress);
         }
@@ -2106,7 +2106,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <para>AL = 00h if successful, 01h if disk full, 02h if segment wrap</para>
     /// </remarks>
     private void FcbSequentialWrite() {
-        SegmentedAddress fcbAddress = GetFcbAddress();
+        uint fcbAddress = GetFcbAddress();
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FCB SEQUENTIAL WRITE at {Address}", fcbAddress);
         }
@@ -2124,7 +2124,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <para>AL = 00h if file created, FFh if error</para>
     /// </remarks>
     private void FcbCreateFile() {
-        SegmentedAddress fcbAddress = GetFcbAddress();
+        uint fcbAddress = GetFcbAddress();
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FCB CREATE FILE at {Address}", fcbAddress);
         }
@@ -2142,7 +2142,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <para>AL = 00h if successful, 01h if EOF, 02h if segment wrap, 03h if partial read</para>
     /// </remarks>
     private void FcbRandomRead() {
-        SegmentedAddress fcbAddress = GetFcbAddress();
+        uint fcbAddress = GetFcbAddress();
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FCB RANDOM READ at {Address}", fcbAddress);
         }
@@ -2160,7 +2160,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <para>AL = 00h if successful, 01h if disk full, 02h if segment wrap</para>
     /// </remarks>
     private void FcbRandomWrite() {
-        SegmentedAddress fcbAddress = GetFcbAddress();
+        uint fcbAddress = GetFcbAddress();
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FCB RANDOM WRITE at {Address}", fcbAddress);
         }
@@ -2178,7 +2178,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <para>AL = 00h if file found (random record field set to file size in records), FFh if file not found</para>
     /// </remarks>
     private void FcbGetFileSize() {
-        SegmentedAddress fcbAddress = GetFcbAddress();
+        uint fcbAddress = GetFcbAddress();
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FCB GET FILE SIZE at {Address}", fcbAddress);
         }
@@ -2198,7 +2198,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <para>Extended FCBs with 0xFF marker are supported; the inner FCB begins at +7 bytes.</para>
     /// </remarks>
     private void FcbSetRandomRecordNumber() {
-        SegmentedAddress fcbAddress = GetFcbAddress();
+        uint fcbAddress = GetFcbAddress();
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FCB SET RANDOM RECORD NUMBER at {Address}", fcbAddress);
         }
@@ -2218,7 +2218,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <para>CX = actual number of records read</para>
     /// </remarks>
     private void FcbRandomBlockRead() {
-        SegmentedAddress fcbAddress = GetFcbAddress();
+        uint fcbAddress = GetFcbAddress();
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FCB RANDOM BLOCK READ at {Address}, {Count} records", fcbAddress, State.CX);
         }
@@ -2240,7 +2240,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <para>CX = actual number of records written</para>
     /// </remarks>
     private void FcbRandomBlockWrite() {
-        SegmentedAddress fcbAddress = GetFcbAddress();
+        uint fcbAddress = GetFcbAddress();
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FCB RANDOM BLOCK WRITE at {Address}, {Count} records", fcbAddress, State.CX);
         }
@@ -2276,7 +2276,10 @@ public class DosInt21Handler : InterruptHandler {
                 stringAddress, fcbAddress, parseControl);
         }
 
-        (FcbParseResult parseStatus, uint bytesAdvanced) = _dosFcbManager.ParseFilename(stringAddress, fcbAddress, parseControl);
+        (FcbParseResult parseStatus, uint bytesAdvanced) = _dosFcbManager.ParseFilename(
+            MemoryUtils.ToPhysicalAddress(stringAddress.Segment, stringAddress.Offset),
+            MemoryUtils.ToPhysicalAddress(fcbAddress.Segment, fcbAddress.Offset),
+            parseControl);
         State.AL = (byte)parseStatus;
         State.SI += (ushort)bytesAdvanced;
     }
@@ -2354,3 +2357,4 @@ public class DosInt21Handler : InterruptHandler {
         _ioPortDispatcher.WriteByte(CmosPorts.Data, value);
     }
 }
+

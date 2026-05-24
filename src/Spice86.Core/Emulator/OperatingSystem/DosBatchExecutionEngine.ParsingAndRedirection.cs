@@ -73,12 +73,12 @@ internal sealed partial class DosBatchExecutionEngine {
             remaining = trimmed[separatorIndex..];
         }
 
-        TrySplitCompactCommand(ref token, ref remaining);
+        SplitCompactCommand(ref token, ref remaining);
 
         return true;
     }
 
-    private static void TrySplitCompactCommand(ref string token, ref string remaining) {
+    private static void SplitCompactCommand(ref string token, ref string remaining) {
         ReadOnlySpan<string> compactCommands = [
             "CD", "CHDIR", "MD", "MKDIR", "RD", "RMDIR", "DIR"
         ];
@@ -112,7 +112,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return i == 0 ? text : text[i..];
     }
 
-    private static bool TryConsumeKeyword(ref string text, string keyword) {
+    private static bool ConsumeKeyword(ref string text, string keyword) {
         string trimmed = text.TrimStart();
         if (!trimmed.StartsWith(keyword, StringComparison.OrdinalIgnoreCase)) {
             return false;
@@ -313,7 +313,7 @@ internal sealed partial class DosBatchExecutionEngine {
             }
 
             string variableName = line[(i + 1)..closingPercent];
-            string? environmentValue = _host.TryGetEnvironmentVariable(variableName);
+            string? environmentValue = _host.GetEnvironmentVariable(variableName);
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                 _loggerService.Verbose("BATCH: Expand %%{VarName}%% -> {Value}", variableName, environmentValue ?? "(null)");
             }
@@ -327,12 +327,12 @@ internal sealed partial class DosBatchExecutionEngine {
         return builder.ToString();
     }
 
-    private bool TryApplyRedirection(CommandRedirection redirection) {
+    private bool ApplyRedirection(CommandRedirection redirection) {
         if (!string.IsNullOrWhiteSpace(redirection.InputPath)) {
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                 _loggerService.Verbose("BATCH: Redirecting stdin from {Path}", redirection.InputPath);
             }
-            if (!TryRedirectStandardInput(redirection.InputPath)) {
+            if (!RedirectStandardInput(redirection.InputPath)) {
                 if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                     _loggerService.Warning("BATCH: Failed to redirect stdin from {Path}", redirection.InputPath);
                 }
@@ -345,7 +345,7 @@ internal sealed partial class DosBatchExecutionEngine {
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                 _loggerService.Verbose("BATCH: Redirecting stdout to {Path} (append={Append})", redirection.OutputPath, redirection.AppendOutput);
             }
-            if (!TryRedirectStandardOutput(redirection.OutputPath, redirection.AppendOutput, (ushort)DosStandardHandle.Stdout)) {
+            if (!RedirectStandardOutput(redirection.OutputPath, redirection.AppendOutput, (ushort)DosStandardHandle.Stdout)) {
                 if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                     _loggerService.Warning("BATCH: Failed to redirect stdout to {Path}", redirection.OutputPath);
                 }
@@ -358,7 +358,7 @@ internal sealed partial class DosBatchExecutionEngine {
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                 _loggerService.Verbose("BATCH: Redirecting stderr to {Path} (append={Append})", redirection.ErrorPath, redirection.AppendError);
             }
-            if (!TryRedirectStandardOutput(redirection.ErrorPath, redirection.AppendError, (ushort)DosStandardHandle.Stderr)) {
+            if (!RedirectStandardOutput(redirection.ErrorPath, redirection.AppendError, (ushort)DosStandardHandle.Stderr)) {
                 if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                     _loggerService.Warning("BATCH: Failed to redirect stderr to {Path}", redirection.ErrorPath);
                 }
@@ -370,16 +370,16 @@ internal sealed partial class DosBatchExecutionEngine {
         return true;
     }
 
-    private bool TryRedirectStandardInput(string dosPath) {
+    private bool RedirectStandardInput(string dosPath) {
         DosFileOperationResult openResult = _dosFileManager.OpenFileOrDevice(dosPath, FileAccessMode.ReadOnly);
         if (openResult.IsError || openResult.Value == null) {
             return false;
         }
 
-        return TryMoveHandleToStandard((ushort)openResult.Value.Value, (ushort)DosStandardHandle.Stdin);
+        return MoveHandleToStandard((ushort)openResult.Value.Value, (ushort)DosStandardHandle.Stdin);
     }
 
-    private bool TryRedirectStandardOutput(string dosPath, bool append, ushort standardHandle) {
+    private bool RedirectStandardOutput(string dosPath, bool append, ushort standardHandle) {
         DosFileOperationResult openResult;
         bool fileAlreadyExisted = false;
         if (append) {
@@ -406,10 +406,10 @@ internal sealed partial class DosBatchExecutionEngine {
             }
         }
 
-        return TryMoveHandleToStandard(openedHandle, standardHandle);
+        return MoveHandleToStandard(openedHandle, standardHandle);
     }
 
-    private bool TryMoveHandleToStandard(ushort sourceHandle, ushort standardHandle) {
+    private bool MoveHandleToStandard(ushort sourceHandle, ushort standardHandle) {
         VirtualFileBase? redirectedFile = _dosFileManager.OpenFiles[sourceHandle];
         if (redirectedFile == null) {
             return false;
@@ -516,7 +516,7 @@ internal sealed partial class DosBatchExecutionEngine {
             }
 
             if (!inQuotes && IsRedirectionStart(commandLine, i)) {
-                if (!TryReadRedirection(commandLine, ref i, redirectionBuilder)) {
+                if (!ReadRedirection(commandLine, ref i, redirectionBuilder)) {
                     return false;
                 }
 
@@ -600,7 +600,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return true;
     }
 
-    private static bool TryReadRedirection(string commandLine, ref int index, RedirectionBuilder redirectionBuilder) {
+    private static bool ReadRedirection(string commandLine, ref int index, RedirectionBuilder redirectionBuilder) {
         int originalIndex = index;
         int descriptor = -1;
         if (char.IsDigit(commandLine[index]) && index + 1 < commandLine.Length &&

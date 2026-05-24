@@ -39,12 +39,12 @@ internal sealed partial class DosBatchExecutionEngine {
 
         string[] callArguments2 = ParseArguments(tail);
 
-        if (TryResolveBatchCommandPath(resolvedTargetToken, out string batchTargetPath)) {
+        if (ResolveBatchCommandPath(resolvedTargetToken, out string batchTargetPath)) {
             if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                 _loggerService.Debug("BATCH: CALL - pushing batch file: '{Path}' with {ArgCount} args",
                     batchTargetPath, callArguments2.Length);
             }
-            if (!TryPushBatchFile(batchTargetPath, callArguments2)) {
+            if (!PushBatchFile(batchTargetPath, callArguments2)) {
                 _lastExitCode = 1;
                 if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                     _loggerService.Warning("BATCH: CALL - failed to push batch file: {Path}", batchTargetPath);
@@ -141,7 +141,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return [.. subroutineLines];
     }
 
-    internal bool TryHandleGoto(string arguments) {
+    internal bool HandleGoto(string arguments) {
         if (_batchFileContexts.Count == 0) {
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                 _loggerService.Warning("BATCH: GOTO outside of batch context, ignoring");
@@ -164,7 +164,7 @@ internal sealed partial class DosBatchExecutionEngine {
         }
 
         BatchFileContext context = _batchFileContexts.Peek();
-        if (!context.TryGoto(label)) {
+        if (!context.GoToLabel(label)) {
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                 _loggerService.Warning("BATCH: GOTO - label not found: {Label}, popping context", label);
             }
@@ -177,7 +177,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return false;
     }
 
-    internal bool TryHandleShift() {
+    internal bool HandleShift() {
         if (_batchFileContexts.Count == 0) {
             return false;
         }
@@ -194,13 +194,13 @@ internal sealed partial class DosBatchExecutionEngine {
         launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
 
         string working = arguments.TrimStart();
-        bool hasNot = TryConsumeKeyword(ref working, "NOT");
+        bool hasNot = ConsumeKeyword(ref working, "NOT");
 
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("BATCH: IF not={Not} args={Args}", hasNot, working);
         }
 
-        if (TryConsumeKeyword(ref working, "ERRORLEVEL")) {
+        if (ConsumeKeyword(ref working, "ERRORLEVEL")) {
             string errorLevelExpression = TrimLeadingEqualsAndWhitespace(working);
             if (!TryExtractFirstToken(errorLevelExpression, out string levelToken, out string commandPart)) {
                 return false;
@@ -217,13 +217,13 @@ internal sealed partial class DosBatchExecutionEngine {
             }
             if (condition != hasNot) {
                 bool launched = TryExecuteCommandLine(commandPart, out launchRequest);
-                return TryApplyInheritedRedirection(inheritedRedirection, launched, ref launchRequest);
+                return ApplyInheritedRedirection(inheritedRedirection, launched, ref launchRequest);
             }
 
             return false;
         }
 
-        if (TryConsumeKeyword(ref working, "EXIST")) {
+        if (ConsumeKeyword(ref working, "EXIST")) {
             if (!TryExtractFirstToken(working, out string fileToken, out string commandPart)) {
                 return false;
             }
@@ -235,7 +235,7 @@ internal sealed partial class DosBatchExecutionEngine {
             }
             if (exists != hasNot) {
                 bool launched = TryExecuteCommandLine(commandPart, out launchRequest);
-                return TryApplyInheritedRedirection(inheritedRedirection, launched, ref launchRequest);
+                return ApplyInheritedRedirection(inheritedRedirection, launched, ref launchRequest);
             }
 
             return false;
@@ -259,7 +259,7 @@ internal sealed partial class DosBatchExecutionEngine {
         }
         if (equals != hasNot) {
             bool launched = TryExecuteCommandLine(commandSegment, out launchRequest);
-            return TryApplyInheritedRedirection(inheritedRedirection, launched, ref launchRequest);
+            return ApplyInheritedRedirection(inheritedRedirection, launched, ref launchRequest);
         }
 
         return false;
@@ -315,7 +315,7 @@ internal sealed partial class DosBatchExecutionEngine {
         string afterIn = restAfterVariable.TrimStart();
         if (afterIn.StartsWith("IN(", StringComparison.OrdinalIgnoreCase)) {
             afterIn = afterIn[2..];
-        } else if (!TryConsumeKeyword(ref afterIn, "IN")) {
+        } else if (!ConsumeKeyword(ref afterIn, "IN")) {
             return false;
         }
 
@@ -331,7 +331,7 @@ internal sealed partial class DosBatchExecutionEngine {
 
         string listSegment = inSegment[1..closeParen];
         string afterList = inSegment[(closeParen + 1)..].TrimStart();
-        if (!TryConsumeKeyword(ref afterList, "DO")) {
+        if (!ConsumeKeyword(ref afterList, "DO")) {
             return false;
         }
 
@@ -363,7 +363,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return TryPump(out launchRequest);
     }
 
-    private bool TryPushBatchFile(string dosPath, string[] arguments) {
+    private bool PushBatchFile(string dosPath, string[] arguments) {
         if (!TryReadBatchFile(dosPath, out string[] lines)) {
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                 _loggerService.Warning("BATCH: Failed to read batch file: {DosPath}", dosPath);

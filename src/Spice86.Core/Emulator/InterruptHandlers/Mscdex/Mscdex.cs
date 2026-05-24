@@ -215,6 +215,28 @@ public sealed class Mscdex {
         }
     }
 
+    /// <summary>
+    /// Removes a previously registered CD-ROM drive.
+    /// </summary>
+    /// <param name="driveLetter">The DOS drive letter to remove.</param>
+    /// <returns><see langword="true"/> when a drive was removed; otherwise <see langword="false"/>.</returns>
+    public bool RemoveDrive(char driveLetter) {
+        char upper = char.ToUpperInvariant(driveLetter);
+        for (int i = 0; i < _drives.Count; i++) {
+            if (_drives[i].DriveLetter != upper) {
+                continue;
+            }
+
+            _drives.RemoveAt(i);
+            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
+                _loggerService.Information("MSCDEX: Removed drive {Drive}:", upper);
+            }
+            return true;
+        }
+
+        return false;
+    }
+
 
     /// <summary>
     /// Reads <see cref="State.AL"/> and dispatches to the appropriate MSCDEX subfunction.
