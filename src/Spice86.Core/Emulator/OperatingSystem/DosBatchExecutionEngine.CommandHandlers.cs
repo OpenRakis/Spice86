@@ -1761,7 +1761,7 @@ internal sealed partial class DosBatchExecutionEngine {
                 _loggerService.Debug("BATCH: Changed drive to {Drive}:", driveLetter);
             }
         } else {
-            WriteToStandardOutput($"Invalid drive specification\r\n");
+            WriteToStandardOutput($"Drive {driveLetter} does not exist!\r\n");
         }
     }
 }
