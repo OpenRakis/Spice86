@@ -634,25 +634,6 @@ public class Renderer : IVgaRenderer {
             frameBuffer[destinationAddress++] = attrMap[index];
         }
     }
-
-    private void Draw256ColorMode(Span<uint> frameBuffer, uint[] paletteMap, ref int destinationAddress, byte plane0, byte plane1, byte plane2, byte plane3) {
-        // 256-color mode is simply using the video memory bytes directly.
-        // Output 8 pixels by drawing each of the 4 pixels twice.
-        uint pixel12Color = paletteMap[plane0];
-        uint pixel34Color = paletteMap[plane1];
-        uint pixel56Color = paletteMap[plane2];
-        uint pixel78Color = paletteMap[plane3];
-        frameBuffer[destinationAddress++] = pixel12Color;
-        frameBuffer[destinationAddress++] = pixel12Color;
-        frameBuffer[destinationAddress++] = pixel34Color;
-        frameBuffer[destinationAddress++] = pixel34Color;
-        frameBuffer[destinationAddress++] = pixel56Color;
-        frameBuffer[destinationAddress++] = pixel56Color;
-        frameBuffer[destinationAddress++] = pixel78Color;
-        frameBuffer[destinationAddress++] = pixel78Color;
-    }
-
-
 }
 
 internal enum MemoryWidth {
