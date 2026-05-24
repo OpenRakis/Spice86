@@ -2317,6 +2317,24 @@ public class DosBatchRoutingIntegrationTests {
     }
 
     [Fact]
+    public void HostRequestedBatch_Vol_OnMountedCdDrive_PrintsMountedMediaLabel() {
+        WithTempFile("dos_batch_vol_cdrom", tempDir => {
+            // Arrange
+            string cdRoot = Path.Join(tempDir, "MYDISC");
+            Directory.CreateDirectory(cdRoot);
+            string script = $"MOUNT D \"{cdRoot}\" -t cdrom\r\nD:\r\nVOL > C:\\OUT.TXT\r\n";
+
+            // Act
+            RunBatchScript(tempDir, script);
+
+            // Assert
+            string output = File.ReadAllText(Path.Join(tempDir, "OUT.TXT")).ToUpperInvariant();
+            output.Should().Contain("VOLUME IN DRIVE D IS MYDISC",
+                "VOL on a mounted CD drive should print the mounted media label, not the default drive placeholder label");
+        });
+    }
+
+    [Fact]
     public void HostRequestedBatch_Date_HelpSwitch_PrintsUsage() {
         WithTempFile("dos_batch_date_help", tempDir => {
             // Act
