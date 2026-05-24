@@ -9,6 +9,8 @@ using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 /// <summary>
@@ -106,6 +108,7 @@ public class DosMemoryManager {
     /// <param name="requestedSizeInParagraphs">The requested size in paragraphs of the memory block.</param>
     /// <returns>The allocated <see cref="DosMemoryControlBlock"/> or <c>null</c> if no memory block could be found.</returns>
     public DosMemoryControlBlock? AllocateMemoryBlock(ushort requestedSizeInParagraphs) {
+        Debug.WriteLine($"[DosMemoryManager] AllocateMemoryBlock: requested {requestedSizeInParagraphs} paragraphs ({requestedSizeInParagraphs * 16} bytes), strategy={_allocationStrategy}");
         IEnumerable<DosMemoryControlBlock> candidates = FindCandidatesForAllocation(requestedSizeInParagraphs);
 
         // Select block based on allocation strategy
@@ -128,17 +131,24 @@ public class DosMemoryManager {
         }
 
         block.PspSegment = _sda.CurrentProgramSegmentPrefix;
+        Debug.WriteLine($"[DosMemoryManager] AllocateMemoryBlock: allocated segment={block.DataBlockSegment:X4} size={block.Size} paragraphs");
         return block;
     }
 
     /// <summary>
-    /// Finds the largest free <see cref="DosMemoryControlBlock"/>.
+    /// Finds the largest free
     /// </summary>
     /// <returns>The largest free <see cref="DosMemoryControlBlock"/></returns>
     public DosMemoryControlBlock FindLargestFree() {
-        return EnumerateBlocks()
+        if (!CompressFreeBlocks()) {
+            return _start;
+        }
+
+        DosMemoryControlBlock result = EnumerateBlocks()
             .Where(block => block.IsFree)
             .MaxBy(block => block.Size) ?? _start;
+        Debug.WriteLine($"[DosMemoryManager] FindLargestFree: segment={result.DataBlockSegment:X4} size={result.Size} paragraphs ({result.AllocationSizeInBytes} bytes)");
+        return result;
     }
 
     /// <summary>
@@ -162,6 +172,7 @@ public class DosMemoryManager {
     /// <param name="blockSegment">The segment number of the MCB.</param>
     /// <returns>Whether the operation was successful.</returns>
     public bool FreeMemoryBlock(ushort blockSegment) {
+        Debug.WriteLine($"[DosMemoryManager] FreeMemoryBlock: segment={blockSegment:X4}");
         return FreeMemoryBlock(GetDosMemoryControlBlockFromSegment(blockSegment));
     }
 
@@ -171,6 +182,7 @@ public class DosMemoryManager {
     /// <param name="block">The MCB to free.</param>
     /// <returns>Whether the operation was successful.</returns>
     public bool FreeMemoryBlock(DosMemoryControlBlock block) {
+        Debug.WriteLine($"[DosMemoryManager] FreeMemoryBlock: block={block}");
         if (!CheckValidOrLogError(block)) {
             return false;
         }
@@ -199,6 +211,7 @@ public class DosMemoryManager {
     /// <returns>Whether the operation was successful.</returns>
     public DosErrorCode TryModifyBlock(in ushort blockSegment, in ushort requestedSizeInParagraphs,
         out DosMemoryControlBlock block) {
+        Debug.WriteLine($"[DosMemoryManager] TryModifyBlock: segment={blockSegment:X4} requestedSize={requestedSizeInParagraphs} paragraphs ({requestedSizeInParagraphs * 16} bytes)");
         block = GetDosMemoryControlBlockFromSegment((ushort)(blockSegment - 1));
         ushort newSizeInParagraphs = requestedSizeInParagraphs;
 
@@ -480,6 +493,27 @@ public class DosMemoryManager {
         return true;
     }
 
+    private bool CompressFreeBlocks() {
+        DosMemoryControlBlock? current = _start;
+        while (current is not null) {
+            if (!CheckValidOrLogError(current)) {
+                return false;
+            }
+
+            if (!JoinBlocks(current, true)) {
+                return false;
+            }
+
+            if (current.IsLast) {
+                return true;
+            }
+
+            current = current.GetNextOrDefault();
+        }
+
+        return true;
+    }
+
     private List<DosMemoryControlBlock> FindCandidatesForAllocation(int requestedSize) {
         DosMemoryControlBlock? current = _start;
         List<DosMemoryControlBlock> candidates = new();
@@ -641,6 +675,7 @@ public class DosMemoryManager {
     /// </summary>
     /// <returns><c>true</c> if the MCB chain is valid, <c>false</c> if corruption is detected.</returns>
     public bool CheckMcbChain() {
+        Debug.WriteLine($"[DosMemoryManager] CheckMcbChain: starting from segment={MemoryUtils.ToSegment(_start.BaseAddress):X4}");
         DosMemoryControlBlock? current = _start;
 
         while (current is not null) {
@@ -672,6 +707,7 @@ public class DosMemoryManager {
     /// <param name="pspSegment">The PSP segment whose memory should be freed.</param>
     /// <returns><c>true</c> if all blocks were freed successfully, <c>false</c> if an error occurred.</returns>
     public bool FreeProcessMemory(ushort pspSegment) {
+        Debug.WriteLine($"[DosMemoryManager] FreeProcessMemory: pspSegment={pspSegment:X4}");
         DosMemoryControlBlock? current = _start;
 
         while (current is not null) {
@@ -696,7 +732,7 @@ public class DosMemoryManager {
             current = current.GetNextOrDefault();
         }
 
-        return true;
+        return CompressFreeBlocks();
     }
 
     /// <summary>
@@ -706,6 +742,7 @@ public class DosMemoryManager {
     /// <param name="ownerPspSegment">Segment of the PSP that owns the environment.</param>
     /// <returns><c>true</c> if the block was freed or no action was required.</returns>
     public bool FreeEnvironmentBlock(ushort environmentSegment, ushort ownerPspSegment) {
+        Debug.WriteLine($"[DosMemoryManager] FreeEnvironmentBlock: environmentSegment={environmentSegment:X4} ownerPspSegment={ownerPspSegment:X4}");
         if (environmentSegment == 0) {
             return true;
         }
@@ -726,7 +763,6 @@ public class DosMemoryManager {
         }
 
         block.SetFree();
-        JoinBlocks(_start, true);
-        return true;
+        return CompressFreeBlocks();
     }
 }
