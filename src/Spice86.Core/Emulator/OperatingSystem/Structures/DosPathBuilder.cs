@@ -10,7 +10,7 @@ using System.Diagnostics;
 /// <remarks>
 /// It is absolutely essential that callers call <see cref="Dispose()"/> or <see cref="ToStringWithDispose()"/> when
 /// finished with the path builder instance. If not, then memory leaks may occur (especially if using
-/// <see cref="DosPathBuilder()"/>, <see cref="DosPathBuilder(int, int)"/>, or
+/// <see cref="Create()"/>, <see cref="CreatePooled(int, int)"/>, or
 /// <see cref="DosPathBuilder(Span{char}, Span{int})"/> and the internal data buffers need to grow beyond the initial
 /// user supplied scratch buffer capacities).
 /// </remarks>
@@ -56,20 +56,13 @@ internal ref struct DosPathBuilder {
     private DosSpecialFileNameSettings _specialFileNameSettings;
     private bool _isFrozen;
 
-    /// <summary>Initializes an empty DOS path builder with no preallocated scratch buffers.</summary>
-    /// <remarks>
-    /// This is useful if caller is using this to call <see cref="ParseSpecialFileName(ReadOnlySpan{char})"/> without
-    /// building a DOS path.
-    /// </remarks>
-    public DosPathBuilder() { }
-
     /// <summary>Initializes a DOS path builder with user supplied scratch buffers.</summary>
     /// <param name="scratchPathBuffer">The initial buffer to use for path characters.</param>
     /// <param name="scratchStackBuffer">The initial buffer to use for path element stack entries.</param>
     /// <remarks>
     /// The intended use for this constructor is for the caller to supply <see langword="stackalloc"/> allocated
     /// buffers to avoid using heap/pooled memory. If memory allocations are required, then use the other constructor
-    /// overload which accepts initial integer capacities (and will thus use pooled memory).
+    /// factory which accepts initial integer capacities (and will thus use pooled memory).
     /// 
     /// Do not modify these scratch buffers while using this path builder! Outside modifications to these buffers may
     /// result in data corruption or other undefined behavior.
@@ -79,12 +72,22 @@ internal ref struct DosPathBuilder {
         _pathStack = new(scratchStackBuffer);
     }
 
-    /// <summary>Initializes a DOS path builder with array pool allocated buffers.</summary>
+    /// <summary>Creates an empty DOS path builder with no preallocated scratch buffers.</summary>
+    /// <remarks>
+    /// This is useful when calling <see cref="ParseSpecialFileName(ReadOnlySpan{char})"/> without building a DOS path.
+    /// </remarks>
+    public static DosPathBuilder Create() {
+        return new DosPathBuilder(Span<char>.Empty, Span<int>.Empty);
+    }
+
+    /// <summary>Creates a DOS path builder with array pool allocated buffers.</summary>
     /// <param name="charsCapacity">The default minimum number of path characters to allocate.</param>
     /// <param name="stackCapacity">The default minimum number of path element stack entries to allocate.</param>
-    public DosPathBuilder(int charsCapacity, int stackCapacity = DefaultStackLength) {
-        _pathBuilder = new(charsCapacity);
-        _pathStack = new(stackCapacity);
+    public static DosPathBuilder CreatePooled(int charsCapacity, int stackCapacity) {
+        DosPathBuilder builder = Create();
+        builder._pathBuilder = new(charsCapacity);
+        builder._pathStack = new(stackCapacity);
+        return builder;
     }
 
     /// <summary>Gets a value indicating whether the path has a valid drive specification.</summary>

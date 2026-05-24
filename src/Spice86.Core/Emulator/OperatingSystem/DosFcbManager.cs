@@ -18,9 +18,8 @@ using Spice86.Shared.Utils;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Implementation Reference:</b> This implementation is based on FreeDOS (for the FCB structures), <br/>
-/// and DOSBox Staging (for the actual functions, since the two implementations differed)
-/// and validated against the MS-DOS Encyclopedia
+/// <b>Implementation Reference:</b> This implementation is based on DOSBox Staging dos_files.cpp
+/// (https://github.com/dosbox-staging/dosbox-staging) and validated against the MS-DOS Encyclopedia
 /// (https://www.pcjs.org/documents/books/mspl13/msdos/encyclopedia/appendix-g/).
 /// </para>
 /// <para>
@@ -67,7 +66,18 @@ public class DosFcbManager {
     /// <param name="parseControl">Parsing control flags.</param>
     /// <returns>A tuple of (FcbParseResult, bytesAdvanced) where bytesAdvanced is the number of bytes consumed from the input string.</returns>
     public (FcbParseResult, uint) ParseFilename(SegmentedAddress stringAddress, SegmentedAddress fcbAddress, FcbParseControl parseControl) {
-        string filename = _memory.GetZeroTerminatedString(MemoryUtils.ToPhysicalAddress(stringAddress.Segment, stringAddress.Offset), 128);
+        return ParseFilename(ToPhysicalAddress(stringAddress), ToPhysicalAddress(fcbAddress), parseControl);
+    }
+
+    /// <summary>
+    /// INT 21h, AH=29h - Parse filename into an FCB.
+    /// </summary>
+    /// <param name="stringAddress">Linear address of the ASCIIZ string to parse.</param>
+    /// <param name="fcbAddress">Linear address of the destination FCB (standard or extended).</param>
+    /// <param name="parseControl">Parsing control flags.</param>
+    /// <returns>A tuple of (FcbParseResult, bytesAdvanced) where bytesAdvanced is the number of bytes consumed from the input string.</returns>
+    public (FcbParseResult, uint) ParseFilename(uint stringAddress, uint fcbAddress, FcbParseControl parseControl) {
+        string filename = _memory.GetZeroTerminatedString(stringAddress, 128);
         DosFileControlBlock fcb = GetFcb(fcbAddress, out _);
 
         int pos = 0;
@@ -257,48 +267,66 @@ public class DosFcbManager {
     /// <summary>
     /// Gets an FCB wrapper at the given linear address, supporting both standard and extended FCBs.
     /// </summary>
-    /// <param name="fcbAddress">Segmented address of the FCB (standard or extended).</param>
+    /// <param name="fcbAddress">Linear address of the FCB (standard or extended).</param>
     /// <param name="attribute">For extended FCBs, receives the file attributes byte; for standard FCBs, set to 0.</param>
     /// <returns>
     /// An extended FCB wrapper if the address points to 0xFF (extended FCB flag),
     /// otherwise a standard FCB wrapper.
     /// </returns>
     public DosFileControlBlock GetFcb(SegmentedAddress fcbAddress, out byte attribute) {
+        return GetFcb(ToPhysicalAddress(fcbAddress), out attribute);
+    }
+
+    /// <summary>
+    /// Gets an FCB wrapper at the given linear address, supporting both standard and extended FCBs.
+    /// </summary>
+    /// <param name="fcbAddress">Linear address of the FCB (standard or extended).</param>
+    /// <param name="attribute">For extended FCBs, receives the file attributes byte; for standard FCBs, set to 0.</param>
+    /// <returns>
+    /// An extended FCB wrapper if the address points to 0xFF (extended FCB flag),
+    /// otherwise a standard FCB wrapper.
+    /// </returns>
+    public DosFileControlBlock GetFcb(uint fcbAddress, out byte attribute) {
         attribute = 0;
 
         byte flag = _memory.UInt8[fcbAddress];
         if (flag == DosExtendedFileControlBlock.ExtendedFcbFlag) {
             // Extended FCB: header at fcbAddress, standard FCB starts at fcbAddress + 7
-            DosExtendedFileControlBlock xfcb = new DosExtendedFileControlBlock(_memory, MemoryUtils.ToPhysicalAddress(fcbAddress.Segment, fcbAddress.Offset));
+            DosExtendedFileControlBlock xfcb = new DosExtendedFileControlBlock(_memory, fcbAddress);
             attribute = xfcb.Attribute;
             return xfcb;
         }
 
         // Standard FCB
-        return new DosFileControlBlock(_memory, MemoryUtils.ToPhysicalAddress(fcbAddress.Segment, fcbAddress.Offset));
+        return new DosFileControlBlock(_memory, fcbAddress);
     }
 
     /// <summary>
     /// Opens a file using the FCB filename and stores the SFT handle in the FCB.
     /// </summary>
-    /// <param name="fcbAddress">Segmented address of the FCB.</param>
+    /// <param name="fcbAddress">Linear address of the FCB.</param>
     /// <returns><see cref="FcbStatus"/> indicating success or failure.</returns>
     public FcbStatus OpenFile(SegmentedAddress fcbAddress) {
+        return OpenFile(ToPhysicalAddress(fcbAddress));
+    }
+
+    /// <summary>
+    /// Opens a file using the FCB filename and stores the SFT handle in the FCB.
+    /// </summary>
+    /// <param name="fcbAddress">Linear address of the FCB.</param>
+    /// <returns><see cref="FcbStatus"/> indicating success or failure.</returns>
+    public FcbStatus OpenFile(uint fcbAddress) {
         uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
         DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
         string fileSpec = fcb.FullFileName;
         if (string.IsNullOrWhiteSpace(fileSpec)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "OPEN", baseAddr, "Blank filename");
-            }
+            LogFcbWarning("OPEN", baseAddr, "Blank filename");
             return FcbStatus.Error;
         }
 
         DosFileOperationResult result = _dosFileManager.OpenFileOrDevice(fileSpec, FileAccessMode.ReadWrite);
         if (result.IsError || result.Value == null) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "OPEN", baseAddr, "OpenFileOrDevice failed");
-            }
+            LogFcbWarning("OPEN", baseAddr, "OpenFileOrDevice failed");
             return FcbStatus.Error;
         }
 
@@ -315,7 +343,7 @@ public class DosFcbManager {
             fcb.FileSize = (uint)dosFile.Length;
 
             // Get file's last write time from the file system
-            string? hostPath = _dosFileManager.TryGetFullHostPathFromDos(fileSpec);
+            string? hostPath = _dosFileManager.GetFullHostPathFromDos(fileSpec);
             if (!string.IsNullOrWhiteSpace(hostPath) && File.Exists(hostPath)) {
                 FileInfo fileInfo = new FileInfo(hostPath);
                 DateTime lastWrite = fileInfo.LastWriteTime;
@@ -328,64 +356,70 @@ public class DosFcbManager {
             }
         }
 
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("FCB {Operation} at 0x{Address:X} ({Detail}) -> {Status}", "OPEN", baseAddr, fileSpec, FcbStatus.Success);
-        }
+        LogFcbDebug("OPEN", baseAddr, fileSpec, FcbStatus.Success);
         return FcbStatus.Success;
     }
 
     /// <summary>
-    /// Closes an FCB-opened file
+    /// Closes an FCB-opened file using its stored SFT handle.
     /// </summary>
-    /// <param name="fcbAddress">Segmented address of the FCB.</param>
+    /// <param name="fcbAddress">Linear address of the FCB.</param>
     /// <returns><see cref="FcbStatus"/> indicating success or failure.</returns>
     public FcbStatus CloseFile(SegmentedAddress fcbAddress) {
+        return CloseFile(ToPhysicalAddress(fcbAddress));
+    }
+
+    /// <summary>
+    /// Closes an FCB-opened file using its stored SFT handle.
+    /// </summary>
+    /// <param name="fcbAddress">Linear address of the FCB.</param>
+    /// <returns><see cref="FcbStatus"/> indicating success or failure.</returns>
+    public FcbStatus CloseFile(uint fcbAddress) {
         uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
         DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
         ushort handle = fcb.SftNumber;
         if (handle == 0) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "CLOSE", baseAddr, "Handle is zero");
-            }
+            LogFcbWarning("CLOSE", baseAddr, "Handle is zero");
             return FcbStatus.Error;
         }
         // Set handle to 0xFF before closing; enables auto-reopen in subsequent read/write
         fcb.SftNumber = 0xFF;
         DosFileOperationResult result = _dosFileManager.CloseFileOrDevice(handle);
         if (result.IsError) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "CLOSE", baseAddr, "CloseFileOrDevice failed");
-            }
+            LogFcbWarning("CLOSE", baseAddr, "CloseFileOrDevice failed");
             return FcbStatus.Error;
         }
 
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("FCB {Operation} at 0x{Address:X} ({Detail}) -> {Status}", "CLOSE", baseAddr, fcb.FullFileName, FcbStatus.Success);
-        }
+        LogFcbDebug("CLOSE", baseAddr, fcb.FullFileName, FcbStatus.Success);
         return FcbStatus.Success;
     }
 
     /// <summary>
     /// Creates a file using the FCB filename and stores the SFT handle in the FCB.
     /// </summary>
-    /// <param name="fcbAddress">Segmented address of the FCB.</param>
+    /// <param name="fcbAddress">Linear address of the FCB.</param>
     /// <returns><see cref="FcbStatus"/> indicating success or failure.</returns>
     public FcbStatus CreateFile(SegmentedAddress fcbAddress) {
+        return CreateFile(ToPhysicalAddress(fcbAddress));
+    }
+
+    /// <summary>
+    /// Creates a file using the FCB filename and stores the SFT handle in the FCB.
+    /// </summary>
+    /// <param name="fcbAddress">Linear address of the FCB.</param>
+    /// <returns><see cref="FcbStatus"/> indicating success or failure.</returns>
+    public FcbStatus CreateFile(uint fcbAddress) {
         uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
         DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
         string fileSpec = fcb.FullFileName;
         if (string.IsNullOrWhiteSpace(fileSpec)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "CREATE", baseAddr, "Blank filename");
-            }
+            LogFcbWarning("CREATE", baseAddr, "Blank filename");
             return FcbStatus.Error;
         }
 
         DosFileOperationResult result = _dosFileManager.CreateFileUsingHandle(fileSpec, 0);
         if (result.IsError || result.Value == null) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "CREATE", baseAddr, "CreateFileUsingHandle failed");
-            }
+            LogFcbWarning("CREATE", baseAddr, "CreateFileUsingHandle failed");
             return FcbStatus.Error;
         }
 
@@ -393,19 +427,27 @@ public class DosFcbManager {
         fcb.SftNumber = (byte)handle;
         // Always set RecordSize to 128 on create
         fcb.RecordSize = DosFileControlBlock.DefaultRecordSize;
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("FCB {Operation} at 0x{Address:X} ({Detail}) -> {Status}", "CREATE", baseAddr, fileSpec, FcbStatus.Success);
-        }
+        LogFcbDebug("CREATE", baseAddr, fileSpec, FcbStatus.Success);
         return FcbStatus.Success;
     }
 
     /// <summary>
     /// INT 21h AH=14h sequential read using the current block/record pointer.
     /// </summary>
-    /// <param name="fcbAddress">Segmented address of the FCB.</param>
-    /// <param name="dtaAddress">Segmented address of the DTA buffer.</param>
+    /// <param name="fcbAddress">Linear address of the FCB.</param>
+    /// <param name="dtaAddress">Linear address of the DTA buffer.</param>
     /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
     public FcbStatus SequentialRead(SegmentedAddress fcbAddress, uint dtaAddress) {
+        return SequentialRead(ToPhysicalAddress(fcbAddress), dtaAddress);
+    }
+
+    /// <summary>
+    /// INT 21h AH=14h sequential read using the current block/record pointer.
+    /// </summary>
+    /// <param name="fcbAddress">Linear address of the FCB.</param>
+    /// <param name="dtaAddress">Linear address of the DTA buffer.</param>
+    /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
+    public FcbStatus SequentialRead(uint fcbAddress, uint dtaAddress) {
         uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
         DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
         ushort handle = fcb.SftNumber;
@@ -414,22 +456,16 @@ public class DosFcbManager {
         if (handle == 0xFF && fcb.RecordSize != 0) {
             FcbStatus reopenStatus = OpenFile(fcbAddress);
             if (reopenStatus != FcbStatus.Success) {
-                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "SEQ READ", baseAddr, "Auto-reopen failed");
-                }
+                LogFcbWarning("SEQ READ", baseAddr, "Auto-reopen failed");
                 return FcbStatus.NoData;
             }
             fcb = new DosFileControlBlock(_memory, baseAddr);
             handle = fcb.SftNumber;
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("FCB {Operation} at 0x{Address:X} ({Detail}) -> {Status}", "SEQ READ", baseAddr, "Reopened closed FCB", FcbStatus.Success);
-            }
+            LogFcbDebug("SEQ READ", baseAddr, "Reopened closed FCB", FcbStatus.Success);
         }
 
         if (handle == 0) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "SEQ READ", baseAddr, "Handle is zero");
-            }
+            LogFcbWarning("SEQ READ", baseAddr, "Handle is zero");
             return FcbStatus.Error;
         }
 
@@ -439,24 +475,18 @@ public class DosFcbManager {
         int recordSize = fcb.RecordSize;
         uint absoluteRecord = fcb.AbsoluteRecord;
         if (!TryComputeOffset(absoluteRecord, recordSize, out int offset, out FcbStatus offsetStatus)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "SEQ READ", baseAddr, "Offset overflow");
-            }
+            LogFcbWarning("SEQ READ", baseAddr, "Offset overflow");
             return offsetStatus;
         }
         DosFileOperationResult seek = _dosFileManager.MoveFilePointerUsingHandle(SeekOrigin.Begin, handle, offset);
         if (seek.IsError) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "SEQ READ", baseAddr, "Seek failed");
-            }
+            LogFcbWarning("SEQ READ", baseAddr, "Seek failed");
             return FcbStatus.Error;
         }
 
         DosFileOperationResult read = _dosFileManager.ReadFileOrDevice(handle, (ushort)recordSize, dtaAddress);
         if (read.IsError) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "SEQ READ", baseAddr, "Read failed");
-            }
+            LogFcbWarning("SEQ READ", baseAddr, "Read failed");
             return FcbStatus.Error;
         }
 
@@ -474,19 +504,27 @@ public class DosFcbManager {
         if (len < recordSize) {
             return FcbStatus.EndOfFile;
         }
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("FCB {Operation} at 0x{Address:X} ({Detail}) -> {Status}", "SEQ READ", baseAddr, fcb.FullFileName, FcbStatus.Success);
-        }
+        LogFcbDebug("SEQ READ", baseAddr, fcb.FullFileName, FcbStatus.Success);
         return FcbStatus.Success;
     }
 
     /// <summary>
-    /// INT 21h AH=15h sequential write
+    /// INT 21h AH=15h sequential write using the current block/record pointer.
     /// </summary>
-    /// <param name="fcbAddress">Segmented address of the FCB.</param>
-    /// <param name="dtaAddress">Segmented address of the DTA buffer.</param>
+    /// <param name="fcbAddress">Linear address of the FCB.</param>
+    /// <param name="dtaAddress">Linear address of the DTA buffer.</param>
     /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
     public FcbStatus SequentialWrite(SegmentedAddress fcbAddress, uint dtaAddress) {
+        return SequentialWrite(ToPhysicalAddress(fcbAddress), dtaAddress);
+    }
+
+    /// <summary>
+    /// INT 21h AH=15h sequential write using the current block/record pointer.
+    /// </summary>
+    /// <param name="fcbAddress">Linear address of the FCB.</param>
+    /// <param name="dtaAddress">Linear address of the DTA buffer.</param>
+    /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
+    public FcbStatus SequentialWrite(uint fcbAddress, uint dtaAddress) {
         uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
         DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
         ushort handle = fcb.SftNumber;
@@ -495,22 +533,16 @@ public class DosFcbManager {
         if (handle == 0xFF && fcb.RecordSize != 0) {
             FcbStatus reopenStatus = OpenFile(fcbAddress);
             if (reopenStatus != FcbStatus.Success) {
-                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "SEQ WRITE", baseAddr, "Auto-reopen failed");
-                }
+                LogFcbWarning("SEQ WRITE", baseAddr, "Auto-reopen failed");
                 return FcbStatus.NoData;
             }
             fcb = new DosFileControlBlock(_memory, baseAddr);
             handle = fcb.SftNumber;
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("FCB {Operation} at 0x{Address:X} ({Detail}) -> {Status}", "SEQ WRITE", baseAddr, "Reopened closed FCB", FcbStatus.Success);
-            }
+            LogFcbDebug("SEQ WRITE", baseAddr, "Reopened closed FCB", FcbStatus.Success);
         }
 
         if (handle == 0) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "SEQ WRITE", baseAddr, "Handle is zero");
-            }
+            LogFcbWarning("SEQ WRITE", baseAddr, "Handle is zero");
             return FcbStatus.Error;
         }
 
@@ -520,24 +552,18 @@ public class DosFcbManager {
         int recordSize = fcb.RecordSize;
         uint absoluteRecord = fcb.AbsoluteRecord;
         if (!TryComputeOffset(absoluteRecord, recordSize, out int offset, out FcbStatus offsetStatus)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "SEQ WRITE", baseAddr, "Offset overflow");
-            }
+            LogFcbWarning("SEQ WRITE", baseAddr, "Offset overflow");
             return offsetStatus;
         }
         DosFileOperationResult seek = _dosFileManager.MoveFilePointerUsingHandle(SeekOrigin.Begin, handle, offset);
         if (seek.IsError) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "SEQ WRITE", baseAddr, "Seek failed");
-            }
+            LogFcbWarning("SEQ WRITE", baseAddr, "Seek failed");
             return FcbStatus.Error;
         }
 
         DosFileOperationResult write = _dosFileManager.WriteToFileOrDevice(handle, (ushort)recordSize, dtaAddress);
         if (write.IsError) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "SEQ WRITE", baseAddr, "Write failed");
-            }
+            LogFcbWarning("SEQ WRITE", baseAddr, "Write failed");
             return FcbStatus.Error;
         }
         ushort len = (ushort)(write.Value ?? 0);
@@ -549,19 +575,27 @@ public class DosFcbManager {
         if (len < recordSize) {
             return FcbStatus.NoData;
         }
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("FCB {Operation} at 0x{Address:X} ({Detail}) -> {Status}", "SEQ WRITE", baseAddr, fcb.FullFileName, FcbStatus.Success);
-        }
+        LogFcbDebug("SEQ WRITE", baseAddr, fcb.FullFileName, FcbStatus.Success);
         return FcbStatus.Success;
     }
 
     /// <summary>
-    /// INT 21h AH=21h random read
+    /// INT 21h AH=21h random read using the RandomRecord field.
     /// </summary>
-    /// <param name="fcbAddress">Segmented address of the FCB.</param>
-    /// <param name="dtaAddress">Segmented address of the DTA buffer.</param>
+    /// <param name="fcbAddress">Linear address of the FCB.</param>
+    /// <param name="dtaAddress">Linear address of the DTA buffer.</param>
     /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
     public FcbStatus RandomRead(SegmentedAddress fcbAddress, uint dtaAddress) {
+        return RandomRead(ToPhysicalAddress(fcbAddress), dtaAddress);
+    }
+
+    /// <summary>
+    /// INT 21h AH=21h random read using the RandomRecord field.
+    /// </summary>
+    /// <param name="fcbAddress">Linear address of the FCB.</param>
+    /// <param name="dtaAddress">Linear address of the DTA buffer.</param>
+    /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
+    public FcbStatus RandomRead(uint fcbAddress, uint dtaAddress) {
         uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
         DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
         ushort handle = fcb.SftNumber;
@@ -570,9 +604,7 @@ public class DosFcbManager {
         if (handle == 0xFF && fcb.RecordSize != 0) {
             FcbStatus reopenStatus = OpenFile(fcbAddress);
             if (reopenStatus != FcbStatus.Success) {
-                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "RAND READ", baseAddr, "Auto-reopen failed");
-                }
+                LogFcbWarning("RAND READ", baseAddr, "Auto-reopen failed");
                 return FcbStatus.NoData;
             }
             fcb = new DosFileControlBlock(_memory, baseAddr);
@@ -580,9 +612,7 @@ public class DosFcbManager {
         }
 
         if (handle == 0) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "RAND READ", baseAddr, "Handle is zero");
-            }
+            LogFcbWarning("RAND READ", baseAddr, "Handle is zero");
             return FcbStatus.Error;
         }
 
@@ -602,24 +632,18 @@ public class DosFcbManager {
 
         uint absoluteRecord = fcb.AbsoluteRecord;
         if (!TryComputeOffset(absoluteRecord, recordSize, out int offset, out FcbStatus offsetStatus)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "RAND READ", baseAddr, "Offset overflow");
-            }
+            LogFcbWarning("RAND READ", baseAddr, "Offset overflow");
             return offsetStatus;
         }
         DosFileOperationResult seek = _dosFileManager.MoveFilePointerUsingHandle(SeekOrigin.Begin, handle, offset);
         if (seek.IsError) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "RAND READ", baseAddr, "Seek failed");
-            }
+            LogFcbWarning("RAND READ", baseAddr, "Seek failed");
             return FcbStatus.Error;
         }
 
         DosFileOperationResult read = _dosFileManager.ReadFileOrDevice(handle, (ushort)recordSize, dtaAddress);
         if (read.IsError) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "RAND READ", baseAddr, "Read failed");
-            }
+            LogFcbWarning("RAND READ", baseAddr, "Read failed");
             return FcbStatus.Error;
         }
         ushort len = (ushort)(read.Value ?? 0);
@@ -639,19 +663,27 @@ public class DosFcbManager {
         if (len < recordSize) {
             return FcbStatus.EndOfFile;
         }
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("FCB {Operation} at 0x{Address:X} ({Detail}) -> {Status}", "RAND READ", baseAddr, fcb.FullFileName, FcbStatus.Success);
-        }
+        LogFcbDebug("RAND READ", baseAddr, fcb.FullFileName, FcbStatus.Success);
         return FcbStatus.Success;
     }
 
     /// <summary>
-    /// INT 21h AH=22h random write
+    /// INT 21h AH=22h random write using the RandomRecord field.
     /// </summary>
-    /// <param name="fcbAddress">Segmented address of the FCB.</param>
-    /// <param name="dtaAddress">Segmented address of the DTA buffer.</param>
+    /// <param name="fcbAddress">Linear address of the FCB.</param>
+    /// <param name="dtaAddress">Linear address of the DTA buffer.</param>
     /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
     public FcbStatus RandomWrite(SegmentedAddress fcbAddress, uint dtaAddress) {
+        return RandomWrite(ToPhysicalAddress(fcbAddress), dtaAddress);
+    }
+
+    /// <summary>
+    /// INT 21h AH=22h random write using the RandomRecord field.
+    /// </summary>
+    /// <param name="fcbAddress">Linear address of the FCB.</param>
+    /// <param name="dtaAddress">Linear address of the DTA buffer.</param>
+    /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
+    public FcbStatus RandomWrite(uint fcbAddress, uint dtaAddress) {
         uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
         DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
         ushort handle = fcb.SftNumber;
@@ -660,9 +692,7 @@ public class DosFcbManager {
         if (handle == 0xFF && fcb.RecordSize != 0) {
             FcbStatus reopenStatus = OpenFile(fcbAddress);
             if (reopenStatus != FcbStatus.Success) {
-                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "RAND WRITE", baseAddr, "Auto-reopen failed");
-                }
+                LogFcbWarning("RAND WRITE", baseAddr, "Auto-reopen failed");
                 return FcbStatus.NoData;
             }
             fcb = new DosFileControlBlock(_memory, baseAddr);
@@ -670,9 +700,7 @@ public class DosFcbManager {
         }
 
         if (handle == 0) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "RAND WRITE", baseAddr, "Handle is zero");
-            }
+            LogFcbWarning("RAND WRITE", baseAddr, "Handle is zero");
             return FcbStatus.Error;
         }
 
@@ -690,24 +718,18 @@ public class DosFcbManager {
 
         uint absoluteRecord = fcb.AbsoluteRecord;
         if (!TryComputeOffset(absoluteRecord, recordSize, out int offset, out FcbStatus offsetStatus)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "RAND WRITE", baseAddr, "Offset overflow");
-            }
+            LogFcbWarning("RAND WRITE", baseAddr, "Offset overflow");
             return offsetStatus;
         }
         DosFileOperationResult seek = _dosFileManager.MoveFilePointerUsingHandle(SeekOrigin.Begin, handle, offset);
         if (seek.IsError) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "RAND WRITE", baseAddr, "Seek failed");
-            }
+            LogFcbWarning("RAND WRITE", baseAddr, "Seek failed");
             return FcbStatus.Error;
         }
 
         DosFileOperationResult write = _dosFileManager.WriteToFileOrDevice(handle, (ushort)recordSize, dtaAddress);
         if (write.IsError) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "RAND WRITE", baseAddr, "Write failed");
-            }
+            LogFcbWarning("RAND WRITE", baseAddr, "Write failed");
             return FcbStatus.Error;
         }
         ushort len = (ushort)(write.Value ?? 0);
@@ -722,20 +744,29 @@ public class DosFcbManager {
         if (len < recordSize) {
             return FcbStatus.NoData;
         }
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("FCB {Operation} at 0x{Address:X} ({Detail}) -> {Status}", "RAND WRITE", baseAddr, fcb.FullFileName, FcbStatus.Success);
-        }
+        LogFcbDebug("RAND WRITE", baseAddr, fcb.FullFileName, FcbStatus.Success);
         return FcbStatus.Success;
     }
 
     /// <summary>
-    /// INT 21h AH=27h random block read
+    /// INT 21h AH=27h random block read from the RandomRecord pointer.
     /// </summary>
-    /// <param name="fcbAddress">Segmented address of the FCB.</param>
-    /// <param name="dtaAddress">Segmented address of the DTA buffer.</param>
+    /// <param name="fcbAddress">Linear address of the FCB.</param>
+    /// <param name="dtaAddress">Linear address of the DTA buffer.</param>
     /// <param name="requestedRecordCount">Number of records requested to read.</param>
     /// <returns>A tuple of (FcbStatus, actualRecordCount) describing the outcome and number of records actually read.</returns>
     public (FcbStatus, ushort) RandomBlockRead(SegmentedAddress fcbAddress, uint dtaAddress, ushort requestedRecordCount) {
+        return RandomBlockRead(ToPhysicalAddress(fcbAddress), dtaAddress, requestedRecordCount);
+    }
+
+    /// <summary>
+    /// INT 21h AH=27h random block read from the RandomRecord pointer.
+    /// </summary>
+    /// <param name="fcbAddress">Linear address of the FCB.</param>
+    /// <param name="dtaAddress">Linear address of the DTA buffer.</param>
+    /// <param name="requestedRecordCount">Number of records requested to read.</param>
+    /// <returns>A tuple of (FcbStatus, actualRecordCount) describing the outcome and number of records actually read.</returns>
+    public (FcbStatus, ushort) RandomBlockRead(uint fcbAddress, uint dtaAddress, ushort requestedRecordCount) {
         uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
         DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
         ushort handle = fcb.SftNumber;
@@ -744,9 +775,7 @@ public class DosFcbManager {
         if (handle == 0xFF && fcb.RecordSize != 0) {
             FcbStatus reopenStatus = OpenFile(fcbAddress);
             if (reopenStatus != FcbStatus.Success) {
-                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "RAND BLK READ", baseAddr, "Auto-reopen failed");
-                }
+                LogFcbWarning("RAND BLK READ", baseAddr, "Auto-reopen failed");
                 return (FcbStatus.NoData, 0);
             }
             fcb = new DosFileControlBlock(_memory, baseAddr);
@@ -754,9 +783,7 @@ public class DosFcbManager {
         }
 
         if (handle == 0) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "RAND BLK READ", baseAddr, "Handle is zero");
-            }
+            LogFcbWarning("RAND BLK READ", baseAddr, "Handle is zero");
             return (FcbStatus.Error, 0);
         }
         if (fcb.RecordSize == 0) {
@@ -827,11 +854,22 @@ public class DosFcbManager {
     /// <summary>
     /// INT 21h AH=28h random block write from the RandomRecord pointer.
     /// </summary>
-    /// <param name="fcbAddress">Segmented address of the FCB.</param>
-    /// <param name="dtaAddress">Segmented address of the DTA buffer.</param>
+    /// <param name="fcbAddress">Linear address of the FCB.</param>
+    /// <param name="dtaAddress">Linear address of the DTA buffer.</param>
     /// <param name="requestedRecordCount">Number of records requested to write (0 = truncate file to random record position).</param>
     /// <returns>A tuple of (FcbStatus, actualRecordCount) describing the outcome and number of records actually written.</returns>
     public (FcbStatus, ushort) RandomBlockWrite(SegmentedAddress fcbAddress, uint dtaAddress, ushort requestedRecordCount) {
+        return RandomBlockWrite(ToPhysicalAddress(fcbAddress), dtaAddress, requestedRecordCount);
+    }
+
+    /// <summary>
+    /// INT 21h AH=28h random block write from the RandomRecord pointer.
+    /// </summary>
+    /// <param name="fcbAddress">Linear address of the FCB.</param>
+    /// <param name="dtaAddress">Linear address of the DTA buffer.</param>
+    /// <param name="requestedRecordCount">Number of records requested to write (0 = truncate file to random record position).</param>
+    /// <returns>A tuple of (FcbStatus, actualRecordCount) describing the outcome and number of records actually written.</returns>
+    public (FcbStatus, ushort) RandomBlockWrite(uint fcbAddress, uint dtaAddress, ushort requestedRecordCount) {
         uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
         DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
         ushort handle = fcb.SftNumber;
@@ -840,9 +878,7 @@ public class DosFcbManager {
         if (handle == 0xFF && fcb.RecordSize != 0) {
             FcbStatus reopenStatus = OpenFile(fcbAddress);
             if (reopenStatus != FcbStatus.Success) {
-                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "RAND BLK WRITE", baseAddr, "Auto-reopen failed");
-                }
+                LogFcbWarning("RAND BLK WRITE", baseAddr, "Auto-reopen failed");
                 return (FcbStatus.NoData, 0);
             }
             fcb = new DosFileControlBlock(_memory, baseAddr);
@@ -850,9 +886,7 @@ public class DosFcbManager {
         }
 
         if (handle == 0) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "RAND BLK WRITE", baseAddr, "Handle is zero");
-            }
+            LogFcbWarning("RAND BLK WRITE", baseAddr, "Handle is zero");
             return (FcbStatus.Error, 0);
         }
         if (fcb.RecordSize == 0) {
@@ -875,14 +909,10 @@ public class DosFcbManager {
                 // Update size/date/time
                 fcb.FileSize = (uint)offset;
                 UpdateFcbDateTime(fcb);
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("FCB {Operation} at 0x{Address:X} ({Detail}) -> {Status}", "RAND BLK WRITE", baseAddr, fcb.FullFileName, FcbStatus.Success);
-                }
+                LogFcbDebug("RAND BLK WRITE", baseAddr, fcb.FullFileName, FcbStatus.Success);
                 return (FcbStatus.Success, 0);
             }
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "RAND BLK WRITE", baseAddr, "Handle is not a file");
-            }
+            LogFcbWarning("RAND BLK WRITE", baseAddr, "Handle is not a file");
             return (FcbStatus.Error, 0);
         }
 
@@ -936,9 +966,7 @@ public class DosFcbManager {
         if (lastError != FcbStatus.Success) {
             return (lastError, totalWritten);
         }
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("FCB {Operation} at 0x{Address:X} ({Detail}) -> {Status}", "RAND BLK WRITE", baseAddr, fcb.FullFileName, FcbStatus.Success);
-        }
+        LogFcbDebug("RAND BLK WRITE", baseAddr, fcb.FullFileName, FcbStatus.Success);
         return (FcbStatus.Success, totalWritten);
     }
 
@@ -947,23 +975,30 @@ public class DosFcbManager {
     /// Opens the file, divides size by record size using ceiling division, stores result in FCB.RandomRecord,
     /// then closes the file. If RecordSize is 0, uses default 128 bytes.
     /// </summary>
-    /// <param name="fcbAddress">Segmented address of the FCB containing the filename to query.</param>
+    /// <param name="fcbAddress">Linear address of the FCB containing the filename to query.</param>
     /// <returns><see cref="FcbStatus.Success"/> if file size retrieved, <see cref="FcbStatus.Error"/> if file not found or device.</returns>
     public FcbStatus GetFileSize(SegmentedAddress fcbAddress) {
+        return GetFileSize(ToPhysicalAddress(fcbAddress));
+    }
+
+    /// <summary>
+    /// INT 21h AH=23h - Get File Size in Records.
+    /// Opens the file, divides size by record size using ceiling division, stores result in FCB.RandomRecord,
+    /// then closes the file. If RecordSize is 0, uses default 128 bytes.
+    /// </summary>
+    /// <param name="fcbAddress">Linear address of the FCB containing the filename to query.</param>
+    /// <returns><see cref="FcbStatus.Success"/> if file size retrieved, <see cref="FcbStatus.Error"/> if file not found or device.</returns>
+    public FcbStatus GetFileSize(uint fcbAddress) {
         uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
         DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
         string fileSpec = fcb.FullFileName;
         if (string.IsNullOrWhiteSpace(fileSpec)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "GET SIZE", baseAddr, "Blank filename");
-            }
+            LogFcbWarning("GET SIZE", baseAddr, "Blank filename");
             return FcbStatus.Error;
         }
         DosFileOperationResult open = _dosFileManager.OpenFileOrDevice(fileSpec, FileAccessMode.ReadOnly);
         if (open.IsError || open.Value == null) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "GET SIZE", baseAddr, "OpenFileOrDevice failed");
-            }
+            LogFcbWarning("GET SIZE", baseAddr, "OpenFileOrDevice failed");
             return FcbStatus.Error;
         }
         ushort handle = (ushort)open.Value.Value;
@@ -977,31 +1012,34 @@ public class DosFcbManager {
             }
             fcb.RandomRecord = records;
             _dosFileManager.CloseFileOrDevice(handle);
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("FCB {Operation} at 0x{Address:X} ({Detail}) -> {Status}", "GET SIZE", baseAddr, fileSpec, FcbStatus.Success);
-            }
+            LogFcbDebug("GET SIZE", baseAddr, fileSpec, FcbStatus.Success);
             return FcbStatus.Success;
         }
         _dosFileManager.CloseFileOrDevice(handle);
-        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-            _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "GET SIZE", baseAddr, "Not a DOS file");
-        }
+        LogFcbWarning("GET SIZE", baseAddr, "Not a DOS file");
         return FcbStatus.Error;
     }
 
     /// <summary>
     /// INT 21h AH=13h delete files matching the FCB pattern.
     /// </summary>
-    /// <param name="fcbAddress">Segmented address of the FCB.</param>
+    /// <param name="fcbAddress">Linear address of the FCB.</param>
     /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
     public FcbStatus DeleteFile(SegmentedAddress fcbAddress) {
+        return DeleteFile(ToPhysicalAddress(fcbAddress));
+    }
+
+    /// <summary>
+    /// INT 21h AH=13h delete files matching the FCB pattern.
+    /// </summary>
+    /// <param name="fcbAddress">Linear address of the FCB.</param>
+    /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
+    public FcbStatus DeleteFile(uint fcbAddress) {
         uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
         DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
         string pattern = fcb.FullFileName;
         if (string.IsNullOrWhiteSpace(pattern)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "DELETE", baseAddr, "Blank pattern");
-            }
+            LogFcbWarning("DELETE", baseAddr, "Blank pattern");
             return FcbStatus.Error;
         }
         DosFileOperationResult ff = _dosFileManager.FindFirstMatchingFile(pattern, 0);
@@ -1013,9 +1051,7 @@ public class DosFcbManager {
             string dosName = dta.FileName;
             DosFileOperationResult del = _dosFileManager.RemoveFile(dosName);
             if (del.IsError) {
-                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "DELETE", baseAddr, "RemoveFile failed");
-                }
+                LogFcbWarning("DELETE", baseAddr, "RemoveFile failed");
                 return FcbStatus.Error;
             }
             DosFileOperationResult nx = _dosFileManager.FindNextMatchingFile();
@@ -1023,18 +1059,25 @@ public class DosFcbManager {
                 break;
             }
         }
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("FCB {Operation} at 0x{Address:X} ({Detail}) -> {Status}", "DELETE", baseAddr, pattern, FcbStatus.Success);
-        }
+        LogFcbDebug("DELETE", baseAddr, pattern, FcbStatus.Success);
         return FcbStatus.Success;
     }
 
     /// <summary>
-    /// INT 21h AH=17h rename
+    /// INT 21h AH=17h rename files using FCB old/new patterns (supports wildcards).
     /// </summary>
-    /// <param name="fcbAddress">Segmented address of the FCB.</param>
+    /// <param name="fcbAddress">Linear address of the FCB.</param>
     /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
     public FcbStatus RenameFile(SegmentedAddress fcbAddress) {
+        return RenameFile(ToPhysicalAddress(fcbAddress));
+    }
+
+    /// <summary>
+    /// INT 21h AH=17h rename files using FCB old/new patterns (supports wildcards).
+    /// </summary>
+    /// <param name="fcbAddress">Linear address of the FCB.</param>
+    /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
+    public FcbStatus RenameFile(uint fcbAddress) {
         // Special FCB layout for rename: old name/ext then new name/ext in reserved region
         uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
         DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
@@ -1042,22 +1085,16 @@ public class DosFcbManager {
         string oldName = GetRenameOldName(fcb);
         string newPattern = GetRenameNewName(baseAddr);
 
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("FCB {Operation} at 0x{Address:X} ({Detail}) -> {Status}", "RENAME START", baseAddr, $"Pattern: {oldName} -> {newPattern}", FcbStatus.Success);
-        }
+        LogFcbDebug("RENAME START", baseAddr, $"Pattern: {oldName} -> {newPattern}", FcbStatus.Success);
 
         if (string.IsNullOrWhiteSpace(oldName) || string.IsNullOrWhiteSpace(newPattern)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "RENAME", baseAddr, "Missing old/new names");
-            }
+            LogFcbWarning("RENAME", baseAddr, "Missing old/new names");
             return FcbStatus.Error;
         }
 
         DosFileOperationResult ff = _dosFileManager.FindFirstMatchingFile(oldName, 0);
         if (ff.IsError) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "RENAME", baseAddr, $"FindFirst failed for pattern: {oldName}");
-            }
+            LogFcbWarning("RENAME", baseAddr, $"FindFirst failed for pattern: {oldName}");
             return FcbStatus.Error;
         }
 
@@ -1070,23 +1107,17 @@ public class DosFcbManager {
             string sourceDos = dta.FileName;
             string destDos = ApplyWildcardRename(sourceDos, newPattern);
 
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("FCB {Operation} at 0x{Address:X} ({Detail}) -> {Status}", "RENAME FILE", baseAddr, $"{sourceDos} -> {destDos}", FcbStatus.Success);
-            }
+            LogFcbDebug("RENAME FILE", baseAddr, $"{sourceDos} -> {destDos}", FcbStatus.Success);
 
-            string? srcHost = _dosFileManager.TryGetFullHostPathFromDos(sourceDos);
+            string? srcHost = _dosFileManager.GetFullHostPathFromDos(sourceDos);
             if (string.IsNullOrWhiteSpace(srcHost)) {
-                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "RENAME", baseAddr, $"Unable to resolve source path: {sourceDos}");
-                }
+                LogFcbWarning("RENAME", baseAddr, $"Unable to resolve source path: {sourceDos}");
                 return FcbStatus.Error;
             }
 
             // Skip duplicates (same file with different case)
             if (seenSources.Contains(srcHost)) {
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("FCB {Operation} at 0x{Address:X} ({Detail}) -> {Status}", "RENAME SKIP", baseAddr, $"Already collected: {srcHost}", FcbStatus.Success);
-                }
+                LogFcbDebug("RENAME SKIP", baseAddr, $"Already collected: {srcHost}", FcbStatus.Success);
                 DosFileOperationResult next = _dosFileManager.FindNextMatchingFile();
                 if (next.IsError) {
                     break;
@@ -1098,32 +1129,24 @@ public class DosFcbManager {
             // For destination, construct path in same directory as source
             string? srcDir = Path.GetDirectoryName(srcHost);
             if (string.IsNullOrWhiteSpace(srcDir)) {
-                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "RENAME", baseAddr, $"Unable to get source directory: {srcHost}");
-                }
+                LogFcbWarning("RENAME", baseAddr, $"Unable to get source directory: {srcHost}");
                 return FcbStatus.Error;
             }
             string dstHost = Path.Join(srcDir, destDos);
 
             if (!File.Exists(srcHost)) {
-                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "RENAME", baseAddr, $"Source does not exist: {srcHost}");
-                }
+                LogFcbWarning("RENAME", baseAddr, $"Source does not exist: {srcHost}");
                 return FcbStatus.Error;
             }
 
             if (File.Exists(dstHost)) {
-                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "RENAME", baseAddr, $"Destination exists: {dstHost}");
-                }
+                LogFcbWarning("RENAME", baseAddr, $"Destination exists: {dstHost}");
                 return FcbStatus.Error;
             }
 
             // Skip if this destination already appears in the rename list (wildcard conflict)
             if (seenDestinations.Contains(dstHost)) {
-                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "RENAME", baseAddr, $"Destination conflict in pattern: {dstHost}");
-                }
+                LogFcbWarning("RENAME", baseAddr, $"Destination conflict in pattern: {dstHost}");
                 return FcbStatus.Error;
             }
             seenDestinations.Add(dstHost);
@@ -1139,51 +1162,44 @@ public class DosFcbManager {
         // Now rename all collected files
         int renameCount = 0;
         foreach ((string srcHost, string dstHost) in filesToRename) {
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("FCB {Operation} at 0x{Address:X} ({Detail}) -> {Status}", "RENAME EXECUTE", baseAddr, $"Moving {srcHost} to {dstHost}", FcbStatus.Success);
-            }
+            LogFcbDebug("RENAME EXECUTE", baseAddr, $"Moving {srcHost} to {dstHost}", FcbStatus.Success);
             try {
                 File.Move(srcHost, dstHost);
                 renameCount++;
             } catch (IOException ex) {
-                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "RENAME", baseAddr, $"Failed to rename {srcHost}: {ex.Message}");
-                }
+                LogFcbWarning("RENAME", baseAddr, $"Failed to rename {srcHost}: {ex.Message}");
                 return FcbStatus.Error;
             } catch (UnauthorizedAccessException ex) {
-                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", "RENAME", baseAddr, $"Access denied renaming {srcHost}: {ex.Message}");
-                }
+                LogFcbWarning("RENAME", baseAddr, $"Access denied renaming {srcHost}: {ex.Message}");
                 return FcbStatus.Error;
             }
         }
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("FCB {Operation} at 0x{Address:X} ({Detail}) -> {Status}", "RENAME", baseAddr, $"{oldName} -> {newPattern} ({renameCount} files)", FcbStatus.Success);
-        }
+        LogFcbDebug("RENAME", baseAddr, $"{oldName} -> {newPattern} ({renameCount} files)", FcbStatus.Success);
         return FcbStatus.Success;
     }
 
     /// <summary>
     /// INT 21h AH=11h FCB Find First using the FCB filename pattern.
+    /// Populates the DTA in FCB format (drive + 8-byte name + 3-byte ext + metadata).
     /// </summary>
-    /// <remarks>
-    /// Matches FreeDOS <c>FcbFindFirstNext</c>: the FCB search delegates to the same
-    /// underlying find routine as the standard (extended) search rather than using a
-    /// separate FCB-specific DTA format. The XFCB attribute is forwarded to the
-    /// underlying find so volume-label/hidden/system searches work via Extended FCBs.
-    /// </remarks>
-    /// <param name="fcbAddress">Segmented address of the FCB.</param>
+    /// <param name="fcbAddress">Linear address of the FCB.</param>
     /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
     public FcbStatus FindFirst(SegmentedAddress fcbAddress) {
-        uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
-        DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
-        GetFcb(fcbAddress, out byte attribute);
+        return FindFirst(ToPhysicalAddress(fcbAddress));
+    }
+
+    /// <summary>
+    /// INT 21h AH=11h FCB Find First using the FCB filename pattern.
+    /// Populates the DTA in FCB format (drive + 8-byte name + 3-byte ext + metadata).
+    /// </summary>
+    /// <param name="fcbAddress">Linear address of the FCB.</param>
+    /// <returns><see cref="FcbStatus"/> describing the outcome.</returns>
+    public FcbStatus FindFirst(uint fcbAddress) {
+        DosFileControlBlock fcb = GetFcb(fcbAddress, out byte attribute);
         string pattern = fcb.FullFileName;
         DosFileOperationResult result = _dosFileManager.FindFirstMatchingFile(pattern, attribute);
         FcbStatus status = result.IsError ? FcbStatus.Error : FcbStatus.Success;
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("FCB {Operation} at 0x{Address:X} ({Detail}) -> {Status}", "FIND FIRST", baseAddr, pattern, status);
-        }
+        LogFcbDebug("FIND FIRST", fcb.BaseAddress, pattern, status);
         return status;
     }
 
@@ -1194,29 +1210,39 @@ public class DosFcbManager {
     public FcbStatus FindNext() {
         DosFileOperationResult result = _dosFileManager.FindNextMatchingFile();
         FcbStatus status = result.IsError ? FcbStatus.Error : FcbStatus.Success;
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("FCB {Operation} at 0x{Address:X} ({Detail}) -> {Status}", "FIND NEXT", 0, string.Empty, status);
-        }
+        LogFcbDebug("FIND NEXT", 0, string.Empty, status);
         return status;
     }
 
     /// <summary>
     /// INT 21h AH=24h - Sets the random record field from the current block and record fields.
     /// </summary>
-    /// <param name="fcbAddress">Segmented address of the FCB.</param>
+    /// <param name="fcbAddress">Linear address of the FCB.</param>
     public void SetRandomRecord(SegmentedAddress fcbAddress) {
+        SetRandomRecord(ToPhysicalAddress(fcbAddress));
+    }
+
+    /// <summary>
+    /// INT 21h AH=24h - Sets the random record field from the current block and record fields.
+    /// </summary>
+    /// <param name="fcbAddress">Linear address of the FCB.</param>
+    public void SetRandomRecord(uint fcbAddress) {
         uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
         DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
         fcb.SetRandomFromPosition();
     }
 
-    private uint GetActualFcbBaseAddress(SegmentedAddress fcbAddress) {
+    private static uint ToPhysicalAddress(SegmentedAddress address) {
+        return MemoryUtils.ToPhysicalAddress(address.Segment, address.Offset);
+    }
+
+    private uint GetActualFcbBaseAddress(uint fcbAddress) {
         // Extended FCB detection via drive marker 0xFF
-        DosFileControlBlock probe = new DosFileControlBlock(_memory, MemoryUtils.ToPhysicalAddress(fcbAddress.Segment, fcbAddress.Offset));
+        DosFileControlBlock probe = new DosFileControlBlock(_memory, fcbAddress);
         if (probe.DriveNumber == 0xFF) {
-            return MemoryUtils.ToPhysicalAddress(fcbAddress.Segment, fcbAddress.Offset) + DosExtendedFileControlBlock.HeaderSize;
+            return fcbAddress + DosExtendedFileControlBlock.HeaderSize;
         }
-        return MemoryUtils.ToPhysicalAddress(fcbAddress.Segment, fcbAddress.Offset);
+        return fcbAddress;
     }
 
     private static string ConvertFcbPatternToDosPattern(string fcbName, string fcbExt) {
@@ -1345,7 +1371,7 @@ public class DosFcbManager {
     /// <summary>
     /// Zero-pads the DTA buffer from the end of read data to the full record size.
     /// </summary>
-    /// <param name="dtaAddress">Segmented address of the DTA buffer.</param>
+    /// <param name="dtaAddress">Linear address of the DTA buffer.</param>
     /// <param name="bytesRead">Number of bytes actually read.</param>
     /// <param name="recordSize">Full record size to pad to.</param>
     private void ZeroPadDta(uint dtaAddress, int bytesRead, int recordSize) {
@@ -1378,4 +1404,15 @@ public class DosFcbManager {
         fcb.Time = DosFileManager.ToDosTime(now);
     }
 
+    private void LogFcbWarning(string operation, uint fcbBaseAddress, string reason) {
+        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+            _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", operation, fcbBaseAddress, reason);
+        }
+    }
+
+    private void LogFcbDebug(string operation, uint fcbBaseAddress, string detail, FcbStatus status) {
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("FCB {Operation} at 0x{Address:X} ({Detail}) -> {Status}", operation, fcbBaseAddress, detail, status);
+        }
+    }
 }

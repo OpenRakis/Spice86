@@ -1,0 +1,53 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:Spice86.Views.Controls"
+        xmlns:vm="clr-namespace:Spice86.ViewModels"
+        x:Class="Spice86.Views.DriveInfoWindow"
+        x:DataType="vm:DriveInfoViewModel"
+        Title="{Binding DriveLetter, StringFormat='Drive {0}: — Information'}"
+        Width="640" Height="520"
+        WindowStartupLocation="CenterOwner">
+    <TabControl>
+        <TabItem Header="Disk Representation">
+            <controls:DriveContentVisualization ContentMap="{Binding ContentMap}" />
+        </TabItem>
+        <TabItem Header="Files &amp; Folders">
+            <DockPanel>
+                <!-- Column header row styled to match DataGrid headers -->
+                <Grid DockPanel.Dock="Top"
+                      ColumnDefinitions="2*,*,*"
+                      Background="{DynamicResource DataGridColumnHeaderBackgroundBrush}"
+                      Margin="0,0,0,1">
+                    <TextBlock Grid.Column="0" Text="Name" Margin="4,2" FontWeight="SemiBold" />
+                    <TextBlock Grid.Column="1" Text="Size" Margin="4,2" FontWeight="SemiBold" TextAlignment="Right" />
+                    <TextBlock Grid.Column="2" Text="Attr" Margin="4,2" FontWeight="SemiBold" />
+                </Grid>
+                <ScrollViewer>
+                    <TreeView ItemsSource="{Binding FileTree}">
+                        <TreeView.Styles>
+                            <Style Selector="TreeViewItem:nth-child(even)">
+                                <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundAltMediumLowBrush}" />
+                            </Style>
+                        </TreeView.Styles>
+                        <TreeView.ItemTemplate>
+                            <TreeDataTemplate DataType="vm:FileTreeNode" ItemsSource="{Binding Children}">
+                                <Grid ColumnDefinitions="2*,*,*">
+                                    <TextBlock Grid.Column="0"
+                                               Text="{Binding Name}"
+                                               Margin="2,1" />
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding Size}"
+                                               Margin="2,1"
+                                               TextAlignment="Right" />
+                                    <TextBlock Grid.Column="2"
+                                               Text="{Binding Attributes}"
+                                               Margin="2,1" />
+                                </Grid>
+                            </TreeDataTemplate>
+                        </TreeView.ItemTemplate>
+                    </TreeView>
+                </ScrollViewer>
+            </DockPanel>
+        </TabItem>
+    </TabControl>
+</Window>

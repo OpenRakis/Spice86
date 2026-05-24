@@ -473,7 +473,7 @@ public class Spice86DependencyInjection : IDisposable {
             keyboardInt16Handler, biosDataArea, vgaFunctionality,
             new Dictionary<string, string> {
                 { "BLASTER", soundBlaster.BlasterString } }, ioPortDispatcher, loggerService,
-            xms);
+            mixer, driveActivityNotifier, xms);
 
         MainWindowViewModel? mainWindowViewModel = null;
         UIDispatcher? uiDispatcher = null;

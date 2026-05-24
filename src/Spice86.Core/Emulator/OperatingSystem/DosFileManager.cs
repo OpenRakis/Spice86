@@ -181,6 +181,10 @@ public class DosFileManager {
             return OpenDevice(device);
         }
 
+        if (IsReadOnlyDosPath(fileName)) {
+            return DosFileOperationResult.Error(DosErrorCode.AccessDenied);
+        }
+
         string? newHostFilePath = _dosPathResolver.ResolveNewFilePath(fileName);
         if (string.IsNullOrWhiteSpace(newHostFilePath)) {
             return PathNotFoundError(fileName);
@@ -312,13 +316,11 @@ public class DosFileManager {
             x => x.IsName(fileSpec)) is { } characterDevice) {
             if (isFcbSearch) {
                 UpdateDosTransferAreaWithFcbResult(dta, characterDevice.Name, 0, 0, 0, 0);
-            } else if (!TryUpdateDosTransferAreaWithFileMatch(dta, fileSpec,
-                characterDevice.Name, string.Empty,
+            } else if (!TryUpdateDosTransferAreaWithDeviceMatch(dta, characterDevice.Name,
                 out DosFileOperationResult status)) {
                 return status;
             }
-            _activeFileSearches.Add(dta.SearchId, new
-                (characterDevice.Name, 1, searchAttributes, isFcbSearch));
+            _activeFileSearches.Add(dta.SearchId, new(characterDevice.Name, 1, searchAttributes, isFcbSearch));
             return DosFileOperationResult.NoValue();
         }
 
@@ -695,6 +697,10 @@ public class DosFileManager {
             return FileNotOpenedError(fileHandle);
         }
 
+        if (file is DosFile dosFile && IsReadOnlyDrive(dosFile.Drive)) {
+            return DosFileOperationResult.Error(DosErrorCode.AccessDenied);
+        }
+
         try {
             byte[] data = _memory.GetSlice((int)bufferAddress, writeLength).ToArray();
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
@@ -726,10 +732,37 @@ public class DosFileManager {
         return true;
     }
 
+    private static bool TryUpdateDosTransferAreaWithDeviceMatch(DosDiskTransferArea dta,
+        string deviceName, out DosFileOperationResult status) {
+        dta.FileAttributes = (byte)DosFileAttributes.Normal;
+        dta.FileDate = 0;
+        dta.FileTime = 0;
+        dta.FileSize = 0;
+        dta.FileName = deviceName.ToUpperInvariant();
+        status = DosFileOperationResult.NoValue();
+        return true;
+    }
+
     private int CountHandles(DosFile openFileToCount) => OpenFiles.Count(openFile => openFile == openFileToCount);
 
     private DosFileOperationResult FileAccessDeniedError(string? filename) {
         return FileOperationErrorWithLog($"File {filename} already in use!", DosErrorCode.AccessDenied);
+    }
+
+    private bool IsReadOnlyDosPath(string dosPath) {
+        if (!_dosPathResolver.TryGetDosDriveIndexFromDosPath(dosPath.AsSpan(), out int driveIndex, out bool _)) {
+            return false;
+        }
+
+        return IsReadOnlyDrive((byte)driveIndex);
+    }
+
+    private bool IsReadOnlyDrive(byte driveIndex) {
+        if (!_dosDriveManager.TryGetDriveAtIndex(driveIndex, out DosDriveBase? drive)) {
+            return false;
+        }
+
+        return drive.IsReadOnlyMedium;
     }
 
     private DosFileOperationResult FileNotFoundError(string? fileName) {
@@ -793,8 +826,14 @@ public class DosFileManager {
         return DosFileOperationResult.Error(DosErrorCode.TooManyOpenFiles);
     }
 
+    internal string? GetFullHostPathFromDos(string dosPath) => _dosPathResolver.
+        GetFullHostPathFromDosOrDefault(dosPath);
+
     internal string? TryGetFullHostPathFromDos(string dosPath) => _dosPathResolver.
         GetFullHostPathFromDosOrDefault(dosPath);
+
+    internal string? GetFullHostExecutablePathFromDos(string dosPath) => _dosPathResolver.
+        GetFullHostExecutablePathFromDosOrDefault(dosPath);
 
     internal string? TryGetFullHostExecutablePathFromDos(string dosPath) => _dosPathResolver.
         GetFullHostExecutablePathFromDosOrDefault(dosPath);
@@ -880,6 +919,10 @@ public class DosFileManager {
         if (string.IsNullOrWhiteSpace(hostFileName)) {
             // Not found
             return FileNotFoundError(dosFileName);
+        }
+
+        if (openMode != FileAccessMode.ReadOnly && IsReadOnlyDosPath(dosFileName)) {
+            return DosFileOperationResult.Error(DosErrorCode.AccessDenied);
         }
 
         int? freeIndex = FindNextFreeFileIndex();
@@ -1057,8 +1100,6 @@ public class DosFileManager {
         resultFcb.DriveNumber = driveNumber;
         resultFcb.FileName = fileName.ToUpperInvariant().PadRight(DosFileControlBlock.FileNameSize);
         resultFcb.FileExtension = fileExtension.ToUpperInvariant().PadRight(DosFileControlBlock.FileExtensionSize);
-        // FCB search results are unopened FCBs: CurrentBlock and RecordSize are zero
-        // because the file has not been opened for I/O yet.
         resultFcb.CurrentBlock = 0;
         resultFcb.RecordSize = 0;
         resultFcb.FileSize = fileSize;
@@ -1066,9 +1107,6 @@ public class DosFileManager {
         resultFcb.Time = dosTime;
     }
 
-    /// <summary>
-    /// Populates the DTA with an FCB result using only the filename (convenience overload for character devices).
-    /// </summary>
     private static void UpdateDosTransferAreaWithFcbResult(DosDiskTransferArea dta,
         string dosFileName, byte attributes, ushort dosDate, ushort dosTime, uint fileSize) {
         string nameOnly = Path.GetFileNameWithoutExtension(dosFileName);
@@ -1088,6 +1126,10 @@ public class DosFileManager {
     /// <param name="dosDirectory">The directory name to create</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult CreateDirectory(string dosDirectory) {
+        if (IsReadOnlyDosPath(dosDirectory)) {
+            return DosFileOperationResult.Error(DosErrorCode.AccessDenied);
+        }
+
         string? parentFolder = _dosPathResolver.GetFullHostParentPathFromDosOrDefault(dosDirectory);
         if (string.IsNullOrWhiteSpace(parentFolder)) {
             return PathNotFoundError(dosDirectory);
@@ -1124,6 +1166,10 @@ public class DosFileManager {
     /// <param name="dosFile">The file name to delete</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult RemoveFile(string dosFile) {
+        if (IsReadOnlyDosPath(dosFile)) {
+            return DosFileOperationResult.Error(DosErrorCode.AccessDenied);
+        }
+
         string? fullHostPath = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosFile);
         if (string.IsNullOrWhiteSpace(fullHostPath)) {
             return PathNotFoundError(dosFile);
@@ -1163,6 +1209,10 @@ public class DosFileManager {
     /// <param name="newDosName">The new file name (may be just a name, or a full path).</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult RenameFile(string oldDosPath, string newDosName) {
+        if (IsReadOnlyDosPath(oldDosPath) || IsReadOnlyDosPath(newDosName)) {
+            return DosFileOperationResult.Error(DosErrorCode.AccessDenied);
+        }
+
         string? fullOldHostPath = _dosPathResolver.GetFullHostPathFromDosOrDefault(oldDosPath);
         if (string.IsNullOrWhiteSpace(fullOldHostPath) || !File.Exists(fullOldHostPath)) {
             return PathNotFoundError(oldDosPath);
@@ -1207,6 +1257,10 @@ public class DosFileManager {
     /// <param name="newDosPath">The full destination DOS path.</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult MoveFile(string oldDosPath, string newDosPath) {
+        if (IsReadOnlyDosPath(oldDosPath) || IsReadOnlyDosPath(newDosPath)) {
+            return DosFileOperationResult.Error(DosErrorCode.AccessDenied);
+        }
+
         string? fullOldHostPath = _dosPathResolver.GetFullHostPathFromDosOrDefault(oldDosPath);
         if (string.IsNullOrWhiteSpace(fullOldHostPath) || !File.Exists(fullOldHostPath)) {
             return PathNotFoundError(oldDosPath);
@@ -1240,6 +1294,10 @@ public class DosFileManager {
     /// <param name="dosDirectory">The directory name to delete</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult RemoveDirectory(string dosDirectory) {
+        if (IsReadOnlyDosPath(dosDirectory)) {
+            return DosFileOperationResult.Error(DosErrorCode.AccessDenied);
+        }
+
         string? hostDirToDelete = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosDirectory);
 
         if (string.IsNullOrWhiteSpace(hostDirToDelete) ||
@@ -1440,13 +1498,22 @@ public class DosFileManager {
                 //* cdrom drives and drive A and B are removable */
                 if (drive < 2) {
                     state.AX = 0;
-                } else if (_dosDriveManager.TryGetDriveAtIndex(drive, out mountedDrive)) {
-                    state.AX = mountedDrive.IsRemovable ? (ushort)0 : (ushort)1;
                 } else {
-                    if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                        _loggerService.Warning("IOCTL: Unable to determine if drive {Drive} is removable", drive);
+                    if (!_dosDriveManager.TryGetDriveAtIndex(drive, out mountedDrive)) {
+                        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                            _loggerService.Warning("IOCTL: Unable to determine if drive {Drive} is removable", drive);
+                        }
+                        return DosFileOperationResult.Error(DosErrorCode.FunctionNumberInvalid);
                     }
-                    return DosFileOperationResult.Error(DosErrorCode.FunctionNumberInvalid);
+
+                    if (!mountedDrive.IsRemovable) {
+                        state.AX = 1;
+                    } else {
+                        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+                            _loggerService.Warning("IOCTL: Removable drive {Drive} does not support IsDeviceRemovable", drive);
+                        }
+                        return DosFileOperationResult.Error(DosErrorCode.FunctionNumberInvalid);
+                    }
                 }
                 return DosFileOperationResult.NoValue();
 
@@ -1504,8 +1571,7 @@ public class DosFileManager {
                         }
                         break;
 
-                    case IoctlGenericBlockCommand.GetVolumeInformation:
-                        {
+                    case IoctlGenericBlockCommand.GetVolumeInformation: {
                             DosVolumeInfo dosVolumeInfo = new(_memory, parameterBlock.Linear);
                             dosVolumeInfo.SerialNumber = 0x1234;
                             dosVolumeInfo.VolumeLabel = mountedDrive.Label.ToUpperInvariant();
