@@ -201,9 +201,11 @@ public sealed class Dos {
         DosSwappableDataArea = new(_memory,
             MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
 
-        DosStringDecoder dosStringDecoder = new(memory, state);
+        DosCodePageState dosCodePageState = new();
+        DosStringDecoder dosStringDecoder = new(memory, state, dosCodePageState);
 
         CountryInfo = new();
+        CountryInfo.Country = (ushort)dosCodePageState.Country;
         FileManager = new DosFileManager(_memory, dosStringDecoder, DosDriveManager,
             _loggerService, Devices);
 
@@ -223,7 +225,7 @@ public sealed class Dos {
         ProcessManager = new(_memory, stack, state, MemoryManager, FileManager, DosDriveManager, batchDisplayCommandHandler, envVars, _loggerService);
         DosInt22Handler = new DosInt22Handler(_memory, functionHandlerProvider, stack, state, ProcessManager, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state,
-            keyboardInt16Handler, CountryInfo, dosStringDecoder,
+            keyboardInt16Handler, CountryInfo, dosCodePageState, dosStringDecoder,
             MemoryManager, FileManager, DosDriveManager, ProcessManager,
             ioPortDispatcher, DosTables, DosSysVars, _loggerService, FcbManager);
         DosInt23Handler = new DosInt23Handler(_memory, functionHandlerProvider, stack, state, ProcessManager, _loggerService);

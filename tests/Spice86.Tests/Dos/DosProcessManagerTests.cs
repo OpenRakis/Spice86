@@ -386,7 +386,8 @@ public class DosProcessManagerTests {
 
         DosDriveManager driveManager = DosTestHelpers.CreateDriveManager(loggerService, null);
         DosMemoryManager memoryManager = new(memory, initialPspSegment, loggerService);
-        DosFileManager fileManager = new(memory, new DosStringDecoder(memory, state), driveManager, loggerService, new List<IVirtualDevice>());
+        DosCodePageState dosCodePageState = new(850, CountryId.UnitedStates);
+        DosFileManager fileManager = new(memory, new DosStringDecoder(memory, state, dosCodePageState), driveManager, loggerService, new List<IVirtualDevice>());
         IBatchDisplayCommandHandler batchDisplayCommandHandler = new DosBatchDisplayCommandHandler(vgaFunctionality);
 
         DosProcessManager processManager = new(

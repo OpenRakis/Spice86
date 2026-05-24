@@ -8,7 +8,7 @@ public class CountryInfo {
     /// <summary>
     /// Gets or sets the country code for the specific country, where 1 represents the United States, 2 represents Canada, and so on.
     /// </summary>
-    public byte Country { get; set; } = (byte)CountryId.UnitedStates;
+    public ushort Country { get; set; } = (ushort)CountryId.UnitedStates;
 
     /// <summary>
     /// Gets or sets the format of the date in the specified country.
