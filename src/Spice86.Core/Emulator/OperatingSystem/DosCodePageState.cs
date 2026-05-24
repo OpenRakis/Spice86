@@ -10,6 +10,7 @@ using System.Text;
 public sealed class DosCodePageState {
     private const ushort DefaultSystemCodePage = 437;
     internal const ushort UseCurrentSystemCodePage = 0xFFFF;
+    private static readonly EncodingProvider s_registeredEncodingProvider = RegisterEncodingProvider();
 
     private static readonly Dictionary<string, DosLocaleDefinition> CultureCodePages = new(StringComparer.OrdinalIgnoreCase) {
         ["ar"] = new(CountryId.Arabic, 864),
@@ -143,24 +144,21 @@ public sealed class DosCodePageState {
         ["uk-UA"] = new(CountryId.Ukraine, 866)
     };
 
-    static DosCodePageState() {
-        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-    }
-
-    public DosCodePageState() : this(ResolveCurrentCulture()) {
-    }
-
-    public DosCodePageState(ushort codePage, CountryId country) : this(codePage, DefaultSystemCodePage, country) {
-    }
-
     public DosCodePageState(ushort activeCodePage, ushort systemCodePage, CountryId country) {
+        EnsureEncodingProviderRegistered();
         ActiveCodePage = activeCodePage;
         SystemCodePage = systemCodePage;
         Country = country;
         CurrentEncoding = ResolveEncoding(activeCodePage);
     }
 
-    private DosCodePageState(DosLocaleDefinition locale) : this((ushort)locale.CodePage, DefaultSystemCodePage, locale.Country) {
+    public static DosCodePageState CreateForCurrentCulture() {
+        DosLocaleDefinition locale = ResolveCurrentCulture();
+        return CreateForLocale(locale);
+    }
+
+    public static DosCodePageState Create(ushort codePage, CountryId country) {
+        return new DosCodePageState(codePage, DefaultSystemCodePage, country);
     }
 
     internal ushort ActiveCodePage { get; private set; }
@@ -213,6 +211,19 @@ public sealed class DosCodePageState {
         }
 
         return new DosLocaleDefinition(CountryId.UnitedStates, 437);
+    }
+
+    private static DosCodePageState CreateForLocale(DosLocaleDefinition locale) {
+        return new DosCodePageState((ushort)locale.CodePage, DefaultSystemCodePage, locale.Country);
+    }
+
+    private static void EnsureEncodingProviderRegistered() {
+        _ = s_registeredEncodingProvider;
+    }
+
+    private static EncodingProvider RegisterEncodingProvider() {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        return CodePagesEncodingProvider.Instance;
     }
 
     private static bool TryResolve(string key, out DosLocaleDefinition definition) {
