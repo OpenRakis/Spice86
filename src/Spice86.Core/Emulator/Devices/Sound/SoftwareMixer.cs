@@ -17,7 +17,7 @@ using HighPassFilter = Spice86.Audio.Filters.IirFilters.Filters.Butterworth.High
 /// <remarks>
 /// 2022-2025 The DOSBox Staging Team
 /// </remarks>
-public sealed class SoftwareMixer : IDisposable {
+public sealed class SoftwareMixer : IDisposable, ISoundChannelCreator {
     private const int DefaultSampleRateHz = 48000;
 
     // Longstanding known-good defaults for Windows
