@@ -1049,13 +1049,13 @@ public class DosMemoryManagerTests {
         DosMemoryControlBlock? block3 = _memoryManager.AllocateMemoryBlock(1500);
         _memoryManager.FreeMemoryBlock(block1!);
         _memoryManager.FreeMemoryBlock(block3!);
-        
+
         // Set first fit strategy
         _memoryManager.AllocationStrategy = DosMemoryAllocationStrategy.FirstFit;
-        
+
         // Act - allocate a block that fits in the first free block
         DosMemoryControlBlock? block4 = _memoryManager.AllocateMemoryBlock(500);
-        
+
         // Assert - should allocate in the first free block (where block1 was)
         block4.Should().NotBeNull();
         block4!.DataBlockSegment.Should().Be(block1!.DataBlockSegment);
@@ -1072,16 +1072,16 @@ public class DosMemoryManagerTests {
         _memoryManager.AllocateMemoryBlock(1000); // Keep allocated
         DosMemoryControlBlock? block3 = _memoryManager.AllocateMemoryBlock(2000); // Will be freed -> large hole
         _memoryManager.AllocateMemoryBlock(1000); // Keep allocated
-        
+
         _memoryManager.FreeMemoryBlock(block1!);  // Creates 500 para hole at start
         _memoryManager.FreeMemoryBlock(block3!);  // Creates 2000 para hole in middle
-        
+
         // Set best fit strategy
         _memoryManager.AllocationStrategy = DosMemoryAllocationStrategy.BestFit;
-        
+
         // Act - allocate a block that fits in the small hole but also fits in the large hole
         DosMemoryControlBlock? blockNew = _memoryManager.AllocateMemoryBlock(400);
-        
+
         // Assert - best fit should choose the smaller hole (500) that's just big enough
         blockNew.Should().NotBeNull();
         blockNew!.DataBlockSegment.Should().Be(block1!.DataBlockSegment);
@@ -1097,16 +1097,16 @@ public class DosMemoryManagerTests {
         _memoryManager.AllocateMemoryBlock(1000); // Keep allocated
         DosMemoryControlBlock? block3 = _memoryManager.AllocateMemoryBlock(500);  // Will be freed -> second hole
         _memoryManager.AllocateMemoryBlock(1000); // Keep allocated
-        
+
         _memoryManager.FreeMemoryBlock(block1!);  // Creates hole at start
         _memoryManager.FreeMemoryBlock(block3!);  // Creates hole in middle
-        
+
         // Set last fit strategy
         _memoryManager.AllocationStrategy = DosMemoryAllocationStrategy.LastFit;
-        
+
         // Act - allocate a block that could fit in either hole
         DosMemoryControlBlock? blockNew = _memoryManager.AllocateMemoryBlock(400);
-        
+
         // Assert - last fit should choose the highest address hole (where block3 was)
         // since there's also free space after block4, the last fit picks the last candidate
         blockNew.Should().NotBeNull();
@@ -1124,6 +1124,46 @@ public class DosMemoryManagerTests {
     }
 
     /// <summary>
+    /// Ensures that freeing a process with adjacent owned blocks exposes the merged block as the
+    /// largest free region.
+    /// </summary>
+    [Fact]
+    public void FreeProcessMemory_MergesAdjacentOwnedBlocksWhenFindingLargestFree() {
+        // Arrange
+        DosSwappableDataArea sda = new(_memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
+        ushort firstPspSegment = _initialPspSegment;
+        ushort secondPspSegment = (ushort)(_initialPspSegment + 0x20);
+
+        sda.CurrentProgramSegmentPrefix = firstPspSegment;
+        DosMemoryControlBlock? firstOwnedBlock = _memoryManager.AllocateMemoryBlock(500);
+        DosMemoryControlBlock? secondOwnedBlock = _memoryManager.AllocateMemoryBlock(600);
+
+        sda.CurrentProgramSegmentPrefix = secondPspSegment;
+        DosMemoryControlBlock? blockerBlock = _memoryManager.AllocateMemoryBlock(700);
+        DosMemoryControlBlock remainingLargestFree = _memoryManager.FindLargestFree();
+        ushort fillerBlockSize = (ushort)(remainingLargestFree.Size - 100);
+        DosMemoryControlBlock? fillerBlock = _memoryManager.AllocateMemoryBlock(fillerBlockSize);
+
+        // Act
+        bool freed = _memoryManager.FreeProcessMemory(firstPspSegment);
+        DosMemoryControlBlock largestFree = _memoryManager.FindLargestFree();
+
+        // Assert
+        firstOwnedBlock.Should().NotBeNull();
+        secondOwnedBlock.Should().NotBeNull();
+        blockerBlock.Should().NotBeNull();
+        fillerBlock.Should().NotBeNull();
+        freed.Should().BeTrue();
+
+        if (firstOwnedBlock is null || secondOwnedBlock is null) {
+            return;
+        }
+
+        largestFree.Size.Should().Be((ushort)(firstOwnedBlock.Size + secondOwnedBlock.Size + 1));
+        largestFree.DataBlockSegment.Should().Be(firstOwnedBlock.DataBlockSegment);
+    }
+
+    /// <summary>
     /// Ensures that the MCB chain check returns true for a valid chain.
     /// </summary>
     [Fact]
@@ -1131,10 +1171,10 @@ public class DosMemoryManagerTests {
         // Arrange - create some allocations
         _memoryManager.AllocateMemoryBlock(1000);
         _memoryManager.AllocateMemoryBlock(2000);
-        
+
         // Act
         bool isValid = _memoryManager.CheckMcbChain();
-        
+
         // Assert
         isValid.Should().BeTrue();
     }
@@ -1147,13 +1187,13 @@ public class DosMemoryManagerTests {
         // Arrange - create some allocations and then corrupt one
         DosMemoryControlBlock? block1 = _memoryManager.AllocateMemoryBlock(1000);
         block1.Should().NotBeNull();
-        
+
         // Corrupt the MCB by setting an invalid TypeField (neither 'M' nor 'Z')
         block1!.TypeField = 0x00; // Invalid value
-        
+
         // Act
         bool isValid = _memoryManager.CheckMcbChain();
-        
+
         // Assert
         isValid.Should().BeFalse();
     }
@@ -1165,10 +1205,10 @@ public class DosMemoryManagerTests {
     public void InvalidAllocationStrategyFitTypeIsIgnored() {
         // Arrange
         DosMemoryAllocationStrategy originalStrategy = _memoryManager.AllocationStrategy;
-        
+
         // Act - try to set invalid fit type (0x03)
         _memoryManager.AllocationStrategy = (DosMemoryAllocationStrategy)0x03;
-        
+
         // Assert - should remain unchanged
         _memoryManager.AllocationStrategy.Should().Be(originalStrategy);
     }
@@ -1180,10 +1220,10 @@ public class DosMemoryManagerTests {
     public void InvalidAllocationStrategyBits2To5SetIsIgnored() {
         // Arrange
         DosMemoryAllocationStrategy originalStrategy = _memoryManager.AllocationStrategy;
-        
+
         // Act - try to set strategy with bit 2 set (0x04)
         _memoryManager.AllocationStrategy = (DosMemoryAllocationStrategy)0x04;
-        
+
         // Assert - should remain unchanged
         _memoryManager.AllocationStrategy.Should().Be(originalStrategy);
     }
@@ -1195,10 +1235,10 @@ public class DosMemoryManagerTests {
     public void InvalidAllocationStrategyHighMemBitsIsIgnored() {
         // Arrange
         DosMemoryAllocationStrategy originalStrategy = _memoryManager.AllocationStrategy;
-        
+
         // Act - try to set invalid high memory bits (0xC0 - both bits 6 and 7 set)
         _memoryManager.AllocationStrategy = (DosMemoryAllocationStrategy)0xC0;
-        
+
         // Assert - should remain unchanged
         _memoryManager.AllocationStrategy.Should().Be(originalStrategy);
     }
