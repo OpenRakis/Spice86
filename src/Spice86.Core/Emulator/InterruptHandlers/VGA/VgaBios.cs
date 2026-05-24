@@ -129,9 +129,9 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         /// "The TotalMemory field indicates the amount of memory installed on the VGA
         /// board. Its value represents the number of 64kb blocks of memory currently
         /// installed."
-        /// Total memory: 1MB = 16 blocks of 64KB each.
+        /// Total memory: 256KB = 4 blocks of 64KB each.
         /// </summary>
-        public const ushort TotalMemory1MB = 16;
+        public const ushort TotalMemory1MB = 4;
 
         /// <summary>
         /// OEM identification string for Spice86 VBE implementation.
