@@ -1169,7 +1169,7 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
     /// Registers a drive letter for a CD-ROM drive so that drive-change commands
     /// (e.g. <c>D:</c>) succeed after <c>IMGMOUNT</c> or <c>MOUNT -t cdrom</c>.
     /// </summary>
-    public void RegisterCdRomDriveLetter(char driveLetter, string hostFolderPath) {
+    public void RegisterCdRomDriveLetter(char driveLetter, string hostFolderPath, string volumeLabel) {
         char upper = NormalizeDriveLetter(driveLetter);
         string mountPath = string.IsNullOrEmpty(hostFolderPath)
             ? string.Empty
@@ -1177,6 +1177,7 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
         CdRomDosDrive newDrive = new() {
             DriveLetter = upper,
             MountedHostDirectory = mountPath,
+            Label = volumeLabel,
             IsReadOnlyMedium = true,
         };
         ReplaceDrive(upper, newDrive);
