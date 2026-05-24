@@ -491,7 +491,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
             byte driveIndex = DosDriveManager.TryGetLetterIndex(upper, out int idx) ? (byte)idx : (byte)3;
             MscdexDriveEntry entry = new MscdexDriveEntry(upper, driveIndex, drive);
             _mscdex.AddDrive(entry);
-            DosDriveManager.RegisterCdRomDriveLetter(upper, hostPath);
+            DosDriveManager.RegisterCdRomDriveLetter(upper, hostPath, volumeLabel);
             if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
                 _loggerService.Information("MOUNT: Drive {Drive}: is now backed by folder {Path}", upper, hostPath);
             }
@@ -526,7 +526,8 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         byte driveIndex = DosDriveManager.TryGetLetterIndex(upper, out int idx) ? (byte)idx : (byte)3;
         MscdexDriveEntry entry = new MscdexDriveEntry(upper, driveIndex, drive);
         _mscdex.AddDrive(entry);
-        DosDriveManager.RegisterCdRomDriveLetter(upper, string.Empty);
+        string volumeLabel = image.PrimaryVolume.VolumeIdentifier ?? string.Empty;
+        DosDriveManager.RegisterCdRomDriveLetter(upper, string.Empty, volumeLabel);
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _loggerService.Information("IMGMOUNT: Mounted image {Image} on drive {Drive}:", imagePath, upper);
         }
