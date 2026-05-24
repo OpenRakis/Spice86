@@ -7,6 +7,7 @@ using Spice86.Shared.Emulator.Storage.CdRom;
 using Spice86.Core.Emulator.InterruptHandlers.Mscdex;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Shared.Emulator.Storage.FileSystem;
+using Spice86.Shared.Emulator.Storage;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 
 using System;
@@ -1545,57 +1546,97 @@ internal sealed partial class DosBatchExecutionEngine {
     }
 
     private void WriteMountedDriveList() {
-        WriteToStandardOutput("Drive  Type    Path\r\n");
-        WriteToStandardOutput("-----  ------  ----\r\n");
+        IReadOnlyList<DosVirtualDriveStatus> statuses = _driveStatusProvider.GetDriveStatuses();
 
-        bool foundDrive = false;
-        for (char driveLetter = 'A'; driveLetter <= 'Z'; driveLetter++) {
-            if (TryGetCdRomDriveEntry(driveLetter, out MscdexDriveEntry? cdRomDrive)) {
-                if (cdRomDrive == null) {
-                    continue;
-                }
-                WriteMountedDriveEntries(driveLetter, "cdrom", cdRomDrive.Drive.AllImagePaths);
-                foundDrive = true;
-                continue;
-            }
+        WriteToStandardOutput("Drive  Type    Path  Label\r\n");
+        WriteToStandardOutput("-----  ------  ----  -----\r\n");
 
-            if (_driveManager.TryGetFloppyDrive(driveLetter, out FloppyDiskDrive? floppyDrive)) {
-                string driveType = driveLetter == 'A' || driveLetter == 'B' ? "floppy" : "hdd";
-                WriteMountedDriveEntries(driveLetter, driveType, floppyDrive.AllImagePaths);
-                foundDrive = true;
-                continue;
-            }
-
-            if (_driveManager.TryGetDrive<MemoryDrive>(driveLetter, out MemoryDrive? _)) {
-                WriteToStandardOutput($" {driveLetter}:    mem     <memory>\r\n");
-                foundDrive = true;
-                continue;
-            }
-
-            if (_driveManager.TryGetDrive<VirtualDrive>(driveLetter, out VirtualDrive? virtualDrive) &&
-                !string.IsNullOrEmpty(virtualDrive.MountedHostDirectory)) {
-                string driveType = driveLetter == 'A' || driveLetter == 'B' ? "floppy" : "dir";
-                string mountedPath = virtualDrive.MountedHostDirectory.TrimEnd('/', '\\');
-                WriteToStandardOutput($" {driveLetter}:    {driveType.PadRight(6)}  {mountedPath}\r\n");
-                foundDrive = true;
-            }
+        if (statuses.Count == 0) {
+            WriteToStandardOutput("No drive available.\r\n");
+            return;
         }
 
-        if (!foundDrive) {
-            WriteToStandardOutput("No drive available.\r\n");
+        for (int i = 0; i < statuses.Count; i++) {
+            DosVirtualDriveStatus status = statuses[i];
+            WriteMountedDriveEntries(status, ResolveMountedDrivePaths(status));
         }
     }
 
-    private void WriteMountedDriveEntries(char driveLetter, string driveType, IReadOnlyList<string> paths) {
+    private void WriteMountedDriveEntries(DosVirtualDriveStatus status, IReadOnlyList<string> paths) {
+        string driveType = GetMountedDriveType(status.DriveType);
+
         if (paths.Count == 0) {
-            WriteToStandardOutput($" {driveLetter}:    {driveType.PadRight(6)}  \r\n");
+            WriteMountedDriveEntry(status.DriveLetter, driveType, string.Empty, status.VolumeLabel, true);
             return;
         }
 
         for (int i = 0; i < paths.Count; i++) {
-            string drivePrefix = i == 0 ? $" {driveLetter}:" : "   ";
-            string typePrefix = i == 0 ? driveType.PadRight(6) : "      ";
-            WriteToStandardOutput($"{drivePrefix}    {typePrefix}  {paths[i]}\r\n");
+            bool firstRow = i == 0;
+            string label = firstRow ? status.VolumeLabel : string.Empty;
+            WriteMountedDriveEntry(status.DriveLetter, driveType, paths[i], label, firstRow);
+        }
+    }
+
+    private void WriteMountedDriveEntry(char driveLetter, string driveType, string path, string label, bool firstRow) {
+        string drivePrefix;
+        if (firstRow) {
+            drivePrefix = $" {driveLetter}:";
+        } else {
+            drivePrefix = "   ";
+        }
+
+        string typePrefix;
+        if (firstRow) {
+            typePrefix = driveType.PadRight(6);
+        } else {
+            typePrefix = "      ";
+        }
+
+        WriteToStandardOutput($"{drivePrefix}    {typePrefix}  {path}  {label}\r\n");
+    }
+
+    private IReadOnlyList<string> ResolveMountedDrivePaths(DosVirtualDriveStatus status) {
+        if (status.DriveType == DosVirtualDriveType.Memory) {
+            return ["<memory>"];
+        }
+
+        if (status.AllImagePaths.Count > 0) {
+            return status.AllImagePaths;
+        }
+
+        string mountedHostPath = GetMountedHostPath(status.DriveLetter);
+        if (!string.IsNullOrEmpty(mountedHostPath)) {
+            return [mountedHostPath];
+        }
+
+        if (!string.IsNullOrEmpty(status.CurrentImagePath)) {
+            return [status.CurrentImagePath];
+        }
+
+        return Array.Empty<string>();
+    }
+
+    private string GetMountedHostPath(char driveLetter) {
+        if (_driveManager.TryGetDrive<VirtualDrive>(driveLetter, out VirtualDrive? virtualDrive) &&
+            virtualDrive != null &&
+            !string.IsNullOrEmpty(virtualDrive.MountedHostDirectory)) {
+            return virtualDrive.MountedHostDirectory.TrimEnd('/', '\\');
+        }
+
+        return string.Empty;
+    }
+
+    private static string GetMountedDriveType(DosVirtualDriveType driveType) {
+        switch (driveType) {
+            case DosVirtualDriveType.Floppy:
+                return "floppy";
+            case DosVirtualDriveType.CdRom:
+                return "cdrom";
+            case DosVirtualDriveType.Memory:
+                return "mem";
+            case DosVirtualDriveType.Fixed:
+            default:
+                return "dir";
         }
     }
 
