@@ -26,7 +26,7 @@ internal sealed class DosBatchProgramLoader : DosProgramLoader {
                 programLaunchRequest.CommandTail, paramBlock.EnvironmentSegment);
         }
 
-        return DosExecResult.Fail(DosErrorCode.FormatInvalid);
+        return base.LoadLaunchRequest(launchRequest, paramBlock);
     }
 
     protected override string? GetHostPathForLaunchedProgram(LaunchRequest launchRequest) {
