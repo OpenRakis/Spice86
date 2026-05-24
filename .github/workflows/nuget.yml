@@ -36,6 +36,16 @@ jobs:
         working-directory: ./src/Spice86.Shared/bin/Release
         run: dotnet nuget push Spice86.Shared.*.nupkg --api-key "${{ secrets.NUGET_API_KEY }}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
 
+      - name: Upload NuGet Spice86.Storage.Cd
+        if: github.ref == 'refs/heads/master' && matrix.os == 'ubuntu-latest'
+        working-directory: ./src/Spice86.Storage.Cd/bin/Release
+        run: dotnet nuget push Spice86.Storage.Cd.*.nupkg --api-key "${{ secrets.NUGET_API_KEY }}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
+
+      - name: Upload NuGet Spice86.Storage.Fat
+        if: github.ref == 'refs/heads/master' && matrix.os == 'ubuntu-latest'
+        working-directory: ./src/Spice86.Storage.Fat/bin/Release
+        run: dotnet nuget push Spice86.Storage.Fat.*.nupkg --api-key "${{ secrets.NUGET_API_KEY }}" --source "https://api.nuget.org/v3/index.json" --skip-duplicate
+
       - name: Upload NuGet Spice86.Logging
         if: github.ref == 'refs/heads/master' && matrix.os == 'ubuntu-latest'
         working-directory: ./src/Spice86.Logging/bin/Release
