@@ -8,6 +8,7 @@ using System.Globalization;
 using System.Text;
 
 public sealed class DosCodePageState {
+    private const ushort DefaultSystemCodePage = 437;
     internal const ushort UseCurrentSystemCodePage = 0xFFFF;
 
     private static readonly Dictionary<string, DosLocaleDefinition> ExactCultureCodePages = new(StringComparer.OrdinalIgnoreCase) {
@@ -46,14 +47,17 @@ public sealed class DosCodePageState {
     public DosCodePageState() : this(ResolveCurrentCulture()) {
     }
 
-    public DosCodePageState(ushort codePage, CountryId country) {
-        ActiveCodePage = codePage;
-        SystemCodePage = codePage;
-        Country = country;
-        CurrentEncoding = ResolveEncoding(codePage);
+    public DosCodePageState(ushort codePage, CountryId country) : this(codePage, DefaultSystemCodePage, country) {
     }
 
-    private DosCodePageState(DosLocaleDefinition locale) : this((ushort)locale.CodePage, locale.Country) {
+    public DosCodePageState(ushort activeCodePage, ushort systemCodePage, CountryId country) {
+        ActiveCodePage = activeCodePage;
+        SystemCodePage = systemCodePage;
+        Country = country;
+        CurrentEncoding = ResolveEncoding(activeCodePage);
+    }
+
+    private DosCodePageState(DosLocaleDefinition locale) : this((ushort)locale.CodePage, DefaultSystemCodePage, locale.Country) {
     }
 
     internal ushort ActiveCodePage { get; private set; }
