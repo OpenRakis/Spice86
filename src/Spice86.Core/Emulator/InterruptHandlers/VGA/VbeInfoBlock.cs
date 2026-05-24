@@ -33,11 +33,18 @@ public class VbeInfoBlock : MemoryBasedDataStructure {
     public string Signature {
         get => GetZeroTerminatedString(0x00, SignatureLength);
         set {
-            string truncated = value.Length >= SignatureLength
-                ? value[..SignatureLength]
-                : value;
+            string truncated = value;
+            if (value.Length >= SignatureLength) {
+                truncated = value[..SignatureLength];
+            }
+
             for (int i = 0; i < SignatureLength; i++) {
-                UInt8[0x00 + i] = i < truncated.Length ? (byte)truncated[i] : (byte)0;
+                byte valueToWrite = 0;
+                if (i < truncated.Length) {
+                    valueToWrite = (byte)truncated[i];
+                }
+
+                UInt8[0x00 + i] = valueToWrite;
             }
         }
     }
@@ -131,9 +138,11 @@ public class VbeInfoBlock : MemoryBasedDataStructure {
     /// <param name="oemString">The OEM string to write.</param>
     /// <param name="offsetFromBase">Offset from base address where to write the string.</param>
     public void WriteOemString(string oemString, uint offsetFromBase) {
-        string truncated = oemString.Length >= OemStringMaxLength
-            ? oemString[..(OemStringMaxLength - 1)]
-            : oemString;
+        string truncated = oemString;
+        if (oemString.Length >= OemStringMaxLength) {
+            truncated = oemString[..(OemStringMaxLength - 1)];
+        }
+
         SetZeroTerminatedString(offsetFromBase, truncated, OemStringMaxLength);
     }
 

@@ -114,9 +114,9 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     private static class VbeConstants {
         /// <summary>
         /// "The current VESA version number is 1.2."
-        /// VBE 1.0 version number in BCD format (major.minor = 0x0100 = 1.0).
+        /// VBE 1.2 version number in BCD format (major.minor = 0x0102 = 1.2).
         /// </summary>
-        public const ushort Version10 = 0x0100;
+        public const ushort Version12 = 0x0102;
 
         /// <summary>
         /// "D0 = DAC is switchable (0 = DAC is fixed width, with 6-bits per primary color,
@@ -131,7 +131,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         /// installed."
         /// Total memory: 256KB = 4 blocks of 64KB each.
         /// </summary>
-        public const ushort TotalMemory1MB = 4;
+        public const ushort TotalMemory256KB = 4;
 
         /// <summary>
         /// OEM identification string for Spice86 VBE implementation.
@@ -139,14 +139,19 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         public const string OemString = "Spice86 VBE";
 
         /// <summary>
-        /// Offset from VbeInfoBlock base where OEM string is written (beyond 256-byte structure).
+        /// Segment for VBE 00h auxiliary data (OEM string and mode list).
         /// </summary>
-        public const uint OemStringOffset = 256;
+        public const ushort VbeDataSegment = MemoryMap.StaticFunctionalityTableSegment;
 
         /// <summary>
-        /// Offset from VbeInfoBlock base where mode list is written (after OEM string).
+        /// Offset where OEM string is written in VBE BIOS-owned storage.
         /// </summary>
-        public const uint ModeListOffset = 280;
+        public const ushort OemStringOffset = 0x0100;
+
+        /// <summary>
+        /// Offset where the video mode list is written in VBE BIOS-owned storage.
+        /// </summary>
+        public const ushort ModeListOffset = 0x0200;
 
         /// <summary>
         /// VBE controller info block size in bytes.
@@ -255,6 +260,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         public const byte MaxVideoPage = 7;
         public const byte MaxPaletteRegister = 0x0F;
         public const byte FunctionSupported = 0x1A;
+        public const byte FunctionalityInfoSupported = 0x1B;
         public const byte SubfunctionSuccess = 0x12;
         public const byte NoSecondaryDisplay = 0x00;
         public const byte DefaultDisplayCombinationCode = 0x08;
@@ -268,6 +274,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         public const byte DontClearMemoryFlag = 0x80;
         public const byte IncludeAttributesFlag = 0x02;
         public const byte UpdateCursorPositionFlag = 0x01;
+        public const byte Bit0Mask = 0x01;
         public const byte ColorModeMemory = 0x01;
         public const byte VideoControlBitMask = 0x80;
         public const ushort EquipmentListFlagsMask = 0x30;
@@ -478,7 +485,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
                 _vgaFunctions.SetAllPaletteRegisters(State.ES, State.DX);
                 break;
             case 0x03:
-                _vgaFunctions.ToggleIntensity((State.BL & BiosConstants.UpdateCursorPositionFlag) != 0);
+                _vgaFunctions.ToggleIntensity((State.BL & BiosConstants.Bit0Mask) != 0);
                 break;
             case 0x07:
                 if (State.BL > BiosConstants.MaxPaletteRegister) {
@@ -508,7 +515,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
                         nameof(VgaBios), nameof(SetPaletteRegisters), State.BL == 0 ? "set Mode Control register bit 7" : "set color select register", State.BH);
                 }
                 if (State.BL == 0) {
-                    _vgaFunctions.SetP5P4Select((State.BH & BiosConstants.UpdateCursorPositionFlag) != 0);
+                    _vgaFunctions.SetP5P4Select((State.BH & BiosConstants.Bit0Mask) != 0);
                 } else {
                     _vgaFunctions.SetColorSelectRegister(State.BH);
                 }
@@ -895,7 +902,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     }
 
     /// <summary>
-    /// VESA VBE 1.0 function dispatcher (INT 10h AH=4Fh).
+    /// VESA VBE 1.2 function dispatcher (INT 10h AH=4Fh).
     /// Dispatches to specific VBE functions based on AL subfunction.
     /// </summary>
     public void VesaFunctions() {
@@ -929,34 +936,34 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         VbeInfoBlock vbeInfo = new VbeInfoBlock(Memory, address);
         ZeroMemory(address, VbeConstants.ControllerInfoBlockSize);
 
-        // Fill VBE Info Block (VBE 1.0)
+        // Fill VBE Info Block (VBE 1.2)
         vbeInfo.Signature = "VESA";
-        vbeInfo.Version = VbeConstants.Version10;
-
-        // OEM String pointer - point to a location beyond the main structure
-        vbeInfo.OemStringOffset = (ushort)(offset + VbeConstants.OemStringOffset);
-        vbeInfo.OemStringSegment = segment;
+        vbeInfo.Version = VbeConstants.Version12;
 
         // Capabilities: DAC is switchable, controller is VGA compatible
         vbeInfo.Capabilities = VbeConstants.DacSwitchableCapability;
 
-        // Video Mode List pointer - point after OEM string
-        vbeInfo.VideoModeListOffset = (ushort)(offset + VbeConstants.ModeListOffset);
-        vbeInfo.VideoModeListSegment = segment;
+        uint oemStringAddress = MemoryUtils.ToPhysicalAddress(VbeConstants.VbeDataSegment, VbeConstants.OemStringOffset);
+        (ushort oemStringSegment, ushort oemStringOffset) = ToFarPointer(oemStringAddress);
+        vbeInfo.OemStringOffset = oemStringOffset;
+        vbeInfo.OemStringSegment = oemStringSegment;
 
-        // Total Memory in 64KB blocks (1MB = 16 blocks)
-        vbeInfo.TotalMemory = VbeConstants.TotalMemory1MB;
+        uint modeListAddress = MemoryUtils.ToPhysicalAddress(VbeConstants.VbeDataSegment, VbeConstants.ModeListOffset);
+        (ushort modeListSegment, ushort modeListOffset) = ToFarPointer(modeListAddress);
+        vbeInfo.VideoModeListOffset = modeListOffset;
+        vbeInfo.VideoModeListSegment = modeListSegment;
 
-        // Write OEM String at offset+256
-        vbeInfo.WriteOemString(VbeConstants.OemString, VbeConstants.OemStringOffset);
+        // Total Memory in 64KB blocks (256KB = 4 blocks)
+        vbeInfo.TotalMemory = VbeConstants.TotalMemory256KB;
 
-        // Write Video Mode List at offset+280
-        ushort[] vesaModes = { VbeConstants.VesaMode800x600x16 };
-        vbeInfo.WriteModeList(vesaModes, VbeConstants.ModeListOffset);
+        Memory.SetZeroTerminatedString(oemStringAddress, VbeConstants.OemString);
+
+        Memory.WriteUInt16Segmented(modeListSegment, modeListOffset, VbeConstants.VesaMode800x600x16);
+        Memory.WriteUInt16Segmented(modeListSegment, (ushort)(modeListOffset + 2), VbeConstants.ModeListTerminator);
 
         if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("{ClassName} INT 10 4F00 VbeGetControllerInfo - Returning VBE 1.0 info at {Segment:X4}:{Offset:X4}",
-                nameof(VgaBios), segment, offset);
+            _logger.Debug("{ClassName} INT 10 4F00 VbeGetControllerInfo - Returning VBE 1.2 info at {Segment:X4}:{Offset:X4}, OEM {OemSegment:X4}:{OemOffset:X4}, modes {ModeSegment:X4}:{ModeOffset:X4}",
+                nameof(VgaBios), segment, offset, oemStringSegment, oemStringOffset, modeListSegment, modeListOffset);
         }
 
         State.AX = (ushort)VbeStatus.Success;
@@ -966,8 +973,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     /// <inheritdoc cref="IVesaBiosExtension.VbeGetModeInfo"/>
     public void VbeGetModeInfo() {
         ushort requestedModeNumber = State.CX;
-        const ushort SupportedVbeMode = 0x0102;
-        ushort modeNumber = (ushort)(requestedModeNumber & 0x3FFF);
+        ushort modeNumber = (ushort)(requestedModeNumber & (ushort)VbeModeFlags.ModeNumberMask);
         ushort segment = State.ES;
         ushort offset = State.DI;
         uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
@@ -975,7 +981,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         // Get mode parameters based on VESA base mode number (without high flag bits)
         (ushort width, ushort height, byte bpp, bool supported) = GetVesaModeParams(modeNumber);
 
-        if (!supported || modeNumber != SupportedVbeMode) {
+        if (!supported) {
             if (_logger.IsEnabled(LogEventLevel.Warning)) {
                 _logger.Warning("{ClassName} INT 10 4F01 VbeGetModeInfo - Unsupported mode 0x{Mode:X4}",
                     nameof(VgaBios), requestedModeNumber);
@@ -1066,7 +1072,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         }
 
         // Return success
-        State.AX = 0x004F;
+        State.AX = (ushort)VbeStatus.Success;
     }
 
     /// <inheritdoc cref="IVesaBiosExtension.VbeSetMode"/>
@@ -1105,39 +1111,13 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
 
     /// <summary>
     /// Gets the parameters for a VESA mode number.
-    /// Returns mode information for all standard VESA modes defined in VBE 1.2 spec.
+    /// Returns mode information for VESA modes currently supported by this VGA implementation.
     /// This is used by VbeGetModeInfo (VBE 01h) to return mode characteristics.
-    /// Note: supported=true means mode info is available for queries (per VBE spec);
-    /// actual ability to SET the mode depends on MapVesaModeToInternal returning a valid internal mode.
-    /// Programs query mode info before setting modes to check if they're suitable.
+    /// supported=true means the mode can be queried and set by the emulator.
     /// </summary>
     private static (ushort width, ushort height, byte bpp, bool supported) GetVesaModeParams(ushort mode) {
         return mode switch {
-            // VBE 1.2 standard modes - return info for queries
-            // Note: Only mode 0x102 can actually be SET (has internal VGA mode support)
-            0x100 => (640, 400, 8, true),    // 640x400x256
-            0x101 => (640, 480, 8, true),    // 640x480x256
-            0x102 => (800, 600, 4, true),    // 800x600x16 (planar) - CAN BE SET via mode 0x6A
-            0x103 => (800, 600, 8, true),    // 800x600x256
-            0x104 => (1024, 768, 4, true),   // 1024x768x16 (planar)
-            0x105 => (1024, 768, 8, true),   // 1024x768x256
-            0x106 => (1280, 1024, 4, true),  // 1280x1024x16 (planar)
-            0x107 => (1280, 1024, 8, true),  // 1280x1024x256
-            0x10D => (320, 200, 15, true),   // 320x200x15-bit
-            0x10E => (320, 200, 16, true),   // 320x200x16-bit
-            0x10F => (320, 200, 24, true),   // 320x200x24-bit
-            0x110 => (640, 480, 15, true),   // 640x480x15-bit (S3 mode 0x70)
-            0x111 => (640, 480, 16, true),   // 640x480x16-bit
-            0x112 => (640, 480, 24, true),   // 640x480x24-bit
-            0x113 => (800, 600, 15, true),   // 800x600x15-bit
-            0x114 => (800, 600, 16, true),   // 800x600x16-bit
-            0x115 => (800, 600, 24, true),   // 800x600x24-bit
-            0x116 => (1024, 768, 15, true),  // 1024x768x15-bit
-            0x117 => (1024, 768, 16, true),  // 1024x768x16-bit
-            0x118 => (1024, 768, 24, true),  // 1024x768x24-bit
-            0x119 => (1280, 1024, 15, true), // 1280x1024x15-bit
-            0x11A => (1280, 1024, 16, true), // 1280x1024x16-bit
-            0x11B => (1280, 1024, 24, true), // 1280x1024x24-bit
+            VbeConstants.VesaMode800x600x16 => (800, 600, 4, true),
             _ => (0, 0, 0, false)
         };
     }
@@ -1164,6 +1144,13 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         Memory.WriteRam(empty, baseAddress);
     }
 
+    private static (ushort Segment, ushort Offset) ToFarPointer(uint physicalAddress) {
+        ushort segment = MemoryUtils.ToSegment(physicalAddress);
+        ushort offset = (ushort)(physicalAddress & 0x0F);
+
+        return (segment, offset);
+    }
+
     /// <inheritdoc />
     public VideoFunctionalityInfo GetFunctionalityInfo() {
         ushort segment = State.ES;
@@ -1171,7 +1158,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
 
         switch (State.BX) {
             case 0x0:
-                State.AL = BiosConstants.FunctionSupported;
+                State.AL = BiosConstants.FunctionalityInfoSupported;
                 break;
             default:
                 if (_logger.IsEnabled(LogEventLevel.Warning)) {
