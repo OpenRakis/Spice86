@@ -48,12 +48,14 @@ public sealed class FloppyDiskController : DefaultIOPortHandler {
     /// Initialises a new <see cref="FloppyDiskController"/>.
     /// </summary>
     /// <param name="state">The CPU registers and flags.</param>
+    /// <param name="ioPortDispatcher">Dispatcher used to expose the controller's I/O ports.</param>
     /// <param name="failOnUnhandledPort">Whether to throw on unhandled ports.</param>
     /// <param name="loggerService">Logger service implementation.</param>
     /// <param name="interruptController">Interrupt controller used to assert IRQ 6 when a command completes.</param>
     /// <param name="transferService">DMA-backed floppy transfer service used for sector reads and writes.</param>
     public FloppyDiskController(
         State state,
+        IOPortDispatcher ioPortDispatcher,
         bool failOnUnhandledPort,
         ILoggerService loggerService,
         DualPic interruptController,
@@ -61,6 +63,7 @@ public sealed class FloppyDiskController : DefaultIOPortHandler {
         : base(state, failOnUnhandledPort, loggerService) {
         _interruptController = interruptController;
         _transferService = transferService;
+        InstallHandlers(ioPortDispatcher);
     }
 
     /// <inheritdoc/>
@@ -85,6 +88,12 @@ public sealed class FloppyDiskController : DefaultIOPortHandler {
             return;
         }
         base.WriteByte(port, value);
+    }
+
+    private void InstallHandlers(IOPortDispatcher ioPortDispatcher) {
+        ioPortDispatcher.AddIOPortHandler(PortDor, this);
+        ioPortDispatcher.AddIOPortHandler(PortMsr, this);
+        ioPortDispatcher.AddIOPortHandler(PortData, this);
     }
 
     private byte ReadMainStatusRegister() {
