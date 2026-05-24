@@ -23,6 +23,7 @@ internal sealed partial class DosBatchExecutionEngine {
     private readonly IDosBatchExecutionHost _host;
     private readonly ILoggerService _loggerService;
     private readonly DosDriveManager _driveManager;
+    private readonly IDriveStatusProvider _driveStatusProvider;
     private readonly Mscdex _mscdex;
     private readonly ISoundChannelCreator _channelCreator;
     private readonly Stack<BatchFileContext> _batchFileContexts = new();
@@ -41,6 +42,7 @@ internal sealed partial class DosBatchExecutionEngine {
 
     internal DosBatchExecutionEngine(DosFileManager dosFileManager,
         DosDriveManager driveManager,
+        IDriveStatusProvider driveStatusProvider,
         Mscdex mscdex,
         ISoundChannelCreator channelCreator,
         IBatchDisplayCommandHandler displayCommandHandler,
@@ -48,6 +50,7 @@ internal sealed partial class DosBatchExecutionEngine {
         ILoggerService loggerService) {
         _dosFileManager = dosFileManager;
         _driveManager = driveManager;
+        _driveStatusProvider = driveStatusProvider;
         _mscdex = mscdex;
         _channelCreator = channelCreator;
         _displayCommandHandler = displayCommandHandler;

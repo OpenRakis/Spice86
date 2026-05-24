@@ -392,6 +392,7 @@ public class DosProcessManagerTests {
         DosFileManager fileManager = new(memory, new DosStringDecoder(memory, state, dosCodePageState), driveManager, loggerService, new List<IVirtualDevice>());
         IBatchDisplayCommandHandler batchDisplayCommandHandler = new DosBatchDisplayCommandHandler(vgaFunctionality);
         Mscdex mscdex = new(state, memory, loggerService);
+        DosDriveStatusProvider driveStatusProvider = new(driveManager, mscdex);
 
         ISoundChannelCreator channelCreator = Substitute.For<ISoundChannelCreator>();
         channelCreator.AddChannel(Arg.Any<Action<int>>(), Arg.Any<int>(), Arg.Any<string>(), Arg.Any<HashSet<ChannelFeature>>())
@@ -404,6 +405,7 @@ public class DosProcessManagerTests {
             memoryManager,
             fileManager,
             driveManager,
+            driveStatusProvider,
             mscdex,
             channelCreator,
             batchDisplayCommandHandler,
