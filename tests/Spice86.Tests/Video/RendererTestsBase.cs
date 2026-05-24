@@ -9,7 +9,6 @@ using Spice86.Core.Emulator.Devices.Video.Registers.CrtController;
 using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Logging;
-using Spice86.Shared.Interfaces;
 
 using Xunit;
 
