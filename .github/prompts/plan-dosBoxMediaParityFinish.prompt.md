@@ -8,6 +8,8 @@ Finish the branch by keeping scope to DOSBox Staging parity for shell media comm
 - Dirty-floppy writeback on pause and shutdown is already implemented.
 - A dedicated DOSBox-style floppy disk I/O timing service now runs through BIOS INT 13h floppy transfers, FDC DMA transfers, and DOS INT 25h/26h floppy image I/O.
 - The retained DOSBox default floppy speed remains `maximum`, so the timing service pumps due scheduled events without adding extra transfer latency unless a non-default speed preset is selected in code.
+- The live startup batch path now preserves `BootFloppyLaunchRequest` through `DosBatchProgramLoader`, so host-started `.BAT` files can execute `IMGMOUNT` plus `BOOT -l A` end to end.
+- The no-argument `MOUNT` and `IMGMOUNT` status path now reuses a shared drive-status provider and prints label-aware drive listings for folder-backed drives, floppy image sets, CD media, and the memory drive.
 
 **Execution constraints (non-negotiable)**
 1. No minimal path: implement full DOSBox Staging behavior for each covered command and flow, not reduced subsets.
@@ -49,7 +51,7 @@ Finish the branch by keeping scope to DOSBox Staging parity for shell media comm
 - Included scope: DOSBox Staging parity for shell and batch `MOUNT`, `IMGMOUNT`, floppy `BOOT`, bare drive changes, CD DOS-visible semantics, CDDA and image handling already present in the branch, floppy BIOS and image behavior, floppy drive emulation, and floppy drive sounds, delivered as complete exact behavior per layer.
 - Excluded scope: image features outside the retained floppy/CD scope, overlay mounts, host-OS physical CD ioctl backends, raw physical media passthrough, and temporary compatibility paths.
 - Important correction from discovery: Ctrl-F4 disc swapping and floppy-drive sounds are already implemented in Spice86; they should be preserved, not newly added.
-- Important correction from discovery: the branch’s real remaining blocker is DOSBox-style floppy timing parity, not absence of core `MOUNT` and `IMGMOUNT` command handlers.
+- Important correction from discovery: after floppy timing parity landed, the next real shell mismatch was the no-argument `MOUNT` and `IMGMOUNT` status listing path, not the presence of the commands themselves.
 
 **Further Considerations**
 1. Recommendation: do not add a standalone `INT 19h` handler unless a concrete Spice86 boot flow requires reboot-based bootstrap semantics for DOSBox-compatible floppy booting. For the retained branch scope, fixing the existing `BOOT` launch path is enough.

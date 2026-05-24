@@ -109,6 +109,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     /// <param name="dosMemoryManager">Allocates and frees DOS memory control blocks for PSPs and environments.</param>
     /// <param name="dosFileManager">Resolves DOS paths and manages open file tables shared across processes.</param>
     /// <param name="dosDriveManager">Provides drive metadata and current drive context for path resolution.</param>
+    /// <param name="driveStatusProvider">Supplies DOS drive-status snapshots shared with the batch command surface.</param>
     /// <param name="mscdex">The MSCDEX CD-ROM handler owned by the DOS kernel, used for IMGMOUNT batch commands.</param>
     /// <param name="mixer">The software audio mixer, used to stream CD audio when an image is mounted.</param>
     /// <param name="batchDisplayCommandHandler">Batch-specific display command handler used by screen-related builtins such as CLS.</param>
@@ -117,6 +118,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     public DosProcessManager(IMemory memory, Stack stack, State state,
         DosMemoryManager dosMemoryManager,
         DosFileManager dosFileManager, DosDriveManager dosDriveManager,
+        IDriveStatusProvider driveStatusProvider,
         Mscdex mscdex,
         ISoundChannelCreator channelCreator,
         IBatchDisplayCommandHandler batchDisplayCommandHandler,
@@ -131,6 +133,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         _loggerService = loggerService;
         _batchExecutionEngine = new DosBatchExecutionEngine(_fileManager,
             _driveManager,
+            driveStatusProvider,
             mscdex,
             channelCreator,
             batchDisplayCommandHandler,
