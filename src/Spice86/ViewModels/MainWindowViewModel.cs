@@ -48,6 +48,20 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         set => SetProperty(ref _mcpStatusViewModel, value);
     }
 
+    private IDiscSwapper? _discSwapper;
+
+    public IDiscSwapper? DiscSwapper {
+        get => _discSwapper;
+        set => SetProperty(ref _discSwapper, value);
+    }
+
+    private DrivesMenuViewModel? _drivesMenuViewModel;
+
+    public DrivesMenuViewModel? DrivesMenuViewModel {
+        get => _drivesMenuViewModel;
+        set => SetProperty(ref _drivesMenuViewModel, value);
+    }
+
     private int? _targetCyclesPerMs;
 
     public int? TargetCyclesPerMs {
