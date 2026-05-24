@@ -151,6 +151,16 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         public const uint ModeListOffset = 280;
 
         /// <summary>
+        /// VBE controller info block size in bytes.
+        /// </summary>
+        public const int ControllerInfoBlockSize = 256;
+
+        /// <summary>
+        /// VBE mode info block size in bytes.
+        /// </summary>
+        public const int ModeInfoBlockSize = 256;
+
+        /// <summary>
         /// "The list of mode numbers is terminated by a -1 (0FFFFh)."
         /// Mode list terminator value.
         /// </summary>
@@ -1439,7 +1449,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
 
         VbeInfoBlock vbeInfo = new VbeInfoBlock(Memory, address);
-        vbeInfo.Clear();
+        ZeroMemory(address, VbeConstants.ControllerInfoBlockSize);
 
         // Fill VBE Info Block (VBE 1.0)
         vbeInfo.Signature = "VESA";
@@ -1497,7 +1507,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         }
 
         VbeModeInfoBlock modeInfo = new VbeModeInfoBlock(Memory, address);
-        modeInfo.Clear();
+        ZeroMemory(address, VbeConstants.ModeInfoBlockSize);
 
         // Mode Attributes
         modeInfo.ModeAttributes = VbeModeInfoConstants.ModeAttributesSupported;
@@ -1669,6 +1679,11 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
             // All other VESA modes are not supported by the current VGA emulation
             _ => null
         };
+    }
+
+    private void ZeroMemory(uint baseAddress, int length) {
+        byte[] empty = new byte[length];
+        Memory.WriteRam(empty, baseAddress);
     }
 
     /// <inheritdoc />
