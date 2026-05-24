@@ -393,6 +393,8 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         SoftwareMixer mixer = new(configuration.AudioEngine, pauseHandler);
+        FloppySoundEmulator floppySoundEmulator = new(mixer);
+        DriveActivityNotifier driveActivityNotifier = new();
         var midiDevice = new Midi(configuration, mixer, state,
             ioPortDispatcher, configuration.Mt32RomsPath,
             configuration.FailOnUnhandledPort, loggerService);
@@ -605,6 +607,24 @@ public class Spice86DependencyInjection : IDisposable {
         emulatorMcpServices.BiosDataArea = biosDataArea;
         emulatorMcpServices.InterruptVectorTable = interruptVectorTable;
         emulatorMcpServices.Dos = dos;
+
+        if (mainWindowViewModel != null) {
+            object dosAsObject = dos;
+            if (dosAsObject is IDiscSwapper discSwapper) {
+                mainWindowViewModel.DiscSwapper = discSwapper;
+            }
+            if (hostStorageProvider != null
+                && dosAsObject is IDriveStatusProvider driveStatusProvider
+                && dosAsObject is IDiscSwapper discSwapper2
+                && dosAsObject is IDriveMountService mountService) {
+                DrivesMenuViewModel drivesMenuViewModel = new(
+                    driveStatusProvider, discSwapper2, mountService,
+                    hostStorageProvider, new NullDriveEventNotifier(), driveActivityNotifier,
+                    dosAsObject as IDriveContentMapProvider, dosAsObject as IDriveFileListProvider);
+                drivesMenuViewModel.StartPolling();
+                mainWindowViewModel.DrivesMenuViewModel = drivesMenuViewModel;
+            }
+        }
 
         if (configuration.InitializeDOS is not false) {
             // Register the DOS interrupt handlers
