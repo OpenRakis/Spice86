@@ -1063,4 +1063,57 @@ public class EmsUnitTests {
         // Assert - Should read the original value from logical page 0
         _memory.UInt8[pageFrameAddress].Should().Be(0x11, "After restore, logical page 0 should be mapped back");
     }
+
+    /// <summary>
+    /// Tests that save or restore page maps are isolated per EMS handle.
+    /// </summary>
+    [Fact]
+    public void SaveAndRestorePageMap_WithDifferentHandles_ShouldRestoreOriginalHandleMapping() {
+        // Arrange - Allocate two logical pages on a regular EMS handle
+        _state.BX = 2;
+        _ems.AllocatePages();
+        ushort mappedHandle = _state.DX;
+        ushort firstSaveHandle = 0;
+
+        _state.BX = 1;
+        _ems.AllocatePages();
+        ushort secondSaveHandle = _state.DX;
+
+        uint pageFrameAddress = MemoryUtils.ToPhysicalAddress(ExpandedMemoryManager.EmmPageFrameSegment, 0);
+
+        // Save handle 0 with logical page 0 mapped
+        _state.AL = 0;
+        _state.BX = 0;
+        _state.DX = mappedHandle;
+        _ems.MapUnmapHandlePage();
+        _memory.UInt8[pageFrameAddress] = 0x11;
+
+        _state.DX = firstSaveHandle;
+        _ems.SavePageMap();
+
+        // Save another handle after changing the mapping to logical page 1
+        _state.AL = 0;
+        _state.BX = 1;
+        _state.DX = mappedHandle;
+        _ems.MapUnmapHandlePage();
+        _memory.UInt8[pageFrameAddress] = 0x22;
+
+        _state.DX = secondSaveHandle;
+        _ems.SavePageMap();
+
+        // Change mapping again so restore must use the saved handle-specific state
+        _state.AL = 0;
+        _state.BX = ExpandedMemoryManager.EmmNullPage;
+        _state.DX = mappedHandle;
+        _ems.MapUnmapHandlePage();
+
+        // Act
+        _state.DX = firstSaveHandle;
+        _ems.RestorePageMap();
+
+        // Assert
+        _state.AH.Should().Be(EmmStatus.EmmNoError, "Restoring the first saved handle should succeed");
+        _memory.UInt8[pageFrameAddress].Should().Be(0x11,
+            "restoring the first saved handle should restore its own saved mapping rather than the most recently saved one");
+    }
 }
