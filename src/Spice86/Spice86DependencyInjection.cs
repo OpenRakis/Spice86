@@ -217,6 +217,7 @@ public class Spice86DependencyInjection : IDisposable {
         pauseHandler.Resumed += () => _emulatedClock.OnResume();
 
         DeviceScheduler emulationLoopScheduler = new(_emulatedClock, loggerService, "Emulation loop");
+        FloppyDiskTimingService floppyDiskTimingService = new(state, _emulatedClock, emulationLoopScheduler, FloppyDiskSpeed.Maximum);
 
         var dualPic = new DualPic(ioPortDispatcher, state, loggerService, configuration.FailOnUnhandledPort);
 
@@ -471,15 +472,16 @@ public class Spice86DependencyInjection : IDisposable {
             keyboardInt16Handler, biosDataArea, vgaFunctionality,
             new Dictionary<string, string> {
                 { "BLASTER", soundBlaster.BlasterString } }, ioPortDispatcher, loggerService,
+            floppyDiskTimingService,
             mixer, driveActivityNotifier, xms);
 
         DmaChannel fdcDmaChannel = dmaSystem.GetChannel(2)
             ?? throw new InvalidOperationException("DMA channel 2 unavailable for Floppy Disk Controller.");
-        FloppyDiskTransferService floppyDiskTransferService = new(dos.DosDriveManager, fdcDmaChannel, driveActivityNotifier);
+        FloppyDiskTransferService floppyDiskTransferService = new(dos.DosDriveManager, fdcDmaChannel, driveActivityNotifier, floppyDiskTimingService);
         FloppyDiskController floppyDiskController = new(state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService, dualPic, floppyDiskTransferService);
         SystemBiosInt13Handler systemBiosInt13Handler = new(memory,
-            cfgCpu, stack, state, dos.DosDriveManager, floppySoundEmulator, driveActivityNotifier, loggerService);
+            cfgCpu, stack, state, dos.DosDriveManager, floppySoundEmulator, driveActivityNotifier, floppyDiskTimingService, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Floppy controller and BIOS disk handler created...");

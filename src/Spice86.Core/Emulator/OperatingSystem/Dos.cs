@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.OperatingSystem;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
@@ -179,6 +180,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
     /// <param name="envVars">The DOS environment variables.</param>
     /// <param name="ioPortDispatcher">The I/O port dispatcher for accessing hardware ports.</param>
     /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="floppyDiskTimingService">Floppy I/O timing service used by absolute floppy image reads and writes.</param>
     /// <param name="configuration">An object that describes what to run and how.</param>
     /// <param name="memory">The emulator memory.</param>
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
@@ -199,6 +201,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,
         BiosDataArea biosDataArea, IVgaFunctionality vgaFunctionality,
         IDictionary<string, string> envVars, IOPortDispatcher ioPortDispatcher, ILoggerService loggerService,
+        FloppyDiskTimingService floppyDiskTimingService,
         ISoundChannelCreator channelCreator,
         IDriveActivityNotifier activityNotifier,
         ExtendedMemoryManager? xms) {
@@ -263,9 +266,9 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         DosInt2FHandler = new DosInt2fHandler(_memory,
             functionHandlerProvider, stack, state, _loggerService, _mscdex, xms);
         DosInt25Handler = new DosDiskInt25Handler(_memory, DosDriveManager,
-            functionHandlerProvider, stack, state, _loggerService);
+            functionHandlerProvider, stack, state, floppyDiskTimingService, _loggerService);
         DosInt26Handler = new DosDiskInt26Handler(_memory, DosDriveManager,
-            functionHandlerProvider, stack, state, _loggerService);
+            functionHandlerProvider, stack, state, floppyDiskTimingService, _loggerService);
         DosInt28Handler = new DosInt28Handler(_memory, functionHandlerProvider,
             stack, state, _loggerService);
 
