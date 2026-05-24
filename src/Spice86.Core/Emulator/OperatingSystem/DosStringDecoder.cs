@@ -16,22 +16,18 @@ public class DosStringDecoder {
 
     private readonly IMemory _memory;
     private readonly State _state;
+    private readonly DosCodePageState _dosCodePageState;
 
-    public DosStringDecoder(IMemory memory, State state) {
+    public DosStringDecoder(IMemory memory, State state, DosCodePageState dosCodePageState) {
         _memory = memory;
-        Encoding = Encoding.GetEncoding("ibm850");
         _state = state;
-    }
-
-    static DosStringDecoder() {
-        // Register the legacy code pages from the nuget package System.Text.Encoding.CodePages
-        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        _dosCodePageState = dosCodePageState;
     }
 
     /// <summary>
-    /// Encoding used to decode DOS strings. Default is Code Page 850 (IBM PC Western DOS encoding).
+    /// Encoding used to decode DOS strings.
     /// </summary>
-    public Encoding Encoding { get; set; }
+    public Encoding Encoding => _dosCodePageState.CurrentEncoding;
 
     /// <summary>
     /// Converts a single DOS character byte to a string using the current encoding.
@@ -46,7 +42,7 @@ public class DosStringDecoder {
     public string ConvertDosChars(byte[] characterBytes) {
         return ConvertDosChars(characterBytes.AsSpan());
     }
-    
+
     /// <summary>
     /// Converts a span of DOS character bytes to a string using the current encoding.
     /// </summary>

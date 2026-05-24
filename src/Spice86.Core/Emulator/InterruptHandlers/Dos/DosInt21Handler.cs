@@ -33,6 +33,7 @@ public class DosInt21Handler : InterruptHandler {
     private readonly InterruptVectorTable _interruptVectorTable;
     private readonly DosFileManager _dosFileManager;
     private readonly KeyboardInt16Handler _keyboardInt16Handler;
+    private readonly DosCodePageState _dosCodePageState;
     private readonly DosStringDecoder _dosStringDecoder;
     private readonly CountryInfo _countryInfo;
     private readonly DosProcessManager _dosProcessManager;
@@ -59,6 +60,7 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="state">The CPU state.</param>
     /// <param name="keyboardInt16Handler">The keyboard interrupt handler.</param>
     /// <param name="countryInfo">The DOS kernel's global region settings.</param>
+    /// <param name="dosCodePageState">The DOS kernel's shared code page state.</param>
     /// <param name="dosStringDecoder">The helper class used to encode/decode DOS strings.</param>
     /// <param name="dosMemoryManager">The DOS class used to manage DOS MCBs.</param>
     /// <param name="dosFileManager">The DOS class responsible for DOS file access.</param>
@@ -71,13 +73,14 @@ public class DosInt21Handler : InterruptHandler {
     public DosInt21Handler(IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         KeyboardInt16Handler keyboardInt16Handler, CountryInfo countryInfo,
-        DosStringDecoder dosStringDecoder, DosMemoryManager dosMemoryManager,
+        DosCodePageState dosCodePageState, DosStringDecoder dosStringDecoder, DosMemoryManager dosMemoryManager,
         DosFileManager dosFileManager, DosDriveManager dosDriveManager,
         DosProcessManager dosProcessManager,
         IOPortDispatcher ioPortDispatcher, DosTables dosTables, DosSysVars dosSysVars, ILoggerService loggerService, DosFcbManager dosFcbManager)
             : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _sda = new(memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
         _countryInfo = countryInfo;
+        _dosCodePageState = dosCodePageState;
         _dosStringDecoder = dosStringDecoder;
         _keyboardInt16Handler = keyboardInt16Handler;
         _dosMemoryManager = dosMemoryManager;
@@ -470,17 +473,27 @@ public class DosInt21Handler : InterruptHandler {
     /// <summary>
     /// Obtains or selects the current code page.
     /// </summary>
-    /// <remarks>Setting the global loaded code page table is not supported and has no effect.</remarks>
     /// <param name="calledFromVm">Whether this was called by the emulator.</param>
     public void GetSetGlobalLoadedCodePageTable(bool calledFromVm) {
-        if (State.AL == 1) {
-            if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-                LoggerService.Warning("Getting the global loaded code page is not supported - returned 0 which passes test programs...");
-            }
-            State.BX = State.DX = 0;
-            SetCarryFlag(false, calledFromVm);
-        } else if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-            LoggerService.Warning("Setting the global loaded code page is not supported.");
+        switch (State.AL) {
+            case 1:
+                State.BX = _dosCodePageState.ActiveCodePage;
+                State.DX = _dosCodePageState.SystemCodePage;
+                SetCarryFlag(false, calledFromVm);
+                break;
+            case 2:
+                if (_dosCodePageState.TrySetActiveCodePage(State.BX, State.DX, out DosErrorCode errorCode)) {
+                    SetCarryFlag(false, calledFromVm);
+                    break;
+                }
+
+                State.AX = (byte)errorCode;
+                SetCarryFlag(true, calledFromVm);
+                break;
+            default:
+                State.AX = (byte)DosErrorCode.FunctionNumberInvalid;
+                SetCarryFlag(true, calledFromVm);
+                break;
         }
     }
 
