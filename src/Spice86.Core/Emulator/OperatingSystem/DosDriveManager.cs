@@ -2,7 +2,6 @@ namespace Spice86.Core.Emulator.OperatingSystem;
 
 using Spice86.Shared.Emulator.Storage;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
-using Spice86.Shared.Emulator.Storage.FileSystem.Partitions;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -1086,47 +1085,6 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _loggerService.Information("IMGMOUNT: Mounted image {Image} on drive {Drive}:", imagePath, upper);
         }
-    }
-
-    /// <summary>
-    /// Mounts an MBR-partitioned hard-disk image to the specified drive letter (C: onwards).
-    /// The full image bytes back the drive for INT 13h LBA sector access while the FAT
-    /// filesystem view is sliced to the active partition's first sector.
-    /// </summary>
-    /// <param name="driveLetter">Target drive letter (typically C..Z).</param>
-    /// <param name="imageData">Raw bytes of the entire host disk image file.</param>
-    /// <param name="imagePath">Host file-system path of the image (used for display and flush).</param>
-    /// <returns>
-    /// <see langword="true"/> when the MBR is valid and a bootable or non-empty partition was found
-    /// and mounted; <see langword="false"/> when the image lacks the 0xAA55 signature or contains
-    /// no usable partition.
-    /// </returns>
-    public bool MountHardDiskImage(char driveLetter, byte[] imageData, string imagePath) {
-        if (imageData == null || imageData.Length < 512) {
-            return false;
-        }
-        if (imageData[510] != 0x55 || imageData[511] != 0xAA) {
-            return false;
-        }
-        MasterBootRecord mbr = MbrCodec.Parse(imageData.AsSpan(0, 512));
-        PartitionTableEntry? partition = mbr.FindBootablePartition() ?? mbr.FindFirstNonEmptyPartition();
-        if (partition is null) {
-            return false;
-        }
-        int partitionByteOffset = (int)(partition.LbaStart * 512u);
-        if (partitionByteOffset <= 0 || partitionByteOffset >= imageData.Length) {
-            return false;
-        }
-        char upper = NormalizeDriveLetter(driveLetter);
-        FloppyDiskDrive drive = new() { DriveLetter = upper, MountedHostDirectory = string.Empty };
-        drive.MountImage(imageData, imagePath, partitionByteOffset);
-        ReplaceDrive(upper, drive);
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information(
-                "IMGMOUNT: Mounted HDD image {Image} on drive {Drive}: at partition LBA {Lba}",
-                imagePath, upper, partition.LbaStart);
-        }
-        return true;
     }
 
     /// <summary>

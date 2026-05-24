@@ -10,7 +10,7 @@ using System.IO;
 /// <remarks>
 /// <para>
 /// Mirrors the on-pause / on-exit write-back strategy used by dosbox-staging
-/// for mounted floppy and HDD images (see <c>src/dos/drive_fat.cpp</c>): the
+/// for FAT-backed mounted images (see <c>src/dos/drive_fat.cpp</c>): the
 /// image bytes are loaded once, mutated through the FAT API, and serialized
 /// back via <see cref="MutableFatFileSystem.CommitChanges"/>.
 /// </para>
@@ -19,13 +19,11 @@ using System.IO;
 /// is still dirty, so callers cannot accidentally lose pending changes.
 /// </para>
 /// </remarks>
-public sealed class FileBackedFatImage : IDisposable
-{
+public sealed class FileBackedFatImage : IDisposable {
     private readonly byte[] _imageBytes;
     private bool _disposed;
 
-    private FileBackedFatImage(string path, byte[] imageBytes, MutableFatFileSystem fileSystem)
-    {
+    private FileBackedFatImage(string path, byte[] imageBytes, MutableFatFileSystem fileSystem) {
         Path = path;
         _imageBytes = imageBytes;
         FileSystem = fileSystem;
@@ -45,10 +43,8 @@ public sealed class FileBackedFatImage : IDisposable
     /// <param name="fatType">Expected FAT variant (FAT12 / FAT16 / FAT32).</param>
     /// <returns>A new <see cref="FileBackedFatImage"/> bound to the file.</returns>
     /// <exception cref="FileNotFoundException">The file does not exist on disk.</exception>
-    public static FileBackedFatImage Open(string path, FatType fatType)
-    {
-        if (!File.Exists(path))
-        {
+    public static FileBackedFatImage Open(string path, FatType fatType) {
+        if (!File.Exists(path)) {
             throw new FileNotFoundException("FAT image file not found.", path);
         }
 
@@ -62,8 +58,7 @@ public sealed class FileBackedFatImage : IDisposable
     /// (via <see cref="MutableFatFileSystem.CommitChanges"/>) and writes the
     /// buffer back to the backing file on disk.
     /// </summary>
-    public void Flush()
-    {
+    public void Flush() {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
         FileSystem.CommitChanges(_imageBytes);
@@ -74,15 +69,12 @@ public sealed class FileBackedFatImage : IDisposable
     /// Flushes pending changes if the filesystem is dirty and marks this
     /// instance disposed.
     /// </summary>
-    public void Dispose()
-    {
-        if (_disposed)
-        {
+    public void Dispose() {
+        if (_disposed) {
             return;
         }
 
-        if (FileSystem.IsDirty)
-        {
+        if (FileSystem.IsDirty) {
             Flush();
         }
 
