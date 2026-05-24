@@ -191,6 +191,27 @@ public class DosFileManagerTests {
     }
 
     [Fact]
+    public void FindFirstMatchingFile_VolumeLabel_CdRomDrive_UsesMountedMediaLabel() {
+        // Arrange
+        using TempFile tempFile = new("Spice86_FM_Tests");
+        string cdRoot = Path.Join(tempFile.Path, "MYDISC");
+        Directory.CreateDirectory(cdRoot);
+        using DosTestFixture fixture = new(tempFile.Path);
+        fixture.Dos.MountFolderAsCdRom('D', cdRoot).Should().BeTrue();
+
+        // Act: volume-label searches on a mounted CD drive should use the mounted media label.
+        DosFileOperationResult result = fixture.DosFileManager.FindFirstMatchingFile(
+            @"D:\*.*", (ushort)DosFileAttributes.VolumeId);
+
+        // Assert
+        result.IsError.Should().BeFalse();
+        DosDiskTransferArea dta = fixture.DosFileManager.DiskTransferArea;
+        dta.FileAttributes.Should().Be((byte)DosFileAttributes.VolumeId);
+        dta.FileName.Should().Be("MYDISC",
+            "DOS-visible CD volume label queries should reflect the mounted CD media label");
+    }
+
+    [Fact]
     public void FindNextMatchingFile_VolumeLabel_ReturnsNoMoreFiles() {
         // Arrange: Volume label searches return exactly one result (the drive label).
         // FindNext should immediately return "no more files".
