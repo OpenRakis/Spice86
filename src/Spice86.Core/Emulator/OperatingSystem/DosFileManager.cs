@@ -1526,6 +1526,7 @@ public class DosFileManager {
                                         // undocumented bits from device attribute word
                                         // TODO Set bit 9 on drives that don't support direct I/O
                 }
+                state.AX = 0x0300;
                 return DosFileOperationResult.NoValue();
 
             case IoctlSubfunction.SetSharingRetryCount:
@@ -1591,6 +1592,7 @@ public class DosFileManager {
                 return DosFileOperationResult.NoValue();
 
             case IoctlSubfunction.GetLogicalDriveMap:
+                state.AH = 0x07;
                 if (drive < 2) {
                     if (_dosDriveManager.HasDriveAtIndex(drive)) {
                         state.AL = (byte)(drive + 1);
@@ -1604,7 +1606,6 @@ public class DosFileManager {
                     return DosFileOperationResult.Error(DosErrorCode.FunctionNumberInvalid);
                 } else { /* Only 1 logical drive assigned */
                     state.AL = 0;
-                    state.AH = 0x07;
                 }
                 return DosFileOperationResult.NoValue();
 
