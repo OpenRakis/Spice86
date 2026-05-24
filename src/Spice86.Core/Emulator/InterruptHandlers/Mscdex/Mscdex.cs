@@ -719,7 +719,12 @@ public sealed class Mscdex {
         }
 
         byte[] sectorBuffer = new byte[sectorCount * sectorSize];
-        drive.Read(startLba, sectorCount, sectorBuffer.AsSpan(), sectorMode);
+        int bytesRead = drive.Read(startLba, sectorCount, sectorBuffer.AsSpan(), sectorMode);
+        if (bytesRead != sectorBuffer.Length) {
+            WriteRequestStatus(requestBase, driveEntry, StatusError);
+            return;
+        }
+
         _activityNotifier?.NotifyRead(driveEntry.DriveLetter);
         _memory.LoadData(bufferAddress, sectorBuffer);
         WriteRequestStatus(requestBase, driveEntry, StatusDone);

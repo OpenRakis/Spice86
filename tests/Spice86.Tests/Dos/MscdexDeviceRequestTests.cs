@@ -20,6 +20,7 @@ using Xunit;
 
 public class MscdexDeviceRequestTests {
     private const byte CommandIoctlInput = 0x03;
+    private const byte CommandReadLong = 0x80;
     private const byte CommandSeek = 0x83;
     private const byte CommandPlayAudio = 0x84;
     private const byte CommandStopAudio = 0x85;
@@ -36,7 +37,10 @@ public class MscdexDeviceRequestTests {
     private const uint IoctlBufferPtrOffset = 14;
     private const uint PlayAudioStartOffset = 14;
     private const uint PlayAudioLengthOffset = 18;
+    private const uint ReadLongSectorCountOffset = 18;
     private const uint SeekSectorOffset = 20;
+    private const uint ReadLongStartSectorOffset = 20;
+    private const uint ReadLongRawFlagOffset = 24;
 
     [Fact]
     public void SendDeviceDriverRequest_IoctlMediaChanged_UsesDosBoxSwapRequestCodes() {
@@ -134,6 +138,26 @@ public class MscdexDeviceRequestTests {
             "MSCDEX resume should restore the audio-playing bit when playback becomes active again");
     }
 
+    [Fact]
+    public void SendDeviceDriverRequest_ReadLong_FailsWhenDriveReturnsShortRawSector() {
+        // Arrange
+        TestCdRomDrive drive = new TestCdRomDrive {
+            ReadByteCount = 2048,
+            ReadFillValue = 0x7A,
+        };
+        MscdexTestHarness harness = new(drive);
+        harness.Memory.UInt8[harness.BufferBaseAddress] = 0x5A;
+
+        // Act
+        harness.DispatchReadLong(16, 1, rawFlag: 1);
+
+        // Assert
+        harness.RequestStatusWord.Should().Be(0x8000,
+            "MSCDEX Read Long should fail when the drive cannot supply a full raw 2352-byte sector");
+        harness.Memory.UInt8[harness.BufferBaseAddress].Should().Be(0x5A,
+            "failed Read Long requests should not overwrite the caller buffer with truncated sector data");
+    }
+
     private sealed class MscdexTestHarness {
         private const ushort RequestSegment = 0x2000;
         private const ushort BufferSegment = 0x2100;
@@ -146,10 +170,10 @@ public class MscdexDeviceRequestTests {
         public uint BufferBaseAddress { get; }
         public ushort RequestStatusWord => Memory.UInt16[RequestBaseAddress + RequestStatusOffset];
 
-        public MscdexTestHarness() {
+        public MscdexTestHarness(TestCdRomDrive? drive = null) {
             State = new State(CpuModel.INTEL_80286);
             Memory = new Memory(new(), new Ram(0x200000), new A20Gate(), new RealModeMmu386(), false);
-            Drive = new TestCdRomDrive();
+            Drive = drive ?? new TestCdRomDrive();
             ILoggerService loggerService = Substitute.For<ILoggerService>();
             Mscdex = new Mscdex(State, Memory, loggerService);
             Mscdex.AddDrive(new MscdexDriveEntry('D', 3, Drive));
@@ -185,6 +209,17 @@ public class MscdexDeviceRequestTests {
             Dispatch();
         }
 
+        public void DispatchReadLong(uint startLba, ushort sectorCount, byte rawFlag) {
+            InitialiseRequest(CommandReadLong);
+            Memory.UInt8[RequestBaseAddress + RequestAddressingModeOffset] = 0;
+            Memory.UInt16[RequestBaseAddress + IoctlBufferPtrOffset] = 0;
+            Memory.UInt16[RequestBaseAddress + IoctlBufferPtrOffset + 2] = BufferSegment;
+            Memory.UInt16[RequestBaseAddress + ReadLongSectorCountOffset] = sectorCount;
+            Memory.UInt32[RequestBaseAddress + ReadLongStartSectorOffset] = startLba;
+            Memory.UInt8[RequestBaseAddress + ReadLongRawFlagOffset] = rawFlag;
+            Dispatch();
+        }
+
         public void DispatchStopAudio() {
             InitialiseRequest(CommandStopAudio);
             Dispatch();
@@ -216,6 +251,10 @@ public class MscdexDeviceRequestTests {
         };
 
         private CdAudioPlayback? _playback;
+
+        public int ReadByteCount { get; set; }
+
+        public byte ReadFillValue { get; set; }
 
         public ICdRomImage Image { get; }
 
@@ -255,7 +294,11 @@ public class MscdexDeviceRequestTests {
         }
 
         public int Read(int lba, int sectorCount, Span<byte> destination, CdSectorMode mode) {
-            return 0;
+            int bytesToCopy = Math.Min(ReadByteCount, destination.Length);
+            if (bytesToCopy > 0) {
+                destination.Slice(0, bytesToCopy).Fill(ReadFillValue);
+            }
+            return bytesToCopy;
         }
 
         public IReadOnlyList<TableOfContentsEntry> GetTableOfContents() {

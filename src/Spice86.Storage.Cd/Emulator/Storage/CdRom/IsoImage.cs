@@ -193,8 +193,17 @@ public sealed class IsoImage : ICdRomImage {
 
     /// <inheritdoc/>
     public int Read(int lba, Span<byte> destination, CdSectorMode mode) {
+        if (mode != CdSectorMode.CookedData2048 || destination.Length < SectorSize) {
+            return 0;
+        }
+
         long byteOffset = (long)lba * SectorSize;
-        return _source.Read(byteOffset, destination.Slice(0, SectorSize));
+        int bytesRead = _source.Read(byteOffset, destination.Slice(0, SectorSize));
+        if (bytesRead != SectorSize) {
+            return 0;
+        }
+
+        return bytesRead;
     }
 
     /// <inheritdoc/>
