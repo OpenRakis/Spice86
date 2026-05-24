@@ -568,6 +568,10 @@ public class DosFileManager {
             return OpenDevice(device);
         }
 
+        if (TryOpenMemoryDriveFile(fileName, accessMode, out DosFileOperationResult memoryDriveResult)) {
+            return memoryDriveResult;
+        }
+
         string? hostFileName = _dosPathResolver.GetFullHostPathFromDosOrDefault(fileName);
         if (string.IsNullOrWhiteSpace(hostFileName)) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
@@ -803,6 +807,63 @@ public class DosFileManager {
         return null;
     }
 
+    private bool TryOpenMemoryDriveFile(string dosFileName, FileAccessMode accessMode, out DosFileOperationResult result) {
+        result = DosFileOperationResult.NoValue();
+        if (!TryGetMemoryDriveFilePath(dosFileName, out MemoryDrive? memoryDrive, out string? fullDosPath,
+                out string relativePath)) {
+            return false;
+        }
+
+        if (memoryDrive == null || string.IsNullOrWhiteSpace(fullDosPath)) {
+            result = FileNotFoundError($"'{dosFileName}'");
+            return true;
+        }
+
+        if (accessMode != FileAccessMode.ReadOnly) {
+            result = DosFileOperationResult.Error(DosErrorCode.AccessDenied);
+            return true;
+        }
+
+        if (!memoryDrive.FileExists(relativePath)) {
+            result = FileNotFoundError($"'{dosFileName}'");
+            return true;
+        }
+
+        int? freeIndex = FindNextFreeFileIndex();
+        if (freeIndex == null) {
+            result = NoFreeHandleError();
+            return true;
+        }
+
+        ushort dosIndex = (ushort)freeIndex.Value;
+        MemoryStream stream = new(memoryDrive.GetFile(relativePath), writable: false);
+        DosFile dosFile = new(fullDosPath, dosIndex, stream) {
+            Drive = (byte)DosDriveManager.GetDriveIndex(memoryDrive.DriveLetter)
+        };
+        dosFile.DeviceInformation = ComputeDefaultDeviceInformation(dosFile);
+        SetOpenFile(dosIndex, dosFile);
+        result = DosFileOperationResult.Value16(dosIndex);
+        return true;
+    }
+
+    private bool TryGetMemoryDriveFilePath(string dosPath, out MemoryDrive? memoryDrive, out string? fullDosPath,
+            out string relativePath) {
+        memoryDrive = null;
+        fullDosPath = _dosPathResolver.GetFullDosPathIncludingRoot(dosPath);
+        relativePath = string.Empty;
+        if (string.IsNullOrWhiteSpace(fullDosPath) || fullDosPath.Length <= 3) {
+            return false;
+        }
+
+        if (!_dosDriveManager.TryGetMemoryDrive(fullDosPath[0], out MemoryDrive? resolvedMemoryDrive)) {
+            return false;
+        }
+
+        memoryDrive = resolvedMemoryDrive;
+        relativePath = fullDosPath[3..];
+        return true;
+    }
+
     /// <summary>
     /// Gets the physical address of the Disk Transfer Area (DTA).
     /// </summary>
@@ -843,6 +904,14 @@ public class DosFileManager {
             .FirstOrDefault(characterDevice => characterDevice.IsName(dosPath));
         if (device is not null) {
             return true;
+        }
+
+        if (TryGetMemoryDriveFilePath(dosPath, out MemoryDrive? memoryDrive, out string? _, out string relativePath)) {
+            if (memoryDrive == null) {
+                return false;
+            }
+
+            return memoryDrive.FileExists(relativePath);
         }
 
         string? hostFileName = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosPath);
@@ -1360,7 +1429,8 @@ public class DosFileManager {
         } else if (subfunction <= IoctlSubfunction.QueryIoctlDevice) {
             if (subfunction != IoctlSubfunction.SetSharingRetryCount) {
                 drive = (byte)(state.BX == 0 ? _dosDriveManager.CurrentDriveIndex : (state.BX - 1));
-                if (drive >= _dosDriveManager.Count) {
+                if (drive >= DosDriveManager.MaxDriveCount ||
+                    (drive >= 2 && !_dosDriveManager.TryGetDriveAtIndex(drive, out _))) {
                     if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                         _loggerService.Warning("IOCTL: Invalid drive {Drive} for {Operation}",
                             drive, operationName);

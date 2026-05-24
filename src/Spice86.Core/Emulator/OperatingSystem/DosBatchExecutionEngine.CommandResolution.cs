@@ -165,8 +165,7 @@ internal sealed partial class DosBatchExecutionEngine {
             return true;
         }
 
-        string? hostPath = _dosFileManager.GetFullHostPathFromDos(normalizedPath);
-        return !string.IsNullOrWhiteSpace(hostPath) && File.Exists(hostPath);
+        return _dosFileManager.FileOrDeviceExists(normalizedPath);
     }
 
     private static string NormalizeDosPath(string dosPath) {

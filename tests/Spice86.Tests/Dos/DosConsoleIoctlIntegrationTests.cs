@@ -221,6 +221,46 @@ public class DosConsoleIoctlIntegrationTests {
         });
     }
 
+    [Fact]
+    public void Ioctl09_ReturnsDosBoxRegisterContract_ForMountedMemoryDriveZ() {
+        WithTempFile("dos_ioctl09_z_drive", tempDir => {
+            // Arrange: BX=26 selects Z: (1-based DOS drive numbering).
+            string comPath = CreateBinaryFile(tempDir, "DRV09Z.COM",
+                BuildIoctlDriveRegisterProbeCom(0x09, 26, 0));
+
+            // Act
+            byte[] video = RunWithPreloadedKeysAndCaptureVideoBytes(comPath, tempDir, 4, Array.Empty<ushort>());
+
+            // Assert: mounted Z: must be accepted as a valid local drive, not rejected by count-based validation.
+            video[0].Should().Be(0x00,
+                "IOCTL 09 should succeed for a mounted high-letter drive such as Z:");
+            video[1].Should().Be(0x03,
+                "IOCTL 09 should return AH=03h for mounted Z: just like other local drives");
+            video[2].Should().Be(0x02,
+                "IOCTL 09 should report DX low byte 02h for mounted Z:");
+            video[3].Should().Be(0x08,
+                "IOCTL 09 should report DX high byte 08h for mounted Z:");
+        });
+    }
+
+    [Fact]
+    public void Ioctl0E_ReturnsLogicalDriveMap_ForMountedMemoryDriveZ() {
+        WithTempFile("dos_ioctl0e_z_drive", tempDir => {
+            // Arrange: BX=26 selects Z: (1-based DOS drive numbering).
+            string comPath = CreateBinaryFile(tempDir, "DRV0EZ.COM",
+                BuildIoctlDriveRegisterProbeCom(0x0E, 26, 0));
+
+            // Act
+            byte[] video = RunWithPreloadedKeysAndCaptureVideoBytes(comPath, tempDir, 4, Array.Empty<ushort>());
+
+            // Assert: mounted Z: is a valid non-removable logical drive with only one assignment.
+            video[0].Should().Be(0x00,
+                "IOCTL 0E should return AL=00h for mounted Z: because it has a single logical assignment");
+            video[1].Should().Be(0x07,
+                "IOCTL 0E should return AH=07h for mounted Z:");
+        });
+    }
+
     [Theory]
     [InlineData("dos_ah06_input_key", 0x1E61, 0x61)]
     [InlineData("dos_ah06_input_nokey", 0x0000, 0x00)]
