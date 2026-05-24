@@ -25,8 +25,11 @@ public class SystemBiosInt13Handler : InterruptHandler {
     private const byte ErrorDriveNotReady = 0x80;
     private const byte ErrorSenseFailed = 0xFF;
 
-    // INT 13h AH=0x08 BL drive type: 3.5" 1.44 MB floppy
-    private const byte FloppyType144MB = 0x04;
+    private const byte FloppyType525DoubleSided = 0x01;
+    private const byte FloppyType525HighDensity = 0x02;
+    private const byte FloppyType35DoubleDensity = 0x03;
+    private const byte FloppyType35HighDensity = 0x04;
+    private const byte FloppyType35ExtendedDensity = 0x06;
 
     private readonly IFloppyDriveAccess? _floppyAccess;
     private readonly FloppySoundEmulator? _floppySound;
@@ -277,7 +280,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
             return;
         }
 
-        if (_floppyAccess == null || !_floppyAccess.TryGetGeometry(driveNumber, out int totalCylinders, out int headsPerCylinder, out int sectorsPerTrack, out int _)) {
+        if (_floppyAccess == null || !_floppyAccess.TryGetGeometry(driveNumber, out int totalCylinders, out int headsPerCylinder, out int sectorsPerTrack, out int bytesPerSector)) {
             SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
             return;
         }
@@ -292,7 +295,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
         State.DH = (byte)maxHead;
         State.CL = (byte)((maxSector & 0x3F) | ((maxCylinder >> 2) & 0xC0));
         State.CH = (byte)(maxCylinder & 0xFF);
-        State.BL = FloppyType144MB;
+        State.BL = GetFloppyBiosType(totalCylinders, headsPerCylinder, sectorsPerTrack, bytesPerSector);
         RecordSuccess(driveNumber);
         SetCarryFlag(false, calledFromVm);
     }
@@ -494,6 +497,39 @@ public class SystemBiosInt13Handler : InterruptHandler {
             }
         }
         return count;
+    }
+
+    private static byte GetFloppyBiosType(int totalCylinders, int headsPerCylinder, int sectorsPerTrack,
+        int bytesPerSector) {
+        if (bytesPerSector != 512) {
+            return 0;
+        }
+
+        int totalKilobytes = totalCylinders * headsPerCylinder * sectorsPerTrack * bytesPerSector / 1024;
+        switch (totalKilobytes) {
+            case 160:
+            case 180:
+            case 200:
+                return 0;
+            case 320:
+            case 360:
+            case 400:
+                return FloppyType525DoubleSided;
+            case 720:
+                return FloppyType35DoubleDensity;
+            case 1200:
+            case 1520:
+                return FloppyType525HighDensity;
+            case 1440:
+            case 1680:
+            case 1720:
+            case 1840:
+                return FloppyType35HighDensity;
+            case 2880:
+                return FloppyType35ExtendedDensity;
+            default:
+                return 0;
+        }
     }
 
     private void SetFloppyError(byte driveNumber, byte errorCode, bool calledFromVm) {
