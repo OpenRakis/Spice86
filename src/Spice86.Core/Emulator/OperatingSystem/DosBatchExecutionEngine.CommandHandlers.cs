@@ -1247,14 +1247,12 @@ internal sealed partial class DosBatchExecutionEngine {
             string ext = Path.GetExtension(imagePaths[0]).ToLowerInvariant();
             if (ext == ".img" || ext == ".ima" || ext == ".vfd") {
                 imageType = "floppy";
-            } else if (ext == ".hdd") {
-                imageType = "hdd";
             } else if (ext == ".iso") {
                 imageType = "iso";
             } else if (ext == ".cue") {
                 imageType = "cue";
             } else {
-                WriteToStandardOutput($"IMGMOUNT: cannot detect image type for '{imagePaths[0]}'. Use -t floppy|hdd|iso|cue.\r\n");
+                WriteToStandardOutput($"IMGMOUNT: cannot detect image type for '{imagePaths[0]}'. Use -t floppy|iso|cue.\r\n");
                 return false;
             }
         }
@@ -1269,8 +1267,6 @@ internal sealed partial class DosBatchExecutionEngine {
 
         if (imageType == "floppy") {
             MountFloppyImages(driveLetter, imagePaths);
-        } else if (imageType == "hdd") {
-            MountHardDiskImage(driveLetter, imagePaths);
         } else if (imageType == "iso" || imageType == "cue") {
             MountCdRomImages(driveLetter, imagePaths, imageType);
         } else {
@@ -1293,20 +1289,6 @@ internal sealed partial class DosBatchExecutionEngine {
         }
         string paths = string.Join(", ", imagePaths);
         WriteToStandardOutput($"Drive {driveLetter}: mounted {imagePaths.Count} floppy image(s): {paths}\r\n");
-    }
-
-    private void MountHardDiskImage(char driveLetter, IReadOnlyList<string> imagePaths) {
-        if (imagePaths.Count > 1) {
-            WriteToStandardOutput("IMGMOUNT: only one hard-disk image may be mounted per drive\r\n");
-            return;
-        }
-        byte[] imageData = File.ReadAllBytes(imagePaths[0]);
-        bool mounted = _driveManager.MountHardDiskImage(driveLetter, imageData, imagePaths[0]);
-        if (!mounted) {
-            WriteToStandardOutput($"IMGMOUNT: '{imagePaths[0]}' is not a valid MBR-partitioned hard-disk image\r\n");
-            return;
-        }
-        WriteToStandardOutput($"Drive {driveLetter}: mounted HDD image: {imagePaths[0]}\r\n");
     }
 
     private void MountCdRomImages(char driveLetter, IReadOnlyList<string> imagePaths, string imageType) {
@@ -1360,8 +1342,8 @@ internal sealed partial class DosBatchExecutionEngine {
 
     /// <summary>
     /// Handles the <c>BOOT</c> internal command, matching DOSBox Staging's
-    /// <c>BOOT [image] [-l A|C|D]</c> and <c>BOOT A:|C:|D:</c> flows for
-    /// booting from mounted floppy or hard-disk images.
+    /// <c>BOOT [image] [-l A|B]</c> and <c>BOOT A:|B:</c> flows for
+    /// booting from mounted floppy images.
     /// </summary>
     /// <param name="arguments">Argument tail after the BOOT token.</param>
     /// <param name="launchRequest">Receives a BOOT launch request on success or <see cref="ContinueBatchExecutionLaunchRequest.Instance"/> on failure.</param>
@@ -1423,24 +1405,11 @@ internal sealed partial class DosBatchExecutionEngine {
                     return false;
                 }
             }
-            if (driveLetter == 'A') {
-                byte[] firstImageData = File.ReadAllBytes(imagePaths[0]);
-                _driveManager.MountFloppyImage(driveLetter, firstImageData, imagePaths[0]);
-                for (int i = 1; i < imagePaths.Count; i++) {
-                    byte[] extra = File.ReadAllBytes(imagePaths[i]);
-                    _driveManager.AddFloppyImage(driveLetter, extra, imagePaths[i]);
-                }
-            } else {
-                if (imagePaths.Count > 1) {
-                    WriteToStandardOutput("BOOT: only one hard-disk image may be specified for C: or D:\r\n");
-                    return false;
-                }
-                byte[] hddImageData = File.ReadAllBytes(imagePaths[0]);
-                bool mounted = _driveManager.MountHardDiskImage(driveLetter, hddImageData, imagePaths[0]);
-                if (!mounted) {
-                    WriteToStandardOutput($"BOOT: '{imagePaths[0]}' is not a valid MBR-partitioned hard-disk image\r\n");
-                    return false;
-                }
+            byte[] firstImageData = File.ReadAllBytes(imagePaths[0]);
+            _driveManager.MountFloppyImage(driveLetter, firstImageData, imagePaths[0]);
+            for (int i = 1; i < imagePaths.Count; i++) {
+                byte[] extra = File.ReadAllBytes(imagePaths[i]);
+                _driveManager.AddFloppyImage(driveLetter, extra, imagePaths[i]);
             }
         }
 
@@ -1464,16 +1433,12 @@ internal sealed partial class DosBatchExecutionEngine {
             _loggerService.Information("BATCH: BOOT from {Drive}: image='{Path}' (explicit={Explicit})",
                 driveLetter, floppy.ImagePath, driveExplicit);
         }
-        if (driveLetter == 'A') {
-            launchRequest = new BootFloppyLaunchRequest(driveLetter, default);
-        } else {
-            launchRequest = new BootHddLaunchRequest(driveLetter, default);
-        }
+        launchRequest = new BootFloppyLaunchRequest(driveLetter, default);
         return true;
     }
 
     private static bool IsSupportedBootDrive(char driveLetter) {
-        return driveLetter == 'A' || driveLetter == 'C' || driveLetter == 'D';
+        return driveLetter == 'A' || driveLetter == 'B';
     }
 
     private static bool TryParseBootDriveSpecifier(string driveSpec, out char driveLetter) {
