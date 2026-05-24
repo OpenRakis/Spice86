@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    </PropertyGroup>
+    <!-- Properties geared towards NuGet -->
+    <PropertyGroup>
+        <PackageId>Spice86.Storage.Fat</PackageId>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="Serilog" />
+    </ItemGroup>
+    <ItemGroup>
+        <!-- Spice86.Shared is referenced only for plain enums/value types (e.g. DriveClusterState).
+             ILoggerService has been replaced by Serilog.ILogger to enable future repository extraction. -->
+        <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
+    </ItemGroup>
+</Project>

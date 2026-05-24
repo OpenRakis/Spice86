@@ -38,12 +38,14 @@
         <FrameworkReference Include="Microsoft.AspNetCore.App" />
         <PackageReference Include="Serilog.Extensions.Hosting" />
         <PackageReference Include="SkiaSharp" />
-		<PackageReference Include="ModelContextProtocol.Core"/>
+		<PackageReference Include="ModelContextProtocol.Core" />
         <PackageReference Include="ModelContextProtocol.AspNetCore" />
 	</ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
         <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
+        <ProjectReference Include="..\Spice86.Storage.Cd\Spice86.Storage.Cd.csproj" />
+        <ProjectReference Include="..\Spice86.Storage.Fat\Spice86.Storage.Fat.csproj" />
     </ItemGroup>
     <ItemGroup>
         <None Include="..\..\3rdparty\Release\FastExpressionCompiler.dll" Pack="true" PackagePath="lib\$(TargetFramework)\" Visible="false" />
