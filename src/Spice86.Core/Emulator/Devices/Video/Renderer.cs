@@ -472,7 +472,13 @@ public class Renderer : IVgaRenderer {
     /// </summary>
     private void ApplyPannedRow(Span<uint> frameBuffer, int panShift, int scratchLength) {
         int destStart = _frameDestinationAddressLatch;
-        int available = Math.Min(Width, scratchLength - panShift);
+        int destinationRemaining = frameBuffer.Length - destStart;
+        if (destinationRemaining <= 0) {
+            _frameDestinationAddress = destStart + Width;
+            return;
+        }
+        int sourceRemaining = scratchLength - panShift;
+        int available = Math.Min(destinationRemaining, sourceRemaining);
         if (available > 0) {
             _rowScratch.AsSpan(panShift, available).CopyTo(frameBuffer.Slice(destStart, available));
         }
