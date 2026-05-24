@@ -181,6 +181,46 @@ public class DosConsoleIoctlIntegrationTests {
         });
     }
 
+    [Fact]
+    public void Ioctl09_ReturnsDosBoxRegisterContract_ForLocalFixedDrive() {
+        WithTempFile("dos_ioctl09_fixed_drive", tempDir => {
+            // Arrange: BX=3 selects C: (1-based DOS drive numbering).
+            string comPath = CreateBinaryFile(tempDir, "DRV09.COM",
+                BuildIoctlDriveRegisterProbeCom(0x09, 3, 0));
+
+            // Act
+            byte[] video = RunWithPreloadedKeysAndCaptureVideoBytes(comPath, tempDir, 4, Array.Empty<ushort>());
+
+            // Assert: DOSBox returns AX=0300h and DX=0802h for a local fixed drive.
+            video[0].Should().Be(0x00,
+                "IOCTL 09 should return AL=00h for a successful local-drive probe");
+            video[1].Should().Be(0x03,
+                "IOCTL 09 should return AH=03h to match DOSBox's AX=0300h contract");
+            video[2].Should().Be(0x02,
+                "IOCTL 09 should report DX low byte 02h for a local fixed drive");
+            video[3].Should().Be(0x08,
+                "IOCTL 09 should report DX high byte 08h for a local fixed drive");
+        });
+    }
+
+    [Fact]
+    public void Ioctl0E_ReturnsAh07_ForFloppyDrive() {
+        WithTempFile("dos_ioctl0e_floppy_drive", tempDir => {
+            // Arrange: BX=1 selects drive A:.
+            string comPath = CreateBinaryFile(tempDir, "DRV0E.COM",
+                BuildIoctlDriveRegisterProbeCom(0x0E, 1, 0));
+
+            // Act
+            byte[] video = RunWithPreloadedKeysAndCaptureVideoBytes(comPath, tempDir, 4, Array.Empty<ushort>());
+
+            // Assert: DOSBox returns AL=01h and AH=07h for drive A:.
+            video[0].Should().Be(0x01,
+                "IOCTL 0E should map floppy drive A: to logical drive 1");
+            video[1].Should().Be(0x07,
+                "IOCTL 0E should always return AH=07h on success, including the floppy branch");
+        });
+    }
+
     [Theory]
     [InlineData("dos_ah06_input_key", 0x1E61, 0x61)]
     [InlineData("dos_ah06_input_nokey", 0x0000, 0x00)]
