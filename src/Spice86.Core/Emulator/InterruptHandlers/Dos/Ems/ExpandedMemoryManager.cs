@@ -105,11 +105,12 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     public IDictionary<ushort, EmmRegister> EmmPageFrame { get; init; } = new Dictionary<ushort, EmmRegister>();
 
     /// <summary>
-    /// Stores the saved page mappings for each physical page. <br/>
-    /// Save Page Map stores which EmmPage is mapped to each physical page. <br/>
-    /// Restore Page Map restores these mappings.
+    /// Stores the saved page mappings for each EMS handle and physical page. <br/>
+    /// Save Page Map stores which EmmPage is mapped to each physical page for the saving handle. <br/>
+    /// Restore Page Map restores the mappings for that same handle.
     /// </summary>
-    private readonly IDictionary<ushort, EmmPage> _savedPageMappings = new Dictionary<ushort, EmmPage>();
+    private readonly IDictionary<ushort, IDictionary<ushort, EmmPage>> _savedPageMappingsByHandle =
+        new Dictionary<ushort, IDictionary<ushort, EmmPage>>();
 
     /// <summary>
     /// The EMM handles given to the DOS programs. An EMM Handle has one or more unique logical pages.
@@ -548,7 +549,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     }
 
     /// <summary>
-    /// Saves the page map to the <see cref="_savedPageMappings"/> dictionary.
+    /// Saves the page map to the per-handle saved page-map store.
     /// </summary>
     /// <param name="handleId">The Id of the EMM handle to be saved.</param>
     /// <returns>The status code.</returns>
@@ -563,13 +564,14 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
             return EmmStatus.EmmPageMapSaved;
         }
 
-        _savedPageMappings.Clear();
+        Dictionary<ushort, EmmPage> savedPageMappings = new();
 
         // Save which EmmPage is mapped to each physical page
         foreach (KeyValuePair<ushort, EmmRegister> item in EmmPageFrame) {
-            _savedPageMappings.Add(item.Key, item.Value.PhysicalPage);
+            savedPageMappings.Add(item.Key, item.Value.PhysicalPage);
         }
 
+        _savedPageMappingsByHandle[handleId] = savedPageMappings;
         EmmHandles[handleId].SavedPageMap = true;
         return EmmStatus.EmmNoError;
     }
@@ -601,7 +603,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     }
 
     /// <summary>
-    /// Restores the page map from the <see cref="_savedPageMappings"/> dictionary.
+    /// Restores the page map from the per-handle saved page-map store.
     /// </summary>
     /// <param name="handleId">The Id of the EMM handle to restore.</param>
     /// <returns>The status code.</returns>
@@ -616,13 +618,18 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
             return EmmStatus.EmmPageNotSavedFirst;
         }
 
+        if (!_savedPageMappingsByHandle.TryGetValue(handleId, out IDictionary<ushort, EmmPage>? savedPageMappings)) {
+            return EmmStatus.EmmPageNotSavedFirst;
+        }
+
         // Restore the EmmPage mappings to each physical page register
-        foreach (KeyValuePair<ushort, EmmPage> item in _savedPageMappings) {
+        foreach (KeyValuePair<ushort, EmmPage> item in savedPageMappings) {
             if (EmmPageFrame.TryGetValue(item.Key, out EmmRegister? register)) {
                 register.PhysicalPage = item.Value;
             }
         }
 
+        _savedPageMappingsByHandle.Remove(handleId);
         EmmHandles[handleId].SavedPageMap = false;
         return EmmStatus.EmmNoError;
     }
