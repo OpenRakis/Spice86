@@ -192,16 +192,12 @@ public sealed class CueBinImage : ICdRomImage {
 
         long fileByteOffset = track.FileOffset + (long)(lba - track.StartLba) * track.SectorSize;
         byte[] rawBuffer = new byte[track.SectorSize];
-        track.Source.Read(fileByteOffset, rawBuffer);
+        int bytesRead = track.Source.Read(fileByteOffset, rawBuffer);
+        if (bytesRead != track.SectorSize) {
+            return 0;
+        }
 
-        if (mode == CdSectorMode.CookedData2048 && track.Mode == CdSectorMode.Raw2352) {
-            return SectorFraming.ExtractCookedFromRaw2352(rawBuffer, destination);
-        }
-        if (mode == CdSectorMode.CookedData2048 && track.Mode == CdSectorMode.Mode2Form1) {
-            return SectorFraming.ExtractMode2Form1FromRaw2352(rawBuffer, destination);
-        }
-        rawBuffer.CopyTo(destination);
-        return track.SectorSize;
+        return SectorFraming.CopySector(rawBuffer, destination, track.Mode, mode);
     }
 
     private CdTrack? FindTrack(int lba) {

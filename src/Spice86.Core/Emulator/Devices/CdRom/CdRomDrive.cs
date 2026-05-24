@@ -88,7 +88,11 @@ public sealed class CdRomDrive : ICdRomDrive {
         int bytesRead = 0;
         for (int i = 0; i < sectorCount; i++) {
             Span<byte> slice = destination.Slice(bytesRead);
-            bytesRead += _image.Read(lba + i, slice, mode);
+            int sectorBytesRead = _image.Read(lba + i, slice, mode);
+            if (sectorBytesRead <= 0) {
+                return bytesRead;
+            }
+            bytesRead += sectorBytesRead;
         }
         return bytesRead;
     }
@@ -180,8 +184,6 @@ public sealed class CdRomDrive : ICdRomDrive {
 
     /// <inheritdoc/>
     public void Eject() {
-        MediaState.IsDoorOpen = true;
-        MediaState.NotifyMediaChanged();
     }
 
     /// <inheritdoc/>
