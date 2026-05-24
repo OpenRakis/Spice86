@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.Memory.Indexer;
 
 using Spice86.Core.Emulator.Memory.Mmu;
+using Spice86.Core.Emulator.Memory.ReaderWriter;
 
 /// <summary>
 /// Provides indexed signed int access over memory.
@@ -15,6 +16,8 @@ public sealed class Int32Indexer : MemoryIndexer<int> {
     public Int32Indexer(UInt32Indexer uInt32Indexer, IMmu mmu) : base(mmu, sizeof(int)) {
         _uInt32Indexer = uInt32Indexer;
     }
+
+    internal IByteReaderWriter ByteReaderWriter => _uInt32Indexer.ByteReaderWriter;
 
     /// <inheritdoc/>
     public override int this[uint address] {

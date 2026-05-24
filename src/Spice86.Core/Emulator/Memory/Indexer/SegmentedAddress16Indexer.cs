@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.Memory.Indexer;
 
+using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Shared.Emulator.Memory;
@@ -61,8 +62,9 @@ public class SegmentedAddress16Indexer : MemoryIndexer<SegmentedAddress> {
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private SegmentedAddress ReadValueCore(uint address) {
-        if (ByteReaderWriter.TryGetSpan(address, sizeof(ushort) * 2, out ReadOnlySpan<byte> span, MemoryAccess.Read) &&
-                span.Length >= sizeof(ushort) * 2) {
+        if (!Indexable.DisableSpanAccess
+            && ByteReaderWriter.TryGetSpan(address, sizeof(ushort) * 2, out ReadOnlySpan<byte> span, MemoryAccess.Read)
+            && span.Length >= sizeof(ushort) * 2) {
             return ReadValueUnsafe(ref MemoryMarshal.GetReference(span));
         } else {
             return new(_uInt16Indexer[address + sizeof(ushort)], _uInt16Indexer[address]);
@@ -71,8 +73,9 @@ public class SegmentedAddress16Indexer : MemoryIndexer<SegmentedAddress> {
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void WriteValueCore(uint address, SegmentedAddress value) {
-        if (ByteReaderWriter.TryGetSpan(address, sizeof(ushort) * 2, out Span<byte> span, MemoryAccess.Write) &&
-                span.Length >= sizeof(ushort) * 2) {
+        if (!Indexable.DisableSpanAccess
+            && ByteReaderWriter.TryGetSpan(address, sizeof(ushort) * 2, out Span<byte> span, MemoryAccess.Write)
+            && span.Length >= sizeof(ushort) * 2) {
             WriteValueUnsafe(ref MemoryMarshal.GetReference(span), value);
         } else {
             _uInt16Indexer[address] = value.Offset;

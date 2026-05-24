@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Memory.Indexer;
 
 using Spice86.Core.Emulator.Memory.Mmu;
+using Spice86.Core.Emulator.Memory.ReaderWriter;
 
 /// <summary>
 /// Provides indexed signed short access over memory.
@@ -15,6 +16,8 @@ public sealed class Int16Indexer : MemoryIndexer<short> {
     public Int16Indexer(UInt16Indexer uInt16Indexer, IMmu mmu) : base(mmu, sizeof(short)) {
         _uInt16Indexer = uInt16Indexer;
     }
+
+    internal IByteReaderWriter ByteReaderWriter => _uInt16Indexer.ByteReaderWriter;
 
     /// <inheritdoc/>
     public override short this[uint address] {

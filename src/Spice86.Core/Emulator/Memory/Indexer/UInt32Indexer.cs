@@ -1,5 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.Memory.Indexer;
 
+using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 
@@ -63,8 +64,9 @@ public sealed class UInt32Indexer : MemoryIndexer<uint> {
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private uint ReadValueCore(uint address) {
-        if (ByteReaderWriter.TryGetSpan(address, sizeof(uint), out ReadOnlySpan<byte> span, MemoryAccess.Read) &&
-                span.Length >= sizeof(uint)) {
+        if (!Indexable.DisableSpanAccess
+            && ByteReaderWriter.TryGetSpan(address, sizeof(uint), out ReadOnlySpan<byte> span, MemoryAccess.Read)
+            && span.Length >= sizeof(uint)) {
             return ReadValueUnsafe(ref MemoryMarshal.GetReference(span));
         } else {
             return ByteReaderWriter[address]
@@ -76,8 +78,9 @@ public sealed class UInt32Indexer : MemoryIndexer<uint> {
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void WriteValueCore(uint address, uint value) {
-        if (ByteReaderWriter.TryGetSpan(address, sizeof(uint), out Span<byte> span, MemoryAccess.Write) &&
-                span.Length >= sizeof(uint)) {
+        if (!Indexable.DisableSpanAccess
+            && ByteReaderWriter.TryGetSpan(address, sizeof(uint), out Span<byte> span, MemoryAccess.Write)
+            && span.Length >= sizeof(uint)) {
             WriteValueUnsafe(ref MemoryMarshal.GetReference(span), value);
         } else {
             ByteReaderWriter[address] = (byte)value;

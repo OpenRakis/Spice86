@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Memory.Indexer;
 
 using Spice86.Core.Emulator.Memory.Mmu;
+using Spice86.Core.Emulator.Memory.ReaderWriter;
 
 /// <summary>
 /// Provides indexed signed byte access over memory.
@@ -15,6 +16,8 @@ public sealed class Int8Indexer : MemoryIndexer<sbyte> {
     public Int8Indexer(UInt8Indexer uInt8Indexer, IMmu mmu) : base(mmu, sizeof(sbyte)) {
         _uInt8Indexer = uInt8Indexer;
     }
+
+    internal IByteReaderWriter ByteReaderWriter => _uInt8Indexer.ByteReaderWriter;
 
     /// <inheritdoc/>
     public override sbyte this[uint address] {
