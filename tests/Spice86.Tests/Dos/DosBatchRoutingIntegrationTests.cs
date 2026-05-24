@@ -150,6 +150,27 @@ public class DosBatchRoutingIntegrationTests {
     }
 
     [Fact]
+    public void HostRequestedBatch_DriveChangeToZ_UsesMemoryDriveForRelativeLookup() {
+        WithTempFile("dos_batch_drive_change_z", tempDir => {
+            // Arrange: Z:\AUTOEXEC.BAT is always present through the bootstrap path.
+            string resultPath = Path.Join(tempDir, "RESULT.TXT");
+            string startBatchPath = CreateTextFile(tempDir, "START.BAT",
+                "Z:\r\n" +
+                "TYPE AUTOEXEC.BAT > C:\\RESULT.TXT\r\n");
+
+            // Act
+            RunWithoutVideoRead(startBatchPath, tempDir);
+
+            // Assert: the relative TYPE after Z: must resolve against the memory drive, not the original C: drive.
+            string output = File.ReadAllText(resultPath);
+            output.Should().Contain("CALL C:\\START.BAT",
+                "after switching to Z:, relative file resolution should use the Z: memory drive contents");
+            output.Should().NotContain("File not found",
+                "switching to Z: should not leave the current drive on C:");
+        });
+    }
+
+    [Fact]
     public void HostRequestedBatch_IfErrorLevelDispatchesCommand() {
         WithTempFile("dos_batch_if_errorlevel", tempDir => {
             // Arrange
