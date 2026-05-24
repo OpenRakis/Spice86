@@ -734,7 +734,10 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
     public void AllocateMemoryBlock(bool calledFromVm) {
         ushort requestedSizeInParagraphs = State.BX;
-        LoggerService.Verbose("ALLOCATE MEMORY BLOCK {RequestedSize}", requestedSizeInParagraphs);
+        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+            LoggerService.Debug("INT 21h AH=48h AllocateMemoryBlock: BX={RequestedSizeInParagraphs:X4} ({RequestedSizeInBytes} bytes)",
+                requestedSizeInParagraphs, requestedSizeInParagraphs * 16);
+        }
         SetCarryFlag(false, calledFromVm);
         DosMemoryControlBlock? res = _dosMemoryManager.AllocateMemoryBlock(requestedSizeInParagraphs);
         if (res == null) {
@@ -745,9 +748,17 @@ public class DosInt21Handler : InterruptHandler {
             // INSUFFICIENT MEMORY
             State.AX = (byte)DosErrorCode.InsufficientMemory;
             State.BX = largest.Size;
+            if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+                LoggerService.Debug("INT 21h AH=48h AllocateMemoryBlock: failed, largestFree={LargestFree:X4} paragraphs",
+                    largest.Size);
+            }
             return;
         }
         State.AX = res.DataBlockSegment;
+        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+            LoggerService.Debug("INT 21h AH=48h AllocateMemoryBlock: success, segment={Segment:X4}",
+                res.DataBlockSegment);
+        }
     }
 
     /// <summary>
@@ -1089,8 +1100,8 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="calledFromVm">Whether the method was called by the emulator.</param>
     public void FreeMemoryBlock(bool calledFromVm) {
         ushort blockSegment = State.ES;
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("FREE ALLOCATED MEMORY {BlockSegment}",
+        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+            LoggerService.Debug("INT 21h AH=49h FreeMemoryBlock: ES={BlockSegment:X4}",
                 ConvertUtils.ToHex16(blockSegment));
         }
         SetCarryFlag(false, calledFromVm);
@@ -1099,6 +1110,13 @@ public class DosInt21Handler : InterruptHandler {
             SetCarryFlag(true, calledFromVm);
             // INVALID MEMORY BLOCK ADDRESS
             State.AX = (ushort)DosErrorCode.MemoryBlockAddressInvalid;
+            if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+                LoggerService.Debug("INT 21h AH=49h FreeMemoryBlock: failed for segment={BlockSegment:X4}",
+                    ConvertUtils.ToHex16(blockSegment));
+            }
+        } else if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+            LoggerService.Debug("INT 21h AH=49h FreeMemoryBlock: success for segment={BlockSegment:X4}",
+                ConvertUtils.ToHex16(blockSegment));
         }
     }
 
@@ -1433,9 +1451,9 @@ public class DosInt21Handler : InterruptHandler {
     public void ModifyMemoryBlock(bool calledFromVm) {
         ushort requestedSizeInParagraphs = State.BX;
         ushort blockSegment = State.ES;
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("MODIFY MEMORY BLOCK {Size} at {BlockSegment}",
-                requestedSizeInParagraphs, ConvertUtils.ToHex16(blockSegment));
+        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+            LoggerService.Debug("INT 21h AH=4Ah ModifyMemoryBlock: ES={BlockSegment:X4} BX={RequestedSizeInParagraphs:X4} ({RequestedSizeInBytes} bytes)",
+                ConvertUtils.ToHex16(blockSegment), requestedSizeInParagraphs, requestedSizeInParagraphs * 16);
         }
         DosErrorCode errorCode = _dosMemoryManager.TryModifyBlock(blockSegment,
             requestedSizeInParagraphs, out DosMemoryControlBlock mcb);
@@ -1443,11 +1461,19 @@ public class DosInt21Handler : InterruptHandler {
             // Undocumented MS-DOS behaviour expected by BRUN45!
             State.AX = blockSegment;
             SetCarryFlag(false, calledFromVm);
+            if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+                LoggerService.Debug("INT 21h AH=4Ah ModifyMemoryBlock: success, segment={BlockSegment:X4} newSize={NewSize} paragraphs",
+                    ConvertUtils.ToHex16(blockSegment), mcb.Size);
+            }
         } else {
             LogDosError(calledFromVm);
             SetCarryFlag(true, calledFromVm);
             State.AX = (byte)errorCode;
             State.BX = mcb.Size;
+            if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+                LoggerService.Debug("INT 21h AH=4Ah ModifyMemoryBlock: failed with error={ErrorCode} largestFree={LargestFree:X4} paragraphs",
+                    errorCode, mcb.Size);
+            }
         }
     }
 
@@ -1736,7 +1762,15 @@ public class DosInt21Handler : InterruptHandler {
         if (op == (byte)AllocationStrategySubFunction.QueryMemoryAllocationStrategy) {
             State.AX = (ushort)_dosMemoryManager.AllocationStrategy;
             SetCarryFlag(false, calledFromVm);
+            if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+                LoggerService.Debug("INT 21h AH=58h AL=00h QueryMemoryAllocationStrategy: strategy={Strategy:X4}",
+                    State.AX);
+            }
         } else if (op == (byte)AllocationStrategySubFunction.SetMemoryAllocationStrategy) {
+            if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+                LoggerService.Debug("INT 21h AH=58h AL=01h SetMemoryAllocationStrategy: BX={Strategy:X4}",
+                    State.BX);
+            }
             _dosMemoryManager.AllocationStrategy = (DosMemoryAllocationStrategy)State.BX;
             State.AX = 0;
             SetCarryFlag(false, calledFromVm);
@@ -1745,7 +1779,14 @@ public class DosInt21Handler : InterruptHandler {
             // 00H = not linked (all allocations go to conventional mem)
             State.AL = 0x00;
             SetCarryFlag(false, calledFromVm);
+            if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+                LoggerService.Debug("INT 21h AH=58h AL=02h QueryUpperMemoryBlockState: AL=00 (not linked)");
+            }
         } else if (op == (byte)AllocationStrategySubFunction.SetUpperMemoryBlockState) {
+            if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+                LoggerService.Debug("INT 21h AH=58h AL=03h SetUpperMemoryBlockState: BX={BX:X4} (not supported, returning error)",
+                    State.BX);
+            }
             State.AX = 0x01; // 0001h (invalid function)
             SetCarryFlag(true, calledFromVm);
         } else {

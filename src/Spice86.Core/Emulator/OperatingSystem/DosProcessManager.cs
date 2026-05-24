@@ -16,6 +16,7 @@ using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 
@@ -415,10 +416,13 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         ushort callerIP, ushort callerCS, ushort parentPspSegment, string hostPath,
         DosMemoryControlBlock? envBlock, DosExeFile exeFile,
         ushort parentSS, ushort parentReservedSP) {
+        Debug.WriteLine($"[DosProcessManager] HandleExeFileLoading: ReserveSpaceForExe for {hostPath}");
         DosMemoryControlBlock? block = _memoryManager.ReserveSpaceForExe(exeFile);
+        Debug.WriteLine($"[DosProcessManager] HandleExeFileLoading: ReserveSpaceForExe result={block?.DataBlockSegment:X4} (null={block is null})");
         if (block is null) {
             // Free the environment block we just allocated
             if (envBlock is not null) {
+                Debug.WriteLine($"[DosProcessManager] HandleExeFileLoading: freeing envBlock={envBlock.DataBlockSegment:X4} due to failed EXE reservation");
                 _memoryManager.FreeMemoryBlock(envBlock);
             }
             return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
@@ -471,12 +475,16 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         ushort paragraphsNeeded = CalculateParagraphsNeeded(DosProgramSegmentPrefix.PspSize + fileBytes.Length);
 
         // MS-DOS and FreeDOS: COM files are ALWAYS loaded in the largest available area
+        Debug.WriteLine($"[DosProcessManager] HandleComFileLoading: finding largest free block for {hostPath}");
         DosMemoryControlBlock largestFree = _memoryManager.FindLargestFree();
+        Debug.WriteLine($"[DosProcessManager] HandleComFileLoading: AllocateMemoryBlock size={largestFree.Size} paragraphs");
         DosMemoryControlBlock? comBlock = _memoryManager.AllocateMemoryBlock(largestFree.Size);
+        Debug.WriteLine($"[DosProcessManager] HandleComFileLoading: comBlock={comBlock?.DataBlockSegment:X4} (null={comBlock is null})");
 
         if (comBlock is null || largestFree.Size < paragraphsNeeded) {
             //Free the environment block we just allocated
             if (envBlock is not null) {
+                Debug.WriteLine($"[DosProcessManager] HandleComFileLoading: freeing envBlock={envBlock.DataBlockSegment:X4} due to failed COM allocation");
                 _memoryManager.FreeMemoryBlock(envBlock);
             }
             return DosExecResult.Fail(DosErrorCode.InsufficientMemory);
@@ -526,10 +534,13 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         int bytesToAllocate = environmentBlock.Length + EnvironmentKeepFreeBytes;
         ushort envParagraphsNeeded = CalculateParagraphsNeeded(bytesToAllocate);
 
+        Debug.WriteLine($"[DosProcessManager] TryAllocateEnvironmentBlock: AllocateMemoryBlock {envParagraphsNeeded} paragraphs ({bytesToAllocate} bytes) for {hostPath}");
         envBlock = _memoryManager.AllocateMemoryBlock(envParagraphsNeeded);
         if (envBlock == null) {
+            Debug.WriteLine($"[DosProcessManager] TryAllocateEnvironmentBlock: allocation failed for {hostPath}");
             return false;
         }
+        Debug.WriteLine($"[DosProcessManager] TryAllocateEnvironmentBlock: allocated envBlock={envBlock.DataBlockSegment:X4}");
 
         _memory.LoadData(MemoryUtils.ToPhysicalAddress(envBlock.DataBlockSegment, 0), environmentBlock);
         envBlock.Owner = BuildMcbOwnerName(hostPath);
@@ -636,8 +647,10 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
 
         // TSR keeps program resident; others free memory.
         if (terminationType != DosTerminationType.TSR) {
+            Debug.WriteLine($"[DosProcessManager] TerminateProcess: FreeProcessMemory pspSegment={currentPspSegment:X4} exitCode={exitCode} type={terminationType}");
             _memoryManager.FreeProcessMemory(currentPspSegment);
         } else {
+            Debug.WriteLine($"[DosProcessManager] TerminateProcess: TSR FreeEnvironmentBlock envSeg={currentPsp.EnvironmentTableSegment:X4} psp={currentPspSegment:X4}");
             _memoryManager.FreeEnvironmentBlock(currentPsp.EnvironmentTableSegment, currentPspSegment);
             if (residentBlock is not null) {
                 residentBlock.PspSegment = currentPspSegment;
