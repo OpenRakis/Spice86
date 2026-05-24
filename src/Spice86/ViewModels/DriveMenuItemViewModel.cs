@@ -249,7 +249,7 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
             return;
         }
         Avalonia.Controls.Window owner = desktop.Windows[0];
-        //await Spice86.Views.DriveInfoWindow.ShowForDrive(owner, this);
+        await Spice86.Views.DriveInfoWindow.ShowForDrive(owner, this);
     }
 
     private void RefreshContentMap() {

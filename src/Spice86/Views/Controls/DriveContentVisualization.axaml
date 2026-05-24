@@ -1,0 +1,11 @@
+<UserControl
+    x:Class="Spice86.Views.Controls.DriveContentVisualization"
+    x:Name="Root"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel Orientation="Vertical" Spacing="4" MaxWidth="320">
+        <TextBlock Text="{Binding Header, ElementName=Root}" FontWeight="SemiBold" />
+        <ContentControl Content="{Binding Body, ElementName=Root}" />
+        <TextBlock Text="{Binding Legend, ElementName=Root}" FontSize="10" Opacity="0.7" />
+    </StackPanel>
+</UserControl>

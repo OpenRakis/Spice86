@@ -1,9 +1,14 @@
-﻿namespace Spice86.Core.Emulator.OperatingSystem;
+namespace Spice86.Core.Emulator.OperatingSystem;
 
+using Spice86.Shared.Emulator.Storage;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Shared.Emulator.Storage.FileSystem.Partitions;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using ImageBiosParameterBlock = Spice86.Shared.Emulator.Storage.FileSystem.BiosParameterBlock;
+
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -12,13 +17,17 @@ using System.Runtime.CompilerServices;
 
 /// <summary>
 /// The class responsible for centralizing all the mounted DOS drives.
+/// Implements <see cref="IFloppyDriveAccess"/> so the BIOS INT 13h handler can perform
+/// low-level sector reads/writes without depending on any DOS-layer types.
 /// </summary>
-public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDictionary<char, DosDriveBase> {
+public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDictionary<char, DosDriveBase>, IFloppyDriveAccess {
     private readonly DosDriveBase?[] _driveMap = new DosDriveBase?[MaxDriveCount];
+    private readonly Dictionary<char, string> _substDriveMap = new();
     private int _mappedDriveCount;
     private uint _version; // Used to prevent simultaneous collection changes and continued enumeration.
     private DriveLetterCollection? _keys;
     private DriveCollection? _values;
+    private readonly ILoggerService _loggerService;
     private readonly DosMediaIdTable _mediaIdTable;
 
     /// <summary>
@@ -34,6 +43,7 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
     /// <param name="executablePath">The host path to the DOS executable to be launched.</param>
     /// <param name="mediaIdTable">The DOS private-segment media ID table owned by this manager.</param>
     public DosDriveManager(ILoggerService loggerService, string? cDriveFolderPath, string? executablePath, DosMediaIdTable mediaIdTable) {
+        _loggerService = loggerService;
         _mediaIdTable = mediaIdTable;
         if (string.IsNullOrWhiteSpace(cDriveFolderPath)) {
             cDriveFolderPath = DosPathResolver.GetExeParentFolder(executablePath);
@@ -994,5 +1004,466 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
     /// <returns>True if memory drive exists; false otherwise.</returns>
     public bool TryGetMemoryDrive(char driveLetter, [MaybeNullWhen(false)] out MemoryDrive drive) {
         return TryGetDrive(driveLetter, out drive);
+    }
+
+    /// <summary>
+    /// Gets a read-only view of all mounted memory drives, keyed by drive letter.
+    /// </summary>
+    public IEnumerable<KeyValuePair<char, MemoryDrive>> MemoryDrives {
+        get {
+            for (int i = 0; i < MaxDriveCount; i++) {
+                if (_driveMap[i] is MemoryDrive m) {
+                    yield return new KeyValuePair<char, MemoryDrive>(m.DriveLetter, m);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets a read-only view of all floppy drives with an image mounted, keyed by drive letter.
+    /// </summary>
+    public IEnumerable<KeyValuePair<char, FloppyDiskDrive>> FloppyDrives {
+        get {
+            for (int i = 0; i < MaxDriveCount; i++) {
+                if (_driveMap[i] is FloppyDiskDrive f && f.HasImage) {
+                    yield return new KeyValuePair<char, FloppyDiskDrive>(f.DriveLetter, f);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Tries to get a floppy drive by letter, returning <see langword="true"/> only when raw image data is mounted.
+    /// </summary>
+    /// <param name="driveLetter">The drive letter to look up.</param>
+    /// <param name="drive">The floppy drive if found; null otherwise.</param>
+    /// <returns>True if a raw image is mounted on the specified letter; false otherwise.</returns>
+    public bool TryGetFloppyDrive(char driveLetter, [MaybeNullWhen(false)] out FloppyDiskDrive drive) {
+        if (TryGetDrive(driveLetter, out FloppyDiskDrive? f) && f.HasImage) {
+            drive = f;
+            return true;
+        }
+        drive = null;
+        return false;
+    }
+
+    /// <summary>
+    /// Flushes all dirty floppy disk images back to their backing host files.
+    /// </summary>
+    /// <remarks>
+    /// Mirrors the on-pause / on-exit write-back behaviour of dosbox-staging
+    /// (see <c>src/dos/drive_fat.cpp</c>): every floppy whose image has been
+    /// modified by an INT 13h / INT 26h sector write is rewritten to disk and
+    /// its dirty flag is cleared on success.
+    /// </remarks>
+    /// <returns>The number of floppy drives whose image was actually flushed.</returns>
+    public int FlushDirtyFloppyImages() {
+        int flushedCount = 0;
+        for (int i = 0; i < _driveMap.Length; i++) {
+            if (_driveMap[i] is not FloppyDiskDrive floppy) {
+                continue;
+            }
+            if (!floppy.HasDirtyImages) {
+                continue;
+            }
+            int flushedImageCount = floppy.FlushDirtyImagesToDisk();
+            if (flushedImageCount > 0) {
+                flushedCount++;
+            }
+        }
+        return flushedCount;
+    }
+
+    /// <summary>
+    /// Mounts a floppy disk image (raw FAT12 bytes) to the specified drive letter (A: or B:).
+    /// Replaces any existing drive at that letter.
+    /// </summary>
+    public void MountFloppyImage(char driveLetter, byte[] imageData, string imagePath) {
+        char upper = NormalizeDriveLetter(driveLetter);
+        FloppyDiskDrive floppy = new() { DriveLetter = upper, MountedHostDirectory = string.Empty };
+        floppy.MountImage(imageData, imagePath);
+        ReplaceDrive(upper, floppy);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("IMGMOUNT: Mounted image {Image} on drive {Drive}:", imagePath, upper);
+        }
+    }
+
+    /// <summary>
+    /// Mounts an MBR-partitioned hard-disk image to the specified drive letter (C: onwards).
+    /// The full image bytes back the drive for INT 13h LBA sector access while the FAT
+    /// filesystem view is sliced to the active partition's first sector.
+    /// </summary>
+    /// <param name="driveLetter">Target drive letter (typically C..Z).</param>
+    /// <param name="imageData">Raw bytes of the entire host disk image file.</param>
+    /// <param name="imagePath">Host file-system path of the image (used for display and flush).</param>
+    /// <returns>
+    /// <see langword="true"/> when the MBR is valid and a bootable or non-empty partition was found
+    /// and mounted; <see langword="false"/> when the image lacks the 0xAA55 signature or contains
+    /// no usable partition.
+    /// </returns>
+    public bool MountHardDiskImage(char driveLetter, byte[] imageData, string imagePath) {
+        if (imageData == null || imageData.Length < 512) {
+            return false;
+        }
+        if (imageData[510] != 0x55 || imageData[511] != 0xAA) {
+            return false;
+        }
+        MasterBootRecord mbr = MbrCodec.Parse(imageData.AsSpan(0, 512));
+        PartitionTableEntry? partition = mbr.FindBootablePartition() ?? mbr.FindFirstNonEmptyPartition();
+        if (partition is null) {
+            return false;
+        }
+        int partitionByteOffset = (int)(partition.LbaStart * 512u);
+        if (partitionByteOffset <= 0 || partitionByteOffset >= imageData.Length) {
+            return false;
+        }
+        char upper = NormalizeDriveLetter(driveLetter);
+        FloppyDiskDrive drive = new() { DriveLetter = upper, MountedHostDirectory = string.Empty };
+        drive.MountImage(imageData, imagePath, partitionByteOffset);
+        ReplaceDrive(upper, drive);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information(
+                "IMGMOUNT: Mounted HDD image {Image} on drive {Drive}: at partition LBA {Lba}",
+                imagePath, upper, partition.LbaStart);
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// Adds an additional floppy disk image to an already-mounted floppy drive,
+    /// making it available for Ctrl-F4 disc switching. If no floppy drive is currently
+    /// mounted on the letter, a new drive is created with this as the first image.
+    /// </summary>
+    public void AddFloppyImage(char driveLetter, byte[] imageData, string imagePath) {
+        char upper = NormalizeDriveLetter(driveLetter);
+        if (!TryGetDrive(upper, out FloppyDiskDrive? floppy)) {
+            floppy = new FloppyDiskDrive { DriveLetter = upper, MountedHostDirectory = string.Empty };
+            floppy.MountImage(imageData, imagePath);
+            ReplaceDrive(upper, floppy);
+        } else {
+            floppy.AddImage(imageData, imagePath);
+        }
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("IMGMOUNT: Added image {Image} to drive {Drive}: ({Count} total)", imagePath, upper, floppy.ImageCount);
+        }
+    }
+
+    /// <summary>
+    /// Advances every floppy drive that has more than one image to the next image in its list.
+    /// </summary>
+    public void SwapFloppyDiscs() {
+        for (int i = 0; i < MaxDriveCount; i++) {
+            if (_driveMap[i] is FloppyDiskDrive floppy && floppy.HasImage) {
+                floppy.SwapToNextImage();
+                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                    _loggerService.Information("MOUNT: Swapping drive {Drive}: to image {Image}", floppy.DriveLetter, floppy.ImagePath);
+                }
+            }
+        }
+    }
+
+    /// <summary>Switches the floppy drive at <paramref name="letter"/> to the image at <paramref name="index"/>.</summary>
+    public void SwapFloppyToIndex(char letter, int index) {
+        char upper = NormalizeDriveLetter(letter);
+        if (!TryGetDrive(upper, out FloppyDiskDrive? drive)) {
+            return;
+        }
+        drive.SwapToIndex(index);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("MOUNT: Drive {Drive}: switched to image {Image}", upper, drive.ImagePath);
+        }
+    }
+
+    /// <summary>
+    /// Mounts a host folder as a folder-backed floppy drive (A: or B:).
+    /// </summary>
+    public void MountFloppyFolder(char driveLetter, string hostFolderPath) {
+        char upper = NormalizeDriveLetter(driveLetter);
+        ReplaceDrive(upper, new VirtualDrive {
+            DriveLetter = upper,
+            MountedHostDirectory = ConvertUtils.ToSlashFolderPath(hostFolderPath),
+        });
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
+            _loggerService.Debug("DosDriveManager: mounted folder {Path} as {Drive}:", hostFolderPath, upper);
+        }
+    }
+
+    /// <summary>
+    /// Mounts a host folder as a regular (HDD-style) DOS drive.
+    /// Adds the drive if it does not already exist, or replaces the existing entry.
+    /// </summary>
+    public void MountFolderDrive(char driveLetter, string hostFolderPath) {
+        char upper = NormalizeDriveLetter(driveLetter);
+        VirtualDrive newDrive = new VirtualDrive {
+            DriveLetter = upper,
+            MountedHostDirectory = ConvertUtils.ToSlashFolderPath(hostFolderPath),
+        };
+        ReplaceDrive(upper, newDrive);
+        if (CurrentDrive.DriveLetter == upper) {
+            CurrentDrive = newDrive;
+        }
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("MOUNT: Drive {Drive}: is now backed by folder {Path}", upper, hostFolderPath);
+        }
+    }
+
+    /// <summary>
+    /// Registers a drive letter for a CD-ROM drive so that drive-change commands
+    /// (e.g. <c>D:</c>) succeed after <c>IMGMOUNT</c> or <c>MOUNT -t cdrom</c>.
+    /// </summary>
+    public void RegisterCdRomDriveLetter(char driveLetter, string hostFolderPath) {
+        char upper = NormalizeDriveLetter(driveLetter);
+        string mountPath = string.IsNullOrEmpty(hostFolderPath)
+            ? string.Empty
+            : ConvertUtils.ToSlashFolderPath(hostFolderPath);
+        CdRomDosDrive newDrive = new() {
+            DriveLetter = upper,
+            MountedHostDirectory = mountPath,
+            IsReadOnlyMedium = true,
+        };
+        ReplaceDrive(upper, newDrive);
+        if (CurrentDrive.DriveLetter == upper) {
+            CurrentDrive = newDrive;
+        }
+    }
+
+    /// <summary>
+    /// Mounts a host folder as a SUBST drive.
+    /// </summary>
+    public void MountSubstDrive(char driveLetter, string hostFolderPath, string originalDosPath) {
+        char upper = NormalizeDriveLetter(driveLetter);
+        MountFolderDrive(upper, hostFolderPath);
+        _substDriveMap[upper] = originalDosPath;
+    }
+
+    /// <summary>
+    /// Removes a previously-SUBST'd drive. Returns <c>false</c> when the drive letter is not currently SUBST'd.
+    /// </summary>
+    public bool UnmountSubstDrive(char driveLetter) {
+        char upper = NormalizeDriveLetter(driveLetter);
+        if (!_substDriveMap.Remove(upper)) {
+            return false;
+        }
+        int idx = GetDriveIndex(upper);
+        if (idx >= 0 && _driveMap[idx] is VirtualDrive drive) {
+            RemoveDriveInternal(drive, idx);
+            if (CurrentDrive.DriveLetter == upper && TryGetDrive('C', out VirtualDrive? cDrive)) {
+                CurrentDrive = cDrive;
+            }
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _loggerService.Information("SUBST: Drive {Drive}: removed (was {Path})", upper, drive.MountedHostDirectory);
+            }
+        }
+        return true;
+    }
+
+    /// <summary>Gets the SUBST drive map (drive letter -> original DOS path).</summary>
+    public IReadOnlyDictionary<char, string> SubstDrives => _substDriveMap;
+
+    /// <summary>Returns <c>true</c> when <paramref name="driveLetter"/> currently refers to a SUBST drive.</summary>
+    public bool IsSubstDrive(char driveLetter) =>
+        _substDriveMap.ContainsKey(NormalizeDriveLetter(driveLetter));
+
+    /// <inheritdoc/>
+    public bool TryGetGeometry(byte driveNumber, out int totalCylinders, out int headsPerCylinder, out int sectorsPerTrack, out int bytesPerSector) {
+        totalCylinders = 0;
+        headsPerCylinder = 0;
+        sectorsPerTrack = 0;
+        bytesPerSector = 0;
+
+        if (!TryResolveImageBackedDrive(driveNumber, out FloppyDiskDrive? _, out byte[]? imageData) || imageData == null) {
+            return false;
+        }
+
+        return TryGetImageGeometry(imageData, out totalCylinders, out headsPerCylinder, out sectorsPerTrack,
+            out bytesPerSector);
+    }
+
+    /// <inheritdoc/>
+    public bool ReadFromImage(byte driveNumber, int imageByteOffset, byte[] destination, int destOffset, int byteCount) {
+        if (!TryResolveImageBackedDrive(driveNumber, out FloppyDiskDrive? _, out byte[]? imageData)) {
+            return false;
+        }
+        if (imageByteOffset < 0 || imageByteOffset + byteCount > imageData!.Length) {
+            return false;
+        }
+        imageData.AsSpan(imageByteOffset, byteCount).CopyTo(destination.AsSpan(destOffset));
+        return true;
+    }
+
+    /// <inheritdoc/>
+    public bool WriteToImage(byte driveNumber, int imageByteOffset, byte[] source, int srcOffset, int byteCount) {
+        if (!TryResolveImageBackedDrive(driveNumber, out FloppyDiskDrive? floppy, out byte[]? imageData)) {
+            return false;
+        }
+        if (imageByteOffset < 0 || imageByteOffset + byteCount > imageData!.Length) {
+            return false;
+        }
+        source.AsSpan(srcOffset, byteCount).CopyTo(imageData.AsSpan(imageByteOffset));
+        floppy?.MarkDirty();
+        return true;
+    }
+
+    private void ReplaceDrive(char driveLetter, DosDriveBase newDrive) {
+        int idx = GetDriveIndexOrThrow(driveLetter);
+        DosDriveBase? existing = _driveMap[idx];
+        if (existing is not null) {
+            RemoveDriveInternal(existing, idx);
+        }
+        _driveMap[idx] = newDrive;
+        _mappedDriveCount++;
+        _version++;
+    }
+
+    private bool TryResolveImageBackedDrive(byte driveNumber, out FloppyDiskDrive? floppy, out byte[]? imageData) {
+        floppy = null;
+        imageData = null;
+        char driveLetter = (char)('A' + driveNumber);
+        if (driveLetter < 'A' || driveLetter > 'Z') {
+            return false;
+        }
+        if (!TryGetFloppyDrive(driveLetter, out floppy)) {
+            return false;
+        }
+        imageData = floppy.GetCurrentImageData();
+        return imageData != null;
+    }
+
+    private static ImageBiosParameterBlock ParseBpb(byte[] imageData) {
+        return ImageBiosParameterBlock.Parse(imageData.AsSpan(0, Math.Min(512, imageData.Length)));
+    }
+
+    private static bool TryGetImageGeometry(byte[] imageData, out int totalCylinders, out int headsPerCylinder,
+        out int sectorsPerTrack, out int bytesPerSector) {
+        if (TryGetGeometryFromBpb(imageData, out totalCylinders, out headsPerCylinder, out sectorsPerTrack,
+                out bytesPerSector)) {
+            return true;
+        }
+
+        return TryGetGeometryFromImageSize(imageData, out totalCylinders, out headsPerCylinder, out sectorsPerTrack,
+            out bytesPerSector);
+    }
+
+    private static bool TryGetGeometryFromBpb(byte[] imageData, out int totalCylinders, out int headsPerCylinder,
+        out int sectorsPerTrack, out int bytesPerSector) {
+        totalCylinders = 0;
+        headsPerCylinder = 0;
+        sectorsPerTrack = 0;
+        bytesPerSector = 0;
+
+        ImageBiosParameterBlock bpb;
+        try {
+            bpb = ParseBpb(imageData);
+        } catch (System.IO.InvalidDataException) {
+            return false;
+        }
+
+        bytesPerSector = bpb.BytesPerSector;
+        sectorsPerTrack = bpb.SectorsPerTrack;
+        headsPerCylinder = bpb.NumberOfHeads;
+        int totalSectors = bpb.TotalSectors;
+        if (bytesPerSector <= 0 || sectorsPerTrack <= 0 || headsPerCylinder <= 0 || totalSectors <= 0) {
+            return false;
+        }
+
+        int tracksPerCylinder = sectorsPerTrack * headsPerCylinder;
+        if (tracksPerCylinder <= 0) {
+            return false;
+        }
+
+        totalCylinders = totalSectors / tracksPerCylinder;
+        return totalCylinders > 0;
+    }
+
+    private static bool TryGetGeometryFromImageSize(byte[] imageData, out int totalCylinders,
+        out int headsPerCylinder, out int sectorsPerTrack, out int bytesPerSector) {
+        totalCylinders = 0;
+        headsPerCylinder = 0;
+        sectorsPerTrack = 0;
+        bytesPerSector = 0;
+
+        const int BytesPerKilobyte = 1024;
+        const int RawFloppyBytesPerSector = 512;
+        if (imageData.Length % BytesPerKilobyte != 0) {
+            return false;
+        }
+
+        int sizeInKilobytes = imageData.Length / BytesPerKilobyte;
+        bytesPerSector = RawFloppyBytesPerSector;
+        switch (sizeInKilobytes) {
+            case 160:
+                sectorsPerTrack = 8;
+                headsPerCylinder = 1;
+                totalCylinders = 40;
+                return true;
+            case 180:
+                sectorsPerTrack = 9;
+                headsPerCylinder = 1;
+                totalCylinders = 40;
+                return true;
+            case 200:
+                sectorsPerTrack = 10;
+                headsPerCylinder = 1;
+                totalCylinders = 40;
+                return true;
+            case 320:
+                sectorsPerTrack = 8;
+                headsPerCylinder = 2;
+                totalCylinders = 40;
+                return true;
+            case 360:
+                sectorsPerTrack = 9;
+                headsPerCylinder = 2;
+                totalCylinders = 40;
+                return true;
+            case 400:
+                sectorsPerTrack = 10;
+                headsPerCylinder = 2;
+                totalCylinders = 40;
+                return true;
+            case 720:
+                sectorsPerTrack = 9;
+                headsPerCylinder = 2;
+                totalCylinders = 80;
+                return true;
+            case 1200:
+                sectorsPerTrack = 15;
+                headsPerCylinder = 2;
+                totalCylinders = 80;
+                return true;
+            case 1440:
+                sectorsPerTrack = 18;
+                headsPerCylinder = 2;
+                totalCylinders = 80;
+                return true;
+            case 1520:
+                sectorsPerTrack = 19;
+                headsPerCylinder = 2;
+                totalCylinders = 80;
+                return true;
+            case 1680:
+                sectorsPerTrack = 21;
+                headsPerCylinder = 2;
+                totalCylinders = 80;
+                return true;
+            case 1720:
+                sectorsPerTrack = 21;
+                headsPerCylinder = 2;
+                totalCylinders = 82;
+                return true;
+            case 1840:
+                sectorsPerTrack = 23;
+                headsPerCylinder = 2;
+                totalCylinders = 80;
+                return true;
+            case 2880:
+                sectorsPerTrack = 36;
+                headsPerCylinder = 2;
+                totalCylinders = 80;
+                return true;
+            default:
+                bytesPerSector = 0;
+                return false;
+        }
     }
 }

@@ -15,29 +15,29 @@
         <PackageId>Spice86.Core</PackageId>
     </PropertyGroup>
 
-	<ItemGroup>
-		<None Remove="Resources\2MGM.sf2" />
-		<None Remove="Resources\DiskNoises\fdd_spinup.wav" />
-		<None Remove="Resources\DiskNoises\fdd_spin.wav" />
-		<None Remove="Resources\DiskNoises\fdd_seek1.wav" />
-		<None Remove="Resources\DiskNoises\fdd_seek2.wav" />
-		<None Remove="Resources\DiskNoises\fdd_seek3.wav" />
-		<None Remove="Resources\DiskNoises\fdd_seek4.wav" />
-		<None Remove="Resources\DiskNoises\fdd_seek5.wav" />
-		<None Remove="Resources\DiskNoises\fdd_seek6.wav" />
-		<None Remove="Resources\DiskNoises\fdd_seek7.wav" />
-		<None Remove="Resources\DiskNoises\fdd_seek8.wav" />
-		<None Remove="Resources\DiskNoises\fdd_seek9.wav" />
-	</ItemGroup>
+    <ItemGroup>
+        <None Remove="Resources\2MGM.sf2" />
+        <None Remove="Resources\DiskNoises\fdd_spinup.wav" />
+        <None Remove="Resources\DiskNoises\fdd_spin.wav" />
+        <None Remove="Resources\DiskNoises\fdd_seek1.wav" />
+        <None Remove="Resources\DiskNoises\fdd_seek2.wav" />
+        <None Remove="Resources\DiskNoises\fdd_seek3.wav" />
+        <None Remove="Resources\DiskNoises\fdd_seek4.wav" />
+        <None Remove="Resources\DiskNoises\fdd_seek5.wav" />
+        <None Remove="Resources\DiskNoises\fdd_seek6.wav" />
+        <None Remove="Resources\DiskNoises\fdd_seek7.wav" />
+        <None Remove="Resources\DiskNoises\fdd_seek8.wav" />
+        <None Remove="Resources\DiskNoises\fdd_seek9.wav" />
+    </ItemGroup>
     <ItemGroup>
         <PackageReference Include="CommunityToolkit.HighPerformance" />
         <PackageReference Include="JetBrains.Annotations" />
         <PackageReference Include="Serilog" />
         <PackageReference Include="Serilog.Sinks.File" />
-		<PackageReference Include="Spectre.Console.Cli" />
+        <PackageReference Include="Spectre.Console.Cli" />
         <Reference Include="FastExpressionCompiler">
-          <HintPath>..\..\3rdparty\Release\FastExpressionCompiler.dll</HintPath>
-          <Private>true</Private>
+            <HintPath>..\..\3rdparty\Release\FastExpressionCompiler.dll</HintPath>
+            <Private>true</Private>
         </Reference>
         <PackageReference Include="MeltySynth" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
@@ -49,14 +49,14 @@
         <FrameworkReference Include="Microsoft.AspNetCore.App" />
         <PackageReference Include="Serilog.Extensions.Hosting" />
         <PackageReference Include="SkiaSharp" />
-		<PackageReference Include="ModelContextProtocol.Core" />
+        <PackageReference Include="ModelContextProtocol.Core"/>
         <PackageReference Include="ModelContextProtocol.AspNetCore" />
-	</ItemGroup>
+    </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\Spice86.Logging\Spice86.Logging.csproj" />
-        <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
         <ProjectReference Include="..\Spice86.Storage.Cd\Spice86.Storage.Cd.csproj" />
         <ProjectReference Include="..\Spice86.Storage.Fat\Spice86.Storage.Fat.csproj" />
+        <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
     </ItemGroup>
     <ItemGroup>
         <None Include="..\..\3rdparty\Release\FastExpressionCompiler.dll" Pack="true" PackagePath="lib\$(TargetFramework)\" Visible="false" />
@@ -70,9 +70,6 @@
             <_Parameter1>Spice86.Tests</_Parameter1>
         </AssemblyAttribute>
         <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
-            <_Parameter1>Spice86.Tests.UI</_Parameter1>
-        </AssemblyAttribute>
-        <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
             <_Parameter1>DynamicProxyGenAssembly2</_Parameter1>
         </AssemblyAttribute>
         <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
@@ -82,6 +79,50 @@
     <ItemGroup>
         <EmbeddedResource Include="Resources\2MGM.sf2">
             <Link>2MGM.sf2</Link>
+            <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Resources\DiskNoises\fdd_spinup.wav">
+            <Link>DiskNoises\fdd_spinup.wav</Link>
+            <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Resources\DiskNoises\fdd_spin.wav">
+            <Link>DiskNoises\fdd_spin.wav</Link>
+            <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Resources\DiskNoises\fdd_seek1.wav">
+            <Link>DiskNoises\fdd_seek1.wav</Link>
+            <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Resources\DiskNoises\fdd_seek2.wav">
+            <Link>DiskNoises\fdd_seek2.wav</Link>
+            <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Resources\DiskNoises\fdd_seek3.wav">
+            <Link>DiskNoises\fdd_seek3.wav</Link>
+            <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Resources\DiskNoises\fdd_seek4.wav">
+            <Link>DiskNoises\fdd_seek4.wav</Link>
+            <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Resources\DiskNoises\fdd_seek5.wav">
+            <Link>DiskNoises\fdd_seek5.wav</Link>
+            <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Resources\DiskNoises\fdd_seek6.wav">
+            <Link>DiskNoises\fdd_seek6.wav</Link>
+            <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Resources\DiskNoises\fdd_seek7.wav">
+            <Link>DiskNoises\fdd_seek7.wav</Link>
+            <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Resources\DiskNoises\fdd_seek8.wav">
+            <Link>DiskNoises\fdd_seek8.wav</Link>
+            <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Resources\DiskNoises\fdd_seek9.wav">
+            <Link>DiskNoises\fdd_seek9.wav</Link>
             <CopyToOutputDirectory>Never</CopyToOutputDirectory>
         </EmbeddedResource>
     </ItemGroup>

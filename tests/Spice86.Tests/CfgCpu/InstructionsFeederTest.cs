@@ -50,7 +50,7 @@ public class InstructionsFeederTest : IDisposable {
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(new PauseHandler(loggerService), state, _memory, memoryBreakpoints, ioBreakpoints);
         _compiler?.Dispose();
         _compiler = new CfgNodeExecutionCompiler(new CfgNodeExecutionCompilerMonitor(loggerService), loggerService, JitMode.InterpretedOnly);
-        
+
         return new InstructionsFeeder(emulatorBreakpointsManager, _memory, state, _instructionReplacer,
             _compiler, new CfgNodeIdAllocator());
     }
