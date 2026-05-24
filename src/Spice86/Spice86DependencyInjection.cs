@@ -381,8 +381,6 @@ public class Spice86DependencyInjection : IDisposable {
 
         SystemClockInt1AHandler systemClockInt1AHandler = new(memory, biosDataArea,
             realTimeClock, cfgCpu, stack, state, loggerService);
-        SystemBiosInt13Handler systemBiosInt13Handler = new(memory,
-            cfgCpu, stack, state, loggerService);
         RtcInt70Handler rtcInt70Handler = new(memory, cfgCpu, stack, state,
             dualPic, biosDataArea, ioPortDispatcher, loggerService);
 
@@ -471,6 +469,18 @@ public class Spice86DependencyInjection : IDisposable {
             new Dictionary<string, string> {
                 { "BLASTER", soundBlaster.BlasterString } }, ioPortDispatcher, loggerService,
             mixer, driveActivityNotifier, xms);
+
+        DmaChannel fdcDmaChannel = dmaSystem.GetChannel(2)
+            ?? throw new InvalidOperationException("DMA channel 2 unavailable for Floppy Disk Controller.");
+        FloppyDiskTransferService floppyDiskTransferService = new(dos.DosDriveManager, fdcDmaChannel, driveActivityNotifier);
+        FloppyDiskController floppyDiskController = new(state, ioPortDispatcher,
+            configuration.FailOnUnhandledPort, loggerService, dualPic, floppyDiskTransferService);
+        SystemBiosInt13Handler systemBiosInt13Handler = new(memory,
+            cfgCpu, stack, state, dos.DosDriveManager, floppySoundEmulator, driveActivityNotifier, loggerService);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Floppy controller and BIOS disk handler created...");
+        }
 
         MainWindowViewModel? mainWindowViewModel = null;
         UIDispatcher? uiDispatcher = null;

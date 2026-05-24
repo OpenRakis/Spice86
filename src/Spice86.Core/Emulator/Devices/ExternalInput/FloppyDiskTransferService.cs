@@ -10,6 +10,7 @@ using System;
 /// Performs DMA-backed floppy sector transfers and drive-activity notifications.
 /// </summary>
 public sealed class FloppyDiskTransferService {
+    private const string DmaOwnerName = "FloppyDiskTransferService";
     private const int DefaultSectorsPerTrack = 18;
     private const int DefaultNumberOfHeads = 2;
 
@@ -27,6 +28,7 @@ public sealed class FloppyDiskTransferService {
         _floppyAccess = floppyAccess;
         _dmaChannel = dmaChannel;
         _activityNotifier = activityNotifier;
+        _dmaChannel.ReserveFor(DmaOwnerName, OnDmaChannelEvicted);
     }
 
     /// <summary>
@@ -82,5 +84,9 @@ public sealed class FloppyDiskTransferService {
             return headsPerCylinder;
         }
         return DefaultNumberOfHeads;
+    }
+
+    private void OnDmaChannelEvicted() {
+        _dmaChannel.RegisterCallback(null);
     }
 }
