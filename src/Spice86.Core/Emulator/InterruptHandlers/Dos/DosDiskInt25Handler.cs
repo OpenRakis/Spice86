@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Shared.Emulator.Storage;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
@@ -26,6 +27,7 @@ public class DosDiskInt25Handler : InterruptHandler {
     private const ushort ErrorInvalidDrive = 0x8002;
 
     private readonly DosDriveManager _dosDriveManager;
+    private readonly FloppyDiskTimingService _timingService;
 
     /// <summary>
     /// Initializes a new instance of <see cref="DosDiskInt25Handler"/>.
@@ -35,12 +37,15 @@ public class DosDiskInt25Handler : InterruptHandler {
     /// <param name="functionHandlerProvider">Provides current call flow handler.</param>
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU registers and flags.</param>
+    /// <param name="timingService">Floppy I/O timing service applied before floppy image reads.</param>
     /// <param name="loggerService">The logging service implementation.</param>
     public DosDiskInt25Handler(IMemory memory, DosDriveManager dosDriveManager,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
+        FloppyDiskTimingService timingService,
         ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _dosDriveManager = dosDriveManager;
+        _timingService = timingService;
     }
 
     /// <inheritdoc />
@@ -112,6 +117,8 @@ public class DosDiskInt25Handler : InterruptHandler {
         int byteOffset = (int)((long)startSector * bytesPerSector);
         int byteCount = sectorCount * bytesPerSector;
         byte[] buffer = new byte[byteCount];
+
+        _timingService.ScheduleFloppyIoDelay(sectorCount);
 
         if (!_dosDriveManager.ReadFromImage(driveIndex, byteOffset, buffer, 0, byteCount)) {
             State.AX = 0x0408;

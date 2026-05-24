@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Shared.Emulator.Storage;
 using Spice86.Core.Emulator.Function;
@@ -30,63 +31,13 @@ public class SystemBiosInt13Handler : InterruptHandler {
     private readonly IFloppyDriveAccess? _floppyAccess;
     private readonly FloppySoundEmulator? _floppySound;
     private readonly IDriveActivityNotifier? _activityNotifier;
+    private readonly FloppyDiskTimingService _timingService;
 
     // Tracks the last operation status per BIOS drive number (index 0=A:, 1=B:)
     private readonly byte[] _lastStatus = new byte[2];
 
     /// <summary>
-    /// Initializes a new instance without floppy image support.
-    /// </summary>
-    /// <param name="memory">The emulated memory bus.</param>
-    /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
-    /// <param name="stack">The CPU stack.</param>
-    /// <param name="state">The CPU registers and flags.</param>
-    /// <param name="loggerService">The logging service implementation.</param>
-    public SystemBiosInt13Handler(
-        IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
-        Stack stack, State state,
-        ILoggerService loggerService)
-        : this(memory, functionHandlerProvider, stack, state, null, null, loggerService) {
-    }
-
-    /// <summary>
-    /// Initializes a new instance with floppy sector access provided by <paramref name="floppyAccess"/>.
-    /// </summary>
-    /// <param name="memory">The emulated memory bus.</param>
-    /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
-    /// <param name="stack">The CPU stack.</param>
-    /// <param name="state">The CPU registers and flags.</param>
-    /// <param name="floppyAccess">Low-level floppy read/write/geometry provider (may be null when no floppy images are used).</param>
-    /// <param name="loggerService">The logging service implementation.</param>
-    public SystemBiosInt13Handler(
-        IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
-        Stack stack, State state,
-        IFloppyDriveAccess? floppyAccess,
-        ILoggerService loggerService)
-        : this(memory, functionHandlerProvider, stack, state, floppyAccess, null, loggerService) {
-    }
-
-    /// <summary>
-    /// Initializes a new instance with floppy sector access and sound emulation.
-    /// </summary>
-    /// <param name="memory">The emulated memory bus.</param>
-    /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
-    /// <param name="stack">The CPU stack.</param>
-    /// <param name="state">The CPU registers and flags.</param>
-    /// <param name="floppyAccess">Low-level floppy read/write/geometry provider (may be null when no floppy images are used).</param>
-    /// <param name="floppySound">Floppy sound synthesizer (may be null to disable sound).</param>
-    /// <param name="loggerService">The logging service implementation.</param>
-    public SystemBiosInt13Handler(
-        IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
-        Stack stack, State state,
-        IFloppyDriveAccess? floppyAccess,
-        FloppySoundEmulator? floppySound,
-        ILoggerService loggerService)
-        : this(memory, functionHandlerProvider, stack, state, floppyAccess, floppySound, null, loggerService) {
-    }
-
-    /// <summary>
-    /// Initializes a new instance with floppy sector access, sound emulation and an activity notifier.
+    /// Initializes a new instance with floppy image timing, image access and UI notifications.
     /// </summary>
     /// <param name="memory">The emulated memory bus.</param>
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
@@ -95,6 +46,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
     /// <param name="floppyAccess">Low-level floppy read/write/geometry provider (may be null when no floppy images are used).</param>
     /// <param name="floppySound">Floppy sound synthesizer (may be null to disable sound).</param>
     /// <param name="activityNotifier">Notifier used to surface per-drive read/write activity to the UI (may be null).</param>
+    /// <param name="timingService">Floppy I/O timing service applied before media transfers.</param>
     /// <param name="loggerService">The logging service implementation.</param>
     public SystemBiosInt13Handler(
         IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
@@ -102,11 +54,13 @@ public class SystemBiosInt13Handler : InterruptHandler {
         IFloppyDriveAccess? floppyAccess,
         FloppySoundEmulator? floppySound,
         IDriveActivityNotifier? activityNotifier,
+        FloppyDiskTimingService timingService,
         ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _floppyAccess = floppyAccess;
         _floppySound = floppySound;
         _activityNotifier = activityNotifier;
+        _timingService = timingService;
         FillDispatchTable();
     }
 
@@ -204,6 +158,8 @@ public class SystemBiosInt13Handler : InterruptHandler {
         uint destAddress = MemoryUtils.ToPhysicalAddress(State.ES, State.BX);
         byte[] transferBuffer = new byte[byteCount];
 
+        _timingService.ScheduleFloppyIoDelay(sectorCount);
+
         if (!_floppyAccess.ReadFromImage(imageDriveNumber, byteOffset, transferBuffer, 0, byteCount)) {
             SetFloppyError(driveNumber, ErrorSectorNotFound, calledFromVm);
             return;
@@ -254,6 +210,8 @@ public class SystemBiosInt13Handler : InterruptHandler {
         for (int i = 0; i < byteCount; i++) {
             transferBuffer[i] = Memory.UInt8[srcAddress + (uint)i];
         }
+
+        _timingService.ScheduleFloppyIoDelay(sectorCount);
 
         if (!_floppyAccess.WriteToImage(imageDriveNumber, byteOffset, transferBuffer, 0, byteCount)) {
             SetFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
@@ -387,6 +345,9 @@ public class SystemBiosInt13Handler : InterruptHandler {
         int byteOffset = lbaStart * bytesPerSector;
         int byteCount = sectorsPerTrack * bytesPerSector;
         byte[] zeros = new byte[byteCount];
+
+        _timingService.ScheduleFloppyIoDelay(sectorsPerTrack);
+
         if (!_floppyAccess.WriteToImage(driveNumber, byteOffset, zeros, 0, byteCount)) {
             SetFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
             return;

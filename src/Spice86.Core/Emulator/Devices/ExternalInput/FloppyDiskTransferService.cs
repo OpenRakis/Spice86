@@ -17,6 +17,7 @@ public sealed class FloppyDiskTransferService {
     private readonly IFloppyDriveAccess _floppyAccess;
     private readonly DmaChannel _dmaChannel;
     private readonly IDriveActivityNotifier _activityNotifier;
+    private readonly FloppyDiskTimingService _timingService;
 
     /// <summary>
     /// Initialises a new <see cref="FloppyDiskTransferService"/>.
@@ -24,10 +25,12 @@ public sealed class FloppyDiskTransferService {
     /// <param name="floppyAccess">Low-level floppy drive access for sector reads and writes.</param>
     /// <param name="dmaChannel">DMA channel 2 used for data transfers.</param>
     /// <param name="activityNotifier">Notifier that surfaces per-drive read/write activity.</param>
-    public FloppyDiskTransferService(IFloppyDriveAccess floppyAccess, DmaChannel dmaChannel, IDriveActivityNotifier activityNotifier) {
+    /// <param name="timingService">Floppy I/O timing service applied before the image transfer happens.</param>
+    public FloppyDiskTransferService(IFloppyDriveAccess floppyAccess, DmaChannel dmaChannel, IDriveActivityNotifier activityNotifier, FloppyDiskTimingService timingService) {
         _floppyAccess = floppyAccess;
         _dmaChannel = dmaChannel;
         _activityNotifier = activityNotifier;
+        _timingService = timingService;
         _dmaChannel.ReserveFor(DmaOwnerName, OnDmaChannelEvicted);
     }
 
@@ -50,6 +53,8 @@ public sealed class FloppyDiskTransferService {
         int byteOffset = lba * bytesPerSector;
         int byteCount = sectorCount * bytesPerSector;
         byte[] buffer = new byte[byteCount];
+
+        _timingService.ScheduleFloppyIoDelay(sectorCount);
 
         if (isRead) {
             bool success = _floppyAccess.ReadFromImage(driveNumber, byteOffset, buffer, 0, byteCount);

@@ -13,9 +13,13 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.OperatingSystem;
+using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Core.Emulator.VM.DeviceScheduler;
 using Spice86.Shared.Interfaces;
 using Spice86.Tests.Dos;
+
+using System;
 
 using Xunit;
 
@@ -23,7 +27,7 @@ public sealed class FloppyDiskControllerTests {
     [Fact]
     public void ReadDataCommand_TransfersSectorIntoDmaBuffer_AndRaisesIrq6() {
         // Arrange
-        FloppyDiskControllerFixture fixture = new();
+        FloppyDiskControllerFixture fixture = new(FloppyDiskSpeed.Maximum);
         byte[] image = new byte[1440 * 1024];
         image[0] = 0xDE;
         image[1] = 0xAD;
@@ -56,7 +60,7 @@ public sealed class FloppyDiskControllerTests {
     [Fact]
     public void WriteDataCommand_TransfersDmaBufferIntoFloppyImage_AndRaisesIrq6() {
         // Arrange
-        FloppyDiskControllerFixture fixture = new();
+        FloppyDiskControllerFixture fixture = new(FloppyDiskSpeed.Maximum);
         byte[] image = new byte[1440 * 1024];
         fixture.DriveManager.MountFloppyImage('A', image, "fdc-write.img");
         fixture.DualPic.SetIrqMask(6, false);
@@ -86,8 +90,33 @@ public sealed class FloppyDiskControllerTests {
         fixture.DualPic.ComputeVectorNumber().Should().Be(0x0E);
     }
 
+    [Fact]
+    public void ReadDataCommand_WithFastTiming_AdvancesCycles() {
+        // Arrange
+        FloppyDiskControllerFixture fixture = new(FloppyDiskSpeed.Fast);
+        byte[] image = new byte[1440 * 1024];
+        image[0] = 0xAA;
+        fixture.DriveManager.MountFloppyImage('A', image, "fdc-timing.img");
+        fixture.DualPic.SetIrqMask(6, false);
+        fixture.ProgramChannel2Dma(0x2000, 512);
+
+        // Act
+        fixture.Dispatcher.WriteByte(0x3F5, 0xE6);
+        fixture.Dispatcher.WriteByte(0x3F5, 0x00);
+        fixture.Dispatcher.WriteByte(0x3F5, 0x00);
+        fixture.Dispatcher.WriteByte(0x3F5, 0x00);
+        fixture.Dispatcher.WriteByte(0x3F5, 0x01);
+        fixture.Dispatcher.WriteByte(0x3F5, 0x02);
+        fixture.Dispatcher.WriteByte(0x3F5, 0x01);
+        fixture.Dispatcher.WriteByte(0x3F5, 0x1B);
+        fixture.Dispatcher.WriteByte(0x3F5, 0xFF);
+
+        // Assert
+        fixture.State.Cycles.Should().BeGreaterThan(0);
+    }
+
     private sealed class FloppyDiskControllerFixture {
-        public FloppyDiskControllerFixture() {
+        public FloppyDiskControllerFixture(FloppyDiskSpeed speed) {
             Logger = Substitute.For<ILoggerService>();
             Logger.IsEnabled(Arg.Any<LogEventLevel>()).Returns(false);
 
@@ -104,7 +133,10 @@ public sealed class FloppyDiskControllerTests {
             IDriveActivityNotifier activityNotifier = Substitute.For<IDriveActivityNotifier>();
             DmaChannel channel2 = DmaBus.GetChannel(2)
                 ?? throw new InvalidOperationException("DMA channel 2 unavailable for floppy controller test.");
-            FloppyDiskTransferService transferService = new(DriveManager, channel2, activityNotifier);
+            CyclesClock clock = new(State, 1000, null, DateTimeOffset.UnixEpoch);
+            DeviceScheduler scheduler = new(clock, Logger, "Floppy timing test");
+            FloppyDiskTimingService timingService = new(State, clock, scheduler, speed);
+            FloppyDiskTransferService transferService = new(DriveManager, channel2, activityNotifier, timingService);
             Controller = new FloppyDiskController(State, Dispatcher, false, Logger, DualPic, transferService);
         }
 
