@@ -18,7 +18,6 @@ internal class DosProgramLoader : DosFileLoader {
     protected readonly DosProcessManager _processManager;
     protected readonly DosFileManager _fileManager;
     private readonly FloppyBootService _floppyBootService;
-    private readonly HardDiskBootService _hardDiskBootService;
 
     public DosProgramLoader(Configuration configuration, IMemory memory,
         State state, DosInt21Handler int21Handler,
@@ -28,7 +27,6 @@ internal class DosProgramLoader : DosFileLoader {
         _processManager = int21Handler.ProcessManager;
         _fileManager = int21Handler.FileManager;
         _floppyBootService = new FloppyBootService(memory, state, loggerService);
-        _hardDiskBootService = new HardDiskBootService(memory, state, loggerService);
     }
 
     public override byte[] LoadFile(string file, string? arguments) {
@@ -87,10 +85,6 @@ internal class DosProgramLoader : DosFileLoader {
             return ExecuteFloppyBoot(bootFloppy);
         }
 
-        if (launchRequest is BootHddLaunchRequest bootHdd) {
-            return ExecuteHddBoot(bootHdd);
-        }
-
         if (launchRequest is not ProgramLaunchRequest programLaunchRequest) {
             return DosExecResult.Fail(DosErrorCode.InvalidDrive);
         }
@@ -109,20 +103,6 @@ internal class DosProgramLoader : DosFileLoader {
         }
         byte driveNumber = (byte)(upper - 'A');
         if (!_floppyBootService.TryBootFromFloppyImage(imageData, driveNumber, imagePath)) {
-            return DosExecResult.Fail(DosErrorCode.InvalidDrive);
-        }
-        return DosExecResult.SuccessExecute(_state.CS, _state.IP, _state.SS, _state.SP);
-    }
-
-    private DosExecResult ExecuteHddBoot(BootHddLaunchRequest request) {
-        char upper = char.ToUpperInvariant(request.DriveLetter);
-        if (upper != 'C' && upper != 'D') {
-            return DosExecResult.Fail(DosErrorCode.InvalidDrive);
-        }
-        if (!_processManager.TryGetMountedImageForBoot(upper, out byte[]? imageData, out string imagePath)) {
-            return DosExecResult.Fail(DosErrorCode.InvalidDrive);
-        }
-        if (!_hardDiskBootService.TryBootFromHardDiskImage(imageData, driveNumber: 0x80, imagePath)) {
             return DosExecResult.Fail(DosErrorCode.InvalidDrive);
         }
         return DosExecResult.SuccessExecute(_state.CS, _state.IP, _state.SS, _state.SP);

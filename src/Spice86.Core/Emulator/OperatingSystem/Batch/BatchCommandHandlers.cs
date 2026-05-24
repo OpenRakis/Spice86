@@ -442,7 +442,7 @@ internal static class BatchCommandHandlers {
     /// Handles the <c>BOOT</c> internal command. Loads the first sector of the
     /// floppy image mounted on the requested drive at <c>0000:7C00</c> and
     /// transfers control there, matching DOSBox Staging's <c>BOOT [-l A|B]</c>
-    /// for floppy images. Hard-disk image booting is not supported.
+    /// for floppy images.
     /// </summary>
     private sealed class BootCommandHandler : ExactTokenBatchCommandHandler {
         internal BootCommandHandler() : base("BOOT") {
