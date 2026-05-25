@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.Memory.ReaderWriter;
 
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -24,21 +25,21 @@ public class ArrayReaderWriter<T> : IReaderWriter<T> {
     public int Length { get => Array.Length; }
 
     /// <inheritdoc/>
-    public bool TryGetSpan(out uint startAddress, out Span<T> span, MemoryAccess access = MemoryAccess.None) {
+    public bool TryGetSpan(out uint startAddress, out Span<T> span, MemoryAccess access) {
         startAddress = 0;
         span = Array;
         return true;
     }
 
     /// <inheritdoc/>
-    public bool TryGetSpan(out uint startAddress, out ReadOnlySpan<T> span, MemoryAccess access = MemoryAccess.None) {
+    public bool TryGetSpan(out uint startAddress, out ReadOnlySpan<T> span, MemoryAccess access) {
         startAddress = 0;
         span = Array;
         return true;
     }
 
     /// <inheritdoc/>
-    public bool TryGetSpan(uint startAddress, out Span<T> span, MemoryAccess access = MemoryAccess.None) {
+    public bool TryGetSpan(uint startAddress, out Span<T> span, MemoryAccess access) {
         T[] array = Array;
         long lengthRemaining = array.Length - startAddress;
         if (lengthRemaining >= 0) {
@@ -54,7 +55,7 @@ public class ArrayReaderWriter<T> : IReaderWriter<T> {
     }
 
     /// <inheritdoc/>
-    public bool TryGetSpan(uint startAddress, out ReadOnlySpan<T> span, MemoryAccess access = MemoryAccess.None) {
+    public bool TryGetSpan(uint startAddress, out ReadOnlySpan<T> span, MemoryAccess access) {
         T[] array = Array;
         long lengthRemaining = array.Length - startAddress;
         if (lengthRemaining >= 0) {
@@ -70,14 +71,13 @@ public class ArrayReaderWriter<T> : IReaderWriter<T> {
     }
 
     /// <inheritdoc/>
-    public bool TryGetSpan(uint startAddress, int length, out Span<T> span, MemoryAccess access = MemoryAccess.None) {
-        ArgumentOutOfRangeException.ThrowIfNegative(length);
-
+    public bool TryGetSpan(uint startAddress, int length, out Span<T> span, MemoryAccess access) {
         T[] array = Array;
         long lengthRemaining = array.Length - startAddress;
-        if (lengthRemaining >= length) {
+        if (lengthRemaining >= (uint)length) {
             // CreateSpan is safe because of above length check (length will always be in the range 0..array.Length and
-            // guaranteed that adding the start address to it will not go out of bounds of array.
+            // guaranteed that adding the start address to it will not go out of bounds of array).
+            Debug.Assert((uint)length <= (uint)array.Length);
             span = MemoryMarshal.CreateSpan(
                 ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(array), startAddress), length);
             return true;
@@ -88,14 +88,13 @@ public class ArrayReaderWriter<T> : IReaderWriter<T> {
     }
 
     /// <inheritdoc/>
-    public bool TryGetSpan(uint startAddress, int length, out ReadOnlySpan<T> span, MemoryAccess access = MemoryAccess.None) {
-        ArgumentOutOfRangeException.ThrowIfNegative(length);
-
+    public bool TryGetSpan(uint startAddress, int length, out ReadOnlySpan<T> span, MemoryAccess access) {
         T[] array = Array;
         long lengthRemaining = array.Length - startAddress;
-        if (lengthRemaining >= length) {
+        if (lengthRemaining >= (uint)length) {
             // CreateSpan is safe because of above length check (length will always be in the range 0..array.Length and
-            // guaranteed that adding the start address to it will not go out of bounds of array.
+            // guaranteed that adding the start address to it will not go out of bounds of array).
+            Debug.Assert((uint)length <= (uint)array.Length);
             span = MemoryMarshal.CreateSpan(
                 ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(array), startAddress), length);
             return true;
