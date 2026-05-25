@@ -99,23 +99,70 @@ internal sealed class CommandShell
     {
         List<byte> program = new();
 
-        WriteBytes(program, 0xB4, 0x09);
-        int initialPromptDxIndex = program.Count + 1;
-        WriteBytes(program, 0xBA, 0x00, 0x00, 0xCD, 0x21);
+        List<int> promptWordPatchIndices = new();
+        List<int> countWordPatchIndices = new();
+        List<int> bufferWordPatchIndices = new();
 
-        int commandLoopOffset = program.Count;
-        WriteBytes(program, 0xB4, 0x0A);
-        int inputBufferDxIndex = program.Count + 1;
-        WriteBytes(program, 0xBA, 0x00, 0x00, 0xCD, 0x21);
+        WriteBytes(program, 0xB4, 0x09, 0xBA);
+        promptWordPatchIndices.Add(program.Count);
+        WriteBytes(program, 0x00, 0x00, 0xCD, 0x21, 0xBF);
+        bufferWordPatchIndices.Add(program.Count);
+        WriteBytes(program, 0x00, 0x00, 0xC6, 0x06);
+        countWordPatchIndices.Add(program.Count);
+        WriteBytes(program, 0x00, 0x00, 0x00);
 
-        int inputCountAddressIndex = program.Count + 1;
-        WriteBytes(program, 0xA0, 0x00, 0x00);
-        WriteBytes(program, 0x3C, 0x04);
+        int inputLoopOffset = program.Count;
+        WriteBytes(program, 0xB4, 0x08, 0xCD, 0x21, 0x3C, 0x00);
+        int discardExtendedJumpIndex = program.Count + 1;
+        WriteBytes(program, 0x74, 0x00, 0x3C, 0x08);
+        int handleBackspaceJumpIndex = program.Count + 1;
+        WriteBytes(program, 0x74, 0x00, 0x3C, 0x0D);
+        int handleEnterJumpIndex = program.Count + 1;
+        WriteBytes(program, 0x74, 0x00, 0x3C, 0x20);
+        int ignoreControlJumpIndex = program.Count + 1;
+        WriteBytes(program, 0x72, 0x00, 0x80, 0x3E);
+        countWordPatchIndices.Add(program.Count);
+        WriteBytes(program, 0x00, 0x00, 0x3F);
+        int bufferFullJumpIndex = program.Count + 1;
+        WriteBytes(program, 0x73, 0x00, 0x88, 0x05, 0x47, 0xFE, 0x06);
+        countWordPatchIndices.Add(program.Count);
+        WriteBytes(program, 0x00, 0x00, 0x88, 0xC2, 0xB4, 0x02, 0xCD, 0x21);
+        int continueInputLoopJumpIndex = program.Count + 1;
+        WriteBytes(program, 0xEB, 0x00);
+
+        int bufferFullOffset = program.Count;
+        WriteBytes(program, 0xB2, 0x07, 0xB4, 0x02, 0xCD, 0x21);
+        int bufferFullLoopJumpIndex = program.Count + 1;
+        WriteBytes(program, 0xEB, 0x00);
+
+        int discardExtendedOffset = program.Count;
+        WriteBytes(program, 0xB4, 0x08, 0xCD, 0x21);
+        int discardExtendedLoopJumpIndex = program.Count + 1;
+        WriteBytes(program, 0xEB, 0x00);
+
+        int backspaceOffset = program.Count;
+        WriteBytes(program, 0x80, 0x3E);
+        countWordPatchIndices.Add(program.Count);
+        WriteBytes(program, 0x00, 0x00, 0x00);
+        int skipBackspaceJumpIndex = program.Count + 1;
+        WriteBytes(program, 0x74, 0x00, 0x4F, 0xFE, 0x0E);
+        countWordPatchIndices.Add(program.Count);
+        WriteBytes(program, 0x00, 0x00, 0xB2, 0x08, 0xB4, 0x02, 0xCD, 0x21,
+            0xB2, 0x20, 0xB4, 0x02, 0xCD, 0x21,
+            0xB2, 0x08, 0xB4, 0x02, 0xCD, 0x21);
+        int backspaceLoopJumpIndex = program.Count + 1;
+        WriteBytes(program, 0xEB, 0x00);
+
+        int enterOffset = program.Count;
+        WriteBytes(program, 0xB2, 0x0D, 0xB4, 0x02, 0xCD, 0x21,
+            0xB2, 0x0A, 0xB4, 0x02, 0xCD, 0x21,
+            0x80, 0x3E);
+        countWordPatchIndices.Add(program.Count);
+        WriteBytes(program, 0x00, 0x00, 0x04);
         int invalidLengthJumpIndex = program.Count + 1;
-        WriteBytes(program, 0x75, 0x00);
-
-        int commandTextSiIndex = program.Count + 1;
-        WriteBytes(program, 0xBE, 0x00, 0x00);
+        WriteBytes(program, 0x75, 0x00, 0xBE);
+        bufferWordPatchIndices.Add(program.Count);
+        WriteBytes(program, 0x00, 0x00);
 
         AppendExitCharacterCheck(program, 'E', out int invalidEJumpIndex);
         AppendExitCharacterCheck(program, 'X', out int invalidXJumpIndex);
@@ -125,41 +172,63 @@ internal sealed class CommandShell
         WriteBytes(program, 0xB8, 0x00, 0x4C, 0xCD, 0x21);
 
         int repromptOffset = program.Count;
-        WriteBytes(program, 0xB4, 0x09);
-        int repromptDxIndex = program.Count + 1;
-        WriteBytes(program, 0xBA, 0x00, 0x00, 0xCD, 0x21);
-        int loopJumpIndex = program.Count + 1;
+        WriteBytes(program, 0xBF);
+        bufferWordPatchIndices.Add(program.Count);
+        WriteBytes(program, 0x00, 0x00, 0xC6, 0x06);
+        countWordPatchIndices.Add(program.Count);
+        WriteBytes(program, 0x00, 0x00, 0x00, 0xB4, 0x09, 0xBA);
+        promptWordPatchIndices.Add(program.Count);
+        WriteBytes(program, 0x00, 0x00, 0xCD, 0x21);
+        int repromptLoopJumpIndex = program.Count + 1;
         WriteBytes(program, 0xEB, 0x00);
 
-        int initialPromptOffset = program.Count;
+        int promptOffset = program.Count;
         WriteAscii(program, "C:\\>");
         program.Add(0x24);
 
-        int repromptStringOffset = program.Count;
-        WriteBytes(program, 0x0D, 0x0A);
-        WriteAscii(program, "C:\\>");
-        program.Add(0x24);
+        int countOffset = program.Count;
+        program.Add(0x00);
 
         int inputBufferOffset = program.Count;
-        program.Add(0x3F);
-        program.Add(0x00);
         for (int i = 0; i < 64; i++)
         {
             program.Add(0x00);
         }
 
-        PatchWord(program, initialPromptDxIndex, ToComAddress(initialPromptOffset));
-        PatchWord(program, inputBufferDxIndex, ToComAddress(inputBufferOffset));
-        PatchWord(program, inputCountAddressIndex, ToComAddress(inputBufferOffset + 1));
-        PatchWord(program, commandTextSiIndex, ToComAddress(inputBufferOffset + 2));
-        PatchWord(program, repromptDxIndex, ToComAddress(repromptStringOffset));
+        ushort promptAddress = ToComAddress(promptOffset);
+        for (int i = 0; i < promptWordPatchIndices.Count; i++)
+        {
+            PatchWord(program, promptWordPatchIndices[i], promptAddress);
+        }
 
+        ushort countAddress = ToComAddress(countOffset);
+        for (int i = 0; i < countWordPatchIndices.Count; i++)
+        {
+            PatchWord(program, countWordPatchIndices[i], countAddress);
+        }
+
+        ushort inputBufferAddress = ToComAddress(inputBufferOffset);
+        for (int i = 0; i < bufferWordPatchIndices.Count; i++)
+        {
+            PatchWord(program, bufferWordPatchIndices[i], inputBufferAddress);
+        }
+
+        PatchRelativeByte(program, discardExtendedJumpIndex, discardExtendedOffset);
+        PatchRelativeByte(program, handleBackspaceJumpIndex, backspaceOffset);
+        PatchRelativeByte(program, handleEnterJumpIndex, enterOffset);
+        PatchRelativeByte(program, ignoreControlJumpIndex, inputLoopOffset);
+        PatchRelativeByte(program, bufferFullJumpIndex, bufferFullOffset);
+        PatchRelativeByte(program, continueInputLoopJumpIndex, inputLoopOffset);
+        PatchRelativeByte(program, bufferFullLoopJumpIndex, inputLoopOffset);
+        PatchRelativeByte(program, discardExtendedLoopJumpIndex, inputLoopOffset);
+        PatchRelativeByte(program, skipBackspaceJumpIndex, inputLoopOffset);
+        PatchRelativeByte(program, backspaceLoopJumpIndex, inputLoopOffset);
         PatchRelativeByte(program, invalidLengthJumpIndex, repromptOffset);
         PatchRelativeByte(program, invalidEJumpIndex, repromptOffset);
         PatchRelativeByte(program, invalidXJumpIndex, repromptOffset);
         PatchRelativeByte(program, invalidIJumpIndex, repromptOffset);
         PatchRelativeByte(program, invalidTJumpIndex, repromptOffset);
-        PatchRelativeByte(program, loopJumpIndex, commandLoopOffset);
+        PatchRelativeByte(program, repromptLoopJumpIndex, inputLoopOffset);
 
         return program.ToArray();
     }
