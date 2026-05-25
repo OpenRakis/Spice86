@@ -86,6 +86,19 @@ public class BreakPointHolder {
         }
     }
 
+    public bool HasActiveBreakPoint(long address) {
+        if (_addressBreakPoints.TryGetValue(address, out List<BreakPoint>? breakPointList) &&
+                breakPointList.Any(x => x.Matches(address))) {
+            return true;
+        }
+
+        if (_unconditionalBreakPoints.Any(x => x.Matches(address))) {
+            return true;
+        }
+
+        return false;
+    }
+
     /// <summary>
     /// Triggers all breakpoints that match the specified address.
     /// </summary>

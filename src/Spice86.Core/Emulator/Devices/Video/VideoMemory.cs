@@ -1,12 +1,12 @@
 namespace Spice86.Core.Emulator.Devices.Video;
 
-using System;
-using System.Runtime.InteropServices;
-using System.Threading;
-
 using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
+
+using System;
+using System.Threading;
 
 /// <summary>
 ///     A wrapper class for the video card that implements the IMemoryDevice interface.
@@ -338,4 +338,28 @@ public class VideoMemory : IVideoMemory {
 
         return (planes, offset);
     }
+
+    /// <inheritdoc/>
+    public bool TryGetSpan(out uint startAddress, out Span<byte> span, MemoryAccess access)
+        => MemoryDeviceUtils.TryGetSpan(VRam, out startAddress, out span);
+
+    /// <inheritdoc/>
+    public bool TryGetSpan(out uint startAddress, out ReadOnlySpan<byte> span, MemoryAccess access)
+        => MemoryDeviceUtils.TryGetSpan(VRam, out startAddress, out span);
+
+    /// <inheritdoc/>
+    public bool TryGetSpan(uint startAddress, out Span<byte> span, MemoryAccess access)
+        => MemoryDeviceUtils.TryGetSpan(VRam, startAddress, out span);
+
+    /// <inheritdoc/>
+    public bool TryGetSpan(uint startAddress, out ReadOnlySpan<byte> span, MemoryAccess access)
+        => MemoryDeviceUtils.TryGetSpan(VRam, startAddress, out span);
+
+    /// <inheritdoc/>
+    public bool TryGetSpan(uint startAddress, int length, out Span<byte> span, MemoryAccess access)
+        => MemoryDeviceUtils.TryGetSpan(VRam, startAddress, length, out span);
+
+    /// <inheritdoc/>
+    public bool TryGetSpan(uint startAddress, int length, out ReadOnlySpan<byte> span, MemoryAccess access)
+        => MemoryDeviceUtils.TryGetSpan(VRam, startAddress, length, out span);
 }

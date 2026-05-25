@@ -77,6 +77,74 @@ public class VgaRom : IMemoryDevice {
 
     /// <inheritdoc />
     public IList<byte> GetSlice(int address, int length) {
+        // Note that this bypasses the write limitations and allows memory to be modified.
         return _storage.GetSlice(address - BaseAddress, length);
+    }
+
+    /// <inheritdoc/>
+    public bool TryGetSpan(out uint startAddress, out Span<byte> span, MemoryAccess access) {
+        // Only allow write access to VGA ROM if no read/write access is requested (bypass mode).
+        if ((access & MemoryAccess.ReadWrite) == MemoryAccess.None) {
+            return MemoryDeviceUtils.TryGetSpan(_storage, out startAddress, out span);
+        }
+
+        startAddress = 0;
+        span = [];
+        return false;
+    }
+
+    /// <inheritdoc/>
+    public bool TryGetSpan(out uint startAddress, out ReadOnlySpan<byte> span, MemoryAccess access) {
+        if (!access.HasFlag(MemoryAccess.Write)) {
+            return MemoryDeviceUtils.TryGetSpan(_storage, out startAddress, out span);
+        }
+
+        startAddress = 0;
+        span = [];
+        return false;
+    }
+
+    /// <inheritdoc/>
+    public bool TryGetSpan(uint startAddress, out Span<byte> span, MemoryAccess access) {
+        // Only allow write access to VGA ROM if no read/write access is requested (bypass mode).
+        if ((access & MemoryAccess.ReadWrite) == MemoryAccess.None) {
+            return MemoryDeviceUtils.TryGetSpan(_storage, startAddress, out span);
+        }
+
+        span = [];
+        return false;
+    }
+
+    /// <inheritdoc/>
+    public bool TryGetSpan(uint startAddress, out ReadOnlySpan<byte> span, MemoryAccess access) {
+        if (!access.HasFlag(MemoryAccess.Write)) {
+            return MemoryDeviceUtils.TryGetSpan(_storage, startAddress, out span);
+        }
+
+        span = [];
+        return false;
+    }
+
+    /// <inheritdoc/>
+    public bool TryGetSpan(uint startAddress, int length, out Span<byte> span, MemoryAccess access) {
+        // Only allow write access to VGA ROM if no read/write access is requested (bypass mode).
+        if ((access & MemoryAccess.ReadWrite) == MemoryAccess.None) {
+            return MemoryDeviceUtils.TryGetSpan(_storage, startAddress, length, out span);
+        }
+
+        startAddress = 0;
+        span = [];
+        return false;
+    }
+
+    /// <inheritdoc/>
+    public bool TryGetSpan(uint startAddress, int length, out ReadOnlySpan<byte> span, MemoryAccess access) {
+        if (!access.HasFlag(MemoryAccess.Write)) {
+            return MemoryDeviceUtils.TryGetSpan(_storage, startAddress, length, out span);
+        }
+
+        startAddress = 0;
+        span = [];
+        return false;
     }
 }

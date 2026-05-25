@@ -33,4 +33,28 @@ public class Ram : IMemoryDevice {
     public IList<byte> GetSlice(int address, int length) {
         return _memory.GetSlice(address, length);
     }
+
+    /// <inheritdoc/>
+    public bool TryGetSpan(out uint startAddress, out Span<byte> span, MemoryAccess access)
+        => MemoryDeviceUtils.TryGetSpan(_memory, out startAddress, out span);
+
+    /// <inheritdoc/>
+    public bool TryGetSpan(out uint startAddress, out ReadOnlySpan<byte> span, MemoryAccess access)
+        => MemoryDeviceUtils.TryGetSpan(_memory, out startAddress, out span);
+
+    /// <inheritdoc/>
+    public bool TryGetSpan(uint startAddress, out Span<byte> span, MemoryAccess access)
+        => MemoryDeviceUtils.TryGetSpan(_memory, startAddress, out span);
+
+    /// <inheritdoc/>
+    public bool TryGetSpan(uint startAddress, out ReadOnlySpan<byte> span, MemoryAccess access)
+        => MemoryDeviceUtils.TryGetSpan(_memory, startAddress, out span);
+
+    /// <inheritdoc/>
+    public bool TryGetSpan(uint startAddress, int length, out Span<byte> span, MemoryAccess access)
+        => MemoryDeviceUtils.TryGetSpan(_memory, startAddress, length, out span);
+
+    /// <inheritdoc/>
+    public bool TryGetSpan(uint startAddress, int length, out ReadOnlySpan<byte> span, MemoryAccess access)
+        => MemoryDeviceUtils.TryGetSpan(_memory, startAddress, length, out span);
 }
