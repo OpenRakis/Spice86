@@ -36,10 +36,10 @@ internal class DosProgramLoader : DosFileLoader {
         string cDrive = ResolveStartupDriveBasePath(file);
         string requestedProgramDosPath = ResolveStartupProgramDosPath(file, cDrive);
         string commandTail = arguments ?? string.Empty;
-        bool interactiveShellEnabled = string.IsNullOrWhiteSpace(requestedProgramDosPath) ||
-            _configuration.ReturnToShellPromptAfterStartupProgramExit;
+        bool shouldTerminateAfterStartupProgram = !string.IsNullOrWhiteSpace(requestedProgramDosPath) &&
+            !_configuration.ShellBootstrap;
         _processManager.BatchExecutionEngine.ConfigureStartupSession(requestedProgramDosPath, commandTail,
-            interactiveShellEnabled);
+            shouldTerminateAfterStartupProgram);
 
         if (string.IsNullOrWhiteSpace(requestedProgramDosPath)) {
             DosExecResult commandComLoadResult = _processManager.LoadInitialCommandComShell();

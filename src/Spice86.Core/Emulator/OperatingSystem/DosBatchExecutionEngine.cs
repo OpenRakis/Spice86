@@ -37,7 +37,6 @@ internal sealed partial class DosBatchExecutionEngine {
     private bool _stdoutRedirected;
     private bool _stderrRedirected;
     private bool _echoEnabled = true;
-    private bool _interactiveShellEnabled;
     private bool _shellExitRequested;
     private byte _lastExitCode;
     private DateTime _currentDateTime;
@@ -64,12 +63,12 @@ internal sealed partial class DosBatchExecutionEngine {
     }
 
     internal void ConfigureStartupSession(string requestedProgramDosPath, string commandTail,
-        bool interactiveShellEnabled) {
+        bool shouldTerminateAfterStartupProgram) {
         SyncCommandComToMemoryDrive();
-        _interactiveShellEnabled = interactiveShellEnabled;
         _shellExitRequested = false;
 
-        string[] startupLines = BuildStartupLines(requestedProgramDosPath, commandTail);
+        string[] startupLines = BuildStartupLines(requestedProgramDosPath, commandTail,
+            shouldTerminateAfterStartupProgram);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             string joinedLines = string.Join(" | ", startupLines);
             _loggerService.Debug("BATCH: ConfigureStartupSession program={Program} tail={Tail} lines={Lines}",
@@ -172,21 +171,22 @@ internal sealed partial class DosBatchExecutionEngine {
         isRedirected = false;
     }
 
-    private static string[] BuildStartupLines(string requestedProgramDosPath, string commandTail) {
+    private static string[] BuildStartupLines(string requestedProgramDosPath, string commandTail,
+        bool shouldTerminateAfterStartupProgram) {
         if (string.IsNullOrWhiteSpace(requestedProgramDosPath)) {
             return Array.Empty<string>();
         }
 
-        string line = BuildCallLine(requestedProgramDosPath, commandTail);
-        return [line];
+        string startupProgramLine = BuildStartupProgramLine(requestedProgramDosPath, commandTail);
+        if (!shouldTerminateAfterStartupProgram) {
+            return [startupProgramLine];
+        }
+
+        return [startupProgramLine, "@EXIT"];
     }
 
     private bool RunInteractiveSession(out LaunchRequest launchRequest) {
         launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
-
-        if (!_interactiveShellEnabled) {
-            return false;
-        }
 
         while (!_shellExitRequested) {
             WriteInteractivePrompt();

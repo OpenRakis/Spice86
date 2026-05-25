@@ -822,7 +822,7 @@ public class Spice86DependencyInjection : IDisposable {
     }
 
     private static string ResolveStateSerializationExecutablePath(Configuration configuration) {
-        if (!configuration.ShellBootstrap) {
+        if (!string.IsNullOrWhiteSpace(configuration.Exe)) {
             return configuration.Exe;
         }
 

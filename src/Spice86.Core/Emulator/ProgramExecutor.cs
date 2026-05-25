@@ -149,7 +149,8 @@ public sealed class ProgramExecutor : IDisposable {
 
     private void LoadInitialProgram(Configuration configuration, IMemory memory, State state, DosInt21Handler int21Handler) {
         string? executableFileName = configuration.Exe;
-        bool shellBootstrap = configuration.ShellBootstrap || string.IsNullOrWhiteSpace(executableFileName);
+        bool hasRequestedExecutable = !string.IsNullOrWhiteSpace(executableFileName);
+        bool shellBootstrap = configuration.ShellBootstrap || !hasRequestedExecutable;
 
         if (shellBootstrap && configuration.InitializeDOS == false) {
             throw new UnrecoverableException("Interactive shell startup requires DOS initialization.");
@@ -158,11 +159,14 @@ public sealed class ProgramExecutor : IDisposable {
         ExecutableFileLoader loader;
 
         if (shellBootstrap) {
-            executableFileName = string.Empty;
             loader = new DosProgramLoader(configuration, memory, state, int21Handler, _loggerService);
 
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                _loggerService.Verbose("Preparing initial DOS shell startup");
+                if (hasRequestedExecutable) {
+                    _loggerService.Verbose("Preparing initial DOS shell startup for {FileName}", executableFileName);
+                } else {
+                    _loggerService.Verbose("Preparing initial DOS shell startup");
+                }
             }
         } else {
             string upperCaseExtension = Path.GetExtension(executableFileName.ToUpperInvariant());
@@ -191,7 +195,7 @@ public sealed class ProgramExecutor : IDisposable {
             byte[] fileContent = loader.LoadFile(executableFileName, configuration.ExeArgs);
             CheckSha256Checksum(fileContent, configuration.ExpectedChecksumValue);
         } catch (IOException e) {
-            string fileDescription = shellBootstrap ? "<interactive-shell>" : executableFileName;
+            string fileDescription = shellBootstrap && !hasRequestedExecutable ? "<interactive-shell>" : executableFileName;
             throw new UnrecoverableException($"Failed to read file {fileDescription}", e);
         }
     }

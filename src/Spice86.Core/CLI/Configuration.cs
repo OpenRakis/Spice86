@@ -52,11 +52,6 @@ public sealed class Configuration : CommandSettings {
     /// </summary>
     public bool ShellBootstrap { get; set; }
 
-    /// <summary>
-    /// Gets whether a startup program launched through the shell session should return to the interactive prompt when it exits.
-    /// </summary>
-    public bool ReturnToShellPromptAfterStartupProgramExit { get; set; }
-
     /// <summary> List of parameters to give to the emulated program. </summary>
     [CommandOption("-a|--ExeArgs <EXEARGS>")]
     public string? ExeArgs { get; set; }

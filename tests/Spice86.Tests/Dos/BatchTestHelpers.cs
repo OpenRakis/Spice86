@@ -155,8 +155,7 @@ internal static class BatchTestHelpers {
     internal static Configuration CreateShellConfiguration(string cDrivePath, string executablePath) {
         return new Configuration {
             Exe = executablePath,
-            ShellBootstrap = string.IsNullOrWhiteSpace(executablePath),
-            ReturnToShellPromptAfterStartupProgramExit = true,
+            ShellBootstrap = true,
             ExpectedChecksumValue = Array.Empty<byte>(),
             InitializeDOS = true,
             ProvidedAsmHandlersSegment = 0xF000,

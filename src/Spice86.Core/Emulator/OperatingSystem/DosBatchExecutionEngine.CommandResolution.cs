@@ -8,15 +8,16 @@ using System;
 using System.IO;
 
 internal sealed partial class DosBatchExecutionEngine {
-    private static string BuildCallLine(string requestedProgramDosPath, string commandTail) {
+    private static string BuildStartupProgramLine(string requestedProgramDosPath, string commandTail) {
         string normalizedProgramPath = NormalizeDosPath(requestedProgramDosPath);
         string escapedProgram = EscapeIfNeeded(normalizedProgramPath);
         string[] parsedArguments = ParseArguments(commandTail);
+        string commandPrefix = IsBatchPath(normalizedProgramPath) ? "CALL " : string.Empty;
         if (parsedArguments.Length == 0) {
-            return $"CALL {escapedProgram}";
+            return $"{commandPrefix}{escapedProgram}";
         }
 
-        return $"CALL {escapedProgram} {JoinArguments(parsedArguments)}";
+        return $"{commandPrefix}{escapedProgram} {JoinArguments(parsedArguments)}";
     }
 
     private static string EscapeIfNeeded(string token) {
