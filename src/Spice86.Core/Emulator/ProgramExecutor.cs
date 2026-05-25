@@ -149,23 +149,36 @@ public sealed class ProgramExecutor : IDisposable {
 
     private void LoadInitialProgram(Configuration configuration, IMemory memory, State state, DosInt21Handler int21Handler) {
         string? executableFileName = configuration.Exe;
-        ArgumentException.ThrowIfNullOrEmpty(executableFileName);
+        bool shellBootstrap = configuration.ShellBootstrap || string.IsNullOrWhiteSpace(executableFileName);
 
-        string upperCaseExtension = Path.GetExtension(executableFileName.ToUpperInvariant());
-        bool isDosProgram = upperCaseExtension is ".EXE" or ".COM" or ".BAT";
-
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Preparing initial load for {FileName} (DOS program: {IsDosProgram})", executableFileName, isDosProgram);
+        if (shellBootstrap && configuration.InitializeDOS == false) {
+            throw new UnrecoverableException("Interactive shell startup requires DOS initialization.");
         }
 
         ExecutableFileLoader loader;
 
-        if (isDosProgram) {
-            loader = upperCaseExtension == ".BAT"
-                ? new DosBatchProgramLoader(configuration, memory, state, int21Handler, _loggerService)
-                : new DosProgramLoader(configuration, memory, state, int21Handler, _loggerService);
+        if (shellBootstrap) {
+            executableFileName = string.Empty;
+            loader = new DosProgramLoader(configuration, memory, state, int21Handler, _loggerService);
+
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose("Preparing initial DOS shell startup");
+            }
         } else {
-            loader = new BiosLoader(memory, state, _loggerService);
+            string upperCaseExtension = Path.GetExtension(executableFileName.ToUpperInvariant());
+            bool isDosProgram = upperCaseExtension is ".EXE" or ".COM" or ".BAT";
+
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose("Preparing initial load for {FileName} (DOS program: {IsDosProgram})", executableFileName, isDosProgram);
+            }
+
+            if (isDosProgram) {
+                loader = upperCaseExtension == ".BAT"
+                    ? new DosBatchProgramLoader(configuration, memory, state, int21Handler, _loggerService)
+                    : new DosProgramLoader(configuration, memory, state, int21Handler, _loggerService);
+            } else {
+                loader = new BiosLoader(memory, state, _loggerService);
+            }
         }
 
         try {
@@ -178,7 +191,8 @@ public sealed class ProgramExecutor : IDisposable {
             byte[] fileContent = loader.LoadFile(executableFileName, configuration.ExeArgs);
             CheckSha256Checksum(fileContent, configuration.ExpectedChecksumValue);
         } catch (IOException e) {
-            throw new UnrecoverableException($"Failed to read file {executableFileName}", e);
+            string fileDescription = shellBootstrap ? "<interactive-shell>" : executableFileName;
+            throw new UnrecoverableException($"Failed to read file {fileDescription}", e);
         }
     }
 

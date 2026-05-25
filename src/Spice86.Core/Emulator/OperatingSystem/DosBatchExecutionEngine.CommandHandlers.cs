@@ -399,6 +399,7 @@ internal sealed partial class DosBatchExecutionEngine {
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("BATCH: EXIT - clearing all {Count} batch contexts", _batchFileContexts.Count);
         }
+        _shellExitRequested = true;
         while (_batchFileContexts.Count > 0) {
             BatchFileContext context = _batchFileContexts.Pop();
             CleanupTemporaryFiles(context.TemporaryFilesToCleanup);

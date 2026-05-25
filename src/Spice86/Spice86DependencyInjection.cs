@@ -120,7 +120,7 @@ public class Spice86DependencyInjection : IDisposable {
         // Create folder for emulator state serialization / deserialization
         EmulatorStateSerializationFolderFactory emulatorStateSerializationFolderFactory = new(_loggerService);
         EmulatorStateSerializationFolder emulatorStateSerializationFolder =
-            emulatorStateSerializationFolderFactory.ComputeFolder(configuration.Exe, configuration.RecordedDataDirectory);
+            emulatorStateSerializationFolderFactory.ComputeFolder(ResolveStateSerializationExecutablePath(configuration), configuration.RecordedDataDirectory);
 
         IPauseHandler pauseHandler = new PauseHandler(loggerService);
 
@@ -819,6 +819,24 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         ProgramExecutor.Run();
+    }
+
+    private static string ResolveStateSerializationExecutablePath(Configuration configuration) {
+        if (!configuration.ShellBootstrap) {
+            return configuration.Exe;
+        }
+
+        string? processPath = Environment.ProcessPath;
+        if (!string.IsNullOrWhiteSpace(processPath)) {
+            return processPath;
+        }
+
+        string assemblyLocation = typeof(Spice86DependencyInjection).Assembly.Location;
+        if (!string.IsNullOrWhiteSpace(assemblyLocation)) {
+            return assemblyLocation;
+        }
+
+        throw new InvalidOperationException("Unable to resolve a host executable path for shell bootstrap startup.");
     }
 
     private static void SetLoggingLevel(LoggerService loggerService, Configuration configuration) {

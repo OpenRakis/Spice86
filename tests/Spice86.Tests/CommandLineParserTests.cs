@@ -96,7 +96,7 @@ public class CommandLineParserTests {
     }
 
     [Fact]
-    public void ParseCommandLine_ShouldReturnNullWhenRequiredOptionMissing() {
+    public void ParseCommandLine_WithoutExe_SelectsShellBootstrap() {
         // Arrange
         string[] args = ["--Debug"];
 
@@ -104,7 +104,11 @@ public class CommandLineParserTests {
         Configuration? configuration = Parse(args);
 
         // Assert
-        configuration.Should().BeNull();
+        configuration.Should().NotBeNull();
+        Configuration nonNullConfiguration = configuration ?? throw new InvalidOperationException("Configuration should not be null.");
+        nonNullConfiguration.Exe.Should().BeEmpty();
+        nonNullConfiguration.ShellBootstrap.Should().BeTrue();
+        nonNullConfiguration.Debug.Should().BeTrue();
     }
 
     [Fact]

@@ -30,15 +30,18 @@ public class CommandLineParser {
 
         SpectreConfigurationCommand.LastParsedConfiguration = null;
         CommandApp<SpectreConfigurationCommand> commandApp = new();
-
         int exitCode = commandApp.Run(reducedArgs);
         Configuration? initialConfig = SpectreConfigurationCommand.LastParsedConfiguration;
-        if ((exitCode != 0) || (initialConfig is null) || string.IsNullOrWhiteSpace(initialConfig.Exe)) {
+
+        if ((exitCode != 0) || (initialConfig is null)) {
             return null;
         }
 
-        initialConfig.Exe = ParseExePath(initialConfig.Exe);
-        initialConfig.CDrive ??= Path.GetDirectoryName(initialConfig.Exe);
+        initialConfig.ShellBootstrap = string.IsNullOrWhiteSpace(initialConfig.Exe);
+        if (!string.IsNullOrWhiteSpace(initialConfig.Exe)) {
+            initialConfig.Exe = ParseExePath(initialConfig.Exe);
+            initialConfig.CDrive ??= Path.GetDirectoryName(initialConfig.Exe);
+        }
         initialConfig.ExpectedChecksumValue = string.IsNullOrWhiteSpace(initialConfig.ExpectedChecksum) ? Array.Empty<byte>() : ConvertUtils.HexToByteArray(initialConfig.ExpectedChecksum);
         initialConfig.OverrideSupplier = ParseFunctionInformationSupplierClassName(initialConfig.OverrideSupplierClassName);
         initialConfig.ExeArgs = exeArgs;

@@ -16,7 +16,7 @@ using System.Reflection;
 using System.Threading;
 
 internal sealed class McpHttpHost : IDisposable {
-    private static readonly TimeSpan ShutdownJoinTimeout = TimeSpan.FromMilliseconds(25);
+    private static readonly TimeSpan ShutdownJoinTimeout = TimeSpan.FromSeconds(2);
     private WebApplication? _app;
     private Thread? _serverThread;
     private readonly ILoggerService _loggerService;
@@ -111,10 +111,12 @@ internal sealed class McpHttpHost : IDisposable {
 
         if (_app != null) {
             _app.Lifetime.StopApplication();
+            ((IDisposable)_app).Dispose();
             if (_serverThread is { IsAlive: true }) {
                 _serverThread.Join(ShutdownJoinTimeout);
             }
             _serverThread = null;
+            _app = null;
         }
         _mcpFileLogger?.Dispose();
         _mcpFileLogger = null;

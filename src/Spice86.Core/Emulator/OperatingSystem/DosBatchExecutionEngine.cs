@@ -17,6 +17,8 @@ using System.Text;
 
 internal sealed partial class DosBatchExecutionEngine {
     private const string AutoExecPath = "Z:\\AUTOEXEC.BAT";
+    internal const string CommandComPath = "Z:\\COMMAND.COM";
+    internal const string ShellPathValue = "Z:\\";
 
     private readonly DosFileManager _dosFileManager;
     private readonly IBatchDisplayCommandHandler _displayCommandHandler;
@@ -35,6 +37,8 @@ internal sealed partial class DosBatchExecutionEngine {
     private bool _stdoutRedirected;
     private bool _stderrRedirected;
     private bool _echoEnabled = true;
+    private bool _interactiveShellEnabled;
+    private bool _shellExitRequested;
     private byte _lastExitCode;
     private DateTime _currentDateTime;
 
@@ -59,33 +63,50 @@ internal sealed partial class DosBatchExecutionEngine {
         _currentDateTime = DateTime.Now;
     }
 
-    internal void ConfigureHostStartupProgram(string requestedProgramDosPath, string commandTail) {
-        string line = BuildCallLine(requestedProgramDosPath, commandTail);
+    internal void ConfigureStartupSession(string requestedProgramDosPath, string commandTail,
+        bool interactiveShellEnabled) {
+        SyncCommandComToMemoryDrive();
+        _interactiveShellEnabled = interactiveShellEnabled;
+        _shellExitRequested = false;
+
+        string[] startupLines = BuildStartupLines(requestedProgramDosPath, commandTail);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: ConfigureHostStartupProgram program={Program} tail={Tail} generatedLine={Line}",
-                requestedProgramDosPath, commandTail, line);
+            string joinedLines = string.Join(" | ", startupLines);
+            _loggerService.Debug("BATCH: ConfigureStartupSession program={Program} tail={Tail} lines={Lines}",
+                requestedProgramDosPath, commandTail, joinedLines);
         }
-        _zDriveFiles[AutoExecPath] = [line];
-        SyncAutoexecBatToMemoryDrive([line]);
+        _zDriveFiles[AutoExecPath] = startupLines;
+        SyncAutoexecBatToMemoryDrive(startupLines);
         _batchFileContexts.Clear();
     }
 
-    internal bool TryStart(out LaunchRequest launchRequest) {
+    internal bool StartSession(out LaunchRequest launchRequest) {
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: TryStart - beginning batch execution via AUTOEXEC.BAT");
+            _loggerService.Debug("BATCH: StartSession - beginning shell startup via AUTOEXEC.BAT");
         }
         _batchFileContexts.Clear();
         _lastExitCode = 0;
-        return TryExecuteCommandLine($"CALL {AutoExecPath}", out launchRequest);
+        _shellExitRequested = false;
+
+        if (TryExecuteCommandLine($"CALL {AutoExecPath}", out launchRequest)) {
+            return true;
+        }
+
+        return RunInteractiveSession(out launchRequest);
     }
 
-    internal bool TryContinue(ushort lastChildReturnCode, out LaunchRequest launchRequest) {
+    internal bool ContinueSession(ushort lastChildReturnCode, out LaunchRequest launchRequest) {
         _lastExitCode = (byte)(lastChildReturnCode & 0x00FF);
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: TryContinue lastChildReturnCode={ReturnCode} exitCode={ExitCode} contextDepth={Depth}",
+            _loggerService.Debug("BATCH: ContinueSession lastChildReturnCode={ReturnCode} exitCode={ExitCode} contextDepth={Depth}",
                 lastChildReturnCode, _lastExitCode, _batchFileContexts.Count);
         }
-        return TryPump(out launchRequest);
+
+        if (TryPump(out launchRequest)) {
+            return true;
+        }
+
+        return RunInteractiveSession(out launchRequest);
     }
 
     internal bool ApplyRedirectionForLaunch(LaunchRequest launchRequest) {
@@ -149,6 +170,92 @@ internal sealed partial class DosBatchExecutionEngine {
         _dosFileManager.OpenFiles[handle] = savedHandle;
         savedHandle = null;
         isRedirected = false;
+    }
+
+    private static string[] BuildStartupLines(string requestedProgramDosPath, string commandTail) {
+        if (string.IsNullOrWhiteSpace(requestedProgramDosPath)) {
+            return Array.Empty<string>();
+        }
+
+        string line = BuildCallLine(requestedProgramDosPath, commandTail);
+        return [line];
+    }
+
+    private bool RunInteractiveSession(out LaunchRequest launchRequest) {
+        launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
+
+        if (!_interactiveShellEnabled) {
+            return false;
+        }
+
+        while (!_shellExitRequested) {
+            WriteInteractivePrompt();
+            string commandLine = ReadInteractiveCommandLine();
+            if (_shellExitRequested) {
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(commandLine)) {
+                continue;
+            }
+
+            if (TryExecuteCommandLine(commandLine, out launchRequest)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private string ReadInteractiveCommandLine() {
+        VirtualFileBase? input = _dosFileManager.OpenFiles[(ushort)DosStandardHandle.Stdin];
+        if (input == null) {
+            _shellExitRequested = true;
+            return string.Empty;
+        }
+
+        List<byte> commandBytes = new();
+        byte[] buffer = new byte[1];
+        while (true) {
+            int readCount = input.Read(buffer, 0, 1);
+            if (readCount < 1) {
+                _shellExitRequested = true;
+                return string.Empty;
+            }
+
+            byte value = buffer[0];
+            if (value == 0x0D || value == 0x0A) {
+                return Encoding.ASCII.GetString(commandBytes.ToArray());
+            }
+
+            if (value == 0x08) {
+                if (commandBytes.Count > 0) {
+                    commandBytes.RemoveAt(commandBytes.Count - 1);
+                }
+                continue;
+            }
+
+            if (value == 0x00 || value == 0xE0) {
+                int extendedReadCount = input.Read(buffer, 0, 1);
+                if (extendedReadCount < 1) {
+                    return Encoding.ASCII.GetString(commandBytes.ToArray());
+                }
+                continue;
+            }
+
+            commandBytes.Add(value);
+        }
+    }
+
+    private void WriteInteractivePrompt() {
+        char driveLetter = _driveManager.CurrentDrive.DriveLetter;
+        DosFileOperationResult result = _dosFileManager.GetCurrentDir(0, out string currentDirectory);
+        string prompt = $"{driveLetter}:\\>";
+        if (!result.IsError && currentDirectory.Length > 0) {
+            prompt = $"{driveLetter}:\\{currentDirectory}>";
+        }
+
+        WriteToStandardOutput(prompt);
     }
 
     private bool TryPump(out LaunchRequest launchRequest) {
@@ -361,6 +468,15 @@ internal sealed partial class DosBatchExecutionEngine {
         string content = contentBuilder.ToString().Replace("\r\n", "\n").Replace("\n", "\r\n");
         byte[] bytes = Encoding.ASCII.GetBytes(content);
         zDrive.AddFile("AUTOEXEC.BAT", bytes);
+    }
+
+    private void SyncCommandComToMemoryDrive() {
+        if (!_driveManager.TryGetMemoryDrive('Z', out MemoryDrive? zDrive)) {
+            return;
+        }
+
+        byte[] commandComBytes = InternalBatchProgramBuilder.BuildCommandComProgramBytes();
+        zDrive.AddFile("COMMAND.COM", commandComBytes);
     }
 
 }

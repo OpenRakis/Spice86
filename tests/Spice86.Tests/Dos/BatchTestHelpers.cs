@@ -2,7 +2,10 @@
 
 using FluentAssertions;
 
+using Spice86.Audio.Filters;
+using Spice86.Core.CLI;
 using Spice86.Core.Emulator;
+using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Shared.Utils;
 using Spice86.Tests.Utility;
@@ -37,6 +40,17 @@ internal static class BatchTestHelpers {
         }
 
         return cells;
+    }
+
+    internal static char[] RunShellSessionAndCaptureVideoCells(string cDrivePath, string executablePath,
+        int cellCount, ushort[] keyCodes) {
+        Configuration configuration = CreateShellConfiguration(cDrivePath, executablePath);
+        using Spice86DependencyInjection spice86 = new(configuration);
+
+        EnqueueKeyboardInput(spice86, keyCodes);
+        spice86.ProgramExecutor.Run();
+
+        return ReadVideoCells(spice86, cellCount);
     }
 
     internal static char RunAndCaptureVideoCell(string executablePath, string cDrivePath,
@@ -136,6 +150,48 @@ internal static class BatchTestHelpers {
         for (int i = 0; i < expectedChars.Length; i++) {
             cells[i].Should().Be(expectedChars[i], $"video cell {i} should match");
         }
+    }
+
+    internal static Configuration CreateShellConfiguration(string cDrivePath, string executablePath) {
+        return new Configuration {
+            Exe = executablePath,
+            ShellBootstrap = string.IsNullOrWhiteSpace(executablePath),
+            ReturnToShellPromptAfterStartupProgramExit = true,
+            ExpectedChecksumValue = Array.Empty<byte>(),
+            InitializeDOS = true,
+            ProvidedAsmHandlersSegment = 0xF000,
+            ProgramEntryPointSegment = 0x170,
+            TimeMultiplier = 0,
+            HeadlessMode = HeadlessType.Minimal,
+            AudioEngine = AudioEngine.Dummy,
+            FailOnUnhandledPort = false,
+            A20Gate = false,
+            Xms = false,
+            Ems = false,
+            CDrive = cDrivePath,
+            RecordedDataDirectory = cDrivePath,
+            SilencedLogs = true,
+            HttpApiPort = 0,
+            InstructionTimeScale = 333333,
+        };
+    }
+
+    private static void EnqueueKeyboardInput(Spice86DependencyInjection spice86, ushort[] keyCodes) {
+        BiosKeyboardBuffer buffer = spice86.Machine.BiosKeyboardInt9Handler.BiosKeyboardBuffer;
+        for (int i = 0; i < keyCodes.Length; i++) {
+            bool queued = buffer.EnqueueKeyCode(keyCodes[i]);
+            queued.Should().BeTrue();
+        }
+    }
+
+    private static char[] ReadVideoCells(Spice86DependencyInjection spice86, int cellCount) {
+        char[] cells = new char[cellCount];
+        for (int i = 0; i < cellCount; i++) {
+            uint videoAddress = MemoryUtils.ToPhysicalAddress(0xB800, (ushort)(i * 2));
+            cells[i] = (char)spice86.Machine.Memory.UInt8[videoAddress];
+        }
+
+        return cells;
     }
 
     private static string WriteStartBatchScript(string cDrivePath, string script) {

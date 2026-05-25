@@ -10,6 +10,10 @@ using System.Text;
 internal static class InternalBatchProgramBuilder {
     private const ushort ComOrigin = 0x100;
 
+    internal static byte[] BuildCommandComProgramBytes() {
+        return [0xB8, 0x00, 0x4C, 0xCD, 0x21];
+    }
+
     internal static LaunchRequest BuildPauseLaunchRequest(CommandRedirection redirection) {
         byte[] promptBytes = Encoding.ASCII.GetBytes("Press any key to continue . . .\r\n$");
 

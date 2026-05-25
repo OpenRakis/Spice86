@@ -33,50 +33,90 @@ internal class DosProgramLoader : DosFileLoader {
         // Ensure root COMMAND.COM PSP exists before loading any programs
         _processManager.CreateRootCommandComPsp();
 
-        // Determine C drive base path
-        string? cDrive = _configuration.CDrive;
-
-        if (string.IsNullOrWhiteSpace(cDrive)) {
-            cDrive = Path.GetDirectoryName(file) ?? "C:\\";
-        }
-
-        // Convert host file path to DOS path relative to C drive
-        string absoluteDosPath;
-
-        if (file.Length >= cDrive.Length) {
-            absoluteDosPath = $"C:{file[cDrive.Length..]}";
-        } else {
-            string fileName = Path.GetFileName(file);
-            absoluteDosPath = $"C:{fileName}";
-        }
-
+        string cDrive = ResolveStartupDriveBasePath(file);
+        string requestedProgramDosPath = ResolveStartupProgramDosPath(file, cDrive);
         string commandTail = arguments ?? string.Empty;
-        _processManager.BatchExecutionEngine.ConfigureHostStartupProgram(absoluteDosPath, commandTail);
+        bool interactiveShellEnabled = string.IsNullOrWhiteSpace(requestedProgramDosPath) ||
+            _configuration.ReturnToShellPromptAfterStartupProgramExit;
+        _processManager.BatchExecutionEngine.ConfigureStartupSession(requestedProgramDosPath, commandTail,
+            interactiveShellEnabled);
 
-        DosExecParameterBlock paramBlock = new(new ByteArrayReaderWriter(new byte[DosExecParameterBlock.Size]), 0);
-        if (_processManager.BatchExecutionEngine.TryStart(out LaunchRequest launchRequest)) {
-            if (!_processManager.BatchExecutionEngine.ApplyRedirectionForLaunch(launchRequest)) {
+        if (string.IsNullOrWhiteSpace(requestedProgramDosPath)) {
+            DosExecResult commandComLoadResult = _processManager.LoadInitialCommandComShell();
+            if (!commandComLoadResult.Success) {
+                _state.AX = (ushort)commandComLoadResult.ErrorCode;
                 _state.IsRunning = false;
-                return File.ReadAllBytes(file);
+                return Array.Empty<byte>();
+            }
+
+            return InternalBatchProgramBuilder.BuildCommandComProgramBytes();
+        }
+
+        return LoadStartupShellSession();
+    }
+
+    private byte[] LoadStartupShellSession() {
+        DosExecParameterBlock paramBlock = new(new ByteArrayReaderWriter(new byte[DosExecParameterBlock.Size]), 0);
+        _processManager.MarkRootShellSessionStarted();
+        bool hasLaunchRequest = _processManager.BatchExecutionEngine.StartSession(out LaunchRequest launchRequest);
+        while (hasLaunchRequest) {
+            if (!_processManager.BatchExecutionEngine.ApplyRedirectionForLaunch(launchRequest)) {
+                _processManager.LastChildReturnCode = BuildCriticalErrorReturnCode(DosErrorCode.PathNotFound);
+                hasLaunchRequest = _processManager.BatchExecutionEngine.ContinueSession(_processManager.LastChildReturnCode, out launchRequest);
+                continue;
             }
 
             DosExecResult result = LoadLaunchRequest(launchRequest, paramBlock);
+            if (result.Success) {
+                string? launchedHostPath = GetHostPathForLaunchedProgram(launchRequest);
+                if (!string.IsNullOrWhiteSpace(launchedHostPath) && File.Exists(launchedHostPath)) {
+                    return File.ReadAllBytes(launchedHostPath);
+                }
 
-            if (!result.Success) {
-                _processManager.BatchExecutionEngine.RestoreStandardHandlesAfterLaunch();
-                _state.IsRunning = false;
-                return File.ReadAllBytes(file);
+                return Array.Empty<byte>();
             }
 
-            string? launchedHostPath = GetHostPathForLaunchedProgram(launchRequest);
-            if (!string.IsNullOrWhiteSpace(launchedHostPath) && File.Exists(launchedHostPath)) {
-                return File.ReadAllBytes(launchedHostPath);
-            }
-        } else {
-            _state.IsRunning = false;
+            _processManager.BatchExecutionEngine.RestoreStandardHandlesAfterLaunch();
+            _processManager.LastChildReturnCode = BuildCriticalErrorReturnCode(result.ErrorCode);
+            hasLaunchRequest = _processManager.BatchExecutionEngine.ContinueSession(_processManager.LastChildReturnCode, out launchRequest);
         }
 
-        return File.ReadAllBytes(file);
+        _state.AX = (ushort)(_processManager.LastChildReturnCode & 0x00FF);
+        _state.IsRunning = false;
+        return Array.Empty<byte>();
+    }
+
+    private string ResolveStartupDriveBasePath(string file) {
+        string? configuredDrive = _configuration.CDrive;
+        if (!string.IsNullOrWhiteSpace(configuredDrive)) {
+            return configuredDrive;
+        }
+
+        if (!string.IsNullOrWhiteSpace(file)) {
+            string? fileDirectory = Path.GetDirectoryName(file);
+            if (!string.IsNullOrWhiteSpace(fileDirectory)) {
+                return fileDirectory;
+            }
+        }
+
+        return Environment.CurrentDirectory;
+    }
+
+    private static string ResolveStartupProgramDosPath(string file, string cDrive) {
+        if (string.IsNullOrWhiteSpace(file)) {
+            return string.Empty;
+        }
+
+        if (file.Length >= cDrive.Length) {
+            return $"C:{file[cDrive.Length..]}";
+        }
+
+        string fileName = Path.GetFileName(file);
+        return $"C:{fileName}";
+    }
+
+    private static ushort BuildCriticalErrorReturnCode(DosErrorCode errorCode) {
+        return (ushort)(((ushort)DosTerminationType.CriticalError << 8) | (byte)errorCode);
     }
 
     protected virtual DosExecResult LoadLaunchRequest(LaunchRequest launchRequest,
