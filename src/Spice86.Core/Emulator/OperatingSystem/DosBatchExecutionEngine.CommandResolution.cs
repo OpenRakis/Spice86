@@ -9,7 +9,8 @@ using System.IO;
 
 internal sealed partial class DosBatchExecutionEngine {
     private static string BuildCallLine(string requestedProgramDosPath, string commandTail) {
-        string escapedProgram = EscapeIfNeeded(requestedProgramDosPath);
+        string normalizedProgramPath = NormalizeDosPath(requestedProgramDosPath);
+        string escapedProgram = EscapeIfNeeded(normalizedProgramPath);
         string[] parsedArguments = ParseArguments(commandTail);
         if (parsedArguments.Length == 0) {
             return $"CALL {escapedProgram}";
