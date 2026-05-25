@@ -84,8 +84,10 @@ public class VgaRom : IMemoryDevice {
     /// <inheritdoc/>
     public bool TryGetSpan(out uint startAddress, out Span<byte> span, MemoryAccess access) {
         // Only allow write access to VGA ROM if no read/write access is requested (bypass mode).
-        if ((access & MemoryAccess.ReadWrite) == MemoryAccess.None) {
-            return MemoryDeviceUtils.TryGetSpan(_storage, out startAddress, out span);
+        if ((access & MemoryAccess.ReadWrite) == MemoryAccess.None
+            && MemoryDeviceUtils.TryGetSpan(_storage, out _, out span)) {
+            startAddress = BaseAddress;
+            return true;
         }
 
         startAddress = 0;
@@ -95,8 +97,10 @@ public class VgaRom : IMemoryDevice {
 
     /// <inheritdoc/>
     public bool TryGetSpan(out uint startAddress, out ReadOnlySpan<byte> span, MemoryAccess access) {
-        if (!access.HasFlag(MemoryAccess.Write)) {
-            return MemoryDeviceUtils.TryGetSpan(_storage, out startAddress, out span);
+        if ((access & MemoryAccess.ReadWrite) == MemoryAccess.None
+            && MemoryDeviceUtils.TryGetSpan(_storage, out _, out span)) {
+            startAddress = BaseAddress;
+            return true;
         }
 
         startAddress = 0;
@@ -108,7 +112,10 @@ public class VgaRom : IMemoryDevice {
     public bool TryGetSpan(uint startAddress, out Span<byte> span, MemoryAccess access) {
         // Only allow write access to VGA ROM if no read/write access is requested (bypass mode).
         if ((access & MemoryAccess.ReadWrite) == MemoryAccess.None) {
-            return MemoryDeviceUtils.TryGetSpan(_storage, startAddress, out span);
+            long romAddress = (long)startAddress - BaseAddress;
+            if (romAddress >= 0) {
+                return MemoryDeviceUtils.TryGetSpan(_storage, (uint)romAddress, out span);
+            }
         }
 
         span = [];
@@ -118,7 +125,10 @@ public class VgaRom : IMemoryDevice {
     /// <inheritdoc/>
     public bool TryGetSpan(uint startAddress, out ReadOnlySpan<byte> span, MemoryAccess access) {
         if (!access.HasFlag(MemoryAccess.Write)) {
-            return MemoryDeviceUtils.TryGetSpan(_storage, startAddress, out span);
+            long romAddress = (long)startAddress - BaseAddress;
+            if (romAddress >= 0) {
+                return MemoryDeviceUtils.TryGetSpan(_storage, (uint)romAddress, out span);
+            }
         }
 
         span = [];
@@ -129,7 +139,10 @@ public class VgaRom : IMemoryDevice {
     public bool TryGetSpan(uint startAddress, int length, out Span<byte> span, MemoryAccess access) {
         // Only allow write access to VGA ROM if no read/write access is requested (bypass mode).
         if ((access & MemoryAccess.ReadWrite) == MemoryAccess.None) {
-            return MemoryDeviceUtils.TryGetSpan(_storage, startAddress, length, out span);
+            long romAddress = (long)startAddress - BaseAddress;
+            if (romAddress >= 0) {
+                return MemoryDeviceUtils.TryGetSpan(_storage, (uint)romAddress, length, out span);
+            }
         }
 
         startAddress = 0;
@@ -140,7 +153,10 @@ public class VgaRom : IMemoryDevice {
     /// <inheritdoc/>
     public bool TryGetSpan(uint startAddress, int length, out ReadOnlySpan<byte> span, MemoryAccess access) {
         if (!access.HasFlag(MemoryAccess.Write)) {
-            return MemoryDeviceUtils.TryGetSpan(_storage, startAddress, length, out span);
+            long romAddress = (long)startAddress - BaseAddress;
+            if (romAddress >= 0) {
+                return MemoryDeviceUtils.TryGetSpan(_storage, (uint)romAddress, length, out span);
+            }
         }
 
         startAddress = 0;

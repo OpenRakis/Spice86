@@ -48,9 +48,11 @@ public class EmmRegister : IMemoryDevice {
 
     /// <inheritdoc/>
     public bool TryGetSpan(uint startAddress, int length, out Span<byte> span, MemoryAccess access) {
-        long pageAddress = (long)startAddress - Offset;
-        if (pageAddress >= 0 && length >= 0 && length <= ExpandedMemoryManager.EmmPageSize - pageAddress) {
-            return PhysicalPage.TryGetSpan((uint)pageAddress, length, out span, access);
+        if (length >= 0) {
+            long pageAddress = (long)startAddress - Offset;
+            if (pageAddress >= 0 && length <= ExpandedMemoryManager.EmmPageSize - pageAddress) {
+                return PhysicalPage.TryGetSpan((uint)pageAddress, length, out span, access);
+            }
         }
 
         span = [];
@@ -59,9 +61,11 @@ public class EmmRegister : IMemoryDevice {
 
     /// <inheritdoc/>
     public bool TryGetSpan(uint startAddress, int length, out ReadOnlySpan<byte> span, MemoryAccess access) {
-        long pageAddress = (long)startAddress - Offset;
-        if (pageAddress >= 0 && length >= 0 && length <= ExpandedMemoryManager.EmmPageSize - pageAddress) {
-            return PhysicalPage.TryGetSpan((uint)pageAddress, length, out span, access);
+        if (length >= 0) {
+            long pageAddress = (long)startAddress - Offset;
+            if (pageAddress >= 0 && length <= ExpandedMemoryManager.EmmPageSize - pageAddress) {
+                return PhysicalPage.TryGetSpan((uint)pageAddress, length, out span, access);
+            }
         }
 
         span = [];

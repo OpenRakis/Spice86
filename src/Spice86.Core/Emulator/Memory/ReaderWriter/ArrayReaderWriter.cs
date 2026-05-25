@@ -44,7 +44,7 @@ public class ArrayReaderWriter<T> : IReaderWriter<T> {
         long lengthRemaining = array.Length - startAddress;
         if (lengthRemaining >= 0) {
             // Cast from long to int is safe because length remaining is in the range 0..array.Length and guaranteed
-            // that adding the start address to it will not go out of bounds of array.
+            // that adding the start address to it will not go out of bounds of array).
             span = MemoryMarshal.CreateSpan(
                 ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(array), startAddress), (int)lengthRemaining);
             return true;
@@ -60,8 +60,8 @@ public class ArrayReaderWriter<T> : IReaderWriter<T> {
         long lengthRemaining = array.Length - startAddress;
         if (lengthRemaining >= 0) {
             // Cast from long to int is safe because length remaining is in the range 0..array.Length and guaranteed
-            // that adding the start address to it will not go out of bounds of array.
-            span = MemoryMarshal.CreateSpan(
+            // that adding the start address to it will not go out of bounds of array).
+            span = MemoryMarshal.CreateReadOnlySpan(
                 ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(array), startAddress), (int)lengthRemaining);
             return true;
         }
@@ -95,7 +95,7 @@ public class ArrayReaderWriter<T> : IReaderWriter<T> {
             // CreateSpan is safe because of above length check (length will always be in the range 0..array.Length and
             // guaranteed that adding the start address to it will not go out of bounds of array).
             Debug.Assert((uint)length <= (uint)array.Length);
-            span = MemoryMarshal.CreateSpan(
+            span = MemoryMarshal.CreateReadOnlySpan(
                 ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(array), startAddress), length);
             return true;
         }
