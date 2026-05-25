@@ -87,6 +87,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     private readonly Stack _stack;
     private readonly DosSwappableDataArea _sda;
     private volatile string _currentProgramName = string.Empty;
+    private bool _guestBooted;
     // In FreeDOS this is 18 (sizeof(iregs) = 9 GP registers pushed by PUSH$ALL).
     // Spice86's CfgCpu INT only pushes FLAGS+CS+IP (6 bytes) with no GP register frame,
     // so no subtraction is needed. A non-zero value corrupts the parent's saved SP,
@@ -157,7 +158,17 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         new(_memory, MemoryUtils.ToPhysicalAddress(_sda.CurrentProgramSegmentPrefix, 0));
 
     /// <inheritdoc />
-    public string CurrentProgramName => _currentProgramName;
+    public string CurrentProgramName {
+        get {
+            if (_guestBooted) {
+                return string.Empty;
+            }
+
+            return _currentProgramName;
+        }
+    }
+
+    internal bool IsGuestBooted => _guestBooted;
 
     private string GetProgramNameFromEnvironment(ushort pspSegment, ushort environmentSegment) {
         if (pspSegment == CommandComSegment) {
@@ -173,6 +184,14 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     public void TrackResidentBlock(DosMemoryControlBlock block) {
         ushort mcbSegment = (ushort)(block.DataBlockSegment - 1);
         _pendingResidentBlocks.Push(new ResidentBlockInfo(mcbSegment));
+    }
+
+    internal void NotifyGuestBooting() {
+        _guestBooted = true;
+        _commandShell.ResetStartupSession();
+        _commandShell.RestoreStandardHandlesAfterLaunch();
+        _currentProgramName = string.Empty;
+        LastChildReturnCode = 0;
     }
 
     /// <summary>
@@ -291,6 +310,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     /// Creates the root COMMAND.COM PSP that acts as the parent for all programs.
     /// </summary>
     public DosProgramSegmentPrefix CreateRootCommandComPsp() {
+        _guestBooted = false;
         _commandShell.ResetStartupSession();
         _sda.CurrentProgramSegmentPrefix = CommandComSegment;
         DosProgramSegmentPrefix rootPsp = GetCurrentPsp();

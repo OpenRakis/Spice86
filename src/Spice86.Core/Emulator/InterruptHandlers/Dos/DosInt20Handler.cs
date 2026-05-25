@@ -21,7 +21,7 @@ public class DosInt20Handler : InterruptHandler {
     /// <param name="state">The CPU state.</param>
     /// <param name="dosInt21Handler">The INT21H is used to exit normally without a process exit code.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DosInt20Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, 
+    public DosInt20Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
         Stack stack, State state, DosInt21Handler dosInt21Handler, ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _dosInt21Handler = dosInt21Handler;
@@ -32,10 +32,17 @@ public class DosInt20Handler : InterruptHandler {
 
     /// <inheritdoc />
     public override void Run() {
+        if (_dosInt21Handler.ProcessManager.IsGuestBooted) {
+            if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+                LoggerService.Warning("INT 20h ignored because a guest boot target already replaced DOS.");
+            }
+            return;
+        }
+
         if (LoggerService.IsEnabled(LogEventLevel.Information)) {
             LoggerService.Information("INT 20h: PROGRAM TERMINATE (legacy CP/M INT20H handler)");
         }
-        
+
         // FreeDOS calls INT 21h AH=0 to legacy CP/M programs termination
         State.AH = 0x00;
         _dosInt21Handler.QuitWithExitCode();

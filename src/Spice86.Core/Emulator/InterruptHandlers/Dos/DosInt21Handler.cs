@@ -1777,6 +1777,13 @@ public class DosInt21Handler : InterruptHandler {
     /// <inheritdoc />
     public override void Run() {
         byte operation = State.AH;
+        if (_dosProcessManager.IsGuestBooted) {
+            if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
+                LoggerService.Warning("INT 21h AH={Operation:X2} ignored because a guest boot target already replaced DOS.", operation);
+            }
+            return;
+        }
+
         Run(operation);
     }
 

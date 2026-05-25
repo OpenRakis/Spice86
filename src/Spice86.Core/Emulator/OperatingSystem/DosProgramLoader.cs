@@ -144,6 +144,8 @@ internal class DosProgramLoader : DosFileLoader {
         if (!_floppyBootService.TryBootFromFloppyImage(imageData, driveNumber, imagePath)) {
             return DosExecResult.Fail(DosErrorCode.InvalidDrive);
         }
+
+        _processManager.NotifyGuestBooting();
         return DosExecResult.SuccessExecute(_state.CS, _state.IP, _state.SS, _state.SP);
     }
 

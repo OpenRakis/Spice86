@@ -183,6 +183,9 @@ public sealed class ProgramExecutor : IDisposable {
             }
             byte[] fileContent = loader.LoadFile(executableFileName, configuration.ExeArgs);
             CheckSha256Checksum(fileContent, configuration.ExpectedChecksumValue);
+            if (loader is BiosLoader) {
+                int21Handler.ProcessManager.NotifyGuestBooting();
+            }
         } catch (IOException e) {
             string fileDescription = shellBootstrap && !hasRequestedExecutable ? "<interactive-shell>" : executableFileName;
             throw new UnrecoverableException($"Failed to read file {fileDescription}", e);
