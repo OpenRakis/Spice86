@@ -40,6 +40,8 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     private readonly PerformanceViewModel _performanceViewModel;
     private readonly IExceptionHandler _exceptionHandler;
     private readonly ICurrentProcessNameProvider _currentProcessNameProvider;
+    private IEmulatorRuntime? _emulatorRuntime;
+    private IMainWindowDisplay? _mainWindowDisplay;
 
     private McpStatusViewModel? _mcpStatusViewModel;
 
@@ -110,7 +112,6 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     public event EventHandler<MouseButtonEventArgs>? MouseButtonDown;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
     public event EventHandler<UIRenderEventArgs>? RenderScreen;
-    internal event EventHandler? CloseMainWindow;
 
     public sealed class MainWindowViewModelDependencies {
         public required SharedMouseData SharedMouseData { get; init; }
@@ -227,8 +228,6 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     [ObservableProperty] private Cursor? _cursor = Cursor.Default;
 
     [ObservableProperty] private WriteableBitmap? _bitmap;
-
-    internal event Action? InvalidateBitmap;
 
     internal void OnKeyDown(KeyEventArgs e) {
         if (_pauseHandler.IsPaused) {
@@ -438,12 +437,13 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         using ILockedFramebuffer pixels = Bitmap.Lock();
         UIRenderEventArgs uiRenderEventArgs = new UIRenderEventArgs(pixels.Address, pixels.RowBytes * pixels.Size.Height / 4);
         RenderScreen.Invoke(this, uiRenderEventArgs);
-        InvalidateBitmap?.Invoke();
+        _mainWindowDisplay?.InvalidateVideo();
     }
 
     internal void StartEmulator() {
-        if (string.IsNullOrWhiteSpace(Configuration.Exe) ||
-            string.IsNullOrWhiteSpace(Configuration.CDrive)) {
+        bool shellBootstrap = Configuration.ShellBootstrap || string.IsNullOrWhiteSpace(Configuration.Exe);
+        if (!shellBootstrap &&
+            (string.IsNullOrWhiteSpace(Configuration.Exe) || string.IsNullOrWhiteSpace(Configuration.CDrive))) {
             return;
         }
 
@@ -459,13 +459,19 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         StartEmulatorThread();
     }
 
+    internal void AttachEmulatorRuntime(IEmulatorRuntime emulatorRuntime) {
+        _emulatorRuntime = emulatorRuntime;
+    }
+
+    internal void AttachMainWindowDisplay(IMainWindowDisplay mainWindowDisplay) {
+        _mainWindowDisplay = mainWindowDisplay;
+    }
+
     public void Dispose() {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
     }
-
-    internal event Action? Disposing;
 
     private void Dispose(bool disposing) {
         if (!_disposed) {
@@ -487,7 +493,6 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
 
                 PlayCommand.Execute(null);
                 IsEmulatorRunning = false;
-                Disposing?.Invoke();
 
                 if (_emulatorThread?.IsAlive == true) {
                     _emulatorThread.Join();
@@ -537,16 +542,16 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         });
     }
 
-    public event Action? UserInterfaceInitialized;
-
     private void EmulatorThread() {
         try {
-            UserInterfaceInitialized?.Invoke();
+            IEmulatorRuntime emulatorRuntime = _emulatorRuntime ??
+                throw new InvalidOperationException("The emulator runtime must be attached before startup.");
+            emulatorRuntime.RunEmulatorToCompletion();
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                 _loggerService.Warning("Emulation exited. Closing main window...");
             }
 
-            _uiDispatcher.Post(() => CloseMainWindow?.Invoke(this, EventArgs.Empty));
+            _uiDispatcher.Post(() => _mainWindowDisplay?.CloseMainWindow());
         } catch (Exception e) {
             if (_loggerService.IsEnabled(LogEventLevel.Error)) {
                 _loggerService.Error(e, "An error occurred during execution");

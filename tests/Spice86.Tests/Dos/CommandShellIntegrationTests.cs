@@ -15,10 +15,12 @@ public sealed class CommandShellIntegrationTests {
     public void StartWithoutExecutable_ShowsPromptAndProcessesExit() {
         WithTempFile("shell_no_exe", tempDir => {
             // Arrange
-            char[] prompt = RunShellSessionAndCaptureVideoCells(tempDir, string.Empty, 4, ExitCommandKeys);
+            (char[] prompt, long cycles) = RunShellSessionAndCaptureVideoCellsAndCycles(tempDir, string.Empty, 4,
+                ExitCommandKeys);
 
             // Assert
             prompt.Should().Equal(['C', ':', '\\', '>']);
+            cycles.Should().BeGreaterThan(32);
         });
     }
 

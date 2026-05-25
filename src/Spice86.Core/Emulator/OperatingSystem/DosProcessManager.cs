@@ -47,6 +47,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     private readonly State _state;
     private readonly ILoggerService _loggerService;
     private readonly DosBatchExecutionEngine _batchExecutionEngine;
+    private readonly CommandShell _commandShell;
 
     private readonly Stack<ResidentBlockInfo> _pendingResidentBlocks = new();
 
@@ -55,11 +56,12 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     /// Follows FreeDOS convention: at 0x60, and with no PSP MCB.
     /// </summary>
     public const ushort CommandComSegment = 0x60;
+    internal const ushort RootEnvironmentSegment = CommandComSegment + 0x13;
+    internal const ushort RootEnvironmentParagraphs = 0x08;
     private const byte DefaultDosVersionMajor = 5;
     private const byte DefaultDosVersionMinor = 0;
     private const ushort FileTableOffset = 0x18;
     private const ushort Call5StubOffset = 0x50;
-    private const ushort RootEnvironmentParagraphOffset = 0x8;
     private const int JobFileTableLength = DosFileManager.MaxOpenFilesPerProcess;
     private const byte StandardFileHandleCount = 5;
     private const byte UnusedFileHandle = 0xFF;
@@ -85,7 +87,6 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     private readonly Stack _stack;
     private readonly DosSwappableDataArea _sda;
     private volatile string _currentProgramName = string.Empty;
-    private bool _rootShellSessionStarted;
     // In FreeDOS this is 18 (sizeof(iregs) = 9 GP registers pushed by PUSH$ALL).
     // Spice86's CfgCpu INT only pushes FLAGS+CS+IP (6 bytes) with no GP register frame,
     // so no subtraction is needed. A non-zero value corrupts the parent's saved SP,
@@ -139,6 +140,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
             batchDisplayCommandHandler,
             this,
             _loggerService);
+        _commandShell = new CommandShell(_batchExecutionEngine, _driveManager);
         _environmentVariables = new();
         _interruptVectorTable = new(memory);
 
@@ -183,6 +185,8 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     public ushort LastChildReturnCode { get; set; }
 
     internal DosBatchExecutionEngine BatchExecutionEngine => _batchExecutionEngine;
+
+    internal CommandShell CommandShell => _commandShell;
 
     /// <summary>
     /// Resolves a mounted image-backed drive letter to its currently active raw
@@ -287,7 +291,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     /// Creates the root COMMAND.COM PSP that acts as the parent for all programs.
     /// </summary>
     public DosProgramSegmentPrefix CreateRootCommandComPsp() {
-        _rootShellSessionStarted = false;
+        _commandShell.ResetStartupSession();
         _sda.CurrentProgramSegmentPrefix = CommandComSegment;
         DosProgramSegmentPrefix rootPsp = GetCurrentPsp();
 
@@ -340,7 +344,8 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         ResetFcb(rootPsp.FirstFileControlBlock);
         ResetFcb(rootPsp.SecondFileControlBlock);
         EnsureRootShellEnvironmentVariables();
-        InitializeRootEnvironment(rootPsp, CreateEnvironmentBlockForDosProgramPath(DosBatchExecutionEngine.CommandComPath));
+        InitializeRootEnvironment(rootPsp, CreateEnvironmentBlockForDosProgramPath(CommandShell.CommandComPath));
+        rootPsp.DosCommandTail.Command = DosCommandTail.PrepareCommandlineString(CommandShell.StartupCommandTail);
 
         _fileManager.SetDiskTransferAreaAddress(
             CommandComSegment, DosCommandTail.OffsetInPspSegment);
@@ -378,7 +383,8 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     /// <returns>EXEC result metadata indicating success, failure code, and entry register values.</returns>
     internal DosExecResult LoadInitialProgram(string programName, DosExecParameterBlock paramBlock,
         string commandTail, ushort environmentSegment) {
-        // Initial program has no caller - use 0:0 as placeholder. Parent is root COMMAND.COM so we halt on terminate anyway.
+        // Initial program has no caller - use 0:0 as placeholder. When it returns to the root shell,
+        // CommandShell decides whether to continue startup launch requests or enter the interactive shell.
         return LoadOrLoadAndExecuteInternal(programName, paramBlock, commandTail, DosExecLoadType.LoadAndExecute, environmentSegment, 0, 0);
     }
 
@@ -393,15 +399,20 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     }
 
     internal DosExecResult LoadInitialProgramFromBytes(byte[] comBytes, string programPath) {
+        return LoadInitialProgramFromBytes(comBytes, programPath, string.Empty);
+    }
+
+    internal DosExecResult LoadInitialProgramFromBytes(byte[] comBytes, string programPath, string commandTail) {
         DosExecParameterBlock paramBlock = new(new ByteArrayReaderWriter(new byte[DosExecParameterBlock.Size]), 0);
-        return HandleComFileLoading(paramBlock, string.Empty, DosExecLoadType.LoadAndExecute,
+        return HandleComFileLoading(paramBlock, commandTail, DosExecLoadType.LoadAndExecute,
             0, 0, 0, _sda.CurrentProgramSegmentPrefix,
             programPath, comBytes, null, _state.SS, (ushort)(_state.SP - IregsFrameSize));
     }
 
     internal DosExecResult LoadInitialCommandComShell() {
-        byte[] commandComBytes = InternalBatchProgramBuilder.BuildCommandComProgramBytes();
-        return LoadInitialProgramFromBytes(commandComBytes, DosBatchExecutionEngine.CommandComPath);
+        byte[] commandComBytes = _commandShell.GetProgramBytes();
+        return LoadInitialProgramFromBytes(commandComBytes, CommandShell.CommandComPath,
+            CommandShell.StartupCommandTail);
     }
 
     private DosExecResult LoadOrLoadAndExecuteInternal(string programName, DosExecParameterBlock paramBlock,
@@ -658,6 +669,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         // Store the return code for parent to retrieve via INT 21h AH=4Dh
         // Format: AH = termination type, AL = exit code
         LastChildReturnCode = (ushort)(((ushort)terminationType << 8) | exitCode);
+        string terminatingProgramName = _currentProgramName;
 
         ushort currentPspSegment = _sda.CurrentProgramSegmentPrefix;
         DosProgramSegmentPrefix currentPsp = GetCurrentPsp();
@@ -670,8 +682,6 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
             residentBlock = new DosMemoryControlBlock(_memory, MemoryUtils.ToPhysicalAddress(residentBlockInfo.McbSegment, 0));
         }
 
-        // Check if parent is the root COMMAND.COM PSP - if so, we shouldn't try to return to it
-        // because it has no valid stack or execution context. Instead, we halt like a normal program exit.
         bool parentIsRootCommandCom = parentPspSegment == CommandComSegment;
 
         // Close non-standard handles only when the process fully terminates; TSR keeps them resident
@@ -727,52 +737,40 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         _state.ES = parentPspSegment;
 
         if (parentIsRootCommandCom) {
-            _batchExecutionEngine.RestoreStandardHandlesAfterLaunch();
+            _commandShell.RestoreStandardHandlesAfterLaunch();
 
-            if (!ResumeShellSessionFromRoot()) {
-                // Halt emulation; COMMAND.COM has no execution context.
+            if (_commandShell.IsCommandComProgram(terminatingProgramName)) {
                 _state.AX = (ushort)(LastChildReturnCode & 0x00FF);
                 _state.IsRunning = false;
+                return;
             }
+
+            if (ContinueCommandShellStartupSession()) {
+                return;
+            }
+
+            if (!_commandShell.ShouldEnterInteractiveShellAfterStartup()) {
+                _state.AX = (ushort)(LastChildReturnCode & 0x00FF);
+                _state.IsRunning = false;
+                return;
+            }
+
+            DosExecResult commandComLoadResult = LoadInitialCommandComShell();
+            if (commandComLoadResult.Success) {
+                return;
+            }
+
+            _state.AX = (ushort)commandComLoadResult.ErrorCode;
+            _state.IsRunning = false;
         }
     }
 
-    internal bool StartRootShellSession() {
-        _rootShellSessionStarted = true;
-        bool hasLaunchRequest = _batchExecutionEngine.StartSession(out LaunchRequest launchRequest);
-        bool sessionLoadedProgram = AdvanceRootShellSession(hasLaunchRequest, launchRequest);
-        if (sessionLoadedProgram) {
-            return true;
-        }
-
-        _state.AX = (ushort)(LastChildReturnCode & 0x00FF);
-        _state.IsRunning = false;
-        return false;
-    }
-
-    internal void MarkRootShellSessionStarted() {
-        _rootShellSessionStarted = true;
-    }
-
-    private bool ResumeShellSessionFromRoot() {
-        bool hasLaunchRequest;
-        LaunchRequest launchRequest;
-
-        if (!_rootShellSessionStarted) {
-            _rootShellSessionStarted = true;
-            hasLaunchRequest = _batchExecutionEngine.StartSession(out launchRequest);
-        } else {
-            hasLaunchRequest = _batchExecutionEngine.ContinueSession(LastChildReturnCode, out launchRequest);
-        }
-
-        return AdvanceRootShellSession(hasLaunchRequest, launchRequest);
-    }
-
-    private bool AdvanceRootShellSession(bool hasLaunchRequest, LaunchRequest launchRequest) {
+    private bool ContinueCommandShellStartupSession() {
+        bool hasLaunchRequest = _commandShell.TryContinueStartupSession(LastChildReturnCode, out LaunchRequest launchRequest);
         while (hasLaunchRequest) {
-            if (!_batchExecutionEngine.ApplyRedirectionForLaunch(launchRequest)) {
+            if (!_commandShell.ApplyRedirectionForLaunch(launchRequest)) {
                 LastChildReturnCode = BuildCriticalErrorReturnCode(DosErrorCode.PathNotFound);
-                hasLaunchRequest = _batchExecutionEngine.ContinueSession(LastChildReturnCode, out launchRequest);
+                hasLaunchRequest = _commandShell.TryContinueStartupSession(LastChildReturnCode, out launchRequest);
                 continue;
             }
 
@@ -782,9 +780,9 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
                 return true;
             }
 
-            _batchExecutionEngine.RestoreStandardHandlesAfterLaunch();
+            _commandShell.RestoreStandardHandlesAfterLaunch();
             LastChildReturnCode = BuildCriticalErrorReturnCode(result.ErrorCode);
-            hasLaunchRequest = _batchExecutionEngine.ContinueSession(LastChildReturnCode, out launchRequest);
+            hasLaunchRequest = _commandShell.TryContinueStartupSession(LastChildReturnCode, out launchRequest);
         }
 
         return false;
@@ -992,9 +990,8 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     }
 
     private void InitializeRootEnvironment(DosProgramSegmentPrefix rootPsp, byte[] environmentBlock) {
-        // Root environment at fixed offset, outside MCB chain.
-        ushort environmentSegment = CommandComSegment + RootEnvironmentParagraphOffset;
-        int capacityBytes = (DosProgramSegmentPrefix.PspSizeInParagraphs - RootEnvironmentParagraphOffset) * 16;
+        ushort environmentSegment = RootEnvironmentSegment;
+        int capacityBytes = RootEnvironmentParagraphs * ParagraphSizeBytes;
         byte[] buffer = new byte[capacityBytes];
         Array.Copy(environmentBlock, buffer, Math.Min(environmentBlock.Length, capacityBytes));
         uint environmentAddress = MemoryUtils.ToPhysicalAddress(environmentSegment, 0);
@@ -1003,8 +1000,8 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     }
 
     private void EnsureRootShellEnvironmentVariables() {
-        _environmentVariables["PATH"] = DosBatchExecutionEngine.ShellPathValue;
-        _environmentVariables["COMSPEC"] = DosBatchExecutionEngine.CommandComPath;
+        _environmentVariables["PATH"] = CommandShell.ShellPathValue;
+        _environmentVariables["COMSPEC"] = CommandShell.CommandComPath;
     }
 
     private static ushort CalculateParagraphsNeeded(int lengthInBytes) {
@@ -1310,8 +1307,8 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     }
 
     private int GetEnvironmentCapacityBytes(ushort environmentSegment) {
-        if (environmentSegment == CommandComSegment + RootEnvironmentParagraphOffset) {
-            return (DosProgramSegmentPrefix.PspSizeInParagraphs - RootEnvironmentParagraphOffset) * ParagraphSizeBytes;
+        if (environmentSegment == RootEnvironmentSegment) {
+            return RootEnvironmentParagraphs * ParagraphSizeBytes;
         }
 
         ushort mcbSegment = (ushort)(environmentSegment - 1);

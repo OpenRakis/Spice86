@@ -38,7 +38,7 @@ internal class DosProgramLoader : DosFileLoader {
         string commandTail = arguments ?? string.Empty;
         bool shouldTerminateAfterStartupProgram = !string.IsNullOrWhiteSpace(requestedProgramDosPath) &&
             !_configuration.ShellBootstrap;
-        _processManager.BatchExecutionEngine.ConfigureStartupSession(requestedProgramDosPath, commandTail,
+        _processManager.CommandShell.ConfigureStartupSession(requestedProgramDosPath, commandTail,
             shouldTerminateAfterStartupProgram);
 
         if (string.IsNullOrWhiteSpace(requestedProgramDosPath)) {
@@ -49,7 +49,7 @@ internal class DosProgramLoader : DosFileLoader {
                 return Array.Empty<byte>();
             }
 
-            return InternalBatchProgramBuilder.BuildCommandComProgramBytes();
+            return _processManager.CommandShell.GetProgramBytes();
         }
 
         return LoadStartupShellSession();
@@ -57,12 +57,11 @@ internal class DosProgramLoader : DosFileLoader {
 
     private byte[] LoadStartupShellSession() {
         DosExecParameterBlock paramBlock = new(new ByteArrayReaderWriter(new byte[DosExecParameterBlock.Size]), 0);
-        _processManager.MarkRootShellSessionStarted();
-        bool hasLaunchRequest = _processManager.BatchExecutionEngine.StartSession(out LaunchRequest launchRequest);
+        bool hasLaunchRequest = _processManager.CommandShell.TryStartStartupSession(out LaunchRequest launchRequest);
         while (hasLaunchRequest) {
-            if (!_processManager.BatchExecutionEngine.ApplyRedirectionForLaunch(launchRequest)) {
+            if (!_processManager.CommandShell.ApplyRedirectionForLaunch(launchRequest)) {
                 _processManager.LastChildReturnCode = BuildCriticalErrorReturnCode(DosErrorCode.PathNotFound);
-                hasLaunchRequest = _processManager.BatchExecutionEngine.ContinueSession(_processManager.LastChildReturnCode, out launchRequest);
+                hasLaunchRequest = _processManager.CommandShell.TryContinueStartupSession(_processManager.LastChildReturnCode, out launchRequest);
                 continue;
             }
 
@@ -76,9 +75,9 @@ internal class DosProgramLoader : DosFileLoader {
                 return Array.Empty<byte>();
             }
 
-            _processManager.BatchExecutionEngine.RestoreStandardHandlesAfterLaunch();
+            _processManager.CommandShell.RestoreStandardHandlesAfterLaunch();
             _processManager.LastChildReturnCode = BuildCriticalErrorReturnCode(result.ErrorCode);
-            hasLaunchRequest = _processManager.BatchExecutionEngine.ContinueSession(_processManager.LastChildReturnCode, out launchRequest);
+            hasLaunchRequest = _processManager.CommandShell.TryContinueStartupSession(_processManager.LastChildReturnCode, out launchRequest);
         }
 
         _state.AX = (ushort)(_processManager.LastChildReturnCode & 0x00FF);

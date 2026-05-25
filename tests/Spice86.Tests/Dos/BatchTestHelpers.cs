@@ -44,13 +44,22 @@ internal static class BatchTestHelpers {
 
     internal static char[] RunShellSessionAndCaptureVideoCells(string cDrivePath, string executablePath,
         int cellCount, ushort[] keyCodes) {
+        (char[] cells, _) = RunShellSessionAndCaptureVideoCellsAndCycles(cDrivePath, executablePath, cellCount,
+            keyCodes);
+        return cells;
+    }
+
+    internal static (char[] VideoCells, long Cycles) RunShellSessionAndCaptureVideoCellsAndCycles(string cDrivePath,
+        string executablePath, int cellCount, ushort[] keyCodes) {
         Configuration configuration = CreateShellConfiguration(cDrivePath, executablePath);
         using Spice86DependencyInjection spice86 = new(configuration);
 
         EnqueueKeyboardInput(spice86, keyCodes);
         spice86.ProgramExecutor.Run();
 
-        return ReadVideoCells(spice86, cellCount);
+        char[] cells = ReadVideoCells(spice86, cellCount);
+        long cycles = spice86.Machine.CpuState.Cycles;
+        return (cells, cycles);
     }
 
     internal static char RunAndCaptureVideoCell(string executablePath, string cDrivePath,

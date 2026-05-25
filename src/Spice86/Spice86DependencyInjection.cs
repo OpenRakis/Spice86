@@ -69,7 +69,7 @@ using System.Reflection;
 /// <summary>
 /// Class responsible for compile-time dependency injection and runtime emulator lifecycle management
 /// </summary>
-public class Spice86DependencyInjection : IDisposable {
+public class Spice86DependencyInjection : IDisposable, IEmulatorRuntime {
     private readonly LoggerService _loggerService;
     public Machine Machine { get; }
     public ProgramExecutor ProgramExecutor { get; }
@@ -704,7 +704,6 @@ public class Spice86DependencyInjection : IDisposable {
             state,
             dos.DosInt21Handler,
             pauseHandler,
-            mainWindowViewModel,
             loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -742,7 +741,7 @@ public class Spice86DependencyInjection : IDisposable {
         ProgramExecutor = programExecutor;
         McpServices = emulatorMcpServices;
         _mcpHttpTransport = mcpHttpTransport;
-        ProgramExecutor.EmulationStopped += OnProgramExecutorEmulationStopped;
+        mainWindowViewModel?.AttachEmulatorRuntime(this);
 
         if (mainWindow != null && uiDispatcher != null &&
             hostStorageProvider != null && textClipboard != null) {
@@ -818,7 +817,12 @@ public class Spice86DependencyInjection : IDisposable {
             _loggerService.Information("Finally starting headless mode...");
         }
 
+        RunEmulatorToCompletion();
+    }
+
+    public void RunEmulatorToCompletion() {
         ProgramExecutor.Run();
+        DisposeMachineAfterRun();
     }
 
     private static string ResolveStateSerializationExecutablePath(Configuration configuration) {
@@ -904,7 +908,6 @@ public class Spice86DependencyInjection : IDisposable {
     private void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
-                ProgramExecutor.EmulationStopped -= OnProgramExecutorEmulationStopped;
                 _debuggerTabRegistry.Dispose();
                 _mcpHttpTransport?.Dispose();
 
@@ -923,10 +926,6 @@ public class Spice86DependencyInjection : IDisposable {
 
             _disposed = true;
         }
-    }
-
-    private void OnProgramExecutorEmulationStopped(object? sender, EventArgs e) {
-        DisposeMachineAfterRun();
     }
 
     private void DisposeMachineAfterRun() {

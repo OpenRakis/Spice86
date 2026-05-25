@@ -38,12 +38,11 @@ public sealed class HeadlessGui : IGuiVideoPresentation, IGuiMouseEvents,
 
     public event EventHandler<KeyboardEventArgs>? KeyUp;
     public event EventHandler<KeyboardEventArgs>? KeyDown;
-#pragma warning disable CS0067 // Headless GUI never raises these events
+#pragma warning disable CS0067 // Headless GUI never raises mouse events
     public event EventHandler<MouseMoveEventArgs>? MouseMoved;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonDown;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
     public event EventHandler<UIRenderEventArgs>? RenderScreen;
-    public event Action? UserInterfaceInitialized;
 #pragma warning restore CS0067
 
     /// <summary>

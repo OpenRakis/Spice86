@@ -21,7 +21,7 @@ public class DosSysVars : MemoryBasedDataStructure {
     public const ushort OfficialOffset = 0x22;
     public const ushort SizeInBytes = 0x8C;
     public const ushort SizeInParagraphs = SizeInBytes / ParagraphSizeInBytes;
-    public const int Segment = DosProcessManager.CommandComSegment + DosProgramSegmentPrefix.PspSizeInParagraphs;
+    public const int Segment = DosProcessManager.RootEnvironmentSegment + DosProcessManager.RootEnvironmentParagraphs;
     public const int FirstMcbSegment = Segment + SizeInParagraphs;
 
     private readonly DosDeviceHeader _nullDeviceHeader;

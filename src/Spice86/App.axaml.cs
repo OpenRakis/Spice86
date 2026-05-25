@@ -54,8 +54,8 @@ internal partial class App : Application {
         Configuration configuration = new CommandLineParser().ParseCommandLine(
                 desktop.Args!)!;
         Spice86DependencyInjection dependencyInjection = new(configuration, mainWindow);
+        mainWindow.Closed += (_, _) => dependencyInjection.Dispose();
         if (mainWindow.DataContext is MainWindowViewModel mainVm) {
-            mainVm.Disposing += dependencyInjection.Dispose;
             mainWindow.Loaded += (_, _) => AttachDriveNotifications(mainWindow, mainVm);
         }
         desktop.MainWindow = mainWindow;

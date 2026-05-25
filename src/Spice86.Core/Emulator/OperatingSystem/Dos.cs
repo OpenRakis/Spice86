@@ -246,9 +246,8 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         // Initialize the SDA with the initial PSP segment
         DosSwappableDataArea.CurrentProgramSegmentPrefix = initialPspSegment;
 
-        // Initialize memory manager first - it must know about the root COMMAND.COM reserved space
-        // Root PSP is at 0x60, environment at 0x68, so MCB chain starts after 0x6F
-        // This matches FreeDOS where DOS_PSP + 16 paragraphs is reserved
+        // Initialize memory manager first - the fixed root COMMAND.COM PSP, shell stub space,
+        // root environment, and DOS sysvars all live below the MCB chain in reserved low memory.
         MemoryManager = new DosMemoryManager(_memory, initialPspSegment, loggerService);
 
         FcbManager = new(_memory, FileManager, DosDriveManager, _loggerService);

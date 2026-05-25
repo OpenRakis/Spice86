@@ -17,8 +17,6 @@ using System.Text;
 
 internal sealed partial class DosBatchExecutionEngine {
     private const string AutoExecPath = "Z:\\AUTOEXEC.BAT";
-    internal const string CommandComPath = "Z:\\COMMAND.COM";
-    internal const string ShellPathValue = "Z:\\";
 
     private readonly DosFileManager _dosFileManager;
     private readonly IBatchDisplayCommandHandler _displayCommandHandler;
@@ -64,7 +62,6 @@ internal sealed partial class DosBatchExecutionEngine {
 
     internal void ConfigureStartupSession(string requestedProgramDosPath, string commandTail,
         bool shouldTerminateAfterStartupProgram) {
-        SyncCommandComToMemoryDrive();
         _shellExitRequested = false;
 
         string[] startupLines = BuildStartupLines(requestedProgramDosPath, commandTail,
@@ -106,6 +103,27 @@ internal sealed partial class DosBatchExecutionEngine {
         }
 
         return RunInteractiveSession(out launchRequest);
+    }
+
+    internal bool TryStartNonInteractiveSession(out LaunchRequest launchRequest) {
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("BATCH: TryStartNonInteractiveSession - beginning shell startup via AUTOEXEC.BAT");
+        }
+        _batchFileContexts.Clear();
+        _lastExitCode = 0;
+        _shellExitRequested = false;
+
+        return TryExecuteCommandLine($"CALL {AutoExecPath}", out launchRequest);
+    }
+
+    internal bool TryContinueNonInteractiveSession(ushort lastChildReturnCode, out LaunchRequest launchRequest) {
+        _lastExitCode = (byte)(lastChildReturnCode & 0x00FF);
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("BATCH: TryContinueNonInteractiveSession lastChildReturnCode={ReturnCode} exitCode={ExitCode} contextDepth={Depth}",
+                lastChildReturnCode, _lastExitCode, _batchFileContexts.Count);
+        }
+
+        return TryPump(out launchRequest);
     }
 
     internal bool ApplyRedirectionForLaunch(LaunchRequest launchRequest) {
@@ -468,15 +486,6 @@ internal sealed partial class DosBatchExecutionEngine {
         string content = contentBuilder.ToString().Replace("\r\n", "\n").Replace("\n", "\r\n");
         byte[] bytes = Encoding.ASCII.GetBytes(content);
         zDrive.AddFile("AUTOEXEC.BAT", bytes);
-    }
-
-    private void SyncCommandComToMemoryDrive() {
-        if (!_driveManager.TryGetMemoryDrive('Z', out MemoryDrive? zDrive)) {
-            return;
-        }
-
-        byte[] commandComBytes = InternalBatchProgramBuilder.BuildCommandComProgramBytes();
-        zDrive.AddFile("COMMAND.COM", commandComBytes);
     }
 
 }

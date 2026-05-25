@@ -6,12 +6,13 @@ using Avalonia.Threading;
 
 using Spice86.Native;
 using Spice86.ViewModels;
+using Spice86.ViewModels.Services;
 
 using System.Runtime.InteropServices;
 
 namespace Spice86.Views;
 
-internal partial class MainWindow : Window {
+internal partial class MainWindow : Window, IMainWindowDisplay {
     // When SDL relative mode is active, track absolute cursor position (0..1) by accumulating deltas.
     // This matches the emulator's virtual screen width (640 px) so one pixel equals one virtual pixel.
     private const double VirtualScreenWidth = 640.0;
@@ -44,8 +45,7 @@ internal partial class MainWindow : Window {
     private void MainWindow_Loaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e) {
         Dispatcher.UIThread.Post(() => {
             if (DataContext is MainWindowViewModel mainVm) {
-                mainVm.CloseMainWindow += (_, _) => Close();
-                mainVm.InvalidateBitmap += Image.InvalidateVisual;
+                mainVm.AttachMainWindowDisplay(this);
                 Image.PointerMoved += OnMouseMoved;
                 Image.PointerPressed += OnPointerPressed;
                 Image.PointerReleased += OnMouseButtonUp;
@@ -55,6 +55,14 @@ internal partial class MainWindow : Window {
                 mainVm.StartEmulator();
             }
         }, DispatcherPriority.Background);
+    }
+
+    void IMainWindowDisplay.CloseMainWindow() {
+        Close();
+    }
+
+    void IMainWindowDisplay.InvalidateVideo() {
+        Image.InvalidateVisual();
     }
 
     private void InitializeMouseCapture() {
