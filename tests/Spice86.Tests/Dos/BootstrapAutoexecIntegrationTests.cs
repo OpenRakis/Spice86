@@ -82,6 +82,23 @@ public class BootstrapAutoexecIntegrationTests {
     }
 
     [Fact]
+    public void Bootstrap_HostRequestedBatchWithSlashPath_NormalizesAutoexecCallPath() {
+        WithTempFile("boot_bat_slash_path", tempDir => {
+            string resultPath = Path.Join(tempDir, "RESULT.TXT");
+            string batPath = CreateTextFile(tempDir, "START.BAT",
+                "Z:\r\n" +
+                "TYPE AUTOEXEC.BAT > C:\\RESULT.TXT\r\n");
+            string slashBatPath = batPath.Replace('\\', '/');
+
+            RunWithoutVideoRead(slashBatPath, tempDir);
+
+            string output = File.ReadAllText(resultPath);
+            output.Should().Contain("CALL C:\\START.BAT");
+            output.Should().NotContain("CALL C:/START.BAT");
+        });
+    }
+
+    [Fact]
     public void Bootstrap_ArgumentsPassedFromHost_ArePreservedThroughAutoexecBat() {
         WithTempFile("boot_args", tempDir => {
             // Arrange: the host provides ExeArgs that flow into AUTOEXEC.BAT via BuildCallLine.
