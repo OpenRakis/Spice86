@@ -23,9 +23,14 @@ public abstract class Indexable : IIndexable {
     internal const char AsciiReplacementChar = '?';
 
     /// <summary>
-    /// Disables all use of high-performance span accesses.
+    /// Disables all use of high-performance span accesses within <see cref="Indexable"/>.
     /// </summary>
-    internal static bool DisableSpanAccess { get; set; }
+    internal static bool DisableIndexableSpanAccess { get; set; } = false;
+
+    /// <summary>
+    /// Disables all use of high-performance span accesses within <see cref="MemoryIndexer{T}"/>.
+    /// </summary>
+    internal static bool DisableIndexerSpanAccess { get; set; } = false;
 
     /// <inheritdoc/>
     public abstract UInt8Indexer UInt8 {
@@ -100,7 +105,7 @@ public abstract class Indexable : IIndexable {
         UInt8Indexer uInt8 = UInt8;
 
         // Try to use high performance span access if possible.
-        if (!DisableSpanAccess) {
+        if (!DisableIndexableSpanAccess) {
             IReaderWriter<byte> readerWriter = uInt8.ByteReaderWriter;
             if (readerWriter.TryGetSpan(address, maxLength, out ReadOnlySpan<byte> span, MemoryAccess.Read)
                 && span.Length >= maxLength) {
@@ -155,7 +160,7 @@ public abstract class Indexable : IIndexable {
         UInt8Indexer uInt8 = UInt8;
 
         // Try to use high performance span access if possible.
-        if (!DisableSpanAccess) {
+        if (!DisableIndexableSpanAccess) {
             IReaderWriter<byte> readerWriter = uInt8.ByteReaderWriter;
             if (readerWriter.TryGetSpan(address, valueByteLength, out Span<byte> span, MemoryAccess.Write)
                 && span.Length >= valueByteLength) {
@@ -197,7 +202,7 @@ public abstract class Indexable : IIndexable {
         UInt8Indexer uInt8 = UInt8;
 
         // Try to use high performance span access if possible.
-        if (!DisableSpanAccess) {
+        if (!DisableIndexableSpanAccess) {
             IReaderWriter<byte> readerWriter = uInt8.ByteReaderWriter;
             if (readerWriter.TryGetSpan(address, length, out ReadOnlySpan<byte> span, MemoryAccess.Read)
                 && span.Length >= length) {
@@ -239,7 +244,7 @@ public abstract class Indexable : IIndexable {
         UInt8Indexer uInt8 = UInt8;
 
         // Try to use high performance span access if possible.
-        if (!DisableSpanAccess) {
+        if (!DisableIndexableSpanAccess) {
             IReaderWriter<byte> readerWriter = uInt8.ByteReaderWriter;
             if (readerWriter.TryGetSpan(address, length, out Span<byte> span, MemoryAccess.Write)
                 && span.Length >= length) {
@@ -293,7 +298,7 @@ public abstract class Indexable : IIndexable {
         UInt8Indexer uInt8 = UInt8;
 
         // Try to use high performance span access if possible.
-        if (!DisableSpanAccess && TryLoadData(uInt8.ByteReaderWriter, address, data)) {
+        if (!DisableIndexableSpanAccess && TryLoadData(uInt8.ByteReaderWriter, address, data)) {
             return;
         }
 
@@ -333,7 +338,7 @@ public abstract class Indexable : IIndexable {
         UInt16Indexer uInt16 = UInt16;
 
         // Try to use high performance span access if possible.
-        if (!DisableSpanAccess && TryLoadData(uInt16.ByteReaderWriter, address, data)) {
+        if (!DisableIndexableSpanAccess && TryLoadData(uInt16.ByteReaderWriter, address, data)) {
             return;
         }
 
@@ -383,7 +388,7 @@ public abstract class Indexable : IIndexable {
         UInt8Indexer uInt8 = UInt8;
 
         // Try to use high performance span access if possible.
-        if (!DisableSpanAccess) {
+        if (!DisableIndexableSpanAccess) {
             IReaderWriter<byte> readerWriter = uInt8.ByteReaderWriter;
             int byteCount = (int)length;
             if (byteCount >= 0
@@ -409,7 +414,7 @@ public abstract class Indexable : IIndexable {
         UInt8Indexer uInt8 = UInt8;
 
         // Try to use high performance span access if possible.
-        if (!DisableSpanAccess) {
+        if (!DisableIndexableSpanAccess) {
             IReaderWriter<byte> readerWriter = uInt8.ByteReaderWriter;
             if (readerWriter.TryGetSpan(address, data.Length, out ReadOnlySpan<byte> span, MemoryAccess.Read)
                 && span.Length >= data.Length) {
@@ -431,7 +436,7 @@ public abstract class Indexable : IIndexable {
         UInt8Indexer uInt8 = UInt8;
 
         // Try to use high performance span access if possible.
-        if (!DisableSpanAccess) {
+        if (!DisableIndexableSpanAccess) {
             IReaderWriter<byte> readerWriter = uInt8.ByteReaderWriter;
             int byteCount = (int)length;
             if (byteCount >= 0
@@ -464,7 +469,7 @@ public abstract class Indexable : IIndexable {
         UInt8Indexer uInt8 = UInt8;
 
         // Try to use high performance span access if possible.
-        if (!DisableSpanAccess) {
+        if (!DisableIndexableSpanAccess) {
             IReaderWriter<byte> readerWriter = uInt8.ByteReaderWriter;
             int byteCount = (int)amount;
             if (byteCount >= 0
@@ -488,7 +493,7 @@ public abstract class Indexable : IIndexable {
         UInt16Indexer uInt16 = UInt16;
 
         // Try to use high performance span access if possible.
-        if (!DisableSpanAccess && TryMemSet16(uInt16.ByteReaderWriter, address, value, amount)) {
+        if (!DisableIndexableSpanAccess && TryMemSet16(uInt16.ByteReaderWriter, address, value, amount)) {
             return;
         }
 

@@ -90,7 +90,7 @@ public class SegmentedAddress32Indexer : MemoryIndexer<SegmentedAddress32> {
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private SegmentedAddress32 ReadValueCore(uint address) {
-        if (!Indexable.DisableSpanAccess
+        if (!Indexable.DisableIndexerSpanAccess
             && ByteReaderWriter.TryGetSpan(address, sizeof(uint) * 2, out ReadOnlySpan<byte> span, MemoryAccess.Read)
             && span.Length >= sizeof(uint) * 2) {
             return ReadValueUnsafe(ref MemoryMarshal.GetReference(span));
@@ -101,7 +101,7 @@ public class SegmentedAddress32Indexer : MemoryIndexer<SegmentedAddress32> {
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void WriteValueCore(uint address, SegmentedAddress32 value) {
-        if (!Indexable.DisableSpanAccess
+        if (!Indexable.DisableIndexerSpanAccess
             && ByteReaderWriter.TryGetSpan(address, sizeof(uint) * 2, out Span<byte> span, MemoryAccess.Write)
             && span.Length >= sizeof(uint) * 2) {
             WriteValueUnsafe(ref MemoryMarshal.GetReference(span), value);

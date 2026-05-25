@@ -56,7 +56,7 @@ public sealed class UInt16BigEndianIndexer : MemoryIndexer<ushort> {
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private ushort ReadValueCore(uint address) {
-        if (!Indexable.DisableSpanAccess
+        if (!Indexable.DisableIndexerSpanAccess
             && _byteReaderWriter.TryGetSpan(address, sizeof(ushort), out ReadOnlySpan<byte> span, MemoryAccess.Read)
             && span.Length >= sizeof(ushort)) {
             return ReadValueUnsafe(ref MemoryMarshal.GetReference(span));
@@ -67,7 +67,7 @@ public sealed class UInt16BigEndianIndexer : MemoryIndexer<ushort> {
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void WriteValueCore(uint address, ushort value) {
-        if (!Indexable.DisableSpanAccess
+        if (!Indexable.DisableIndexerSpanAccess
             && _byteReaderWriter.TryGetSpan(address, sizeof(ushort), out Span<byte> span, MemoryAccess.Write)
             && span.Length >= sizeof(ushort)) {
             WriteValueUnsafe(ref MemoryMarshal.GetReference(span), value);
