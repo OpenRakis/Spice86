@@ -4,6 +4,7 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Mscdex;
 using Spice86.Core.Emulator.LoadableFile.Dos;
 using Spice86.Core.Emulator.Memory;
@@ -17,6 +18,7 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -115,6 +117,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     /// <param name="mscdex">The MSCDEX CD-ROM handler owned by the DOS kernel, used for IMGMOUNT batch commands.</param>
     /// <param name="mixer">The software audio mixer, used to stream CD audio when an image is mounted.</param>
     /// <param name="batchDisplayCommandHandler">Batch-specific display command handler used by screen-related builtins such as CLS.</param>
+    /// <param name="callbackHandler">The callback registry used to expose the DOS-visible COMMAND.COM bridge back into the host shell coordinator.</param>
     /// <param name="envVars">The initial host environment variables to seed the master environment block.</param>
     /// <param name="loggerService">Logger for emitting diagnostic information during process lifecycle changes.</param>
     public DosProcessManager(IMemory memory, Stack stack, State state,
@@ -124,6 +127,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         Mscdex mscdex,
         ISoundChannelCreator channelCreator,
         IBatchDisplayCommandHandler batchDisplayCommandHandler,
+        CallbackHandler callbackHandler,
         IDictionary<string, string> envVars, ILoggerService loggerService) {
         _sda = new(memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
         _memory = memory;
@@ -429,6 +433,15 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
             programPath, comBytes, null, _state.SS, (ushort)(_state.SP - IregsFrameSize));
     }
 
+    internal DosExecResult LoadProgramFromBytesFromCurrentContext(byte[] comBytes, string programPath, string commandTail) {
+        ushort callerIP = _stack.Peek16(0);
+        ushort callerCS = _stack.Peek16(2);
+        DosExecParameterBlock paramBlock = new(new ByteArrayReaderWriter(new byte[DosExecParameterBlock.Size]), 0);
+        return HandleComFileLoading(paramBlock, commandTail, DosExecLoadType.LoadAndExecute,
+            0, callerIP, callerCS, _sda.CurrentProgramSegmentPrefix,
+            programPath, comBytes, null, _state.SS, (ushort)(_state.SP - IregsFrameSize));
+    }
+
     internal DosExecResult LoadInitialCommandComShell() {
         byte[] commandComBytes = _commandShell.GetProgramBytes();
         return LoadInitialProgramFromBytes(commandComBytes, CommandShell.CommandComPath,
@@ -548,7 +561,13 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
 
         // MS-DOS and FreeDOS: COM files are ALWAYS loaded in the largest available area
         DosMemoryControlBlock largestFree = _memoryManager.FindLargestFree();
-        DosMemoryControlBlock? comBlock = _memoryManager.AllocateMemoryBlock(largestFree.Size);
+        ushort allocationParagraphs = largestFree.Size;
+        if (_commandShell.IsCommandComProgram(Path.GetFileName(hostPath))) {
+            allocationParagraphs = paragraphsNeeded;
+            TraceProcess($"EXEC COM: allocating compact COMMAND.COM block paragraphsNeeded={paragraphsNeeded} largestFree={largestFree.Size} hostPath='{hostPath}'");
+        }
+
+        DosMemoryControlBlock? comBlock = _memoryManager.AllocateMemoryBlock(allocationParagraphs);
 
         if (comBlock is null || largestFree.Size < paragraphsNeeded) {
             //Free the environment block we just allocated
@@ -704,6 +723,8 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
 
         bool parentIsRootCommandCom = parentPspSegment == CommandComSegment;
 
+        TraceProcess($"TERMINATE: start program='{terminatingProgramName}' exitCode=0x{exitCode:X2} type={terminationType} currentPsp={currentPspSegment:X4} parentPsp={parentPspSegment:X4} parentIsRoot={parentIsRootCommandCom} CS:IP={_state.CS:X4}:{_state.IP:X4} SS:SP={_state.SS:X4}:{_state.SP:X4}");
+
         // Close non-standard handles only when the process fully terminates; TSR keeps them resident
         if (terminationType != DosTerminationType.TSR) {
             CloseProcessFileHandles(currentPsp);
@@ -757,19 +778,23 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         _state.ES = parentPspSegment;
 
         if (parentIsRootCommandCom) {
+            TraceProcess($"TERMINATE: parent is root COMMAND.COM, restoring handles for program='{terminatingProgramName}' lastReturn=0x{LastChildReturnCode:X4}");
             _commandShell.RestoreStandardHandlesAfterLaunch();
 
             if (_commandShell.IsCommandComProgram(terminatingProgramName)) {
+                TraceProcess("TERMINATE: terminating COMMAND.COM itself, stopping emulation");
                 _state.AX = (ushort)(LastChildReturnCode & 0x00FF);
                 _state.IsRunning = false;
                 return;
             }
 
             if (ContinueCommandShellStartupSession()) {
+                TraceProcess("TERMINATE: continued startup shell session");
                 return;
             }
 
             if (!_commandShell.ShouldEnterInteractiveShellAfterStartup()) {
+                TraceProcess("TERMINATE: startup shell should not enter interactive mode, stopping emulation");
                 _state.AX = (ushort)(LastChildReturnCode & 0x00FF);
                 _state.IsRunning = false;
                 return;
@@ -777,9 +802,11 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
 
             DosExecResult commandComLoadResult = LoadInitialCommandComShell();
             if (commandComLoadResult.Success) {
+                TraceProcess($"TERMINATE: reloaded COMMAND.COM shell CS:IP={_state.CS:X4}:{_state.IP:X4} SS:SP={_state.SS:X4}:{_state.SP:X4} currentProgram='{_currentProgramName}'");
                 return;
             }
 
+            TraceProcess($"TERMINATE: failed to reload COMMAND.COM shell error={commandComLoadResult.ErrorCode}");
             _state.AX = (ushort)commandComLoadResult.ErrorCode;
             _state.IsRunning = false;
         }
@@ -808,22 +835,79 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         return false;
     }
 
+    internal void ExecuteCommandComEntry() {
+        Debug.Assert(_sda.CurrentProgramSegmentPrefix == CommandComSegment,
+            "COMMAND.COM bridge should execute from the root COMMAND.COM PSP.");
+        TraceProcess($"SHELL BRIDGE: enter currentProgram='{_currentProgramName}' lastReturn=0x{LastChildReturnCode:X4} PSP={_sda.CurrentProgramSegmentPrefix:X4} CS:IP={_state.CS:X4}:{_state.IP:X4} SS:SP={_state.SS:X4}:{_state.SP:X4}");
+        bool hasLaunchRequest = _commandShell.TryEnterShellSession(LastChildReturnCode, out LaunchRequest launchRequest);
+        TraceProcess($"SHELL BRIDGE: initial hasLaunchRequest={hasLaunchRequest} request={DescribeLaunchRequest(launchRequest)}");
+        while (hasLaunchRequest) {
+            TraceProcess($"SHELL BRIDGE: dispatching request={DescribeLaunchRequest(launchRequest)}");
+            if (!_commandShell.ApplyRedirectionForLaunch(launchRequest)) {
+                TraceProcess($"SHELL BRIDGE: redirection failed for request={DescribeLaunchRequest(launchRequest)}");
+                LastChildReturnCode = BuildCriticalErrorReturnCode(DosErrorCode.PathNotFound);
+                hasLaunchRequest = _commandShell.TryEnterShellSession(LastChildReturnCode, out launchRequest);
+                TraceProcess($"SHELL BRIDGE: retry after redirection failure hasLaunchRequest={hasLaunchRequest} request={DescribeLaunchRequest(launchRequest)}");
+                continue;
+            }
+
+            DosExecResult result = LoadShellLaunchRequest(launchRequest);
+            TraceProcess($"SHELL BRIDGE: load result success={result.Success} error={result.ErrorCode} currentProgram='{_currentProgramName}' CS:IP={_state.CS:X4}:{_state.IP:X4} SS:SP={_state.SS:X4}:{_state.SP:X4}");
+            if (result.Success) {
+                return;
+            }
+
+            _commandShell.RestoreStandardHandlesAfterLaunch();
+            LastChildReturnCode = BuildCriticalErrorReturnCode(result.ErrorCode);
+            hasLaunchRequest = _commandShell.TryEnterShellSession(LastChildReturnCode, out launchRequest);
+            TraceProcess($"SHELL BRIDGE: retry after load failure hasLaunchRequest={hasLaunchRequest} request={DescribeLaunchRequest(launchRequest)}");
+        }
+
+        TraceProcess($"SHELL BRIDGE: exit without launch lastReturn=0x{LastChildReturnCode:X4}");
+    }
+
     private static ushort BuildCriticalErrorReturnCode(DosErrorCode errorCode) {
         return (ushort)(((ushort)DosTerminationType.CriticalError << 8) | (byte)errorCode);
     }
 
     private DosExecResult LoadShellLaunchRequest(LaunchRequest launchRequest) {
+        Debug.Assert(launchRequest is InternalProgramLaunchRequest || launchRequest is ProgramLaunchRequest,
+            "Shell launch requests should resolve to internal or external program launches.");
+        TraceProcess($"SHELL LOAD: begin request={DescribeLaunchRequest(launchRequest)} currentProgram='{_currentProgramName}' PSP={_sda.CurrentProgramSegmentPrefix:X4}");
         if (launchRequest is InternalProgramLaunchRequest internalProgramLaunchRequest) {
-            return LoadInitialProgramFromBytes(internalProgramLaunchRequest.ComProgramBytes);
+            DosExecResult internalResult = LoadProgramFromBytesFromCurrentContext(internalProgramLaunchRequest.ComProgramBytes,
+                "BATCH$$$.COM", string.Empty);
+            TraceProcess($"SHELL LOAD: internal result success={internalResult.Success} error={internalResult.ErrorCode} currentProgram='{_currentProgramName}' CS:IP={_state.CS:X4}:{_state.IP:X4}");
+            return internalResult;
         }
 
         if (launchRequest is ProgramLaunchRequest programLaunchRequest) {
             DosExecParameterBlock paramBlock = new(new ByteArrayReaderWriter(new byte[DosExecParameterBlock.Size]), 0);
-            return LoadInitialProgram(programLaunchRequest.ProgramName, paramBlock,
-                programLaunchRequest.CommandTail, paramBlock.EnvironmentSegment);
+            DosExecResult programResult = LoadOrLoadAndExecute(programLaunchRequest.ProgramName, paramBlock,
+                programLaunchRequest.CommandTail, DosExecLoadType.LoadAndExecute, paramBlock.EnvironmentSegment);
+            TraceProcess($"SHELL LOAD: program result success={programResult.Success} error={programResult.ErrorCode} target='{programLaunchRequest.ProgramName}' currentProgram='{_currentProgramName}' CS:IP={_state.CS:X4}:{_state.IP:X4}");
+            return programResult;
         }
 
+        TraceProcess($"SHELL LOAD: unsupported request type {launchRequest.GetType().Name}");
         return DosExecResult.Fail(DosErrorCode.FormatInvalid);
+    }
+
+    private static string DescribeLaunchRequest(LaunchRequest launchRequest) {
+        if (launchRequest is ProgramLaunchRequest programLaunchRequest) {
+            return $"Program('{programLaunchRequest.ProgramName}', tail='{programLaunchRequest.CommandTail}', in='{programLaunchRequest.Redirection.InputPath}', out='{programLaunchRequest.Redirection.OutputPath}', err='{programLaunchRequest.Redirection.ErrorPath}')";
+        }
+
+        if (launchRequest is InternalProgramLaunchRequest internalProgramLaunchRequest) {
+            return $"Internal({internalProgramLaunchRequest.ComProgramBytes.Length} bytes, in='{internalProgramLaunchRequest.Redirection.InputPath}', out='{internalProgramLaunchRequest.Redirection.OutputPath}', err='{internalProgramLaunchRequest.Redirection.ErrorPath}')";
+        }
+
+        return launchRequest.GetType().Name;
+    }
+
+    private static void TraceProcess(string message) {
+        Debug.WriteLine(message);
+        Console.WriteLine(message);
     }
 
     /// <summary>

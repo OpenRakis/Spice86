@@ -103,6 +103,22 @@ internal sealed partial class DosBatchExecutionEngine {
             }
         }
 
+        char currentDriveLetter = _driveManager.CurrentDrive.DriveLetter;
+        string currentDirectory = _driveManager.CurrentDrive.CurrentDosDirectory;
+        string currentDirectoryCandidate = $"{currentDriveLetter}:\\{commandToken}";
+        if (currentDirectory.Length > 0) {
+            currentDirectoryCandidate = $"{currentDriveLetter}:\\{currentDirectory}\\{commandToken}";
+        }
+
+        currentDirectoryCandidate = NormalizeDosPath(currentDirectoryCandidate);
+        string? resolvedInCurrentDirectory = ResolveExecutablePath(currentDirectoryCandidate);
+        if (resolvedInCurrentDirectory != null) {
+            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                _loggerService.Verbose("BATCH: Resolved command {Token} -> {Path} (from current directory)", commandToken, resolvedInCurrentDirectory);
+            }
+            return resolvedInCurrentDirectory;
+        }
+
         // Search PATH directories with .COM -> .EXE -> .BAT probe order.
         string? pathResolved = ResolveCommandFromPath(commandToken);
         if (pathResolved != null) {

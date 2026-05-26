@@ -8,6 +8,7 @@ using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Video;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Mscdex;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Indexable;
@@ -393,6 +394,7 @@ public class DosProcessManagerTests {
         IBatchDisplayCommandHandler batchDisplayCommandHandler = new DosBatchDisplayCommandHandler(vgaFunctionality);
         Mscdex mscdex = new(state, memory, loggerService);
         DosDriveStatusProvider driveStatusProvider = new(driveManager, mscdex);
+        CallbackHandler callbackHandler = new(state, loggerService);
 
         ISoundChannelCreator channelCreator = Substitute.For<ISoundChannelCreator>();
         channelCreator.AddChannel(Arg.Any<Action<int>>(), Arg.Any<int>(), Arg.Any<string>(), Arg.Any<HashSet<ChannelFeature>>())
@@ -409,6 +411,7 @@ public class DosProcessManagerTests {
             mscdex,
             channelCreator,
             batchDisplayCommandHandler,
+            callbackHandler,
             new Dictionary<string, string>(),
             loggerService);
 

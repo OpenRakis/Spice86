@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
@@ -80,6 +81,11 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
     /// Gets the INT 2Ah DOS services (minimal stub).
     /// </summary>
     public DosInt2aHandler DosInt2aHandler { get; }
+
+    /// <summary>
+    /// Gets the INT 2Eh DOS shell bridge.
+    /// </summary>
+    public DosInt2eHandler DosInt2eHandler { get; }
 
     /// <summary>
     /// Gets the INT 25H DOS Disk services.
@@ -176,6 +182,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
     /// <param name="state">The CPU state.</param>
     /// <param name="biosKeyboardBuffer">The BIOS keyboard buffer structure in emulated memory.</param>
     /// <param name="keyboardInt16Handler">The BIOS interrupt handler that writes/reads the BIOS Keyboard Buffer.</param>
+    /// <param name="callbackHandler">The callback registry used for DOS-visible bridges such as COMMAND.COM.</param>
     /// <param name="biosDataArea">The memory mapped BIOS values and settings.</param>
     /// <param name="vgaFunctionality">The high-level VGA functions.</param>
     /// <param name="envVars">The DOS environment variables.</param>
@@ -199,6 +206,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
     /// <param name="xms">Optional XMS manager to expose through DOS.</param>
     public Dos(Configuration configuration, IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
+        CallbackHandler callbackHandler,
         BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,
         BiosDataArea biosDataArea, IVgaFunctionality vgaFunctionality,
         IDictionary<string, string> envVars, IOPortDispatcher ioPortDispatcher, ILoggerService loggerService,
@@ -254,7 +262,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         IBatchDisplayCommandHandler batchDisplayCommandHandler = new DosBatchDisplayCommandHandler(_vgaFunctionality);
         _mscdex = new Mscdex(state, memory, loggerService, _activityNotifier);
         _driveStatusProvider = new DosDriveStatusProvider(DosDriveManager, _mscdex);
-        ProcessManager = new(_memory, stack, state, MemoryManager, FileManager, DosDriveManager, _driveStatusProvider, _mscdex, channelCreator, batchDisplayCommandHandler, envVars, _loggerService);
+        ProcessManager = new(_memory, stack, state, MemoryManager, FileManager, DosDriveManager, _driveStatusProvider, _mscdex, channelCreator, batchDisplayCommandHandler, callbackHandler, envVars, _loggerService);
         DosInt22Handler = new DosInt22Handler(_memory, functionHandlerProvider, stack, state, ProcessManager, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state,
             keyboardInt16Handler, CountryInfo, dosCodePageState, dosStringDecoder,
@@ -264,6 +272,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         DosInt24Handler = new DosInt24Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
         DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, DosInt21Handler, _loggerService);
         DosInt2aHandler = new DosInt2aHandler(_memory, functionHandlerProvider, stack, state, _loggerService);
+        DosInt2eHandler = new DosInt2eHandler(_memory, functionHandlerProvider, stack, state, ProcessManager, _loggerService);
         DosInt2FHandler = new DosInt2fHandler(_memory,
             functionHandlerProvider, stack, state, _loggerService, _mscdex, xms);
         DosInt25Handler = new DosDiskInt25Handler(_memory, DosDriveManager,

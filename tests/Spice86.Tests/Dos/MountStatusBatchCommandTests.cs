@@ -8,6 +8,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Mscdex;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.IOPorts;
@@ -128,6 +129,7 @@ public sealed class MountStatusBatchCommandTests : IDisposable {
             IBatchDisplayCommandHandler batchDisplayCommandHandler = new DosBatchDisplayCommandHandler(vgaFunctionality);
             Mscdex mscdex = new(state, memory, logger);
             DosDriveStatusProvider driveStatusProvider = new(driveManager, mscdex);
+            CallbackHandler callbackHandler = new(state, logger);
 
             ISoundChannelCreator channelCreator = Substitute.For<ISoundChannelCreator>();
             channelCreator.AddChannel(Arg.Any<Action<int>>(), Arg.Any<int>(), Arg.Any<string>(), Arg.Any<HashSet<ChannelFeature>>())
@@ -144,6 +146,7 @@ public sealed class MountStatusBatchCommandTests : IDisposable {
                 mscdex,
                 channelCreator,
                 batchDisplayCommandHandler,
+                callbackHandler,
                 new Dictionary<string, string>(),
                 logger);
 

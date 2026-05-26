@@ -12,6 +12,8 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using System;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
@@ -707,6 +709,13 @@ public class DosFileManager {
 
         try {
             byte[] data = _memory.GetSlice((int)bufferAddress, writeLength).ToArray();
+            string fileName = file.Name;
+            string fileType = file.GetType().Name;
+            string positionBefore = "n/a";
+            if (file.CanSeek) {
+                positionBefore = file.Position.ToString();
+            }
+            TraceDosFile($"DOS WRITE: handle={fileHandle} length={writeLength} name='{fileName}' type={fileType} positionBefore={positionBefore}");
             if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                 string valueAsString = _dosStringDecoder.ConvertDosChars(data);
                 _loggerService.Verbose("Writing to file or device content: {Name} {Bytes} {CodePage850String}",
@@ -714,11 +723,22 @@ public class DosFileManager {
             }
 
             file.Write(data);
+            file.Flush();
+            string positionAfter = "n/a";
+            if (file.CanSeek) {
+                positionAfter = file.Position.ToString();
+            }
+            TraceDosFile($"DOS WRITE: completed handle={fileHandle} length={writeLength} name='{fileName}' positionAfter={positionAfter}");
         } catch (IOException e) {
             throw new UnrecoverableException("IOException while writing file", e);
         }
 
         return DosFileOperationResult.Value16(writeLength);
+    }
+
+    private static void TraceDosFile(string message) {
+        Debug.WriteLine(message);
+        Console.WriteLine(message);
     }
 
     private bool TryUpdateDosTransferAreaWithFileMatch(DosDiskTransferArea dta,

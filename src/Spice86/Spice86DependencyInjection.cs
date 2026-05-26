@@ -465,7 +465,7 @@ public class Spice86DependencyInjection : IDisposable, IEmulatorRuntime {
             biosKeyboardBuffer);
 
         Dos dos = new Dos(configuration, memory, cfgCpu, stack,
-            state, biosKeyboardBuffer,
+            state, callbackHandler, biosKeyboardBuffer,
             keyboardInt16Handler, biosDataArea, vgaFunctionality,
             new Dictionary<string, string> {
                 { "BLASTER", soundBlaster.BlasterString } }, ioPortDispatcher, loggerService,
@@ -647,6 +647,7 @@ public class Spice86DependencyInjection : IDisposable, IEmulatorRuntime {
             interruptInstaller.InstallInterruptHandler(dos.DosInt26Handler);
             interruptInstaller.InstallInterruptHandler(dos.DosInt28Handler);
             interruptInstaller.InstallInterruptHandler(dos.DosInt2aHandler);
+            interruptInstaller.InstallInterruptHandler(dos.DosInt2eHandler);
             if (dos.Ems is not null) {
                 interruptInstaller.InstallInterruptHandler(dos.Ems);
             }
