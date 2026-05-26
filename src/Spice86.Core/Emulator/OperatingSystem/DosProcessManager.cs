@@ -14,11 +14,11 @@ using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
 using Spice86.Shared.Emulator.Dos;
+using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
-using System.Diagnostics;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -564,7 +564,6 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         ushort allocationParagraphs = largestFree.Size;
         if (_commandShell.IsCommandComProgram(Path.GetFileName(hostPath))) {
             allocationParagraphs = paragraphsNeeded;
-            TraceProcess($"EXEC COM: allocating compact COMMAND.COM block paragraphsNeeded={paragraphsNeeded} largestFree={largestFree.Size} hostPath='{hostPath}'");
         }
 
         DosMemoryControlBlock? comBlock = _memoryManager.AllocateMemoryBlock(allocationParagraphs);
@@ -723,8 +722,6 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
 
         bool parentIsRootCommandCom = parentPspSegment == CommandComSegment;
 
-        TraceProcess($"TERMINATE: start program='{terminatingProgramName}' exitCode=0x{exitCode:X2} type={terminationType} currentPsp={currentPspSegment:X4} parentPsp={parentPspSegment:X4} parentIsRoot={parentIsRootCommandCom} CS:IP={_state.CS:X4}:{_state.IP:X4} SS:SP={_state.SS:X4}:{_state.SP:X4}");
-
         // Close non-standard handles only when the process fully terminates; TSR keeps them resident
         if (terminationType != DosTerminationType.TSR) {
             CloseProcessFileHandles(currentPsp);
@@ -778,23 +775,19 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         _state.ES = parentPspSegment;
 
         if (parentIsRootCommandCom) {
-            TraceProcess($"TERMINATE: parent is root COMMAND.COM, restoring handles for program='{terminatingProgramName}' lastReturn=0x{LastChildReturnCode:X4}");
             _commandShell.RestoreStandardHandlesAfterLaunch();
 
             if (_commandShell.IsCommandComProgram(terminatingProgramName)) {
-                TraceProcess("TERMINATE: terminating COMMAND.COM itself, stopping emulation");
                 _state.AX = (ushort)(LastChildReturnCode & 0x00FF);
                 _state.IsRunning = false;
                 return;
             }
 
             if (ContinueCommandShellStartupSession()) {
-                TraceProcess("TERMINATE: continued startup shell session");
                 return;
             }
 
             if (!_commandShell.ShouldEnterInteractiveShellAfterStartup()) {
-                TraceProcess("TERMINATE: startup shell should not enter interactive mode, stopping emulation");
                 _state.AX = (ushort)(LastChildReturnCode & 0x00FF);
                 _state.IsRunning = false;
                 return;
@@ -802,11 +795,9 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
 
             DosExecResult commandComLoadResult = LoadInitialCommandComShell();
             if (commandComLoadResult.Success) {
-                TraceProcess($"TERMINATE: reloaded COMMAND.COM shell CS:IP={_state.CS:X4}:{_state.IP:X4} SS:SP={_state.SS:X4}:{_state.SP:X4} currentProgram='{_currentProgramName}'");
                 return;
             }
 
-            TraceProcess($"TERMINATE: failed to reload COMMAND.COM shell error={commandComLoadResult.ErrorCode}");
             _state.AX = (ushort)commandComLoadResult.ErrorCode;
             _state.IsRunning = false;
         }
@@ -836,23 +827,20 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     }
 
     internal void ExecuteCommandComEntry() {
-        Debug.Assert(_sda.CurrentProgramSegmentPrefix == CommandComSegment,
-            "COMMAND.COM bridge should execute from the root COMMAND.COM PSP.");
-        TraceProcess($"SHELL BRIDGE: enter currentProgram='{_currentProgramName}' lastReturn=0x{LastChildReturnCode:X4} PSP={_sda.CurrentProgramSegmentPrefix:X4} CS:IP={_state.CS:X4}:{_state.IP:X4} SS:SP={_state.SS:X4}:{_state.SP:X4}");
+        if (!_commandShell.IsCommandComProgram(_currentProgramName)) {
+            throw new UnrecoverableException(
+                $"COMMAND.COM bridge must execute from COMMAND.COM, but current program is '{_currentProgramName}'.");
+        }
+
         bool hasLaunchRequest = _commandShell.TryEnterShellSession(LastChildReturnCode, out LaunchRequest launchRequest);
-        TraceProcess($"SHELL BRIDGE: initial hasLaunchRequest={hasLaunchRequest} request={DescribeLaunchRequest(launchRequest)}");
         while (hasLaunchRequest) {
-            TraceProcess($"SHELL BRIDGE: dispatching request={DescribeLaunchRequest(launchRequest)}");
             if (!_commandShell.ApplyRedirectionForLaunch(launchRequest)) {
-                TraceProcess($"SHELL BRIDGE: redirection failed for request={DescribeLaunchRequest(launchRequest)}");
                 LastChildReturnCode = BuildCriticalErrorReturnCode(DosErrorCode.PathNotFound);
                 hasLaunchRequest = _commandShell.TryEnterShellSession(LastChildReturnCode, out launchRequest);
-                TraceProcess($"SHELL BRIDGE: retry after redirection failure hasLaunchRequest={hasLaunchRequest} request={DescribeLaunchRequest(launchRequest)}");
                 continue;
             }
 
             DosExecResult result = LoadShellLaunchRequest(launchRequest);
-            TraceProcess($"SHELL BRIDGE: load result success={result.Success} error={result.ErrorCode} currentProgram='{_currentProgramName}' CS:IP={_state.CS:X4}:{_state.IP:X4} SS:SP={_state.SS:X4}:{_state.SP:X4}");
             if (result.Success) {
                 return;
             }
@@ -860,10 +848,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
             _commandShell.RestoreStandardHandlesAfterLaunch();
             LastChildReturnCode = BuildCriticalErrorReturnCode(result.ErrorCode);
             hasLaunchRequest = _commandShell.TryEnterShellSession(LastChildReturnCode, out launchRequest);
-            TraceProcess($"SHELL BRIDGE: retry after load failure hasLaunchRequest={hasLaunchRequest} request={DescribeLaunchRequest(launchRequest)}");
         }
-
-        TraceProcess($"SHELL BRIDGE: exit without launch lastReturn=0x{LastChildReturnCode:X4}");
     }
 
     private static ushort BuildCriticalErrorReturnCode(DosErrorCode errorCode) {
@@ -871,43 +856,24 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     }
 
     private DosExecResult LoadShellLaunchRequest(LaunchRequest launchRequest) {
-        Debug.Assert(launchRequest is InternalProgramLaunchRequest || launchRequest is ProgramLaunchRequest,
-            "Shell launch requests should resolve to internal or external program launches.");
-        TraceProcess($"SHELL LOAD: begin request={DescribeLaunchRequest(launchRequest)} currentProgram='{_currentProgramName}' PSP={_sda.CurrentProgramSegmentPrefix:X4}");
+        if (launchRequest is not InternalProgramLaunchRequest && launchRequest is not ProgramLaunchRequest) {
+            throw new UnrecoverableException(
+                $"Shell launch request must resolve to an internal or external program launch, but got {launchRequest.GetType().Name}.");
+        }
+
         if (launchRequest is InternalProgramLaunchRequest internalProgramLaunchRequest) {
-            DosExecResult internalResult = LoadProgramFromBytesFromCurrentContext(internalProgramLaunchRequest.ComProgramBytes,
+            return LoadProgramFromBytesFromCurrentContext(internalProgramLaunchRequest.ComProgramBytes,
                 "BATCH$$$.COM", string.Empty);
-            TraceProcess($"SHELL LOAD: internal result success={internalResult.Success} error={internalResult.ErrorCode} currentProgram='{_currentProgramName}' CS:IP={_state.CS:X4}:{_state.IP:X4}");
-            return internalResult;
         }
 
         if (launchRequest is ProgramLaunchRequest programLaunchRequest) {
             DosExecParameterBlock paramBlock = new(new ByteArrayReaderWriter(new byte[DosExecParameterBlock.Size]), 0);
-            DosExecResult programResult = LoadOrLoadAndExecute(programLaunchRequest.ProgramName, paramBlock,
+            return LoadOrLoadAndExecute(programLaunchRequest.ProgramName, paramBlock,
                 programLaunchRequest.CommandTail, DosExecLoadType.LoadAndExecute, paramBlock.EnvironmentSegment);
-            TraceProcess($"SHELL LOAD: program result success={programResult.Success} error={programResult.ErrorCode} target='{programLaunchRequest.ProgramName}' currentProgram='{_currentProgramName}' CS:IP={_state.CS:X4}:{_state.IP:X4}");
-            return programResult;
         }
 
-        TraceProcess($"SHELL LOAD: unsupported request type {launchRequest.GetType().Name}");
-        return DosExecResult.Fail(DosErrorCode.FormatInvalid);
-    }
-
-    private static string DescribeLaunchRequest(LaunchRequest launchRequest) {
-        if (launchRequest is ProgramLaunchRequest programLaunchRequest) {
-            return $"Program('{programLaunchRequest.ProgramName}', tail='{programLaunchRequest.CommandTail}', in='{programLaunchRequest.Redirection.InputPath}', out='{programLaunchRequest.Redirection.OutputPath}', err='{programLaunchRequest.Redirection.ErrorPath}')";
-        }
-
-        if (launchRequest is InternalProgramLaunchRequest internalProgramLaunchRequest) {
-            return $"Internal({internalProgramLaunchRequest.ComProgramBytes.Length} bytes, in='{internalProgramLaunchRequest.Redirection.InputPath}', out='{internalProgramLaunchRequest.Redirection.OutputPath}', err='{internalProgramLaunchRequest.Redirection.ErrorPath}')";
-        }
-
-        return launchRequest.GetType().Name;
-    }
-
-    private static void TraceProcess(string message) {
-        Debug.WriteLine(message);
-        Console.WriteLine(message);
+        throw new UnrecoverableException(
+            $"Shell launch request must resolve to an internal or external program launch, but got {launchRequest.GetType().Name}.");
     }
 
     /// <summary>

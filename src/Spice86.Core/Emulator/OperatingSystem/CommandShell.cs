@@ -4,8 +4,6 @@ using Spice86.Core.Emulator.OperatingSystem.Batch;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 
 using System;
-using System.Diagnostics;
-using System.IO;
 
 internal sealed class CommandShell {
     private const byte CommandComInterruptNumber = 0x2E;
@@ -35,7 +33,6 @@ internal sealed class CommandShell {
 
     internal void ConfigureStartupSession(string requestedProgramDosPath, string commandTail,
         bool shouldTerminateAfterStartupProgram) {
-        TraceShell($"SHELL: ConfigureStartupSession program='{requestedProgramDosPath}' tail='{commandTail}' terminateAfterStartup={shouldTerminateAfterStartupProgram}");
         EnsureCommandComInMemoryDrive();
         _launchInteractiveShellAfterStartup = !shouldTerminateAfterStartupProgram;
         _batchExecutionEngine.ConfigureStartupSession(requestedProgramDosPath, commandTail,
@@ -49,52 +46,36 @@ internal sealed class CommandShell {
 
     internal bool TryStartStartupSession(out LaunchRequest launchRequest) {
         _startupSessionStarted = true;
-        bool hasLaunchRequest = _batchExecutionEngine.TryStartNonInteractiveSession(out launchRequest);
-        TraceShell($"SHELL: TryStartStartupSession hasLaunchRequest={hasLaunchRequest} request={DescribeLaunchRequest(launchRequest)}");
-        return hasLaunchRequest;
+        return _batchExecutionEngine.TryStartNonInteractiveSession(out launchRequest);
     }
 
     internal bool TryContinueStartupSession(ushort lastChildReturnCode, out LaunchRequest launchRequest) {
-        TraceShell($"SHELL: TryContinueStartupSession lastChildReturnCode=0x{lastChildReturnCode:X4} startupStarted={_startupSessionStarted}");
         if (!_startupSessionStarted) {
             return TryStartStartupSession(out launchRequest);
         }
 
-        bool hasLaunchRequest = _batchExecutionEngine.TryContinueNonInteractiveSession(lastChildReturnCode, out launchRequest);
-        TraceShell($"SHELL: TryContinueStartupSession hasLaunchRequest={hasLaunchRequest} request={DescribeLaunchRequest(launchRequest)}");
-        return hasLaunchRequest;
+        return _batchExecutionEngine.TryContinueNonInteractiveSession(lastChildReturnCode, out launchRequest);
     }
 
     internal bool ApplyRedirectionForLaunch(LaunchRequest launchRequest) {
-        TraceShell($"SHELL: ApplyRedirectionForLaunch request={DescribeLaunchRequest(launchRequest)}");
-        bool result = _batchExecutionEngine.ApplyRedirectionForLaunch(launchRequest);
-        TraceShell($"SHELL: ApplyRedirectionForLaunch result={result} request={DescribeLaunchRequest(launchRequest)}");
-        return result;
+        return _batchExecutionEngine.ApplyRedirectionForLaunch(launchRequest);
     }
 
     internal void RestoreStandardHandlesAfterLaunch() {
-        TraceShell("SHELL: RestoreStandardHandlesAfterLaunch");
         _batchExecutionEngine.RestoreStandardHandlesAfterLaunch();
     }
 
     internal bool TryEnterShellSession(ushort lastChildReturnCode, out LaunchRequest launchRequest) {
-        TraceShell($"SHELL: TryEnterShellSession lastChildReturnCode=0x{lastChildReturnCode:X4} shellStarted={_shellSessionStarted}");
         if (!_shellSessionStarted) {
             _shellSessionStarted = true;
-            bool hasLaunchRequest;
             if (_startupSessionStarted) {
-                hasLaunchRequest = _batchExecutionEngine.ContinueSession(lastChildReturnCode, out launchRequest);
-                TraceShell($"SHELL: TryEnterShellSession continue-after-startup hasLaunchRequest={hasLaunchRequest} request={DescribeLaunchRequest(launchRequest)}");
-            } else {
-                hasLaunchRequest = _batchExecutionEngine.StartSession(out launchRequest);
-                TraceShell($"SHELL: TryEnterShellSession start hasLaunchRequest={hasLaunchRequest} request={DescribeLaunchRequest(launchRequest)}");
+                return _batchExecutionEngine.ContinueSession(lastChildReturnCode, out launchRequest);
             }
-            return hasLaunchRequest;
+
+            return _batchExecutionEngine.StartSession(out launchRequest);
         }
 
-        bool hasLaunchRequest2 = _batchExecutionEngine.ContinueSession(lastChildReturnCode, out launchRequest);
-        TraceShell($"SHELL: TryEnterShellSession continue hasLaunchRequest={hasLaunchRequest2} request={DescribeLaunchRequest(launchRequest)}");
-        return hasLaunchRequest2;
+        return _batchExecutionEngine.ContinueSession(lastChildReturnCode, out launchRequest);
     }
 
     internal byte[] GetProgramBytes() {
@@ -119,22 +100,5 @@ internal sealed class CommandShell {
             0xB8, 0x00, 0x4C,
             0xCD, 0x21
         ];
-    }
-
-    private static string DescribeLaunchRequest(LaunchRequest launchRequest) {
-        if (launchRequest is ProgramLaunchRequest programLaunchRequest) {
-            return $"Program('{programLaunchRequest.ProgramName}', tail='{programLaunchRequest.CommandTail}', in='{programLaunchRequest.Redirection.InputPath}', out='{programLaunchRequest.Redirection.OutputPath}', err='{programLaunchRequest.Redirection.ErrorPath}')";
-        }
-
-        if (launchRequest is InternalProgramLaunchRequest internalProgramLaunchRequest) {
-            return $"Internal({internalProgramLaunchRequest.ComProgramBytes.Length} bytes, in='{internalProgramLaunchRequest.Redirection.InputPath}', out='{internalProgramLaunchRequest.Redirection.OutputPath}', err='{internalProgramLaunchRequest.Redirection.ErrorPath}')";
-        }
-
-        return launchRequest.GetType().Name;
-    }
-
-    private static void TraceShell(string message) {
-        Debug.WriteLine(message);
-        Console.WriteLine(message);
     }
 }

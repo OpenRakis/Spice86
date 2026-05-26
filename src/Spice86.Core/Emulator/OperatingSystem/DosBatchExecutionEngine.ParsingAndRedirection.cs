@@ -5,10 +5,10 @@ using Serilog.Events;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Shared.Emulator.Errors;
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Text;
 
@@ -374,11 +374,9 @@ internal sealed partial class DosBatchExecutionEngine {
     private bool RedirectStandardInput(string dosPath) {
         DosFileOperationResult openResult = _dosFileManager.OpenFileOrDevice(dosPath, FileAccessMode.ReadOnly);
         if (openResult.IsError || openResult.Value == null) {
-            TraceRedirection($"REDIR: failed to redirect stdin from '{dosPath}'");
             return false;
         }
 
-        TraceRedirection($"REDIR: stdin '{dosPath}' opened as handle {openResult.Value.Value}");
         return MoveHandleToStandard((ushort)openResult.Value.Value, (ushort)DosStandardHandle.Stdin);
     }
 
@@ -397,16 +395,13 @@ internal sealed partial class DosBatchExecutionEngine {
         }
 
         if (openResult.IsError || openResult.Value == null) {
-            TraceRedirection($"REDIR: failed to redirect handle {standardHandle} to '{dosPath}' append={append}");
             return false;
         }
 
         ushort openedHandle = (ushort)openResult.Value.Value;
-        TraceRedirection($"REDIR: output '{dosPath}' opened as handle {openedHandle} append={append} targetHandle={standardHandle}");
         if (append && fileAlreadyExisted) {
             DosFileOperationResult seekResult = _dosFileManager.MoveFilePointerUsingHandle(SeekOrigin.End, openedHandle, 0);
             if (seekResult.IsError) {
-                TraceRedirection($"REDIR: failed to seek output handle {openedHandle} for append");
                 _dosFileManager.CloseFileOrDevice(openedHandle);
                 return false;
             }
@@ -417,17 +412,15 @@ internal sealed partial class DosBatchExecutionEngine {
 
     private bool MoveHandleToStandard(ushort sourceHandle, ushort standardHandle) {
         VirtualFileBase? redirectedFile = _dosFileManager.OpenFiles[sourceHandle];
-        Debug.Assert(redirectedFile is not null, "A redirected file must exist before moving it to a standard handle.");
         if (redirectedFile == null) {
-            return false;
+            throw new UnrecoverableException(
+                $"Cannot move DOS handle {sourceHandle} to standard handle {standardHandle} because the source handle is not open.");
         }
 
-        TraceRedirection($"REDIR: moving handle {sourceHandle} ('{redirectedFile.Name}') to standard handle {standardHandle}");
         TrackOriginalStandardHandle(standardHandle);
 
         _dosFileManager.OpenFiles[standardHandle] = redirectedFile;
         _dosFileManager.OpenFiles[sourceHandle] = null;
-        TraceRedirection($"REDIR: standard handle {standardHandle} now points to '{redirectedFile.Name}'");
         return true;
     }
 
@@ -437,21 +430,18 @@ internal sealed partial class DosBatchExecutionEngine {
                 if (!_stdinRedirected) {
                     _savedStandardInput = _dosFileManager.OpenFiles[(ushort)DosStandardHandle.Stdin];
                     _stdinRedirected = true;
-                    TraceRedirection($"REDIR: saved stdin handle object '{_savedStandardInput?.Name}'");
                 }
                 break;
             case DosStandardHandle.Stdout:
                 if (!_stdoutRedirected) {
                     _savedStandardOutput = _dosFileManager.OpenFiles[(ushort)DosStandardHandle.Stdout];
                     _stdoutRedirected = true;
-                    TraceRedirection($"REDIR: saved stdout handle object '{_savedStandardOutput?.Name}'");
                 }
                 break;
             case DosStandardHandle.Stderr:
                 if (!_stderrRedirected) {
                     _savedStandardError = _dosFileManager.OpenFiles[(ushort)DosStandardHandle.Stderr];
                     _stderrRedirected = true;
-                    TraceRedirection($"REDIR: saved stderr handle object '{_savedStandardError?.Name}'");
                 }
                 break;
         }
@@ -459,18 +449,11 @@ internal sealed partial class DosBatchExecutionEngine {
 
     private void CloseRedirectedStandardHandle(ushort handle) {
         VirtualFileBase? redirectedHandle = _dosFileManager.OpenFiles[handle];
-        string redirectedName = redirectedHandle?.Name ?? "<null>";
-        TraceRedirection($"REDIR: closing redirected standard handle {handle} name='{redirectedName}' type={redirectedHandle?.GetType().Name ?? "<null>"}");
         if (redirectedHandle is DosFile) {
             _dosFileManager.CloseFileOrDevice(handle);
         } else {
             _dosFileManager.OpenFiles[handle] = null;
         }
-    }
-
-    private static void TraceRedirection(string message) {
-        Debug.WriteLine(message);
-        Console.WriteLine(message);
     }
 
     private static CommandRedirection MergeRedirections(CommandRedirection current, CommandRedirection inherited) {
