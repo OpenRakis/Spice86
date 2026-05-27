@@ -336,6 +336,7 @@ public class Spice86DependencyInjection : IDisposable {
         VgaTimingEngine vgaTimingEngine = new(videoState, vgaScheduler,
             _emulatedClock, vgaRenderer, vgaBlinkState);
         VgaRom vgaRom = new();
+        memory.RegisterMapping(VgaRom.Segment << 4, vgaRom.Size, vgaRom);
         VgaFunctionality vgaFunctionality = new VgaFunctionality(memory,
             interruptVectorTable, ioPortDispatcher,
             biosDataArea, vgaRom,
