@@ -19,6 +19,7 @@ using Spice86.Shared.Utils;
 using System.Linq;
 
 using InstructionNode = Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.InstructionNode;
+using SequentialIdAllocator = Spice86.Shared.Utils.SequentialIdAllocator;
 
 public class InstructionParser {
     // Handler tables: single-byte opcodes (0x00-0xFF) and 0F-prefixed opcodes (indexed by second byte)
@@ -89,7 +90,7 @@ public class InstructionParser {
     private readonly XchgRmParser _xchgRmParser;
     private readonly XlatParser _xlatParser;
 
-    public InstructionParser(IIndexable memory, State state, CfgNodeIdAllocator idAllocator) {
+    public InstructionParser(IIndexable memory, State state, SequentialIdAllocator idAllocator) {
         _parsingTools = new(memory, state, idAllocator);
         _aluOperationParser = new(_parsingTools);
         _bcdAdjustParser = new(_parsingTools);

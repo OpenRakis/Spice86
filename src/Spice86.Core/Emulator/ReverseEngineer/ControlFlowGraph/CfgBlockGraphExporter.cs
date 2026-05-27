@@ -1,9 +1,10 @@
-namespace Spice86.Core.Emulator.StateSerialization.ControlFlow;
+namespace Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
 
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.ReverseEngineer.Graph;
 
 using System.Linq;
 
@@ -84,71 +85,23 @@ public sealed class CfgBlockGraphExporter {
     }
 
     private static CfgBlockGraph TraverseFromSeeds(List<CfgBlock> seeds, CfgBlock? executingBlock, int? nodeLimit) {
-        HashSet<int> visitedBlockIds = new();
         HashSet<(int, int)> existingEdgeKeys = new();
-        Queue<CfgBlock> queue = new();
         List<CfgBlockGraphNode> blocks = new();
         List<CfgBlockGraphEdge> edges = new();
         bool truncated = false;
 
-        foreach (CfgBlock seed in seeds.Where(seed => visitedBlockIds.Add(seed.Id))) {
-            queue.Enqueue(seed);
-        }
-
-        while (queue.Count > 0) {
+        IEnumerable<CfgBlock> traversal = BreadthFirstSearch.Enumerate(seeds, block => GetAdjacentBlocks(block, existingEdgeKeys, edges));
+        foreach (CfgBlock block in traversal) {
             if (nodeLimit.HasValue && blocks.Count >= nodeLimit.Value) {
                 truncated = true;
                 break;
             }
-
-            CfgBlock block = queue.Dequeue();
 
             bool isExecutingBlock = executingBlock is not null && block.Id == executingBlock.Id;
             blocks.Add(new CfgBlockGraphNode {
                 Block = block,
                 IsExecutingBlock = isExecutingBlock
             });
-
-            // Successor edges
-            foreach (ICfgNode successor in block.Successors) {
-                CfgBlock? successorBlock = successor.ContainingBlock;
-                if (successorBlock is null) {
-                    continue;
-                }
-                (int, int) edgeKey = (block.Id, successorBlock.Id);
-                if (existingEdgeKeys.Add(edgeKey)) {
-                    edges.Add(new CfgBlockGraphEdge {
-                        From = block,
-                        To = successorBlock,
-                        BridgeNode = successor
-                    });
-                }
-                if (visitedBlockIds.Add(successorBlock.Id)) {
-                    queue.Enqueue(successorBlock);
-                }
-            }
-
-            // Predecessor edges
-            foreach (CfgBlock? predecessorBlock in block.Predecessors.Select(predecessor => predecessor.ContainingBlock)) {
-                if (predecessorBlock is null) {
-                    continue;
-                }
-                (int, int) edgeKey = (predecessorBlock.Id, block.Id);
-                if (existingEdgeKeys.Add(edgeKey)) {
-                    edges.Add(new CfgBlockGraphEdge {
-                        From = predecessorBlock,
-                        To = block,
-                        BridgeNode = block.Entry
-                    });
-                }
-                if (visitedBlockIds.Add(predecessorBlock.Id)) {
-                    queue.Enqueue(predecessorBlock);
-                }
-            }
-        }
-
-        if (queue.Count > 0) {
-            truncated = true;
         }
 
         HashSet<int> includedIds = new(blocks.Select(n => n.Block.Id));
@@ -161,5 +114,42 @@ public sealed class CfgBlockGraphExporter {
             Edges = closedEdges,
             Truncated = truncated
         };
+    }
+
+    private static IEnumerable<CfgBlock> GetAdjacentBlocks(
+        CfgBlock block,
+        HashSet<(int, int)> existingEdgeKeys,
+        List<CfgBlockGraphEdge> edges) {
+        List<CfgBlock> neighbors = new();
+        foreach (ICfgNode successor in block.Successors) {
+            CfgBlock? successorBlock = successor.ContainingBlock;
+            if (successorBlock is null) {
+                continue;
+            }
+            (int, int) edgeKey = (block.Id, successorBlock.Id);
+            if (existingEdgeKeys.Add(edgeKey)) {
+                edges.Add(new CfgBlockGraphEdge {
+                    From = block,
+                    To = successorBlock,
+                    BridgeNode = successor
+                });
+            }
+            neighbors.Add(successorBlock);
+        }
+        foreach (CfgBlock? predecessorBlock in block.Predecessors.Select(predecessor => predecessor.ContainingBlock)) {
+            if (predecessorBlock is null) {
+                continue;
+            }
+            (int, int) edgeKey = (predecessorBlock.Id, block.Id);
+            if (existingEdgeKeys.Add(edgeKey)) {
+                edges.Add(new CfgBlockGraphEdge {
+                    From = predecessorBlock,
+                    To = block,
+                    BridgeNode = block.Entry
+                });
+            }
+            neighbors.Add(predecessorBlock);
+        }
+        return neighbors;
     }
 }

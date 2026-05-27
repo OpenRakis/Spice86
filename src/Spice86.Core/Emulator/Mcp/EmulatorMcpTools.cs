@@ -53,6 +53,8 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
+using SequentialIdAllocator = Spice86.Shared.Utils.SequentialIdAllocator;
+
 [McpServerToolType]
 internal sealed class EmulatorMcpTools {
     private static readonly JsonSerializerOptions SerializerOptions = new() {
@@ -242,7 +244,7 @@ internal sealed class EmulatorMcpTools {
                     throw new InvalidOperationException("instructionCount must be between 1 and 500");
                 }
 
-                InstructionParser parser = new(_services.Memory, _services.State, new CfgNodeIdAllocator());
+                InstructionParser parser = new(_services.Memory, _services.State, new SequentialIdAllocator());
                 AstInstructionRenderer renderer = new(AsmRenderingConfig.CreateSpice86Style());
                 List<DisassemblyLine> lines = new();
                 SegmentedAddress current = new(segment, offset);

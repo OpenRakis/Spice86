@@ -1,0 +1,12 @@
+F000:0000 mov CX,0
+F000:0003 cmp CX,0
+F000:0006 je short 9
+F000:0008 hlt
+F000:0009 mov AX,word ptr [0x000F000A]
+F000:000C mov word ptr CS:[0x000A],0x162E
+F000:0013 mov CX,1
+F000:0016 cmp AX,0x162E
+F000:0019 je short 3
+F000:001B mov CX,0
+F000:001E jmp short 3
+F000:FFF0 jmp short 0

@@ -1,4 +1,4 @@
-; build: nasm -f bin tsr22h.com.asm -o tsr22h.com
+; build: nasm -f bin tsr22h.asm -o tsr22h.com
 
 BITS 16
 

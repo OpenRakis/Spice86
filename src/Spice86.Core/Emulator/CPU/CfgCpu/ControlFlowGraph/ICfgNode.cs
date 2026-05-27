@@ -9,7 +9,7 @@ using Spice86.Shared.Emulator.Memory;
 /// <summary>
 /// Represents a node in the CFG graph.
 /// </summary>
-public interface ICfgNode {
+public interface ICfgNode : IEquatable<ICfgNode> {
     /// <summary>
     /// Unique identifier of the node
     /// </summary>

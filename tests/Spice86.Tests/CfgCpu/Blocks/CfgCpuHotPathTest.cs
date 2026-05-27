@@ -5,6 +5,7 @@ using FluentAssertions;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Shared.Utils;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
@@ -28,7 +29,7 @@ using Xunit;
 public class CfgCpuHotPathTest : IDisposable {
     private const ushort BaseSegment = 0x1000;
     private const int BlockSize = 4;
-    private static readonly CfgNodeIdAllocator _allocator = new();
+    private static readonly SequentialIdAllocator _allocator = new();
     private readonly SingleStepTestMinimalMachine _machine = new(CpuModel.INTEL_80286);
 
     private CfgCpu Cpu => _machine.Cpu;

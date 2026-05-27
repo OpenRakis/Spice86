@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Shared.Utils;
 using Spice86.Core.Emulator.CPU.CfgCpu.Exceptions;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
@@ -13,9 +14,9 @@ using System.Runtime.CompilerServices;
 
 public class NodeLinker : InstructionReplacer {
     private readonly CfgNodeExecutionCompiler _executionCompiler;
-    private readonly CfgNodeIdAllocator _idAllocator;
+    private readonly SequentialIdAllocator _idAllocator;
 
-    public NodeLinker(InstructionReplacerRegistry replacerRegistry, CfgNodeExecutionCompiler executionCompiler, CfgNodeIdAllocator idAllocator) : base(replacerRegistry) {
+    public NodeLinker(InstructionReplacerRegistry replacerRegistry, CfgNodeExecutionCompiler executionCompiler, SequentialIdAllocator idAllocator) : base(replacerRegistry) {
         _executionCompiler = executionCompiler;
         _idAllocator = idAllocator;
     }
@@ -56,6 +57,9 @@ public class NodeLinker : InstructionReplacer {
             return resolvedForRet;
         }
         InstructionSuccessorType type = ComputeSuccessorTypeForRet(callInstruction, next);
+        if (!callInstruction.IsCall) {
+            callInstruction.IncreaseMaxSuccessorsCount(next.Address);
+        }
         // call->next is bookkeeping only, do not return the resolved value
         LinkCfgInstructionWithType(type, callInstruction, next);
         return resolvedForRet;
@@ -70,7 +74,7 @@ public class NodeLinker : InstructionReplacer {
             return next;
         }
 
-        if (!ReferenceEquals(shouldBeNext, next)) {
+        if (!shouldBeNext.Equals(next)) {
             return ResolveSuccessorConflict(current, next, shouldBeNext);
         }
         return next;
@@ -138,7 +142,7 @@ public class NodeLinker : InstructionReplacer {
                 AttachToNext(current, next);
                 return;
             }
-            if (!ReferenceEquals(shouldBeNextOrNull, next)) {
+            if (!shouldBeNextOrNull.Equals(next)) {
                 throw new UnhandledCfgDiscrepancyException("Next instruction's signature is present in the selector node successors, but the corresponding successor is not next instruction which should never happen.");
             }
         } else {
@@ -212,7 +216,7 @@ public class NodeLinker : InstructionReplacer {
         }
 
         // Intra-block edge: both nodes already share the same block.
-        if (ReferenceEquals(next.ContainingBlock, currentBlock)) {
+        if (currentBlock.Equals(next.ContainingBlock)) {
             int currentIndex = currentBlock.IndexOf(current);
             int nextIndex = currentBlock.IndexOf(next);
             // True idempotency: next immediately follows current in the block.
@@ -327,7 +331,7 @@ public class NodeLinker : InstructionReplacer {
             OpenBlock(next);
             return;
         }
-        if (!ReferenceEquals(next, next.ContainingBlock.Entry)) {
+        if (!next.Equals(next.ContainingBlock.Entry)) {
             SplitBlock(next.ContainingBlock, next.ContainingBlock.IndexOf(next), completePrefixDiscovery: true);
         }
     }
@@ -367,9 +371,10 @@ public class NodeLinker : InstructionReplacer {
 
     private void SwitchSuccessorsToNew(ICfgNode oldNode, ICfgNode newNode) {
         foreach (ICfgNode successor in oldNode.Successors) {
-            // Replace current with new in the successor's predecessors
-            LinkToNext(newNode, successor);
+            // Remove oldNode before linking newNode so LinkToNext never observes a
+            // transient state where both old and new are in Predecessors at the same time.
             successor.Predecessors.Remove(oldNode);
+            LinkToNext(newNode, successor);
             // No cache update of newNode. Should be done at the end of the loop but caller already does it.
         }
         oldNode.Successors.Clear();
@@ -377,9 +382,10 @@ public class NodeLinker : InstructionReplacer {
 
     private void SwitchPredecessorsToNew(ICfgNode oldNode, ICfgNode newNode) {
         foreach (ICfgNode predecessor in oldNode.Predecessors) {
-            // Replace current with new in the predecessors successors
-            LinkToNext(predecessor, newNode);
+            // Remove oldNode before linking newNode so LinkToNext never observes a
+            // transient state where both old and new are in Successors at the same time.
             predecessor.Successors.Remove(oldNode);
+            LinkToNext(predecessor, newNode);
             predecessor.UpdateSuccessorCache();
             if (predecessor is CfgInstruction predecessorInstruction) {
                 ReplaceSuccessorOfCallInstruction(predecessorInstruction, oldNode, newNode);

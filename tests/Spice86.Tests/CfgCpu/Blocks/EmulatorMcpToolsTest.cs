@@ -67,6 +67,11 @@ public class EmulatorMcpToolsTest {
         response.Blocks.Should().BeEmpty(
             "after CfgCpu.Clear() there are no entry points and no LastExecuted, " +
             "so the block-centric BFS has no seeds");
+        response.Partitions.Should().NotBeNull();
+        response.Partitions.Should().BeEmpty();
+        response.Transfers.Should().NotBeNull();
+        response.Transfers.Should().BeEmpty();
+        response.PartitioningRequiresFullGraph.Should().BeNull();
         response.Truncated.Should().BeFalse();
         response.LastExecutedAddress.Should().BeNull();
         response.LastExecutedBlockId.Should().BeNull();
@@ -108,6 +113,9 @@ public class EmulatorMcpToolsTest {
         result.IsError.Should().NotBe(true);
         CfgCpuGraph response = DeserializeResponse(result);
         response.Blocks.Should().NotBeEmpty("running the program must produce at least one block");
+        response.Partitions.Should().BeNull("partitioning a node-limited graph would create references to omitted blocks");
+        response.Transfers.Should().BeNull("partitioning a node-limited graph would create references to omitted partitions");
+        response.PartitioningRequiresFullGraph.Should().BeTrue();
 
         HashSet<int> includedIds = response.Blocks.Select(b => b.Id).ToHashSet();
         foreach (CfgBlockInfo block in response.Blocks) {

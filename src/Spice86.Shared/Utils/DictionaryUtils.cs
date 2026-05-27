@@ -18,4 +18,16 @@ public static class DictionaryUtils {
             dictionary1[entry.Key] = entry.Value;
         }
     }
+
+    /// <summary>
+    /// Returns the list for <paramref name="key"/>, creating and inserting an empty list if absent.
+    /// </summary>
+    public static List<TValue> GetOrAddList<TKey, TValue>(Dictionary<TKey, List<TValue>> dictionary, TKey key)
+        where TKey : notnull {
+        if (!dictionary.TryGetValue(key, out List<TValue>? values)) {
+            values = new();
+            dictionary[key] = values;
+        }
+        return values;
+    }
 }

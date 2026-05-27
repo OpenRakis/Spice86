@@ -4,6 +4,7 @@ using NSubstitute;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Shared.Utils;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
@@ -19,13 +20,13 @@ using Spice86.Shared.Interfaces;
 internal sealed class LinkerHarness : IDisposable {
     private readonly CfgNodeExecutionCompiler _compiler;
     private readonly CfgNodeExecutionCompilerMonitor _monitor;
-    private readonly CfgNodeIdAllocator _idAllocator;
+    private readonly SequentialIdAllocator _idAllocator;
 
     public LinkerHarness() {
         ILoggerService loggerService = Substitute.For<ILoggerService>();
         _monitor = new CfgNodeExecutionCompilerMonitor(loggerService);
         _compiler = new CfgNodeExecutionCompiler(_monitor, loggerService, JitMode.InterpretedOnly);
-        _idAllocator = new CfgNodeIdAllocator();
+        _idAllocator = new SequentialIdAllocator();
         Linker = new NodeLinker(new InstructionReplacerRegistry(), _compiler, _idAllocator);
     }
 

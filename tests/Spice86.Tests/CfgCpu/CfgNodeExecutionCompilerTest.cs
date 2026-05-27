@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Shared.Utils;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Shared.Emulator.Memory;
@@ -35,7 +36,7 @@ public class CfgNodeExecutionCompilerTest {
     /// The AST is a simple <see cref="SelectorNode"/> which compiles to a no-op like expression.
     /// </summary>
     private sealed class FixedAstNode : CfgNode {
-        private static readonly CfgNodeIdAllocator _allocator = new();
+        private static readonly SequentialIdAllocator _allocator = new();
         private IVisitableAstNode _ast;
 
         public FixedAstNode(SegmentedAddress address, IVisitableAstNode ast)

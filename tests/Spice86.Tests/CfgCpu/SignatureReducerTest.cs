@@ -3,6 +3,7 @@ namespace Spice86.Tests.CfgCpu;
 using FluentAssertions;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Shared.Utils;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
@@ -15,7 +16,7 @@ using Xunit;
 public class SignatureReducerTest {
     private static readonly SegmentedAddress TestAddress = new(0x1000, 0);
     private const uint DefaultValueAddress = 0x10001;
-    private static readonly CfgNodeIdAllocator _allocator = new();
+    private static readonly SequentialIdAllocator _allocator = new();
 
     private static SignatureReducer CreateReducer() {
         InstructionReplacerRegistry replacerRegistry = new();

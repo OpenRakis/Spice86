@@ -14,11 +14,13 @@ using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
 using Spice86.Core.Emulator.Errors;
+using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Mcp.Response;
 using Spice86.Core.Emulator.StateSerialization;
-using Spice86.Core.Emulator.StateSerialization.ControlFlow;
+using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
 using Spice86.Core.Emulator.VM;
 using Spice86.Logging;
 using Spice86.Shared.Emulator.Memory;
@@ -34,6 +36,15 @@ using Xunit;
 public class MachineTest
 {
     public static IEnumerable<object[]> JitModes => [[JitMode.InterpretedOnly], [JitMode.CompiledOnly]];
+
+    public static IEnumerable<object[]> CfgPartitioningGraphFixtures => [
+        ["partition_jump_into_function_middle"],
+        ["partition_shared_tail"],
+        ["partition_multi_entry_dominated_shared"],
+        ["partition_multi_entry_irreducible_shared"],
+        ["partition_cross_function_loop"],
+        ["partition_indirect_call_jump"]
+    ];
 
     private readonly ListingExtractor _dumper = new(new(AsmRenderingConfig.CreateSpice86Style()));
 
@@ -396,6 +407,42 @@ public class MachineTest
         TestOneBin("selfmodifyinstructions", expected, jitMode);
     }
 
+    /// <summary>
+    /// Regression test for the bug in <see cref="NodeLinker"/> where
+    /// <c>SwitchPredecessorsToNew</c> adds the new successor before removing the old one.
+    /// If adding the new successor brings <c>Successors.Count</c> to
+    /// <c>MaxSuccessorsCount</c>, <c>CanHaveMoreSuccessors</c> is set to <c>false</c>.
+    /// Removing the old successor afterwards drops the count back below the max, but
+    /// <c>CanHaveMoreSuccessors</c> is never reset to <c>true</c>.
+    /// This causes the <c>je -> hlt</c> fall-through link to never be added.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestSelfModifyJe(JitMode jitMode)
+    {
+        TestOneBin("selfmodifyje", [], jitMode, machine => {
+            CurrentInstructions currentInstructions = machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
+            // Layout (F000:0000 = start):
+            //   0000: mov cx, 0       (3 bytes)
+            //   0003: cmp cx, 0       (3 bytes)  <- jump label
+            //   0006: je selfmodify   (2 bytes)
+            //   0008: hlt             (1 byte)
+            //   0009: mov ax, 1234    (3 bytes)  <- selfmodify label
+            CfgInstruction? je = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x0006));
+            CfgInstruction? hlt = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x0008));
+            CfgInstruction? selfModify = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x0009));
+            Assert.NotNull(je);
+            Assert.NotNull(hlt);
+            Assert.NotNull(selfModify);
+            // Both successor paths are discovered: selfModify (taken) and hlt (fall-through).
+            Assert.Equal(2, je.Successors.Count);
+            // hlt must be a successor of je (fall-through path, added on iteration 3)
+            Assert.Contains(hlt, je.Successors);
+            // selfModify must still be a successor of je (taken path)
+            Assert.Contains(selfModify, je.Successors);
+        });
+    }
+
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestSelfModifyCall(JitMode jitMode)
@@ -533,6 +580,8 @@ public class MachineTest
             // Instruction-level: div has CallToReturn edge to divblockEntry
             // (handler rewrites return IP to divblock start)
             Assert.Contains(divblockEntry, div.Successors);
+            Assert.Contains(postDiv, div.Successors);
+            Assert.Contains(postDiv, div.SuccessorsPerType[InstructionSuccessorType.Normal]);
 
             // Block-level: div is a block terminator (CpuFault gives it multiple successor types)
             CfgBlock? divBlock = div.ContainingBlock;
@@ -573,6 +622,26 @@ public class MachineTest
         expected[0x00] = 0x02;
         expected[0x01] = 0x00;
         TestOneBin("linearsamesegmenteddifferent", expected, jitMode, enableA20Gate:true);
+    }
+
+    [Theory]
+    [MemberData(nameof(CfgPartitioningGraphFixtures))]
+    public void TestCfgPartitioningGraphFixture(string binName) {
+        TestOneBin(binName, [], JitMode.InterpretedOnly, maxCycles: 1000);
+    }
+
+    [Fact]
+    public void TestPartitionIndirectCallJump_HasCallOutAndAlignedReturn() {
+        TestOneBin("partition_indirect_call_jump", [], JitMode.InterpretedOnly, machine => {
+            CfgBlocksJsonExporter exporter = new(new CfgBlockGraphExporter(), new FunctionCatalogue(), new CfgFunctionPartitioner());
+            CfgCpuGraph graph = exporter.BuildGraph(machine.CfgCpu.ExecutionContextManager, null);
+
+            graph.Partitions.Should().NotBeNull();
+            graph.Partitions.Should().HaveCount(2, "one for the indirect target function, one for the entry point");
+            graph.Transfers.Should().NotBeNull();
+            graph.Transfers.Should().Contain(t => t.Kind == "callOut", "indirect call via BX must produce a callOut transfer");
+            graph.Transfers.Should().Contain(t => t.Kind == "alignedReturn", "ret from indirect target must produce an alignedReturn transfer");
+        }, maxCycles: 1000);
     }
 
     [Theory]
@@ -940,7 +1009,7 @@ public class MachineTest
     }
 
     private void CompareCfgBlocksJsonWithExpected(string binName, Machine machine) {
-        CfgBlocksJsonExporter exporter = new(new CfgBlockGraphExporter());
+        CfgBlocksJsonExporter exporter = new(new CfgBlockGraphExporter(), new FunctionCatalogue(), new CfgFunctionPartitioner());
         CfgCpuGraph actualGraph = exporter.BuildGraph(machine.CfgCpu.ExecutionContextManager, null);
 
         string actualJson = JsonSerializer.Serialize(actualGraph, CfgBlocksJsonOptions);

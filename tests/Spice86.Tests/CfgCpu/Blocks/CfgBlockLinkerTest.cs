@@ -6,6 +6,7 @@ using NSubstitute;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Shared.Utils;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
@@ -24,7 +25,7 @@ public class CfgBlockLinkerTest : IDisposable {
     private const ushort BaseSegment = 0x1000;
     private const ushort TargetSegment = 0x4000;
 
-    private static readonly CfgNodeIdAllocator _blockAllocator = new();
+    private static readonly SequentialIdAllocator _blockAllocator = new();
     private readonly CfgNodeExecutionCompiler _compiler;
     private readonly CfgNodeExecutionCompilerMonitor _monitor;
     private readonly NodeLinker _linker;
@@ -33,7 +34,7 @@ public class CfgBlockLinkerTest : IDisposable {
         ILoggerService loggerService = Substitute.For<ILoggerService>();
         _monitor = new CfgNodeExecutionCompilerMonitor(loggerService);
         _compiler = new CfgNodeExecutionCompiler(_monitor, loggerService, JitMode.InterpretedOnly);
-        _linker = new NodeLinker(new InstructionReplacerRegistry(), _compiler, new CfgNodeIdAllocator());
+        _linker = new NodeLinker(new InstructionReplacerRegistry(), _compiler, new SequentialIdAllocator());
     }
 
     public void Dispose() {
