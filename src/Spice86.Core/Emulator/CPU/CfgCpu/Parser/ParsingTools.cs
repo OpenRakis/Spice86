@@ -6,6 +6,8 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Parser.FieldReader;
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.Memory.Indexable;
 
+using SequentialIdAllocator = Spice86.Shared.Utils.SequentialIdAllocator;
+
 /// <summary>
 /// Shared toolkit passed to all instruction parsers. Holds the reader, ModRM parser,
 /// CPU state, prefix parser, and AST builder that every parser needs.
@@ -16,9 +18,9 @@ public class ParsingTools {
     public ModRmParser ModRmParser { get; }
     public State State { get; }
     public AstBuilder AstBuilder { get; }
-    public CfgNodeIdAllocator IdAllocator { get; }
+    public SequentialIdAllocator IdAllocator { get; }
 
-    public ParsingTools(IIndexable memory, State state, CfgNodeIdAllocator idAllocator) {
+    public ParsingTools(IIndexable memory, State state, SequentialIdAllocator idAllocator) {
         InstructionReader instructionReader = new(memory);
         InstructionReader = instructionReader;
         InstructionPrefixParser = new(instructionReader);

@@ -146,7 +146,7 @@ public class CfgNodeFeederTest : IDisposable {
         // Check the selector node is there
         AssertLinksTo(movAx0, selectorNode);
         // Check selector node also contains Mov BX
-        ICfgNode movBx = selectorNode.Successors.First(node => !ReferenceEquals(node, movAx1));
+        ICfgNode movBx = selectorNode.Successors.First(node => !node.Equals(movAx1));
         CfgInstruction movBxRegImm16 = AssertIsMovWithOpcode(movBx, MovBxOpcode);
         CfgInstruction movAx1RegImm16 = AssertIsMovWithOpcode(movAx1, MovAxOpcode);
         AssertUsesValue(movBxRegImm16, DefaultValue);

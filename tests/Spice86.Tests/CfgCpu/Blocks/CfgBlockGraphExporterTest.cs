@@ -2,22 +2,14 @@ namespace Spice86.Tests.CfgCpu.Blocks;
 
 using FluentAssertions;
 
-using NSubstitute;
-
-using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
-using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
-using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.StateSerialization.ControlFlow;
-using Spice86.Core.Emulator.Memory.Mmu;
-using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
 using Spice86.Shared.Emulator.Memory;
-using Spice86.Shared.Interfaces;
+using Spice86.Tests.Fixtures;
 
 using Xunit;
 
@@ -241,19 +233,8 @@ public class CfgBlockGraphExporterTest : IDisposable {
     [Fact]
     public void ExportFromExecutionContext_IncludesContextMetadata() {
         // Arrange — create a minimal ExecutionContextManager
-        ILoggerService loggerService = Substitute.For<ILoggerService>();
-        AddressReadWriteBreakpoints memoryBreakpoints = new();
-        Memory memory = new(memoryBreakpoints, new Ram(0x100000), new A20Gate(), new RealModeMmu386(), false);
-        State state = new(CpuModel.INTEL_80286);
-        InstructionReplacerRegistry replacerRegistry = new();
-        using CfgNodeExecutionCompilerMonitor monitor = new(loggerService);
-        using CfgNodeExecutionCompiler compiler = new(monitor, loggerService, Spice86.Core.CLI.JitMode.InterpretedOnly);
-        using Spice86.Core.Emulator.VM.PauseHandler pauseHandler = new(loggerService);
-        CfgNodeFeeder feeder = new(memory, state, new EmulatorBreakpointsManager(
-            pauseHandler, state, memory,
-            memoryBreakpoints, new AddressReadWriteBreakpoints()), replacerRegistry, compiler);
-        ExecutionContextManager contextManager = new(memory, state, feeder, replacerRegistry,
-            new FunctionCatalogue(), false, loggerService, null);
+        using ExecutionContextManagerFactory factory = new(new FunctionCatalogue());
+        ExecutionContextManager contextManager = factory.ContextManager;
 
         // Build a simple chain
         CfgInstruction instrA = _harness.CreateInstruction(new SegmentedAddress(Seg, 0x0000), 0xEB, 1, InstructionKind.Jump);

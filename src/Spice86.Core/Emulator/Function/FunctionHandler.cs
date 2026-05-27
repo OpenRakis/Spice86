@@ -15,9 +15,11 @@ using Spice86.Shared.Utils;
 /// Handles function calls for the emulator machine.
 /// </summary>
 public class FunctionHandler {
+    private const int MaxCallStackDepth = 1000;
+
     private readonly ILoggerService _loggerService;
 
-    private readonly Stack<FunctionCall> _callerStack = new();
+    private readonly FunctionCallStack _callerStack = new();
 
     private readonly State _state;
 
@@ -84,14 +86,19 @@ public class FunctionHandler {
             // No need to register the function call, no associated ret was executed.
             return;
         }
+        FunctionInformation? callerInfo = _functionCatalogue.GetFunctionInformation(CurrentFunctionCall);
         FunctionCall currentFunctionCall = new(callType, entryAddress, expectedReturnAddress, CurrentStackAddress, call);
         _callerStack.Push(currentFunctionCall);
+        if (_callerStack.Count > MaxCallStackDepth) {
+            _loggerService.Warning(
+                "CALL STACK DEPTH EXCEEDED {MaxDepth}! Something is very wrong with the emulated code. Function tracking will be reset. Further returns may be flagged as misaligned.",
+                MaxCallStackDepth);
+            _callerStack.Clear();
+        }
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            FunctionInformation? caller = _functionCatalogue.GetFunctionInformation(CurrentFunctionCall);
-            _loggerService.Verbose("{Depth} Calling {CurrentFunction} from {Caller}", _callerStack.Count, currentFunction, caller);
+            _loggerService.Verbose("{Depth} Calling {CurrentFunction} from {Caller}", _callerStack.Count, currentFunction, callerInfo);
         }
 
-        FunctionInformation? callerInfo = _functionCatalogue.GetFunctionInformation(CurrentFunctionCall);
         currentFunction.Enter(callerInfo);
     }
 
@@ -101,7 +108,7 @@ public class FunctionHandler {
     /// <returns>A string representation of the call stack.</returns>
     public string DumpCallStack() {
         StringBuilder res = new();
-        foreach (FunctionCall functionCall in _callerStack) {
+        foreach (FunctionCall functionCall in _callerStack.FromTopToBottom) {
             SegmentedAddress? returnAddress = functionCall.ExpectedReturnAddress;
             FunctionInformation? functionInformation = _functionCatalogue.GetFunctionInformation(functionCall);
             res.Append(" - ");
@@ -138,7 +145,7 @@ public class FunctionHandler {
             CallType.FAR16 or CallType.INTERRUPT or CallType.EXTERNAL_INTERRUPT => memory.SegmentedAddress16[stackPhysicalAddress],
             CallType.FAR32 => memory.SegmentedAddress32[stackPhysicalAddress].ToSegmentedAddress(),
             CallType.MACHINE => null,
-            _ => null
+            _ => throw new ArgumentOutOfRangeException(nameof(returnCallType), returnCallType, "Unknown CallType")
         };
     }
 
@@ -158,31 +165,50 @@ public class FunctionHandler {
     /// </summary>
     /// <param name="returnCallType">The calling convention.</param>
     /// <param name="ret">The instruction that initiated this return.</param>
-    /// <returns>A value indicating whether the return was successful.</returns>
     public void Ret(CallType returnCallType, CfgInstruction? ret) {
-        if (_callerStack.TryPop(out FunctionCall currentFunctionCall) == false) {
+        FunctionCall? currentFunctionCallOrNull = CurrentFunctionCall;
+        if (currentFunctionCallOrNull == null) {
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                 _loggerService.Warning("Returning but no call was done before!!. Instruction is {Instruction}", ret);
             }
             return;
         }
+        FunctionCall currentFunctionCall = currentFunctionCallOrNull.Value;
         if (returnCallType == CallType.MACHINE) {
+            _callerStack.TryPop(out currentFunctionCall);
             if (currentFunctionCall.CallType != returnCallType) {
                 _loggerService.Warning("Exiting machine entry point but current function does not seem to be entry point.");
             }
             return;
         }
-        if (ret is not null && ret.IsReturn) {
-            // Register the call instruction that probably caused this return
-            ret.CurrentCorrespondingCallInstruction = currentFunctionCall.Initiator;
+
+        SegmentedAddress? actualReturnAddress = PeekReturnAddressOnMachineStack(returnCallType);
+        FunctionCallStackMatch? returnMatch = _callerStack.FindReturnMatch(actualReturnAddress);
+        if (returnMatch == null) {
+            if (ret is not null && ret.IsReturn) {
+                ret.CurrentCorrespondingCallInstruction = currentFunctionCall.Initiator;
+            }
+            HandleReturn(returnCallType, currentFunctionCall, false, actualReturnAddress);
+            LogVerboseReturn(returnCallType, currentFunctionCall);
+            return;
         }
 
-        
-        bool returnAddressAlignedWithCallStack = HandleReturn(returnCallType, currentFunctionCall);
-        if (!returnAddressAlignedWithCallStack) {
-            // Put it back in the stack, we did a jump not a return
-            _callerStack.Push(currentFunctionCall);
+        FunctionCallStackMatch nonNullReturnMatch = returnMatch.Value;
+        bool returnAddressAlignedWithCallStack = nonNullReturnMatch.IsTop;
+        FunctionCall functionCallToRecord = returnAddressAlignedWithCallStack
+            ? nonNullReturnMatch.FunctionCall
+            : currentFunctionCall;
+        if (ret is not null && ret.IsReturn) {
+            // Register the call instruction that probably caused this return
+            ret.CurrentCorrespondingCallInstruction = functionCallToRecord.Initiator;
         }
+
+        HandleReturn(returnCallType, functionCallToRecord, returnAddressAlignedWithCallStack, actualReturnAddress);
+        _callerStack.PopThrough(nonNullReturnMatch);
+        LogVerboseReturn(returnCallType, functionCallToRecord);
+    }
+
+    private void LogVerboseReturn(CallType returnCallType, FunctionCall currentFunctionCall) {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             FunctionInformation? currentFunctionInformation = _functionCatalogue.GetFunctionInformation(currentFunctionCall);
             _loggerService.Verbose("Returning from function {From} to function {To} ({TargetAddress})", 
@@ -197,55 +223,31 @@ public class FunctionHandler {
     /// </summary>
     public bool UseCodeOverride { get; set; }
 
-    private bool HandleReturn(CallType returnCallType, FunctionCall currentFunctionCall) {
-        bool returnAddressAlignedWithCallStack = DetectUnalignedReturns(currentFunctionCall, returnCallType);
+    private void HandleReturn(CallType returnCallType, FunctionCall currentFunctionCall, bool returnAddressAlignedWithCallStack, SegmentedAddress? actualReturnAddress) {
         FunctionInformation? currentFunctionInformation = _functionCatalogue.GetFunctionInformation(currentFunctionCall);
         // Do not register functions when they are overriden
         if (currentFunctionInformation != null && !UseOverride(currentFunctionInformation)) {
             FunctionReturn currentFunctionReturn = new FunctionReturn(returnCallType, _state.IpSegmentedAddress);
-            SegmentedAddress? actualReturnAddress = PeekReturnAddressOnMachineStack(returnCallType);
             SegmentedAddress? addressToRecord = actualReturnAddress;
 
             if (returnAddressAlignedWithCallStack) {
                 currentFunctionInformation.AddReturn(currentFunctionReturn, addressToRecord);
             } else {
+                if (actualReturnAddress != null) {
+                    LogUnalignedReturn(currentFunctionCall, currentFunctionInformation, returnCallType,
+                        currentFunctionCall.ExpectedReturnAddress, actualReturnAddress.Value);
+                }
                 currentFunctionInformation.AddUnalignedReturn(currentFunctionReturn, addressToRecord);
             }
         }
-
-        return returnAddressAlignedWithCallStack;
     }
 
     private FunctionCall? CurrentFunctionCall {
-        get {
-            if (_callerStack.Count > 0 == false) {
-                return null;
-            }
-            return _callerStack.TryPeek(out FunctionCall firstElement) ? firstElement : null;
-        }
+        get => _callerStack.Current;
     }
 
 
     private SegmentedAddress CurrentStackAddress => new(_state.SS, _state.SP);
-
-    private bool DetectUnalignedReturns(FunctionCall currentFunctionCall, CallType returnCallType) {
-        SegmentedAddress? expectedReturnAddress = currentFunctionCall.ExpectedReturnAddress;
-        SegmentedAddress? actualReturnAddress = PeekReturnAddressOnMachineStack(returnCallType);
-        // Null check necessary for machine stop call, in this case it won't be equals to what is in
-        // the stack but it's expected.
-        if (actualReturnAddress == null || actualReturnAddress.Equals(expectedReturnAddress)) {
-            // Everything is normal
-            return true;
-        }
-        
-        FunctionInformation? currentFunctionInformation = _functionCatalogue.GetFunctionInformation(currentFunctionCall);
-        if (currentFunctionInformation != null) {
-            LogUnalignedReturn(currentFunctionCall, currentFunctionInformation, returnCallType, expectedReturnAddress,
-                actualReturnAddress.Value);
-        }
-
-        return false;
-    }
 
     private void LogUnalignedReturn(FunctionCall currentFunctionCall, FunctionInformation currentFunctionInformation,
         CallType returnCallType, SegmentedAddress? expectedReturnAddress,

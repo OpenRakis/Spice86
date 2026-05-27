@@ -8,6 +8,7 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Shared.Emulator.VM.Breakpoint.Serializable;
 using Spice86.Shared.Interfaces;
 
+using System.IO;
 using System.Text;
 using System.Text.Json;
 
@@ -64,17 +65,23 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Information)) {
             LoggerService.Information("Saving all data to {DumpDirectory}", DataDirectory);
         }
-        File.WriteAllText(CpuRegistersFile, JsonSerializer.Serialize(_state));
-        _memoryDataExporter.Write(MemoryFile);
-        _listingExporter.Write(ListingFile);
-        _cfgBlocksJsonExporter.Write(_executionContextManager, CfgBlocksFile);
         ExecutionAddresses executionAddresses = _executionAddressesExtractor.Extract();
-        new GhidraSymbolsExporter(LoggerService).Write(executionAddresses, _functionCatalogue, SymbolsFile);
-        new ExecutionAddressesExporter(LoggerService).Write(executionAddresses, ExecutionFlowFile);
-        WriteBreakpoints(BreakpointsFile);
+        WriteToFile(CpuRegistersFile, () => File.WriteAllText(CpuRegistersFile, JsonSerializer.Serialize(_state)));
+        WriteToFile(MemoryFile, () => _memoryDataExporter.Write(MemoryFile));
+        WriteToFile(ListingFile, () => _listingExporter.Write(ListingFile));
+        WriteToFile(CfgBlocksFile, () => _cfgBlocksJsonExporter.Write(_executionContextManager, CfgBlocksFile));
+        WriteToFile(SymbolsFile, () => new GhidraSymbolsExporter(LoggerService).Write(executionAddresses, _functionCatalogue, SymbolsFile));
+        WriteToFile(ExecutionFlowFile, () => new ExecutionAddressesExporter(LoggerService).Write(executionAddresses, ExecutionFlowFile));
+        WriteToFile(BreakpointsFile, () => WriteBreakpoints(BreakpointsFile));
     }
-    
-    
+
+    private void WriteToFile(string path, Action writeAction) {
+        if (LoggerService.IsEnabled(LogEventLevel.Information)) {
+            LoggerService.Information("Saving file {FileName}", Path.GetFileName(path));
+        }
+        writeAction();
+    }
+
     private void WriteBreakpoints(string filePath) {
         SerializableUserBreakpointCollection serializedBreakpoints =
             _serializableBreakpointsSource.CreateSerializableBreakpoints();
@@ -83,10 +90,5 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
             new JsonSerializerOptions { WriteIndented = true });
         using FileStream fileStream = File.Open(filePath, FileMode.Create);
         fileStream.Write(Encoding.UTF8.GetBytes(jsonString));
-
-        if (LoggerService.IsEnabled(LogEventLevel.Information)) {
-            LoggerService.Information("Saved {Count} breakpoints to {FilePath}",
-                serializedBreakpoints.Breakpoints.Count, filePath);
-        }
     }
 }

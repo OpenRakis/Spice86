@@ -232,7 +232,7 @@ public abstract class BreakpointUiTestBase : IDisposable {
 
         CallbackHandler callbackHandler = new(state, loggerService);
         Configuration configuration = new() { HttpApiPort = 0 };
-        MemoryDataExporter memoryDataExporter = new(memory, callbackHandler, configuration, loggerService);
+        MemoryDataExporter memoryDataExporter = new(memory, callbackHandler, configuration);
 
         EmulatorBreakpointsManager breakpointsManager = CreateBreakpointsManager(
             pauseHandler, state, memory, memoryBreakpoints, ioBreakpoints);

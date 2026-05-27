@@ -15,6 +15,8 @@ using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
 
+using SequentialIdAllocator = Spice86.Shared.Utils.SequentialIdAllocator;
+
 public class BaseInstructionParser {
     /// <summary>
     /// For some instructions, lsb == 0 when 8bit and 1 when 16/32
@@ -24,7 +26,7 @@ public class BaseInstructionParser {
     protected readonly ModRmParser _modRmParser;
     protected readonly State _state;
     protected readonly AstBuilder _astBuilder;
-    protected readonly CfgNodeIdAllocator _idAllocator;
+    protected readonly SequentialIdAllocator _idAllocator;
 
     protected BaseInstructionParser(ParsingTools parsingTools) {
         _instructionReader = parsingTools.InstructionReader;

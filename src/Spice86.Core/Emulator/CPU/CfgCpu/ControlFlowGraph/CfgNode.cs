@@ -9,7 +9,7 @@ using Spice86.Shared.Emulator.Memory;
 
 using System.Threading;
 
-public abstract class CfgNode : ICfgNode {
+public abstract class CfgNode : ICfgNode, IEquatable<CfgNode> {
     public CfgNode(int id, SegmentedAddress address, int? maxSuccessorsCount) {
         Id = id;
         Address = address;
@@ -99,4 +99,20 @@ public abstract class CfgNode : ICfgNode {
     public override string ToString() {
         return $"CfgNode of type {GetType()} with address {Address} and id {Id} IsLive {IsLive}";
     }
+
+    /// <inheritdoc />
+    public bool Equals(ICfgNode? other) => other is not null && Id == other.Id;
+
+    /// <inheritdoc />
+    public bool Equals(CfgNode? other) => Equals((ICfgNode?)other);
+
+    /// <inheritdoc />
+    public override bool Equals(object? obj) => obj is ICfgNode other && Equals(other);
+
+    /// <inheritdoc />
+    public override int GetHashCode() => Id;
+
+    public static bool operator ==(CfgNode? left, CfgNode? right) => Equals(left, right);
+
+    public static bool operator !=(CfgNode? left, CfgNode? right) => !Equals(left, right);
 }

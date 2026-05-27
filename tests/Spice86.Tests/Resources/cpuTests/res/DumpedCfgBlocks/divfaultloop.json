@@ -6,13 +6,15 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:0036",
-  "lastExecutedBlockId": 32,
+  "lastExecutedBlockId": 31,
   "blocks": [
     {
-      "id": 32,
+      "id": 31,
       "entry": "F000:002A",
       "term": "F000:0036",
-      "pred": [],
+      "pred": [
+        27
+      ],
       "succ": [],
       "asm": [
         "2E8B1E0001|mov BX,word ptr CS:[0x0100]",
@@ -34,6 +36,26 @@
       ]
     },
     {
+      "id": 27,
+      "entry": "F000:0020",
+      "term": "F000:0028",
+      "pred": [
+        3,
+        23,
+        27
+      ],
+      "succ": [
+        14,
+        27,
+        31
+      ],
+      "asm": [
+        "B80A00|mov AX,0x000A",
+        "2E8B1E0201|mov BX,word ptr CS:[0x0102]",
+        "F7F3|div BX"
+      ]
+    },
+    {
       "id": 3,
       "entry": "F000:0000",
       "term": "F000:0019",
@@ -51,25 +73,6 @@
         "8C0E0200|mov word ptr DS:[2],CS",
         "2EC70600010000|mov word ptr CS:[0x0100],0",
         "2EC70602010000|mov word ptr CS:[0x0102],0"
-      ]
-    },
-    {
-      "id": 27,
-      "entry": "F000:0020",
-      "term": "F000:0028",
-      "pred": [
-        3,
-        23,
-        27
-      ],
-      "succ": [
-        14,
-        27
-      ],
-      "asm": [
-        "B80A00|mov AX,0x000A",
-        "2E8B1E0201|mov BX,word ptr CS:[0x0102]",
-        "F7F3|div BX"
       ]
     },
     {
@@ -125,6 +128,86 @@
       "asm": [
         "2EC70602010500|mov word ptr CS:[0x0102],5"
       ]
+    }
+  ],
+  "partitions": [
+    {
+      "id": 1,
+      "kind": "observed",
+      "name": "unknown_F000_0020_F0020",
+      "blocks": [
+        27,
+        31
+      ],
+      "entries": [
+        {
+          "block": 27,
+          "address": "F000:0020",
+          "kind": "returnTargetEntry"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "observed",
+      "name": "unknown_F000_0037_F0037",
+      "blocks": [
+        14,
+        29,
+        23
+      ],
+      "entries": [
+        {
+          "block": 14,
+          "address": "F000:0037",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "observed",
+      "name": "unknown_F000_FFF0_FFFF0",
+      "blocks": [
+        3,
+        2
+      ],
+      "entries": [
+        {
+          "block": 2,
+          "address": "F000:FFF0",
+          "kind": "executionContextEntry"
+        }
+      ]
+    }
+  ],
+  "transfers": [
+    {
+      "kind": "cpuFault",
+      "fromPartition": 1,
+      "toPartition": 2,
+      "fromBlock": 27,
+      "toBlock": 14,
+      "from": "F000:0028",
+      "target": "F000:0037"
+    },
+    {
+      "kind": "dynamicReturn",
+      "fromPartition": 2,
+      "toPartition": 1,
+      "fromBlock": 23,
+      "toBlock": 27,
+      "from": "F000:0059",
+      "target": "F000:0020"
+    },
+    {
+      "kind": "crossPartitionJump",
+      "fromPartition": 3,
+      "toPartition": 1,
+      "fromBlock": 3,
+      "toBlock": 27,
+      "from": "F000:0019",
+      "target": "F000:0020"
     }
   ],
   "truncated": false

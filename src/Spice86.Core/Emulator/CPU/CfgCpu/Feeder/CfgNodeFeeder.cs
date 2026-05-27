@@ -8,6 +8,8 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM.Breakpoint;
 
+using SequentialIdAllocator = Spice86.Shared.Utils.SequentialIdAllocator;
+
 /// <summary>
 /// Handles coherency between the memory and the graph of instructions executed by the CPU.
 /// Next node to execute is normally the next node from the graph but several checks are done to make sure it is really it:
@@ -23,7 +25,7 @@ public class CfgNodeFeeder {
     public CfgNodeFeeder(IMemory memory, State state, EmulatorBreakpointsManager emulatorBreakpointsManager,
         InstructionReplacerRegistry replacerRegistry, CfgNodeExecutionCompiler executionCompiler) {
         _state = state;
-        CfgNodeIdAllocator idAllocator = new();
+        SequentialIdAllocator idAllocator = new();
         InstructionsFeeder = new(emulatorBreakpointsManager, memory, state, replacerRegistry, executionCompiler, idAllocator);
         _nodeLinker = new(replacerRegistry, executionCompiler, idAllocator);
     }
@@ -80,7 +82,7 @@ public class CfgNodeFeeder {
 
         // If the replacer merged the stale node into fromMemory, the graph reference
         // now points to fromMemory. Reconciliation succeeded.
-        if (ReferenceEquals(fromMemory, graphNodeAfterReconciliation)) {
+        if (fromMemory.Equals(graphNodeAfterReconciliation)) {
             return fromMemory;
         }
 

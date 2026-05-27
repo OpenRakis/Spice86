@@ -10,13 +10,14 @@ using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Shared.Utils;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
-using Spice86.Core.Emulator.StateSerialization.ControlFlow;
+using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.VM;
@@ -82,7 +83,14 @@ public class CfgCpuViewModelTest : IDisposable {
             _monitor = new CfgNodeExecutionCompilerMonitor(_loggerService);
             _compiler = new CfgNodeExecutionCompiler(_monitor, _loggerService, JitMode.InterpretedOnly);
             CfgNodeFeeder cfgNodeFeeder = new(Memory, State, breakpointsManager, replacerRegistry, _compiler);
-            Linker = new NodeLinker(replacerRegistry, _compiler, new CfgNodeIdAllocator());
+            // Share one allocator between the parser and the linker so IDs are globally
+            // unique within this harness. This mirrors what CfgNodeFeeder does in production
+            // (it passes the same SequentialIdAllocator to both InstructionsFeeder and its
+            // internal NodeLinker). Without sharing, the two allocators both start at 0 and
+            // produce colliding IDs: a SelectorNode allocated by the linker would get the
+            // same ID as an already-parsed CfgInstruction, breaking HashSet lookups.
+            SequentialIdAllocator sharedIdAllocator = new();
+            Linker = new NodeLinker(replacerRegistry, _compiler, sharedIdAllocator);
             ContextManager = new ExecutionContextManager(
                 Memory, State, cfgNodeFeeder, replacerRegistry,
                 new Spice86.Core.Emulator.Function.FunctionCatalogue(),
@@ -92,7 +100,7 @@ public class CfgCpuViewModelTest : IDisposable {
             // Reuse the InstructionParser pattern from TestInstructionHelper but bind it to
             // OUR memory/state so parsed instructions land at the addresses we wire through
             // the linker.
-            InstructionHelper = new TestInstructionHelperBoundTo(Memory, State);
+            InstructionHelper = new TestInstructionHelperBoundTo(Memory, State, sharedIdAllocator);
         }
 
         public Memory Memory { get; }
@@ -128,9 +136,9 @@ public class CfgCpuViewModelTest : IDisposable {
         private readonly Memory _memory;
         private readonly Spice86.Core.Emulator.CPU.CfgCpu.Parser.InstructionParser _parser;
 
-        public TestInstructionHelperBoundTo(Memory memory, State state) {
+        public TestInstructionHelperBoundTo(Memory memory, State state, SequentialIdAllocator idAllocator) {
             _memory = memory;
-            _parser = new Spice86.Core.Emulator.CPU.CfgCpu.Parser.InstructionParser(memory, state, new CfgNodeIdAllocator());
+            _parser = new Spice86.Core.Emulator.CPU.CfgCpu.Parser.InstructionParser(memory, state, idAllocator);
         }
 
         public CfgInstruction WriteAndParse(SegmentedAddress address,
@@ -681,22 +689,4 @@ public class CfgCpuViewModelTest : IDisposable {
         }
         return count;
     }
-}
-
-/// <summary>
-/// Synchronous <see cref="IUIDispatcher"/> stand-in: runs callbacks inline so command
-/// continuations execute within the test thread without requiring an Avalonia
-/// <see cref="Avalonia.Threading.Dispatcher"/> pump.
-/// </summary>
-internal sealed class InlineUIDispatcher : IUIDispatcher {
-    public Task InvokeAsync(Action callback, Avalonia.Threading.DispatcherPriority priority = default) {
-        callback();
-        return Task.CompletedTask;
-    }
-
-    public void Post(Action callback, Avalonia.Threading.DispatcherPriority priority = default) {
-        callback();
-    }
-
-    public bool CheckAccess() => true;
 }

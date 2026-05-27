@@ -28,6 +28,7 @@ using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Http;
+using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning;
 using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
@@ -47,7 +48,7 @@ using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.StateSerialization;
-using Spice86.Core.Emulator.StateSerialization.ControlFlow;
+using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM.Clock;
@@ -425,17 +426,18 @@ public class Spice86DependencyInjection : IDisposable {
 
         loggerService.Information("Sound devices created...");
 
-        MemoryDataExporter memoryDataExporter = new(memory, callbackHandler, configuration, loggerService);
+        MemoryDataExporter memoryDataExporter = new(memory, callbackHandler, configuration);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Memory data exporter created...");
         }
 
-        ListingExporter listingExporter = new(cfgCpu, loggerService, nodeToString);
+        ListingExporter listingExporter = new(cfgCpu, nodeToString);
 
         ExecutionAddressesExtractor executionAddressesExtractor = new(cfgCpu, executionAddresses);
         CfgBlockGraphExporter cfgBlockGraphExporter = new();
-        CfgBlocksJsonExporter cfgBlocksJsonExporter = new(cfgBlockGraphExporter);
+        CfgFunctionPartitioner cfgFunctionPartitioner = new();
+        CfgBlocksJsonExporter cfgBlocksJsonExporter = new(cfgBlockGraphExporter, functionCatalogue, cfgFunctionPartitioner);
         EmulationStateDataWriter emulationStateDataWriter = new(state, executionAddressesExtractor, memoryDataExporter,
             listingExporter, cfgBlocksJsonExporter, cfgCpu.ExecutionContextManager, functionCatalogue, emulatorStateSerializationFolder, emulatorBreakpointsManager,
             loggerService);

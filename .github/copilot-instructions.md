@@ -41,10 +41,10 @@ dotnet build
 dotnet run --project src/Spice86 -- -e path\to\program.exe
 
 # Run tests (excluding SingleStepTest - see note below)
-dotnet test tests/Spice86.Tests --filter "FullyQualifiedName!~SingleStepTest"
+dotnet test tests/Spice86.Tests --filter 'FullyQualifiedName!~SingleStepTest'
 ```
 
-> **SingleStepTest exclusion rule**: `SingleStepTest` runs millions of CPU instruction test cases and take an extremely long time to complete. **Always exclude it** using `--filter "FullyQualifiedName!~SingleStepTest"` unless the change being tested directly touches CPU instruction decoding, execution, or flag handling (e.g. changes to `CfgCpu`, instruction parsers, ALU operations, or flag computation). When in doubt, exclude it.
+> **SingleStepTest exclusion rule**: `SingleStepTest` runs millions of CPU instruction test cases and take an extremely long time to complete. **Always exclude it** using `--filter 'FullyQualifiedName!~SingleStepTest'` unless the change being tested directly touches CPU instruction decoding, execution, or flag handling (e.g. changes to `CfgCpu`, instruction parsers, ALU operations, or flag computation). When in doubt, exclude it.
 
 ### Debugging Workflow
 - **GDB Integration**: Server runs on port 10000 by default (`--GdbPort 10000`)
@@ -116,7 +116,7 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 - **Use `tmp/` for temporary files** - if a temporary file must be written (e.g., captured command output, intermediate data), place it inside the `tmp/` folder at the root of the repository. Never write to `/tmp` or any path outside the workspace.
 - **Avoid complexity** - keep cyclomatic complexity low, prefer simple, linear code over nested conditionals
 - **No optional parameters** - avoid nullable or optional parameters in new code
-- **No ternary expressions** - avoid `condition ? whenTrue : whenFalse`; always use explicit `if/else`
+- **No complex ternary expressions** - avoid nested, chained, or multi-line ternaries; simple single-line ternaries with short operands are allowed (e.g. `int x = a > b ? a : b;`), but non-trivial conditions or non-trivial branches must use explicit `if/else`
 - **Minimal comments** - write self-documenting code with clear names; avoid obvious comments
 - **Test before submit** - always run tests after code changes to verify functionality
 - **Rebuild and verify** - For any task that changes code or tests, rebuild the project and run the full test suite; do not stop until all tests are green.
@@ -182,7 +182,7 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
   - **Avoid non-ASCII Unicode characters**: Prefer plain ASCII in source code and documentation; only use Unicode when necessary for languages that require characters outside the ASCII range (for example, Chinese). Some editors or tools may not assume UTF-8 and can render or save these characters incorrectly.
 - **Do not use `#region`**: Avoid `#region`/`#endregion` blocks; keep code organized via clear structure and namespaces
 - **Do not suppress warnings with pragmas**: Never disable warnings using preprocessor directives (e.g., `#pragma warning disable`). Fix the underlying issue instead.
-- **No ternary operator**: Do not use the ternary conditional operator (`?:`). Use explicit `if/else` blocks for all conditional assignments and returns.
+- **No complex ternary operator**: Avoid nested, chained, or multi-line ternary expressions. Simple single-line ternaries with short, obvious operands are acceptable. Use explicit `if/else` blocks when the condition or either branch is non-trivial.
 - **Async usage restrictions**:
   - **Do NOT let async "infect" the `Spice86.Core` assembly**
   - Keep async code in the UI layer (`Spice86` project) only

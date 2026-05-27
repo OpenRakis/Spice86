@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Shared.Utils;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
@@ -18,7 +19,6 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Logging;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
-using Spice86.Shared.Utils;
 
 using Xunit;
 
@@ -52,7 +52,7 @@ public class InstructionsFeederTest : IDisposable {
         _compiler = new CfgNodeExecutionCompiler(new CfgNodeExecutionCompilerMonitor(loggerService), loggerService, JitMode.InterpretedOnly);
         
         return new InstructionsFeeder(emulatorBreakpointsManager, _memory, state, _instructionReplacer,
-            _compiler, new CfgNodeIdAllocator());
+            _compiler, new SequentialIdAllocator());
     }
 
     private void WriteJumpNear(SegmentedAddress address) {

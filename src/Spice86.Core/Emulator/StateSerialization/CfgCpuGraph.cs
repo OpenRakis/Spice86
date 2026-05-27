@@ -16,5 +16,8 @@ internal sealed record CfgCpuGraph {
     [JsonPropertyName("lastExecutedAddress")] public string? LastExecutedAddress { get; init; }
     [JsonPropertyName("lastExecutedBlockId")] public int? LastExecutedBlockId { get; init; }
     [JsonPropertyName("blocks")] public required CfgBlockInfo[] Blocks { get; init; }
+    [JsonPropertyName("partitions")] public CfgPartitionInfo[]? Partitions { get; init; }
+    [JsonPropertyName("transfers")] public CfgPartitionTransferInfo[]? Transfers { get; init; }
+    [JsonPropertyName("partitioningRequiresFullGraph")] public bool? PartitioningRequiresFullGraph { get; init; }
     [JsonPropertyName("truncated")] public required bool Truncated { get; init; }
 }

@@ -1,0 +1,126 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "F000:FFF0",
+  "totalEntryPoints": 1,
+  "entryPointAddresses": [
+    "F000:FFF0"
+  ],
+  "lastExecutedAddress": "F000:0008",
+  "lastExecutedBlockId": 18,
+  "blocks": [
+    {
+      "id": 18,
+      "entry": "F000:0008",
+      "term": "F000:0008",
+      "pred": [
+        15
+      ],
+      "succ": [],
+      "asm": [
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 2,
+      "entry": "F000:FFF0",
+      "term": "F000:FFF0",
+      "pred": [],
+      "succ": [
+        3
+      ],
+      "asm": [
+        "EB0E|jmp short 0"
+      ]
+    },
+    {
+      "id": 15,
+      "entry": "F000:0003",
+      "term": "F000:0006",
+      "pred": [
+        3,
+        7,
+        13
+      ],
+      "succ": [
+        7,
+        18
+      ],
+      "asm": [
+        "83F900|cmp CX,0",
+        "7401|je short 9"
+      ]
+    },
+    {
+      "id": 3,
+      "entry": "F000:0000",
+      "term": "F000:0000",
+      "pred": [
+        2
+      ],
+      "succ": [
+        15
+      ],
+      "asm": [
+        "B90000|mov CX,0"
+      ]
+    },
+    {
+      "id": 7,
+      "entry": "F000:0009",
+      "term": "F000:0019",
+      "pred": [
+        15
+      ],
+      "succ": [
+        13,
+        15
+      ],
+      "asm": [
+        "B8____|mov AX,word ptr [0x000F000A]",
+        "2EC7060A002E16|mov word ptr CS:[0x000A],0x162E",
+        "B90100|mov CX,1",
+        "3D2E16|cmp AX,0x162E",
+        "74E8|je short 3"
+      ]
+    },
+    {
+      "id": 13,
+      "entry": "F000:001B",
+      "term": "F000:001E",
+      "pred": [
+        7
+      ],
+      "succ": [
+        15
+      ],
+      "asm": [
+        "B90000|mov CX,0",
+        "EBE3|jmp short 3"
+      ]
+    }
+  ],
+  "partitions": [
+    {
+      "id": 1,
+      "kind": "observed",
+      "name": "unknown_F000_FFF0_FFFF0",
+      "blocks": [
+        3,
+        15,
+        18,
+        7,
+        13,
+        2
+      ],
+      "entries": [
+        {
+          "block": 2,
+          "address": "F000:FFF0",
+          "kind": "executionContextEntry"
+        }
+      ]
+    }
+  ],
+  "transfers": [],
+  "truncated": false
+}

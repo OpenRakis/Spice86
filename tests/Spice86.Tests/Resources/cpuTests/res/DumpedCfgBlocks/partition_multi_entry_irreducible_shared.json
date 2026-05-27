@@ -1,0 +1,297 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "F000:FFF0",
+  "totalEntryPoints": 1,
+  "entryPointAddresses": [
+    "F000:FFF0"
+  ],
+  "lastExecutedAddress": "F000:0014",
+  "lastExecutedBlockId": 26,
+  "blocks": [
+    {
+      "id": 26,
+      "entry": "F000:0014",
+      "term": "F000:0014",
+      "pred": [
+        19,
+        24
+      ],
+      "succ": [],
+      "asm": [
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 2,
+      "entry": "F000:FFF0",
+      "term": "F000:FFF0",
+      "pred": [],
+      "succ": [
+        3
+      ],
+      "asm": [
+        "EB0E|jmp short 0"
+      ]
+    },
+    {
+      "id": 24,
+      "entry": "F000:001E",
+      "term": "F000:001E",
+      "pred": [
+        11
+      ],
+      "succ": [
+        26
+      ],
+      "asm": [
+        "C3|ret near"
+      ]
+    },
+    {
+      "id": 19,
+      "entry": "F000:000E",
+      "term": "F000:0011",
+      "pred": [
+        3,
+        17
+      ],
+      "succ": [
+        22,
+        26
+      ],
+      "asm": [
+        "B90100|mov CX,1",
+        "E80300|call near 0x0017"
+      ]
+    },
+    {
+      "id": 3,
+      "entry": "F000:0000",
+      "term": "F000:000B",
+      "pred": [
+        2
+      ],
+      "succ": [
+        9,
+        19
+      ],
+      "asm": [
+        "B80010|mov AX,0x1000",
+        "8ED0|mov SS,AX",
+        "BC0001|mov SP,0x0100",
+        "B90000|mov CX,0",
+        "E80700|call near 0x0015"
+      ]
+    },
+    {
+      "id": 11,
+      "entry": "F000:0019",
+      "term": "F000:001C",
+      "pred": [
+        9,
+        14
+      ],
+      "succ": [
+        14,
+        24
+      ],
+      "asm": [
+        "83F900|cmp CX,0",
+        "7401|je short 0x001F"
+      ]
+    },
+    {
+      "id": 22,
+      "entry": "F000:0017",
+      "term": "F000:0017",
+      "pred": [
+        19
+      ],
+      "succ": [
+        14
+      ],
+      "asm": [
+        "EB06|jmp short 0x001F"
+      ]
+    },
+    {
+      "id": 17,
+      "entry": "F000:0024",
+      "term": "F000:0024",
+      "pred": [
+        14
+      ],
+      "succ": [
+        19
+      ],
+      "asm": [
+        "C3|ret near"
+      ]
+    },
+    {
+      "id": 9,
+      "entry": "F000:0015",
+      "term": "F000:0015",
+      "pred": [
+        3
+      ],
+      "succ": [
+        11
+      ],
+      "asm": [
+        "EB02|jmp short 0x0019"
+      ]
+    },
+    {
+      "id": 14,
+      "entry": "F000:001F",
+      "term": "F000:0022",
+      "pred": [
+        11,
+        22
+      ],
+      "succ": [
+        11,
+        17
+      ],
+      "asm": [
+        "83F901|cmp CX,1",
+        "74F5|je short 0x0019"
+      ]
+    }
+  ],
+  "partitions": [
+    {
+      "id": 1,
+      "kind": "observed",
+      "name": "unknown_F000_0015_F0015",
+      "blocks": [
+        9
+      ],
+      "entries": [
+        {
+          "block": 9,
+          "address": "F000:0015",
+          "kind": "functionEntry"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "observed",
+      "name": "unknown_F000_0017_F0017",
+      "blocks": [
+        22
+      ],
+      "entries": [
+        {
+          "block": 22,
+          "address": "F000:0017",
+          "kind": "functionEntry"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "observed",
+      "name": "unknown_F000_FFF0_FFFF0",
+      "blocks": [
+        3,
+        19,
+        26,
+        2
+      ],
+      "entries": [
+        {
+          "block": 2,
+          "address": "F000:FFF0",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "kind": "synthetic",
+      "name": "unknown_F000_0019_F0019",
+      "blocks": [
+        11,
+        24,
+        14,
+        17
+      ],
+      "entries": [
+        {
+          "block": 11,
+          "address": "F000:0019",
+          "kind": "sharedEntry"
+        },
+        {
+          "block": 14,
+          "address": "F000:001F",
+          "kind": "sharedEntry"
+        }
+      ]
+    }
+  ],
+  "transfers": [
+    {
+      "kind": "crossPartitionJump",
+      "fromPartition": 1,
+      "toPartition": 4,
+      "fromBlock": 9,
+      "toBlock": 11,
+      "from": "F000:0015",
+      "target": "F000:0019"
+    },
+    {
+      "kind": "crossPartitionJump",
+      "fromPartition": 2,
+      "toPartition": 4,
+      "fromBlock": 22,
+      "toBlock": 14,
+      "from": "F000:0017",
+      "target": "F000:001F"
+    },
+    {
+      "kind": "callOut",
+      "fromPartition": 3,
+      "toPartition": 1,
+      "fromBlock": 3,
+      "toBlock": 9,
+      "from": "F000:000B",
+      "target": "F000:0015",
+      "callContinuationBlock": 19,
+      "callContinuationAddress": "F000:000E"
+    },
+    {
+      "kind": "callOut",
+      "fromPartition": 3,
+      "toPartition": 2,
+      "fromBlock": 19,
+      "toBlock": 22,
+      "from": "F000:0011",
+      "target": "F000:0017",
+      "callContinuationBlock": 26,
+      "callContinuationAddress": "F000:0014"
+    },
+    {
+      "kind": "alignedReturn",
+      "fromPartition": 4,
+      "toPartition": 3,
+      "fromBlock": 17,
+      "toBlock": 19,
+      "from": "F000:0024",
+      "target": "F000:000E"
+    },
+    {
+      "kind": "alignedReturn",
+      "fromPartition": 4,
+      "toPartition": 3,
+      "fromBlock": 24,
+      "toBlock": 26,
+      "from": "F000:001E",
+      "target": "F000:0014"
+    }
+  ],
+  "truncated": false
+}

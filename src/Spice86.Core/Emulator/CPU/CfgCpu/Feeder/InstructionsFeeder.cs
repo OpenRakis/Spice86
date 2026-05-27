@@ -10,6 +10,8 @@ using Spice86.Shared.Emulator.Memory;
 
 using System.Runtime.CompilerServices;
 
+using SequentialIdAllocator = Spice86.Shared.Utils.SequentialIdAllocator;
+
 /// <summary>
 /// Responsible for getting parsed instructions at a given address from memory.
 /// Instructions are parsed only once per address, after that they are retrieved from a cache
@@ -23,7 +25,7 @@ public class InstructionsFeeder : IClearable {
     private readonly CfgNodeExecutionCompiler _executionCompiler;
 
     public InstructionsFeeder(EmulatorBreakpointsManager emulatorBreakpointsManager, IMemory memory, State cpuState,
-        InstructionReplacerRegistry replacerRegistry, CfgNodeExecutionCompiler executionCompiler, CfgNodeIdAllocator idAllocator) {
+        InstructionReplacerRegistry replacerRegistry, CfgNodeExecutionCompiler executionCompiler, SequentialIdAllocator idAllocator) {
         _instructionParser = new(memory, cpuState, idAllocator);
         _executionCompiler = executionCompiler;
         CurrentInstructions = new(memory, emulatorBreakpointsManager, replacerRegistry);

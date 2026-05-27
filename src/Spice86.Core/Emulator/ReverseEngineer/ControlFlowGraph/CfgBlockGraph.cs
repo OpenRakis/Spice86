@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.StateSerialization.ControlFlow;
+namespace Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
 
 /// <summary>
 /// Pure traversal result shared by both JSON and UI consumers. Contains no execution-context metadata.

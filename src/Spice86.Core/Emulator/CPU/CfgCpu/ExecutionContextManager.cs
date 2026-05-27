@@ -134,7 +134,7 @@ public class ExecutionContextManager : InstructionReplacer, IClearable {
 
     private static void UpdateNodeToExecuteIfStale(ExecutionContext context,
         CfgInstruction oldInstruction, CfgInstruction newInstruction) {
-        if (ReferenceEquals(context.NodeToExecuteNextAccordingToGraph, oldInstruction)) {
+        if (oldInstruction.Equals(context.NodeToExecuteNextAccordingToGraph)) {
             context.NodeToExecuteNextAccordingToGraph = newInstruction;
         }
     }

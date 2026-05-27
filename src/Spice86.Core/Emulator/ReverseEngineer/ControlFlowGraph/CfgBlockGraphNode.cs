@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.StateSerialization.ControlFlow;
+namespace Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 

@@ -5,7 +5,10 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
-using Spice86.Core.Emulator.StateSerialization.ControlFlow;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
+using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning;
+using Spice86.Core.Emulator.StateSerialization.FunctionPartitioning;
 
 using System.Linq;
 using System.Text.Json;
@@ -26,13 +29,19 @@ public class CfgBlocksJsonExporter {
 
     private readonly AstInstructionRenderer _renderer;
     private readonly CfgBlockGraphExporter _graphExporter;
+    private readonly CfgFunctionPartitioner _functionPartitioner;
+    private readonly CfgPartitionSerializationMapper _partitionMapper;
+    private readonly FunctionCatalogue _functionCatalogue;
 
     /// <summary>
-    /// Creates an exporter with a dedicated graph exporter instance.
+    /// Creates an exporter with a dedicated graph exporter instance and function labels.
     /// </summary>
-    public CfgBlocksJsonExporter(CfgBlockGraphExporter graphExporter) {
+    public CfgBlocksJsonExporter(CfgBlockGraphExporter graphExporter, FunctionCatalogue functionCatalogue, CfgFunctionPartitioner functionPartitioner) {
         _renderer = new AstInstructionRenderer(AsmRenderingConfig.CreateSpice86Style());
         _graphExporter = graphExporter;
+        _functionPartitioner = functionPartitioner;
+        _partitionMapper = new CfgPartitionSerializationMapper();
+        _functionCatalogue = functionCatalogue;
     }
 
     /// <summary>
@@ -53,6 +62,17 @@ public class CfgBlocksJsonExporter {
             lastExecutedBlockId = lastBlock.Id;
         }
 
+        CfgFunctionPartitioningResult? partitioning = null;
+        bool? partitioningRequiresFullGraph = null;
+        if (graph.Truncated) {
+            partitioningRequiresFullGraph = true;
+        } else {
+            // Partitioning throws only when graph-structural invariants are violated (no roots, ownerless blocks).
+            // Those invariants hold if the emulator CFG is correct, so a failure here means the emulator has a bug
+            // and the graph data itself cannot be trusted. Letting the exception propagate is intentional.
+            partitioning = _partitionMapper.Map(_functionPartitioner.Partition(graph, contextManager, _functionCatalogue));
+        }
+
         return new CfgCpuGraph {
             CurrentContextDepth = exported.CurrentContextDepth,
             CurrentContextEntryPoint = exported.CurrentContextEntryPoint,
@@ -61,6 +81,9 @@ public class CfgBlocksJsonExporter {
             LastExecutedAddress = exported.LastExecuted?.Address.ToString(),
             LastExecutedBlockId = lastExecutedBlockId,
             Blocks = blocks,
+            Partitions = partitioning?.Partitions,
+            Transfers = partitioning?.Transfers,
+            PartitioningRequiresFullGraph = partitioningRequiresFullGraph,
             Truncated = graph.Truncated
         };
     }

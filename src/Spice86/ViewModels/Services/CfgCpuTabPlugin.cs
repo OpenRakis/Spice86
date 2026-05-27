@@ -3,7 +3,7 @@ namespace Spice86.ViewModels.Services;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
-using Spice86.Core.Emulator.StateSerialization.ControlFlow;
+using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
 using Spice86.Core.Emulator.VM;
 using Spice86.ViewModels;
 
