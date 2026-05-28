@@ -53,4 +53,10 @@ public class AddressReadWriteBreakpoints {
         _writeBreakPoints.TriggerMatchingBreakPoints(address);
     }
 
+    public bool HasActiveBreakPoint(long address, AddressOperation trigger) => trigger switch {
+        AddressOperation.READ => _readBreakPoints.HasActiveBreakPoint(address),
+        AddressOperation.WRITE => _writeBreakPoints.HasActiveBreakPoint(address),
+        AddressOperation.ACCESS => _readBreakPoints.HasActiveBreakPoint(address) || _writeBreakPoints.HasActiveBreakPoint(address),
+        _ => false
+    };
 }

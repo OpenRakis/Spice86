@@ -1,12 +1,11 @@
 namespace Spice86.Core.Emulator.Devices.Video;
 
-using System;
-using System.Runtime.InteropServices;
-using System.Threading;
-
 using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
 using Spice86.Shared.Interfaces;
+
+using System;
+using System.Threading;
 
 /// <summary>
 ///     A wrapper class for the video card that implements the IMemoryDevice interface.

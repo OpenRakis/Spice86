@@ -32,4 +32,28 @@ public class EmmPage : IMemoryDevice {
 
     /// <inheritdoc />
     public IList<byte> GetSlice(int address, int length) => _pageMemory.GetSlice(address, length);
+
+    /// <inheritdoc/>
+    public bool TryGetSpan(out uint startAddress, out Span<byte> span, MemoryAccess access)
+        => _pageMemory.TryGetSpan(out startAddress, out span, access);
+
+    /// <inheritdoc/>
+    public bool TryGetSpan(out uint startAddress, out ReadOnlySpan<byte> span, MemoryAccess access)
+        => _pageMemory.TryGetSpan(out startAddress, out span, access);
+
+    /// <inheritdoc/>
+    public bool TryGetSpan(uint startAddress, out Span<byte> span, MemoryAccess access)
+        => _pageMemory.TryGetSpan(startAddress, out span, access);
+
+    /// <inheritdoc/>
+    public bool TryGetSpan(uint startAddress, out ReadOnlySpan<byte> span, MemoryAccess access)
+        => _pageMemory.TryGetSpan(startAddress, out span, access);
+
+    /// <inheritdoc/>
+    public bool TryGetSpan(uint startAddress, int length, out Span<byte> span, MemoryAccess access)
+        => _pageMemory.TryGetSpan(startAddress, length, out span, access);
+
+    /// <inheritdoc/>
+    public bool TryGetSpan(uint startAddress, int length, out ReadOnlySpan<byte> span, MemoryAccess access)
+        => _pageMemory.TryGetSpan(startAddress, length, out span, access);
 }

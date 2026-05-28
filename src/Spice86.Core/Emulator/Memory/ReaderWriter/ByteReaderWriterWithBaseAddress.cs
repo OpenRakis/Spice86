@@ -4,10 +4,9 @@
 /// ByteReaderWriter that wraps another IByteReaderWriter.
 /// Reads and writes are done with address + BaseAddress
 /// </summary>
-public class ByteReaderWriterWithBaseAddress : IByteReaderWriter {
+public sealed class ByteReaderWriterWithBaseAddress : IByteReaderWriter {
     private readonly IByteReaderWriter _byteReaderWriter;
     private readonly IBaseAddressProvider _baseAddressProvider;
-
 
     /// <summary>
     /// Builds a new ByteReaderWriterWithBaseAddress from the given byteReaderWriter providing a data source / store and baseAddressProvider providing an address modifier.
@@ -26,5 +25,83 @@ public class ByteReaderWriterWithBaseAddress : IByteReaderWriter {
     public byte this[uint address] {
         get => _byteReaderWriter[address + _baseAddressProvider.BaseAddress];
         set => _byteReaderWriter[address + _baseAddressProvider.BaseAddress] = value;
+    }
+
+    /// <inheritdoc/>
+    public bool TryGetSpan(out uint startAddress, out Span<byte> span, MemoryAccess access = MemoryAccess.None) {
+        if (_byteReaderWriter.TryGetSpan(_baseAddressProvider.BaseAddress, out span, access)) {
+            startAddress = 0;
+            return true;
+        }
+
+        startAddress = 0;
+        span = [];
+        return false;
+    }
+
+    /// <inheritdoc/>
+    public bool TryGetSpan(out uint startAddress, out ReadOnlySpan<byte> span, MemoryAccess access = MemoryAccess.None) {
+        if (_byteReaderWriter.TryGetSpan(_baseAddressProvider.BaseAddress, out span, access)) {
+            startAddress = 0;
+            return true;
+        }
+
+        startAddress = 0;
+        span = [];
+        return false;
+    }
+
+    /// <inheritdoc/>
+    public bool TryGetSpan(uint startAddress, out Span<byte> span, MemoryAccess access = MemoryAccess.None) {
+        // Note that this may overflow. If that occurs, then just assume that it is a 32-bit address overflow and wrap.
+        uint startAddressRebased = startAddress + _baseAddressProvider.BaseAddress;
+        if (_byteReaderWriter.TryGetSpan(startAddressRebased, out span, access)) {
+            return true;
+        }
+
+        span = [];
+        return false;
+    }
+
+    /// <inheritdoc/>
+    public bool TryGetSpan(uint startAddress, out ReadOnlySpan<byte> span, MemoryAccess access = MemoryAccess.None) {
+        // Note that this may overflow. If that occurs, then just assume that it is a 32-bit address overflow and wrap.
+        uint startAddressRebased = startAddress + _baseAddressProvider.BaseAddress;
+        if (_byteReaderWriter.TryGetSpan(startAddressRebased, out span, access)) {
+            return true;
+        }
+
+        span = [];
+        return false;
+    }
+
+    /// <inheritdoc/>
+    public bool TryGetSpan(uint startAddress, int length, out Span<byte> span, MemoryAccess access = MemoryAccess.None) {
+        // Note that this may overflow. If that occurs, then just assume that it is a 32-bit address overflow and wrap.
+        uint startAddressRebased = startAddress + _baseAddressProvider.BaseAddress;
+        if (_byteReaderWriter.TryGetSpan(startAddressRebased, length, out span, access)) {
+            return true;
+        }
+
+        // Defer argument check here as it should have already been checked by TryGetSpan() for the success case.
+        ArgumentOutOfRangeException.ThrowIfNegative(length);
+
+        span = [];
+        return false;
+    }
+
+    /// <inheritdoc/>
+    public bool TryGetSpan(uint startAddress, int length, out ReadOnlySpan<byte> span, MemoryAccess access = MemoryAccess.None) {
+        // Note that this may overflow. If that occurs, then just assume that it is a 32-bit address overflow and wrap.
+        uint startAddressRebased = startAddress + _baseAddressProvider.BaseAddress;
+        if (_byteReaderWriter.TryGetSpan(startAddressRebased, length, out span, access)) {
+            return true;
+        }
+
+        // Defer argument check here as it should have already been checked by TryGetSpan() for the success case.
+        ArgumentOutOfRangeException.ThrowIfNegative(length);
+
+        span = [];
+        return false;
     }
 }

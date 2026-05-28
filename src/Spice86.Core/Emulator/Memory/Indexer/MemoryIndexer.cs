@@ -1,18 +1,17 @@
 namespace Spice86.Core.Emulator.Memory.Indexer;
 
-using Spice86.Shared.Emulator.Memory;
-using Spice86.Shared.Utils;
 using Spice86.Core.Emulator.Memory.Mmu;
+using Spice86.Shared.Emulator.Memory;
 
 using System.Collections;
 
-public abstract class MemoryIndexer<T> : Indexer<T>, IList<T> {
+public abstract class MemoryIndexer<T> : Indexer<T>, IList<T>, IReadOnlyList<T> {
     private readonly uint _accessSize;
 
     /// <summary>
     /// The MMU used for segmented access checks and address translation.
     /// </summary>
-    protected IMmu Mmu { get; }
+    protected internal IMmu Mmu { get; }
 
     /// <summary>
     /// Initializes a new instance.
@@ -68,13 +67,13 @@ public abstract class MemoryIndexer<T> : Indexer<T>, IList<T> {
     /// Translates the segment:offset pair and reads a value without an MMU access check.
     /// Used by composite indexers that perform their own check for the full access range.
     /// </summary>
-    internal abstract T ReadSegmented(ushort segment, uint offset);
+    protected internal abstract T ReadSegmented(ushort segment, uint offset);
 
     /// <summary>
     /// Translates the segment:offset pair and writes a value without an MMU access check.
     /// Used by composite indexers that perform their own check for the full access range.
     /// </summary>
-    internal abstract void WriteSegmented(ushort segment, uint offset, T value);
+    protected internal abstract void WriteSegmented(ushort segment, uint offset, T value);
 
     /// <summary>
     /// Gets or sets the data at the specified segmented address and offset in the memory.
@@ -86,7 +85,7 @@ public abstract class MemoryIndexer<T> : Indexer<T>, IList<T> {
     }
 
     /// <inheritdoc />
-    public IEnumerator<T> GetEnumerator() {
+    public virtual IEnumerator<T> GetEnumerator() {
         for (int i = 0; i < Count; i++) {
             yield return this[i];
         }
@@ -104,12 +103,12 @@ public abstract class MemoryIndexer<T> : Indexer<T>, IList<T> {
     public void Clear() => throw new NotImplementedException();
 
     /// <inheritdoc />
-    public bool Contains(T item) {
+    public virtual bool Contains(T item) {
         return IndexOf(item) != -1;
     }
 
     /// <inheritdoc />
-    public void CopyTo(T[] array, int arrayIndex) {
+    public virtual void CopyTo(T[] array, int arrayIndex) {
         for (int i = 0; i < Count; i++) {
             array[arrayIndex + i] = this[i];
         }
@@ -125,7 +124,7 @@ public abstract class MemoryIndexer<T> : Indexer<T>, IList<T> {
     public bool IsReadOnly => false;
 
     /// <inheritdoc />
-    public int IndexOf(T item) {
+    public virtual int IndexOf(T item) {
         for (int i = 0; i < Count; i++) {
             if (EqualityComparer<T>.Default.Equals(this[i], item)) {
                 return i;

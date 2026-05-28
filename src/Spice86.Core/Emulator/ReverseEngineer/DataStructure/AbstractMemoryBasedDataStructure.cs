@@ -21,49 +21,48 @@ public abstract class AbstractMemoryBasedDataStructure : Indexable, IBaseAddress
             InstantiateIndexersFromByteReaderWriter(ByteReaderWriterShiftedToBaseAddress, new RealModeMmu8086());
     }
 
-
     /// <inheritdoc/>
-    public override UInt8Indexer UInt8 {
+    public sealed override UInt8Indexer UInt8 {
         get;
     }
 
     /// <inheritdoc/>
-    public override UInt16Indexer UInt16 {
-        get;
-    }
-    
-    /// <inheritdoc/>
-    public override UInt16BigEndianIndexer UInt16BigEndian {
+    public sealed override UInt16Indexer UInt16 {
         get;
     }
 
     /// <inheritdoc/>
-    public override UInt32Indexer UInt32 {
+    public sealed override UInt16BigEndianIndexer UInt16BigEndian {
         get;
     }
 
     /// <inheritdoc/>
-    public override Int8Indexer Int8 {
+    public sealed override UInt32Indexer UInt32 {
         get;
     }
 
     /// <inheritdoc/>
-    public override Int16Indexer Int16 {
+    public sealed override Int8Indexer Int8 {
         get;
     }
 
     /// <inheritdoc/>
-    public override Int32Indexer Int32 {
+    public sealed override Int16Indexer Int16 {
         get;
     }
 
     /// <inheritdoc/>
-    public override SegmentedAddress16Indexer SegmentedAddress16 {
+    public sealed override Int32Indexer Int32 {
         get;
     }
-    
+
     /// <inheritdoc/>
-    public override SegmentedAddress32Indexer SegmentedAddress32 {
+    public sealed override SegmentedAddress16Indexer SegmentedAddress16 {
+        get;
+    }
+
+    /// <inheritdoc/>
+    public sealed override SegmentedAddress32Indexer SegmentedAddress32 {
         get;
     }
 
@@ -87,8 +86,11 @@ public abstract class AbstractMemoryBasedDataStructure : Indexable, IBaseAddress
     /// </summary>
     /// <param name="offset">The offset to add to the <see cref="BaseAddress"/></param>
     /// <returns>The linear address of <see cref="BaseAddress"/> + offset</returns>
+    /// <remarks>
+    /// If the destination address overflows, it will wrap around.
+    /// </remarks>
     protected uint ComputeAddressFromOffset(uint offset) {
-        return (uint)(BaseAddress + offset);
+        return BaseAddress + offset;
     }
 
     /// <summary>

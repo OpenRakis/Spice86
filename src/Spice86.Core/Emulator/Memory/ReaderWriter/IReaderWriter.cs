@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.Memory.ReaderWriter; 
+namespace Spice86.Core.Emulator.Memory.ReaderWriter;
 
 /// <summary>
 /// Interface for objects that allow to read at specific addresses
@@ -9,9 +9,123 @@ public interface IReaderWriter<T> {
     /// </summary>
     /// <param name="address">Address where to perform the operation</param>
     public T this[uint address] { get; set; }
-    
+
     /// <summary>
     /// Length of the address space
     /// </summary>
     public int Length { get; }
+
+    /// <summary>
+    /// Attempts to get a span from the reader/writer.
+    /// </summary>
+    /// <param name="startAddress">The starting address for the returned span.</param>
+    /// <param name="span">A span containing all the elements in the requested memory.</param>
+    /// <param name="access">Specifies the type of memory access that is requested for the span.</param>
+    /// <returns><see langword="true"/> if the span was successfully retrieved; otherwise, <see langword="false"/>.</returns>
+    /// <remarks>
+    /// When <paramref name="access"/> is set to <see cref="MemoryAccess.None"/> (the default), then typically no
+    /// debugger breakpoints will be checked prior to retrieving the data.
+    /// </remarks>
+    public virtual bool TryGetSpan(out uint startAddress, out Span<T> span, MemoryAccess access) {
+        startAddress = 0;
+        return TryGetSpan(0, Length, out span, access);
+    }
+
+    /// <summary>
+    /// Attempts to get a read only span from the reader/writer.
+    /// </summary>
+    /// <param name="startAddress">The starting address for the returned span.</param>
+    /// <param name="span">A read only span containing all the elements in the requested memory.</param>
+    /// <param name="access">Specifies the type of memory access that is requested for the span.</param>
+    /// <returns><see langword="true"/> if the span was successfully retrieved; otherwise, <see langword="false"/>.</returns>
+    /// <remarks>
+    /// When <paramref name="access"/> is set to <see cref="MemoryAccess.None"/> (the default), then typically no
+    /// debugger breakpoints will be checked prior to retrieving the data.
+    /// </remarks>
+    public virtual bool TryGetSpan(out uint startAddress, out ReadOnlySpan<T> span, MemoryAccess access) {
+        bool result = TryGetSpan(out startAddress, out Span<T> mutableSpan, access);
+        span = mutableSpan;
+        return result;
+    }
+
+    /// <summary>
+    /// Attempts to get a span from a portion of the reader/writer.
+    /// </summary>
+    /// <param name="startAddress">The starting address to request elements from.</param>
+    /// <param name="span">A span containing the remaining elements starting at the given address.</param>
+    /// <param name="access">Specifies the type of memory access that is requested for the span.</param>
+    /// <returns><see langword="true"/> if the span was successfully retrieved; otherwise, <see langword="false"/>.</returns>
+    /// <remarks>
+    /// When <paramref name="access"/> is set to <see cref="MemoryAccess.None"/> (the default), then typically no
+    /// debugger breakpoints will be checked prior to retrieving the data.
+    /// </remarks>
+    public virtual bool TryGetSpan(uint startAddress, out Span<T> span, MemoryAccess access) {
+        return TryGetSpan(startAddress, (int)Math.Max(-1, Length - startAddress), out span, access);
+    }
+
+    /// <summary>
+    /// Attempts to get a read only span from a portion of the reader/writer.
+    /// </summary>
+    /// <param name="startAddress">The starting address to request elements from.</param>
+    /// <param name="span">A span containing the remaining elements starting at the given address.</param>
+    /// <param name="access">Specifies the type of memory access that is requested for the span.</param>
+    /// <returns><see langword="true"/> if the span was successfully retrieved; otherwise, <see langword="false"/>.</returns>
+    /// <remarks>
+    /// When <paramref name="access"/> is set to <see cref="MemoryAccess.None"/> (the default), then typically no
+    /// debugger breakpoints will be checked prior to retrieving the data.
+    /// </remarks>
+    public virtual bool TryGetSpan(uint startAddress, out ReadOnlySpan<T> span, MemoryAccess access) {
+        bool result = TryGetSpan(startAddress, out Span<T> mutableSpan, access);
+        span = mutableSpan;
+        return result;
+    }
+
+    /// <summary>
+    /// Attempts to get a span from a portion of the reader/writer.
+    /// </summary>
+    /// <param name="startAddress">The starting address to request elements from.</param>
+    /// <param name="length">The number of elements requested. A negative length should always result in a failure.</param>
+    /// <param name="span">A span containing the number of requested elements starting at the given address.</param>
+    /// <param name="access">Specifies the type of memory access that is requested for the span.</param>
+    /// <returns><see langword="true"/> if the span was successfully retrieved; otherwise, <see langword="false"/>.</returns>
+    /// <remarks>
+    /// <para>
+    /// Implementors should always return a span with <paramref name="length"/> elements if successful. Callers should
+    /// only assume that all implementors will return a span with <em>at least</em> <paramref name="length"/> elements
+    /// on success.
+    /// </para>
+    /// <para>
+    /// When <paramref name="access"/> is set to <see cref="MemoryAccess.None"/> (the default), then typically no
+    /// debugger breakpoints will be checked prior to retrieving the data.
+    /// </para>
+    /// </remarks>
+    public virtual bool TryGetSpan(uint startAddress, int length, out Span<T> span, MemoryAccess access) {
+        span = [];
+        return false;
+    }
+
+    /// <summary>
+    /// Attempts to get a read only span from a portion of the reader/writer.
+    /// </summary>
+    /// <param name="startAddress">The starting address to request elements from.</param>
+    /// <param name="length">The number of elements requested. A negative length should always result in a failure.</param>
+    /// <param name="span">A span containing the number of requested elements starting at the given address.</param>
+    /// <param name="access">Specifies the type of memory access that is requested for the span.</param>
+    /// <returns><see langword="true"/> if the span was successfully retrieved; otherwise, <see langword="false"/>.</returns>
+    /// <remarks>
+    /// <para>
+    /// Implementors should always return a span with <paramref name="length"/> elements if successful. Callers should
+    /// only assume that all implementors will return a span with <em>at least</em> <paramref name="length"/> elements
+    /// on success.
+    /// </para>
+    /// <para>
+    /// When <paramref name="access"/> is set to <see cref="MemoryAccess.None"/> (the default), then typically no
+    /// debugger breakpoints will be checked prior to retrieving the data.
+    /// </para>
+    /// </remarks>
+    public virtual bool TryGetSpan(uint startAddress, int length, out ReadOnlySpan<T> span, MemoryAccess access) {
+        bool result = TryGetSpan(startAddress, length, out Span<T> mutableSpan, access);
+        span = mutableSpan;
+        return result;
+    }
 }
