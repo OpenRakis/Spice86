@@ -155,7 +155,7 @@ public sealed class CfgFunctionPartitionerTest : IDisposable {
         syntheticOverlay.Entries.Should().ContainSingle();
         syntheticOverlay.Blocks.Should().Contain(CfgTestHelpers.GetContainingBlock(sharedTail));
         program.Partitions.Where(partition => partition.Kind == CfgCodePartitionKind.Observed).Should().HaveCount(2);
-        program.Transfers.Should().Contain(transfer => transfer.ToPartition == syntheticOverlay && transfer.Kind == CfgCodePartitionTransferKind.CrossPartitionJump);
+        program.Transfers.Should().Contain(transfer => transfer.ToPartition == syntheticOverlay && transfer.Kind == CfgCodePartitionTransferKind.CrossPartitionFlow);
     }
 
     [Fact]
@@ -514,6 +514,185 @@ public sealed class CfgFunctionPartitionerTest : IDisposable {
         transfers.Should().NotContain(transfer =>
             transfer.FromPartition == returningPartition
             && transfer.Kind == CfgCodePartitionTransferKind.AlignedReturn);
+    }
+
+    [Fact]
+    public void PartitionEdgeAnnotator_MixedActivationCycle_ClassifiesCycleJumpsAsCyclic() {
+        // Arrange
+        CfgInstruction firstJump = CreateInstruction(0x0000, 0xEB, 2, InstructionKind.Jump);
+        CfgInstruction secondEntry = CreateInstruction(0x0100, 0xE8, 3, InstructionKind.Call);
+        CfgInstruction thirdEntry = CreateInstruction(0x0200, 0xEB, 2, InstructionKind.Jump);
+        CfgBlock firstBlock = CreateBlock(100, firstJump);
+        CfgBlock secondBlock = CreateBlock(101, secondEntry);
+        CfgBlock thirdBlock = CreateBlock(102, thirdEntry);
+        CfgCodePartition firstPartition = CreatePartition(1, firstBlock);
+        CfgCodePartition secondPartition = CreatePartition(2, secondBlock);
+        CfgCodePartition thirdPartition = CreatePartition(3, thirdBlock);
+        List<CfgPartitionEdgeRecord> edgeRecords = [
+            new(firstBlock, secondBlock, firstJump, secondEntry,
+                InstructionSuccessorType.Normal, ClassifiedEdgeKind.Jump),
+            new(secondBlock, thirdBlock, secondEntry, thirdEntry,
+                InstructionSuccessorType.Normal, ClassifiedEdgeKind.Call),
+            new(thirdBlock, firstBlock, thirdEntry, firstJump,
+                InstructionSuccessorType.Normal, ClassifiedEdgeKind.Jump)
+        ];
+        Dictionary<CfgBlock, CfgCodePartition> partitionByBlock = new() {
+            [firstBlock] = firstPartition,
+            [secondBlock] = secondPartition,
+            [thirdBlock] = thirdPartition
+        };
+        CfgPartitionEdgeIndex edgeIndex = new(edgeRecords);
+        CfgPartitionEdgeAnnotator annotator = new();
+        CfgPartitionCycleClassifier cycleClassifier = new();
+
+        // Act
+        List<CfgCodePartitionTransfer> transfers = cycleClassifier.Refine(
+            [firstPartition, secondPartition, thirdPartition],
+            annotator.CollectTransfers(edgeIndex, partitionByBlock));
+
+        // Assert
+        transfers.Should().ContainSingle(transfer =>
+            transfer.FromPartition == firstPartition
+            && transfer.ToPartition == secondPartition
+            && transfer.Kind == CfgCodePartitionTransferKind.CyclicCrossPartitionFlow);
+        transfers.Should().ContainSingle(transfer =>
+            transfer.FromPartition == thirdPartition
+            && transfer.ToPartition == firstPartition
+            && transfer.Kind == CfgCodePartitionTransferKind.CyclicCrossPartitionFlow);
+        transfers.Should().ContainSingle(transfer =>
+            transfer.FromPartition == secondPartition
+            && transfer.ToPartition == thirdPartition
+            && transfer.Kind == CfgCodePartitionTransferKind.CallOut);
+    }
+
+    [Fact]
+    public void PartitionEdgeAnnotator_DynamicReturnActivationCycle_ClassifiesJumpAsCyclic() {
+        // Arrange
+        CfgInstruction jump = CreateInstruction(0x0000, 0xEB, 2, InstructionKind.Jump);
+        CfgInstruction returningRet = CreateInstruction(0x0100, 0xC3, 1, InstructionKind.Return);
+        CfgBlock jumpBlock = CreateBlock(100, jump);
+        CfgBlock returningBlock = CreateBlock(101, returningRet);
+        CfgCodePartition jumpPartition = CreatePartition(1, jumpBlock);
+        CfgCodePartition returningPartition = CreatePartition(2, returningBlock);
+        List<CfgPartitionEdgeRecord> edgeRecords = [
+            new(jumpBlock, returningBlock, jump, returningRet,
+                InstructionSuccessorType.Normal, ClassifiedEdgeKind.Jump),
+            new(returningBlock, jumpBlock, returningRet, jump,
+                InstructionSuccessorType.Normal, ClassifiedEdgeKind.RetTarget)
+        ];
+        Dictionary<CfgBlock, CfgCodePartition> partitionByBlock = new() {
+            [jumpBlock] = jumpPartition,
+            [returningBlock] = returningPartition
+        };
+        CfgPartitionEdgeIndex edgeIndex = new(edgeRecords);
+        CfgPartitionEdgeAnnotator annotator = new();
+        CfgPartitionCycleClassifier cycleClassifier = new();
+
+        // Act
+        List<CfgCodePartitionTransfer> transfers = cycleClassifier.Refine(
+            [jumpPartition, returningPartition],
+            annotator.CollectTransfers(edgeIndex, partitionByBlock));
+
+        // Assert
+        transfers.Should().ContainSingle(transfer =>
+            transfer.FromPartition == jumpPartition
+            && transfer.ToPartition == returningPartition
+            && transfer.Kind == CfgCodePartitionTransferKind.CyclicCrossPartitionFlow);
+        transfers.Should().ContainSingle(transfer =>
+            transfer.FromPartition == returningPartition
+            && transfer.ToPartition == jumpPartition
+            && transfer.Kind == CfgCodePartitionTransferKind.DynamicReturn);
+    }
+
+    [Fact]
+    public void PartitionEdgeAnnotator_CpuFaultActivationCycle_ClassifiesJumpAsCyclic() {
+        // Arrange
+        CfgInstruction jump = CreateInstruction(0x0000, 0xEB, 2, InstructionKind.Jump);
+        CfgInstruction fault = CreateInstruction(0x0100, 0xF4, 1, InstructionKind.None);
+        CfgBlock jumpBlock = CreateBlock(100, jump);
+        CfgBlock faultBlock = CreateBlock(101, fault);
+        CfgCodePartition jumpPartition = CreatePartition(1, jumpBlock);
+        CfgCodePartition faultPartition = CreatePartition(2, faultBlock);
+        List<CfgPartitionEdgeRecord> edgeRecords = [
+            new(jumpBlock, faultBlock, jump, fault,
+                InstructionSuccessorType.Normal, ClassifiedEdgeKind.Jump),
+            new(faultBlock, jumpBlock, fault, jump,
+                InstructionSuccessorType.Normal, ClassifiedEdgeKind.CpuFault)
+        ];
+        Dictionary<CfgBlock, CfgCodePartition> partitionByBlock = new() {
+            [jumpBlock] = jumpPartition,
+            [faultBlock] = faultPartition
+        };
+        CfgPartitionEdgeIndex edgeIndex = new(edgeRecords);
+        CfgPartitionEdgeAnnotator annotator = new();
+        CfgPartitionCycleClassifier cycleClassifier = new();
+
+        // Act
+        List<CfgCodePartitionTransfer> transfers = cycleClassifier.Refine(
+            [jumpPartition, faultPartition],
+            annotator.CollectTransfers(edgeIndex, partitionByBlock));
+
+        // Assert
+        transfers.Should().ContainSingle(transfer =>
+            transfer.FromPartition == jumpPartition
+            && transfer.ToPartition == faultPartition
+            && transfer.Kind == CfgCodePartitionTransferKind.CyclicCrossPartitionFlow);
+        transfers.Should().ContainSingle(transfer =>
+            transfer.FromPartition == faultPartition
+            && transfer.ToPartition == jumpPartition
+            && transfer.Kind == CfgCodePartitionTransferKind.CpuFault);
+    }
+
+    [Fact]
+    public void PartitionEdgeAnnotator_AlignedReturnDoesNotCloseActivationCycle_KeepsJumpNonCyclic() {
+        // Arrange
+        CfgInstruction jump = CreateInstruction(0x0000, 0xEB, 2, InstructionKind.Jump);
+        CfgInstruction call = CreateInstruction(0x0002, 0xE8, 3, InstructionKind.Call);
+        CfgInstruction continuation = CreateInstruction(0x0005, 0x90, 1, InstructionKind.None);
+        CfgInstruction returningRet = CreateInstruction(0x0100, 0xC3, 1, InstructionKind.Return);
+        CfgBlock jumpBlock = CreateBlock(100, jump);
+        CfgBlock callBlock = CreateBlock(101, call);
+        CfgBlock continuationBlock = CreateBlock(102, continuation);
+        CfgBlock returningBlock = CreateBlock(103, returningRet);
+        CfgCodePartition callerPartition = CreatePartition(1, jumpBlock, callBlock, continuationBlock);
+        CfgCodePartition returningPartition = CreatePartition(2, returningBlock);
+        List<CfgPartitionEdgeRecord> edgeRecords = [
+            new(jumpBlock, returningBlock, jump, returningRet,
+                InstructionSuccessorType.Normal, ClassifiedEdgeKind.Jump),
+            new(callBlock, returningBlock, call, returningRet,
+                InstructionSuccessorType.Normal, ClassifiedEdgeKind.Call),
+            new(callBlock, continuationBlock, call, continuation,
+                InstructionSuccessorType.CallToReturn, ClassifiedEdgeKind.CallContinuation),
+            new(returningBlock, continuationBlock, returningRet, continuation,
+                InstructionSuccessorType.Normal, ClassifiedEdgeKind.RetTarget)
+        ];
+        Dictionary<CfgBlock, CfgCodePartition> partitionByBlock = new() {
+            [jumpBlock] = callerPartition,
+            [callBlock] = callerPartition,
+            [continuationBlock] = callerPartition,
+            [returningBlock] = returningPartition
+        };
+        CfgPartitionEdgeIndex edgeIndex = new(edgeRecords);
+        CfgPartitionEdgeAnnotator annotator = new();
+        CfgPartitionCycleClassifier cycleClassifier = new();
+
+        // Act
+        List<CfgCodePartitionTransfer> transfers = cycleClassifier.Refine(
+            [callerPartition, returningPartition],
+            annotator.CollectTransfers(edgeIndex, partitionByBlock));
+
+        // Assert
+        transfers.Should().ContainSingle(transfer =>
+            transfer.FromPartition == callerPartition
+            && transfer.ToPartition == returningPartition
+            && Equals(transfer.FromNode, jump)
+            && transfer.Kind == CfgCodePartitionTransferKind.CrossPartitionFlow);
+        transfers.Should().ContainSingle(transfer =>
+            transfer.FromPartition == returningPartition
+            && transfer.ToPartition == callerPartition
+            && transfer.Kind == CfgCodePartitionTransferKind.AlignedReturn);
+        transfers.Should().NotContain(transfer =>
+            transfer.Kind == CfgCodePartitionTransferKind.CyclicCrossPartitionFlow);
     }
 
     private CfgPartitionedProgram PartitionFrom(CfgInstruction start) {

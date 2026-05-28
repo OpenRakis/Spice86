@@ -315,7 +315,8 @@ A transfer is an outgoing control-flow edge from one partition to another. Trans
 | `cpuFault` | A faulting instruction transfers to a CPU fault handler partition. |
 | `alignedReturn` | A return whose target matches an observed call continuation. This behaves like a normal function return. |
 | `dynamicReturn` | A return whose target does not match an observed call continuation. This behaves more like a stack-sourced jump. |
-| `crossPartitionJump` | A non-call, non-fault, non-return transfer to another partition. |
+| `crossPartitionFlow` | A non-call, non-fault, non-return transfer to another partition. |
+| `cyclicCrossPartitionFlow` | A cross-partition flow transfer that participates in an activation cycle. |
 
 Each transfer contains:
 

@@ -1,0 +1,16 @@
+F000:0000 mov AX,0x1000
+F000:0003 mov SS,AX
+F000:0005 mov SP,0x0100
+F000:0008 mov CX,1
+F000:000B call near 0x001B
+F000:000E mov CX,2
+F000:0011 call near 0x0015
+F000:0014 hlt
+F000:0015 dec CX
+F000:0016 je short 0x001A
+F000:0018 jmp short 0x001B
+F000:001A ret near
+F000:001B call near 0x001F
+F000:001E ret near
+F000:001F jmp short 0x0015
+F000:FFF0 jmp short 0

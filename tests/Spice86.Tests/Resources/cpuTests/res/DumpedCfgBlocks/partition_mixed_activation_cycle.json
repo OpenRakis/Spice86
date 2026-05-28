@@ -6,15 +6,15 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:0014",
-  "lastExecutedBlockId": 26,
+  "lastExecutedBlockId": 25,
   "blocks": [
     {
-      "id": 26,
+      "id": 25,
       "entry": "F000:0014",
       "term": "F000:0014",
       "pred": [
-        19,
-        24
+        18,
+        20
       ],
       "succ": [],
       "asm": [
@@ -34,34 +34,36 @@
       ]
     },
     {
-      "id": 24,
-      "entry": "F000:001A",
-      "term": "F000:001A",
+      "id": 18,
+      "entry": "F000:001E",
+      "term": "F000:001E",
       "pred": [
-        9
+        9,
+        16
       ],
       "succ": [
-        26
+        20,
+        25
       ],
       "asm": [
         "C3|ret near"
       ]
     },
     {
-      "id": 19,
+      "id": 20,
       "entry": "F000:000E",
       "term": "F000:0011",
       "pred": [
         3,
-        17
+        18
       ],
       "succ": [
-        14,
-        26
+        13,
+        25
       ],
       "asm": [
         "B90200|mov CX,2",
-        "E80700|call near 0x001B"
+        "E80100|call near 0x0015"
       ]
     },
     {
@@ -73,27 +75,57 @@
       ],
       "succ": [
         9,
-        19
+        20
       ],
       "asm": [
         "B80010|mov AX,0x1000",
         "8ED0|mov SS,AX",
         "BC0001|mov SP,0x0100",
-        "B90200|mov CX,2",
-        "E80700|call near 0x0015"
+        "B90100|mov CX,1",
+        "E80D00|call near 0x001B"
+      ]
+    },
+    {
+      "id": 16,
+      "entry": "F000:001A",
+      "term": "F000:001A",
+      "pred": [
+        13
+      ],
+      "succ": [
+        18
+      ],
+      "asm": [
+        "C3|ret near"
       ]
     },
     {
       "id": 9,
+      "entry": "F000:001B",
+      "term": "F000:001B",
+      "pred": [
+        3,
+        23
+      ],
+      "succ": [
+        11,
+        18
+      ],
+      "asm": [
+        "E80100|call near 0x001F"
+      ]
+    },
+    {
+      "id": 13,
       "entry": "F000:0015",
       "term": "F000:0016",
       "pred": [
-        3,
-        22
+        11,
+        20
       ],
       "succ": [
-        12,
-        24
+        16,
+        23
       ],
       "asm": [
         "49|dec CX",
@@ -101,62 +133,31 @@
       ]
     },
     {
-      "id": 14,
-      "entry": "F000:001B",
-      "term": "F000:001C",
+      "id": 11,
+      "entry": "F000:001F",
+      "term": "F000:001F",
       "pred": [
-        12,
-        19
+        9
       ],
       "succ": [
-        17,
-        22
+        13
       ],
       "asm": [
-        "49|dec CX",
-        "7402|je short 0x0020"
+        "EBF4|jmp short 0x0015"
       ]
     },
     {
-      "id": 17,
-      "entry": "F000:0020",
-      "term": "F000:0020",
-      "pred": [
-        14
-      ],
-      "succ": [
-        19
-      ],
-      "asm": [
-        "C3|ret near"
-      ]
-    },
-    {
-      "id": 12,
+      "id": 23,
       "entry": "F000:0018",
       "term": "F000:0018",
       "pred": [
-        9
+        13
       ],
       "succ": [
-        14
+        9
       ],
       "asm": [
         "EB01|jmp short 0x001B"
-      ]
-    },
-    {
-      "id": 22,
-      "entry": "F000:001E",
-      "term": "F000:001E",
-      "pred": [
-        14
-      ],
-      "succ": [
-        9
-      ],
-      "asm": [
-        "EBF5|jmp short 0x0015"
       ]
     }
   ],
@@ -166,13 +167,13 @@
       "kind": "observed",
       "name": "unknown_F000_0015_F0015",
       "blocks": [
-        9,
-        12,
-        24
+        13,
+        23,
+        16
       ],
       "entries": [
         {
-          "block": 9,
+          "block": 13,
           "address": "F000:0015",
           "kind": "functionEntry"
         }
@@ -183,13 +184,12 @@
       "kind": "observed",
       "name": "unknown_F000_001B_F001B",
       "blocks": [
-        14,
-        22,
-        17
+        9,
+        18
       ],
       "entries": [
         {
-          "block": 14,
+          "block": 9,
           "address": "F000:001B",
           "kind": "functionEntry"
         }
@@ -198,11 +198,26 @@
     {
       "id": 3,
       "kind": "observed",
+      "name": "unknown_F000_001F_F001F",
+      "blocks": [
+        11
+      ],
+      "entries": [
+        {
+          "block": 11,
+          "address": "F000:001F",
+          "kind": "functionEntry"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "kind": "observed",
       "name": "unknown_F000_FFF0_FFFF0",
       "blocks": [
         3,
-        19,
-        26,
+        20,
+        25,
         2
       ],
       "entries": [
@@ -216,62 +231,82 @@
   ],
   "transfers": [
     {
+      "kind": "alignedReturn",
+      "fromPartition": 1,
+      "toPartition": 2,
+      "fromBlock": 16,
+      "toBlock": 18,
+      "from": "F000:001A",
+      "target": "F000:001E"
+    },
+    {
       "kind": "cyclicCrossPartitionFlow",
       "fromPartition": 1,
       "toPartition": 2,
-      "fromBlock": 12,
-      "toBlock": 14,
+      "fromBlock": 23,
+      "toBlock": 9,
       "from": "F000:0018",
       "target": "F000:001B"
     },
     {
-      "kind": "alignedReturn",
-      "fromPartition": 1,
+      "kind": "callOut",
+      "fromPartition": 2,
       "toPartition": 3,
-      "fromBlock": 24,
-      "toBlock": 26,
-      "from": "F000:001A",
+      "fromBlock": 9,
+      "toBlock": 11,
+      "from": "F000:001B",
+      "target": "F000:001F",
+      "callContinuationBlock": 18,
+      "callContinuationAddress": "F000:001E"
+    },
+    {
+      "kind": "alignedReturn",
+      "fromPartition": 2,
+      "toPartition": 4,
+      "fromBlock": 18,
+      "toBlock": 20,
+      "from": "F000:001E",
+      "target": "F000:000E"
+    },
+    {
+      "kind": "alignedReturn",
+      "fromPartition": 2,
+      "toPartition": 4,
+      "fromBlock": 18,
+      "toBlock": 25,
+      "from": "F000:001E",
       "target": "F000:0014"
     },
     {
       "kind": "cyclicCrossPartitionFlow",
-      "fromPartition": 2,
+      "fromPartition": 3,
       "toPartition": 1,
-      "fromBlock": 22,
-      "toBlock": 9,
-      "from": "F000:001E",
+      "fromBlock": 11,
+      "toBlock": 13,
+      "from": "F000:001F",
       "target": "F000:0015"
     },
     {
-      "kind": "alignedReturn",
-      "fromPartition": 2,
-      "toPartition": 3,
-      "fromBlock": 17,
-      "toBlock": 19,
-      "from": "F000:0020",
-      "target": "F000:000E"
+      "kind": "callOut",
+      "fromPartition": 4,
+      "toPartition": 1,
+      "fromBlock": 20,
+      "toBlock": 13,
+      "from": "F000:0011",
+      "target": "F000:0015",
+      "callContinuationBlock": 25,
+      "callContinuationAddress": "F000:0014"
     },
     {
       "kind": "callOut",
-      "fromPartition": 3,
-      "toPartition": 1,
+      "fromPartition": 4,
+      "toPartition": 2,
       "fromBlock": 3,
       "toBlock": 9,
       "from": "F000:000B",
-      "target": "F000:0015",
-      "callContinuationBlock": 19,
-      "callContinuationAddress": "F000:000E"
-    },
-    {
-      "kind": "callOut",
-      "fromPartition": 3,
-      "toPartition": 2,
-      "fromBlock": 19,
-      "toBlock": 14,
-      "from": "F000:0011",
       "target": "F000:001B",
-      "callContinuationBlock": 26,
-      "callContinuationAddress": "F000:0014"
+      "callContinuationBlock": 20,
+      "callContinuationAddress": "F000:000E"
     }
   ],
   "truncated": false

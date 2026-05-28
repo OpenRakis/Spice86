@@ -318,7 +318,7 @@
   ],
   "transfers": [
     {
-      "kind": "crossPartitionJump",
+      "kind": "crossPartitionFlow",
       "fromPartition": 1,
       "toPartition": 4,
       "fromBlock": 9,
@@ -327,7 +327,7 @@
       "target": "F000:0029"
     },
     {
-      "kind": "crossPartitionJump",
+      "kind": "crossPartitionFlow",
       "fromPartition": 1,
       "toPartition": 5,
       "fromBlock": 21,
@@ -336,7 +336,7 @@
       "target": "F000:002E"
     },
     {
-      "kind": "crossPartitionJump",
+      "kind": "crossPartitionFlow",
       "fromPartition": 2,
       "toPartition": 4,
       "fromBlock": 29,
@@ -345,7 +345,7 @@
       "target": "F000:0029"
     },
     {
-      "kind": "crossPartitionJump",
+      "kind": "crossPartitionFlow",
       "fromPartition": 2,
       "toPartition": 5,
       "fromBlock": 35,
@@ -398,7 +398,7 @@
       "callContinuationAddress": "F000:001C"
     },
     {
-      "kind": "crossPartitionJump",
+      "kind": "crossPartitionFlow",
       "fromPartition": 4,
       "toPartition": 6,
       "fromBlock": 12,
@@ -407,7 +407,7 @@
       "target": "F000:0033"
     },
     {
-      "kind": "crossPartitionJump",
+      "kind": "crossPartitionFlow",
       "fromPartition": 5,
       "toPartition": 6,
       "fromBlock": 23,

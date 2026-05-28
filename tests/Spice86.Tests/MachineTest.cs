@@ -43,6 +43,7 @@ public class MachineTest
         ["partition_multi_entry_dominated_shared"],
         ["partition_multi_entry_irreducible_shared"],
         ["partition_cross_function_loop"],
+        ["partition_mixed_activation_cycle"],
         ["partition_indirect_call_jump"]
     ];
 

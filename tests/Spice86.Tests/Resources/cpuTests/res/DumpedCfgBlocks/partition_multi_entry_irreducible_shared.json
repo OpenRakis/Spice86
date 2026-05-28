@@ -235,7 +235,7 @@
   ],
   "transfers": [
     {
-      "kind": "crossPartitionJump",
+      "kind": "crossPartitionFlow",
       "fromPartition": 1,
       "toPartition": 4,
       "fromBlock": 9,
@@ -244,7 +244,7 @@
       "target": "F000:0019"
     },
     {
-      "kind": "crossPartitionJump",
+      "kind": "crossPartitionFlow",
       "fromPartition": 2,
       "toPartition": 4,
       "fromBlock": 22,

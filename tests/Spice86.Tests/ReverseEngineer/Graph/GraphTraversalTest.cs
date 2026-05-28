@@ -147,4 +147,39 @@ public sealed class GraphTraversalTest {
         visited.Should().HaveCount(3);
         visited.Should().OnlyHaveUniqueItems();
     }
+
+    [Fact]
+    public void StronglyConnectedComponents_Find_GroupsCyclesAndSingletons() {
+        Dictionary<string, string[]> graph = new() {
+            ["A"] = ["B"],
+            ["B"] = ["A", "C"],
+            ["C"] = ["D"],
+            ["D"] = ["C"],
+            ["E"] = []
+        };
+        IEnumerable<string> GetNeighbors(string node) =>
+            graph.TryGetValue(node, out string[]? neighbors) ? neighbors : [];
+
+        Dictionary<string, int> componentByNode = StronglyConnectedComponents.Find(graph.Keys, GetNeighbors);
+
+        componentByNode.Should().HaveCount(5);
+        componentByNode["A"].Should().Be(componentByNode["B"]);
+        componentByNode["C"].Should().Be(componentByNode["D"]);
+        componentByNode["A"].Should().NotBe(componentByNode["C"]);
+        componentByNode["E"].Should().NotBe(componentByNode["A"]);
+        componentByNode["E"].Should().NotBe(componentByNode["C"]);
+    }
+
+    [Fact]
+    public void StronglyConnectedComponents_Find_HandlesLargeLinearGraphWithoutRecursion() {
+        const int nodeCount = 10_000;
+        int[] nodes = Enumerable.Range(0, nodeCount).ToArray();
+        static IEnumerable<int> GetNeighbors(int node) =>
+            node + 1 < nodeCount ? [node + 1] : [];
+
+        Dictionary<int, int> componentByNode = StronglyConnectedComponents.Find(nodes, GetNeighbors);
+
+        componentByNode.Should().HaveCount(nodeCount);
+        componentByNode.Values.Should().OnlyHaveUniqueItems();
+    }
 }
