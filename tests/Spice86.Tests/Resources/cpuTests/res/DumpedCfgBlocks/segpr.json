@@ -209,7 +209,7 @@
       "target": "F000:0065"
     },
     {
-      "kind": "crossPartitionJump",
+      "kind": "crossPartitionFlow",
       "fromPartition": 4,
       "toPartition": 1,
       "fromBlock": 3,

@@ -62,7 +62,7 @@ internal sealed class CfgPartitionEdgeAnnotator {
                 ? CfgCodePartitionTransferKind.AlignedReturn
                 : CfgCodePartitionTransferKind.DynamicReturn;
         }
-        return CfgCodePartitionTransferKind.CrossPartitionJump;
+        return CfgCodePartitionTransferKind.CrossPartitionFlow;
     }
 
 }

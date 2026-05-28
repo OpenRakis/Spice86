@@ -695,7 +695,7 @@
   ],
   "transfers": [
     {
-      "kind": "crossPartitionJump",
+      "kind": "cyclicCrossPartitionFlow",
       "fromPartition": 1,
       "toPartition": 2,
       "fromBlock": 47,
@@ -713,7 +713,7 @@
       "target": "F000:1000"
     },
     {
-      "kind": "crossPartitionJump",
+      "kind": "cyclicCrossPartitionFlow",
       "fromPartition": 2,
       "toPartition": 3,
       "fromBlock": 58,
@@ -731,7 +731,7 @@
       "target": "F000:1000"
     },
     {
-      "kind": "crossPartitionJump",
+      "kind": "cyclicCrossPartitionFlow",
       "fromPartition": 3,
       "toPartition": 4,
       "fromBlock": 68,
@@ -749,7 +749,7 @@
       "target": "F000:1000"
     },
     {
-      "kind": "crossPartitionJump",
+      "kind": "cyclicCrossPartitionFlow",
       "fromPartition": 4,
       "toPartition": 5,
       "fromBlock": 104,
@@ -767,7 +767,7 @@
       "target": "F000:1000"
     },
     {
-      "kind": "crossPartitionJump",
+      "kind": "cyclicCrossPartitionFlow",
       "fromPartition": 5,
       "toPartition": 6,
       "fromBlock": 113,
@@ -785,7 +785,7 @@
       "target": "F000:1000"
     },
     {
-      "kind": "crossPartitionJump",
+      "kind": "cyclicCrossPartitionFlow",
       "fromPartition": 6,
       "toPartition": 7,
       "fromBlock": 149,
@@ -803,7 +803,7 @@
       "target": "F000:1000"
     },
     {
-      "kind": "crossPartitionJump",
+      "kind": "cyclicCrossPartitionFlow",
       "fromPartition": 7,
       "toPartition": 8,
       "fromBlock": 187,
@@ -821,7 +821,7 @@
       "target": "F000:1000"
     },
     {
-      "kind": "crossPartitionJump",
+      "kind": "cyclicCrossPartitionFlow",
       "fromPartition": 8,
       "toPartition": 9,
       "fromBlock": 206,
@@ -839,7 +839,7 @@
       "target": "F000:1000"
     },
     {
-      "kind": "crossPartitionJump",
+      "kind": "cyclicCrossPartitionFlow",
       "fromPartition": 9,
       "toPartition": 10,
       "fromBlock": 239,
@@ -857,7 +857,7 @@
       "target": "F000:1000"
     },
     {
-      "kind": "crossPartitionJump",
+      "kind": "crossPartitionFlow",
       "fromPartition": 10,
       "toPartition": 11,
       "fromBlock": 247,
@@ -974,7 +974,7 @@
       "target": "F000:02F6"
     },
     {
-      "kind": "crossPartitionJump",
+      "kind": "crossPartitionFlow",
       "fromPartition": 13,
       "toPartition": 1,
       "fromBlock": 3,

@@ -21,6 +21,7 @@ public sealed class CfgFunctionPartitioner {
     private readonly CfgPartitionAssembler _partitionAssembler = new();
     private readonly CfgPartitionNormalizer _partitionNormalizer = new();
     private readonly CfgPartitionEdgeAnnotator _edgeAnnotator = new();
+    private readonly CfgPartitionCycleClassifier _cycleClassifier = new();
 
     /// <summary>
     /// Partitions a full exported block graph. Truncated graphs must be rejected by the caller.
@@ -66,6 +67,8 @@ public sealed class CfgFunctionPartitioner {
             .ToDictionary(entry => entry.Key, entry => partitionByDraft[entry.Value]);
         // Step 7: classify inter-partition transfers (call-out, aligned return, dynamic return, jump, fault).
         List<CfgCodePartitionTransfer> transfers = _edgeAnnotator.CollectTransfers(edgeIndex, partitionByBlock);
+        // Step 8: mark jump transfers that participate in generated activation cycles.
+        transfers = _cycleClassifier.Refine(partitions, transfers);
 
         return new CfgPartitionedProgram {
             Partitions = partitions,

@@ -384,7 +384,7 @@
       "callContinuationAddress": "F000:4002"
     },
     {
-      "kind": "crossPartitionJump",
+      "kind": "crossPartitionFlow",
       "fromPartition": 5,
       "toPartition": 3,
       "fromBlock": 33,

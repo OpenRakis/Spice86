@@ -8,5 +8,6 @@ internal enum CfgCodePartitionTransferKind {
     CpuFault,
     AlignedReturn,
     DynamicReturn,
-    CrossPartitionJump
+    CrossPartitionFlow,
+    CyclicCrossPartitionFlow
 }
