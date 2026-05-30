@@ -5,9 +5,9 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
-using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning;
+using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Core.Emulator.StateSerialization.CfgReload;
 using Spice86.Core.Emulator.StateSerialization.FunctionPartitioning;
 
@@ -16,10 +16,11 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 
 /// <summary>
-/// JSON serialization adapter for the CFG block graph. Delegates traversal to
-/// <see cref="CfgBlockGraphExporter"/> and converts the exported graph into the
-/// <see cref="CfgCpuGraph"/> / <see cref="CfgBlockInfo"/> wire model used for
-/// on-disk dumps and MCP responses.
+/// JSON serialization adapter for the CFG block graph. Converts a <see cref="CfgCpuSnapshot"/> (the exported
+/// graph plus its partition overlay, produced by <see cref="CfgCpuSnapshotBuilder"/>) into the
+/// <see cref="CfgCpuGraph"/> / <see cref="CfgBlockInfo"/> wire model used for on-disk dumps and MCP responses.
+/// This class no longer exports or partitions the graph itself; that single responsibility lives in
+/// <see cref="CfgCpuSnapshotBuilder"/>.
 /// </summary>
 public class CfgBlocksJsonExporter {
     private static readonly JsonSerializerOptions SerializerOptions = new() {
@@ -29,28 +30,30 @@ public class CfgBlocksJsonExporter {
     };
 
     private readonly AstInstructionRenderer _renderer;
-    private readonly CfgBlockGraphExporter _graphExporter;
-    private readonly CfgFunctionPartitioner _functionPartitioner;
+    private readonly CfgCpuSnapshotBuilder _snapshotBuilder;
     private readonly CfgPartitionSerializationMapper _partitionMapper;
-    private readonly FunctionCatalogue _functionCatalogue;
 
     /// <summary>
-    /// Creates an exporter with a dedicated graph exporter instance and function labels.
+    /// Creates an exporter over the given snapshot builder.
     /// </summary>
-    public CfgBlocksJsonExporter(CfgBlockGraphExporter graphExporter, FunctionCatalogue functionCatalogue, CfgFunctionPartitioner functionPartitioner) {
+    internal CfgBlocksJsonExporter(CfgCpuSnapshotBuilder snapshotBuilder) {
         _renderer = new AstInstructionRenderer(AsmRenderingConfig.CreateSpice86Style());
-        _graphExporter = graphExporter;
-        _functionPartitioner = functionPartitioner;
+        _snapshotBuilder = snapshotBuilder;
         _partitionMapper = new CfgPartitionSerializationMapper();
-        _functionCatalogue = functionCatalogue;
     }
 
     /// <summary>
-    /// Builds a <see cref="CfgCpuGraph"/> from the given execution context manager.
-    /// Stops early if <paramref name="nodeLimit"/> is reached; <c>Truncated</c> is set accordingly.
+    /// Builds a snapshot from the execution context (convenience for callers that do not already have one,
+    /// e.g. the MCP graph tool and tests), then maps it to the JSON wire model.
     /// </summary>
-    internal CfgCpuGraph BuildGraph(ExecutionContextManager contextManager, int? nodeLimit) {
-        CfgExecutionContextGraph exported = _graphExporter.ExportFromExecutionContext(contextManager, nodeLimit);
+    internal CfgCpuGraph BuildGraph(ExecutionContextManager contextManager, int? nodeLimit) =>
+        ToCfgCpuGraph(_snapshotBuilder.Build(contextManager, nodeLimit));
+
+    /// <summary>
+    /// Maps an already-built snapshot to the JSON wire model.
+    /// </summary>
+    internal CfgCpuGraph ToCfgCpuGraph(CfgCpuSnapshot snapshot) {
+        CfgExecutionContextGraph exported = snapshot.Exported;
         CfgBlockGraph graph = exported.Graph;
 
         HashSet<int> includedBlockIds = new(graph.Blocks.Select(n => n.Block.Id));
@@ -64,14 +67,8 @@ public class CfgBlocksJsonExporter {
         }
 
         CfgFunctionPartitioningResult? partitioning = null;
-        bool? partitioningRequiresFullGraph = null;
-        if (graph.Truncated) {
-            partitioningRequiresFullGraph = true;
-        } else {
-            // Partitioning throws only when graph-structural invariants are violated (no roots, ownerless blocks).
-            // Those invariants hold if the emulator CFG is correct, so a failure here means the emulator has a bug
-            // and the graph data itself cannot be trusted. Letting the exception propagate is intentional.
-            partitioning = _partitionMapper.Map(_functionPartitioner.Partition(graph, contextManager, _functionCatalogue));
+        if (snapshot.PartitionedProgram is CfgPartitionedProgram program) {
+            partitioning = _partitionMapper.Map(program);
         }
 
         return new CfgCpuGraph {
@@ -84,25 +81,76 @@ public class CfgBlocksJsonExporter {
             Blocks = blocks,
             Partitions = partitioning?.Partitions,
             Transfers = partitioning?.Transfers,
-            PartitioningRequiresFullGraph = partitioningRequiresFullGraph,
+            PartitioningRequiresFullGraph = graph.Truncated ? true : null,
             Truncated = graph.Truncated
         };
     }
 
     /// <summary>
-    /// Serializes the full block graph to a JSON string.
+    /// Maps an already-built snapshot to the blocks-only on-disk view (no partition overlay).
     /// </summary>
-    internal string ToJson(ExecutionContextManager contextManager) {
-        CfgCpuGraph graph = BuildGraph(contextManager, null);
-        return JsonSerializer.Serialize(graph, SerializerOptions);
+    internal CfgBlocksDump ToBlocksDump(CfgCpuSnapshot snapshot) {
+        CfgExecutionContextGraph exported = snapshot.Exported;
+        CfgBlockGraph graph = exported.Graph;
+
+        HashSet<int> includedBlockIds = new(graph.Blocks.Select(n => n.Block.Id));
+        CfgBlockInfo[] blocks = graph.Blocks
+            .Select(graphNode => BuildCfgBlockInfo(graphNode.Block, includedBlockIds))
+            .ToArray();
+
+        int? lastExecutedBlockId = null;
+        if (exported.LastExecutedBlock is CfgBlock lastBlock) {
+            lastExecutedBlockId = lastBlock.Id;
+        }
+
+        return new CfgBlocksDump {
+            CurrentContextDepth = exported.CurrentContextDepth,
+            CurrentContextEntryPoint = exported.CurrentContextEntryPoint,
+            TotalEntryPoints = exported.EntryPointAddresses.Length,
+            EntryPointAddresses = exported.EntryPointAddresses,
+            LastExecutedAddress = exported.LastExecuted?.Address.ToString(),
+            LastExecutedBlockId = lastExecutedBlockId,
+            Blocks = blocks,
+            Truncated = graph.Truncated
+        };
     }
 
     /// <summary>
-    /// Writes the full block graph JSON to a file.
+    /// Maps an already-built snapshot to the partition overlay on-disk view. A truncated graph or a partitioning
+    /// failure yields an empty overlay (partitioning requires the full graph and does not throw out here).
     /// </summary>
-    internal void Write(ExecutionContextManager contextManager, string path) {
-        string json = ToJson(contextManager);
-        File.WriteAllText(path, json);
+    internal CfgPartitionsDump ToPartitionsDump(CfgCpuSnapshot snapshot) {
+        CfgFunctionPartitioningResult? partitioning = null;
+        if (snapshot.PartitionedProgram is CfgPartitionedProgram program) {
+            partitioning = _partitionMapper.Map(program);
+        }
+
+        return new CfgPartitionsDump {
+            Partitions = partitioning?.Partitions ?? [],
+            Transfers = partitioning?.Transfers ?? [],
+            PartitioningRequiresFullGraph = snapshot.Exported.Graph.Truncated ? true : null
+        };
+    }
+
+    /// <summary>
+    /// Serializes an already-built snapshot to a JSON string.
+    /// </summary>
+    internal string ToJson(CfgCpuSnapshot snapshot) {
+        return JsonSerializer.Serialize(ToCfgCpuGraph(snapshot), SerializerOptions);
+    }
+
+    /// <summary>
+    /// Writes the blocks-only JSON for an already-built snapshot to a file.
+    /// </summary>
+    internal void WriteBlocks(CfgCpuSnapshot snapshot, string path) {
+        File.WriteAllText(path, JsonSerializer.Serialize(ToBlocksDump(snapshot), SerializerOptions));
+    }
+
+    /// <summary>
+    /// Writes the partition overlay JSON for an already-built snapshot to a file.
+    /// </summary>
+    internal void WritePartitions(CfgCpuSnapshot snapshot, string path) {
+        File.WriteAllText(path, JsonSerializer.Serialize(ToPartitionsDump(snapshot), SerializerOptions));
     }
 
     private CfgBlockInfo BuildCfgBlockInfo(CfgBlock block, HashSet<int> includedBlockIds) {

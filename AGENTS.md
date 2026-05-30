@@ -1,7 +1,9 @@
-# Copilot Instructions for Spice86
+# AGENTS
+
+Guidance for AI agents working in the Spice86 repository.
 
 ## Project Overview
-Spice86 is a .NET 8 cross-platform emulator for reverse engineering real-mode DOS programs. It enables running, analyzing, and incrementally rewriting DOS binaries in C# without source code.
+Spice86 is a .NET 10 cross-platform emulator for reverse engineering real-mode DOS programs. It enables running, analyzing, and incrementally rewriting DOS binaries in C# without source code.
 
 ## Architecture & Module Boundaries
 
@@ -182,6 +184,7 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
   - **Avoid non-ASCII Unicode characters**: Prefer plain ASCII in source code and documentation; only use Unicode when necessary for languages that require characters outside the ASCII range (for example, Chinese). Some editors or tools may not assume UTF-8 and can render or save these characters incorrectly.
 - **Do not use `#region`**: Avoid `#region`/`#endregion` blocks; keep code organized via clear structure and namespaces
 - **Do not suppress warnings with pragmas**: Never disable warnings using preprocessor directives (e.g., `#pragma warning disable`). Fix the underlying issue instead.
+- **Use `Path.Join`, not `Path.Combine`**: Never use `System.IO.Path.Combine`. It silently discards all earlier segments if a later argument is rooted, and CodeQL flags every call ("Path.Combine may silently drop its earlier arguments") because it cannot prove the arguments are relative. Always use `Path.Join`, which concatenates segments without dropping any. This is a very frequent CodeQL finding - prefer `Path.Join` everywhere paths are assembled.
 - **No complex ternary operator**: Avoid nested, chained, or multi-line ternary expressions. Simple single-line ternaries with short, obvious operands are acceptable. Use explicit `if/else` blocks when the condition or either branch is non-trivial.
 - **Async usage restrictions**:
   - **Do NOT let async "infect" the `Spice86.Core` assembly**
@@ -210,6 +213,10 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 - **Prefer ASM-based tests over unit tests** for testing the emulator
   - Unit tests are acceptable for interrupt handlers that don't override `WriteAssemblyInRam` and deal with few dependencies
   - Use assembly-based integration tests for comprehensive emulator validation
+- **Every `MachineTest` scenario must also be covered by `GeneratedCodeMachineTest`**
+  - `MachineTest` (`TestOneBin`) only runs the interpreter and compares golden listings/dumps; it never invokes the C# generator.
+  - `GeneratedCodeMachineTest` (via `GeneratedCodeMachineTestRunner.TestGeneratedCode`) is the execute-then-generate-from-trace path: it runs the bin in the interpreter, generates C# from the recorded CFG/trace, compiles it, then re-runs the bin with the compiled override installed and asserts the memory dump.
+  - When adding or changing an ASM fixture in `MachineTest`, add the matching `GeneratedCodeMachineTest` entry for the same bin so the code generator is exercised on it too. Bugs in code generation (e.g. control-flow lowering) are only caught by the generated-code path.
 - Use FluentAssertions for assertions: `result.Should().Be(expected)`
 - Mock with NSubstitute: `Substitute.For<IInterface>()`
 - CPU tests in `tests/Spice86.Tests/CpuTests/` use SingleStepTests NuGet packages for validation

@@ -232,6 +232,13 @@ public sealed class Machine : IDisposable {
     public IPauseHandler PauseHandler { get; }
 
     /// <summary>
+    /// The emulation-loop event scheduler. Used by generated/override code to advance scheduled device
+    /// events (e.g. the PIT raising IRQ0) at external-event boundaries, since override code runs without
+    /// returning to the interpreter run loop that normally pumps the scheduler.
+    /// </summary>
+    public DeviceScheduler.DeviceScheduler EmulationLoopScheduler { get; }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="Machine"/> class.
     /// </summary>
     public Machine(BiosDataArea biosDataArea,
@@ -272,7 +279,8 @@ public sealed class Machine : IDisposable {
         IMouseDevice mouseDevice,
         IMouseDriver mouseDriver,
         IVgaFunctionality vgaFunctions,
-        IPauseHandler pauseHandler) {
+        IPauseHandler pauseHandler,
+        DeviceScheduler.DeviceScheduler emulationLoopScheduler) {
         BiosDataArea = biosDataArea;
         BiosEquipmentDeterminationInt11Handler = biosEquipmentDeterminationInt11Handler;
         BiosKeyboardInt9Handler = biosKeyboardInt9Handler;
@@ -312,6 +320,7 @@ public sealed class Machine : IDisposable {
         MouseDriver = mouseDriver;
         VgaFunctions = vgaFunctions;
         PauseHandler = pauseHandler;
+        EmulationLoopScheduler = emulationLoopScheduler;
     }
 
     /// <summary>

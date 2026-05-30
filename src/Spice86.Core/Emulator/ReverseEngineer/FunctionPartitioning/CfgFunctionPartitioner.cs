@@ -51,6 +51,9 @@ public sealed class CfgFunctionPartitioner {
         roots = _rootCollector.AddSelfContainedComponentRoots(blocks, edgeIndex, roots, functionCatalogue);
         // Step 4: flood-fill each root's owned region via ownership-preserving edges.
         Dictionary<CfgBlock, HashSet<CfgPartitionRoot>> ownersByBlock = _regionGrower.Grow(edgeIndex, roots);
+        // Step 4b: rescue ownership-preserving cycles no root reached (entered only through
+        // return/fault/call edges whose root promotion was suppressed), then re-grow.
+        ownersByBlock = RescueOwnerlessRegions(blocks, edgeIndex, roots, functionCatalogue, ownersByBlock);
         EnsureNoOwnerlessBlocks(blocks, edgeIndex, ownersByBlock);
         SequentialIdAllocator idAllocator = new(1);
         // Step 5: combine root regions and shared-block components into partition drafts.
@@ -74,6 +77,30 @@ public sealed class CfgFunctionPartitioner {
             Partitions = partitions,
             Transfers = transfers
         };
+    }
+
+    private Dictionary<CfgBlock, HashSet<CfgPartitionRoot>> RescueOwnerlessRegions(
+        List<CfgBlock> blocks,
+        CfgPartitionEdgeIndex edgeIndex,
+        List<CfgPartitionRoot> roots,
+        FunctionCatalogue? functionCatalogue,
+        Dictionary<CfgBlock, HashSet<CfgPartitionRoot>> ownersByBlock) {
+        Dictionary<CfgBlock, HashSet<CfgPartitionRoot>> currentOwners = ownersByBlock;
+        List<CfgBlock> ownerlessBlocks = blocks.Where(block => !currentOwners.ContainsKey(block)).ToList();
+        // Each rescue pass promotes at least one new root and re-grows, so the ownerless set strictly
+        // shrinks; the block count bounds the number of passes. Rescue roots are appended in their own
+        // sorted order, so existing roots keep their position (and their assembled partition ids).
+        while (ownerlessBlocks.Count > 0) {
+            List<CfgPartitionRoot> rescueRoots = _rootCollector.CreateOwnerlessRegionRoots(
+                ownerlessBlocks, edgeIndex, roots, functionCatalogue);
+            if (rescueRoots.Count == 0) {
+                break;
+            }
+            roots.AddRange(CfgPartitionOrdering.RootsByEntryBlock(rescueRoots));
+            currentOwners = _regionGrower.Grow(edgeIndex, roots);
+            ownerlessBlocks = blocks.Where(block => !currentOwners.ContainsKey(block)).ToList();
+        }
+        return currentOwners;
     }
 
     private static void EnsureHasRoot(List<CfgPartitionRoot> roots) {

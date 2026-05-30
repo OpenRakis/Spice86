@@ -83,7 +83,21 @@ At this stage there are no partitions yet. The partitioner only knows which bloc
 - call targets become observed function roots;
 - CPU fault targets become observed execution-context roots.
 
-At least one observed root is required for a non-empty graph. If root collection finds none, partitioning fails with an `InvalidOperationException`; a graph with no execution-context entry, call target, or CPU fault handler target does not contain enough evidence to partition safely. After this validation, the partitioner grows ownership from the roots and fails if any exported block is still ownerless. In a complete emulator export, every block should be explained by observed entry evidence or by an ownership-preserving predecessor; an ownerless block means the emulator/export path lost control-flow evidence and needs a fix.
+At least one observed root is required for a non-empty graph. If root collection finds none, partitioning fails with an `InvalidOperationException`; a graph with no execution-context entry, call target, or CPU fault handler target does not contain enough evidence to partition safely. After this validation, the partitioner grows ownership from the roots. If any block is still ownerless, it runs a rescue pass (see below) and re-grows. A block that is ownerless **and** has no incoming edge at all is genuine lost control-flow evidence and fails the ownerless-block guard; that signals the emulator/export path needs a fix.
+
+### Ownerless region rescue
+
+An ownership-preserving cycle can form that no observed root reaches. This is a graph-shape problem, independent of self-modifying code: a loop `A -call continuation-> B -> ... -> A` whose only edges entering it from outside are returns, faults, or calls, and where no block in the loop is an execution-context entry or a call target. Because an aligned call-continuation target inside the loop suppresses its own return-target root promotion, the whole loop ends up with no root and the grow phase leaves every block in it ownerless.
+
+Self-modifying code is one way this shape arises in practice (a region of stale, non-live blocks re-entered only through returns), but staleness is incidental: the partitioner only looks at edges, and a purely live graph with the same shape fails identically.
+
+The rescue promotes a root for each such region rather than failing:
+
+- Only ownerless blocks that control flow actually reaches (at least one incoming edge) are rescued.
+- Blocks entered from outside the ownerless region become the rescue roots, classified by their external entry edge (`returnTargetEntry` for a return, `executionContextEntry` for a fault, `graphComponentEntry` otherwise).
+- A region with only internal edges falls back to its lowest-address block.
+
+The partitioner re-grows after each rescue pass; because every pass owns at least its new root, the ownerless set strictly shrinks and the loop terminates.
 
 In the example, roots are created for `A` and `D`:
 
@@ -249,6 +263,7 @@ Current root sources are:
 - CPU fault handler targets.
 - Dynamic return targets when no aligned call-continuation evidence exists.
 - Self-contained graph components created by non-assembly control transfers, such as code override continuations.
+- Rescue roots for ownership-preserving regions left ownerless after the grow phase (cycles entered only through return/fault/call edges, e.g. a suppressed aligned return target with no in-cycle call target or context entry).
 
 The exported JSON also exposes `currentContextEntryPoint`, but that is execution metadata for the current CPU context. It is not a separate partition root source; during normal execution it is already present in the execution-context entry-point set.
 

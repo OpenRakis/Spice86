@@ -73,6 +73,13 @@ public sealed class Configuration : CommandSettings {
     public bool UseCodeOverrideOption => UseCodeOverride ?? true;
 
     /// <summary>
+    /// Gets a value indicating whether C# code overrides actually replace emulated asm. This is true only when an
+    /// <see cref="OverrideSupplier"/> is set and <see cref="UseCodeOverrideOption"/> is enabled. When active, overrides
+    /// mask the original asm and make the CFG jump between overrides, so CFG and execution flow dumps are not representative.
+    /// </summary>
+    public bool CodeOverridesActive => UseCodeOverrideOption && OverrideSupplier != null;
+
+    /// <summary>
     /// Flag indicating if headless mode is enabled. When this option is not specified, the normal UI is used.
     /// </summary>
     [CommandOption("-h|--HeadlessMode <HEADLESSMODE>")]

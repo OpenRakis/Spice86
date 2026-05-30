@@ -50,6 +50,7 @@ using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Core.Emulator.StateSerialization.CfgReload;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM.Clock;
@@ -450,10 +451,12 @@ public class Spice86DependencyInjection : IDisposable {
         ExecutionAddressesExtractor executionAddressesExtractor = new(cfgCpu, executionAddresses);
         CfgBlockGraphExporter cfgBlockGraphExporter = new();
         CfgFunctionPartitioner cfgFunctionPartitioner = new();
-        CfgBlocksJsonExporter cfgBlocksJsonExporter = new(cfgBlockGraphExporter, functionCatalogue, cfgFunctionPartitioner);
+        CfgCpuSnapshotBuilder cfgCpuSnapshotBuilder = new(cfgBlockGraphExporter, cfgFunctionPartitioner, functionCatalogue, loggerService);
+        CfgBlocksJsonExporter cfgBlocksJsonExporter = new(cfgCpuSnapshotBuilder);
+        CfgCSharpDumper cfgCSharpDumper = new(new CfgCSharpGenerator(), loggerService);
         EmulationStateDataWriter emulationStateDataWriter = new(state, executionAddressesExtractor, memoryDataExporter,
-            listingExporter, cfgBlocksJsonExporter, cfgCpu.ExecutionContextManager, functionCatalogue, emulatorStateSerializationFolder, emulatorBreakpointsManager,
-            loggerService);
+            listingExporter, cfgCpuSnapshotBuilder, cfgBlocksJsonExporter, cfgCSharpDumper, cfgCpu.ExecutionContextManager, functionCatalogue, emulatorStateSerializationFolder, emulatorBreakpointsManager,
+            configuration, loggerService);
         EmulatorStateSerializer emulatorStateSerializer = new(emulatorStateSerializationFolder,
             emulationStateDataReader, emulationStateDataWriter);
 
@@ -673,7 +676,7 @@ public class Spice86DependencyInjection : IDisposable {
             vgaCard, videoState, vgaIoPortHandler,
             vgaRenderer, vgaBios, vgaRom,
             dmaSystem, opl, mixer, mouse, mouseDriver,
-            vgaFunctionality, pauseHandler);
+            vgaFunctionality, pauseHandler, emulationLoopScheduler);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Machine created...");

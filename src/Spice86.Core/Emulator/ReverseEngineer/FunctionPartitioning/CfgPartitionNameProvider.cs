@@ -9,11 +9,15 @@ using Spice86.Shared.Emulator.Memory;
 internal static class CfgPartitionNameProvider {
     public static string GetPartitionName(SegmentedAddress address, FunctionCatalogue? functionCatalogue) {
         if (functionCatalogue != null && functionCatalogue.FunctionInformations.TryGetValue(address, out FunctionInformation? information)) {
-            return information.ToString();
+            return information.Name;
         }
         return CreateUnknownName(address);
     }
 
-    public static string CreateUnknownName(SegmentedAddress address) =>
-        $"unknown_{address.Segment:X4}_{address.Offset:X4}_{address.Linear:X5}";
+    /// <summary>
+    /// Base name for partitions with no catalogued function. It is intentionally address-free: the single
+    /// address suffix is owned by the C# generator (<c>GeneratorAnalysis</c>), which appends it once to form
+    /// a unique method name. Baking the address triplet in here too would duplicate it in the generated name.
+    /// </summary>
+    public static string CreateUnknownName(SegmentedAddress address) => "unknown";
 }

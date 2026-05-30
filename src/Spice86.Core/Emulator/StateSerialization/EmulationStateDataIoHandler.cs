@@ -61,9 +61,26 @@ public abstract class EmulationStateDataIoHandler {
     protected string CfgBlocksFile => GenerateDumpFileName("CfgBlocks.json");
 
     /// <summary>
+    /// Gets name of the file the CFG partition overlay JSON dump (partitions and inter-partition transfers
+    /// derived from the block graph). Kept separate from <see cref="CfgBlocksFile"/> so a partitioning failure
+    /// never prevents the block graph from being written.
+    /// </summary>
+    protected string CfgPartitionsFile => GenerateDumpFileName("CfgPartitions.json");
+
+    /// <summary>
     /// Gets name of the file the machine-oriented CFG reload dump (used to reload the graph on restart).
     /// </summary>
     protected string CfgReloadFile => GenerateDumpFileName("CfgReload.json");
+
+    /// <summary>
+    /// Gets name of the generated CFG C# override dump.
+    /// </summary>
+    protected string CfgGeneratedCSharpFile => GenerateDumpFileName("CfgGeneratedOverrides.cs");
+
+    /// <summary>
+    /// Gets the directory of the self-contained, runnable generated project (csproj + Program.cs + overrides).
+    /// </summary>
+    protected string GeneratedProjectDirectory => $"{DataDirectory}/GeneratedProject";
 
     /// <summary>
     /// Generates a dump file name with the specified suffix.

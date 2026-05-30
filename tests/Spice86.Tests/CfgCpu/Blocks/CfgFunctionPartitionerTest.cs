@@ -105,6 +105,59 @@ public sealed class CfgFunctionPartitionerTest : IDisposable {
     }
 
     [Fact]
+    public void Partition_OwnershipPreservingCycleEnteredOnlyByReturn_AssignsEveryBlockToAPartition() {
+        // Arrange
+        // The bug is a graph-shape problem, not an SMC problem: an ownership-preserving cycle whose
+        // only entry from outside is a suppressed return target. This test builds that shape directly.
+        //   A --callContinuation--> B --jump--> D --callContinuation--> E --jump--> A
+        // The cycle contains no execution-context entry, call target, or CPU fault target, so no
+        // root sits inside it. Its only entry from outside is a return edge into B. Because B is
+        // also an aligned call-continuation target of the in-cycle call A, RetTarget root promotion
+        // for B is suppressed, leaving the whole cycle ownerless. The partitioner must still attribute
+        // every block to a partition instead of throwing. (In the wild this shape showed up as a region
+        // of stale self-modified blocks re-entered only through returns, but staleness is incidental.)
+        CfgInstruction start = CreateInstruction(0x2000, 0xE8, 3, InstructionKind.Call);
+        CfgInstruction externalCallee = CreateInstruction(0x0100, 0xC3, 1, InstructionKind.Return);
+        CfgInstruction cycleCallA = CreateInstruction(0x0000, 0xE8, 3, InstructionKind.Call);
+        CfgInstruction inCallee1 = CreateInstruction(0x0200, 0xC3, 1, InstructionKind.Return);
+        CfgInstruction cycleEntryB = CreateInstruction(0x0003, 0xEB, 2, InstructionKind.Jump);
+        CfgInstruction cycleCallD = CreateInstruction(0x0010, 0xE8, 3, InstructionKind.Call);
+        CfgInstruction inCallee2 = CreateInstruction(0x0300, 0xC3, 1, InstructionKind.Return);
+        CfgInstruction cycleBackE = CreateInstruction(0x0013, 0xEB, 2, InstructionKind.Jump);
+
+        // start calls externalCallee, whose ret lands on B (misaligned vs start, so a plain RetTarget into B).
+        _harness.Linker.Link(InstructionSuccessorType.Normal, start, externalCallee);
+        externalCallee.CurrentCorrespondingCallInstruction = start;
+        _harness.Linker.Link(InstructionSuccessorType.Normal, externalCallee, cycleEntryB);
+
+        // A calls inCallee1, whose ret lands on B (aligned: A.next == B), making A -> B a call-continuation.
+        _harness.Linker.Link(InstructionSuccessorType.Normal, cycleCallA, inCallee1);
+        inCallee1.CurrentCorrespondingCallInstruction = cycleCallA;
+        _harness.Linker.Link(InstructionSuccessorType.Normal, inCallee1, cycleEntryB);
+
+        // B -> D, D calls inCallee2 (aligned continuation D -> E), E -> A closes the cycle.
+        _harness.Linker.Link(InstructionSuccessorType.Normal, cycleEntryB, cycleCallD);
+        _harness.Linker.Link(InstructionSuccessorType.Normal, cycleCallD, inCallee2);
+        inCallee2.CurrentCorrespondingCallInstruction = cycleCallD;
+        _harness.Linker.Link(InstructionSuccessorType.Normal, inCallee2, cycleBackE);
+        _harness.Linker.Link(InstructionSuccessorType.Normal, cycleBackE, cycleCallA);
+        RegisterEntry(start);
+
+        // Act
+        CfgPartitionedProgram program = PartitionFrom(start);
+
+        // Assert
+        CfgBlock blockA = CfgTestHelpers.GetContainingBlock(cycleCallA);
+        CfgBlock blockB = CfgTestHelpers.GetContainingBlock(cycleEntryB);
+        CfgBlock blockD = CfgTestHelpers.GetContainingBlock(cycleCallD);
+        CfgBlock blockE = CfgTestHelpers.GetContainingBlock(cycleBackE);
+        foreach (CfgBlock cycleBlock in new[] { blockA, blockB, blockD, blockE }) {
+            program.Partitions.Should().ContainSingle(partition => partition.Blocks.Contains(cycleBlock),
+                "every block in an ownerless ownership-preserving cycle must be attributed to exactly one partition");
+        }
+    }
+
+    [Fact]
     public void Partition_NormalCallWithContinuation_SeparatesCallerAndCallee() {
         // Arrange
         CfgInstruction call = CreateInstruction(0x0000, 0xE8, 3, InstructionKind.Call);

@@ -35,6 +35,22 @@ public class CSharpOverrideHelperTest {
     }
 
     [Fact]
+    public void TestMutuallyRecursiveJumpsUnwindWithoutThrowing() {
+        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection res = creator.Create();
+        res.Machine.CpuState.SS = 0x3000;
+        res.Machine.CpuState.SP = 0x100;
+        Machine machine = res.Machine;
+        DeepRecursiveJumps deepRecursiveJumps =
+            new DeepRecursiveJumps(new Dictionary<SegmentedAddress, FunctionInformation>(),
+                machine,
+                _loggerServiceMock, new Configuration { HttpApiPort = 0 });
+        deepRecursiveJumps.JumpTarget1(0);
+        Assert.Equal(DeepRecursiveJumps.MaxNumberOfJumps, deepRecursiveJumps.NumberOfCallsTo1);
+        Assert.Equal(DeepRecursiveJumps.MaxNumberOfJumps, deepRecursiveJumps.NumberOfCallsTo2);
+    }
+
+    [Fact]
     public void TestSimpleCallsJumps() {
         using Spice86Creator creator = new Spice86Creator(binName: "jump2", overrideSupplierClassName: typeof(SimpleCallsJumpsOverrideSupplier).AssemblyQualifiedName);
         using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
@@ -90,7 +106,7 @@ class RecursiveJumps : CSharpOverrideHelper {
             goto entrydispatcher;
         }
 
-        return JumpDispatcher.JumpAsmReturn!;
+        return JumpDispatcher.RequiredJumpAsmReturn;
     }
 
     public Action JumpTarget2(int loadOffset) {
@@ -105,7 +121,43 @@ class RecursiveJumps : CSharpOverrideHelper {
             goto entrydispatcher;
         }
 
-        return JumpDispatcher.JumpAsmReturn!;
+        return JumpDispatcher.RequiredJumpAsmReturn;
+    }
+}
+
+class DeepRecursiveJumps : CSharpOverrideHelper {
+    public static int MaxNumberOfJumps = 2;
+    public int NumberOfCallsTo1 { get; set; }
+    public int NumberOfCallsTo2 { get; set; }
+
+    public DeepRecursiveJumps(IDictionary<SegmentedAddress, FunctionInformation> functionInformations,
+        Machine machine, ILoggerService loggerService, Configuration configuration) : base(functionInformations, machine, loggerService, new()) {
+    }
+
+    public Action JumpTarget1(int loadOffset) {
+    entrydispatcher:
+        NumberOfCallsTo1++;
+        if (JumpDispatcher.Jump(JumpTarget2, 0)) {
+            loadOffset = JumpDispatcher.NextEntryAddress;
+            goto entrydispatcher;
+        }
+
+        return JumpDispatcher.RequiredJumpAsmReturn;
+    }
+
+    public Action JumpTarget2(int loadOffset) {
+    entrydispatcher:
+        NumberOfCallsTo2++;
+        if (NumberOfCallsTo2 == MaxNumberOfJumps) {
+            return NearRet();
+        }
+
+        if (JumpDispatcher.Jump(JumpTarget1, 0)) {
+            loadOffset = JumpDispatcher.NextEntryAddress;
+            goto entrydispatcher;
+        }
+
+        return JumpDispatcher.RequiredJumpAsmReturn;
     }
 }
 
@@ -141,8 +193,8 @@ class SimpleCallsJumps : CSharpOverrideHelper {
     public Action Entry_F000_FFF0_FFFF0(int loadOffset) {
         EntryCalled++;
         NearCall(0xF000, 0xFFF0, Near_F000_0100_F0100);
-        FarCall(0xF000, 0xFFF0, Far_2000_0100_20100);
-        FarCall(0xF000, 0xFFF0, Far_calls_another_far_via_stack_0000_0100_00100);
+        FarCall(0xF000, 0xFFF0, 0x2000, Far_2000_0100_20100);
+        FarCall(0xF000, 0xFFF0, 0x0000, Far_calls_another_far_via_stack_0000_0100_00100);
         // We completely override the assembly code
         return Hlt();
     }

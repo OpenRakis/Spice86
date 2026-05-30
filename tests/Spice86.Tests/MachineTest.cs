@@ -8,6 +8,7 @@ using Serilog;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
@@ -640,6 +641,32 @@ public class MachineTest
         }, maxCycles: 1000);
     }
 
+    /// <summary>
+    /// Reproduces a CFG function-partitioning failure on an ownership-preserving call/loop cycle that
+    /// no partition root can reach. The fixture bootstraps a loop by pushing the loop continuation and
+    /// executing RET into it. That continuation is also the aligned call-continuation target of the
+    /// loop body's CALL, so the partitioner suppresses promoting the return target to a root. The loop
+    /// head is reached only by the loop-back jump, so it is not a call target either. The whole cycle
+    /// therefore had no root and every block in it was ownerless, which made partitioning throw and the
+    /// snapshot degrade to a blocks-only graph (no partitions). The ownerless-region rescue fixes this
+    /// by promoting a root for the unreachable cycle, so partitioning now attributes every block. The
+    /// golden CfgBlocks/CfgPartitions fixtures lock in the recovered partitioning.
+    /// </summary>
+    [Fact]
+    public void TestOwnerlessCallCycle_AssignsEveryBlockToAPartition() {
+        TestOneBin("ownerlesscallcycle", [], JitMode.InterpretedOnly, machine => {
+            CfgCpuGraph graph = CfgBlocksTestJson.BuildGraph(machine.CfgCpu.ExecutionContextManager);
+
+            graph.Truncated.Should().BeFalse("the graph is small and fully exported");
+            graph.Partitions.Should().NotBeNull(
+                "partitioning must not throw on the ownerless cycle and degrade the snapshot to a blocks-only graph");
+            CfgPartitionInfo[] partitions = graph.Partitions ?? [];
+            int[] partitionedBlocks = partitions.SelectMany(partition => partition.Blocks).Distinct().ToArray();
+            partitionedBlocks.Should().BeEquivalentTo(graph.Blocks.Select(block => block.Id),
+                "every exported block, including the rescued ownership-preserving cycle, must belong to exactly one partition");
+        }, maxCycles: 1000);
+    }
+
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestCallbacks(JitMode jitMode) {
@@ -1005,21 +1032,28 @@ public class MachineTest
     }
 
     private void CompareCfgBlocksJsonWithExpected(string binName, Machine machine) {
-        string actualJson = CfgBlocksTestJson.Serialize(machine.CfgCpu.ExecutionContextManager);
-        //WriteExpectedCfgBlocksJson(binName, actualJson);
-        string expectedJson = GetExpectedCfgBlocksJson(binName);
-        Assert.Equal(expectedJson, actualJson);
+        ExecutionContextManager contextManager = machine.CfgCpu.ExecutionContextManager;
+        string actualBlocksJson = CfgBlocksTestJson.SerializeBlocks(contextManager);
+        string actualPartitionsJson = CfgBlocksTestJson.SerializePartitions(contextManager);
+        //WriteExpectedCfgJson(binName, actualBlocksJson, actualPartitionsJson);
+        Assert.Equal(GetExpectedCfgJson(binName, "DumpedCfgBlocks"), actualBlocksJson);
+        Assert.Equal(GetExpectedCfgJson(binName, "DumpedCfgPartitions"), actualPartitionsJson);
     }
 
-    private static string GetExpectedCfgBlocksJson(string binName) {
-        string resPath = $"Resources/cpuTests/res/DumpedCfgBlocks/{binName}.json";
+    private static string GetExpectedCfgJson(string binName, string subDirectory) {
+        string resPath = $"Resources/cpuTests/res/{subDirectory}/{binName}.json";
         return File.ReadAllText(resPath);
     }
 
-    private static void WriteExpectedCfgBlocksJson(string binName, string json) {
+    private static void WriteExpectedCfgJson(string binName, string blocksJson, string partitionsJson) {
+        WriteCfgResource(binName, "DumpedCfgBlocks", blocksJson);
+        WriteCfgResource(binName, "DumpedCfgPartitions", partitionsJson);
+    }
+
+    private static void WriteCfgResource(string binName, string subDirectory, string json) {
         string sourceDir = GetDirectoryName(GetSourceFilePath());
         string fileName = Path.GetFileName(binName) + ".json";
-        string resPath = Path.Join(sourceDir, "Resources", "cpuTests", "res", "DumpedCfgBlocks", fileName);
+        string resPath = Path.Join(sourceDir, "Resources", "cpuTests", "res", subDirectory, fileName);
         Directory.CreateDirectory(GetDirectoryName(resPath));
         File.WriteAllText(resPath, json);
     }

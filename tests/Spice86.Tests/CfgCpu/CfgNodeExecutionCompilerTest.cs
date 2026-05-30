@@ -20,6 +20,8 @@ using System.Threading;
 
 using Xunit;
 
+using CfgSelectorNode = Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying.SelectorNode;
+
 /// <summary>
 /// Tests for <see cref="CfgNodeExecutionCompiler"/> caching behaviour:
 /// cache reuse for structurally equal ASTs and concurrent compile deduplication.
@@ -73,7 +75,7 @@ public class CfgNodeExecutionCompilerTest {
     [Fact]
     public void Compile_AssignsCompiledExecution() {
         // A SelectorNode AST produces a simple compiled delegate.
-        SelectorNode ast = new SelectorNode();
+        SelectorNode ast = new SelectorNode(new CfgSelectorNode(0, new SegmentedAddress(0x1000, 0)));
         FixedAstNode node = new FixedAstNode(new SegmentedAddress(0x1000, 0), ast);
         using CfgNodeExecutionCompiler compiler = CreateCompiler();
 
@@ -91,7 +93,7 @@ public class CfgNodeExecutionCompilerTest {
         for (int i = 0; i < parallelCount; i++) {
             nodes[i] = new FixedAstNode(
                 new SegmentedAddress((ushort)(0x3000 + i), 0),
-                new SelectorNode());
+                new SelectorNode(new CfgSelectorNode(0, new SegmentedAddress((ushort)(0x3000 + i), 0))));
         }
         using CfgNodeExecutionCompiler compiler = CreateCompiler();
 
