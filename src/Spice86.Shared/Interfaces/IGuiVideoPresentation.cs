@@ -1,4 +1,5 @@
 ﻿namespace Spice86.Shared.Interfaces;
+
 using Spice86.Shared.Emulator.Video;
 
 /// <summary>
@@ -26,9 +27,4 @@ public interface IGuiVideoPresentation {
     /// Invoked when the GUI asks the VideoCard to render the screen contents in the WriteableBitmap's buffer pointer.
     /// </summary>
     event EventHandler<UIRenderEventArgs>? RenderScreen;
-
-    /// <summary>
-    /// Event raised when the user interface has fully initialized and is able to display the content of the video renderer.
-    /// </summary>
-    public event Action? UserInterfaceInitialized;
 }
