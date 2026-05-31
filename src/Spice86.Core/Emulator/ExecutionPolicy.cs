@@ -15,7 +15,7 @@ using Spice86.Shared.Interfaces;
 
 /// <summary>
 /// Owns execution-policy concerns for a program run: optional debug-pause breakpoints,
-/// the GDB remote-debugging server, and the stop-after-cycles termination breakpoint.
+/// the GDB remote-debugging server, and the emulation termination breakpoint.
 /// </summary>
 internal sealed class ExecutionPolicy : IDisposable {
     private readonly Configuration _configuration;
