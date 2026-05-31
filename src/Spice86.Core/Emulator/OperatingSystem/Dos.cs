@@ -672,7 +672,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         List<DriveFileEntry> files = new();
         for (int i = 0; i < records.Count; i++) {
             IsoDirectoryRecord rec = records[i];
-            if (rec.Name == "\x00" || rec.Name == "\x01") {
+            if (rec.Name is "\x00" or "\x01") {
                 continue;
             }
             if (rec.IsDirectory) {

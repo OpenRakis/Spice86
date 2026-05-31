@@ -477,7 +477,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
         }
 
         int mapped = 2 + (biosDriveNumber - 0x80);
-        if (mapped < 0 || mapped > byte.MaxValue) {
+        if (mapped is < 0 or > byte.MaxValue) {
             imageDriveNumber = 0;
             return false;
         }

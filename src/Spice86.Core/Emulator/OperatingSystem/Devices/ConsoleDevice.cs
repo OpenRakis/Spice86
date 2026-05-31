@@ -183,7 +183,7 @@ public class ConsoleDevice : CharacterDevice {
             // Key reassignment lookup (NANSI: lookup in getchar).
             // Normal keys: lookup by ASCII code. Function/extended keys (AL=0 or 0xE0): lookup by scanCode<<8.
             // NANSI keyE0fixup: treats AL=0xE0 the same as AL=0.
-            ushort keyCode = asciiCode != 0 && asciiCode != 0xE0 ? asciiCode : (ushort)(scanCode << 8);
+            ushort keyCode = asciiCode is not 0 and not 0xE0 ? asciiCode : (ushort)(scanCode << 8);
             if (_ansiState.KeyRedefinitions.TryGetValue(keyCode, out byte[]? replacement)) {
                 foreach (byte b in replacement) {
                     _stuffAheadBuffer.Enqueue(b);
@@ -358,7 +358,7 @@ public class ConsoleDevice : CharacterDevice {
     /// Matches NANSI's f_get_param / f_in_param states.
     /// </summary>
     private void WriteCsiParameter(byte chr) {
-        if (chr >= '0' && chr <= '9') {
+        if (chr is >= (byte)'0' and <= (byte)'9') {
             _ansiState.PrefixAllowed = false;
             int paramIndex = _ansiState.ParameterCount;
             if (paramIndex < AnsiState.MaxParameters) {
@@ -385,7 +385,7 @@ public class ConsoleDevice : CharacterDevice {
         // Fall through to syntax error when '=' or '?' appears after prefix is no longer allowed.
         _ansiState.PrefixAllowed = false;
         // Quoted strings for keyboard reassignment (NANSI: f_get_string).
-        if (chr == '"' || chr == '\'') {
+        if (chr is (byte)'"' or (byte)'\'') {
             _ansiState.StringTerminator = chr;
             _ansiState.Phase = AnsiParserPhase.StringCollecting;
             return;
@@ -393,7 +393,7 @@ public class ConsoleDevice : CharacterDevice {
         // Command letters: @..Z (0x40..0x5A) and a..z (0x61..0x7A)
         // NANSI: after calling the command subroutine, sets escvector=0
         // to return to the main loop (no longer parsing).
-        if ((chr >= '@' && chr <= 'Z') || (chr >= 'a' && chr <= 'z')) {
+        if (chr is >= (byte)'@' and <= (byte)'Z' or >= (byte)'a' and <= (byte)'z') {
             _ansiHandler.Execute((char)chr);
             _ansiState.Phase = AnsiParserPhase.Normal;
             return;
