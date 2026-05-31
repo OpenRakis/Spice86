@@ -400,7 +400,6 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         SoftwareMixer mixer = new(configuration.AudioEngine, pauseHandler);
-        FloppySoundEmulator floppySoundEmulator = new(mixer);
         DriveActivityNotifier driveActivityNotifier = new();
         var midiDevice = new Midi(configuration, mixer, state,
             ioPortDispatcher, configuration.Mt32RomsPath,
@@ -489,7 +488,7 @@ public class Spice86DependencyInjection : IDisposable {
         FloppyDiskController floppyDiskController = new(state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService, dualPic, floppyDiskTransferService);
         SystemBiosInt13Handler systemBiosInt13Handler = new(memory,
-            cfgCpu, stack, state, dos.DosDriveManager, floppySoundEmulator, driveActivityNotifier, floppyDiskTimingService, loggerService);
+            cfgCpu, stack, state, dos.DosDriveManager, mixer, driveActivityNotifier, floppyDiskTimingService, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Floppy controller and BIOS disk handler created...");

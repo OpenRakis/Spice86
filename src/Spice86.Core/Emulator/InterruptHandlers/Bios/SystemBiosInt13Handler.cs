@@ -31,9 +31,9 @@ public class SystemBiosInt13Handler : InterruptHandler {
     private const byte FloppyType35HighDensity = 0x04;
     private const byte FloppyType35ExtendedDensity = 0x06;
 
-    private readonly IFloppyDriveAccess? _floppyAccess;
-    private readonly FloppySoundEmulator? _floppySound;
-    private readonly IDriveActivityNotifier? _activityNotifier;
+    private readonly IFloppyDriveAccess _floppyAccess;
+    private readonly FloppySoundEmulator _floppySound;
+    private readonly IDriveActivityNotifier _activityNotifier;
     private readonly FloppyDiskTimingService _timingService;
 
     // Tracks the last operation status per BIOS drive number (index 0=A:, 1=B:)
@@ -46,22 +46,22 @@ public class SystemBiosInt13Handler : InterruptHandler {
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU registers and flags.</param>
-    /// <param name="floppyAccess">Low-level floppy read/write/geometry provider (may be null when no floppy images are used).</param>
-    /// <param name="floppySound">Floppy sound synthesizer (may be null to disable sound).</param>
-    /// <param name="activityNotifier">Notifier used to surface per-drive read/write activity to the UI (may be null).</param>
+    /// <param name="floppyAccess">Low-level floppy read/write/geometry provider.</param>
+    /// <param name="soundChannelCreator">Mixer used to construct the owned floppy sound emulator.</param>
+    /// <param name="activityNotifier">Notifier used to surface per-drive read/write activity to the UI.</param>
     /// <param name="timingService">Floppy I/O timing service applied before media transfers.</param>
     /// <param name="loggerService">The logging service implementation.</param>
     public SystemBiosInt13Handler(
         IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
         Stack stack, State state,
-        IFloppyDriveAccess? floppyAccess,
-        FloppySoundEmulator? floppySound,
-        IDriveActivityNotifier? activityNotifier,
+        IFloppyDriveAccess floppyAccess,
+        ISoundChannelCreator soundChannelCreator,
+        IDriveActivityNotifier activityNotifier,
         FloppyDiskTimingService timingService,
         ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _floppyAccess = floppyAccess;
-        _floppySound = floppySound;
+        _floppySound = new FloppySoundEmulator(soundChannelCreator);
         _activityNotifier = activityNotifier;
         _timingService = timingService;
         FillDispatchTable();
@@ -142,7 +142,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
             SetFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
             return;
         }
-        if (_floppyAccess == null || !TryMapBiosDriveToImageDriveNumber(driveNumber, out byte imageDriveNumber)) {
+        if (!TryMapBiosDriveToImageDriveNumber(driveNumber, out byte imageDriveNumber)) {
             SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
             return;
         }
@@ -168,11 +168,11 @@ public class SystemBiosInt13Handler : InterruptHandler {
             return;
         }
 
-        _floppySound?.PlaySeek();
+        _floppySound.PlaySeek();
         Memory.LoadData(destAddress, transferBuffer);
 
         if (imageDriveNumber < 26) {
-            _activityNotifier?.NotifyRead((char)('A' + imageDriveNumber));
+            _activityNotifier.NotifyRead((char)('A' + imageDriveNumber));
         }
         State.AH = ErrorNone;
         State.AL = (byte)sectorCount;
@@ -192,7 +192,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
             SetFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
             return;
         }
-        if (_floppyAccess == null || !TryMapBiosDriveToImageDriveNumber(driveNumber, out byte imageDriveNumber)) {
+        if (!TryMapBiosDriveToImageDriveNumber(driveNumber, out byte imageDriveNumber)) {
             SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
             return;
         }
@@ -221,9 +221,9 @@ public class SystemBiosInt13Handler : InterruptHandler {
             return;
         }
 
-        _floppySound?.PlaySeek();
+        _floppySound.PlaySeek();
         if (imageDriveNumber < 26) {
-            _activityNotifier?.NotifyWrite((char)('A' + imageDriveNumber));
+            _activityNotifier.NotifyWrite((char)('A' + imageDriveNumber));
         }
         State.AH = ErrorNone;
         State.AL = (byte)sectorCount;
@@ -250,7 +250,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
             return;
         }
         if (IsFloppyDrive(driveNumber)) {
-            if (_floppyAccess == null || !_floppyAccess.TryGetGeometry(driveNumber, out int _, out int _, out int _, out int _)) {
+            if (!_floppyAccess.TryGetGeometry(driveNumber, out int _, out int _, out int _, out int _)) {
                 SetFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
                 return;
             }
@@ -280,7 +280,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
             return;
         }
 
-        if (_floppyAccess == null || !_floppyAccess.TryGetGeometry(driveNumber, out int totalCylinders, out int headsPerCylinder, out int sectorsPerTrack, out int bytesPerSector)) {
+        if (!_floppyAccess.TryGetGeometry(driveNumber, out int totalCylinders, out int headsPerCylinder, out int sectorsPerTrack, out int bytesPerSector)) {
             SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
             return;
         }
@@ -318,7 +318,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
             return;
         }
 
-        if (IsFloppyDrive(driveNumber) && _floppyAccess != null &&
+        if (IsFloppyDrive(driveNumber) &&
             _floppyAccess.TryGetGeometry(driveNumber, out int _, out int _, out int _, out int _)) {
             State.AH = 0x01; // floppy without change-line support (DOSBox Staging parity)
             SetCarryFlag(false, calledFromVm);
@@ -335,7 +335,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
     /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
     public void FormatTrack(bool calledFromVm) {
         byte driveNumber = State.DL;
-        if (_floppyAccess == null || !IsFloppyDrive(driveNumber)) {
+        if (!IsFloppyDrive(driveNumber)) {
             SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
             return;
         }
@@ -355,7 +355,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
             SetFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
             return;
         }
-        _floppySound?.PlaySeek();
+        _floppySound.PlaySeek();
         State.AH = ErrorNone;
         State.AL = (byte)sectorsPerTrack;
         RecordSuccess(driveNumber);
@@ -369,11 +369,11 @@ public class SystemBiosInt13Handler : InterruptHandler {
     public void SeekToCylinder(bool calledFromVm) {
         byte driveNumber = State.DL;
         if (IsFloppyDrive(driveNumber)) {
-            if (_floppyAccess == null || !_floppyAccess.TryGetGeometry(driveNumber, out int _, out int _, out int _, out int _)) {
+            if (!_floppyAccess.TryGetGeometry(driveNumber, out int _, out int _, out int _, out int _)) {
                 SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
                 return;
             }
-            _floppySound?.PlaySeek();
+            _floppySound.PlaySeek();
             RecordSuccess(driveNumber);
         }
         State.AH = ErrorNone;
@@ -394,7 +394,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
     /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
     public void TestDriveReady(bool calledFromVm) {
         byte driveNumber = State.DL;
-        if (_floppyAccess != null && IsFloppyDrive(driveNumber)
+        if (IsFloppyDrive(driveNumber)
             && _floppyAccess.TryGetGeometry(driveNumber, out int _, out int _, out int _, out int _)) {
             State.AH = ErrorNone;
             RecordSuccess(driveNumber);
@@ -410,8 +410,8 @@ public class SystemBiosInt13Handler : InterruptHandler {
     /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
     public void Recalibrate(bool calledFromVm) {
         byte driveNumber = State.DL;
-        if (IsFloppyDrive(driveNumber) && _floppyAccess != null) {
-            _floppySound?.PlaySeek();
+        if (IsFloppyDrive(driveNumber)) {
+            _floppySound.PlaySeek();
         }
         State.AH = ErrorNone;
         SetCarryFlag(false, calledFromVm);
@@ -428,7 +428,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
             SetCarryFlag(false, calledFromVm);
             return;
         }
-        if (_floppyAccess == null || !_floppyAccess.TryGetGeometry(driveNumber, out int _, out int _, out int _, out int _)) {
+        if (!_floppyAccess.TryGetGeometry(driveNumber, out int _, out int _, out int _, out int _)) {
             SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
             return;
         }
@@ -487,9 +487,6 @@ public class SystemBiosInt13Handler : InterruptHandler {
     }
 
     private int CountMountedFloppyDrives() {
-        if (_floppyAccess == null) {
-            return 0;
-        }
         int count = 0;
         for (byte drive = 0; drive < 2; drive++) {
             if (_floppyAccess.TryGetGeometry(drive, out int _, out int _, out int _, out int _)) {
