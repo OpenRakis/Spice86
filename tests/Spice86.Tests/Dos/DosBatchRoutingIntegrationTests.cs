@@ -698,6 +698,77 @@ public class DosBatchRoutingIntegrationTests {
         });
     }
 
+    /// <summary>
+    /// MS-DOS / dosbox-staging parity: when ECHO is ON (default), every batch line is
+    /// echoed to stdout (prefixed with the DOS prompt) BEFORE being executed.
+    /// </summary>
+    [Fact]
+    public void HostRequestedBatch_EchoOnByDefault_EchoesEachLineBeforeExecution() {
+        WithTempFile("dos_batch_echo_on_default", tempDir => {
+            // Arrange
+            string startBatchPath = CreateTextFile(tempDir, "START.BAT", "ECHO HELLO\r\n");
+
+            // Act
+            string screenText = CaptureScreenText(startBatchPath, tempDir);
+
+            // Assert: the echoed command line and the command output are both present
+            screenText.Should().Contain("ECHO HELLO",
+                "the ECHO command line itself must be echoed before execution when ECHO is ON");
+            screenText.Should().Contain("HELLO",
+                "the ECHO command output must be displayed");
+        });
+    }
+
+    /// <summary>
+    /// MS-DOS / dosbox-staging parity: a line that starts with '@' is NOT echoed even when
+    /// ECHO is ON. The command itself still runs and its output is visible.
+    /// </summary>
+    [Fact]
+    public void HostRequestedBatch_AtPrefix_SuppressesEchoForSingleLine() {
+        WithTempFile("dos_batch_at_prefix_suppresses_echo", tempDir => {
+            // Arrange
+            string startBatchPath = CreateTextFile(tempDir, "START.BAT", "@ECHO HELLO\r\n");
+
+            // Act
+            string screenText = CaptureScreenText(startBatchPath, tempDir);
+
+            // Assert: only the output is visible, the line itself is not echoed
+            screenText.Should().NotContain("ECHO HELLO",
+                "lines prefixed with '@' must not be echoed");
+            screenText.Should().Contain("HELLO",
+                "the ECHO command output must still be displayed");
+        });
+    }
+
+    /// <summary>
+    /// MS-DOS / dosbox-staging parity: after <c>@ECHO OFF</c>, subsequent batch lines
+    /// are not echoed (until <c>ECHO ON</c>).
+    /// </summary>
+    [Fact]
+    public void HostRequestedBatch_EchoOff_SuppressesSubsequentLineEchoes() {
+        WithTempFile("dos_batch_echo_off_suppresses_lines", tempDir => {
+            // Arrange
+            string startBatchPath = CreateTextFile(tempDir, "START.BAT",
+                "@ECHO OFF\r\nECHO HELLO\r\n");
+
+            // Act
+            string screenText = CaptureScreenText(startBatchPath, tempDir);
+
+            // Assert: ECHO HELLO is not echoed as a command line, only its output is visible
+            screenText.Should().NotContain("ECHO HELLO",
+                "command lines must not be echoed while ECHO is OFF");
+            screenText.Should().Contain("HELLO",
+                "the ECHO command output must still be displayed");
+        });
+    }
+
+    private static string CaptureScreenText(string executablePath, string cDrivePath) {
+        // Capture the first few rows of the 80-column text mode screen.
+        // 80 cols * 8 rows = 640 cells is plenty for short batch scripts.
+        char[] cells = RunAndCaptureVideoCells(executablePath, cDrivePath, 80 * 8);
+        return new string(cells);
+    }
+
     [Theory]
     [InlineData("ECHO. > OUT.TXT", " \r\n")]
     [InlineData("ECHO.HELLO > OUT.TXT", "HELLO \r\n")]
@@ -981,9 +1052,10 @@ public class DosBatchRoutingIntegrationTests {
             CreateBinaryFile(tempDir, "WRITE_Y.COM", BuildVideoWriterCom('Y', 4));
 
             // Act
+            // @ECHO OFF avoids the post-CLS prompt being echoed into the video buffer.
             char[] cells = RunAndCaptureVideoCells(
                 CreateTextFile(tempDir, "START.BAT",
-                    "CALL WRITE_X.COM\r\nCLS\r\nCALL WRITE_Y.COM\r\n"),
+                    "@ECHO OFF\r\nCALL WRITE_X.COM\r\nCLS\r\nCALL WRITE_Y.COM\r\n"),
                 tempDir, 3);
 
             // Assert: cell 0 was cleared by CLS (replaced with space), cell 2 proves execution continued.
