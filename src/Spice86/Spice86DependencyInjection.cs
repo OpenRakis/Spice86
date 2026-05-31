@@ -48,6 +48,7 @@ using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.StateSerialization;
+using Spice86.Core.Emulator.StateSerialization.CfgReload;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
@@ -682,6 +683,14 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Program executor created...");
         }
 
+        // Reload a previously dumped CFG graph into live state, if requested and available. Must run
+        // before CfgCpu.SignalEntry (later, in EmulationLoop) so resumed execution reconnects to the
+        // reloaded graph instead of building a disconnected one. Reconstruction parses each node's own
+        // stored bytes, so it does not depend on the program image already being loaded in memory; that
+        // image only matters later, when resumed execution memory-matches a reloaded node.
+        ReloadCfgGraphIfRequested(configuration, emulationStateDataReader, cfgCpu, state,
+            cfgNodeExecutionCompiler, loggerService);
+
         McpHttpHost? mcpHttpTransport = null;
 
         // Collect additional MCP tool assemblies and services from override supplier
@@ -799,6 +808,22 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.LogLevelSwitch.MinimumLevel = LogEventLevel.Warning;
         } else if (configuration.VerboseLogs) {
             loggerService.LogLevelSwitch.MinimumLevel = LogEventLevel.Verbose;
+        }
+    }
+
+    private static void ReloadCfgGraphIfRequested(Configuration configuration,
+        EmulationStateDataReader emulationStateDataReader, CfgCpu cfgCpu, State state,
+        CfgNodeExecutionCompiler cfgNodeExecutionCompiler, ILoggerService loggerService) {
+        if (!configuration.ReloadCfgGraph) {
+            return;
+        }
+        CfgReloadDump? reloadDump = emulationStateDataReader.ReadCfgReloadFromFileOrNull();
+        if (reloadDump == null) {
+            return;
+        }
+        new CfgGraphReloader(cfgCpu, state, cfgNodeExecutionCompiler).Reload(reloadDump);
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("CFG graph reloaded from dump...");
         }
     }
 
