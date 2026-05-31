@@ -157,7 +157,8 @@ public sealed partial class DrivesMenuViewModel : ObservableObject {
             }
         }
         if (!hasCdDrive) {
-            relevant.Add(new DosVirtualDriveStatus('D', DosVirtualDriveType.CdRom, false, string.Empty));
+            relevant.Add(new DosVirtualDriveStatus('D', DosVirtualDriveType.CdRom, false, string.Empty,
+                string.Empty, 0, Array.Empty<string>()));
         }
 
         int i = 0;

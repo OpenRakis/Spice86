@@ -1,6 +1,7 @@
 namespace Spice86.ViewModels;
 
 using Spice86.Shared.Emulator.Storage;
+using Spice86.ViewModels.DataModels;
 
 using System.Collections.ObjectModel;
 

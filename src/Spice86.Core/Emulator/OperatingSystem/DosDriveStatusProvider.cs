@@ -57,9 +57,9 @@ public sealed class DosDriveStatusProvider : IDriveStatusProvider {
                         DosVirtualDriveType.Floppy,
                         hasMedia: true,
                         floppyDrive.Label,
-                        currentImagePath: floppyDrive.ImagePath,
-                        imageCount: floppyDrive.ImageCount,
-                        allImagePaths: floppyDrive.AllImagePaths));
+                        floppyDrive.ImagePath,
+                        floppyDrive.ImageCount,
+                        floppyDrive.AllImagePaths));
                 }
                 continue;
             }
@@ -73,21 +73,25 @@ public sealed class DosDriveStatusProvider : IDriveStatusProvider {
                     driveType,
                     hasMedia,
                     virtualDrive.Label,
-                    currentImagePath: folderPath,
-                    imageCount: 1,
-                    allImagePaths: folderPaths));
+                    folderPath,
+                    1,
+                    folderPaths));
             } else {
                 statuses.Add(new DosVirtualDriveStatus(
                     virtualDrive.DriveLetter,
                     driveType,
                     hasMedia,
-                    virtualDrive.Label));
+                    virtualDrive.Label,
+                    string.Empty,
+                    0,
+                    Array.Empty<string>()));
             }
         }
 
         foreach (KeyValuePair<char, MemoryDrive> kvp in _dosDriveManager.MemoryDrives) {
             MemoryDrive memoryDrive = kvp.Value;
-            statuses.Add(new DosVirtualDriveStatus(memoryDrive.DriveLetter, DosVirtualDriveType.Memory, hasMedia: true, memoryDrive.Label));
+            statuses.Add(new DosVirtualDriveStatus(memoryDrive.DriveLetter, DosVirtualDriveType.Memory, hasMedia: true,
+                memoryDrive.Label, string.Empty, 0, Array.Empty<string>()));
         }
 
         foreach (MscdexDriveEntry cdRom in _mscdex.Drives) {
@@ -109,9 +113,9 @@ public sealed class DosDriveStatusProvider : IDriveStatusProvider {
                 DosVirtualDriveType.CdRom,
                 hasCdMedia,
                 volumeLabel,
-                currentImagePath: imagePath,
-                imageCount: cdRom.Drive.ImageCount,
-                allImagePaths: cdRom.Drive.AllImagePaths));
+                imagePath,
+                cdRom.Drive.ImageCount,
+                cdRom.Drive.AllImagePaths));
         }
 
         statuses.Sort(static (left, right) => left.DriveLetter.CompareTo(right.DriveLetter));

@@ -17,10 +17,15 @@ public sealed class MemoryDataSource : IDataSource {
 
     /// <inheritdoc/>
     public int Read(long byteOffset, Span<byte> destination) {
-        if (byteOffset >= _data.Length) {
+        if (byteOffset < 0 || byteOffset > int.MaxValue || byteOffset >= _data.Length) {
             return 0;
         }
+
         int available = (int)Math.Min(destination.Length, _data.Length - byteOffset);
+        if (available <= 0) {
+            return 0;
+        }
+
         _data.AsSpan((int)byteOffset, available).CopyTo(destination);
         return available;
     }

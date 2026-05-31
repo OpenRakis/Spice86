@@ -11,8 +11,7 @@ namespace Spice86.Shared.Emulator.Storage.CdRom;
 /// "skip" semantics so that the previous track's TOC length terminates at
 /// the next track's INDEX 00 when one is declared.
 /// </summary>
-public sealed class CueFrameMapper
-{
+public sealed class CueFrameMapper {
     /// <summary>
     /// Red Book pre-gap offset in frames (2 seconds * 75 frames/second).
     /// Matches DOSBox Staging's <c>REDBOOK_FRAME_PADDING = 150</c>.
@@ -29,47 +28,39 @@ public sealed class CueFrameMapper
     /// file (typically the last track).
     /// </param>
     /// <returns>One <see cref="CueTrackLayout"/> per declared track, in CUE order.</returns>
-    public IReadOnlyList<CueTrackLayout> BuildLayout(CueSheet sheet, Func<string, long> fileLengthProvider)
-    {
-        if (sheet == null)
-        {
+    public IReadOnlyList<CueTrackLayout> BuildLayout(CueSheet sheet, Func<string, long> fileLengthProvider) {
+        if (sheet == null) {
             throw new ArgumentNullException(nameof(sheet));
         }
-        if (fileLengthProvider == null)
-        {
+        if (fileLengthProvider == null) {
             throw new ArgumentNullException(nameof(fileLengthProvider));
         }
 
         List<RawTrack> raws = CollectRawTracks(sheet);
         List<CueTrackLayout> resolved = new List<CueTrackLayout>(raws.Count);
 
-        for (int i = 0; i < raws.Count; i++)
-        {
+        for (int i = 0; i < raws.Count; i++) {
             RawTrack current = raws[i];
             int sectorSize = TrackModeSectorSize(current.TrackMode);
             int startLba = Math.Max(0, current.Index01Frames - RedbookPreGapFrames);
             int lengthSectors;
 
-            if (i + 1 < raws.Count)
-            {
+            if (i + 1 < raws.Count) {
                 RawTrack next = raws[i + 1];
                 int nextStartLba = Math.Max(0, next.Index01Frames - RedbookPreGapFrames);
-                int skip = next.Index00Frames.HasValue
-                    ? next.Index01Frames - next.Index00Frames.Value
-                    : 0;
+                int skip = 0;
+                if (next.Index00Frames.HasValue) {
+                    skip = next.Index01Frames - next.Index00Frames.Value;
+                }
                 lengthSectors = nextStartLba - startLba - skip;
-                if (lengthSectors <= 0)
-                {
+                if (lengthSectors <= 0) {
                     lengthSectors = 1;
                 }
-            }
-            else
-            {
+            } else {
                 long fileLength = fileLengthProvider(current.FileName);
                 int totalSectors = (int)(fileLength / sectorSize);
                 lengthSectors = totalSectors - startLba;
-                if (lengthSectors <= 0)
-                {
+                if (lengthSectors <= 0) {
                     lengthSectors = 1;
                 }
             }
@@ -95,13 +86,10 @@ public sealed class CueFrameMapper
         return resolved;
     }
 
-    private static List<RawTrack> CollectRawTracks(CueSheet sheet)
-    {
+    private static List<RawTrack> CollectRawTracks(CueSheet sheet) {
         Dictionary<int, List<CueEntry>> byTrack = new Dictionary<int, List<CueEntry>>();
-        foreach (CueEntry entry in sheet.Entries)
-        {
-            if (!byTrack.TryGetValue(entry.TrackNumber, out List<CueEntry>? bucket))
-            {
+        foreach (CueEntry entry in sheet.Entries) {
+            if (!byTrack.TryGetValue(entry.TrackNumber, out List<CueEntry>? bucket)) {
                 bucket = new List<CueEntry>();
                 byTrack[entry.TrackNumber] = bucket;
             }
@@ -112,11 +100,9 @@ public sealed class CueFrameMapper
         trackNumbers.Sort();
 
         List<RawTrack> raws = new List<RawTrack>(trackNumbers.Count);
-        foreach (int trackNum in trackNumbers)
-        {
+        foreach (int trackNum in trackNumbers) {
             List<CueEntry> entries = byTrack[trackNum];
-            if (entries.Count == 0)
-            {
+            if (entries.Count == 0) {
                 continue;
             }
             CueEntry first = entries[0];
@@ -139,21 +125,17 @@ public sealed class CueFrameMapper
         return raws;
     }
 
-    private static int TrackModeSectorSize(string trackMode)
-    {
-        if (trackMode.Equals("MODE1/2048", StringComparison.OrdinalIgnoreCase))
-        {
+    private static int TrackModeSectorSize(string trackMode) {
+        if (trackMode.Equals("MODE1/2048", StringComparison.OrdinalIgnoreCase)) {
             return 2048;
         }
-        if (trackMode.Equals("MODE2/2336", StringComparison.OrdinalIgnoreCase))
-        {
+        if (trackMode.Equals("MODE2/2336", StringComparison.OrdinalIgnoreCase)) {
             return 2336;
         }
         return 2352;
     }
 
-    private sealed class RawTrack
-    {
+    private sealed class RawTrack {
         public int TrackNumber { get; }
         public string FileName { get; }
         public CueFileType FileType { get; }
@@ -171,8 +153,7 @@ public sealed class CueFrameMapper
             int index01Frames,
             int? index00Frames,
             int pregap,
-            int postgap)
-        {
+            int postgap) {
             TrackNumber = trackNumber;
             FileName = fileName;
             FileType = fileType;
