@@ -52,6 +52,10 @@ public sealed class CueSheetParser {
 
     private static string ParseFileName(string line, string cueDir) {
         Match match = Regex.Match(line, @"FILE\s+(?:""([^""]+)""|(\S+))", RegexOptions.IgnoreCase);
+        if (!match.Success) {
+            throw new InvalidDataException($"Malformed FILE directive in CUE sheet: '{line}'.");
+        }
+
         string raw = match.Groups[1].Success ? match.Groups[1].Value : match.Groups[2].Value;
         if (Path.IsPathRooted(raw)) {
             return raw;
@@ -101,7 +105,7 @@ public sealed class CueSheetParser {
     private static CueFileType ParseFileType(string line) {
         Match match = Regex.Match(line, @"FILE\s+(?:""[^""]+""|\S+)\s+(\S+)\s*$", RegexOptions.IgnoreCase);
         if (!match.Success) {
-            return CueFileType.Binary;
+            throw new InvalidDataException($"Malformed FILE directive in CUE sheet: '{line}'.");
         }
         string token = match.Groups[1].Value;
         if (token.Equals("BINARY", StringComparison.OrdinalIgnoreCase)) {

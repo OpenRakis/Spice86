@@ -9,8 +9,7 @@ using System.IO;
 /// supported; non-conforming files are rejected so callers can either
 /// transcode or fall back to a different pipeline.
 /// </summary>
-public sealed class WavAudioFile
-{
+public sealed class WavAudioFile {
     private const int RiffHeaderSize = 12;
     private const ushort PcmFormatTag = 1;
     private const int CddaSampleRate = 44100;
@@ -24,8 +23,7 @@ public sealed class WavAudioFile
     /// CDDA-compliant.
     /// </exception>
     /// <exception cref="IOException">Thrown when the file cannot be opened.</exception>
-    public WavAudioFile(string filePath)
-    {
+    public WavAudioFile(string filePath) {
         FilePath = filePath;
         ParseHeader();
     }
@@ -48,41 +46,47 @@ public sealed class WavAudioFile
     /// <summary>Gets the bits-per-sample (always 16 for CDDA).</summary>
     public int BitsPerSample { get; private set; }
 
-    private void ParseHeader()
-    {
+    private void ParseHeader() {
         using FileStream stream = File.OpenRead(FilePath);
         using BinaryReader reader = new(stream);
 
-        if (stream.Length < RiffHeaderSize)
-        {
+        if (stream.Length < RiffHeaderSize) {
             throw new InvalidDataException("WAV file is too small to contain a RIFF header.");
         }
 
         string riff = new(reader.ReadChars(4));
-        if (riff != "RIFF")
-        {
+        if (riff != "RIFF") {
             throw new InvalidDataException($"Expected 'RIFF' signature, got '{riff}'.");
         }
-        reader.ReadInt32(); // chunk size (ignored, validated via stream length)
+        int riffChunkSize = reader.ReadInt32();
+        if (riffChunkSize < 0) {
+            throw new InvalidDataException("RIFF chunk size must be non-negative.");
+        }
+        if ((long)riffChunkSize + 8 > stream.Length) {
+            throw new InvalidDataException("RIFF chunk size exceeds file length.");
+        }
         string wave = new(reader.ReadChars(4));
-        if (wave != "WAVE")
-        {
+        if (wave != "WAVE") {
             throw new InvalidDataException($"Expected 'WAVE' form, got '{wave}'.");
         }
 
         bool fmtParsed = false;
         bool dataLocated = false;
 
-        while (stream.Position + 8 <= stream.Length)
-        {
+        while (stream.Position + 8 <= stream.Length) {
             string chunkId = new(reader.ReadChars(4));
             int chunkSize = reader.ReadInt32();
+            if (chunkSize < 0) {
+                throw new InvalidDataException($"Chunk '{chunkId}' has a negative size ({chunkSize}).");
+            }
             long chunkStart = stream.Position;
+            long chunkEnd = chunkStart + chunkSize;
+            if (chunkEnd < chunkStart || chunkEnd > stream.Length) {
+                throw new InvalidDataException($"Chunk '{chunkId}' extends beyond end of file.");
+            }
 
-            if (chunkId == "fmt ")
-            {
-                if (chunkSize < 16)
-                {
+            if (chunkId == "fmt ") {
+                if (chunkSize < 16) {
                     throw new InvalidDataException("'fmt ' chunk is shorter than 16 bytes.");
                 }
                 ushort formatTag = reader.ReadUInt16();
@@ -92,12 +96,10 @@ public sealed class WavAudioFile
                 reader.ReadUInt16(); // block align
                 ushort bitsPerSample = reader.ReadUInt16();
 
-                if (formatTag != PcmFormatTag)
-                {
+                if (formatTag != PcmFormatTag) {
                     throw new InvalidDataException($"Only PCM WAV files are supported (formatTag={formatTag}).");
                 }
-                if (sampleRate != CddaSampleRate || channels != CddaChannelCount || bitsPerSample != CddaBitsPerSample)
-                {
+                if (sampleRate != CddaSampleRate || channels != CddaChannelCount || bitsPerSample != CddaBitsPerSample) {
                     throw new InvalidDataException(
                         $"WAV file is not CDDA-compliant (got {sampleRate} Hz, {channels} ch, {bitsPerSample}-bit; expected 44100 Hz, 2 ch, 16-bit).");
                 }
@@ -105,36 +107,31 @@ public sealed class WavAudioFile
                 ChannelCount = channels;
                 BitsPerSample = bitsPerSample;
                 fmtParsed = true;
-                stream.Position = chunkStart + chunkSize;
-            }
-            else if (chunkId == "data")
-            {
-                if (!fmtParsed)
-                {
+                stream.Position = chunkEnd;
+            } else if (chunkId == "data") {
+                if (!fmtParsed) {
                     throw new InvalidDataException("'data' chunk encountered before 'fmt ' chunk.");
                 }
                 PcmDataOffset = chunkStart;
                 PcmDataLength = chunkSize;
+                if (PcmDataOffset + PcmDataLength > stream.Length) {
+                    throw new InvalidDataException("'data' chunk exceeds file length.");
+                }
                 dataLocated = true;
                 break;
+            } else {
+                stream.Position = chunkEnd;
             }
-            else
-            {
-                stream.Position = chunkStart + chunkSize;
-            }
-            if ((chunkSize & 1) == 1 && stream.Position < stream.Length)
-            {
+            if ((chunkSize & 1) == 1 && stream.Position < stream.Length) {
                 // RIFF chunks are word-aligned.
                 stream.Position++;
             }
         }
 
-        if (!fmtParsed)
-        {
+        if (!fmtParsed) {
             throw new InvalidDataException("WAV file is missing the 'fmt ' chunk.");
         }
-        if (!dataLocated)
-        {
+        if (!dataLocated) {
             throw new InvalidDataException("WAV file is missing the 'data' chunk.");
         }
     }
