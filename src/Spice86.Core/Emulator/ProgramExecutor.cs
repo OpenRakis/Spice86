@@ -36,7 +36,7 @@ public sealed class ProgramExecutor : IDisposable {
     private readonly EmulationLoop _emulationLoop;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly EmulatorStateSerializer _emulatorStateSerializer;
-    public event EventHandler? EmulationStopped;
+    private readonly IShutdownCoordinator _shutdownCoordinator;
 
     /// <summary>
     /// Initializes a new instance of <see cref="ProgramExecutor"/>
@@ -50,7 +50,7 @@ public sealed class ProgramExecutor : IDisposable {
     /// <param name="state">The CPU registers and flags.</param>
     /// <param name="int21Handler">The central DOS interrupt handler, used to load DOS programs.</param>
     /// <param name="pauseHandler">The object responsible for pausing an resuming the emulation.</param>
-    /// <param name="screenPresenter">The user interface class that displays video output in a dedicated thread.</param>
+    /// <param name="shutdownCoordinator">The shutdown coordinator used after the emulation loop exits.</param>
     /// <param name="loggerService">The logging service to use.</param>
     public ProgramExecutor(
         Configuration configuration,
@@ -62,7 +62,7 @@ public sealed class ProgramExecutor : IDisposable {
         State state,
         DosInt21Handler int21Handler,
         IPauseHandler pauseHandler,
-        IGuiVideoPresentation? screenPresenter,
+        IShutdownCoordinator shutdownCoordinator,
         ILoggerService loggerService) {
         _configuration = configuration;
         _emulationLoop = emulationLoop;
@@ -70,6 +70,7 @@ public sealed class ProgramExecutor : IDisposable {
         _emulatorStateSerializer = emulatorStateSerializer;
         _pauseHandler = pauseHandler;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
+        _shutdownCoordinator = shutdownCoordinator;
         _gdbServer = CreateGdbServer(
             configuration,
             memory,
@@ -79,10 +80,6 @@ public sealed class ProgramExecutor : IDisposable {
             emulatorBreakpointsManager,
             emulatorStateSerializer,
             _loggerService);
-
-        if (screenPresenter is not null) {
-            screenPresenter.UserInterfaceInitialized += Run;
-        }
         LoadInitialProgram(configuration, memory, state, int21Handler);
     }
 
@@ -110,7 +107,7 @@ public sealed class ProgramExecutor : IDisposable {
 
             _emulatorStateSerializer.EmulationStateDataWriter.Write();
         } finally {
-            EmulationStopped?.Invoke(this, EventArgs.Empty);
+            _shutdownCoordinator.Shutdown();
         }
     }
 

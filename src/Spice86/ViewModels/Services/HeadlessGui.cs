@@ -43,7 +43,6 @@ public sealed class HeadlessGui : IGuiVideoPresentation, IGuiMouseEvents,
     public event EventHandler<MouseButtonEventArgs>? MouseButtonDown;
     public event EventHandler<MouseButtonEventArgs>? MouseButtonUp;
     public event EventHandler<UIRenderEventArgs>? RenderScreen;
-    public event Action? UserInterfaceInitialized;
 #pragma warning restore CS0067
 
     /// <summary>
