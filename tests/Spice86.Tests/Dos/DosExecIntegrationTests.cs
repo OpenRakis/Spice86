@@ -23,11 +23,14 @@ public class DosExecIntegrationTests {
         File.Move(Path.Join(tempFile.Path, "overlay_driver.bin"), Path.Join(tempFile.Path, "dos_exec_master.000"));
 
         // Act
-        string output = RunProgramAndReadVideoOutput(
-            Path.Join(tempFile.Path, "dos_exec_master.com"), tempFile.Path, expectedLength: 10);
+        // The bootstrap autoexec line "CALL <program>" is echoed at the top of the
+        // screen (MS-DOS / dosbox-staging parity), so the program output appears
+        // after it. Scan the full text-mode screen for the expected token.
+        string screen = RunProgramAndReadVideoOutput(
+            Path.Join(tempFile.Path, "dos_exec_master.com"), tempFile.Path, expectedLength: 80 * 25);
 
         // Assert
-        output.Should().Be("SEMJCTLOAV");
+        screen.Should().Contain("SEMJCTLOAV");
     }
 
     [Fact]
@@ -38,11 +41,14 @@ public class DosExecIntegrationTests {
             new[] { "fcb_process_isolation.com", "fcbchild.com" });
 
         // Act
-        string output = RunProgramAndReadVideoOutput(
-            Path.Join(tempFile.Path, "fcb_process_isolation.com"), tempFile.Path, expectedLength: 7);
+        // The bootstrap autoexec line "CALL <program>" is echoed at the top of the
+        // screen (MS-DOS / dosbox-staging parity), so the program output appears
+        // after it. Scan the full text-mode screen for the expected token.
+        string screen = RunProgramAndReadVideoOutput(
+            Path.Join(tempFile.Path, "fcb_process_isolation.com"), tempFile.Path, expectedLength: 80 * 25);
 
         // Assert
-        output.Should().Be("SCWOXER");
+        screen.Should().Contain("SCWOXER");
     }
 
     private static void CopyResourceFiles(string resourceSubDir, string tempDir, string[] files) {
