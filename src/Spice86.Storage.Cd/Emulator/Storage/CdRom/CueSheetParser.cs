@@ -12,7 +12,7 @@ public sealed class CueSheetParser {
     /// <returns>A fully populated <see cref="CueSheet"/>.</returns>
     /// <exception cref="IOException">Thrown when the file cannot be read.</exception>
     /// <exception cref="InvalidDataException">Thrown when a time field is malformed.</exception>
-    public CueSheet Parse(string cueFilePath) {
+    public static CueSheet Parse(string cueFilePath) {
         string[] lines = File.ReadAllLines(cueFilePath);
 
         string cueDir = Path.GetDirectoryName(cueFilePath) ?? string.Empty;

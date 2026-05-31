@@ -17,8 +17,7 @@ using System.Text;
 /// ordinals are non-contiguous, or when the topmost slot lacks the
 /// last-entry flag.
 /// </remarks>
-public sealed class VfatDirectoryReader
-{
+public sealed class VfatDirectoryReader {
     /// <summary>Marker byte at offset 0 indicating a deleted directory entry.</summary>
     public const byte DeletedEntryMarker = 0xE5;
 
@@ -32,34 +31,28 @@ public sealed class VfatDirectoryReader
     /// enumeration.
     /// </summary>
     /// <param name="directoryBytes">Raw directory bytes.</param>
-    public IReadOnlyList<VfatDirectoryRecord> ReadRecords(ReadOnlySpan<byte> directoryBytes)
-    {
+    public static IReadOnlyList<VfatDirectoryRecord> ReadRecords(ReadOnlySpan<byte> directoryBytes) {
         LongFileNameCodec codec = new();
         List<VfatDirectoryRecord> records = new();
         List<VfatLfnEntry> pendingSlots = new();
         int entrySize = FatDirectoryEntry.EntrySize;
-        for (int offset = 0; offset + entrySize <= directoryBytes.Length; offset += entrySize)
-        {
+        for (int offset = 0; offset + entrySize <= directoryBytes.Length; offset += entrySize) {
             ReadOnlySpan<byte> entry = directoryBytes.Slice(offset, entrySize);
             byte firstByte = entry[0];
-            if (firstByte == EndOfDirectoryMarker)
-            {
+            if (firstByte == EndOfDirectoryMarker) {
                 break;
             }
-            if (firstByte == DeletedEntryMarker)
-            {
+            if (firstByte == DeletedEntryMarker) {
                 pendingSlots.Clear();
                 continue;
             }
-            VfatLfnEntry? lfn = codec.TryParseSlot(entry);
-            if (lfn != null)
-            {
+            VfatLfnEntry? lfn = LongFileNameCodec.TryParseSlot(entry);
+            if (lfn != null) {
                 pendingSlots.Add(lfn);
                 continue;
             }
             // Skip volume-label entries (attribute bit 0x08) but still drop pending slots.
-            if ((entry[11] & 0x08) != 0 && (entry[11] & 0x10) == 0)
-            {
+            if ((entry[11] & 0x08) != 0 && (entry[11] & 0x10) == 0) {
                 pendingSlots.Clear();
                 continue;
             }
@@ -74,10 +67,8 @@ public sealed class VfatDirectoryReader
     private static string? TryDecodePendingChain(
         LongFileNameCodec codec,
         List<VfatLfnEntry> pendingSlots,
-        MutableFatDirectoryEntry shortEntry)
-    {
-        if (pendingSlots.Count == 0)
-        {
+        MutableFatDirectoryEntry shortEntry) {
+        if (pendingSlots.Count == 0) {
             return null;
         }
         Span<byte> packedShortName = stackalloc byte[11];
@@ -89,7 +80,7 @@ public sealed class VfatDirectoryReader
         Encoding.ASCII.GetBytes(shortEntry.Extension.ToUpperInvariant(), extensionBytes);
         baseBytes.CopyTo(packedShortName.Slice(0, 8));
         extensionBytes.CopyTo(packedShortName.Slice(8, 3));
-        byte expectedChecksum = codec.ComputeShortNameChecksum(packedShortName);
-        return codec.DecodeLongName(pendingSlots, expectedChecksum);
+        byte expectedChecksum = LongFileNameCodec.ComputeShortNameChecksum(packedShortName);
+        return LongFileNameCodec.DecodeLongName(pendingSlots, expectedChecksum);
     }
 }

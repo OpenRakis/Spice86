@@ -14,7 +14,7 @@ public sealed class DirectoryWriter {
     /// </summary>
     /// <param name="directorySectors">Raw directory sector bytes.</param>
     /// <returns>Slot index, or -1 if the directory has no free slot.</returns>
-    public int FindNextSlot(byte[] directorySectors) {
+    public static int FindNextSlot(byte[] directorySectors) {
         if (directorySectors == null) {
             throw new ArgumentNullException(nameof(directorySectors));
         }
@@ -38,7 +38,7 @@ public sealed class DirectoryWriter {
     /// <param name="slot">Slot index to overwrite.</param>
     /// <param name="entry">Entry to write.</param>
     /// <param name="fatTable">FAT table used for chain validation.</param>
-    public void WriteEntry(byte[] directorySectors, int slot, MutableFatDirectoryEntry entry, FatTable fatTable) {
+    public static void WriteEntry(byte[] directorySectors, int slot, MutableFatDirectoryEntry entry, FatTable fatTable) {
         if (directorySectors == null) {
             throw new ArgumentNullException(nameof(directorySectors));
         }
