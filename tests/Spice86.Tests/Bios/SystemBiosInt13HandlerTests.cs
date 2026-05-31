@@ -6,6 +6,7 @@ using NSubstitute;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
+using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.Memory;
@@ -15,6 +16,8 @@ using Spice86.Core.Emulator.VM.DeviceScheduler;
 using Spice86.Shared.Emulator.Storage;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
+
+using System.Collections.Generic;
 
 using Xunit;
 
@@ -40,8 +43,10 @@ public class SystemBiosInt13HandlerTests {
         DeviceScheduler scheduler = new(clock, loggerService, "test-floppy-scheduler");
         FloppyDiskTimingService timingService = new(state, clock, scheduler, FloppyDiskSpeed.Maximum);
         TestFloppyDriveAccess floppyAccess = new(totalCylinders, headsPerCylinder, sectorsPerTrack, bytesPerSector);
+        IDriveActivityNotifier activityNotifier = Substitute.For<IDriveActivityNotifier>();
+        ISoundChannelCreator soundChannelCreator = new StubSoundChannelCreator();
         SystemBiosInt13Handler handler = new(memory, functionHandlerProvider, stack, state, floppyAccess,
-            floppySound: null, activityNotifier: null, timingService, loggerService);
+            soundChannelCreator, activityNotifier, timingService, loggerService);
 
         // Act
         handler.GetDriveParameters(false);
@@ -51,6 +56,12 @@ public class SystemBiosInt13HandlerTests {
         state.AH.Should().Be(0);
         state.BL.Should().Be(expectedBiosType,
             "DOSBox reports BIOS type from the mounted floppy geometry instead of hardcoding 1.44 MB");
+    }
+
+    private sealed class StubSoundChannelCreator : ISoundChannelCreator {
+        public SoundChannel AddChannel(Action<int> handler, int sampleRateHz, string name, HashSet<ChannelFeature> features) {
+            return new SoundChannel(handler, name, features);
+        }
     }
 
     private sealed class TestFloppyDriveAccess : IFloppyDriveAccess {
