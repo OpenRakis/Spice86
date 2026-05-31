@@ -44,7 +44,7 @@ public sealed class DosDriveStatusProvider : IDriveStatusProvider {
             }
 
             DosVirtualDriveType driveType;
-            if (virtualDrive.DriveLetter == 'A' || virtualDrive.DriveLetter == 'B') {
+            if (virtualDrive.DriveLetter is 'A' or 'B') {
                 driveType = DosVirtualDriveType.Floppy;
             } else {
                 driveType = DosVirtualDriveType.Fixed;

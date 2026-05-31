@@ -140,7 +140,7 @@ internal sealed class FloppyDiskNoiseDevice {
     /// </summary>
     internal void ActivateSpin() {
         lock (_lock) {
-            if (_mode == FloppyDiskNoiseMode.Off || _mode == FloppyDiskNoiseMode.SeekOnly) {
+            if (_mode is FloppyDiskNoiseMode.Off or FloppyDiskNoiseMode.SeekOnly) {
                 return;
             }
 

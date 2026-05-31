@@ -61,6 +61,6 @@ public sealed class IsoSupplementaryVolumeDescriptor {
             return false;
         }
         byte level = sequence[2];
-        return level == 0x40 || level == 0x43 || level == 0x45;
+        return level is 0x40 or 0x43 or 0x45;
     }
 }

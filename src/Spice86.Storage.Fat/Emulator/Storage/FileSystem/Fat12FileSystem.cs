@@ -170,7 +170,7 @@ public sealed class Fat12FileSystem {
         List<ushort> chain = new();
         ushort current = startCluster;
 
-        while (current >= 2 && current < EndOfChainMin && current != BadCluster) {
+        while (current is >= 2 and < EndOfChainMin and not BadCluster) {
             chain.Add(current);
             if (current >= _fat.Length) {
                 break;

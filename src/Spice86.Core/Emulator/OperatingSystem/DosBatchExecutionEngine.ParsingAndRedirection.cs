@@ -294,7 +294,7 @@ internal sealed partial class DosBatchExecutionEngine {
                 continue;
             }
 
-            if (marker >= '0' && marker <= '9') {
+            if (marker is >= '0' and <= '9') {
                 int index = marker - '0';
                 string argValue = context.GetArgument(index);
                 if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
@@ -534,7 +534,7 @@ internal sealed partial class DosBatchExecutionEngine {
 
     private static bool IsRedirectionStart(string commandLine, int index) {
         char current = commandLine[index];
-        if (current == '>' || current == '<') {
+        if (current is '>' or '<') {
             return true;
         }
 
@@ -610,7 +610,7 @@ internal sealed partial class DosBatchExecutionEngine {
         }
 
         char operation = commandLine[index];
-        if (operation != '>' && operation != '<') {
+        if (operation is not '>' and not '<') {
             index = originalIndex;
             return false;
         }
@@ -637,7 +637,7 @@ internal sealed partial class DosBatchExecutionEngine {
         }
 
         if (operation == '<') {
-            if (descriptor == -1 || descriptor == 0) {
+            if (descriptor is -1 or 0) {
                 redirectionBuilder.SetInput(normalizedTarget);
             }
             return true;

@@ -693,7 +693,7 @@ internal sealed partial class DosBatchExecutionEngine {
             }
 
             if (bare) {
-                if (fileName != "." && fileName != "..") {
+                if (fileName is not "." and not "..") {
                     WriteToStandardOutput($"{fileName}\r\n");
                 }
             } else {
@@ -1264,7 +1264,7 @@ internal sealed partial class DosBatchExecutionEngine {
         // Auto-detect type from the first image if not specified
         if (string.IsNullOrEmpty(imageType)) {
             string ext = Path.GetExtension(imagePaths[0]).ToLowerInvariant();
-            if (ext == ".img" || ext == ".ima" || ext == ".vfd") {
+            if (ext is ".img" or ".ima" or ".vfd") {
                 imageType = "floppy";
             } else if (ext == ".iso") {
                 imageType = "iso";
@@ -1286,7 +1286,7 @@ internal sealed partial class DosBatchExecutionEngine {
 
         if (imageType == "floppy") {
             MountFloppyImages(driveLetter, imagePaths);
-        } else if (imageType == "iso" || imageType == "cue") {
+        } else if (imageType is "iso" or "cue") {
             MountCdRomImages(driveLetter, imagePaths, imageType);
         } else {
             WriteToStandardOutput($"IMGMOUNT: unsupported image type '{imageType}'\r\n");
@@ -1458,7 +1458,7 @@ internal sealed partial class DosBatchExecutionEngine {
     }
 
     private static bool IsSupportedBootDrive(char driveLetter) {
-        return driveLetter == 'A' || driveLetter == 'B';
+        return driveLetter is 'A' or 'B';
     }
 
     private static bool TryParseBootDriveSpecifier(string driveSpec, out char driveLetter) {
@@ -1729,7 +1729,7 @@ internal sealed partial class DosBatchExecutionEngine {
             return false;
         }
 
-        if (driveLetter == 'A' || driveLetter == 'B') {
+        if (driveLetter is 'A' or 'B') {
             WriteToStandardOutput($"SUBST: cannot SUBST a floppy drive ({driveLetter}:)\r\n");
             return false;
         }

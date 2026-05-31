@@ -471,7 +471,7 @@ public sealed class AnsiSequenceHandler {
         int dataStart;
         ushort keyCode;
         byte firstByte = _state.Parameters[0];
-        if (firstByte == 0 || firstByte == 0xE0) {
+        if (firstByte is 0 or 0xE0) {
             if (totalBytes < 2) {
                 return;
             }
