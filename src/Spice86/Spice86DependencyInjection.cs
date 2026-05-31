@@ -499,6 +499,9 @@ public class Spice86DependencyInjection : IDisposable {
         UIDispatcher? uiDispatcher = null;
         HostStorageProvider? hostStorageProvider = null;
         TextClipboard? textClipboard = null;
+        EmulatorDisplayViewModel? displayViewModel = null;
+        PerformanceViewModel? performanceViewModel = null;
+        IExceptionHandler? exceptionHandler = null;
         InputEventHub inputEventHub;
 
         if (mainWindow != null) {
@@ -508,41 +511,20 @@ public class Spice86DependencyInjection : IDisposable {
             textClipboard = new TextClipboard(mainWindow.Clipboard);
 
             PerformanceTracker performanceTracker = new PerformanceTracker(new SystemTimeProvider());
-
-            PerformanceViewModel performanceViewModel = new(
+            performanceViewModel = new PerformanceViewModel(
                 state, pauseHandler, uiDispatcher, performanceTracker);
 
-            mainWindow.PerformanceViewModel = performanceViewModel;
-
-            IExceptionHandler exceptionHandler = configuration.HeadlessMode switch {
+            exceptionHandler = configuration.HeadlessMode switch {
                 null => new MainWindowExceptionHandler(pauseHandler),
                 _ => new HeadlessModeExceptionHandler(uiDispatcher)
             };
 
-            MainWindowViewModel.MainWindowViewModelDependencies mainWindowDependencies = new() {
-                SharedMouseData = sharedMouseData,
-                Pit = pitTimer,
-                UiDispatcher = uiDispatcher,
-                HostStorageProvider = hostStorageProvider,
-                TextClipboard = textClipboard,
-                Configuration = configuration,
-                LoggerService = loggerService,
-                PauseHandler = pauseHandler,
-                PerformanceViewModel = performanceViewModel,
-                ExceptionHandler = exceptionHandler,
-                CyclesLimiter = cyclesLimiter,
-                McpServices = emulatorMcpServices,
-                McpPort = configuration.McpHttpPort,
-                CurrentProcessNameProvider = dos.ProcessManager
-            };
-            mainWindowViewModel = new MainWindowViewModel(mainWindowDependencies);
+            displayViewModel = new EmulatorDisplayViewModel(uiDispatcher, pauseHandler, sharedMouseData, loggerService);
+            vgaFunctionality.VideoModeChanged += displayViewModel.OnVideoModeChanged;
 
-            // Subscribe to video mode changes for dynamic aspect ratio correction
-            vgaFunctionality.VideoModeChanged += mainWindowViewModel.OnVideoModeChanged;
+            inputEventHub = new(displayViewModel, displayViewModel);
 
-            inputEventHub = new(mainWindowViewModel, mainWindowViewModel);
-
-            _gui = mainWindowViewModel;
+            _gui = displayViewModel;
         } else {
             HeadlessGui headlessGui = new HeadlessGui();
             _gui = headlessGui;
@@ -628,21 +610,19 @@ public class Spice86DependencyInjection : IDisposable {
         emulatorMcpServices.InterruptVectorTable = interruptVectorTable;
         emulatorMcpServices.Dos = dos;
 
-        if (mainWindowViewModel != null) {
-            object dosAsObject = dos;
-            if (dosAsObject is IDiscSwapper discSwapper) {
-                mainWindowViewModel.DiscSwapper = discSwapper;
+        IDiscSwapper? capturedDiscSwapper = null;
+        DrivesMenuViewModel? capturedDrivesMenuViewModel = null;
+        if (displayViewModel != null) {
+            if (dos is IDiscSwapper discSwapper) {
+                capturedDiscSwapper = discSwapper;
             }
-            if (hostStorageProvider != null
-                && dosAsObject is IDriveStatusProvider driveStatusProvider
-                && dosAsObject is IDiscSwapper discSwapper2
-                && dosAsObject is IDriveMountService mountService) {
+            if (hostStorageProvider != null) {
                 DrivesMenuViewModel drivesMenuViewModel = new(
-                    driveStatusProvider, discSwapper2, mountService,
+                    dos, dos, dos,
                     hostStorageProvider, new NullDriveEventNotifier(), driveActivityNotifier,
-                    dosAsObject as IDriveContentMapProvider, dosAsObject as IDriveFileListProvider);
+                    dos, dos);
                 drivesMenuViewModel.StartPolling();
-                mainWindowViewModel.DrivesMenuViewModel = drivesMenuViewModel;
+                capturedDrivesMenuViewModel = drivesMenuViewModel;
             }
         }
 
@@ -715,18 +695,14 @@ public class Spice86DependencyInjection : IDisposable {
 
         _shutdownCoordinator = shutdownCoordinator;
 
-        ProgramExecutor programExecutor = new(
-            configuration,
-            emulationLoop,
-            emulatorBreakpointsManager,
-            emulatorStateSerializer,
-            memory,
-            cfgCpu,
-            state,
-            dos.DosInt21Handler,
-            pauseHandler,
-            shutdownCoordinator,
-            loggerService);
+        ProgramBootstrapper programBootstrapper = new ProgramBootstrapper(
+            configuration, memory, state, dos.DosInt21Handler, loggerService);
+        ExecutionPolicy executionPolicy = new ExecutionPolicy(
+            configuration, memory, cfgCpu, state, pauseHandler,
+            emulatorBreakpointsManager, emulationLoop, emulatorStateSerializer, loggerService);
+        ProgramExecutor createdProgramExecutor = new(
+            programBootstrapper, executionPolicy, emulationLoop,
+            emulatorStateSerializer, shutdownCoordinator, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Program executor created...");
@@ -768,15 +744,27 @@ public class Spice86DependencyInjection : IDisposable {
 
         _debuggerTabRegistry = new DebuggerTabRegistry();
         Machine = machine;
-        ProgramExecutor = programExecutor;
+        ProgramExecutor = createdProgramExecutor;
         McpServices = emulatorMcpServices;
         _mcpHttpTransport = mcpHttpTransport;
-        if (mainWindowViewModel != null) {
-            mainWindowViewModel.ProgramExecutor = programExecutor;
+
+        if (mainWindow != null && uiDispatcher != null &&
+            hostStorageProvider != null && textClipboard != null
+            && displayViewModel != null && performanceViewModel != null && exceptionHandler != null) {
+            EmulatorSession session = new EmulatorSession(
+                createdProgramExecutor, uiDispatcher, exceptionHandler, loggerService);
+            McpStatusViewModel mcpStatusViewModel = new McpStatusViewModel(
+                emulatorMcpServices, configuration.McpHttpPort);
+
+            mainWindowViewModel = new MainWindowViewModel(
+                displayViewModel, session, performanceViewModel, mcpStatusViewModel,
+                capturedDrivesMenuViewModel, capturedDiscSwapper,
+                configuration, uiDispatcher, textClipboard, loggerService, pauseHandler,
+                pitTimer, cyclesLimiter, hostStorageProvider, dos.ProcessManager);
         }
 
         if (mainWindow != null && uiDispatcher != null &&
-            hostStorageProvider != null && textClipboard != null) {
+            hostStorageProvider != null && textClipboard != null && mainWindowViewModel != null) {
             IMessenger messenger = WeakReferenceMessenger.Default;
 
             BreakpointsTabPlugin breakpointsTabPlugin = new(state, pauseHandler, messenger,
