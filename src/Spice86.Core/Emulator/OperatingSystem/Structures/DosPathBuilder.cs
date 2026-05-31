@@ -77,7 +77,7 @@ internal ref struct DosPathBuilder {
     /// This is useful when calling <see cref="ParseSpecialFileName(ReadOnlySpan{char})"/> without building a DOS path.
     /// </remarks>
     public static DosPathBuilder Create() {
-        return new DosPathBuilder(Span<char>.Empty, Span<int>.Empty);
+        return new DosPathBuilder();
     }
 
     /// <summary>Creates a DOS path builder with array pool allocated buffers.</summary>
