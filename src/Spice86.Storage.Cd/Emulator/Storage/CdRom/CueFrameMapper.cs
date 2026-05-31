@@ -28,7 +28,7 @@ public sealed class CueFrameMapper {
     /// file (typically the last track).
     /// </param>
     /// <returns>One <see cref="CueTrackLayout"/> per declared track, in CUE order.</returns>
-    public IReadOnlyList<CueTrackLayout> BuildLayout(CueSheet sheet, Func<string, long> fileLengthProvider) {
+    public static IReadOnlyList<CueTrackLayout> BuildLayout(CueSheet sheet, Func<string, long> fileLengthProvider) {
         if (sheet == null) {
             throw new ArgumentNullException(nameof(sheet));
         }

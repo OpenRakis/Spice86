@@ -39,7 +39,7 @@ public sealed class CueBinImage : ICdRomImage {
         _codecFactory = codecFactory;
         ImagePath = cueFilePath;
         CueSheetParser parser = new CueSheetParser();
-        CueSheet sheet = parser.Parse(cueFilePath);
+        CueSheet sheet = CueSheetParser.Parse(cueFilePath);
         UpcEan = sheet.Catalog;
 
         BuildTracks(sheet);
@@ -48,7 +48,7 @@ public sealed class CueBinImage : ICdRomImage {
 
     private void BuildTracks(CueSheet sheet) {
         CueFrameMapper mapper = new CueFrameMapper();
-        IReadOnlyList<CueTrackLayout> layouts = mapper.BuildLayout(sheet, GetFileLengthBytes);
+        IReadOnlyList<CueTrackLayout> layouts = CueFrameMapper.BuildLayout(sheet, GetFileLengthBytes);
 
         foreach (CueTrackLayout layout in layouts) {
             CdSectorMode mode = MapMode(layout.TrackMode);

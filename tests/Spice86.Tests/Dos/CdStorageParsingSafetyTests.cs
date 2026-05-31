@@ -49,7 +49,7 @@ public class CdStorageParsingSafetyTests {
         CueSheetParser parser = new();
 
         // Act
-        Action act = () => parser.Parse(cuePath);
+        Action act = () => CueSheetParser.Parse(cuePath);
 
         // Assert
         act.Should().Throw<InvalidDataException>()
