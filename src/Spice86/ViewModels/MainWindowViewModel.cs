@@ -13,6 +13,7 @@ using CommunityToolkit.Mvvm.Input;
 using Serilog.Events;
 
 using Spice86.Core.CLI;
+using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.Mcp;
@@ -40,6 +41,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
     private readonly PerformanceViewModel _performanceViewModel;
     private readonly IExceptionHandler _exceptionHandler;
     private readonly ICurrentProcessNameProvider _currentProcessNameProvider;
+    private ProgramExecutor? _programExecutor;
 
     private McpStatusViewModel? _mcpStatusViewModel;
 
@@ -127,6 +129,11 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         public required EmulatorMcpServices McpServices { get; init; }
         public required int McpPort { get; init; }
         public required ICurrentProcessNameProvider CurrentProcessNameProvider { get; init; }
+    }
+
+    internal ProgramExecutor? ProgramExecutor {
+        get => _programExecutor;
+        set => SetProperty(ref _programExecutor, value);
     }
 
     public MainWindowViewModel(MainWindowViewModelDependencies dependencies)
@@ -537,11 +544,14 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IGui
         });
     }
 
-    public event Action? UserInterfaceInitialized;
-
     private void EmulatorThread() {
         try {
-            UserInterfaceInitialized?.Invoke();
+            ProgramExecutor? programExecutor = ProgramExecutor;
+            if (programExecutor is null) {
+                throw new InvalidOperationException("Program executor is not initialized.");
+            }
+
+            programExecutor.Run();
             if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
                 _loggerService.Warning("Emulation exited. Closing main window...");
             }

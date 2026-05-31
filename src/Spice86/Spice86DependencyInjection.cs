@@ -97,9 +97,9 @@ public class Spice86DependencyInjection : IDisposable {
     private readonly McpHttpHost? _mcpHttpTransport;
     private readonly DeviceSchedulerThread? _vgaTimingThread;
     private readonly CfgNodeExecutionCompiler _cfgNodeExecutionCompiler;
+    private readonly IShutdownCoordinator _shutdownCoordinator;
     private readonly DebuggerTabRegistry _debuggerTabRegistry;
     private bool _disposed;
-    private bool _machineDisposedAfterRun;
 
     public Spice86DependencyInjection(Configuration configuration)
         : this(configuration, null) {
@@ -697,6 +697,16 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Function overrides added...");
         }
 
+        ShutdownCoordinator shutdownCoordinator = new(
+            _vgaTimingThread,
+            _emulatedClock,
+            _httpApiServer,
+            cfgNodeExecutionCompiler,
+            machine,
+            loggerService);
+
+        _shutdownCoordinator = shutdownCoordinator;
+
         ProgramExecutor programExecutor = new(
             configuration,
             emulationLoop,
@@ -707,7 +717,7 @@ public class Spice86DependencyInjection : IDisposable {
             state,
             dos.DosInt21Handler,
             pauseHandler,
-            mainWindowViewModel,
+            shutdownCoordinator,
             loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -745,7 +755,9 @@ public class Spice86DependencyInjection : IDisposable {
         ProgramExecutor = programExecutor;
         McpServices = emulatorMcpServices;
         _mcpHttpTransport = mcpHttpTransport;
-        ProgramExecutor.EmulationStopped += OnProgramExecutorEmulationStopped;
+        if (mainWindowViewModel != null) {
+            mainWindowViewModel.ProgramExecutor = programExecutor;
+        }
 
         if (mainWindow != null && uiDispatcher != null &&
             hostStorageProvider != null && textClipboard != null) {
@@ -889,7 +901,6 @@ public class Spice86DependencyInjection : IDisposable {
     private void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
-                ProgramExecutor.EmulationStopped -= OnProgramExecutorEmulationStopped;
                 _debuggerTabRegistry.Dispose();
                 _mcpHttpTransport?.Dispose();
 
@@ -902,28 +913,11 @@ public class Spice86DependencyInjection : IDisposable {
                     headlessGui.Dispose();
                 }
 
-                DisposeMachineAfterRun();
+                _shutdownCoordinator.Shutdown();
                 _loggerService.Dispose();
             }
 
             _disposed = true;
         }
-    }
-
-    private void OnProgramExecutorEmulationStopped(object? sender, EventArgs e) {
-        DisposeMachineAfterRun();
-    }
-
-    private void DisposeMachineAfterRun() {
-        if (_machineDisposedAfterRun) {
-            return;
-        }
-
-        _machineDisposedAfterRun = true;
-        _vgaTimingThread?.Dispose();
-        _emulatedClock.Dispose();
-        _httpApiServer?.Dispose();
-        _cfgNodeExecutionCompiler.Dispose();
-        Machine.Dispose();
     }
 }
