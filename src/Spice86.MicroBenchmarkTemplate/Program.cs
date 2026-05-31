@@ -1,5 +1,7 @@
 ﻿namespace Spice86.MicroBenchmarkTemplate;
 
+using System.Numerics;
+
 using Xunit;
 
 /// <summary>
@@ -20,7 +22,47 @@ public class BenchmarkTest {
 
     [Benchmark]
     public SegmentedAddress Cached() => _instance.CachedSegmentedAddress;
+
+    [Benchmark]
+    [Arguments(42)]
+    [Arguments(69)]
+    public bool AluParity8_FourBit(byte value) {
+        const uint FourBitParityTable = 0b1001011001101001;
+        int low4 = value & 0xF;
+        int high4 = value >> 4 & 0xF;
+        return ((FourBitParityTable >> low4) & 1) == ((FourBitParityTable >> high4) & 1);
+    }
+
+    [Benchmark]
+    [Arguments(42)]
+    [Arguments(69)]
+    public bool AluParity8_PopCount(byte value) {
+        return (BitOperations.PopCount(value) & 1) == 0;
+    }
+
+    [Benchmark]
+    [Arguments(42)]
+    [Arguments(69)]
+    public bool AluParity8_PopCountFallback(byte value) {
+        // This simulates platforms which do not have a hardware-optimized population count implementation. The
+        // "SoftwareFallback" method was copied from BitOperations.PopCount on .NET 10.
+        return (SoftwareFallback(value) & 1) == 0;
+
+        static int SoftwareFallback(uint value) {
+            const uint c1 = 0x_55555555u;
+            const uint c2 = 0x_33333333u;
+            const uint c3 = 0x_0F0F0F0Fu;
+            const uint c4 = 0x_01010101u;
+
+            value -= (value >> 1) & c1;
+            value = (value & c2) + ((value >> 2) & c2);
+            value = (((value + (value >> 4)) & c3) * c4) >> 24;
+
+            return (int)value;
+        }
+    }
 }
+
 internal class Program {
     public static void Main() {
 #if RELEASE
