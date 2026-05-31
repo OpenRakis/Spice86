@@ -1277,11 +1277,7 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
     private bool TryResolveImageBackedDrive(byte driveNumber, out FloppyDiskDrive? floppy, out byte[]? imageData) {
         floppy = null;
         imageData = null;
-        char driveLetter = (char)('A' + driveNumber);
-        if (driveLetter < 'A' || driveLetter > 'Z') {
-            return false;
-        }
-        if (!TryGetFloppyDrive(driveLetter, out floppy)) {
+        if (!TryGetDriveLetterFromIndex(driveNumber, out char driveLetter) || !TryGetFloppyDrive(driveLetter, out floppy)) {
             return false;
         }
         imageData = floppy.GetCurrentImageData();
