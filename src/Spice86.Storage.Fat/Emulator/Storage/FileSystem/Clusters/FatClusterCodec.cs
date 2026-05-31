@@ -51,7 +51,10 @@ public static class FatClusterCodec {
                         throw new ArgumentOutOfRangeException(nameof(clusterIndex), $"Cluster index {clusterIndex} is past end of FAT (length {fatBytes.Length}).");
                     }
                     ushort raw = (ushort)(fatBytes[offset] | (fatBytes[offset + 1] << 8));
-                    return (clusterIndex & 1) == 0 ? (uint)(raw & 0x0FFF) : (uint)(raw >> 4);
+                    if ((clusterIndex & 1) == 0) {
+                        return (uint)(raw & 0x0FFF);
+                    }
+                    return (uint)(raw >> 4);
                 }
             case FatType.Fat16: {
                     int offset = (int)(clusterIndex * 2);

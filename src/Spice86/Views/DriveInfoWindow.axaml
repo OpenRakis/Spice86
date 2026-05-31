@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:Spice86.Views.Controls"
         xmlns:vm="clr-namespace:Spice86.ViewModels"
+        xmlns:dm="clr-namespace:Spice86.ViewModels.DataModels"
         x:Class="Spice86.Views.DriveInfoWindow"
         x:DataType="vm:DriveInfoViewModel"
         Title="{Binding DriveLetter, StringFormat='Drive {0}: — Information'}"
@@ -30,7 +31,7 @@
                             </Style>
                         </TreeView.Styles>
                         <TreeView.ItemTemplate>
-                            <TreeDataTemplate DataType="vm:FileTreeNode" ItemsSource="{Binding Children}">
+                            <TreeDataTemplate DataType="dm:FileTreeNode" ItemsSource="{Binding Children}">
                                 <Grid ColumnDefinitions="2*,*,*">
                                     <TextBlock Grid.Column="0"
                                                Text="{Binding Name}"

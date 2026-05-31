@@ -159,7 +159,7 @@ public interface IHostStorageProvider {
     Task<IReadOnlyList<IStorageFile>> OpenFilePickerAsync(FilePickerOpenOptions options);
 
     /// <summary>
-    /// Spawns the file pciker to saves a bitmap to a file.
+    /// Spawns the file picker to save a bitmap to a file.
     /// </summary>
     /// <param name="bitmap">The bitmap to save on the host storage.</param>
     /// <returns>The operation as an awaitable Task.</returns>

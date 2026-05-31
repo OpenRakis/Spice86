@@ -193,7 +193,11 @@ public sealed class IsoImage : ICdRomImage {
 
     /// <inheritdoc/>
     public int Read(int lba, Span<byte> destination, CdSectorMode mode) {
-        if (mode != CdSectorMode.CookedData2048 || destination.Length < SectorSize) {
+        // Plain ISO images expose cooked 2048-byte sectors only.
+        if (mode != CdSectorMode.CookedData2048) {
+            return 0;
+        }
+        if (destination.Length < SectorSize) {
             return 0;
         }
 

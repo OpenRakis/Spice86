@@ -2,6 +2,7 @@ namespace Spice86.Views;
 
 using Avalonia.Controls;
 
+using Spice86.ViewModels.DataModels;
 using Spice86.ViewModels;
 
 using System.Collections.Generic;
