@@ -61,6 +61,11 @@ public abstract class EmulationStateDataIoHandler {
     protected string CfgBlocksFile => GenerateDumpFileName("CfgBlocks.json");
 
     /// <summary>
+    /// Gets name of the file the machine-oriented CFG reload dump (used to reload the graph on restart).
+    /// </summary>
+    protected string CfgReloadFile => GenerateDumpFileName("CfgReload.json");
+
+    /// <summary>
     /// Generates a dump file name with the specified suffix.
     /// </summary>
     /// <param name="suffix">The suffix to add to the dump file name.</param>

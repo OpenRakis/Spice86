@@ -5,6 +5,7 @@ using Serilog.Events;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.StateSerialization.CfgReload;
 using Spice86.Shared.Emulator.VM.Breakpoint.Serializable;
 using Spice86.Shared.Interfaces;
 
@@ -70,6 +71,7 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
         WriteToFile(MemoryFile, () => _memoryDataExporter.Write(MemoryFile));
         WriteToFile(ListingFile, () => _listingExporter.Write(ListingFile));
         WriteToFile(CfgBlocksFile, () => _cfgBlocksJsonExporter.Write(_executionContextManager, CfgBlocksFile));
+        WriteToFile(CfgReloadFile, () => WriteCfgReload(CfgReloadFile));
         WriteToFile(SymbolsFile, () => new GhidraSymbolsExporter(LoggerService).Write(executionAddresses, _functionCatalogue, SymbolsFile));
         WriteToFile(ExecutionFlowFile, () => new ExecutionAddressesExporter(LoggerService).Write(executionAddresses, ExecutionFlowFile));
         WriteToFile(BreakpointsFile, () => WriteBreakpoints(BreakpointsFile));
@@ -80,6 +82,12 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
             LoggerService.Information("Saving file {FileName}", Path.GetFileName(path));
         }
         writeAction();
+    }
+
+    private void WriteCfgReload(string filePath) {
+        CfgReloadDump dump = new CfgReloadExporter().Export(_executionContextManager);
+        string jsonString = JsonSerializer.Serialize(dump, CfgReloadSerialization.Options);
+        File.WriteAllText(filePath, jsonString);
     }
 
     private void WriteBreakpoints(string filePath) {

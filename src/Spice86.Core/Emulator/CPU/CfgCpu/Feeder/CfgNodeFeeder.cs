@@ -26,11 +26,18 @@ public class CfgNodeFeeder {
         InstructionReplacerRegistry replacerRegistry, CfgNodeExecutionCompiler executionCompiler) {
         _state = state;
         SequentialIdAllocator idAllocator = new();
+        IdAllocator = idAllocator;
         InstructionsFeeder = new(emulatorBreakpointsManager, memory, state, replacerRegistry, executionCompiler, idAllocator);
         _nodeLinker = new(replacerRegistry, executionCompiler, idAllocator);
     }
 
     public InstructionsFeeder InstructionsFeeder { get; }
+
+    /// <summary>
+    /// The single id allocator shared by blocks, instructions and selectors. Exposed so the CFG graph
+    /// reloader can seed it past the highest reloaded id, preventing id collisions on resumed execution.
+    /// </summary>
+    public SequentialIdAllocator IdAllocator { get; }
 
     /// <summary>
     /// Parses or retrieves from cache the instruction at the current IP from memory.

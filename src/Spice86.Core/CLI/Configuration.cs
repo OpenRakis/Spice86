@@ -105,6 +105,15 @@ public sealed class Configuration : CommandSettings {
     public string? RecordedDataDirectory { get; init; }
 
     /// <summary>
+    /// When true, reloads the previously dumped CFG instruction graph (<c>spice86dumpCfgReload.json</c>)
+    /// from the recorded data directory into live emulator state at startup, so previously explored
+    /// program structure is restored across restarts. No-op if the file is absent.
+    /// </summary>
+    [CommandOption("--ReloadCfgGraph <RELOADCFGGRAPH>")]
+    [DefaultValue(true)]
+    public bool ReloadCfgGraph { get; init; }
+
+    /// <summary>
     /// Install DOS interrupt vectors or not.
     /// </summary>
     [CommandOption("-v|--InitializeDOS <INITIALIZEDOS>")]

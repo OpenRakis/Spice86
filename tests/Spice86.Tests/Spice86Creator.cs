@@ -17,6 +17,7 @@ public sealed class Spice86Creator : IDisposable {
     private readonly Configuration _configuration;
     private readonly long _maxCycles;
     private readonly string _exportFolder;
+    private readonly bool _ownsExportFolder;
 
     public Spice86Creator(string binName, bool enablePit = false,
         long maxCycles = 100000, bool installInterruptVectors = false, bool failOnUnhandledPort = false, bool enableA20Gate = false,
@@ -25,14 +26,19 @@ public sealed class Spice86Creator : IDisposable {
         SbType sbType = SbType.None, OplMode oplMode = OplMode.None,
         ushort sbBase = 0x220, byte sbIrq = 7, byte sbDma = 1, byte sbHdma = 5,
         string? exeArgs = null, long? instructionTimeScale = null,
-        JitMode jitMode = JitMode.InterpretedOnly, bool failOnInvalidOpcode = false) {
+        JitMode jitMode = JitMode.InterpretedOnly, bool failOnInvalidOpcode = false,
+        string? recordedDataDirectory = null, bool reloadCfgGraph = false) {
         string executablePath = Path.IsPathRooted(binName) ? binName : $"Resources/cpuTests/{binName}.bin";
         IOverrideSupplier? overrideSupplier = null;
         if (overrideSupplierClassName != null) {
             overrideSupplier = CommandLineParser.ParseFunctionInformationSupplierClassName(overrideSupplierClassName);
         }
 
-        string exportFolder = Path.Join(
+        // When the caller provides a recorded-data directory it owns the lifecycle (e.g. it must
+        // survive across two Spice86Creator instances for a dump-then-reload handoff), so we do not
+        // delete it on Dispose. Otherwise we create a throwaway folder and clean it up ourselves.
+        _ownsExportFolder = recordedDataDirectory == null;
+        string exportFolder = recordedDataDirectory ?? Path.Join(
             Path.GetTempPath(),
             Guid.NewGuid().ToString()
         );
@@ -71,6 +77,7 @@ public sealed class Spice86Creator : IDisposable {
             InstructionTimeScale = instructionTimeScale ?? 333333,
             JitMode = jitMode,
             FailOnInvalidOpcode = failOnInvalidOpcode,
+            ReloadCfgGraph = reloadCfgGraph,
         };
 
         _maxCycles = maxCycles;
@@ -90,7 +97,7 @@ public sealed class Spice86Creator : IDisposable {
 
     /// <inheritdoc />
     public void Dispose() {
-        if (Directory.Exists(_exportFolder)) {
+        if (_ownsExportFolder && Directory.Exists(_exportFolder)) {
             Directory.Delete(_exportFolder, recursive: true);
         }
     }

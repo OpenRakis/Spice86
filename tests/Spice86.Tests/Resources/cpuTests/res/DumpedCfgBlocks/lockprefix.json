@@ -71,7 +71,7 @@
       ],
       "asm": [
         "C70604005700|mov word ptr DS:[4],0x0057",
-        "F0FF|invalid"
+        "F0FFC0|invalid"
       ]
     },
     {
@@ -100,7 +100,7 @@
         "F0FF0E1000|dec word ptr DS:[0x0010]",
         "C70602000300|mov word ptr DS:[2],3",
         "C70604004500|mov word ptr DS:[4],0x0045",
-        "F089|invalid"
+        "F089061000|invalid"
       ]
     },
     {
@@ -117,7 +117,7 @@
       ],
       "asm": [
         "C70604004E00|mov word ptr DS:[4],0x004E",
-        "F003|invalid"
+        "F003C3|invalid"
       ]
     }
   ],
