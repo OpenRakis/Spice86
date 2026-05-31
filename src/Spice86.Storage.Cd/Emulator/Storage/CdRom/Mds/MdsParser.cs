@@ -17,8 +17,7 @@ namespace Spice86.Shared.Emulator.Storage.CdRom.Mds;
 /// and a footer (filename pointer). Non-track entries (point &lt; 1 or &gt; 99)
 /// are skipped.
 /// </remarks>
-public sealed class MdsParser
-{
+public sealed class MdsParser {
     private const int HeaderSize = 88;
     private const int SessionBlockSize = 24;
     private const int TrackBlockSize = 80;
@@ -36,8 +35,7 @@ public sealed class MdsParser
     /// <exception cref="ArgumentNullException">Thrown when the path is null.</exception>
     /// <exception cref="FileNotFoundException">Thrown when the path does not exist.</exception>
     /// <exception cref="InvalidDataException">Thrown when the file is not a valid MDS file.</exception>
-    public MdsDiscDescriptor ParseFile(string mdsFilePath)
-    {
+    public MdsDiscDescriptor ParseFile(string mdsFilePath) {
         ArgumentNullException.ThrowIfNull(mdsFilePath);
         using FileStream stream = new FileStream(mdsFilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
         return Parse(stream);
@@ -48,11 +46,9 @@ public sealed class MdsParser
     /// <returns>The parsed disc descriptor.</returns>
     /// <exception cref="ArgumentNullException">Thrown when the stream is null.</exception>
     /// <exception cref="InvalidDataException">Thrown when the stream does not contain a valid MDS layout.</exception>
-    public MdsDiscDescriptor Parse(Stream stream)
-    {
+    public MdsDiscDescriptor Parse(Stream stream) {
         ArgumentNullException.ThrowIfNull(stream);
-        if (!stream.CanSeek)
-        {
+        if (!stream.CanSeek) {
             throw new InvalidDataException("MDS parser requires a seekable stream.");
         }
 
@@ -70,14 +66,12 @@ public sealed class MdsParser
         byte[] trackBuffer = new byte[TrackBlockSize];
         byte[] extraBuffer = new byte[ExtraBlockSize];
         byte[] footerBuffer = new byte[FooterSize];
-        for (int i = 0; i < numAllBlocks; i++)
-        {
+        for (int i = 0; i < numAllBlocks; i++) {
             long blockPos = trackBlockOffset + (long)i * TrackBlockSize;
             ReadAt(stream, blockPos, trackBuffer);
 
             byte point = trackBuffer[4];
-            if (point < MinValidPoint || point > MaxValidPoint)
-            {
+            if (point is < MinValidPoint or > MaxValidPoint) {
                 continue;
             }
 
@@ -92,16 +86,13 @@ public sealed class MdsParser
 
             MdsTrackMode mode = DecodeTrackMode(modeRaw);
             int subchannelSize = DecodeSubchannelSize(subchannelRaw);
-            if (subchannelSize >= sectorSize)
-            {
+            if (subchannelSize >= sectorSize) {
                 throw new InvalidDataException($"Invalid sector/subchannel size. Sector size: {sectorSize} Subchannel size: {subchannelSize}");
             }
-            if (numberOfFiles != 1)
-            {
+            if (numberOfFiles != 1) {
                 throw new InvalidDataException($"Track {point} has {numberOfFiles} files; only single-file tracks are supported.");
             }
-            if (footerOffset == 0 || extraOffset == 0)
-            {
+            if (footerOffset == 0 || extraOffset == 0) {
                 throw new InvalidDataException("Invalid MDS file: track block has missing extra or footer offset.");
             }
 
@@ -113,13 +104,11 @@ public sealed class MdsParser
             ReadAt(stream, footerOffset, footerSpan);
             uint filenameOffset = BinaryPrimitives.ReadUInt32LittleEndian(footerSpan.Slice(0, 4));
             uint widecharFlag = BinaryPrimitives.ReadUInt32LittleEndian(footerSpan.Slice(4, 4));
-            if (filenameOffset == 0)
-            {
+            if (filenameOffset == 0) {
                 throw new InvalidDataException("Invalid MDS file: footer has zero filename offset.");
             }
 
-            if (point != previousTrackNumber + 1 || startSector < previousEndSector)
-            {
+            if (point != previousTrackNumber + 1 || startSector < previousEndSector) {
                 throw new InvalidDataException("Non-contiguous track found in MDS file.");
             }
 
@@ -139,128 +128,101 @@ public sealed class MdsParser
             previousEndSector = (int)(startSector + lengthSectors);
         }
 
-        if (tracks.Count == 0)
-        {
+        if (tracks.Count == 0) {
             throw new InvalidDataException("Failed to find any tracks in MDS file.");
         }
 
         return new MdsDiscDescriptor(tracks);
     }
 
-    private static void ValidateHeader(ReadOnlySpan<byte> header, out uint sessionBlockOffset)
-    {
-        if (!header.Slice(0, Signature.Length).SequenceEqual(Signature))
-        {
+    private static void ValidateHeader(ReadOnlySpan<byte> header, out uint sessionBlockOffset) {
+        if (!header.Slice(0, Signature.Length).SequenceEqual(Signature)) {
             throw new InvalidDataException("Not an MDS file: signature mismatch.");
         }
         byte majorVersion = header[16];
-        if (majorVersion != 1)
-        {
+        if (majorVersion != 1) {
             throw new InvalidDataException($"Unsupported MDS major version: {majorVersion}.");
         }
         ushort numSessions = BinaryPrimitives.ReadUInt16LittleEndian(header.Slice(20, 2));
-        if (numSessions == 0)
-        {
+        if (numSessions == 0) {
             throw new InvalidDataException("Invalid MDS file: zero sessions.");
         }
         sessionBlockOffset = BinaryPrimitives.ReadUInt32LittleEndian(header.Slice(80, 4));
-        if (sessionBlockOffset == 0)
-        {
+        if (sessionBlockOffset == 0) {
             throw new InvalidDataException("Invalid MDS file: zero session block offset.");
         }
     }
 
-    private static void ValidateSessionBlock(ReadOnlySpan<byte> block, out int numAllBlocks, out uint trackBlockOffset)
-    {
+    private static void ValidateSessionBlock(ReadOnlySpan<byte> block, out int numAllBlocks, out uint trackBlockOffset) {
         numAllBlocks = block[10];
-        if (numAllBlocks == 0)
-        {
+        if (numAllBlocks == 0) {
             throw new InvalidDataException("Invalid MDS file: session block reports zero track blocks.");
         }
         trackBlockOffset = BinaryPrimitives.ReadUInt32LittleEndian(block.Slice(20, 4));
-        if (trackBlockOffset == 0)
-        {
+        if (trackBlockOffset == 0) {
             throw new InvalidDataException("Invalid MDS file: session block has zero track block offset.");
         }
     }
 
-    private static MdsTrackMode DecodeTrackMode(byte rawMode)
-    {
+    private static MdsTrackMode DecodeTrackMode(byte rawMode) {
         int mode = rawMode & 0x07;
-        if (mode == 1)
-        {
+        if (mode == 1) {
             return MdsTrackMode.Audio;
         }
-        if (mode == 2)
-        {
+        if (mode == 2) {
             return MdsTrackMode.Mode1Data;
         }
-        if (mode == 0 || mode == 3 || mode == 7)
-        {
+        if (mode is 0 or 3 or 7) {
             return MdsTrackMode.Mode2Data;
         }
         throw new InvalidDataException($"Unsupported MDS track mode: {mode}.");
     }
 
-    private static int DecodeSubchannelSize(byte rawSubchannel)
-    {
-        if (rawSubchannel == 0)
-        {
+    private static int DecodeSubchannelSize(byte rawSubchannel) {
+        if (rawSubchannel == 0) {
             return 0;
         }
-        if (rawSubchannel == 8)
-        {
+        if (rawSubchannel == 8) {
             return 96;
         }
         return 0;
     }
 
-    private static string ReadFilename(Stream stream, uint offset, bool isWideChar)
-    {
+    private static string ReadFilename(Stream stream, uint offset, bool isWideChar) {
         stream.Seek(offset, SeekOrigin.Begin);
-        if (isWideChar)
-        {
+        if (isWideChar) {
             StringBuilder builder = new StringBuilder();
             byte[] codeUnit = new byte[2];
-            while (true)
-            {
-                if (stream.Read(codeUnit, 0, 2) != 2)
-                {
+            while (true) {
+                if (stream.Read(codeUnit, 0, 2) != 2) {
                     throw new InvalidDataException("Truncated wide MDF filename in MDS footer.");
                 }
                 ushort value = BinaryPrimitives.ReadUInt16LittleEndian(codeUnit);
-                if (value == 0)
-                {
+                if (value == 0) {
                     return builder.ToString();
                 }
                 builder.Append((char)value);
             }
         }
         StringBuilder asciiBuilder = new StringBuilder();
-        while (true)
-        {
+        while (true) {
             int b = stream.ReadByte();
-            if (b < 0)
-            {
+            if (b < 0) {
                 throw new InvalidDataException("Truncated MDF filename in MDS footer.");
             }
-            if (b == 0)
-            {
+            if (b == 0) {
                 return asciiBuilder.ToString();
             }
             asciiBuilder.Append((char)b);
         }
     }
 
-    private static void ReadAt(Stream stream, long offset, Span<byte> destination)
-    {
+    private static void ReadAt(Stream stream, long offset, Span<byte> destination) {
         stream.Seek(offset, SeekOrigin.Begin);
         int total = 0;
-        while (total < destination.Length)
-        {
+        while (total < destination.Length) {
             int read = stream.Read(destination.Slice(total));
-            if (read <= 0)
-            {
+            if (read <= 0) {
                 throw new InvalidDataException("Unexpected end of MDS stream.");
             }
             total += read;

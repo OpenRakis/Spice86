@@ -133,9 +133,9 @@ public static class FatClusterCodec {
     /// <summary>Returns true if <paramref name="value"/> is an end-of-chain marker for <paramref name="fatType"/>.</summary>
     public static bool IsEndOfChain(uint value, FatType fatType) {
         return fatType switch {
-            FatType.Fat12 => value >= Fat12EndOfChainMin && value <= 0xFFF,
-            FatType.Fat16 => value >= Fat16EndOfChainMin && value <= 0xFFFF,
-            FatType.Fat32 => value >= Fat32EndOfChainMin && value <= Fat32ValueMask,
+            FatType.Fat12 => value is >= Fat12EndOfChainMin and <= 0xFFF,
+            FatType.Fat16 => value is >= Fat16EndOfChainMin and <= 0xFFFF,
+            FatType.Fat32 => value is >= Fat32EndOfChainMin and <= Fat32ValueMask,
             _ => false
         };
     }

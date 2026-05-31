@@ -95,7 +95,7 @@ internal class DosProgramLoader : DosFileLoader {
 
     private DosExecResult ExecuteFloppyBoot(BootFloppyLaunchRequest request) {
         char upper = char.ToUpperInvariant(request.DriveLetter);
-        if (upper != 'A' && upper != 'B') {
+        if (upper is not 'A' and not 'B') {
             return DosExecResult.Fail(DosErrorCode.InvalidDrive);
         }
         if (!_processManager.TryGetMountedImageForBoot(upper, out byte[]? imageData, out string imagePath)) {
