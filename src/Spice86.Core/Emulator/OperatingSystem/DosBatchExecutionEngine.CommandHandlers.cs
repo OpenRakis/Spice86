@@ -308,6 +308,24 @@ internal sealed partial class DosBatchExecutionEngine {
         output.Write(bytes, 0, bytes.Length);
     }
 
+    /// <summary>
+    /// Echoes a batch line to standard output, prefixed with the current DOS prompt
+    /// (e.g. <c>C:\GAMES&gt;</c>). This mirrors the MS-DOS / dosbox-staging behavior of
+    /// displaying each batch line before executing it when ECHO is ON.
+    /// </summary>
+    private void EchoBatchLine(string expandedLine) {
+        char driveLetter = _driveManager.CurrentDrive.DriveLetter;
+        DosFileOperationResult result = _dosFileManager.GetCurrentDir(0, out string currentDir);
+        string prompt;
+        if (result.IsError) {
+            prompt = $"{driveLetter}:\\>";
+        } else {
+            prompt = $"{driveLetter}:\\{currentDir}>";
+        }
+
+        WriteToStandardOutput($"{prompt}{expandedLine}\r\n");
+    }
+
     internal bool HandleType(string arguments) {
         string remaining = arguments.Trim();
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {

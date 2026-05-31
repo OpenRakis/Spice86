@@ -171,7 +171,14 @@ internal sealed partial class DosBatchExecutionEngine {
                 _loggerService.Debug("BATCH: [{BatchFile}] raw='{RawLine}' expanded='{ExpandedLine}'",
                     current.FilePath, line, expandedLine);
             }
-            if (expandedLine.StartsWith('@')) {
+
+            bool suppressedByAt = expandedLine.Length > 0 && expandedLine[0] == '@';
+            bool isBlank = string.IsNullOrWhiteSpace(expandedLine);
+            if (current.EchoEnabled && !suppressedByAt && !isBlank) {
+                EchoBatchLine(expandedLine);
+            }
+
+            if (suppressedByAt) {
                 expandedLine = expandedLine[1..];
             }
 
