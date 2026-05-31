@@ -512,7 +512,9 @@
             On exit (or via <code>monitor dumpall</code> in GDB) Spice86 writes
             <code>spice86dumpMemoryDump.bin</code> (RAM snapshot) and
             <code>spice86dumpExecutionFlow.json</code> (function addresses, labels, executed
-            instructions) to a per-executable subdirectory named by SHA-256 hash.
+            instructions) to a per-executable subdirectory named by SHA-256 hash. The CFG
+            instruction graph is dumped too (<code>spice86dumpCfgReload.json</code>) and reloaded
+            on the next run by default, preserving explored program structure across restarts.
           </p>
         </div>
       </li>
@@ -621,6 +623,7 @@ Spice86 -e game.exe</code></pre>
           <tr><td><code>-a, --ExeArgs</code></td><td>—</td><td>Arguments passed to the emulated program (max 127 chars)</td></tr>
           <tr><td><code>-c, --CDrive</code></td><td>exe parent folder</td><td>Path to the emulated C: drive</td></tr>
           <tr><td><code>-r, --RecordedDataDirectory</code></td><td><code>SPICE86_DUMPS_FOLDER</code> or cwd</td><td>Directory for memory and execution-flow dumps</td></tr>
+          <tr><td><code>--ReloadCfgGraph</code></td><td><code>true</code></td><td>Reload the dumped CFG instruction graph at startup to preserve explored structure across runs</td></tr>
           <tr><td><code>-x, --ExpectedChecksum</code></td><td>—</td><td>Hex SHA-256 of the expected executable; fails if mismatch</td></tr>
           <tr><td><code>-p, --ProgramEntryPointSegment</code></td><td><code>0x170</code></td><td>Segment where the program is loaded</td></tr>
           <tr><td><code>-v, --InitializeDOS</code></td><td>auto (guessed at runtime)</td><td>Install DOS interrupt vectors</td></tr>

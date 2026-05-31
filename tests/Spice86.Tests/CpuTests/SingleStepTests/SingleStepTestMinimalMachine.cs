@@ -16,6 +16,7 @@ using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
+using Spice86.Shared.Utils;
 
 public class SingleStepTestMinimalMachine : IDisposable {
     private readonly IList<uint> _modifiedAddresses = new List<uint>();
@@ -49,7 +50,7 @@ public class SingleStepTestMinimalMachine : IDisposable {
         _cfgNodeExecutionCompiler = executionCompiler;
         Cpu = new CfgCpu(memory, state, ioPortDispatcher, callbackHandler, dualPic,
             emulatorBreakpointsManager, pauseHandler, functionCatalogue, false, false, true, loggerService,
-            executionCompiler);
+            executionCompiler, new SequentialIdAllocator());
     }
 
     public void RestoreMemoryAfterTest() {

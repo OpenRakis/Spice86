@@ -176,13 +176,9 @@ public class NodeLinker : InstructionReplacer {
             return;
         }
         next.Predecessors.Add(current);
-        // Unique successor is only valid if node has 1 successor
-        current.UniqueSuccessor = current.MaxSuccessorsCount == 1 ? next : null;
-        if (current.Successors.Count == current.MaxSuccessorsCount) {
-            // We reached the max number of successors for this node
-            // This means that there is no need to try to link it to other nodes, it is impossible there will be new links.
-            current.CanHaveMoreSuccessors = false;
-        }
+        // Derive UniqueSuccessor / CanHaveMoreSuccessors from the updated successor set. Shared with
+        // the CFG graph reloader via SuccessorInvariant so the live and reload paths cannot drift.
+        SuccessorInvariant.Refresh(current);
         // Block-level reconciliation: single choke-point where block construction,
         // extension, splitting, and discovery state are kept in sync.
         ReconcileBlockAtEdge(current, next);

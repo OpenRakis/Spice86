@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Visitor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Core.Emulator.CPU.CfgCpu.Parser.FieldReader;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser.SpecificParsers;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.CPU.Registers;
@@ -176,13 +177,52 @@ public class InstructionParser {
             ValidateLockPrefix(parsed, prefixes);
             return parsed;
         } catch (CpuException e) {
-            CfgInstruction instruction = new(_parsingTools.IdAllocator.AllocateId(), address, opcodeField, prefixes, null) {
-                Kind = InstructionKind.Invalid
-            };
-            instruction.AttachAsts(
-                new InstructionNode(InstructionOperation.INVALID),
-                new InvalidInstructionNode(instruction, e));
-            return instruction;
+            // Capture how many bytes the decoder consumed before it gave up. NextField / Advance keep
+            // this index in step with every field read (prefixes, opcode, ModRM, SIB, displacement,
+            // immediate), so at the point of failure it is the authoritative consumed length. Read it
+            // here, before BuildInvalidInstruction touches the reader to re-read the trailing span.
+            int consumedLength = _parsingTools.InstructionReader.InstructionReaderAddressSource.IndexInInstruction;
+            return BuildInvalidInstruction(address, prefixes, opcodeField, e, consumedLength);
+        }
+    }
+
+    /// <summary>
+    /// Builds the invalid node for a failed parse, capturing the <b>full byte span the decoder
+    /// consumed</b> (<paramref name="consumedLength"/>) as its byte image. Prefix + opcode fields are
+    /// added by the constructor; any additional bytes the decoder read before faulting (ModRM, SIB,
+    /// displacement, immediate, or the operand bytes of a LOCK-invalid instruction) are appended as
+    /// final raw-byte fields so <see cref="CfgInstruction.Signature"/> / <see cref="CfgInstruction.Length"/>
+    /// / <see cref="CfgInstruction.NextInMemoryAddress32"/> cover the whole span. This makes an invalid
+    /// node round-trippable through the normal parser on CFG reload: re-decoding the exact span
+    /// re-derives the same fault (same <see cref="CpuException"/> subtype / interrupt vector), with no
+    /// special-casing and no serialized exception metadata.
+    /// </summary>
+    private CfgInstruction BuildInvalidInstruction(SegmentedAddress address, List<InstructionPrefix> prefixes,
+        InstructionField<ushort> opcodeField, CpuException exception, int consumedLength) {
+        CfgInstruction instruction = new(_parsingTools.IdAllocator.AllocateId(), address, opcodeField, prefixes, null) {
+            Kind = InstructionKind.Invalid
+        };
+        AppendConsumedTrailingBytes(instruction, consumedLength);
+        instruction.AttachAsts(
+            new InstructionNode(InstructionOperation.INVALID),
+            new InvalidInstructionNode(instruction, exception));
+        return instruction;
+    }
+
+    /// <summary>
+    /// Appends the bytes the decoder consumed past the prefix + opcode (positions
+    /// <c>[instruction.Length, consumedLength)</c>) as individual final <c>byte</c> fields. They carry
+    /// no execution semantics (the node faults), so each is a fixed, non-nullable signature byte. A
+    /// pure opcode-table miss consumes nothing beyond the opcode, so this is a no-op for that shape.
+    /// </summary>
+    private void AppendConsumedTrailingBytes(CfgInstruction instruction, int consumedLength) {
+        InstructionReaderAddressSource addressSource =
+            _parsingTools.InstructionReader.InstructionReaderAddressSource;
+        // instruction.Length currently covers prefixes + opcode; resume reading from there.
+        addressSource.IndexInInstruction = instruction.Length;
+        while (addressSource.IndexInInstruction < consumedLength) {
+            InstructionField<byte> trailingByte = _parsingTools.InstructionReader.UInt8.NextField(true);
+            instruction.AddField(trailingByte);
         }
     }
 

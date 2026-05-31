@@ -27,6 +27,8 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using Spice86.Tests.Utility;
+
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -48,12 +50,6 @@ public class MachineTest
     ];
 
     private readonly ListingExtractor _dumper = new(new(AsmRenderingConfig.CreateSpice86Style()));
-
-    private static readonly JsonSerializerOptions CfgBlocksJsonOptions = new() {
-        WriteIndented = true,
-        Converters = { new JsonStringEnumConverter() },
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
 
     static MachineTest()
     {
@@ -634,8 +630,7 @@ public class MachineTest
     [Fact]
     public void TestPartitionIndirectCallJump_HasCallOutAndAlignedReturn() {
         TestOneBin("partition_indirect_call_jump", [], JitMode.InterpretedOnly, machine => {
-            CfgBlocksJsonExporter exporter = new(new CfgBlockGraphExporter(), new FunctionCatalogue(), new CfgFunctionPartitioner());
-            CfgCpuGraph graph = exporter.BuildGraph(machine.CfgCpu.ExecutionContextManager, null);
+            CfgCpuGraph graph = CfgBlocksTestJson.BuildGraph(machine.CfgCpu.ExecutionContextManager);
 
             graph.Partitions.Should().NotBeNull();
             graph.Partitions.Should().HaveCount(2, "one for the indirect target function, one for the entry point");
@@ -1010,10 +1005,7 @@ public class MachineTest
     }
 
     private void CompareCfgBlocksJsonWithExpected(string binName, Machine machine) {
-        CfgBlocksJsonExporter exporter = new(new CfgBlockGraphExporter(), new FunctionCatalogue(), new CfgFunctionPartitioner());
-        CfgCpuGraph actualGraph = exporter.BuildGraph(machine.CfgCpu.ExecutionContextManager, null);
-
-        string actualJson = JsonSerializer.Serialize(actualGraph, CfgBlocksJsonOptions);
+        string actualJson = CfgBlocksTestJson.Serialize(machine.CfgCpu.ExecutionContextManager);
         //WriteExpectedCfgBlocksJson(binName, actualJson);
         string expectedJson = GetExpectedCfgBlocksJson(binName);
         Assert.Equal(expectedJson, actualJson);

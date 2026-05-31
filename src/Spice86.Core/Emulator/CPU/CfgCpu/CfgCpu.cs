@@ -34,19 +34,18 @@ public class CfgCpu : IFunctionHandlerProvider, IClearable {
         DualPic dualPic, EmulatorBreakpointsManager emulatorBreakpointsManager,
         IPauseHandler pauseHandler,
         FunctionCatalogue functionCatalogue,
-        bool useCodeOverride, bool failOnInvalidOpcode, bool allowIvtAddress0, ILoggerService loggerService, CfgNodeExecutionCompiler executionCompiler, CpuHeavyLogger? cpuHeavyLogger = null) {
+        bool useCodeOverride, bool failOnInvalidOpcode, bool allowIvtAddress0, ILoggerService loggerService, CfgNodeExecutionCompiler executionCompiler, SequentialIdAllocator idAllocator, CpuHeavyLogger? cpuHeavyLogger = null) {
         _loggerService = loggerService;
         _state = state;
         _dualPic = dualPic;
         _cpuHeavyLogger = cpuHeavyLogger;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
-
-        CfgNodeFeeder = new(memory, state, emulatorBreakpointsManager, _replacerRegistry, executionCompiler);
+        CfgNodeFeeder = new(memory, state, emulatorBreakpointsManager, _replacerRegistry, executionCompiler, idAllocator);
         _executionContextManager = new(memory, state, CfgNodeFeeder, _replacerRegistry, functionCatalogue, useCodeOverride, loggerService, cpuHeavyLogger);
         _instructionExecutionHelper = new(state, memory, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager, _executionContextManager, failOnInvalidOpcode, allowIvtAddress0, loggerService);
     }
-    
+
     /// <summary>
     /// Handles at high level parsing, linking and book keeping of nodes from the graph.
     /// </summary>
