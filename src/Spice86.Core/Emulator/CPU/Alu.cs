@@ -20,29 +20,6 @@ public abstract class Alu<TUnsigned, TSigned, TUnsignedUpper, TSignedUpper>
     where TUnsignedUpper : IUnsignedNumber<TUnsignedUpper>
     where TSignedUpper : ISignedNumber<TSignedUpper> {
     /// <summary>
-    /// Shifting this by the number we want to test gives 1 if number of bit is even and 0 if odd.<br/>
-    /// Hardcoded numbers:<br/>
-    /// 0 -> 0000: even -> 1<br/>
-    /// 1 -> 0001: 1 bit so odd -> 0<br/>
-    /// 2 -> 0010: 1 bit so odd -> 0<br/>
-    /// 3 -> 0011: 2 bit so even -> 1<br/>
-    /// 4 -> 0100: 1 bit so odd -> 0<br/>
-    /// 5 -> 0101: even -> 1<br/>
-    /// 6 -> 0110: even -> 1<br/>
-    /// 7 -> 0111: odd -> 0<br/>
-    /// 8 -> 1000: odd -> 0<br/>
-    /// 9 -> 1001: even -> 1<br/>
-    /// A -> 1010: even -> 1<br/>
-    /// B -> 1011: odd -> 0<br/>
-    /// C -> 1100: even -> 1<br/>
-    /// D -> 1101: odd -> 0<br/>
-    /// E -> 1110: odd -> 0<br/>
-    /// F -> 1111: even -> 1<br/>
-    /// => lookup table is 1001011001101001
-    /// </summary>
-    private const uint FourBitParityTable = 0b1001011001101001;
-
-    /// <summary>
     /// The mask value of 0x1F (or 31 in decimal) effectively discards all but the 5 least significant bits of the shift count, thus ensuring it is within the range 0-31.
     /// </summary>
     protected const int ShiftCountMask = 0x1F;
@@ -166,9 +143,7 @@ public abstract class Alu<TUnsigned, TSigned, TUnsignedUpper, TSignedUpper>
     /// Returns whether the given byte has even parity.
     /// </summary>
     private static bool IsParity(byte value) {
-        int low4 = value & 0xF;
-        int high4 = value >> 4 & 0xF;
-        return (FourBitParityTable >> low4 & 1) == (FourBitParityTable >> high4 & 1);
+        return (BitOperations.PopCount(value) & 1) == 0;
     }
 
     // from https://www.vogons.org/viewtopic.php?t=55377
