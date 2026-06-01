@@ -13,6 +13,7 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
+using Spice86.Shared.Utils;
 
 /// <summary>
 /// Builds the common Memory + State + ExecutionContextManager graph used by multiple test classes.
@@ -37,7 +38,7 @@ internal sealed class ExecutionContextManagerFactory : IDisposable {
         Spice86.Core.Emulator.VM.PauseHandler pauseHandler = new(loggerService);
         CfgNodeFeeder feeder = new(Memory, State, new EmulatorBreakpointsManager(
             pauseHandler, State, Memory,
-            memoryBreakpoints, new AddressReadWriteBreakpoints()), replacerRegistry, _compiler);
+            memoryBreakpoints, new AddressReadWriteBreakpoints()), replacerRegistry, _compiler, new SequentialIdAllocator());
         ContextManager = new ExecutionContextManager(Memory, State, feeder, replacerRegistry,
             functionCatalogue, false, loggerService, null);
     }

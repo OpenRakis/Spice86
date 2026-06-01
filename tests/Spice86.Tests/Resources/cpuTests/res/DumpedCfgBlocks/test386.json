@@ -5093,7 +5093,7 @@
         "B80010|mov AX,0x1000",
         "8ED0|mov SS,AX",
         "BCFFFF|mov SP,0xFFFF",
-        "8E|invalid"
+        "8ECA|invalid"
       ]
     },
     {
@@ -5302,7 +5302,7 @@
         "B80010|mov AX,0x1000",
         "8ED0|mov SS,AX",
         "BCFFFF|mov SP,0xFFFF",
-        "8E|invalid"
+        "8E0E0000|invalid"
       ]
     },
     {

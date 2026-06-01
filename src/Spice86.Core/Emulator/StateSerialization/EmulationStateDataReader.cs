@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.StateSerialization;
 
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.StateSerialization.CfgReload;
 using Spice86.Shared.Emulator.VM.Breakpoint.Serializable;
 using Spice86.Shared.Interfaces;
 
@@ -57,5 +58,27 @@ public class EmulationStateDataReader : EmulationStateDataIoHandler {
         }
 
         return res;
+    }
+
+    /// <summary>
+    /// Reads the machine-oriented CFG reload dump from a file, or returns <c>null</c> if the file does
+    /// not exist or is empty.
+    /// </summary>
+    internal CfgReloadDump? ReadCfgReloadFromFileOrNull() {
+        if (!File.Exists(CfgReloadFile) || new FileInfo(CfgReloadFile).Length == 0) {
+            return null;
+        }
+
+        string jsonString = File.ReadAllText(CfgReloadFile);
+        if (string.IsNullOrWhiteSpace(jsonString)) {
+            return null;
+        }
+
+        CfgReloadDump? dump = JsonSerializer.Deserialize<CfgReloadDump>(jsonString, CfgReloadSerialization.Options);
+        if (dump != null && LoggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            LoggerService.Information("Loaded CFG reload dump with {Count} nodes", dump.Nodes.Length);
+        }
+
+        return dump;
     }
 }

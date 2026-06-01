@@ -62,6 +62,8 @@ The emulator dumps the following files:
 
 When there is already data in the specified location, the emulator will load it first and complement it.
 
+**CFG graph reload:** The CFG instruction graph is also dumped (**spice86dumpCfgReload.json**) and, by default, reloaded from the recorded data directory at startup so previously explored program structure is preserved across runs. Disable with `--ReloadCfgGraph false`. It is a no-op if the file is absent.
+
 ### CPU Heavy Logging
 
 For detailed debugging, you can enable CPU heavy logging which records every executed instruction to a file.
@@ -131,6 +133,7 @@ Spice86 -e program.exe --CpuHeavyLog \
   --CpuHeavyLog                      (Default: false) Enable CPU heavy logging. Logs every executed instruction to a file. Warning: significant performance impact.
   --CpuHeavyLogDumpFile              Custom file path for CPU heavy log output. If not specified, defaults to {DumpDirectory}/cpu_heavy.log
   --CpuHeavyLogExpressions           (Default: none) Named expressions appended to every CPU heavy log line. Repeat the option for each expression to append (for example: --CpuHeavyLogExpressions "life=AX+1"). Only active when --CpuHeavyLog is true.
+  --ReloadCfgGraph                   (Default: true) Reload the previously dumped CFG instruction graph (spice86dumpCfgReload.json) at startup so explored program structure is preserved across runs. No-op if the file is absent.
   --AsmRenderingStyle                Style of the ASM rendering. Spice86 or DosBox.
   --StructureFile                    Path to a C header file that describes the structures in the application. Works best with exports from IDA or Ghidra
   --mcp-http-port                    (Default: 8081) Port for the MCP HTTP server
@@ -474,6 +477,12 @@ or use this where Spice86.csproj is located:
 
 ```bash
    dotnet run -e <path to executable>
+```
+
+if you don't want to manually build and run separately, use the helper script at the root of the repository which builds and runs the app, passing all arguments through:
+
+```bash
+   ./run.sh -e <path to executable>
 ```
 
 ### Ghidra plugin

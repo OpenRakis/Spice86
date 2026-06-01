@@ -8,6 +8,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning;
+using Spice86.Core.Emulator.StateSerialization.CfgReload;
 using Spice86.Core.Emulator.StateSerialization.FunctionPartitioning;
 
 using System.Linq;
@@ -110,7 +111,7 @@ public class CfgBlocksJsonExporter {
             switch (node) {
                 case CfgInstruction instruction:
                     string assembly = instruction.DisplayAst.Accept(_renderer);
-                    string sigHex = string.Concat(instruction.Signature.SignatureValue.Select(b => b.HasValue ? b.Value.ToString("X2") : "__"));
+                    string sigHex = SigHex.Encode(instruction.Signature.SignatureValue);
                     asm.Add($"{sigHex}|{assembly}");
                     break;
                 case SelectorNode:

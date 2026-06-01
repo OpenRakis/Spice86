@@ -82,14 +82,8 @@ public class CfgCpuViewModelTest : IDisposable {
             InstructionReplacerRegistry replacerRegistry = new();
             _monitor = new CfgNodeExecutionCompilerMonitor(_loggerService);
             _compiler = new CfgNodeExecutionCompiler(_monitor, _loggerService, JitMode.InterpretedOnly);
-            CfgNodeFeeder cfgNodeFeeder = new(Memory, State, breakpointsManager, replacerRegistry, _compiler);
-            // Share one allocator between the parser and the linker so IDs are globally
-            // unique within this harness. This mirrors what CfgNodeFeeder does in production
-            // (it passes the same SequentialIdAllocator to both InstructionsFeeder and its
-            // internal NodeLinker). Without sharing, the two allocators both start at 0 and
-            // produce colliding IDs: a SelectorNode allocated by the linker would get the
-            // same ID as an already-parsed CfgInstruction, breaking HashSet lookups.
             SequentialIdAllocator sharedIdAllocator = new();
+            CfgNodeFeeder cfgNodeFeeder = new(Memory, State, breakpointsManager, replacerRegistry, _compiler, sharedIdAllocator);
             Linker = new NodeLinker(replacerRegistry, _compiler, sharedIdAllocator);
             ContextManager = new ExecutionContextManager(
                 Memory, State, cfgNodeFeeder, replacerRegistry,

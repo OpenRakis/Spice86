@@ -11,6 +11,10 @@ By recording execution as a graph, the system captures:
 
 This also opens the door to JIT-compiling hot blocks in the future.
 
+## Graph Persistence
+
+On exit the graph is dumped to `spice86dumpCfgReload.json` (a machine-oriented artifact separate from the LLM-optimized `spice86dumpCfgBlocks.json`). At startup it is reloaded from the recorded data directory into live emulator state, so previously explored program structure is preserved across runs. This is on by default; disable with `--ReloadCfgGraph false`, and it is a no-op when the file is absent.
+
 ## Node Types
 
 ### CfgNode
