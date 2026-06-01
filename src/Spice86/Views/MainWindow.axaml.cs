@@ -9,6 +9,8 @@ using Spice86.ViewModels;
 
 using System.Runtime.InteropServices;
 
+using AvaloniaMouseButton = Avalonia.Input.MouseButton;
+
 namespace Spice86.Views;
 
 internal partial class MainWindow : Window {
@@ -21,6 +23,19 @@ internal partial class MainWindow : Window {
     private double _sdlCapturedMouseX = 0.5;
     private double _sdlCapturedMouseY = 0.5;
     private DispatcherTimer? _relativePollTimer;
+    private bool _windowClosed;
+
+    public void ShowMouseCursor() {
+        if (DataContext is MainWindowViewModel mainVm) {
+            mainVm.Display.ShowMouseCursor();
+        }
+    }
+
+    public void HideMouseCursor() {
+        if (DataContext is MainWindowViewModel mainVm) {
+            mainVm.Display.HideMouseCursor();
+        }
+    }
 
     /// <summary>
     /// Initializes a new instance
@@ -44,17 +59,23 @@ internal partial class MainWindow : Window {
     private void MainWindow_Loaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e) {
         Dispatcher.UIThread.Post(() => {
             if (DataContext is MainWindowViewModel mainVm) {
-                mainVm.CloseMainWindow += (_, _) => Close();
-                mainVm.InvalidateBitmap += Image.InvalidateVisual;
+                mainVm.Display.InvalidateBitmap += Image.InvalidateVisual;
                 Image.PointerMoved += OnMouseMoved;
                 Image.PointerPressed += OnPointerPressed;
                 Image.PointerReleased += OnMouseButtonUp;
                 InitializeMouseCapture();
                 UpdateCaptureUiState();
                 FocusOnVideoBuffer();
-                mainVm.StartEmulator();
+                _ = StartMainWindowSessionAsync(mainVm);
             }
         }, DispatcherPriority.Background);
+    }
+
+    private async Task StartMainWindowSessionAsync(MainWindowViewModel mainVm) {
+        bool shouldCloseWindow = await mainVm.StartEmulatorAsync();
+        if (shouldCloseWindow && !_windowClosed) {
+            Close();
+        }
     }
 
     private void InitializeMouseCapture() {
@@ -99,15 +120,6 @@ internal partial class MainWindow : Window {
         return platformHandle.Handle;
     }
 
-    public static readonly StyledProperty<PerformanceViewModel?> PerformanceViewModelProperty =
-        AvaloniaProperty.Register<MainWindow, PerformanceViewModel?>(nameof(PerformanceViewModel),
-            defaultValue: null);
-
-    public PerformanceViewModel? PerformanceViewModel {
-        get => GetValue(PerformanceViewModelProperty);
-        set => SetValue(PerformanceViewModelProperty, value);
-    }
-
     private void OnMouseMoved(object? sender, PointerEventArgs e) {
         // When SDL relative mode is active, Avalonia pointer events are not useful;
         // deltas are fed by the polling timer instead.
@@ -115,33 +127,32 @@ internal partial class MainWindow : Window {
             return;
         }
 
-        if (this.DataContext is MainWindowViewModel mainVm) {
-            mainVm.OnMouseMoved(e, Image);
+        if (DataContext is MainWindowViewModel mainVm) {
+            mainVm.Display.OnMouseMoved(e, Image);
         }
     }
 
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e) {
-        if (this.DataContext is not MainWindowViewModel mainVm) {
-            return;
-        }
-
         if (e.GetCurrentPoint(Image).Properties.IsMiddleButtonPressed) {
             // Toggle happens on release; consume the press here.
             e.Handled = true;
             return;
         }
 
-        mainVm.OnMouseButtonDown(e, Image);
+        if (DataContext is MainWindowViewModel mainVm) {
+            mainVm.Display.OnMouseButtonDown(e, Image);
+        }
     }
 
     private void OnMouseButtonUp(object? sender, PointerReleasedEventArgs e) {
-        if (this.DataContext is MainWindowViewModel mainVm) {
-            if (e.InitialPressMouseButton == MouseButton.Middle) {
-                ToggleMouseCapture();
-                e.Handled = true;
-                return;
-            }
-            mainVm.OnMouseButtonUp(e, Image);
+        if (e.InitialPressMouseButton == AvaloniaMouseButton.Middle) {
+            ToggleMouseCapture();
+            e.Handled = true;
+            return;
+        }
+
+        if (DataContext is MainWindowViewModel mainVm) {
+            mainVm.Display.OnMouseButtonUp(e, Image);
         }
     }
 
@@ -240,7 +251,7 @@ internal partial class MainWindow : Window {
         _sdlCapturedMouseX = Math.Clamp(_sdlCapturedMouseX + normalizedDx, 0.0, 1.0);
         _sdlCapturedMouseY = Math.Clamp(_sdlCapturedMouseY + normalizedDy, 0.0, 1.0);
 
-        mainVm.OnMouseMovedNormalized(_sdlCapturedMouseX, _sdlCapturedMouseY);
+        mainVm.Display.OnMouseMovedNormalized(_sdlCapturedMouseX, _sdlCapturedMouseY);
     }
 
     private void UpdateCaptureUiState() {
@@ -257,12 +268,12 @@ internal partial class MainWindow : Window {
     }
 
     private void OnMenuKeyUp(object? sender, KeyEventArgs e) {
-        (DataContext as MainWindowViewModel)?.OnKeyUp(e);
+        (DataContext as MainWindowViewModel)?.Display.OnKeyUp(e);
         e.Handled = true;
     }
 
     private void OnMenuKeyDown(object? sender, KeyEventArgs e) {
-        (DataContext as MainWindowViewModel)?.OnKeyDown(e);
+        (DataContext as MainWindowViewModel)?.Display.OnKeyDown(e);
         e.Handled = true;
     }
 
@@ -272,14 +283,13 @@ internal partial class MainWindow : Window {
 
     protected override void OnKeyUp(KeyEventArgs e) {
         FocusOnVideoBuffer();
-        MainWindowViewModel? mainWindowViewModel = DataContext as MainWindowViewModel;
-        mainWindowViewModel?.OnKeyUp(e);
+        (DataContext as MainWindowViewModel)?.Display.OnKeyUp(e);
         e.Handled = true;
     }
 
     protected override void OnKeyDown(KeyEventArgs e) {
         FocusOnVideoBuffer();
-        (DataContext as MainWindowViewModel)?.OnKeyDown(e);
+        (DataContext as MainWindowViewModel)?.Display.OnKeyDown(e);
         e.Handled = true;
     }
 
@@ -290,6 +300,7 @@ internal partial class MainWindow : Window {
     }
 
     protected override void OnClosed(EventArgs e) {
+        _windowClosed = true;
         Deactivated -= OnWindowDeactivated;
         if (_captureBackend is { UsesRelativeMouseMode: false }) {
             PositionChanged -= OnWindowPositionChanged;

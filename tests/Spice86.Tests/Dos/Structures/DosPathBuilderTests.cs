@@ -67,7 +67,7 @@ public class DosPathBuilderTests {
     [InlineData("LPT³", DosSpecialFileName.ParallelPort3)]
     internal void SpecialFileNames_DefaultSettings(string fileName, DosSpecialFileName expectedSpecialFileName) {
         // Arrange
-        using DosPathBuilder builder = new();
+        using DosPathBuilder builder = DosPathBuilder.Create();
 
         // Act
         // Documentation for ParseSpecialFileName() indicates that leading white space must always be trimmed.
@@ -87,17 +87,20 @@ public class DosPathBuilderTests {
     [InlineData("LPT³", DosSpecialFileName.Invalid)]
     internal void SpecialFileNames_NoDeviceSuperscriptSetting(string fileName, DosSpecialFileName expectedSpecialFileName) {
         // Arrange
-        using DosPathBuilder builder = new() {
-            SpecialFileNameSettings = DosSpecialFileNameSettings.NoDeviceSuperscriptDigits
-        };
+        DosPathBuilder builder = DosPathBuilder.Create();
+        builder.SpecialFileNameSettings = DosSpecialFileNameSettings.NoDeviceSuperscriptDigits;
 
-        // Act
-        // Documentation for ParseSpecialFileName() indicates that leading white space must always be trimmed.
-        ReadOnlySpan<char> fileNameTrimmed = fileName.AsSpan().TrimStart();
-        DosSpecialFileName result = builder.ParseSpecialFileName(fileNameTrimmed);
+        try {
+            // Act
+            // Documentation for ParseSpecialFileName() indicates that leading white space must always be trimmed.
+            ReadOnlySpan<char> fileNameTrimmed = fileName.AsSpan().TrimStart();
+            DosSpecialFileName result = builder.ParseSpecialFileName(fileNameTrimmed);
 
-        // Assert
-        result.Should().Be(expectedSpecialFileName);
+            // Assert
+            result.Should().Be(expectedSpecialFileName);
+        } finally {
+            builder.Dispose();
+        }
     }
 
     [Theory]
@@ -128,7 +131,7 @@ public class DosPathBuilderTests {
     public void BuildPath_Drive_Relative_Rooted_FileName(char driveLetter, string? appendRelativePath, string? appendRootedPathAfterRelative,
             string? appendFileName, string expectedPath) {
         // Arrange
-        using DosPathBuilder builder = new();
+        using DosPathBuilder builder = DosPathBuilder.Create();
 
         // Act
         DosPathBuilderResult resultSetDriveLetter = builder.SetDriveLetter(driveLetter);
@@ -161,7 +164,7 @@ public class DosPathBuilderTests {
     [InlineData("foo.. .")]
     public void AppendFileName_TrailingDotExposedByWhitespace_IsRejected(string fileName) {
         // Arrange
-        using DosPathBuilder builder = new();
+        using DosPathBuilder builder = DosPathBuilder.Create();
         DosPathBuilderResult resultSetDriveLetter = builder.SetDriveLetter('C');
 
         // Act
@@ -177,7 +180,7 @@ public class DosPathBuilderTests {
     [InlineData("foo.. .")]
     public void AppendRelativePath_TrailingDotExposedByWhitespace_IsRejected(string relativePath) {
         // Arrange
-        using DosPathBuilder builder = new();
+        using DosPathBuilder builder = DosPathBuilder.Create();
         DosPathBuilderResult resultSetDriveLetter = builder.SetDriveLetter('C');
 
         // Act

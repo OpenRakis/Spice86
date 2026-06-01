@@ -6,7 +6,9 @@ using NSubstitute;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Video;
+using Spice86.Core.Emulator.InterruptHandlers.Mscdex;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Core.Emulator.Memory.Mmu;
@@ -386,9 +388,15 @@ public class DosProcessManagerTests {
 
         DosDriveManager driveManager = DosTestHelpers.CreateDriveManager(loggerService, null);
         DosMemoryManager memoryManager = new(memory, initialPspSegment, loggerService);
-        DosCodePageState dosCodePageState = new(850, CountryId.UnitedStates);
+        DosCodePageState dosCodePageState = DosCodePageState.Create(850, CountryId.UnitedStates);
         DosFileManager fileManager = new(memory, new DosStringDecoder(memory, state, dosCodePageState), driveManager, loggerService, new List<IVirtualDevice>());
         IBatchDisplayCommandHandler batchDisplayCommandHandler = new DosBatchDisplayCommandHandler(vgaFunctionality);
+        Mscdex mscdex = new(state, memory, loggerService);
+        DosDriveStatusProvider driveStatusProvider = new(driveManager, mscdex);
+
+        ISoundChannelCreator channelCreator = Substitute.For<ISoundChannelCreator>();
+        channelCreator.AddChannel(Arg.Any<Action<int>>(), Arg.Any<int>(), Arg.Any<string>(), Arg.Any<HashSet<ChannelFeature>>())
+            .Returns(callInfo => new SoundChannel((Action<int>)callInfo[0], (string)callInfo[2], (HashSet<ChannelFeature>)callInfo[3]));
 
         DosProcessManager processManager = new(
             memory,
@@ -397,6 +405,9 @@ public class DosProcessManagerTests {
             memoryManager,
             fileManager,
             driveManager,
+            driveStatusProvider,
+            mscdex,
+            channelCreator,
             batchDisplayCommandHandler,
             new Dictionary<string, string>(),
             loggerService);

@@ -2,88 +2,46 @@
 
 using Serilog.Events;
 
-using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.CPU.CfgCpu;
-using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.Gdb;
-using Spice86.Core.Emulator.InterruptHandlers.Dos;
-using Spice86.Core.Emulator.LoadableFile;
-using Spice86.Core.Emulator.LoadableFile.Bios;
-using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.OperatingSystem;
-using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Core.Emulator.VM;
-using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Logging;
-using Spice86.Shared.Emulator.Errors;
-using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
-using Spice86.Shared.Utils;
-
-using System.IO;
-using System.Security.Cryptography;
 
 /// <summary>
-/// The class that is responsible for executing a program in the emulator. Supports COM, EXE, and BIOS files.
+/// Runs the loaded program inside the emulator. Acts as a thin facade composing
+/// <see cref="ProgramBootstrapper"/>, <see cref="ExecutionPolicy"/>, the emulation loop,
+/// state serialization, and the shutdown coordinator.
 /// </summary>
 public sealed class ProgramExecutor : IDisposable {
     private bool _disposed;
     private readonly ILoggerService _loggerService;
-    private readonly IPauseHandler _pauseHandler;
-    private readonly Configuration _configuration;
-    private readonly GdbServer? _gdbServer;
     private readonly EmulationLoop _emulationLoop;
-    private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly EmulatorStateSerializer _emulatorStateSerializer;
-    public event EventHandler? EmulationStopped;
+    private readonly IShutdownCoordinator _shutdownCoordinator;
+    private readonly ExecutionPolicy _executionPolicy;
 
     /// <summary>
-    /// Initializes a new instance of <see cref="ProgramExecutor"/>
+    /// Initializes a new instance of <see cref="ProgramExecutor"/>. The initial program is loaded eagerly
+    /// from <paramref name="programBootstrapper"/> so that <see cref="Run"/> only deals with execution.
     /// </summary>
-    /// <param name="configuration">The emulator <see cref="Configuration"/> to use.</param>
-    /// <param name="emulationLoop">The class that runs the core emulation process.</param>
-    /// <param name="emulatorBreakpointsManager">The class that manages machine code execution breakpoints.</param>
-    /// <param name="emulatorStateSerializer">The class that is responsible for serializing the state of the emulator to a directory.</param>
-    /// <param name="memory">The memory bus.</param>
-    /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
-    /// <param name="state">The CPU registers and flags.</param>
-    /// <param name="int21Handler">The central DOS interrupt handler, used to load DOS programs.</param>
-    /// <param name="pauseHandler">The object responsible for pausing an resuming the emulation.</param>
-    /// <param name="screenPresenter">The user interface class that displays video output in a dedicated thread.</param>
+    /// <param name="programBootstrapper">Loads the configured executable into memory.</param>
+    /// <param name="executionPolicy">Owns GDB, stop-after-cycles, and debug-pause breakpoints.</param>
+    /// <param name="emulationLoop">The core emulation loop driver.</param>
+    /// <param name="emulatorStateSerializer">Writes the recorded emulation state on normal exit.</param>
+    /// <param name="shutdownCoordinator">Coordinates idempotent post-run teardown.</param>
     /// <param name="loggerService">The logging service to use.</param>
-    public ProgramExecutor(
-        Configuration configuration,
+    internal ProgramExecutor(
+        ProgramBootstrapper programBootstrapper,
+        ExecutionPolicy executionPolicy,
         EmulationLoop emulationLoop,
-        EmulatorBreakpointsManager emulatorBreakpointsManager,
         EmulatorStateSerializer emulatorStateSerializer,
-        IMemory memory,
-        IFunctionHandlerProvider functionHandlerProvider,
-        State state,
-        DosInt21Handler int21Handler,
-        IPauseHandler pauseHandler,
-        IGuiVideoPresentation? screenPresenter,
+        IShutdownCoordinator shutdownCoordinator,
         ILoggerService loggerService) {
-        _configuration = configuration;
         _emulationLoop = emulationLoop;
-        _loggerService = loggerService;
         _emulatorStateSerializer = emulatorStateSerializer;
-        _pauseHandler = pauseHandler;
-        _emulatorBreakpointsManager = emulatorBreakpointsManager;
-        _gdbServer = CreateGdbServer(
-            configuration,
-            memory,
-            functionHandlerProvider,
-            state,
-            pauseHandler,
-            emulatorBreakpointsManager,
-            emulatorStateSerializer,
-            _loggerService);
-
-        if (screenPresenter is not null) {
-            screenPresenter.UserInterfaceInitialized += Run;
-        }
-        LoadInitialProgram(configuration, memory, state, int21Handler);
+        _shutdownCoordinator = shutdownCoordinator;
+        _executionPolicy = executionPolicy;
+        _loggerService = loggerService;
+        programBootstrapper.LoadInitialProgram();
     }
 
     /// <summary>
@@ -95,133 +53,32 @@ public sealed class ProgramExecutor : IDisposable {
                 _loggerService.Information("Starting the emulation loop");
             }
 
-            if (_configuration.Debug) {
-                ToggleStartOrStopBreakpoint(BreakPointType.MACHINE_START,
-                    "Starting the emulated program in paused state.");
-                ToggleStartOrStopBreakpoint(BreakPointType.MACHINE_STOP,
-                    "Stopping the emulated program in paused state.");
-            }
-
-            _gdbServer?.StartServer();
-
-            RegisterStopAfterCyclesBreakpoint(_configuration.StopAfterCycles);
+            _executionPolicy.ApplyStartupBreakpoints();
+            _executionPolicy.StartGdbServer();
+            _executionPolicy.RegisterStopAfterCyclesBreakpoint();
 
             _emulationLoop.Run();
 
             _emulatorStateSerializer.EmulationStateDataWriter.Write();
         } finally {
-            EmulationStopped?.Invoke(this, EventArgs.Empty);
+            _shutdownCoordinator.Shutdown();
         }
-    }
-
-    private void RegisterStopAfterCyclesBreakpoint(long cycles) {
-        // Emulation loop checks breakpoints just after entering the loop, so will always execute the next instruction.
-        long targetCycles = cycles - 1;
-        if (targetCycles <= 0) {
-            return;
-        }
-
-        AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.CPU_CYCLES, targetCycles,
-            _ => _emulationLoop.Exit(), isRemovedOnTrigger: true);
-        _emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
-    }
-
-    private void ToggleStartOrStopBreakpoint(BreakPointType type, string reason) {
-        BreakPoint breakPoint = new UnconditionalBreakPoint(type, (breakpoint) => { _pauseHandler.RequestPause(reason); }, removeOnTrigger: false);
-        _emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
-    }
-
-    private static void CheckSha256Checksum(byte[] file, byte[]? expectedHash) {
-        ArgumentNullException.ThrowIfNull(expectedHash, nameof(expectedHash));
-        if (expectedHash.Length == 0) {
-            // No hash check
-            return;
-        }
-
-        byte[] actualHash = SHA256.HashData(file);
-
-        if (!actualHash.AsSpan().SequenceEqual(expectedHash)) {
-            string error =
-                $"File does not match the expected SHA256 checksum, cannot execute it.\nExpected checksum is {ConvertUtils.ByteArrayToHexString(expectedHash)}.\nGot {ConvertUtils.ByteArrayToHexString(actualHash)}\n";
-            throw new UnrecoverableException(error);
-        }
-    }
-
-    private void LoadInitialProgram(Configuration configuration, IMemory memory, State state, DosInt21Handler int21Handler) {
-        string? executableFileName = configuration.Exe;
-        ArgumentException.ThrowIfNullOrEmpty(executableFileName);
-
-        string upperCaseExtension = Path.GetExtension(executableFileName.ToUpperInvariant());
-        bool isDosProgram = upperCaseExtension is ".EXE" or ".COM" or ".BAT";
-
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Preparing initial load for {FileName} (DOS program: {IsDosProgram})", executableFileName, isDosProgram);
-        }
-
-        ExecutableFileLoader loader;
-
-        if (isDosProgram) {
-            loader = upperCaseExtension == ".BAT"
-                ? new DosBatchProgramLoader(configuration, memory, state, int21Handler, _loggerService)
-                : new DosProgramLoader(configuration, memory, state, int21Handler, _loggerService);
-        } else {
-            loader = new BiosLoader(memory, state, _loggerService);
-        }
-
-        try {
-            if (configuration.InitializeDOS is null) {
-                configuration.InitializeDOS = loader.DosInitializationNeeded;
-                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                    _loggerService.Verbose("InitializeDOS parameter not provided. Guessed value is: {InitializeDOS}", configuration.InitializeDOS);
-                }
-            }
-            byte[] fileContent = loader.LoadFile(executableFileName, configuration.ExeArgs);
-            CheckSha256Checksum(fileContent, configuration.ExpectedChecksumValue);
-        } catch (IOException e) {
-            throw new UnrecoverableException($"Failed to read file {executableFileName}", e);
-        }
-    }
-
-    private static GdbServer? CreateGdbServer(
-        Configuration configuration,
-        IMemory memory,
-        IFunctionHandlerProvider functionHandlerProvider,
-        State state,
-        IPauseHandler pauseHandler,
-        EmulatorBreakpointsManager emulatorBreakpointsManager,
-        EmulatorStateSerializer emulatorStateSerializer,
-        ILoggerService loggerService) {
-        if (configuration.GdbPort == 0) {
-            if (loggerService.IsEnabled(LogEventLevel.Information)) {
-                loggerService.Information("GDB port is 0, disabling GDB server.");
-            }
-            return null;
-        }
-        return new GdbServer(
-            configuration,
-            memory,
-            functionHandlerProvider,
-            state,
-            pauseHandler,
-            emulatorBreakpointsManager,
-            emulatorStateSerializer,
-            loggerService);
     }
 
     /// <inheritdoc cref="IDisposable" />
     public void Dispose() {
-        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
     }
 
     private void Dispose(bool disposing) {
-        if (!_disposed) {
-            if (disposing) {
-                _gdbServer?.Dispose();
-                _emulationLoop.Exit();
-            }
-            _disposed = true;
+        if (_disposed) {
+            return;
         }
+        if (disposing) {
+            _executionPolicy.Dispose();
+            _emulationLoop.Exit();
+        }
+        _disposed = true;
     }
 }

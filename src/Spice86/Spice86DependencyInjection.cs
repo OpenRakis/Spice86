@@ -97,9 +97,9 @@ public class Spice86DependencyInjection : IDisposable {
     private readonly McpHttpHost? _mcpHttpTransport;
     private readonly DeviceSchedulerThread? _vgaTimingThread;
     private readonly CfgNodeExecutionCompiler _cfgNodeExecutionCompiler;
+    private readonly IShutdownCoordinator _shutdownCoordinator;
     private readonly DebuggerTabRegistry _debuggerTabRegistry;
     private bool _disposed;
-    private bool _machineDisposedAfterRun;
 
     public Spice86DependencyInjection(Configuration configuration)
         : this(configuration, null) {
@@ -217,6 +217,7 @@ public class Spice86DependencyInjection : IDisposable {
         pauseHandler.Resumed += () => _emulatedClock.OnResume();
 
         DeviceScheduler emulationLoopScheduler = new(_emulatedClock, loggerService, "Emulation loop");
+        FloppyDiskTimingService floppyDiskTimingService = new(state, _emulatedClock, emulationLoopScheduler, FloppyDiskSpeed.Maximum);
 
         var dualPic = new DualPic(ioPortDispatcher, state, loggerService, configuration.FailOnUnhandledPort);
 
@@ -383,8 +384,6 @@ public class Spice86DependencyInjection : IDisposable {
 
         SystemClockInt1AHandler systemClockInt1AHandler = new(memory, biosDataArea,
             realTimeClock, cfgCpu, stack, state, loggerService);
-        SystemBiosInt13Handler systemBiosInt13Handler = new(memory,
-            cfgCpu, stack, state, loggerService);
         RtcInt70Handler rtcInt70Handler = new(memory, cfgCpu, stack, state,
             dualPic, biosDataArea, ioPortDispatcher, loggerService);
 
@@ -393,6 +392,7 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         SoftwareMixer mixer = new(configuration.AudioEngine, pauseHandler);
+        DriveActivityNotifier driveActivityNotifier = new();
         var midiDevice = new Midi(configuration, mixer, state,
             ioPortDispatcher, configuration.Mt32RomsPath,
             configuration.FailOnUnhandledPort, loggerService);
@@ -471,12 +471,28 @@ public class Spice86DependencyInjection : IDisposable {
             keyboardInt16Handler, biosDataArea, vgaFunctionality,
             new Dictionary<string, string> {
                 { "BLASTER", soundBlaster.BlasterString } }, ioPortDispatcher, loggerService,
-            xms);
+            floppyDiskTimingService,
+            mixer, driveActivityNotifier, xms);
+
+        DmaChannel fdcDmaChannel = dmaSystem.GetChannel(2)
+            ?? throw new InvalidOperationException("DMA channel 2 unavailable for Floppy Disk Controller.");
+        FloppyDiskTransferService floppyDiskTransferService = new(dos.DosDriveManager, fdcDmaChannel, driveActivityNotifier, floppyDiskTimingService);
+        FloppyDiskController floppyDiskController = new(state, ioPortDispatcher,
+            configuration.FailOnUnhandledPort, loggerService, dualPic, floppyDiskTransferService);
+        SystemBiosInt13Handler systemBiosInt13Handler = new(memory,
+            cfgCpu, stack, state, dos.DosDriveManager, mixer, driveActivityNotifier, floppyDiskTimingService, loggerService);
+
+        if (loggerService.IsEnabled(LogEventLevel.Information)) {
+            loggerService.Information("Floppy controller and BIOS disk handler created...");
+        }
 
         MainWindowViewModel? mainWindowViewModel = null;
         UIDispatcher? uiDispatcher = null;
         HostStorageProvider? hostStorageProvider = null;
         TextClipboard? textClipboard = null;
+        EmulatorDisplayViewModel? displayViewModel = null;
+        PerformanceViewModel? performanceViewModel = null;
+        IExceptionHandler? exceptionHandler = null;
         InputEventHub inputEventHub;
 
         if (mainWindow != null) {
@@ -486,41 +502,20 @@ public class Spice86DependencyInjection : IDisposable {
             textClipboard = new TextClipboard(mainWindow.Clipboard);
 
             PerformanceTracker performanceTracker = new PerformanceTracker(new SystemTimeProvider());
-
-            PerformanceViewModel performanceViewModel = new(
+            performanceViewModel = new PerformanceViewModel(
                 state, pauseHandler, uiDispatcher, performanceTracker);
 
-            mainWindow.PerformanceViewModel = performanceViewModel;
-
-            IExceptionHandler exceptionHandler = configuration.HeadlessMode switch {
+            exceptionHandler = configuration.HeadlessMode switch {
                 null => new MainWindowExceptionHandler(pauseHandler),
                 _ => new HeadlessModeExceptionHandler(uiDispatcher)
             };
 
-            MainWindowViewModel.MainWindowViewModelDependencies mainWindowDependencies = new() {
-                SharedMouseData = sharedMouseData,
-                Pit = pitTimer,
-                UiDispatcher = uiDispatcher,
-                HostStorageProvider = hostStorageProvider,
-                TextClipboard = textClipboard,
-                Configuration = configuration,
-                LoggerService = loggerService,
-                PauseHandler = pauseHandler,
-                PerformanceViewModel = performanceViewModel,
-                ExceptionHandler = exceptionHandler,
-                CyclesLimiter = cyclesLimiter,
-                McpServices = emulatorMcpServices,
-                McpPort = configuration.McpHttpPort,
-                CurrentProcessNameProvider = dos.ProcessManager
-            };
-            mainWindowViewModel = new MainWindowViewModel(mainWindowDependencies);
+            displayViewModel = new EmulatorDisplayViewModel(uiDispatcher, pauseHandler, sharedMouseData, loggerService);
+            vgaFunctionality.VideoModeChanged += displayViewModel.OnVideoModeChanged;
 
-            // Subscribe to video mode changes for dynamic aspect ratio correction
-            vgaFunctionality.VideoModeChanged += mainWindowViewModel.OnVideoModeChanged;
+            inputEventHub = new(displayViewModel, displayViewModel);
 
-            inputEventHub = new(mainWindowViewModel, mainWindowViewModel);
-
-            _gui = mainWindowViewModel;
+            _gui = displayViewModel;
         } else {
             HeadlessGui headlessGui = new HeadlessGui();
             _gui = headlessGui;
@@ -606,6 +601,22 @@ public class Spice86DependencyInjection : IDisposable {
         emulatorMcpServices.InterruptVectorTable = interruptVectorTable;
         emulatorMcpServices.Dos = dos;
 
+        IDiscSwapper? capturedDiscSwapper = null;
+        DrivesMenuViewModel? capturedDrivesMenuViewModel = null;
+        if (displayViewModel != null) {
+            if (dos is IDiscSwapper discSwapper) {
+                capturedDiscSwapper = discSwapper;
+            }
+            if (hostStorageProvider != null) {
+                DrivesMenuViewModel drivesMenuViewModel = new(
+                    dos, dos, dos,
+                    hostStorageProvider, new NullDriveEventNotifier(), driveActivityNotifier,
+                    dos, dos);
+                drivesMenuViewModel.StartPolling();
+                capturedDrivesMenuViewModel = drivesMenuViewModel;
+            }
+        }
+
         if (configuration.InitializeDOS is not false) {
             // Register the DOS interrupt handlers
             interruptInstaller.InstallInterruptHandler(dos.DosInt22Handler);
@@ -665,18 +676,24 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("Function overrides added...");
         }
 
-        ProgramExecutor programExecutor = new(
-            configuration,
-            emulationLoop,
-            emulatorBreakpointsManager,
-            emulatorStateSerializer,
-            memory,
-            cfgCpu,
-            state,
-            dos.DosInt21Handler,
-            pauseHandler,
-            mainWindowViewModel,
+        ShutdownCoordinator shutdownCoordinator = new(
+            _vgaTimingThread,
+            _emulatedClock,
+            _httpApiServer,
+            cfgNodeExecutionCompiler,
+            machine,
             loggerService);
+
+        _shutdownCoordinator = shutdownCoordinator;
+
+        ProgramBootstrapper programBootstrapper = new ProgramBootstrapper(
+            configuration, memory, state, dos.DosInt21Handler, loggerService);
+        ExecutionPolicy executionPolicy = new ExecutionPolicy(
+            configuration, memory, cfgCpu, state, pauseHandler,
+            emulatorBreakpointsManager, emulationLoop, emulatorStateSerializer, loggerService);
+        ProgramExecutor createdProgramExecutor = new(
+            programBootstrapper, executionPolicy, emulationLoop,
+            emulatorStateSerializer, shutdownCoordinator, loggerService);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Program executor created...");
@@ -710,13 +727,27 @@ public class Spice86DependencyInjection : IDisposable {
 
         _debuggerTabRegistry = new DebuggerTabRegistry();
         Machine = machine;
-        ProgramExecutor = programExecutor;
+        ProgramExecutor = createdProgramExecutor;
         McpServices = emulatorMcpServices;
         _mcpHttpTransport = mcpHttpTransport;
-        ProgramExecutor.EmulationStopped += OnProgramExecutorEmulationStopped;
 
         if (mainWindow != null && uiDispatcher != null &&
-            hostStorageProvider != null && textClipboard != null) {
+            hostStorageProvider != null && textClipboard != null
+            && displayViewModel != null && performanceViewModel != null && exceptionHandler != null) {
+            EmulatorSession session = new EmulatorSession(
+                createdProgramExecutor, uiDispatcher, exceptionHandler, loggerService);
+            McpStatusViewModel mcpStatusViewModel = new McpStatusViewModel(
+                emulatorMcpServices, configuration.McpHttpPort);
+
+            mainWindowViewModel = new MainWindowViewModel(
+                displayViewModel, session, performanceViewModel, mcpStatusViewModel,
+                capturedDrivesMenuViewModel, capturedDiscSwapper,
+                configuration, uiDispatcher, textClipboard, loggerService, pauseHandler,
+                pitTimer, cyclesLimiter, hostStorageProvider, dos.ProcessManager);
+        }
+
+        if (mainWindow != null && uiDispatcher != null &&
+            hostStorageProvider != null && textClipboard != null && mainWindowViewModel != null) {
             IMessenger messenger = WeakReferenceMessenger.Default;
 
             BreakpointsTabPlugin breakpointsTabPlugin = new(state, pauseHandler, messenger,
@@ -857,7 +888,6 @@ public class Spice86DependencyInjection : IDisposable {
     private void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
-                ProgramExecutor.EmulationStopped -= OnProgramExecutorEmulationStopped;
                 _debuggerTabRegistry.Dispose();
                 _mcpHttpTransport?.Dispose();
 
@@ -870,28 +900,11 @@ public class Spice86DependencyInjection : IDisposable {
                     headlessGui.Dispose();
                 }
 
-                DisposeMachineAfterRun();
+                _shutdownCoordinator.Shutdown();
                 _loggerService.Dispose();
             }
 
             _disposed = true;
         }
-    }
-
-    private void OnProgramExecutorEmulationStopped(object? sender, EventArgs e) {
-        DisposeMachineAfterRun();
-    }
-
-    private void DisposeMachineAfterRun() {
-        if (_machineDisposedAfterRun) {
-            return;
-        }
-
-        _machineDisposedAfterRun = true;
-        _vgaTimingThread?.Dispose();
-        _emulatedClock.Dispose();
-        _httpApiServer?.Dispose();
-        _cfgNodeExecutionCompiler.Dispose();
-        Machine.Dispose();
     }
 }

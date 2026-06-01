@@ -6,16 +6,30 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
+using Spice86.Core.Emulator.InterruptHandlers.Mscdex;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
-using Spice86.Shared.Utils;
 
 /// <summary>
-/// Reimplementation of int2f
+/// Handles DOS multiplex interrupt <c>INT 2Fh</c> services used by DOS extenders,
+/// memory managers, ANSI drivers, MSCDEX, and Windows compatibility checks.
 /// </summary>
+/// <remarks>
+/// Supported <c>AH</c> services currently include:
+/// <list type="bullet">
+/// <item><description><c>10h</c>: SHARE.EXE installation check (<c>AL=00h</c> returns installed).</description></item>
+/// <item><description><c>15h</c>: MSCDEX dispatcher passthrough.</description></item>
+/// <item><description><c>16h</c>: DOS virtual machine service placeholder.</description></item>
+/// <item><description><c>1Ah</c>: ANSI console installation check (<c>AL=00h</c> returns installed).</description></item>
+/// <item><description><c>43h</c>: XMS installation check and callback address query.</description></item>
+/// <item><description><c>46h</c>: Windows virtual machine installation check compatibility.</description></item>
+/// <item><description><c>4Ah</c>: High Memory Area query/allocation compatibility response.</description></item>
+/// </list>
+/// </remarks>
 public class DosInt2fHandler : InterruptHandler {
     private readonly ExtendedMemoryManager? _xms;
+    private readonly Mscdex _mscdexService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DosInt2fHandler"/> class.
@@ -25,12 +39,15 @@ public class DosInt2fHandler : InterruptHandler {
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="mscdexService">The MSCDEX handler owned by the <c>Dos</c> class.</param>
     /// <param name="xms">The extended memory manager. Can be <c>null</c> if XMS was not enabled.</param>
     public DosInt2fHandler(IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack,
-        State state, ILoggerService loggerService, ExtendedMemoryManager? xms = null)
+        State state, ILoggerService loggerService, Mscdex mscdexService,
+        ExtendedMemoryManager? xms = null)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _xms = xms;
+        _mscdexService = mscdexService;
         FillDispatchTable();
     }
 
@@ -98,7 +115,7 @@ public class DosInt2fHandler : InterruptHandler {
                 break;
             //Get XMS Control Function Address
             case (byte)XmsInt2FFunctionsCodes.GetCallbackAddress:
-                SegmentedAddress segmentedAddress = _xms?.CallbackAddress ?? new(0,0);
+                SegmentedAddress segmentedAddress = _xms?.CallbackAddress ?? new(0, 0);
                 State.ES = segmentedAddress.Segment;
                 State.BX = segmentedAddress.Offset;
                 break;
@@ -112,7 +129,7 @@ public class DosInt2fHandler : InterruptHandler {
     }
 
     public void HighMemoryAreaServices() {
-        switch(State.AL) {
+        switch (State.AL) {
             case 0x1 or 0x2: // Query Free HMA Space or Allocate HMA Space
                 State.BX = 0; // Number of bytes available / Amount allocated
                 State.ES = A20Gate.SegmentStartOfHighMemoryArea;
@@ -137,7 +154,7 @@ public class DosInt2fHandler : InterruptHandler {
     }
 
     public void WindowsVirtualMachineServices() {
-        switch(State.AL) {
+        switch (State.AL) {
             case 0x80: //MS Windows v3.0 - INSTALLATION CHECK {undocumented} (AX: 4680h)
                 State.AX = 1; //We are not Windows, but plain ol' MS-DOS.
                 break;
@@ -150,19 +167,10 @@ public class DosInt2fHandler : InterruptHandler {
     }
 
     /// <summary>
-    /// Sends a DOS device driver request to MSCDEX. Always fails.
-    /// TODO: Implement MSCDEX.
+    /// Handles MSCDEX INT 2Fh AH=15h subfunctions. Delegates to <see cref="Mscdex"/>.
     /// </summary>
     public void MscdexServices(bool calledFromVm) {
-        ushort drive = State.CX;
-        uint deviceDriverRequestHeaderAddress = MemoryUtils.ToPhysicalAddress(State.ES, State.BX);
-        if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-            LoggerService.Warning("SEND DEVICE DRIVER REQUEST Drive {Drive} Request header at: {Address:x8}",
-                drive, deviceDriverRequestHeaderAddress);
-        }
-
-        SetCarryFlag(true, calledFromVm);
-        // AX carries error reason.
-        State.AX = 0x000F; // Error code for "Invalid drive"
+        _mscdexService.Dispatch();
+        SetCarryFlag(State.CarryFlag, calledFromVm);
     }
 }

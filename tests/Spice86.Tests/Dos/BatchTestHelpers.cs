@@ -523,6 +523,43 @@ internal static class BatchTestHelpers {
     }
 
     /// <summary>
+    /// Builds a COM program that calls a drive-based IOCTL subfunction (INT 21h AH=44h with BX=drive number),
+    /// then writes AX and DX to video memory as four consecutive bytes: AL, AH, DL, DH.
+    /// </summary>
+    internal static byte[] BuildIoctlDriveRegisterProbeCom(byte ioctlSubFunction, ushort driveNumber, ushort videoOffset) {
+        return new byte[] {
+            0xB4, 0x44,                                                     // MOV AH, 44h
+            0xB0, ioctlSubFunction,                                         // MOV AL, subfunction
+            0xBB, (byte)(driveNumber & 0xFF), (byte)(driveNumber >> 8),     // MOV BX, drive number (1-based)
+            0xCD, 0x21,                                                     // INT 21h
+            0x50,                                                           // PUSH AX
+            0x52,                                                           // PUSH DX
+            0xB8, 0x00, 0xB8,                                               // MOV AX, B800h
+            0x8E, 0xC0,                                                     // MOV ES, AX
+            0xBF, (byte)(videoOffset & 0xFF), (byte)(videoOffset >> 8),     // MOV DI, videoOffset
+            0x5A,                                                           // POP DX
+            0x58,                                                           // POP AX
+            0xAA,                                                           // STOSB (AL)
+            0xB0, 0x07,                                                     // MOV AL, 07h
+            0xAA,                                                           // STOSB (attribute)
+            0x8A, 0xC4,                                                     // MOV AL, AH
+            0xAA,                                                           // STOSB (AH)
+            0xB0, 0x07,                                                     // MOV AL, 07h
+            0xAA,                                                           // STOSB (attribute)
+            0x8A, 0xC2,                                                     // MOV AL, DL
+            0xAA,                                                           // STOSB (DL)
+            0xB0, 0x07,                                                     // MOV AL, 07h
+            0xAA,                                                           // STOSB (attribute)
+            0x8A, 0xC6,                                                     // MOV AL, DH
+            0xAA,                                                           // STOSB (DH)
+            0xB0, 0x07,                                                     // MOV AL, 07h
+            0xAA,                                                           // STOSB (attribute)
+            0xB8, 0x00, 0x4C,                                               // MOV AX, 4C00h
+            0xCD, 0x21                                                      // INT 21h
+        };
+    }
+
+    /// <summary>
     /// Builds a COM program that prints a $-terminated string via INT 21h AH=09h, then exits.
     /// The string data is placed immediately after the code.
     /// </summary>

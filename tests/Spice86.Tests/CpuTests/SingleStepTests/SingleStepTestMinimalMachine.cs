@@ -34,7 +34,7 @@ public class SingleStepTestMinimalMachine : IDisposable {
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state, memory, memoryBreakpoints, ioBreakpoints);
         for (uint address = 0; address < memory.Length; address++) {
             // monitor what is written in ram so that we can restore it to 0 after
-            AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.MEMORY_WRITE, address, 
+            AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.MEMORY_WRITE, address,
                 breakPoint => _modifiedAddresses.Add((uint)((AddressBreakPoint)breakPoint).Address), false
             );
             emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
@@ -63,7 +63,7 @@ public class SingleStepTestMinimalMachine : IDisposable {
     public void Dispose() {
         _cfgNodeExecutionCompiler.Dispose();
     }
-    
+
     public CfgCpu Cpu { get; }
     public State State { get; }
     public Memory Memory { get; }

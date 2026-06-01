@@ -36,6 +36,11 @@ public class HostStorageProvider(
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<IStorageFile>> OpenFilePickerAsync(FilePickerOpenOptions options) {
+        return await storageProvider.OpenFilePickerAsync(options);
+    }
+
+    /// <inheritdoc />
     public async Task<IStorageFolder?> TryGetWellKnownFolderAsync(WellKnownFolder wellKnownFolder) {
         return await storageProvider.TryGetWellKnownFolderAsync(wellKnownFolder);
     }
@@ -148,8 +153,13 @@ public interface IHostStorageProvider {
     /// <returns>A list of selected folders.</returns>
     Task<IReadOnlyList<IStorageFolder>> OpenFolderPickerAsync(FolderPickerOpenOptions options);
 
+    /// <summary>Opens the file picker dialog.</summary>
+    /// <param name="options">The file picker configuration.</param>
+    /// <returns>A list of selected files.</returns>
+    Task<IReadOnlyList<IStorageFile>> OpenFilePickerAsync(FilePickerOpenOptions options);
+
     /// <summary>
-    /// Spawns the file pciker to saves a bitmap to a file.
+    /// Spawns the file picker to save a bitmap to a file.
     /// </summary>
     /// <param name="bitmap">The bitmap to save on the host storage.</param>
     /// <returns>The operation as an awaitable Task.</returns>

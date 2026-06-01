@@ -26,14 +26,14 @@ internal sealed class DosBatchProgramLoader : DosProgramLoader {
                 programLaunchRequest.CommandTail, paramBlock.EnvironmentSegment);
         }
 
-        return DosExecResult.Fail(DosErrorCode.FormatInvalid);
+        return base.LoadLaunchRequest(launchRequest, paramBlock);
     }
 
-    protected override string? TryGetHostPathForLaunchedProgram(LaunchRequest launchRequest) {
+    protected override string? GetHostPathForLaunchedProgram(LaunchRequest launchRequest) {
         if (launchRequest is not ProgramLaunchRequest programLaunchRequest) {
             return null;
         }
 
-        return _fileManager.TryGetFullHostExecutablePathFromDos(programLaunchRequest.ProgramName);
+        return _fileManager.GetFullHostExecutablePathFromDos(programLaunchRequest.ProgramName);
     }
 }

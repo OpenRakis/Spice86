@@ -7,9 +7,11 @@
 		xmlns:local="clr-namespace:Spice86.Views;assembly=Spice86"
 		xmlns:b="clr-namespace:Spice86.Views.Behaviors"
 		xmlns:userControls="clr-namespace:Spice86.Views.UserControls"
+		xmlns:viewControls="clr-namespace:Spice86.Views.Controls"
 		xmlns:factory="clr-namespace:Spice86.Views.Factory"
 		xmlns:fluent="clr-namespace:FluentIcons.Avalonia;assembly=FluentIcons.Avalonia"
 		xmlns:controls="clr-namespace:Spice86.Views.Controls"
+		xmlns:storage="using:Spice86.Shared.Emulator.Storage"
 		mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
 		x:Class="Spice86.Views.MainWindow"
 		Icon="/Views/Assets/Spice86.ico"
@@ -26,6 +28,7 @@
 	</Window.DataTemplates>
 	<Window.Resources>
 		<converters:NullableToBooleanConverter x:Key="NullableToBooleanConverter" />
+		<converters:BoolToOpacityConverter x:Key="BoolToOpacityConverter" />
 		<b:ShowAdditionnalWindowBehavior x:Key="ShowAdditionnalWindowBehavior" />
 	</Window.Resources>
 	<Design.DataContext>
@@ -95,7 +98,7 @@
 				<MenuItem Header="Video" IsEnabled="{Binding IsEmulatorRunning}">
 					<MenuItem>
 						<MenuItem.Header>
-							<CheckBox Content="Show Cursor" IsChecked="{Binding ShowCursor}" />
+							<CheckBox Content="Show Cursor" IsChecked="{Binding Display.ShowCursor}" />
 						</MenuItem.Header>
 					</MenuItem>
 					<MenuItem Command="{Binding SaveBitmapCommand}">
@@ -116,6 +119,48 @@
 							</StackPanel>
 						</MenuItem.Header>
 					</MenuItem>
+				</MenuItem>
+				<MenuItem Header="Drives"
+						  IsEnabled="{Binding IsEmulatorRunning}"
+						  IsVisible="{Binding DrivesMenuViewModel, Converter={StaticResource NullableToBooleanConverter}}"
+						  ItemsSource="{Binding DrivesMenuViewModel.AllDrives}">
+					<MenuItem.ItemTemplate>
+						<DataTemplate DataType="vm:DriveMenuItemViewModel">
+							<StackPanel Orientation="Horizontal" Spacing="6">
+								<!-- Tooltip removed. Info button added below. -->
+								<!-- Disk type icon and info button -->
+								<StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+									<fluent:SymbolIcon Symbol="Save" IsVisible="{Binding IsFloppy}" Width="16" Height="16" />
+									<fluent:SymbolIcon Symbol="Record" IsVisible="{Binding IsCdRom}" Width="16" Height="16" />
+									<fluent:SymbolIcon Symbol="Storage" IsVisible="{Binding IsHdd}" Width="16" Height="16" />
+									<Button Command="{Binding ShowDriveInfoCommand}" ToolTip.Tip="Show disk info" Width="18" Height="18" Padding="0" Margin="2,0,0,0">
+										<fluent:SymbolIcon Symbol="Info" Width="14" Height="14" />
+									</Button>
+								</StackPanel>
+								<TextBlock Text="{Binding DriveLetter, StringFormat={}{0}:}" VerticalAlignment="Center" />
+								<Ellipse Width="8" Height="8" Fill="LimeGreen" VerticalAlignment="Center"
+										 ToolTip.Tip="Read activity"
+										 Opacity="{Binding IsReadActive, Converter={StaticResource BoolToOpacityConverter}}" />
+								<Ellipse Width="8" Height="8" Fill="OrangeRed" VerticalAlignment="Center"
+										 ToolTip.Tip="Write activity"
+										 Opacity="{Binding IsWriteActive, Converter={StaticResource BoolToOpacityConverter}}" />
+								<ComboBox ItemsSource="{Binding ComboboxOptions}"
+										  SelectedItem="{Binding SelectedOption}"
+										  IsEnabled="{Binding !IsHdd}"
+										  MinWidth="160" />
+								<Button IsVisible="{Binding !IsHdd}"
+										Command="{Binding MountFolderCommand}"
+										ToolTip.Tip="Mount folder">
+									<fluent:SymbolIcon Symbol="FolderOpen" Width="14" Height="14" />
+								</Button>
+								<Button IsVisible="{Binding !IsHdd}"
+										Command="{Binding MountImageCommand}"
+										ToolTip.Tip="Mount image">
+									<fluent:SymbolIcon Symbol="DocumentAdd" Width="14" Height="14" />
+								</Button>
+							</StackPanel>
+						</DataTemplate>
+					</MenuItem.ItemTemplate>
 				</MenuItem>
 			</Menu>
 			<StackPanel Grid.Column="1" Focusable="False" IsTabStop="False" IsEnabled="{Binding IsEmulatorRunning}" Grid.Row="0" Margin="160,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
@@ -141,22 +186,22 @@
 				<LayoutTransformControl.LayoutTransform>
 					<TransformGroup>
 						<!-- Dynamic aspect ratio correction based on current video mode -->
-						<ScaleTransform ScaleX="1" ScaleY="{Binding AspectRatioCorrectionFactor}" />
+						<ScaleTransform ScaleX="1" ScaleY="{Binding Display.AspectRatioCorrectionFactor}" />
 					</TransformGroup>
 				</LayoutTransformControl.LayoutTransform>
 				<Image x:Name="Image"
 					   RenderOptions.BitmapInterpolationMode="None"
-					   Cursor="{Binding Cursor}"
-					   Source="{Binding Bitmap}" />
+					   Cursor="{Binding Display.Cursor}"
+					   Source="{Binding Display.Bitmap}" />
 			</LayoutTransformControl>
 		</Viewbox>
 		<controls:StatusBar x:Name="BottomBar" IsTabStop="False" Focusable="False" VerticalAlignment="Bottom" Grid.Row="2">
 			<controls:StatusBarItem>
-				<TextBlock Text="{Binding StatusMessage}" />
+				<TextBlock Text="{Binding Session.StatusMessage}" />
 			</controls:StatusBarItem>
 			<Separator />
 			<controls:StatusBarItem>
-				<TextBlock Text="{Binding AsmOverrideStatus}" />
+				<TextBlock Text="{Binding Session.AsmOverrideStatus}" />
 			</controls:StatusBarItem>
 			<Separator />
 			<controls:StatusBarItem>
@@ -170,7 +215,7 @@
 			</controls:StatusBarItem>
 			<Separator />
 			<controls:StatusBarItem>
-				<TextBlock Text="{Binding EmulatorMouseCursorInfo, StringFormat='Mouse: {0}'}" />
+				<TextBlock Text="{Binding Display.EmulatorMouseCursorInfo, StringFormat='Mouse: {0}'}" />
 			</controls:StatusBarItem>
 			<Separator />
 			<controls:StatusBarItem>
@@ -189,8 +234,7 @@
 			</controls:StatusBarItem>
 			<Separator />
 			<controls:StatusBarItem HorizontalAlignment="Right" HorizontalContentAlignment="Right">
-				<ContentPresenter
-				Content="{ReflectionBinding PerformanceViewModel, RelativeSource={RelativeSource FindAncestor, AncestorType=Window}}" />
+				<ContentControl Content="{Binding PerformanceViewModel}" />
 			</controls:StatusBarItem>
 		</controls:StatusBar>
 		<WrapPanel HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Row="0" Grid.RowSpan="3"

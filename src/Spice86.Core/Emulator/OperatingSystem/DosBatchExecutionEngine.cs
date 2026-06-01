@@ -2,6 +2,8 @@ namespace Spice86.Core.Emulator.OperatingSystem.Batch;
 
 using Serilog.Events;
 
+using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.InterruptHandlers.Mscdex;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
@@ -21,6 +23,9 @@ internal sealed partial class DosBatchExecutionEngine {
     private readonly IDosBatchExecutionHost _host;
     private readonly ILoggerService _loggerService;
     private readonly DosDriveManager _driveManager;
+    private readonly IDriveStatusProvider _driveStatusProvider;
+    private readonly Mscdex _mscdex;
+    private readonly ISoundChannelCreator _channelCreator;
     private readonly Stack<BatchFileContext> _batchFileContexts = new();
     private readonly Dictionary<string, string[]> _zDriveFiles = new(StringComparer.OrdinalIgnoreCase);
     private VirtualFileBase? _savedStandardInput;
@@ -37,11 +42,17 @@ internal sealed partial class DosBatchExecutionEngine {
 
     internal DosBatchExecutionEngine(DosFileManager dosFileManager,
         DosDriveManager driveManager,
+        IDriveStatusProvider driveStatusProvider,
+        Mscdex mscdex,
+        ISoundChannelCreator channelCreator,
         IBatchDisplayCommandHandler displayCommandHandler,
         IDosBatchExecutionHost host,
         ILoggerService loggerService) {
         _dosFileManager = dosFileManager;
         _driveManager = driveManager;
+        _driveStatusProvider = driveStatusProvider;
+        _mscdex = mscdex;
+        _channelCreator = channelCreator;
         _displayCommandHandler = displayCommandHandler;
         _host = host;
         _loggerService = loggerService;
@@ -77,7 +88,7 @@ internal sealed partial class DosBatchExecutionEngine {
         return TryPump(out launchRequest);
     }
 
-    internal bool TryApplyRedirectionForLaunch(LaunchRequest launchRequest) {
+    internal bool ApplyRedirectionForLaunch(LaunchRequest launchRequest) {
         RestoreStandardHandlesAfterLaunch();
 
         if (!launchRequest.Redirection.HasAny) {
@@ -90,7 +101,34 @@ internal sealed partial class DosBatchExecutionEngine {
                 launchRequest.Redirection.AppendOutput, launchRequest.Redirection.ErrorPath,
                 launchRequest.Redirection.AppendError);
         }
-        return TryApplyRedirection(launchRequest.Redirection);
+        return ApplyRedirection(launchRequest.Redirection);
+    }
+
+    internal bool PrepareInternalCommandRedirection(CommandRedirection redirection) {
+        if (!redirection.HasAny) {
+            return true;
+        }
+
+        RestoreStandardHandlesAfterLaunch();
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug(
+                "BATCH: Applying redirection for internal command - stdin={Stdin} stdout={Stdout}(append={AppendOut}) stderr={Stderr}(append={AppendErr})",
+                redirection.InputPath,
+                redirection.OutputPath,
+                redirection.AppendOutput,
+                redirection.ErrorPath,
+                redirection.AppendError);
+        }
+
+        return ApplyRedirection(redirection);
+    }
+
+    internal void CompleteInternalCommandRedirection(CommandRedirection redirection) {
+        if (!redirection.HasAny) {
+            return;
+        }
+
+        RestoreStandardHandlesAfterLaunch();
     }
 
     internal void RestoreStandardHandlesAfterLaunch() {
@@ -133,7 +171,14 @@ internal sealed partial class DosBatchExecutionEngine {
                 _loggerService.Debug("BATCH: [{BatchFile}] raw='{RawLine}' expanded='{ExpandedLine}'",
                     current.FilePath, line, expandedLine);
             }
-            if (expandedLine.StartsWith('@')) {
+
+            bool suppressedByAt = expandedLine.Length > 0 && expandedLine[0] == '@';
+            bool isBlank = string.IsNullOrWhiteSpace(expandedLine);
+            if (current.EchoEnabled && !suppressedByAt && !isBlank) {
+                EchoBatchLine(expandedLine);
+            }
+
+            if (suppressedByAt) {
                 expandedLine = expandedLine[1..];
             }
 
@@ -225,13 +270,13 @@ internal sealed partial class DosBatchExecutionEngine {
             return false;
         }
 
-        if (TryResolveBatchCommandPath(commandExecutionContext.ResolvedCommandToken, out string batchCommandPath)) {
+        if (ResolveBatchCommandPath(commandExecutionContext.ResolvedCommandToken, out string batchCommandPath)) {
             if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                 _loggerService.Debug("BATCH: Resolved as batch file: '{BatchPath}' (replacing current context)", batchCommandPath);
             }
             if (_batchFileContexts.Count > 0) {
                 BatchFileContext replaced = _batchFileContexts.Pop();
-                if (TryPushBatchFile(batchCommandPath, Array.Empty<string>())) {
+                if (PushBatchFile(batchCommandPath, Array.Empty<string>())) {
                     CleanupTemporaryFiles(replaced.TemporaryFilesToCleanup);
                     return TryPump(out launchRequest);
                 }
@@ -240,7 +285,7 @@ internal sealed partial class DosBatchExecutionEngine {
                 return false;
             }
 
-            if (TryPushBatchFile(batchCommandPath, Array.Empty<string>())) {
+            if (PushBatchFile(batchCommandPath, Array.Empty<string>())) {
                 return TryPump(out launchRequest);
             }
 
@@ -272,31 +317,6 @@ internal sealed partial class DosBatchExecutionEngine {
         return false;
     }
 
-    internal bool ExecuteInternalCommandWithArgument(CommandExecutionContext commandExecutionContext,
-        Func<string, bool> commandHandler) {
-        return TryExecuteInternalCommandWithRedirection(commandExecutionContext.Redirection,
-            () => commandHandler(commandExecutionContext.ArgumentPart));
-    }
-
-    internal bool ExecuteInternalCommandNoArgument(CommandExecutionContext commandExecutionContext,
-        Func<bool> commandHandler) {
-        return TryExecuteInternalCommandWithRedirection(commandExecutionContext.Redirection,
-            commandHandler);
-    }
-
-    internal bool TryExecuteInternalCommandWithRedirection(CommandRedirection redirection, Func<bool> internalCommand) {
-        if (redirection.HasAny && !TryApplyRedirectionForLaunch(new ProgramLaunchRequest(string.Empty, string.Empty, redirection))) {
-            return false;
-        }
-
-        bool result = internalCommand();
-        if (redirection.HasAny) {
-            RestoreStandardHandlesAfterLaunch();
-        }
-
-        return result;
-    }
-
     private static bool IsSkippableBatchLine(string line) {
         string trimmed = line.Trim();
         if (string.IsNullOrWhiteSpace(trimmed)) {
@@ -315,7 +335,7 @@ internal sealed partial class DosBatchExecutionEngine {
             (trimmed.Length == 3 || char.IsWhiteSpace(trimmed[3]));
     }
 
-    private bool TryApplyInheritedRedirection(CommandRedirection inheritedRedirection, bool launched, ref LaunchRequest launchRequest) {
+    private bool ApplyInheritedRedirection(CommandRedirection inheritedRedirection, bool launched, ref LaunchRequest launchRequest) {
         if (!launched) {
             return false;
         }

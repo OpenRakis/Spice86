@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.OperatingSystem;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
@@ -10,28 +11,40 @@ using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
+using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.InterruptHandlers.Mscdex;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Batch;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
+using Spice86.Core.Emulator.Devices.CdRom;
+using Spice86.Shared.Emulator.Storage.CdRom;
+using Spice86.Shared.Emulator.Storage.FileSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Emulator.Storage;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 
 /// <summary>
 /// Represents the DOS kernel.
 /// </summary>
-public sealed class Dos {
+public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService, IDriveContentMapProvider, IDriveFileListProvider {
     private readonly BiosDataArea _biosDataArea;
     private readonly IVgaFunctionality _vgaFunctionality;
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
     private readonly IMemory _memory;
     private readonly ILoggerService _loggerService;
+    private readonly Mscdex _mscdex;
+    private readonly ISoundChannelCreator _channelCreator;
+    private readonly IDriveActivityNotifier _activityNotifier;
+    private readonly IDriveStatusProvider _driveStatusProvider;
 
     /// <summary>
     /// Gets the INT 20h DOS services.
@@ -84,7 +97,7 @@ public sealed class Dos {
     public DosInt28Handler DosInt28Handler { get; }
 
     /// <summary>
-    /// The class that handles DOS drives, as a sorted dictionnary.
+    /// The class that handles DOS drives, as a sorted dictionary.
     /// </summary>
     public DosDriveManager DosDriveManager { get; }
 
@@ -168,14 +181,34 @@ public sealed class Dos {
     /// <param name="envVars">The DOS environment variables.</param>
     /// <param name="ioPortDispatcher">The I/O port dispatcher for accessing hardware ports.</param>
     /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="floppyDiskTimingService">Floppy I/O timing service used by absolute floppy image reads and writes.</param>
+    /// <param name="configuration">An object that describes what to run and how.</param>
+    /// <param name="memory">The emulator memory.</param>
+    /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
+    /// <param name="stack">The CPU stack.</param>
+    /// <param name="state">The CPU state.</param>
+    /// <param name="biosKeyboardBuffer">The BIOS keyboard buffer structure in emulated memory.</param>
+    /// <param name="keyboardInt16Handler">The BIOS interrupt handler that writes/reads the BIOS Keyboard Buffer.</param>
+    /// <param name="biosDataArea">The memory mapped BIOS values and settings.</param>
+    /// <param name="vgaFunctionality">The high-level VGA functions.</param>
+    /// <param name="envVars">The DOS environment variables.</param>
+    /// <param name="ioPortDispatcher">The I/O port dispatcher for accessing hardware ports.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="channelCreator">The sound channel creator, used to stream CD audio when an image is mounted.</param>
+    /// <param name="activityNotifier">Notifier that surfaces per-drive read/write activity to the UI.</param>
     /// <param name="xms">Optional XMS manager to expose through DOS.</param>
     public Dos(Configuration configuration, IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,
         BiosDataArea biosDataArea, IVgaFunctionality vgaFunctionality,
         IDictionary<string, string> envVars, IOPortDispatcher ioPortDispatcher, ILoggerService loggerService,
-        ExtendedMemoryManager? xms = null) {
+        FloppyDiskTimingService floppyDiskTimingService,
+        ISoundChannelCreator channelCreator,
+        IDriveActivityNotifier activityNotifier,
+        ExtendedMemoryManager? xms) {
         _loggerService = loggerService;
+        _channelCreator = channelCreator;
+        _activityNotifier = activityNotifier;
         Xms = xms;
         _biosKeyboardBuffer = biosKeyboardBuffer;
         _memory = memory;
@@ -201,11 +234,9 @@ public sealed class Dos {
         DosSwappableDataArea = new(_memory,
             MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
 
-        DosCodePageState dosCodePageState = new();
-        DosStringDecoder dosStringDecoder = new(memory, state, dosCodePageState);
-
         CountryInfo = new();
-        CountryInfo.Country = (ushort)dosCodePageState.Country;
+        DosCodePageState dosCodePageState = DosCodePageState.CreateForCurrentCulture();
+        DosStringDecoder dosStringDecoder = new(memory, state, dosCodePageState);
         FileManager = new DosFileManager(_memory, dosStringDecoder, DosDriveManager,
             _loggerService, Devices);
 
@@ -222,7 +253,9 @@ public sealed class Dos {
 
         FcbManager = new(_memory, FileManager, DosDriveManager, _loggerService);
         IBatchDisplayCommandHandler batchDisplayCommandHandler = new DosBatchDisplayCommandHandler(_vgaFunctionality);
-        ProcessManager = new(_memory, stack, state, MemoryManager, FileManager, DosDriveManager, batchDisplayCommandHandler, envVars, _loggerService);
+        _mscdex = new Mscdex(state, memory, loggerService, _activityNotifier);
+        _driveStatusProvider = new DosDriveStatusProvider(DosDriveManager, _mscdex);
+        ProcessManager = new(_memory, stack, state, MemoryManager, FileManager, DosDriveManager, _driveStatusProvider, _mscdex, channelCreator, batchDisplayCommandHandler, envVars, _loggerService);
         DosInt22Handler = new DosInt22Handler(_memory, functionHandlerProvider, stack, state, ProcessManager, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state,
             keyboardInt16Handler, CountryInfo, dosCodePageState, dosStringDecoder,
@@ -233,11 +266,11 @@ public sealed class Dos {
         DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, DosInt21Handler, _loggerService);
         DosInt2aHandler = new DosInt2aHandler(_memory, functionHandlerProvider, stack, state, _loggerService);
         DosInt2FHandler = new DosInt2fHandler(_memory,
-            functionHandlerProvider, stack, state, _loggerService, xms);
+            functionHandlerProvider, stack, state, _loggerService, _mscdex, xms);
         DosInt25Handler = new DosDiskInt25Handler(_memory, DosDriveManager,
-            functionHandlerProvider, stack, state, _loggerService);
+            functionHandlerProvider, stack, state, floppyDiskTimingService, _loggerService);
         DosInt26Handler = new DosDiskInt26Handler(_memory, DosDriveManager,
-            functionHandlerProvider, stack, state, _loggerService);
+            functionHandlerProvider, stack, state, floppyDiskTimingService, _loggerService);
         DosInt28Handler = new DosInt28Handler(_memory, functionHandlerProvider,
             stack, state, _loggerService);
 
@@ -375,5 +408,326 @@ public sealed class Dos {
             IsReadOnlyMedium = true,
         };
         DosDriveManager.MountMemoryDrive(zDrive);
+    }
+
+    public IReadOnlyList<DosVirtualDriveStatus> GetDriveStatuses() {
+        return _driveStatusProvider.GetDriveStatuses();
+    }
+
+    /// <inheritdoc/>
+    public void SwapDiscImages() {
+        DosDriveManager.SwapFloppyDiscs();
+        foreach (MscdexDriveEntry entry in _mscdex.Drives) {
+            entry.Drive.SwapToNextDisc();
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _loggerService.Information("MOUNT: Swapping drive {Drive}: to image {Image}", entry.DriveLetter, entry.Drive.Image.ImagePath);
+            }
+        }
+    }
+
+    /// <inheritdoc/>
+    public void SwapToImageIndex(char driveLetter, int imageIndex) {
+        char upper = char.ToUpperInvariant(driveLetter);
+        if (DosDriveManager.TryGetFloppyDrive(upper, out FloppyDiskDrive? floppy)) {
+            floppy.SwapToIndex(imageIndex);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _loggerService.Information("MOUNT: Drive {Drive}: switched to image {Image}", upper, floppy.ImagePath);
+            }
+            return;
+        }
+        foreach (MscdexDriveEntry entry in _mscdex.Drives) {
+            if (char.ToUpperInvariant(entry.DriveLetter) == upper) {
+                entry.Drive.SwapToIndex(imageIndex);
+                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                    _loggerService.Information("MOUNT: Drive {Drive}: switched to image {Image}", upper, entry.Drive.Image.ImagePath);
+                }
+                return;
+            }
+        }
+    }
+
+    /// <inheritdoc/>
+    public bool MountFolderAsFloppy(char driveLetter, string hostPath) {
+        if (string.IsNullOrWhiteSpace(hostPath) || !Directory.Exists(hostPath)) {
+            _loggerService.Error("MOUNT: Could not mount folder {Path} as floppy {Drive}: directory does not exist", hostPath, char.ToUpperInvariant(driveLetter));
+            return false;
+        }
+        DosDriveManager.MountFloppyFolder(driveLetter, hostPath);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("MOUNT: Drive {Drive}: is now backed by folder {Path}", char.ToUpperInvariant(driveLetter), hostPath);
+        }
+        return true;
+    }
+
+    /// <inheritdoc/>
+    public bool MountImageAsFloppy(char driveLetter, string imagePath) {
+        byte[] imageData;
+        try {
+            imageData = File.ReadAllBytes(imagePath);
+        } catch (IOException ex) {
+            _loggerService.Error("IMGMOUNT: Could not read image file {Path}: {Message}", imagePath, ex.Message);
+            return false;
+        }
+        try {
+            DosDriveManager.MountFloppyImage(driveLetter, imageData, imagePath);
+        } catch (InvalidDataException ex) {
+            _loggerService.Error("IMGMOUNT: Image {Path} is not a valid FAT disk image: {Message}", imagePath, ex.Message);
+            return false;
+        }
+        return true;
+    }
+
+    /// <inheritdoc/>
+    public bool MountFolderAsCdRom(char driveLetter, string hostPath) {
+        try {
+            string volumeLabel = Path.GetFileName(hostPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+            VirtualIsoImage image = new VirtualIsoImage(hostPath, volumeLabel);
+            CdRomDrive drive = new CdRomDrive(image);
+            CdAudioPlayer audioPlayer = new CdAudioPlayer(_channelCreator, _activityNotifier);
+            audioPlayer.SetDrive(drive);
+            audioPlayer.SetDriveLetter(char.ToUpperInvariant(driveLetter));
+            drive.SetAudioPlayer(audioPlayer);
+            char upper = char.ToUpperInvariant(driveLetter);
+            byte driveIndex = DosDriveManager.TryGetLetterIndex(upper, out int idx) ? (byte)idx : (byte)3;
+            MscdexDriveEntry entry = new MscdexDriveEntry(upper, driveIndex, drive);
+            _mscdex.AddDrive(entry);
+            DosDriveManager.RegisterCdRomDriveLetter(upper, hostPath, volumeLabel);
+            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+                _loggerService.Information("MOUNT: Drive {Drive}: is now backed by folder {Path}", upper, hostPath);
+            }
+            return true;
+        } catch (IOException ex) {
+            _loggerService.Error("MOUNT: Could not mount folder {Path} as CD-ROM: {Message}", hostPath, ex.Message);
+            return false;
+        }
+    }
+
+    /// <inheritdoc/>
+    public bool MountImageAsCdRom(char driveLetter, string imagePath) {
+        ICdRomImage image;
+        try {
+            image = CdRomImageFactory.Open(imagePath);
+        } catch (ArgumentException ex) {
+            _loggerService.Error("IMGMOUNT: Unsupported CD image format for {Path}: {Message}", imagePath, ex.Message);
+            return false;
+        } catch (InvalidDataException ex) {
+            _loggerService.Error("IMGMOUNT: CD image {Path} is not a valid disc image: {Message}", imagePath, ex.Message);
+            return false;
+        } catch (IOException ex) {
+            _loggerService.Error("IMGMOUNT: Could not read CD image {Path}: {Message}", imagePath, ex.Message);
+            return false;
+        }
+        CdRomDrive drive = new CdRomDrive(image);
+        CdAudioPlayer audioPlayer = new CdAudioPlayer(_channelCreator, _activityNotifier);
+        audioPlayer.SetDrive(drive);
+        audioPlayer.SetDriveLetter(char.ToUpperInvariant(driveLetter));
+        drive.SetAudioPlayer(audioPlayer);
+        char upper = char.ToUpperInvariant(driveLetter);
+        byte driveIndex = DosDriveManager.TryGetLetterIndex(upper, out int idx) ? (byte)idx : (byte)3;
+        MscdexDriveEntry entry = new MscdexDriveEntry(upper, driveIndex, drive);
+        _mscdex.AddDrive(entry);
+        string volumeLabel = image.PrimaryVolume.VolumeIdentifier ?? string.Empty;
+        DosDriveManager.RegisterCdRomDriveLetter(upper, string.Empty, volumeLabel);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("IMGMOUNT: Mounted image {Image} on drive {Drive}:", imagePath, upper);
+        }
+        return true;
+    }
+
+    /// <inheritdoc />
+    public bool TryGetContentMap(char driveLetter, out DriveContentMap? map) {
+        char upper = char.ToUpperInvariant(driveLetter);
+        if (DosDriveManager.TryGetFloppyDrive(upper, out FloppyDiskDrive? floppy) && floppy.Image != null) {
+            DriveClusterState[] states = floppy.Image.GetClusterUsageBitmap(MaxVisualizationClusters);
+            List<DriveClusterInfo> clusterInfos = new(states.Length);
+            for (int i = 0; i < states.Length; i++) {
+                clusterInfos.Add(new DriveClusterInfo(i, states[i]));
+            }
+            int totalClusters = floppy.Image.Bpb.SectorsPerCluster == 0
+                ? states.Length
+                : floppy.Image.Bpb.TotalSectors / floppy.Image.Bpb.SectorsPerCluster;
+            map = DriveContentMap.ForFat(upper, clusterInfos, totalClusters);
+            return true;
+        }
+        for (int i = 0; i < _mscdex.Drives.Count; i++) {
+            MscdexDriveEntry entry = _mscdex.Drives[i];
+            if (entry.DriveLetter != upper) {
+                continue;
+            }
+            ICdRomImage image = entry.Drive.Image;
+            IReadOnlyList<CdTrack> rawTracks = image.Tracks;
+            List<DriveCdTrackInfo> tracks = new(rawTracks.Count);
+            for (int t = 0; t < rawTracks.Count; t++) {
+                CdTrack track = rawTracks[t];
+                int endLba = t + 1 < rawTracks.Count ? rawTracks[t + 1].StartLba : image.TotalSectors;
+                int length = endLba > track.StartLba ? endLba - track.StartLba : 0;
+                tracks.Add(new DriveCdTrackInfo(track.Number, (uint)track.StartLba, (uint)length, track.IsAudio));
+            }
+            map = DriveContentMap.ForCdRom(upper, (uint)image.TotalSectors, tracks);
+            return true;
+        }
+        map = null;
+        return false;
+    }
+
+    private const int MaxVisualizationClusters = 4096;
+
+    /// <inheritdoc />
+    public bool TryGetFileList(char driveLetter, out IReadOnlyList<DriveFileEntry>? entries) {
+        char upper = char.ToUpperInvariant(driveLetter);
+
+        // FAT image-backed floppy drive.
+        if (DosDriveManager.TryGetFloppyDrive(upper, out FloppyDiskDrive? floppy) && floppy.Image != null) {
+            entries = BuildFatEntries(floppy.Image, isRoot: true, firstCluster: 0);
+            return true;
+        }
+
+        // CD-ROM drives registered with MSCDEX.
+        for (int i = 0; i < _mscdex.Drives.Count; i++) {
+            MscdexDriveEntry entry = _mscdex.Drives[i];
+            if (entry.DriveLetter != upper) {
+                continue;
+            }
+            entries = BuildIsoEntries(entry.Drive.Image, entry.Drive.Image.PrimaryVolume.RootDirectoryLba, entry.Drive.Image.PrimaryVolume.RootDirectorySize);
+            return true;
+        }
+
+        // Folder-backed drive (HDD, folder floppy, folder CD).
+        if (DosDriveManager.TryGetDrive<VirtualDrive>(upper, out VirtualDrive? vd) && !string.IsNullOrEmpty(vd.MountedHostDirectory)) {
+            string hostRoot = vd.MountedHostDirectory.TrimEnd('/', '\\');
+            entries = BuildHostEntries(hostRoot);
+            return true;
+        }
+
+        entries = null;
+        return false;
+    }
+
+    private static IReadOnlyList<DriveFileEntry> BuildFatEntries(FatFileSystem fs, bool isRoot, uint firstCluster) {
+        IReadOnlyList<FatDirectoryEntry> raw = isRoot
+            ? fs.ListRootDirectory()
+            : fs.ListSubDirectory(firstCluster);
+
+        List<DriveFileEntry> dirs = new();
+        List<DriveFileEntry> files = new();
+        for (int i = 0; i < raw.Count; i++) {
+            FatDirectoryEntry e = raw[i];
+            if (e.IsDirectory) {
+                IReadOnlyList<DriveFileEntry> children = BuildFatEntries(fs, isRoot: false, firstCluster: e.FirstCluster);
+                dirs.Add(new DriveFileEntry(e.DosName, 0, FormatFatAttributes(e.Attributes), isDirectory: true, children));
+            } else {
+                files.Add(new DriveFileEntry(e.DosName, e.FileSize, FormatFatAttributes(e.Attributes), isDirectory: false, System.Array.Empty<DriveFileEntry>()));
+            }
+        }
+        dirs.AddRange(files);
+        return dirs;
+    }
+
+    private static string FormatFatAttributes(byte attr) {
+        List<string> parts = new();
+        if ((attr & 0x01) != 0) {
+            parts.Add("R");
+        }
+        if ((attr & 0x02) != 0) {
+            parts.Add("H");
+        }
+        if ((attr & 0x04) != 0) {
+            parts.Add("S");
+        }
+        if ((attr & 0x10) != 0) {
+            parts.Add("D");
+        }
+        if ((attr & 0x20) != 0) {
+            parts.Add("A");
+        }
+        return parts.Count == 0 ? "---" : string.Join("", parts);
+    }
+
+    private IReadOnlyList<DriveFileEntry> BuildIsoEntries(ICdRomImage image, int dirLba, int dirSize) {
+        int sectorSize = image.PrimaryVolume.LogicalBlockSize;
+        if (sectorSize <= 0) {
+            sectorSize = 2048;
+        }
+        int sectorsNeeded = (dirSize + sectorSize - 1) / sectorSize;
+        byte[] buf = new byte[sectorSize];
+        List<IsoDirectoryRecord> records = new();
+        for (int s = 0; s < sectorsNeeded; s++) {
+            image.Read(dirLba + s, buf, CdSectorMode.CookedData2048);
+            int offset = 0;
+            while (offset < buf.Length) {
+                if (buf[offset] == 0) {
+                    break;
+                }
+                ReadOnlySpan<byte> span = buf.AsSpan(offset);
+                IsoDirectoryRecord? rec = IsoDirectoryRecord.ParseNullable(span);
+                if (rec == null) {
+                    break;
+                }
+                records.Add(rec);
+                offset += buf[offset];
+            }
+        }
+
+        List<DriveFileEntry> dirs = new();
+        List<DriveFileEntry> files = new();
+        for (int i = 0; i < records.Count; i++) {
+            IsoDirectoryRecord rec = records[i];
+            if (rec.Name is "\x00" or "\x01") {
+                continue;
+            }
+            if (rec.IsDirectory) {
+                IReadOnlyList<DriveFileEntry> children = BuildIsoEntries(image, rec.ExtentLba, rec.DataLength);
+                dirs.Add(new DriveFileEntry(rec.Name, 0, "D", isDirectory: true, children));
+            } else {
+                files.Add(new DriveFileEntry(rec.Name, rec.DataLength, "---", isDirectory: false, System.Array.Empty<DriveFileEntry>()));
+            }
+        }
+        dirs.AddRange(files);
+        return dirs;
+    }
+
+    private static IReadOnlyList<DriveFileEntry> BuildHostEntries(string hostPath) {
+        if (!Directory.Exists(hostPath)) {
+            return System.Array.Empty<DriveFileEntry>();
+        }
+        DirectoryInfo dir = new DirectoryInfo(hostPath);
+        DirectoryInfo[] subdirs = dir.GetDirectories();
+        FileInfo[] fileInfos = dir.GetFiles();
+
+        List<DriveFileEntry> dirs = new(subdirs.Length);
+        for (int i = 0; i < subdirs.Length; i++) {
+            DirectoryInfo sub = subdirs[i];
+            IReadOnlyList<DriveFileEntry> children = BuildHostEntries(sub.FullName);
+            dirs.Add(new DriveFileEntry(sub.Name.ToUpperInvariant(), 0, "D", isDirectory: true, children));
+        }
+
+        List<DriveFileEntry> files = new(fileInfos.Length);
+        for (int i = 0; i < fileInfos.Length; i++) {
+            FileInfo fi = fileInfos[i];
+            string attrs = FormatHostAttributes(fi.Attributes);
+            files.Add(new DriveFileEntry(fi.Name.ToUpperInvariant(), fi.Length, attrs, isDirectory: false, System.Array.Empty<DriveFileEntry>()));
+        }
+
+        dirs.Sort((a, b) => string.Compare(a.Name, b.Name, System.StringComparison.OrdinalIgnoreCase));
+        files.Sort((a, b) => string.Compare(a.Name, b.Name, System.StringComparison.OrdinalIgnoreCase));
+        dirs.AddRange(files);
+        return dirs;
+    }
+
+    private static string FormatHostAttributes(System.IO.FileAttributes attr) {
+        List<string> parts = new();
+        if ((attr & System.IO.FileAttributes.ReadOnly) != 0) {
+            parts.Add("R");
+        }
+        if ((attr & System.IO.FileAttributes.Hidden) != 0) {
+            parts.Add("H");
+        }
+        if ((attr & System.IO.FileAttributes.System) != 0) {
+            parts.Add("S");
+        }
+        if ((attr & System.IO.FileAttributes.Archive) != 0) {
+            parts.Add("A");
+        }
+        return parts.Count == 0 ? "---" : string.Join("", parts);
     }
 }
