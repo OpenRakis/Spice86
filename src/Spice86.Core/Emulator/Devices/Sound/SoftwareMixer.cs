@@ -218,8 +218,9 @@ public sealed class SoftwareMixer : IDisposable {
 
     /// <summary>
     /// Applies global crossfeed settings to all channels.
+    /// Must be called with the mixer lock already held.
     /// </summary>
-    private void SetGlobalCrossfeed() {
+    private void SetGlobalCrossfeedUnlocked() {
         // Apply preset-specific crossfeed strength to OPL and CMS channels only
         float globalStrength = _doCrossfeed ? _crossfeedGlobalStrength : 0.0f;
         foreach (SoundChannel channel in _channels.Values) {
@@ -233,7 +234,19 @@ public sealed class SoftwareMixer : IDisposable {
         }
     }
 
-    private void SetGlobalReverb() {
+    /// <summary>
+    /// Applies global crossfeed settings to all channels (with lock acquisition).
+    /// </summary>
+    private void SetGlobalCrossfeed() {
+        LockMixerThread();
+        try {
+            SetGlobalCrossfeedUnlocked();
+        } finally {
+            UnlockMixerThread();
+        }
+    }
+
+    private void SetGlobalReverbUnlocked() {
         foreach (SoundChannel channel in _channels.Values) {
             if (!_doReverb || !channel.HasFeature(ChannelFeature.ReverbSend)) {
                 channel.ReverbLevel = 0.0f;
@@ -245,7 +258,16 @@ public sealed class SoftwareMixer : IDisposable {
         }
     }
 
-    private void SetGlobalChorus() {
+    private void SetGlobalReverb() {
+        LockMixerThread();
+        try {
+            SetGlobalReverbUnlocked();
+        } finally {
+            UnlockMixerThread();
+        }
+    }
+
+    private void SetGlobalChorusUnlocked() {
         foreach (SoundChannel channel in _channels.Values) {
             if (!_doChorus || !channel.HasFeature(ChannelFeature.ChorusSend)) {
                 channel.ChorusLevel = 0.0f;
@@ -254,6 +276,15 @@ public sealed class SoftwareMixer : IDisposable {
             } else if (channel.HasFeature(ChannelFeature.DigitalAudio)) {
                 channel.ChorusLevel = _chorusDigitalSendLevel;
             }
+        }
+    }
+
+    private void SetGlobalChorus() {
+        LockMixerThread();
+        try {
+            SetGlobalChorusUnlocked();
+        } finally {
+            UnlockMixerThread();
         }
     }
 
@@ -281,23 +312,28 @@ public sealed class SoftwareMixer : IDisposable {
         channel.AppVolume = new AudioFrame(1.0f, 1.0f);
         channel.UserVolume = new AudioFrame(1.0f, 1.0f);
 
-        // Add to channels registry
-        if (!_channels.TryAdd(name, channel)) {
-            // Replace existing
-            _channels[name] = channel;
-        }
+        // Add to channels registry under lock
+        LockMixerThread();
+        try {
+            if (!_channels.TryAdd(name, channel)) {
+                // Replace existing
+                _channels[name] = channel;
+            }
 
-        if (_channelSettingsCache.TryGetValue(name, out SoundChannelSettings cachedSettings)) {
-            channel.SetSettings(cachedSettings);
-            ApplyCachedEffectSettings(channel, cachedSettings);
-        } else {
-            // Set default state
-            channel.Enable(false);
-            channel.UserVolume = new AudioFrame(1.0f, 1.0f);
-            channel.SetChannelMap(new StereoLine { Left = LineIndex.Left, Right = LineIndex.Right });
-            SetGlobalCrossfeed();
-            SetGlobalReverb();
-            SetGlobalChorus();
+            if (_channelSettingsCache.TryGetValue(name, out SoundChannelSettings cachedSettings)) {
+                channel.SetSettings(cachedSettings);
+                ApplyCachedEffectSettings(channel, cachedSettings);
+            } else {
+                // Set default state
+                channel.Enable(false);
+                channel.UserVolume = new AudioFrame(1.0f, 1.0f);
+                channel.SetChannelMap(new StereoLine { Left = LineIndex.Left, Right = LineIndex.Right });
+                SetGlobalCrossfeedUnlocked();
+                SetGlobalReverbUnlocked();
+                SetGlobalChorusUnlocked();
+            }
+        } finally {
+            UnlockMixerThread();
         }
 
         return channel;
@@ -338,6 +374,8 @@ public sealed class SoftwareMixer : IDisposable {
 
     private void MixerThreadLoop() {
         while (!_threadShouldQuit) {
+            double expectedTimeMs;
+
             lock (_mixerLock) {
                 // "Underflow" is not a concern since moving to a threaded
                 // mixer. If the CPU is running slower than real-time, the audio
@@ -346,9 +384,9 @@ public sealed class SoftwareMixer : IDisposable {
                 int framesRequested = _blocksize;
 
                 MixSamples(framesRequested);
-            }
 
-            double expectedTimeMs = (double)_blocksize / _sampleRateHz * 1000.0;
+                expectedTimeMs = (double)_blocksize / _sampleRateHz * 1000.0;
+            }
 
             if (_state == MixerState.NoSound) {
                 // SDL callback is not running. Mixed sound gets
