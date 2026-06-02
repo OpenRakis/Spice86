@@ -1,21 +1,30 @@
 namespace Spice86.Core.Emulator.Devices.CdRom.Subchannel;
 
 /// <summary>
-/// Immutable result of subchannel-Q synthesis for a given absolute logical block address.
-/// The byte fields mirror the MSCDEX IOCTL 0x0C response wire layout: the attribute byte,
-/// the BCD-encoded track number, the linear index number, and two MSF triplets (one
-/// relative to the current track, one absolute on the disc) expressed as plain decimal
-/// values per DOSBox-staging parity.
+/// Immutable representation of CD subchannel-Q position metadata for one disc location.
+/// This is the logical payload consumed by MSCDEX IOCTL input control 0x0C
+/// (audio subchannel information), and mirrors the bytes written to the caller buffer in
+/// <c>Mscdex.WriteAudioSubchannel</c>.
+///
+/// Subchannel-Q is used by DOS CD audio clients to query where playback currently is:
+/// track number and index plus both relative and absolute MSF positions.
 /// </summary>
-public sealed class SubchannelQData
-{
-    /// <summary>Gets the control+ADR attribute byte for the containing track (0 for audio, 4 for data).</summary>
+public sealed class SubchannelQData {
+    /// <summary>
+    /// Gets the track control+ADR attribute byte.
+    /// Typical values are 0x00 for audio tracks and 0x04 for data tracks.
+    /// </summary>
     public byte Attribute { get; }
 
-    /// <summary>Gets the BCD-encoded track number (1..99). The lead-out track is reported as 0xAA.</summary>
+    /// <summary>
+    /// Gets the BCD-encoded track number (01h..99h).
+    /// The lead-out track is encoded as 0xAA.
+    /// </summary>
     public byte TrackNumberBcd { get; }
 
-    /// <summary>Gets the linear (non-BCD) index number within the current track (1 outside pregap).</summary>
+    /// <summary>
+    /// Gets the linear (non-BCD) index number inside the track.
+    /// </summary>
     public byte IndexNumber { get; }
 
     /// <summary>Gets the minute component of the relative MSF position within the current track.</summary>
@@ -27,13 +36,22 @@ public sealed class SubchannelQData
     /// <summary>Gets the frame component of the relative MSF position within the current track.</summary>
     public byte RelativeFrame { get; }
 
-    /// <summary>Gets the minute component of the absolute MSF position on the disc (includes 150-frame pregap).</summary>
+    /// <summary>
+    /// Gets the minute component of the absolute disc MSF position.
+    /// Includes the Red Book 150-frame pre-gap offset.
+    /// </summary>
     public byte AbsoluteMinute { get; }
 
-    /// <summary>Gets the second component of the absolute MSF position on the disc (includes 150-frame pregap).</summary>
+    /// <summary>
+    /// Gets the second component of the absolute disc MSF position.
+    /// Includes the Red Book 150-frame pre-gap offset.
+    /// </summary>
     public byte AbsoluteSecond { get; }
 
-    /// <summary>Gets the frame component of the absolute MSF position on the disc (includes 150-frame pregap).</summary>
+    /// <summary>
+    /// Gets the frame component of the absolute disc MSF position.
+    /// Includes the Red Book 150-frame pre-gap offset.
+    /// </summary>
     public byte AbsoluteFrame { get; }
 
     /// <summary>Initialises a new <see cref="SubchannelQData"/> from already-resolved field values.</summary>
@@ -46,8 +64,7 @@ public sealed class SubchannelQData
         byte relativeFrame,
         byte absoluteMinute,
         byte absoluteSecond,
-        byte absoluteFrame)
-    {
+        byte absoluteFrame) {
         Attribute = attribute;
         TrackNumberBcd = trackNumberBcd;
         IndexNumber = indexNumber;

@@ -9,6 +9,8 @@ using System.Collections.Generic;
 /// <c>CDROM_Interface_Image::GetAudioSub</c>: the track-number byte is BCD-encoded, the
 /// index byte is the linear value 1 (always), and both MSF triplets are written in plain
 /// decimal (not BCD) so MSCDEX IOCTL 0x0C responses round-trip identically to DOSBox.
+/// The result is returned as <see cref="SubchannelQData"/> and then serialized by
+/// MSCDEX into the caller-visible IOCTL buffer.
 /// </summary>
 public sealed class SubchannelQSynthesizer {
     /// <summary>The standard Red Book 150-frame pre-gap offset added to LBAs to produce the absolute MSF.</summary>
@@ -18,11 +20,17 @@ public sealed class SubchannelQSynthesizer {
     public const int LeadOutTrackNumber = 0xAA;
 
     /// <summary>
-    /// Computes the subchannel-Q payload for the given table of contents at the given absolute LBA.
+    /// Computes a <see cref="SubchannelQData"/> snapshot for a single absolute disc position.
     /// </summary>
-    /// <param name="toc">The disc table of contents, ending with a synthetic lead-out entry (track 0xAA).</param>
-    /// <param name="currentLba">The absolute LBA whose position should be reported.</param>
-    /// <returns>The synthesised subchannel-Q data.</returns>
+    /// <param name="toc">
+    /// Disc table of contents ordered by track start LBA and ending with a synthetic
+    /// lead-out entry (track 0xAA).
+    /// </param>
+    /// <param name="currentLba">Absolute logical block address to report.</param>
+    /// <returns>
+    /// Subchannel-Q metadata containing attribute, BCD track number, index, relative MSF,
+    /// and absolute MSF values.
+    /// </returns>
     public SubchannelQData Compute(IReadOnlyList<TableOfContentsEntry> toc, int currentLba) {
         TrackLookup containingTrackLookup = FindContainingTrack(toc, currentLba);
 
