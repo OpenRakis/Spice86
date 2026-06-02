@@ -538,7 +538,9 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
             }
             return DriveContentMap.ForCdRom(upper, (uint)image.TotalSectors, tracks);
         }
-        throw new InvalidOperationException($"Drive {upper}: does not expose a content map");
+
+        // Empty/unmounted drives are expected and should return a normal empty map.
+        return DriveContentMap.ForFat(upper, System.Array.Empty<DriveClusterInfo>(), 0);
     }
 
     private const int MaxVisualizationClusters = 4096;
