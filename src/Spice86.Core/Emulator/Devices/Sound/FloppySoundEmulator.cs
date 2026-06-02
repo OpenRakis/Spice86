@@ -125,8 +125,6 @@ public sealed class FloppySoundEmulator {
         _device.SetLastIoPath(path, isWrite);
     }
 
-    // ------------------------------------------------------------------ //
-
     private void AudioCallback(int framesRequested) {
         // Stereo-interleaved output (L + R per frame)
         int needed = framesRequested * 2;
