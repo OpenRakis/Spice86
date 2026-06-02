@@ -19,14 +19,14 @@ public sealed class Fat12FileSystem {
     private const int FatEntryBitsPerEntry = 12;
 
     private readonly byte[] _imageData;
-    private readonly BiosParameterBlock _bpb;
+    private readonly FatBiosParameterBlock _bpb;
     private readonly ushort[] _fat;
 
     /// <summary>Gets the volume label found in the BPB or the root-directory volume-label entry.</summary>
     public string VolumeLabel { get; }
 
     /// <summary>Gets the BIOS Parameter Block parsed from the boot sector.</summary>
-    public BiosParameterBlock Bpb => _bpb;
+    public FatBiosParameterBlock Bpb => _bpb;
 
     /// <summary>
     /// Opens a FAT12 floppy image from raw bytes.
@@ -35,7 +35,7 @@ public sealed class Fat12FileSystem {
     /// <exception cref="InvalidDataException">Thrown when the image is not a valid FAT12 volume.</exception>
     public Fat12FileSystem(byte[] imageData) {
         _imageData = imageData;
-        _bpb = BiosParameterBlock.Parse(_imageData.AsSpan(0, Math.Min(512, _imageData.Length)));
+        _bpb = FatBiosParameterBlock.Parse(_imageData.AsSpan(0, Math.Min(512, _imageData.Length)));
         _fat = ReadFat();
         VolumeLabel = FindVolumeLabel();
     }

@@ -7,7 +7,7 @@ using System.Text;
 /// <summary>
 /// Parses the BIOS Parameter Block (BPB) from the boot sector of a FAT12/FAT16 floppy image.
 /// </summary>
-public sealed class BiosParameterBlock {
+public sealed class FatBiosParameterBlock {
     /// <summary>Gets the number of bytes per sector (typically 512).</summary>
     public ushort BytesPerSector { get; }
 
@@ -79,7 +79,7 @@ public sealed class BiosParameterBlock {
     /// <summary>Gets the size of one allocation cluster in bytes.</summary>
     public int BytesPerCluster => BytesPerSector * SectorsPerCluster;
 
-    private BiosParameterBlock(
+    private FatBiosParameterBlock(
         ushort bytesPerSector, byte sectorsPerCluster, ushort reservedSectors,
         byte numberOfFats, ushort rootDirEntries, ushort totalSectors16,
         byte mediaDescriptor, ushort sectorsPerFat, ushort sectorsPerTrack,
@@ -106,9 +106,9 @@ public sealed class BiosParameterBlock {
     /// Parses a BPB from the first 512 bytes of a FAT floppy boot sector.
     /// </summary>
     /// <param name="bootSector">The raw boot sector bytes (must be at least 62 bytes).</param>
-    /// <returns>The parsed <see cref="BiosParameterBlock"/>.</returns>
+    /// <returns>The parsed <see cref="FatBiosParameterBlock"/>.</returns>
     /// <exception cref="InvalidDataException">Thrown when the sector is too short or has a zero bytes-per-sector value.</exception>
-    public static BiosParameterBlock Parse(ReadOnlySpan<byte> bootSector) {
+    public static FatBiosParameterBlock Parse(ReadOnlySpan<byte> bootSector) {
         if (bootSector.Length < 62) {
             throw new InvalidDataException($"Boot sector is too short: {bootSector.Length} bytes (expected at least 62).");
         }
@@ -151,7 +151,7 @@ public sealed class BiosParameterBlock {
             }
         }
 
-        return new BiosParameterBlock(
+        return new FatBiosParameterBlock(
             bytesPerSector, sectorsPerCluster, reservedSectors,
             numberOfFats, rootDirEntries, totalSectors16,
             mediaDescriptor, sectorsPerFat, sectorsPerTrack,

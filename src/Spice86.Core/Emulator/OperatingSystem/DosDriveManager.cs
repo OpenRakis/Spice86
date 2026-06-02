@@ -5,7 +5,7 @@ using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
-using ImageBiosParameterBlock = Spice86.Shared.Emulator.Storage.FileSystem.BiosParameterBlock;
+using FatBiosParameterBlock = Spice86.Shared.Emulator.Storage.FileSystem.FatBiosParameterBlock;
 
 using System;
 using System.Collections;
@@ -1310,8 +1310,8 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
         return ImageBackedFloppyDrive.From(floppy, imageData);
     }
 
-    private static ImageBiosParameterBlock ParseBpb(byte[] imageData) {
-        return ImageBiosParameterBlock.Parse(imageData.AsSpan(0, Math.Min(512, imageData.Length)));
+    private static FatBiosParameterBlock ParseBpb(byte[] imageData) {
+        return FatBiosParameterBlock.Parse(imageData.AsSpan(0, Math.Min(512, imageData.Length)));
     }
 
     /// <summary>
@@ -1360,7 +1360,7 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
             return false;
         }
 
-        ImageBiosParameterBlock bpb = ParseBpb(imageData);
+        FatBiosParameterBlock bpb = ParseBpb(imageData);
 
         bytesPerSector = bpb.BytesPerSector;
         sectorsPerTrack = bpb.SectorsPerTrack;
