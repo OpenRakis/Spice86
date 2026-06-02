@@ -24,7 +24,10 @@ public sealed class VirtualFloppyImage {
     private const int RootDirEntries = 224;
     private const int SectorsPerTrack = 18;
     private const int NumberOfHeads = 2;
-    private const byte MediaDescriptor = 0xF0;
+
+    private enum FloppyMediaDescriptor : byte {
+        Fat12_1440K = 0xF0
+    }
 
     private static readonly int RootDirSectors = (RootDirEntries * 32 + BytesPerSector - 1) / BytesPerSector;
     private static readonly int FatStartSector = ReservedSectors;
@@ -53,7 +56,7 @@ public sealed class VirtualFloppyImage {
     public byte[] Build() {
         byte[] image = new byte[ImageSize];
         ushort[] fat = new ushort[TotalDataClusters + 2];
-        fat[0] = (ushort)(0xF00 | MediaDescriptor);
+        fat[0] = (ushort)(0xF00 | (byte)FloppyMediaDescriptor.Fat12_1440K);
         fat[1] = 0xFFF;
         int nextCluster = 2;
         int rootDirSlot = 0;
@@ -208,7 +211,7 @@ public sealed class VirtualFloppyImage {
                     image[byteIndex + 1] = (byte)(value >> 4);
                 }
             }
-            image[fatByteOffset] = MediaDescriptor;
+            image[fatByteOffset] = (byte)FloppyMediaDescriptor.Fat12_1440K;
             image[fatByteOffset + 1] = 0xFF;
             image[fatByteOffset + 2] = 0xFF;
         }
@@ -226,7 +229,7 @@ public sealed class VirtualFloppyImage {
         boot[16] = NumberOfFats;
         BitConverter.GetBytes((ushort)RootDirEntries).CopyTo(boot.Slice(17));
         BitConverter.GetBytes((ushort)TotalSectors).CopyTo(boot.Slice(19));
-        boot[21] = MediaDescriptor;
+        boot[21] = (byte)FloppyMediaDescriptor.Fat12_1440K;
         BitConverter.GetBytes((ushort)SectorsPerFat).CopyTo(boot.Slice(22));
         BitConverter.GetBytes((ushort)SectorsPerTrack).CopyTo(boot.Slice(24));
         BitConverter.GetBytes((ushort)NumberOfHeads).CopyTo(boot.Slice(26));

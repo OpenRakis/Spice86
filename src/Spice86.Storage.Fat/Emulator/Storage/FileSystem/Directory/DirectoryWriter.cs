@@ -23,7 +23,7 @@ public sealed class DirectoryWriter {
         for (int slot = 0; slot < entryCount; slot++) {
             int offset = slot * FatDirectoryEntry.EntrySize;
             byte marker = directorySectors[offset];
-            if (marker is FatDirectoryEntry.EndOfDirectory or FatDirectoryEntry.DeletedEntry) {
+            if (marker is (byte)FatDirectoryEntry.EntryMarker.EndOfDirectory or (byte)FatDirectoryEntry.EntryMarker.DeletedEntry) {
                 return slot;
             }
         }

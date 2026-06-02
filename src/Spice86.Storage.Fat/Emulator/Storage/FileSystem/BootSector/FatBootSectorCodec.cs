@@ -15,11 +15,11 @@ public static class FatBootSectorCodec {
     /// <summary>Offset of the 0x55 0xAA boot signature inside the boot sector.</summary>
     public const int BootSignatureOffset = 510;
 
-    /// <summary>Low byte of the boot signature.</summary>
-    public const byte BootSignatureLo = 0x55;
-
-    /// <summary>High byte of the boot signature.</summary>
-    public const byte BootSignatureHi = 0xAA;
+    /// <summary>Byte values that compose the boot signature.</summary>
+    public enum BootSignatureByte : byte {
+        Low = 0x55,
+        High = 0xAA
+    }
 
     /// <summary>
     /// Parses a boot sector into a <see cref="MutableBiosParameterBlock"/>.
@@ -32,7 +32,7 @@ public static class FatBootSectorCodec {
         if (bootSector.Length < BootSectorSize) {
             throw new InvalidDataException($"Boot sector is {bootSector.Length} bytes; expected {BootSectorSize}.");
         }
-        if (bootSector[BootSignatureOffset] != BootSignatureLo || bootSector[BootSignatureOffset + 1] != BootSignatureHi) {
+        if (bootSector[BootSignatureOffset] != (byte)BootSignatureByte.Low || bootSector[BootSignatureOffset + 1] != (byte)BootSignatureByte.High) {
             throw new InvalidDataException($"Boot sector signature 0x{bootSector[BootSignatureOffset]:X2}{bootSector[BootSignatureOffset + 1]:X2} does not match expected 0x55AA.");
         }
 
@@ -90,7 +90,7 @@ public static class FatBootSectorCodec {
             throw new ArgumentException($"Boot sector buffer is {destination.Length} bytes; need at least {BootSectorSize}.", nameof(destination));
         }
         bpb.Serialize(destination, fatType);
-        destination[BootSignatureOffset] = BootSignatureLo;
-        destination[BootSignatureOffset + 1] = BootSignatureHi;
+        destination[BootSignatureOffset] = (byte)BootSignatureByte.Low;
+        destination[BootSignatureOffset + 1] = (byte)BootSignatureByte.High;
     }
 }

@@ -16,11 +16,14 @@ public sealed class IsoImage : ICdRomImage {
     private const int PvdVolumeIdentifierOffset = 40;
     private const int PvdVolumeIdentifierLength = 32;
     private const int SvdEscapeSequenceOffset = 88;
-    private const int VolumeDescriptorTypePvd = 0x01;
-    private const int VolumeDescriptorTypeSvd = 0x02;
-    private const int VolumeDescriptorTypeTerminator = 0xFF;
     private const int MaxVolumeDescriptorsToScan = 32;
     private static readonly byte[] ExpectedSignature = "CD001"u8.ToArray();
+
+    private enum VolumeDescriptorType : byte {
+        Primary = 0x01,
+        Supplementary = 0x02,
+        Terminator = 0xFF
+    }
 
     private readonly FileBackedDataSource _source;
     private readonly List<CdTrack> _tracks;
@@ -136,13 +139,13 @@ public sealed class IsoImage : ICdRomImage {
             }
             _source.Read(offset, sector);
             byte type = sector[0];
-            if (type == VolumeDescriptorTypeTerminator) {
+            if (type == (byte)VolumeDescriptorType.Terminator) {
                 return;
             }
             if (!HasCd001Signature(sector)) {
                 return;
             }
-            if (type != VolumeDescriptorTypeSvd) {
+            if (type != (byte)VolumeDescriptorType.Supplementary) {
                 continue;
             }
             IsoSupplementaryVolumeDescriptor svd = ParseSupplementaryVolumeDescriptor(sector);
