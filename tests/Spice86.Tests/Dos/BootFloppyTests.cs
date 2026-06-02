@@ -4,8 +4,7 @@ using FluentAssertions;
 
 using Spice86.Core.Emulator.OperatingSystem.Batch;
 using Spice86.Tests.Dos.FileSystem;
-
-using System;
+using Spice86.Tests.Utility;
 
 using Xunit;
 
@@ -23,7 +22,8 @@ using Xunit;
 public class BootFloppyTests {
     [Fact]
     public void BootFromFloppy_DriveA_LoadsSectorAt7C00() {
-        using DosTestFixture ctx = new(Path.GetTempPath());
+        using TempFile tempFile = new("boot-floppy");
+        using DosTestFixture ctx = new(tempFile.Path);
         byte[] image = new Fat12ImageBuilder().Build();
         // Mark a recognisable byte pattern in the boot-code area (offset 0x40, well past the BPB).
         image[0x40] = 0xDE;
@@ -44,7 +44,8 @@ public class BootFloppyTests {
 
     [Fact]
     public void BootFromFloppy_DriveA_SetsCpuStateForBiosBootProtocol() {
-        using DosTestFixture ctx = new(Path.GetTempPath());
+        using TempFile tempFile = new("boot-floppy");
+        using DosTestFixture ctx = new(tempFile.Path);
         byte[] image = new Fat12ImageBuilder().Build();
 
         ctx.BootService.TryBootFromFloppyImage(image, 0, "test.img");
@@ -67,7 +68,8 @@ public class BootFloppyTests {
 
     [Fact]
     public void BootFromFloppy_DriveB_SetsDLToOne() {
-        using DosTestFixture ctx = new(Path.GetTempPath());
+        using TempFile tempFile = new("boot-floppy");
+        using DosTestFixture ctx = new(tempFile.Path);
         byte[] image = new Fat12ImageBuilder().Build();
 
         ctx.BootService.TryBootFromFloppyImage(image, 1, "test.img");
@@ -77,7 +79,8 @@ public class BootFloppyTests {
 
     [Fact]
     public void BootFromFloppy_MissingBootSignature_ReturnsFalse() {
-        using DosTestFixture ctx = new(Path.GetTempPath());
+        using TempFile tempFile = new("boot-floppy");
+        using DosTestFixture ctx = new(tempFile.Path);
         byte[] image = new Fat12ImageBuilder().Build();
         image[510] = 0x00;
         image[511] = 0x00;
@@ -89,7 +92,8 @@ public class BootFloppyTests {
 
     [Fact]
     public void BatchEngine_BootCommand_NoMount_FailsWithErrorMessage() {
-        using DosTestFixture ctx = new(Path.GetTempPath());
+        using TempFile tempFile = new("boot-floppy");
+        using DosTestFixture ctx = new(tempFile.Path);
         DosBatchExecutionEngine engine = ctx.ProcessManager.BatchExecutionEngine;
 
         bool launched = engine.TryExecuteCommandLine("BOOT", out LaunchRequest launchRequest);
@@ -100,7 +104,8 @@ public class BootFloppyTests {
 
     [Fact]
     public void BatchEngine_BootCommand_WithMountedFloppy_YieldsBootFloppyLaunchRequest() {
-        using DosTestFixture ctx = new(Path.GetTempPath());
+        using TempFile tempFile = new("boot-floppy");
+        using DosTestFixture ctx = new(tempFile.Path);
         byte[] image = new Fat12ImageBuilder().Build();
         ctx.DriveManager.MountFloppyImage('A', image, "test.img");
         DosBatchExecutionEngine engine = ctx.ProcessManager.BatchExecutionEngine;
@@ -115,7 +120,8 @@ public class BootFloppyTests {
     [Fact]
     public void BatchEngine_BootCommand_HardDiskLetterWithoutMount_FailsGracefully() {
         // Arrange
-        using DosTestFixture ctx = new(Path.GetTempPath());
+        using TempFile tempFile = new("boot-floppy");
+        using DosTestFixture ctx = new(tempFile.Path);
         DosBatchExecutionEngine engine = ctx.ProcessManager.BatchExecutionEngine;
 
         // Act

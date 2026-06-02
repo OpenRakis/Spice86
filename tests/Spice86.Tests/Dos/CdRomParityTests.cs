@@ -112,7 +112,7 @@ public class CdRomParityTests {
 
     private static VirtualIsoImage CreateVirtualIsoImage(TempFile tempFile) {
         string sourceDirectory = tempFile.CreateDirectory("source");
-        File.WriteAllText(Path.Combine(sourceDirectory, "README.TXT"), "Spice86");
+        File.WriteAllText(Path.Join(sourceDirectory, "README.TXT"), "Spice86");
         return new VirtualIsoImage(sourceDirectory, "SPICE86");
     }
 

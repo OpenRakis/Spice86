@@ -1,6 +1,7 @@
 namespace Spice86.Tests.Dos.FileSystem;
 
 using Spice86.Shared.Emulator.Storage.FileSystem;
+using Spice86.Tests.Utility;
 
 using System;
 using System.Collections.Generic;
@@ -20,24 +21,20 @@ internal sealed class Fat12ImageBuilder {
     }
 
     internal byte[] Build() {
-        string tempDirectory = Path.Combine(Path.GetTempPath(), $"spice86-fat12-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDirectory);
+        using TempFile tempFile = new("spice86-fat12");
+        string tempDirectory = tempFile.Path;
 
-        try {
-            for (int i = 0; i < _files.Count; i++) {
-                (string fileName, byte[] content) file = _files[i];
-                string filePath = Path.Combine(tempDirectory, file.fileName);
-                string? directoryPath = Path.GetDirectoryName(filePath);
-                if (!string.IsNullOrEmpty(directoryPath)) {
-                    Directory.CreateDirectory(directoryPath);
-                }
-                File.WriteAllBytes(filePath, file.content);
+        for (int i = 0; i < _files.Count; i++) {
+            (string fileName, byte[] content) file = _files[i];
+            string filePath = Path.Join(tempDirectory, file.fileName);
+            string? directoryPath = Path.GetDirectoryName(filePath);
+            if (!string.IsNullOrEmpty(directoryPath)) {
+                Directory.CreateDirectory(directoryPath);
             }
-
-            VirtualFloppyImage image = new(tempDirectory);
-            return image.Build();
-        } finally {
-            Directory.Delete(tempDirectory, true);
+            File.WriteAllBytes(filePath, file.content);
         }
+
+        VirtualFloppyImage image = new(tempDirectory);
+        return image.Build();
     }
 }

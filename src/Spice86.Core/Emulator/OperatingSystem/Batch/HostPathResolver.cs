@@ -54,7 +54,7 @@ internal static class HostPathResolver {
                     Path.DirectorySeparatorChar, '/', '\\');
                 string combined = string.IsNullOrEmpty(dosRelative)
                     ? hostBase
-                    : Path.Combine(hostBase, dosRelative);
+                    : Path.Join(hostBase, dosRelative);
                 string dosResolved = Path.GetFullPath(combined);
                 if (Directory.Exists(dosResolved) || File.Exists(dosResolved)) {
                     return dosResolved;
@@ -81,11 +81,11 @@ internal static class HostPathResolver {
                 string relDir = dosCurrentDir.TrimStart('/', '\\')
                                              .Replace('\\', Path.DirectorySeparatorChar)
                                              .Replace('/', Path.DirectorySeparatorChar);
-                hostBase = Path.Combine(hostBase, relDir);
+                hostBase = Path.Join(hostBase, relDir);
             }
             string relPath = path.Replace('\\', Path.DirectorySeparatorChar)
                                  .Replace('/', Path.DirectorySeparatorChar);
-            string dosRelativeResolved = Path.GetFullPath(Path.Combine(hostBase, relPath));
+            string dosRelativeResolved = Path.GetFullPath(Path.Join(hostBase, relPath));
             if (Directory.Exists(dosRelativeResolved) || File.Exists(dosRelativeResolved)) {
                 return dosRelativeResolved;
             }

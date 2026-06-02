@@ -84,12 +84,12 @@ public sealed class MdsImage : ICdRomImage {
     private static string ResolveMdfPath(string mdfFilename, string mdsDirectory, string mdsFilePath) {
         if (string.Equals(mdfFilename, "*.mdf", StringComparison.OrdinalIgnoreCase)) {
             string baseName = Path.GetFileNameWithoutExtension(mdsFilePath);
-            return Path.Combine(mdsDirectory, baseName + ".mdf");
+            return Path.Join(mdsDirectory, baseName + ".mdf");
         }
         if (Path.IsPathRooted(mdfFilename)) {
             return mdfFilename;
         }
-        return Path.Combine(mdsDirectory, mdfFilename);
+        return Path.Join(mdsDirectory, mdfFilename);
     }
 
     private FileBackedDataSource GetOrOpenSource(string mdfPath) {

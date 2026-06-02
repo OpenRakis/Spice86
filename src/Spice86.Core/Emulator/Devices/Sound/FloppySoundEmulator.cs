@@ -176,18 +176,18 @@ public sealed class FloppySoundEmulator {
     /// </summary>
     private static string? ResolveFilePath(string filename, string? userDirectory) {
         if (!string.IsNullOrEmpty(userDirectory)) {
-            string candidate = Path.Combine(userDirectory, filename);
+            string candidate = Path.Join(userDirectory, filename);
             if (File.Exists(candidate)) {
                 return candidate;
             }
         }
 
-        string builtinPath = Path.Combine(AppContext.BaseDirectory, ResourceSubDir, filename);
+        string builtinPath = Path.Join(AppContext.BaseDirectory, ResourceSubDir, filename);
         if (File.Exists(builtinPath)) {
             return builtinPath;
         }
 
-        string cwdPath = Path.Combine(Environment.CurrentDirectory, filename);
+        string cwdPath = Path.Join(Environment.CurrentDirectory, filename);
         if (File.Exists(cwdPath)) {
             return cwdPath;
         }

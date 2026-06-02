@@ -25,174 +25,193 @@ public class MscdexDeviceRequestTests {
     [Fact]
     public void SendDeviceDriverRequest_IoctlMediaChanged_UsesDosBoxSwapRequestCodes() {
         // Arrange
-        CdRomDrive drive = CreateAudioCdRomDrive(out _, out _);
-        MscdexTestHarness harness = new(drive);
+        using TempFile tempFile = new("cdrom-mscdex-audio");
+        CdRomDrive drive = CreateAudioCdRomDrive(tempFile, out ICdRomImage image, out _, out _);
+        using (image) {
+            MscdexTestHarness harness = new(drive);
 
-        // Act
-        harness.DispatchIoctlInput((byte)MscdexIoctlInputCode.MediaChanged);
-        byte firstStatus = harness.Memory.UInt8[harness.BufferBaseAddress + 1];
+            // Act
+            harness.DispatchIoctlInput((byte)MscdexIoctlInputCode.MediaChanged);
+            byte firstStatus = harness.Memory.UInt8[harness.BufferBaseAddress + 1];
 
-        harness.DispatchIoctlInput((byte)MscdexIoctlInputCode.MediaChanged);
-        byte secondStatus = harness.Memory.UInt8[harness.BufferBaseAddress + 1];
+            harness.DispatchIoctlInput((byte)MscdexIoctlInputCode.MediaChanged);
+            byte secondStatus = harness.Memory.UInt8[harness.BufferBaseAddress + 1];
 
-        // Assert
-        firstStatus.Should().Be(0xFF,
-            "MSCDEX IOCTL media-change should report swap requested on the first query after media insertion");
-        secondStatus.Should().Be(0x01,
-            "MSCDEX IOCTL media-change should report 0x01 once the pending swap notification has been consumed");
+            // Assert
+            firstStatus.Should().Be(0xFF,
+                "MSCDEX IOCTL media-change should report swap requested on the first query after media insertion");
+            secondStatus.Should().Be(0x01,
+                "MSCDEX IOCTL media-change should report 0x01 once the pending swap notification has been consumed");
+        }
     }
 
     [Fact]
     public void SendDeviceDriverRequest_Seek_UpdatesCurrentPositionWhenPlaybackIsIdle() {
         // Arrange
-        CdRomDrive drive = CreateAudioCdRomDrive(out _, out _);
-        MscdexTestHarness harness = new(drive);
+        using TempFile tempFile = new("cdrom-mscdex-audio");
+        CdRomDrive drive = CreateAudioCdRomDrive(tempFile, out ICdRomImage image, out _, out _);
+        using (image) {
+            MscdexTestHarness harness = new(drive);
 
-        // Act
-        harness.DispatchSeek(321);
-        harness.DispatchIoctlInput((byte)MscdexIoctlInputCode.CurrentPosition, 0);
-        uint currentLba = harness.Memory.UInt32[harness.BufferBaseAddress + 2];
+            // Act
+            harness.DispatchSeek(321);
+            harness.DispatchIoctlInput((byte)MscdexIoctlInputCode.CurrentPosition, 0);
+            uint currentLba = harness.Memory.UInt32[harness.BufferBaseAddress + 2];
 
-        // Assert
-        currentLba.Should().Be(321u,
-            "MSCDEX seek should update the idle current-position state used by IOCTL current-position queries");
+            // Assert
+            currentLba.Should().Be(321u,
+                "MSCDEX seek should update the idle current-position state used by IOCTL current-position queries");
+        }
     }
 
     [Fact]
     public void SendDeviceDriverRequest_StopAndResume_PreservePausedAudioSessionAndDosBoxAudioStatus() {
         // Arrange
-        CdRomDrive drive = CreateAudioCdRomDrive(out Action<int> audioCallback, out _);
-        MscdexTestHarness harness = new(drive);
+        using TempFile tempFile = new("cdrom-mscdex-audio");
+        CdRomDrive drive = CreateAudioCdRomDrive(tempFile, out ICdRomImage image, out Action<int> audioCallback, out _);
+        using (image) {
+            MscdexTestHarness harness = new(drive);
 
-        // Act
-        harness.DispatchPlayAudio(100, 75);
-        audioCallback(588 * 20);
-        harness.DispatchStopAudio();
-        harness.DispatchIoctlInput((byte)MscdexIoctlInputCode.AudioStatus);
+            // Act
+            harness.DispatchPlayAudio(100, 75);
+            audioCallback(588 * 20);
+            harness.DispatchStopAudio();
+            harness.DispatchIoctlInput((byte)MscdexIoctlInputCode.AudioStatus);
 
-        byte pauseFlag = harness.Memory.UInt8[harness.BufferBaseAddress + 1];
-        byte startMinute = harness.Memory.UInt8[harness.BufferBaseAddress + 3];
-        byte startSecond = harness.Memory.UInt8[harness.BufferBaseAddress + 4];
-        byte startFrame = harness.Memory.UInt8[harness.BufferBaseAddress + 5];
-        byte endMinute = harness.Memory.UInt8[harness.BufferBaseAddress + 7];
-        byte endSecond = harness.Memory.UInt8[harness.BufferBaseAddress + 8];
-        byte endFrame = harness.Memory.UInt8[harness.BufferBaseAddress + 9];
+            byte pauseFlag = harness.Memory.UInt8[harness.BufferBaseAddress + 1];
+            byte startMinute = harness.Memory.UInt8[harness.BufferBaseAddress + 3];
+            byte startSecond = harness.Memory.UInt8[harness.BufferBaseAddress + 4];
+            byte startFrame = harness.Memory.UInt8[harness.BufferBaseAddress + 5];
+            byte endMinute = harness.Memory.UInt8[harness.BufferBaseAddress + 7];
+            byte endSecond = harness.Memory.UInt8[harness.BufferBaseAddress + 8];
+            byte endFrame = harness.Memory.UInt8[harness.BufferBaseAddress + 9];
 
-        harness.DispatchResumeAudio();
-        CdAudioPlayback resumedPlayback = drive.GetAudioStatus();
+            harness.DispatchResumeAudio();
+            CdAudioPlayback resumedPlayback = drive.GetAudioStatus();
 
-        // Assert
-        pauseFlag.Should().Be(1,
-            "MSCDEX stop should preserve a resumable paused audio session instead of discarding playback state");
-        startMinute.Should().Be(0);
-        startSecond.Should().Be(3);
-        startFrame.Should().Be(45,
-            "MSCDEX audio status should report the paused playback position in Red Book MSF");
-        endMinute.Should().Be(0);
-        endSecond.Should().Be(3);
-        endFrame.Should().Be(0,
-            "MSCDEX audio status should report the requested playback length, not an absolute end LBA");
-        resumedPlayback.Status.Should().Be(CdAudioStatus.Playing,
-            "MSCDEX resume should restart a previously paused audio session");
+            // Assert
+            pauseFlag.Should().Be(1,
+                "MSCDEX stop should preserve a resumable paused audio session instead of discarding playback state");
+            startMinute.Should().Be(0);
+            startSecond.Should().Be(3);
+            startFrame.Should().Be(45,
+                "MSCDEX audio status should report the paused playback position in Red Book MSF");
+            endMinute.Should().Be(0);
+            endSecond.Should().Be(3);
+            endFrame.Should().Be(0,
+                "MSCDEX audio status should report the requested playback length, not an absolute end LBA");
+            resumedPlayback.Status.Should().Be(CdAudioStatus.Playing,
+                "MSCDEX resume should restart a previously paused audio session");
+        }
     }
 
     [Fact]
     public void SendDeviceDriverRequest_PlayAndResume_SetAudioPlayingBitInStatusWord() {
         // Arrange
-        CdRomDrive drive = CreateAudioCdRomDrive(out Action<int> audioCallback, out _);
-        MscdexTestHarness harness = new(drive);
+        using TempFile tempFile = new("cdrom-mscdex-audio");
+        CdRomDrive drive = CreateAudioCdRomDrive(tempFile, out ICdRomImage image, out Action<int> audioCallback, out _);
+        using (image) {
+            MscdexTestHarness harness = new(drive);
 
-        // Act
-        harness.DispatchPlayAudio(100, 75);
-        ushort playStatus = harness.RequestStatusWord;
+            // Act
+            harness.DispatchPlayAudio(100, 75);
+            ushort playStatus = harness.RequestStatusWord;
 
-        audioCallback(588 * 20);
-        harness.DispatchStopAudio();
-        ushort stopStatus = harness.RequestStatusWord;
+            audioCallback(588 * 20);
+            harness.DispatchStopAudio();
+            ushort stopStatus = harness.RequestStatusWord;
 
-        harness.DispatchResumeAudio();
-        ushort resumeStatus = harness.RequestStatusWord;
+            harness.DispatchResumeAudio();
+            ushort resumeStatus = harness.RequestStatusWord;
 
-        // Assert
-        playStatus.Should().Be(0x0300,
-            "MSCDEX request status should set the audio-playing bit while playback is active");
-        stopStatus.Should().Be(0x0100,
-            "MSCDEX stop should clear the audio-playing bit once playback has been paused");
-        resumeStatus.Should().Be(0x0300,
-            "MSCDEX resume should restore the audio-playing bit when playback becomes active again");
+            // Assert
+            playStatus.Should().Be(0x0300,
+                "MSCDEX request status should set the audio-playing bit while playback is active");
+            stopStatus.Should().Be(0x0100,
+                "MSCDEX stop should clear the audio-playing bit once playback has been paused");
+            resumeStatus.Should().Be(0x0300,
+                "MSCDEX resume should restore the audio-playing bit when playback becomes active again");
+        }
     }
 
     [Fact]
     public void SendDeviceDriverRequest_IoctlChannelControl_ClampsDosBoxRoutingAndAppliesLiveMixerState() {
         // Arrange
-        CdRomDrive drive = CreateAudioCdRomDrive(out _, out SoundChannel channel);
-        MscdexTestHarness harness = new(drive);
+        using TempFile tempFile = new("cdrom-mscdex-audio");
+        CdRomDrive drive = CreateAudioCdRomDrive(tempFile, out ICdRomImage image, out _, out SoundChannel channel);
+        using (image) {
+            MscdexTestHarness harness = new(drive);
 
-        // Act
-        harness.DispatchIoctlOutputChannelControl(3, 64, 9, 192, 2, 111, 3, 222);
-        harness.DispatchIoctlInput((byte)MscdexIoctlInputCode.ChannelControl);
+            // Act
+            harness.DispatchIoctlOutputChannelControl(3, 64, 9, 192, 2, 111, 3, 222);
+            harness.DispatchIoctlInput((byte)MscdexIoctlInputCode.ChannelControl);
 
-        // Assert
-        channel.AppVolume.Left.Should().BeApproximately(64.0f / 255.0f, 0.0001f,
-            "MSCDEX IOCTL channel-control should update the live left application gain on the CD audio mixer channel");
-        channel.AppVolume.Right.Should().BeApproximately(192.0f / 255.0f, 0.0001f,
-            "MSCDEX IOCTL channel-control should update the live right application gain on the CD audio mixer channel");
-        channel.ChannelMap.Should().Be(StereoLine.StereoMap,
-            "DOSBox clamps invalid channel-control output routes back to left/right before applying them");
-        harness.Memory.UInt8[harness.BufferBaseAddress + 1].Should().Be(0,
-            "invalid left output routes should round-trip as the DOSBox left default");
-        harness.Memory.UInt8[harness.BufferBaseAddress + 2].Should().Be(64);
-        harness.Memory.UInt8[harness.BufferBaseAddress + 3].Should().Be(1,
-            "invalid right output routes should round-trip as the DOSBox right default");
-        harness.Memory.UInt8[harness.BufferBaseAddress + 4].Should().Be(192);
-        harness.Memory.UInt8[harness.BufferBaseAddress + 5].Should().Be(2);
-        harness.Memory.UInt8[harness.BufferBaseAddress + 6].Should().Be(111);
-        harness.Memory.UInt8[harness.BufferBaseAddress + 7].Should().Be(3);
-        harness.Memory.UInt8[harness.BufferBaseAddress + 8].Should().Be(222);
+            // Assert
+            channel.AppVolume.Left.Should().BeApproximately(64.0f / 255.0f, 0.0001f,
+                "MSCDEX IOCTL channel-control should update the live left application gain on the CD audio mixer channel");
+            channel.AppVolume.Right.Should().BeApproximately(192.0f / 255.0f, 0.0001f,
+                "MSCDEX IOCTL channel-control should update the live right application gain on the CD audio mixer channel");
+            channel.ChannelMap.Should().Be(StereoLine.StereoMap,
+                "DOSBox clamps invalid channel-control output routes back to left/right before applying them");
+            harness.Memory.UInt8[harness.BufferBaseAddress + 1].Should().Be(0,
+                "invalid left output routes should round-trip as the DOSBox left default");
+            harness.Memory.UInt8[harness.BufferBaseAddress + 2].Should().Be(64);
+            harness.Memory.UInt8[harness.BufferBaseAddress + 3].Should().Be(1,
+                "invalid right output routes should round-trip as the DOSBox right default");
+            harness.Memory.UInt8[harness.BufferBaseAddress + 4].Should().Be(192);
+            harness.Memory.UInt8[harness.BufferBaseAddress + 5].Should().Be(2);
+            harness.Memory.UInt8[harness.BufferBaseAddress + 6].Should().Be(111);
+            harness.Memory.UInt8[harness.BufferBaseAddress + 7].Should().Be(3);
+            harness.Memory.UInt8[harness.BufferBaseAddress + 8].Should().Be(222);
+        }
     }
 
     [Fact]
     public void SendDeviceDriverRequest_ReadLong_FailsWhenDriveReturnsShortRawSector() {
         // Arrange
-        CdRomDrive drive = CreateCookedOnlyCdRomDrive();
-        MscdexTestHarness harness = new(drive);
-        harness.Memory.UInt8[harness.BufferBaseAddress] = 0x5A;
+        using TempFile tempFile = new("cdrom-mscdex-cooked");
+        CdRomDrive drive = CreateCookedOnlyCdRomDrive(tempFile, out ICdRomImage image);
+        using (image) {
+            MscdexTestHarness harness = new(drive);
+            harness.Memory.UInt8[harness.BufferBaseAddress] = 0x5A;
 
-        // Act
-        harness.DispatchReadLong(16, 1, rawFlag: 1);
+            // Act
+            harness.DispatchReadLong(16, 1, rawFlag: 1);
 
-        // Assert
-        harness.RequestStatusWord.Should().Be(0x8000,
-            "MSCDEX Read Long should fail when the drive cannot supply a full raw 2352-byte sector");
-        harness.Memory.UInt8[harness.BufferBaseAddress].Should().Be(0x5A,
-            "failed Read Long requests should not overwrite the caller buffer with truncated sector data");
+            // Assert
+            harness.RequestStatusWord.Should().Be(0x8000,
+                "MSCDEX Read Long should fail when the drive cannot supply a full raw 2352-byte sector");
+            harness.Memory.UInt8[harness.BufferBaseAddress].Should().Be(0x5A,
+                "failed Read Long requests should not overwrite the caller buffer with truncated sector data");
+        }
     }
 
-    private static CdRomDrive CreateAudioCdRomDrive(out Action<int> audioCallback, out SoundChannel channel) {
-        string rootDirectory = CreateUniqueDirectory("cdrom-mscdex-audio");
-        string binPath = Path.Combine(rootDirectory, "disc.bin");
-        byte[] binBytes = new byte[2352 * 200];
-        for (int i = 0; i < binBytes.Length; i++) {
-            binBytes[i] = (byte)(i & 0xFF);
-        }
-        File.WriteAllBytes(binPath, binBytes);
-        string cuePath = Path.Combine(rootDirectory, "disc.cue");
-        File.WriteAllText(cuePath,
+    private static CdRomDrive CreateAudioCdRomDrive(TempFile tempFile, out ICdRomImage image,
+        out Action<int> audioCallback,
+        out SoundChannel channel) {
+        tempFile.CreateFile("disc.bin", CreateAudioDiscBytes(200));
+        string cuePath = tempFile.CreateTextFile("disc.cue",
             "FILE \"disc.bin\" BINARY\r\n" +
             "TRACK 01 AUDIO\r\n" +
             "INDEX 01 00:00:00\r\n");
 
-        CueBinImage image = new(cuePath);
+        image = new CueBinImage(cuePath);
         return CreateDrive(image, out audioCallback, out channel);
     }
 
-    private static CdRomDrive CreateCookedOnlyCdRomDrive() {
-        string rootDirectory = CreateUniqueDirectory("cdrom-mscdex-cooked");
-        string sourceDirectory = Path.Combine(rootDirectory, "source");
-        Directory.CreateDirectory(sourceDirectory);
-        File.WriteAllText(Path.Combine(sourceDirectory, "README.TXT"), "Spice86");
+    private static byte[] CreateAudioDiscBytes(int sectorCount) {
+        byte[] binBytes = new byte[2352 * sectorCount];
+        for (int i = 0; i < binBytes.Length; i++) {
+            binBytes[i] = (byte)(i & 0xFF);
+        }
+        return binBytes;
+    }
 
-        VirtualIsoImage image = new(sourceDirectory, "SPICE86");
+    private static CdRomDrive CreateCookedOnlyCdRomDrive(TempFile tempFile, out ICdRomImage image) {
+        string sourceDirectory = tempFile.CreateDirectory("source");
+        File.WriteAllText(Path.Join(sourceDirectory, "README.TXT"), "Spice86");
+
+        image = new VirtualIsoImage(sourceDirectory, "SPICE86");
         return CreateDrive(image, out _, out _);
     }
 
@@ -218,12 +237,6 @@ public class MscdexDeviceRequestTests {
         audioCallback = capturedAudioCallback;
         channel = capturedChannel;
         return drive;
-    }
-
-    private static string CreateUniqueDirectory(string prefix) {
-        string directory = Path.Combine(Path.GetTempPath(), "Spice86", prefix, Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);
-        return directory;
     }
 
     private sealed class MscdexTestHarness {
