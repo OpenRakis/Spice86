@@ -208,8 +208,6 @@ internal sealed class FloppyDiskNoiseDevice {
         }
     }
 
-    // ------------------------------------------------------------------ //
-
     private void ResetIterators() {
         _spinUpPos = _spinUpSamples.Length; // exhausted — motor is idle initially
         _spinPos = _spinSamples.Length;
