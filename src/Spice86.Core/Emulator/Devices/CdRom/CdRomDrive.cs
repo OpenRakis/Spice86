@@ -182,6 +182,11 @@ public sealed class CdRomDrive : ICdRomDrive {
     }
 
     /// <inheritdoc/>
+    public void ApplyChannelControl(byte leftOutput, byte leftVolume, byte rightOutput, byte rightVolume) {
+        _audioPlayer.ApplyChannelControl(leftOutput, leftVolume, rightOutput, rightVolume);
+    }
+
+    /// <inheritdoc/>
     public string? GetUpc() {
         return _image.UpcEan;
     }

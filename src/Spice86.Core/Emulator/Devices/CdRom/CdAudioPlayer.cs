@@ -3,6 +3,8 @@ namespace Spice86.Core.Emulator.Devices.CdRom;
 using Spice86.Shared.Emulator.Storage.CdRom;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Shared.Interfaces;
+using Spice86.Audio.Common;
+using Spice86.Audio.Filters;
 
 using System;
 using System.Buffers.Binary;
@@ -55,6 +57,19 @@ public sealed class CdAudioPlayer {
         _soundChannel.Enable(true);
     }
 
+    /// <summary>Applies MSCDEX channel-control routing and gain to the live CD audio mixer channel.</summary>
+    /// <param name="leftOutput">Mapped destination for the left CD channel.</param>
+    /// <param name="leftVolume">Gain for the left CD channel in the 0-255 MSCDEX range.</param>
+    /// <param name="rightOutput">Mapped destination for the right CD channel.</param>
+    /// <param name="rightVolume">Gain for the right CD channel in the 0-255 MSCDEX range.</param>
+    public void ApplyChannelControl(byte leftOutput, byte leftVolume, byte rightOutput, byte rightVolume) {
+        _soundChannel.AppVolume = new AudioFrame(leftVolume / 255.0f, rightVolume / 255.0f);
+        _soundChannel.SetChannelMap(new StereoLine {
+            Left = leftOutput == 1 ? LineIndex.Right : LineIndex.Left,
+            Right = rightOutput == 0 ? LineIndex.Left : LineIndex.Right,
+        });
+    }
+
     private void AudioCallback(int framesRequested) {
         if (_drive == null) {
             return;
@@ -64,34 +79,45 @@ public sealed class CdAudioPlayer {
             _soundChannel.Enable(false);
             return;
         }
+        int remainingSectors = status.EndLba - status.CurrentLba;
+        if (remainingSectors <= 0) {
+            status.Status = CdAudioStatus.Stopped;
+            _soundChannel.Enable(false);
+            return;
+        }
         int sectorsNeeded = (framesRequested + SamplesPerSector - 1) / SamplesPerSector;
-        int rawBytesNeeded = sectorsNeeded * AudioSectorSizeBytes;
+        int sectorsToRead = Math.Min(sectorsNeeded, remainingSectors);
+        int rawBytesNeeded = sectorsToRead * AudioSectorSizeBytes;
         if (_rawAudioBuffer.Length < rawBytesNeeded) {
             _rawAudioBuffer = new byte[rawBytesNeeded];
         }
         Span<byte> rawAudio = _rawAudioBuffer.AsSpan(0, rawBytesNeeded);
-        int bytesRead = _drive.Read(status.CurrentLba, sectorsNeeded, rawAudio, CdSectorMode.AudioRaw2352);
-        if (bytesRead <= 0) {
+        int bytesRead = _drive.Read(status.CurrentLba, sectorsToRead, rawAudio, CdSectorMode.AudioRaw2352);
+        int completeSectorsRead = bytesRead / AudioSectorSizeBytes;
+        if (completeSectorsRead <= 0) {
+            status.Status = CdAudioStatus.Stopped;
+            _soundChannel.Enable(false);
             return;
         }
+        int completeBytesRead = completeSectorsRead * AudioSectorSizeBytes;
         if (_driveLetter != '\0') {
             _activityNotifier.NotifyRead(_driveLetter);
         }
-        int sampleCount = bytesRead / 2;
+        int sampleCount = completeBytesRead / 2;
         if (_floatSampleBuffer.Length < sampleCount) {
             _floatSampleBuffer = new float[sampleCount];
         }
         // CD-DA on a BIN image is signed 16-bit little-endian PCM (Red Book; mirrors
         // dosbox-staging cdrom_image.cpp BinaryFile::getEndian returning little-endian).
-        ReadOnlySpan<byte> rawAudioRead = _rawAudioBuffer.AsSpan(0, bytesRead);
+        ReadOnlySpan<byte> rawAudioRead = _rawAudioBuffer.AsSpan(0, completeBytesRead);
         for (int i = 0; i < sampleCount; i++) {
             short sample = BinaryPrimitives.ReadInt16LittleEndian(rawAudioRead.Slice(i * 2, 2));
             _floatSampleBuffer[i] = sample;
         }
         int numFrames = sampleCount / 2;
         _soundChannel.AddSamplesFloat(numFrames, _floatSampleBuffer.AsSpan(0, sampleCount));
-        status.CurrentLba += sectorsNeeded;
-        if (status.CurrentLba >= status.EndLba) {
+        status.CurrentLba += completeSectorsRead;
+        if (status.CurrentLba >= status.EndLba || completeSectorsRead < sectorsToRead) {
             status.Status = CdAudioStatus.Stopped;
             _soundChannel.Enable(false);
         }

@@ -668,6 +668,14 @@ public sealed class Mscdex {
                     _channelOutputMap[chan] = _memory.UInt8[bufferAddress + (uint)(chan * 2 + 1)];
                     _channelVolumes[chan] = _memory.UInt8[bufferAddress + (uint)(chan * 2 + 2)];
                 }
+                if (_channelOutputMap[0] > 1) {
+                    _channelOutputMap[0] = 0;
+                }
+                if (_channelOutputMap[1] > 1) {
+                    _channelOutputMap[1] = 1;
+                }
+                drive.ApplyChannelControl(_channelOutputMap[0], _channelVolumes[0], _channelOutputMap[1],
+                    _channelVolumes[1]);
                 break;
             case IoctlOutputLoadMedia:
                 // Load media — no-op for image drives (media is always present when an image is mounted)

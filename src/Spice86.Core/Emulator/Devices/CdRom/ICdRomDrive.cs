@@ -80,6 +80,13 @@ public interface ICdRomDrive {
     /// <returns>A <see cref="CdAudioPlayback"/> describing the current or last playback.</returns>
     CdAudioPlayback GetAudioStatus();
 
+    /// <summary>Applies MSCDEX channel-control routing and gain to the live CD audio output.</summary>
+    /// <param name="leftOutput">Mapped destination for the left CD channel.</param>
+    /// <param name="leftVolume">Gain for the left CD channel in the 0-255 MSCDEX range.</param>
+    /// <param name="rightOutput">Mapped destination for the right CD channel.</param>
+    /// <param name="rightVolume">Gain for the right CD channel in the 0-255 MSCDEX range.</param>
+    void ApplyChannelControl(byte leftOutput, byte leftVolume, byte rightOutput, byte rightVolume);
+
     /// <summary>Returns the UPC/EAN catalogue number of the disc, or <see langword="null"/> if not present.</summary>
     string? GetUpc();
 
