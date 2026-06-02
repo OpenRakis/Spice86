@@ -1,10 +1,14 @@
 namespace Spice86.Tests.Dos;
 
 using Spice86.Core.Emulator.CPU;
+using NSubstitute;
+
+using Spice86.Core.Emulator.Boot;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Tests.Utility;
+using Spice86.Shared.Interfaces;
 
 /// <summary>
 /// Shared test fixture for DOS components (FileManager, FcbManager, etc.)
@@ -20,6 +24,10 @@ public class DosTestFixture : IDisposable {
     public Dos Dos => _spice86.Machine.Dos;
     public IMemory Memory => _spice86.Machine.Memory;
     public State CpuState => _spice86.Machine.CpuState;
+    public State State => _spice86.Machine.CpuState;
+    public DosDriveManager DriveManager => Dos.DosDriveManager;
+    public DosProcessManager ProcessManager => Dos.ProcessManager;
+    public FloppyBootService BootService { get; }
     public DosInt21Handler DosInt21Handler => _spice86.Machine.Dos.DosInt21Handler;
 
     public DosTestFixture(string mountPoint) {
@@ -32,6 +40,7 @@ public class DosTestFixture : IDisposable {
             installInterruptVectors: true,
             cDrive: mountPoint);
         _spice86 = _creator.Create();
+        BootService = new FloppyBootService(Memory, _spice86.Machine.CpuState, Substitute.For<ILoggerService>());
     }
 
     public void Dispose() {

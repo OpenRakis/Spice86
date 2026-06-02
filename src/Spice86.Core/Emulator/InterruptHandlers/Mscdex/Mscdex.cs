@@ -70,61 +70,7 @@ public sealed class Mscdex {
     /// <summary>Number of bytes written per drive entry in the device-list buffer (subunit byte + 4-byte far pointer).</summary>
     private const uint DeviceListEntrySize = 5;
 
-    // Device driver request header field offsets (matching DOSBox Staging dos_mscdex.cpp)
-    private const uint RequestSubunitOffset = 1;
-    private const uint RequestCommandOffset = 2;
-    private const uint RequestStatusOffset = 3;
-
-    // Addressing mode byte (HSG=0, Red Book=1) — at offset 0x0D (13) per DOS device driver spec
-    private const uint RequestAddressingModeOffset = 13;
-
-    // Transfer buffer pointer: offset word at 0x0E (14), segment word at 0x10 (16)
-    // Matches DOSBox Staging: buffer = PhysicalMake(mem_readw(hdr+0x10), mem_readw(hdr+0x0E))
-    private const uint IoctlBufferPtrOffset = 14;
-
-    // Play Audio: start LBA/MSF DWORD at 0x0E (14), sector count DWORD at 0x12 (18)
-    // Matches DOSBox Staging case 0x84: start=readd(hdr+0x0E), len=readd(hdr+0x12)
-    private const uint PlayAudioStartLbaOffset = 14;
-    private const uint PlayAudioSectorCountOffset = 18;
-
-    // Read Long: sector count WORD at 0x12 (18), start DWORD at 0x14 (20), raw flag BYTE at 0x18 (24)
-    // Matches DOSBox Staging case 0x80: len=readw(hdr+0x12), start=readd(hdr+0x14)
-    private const uint ReadLongSectorCountOffset = 18;
-    private const uint ReadLongStartSectorOffset = 20;
-    private const uint ReadLongRawFlagOffset = 24;
-
-    // Device driver command codes (matching DOSBox Staging dos_mscdex.cpp switch on funcNr)
-    private const byte CommandIoctlInput = 0x03;
-    private const byte CommandIoctlOutput = 0x0C;
-    private const byte CommandDeviceOpen = 0x0D;
-    private const byte CommandDeviceClose = 0x0E;
-    private const byte CommandReadLong = 0x80;
-    private const byte CommandReadLongPrefetch = 0x82;
-    private const byte CommandSeek = 0x83;
-    private const byte CommandPlayAudio = 0x84;
-    private const byte CommandStopAudio = 0x85;
-    private const byte CommandResumeAudio = 0x88;
-
-    // IOCTL Input sub-command control codes — matching DOSBox Staging MSCDEX_IOCTL_Input()
-    private const byte IoctlDeviceHeaderAddress = 0x00;
-    private const byte IoctlCurrentPosition = 0x01;
-    private const byte IoctlChannelControl = 0x04;
-    private const byte IoctlDeviceStatus = 0x06;
-    private const byte IoctlSectorSize = 0x07;
-    private const byte IoctlVolumeSize = 0x08;
-    private const byte IoctlMediaChanged = 0x09;
-    private const byte IoctlAudioDiskInfo = 0x0A;
-    private const byte IoctlAudioTrackInfo = 0x0B;
-    private const byte IoctlAudioSubchannel = 0x0C;
-    private const byte IoctlUpcCode = 0x0E;
-    private const byte IoctlAudioStatus = 0x0F;
-
-    // IOCTL Output sub-command control codes — matching DOSBox Staging MSCDEX_IOCTL_Output()
-    private const byte IoctlOutputEject = 0x00;
-    private const byte IoctlOutputLockDoor = 0x01;
-    private const byte IoctlOutputResetDrive = 0x02;
-    private const byte IoctlOutputChannelControl = 0x03;
-    private const byte IoctlOutputLoadMedia = 0x05;
+    // Device driver request layout and command codes are shared with tests.
 
     // Channel control: 4 channels, each with output-map and volume byte
     private const int ChannelCount = 4;
@@ -504,41 +450,41 @@ public sealed class Mscdex {
     /// </summary>
     private void SendDeviceDriverRequest() {
         uint requestBase = MemoryUtils.ToPhysicalAddress(_state.ES, _state.BX);
-        byte subunit = _memory.UInt8[requestBase + RequestSubunitOffset];
-        byte command = _memory.UInt8[requestBase + RequestCommandOffset];
+        byte subunit = _memory.UInt8[requestBase + MscdexRequestOffsets.RequestSubunitOffset];
+        byte command = _memory.UInt8[requestBase + MscdexRequestOffsets.RequestCommandOffset];
 
         if (!TryGetDriveBySubUnit(subunit, out MscdexDriveEntry? driveEntry)) {
-            _memory.UInt16[requestBase + RequestStatusOffset] = StatusError | (ushort)MscdexErrorCode.InvalidDrive;
+            _memory.UInt16[requestBase + MscdexRequestOffsets.RequestStatusOffset] = StatusError | (ushort)MscdexErrorCode.InvalidDrive;
             return;
         }
 
-        switch (command) {
-            case CommandIoctlInput:
+        switch ((MscdexDeviceDriverCommand)command) {
+            case MscdexDeviceDriverCommand.IoctlInput:
                 HandleIoctlInput(requestBase, driveEntry);
                 break;
-            case CommandIoctlOutput:
+            case MscdexDeviceDriverCommand.IoctlOutput:
                 HandleIoctlOutput(requestBase, driveEntry);
                 break;
-            case CommandDeviceOpen:
-            case CommandDeviceClose:
+            case MscdexDeviceDriverCommand.DeviceOpen:
+            case MscdexDeviceDriverCommand.DeviceClose:
                 // Device open/close — no-op, matching DOSBox Staging case 0x0D/0x0E
                 WriteRequestStatus(requestBase, driveEntry, StatusDone);
                 break;
-            case CommandReadLong:
-            case CommandReadLongPrefetch:
+            case MscdexDeviceDriverCommand.ReadLong:
+            case MscdexDeviceDriverCommand.ReadLongPrefetch:
                 HandleReadLong(requestBase, driveEntry);
                 break;
-            case CommandSeek:
+            case MscdexDeviceDriverCommand.Seek:
                 HandleSeek(requestBase, driveEntry);
                 break;
-            case CommandPlayAudio:
+            case MscdexDeviceDriverCommand.PlayAudio:
                 HandlePlayAudio(requestBase, driveEntry);
                 break;
-            case CommandStopAudio:
+            case MscdexDeviceDriverCommand.StopAudio:
                 StopAudio(driveEntry);
                 WriteRequestStatus(requestBase, driveEntry, StatusDone);
                 break;
-            case CommandResumeAudio:
+            case MscdexDeviceDriverCommand.ResumeAudio:
                 ResumeAudio(driveEntry);
                 WriteRequestStatus(requestBase, driveEntry, StatusDone);
                 break;
@@ -553,9 +499,9 @@ public sealed class Mscdex {
 
     private void HandlePlayAudio(uint requestBase, MscdexDriveEntry driveEntry) {
         ICdRomDrive drive = driveEntry.Drive;
-        byte addressingMode = _memory.UInt8[requestBase + RequestAddressingModeOffset];
-        uint startRaw = _memory.UInt32[requestBase + PlayAudioStartLbaOffset];
-        uint sectorCount = _memory.UInt32[requestBase + PlayAudioSectorCountOffset];
+        byte addressingMode = _memory.UInt8[requestBase + MscdexRequestOffsets.RequestAddressingModeOffset];
+        uint startRaw = _memory.UInt32[requestBase + MscdexRequestOffsets.PlayAudioStartLbaOffset];
+        uint sectorCount = _memory.UInt32[requestBase + MscdexRequestOffsets.PlayAudioSectorCountOffset];
         int startLba = TranslateRequestSector(addressingMode, startRaw);
         drive.PlayAudio(startLba, (int)sectorCount);
         MscdexAudioState audioState = GetAudioState(driveEntry);
@@ -565,8 +511,8 @@ public sealed class Mscdex {
     }
 
     private void HandleSeek(uint requestBase, MscdexDriveEntry driveEntry) {
-        byte addressingMode = _memory.UInt8[requestBase + RequestAddressingModeOffset];
-        uint startRaw = _memory.UInt32[requestBase + ReadLongStartSectorOffset];
+        byte addressingMode = _memory.UInt8[requestBase + MscdexRequestOffsets.RequestAddressingModeOffset];
+        uint startRaw = _memory.UInt32[requestBase + MscdexRequestOffsets.ReadLongStartSectorOffset];
         int startLba = TranslateRequestSector(addressingMode, startRaw);
         driveEntry.Drive.StopAudio();
         MscdexAudioState audioState = GetAudioState(driveEntry);
@@ -577,29 +523,29 @@ public sealed class Mscdex {
 
     private void HandleIoctlInput(uint requestBase, MscdexDriveEntry driveEntry) {
         ICdRomDrive drive = driveEntry.Drive;
-        ushort bufferOffset = _memory.UInt16[requestBase + IoctlBufferPtrOffset];
-        ushort bufferSegment = _memory.UInt16[requestBase + IoctlBufferPtrOffset + 2];
+        ushort bufferOffset = _memory.UInt16[requestBase + MscdexRequestOffsets.IoctlBufferPtrOffset];
+        ushort bufferSegment = _memory.UInt16[requestBase + MscdexRequestOffsets.IoctlBufferPtrOffset + 2];
         uint bufferAddress = MemoryUtils.ToPhysicalAddress(bufferSegment, bufferOffset);
         byte controlCode = _memory.UInt8[bufferAddress];
 
-        switch (controlCode) {
-            case IoctlDeviceHeaderAddress:
+        switch ((MscdexIoctlInputCode)controlCode) {
+            case MscdexIoctlInputCode.DeviceHeaderAddress:
                 // 0x00: Return Device Header address — write a zero far pointer (no real driver header installed)
                 _memory.UInt32[bufferAddress + 1] = 0;
                 break;
-            case IoctlCurrentPosition:
+            case MscdexIoctlInputCode.CurrentPosition:
                 if (!WriteCurrentPosition(bufferAddress, driveEntry)) {
                     WriteRequestStatus(requestBase, driveEntry, StatusError | (ushort)MscdexErrorCode.BadCommand);
                     return;
                 }
                 break;
-            case IoctlChannelControl:
+            case MscdexIoctlInputCode.ChannelControl:
                 WriteChannelControl(bufferAddress);
                 break;
-            case IoctlDeviceStatus:
+            case MscdexIoctlInputCode.DeviceStatus:
                 WriteDeviceStatus(bufferAddress, drive);
                 break;
-            case IoctlSectorSize:
+            case MscdexIoctlInputCode.SectorSize:
                 // 0x07: mode byte at buffer+1 (0=cooked 2048, 1=raw 2352); write sector size word at buffer+2.
                 // Per DOSBox Staging dos_mscdex.cpp MSCDEX_IOCTL_Input case 0x07, any other mode byte
                 // returns invalid-function (0x03).
@@ -613,25 +559,25 @@ public sealed class Mscdex {
                     return;
                 }
                 break;
-            case IoctlVolumeSize:
+            case MscdexIoctlInputCode.VolumeSize:
                 _memory.UInt32[bufferAddress + 1] = (uint)drive.GetDiscInfo().TotalSectors;
                 break;
-            case IoctlMediaChanged:
+            case MscdexIoctlInputCode.MediaChanged:
                 _memory.UInt8[bufferAddress + 1] = drive.MediaState.ReadAndClearMediaChanged() ? (byte)0xFF : (byte)0x01;
                 break;
-            case IoctlAudioDiskInfo:
+            case MscdexIoctlInputCode.AudioDiskInfo:
                 WriteAudioDiskInfo(bufferAddress, drive);
                 break;
-            case IoctlAudioTrackInfo:
+            case MscdexIoctlInputCode.AudioTrackInfo:
                 WriteAudioTrackInfo(bufferAddress, drive);
                 break;
-            case IoctlAudioSubchannel:
+            case MscdexIoctlInputCode.AudioSubchannel:
                 WriteAudioSubchannel(bufferAddress, drive);
                 break;
-            case IoctlUpcCode:
+            case MscdexIoctlInputCode.UpcCode:
                 WriteUpcCode(bufferAddress, drive);
                 break;
-            case IoctlAudioStatus:
+            case MscdexIoctlInputCode.AudioStatus:
                 WriteAudioStatus(bufferAddress, driveEntry);
                 break;
             default:
@@ -646,23 +592,23 @@ public sealed class Mscdex {
 
     private void HandleIoctlOutput(uint requestBase, MscdexDriveEntry driveEntry) {
         ICdRomDrive drive = driveEntry.Drive;
-        ushort bufferOffset = _memory.UInt16[requestBase + IoctlBufferPtrOffset];
-        ushort bufferSegment = _memory.UInt16[requestBase + IoctlBufferPtrOffset + 2];
+        ushort bufferOffset = _memory.UInt16[requestBase + MscdexRequestOffsets.IoctlBufferPtrOffset];
+        ushort bufferSegment = _memory.UInt16[requestBase + MscdexRequestOffsets.IoctlBufferPtrOffset + 2];
         uint bufferAddress = MemoryUtils.ToPhysicalAddress(bufferSegment, bufferOffset);
         byte controlCode = _memory.UInt8[bufferAddress];
 
-        switch (controlCode) {
-            case IoctlOutputEject:
+        switch ((MscdexIoctlOutputCode)controlCode) {
+            case MscdexIoctlOutputCode.Eject:
                 drive.Eject();
                 break;
-            case IoctlOutputLockDoor:
+            case MscdexIoctlOutputCode.LockDoor:
                 // Lock/unlock door — no-op (image drives cannot be physically locked)
                 break;
-            case IoctlOutputResetDrive:
+            case MscdexIoctlOutputCode.ResetDrive:
                 // Reset drive: stop audio playback, matching DOSBox Staging case 0x02
                 StopAudio(driveEntry);
                 break;
-            case IoctlOutputChannelControl:
+            case MscdexIoctlOutputCode.ChannelControl:
                 // Read 4-channel volume/mapping from the IOCTL buffer and store it
                 for (int chan = 0; chan < ChannelCount; chan++) {
                     _channelOutputMap[chan] = _memory.UInt8[bufferAddress + (uint)(chan * 2 + 1)];
@@ -677,7 +623,7 @@ public sealed class Mscdex {
                 drive.ApplyChannelControl(_channelOutputMap[0], _channelVolumes[0], _channelOutputMap[1],
                     _channelVolumes[1]);
                 break;
-            case IoctlOutputLoadMedia:
+            case MscdexIoctlOutputCode.LoadMedia:
                 // Load media — no-op for image drives (media is always present when an image is mounted)
                 break;
             default:
@@ -692,14 +638,14 @@ public sealed class Mscdex {
 
     private void HandleReadLong(uint requestBase, MscdexDriveEntry driveEntry) {
         ICdRomDrive drive = driveEntry.Drive;
-        ushort bufferOffset = _memory.UInt16[requestBase + IoctlBufferPtrOffset];
-        ushort bufferSegment = _memory.UInt16[requestBase + IoctlBufferPtrOffset + 2];
+        ushort bufferOffset = _memory.UInt16[requestBase + MscdexRequestOffsets.IoctlBufferPtrOffset];
+        ushort bufferSegment = _memory.UInt16[requestBase + MscdexRequestOffsets.IoctlBufferPtrOffset + 2];
         uint bufferAddress = MemoryUtils.ToPhysicalAddress(bufferSegment, bufferOffset);
 
-        ushort sectorCount = _memory.UInt16[requestBase + ReadLongSectorCountOffset];
-        uint startRaw = _memory.UInt32[requestBase + ReadLongStartSectorOffset];
-        byte rawFlag = _memory.UInt8[requestBase + ReadLongRawFlagOffset];
-        byte addressingMode = _memory.UInt8[requestBase + RequestAddressingModeOffset];
+        ushort sectorCount = _memory.UInt16[requestBase + MscdexRequestOffsets.ReadLongSectorCountOffset];
+        uint startRaw = _memory.UInt32[requestBase + MscdexRequestOffsets.ReadLongStartSectorOffset];
+        byte rawFlag = _memory.UInt8[requestBase + MscdexRequestOffsets.ReadLongRawFlagOffset];
+        byte addressingMode = _memory.UInt8[requestBase + MscdexRequestOffsets.RequestAddressingModeOffset];
 
         int startLba;
         if (addressingMode == 0) {
@@ -944,7 +890,7 @@ public sealed class Mscdex {
     }
 
     private void WriteRequestStatus(uint requestBase, MscdexDriveEntry driveEntry, ushort status) {
-        _memory.UInt16[requestBase + RequestStatusOffset] = ComposeRequestStatus(driveEntry, status);
+        _memory.UInt16[requestBase + MscdexRequestOffsets.RequestStatusOffset] = ComposeRequestStatus(driveEntry, status);
     }
 
     private ushort ComposeRequestStatus(MscdexDriveEntry driveEntry, ushort status) {

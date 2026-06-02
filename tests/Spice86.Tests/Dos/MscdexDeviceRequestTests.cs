@@ -2,6 +2,7 @@ namespace Spice86.Tests.Dos;
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 using FluentAssertions;
 
@@ -16,46 +17,22 @@ using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Shared.Emulator.Storage.CdRom;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
+using Spice86.Tests.Utility;
 
 using Xunit;
 
 public class MscdexDeviceRequestTests {
-    private const byte CommandIoctlInput = 0x03;
-    private const byte CommandIoctlOutput = 0x0C;
-    private const byte CommandReadLong = 0x80;
-    private const byte CommandSeek = 0x83;
-    private const byte CommandPlayAudio = 0x84;
-    private const byte CommandStopAudio = 0x85;
-    private const byte CommandResumeAudio = 0x88;
-
-    private const byte IoctlCurrentPosition = 0x01;
-    private const byte IoctlChannelControl = 0x04;
-    private const byte IoctlMediaChanged = 0x09;
-    private const byte IoctlAudioStatus = 0x0F;
-    private const byte IoctlOutputChannelControl = 0x03;
-
-    private const uint RequestSubunitOffset = 1;
-    private const uint RequestCommandOffset = 2;
-    private const uint RequestStatusOffset = 3;
-    private const uint RequestAddressingModeOffset = 13;
-    private const uint IoctlBufferPtrOffset = 14;
-    private const uint PlayAudioStartOffset = 14;
-    private const uint PlayAudioLengthOffset = 18;
-    private const uint ReadLongSectorCountOffset = 18;
-    private const uint SeekSectorOffset = 20;
-    private const uint ReadLongStartSectorOffset = 20;
-    private const uint ReadLongRawFlagOffset = 24;
-
     [Fact]
     public void SendDeviceDriverRequest_IoctlMediaChanged_UsesDosBoxSwapRequestCodes() {
         // Arrange
-        MscdexTestHarness harness = new();
+        CdRomDrive drive = CreateAudioCdRomDrive(out _, out _);
+        MscdexTestHarness harness = new(drive);
 
         // Act
-        harness.DispatchIoctlInput(IoctlMediaChanged);
+        harness.DispatchIoctlInput((byte)MscdexIoctlInputCode.MediaChanged);
         byte firstStatus = harness.Memory.UInt8[harness.BufferBaseAddress + 1];
 
-        harness.DispatchIoctlInput(IoctlMediaChanged);
+        harness.DispatchIoctlInput((byte)MscdexIoctlInputCode.MediaChanged);
         byte secondStatus = harness.Memory.UInt8[harness.BufferBaseAddress + 1];
 
         // Assert
@@ -68,11 +45,12 @@ public class MscdexDeviceRequestTests {
     [Fact]
     public void SendDeviceDriverRequest_Seek_UpdatesCurrentPositionWhenPlaybackIsIdle() {
         // Arrange
-        MscdexTestHarness harness = new();
+        CdRomDrive drive = CreateAudioCdRomDrive(out _, out _);
+        MscdexTestHarness harness = new(drive);
 
         // Act
         harness.DispatchSeek(321);
-        harness.DispatchIoctlInput(IoctlCurrentPosition, 0);
+        harness.DispatchIoctlInput((byte)MscdexIoctlInputCode.CurrentPosition, 0);
         uint currentLba = harness.Memory.UInt32[harness.BufferBaseAddress + 2];
 
         // Assert
@@ -83,13 +61,14 @@ public class MscdexDeviceRequestTests {
     [Fact]
     public void SendDeviceDriverRequest_StopAndResume_PreservePausedAudioSessionAndDosBoxAudioStatus() {
         // Arrange
-        MscdexTestHarness harness = new();
+        CdRomDrive drive = CreateAudioCdRomDrive(out Action<int> audioCallback, out _);
+        MscdexTestHarness harness = new(drive);
 
         // Act
         harness.DispatchPlayAudio(100, 75);
-        harness.Drive.AdvancePlaybackTo(120);
+        audioCallback(588 * 20);
         harness.DispatchStopAudio();
-        harness.DispatchIoctlInput(IoctlAudioStatus);
+        harness.DispatchIoctlInput((byte)MscdexIoctlInputCode.AudioStatus);
 
         byte pauseFlag = harness.Memory.UInt8[harness.BufferBaseAddress + 1];
         byte startMinute = harness.Memory.UInt8[harness.BufferBaseAddress + 3];
@@ -100,7 +79,7 @@ public class MscdexDeviceRequestTests {
         byte endFrame = harness.Memory.UInt8[harness.BufferBaseAddress + 9];
 
         harness.DispatchResumeAudio();
-        CdAudioPlayback resumedPlayback = harness.Drive.GetAudioStatus();
+        CdAudioPlayback resumedPlayback = drive.GetAudioStatus();
 
         // Assert
         pauseFlag.Should().Be(1,
@@ -120,13 +99,14 @@ public class MscdexDeviceRequestTests {
     [Fact]
     public void SendDeviceDriverRequest_PlayAndResume_SetAudioPlayingBitInStatusWord() {
         // Arrange
-        MscdexTestHarness harness = new();
+        CdRomDrive drive = CreateAudioCdRomDrive(out Action<int> audioCallback, out _);
+        MscdexTestHarness harness = new(drive);
 
         // Act
         harness.DispatchPlayAudio(100, 75);
         ushort playStatus = harness.RequestStatusWord;
 
-        harness.Drive.AdvancePlaybackTo(120);
+        audioCallback(588 * 20);
         harness.DispatchStopAudio();
         ushort stopStatus = harness.RequestStatusWord;
 
@@ -145,29 +125,12 @@ public class MscdexDeviceRequestTests {
     [Fact]
     public void SendDeviceDriverRequest_IoctlChannelControl_ClampsDosBoxRoutingAndAppliesLiveMixerState() {
         // Arrange
-        ICdRomImage image = Substitute.For<ICdRomImage>();
-        image.Tracks.Returns(Array.Empty<CdTrack>());
-
-        ISoundChannelCreator channelCreator = Substitute.For<ISoundChannelCreator>();
-        SoundChannel? channel = null;
-        channelCreator
-            .AddChannel(Arg.Any<Action<int>>(), Arg.Any<int>(), Arg.Any<string>(), Arg.Any<HashSet<ChannelFeature>>())
-            .Returns(callInfo => {
-                Action<int> handler = (Action<int>)callInfo[0];
-                SoundChannel createdChannel = new SoundChannel(handler, (string)callInfo[2], (HashSet<ChannelFeature>)callInfo[3]);
-                channel = createdChannel;
-                return createdChannel;
-            });
-        IDriveActivityNotifier activityNotifier = Substitute.For<IDriveActivityNotifier>();
-        CdRomDrive drive = new(image, channelCreator, activityNotifier, 'D');
+        CdRomDrive drive = CreateAudioCdRomDrive(out _, out SoundChannel channel);
         MscdexTestHarness harness = new(drive);
-        if (channel == null) {
-            throw new InvalidOperationException("CD audio channel was not registered.");
-        }
 
         // Act
         harness.DispatchIoctlOutputChannelControl(3, 64, 9, 192, 2, 111, 3, 222);
-        harness.DispatchIoctlInput(IoctlChannelControl);
+        harness.DispatchIoctlInput((byte)MscdexIoctlInputCode.ChannelControl);
 
         // Assert
         channel.AppVolume.Left.Should().BeApproximately(64.0f / 255.0f, 0.0001f,
@@ -191,10 +154,7 @@ public class MscdexDeviceRequestTests {
     [Fact]
     public void SendDeviceDriverRequest_ReadLong_FailsWhenDriveReturnsShortRawSector() {
         // Arrange
-        TestCdRomDrive drive = new TestCdRomDrive {
-            ReadByteCount = 2048,
-            ReadFillValue = 0x7A,
-        };
+        CdRomDrive drive = CreateCookedOnlyCdRomDrive();
         MscdexTestHarness harness = new(drive);
         harness.Memory.UInt8[harness.BufferBaseAddress] = 0x5A;
 
@@ -208,40 +168,80 @@ public class MscdexDeviceRequestTests {
             "failed Read Long requests should not overwrite the caller buffer with truncated sector data");
     }
 
+    private static CdRomDrive CreateAudioCdRomDrive(out Action<int> audioCallback, out SoundChannel channel) {
+        string rootDirectory = CreateUniqueDirectory("cdrom-mscdex-audio");
+        string binPath = Path.Combine(rootDirectory, "disc.bin");
+        byte[] binBytes = new byte[2352 * 200];
+        for (int i = 0; i < binBytes.Length; i++) {
+            binBytes[i] = (byte)(i & 0xFF);
+        }
+        File.WriteAllBytes(binPath, binBytes);
+        string cuePath = Path.Combine(rootDirectory, "disc.cue");
+        File.WriteAllText(cuePath,
+            "FILE \"disc.bin\" BINARY\r\n" +
+            "TRACK 01 AUDIO\r\n" +
+            "INDEX 01 00:00:00\r\n");
+
+        CueBinImage image = new(cuePath);
+        return CreateDrive(image, out audioCallback, out channel);
+    }
+
+    private static CdRomDrive CreateCookedOnlyCdRomDrive() {
+        string rootDirectory = CreateUniqueDirectory("cdrom-mscdex-cooked");
+        string sourceDirectory = Path.Combine(rootDirectory, "source");
+        Directory.CreateDirectory(sourceDirectory);
+        File.WriteAllText(Path.Combine(sourceDirectory, "README.TXT"), "Spice86");
+
+        VirtualIsoImage image = new(sourceDirectory, "SPICE86");
+        return CreateDrive(image, out _, out _);
+    }
+
+    private static CdRomDrive CreateDrive(ICdRomImage image, out Action<int> audioCallback, out SoundChannel channel) {
+        ISoundChannelCreator channelCreator = Substitute.For<ISoundChannelCreator>();
+        Action<int>? capturedAudioCallback = null;
+        SoundChannel? capturedChannel = null;
+        channelCreator
+            .AddChannel(Arg.Any<Action<int>>(), Arg.Any<int>(), Arg.Any<string>(), Arg.Any<HashSet<ChannelFeature>>())
+            .Returns(callInfo => {
+                Action<int> handler = (Action<int>)callInfo[0];
+                SoundChannel createdChannel = new SoundChannel(handler, (string)callInfo[2], (HashSet<ChannelFeature>)callInfo[3]);
+                capturedAudioCallback = handler;
+                capturedChannel = createdChannel;
+                return createdChannel;
+            });
+        IDriveActivityNotifier activityNotifier = Substitute.For<IDriveActivityNotifier>();
+        CdRomDrive drive = new(image, channelCreator, activityNotifier, 'D');
+        if (capturedAudioCallback == null || capturedChannel == null) {
+            throw new InvalidOperationException("CD audio channel was not registered.");
+        }
+
+        audioCallback = capturedAudioCallback;
+        channel = capturedChannel;
+        return drive;
+    }
+
+    private static string CreateUniqueDirectory(string prefix) {
+        string directory = Path.Combine(Path.GetTempPath(), "Spice86", prefix, Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        return directory;
+    }
+
     private sealed class MscdexTestHarness {
         private const ushort RequestSegment = 0x2000;
         private const ushort BufferSegment = 0x2100;
 
         public State State { get; }
         public Memory Memory { get; }
-        private readonly TestCdRomDrive? _testDrive;
-
-        public TestCdRomDrive Drive => _testDrive ?? throw new InvalidOperationException(
-            "This harness instance was created with a real drive and does not expose the scripted test drive helpers.");
-
-        public ICdRomDrive RegisteredDrive { get; }
+        public ICdRomDrive Drive { get; }
         public Mscdex Mscdex { get; }
         public uint RequestBaseAddress { get; }
         public uint BufferBaseAddress { get; }
-        public ushort RequestStatusWord => Memory.UInt16[RequestBaseAddress + RequestStatusOffset];
+        public ushort RequestStatusWord => Memory.UInt16[RequestBaseAddress + MscdexRequestOffsets.RequestStatusOffset];
 
-        public MscdexTestHarness()
-            : this(new TestCdRomDrive()) {
-        }
-
-        public MscdexTestHarness(TestCdRomDrive drive)
-            : this(drive, drive) {
-        }
-
-        public MscdexTestHarness(ICdRomDrive drive)
-            : this(drive, drive as TestCdRomDrive) {
-        }
-
-        private MscdexTestHarness(ICdRomDrive drive, TestCdRomDrive? testDrive) {
+        public MscdexTestHarness(ICdRomDrive drive) {
+            Drive = drive;
             State = new State(CpuModel.INTEL_80286);
             Memory = new Memory(new(), new Ram(0x200000), new A20Gate(), new RealModeMmu386(), false);
-            RegisteredDrive = drive;
-            _testDrive = testDrive;
             ILoggerService loggerService = Substitute.For<ILoggerService>();
             Mscdex = new Mscdex(State, Memory, loggerService);
             Mscdex.AddDrive(new MscdexDriveEntry('D', 3, drive));
@@ -254,35 +254,35 @@ public class MscdexDeviceRequestTests {
         }
 
         public void DispatchIoctlInput(byte controlCode, byte addressMode) {
-            InitialiseRequest(CommandIoctlInput);
-            Memory.UInt16[RequestBaseAddress + IoctlBufferPtrOffset] = 0;
-            Memory.UInt16[RequestBaseAddress + IoctlBufferPtrOffset + 2] = BufferSegment;
+            InitialiseRequest((byte)MscdexDeviceDriverCommand.IoctlInput);
+            Memory.UInt16[RequestBaseAddress + MscdexRequestOffsets.IoctlBufferPtrOffset] = 0;
+            Memory.UInt16[RequestBaseAddress + MscdexRequestOffsets.IoctlBufferPtrOffset + 2] = BufferSegment;
             Memory.UInt8[BufferBaseAddress] = controlCode;
             Memory.UInt8[BufferBaseAddress + 1] = addressMode;
-            Dispatch();
+            Mscdex.Dispatch();
         }
 
         public void DispatchSeek(uint lba) {
-            InitialiseRequest(CommandSeek);
-            Memory.UInt8[RequestBaseAddress + RequestAddressingModeOffset] = 0;
-            Memory.UInt32[RequestBaseAddress + SeekSectorOffset] = lba;
-            Dispatch();
+            InitialiseRequest((byte)MscdexDeviceDriverCommand.Seek);
+            Memory.UInt8[RequestBaseAddress + MscdexRequestOffsets.RequestAddressingModeOffset] = 0;
+            Memory.UInt32[RequestBaseAddress + MscdexRequestOffsets.ReadLongStartSectorOffset] = lba;
+            Mscdex.Dispatch();
         }
 
         public void DispatchPlayAudio(uint startLba, uint sectorCount) {
-            InitialiseRequest(CommandPlayAudio);
-            Memory.UInt8[RequestBaseAddress + RequestAddressingModeOffset] = 0;
-            Memory.UInt32[RequestBaseAddress + PlayAudioStartOffset] = startLba;
-            Memory.UInt32[RequestBaseAddress + PlayAudioLengthOffset] = sectorCount;
-            Dispatch();
+            InitialiseRequest((byte)MscdexDeviceDriverCommand.PlayAudio);
+            Memory.UInt8[RequestBaseAddress + MscdexRequestOffsets.RequestAddressingModeOffset] = 0;
+            Memory.UInt32[RequestBaseAddress + MscdexRequestOffsets.PlayAudioStartLbaOffset] = startLba;
+            Memory.UInt32[RequestBaseAddress + MscdexRequestOffsets.PlayAudioSectorCountOffset] = sectorCount;
+            Mscdex.Dispatch();
         }
 
         public void DispatchIoctlOutputChannelControl(byte output0, byte volume0, byte output1, byte volume1,
             byte output2, byte volume2, byte output3, byte volume3) {
-            InitialiseRequest(CommandIoctlOutput);
-            Memory.UInt16[RequestBaseAddress + IoctlBufferPtrOffset] = 0;
-            Memory.UInt16[RequestBaseAddress + IoctlBufferPtrOffset + 2] = BufferSegment;
-            Memory.UInt8[BufferBaseAddress] = IoctlOutputChannelControl;
+            InitialiseRequest((byte)MscdexDeviceDriverCommand.IoctlOutput);
+            Memory.UInt16[RequestBaseAddress + MscdexRequestOffsets.IoctlBufferPtrOffset] = 0;
+            Memory.UInt16[RequestBaseAddress + MscdexRequestOffsets.IoctlBufferPtrOffset + 2] = BufferSegment;
+            Memory.UInt8[BufferBaseAddress] = (byte)MscdexIoctlOutputCode.ChannelControl;
             Memory.UInt8[BufferBaseAddress + 1] = output0;
             Memory.UInt8[BufferBaseAddress + 2] = volume0;
             Memory.UInt8[BufferBaseAddress + 3] = output1;
@@ -291,165 +291,37 @@ public class MscdexDeviceRequestTests {
             Memory.UInt8[BufferBaseAddress + 6] = volume2;
             Memory.UInt8[BufferBaseAddress + 7] = output3;
             Memory.UInt8[BufferBaseAddress + 8] = volume3;
-            Dispatch();
+            Mscdex.Dispatch();
         }
 
         public void DispatchReadLong(uint startLba, ushort sectorCount, byte rawFlag) {
-            InitialiseRequest(CommandReadLong);
-            Memory.UInt8[RequestBaseAddress + RequestAddressingModeOffset] = 0;
-            Memory.UInt16[RequestBaseAddress + IoctlBufferPtrOffset] = 0;
-            Memory.UInt16[RequestBaseAddress + IoctlBufferPtrOffset + 2] = BufferSegment;
-            Memory.UInt16[RequestBaseAddress + ReadLongSectorCountOffset] = sectorCount;
-            Memory.UInt32[RequestBaseAddress + ReadLongStartSectorOffset] = startLba;
-            Memory.UInt8[RequestBaseAddress + ReadLongRawFlagOffset] = rawFlag;
-            Dispatch();
+            InitialiseRequest((byte)MscdexDeviceDriverCommand.ReadLong);
+            Memory.UInt8[RequestBaseAddress + MscdexRequestOffsets.RequestAddressingModeOffset] = 0;
+            Memory.UInt16[RequestBaseAddress + MscdexRequestOffsets.IoctlBufferPtrOffset] = 0;
+            Memory.UInt16[RequestBaseAddress + MscdexRequestOffsets.IoctlBufferPtrOffset + 2] = BufferSegment;
+            Memory.UInt16[RequestBaseAddress + MscdexRequestOffsets.ReadLongSectorCountOffset] = sectorCount;
+            Memory.UInt32[RequestBaseAddress + MscdexRequestOffsets.ReadLongStartSectorOffset] = startLba;
+            Memory.UInt8[RequestBaseAddress + MscdexRequestOffsets.ReadLongRawFlagOffset] = rawFlag;
+            Mscdex.Dispatch();
         }
 
         public void DispatchStopAudio() {
-            InitialiseRequest(CommandStopAudio);
-            Dispatch();
+            InitialiseRequest((byte)MscdexDeviceDriverCommand.StopAudio);
+            Mscdex.Dispatch();
         }
 
         public void DispatchResumeAudio() {
-            InitialiseRequest(CommandResumeAudio);
-            Dispatch();
+            InitialiseRequest((byte)MscdexDeviceDriverCommand.ResumeAudio);
+            Mscdex.Dispatch();
         }
 
         private void InitialiseRequest(byte command) {
             State.AL = 0x10;
             State.ES = RequestSegment;
             State.BX = 0;
-            Memory.UInt8[RequestBaseAddress + RequestSubunitOffset] = 0;
-            Memory.UInt8[RequestBaseAddress + RequestCommandOffset] = command;
-            Memory.UInt16[RequestBaseAddress + RequestStatusOffset] = 0;
-        }
-
-        private void Dispatch() {
-            Mscdex.Dispatch();
-        }
-    }
-
-    private sealed class TestCdRomDrive : ICdRomDrive {
-        private readonly IReadOnlyList<TableOfContentsEntry> _tableOfContents = new[] {
-            new TableOfContentsEntry(1, 0, true, 0, 1),
-            new TableOfContentsEntry(0xAA, 1000, false, 4, 1),
-        };
-
-        private CdAudioPlayback? _playback;
-
-        public int ReadByteCount { get; set; }
-
-        public byte ReadFillValue { get; set; }
-
-        public ICdRomImage Image { get; }
-
-        public CdRomMediaState MediaState { get; } = new();
-
-        public bool IsAudioPlaying {
-            get {
-                if (_playback == null) {
-                    return false;
-                }
-                return _playback.Status == CdAudioStatus.Playing;
-            }
-        }
-
-        public int ImageCount => 1;
-
-        public IReadOnlyList<string> AllImagePaths { get; } = new[] { "disc.bin" };
-
-        public TestCdRomDrive() {
-            Image = Substitute.For<ICdRomImage>();
-        }
-
-        public void AdvancePlaybackTo(int currentLba) {
-            if (_playback == null) {
-                throw new InvalidOperationException("Playback must be active before advancing it.");
-            }
-            _playback.CurrentLba = currentLba;
-        }
-
-        public void AddImage(ICdRomImage image) {
-        }
-
-        public void SwapToNextDisc() {
-        }
-
-        public void SwapToIndex(int index) {
-        }
-
-        public int Read(int lba, int sectorCount, Span<byte> destination, CdSectorMode mode) {
-            int bytesToCopy = Math.Min(ReadByteCount, destination.Length);
-            if (bytesToCopy > 0) {
-                destination.Slice(0, bytesToCopy).Fill(ReadFillValue);
-            }
-            return bytesToCopy;
-        }
-
-        public IReadOnlyList<TableOfContentsEntry> GetTableOfContents() {
-            return _tableOfContents;
-        }
-
-        public TableOfContentsEntry? GetTrackInfo(int trackNumber) {
-            foreach (TableOfContentsEntry entry in _tableOfContents) {
-                if (entry.TrackNumber == trackNumber) {
-                    return entry;
-                }
-            }
-            return null;
-        }
-
-        public DiscInfo GetDiscInfo() {
-            return new DiscInfo(1, 1, 1000, 1000);
-        }
-
-        public void PlayAudio(int startLba, int sectorCount) {
-            _playback = new CdAudioPlayback(startLba, startLba + sectorCount);
-            _playback.Status = CdAudioStatus.Playing;
-        }
-
-        public void StopAudio() {
-            if (_playback != null) {
-                _playback.Status = CdAudioStatus.Stopped;
-            }
-        }
-
-        public void ResumeAudio() {
-            if (_playback != null && _playback.Status == CdAudioStatus.Paused) {
-                _playback.Status = CdAudioStatus.Playing;
-            }
-        }
-
-        public void PauseAudio() {
-            if (_playback != null && _playback.Status == CdAudioStatus.Playing) {
-                _playback.Status = CdAudioStatus.Paused;
-            }
-        }
-
-        public CdAudioPlayback GetAudioStatus() {
-            if (_playback != null) {
-                return _playback;
-            }
-            CdAudioPlayback stoppedPlayback = new CdAudioPlayback(0, 0);
-            stoppedPlayback.Status = CdAudioStatus.Stopped;
-            return stoppedPlayback;
-        }
-
-        public void ApplyChannelControl(byte leftOutput, byte leftVolume, byte rightOutput, byte rightVolume) {
-        }
-
-        public string? GetUpc() {
-            return null;
-        }
-
-        public void Eject() {
-            MediaState.IsDoorOpen = true;
-            MediaState.NotifyMediaChanged();
-        }
-
-        public void Insert(ICdRomImage image) {
-            MediaState.IsDoorOpen = false;
-            MediaState.NotifyMediaChanged();
+            Memory.UInt8[RequestBaseAddress + MscdexRequestOffsets.RequestSubunitOffset] = 0;
+            Memory.UInt8[RequestBaseAddress + MscdexRequestOffsets.RequestCommandOffset] = command;
+            Memory.UInt16[RequestBaseAddress + MscdexRequestOffsets.RequestStatusOffset] = 0;
         }
     }
 }
