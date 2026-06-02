@@ -4,7 +4,6 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Batch;
-using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 
@@ -27,13 +26,5 @@ internal sealed class DosBatchProgramLoader : DosProgramLoader {
         }
 
         return base.LoadLaunchRequest(launchRequest, paramBlock);
-    }
-
-    protected override string? GetHostPathForLaunchedProgram(LaunchRequest launchRequest) {
-        if (launchRequest is not ProgramLaunchRequest programLaunchRequest) {
-            return null;
-        }
-
-        return _fileManager.GetFullHostExecutablePathFromDos(programLaunchRequest.ProgramName);
     }
 }
