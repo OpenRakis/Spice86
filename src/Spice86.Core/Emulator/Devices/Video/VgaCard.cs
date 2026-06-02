@@ -35,7 +35,7 @@ public class VgaCard {
     public void SubscribeToEvents() {
         if (_gui is not null) {
             // Init bitmaps, needed for GUI to start calling Render function
-            _gui.SetResolution(_renderer.Width, _renderer.Height);
+            _gui.UpdateResolution(_renderer.Width, _renderer.Height);
             _gui.RenderScreen += (_, e) => Render(e);
         }
     }
@@ -45,13 +45,13 @@ public class VgaCard {
             // Resolution is matching, nothing to do.
             return true;
         }
-        _gui?.SetResolution(_renderer.Width, _renderer.Height);
+        _gui?.UpdateResolution(_renderer.Width, _renderer.Height);
         // Resolution change is asynchronous via Dispatcher.Post; skip this frame
         // to avoid blocking the UI thread (the previous busy-wait would deadlock
         // now that DrawScreen runs on the UI thread via DispatcherTimer).
         return false;
     }
-    
+
 
     private unsafe void Render(UIRenderEventArgs uiRenderEventArgs) {
         if (!EnsureGuiResolutionMatchesHardware()) {

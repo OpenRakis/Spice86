@@ -1218,15 +1218,15 @@ public class DosFcbManager {
     /// INT 21h AH=24h - Sets the random record field from the current block and record fields.
     /// </summary>
     /// <param name="fcbAddress">Linear address of the FCB.</param>
-    public void SetRandomRecord(SegmentedAddress fcbAddress) {
-        SetRandomRecord(ToPhysicalAddress(fcbAddress));
+    public void UpdateRandomRecord(SegmentedAddress fcbAddress) {
+        UpdateRandomRecord(ToPhysicalAddress(fcbAddress));
     }
 
     /// <summary>
     /// INT 21h AH=24h - Sets the random record field from the current block and record fields.
     /// </summary>
     /// <param name="fcbAddress">Linear address of the FCB.</param>
-    public void SetRandomRecord(uint fcbAddress) {
+    public void UpdateRandomRecord(uint fcbAddress) {
         uint baseAddr = GetActualFcbBaseAddress(fcbAddress);
         DosFileControlBlock fcb = new DosFileControlBlock(_memory, baseAddr);
         fcb.SetRandomFromPosition();

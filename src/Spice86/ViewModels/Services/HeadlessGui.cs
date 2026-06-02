@@ -18,11 +18,11 @@ public sealed class HeadlessGui : IGuiVideoPresentation, IGuiMouseEvents,
     private bool _isSettingResolution;
 
     private byte[]? _pixelBuffer;
-    private bool _renderingTimerInitialized;
 
     public HeadlessGui() {
         AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
         Console.CancelKeyPress += OnProcessExit;
+        _drawTimer = new Timer(DrawScreenCallback, null, RefreshInterval, RefreshInterval);
     }
 
     public void Dispose() {
@@ -69,7 +69,7 @@ public sealed class HeadlessGui : IGuiVideoPresentation, IGuiMouseEvents,
 
     public double MouseY { get; set; }
 
-    public void SetResolution(int width, int height) {
+    public void UpdateResolution(int width, int height) {
         if (width <= 0 || height <= 0) {
             throw new ArgumentOutOfRangeException($"Invalid resolution: {width}x{height}");
         }
@@ -95,20 +95,10 @@ public sealed class HeadlessGui : IGuiVideoPresentation, IGuiMouseEvents,
             _isSettingResolution = false;
         }
 
-        InitializeRenderingTimer();
     }
 
     private void OnProcessExit(object? sender, EventArgs e) {
         _isAppClosing = true;
-    }
-
-    private void InitializeRenderingTimer() {
-        if (_renderingTimerInitialized) {
-            return;
-        }
-
-        _renderingTimerInitialized = true;
-        _drawTimer = new Timer(DrawScreenCallback, null, RefreshInterval, RefreshInterval);
     }
 
     private void DrawScreenCallback(object? state) {

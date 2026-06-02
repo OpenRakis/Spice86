@@ -190,7 +190,7 @@ internal sealed class FloppyDiskNoiseDevice {
     /// </summary>
     /// <param name="path">The host path of the file that was accessed.</param>
     /// <param name="isWrite"><see langword="true"/> for write operations, <see langword="false"/> for reads.</param>
-    internal void SetLastIoPath(string path, bool isWrite) {
+    internal void RecordLastIoPath(string path, bool isWrite) {
         if (_mode == FloppyDiskNoiseMode.Off || string.IsNullOrEmpty(path)) {
             return;
         }

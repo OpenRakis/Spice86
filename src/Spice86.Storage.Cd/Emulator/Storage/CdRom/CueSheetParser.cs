@@ -17,7 +17,7 @@ public sealed class CueSheetParser {
 
         string cueDir = Path.GetDirectoryName(cueFilePath) ?? string.Empty;
         List<CueEntry> entries = new List<CueEntry>();
-        string? catalog = null;
+        string catalog = string.Empty;
         string currentFile = string.Empty;
         CueFileType currentFileType = CueFileType.Binary;
         string currentTrackMode = string.Empty;

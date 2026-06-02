@@ -34,14 +34,14 @@ public sealed class VirtualFloppyImage {
     private static readonly int ImageSize = TotalSectors * BytesPerSector;
 
     private readonly string _sourceDirectory;
-    private readonly ILogger? _logger;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initialises a new <see cref="VirtualFloppyImage"/> that will read from <paramref name="sourceDirectory"/>.
     /// </summary>
     /// <param name="sourceDirectory">Path to the host directory whose contents will be written to the image.</param>
-    /// <param name="logger">Optional Serilog logger used to emit warnings for files that do not fit. When <c>null</c>, warnings are suppressed.</param>
-    public VirtualFloppyImage(string sourceDirectory, ILogger? logger = null) {
+    /// <param name="logger">Serilog logger used to emit warnings for files that do not fit.</param>
+    public VirtualFloppyImage(string sourceDirectory, ILogger logger) {
         _sourceDirectory = sourceDirectory;
         _logger = logger;
     }
@@ -251,7 +251,7 @@ public sealed class VirtualFloppyImage {
     }
 
     private void LogSkipWarning(string name, string reason) {
-        if (_logger != null && _logger.IsEnabled(LogEventLevel.Warning)) {
+        if (_logger.IsEnabled(LogEventLevel.Warning)) {
             _logger.Warning("VirtualFloppyImage: skipping '{Name}' - {Reason}", name, reason);
         }
     }

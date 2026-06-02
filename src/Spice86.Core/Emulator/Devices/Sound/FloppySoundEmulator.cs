@@ -52,27 +52,14 @@ public sealed class FloppySoundEmulator {
     internal SoundChannel Channel => _channel;
 
     /// <summary>
-    /// Initialises the emulator with the default noise mode
-    /// (<see cref="FloppyDiskNoiseMode.On"/>) and no user-specified samples directory.
-    /// Sample files are resolved automatically via the standard search paths,
-    /// falling back to embedded assembly resources when no on-disk file is found.
-    /// </summary>
-    /// <param name="channelCreator">The sound channel creator to register the floppy channel with.</param>
-    public FloppySoundEmulator(ISoundChannelCreator channelCreator)
-        : this(channelCreator, FloppyDiskNoiseMode.On, samplesDirectory: null) {
-    }
-
-    /// <summary>
-    /// Initialises the emulator with an explicit noise mode and optional
-    /// user-supplied samples directory.
+    /// Initialises the emulator with an explicit noise mode and sample directory hint.
     /// </summary>
     /// <param name="channelCreator">The sound channel creator to register the floppy channel with.</param>
     /// <param name="mode">The floppy noise emulation level.</param>
     /// <param name="samplesDirectory">
-    /// Optional path to a directory containing the WAV sample files.
-    /// Pass <see langword="null"/> or empty to rely on the automatic search.
+    /// Path to a directory containing the WAV sample files. Pass an empty string to rely on automatic search.
     /// </param>
-    public FloppySoundEmulator(ISoundChannelCreator channelCreator, FloppyDiskNoiseMode mode, string? samplesDirectory) {
+    public FloppySoundEmulator(ISoundChannelCreator channelCreator, FloppyDiskNoiseMode mode, string samplesDirectory) {
         _channel = channelCreator.AddChannel(AudioCallback, SampleRateHz, "Floppy",
             new HashSet<ChannelFeature> { ChannelFeature.DigitalAudio });
         _channel.Enable(false);
@@ -121,8 +108,8 @@ public sealed class FloppySoundEmulator {
     /// </summary>
     /// <param name="path">The image file path being accessed.</param>
     /// <param name="isWrite"><see langword="true"/> for writes, <see langword="false"/> for reads.</param>
-    public void SetLastIoPath(string path, bool isWrite) {
-        _device.SetLastIoPath(path, isWrite);
+    public void RecordLastIoPath(string path, bool isWrite) {
+        _device.RecordLastIoPath(path, isWrite);
     }
 
     private void AudioCallback(int framesRequested) {
@@ -156,9 +143,9 @@ public sealed class FloppySoundEmulator {
     /// Loads WAV samples for the given filename, searching on disk first and
     /// then falling back to the embedded assembly resource.
     /// </summary>
-    private static float[] LoadSamples(string filename, string? userDirectory) {
-        string? resolvedPath = ResolveFilePath(filename, userDirectory);
-        if (resolvedPath != null) {
+    private static float[] LoadSamples(string filename, string userDirectory) {
+        string resolvedPath = ResolveFilePath(filename, userDirectory);
+        if (!string.IsNullOrEmpty(resolvedPath)) {
             float[] samples = WavPcmLoader.TryLoad(resolvedPath);
             if (samples.Length > 0) {
                 return samples;
@@ -171,10 +158,10 @@ public sealed class FloppySoundEmulator {
     /// <summary>
     /// Resolves the on-disk path to a sample WAV file, searching the user-supplied
     /// directory first, then the built-in resources sub-directory, then the
-    /// process working directory.  Returns the first existing path found, or
-    /// <see langword="null"/> when no file is found on disk.
+    /// process working directory. Returns the first existing path found, or
+    /// an empty string when no file is found on disk.
     /// </summary>
-    private static string? ResolveFilePath(string filename, string? userDirectory) {
+    private static string ResolveFilePath(string filename, string userDirectory) {
         if (!string.IsNullOrEmpty(userDirectory)) {
             string candidate = Path.Join(userDirectory, filename);
             if (File.Exists(candidate)) {
@@ -192,7 +179,7 @@ public sealed class FloppySoundEmulator {
             return cwdPath;
         }
 
-        return null;
+        return string.Empty;
     }
 
     /// <summary>

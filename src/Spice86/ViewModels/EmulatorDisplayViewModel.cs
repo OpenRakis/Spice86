@@ -36,7 +36,6 @@ public sealed partial class EmulatorDisplayViewModel : ObservableObject,
     private readonly SharedMouseData _sharedMouseData;
     private readonly ILoggerService _loggerService;
     private DispatcherTimer? _drawTimer;
-    private bool _renderingTimerInitialized;
     private bool _isSettingResolution;
     private bool _disposed;
     private bool _isAppClosing;
@@ -50,6 +49,9 @@ public sealed partial class EmulatorDisplayViewModel : ObservableObject,
         _pauseHandler = pauseHandler;
         _sharedMouseData = sharedMouseData;
         _loggerService = loggerService;
+        _drawTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(1000.0 / ScreenRefreshHz),
+            DispatcherPriority.Render, (_, _) => DrawScreen());
+        _drawTimer.Start();
     }
 
     public event EventHandler<UIRenderEventArgs>? RenderScreen;
@@ -88,7 +90,7 @@ public sealed partial class EmulatorDisplayViewModel : ObservableObject,
     public double MouseX { get; set; }
     public double MouseY { get; set; }
 
-    public void SetResolution(int videoWidth, int videoHeight) {
+    public void UpdateResolution(int videoWidth, int videoHeight) {
         _uiDispatcher.Post(() => {
             _isSettingResolution = true;
             if (Width != videoWidth || Height != videoHeight) {
@@ -105,7 +107,6 @@ public sealed partial class EmulatorDisplayViewModel : ObservableObject,
 
             _isSettingResolution = false;
             UpdateShownEmulatorMouseCursorPosition();
-            InitializeRenderingTimer();
         }, DispatcherPriority.Background);
     }
 
@@ -181,16 +182,6 @@ public sealed partial class EmulatorDisplayViewModel : ObservableObject,
     }
 
     internal void NotifyAppClosing() => _isAppClosing = true;
-
-    private void InitializeRenderingTimer() {
-        if (_renderingTimerInitialized) {
-            return;
-        }
-        _renderingTimerInitialized = true;
-        _drawTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(1000.0 / ScreenRefreshHz),
-            DispatcherPriority.Render, (_, _) => DrawScreen());
-        _drawTimer.Start();
-    }
 
     private void DrawScreen() {
         if (_disposed || _pauseHandler.IsPaused || _isSettingResolution ||

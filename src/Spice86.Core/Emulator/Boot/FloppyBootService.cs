@@ -66,7 +66,7 @@ public sealed class FloppyBootService {
         }
 
         _memory.LoadData(BootSectorLoadAddress, imageData, BootSectorSize);
-        SetupCpuRegistersForBoot(driveNumber);
+        PrepareCpuRegistersForBoot(driveNumber);
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("BOOT: loaded {Bytes} bytes from floppy '{Path}' at 0000:7C00, DL={DL:X2}",
                 BootSectorSize, imagePathForLogging, _state.DL);
@@ -74,7 +74,7 @@ public sealed class FloppyBootService {
         return true;
     }
 
-    private void SetupCpuRegistersForBoot(byte driveNumber) {
+    private void PrepareCpuRegistersForBoot(byte driveNumber) {
         _state.CS = 0;
         _state.IP = BootSectorLoadOffset;
         _state.DS = 0;

@@ -4,6 +4,7 @@ using Avalonia.Controls;
 
 using Spice86.ViewModels.DataModels;
 using Spice86.ViewModels;
+using Spice86.Shared.Emulator.Storage;
 
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -25,7 +26,10 @@ public partial class DriveInfoWindow : Window {
     /// <param name="driveVm">The drive menu item that was clicked.</param>
     public static async Task ShowForDrive(Window owner, DriveMenuItemViewModel driveVm) {
         ObservableCollection<FileTreeNode> fileTree = BuildFileTree(driveVm);
-        DriveInfoViewModel vm = new DriveInfoViewModel(driveVm.DriveLetter, driveVm.ContentMap, fileTree);
+        bool hasContentMap = driveVm.ContentMap != null;
+        DriveContentMap contentMap = driveVm.ContentMap ?? DriveContentMap.ForFat(driveVm.DriveLetter,
+            Array.Empty<DriveClusterInfo>(), 0);
+        DriveInfoViewModel vm = new DriveInfoViewModel(driveVm.DriveLetter, contentMap, hasContentMap, fileTree);
         DriveInfoWindow window = new DriveInfoWindow {
             DataContext = vm
         };

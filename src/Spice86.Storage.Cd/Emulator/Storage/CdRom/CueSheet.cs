@@ -7,11 +7,11 @@ public sealed class CueSheet {
     /// <summary>Gets the list of parsed CUE entries (one per INDEX directive, carrying track/file context).</summary>
     public IReadOnlyList<CueEntry> Entries { get; }
 
-    /// <summary>Gets the CATALOG string from the CUE sheet, or <see langword="null"/> if absent.</summary>
-    public string? Catalog { get; }
+    /// <summary>Gets the CATALOG string from the CUE sheet, or empty when absent.</summary>
+    public string Catalog { get; }
 
     /// <summary>Initialises a new <see cref="CueSheet"/>.</summary>
-    public CueSheet(IReadOnlyList<CueEntry> entries, string? catalog) {
+    public CueSheet(IReadOnlyList<CueEntry> entries, string catalog) {
         Entries = entries;
         Catalog = catalog;
     }

@@ -39,7 +39,7 @@ public partial class DriveContentVisualization : UserControl {
 
     /// <summary>Initialises a new instance of <see cref="DriveContentVisualization"/>.</summary>
     public DriveContentVisualization() {
-        InitializeComponent();
+        LoadView();
         Rebuild();
     }
 
@@ -75,7 +75,7 @@ public partial class DriveContentVisualization : UserControl {
         }
     }
 
-    private void InitializeComponent() {
+    private void LoadView() {
         AvaloniaXamlLoader.Load(this);
     }
 
