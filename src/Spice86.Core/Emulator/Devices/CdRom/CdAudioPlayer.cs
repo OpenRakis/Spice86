@@ -18,8 +18,8 @@ public sealed class CdAudioPlayer {
     private readonly IDriveActivityNotifier? _activityNotifier;
     private ICdRomDrive? _drive;
     private char _driveLetter = '\0';
-    private byte[] _rawAudioBuffer = Array.Empty<byte>();
-    private float[] _floatSampleBuffer = Array.Empty<float>();
+    private byte[] _rawAudioBuffer = [];
+    private float[] _floatSampleBuffer = [];
 
     /// <summary>Gets the underlying sound channel for test introspection.</summary>
     internal SoundChannel Channel => _soundChannel;
