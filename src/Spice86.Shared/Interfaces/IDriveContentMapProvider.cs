@@ -11,7 +11,8 @@ public interface IDriveContentMapProvider {
     /// Gets a content map for the specified drive letter.
     /// </summary>
     /// <param name="driveLetter">The DOS drive letter (case-insensitive).</param>
-    /// <returns>The content map for the drive.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the specified drive does not expose a content map.</exception>
+    /// <returns>
+    /// The content map for the drive. For empty/unmounted drives, returns an empty map.
+    /// </returns>
     DriveContentMap GetContentMap(char driveLetter);
 }
