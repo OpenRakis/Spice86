@@ -4,9 +4,7 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
-using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.IOPorts;
-using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.DeviceScheduler;
 using Spice86.Shared.Interfaces;
@@ -415,6 +413,7 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
         if (_disposed) {
             return;
         }
+        _clock.Dispose();
         _disposed = true;
         GC.SuppressFinalize(this);
     }
