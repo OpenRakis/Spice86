@@ -21,9 +21,6 @@ public sealed class CdAudioPlayer {
     private byte[] _rawAudioBuffer = [];
     private float[] _floatSampleBuffer = [];
 
-    /// <summary>Gets the underlying sound channel for test introspection.</summary>
-    internal SoundChannel Channel => _soundChannel;
-
     /// <summary>Initialises a new <see cref="CdAudioPlayer"/> and registers a channel with the mixer.</summary>
     /// <param name="channelCreator">The sound channel creator used to register the CD audio channel.</param>
     public CdAudioPlayer(ISoundChannelCreator channelCreator)
