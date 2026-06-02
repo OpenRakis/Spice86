@@ -6,7 +6,7 @@ using System.IO;
 using System.Text;
 
 /// <summary>
-/// Writable mirror of <see cref="BiosParameterBlock"/> used for creating or editing FAT boot sectors.
+/// Writable mirror of <see cref="FatBiosParameterBlock"/> used for creating or editing FAT boot sectors.
 /// All offsets in property documentation are byte offsets inside the 512 byte boot sector,
 /// matching the FAT specification and the values used by dosbox-staging's
 /// <c>drive_fat.cpp</c> boot sector struct.
@@ -149,12 +149,12 @@ public sealed class MutableBiosParameterBlock {
     }
 
     /// <summary>
-    /// Creates a mutable copy from a parsed read-only <see cref="BiosParameterBlock"/>.
+    /// Creates a mutable copy from a parsed read-only <see cref="FatBiosParameterBlock"/>.
     /// </summary>
     /// <param name="source">Source BPB to mirror.</param>
     /// <returns>A new <see cref="MutableBiosParameterBlock"/> seeded with the source values.</returns>
     /// <exception cref="ArgumentNullException">If <paramref name="source"/> is null.</exception>
-    public static MutableBiosParameterBlock FromReadOnly(BiosParameterBlock source) {
+    public static MutableBiosParameterBlock FromReadOnly(FatBiosParameterBlock source) {
         if (source is null) {
             throw new ArgumentNullException(nameof(source));
         }

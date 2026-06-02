@@ -20,7 +20,7 @@ public sealed class FatFileSystem {
     private const uint Fat32BadCluster = 0x0FFFFFF7;
 
     private readonly byte[] _imageData;
-    private readonly BiosParameterBlock _bpb;
+    private readonly FatBiosParameterBlock _bpb;
     private readonly uint[] _fat;
 
     /// <summary>Gets the type of FAT used in this volume.</summary>
@@ -30,7 +30,7 @@ public sealed class FatFileSystem {
     public string VolumeLabel { get; }
 
     /// <summary>Gets the BIOS Parameter Block parsed from the boot sector.</summary>
-    public BiosParameterBlock Bpb => _bpb;
+    public FatBiosParameterBlock Bpb => _bpb;
 
     /// <summary>
     /// Opens a FAT filesystem image from raw bytes.
@@ -39,7 +39,7 @@ public sealed class FatFileSystem {
     /// <exception cref="InvalidDataException">Thrown when the image is not a valid FAT volume.</exception>
     public FatFileSystem(byte[] imageData) {
         _imageData = imageData;
-        _bpb = BiosParameterBlock.Parse(_imageData.AsSpan(0, Math.Min(512, _imageData.Length)));
+        _bpb = FatBiosParameterBlock.Parse(_imageData.AsSpan(0, Math.Min(512, _imageData.Length)));
         FatType = DetectFatType();
         _fat = ReadFat();
         VolumeLabel = FindVolumeLabel();
