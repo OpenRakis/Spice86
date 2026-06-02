@@ -55,10 +55,10 @@ public sealed class FloppyBootService {
     /// </summary>
     /// <param name="imageData">The full floppy image bytes.</param>
     /// <param name="driveNumber">BIOS drive number (0 = A:, 1 = B:).</param>
-    /// <param name="imagePathForLogging">Optional path used in info logs.</param>
+    /// <param name="imagePathForLogging">Image path used in info logs.</param>
     /// <returns><c>true</c> if the boot sector was loaded and CPU prepared; <c>false</c> for a missing/invalid image.</returns>
-    public bool TryBootFromFloppyImage(byte[]? imageData, byte driveNumber, string? imagePathForLogging) {
-        if (imageData is null || imageData.Length < BootSectorSize) {
+    public bool TryBootFromFloppyImage(byte[] imageData, byte driveNumber, string imagePathForLogging) {
+        if (imageData.Length < BootSectorSize) {
             return false;
         }
         if (imageData[BootSectorSize - 2] != 0x55 || imageData[BootSectorSize - 1] != 0xAA) {
@@ -69,7 +69,7 @@ public sealed class FloppyBootService {
         SetupCpuRegistersForBoot(driveNumber);
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("BOOT: loaded {Bytes} bytes from floppy '{Path}' at 0000:7C00, DL={DL:X2}",
-                BootSectorSize, imagePathForLogging ?? string.Empty, _state.DL);
+                BootSectorSize, imagePathForLogging, _state.DL);
         }
         return true;
     }
