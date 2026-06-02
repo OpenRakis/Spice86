@@ -8,10 +8,10 @@ using Spice86.Shared.Emulator.Storage;
 /// </summary>
 public interface IDriveContentMapProvider {
     /// <summary>
-    /// Tries to obtain a content map for the specified drive letter.
+    /// Gets a content map for the specified drive letter.
     /// </summary>
     /// <param name="driveLetter">The DOS drive letter (case-insensitive).</param>
-    /// <param name="map">When this method returns <see langword="true"/>, contains the content map.</param>
-    /// <returns><see langword="true"/> if a content map could be produced; otherwise <see langword="false"/>.</returns>
-    bool TryGetContentMap(char driveLetter, out DriveContentMap? map);
+    /// <returns>The content map for the drive.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the specified drive does not expose a content map.</exception>
+    DriveContentMap GetContentMap(char driveLetter);
 }

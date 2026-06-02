@@ -316,9 +316,8 @@ public class DosFileManager {
             x => x.IsName(fileSpec)) is { } characterDevice) {
             if (isFcbSearch) {
                 UpdateDosTransferAreaWithFcbResult(dta, characterDevice.Name, 0, 0, 0, 0);
-            } else if (!TryUpdateDosTransferAreaWithDeviceMatch(dta, characterDevice.Name,
-                out DosFileOperationResult status)) {
-                return status;
+            } else {
+                UpdateDosTransferAreaWithDeviceMatch(dta, characterDevice.Name);
             }
             _activeFileSearches.Add(dta.SearchId, new(characterDevice.Name, 1, searchAttributes, isFcbSearch));
             return DosFileOperationResult.NoValue();
@@ -350,9 +349,8 @@ public class DosFileManager {
 
             if (isFcbSearch) {
                 UpdateDosTransferAreaWithFcbFileMatch(dta, matchingPaths[0], searchFolder, fileSpec);
-            } else if (!TryUpdateDosTransferAreaWithFileMatch(dta, fileSpec, matchingPaths[0], searchFolder,
-                out DosFileOperationResult status)) {
-                return status;
+            } else {
+                UpdateDosTransferAreaWithFileMatch(dta, fileSpec, matchingPaths[0], searchFolder);
             }
 
             _activeFileSearches.Add(dta.SearchId, new(fileSpec, 1, searchAttributes, isFcbSearch));
@@ -491,10 +489,8 @@ public class DosFileManager {
 
         if (search.IsFcbSearch) {
             UpdateDosTransferAreaWithFcbFileMatch(dta, fileMatch, searchFolder, search.FileSpec);
-        } else if (!TryUpdateDosTransferAreaWithFileMatch(dta, search.FileSpec,
-            fileMatch, searchFolder, out _)) {
-            return FileOperationErrorWithLog("Error when getting file system entry attributes of FindNext match.",
-                DosErrorCode.NoMoreFiles);
+        } else {
+            UpdateDosTransferAreaWithFileMatch(dta, search.FileSpec, fileMatch, searchFolder);
         }
         UpdateActiveSearch(key, search.FileSpec);
 
@@ -568,7 +564,8 @@ public class DosFileManager {
             return OpenDevice(device);
         }
 
-        if (TryOpenMemoryDriveFile(fileName, accessMode, out DosFileOperationResult memoryDriveResult)) {
+        DosFileOperationResult? memoryDriveResult = OpenMemoryDriveFile(fileName, accessMode);
+        if (memoryDriveResult != null) {
             return memoryDriveResult;
         }
 
@@ -721,30 +718,13 @@ public class DosFileManager {
         return DosFileOperationResult.Value16(writeLength);
     }
 
-    private bool TryUpdateDosTransferAreaWithFileMatch(DosDiskTransferArea dta,
-    string fileSpec, string matchingFileName, string hostFolder, out DosFileOperationResult status) {
-        try {
-            UpdateDosTransferAreaWithFileMatch(dta, fileSpec, matchingFileName, hostFolder);
-        } catch (IOException e) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning(e, "Error while getting attributes");
-            }
-            status = FileNotFoundError(null);
-            return false;
-        }
-        status = DosFileOperationResult.NoValue();
-        return true;
-    }
-
-    private static bool TryUpdateDosTransferAreaWithDeviceMatch(DosDiskTransferArea dta,
-        string deviceName, out DosFileOperationResult status) {
+    private static void UpdateDosTransferAreaWithDeviceMatch(DosDiskTransferArea dta,
+        string deviceName) {
         dta.FileAttributes = (byte)DosFileAttributes.Normal;
         dta.FileDate = 0;
         dta.FileTime = 0;
         dta.FileSize = 0;
         dta.FileName = deviceName.ToUpperInvariant();
-        status = DosFileOperationResult.NoValue();
-        return true;
     }
 
     private int CountHandles(DosFile openFileToCount) => OpenFiles.Count(openFile => openFile == openFileToCount);
@@ -807,61 +787,47 @@ public class DosFileManager {
         return null;
     }
 
-    private bool TryOpenMemoryDriveFile(string dosFileName, FileAccessMode accessMode, out DosFileOperationResult result) {
-        result = DosFileOperationResult.NoValue();
-        if (!TryGetMemoryDriveFilePath(dosFileName, out MemoryDrive? memoryDrive, out string? fullDosPath,
-                out string relativePath)) {
-            return false;
-        }
-
-        if (memoryDrive == null || string.IsNullOrWhiteSpace(fullDosPath)) {
-            result = FileNotFoundError($"'{dosFileName}'");
-            return true;
+    private DosFileOperationResult? OpenMemoryDriveFile(string dosFileName, FileAccessMode accessMode) {
+        MemoryDrivePathContext? context = GetMemoryDrivePathContext(dosFileName);
+        if (context == null) {
+            return null;
         }
 
         if (accessMode != FileAccessMode.ReadOnly) {
-            result = DosFileOperationResult.Error(DosErrorCode.AccessDenied);
-            return true;
+            return DosFileOperationResult.Error(DosErrorCode.AccessDenied);
         }
 
-        if (!memoryDrive.FileExists(relativePath)) {
-            result = FileNotFoundError($"'{dosFileName}'");
-            return true;
+        if (!context.Value.MemoryDrive.FileExists(context.Value.RelativePath)) {
+            return FileNotFoundError($"'{dosFileName}'");
         }
 
         int? freeIndex = FindNextFreeFileIndex();
         if (freeIndex == null) {
-            result = NoFreeHandleError();
-            return true;
+            return NoFreeHandleError();
         }
 
         ushort dosIndex = (ushort)freeIndex.Value;
-        MemoryStream stream = new(memoryDrive.GetFile(relativePath), writable: false);
-        DosFile dosFile = new(fullDosPath, dosIndex, stream) {
-            Drive = (byte)DosDriveManager.GetDriveIndex(memoryDrive.DriveLetter)
+        MemoryStream stream = new(context.Value.MemoryDrive.GetFile(context.Value.RelativePath), writable: false);
+        DosFile dosFile = new(context.Value.FullDosPath, dosIndex, stream) {
+            Drive = (byte)DosDriveManager.GetDriveIndex(context.Value.MemoryDrive.DriveLetter)
         };
         dosFile.DeviceInformation = ComputeDefaultDeviceInformation(dosFile);
         SetOpenFile(dosIndex, dosFile);
-        result = DosFileOperationResult.Value16(dosIndex);
-        return true;
+        return DosFileOperationResult.Value16(dosIndex);
     }
 
-    private bool TryGetMemoryDriveFilePath(string dosPath, out MemoryDrive? memoryDrive, out string? fullDosPath,
-            out string relativePath) {
-        memoryDrive = null;
-        fullDosPath = _dosPathResolver.GetFullDosPathIncludingRoot(dosPath);
-        relativePath = string.Empty;
+    private MemoryDrivePathContext? GetMemoryDrivePathContext(string dosPath) {
+        string? fullDosPath = _dosPathResolver.GetFullDosPathIncludingRoot(dosPath);
         if (string.IsNullOrWhiteSpace(fullDosPath) || fullDosPath.Length <= 3) {
-            return false;
+            return null;
         }
 
         if (!_dosDriveManager.TryGetMemoryDrive(fullDosPath[0], out MemoryDrive? resolvedMemoryDrive)) {
-            return false;
+            return null;
         }
 
-        memoryDrive = resolvedMemoryDrive;
-        relativePath = fullDosPath[3..];
-        return true;
+        string relativePath = fullDosPath[3..];
+        return new MemoryDrivePathContext(resolvedMemoryDrive, fullDosPath, relativePath);
     }
 
     /// <summary>
@@ -906,12 +872,9 @@ public class DosFileManager {
             return true;
         }
 
-        if (TryGetMemoryDriveFilePath(dosPath, out MemoryDrive? memoryDrive, out string? _, out string relativePath)) {
-            if (memoryDrive == null) {
-                return false;
-            }
-
-            return memoryDrive.FileExists(relativePath);
+        MemoryDrivePathContext? memoryDriveContext = GetMemoryDrivePathContext(dosPath);
+        if (memoryDriveContext != null) {
+            return memoryDriveContext.Value.MemoryDrive.FileExists(memoryDriveContext.Value.RelativePath);
         }
 
         string? hostFileName = _dosPathResolver.GetFullHostPathFromDosOrDefault(dosPath);
@@ -982,6 +945,18 @@ public class DosFileManager {
         }
 
         return info;
+    }
+
+    private readonly struct MemoryDrivePathContext {
+        public MemoryDrivePathContext(MemoryDrive memoryDrive, string fullDosPath, string relativePath) {
+            MemoryDrive = memoryDrive;
+            FullDosPath = fullDosPath;
+            RelativePath = relativePath;
+        }
+
+        public MemoryDrive MemoryDrive { get; }
+        public string FullDosPath { get; }
+        public string RelativePath { get; }
     }
 
     private DosFileOperationResult OpenFileInternal(string dosFileName, string? hostFileName, FileAccessMode openMode) {

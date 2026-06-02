@@ -36,6 +36,8 @@ using System.Text;
 /// Represents the DOS kernel.
 /// </summary>
 public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService, IDriveContentMapProvider, IDriveFileListProvider {
+    private const byte DefaultCdDriveIndex = 3;
+    private const int CookedCdSectorSize = 2048;
     private readonly BiosDataArea _biosDataArea;
     private readonly IVgaFunctionality _vgaFunctionality;
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
@@ -447,75 +449,56 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
     }
 
     /// <inheritdoc/>
-    public bool MountFolderAsFloppy(char driveLetter, string hostPath) {
+    public void MountFolderAsFloppy(char driveLetter, string hostPath) {
         if (string.IsNullOrWhiteSpace(hostPath) || !Directory.Exists(hostPath)) {
-            _loggerService.Error("MOUNT: Could not mount folder {Path} as floppy {Drive}: directory does not exist", hostPath, char.ToUpperInvariant(driveLetter));
-            return false;
+            throw new DirectoryNotFoundException($"Floppy mount folder was not found: {hostPath}");
         }
+
         DosDriveManager.MountFloppyFolder(driveLetter, hostPath);
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _loggerService.Information("MOUNT: Drive {Drive}: is now backed by folder {Path}", char.ToUpperInvariant(driveLetter), hostPath);
         }
-        return true;
     }
 
     /// <inheritdoc/>
-    public bool MountImageAsFloppy(char driveLetter, string imagePath) {
-        byte[] imageData;
-        try {
-            imageData = File.ReadAllBytes(imagePath);
-        } catch (IOException ex) {
-            _loggerService.Error("IMGMOUNT: Could not read image file {Path}: {Message}", imagePath, ex.Message);
-            return false;
+    public void MountImageAsFloppy(char driveLetter, string imagePath) {
+        if (string.IsNullOrWhiteSpace(imagePath) || !File.Exists(imagePath)) {
+            throw new FileNotFoundException("Floppy image was not found", imagePath);
         }
-        try {
-            DosDriveManager.MountFloppyImage(driveLetter, imageData, imagePath);
-        } catch (InvalidDataException ex) {
-            _loggerService.Error("IMGMOUNT: Image {Path} is not a valid FAT disk image: {Message}", imagePath, ex.Message);
-            return false;
-        }
-        return true;
+
+        byte[] imageData = File.ReadAllBytes(imagePath);
+        DosDriveManager.MountFloppyImage(driveLetter, imageData, imagePath);
     }
 
     /// <inheritdoc/>
-    public bool MountFolderAsCdRom(char driveLetter, string hostPath) {
-        try {
-            string volumeLabel = Path.GetFileName(hostPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-            VirtualIsoImage image = new VirtualIsoImage(hostPath, volumeLabel);
-            char upper = char.ToUpperInvariant(driveLetter);
-            CdRomDrive drive = new CdRomDrive(image, _channelCreator, _activityNotifier, upper);
-            byte driveIndex = DosDriveManager.TryGetLetterIndex(upper, out int idx) ? (byte)idx : (byte)3;
-            MscdexDriveEntry entry = new MscdexDriveEntry(upper, driveIndex, drive);
-            _mscdex.AddDrive(entry);
-            DosDriveManager.RegisterCdRomDriveLetter(upper, hostPath, volumeLabel);
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _loggerService.Information("MOUNT: Drive {Drive}: is now backed by folder {Path}", upper, hostPath);
-            }
-            return true;
-        } catch (IOException ex) {
-            _loggerService.Error("MOUNT: Could not mount folder {Path} as CD-ROM: {Message}", hostPath, ex.Message);
-            return false;
+    public void MountFolderAsCdRom(char driveLetter, string hostPath) {
+        if (string.IsNullOrWhiteSpace(hostPath) || !Directory.Exists(hostPath)) {
+            throw new DirectoryNotFoundException($"CD-ROM mount folder was not found: {hostPath}");
         }
-    }
 
-    /// <inheritdoc/>
-    public bool MountImageAsCdRom(char driveLetter, string imagePath) {
-        ICdRomImage image;
-        try {
-            image = CdRomImageFactory.Open(imagePath);
-        } catch (ArgumentException ex) {
-            _loggerService.Error("IMGMOUNT: Unsupported CD image format for {Path}: {Message}", imagePath, ex.Message);
-            return false;
-        } catch (InvalidDataException ex) {
-            _loggerService.Error("IMGMOUNT: CD image {Path} is not a valid disc image: {Message}", imagePath, ex.Message);
-            return false;
-        } catch (IOException ex) {
-            _loggerService.Error("IMGMOUNT: Could not read CD image {Path}: {Message}", imagePath, ex.Message);
-            return false;
-        }
+        string volumeLabel = Path.GetFileName(hostPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        VirtualIsoImage image = new VirtualIsoImage(hostPath, volumeLabel);
         char upper = char.ToUpperInvariant(driveLetter);
         CdRomDrive drive = new CdRomDrive(image, _channelCreator, _activityNotifier, upper);
-        byte driveIndex = DosDriveManager.TryGetLetterIndex(upper, out int idx) ? (byte)idx : (byte)3;
+        byte driveIndex = GetDriveIndexOrDefault(upper);
+        MscdexDriveEntry entry = new MscdexDriveEntry(upper, driveIndex, drive);
+        _mscdex.AddDrive(entry);
+        DosDriveManager.RegisterCdRomDriveLetter(upper, hostPath, volumeLabel);
+        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
+            _loggerService.Information("MOUNT: Drive {Drive}: is now backed by folder {Path}", upper, hostPath);
+        }
+    }
+
+    /// <inheritdoc/>
+    public void MountImageAsCdRom(char driveLetter, string imagePath) {
+        if (string.IsNullOrWhiteSpace(imagePath) || !File.Exists(imagePath)) {
+            throw new FileNotFoundException("CD-ROM image was not found", imagePath);
+        }
+
+        ICdRomImage image = CdRomImageFactory.Open(imagePath);
+        char upper = char.ToUpperInvariant(driveLetter);
+        CdRomDrive drive = new CdRomDrive(image, _channelCreator, _activityNotifier, upper);
+        byte driveIndex = GetDriveIndexOrDefault(upper);
         MscdexDriveEntry entry = new MscdexDriveEntry(upper, driveIndex, drive);
         _mscdex.AddDrive(entry);
         string volumeLabel = image.PrimaryVolume.VolumeIdentifier ?? string.Empty;
@@ -523,11 +506,10 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _loggerService.Information("IMGMOUNT: Mounted image {Image} on drive {Drive}:", imagePath, upper);
         }
-        return true;
     }
 
     /// <inheritdoc />
-    public bool TryGetContentMap(char driveLetter, out DriveContentMap? map) {
+    public DriveContentMap GetContentMap(char driveLetter) {
         char upper = char.ToUpperInvariant(driveLetter);
         if (DosDriveManager.TryGetFloppyDrive(upper, out FloppyDiskDrive? floppy) && floppy.Image != null) {
             DriveClusterState[] states = floppy.Image.GetClusterUsageBitmap(MaxVisualizationClusters);
@@ -538,8 +520,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
             int totalClusters = floppy.Image.Bpb.SectorsPerCluster == 0
                 ? states.Length
                 : floppy.Image.Bpb.TotalSectors / floppy.Image.Bpb.SectorsPerCluster;
-            map = DriveContentMap.ForFat(upper, clusterInfos, totalClusters);
-            return true;
+            return DriveContentMap.ForFat(upper, clusterInfos, totalClusters);
         }
         for (int i = 0; i < _mscdex.Drives.Count; i++) {
             MscdexDriveEntry entry = _mscdex.Drives[i];
@@ -555,23 +536,20 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
                 int length = endLba > track.StartLba ? endLba - track.StartLba : 0;
                 tracks.Add(new DriveCdTrackInfo(track.Number, (uint)track.StartLba, (uint)length, track.IsAudio));
             }
-            map = DriveContentMap.ForCdRom(upper, (uint)image.TotalSectors, tracks);
-            return true;
+            return DriveContentMap.ForCdRom(upper, (uint)image.TotalSectors, tracks);
         }
-        map = null;
-        return false;
+        throw new InvalidOperationException($"Drive {upper}: does not expose a content map");
     }
 
     private const int MaxVisualizationClusters = 4096;
 
     /// <inheritdoc />
-    public bool TryGetFileList(char driveLetter, out IReadOnlyList<DriveFileEntry>? entries) {
+    public IReadOnlyList<DriveFileEntry> GetFileList(char driveLetter) {
         char upper = char.ToUpperInvariant(driveLetter);
 
         // FAT image-backed floppy drive.
         if (DosDriveManager.TryGetFloppyDrive(upper, out FloppyDiskDrive? floppy) && floppy.Image != null) {
-            entries = BuildFatEntries(floppy.Image, isRoot: true, firstCluster: 0);
-            return true;
+            return BuildFatEntries(floppy.Image, isRoot: true, firstCluster: 0);
         }
 
         // CD-ROM drives registered with MSCDEX.
@@ -580,19 +558,16 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
             if (entry.DriveLetter != upper) {
                 continue;
             }
-            entries = BuildIsoEntries(entry.Drive.Image, entry.Drive.Image.PrimaryVolume.RootDirectoryLba, entry.Drive.Image.PrimaryVolume.RootDirectorySize);
-            return true;
+            return BuildIsoEntries(entry.Drive.Image, entry.Drive.Image.PrimaryVolume.RootDirectoryLba, entry.Drive.Image.PrimaryVolume.RootDirectorySize);
         }
 
         // Folder-backed drive (HDD, folder floppy, folder CD).
         if (DosDriveManager.TryGetDrive<VirtualDrive>(upper, out VirtualDrive? vd) && !string.IsNullOrEmpty(vd.MountedHostDirectory)) {
             string hostRoot = vd.MountedHostDirectory.TrimEnd('/', '\\');
-            entries = BuildHostEntries(hostRoot);
-            return true;
+            return BuildHostEntries(hostRoot);
         }
 
-        entries = null;
-        return false;
+        throw new InvalidOperationException($"Drive {upper}: does not expose a DOS-visible file list");
     }
 
     private static List<DriveFileEntry> BuildFatEntries(FatFileSystem fs, bool isRoot, uint firstCluster) {
@@ -721,5 +696,13 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
             parts.Add("A");
         }
         return parts.Count == 0 ? "---" : string.Join("", parts);
+    }
+
+    private byte GetDriveIndexOrDefault(char driveLetter) {
+        if (DosDriveManager.TryGetLetterIndex(driveLetter, out int index)) {
+            return (byte)index;
+        }
+
+        return DefaultCdDriveIndex;
     }
 }

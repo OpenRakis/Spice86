@@ -36,9 +36,8 @@ public partial class DriveInfoWindow : Window {
         if (driveVm.FileListProvider == null) {
             return new ObservableCollection<FileTreeNode>();
         }
-        if (!driveVm.FileListProvider.TryGetFileList(driveVm.DriveLetter, out IReadOnlyList<Spice86.Shared.Emulator.Storage.DriveFileEntry>? entries) || entries == null) {
-            return new ObservableCollection<FileTreeNode>();
-        }
+
+        IReadOnlyList<Spice86.Shared.Emulator.Storage.DriveFileEntry> entries = driveVm.FileListProvider.GetFileList(driveVm.DriveLetter);
         return BuildNodes(entries);
     }
 

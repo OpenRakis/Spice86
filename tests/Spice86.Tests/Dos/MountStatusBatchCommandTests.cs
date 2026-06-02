@@ -27,12 +27,7 @@ public sealed class MountStatusBatchCommandTests : IDisposable {
 
     [Fact]
     public void Mount_NoArguments_ListsDriveLabels() {
-        bool foundDrive = _fixture.DriveManager.TryGetDrive<VirtualDrive>('C', out VirtualDrive? cDrive);
-
-        foundDrive.Should().BeTrue();
-        if (cDrive == null) {
-            throw new InvalidOperationException("Expected C: drive to be mounted.");
-        }
+        VirtualDrive cDrive = _fixture.DriveManager.GetDrive<VirtualDrive>('C');
         cDrive.Label = "HOSTDRV";
 
         string output = ExecuteAndReadOutput("MOUNT", "MOUNT.TXT");
@@ -55,11 +50,7 @@ public sealed class MountStatusBatchCommandTests : IDisposable {
         _fixture.DriveManager.MountFloppyImage('A', imageData1, imagePath1);
         _fixture.DriveManager.AddFloppyImage('A', imageData2, imagePath2);
 
-        bool foundDrive = _fixture.DriveManager.TryGetFloppyDrive('A', out FloppyDiskDrive? floppyDrive);
-        foundDrive.Should().BeTrue();
-        if (floppyDrive == null) {
-            throw new InvalidOperationException("Expected A: floppy drive to be mounted.");
-        }
+        FloppyDiskDrive floppyDrive = _fixture.DriveManager.GetDrive<FloppyDiskDrive>('A');
         floppyDrive.Label = "DISKSET";
 
         string output = ExecuteAndReadOutput("IMGMOUNT", "IMGMOUNT.TXT");
