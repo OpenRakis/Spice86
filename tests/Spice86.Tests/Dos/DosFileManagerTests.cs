@@ -197,7 +197,7 @@ public class DosFileManagerTests {
         string cdRoot = Path.Join(tempFile.Path, "MYDISC");
         Directory.CreateDirectory(cdRoot);
         using DosTestFixture fixture = new(tempFile.Path);
-        fixture.Dos.MountFolderAsCdRom('D', cdRoot).Should().BeTrue();
+        fixture.Dos.MountFolderAsCdRom('D', cdRoot);
 
         // Act: volume-label searches on a mounted CD drive should use the mounted media label.
         DosFileOperationResult result = fixture.DosFileManager.FindFirstMatchingFile(

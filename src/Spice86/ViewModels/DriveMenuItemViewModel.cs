@@ -256,11 +256,8 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
         if (_contentMapProvider == null) {
             return;
         }
-        if (_contentMapProvider.TryGetContentMap(DriveLetter, out DriveContentMap? map)) {
-            ContentMap = map;
-        } else {
-            ContentMap = null;
-        }
+
+        ContentMap = _contentMapProvider.GetContentMap(DriveLetter);
     }
 
     private void OnActivityRead(object? sender, DriveActivityEventArgs e) {
@@ -381,14 +378,10 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
         if (string.IsNullOrEmpty(path)) {
             return;
         }
-        bool success;
         if (DriveType == DosVirtualDriveType.Floppy) {
-            success = _mountService.MountFolderAsFloppy(DriveLetter, path);
+            _mountService.MountFolderAsFloppy(DriveLetter, path);
         } else {
-            success = _mountService.MountFolderAsCdRom(DriveLetter, path);
-        }
-        if (!success) {
-            _driveEventNotifier.NotifyError($"Drive {DriveLetter}: mount failed", $"Could not mount folder: {Path.GetFileName(path)}");
+            _mountService.MountFolderAsCdRom(DriveLetter, path);
         }
     }
 
@@ -409,14 +402,10 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
         if (string.IsNullOrEmpty(path)) {
             return;
         }
-        bool success;
         if (DriveType == DosVirtualDriveType.Floppy) {
-            success = _mountService.MountImageAsFloppy(DriveLetter, path);
+            _mountService.MountImageAsFloppy(DriveLetter, path);
         } else {
-            success = _mountService.MountImageAsCdRom(DriveLetter, path);
-        }
-        if (!success) {
-            _driveEventNotifier.NotifyError($"Drive {DriveLetter}: mount failed", $"Could not mount image: {Path.GetFileName(path)}");
+            _mountService.MountImageAsCdRom(DriveLetter, path);
         }
     }
 

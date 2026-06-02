@@ -1047,6 +1047,24 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
     }
 
     /// <summary>
+    /// Gets the current mounted floppy image for BOOT flows.
+    /// Returns <see cref="MountedFloppyImage.None"/> when no image-backed floppy is mounted.
+    /// </summary>
+    public MountedFloppyImage GetMountedFloppyImageForBoot(char driveLetter) {
+        char upper = NormalizeDriveLetter(driveLetter);
+        if (!TryGetFloppyDrive(upper, out FloppyDiskDrive? floppy)) {
+            return MountedFloppyImage.None;
+        }
+
+        byte[]? imageData = floppy.GetCurrentImageData();
+        if (imageData == null) {
+            return MountedFloppyImage.None;
+        }
+
+        return MountedFloppyImage.From(imageData, floppy.ImagePath);
+    }
+
+    /// <summary>
     /// Flushes all dirty floppy disk images back to their backing host files.
     /// </summary>
     /// <remarks>
@@ -1230,17 +1248,17 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
         sectorsPerTrack = 0;
         bytesPerSector = 0;
 
-        if (!TryResolveImageBackedDrive(driveNumber, out FloppyDiskDrive? _, out byte[]? imageData) || imageData == null) {
+        if (!ResolveImageBackedDrive(driveNumber, out FloppyDiskDrive? _, out byte[]? imageData) || imageData == null) {
             return false;
         }
 
-        return TryGetImageGeometry(imageData, out totalCylinders, out headsPerCylinder, out sectorsPerTrack,
+        return GetImageGeometry(imageData, out totalCylinders, out headsPerCylinder, out sectorsPerTrack,
             out bytesPerSector);
     }
 
     /// <inheritdoc/>
     public bool ReadFromImage(byte driveNumber, int imageByteOffset, byte[] destination, int destOffset, int byteCount) {
-        if (!TryResolveImageBackedDrive(driveNumber, out FloppyDiskDrive? _, out byte[]? imageData)) {
+        if (!ResolveImageBackedDrive(driveNumber, out FloppyDiskDrive? _, out byte[]? imageData)) {
             return false;
         }
         if (imageByteOffset < 0 || imageByteOffset + byteCount > imageData!.Length) {
@@ -1252,7 +1270,7 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
 
     /// <inheritdoc/>
     public bool WriteToImage(byte driveNumber, int imageByteOffset, byte[] source, int srcOffset, int byteCount) {
-        if (!TryResolveImageBackedDrive(driveNumber, out FloppyDiskDrive? floppy, out byte[]? imageData)) {
+        if (!ResolveImageBackedDrive(driveNumber, out FloppyDiskDrive? floppy, out byte[]? imageData)) {
             return false;
         }
         if (imageByteOffset < 0 || imageByteOffset + byteCount > imageData!.Length) {
@@ -1274,7 +1292,7 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
         _version++;
     }
 
-    private bool TryResolveImageBackedDrive(byte driveNumber, out FloppyDiskDrive? floppy, out byte[]? imageData) {
+    private bool ResolveImageBackedDrive(byte driveNumber, out FloppyDiskDrive? floppy, out byte[]? imageData) {
         floppy = null;
         imageData = null;
         if (!TryGetDriveLetterFromIndex(driveNumber, out char driveLetter) || !TryGetFloppyDrive(driveLetter, out floppy)) {
@@ -1288,30 +1306,45 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
         return ImageBiosParameterBlock.Parse(imageData.AsSpan(0, Math.Min(512, imageData.Length)));
     }
 
-    private static bool TryGetImageGeometry(byte[] imageData, out int totalCylinders, out int headsPerCylinder,
+    /// <summary>
+    /// Value object carrying mounted floppy image data for boot requests.
+    /// </summary>
+    public readonly record struct MountedFloppyImage(bool IsPresent, byte[] ImageData, string ImagePath) {
+        public static MountedFloppyImage None { get; } = new(false, Array.Empty<byte>(), string.Empty);
+
+        public static MountedFloppyImage From(byte[] imageData, string imagePath) {
+            return new MountedFloppyImage(true, imageData, imagePath);
+        }
+    }
+
+    private static bool GetImageGeometry(byte[] imageData, out int totalCylinders, out int headsPerCylinder,
         out int sectorsPerTrack, out int bytesPerSector) {
-        if (TryGetGeometryFromBpb(imageData, out totalCylinders, out headsPerCylinder, out sectorsPerTrack,
+        if (GetGeometryFromBpb(imageData, out totalCylinders, out headsPerCylinder, out sectorsPerTrack,
                 out bytesPerSector)) {
             return true;
         }
 
-        return TryGetGeometryFromImageSize(imageData, out totalCylinders, out headsPerCylinder, out sectorsPerTrack,
+        return GetGeometryFromImageSize(imageData, out totalCylinders, out headsPerCylinder, out sectorsPerTrack,
             out bytesPerSector);
     }
 
-    private static bool TryGetGeometryFromBpb(byte[] imageData, out int totalCylinders, out int headsPerCylinder,
+    private static bool GetGeometryFromBpb(byte[] imageData, out int totalCylinders, out int headsPerCylinder,
         out int sectorsPerTrack, out int bytesPerSector) {
         totalCylinders = 0;
         headsPerCylinder = 0;
         sectorsPerTrack = 0;
         bytesPerSector = 0;
 
-        ImageBiosParameterBlock bpb;
-        try {
-            bpb = ParseBpb(imageData);
-        } catch (System.IO.InvalidDataException) {
+        if (imageData.Length < 62) {
             return false;
         }
+
+        ushort bytesPerSectorCandidate = BitConverter.ToUInt16(imageData, 11);
+        if (bytesPerSectorCandidate == 0) {
+            return false;
+        }
+
+        ImageBiosParameterBlock bpb = ParseBpb(imageData);
 
         bytesPerSector = bpb.BytesPerSector;
         sectorsPerTrack = bpb.SectorsPerTrack;
@@ -1330,7 +1363,7 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
         return totalCylinders > 0;
     }
 
-    private static bool TryGetGeometryFromImageSize(byte[] imageData, out int totalCylinders,
+    private static bool GetGeometryFromImageSize(byte[] imageData, out int totalCylinders,
         out int headsPerCylinder, out int sectorsPerTrack, out int bytesPerSector) {
         totalCylinders = 0;
         headsPerCylinder = 0;
