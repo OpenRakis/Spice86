@@ -1242,43 +1242,48 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
         _substDriveMap.ContainsKey(NormalizeDriveLetter(driveLetter));
 
     /// <inheritdoc/>
-    public bool TryGetGeometry(byte driveNumber, out int totalCylinders, out int headsPerCylinder, out int sectorsPerTrack, out int bytesPerSector) {
-        totalCylinders = 0;
-        headsPerCylinder = 0;
-        sectorsPerTrack = 0;
-        bytesPerSector = 0;
-
-        if (!ResolveImageBackedDrive(driveNumber, out FloppyDiskDrive? _, out byte[]? imageData) || imageData == null) {
-            return false;
+    public FloppyGeometryResult GetGeometry(byte driveNumber) {
+        ImageBackedFloppyDrive imageDrive = ResolveImageBackedDrive(driveNumber);
+        if (!imageDrive.IsPresent) {
+            return FloppyGeometryResult.DriveNotReady;
         }
 
-        return GetImageGeometry(imageData, out totalCylinders, out headsPerCylinder, out sectorsPerTrack,
-            out bytesPerSector);
+        if (TryGetImageGeometry(imageDrive.ImageData, out int totalCylinders, out int headsPerCylinder,
+                out int sectorsPerTrack, out int bytesPerSector)) {
+            FloppyGeometry geometry = new(totalCylinders, headsPerCylinder, sectorsPerTrack, bytesPerSector);
+            return FloppyGeometryResult.Success(geometry);
+        }
+
+        return FloppyGeometryResult.DriveNotReady;
     }
 
     /// <inheritdoc/>
-    public bool ReadFromImage(byte driveNumber, int imageByteOffset, byte[] destination, int destOffset, int byteCount) {
-        if (!ResolveImageBackedDrive(driveNumber, out FloppyDiskDrive? _, out byte[]? imageData)) {
-            return false;
+    public FloppyTransferResult ReadFromImage(byte driveNumber, int imageByteOffset, byte[] destination, int destOffset, int byteCount) {
+        ImageBackedFloppyDrive imageDrive = ResolveImageBackedDrive(driveNumber);
+        if (!imageDrive.IsPresent) {
+            return FloppyTransferResult.DriveNotReady;
         }
-        if (imageByteOffset < 0 || imageByteOffset + byteCount > imageData!.Length) {
-            return false;
+        if (imageByteOffset < 0 || imageByteOffset + byteCount > imageDrive.ImageData.Length) {
+            return FloppyTransferResult.OutOfRange;
         }
-        imageData.AsSpan(imageByteOffset, byteCount).CopyTo(destination.AsSpan(destOffset));
-        return true;
+
+        imageDrive.ImageData.AsSpan(imageByteOffset, byteCount).CopyTo(destination.AsSpan(destOffset));
+        return FloppyTransferResult.Success(byteCount);
     }
 
     /// <inheritdoc/>
-    public bool WriteToImage(byte driveNumber, int imageByteOffset, byte[] source, int srcOffset, int byteCount) {
-        if (!ResolveImageBackedDrive(driveNumber, out FloppyDiskDrive? floppy, out byte[]? imageData)) {
-            return false;
+    public FloppyTransferResult WriteToImage(byte driveNumber, int imageByteOffset, byte[] source, int srcOffset, int byteCount) {
+        ImageBackedFloppyDrive imageDrive = ResolveImageBackedDrive(driveNumber);
+        if (!imageDrive.IsPresent) {
+            return FloppyTransferResult.DriveNotReady;
         }
-        if (imageByteOffset < 0 || imageByteOffset + byteCount > imageData!.Length) {
-            return false;
+        if (imageByteOffset < 0 || imageByteOffset + byteCount > imageDrive.ImageData.Length) {
+            return FloppyTransferResult.OutOfRange;
         }
-        source.AsSpan(srcOffset, byteCount).CopyTo(imageData.AsSpan(imageByteOffset));
-        floppy?.MarkDirty();
-        return true;
+
+        source.AsSpan(srcOffset, byteCount).CopyTo(imageDrive.ImageData.AsSpan(imageByteOffset));
+        imageDrive.Drive.MarkDirty();
+        return FloppyTransferResult.Success(byteCount);
     }
 
     private void ReplaceDrive(char driveLetter, DosDriveBase newDrive) {
@@ -1292,14 +1297,17 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
         _version++;
     }
 
-    private bool ResolveImageBackedDrive(byte driveNumber, out FloppyDiskDrive? floppy, out byte[]? imageData) {
-        floppy = null;
-        imageData = null;
-        if (!TryGetDriveLetterFromIndex(driveNumber, out char driveLetter) || !TryGetFloppyDrive(driveLetter, out floppy)) {
-            return false;
+    private ImageBackedFloppyDrive ResolveImageBackedDrive(byte driveNumber) {
+        if (!TryGetDriveLetterFromIndex(driveNumber, out char driveLetter) || !TryGetFloppyDrive(driveLetter, out FloppyDiskDrive? floppy)) {
+            return ImageBackedFloppyDrive.None;
         }
-        imageData = floppy.GetCurrentImageData();
-        return imageData != null;
+
+        byte[]? imageData = floppy.GetCurrentImageData();
+        if (imageData == null) {
+            return ImageBackedFloppyDrive.None;
+        }
+
+        return ImageBackedFloppyDrive.From(floppy, imageData);
     }
 
     private static ImageBiosParameterBlock ParseBpb(byte[] imageData) {
@@ -1317,7 +1325,15 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
         }
     }
 
-    private static bool GetImageGeometry(byte[] imageData, out int totalCylinders, out int headsPerCylinder,
+    private readonly record struct ImageBackedFloppyDrive(bool IsPresent, FloppyDiskDrive Drive, byte[] ImageData) {
+        public static ImageBackedFloppyDrive None { get; } = new(false, new FloppyDiskDrive(), Array.Empty<byte>());
+
+        public static ImageBackedFloppyDrive From(FloppyDiskDrive drive, byte[] imageData) {
+            return new ImageBackedFloppyDrive(true, drive, imageData);
+        }
+    }
+
+    private static bool TryGetImageGeometry(byte[] imageData, out int totalCylinders, out int headsPerCylinder,
         out int sectorsPerTrack, out int bytesPerSector) {
         if (GetGeometryFromBpb(imageData, out totalCylinders, out headsPerCylinder, out sectorsPerTrack,
                 out bytesPerSector)) {

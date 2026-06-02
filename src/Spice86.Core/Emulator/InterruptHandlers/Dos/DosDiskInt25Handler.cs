@@ -97,7 +97,8 @@ public class DosDiskInt25Handler : InterruptHandler {
             bufferAddress = MemoryUtils.ToPhysicalAddress(State.DS, State.BX);
         }
 
-        if (!_dosDriveManager.TryGetGeometry(driveIndex, out int _, out int _, out int _, out int bytesPerSector)) {
+        FloppyGeometryResult geometryResult = _dosDriveManager.GetGeometry(driveIndex);
+        if (geometryResult.Status != FloppyAccessStatus.Success) {
             if (driveIndex >= 2) {
                 if (sectorCount == 1 && startSector == 0) {
                     // Write BPB hidden-sectors field into the buffer for MicroProse installers.
@@ -113,6 +114,7 @@ public class DosDiskInt25Handler : InterruptHandler {
             SetCarryFlag(true, calledFromVm);
             return;
         }
+        int bytesPerSector = geometryResult.Geometry.BytesPerSector;
 
         int byteOffset = (int)((long)startSector * bytesPerSector);
         int byteCount = sectorCount * bytesPerSector;
@@ -120,7 +122,8 @@ public class DosDiskInt25Handler : InterruptHandler {
 
         _timingService.ScheduleFloppyIoDelay(sectorCount);
 
-        if (!_dosDriveManager.ReadFromImage(driveIndex, byteOffset, buffer, 0, byteCount)) {
+        FloppyTransferResult readResult = _dosDriveManager.ReadFromImage(driveIndex, byteOffset, buffer, 0, byteCount);
+        if (readResult.Status != FloppyAccessStatus.Success) {
             State.AX = 0x0408;
             SetCarryFlag(true, calledFromVm);
             return;
