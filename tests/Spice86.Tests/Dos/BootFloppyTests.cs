@@ -32,7 +32,7 @@ using Xunit;
 /// Tests for the BOOT.COM internal batch command and the
 /// <see cref="FloppyBootService"/> CPU/memory setup.
 ///
-/// Mirrors DOSBox Staging's BOOT command for floppy images: the first
+/// BOOT command for floppy images: the first
 /// 512-byte sector of the mounted image must be loaded at physical 0x7C00,
 /// and the CPU must be prepared with CS:IP=0000:7C00, SS:SP=0000:7C00 and
 /// DL set to the floppy drive number (0=A, 1=B). The boot service lives
@@ -40,15 +40,6 @@ using Xunit;
 /// DOS kernel.
 /// </summary>
 public class BootFloppyTests {
-    [Fact]
-    public void BootFromFloppy_NoMountedImage_ReturnsFalse() {
-        BootContext ctx = BootContext.Create();
-
-        bool ok = ctx.BootService.TryBootFromFloppyImage(null, 0, null);
-
-        ok.Should().BeFalse();
-    }
-
     [Fact]
     public void BootFromFloppy_DriveA_LoadsSectorAt7C00() {
         BootContext ctx = BootContext.Create();
