@@ -142,8 +142,8 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
             case 0x03:
             case 0x05:
                 _cmosRegisters[reg] = value;
-                if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                    _loggerService.Information("CMOS: Alarm register {Reg:X2} set to {Val:X2}", reg, value);
+                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                    _loggerService.Debug("CMOS: Alarm register {Reg:X2} set to {Val:X2}", reg, value);
                 }
                 return;
 
@@ -167,13 +167,13 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
                     _loggerService.Error("CMOS: Update-ended interrupt not supported (bit 4 set in Register B).");
                 }
                 if (_cmosRegisters.Timer.Enabled && !prevEnabled) {
-                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                        _loggerService.Information("RTC: Periodic interrupt enabled via Status Register B write");
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("RTC: Periodic interrupt enabled via Status Register B write");
                     }
                     ScheduleNextPeriodicInterrupt();
                 } else if (!_cmosRegisters.Timer.Enabled && prevEnabled) {
-                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                        _loggerService.Information("RTC: Periodic interrupt disabled via Status Register B write");
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("RTC: Periodic interrupt disabled via Status Register B write");
                     }
                     CancelPeriodicInterrupts();
                 }
@@ -237,8 +237,8 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
             case CmosRegisterAddresses.StatusRegisterB:
                 {
                     byte value = _cmosRegisters[reg];
-                    if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                        _loggerService.Information("RTC: Status Register B read: value=0x{Value:X2}, PIE={PIE}",
+                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+                        _loggerService.Debug("RTC: Status Register B read: value=0x{Value:X2}, PIE={PIE}",
                             value, (value & 0x40) != 0);
                     }
                     return value;
