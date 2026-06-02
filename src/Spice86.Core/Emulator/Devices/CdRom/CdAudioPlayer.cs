@@ -16,31 +16,21 @@ public sealed class CdAudioPlayer {
 
     private readonly SoundChannel _soundChannel;
     private readonly IDriveActivityNotifier? _activityNotifier;
-    private ICdRomDrive? _drive;
+    private readonly ICdRomDrive _drive;
     private char _driveLetter = '\0';
     private byte[] _rawAudioBuffer = [];
     private float[] _floatSampleBuffer = [];
 
-    /// <summary>Initialises a new <see cref="CdAudioPlayer"/> and registers a channel with the mixer.</summary>
-    /// <param name="channelCreator">The sound channel creator used to register the CD audio channel.</param>
-    public CdAudioPlayer(ISoundChannelCreator channelCreator)
-        : this(channelCreator, null) {
-    }
-
     /// <summary>Initialises a new <see cref="CdAudioPlayer"/> with an activity notifier.</summary>
+    /// <param name="cdRomDrive">The CD-ROM drive</param>
     /// <param name="channelCreator">The sound channel creator used to register the CD audio channel.</param>
-    /// <param name="activityNotifier">Notifier that surfaces per-drive read activity for streamed audio sectors (may be null).</param>
-    public CdAudioPlayer(ISoundChannelCreator channelCreator, IDriveActivityNotifier? activityNotifier) {
+    /// <param name="activityNotifier">Notifier that surfaces per-drive read activity for streamed audio sectors.</param>
+    public CdAudioPlayer(ICdRomDrive cdRomDrive, ISoundChannelCreator channelCreator, IDriveActivityNotifier? activityNotifier) {
         _soundChannel = channelCreator.AddChannel(AudioCallback, CdAudioSampleRateHz, "CD Audio",
             new HashSet<ChannelFeature> { ChannelFeature.DigitalAudio, ChannelFeature.Stereo, ChannelFeature.ReverbSend });
         _soundChannel.Enable(false);
+        _drive = cdRomDrive;
         _activityNotifier = activityNotifier;
-    }
-
-    /// <summary>Sets the CD-ROM drive from which audio sectors will be read.</summary>
-    /// <param name="drive">The drive to stream audio from.</param>
-    public void SetDrive(ICdRomDrive drive) {
-        _drive = drive;
     }
 
     /// <summary>Sets the drive letter associated with this player; used for activity notifications.</summary>

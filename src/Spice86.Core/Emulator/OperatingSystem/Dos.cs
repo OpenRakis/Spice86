@@ -482,12 +482,8 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         try {
             string volumeLabel = Path.GetFileName(hostPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
             VirtualIsoImage image = new VirtualIsoImage(hostPath, volumeLabel);
-            CdRomDrive drive = new CdRomDrive(image);
-            CdAudioPlayer audioPlayer = new CdAudioPlayer(_channelCreator, _activityNotifier);
-            audioPlayer.SetDrive(drive);
-            audioPlayer.SetDriveLetter(char.ToUpperInvariant(driveLetter));
-            drive.SetAudioPlayer(audioPlayer);
             char upper = char.ToUpperInvariant(driveLetter);
+            CdRomDrive drive = new CdRomDrive(image, _channelCreator, _activityNotifier, upper);
             byte driveIndex = DosDriveManager.TryGetLetterIndex(upper, out int idx) ? (byte)idx : (byte)3;
             MscdexDriveEntry entry = new MscdexDriveEntry(upper, driveIndex, drive);
             _mscdex.AddDrive(entry);
@@ -517,12 +513,8 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
             _loggerService.Error("IMGMOUNT: Could not read CD image {Path}: {Message}", imagePath, ex.Message);
             return false;
         }
-        CdRomDrive drive = new CdRomDrive(image);
-        CdAudioPlayer audioPlayer = new CdAudioPlayer(_channelCreator, _activityNotifier);
-        audioPlayer.SetDrive(drive);
-        audioPlayer.SetDriveLetter(char.ToUpperInvariant(driveLetter));
-        drive.SetAudioPlayer(audioPlayer);
         char upper = char.ToUpperInvariant(driveLetter);
+        CdRomDrive drive = new CdRomDrive(image, _channelCreator, _activityNotifier, upper);
         byte driveIndex = DosDriveManager.TryGetLetterIndex(upper, out int idx) ? (byte)idx : (byte)3;
         MscdexDriveEntry entry = new MscdexDriveEntry(upper, driveIndex, drive);
         _mscdex.AddDrive(entry);
@@ -603,7 +595,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         return false;
     }
 
-    private static IReadOnlyList<DriveFileEntry> BuildFatEntries(FatFileSystem fs, bool isRoot, uint firstCluster) {
+    private static List<DriveFileEntry> BuildFatEntries(FatFileSystem fs, bool isRoot, uint firstCluster) {
         IReadOnlyList<FatDirectoryEntry> raw = isRoot
             ? fs.ListRootDirectory()
             : fs.ListSubDirectory(firstCluster);
@@ -643,7 +635,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         return parts.Count == 0 ? "---" : string.Join("", parts);
     }
 
-    private IReadOnlyList<DriveFileEntry> BuildIsoEntries(ICdRomImage image, int dirLba, int dirSize) {
+    private List<DriveFileEntry> BuildIsoEntries(ICdRomImage image, int dirLba, int dirSize) {
         int sectorSize = image.PrimaryVolume.LogicalBlockSize;
         if (sectorSize <= 0) {
             sectorSize = 2048;
@@ -686,9 +678,9 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         return dirs;
     }
 
-    private static IReadOnlyList<DriveFileEntry> BuildHostEntries(string hostPath) {
+    private static List<DriveFileEntry> BuildHostEntries(string hostPath) {
         if (!Directory.Exists(hostPath)) {
-            return System.Array.Empty<DriveFileEntry>();
+            return new();
         }
         DirectoryInfo dir = new DirectoryInfo(hostPath);
         DirectoryInfo[] subdirs = dir.GetDirectories();

@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
+using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Shared.Emulator.Storage.CdRom;
+using Spice86.Shared.Interfaces;
 
 namespace Spice86.Core.Emulator.Devices.CdRom;
 
@@ -12,7 +14,7 @@ public sealed class CdRomDrive : ICdRomDrive {
     private int _currentIndex;
     private ICdRomImage _image;
     private CdAudioPlayback? _audioPlayback;
-    private CdAudioPlayer? _audioPlayer;
+    private readonly CdAudioPlayer _audioPlayer;
 
     /// <inheritdoc/>
     public ICdRomImage Image => _image;
@@ -31,16 +33,24 @@ public sealed class CdRomDrive : ICdRomDrive {
 
     /// <summary>Initialises a new <see cref="CdRomDrive"/> with the given image mounted.</summary>
     /// <param name="image">The CD-ROM image to mount initially.</param>
-    public CdRomDrive(ICdRomImage image) {
+    /// <param name="channelCreator">The sound channel creator used to register CD audio playback.</param>
+    /// <param name="activityNotifier">Optional notifier used to surface per-drive CD audio read activity.</param>
+    /// <param name="driveLetter">The DOS drive letter associated with this CD-ROM drive.</param>
+    public CdRomDrive(ICdRomImage image, ISoundChannelCreator channelCreator, IDriveActivityNotifier? activityNotifier, char driveLetter) {
         _image = image;
         _images.Add(image);
         _currentIndex = 0;
         MediaState = new CdRomMediaState();
+        _audioPlayer = new CdAudioPlayer(this, channelCreator, activityNotifier);
+        _audioPlayer.SetDriveLetter(driveLetter);
     }
 
     /// <summary>Initialises a new <see cref="CdRomDrive"/> with a list of images.</summary>
     /// <param name="images">Ordered list of images; the first image is mounted initially.</param>
-    public CdRomDrive(IReadOnlyList<ICdRomImage> images) {
+    /// <param name="channelCreator">The sound channel creator used to register CD audio playback.</param>
+    /// <param name="activityNotifier">Optional notifier used to surface per-drive CD audio read activity.</param>
+    /// <param name="driveLetter">The DOS drive letter associated with this CD-ROM drive.</param>
+    public CdRomDrive(IReadOnlyList<ICdRomImage> images, ISoundChannelCreator channelCreator, IDriveActivityNotifier? activityNotifier, char driveLetter) {
         if (images.Count == 0) {
             throw new ArgumentException("At least one CD-ROM image is required.", nameof(images));
         }
@@ -48,6 +58,8 @@ public sealed class CdRomDrive : ICdRomDrive {
         _currentIndex = 0;
         _image = _images[0];
         MediaState = new CdRomMediaState();
+        _audioPlayer = new CdAudioPlayer(this, channelCreator, activityNotifier);
+        _audioPlayer.SetDriveLetter(driveLetter);
     }
 
     /// <inheritdoc/>
@@ -128,7 +140,7 @@ public sealed class CdRomDrive : ICdRomDrive {
         _audioPlayback = new CdAudioPlayback(startLba, startLba + sectorCount) {
             Status = CdAudioStatus.Playing,
         };
-        _audioPlayer?.StartPlayback();
+        _audioPlayer.StartPlayback();
     }
 
     /// <inheritdoc/>
@@ -136,7 +148,7 @@ public sealed class CdRomDrive : ICdRomDrive {
         if (_audioPlayback != null) {
             _audioPlayback.Status = CdAudioStatus.Stopped;
         }
-        _audioPlayer?.StopPlayback();
+        _audioPlayer.StopPlayback();
     }
 
     /// <inheritdoc/>
@@ -149,7 +161,7 @@ public sealed class CdRomDrive : ICdRomDrive {
         }
         if (_audioPlayback.Status == CdAudioStatus.Paused) {
             _audioPlayback.Status = CdAudioStatus.Playing;
-            _audioPlayer?.ResumePlayback();
+            _audioPlayer.ResumePlayback();
         }
     }
 
@@ -157,14 +169,8 @@ public sealed class CdRomDrive : ICdRomDrive {
     public void PauseAudio() {
         if (_audioPlayback != null && _audioPlayback.Status == CdAudioStatus.Playing) {
             _audioPlayback.Status = CdAudioStatus.Paused;
-            _audioPlayer?.PausePlayback();
+            _audioPlayer.PausePlayback();
         }
-    }
-
-    /// <summary>Registers the <see cref="CdAudioPlayer"/> used to stream audio through the mixer.</summary>
-    /// <param name="audioPlayer">The player to associate with this drive.</param>
-    public void SetAudioPlayer(CdAudioPlayer audioPlayer) {
-        _audioPlayer = audioPlayer;
     }
 
     /// <inheritdoc/>
