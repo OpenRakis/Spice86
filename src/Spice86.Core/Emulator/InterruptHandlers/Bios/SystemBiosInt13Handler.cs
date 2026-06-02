@@ -61,7 +61,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
         ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _floppyAccess = floppyAccess;
-        _floppySound = new FloppySoundEmulator(soundChannelCreator);
+        _floppySound = new FloppySoundEmulator(soundChannelCreator, FloppyDiskNoiseMode.On, string.Empty);
         _activityNotifier = activityNotifier;
         _timingService = timingService;
         FillDispatchTable();
@@ -99,8 +99,8 @@ public class SystemBiosInt13Handler : InterruptHandler {
         AddAction(0x11, () => Recalibrate(true));
         AddAction(0x15, () => GetDisketteOrHddType(true));
         AddAction(0x16, () => GetDiskChangeLineStatus(true));
-        AddAction(0x17, () => SetDasdTypeForFormat(true));
-        AddAction(0x18, () => SetMediaTypeForFormat(true));
+        AddAction(0x17, () => HandleDasdTypeForFormat(true));
+        AddAction(0x18, () => HandleMediaTypeForFormat(true));
     }
 
     /// <summary>
@@ -139,19 +139,19 @@ public class SystemBiosInt13Handler : InterruptHandler {
     public void ReadSectors(bool calledFromVm) {
         byte driveNumber = State.DL;
         if (State.AL == 0) {
-            SetFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
+            ApplyFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
             return;
         }
         ImageDriveNumberMapping readDriveMapping = MapBiosDriveToImageDriveNumber(driveNumber);
         if (!readDriveMapping.IsPresent) {
-            SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
+            ApplyFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
             return;
         }
         byte imageDriveNumber = readDriveMapping.ImageDriveNumber;
 
         FloppyGeometryResult readGeometryResult = _floppyAccess.GetGeometry(imageDriveNumber);
         if (readGeometryResult.Status != FloppyAccessStatus.Success) {
-            SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
+            ApplyFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
             return;
         }
         int heads = readGeometryResult.Geometry.HeadsPerCylinder;
@@ -171,7 +171,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
 
         FloppyTransferResult readResult = _floppyAccess.ReadFromImage(imageDriveNumber, byteOffset, transferBuffer, 0, byteCount);
         if (readResult.Status != FloppyAccessStatus.Success) {
-            SetFloppyError(driveNumber, ErrorSectorNotFound, calledFromVm);
+            ApplyFloppyError(driveNumber, ErrorSectorNotFound, calledFromVm);
             return;
         }
 
@@ -196,19 +196,19 @@ public class SystemBiosInt13Handler : InterruptHandler {
     public void WriteSectors(bool calledFromVm) {
         byte driveNumber = State.DL;
         if (State.AL == 0) {
-            SetFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
+            ApplyFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
             return;
         }
         ImageDriveNumberMapping writeDriveMapping = MapBiosDriveToImageDriveNumber(driveNumber);
         if (!writeDriveMapping.IsPresent) {
-            SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
+            ApplyFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
             return;
         }
         byte imageDriveNumber = writeDriveMapping.ImageDriveNumber;
 
         FloppyGeometryResult writeGeometryResult = _floppyAccess.GetGeometry(imageDriveNumber);
         if (writeGeometryResult.Status != FloppyAccessStatus.Success) {
-            SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
+            ApplyFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
             return;
         }
         int heads = writeGeometryResult.Geometry.HeadsPerCylinder;
@@ -231,7 +231,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
 
         FloppyTransferResult writeResult = _floppyAccess.WriteToImage(imageDriveNumber, byteOffset, transferBuffer, 0, byteCount);
         if (writeResult.Status != FloppyAccessStatus.Success) {
-            SetFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
+            ApplyFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
             return;
         }
 
@@ -260,13 +260,13 @@ public class SystemBiosInt13Handler : InterruptHandler {
         }
         byte driveNumber = State.DL;
         if (State.AL == 0) {
-            SetFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
+            ApplyFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
             return;
         }
         if (IsFloppyDrive(driveNumber)) {
             FloppyGeometryResult verifyGeometryResult = _floppyAccess.GetGeometry(driveNumber);
             if (verifyGeometryResult.Status != FloppyAccessStatus.Success) {
-                SetFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
+                ApplyFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
                 return;
             }
             RecordSuccess(driveNumber);
@@ -297,7 +297,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
 
         FloppyGeometryResult parametersGeometryResult = _floppyAccess.GetGeometry(driveNumber);
         if (parametersGeometryResult.Status != FloppyAccessStatus.Success) {
-            SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
+            ApplyFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
             return;
         }
         int totalCylinders = parametersGeometryResult.Geometry.TotalCylinders;
@@ -356,12 +356,12 @@ public class SystemBiosInt13Handler : InterruptHandler {
     public void FormatTrack(bool calledFromVm) {
         byte driveNumber = State.DL;
         if (!IsFloppyDrive(driveNumber)) {
-            SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
+            ApplyFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
             return;
         }
         FloppyGeometryResult formatGeometryResult = _floppyAccess.GetGeometry(driveNumber);
         if (formatGeometryResult.Status != FloppyAccessStatus.Success) {
-            SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
+            ApplyFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
             return;
         }
         int heads = formatGeometryResult.Geometry.HeadsPerCylinder;
@@ -377,7 +377,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
 
         FloppyTransferResult formatWriteResult = _floppyAccess.WriteToImage(driveNumber, byteOffset, zeros, 0, byteCount);
         if (formatWriteResult.Status != FloppyAccessStatus.Success) {
-            SetFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
+            ApplyFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
             return;
         }
         _floppySound.PlaySeek();
@@ -396,7 +396,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
         if (IsFloppyDrive(driveNumber)) {
             FloppyGeometryResult seekGeometryResult = _floppyAccess.GetGeometry(driveNumber);
             if (seekGeometryResult.Status != FloppyAccessStatus.Success) {
-                SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
+                ApplyFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
                 return;
             }
             _floppySound.PlaySeek();
@@ -426,7 +426,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
             RecordSuccess(driveNumber);
             SetCarryFlag(false, calledFromVm);
         } else {
-            SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
+            ApplyFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
         }
     }
 
@@ -456,7 +456,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
         }
         FloppyGeometryResult changeLineGeometryResult = _floppyAccess.GetGeometry(driveNumber);
         if (changeLineGeometryResult.Status != FloppyAccessStatus.Success) {
-            SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
+            ApplyFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
             return;
         }
         State.AH = ErrorNone;
@@ -468,7 +468,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
     /// Set DASD Type for Format (AH=0x17). Accepts disk type in AL, always succeeds.
     /// </summary>
     /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
-    public void SetDasdTypeForFormat(bool calledFromVm) {
+    public void HandleDasdTypeForFormat(bool calledFromVm) {
         State.AH = ErrorNone;
         SetCarryFlag(false, calledFromVm);
     }
@@ -477,7 +477,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
     /// Set Media Type for Format (AH=0x18). Accepts geometry in CH/CL/DL, always succeeds.
     /// </summary>
     /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
-    public void SetMediaTypeForFormat(bool calledFromVm) {
+    public void HandleMediaTypeForFormat(bool calledFromVm) {
         State.AH = ErrorNone;
         SetCarryFlag(false, calledFromVm);
     }
@@ -562,7 +562,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
         }
     }
 
-    private void SetFloppyError(byte driveNumber, byte errorCode, bool calledFromVm) {
+    private void ApplyFloppyError(byte driveNumber, byte errorCode, bool calledFromVm) {
         State.AH = errorCode;
         if (driveNumber < _lastStatus.Length) {
             _lastStatus[driveNumber] = errorCode;

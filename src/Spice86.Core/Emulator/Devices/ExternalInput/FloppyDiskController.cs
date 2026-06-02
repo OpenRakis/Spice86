@@ -204,7 +204,7 @@ public sealed class FloppyDiskController : DefaultIOPortHandler {
                 break;
             default:
                 PushResultByte(0x80);
-                SetResultPhase();
+                EnterResultPhase();
                 break;
         }
     }
@@ -229,7 +229,7 @@ public sealed class FloppyDiskController : DefaultIOPortHandler {
             st3 |= 0x10; // bit 4: Track 0 signal — asserted only when head is at cylinder 0
         }
         PushResultByte(st3);
-        SetResultPhase();
+        EnterResultPhase();
     }
 
     private void ExecuteRecalibrate() {
@@ -245,7 +245,7 @@ public sealed class FloppyDiskController : DefaultIOPortHandler {
     private void ExecuteSenseInterrupt() {
         PushResultByte(_lastSt0);
         PushResultByte(_lastPcn);
-        SetResultPhase();
+        EnterResultPhase();
     }
 
     private void ExecuteSeek() {
@@ -262,7 +262,7 @@ public sealed class FloppyDiskController : DefaultIOPortHandler {
     private void ExecuteReadData() {
         if (_commandBuffer.Count < 8) {
             PushSt0St1St2NoChs();
-            SetResultPhase();
+            EnterResultPhase();
             return;
         }
         byte driveHead = _commandBuffer[0];
@@ -284,14 +284,14 @@ public sealed class FloppyDiskController : DefaultIOPortHandler {
         PushResultByte(head);
         PushResultByte((byte)(sector + (lastSector - sector + 1)));
         PushResultByte(sectorSizeCode);
-        SetResultPhase();
+        EnterResultPhase();
         RaiseCompletionInterrupt();
     }
 
     private void ExecuteWriteData() {
         if (_commandBuffer.Count < 8) {
             PushSt0St1St2NoChs();
-            SetResultPhase();
+            EnterResultPhase();
             return;
         }
         byte driveHead = _commandBuffer[0];
@@ -313,7 +313,7 @@ public sealed class FloppyDiskController : DefaultIOPortHandler {
         PushResultByte(head);
         PushResultByte((byte)(sector + (lastSector - sector + 1)));
         PushResultByte(sectorSizeCode);
-        SetResultPhase();
+        EnterResultPhase();
         RaiseCompletionInterrupt();
     }
 
@@ -328,7 +328,7 @@ public sealed class FloppyDiskController : DefaultIOPortHandler {
         PushResultByte(0x00);
         PushResultByte(0x01);
         PushResultByte(0x02);
-        SetResultPhase();
+        EnterResultPhase();
         RaiseCompletionInterrupt();
     }
 
@@ -342,7 +342,7 @@ public sealed class FloppyDiskController : DefaultIOPortHandler {
         PushResultByte(0x00);
         PushResultByte(0x01);
         PushResultByte(sectorSizeCode);
-        SetResultPhase();
+        EnterResultPhase();
         RaiseCompletionInterrupt();
     }
 
@@ -368,7 +368,7 @@ public sealed class FloppyDiskController : DefaultIOPortHandler {
         PushResultByte(0x02);
     }
 
-    private void SetResultPhase() {
+    private void EnterResultPhase() {
         _phase = FdcPhase.Result;
     }
 

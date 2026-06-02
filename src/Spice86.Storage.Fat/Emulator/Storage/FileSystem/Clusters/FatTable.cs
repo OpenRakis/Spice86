@@ -92,7 +92,7 @@ public sealed class FatTable {
     /// <param name="cluster">Cluster number (must be at least 2).</param>
     /// <param name="value">New cluster value.</param>
     /// <exception cref="ArgumentOutOfRangeException">If <paramref name="cluster"/> is reserved or out of range.</exception>
-    public void SetEntry(uint cluster, uint value) {
+    public void WriteEntry(uint cluster, uint value) {
         if (cluster < 2) {
             throw new ArgumentOutOfRangeException(nameof(cluster), "Cannot modify reserved cluster entries 0 or 1.");
         }
@@ -122,7 +122,7 @@ public sealed class FatTable {
     /// Marks <paramref name="cluster"/> as end-of-chain using the canonical marker for the FAT type.
     /// </summary>
     public void MarkAsEof(uint cluster) {
-        SetEntry(cluster, FatClusterCodec.EndOfChainMarker(_fatType));
+        WriteEntry(cluster, FatClusterCodec.EndOfChainMarker(_fatType));
     }
 
     /// <summary>
@@ -145,7 +145,7 @@ public sealed class FatTable {
     /// also patching any cluster whose entry pointed at this one.
     /// </summary>
     public void FreeCluster(uint cluster) {
-        SetEntry(cluster, 0);
+        WriteEntry(cluster, 0);
     }
 
     /// <summary>
@@ -157,7 +157,7 @@ public sealed class FatTable {
             throw new ArgumentOutOfRangeException(nameof(tail), "Tail must be a data cluster (>= 2).");
         }
         CheckRange(tail);
-        SetEntry(head, tail);
+        WriteEntry(head, tail);
     }
 
     /// <summary>

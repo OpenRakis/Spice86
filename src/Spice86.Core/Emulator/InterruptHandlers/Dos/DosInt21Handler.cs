@@ -2202,7 +2202,7 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("FCB SET RANDOM RECORD NUMBER at {Address}", fcbAddress);
         }
-        _dosFcbManager.SetRandomRecord(fcbAddress);
+        _dosFcbManager.UpdateRandomRecord(fcbAddress);
     }
 
     /// <summary>

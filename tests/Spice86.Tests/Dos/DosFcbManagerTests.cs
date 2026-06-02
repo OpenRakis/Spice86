@@ -528,7 +528,7 @@ public sealed class DosFcbManagerTests : IDisposable {
     }
 
     [Fact]
-    public void SetRandomRecord_CalculatesCorrectly() {
+    public void UpdateRandomRecord_CalculatesCorrectly() {
         // Arrange
         DosFileControlBlock fcb = new DosFileControlBlock(_fixture.Memory, FcbAddr);
 
@@ -538,7 +538,7 @@ public sealed class DosFcbManagerTests : IDisposable {
         fcb.RecordSize = 128;
 
         // Act
-        _fixture.DosFcbManager.SetRandomRecord(FcbPointer);
+        _fixture.DosFcbManager.UpdateRandomRecord(FcbPointer);
 
         // Assert - random record = (currentBlock * 128) + currentRecord
         const uint expectedRandom = (5u * 128) + 42;

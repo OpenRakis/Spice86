@@ -267,7 +267,7 @@ public class MscdexDeviceRequestTests {
         }
 
         public void DispatchIoctlInput(byte controlCode, byte addressMode) {
-            InitialiseRequest((byte)MscdexDeviceDriverCommand.IoctlInput);
+            PrepareRequest((byte)MscdexDeviceDriverCommand.IoctlInput);
             Memory.UInt16[RequestBaseAddress + MscdexRequestOffsets.IoctlBufferPtrOffset] = 0;
             Memory.UInt16[RequestBaseAddress + MscdexRequestOffsets.IoctlBufferPtrOffset + 2] = BufferSegment;
             Memory.UInt8[BufferBaseAddress] = controlCode;
@@ -276,14 +276,14 @@ public class MscdexDeviceRequestTests {
         }
 
         public void DispatchSeek(uint lba) {
-            InitialiseRequest((byte)MscdexDeviceDriverCommand.Seek);
+            PrepareRequest((byte)MscdexDeviceDriverCommand.Seek);
             Memory.UInt8[RequestBaseAddress + MscdexRequestOffsets.RequestAddressingModeOffset] = 0;
             Memory.UInt32[RequestBaseAddress + MscdexRequestOffsets.ReadLongStartSectorOffset] = lba;
             Mscdex.Dispatch();
         }
 
         public void DispatchPlayAudio(uint startLba, uint sectorCount) {
-            InitialiseRequest((byte)MscdexDeviceDriverCommand.PlayAudio);
+            PrepareRequest((byte)MscdexDeviceDriverCommand.PlayAudio);
             Memory.UInt8[RequestBaseAddress + MscdexRequestOffsets.RequestAddressingModeOffset] = 0;
             Memory.UInt32[RequestBaseAddress + MscdexRequestOffsets.PlayAudioStartLbaOffset] = startLba;
             Memory.UInt32[RequestBaseAddress + MscdexRequestOffsets.PlayAudioSectorCountOffset] = sectorCount;
@@ -292,7 +292,7 @@ public class MscdexDeviceRequestTests {
 
         public void DispatchIoctlOutputChannelControl(byte output0, byte volume0, byte output1, byte volume1,
             byte output2, byte volume2, byte output3, byte volume3) {
-            InitialiseRequest((byte)MscdexDeviceDriverCommand.IoctlOutput);
+            PrepareRequest((byte)MscdexDeviceDriverCommand.IoctlOutput);
             Memory.UInt16[RequestBaseAddress + MscdexRequestOffsets.IoctlBufferPtrOffset] = 0;
             Memory.UInt16[RequestBaseAddress + MscdexRequestOffsets.IoctlBufferPtrOffset + 2] = BufferSegment;
             Memory.UInt8[BufferBaseAddress] = (byte)MscdexIoctlOutputCode.ChannelControl;
@@ -308,7 +308,7 @@ public class MscdexDeviceRequestTests {
         }
 
         public void DispatchReadLong(uint startLba, ushort sectorCount, byte rawFlag) {
-            InitialiseRequest((byte)MscdexDeviceDriverCommand.ReadLong);
+            PrepareRequest((byte)MscdexDeviceDriverCommand.ReadLong);
             Memory.UInt8[RequestBaseAddress + MscdexRequestOffsets.RequestAddressingModeOffset] = 0;
             Memory.UInt16[RequestBaseAddress + MscdexRequestOffsets.IoctlBufferPtrOffset] = 0;
             Memory.UInt16[RequestBaseAddress + MscdexRequestOffsets.IoctlBufferPtrOffset + 2] = BufferSegment;
@@ -319,16 +319,16 @@ public class MscdexDeviceRequestTests {
         }
 
         public void DispatchStopAudio() {
-            InitialiseRequest((byte)MscdexDeviceDriverCommand.StopAudio);
+            PrepareRequest((byte)MscdexDeviceDriverCommand.StopAudio);
             Mscdex.Dispatch();
         }
 
         public void DispatchResumeAudio() {
-            InitialiseRequest((byte)MscdexDeviceDriverCommand.ResumeAudio);
+            PrepareRequest((byte)MscdexDeviceDriverCommand.ResumeAudio);
             Mscdex.Dispatch();
         }
 
-        private void InitialiseRequest(byte command) {
+        private void PrepareRequest(byte command) {
             State.AL = 0x10;
             State.ES = RequestSegment;
             State.BX = 0;

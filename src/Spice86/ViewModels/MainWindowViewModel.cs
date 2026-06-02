@@ -175,7 +175,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IDis
         };
 
         SetLogLevel(Configuration.SilencedLogs ? "Silent" : _loggerService.LogLevelSwitch.MinimumLevel.ToString());
-        SetMainTitle(_performanceViewModel.InstructionsPerMillisecond);
+        UpdateMainTitle(_performanceViewModel.InstructionsPerMillisecond);
 
         bool ok = await Session.StartAsync(asmOverrideStatus);
         if (!ok && Session.LastException is { } ex) {
@@ -239,10 +239,10 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IDis
     private bool CanPlay() => IsEmulatorRunning && IsPaused;
 
     private void RefreshMainTitleWithInstructionsPerMs() {
-        SetMainTitle(_performanceViewModel.InstructionsPerMillisecond);
+        UpdateMainTitle(_performanceViewModel.InstructionsPerMillisecond);
     }
 
-    private void SetMainTitle(double instructionsPerMillisecond) {
+    private void UpdateMainTitle(double instructionsPerMillisecond) {
         string currentProgramName = _currentProcessNameProvider.CurrentProgramName;
         if (string.IsNullOrEmpty(currentProgramName)) {
             MainTitle = $"{nameof(Spice86)} {Configuration.Exe} - cycles/ms: {instructionsPerMillisecond,7:N0}{MouseCaptureHint}";

@@ -57,19 +57,19 @@ public sealed class VfatDirectoryReader {
                 continue;
             }
             MutableFatDirectoryEntry shortEntry = MutableFatDirectoryEntry.Parse(entry);
-            string? longName = TryDecodePendingChain(codec, pendingSlots, shortEntry);
+            string longName = TryDecodePendingChain(codec, pendingSlots, shortEntry);
             pendingSlots.Clear();
             records.Add(new VfatDirectoryRecord(shortEntry, longName));
         }
         return records;
     }
 
-    private static string? TryDecodePendingChain(
+    private static string TryDecodePendingChain(
         LongFileNameCodec codec,
         List<VfatLfnEntry> pendingSlots,
         MutableFatDirectoryEntry shortEntry) {
         if (pendingSlots.Count == 0) {
-            return null;
+            return string.Empty;
         }
         Span<byte> packedShortName = stackalloc byte[11];
         Span<byte> baseBytes = stackalloc byte[8];
@@ -81,6 +81,6 @@ public sealed class VfatDirectoryReader {
         baseBytes.CopyTo(packedShortName.Slice(0, 8));
         extensionBytes.CopyTo(packedShortName.Slice(8, 3));
         byte expectedChecksum = LongFileNameCodec.ComputeShortNameChecksum(packedShortName);
-        return LongFileNameCodec.DecodeLongName(pendingSlots, expectedChecksum);
+        return LongFileNameCodec.DecodeLongName(pendingSlots, expectedChecksum) ?? string.Empty;
     }
 }
