@@ -1,11 +1,25 @@
 <UserControl
-    x:Class="Spice86.Views.Controls.DriveContentVisualization"
-    x:Name="Root"
-    xmlns="https://github.com/avaloniaui"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <StackPanel Orientation="Vertical" Spacing="4" MaxWidth="320">
-        <TextBlock Text="{Binding Header, ElementName=Root}" FontWeight="SemiBold" />
-        <ContentControl Content="{Binding Body, ElementName=Root}" />
-        <TextBlock Text="{Binding Legend, ElementName=Root}" FontSize="10" Opacity="0.7" />
-    </StackPanel>
+x:Class="Spice86.Views.Controls.DriveContentVisualization"
+x:Name="Root"
+xmlns="https://github.com/avaloniaui"
+xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Border Padding="16"
+            CornerRadius="14"
+            BorderThickness="1"
+            BorderBrush="#5E6A7A"
+            Background="#1E2630"
+            MaxWidth="620"
+            HorizontalAlignment="Stretch">
+        <StackPanel Orientation="Vertical" Spacing="12">
+            <TextBlock Text="{Binding Header, ElementName=Root}"
+                       FontWeight="Bold"
+                       FontSize="18"
+                       Foreground="#EAF2FF" />
+            <ContentControl Content="{Binding Body, ElementName=Root}" />
+            <TextBlock Text="{Binding Legend, ElementName=Root}"
+                       FontSize="11"
+                       Foreground="#AFC0D9"
+                       TextWrapping="Wrap" />
+        </StackPanel>
+    </Border>
 </UserControl>

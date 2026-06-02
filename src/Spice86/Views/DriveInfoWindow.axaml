@@ -9,8 +9,17 @@
         Width="640" Height="520"
         WindowStartupLocation="CenterOwner">
     <TabControl>
-        <TabItem Header="Disk Representation">
-            <controls:DriveContentVisualization ContentMap="{Binding ContentMap}" />
+        <TabItem Header="Disc Visual">
+            <Grid RowDefinitions="Auto,*" Margin="12">
+                <TextBlock Grid.Row="0"
+                           Text="Media Overview"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           Margin="0,0,0,8" />
+                <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                    <controls:DriveContentVisualization ContentMap="{Binding ContentMap}" />
+                </ScrollViewer>
+            </Grid>
         </TabItem>
         <TabItem Header="Files &amp; Folders">
             <DockPanel>

@@ -25,11 +25,11 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
     private readonly IDriveMountService _mountService;
     private readonly IHostStorageProvider _hostStorageProvider;
     private readonly IDriveEventNotifier _driveEventNotifier;
-    private readonly IDriveActivityNotifier? _activityNotifier;
-    private readonly IDriveContentMapProvider? _contentMapProvider;
-    private readonly IDriveFileListProvider? _fileListProvider;
-    private readonly DispatcherTimer? _readTimer;
-    private readonly DispatcherTimer? _writeTimer;
+    private readonly IDriveActivityNotifier _activityNotifier;
+    private readonly IDriveContentMapProvider _contentMapProvider;
+    private readonly IDriveFileListProvider _fileListProvider;
+    private readonly DispatcherTimer _readTimer;
+    private readonly DispatcherTimer _writeTimer;
     private readonly List<string> _allImagePaths;
     private string _currentImagePath = string.Empty;
 
@@ -96,90 +96,6 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
     private bool _suppressSelectionHandling;
 
     /// <summary>
-    /// Initialises a new <see cref="DriveMenuItemViewModel"/>.
-    /// </summary>
-    /// <param name="driveLetter">The DOS drive letter.</param>
-    /// <param name="driveType">The drive type.</param>
-    /// <param name="allImagePaths">All registered image paths for this drive.</param>
-    /// <param name="currentImagePath">The currently active image path.</param>
-    /// <param name="volumeLabel">The volume label of the mounted media.</param>
-    /// <param name="discSwapper">The disc swapper service.</param>
-    /// <param name="mountService">The drive mount service.</param>
-    /// <param name="hostStorageProvider">The host storage provider for file picker dialogs.</param>
-    /// <param name="driveEventNotifier">The notifier used to surface mount errors as toast notifications.</param>
-    public DriveMenuItemViewModel(
-        char driveLetter,
-        DosVirtualDriveType driveType,
-        IReadOnlyList<string> allImagePaths,
-        string currentImagePath,
-        string volumeLabel,
-        IDiscSwapper discSwapper,
-        IDriveMountService mountService,
-        IHostStorageProvider hostStorageProvider,
-        IDriveEventNotifier driveEventNotifier)
-        : this(driveLetter, driveType, allImagePaths, currentImagePath, volumeLabel,
-            discSwapper, mountService, hostStorageProvider, driveEventNotifier, null, null, null) {
-    }
-
-    /// <summary>
-    /// Initialises a new <see cref="DriveMenuItemViewModel"/> with an activity notifier.
-    /// </summary>
-    /// <param name="driveLetter">The DOS drive letter.</param>
-    /// <param name="driveType">The drive type.</param>
-    /// <param name="allImagePaths">All registered image paths for this drive.</param>
-    /// <param name="currentImagePath">The currently active image path.</param>
-    /// <param name="volumeLabel">The volume label of the mounted media.</param>
-    /// <param name="discSwapper">The disc swapper service.</param>
-    /// <param name="mountService">The drive mount service.</param>
-    /// <param name="hostStorageProvider">The host storage provider for file picker dialogs.</param>
-    /// <param name="driveEventNotifier">The notifier used to surface mount errors as toast notifications.</param>
-    /// <param name="activityNotifier">Optional notifier for per-drive read/write activity flashes.</param>
-    public DriveMenuItemViewModel(
-        char driveLetter,
-        DosVirtualDriveType driveType,
-        IReadOnlyList<string> allImagePaths,
-        string currentImagePath,
-        string volumeLabel,
-        IDiscSwapper discSwapper,
-        IDriveMountService mountService,
-        IHostStorageProvider hostStorageProvider,
-        IDriveEventNotifier driveEventNotifier,
-        IDriveActivityNotifier? activityNotifier)
-        : this(driveLetter, driveType, allImagePaths, currentImagePath, volumeLabel,
-            discSwapper, mountService, hostStorageProvider, driveEventNotifier, activityNotifier, null, null) {
-    }
-
-    /// <summary>
-    /// Initialises a new <see cref="DriveMenuItemViewModel"/> with an activity notifier and content provider.
-    /// </summary>
-    /// <param name="driveLetter">The DOS drive letter.</param>
-    /// <param name="driveType">The drive type.</param>
-    /// <param name="allImagePaths">All registered image paths for this drive.</param>
-    /// <param name="currentImagePath">The currently active image path.</param>
-    /// <param name="volumeLabel">The volume label of the mounted media.</param>
-    /// <param name="discSwapper">The disc swapper service.</param>
-    /// <param name="mountService">The drive mount service.</param>
-    /// <param name="hostStorageProvider">The host storage provider for file picker dialogs.</param>
-    /// <param name="driveEventNotifier">The notifier used to surface mount errors as toast notifications.</param>
-    /// <param name="activityNotifier">Optional notifier for per-drive read/write activity flashes.</param>
-    /// <param name="contentMapProvider">Optional provider used to populate <see cref="ContentMap"/>.</param>
-    public DriveMenuItemViewModel(
-        char driveLetter,
-        DosVirtualDriveType driveType,
-        IReadOnlyList<string> allImagePaths,
-        string currentImagePath,
-        string volumeLabel,
-        IDiscSwapper discSwapper,
-        IDriveMountService mountService,
-        IHostStorageProvider hostStorageProvider,
-        IDriveEventNotifier driveEventNotifier,
-        IDriveActivityNotifier? activityNotifier,
-        IDriveContentMapProvider? contentMapProvider)
-        : this(driveLetter, driveType, allImagePaths, currentImagePath, volumeLabel,
-            discSwapper, mountService, hostStorageProvider, driveEventNotifier, activityNotifier, contentMapProvider, null) {
-    }
-
-    /// <summary>
     /// Initialises a new <see cref="DriveMenuItemViewModel"/> with an activity notifier, content map provider,
     /// and file list provider.
     /// </summary>
@@ -192,9 +108,9 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
     /// <param name="mountService">The drive mount service.</param>
     /// <param name="hostStorageProvider">The host storage provider for file picker dialogs.</param>
     /// <param name="driveEventNotifier">The notifier used to surface mount errors as toast notifications.</param>
-    /// <param name="activityNotifier">Optional notifier for per-drive read/write activity flashes.</param>
-    /// <param name="contentMapProvider">Optional provider used to populate <see cref="ContentMap"/>.</param>
-    /// <param name="fileListProvider">Optional provider used to enumerate DOS-visible files for the info window.</param>
+    /// <param name="activityNotifier">Notifier for per-drive read/write activity flashes.</param>
+    /// <param name="contentMapProvider">Provider used to populate <see cref="ContentMap"/>.</param>
+    /// <param name="fileListProvider">Provider used to enumerate DOS-visible files for the info window.</param>
     public DriveMenuItemViewModel(
         char driveLetter,
         DosVirtualDriveType driveType,
@@ -205,9 +121,9 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
         IDriveMountService mountService,
         IHostStorageProvider hostStorageProvider,
         IDriveEventNotifier driveEventNotifier,
-        IDriveActivityNotifier? activityNotifier,
-        IDriveContentMapProvider? contentMapProvider,
-        IDriveFileListProvider? fileListProvider) {
+        IDriveActivityNotifier activityNotifier,
+        IDriveContentMapProvider contentMapProvider,
+        IDriveFileListProvider fileListProvider) {
         DriveLetter = driveLetter;
         DriveType = driveType;
         _volumeLabel = volumeLabel;
@@ -221,16 +137,14 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
         _allImagePaths = new List<string>(allImagePaths);
         _currentImagePath = currentImagePath;
         ShowDriveInfoCommand = new RelayCommand(OnShowDriveInfo);
-        if (_activityNotifier != null) {
-            _readTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(200), DispatcherPriority.Background,
-                (_, _) => OnActivityTimerElapsed(isWrite: false));
-            _readTimer.Stop();
-            _writeTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(200), DispatcherPriority.Background,
-                (_, _) => OnActivityTimerElapsed(isWrite: true));
-            _writeTimer.Stop();
-            _activityNotifier.Read += OnActivityRead;
-            _activityNotifier.Write += OnActivityWrite;
-        }
+        _readTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(200), DispatcherPriority.Background,
+            (_, _) => OnActivityTimerElapsed(isWrite: false));
+        _readTimer.Stop();
+        _writeTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(200), DispatcherPriority.Background,
+            (_, _) => OnActivityTimerElapsed(isWrite: true));
+        _writeTimer.Stop();
+        _activityNotifier.Read += OnActivityRead;
+        _activityNotifier.Write += OnActivityWrite;
         RebuildOptions(currentImagePath);
         RefreshContentMap();
     }
@@ -239,7 +153,7 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
     public string CurrentImagePath => _currentImagePath;
 
     /// <summary>Gets the file list provider, used by the disk info window to enumerate DOS-visible entries.</summary>
-    public IDriveFileListProvider? FileListProvider => _fileListProvider;
+    public IDriveFileListProvider FileListProvider => _fileListProvider;
 
     private async void OnShowDriveInfo() {
         if (Avalonia.Application.Current?.ApplicationLifetime is not Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop) {
@@ -253,10 +167,6 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
     }
 
     private void RefreshContentMap() {
-        if (_contentMapProvider == null) {
-            return;
-        }
-
         ContentMap = _contentMapProvider.GetContentMap(DriveLetter);
     }
 
@@ -266,8 +176,8 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
         }
         Dispatcher.UIThread.Post(() => {
             IsReadActive = true;
-            _readTimer?.Stop();
-            _readTimer?.Start();
+            _readTimer.Stop();
+            _readTimer.Start();
         });
     }
 
@@ -277,17 +187,17 @@ public sealed partial class DriveMenuItemViewModel : ObservableObject {
         }
         Dispatcher.UIThread.Post(() => {
             IsWriteActive = true;
-            _writeTimer?.Stop();
-            _writeTimer?.Start();
+            _writeTimer.Stop();
+            _writeTimer.Start();
         });
     }
 
     private void OnActivityTimerElapsed(bool isWrite) {
         if (isWrite) {
-            _writeTimer?.Stop();
+            _writeTimer.Stop();
             IsWriteActive = false;
         } else {
-            _readTimer?.Stop();
+            _readTimer.Stop();
             IsReadActive = false;
         }
     }
