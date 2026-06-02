@@ -97,7 +97,8 @@ public class DosDiskInt26Handler : InterruptHandler {
             bufferAddress = MemoryUtils.ToPhysicalAddress(State.DS, State.BX);
         }
 
-        if (!_dosDriveManager.TryGetGeometry(driveIndex, out int _, out int _, out int _, out int bytesPerSector)) {
+        FloppyGeometryResult geometryResult = _dosDriveManager.GetGeometry(driveIndex);
+        if (geometryResult.Status != FloppyAccessStatus.Success) {
             if (driveIndex >= 2) {
                 SetCarryFlag(false, calledFromVm);
                 State.AX = 0;
@@ -107,6 +108,7 @@ public class DosDiskInt26Handler : InterruptHandler {
             SetCarryFlag(true, calledFromVm);
             return;
         }
+        int bytesPerSector = geometryResult.Geometry.BytesPerSector;
 
         int byteOffset = (int)((long)startSector * bytesPerSector);
         int byteCount = sectorCount * bytesPerSector;
@@ -117,7 +119,8 @@ public class DosDiskInt26Handler : InterruptHandler {
 
         _timingService.ScheduleFloppyIoDelay(sectorCount);
 
-        if (!_dosDriveManager.WriteToImage(driveIndex, byteOffset, buffer, 0, byteCount)) {
+        FloppyTransferResult writeResult = _dosDriveManager.WriteToImage(driveIndex, byteOffset, buffer, 0, byteCount);
+        if (writeResult.Status != FloppyAccessStatus.Success) {
             State.AX = 0x0408;
             SetCarryFlag(true, calledFromVm);
             return;

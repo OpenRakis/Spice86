@@ -78,31 +78,23 @@ public class SystemBiosInt13HandlerTests {
             _bytesPerSector = bytesPerSector;
         }
 
-        public bool TryGetGeometry(byte driveNumber, out int totalCylinders, out int headsPerCylinder,
-            out int sectorsPerTrack, out int bytesPerSector) {
+        public FloppyGeometryResult GetGeometry(byte driveNumber) {
             if (driveNumber != 0) {
-                totalCylinders = 0;
-                headsPerCylinder = 0;
-                sectorsPerTrack = 0;
-                bytesPerSector = 0;
-                return false;
+                return FloppyGeometryResult.DriveNotReady;
             }
 
-            totalCylinders = _totalCylinders;
-            headsPerCylinder = _headsPerCylinder;
-            sectorsPerTrack = _sectorsPerTrack;
-            bytesPerSector = _bytesPerSector;
-            return true;
+            FloppyGeometry geometry = new(_totalCylinders, _headsPerCylinder, _sectorsPerTrack, _bytesPerSector);
+            return FloppyGeometryResult.Success(geometry);
         }
 
-        public bool ReadFromImage(byte driveNumber, int imageByteOffset, byte[] destination, int destOffset,
+        public FloppyTransferResult ReadFromImage(byte driveNumber, int imageByteOffset, byte[] destination, int destOffset,
             int byteCount) {
-            return false;
+            return FloppyTransferResult.DriveNotReady;
         }
 
-        public bool WriteToImage(byte driveNumber, int imageByteOffset, byte[] source, int srcOffset,
+        public FloppyTransferResult WriteToImage(byte driveNumber, int imageByteOffset, byte[] source, int srcOffset,
             int byteCount) {
-            return false;
+            return FloppyTransferResult.DriveNotReady;
         }
     }
 }

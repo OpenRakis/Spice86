@@ -57,8 +57,8 @@ public sealed class FloppyDiskTransferService {
         _timingService.ScheduleFloppyIoDelay(sectorCount);
 
         if (isRead) {
-            bool success = _floppyAccess.ReadFromImage(driveNumber, byteOffset, buffer, 0, byteCount);
-            if (!success) {
+            FloppyTransferResult readResult = _floppyAccess.ReadFromImage(driveNumber, byteOffset, buffer, 0, byteCount);
+            if (readResult.Status != FloppyAccessStatus.Success) {
                 return false;
             }
 
@@ -68,8 +68,8 @@ public sealed class FloppyDiskTransferService {
         }
 
         _dmaChannel.Read(byteCount, buffer);
-        bool writeSuccess = _floppyAccess.WriteToImage(driveNumber, byteOffset, buffer, 0, byteCount);
-        if (!writeSuccess) {
+        FloppyTransferResult writeResult = _floppyAccess.WriteToImage(driveNumber, byteOffset, buffer, 0, byteCount);
+        if (writeResult.Status != FloppyAccessStatus.Success) {
             return false;
         }
 
@@ -78,15 +78,17 @@ public sealed class FloppyDiskTransferService {
     }
 
     private int GetSectorsPerTrack(byte driveNumber) {
-        if (_floppyAccess.TryGetGeometry(driveNumber, out int _, out int _, out int sectorsPerTrack, out int _)) {
-            return sectorsPerTrack;
+        FloppyGeometryResult geometryResult = _floppyAccess.GetGeometry(driveNumber);
+        if (geometryResult.Status == FloppyAccessStatus.Success) {
+            return geometryResult.Geometry.SectorsPerTrack;
         }
         return DefaultSectorsPerTrack;
     }
 
     private int GetNumberOfHeads(byte driveNumber) {
-        if (_floppyAccess.TryGetGeometry(driveNumber, out int _, out int headsPerCylinder, out int _, out int _)) {
-            return headsPerCylinder;
+        FloppyGeometryResult geometryResult = _floppyAccess.GetGeometry(driveNumber);
+        if (geometryResult.Status == FloppyAccessStatus.Success) {
+            return geometryResult.Geometry.HeadsPerCylinder;
         }
         return DefaultNumberOfHeads;
     }

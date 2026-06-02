@@ -147,10 +147,14 @@ public class SystemBiosInt13Handler : InterruptHandler {
             return;
         }
 
-        if (!_floppyAccess.TryGetGeometry(imageDriveNumber, out int _, out int heads, out int sectorsPerTrack, out int bytesPerSector)) {
+        FloppyGeometryResult readGeometryResult = _floppyAccess.GetGeometry(imageDriveNumber);
+        if (readGeometryResult.Status != FloppyAccessStatus.Success) {
             SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
             return;
         }
+        int heads = readGeometryResult.Geometry.HeadsPerCylinder;
+        int sectorsPerTrack = readGeometryResult.Geometry.SectorsPerTrack;
+        int bytesPerSector = readGeometryResult.Geometry.BytesPerSector;
 
         (int cylinder, int head, int sector) = DecodeChs();
         int lba = ChsToLba(cylinder, head, sector, sectorsPerTrack, heads);
@@ -163,7 +167,8 @@ public class SystemBiosInt13Handler : InterruptHandler {
 
         _timingService.ScheduleFloppyIoDelay(sectorCount);
 
-        if (!_floppyAccess.ReadFromImage(imageDriveNumber, byteOffset, transferBuffer, 0, byteCount)) {
+        FloppyTransferResult readResult = _floppyAccess.ReadFromImage(imageDriveNumber, byteOffset, transferBuffer, 0, byteCount);
+        if (readResult.Status != FloppyAccessStatus.Success) {
             SetFloppyError(driveNumber, ErrorSectorNotFound, calledFromVm);
             return;
         }
@@ -197,10 +202,14 @@ public class SystemBiosInt13Handler : InterruptHandler {
             return;
         }
 
-        if (!_floppyAccess.TryGetGeometry(imageDriveNumber, out int _, out int heads, out int sectorsPerTrack, out int bytesPerSector)) {
+        FloppyGeometryResult writeGeometryResult = _floppyAccess.GetGeometry(imageDriveNumber);
+        if (writeGeometryResult.Status != FloppyAccessStatus.Success) {
             SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
             return;
         }
+        int heads = writeGeometryResult.Geometry.HeadsPerCylinder;
+        int sectorsPerTrack = writeGeometryResult.Geometry.SectorsPerTrack;
+        int bytesPerSector = writeGeometryResult.Geometry.BytesPerSector;
 
         (int cylinder, int head, int sector) = DecodeChs();
         int lba = ChsToLba(cylinder, head, sector, sectorsPerTrack, heads);
@@ -216,7 +225,8 @@ public class SystemBiosInt13Handler : InterruptHandler {
 
         _timingService.ScheduleFloppyIoDelay(sectorCount);
 
-        if (!_floppyAccess.WriteToImage(imageDriveNumber, byteOffset, transferBuffer, 0, byteCount)) {
+        FloppyTransferResult writeResult = _floppyAccess.WriteToImage(imageDriveNumber, byteOffset, transferBuffer, 0, byteCount);
+        if (writeResult.Status != FloppyAccessStatus.Success) {
             SetFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
             return;
         }
@@ -250,7 +260,8 @@ public class SystemBiosInt13Handler : InterruptHandler {
             return;
         }
         if (IsFloppyDrive(driveNumber)) {
-            if (!_floppyAccess.TryGetGeometry(driveNumber, out int _, out int _, out int _, out int _)) {
+            FloppyGeometryResult verifyGeometryResult = _floppyAccess.GetGeometry(driveNumber);
+            if (verifyGeometryResult.Status != FloppyAccessStatus.Success) {
                 SetFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
                 return;
             }
@@ -280,10 +291,15 @@ public class SystemBiosInt13Handler : InterruptHandler {
             return;
         }
 
-        if (!_floppyAccess.TryGetGeometry(driveNumber, out int totalCylinders, out int headsPerCylinder, out int sectorsPerTrack, out int bytesPerSector)) {
+        FloppyGeometryResult parametersGeometryResult = _floppyAccess.GetGeometry(driveNumber);
+        if (parametersGeometryResult.Status != FloppyAccessStatus.Success) {
             SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
             return;
         }
+        int totalCylinders = parametersGeometryResult.Geometry.TotalCylinders;
+        int headsPerCylinder = parametersGeometryResult.Geometry.HeadsPerCylinder;
+        int sectorsPerTrack = parametersGeometryResult.Geometry.SectorsPerTrack;
+        int bytesPerSector = parametersGeometryResult.Geometry.BytesPerSector;
 
         int maxCylinder = totalCylinders - 1;
         int maxHead = headsPerCylinder - 1;
@@ -318,8 +334,8 @@ public class SystemBiosInt13Handler : InterruptHandler {
             return;
         }
 
-        if (IsFloppyDrive(driveNumber) &&
-            _floppyAccess.TryGetGeometry(driveNumber, out int _, out int _, out int _, out int _)) {
+        FloppyGeometryResult diskTypeGeometryResult = _floppyAccess.GetGeometry(driveNumber);
+        if (IsFloppyDrive(driveNumber) && diskTypeGeometryResult.Status == FloppyAccessStatus.Success) {
             State.AH = 0x01; // floppy without change-line support (DOSBox Staging parity)
             SetCarryFlag(false, calledFromVm);
             return;
@@ -339,10 +355,14 @@ public class SystemBiosInt13Handler : InterruptHandler {
             SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
             return;
         }
-        if (!_floppyAccess.TryGetGeometry(driveNumber, out int _, out int heads, out int sectorsPerTrack, out int bytesPerSector)) {
+        FloppyGeometryResult formatGeometryResult = _floppyAccess.GetGeometry(driveNumber);
+        if (formatGeometryResult.Status != FloppyAccessStatus.Success) {
             SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
             return;
         }
+        int heads = formatGeometryResult.Geometry.HeadsPerCylinder;
+        int sectorsPerTrack = formatGeometryResult.Geometry.SectorsPerTrack;
+        int bytesPerSector = formatGeometryResult.Geometry.BytesPerSector;
         (int cylinder, int head, int _) = DecodeChs();
         int lbaStart = ChsToLba(cylinder, head, 1, sectorsPerTrack, heads);
         int byteOffset = lbaStart * bytesPerSector;
@@ -351,7 +371,8 @@ public class SystemBiosInt13Handler : InterruptHandler {
 
         _timingService.ScheduleFloppyIoDelay(sectorsPerTrack);
 
-        if (!_floppyAccess.WriteToImage(driveNumber, byteOffset, zeros, 0, byteCount)) {
+        FloppyTransferResult formatWriteResult = _floppyAccess.WriteToImage(driveNumber, byteOffset, zeros, 0, byteCount);
+        if (formatWriteResult.Status != FloppyAccessStatus.Success) {
             SetFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
             return;
         }
@@ -369,7 +390,8 @@ public class SystemBiosInt13Handler : InterruptHandler {
     public void SeekToCylinder(bool calledFromVm) {
         byte driveNumber = State.DL;
         if (IsFloppyDrive(driveNumber)) {
-            if (!_floppyAccess.TryGetGeometry(driveNumber, out int _, out int _, out int _, out int _)) {
+            FloppyGeometryResult seekGeometryResult = _floppyAccess.GetGeometry(driveNumber);
+            if (seekGeometryResult.Status != FloppyAccessStatus.Success) {
                 SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
                 return;
             }
@@ -394,8 +416,8 @@ public class SystemBiosInt13Handler : InterruptHandler {
     /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
     public void TestDriveReady(bool calledFromVm) {
         byte driveNumber = State.DL;
-        if (IsFloppyDrive(driveNumber)
-            && _floppyAccess.TryGetGeometry(driveNumber, out int _, out int _, out int _, out int _)) {
+        FloppyGeometryResult testReadyGeometryResult = _floppyAccess.GetGeometry(driveNumber);
+        if (IsFloppyDrive(driveNumber) && testReadyGeometryResult.Status == FloppyAccessStatus.Success) {
             State.AH = ErrorNone;
             RecordSuccess(driveNumber);
             SetCarryFlag(false, calledFromVm);
@@ -428,7 +450,8 @@ public class SystemBiosInt13Handler : InterruptHandler {
             SetCarryFlag(false, calledFromVm);
             return;
         }
-        if (!_floppyAccess.TryGetGeometry(driveNumber, out int _, out int _, out int _, out int _)) {
+        FloppyGeometryResult changeLineGeometryResult = _floppyAccess.GetGeometry(driveNumber);
+        if (changeLineGeometryResult.Status != FloppyAccessStatus.Success) {
             SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
             return;
         }
@@ -489,7 +512,8 @@ public class SystemBiosInt13Handler : InterruptHandler {
     private int CountMountedFloppyDrives() {
         int count = 0;
         for (byte drive = 0; drive < 2; drive++) {
-            if (_floppyAccess.TryGetGeometry(drive, out int _, out int _, out int _, out int _)) {
+            FloppyGeometryResult countGeometryResult = _floppyAccess.GetGeometry(drive);
+            if (countGeometryResult.Status == FloppyAccessStatus.Success) {
                 count++;
             }
         }

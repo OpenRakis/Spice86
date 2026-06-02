@@ -16,6 +16,7 @@ using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM.DeviceScheduler;
+using Spice86.Shared.Emulator.Storage;
 using Spice86.Shared.Interfaces;
 using Spice86.Tests.Dos;
 
@@ -83,8 +84,8 @@ public sealed class FloppyDiskControllerTests {
 
         // Assert
         byte[] sectorBytes = new byte[4];
-        bool readSuccess = fixture.DriveManager.ReadFromImage(0, 0, sectorBytes, 0, sectorBytes.Length);
-        readSuccess.Should().BeTrue();
+        FloppyTransferResult readResult = fixture.DriveManager.ReadFromImage(0, 0, sectorBytes, 0, sectorBytes.Length);
+        readResult.Status.Should().Be(FloppyAccessStatus.Success);
         sectorBytes.Should().Equal(0x12, 0x34, 0x56, 0x78);
         fixture.DualPic.IrqCheck.Should().BeTrue();
         fixture.DualPic.ComputeVectorNumber().Should().Be(0x0E);
