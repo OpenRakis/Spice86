@@ -11,7 +11,6 @@ using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 /// <summary>
@@ -286,7 +285,8 @@ public sealed class Mscdex {
     /// </summary>
     private void GetFileNameInfo() {
         int driveIndex = _state.CX;
-        if (!TryGetDrive(driveIndex, out MscdexDriveEntry? _)) {
+        MscdexDriveLookup driveLookup = GetDriveByIndex(driveIndex);
+        if (!driveLookup.IsPresent) {
             _state.CarryFlag = true;
             _state.AX = (ushort)MscdexErrorCode.InvalidDrive;
             return;
@@ -305,11 +305,13 @@ public sealed class Mscdex {
     /// </summary>
     private void ReadVolumeTableOfContents() {
         int driveIndex = _state.CX;
-        if (!TryGetDrive(driveIndex, out MscdexDriveEntry? driveEntry)) {
+        MscdexDriveLookup driveLookup = GetDriveByIndex(driveIndex);
+        if (!driveLookup.IsPresent) {
             _state.CarryFlag = true;
             _state.AX = (ushort)MscdexErrorCode.InvalidDrive;
             return;
         }
+        MscdexDriveEntry driveEntry = _drives[driveLookup.DriveListIndex];
 
         int descriptorIndex = _state.DX;
         int lba = FirstVolumeDescriptorLba + descriptorIndex;
@@ -339,11 +341,13 @@ public sealed class Mscdex {
     /// </summary>
     private void AbsoluteDiskRead() {
         int driveIndex = _state.CX;
-        if (!TryGetDrive(driveIndex, out MscdexDriveEntry? driveEntry)) {
+        MscdexDriveLookup driveLookup = GetDriveByIndex(driveIndex);
+        if (!driveLookup.IsPresent) {
             _state.CarryFlag = true;
             _state.AX = (ushort)MscdexErrorCode.InvalidDrive;
             return;
         }
+        MscdexDriveEntry driveEntry = _drives[driveLookup.DriveListIndex];
 
         uint startLbaUint = ((uint)_state.SI << 16) | _state.DI;
         int startLba = (int)startLbaUint;
@@ -377,7 +381,7 @@ public sealed class Mscdex {
     private void CdRomDriveCheck() {
         int driveIndex = _state.CX;
         _state.BX = DriveCheckMagicBx;
-        if (TryGetDrive(driveIndex, out MscdexDriveEntry? _)) {
+        if (GetDriveByIndex(driveIndex).IsPresent) {
             _state.AX = DriveCheckMagicAxValid;
         } else {
             _state.AX = 0;
@@ -412,7 +416,8 @@ public sealed class Mscdex {
     /// </summary>
     private void GetSetVolumeDescriptorPreference() {
         int driveIndex = _state.CX;
-        if (!TryGetDrive(driveIndex, out MscdexDriveEntry? _)) {
+        MscdexDriveLookup driveLookup = GetDriveByIndex(driveIndex);
+        if (!driveLookup.IsPresent) {
             _state.AX = (ushort)MscdexErrorCode.InvalidDrive;
             _state.CarryFlag = true;
             return;
@@ -453,10 +458,12 @@ public sealed class Mscdex {
         byte subunit = _memory.UInt8[requestBase + MscdexRequestOffsets.RequestSubunitOffset];
         byte command = _memory.UInt8[requestBase + MscdexRequestOffsets.RequestCommandOffset];
 
-        if (!TryGetDriveBySubUnit(subunit, out MscdexDriveEntry? driveEntry)) {
+        MscdexDriveLookup driveLookup = GetDriveBySubUnit(subunit);
+        if (!driveLookup.IsPresent) {
             _memory.UInt16[requestBase + MscdexRequestOffsets.RequestStatusOffset] = StatusError | (ushort)MscdexErrorCode.InvalidDrive;
             return;
         }
+        MscdexDriveEntry driveEntry = _drives[driveLookup.DriveListIndex];
 
         switch ((MscdexDeviceDriverCommand)command) {
             case MscdexDeviceDriverCommand.IoctlInput:
@@ -930,16 +937,11 @@ public sealed class Mscdex {
     /// <summary>
     /// Finds the drive at position <paramref name="subunit"/> in the <see cref="_drives"/> list.
     /// </summary>
-    /// <param name="subunit">Zero-based index into the drives list.</param>
-    /// <param name="drive">The matching entry, or <see langword="null"/> when not found.</param>
-    /// <returns><see langword="true"/> if a drive at that position exists; otherwise <see langword="false"/>.</returns>
-    private bool TryGetDriveBySubUnit(int subunit, [NotNullWhen(true)] out MscdexDriveEntry? drive) {
+    private MscdexDriveLookup GetDriveBySubUnit(int subunit) {
         if (subunit < 0 || subunit >= _drives.Count) {
-            drive = null;
-            return false;
+            return MscdexDriveLookup.None;
         }
-        drive = _drives[subunit];
-        return true;
+        return MscdexDriveLookup.From(subunit);
     }
 
     /// <summary>
@@ -957,23 +959,21 @@ public sealed class Mscdex {
     /// <summary>
     /// Finds the drive whose <see cref="MscdexDriveEntry.DriveIndex"/> equals <paramref name="driveIndex"/>.
     /// </summary>
-    /// <param name="driveIndex">Zero-based drive index to look up.</param>
-    /// <param name="drive">The matching entry, or <see langword="null"/> when not found.</param>
-    /// <returns><see langword="true"/> if a matching drive was found; otherwise <see langword="false"/>.</returns>
-    private bool TryGetDrive(int driveIndex, [NotNullWhen(true)] out MscdexDriveEntry? drive) {
-        drive = _drives.FirstOrDefault(e => e.DriveIndex == driveIndex);
-        return drive != null;
+    private MscdexDriveLookup GetDriveByIndex(int driveIndex) {
+        for (int i = 0; i < _drives.Count; i++) {
+            if (_drives[i].DriveIndex == driveIndex) {
+                return MscdexDriveLookup.From(i);
+            }
+        }
+        return MscdexDriveLookup.None;
     }
 
-    /// <summary>
-    /// Finds the drive whose <see cref="MscdexDriveEntry.DriveLetter"/> equals <paramref name="letter"/>.
-    /// </summary>
-    /// <param name="letter">The DOS drive letter to look up (e.g. 'D').</param>
-    /// <param name="drive">The matching entry, or <see langword="null"/> when not found.</param>
-    /// <returns><see langword="true"/> if a matching drive was found; otherwise <see langword="false"/>.</returns>
-    private bool TryGetDriveByLetter(char letter, [NotNullWhen(true)] out MscdexDriveEntry? drive) {
-        drive = _drives.FirstOrDefault(e => e.DriveLetter == letter);
-        return drive != null;
+    private readonly record struct MscdexDriveLookup(bool IsPresent, int DriveListIndex) {
+        public static MscdexDriveLookup None { get; } = new(false, -1);
+
+        public static MscdexDriveLookup From(int driveListIndex) {
+            return new MscdexDriveLookup(true, driveListIndex);
+        }
     }
 
     /// <summary>

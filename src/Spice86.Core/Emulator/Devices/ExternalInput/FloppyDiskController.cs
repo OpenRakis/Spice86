@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.Devices.ExternalInput;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Shared.Emulator.Storage;
 using Spice86.Shared.Interfaces;
 
 using System;
@@ -273,7 +274,8 @@ public sealed class FloppyDiskController : DefaultIOPortHandler {
         int bytesPerSector = 128 << sectorSizeCode;
         byte driveNumber = (byte)(driveHead & 0x01);
 
-        bool success = TransferSectorsViaDma(driveNumber, cylinder, head, sector, lastSector, bytesPerSector, true);
+        FloppyTransferResult transferResult = TransferSectorsViaDma(driveNumber, cylinder, head, sector, lastSector, bytesPerSector, true);
+        bool success = transferResult.Status == FloppyAccessStatus.Success;
         byte st0 = success ? (byte)(driveHead & 0x07) : (byte)(0x40 | (driveHead & 0x07));
         PushResultByte(st0);
         PushResultByte(0x00);
@@ -301,7 +303,8 @@ public sealed class FloppyDiskController : DefaultIOPortHandler {
         int bytesPerSector = 128 << sectorSizeCode;
         byte driveNumber = (byte)(driveHead & 0x01);
 
-        bool success = TransferSectorsViaDma(driveNumber, cylinder, head, sector, lastSector, bytesPerSector, false);
+        FloppyTransferResult transferResult = TransferSectorsViaDma(driveNumber, cylinder, head, sector, lastSector, bytesPerSector, false);
+        bool success = transferResult.Status == FloppyAccessStatus.Success;
         byte st0 = success ? (byte)(driveHead & 0x07) : (byte)(0x40 | (driveHead & 0x07));
         PushResultByte(st0);
         PushResultByte(0x00);
@@ -343,7 +346,7 @@ public sealed class FloppyDiskController : DefaultIOPortHandler {
         RaiseCompletionInterrupt();
     }
 
-    private bool TransferSectorsViaDma(byte driveNumber, byte cylinder, byte head, byte startSector, byte lastSector, int bytesPerSector, bool isRead) {
+    private FloppyTransferResult TransferSectorsViaDma(byte driveNumber, byte cylinder, byte head, byte startSector, byte lastSector, int bytesPerSector, bool isRead) {
         return _transferService.TransferSectorsViaDma(driveNumber, cylinder, head, startSector, lastSector, bytesPerSector, isRead);
     }
 

@@ -10,8 +10,7 @@ using System.Collections.Generic;
 /// index byte is the linear value 1 (always), and both MSF triplets are written in plain
 /// decimal (not BCD) so MSCDEX IOCTL 0x0C responses round-trip identically to DOSBox.
 /// </summary>
-public sealed class SubchannelQSynthesizer
-{
+public sealed class SubchannelQSynthesizer {
     /// <summary>The standard Red Book 150-frame pre-gap offset added to LBAs to produce the absolute MSF.</summary>
     public const int RedBookPreGapFrames = 150;
 
@@ -24,21 +23,19 @@ public sealed class SubchannelQSynthesizer
     /// <param name="toc">The disc table of contents, ending with a synthetic lead-out entry (track 0xAA).</param>
     /// <param name="currentLba">The absolute LBA whose position should be reported.</param>
     /// <returns>The synthesised subchannel-Q data.</returns>
-    public SubchannelQData Compute(IReadOnlyList<TableOfContentsEntry> toc, int currentLba)
-    {
-        TableOfContentsEntry? containingTrack = FindContainingTrack(toc, currentLba);
+    public SubchannelQData Compute(IReadOnlyList<TableOfContentsEntry> toc, int currentLba) {
+        TrackLookup containingTrackLookup = FindContainingTrack(toc, currentLba);
 
         byte attribute = 0;
         byte trackNumberBcd = 0;
         int relativeLba = 0;
-        if (containingTrack != null)
-        {
+        if (containingTrackLookup.IsPresent) {
+            TableOfContentsEntry containingTrack = toc[containingTrackLookup.Index];
             attribute = containingTrack.Control;
             int trackNumber = containingTrack.TrackNumber;
             trackNumberBcd = (byte)(((trackNumber / 10) << 4) | (trackNumber % 10));
             relativeLba = currentLba - containingTrack.Lba;
-            if (relativeLba < 0)
-            {
+            if (relativeLba < 0) {
                 relativeLba = 0;
             }
         }
@@ -58,31 +55,32 @@ public sealed class SubchannelQSynthesizer
             absoluteFrame: absFr);
     }
 
-    private static TableOfContentsEntry? FindContainingTrack(IReadOnlyList<TableOfContentsEntry> toc, int lba)
-    {
-        for (int i = 0; i < toc.Count; i++)
-        {
+    private static TrackLookup FindContainingTrack(IReadOnlyList<TableOfContentsEntry> toc, int lba) {
+        for (int i = 0; i < toc.Count; i++) {
             TableOfContentsEntry candidate = toc[i];
-            if (candidate.TrackNumber == LeadOutTrackNumber)
-            {
+            if (candidate.TrackNumber == LeadOutTrackNumber) {
                 break;
             }
-            TableOfContentsEntry? next = (i + 1 < toc.Count) ? toc[i + 1] : null;
-            if (next == null || lba < next.Lba)
-            {
-                if (lba >= candidate.Lba)
-                {
-                    return candidate;
+            bool hasNext = i + 1 < toc.Count;
+            if (!hasNext || lba < toc[i + 1].Lba) {
+                if (lba >= candidate.Lba) {
+                    return TrackLookup.From(i);
                 }
             }
         }
-        return null;
+        return TrackLookup.None;
     }
 
-    private static (byte min, byte sec, byte frame) LbaToMsf(int frames)
-    {
-        if (frames < 0)
-        {
+    private readonly record struct TrackLookup(bool IsPresent, int Index) {
+        public static TrackLookup None { get; } = new(false, -1);
+
+        public static TrackLookup From(int index) {
+            return new TrackLookup(true, index);
+        }
+    }
+
+    private static (byte min, byte sec, byte frame) LbaToMsf(int frames) {
+        if (frames < 0) {
             frames = 0;
         }
         byte fr = (byte)(frames % 75);
