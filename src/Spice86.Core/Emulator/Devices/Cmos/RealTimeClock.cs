@@ -77,8 +77,8 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     /// Handles writes to port 0x70 (address/index selection) and 0x71 (data).
     /// </summary>
     public override void WriteByte(ushort port, byte value) {
-        if (_loggerService.IsEnabled(LogEventLevel.Information) && port == CmosPorts.Address && value == 0x0B) {
-            _loggerService.Information("RTC: Writing 0x0B to address port (selecting StatusB for next read/write)");
+        if (_loggerService.IsEnabled(LogEventLevel.Debug) && port == CmosPorts.Address && value == 0x0B) {
+            _loggerService.Debug("RTC: Writing 0x0B to address port (selecting StatusB for next read/write)");
         }
         switch (port) {
             case CmosPorts.Address:
@@ -100,8 +100,8 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     public override byte ReadByte(ushort port) {
         if (port == CmosPorts.Data) {
             byte result = HandleDataPortRead();
-            if (_loggerService.IsEnabled(LogEventLevel.Information) && _cmosRegisters.CurrentRegister == CmosRegisterAddresses.StatusRegisterB) {
-                _loggerService.Information("RTC: Port 0x71 read returning 0x{Result:X2} for register 0x{Reg:X2} (StatusB, PIE={PIE})",
+            if (_loggerService.IsEnabled(LogEventLevel.Debug) && _cmosRegisters.CurrentRegister == CmosRegisterAddresses.StatusRegisterB) {
+                _loggerService.Debug("RTC: Port 0x71 read returning 0x{Result:X2} for register 0x{Reg:X2} (StatusB, PIE={PIE})",
                     result, _cmosRegisters.CurrentRegister, (result & 0x40) != 0);
             }
             return result;
