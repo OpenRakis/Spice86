@@ -1322,10 +1322,7 @@ internal sealed partial class DosBatchExecutionEngine {
                 }
                 images.Add(image);
             }
-            CdRomDrive drive = new CdRomDrive(images);
-            CdAudioPlayer audioPlayer = new CdAudioPlayer(_channelCreator);
-            audioPlayer.SetDrive(drive);
-            drive.SetAudioPlayer(audioPlayer);
+            CdRomDrive drive = new CdRomDrive(images, _channelCreator, activityNotifier: null, driveLetter);
             byte driveIndex = DosDriveManager.TryGetLetterIndex(driveLetter, out int idx) ? (byte)idx : (byte)3;
             MscdexDriveEntry entry = new MscdexDriveEntry(driveLetter, driveIndex, drive);
             _mscdex.AddDrive(entry);
@@ -1345,10 +1342,7 @@ internal sealed partial class DosBatchExecutionEngine {
         }
         try {
             VirtualIsoImage image = new VirtualIsoImage(hostPath, volumeLabel);
-            CdRomDrive drive = new CdRomDrive(image);
-            CdAudioPlayer audioPlayer = new CdAudioPlayer(_channelCreator);
-            audioPlayer.SetDrive(drive);
-            drive.SetAudioPlayer(audioPlayer);
+            CdRomDrive drive = new CdRomDrive(image, _channelCreator, activityNotifier: null, driveLetter);
             byte driveIndex = DosDriveManager.TryGetLetterIndex(driveLetter, out int idx) ? (byte)idx : (byte)3;
             MscdexDriveEntry entry = new MscdexDriveEntry(driveLetter, driveIndex, drive);
             _mscdex.AddDrive(entry);

@@ -1,12 +1,17 @@
 namespace Spice86.Tests.Dos;
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 
 using FluentAssertions;
 
+using NSubstitute;
+
 using Spice86.Core.Emulator.Devices.CdRom;
+using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Shared.Emulator.Storage.CdRom;
+using Spice86.Shared.Interfaces;
 using Spice86.Tests.Utility;
 
 using Xunit;
@@ -48,7 +53,11 @@ public class CdRomParityTests {
         // Arrange
         using TempFile tempFile = new("cdrom-parity");
         using VirtualIsoImage image = CreateVirtualIsoImage(tempFile);
-        CdRomDrive drive = new(image);
+        ISoundChannelCreator channelCreator = Substitute.For<ISoundChannelCreator>();
+        channelCreator
+            .AddChannel(Arg.Any<Action<int>>(), Arg.Any<int>(), Arg.Any<string>(), Arg.Any<HashSet<ChannelFeature>>())
+            .Returns(callInfo => new SoundChannel((Action<int>)callInfo[0], (string)callInfo[2], (HashSet<ChannelFeature>)callInfo[3]));
+        CdRomDrive drive = new(image, channelCreator, activityNotifier: null, driveLetter: 'D');
         bool initialMediaChanged = drive.MediaState.ReadAndClearMediaChanged();
 
         // Act
