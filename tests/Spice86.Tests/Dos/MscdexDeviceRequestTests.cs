@@ -1,8 +1,6 @@
 namespace Spice86.Tests.Dos;
 
 using System;
-using System.Collections.Generic;
-using System.IO;
 
 using FluentAssertions;
 
@@ -26,7 +24,12 @@ public class MscdexDeviceRequestTests {
     public void SendDeviceDriverRequest_IoctlMediaChanged_UsesDosBoxSwapRequestCodes() {
         // Arrange
         using TempFile tempFile = new("cdrom-mscdex-audio");
-        CdRomDrive drive = CreateAudioCdRomDrive(tempFile, out ICdRomImage image, out _, out _);
+        CdRomDrive drive = CdRomTestFixture.CreateAudioCueBinDrive(
+            tempFile,
+            CdRomTestFixture.CreateAudioDiscBytes(200),
+            out ICdRomImage image,
+            out _,
+            out _);
         using (image) {
             MscdexTestHarness harness = new(drive);
 
@@ -49,7 +52,12 @@ public class MscdexDeviceRequestTests {
     public void SendDeviceDriverRequest_Seek_UpdatesCurrentPositionWhenPlaybackIsIdle() {
         // Arrange
         using TempFile tempFile = new("cdrom-mscdex-audio");
-        CdRomDrive drive = CreateAudioCdRomDrive(tempFile, out ICdRomImage image, out _, out _);
+        CdRomDrive drive = CdRomTestFixture.CreateAudioCueBinDrive(
+            tempFile,
+            CdRomTestFixture.CreateAudioDiscBytes(200),
+            out ICdRomImage image,
+            out _,
+            out _);
         using (image) {
             MscdexTestHarness harness = new(drive);
 
@@ -68,7 +76,12 @@ public class MscdexDeviceRequestTests {
     public void SendDeviceDriverRequest_StopAndResume_PreservePausedAudioSessionAndDosBoxAudioStatus() {
         // Arrange
         using TempFile tempFile = new("cdrom-mscdex-audio");
-        CdRomDrive drive = CreateAudioCdRomDrive(tempFile, out ICdRomImage image, out Action<int> audioCallback, out _);
+        CdRomDrive drive = CdRomTestFixture.CreateAudioCueBinDrive(
+            tempFile,
+            CdRomTestFixture.CreateAudioDiscBytes(200),
+            out ICdRomImage image,
+            out Action<int> audioCallback,
+            out _);
         using (image) {
             MscdexTestHarness harness = new(drive);
 
@@ -109,7 +122,12 @@ public class MscdexDeviceRequestTests {
     public void SendDeviceDriverRequest_PlayAndResume_SetAudioPlayingBitInStatusWord() {
         // Arrange
         using TempFile tempFile = new("cdrom-mscdex-audio");
-        CdRomDrive drive = CreateAudioCdRomDrive(tempFile, out ICdRomImage image, out Action<int> audioCallback, out _);
+        CdRomDrive drive = CdRomTestFixture.CreateAudioCueBinDrive(
+            tempFile,
+            CdRomTestFixture.CreateAudioDiscBytes(200),
+            out ICdRomImage image,
+            out Action<int> audioCallback,
+            out _);
         using (image) {
             MscdexTestHarness harness = new(drive);
 
@@ -138,7 +156,12 @@ public class MscdexDeviceRequestTests {
     public void SendDeviceDriverRequest_IoctlChannelControl_ClampsDosBoxRoutingAndAppliesLiveMixerState() {
         // Arrange
         using TempFile tempFile = new("cdrom-mscdex-audio");
-        CdRomDrive drive = CreateAudioCdRomDrive(tempFile, out ICdRomImage image, out _, out SoundChannel channel);
+        CdRomDrive drive = CdRomTestFixture.CreateAudioCueBinDrive(
+            tempFile,
+            CdRomTestFixture.CreateAudioDiscBytes(200),
+            out ICdRomImage image,
+            out _,
+            out SoundChannel channel);
         using (image) {
             MscdexTestHarness harness = new(drive);
 
@@ -170,7 +193,7 @@ public class MscdexDeviceRequestTests {
     public void SendDeviceDriverRequest_ReadLong_FailsWhenDriveReturnsShortRawSector() {
         // Arrange
         using TempFile tempFile = new("cdrom-mscdex-cooked");
-        CdRomDrive drive = CreateCookedOnlyCdRomDrive(tempFile, out ICdRomImage image);
+        CdRomDrive drive = CdRomTestFixture.CreateCookedOnlyCdRomDrive(tempFile, out ICdRomImage image);
         using (image) {
             MscdexTestHarness harness = new(drive);
             harness.Memory.UInt8[harness.BufferBaseAddress] = 0x5A;
@@ -184,59 +207,6 @@ public class MscdexDeviceRequestTests {
             harness.Memory.UInt8[harness.BufferBaseAddress].Should().Be(0x5A,
                 "failed Read Long requests should not overwrite the caller buffer with truncated sector data");
         }
-    }
-
-    private static CdRomDrive CreateAudioCdRomDrive(TempFile tempFile, out ICdRomImage image,
-        out Action<int> audioCallback,
-        out SoundChannel channel) {
-        tempFile.CreateFile("disc.bin", CreateAudioDiscBytes(200));
-        string cuePath = tempFile.CreateTextFile("disc.cue",
-            "FILE \"disc.bin\" BINARY\r\n" +
-            "TRACK 01 AUDIO\r\n" +
-            "INDEX 01 00:00:00\r\n");
-
-        image = new CueBinImage(cuePath);
-        return CreateDrive(image, out audioCallback, out channel);
-    }
-
-    private static byte[] CreateAudioDiscBytes(int sectorCount) {
-        byte[] binBytes = new byte[2352 * sectorCount];
-        for (int i = 0; i < binBytes.Length; i++) {
-            binBytes[i] = (byte)(i & 0xFF);
-        }
-        return binBytes;
-    }
-
-    private static CdRomDrive CreateCookedOnlyCdRomDrive(TempFile tempFile, out ICdRomImage image) {
-        string sourceDirectory = tempFile.CreateDirectory("source");
-        File.WriteAllText(Path.Join(sourceDirectory, "README.TXT"), "Spice86");
-
-        image = new VirtualIsoImage(sourceDirectory, "SPICE86");
-        return CreateDrive(image, out _, out _);
-    }
-
-    private static CdRomDrive CreateDrive(ICdRomImage image, out Action<int> audioCallback, out SoundChannel channel) {
-        ISoundChannelCreator channelCreator = Substitute.For<ISoundChannelCreator>();
-        Action<int>? capturedAudioCallback = null;
-        SoundChannel? capturedChannel = null;
-        channelCreator
-            .AddChannel(Arg.Any<Action<int>>(), Arg.Any<int>(), Arg.Any<string>(), Arg.Any<HashSet<ChannelFeature>>())
-            .Returns(callInfo => {
-                Action<int> handler = (Action<int>)callInfo[0];
-                SoundChannel createdChannel = new SoundChannel(handler, (string)callInfo[2], (HashSet<ChannelFeature>)callInfo[3]);
-                capturedAudioCallback = handler;
-                capturedChannel = createdChannel;
-                return createdChannel;
-            });
-        IDriveActivityNotifier activityNotifier = Substitute.For<IDriveActivityNotifier>();
-        CdRomDrive drive = new(image, channelCreator, activityNotifier, 'D');
-        if (capturedAudioCallback == null || capturedChannel == null) {
-            throw new InvalidOperationException("CD audio channel was not registered.");
-        }
-
-        audioCallback = capturedAudioCallback;
-        channel = capturedChannel;
-        return drive;
     }
 
     private sealed class MscdexTestHarness {
