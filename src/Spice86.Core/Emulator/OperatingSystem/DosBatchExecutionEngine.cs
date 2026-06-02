@@ -26,6 +26,7 @@ internal sealed partial class DosBatchExecutionEngine {
     private readonly IDriveStatusProvider _driveStatusProvider;
     private readonly Mscdex _mscdex;
     private readonly ISoundChannelCreator _channelCreator;
+    private readonly IDriveActivityNotifier _activityNotifier;
     private readonly Stack<BatchFileContext> _batchFileContexts = new();
     private readonly Dictionary<string, string[]> _zDriveFiles = new(StringComparer.OrdinalIgnoreCase);
     private VirtualFileBase? _savedStandardInput;
@@ -45,6 +46,7 @@ internal sealed partial class DosBatchExecutionEngine {
         IDriveStatusProvider driveStatusProvider,
         Mscdex mscdex,
         ISoundChannelCreator channelCreator,
+        IDriveActivityNotifier activityNotifier,
         IBatchDisplayCommandHandler displayCommandHandler,
         IDosBatchExecutionHost host,
         ILoggerService loggerService) {
@@ -53,6 +55,7 @@ internal sealed partial class DosBatchExecutionEngine {
         _driveStatusProvider = driveStatusProvider;
         _mscdex = mscdex;
         _channelCreator = channelCreator;
+        _activityNotifier = activityNotifier;
         _displayCommandHandler = displayCommandHandler;
         _host = host;
         _loggerService = loggerService;

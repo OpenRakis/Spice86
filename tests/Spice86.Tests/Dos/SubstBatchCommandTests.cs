@@ -179,11 +179,12 @@ public sealed class SubstBatchCommandTests : IDisposable {
             ISoundChannelCreator channelCreator = Substitute.For<ISoundChannelCreator>();
             channelCreator.AddChannel(Arg.Any<Action<int>>(), Arg.Any<int>(), Arg.Any<string>(), Arg.Any<HashSet<ChannelFeature>>())
                 .Returns(callInfo => new SoundChannel((Action<int>)callInfo[0], (string)callInfo[2], (HashSet<ChannelFeature>)callInfo[3]));
+            IDriveActivityNotifier activityNotifier = Substitute.For<IDriveActivityNotifier>();
 
             DosProcessManager processManager = new(
                 memory, stack, state,
                 memoryManager, fileManager, driveManager,
-                driveStatusProvider, mscdex, channelCreator, batchDisplayCommandHandler,
+                driveStatusProvider, mscdex, channelCreator, activityNotifier, batchDisplayCommandHandler,
                 new Dictionary<string, string>(), logger);
 
             return new SubstContext {
