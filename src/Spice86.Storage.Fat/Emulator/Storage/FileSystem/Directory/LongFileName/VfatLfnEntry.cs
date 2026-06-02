@@ -13,17 +13,16 @@ using System;
 /// offsets 1..10 (5 chars), 14..25 (6 chars), and 28..31 (2 chars). Unused
 /// trailing positions are filled with <c>0x0000</c> (NUL terminator) and then
 /// <c>0xFFFF</c> padding. The ordinal byte at offset 0 carries the 1-based
-/// sequence number; the high bit (<see cref="LastEntryFlag"/> = 0x40) marks
+/// sequence number; the high bit (<see cref="SlotFlag.LastEntryFlag"/> = 0x40) marks
 /// the slot that physically comes first on disc but logically holds the last
 /// fragment of the name.
 /// </remarks>
-public sealed class VfatLfnEntry
-{
-    /// <summary>Attribute byte value identifying a VFAT LFN slot.</summary>
-    public const byte LfnAttribute = 0x0F;
-
-    /// <summary>Bit flag marking the topmost slot (last fragment of the name).</summary>
-    public const byte LastEntryFlag = 0x40;
+public sealed class VfatLfnEntry {
+    /// <summary>Byte flags used by VFAT LFN slots.</summary>
+    public enum SlotFlag : byte {
+        LfnAttribute = 0x0F,
+        LastEntryFlag = 0x40
+    }
 
     /// <summary>Maximum UCS-2 characters per LFN slot.</summary>
     public const int CharsPerSlot = 13;
@@ -48,10 +47,8 @@ public sealed class VfatLfnEntry
     /// <param name="isLast">Whether this is the topmost slot.</param>
     /// <param name="checksum">8.3-name checksum.</param>
     /// <param name="nameFragment">13 UCS-2 code units (defensively copied).</param>
-    public VfatLfnEntry(byte ordinal, bool isLast, byte checksum, char[] nameFragment)
-    {
-        if (nameFragment.Length != CharsPerSlot)
-        {
+    public VfatLfnEntry(byte ordinal, bool isLast, byte checksum, char[] nameFragment) {
+        if (nameFragment.Length != CharsPerSlot) {
             throw new ArgumentException(
                 $"LFN slot name fragment must be exactly {CharsPerSlot} chars.",
                 nameof(nameFragment));

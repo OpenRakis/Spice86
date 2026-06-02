@@ -82,11 +82,11 @@ public sealed class LongFileNameCodec {
         destination.Slice(0, FatDirectoryEntry.EntrySize).Clear();
         byte ordinalByte = slot.Ordinal;
         if (slot.IsLast) {
-            ordinalByte = (byte)(ordinalByte | VfatLfnEntry.LastEntryFlag);
+            ordinalByte = (byte)(ordinalByte | (byte)VfatLfnEntry.SlotFlag.LastEntryFlag);
         }
         destination[0] = ordinalByte;
         WriteUcs2Chars(slot.NameFragment.AsSpan(0, 5), destination.Slice(1, 10));
-        destination[11] = VfatLfnEntry.LfnAttribute;
+        destination[11] = (byte)VfatLfnEntry.SlotFlag.LfnAttribute;
         destination[12] = 0;
         destination[13] = slot.Checksum;
         WriteUcs2Chars(slot.NameFragment.AsSpan(5, 6), destination.Slice(14, 12));
@@ -104,11 +104,11 @@ public sealed class LongFileNameCodec {
         if (entryBytes.Length < FatDirectoryEntry.EntrySize) {
             return null;
         }
-        if (entryBytes[11] != VfatLfnEntry.LfnAttribute) {
+        if (entryBytes[11] != (byte)VfatLfnEntry.SlotFlag.LfnAttribute) {
             return null;
         }
         byte ordinalByte = entryBytes[0];
-        bool isLast = (ordinalByte & VfatLfnEntry.LastEntryFlag) != 0;
+        bool isLast = (ordinalByte & (byte)VfatLfnEntry.SlotFlag.LastEntryFlag) != 0;
         byte ordinal = (byte)(ordinalByte & 0x1F);
         byte checksum = entryBytes[13];
         char[] fragment = new char[VfatLfnEntry.CharsPerSlot];

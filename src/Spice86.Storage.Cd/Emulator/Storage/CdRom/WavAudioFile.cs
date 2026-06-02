@@ -11,10 +11,13 @@ using System.IO;
 /// </summary>
 public sealed class WavAudioFile {
     private const int RiffHeaderSize = 12;
-    private const ushort PcmFormatTag = 1;
     private const int CddaSampleRate = 44100;
     private const int CddaChannelCount = 2;
     private const int CddaBitsPerSample = 16;
+
+    private enum WavFormatTag : ushort {
+        Pcm = 1
+    }
 
     /// <summary>Opens the WAV file at <paramref name="filePath"/> and parses its header.</summary>
     /// <param name="filePath">Path to a CDDA-compliant <c>.wav</c> file.</param>
@@ -96,7 +99,7 @@ public sealed class WavAudioFile {
                 reader.ReadUInt16(); // block align
                 ushort bitsPerSample = reader.ReadUInt16();
 
-                if (formatTag != PcmFormatTag) {
+                if (formatTag != (ushort)WavFormatTag.Pcm) {
                     throw new InvalidDataException($"Only PCM WAV files are supported (formatTag={formatTag}).");
                 }
                 if (sampleRate != CddaSampleRate || channels != CddaChannelCount || bitsPerSample != CddaBitsPerSample) {

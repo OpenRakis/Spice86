@@ -10,11 +10,11 @@ public sealed class FatDirectoryEntry {
     /// <summary>The size in bytes of a single directory entry on disk.</summary>
     public const int EntrySize = 32;
 
-    /// <summary>The first byte value that signals the end of directory entries.</summary>
-    public const byte EndOfDirectory = 0x00;
-
-    /// <summary>The first byte value that signals a deleted entry.</summary>
-    public const byte DeletedEntry = 0xE5;
+    /// <summary>Marker byte values used in the first byte of a FAT directory entry.</summary>
+    public enum EntryMarker : byte {
+        EndOfDirectory = 0x00,
+        DeletedEntry = 0xE5
+    }
 
     /// <summary>Gets the base name of the file (8 characters, space-padded).</summary>
     public string BaseName { get; }
@@ -88,11 +88,11 @@ public sealed class FatDirectoryEntry {
         }
 
         byte firstByte = data[0];
-        if (firstByte == EndOfDirectory) {
+        if (firstByte == (byte)EntryMarker.EndOfDirectory) {
             return new FatDirectoryEntry(string.Empty, string.Empty, 0, 0, 0, isEndMarker: true, isDeleted: false);
         }
 
-        bool isDeleted = firstByte == DeletedEntry;
+        bool isDeleted = firstByte == (byte)EntryMarker.DeletedEntry;
         // Restore the real first character for deleted entries (DOS stores 0xE5 there).
         byte[] nameBytes = data.Slice(0, 8).ToArray();
         if (isDeleted) {

@@ -18,12 +18,6 @@ using System.Text;
 /// last-entry flag.
 /// </remarks>
 public sealed class VfatDirectoryReader {
-    /// <summary>Marker byte at offset 0 indicating a deleted directory entry.</summary>
-    public const byte DeletedEntryMarker = 0xE5;
-
-    /// <summary>Marker byte at offset 0 indicating the end of the directory.</summary>
-    public const byte EndOfDirectoryMarker = 0x00;
-
     /// <summary>
     /// Enumerates short entries (with optional decoded long names) from a raw
     /// directory buffer. Deleted entries (0xE5) and any LFN slots that
@@ -39,10 +33,10 @@ public sealed class VfatDirectoryReader {
         for (int offset = 0; offset + entrySize <= directoryBytes.Length; offset += entrySize) {
             ReadOnlySpan<byte> entry = directoryBytes.Slice(offset, entrySize);
             byte firstByte = entry[0];
-            if (firstByte == EndOfDirectoryMarker) {
+            if (firstByte == (byte)FatDirectoryEntry.EntryMarker.EndOfDirectory) {
                 break;
             }
-            if (firstByte == DeletedEntryMarker) {
+            if (firstByte == (byte)FatDirectoryEntry.EntryMarker.DeletedEntry) {
                 pendingSlots.Clear();
                 continue;
             }
