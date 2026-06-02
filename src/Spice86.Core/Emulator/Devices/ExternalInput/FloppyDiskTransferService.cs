@@ -44,8 +44,8 @@ public sealed class FloppyDiskTransferService {
     /// <param name="lastSector">Last sector number to transfer.</param>
     /// <param name="bytesPerSector">Transfer size for each sector.</param>
     /// <param name="isRead"><see langword="true"/> for disk-to-memory reads; <see langword="false"/> for memory-to-disk writes.</param>
-    /// <returns><see langword="true"/> when the transfer succeeds; otherwise <see langword="false"/>.</returns>
-    public bool TransferSectorsViaDma(byte driveNumber, byte cylinder, byte head, byte startSector, byte lastSector, int bytesPerSector, bool isRead) {
+    /// <returns>The transfer outcome.</returns>
+    public FloppyTransferResult TransferSectorsViaDma(byte driveNumber, byte cylinder, byte head, byte startSector, byte lastSector, int bytesPerSector, bool isRead) {
         int sectorsPerTrack = GetSectorsPerTrack(driveNumber);
         int numberOfHeads = GetNumberOfHeads(driveNumber);
         int sectorCount = lastSector - startSector + 1;
@@ -59,22 +59,22 @@ public sealed class FloppyDiskTransferService {
         if (isRead) {
             FloppyTransferResult readResult = _floppyAccess.ReadFromImage(driveNumber, byteOffset, buffer, 0, byteCount);
             if (readResult.Status != FloppyAccessStatus.Success) {
-                return false;
+                return readResult;
             }
 
             _dmaChannel.Write(byteCount, buffer);
             _activityNotifier.NotifyRead((char)('A' + driveNumber));
-            return true;
+            return FloppyTransferResult.Success(byteCount);
         }
 
         _dmaChannel.Read(byteCount, buffer);
         FloppyTransferResult writeResult = _floppyAccess.WriteToImage(driveNumber, byteOffset, buffer, 0, byteCount);
         if (writeResult.Status != FloppyAccessStatus.Success) {
-            return false;
+            return writeResult;
         }
 
         _activityNotifier.NotifyWrite((char)('A' + driveNumber));
-        return true;
+        return FloppyTransferResult.Success(byteCount);
     }
 
     private int GetSectorsPerTrack(byte driveNumber) {

@@ -142,10 +142,12 @@ public class SystemBiosInt13Handler : InterruptHandler {
             SetFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
             return;
         }
-        if (!TryMapBiosDriveToImageDriveNumber(driveNumber, out byte imageDriveNumber)) {
+        ImageDriveNumberMapping readDriveMapping = MapBiosDriveToImageDriveNumber(driveNumber);
+        if (!readDriveMapping.IsPresent) {
             SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
             return;
         }
+        byte imageDriveNumber = readDriveMapping.ImageDriveNumber;
 
         FloppyGeometryResult readGeometryResult = _floppyAccess.GetGeometry(imageDriveNumber);
         if (readGeometryResult.Status != FloppyAccessStatus.Success) {
@@ -197,10 +199,12 @@ public class SystemBiosInt13Handler : InterruptHandler {
             SetFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
             return;
         }
-        if (!TryMapBiosDriveToImageDriveNumber(driveNumber, out byte imageDriveNumber)) {
+        ImageDriveNumberMapping writeDriveMapping = MapBiosDriveToImageDriveNumber(driveNumber);
+        if (!writeDriveMapping.IsPresent) {
             SetFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
             return;
         }
+        byte imageDriveNumber = writeDriveMapping.ImageDriveNumber;
 
         FloppyGeometryResult writeGeometryResult = _floppyAccess.GetGeometry(imageDriveNumber);
         if (writeGeometryResult.Status != FloppyAccessStatus.Success) {
@@ -493,20 +497,25 @@ public class SystemBiosInt13Handler : InterruptHandler {
         return driveNumber < 0x80;
     }
 
-    private static bool TryMapBiosDriveToImageDriveNumber(byte biosDriveNumber, out byte imageDriveNumber) {
+    private static ImageDriveNumberMapping MapBiosDriveToImageDriveNumber(byte biosDriveNumber) {
         if (biosDriveNumber < 0x80) {
-            imageDriveNumber = biosDriveNumber;
-            return true;
+            return ImageDriveNumberMapping.From(biosDriveNumber);
         }
 
         int mapped = 2 + (biosDriveNumber - 0x80);
         if (mapped is < 0 or > byte.MaxValue) {
-            imageDriveNumber = 0;
-            return false;
+            return ImageDriveNumberMapping.None;
         }
 
-        imageDriveNumber = (byte)mapped;
-        return true;
+        return ImageDriveNumberMapping.From((byte)mapped);
+    }
+
+    private readonly record struct ImageDriveNumberMapping(bool IsPresent, byte ImageDriveNumber) {
+        public static ImageDriveNumberMapping None { get; } = new(false, 0);
+
+        public static ImageDriveNumberMapping From(byte imageDriveNumber) {
+            return new ImageDriveNumberMapping(true, imageDriveNumber);
+        }
     }
 
     private int CountMountedFloppyDrives() {
