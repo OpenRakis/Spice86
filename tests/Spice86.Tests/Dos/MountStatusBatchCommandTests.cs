@@ -132,6 +132,7 @@ public sealed class MountStatusBatchCommandTests : IDisposable {
             ISoundChannelCreator channelCreator = Substitute.For<ISoundChannelCreator>();
             channelCreator.AddChannel(Arg.Any<Action<int>>(), Arg.Any<int>(), Arg.Any<string>(), Arg.Any<HashSet<ChannelFeature>>())
                 .Returns(callInfo => new SoundChannel((Action<int>)callInfo[0], (string)callInfo[2], (HashSet<ChannelFeature>)callInfo[3]));
+            IDriveActivityNotifier activityNotifier = Substitute.For<IDriveActivityNotifier>();
 
             DosProcessManager processManager = new(
                 memory,
@@ -143,6 +144,7 @@ public sealed class MountStatusBatchCommandTests : IDisposable {
                 driveStatusProvider,
                 mscdex,
                 channelCreator,
+                activityNotifier,
                 batchDisplayCommandHandler,
                 new Dictionary<string, string>(),
                 logger);

@@ -255,7 +255,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         IBatchDisplayCommandHandler batchDisplayCommandHandler = new DosBatchDisplayCommandHandler(_vgaFunctionality);
         _mscdex = new Mscdex(state, memory, loggerService, _activityNotifier);
         _driveStatusProvider = new DosDriveStatusProvider(DosDriveManager, _mscdex);
-        ProcessManager = new(_memory, stack, state, MemoryManager, FileManager, DosDriveManager, _driveStatusProvider, _mscdex, channelCreator, batchDisplayCommandHandler, envVars, _loggerService);
+        ProcessManager = new(_memory, stack, state, MemoryManager, FileManager, DosDriveManager, _driveStatusProvider, _mscdex, channelCreator, _activityNotifier, batchDisplayCommandHandler, envVars, _loggerService);
         DosInt22Handler = new DosInt22Handler(_memory, functionHandlerProvider, stack, state, ProcessManager, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state,
             keyboardInt16Handler, CountryInfo, dosCodePageState, dosStringDecoder,

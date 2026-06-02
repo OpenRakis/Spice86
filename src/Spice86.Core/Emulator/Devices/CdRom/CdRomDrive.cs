@@ -36,13 +36,12 @@ public sealed class CdRomDrive : ICdRomDrive {
     /// <param name="channelCreator">The sound channel creator used to register CD audio playback.</param>
     /// <param name="activityNotifier">Optional notifier used to surface per-drive CD audio read activity.</param>
     /// <param name="driveLetter">The DOS drive letter associated with this CD-ROM drive.</param>
-    public CdRomDrive(ICdRomImage image, ISoundChannelCreator channelCreator, IDriveActivityNotifier? activityNotifier, char driveLetter) {
+    public CdRomDrive(ICdRomImage image, ISoundChannelCreator channelCreator, IDriveActivityNotifier activityNotifier, char driveLetter) {
         _image = image;
         _images.Add(image);
         _currentIndex = 0;
         MediaState = new CdRomMediaState();
-        _audioPlayer = new CdAudioPlayer(this, channelCreator, activityNotifier);
-        _audioPlayer.SetDriveLetter(driveLetter);
+        _audioPlayer = new CdAudioPlayer(this, channelCreator, activityNotifier, driveLetter);
     }
 
     /// <summary>Initialises a new <see cref="CdRomDrive"/> with a list of images.</summary>
@@ -50,7 +49,7 @@ public sealed class CdRomDrive : ICdRomDrive {
     /// <param name="channelCreator">The sound channel creator used to register CD audio playback.</param>
     /// <param name="activityNotifier">Optional notifier used to surface per-drive CD audio read activity.</param>
     /// <param name="driveLetter">The DOS drive letter associated with this CD-ROM drive.</param>
-    public CdRomDrive(IReadOnlyList<ICdRomImage> images, ISoundChannelCreator channelCreator, IDriveActivityNotifier? activityNotifier, char driveLetter) {
+    public CdRomDrive(IReadOnlyList<ICdRomImage> images, ISoundChannelCreator channelCreator, IDriveActivityNotifier activityNotifier, char driveLetter) {
         if (images.Count == 0) {
             throw new ArgumentException("At least one CD-ROM image is required.", nameof(images));
         }
@@ -58,8 +57,7 @@ public sealed class CdRomDrive : ICdRomDrive {
         _currentIndex = 0;
         _image = _images[0];
         MediaState = new CdRomMediaState();
-        _audioPlayer = new CdAudioPlayer(this, channelCreator, activityNotifier);
-        _audioPlayer.SetDriveLetter(driveLetter);
+        _audioPlayer = new CdAudioPlayer(this, channelCreator, activityNotifier, driveLetter);
     }
 
     /// <inheritdoc/>
