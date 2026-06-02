@@ -22,91 +22,34 @@ public sealed partial class DrivesMenuViewModel : ObservableObject {
     private readonly IDriveMountService _mountService;
     private readonly IHostStorageProvider _hostStorageProvider;
     private IDriveEventNotifier _driveEventNotifier;
-    private readonly IDriveActivityNotifier? _activityNotifier;
-    private readonly IDriveContentMapProvider? _contentMapProvider;
-    private readonly IDriveFileListProvider? _fileListProvider;
+    private readonly IDriveActivityNotifier _activityNotifier;
+    private readonly IDriveContentMapProvider _contentMapProvider;
+    private readonly IDriveFileListProvider _fileListProvider;
     private readonly Dictionary<char, string> _lastKnownImagePath = new();
 
     /// <summary>Gets all drive entries (floppy and CD-ROM) available in the menu.</summary>
     public ObservableCollection<DriveMenuItemViewModel> AllDrives { get; } = new();
 
     /// <summary>
-    /// Initialises a new <see cref="DrivesMenuViewModel"/> and starts the polling timer.
+    /// Initialises a new <see cref="DrivesMenuViewModel"/>.
     /// </summary>
     /// <param name="driveStatusProvider">The provider that returns the current drive snapshot.</param>
     /// <param name="discSwapper">The disc swapper service.</param>
     /// <param name="mountService">The drive mount service.</param>
     /// <param name="hostStorageProvider">The host storage provider for file picker dialogs.</param>
     /// <param name="driveEventNotifier">The notifier used to show toast notifications for drive events.</param>
-    public DrivesMenuViewModel(
-        IDriveStatusProvider driveStatusProvider,
-        IDiscSwapper discSwapper,
-        IDriveMountService mountService,
-        IHostStorageProvider hostStorageProvider,
-        IDriveEventNotifier driveEventNotifier)
-        : this(driveStatusProvider, discSwapper, mountService, hostStorageProvider, driveEventNotifier, null, null) {
-    }
-
-    /// <summary>
-    /// Initialises a new <see cref="DrivesMenuViewModel"/> with an activity notifier and starts the polling timer.
-    /// </summary>
-    /// <param name="driveStatusProvider">The provider that returns the current drive snapshot.</param>
-    /// <param name="discSwapper">The disc swapper service.</param>
-    /// <param name="mountService">The drive mount service.</param>
-    /// <param name="hostStorageProvider">The host storage provider for file picker dialogs.</param>
-    /// <param name="driveEventNotifier">The notifier used to show toast notifications for drive events.</param>
-    /// <param name="activityNotifier">The notifier used to surface per-drive read/write activity (may be null).</param>
+    /// <param name="activityNotifier">The notifier used to surface per-drive read/write activity.</param>
+    /// <param name="contentMapProvider">The provider used by drive items for hover visualisation.</param>
+    /// <param name="fileListProvider">The provider used to enumerate DOS-visible files for the info window.</param>
     public DrivesMenuViewModel(
         IDriveStatusProvider driveStatusProvider,
         IDiscSwapper discSwapper,
         IDriveMountService mountService,
         IHostStorageProvider hostStorageProvider,
         IDriveEventNotifier driveEventNotifier,
-        IDriveActivityNotifier? activityNotifier)
-        : this(driveStatusProvider, discSwapper, mountService, hostStorageProvider, driveEventNotifier, activityNotifier, null) {
-    }
-
-    /// <summary>
-    /// Initialises a new <see cref="DrivesMenuViewModel"/> with an activity notifier and content map provider.
-    /// </summary>
-    /// <param name="driveStatusProvider">The provider that returns the current drive snapshot.</param>
-    /// <param name="discSwapper">The disc swapper service.</param>
-    /// <param name="mountService">The drive mount service.</param>
-    /// <param name="hostStorageProvider">The host storage provider for file picker dialogs.</param>
-    /// <param name="driveEventNotifier">The notifier used to show toast notifications for drive events.</param>
-    /// <param name="activityNotifier">The notifier used to surface per-drive read/write activity (may be null).</param>
-    /// <param name="contentMapProvider">The provider used by drive items for hover visualisation (may be null).</param>
-    public DrivesMenuViewModel(
-        IDriveStatusProvider driveStatusProvider,
-        IDiscSwapper discSwapper,
-        IDriveMountService mountService,
-        IHostStorageProvider hostStorageProvider,
-        IDriveEventNotifier driveEventNotifier,
-        IDriveActivityNotifier? activityNotifier,
-        IDriveContentMapProvider? contentMapProvider)
-        : this(driveStatusProvider, discSwapper, mountService, hostStorageProvider, driveEventNotifier, activityNotifier, contentMapProvider, null) {
-    }
-
-    /// <summary>
-    /// Initialises a new <see cref="DrivesMenuViewModel"/> with all optional providers.
-    /// </summary>
-    /// <param name="driveStatusProvider">The provider that returns the current drive snapshot.</param>
-    /// <param name="discSwapper">The disc swapper service.</param>
-    /// <param name="mountService">The drive mount service.</param>
-    /// <param name="hostStorageProvider">The host storage provider for file picker dialogs.</param>
-    /// <param name="driveEventNotifier">The notifier used to show toast notifications for drive events.</param>
-    /// <param name="activityNotifier">The notifier used to surface per-drive read/write activity (may be null).</param>
-    /// <param name="contentMapProvider">The provider used by drive items for hover visualisation (may be null).</param>
-    /// <param name="fileListProvider">The provider used to enumerate DOS-visible files for the info window (may be null).</param>
-    public DrivesMenuViewModel(
-        IDriveStatusProvider driveStatusProvider,
-        IDiscSwapper discSwapper,
-        IDriveMountService mountService,
-        IHostStorageProvider hostStorageProvider,
-        IDriveEventNotifier driveEventNotifier,
-        IDriveActivityNotifier? activityNotifier,
-        IDriveContentMapProvider? contentMapProvider,
-        IDriveFileListProvider? fileListProvider) {
+        IDriveActivityNotifier activityNotifier,
+        IDriveContentMapProvider contentMapProvider,
+        IDriveFileListProvider fileListProvider) {
         _driveStatusProvider = driveStatusProvider;
         _discSwapper = discSwapper;
         _mountService = mountService;
