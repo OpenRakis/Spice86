@@ -156,12 +156,7 @@ public sealed class IsoImage : ICdRomImage {
     }
 
     private static bool HasCd001Signature(byte[] sector) {
-        for (int i = 0; i < ExpectedSignature.Length; i++) {
-            if (sector[PvdSignatureOffset + i] != ExpectedSignature[i]) {
-                return false;
-            }
-        }
-        return true;
+        return sector.AsSpan(PvdSignatureOffset, ExpectedSignature.Length).SequenceEqual(ExpectedSignature);
     }
 
     private static IsoSupplementaryVolumeDescriptor ParseSupplementaryVolumeDescriptor(byte[] sector) {
