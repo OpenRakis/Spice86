@@ -1354,116 +1354,6 @@ internal sealed partial class DosBatchExecutionEngine {
         }
     }
 
-    /// <summary>
-    /// Handles the <c>BOOT</c> internal command, matching DOSBox Staging's
-    /// <c>BOOT [image] [-l A|B]</c> and <c>BOOT A:|B:</c> flows for
-    /// booting from mounted floppy images.
-    /// </summary>
-    /// <param name="arguments">Argument tail after the BOOT token.</param>
-    /// <param name="launchRequest">Receives a BOOT launch request on success or <see cref="ContinueBatchExecutionLaunchRequest.Instance"/> on failure.</param>
-    /// <returns><c>true</c> when boot setup is requested (caller must yield to host); <c>false</c> on parse/validation failure.</returns>
-    internal bool TryHandleBoot(string arguments, out LaunchRequest launchRequest) {
-        launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
-        string trimmed = arguments.Trim();
-        string[] parts = BatchArgumentParser.SplitWithQuotes(trimmed);
-
-        char driveLetter = 'A';
-        bool driveExplicit = false;
-        List<string> imagePaths = new();
-        for (int i = 0; i < parts.Length; i++) {
-            if (parts[i].Equals("-l", StringComparison.OrdinalIgnoreCase)) {
-                if (i + 1 >= parts.Length) {
-                    WriteToStandardOutput("BOOT: missing drive letter after -l\r\n");
-                    return false;
-                }
-                string driveSpec = parts[i + 1];
-                if (driveSpec.Length < 1 || !char.IsLetter(driveSpec[0])) {
-                    WriteToStandardOutput($"BOOT: invalid drive letter '{driveSpec}'\r\n");
-                    return false;
-                }
-                driveLetter = char.ToUpperInvariant(driveSpec[0]);
-                driveExplicit = true;
-                i++;
-                continue;
-            }
-            if (parts.Length == 1 && TryParseBootDriveSpecifier(parts[i], out char parsedDriveLetter)) {
-                driveLetter = parsedDriveLetter;
-                driveExplicit = true;
-                continue;
-            }
-            string resolved;
-            try {
-                resolved = HostPathResolver.Resolve(parts[i], _driveManager);
-            } catch (ArgumentException ex) {
-                WriteToStandardOutput($"BOOT: invalid path '{parts[i]}': {ex.Message}\r\n");
-                return false;
-            } catch (NotSupportedException ex) {
-                WriteToStandardOutput($"BOOT: invalid path format '{parts[i]}': {ex.Message}\r\n");
-                return false;
-            } catch (PathTooLongException ex) {
-                WriteToStandardOutput($"BOOT: path too long '{parts[i]}': {ex.Message}\r\n");
-                return false;
-            }
-            imagePaths.Add(resolved);
-        }
-
-        if (!IsSupportedBootDrive(driveLetter)) {
-            WriteToStandardOutput($"BOOT: invalid drive letter '{driveLetter}'\r\n");
-            return false;
-        }
-
-        if (imagePaths.Count > 0) {
-            foreach (string path in imagePaths) {
-                if (!File.Exists(path)) {
-                    WriteToStandardOutput($"BOOT: image file not found: {path}\r\n");
-                    return false;
-                }
-            }
-            byte[] firstImageData = File.ReadAllBytes(imagePaths[0]);
-            _driveManager.MountFloppyImage(driveLetter, firstImageData, imagePaths[0]);
-            for (int i = 1; i < imagePaths.Count; i++) {
-                byte[] extra = File.ReadAllBytes(imagePaths[i]);
-                _driveManager.AddFloppyImage(driveLetter, extra, imagePaths[i]);
-            }
-        }
-
-        if (!_driveManager.TryGetFloppyDrive(driveLetter, out FloppyDiskDrive? floppy) ||
-            floppy.GetCurrentImageData() is not byte[] imageData) {
-            WriteToStandardOutput($"BOOT: no disk image mounted on {driveLetter}:\r\n");
-            return false;
-        }
-
-        if (imageData.Length < 512) {
-            WriteToStandardOutput($"BOOT: image on {driveLetter}: is smaller than one sector\r\n");
-            return false;
-        }
-
-        if (imageData[510] != 0x55 || imageData[511] != 0xAA) {
-            WriteToStandardOutput($"BOOT: image on {driveLetter}: has no valid boot signature (0xAA55)\r\n");
-            return false;
-        }
-
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("BATCH: BOOT from {Drive}: image='{Path}' (explicit={Explicit})",
-                driveLetter, floppy.ImagePath, driveExplicit);
-        }
-        launchRequest = new BootFloppyLaunchRequest(driveLetter, default);
-        return true;
-    }
-
-    private static bool IsSupportedBootDrive(char driveLetter) {
-        return driveLetter is 'A' or 'B';
-    }
-
-    private static bool TryParseBootDriveSpecifier(string driveSpec, out char driveLetter) {
-        driveLetter = '\0';
-        if (driveSpec.Length != 2 || driveSpec[1] != ':' || !char.IsLetter(driveSpec[0])) {
-            return false;
-        }
-        driveLetter = char.ToUpperInvariant(driveSpec[0]);
-        return true;
-    }
-
     private bool TryHandleMountedDriveUnmount(string commandName, string[] parts) {
         bool hasUnmountFlag = false;
         for (int i = 0; i < parts.Length; i++) {
@@ -1492,10 +1382,11 @@ internal sealed partial class DosBatchExecutionEngine {
             return true;
         }
 
-        if (!TryParseBootDriveSpecifier(driveSpec, out char driveLetter)) {
+        if (driveSpec.Length != 2 || driveSpec[1] != ':' || !char.IsLetter(driveSpec[0])) {
             WriteToStandardOutput($"{commandName}: invalid drive letter '{driveSpec}'\r\n");
             return true;
         }
+        char driveLetter = char.ToUpperInvariant(driveSpec[0]);
 
         if (!HasListedMountedDrive(driveLetter)) {
             WriteToStandardOutput($"{commandName}: drive {driveLetter}: is not mounted\r\n");

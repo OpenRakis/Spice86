@@ -1047,24 +1047,6 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
     }
 
     /// <summary>
-    /// Gets the current mounted floppy image for BOOT flows.
-    /// Returns <see cref="MountedFloppyImage.None"/> when no image-backed floppy is mounted.
-    /// </summary>
-    public MountedFloppyImage GetMountedFloppyImageForBoot(char driveLetter) {
-        char upper = NormalizeDriveLetter(driveLetter);
-        if (!TryGetFloppyDrive(upper, out FloppyDiskDrive? floppy)) {
-            return MountedFloppyImage.None;
-        }
-
-        byte[]? imageData = floppy.GetCurrentImageData();
-        if (imageData == null) {
-            return MountedFloppyImage.None;
-        }
-
-        return MountedFloppyImage.From(imageData, floppy.ImagePath);
-    }
-
-    /// <summary>
     /// Flushes all dirty floppy disk images back to their backing host files.
     /// </summary>
     /// <remarks>
@@ -1312,17 +1294,6 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
 
     private static FatBiosParameterBlock ParseBpb(byte[] imageData) {
         return FatBiosParameterBlock.Parse(imageData.AsSpan(0, Math.Min(512, imageData.Length)));
-    }
-
-    /// <summary>
-    /// Value object carrying mounted floppy image data for boot requests.
-    /// </summary>
-    public readonly record struct MountedFloppyImage(bool IsPresent, byte[] ImageData, string ImagePath) {
-        public static MountedFloppyImage None { get; } = new(false, Array.Empty<byte>(), string.Empty);
-
-        public static MountedFloppyImage From(byte[] imageData, string imagePath) {
-            return new MountedFloppyImage(true, imageData, imagePath);
-        }
     }
 
     private readonly record struct ImageBackedFloppyDrive(bool IsPresent, FloppyDiskDrive Drive, byte[] ImageData) {
