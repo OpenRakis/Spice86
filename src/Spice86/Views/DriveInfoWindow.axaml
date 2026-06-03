@@ -6,7 +6,7 @@
         x:Class="Spice86.Views.DriveInfoWindow"
         x:DataType="vm:DriveInfoViewModel"
         Title="{Binding DriveLetter, StringFormat='Drive {0}: — Information'}"
-        Width="640" Height="520"
+        MinWidth="1024" MinHeight="768"
         WindowStartupLocation="CenterOwner">
     <TabControl>
         <TabItem Header="Disc Visual">
@@ -16,7 +16,7 @@
                            FontSize="14"
                            FontWeight="SemiBold"
                            Margin="0,0,0,8" />
-                <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
                     <controls:DriveContentVisualization ContentMap="{Binding ContentMap}" />
                 </ScrollViewer>
             </Grid>
