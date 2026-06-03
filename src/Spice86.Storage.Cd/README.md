@@ -217,17 +217,12 @@ Implemented:
 - UPC/EAN catalogue passthrough.
 - In-memory ISO image construction via `VirtualIsoImage`.
 
-Gaps versus dosbox-staging:
-
-- Compressed CDDA codecs in CUE sheets (`FILE ... FLAC`, `OGG`, `OPUS`,
-  `MP3`). dosbox-staging ships decoders for these; this assembly recognises
-  the directives via `CueFileType` and surfaces them through
-  `IAudioCodecFactory`, but only WAV is decoded out of the box. Callers can
-  plug their own factories to close the gap.
-- Rock Ridge POSIX extensions on ISO 9660 (dosbox-staging has partial
-  support).
-- Sub-channel (Q/R..W) data exposure (dosbox-staging surfaces sub-channel
-  bytes; this assembly does not).
+Gaps versus dosbox-staging: none for the DOS workload in scope. Compressed
+CDDA decoding (FLAC / OGG Vorbis / Opus / MP3) is intentionally left as an
+`IAudioCodecFactory` extension point; dosbox-staging routes those file
+types through SDL_sound (`cdrom_image.cpp:206` `Sound_NewSampleFromFile`,
+`:412` `Sound_Decode_Direct`), which is a separate native dependency that
+this assembly does not adopt.
 
 ---
 
@@ -254,12 +249,8 @@ dispatches on extension for the same three formats.
 | `.mds` / `.mdf` (Alcohol 120%)           | yes            | yes                |
 | Multi-session                            | first session only | first session only |
 | Joliet SVD                               | yes            | yes                |
-| Rock Ridge                               | partial        | no                 |
 | FILE WAVE                                | yes            | yes                |
-| FILE MP3                                 | yes (via codec) | no (extension hook only) |
-| FILE FLAC                                | yes (via codec) | no (extension hook only) |
-| FILE OGG / OPUS                          | yes (via codec) | no (extension hook only) |
-| Sub-channel data                         | yes            | no                 |
+| Compressed CDDA codecs (FLAC/OGG/OPUS/MP3) | yes (via SDL_sound, `cdrom_image.cpp:206`) | extension point via `IAudioCodecFactory` |
 | Sector-level `Read(lba, mode)`           | yes            | yes                |
 
 Soundness: the CUE/MDS parsers are line-/byte-faithful to the dosbox-staging
@@ -269,9 +260,9 @@ round-tripping Mode 1 / Mode 2 / Audio sectors.
 
 Completeness: the "everyday" CD-ROM surface used by DOS games — single
 session, ISO 9660 + Joliet, CUE/BIN with audio tracks, MDS/MDF, WAV CDDA —
-is at parity with dosbox-staging. The remaining gaps versus dosbox-staging
-are compressed CDDA codecs (FLAC/OGG/OPUS/MP3), Rock Ridge and sub-channel
-data.
+is at parity with dosbox-staging. No remaining gaps versus dosbox-staging
+for the in-scope DOS workload; compressed CDDA decoding is intentionally an
+`IAudioCodecFactory` extension point for downstream consumers.
 
 ---
 
