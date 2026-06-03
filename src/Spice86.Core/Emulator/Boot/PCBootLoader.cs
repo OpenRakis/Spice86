@@ -7,16 +7,9 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
-/// Bootstraps the CPU from a floppy disk image, mirroring the IBM PC BIOS
-/// floppy-boot convention used by DOSBox Staging's <c>boot.cpp</c>.
-/// <para>
-/// This service deliberately lives outside the DOS namespace: PC booters
-/// produced by the BOOT command do not run on top of the emulator's DOS
-/// kernel. The DOS layer only orchestrates user-facing argument parsing
-/// (drive letter, image path) before delegating to this service.
-/// </para>
+/// Boots an IBM PC-compatible machine from a floppy image without involving the DOS kernel.
 /// </summary>
-public sealed class FloppyBootService {
+public sealed class PCBootLoader {
     /// <summary>
     /// Size of a floppy boot sector in bytes.
     /// </summary>
@@ -34,29 +27,22 @@ public sealed class FloppyBootService {
     private readonly ILoggerService _loggerService;
 
     /// <summary>
-    /// Creates a new <see cref="FloppyBootService"/>.
+    /// Creates a new boot loader for floppy-based PC boot images.
     /// </summary>
-    public FloppyBootService(IMemory memory, State state, ILoggerService loggerService) {
+    public PCBootLoader(IMemory memory, State state, ILoggerService loggerService) {
         _memory = memory;
         _state = state;
         _loggerService = loggerService;
     }
 
     /// <summary>
-    /// Validates a floppy image, copies its first 512 bytes to physical
-    /// 0x7C00, and configures the CPU registers per the BIOS bootstrap
-    /// convention so the emulator resumes execution at <c>0000:7C00</c>.
-    /// <para>
-    /// Registers set: <c>CS:IP=0000:7C00</c>, <c>SS:SP=0000:7C00</c>,
-    /// <c>DS=ES=0</c>, <c>AX=0</c>, <c>BX=0x7C00</c>, <c>CX=1</c>,
-    /// <c>DX=0</c>, <c>DL</c>=<paramref name="driveNumber"/>,
-    /// <c>SI=DI=BP=0</c>, IF set.
-    /// </para>
+    /// Validates a floppy image, copies its first 512 bytes to physical 0x7C00, and configures the CPU registers
+    /// per the BIOS bootstrap convention so execution resumes at <c>0000:7C00</c>.
     /// </summary>
     /// <param name="imageData">The full floppy image bytes.</param>
     /// <param name="driveNumber">BIOS drive number (0 = A:, 1 = B:).</param>
     /// <param name="imagePathForLogging">Image path used in info logs.</param>
-    /// <returns><c>true</c> if the boot sector was loaded and CPU prepared; <c>false</c> for a missing/invalid image.</returns>
+    /// <returns><c>true</c> if the boot sector was loaded and CPU prepared; <c>false</c> for a missing or invalid image.</returns>
     public bool TryBootFromFloppyImage(byte[] imageData, byte driveNumber, string imagePathForLogging) {
         if (imageData.Length < BootSectorSize) {
             return false;
@@ -68,7 +54,7 @@ public sealed class FloppyBootService {
         _memory.LoadData(BootSectorLoadAddress, imageData, BootSectorSize);
         PrepareCpuRegistersForBoot(driveNumber);
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("BOOT: loaded {Bytes} bytes from floppy '{Path}' at 0000:7C00, DL={DL:X2}",
+            _loggerService.Information("PCBOOT: loaded {Bytes} bytes from floppy '{Path}' at 0000:7C00, DL={DL:X2}",
                 BootSectorSize, imagePathForLogging, _state.DL);
         }
         return true;
