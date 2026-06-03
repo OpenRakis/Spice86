@@ -32,14 +32,36 @@ public sealed class CueBinImage : ICdRomImage {
     /// <param name="codecFactory">Composite factory used to decode non-BINARY audio file references.</param>
     /// <exception cref="IOException">Thrown when a BIN file cannot be opened.</exception>
     /// <exception cref="InvalidDataException">Thrown when the CUE sheet is malformed.</exception>
-    public CueBinImage(string cueFilePath, CompositeAudioCodecFactory codecFactory) {
+    public CueBinImage(string cueFilePath, CompositeAudioCodecFactory codecFactory)
+        : this(CueSheetParser.Parse(cueFilePath), cueFilePath, codecFactory) {
+    }
+
+    /// <summary>
+    /// Constructs a CUE/BIN image from a pre-built <see cref="CueSheet"/> (e.g. synthesized for a raw
+    /// .bin file that has no companion .cue), using the default audio codec factory.
+    /// </summary>
+    /// <param name="sheet">In-memory CUE sheet with absolute file paths.</param>
+    /// <param name="imagePath">Path used to identify this image (typically the .bin path).</param>
+    public CueBinImage(CueSheet sheet, string imagePath)
+        : this(sheet, imagePath, DefaultAudioCodecFactory.Create()) {
+    }
+
+    /// <summary>
+    /// Core constructor: builds the image from an already-parsed <see cref="CueSheet"/>.
+    /// All other constructors funnel through here.
+    /// </summary>
+    /// <param name="sheet">CUE sheet (parsed from disk or synthesized in memory).</param>
+    /// <param name="imagePath">Path used to identify this image (the .cue or the raw .bin path).</param>
+    /// <param name="codecFactory">Composite factory used to decode non-BINARY audio file references.</param>
+    public CueBinImage(CueSheet sheet, string imagePath, CompositeAudioCodecFactory codecFactory) {
+        if (sheet == null) {
+            throw new ArgumentNullException(nameof(sheet));
+        }
         if (codecFactory == null) {
             throw new ArgumentNullException(nameof(codecFactory));
         }
         _codecFactory = codecFactory;
-        ImagePath = cueFilePath;
-        CueSheetParser parser = new CueSheetParser();
-        CueSheet sheet = CueSheetParser.Parse(cueFilePath);
+        ImagePath = imagePath;
         UpcEan = sheet.Catalog;
 
         BuildTracks(sheet);
