@@ -8,7 +8,7 @@ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
             BorderThickness="1"
             BorderBrush="#5E6A7A"
             Background="#1E2630"
-            MaxWidth="620"
+            MaxWidth="760"
             HorizontalAlignment="Stretch">
         <StackPanel Orientation="Vertical" Spacing="12">
             <TextBlock Text="{Binding Header, ElementName=Root}"

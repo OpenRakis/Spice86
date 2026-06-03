@@ -94,6 +94,8 @@ public partial class DriveContentVisualization : UserControl {
         }
         if (map.IsCdRom && map.Tracks != null) {
             BuildCdLayout(map);
+        } else if (map.IsFloppy && map.Clusters != null) {
+            BuildFloppyLayout(map);
         } else if (map.IsFat && map.Clusters != null) {
             BuildFatLayout(map);
         } else {
@@ -114,7 +116,7 @@ public partial class DriveContentVisualization : UserControl {
         Header = $"Drive {map.DriveLetter}: Compact Disc Visual";
 
         Grid layout = new() {
-            ColumnDefinitions = new ColumnDefinitions("340,*"),
+            ColumnDefinitions = new ColumnDefinitions("320,*"),
             RowDefinitions = new RowDefinitions("Auto")
         };
 
@@ -162,7 +164,8 @@ public partial class DriveContentVisualization : UserControl {
             TextBlock meta = new() {
                 Text = $"{(track.IsAudio ? "Audio" : "Data")}  {track.LengthSectors:N0} sectors  ({percent:0.0}%)",
                 Foreground = new SolidColorBrush(Color.Parse("#BFD0E8")),
-                VerticalAlignment = VerticalAlignment.Center
+                VerticalAlignment = VerticalAlignment.Center,
+                TextWrapping = TextWrapping.NoWrap
             };
             row.Children.Add(meta);
             Grid.SetColumn(meta, 2);
@@ -341,5 +344,323 @@ public partial class DriveContentVisualization : UserControl {
         }
         Body = panel;
         Legend = "Blue = used, gray = free, red = bad";
+    }
+
+    private void BuildFloppyLayout(DriveContentMap map) {
+        IReadOnlyList<DriveClusterInfo>? clusters = map.Clusters;
+        if (clusters == null) {
+            Header = "No floppy layout information available";
+            Legend = string.Empty;
+            Body = null;
+            return;
+        }
+
+        int shown = clusters.Count;
+        int total = map.TotalClusters > 0 ? map.TotalClusters : shown;
+        int used = 0;
+        int bad = 0;
+        int reserved = 0;
+        for (int i = 0; i < clusters.Count; i++) {
+            DriveClusterState state = clusters[i].State;
+            if (state == DriveClusterState.Used) {
+                used++;
+            } else if (state == DriveClusterState.Bad) {
+                bad++;
+            } else if (state == DriveClusterState.Reserved) {
+                reserved++;
+            }
+        }
+        double usedPercent = total > 0 ? used * 100.0 / total : 0.0;
+
+        Header = $"Drive {map.DriveLetter}: Floppy Disk";
+
+        Grid layout = new() {
+            ColumnDefinitions = new ColumnDefinitions("260,*"),
+            RowDefinitions = new RowDefinitions("Auto")
+        };
+
+        Control floppyVisual = BuildFloppyVisual(map.DriveLetter, usedPercent, total);
+        layout.Children.Add(floppyVisual);
+        Grid.SetColumn(floppyVisual, 0);
+
+        StackPanel right = new() {
+            Orientation = Orientation.Vertical,
+            Spacing = 8,
+            Margin = new Thickness(14, 4, 0, 0)
+        };
+
+        right.Children.Add(BuildStatRow("Drive", $"{map.DriveLetter}:"));
+        if (!string.IsNullOrEmpty(map.FileSystemLabel)) {
+            right.Children.Add(BuildStatRow("Filesystem", map.FileSystemLabel));
+        }
+        right.Children.Add(BuildStatRow("Clusters", $"{used:N0} used / {total:N0} total"));
+        right.Children.Add(BuildStatRow("Usage", $"{usedPercent:0.0}%"));
+        if (reserved > 0) {
+            right.Children.Add(BuildStatRow("Reserved", $"{reserved:N0}"));
+        }
+        if (bad > 0) {
+            right.Children.Add(BuildStatRow("Bad", $"{bad:N0}"));
+        }
+
+        TextBlock mapHeader = new() {
+            Text = total > shown
+                ? $"Cluster map (first {shown:N0} of {total:N0})"
+                : "Cluster map",
+            Foreground = new SolidColorBrush(Color.Parse("#BFD0E8")),
+            FontSize = 11,
+            FontWeight = FontWeight.SemiBold,
+            Margin = new Thickness(0, 6, 0, 2)
+        };
+        right.Children.Add(mapHeader);
+
+        right.Children.Add(BuildClusterGrid(clusters, cellSize: 10, columns: 64));
+
+        layout.Children.Add(right);
+        Grid.SetColumn(right, 1);
+
+        Body = layout;
+        Legend = "Blue = used, gray = free, red = bad, dim = reserved.";
+    }
+
+    private static Control BuildFloppyVisual(char driveLetter, double usedPercent, int totalClusters) {
+        const double bodyW = 240;
+        const double bodyH = 268;
+        const double shutterW = 116;
+        const double shutterH = 70;
+        const double labelW = 200;
+        const double labelH = 130;
+
+        Canvas root = new() {
+            Width = bodyW + 8,
+            Height = bodyH + 8
+        };
+
+        Rectangle body = new() {
+            Width = bodyW,
+            Height = bodyH,
+            RadiusX = 10,
+            RadiusY = 10,
+            Fill = new LinearGradientBrush {
+                StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
+                EndPoint = new RelativePoint(1, 1, RelativeUnit.Relative),
+                GradientStops = new GradientStops {
+                    new GradientStop(Color.Parse("#3A4654"), 0.0),
+                    new GradientStop(Color.Parse("#1E2632"), 1.0)
+                }
+            },
+            Stroke = new SolidColorBrush(Color.Parse("#0B0F15")),
+            StrokeThickness = 1.5
+        };
+        Canvas.SetLeft(body, 4);
+        Canvas.SetTop(body, 4);
+        root.Children.Add(body);
+
+        // Write-protect notch (top-left)
+        Rectangle notch = new() {
+            Width = 14,
+            Height = 10,
+            Fill = new SolidColorBrush(Color.Parse("#0A0E14"))
+        };
+        Canvas.SetLeft(notch, 14);
+        Canvas.SetTop(notch, 4);
+        root.Children.Add(notch);
+
+        // Metal shutter
+        double shutterX = 4 + (bodyW - shutterW) / 2;
+        const double shutterY = 18;
+        Rectangle shutter = new() {
+            Width = shutterW,
+            Height = shutterH,
+            RadiusX = 3,
+            RadiusY = 3,
+            Fill = new LinearGradientBrush {
+                StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
+                EndPoint = new RelativePoint(0, 1, RelativeUnit.Relative),
+                GradientStops = new GradientStops {
+                    new GradientStop(Color.Parse("#EEF2F6"), 0.0),
+                    new GradientStop(Color.Parse("#A9B4C0"), 0.5),
+                    new GradientStop(Color.Parse("#7D8997"), 1.0)
+                }
+            },
+            Stroke = new SolidColorBrush(Color.Parse("#3A4654")),
+            StrokeThickness = 1
+        };
+        Canvas.SetLeft(shutter, shutterX);
+        Canvas.SetTop(shutter, shutterY);
+        root.Children.Add(shutter);
+
+        // Shutter slot (read/write head opening)
+        Rectangle slot = new() {
+            Width = shutterW - 36,
+            Height = 14,
+            RadiusX = 2,
+            RadiusY = 2,
+            Fill = new SolidColorBrush(Color.Parse("#0B0F15"))
+        };
+        Canvas.SetLeft(slot, shutterX + 18);
+        Canvas.SetTop(slot, shutterY + (shutterH - 14) / 2);
+        root.Children.Add(slot);
+
+        // Shutter slide rail (small detail on right)
+        Rectangle rail = new() {
+            Width = 6,
+            Height = shutterH - 10,
+            Fill = new SolidColorBrush(Color.Parse("#5A6776"))
+        };
+        Canvas.SetLeft(rail, shutterX + shutterW - 10);
+        Canvas.SetTop(rail, shutterY + 5);
+        root.Children.Add(rail);
+
+        // Label
+        double labelX = 4 + (bodyW - labelW) / 2;
+        double labelY = shutterY + shutterH + 14;
+        Rectangle label = new() {
+            Width = labelW,
+            Height = labelH,
+            RadiusX = 4,
+            RadiusY = 4,
+            Fill = new LinearGradientBrush {
+                StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
+                EndPoint = new RelativePoint(0, 1, RelativeUnit.Relative),
+                GradientStops = new GradientStops {
+                    new GradientStop(Color.Parse("#FBFCFE"), 0.0),
+                    new GradientStop(Color.Parse("#E2E8EF"), 1.0)
+                }
+            },
+            Stroke = new SolidColorBrush(Color.Parse("#8A95A3")),
+            StrokeThickness = 1
+        };
+        Canvas.SetLeft(label, labelX);
+        Canvas.SetTop(label, labelY);
+        root.Children.Add(label);
+
+        // Drive letter (big)
+        TextBlock letter = new() {
+            Text = $"{driveLetter}:",
+            Foreground = new SolidColorBrush(Color.Parse("#1C2736")),
+            FontWeight = FontWeight.Bold,
+            FontSize = 44,
+            Width = labelW,
+            TextAlignment = TextAlignment.Center
+        };
+        Canvas.SetLeft(letter, labelX);
+        Canvas.SetTop(letter, labelY + 8);
+        root.Children.Add(letter);
+
+        // Subtitle
+        TextBlock subtitle = new() {
+            Text = "Virtual Disk",
+            Foreground = new SolidColorBrush(Color.Parse("#4A5664")),
+            FontSize = 12,
+            FontWeight = FontWeight.SemiBold,
+            Width = labelW,
+            TextAlignment = TextAlignment.Center
+        };
+        Canvas.SetLeft(subtitle, labelX);
+        Canvas.SetTop(subtitle, labelY + 64);
+        root.Children.Add(subtitle);
+
+        // Usage bar
+        const double barW = labelW - 28;
+        const double barH = 10;
+        double barX = labelX + 14;
+        double barY = labelY + labelH - 26;
+        Rectangle barBack = new() {
+            Width = barW,
+            Height = barH,
+            RadiusX = 3,
+            RadiusY = 3,
+            Fill = new SolidColorBrush(Color.Parse("#C4CCD6"))
+        };
+        Canvas.SetLeft(barBack, barX);
+        Canvas.SetTop(barBack, barY);
+        root.Children.Add(barBack);
+
+        double fillFraction = usedPercent / 100.0;
+        if (fillFraction < 0) {
+            fillFraction = 0;
+        }
+        if (fillFraction > 1) {
+            fillFraction = 1;
+        }
+        double fillWidth = barW * fillFraction;
+        if (fillWidth > 0) {
+            Rectangle barFill = new() {
+                Width = fillWidth,
+                Height = barH,
+                RadiusX = 3,
+                RadiusY = 3,
+                Fill = new SolidColorBrush(Color.Parse("#4FA3F7"))
+            };
+            Canvas.SetLeft(barFill, barX);
+            Canvas.SetTop(barFill, barY);
+            root.Children.Add(barFill);
+        }
+
+        TextBlock barText = new() {
+            Text = totalClusters > 0
+                ? $"{usedPercent:0.0}% used"
+                : "empty / unformatted",
+            Foreground = new SolidColorBrush(Color.Parse("#4A5664")),
+            FontSize = 10,
+            Width = labelW,
+            TextAlignment = TextAlignment.Center
+        };
+        Canvas.SetLeft(barText, labelX);
+        Canvas.SetTop(barText, barY - 14);
+        root.Children.Add(barText);
+
+        return root;
+    }
+
+    private static Grid BuildStatRow(string label, string value) {
+        Grid row = new() {
+            ColumnDefinitions = new ColumnDefinitions("80,*")
+        };
+        TextBlock labelBlock = new() {
+            Text = label,
+            Foreground = new SolidColorBrush(Color.Parse("#8FA0B8")),
+            FontSize = 11,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        row.Children.Add(labelBlock);
+        TextBlock valueBlock = new() {
+            Text = value,
+            Foreground = Brushes.White,
+            FontSize = 12,
+            FontWeight = FontWeight.SemiBold,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        Grid.SetColumn(valueBlock, 1);
+        row.Children.Add(valueBlock);
+        return row;
+    }
+
+    private static WrapPanel BuildClusterGrid(IReadOnlyList<DriveClusterInfo> clusters, double cellSize, int columns) {
+        const double gap = 2;
+        double slot = cellSize + gap;
+        WrapPanel panel = new() {
+            Orientation = Orientation.Horizontal,
+            MaxWidth = slot * columns
+        };
+        for (int i = 0; i < clusters.Count; i++) {
+            DriveClusterState state = clusters[i].State;
+            (IBrush fill, IBrush border) = state switch {
+                DriveClusterState.Used => ((IBrush)new SolidColorBrush(Color.Parse("#4FA3F7")), (IBrush)new SolidColorBrush(Color.Parse("#1F4E7A"))),
+                DriveClusterState.Bad => ((IBrush)new SolidColorBrush(Color.Parse("#E04545")), (IBrush)new SolidColorBrush(Color.Parse("#6B1414"))),
+                DriveClusterState.Reserved => ((IBrush)new SolidColorBrush(Color.Parse("#5A6776")), (IBrush)new SolidColorBrush(Color.Parse("#2A323D"))),
+                _ => ((IBrush)new SolidColorBrush(Color.Parse("#CCD3DC")), (IBrush)new SolidColorBrush(Color.Parse("#6A7280")))
+            };
+            Border cell = new() {
+                Width = cellSize,
+                Height = cellSize,
+                Background = fill,
+                BorderBrush = border,
+                BorderThickness = new Thickness(1),
+                Margin = new Thickness(0, 0, gap, gap)
+            };
+            panel.Children.Add(cell);
+        }
+        return panel;
     }
 }

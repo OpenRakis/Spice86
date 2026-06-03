@@ -520,7 +520,8 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
             int totalClusters = floppy.Image.Bpb.SectorsPerCluster == 0
                 ? states.Length
                 : floppy.Image.Bpb.TotalSectors / floppy.Image.Bpb.SectorsPerCluster;
-            return DriveContentMap.ForFat(upper, clusterInfos, totalClusters);
+            string fsLabel = FormatFatTypeLabel(floppy.Image.FatType);
+            return DriveContentMap.ForFloppy(upper, clusterInfos, totalClusters, fsLabel);
         }
         for (int i = 0; i < _mscdex.Drives.Count; i++) {
             MscdexDriveEntry entry = _mscdex.Drives[i];
@@ -544,6 +545,19 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
     }
 
     private const int MaxVisualizationClusters = 4096;
+
+    private static string FormatFatTypeLabel(FatType fatType) {
+        if (fatType == FatType.Fat12) {
+            return "FAT12";
+        }
+        if (fatType == FatType.Fat16) {
+            return "FAT16";
+        }
+        if (fatType == FatType.Fat32) {
+            return "FAT32";
+        }
+        return string.Empty;
+    }
 
     /// <inheritdoc />
     public IReadOnlyList<DriveFileEntry> GetFileList(char driveLetter) {
@@ -569,7 +583,8 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
             return BuildHostEntries(hostRoot);
         }
 
-        throw new InvalidOperationException($"Drive {upper}: does not expose a DOS-visible file list");
+        // Drive exists but has no mounted image or host folder (e.g., empty floppy slot).
+        return System.Array.Empty<DriveFileEntry>();
     }
 
     private static List<DriveFileEntry> BuildFatEntries(FatFileSystem fs, bool isRoot, uint firstCluster) {
