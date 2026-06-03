@@ -6,6 +6,12 @@
     <PropertyGroup>
         <PackageId>Spice86.Storage.Cd</PackageId>
     </PropertyGroup>
+    <!-- Per-package README: replace the repo-root README that Directory.Build.props
+         would otherwise pack into every NuGet. -->
+    <ItemGroup>
+        <None Remove="$(MSBuildThisFileDirectory)..\..\README.md" />
+        <None Include="README.md" Pack="true" PackagePath="\" />
+    </ItemGroup>
     <ItemGroup>
     </ItemGroup>
 </Project>
