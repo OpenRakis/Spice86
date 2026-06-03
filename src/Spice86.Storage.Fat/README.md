@@ -201,13 +201,10 @@ Implemented:
 - Pause / exit write-back through `FileBackedFatImage`
 - 1.44 MB FAT12 floppy image synthesis from a host directory
 
-Gaps versus dosbox-staging:
-
-- VFAT long file name write (dosbox-staging has partial LFN write support).
-- Multiple partitions per disk image (dosbox-staging iterates all primary
-  partitions; this assembly mounts only the first one).
-- Codepage / NLS-aware short-name conversion (dosbox-staging uses codepage
-  tables; this assembly uppercases ASCII only).
+Gaps versus dosbox-staging: none for new code shipped in this assembly.
+The CP437 0x80..0xA4 uppercase mapping used by `DOS_ToUpper` is implemented
+in `DosNameConverter` (ported byte-for-byte from
+`dosbox-staging/src/dos/dos_files.cpp`).
 
 ---
 
@@ -225,13 +222,13 @@ backend. The reference for the comparison below is the FAT/MBR code in
 | BPB parsing                            | yes            | yes (FAT12/16/32)   |
 | BPB validation                         | best-effort logs | structured `BpbValidationIssue` list |
 | MBR + first partition selection        | yes            | yes                 |
-| Multiple partitions per disk           | yes            | first partition only |
+| Multiple partitions per disk           | first partition only (`drive_fat.cpp:815-832` breaks on first non-zero) | first partition only |
 | LFN / VFAT read                        | yes            | yes                 |
-| LFN / VFAT write                       | partial        | no (8.3 only)       |
+| LFN / VFAT write                       | no (`drive_fat.cpp:1536` `addDirectoryEntry` writes only 32-byte `direntry`) | no |
 | 1.44 MB FAT12 image synthesis from dir | no             | yes (`VirtualFloppyImage`) |
 | Boot-sector signature check            | yes (0x55 0xAA) | yes                |
 | On-pause / on-exit write-back          | yes            | yes (`FileBackedFatImage`) |
-| Codepage / NLS-aware short-name conversion | yes (codepage tables) | uppercase ASCII only |
+| Short-name uppercase (CP437 0x80..0xA4 table) | yes (`DOS_ToUpper`) | yes (`DosNameConverter.DosToUpper`) |
 
 Soundness: the FAT12/16/32 codec uses the official on-disk constants (bad
 cluster, EOC marker, value mask) and is covered by the `Spice86.Tests`
@@ -241,8 +238,8 @@ and end-to-end mount tests over real `VirtualFloppyImage.Build()` output.
 Completeness: read-side and the mount life-cycle are at parity with
 dosbox-staging for the variants targeted by retro DOS workloads (FAT12 and
 FAT16). FAT32 mutation is implemented but should be considered the youngest
-code path. The remaining gaps versus dosbox-staging are VFAT LFN write,
-multi-partition disks and codepage-aware short-name conversion.
+code path. There are no remaining gaps versus dosbox-staging for the scope
+shipped in this assembly.
 
 ---
 
