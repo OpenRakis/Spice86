@@ -425,8 +425,8 @@ public partial class DriveContentVisualization : UserControl {
     private static Control BuildFloppyVisual(char driveLetter, double usedPercent, int totalClusters) {
         const double bodyW = 240;
         const double bodyH = 268;
-        const double shutterW = 116;
-        const double shutterH = 70;
+        const double shutterW = 188;
+        const double shutterH = 54;
         const double labelW = 200;
         const double labelH = 130;
 
@@ -457,13 +457,24 @@ public partial class DriveContentVisualization : UserControl {
 
         // Write-protect notch (top-left)
         Rectangle notch = new() {
-            Width = 14,
-            Height = 10,
+            Width = 20,
+            Height = 12,
             Fill = new SolidColorBrush(Color.Parse("#0A0E14"))
         };
-        Canvas.SetLeft(notch, 14);
+        Canvas.SetLeft(notch, 12);
         Canvas.SetTop(notch, 4);
         root.Children.Add(notch);
+
+        // Characteristic cut corner on 3.5-inch floppy shells.
+        Polygon cutCorner = new() {
+            Fill = new SolidColorBrush(Color.Parse("#0A0E14")),
+            Points = new Points {
+                new Point(4 + bodyW - 42, 4 + bodyH),
+                new Point(4 + bodyW, 4 + bodyH),
+                new Point(4 + bodyW, 4 + bodyH - 42)
+            }
+        };
+        root.Children.Add(cutCorner);
 
         // Metal shutter
         double shutterX = 4 + (bodyW - shutterW) / 2;
@@ -491,25 +502,52 @@ public partial class DriveContentVisualization : UserControl {
 
         // Shutter slot (read/write head opening)
         Rectangle slot = new() {
-            Width = shutterW - 36,
-            Height = 14,
+            Width = shutterW - 56,
+            Height = 16,
             RadiusX = 2,
             RadiusY = 2,
             Fill = new SolidColorBrush(Color.Parse("#0B0F15"))
         };
-        Canvas.SetLeft(slot, shutterX + 18);
-        Canvas.SetTop(slot, shutterY + (shutterH - 14) / 2);
+        Canvas.SetLeft(slot, shutterX + 20);
+        Canvas.SetTop(slot, shutterY + (shutterH - 16) / 2);
         root.Children.Add(slot);
 
-        // Shutter slide rail (small detail on right)
-        Rectangle rail = new() {
-            Width = 6,
-            Height = shutterH - 10,
-            Fill = new SolidColorBrush(Color.Parse("#5A6776"))
+        // Right latch window typically present on floppy shutter assemblies.
+        Rectangle latchWindow = new() {
+            Width = 11,
+            Height = 22,
+            RadiusX = 2,
+            RadiusY = 2,
+            Fill = new SolidColorBrush(Color.Parse("#626F7F")),
+            Stroke = new SolidColorBrush(Color.Parse("#42505F")),
+            StrokeThickness = 1
         };
-        Canvas.SetLeft(rail, shutterX + shutterW - 10);
-        Canvas.SetTop(rail, shutterY + 5);
-        root.Children.Add(rail);
+        Canvas.SetLeft(latchWindow, shutterX + shutterW - 18);
+        Canvas.SetTop(latchWindow, shutterY + (shutterH - 22) / 2);
+        root.Children.Add(latchWindow);
+
+        // Rivet details to make the shutter read as stamped metal.
+        Ellipse rivetLeft = new() {
+            Width = 5,
+            Height = 5,
+            Fill = new SolidColorBrush(Color.Parse("#7C8795")),
+            Stroke = new SolidColorBrush(Color.Parse("#4C5866")),
+            StrokeThickness = 1
+        };
+        Canvas.SetLeft(rivetLeft, shutterX + 10);
+        Canvas.SetTop(rivetLeft, shutterY + 8);
+        root.Children.Add(rivetLeft);
+
+        Ellipse rivetRight = new() {
+            Width = 5,
+            Height = 5,
+            Fill = new SolidColorBrush(Color.Parse("#7C8795")),
+            Stroke = new SolidColorBrush(Color.Parse("#4C5866")),
+            StrokeThickness = 1
+        };
+        Canvas.SetLeft(rivetRight, shutterX + shutterW - 16);
+        Canvas.SetTop(rivetRight, shutterY + 8);
+        root.Children.Add(rivetRight);
 
         // Label
         double labelX = 4 + (bodyW - labelW) / 2;
