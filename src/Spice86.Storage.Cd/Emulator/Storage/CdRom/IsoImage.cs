@@ -91,11 +91,11 @@ public sealed class IsoImage : ICdRomImage {
 
     /// <summary>
     /// Reads the Joliet root directory and returns its entries with UCS-2 BE
-    /// decoded names. Throws when no Joliet volume is present.
+    /// decoded names.
     /// </summary>
     public IReadOnlyList<IsoDirectoryRecord> ReadJolietRootDirectory() {
         if (JolietVolume is null) {
-            throw new InvalidOperationException("This ISO image does not contain a Joliet supplementary volume descriptor.");
+            return [];
         }
         int totalBytes = JolietVolume.RootDirectorySize;
         int firstLba = JolietVolume.RootDirectoryLba;
