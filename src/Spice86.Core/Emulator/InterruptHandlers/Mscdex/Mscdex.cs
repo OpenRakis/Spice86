@@ -5,13 +5,12 @@ using Serilog.Events;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.CdRom;
 using Spice86.Core.Emulator.Devices.CdRom.Subchannel;
-using Spice86.Shared.Emulator.Storage.CdRom;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Shared.Emulator.Storage.CdRom;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using System.Collections.Generic;
-using System.Linq;
 
 /// <summary>
 /// Handles MSCDEX INT 2Fh AH=15h subfunctions, dispatching on the AL register.
