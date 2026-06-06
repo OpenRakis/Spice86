@@ -4,10 +4,9 @@ using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
-using Spice86.Core.Emulator.Devices.Sound;
-using Spice86.Shared.Emulator.Storage;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Shared.Emulator.Storage;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -29,7 +28,6 @@ public class SystemBiosInt13Handler : InterruptHandler {
     private const byte FloppyType35ExtendedDensity = 0x06;
 
     private readonly IFloppyDriveAccess _floppyAccess;
-    private readonly FloppySoundEmulator _floppySound;
     private readonly IDriveActivityNotifier _activityNotifier;
     private readonly FloppyDiskTimingService _timingService;
 
@@ -44,7 +42,6 @@ public class SystemBiosInt13Handler : InterruptHandler {
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU registers and flags.</param>
     /// <param name="floppyAccess">Low-level floppy read/write/geometry provider.</param>
-    /// <param name="soundChannelCreator">Mixer used to construct the owned floppy sound emulator.</param>
     /// <param name="activityNotifier">Notifier used to surface per-drive read/write activity to the UI.</param>
     /// <param name="timingService">Floppy I/O timing service applied before media transfers.</param>
     /// <param name="loggerService">The logging service implementation.</param>
@@ -52,13 +49,11 @@ public class SystemBiosInt13Handler : InterruptHandler {
         IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
         Stack stack, State state,
         IFloppyDriveAccess floppyAccess,
-        ISoundChannelCreator soundChannelCreator,
         IDriveActivityNotifier activityNotifier,
         FloppyDiskTimingService timingService,
         ILoggerService loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _floppyAccess = floppyAccess;
-        _floppySound = new FloppySoundEmulator(soundChannelCreator, FloppyDiskNoiseMode.On, string.Empty);
         _activityNotifier = activityNotifier;
         _timingService = timingService;
         FillDispatchTable();
@@ -172,7 +167,6 @@ public class SystemBiosInt13Handler : InterruptHandler {
             return;
         }
 
-        _floppySound.PlaySeek();
         Memory.LoadData(destAddress, transferBuffer);
 
         if (imageDriveNumber < 26) {
@@ -232,7 +226,6 @@ public class SystemBiosInt13Handler : InterruptHandler {
             return;
         }
 
-        _floppySound.PlaySeek();
         if (imageDriveNumber < 26) {
             _activityNotifier.NotifyWrite((char)('A' + imageDriveNumber));
         }
@@ -376,7 +369,6 @@ public class SystemBiosInt13Handler : InterruptHandler {
             ApplyFloppyError(driveNumber, ErrorInvalidParameter, calledFromVm);
             return;
         }
-        _floppySound.PlaySeek();
         State.AH = ErrorNone;
         State.AL = (byte)sectorsPerTrack;
         RecordSuccess(driveNumber);
@@ -395,7 +387,6 @@ public class SystemBiosInt13Handler : InterruptHandler {
                 ApplyFloppyError(driveNumber, ErrorDriveNotReady, calledFromVm);
                 return;
             }
-            _floppySound.PlaySeek();
             RecordSuccess(driveNumber);
         }
         State.AH = ErrorNone;
@@ -427,14 +418,10 @@ public class SystemBiosInt13Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Recalibrate (AH=0x11). Moves the head to cylinder 0.
+    /// Recalibrate (AH=0x11). Moves the head to cylinder 0. Drive number is in DL register. Always returns no eror in AH.
     /// </summary>
     /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
     public void Recalibrate(bool calledFromVm) {
-        byte driveNumber = State.DL;
-        if (IsFloppyDrive(driveNumber)) {
-            _floppySound.PlaySeek();
-        }
         State.AH = ErrorNone;
         SetCarryFlag(false, calledFromVm);
     }
