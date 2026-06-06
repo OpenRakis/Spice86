@@ -40,7 +40,7 @@ public class SystemClockInt1AHandler : InterruptHandler {
         AddAction(0x02, () => ReadTimeFromRTC(true));
         AddAction(0x03, () => SetRTCTime(true));
         AddAction(0x04, () => ReadDateFromRTC(true));
-        AddAction(0x05, SetRTCDate);
+        AddAction(0x05, () => SetRTCDate(true));
     }
 
     /// <inheritdoc />
@@ -132,10 +132,10 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// Returns error as modifying the host system date is not permitted for security and consistency reasons.
     /// Programs should not rely on being able to set the system date in an emulated environment.
     /// </summary>
-    public void SetRTCDate() {
+    public void SetRTCDate(bool calledFromVm) {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("INT 1A, AH=05h - Set RTC Date (not permitted, returning error)");
         }
-        State.CarryFlag = true;
+        SetCarryFlag(true, calledFromVm);
     }
 }
