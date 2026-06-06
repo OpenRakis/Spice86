@@ -391,7 +391,7 @@ public class DosProcessManagerTests {
         DosCodePageState dosCodePageState = DosCodePageState.Create(850, CountryId.UnitedStates);
         DosFileManager fileManager = new(memory, new DosStringDecoder(memory, state, dosCodePageState), driveManager, loggerService, new List<IVirtualDevice>());
         IBatchDisplayCommandHandler batchDisplayCommandHandler = new DosBatchDisplayCommandHandler(vgaFunctionality);
-        Mscdex mscdex = new(state, memory, loggerService);
+        Mscdex mscdex = new(state, memory, loggerService, new DriveActivityNotifier());
         DosDriveStatusProvider driveStatusProvider = new(driveManager, mscdex);
 
         ISoundChannelCreator channelCreator = Substitute.For<ISoundChannelCreator>();
