@@ -542,7 +542,15 @@ Betrayal at Krondor:
 
 ## Credits
 
-The SoundBlaster implementation is fully ported from [dosbox-staging](https://github.com/dosbox-staging/dosbox-staging), replacing the previous one which was modified from the Aeon emulator. This includes PCM and OPL sound quality improvements, emulation accuracy, SB/OPL compatibility, mixer thread logic, audio events, audio hardware delays, and a complete audio re-architecture.
+The SoundBlaster and Adlib Gold implementations are fully ported from [dosbox-staging](https://github.com/dosbox-staging/dosbox-staging), replacing the previous one which was modified from the Aeon emulator. This includes PCM and OPL sound quality improvements, far greater emulation accuracy, SB/OPL compatibility, mixer thread logic, audio events, audio hardware delays, and a complete audio re-architecture.
+
+The NukedOpl3 port to C# was done by codeEngine. It is bit-accurate. Thanks a lot!
+
+The DOS implementation is heavily inspired by the clean code from FreeDOS, and DOSBox Staging.
+
+The implementations of MSCDEX, CDDA, Floppy emulation, CD images support, used DOSBox Staging as a model (even if the architecture is different), escpecially for conformance about expected behavior (ie. IOCTL).
+
+The BIOS implementation draws heavily from SeaBIOS, IBM PC BIOS reconstructionns, and sometimes DOSBox Staging.
 
 Additionally, the project no longer relies on PortAudio. Instead, it uses a fully cross-platform C# port of the SDL2 audio APIs.
 We only depend on WASAPI (Windows), ALSA (Linux), or CoreAudio (macOS).
