@@ -61,6 +61,29 @@ public sealed class MountStatusBatchCommandTests : IDisposable {
         output.Should().Contain(imagePath2);
     }
 
+    [Fact]
+    public void ImgMount_CdromAlias_WithAbsoluteCuePath_MountsCdRomDrive() {
+        byte[] discBytes = CdRomTestFixture.CreateAudioDiscBytes(300);
+        string imageDirectory = Path.Join(Path.GetTempPath(), $"Spice86_ImgMountCdromAlias_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(imageDirectory);
+        string binPath = Path.Join(imageDirectory, "disc.bin");
+        string cuePath = Path.Join(imageDirectory, "disc.cue");
+        File.WriteAllBytes(binPath, discBytes);
+        File.WriteAllText(cuePath,
+            "FILE \"disc.bin\" BINARY\r\n" +
+            "TRACK 01 AUDIO\r\n" +
+            "INDEX 01 00:00:00\r\n");
+
+        bool launched = _fixture.ProcessManager.BatchExecutionEngine.TryExecuteCommandLine(
+            $"IMGMOUNT D \"{cuePath}\" -t cdrom", out _);
+
+        launched.Should().BeFalse();
+        bool hasCdRomDrive = _fixture.DriveManager.TryGetDrive<CdRomDosDrive>('D', out CdRomDosDrive? mountedDrive);
+        hasCdRomDrive.Should().BeTrue();
+        mountedDrive.Should().NotBeNull();
+        _fixture.ProcessManager.BatchExecutionEngine.TryExecuteCommandLine("IMGMOUNT -u D:", out _);
+    }
+
     private string ExecuteAndReadOutput(string commandName, string outputFileName) {
         string dosOutputPath = $"C:\\{outputFileName}";
 
