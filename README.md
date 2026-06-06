@@ -548,9 +548,12 @@ The NukedOpl3 port to C# was done by codeEngine. It is bit-accurate. Thanks a lo
 
 The DOS implementation is heavily inspired by the clean code from FreeDOS, and DOSBox Staging.
 
-The implementations of MSCDEX, CDDA, Floppy emulation, CD images support, used DOSBox Staging as a model (even if the architecture is different), escpecially for conformance about expected behavior (ie. IOCTL).
+The implementations of MSCDEX, CDDA, Floppy emulation, CD images support, CD drive emulation all used DOSBox Staging as a model (even if the architecture is different), escpecially for conformance about expected behavior (ie. IOCTL).
 
 The BIOS implementation draws heavily from SeaBIOS, IBM PC BIOS reconstructionns, and sometimes DOSBox Staging.
+
+EMS was written with the help of the specs.
+XMS was written with the help of the specs, but a lot had to be rewritten by looking at [the real HIMEM driver](https://github.com/neozeed/himem.sys-2.06), and by reproducing the XMS tests from Microsoft.
 
 Additionally, the project no longer relies on PortAudio. Instead, it uses a fully cross-platform C# port of the SDL2 audio APIs.
 We only depend on WASAPI (Windows), ALSA (Linux), or CoreAudio (macOS).
