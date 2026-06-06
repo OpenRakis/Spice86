@@ -1261,6 +1261,11 @@ internal sealed partial class DosBatchExecutionEngine {
             return false;
         }
 
+        if (string.Equals(imageType, "cdrom", StringComparison.OrdinalIgnoreCase)) {
+            string firstExtension = Path.GetExtension(imagePaths[0]).ToLowerInvariant();
+            imageType = firstExtension == ".cue" ? "cue" : "iso";
+        }
+
         // Auto-detect type from the first image if not specified
         if (string.IsNullOrEmpty(imageType)) {
             string ext = Path.GetExtension(imagePaths[0]).ToLowerInvariant();
