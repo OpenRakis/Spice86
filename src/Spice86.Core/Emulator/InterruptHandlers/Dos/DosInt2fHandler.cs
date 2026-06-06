@@ -170,7 +170,8 @@ public class DosInt2fHandler : InterruptHandler {
     /// Handles MSCDEX INT 2Fh AH=15h subfunctions. Delegates to <see cref="Mscdex"/>.
     /// </summary>
     public void MscdexServices(bool calledFromVm) {
-        _mscdexService.Dispatch();
-        SetCarryFlag(State.CarryFlag, calledFromVm);
+        if (_mscdexService.Dispatch()) {
+            SetCarryFlag(true, calledFromVm);
+        }
     }
 }
