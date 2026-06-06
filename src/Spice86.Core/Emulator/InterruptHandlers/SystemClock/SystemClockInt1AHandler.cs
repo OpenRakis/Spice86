@@ -37,9 +37,9 @@ public class SystemClockInt1AHandler : InterruptHandler {
     private void FillDispatchTable() {
         AddAction(0x00, GetSystemClockCounter);
         AddAction(0x01, SetSystemClockCounter);
-        AddAction(0x02, ReadTimeFromRTC);
-        AddAction(0x03, SetRTCTime);
-        AddAction(0x04, ReadDateFromRTC);
+        AddAction(0x02, () => ReadTimeFromRTC(true));
+        AddAction(0x03, () => SetRTCTime(true));
+        AddAction(0x04, () => ReadDateFromRTC(true));
         AddAction(0x05, SetRTCDate);
     }
 
@@ -54,7 +54,7 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// Returns the number of clock ticks since midnight.
     /// Clock ticks at 18.2 Hz (approximately 1,193,180 / 65,536 times per second).
     /// </summary>
-    private void GetSystemClockCounter() {
+    public void GetSystemClockCounter() {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("INT 1A, AH=00h - Get System Clock Counter");
         }
@@ -71,7 +71,7 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// INT 1A, AH=01h - Set System Clock Counter.
     /// Sets the system clock counter to the specified value.
     /// </summary>
-    private void SetSystemClockCounter() {
+    public void SetSystemClockCounter() {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("INT 1A, AH=01h - Set System Clock Counter");
         }
@@ -85,7 +85,7 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// INT 1A, AH=02h - Read Time from RTC.
     /// Returns time in BCD format from the Real-Time Clock.
     /// </summary>
-    private void ReadTimeFromRTC() {
+    public void ReadTimeFromRTC(bool calledFromVm) {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("INT 1A, AH=02h - Read Time from RTC");
         }
@@ -95,7 +95,7 @@ public class SystemClockInt1AHandler : InterruptHandler {
         State.CL = BcdConverter.ToBcd((byte)now.Minute);
         State.DH = BcdConverter.ToBcd((byte)now.Second);
         State.DL = 0; // Standard time (not daylight savings)
-        State.CarryFlag = false;
+        SetCarryFlag(false, calledFromVm);
     }
 
     /// <summary>
@@ -103,18 +103,18 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// Returns error as modifying the host system time is not permitted for security and consistency reasons.
     /// Programs should not rely on being able to set the system time in an emulated environment.
     /// </summary>
-    private void SetRTCTime() {
+    public void SetRTCTime(bool calledFromVm) {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("INT 1A, AH=03h - Set RTC Time (not permitted, returning error)");
         }
-        State.CarryFlag = true;
+        SetCarryFlag(true, calledFromVm);
     }
 
     /// <summary>
     /// INT 1A, AH=04h - Read Date from RTC.
     /// Returns date in BCD format from the Real-Time Clock.
     /// </summary>
-    private void ReadDateFromRTC() {
+    public void ReadDateFromRTC(bool calledFromVm) {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("INT 1A, AH=04h - Read Date from RTC");
         }
@@ -124,7 +124,7 @@ public class SystemClockInt1AHandler : InterruptHandler {
         State.CL = BcdConverter.ToBcd((byte)(now.Year % 100));
         State.DH = BcdConverter.ToBcd((byte)now.Month);
         State.DL = BcdConverter.ToBcd((byte)now.Day);
-        State.CarryFlag = false;
+        SetCarryFlag(false, calledFromVm);
     }
 
     /// <summary>
@@ -132,7 +132,7 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// Returns error as modifying the host system date is not permitted for security and consistency reasons.
     /// Programs should not rely on being able to set the system date in an emulated environment.
     /// </summary>
-    private void SetRTCDate() {
+    public void SetRTCDate() {
         if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
             LoggerService.Verbose("INT 1A, AH=05h - Set RTC Date (not permitted, returning error)");
         }
