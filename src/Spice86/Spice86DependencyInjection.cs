@@ -389,6 +389,8 @@ public class Spice86DependencyInjection : IDisposable {
         SystemBiosInt15Handler systemBiosInt15Handler = new(configuration, memory,
             cfgCpu, stack, state, a20Gate, biosDataArea, emulationLoopScheduler,
             ioPortDispatcher, loggerService, configuration.InitializeDOS is not false);
+        SystemBiosInt14Handler systemBiosInt14Handler = new(memory,
+            cfgCpu, stack, state, biosDataArea, ioPortDispatcher, loggerService);
 
         SystemClockInt1AHandler systemClockInt1AHandler = new(memory, biosDataArea,
             realTimeClock, cfgCpu, stack, state, loggerService);
@@ -588,6 +590,7 @@ public class Spice86DependencyInjection : IDisposable {
             interruptInstaller.InstallInterruptHandler(biosKeyboardInt9Handler);
             interruptInstaller.InstallInterruptHandler(biosEquipmentDeterminationInt11Handler);
             interruptInstaller.InstallInterruptHandler(systemBiosInt12Handler);
+            interruptInstaller.InstallInterruptHandler(systemBiosInt14Handler);
             interruptInstaller.InstallInterruptHandler(systemBiosInt15Handler);
             interruptInstaller.InstallInterruptHandler(keyboardInt16Handler);
             interruptInstaller.InstallInterruptHandler(systemClockInt1AHandler);
