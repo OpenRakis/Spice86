@@ -137,7 +137,9 @@ Spice86 -e program.exe --CpuHeavyLog \
   --AsmRenderingStyle                Style of the ASM rendering. Spice86 or DosBox.
   --StructureFile                    Path to a C header file that describes the structures in the application. Works best with exports from IDA or Ghidra
   --mcp-http-port                    (Default: 8081) Port for the MCP HTTP server
-  --help                             Display this help screen.
+  --RenderingMode                    (Default: Async) Selects the VGA rendering mode. Sync fires VGA events on the emulation thread for determinism; The default mode is for performance.
+   --JitMode                         (Default: InterpretedThenCompiled) Controls how the JIT compiler handles instruction execution delegates.
+   --AllowIvtAddress0                (Default: false) Controls whether an INT instruction whose IVT entry is 0:0 is treated as valid.
   --version                          Display version information.
 ```
 
@@ -269,12 +271,12 @@ Also, while in Seer, set Settings/Configuration/Assembly/Disassembly Mode to
 |  | No paging support |
 | **Graphics** | Text modes, VGA, EGA, and CGA implemented |
 |  | EGA and CGA modes are best effort (you may find bugs) |
-|  | No VESA support |
-| **DOS** | Partial int 21h implementation (DOS 5.0) |
+|  | VESA VBE 1.2 is supported |
+| **DOS** | Largely complete DOS and INT 21h implementation (DOS 5.0) |
 | **Input** | Keyboard and mouse supported |
 |  | No joystick support |
-| **CD-ROM** | No MSCDEX support |
-| **Floppy** | No Floppy Disk support |
+| **CD-ROM** | MSCDEX and CDDA support is implemented, including CD images |
+| **Floppy** | Floppy disk emulation is implemented, including floppy images and booting on a floppy image |
 
 ## Sound support
 
