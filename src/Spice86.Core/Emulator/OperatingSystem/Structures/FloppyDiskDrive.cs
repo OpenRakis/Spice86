@@ -168,6 +168,9 @@ public class FloppyDiskDrive : VirtualDrive, System.IDisposable {
         } catch (InvalidDataException) {
             Image = null;
             Label = string.Empty;
+        } catch (ArgumentOutOfRangeException) {
+            Image = null;
+            Label = string.Empty;
         }
     }
 

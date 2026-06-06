@@ -35,6 +35,7 @@ internal static class BatchCommandHandlers {
             new EchoDotCommandHandler(),
             new MountCommandHandler(),
             new ImgMountCommandHandler(),
+            new BootCommandHandler(),
             new SubstCommandHandler(),
             new DriveChangeCommandHandler()
         };
@@ -118,6 +119,18 @@ internal static class BatchCommandHandlers {
         }
 
         protected abstract bool ExecuteInternalCommand(DosBatchExecutionEngine engine, CommandExecutionContext context);
+    }
+
+    private sealed class BootCommandHandler : BatchCommandHandlerBase {
+        protected override bool IsMatch(DosBatchExecutionEngine engine, CommandExecutionContext context) {
+            return DosBatchExecutionEngine.IsCommandToken(context.ResolvedCommandToken, "BOOT") ||
+                   DosBatchExecutionEngine.IsCommandToken(context.ResolvedCommandToken, "BOOT.COM");
+        }
+
+        protected override bool Execute(DosBatchExecutionEngine engine, CommandExecutionContext context,
+            out LaunchRequest launchRequest) {
+            return engine.TryHandleBoot(context.ArgumentPart, context.Redirection, out launchRequest);
+        }
     }
 
     private abstract class RedirectedArgumentBatchCommandHandler : RedirectedExactTokenBatchCommandHandler {

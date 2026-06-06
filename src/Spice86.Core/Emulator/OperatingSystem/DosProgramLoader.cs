@@ -78,6 +78,10 @@ internal class DosProgramLoader : DosFileLoader {
 
     protected virtual DosExecResult LoadLaunchRequest(LaunchRequest launchRequest,
         DosExecParameterBlock paramBlock) {
+        if (launchRequest is BootLaunchRequest bootLaunchRequest) {
+            return _processManager.LoadInitialBootProgram(bootLaunchRequest.DriveLetter);
+        }
+
         if (launchRequest is not ProgramLaunchRequest programLaunchRequest) {
             return DosExecResult.Fail(DosErrorCode.InvalidDrive);
         }
@@ -87,6 +91,10 @@ internal class DosProgramLoader : DosFileLoader {
     }
 
     protected virtual string? GetHostPathForLaunchedProgram(LaunchRequest launchRequest) {
+        if (launchRequest is BootLaunchRequest) {
+            return null;
+        }
+
         if (launchRequest is not ProgramLaunchRequest programLaunchRequest) {
             return null;
         }

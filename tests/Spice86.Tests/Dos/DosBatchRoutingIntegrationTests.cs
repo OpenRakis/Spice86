@@ -2,6 +2,9 @@
 
 using FluentAssertions;
 
+using Spice86;
+using Spice86.Tests.Dos.FileSystem;
+
 using System.IO;
 
 using Xunit;
@@ -128,6 +131,69 @@ public class DosBatchRoutingIntegrationTests {
 
             // Assert
             actual.Should().Be('B');
+        });
+    }
+
+    [Fact]
+    public void HostRequestedBatch_ImgMount_InternalCommandTakesPrecedenceOverSameNameBatchFile() {
+        WithTempFile("dos_imgmount_internal_precedence", tempDir => {
+            // Arrange
+            byte[] imageData = new Fat12ImageBuilder().Build();
+            string imagePath = Path.Join(tempDir, "DISK.IMG");
+            File.WriteAllBytes(imagePath, imageData);
+
+            // If command resolution incorrectly prefers external batch files, this script will run.
+            CreateTextFile(tempDir, "IMGMOUNT.BAT", "echo SHADOW > C:\\SHADOW.TXT\r\n");
+            string startBatchPath = CreateTextFile(tempDir, "START.BAT",
+                "imgmount a \"C:\\DISK.IMG\" -t floppy\r\n" +
+                "if errorlevel 1 echo FAIL > C:\\RESULT.TXT\r\n" +
+                "if not errorlevel 1 echo OK > C:\\RESULT.TXT\r\n");
+
+            // Act
+            RunWithoutVideoRead(startBatchPath, tempDir);
+
+            // Assert
+            string shadowPath = Path.Join(tempDir, "SHADOW.TXT");
+            File.Exists(shadowPath).Should().BeFalse();
+        });
+    }
+
+    [Fact]
+    public void HostRequestedBatch_BootA_AutoLoadsMountedFloppyBootSector() {
+        WithTempFile("dos_batch_boot_program", tempDir => {
+            // Arrange
+            byte[] imageData = new Fat12ImageBuilder().Build();
+            imageData[0x40] = 0xDE;
+            imageData[0x41] = 0xAD;
+            imageData[0x42] = 0xBE;
+            imageData[0x43] = 0xEF;
+            imageData[510] = 0x55;
+            imageData[511] = 0xAA;
+
+            string imagePath = Path.Join(tempDir, "BOOT.IMG");
+            File.WriteAllBytes(imagePath, imageData);
+            string startBatchPath = CreateTextFile(tempDir, "START.BAT",
+                "imgmount a \"C:\\BOOT.IMG\" -t floppy\r\n" +
+                "boot a:\r\n");
+
+            using Spice86Creator creator = new(
+                binName: startBatchPath,
+                enablePit: false,
+                maxCycles: 1000,
+                installInterruptVectors: true,
+                cDrive: tempDir);
+            using Spice86DependencyInjection spice86 = creator.Create();
+
+            // Act
+
+            // Assert
+            spice86.Machine.CpuState.CS.Should().Be(0);
+            spice86.Machine.CpuState.IP.Should().Be(0x7C00);
+            spice86.Machine.CpuState.DL.Should().Be(0x00);
+            spice86.Machine.Memory.UInt8[0x7C00 + 0x40].Should().Be(0xDE);
+            spice86.Machine.Memory.UInt8[0x7C00 + 0x41].Should().Be(0xAD);
+            spice86.Machine.Memory.UInt8[0x7C00 + 0x42].Should().Be(0xBE);
+            spice86.Machine.Memory.UInt8[0x7C00 + 0x43].Should().Be(0xEF);
         });
     }
 

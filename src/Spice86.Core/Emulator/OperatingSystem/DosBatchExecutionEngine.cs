@@ -246,26 +246,32 @@ internal sealed partial class DosBatchExecutionEngine {
             return false;
         }
 
-        string resolvedToken = ResolveCommandTokenForCurrentBatchContext(commandToken);
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: Parsed token='{Token}' resolved='{Resolved}' args='{Args}' redirection={HasRedir}",
-                commandToken, resolvedToken, argumentPart, parsedCommandLine.Redirection.HasAny);
-        }
-
         CommandExecutionContext commandExecutionContext = new(
             preprocessedLine,
             argumentPart,
-            resolvedToken,
+            commandToken,
             parsedCommandLine.Redirection);
 
         bool knownCommandResult = TryExecuteKnownCommand(commandExecutionContext, out bool knownCommandMatched,
             out launchRequest);
         if (knownCommandMatched) {
             if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("BATCH: Known command matched: '{Token}' result={Result}", resolvedToken, knownCommandResult);
+                _loggerService.Debug("BATCH: Known command matched: '{Token}' result={Result}", commandToken, knownCommandResult);
             }
             return knownCommandResult;
         }
+
+        string resolvedToken = ResolveCommandTokenForCurrentBatchContext(commandToken);
+        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+            _loggerService.Debug("BATCH: Parsed token='{Token}' resolved='{Resolved}' args='{Args}' redirection={HasRedir}",
+                commandToken, resolvedToken, argumentPart, parsedCommandLine.Redirection.HasAny);
+        }
+
+        commandExecutionContext = new(
+            preprocessedLine,
+            argumentPart,
+            resolvedToken,
+            parsedCommandLine.Redirection);
 
         if (IsBatchPath(commandExecutionContext.ResolvedCommandToken) &&
             !DosFileExists(commandExecutionContext.ResolvedCommandToken)) {
