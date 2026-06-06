@@ -60,6 +60,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
         AddAction(0x50, () => DosVFontSubsystemAccess(true));
         AddAction(0x24, () => ToggleA20GateOrGetStatus(true));
         AddAction(0x6, Unsupported);
+        AddAction(0x41, Unsupported);
         AddAction(0x86, () => BiosWait(true));
         AddAction(0x90, () => DeviceBusy(true));
         AddAction(0x91, () => DevicePost(true));
