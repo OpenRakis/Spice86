@@ -52,7 +52,7 @@ public sealed class PCBootLoader {
         }
 
         _memory.LoadData(BootSectorLoadAddress, imageData, BootSectorSize);
-        PrepareCpuRegistersForBoot(driveNumber);
+        PrepareCpuRegistersForBoot(_state, driveNumber);
         if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("PCBOOT: loaded {Bytes} bytes from floppy '{Path}' at 0000:7C00, DL={DL:X2}",
                 BootSectorSize, imagePathForLogging, _state.DL);
@@ -60,21 +60,21 @@ public sealed class PCBootLoader {
         return true;
     }
 
-    private void PrepareCpuRegistersForBoot(byte driveNumber) {
-        _state.CS = 0;
-        _state.IP = BootSectorLoadOffset;
-        _state.DS = 0;
-        _state.ES = 0;
-        _state.SS = 0;
-        _state.SP = BootSectorLoadOffset;
-        _state.AX = 0;
-        _state.BX = BootSectorLoadOffset;
-        _state.CX = 1;
-        _state.DX = 0;
-        _state.DL = driveNumber;
-        _state.SI = 0;
-        _state.DI = 0;
-        _state.BP = 0;
-        _state.InterruptFlag = true;
+    public static void PrepareCpuRegistersForBoot(State state, byte driveNumber) {
+        state.CS = 0;
+        state.IP = BootSectorLoadOffset;
+        state.DS = 0;
+        state.ES = 0;
+        state.SS = 0;
+        state.SP = BootSectorLoadOffset;
+        state.AX = 0;
+        state.BX = BootSectorLoadOffset;
+        state.CX = 1;
+        state.DX = 0;
+        state.DL = driveNumber;
+        state.SI = 0;
+        state.DI = 0;
+        state.BP = 0;
+        state.InterruptFlag = true;
     }
 }

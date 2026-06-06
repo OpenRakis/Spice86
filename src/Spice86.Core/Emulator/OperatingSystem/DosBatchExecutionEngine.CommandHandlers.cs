@@ -1304,6 +1304,35 @@ internal sealed partial class DosBatchExecutionEngine {
         return false;
     }
 
+    internal bool TryHandleBoot(string arguments, CommandRedirection commandRedirection, out LaunchRequest launchRequest) {
+        launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
+
+        char driveLetter = 'A';
+        string trimmed = arguments.Trim();
+        if (!string.IsNullOrWhiteSpace(trimmed)) {
+            string[] parts = BatchArgumentParser.SplitWithQuotes(trimmed);
+            if (parts.Length == 0) {
+                return false;
+            }
+
+            if (parts.Length >= 2 && parts[0].Equals("-l", StringComparison.OrdinalIgnoreCase)) {
+                driveLetter = parts[1][0];
+            } else {
+                driveLetter = parts[0][0];
+            }
+        }
+
+        driveLetter = char.ToUpperInvariant(driveLetter);
+        if (driveLetter is < 'A' or > 'B') {
+            WriteToStandardOutput($"BOOT: unsupported drive '{driveLetter}'\r\n");
+            _lastExitCode = 1;
+            return false;
+        }
+
+        launchRequest = new BootLaunchRequest(driveLetter, commandRedirection);
+        return true;
+    }
+
     private void MountFloppyImages(char driveLetter, IReadOnlyList<string> imagePaths) {
         byte[] firstImageData = File.ReadAllBytes(imagePaths[0]);
         _driveManager.MountFloppyImage(driveLetter, firstImageData, imagePaths[0]);

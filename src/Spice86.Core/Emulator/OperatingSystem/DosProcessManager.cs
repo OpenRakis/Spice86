@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.OperatingSystem;
 
 using Serilog.Events;
 
+using Spice86.Core.Emulator.Boot;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.InterruptHandlers.Mscdex;
@@ -375,6 +376,27 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
             "BATCH$$$.COM", comBytes, null, _state.SS, (ushort)(_state.SP - IregsFrameSize));
     }
 
+    internal DosExecResult LoadInitialBootProgram(char driveLetter) {
+        char normalizedDriveLetter = char.ToUpperInvariant(driveLetter);
+        if (!_driveManager.TryGetFloppyDrive(normalizedDriveLetter, out FloppyDiskDrive? floppyDrive)) {
+            return DosExecResult.Fail(DosErrorCode.InvalidDrive);
+        }
+
+        byte[]? imageData = floppyDrive.GetCurrentImageData();
+        if (imageData == null) {
+            return DosExecResult.Fail(DosErrorCode.FileNotFound);
+        }
+
+        byte driveNumber = normalizedDriveLetter == 'B' ? (byte)1 : (byte)0;
+        PCBootLoader bootLoader = new(_memory, _state, _loggerService);
+        if (!bootLoader.TryBootFromFloppyImage(imageData, driveNumber, floppyDrive.ImagePath)) {
+            return DosExecResult.Fail(DosErrorCode.FormatInvalid);
+        }
+
+        _currentProgramName = floppyDrive.ImagePath;
+        return DosExecResult.SuccessExecute(_state.CS, _state.IP, _state.SS, _state.SP);
+    }
+
     private DosExecResult LoadOrLoadAndExecuteInternal(string programName, DosExecParameterBlock paramBlock,
         string commandTail, DosExecLoadType loadType, ushort environmentSegment, ushort callerCS, ushort callerIP) {
 
@@ -729,6 +751,10 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     }
 
     private DosExecResult LoadBatchLaunchRequest(LaunchRequest launchRequest) {
+        if (launchRequest is BootLaunchRequest bootLaunchRequest) {
+            return LoadInitialBootProgram(bootLaunchRequest.DriveLetter);
+        }
+
         if (launchRequest is InternalProgramLaunchRequest internalProgramLaunchRequest) {
             return LoadInitialProgramFromBytes(internalProgramLaunchRequest.ComProgramBytes);
         }

@@ -16,6 +16,10 @@ internal sealed class DosBatchProgramLoader : DosProgramLoader {
 
     protected override DosExecResult LoadLaunchRequest(LaunchRequest launchRequest,
         DosExecParameterBlock paramBlock) {
+        if (launchRequest is BootLaunchRequest bootLaunchRequest) {
+            return _processManager.LoadInitialBootProgram(bootLaunchRequest.DriveLetter);
+        }
+
         if (launchRequest is InternalProgramLaunchRequest internalProgramLaunchRequest) {
             return _processManager.LoadInitialProgramFromBytes(internalProgramLaunchRequest.ComProgramBytes);
         }
