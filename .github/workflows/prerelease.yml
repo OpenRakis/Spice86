@@ -74,7 +74,7 @@ jobs:
         run: |
           set -euo pipefail
           SOURCE="https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
-          for project in Spice86.Shared Spice86.Logging Spice86.Core Spice86; do
+          for project in Spice86.Storage.Cd Spice86.Storage.Fat Spice86.Shared Spice86.Logging Spice86.Core Spice86; do
                PACKAGE_PATH="./src/${project}/bin/Release/${project}.${PACKAGE_VERSION}.nupkg"
                if [ -f "$PACKAGE_PATH" ]; then
                     dotnet nuget push "$PACKAGE_PATH" --source "$SOURCE" --api-key "$GITHUB_TOKEN" --skip-duplicate
