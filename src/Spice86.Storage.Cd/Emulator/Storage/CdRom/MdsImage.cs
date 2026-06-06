@@ -1,11 +1,7 @@
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
+using Spice86.Shared.Emulator.Storage.CdRom.Mds;
 
 using System.Buffers.Binary;
-
-using Spice86.Shared.Emulator.Storage.CdRom.Mds;
+using System.Text;
 
 namespace Spice86.Shared.Emulator.Storage.CdRom;
 

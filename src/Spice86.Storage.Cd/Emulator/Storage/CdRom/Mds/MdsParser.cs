@@ -1,14 +1,10 @@
 using System.Buffers.Binary;
-using System.Collections.Generic;
-using System.IO;
 using System.Text;
 
 namespace Spice86.Shared.Emulator.Storage.CdRom.Mds;
 
 /// <summary>
-/// Parses an MDS (Alcohol 120%) disc descriptor file. The on-disk layout is the
-/// one documented in dosbox-staging's <c>cdrom_mds.h</c> (de-glib'd from
-/// cdemu/libmirage). Multi-session discs are truncated to the first session.
+/// Parses an MDS (Alcohol 120%) disc descriptor file.
 /// </summary>
 /// <remarks>
 /// Layout: header (88 bytes) -> session block at <c>session_block_offset</c> ->

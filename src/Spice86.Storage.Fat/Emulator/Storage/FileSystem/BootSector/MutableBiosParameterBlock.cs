@@ -2,14 +2,12 @@ namespace Spice86.Shared.Emulator.Storage.FileSystem.BootSector;
 
 using System;
 using System.Buffers.Binary;
-using System.IO;
 using System.Text;
 
 /// <summary>
 /// Writable mirror of <see cref="FatBiosParameterBlock"/> used for creating or editing FAT boot sectors.
 /// All offsets in property documentation are byte offsets inside the 512 byte boot sector,
-/// matching the FAT specification and the values used by dosbox-staging's
-/// <c>drive_fat.cpp</c> boot sector struct.
+/// matching the FAT specification.
 /// </summary>
 public sealed class MutableBiosParameterBlock {
     /// <summary>Offset 11. Bytes per logical sector. Common value: 512.</summary>

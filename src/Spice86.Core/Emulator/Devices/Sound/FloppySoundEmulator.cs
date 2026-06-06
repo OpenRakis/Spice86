@@ -9,35 +9,6 @@ using System.Reflection;
 /// Emulates floppy-drive audio (head-seek and motor-spin sounds) via the
 /// software mixer, using real audio samples loaded from WAV files.
 /// </summary>
-/// <remarks>
-/// <para>
-/// Ported from DOSBox Staging's disk noise emulation
-/// (<c>src/audio/disk_noise.cpp</c>).  The floppy-specific behaviour is:
-/// </para>
-/// <list type="bullet">
-///   <item>Motor spin sound is played once per activation and is not looped.</item>
-///   <item>Up to 9 seek samples are loaded; the selection algorithm gives an 80%
-///         probability to the first two samples and 20% to the rest.</item>
-///   <item>Sequential seek detection: when the same file path is accessed twice
-///         in a row, the first two samples are always used.</item>
-/// </list>
-/// <para>
-/// Sample files are resolved in the following priority order for each name:
-/// <list type="number">
-///   <item>The directory supplied via <paramref name="samplesDirectory"/> (if not null/empty).</item>
-///   <item><c>&lt;AppContext.BaseDirectory&gt;/resources/disk_noises/</c></item>
-///   <item>The process working directory.</item>
-///   <item>The embedded assembly resource (<c>Spice86.Core.DiskNoises.&lt;name&gt;</c>).</item>
-/// </list>
-/// If none of the locations contain the file the corresponding sound is
-/// silently skipped — the emulator continues to work without that sound.
-/// </para>
-/// <para>
-/// <b>Sample file names</b> (22 050 Hz mono 16-bit PCM WAV):
-/// <c>fdd_spinup.wav</c>, <c>fdd_spin.wav</c>,
-/// <c>fdd_seek1.wav</c> … <c>fdd_seek9.wav</c>.
-/// </para>
-/// </remarks>
 public sealed class FloppySoundEmulator {
     private const int SampleRateHz = 22050;
     private const int MaxSeekSamples = 9;

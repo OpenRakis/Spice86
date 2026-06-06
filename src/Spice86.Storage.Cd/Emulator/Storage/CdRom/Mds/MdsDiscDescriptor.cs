@@ -1,12 +1,9 @@
-using System.Collections.Generic;
-
 namespace Spice86.Shared.Emulator.Storage.CdRom.Mds;
 
 /// <summary>
 /// Immutable parsed representation of an MDS file (Alcohol 120% disc descriptor).
 /// Contains exactly the tracks of the first session — multi-session discs are
-/// truncated to the first session to mirror dosbox-staging's
-/// <c>LoadMdsFile</c> behaviour.
+/// truncated to the first session.
 /// </summary>
 public sealed class MdsDiscDescriptor
 {

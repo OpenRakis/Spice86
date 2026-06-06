@@ -310,7 +310,7 @@ internal sealed partial class DosBatchExecutionEngine {
 
     /// <summary>
     /// Echoes a batch line to standard output, prefixed with the current DOS prompt
-    /// (e.g. <c>C:\GAMES&gt;</c>). This mirrors the MS-DOS / dosbox-staging behavior of
+    /// (e.g. <c>C:\GAMES&gt;</c>). This mirrors the MS-DOS behavior of
     /// displaying each batch line before executing it when ECHO is ON.
     /// </summary>
     private void EchoBatchLine(string expandedLine) {
@@ -1593,8 +1593,7 @@ internal sealed partial class DosBatchExecutionEngine {
     }
 
     /// <summary>
-    /// Handles the <c>SUBST</c> internal command, matching DOSBox Staging's
-    /// <c>SUBST [drive: path]</c> / <c>SUBST drive: /D</c>:
+    /// Handles the <c>SUBST</c> internal command
     /// <list type="bullet">
     ///   <item><c>SUBST</c> with no arguments lists active SUBST drives.</item>
     ///   <item><c>SUBST X: \DOS\PATH</c> creates a virtual drive X: that maps
@@ -1688,8 +1687,7 @@ internal sealed partial class DosBatchExecutionEngine {
 
     /// <summary>
     /// Changes the current DOS drive to the specified letter.
-    /// Mirrors COMMAND.COM's internal drive-change handling in DOSBox Staging:
-    /// typing <c>X:</c> at a prompt (or in a batch file) switches the default drive.
+    /// Typing <c>X:</c> at a prompt (or in a batch file) switches the default drive.
     /// </summary>
     /// <param name="driveLetter">The upper-case drive letter to select.</param>
     internal void ChangeDrive(char driveLetter) {

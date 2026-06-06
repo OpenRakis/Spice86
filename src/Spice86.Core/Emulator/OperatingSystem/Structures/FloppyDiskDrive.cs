@@ -12,7 +12,7 @@ using System.Linq;
 /// When the current image contains a FAT volume, <see cref="Image"/> exposes a derived filesystem view.
 /// When more than one image is registered, Ctrl-F4 disc switching cycles through them.
 /// </summary>
-public class FloppyDiskDrive : VirtualDrive, System.IDisposable {
+public sealed class FloppyDiskDrive : VirtualDrive, System.IDisposable {
     private readonly List<(byte[] Data, string Path, bool IsDirty, int PartitionByteOffset)> _images = new();
     private int _currentIndex;
 
@@ -175,8 +175,7 @@ public class FloppyDiskDrive : VirtualDrive, System.IDisposable {
     }
 
     /// <summary>
-    /// Flushes any dirty images back to disk so guest-side writes survive an unmount or emulator exit.
-    /// Mirrors dosbox-staging's drive_fat destructor behaviour.
+    /// Flushes any dirty images back to disk.
     /// </summary>
     public void Dispose() {
         FlushDirtyImagesToDisk();

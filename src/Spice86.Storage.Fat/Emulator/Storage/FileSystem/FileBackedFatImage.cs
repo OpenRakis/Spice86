@@ -9,7 +9,7 @@ using System.IO;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Mirrors the on-pause / on-exit write-back strategy used by dosbox-staging
+/// The on-pause / on-exit write-back strategy is the same as the one used by dosbox-staging
 /// for FAT-backed mounted images (see <c>src/dos/drive_fat.cpp</c>): the
 /// image bytes are loaded once, mutated through the FAT API, and serialized
 /// back via <see cref="MutableFatFileSystem.CommitChanges"/>.

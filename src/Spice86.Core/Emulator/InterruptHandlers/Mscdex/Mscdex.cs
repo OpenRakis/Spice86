@@ -15,21 +15,19 @@ using System.Linq;
 
 /// <summary>
 /// Handles MSCDEX INT 2Fh AH=15h subfunctions, dispatching on the AL register.
-/// This handler is owned by the <c>Dos</c> class and must not be treated as a standalone service.
 /// </summary>
 public sealed class Mscdex {
     private const ushort MscdexVersionMajor = 2;
     private const ushort MscdexVersionMinor = 23;
 
-    /// <summary>Magic value written to BX for the drive-check subfunction, per DOSBox Staging (always written, even on miss).</summary>
+    /// <summary>Magic value written to BX for the drive-check subfunction (always written, even on miss).</summary>
     private const ushort DriveCheckMagicBx = 0xADAD;
 
-    /// <summary>Magic value written to AX when the drive-check subfunction finds a CD-ROM drive (DOSBox Staging case 0x150B).</summary>
+    /// <summary>Magic value written to AX when the drive-check subfunction finds a CD-ROM drive.</summary>
     private const ushort DriveCheckMagicAxValid = 0x5AD8;
 
     /// <summary>
-    /// AX value returned for invalid/unsupported operations, matching DOSBox Staging's
-    /// <c>MSCDEX_ERROR_INVALID_FUNCTION = 1</c>.
+    /// AX value returned for invalid/unsupported operations
     /// </summary>
     private const ushort MscdexInvalidFunctionError = 1;
 
@@ -50,19 +48,17 @@ public sealed class Mscdex {
 
     /// <summary>
     /// AX error code returned by <see cref="ReadVolumeTableOfContents"/> for a Primary Volume Descriptor,
-    /// matching DOSBox Staging's <c>error = (type == 1) ? 1 : …</c>.
     /// </summary>
     private const ushort VolumeDescriptorAxPrimary = 0x0001;
 
     /// <summary>
     /// AX error code returned by <see cref="ReadVolumeTableOfContents"/> for a VD Set Terminator,
-    /// matching DOSBox Staging's <c>… : (type == 0xFF) ? 0xFF : 0</c>.
     /// </summary>
     private const ushort VolumeDescriptorAxTerminator = 0x00FF;
 
     /// <summary>
     /// DX value returned by <see cref="GetSetVolumeDescriptorPreference"/> for a get request (BX=0),
-    /// meaning "prefer Primary Volume Descriptor". Matches DOSBox Staging <c>reg_dx = 0x100</c>.
+    /// meaning "prefer Primary Volume Descriptor".</c>.
     /// </summary>
     private const ushort VolumeDescriptorPreferencePrimaryValue = 0x0100;
 
@@ -79,7 +75,7 @@ public sealed class Mscdex {
     private const ushort StatusError = 0x8000;
     private const ushort StatusAudioPlaying = 0x0200;
 
-    // Device status word bits (per DOSBox Staging dos_mscdex.cpp CMscdex::GetDeviceStatus)
+    // Device status word bits
     private const uint DeviceStatusDoorOpen = 1u << 0;
     private const uint DeviceStatusDoorLocked = 1u << 1;
     private const uint DeviceStatusSupportsRawCooked = 1u << 2;
@@ -93,7 +89,6 @@ public sealed class Mscdex {
     /// Red Book pre-gap offset in frames (2 seconds × 75 frames/second).
     /// LBA 0 on a CD corresponds to absolute frame 150; adding this when converting
     /// LBA → MSF gives the correct Red Book position for IOCTL audio responses,
-    /// matching DOSBox Staging's <c>REDBOOK_FRAME_PADDING = 150</c>.
     /// </summary>
     private const int RedbookPreGapFrames = 150;
 
@@ -189,7 +184,6 @@ public sealed class Mscdex {
 
     /// <summary>
     /// Reads <see cref="State.AL"/> and dispatches to the appropriate MSCDEX subfunction.
-    /// Clears the carry flag before dispatch, matching DOSBox Staging's CALLBACK_SCF(false).
     /// </summary>
     public void Dispatch() {
         _state.CarryFlag = false;
@@ -210,8 +204,7 @@ public sealed class Mscdex {
                 break;
             case 0x06:
             case 0x07:
-                // Debugging on/off — not functional in production MSCDEX; do nothing.
-                // Matches DOSBox Staging which silently breaks on these.
+                // Debugging on/off — not functional; do nothing.
                 break;
             case 0x08:
                 AbsoluteDiskRead();
@@ -220,7 +213,7 @@ public sealed class Mscdex {
                 AbsoluteDiskWrite();
                 break;
             case 0x0A:
-                // Reserved — matches DOSBox Staging case 0x150A which does nothing.
+                // Reserved; which does nothing.
                 break;
             case 0x0B:
                 CdRomDriveCheck();
@@ -248,8 +241,7 @@ public sealed class Mscdex {
 
     /// <summary>
     /// AL=0x00: Returns the number of registered CD-ROM drives and the index of the first one.
-    /// Sets BX = drive count, CX = first drive index (or 0 if none), and AL = 0xFF,
-    /// matching DOSBox Staging's MSCDEX_Handler case 0x1500.
+    /// Sets BX = drive count, CX = first drive index (or 0 if none), and AL = 0xFF.
     /// </summary>
     private void GetNumberOfCdRomDrives() {
         _state.BX = (ushort)_drives.Count;
@@ -280,8 +272,7 @@ public sealed class Mscdex {
     /// AL=0x02/0x03/0x04: Returns an empty (null-terminated) string for copyright, abstract,
     /// and bibliographic file names.
     /// CX = drive index; ES:BX = buffer to receive the filename.
-    /// If the drive is not found, sets carry and AX = <see cref="MscdexErrorCode.InvalidDrive"/>,
-    /// matching DOSBox Staging's check in case 0x1502-0x1504.
+    /// If the drive is not found, sets carry and AX = <see cref="MscdexErrorCode.InvalidDrive"/>.
     /// </summary>
     private void GetFileNameInfo() {
         int driveIndex = _state.CX;
@@ -297,10 +288,10 @@ public sealed class Mscdex {
 
     /// <summary>
     /// AL=0x05: Reads a volume descriptor sector from the disc and copies it to the caller's buffer.
-    /// CX = drive index (0-based, matches DOSBox Staging <c>reg_cx</c>);
-    /// DX = descriptor index (0 = PVD, matches DOSBox Staging <c>reg_dx</c>).
+    /// CX = drive index
+    /// DX = descriptor index (0 = PVD).
     /// On success, sets AX = 1 for PVD (type byte 0x01), AX = 0xFF for VD set terminator
-    /// (type byte 0xFF), or AX = 0 for HSFS/unrecognised — matching DOSBox Staging's
+    /// (type byte 0xFF), or AX = 0 for HSFS/unrecognised —
     /// <c>error = (type == 1) ? 1 : (type == 0xFF) ? 0xFF : 0; reg_ax = error;</c>.
     /// </summary>
     private void ReadVolumeTableOfContents() {
@@ -336,8 +327,6 @@ public sealed class Mscdex {
     /// <summary>
     /// AL=0x08: Reads one or more sectors from the CD-ROM drive into the caller's buffer.
     /// CX = drive index; SI:DI = 32-bit starting LBA (SI is the high word); DX = sector count; ES:BX = destination buffer.
-    /// Matches DOSBox Staging's case 0x1508 which uses <c>sector = (reg_si &lt;&lt; 16) + reg_di</c>,
-    /// <c>reg_cx</c> for the drive, and <c>reg_dx</c> for the sector count.
     /// </summary>
     private void AbsoluteDiskRead() {
         int driveIndex = _state.CX;
@@ -364,8 +353,6 @@ public sealed class Mscdex {
 
     /// <summary>
     /// AL=0x09: Absolute disk write — always fails because CD-ROMs are read-only.
-    /// Matches DOSBox Staging <c>case 0x1509</c> which returns AX = MSCDEX_ERROR_INVALID_FUNCTION (1)
-    /// and sets the carry flag.
     /// </summary>
     private void AbsoluteDiskWrite() {
         _state.AX = MscdexInvalidFunctionError;
@@ -375,8 +362,6 @@ public sealed class Mscdex {
     /// <summary>
     /// AL=0x0B: Checks whether the drive index in CX corresponds to a known CD-ROM drive.
     /// Writes BX=0xADAD unconditionally; sets AX=0x5AD8 on a match, AX=0x0000 on a miss.
-    /// Matches DOSBox Staging's MSCDEX_Handler case 0x150B:
-    /// <c>reg_ax = IsValidDrive(reg_cx) ? 0x5AD8 : 0x0000; reg_bx = 0xADAD;</c>
     /// </summary>
     private void CdRomDriveCheck() {
         int driveIndex = _state.CX;
@@ -412,7 +397,6 @@ public sealed class Mscdex {
     /// Validates the drive via CX. If BX=0 (get), sets DX=0x100 (prefer PVD).
     /// If BX=1 (set), validates DH=1; if DH is not 1, returns invalid-function error.
     /// Any other BX value also returns invalid-function error.
-    /// Matches DOSBox Staging's <c>case 0x150E</c>.
     /// </summary>
     private void GetSetVolumeDescriptorPreference() {
         int driveIndex = _state.CX;
@@ -474,7 +458,7 @@ public sealed class Mscdex {
                 break;
             case MscdexDeviceDriverCommand.DeviceOpen:
             case MscdexDeviceDriverCommand.DeviceClose:
-                // Device open/close — no-op, matching DOSBox Staging case 0x0D/0x0E
+                // Device open/close — no-op
                 WriteRequestStatus(requestBase, driveEntry, StatusDone);
                 break;
             case MscdexDeviceDriverCommand.ReadLong:
@@ -554,8 +538,6 @@ public sealed class Mscdex {
                 break;
             case MscdexIoctlInputCode.SectorSize:
                 // 0x07: mode byte at buffer+1 (0=cooked 2048, 1=raw 2352); write sector size word at buffer+2.
-                // Per DOSBox Staging dos_mscdex.cpp MSCDEX_IOCTL_Input case 0x07, any other mode byte
-                // returns invalid-function (0x03).
                 byte sectorSizeMode = _memory.UInt8[bufferAddress + 1];
                 if (sectorSizeMode == 0) {
                     _memory.UInt16[bufferAddress + 2] = CookedSectorSize;
@@ -609,10 +591,10 @@ public sealed class Mscdex {
                 drive.Eject();
                 break;
             case MscdexIoctlOutputCode.LockDoor:
-                // Lock/unlock door — no-op (image drives cannot be physically locked)
+                // Lock/unlock door — no-op
                 break;
             case MscdexIoctlOutputCode.ResetDrive:
-                // Reset drive: stop audio playback, matching DOSBox Staging case 0x02
+                // Reset drive: stop audio playback
                 StopAudio(driveEntry);
                 break;
             case MscdexIoctlOutputCode.ChannelControl:
@@ -707,7 +689,6 @@ public sealed class Mscdex {
         }
         if (addressMode == 1) {
             // Red Book MSF mode: write fr, sec, min at buffer+2,3,4; 0x00 at buffer+5
-            // Matches DOSBox Staging IOCTL 0x01 Red Book branch: writeb fr, sec, min, 0x00
             int totalFrames = currentLba + RedbookPreGapFrames;
             byte fr = (byte)(totalFrames % 75);
             int totalSeconds = totalFrames / 75;
@@ -719,14 +700,12 @@ public sealed class Mscdex {
             _memory.UInt8[bufferAddress + 5] = 0;
             return true;
         }
-        // Per DOSBox Staging dos_mscdex.cpp MSCDEX_IOCTL_Input case 0x01, an addr_mode
-        // other than 0 (HSG) or 1 (Red Book) returns invalid-function (0x03).
+        // addressMode other than 0 (HSG) or 1 (Red Book) returns invalid-function (0x03).
         return false;
     }
 
     private void WriteChannelControl(uint bufferAddress) {
-        // Write identity channel control (each channel maps to itself at full volume),
-        // matching DOSBox Staging IOCTL 0x04 default state.
+        // Write identity channel control (each channel maps to itself at full volume)
         for (int chan = 0; chan < ChannelCount; chan++) {
             _memory.UInt8[bufferAddress + (uint)(chan * 2 + 1)] = _channelOutputMap[chan];
             _memory.UInt8[bufferAddress + (uint)(chan * 2 + 2)] = _channelVolumes[chan];
@@ -734,7 +713,7 @@ public sealed class Mscdex {
     }
 
     private void WriteDeviceStatus(uint bufferAddress, ICdRomDrive drive) {
-        // Layout matches DOSBox Staging dos_mscdex.cpp CMscdex::GetDeviceStatus:
+        // Layout:
         //   bit 0  : tray/door open
         //   bit 1  : door locked
         //   bit 2  : supports both raw and cooked sectors (always set)
@@ -766,7 +745,7 @@ public sealed class Mscdex {
         DiscInfo info = drive.GetDiscInfo();
         _memory.UInt8[bufferAddress + 1] = (byte)info.FirstTrack;
         _memory.UInt8[bufferAddress + 2] = (byte)info.LastTrack;
-        // Lead-out in Red Book MSF layout matching DOSBox Staging MSCDEX_IOCTL_Input case 0x0A:
+        // Lead-out in Red Book MSF layout for case 0x0A:
         //   writeb(buffer+3, leadOut.fr)   ← frame at lowest address
         //   writeb(buffer+4, leadOut.sec)
         //   writeb(buffer+5, leadOut.min)
@@ -789,7 +768,7 @@ public sealed class Mscdex {
             _memory.UInt8[bufferAddress + 6] = 0;
             return;
         }
-        // Track start in Red Book MSF, matching DOSBox Staging MSCDEX_IOCTL_Input case 0x0B:
+        // Track start in Red Book MSF, case 0x0B:
         //   writeb(buffer+2, start.fr)   ← frame at offset 2
         //   writeb(buffer+3, start.sec)
         //   writeb(buffer+4, start.min)
@@ -809,7 +788,7 @@ public sealed class Mscdex {
         SubchannelQSynthesizer synthesizer = new();
         SubchannelQData q = synthesizer.Compute(toc, audioStatus.CurrentLba);
 
-        // Write subchannel response matching DOSBox Staging MSCDEX_IOCTL_Input case 0x0C:
+        // Write subchannel response case 0x0C:
         //   writeb(buffer+1, attr)
         //   writeb(buffer+2, track_BCD)
         //   writeb(buffer+3, index)
@@ -830,7 +809,7 @@ public sealed class Mscdex {
 
     private void WriteUpcCode(uint bufferAddress, ICdRomDrive drive) {
         string? upc = drive.GetUpc();
-        // Write UPC response matching DOSBox Staging MSCDEX_IOCTL_Input case 0x0E:
+        // Write UPC response case 0x0E:
         //   writeb(buffer+1, attr)
         //   writeb(buffer+2..8, 7 BCD bytes of UPC)
         //   writeb(buffer+9, 0x00)
@@ -851,7 +830,7 @@ public sealed class Mscdex {
         MscdexAudioState sessionState = GetAudioState(driveEntry);
         bool isPaused = audioStatus.Status == CdAudioStatus.Paused;
         bool hasActiveSession = audioStatus.Status == CdAudioStatus.Playing || isPaused;
-        // Matching DOSBox Staging MSCDEX_IOCTL_Input case 0x0F:
+        // Layout, case 0x0F:
         //   writeb(buffer+1, pause)          ← single byte, NOT uint16
         //   (buffer+2 not written)
         //   writeb(buffer+3..5, start min/sec/fr) + writeb(buffer+6, 0x00)
@@ -946,7 +925,6 @@ public sealed class Mscdex {
 
     /// <summary>
     /// Logs a warning and returns an error for any unrecognised AL subfunction value.
-    /// Matches DOSBox Staging's default case which returns <c>MSCDEX_ERROR_INVALID_FUNCTION = 1</c>.
     /// </summary>
     private void HandleUnknownSubfunction() {
         if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
@@ -978,8 +956,7 @@ public sealed class Mscdex {
 
     /// <summary>
     /// Converts a logical block address to a 3-tuple of (minute, second, frame) in Red Book MSF format.
-    /// The 150-frame pre-gap offset is added before conversion, so LBA 0 maps to MSF 00:02:00,
-    /// matching DOSBox Staging's <c>FRAMES_TO_MSF(lba + REDBOOK_FRAME_PADDING, …)</c> pattern.
+    /// The 150-frame pre-gap offset is added before conversion, so LBA 0 maps to MSF 00:02:00.
     /// </summary>
     private static (byte min, byte sec, byte frame) LbaToRedBookMsf(int lba) {
         return LbaToMsf(lba + RedbookPreGapFrames);

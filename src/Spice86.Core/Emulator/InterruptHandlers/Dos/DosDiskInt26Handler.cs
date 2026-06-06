@@ -54,7 +54,6 @@ public class DosDiskInt26Handler : InterruptHandler {
     /// <inheritdoc />
     /// <remarks>
     /// INT 25h/26h use RETF instead of IRET, leaving FLAGS on the stack for the caller to POPF.
-    /// This matches real DOS and DOSBox Staging behaviour.
     /// </remarks>
     public override SegmentedAddress WriteAssemblyInRam(MemoryAsmWriter memoryAsmWriter) {
         SegmentedAddress handlerAddress = memoryAsmWriter.CurrentAddress;

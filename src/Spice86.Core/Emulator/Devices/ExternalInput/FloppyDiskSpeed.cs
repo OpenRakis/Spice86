@@ -1,8 +1,11 @@
 namespace Spice86.Core.Emulator.Devices.ExternalInput;
 
 /// <summary>
-/// DOSBox-compatible floppy transfer speed presets.
+/// Floppy transfer speed presets.
 /// </summary>
+/// <remarks>
+/// Ported from DOSBox Staging config file presets
+/// </remarks>
 public enum FloppyDiskSpeed {
     /// <summary>
     /// Do not add any transfer delay.

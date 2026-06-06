@@ -4,8 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 
 /// <summary>
-/// Tokenises MOUNT / IMGMOUNT argument strings respecting double-quoted tokens,
-/// matching the behaviour of the DOSBox Staging shell tokeniser.
+/// Tokenises MOUNT / IMGMOUNT argument strings respecting double-quoted tokens.
 /// </summary>
 internal static class BatchArgumentParser {
     /// <summary>

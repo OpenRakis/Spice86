@@ -8,7 +8,7 @@ using System;
 using System.Threading;
 
 /// <summary>
-/// Applies DOSBox-compatible floppy I/O timing to image-backed transfers.
+/// Applies floppy I/O timing to image-backed transfers.
 /// </summary>
 public sealed class FloppyDiskTimingService {
     private const int BytesPerKilobyte = 1024;
@@ -28,7 +28,7 @@ public sealed class FloppyDiskTimingService {
     /// <param name="state">The CPU state used when the emulated clock is cycle-based.</param>
     /// <param name="clock">The emulated clock that defines the active timing model.</param>
     /// <param name="scheduler">The shared device scheduler that must continue running during disk waits.</param>
-    /// <param name="speed">The DOSBox-compatible floppy speed preset to apply.</param>
+    /// <param name="speed">The floppy controller speed preset to apply.</param>
     public FloppyDiskTimingService(State state, IEmulatedClock clock, DeviceScheduler scheduler, FloppyDiskSpeed speed) {
         _state = state;
         _clock = clock;
@@ -40,7 +40,7 @@ public sealed class FloppyDiskTimingService {
     /// Schedules the floppy I/O delay for the specified number of transferred sectors.
     /// </summary>
     /// <param name="sectorCount">The number of 512-byte sectors involved in the transfer.</param>
-    /// <returns>The DOSBox-compatible delay, in milliseconds.</returns>
+    /// <returns>The applied busy-wait delay, in milliseconds.</returns>
     public double ScheduleFloppyIoDelay(int sectorCount) {
         _scheduler.ProcessEvents();
 

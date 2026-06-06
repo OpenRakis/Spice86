@@ -28,7 +28,7 @@ public class CdRomParityTests {
 
         // Assert
         bytesRead.Should().Be(0,
-            "DOSBox rejects raw 2352-byte reads from cooked-only virtual ISO tracks");
+            "reject raw 2352-byte reads from cooked-only virtual ISO tracks");
     }
 
     [Fact]
@@ -44,7 +44,7 @@ public class CdRomParityTests {
 
         // Assert
         bytesRead.Should().Be(0,
-            "DOSBox rejects raw 2352-byte reads from plain ISO images because they only expose cooked 2048-byte sectors");
+            "reject raw 2352-byte reads from plain ISO images because they only expose cooked 2048-byte sectors");
     }
 
     [Fact]
@@ -68,9 +68,9 @@ public class CdRomParityTests {
         initialMediaChanged.Should().BeTrue(
             "newly mounted images should expose the initial media-changed notification before the eject check runs");
         drive.MediaState.IsDoorOpen.Should().BeFalse(
-            "DOSBox image-backed drives do not transition to an open tray state on eject requests");
+            "image-backed drives do not transition to an open tray state on eject requests");
         postEjectMediaChanged.Should().BeFalse(
-            "DOSBox image-backed drives treat eject as a no-op rather than a media change");
+            "image-backed drives treat eject as a no-op rather than a media change");
     }
 
     [Fact]

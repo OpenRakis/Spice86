@@ -14,7 +14,7 @@ public static class CdRomImageFactory {
     /// Opens the disc image at <paramref name="imagePath"/>, choosing the implementation based on file
     /// extension and content sniffing. Recognised extensions are <c>.cue</c>, <c>.mds</c>, <c>.iso</c>,
     /// and raw dumps (<c>.bin</c>, <c>.img</c>, <c>.gog</c>). Raw dumps are accepted with or without a
-    /// sibling <c>.cue</c> file, mirroring DOSBox behaviour: when no sibling is present the file is
+    /// sibling <c>.cue</c> file: when no sibling is present the file is
     /// sniffed for an ISO 9660 signature, then its length is matched against a known sector size, and
     /// finally MODE1/2352 is assumed as a permissive last resort. Any unknown extension is treated the
     /// same way so the call never fails for a file that exists.
