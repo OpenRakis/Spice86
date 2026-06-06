@@ -226,7 +226,7 @@ public class MscdexDeviceRequestTests {
             State = new State(CpuModel.INTEL_80286);
             Memory = new Memory(new(), new Ram(0x200000), new A20Gate(), new RealModeMmu386(), false);
             ILoggerService loggerService = Substitute.For<ILoggerService>();
-            Mscdex = new Mscdex(State, Memory, loggerService);
+            Mscdex = new Mscdex(State, Memory, loggerService, new DriveActivityNotifier());
             Mscdex.AddDrive(new MscdexDriveEntry('D', 3, drive));
             RequestBaseAddress = MemoryUtils.ToPhysicalAddress(RequestSegment, 0);
             BufferBaseAddress = MemoryUtils.ToPhysicalAddress(BufferSegment, 0);

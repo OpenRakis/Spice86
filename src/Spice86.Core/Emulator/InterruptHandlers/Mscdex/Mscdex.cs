@@ -95,7 +95,7 @@ public sealed class Mscdex {
     private readonly State _state;
     private readonly IMemory _memory;
     private readonly ILoggerService _loggerService;
-    private readonly IDriveActivityNotifier? _activityNotifier;
+    private readonly IDriveActivityNotifier _activityNotifier;
     private readonly Dictionary<char, MscdexAudioState> _audioStates = new();
 
     // Audio channel output mapping: channel i routes to channel _channelOutputMap[i]
@@ -107,17 +107,6 @@ public sealed class Mscdex {
     public IReadOnlyList<MscdexDriveEntry> Drives => _drives;
 
     /// <summary>
-    /// Initialises a new <see cref="Mscdex"/> with no registered drives.
-    /// Call <see cref="AddDrive"/> to register CD-ROM drives after construction.
-    /// </summary>
-    /// <param name="state">The CPU register state.</param>
-    /// <param name="memory">The memory bus.</param>
-    /// <param name="loggerService">The logger service.</param>
-    public Mscdex(State state, IMemory memory, ILoggerService loggerService)
-        : this(state, memory, loggerService, null) {
-    }
-
-    /// <summary>
     /// Initialises a new <see cref="Mscdex"/> with no registered drives and an activity notifier.
     /// Call <see cref="AddDrive"/> to register CD-ROM drives after construction.
     /// </summary>
@@ -126,7 +115,7 @@ public sealed class Mscdex {
     /// <param name="loggerService">The logger service.</param>
     /// <param name="activityNotifier">Notifier that surfaces per-drive read activity to the UI (may be null).</param>
     public Mscdex(State state, IMemory memory, ILoggerService loggerService,
-        IDriveActivityNotifier? activityNotifier) {
+        IDriveActivityNotifier activityNotifier) {
         _state = state;
         _memory = memory;
         _loggerService = loggerService;
@@ -179,7 +168,6 @@ public sealed class Mscdex {
 
         return false;
     }
-
 
     /// <summary>
     /// Reads <see cref="State.AL"/> and dispatches to the appropriate MSCDEX subfunction.
