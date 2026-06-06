@@ -284,6 +284,18 @@ byte[] pvdSector = new byte[2048];
 disc.Read(16, pvdSector, CdSectorMode.CookedData2048);
 ```
 
+## DOS CDDA Assembly Example
+
+A standalone 16-bit DOS MSCDEX CDDA player example (ASM + COM + launcher batch)
+is provided here:
+
+- `examples/cdda-assembly/cdda_mscdex_loop.asm`
+- `examples/cdda-assembly/CDDA.COM`
+- `examples/cdda-assembly/launch_mw2_cdda.bat`
+- `examples/cdda-assembly/README.md`
+
+This is example content only and is not part of the assembly build output.
+
 ---
 
 ## License
