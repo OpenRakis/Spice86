@@ -39,7 +39,7 @@ internal sealed class FloppyDiskNoiseDevice {
 
     private readonly FloppyDiskNoiseMode _mode;
     private readonly Random _random = new();
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
 
     // ---- spin state ----
     private float[] _spinUpSamples = Array.Empty<float>();
