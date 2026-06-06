@@ -9,12 +9,6 @@ few plain enums and value types) and on `Serilog` (for the `ILogger` warning
 sink used by the floppy image builder). It has no I/O backend assumptions
 beyond `byte[]` / `Stream` and the standard `System.IO` file APIs.
 
-The on-disk layout follows the public FAT specification ("FAT: General
-Overview of On-Disk Format", Microsoft EFI FAT specification rev. 1.03,
-December 6 2000) and the VFAT long-file-name extension as described in US
-Patent 5,758,352. The behavioural reference for mounting / write-back is
-dosbox-staging's `src/dos/drive_fat.cpp`.
-
 ---
 
 ## Package contents
@@ -108,12 +102,6 @@ The VFAT LFN extension is implemented for read access:
   name, so callers can fall back to the 8.3 entry when no LFN slots are
   present.
 
-Writing LFN slots is not implemented in this version; new entries created via
-`DirectoryWriter` are written as plain 8.3 entries produced by
-`DosNameConverter`. This is by design: the host workflows targeted by
-Spice86 (FreeDOS, MS-DOS 5/6) do not require LFN write support, and matches
-the dosbox-staging FAT writer scope.
-
 ---
 
 ## Partitioned hard disk images
@@ -200,48 +188,6 @@ Implemented:
 - MBR + first-partition read and validation
 - Pause / exit write-back through `FileBackedFatImage`
 - 1.44 MB FAT12 floppy image synthesis from a host directory
-
-Gaps versus dosbox-staging: none for new code shipped in this assembly.
-The CP437 0x80..0xA4 uppercase mapping used by `DOS_ToUpper` is implemented
-in `DosNameConverter` (ported byte-for-byte from
-`dosbox-staging/src/dos/dos_files.cpp`).
-
----
-
-## Completeness vs. dosbox-staging
-
-dosbox-staging exposes FAT support through `IMGMOUNT` and the `drive_fat`
-backend. The reference for the comparison below is the FAT/MBR code in
-`dosbox-staging/src/dos/drive_fat.cpp`.
-
-| Feature                                | dosbox-staging | Spice86.Storage.Fat |
-|----------------------------------------|----------------|---------------------|
-| FAT12 mount (read/write)               | yes            | yes                 |
-| FAT16 mount (read/write)               | yes            | yes                 |
-| FAT32 mount (read/write)               | yes (read), partial write | yes (in-memory + write-back) |
-| BPB parsing                            | yes            | yes (FAT12/16/32)   |
-| BPB validation                         | best-effort logs | structured `BpbValidationIssue` list |
-| MBR + first partition selection        | yes            | yes                 |
-| Multiple partitions per disk           | first partition only (`drive_fat.cpp:815-832` breaks on first non-zero) | first partition only |
-| LFN / VFAT read                        | yes            | yes                 |
-| LFN / VFAT write                       | no (`drive_fat.cpp:1536` `addDirectoryEntry` writes only 32-byte `direntry`) | no |
-| 1.44 MB FAT12 image synthesis from dir | no             | yes (`VirtualFloppyImage`) |
-| Boot-sector signature check            | yes (0x55 0xAA) | yes                |
-| On-pause / on-exit write-back          | yes            | yes (`FileBackedFatImage`) |
-| Short-name uppercase (CP437 0x80..0xA4 table) | yes (`DOS_ToUpper`) | yes (`DosNameConverter.DosToUpper`) |
-
-Soundness: the FAT12/16/32 codec uses the official on-disk constants (bad
-cluster, EOC marker, value mask) and is covered by the `Spice86.Tests`
-suite, including round-trip tests for `MutableFatFileSystem.CommitChanges`
-and end-to-end mount tests over real `VirtualFloppyImage.Build()` output.
-
-Completeness: read-side and the mount life-cycle are at parity with
-dosbox-staging for the variants targeted by retro DOS workloads (FAT12 and
-FAT16). FAT32 mutation is implemented but should be considered the youngest
-code path. There are no remaining gaps versus dosbox-staging for the scope
-shipped in this assembly.
-
----
 
 ## Example
 

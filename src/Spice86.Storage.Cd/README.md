@@ -26,8 +26,7 @@ Book; ISO 9660 / Joliet sit on top.
 | White   | Video CD (MPEG-1 over Mode 2 Form 2)   | VCD application layout on top of XA                                     | data plumbing only — sectors readable through `Mode2Form2`; no MPEG decoding |
 | Blue    | Enhanced Music CD (CD-EXTRA / CD-Plus) | Multi-session audio + data layout                                       | not supported — multi-session reads are limited to the first session |
 
-ISO 9660 (ECMA-119) and the Joliet supplementary volume descriptor
-(Microsoft, 1995) describe the logical filesystem inside a Yellow Book data
+ISO 9660 and the Joliet supplementary volume descriptor describe the logical filesystem.
 track. Both are parsed by `IsoImage` and used by `CueBinImage` and
 `MdsImage` to expose `PrimaryVolume` / `JolietVolume` metadata.
 
@@ -41,7 +40,7 @@ Namespace root: `Spice86.Shared.Emulator.Storage.CdRom`.
 |----------------|---------------------------------------|---------------------------------|-----------------------------------------------------------------------|
 | `.iso`         | Plain ISO 9660 image                  | `IsoImage`                      | Single Mode 1 / 2048 data track. Parses PVD + optional Joliet SVD.    |
 | `.cue` + `.bin`| CUE sheet with one or more BIN files  | `CueBinImage`                   | Multi-track. Supports `MODE1/2048`, `MODE1/2352`, `MODE2/2336`, `MODE2/2352`, `AUDIO`, plus `WAVE` FILE references. |
-| `.mds` + `.mdf`| Alcohol 120% disc descriptor          | `MdsImage`                      | Parses MEDIA DESCRIPTOR header + session + track blocks. Multi-session images are truncated to session 1 (dosbox-staging parity). |
+| `.mds` + `.mdf`| Alcohol 120% disc descriptor          | `MdsImage`                      | Parses MEDIA DESCRIPTOR header + session + track blocks. Multi-session images are truncated to session 1. |
 
 All readers expose the same `ICdRomImage` interface:
 
@@ -91,7 +90,7 @@ API always returns user data in the requested mode.
 ## CUE/BIN parser
 
 `CueSheetParser.Parse(cuePath)` is a tolerant CUE sheet parser that
-implements the directives required by dosbox-staging and real-world DOS
+implements the directives required by real-world DOS
 game images:
 
 - `CATALOG <upc-ean>` (13 ASCII digits) — exposed as
@@ -127,9 +126,6 @@ CUE parser will then accept the corresponding `FILE ... <TYPE>` references.
 and binds the resolved tracks to one or more `.mdf` data files via
 `FileBackedDataSource`.
 
-The on-disk MDS layout matches the format documented in dosbox-staging's
-`cdrom_mds.h` (originally de-glib'd from cdemu / libmirage):
-
 - 88-byte header. Validated by `MdsParser.Signature`
   (`"MEDIA DESCRIPTOR"`).
 - Session block (24 bytes) at `session_block_offset`. `num_all_blocks`
@@ -138,13 +134,10 @@ The on-disk MDS layout matches the format documented in dosbox-staging's
   in sectors) and a 16-byte footer (filename pointer, ANSI/UTF-16 flag).
 - `MdsTrackMode` recognises Red Book audio (attribute 0x00), Mode 1 data
   (attribute 0x40, mode2 = false) and Mode 2 data (attribute 0x40,
-  mode2 = true). DVD-only XA forms 4/5/6 are rejected, matching
-  dosbox-staging's `set_track_mode`.
+  mode2 = true). DVD-only XA forms 4/5/6 are rejected
 - Non-track entries (point &lt; 1 or &gt; 99) are skipped.
 - A synthetic lead-out entry is appended after the last track so callers
   can iterate up to the end of the disc.
-- Multi-session MDS files are truncated to the first session
-  (dosbox-staging parity).
 
 `*.mdf` filenames inside the descriptor resolve relative to the directory
 that contains the `.mds`. A footer filename of `"*.mdf"` is rewritten to
@@ -216,55 +209,6 @@ Implemented:
 - Sector-level `Read(lba, span, mode)` API on all image types.
 - UPC/EAN catalogue passthrough.
 - In-memory ISO image construction via `VirtualIsoImage`.
-
-Gaps versus dosbox-staging: none for the DOS workload in scope. Compressed
-CDDA decoding (FLAC / OGG Vorbis / Opus / MP3) is intentionally left as an
-`IAudioCodecFactory` extension point; dosbox-staging routes those file
-types through SDL_sound (`cdrom_image.cpp:206` `Sound_NewSampleFromFile`,
-`:412` `Sound_Decode_Direct`), which is a separate native dependency that
-this assembly does not adopt.
-
----
-
-## Completeness vs. dosbox-staging
-
-Reference: `dosbox-staging/src/dos/cdrom_image.cpp` and `cdrom_mds.h`. The
-load entry point in dosbox-staging is
-`LoadMdsFile || LoadCueSheet || LoadIsoFile`; `CdRomImageFactory.Open`
-dispatches on extension for the same three formats.
-
-| Feature                                  | dosbox-staging | Spice86.Storage.Cd |
-|------------------------------------------|----------------|--------------------|
-| `.iso` (Mode 1 / 2048 single track)      | yes            | yes                |
-| `.cue` / `.bin` (multi-track)            | yes            | yes                |
-| `MODE1/2048` track                       | yes            | yes                |
-| `MODE1/2352` track                       | yes            | yes                |
-| `MODE2/2336` track                       | yes            | yes                |
-| `MODE2/2352` track (XA Form 1)           | yes            | yes                |
-| `AUDIO` track (Red Book)                 | yes            | yes                |
-| `PREGAP` / `POSTGAP`                     | yes            | yes                |
-| `INDEX 00`-derived implicit pregap       | yes            | yes                |
-| `CATALOG` UPC/EAN                        | yes            | yes                |
-| `ISRC`                                   | yes (ignored)  | yes (ignored)      |
-| `.mds` / `.mdf` (Alcohol 120%)           | yes            | yes                |
-| Multi-session                            | first session only | first session only |
-| Joliet SVD                               | yes            | yes                |
-| FILE WAVE                                | yes            | yes                |
-| Compressed CDDA codecs (FLAC/OGG/OPUS/MP3) | yes (via SDL_sound, `cdrom_image.cpp:206`) | extension point via `IAudioCodecFactory` |
-| Sector-level `Read(lba, mode)`           | yes            | yes                |
-
-Soundness: the CUE/MDS parsers are line-/byte-faithful to the dosbox-staging
-reference and are covered by integration tests over real disc images
-(see `Spice86.Tests/Emulator/Storage/...`). Sector framing is verified by
-round-tripping Mode 1 / Mode 2 / Audio sectors.
-
-Completeness: the "everyday" CD-ROM surface used by DOS games — single
-session, ISO 9660 + Joliet, CUE/BIN with audio tracks, MDS/MDF, WAV CDDA —
-is at parity with dosbox-staging. No remaining gaps versus dosbox-staging
-for the in-scope DOS workload; compressed CDDA decoding is intentionally an
-`IAudioCodecFactory` extension point for downstream consumers.
-
----
 
 ## Example
 
