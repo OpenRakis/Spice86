@@ -185,8 +185,8 @@ public sealed class Mscdex {
     /// <summary>
     /// Reads <see cref="State.AL"/> and dispatches to the appropriate MSCDEX subfunction.
     /// </summary>
-    public void Dispatch() {
-        _state.CarryFlag = false;
+    /// <returns><see langword="true" /> if an error occured. <see langword="false"> otherwise.</returns>
+    public bool Dispatch() {
         switch (_state.AL) {
             case 0x00:
                 GetNumberOfCdRomDrives();
@@ -197,21 +197,17 @@ public sealed class Mscdex {
             case 0x02:
             case 0x03:
             case 0x04:
-                GetFileNameInfo();
-                break;
+                return GetFileNameInfo();
             case 0x05:
-                ReadVolumeTableOfContents();
-                break;
+                return ReadVolumeTableOfContents();
             case 0x06:
             case 0x07:
                 // Debugging on/off — not functional; do nothing.
                 break;
             case 0x08:
-                AbsoluteDiskRead();
-                break;
+                return AbsoluteDiskRead();
             case 0x09:
-                AbsoluteDiskWrite();
-                break;
+                return AbsoluteDiskWrite();
             case 0x0A:
                 // Reserved; which does nothing.
                 break;
@@ -225,25 +221,23 @@ public sealed class Mscdex {
                 GetCdRomDriveLetters();
                 break;
             case 0x0E:
-                GetSetVolumeDescriptorPreference();
-                break;
+                return GetSetVolumeDescriptorPreference();
             case 0x0F:
-                GetDirectoryEntry();
-                break;
+                return GetDirectoryEntry();
             case 0x10:
                 SendDeviceDriverRequest();
                 break;
             default:
-                HandleUnknownSubfunction();
-                break;
+                return HandleUnknownSubfunction();
         }
+        return false;
     }
 
     /// <summary>
     /// AL=0x00: Returns the number of registered CD-ROM drives and the index of the first one.
     /// Sets BX = drive count, CX = first drive index (or 0 if none), and AL = 0xFF.
     /// </summary>
-    private void GetNumberOfCdRomDrives() {
+    public void GetNumberOfCdRomDrives() {
         _state.BX = (ushort)_drives.Count;
         _state.CX = 0;
         if (_drives.Count > 0) {
@@ -256,7 +250,7 @@ public sealed class Mscdex {
     /// AL=0x01: Fills the caller's buffer at ES:BX with a 5-byte entry per drive
     /// (subunit byte + 4-byte placeholder far pointer to the device driver header).
     /// </summary>
-    private void GetCdRomDriveDeviceList() {
+    public void GetCdRomDriveDeviceList() {
         uint bufferAddress = MemoryUtils.ToPhysicalAddress(_state.ES, _state.BX);
         for (int i = 0; i < _drives.Count; i++) {
             uint entryAddress = bufferAddress + (uint)i * DeviceListEntrySize;
@@ -274,16 +268,17 @@ public sealed class Mscdex {
     /// CX = drive index; ES:BX = buffer to receive the filename.
     /// If the drive is not found, sets carry and AX = <see cref="MscdexErrorCode.InvalidDrive"/>.
     /// </summary>
-    private void GetFileNameInfo() {
+    /// <returns><see langword="true" /> if an error occured. <see langword="false"> otherwise.</returns>
+    public bool GetFileNameInfo() {
         int driveIndex = _state.CX;
         MscdexDriveLookup driveLookup = GetDriveByIndex(driveIndex);
         if (!driveLookup.IsPresent) {
-            _state.CarryFlag = true;
             _state.AX = (ushort)MscdexErrorCode.InvalidDrive;
-            return;
+            return true;
         }
         uint bufferAddress = MemoryUtils.ToPhysicalAddress(_state.ES, _state.BX);
         _memory.UInt8[bufferAddress] = 0;
+        return false;
     }
 
     /// <summary>
@@ -294,13 +289,13 @@ public sealed class Mscdex {
     /// (type byte 0xFF), or AX = 0 for HSFS/unrecognised —
     /// <c>error = (type == 1) ? 1 : (type == 0xFF) ? 0xFF : 0; reg_ax = error;</c>.
     /// </summary>
-    private void ReadVolumeTableOfContents() {
+    /// <returns><see langword="true" /> if an error occured. <see langword="false"> otherwise.</returns>
+    public bool ReadVolumeTableOfContents() {
         int driveIndex = _state.CX;
         MscdexDriveLookup driveLookup = GetDriveByIndex(driveIndex);
         if (!driveLookup.IsPresent) {
-            _state.CarryFlag = true;
             _state.AX = (ushort)MscdexErrorCode.InvalidDrive;
-            return;
+            return true;
         }
         MscdexDriveEntry driveEntry = _drives[driveLookup.DriveListIndex];
 
@@ -321,20 +316,20 @@ public sealed class Mscdex {
         } else {
             _state.AX = 0x0000; // HSFS or unrecognised
         }
-        _state.CarryFlag = false;
+        return false;
     }
 
     /// <summary>
     /// AL=0x08: Reads one or more sectors from the CD-ROM drive into the caller's buffer.
     /// CX = drive index; SI:DI = 32-bit starting LBA (SI is the high word); DX = sector count; ES:BX = destination buffer.
     /// </summary>
-    private void AbsoluteDiskRead() {
+    /// <returns><see langword="true" /> if an error occured. <see langword="false"> otherwise.</returns>
+    public bool AbsoluteDiskRead() {
         int driveIndex = _state.CX;
         MscdexDriveLookup driveLookup = GetDriveByIndex(driveIndex);
         if (!driveLookup.IsPresent) {
-            _state.CarryFlag = true;
             _state.AX = (ushort)MscdexErrorCode.InvalidDrive;
-            return;
+            return true;
         }
         MscdexDriveEntry driveEntry = _drives[driveLookup.DriveListIndex];
 
@@ -348,15 +343,16 @@ public sealed class Mscdex {
         uint destAddress = MemoryUtils.ToPhysicalAddress(_state.ES, _state.BX);
         _memory.LoadData(destAddress, sectorBuffer);
         _state.AX = 0;
-        _state.CarryFlag = false;
+        return false;
     }
 
     /// <summary>
     /// AL=0x09: Absolute disk write — always fails because CD-ROMs are read-only.
     /// </summary>
-    private void AbsoluteDiskWrite() {
+    /// <returns><see langword="true" /> if an error occured. <see langword="false"> otherwise.</returns>
+    public bool AbsoluteDiskWrite() {
         _state.AX = MscdexInvalidFunctionError;
-        _state.CarryFlag = true;
+        return true;
     }
 
     /// <summary>
@@ -378,7 +374,7 @@ public sealed class Mscdex {
     /// BH = major version (2), BL = minor version (23 decimal = 0x17 hex), so BX = 0x0217.
     /// </summary>
     private void GetMscdexVersion() {
-        _state.BX = (ushort)((MscdexVersionMajor << 8) | MscdexVersionMinor);
+        _state.BX = (MscdexVersionMajor << 8) | MscdexVersionMinor;
     }
 
     /// <summary>
@@ -398,13 +394,13 @@ public sealed class Mscdex {
     /// If BX=1 (set), validates DH=1; if DH is not 1, returns invalid-function error.
     /// Any other BX value also returns invalid-function error.
     /// </summary>
-    private void GetSetVolumeDescriptorPreference() {
+    /// <returns><see langword="true" /> if an error occured. <see langword="false"> otherwise.</returns>
+    public bool GetSetVolumeDescriptorPreference() {
         int driveIndex = _state.CX;
         MscdexDriveLookup driveLookup = GetDriveByIndex(driveIndex);
         if (!driveLookup.IsPresent) {
             _state.AX = (ushort)MscdexErrorCode.InvalidDrive;
-            _state.CarryFlag = true;
-            return;
+            return true;
         }
 
         if (_state.BX == 0) {
@@ -414,23 +410,25 @@ public sealed class Mscdex {
             // Set preference — DH must be 1
             if (_state.DH != 1) {
                 _state.AX = MscdexInvalidFunctionError;
-                _state.CarryFlag = true;
+                return true;
             }
         } else {
             _state.AX = MscdexInvalidFunctionError;
-            _state.CarryFlag = true;
+            return true;
         }
+        return false;
     }
 
     /// <summary>
     /// AL=0x0F: Get Directory Entry — not implemented; sets carry and returns an error.
     /// </summary>
-    private void GetDirectoryEntry() {
+    /// <returns><see langword="true" /> if an error occured. <see langword="false"> otherwise.</returns>
+    private bool GetDirectoryEntry() {
         if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
             _loggerService.Warning("{MethodName}: not implemented", nameof(GetDirectoryEntry));
         }
-        _state.CarryFlag = true;
         _state.AX = (ushort)MscdexErrorCode.InvalidFunction;
+        return true;
     }
 
     /// <summary>
@@ -926,12 +924,12 @@ public sealed class Mscdex {
     /// <summary>
     /// Logs a warning and returns an error for any unrecognised AL subfunction value.
     /// </summary>
-    private void HandleUnknownSubfunction() {
+    private bool HandleUnknownSubfunction() {
         if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
             _loggerService.Warning("MSCDEX: unknown subfunction AL={AL:X2}", _state.AL);
         }
-        _state.CarryFlag = true;
         _state.AX = MscdexInvalidFunctionError;
+        return true;
     }
 
     /// <summary>
