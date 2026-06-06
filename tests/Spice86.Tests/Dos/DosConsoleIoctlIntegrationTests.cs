@@ -191,7 +191,7 @@ public class DosConsoleIoctlIntegrationTests {
             // Act
             byte[] video = RunWithPreloadedKeysAndCaptureVideoBytes(comPath, tempDir, 4, Array.Empty<ushort>());
 
-            // Assert: DOSBox returns AX=0300h and DX=0802h for a local fixed drive.
+            // Assert: returns AX=0300h and DX=0802h for a local fixed drive.
             video[0].Should().Be(0x00,
                 "IOCTL 09 should return AL=00h for a successful local-drive probe");
             video[1].Should().Be(0x03,
@@ -213,7 +213,7 @@ public class DosConsoleIoctlIntegrationTests {
             // Act
             byte[] video = RunWithPreloadedKeysAndCaptureVideoBytes(comPath, tempDir, 4, Array.Empty<ushort>());
 
-            // Assert: DOSBox returns AL=01h and AH=07h for drive A:.
+            // Assert: returns AL=01h and AH=07h for drive A:.
             video[0].Should().Be(0x01,
                 "IOCTL 0E should map floppy drive A: to logical drive 1");
             video[1].Should().Be(0x07,

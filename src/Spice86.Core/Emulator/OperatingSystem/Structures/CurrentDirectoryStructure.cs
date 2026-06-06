@@ -25,7 +25,7 @@ public class CurrentDirectoryStructure : MemoryBasedDataStructure {
     /// <param name="baseAddress">The base address of the CDS structure in memory.</param>
     public CurrentDirectoryStructure(IByteReaderWriter byteReaderWriter, uint baseAddress)
         : base(byteReaderWriter, baseAddress) {
-        // Initialize with "C:\" - matches DOSBox behavior
+        // Initialize with "C:\"
         // 0x005c3a43 in little-endian = 0x43 ('C'), 0x3A (':'), 0x5C ('\'), 0x00 (null terminator)
         CurrentPath = 0x005c3a43;
     }

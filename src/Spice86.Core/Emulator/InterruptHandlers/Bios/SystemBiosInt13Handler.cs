@@ -14,9 +14,6 @@ using Spice86.Shared.Utils;
 /// <summary>
 ///     INT 13h handler. BIOS disk access functions.
 /// </summary>
-/// <remarks>
-/// In DOSBox, this is INT13_DiskHandler in bios_disk.cpp
-/// </remarks>
 public class SystemBiosInt13Handler : InterruptHandler {
     // BIOS error codes (returned in AH on failure)
     private const byte ErrorNone = 0x00;
@@ -133,7 +130,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
     /// <summary>
     /// Read Disk Sectors into Memory (AH=0x02).
     /// Reads AL sectors starting at CHS (CH/CL/DH) from drive DL into the buffer at ES:BX.
-    /// Returns an error when AL=0 (zero sectors requested), matching DOSBox Staging behaviour.
+    /// Returns an error when AL=0 (zero sectors requested).
     /// </summary>
     /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
     public void ReadSectors(bool calledFromVm) {
@@ -190,7 +187,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
     /// <summary>
     /// Write Disk Sectors (AH=0x03).
     /// Writes AL sectors from the buffer at ES:BX to CHS (CH/CL/DH) on drive DL.
-    /// Returns an error when AL=0 (zero sectors requested), matching DOSBox Staging behaviour.
+    /// Returns an error when AL=0 (zero sectors requested).
     /// </summary>
     /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
     public void WriteSectors(bool calledFromVm) {
@@ -247,8 +244,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
 
     /// <summary>
     /// Verify Disk Sectors (AH=0x04). On floppy this is a "read without transfer".
-    /// Returns success when the drive is present and AL is non-zero, matching DOSBox Staging
-    /// bios_disk.cpp which validates drive presence before returning success.
+    /// Returns success when the drive is present and AL is non-zero.
     /// </summary>
     /// <remarks>
     /// Shangai II needs this to run.
@@ -322,7 +318,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
 
     /// <summary>
     /// Get Diskette Type or Check Hard Drive Installed (AH=0x15).
-    /// Returns AH=0x01 for a mounted floppy (no change-line support, matching DOSBox Staging
+    /// Returns AH=0x01 for a mounted floppy (no change-line support,
     /// which deliberately avoids returning 0x02 to prevent MS-DOS from polling INT 13h AH=0x16),
     /// AH=0x03 for the first hard disk, or sets CF when the drive is not present.
     /// </summary>
@@ -340,7 +336,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
 
         FloppyGeometryResult diskTypeGeometryResult = _floppyAccess.GetGeometry(driveNumber);
         if (IsFloppyDrive(driveNumber) && diskTypeGeometryResult.Status == FloppyAccessStatus.Success) {
-            State.AH = 0x01; // floppy without change-line support (DOSBox Staging parity)
+            State.AH = 0x01; // floppy drive without change-line support
             SetCarryFlag(false, calledFromVm);
             return;
         }

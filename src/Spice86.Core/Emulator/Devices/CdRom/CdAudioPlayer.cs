@@ -107,8 +107,7 @@ public sealed class CdAudioPlayer {
         if (_floatSampleBuffer.Length < sampleCount) {
             _floatSampleBuffer = new float[sampleCount];
         }
-        // CD-DA on a BIN image is signed 16-bit little-endian PCM (Red Book; mirrors
-        // dosbox-staging cdrom_image.cpp BinaryFile::getEndian returning little-endian).
+        // CD-DA on a BIN image is signed 16-bit little-endian PCM (Red Book)
         ReadOnlySpan<byte> rawAudioRead = _rawAudioBuffer.AsSpan(0, completeBytesRead);
         for (int i = 0; i < sampleCount; i++) {
             short sample = BinaryPrimitives.ReadInt16LittleEndian(rawAudioRead.Slice(i * 2, 2));

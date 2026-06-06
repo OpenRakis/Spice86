@@ -1049,12 +1049,6 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
     /// <summary>
     /// Flushes all dirty floppy disk images back to their backing host files.
     /// </summary>
-    /// <remarks>
-    /// Mirrors the on-pause / on-exit write-back behaviour of dosbox-staging
-    /// (see <c>src/dos/drive_fat.cpp</c>): every floppy whose image has been
-    /// modified by an INT 13h / INT 26h sector write is rewritten to disk and
-    /// its dirty flag is cleared on success.
-    /// </remarks>
     /// <returns>The number of floppy drives whose image was actually flushed.</returns>
     public int FlushDirtyFloppyImages() {
         int flushedCount = 0;

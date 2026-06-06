@@ -1,9 +1,8 @@
 namespace Spice86.Shared.Emulator.Storage.CdRom.Mds;
 
 /// <summary>
-/// Parsed descriptor for a single MDS track block. Immutable. Mirrors the
-/// fields dosbox-staging's <c>LoadMdsFile</c> reads from each
-/// <c>MdsTrackBlock</c> + its associated extra block + footer.
+/// Parsed descriptor for a single MDS track block. Immutable.
+/// <c>LoadMdsFile</c> reads from each <c>MdsTrackBlock</c> + its associated extra block + footer.
 /// </summary>
 public sealed class MdsTrack
 {

@@ -144,7 +144,7 @@ public class DosInt2fHandler : InterruptHandler {
     }
 
     /// <summary>
-    /// A service that does nothing, see dos_misc.cpp in DOSBox Staging
+    /// A service that does nothing.
     /// </summary>
     public void DosVirtualMachineServices() {
         //Do nothing,not even set CX or CF...

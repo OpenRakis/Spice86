@@ -4,13 +4,11 @@ using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Shared.Emulator.Storage;
 using Spice86.Shared.Interfaces;
 
-using System;
-
 /// <summary>
 /// Performs DMA-backed floppy sector transfers and drive-activity notifications.
 /// </summary>
 public sealed class FloppyDiskTransferService {
-    private const string DmaOwnerName = "FloppyDiskTransferService";
+    private const string DmaOwnerName = nameof(FloppyDiskTransferService);
     private const int DefaultSectorsPerTrack = 18;
     private const int DefaultNumberOfHeads = 2;
 

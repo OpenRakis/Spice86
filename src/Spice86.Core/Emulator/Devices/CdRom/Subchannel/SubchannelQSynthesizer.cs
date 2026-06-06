@@ -5,10 +5,9 @@ using System.Collections.Generic;
 /// <summary>
 /// Computes the subchannel-Q payload for a given absolute logical block address by
 /// inspecting the table of contents to locate the containing track and deriving relative
-/// and absolute MSF positions. Behaviour matches DOSBox-staging's
-/// <c>CDROM_Interface_Image::GetAudioSub</c>: the track-number byte is BCD-encoded, the
+/// and absolute MSF positions. Behaviour is: the track-number byte is BCD-encoded, the
 /// index byte is the linear value 1 (always), and both MSF triplets are written in plain
-/// decimal (not BCD) so MSCDEX IOCTL 0x0C responses round-trip identically to DOSBox.
+/// decimal (not BCD) so MSCDEX IOCTL 0x0C responses round-trip identically to the real driver.
 /// The result is returned as <see cref="SubchannelQData"/> and then serialized by
 /// MSCDEX into the caller-visible IOCTL buffer.
 /// </summary>

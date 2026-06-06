@@ -25,15 +25,12 @@ using System.Collections.Generic;
 /// <para>
 /// Audio output: <see cref="GetNextFrame"/> must be called once per output
 /// sample by the mixer callback.  All PCM samples are normalised floats in
-/// [-1, 1]; a gain of 0.2 is applied when mixing (matching DOSBox Staging's
-/// <c>DiskNoiseGain = 0.2f</c>).
+/// [-1, 1]; a gain of 0.2 is applied when mixing</c>).
 /// </para>
 /// </remarks>
 internal sealed class FloppyDiskNoiseDevice {
-    // Mirrors DiskNoiseGain in DOSBox Staging
     private const float DiskNoiseGain = 0.2f;
 
-    // Maximum number of seek samples (DOSBox Staging uses up to 9)
     private const int MaxSeekSamples = 9;
 
     // 80% preference for first two samples in random-access seek
@@ -134,7 +131,6 @@ internal sealed class FloppyDiskNoiseDevice {
 
     /// <summary>
     /// Activates the motor spin sound.
-    /// Mirrors <c>DiskNoiseDevice::ActivateSpin()</c> in DOSBox Staging.
     /// The spin is only (re-)started once the previous playback has
     /// finished — it is not looped.
     /// </summary>
@@ -159,7 +155,6 @@ internal sealed class FloppyDiskNoiseDevice {
 
     /// <summary>
     /// Triggers a head-seek noise burst.
-    /// Mirrors <c>DiskNoiseDevice::PlaySeek()</c> in DOSBox Staging.
     /// If a seek sample is still playing it is not interrupted.
     /// </summary>
     internal void PlaySeek() {
@@ -186,7 +181,6 @@ internal sealed class FloppyDiskNoiseDevice {
     /// <summary>
     /// Updates the sequential/random seek detection state based on the
     /// last accessed file path.
-    /// Mirrors <c>DiskNoiseDevice::SetLastIoPath()</c> in DOSBox Staging.
     /// </summary>
     /// <param name="path">The host path of the file that was accessed.</param>
     /// <param name="isWrite"><see langword="true"/> for write operations, <see langword="false"/> for reads.</param>
@@ -216,7 +210,6 @@ internal sealed class FloppyDiskNoiseDevice {
 
     /// <summary>
     /// Chooses the index of the seek sample to play, using the same
-    /// weighted-random algorithm as DOSBox Staging.
     /// </summary>
     private int ChooseSeekIndex() {
         if (_seekSamples.Count == 0) {

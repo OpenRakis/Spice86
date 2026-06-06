@@ -24,7 +24,7 @@ public class DosExecIntegrationTests {
 
         // Act
         // The bootstrap autoexec line "CALL <program>" is echoed at the top of the
-        // screen (MS-DOS / dosbox-staging parity), so the program output appears
+        // screen, so the program output appears
         // after it. Scan the full text-mode screen for the expected token.
         string screen = RunProgramAndReadVideoOutput(
             Path.Join(tempFile.Path, "dos_exec_master.com"), tempFile.Path, expectedLength: 80 * 25);
@@ -42,7 +42,7 @@ public class DosExecIntegrationTests {
 
         // Act
         // The bootstrap autoexec line "CALL <program>" is echoed at the top of the
-        // screen (MS-DOS / dosbox-staging parity), so the program output appears
+        // screen, so the program output appears
         // after it. Scan the full text-mode screen for the expected token.
         string screen = RunProgramAndReadVideoOutput(
             Path.Join(tempFile.Path, "fcb_process_isolation.com"), tempFile.Path, expectedLength: 80 * 25);

@@ -765,7 +765,7 @@ public class DosBatchRoutingIntegrationTests {
     }
 
     /// <summary>
-    /// MS-DOS / dosbox-staging parity: when ECHO is ON (default), every batch line is
+    /// When ECHO is ON (default), every batch line is
     /// echoed to stdout (prefixed with the DOS prompt) BEFORE being executed.
     /// </summary>
     [Fact]
@@ -786,7 +786,7 @@ public class DosBatchRoutingIntegrationTests {
     }
 
     /// <summary>
-    /// MS-DOS / dosbox-staging parity: a line that starts with '@' is NOT echoed even when
+    /// A line that starts with '@' is NOT echoed even when
     /// ECHO is ON. The command itself still runs and its output is visible.
     /// </summary>
     [Fact]
@@ -807,7 +807,7 @@ public class DosBatchRoutingIntegrationTests {
     }
 
     /// <summary>
-    /// MS-DOS / dosbox-staging parity: after <c>@ECHO OFF</c>, subsequent batch lines
+    /// After <c>@ECHO OFF</c>, subsequent batch lines
     /// are not echoed (until <c>ECHO ON</c>).
     /// </summary>
     [Fact]
@@ -1564,7 +1564,7 @@ public class DosBatchRoutingIntegrationTests {
 
 
     /// <summary>
-    /// CHOICE should skip invalid keys and accept the first valid key, matching DOSBox retry loop.
+    /// CHOICE should skip invalid keys and accept the first valid key, matching MS-DOS retry loop.
     /// </summary>
     [Fact]
     public void HostRequestedBatch_ChoiceSkipsInvalidKeysAndAcceptsFirstValid() {
@@ -1649,7 +1649,6 @@ public class DosBatchRoutingIntegrationTests {
 
     /// <summary>
     /// EXIT inside a CALLed batch file terminates all batch processing, not just the inner file.
-    /// DOSBox sets exit_cmd_called which stops the entire shell.
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Exit_InsideCall_StopsAllBatches() {
@@ -1674,7 +1673,6 @@ public class DosBatchRoutingIntegrationTests {
     /// <summary>
     /// Running a .BAT without CALL should replace the current batch (tail-call).
     /// Commands after the bare batch invocation in the parent should NOT execute.
-    /// DOSBox pops the current batch before pushing the new one.
     /// </summary>
     [Fact]
     public void HostRequestedBatch_BareBatInvocation_ReplacesCurrentBatch() {
@@ -1971,8 +1969,7 @@ public class DosBatchRoutingIntegrationTests {
     }
 
     /// <summary>
-    /// DEL skips read-only files (DOS attribute 0x01). DOSBox's CMD_DELETE checks
-    /// FatAttributeFlags before removing.
+    /// DEL should skips read-only files (DOS attribute 0x01).
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Del_SkipsReadonlyFiles() {
@@ -2778,10 +2775,8 @@ public class DosBatchRoutingIntegrationTests {
         });
     }
 
-    // ───────────────────────── DELETE alias ─────────────────────────
-
     /// <summary>
-    /// DELETE is a DOSBox-registered alias for DEL. It must be recognized.
+    /// DELETE is a registered alias for DEL. It must be recognized.
     /// </summary>
     [Fact]
     public void HostRequestedBatch_Delete_IsAliasForDel() {

@@ -10,7 +10,7 @@ using System;
 using Xunit;
 
 /// <summary>
-/// Tests for the SUBST internal batch command, mirroring DOSBox Staging's
+/// Tests for the SUBST internal batch command.
 /// <c>SUBST</c> behaviour: substitute a drive letter for a path, remove an
 /// existing SUBST with <c>/D</c>, or list active SUBSTs when invoked with
 /// no arguments.

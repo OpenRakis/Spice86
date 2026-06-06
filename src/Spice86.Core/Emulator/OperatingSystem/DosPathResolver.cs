@@ -469,7 +469,7 @@ internal class DosPathResolver {
         string rawName = Path.GetFileNameWithoutExtension(hostFileName);
         string rawExtension = Path.GetExtension(hostFileName);
 
-        // Step 1: Uppercase and strip spaces (DOSBox: upcase + RemoveSpaces)
+        // Step 1: Uppercase and strip spaces
         string upperName = rawName.ToUpperInvariant().Replace(" ", "", StringComparison.Ordinal);
         string upperExtension = rawExtension.ToUpperInvariant().Replace(" ", "", StringComparison.Ordinal);
 
@@ -482,7 +482,7 @@ internal class DosPathResolver {
             upperName = upperName[leadingDots..];
         }
 
-        // Step 3: Determine if a short name with tilde is needed (DOSBox logic)
+        // Step 3: Determine if a short name with tilde is needed
         bool needsShortName = upperName.Length != rawName.Length; // spaces were removed
         needsShortName = needsShortName || upperName.Length > DosMfnlength; // name > 8 chars
         needsShortName = needsShortName || rawExtension.Length > DosExtlength + 1; // extension > 3 chars (including dot)
@@ -500,7 +500,7 @@ internal class DosPathResolver {
             return $"{upperName}{shortExtension}";
         }
 
-        // Step 5: Count collisions with same short-name stem in the directory (DOSBox: CreateShortNameID)
+        // Step 5: Count collisions with same short-name stem in the directory
         int shortNr = ComputeShortNameId(hostFileName, upperName, hostDir);
 
         // Step 6: Build NAMEXX~N format
@@ -659,7 +659,7 @@ internal class DosPathResolver {
         Span<char> fileName = stackalloc char[DosMfnlength];
         Span<char> fileExt = stackalloc char[DosExtlength];
         Span<char> wildName = stackalloc char[DosMfnlength];
-        // wild ext needs an extra slot to check the 4th char like DOSBox
+        // wild ext needs an extra slot to check the 4th char
         Span<char> wildExt = stackalloc char[DosExtlength + 1];
 
         SplitTo83(sourceFilename, fileName, fileExt, out _);
@@ -726,7 +726,7 @@ internal class DosPathResolver {
             dotPos >= 0 && dotPos + 1 < file.Length ? file[(dotPos + 1)..] : ReadOnlySpan<char>.Empty;
         ToUpperCopy(fileNameRaw[..Math.Min(fileNameRaw.Length, targetFileName.Length)], targetFileName);
         ToUpperCopy(fileExtRaw[..Math.Min(fileExtRaw.Length, targetFileExt.Length)], targetFileExt);
-        extLength = fileExtRaw.Length; // actual (untruncated) length for the DOSBox-style 4th-char check
+        extLength = fileExtRaw.Length; // actual (untruncated) length for the 4th-char check
     }
 
     private static bool WildcardMatchesHiddenFile(ReadOnlySpan<char> fileName, ReadOnlySpan<char> wildcard) {

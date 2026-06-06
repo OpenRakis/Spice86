@@ -451,8 +451,7 @@ internal static class BatchCommandHandlers {
     }
 
     /// <summary>
-    /// Handles the <c>SUBST</c> internal command, matching DOSBox Staging's
-    /// <c>SUBST [drive: path]</c> / <c>SUBST drive: /D</c> behaviour.
+    /// Handles the <c>SUBST</c> internal command.
     /// Substitutes a drive letter for a host (or DOS-resolvable) path, removes
     /// an existing SUBST when <c>/D</c> is supplied, or lists active SUBSTs
     /// when invoked with no arguments.
@@ -468,7 +467,7 @@ internal static class BatchCommandHandlers {
 
     /// <summary>
     /// Handles bare drive-change commands such as <c>C:</c>, <c>D:</c>, etc.
-    /// In real DOS / DOSBox Staging, typing a drive letter followed by a colon at
+    /// In real DOS typing a drive letter followed by a colon at
     /// the prompt (or in a batch file) switches the current default drive.
     /// </summary>
     private sealed class DriveChangeCommandHandler : BatchCommandHandlerBase {

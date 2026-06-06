@@ -1,9 +1,7 @@
 namespace Spice86.Shared.Emulator.Storage.CdRom.Mds;
 
 /// <summary>
-/// High-level track mode parsed from an MDS track block. Mirrors the subset of
-/// modes that dosbox-staging's <c>set_track_mode</c> accepts for CDROM (DVD-only
-/// XA forms 4/5/6 are rejected, not represented here).
+/// High-level track mode parsed from an MDS track block.
 /// </summary>
 public enum MdsTrackMode
 {

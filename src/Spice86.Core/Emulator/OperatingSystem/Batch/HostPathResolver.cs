@@ -10,7 +10,7 @@ using System.IO;
 /// Resolves raw path tokens from MOUNT / IMGMOUNT command lines to absolute host file-system paths.
 /// </summary>
 /// <remarks>
-/// Resolution priority (mirrors DOSBox Staging behaviour):
+/// Resolution priority
 /// <list type="number">
 ///   <item>Path starts with a letter that matches a mounted DOS drive (e.g. <c>C:\games\disc.iso</c>)
 ///         → strip the DOS drive prefix and combine with the drive's host directory.</item>

@@ -217,7 +217,7 @@ public sealed class FloppyDiskController : DefaultIOPortHandler {
     private void ExecuteSenseDriveStatus() {
         byte driveSelect = _commandBuffer.Count > 0 ? _commandBuffer[0] : (byte)0;
         byte drive = (byte)(driveSelect & 0x03);
-        // ST3 layout (matches DOSBox Staging fdc.cpp get_ST3()):
+        // ST3 layout:
         //   bits 0-1: drive select
         //   bit  2:   side 1 selected (head number from command byte)
         //   bit  3:   two-sided drive (always set for double-sided floppies)

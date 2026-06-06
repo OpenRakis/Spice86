@@ -14,7 +14,6 @@ namespace Spice86.Shared.Emulator.Storage.CdRom;
 public sealed class CueFrameMapper {
     /// <summary>
     /// Red Book pre-gap offset in frames (2 seconds * 75 frames/second).
-    /// Matches DOSBox Staging's <c>REDBOOK_FRAME_PADDING = 150</c>.
     /// </summary>
     public const int RedbookPreGapFrames = 150;
 

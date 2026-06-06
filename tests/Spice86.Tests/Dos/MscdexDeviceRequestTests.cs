@@ -175,12 +175,12 @@ public class MscdexDeviceRequestTests {
             channel.AppVolume.Right.Should().BeApproximately(192.0f / 255.0f, 0.0001f,
                 "MSCDEX IOCTL channel-control should update the live right application gain on the CD audio mixer channel");
             channel.ChannelMap.Should().Be(StereoLine.StereoMap,
-                "DOSBox clamps invalid channel-control output routes back to left/right before applying them");
+                "Emulator should clamp invalid channel-control output routes back to left/right before applying them");
             harness.Memory.UInt8[harness.BufferBaseAddress + 1].Should().Be(0,
-                "invalid left output routes should round-trip as the DOSBox left default");
+                "invalid left output routes should round-trip as the left default");
             harness.Memory.UInt8[harness.BufferBaseAddress + 2].Should().Be(64);
             harness.Memory.UInt8[harness.BufferBaseAddress + 3].Should().Be(1,
-                "invalid right output routes should round-trip as the DOSBox right default");
+                "invalid right output routes should round-trip as the right default");
             harness.Memory.UInt8[harness.BufferBaseAddress + 4].Should().Be(192);
             harness.Memory.UInt8[harness.BufferBaseAddress + 5].Should().Be(2);
             harness.Memory.UInt8[harness.BufferBaseAddress + 6].Should().Be(111);

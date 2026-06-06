@@ -12,8 +12,7 @@ public static class DosNameConverter
     };
 
     /// <summary>
-    /// CP437 extended uppercase table for byte values 0x80..0xA4 (37 entries),
-    /// ported byte-for-byte from dosbox-staging src/dos/dos_files.cpp DOS_ToUpper.
+    /// CP437 extended uppercase table for byte values 0x80..0xA4 (37 entries).
     /// A zero entry means the source byte already is the uppercase form (no change).
     /// </summary>
     private static readonly byte[] Cp437ExtendedUppercase = new byte[] {
@@ -23,7 +22,7 @@ public static class DosNameConverter
     };
 
     /// <summary>
-    /// DOS uppercase mapping for a single byte. Mirrors dosbox-staging DOS_ToUpper:
+    /// DOS uppercase mapping for a single byte:
     /// ASCII lowercase a..z folds to A..Z; bytes 0x80..0xA4 use the CP437 table.
     /// All other bytes pass through unchanged.
     /// </summary>
