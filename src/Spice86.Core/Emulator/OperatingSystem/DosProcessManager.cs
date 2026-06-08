@@ -88,11 +88,6 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     private readonly Stack _stack;
     private readonly DosSwappableDataArea _sda;
     private volatile string _currentProgramName = string.Empty;
-    // In FreeDOS this is 18 (sizeof(iregs) = 9 GP registers pushed by PUSH$ALL).
-    // Spice86's CfgCpu INT only pushes FLAGS+CS+IP (6 bytes) with no GP register frame,
-    // so no subtraction is needed. A non-zero value corrupts the parent's saved SP,
-    // causing IRET to pop garbage FLAGS (e.g. carry flag set → SUMMON.COM error path).
-    private const int IregsFrameSize = 0;
 
     /// <summary>
     /// The master environment block that all DOS PSPs inherit.
@@ -332,7 +327,6 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         return rootPsp;
     }
 
-
     /// <summary>
     /// Implements INT 21h AH=4Bh loading logic: resolves the DOS path, allocates memory, builds a PSP, loads EXE or COM images, updates CPU registers, and optionally executes or returns load metadata.
     /// </summary>
@@ -374,7 +368,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         DosExecParameterBlock paramBlock = new(new ByteArrayReaderWriter(new byte[DosExecParameterBlock.Size]), 0);
         return HandleComFileLoading(paramBlock, string.Empty, DosExecLoadType.LoadAndExecute,
             0, 0, 0, _sda.CurrentProgramSegmentPrefix,
-            "BATCH$$$.COM", comBytes, null, _state.SS, (ushort)(_state.SP - IregsFrameSize));
+            "BATCH$$$.COM", comBytes, null, _state.SS, (ushort)(_state.SP));
     }
 
     internal DosExecResult LoadInitialBootProgram(char driveLetter) {
@@ -417,8 +411,8 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         ushort parentSS = _state.SS;
         ushort parentSP = _state.SP;
         // FreeDOS stores (SP - sizeof(iregs)) in the parent PSP's stack field.
-        // In Spice86, IregsFrameSize is 0 because CfgCpu has no GP register frame.
-        ushort parentReservedSP = (ushort)(parentSP - IregsFrameSize);
+        // In Spice86, this is just parentSP because the cfgcpu has no GP register frame.
+        ushort parentReservedSP = parentSP;
 
         // Allocate environment block FIRST before allocating program memory, as we might decide to take ALL the remaining free memory
         DosMemoryControlBlock? envBlock = null;
