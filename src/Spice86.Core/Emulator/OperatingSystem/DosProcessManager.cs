@@ -338,6 +338,9 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     /// <returns>EXEC result metadata indicating success, failure code, and entry register values.</returns>
     public DosExecResult LoadOrLoadAndExecute(string programName, DosExecParameterBlock paramBlock,
         string commandTail, DosExecLoadType loadType, ushort environmentSegment) {
+        if(string.IsNullOrEmpty(programName)) {
+            return DosExecResult.Fail(DosErrorCode.FileNotFound);
+        }
         // Read CS:IP from the stack to get the address where the parent will resume.
         ushort callerIP = _stack.Peek16(0);
         ushort callerCS = _stack.Peek16(2);
