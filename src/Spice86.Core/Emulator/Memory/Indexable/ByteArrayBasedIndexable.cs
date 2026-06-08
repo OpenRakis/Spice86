@@ -5,7 +5,7 @@ using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 
 /// <summary>
-/// Implementation of Indexable over a byte array.
+/// Implementation of <see cref="Indexable"/> over a byte array.
 /// </summary>
 public class ByteArrayBasedIndexable : Indexable {
 
@@ -20,32 +20,33 @@ public class ByteArrayBasedIndexable : Indexable {
     public byte[] Array { get => ReaderWriter.Array; }
 
     /// <inheritdoc/>
-    public override UInt8Indexer UInt8 { get; }
+    public sealed override UInt8Indexer UInt8 { get; }
 
     /// <inheritdoc/>
-    public override UInt16Indexer UInt16 { get; }
+    public sealed override UInt16Indexer UInt16 { get; }
 
     /// <inheritdoc/>
-    public override UInt32Indexer UInt32 { get; }
+    public sealed override UInt32Indexer UInt32 { get; }
 
     /// <inheritdoc/>
-    public override Int8Indexer Int8 { get; }
+    public sealed override Int8Indexer Int8 { get; }
 
     /// <inheritdoc/>
-    public override Int16Indexer Int16 { get; }
+    public sealed override Int16Indexer Int16 { get; }
 
     /// <inheritdoc/>
-    public override UInt16BigEndianIndexer UInt16BigEndian { get; }
-    /// <inheritdoc/>
-    public override Int32Indexer Int32 { get; }
+    public sealed override UInt16BigEndianIndexer UInt16BigEndian { get; }
 
     /// <inheritdoc/>
-    public override SegmentedAddress16Indexer SegmentedAddress16 {
+    public sealed override Int32Indexer Int32 { get; }
+
+    /// <inheritdoc/>
+    public sealed override SegmentedAddress16Indexer SegmentedAddress16 {
         get;
     }
-    
+
     /// <inheritdoc/>
-    public override SegmentedAddress32Indexer SegmentedAddress32 {
+    public sealed override SegmentedAddress32Indexer SegmentedAddress32 {
         get;
     }
 
@@ -55,6 +56,7 @@ public class ByteArrayBasedIndexable : Indexable {
     /// <param name="array">The byte array used as RAM storage.</param>
     public ByteArrayBasedIndexable(byte[] array) {
         ReaderWriter = new ByteArrayReaderWriter(array);
-        (UInt8, UInt16, UInt16BigEndian, UInt32, Int8, Int16, Int32, SegmentedAddress16, SegmentedAddress32) = InstantiateIndexersFromByteReaderWriter(ReaderWriter, new RealModeMmu8086());
+        (UInt8, UInt16, UInt16BigEndian, UInt32, Int8, Int16, Int32, SegmentedAddress16, SegmentedAddress32) =
+            InstantiateIndexersFromByteReaderWriter(ReaderWriter, new RealModeMmu8086());
     }
 }

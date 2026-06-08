@@ -1393,15 +1393,15 @@ public class VgaFunctionality : IVgaFunctionality {
         switch (vgaMode.MemoryModel) {
             case MemoryModel.Text:
                 // Write white (0x07) spaces (0x20) to memory. 
-                MemSet16(vgaMode.StartSegment, 0, 0x0720, 32 * 1024);
+                MemSet16(vgaMode.StartSegment, 0, 0x0720, 16 * 1024);
                 break;
             case MemoryModel.Cga:
-                MemSet16(vgaMode.StartSegment, 0, 0x0000, 32 * 1024);
+                MemSet16(vgaMode.StartSegment, 0, 0x0000, 16 * 1024);
                 break;
             case MemoryModel.Planar:
             case MemoryModel.Packed:
             default:
-                MemSet16(vgaMode.StartSegment, 0, 0x0000, 64 * 1024);
+                MemSet16(vgaMode.StartSegment, 0, 0x0000, 32 * 1024);
                 break;
         }
     }

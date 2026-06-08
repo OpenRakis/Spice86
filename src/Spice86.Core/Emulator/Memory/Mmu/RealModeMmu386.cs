@@ -25,11 +25,23 @@ public sealed class RealModeMmu386 : IMmu {
     }
 
     private static bool IsValidAccess(uint offset, uint length) {
-        return offset <= SegmentLimit && length - 1u <= SegmentLimit - offset;
+        return (ulong)offset + length <= SegmentLimit + 1;
     }
 
     /// <inheritdoc />
     public uint TranslateAddress(ushort segment, uint offset) {
         return MemoryUtils.ToPhysicalAddress(segment, (ushort)offset);
+    }
+
+    /// <inheritdoc/>
+    public bool TryTranslateAddressRange(ushort segment, uint offset, uint length, out uint startAddress) {
+        // Make sure range will not result in an out of bounds segment address.
+        if (!IsValidAccess(offset, length)) {
+            startAddress = 0;
+            return false;
+        }
+
+        startAddress = MemoryUtils.ToPhysicalAddress(segment, (ushort)offset);
+        return true;
     }
 }
