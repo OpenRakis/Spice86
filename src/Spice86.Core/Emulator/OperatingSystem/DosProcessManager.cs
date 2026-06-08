@@ -740,7 +740,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     private bool ResumeBatchExecutionFromRoot() {
         while (_batchExecutionEngine.TryContinue(LastChildReturnCode, out LaunchRequest launchRequest)) {
             if (!_batchExecutionEngine.ApplyRedirectionForLaunch(launchRequest)) {
-                LastChildReturnCode = (ushort)(((ushort)DosTerminationType.CriticalError << 8) | (byte)DosErrorCode.PathNotFound);
+                LastChildReturnCode = ((ushort)DosTerminationType.CriticalError << 8) | (byte)DosErrorCode.PathNotFound;
                 continue;
             }
 
