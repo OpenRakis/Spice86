@@ -364,7 +364,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     /// </summary>
     /// <param name="comBytes">Raw COM program bytes to load at PSP+100h.</param>
     /// <returns>EXEC result metadata indicating success or failure.</returns>
-    internal DosExecResult LoadInitialProgramFromBytes(byte[] comBytes) {
+    internal DosExecResult LoadInternalProgramFromBytes(byte[] comBytes) {
         DosExecParameterBlock paramBlock = new(new ByteArrayReaderWriter(new byte[DosExecParameterBlock.Size]), 0);
         return HandleComFileLoading(paramBlock, string.Empty, DosExecLoadType.LoadAndExecute,
             0, 0, 0, _sda.CurrentProgramSegmentPrefix,
@@ -763,7 +763,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         }
 
         if (launchRequest is InternalProgramLaunchRequest internalProgramLaunchRequest) {
-            return LoadInitialProgramFromBytes(internalProgramLaunchRequest.ComProgramBytes);
+            return LoadInternalProgramFromBytes(internalProgramLaunchRequest.ComProgramBytes);
         }
 
         if (launchRequest is ProgramLaunchRequest programLaunchRequest) {

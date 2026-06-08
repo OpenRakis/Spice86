@@ -21,7 +21,7 @@ internal sealed class DosBatchProgramLoader : DosProgramLoader {
         }
 
         if (launchRequest is InternalProgramLaunchRequest internalProgramLaunchRequest) {
-            return _processManager.LoadInitialProgramFromBytes(internalProgramLaunchRequest.ComProgramBytes);
+            return _processManager.LoadInternalProgramFromBytes(internalProgramLaunchRequest.ComProgramBytes);
         }
 
         if (launchRequest is ProgramLaunchRequest programLaunchRequest) {
