@@ -62,5 +62,5 @@ public class SelectorNode(int id, SegmentedAddress address) : CfgNode(id, addres
         new InstructionNode(InstructionOperation.SELECTOR);
 
     public override IVisitableAstNode ExecutionAst =>
-        new AstSelectorNode();
+        new AstSelectorNode(this);
 }

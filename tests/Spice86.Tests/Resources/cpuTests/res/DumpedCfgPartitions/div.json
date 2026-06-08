@@ -1,0 +1,499 @@
+{
+  "partitions": [
+    {
+      "id": 1,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        47
+      ],
+      "entries": [
+        {
+          "block": 47,
+          "address": "F000:0061",
+          "kind": "returnTargetEntry"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        58
+      ],
+      "entries": [
+        {
+          "block": 58,
+          "address": "F000:0085",
+          "kind": "returnTargetEntry"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        68
+      ],
+      "entries": [
+        {
+          "block": 68,
+          "address": "F000:00A0",
+          "kind": "returnTargetEntry"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        104
+      ],
+      "entries": [
+        {
+          "block": 104,
+          "address": "F000:010F",
+          "kind": "returnTargetEntry"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        113
+      ],
+      "entries": [
+        {
+          "block": 113,
+          "address": "F000:012C",
+          "kind": "returnTargetEntry"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        149
+      ],
+      "entries": [
+        {
+          "block": 149,
+          "address": "F000:019B",
+          "kind": "returnTargetEntry"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        187
+      ],
+      "entries": [
+        {
+          "block": 187,
+          "address": "F000:0211",
+          "kind": "returnTargetEntry"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        206
+      ],
+      "entries": [
+        {
+          "block": 206,
+          "address": "F000:024D",
+          "kind": "returnTargetEntry"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        239
+      ],
+      "entries": [
+        {
+          "block": 239,
+          "address": "F000:02B1",
+          "kind": "returnTargetEntry"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        247
+      ],
+      "entries": [
+        {
+          "block": 247,
+          "address": "F000:02C6",
+          "kind": "returnTargetEntry"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        265
+      ],
+      "entries": [
+        {
+          "block": 265,
+          "address": "F000:02F6",
+          "kind": "returnTargetEntry"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        32
+      ],
+      "entries": [
+        {
+          "block": 32,
+          "address": "F000:1000",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        3,
+        2
+      ],
+      "entries": [
+        {
+          "block": 2,
+          "address": "F000:FFF0",
+          "kind": "executionContextEntry"
+        }
+      ]
+    }
+  ],
+  "transfers": [
+    {
+      "kind": "cyclicCrossPartitionFlow",
+      "fromPartition": 1,
+      "toPartition": 2,
+      "fromBlock": 47,
+      "toBlock": 58,
+      "from": "F000:0081",
+      "target": "F000:0085"
+    },
+    {
+      "kind": "cpuFault",
+      "fromPartition": 1,
+      "toPartition": 12,
+      "fromBlock": 47,
+      "toBlock": 32,
+      "from": "F000:0081",
+      "target": "F000:1000"
+    },
+    {
+      "kind": "cyclicCrossPartitionFlow",
+      "fromPartition": 2,
+      "toPartition": 3,
+      "fromBlock": 58,
+      "toBlock": 68,
+      "from": "F000:009E",
+      "target": "F000:00A0"
+    },
+    {
+      "kind": "cpuFault",
+      "fromPartition": 2,
+      "toPartition": 12,
+      "fromBlock": 58,
+      "toBlock": 32,
+      "from": "F000:009E",
+      "target": "F000:1000"
+    },
+    {
+      "kind": "cyclicCrossPartitionFlow",
+      "fromPartition": 3,
+      "toPartition": 4,
+      "fromBlock": 68,
+      "toBlock": 104,
+      "from": "F000:010D",
+      "target": "F000:010F"
+    },
+    {
+      "kind": "cpuFault",
+      "fromPartition": 3,
+      "toPartition": 12,
+      "fromBlock": 68,
+      "toBlock": 32,
+      "from": "F000:010D",
+      "target": "F000:1000"
+    },
+    {
+      "kind": "cyclicCrossPartitionFlow",
+      "fromPartition": 4,
+      "toPartition": 5,
+      "fromBlock": 104,
+      "toBlock": 113,
+      "from": "F000:0128",
+      "target": "F000:012C"
+    },
+    {
+      "kind": "cpuFault",
+      "fromPartition": 4,
+      "toPartition": 12,
+      "fromBlock": 104,
+      "toBlock": 32,
+      "from": "F000:0128",
+      "target": "F000:1000"
+    },
+    {
+      "kind": "cyclicCrossPartitionFlow",
+      "fromPartition": 5,
+      "toPartition": 6,
+      "fromBlock": 113,
+      "toBlock": 149,
+      "from": "F000:0197",
+      "target": "F000:019B"
+    },
+    {
+      "kind": "cpuFault",
+      "fromPartition": 5,
+      "toPartition": 12,
+      "fromBlock": 113,
+      "toBlock": 32,
+      "from": "F000:0197",
+      "target": "F000:1000"
+    },
+    {
+      "kind": "cyclicCrossPartitionFlow",
+      "fromPartition": 6,
+      "toPartition": 7,
+      "fromBlock": 149,
+      "toBlock": 187,
+      "from": "F000:020F",
+      "target": "F000:0211"
+    },
+    {
+      "kind": "cpuFault",
+      "fromPartition": 6,
+      "toPartition": 12,
+      "fromBlock": 149,
+      "toBlock": 32,
+      "from": "F000:020F",
+      "target": "F000:1000"
+    },
+    {
+      "kind": "cyclicCrossPartitionFlow",
+      "fromPartition": 7,
+      "toPartition": 8,
+      "fromBlock": 187,
+      "toBlock": 206,
+      "from": "F000:0249",
+      "target": "F000:024D"
+    },
+    {
+      "kind": "cpuFault",
+      "fromPartition": 7,
+      "toPartition": 12,
+      "fromBlock": 187,
+      "toBlock": 32,
+      "from": "F000:0249",
+      "target": "F000:1000"
+    },
+    {
+      "kind": "cyclicCrossPartitionFlow",
+      "fromPartition": 8,
+      "toPartition": 9,
+      "fromBlock": 206,
+      "toBlock": 239,
+      "from": "F000:02AF",
+      "target": "F000:02B1"
+    },
+    {
+      "kind": "cpuFault",
+      "fromPartition": 8,
+      "toPartition": 12,
+      "fromBlock": 206,
+      "toBlock": 32,
+      "from": "F000:02AF",
+      "target": "F000:1000"
+    },
+    {
+      "kind": "cyclicCrossPartitionFlow",
+      "fromPartition": 9,
+      "toPartition": 10,
+      "fromBlock": 239,
+      "toBlock": 247,
+      "from": "F000:02C4",
+      "target": "F000:02C6"
+    },
+    {
+      "kind": "cpuFault",
+      "fromPartition": 9,
+      "toPartition": 12,
+      "fromBlock": 239,
+      "toBlock": 32,
+      "from": "F000:02C4",
+      "target": "F000:1000"
+    },
+    {
+      "kind": "crossPartitionFlow",
+      "fromPartition": 10,
+      "toPartition": 11,
+      "fromBlock": 247,
+      "toBlock": 265,
+      "from": "F000:02F4",
+      "target": "F000:02F6"
+    },
+    {
+      "kind": "cpuFault",
+      "fromPartition": 10,
+      "toPartition": 12,
+      "fromBlock": 247,
+      "toBlock": 32,
+      "from": "F000:02F4",
+      "target": "F000:1000"
+    },
+    {
+      "kind": "dynamicReturn",
+      "fromPartition": 12,
+      "toPartition": 1,
+      "fromBlock": 32,
+      "toBlock": 47,
+      "from": "F000:101A",
+      "target": "F000:0061"
+    },
+    {
+      "kind": "dynamicReturn",
+      "fromPartition": 12,
+      "toPartition": 2,
+      "fromBlock": 32,
+      "toBlock": 58,
+      "from": "F000:101A",
+      "target": "F000:0085"
+    },
+    {
+      "kind": "dynamicReturn",
+      "fromPartition": 12,
+      "toPartition": 3,
+      "fromBlock": 32,
+      "toBlock": 68,
+      "from": "F000:101A",
+      "target": "F000:00A0"
+    },
+    {
+      "kind": "dynamicReturn",
+      "fromPartition": 12,
+      "toPartition": 4,
+      "fromBlock": 32,
+      "toBlock": 104,
+      "from": "F000:101A",
+      "target": "F000:010F"
+    },
+    {
+      "kind": "dynamicReturn",
+      "fromPartition": 12,
+      "toPartition": 5,
+      "fromBlock": 32,
+      "toBlock": 113,
+      "from": "F000:101A",
+      "target": "F000:012C"
+    },
+    {
+      "kind": "dynamicReturn",
+      "fromPartition": 12,
+      "toPartition": 6,
+      "fromBlock": 32,
+      "toBlock": 149,
+      "from": "F000:101A",
+      "target": "F000:019B"
+    },
+    {
+      "kind": "dynamicReturn",
+      "fromPartition": 12,
+      "toPartition": 7,
+      "fromBlock": 32,
+      "toBlock": 187,
+      "from": "F000:101A",
+      "target": "F000:0211"
+    },
+    {
+      "kind": "dynamicReturn",
+      "fromPartition": 12,
+      "toPartition": 8,
+      "fromBlock": 32,
+      "toBlock": 206,
+      "from": "F000:101A",
+      "target": "F000:024D"
+    },
+    {
+      "kind": "dynamicReturn",
+      "fromPartition": 12,
+      "toPartition": 9,
+      "fromBlock": 32,
+      "toBlock": 239,
+      "from": "F000:101A",
+      "target": "F000:02B1"
+    },
+    {
+      "kind": "dynamicReturn",
+      "fromPartition": 12,
+      "toPartition": 10,
+      "fromBlock": 32,
+      "toBlock": 247,
+      "from": "F000:101A",
+      "target": "F000:02C6"
+    },
+    {
+      "kind": "dynamicReturn",
+      "fromPartition": 12,
+      "toPartition": 11,
+      "fromBlock": 32,
+      "toBlock": 265,
+      "from": "F000:101A",
+      "target": "F000:02F6"
+    },
+    {
+      "kind": "crossPartitionFlow",
+      "fromPartition": 13,
+      "toPartition": 1,
+      "fromBlock": 3,
+      "toBlock": 47,
+      "from": "F000:005F",
+      "target": "F000:0061"
+    },
+    {
+      "kind": "cpuFault",
+      "fromPartition": 13,
+      "toPartition": 12,
+      "fromBlock": 3,
+      "toBlock": 32,
+      "from": "F000:005F",
+      "target": "F000:1000"
+    }
+  ]
+}

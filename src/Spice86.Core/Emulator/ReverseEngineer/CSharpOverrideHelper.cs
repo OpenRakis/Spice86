@@ -3,6 +3,7 @@
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
@@ -18,6 +19,7 @@ using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using System.Collections.Immutable;
 using System.Linq;
 
 /// <summary>
@@ -218,6 +220,46 @@ public class CSharpOverrideHelper {
     /// Gets or sets the value of IP register.
     /// </summary>
     public ushort IP { get => State.IP; set => State.IP = value; }
+
+    /// <summary>
+    /// Gets or sets the value of the 32-bit EAX register.
+    /// </summary>
+    public uint EAX { get => State.EAX; set => State.EAX = value; }
+
+    /// <summary>
+    /// Gets or sets the value of the 32-bit EBX register.
+    /// </summary>
+    public uint EBX { get => State.EBX; set => State.EBX = value; }
+
+    /// <summary>
+    /// Gets or sets the value of the 32-bit ECX register.
+    /// </summary>
+    public uint ECX { get => State.ECX; set => State.ECX = value; }
+
+    /// <summary>
+    /// Gets or sets the value of the 32-bit EDX register.
+    /// </summary>
+    public uint EDX { get => State.EDX; set => State.EDX = value; }
+
+    /// <summary>
+    /// Gets or sets the value of the 32-bit ESP register.
+    /// </summary>
+    public uint ESP { get => State.ESP; set => State.ESP = value; }
+
+    /// <summary>
+    /// Gets or sets the value of the 32-bit EBP register.
+    /// </summary>
+    public uint EBP { get => State.EBP; set => State.EBP = value; }
+
+    /// <summary>
+    /// Gets or sets the value of the 32-bit ESI register.
+    /// </summary>
+    public uint ESI { get => State.ESI; set => State.ESI = value; }
+
+    /// <summary>
+    /// Gets or sets the value of the 32-bit EDI register.
+    /// </summary>
+    public uint EDI { get => State.EDI; set => State.EDI = value; }
 
     /// <summary>
     /// Gets or sets the value of the auxiliary flag.
@@ -473,8 +515,23 @@ public class CSharpOverrideHelper {
     /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
     /// <param name="function">The function to call.</param>
     public void NearCall(ushort expectedReturnCs, ushort expectedReturnIp, Func<int, Action> function) {
-        ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, function, () => {
+        ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, expectedReturnCs, function, () => {
             Stack.Push16(expectedReturnIp);
+            Action returnAction = function.Invoke(0);
+            returnAction.Invoke();
+        });
+    }
+
+    /// <summary>
+    /// Performs a near call with a 32-bit operand size, pushing a 32-bit return EIP onto the stack
+    /// (matching <c>Stack.Push32</c> used by the interpreter for 32-bit near calls).
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="function">The function to call.</param>
+    public void NearCall32(ushort expectedReturnCs, ushort expectedReturnIp, Func<int, Action> function) {
+        ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, expectedReturnCs, function, () => {
+            Stack.Push32(expectedReturnIp);
             Action returnAction = function.Invoke(0);
             returnAction.Invoke();
         });
@@ -485,11 +542,29 @@ public class CSharpOverrideHelper {
     /// </summary>
     /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
     /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="targetCs">The CS value of the callee, executed in for the duration of the call.</param>
     /// <param name="function">The function to call.</param>
-    public void FarCall(ushort expectedReturnCs, ushort expectedReturnIp, Func<int, Action> function) {
-        ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, function, () => {
+    public void FarCall(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Func<int, Action> function) {
+        ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, targetCs, function, () => {
             Stack.Push16(expectedReturnCs);
             Stack.Push16(expectedReturnIp);
+            Action returnAction = function.Invoke(0);
+            returnAction.Invoke();
+        });
+    }
+
+    /// <summary>
+    /// Performs a far call with a 32-bit operand size, pushing the return address as a 32-bit far pointer
+    /// (4-byte EIP + 2-byte CS + 2-byte padding) via <see cref="Stack.PushFarPointer32"/>, matching the
+    /// interpreter's 32-bit far-call stack layout so <see cref="FarRet32"/> reads back the right values.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="targetCs">The CS value of the callee, executed in for the duration of the call.</param>
+    /// <param name="function">The function to call.</param>
+    public void FarCall32(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Func<int, Action> function) {
+        ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, targetCs, function, () => {
+            Stack.PushFarPointer32(new SegmentedAddress32(expectedReturnCs, expectedReturnIp));
             Action returnAction = function.Invoke(0);
             returnAction.Invoke();
         });
@@ -499,7 +574,7 @@ public class CSharpOverrideHelper {
     /// Call the given callback number
     /// </summary>
     /// <param name="callbackNumber">The callback identifier.</param>
-    public void Callback(byte callbackNumber) {
+    public void Callback(ushort callbackNumber) {
         _callbackHandler.RunFromOverriden(callbackNumber);
     }
 
@@ -508,9 +583,10 @@ public class CSharpOverrideHelper {
     /// </summary>
     /// <param name="expectedReturnCs">The expected value of the CS register after the interrupt call.</param>
     /// <param name="expectedReturnIp">The expected value of the IP register after the interrupt call.</param>
+    /// <param name="targetCs">The CS value of the interrupt handler, executed in for the duration of the call.</param>
     /// <param name="function">The function to execute as part of the interrupt call.</param>
-    public void InterruptCall(ushort expectedReturnCs, ushort expectedReturnIp, Func<int, Action> function) {
-        ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, function, () => {
+    public void InterruptCall(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Func<int, Action> function) {
+        ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, targetCs, function, () => {
             Stack.Push16(State.Flags.FlagRegister16);
             InterruptFlag = false;
             Stack.Push16(expectedReturnCs);
@@ -534,7 +610,23 @@ public class CSharpOverrideHelper {
             throw FailAsUntested($"Could not find an override at address {target}");
         }
 
-        InterruptCall(expectedReturnCs, expectedReturnIp, function);
+        InterruptCall(expectedReturnCs, expectedReturnIp, target.Segment, function);
+    }
+
+    /// <summary>
+    /// Performs the CPU-fault entry sequence used by generated code: pushes the flags register and the
+    /// faulting instruction's address as the return frame, clears the interrupt flag, and sets CS:IP to the
+    /// resolved fault handler target. Control transfer into the handler partition happens at the call site.
+    /// </summary>
+    /// <param name="faultingInstructionCs">The CS of the instruction that faulted, pushed as the return segment.</param>
+    /// <param name="faultingInstructionIp">The IP of the instruction that faulted, pushed as the return offset.</param>
+    /// <param name="target">The fault handler address resolved through the interrupt vector table.</param>
+    public void EnterCpuFaultHandler(ushort faultingInstructionCs, ushort faultingInstructionIp, SegmentedAddress target) {
+        Stack.Push16(State.Flags.FlagRegister16);
+        Stack.PushSegmentedAddress(new SegmentedAddress(faultingInstructionCs, faultingInstructionIp));
+        InterruptFlag = false;
+        CS = target.Segment;
+        IP = target.Offset;
     }
 
     /// <summary>
@@ -552,9 +644,15 @@ public class CSharpOverrideHelper {
     }
 
     private void ExecuteCallEnsuringSameStack(ushort expectedReturnCs, ushort expectedReturnIp,
-        Func<int, Action> function, Action action) {
+        ushort targetCs, Func<int, Action> function, Action action) {
         uint expectedStackAddress = State.StackPhysicalAddress;
-        State.CS = expectedReturnCs;
+        // CS is set to the callee's segment for the duration of the call: this is the segment the emulated
+        // CPU runs in while inside the callee, so reads of CS (e.g. a "push CS" idiom) observe the right value.
+        // For near calls targetCs equals expectedReturnCs so CS is unchanged. IP is set to the expected return
+        // offset as a fallback for the post-call validation below; generated code never reads State.IP mid-call
+        // (CheckExternalEvents takes the offset explicitly), and the callee's return action overwrites CS:IP
+        // with the actual return address before the loop runs.
+        State.CS = targetCs;
         State.IP = expectedReturnIp;
         ExecuteCall(function, action);
         ushort actualReturnCs = State.CS;
@@ -706,6 +804,24 @@ public class CSharpOverrideHelper {
     }
 
     /// <summary>
+    /// Compares the in-memory bytes at the given segmented address against a self-modifying-code selector
+    /// signature, reusing the exact primitives the interpreter uses (<see cref="IMemory.GetSlice"/> over a
+    /// linear slice and <see cref="Signature.ListEquivalent(IList{byte})"/>, where null entries are
+    /// wildcards). This keeps generated selector dispatch provably identical to the execution oracle
+    /// (<c>SelectorNode.GetNextSuccessor</c> / <c>MemoryInstructionMatcher</c>): no MMU translation, no
+    /// segment-limit fault, and no 16-bit offset wraparound.
+    /// </summary>
+    /// <param name="segment">The segment of the address whose bytes are compared.</param>
+    /// <param name="offset">The offset of the address whose bytes are compared.</param>
+    /// <param name="signature">The expected byte pattern; null entries match any byte.</param>
+    /// <returns><c>true</c> when every non-null signature byte matches memory; otherwise <c>false</c>.</returns>
+    public bool SelectorSignatureMatches(ushort segment, ushort offset, byte?[] signature) {
+        uint linearAddress = MemoryUtils.ToPhysicalAddress(segment, offset);
+        IList<byte> bytes = Memory.GetSlice((int)linearAddress, signature.Length);
+        return new Signature(ImmutableList.CreateRange(signature)).ListEquivalent(bytes);
+    }
+
+    /// <summary>
     /// Throws an exception if the given value is not one of the possible values.
     /// </summary>
     /// <param name="value">The value to check for support.</param>
@@ -728,6 +844,10 @@ public class CSharpOverrideHelper {
             Exit();
         }
         State.IncCycles();
+        // Override/generated code runs without returning to the interpreter run loop that normally pumps the
+        // device scheduler, so advance scheduled device events here (e.g. the PIT raising IRQ0). Without this,
+        // external hardware interrupts would never become pending while generated code is executing.
+        Machine.EmulationLoopScheduler.ProcessEvents();
         if (!InterruptFlag) {
             return;
         }

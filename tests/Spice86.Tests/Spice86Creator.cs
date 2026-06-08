@@ -22,6 +22,7 @@ public sealed class Spice86Creator : IDisposable {
     public Spice86Creator(string binName, bool enablePit = false,
         long maxCycles = 100000, bool installInterruptVectors = false, bool failOnUnhandledPort = false, bool enableA20Gate = false,
         bool enableXms = false, bool enableEms = false, string? overrideSupplierClassName = null, string? cDrive = null,
+        IOverrideSupplier? overrideSupplier = null,
         ushort programEntryPointSegment = 0x170,
         SbType sbType = SbType.None, OplMode oplMode = OplMode.None,
         ushort sbBase = 0x220, byte sbIrq = 7, byte sbDma = 1, byte sbHdma = 5,
@@ -29,7 +30,9 @@ public sealed class Spice86Creator : IDisposable {
         JitMode jitMode = JitMode.InterpretedOnly, bool failOnInvalidOpcode = false,
         string? recordedDataDirectory = null, bool reloadCfgGraph = false) {
         string executablePath = Path.IsPathRooted(binName) ? binName : $"Resources/cpuTests/{binName}.bin";
-        IOverrideSupplier? overrideSupplier = null;
+        if (overrideSupplierClassName != null && overrideSupplier != null) {
+            throw new ArgumentException("Provide either an override supplier instance or an override supplier class name, not both.");
+        }
         if (overrideSupplierClassName != null) {
             overrideSupplier = CommandLineParser.ParseFunctionInformationSupplierClassName(overrideSupplierClassName);
         }

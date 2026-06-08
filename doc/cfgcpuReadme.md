@@ -15,6 +15,10 @@ This also opens the door to JIT-compiling hot blocks in the future.
 
 On exit the graph is dumped to `spice86dumpCfgReload.json` (a machine-oriented artifact separate from the LLM-optimized `spice86dumpCfgBlocks.json`). At startup it is reloaded from the recorded data directory into live emulator state, so previously explored program structure is preserved across runs. This is on by default; disable with `--ReloadCfgGraph false`, and it is a no-op when the file is absent.
 
+The dump is split across two files: `spice86dumpCfgBlocks.json` holds the basic blocks and execution-context metadata, and `spice86dumpCfgPartitions.json` holds the recovered function/helper partitions and the transfers between them.
+
+When code overrides are active (`--UseCodeOverride true` with an override supplier), the graph dumps (`spice86dumpCfgReload.json`, `spice86dumpCfgBlocks.json`, `spice86dumpCfgPartitions.json`) and `spice86dumpExecutionFlow.json` are skipped: overrides mask the emulated asm, so the graph jumps between overrides and no longer represents the program.
+
 ## Node Types
 
 ### CfgNode

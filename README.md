@@ -27,14 +27,16 @@ Spice86 is a tool that helps you do so with a methodic divide and conquer approa
 General process:
 
 - You start by emulating the program in the Spice86 emulator.
-- At the end of each run, the emulator dumps some runtime data (memory dump and execution flow)
-- You load those data into [ghidra](https://github.com/NationalSecurityAgency/ghidra) via the [spice86-ghidra-plugin](https://github.com/OpenRakis/spice86-ghidra-plugin)
-- The plugin converts the assembly instructions in the memory dump to C# that can be loaded into spice86 and used either partially or completely instead of the assembly code.
-- This allows you to gradually reimplement the assembly code with your C# methods
+- As the program runs, Spice86 builds a Control Flow Graph (CFG) of the executed code.
+- At the end of each run, the emulator dumps some runtime data (memory dump, execution flow and the CFG).
+- From that CFG, Spice86 **directly generates a self-contained, runnable C# project** that overrides the original assembly with equivalent C# code.
+- You then gradually rewrite the generated C# functions, replacing the mechanical translation with readable, intentful code (a task an LLM can help with).
 - This is helpful because:
   - Small sequences of assembly can be statically analyzed and are generally easy to translate to a higher level language.
   - You work all the time with a fully working version of the program so it is relatively easy to catch mistakes early.
   - Rewriting code function by function allows you to discover the intent of the author.
+
+Spice86 also dumps Ghidra-compatible symbols, so you can **optionally** load the memory dump into [Ghidra](https://github.com/NationalSecurityAgency/ghidra) via the [spice86-ghidra-plugin](https://github.com/OpenRakis/spice86-ghidra-plugin) for deeper static analysis. This is no longer required to produce C# overrides; it is just an extra analysis aid.
 
 ## Running your exe
 
@@ -59,10 +61,17 @@ The emulator dumps the following files:
 
 - **spice86dumpMemoryDump.bin**: Snapshot of the real mode address space
 - **spice86dumpExecutionFlow.json**: Contains function addresses, labels, and executed instructions
+- **spice86dumpGhidraSymbols.txt**: Ghidra-compatible symbols (function and label addresses), for optional import into Ghidra
+- **spice86dumpCfgBlocks.json**: The explored CFG as basic blocks with execution-context metadata
+- **spice86dumpCfgPartitions.json**: The recovered function/helper partitions and inter-partition transfers, derived from the block graph
+- **spice86dumpCfgGeneratedOverrides.cs**: C# overrides generated from the explored CFG
+- **GeneratedProject/**: A self-contained, runnable C# override project (see [Generated C# override project](#generated-c-override-project))
 
 When there is already data in the specified location, the emulator will load it first and complement it.
 
 **CFG graph reload:** The CFG instruction graph is also dumped (**spice86dumpCfgReload.json**) and, by default, reloaded from the recorded data directory at startup so previously explored program structure is preserved across runs. Disable with `--ReloadCfgGraph false`. It is a no-op if the file is absent.
+
+**Code overrides:** When code overrides are active (`--UseCodeOverride true` with an `--OverrideSupplierClassName`), the CFG and execution flow dumps (**spice86dumpExecutionFlow.json**, **spice86dumpCfgBlocks.json**, **spice86dumpCfgPartitions.json**, **spice86dumpCfgReload.json**) are not written. Overrides replace the emulated asm, so the recorded graph would jump between overrides and no longer reflect the program.
 
 ### CPU Heavy Logging
 
@@ -224,7 +233,9 @@ Dumps everything described below in one shot. Files are created in the dump fold
 Several files are produced:
 
 - spice86dumpMemoryDump.bin: Snapshot of the real mode address space. Contains the instructions that are actually loaded and executed. They may differ from the exe you are running because DOS programs can rewrite some of their instructions / load additional modules in memory.
-- spice86dumpExecutionFlow.json: Contains information used by the [spice86-ghidra-plugin](https://github.com/OpenRakis/spice86-ghidra-plugin) to make sense of the memory dump, like addresses of the functions, the labels, the instructions that have been executed ...
+- spice86dumpExecutionFlow.json: Contains information about the run such as addresses of the functions, the labels, and the instructions that have been executed. Also consumed by the optional [spice86-ghidra-plugin](https://github.com/OpenRakis/spice86-ghidra-plugin).
+- spice86dumpCfgBlocks.json and spice86dumpCfgPartitions.json: the explored CFG as basic blocks, and the function/helper partitions plus transfers derived from those blocks.
+- spice86dumpCfgGeneratedOverrides.cs and GeneratedProject/: the C# overrides and runnable project generated from the explored CFG (see [Generated C# override project](#generated-c-override-project)).
 
 #### Special breakpoints
 
@@ -306,17 +317,40 @@ Concrete example with Cryo Dune [here](https://github.com/OpenRakis/Cryogenic).
 
 First run your program and make sure everything works fine in Spice86. If you encounter issues it could be due to unimplemented hardware / DOS / BIOS features.
 
-When Spice86 exits, it should dump data in current folder or in folder specified by env variable
+When Spice86 exits, it dumps its data (memory dump, execution flow, CFG) and generates a C# override project in the dump folder (current folder, or the folder specified by the `SPICE86_DUMPS_FOLDER` env variable / `--RecordedDataDirectory`).
 
-Open the data in [ghidra](https://github.com/NationalSecurityAgency/ghidra) with the [spice86-ghidra-plugin](https://github.com/OpenRakis/spice86-ghidra-plugin) and generate code. You can import the generated files in a template project you generate via the [spice86-dotnet-templates](https://github.com/OpenRakis/spice86-dotnet-templates):
+The generated project under `GeneratedProject/` is immediately runnable and already overrides the explored assembly with equivalent C#. From there you rewrite the generated functions, function by function, to discover and document the program's intent. This is well suited to LLM assistance.
 
+See [Generated C# override project](#generated-c-override-project) for how to run it and [Overriding emulated code with C# code](#overriding-emulated-code-with-c-code) for the override API.
+
+Optionally, you can also open the memory dump in [Ghidra](https://github.com/NationalSecurityAgency/ghidra) with the [spice86-ghidra-plugin](https://github.com/OpenRakis/spice86-ghidra-plugin) for additional static analysis (see [Ghidra plugin](#ghidra-plugin)).
+
+## Generated C# override project
+
+On every dump (when not already running with overrides), Spice86 turns the explored CFG into a ready-to-run C# project, so you do not need any external tool to start rewriting the program in C#.
+
+Two artifacts are produced in the dump folder:
+
+- **spice86dumpCfgGeneratedOverrides.cs**: the generated overrides on their own (a `CfgGeneratedOverrideSupplier` plus a `CfgGeneratedOverrides : CSharpOverrideHelper` mapping every discovered function via `DefineFunction`).
+- **GeneratedProject/**: a self-contained, runnable project wrapping those overrides:
+  - `Spice86.Generated.csproj` references the Spice86 GUI project, so the build always matches the running emulator.
+  - `Program.cs` forwards all your arguments to Spice86 and defaults in `--OverrideSupplierClassName`, `--UseCodeOverride true`, and the program's `--ExpectedChecksum` (so the overrides cannot run against a different binary).
+  - `CfgGeneratedOverrides.cs` contains the generated overrides.
+
+Run it like a normal .NET project, passing the path to your executable:
+
+```bash
+cd <dump folder>/GeneratedProject
+dotnet run -- -e /path/to/PROGRAM.EXE
 ```
-dotnet new spice86.project
-```
+
+Then progressively replace the mechanically generated function bodies with your own readable C# implementations.
+
+> **Note:** while running with overrides active (`--UseCodeOverride true`), the CFG and execution-flow dumps are not rewritten, so regenerating from scratch should be done from a plain (non-override) run.
 
 ## Overriding emulated code with C# code
 
-You can provide your own C# code to override the program original assembly code.
+You can provide your own C# code to override the program original assembly code. This is exactly what the [generated project](#generated-c-override-project) does for you automatically; the section below explains the API so you (or an LLM) can write or refine overrides.
 
 ### Defining overrides
 
@@ -332,12 +366,10 @@ namespace My.Program;
 // This class is responsible for providing the overrides to spice86.
 // There is only one per program you reimplement.
 public class MyProgramOverrideSupplier : IOverrideSupplier {
-  public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(int programStartSegment,
-                                                                                 Machine machine) {
-    Dictionary<SegmentedAddress, FunctionInformation> res = new();
-    // In more complex examples, overrides may call each other
-    new MyOverrides(res, programStartSegment, machine);
-    return res;
+  public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(
+      ILoggerService loggerService, Configuration configuration, ushort programStartSegment, Machine machine) {
+    return new MyOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(),
+        machine, loggerService, configuration).FunctionInformations;
   }
 
   public override string ToString() {
@@ -347,20 +379,19 @@ public class MyProgramOverrideSupplier : IOverrideSupplier {
 
 // This class contains the actual overrides. As the project grows, you will probably need to split the reverse engineered code in several classes.
 public class MyOverrides : CSharpOverrideHelper {
-  private MyOverridesGlobalsOnDs globalsOnDs;
+  private readonly MyOverridesGlobalsOnDs globalsOnDs;
 
-  public MyOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, ushort entrySegment, Machine machine, ILoggerService loggerService, Configuration configuration) {
-    // "myOverides" is a prefix that will be appended to all the function names defined in this class
-    base(functionInformations, machine,  loggerService, configuration);
-    globalsOnDs = new MyOverridesGlobalsOnDs(machine);
-    // incUnknown47A8_0x1ED_0xA1E8_0xC0B8 will get executed instead of the assembly code when a call to 1ED:A1E8 is performed.
-    // Also when dumping functions, the name myOverides.incUnknown47A8 or instead of unknown
-    // Note: the segment is provided in parameter as spice86 can load executables in different places depending on the configuration
-    DefineFunction(segment, 0xA1E8, "incDialogueCount47A8", IncDialogueCount47A8_0x1ED_0xA1E8_0xC0B8);
-    DefineFunction(segment, 0x0100, "addOneToAX", AddOneToAX_0x1ED_0x100_0x1FD0);
+  public MyOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations,
+      Machine machine, ILoggerService loggerService, Configuration configuration)
+      : base(functionInformations, machine, loggerService, configuration) {
+    globalsOnDs = new MyOverridesGlobalsOnDs(Memory, State.SegmentRegisters);
+    // IncDialogueCount47A8 will get executed instead of the assembly code when a call to 017D:A1E8 is performed.
+    // The override method receives the load offset (segment where the program was loaded) as parameter.
+    DefineFunction(0x017D, 0xA1E8, IncDialogueCount47A8_017D_A1E8_0C0B8);
+    DefineFunction(0x017D, 0x0100, AddOneToAX_017D_0100_01FD0);
   }
 
-  public Action IncDialogueCount47A8_0x1ED_0xA1E8_0xC0B8() {
+  public Action IncDialogueCount47A8_017D_A1E8_0C0B8(int loadOffset) {
     // Accessing the memory via accessors
     globalsOnDs.SetDialogueCount47A8(globalsOnDs.GetDialogueCount47A8() + 1);
     // Depends on the actual return instruction performed by the function, needed to be called from the emulated code as
@@ -368,12 +399,12 @@ public class MyOverrides : CSharpOverrideHelper {
     return NearRet();
   }
 
-  private Action AddOneToAX_0x1ED_0x100_0x1FD0() {
+  public Action AddOneToAX_017D_0100_01FD0(int loadOffset) {
     // Assembly for this would be
     // INC AX
-    // RETF
+    // RETN
     // Note that you can access the whole emulator to change the state in the overrides.
-    state.AX++;
+    State.AX++;
     return NearRet();
   }
 }
@@ -389,22 +420,20 @@ public class GlobalsOnDs : MemoryBasedDataStructureWithDsBaseAddress {
         return UInt16[0x2];
     }
 
-    // Operation not registered by running code
-    public void Set01DD_0002_Word16(byte value) {
+    public void Set01DD_0002_Word16(ushort value) {
         UInt16[0x2] = value;
     }
 
     // Getters and Setters for address 0x1138:0x0/0x11380.
-    // Operation not registered by running code
     public int Get1138_0000_Word16() {
         return UInt16[0x0];
     }
 }
 ```
 
-*Remember*: You must tell Spice86 to use your assembly code overrides with the command line argument "--UseCodeOverride true" when debugging your project.
+The override method name encodes the address (`Name_<segment>_<offset>_<linear>`) so it can be parsed back into a `FunctionInformation`; pass an explicit `name` argument to `DefineFunction` if you prefer not to follow that convention.
 
-Along with the mandatory path to your DOS program, passed with the --ExePath argument.
+*Remember*: You must tell Spice86 to use your C# code overrides with the command line argument "--UseCodeOverride true" when debugging your project, along with the mandatory path to your DOS program passed with the "-e" / "--Exe" argument.
 
 ## Debugger
 
@@ -489,6 +518,8 @@ if you don't want to manually build and run separately, use the helper script at
 
 ### Ghidra plugin
 
+Importing the dump into Ghidra is **optional**. Spice86 already generates a runnable C# override project on its own (see [Generated C# override project](#generated-c-override-project)); the Ghidra plugin is only useful if you additionally want to explore the dump inside Ghidra (static analysis, labeling, or producing a `--StructureFile` C header for the [structure viewer](#structure-viewer)).
+
 This uses Ghidra and Java 17.
 
 Before using it, define an environnement variable named SPICE86_DUMPS_FOLDER pointing to a folder where the Spice86 dumps are located.
@@ -502,7 +533,7 @@ General procedure, in order:
 
 3.Now, you can use the plugin.
 
-Remember: if Ghidra displays SUBROUTINES, use the 'f' key to convert them into functions. The code generator only works with functions.
+Remember: if Ghidra displays SUBROUTINES, use the 'f' key to convert them into functions.
 
 Also, if you have any weird behaviour, make sure you have Java 17 and ONLY Java 17. That's how Ghidra likes it.
 

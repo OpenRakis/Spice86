@@ -7,10 +7,25 @@
 public class JumpDispatcher {
     private static int _instanceCounter;
 
+    private static readonly Action UnwindNoOp = () => { };
+
     /// <summary>
     /// Caller needs to return this when the Jump method returns false
     /// </summary>
     public Action? JumpAsmReturn { get; set; }
+
+    /// <summary>
+    /// Non-null view of <see cref="JumpAsmReturn"/> for callers that must return it after <see cref="Jump"/>
+    /// returned <c>false</c>, avoiding the null-forgiving operator at every call site.
+    /// <para>
+    /// On a mutual-recursion unwind (the target was already on the jump stack), the active call frame returns
+    /// before the enclosing <see cref="Jump"/> assigns <see cref="JumpAsmReturn"/>, so it is still <c>null</c>.
+    /// That returned value is discarded by the enclosing frame, which overwrites <see cref="JumpAsmReturn"/>
+    /// and re-enters its target. A no-op action is returned in that case so the value is never <c>null</c> and
+    /// is harmless if invoked.
+    /// </para>
+    /// </summary>
+    public Action RequiredJumpAsmReturn => JumpAsmReturn ?? UnwindNoOp;
 
     /// <summary>
     /// Caller needs to jump to its entry point with gotoAddress = NextEntryAddress when Jump returns true

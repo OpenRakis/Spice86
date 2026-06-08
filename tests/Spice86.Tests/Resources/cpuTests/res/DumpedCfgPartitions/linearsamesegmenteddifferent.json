@@ -1,0 +1,72 @@
+{
+  "partitions": [
+    {
+      "id": 1,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        18,
+        20
+      ],
+      "entries": [
+        {
+          "block": 18,
+          "address": "FFEF:000D",
+          "kind": "returnTargetEntry"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        13,
+        11
+      ],
+      "entries": [
+        {
+          "block": 11,
+          "address": "F000:FEFD",
+          "kind": "returnTargetEntry"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        3,
+        2
+      ],
+      "entries": [
+        {
+          "block": 2,
+          "address": "F000:FFF0",
+          "kind": "executionContextEntry"
+        }
+      ]
+    }
+  ],
+  "transfers": [
+    {
+      "kind": "dynamicReturn",
+      "fromPartition": 2,
+      "toPartition": 1,
+      "fromBlock": 13,
+      "toBlock": 18,
+      "from": "F000:0007",
+      "target": "FFEF:000D"
+    },
+    {
+      "kind": "dynamicReturn",
+      "fromPartition": 3,
+      "toPartition": 2,
+      "fromBlock": 3,
+      "toBlock": 11,
+      "from": "F000:0019",
+      "target": "F000:FEFD"
+    }
+  ]
+}
