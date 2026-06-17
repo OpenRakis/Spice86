@@ -108,7 +108,6 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     /// <param name="dosDriveManager">Provides drive metadata and current drive context for path resolution.</param>
     /// <param name="driveStatusProvider">Supplies DOS drive-status snapshots shared with the batch command surface.</param>
     /// <param name="mscdex">The MSCDEX CD-ROM handler owned by the DOS kernel, used for IMGMOUNT batch commands.</param>
-    /// <param name="mixer">The software audio mixer, used to stream CD audio when an image is mounted.</param>
     /// <param name="activityNotifier">Notifier that surfaces per-drive read/write activity to UI subscribers.</param>
     /// <param name="batchDisplayCommandHandler">Batch-specific display command handler used by screen-related builtins such as CLS.</param>
     /// <param name="envVars">The initial host environment variables to seed the master environment block.</param>
