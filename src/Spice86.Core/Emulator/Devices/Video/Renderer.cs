@@ -7,7 +7,7 @@ using Spice86.Core.Emulator.Devices.Video.Registers.CrtController;
 using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Logging;
+using Spice86.Shared.Interfaces;
 
 using ClockSelect = Registers.General.MiscellaneousOutput.ClockSelectValue;
 
@@ -74,7 +74,7 @@ public class Renderer : IVgaRenderer {
     /// <param name="blinkState">Shared blink state for text-mode attribute blinking.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="renderer256Color">The 256-color scanline renderer selected for the current CPU.</param>
-    public Renderer(IMemory memory, IVideoState state, VgaBlinkState blinkState, LoggerService loggerService, IVgaRenderer256Color renderer256Color) {
+    public Renderer(IMemory memory, IVideoState state, VgaBlinkState blinkState, ILoggerService loggerService, IVgaRenderer256Color renderer256Color) {
         _state = state;
         _blinkState = blinkState;
         _renderer256Color = renderer256Color;

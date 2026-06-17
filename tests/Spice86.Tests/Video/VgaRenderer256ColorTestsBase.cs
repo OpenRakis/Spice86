@@ -7,7 +7,6 @@ using NSubstitute;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Devices.Video.Registers.CrtController;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Logging;
 using Spice86.Shared.Interfaces;
 
 using Xunit;
@@ -42,7 +41,7 @@ public abstract class VgaRenderer256ColorTestsBase {
         mockMemory.When(m => m.RegisterMapping(Arg.Any<uint>(), Arg.Any<uint>(), Arg.Any<IMemoryDevice>()))
             .Do(callInfo => captured = (VideoMemory)callInfo.ArgAt<IMemoryDevice>(2));
 
-        LoggerService loggerService = new();
+        ILoggerService loggerService = Substitute.For<ILoggerService>();
         VgaBlinkState blinkState = new();
         IVgaRenderer256Color renderer256Color = Create256ColorRenderer();
         Renderer renderer = new(mockMemory, state, blinkState, loggerService, renderer256Color);

@@ -33,9 +33,4 @@ public interface ILoggerService : ILogger {
     /// </summary>
     /// <returns>The new <see cref="LoggerConfiguration"/></returns>
     LoggerConfiguration CreateLoggerConfiguration();
-
-    /// <summary>
-    /// Redirects console log output to stderr, freeing stdout for protocol transports (e.g., MCP stdio).
-    /// </summary>
-    void UseStderrForConsoleOutput();
 }
