@@ -25,7 +25,7 @@
     <PackageVersion Include="Dock.Model.Avalonia" Version="12.0.0.2" />
     <PackageVersion Include="Dock.Model.Mvvm" Version="12.0.0.2" />
     <PackageVersion Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2" />
-    <PackageVersion Include="FluentIcons.Avalonia" Version="2.1.326" />
+    <PackageVersion Include="FluentIcons.Avalonia" Version="2.1.330" />
     <PackageVersion Include="Iced" Version="1.21.0" />
     <PackageVersion Include="JetBrains.Annotations" Version="2025.2.4" />
     <PackageVersion Include="JvE.Structurizer" Version="1.2.0" />
