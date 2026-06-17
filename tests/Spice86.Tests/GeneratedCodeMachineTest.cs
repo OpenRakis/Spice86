@@ -250,7 +250,7 @@ public sealed class GeneratedCodeMachineTest {
         source.Should().NotContain("relocationBaseSegment");
         source.Should().NotContain("relocated from the runtime entry segment");
         // The generated source still compiles.
-        new GeneratedOverrideCompiler().CompileSupplier(source);
+        using CompiledGeneratedOverride compiledOverride = new GeneratedOverrideCompiler().CompileSupplier(source);
     }
 
     [Fact]

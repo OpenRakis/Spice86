@@ -74,6 +74,7 @@ public sealed class Spice86Creator : IDisposable {
             RecordedDataDirectory = exportFolder,
             SilencedLogs = true,
             HttpApiPort = 0,
+            McpHttpPort = 0,
             // Deterministic cycle-based clock (CyclesClock) to avoid
             // wall-clock non-determinism in tests.
             // 333333 is the value that allowed most wall clock based tests to pass without changing all the expected values.

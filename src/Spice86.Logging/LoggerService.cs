@@ -14,7 +14,6 @@ public class LoggerService : ILoggerService, IDisposable {
 
     private static readonly object?[] EmptyProperties = [];
 
-    private LoggerConfiguration _loggerConfiguration;
     private Logger? _logger;
     private LoggingLevelSwitch _logLevelSwitch;
     private bool _disposed;
@@ -25,8 +24,6 @@ public class LoggerService : ILoggerService, IDisposable {
     public LoggerService() {
         _logLevelSwitch = new LoggingLevelSwitch();
         LoggerPropertyBag = new LoggerPropertyBag();
-        _loggerConfiguration = CreateLoggerConfiguration();
-        _loggerConfiguration.MinimumLevel.ControlledBy(_logLevelSwitch);
     }
 
     /// <inheritdoc />
@@ -34,7 +31,6 @@ public class LoggerService : ILoggerService, IDisposable {
         get => _logLevelSwitch;
         set {
             _logLevelSwitch = value ?? throw new ArgumentNullException(nameof(value));
-            _loggerConfiguration.MinimumLevel.ControlledBy(_logLevelSwitch);
             ResetLogger();
         }
     }
@@ -49,26 +45,12 @@ public class LoggerService : ILoggerService, IDisposable {
     public LoggerConfiguration CreateLoggerConfiguration() {
         LoggerConfiguration configuration = new LoggerConfiguration()
             .Enrich.FromLogContext()
-            .Enrich.With(new LoggerPropertyBagEnricher(LoggerPropertyBag))
-            .WriteTo.Async(conf => conf.Console(outputTemplate: LogFormat))
-            .WriteTo.Async(conf2 => conf2.Debug(outputTemplate: LogFormat))
-            .WriteTo.Async(conf3 =>
-                conf3.File("logs/log-.txt", outputTemplate: LogFormat, rollingInterval: RollingInterval.Day));
+            .Enrich.With(new LoggerPropertyBagEnricher(LoggerPropertyBag));
+        configuration.WriteTo.Async(conf => conf.Console(outputTemplate: LogFormat));
+        configuration.WriteTo.Async(conf2 => conf2.Debug(outputTemplate: LogFormat));
+        configuration.WriteTo.Async(conf3 =>
+            conf3.File("logs/log-.txt", outputTemplate: LogFormat, rollingInterval: RollingInterval.Day));
         return configuration;
-    }
-
-    /// <inheritdoc />
-    public void UseStderrForConsoleOutput() {
-        _logger?.Dispose();
-        _logger = null;
-        _loggerConfiguration = new LoggerConfiguration()
-            .Enrich.FromLogContext()
-            .Enrich.With(new LoggerPropertyBagEnricher(LoggerPropertyBag))
-            .WriteTo.Async(conf => conf.Console(outputTemplate: LogFormat, standardErrorFromLevel: Serilog.Events.LogEventLevel.Verbose))
-            .WriteTo.Async(conf2 => conf2.Debug(outputTemplate: LogFormat))
-            .WriteTo.Async(conf3 =>
-                conf3.File("logs/log-.txt", outputTemplate: LogFormat, rollingInterval: RollingInterval.Day));
-        _loggerConfiguration.MinimumLevel.ControlledBy(_logLevelSwitch);
     }
 
     public void Write(LogEventLevel level, string messageTemplate) {
@@ -139,8 +121,6 @@ public class LoggerService : ILoggerService, IDisposable {
     private void ResetLogger() {
         _logger?.Dispose();
         _logger = null;
-        _loggerConfiguration = CreateLoggerConfiguration();
-        _loggerConfiguration.MinimumLevel.ControlledBy(_logLevelSwitch);
     }
 
     private Logger? GetLoggerForLevel(LogEventLevel level) {
@@ -148,8 +128,14 @@ public class LoggerService : ILoggerService, IDisposable {
             return null;
         }
 
-        _logger ??= _loggerConfiguration.CreateLogger();
+        _logger ??= BuildLogger();
         return _logger;
+    }
+
+    private Logger BuildLogger() {
+        LoggerConfiguration configuration = CreateLoggerConfiguration();
+        configuration.MinimumLevel.ControlledBy(_logLevelSwitch);
+        return configuration.CreateLogger();
     }
 
     private static object?[] Normalize(object?[]? properties) {

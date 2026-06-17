@@ -12,12 +12,14 @@ using System.Reflection;
 using System.Runtime.Loader;
 
 internal sealed class GeneratedOverrideCompiler {
+    private static readonly MetadataReference[] PlatformMetadataReferences = CreateMetadataReferences();
+
     public CompiledGeneratedOverride CompileSupplier(string source) {
         SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(source, CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Preview));
         CSharpCompilation compilation = CSharpCompilation.Create(
             assemblyName: "Spice86.GeneratedCode.Tests." + Guid.NewGuid().ToString("N"),
             syntaxTrees: [syntaxTree],
-            references: GetMetadataReferences(),
+            references: PlatformMetadataReferences,
             options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
         using MemoryStream peStream = new();
@@ -30,14 +32,20 @@ internal sealed class GeneratedOverrideCompiler {
         }
 
         peStream.Position = 0;
-        Assembly assembly = AssemblyLoadContext.Default.LoadFromStream(peStream);
-        Type supplierType = assembly.GetTypes().Single(type => typeof(IOverrideSupplier).IsAssignableFrom(type) && !type.IsAbstract);
-        object supplierInstance = Activator.CreateInstance(supplierType)
-            ?? throw new InvalidOperationException($"Could not instantiate generated supplier type {supplierType.FullName}.");
-        return new CompiledGeneratedOverride((IOverrideSupplier)supplierInstance);
+        CollectibleAssemblyLoadContext loadContext = new();
+        try {
+            Assembly assembly = loadContext.LoadFromStream(peStream);
+            Type supplierType = assembly.GetTypes().Single(type => typeof(IOverrideSupplier).IsAssignableFrom(type) && !type.IsAbstract);
+            object supplierInstance = Activator.CreateInstance(supplierType)
+                ?? throw new InvalidOperationException($"Could not instantiate generated supplier type {supplierType.FullName}.");
+            return new CompiledGeneratedOverride(loadContext, (IOverrideSupplier)supplierInstance);
+        } catch {
+            loadContext.Unload();
+            throw;
+        }
     }
 
-    private static MetadataReference[] GetMetadataReferences() {
+    private static MetadataReference[] CreateMetadataReferences() {
         string trustedAssemblies = (string?)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") ?? string.Empty;
         IEnumerable<string> trustedPaths = trustedAssemblies.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries);
         IEnumerable<string> loadedPaths = AppDomain.CurrentDomain.GetAssemblies()

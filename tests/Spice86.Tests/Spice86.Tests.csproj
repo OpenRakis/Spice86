@@ -5,6 +5,15 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<WarningsAsErrors>nullable</WarningsAsErrors>
 		<IsPackable>false</IsPackable>
+		<!--
+		  Use workstation GC for the test host. Server GC is lazy about reclaiming
+		  collectible memory while RAM is abundant, which lets per-test allocations
+		  (the multi-MB Ram array, audio reverb buffers, CFG graphs) pile up and push
+		  RSS into the tens of GB over a full run eventually OOM-killing the host on
+		  memory-constrained machines/CI.
+		-->
+		<ServerGarbageCollection>false</ServerGarbageCollection>
+		<ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
 	</PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="ErrorProne.NET.CoreAnalyzers">

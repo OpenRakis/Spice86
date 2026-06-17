@@ -726,24 +726,26 @@ public class Spice86DependencyInjection : IDisposable {
 
         McpHttpHost? mcpHttpTransport = null;
 
-        // Collect additional MCP tool assemblies and services from override supplier
-        IEnumerable<Assembly>? additionalToolAssemblies = null;
-        IEnumerable<object>? additionalMcpServices = null;
-        if (configuration.OverrideSupplier is IMcpToolSupplier mcpToolSupplier) {
-            additionalToolAssemblies = mcpToolSupplier.GetMcpToolAssemblies();
-            additionalMcpServices = mcpToolSupplier.GetMcpServices();
-        }
-
-        mcpHttpTransport = new McpHttpHost(loggerService);
-        try {
-            mcpHttpTransport.Start(emulatorMcpServices, configuration.McpHttpPort, additionalToolAssemblies, additionalMcpServices);
-            if (loggerService.IsEnabled(LogEventLevel.Information)) {
-                loggerService.Information("MCP HTTP transport started on port {Port}", configuration.McpHttpPort);
+        if (configuration.McpHttpPort != 0) {
+            // Collect additional MCP tool assemblies and services from override supplier
+            IEnumerable<Assembly>? additionalToolAssemblies = null;
+            IEnumerable<object>? additionalMcpServices = null;
+            if (configuration.OverrideSupplier is IMcpToolSupplier mcpToolSupplier) {
+                additionalToolAssemblies = mcpToolSupplier.GetMcpToolAssemblies();
+                additionalMcpServices = mcpToolSupplier.GetMcpServices();
             }
-        } catch (InvalidOperationException ex) {
-            loggerService.Warning(ex, "Failed to configure MCP HTTP transport on port {Port}; MCP HTTP will be unavailable", configuration.McpHttpPort);
-            mcpHttpTransport.Dispose();
-            mcpHttpTransport = null;
+
+            mcpHttpTransport = new McpHttpHost(loggerService);
+            try {
+                mcpHttpTransport.Start(emulatorMcpServices, configuration.McpHttpPort, additionalToolAssemblies, additionalMcpServices);
+                if (loggerService.IsEnabled(LogEventLevel.Information)) {
+                    loggerService.Information("MCP HTTP transport started on port {Port}", configuration.McpHttpPort);
+                }
+            } catch (InvalidOperationException ex) {
+                loggerService.Warning(ex, "Failed to configure MCP HTTP transport on port {Port}; MCP HTTP will be unavailable", configuration.McpHttpPort);
+                mcpHttpTransport.Dispose();
+                mcpHttpTransport = null;
+            }
         }
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {

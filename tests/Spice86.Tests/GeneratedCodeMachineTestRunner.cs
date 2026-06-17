@@ -27,7 +27,7 @@ internal sealed class GeneratedCodeMachineTestRunner {
     }
 
     public void TestGeneratedCode(string binName, byte[] expected, GeneratedCodeRunOptions options, Action<Machine>? assertions = null) {
-        CompiledGeneratedOverride compiledOverride = GenerateAndCompileSupplier(binName, options);
+        using CompiledGeneratedOverride compiledOverride = GenerateAndCompileSupplier(binName, options);
 
         using Spice86Creator creator = new(binName: binName, maxCycles: options.MaxCycles, enablePit: options.EnablePit,
             installInterruptVectors: options.InstallInterruptVectors, failOnUnhandledPort: options.FailOnUnhandledPort,

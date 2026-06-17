@@ -41,7 +41,7 @@ public class InstructionsFeederTest : IDisposable {
     }
 
     private InstructionsFeeder CreateInstructionsFeeder(IMmu mmu) {
-        ILoggerService loggerService = Substitute.For<LoggerService>();
+        ILoggerService loggerService = Substitute.For<ILoggerService>();
         State state = new(CpuModel.INTEL_80286);
         AddressReadWriteBreakpoints memoryBreakpoints = new();
         AddressReadWriteBreakpoints ioBreakpoints = new();
