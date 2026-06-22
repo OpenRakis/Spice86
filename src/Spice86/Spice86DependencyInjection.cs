@@ -216,12 +216,16 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         DateTimeOffset clockStartTime = configuration.ClockStartTime ?? DateTimeOffset.UtcNow;
-        _emulatedClock = configuration.InstructionTimeScale != null
+        IEmulatedClock emulatedClock = configuration.InstructionTimeScale != null
             ? new CyclesClock(state, configuration.InstructionTimeScale.Value, configuration.ClockJitterSeed, clockStartTime)
             : new EmulatedClock(configuration.ClockJitterSeed, clockStartTime);
-        // Register clock and limiter to pause/resume events
-        pauseHandler.Pausing += () => _emulatedClock.OnPause();
-        pauseHandler.Resumed += () => _emulatedClock.OnResume();
+        _emulatedClock = emulatedClock;
+        // Register clock and limiter to pause/resume events. Capture the clock through a local rather than the
+        // field so the event delegates do not close over this Spice86DependencyInjection instance: the pause
+        // handler can be rooted independently (e.g. by the MCP host service graph), and a closure over 'this'
+        // would keep the whole Machine graph alive after disposal.
+        pauseHandler.Pausing += () => emulatedClock.OnPause();
+        pauseHandler.Resumed += () => emulatedClock.OnResume();
 
         DeviceScheduler emulationLoopScheduler = new(_emulatedClock, loggerService, "Emulation loop");
         FloppyDiskTimingService floppyDiskTimingService = new(state, _emulatedClock, emulationLoopScheduler, FloppyDiskSpeed.Maximum);

@@ -10,8 +10,7 @@ using NSubstitute;
 
 using Xunit;
 
-[Collection(HttpApiServerCollection.Name)]
-public sealed partial class HttpApiGeneratedClientIntegrationTests {
+public sealed partial class HttpApiGeneratedClientIntegrationTests : IClassFixture<HttpApiServerFixture> {
     private const string KiotaToolVersion = "1.30.0";
     private static readonly TimeSpan CommandTimeout = TimeSpan.FromMinutes(3);
     private readonly HttpApiServerFixture _fixture;
@@ -25,6 +24,10 @@ public sealed partial class HttpApiGeneratedClientIntegrationTests {
     [InlineData("yaml", "/openapi/v1.yaml")]
     public async Task KiotaGeneratedDotNetClient_CanBeGeneratedBuiltAndExecuted(string extension, string openApiPath) {
         // Arrange
+        _fixture.Memory[0x40] = 0x12;
+        _fixture.Memory[0x41] = 0x34;
+        _fixture.Memory[0x42] = 0x56;
+        _fixture.Memory[0x43] = 0x78;
         _fixture.PauseHandler.IsPaused.Returns(false);
         _fixture.PauseHandler.ClearReceivedCalls();
         TestWorkspace workspace = CreateTestWorkspace(extension);

@@ -30,11 +30,12 @@ public sealed class HttpApiServerTests {
     [Fact]
     public async Task GetStatus_ReturnsMachineState() {
         SeedMemory();
-        HttpResponseMessage response = await _fixture.HttpClient.GetAsync("/api/status");
+        _fixture.PauseHandler.IsPaused.Returns(false);
+        HttpResponseMessage response = await _fixture.HttpClient.GetAsync("/api/status", TestContext.Current.CancellationToken);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        HttpApiStatusResponse payload = await response.Content.ReadFromJsonAsync<HttpApiStatusResponse>()
+        HttpApiStatusResponse payload = await response.Content.ReadFromJsonAsync<HttpApiStatusResponse>(TestContext.Current.CancellationToken)
             ?? throw new InvalidOperationException("Expected non-null payload");
         payload.IsPaused.Should().BeFalse();
         payload.IsCpuRunning.Should().BeTrue();
@@ -47,11 +48,11 @@ public sealed class HttpApiServerTests {
     [Fact]
     public async Task GetByte_ReturnsByteAtAddress() {
         SeedMemory();
-        HttpResponseMessage response = await _fixture.HttpClient.GetAsync("/api/memory/64/byte");
+        HttpResponseMessage response = await _fixture.HttpClient.GetAsync("/api/memory/64/byte", TestContext.Current.CancellationToken);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        HttpApiMemoryByteResponse payload = await response.Content.ReadFromJsonAsync<HttpApiMemoryByteResponse>()
+        HttpApiMemoryByteResponse payload = await response.Content.ReadFromJsonAsync<HttpApiMemoryByteResponse>(TestContext.Current.CancellationToken)
             ?? throw new InvalidOperationException("Expected non-null payload");
         payload.Address.Should().Be(64);
         payload.Value.Should().Be(0x12);
@@ -63,7 +64,7 @@ public sealed class HttpApiServerTests {
         _fixture.PauseHandler.ClearReceivedCalls();
         _fixture.PauseHandler.IsPaused.Returns(false);
 
-        HttpResponseMessage response = await _fixture.HttpClient.GetAsync("/api/memory/64/byte");
+        HttpResponseMessage response = await _fixture.HttpClient.GetAsync("/api/memory/64/byte", TestContext.Current.CancellationToken);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         _fixture.PauseHandler.Received(1).RequestPause(Arg.Any<string>());
@@ -76,7 +77,7 @@ public sealed class HttpApiServerTests {
         _fixture.PauseHandler.ClearReceivedCalls();
         _fixture.PauseHandler.IsPaused.Returns(true);
 
-        HttpResponseMessage response = await _fixture.HttpClient.GetAsync("/api/memory/64/byte");
+        HttpResponseMessage response = await _fixture.HttpClient.GetAsync("/api/memory/64/byte", TestContext.Current.CancellationToken);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         _fixture.PauseHandler.DidNotReceive().RequestPause(Arg.Any<string>());
@@ -90,15 +91,15 @@ public sealed class HttpApiServerTests {
             Value = 0xAB
         };
 
-        HttpResponseMessage putResponse = await _fixture.HttpClient.PutAsJsonAsync("/api/memory/64/byte", request);
+        HttpResponseMessage putResponse = await _fixture.HttpClient.PutAsJsonAsync("/api/memory/64/byte", request, TestContext.Current.CancellationToken);
         putResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        HttpApiMemoryByteResponse putPayload = await putResponse.Content.ReadFromJsonAsync<HttpApiMemoryByteResponse>()
+        HttpApiMemoryByteResponse putPayload = await putResponse.Content.ReadFromJsonAsync<HttpApiMemoryByteResponse>(TestContext.Current.CancellationToken)
             ?? throw new InvalidOperationException("Expected non-null putPayload");
         putPayload.Value.Should().Be(0xAB);
 
-        HttpResponseMessage getResponse = await _fixture.HttpClient.GetAsync("/api/memory/64/byte");
-        HttpApiMemoryByteResponse getPayload = await getResponse.Content.ReadFromJsonAsync<HttpApiMemoryByteResponse>()
+        HttpResponseMessage getResponse = await _fixture.HttpClient.GetAsync("/api/memory/64/byte", TestContext.Current.CancellationToken);
+        HttpApiMemoryByteResponse getPayload = await getResponse.Content.ReadFromJsonAsync<HttpApiMemoryByteResponse>(TestContext.Current.CancellationToken)
             ?? throw new InvalidOperationException("Expected non-null getPayload");
         getPayload.Value.Should().Be(0xAB);
         _fixture.Memory[0x40].Should().Be(0xAB);
@@ -113,7 +114,7 @@ public sealed class HttpApiServerTests {
             Value = 0xCD
         };
 
-        HttpResponseMessage response = await _fixture.HttpClient.PutAsJsonAsync("/api/memory/64/byte", request);
+        HttpResponseMessage response = await _fixture.HttpClient.PutAsJsonAsync("/api/memory/64/byte", request, TestContext.Current.CancellationToken);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         _fixture.PauseHandler.Received(1).RequestPause(Arg.Any<string>());
@@ -123,11 +124,11 @@ public sealed class HttpApiServerTests {
     [Fact]
     public async Task GetRange_ReturnsRequestedRange() {
         SeedMemory();
-        HttpResponseMessage response = await _fixture.HttpClient.GetAsync("/api/memory/64/range/4");
+        HttpResponseMessage response = await _fixture.HttpClient.GetAsync("/api/memory/64/range/4", TestContext.Current.CancellationToken);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        HttpApiMemoryRangeResponse payload = await response.Content.ReadFromJsonAsync<HttpApiMemoryRangeResponse>()
+        HttpApiMemoryRangeResponse payload = await response.Content.ReadFromJsonAsync<HttpApiMemoryRangeResponse>(TestContext.Current.CancellationToken)
             ?? throw new InvalidOperationException("Expected non-null payload");
         payload.Address.Should().Be(64);
         payload.Length.Should().Be(4);
@@ -138,7 +139,7 @@ public sealed class HttpApiServerTests {
     public async Task PauseEndpoint_PausesEmulator() {
         _fixture.PauseHandler.ClearReceivedCalls();
 
-        HttpResponseMessage response = await _fixture.HttpClient.PostAsync("/api/status/pause", content: null);
+        HttpResponseMessage response = await _fixture.HttpClient.PostAsync("/api/status/pause", content: null, TestContext.Current.CancellationToken);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         _fixture.PauseHandler.Received(1).RequestPause(Arg.Any<string>());
@@ -148,7 +149,7 @@ public sealed class HttpApiServerTests {
     public async Task UnpauseEndpoint_ResumesEmulator() {
         _fixture.PauseHandler.ClearReceivedCalls();
 
-        HttpResponseMessage response = await _fixture.HttpClient.PostAsync("/api/status/unpause", content: null);
+        HttpResponseMessage response = await _fixture.HttpClient.PostAsync("/api/status/unpause", content: null, TestContext.Current.CancellationToken);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         _fixture.PauseHandler.Received(1).Resume();
@@ -161,11 +162,11 @@ public sealed class HttpApiServerTests {
         _fixture.Memory[(uint)lastAddress] = 0x9A;
         _fixture.Memory[(uint)(lastAddress + 1)] = 0xBC;
 
-        HttpResponseMessage response = await _fixture.HttpClient.GetAsync($"/api/memory/{lastAddress}/range/16");
+        HttpResponseMessage response = await _fixture.HttpClient.GetAsync($"/api/memory/{lastAddress}/range/16", TestContext.Current.CancellationToken);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        HttpApiMemoryRangeResponse payload = await response.Content.ReadFromJsonAsync<HttpApiMemoryRangeResponse>()
+        HttpApiMemoryRangeResponse payload = await response.Content.ReadFromJsonAsync<HttpApiMemoryRangeResponse>(TestContext.Current.CancellationToken)
             ?? throw new InvalidOperationException("Expected non-null payload");
         payload.Length.Should().Be(2);
         payload.Values.Should().Equal([0x9A, 0xBC]);
@@ -174,11 +175,11 @@ public sealed class HttpApiServerTests {
     [Fact]
     public async Task GetByte_WithNegativeAddress_ReturnsBadRequest() {
         SeedMemory();
-        HttpResponseMessage response = await _fixture.HttpClient.GetAsync("/api/memory/-1/byte");
+        HttpResponseMessage response = await _fixture.HttpClient.GetAsync("/api/memory/-1/byte", TestContext.Current.CancellationToken);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
-        HttpApiErrorResponse payload = await response.Content.ReadFromJsonAsync<HttpApiErrorResponse>()
+        HttpApiErrorResponse payload = await response.Content.ReadFromJsonAsync<HttpApiErrorResponse>(TestContext.Current.CancellationToken)
             ?? throw new InvalidOperationException("Expected non-null payload");
         payload.Message.Should().Contain("between 0 and 4294967295");
     }
@@ -186,11 +187,11 @@ public sealed class HttpApiServerTests {
     [Fact]
     public async Task GetByte_WithAddressTooLarge_ReturnsBadRequest() {
         SeedMemory();
-        HttpResponseMessage response = await _fixture.HttpClient.GetAsync("/api/memory/4294967296/byte");
+        HttpResponseMessage response = await _fixture.HttpClient.GetAsync("/api/memory/4294967296/byte", TestContext.Current.CancellationToken);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
-        HttpApiErrorResponse payload = await response.Content.ReadFromJsonAsync<HttpApiErrorResponse>()
+        HttpApiErrorResponse payload = await response.Content.ReadFromJsonAsync<HttpApiErrorResponse>(TestContext.Current.CancellationToken)
             ?? throw new InvalidOperationException("Expected non-null payload");
         payload.Message.Should().Contain("between 0 and 4294967295");
     }
@@ -198,11 +199,11 @@ public sealed class HttpApiServerTests {
     [Fact]
     public async Task GetByte_WithOutOfRangeAddress_ReturnsNotFound() {
         SeedMemory();
-        HttpResponseMessage response = await _fixture.HttpClient.GetAsync($"/api/memory/{_fixture.Memory.Length}/byte");
+        HttpResponseMessage response = await _fixture.HttpClient.GetAsync($"/api/memory/{_fixture.Memory.Length}/byte", TestContext.Current.CancellationToken);
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
 
-        HttpApiErrorResponse payload = await response.Content.ReadFromJsonAsync<HttpApiErrorResponse>()
+        HttpApiErrorResponse payload = await response.Content.ReadFromJsonAsync<HttpApiErrorResponse>(TestContext.Current.CancellationToken)
             ?? throw new InvalidOperationException("Expected non-null payload");
         payload.Message.Should().Be("address is outside of memory range");
     }
@@ -211,11 +212,11 @@ public sealed class HttpApiServerTests {
     public async Task GetRange_WithExcessiveLength_ReturnsBadRequest() {
         SeedMemory();
         int excessiveLength = HttpApiEndpoint.MaxRangeLength + 1;
-        HttpResponseMessage response = await _fixture.HttpClient.GetAsync($"/api/memory/64/range/{excessiveLength}");
+        HttpResponseMessage response = await _fixture.HttpClient.GetAsync($"/api/memory/64/range/{excessiveLength}", TestContext.Current.CancellationToken);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
-        HttpApiErrorResponse payload = await response.Content.ReadFromJsonAsync<HttpApiErrorResponse>()
+        HttpApiErrorResponse payload = await response.Content.ReadFromJsonAsync<HttpApiErrorResponse>(TestContext.Current.CancellationToken)
             ?? throw new InvalidOperationException("Expected non-null payload");
         payload.Message.Should().Contain($"{HttpApiEndpoint.MaxRangeLength}");
     }
@@ -223,11 +224,11 @@ public sealed class HttpApiServerTests {
     [Fact]
     public async Task GetRange_WithInvalidLength_ReturnsBadRequest() {
         SeedMemory();
-        HttpResponseMessage response = await _fixture.HttpClient.GetAsync("/api/memory/64/range/0");
+        HttpResponseMessage response = await _fixture.HttpClient.GetAsync("/api/memory/64/range/0", TestContext.Current.CancellationToken);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
-        HttpApiErrorResponse payload = await response.Content.ReadFromJsonAsync<HttpApiErrorResponse>()
+        HttpApiErrorResponse payload = await response.Content.ReadFromJsonAsync<HttpApiErrorResponse>(TestContext.Current.CancellationToken)
             ?? throw new InvalidOperationException("Expected non-null payload");
         payload.Message.Should().Be("length must be greater than 0");
     }
@@ -239,11 +240,11 @@ public sealed class HttpApiServerTests {
             Value = 0xEF
         };
 
-        HttpResponseMessage response = await _fixture.HttpClient.PutAsJsonAsync($"/api/memory/{_fixture.Memory.Length}/byte", request);
+        HttpResponseMessage response = await _fixture.HttpClient.PutAsJsonAsync($"/api/memory/{_fixture.Memory.Length}/byte", request, TestContext.Current.CancellationToken);
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
 
-        HttpApiErrorResponse payload = await response.Content.ReadFromJsonAsync<HttpApiErrorResponse>()
+        HttpApiErrorResponse payload = await response.Content.ReadFromJsonAsync<HttpApiErrorResponse>(TestContext.Current.CancellationToken)
             ?? throw new InvalidOperationException("Expected non-null payload");
         payload.Message.Should().Be("address is outside of memory range");
     }
