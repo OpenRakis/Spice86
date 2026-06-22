@@ -25,6 +25,7 @@ public class CallParser : BaseInstructionParser {
             InstructionNode displayAst = new InstructionNode(InstructionOperation.CALL_FAR, _astBuilder.InstructionField.ToNode(addrField32));
             IVisitableAstNode execAst = new CallFarNode(instr, targetAddress, operandBitWidth);
             instr.AttachAsts(displayAst, execAst);
+            instr.RegisterStaticSuccessorAddress(addrField32.Value.ToSegmentedAddress(), InstructionSuccessorType.Normal);
             return instr;
         }
         InstructionField<SegmentedAddress> addrField = _instructionReader.SegmentedAddress16.NextField(true);
@@ -34,6 +35,7 @@ public class CallParser : BaseInstructionParser {
         InstructionNode displayAst16 = new InstructionNode(InstructionOperation.CALL_FAR, _astBuilder.InstructionField.ToNode(addrField));
         IVisitableAstNode execAst16 = new CallFarNode(instr16, targetAddress16, operandBitWidth);
         instr16.AttachAsts(displayAst16, execAst16);
+        instr16.RegisterStaticSuccessorAddress(addrField.Value, InstructionSuccessorType.Normal);
         return instr16;
     }
 
@@ -48,6 +50,7 @@ public class CallParser : BaseInstructionParser {
         instr.AttachAsts(
             new InstructionNode(InstructionOperation.CALL_NEAR, targetIpNode),
             new CallNearNode(instr, targetIpNode, operandBitWidth));
+        instr.RegisterStaticSuccessorAddress(new SegmentedAddress(instr.NextInMemoryAddress32.Segment, targetIp), InstructionSuccessorType.Normal);
         return instr;
     }
 }

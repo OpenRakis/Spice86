@@ -14,6 +14,7 @@ using Spice86.Core.Emulator.ReverseEngineer.Graph;
 using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Core.Emulator.StateSerialization.CfgReload;
 using Spice86.Core.Emulator.VM;
+using Spice86.Logging;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Tests.Utility;
@@ -132,6 +133,36 @@ public class CfgGraphReloadTest {
         // Records compare structurally, but the array members are reference-typed, so compare the
         // canonical (sorted) JSON the exporter already produces deterministically.
         Assert.Equal(SerializeDump(original), SerializeDump(reExported));
+    }
+
+    [Theory]
+    [MemberData(nameof(RoundTripBins))]
+    public void ReloadRegistersEveryInstructionInTheNodeIndex(string binName) {
+        // The CfgNodeIndex spans ALL nodes, observed and speculative, mirroring the live feeder path
+        // where ParseAndSetAsCurrent calls NodeIndex.Insert for every parsed node (not just
+        // speculative ones). If reload registered only one provenance, the index would be missing
+        // entries; the explorer's convergence check (HasAddress) and the cold-path promote/discard
+        // probe (GetAtAddress) would then mint duplicate nodes or fail to converge onto reloaded code.
+        // Assert the invariant directly: every reconstructed instruction is findable in the index by id.
+        CfgReloadDump original = CaptureDump(binName);
+
+        using LoggerService loggerService = new();
+        using Spice86Creator creator = CreateCreator(binName);
+        using Spice86DependencyInjection di = creator.Create();
+        using CfgNodeExecutionCompiler compiler = NewCompiler(loggerService);
+        CfgGraphReloader reloader = new(di.Machine.CfgCpu, di.Machine.CpuState, compiler, di.CfgIdAllocator);
+        reloader.Reload(original);
+
+        CfgNodeIndex index = di.Machine.CfgCpu.CfgNodeFeeder.NodeIndex;
+        foreach (CfgReloadNodeInfo nodeInfo in original.Nodes) {
+            if (nodeInfo.Type != CfgReloadNodeType.Instruction) {
+                continue;
+            }
+            SegmentedAddress address = ParseAddress(nodeInfo.Addr);
+            bool indexed = index.GetAtAddress(address).Any(node => node.Id == nodeInfo.Id);
+            Assert.True(indexed,
+                $"reloaded instruction id {nodeInfo.Id} at {nodeInfo.Addr} must be registered in the node index");
+        }
     }
 
     [Theory]

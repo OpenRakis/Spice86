@@ -623,6 +623,87 @@ public class MachineTest
     }
 
     [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestSpeculativeBranch(JitMode jitMode) {
+        byte[] expected = new byte[0x403];
+        expected[0x400] = 0x01;
+        expected[0x401] = 0xDD;
+        expected[0x402] = 0xAA;
+        TestOneBin("speculative_branch", expected, jitMode, maxCycles: 1000);
+    }
+
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestSpeculativeClosure(JitMode jitMode) {
+        byte[] expected = new byte[0x403];
+        expected[0x400] = 0x01;
+        expected[0x401] = 0xDD;
+        expected[0x402] = 0xBB;
+        TestOneBin("speculative_closure", expected, jitMode, maxCycles: 1000);
+    }
+
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestSpeculativeConvergence(JitMode jitMode) {
+        byte[] expected = new byte[0x404];
+        expected[0x400] = 0x01;
+        expected[0x401] = 0xAA;
+        expected[0x402] = 0xCC;
+        expected[0x403] = 0xFF;
+        TestOneBin("speculative_convergence", expected, jitMode, maxCycles: 1000);
+    }
+
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestSpeculativeInvalidOpcode(JitMode jitMode) {
+        byte[] expected = new byte[0x403];
+        expected[0x400] = 0x01;
+        expected[0x401] = 0xDD;
+        expected[0x402] = 0xEE;
+        TestOneBin("speculative_invalid_opcode", expected, jitMode, maxCycles: 1000);
+    }
+
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestSpeculativeCallEntry(JitMode jitMode) {
+        byte[] expected = new byte[0x403];
+        expected[0x400] = 0x01;
+        expected[0x401] = 0xDD;
+        expected[0x402] = 0xAA;
+        TestOneBin("speculative_call_entry", expected, jitMode, maxCycles: 1000);
+    }
+
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestSpeculativeSmcGuard(JitMode jitMode) {
+        byte[] expected = new byte[0x403];
+        expected[0x400] = 0x01;
+        expected[0x401] = 0xDD;
+        expected[0x402] = 0xAA;
+        TestOneBin("speculative_smc_guard", expected, jitMode, maxCycles: 1000);
+    }
+
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestSpeculativeDiscard(JitMode jitMode) {
+        byte[] expected = new byte[0x403];
+        expected[0x400] = 0x01;
+        expected[0x401] = 0xDD;
+        expected[0x402] = 0xAA;
+        TestOneBin("speculative_discard", expected, jitMode, maxCycles: 1000);
+    }
+
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestSpeculativeMixedBlock(JitMode jitMode) {
+        byte[] expected = new byte[0x403];
+        expected[0x400] = 0x01;
+        expected[0x401] = 0xDD;
+        expected[0x402] = 0xAA;
+        TestOneBin("speculative_mixed_block", expected, jitMode, maxCycles: 1000);
+    }
+
+    [Theory]
     [MemberData(nameof(CfgPartitioningGraphFixtures))]
     public void TestCfgPartitioningGraphFixture(string binName) {
         TestOneBin(binName, [], JitMode.InterpretedOnly, maxCycles: 1000);

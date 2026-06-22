@@ -7,6 +7,8 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 
+using System.Linq;
+
 using CfgSelectorNode = Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying.SelectorNode;
 
 /// <summary>
@@ -34,6 +36,14 @@ internal sealed class MethodEmitter(
             if (nodePlan.IsBlockEntry) {
                 writer.Label(nodePlan.Label);
                 EmitBlockEntryExternalEventCheck(writer, nodePlan.Block);
+            }
+            // Speculative instructions are verified against memory immediately before they execute.
+            // A per-instruction guard (rather than a single block-entry guard) is required so that
+            // self-modifying code performed by an earlier instruction in the same block is detected
+            // before the modified instruction's decode-time-baked body runs: at block entry the bytes
+            // still match, the divergence only appears once the earlier store has executed.
+            if (nodePlan.Node is CfgInstruction speculativeInstruction && speculativeInstruction.IsSpeculative) {
+                EmitSpeculativeGuard(writer, speculativeInstruction);
             }
             EmittedCode nodeCode = BuildNode(writer, nodePlan.Node, method);
             EmittedCodeRenderer.Render(nodeCode, writer);
@@ -103,5 +113,24 @@ internal sealed class MethodEmitter(
             default:
                 throw new NotSupportedException($"CFG C# generation does not support node {node.GetType().FullName} yet at {node.Address}.");
         }
+    }
+
+    /// <summary>
+    /// Emits a <c>VerifySpeculativeEntryOrFail</c> guard for a single speculative instruction. The guard
+    /// re-reads the instruction's bytes from memory immediately before its body executes and fails as
+    /// untested if they no longer match the signature decoded at exploration time. Emitting one guard per
+    /// speculative instruction (rather than a single block-entry guard covering the whole run) is what lets
+    /// the generated code detect self-modifying code that an earlier instruction in the same block performs
+    /// against a later speculative instruction: an entry-only guard runs before any instruction executes and
+    /// so cannot observe such a mutation.
+    /// </summary>
+    private void EmitSpeculativeGuard(CSharpSourceWriter writer, CfgInstruction speculativeInstruction) {
+        IReadOnlyList<byte?> signatureValue = speculativeInstruction.Signature.SignatureValue;
+        if (signatureValue.Count == 0) {
+            return;
+        }
+        string signatureBytes = string.Join(", ", signatureValue.Select(value => value is byte byteValue ? $"(byte)0x{byteValue:X2}" : "null"));
+        string segmentVariable = context.GetSegmentVariable(speculativeInstruction.Address.Segment);
+        writer.Line($"VerifySpeculativeEntryOrFail({segmentVariable}, 0x{speculativeInstruction.Address.Offset:X4}, [{signatureBytes}]);");
     }
 }

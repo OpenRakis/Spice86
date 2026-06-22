@@ -23,6 +23,12 @@ public sealed class CfgBlock : CfgNode {
     /// </summary>
     private int _nonLiveCounter;
 
+    /// <summary>
+    /// Number of contained nodes whose <see cref="ICfgNode.IsSpeculative"/> is currently <c>true</c>.
+    /// <see cref="IsSpeculative"/> is <c>(_speculativeCounter &gt; 0)</c>.
+    /// </summary>
+    private int _speculativeCounter;
+
     private BlockNode? _cachedDisplayAst;
     private bool _isDisplayAstStale = true;
 
@@ -49,6 +55,13 @@ public sealed class CfgBlock : CfgNode {
     /// maintained <see cref="_nonLiveCounter"/> without iterating.
     /// </remarks>
     public override bool IsLive => _nonLiveCounter == 0;
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// O(1). The block is speculative iff at least one contained instruction is speculative;
+    /// computed from the maintained <see cref="_speculativeCounter"/> without iterating.
+    /// </remarks>
+    public override bool IsSpeculative => _speculativeCounter > 0;
 
     /// <inheritdoc />
     /// <remarks>
@@ -140,19 +153,22 @@ public sealed class CfgBlock : CfgNode {
 
     /// <summary>
     /// Appends <paramref name="node"/> to the end of the block, making it the new
-    /// <see cref="Terminator"/>. Updates the non-live counter from the node's live state.
+    /// <see cref="Terminator"/>. Updates the non-live and speculative counters from the node's state.
     /// </summary>
     internal void Append(ICfgNode node) {
         _instructions.Add(node);
         if (!node.IsLive) {
             _nonLiveCounter++;
         }
+        if (node.IsSpeculative) {
+            _speculativeCounter++;
+        }
         _isDisplayAstStale = true;
     }
 
     /// <summary>
     /// Replaces the node at <paramref name="index"/> with <paramref name="newNode"/>, preserving
-    /// order. Adjusts the non-live counter to reflect the new node's live state.
+    /// order. Adjusts the non-live and speculative counters to reflect the new node's state.
     /// </summary>
     internal void ReplaceInPlace(int index, ICfgNode newNode) {
         ICfgNode old = _instructions[index];
@@ -163,18 +179,25 @@ public sealed class CfgBlock : CfgNode {
         if (!newNode.IsLive) {
             _nonLiveCounter++;
         }
+        if (old.IsSpeculative) {
+            _speculativeCounter--;
+        }
+        if (newNode.IsSpeculative) {
+            _speculativeCounter++;
+        }
         _isDisplayAstStale = true;
     }
 
     /// <summary>
     /// Removes nodes from <paramref name="splitIndex"/> through the end and returns them as a
-    /// new list. The non-live counter is recomputed for the surviving prefix.
+    /// new list. The non-live and speculative counters are recomputed for the surviving prefix.
     /// </summary>
     internal List<ICfgNode> SliceFrom(int splitIndex) {
         int tailLength = _instructions.Count - splitIndex;
         List<ICfgNode> tail = _instructions.GetRange(splitIndex, tailLength);
         _instructions.RemoveRange(splitIndex, tailLength);
         RecountNonLiveFromInstructions();
+        RecountSpeculativeFromInstructions();
         _isDisplayAstStale = true;
         return tail;
     }
@@ -192,11 +215,31 @@ public sealed class CfgBlock : CfgNode {
     }
 
     /// <summary>
+    /// Counter choke-point invoked by <see cref="CfgInstruction.SetSpeculative"/> exactly once per
+    /// actual <see cref="ICfgNode.IsSpeculative"/> transition of a contained instruction.
+    /// </summary>
+    internal void OnContainedInstructionSpeculativeChanged(bool nowSpeculative) {
+        if (nowSpeculative) {
+            _speculativeCounter++;
+        } else {
+            _speculativeCounter--;
+        }
+    }
+
+    /// <summary>
     /// Recomputes the non-live counter from scratch by iterating the contained instructions.
     /// Used after a split to re-base the counter on the new instruction set.
     /// </summary>
     internal void RecountNonLiveFromInstructions() {
         _nonLiveCounter = _instructions.Count(node => !node.IsLive);
+    }
+
+    /// <summary>
+    /// Recomputes the speculative counter from scratch by iterating the contained instructions.
+    /// Used after a split to re-base the counter on the new instruction set.
+    /// </summary>
+    internal void RecountSpeculativeFromInstructions() {
+        _speculativeCounter = _instructions.Count(node => node.IsSpeculative);
     }
 
     /// <summary>

@@ -5,6 +5,7 @@ using Serilog.Events;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
+using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
@@ -33,6 +34,7 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
     private readonly FunctionCatalogue _functionCatalogue;
     private readonly ISerializableBreakpointsSource _serializableBreakpointsSource;
     private readonly Configuration _configuration;
+    private readonly CfgNodeIndex? _nodeIndex;
 
     /// <summary>
     /// Initializes a new instance.
@@ -49,6 +51,7 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
     /// <param name="emulatorStateSerializationFolder">Where to save the data.</param>
     /// <param name="serializableBreakpointsSource">Source for breakpoints to serialize</param>
     /// <param name="configuration">The emulator configuration, used to derive the program checksum baked into the generated project.</param>
+    /// <param name="nodeIndex">The persistent graph index whose poison set is serialized with the CFG reload dump.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     internal EmulationStateDataWriter(State state,
         ExecutionAddressesExtractor executionAddressesExtractor,
@@ -62,6 +65,7 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
         EmulatorStateSerializationFolder emulatorStateSerializationFolder,
         ISerializableBreakpointsSource serializableBreakpointsSource,
         Configuration configuration,
+        CfgNodeIndex? nodeIndex,
         ILoggerService loggerService) : base(emulatorStateSerializationFolder, loggerService) {
         _executionAddressesExtractor = executionAddressesExtractor;
         _state = state;
@@ -74,6 +78,7 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
         _functionCatalogue = functionCatalogue;
         _serializableBreakpointsSource = serializableBreakpointsSource;
         _configuration = configuration;
+        _nodeIndex = nodeIndex;
     }
 
     /// <summary>
@@ -150,7 +155,7 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
     }
 
     private void WriteCfgReload(string filePath) {
-        CfgReloadDump dump = new CfgReloadExporter().Export(_executionContextManager);
+        CfgReloadDump dump = new CfgReloadExporter().Export(_executionContextManager, _nodeIndex?.PoisonSet);
         string jsonString = JsonSerializer.Serialize(dump, CfgReloadSerialization.Options);
         File.WriteAllText(filePath, jsonString);
     }

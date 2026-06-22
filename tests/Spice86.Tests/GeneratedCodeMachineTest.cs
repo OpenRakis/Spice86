@@ -76,11 +76,16 @@ public sealed class GeneratedCodeMachineTest {
     [Fact]
     public void AlwaysTakenConditionalJumpGuardsUnobservedFallthroughWithIf() {
         // jump1 contains conditional jumps that were always taken during discovery (e.g. `clc; ja j01`),
-        // so their fallthrough (next-in-memory) edge was never observed. Each such jump must lower to an
-        // `if` that guards the unobserved fallthrough with FailAsUntested, not silently collapse to an
-        // unconditional transfer to the taken target.
+        // so their fallthrough (next-in-memory) edge was never observed. With speculation off, each such
+        // jump must lower to an `if` that guards the unobserved fallthrough with FailAsUntested, not
+        // silently collapse to an unconditional transfer to the taken target. (The speculation-on
+        // resolution of the same fallthroughs is covered by SpeculationOnJump1ResolvesUnobservedFallthroughs.)
+        GeneratedCodeRunOptions options = new() {
+            MaxCycles = 1000,
+            EnableSpeculativeCfgExploration = false
+        };
         GeneratedCodeMachineTestRunner runner = new();
-        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("jump1", maxCycles: 1000);
+        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("jump1", options);
 
         generatedProgram.SourceText.Should().Contain("Unobserved conditional fallthrough");
     }
@@ -378,7 +383,7 @@ public sealed class GeneratedCodeMachineTest {
         byte[] expected = new byte[6];
         expected[0x00] = 0x01;
         new GeneratedCodeMachineTestRunner().TestGeneratedCode("externalint", expected,
-            new GeneratedCodeRunOptions { MaxCycles = 0xFFFFFFF, EnablePit = true, InstallInterruptVectors = true });
+            new GeneratedCodeRunOptions { MaxCycles = 0xFFFFFFF, EnablePit = true });
     }
 
     [Fact]
@@ -397,6 +402,87 @@ public sealed class GeneratedCodeMachineTest {
         // HaltRequestedException, so CpuState.IsRunning is not the relevant invariant here, unlike the
         // emulated-mode CPU HLT path.)
         new GeneratedCodeMachineTestRunner().TestGeneratedCode("sticli", [], new GeneratedCodeRunOptions { MaxCycles = 1000 });
+    }
+
+    [Fact]
+    public void SpeculativeBranchGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        byte[] expected = new byte[0x403];
+        expected[0x400] = 0x01;
+        expected[0x401] = 0xDD;
+        expected[0x402] = 0xAA;
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode("speculative_branch", expected,
+            new GeneratedCodeRunOptions { MaxCycles = 1000, EnableSpeculativeCfgExploration = true });
+    }
+
+    [Fact]
+    public void SpeculativeClosureGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        byte[] expected = new byte[0x403];
+        expected[0x400] = 0x01;
+        expected[0x401] = 0xDD;
+        expected[0x402] = 0xBB;
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode("speculative_closure", expected,
+            new GeneratedCodeRunOptions { MaxCycles = 1000, EnableSpeculativeCfgExploration = true });
+    }
+
+    [Fact]
+    public void SpeculativeConvergenceGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        byte[] expected = new byte[0x404];
+        expected[0x400] = 0x01;
+        expected[0x401] = 0xAA;
+        expected[0x402] = 0xCC;
+        expected[0x403] = 0xFF;
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode("speculative_convergence", expected,
+            new GeneratedCodeRunOptions { MaxCycles = 1000, EnableSpeculativeCfgExploration = true });
+    }
+
+    [Fact]
+    public void SpeculativeInvalidOpcodeGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        byte[] expected = new byte[0x403];
+        expected[0x400] = 0x01;
+        expected[0x401] = 0xDD;
+        expected[0x402] = 0xEE;
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode("speculative_invalid_opcode", expected,
+            new GeneratedCodeRunOptions { MaxCycles = 1000, EnableSpeculativeCfgExploration = true });
+    }
+
+    [Fact]
+    public void SpeculativeCallEntryGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        byte[] expected = new byte[0x403];
+        expected[0x400] = 0x01;
+        expected[0x401] = 0xDD;
+        expected[0x402] = 0xAA;
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode("speculative_call_entry", expected,
+            new GeneratedCodeRunOptions { MaxCycles = 1000, EnableSpeculativeCfgExploration = true });
+    }
+
+    [Fact]
+    public void SpeculativeSmcGuardGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        byte[] expected = new byte[0x403];
+        expected[0x400] = 0x01;
+        expected[0x401] = 0xDD;
+        expected[0x402] = 0xAA;
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode("speculative_smc_guard", expected,
+            new GeneratedCodeRunOptions { MaxCycles = 1000, EnableSpeculativeCfgExploration = true });
+    }
+
+    [Fact]
+    public void SpeculativeDiscardGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        byte[] expected = new byte[0x403];
+        expected[0x400] = 0x01;
+        expected[0x401] = 0xDD;
+        expected[0x402] = 0xAA;
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode("speculative_discard", expected,
+            new GeneratedCodeRunOptions { MaxCycles = 1000, EnableSpeculativeCfgExploration = true });
+    }
+
+    [Fact]
+    public void SpeculativeMixedBlockGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        byte[] expected = new byte[0x403];
+        expected[0x400] = 0x01;
+        expected[0x401] = 0xDD;
+        expected[0x402] = 0xAA;
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode("speculative_mixed_block", expected,
+            new GeneratedCodeRunOptions { MaxCycles = 1000, EnableSpeculativeCfgExploration = true });
     }
 
     [Fact]

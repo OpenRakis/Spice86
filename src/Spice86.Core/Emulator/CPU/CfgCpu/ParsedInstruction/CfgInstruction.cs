@@ -60,6 +60,11 @@ public sealed class CfgInstruction : CfgNode {
     }
 
     /// <summary>
+    /// Instructions are born observed (not speculative).
+    /// </summary>
+    private bool _isSpeculative;
+
+    /// <summary>
     /// Instructions are born live.
     /// </summary>
     private bool _isLive = true;
@@ -133,6 +138,15 @@ public sealed class CfgInstruction : CfgNode {
     /// </summary>
     public Dictionary<InstructionSuccessorType, ISet<ICfgNode>> SuccessorsPerType { get; } = new();
 
+    /// <summary>
+    /// Successors whose edge from this node was wired speculatively (created by the explorer while the
+    /// target was speculative), as opposed to being observed during execution. The recorded successor
+    /// type of such an edge is a speculative guess (typically a Normal fallthrough); when observed
+    /// execution later reaches the same target via a different edge type, the observed type replaces
+    /// the speculative one. Membership is dropped once an observed link confirms or re-types the edge.
+    /// </summary>
+    public ISet<ICfgNode> SpeculativelyWiredSuccessors { get; } = new HashSet<ICfgNode>();
+
     public override void UpdateSuccessorCache() {
         SuccessorsPerAddress = Successors.ToDictionary(node => node.Address);
     }
@@ -146,6 +160,9 @@ public sealed class CfgInstruction : CfgNode {
     }
 
     public override bool IsLive => _isLive;
+
+    /// <inheritdoc />
+    public override bool IsSpeculative => _isSpeculative;
 
     /// <inheritdoc />
     /// <remarks>
@@ -254,6 +271,27 @@ public sealed class CfgInstruction : CfgNode {
     }
 
     /// <summary>
+    /// Updates the speculative state of this instruction.
+    /// </summary>
+    /// <remarks>
+    /// On an actual transition notifies the <see cref="ContainingBlock"/> exactly once via
+    /// <see cref="CfgBlock.OnContainedInstructionSpeculativeChanged"/> so the block's speculative
+    /// counter stays in sync. A speculative instruction is always non-live; promotion (clearing the
+    /// speculative flag) is the only direction that matters for <see cref="SetLive"/>.
+    /// No-op if the speculative state is unchanged.
+    /// </remarks>
+    public override void SetSpeculative(bool isSpeculative) {
+        if (_isSpeculative == isSpeculative) {
+            return;
+        }
+        _isSpeculative = isSpeculative;
+        if (isSpeculative) {
+            SetLive(false);
+        }
+        ContainingBlock?.OnContainedInstructionSpeculativeChanged(isSpeculative);
+    }
+
+    /// <summary>
     /// Returns the pre-built display AST set by <see cref="AttachAsts"/>.
     /// </summary>
     public override InstructionNode DisplayAst {
@@ -277,6 +315,26 @@ public sealed class CfgInstruction : CfgNode {
             throw new InvalidOperationException(
                 $"AttachAsts must be called before accessing ExecutionAst for {GetType().Name} at {Address}");
         }
+    }
+
+    /// <summary>
+    /// Statically-known successor addresses derived from the instruction's decode-time operands,
+    /// each paired with its edge type. Populated by parsers for instructions with immediate branch
+    /// targets (Jcc, Jcxz, Loop, near/short jmp imm, near/far call imm). Empty for indirect, RET,
+    /// IRET, and other forms where the target is not statically knowable.
+    /// For conditional jumps and loops this contains two entries (taken, fall-through);
+    /// for unconditional direct jumps/calls it contains the single target.
+    /// For non-terminator instructions it contains the single fall-through (NextInMemoryAddress32).
+    /// </summary>
+    public IReadOnlyList<StaticSuccessor> StaticSuccessorAddresses => _staticSuccessorAddresses;
+
+    private readonly List<StaticSuccessor> _staticSuccessorAddresses = new();
+
+    /// <summary>
+    /// Records a statically-known successor address with its edge type. Called by parsers at creation time.
+    /// </summary>
+    internal void RegisterStaticSuccessorAddress(SegmentedAddress address, InstructionSuccessorType edgeType) {
+        _staticSuccessorAddresses.Add(new StaticSuccessor(address, edgeType));
     }
 
     public void IncreaseMaxSuccessorsCount(SegmentedAddress target) {

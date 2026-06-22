@@ -6,14 +6,14 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:0021",
-  "lastExecutedBlockId": 32,
+  "lastExecutedBlockId": 53,
   "blocks": [
     {
-      "id": 32,
+      "id": 53,
       "entry": "F000:0020",
       "term": "F000:0021",
       "pred": [
-        30
+        52
       ],
       "succ": [],
       "asm": [
@@ -34,14 +34,14 @@
       ]
     },
     {
-      "id": 30,
+      "id": 52,
       "entry": "F000:0019",
       "term": "F000:0019",
       "pred": [
-        17
+        35
       ],
       "succ": [
-        32
+        53
       ],
       "asm": [
         "EB05|jmp short 0x0020"
@@ -55,7 +55,7 @@
         2
       ],
       "succ": [
-        20
+        38
       ],
       "asm": [
         "B80000|mov AX,0",
@@ -66,17 +66,17 @@
       ]
     },
     {
-      "id": 17,
+      "id": 35,
       "entry": "F000:0014",
       "term": "F000:0019",
       "pred": [
         14,
-        20,
-        22
+        16,
+        38
       ],
       "succ": [
-        29,
-        30
+        52,
+        56
       ],
       "asm": [
         "B84200|mov AX,0x0042",
@@ -85,16 +85,16 @@
       ]
     },
     {
-      "id": 20,
+      "id": 38,
       "entry": "F000:0010",
       "term": "F000:0011",
       "pred": [
         3,
-        29
+        56
       ],
       "succ": [
         11,
-        17
+        35
       ],
       "asm": [
         "50|push AX",
@@ -102,15 +102,16 @@
       ]
     },
     {
-      "id": 29,
+      "id": 56,
       "entry": "F000:0019",
       "dead": true,
       "term": "F000:0019",
       "pred": [
-        17
+        35
       ],
       "succ": [
-        20
+        38,
+        40
       ],
       "asm": [
         "75F5|jne short 0x0010"
@@ -124,7 +125,7 @@
         11
       ],
       "succ": [
-        17
+        35
       ],
       "asm": [
         "FE064000|inc byte ptr DS:[0x0040]",
@@ -132,14 +133,14 @@
       ]
     },
     {
-      "id": 22,
+      "id": 16,
       "entry": "F000:0029",
       "term": "F000:003A",
       "pred": [
         11
       ],
       "succ": [
-        17
+        35
       ],
       "asm": [
         "B800F0|mov AX,0xF000",
@@ -154,15 +155,30 @@
       "entry": "F000:0022",
       "term": "F000:0027",
       "pred": [
-        20
+        38
       ],
       "succ": [
         14,
-        22
+        16
       ],
       "asm": [
         "803E400000|cmp byte ptr DS:[0x0040],0",
         "7412|je short 0x003B"
+      ]
+    },
+    {
+      "id": 40,
+      "entry": "F000:001B",
+      "dead": true,
+      "term": "F000:001F",
+      "pred": [
+        56
+      ],
+      "succ": [],
+      "asm": [
+        "B8ADDE|mov AX,0xDEAD",
+        "50|push AX",
+        "F4|hlt"
       ]
     }
   ],

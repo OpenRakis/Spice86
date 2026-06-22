@@ -82,6 +82,36 @@ public class CSharpOverrideHelper {
     public UInt32Indexer UInt32 => Memory.UInt32;
 
     /// <summary>
+    /// Gets the big-endian 16-bit indexer of the memory bus.
+    /// </summary>
+    public UInt16BigEndianIndexer UInt16BigEndian => Memory.UInt16BigEndian;
+
+    /// <summary>
+    /// Gets the signed 8-bit indexer of the memory bus.
+    /// </summary>
+    public Int8Indexer Int8 => Memory.Int8;
+
+    /// <summary>
+    /// Gets the signed 16-bit indexer of the memory bus.
+    /// </summary>
+    public Int16Indexer Int16 => Memory.Int16;
+
+    /// <summary>
+    /// Gets the signed 32-bit indexer of the memory bus.
+    /// </summary>
+    public Int32Indexer Int32 => Memory.Int32;
+
+    /// <summary>
+    /// Gets the 16-bit segmented address indexer of the memory bus.
+    /// </summary>
+    public SegmentedAddress16Indexer SegmentedAddress16 => Memory.SegmentedAddress16;
+
+    /// <summary>
+    /// Gets the 32-bit segmented address indexer of the memory bus.
+    /// </summary>
+    public SegmentedAddress32Indexer SegmentedAddress32 => Memory.SegmentedAddress32;
+
+    /// <summary>
     /// Gets the stack of the CPU.
     /// </summary>
     public Stack Stack => Machine.Stack;
@@ -819,6 +849,25 @@ public class CSharpOverrideHelper {
         uint linearAddress = MemoryUtils.ToPhysicalAddress(segment, offset);
         IList<byte> bytes = Memory.GetSlice((int)linearAddress, signature.Length);
         return new Signature(ImmutableList.CreateRange(signature)).ListEquivalent(bytes);
+    }
+
+    /// <summary>
+    /// Verifies that a single speculative instruction at the given segmented address still matches the
+    /// signature decoded at exploration time. The generated code calls this immediately before the
+    /// instruction's body so that self-modifying code performed by an earlier instruction in the same block
+    /// is detected before the modified instruction's decode-time-baked body executes. If memory no longer
+    /// matches, the speculative decode was wrong and execution falls back to <see cref="FailAsUntested"/>.
+    /// </summary>
+    /// <param name="segment">The segment of the speculative instruction.</param>
+    /// <param name="offset">The offset of the speculative instruction.</param>
+    /// <param name="runSignature">The signature of the speculative instruction; null entries are wildcards for fields the decoder reads from memory at execution time.</param>
+    /// <exception cref="UnrecoverableException">Thrown when memory at the instruction address does not match the expected signature.</exception>
+    public void VerifySpeculativeEntryOrFail(ushort segment, ushort offset, byte?[] runSignature) {
+        uint linearAddress = MemoryUtils.ToPhysicalAddress(segment, offset);
+        IList<byte> bytes = Memory.GetSlice((int)linearAddress, runSignature.Length);
+        if (!new Signature(ImmutableList.CreateRange(runSignature)).ListEquivalent(bytes)) {
+            throw FailAsUntested($"Speculative code at {segment:X4}:{offset:X4} no longer matches memory");
+        }
     }
 
     /// <summary>

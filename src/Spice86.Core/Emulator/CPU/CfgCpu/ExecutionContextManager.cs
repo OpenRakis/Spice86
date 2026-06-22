@@ -121,6 +121,22 @@ public class ExecutionContextManager : InstructionReplacer, IClearable {
         nodes.Add(toExecute);
     }
 
+    /// <summary>
+    /// Registers <paramref name="node"/> as a CFG entry point so it is treated as a generation root by
+    /// the graph exporter and the function partitioner. Used to seed emulator-installed hardware
+    /// interrupt handlers: these fire on external events with nondeterministic timing and may never be
+    /// reached from the program's observed entry points during discovery, yet must still become
+    /// generated overrides so generated code can service the interrupt.
+    /// </summary>
+    /// <param name="node">The handler entry instruction to register.</param>
+    public void RegisterEntryPoint(CfgInstruction node) {
+        if (!ExecutionContextEntryPoints.TryGetValue(node.Address, out ISet<CfgInstruction>? nodes)) {
+            nodes = new HashSet<CfgInstruction>();
+            ExecutionContextEntryPoints.Add(node.Address, nodes);
+        }
+        nodes.Add(node);
+    }
+
     public override void ReplaceInstruction(CfgInstruction oldInstruction, CfgInstruction newInstruction) {
         if (ExecutionContextEntryPoints.TryGetValue(newInstruction.Address, out ISet<CfgInstruction>? entriesAtAddress)
             && entriesAtAddress.Remove(oldInstruction)) {

@@ -48,6 +48,8 @@ dotnet test tests/Spice86.Tests --filter 'FullyQualifiedName!~SingleStepTest'
 
 > **SingleStepTest exclusion rule**: `SingleStepTest` runs millions of CPU instruction test cases and take an extremely long time to complete. **Always exclude it** using `--filter 'FullyQualifiedName!~SingleStepTest'` unless the change being tested directly touches CPU instruction decoding, execution, or flag handling (e.g. changes to `CfgCpu`, instruction parsers, ALU operations, or flag computation). When in doubt, exclude it.
 
+> **Shell-tool output rule (agents only)**: `dotnet test` can emit thousands of lines of progress ticks and Serilog INFO output. **Redirect output to a file** and read its tail instead: `dotnet test tests/Spice86.Tests --filter 'FullyQualifiedName!~SingleStepTest' --no-build > tmp/test-output.txt 2>&1; echo "EXIT:$?" >> tmp/test-output.txt`
+
 ### Debugging Workflow
 - **GDB Integration**: Server runs on port 10000 by default (`--GdbPort 10000`)
   - Use `--Debug` to pause at startup for breakpoint setup
@@ -120,6 +122,7 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 - **No optional parameters** - avoid nullable or optional parameters in new code
 - **No complex ternary expressions** - avoid nested, chained, or multi-line ternaries; simple single-line ternaries with short operands are allowed (e.g. `int x = a > b ? a : b;`), but non-trivial conditions or non-trivial branches must use explicit `if/else`
 - **Minimal comments** - write self-documenting code with clear names; avoid obvious comments
+- **No references to plan/spec sections in code** - never point comments, XML docs, or test names at sections of a plan, spec, or implementation-tracking document (e.g. "Phase 5", "Gap D", "Rule 4", "section S6.1.1", "Test 18", "implementation plan"). Those documents are temporary or drift over time, leaving dangling pointers that mean nothing to a future reader. Describe the actual behavior, invariant, or scenario directly instead.
 - **Test before submit** - always run tests after code changes to verify functionality
 - **Rebuild and verify** - For any task that changes code or tests, rebuild the project and run the full test suite; do not stop until all tests are green.
 - **Concise documentation** - XML docs should be precise and complete but not verbose; avoid excessive remarks

@@ -13,6 +13,12 @@ public class SimpleInstructionParser : BaseInstructionParser {
     public SimpleInstructionParser(ParsingTools parsingTools) : base(parsingTools) {
     }
 
+    /// <summary>
+    /// Parses the HLT instruction. MaxSuccessorsCount is 0 (no static successors): this makes
+    /// IsBlockTerminator true and prevents the InstructionParser catch-all from adding a
+    /// fallthrough edge. Execution after HLT resumes via a hardware interrupt which is handled
+    /// dynamically, not through static successors.
+    /// </summary>
     public CfgInstruction ParseHlt(ParsingContext context) {
         CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 0);
         InstructionNode displayAst = new InstructionNode(InstructionOperation.HLT);
