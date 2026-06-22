@@ -54,7 +54,7 @@ internal sealed class CfgCSharpDumper {
         string programPath = Path.Join(projectDirectory, GeneratedProjectScaffolder.ProgramFileName);
         string overridesPath = Path.Join(projectDirectory, GeneratedOverrideNames.DumpFileSuffix);
 
-        File.WriteAllText(csProjPath, BuildCsProjForCurrentInstall(projectDirectory));
+        File.WriteAllText(csProjPath, BuildCsProjAndPropsForCurrentInstall(projectDirectory));
         File.WriteAllText(programPath, GeneratedProjectScaffolder.BuildProgramCs(expectedChecksum));
         File.WriteAllText(overridesPath, Generate(program).SourceText);
     }
@@ -62,10 +62,13 @@ internal sealed class CfgCSharpDumper {
     /// <summary>
     /// Picks the csproj reference for the running install and builds the project text accordingly. When the
     /// Spice86 source tree is found, a <c>ProjectReference</c> is used so the overrides build against the exact
-    /// source being run (development). Otherwise a <c>PackageReference</c> pinned to the running version is used
-    /// (release / NuGet install). The chosen reference is logged so users can diagnose build/restore problems.
+    /// source being run (development), and a sibling <c>Directory.Build.props</c> is written pointing central
+    /// package management at the source tree's <c>Directory.Packages.props</c> so restored package versions match
+    /// the ones the already-built Spice86.Core.dll/Spice86.dll were compiled against. Otherwise a
+    /// <c>PackageReference</c> pinned to the running version is used (release / NuGet install). The chosen
+    /// reference is logged so users can diagnose build/restore problems.
     /// </summary>
-    private string BuildCsProjForCurrentInstall(string projectDirectory) {
+    private string BuildCsProjAndPropsForCurrentInstall(string projectDirectory) {
         if (GeneratedProjectScaffolder.TryResolveSpice86CsprojPath(out string? spice86CsprojPath)
             && spice86CsprojPath is not null) {
             // Relative reference keeps the generated project portable when the whole tree is moved together.
@@ -76,6 +79,13 @@ internal sealed class CfgCSharpDumper {
                     "This is expected for a development build run from the source tree.",
                     spice86CsprojPath);
             }
+
+            string? directoryBuildProps = GeneratedProjectScaffolder.BuildDirectoryBuildPropsForProjectReference(referencePath);
+            if (directoryBuildProps is not null) {
+                string directoryBuildPropsPath = Path.Join(projectDirectory, GeneratedProjectScaffolder.DirectoryBuildPropsFileName);
+                File.WriteAllText(directoryBuildPropsPath, directoryBuildProps);
+            }
+
             return GeneratedProjectScaffolder.BuildCsProjWithProjectReference(referencePath);
         }
 

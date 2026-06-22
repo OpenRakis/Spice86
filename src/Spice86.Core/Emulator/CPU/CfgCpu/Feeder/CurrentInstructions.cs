@@ -51,6 +51,17 @@ public class CurrentInstructions : InstructionReplacer, IClearable {
         }
     }
 
+    /// <summary>
+    /// Handles removal fan-out: if <paramref name="instruction"/> is the current entry at its
+    /// address, evicts it and unregisters its memory-write breakpoints. No-op when the instruction
+    /// is not the current entry.
+    /// </summary>
+    public override void RemoveInstruction(CfgInstruction instruction) {
+        if (GetAtAddress(instruction.Address) == instruction) {
+            ClearCurrentInstruction(instruction);
+        }
+    }
+
 
     public void SetAsCurrent(CfgInstruction instruction) {
         // Clear it because in some cases it can be added twice (signature reducer)

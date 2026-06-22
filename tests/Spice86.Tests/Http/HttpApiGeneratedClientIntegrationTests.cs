@@ -11,7 +11,7 @@ using NSubstitute;
 using Xunit;
 
 public sealed partial class HttpApiGeneratedClientIntegrationTests : IClassFixture<HttpApiServerFixture> {
-    private const string KiotaToolVersion = "1.30.0";
+    private const string KiotaToolVersion = "1.34.0";
     private static readonly TimeSpan CommandTimeout = TimeSpan.FromMinutes(3);
     private readonly HttpApiServerFixture _fixture;
 

@@ -14,4 +14,10 @@ public class InstructionReplacerRegistry : IInstructionReplacer {
             instructionReplacer.ReplaceInstruction(oldInstruction, newInstruction);
         }
     }
+
+    public void RemoveInstruction(CfgInstruction instruction) {
+        foreach (InstructionReplacer instructionReplacer in _replacers) {
+            instructionReplacer.RemoveInstruction(instruction);
+        }
+    }
 }

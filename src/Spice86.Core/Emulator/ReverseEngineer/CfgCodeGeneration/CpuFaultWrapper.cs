@@ -21,7 +21,7 @@ internal sealed class CpuFaultWrapper(CfgGeneratorContext context, TransferEmitt
     /// observed CPU-fault edges; otherwise returns the body unchanged.
     /// </summary>
     public EmittedCode Wrap(CfgInstruction instruction, EmittedCode body, MethodPlan method) {
-        IReadOnlyList<ResolvedCfgEdge> faultEdges = context.GetObservedEdges(instruction, InstructionSuccessorType.CpuFault);
+        IReadOnlyList<ResolvedCfgEdge> faultEdges = context.GetSuccessorEdges(instruction, InstructionSuccessorType.CpuFault);
         if (faultEdges.Count == 0) {
             return body;
         }

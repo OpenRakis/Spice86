@@ -34,14 +34,14 @@ public class CfgCpu : IFunctionHandlerProvider, IClearable {
         DualPic dualPic, EmulatorBreakpointsManager emulatorBreakpointsManager,
         IPauseHandler pauseHandler,
         FunctionCatalogue functionCatalogue,
-        bool useCodeOverride, bool failOnInvalidOpcode, bool allowIvtAddress0, ILoggerService loggerService, CfgNodeExecutionCompiler executionCompiler, SequentialIdAllocator idAllocator, CpuHeavyLogger? cpuHeavyLogger = null) {
+        bool useCodeOverride, bool failOnInvalidOpcode, bool allowIvtAddress0, bool enableSpeculativeExploration, ILoggerService loggerService, CfgNodeExecutionCompiler executionCompiler, SequentialIdAllocator idAllocator, CpuHeavyLogger? cpuHeavyLogger = null) {
         _loggerService = loggerService;
         _state = state;
         _dualPic = dualPic;
         _cpuHeavyLogger = cpuHeavyLogger;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
-        CfgNodeFeeder = new(memory, state, emulatorBreakpointsManager, _replacerRegistry, executionCompiler, idAllocator);
+        CfgNodeFeeder = new(memory, state, emulatorBreakpointsManager, _replacerRegistry, executionCompiler, idAllocator, enableSpeculativeExploration);
         _executionContextManager = new(memory, state, CfgNodeFeeder, _replacerRegistry, functionCatalogue, useCodeOverride, loggerService, cpuHeavyLogger);
         _instructionExecutionHelper = new(state, memory, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager, _executionContextManager, failOnInvalidOpcode, allowIvtAddress0, loggerService);
     }
@@ -61,6 +61,7 @@ public class CfgCpu : IFunctionHandlerProvider, IClearable {
     public FunctionHandler FunctionHandlerInUse => ExecutionContextManager.CurrentExecutionContext.FunctionHandler;
     public bool IsInitialExecutionContext => ExecutionContextManager.CurrentExecutionContext.Depth == 0;
     private ExecutionContext CurrentExecutionContext => _executionContextManager.CurrentExecutionContext;
+
     public ICfgNode ToExecute() {
         return CfgNodeFeeder.GetLinkedCfgNodeToExecute(CurrentExecutionContext);
     }
