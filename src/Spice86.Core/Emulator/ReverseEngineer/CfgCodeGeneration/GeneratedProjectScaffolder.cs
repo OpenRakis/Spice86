@@ -118,21 +118,23 @@ internal static class GeneratedProjectScaffolder {
     }
 
     /// <summary>
-    /// Tries to resolve the path to <c>src/Spice86/Spice86.csproj</c> by walking up from the running
-    /// <c>Spice86.Core</c> assembly location until the GUI project is found. Succeeds only when generation runs
-    /// from within the source tree; a published or NuGet-installed build has no such project, in which case the
-    /// caller falls back to a package reference (<see cref="BuildCsProjWithPackageReference"/>).
+    /// Tries to resolve the path to <c>src/Spice86/Spice86.csproj</c> by walking up from the running app's
+    /// base directory until the GUI project is found. Succeeds only when generation runs from within the source
+    /// tree; a published or NuGet-installed build has no such project, in which case the caller falls back to a
+    /// package reference (<see cref="BuildCsProjWithPackageReference"/>).
     /// </summary>
     /// <param name="spice86CsprojPath">The resolved path when found; otherwise <c>null</c>.</param>
     /// <returns><c>true</c> when the GUI project was located, otherwise <c>false</c>.</returns>
     public static bool TryResolveSpice86CsprojPath(out string? spice86CsprojPath) {
         spice86CsprojPath = null;
-        // Spice86.Core assembly location: <repo>/src/Spice86.Core/bin/<cfg>/<tfm>/Spice86.Core.dll
-        string? coreAssemblyDir = Path.GetDirectoryName(typeof(CSharpOverrideHelper).Assembly.Location);
-        if (string.IsNullOrEmpty(coreAssemblyDir)) {
+        // Base directory of the running app: <repo>/src/Spice86/bin/<cfg>/<tfm>/ during development.
+        // AppContext.BaseDirectory is used instead of Assembly.Location because the latter returns an empty
+        // string for assemblies embedded in a single-file app (IL3000).
+        string appBaseDirectory = AppContext.BaseDirectory;
+        if (string.IsNullOrEmpty(appBaseDirectory)) {
             return false;
         }
-        DirectoryInfo? dir = new(coreAssemblyDir);
+        DirectoryInfo? dir = new(appBaseDirectory);
         while (dir is not null) {
             string candidate = Path.Join(dir.FullName, "Spice86", "Spice86.csproj");
             if (File.Exists(candidate)) {
