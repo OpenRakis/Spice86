@@ -89,6 +89,7 @@ public sealed class Spice86Creator : IDisposable {
 
     public Spice86DependencyInjection Create() {
         Spice86DependencyInjection res = new(_configuration);
+        MachineLeakTracker.Track(res.Machine);
         res.Machine.CpuState.Flags.CpuModel = CpuModel.ZET_86;
         // Add a breakpoint after some cycles to ensure no infinite loop can lock the tests
         res.Machine.EmulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CPU_CYCLES, _maxCycles,

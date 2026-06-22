@@ -4,6 +4,7 @@
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<WarningsAsErrors>nullable</WarningsAsErrors>
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 		<IsPackable>false</IsPackable>
 		<!--
 		  Use workstation GC for the test host. Server GC is lazy about reclaiming
@@ -42,7 +43,6 @@
 		<PackageReference Include="SingleStepTests.Intel80386.67.00-67.7F" />
 		<PackageReference Include="SingleStepTests.Intel80386.67.80-67.FF" />
 		<PackageReference Include="SingleStepTests.Intel80386.68-FF" />
-		<PackageReference Include="Xunit.SkippableFact" />
 		<PackageReference Include="xunit.runner.visualstudio">
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 			<PrivateAssets>all</PrivateAssets>
@@ -51,7 +51,7 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 			<PrivateAssets>all</PrivateAssets>
 		</PackageReference>
-		<PackageReference Include="xunit.v3.assert" />
+		<PackageReference Include="xunit.v3" />
 	</ItemGroup>
 	<ItemGroup>
 		<Compile Remove="UI\**\*.cs" />
