@@ -56,11 +56,14 @@ internal sealed class McpHttpHost : IDisposable {
                 };
             })
             .WithHttpTransport(options => {
-                // Stateless mode: the server never issues Mcp-Session-Id headers.
-                // Stateful sessions cause 404 when AI clients reuse a session ID
-                // from a fresh TCP connection or skip the notifications/initialized
-                // handshake step, which is a common real-world pattern.
-                options.Stateless = true;
+                // Stateful mode enables the GET /mcp endpoint for SSE-based
+                // client-to-server communication and allows the MCP client SDK
+                // (used by opencode remote MCP) to negotiate sessions via the
+                // initialize handshake with Mcp-Session-Id headers.
+                // Previously stateless mode was used, but AI coding agents
+                // now support the standard Streamable HTTP transport with
+                // session negotiation natively.
+                options.Stateless = false;
             })
             .WithToolsFromAssembly(typeof(EmulatorMcpTools).Assembly);
 
