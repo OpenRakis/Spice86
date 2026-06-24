@@ -29,6 +29,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Spice86.Storage.Fat", "Spic
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Spice86.Storage.Cd", "Spice86.Storage.Cd\Spice86.Storage.Cd.csproj", "{058F9104-71C6-4544-A7C6-ADC0DD71FEF8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BattleTechMcpTools", "BattleTechMcpTools\BattleTechMcpTools.csproj", "{191D3DE1-DB65-4B39-BDF2-14C95A75144E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -147,6 +149,18 @@ Global
 		{058F9104-71C6-4544-A7C6-ADC0DD71FEF8}.Release|x64.Build.0 = Release|Any CPU
 		{058F9104-71C6-4544-A7C6-ADC0DD71FEF8}.Release|x86.ActiveCfg = Release|Any CPU
 		{058F9104-71C6-4544-A7C6-ADC0DD71FEF8}.Release|x86.Build.0 = Release|Any CPU
+		{191D3DE1-DB65-4B39-BDF2-14C95A75144E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{191D3DE1-DB65-4B39-BDF2-14C95A75144E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{191D3DE1-DB65-4B39-BDF2-14C95A75144E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{191D3DE1-DB65-4B39-BDF2-14C95A75144E}.Debug|x64.Build.0 = Debug|Any CPU
+		{191D3DE1-DB65-4B39-BDF2-14C95A75144E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{191D3DE1-DB65-4B39-BDF2-14C95A75144E}.Debug|x86.Build.0 = Debug|Any CPU
+		{191D3DE1-DB65-4B39-BDF2-14C95A75144E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{191D3DE1-DB65-4B39-BDF2-14C95A75144E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{191D3DE1-DB65-4B39-BDF2-14C95A75144E}.Release|x64.ActiveCfg = Release|Any CPU
+		{191D3DE1-DB65-4B39-BDF2-14C95A75144E}.Release|x64.Build.0 = Release|Any CPU
+		{191D3DE1-DB65-4B39-BDF2-14C95A75144E}.Release|x86.ActiveCfg = Release|Any CPU
+		{191D3DE1-DB65-4B39-BDF2-14C95A75144E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
