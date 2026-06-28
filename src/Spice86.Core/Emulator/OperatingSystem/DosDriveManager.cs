@@ -48,8 +48,8 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
             cDriveFolderPath = DosPathResolver.GetExeParentFolder(executablePath);
         }
         cDriveFolderPath = ConvertUtils.ToSlashFolderPath(cDriveFolderPath);
-        _driveMap[GetDriveIndex('A')] = new VirtualDrive() { DriveLetter = 'A', MountedHostDirectory = "" };
-        _driveMap[GetDriveIndex('B')] = new VirtualDrive() { DriveLetter = 'B', MountedHostDirectory = "" };
+        _driveMap[GetDriveIndex('A')] = new VirtualDrive() { DriveLetter = 'A', MountedHostDirectory = cDriveFolderPath };
+        _driveMap[GetDriveIndex('B')] = new VirtualDrive() { DriveLetter = 'B', MountedHostDirectory = cDriveFolderPath };
         var cDrive = new VirtualDrive { DriveLetter = 'C', MountedHostDirectory = cDriveFolderPath };
         _driveMap[GetDriveIndex('C')] = cDrive;
         CurrentDrive = cDrive;

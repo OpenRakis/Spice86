@@ -32,7 +32,7 @@ public abstract class DosDriveBase {
     /// <summary>
     /// Gets the absolute path to the current DOS directory in use on the drive.
     /// </summary>
-    public string CurrentDosDirectory { get; set; } = "";
+    public string CurrentDosDirectory { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets if it is a network drive. Not supported, always <see langword="false" />
