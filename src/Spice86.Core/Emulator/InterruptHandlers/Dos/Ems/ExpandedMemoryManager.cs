@@ -121,7 +121,27 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
 
     public DosDeviceHeader Header { get; init; }
 
-    public ushort Information => 0xc0c0; //Lifted from DOSBox.
+    /// <summary>
+    /// Returns the EMS capability bitmask.
+    /// The value <c>0b1100000011000000</c> (0xC0C0) matches the behavior of DOSBox
+    /// and represents two identical capability bytes:
+    /// <para>
+    ///   • High byte: hardware capability flags<br/>
+    ///   • Low byte:  software capability flags
+    /// </para>
+    /// <para>
+    /// Each byte uses the LIM EMS 4.0 bit layout:<br/>
+    ///   bit 7 — DMA region support <br/>
+    ///   bit 6 — Page mapping supported<br/>
+    ///   bit 5 — Partial-page mapping not supported<br/>
+    ///   bit 4 — Raw page frame segment not exposed<br/>
+    ///   bit 3 — No alternate mapping register sets<br/>
+    ///   bit 2 — Basic handle-based allocation<br/>
+    ///   bit 1 — No special version/compatibility flags<br/>
+    ///   bit 0 — Reserved
+    /// </para>
+    /// </summary>
+    public ushort Information => 0xc0c0;
 
     public string Name {
         get {
