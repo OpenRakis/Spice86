@@ -38,6 +38,24 @@ public interface ICfgNode : IEquatable<ICfgNode> {
     bool IsLive { get; }
 
     /// <summary>
+    /// Returns whether the node is speculative.
+    /// A speculative node was decoded by the static explorer from memory bytes but has never been
+    /// executed and confirmed. It is a separate axis from <see cref="IsLive"/>: a speculative node
+    /// is always non-live, but a non-live observed node (e.g. SMC-evicted) is not speculative.
+    /// Speculative nodes never enter <see cref="Feeder.CurrentInstructions"/>,
+    /// <see cref="Feeder.PreviousInstructions"/>, or a <see cref="ParsedInstruction.SelfModifying.SelectorNode"/>.
+    /// </summary>
+    bool IsSpeculative { get; }
+
+    /// <summary>
+    /// Updates the speculative provenance of this node. On an actual transition, keeps the
+    /// containing <see cref="CfgBlock"/>'s speculative counter in sync. Setting speculative also
+    /// forces the node non-live. No-op for node kinds that have no speculative state
+    /// (<see cref="ParsedInstruction.SelfModifying.SelectorNode"/>, <see cref="CfgBlock"/>).
+    /// </summary>
+    void SetSpeculative(bool isSpeculative);
+
+    /// <summary>
     /// True when the node execution can lead to going back to previous execution context if the next to execute is the correct address
     /// </summary>
     bool CanCauseContextRestore { get; }

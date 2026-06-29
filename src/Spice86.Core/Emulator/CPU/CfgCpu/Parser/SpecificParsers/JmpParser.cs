@@ -40,6 +40,7 @@ public class JmpParser : BaseInstructionParser {
         instr.AttachAsts(
             new InstructionNode(InstructionOperation.JMP_FAR, targetAddressNode),
             new JumpFarNode(instr, targetAddressNode));
+        instr.RegisterStaticSuccessorAddress(targetAddress, InstructionSuccessorType.Normal);
         return instr;
     }
 
@@ -53,6 +54,7 @@ public class JmpParser : BaseInstructionParser {
         instr.AttachAsts(
             new InstructionNode(displayOp, targetIpNode),
             new JumpNearNode(instr, targetIpNode));
+        instr.RegisterStaticSuccessorAddress(new SegmentedAddress(instr.NextInMemoryAddress32.Segment, targetIp), InstructionSuccessorType.Normal);
         return instr;
     }
 }

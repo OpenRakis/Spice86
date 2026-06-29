@@ -175,15 +175,30 @@ public class InstructionParser {
         try {
             CfgInstruction parsed = ParseCfgInstruction(context);
             ValidateLockPrefix(parsed, prefixes);
+            if (!parsed.IsBlockTerminator && parsed.StaticSuccessorAddresses.Count == 0) {
+                parsed.RegisterStaticSuccessorAddress(parsed.NextInMemoryAddress32.ToSegmentedAddress(), InstructionSuccessorType.Normal);
+            }
             return parsed;
         } catch (CpuException e) {
-            // Capture how many bytes the decoder consumed before it gave up. NextField / Advance keep
-            // this index in step with every field read (prefixes, opcode, ModRM, SIB, displacement,
-            // immediate), so at the point of failure it is the authoritative consumed length. Read it
-            // here, before BuildInvalidInstruction touches the reader to re-read the trailing span.
-            int consumedLength = _parsingTools.InstructionReader.InstructionReaderAddressSource.IndexInInstruction;
-            return BuildInvalidInstruction(address, prefixes, opcodeField, e, consumedLength);
+            return BuildInvalidInstruction(address, prefixes, opcodeField, e);
+        } catch (InvalidGroupIndexException) {
+            // An undefined GRP reg-field selection (e.g. GRP5 reg=7) is a #UD invalid opcode: route it
+            // through the same invalid-node machinery as other invalid opcodes instead of crashing the decode.
+            return BuildInvalidInstruction(address, prefixes, opcodeField, new CpuInvalidOpcodeException($"Invalid group index at {address}"));
         }
+    }
+
+    /// <summary>
+    /// Builds an invalid node for a failed parse, capturing the full byte span the decoder consumed.
+    /// NextField / Advance keep the in-instruction index in step with every field read (prefixes,
+    /// opcode, ModRM, SIB, displacement, immediate), so at the point of failure it is the authoritative
+    /// consumed length. It must be read before <see cref="BuildInvalidInstruction"/> touches the reader
+    /// to re-read the trailing span.
+    /// </summary>
+    private CfgInstruction BuildInvalidInstruction(SegmentedAddress address, List<InstructionPrefix> prefixes,
+        InstructionField<ushort> opcodeField, CpuException exception) {
+        int consumedLength = _parsingTools.InstructionReader.InstructionReaderAddressSource.IndexInInstruction;
+        return BuildInvalidInstruction(address, prefixes, opcodeField, exception, consumedLength);
     }
 
     /// <summary>

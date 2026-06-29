@@ -2,12 +2,14 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
+using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 
+using System.Linq;
 using System.Runtime.CompilerServices;
 
 using SequentialIdAllocator = Spice86.Shared.Utils.SequentialIdAllocator;
@@ -23,18 +25,44 @@ public class InstructionsFeeder : IClearable {
     private readonly InstructionParser _instructionParser;
     private readonly SignatureReducer _signatureReducer;
     private readonly CfgNodeExecutionCompiler _executionCompiler;
+    private readonly SpeculativeExplorer? _speculativeExplorer;
 
     public InstructionsFeeder(EmulatorBreakpointsManager emulatorBreakpointsManager, IMemory memory, State cpuState,
-        InstructionReplacerRegistry replacerRegistry, CfgNodeExecutionCompiler executionCompiler, SequentialIdAllocator idAllocator) {
+        InstructionReplacerRegistry replacerRegistry, CfgNodeExecutionCompiler executionCompiler, SequentialIdAllocator idAllocator,
+        NodeLinker? nodeLinker) {
         _instructionParser = new(memory, cpuState, idAllocator);
         _executionCompiler = executionCompiler;
         CurrentInstructions = new(memory, emulatorBreakpointsManager, replacerRegistry);
         PreviousInstructions = new(memory, replacerRegistry);
         _signatureReducer = new(replacerRegistry);
+        NodeIndex = new(replacerRegistry);
+        if (nodeLinker is not null) {
+            _speculativeExplorer = new(_instructionParser, NodeIndex, nodeLinker);
+            SpeculativePromoter = new(executionCompiler, CurrentInstructions, PreviousInstructions);
+        }
     }
     
     public CurrentInstructions CurrentInstructions { get; }
     public PreviousInstructions PreviousInstructions { get; }
+    public CfgNodeIndex NodeIndex { get; }
+    public SpeculativePromoter? SpeculativePromoter { get; }
+    public SpeculativeReconciler? SpeculativeReconciler { get; private set; }
+
+    /// <summary>
+    /// Seeds known-safe interrupt handler entry points for speculative exploration with
+    /// continuation-following enabled. Each address is decoded speculatively (if not already
+    /// in the index) and its full handler body is explored including post-call/int continuations.
+    /// No-op when the speculative explorer is disabled.
+    /// </summary>
+    /// <param name="handlerAddresses">Entry addresses of emulator-installed interrupt handlers.</param>
+    public void SeedKnownSafeHandlers(IReadOnlyList<SegmentedAddress> handlerAddresses) {
+        if (_speculativeExplorer is null) {
+            return;
+        }
+        foreach (SegmentedAddress entry in handlerAddresses) {
+            _speculativeExplorer.SeedKnownSafe(entry);
+        }
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public CfgInstruction GetInstructionFromMemory(SegmentedAddress address) {
@@ -62,20 +90,56 @@ public class InstructionsFeeder : IClearable {
             return previousMatching;
         }
 
-        return ParseAndSetAsCurrent(address);
+        return ParseCheckingExistingSpeculative(address);
     }
-    private CfgInstruction ParseAndSetAsCurrent(SegmentedAddress address) {
+
+    internal void SetSpeculativePruner(SpeculativeReachabilityPruner pruner) {
+        if (SpeculativePromoter is not null) {
+            SpeculativeReconciler = new(SpeculativePromoter, pruner, NodeIndex);
+        }
+    }
+
+    private CfgInstruction ParseCheckingExistingSpeculative(SegmentedAddress address) {
+        if (SpeculativeReconciler is null) {
+            return ParseAndSetAsCurrent(address);
+        }
+        CfgInstruction? existingSpeculative = NodeIndex.GetAtAddress(address)
+            .FirstOrDefault(n => n.IsSpeculative);
+        if (existingSpeculative is null) {
+            return ParseAndSetAsCurrent(address);
+        }
+        // Light parse only for signature comparison — avoids SignatureReducer fan-out
+        // and discards the node cheaply on the fast path (promotion).
+        CfgInstruction parsed = _instructionParser.ParseInstructionAt(address);
+        if (SpeculativeReconciler.Reconcile(existingSpeculative, parsed.Signature, address)) {
+            return existingSpeculative;
+        }
+        // Signatures differ: run the full uniqueness check (signature reduction against
+        // previous instructions) so we reuse an existing node when possible.
+        CfgInstruction live = ReduceAgainstPrevious(parsed, address);
+        CommitObserved(live);
+        return live;
+    }
+    internal CfgInstruction ParseAndSetAsCurrent(SegmentedAddress address) {
         CfgInstruction parsed = ParseEnsuringUnique(address);
-        // Recompile instruction
-        _executionCompiler.Compile(parsed);
-        CurrentInstructions.SetAsCurrent(parsed);
-        PreviousInstructions.AddInstructionInPrevious(parsed);
+        CommitObserved(parsed);
+        _speculativeExplorer?.ExploreFrom(parsed);
         return parsed;
     }
 
-    private CfgInstruction ParseEnsuringUnique(SegmentedAddress address) {
+    private void CommitObserved(CfgInstruction instruction) {
+        _executionCompiler.Compile(instruction);
+        CurrentInstructions.SetAsCurrent(instruction);
+        PreviousInstructions.AddInstructionInPrevious(instruction);
+        NodeIndex.Insert(instruction);
+    }
+
+    internal CfgInstruction ParseEnsuringUnique(SegmentedAddress address) {
         CfgInstruction parsed = _instructionParser.ParseInstructionAt(address);
-        // Let's try with the signature reducer to see if the parsed instruction has an existing match
+        return ReduceAgainstPrevious(parsed, address);
+    }
+
+    private CfgInstruction ReduceAgainstPrevious(CfgInstruction parsed, SegmentedAddress address) {
         HashSet<CfgInstruction>? previousSet = PreviousInstructions.GetAtAddress(address);
         if (previousSet != null) {
             foreach (CfgInstruction existing in previousSet) {

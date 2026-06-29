@@ -28,7 +28,8 @@ public sealed class Spice86Creator : IDisposable {
         ushort sbBase = 0x220, byte sbIrq = 7, byte sbDma = 1, byte sbHdma = 5,
         string? exeArgs = null, long? instructionTimeScale = null,
         JitMode jitMode = JitMode.InterpretedOnly, bool failOnInvalidOpcode = false,
-        string? recordedDataDirectory = null, bool reloadCfgGraph = false) {
+        string? recordedDataDirectory = null, bool reloadCfgGraph = false,
+        bool enableSpeculativeCfgExploration = true) {
         string executablePath = Path.IsPathRooted(binName) ? binName : $"Resources/cpuTests/{binName}.bin";
         if (overrideSupplierClassName != null && overrideSupplier != null) {
             throw new ArgumentException("Provide either an override supplier instance or an override supplier class name, not both.");
@@ -82,6 +83,7 @@ public sealed class Spice86Creator : IDisposable {
             JitMode = jitMode,
             FailOnInvalidOpcode = failOnInvalidOpcode,
             ReloadCfgGraph = reloadCfgGraph,
+            EnableSpeculativeCfgExploration = enableSpeculativeCfgExploration,
         };
 
         _maxCycles = maxCycles;

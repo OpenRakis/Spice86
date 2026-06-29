@@ -10,6 +10,9 @@ F000:0017 or AX,AX
 F000:0019 selector
 F000:0019 jmp short 0x0020
 F000:0019 jne short 0x0010
+F000:001B mov AX,0xDEAD
+F000:001E push AX
+F000:001F hlt
 F000:0020 push AX
 F000:0021 hlt
 F000:0022 cmp byte ptr DS:[0x0040],0

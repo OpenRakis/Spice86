@@ -67,6 +67,8 @@ public class LoopParser(ParsingTools parsingTools) : BaseInstructionParser(parsi
         InstructionNode displayAst = new InstructionNode(displayOp, targetIpNode);
         BlockNode execAst = new BlockNode(decrementCounter, conditionalJump);
         instr.AttachAsts(displayAst, execAst);
+        instr.RegisterStaticSuccessorAddress(new SegmentedAddress(instr.NextInMemoryAddress32.Segment, targetIp), InstructionSuccessorType.Normal);
+        instr.RegisterStaticSuccessorAddress(instr.NextInMemoryAddress32.ToSegmentedAddress(), InstructionSuccessorType.Normal);
         return instr;
     }
 

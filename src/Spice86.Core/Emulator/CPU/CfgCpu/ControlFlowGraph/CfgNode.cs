@@ -43,6 +43,21 @@ public abstract class CfgNode : ICfgNode, IEquatable<CfgNode> {
     }
 
     public abstract bool IsLive { get; }
+
+    /// <summary>
+    /// Default is <c>false</c>. <see cref="ParsedInstruction.CfgInstruction"/> overrides this to
+    /// expose its stored speculative flag, maintained by <see cref="SetSpeculative"/> calls.
+    /// <see cref="SelectorNode"/> and <see cref="CfgBlock"/> keep the default <c>false</c>.
+    /// </summary>
+    public virtual bool IsSpeculative => false;
+
+    /// <summary>
+    /// No-op default: <see cref="SelectorNode"/> and <see cref="CfgBlock"/> have no speculative
+    /// state. <see cref="ParsedInstruction.CfgInstruction"/> overrides this to maintain its stored
+    /// flag and notify its containing block.
+    /// </summary>
+    public virtual void SetSpeculative(bool isSpeculative) {
+    }
     
     public abstract void UpdateSuccessorCache();
     public abstract ICfgNode? GetNextSuccessor(InstructionExecutionHelper helper);

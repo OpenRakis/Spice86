@@ -136,8 +136,12 @@ public class Signature : IComparable<Signature> {
 
     /// <inheritdoc/>
     public override int GetHashCode() {
-        // Hashcode cannot depend on the signature value because 2 values can be equals if they have null bytes 
-        return 1;
+        // Equality (ListEquivalent) treats null bytes as wildcards, so two signatures with different
+        // concrete bytes can compare equal; the hash therefore cannot depend on byte values.
+        // Equality does require equal length though, and NullifySignature preserves length, so the
+        // byte count is a stable, equality-consistent hash. It keeps signatures of different lengths
+        // in separate buckets instead of collapsing everything into one (as a constant would).
+        return SignatureValue.Count;
     }
 
     /// <inheritdoc/>

@@ -23,13 +23,22 @@ public class CfgNodeFeeder {
     private readonly NodeLinker _nodeLinker;
 
     public CfgNodeFeeder(IMemory memory, State state, EmulatorBreakpointsManager emulatorBreakpointsManager,
-        InstructionReplacerRegistry replacerRegistry, CfgNodeExecutionCompiler executionCompiler, SequentialIdAllocator idAllocator) {
+        InstructionReplacerRegistry replacerRegistry, CfgNodeExecutionCompiler executionCompiler, SequentialIdAllocator idAllocator,
+        bool enableSpeculativeExploration) {
         _state = state;
-        InstructionsFeeder = new(emulatorBreakpointsManager, memory, state, replacerRegistry, executionCompiler, idAllocator);
         _nodeLinker = new(replacerRegistry, executionCompiler, idAllocator);
+        InstructionsFeeder = new(emulatorBreakpointsManager, memory, state, replacerRegistry, executionCompiler, idAllocator,
+            enableSpeculativeExploration ? _nodeLinker : null);
+        if (enableSpeculativeExploration) {
+            SpeculativeReachabilityPruner pruner = new(_nodeLinker, InstructionsFeeder.NodeIndex);
+            InstructionsFeeder.SetSpeculativePruner(pruner);
+        }
     }
 
     public InstructionsFeeder InstructionsFeeder { get; }
+
+    /// <summary>Persistent graph index spanning all nodes (observed + speculative).</summary>
+    public CfgNodeIndex NodeIndex => InstructionsFeeder.NodeIndex;
 
     /// <summary>
     /// Parses or retrieves from cache the instruction at the current IP from memory.
@@ -90,6 +99,18 @@ public class CfgNodeFeeder {
                 "Nodes from memory and from graph don't have the same address. This should never happen. " +
                 $"From memory: {fromMemory} " +
                 $"From graph: {graphNodeAfterReconciliation}");
+        }
+
+        // Provenance-gated path: when the stale graph node is speculative,
+        // either promote it (memory match) or discard-and-replace (mismatch).
+        // This must run BEFORE the generic SelectorNode path so that speculative nodes
+        // never enter a SelectorNode.
+        if (graphNodeAfterReconciliation is CfgInstruction speculativeInGraph && speculativeInGraph.IsSpeculative) {
+            SpeculativeReconciler? reconciler = InstructionsFeeder.SpeculativeReconciler;
+            if (reconciler is not null && reconciler.Reconcile(speculativeInGraph, fromMemory.Signature, fromMemory.Address)) {
+                return speculativeInGraph;
+            }
+            return fromMemory;
         }
 
         // Genuinely different instructions at the same address. Inject a SelectorNode

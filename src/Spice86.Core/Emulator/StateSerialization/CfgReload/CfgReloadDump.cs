@@ -27,4 +27,11 @@ internal sealed record CfgReloadDump {
 
     /// <summary>Ordered block membership; authoritative on import (blocks are rebuilt from this).</summary>
     [JsonPropertyName("blocks")] public required CfgReloadBlockInfo[] Blocks { get; init; }
+
+    /// <summary>
+    /// Addresses proven byte-unstable between explore-time and execution-time.
+    /// Speculation permanently stops at these addresses. Persisted to make poisoning monotonic
+    /// across runs (a speculative-only instability leaves no graph trace otherwise).
+    /// </summary>
+    [JsonPropertyName("poisonedAddresses")] public string[]? PoisonedAddresses { get; init; }
 }

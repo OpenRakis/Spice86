@@ -11,11 +11,17 @@ using System.Linq;
 /// <summary>
 /// Shared CFG block traversal layer. Owns BFS over blocks, seed collection, and edge discovery.
 /// Both JSON serialization and UI rendering consume the exported graph without running their own traversal.
+///
+/// <para>Speculative blocks are discovered for free during BFS traversal because the explorer
+/// wires full edges (observed-terminator -> speculative-entry) at explore time. No generation-time
+/// block building is needed.</para>
 /// </summary>
 public sealed class CfgBlockGraphExporter {
     /// <summary>
     /// Exports a <see cref="CfgExecutionContextGraph"/> from the given execution context manager,
     /// seeded by entry-point blocks and the last-executed block.
+    /// Speculative blocks reachable from observed block terminators are included automatically
+    /// via BFS traversal of the live edges wired by the explorer.
     /// </summary>
     public CfgExecutionContextGraph ExportFromExecutionContext(ExecutionContextManager contextManager, int? nodeLimit) {
         ExecutionContext currentContext = contextManager.CurrentExecutionContext;
