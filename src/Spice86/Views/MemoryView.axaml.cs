@@ -25,6 +25,7 @@ public partial class MemoryView : UserControl {
         DataContextChanged += OnDataContextChanged;
 
         this.HexViewer.DoubleTapped += OnHexViewerDoubleTapped;
+        HexViewer.HexView.BytesPerLine = 16;
     }
 
     private void OnHexViewerDoubleTapped(object? sender, TappedEventArgs e) {
