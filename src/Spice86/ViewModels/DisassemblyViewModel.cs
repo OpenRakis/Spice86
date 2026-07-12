@@ -444,7 +444,14 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
         for (int i = clampedFirst; i <= clampedLast; i++)
         {
             DebuggerLineViewModel line = sortedLines[i];
-            line.EvaluatedOperands = _evaluationService.FormatOperandValues(line.InstructionInfo);
+            try
+            {
+                line.EvaluatedOperands = _evaluationService.FormatOperandValues(line.InstructionInfo);
+            }
+            catch
+            {
+                line.EvaluatedOperands = null;
+            }
         }
     }
 
