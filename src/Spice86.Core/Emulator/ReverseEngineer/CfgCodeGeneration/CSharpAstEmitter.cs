@@ -175,8 +175,8 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
                 edge => CallBranchBody(node.Instruction, runtimeContinuation, helperName, edge, isFarCall: true, forceSameMethodGoto: true));
         }
 
-        ResolvedCfgEdge targetEdge = Context.ResolveEdge(node.Instruction, InstructionSuccessorType.Normal,
-            new SegmentedAddress(targetSegment.Value, targetOffset.Value));
+        SegmentedAddress targetAddress = new SegmentedAddress(targetSegment.Value, targetOffset.Value);
+        ResolvedCfgEdge targetEdge = Context.ResolveEdge(node.Instruction, InstructionSuccessorType.Normal, targetAddress);
         return Transfer.EmitCallHelperAndContinuation(helperName, node.Instruction, Transfer.FunctionExpression(targetEdge), CurrentMethod, farCallTargetCs: targetSegment.Value);
     }
 
@@ -344,7 +344,9 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
 
     private EmittedCode BuildNearRuntimeDispatch(CfgInstruction instruction, string targetExpression, string targetKind,
         Func<ResolvedCfgEdge, IReadOnlyList<StatementItem>> bodyForEdge) {
-        IReadOnlyList<ResolvedCfgEdge> edges = RequireObservedEdges(instruction, targetKind);
+        if (!TryGetObservedDispatchEdges(instruction, targetKind, out IReadOnlyList<ResolvedCfgEdge> edges, out EmittedCode failure)) {
+            return failure;
+        }
         List<SwitchCase> cases = edges
             .OrderBy(edge => edge.Target.Address.Offset)
             .Select(edge => new SwitchCase($"0x{edge.Target.Address.Offset:X4}", bodyForEdge(edge)))
@@ -355,7 +357,9 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
 
     private EmittedCode BuildFarRuntimeDispatch(CfgInstruction instruction, string segmentExpression, string offsetExpression, string targetKind,
         Func<ResolvedCfgEdge, IReadOnlyList<StatementItem>> bodyForEdge) {
-        IReadOnlyList<ResolvedCfgEdge> edges = RequireObservedEdges(instruction, $"far {targetKind}");
+        if (!TryGetObservedDispatchEdges(instruction, $"far {targetKind}", out IReadOnlyList<ResolvedCfgEdge> edges, out EmittedCode failure)) {
+            return failure;
+        }
         string segmentVariable = $"targetSegment_{instruction.Id}";
         string offsetVariable = $"targetOffset_{instruction.Id}";
         List<StatementItem> items = [
@@ -373,12 +377,22 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
         return EmittedCode.Statements(items);
     }
 
-    private IReadOnlyList<ResolvedCfgEdge> RequireObservedEdges(CfgInstruction instruction, string targetKind) {
-        IReadOnlyList<ResolvedCfgEdge> edges = Context.GetObservedEdges(instruction, InstructionSuccessorType.Normal);
+    /// <summary>
+    /// Resolves the observed normal successor edges that an indirect (computed) jump or call dispatches over.
+    /// Returns <c>false</c> with a runtime <c>FailAsUntested</c> throw in <paramref name="failure"/> when the
+    /// instruction was decoded into the CFG but never observed taking any edge during discovery. Failing at
+    /// generation time would abort the whole dump; instead the generated code compiles and only fails if this
+    /// branch is actually reached at runtime, matching the untested-path convention used elsewhere.
+    /// </summary>
+    private bool TryGetObservedDispatchEdges(CfgInstruction instruction, string targetKind,
+        out IReadOnlyList<ResolvedCfgEdge> edges, out EmittedCode failure) {
+        edges = Context.GetSuccessorEdges(instruction, InstructionSuccessorType.Normal);
         if (edges.Count == 0) {
-            throw new NotSupportedException($"Instruction {instruction.Address} has no observed normal {targetKind} targets.");
+            failure = EmittedCode.Diverging($"throw FailAsUntested(\"Indirect {targetKind} at {instruction.Address} has no observed targets.\");");
+            return false;
         }
-        return edges;
+        failure = EmittedCode.None;
+        return true;
     }
 
     private IReadOnlyList<StatementItem> CallBranchBody(CfgInstruction instruction, CallContinuation continuation,

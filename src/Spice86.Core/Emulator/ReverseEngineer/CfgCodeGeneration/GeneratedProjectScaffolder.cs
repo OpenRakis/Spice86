@@ -38,6 +38,13 @@ internal static class GeneratedProjectScaffolder {
         GeneratedOverrideNames.GeneratedNamespace + "." + GeneratedOverrideNames.SupplierClassName +
         ", " + ProjectAssemblyName;
 
+    /// <summary>The file name of the central package version manifest used by the source tree.</summary>
+    private const string PackagesPropsFileName = "Directory.Packages.props";
+
+    /// <summary>The file name of the sibling props file used to point the generated project at the source
+    /// tree's central package version manifest (see <see cref="BuildDirectoryBuildPropsForProjectReference"/>).</summary>
+    public const string DirectoryBuildPropsFileName = "Directory.Build.props";
+
     /// <summary>
     /// Builds the <c>Spice86.Generated.csproj</c> text using a <c>ProjectReference</c> to the live Spice86 GUI
     /// project. Preferred during development: the build always matches the running source tree and transitively
@@ -49,6 +56,38 @@ internal static class GeneratedProjectScaffolder {
         // MSBuild accepts forward slashes on every platform; normalize so the reference is portable.
         string referencePath = spice86CsprojReferencePath.Replace('\\', '/');
         return BuildCsProj($"""<ProjectReference Include="{referencePath}" />""");
+    }
+
+    /// <summary>
+    /// Builds the sibling <c>Directory.Build.props</c> text that points the generated project's central package
+    /// management at <c>src/Directory.Packages.props</c>, or <c>null</c> when the source tree layout could not be
+    /// determined. The generated project lives outside the src/ directory tree, so it never auto-discovers
+    /// src/Directory.Packages.props the way every other project in the solution does. Without it, restoring this
+    /// project resolves transitive package versions (e.g. Microsoft.OpenApi) independently from the ones
+    /// Spice86.csproj was built against, which can pick a different version than the one baked into the
+    /// already-built Spice86.Core.dll/Spice86.dll and crash at runtime with a FileNotFoundException. Setting
+    /// <c>DirectoryPackagesPropsPath</c> (the officially supported override point for relocating the central
+    /// version manifest) keeps both builds pinned to identical package versions.
+    /// </summary>
+    /// <param name="spice86CsprojReferencePath">Path (relative or absolute) to <c>src/Spice86/Spice86.csproj</c>,
+    /// as passed to <see cref="BuildCsProjWithProjectReference"/>.</param>
+    public static string? BuildDirectoryBuildPropsForProjectReference(string spice86CsprojReferencePath) {
+        string referencePath = spice86CsprojReferencePath.Replace('\\', '/');
+        string? spice86ProjectDirectory = Path.GetDirectoryName(referencePath);
+        string? srcDirectory = spice86ProjectDirectory is null ? null : Path.GetDirectoryName(spice86ProjectDirectory);
+        if (srcDirectory is null) {
+            return null;
+        }
+        string packagesPropsPath = Path.Join(srcDirectory, PackagesPropsFileName).Replace('\\', '/');
+        return $"""
+            <Project>
+              <PropertyGroup>
+                <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+                <DirectoryPackagesPropsPath>$(MSBuildThisFileDirectory){packagesPropsPath}</DirectoryPackagesPropsPath>
+              </PropertyGroup>
+            </Project>
+
+            """;
     }
 
     /// <summary>

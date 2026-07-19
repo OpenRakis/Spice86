@@ -75,6 +75,9 @@ public class Grp45Parser : BaseGrpOperationParser {
         InstructionNode displayAst = new InstructionNode(InstructionOperation.CALLBACK, callbackNode);
         IVisitableAstNode execAst = new CallbackNode(instr, _astBuilder.Constant.ToNode(callbackNumber.Value));
         instr.AttachAsts(displayAst, execAst);
+        // Although callbacks can cause CS:IP changes (example int21 LoadAndOrExecute / TerminateProcess)
+        // most of the times they just fall through the next in memory
+        instr.RegisterStaticSuccessorAddress(instr.NextInMemoryAddress32.ToSegmentedAddress());
         return instr;
     }
 

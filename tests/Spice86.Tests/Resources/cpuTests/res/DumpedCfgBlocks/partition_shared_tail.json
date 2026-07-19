@@ -6,15 +6,15 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:000E",
-  "lastExecutedBlockId": 19,
+  "lastExecutedBlockId": 30,
   "blocks": [
     {
-      "id": 19,
+      "id": 30,
       "entry": "F000:000E",
       "term": "F000:000E",
       "pred": [
         11,
-        14
+        23
       ],
       "succ": [],
       "asm": [
@@ -39,11 +39,11 @@
       "term": "F000:001C",
       "pred": [
         8,
-        16
+        24
       ],
       "succ": [
-        14,
-        19
+        23,
+        30
       ],
       "asm": [
         "B93333|mov CX,0x3333",
@@ -51,7 +51,7 @@
       ]
     },
     {
-      "id": 14,
+      "id": 23,
       "entry": "F000:000B",
       "term": "F000:000B",
       "pred": [
@@ -59,8 +59,8 @@
         11
       ],
       "succ": [
-        16,
-        19
+        24,
+        30
       ],
       "asm": [
         "E80600|call near 0x0014"
@@ -75,7 +75,7 @@
       ],
       "succ": [
         8,
-        14
+        23
       ],
       "asm": [
         "B80010|mov AX,0x1000",
@@ -100,11 +100,11 @@
       ]
     },
     {
-      "id": 16,
+      "id": 24,
       "entry": "F000:0014",
       "term": "F000:0017",
       "pred": [
-        14
+        23
       ],
       "succ": [
         11

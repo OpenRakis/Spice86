@@ -12,9 +12,11 @@ using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.Logging;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.Devices.Cmos;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
@@ -67,6 +69,7 @@ using Spice86.ViewModels.Services;
 using Spice86.Views;
 
 using System.Net.Sockets;
+using System.Linq;
 using System.Reflection;
 
 /// <summary>
@@ -312,7 +315,7 @@ public class Spice86DependencyInjection : IDisposable {
         CfgIdAllocator = cfgIdAllocator;
         CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler,
             dualPic, emulatorBreakpointsManager, pauseHandler, functionCatalogue,
-            configuration.UseCodeOverrideOption, configuration.FailOnInvalidOpcode, configuration.AllowIvtAddress0, loggerService, cfgNodeExecutionCompiler, cfgIdAllocator, cpuHeavyLogger);
+            configuration.UseCodeOverrideOption, configuration.FailOnInvalidOpcode, configuration.AllowIvtAddress0, configuration.EnableSpeculativeCfgExploration, loggerService, cfgNodeExecutionCompiler, cfgIdAllocator, cpuHeavyLogger);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("CfgCpu created...");
@@ -460,7 +463,7 @@ public class Spice86DependencyInjection : IDisposable {
         CfgCSharpDumper cfgCSharpDumper = new(new CfgCSharpGenerator(), loggerService);
         EmulationStateDataWriter emulationStateDataWriter = new(state, executionAddressesExtractor, memoryDataExporter,
             listingExporter, cfgCpuSnapshotBuilder, cfgBlocksJsonExporter, cfgCSharpDumper, cfgCpu.ExecutionContextManager, functionCatalogue, emulatorStateSerializationFolder, emulatorBreakpointsManager,
-            configuration, loggerService);
+            configuration, cfgCpu.CfgNodeFeeder.NodeIndex, loggerService);
         EmulatorStateSerializer emulatorStateSerializer = new(emulatorStateSerializationFolder,
             emulationStateDataReader, emulationStateDataWriter);
 
@@ -584,7 +587,8 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         InterruptInstaller interruptInstaller =
-            new InterruptInstaller(interruptVectorTable, memoryAsmWriter, functionCatalogue);
+            new InterruptInstaller(interruptVectorTable, memoryAsmWriter, functionCatalogue, 
+                dualPic.EnumerateHardwareInterruptVectorNumbers());
         AssemblyRoutineInstaller assemblyRoutineInstaller =
             new AssemblyRoutineInstaller(memoryAsmWriter, functionCatalogue);
 
@@ -728,17 +732,29 @@ public class Spice86DependencyInjection : IDisposable {
         ReloadCfgGraphIfRequested(configuration, emulationStateDataReader, cfgCpu, state,
             cfgNodeExecutionCompiler, loggerService, cfgIdAllocator);
 
+        // Seed emulator-installed hardware interrupt (external event) handlers for speculative
+        // exploration and register them as CFG generation roots. The addresses were captured at
+        // install time (see InterruptInstaller), so this only needs to run after CFG reload (so any
+        // previously indexed nodes are present). External-event handlers fire with nondeterministic
+        // timing and may never be reached from the program's observed entry points during discovery,
+        // so without this they would be absent from generated code and generated execution would fail
+        // when the PIC delivers their vector.
+        if (configuration.InitializeDOS is not false) {
+            cfgCpu.ExecutionContextManager.SeedKnownSafeHandlersAndRegisterEntryPoints(
+                interruptInstaller.InstalledHardwareInterruptHandlerAddresses);
+        }
+
         McpHttpHost? mcpHttpTransport = null;
 
-        if (configuration.McpHttpPort != 0) {
-            // Collect additional MCP tool assemblies and services from override supplier
-            IEnumerable<Assembly>? additionalToolAssemblies = null;
-            IEnumerable<object>? additionalMcpServices = null;
-            if (configuration.OverrideSupplier is IMcpToolSupplier mcpToolSupplier) {
-                additionalToolAssemblies = mcpToolSupplier.GetMcpToolAssemblies();
-                additionalMcpServices = mcpToolSupplier.GetMcpServices();
-            }
+        // Collect additional MCP tool assemblies and services from override supplier
+        IEnumerable<Assembly>? additionalToolAssemblies = null;
+        IEnumerable<object>? additionalMcpServices = null;
+        if (configuration.OverrideSupplier is IMcpToolSupplier mcpToolSupplier) {
+            additionalToolAssemblies = mcpToolSupplier.GetMcpToolAssemblies();
+            additionalMcpServices = mcpToolSupplier.GetMcpServices();
+        }
 
+        if (configuration.McpHttpPort != 0) {
             mcpHttpTransport = new McpHttpHost(loggerService);
             try {
                 mcpHttpTransport.Start(emulatorMcpServices, configuration.McpHttpPort, additionalToolAssemblies, additionalMcpServices);

@@ -52,7 +52,7 @@ public class InstructionsFeederTest : IDisposable {
         _compiler = new CfgNodeExecutionCompiler(new CfgNodeExecutionCompilerMonitor(loggerService), loggerService, JitMode.InterpretedOnly);
 
         return new InstructionsFeeder(emulatorBreakpointsManager, _memory, state, _instructionReplacer,
-            _compiler, new SequentialIdAllocator());
+            _compiler, new SequentialIdAllocator(), nodeLinker: null);
     }
 
     private void WriteJumpNear(SegmentedAddress address) {

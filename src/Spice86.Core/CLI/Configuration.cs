@@ -357,4 +357,17 @@ public sealed class Configuration : CommandSettings {
     [CommandOption("--AllowIvtAddress0")]
     public bool AllowIvtAddress0 { get; init; }
 
+    /// <summary>
+    /// When true (default), the speculative CFG explorer is enabled: after each newly-observed
+    /// instruction is parsed, the explorer performs a recursive-descent static decode of all
+    /// statically-reachable successors that have not yet been observed, marking the resulting nodes
+    /// as speculative. This allows the C# code generator to emit real branches for unobserved
+    /// conditional arms instead of always falling back to <c>FailAsUntested</c>.
+    /// When false, no speculative nodes, edges, or index entries are created; the graph content is
+    /// byte-identical to the pre-feature baseline.
+    /// </summary>
+    [CommandOption("--EnableSpeculativeCfgExploration <ENABLESPECULATIVECFGEXPLORATION>")]
+    [DefaultValue(true)]
+    public bool EnableSpeculativeCfgExploration { get; init; } = true;
+
 }

@@ -6,10 +6,10 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:0008",
-  "lastExecutedBlockId": 18,
+  "lastExecutedBlockId": 9,
   "blocks": [
     {
-      "id": 18,
+      "id": 9,
       "entry": "F000:0008",
       "term": "F000:0008",
       "pred": [
@@ -39,11 +39,11 @@
       "pred": [
         3,
         7,
-        13
+        17
       ],
       "succ": [
         7,
-        18
+        9
       ],
       "asm": [
         "83F900|cmp CX,0",
@@ -72,8 +72,8 @@
         15
       ],
       "succ": [
-        13,
-        15
+        15,
+        17
       ],
       "asm": [
         "B8____|mov AX,word ptr [0x000F000A]",
@@ -84,7 +84,7 @@
       ]
     },
     {
-      "id": 13,
+      "id": 17,
       "entry": "F000:001B",
       "term": "F000:001E",
       "pred": [
