@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>BattleTechMcpTools</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Spice86.Core\Spice86.Core.csproj" />
+    <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
+    <PackageReference Include="ModelContextProtocol.Core" />
+    <PackageReference Include="ModelContextProtocol.AspNetCore" />
+  </ItemGroup>
+</Project>
