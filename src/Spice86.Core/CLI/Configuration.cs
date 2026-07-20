@@ -190,6 +190,13 @@ public sealed class Configuration : CommandSettings {
     public bool WarningLogs { get; init; }
 
     /// <summary>
+    /// Path to a file where DOS program output (stdout text) is logged.
+    /// When set, all text written by the emulated program to the console is captured to this file.
+    /// </summary>
+    [CommandOption("--DosOutputLog <DOSOUTPUTLOG>")]
+    public string? DosOutputLog { get; init; }
+
+    /// <summary>
     /// The path to the zip file or directory containing the MT-32 ROM files.
     /// </summary>
     [CommandOption("-m|--Mt32RomsPath <MT32ROMSPATH>")]

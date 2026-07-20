@@ -43,6 +43,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
     private readonly IMemory _memory;
     private readonly ILoggerService _loggerService;
+    private readonly IDosOutputHandler _dosOutputHandler;
     private readonly Mscdex _mscdex;
     private readonly ISoundChannelCreator _channelCreator;
     private readonly IDriveActivityNotifier _activityNotifier;
@@ -207,8 +208,10 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         FloppyDiskTimingService floppyDiskTimingService,
         ISoundChannelCreator channelCreator,
         IDriveActivityNotifier activityNotifier,
-        ExtendedMemoryManager? xms) {
+        ExtendedMemoryManager? xms,
+        IDosOutputHandler dosOutputHandler) {
         _loggerService = loggerService;
+        _dosOutputHandler = dosOutputHandler;
         _channelCreator = channelCreator;
         _activityNotifier = activityNotifier;
         Xms = xms;
@@ -349,7 +352,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         var consoleDevice = new ConsoleDevice(_memory, GetDefaultNewDeviceBaseAddress(),
             _loggerService, state,
             _biosDataArea, keyboardInt16Handler, _vgaFunctionality,
-            _biosKeyboardBuffer);
+            _biosKeyboardBuffer, _dosOutputHandler);
         AddDevice(consoleDevice);
         var printerDevice = new PrinterDevice(_loggerService, _memory, GetDefaultNewDeviceBaseAddress());
         AddDevice(printerDevice);
