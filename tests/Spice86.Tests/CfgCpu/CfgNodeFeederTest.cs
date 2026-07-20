@@ -1,6 +1,7 @@
 ﻿using JetBrains.Annotations;
 
 using NSubstitute;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;

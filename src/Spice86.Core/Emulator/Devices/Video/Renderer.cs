@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.Devices.Video;
 
 using System;
+using Microsoft.Extensions.Logging;
 using System.Threading;
 
 using Spice86.Core.Emulator.Devices.Video.Registers.CrtController;

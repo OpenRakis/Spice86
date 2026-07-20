@@ -1,6 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
@@ -239,13 +239,13 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     /// <inheritdoc />
     public override void Run() {
         byte operation = State.AH;
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("EMS function: 0x{@Function:X2} AL=0x{Al:X2}", operation, State.AL);
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("EMS function: 0x{@Function:X2} AL=0x{Al:X2}", operation, State.AL);
         }
 
         if (!HasRunnable(operation)) {
-            if (LoggerService.IsEnabled(LogEventLevel.Error)) {
-                LoggerService.Error("EMS function not provided: {@Function}", operation);
+            if (LoggerService.IsEnabled(LogLevel.Error)) {
+                LoggerService.LogError("EMS function not provided: {@Function}", operation);
             }
             State.AH = EmmStatus.EmmFunctionNotSupported;
             return;
@@ -259,8 +259,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     public void GetStatus() {
         // Return good status in AH.
         State.AH = EmmStatus.EmmNoError;
-        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
-            LoggerService.Debug("EMS: {@MethodName}: {@Result}", nameof(GetStatus), State.AH);
+        if (LoggerService.IsEnabled(LogLevel.Debug)) {
+            LoggerService.LogDebug("EMS: {@MethodName}: {@Result}", nameof(GetStatus), State.AH);
         }
     }
 
@@ -272,8 +272,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
         State.BX = EmmPageFrameSegment;
         // Set good status.
         State.AH = EmmStatus.EmmNoError;
-        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
-            LoggerService.Debug("EMS: {@MethodName}: 0x{Result:X4}", nameof(GetPageFrameSegment), State.BX);
+        if (LoggerService.IsEnabled(LogLevel.Debug)) {
+            LoggerService.LogDebug("EMS: {@MethodName}: 0x{Result:X4}", nameof(GetPageFrameSegment), State.BX);
         }
     }
 
@@ -289,8 +289,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
         State.BX = GetFreePageCount();
         // Set good status.
         State.AH = EmmStatus.EmmNoError;
-        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
-            LoggerService.Debug("{MethodName}: Total pages: {TotalPages} Free pages: {FreePages}", nameof(GetUnallocatedPageCount), State.DX, State.BX);
+        if (LoggerService.IsEnabled(LogLevel.Debug)) {
+            LoggerService.LogDebug("{MethodName}: Total pages: {TotalPages} Free pages: {FreePages}", nameof(GetUnallocatedPageCount), State.DX, State.BX);
         }
     }
 
@@ -414,16 +414,16 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     /// <returns>The status code.</returns>
     public byte MapUnmapHandlePage(ushort logicalPageNumber, ushort physicalPageNumber, ushort handleId) {
         if (physicalPageNumber >= EmmMaxPhysicalPages) {
-            if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-                LoggerService.Warning("Physical page {PhysicalPage} out of range",
+            if (LoggerService.IsEnabled(LogLevel.Warning)) {
+                LoggerService.LogWarning("Physical page {PhysicalPage} out of range",
                     physicalPageNumber);
             }
             return EmmStatus.EmmIllegalPhysicalPage;
         }
 
         if (!IsValidHandle(handleId)) {
-            if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-                LoggerService.Warning("Invalid Handle {InvalidHandle}", handleId);
+            if (LoggerService.IsEnabled(LogLevel.Warning)) {
+                LoggerService.LogWarning("Invalid Handle {InvalidHandle}", handleId);
             }
             return EmmStatus.EmmInvalidHandle;
         }
@@ -432,8 +432,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
 
         // Unmapping
         if (logicalPageNumber == EmmNullPage) {
-            if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
-                LoggerService.Debug("Unmapped physical page: {PhysicalPage}",
+            if (LoggerService.IsEnabled(LogLevel.Debug)) {
+                LoggerService.LogDebug("Unmapped physical page: {PhysicalPage}",
                     emmRegister.PhysicalPage.PageNumber);
             }
             emmRegister.PhysicalPage.PageNumber = EmmNullPage;
@@ -443,15 +443,15 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
         // Mapping
         EmmHandle allocatedEmmHandle = EmmHandles[handleId];
         if (logicalPageNumber > allocatedEmmHandle.LogicalPages.Count - 1) {
-            if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-                LoggerService.Warning("Logical page {LogicalPage} out of range",
+            if (LoggerService.IsEnabled(LogLevel.Warning)) {
+                LoggerService.LogWarning("Logical page {LogicalPage} out of range",
                     logicalPageNumber);
             }
             return EmmStatus.EmmLogicalPageOutOfRange;
         }
         emmRegister.PhysicalPage = allocatedEmmHandle.LogicalPages[logicalPageNumber];
-        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
-            LoggerService.Debug("Mapped logical page {LogicalPage} to physical page {PhysicalPage}",
+        if (LoggerService.IsEnabled(LogLevel.Debug)) {
+            LoggerService.LogDebug("Mapped logical page {LogicalPage} to physical page {PhysicalPage}",
                 logicalPageNumber,
                 physicalPageNumber);
         }
@@ -516,8 +516,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
         State.AL = 0x32;
         // Return good status.
         State.AH = EmmStatus.EmmNoError;
-        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
-            LoggerService.Debug("EMS: {@MethodName}: 0x{Version:X2}", nameof(GetEmmVersion), State.AL);
+        if (LoggerService.IsEnabled(LogLevel.Debug)) {
+            LoggerService.LogDebug("EMS: {@MethodName}: 0x{Version:X2}", nameof(GetEmmVersion), State.AL);
         }
     }
 
@@ -693,8 +693,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
         ushort handleId = State.DX;
         ushort numberOfPages = State.CX;
         uint mapAddress = MemoryUtils.ToPhysicalAddress(State.DS, State.SI);
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose(
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace(
                 "EMS: {@MethodName} Map {@NumberOfPages} pages from handle {@Handle} according to the map at address 0x{@MapAddress:X6}",
                 nameof(MapUnmapMultipleHandlePages), numberOfPages, handleId, mapAddress);
         }
@@ -726,8 +726,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
                 }
                 break;
             default:
-                if (LoggerService.IsEnabled(LogEventLevel.Error)) {
-                    LoggerService.Error(
+                if (LoggerService.IsEnabled(LogLevel.Error)) {
+                    LoggerService.LogError(
                         "{@MethodName} subFunction number {@SubFunctionId} not supported",
                         nameof(MapUnmapMultipleHandlePages), operation);
                 }
@@ -824,8 +824,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
                 break;
 
             default:
-                if (LoggerService.IsEnabled(LogEventLevel.Error)) {
-                    LoggerService.Error("{@MethodName}: subFunction {@FunctionId} invalid", nameof(GetSetHandleName), operation);
+                if (LoggerService.IsEnabled(LogLevel.Error)) {
+                    LoggerService.LogError("{@MethodName}: subFunction {@FunctionId} invalid", nameof(GetSetHandleName), operation);
                 }
                 return EmmStatus.EmmInvalidSubFunction;
         }
@@ -902,8 +902,8 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
                 State.AH = EmmStatus.EmmNoError;
                 break;
             default:
-                if (LoggerService.IsEnabled(LogEventLevel.Error)) {
-                    LoggerService.Error("{@MethodName}: EMS subfunction number {@SubFunction} not implemented",
+                if (LoggerService.IsEnabled(LogLevel.Error)) {
+                    LoggerService.LogError("{@MethodName}: EMS subfunction number {@SubFunction} not implemented",
                         nameof(GetExpandedMemoryHardwareInformation), State.AL);
                 }
                 break;

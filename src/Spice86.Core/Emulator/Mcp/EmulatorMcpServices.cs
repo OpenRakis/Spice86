@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.Mcp;
 
 using ModelContextProtocol.Server;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;

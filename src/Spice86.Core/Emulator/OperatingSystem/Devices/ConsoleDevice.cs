@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.OperatingSystem.Devices;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Video;
@@ -345,8 +345,8 @@ public class ConsoleDevice : CharacterDevice {
             _ansiState.PrefixAllowed = true;
             return;
         }
-        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-            _loggerService.Warning("ANSI: expected '[' after ESC, got 0x{Char:X2}", chr);
+        if (_loggerService.IsEnabled(LogLevel.Warning)) {
+            _loggerService.LogWarning("ANSI: expected '[' after ESC, got 0x{Char:X2}", chr);
         }
         _ansiState.Reset();
         OutputCharacter((char)chr);
@@ -400,8 +400,8 @@ public class ConsoleDevice : CharacterDevice {
         }
         // Anything else is a syntax error
         // NANSI: syntax_error → jmp f_not_ANSI, which prints the offending char.
-        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-            _loggerService.Warning("ANSI: unexpected char 0x{Char:X2} in CSI sequence", chr);
+        if (_loggerService.IsEnabled(LogLevel.Warning)) {
+            _loggerService.LogWarning("ANSI: unexpected char 0x{Char:X2} in CSI sequence", chr);
         }
         _ansiState.Reset();
         OutputCharacter((char)chr);

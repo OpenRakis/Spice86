@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.Devices.ExternalInput;
 
 using Spice86.Core.Emulator.CPU;
+using Microsoft.Extensions.Logging;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Shared.Emulator.Storage;
 using Spice86.Shared.Interfaces;

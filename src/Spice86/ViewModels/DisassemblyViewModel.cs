@@ -6,7 +6,7 @@ using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Messaging;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
@@ -404,9 +404,9 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
 
         // Capture the current CPU instruction pointer at the moment of pausing
         SegmentedAddress currentInstructionAddress = State.IpSegmentedAddress;
-        if (_logger.IsEnabled(LogEventLevel.Debug))
+        if (_logger.IsEnabled(LogLevel.Debug))
         {
-            _logger.Debug("Pausing: Captured instruction pointer at {CurrentInstructionAddress}", currentInstructionAddress);
+            _logger.LogDebug("Pausing: Captured instruction pointer at {CurrentInstructionAddress}", currentInstructionAddress);
         }
 
         EnsureAddressIsLoaded(currentInstructionAddress);
@@ -485,9 +485,9 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
         {
             return debuggerLine;
         }
-        if (_logger.IsEnabled(LogEventLevel.Debug))
+        if (_logger.IsEnabled(LogLevel.Debug))
         {
-            _logger.Debug("Current address {CurrentInstructionAddress} not found in DebuggerLines, loading instructions", address);
+            _logger.LogDebug("Current address {CurrentInstructionAddress} not found in DebuggerLines, loading instructions", address);
         }
 
         try
@@ -495,28 +495,28 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
             IsLoading = true;
 
             // Decode the instructions
-            if (_logger.IsEnabled(LogEventLevel.Debug))
+            if (_logger.IsEnabled(LogLevel.Debug))
             {
-                _logger.Debug("Decoding instructions for address {Address}", address);
+                _logger.LogDebug("Decoding instructions for address {Address}", address);
             }
             Dictionary<uint, EnrichedInstruction> instructions = _instructionsDecoder.DecodeInstructions(address, 256, 512);
-            if (_logger.IsEnabled(LogEventLevel.Debug))
+            if (_logger.IsEnabled(LogLevel.Debug))
             {
-                _logger.Debug("Decoded {Count} instructions", instructions.Count);
+                _logger.LogDebug("Decoded {Count} instructions", instructions.Count);
             }
 
             UpdateDebuggerLinesInBatch(instructions);
-            if (_logger.IsEnabled(LogEventLevel.Debug))
+            if (_logger.IsEnabled(LogLevel.Debug))
             {
-                _logger.Debug("Instructions loaded, now contains {DebuggerLinesCount} instructions", DebuggerLines.Count);
+                _logger.LogDebug("Instructions loaded, now contains {DebuggerLinesCount} instructions", DebuggerLines.Count);
             }
 
             // Verify that the current instruction is now in the collection
             if (!TryGetLineByAddress(address, out debuggerLine))
             {
-                if (_logger.IsEnabled(LogEventLevel.Error))
+                if (_logger.IsEnabled(LogLevel.Error))
                 {
-                    _logger.Error("Address {Address} still not found after loading instructions", address);
+                    _logger.LogError("Address {Address} still not found after loading instructions", address);
                 }
 
                 throw new InvalidOperationException($"Current address {address} still not found in DebuggerLines after update");
@@ -553,9 +553,9 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
 
         try
         {
-            if (_logger.IsEnabled(LogEventLevel.Debug))
+            if (_logger.IsEnabled(LogLevel.Debug))
             {
-                _logger.Debug("Updating highlighting: CPU instruction address={CpuInstructionAddress}, Previous={PreviousInstructionAddress}", State.IpSegmentedAddress, _previousInstructionAddress);
+                _logger.LogDebug("Updating highlighting: CPU instruction address={CpuInstructionAddress}, Previous={PreviousInstructionAddress}", State.IpSegmentedAddress, _previousInstructionAddress);
             }
 
             DebuggerLineViewModel currentLine = EnsureAddressIsLoaded(State.IpSegmentedAddress);
@@ -645,9 +645,9 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
 
     private void LogConditionCompilationWarning(Exception ex, string? conditionExpression)
     {
-        if (_logger.IsEnabled(LogEventLevel.Warning))
+        if (_logger.IsEnabled(LogLevel.Warning))
         {
-            _logger.Warning(ex, "Failed to compile breakpoint condition: {ConditionExpression}", conditionExpression);
+            _logger.LogWarning(ex, "Failed to compile breakpoint condition: {ConditionExpression}", conditionExpression);
         }
     }
 

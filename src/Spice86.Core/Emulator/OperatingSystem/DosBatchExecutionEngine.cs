@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.OperatingSystem.Batch;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.InterruptHandlers.Mscdex;
@@ -64,8 +64,8 @@ internal sealed partial class DosBatchExecutionEngine {
 
     internal void ConfigureHostStartupProgram(string requestedProgramDosPath, string commandTail) {
         string line = BuildCallLine(requestedProgramDosPath, commandTail);
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: ConfigureHostStartupProgram program={Program} tail={Tail} generatedLine={Line}",
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("BATCH: ConfigureHostStartupProgram program={Program} tail={Tail} generatedLine={Line}",
                 requestedProgramDosPath, commandTail, line);
         }
         _zDriveFiles[AutoExecPath] = [line];
@@ -74,8 +74,8 @@ internal sealed partial class DosBatchExecutionEngine {
     }
 
     internal bool TryStart(out LaunchRequest launchRequest) {
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: TryStart - beginning batch execution via AUTOEXEC.BAT");
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("BATCH: TryStart - beginning batch execution via AUTOEXEC.BAT");
         }
         _batchFileContexts.Clear();
         _lastExitCode = 0;
@@ -84,8 +84,8 @@ internal sealed partial class DosBatchExecutionEngine {
 
     internal bool TryContinue(ushort lastChildReturnCode, out LaunchRequest launchRequest) {
         _lastExitCode = (byte)(lastChildReturnCode & 0x00FF);
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: TryContinue lastChildReturnCode={ReturnCode} exitCode={ExitCode} contextDepth={Depth}",
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("BATCH: TryContinue lastChildReturnCode={ReturnCode} exitCode={ExitCode} contextDepth={Depth}",
                 lastChildReturnCode, _lastExitCode, _batchFileContexts.Count);
         }
         return TryPump(out launchRequest);
@@ -98,8 +98,8 @@ internal sealed partial class DosBatchExecutionEngine {
             return true;
         }
 
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: Applying redirection for launch - stdin={Stdin} stdout={Stdout}(append={AppendOut}) stderr={Stderr}(append={AppendErr})",
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("BATCH: Applying redirection for launch - stdin={Stdin} stdout={Stdout}(append={AppendOut}) stderr={Stderr}(append={AppendErr})",
                 launchRequest.Redirection.InputPath, launchRequest.Redirection.OutputPath,
                 launchRequest.Redirection.AppendOutput, launchRequest.Redirection.ErrorPath,
                 launchRequest.Redirection.AppendError);
@@ -113,8 +113,8 @@ internal sealed partial class DosBatchExecutionEngine {
         }
 
         RestoreStandardHandlesAfterLaunch();
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug(
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug(
                 "BATCH: Applying redirection for internal command - stdin={Stdin} stdout={Stdout}(append={AppendOut}) stderr={Stderr}(append={AppendErr})",
                 redirection.InputPath,
                 redirection.OutputPath,
@@ -145,8 +145,8 @@ internal sealed partial class DosBatchExecutionEngine {
             return;
         }
 
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("BATCH: Restoring standard handle {Handle}", handle);
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("BATCH: Restoring standard handle {Handle}", handle);
         }
         CloseRedirectedStandardHandle(handle);
         _dosFileManager.OpenFiles[handle] = savedHandle;
@@ -160,8 +160,8 @@ internal sealed partial class DosBatchExecutionEngine {
         while (_batchFileContexts.Count > 0) {
             BatchFileContext current = _batchFileContexts.Peek();
             if (!current.TryReadNextLine(out string line)) {
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("BATCH: Pump - end of batch '{BatchFile}', popping (remaining depth={Depth})",
+                if (_loggerService.IsEnabled(LogLevel.Debug)) {
+                    _loggerService.LogDebug("BATCH: Pump - end of batch '{BatchFile}', popping (remaining depth={Depth})",
                         current.FilePath, _batchFileContexts.Count - 1);
                 }
                 CleanupTemporaryFiles(current.TemporaryFilesToCleanup);
@@ -170,8 +170,8 @@ internal sealed partial class DosBatchExecutionEngine {
             }
 
             string expandedLine = ExpandBatchLine(line, current);
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("BATCH: [{BatchFile}] raw='{RawLine}' expanded='{ExpandedLine}'",
+            if (_loggerService.IsEnabled(LogLevel.Debug)) {
+                _loggerService.LogDebug("BATCH: [{BatchFile}] raw='{RawLine}' expanded='{ExpandedLine}'",
                     current.FilePath, line, expandedLine);
             }
 
@@ -186,15 +186,15 @@ internal sealed partial class DosBatchExecutionEngine {
             }
 
             if (IsSkippableBatchLine(expandedLine)) {
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("BATCH: [{BatchFile}] SKIP '{Line}'",
+                if (_loggerService.IsEnabled(LogLevel.Debug)) {
+                    _loggerService.LogDebug("BATCH: [{BatchFile}] SKIP '{Line}'",
                         current.FilePath, expandedLine);
                 }
                 continue;
             }
 
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("BATCH: [{BatchFile}] EXEC '{Line}'",
+            if (_loggerService.IsEnabled(LogLevel.Debug)) {
+                _loggerService.LogDebug("BATCH: [{BatchFile}] EXEC '{Line}'",
                     current.FilePath, expandedLine);
             }
             if (TryExecuteCommandLine(expandedLine, out launchRequest)) {
@@ -202,8 +202,8 @@ internal sealed partial class DosBatchExecutionEngine {
             }
         }
 
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: Pump - all batch contexts exhausted, execution complete");
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("BATCH: Pump - all batch contexts exhausted, execution complete");
         }
         return false;
     }
@@ -211,37 +211,37 @@ internal sealed partial class DosBatchExecutionEngine {
     internal bool TryExecuteCommandLine(string commandLine, out LaunchRequest launchRequest) {
         launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
 
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: TryExecuteCommandLine: '{CommandLine}'", commandLine);
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("BATCH: TryExecuteCommandLine: '{CommandLine}'", commandLine);
         }
 
         string[] pipelineSegments = Array.Empty<string>();
         bool hasPipe = ContainsPipeOutsideQuotes(commandLine);
         if (hasPipe && !TrySplitPipelineSegments(commandLine, out pipelineSegments)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("BATCH: Failed to split pipeline segments for: {CommandLine}", commandLine);
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning("BATCH: Failed to split pipeline segments for: {CommandLine}", commandLine);
             }
             return false;
         }
 
         if (hasPipe && pipelineSegments.Length > 1) {
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("BATCH: Handling pipeline with {Count} segments", pipelineSegments.Length);
+            if (_loggerService.IsEnabled(LogLevel.Debug)) {
+                _loggerService.LogDebug("BATCH: Handling pipeline with {Count} segments", pipelineSegments.Length);
             }
             return TryHandlePipeline(pipelineSegments, out launchRequest);
         }
 
         if (!TryParseCommandLine(commandLine, out ParsedCommandLine parsedCommandLine)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                _loggerService.Verbose("BATCH: TryParseCommandLine failed for: {CommandLine}", commandLine);
+            if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                _loggerService.LogTrace("BATCH: TryParseCommandLine failed for: {CommandLine}", commandLine);
             }
             return false;
         }
 
         string preprocessedLine = parsedCommandLine.CommandLineWithoutRedirection;
         if (!TryExtractCommandToken(preprocessedLine, out string commandToken, out string argumentPart)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                _loggerService.Verbose("BATCH: TryExtractCommandToken failed for: {Line}", preprocessedLine);
+            if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                _loggerService.LogTrace("BATCH: TryExtractCommandToken failed for: {Line}", preprocessedLine);
             }
             return false;
         }
@@ -255,15 +255,15 @@ internal sealed partial class DosBatchExecutionEngine {
         bool knownCommandResult = TryExecuteKnownCommand(commandExecutionContext, out bool knownCommandMatched,
             out launchRequest);
         if (knownCommandMatched) {
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("BATCH: Known command matched: '{Token}' result={Result}", commandToken, knownCommandResult);
+            if (_loggerService.IsEnabled(LogLevel.Debug)) {
+                _loggerService.LogDebug("BATCH: Known command matched: '{Token}' result={Result}", commandToken, knownCommandResult);
             }
             return knownCommandResult;
         }
 
         string resolvedToken = ResolveCommandTokenForCurrentBatchContext(commandToken);
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: Parsed token='{Token}' resolved='{Resolved}' args='{Args}' redirection={HasRedir}",
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("BATCH: Parsed token='{Token}' resolved='{Resolved}' args='{Args}' redirection={HasRedir}",
                 commandToken, resolvedToken, argumentPart, parsedCommandLine.Redirection.HasAny);
         }
 
@@ -280,8 +280,8 @@ internal sealed partial class DosBatchExecutionEngine {
         }
 
         if (ResolveBatchCommandPath(commandExecutionContext.ResolvedCommandToken, out string batchCommandPath)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("BATCH: Resolved as batch file: '{BatchPath}' (replacing current context)", batchCommandPath);
+            if (_loggerService.IsEnabled(LogLevel.Debug)) {
+                _loggerService.LogDebug("BATCH: Resolved as batch file: '{BatchPath}' (replacing current context)", batchCommandPath);
             }
             if (_batchFileContexts.Count > 0) {
                 BatchFileContext replaced = _batchFileContexts.Pop();
@@ -301,8 +301,8 @@ internal sealed partial class DosBatchExecutionEngine {
             return false;
         }
 
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: LAUNCH external program: '{Program}' args='{Args}'",
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("BATCH: LAUNCH external program: '{Program}' args='{Args}'",
                 commandExecutionContext.ResolvedCommandToken, commandExecutionContext.ArgumentPart);
         }
         launchRequest = new ProgramLaunchRequest(commandExecutionContext.ResolvedCommandToken,

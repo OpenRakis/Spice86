@@ -1,6 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Bios;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
@@ -117,8 +117,8 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// AL=00h to set, AL=01h to cancel. Returns CF=1 + AH=80h if event already in progress.
     /// </summary>
     public void WaitFunction(bool calledFromVm) {
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("INT 15h, AH=83h - WAIT FUNCTION, AL={AL:X2}", State.AL);
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("INT 15h, AH=83h - WAIT FUNCTION, AL={AL:X2}", State.AL);
         }
 
         if (State.AL == 0x01) {
@@ -127,8 +127,8 @@ public class SystemBiosInt15Handler : InterruptHandler {
 
             SetCarryFlag(false, calledFromVm);
 
-            if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-                LoggerService.Verbose("WAIT FUNCTION cancelled");
+            if (LoggerService.IsEnabled(LogLevel.Trace)) {
+                LoggerService.LogTrace("WAIT FUNCTION cancelled");
             }
             return;
         }
@@ -137,8 +137,8 @@ public class SystemBiosInt15Handler : InterruptHandler {
             State.AH = 0x80;
             SetCarryFlag(true, calledFromVm);
 
-            if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-                LoggerService.Warning("WAIT FUNCTION called while event already in progress");
+            if (LoggerService.IsEnabled(LogLevel.Warning)) {
+                LoggerService.LogWarning("WAIT FUNCTION called while event already in progress");
             }
             return;
         }
@@ -151,8 +151,8 @@ public class SystemBiosInt15Handler : InterruptHandler {
 
         SetCarryFlag(false, calledFromVm);
 
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("WAIT FUNCTION set: count={Count} microseconds, callback={Segment:X4}:{Offset:X4}",
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("WAIT FUNCTION set: count={Count} microseconds, callback={Segment:X4}:{Offset:X4}",
                 count, State.ES, State.BX);
         }
     }
@@ -190,8 +190,8 @@ public class SystemBiosInt15Handler : InterruptHandler {
                 break;
 
             default:
-                if (LoggerService.IsEnabled(LogEventLevel.Error)) {
-                    LoggerService.Error("Unrecognized command in AL for {MethodName}",
+                if (LoggerService.IsEnabled(LogLevel.Error)) {
+                    LoggerService.LogError("Unrecognized command in AL for {MethodName}",
                         nameof(ToggleA20GateOrGetStatus));
                 }
                 break;
@@ -345,8 +345,8 @@ public class SystemBiosInt15Handler : InterruptHandler {
 
         uint microseconds = ((uint)State.CX << 16) | State.DX;
 
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("BIOS WAIT requested for {Microseconds} microseconds", microseconds);
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("BIOS WAIT requested for {Microseconds} microseconds", microseconds);
         }
 
         double delayMs = (microseconds / 1000.0) + 1.0;
@@ -359,8 +359,8 @@ public class SystemBiosInt15Handler : InterruptHandler {
 
     private void OnWaitComplete(uint value) {
         _biosDataArea.RtcWaitFlag = 0;
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("BIOS WAIT completed");
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("BIOS WAIT completed");
         }
     }
 
@@ -370,8 +370,8 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// </summary>
     public void KeyboardIntercept(bool calledFromVm) {
         byte scanCode = State.AL;
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("INT 15h AH=4Fh: Keyboard intercept called with scan code {ScanCode:X2}", scanCode);
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("INT 15h AH=4Fh: Keyboard intercept called with scan code {ScanCode:X2}", scanCode);
         }
 
         SetCarryFlag(true, calledFromVm);

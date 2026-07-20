@@ -1,6 +1,7 @@
 namespace Spice86.Shared.Interfaces;
 
 using Spice86.Shared.Emulator.Memory;
+using Microsoft.Extensions.Logging;
 
 /// <summary>
 /// Contains properties used internally by the <see cref="ILoggerService"/> to enrich logs. <br/>

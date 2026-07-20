@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.Devices.Cmos;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
@@ -66,8 +66,8 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
         ioPortDispatcher.AddIOPortHandler(CmosPorts.Address, this);
         ioPortDispatcher.AddIOPortHandler(CmosPorts.Data, this);
 
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("CMOS/RTC initialized");
+        if (_loggerService.IsEnabled(LogLevel.Information)) {
+            _loggerService.LogInformation("CMOS/RTC initialized");
         }
     }
 
@@ -75,8 +75,8 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     /// Handles writes to port 0x70 (address/index selection) and 0x71 (data).
     /// </summary>
     public override void WriteByte(ushort port, byte value) {
-        if (_loggerService.IsEnabled(LogEventLevel.Debug) && port == CmosPorts.Address && value == 0x0B) {
-            _loggerService.Debug("RTC: Writing 0x0B to address port (selecting StatusB for next read/write)");
+        if (_loggerService.IsEnabled(LogLevel.Debug) && port == CmosPorts.Address && value == 0x0B) {
+            _loggerService.LogDebug("RTC: Writing 0x0B to address port (selecting StatusB for next read/write)");
         }
         switch (port) {
             case CmosPorts.Address:
@@ -98,8 +98,8 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     public override byte ReadByte(ushort port) {
         if (port == CmosPorts.Data) {
             byte result = HandleDataPortRead();
-            if (_loggerService.IsEnabled(LogEventLevel.Debug) && _cmosRegisters.CurrentRegister == CmosRegisterAddresses.StatusRegisterB) {
-                _loggerService.Debug("RTC: Port 0x71 read returning 0x{Result:X2} for register 0x{Reg:X2} (StatusB, PIE={PIE})",
+            if (_loggerService.IsEnabled(LogLevel.Debug) && _cmosRegisters.CurrentRegister == CmosRegisterAddresses.StatusRegisterB) {
+                _loggerService.LogDebug("RTC: Port 0x71 read returning 0x{Result:X2} for register 0x{Reg:X2} (StatusB, PIE={PIE})",
                     result, _cmosRegisters.CurrentRegister, (result & 0x40) != 0);
             }
             return result;
@@ -133,8 +133,8 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
             case CmosRegisterAddresses.Year:
             case CmosRegisterAddresses.Century:
                 _cmosRegisters[reg] = value;
-                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                    _loggerService.Verbose("CMOS: Time/date register {Reg:X2} set to {Val:X2} (stored but not used for time reads)", reg, value);
+                if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                    _loggerService.LogTrace("CMOS: Time/date register {Reg:X2} set to {Val:X2} (stored but not used for time reads)", reg, value);
                 }
                 return;
 
@@ -142,8 +142,8 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
             case 0x03:
             case 0x05:
                 _cmosRegisters[reg] = value;
-                if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                    _loggerService.Debug("CMOS: Alarm register {Reg:X2} set to {Val:X2}", reg, value);
+                if (_loggerService.IsEnabled(LogLevel.Debug)) {
+                    _loggerService.LogDebug("CMOS: Alarm register {Reg:X2} set to {Val:X2}", reg, value);
                 }
                 return;
 
@@ -163,17 +163,17 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
                 _cmosRegisters[reg] = (byte)(value & 0x7F);
                 bool prevEnabled = _cmosRegisters.Timer.Enabled;
                 _cmosRegisters.Timer.Enabled = (value & 0x40) != 0;
-                if ((value & 0x10) != 0 && _loggerService.IsEnabled(LogEventLevel.Error)) {
-                    _loggerService.Error("CMOS: Update-ended interrupt not supported (bit 4 set in Register B).");
+                if ((value & 0x10) != 0 && _loggerService.IsEnabled(LogLevel.Error)) {
+                    _loggerService.LogError("CMOS: Update-ended interrupt not supported (bit 4 set in Register B).");
                 }
                 if (_cmosRegisters.Timer.Enabled && !prevEnabled) {
-                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                        _loggerService.Debug("RTC: Periodic interrupt enabled via Status Register B write");
+                    if (_loggerService.IsEnabled(LogLevel.Debug)) {
+                        _loggerService.LogDebug("RTC: Periodic interrupt enabled via Status Register B write");
                     }
                     ScheduleNextPeriodicInterrupt();
                 } else if (!_cmosRegisters.Timer.Enabled && prevEnabled) {
-                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                        _loggerService.Debug("RTC: Periodic interrupt disabled via Status Register B write");
+                    if (_loggerService.IsEnabled(LogLevel.Debug)) {
+                        _loggerService.LogDebug("RTC: Periodic interrupt disabled via Status Register B write");
                     }
                     CancelPeriodicInterrupts();
                 }
@@ -189,8 +189,8 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
 
             default:
                 _cmosRegisters[reg] = (byte)(value & 0x7F);
-                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning("CMOS: Write to unhandled register {Reg:X2} value {Val:X2}", reg, value);
+                if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                    _loggerService.LogWarning("CMOS: Write to unhandled register {Reg:X2} value {Val:X2}", reg, value);
                 }
                 return;
         }
@@ -204,8 +204,8 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     private byte HandleDataPortRead() {
         byte reg = _cmosRegisters.CurrentRegister;
         if (reg > 0x3F) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("CMOS: Read from illegal register {Reg:X2}", reg);
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning("CMOS: Read from illegal register {Reg:X2}", reg);
             }
             return 0xFF;
         }
@@ -237,8 +237,8 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
             case CmosRegisterAddresses.StatusRegisterB:
                 {
                     byte value = _cmosRegisters[reg];
-                    if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                        _loggerService.Debug("RTC: Status Register B read: value=0x{Value:X2}, PIE={PIE}",
+                    if (_loggerService.IsEnabled(LogLevel.Debug)) {
+                        _loggerService.LogDebug("RTC: Status Register B read: value=0x{Value:X2}, PIE={PIE}",
                             value, (value & 0x40) != 0);
                     }
                     return value;
@@ -325,8 +325,8 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
             return;
         }
         _cmosRegisters.Timer.Delay = 1000.0 / hz;
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("RTC periodic timer configured: divider={Div} frequency={Freq:F2}Hz period={Period:F3}ms",
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("RTC periodic timer configured: divider={Div} frequency={Freq:F2}Hz period={Period:F3}ms",
                 div, hz, _cmosRegisters.Timer.Delay);
         }
     }
@@ -336,14 +336,14 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     /// </summary>
     private void ScheduleNextPeriodicInterrupt() {
         if (_cmosRegisters.Timer.Delay <= 0) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("RTC: Cannot schedule periodic interrupt - delay is {Delay}", _cmosRegisters.Timer.Delay);
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning("RTC: Cannot schedule periodic interrupt - delay is {Delay}", _cmosRegisters.Timer.Delay);
             }
             return;
         }
         _scheduler.AddEvent(OnPeriodicInterrupt, _cmosRegisters.Timer.Delay, 0);
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("RTC: Next periodic interrupt scheduled (delay={Delay:F3}ms) via scheduler", _cmosRegisters.Timer.Delay);
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("RTC: Next periodic interrupt scheduled (delay={Delay:F3}ms) via scheduler", _cmosRegisters.Timer.Delay);
         }
     }
 
@@ -367,8 +367,8 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
         _cmosRegisters.Timer.Acknowledged = false;
         _cmosRegisters.Last.Timer = _clock.ElapsedTimeMs;
         _dualPic.ProcessInterruptRequest(8);
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("RTC: Periodic interrupt fired via scheduler, raising IRQ 8");
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("RTC: Periodic interrupt fired via scheduler, raising IRQ 8");
         }
         ScheduleNextPeriodicInterrupt();
     }
@@ -404,8 +404,8 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     /// Logs a warning if bits 4-6 don't equal 0x20 (the standard value).
     /// </summary>
     private void ValidateDivider(byte written) {
-        if ((written & 0x70) != 0x20 && _loggerService.IsEnabled(LogEventLevel.Warning)) {
-            _loggerService.Warning("CMOS: Illegal 22-stage divider value in Register A: {Val:X2}", written);
+        if ((written & 0x70) != 0x20 && _loggerService.IsEnabled(LogLevel.Warning)) {
+            _loggerService.LogWarning("CMOS: Illegal 22-stage divider value in Register A: {Val:X2}", written);
         }
     }
 

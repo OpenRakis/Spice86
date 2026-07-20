@@ -1,6 +1,7 @@
 namespace Spice86.Tests.Dos;
 
 using System;
+using Microsoft.Extensions.Logging;
 
 using FluentAssertions;
 

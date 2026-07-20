@@ -13,7 +13,7 @@
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="Avalonia"/>
-        <PackageReference Include="Serilog"/>
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"/>
     </ItemGroup>
     <ItemGroup>
         <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">

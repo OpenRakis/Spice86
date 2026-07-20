@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -35,7 +35,7 @@ internal sealed class DmaController {
             _channels[i] = new DmaChannel(channelNumber, is16Bit, memory, logger, wrappingMask);
         }
 
-        _logger.Debug("DMA[{Index}]: Controller initialised", _index);
+        _logger.LogDebug("DMA[{Index}]: Controller initialised", _index);
     }
 
     /// <summary>
@@ -54,7 +54,7 @@ internal sealed class DmaController {
             return;
         }
 
-        _logger.Debug("DMA[{Index}]: Resetting channel {Channel}", _index, localChannel);
+        _logger.LogDebug("DMA[{Index}]: Resetting channel {Channel}", _index, localChannel);
         channel.Reset();
     }
 
@@ -62,7 +62,7 @@ internal sealed class DmaController {
     ///     Handles a write to one of the controller's registers and dispatches it to the appropriate channel logic.
     /// </summary>
     public void WriteRegister(byte reg, byte value) {
-        _logger.Verbose("DMA[{Index}]: Write register 0x{Register:X2} value 0x{Value:X2}", _index, reg, value);
+        _logger.LogTrace("DMA[{Index}]: Write register 0x{Register:X2} value 0x{Value:X2}", _index, reg, value);
 
         switch (reg) {
             case 0x0:
@@ -84,7 +84,7 @@ internal sealed class DmaController {
                 break;
 
             case 0x9:
-                _logger.Warning("DMA: Unsupported memory-to-memory requested at controller {Index}", _index);
+                _logger.LogWarning("DMA: Unsupported memory-to-memory requested at controller {Index}", _index);
                 // Request register / memory-to-memory. No-op.
                 break;
 
@@ -98,7 +98,7 @@ internal sealed class DmaController {
 
             case 0xC:
                 _flipFlop = false;
-                _logger.Debug("DMA[{Index}]: Flip-flop reset", _index);
+                _logger.LogDebug("DMA[{Index}]: Flip-flop reset", _index);
                 break;
             case 0xD:
                 ChannelClearAndMaskAll();
@@ -114,37 +114,37 @@ internal sealed class DmaController {
                 break;
 
             default:
-                _logger.Warning("DMA: Undefined write to controller {Index} register 0x{Register:X}", _index, reg);
+                _logger.LogWarning("DMA: Undefined write to controller {Index} register 0x{Register:X}", _index, reg);
                 break;
         }
     }
 
     private void ChannelSetMaskAll(byte value) {
-        _logger.Debug("DMA[{Index}]: Writing mask register with value 0x{Value:X2}", _index, value);
+        _logger.LogDebug("DMA[{Index}]: Writing mask register with value 0x{Value:X2}", _index, value);
 
         foreach (DmaChannel channel in _channels) {
             bool mask = (value & 0x1) != 0;
             channel.SetMask(mask);
-            _logger.Verbose("DMA[{Index}]: Channel {Channel} mask set to {Mask}", _index, channel.ChannelNumber, mask);
+            _logger.LogTrace("DMA[{Index}]: Channel {Channel} mask set to {Mask}", _index, channel.ChannelNumber, mask);
             value >>= 1;
         }
     }
 
     private void ChannelUnmaskAll() {
-        _logger.Debug("DMA[{Index}]: Unmasking all channels", _index);
+        _logger.LogDebug("DMA[{Index}]: Unmasking all channels", _index);
         foreach (DmaChannel channel in _channels) {
             channel.SetMask(false);
-            _logger.Verbose("DMA[{Index}]: Channel {Channel} unmasked", _index, channel.ChannelNumber);
+            _logger.LogTrace("DMA[{Index}]: Channel {Channel} unmasked", _index, channel.ChannelNumber);
         }
     }
 
     private void ChannelClearAndMaskAll() {
-        _logger.Debug("DMA[{Index}]: Clearing controller state and masking all channels", _index);
+        _logger.LogDebug("DMA[{Index}]: Clearing controller state and masking all channels", _index);
 
         foreach (DmaChannel channel in _channels) {
             channel.SetMask(true);
             channel.HasReachedTerminalCount = false;
-            _logger.Verbose("DMA[{Index}]: Channel {Channel} masked during controller clear", _index,
+            _logger.LogTrace("DMA[{Index}]: Channel {Channel} masked during controller clear", _index,
                 channel.ChannelNumber);
         }
 
@@ -158,9 +158,9 @@ internal sealed class DmaController {
         }
 
         channel.SetMode(value);
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+        if (_logger.IsEnabled(LogLevel.Debug)) {
             string addressMode = channel.IsIncremented ? "increment" : "decrement";
-            _logger.Debug(
+            _logger.LogDebug(
                 "DMA[{Index}]: Channel {Channel} mode auto-init={AutoInit}, address={AddressMode}",
                 _index,
                 channel.ChannelNumber,
@@ -177,7 +177,7 @@ internal sealed class DmaController {
 
         bool mask = (value & 0x4) != 0;
         channel.SetMask(mask);
-        _logger.Debug("DMA[{Index}]: Channel {Channel} mask set to {Mask}", _index, channel.ChannelNumber, mask);
+        _logger.LogDebug("DMA[{Index}]: Channel {Channel} mask set to {Mask}", _index, channel.ChannelNumber, mask);
     }
 
     private void ChannelSetCurrentCount(byte reg, byte value) {
@@ -195,8 +195,8 @@ internal sealed class DmaController {
             channel.CurrentCount = (ushort)((channel.CurrentCount & 0x00FF) | (value << 8));
         }
 
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug(
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug(
                 "DMA[{Index}]: Channel {Channel} count set to base 0x{Base:X4}, current 0x{Current:X4}",
                 _index,
                 channel.ChannelNumber,
@@ -220,8 +220,8 @@ internal sealed class DmaController {
             channel.CurrentAddress = (channel.CurrentAddress & 0x00FF) | (uint)(value << 8);
         }
 
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug(
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug(
                 "DMA[{Index}]: Channel {Channel} address set to base 0x{Base:X4}, current 0x{Current:X4}",
                 _index,
                 channel.ChannelNumber,
@@ -251,7 +251,7 @@ internal sealed class DmaController {
                 return ChannelGetStatusRegisterAndClearTc();
 
             default:
-                _logger.Warning("DMA: Undefined read from controller {Index} register 0x{Register:X}", _index, reg);
+                _logger.LogWarning("DMA: Undefined read from controller {Index} register 0x{Register:X}", _index, reg);
                 return 0xFF;
         }
     }
@@ -270,7 +270,7 @@ internal sealed class DmaController {
             }
         }
 
-        _logger.Verbose("DMA[{Index}]: Read status register -> 0x{Value:X2}", _index, result);
+        _logger.LogTrace("DMA[{Index}]: Read status register -> 0x{Value:X2}", _index, result);
         return result;
     }
 
@@ -285,7 +285,7 @@ internal sealed class DmaController {
             ? (byte)(channel.CurrentCount & 0xFF)
             : (byte)((channel.CurrentCount >> 8) & 0xFF);
 
-        _logger.Verbose("DMA[{Index}]: Read count register 0x{Register:X2} -> 0x{Value:X2}", _index, reg, result);
+        _logger.LogTrace("DMA[{Index}]: Read count register 0x{Register:X2} -> 0x{Value:X2}", _index, reg, result);
         return result;
     }
 
@@ -300,7 +300,7 @@ internal sealed class DmaController {
             ? (byte)(channel.CurrentAddress & 0xFF)
             : (byte)((channel.CurrentAddress >> 8) & 0xFF);
 
-        _logger.Verbose("DMA[{Index}]: Read address register 0x{Register:X2} -> 0x{Value:X2}", _index, reg, result);
+        _logger.LogTrace("DMA[{Index}]: Read address register 0x{Register:X2} -> 0x{Value:X2}", _index, reg, result);
         return result;
     }
 }

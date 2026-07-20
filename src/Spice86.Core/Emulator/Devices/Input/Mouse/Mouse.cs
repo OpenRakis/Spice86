@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.Devices.Input.Mouse;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
@@ -108,8 +108,8 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
             _gui.MouseButtonDown += OnMouseClick;
             _gui.MouseMoved += OnMouseMoved;
         }
-        if (_logger.IsEnabled(LogEventLevel.Information)) {
-            _logger.Information("Mouse initialized: {MouseType}", MouseType);
+        if (_logger.IsEnabled(LogLevel.Information)) {
+            _logger.LogInformation("Mouse initialized: {MouseType}", MouseType);
         }
     }
 
@@ -134,8 +134,8 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
             case MouseButton.XButton1:
             case MouseButton.XButton2:
             default: {
-                if (_logger.IsEnabled(LogEventLevel.Information)) {
-                    _logger.Information("Unknown mouse button clicked: {@EventArgs}", eventArgs);
+                if (_logger.IsEnabled(LogLevel.Information)) {
+                    _logger.LogInformation("Unknown mouse button clicked: {@EventArgs}", eventArgs);
                     return;
                 }
                 break;

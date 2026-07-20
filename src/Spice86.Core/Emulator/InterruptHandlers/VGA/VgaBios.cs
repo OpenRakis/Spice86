@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.VGA;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Video;
@@ -302,8 +302,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         _biosDataArea = biosDataArea;
         _vgaFunctions = vgaFunctions;
         _logger = loggerService;
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("Initializing VGA BIOS");
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("Initializing VGA BIOS");
         }
         FillDispatchTable();
 
@@ -325,10 +325,10 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         byte attribute = State.BL;
         bool includeAttributes = (State.AL & BiosConstants.IncludeAttributesFlag) != 0;
         bool updateCursorPosition = (State.AL & BiosConstants.UpdateCursorPositionFlag) != 0;
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
+        if (_logger.IsEnabled(LogLevel.Debug)) {
             uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
             string str = Memory.GetZeroTerminatedString(address, State.CX);
-            _logger.Debug("{ClassName} INT 10 13 {MethodName}: {String} at {X},{Y} attribute: 0x{Attribute:X2}",
+            _logger.LogDebug("{ClassName} INT 10 13 {MethodName}: {String} at {X},{Y} attribute: 0x{Attribute:X2}",
                 nameof(VgaBios), nameof(WriteString), str, cursorPosition.X, cursorPosition.Y, includeAttributes ? "included" : attribute);
         }
         _vgaFunctions.WriteString(segment, offset, length, includeAttributes, attribute, cursorPosition, updateCursorPosition);
@@ -341,8 +341,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
                     State.AL = BiosConstants.FunctionSupported;
                     State.BL = _biosDataArea.DisplayCombinationCode;
                     State.BH = BiosConstants.NoSecondaryDisplay;
-                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                        _logger.Debug("{ClassName} INT 10 1A {MethodName} - Get: DCC 0x{Dcc:X2}",
+                    if (_logger.IsEnabled(LogLevel.Debug)) {
+                        _logger.LogDebug("{ClassName} INT 10 1A {MethodName} - Get: DCC 0x{Dcc:X2}",
                             nameof(VgaBios), nameof(GetSetDisplayCombinationCode), State.BL);
                     }
                     break;
@@ -350,8 +350,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
             case 0x01: {
                     State.AL = BiosConstants.FunctionSupported;
                     _biosDataArea.DisplayCombinationCode = State.BL;
-                    if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                        _logger.Debug("{ClassName} INT 10 1A {MethodName} - Set: DCC 0x{Dcc:X2}",
+                    if (_logger.IsEnabled(LogLevel.Debug)) {
+                        _logger.LogDebug("{ClassName} INT 10 1A {MethodName} - Set: DCC 0x{Dcc:X2}",
                             nameof(VgaBios), nameof(GetSetDisplayCombinationCode), State.BL);
                     }
                     break;
@@ -364,8 +364,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
 
     /// <inheritdoc />
     public void VideoSubsystemConfiguration() {
-        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-            _logger.Verbose("{ClassName} INT 10 12 {MethodName} - Sub function 0x{SubFunction:X2}",
+        if (_logger.IsEnabled(LogLevel.Trace)) {
+            _logger.LogTrace("{ClassName} INT 10 12 {MethodName} - Sub function 0x{SubFunction:X2}",
                 nameof(VgaBios), nameof(LoadFontInfo), State.BL);
         }
         switch ((VideoSubsystemFunction)State.BL) {
@@ -395,8 +395,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
                 break;
             default:
                 // Do not fail in case the index is not valid, this is the behaviour of the VGA bios and some programs expect this (prince of persia, checkit).
-                if (_logger.IsEnabled(LogEventLevel.Warning)) {
-                    _logger.Warning("BL={BL} is not a valid subFunction for INT 10 12", ConvertUtils.ToHex8(State.BL));
+                if (_logger.IsEnabled(LogLevel.Warning)) {
+                    _logger.LogWarning("BL={BL} is not a valid subFunction for INT 10 12", ConvertUtils.ToHex8(State.BL));
                 }
                 break;
         }
@@ -404,8 +404,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
 
     /// <inheritdoc />
     public void LoadFontInfo() {
-        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-            _logger.Verbose("{ClassName} INT 10 11 {MethodName} - Sub function 0x{SubFunction:X2}",
+        if (_logger.IsEnabled(LogLevel.Trace)) {
+            _logger.LogTrace("{ClassName} INT 10 11 {MethodName} - Sub function 0x{SubFunction:X2}",
                 nameof(VgaBios), nameof(LoadFontInfo), State.AL);
         }
         switch (State.AL) {
@@ -470,8 +470,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
 
     /// <inheritdoc />
     public void SetPaletteRegisters() {
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("{ClassName} INT 10 10 {MethodName} - Sub function 0x{SubFunction:X2}",
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("{ClassName} INT 10 10 {MethodName} - Sub function 0x{SubFunction:X2}",
                 nameof(VgaBios), nameof(SetPaletteRegisters), State.AL);
         }
         switch (State.AL) {
@@ -504,14 +504,14 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
                 break;
             case 0x12:
                 _vgaFunctions.WriteToDac(State.ES, State.DX, State.BL, State.CX);
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("{ClassName} INT 10 10 {MethodName} - set block of DAC color registers. {Amount} colors starting at register {StartRegister}, source address: {Segment:X4}:{Offset:X4}",
+                if (_logger.IsEnabled(LogLevel.Debug)) {
+                    _logger.LogDebug("{ClassName} INT 10 10 {MethodName} - set block of DAC color registers. {Amount} colors starting at register {StartRegister}, source address: {Segment:X4}:{Offset:X4}",
                         nameof(VgaBios), nameof(SetPaletteRegisters), State.BL, State.CX, State.ES, State.DX);
                 }
                 break;
             case 0x13:
-                if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                    _logger.Debug("{ClassName} INT 10 10 {MethodName} - Select color page, mode '{Mode}', value 0x{Value:X2} ",
+                if (_logger.IsEnabled(LogLevel.Debug)) {
+                    _logger.LogDebug("{ClassName} INT 10 10 {MethodName} - Select color page, mode '{Mode}', value 0x{Value:X2} ",
                         nameof(VgaBios), nameof(SetPaletteRegisters), State.BL == 0 ? "set Mode Control register bit 7" : "set color select register", State.BH);
                 }
                 if (State.BL == 0) {
@@ -551,8 +551,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         State.BH = _biosDataArea.CurrentVideoPage;
         State.AL = (byte)(_biosDataArea.VideoMode | _biosDataArea.VideoCtl & BiosConstants.VideoControlBitMask);
         State.AH = (byte)_biosDataArea.ScreenColumns;
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("{ClassName} INT 10 0F {MethodName} - Page {Page}, mode {Mode}, columns {Columns}",
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("{ClassName} INT 10 0F {MethodName} - Page {Page}, mode {Mode}, columns {Columns}",
                 nameof(VgaBios), nameof(GetVideoState), State.BH, State.AL, State.AH);
         }
     }
@@ -561,8 +561,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     public void WriteTextInTeletypeMode() {
         CharacterPlusAttribute characterPlusAttribute = new((char)State.AL, State.BL, false);
         CursorPosition cursorPosition = _vgaFunctions.GetCursorPosition(_biosDataArea.CurrentVideoPage);
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("{ClassName} INT 10 0E {MethodName} - {Character} Attribute 0x{Attribute:X2} at {X},{Y} on page {Page}",
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("{ClassName} INT 10 0E {MethodName} - {Character} Attribute 0x{Attribute:X2} at {X},{Y} on page {Page}",
                 nameof(VgaBios), nameof(WriteTextInTeletypeMode), characterPlusAttribute.Character, characterPlusAttribute.Attribute, cursorPosition.X, cursorPosition.Y, cursorPosition.Page);
         }
         _vgaFunctions.WriteTextInTeletypeMode(characterPlusAttribute);
@@ -572,8 +572,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     public void SetColorPaletteOrBackGroundColor() {
         if (State.BH == 0x00) {
             _vgaFunctions.SetBorderColor(State.BL);
-            if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                _logger.Debug("{ClassName} INT 10 0B {MethodName} - Set border color {Color}",
+            if (_logger.IsEnabled(LogLevel.Debug)) {
+                _logger.LogDebug("{ClassName} INT 10 0B {MethodName} - Set border color {Color}",
                     nameof(VgaBios), nameof(SetColorPaletteOrBackGroundColor), State.BL);
             }
         } else {
@@ -583,8 +583,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
             // https://github.com/gawlas/IBM-PC-BIOS/blob/master/IBM%20PC/PCBIOSV3.ASM#L3814
 
             _vgaFunctions.SetPalette(State.BL);
-            if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                _logger.Debug("{ClassName} INT 10 0B {MethodName} - Set palette id {PaletteId}",
+            if (_logger.IsEnabled(LogLevel.Debug)) {
+                _logger.LogDebug("{ClassName} INT 10 0B {MethodName} - Set palette id {PaletteId}",
                     nameof(VgaBios), nameof(SetColorPaletteOrBackGroundColor), State.BL);
             }
         }
@@ -596,8 +596,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         byte currentVideoPage = State.BH;
         CursorPosition cursorPosition = _vgaFunctions.GetCursorPosition(currentVideoPage);
         int count = State.CX;
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("{ClassName} INT 10 0A {MethodName} - {Count} times '{Character}' Attribute 0x{Attribute:X2} at {X},{Y} on page {Page}",
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("{ClassName} INT 10 0A {MethodName} - {Count} times '{Character}' Attribute 0x{Attribute:X2} at {X},{Y} on page {Page}",
                 nameof(VgaBios), nameof(WriteCharacterAtCursor), count, characterPlusAttribute.Character, characterPlusAttribute.Attribute, cursorPosition.X, cursorPosition.Y, cursorPosition.Page);
         }
 
@@ -610,8 +610,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         byte currentVideoPage = State.BH;
         CursorPosition cursorPosition = _vgaFunctions.GetCursorPosition(currentVideoPage);
         int count = State.CX;
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("{ClassName} INT 10 09 {MethodName} - {Count} times '{Character}' Attribute 0x{Attribute:X2} at {X},{Y} on page {Page}",
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("{ClassName} INT 10 09 {MethodName} - {Count} times '{Character}' Attribute 0x{Attribute:X2} at {X},{Y} on page {Page}",
                 nameof(VgaBios), nameof(WriteCharacterAndAttributeAtCursor), count, characterPlusAttribute.Character, characterPlusAttribute.Attribute, cursorPosition.X, cursorPosition.Y, cursorPosition.Page);
         }
         _vgaFunctions.WriteCharacterAtCursor(characterPlusAttribute, currentVideoPage, count);
@@ -623,8 +623,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         CharacterPlusAttribute characterPlusAttribute = _vgaFunctions.ReadChar(cursorPosition);
         State.AL = (byte)characterPlusAttribute.Character;
         State.AH = characterPlusAttribute.Attribute;
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("{ClassName} INT 10 08 {MethodName} - Character '{Character}' Attribute 0x{Attribute:X2} at {X},{Y} on page {Page}",
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("{ClassName} INT 10 08 {MethodName} - Character '{Character}' Attribute 0x{Attribute:X2} at {X},{Y} on page {Page}",
                 nameof(VgaBios), nameof(ReadCharacterAndAttributeAtCursor), characterPlusAttribute.Character, characterPlusAttribute.Attribute, cursorPosition.X, cursorPosition.Y, cursorPosition.Page);
         }
     }
@@ -632,8 +632,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     /// <inheritdoc />
     public void ScrollPageDown() {
         _vgaFunctions.VerifyScroll(-1, State.CL, State.CH, State.DL, State.DH, State.AL, State.BH);
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("{ClassName} INT 10 07 {MethodName} - from {X},{Y} to {X2},{Y2}, {Lines} lines, attribute {Attribute}",
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("{ClassName} INT 10 07 {MethodName} - from {X},{Y} to {X2},{Y2}, {Lines} lines, attribute {Attribute}",
                 nameof(VgaBios), nameof(ScrollPageDown), State.CL, State.CH, State.DL, State.DH, State.AL, State.BH);
         }
     }
@@ -641,8 +641,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     /// <inheritdoc />
     public void ScrollPageUp() {
         _vgaFunctions.VerifyScroll(1, State.CL, State.CH, State.DL, State.DH, State.AL, State.BH);
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("{ClassName} INT 10 06 {MethodName} - from {X},{Y} to {X2},{Y2}, {Lines} lines, attribute {Attribute}",
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("{ClassName} INT 10 06 {MethodName} - from {X},{Y} to {X2},{Y2}, {Lines} lines, attribute {Attribute}",
                 nameof(VgaBios), nameof(ScrollPageUp), State.CL, State.CH, State.DL, State.DH, State.AL, State.BH);
         }
     }
@@ -652,8 +652,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         byte page = State.AL;
         int address = _vgaFunctions.SetActivePage(page);
 
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("{ClassName} INT 10 05 {MethodName} - page {Page}, address {Address:X4}",
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("{ClassName} INT 10 05 {MethodName} - page {Page}, address {Address:X4}",
                 nameof(VgaBios), nameof(SelectActiveDisplayPage), page, address);
         }
     }
@@ -665,8 +665,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         State.CX = _biosDataArea.CursorType;
         State.DL = (byte)cursorPosition.X;
         State.DH = (byte)cursorPosition.Y;
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("{ClassName} INT 10 03 {MethodName} - cursor position {X},{Y} on page {Page} type {Type}",
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("{ClassName} INT 10 03 {MethodName} - cursor position {X},{Y} on page {Page} type {Type}",
                 nameof(VgaBios), nameof(GetCursorPosition), cursorPosition.X, cursorPosition.Y, cursorPosition.Page, State.CX);
         }
     }
@@ -675,8 +675,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     public void SetCursorPosition() {
         CursorPosition cursorPosition = new(State.DL, State.DH, State.BH);
         _vgaFunctions.SetCursorPosition(cursorPosition);
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("{ClassName} INT 10 02 {MethodName} - cursor position {X},{Y} on page {Page}",
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("{ClassName} INT 10 02 {MethodName} - cursor position {X},{Y} on page {Page}",
                 nameof(VgaBios), nameof(SetCursorPosition), cursorPosition.X, cursorPosition.Y, cursorPosition.Page);
         }
     }
@@ -684,8 +684,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     /// <inheritdoc />
     public void SetCursorType() {
         _vgaFunctions.SetCursorShape(State.CX);
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("{ClassName} INT 10 01 {MethodName} - CX: {CX}",
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("{ClassName} INT 10 01 {MethodName} - CX: {CX}",
                 nameof(VgaBios), nameof(SetCursorType), State.CX);
         }
     }
@@ -693,8 +693,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     /// <inheritdoc />
     public void ReadDot() {
         State.AL = _vgaFunctions.ReadPixel(State.CX, State.DX);
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("{ClassName} INT 10 0D {MethodName} - pixel at {X},{Y} = 0x{Pixel:X2}",
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("{ClassName} INT 10 0D {MethodName} - pixel at {X},{Y} = 0x{Pixel:X2}",
                 nameof(VgaBios), nameof(ReadDot), State.CX, State.DX, State.AL);
         }
     }
@@ -702,8 +702,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     /// <inheritdoc />
     public void WriteDot() {
         _vgaFunctions.WritePixel(State.AL, State.CX, State.DX);
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("{ClassName} INT 10 0C {MethodName} - write {Pixel} at {X},{Y}",
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("{ClassName} INT 10 0C {MethodName} - write {Pixel} at {X},{Y}",
                 nameof(VgaBios), nameof(WriteDot), State.AL, State.CX, State.DX);
         }
     }
@@ -724,13 +724,13 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         } else {
             State.AL = BiosConstants.ModeBelow7Return;
         }
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("{ClassName} INT 10 00 {MethodName} - mode {ModeId:X2}, {Flags}",
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("{ClassName} INT 10 00 {MethodName} - mode {ModeId:X2}, {Flags}",
                 nameof(VgaBios), nameof(SetVideoMode), modeId, flags);
         }
         _vgaFunctions.VgaSetMode(modeId, flags);
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("VGA BIOS mode set complete");
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("VGA BIOS mode set complete");
         }
     }
 
@@ -739,8 +739,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     /// </summary>
     public override void Run() {
         byte operation = State.AH;
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("{ClassName} running INT 10 operation 0x{Operation:X2}", nameof(VgaBios), operation);
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("{ClassName} running INT 10 operation 0x{Operation:X2}", nameof(VgaBios), operation);
         }
 
         const byte MshercGetVideoAdapterTypeAndMode = 0xEF;
@@ -752,8 +752,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
             // dosbox svn/staging just ignoring the interrupt
             // operation is used by Microsoft Quick/PDS Basic library
             // Gunboat ~1990 needs it
-            if (_logger.IsEnabled(LogEventLevel.Warning)) {
-                _logger.Warning("INT10H: Ignored VgaBios function number in AH register: {OperationNumber}", State.AH);
+            if (_logger.IsEnabled(LogLevel.Warning)) {
+                _logger.LogWarning("INT10H: Ignored VgaBios function number in AH register: {OperationNumber}", State.AH);
             }
             return;
         }
@@ -761,22 +761,22 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         if (operation == UnsupportedButCommonCompatibilityCall) {
             // Some DOS programs probe INT10 AH=FEh as a compatibility check.
             // dosbox-staging treats unknown INT10 calls as non-fatal, so ignore this call.
-            if (_logger.IsEnabled(LogEventLevel.Warning)) {
-                _logger.Warning("INT10H: Ignored compatibility VgaBios function number in AH register: {OperationNumber}", State.AH);
+            if (_logger.IsEnabled(LogLevel.Warning)) {
+                _logger.LogWarning("INT10H: Ignored compatibility VgaBios function number in AH register: {OperationNumber}", State.AH);
             }
             return;
         }
 
-        if (!HasRunnable(operation) && _logger.IsEnabled(LogEventLevel.Error)) {
-            _logger.Error("INT10H: Unrecognized VgaBios function number in AH register: {OperationNumber}", State.AH);
+        if (!HasRunnable(operation) && _logger.IsEnabled(LogLevel.Error)) {
+            _logger.LogError("INT10H: Unrecognized VgaBios function number in AH register: {OperationNumber}", State.AH);
         }
         Run(operation);
     }
 
     /// <inheritdoc />
     public void ReadLightPenPosition() {
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("{ClassName} INT 10 04 {MethodName} - Read Light Pen Position, returning 0",
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("{ClassName} INT 10 04 {MethodName} - Read Light Pen Position, returning 0",
                 nameof(VgaBios), nameof(ReadLightPenPosition));
         }
         State.AX = State.BX = State.CX = State.DX = 0;
@@ -793,16 +793,16 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     }
 
     private void VideoScreenOnOff() {
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("{ClassName} INT 10 12 36 {MethodName} - Ignored",
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("{ClassName} INT 10 12 36 {MethodName} - Ignored",
                 nameof(VgaBios), nameof(VideoScreenOnOff));
         }
         State.AL = BiosConstants.SubfunctionSuccess;
     }
 
     private void DisplaySwitch() {
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("{ClassName} INT 10 12 35 {MethodName} - Ignored",
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("{ClassName} INT 10 12 35 {MethodName} - Ignored",
                 nameof(VgaBios), nameof(DisplaySwitch));
         }
         State.AL = BiosConstants.SubfunctionSuccess;
@@ -811,8 +811,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     private void CursorEmulation() {
         bool enabled = (State.AL & BiosConstants.UpdateCursorPositionFlag) == 0;
         _vgaFunctions.CursorEmulation(enabled);
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("{ClassName} INT 10 12 34 {MethodName} - {Result}",
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("{ClassName} INT 10 12 34 {MethodName} - {Result}",
                 nameof(VgaBios), nameof(CursorEmulation), enabled ? "Enabled" : "Disabled");
         }
         State.AL = BiosConstants.SubfunctionSuccess;
@@ -821,8 +821,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     private void SummingToGrayScales() {
         bool enabled = (State.AL & BiosConstants.UpdateCursorPositionFlag) == 0;
         _vgaFunctions.SummingToGrayScales(enabled);
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("{ClassName} INT 10 12 33 {MethodName} - {Result}",
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("{ClassName} INT 10 12 33 {MethodName} - {Result}",
                 nameof(VgaBios), nameof(SummingToGrayScales), enabled ? "Enabled" : "Disabled");
         }
         State.AL = BiosConstants.SubfunctionSuccess;
@@ -830,8 +830,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
 
     private void VideoEnableDisable() {
         _vgaFunctions.EnableVideoAddressing((State.AL & BiosConstants.UpdateCursorPositionFlag) == 0);
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("{ClassName} INT 10 12 32 {MethodName} - {Result}",
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("{ClassName} INT 10 12 32 {MethodName} - {Result}",
                 nameof(VgaBios), nameof(VideoEnableDisable), (State.AL & BiosConstants.UpdateCursorPositionFlag) == 0 ? "Enabled" : "Disabled");
         }
         State.AL = BiosConstants.SubfunctionSuccess;
@@ -839,8 +839,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
 
     private void DefaultPaletteLoading() {
         _vgaFunctions.DefaultPaletteLoading((State.AL & BiosConstants.UpdateCursorPositionFlag) != 0);
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("{ClassName} INT 10 12 31 {MethodName} - 0x{Al:X2}",
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("{ClassName} INT 10 12 31 {MethodName} - 0x{Al:X2}",
                 nameof(VgaBios), nameof(DefaultPaletteLoading), State.AL);
         }
         State.AL = BiosConstants.SubfunctionSuccess;
@@ -854,8 +854,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
             _ => throw new NotSupportedException($"AL=0x{State.AL:X2} is not a valid subFunction for INT 10 12 30")
         };
         _vgaFunctions.SelectScanLines(lines);
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("{ClassName} INT 10 12 30 {MethodName} - {Lines} lines",
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("{ClassName} INT 10 12 30 {MethodName} - {Lines} lines",
                 nameof(VgaBios), nameof(SelectScanLines), lines);
         }
         State.AL = BiosConstants.SubfunctionSuccess;
@@ -865,8 +865,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         State.BH = (byte)(_vgaFunctions.GetColorMode() ? BiosConstants.ColorModeMemory : 0x00);
         State.BL = BiosConstants.Memory256KB;
         State.CX = _vgaFunctions.GetFeatureSwitches();
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("{ClassName} INT 10 12 10 {MethodName} - ColorMode 0x{ColorMode:X2}, Memory: 0x{Memory:X2}, FeatureSwitches: 0x{FeatureSwitches:X2}",
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("{ClassName} INT 10 12 10 {MethodName} - ColorMode 0x{ColorMode:X2}, Memory: 0x{Memory:X2}, FeatureSwitches: 0x{FeatureSwitches:X2}",
                 nameof(VgaBios), nameof(EgaVgaInformation), State.BH, State.BL, State.CX);
         }
     }
@@ -918,8 +918,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
                 VbeSetMode();
                 break;
             default:
-                if (_logger.IsEnabled(LogEventLevel.Warning)) {
-                    _logger.Warning("{ClassName} INT 10 4F{Subfunction:X2} - Unsupported VBE function",
+                if (_logger.IsEnabled(LogLevel.Warning)) {
+                    _logger.LogWarning("{ClassName} INT 10 4F{Subfunction:X2} - Unsupported VBE function",
                         nameof(VgaBios), subfunction);
                 }
                 State.AX = (ushort)VbeStatus.Failed;
@@ -961,8 +961,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         Memory.WriteUInt16Segmented(modeListSegment, modeListOffset, VbeConstants.VesaMode800x600x16);
         Memory.WriteUInt16Segmented(modeListSegment, (ushort)(modeListOffset + 2), VbeConstants.ModeListTerminator);
 
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("{ClassName} INT 10 4F00 VbeGetControllerInfo - Returning VBE 1.2 info at {Segment:X4}:{Offset:X4}, OEM {OemSegment:X4}:{OemOffset:X4}, modes {ModeSegment:X4}:{ModeOffset:X4}",
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("{ClassName} INT 10 4F00 VbeGetControllerInfo - Returning VBE 1.2 info at {Segment:X4}:{Offset:X4}, OEM {OemSegment:X4}:{OemOffset:X4}, modes {ModeSegment:X4}:{ModeOffset:X4}",
                 nameof(VgaBios), segment, offset, oemStringSegment, oemStringOffset, modeListSegment, modeListOffset);
         }
 
@@ -982,8 +982,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         (ushort width, ushort height, byte bpp, bool supported) = GetVesaModeParams(modeNumber);
 
         if (!supported) {
-            if (_logger.IsEnabled(LogEventLevel.Warning)) {
-                _logger.Warning("{ClassName} INT 10 4F01 VbeGetModeInfo - Unsupported mode 0x{Mode:X4}",
+            if (_logger.IsEnabled(LogLevel.Warning)) {
+                _logger.LogWarning("{ClassName} INT 10 4F01 VbeGetModeInfo - Unsupported mode 0x{Mode:X4}",
                     nameof(VgaBios), requestedModeNumber);
             }
             State.AX = (ushort)VbeStatus.Failed;
@@ -1066,8 +1066,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
             }
         }
 
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("{ClassName} INT 10 4F01 VbeGetModeInfo - Mode 0x{Mode:X4}: {Width}x{Height}x{Bpp}",
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("{ClassName} INT 10 4F01 VbeGetModeInfo - Mode 0x{Mode:X4}: {Width}x{Height}x{Bpp}",
                 nameof(VgaBios), modeNumber, width, height, bpp);
         }
 
@@ -1086,8 +1086,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         int? internalMode = MapVesaModeToInternal(mode);
 
         if (!internalMode.HasValue) {
-            if (_logger.IsEnabled(LogEventLevel.Warning)) {
-                _logger.Warning("{ClassName} INT 10 4F02 VbeSetMode - Unsupported mode 0x{Mode:X4}",
+            if (_logger.IsEnabled(LogLevel.Warning)) {
+                _logger.LogWarning("{ClassName} INT 10 4F02 VbeSetMode - Unsupported mode 0x{Mode:X4}",
                     nameof(VgaBios), mode);
             }
             State.AX = (ushort)VbeStatus.Failed;
@@ -1099,8 +1099,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
             flags |= ModeFlags.NoClearMem;
         }
 
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("{ClassName} INT 10 4F02 VbeSetMode - Setting VESA mode 0x{VesaMode:X4} (internal mode 0x{InternalMode:X2})",
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("{ClassName} INT 10 4F02 VbeSetMode - Setting VESA mode 0x{VesaMode:X4} (internal mode 0x{InternalMode:X2})",
                 nameof(VgaBios), mode, internalMode.Value);
         }
 
@@ -1161,8 +1161,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
                 State.AL = BiosConstants.FunctionalityInfoSupported;
                 break;
             default:
-                if (_logger.IsEnabled(LogEventLevel.Warning)) {
-                    _logger.Warning("{ClassName} INT 10 1B: {MethodName} - Unsupported subFunction 0x{SubFunction:X2}",
+                if (_logger.IsEnabled(LogLevel.Warning)) {
+                    _logger.LogWarning("{ClassName} INT 10 1B: {MethodName} - Unsupported subFunction 0x{SubFunction:X2}",
                         nameof(VgaBios), nameof(GetFunctionalityInfo), State.BX);
                 }
                 State.AL = 0;
@@ -1206,8 +1206,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
             info.SetCursorPosition(i, (byte)cursorPosition.X, (byte)cursorPosition.Y);
         }
 
-        if (_logger.IsEnabled(LogEventLevel.Warning)) {
-            _logger.Warning("{ClassName} INT 10 1B: {MethodName} - experimental! {@Summary}",
+        if (_logger.IsEnabled(LogLevel.Warning)) {
+            _logger.LogWarning("{ClassName} INT 10 1B: {MethodName} - experimental! {@Summary}",
                 nameof(VgaBios), nameof(GetFunctionalityInfo), info.CreateFunctionalityInfoLogSnapshot());
         }
         return info;

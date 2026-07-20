@@ -4,7 +4,7 @@ using FluentAssertions;
 
 using NSubstitute;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
@@ -59,7 +59,7 @@ public sealed class FloppyDiskTimingServiceTests {
 
     private static ILoggerService CreateLogger() {
         ILoggerService logger = Substitute.For<ILoggerService>();
-        logger.IsEnabled(Arg.Any<LogEventLevel>()).Returns(false);
+        logger.IsEnabled(Arg.Any<LogLevel>()).Returns(false);
         return logger;
     }
 }

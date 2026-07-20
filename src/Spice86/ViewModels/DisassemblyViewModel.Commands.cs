@@ -3,7 +3,7 @@ namespace Spice86.ViewModels;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Debugger;
@@ -30,9 +30,9 @@ public partial class DisassemblyViewModel
 
         if (!debuggerLine.CanBeSteppedOver)
         {
-            if (_logger.IsEnabled(LogEventLevel.Debug))
+            if (_logger.IsEnabled(LogLevel.Debug))
             {
-                _logger.Debug("Setting single-instruction cycle breakpoint for step over");
+                _logger.LogDebug("Setting single-instruction cycle breakpoint for step over");
             }
 
             StepOneInstruction(
@@ -40,9 +40,9 @@ public partial class DisassemblyViewModel
                 "Step over breakpoint reached. Previous address: {CurrentAddress:X8}, New address: {StateIpPhysicalAddress:X8}",
                 currentAddress);
 
-            if (_logger.IsEnabled(LogEventLevel.Debug))
+            if (_logger.IsEnabled(LogLevel.Debug))
             {
-                _logger.Debug("Resuming execution for step over");
+                _logger.LogDebug("Resuming execution for step over");
             }
             _pauseHandler.Resume();
 
@@ -54,15 +54,15 @@ public partial class DisassemblyViewModel
         DebuggerStepHelper.SetupStepOverBreakpoint(_emulatorBreakpointsManager, nextInstructionAddress, () =>
         {
             Pause("Step over execution breakpoint was reached");
-            if (_logger.IsEnabled(LogEventLevel.Debug))
+            if (_logger.IsEnabled(LogLevel.Debug))
             {
-                _logger.Debug("Step over breakpoint reached. Previous address: {CurrentAddress}, New address: {StateCsIp}", currentAddress, State.IpSegmentedAddress);
+                _logger.LogDebug("Step over breakpoint reached. Previous address: {CurrentAddress}, New address: {StateCsIp}", currentAddress, State.IpSegmentedAddress);
             }
         });
 
-        if (_logger.IsEnabled(LogEventLevel.Debug))
+        if (_logger.IsEnabled(LogLevel.Debug))
         {
-            _logger.Debug("Resuming execution for step over");
+            _logger.LogDebug("Resuming execution for step over");
         }
         _pauseHandler.Resume();
     }
@@ -86,9 +86,9 @@ public partial class DisassemblyViewModel
         {
             Pause(pauseReason);
 
-            if (_logger.IsEnabled(LogEventLevel.Debug))
+            if (_logger.IsEnabled(LogLevel.Debug))
             {
-                _logger.Debug(debugMessageTemplate, currentAddress, State.IpSegmentedAddress);
+                _logger.LogDebug(debugMessageTemplate, currentAddress, State.IpSegmentedAddress);
             }
         });
     }
@@ -142,9 +142,9 @@ public partial class DisassemblyViewModel
         {
             return;
         }
-        if (_logger.IsEnabled(LogEventLevel.Debug))
+        if (_logger.IsEnabled(LogLevel.Debug))
         {
-            _logger.Debug("Go to function: {FunctionName} at address {FunctionAddress:X8}", functionInfo.Name, functionInfo.Address.Linear);
+            _logger.LogDebug("Go to function: {FunctionName} at address {FunctionAddress:X8}", functionInfo.Name, functionInfo.Address.Linear);
         }
         GoToAddress(functionInfo.Address);
     }
@@ -158,9 +158,9 @@ public partial class DisassemblyViewModel
     [RelayCommand]
     public void GoToAddress(SegmentedAddress? address)
     {
-        if (_logger.IsEnabled(LogEventLevel.Debug))
+        if (_logger.IsEnabled(LogLevel.Debug))
         {
-            _logger.Debug("Go to address: {Address}", address);
+            _logger.LogDebug("Go to address: {Address}", address);
         }
         if (address == null)
         {

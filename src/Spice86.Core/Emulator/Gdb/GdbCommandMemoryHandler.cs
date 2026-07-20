@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Gdb;
 
 using Spice86.Core.Emulator.Memory;
+using Microsoft.Extensions.Logging;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -41,8 +42,8 @@ public class GdbCommandMemoryHandler {
                 length = ConvertUtils.ParseHex32(commandContentSplit[1]);
             }
 
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                _loggerService.Verbose("Reading memory at address {Address} for a length of {Length}", address, length);
+            if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                _loggerService.LogTrace("Reading memory at address {Address} for a length of {Length}", address, length);
             }
             uint memorySize = (uint)_memory.Length;
             StringBuilder response = new StringBuilder((int)length * 2);
@@ -59,8 +60,8 @@ public class GdbCommandMemoryHandler {
 
             return _gdbIo.GenerateResponse(response.ToString());
         } catch (FormatException nfe) {
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _loggerService.Error(nfe, "Memory read requested but could not understand the request {CommandContent}", commandContent);
+            if (_loggerService.IsEnabled(LogLevel.Error)) {
+                _loggerService.LogError(nfe, "Memory read requested but could not understand the request {CommandContent}", commandContent);
             }
             return _gdbIo.GenerateUnsupportedResponse();
         }
@@ -112,8 +113,8 @@ public class GdbCommandMemoryHandler {
             _memory.LoadData(address, data);
             return _gdbIo.GenerateResponse("OK");
         } catch (FormatException nfe) {
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _loggerService.Error(nfe, "Memory write requested but could not understand the request {CommandContent}", commandContent);
+            if (_loggerService.IsEnabled(LogLevel.Error)) {
+                _loggerService.LogError(nfe, "Memory write requested but could not understand the request {CommandContent}", commandContent);
             }
             return _gdbIo.GenerateUnsupportedResponse();
         }

@@ -1,4 +1,5 @@
 using Spice86.Core.CLI;
+using Microsoft.Extensions.Logging;
 
 namespace Spice86.Tests;
 

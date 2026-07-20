@@ -1,6 +1,7 @@
 namespace Spice86.Tests.CfgCpu;
 
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 
 using NSubstitute;
 

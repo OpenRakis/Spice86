@@ -1,6 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.Devices.Input.Keyboard;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
@@ -113,8 +113,8 @@ public partial class Intel8042Controller : DefaultIOPortHandler {
         const uint thresoldCycles = 150;
 
         if (!_bufferFullWarned || (_cpuState.Cycles - _lastTimeStamp > thresoldCycles)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("I8042: Internal buffer overflow");
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning("I8042: Internal buffer overflow");
             }
             _lastTimeStamp = _cpuState.Cycles;
             _bufferFullWarned = true;
@@ -123,8 +123,8 @@ public partial class Intel8042Controller : DefaultIOPortHandler {
 
     private void LogWarnSwitchToATMode() {
         if (!_controllerModeWarned) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("I8042: Switching controller to AT mode not emulated");
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning("I8042: Switching controller to AT mode not emulated");
             }
             _controllerModeWarned = true;
         }
@@ -132,8 +132,8 @@ public partial class Intel8042Controller : DefaultIOPortHandler {
 
     private void LogWarnAccessToInternalRam() {
         if (!_internalRamWarned) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("I8042: Accessing internal RAM (other than byte 0x00) gives vendor-specific results");
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning("I8042: Accessing internal RAM (other than byte 0x00) gives vendor-specific results");
             }
             _internalRamWarned = true;
         }
@@ -141,8 +141,8 @@ public partial class Intel8042Controller : DefaultIOPortHandler {
 
     private void LogWarnPulseOtherThanResetNotImplemented() {
         if (!_linePulseWarned) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("I8042: Pulsing line other than RESET not emulated");
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning("I8042: Pulsing line other than RESET not emulated");
             }
             _linePulseWarned = true;
         }
@@ -150,8 +150,8 @@ public partial class Intel8042Controller : DefaultIOPortHandler {
 
     private void LogWarnReadTestInputsNotImplemented() {
         if (!_readTestInputsWarned) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("I8042: Reading test inputs not implemented");
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning("I8042: Reading test inputs not implemented");
             }
             _readTestInputsWarned = true;
         }
@@ -159,8 +159,8 @@ public partial class Intel8042Controller : DefaultIOPortHandler {
 
     private void LogWarnVendorLineCommandsNotImplemented() {
         if (!_vendorLinesWarned) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("I8042: No vendor-specific commands to manipulate controller lines are emulated");
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning("I8042: No vendor-specific commands to manipulate controller lines are emulated");
             }
             _vendorLinesWarned = true;
         }
@@ -169,8 +169,8 @@ public partial class Intel8042Controller : DefaultIOPortHandler {
     private void LogWarnUnknownCommand(KeyboardCommand command) {
         byte code = (byte)command;
         if (!_unknownCommandWarned[code]) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("I8042: Unknown command 0x{Command:X2}", code);
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning("I8042: Unknown command 0x{Command:X2}", code);
             }
             _unknownCommandWarned[code] = true;
         }
@@ -613,8 +613,8 @@ public partial class Intel8042Controller : DefaultIOPortHandler {
             case KeyboardCommand.WriteOutputPort: // 0xd1
                 // Writes the controller output port (P2)
                 _a20Gate.IsEnabled = (param & (byte)OutputPortBits.A20Enabled) != 0;
-                if ((param & (byte)OutputPortBits.ResetNotAsserted) == 0 && _loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning("I8042: Clearing P2 bit 0 locks a real PC");
+                if ((param & (byte)OutputPortBits.ResetNotAsserted) == 0 && _loggerService.IsEnabled(LogLevel.Warning)) {
+                    _loggerService.LogWarning("I8042: Clearing P2 bit 0 locks a real PC");
                     // System restart is not supported.
                 }
                 break;
@@ -643,8 +643,8 @@ public partial class Intel8042Controller : DefaultIOPortHandler {
                         (code != 0xf0 && param != (byte)LineParam.AllLines)) {
                         LogWarnPulseOtherThanResetNotImplemented();
                     }
-                    if (code == 0xf0 && (lines & (byte)LineParam.Reset) == 0 && _loggerService.IsEnabled(LogEventLevel.Warning)) {
-                        _loggerService.Warning("System Reset is not implemented");
+                    if (code == 0xf0 && (lines & (byte)LineParam.Reset) == 0 && _loggerService.IsEnabled(LogLevel.Warning)) {
+                        _loggerService.LogWarning("System Reset is not implemented");
                     }
                 } else {
                     // If we are here, than either this function

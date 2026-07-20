@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
@@ -37,8 +37,8 @@ public class DosInt2aHandler : InterruptHandler {
     /// is detected.
     /// </summary>
     public void NetworkInstallationQuery() {
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("INT 2Ah AH=00: Network Installation Query");
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("INT 2Ah AH=00: Network Installation Query");
         }
         bool isNetworkInstalled = false; // Stub
 
@@ -50,8 +50,8 @@ public class DosInt2aHandler : InterruptHandler {
         byte operation = State.AH;
         if (!HasRunnable(operation)) {
             // For any other AH subfunction, respond with a generic "not implemented" error.
-            if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-                LoggerService.Warning("INT 2Ah AH={AH:X2}: operation not implemented", State.AH);
+            if (LoggerService.IsEnabled(LogLevel.Warning)) {
+                LoggerService.LogWarning("INT 2Ah AH={AH:X2}: operation not implemented", State.AH);
             }
             // DOS convention: set Carry Flag and set AX to an error code. 0x01 = Invalid function.
             State.AX = 0x0001;

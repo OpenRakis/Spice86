@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.Devices.Video;
 
 using System;
+using Microsoft.Extensions.Logging;
 using System.Runtime.InteropServices;
 using System.Threading;
 
@@ -38,7 +39,7 @@ public class VideoMemory : IVideoMemory {
     /// <inheritdoc />
     public byte Read(uint address) {
         if (IsOutsideCurrentlyMappedRange(address)) {
-            _logger.Debug("VGA read outside mapping! Returning 0x00 for address 0x{Address:X}", address);
+            _logger.LogDebug("VGA read outside mapping! Returning 0x00 for address 0x{Address:X}", address);
 
             return 0;
         }
@@ -102,7 +103,7 @@ public class VideoMemory : IVideoMemory {
         if (IsOutsideCurrentlyMappedRange(address)) {
             // TODO: this is most likely writing to a secondary monochrome monitor we have not implemented yet.
             if (value != 0x00) { // don't log initial memory clearing
-                _logger.Debug("VGA write outside mapping! Wrote 0x{Value:X2} '{C}' to 0x{Address:X}", value, (char)value, address);
+                _logger.LogDebug("VGA write outside mapping! Wrote 0x{Value:X2} '{C}' to 0x{Address:X}", value, (char)value, address);
             }
 
             return;

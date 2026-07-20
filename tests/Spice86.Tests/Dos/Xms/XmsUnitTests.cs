@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Tests.Dos.Xms;
 
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 
 using NSubstitute;
 

@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.OperatingSystem.Devices;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
@@ -103,8 +103,8 @@ public sealed class AnsiSequenceHandler {
                 DeviceStatusReport();
                 break;
             default:
-                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning("ANSI: unsupported CSI command '{Command}'", command);
+                if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                    _loggerService.LogWarning("ANSI: unsupported CSI command '{Command}'", command);
                 }
                 break;
         }
@@ -313,8 +313,8 @@ public sealed class AnsiSequenceHandler {
             case 46: _state.Attribute = (byte)((_state.Attribute & 0x8F) | 0x30); break;
             case 47: _state.Attribute = (byte)((_state.Attribute & 0x8F) | 0x70); break;
             default:
-                if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                    _loggerService.Information("ANSI: unsupported SGR code {Code}", code);
+                if (_loggerService.IsEnabled(LogLevel.Information)) {
+                    _loggerService.LogInformation("ANSI: unsupported SGR code {Code}", code);
                 }
                 break;
         }

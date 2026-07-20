@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Bios;
 
 using Spice86.Core.Emulator.Devices.ExternalInput;
+using Microsoft.Extensions.Logging;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Shared.Emulator.Memory;
@@ -49,18 +50,18 @@ public sealed class DefaultIrqHandler : IInterruptHandler {
     ///     Handles an unexpected IRQ by recording it and acknowledging the PIC so the system continues to run.
     /// </summary>
     private void HandleIrq() {
-        _logger.Warning("BIOS default IRQ handler serviced unhandled IRQ{Irq}", _irq);
+        _logger.LogWarning("BIOS default IRQ handler serviced unhandled IRQ{Irq}", _irq);
 
         byte mask = ComputeBiosIrqMask();
-        _logger.Debug("BIOS_LAST_UNEXPECTED_IRQ previous value 0x{Prev:X2}", _biosDataArea.LastUnexpectedIrq);
+        _logger.LogDebug("BIOS_LAST_UNEXPECTED_IRQ previous value 0x{Prev:X2}", _biosDataArea.LastUnexpectedIrq);
 
         _biosDataArea.LastUnexpectedIrq = mask;
-        _logger.Debug("BIOS_LAST_UNEXPECTED_IRQ updated to 0x{Mask:X2}", mask);
+        _logger.LogDebug("BIOS_LAST_UNEXPECTED_IRQ updated to 0x{Mask:X2}", mask);
 
         _dualPic.AcknowledgeInterrupt(_irq);
-        _logger.Verbose("Acknowledged IRQ{Irq} on the PIC", _irq);
+        _logger.LogTrace("Acknowledged IRQ{Irq} on the PIC", _irq);
         _dualPic.SetIrqMask(_irq, true);
-        _logger.Verbose("Masked IRQ{Irq} to prevent repeated unexpected interrupts", _irq);
+        _logger.LogTrace("Masked IRQ{Irq} to prevent repeated unexpected interrupts", _irq);
     }
 
     /// <summary>

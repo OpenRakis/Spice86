@@ -1,6 +1,7 @@
 namespace Spice86.Tests.Boot;
 
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 
 using NSubstitute;
 

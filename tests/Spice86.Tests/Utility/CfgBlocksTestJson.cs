@@ -1,6 +1,7 @@
 namespace Spice86.Tests.Utility;
 
 using Spice86.Core.Emulator.CPU.CfgCpu;
+using Microsoft.Extensions.Logging;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning;

@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.Devices.Video;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Shared.Emulator.Video;
 using Spice86.Shared.Interfaces;
@@ -60,8 +60,8 @@ public class VgaCard {
         }
         var buffer = new Span<uint>((void*)uiRenderEventArgs.Address, uiRenderEventArgs.Length);
         int requiredBufferSize = _renderer.Width * _renderer.Height;
-        if (buffer.Length < requiredBufferSize && _logger.IsEnabled(LogEventLevel.Warning)) {
-            _logger.Warning("Buffer size {BufferLength} is too small for the required buffer size {RequiredBufferSize} for render resolution {RenderWidth} x {RenderHeight}",
+        if (buffer.Length < requiredBufferSize && _logger.IsEnabled(LogLevel.Warning)) {
+            _logger.LogWarning("Buffer size {BufferLength} is too small for the required buffer size {RequiredBufferSize} for render resolution {RenderWidth} x {RenderHeight}",
                 buffer.Length, requiredBufferSize, _renderer.Width, _renderer.Height);
             return;
         }

@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.VM.DeviceScheduler;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Shared.Collections;
@@ -46,7 +46,7 @@ public class DeviceScheduler {
     public DeviceScheduler(IEmulatedClock clock, ILoggerService logger, string instanceName) {
         _clock = clock;
         _logger = logger;
-        _monitor = _logger.IsEnabled(LogEventLevel.Debug) ? new DeviceSchedulerMonitor(logger, instanceName) : null;
+        _monitor = _logger.IsEnabled(LogLevel.Debug) ? new DeviceSchedulerMonitor(logger, instanceName) : null;
     }
 
     /// <summary>
@@ -57,8 +57,8 @@ public class DeviceScheduler {
     /// <param name="val">Value forwarded to the callback.</param>
     public void AddEvent(EventHandler handler, double delay, uint val = 0) {
         if (_queue.Count >= MaxQueueSize) {
-            if (_logger.IsEnabled(LogEventLevel.Error)) {
-                _logger.Error("Event queue full when scheduling handler {Handler}", GetHandlerName(handler));
+            if (_logger.IsEnabled(LogLevel.Error)) {
+                _logger.LogError("Event queue full when scheduling handler {Handler}", GetHandlerName(handler));
             }
 
             return;
@@ -108,8 +108,8 @@ public class DeviceScheduler {
             removedCount++;
         }
 
-        if (removedCount > 0 && _logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("Cancelled all {EventCount} events for handler {Handler}", removedCount, GetHandlerName(handler));
+        if (removedCount > 0 && _logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("Cancelled all {EventCount} events for handler {Handler}", removedCount, GetHandlerName(handler));
         }
     }
 

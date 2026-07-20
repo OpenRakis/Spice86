@@ -1,6 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
@@ -75,9 +75,9 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
         // Disable keyboard first - otherwise Prince of Persia reads it before us!
         _ps2Controller.WriteByte(KeyboardPorts.Command, (byte)KeyboardCommand.DisablePortKbd);
 
-        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+        if (LoggerService.IsEnabled(LogLevel.Debug)) {
             byte st = _ps2Controller.ReadByte(KeyboardPorts.StatusRegister);
-            LoggerService.Debug("INT09: entry ST=0x{St:X2}", st);
+            LoggerService.LogDebug("INT09: entry ST=0x{St:X2}", st);
         }
 
         byte scancode = _ps2Controller.ReadByte(KeyboardPorts.Data);
@@ -85,9 +85,9 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
         // Re-enable keyboard port immediately - otherwise Prince of Persia doesn't like it!
         _ps2Controller.WriteByte(KeyboardPorts.Command, (byte)KeyboardCommand.EnableKeyboardPort);
 
-        if (LoggerService.IsEnabled(LogEventLevel.Debug)) {
+        if (LoggerService.IsEnabled(LogLevel.Debug)) {
             byte stAfter = _ps2Controller.ReadByte(KeyboardPorts.StatusRegister);
-            LoggerService.Debug("INT09: read scan=0x{Scan:X2} ST(after)=0x{St:X2}", scancode, stAfter);
+            LoggerService.LogDebug("INT09: read scan=0x{Scan:X2} ST(after)=0x{St:X2}", scancode, stAfter);
         }
 
         bool savedCf = State.CarryFlag;
@@ -107,8 +107,8 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
         State.AL = savedAl;
         State.CarryFlag = savedCf;
 
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("INT09: process scan=0x{Scan:X2}", scancode);
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("INT09: process scan=0x{Scan:X2}", scancode);
         }
 
         var keyboardState = new KeyboardState {

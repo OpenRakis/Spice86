@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.OperatingSystem;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.LoadableFile.Dos;
 using Spice86.Core.Emulator.Memory;
@@ -66,8 +66,8 @@ public class DosMemoryManager {
         // Therefore subtract the size of the MCB (1 paragraph, which is 16 bytes) from the total
         // size to get the useable space that we can allocate.
         _start.Size = (ushort)(size - 1);
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information(
+        if (_loggerService.IsEnabled(LogLevel.Information)) {
+            _loggerService.LogInformation(
                 "DOS available memory: {ConventionalFree} - in paragraphs: {DosFreeParagraphs}",
                 _start.AllocationSizeInBytes, _start.Size);
         }
@@ -112,8 +112,8 @@ public class DosMemoryManager {
         DosMemoryControlBlock? blockOptional = SelectBlockByStrategy(candidates);
         if (blockOptional is null) {
             // Nothing found
-            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error("Could not find any MCB to fit {RequestedSize}", requestedSizeInParagraphs);
+            if (_loggerService.IsEnabled(LogLevel.Error)) {
+                _loggerService.LogError("Could not find any MCB to fit {RequestedSize}", requestedSizeInParagraphs);
             }
             return null;
         }
@@ -121,8 +121,8 @@ public class DosMemoryManager {
         DosMemoryControlBlock block = blockOptional;
         if (!SplitBlock(block, requestedSizeInParagraphs)) {
             // An issue occurred while splitting the block
-            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error("Could not split block {Block}", block);
+            if (_loggerService.IsEnabled(LogLevel.Error)) {
+                _loggerService.LogError("Could not split block {Block}", block);
             }
             return null;
         }
@@ -213,20 +213,20 @@ public class DosMemoryManager {
 
         // Make the block the biggest it can get
         if (!JoinBlocks(block, false)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error("Could not join MCB {Block}", block);
+            if (_loggerService.IsEnabled(LogLevel.Error)) {
+                _loggerService.LogError("Could not join MCB {Block}", block);
             }
             return DosErrorCode.InsufficientMemory;
         }
 
         if (block.Size < newSizeInParagraphs) {
-            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error("MCB {Block} is too small for requested size {RequestedSize}",
+            if (_loggerService.IsEnabled(LogLevel.Error)) {
+                _loggerService.LogError("MCB {Block} is too small for requested size {RequestedSize}",
                     block, newSizeInParagraphs);
 
-                if (_loggerService.IsEnabled(LogEventLevel.Verbose) && !block.IsLast) {
+                if (_loggerService.IsEnabled(LogLevel.Trace) && !block.IsLast) {
                     DosMemoryControlBlock? nextBlock = block.GetNextOrDefault();
-                    _loggerService.Verbose("Next MCB is {Block}", nextBlock);
+                    _loggerService.LogTrace("Next MCB is {Block}", nextBlock);
                 }
             }
             return DosErrorCode.InsufficientMemory;
@@ -296,16 +296,16 @@ public class DosMemoryManager {
             // program loading this one.
             block.PspSegment = block.DataBlockSegment;
 
-            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                _loggerService.Verbose(
+            if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                _loggerService.LogTrace(
                     "Allocated {AllocationType} {SizeInParagraphs} paragraphs ({SizeInBytes} bytes) at {PspSegment} to load program",
                     block.Size == size.MinSizeInParagraphs ? "required" : "requested",
                     block.Size,
                     block.AllocationSizeInBytes,
                     ConvertUtils.ToHex16(block.DataBlockSegment));
             }
-        } else if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-            _loggerService.Error(
+        } else if (_loggerService.IsEnabled(LogLevel.Error)) {
+            _loggerService.LogError(
                 "{SizeInParagraphs} paragraphs ({SizeInBytes} bytes) are not available at {PspSegment} to load program",
                 size.MinSizeInParagraphs,
                 size.MinSizeInParagraphs * 16,
@@ -454,8 +454,8 @@ public class DosMemoryManager {
         if (!CheckValidOrLogError(block)) {
             return null;
         } else if (!block.IsFree) {
-            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error("MCB {Block} cannot be allocated because it is not free", block);
+            if (_loggerService.IsEnabled(LogLevel.Error)) {
+                _loggerService.LogError("MCB {Block} cannot be allocated because it is not free", block);
             }
             return null;
         } else if (block.Size < size.MinSizeInParagraphs) {
@@ -471,8 +471,8 @@ public class DosMemoryManager {
 
     private bool CheckValidOrLogError(DosMemoryControlBlock? block) {
         if (block is null || !block.IsValid) {
-            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error("MCB {Block} is invalid", block);
+            if (_loggerService.IsEnabled(LogLevel.Error)) {
+                _loggerService.LogError("MCB {Block} is invalid", block);
             }
             return false;
         }
@@ -521,8 +521,8 @@ public class DosMemoryManager {
             }
 
             if (!CheckValidOrLogError(next)) {
-                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                    _loggerService.Error("MCB {NextBlock} is not valid", next);
+                if (_loggerService.IsEnabled(LogLevel.Error)) {
+                    _loggerService.LogError("MCB {NextBlock} is not valid", next);
                 }
                 return false;
             }
@@ -563,8 +563,8 @@ public class DosMemoryManager {
 
         int nextBlockSize = blockSize - size - 1;
         if (nextBlockSize < 0) {
-            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error("Cannot split block {Block} with size {Size} because it is too small",
+            if (_loggerService.IsEnabled(LogLevel.Error)) {
+                _loggerService.LogError("Cannot split block {Block} with size {Size} because it is too small",
                     block, size);
             }
             return false;
@@ -645,8 +645,8 @@ public class DosMemoryManager {
 
         while (current is not null) {
             if (!current.IsValid) {
-                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                    _loggerService.Error("MCB chain corrupted at segment {Segment}",
+                if (_loggerService.IsEnabled(LogLevel.Error)) {
+                    _loggerService.LogError("MCB chain corrupted at segment {Segment}",
                         ConvertUtils.ToHex16(MemoryUtils.ToSegment(current.BaseAddress)));
                 }
                 return false;
@@ -660,8 +660,8 @@ public class DosMemoryManager {
         }
 
         // If we get here, we reached the end of memory without finding MCB_LAST
-        if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-            _loggerService.Error("MCB chain ended unexpectedly without MCB_LAST marker");
+        if (_loggerService.IsEnabled(LogLevel.Error)) {
+            _loggerService.LogError("MCB chain ended unexpectedly without MCB_LAST marker");
         }
         return false;
     }
@@ -676,8 +676,8 @@ public class DosMemoryManager {
 
         while (current is not null) {
             if (!current.IsValid) {
-                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                    _loggerService.Error("MCB chain corrupted while freeing process memory");
+                if (_loggerService.IsEnabled(LogLevel.Error)) {
+                    _loggerService.LogError("MCB chain corrupted while freeing process memory");
                 }
                 return false;
             }
@@ -717,8 +717,8 @@ public class DosMemoryManager {
         }
 
         if (block.PspSegment != ownerPspSegment) {
-            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                _loggerService.Verbose(
+            if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                _loggerService.LogTrace(
                     "Environment block at {EnvSegment:X4} not owned by PSP {Owner:X4}, skipping free",
                     environmentSegment, ownerPspSegment);
             }

@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
 
 using Spice86.Core.Emulator.CPU;
+using Microsoft.Extensions.Logging;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Shared.Emulator.Storage;
 using Spice86.Core.Emulator.Function;
@@ -102,8 +103,8 @@ public class DosDiskInt25Handler : InterruptHandler {
                 if (sectorCount == 1 && startSector == 0) {
                     // Write BPB hidden-sectors field into the buffer for MicroProse installers.
                     Memory.UInt16[bufferAddress + 0x1cu] = 0x3f;
-                } else if (LoggerService.IsEnabled(Serilog.Events.LogEventLevel.Warning)) {
-                    LoggerService.Warning("Interrupt 25 called but not as disk detection, {DriveIndex}", driveIndex);
+                } else if (LoggerService.IsEnabled(LogLevel.Warning)) {
+                    LoggerService.LogWarning("Interrupt 25 called but not as disk detection, {DriveIndex}", driveIndex);
                 }
                 SetCarryFlag(false, calledFromVm);
                 State.AX = 0;

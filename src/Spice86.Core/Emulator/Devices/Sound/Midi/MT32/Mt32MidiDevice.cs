@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.Devices.Sound.Midi.MT32;
 
 using Mt32emu;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Audio.Common;
 using Spice86.Core.Emulator.Devices.Sound;
@@ -37,8 +38,8 @@ public sealed class Mt32MidiDevice : MidiDevice {
         }
 
         if (!LoadRoms(romsPath)) {
-            if (loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                loggerService.Error("{MethodName} could not find roms in {RomsPath}, {ClassName} was not created",
+            if (loggerService.IsEnabled(LogLevel.Error)) {
+                loggerService.LogError("{MethodName} could not find roms in {RomsPath}, {ClassName} was not created",
                     nameof(LoadRoms), romsPath, nameof(Mt32MidiDevice));
             }
             return;

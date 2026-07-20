@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 
 using FastExpressionCompiler;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
@@ -48,7 +49,7 @@ public class CfgNodeExecutionCompiler : IDisposable {
 
         if (_jitMode == JitMode.InterpretedThenCompiled) {
             int backgroundCompilerThreadCount = Math.Max(1, Environment.ProcessorCount - 2);
-            _logger.Information("CfgNodeExecutionCompiler: starting {ThreadCount} background compiler threads",
+            _logger.LogInformation("CfgNodeExecutionCompiler: starting {ThreadCount} background compiler threads",
                 backgroundCompilerThreadCount);
             CancellationToken token = _cts.Token;
             _backgroundThreads = new Thread[backgroundCompilerThreadCount];
@@ -62,7 +63,7 @@ public class CfgNodeExecutionCompiler : IDisposable {
             }
         } else {
             _backgroundThreads = Array.Empty<Thread>();
-            _logger.Information("CfgNodeExecutionCompiler: JitMode={JitMode}; no background compiler threads started", _jitMode);
+            _logger.LogInformation("CfgNodeExecutionCompiler: JitMode={JitMode}; no background compiler threads started", _jitMode);
         }
     }
 
@@ -75,7 +76,7 @@ public class CfgNodeExecutionCompiler : IDisposable {
                     CfgNodeExecutionAction<InstructionExecutionHelper> optimized = CompileExpression(item.Expression);
                     TrySwapCompiledExecution(item.Node, item.Generation, optimized);
                 } catch (InvalidOperationException ex) {
-                    _logger.Error(ex, "CfgNodeExecutionCompiler: background compile error: {Message}", ex.Message);
+                    _logger.LogError(ex, "CfgNodeExecutionCompiler: background compile error: {Message}", ex.Message);
                 } finally {
                     _monitor.RecordQueuePopped();
                 }
@@ -99,7 +100,7 @@ public class CfgNodeExecutionCompiler : IDisposable {
             sw.Stop();
             long micros = (long)((double)sw.ElapsedTicks * 1_000_000 / Stopwatch.Frequency);
             _monitor.RecordCompileFailure(micros);
-            _logger.Error(ex, "CfgNodeExecutionCompiler: compile error: {Message}", ex.Message);
+            _logger.LogError(ex, "CfgNodeExecutionCompiler: compile error: {Message}", ex.Message);
             throw;
         }
     }

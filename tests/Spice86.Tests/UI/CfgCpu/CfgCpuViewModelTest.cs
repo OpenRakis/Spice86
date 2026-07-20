@@ -1,6 +1,7 @@
 namespace Spice86.Tests.UI.CfgCpu;
 
 using AvaloniaGraphControl;
+using Microsoft.Extensions.Logging;
 
 using FluentAssertions;
 

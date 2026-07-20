@@ -1,6 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Input.Mouse;
@@ -42,41 +42,41 @@ public class MouseInt33Handler : InterruptHandler {
         //Examples include Lands of Lore (0x53c1), and Knights of Xentar (0xa1)
         switch (State.AX) {
             case 0xa1: // ??? (ignore - game issues this once, and then boots!)
-                LoggerService.Warning("MOUSE INT33: 0xA1 command ignored!");
+                LoggerService.LogWarning("MOUSE INT33: 0xA1 command ignored!");
                 return;
             case 0x70:
                 // Mouse Systems - installation check
-                LoggerService.Warning("MOUSE INT33: 0x70 command ignored!");
+                LoggerService.LogWarning("MOUSE INT33: 0x70 command ignored!");
                 return;
             case 0x72:
                 // Mouse Systems 7.01+ - unknown functionality
                 // Genius Mouse 9.06+  - unknown functionality
-                LoggerService.Warning("MOUSE INT33: 0x72 command ignored!");
+                LoggerService.LogWarning("MOUSE INT33: 0x72 command ignored!");
                 return;
             case 0x73:
                 // Mouse Systems 7.01+ - get button assignments
                 // VBADOS driver       - get driver info
-                LoggerService.Warning("MOUSE INT33: 0x73 command ignored!");
+                LoggerService.LogWarning("MOUSE INT33: 0x73 command ignored!");
                 return;
             case 0x5301:
                 // Logitech CyberMan - get 3D position, orientation, and button status
-                LoggerService.Warning("MOUSE INT33: 0x5301 command ignored!");
+                LoggerService.LogWarning("MOUSE INT33: 0x5301 command ignored!");
                 return;
             case 0x5330:
                 // Logitech CyberMan - generate tactile feedback
-                LoggerService.Warning("MOUSE INT33: 0x5330 command ignored!");
+                LoggerService.LogWarning("MOUSE INT33: 0x5330 command ignored!");
                 return;
             case 0x53c0:
                 // Logitech CyberMan - exchange event handlers
-                LoggerService.Warning("MOUSE INT33: 0x53c0 command ignored!");
+                LoggerService.LogWarning("MOUSE INT33: 0x53c0 command ignored!");
                 return;
             case 0x53c1:
                 // Logitech CyberMan - get static device data and driver support status
-                LoggerService.Warning("MOUSE INT33: 0x53c1 command ignored!");
+                LoggerService.LogWarning("MOUSE INT33: 0x53c1 command ignored!");
                 return;
             case 0x53c2:
                 // Logitech CyberMan - get dynamic device data
-                LoggerService.Warning("MOUSE INT33: 0x53c2 command ignored!");
+                LoggerService.LogWarning("MOUSE INT33: 0x53c2 command ignored!");
                 return;
         }
         byte operation = State.AL;
@@ -105,8 +105,8 @@ public class MouseInt33Handler : InterruptHandler {
     public void MouseInstalledFlag() {
         State.AX = 0xFFFF; // installed
         State.BX = (ushort)_mouseDriver.ButtonCount;
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("{ClassName} INT {Int:X2} 00 {MethodName}: driver installed, {ButtonCount} buttons",
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("{ClassName} INT {Int:X2} 00 {MethodName}: driver installed, {ButtonCount} buttons",
                 nameof(MouseInt33Handler), VectorNumber, nameof(MouseInstalledFlag), State.BX);
         }
         _mouseDriver.Reset();
@@ -130,8 +130,8 @@ public class MouseInt33Handler : InterruptHandler {
     ///         This function also resets the "exclusion area" set via INT 33H 0010H. TODO: not implemented
     /// </summary>
     public void ShowMouseCursor() {
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("{ClassName} INT {Int:X2} 01 {MethodName}",
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("{ClassName} INT {Int:X2} 01 {MethodName}",
                 nameof(MouseInt33Handler), VectorNumber, nameof(ShowMouseCursor));
         }
         _mouseDriver.ShowMouseCursor();
@@ -148,8 +148,8 @@ public class MouseInt33Handler : InterruptHandler {
     ///     pointer) and call INT 33H 0001H (show ptr) after writing to the screen.
     /// </summary>
     public void HideMouseCursor() {
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("{ClassName} INT {Int:X2} 02 {MethodName}",
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("{ClassName} INT {Int:X2} 02 {MethodName}",
                 nameof(MouseInt33Handler), VectorNumber, nameof(HideMouseCursor));
         }
         _mouseDriver.HideMouseCursor();
@@ -174,8 +174,8 @@ public class MouseInt33Handler : InterruptHandler {
     /// </summary>
     public void GetMousePositionAndStatus() {
         MouseStatusRecord status = _mouseDriver.CurrentMouseStatus;
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("{ClassName} INT {Int:X2} 03 {MethodName}: {MouseStatus}",
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("{ClassName} INT {Int:X2} 03 {MethodName}: {MouseStatus}",
                 nameof(MouseInt33Handler), VectorNumber, nameof(GetMousePositionAndStatus), status);
         }
         State.CX = (ushort)status.X;
@@ -287,8 +287,8 @@ public class MouseInt33Handler : InterruptHandler {
         ushort x = State.CX;
         ushort y = State.DX;
 
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("{ClassName} INT {Int:X2} 04 {MethodName}: x = {MouseX}, y = {MouseY}",
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("{ClassName} INT {Int:X2} 04 {MethodName}: x = {MouseX}, y = {MouseY}",
                 nameof(MouseInt33Handler), VectorNumber, nameof(SetMouseCursorPosition), x, y);
         }
         _mouseDriver.SetCursorPosition(x, y);
@@ -309,8 +309,8 @@ public class MouseInt33Handler : InterruptHandler {
     ///     8 to get a character column,row.
     /// </summary>
     public void SetMouseHorizontalMinMaxPosition() {
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("{ClassName} INT {Int:X2} 07 {MethodName}: min = {Min}, max = {Max}",
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("{ClassName} INT {Int:X2} 07 {MethodName}: min = {Min}, max = {Max}",
                 nameof(MouseInt33Handler), VectorNumber, nameof(SetMouseHorizontalMinMaxPosition), State.CX, State.DX);
         }
         _mouseDriver.CurrentMinX = State.CX;
@@ -332,8 +332,8 @@ public class MouseInt33Handler : InterruptHandler {
     ///     8 to get a character column,row.
     /// </summary>
     public void SetMouseVerticalMinMaxPosition() {
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("{ClassName} INT {Int:X2} 08 {MethodName}: min Y = {MinY}, max Y = {MaxY}",
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("{ClassName} INT {Int:X2} 08 {MethodName}: min Y = {MinY}, max Y = {MaxY}",
                 nameof(MouseInt33Handler), VectorNumber, nameof(SetMouseVerticalMinMaxPosition), State.CX, State.DX);
         }
         _mouseDriver.CurrentMinY = State.CX;
@@ -391,8 +391,8 @@ public class MouseInt33Handler : InterruptHandler {
     /// </summary>
     public void SetMouseUserDefinedSubroutine() {
         MouseUserCallback callbackInfo = new((MouseEventMask)State.CX, State.ES, State.DX);
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("{ClassName} INT {Int:X2} 0C {MethodName}: {@CallbackInfo}",
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("{ClassName} INT {Int:X2} 0C {MethodName}: {@CallbackInfo}",
                 nameof(MouseInt33Handler), VectorNumber, nameof(SetMouseUserDefinedSubroutine), callbackInfo);
         }
         _mouseDriver.RegisterCallback(callbackInfo);
@@ -436,8 +436,8 @@ public class MouseInt33Handler : InterruptHandler {
             return;
         }
 
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("{ClassName} INT {Int:X2} 0F {MethodName}: horizontal = {XRatio} mickeys per 8 pixels, vertical = {YRatio} mickeys per 8 pixels",
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("{ClassName} INT {Int:X2} 0F {MethodName}: horizontal = {XRatio} mickeys per 8 pixels, vertical = {YRatio} mickeys per 8 pixels",
                 nameof(MouseInt33Handler), VectorNumber, nameof(SetMouseMickeyPixelRatio), horizontal, vertical);
         }
 
@@ -450,8 +450,8 @@ public class MouseInt33Handler : InterruptHandler {
     /// </summary>
     public void SetMouseDoubleSpeedThreshold() {
         ushort threshold = State.DX;
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("{ClassName} INT {Int:X2} 13 {MethodName}: doubleSpeedThreshold = {Threshold} mickeys per second",
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("{ClassName} INT {Int:X2} 13 {MethodName}: doubleSpeedThreshold = {Threshold} mickeys per second",
                 nameof(MouseInt33Handler), VectorNumber, nameof(SetMouseDoubleSpeedThreshold), threshold);
         }
         _mouseDriver.DoubleSpeedThreshold = threshold;
@@ -461,8 +461,8 @@ public class MouseInt33Handler : InterruptHandler {
         int horizontal = _mouseDriver.HorizontalMickeysPerPixel;
         int vertical = _mouseDriver.VerticalMickeysPerPixel;
         int threshold = _mouseDriver.DoubleSpeedThreshold;
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("{ClassName} INT {Int:X2} 1B {MethodName}: horizontal = {XRatio} mickeys per pixel, vertical = {YRatio} mickeys per pixel, doubleSpeedThreshold = {Threshold} mickeys per second",
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("{ClassName} INT {Int:X2} 1B {MethodName}: horizontal = {XRatio} mickeys per pixel, vertical = {YRatio} mickeys per pixel, doubleSpeedThreshold = {Threshold} mickeys per second",
                 nameof(MouseInt33Handler), VectorNumber, nameof(GetMouseSensitivity), horizontal, vertical, threshold);
         }
         State.BX = (ushort)horizontal;
@@ -474,8 +474,8 @@ public class MouseInt33Handler : InterruptHandler {
         ushort horizontal = State.BX;
         ushort vertical = State.CX;
         ushort threshold = State.DX;
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("{ClassName} INT {Int:X2} 1A {MethodName}: horizontal = {XRatio} mickeys per pixel, vertical = {YRatio} mickeys per pixel, doubleSpeedThreshold = {Threshold} mickeys per second",
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("{ClassName} INT {Int:X2} 1A {MethodName}: horizontal = {XRatio} mickeys per pixel, vertical = {YRatio} mickeys per pixel, doubleSpeedThreshold = {Threshold} mickeys per second",
                 nameof(MouseInt33Handler), VectorNumber, nameof(SetMouseSensitivity), horizontal, vertical, threshold);
         }
         _mouseDriver.HorizontalMickeysPerPixel = horizontal;
@@ -514,8 +514,8 @@ public class MouseInt33Handler : InterruptHandler {
     public void SwapMouseUserDefinedSubroutine() {
         MouseUserCallback newCallback = new((MouseEventMask)State.CX, State.ES, State.DX);
         MouseUserCallback oldCallback = _mouseDriver.GetRegisteredCallback();
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("{ClassName} INT {Int:X2} 14 {MethodName}: old: {@OldCallback}, new: {@NewCallback}",
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("{ClassName} INT {Int:X2} 14 {MethodName}: old: {@OldCallback}, new: {@NewCallback}",
                 nameof(MouseInt33Handler), VectorNumber, nameof(SwapMouseUserDefinedSubroutine), oldCallback, newCallback);
         }
         State.CX = (ushort)oldCallback.TriggerMask;
@@ -542,8 +542,8 @@ public class MouseInt33Handler : InterruptHandler {
     ///     application slow down.
     /// </summary>
     public void SetInterruptRate() {
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("{ClassName} INT {Int:X2} 1C {MethodName}: called with rate {Rate} ",
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("{ClassName} INT {Int:X2} 1C {MethodName}: called with rate {Rate} ",
                 nameof(MouseInt33Handler), VectorNumber, nameof(SetInterruptRate), State.BX);
         }
         if (_mouseDriver.MouseType == MouseType.InPort) {
@@ -584,8 +584,8 @@ public class MouseInt33Handler : InterruptHandler {
             };
             State.CL = 0; /* (0=PS/2, 2=IRQ2, 3=IRQ3,...,7=IRQ7,...,0Fh=IRQ15) */
         }
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("{ClassName} INT {Int:X2} 24 {MethodName}: reporting version {Major}.{Minor}, mouse type {MouseType} and irq {Irq}",
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("{ClassName} INT {Int:X2} 24 {MethodName}: reporting version {Major}.{Minor}, mouse type {MouseType} and irq {Irq}",
                 nameof(MouseInt33Handler), VectorNumber, nameof(GetSoftwareVersionAndMouseType), State.BH, State.BL, _mouseDriver.MouseType, State.CL);
         }
     }
@@ -613,8 +613,8 @@ public class MouseInt33Handler : InterruptHandler {
     }
 
     private void Reset() {
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("{ClassName} INT {Int:X2} 21 {MethodName}: Resetting mouse", nameof(MouseInt33Handler), VectorNumber, nameof(Reset));
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("{ClassName} INT {Int:X2} 21 {MethodName}: Resetting mouse", nameof(MouseInt33Handler), VectorNumber, nameof(Reset));
         }
         _mouseDriver.Reset();
         State.AX = 0xFFFF;
@@ -624,8 +624,8 @@ public class MouseInt33Handler : InterruptHandler {
     private void GetMotionDistance() {
         short x = _mouseDriver.GetDeltaXMickeys();
         short y = _mouseDriver.GetDeltaYMickeys();
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("{ClassName} INT {Int:X2} 0B {MethodName}: x = {X} mickeys, y = {Y} mickeys",
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("{ClassName} INT {Int:X2} 0B {MethodName}: x = {X} mickeys, y = {Y} mickeys",
                 nameof(MouseInt33Handler), VectorNumber, nameof(GetMotionDistance), x, y);
         }
         State.CX = (ushort)x;

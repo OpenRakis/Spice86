@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
@@ -50,8 +50,8 @@ internal sealed class ProgramBootstrapper {
         string upperCaseExtension = Path.GetExtension(executableFileName.ToUpperInvariant());
         bool isDosProgram = upperCaseExtension is ".EXE" or ".COM" or ".BAT";
 
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Preparing initial load for {FileName} (DOS program: {IsDosProgram})",
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("Preparing initial load for {FileName} (DOS program: {IsDosProgram})",
                 executableFileName, isDosProgram);
         }
 
@@ -60,8 +60,8 @@ internal sealed class ProgramBootstrapper {
         try {
             if (_configuration.InitializeDOS is null) {
                 _configuration.InitializeDOS = loader.DosInitializationNeeded;
-                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                    _loggerService.Verbose("InitializeDOS parameter not provided. Guessed value is: {InitializeDOS}",
+                if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                    _loggerService.LogTrace("InitializeDOS parameter not provided. Guessed value is: {InitializeDOS}",
                         _configuration.InitializeDOS);
                 }
             }

@@ -1,6 +1,7 @@
 namespace Spice86.Tests.Video;
 
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 
 using NSubstitute;
 

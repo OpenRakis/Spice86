@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.Devices.Sound.Midi;
 
 using Spice86.Core.Emulator.CPU;
+using Microsoft.Extensions.Logging;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Midi.MT32;
 using Spice86.Core.Emulator.IOPorts;
@@ -147,31 +148,31 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable {
     public override void WriteByte(ushort port, byte value) {
         switch (port) {
             case DataPort:
-                if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                    _logger.Verbose("MIDI: DataPort write value=0x{Value:X2}", value);
+                if (_logger.IsEnabled(LogLevel.Trace)) {
+                    _logger.LogTrace("MIDI: DataPort write value=0x{Value:X2}", value);
                 }
                 _midiMapper.SendByte(value);
                 break;
 
             case StatusPort:
-                if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-                    _logger.Debug("MIDI: StatusPort write value=0x{Value:X2}", value);
+                if (_logger.IsEnabled(LogLevel.Debug)) {
+                    _logger.LogDebug("MIDI: StatusPort write value=0x{Value:X2}", value);
                 }
                 switch (value) {
                     case ResetCommand:
                         State = GeneralMidiState.NormalMode;
                         _dataBytes.Clear();
                         _dataBytes.Enqueue(CommandAcknowledge);
-                        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-                            _logger.Debug("MIDI: ResetCommand handled; state={State}", State);
+                        if (_logger.IsEnabled(LogLevel.Debug)) {
+                            _logger.LogDebug("MIDI: ResetCommand handled; state={State}", State);
                         }
                         break;
 
                     case EnterUartModeCommand:
                         State = GeneralMidiState.UartMode;
                         _dataBytes.Enqueue(CommandAcknowledge);
-                        if (_logger.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-                            _logger.Debug("MIDI: EnterUartMode handled; state={State}", State);
+                        if (_logger.IsEnabled(LogLevel.Debug)) {
+                            _logger.LogDebug("MIDI: EnterUartMode handled; state={State}", State);
                         }
                         break;
                 }

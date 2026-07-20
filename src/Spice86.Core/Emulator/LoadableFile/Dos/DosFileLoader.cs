@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.LoadableFile.Dos;
 
 using Spice86.Core.Emulator.CPU;
+using Microsoft.Extensions.Logging;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 

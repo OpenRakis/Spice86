@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.OperatingSystem.Batch;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.Devices.CdRom;
 using Spice86.Shared.Emulator.Storage.CdRom;
@@ -27,8 +27,8 @@ internal sealed partial class DosBatchExecutionEngine {
         }
 
         if (trimmedArguments.Length == 0) {
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("BATCH: SET - listing all environment variables");
+            if (_loggerService.IsEnabled(LogLevel.Debug)) {
+                _loggerService.LogDebug("BATCH: SET - listing all environment variables");
             }
             IReadOnlyList<KeyValuePair<string, string>> entries = _host.GetEnvironmentVariablesSnapshot();
             for (int i = 0; i < entries.Count; i++) {
@@ -47,8 +47,8 @@ internal sealed partial class DosBatchExecutionEngine {
                 return false;
             }
 
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("BATCH: SET {Name}={Value}", name, value);
+            if (_loggerService.IsEnabled(LogLevel.Debug)) {
+                _loggerService.LogDebug("BATCH: SET {Name}={Value}", name, value);
             }
             _ = _host.TrySetEnvironmentVariable(name, value);
             return false;
@@ -69,8 +69,8 @@ internal sealed partial class DosBatchExecutionEngine {
         string rawArguments = arguments;
         string trimmedArguments = rawArguments.TrimStart();
         string normalizedArguments = trimmedArguments.TrimEnd();
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("BATCH: ECHO args={Args}", trimmedArguments);
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("BATCH: ECHO args={Args}", trimmedArguments);
         }
         if (normalizedArguments.Length == 0) {
             bool currentEcho = _batchFileContexts.Count > 0 ? _batchFileContexts.Peek().EchoEnabled : _echoEnabled;
@@ -116,8 +116,8 @@ internal sealed partial class DosBatchExecutionEngine {
 
     internal bool HandlePath(string arguments) {
         string trimmed = arguments.TrimStart();
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: PATH {Args}", trimmed);
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("BATCH: PATH {Args}", trimmed);
         }
         if (trimmed.Length == 0) {
             string? pathValue = _host.GetEnvironmentVariable("PATH");
@@ -141,8 +141,8 @@ internal sealed partial class DosBatchExecutionEngine {
     }
 
     internal void HandleCls() {
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: CLS - clearing screen");
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("BATCH: CLS - clearing screen");
         }
         _displayCommandHandler.ClearScreen();
     }
@@ -150,23 +150,23 @@ internal sealed partial class DosBatchExecutionEngine {
     private bool TryHandlePipeline(string[] pipelineSegments, out LaunchRequest launchRequest) {
         launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
 
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: Pipeline - building {Count} pipe segments", pipelineSegments.Length);
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("BATCH: Pipeline - building {Count} pipe segments", pipelineSegments.Length);
             for (int s = 0; s < pipelineSegments.Length; s++) {
-                _loggerService.Debug("BATCH: Pipeline segment[{Index}]: {Segment}", s, pipelineSegments[s]);
+                _loggerService.LogDebug("BATCH: Pipeline segment[{Index}]: {Segment}", s, pipelineSegments[s]);
             }
         }
 
         if (!TryBuildPipelineCommands(pipelineSegments, out string[] generatedCommands, out string[] temporaryDosFiles)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("BATCH: Pipeline - failed to build pipeline commands");
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning("BATCH: Pipeline - failed to build pipeline commands");
             }
             return false;
         }
 
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
             for (int g = 0; g < generatedCommands.Length; g++) {
-                _loggerService.Debug("BATCH: Pipeline generated command[{Index}]: {Cmd}", g, generatedCommands[g]);
+                _loggerService.LogDebug("BATCH: Pipeline generated command[{Index}]: {Cmd}", g, generatedCommands[g]);
             }
         }
 
@@ -244,8 +244,8 @@ internal sealed partial class DosBatchExecutionEngine {
     }
 
     private void CleanupTemporaryFiles(string[] temporaryDosFiles) {
-        if (temporaryDosFiles.Length > 0 && _loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("BATCH: Cleaning up {Count} temporary files", temporaryDosFiles.Length);
+        if (temporaryDosFiles.Length > 0 && _loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("BATCH: Cleaning up {Count} temporary files", temporaryDosFiles.Length);
         }
         for (int i = 0; i < temporaryDosFiles.Length; i++) {
             string? hostPath = _dosFileManager.GetFullHostPathFromDos(temporaryDosFiles[i]);
@@ -256,36 +256,36 @@ internal sealed partial class DosBatchExecutionEngine {
             try {
                 if (File.Exists(hostPath)) {
                     File.Delete(hostPath);
-                    if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                        _loggerService.Verbose("BATCH: Deleted temp file {DosPath} -> {HostPath}", temporaryDosFiles[i], hostPath);
+                    if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                        _loggerService.LogTrace("BATCH: Deleted temp file {DosPath} -> {HostPath}", temporaryDosFiles[i], hostPath);
                     }
                 }
             } catch (ArgumentNullException exception) {
-                _loggerService.Warning(exception,
+                _loggerService.LogWarning(exception,
                     "BATCH: Failed to delete temporary file because path is null {DosPath} -> {HostPath}",
                     temporaryDosFiles[i], hostPath);
             } catch (ArgumentException exception) {
-                _loggerService.Warning(exception,
+                _loggerService.LogWarning(exception,
                     "BATCH: Failed to delete temporary file because path is invalid {DosPath} -> {HostPath}",
                     temporaryDosFiles[i], hostPath);
             } catch (DirectoryNotFoundException exception) {
-                _loggerService.Warning(exception,
+                _loggerService.LogWarning(exception,
                     "BATCH: Failed to delete temporary file because directory was not found {DosPath} -> {HostPath}",
                     temporaryDosFiles[i], hostPath);
             } catch (PathTooLongException exception) {
-                _loggerService.Warning(exception,
+                _loggerService.LogWarning(exception,
                     "BATCH: Failed to delete temporary file because path is too long {DosPath} -> {HostPath}",
                     temporaryDosFiles[i], hostPath);
             } catch (IOException exception) {
-                _loggerService.Warning(exception,
+                _loggerService.LogWarning(exception,
                     "BATCH: Failed to delete temporary file because of an I/O error {DosPath} -> {HostPath}",
                     temporaryDosFiles[i], hostPath);
             } catch (NotSupportedException exception) {
-                _loggerService.Warning(exception,
+                _loggerService.LogWarning(exception,
                     "BATCH: Failed to delete temporary file because path format is not supported {DosPath} -> {HostPath}",
                     temporaryDosFiles[i], hostPath);
             } catch (UnauthorizedAccessException exception) {
-                _loggerService.Warning(exception,
+                _loggerService.LogWarning(exception,
                     "BATCH: Failed to delete temporary file because access was denied {DosPath} -> {HostPath}",
                     temporaryDosFiles[i], hostPath);
             }
@@ -328,8 +328,8 @@ internal sealed partial class DosBatchExecutionEngine {
 
     internal bool HandleType(string arguments) {
         string remaining = arguments.Trim();
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: TYPE {Args}", remaining);
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("BATCH: TYPE {Args}", remaining);
         }
         if (remaining.Length == 0) {
             WriteToStandardOutput("Required parameter missing\r\n");
@@ -369,9 +369,9 @@ internal sealed partial class DosBatchExecutionEngine {
     internal bool HandleChdir(string arguments) {
         ReadOnlySpan<char> trimmed = arguments.AsSpan().Trim();
         string? trimmedString = null;
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
             trimmedString ??= trimmed.Length == arguments.Length ? arguments : trimmed.ToString();
-            _loggerService.Debug("BATCH: CD/CHDIR args={Args}", trimmedString);
+            _loggerService.LogDebug("BATCH: CD/CHDIR args={Args}", trimmedString);
         }
         if (trimmed.Length == 0) {
             DosFileOperationResult result = _dosFileManager.GetCurrentDir(0, out string currentDir);
@@ -414,8 +414,8 @@ internal sealed partial class DosBatchExecutionEngine {
     }
 
     internal void HandleExit() {
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: EXIT - clearing all {Count} batch contexts", _batchFileContexts.Count);
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("BATCH: EXIT - clearing all {Count} batch contexts", _batchFileContexts.Count);
         }
         while (_batchFileContexts.Count > 0) {
             BatchFileContext context = _batchFileContexts.Pop();
@@ -425,8 +425,8 @@ internal sealed partial class DosBatchExecutionEngine {
 
     internal bool HandleMkdir(string arguments) {
         string trimmed = arguments.Trim();
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: MKDIR {Path}", trimmed);
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("BATCH: MKDIR {Path}", trimmed);
         }
         if (trimmed.Length == 0) {
             WriteToStandardOutput("Required parameter missing\r\n");
@@ -435,8 +435,8 @@ internal sealed partial class DosBatchExecutionEngine {
 
         DosFileOperationResult result = _dosFileManager.CreateDirectory(trimmed);
         if (result.IsError) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("BATCH: MKDIR failed for {Path}", trimmed);
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning("BATCH: MKDIR failed for {Path}", trimmed);
             }
             WriteToStandardOutput($"Unable to create directory\r\n");
         }
@@ -446,8 +446,8 @@ internal sealed partial class DosBatchExecutionEngine {
 
     internal bool HandleRmdir(string arguments) {
         string trimmed = arguments.Trim();
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: RMDIR {Path}", trimmed);
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("BATCH: RMDIR {Path}", trimmed);
         }
         if (trimmed.Length == 0) {
             WriteToStandardOutput("Required parameter missing\r\n");
@@ -456,8 +456,8 @@ internal sealed partial class DosBatchExecutionEngine {
 
         DosFileOperationResult result = _dosFileManager.RemoveDirectory(trimmed);
         if (result.IsError) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("BATCH: RMDIR failed for {Path}", trimmed);
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning("BATCH: RMDIR failed for {Path}", trimmed);
             }
             WriteToStandardOutput($"Invalid path, not directory, or directory not empty\r\n");
         }
@@ -467,8 +467,8 @@ internal sealed partial class DosBatchExecutionEngine {
 
     internal bool HandleDel(string arguments) {
         string trimmed = arguments.Trim();
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: DEL {FileSpec}", trimmed);
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("BATCH: DEL {FileSpec}", trimmed);
         }
         if (trimmed.Length == 0) {
             WriteToStandardOutput("Required parameter missing\r\n");
@@ -510,8 +510,8 @@ internal sealed partial class DosBatchExecutionEngine {
 
     internal bool HandleRen(string arguments) {
         string trimmed = arguments.Trim();
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: REN {Args}", trimmed);
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("BATCH: REN {Args}", trimmed);
         }
         if (!TryExtractFirstToken(trimmed, out string source, out string tail)) {
             WriteToStandardOutput("Insufficient parameters\r\n");
@@ -531,8 +531,8 @@ internal sealed partial class DosBatchExecutionEngine {
                 string matchedFile = matchingFiles[i];
                 string newName = ApplyWildcardTargetPattern(matchedFile, source, target);
                 DosFileOperationResult result = _dosFileManager.RenameFile(matchedFile, newName);
-                if (result.IsError && _loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning("BATCH: REN failed for {Source} -> {Target}", matchedFile, newName);
+                if (result.IsError && _loggerService.IsEnabled(LogLevel.Warning)) {
+                    _loggerService.LogWarning("BATCH: REN failed for {Source} -> {Target}", matchedFile, newName);
                 }
             }
         } else {
@@ -593,8 +593,8 @@ internal sealed partial class DosBatchExecutionEngine {
 
     internal bool HandleDir(string arguments) {
         string[] tokens = ParseArguments(arguments);
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: DIR {Args}", arguments);
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("BATCH: DIR {Args}", arguments);
         }
         bool bare = false;
         bool listDirectoriesOnly = false;
@@ -745,8 +745,8 @@ internal sealed partial class DosBatchExecutionEngine {
 
     internal bool HandleCopy(string arguments) {
         string trimmed = arguments.Trim();
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: COPY {Args}", trimmed);
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("BATCH: COPY {Args}", trimmed);
         }
 
         string[] parsedArguments = ParseArguments(trimmed);
@@ -899,8 +899,8 @@ internal sealed partial class DosBatchExecutionEngine {
 
     internal bool HandleMove(string arguments) {
         string trimmed = arguments.Trim();
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: MOVE {Args}", trimmed);
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("BATCH: MOVE {Args}", trimmed);
         }
         if (!TryExtractFirstToken(trimmed, out string source, out string tail)) {
             WriteToStandardOutput("Required parameter missing\r\n");
@@ -958,8 +958,8 @@ internal sealed partial class DosBatchExecutionEngine {
     }
 
     internal bool HandleDate(string arguments) {
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("BATCH: DATE {Args}", arguments);
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("BATCH: DATE {Args}", arguments);
         }
 
         string[] tokens = ParseArguments(arguments);
@@ -1017,8 +1017,8 @@ internal sealed partial class DosBatchExecutionEngine {
     }
 
     internal bool HandleTime(string arguments) {
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("BATCH: TIME {Args}", arguments);
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("BATCH: TIME {Args}", arguments);
         }
 
         string[] tokens = ParseArguments(arguments);
@@ -1097,8 +1097,8 @@ internal sealed partial class DosBatchExecutionEngine {
     }
 
     internal bool HandleVer() {
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("BATCH: VER");
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("BATCH: VER");
         }
         WriteToStandardOutput("Spice86 DOS version 5.00\r\n");
         return false;
@@ -1106,8 +1106,8 @@ internal sealed partial class DosBatchExecutionEngine {
 
     internal bool HandleVol(string arguments) {
         string trimmed = arguments.Trim();
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("BATCH: VOL {Args}", trimmed);
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("BATCH: VOL {Args}", trimmed);
         }
 
         char driveLetter = _driveManager.CurrentDrive.DriveLetter;
@@ -1191,8 +1191,8 @@ internal sealed partial class DosBatchExecutionEngine {
         }
 
         WriteToStandardOutput($"Drive {driveLetter}: mounted as {hostPath}\r\n");
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: MOUNT {Drive}: = {Path} (type={Type})", driveLetter, hostPath, driveType);
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("BATCH: MOUNT {Drive}: = {Path} (type={Type})", driveLetter, hostPath, driveType);
         }
         return false;
     }
@@ -1297,8 +1297,8 @@ internal sealed partial class DosBatchExecutionEngine {
             WriteToStandardOutput($"IMGMOUNT: unsupported image type '{imageType}'\r\n");
         }
 
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: IMGMOUNT {Drive}: = [{Paths}] (type={Type})",
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("BATCH: IMGMOUNT {Drive}: = [{Paths}] (type={Type})",
                 driveLetter, string.Join(", ", imagePaths), imageType);
         }
         return false;
@@ -1679,8 +1679,8 @@ internal sealed partial class DosBatchExecutionEngine {
 
         _driveManager.MountSubstDrive(driveLetter, hostPath, parts[1]);
         WriteToStandardOutput($"Drive {driveLetter}: SUBSTed to {hostPath}\r\n");
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: SUBST {Drive}: = {Path}", driveLetter, hostPath);
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("BATCH: SUBST {Drive}: = {Path}", driveLetter, hostPath);
         }
         return false;
     }
@@ -1693,8 +1693,8 @@ internal sealed partial class DosBatchExecutionEngine {
     internal void ChangeDrive(char driveLetter) {
         if (_driveManager.TryGetDrive<VirtualDrive>(driveLetter, out VirtualDrive? drive)) {
             _driveManager.CurrentDrive = drive;
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("BATCH: Changed drive to {Drive}:", driveLetter);
+            if (_loggerService.IsEnabled(LogLevel.Debug)) {
+                _loggerService.LogDebug("BATCH: Changed drive to {Drive}:", driveLetter);
             }
         } else {
             WriteToStandardOutput($"Drive {driveLetter} does not exist!\r\n");

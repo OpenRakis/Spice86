@@ -5,7 +5,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.VM;
@@ -174,7 +174,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IDis
             _ => "ASM code overrides: none."
         };
 
-        SetLogLevel(Configuration.SilencedLogs ? "Silent" : _loggerService.LogLevelSwitch.MinimumLevel.ToString());
+        SetLogLevel(Configuration.SilencedLogs ? "Silent" : _loggerService.MinimumLevel.ToString());
         UpdateMainTitle(_performanceViewModel.InstructionsPerMillisecond);
 
         bool ok = await Session.StartAsync(asmOverrideStatus);
@@ -195,12 +195,12 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IDis
     }
 
     [RelayCommand] public void SetLogLevelToSilent() => SetLogLevel("Silent");
-    [RelayCommand] public void SetLogLevelToVerbose() => SetLogLevel("Verbose");
+    [RelayCommand] public void SetLogLevelToVerbose() => SetLogLevel("Trace");
     [RelayCommand] public void SetLogLevelToDebug() => SetLogLevel("Debug");
     [RelayCommand] public void SetLogLevelToInformation() => SetLogLevel("Information");
     [RelayCommand] public void SetLogLevelToWarning() => SetLogLevel("Warning");
     [RelayCommand] public void SetLogLevelToError() => SetLogLevel("Error");
-    [RelayCommand] public void SetLogLevelToFatal() => SetLogLevel("Fatal");
+    [RelayCommand] public void SetLogLevelToFatal() => SetLogLevel("Critical");
 
     [RelayCommand]
     private void IncreaseTargetCycles() {
@@ -255,10 +255,10 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IDis
         if (logLevel == "Silent") {
             CurrentLogLevel = logLevel;
             _loggerService.AreLogsSilenced = true;
-            _loggerService.LogLevelSwitch.MinimumLevel = LogEventLevel.Fatal;
+            _loggerService.MinimumLevel = LogLevel.None;
         } else {
             _loggerService.AreLogsSilenced = false;
-            _loggerService.LogLevelSwitch.MinimumLevel = Enum.Parse<LogEventLevel>(logLevel);
+            _loggerService.MinimumLevel = Enum.Parse<LogLevel>(logLevel);
             CurrentLogLevel = logLevel;
         }
     }

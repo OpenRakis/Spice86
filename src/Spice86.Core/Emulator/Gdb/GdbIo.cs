@@ -1,6 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.Gdb;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -38,13 +38,13 @@ public sealed class GdbIo : IDisposable {
     /// </summary>
     public void WaitForConnection() {
         _tcpListener.Start();
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("GDB Server listening on port {Port}", ((IPEndPoint)_tcpListener.LocalEndpoint).Port);
+        if (_loggerService.IsEnabled(LogLevel.Information)) {
+            _loggerService.LogInformation("GDB Server listening on port {Port}", ((IPEndPoint)_tcpListener.LocalEndpoint).Port);
         }
         try {
             _socket = _tcpListener.AcceptSocket();
-            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                _loggerService.Information("Client connected: {@CanonicalHostName}", _socket.RemoteEndPoint);
+            if (_loggerService.IsEnabled(LogLevel.Information)) {
+                _loggerService.LogInformation("Client connected: {@CanonicalHostName}", _socket.RemoteEndPoint);
             }
             _stream = new NetworkStream(_socket);
         } catch (SocketException e) {
@@ -141,8 +141,8 @@ public sealed class GdbIo : IDisposable {
                 chr = _stream.ReadByte();
             }
             string payload = GetPayload(resBuilder);
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("Received command from GDB {GdbPayload}", payload);
+            if (_loggerService.IsEnabled(LogLevel.Debug)) {
+                _loggerService.LogDebug("Received command from GDB {GdbPayload}", payload);
             }
             return payload;
         } catch (SocketException e) {
@@ -159,15 +159,15 @@ public sealed class GdbIo : IDisposable {
     /// <param name="data">The response data to send.</param>
     public void SendResponse(string? data) {
         if (!IsClientConnected()) {
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("Cannot send response, client is not connected anymore");
+            if (_loggerService.IsEnabled(LogLevel.Debug)) {
+                _loggerService.LogDebug("Cannot send response, client is not connected anymore");
             }
             // Happens when the emulator thread reaches a breakpoint but the client is gone
             return;
         }
         if (data != null) {
-            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                _loggerService.Verbose("Sending response {ResponseData}", data);
+            if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                _loggerService.LogTrace("Sending response {ResponseData}", data);
             }
             try {
                 _stream?.Write(Encoding.UTF8.GetBytes(data));

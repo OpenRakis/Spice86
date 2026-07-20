@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.StateSerialization;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
@@ -85,8 +85,8 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
     /// Dumps all recorded data to their respective files.
     /// </summary>
     public void Write() {
-        if (LoggerService.IsEnabled(LogEventLevel.Information)) {
-            LoggerService.Information("Saving all data to {DumpDirectory}", DataDirectory);
+        if (LoggerService.IsEnabled(LogLevel.Information)) {
+            LoggerService.LogInformation("Saving all data to {DumpDirectory}", DataDirectory);
         }
         ExecutionAddresses executionAddresses = _executionAddressesExtractor.Extract();
         WriteToFile(CpuRegistersFile, () => File.WriteAllText(CpuRegistersFile, JsonSerializer.Serialize(_state)));
@@ -96,8 +96,8 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
             // The CFG and execution flow jump between overrides and are not representative of the program, so
             // the snapshot, CFG/reload/execution-flow dumps and the generated C# are all skipped: building the
             // snapshot or running the generator here would be wasted work on a non-representative graph.
-            if (LoggerService.IsEnabled(LogEventLevel.Information)) {
-                LoggerService.Information(
+            if (LoggerService.IsEnabled(LogLevel.Information)) {
+                LoggerService.LogInformation(
                     "Skipping {CfgBlocksFile}, {CfgPartitionsFile}, {CfgReloadFile}, {ExecutionFlowFile} and generated C#: code overrides are active, so the CFG and execution flow are not representative of the program.",
                     Path.GetFileName(CfgBlocksFile), Path.GetFileName(CfgPartitionsFile), Path.GetFileName(CfgReloadFile), Path.GetFileName(ExecutionFlowFile));
             }
@@ -121,8 +121,8 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
         // partitioned program, so the generated-C# dump is skipped rather than aborting the whole state dump.
         // Genuine generation failures on a full graph still propagate loudly out of WriteToFile.
         if (cfgCpuSnapshot.PartitionedProgram is null) {
-            if (LoggerService.IsEnabled(LogEventLevel.Information)) {
-                LoggerService.Information(
+            if (LoggerService.IsEnabled(LogLevel.Information)) {
+                LoggerService.LogInformation(
                     "Skipping {FileName}: the CFG graph is truncated, so no partitioned program is available for C# generation.",
                     Path.GetFileName(CfgGeneratedCSharpFile));
             }
@@ -145,12 +145,12 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
     }
 
     private void WriteToFile(string path, Action writeAction) {
-        if (LoggerService.IsEnabled(LogEventLevel.Information)) {
-            LoggerService.Information("Saving file {FileName}", Path.GetFileName(path));
+        if (LoggerService.IsEnabled(LogLevel.Information)) {
+            LoggerService.LogInformation("Saving file {FileName}", Path.GetFileName(path));
         }
         writeAction();
-        if (LoggerService.IsEnabled(LogEventLevel.Information)) {
-            LoggerService.Information("Saved file {FileName}", Path.GetFileName(path));
+        if (LoggerService.IsEnabled(LogLevel.Information)) {
+            LoggerService.LogInformation("Saved file {FileName}", Path.GetFileName(path));
         }
     }
 

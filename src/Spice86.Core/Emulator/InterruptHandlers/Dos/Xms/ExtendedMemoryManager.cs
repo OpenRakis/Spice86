@@ -1,6 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core;
 using Spice86.Core.Emulator.CPU;
@@ -442,8 +442,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
                 break;
 
             default:
-                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                    _loggerService.Error("Call for XMS function not known to anyone! {FunctionNumber:X2}", _state.AH);
+                if (_loggerService.IsEnabled(LogLevel.Error)) {
+                    _loggerService.LogError("Call for XMS function not known to anyone! {FunctionNumber:X2}", _state.AH);
                 }
                 _state.AX = 1;
                 _state.BL = (byte)XmsErrorCodes.NotImplemented;
@@ -609,8 +609,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// </para>
     /// </remarks>
     public void GlobalEnableA20() {
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("XMS GlobalEnableA20 called, current A20 state={CurrentState}",
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("XMS GlobalEnableA20 called, current A20 state={CurrentState}",
                 _a20Gate.IsEnabled);
         }
         // This appears to be how Microsoft HIMEM.SYS implements this
@@ -666,8 +666,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// </para>
     /// </remarks>
     public void GlobalDisableA20() {
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("XMS GlobalDisableA20 called, current A20 state={CurrentState}",
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("XMS GlobalDisableA20 called, current A20 state={CurrentState}",
                 _a20Gate.IsEnabled);
         }
         // This appears to be how Microsoft HIMEM.SYS implements this
@@ -724,8 +724,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// </para>
     /// </remarks>
     public void EnableLocalA20() {
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("XMS EnableLocalA20 called, current count={CurrentCount}",
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("XMS EnableLocalA20 called, current count={CurrentCount}",
                 _a20State.NumTimesEnabled);
         }
         XmsErrorCodes errorCode = EnableLocalA20Internal();
@@ -776,8 +776,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// </para>
     /// </remarks>
     public void DisableLocalA20() {
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("XMS DisableLocalA20 called, current count={CurrentCount}",
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("XMS DisableLocalA20 called, current count={CurrentCount}",
                 _a20State.NumTimesEnabled);
         }
         XmsErrorCodes errorCode = DisableLocalA20Internal();
@@ -913,13 +913,13 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         _state.DX = totalKB;
 
         if (totalKB == 0) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("XMS QueryFreeExtendedMemory: All memory is allocated");
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning("XMS QueryFreeExtendedMemory: All memory is allocated");
             }
             _state.BL = (byte)XmsErrorCodes.XmsOutOfMemory;
         } else {
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("XMS QueryFreeExtendedMemory returned: Largest={Largest}KB, Total={Total}KB",
+            if (_loggerService.IsEnabled(LogLevel.Debug)) {
+                _loggerService.LogDebug("XMS QueryFreeExtendedMemory returned: Largest={Largest}KB, Total={Total}KB",
                     largestKB, totalKB);
             }
             _state.BL = (byte)XmsErrorCodes.Ok;
@@ -965,8 +965,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// </para>
     /// </remarks>
     public void AllocateExtendedMemoryBlock() {
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("XMS AllocateExtendedMemoryBlock called: Size={SizeKB}KB", _state.DX);
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("XMS AllocateExtendedMemoryBlock called: Size={SizeKB}KB", _state.DX);
         }
 
         uint length = _state.DX * 1024u;
@@ -977,16 +977,16 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         XmsErrorCodes result = TryAllocate(length, out ushort handle);
 
         if (result == XmsErrorCodes.Ok) {
-            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                _loggerService.Verbose("XMS AllocateExtendedMemoryBlock succeeded: Handle={Handle:X4}h for {Size}KB",
+            if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                _loggerService.LogTrace("XMS AllocateExtendedMemoryBlock succeeded: Handle={Handle:X4}h for {Size}KB",
                     handle, _state.DX);
             }
             _state.BL = (byte)XmsErrorCodes.Ok;
             _state.DX = handle;
             _state.AX = 1;
         } else {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("XMS AllocateExtendedMemoryBlock failed: Error={Error:X2}h for {Size}KB",
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning("XMS AllocateExtendedMemoryBlock failed: Error={Error:X2}h for {Size}KB",
                     result, _state.DX);
             }
             _state.BL = (byte)result;
@@ -1032,13 +1032,13 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     public void FreeExtendedMemoryBlock() {
         int handle = _state.DX;
 
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("XMS FreeExtendedMemoryBlock called: Handle={Handle:X4}h", handle);
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("XMS FreeExtendedMemoryBlock called: Handle={Handle:X4}h", handle);
         }
 
         if (!_xmsHandles.TryGetValue(handle, out byte lockCount)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("XMS FreeExtendedMemoryBlock failed: Invalid handle {Handle:X4}h", handle);
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning("XMS FreeExtendedMemoryBlock failed: Invalid handle {Handle:X4}h", handle);
             }
             _state.AX = 0;
             _state.BL = (byte)XmsErrorCodes.XmsInvalidHandle;
@@ -1046,8 +1046,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         }
 
         if (lockCount > 0) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("XMS FreeExtendedMemoryBlock failed: Block is locked {LockCount} times", lockCount);
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning("XMS FreeExtendedMemoryBlock failed: Block is locked {LockCount} times", lockCount);
             }
             _state.AX = 0;
             _state.BL = (byte)XmsErrorCodes.XmsBlockLocked;
@@ -1055,8 +1055,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         }
 
         if (TryGetBlock(handle, out XmsBlock? block)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                _loggerService.Verbose("XMS FreeExtendedMemoryBlock: Freeing block at offset {Offset:X8}h, length {Length:X8}h ({LengthKB}KB)",
+            if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                _loggerService.LogTrace("XMS FreeExtendedMemoryBlock: Freeing block at offset {Offset:X8}h, length {Length:X8}h ({LengthKB}KB)",
                     block.Value.Offset, block.Value.Length, block.Value.Length / 1024);
             }
             XmsBlock freeBlock = block.Value.Free();
@@ -1065,8 +1065,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             _xmsHandles.Remove(handle);
             _state.BL = (byte)XmsErrorCodes.Ok;
             _state.AX = 1;
-            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                _loggerService.Verbose("XMS FreeExtendedMemoryBlock succeeded for handle {Handle:X4}h", handle);
+            if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                _loggerService.LogTrace("XMS FreeExtendedMemoryBlock succeeded for handle {Handle:X4}h", handle);
             }
         } else {
             _state.AX = 0;
@@ -1156,8 +1156,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         uint moveStructAddress = MemoryUtils.ToPhysicalAddress(_state.DS, _state.SI);
         var move = new ExtendedMemoryMoveStructure(_memory, moveStructAddress);
 
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("MoveExtendedMemoryBlock with param: {@MoveStructParam}", move);
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("MoveExtendedMemoryBlock with param: {@MoveStructParam}", move);
         }
 
         // "Length must be even" --Microsoft XMS Spec 3.0
@@ -1254,8 +1254,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             }
         }
 
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("MoveExtendedMemoryBlock: success!");
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("MoveExtendedMemoryBlock: success!");
         }
 
         _state.AX = 1; // Success
@@ -1280,13 +1280,13 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     public void LockExtendedMemoryBlock() {
         int handle = _state.DX;
 
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("XMS LockExtendedMemoryBlock called: Handle={Handle:X4}h", handle);
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("XMS LockExtendedMemoryBlock called: Handle={Handle:X4}h", handle);
         }
 
         if (!_xmsHandles.TryGetValue(handle, out byte lockCount)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("XMS LockExtendedMemoryBlock failed: Invalid handle {Handle:X4}h", handle);
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning("XMS LockExtendedMemoryBlock failed: Invalid handle {Handle:X4}h", handle);
             }
             _state.AX = 0;
             _state.BL = (byte)XmsErrorCodes.XmsInvalidHandle;
@@ -1294,8 +1294,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         }
 
         if (lockCount >= byte.MaxValue) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("XMS LockExtendedMemoryBlock failed: Lock count overflow for handle {Handle:X4}h", handle);
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning("XMS LockExtendedMemoryBlock failed: Lock count overflow for handle {Handle:X4}h", handle);
             }
             _state.AX = 0;
             _state.BL = (byte)XmsErrorCodes.XmsLockCountOverflow;
@@ -1305,8 +1305,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         _xmsHandles[handle] = (byte)(lockCount + 1);
 
         if (!TryGetBlock(handle, out XmsBlock? block)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("XMS LockExtendedMemoryBlock failed: Block not found for handle {Handle:X4}h", handle);
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning("XMS LockExtendedMemoryBlock failed: Block not found for handle {Handle:X4}h", handle);
             }
             _state.AX = 0;
             _state.BL = (byte)XmsErrorCodes.XmsInvalidHandle;
@@ -1315,8 +1315,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
 
         uint fullAddress = XmsBaseAddress + block.Value.Offset;
 
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("XMS LockExtendedMemoryBlock succeeded: Handle={Handle:X4}h, Address={Addr:X8}h, NewLockCount={LockCount}",
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("XMS LockExtendedMemoryBlock succeeded: Handle={Handle:X4}h, Address={Addr:X8}h, NewLockCount={LockCount}",
                 handle, fullAddress, _xmsHandles[handle]);
         }
 
@@ -1635,8 +1635,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         }
 
         if (totalKB == 0) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("XMS QueryAnyFreeExtendedMemory: All memory is allocated");
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning("XMS QueryAnyFreeExtendedMemory: All memory is allocated");
             }
             _state.EAX = 0;
             _state.ECX = 0;
@@ -1648,8 +1648,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
 
         _state.ECX = highestEndingAddressOfAnyXmsBlock;
 
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("XMS QueryAnyFreeExtendedMemory returned: Largest={Largest}KB, Total={Total}KB",
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("XMS QueryAnyFreeExtendedMemory returned: Largest={Largest}KB, Total={Total}KB",
                 largestKB, totalKB);
         }
     }
@@ -1726,13 +1726,13 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     }
 
     private XmsErrorCodes TryAllocate(uint length, out ushort handle) {
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("XMS TryAllocate called: RequestedLength={Length} bytes", length);
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("XMS TryAllocate called: RequestedLength={Length} bytes", length);
         }
 
         if (!TryGetFreeHandle(out ushort? freeHandle)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("XMS TryAllocate failed: All {MaxHandles} handles in use", MaxHandles);
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning("XMS TryAllocate failed: All {MaxHandles} handles in use", MaxHandles);
             }
             handle = 0;
             return XmsErrorCodes.XmsOutOfHandles;
@@ -1745,8 +1745,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             _xmsBlocksLinkedList.AddLast(new XmsBlock(handle, 0, 0, free: false));
             _xmsHandles.Add(handle, 0);
 
-            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                _loggerService.Verbose("XMS TryAllocate: Allocated zero-length block with handle {Handle}", handle);
+            if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                _loggerService.LogTrace("XMS TryAllocate: Allocated zero-length block with handle {Handle}", handle);
             }
             return XmsErrorCodes.Ok;
         }
@@ -1764,8 +1764,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         }
 
         if (smallestFreeBlock == null) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("XMS TryAllocate failed: No free blocks large enough for {Length} bytes (largest={Largest} bytes)",
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning("XMS TryAllocate failed: No free blocks large enough for {Length} bytes (largest={Largest} bytes)",
                     length, LargestFreeBlockLength);
             }
             return XmsErrorCodes.XmsOutOfMemory;
@@ -1774,12 +1774,12 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         XmsBlock[] allocatedBlocks = smallestFreeBlock.Value.Allocate(handle, length);
         _xmsBlocksLinkedList.Replace((XmsBlock)smallestFreeBlock, allocatedBlocks);
 
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("XMS TryAllocate: Allocated block of {Length} bytes from free block of {FreeLength} bytes, handle={Handle}",
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("XMS TryAllocate: Allocated block of {Length} bytes from free block of {FreeLength} bytes, handle={Handle}",
                 length, smallestFreeBlock.Value.Length, handle);
 
             if (allocatedBlocks.Length > 1) {
-                _loggerService.Verbose("XMS TryAllocate: Created remainder free block of {RemainderLength} bytes",
+                _loggerService.LogTrace("XMS TryAllocate: Created remainder free block of {RemainderLength} bytes",
                     allocatedBlocks[1].Length);
             }
         }
@@ -1823,8 +1823,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
 
     private void MergeFreeBlocks(XmsBlock firstBlock) {
         if (!firstBlock.IsFree) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("XMS MergeFreeBlocks called with non-free block at offset {Offset:X8}h", firstBlock.Offset);
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning("XMS MergeFreeBlocks called with non-free block at offset {Offset:X8}h", firstBlock.Offset);
             }
             return;
         }
@@ -1839,8 +1839,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             return;
         }
 
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("XMS MergeFreeBlocks: Merging blocks at {Offset1:X8}h ({Length1} bytes) and {Offset2:X8}h ({Length2} bytes)",
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("XMS MergeFreeBlocks: Merging blocks at {Offset1:X8}h ({Length1} bytes) and {Offset2:X8}h ({Length2} bytes)",
                 firstBlock.Offset, firstBlock.Length, nextNode.Value.Offset, nextNode.Value.Length);
         }
 
@@ -1849,8 +1849,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
             _xmsBlocksLinkedList.Remove(nextNode);
             _xmsBlocksLinkedList.Replace(firstBlock, newBlock.Free());
 
-            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                _loggerService.Verbose("XMS MergeFreeBlocks: Created merged free block at {Offset:X8}h ({Length} bytes)",
+            if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                _loggerService.LogTrace("XMS MergeFreeBlocks: Created merged free block at {Offset:X8}h ({Length} bytes)",
                     newBlock.Offset, newBlock.Length);
             }
         } else if (nextNode.Value.IsFree && nextNode.Value.Length is 0) {
@@ -1898,8 +1898,8 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         bool oldState = _a20Gate.IsEnabled;
         _a20Gate.IsEnabled = enable;
         if (oldState != enable) {
-            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                _loggerService.Verbose("A20 line state changed from {0} to {1}", oldState, enable);
+            if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                _loggerService.LogTrace("A20 line state changed from {0} to {1}", oldState, enable);
             }
         }
     }

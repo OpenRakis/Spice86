@@ -3,7 +3,7 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Shared.Interfaces;
@@ -80,8 +80,8 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     /// <param name="port">The port number that was read.</param>
     /// <param name="methodName">The name of the calling method. Automatically populated if not specified.</param>
     protected void LogUnhandledPortRead(ushort port, [CallerMemberName] string? methodName = null) {
-        if (_failOnUnhandledPort && _loggerService.IsEnabled(LogEventLevel.Error)) {
-            _loggerService.Error("Unhandled port read: 0x{PortNumber:X4} in {MethodName}", port, methodName);
+        if (_failOnUnhandledPort && _loggerService.IsEnabled(LogLevel.Error)) {
+            _loggerService.LogError("Unhandled port read: 0x{PortNumber:X4} in {MethodName}", port, methodName);
         }
     }
 
@@ -94,8 +94,8 @@ public abstract class DefaultIOPortHandler : IIOPortHandler {
     /// <param name="methodName">The name of the calling method. Automatically populated if not specified.</param>
     protected void LogUnhandledPortWrite<T>(ushort port, T value, [CallerMemberName] string? methodName = null)
         where T : INumber<T> {
-        if (_failOnUnhandledPort && _loggerService.IsEnabled(LogEventLevel.Error)) {
-            _loggerService.Error("Unhandled port write: 0x{PortNumber:X4}, 0x{Value:X4} in {MethodName}", port, value,
+        if (_failOnUnhandledPort && _loggerService.IsEnabled(LogLevel.Error)) {
+            _loggerService.LogError("Unhandled port write: 0x{PortNumber:X4}, 0x{Value:X4} in {MethodName}", port, value,
                 methodName);
         }
     }

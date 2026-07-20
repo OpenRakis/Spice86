@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Input.Mouse;
@@ -152,8 +152,8 @@ public class MouseDriver : IMouseDriver {
     private void EnsureUserRoutineWillBeCalledNextInstruction() {
         // Address is written to the call instruction that is supposed to be just after this code runs.
         _userHandlerAddressSwitcher.SetAddress(_userCallback.Segment, _userCallback.Offset);
-        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-            _logger.Verbose("{ClassName} {MethodName}: calling {Segment:X4}:{Offset:X4} with AX={AX:X4}, BX={BX:X4}, CX={CX:X4}, DX={DX:X4}, SI={SI:X4}, DI={DI:X4}",
+        if (_logger.IsEnabled(LogLevel.Trace)) {
+            _logger.LogTrace("{ClassName} {MethodName}: calling {Segment:X4}:{Offset:X4} with AX={AX:X4}, BX={BX:X4}, CX={CX:X4}, DX={DX:X4}, SI={SI:X4}, DI={DI:X4}",
                 nameof(MouseDriver), nameof(BeforeUserHandlerExecution), _userCallback.Segment, _userCallback.Offset, _state.AX, _state.BX, _state.CX, _state.DX, _state.SI, _state.DI);
         }
     }

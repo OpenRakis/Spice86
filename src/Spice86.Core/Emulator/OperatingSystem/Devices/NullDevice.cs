@@ -1,6 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.OperatingSystem.Devices;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
@@ -30,38 +30,38 @@ public class NullDevice : VirtualDeviceBase {
 
     public override void Flush() {
         // No-op for null device
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Flushing {@Device}", this);
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("Flushing {@Device}", this);
         }
     }
 
     public override int Read(byte[] buffer, int offset, int count) {
         // No-op for null device
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Reading {@Device}", this);
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("Reading {@Device}", this);
         }
         return 0;
     }
 
     public override long Seek(long offset, SeekOrigin origin) {
         // No-op for null device
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Seeking {@Device}", this);
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("Seeking {@Device}", this);
         }
         return 0;
     }
 
     public override void SetLength(long value) {
         // No-op for null device
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Setting length {@Device}", this);
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("Setting length {@Device}", this);
         }
     }
 
     public override bool TryReadFromControlChannel(uint address, ushort size,
         [NotNullWhen(true)] out ushort? returnCode) {
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Reading from control channel of {@Device}", this);
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("Reading from control channel of {@Device}", this);
         }
 
         returnCode = null;
@@ -70,8 +70,8 @@ public class NullDevice : VirtualDeviceBase {
 
     public override bool TryWriteToControlChannel(uint address, ushort size,
         [NotNullWhen(true)] out ushort? returnCode) {
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Writing to control channel of {@Device}", this);
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("Writing to control channel of {@Device}", this);
         }
         returnCode = null;
         return false;
@@ -79,8 +79,8 @@ public class NullDevice : VirtualDeviceBase {
 
     public override void Write(byte[] buffer, int offset, int count) {
         // No-op for null device
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Writing {@Device}", this);
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("Writing {@Device}", this);
         }
     }
 }

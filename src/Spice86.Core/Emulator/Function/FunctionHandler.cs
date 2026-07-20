@@ -2,7 +2,7 @@
 
 using System.Text;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
@@ -90,13 +90,13 @@ public class FunctionHandler {
         FunctionCall currentFunctionCall = new(callType, entryAddress, expectedReturnAddress, CurrentStackAddress, call);
         _callerStack.Push(currentFunctionCall);
         if (_callerStack.Count > MaxCallStackDepth) {
-            _loggerService.Warning(
+            _loggerService.LogWarning(
                 "CALL STACK DEPTH EXCEEDED {MaxDepth}! Something is very wrong with the emulated code. Function tracking will be reset. Further returns may be flagged as misaligned.",
                 MaxCallStackDepth);
             _callerStack.Clear();
         }
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("{Depth} Calling {CurrentFunction} from {Caller}", _callerStack.Count, currentFunction, callerInfo);
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("{Depth} Calling {CurrentFunction} from {Caller}", _callerStack.Count, currentFunction, callerInfo);
         }
 
         currentFunction.Enter(callerInfo);
@@ -168,8 +168,8 @@ public class FunctionHandler {
     public void Ret(CallType returnCallType, CfgInstruction? ret) {
         FunctionCall? currentFunctionCallOrNull = CurrentFunctionCall;
         if (currentFunctionCallOrNull == null) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("Returning but no call was done before!!. Instruction is {Instruction}", ret);
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning("Returning but no call was done before!!. Instruction is {Instruction}", ret);
             }
             return;
         }
@@ -177,7 +177,7 @@ public class FunctionHandler {
         if (returnCallType == CallType.MACHINE) {
             _callerStack.TryPop(out currentFunctionCall);
             if (currentFunctionCall.CallType != returnCallType) {
-                _loggerService.Warning("Exiting machine entry point but current function does not seem to be entry point.");
+                _loggerService.LogWarning("Exiting machine entry point but current function does not seem to be entry point.");
             }
             return;
         }
@@ -209,9 +209,9 @@ public class FunctionHandler {
     }
 
     private void LogVerboseReturn(CallType returnCallType, FunctionCall currentFunctionCall) {
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
             FunctionInformation? currentFunctionInformation = _functionCatalogue.GetFunctionInformation(currentFunctionCall);
-            _loggerService.Verbose("Returning from function {From} to function {To} ({TargetAddress})", 
+            _loggerService.LogTrace("Returning from function {From} to function {To} ({TargetAddress})", 
                 currentFunctionInformation,
                 _functionCatalogue.GetFunctionInformation(CurrentFunctionCall),
                 PeekReturnAddressOnMachineStack(returnCallType));
@@ -252,7 +252,7 @@ public class FunctionHandler {
     private void LogUnalignedReturn(FunctionCall currentFunctionCall, FunctionInformation currentFunctionInformation,
         CallType returnCallType, SegmentedAddress? expectedReturnAddress,
         SegmentedAddress actualReturnAddress) {
-        if (!_loggerService.IsEnabled(LogEventLevel.Warning)) {
+        if (!_loggerService.IsEnabled(LogLevel.Warning)) {
             return;
         }
 
@@ -277,7 +277,7 @@ public class FunctionHandler {
             additionalInformation += "Return address on stack was modified";
         }
 
-        _loggerService.Warning("""
+        _loggerService.LogWarning("""
                                PROGRAM IS NOT WELL BEHAVED SO CALL STACK COULD NOT BE TRACEABLE ANYMORE!
                                Current function {CurrentFunctionInformation} return instruction {CurrentFunctionReturn} will not go to the expected place:
                                - Expected return at {CallType} call time was {ExpectedReturnAddress} but return will go to {ActualReturnAddress}

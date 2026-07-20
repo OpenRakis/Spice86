@@ -1,6 +1,7 @@
 namespace Spice86.Tests.Video;
 
 using NSubstitute;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Devices.Video.Registers.Graphics;

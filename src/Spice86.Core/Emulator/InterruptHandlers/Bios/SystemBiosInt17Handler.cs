@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Bios;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
@@ -37,14 +37,14 @@ public sealed class SystemBiosInt17Handler : InterruptHandler {
 
     public override void Run() {
         byte operation = State.AH;
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("BIOS INT17H: AH=0x{Function:X2} DX=0x{PrinterIndex:X4} AL=0x{Character:X2}",
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("BIOS INT17H: AH=0x{Function:X2} DX=0x{PrinterIndex:X4} AL=0x{Character:X2}",
                 operation, State.DX, State.AL);
         }
 
         if (!HasRunnable(operation)) {
-            if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-                LoggerService.Warning("BIOS INT17H: Unsupported function AH=0x{Function:X2}", operation);
+            if (LoggerService.IsEnabled(LogLevel.Warning)) {
+                LoggerService.LogWarning("BIOS INT17H: Unsupported function AH=0x{Function:X2}", operation);
             }
             SetCarryFlag(true, true);
             return;
@@ -79,8 +79,8 @@ public sealed class SystemBiosInt17Handler : InterruptHandler {
 
     private void WriteCharacter(bool calledFromVm) {
         ushort printerIndex = State.DX;
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("BIOS INT17H: Write character 0x{Character:X2} to printer index {PrinterIndex}",
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("BIOS INT17H: Write character 0x{Character:X2} to printer index {PrinterIndex}",
                 State.AL, printerIndex);
         }
 
@@ -89,8 +89,8 @@ public sealed class SystemBiosInt17Handler : InterruptHandler {
     }
 
     private void InitializePrinterPort(bool calledFromVm) {
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("BIOS INT17H: Initialize printer index {PrinterIndex}", State.DX);
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("BIOS INT17H: Initialize printer index {PrinterIndex}", State.DX);
         }
 
         State.AH = PrinterReadyStatus;
@@ -98,8 +98,8 @@ public sealed class SystemBiosInt17Handler : InterruptHandler {
     }
 
     private void GetPrinterStatus(bool calledFromVm) {
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("BIOS INT17H: Get status for printer index {PrinterIndex}", State.DX);
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("BIOS INT17H: Get status for printer index {PrinterIndex}", State.DX);
         }
 
         State.AH = PrinterReadyStatus;

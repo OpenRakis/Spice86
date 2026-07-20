@@ -1,6 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.OperatingSystem.Devices;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Shared.Interfaces;
@@ -35,27 +35,27 @@ public class PrinterDevice : CharacterDevice {
 
     public override void Write(byte[] buffer, int offset, int count) {
         string output = System.Text.Encoding.ASCII.GetString(buffer, offset, count);
-        if(_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("Writing to printer: {Output}", output);
+        if(_loggerService.IsEnabled(LogLevel.Information)) {
+            _loggerService.LogInformation("Writing to printer: {Output}", output);
         }
     }
 
     public override void Flush() {
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("Flushing printer");
+        if (_loggerService.IsEnabled(LogLevel.Information)) {
+            _loggerService.LogInformation("Flushing printer");
         }
     }
 
     public override int Read(byte[] buffer, int offset, int count) {
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("Reading printer");
+        if (_loggerService.IsEnabled(LogLevel.Information)) {
+            _loggerService.LogInformation("Reading printer");
         }
         return 0;
     }
 
     public override long Seek(long offset, SeekOrigin origin) {
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("Seeking printer");
+        if (_loggerService.IsEnabled(LogLevel.Information)) {
+            _loggerService.LogInformation("Seeking printer");
         }
         return 0;
     }

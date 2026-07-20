@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -123,7 +123,7 @@ public sealed class DmaChannel {
         _logger = logger;
         _wrappingMask = wrappingMask;
 
-        _logger.Debug(
+        _logger.LogDebug(
             "DMA[{Channel}]: Constructed {Width}-bit channel with wrapping mask 0x{Mask:X}",
             ChannelNumber,
             Is16Bit ? 16 : 8,
@@ -154,7 +154,7 @@ public sealed class DmaChannel {
             return;
         }
 
-        _logger.Debug("DMA: Shutting down {Owner} on {Width}-bit DMA channel {Channel}", _reservationOwnerName,
+        _logger.LogDebug("DMA: Shutting down {Owner} on {Width}-bit DMA channel {Channel}", _reservationOwnerName,
             Is16Bit ? 16 : 8, ChannelNumber);
 
         EvictReserver();
@@ -164,7 +164,7 @@ public sealed class DmaChannel {
     ///     Notifies listeners about a change in the channel state.
     /// </summary>
     private void DoCallback(DmaEvent dmaEvent) {
-        _logger.Verbose("DMA[{Channel}]: Emitting {Event} event", ChannelNumber, dmaEvent);
+        _logger.LogTrace("DMA[{Channel}]: Emitting {Event} event", ChannelNumber, dmaEvent);
         _callback?.Invoke(this, dmaEvent);
     }
 
@@ -173,7 +173,7 @@ public sealed class DmaChannel {
     /// </summary>
     public void SetMask(bool mask) {
         IsMasked = mask;
-        _logger.Debug("DMA[{Channel}]: Mask set to {Masked}", ChannelNumber, mask);
+        _logger.LogDebug("DMA[{Channel}]: Mask set to {Masked}", ChannelNumber, mask);
         DoCallback(IsMasked ? DmaEvent.IsMasked : DmaEvent.IsUnmasked);
     }
 
@@ -189,7 +189,7 @@ public sealed class DmaChannel {
             ClearRequest();
         }
 
-        _logger.Debug("DMA[{Channel}]: Callback {State}", ChannelNumber, _callback != null ? "registered" : "cleared");
+        _logger.LogDebug("DMA[{Channel}]: Callback {State}", ChannelNumber, _callback != null ? "registered" : "cleared");
     }
 
     /// <summary>
@@ -197,7 +197,7 @@ public sealed class DmaChannel {
     /// </summary>
     private void ReachedTerminalCount() {
         HasReachedTerminalCount = true;
-        _logger.Debug("DMA[{Channel}]: Reached terminal count (auto-init {AutoInit})", ChannelNumber,
+        _logger.LogDebug("DMA[{Channel}]: Reached terminal count (auto-init {AutoInit})", ChannelNumber,
             IsAutoiniting);
 
         DoCallback(DmaEvent.ReachedTerminalCount);
@@ -209,7 +209,7 @@ public sealed class DmaChannel {
     public void SetPage(byte value) {
         PageRegisterValue = value;
         PageBase = ((uint)PageRegisterValue >> ShiftCount) << (16 + ShiftCount);
-        _logger.Debug("DMA[{Channel}]: Page register set to 0x{Page:X2} (base 0x{Base:X6})", ChannelNumber,
+        _logger.LogDebug("DMA[{Channel}]: Page register set to 0x{Page:X2} (base 0x{Base:X6})", ChannelNumber,
             PageRegisterValue,
             PageBase);
     }
@@ -219,7 +219,7 @@ public sealed class DmaChannel {
     /// </summary>
     private void RaiseRequest() {
         HasRaisedRequest = true;
-        _logger.Verbose("DMA[{Channel}]: Request line asserted", ChannelNumber);
+        _logger.LogTrace("DMA[{Channel}]: Request line asserted", ChannelNumber);
     }
 
     /// <summary>
@@ -227,7 +227,7 @@ public sealed class DmaChannel {
     /// </summary>
     internal void ClearRequest() {
         HasRaisedRequest = false;
-        _logger.Verbose("DMA[{Channel}]: Request line cleared", ChannelNumber);
+        _logger.LogTrace("DMA[{Channel}]: Request line cleared", ChannelNumber);
     }
 
     /// <summary>
@@ -240,8 +240,8 @@ public sealed class DmaChannel {
                 nameof(destinationBuffer));
         }
 
-        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-            _logger.Verbose(
+        if (_logger.IsEnabled(LogLevel.Trace)) {
+            _logger.LogTrace(
                 "DMA[{Channel}]: Read scheduled for {Words} words ({Bytes} bytes) into buffer length {BufferLength}",
                 ChannelNumber,
                 words,
@@ -262,8 +262,8 @@ public sealed class DmaChannel {
                 nameof(sourceBuffer));
         }
 
-        if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-            _logger.Verbose(
+        if (_logger.IsEnabled(LogLevel.Trace)) {
+            _logger.LogTrace(
                 "DMA[{Channel}]: Write scheduled for {Words} words ({Bytes} bytes) from buffer length {BufferLength}",
                 ChannelNumber,
                 words,
@@ -297,7 +297,7 @@ public sealed class DmaChannel {
         _evictCallback = null;
         _reservationOwnerName = null;
 
-        _logger.Debug("DMA[{Channel}]: Registers reset to defaults", ChannelNumber);
+        _logger.LogDebug("DMA[{Channel}]: Registers reset to defaults", ChannelNumber);
     }
 
     /// <summary>
@@ -308,8 +308,8 @@ public sealed class DmaChannel {
         ArgumentNullException.ThrowIfNull(evictCallback);
 
         if (HasReservation()) {
-            if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                _logger.Debug("DMA: {Owner} is replacing {PreviousOwner} on {Width}-bit DMA channel {Channel}",
+            if (_logger.IsEnabled(LogLevel.Debug)) {
+                _logger.LogDebug("DMA: {Owner} is replacing {PreviousOwner} on {Width}-bit DMA channel {Channel}",
                     ownerName,
                     _reservationOwnerName,
                     Is16Bit ? 16 : 8,
@@ -323,7 +323,7 @@ public sealed class DmaChannel {
         _evictCallback = evictCallback;
         _reservationOwnerName = ownerName;
 
-        _logger.Debug("DMA[{Channel}]: Reserved for {Owner}", ChannelNumber, ownerName);
+        _logger.LogDebug("DMA[{Channel}]: Reserved for {Owner}", ChannelNumber, ownerName);
     }
 
     /// <summary>
@@ -332,13 +332,13 @@ public sealed class DmaChannel {
     private int ReadOrWrite(DmaDirection direction, int words, Span<byte> readBuffer, ReadOnlySpan<byte> writeBuffer) {
         switch (words) {
             case < 0:
-                _logger.Warning(
+                _logger.LogWarning(
                     "DMA[{Channel}]: Requested transfer with negative word count {Words}; treating as zero",
                     ChannelNumber,
                     words);
                 break;
             case > ushort.MaxValue:
-                _logger.Warning(
+                _logger.LogWarning(
                     "DMA[{Channel}]: Requested transfer of {Words} words exceeds counter width; clamping to {MaxWords}",
                     ChannelNumber,
                     words,
@@ -450,7 +450,7 @@ public sealed class DmaChannel {
     private void EvictReserver() {
         Debug.Assert(HasReservation());
         _evictCallback?.Invoke();
-        _logger.Debug("DMA[{Channel}]: Reservation evicted (previous owner {Owner})", ChannelNumber,
+        _logger.LogDebug("DMA[{Channel}]: Reservation evicted (previous owner {Owner})", ChannelNumber,
             _reservationOwnerName);
 
         _evictCallback = null;

@@ -1,6 +1,7 @@
 namespace Spice86.Tests.Utility;
 
 using Spice86.Core.Emulator.CPU;
+using Microsoft.Extensions.Logging;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Shared.Interfaces;
 

@@ -1,6 +1,7 @@
 namespace Spice86.Tests.Emulator.Devices.Sound;
 
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;

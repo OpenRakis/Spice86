@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.StateSerialization;
 
 using Spice86.Core.Emulator.Function;
+using Microsoft.Extensions.Logging;
 using Spice86.Core.Emulator.StateSerialization.CfgReload;
 using Spice86.Shared.Emulator.VM.Breakpoint.Serializable;
 using Spice86.Shared.Interfaces;
@@ -53,8 +54,8 @@ public class EmulationStateDataReader : EmulationStateDataIoHandler {
             return new();
         }
 
-        if (LoggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            LoggerService.Information("Loaded {Count} breakpoints", res.Breakpoints.Count);
+        if (LoggerService.IsEnabled(LogLevel.Information)) {
+            LoggerService.LogInformation("Loaded {Count} breakpoints", res.Breakpoints.Count);
         }
 
         return res;
@@ -75,8 +76,8 @@ public class EmulationStateDataReader : EmulationStateDataIoHandler {
         }
 
         CfgReloadDump? dump = JsonSerializer.Deserialize<CfgReloadDump>(jsonString, CfgReloadSerialization.Options);
-        if (dump != null && LoggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            LoggerService.Information("Loaded CFG reload dump with {Count} nodes", dump.Nodes.Length);
+        if (dump != null && LoggerService.IsEnabled(LogLevel.Information)) {
+            LoggerService.LogInformation("Loaded CFG reload dump with {Count} nodes", dump.Nodes.Length);
         }
 
         return dump;

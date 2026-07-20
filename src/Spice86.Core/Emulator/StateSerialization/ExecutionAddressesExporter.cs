@@ -1,6 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.StateSerialization;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Interfaces;
@@ -41,8 +41,8 @@ public class ExecutionAddressesExporter {
     /// <exception cref="UnrecoverableException">Thrown if the file at the specified <paramref name="filePath"/> is not valid JSON.</exception>
     public ExecutionAddresses ReadFromFileOrCreate(string filePath) {
         if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("File path \"{FilePath}\" is blank or doesn't exist", filePath);
+            if (_loggerService.IsEnabled(LogLevel.Debug)) {
+                _loggerService.LogDebug("File path \"{FilePath}\" is blank or doesn't exist", filePath);
             }
             return new ();
         }

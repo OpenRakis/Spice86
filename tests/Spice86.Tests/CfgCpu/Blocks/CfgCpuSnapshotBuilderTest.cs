@@ -4,7 +4,7 @@ using FluentAssertions;
 
 using NSubstitute;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
@@ -35,7 +35,7 @@ public sealed class CfgCpuSnapshotBuilderTest : IDisposable {
     public CfgCpuSnapshotBuilderTest() {
         _contextManagerFactory = new ExecutionContextManagerFactory(_functionCatalogue);
         _contextManager = _contextManagerFactory.ContextManager;
-        _loggerService.IsEnabled(Arg.Any<LogEventLevel>()).Returns(true);
+        _loggerService.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
     }
 
     public void Dispose() {
@@ -65,7 +65,12 @@ public sealed class CfgCpuSnapshotBuilderTest : IDisposable {
         snapshot.Exported.Graph.Truncated.Should().BeFalse();
         snapshot.Exported.Graph.Blocks.Select(node => node.Block.Id)
             .Should().Contain([100, 101], "the full block graph must survive a partitioning failure");
-        _loggerService.Received().Error(Arg.Any<InvalidOperationException>(), Arg.Any<string>(), Arg.Any<string>());
+        _loggerService.Received().Log(
+            LogLevel.Error,
+            Arg.Any<EventId>(),
+            Arg.Any<object>(),
+            Arg.Any<InvalidOperationException>(),
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     private void RegisterEntry(CfgInstruction instruction) {

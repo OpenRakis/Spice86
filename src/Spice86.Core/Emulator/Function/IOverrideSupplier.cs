@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Function;
 
 using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 

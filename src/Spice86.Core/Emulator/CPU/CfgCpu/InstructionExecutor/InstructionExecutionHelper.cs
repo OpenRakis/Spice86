@@ -2,7 +2,7 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 
 using System.Numerics;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
@@ -226,8 +226,8 @@ public class InstructionExecutionHelper {
             throw new InvalidVMOperationException(State, cpuException);
         }
 
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug(cpuException,"{ExceptionType} in {MethodName}", nameof(CpuException), nameof(HandleCpuException));
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug(cpuException,"{ExceptionType} in {MethodName}", nameof(CpuException), nameof(HandleCpuException));
         }
         // Real-mode interrupts do NOT push an error code on the stack — that is a
         // protected-mode behavior. Spice86 is real-mode only, so any error code

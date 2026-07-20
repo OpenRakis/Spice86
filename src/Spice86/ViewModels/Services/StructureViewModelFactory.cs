@@ -1,6 +1,7 @@
 namespace Spice86.ViewModels.Services;
 
 using AvaloniaHex.Document;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
@@ -60,7 +61,7 @@ public class StructureViewModelFactory : IStructureViewModelFactory {
     }
 
     public void Parse(string headerFilePath) {
-        _logger.Information("Parsing {HeaderFilePath} for structure information", headerFilePath);
+        _logger.LogInformation("Parsing {HeaderFilePath} for structure information", headerFilePath);
         if (_parser == null) {
             throw new InvalidOperationException("Factory not initialized.");
         }

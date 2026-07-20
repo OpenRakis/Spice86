@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Mscdex;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.CdRom;
@@ -141,8 +141,8 @@ public sealed class Mscdex {
             _drives.Add(drive);
         }
         _audioStates[drive.DriveLetter] = new MscdexAudioState();
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("MSCDEX: Registered drive {Drive}: (index {Index})", drive.DriveLetter, drive.DriveIndex);
+        if (_loggerService.IsEnabled(LogLevel.Information)) {
+            _loggerService.LogInformation("MSCDEX: Registered drive {Drive}: (index {Index})", drive.DriveLetter, drive.DriveIndex);
         }
     }
 
@@ -160,8 +160,8 @@ public sealed class Mscdex {
 
             _drives.RemoveAt(i);
             _audioStates.Remove(upper);
-            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                _loggerService.Information("MSCDEX: Removed drive {Drive}:", upper);
+            if (_loggerService.IsEnabled(LogLevel.Information)) {
+                _loggerService.LogInformation("MSCDEX: Removed drive {Drive}:", upper);
             }
             return true;
         }
@@ -411,8 +411,8 @@ public sealed class Mscdex {
     /// </summary>
     /// <returns><see langword="true" /> if an error occured. <see langword="false"> otherwise.</returns>
     private bool GetDirectoryEntry() {
-        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-            _loggerService.Warning("{MethodName}: not implemented", nameof(GetDirectoryEntry));
+        if (_loggerService.IsEnabled(LogLevel.Warning)) {
+            _loggerService.LogWarning("{MethodName}: not implemented", nameof(GetDirectoryEntry));
         }
         _state.AX = (ushort)MscdexErrorCode.InvalidFunction;
         return true;
@@ -465,8 +465,8 @@ public sealed class Mscdex {
                 WriteRequestStatus(requestBase, driveEntry, StatusDone);
                 break;
             default:
-                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning("MSCDEX SendDeviceDriverRequest: unknown command 0x{Command:X2}", command);
+                if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                    _loggerService.LogWarning("MSCDEX SendDeviceDriverRequest: unknown command 0x{Command:X2}", command);
                 }
                 WriteRequestStatus(requestBase, driveEntry, StatusError | (ushort)MscdexErrorCode.InvalidFunction);
                 break;
@@ -555,8 +555,8 @@ public sealed class Mscdex {
                 WriteAudioStatus(bufferAddress, driveEntry);
                 break;
             default:
-                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning("MSCDEX IOCTL Input: unknown control code 0x{Code:X2}", controlCode);
+                if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                    _loggerService.LogWarning("MSCDEX IOCTL Input: unknown control code 0x{Code:X2}", controlCode);
                 }
                 WriteRequestStatus(requestBase, driveEntry, StatusError | (ushort)MscdexErrorCode.InvalidFunction);
                 return;
@@ -601,8 +601,8 @@ public sealed class Mscdex {
                 // Load media — no-op for image drives (media is always present when an image is mounted)
                 break;
             default:
-                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning("MSCDEX IOCTL Output: unknown control code 0x{Code:X2}", controlCode);
+                if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                    _loggerService.LogWarning("MSCDEX IOCTL Output: unknown control code 0x{Code:X2}", controlCode);
                 }
                 WriteRequestStatus(requestBase, driveEntry, StatusError | (ushort)MscdexErrorCode.InvalidFunction);
                 return;
@@ -912,8 +912,8 @@ public sealed class Mscdex {
     /// Logs a warning and returns an error for any unrecognised AL subfunction value.
     /// </summary>
     private bool HandleUnknownSubfunction() {
-        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-            _loggerService.Warning("MSCDEX: unknown subfunction AL={AL:X2}", _state.AL);
+        if (_loggerService.IsEnabled(LogLevel.Warning)) {
+            _loggerService.LogWarning("MSCDEX: unknown subfunction AL={AL:X2}", _state.AL);
         }
         _state.AX = MscdexInvalidFunctionError;
         return true;

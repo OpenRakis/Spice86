@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Microsoft.Extensions.Logging;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;

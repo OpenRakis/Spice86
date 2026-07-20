@@ -1,6 +1,7 @@
 namespace Spice86.Tests.Dos;
 
 using NSubstitute;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.OperatingSystem;

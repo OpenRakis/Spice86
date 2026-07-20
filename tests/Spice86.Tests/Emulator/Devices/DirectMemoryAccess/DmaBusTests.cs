@@ -4,7 +4,7 @@ using FluentAssertions;
 
 using NSubstitute;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
@@ -89,7 +89,7 @@ public class DmaBusTests {
     private static DmaBus CreateSystem(out Memory memory, out State state, out IOPortDispatcher dispatcher) {
         state = new State(CpuModel.INTEL_8086);
         ILoggerService logger = Substitute.For<ILoggerService>();
-        logger.IsEnabled(Arg.Any<LogEventLevel>()).Returns(false);
+        logger.IsEnabled(Arg.Any<LogLevel>()).Returns(false);
 
         AddressReadWriteBreakpoints ioBreakpoints = new();
         dispatcher = new IOPortDispatcher(ioBreakpoints, state, logger, false);

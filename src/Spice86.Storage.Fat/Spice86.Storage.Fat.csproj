@@ -13,11 +13,10 @@
         <None Include="README.md" Pack="true" PackagePath="\" />
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="Serilog" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     </ItemGroup>
     <ItemGroup>
-        <!-- Spice86.Shared is referenced only for plain enums/value types (e.g. DriveClusterState).
-             ILoggerService has been replaced by Serilog.ILogger to enable future repository extraction. -->
+        <!-- Spice86.Shared is referenced only for plain enums/value types (e.g. DriveClusterState). -->
         <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
     </ItemGroup>
 </Project>

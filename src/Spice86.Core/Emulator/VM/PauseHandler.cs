@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.VM;
 
 using Spice86.Shared.Interfaces;
+using Microsoft.Extensions.Logging;
 
 /// <summary>
 /// Provides functionality to handle pausing of the emulator.
@@ -67,7 +68,7 @@ public class PauseHandler : IPauseHandler {
                 return;
             }
         }
-        _loggerService.Information("Pause requested by thread '{Thread}': {Reason}",
+        _loggerService.LogInformation("Pause requested by thread '{Thread}': {Reason}",
             Thread.CurrentThread.Name ?? Environment.CurrentManagedThreadId.ToString(), reason);
         Pausing?.Invoke();
         lock (_pauseLock) {
@@ -82,7 +83,7 @@ public class PauseHandler : IPauseHandler {
 
     /// <inheritdoc />
     public void Resume() {
-        _loggerService.Debug("Pause ended by thread {Thread}", Thread.CurrentThread.Name ?? Environment.CurrentManagedThreadId.ToString());
+        _loggerService.LogDebug("Pause ended by thread {Thread}", Thread.CurrentThread.Name ?? Environment.CurrentManagedThreadId.ToString());
         lock (_pauseLock) {
             if (_disposed) {
                 return;
@@ -101,7 +102,7 @@ public class PauseHandler : IPauseHandler {
         if (_disposed) {
             return;
         }
-        _loggerService.Debug("Thread {Thread} is taking a pause", Thread.CurrentThread.Name ?? Environment.CurrentManagedThreadId.ToString());
+        _loggerService.LogDebug("Thread {Thread} is taking a pause", Thread.CurrentThread.Name ?? Environment.CurrentManagedThreadId.ToString());
         _manualResetEvent.WaitOne(Timeout.Infinite);
     }
 }

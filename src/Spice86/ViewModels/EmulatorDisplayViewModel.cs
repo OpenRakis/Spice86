@@ -9,7 +9,7 @@ using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
@@ -113,8 +113,8 @@ public sealed partial class EmulatorDisplayViewModel : ObservableObject,
     public void OnVideoModeChanged(object? sender, VideoModeChangedEventArgs e) {
         _uiDispatcher.Post(() => {
             AspectRatioCorrectionFactor = e.AspectRatioCorrectionFactor;
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug(
+            if (_loggerService.IsEnabled(LogLevel.Debug)) {
+                _loggerService.LogDebug(
                     "Video mode changed to {Width}x{Height}, aspect ratio correction factor: {Factor}",
                     e.NewMode.Width, e.NewMode.Height, e.AspectRatioCorrectionFactor);
             }

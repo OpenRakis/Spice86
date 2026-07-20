@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
@@ -59,8 +59,8 @@ public class DosInt2fHandler : InterruptHandler {
         byte multiplexServiceId = State.AH;
 
         if (!HasRunnable(multiplexServiceId)) {
-            if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-                LoggerService.Warning("Unhandled INT2F call: {Operation:X2}", multiplexServiceId);
+            if (LoggerService.IsEnabled(LogLevel.Warning)) {
+                LoggerService.LogWarning("Unhandled INT2F call: {Operation:X2}", multiplexServiceId);
             }
             //Moving on...
             return;
@@ -86,8 +86,8 @@ public class DosInt2fHandler : InterruptHandler {
                 State.AL = 0xFF;
                 break;
             default:
-                if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-                    LoggerService.Warning("{MethodName}: value {AX:X2} not supported", nameof(ShareExeServices), State.AX);
+                if (LoggerService.IsEnabled(LogLevel.Warning)) {
+                    LoggerService.LogWarning("{MethodName}: value {AX:X2} not supported", nameof(ShareExeServices), State.AX);
                 }
                 break;
         }
@@ -100,8 +100,8 @@ public class DosInt2fHandler : InterruptHandler {
                 State.AL = 0xFF;
                 break;
             default:
-                if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-                    LoggerService.Warning("{MethodName}: value {AX:X2} not supported", nameof(AnsiConsoleServices), State.AX);
+                if (LoggerService.IsEnabled(LogLevel.Warning)) {
+                    LoggerService.LogWarning("{MethodName}: value {AX:X2} not supported", nameof(AnsiConsoleServices), State.AX);
                 }
                 break;
         }
@@ -120,8 +120,8 @@ public class DosInt2fHandler : InterruptHandler {
                 State.BX = segmentedAddress.Offset;
                 break;
             default:
-                if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-                    LoggerService.Warning("{MethodName}: value {AL} not supported", nameof(XmsServices), State.AL);
+                if (LoggerService.IsEnabled(LogLevel.Warning)) {
+                    LoggerService.LogWarning("{MethodName}: value {AL} not supported", nameof(XmsServices), State.AL);
                 }
                 break;
         }
@@ -136,8 +136,8 @@ public class DosInt2fHandler : InterruptHandler {
                 State.DI = 0xFFFF; // Amount of allocated HMA memory
                 break;
             default:
-                if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-                    LoggerService.Warning("Unhandled INT2F HMA subfunction: {AX:X2}", State.AX);
+                if (LoggerService.IsEnabled(LogLevel.Warning)) {
+                    LoggerService.LogWarning("Unhandled INT2F HMA subfunction: {AX:X2}", State.AX);
                 }
                 break;
         }
@@ -148,8 +148,8 @@ public class DosInt2fHandler : InterruptHandler {
     /// </summary>
     public void DosVirtualMachineServices() {
         //Do nothing,not even set CX or CF...
-        if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-            LoggerService.Warning("Unhandled INT2F DOS VM subfunction: {AX:X2}", State.AX);
+        if (LoggerService.IsEnabled(LogLevel.Warning)) {
+            LoggerService.LogWarning("Unhandled INT2F DOS VM subfunction: {AX:X2}", State.AX);
         }
     }
 
@@ -159,8 +159,8 @@ public class DosInt2fHandler : InterruptHandler {
                 State.AX = 1; //We are not Windows, but plain ol' MS-DOS.
                 break;
             default:
-                if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-                    LoggerService.Warning("Unhandled INT2F Windows VM subfunction: {AX:X2}", State.AX);
+                if (LoggerService.IsEnabled(LogLevel.Warning)) {
+                    LoggerService.LogWarning("Unhandled INT2F Windows VM subfunction: {AX:X2}", State.AX);
                 }
                 break;
         }

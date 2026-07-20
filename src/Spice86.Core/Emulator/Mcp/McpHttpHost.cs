@@ -86,7 +86,7 @@ internal sealed class McpHttpHost : IDisposable {
             IsBackground = true
         };
         _serverThread.Start();
-        _loggerService.Information("MCP HTTP server started on http://localhost:{Port}/mcp", port);
+        _loggerService.LogInformation("MCP HTTP server started on http://localhost:{Port}/mcp", port);
     }
 
     private void RunServerLoop() {
@@ -99,7 +99,7 @@ internal sealed class McpHttpHost : IDisposable {
         } catch (ObjectDisposedException) {
             // Host disposed while thread was exiting.
         } catch (InvalidOperationException ex) {
-            _loggerService.Error(ex, "MCP HTTP server stopped unexpectedly");
+            _loggerService.LogError(ex, "MCP HTTP server stopped unexpectedly");
         }
     }
 

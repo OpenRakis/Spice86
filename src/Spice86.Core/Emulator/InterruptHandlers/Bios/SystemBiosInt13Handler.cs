@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Bios;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
@@ -65,13 +65,13 @@ public class SystemBiosInt13Handler : InterruptHandler {
     /// <inheritdoc />
     public override void Run() {
         byte operation = State.AH;
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("BIOS INT13H: AH=0x{Function:X2} DL=0x{Drive:X2}", operation, State.DL);
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("BIOS INT13H: AH=0x{Function:X2} DL=0x{Drive:X2}", operation, State.DL);
         }
 
         if (!HasRunnable(operation)) {
-            if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-                LoggerService.Warning("BIOS DISK function not provided: AH=0x{Function:X2}", operation);
+            if (LoggerService.IsEnabled(LogLevel.Warning)) {
+                LoggerService.LogWarning("BIOS DISK function not provided: AH=0x{Function:X2}", operation);
             }
         }
         Run(operation);
@@ -100,8 +100,8 @@ public class SystemBiosInt13Handler : InterruptHandler {
     /// </summary>
     /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
     public void ResetDiskSystem(bool calledFromVm) {
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("BIOS INT13H: Reset Disk DL=0x{Drive:X2}", State.DL);
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("BIOS INT13H: Reset Disk DL=0x{Drive:X2}", State.DL);
         }
         SetCarryFlag(false, calledFromVm);
     }
@@ -244,8 +244,8 @@ public class SystemBiosInt13Handler : InterruptHandler {
     /// </remarks>
     /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
     public void VerifySectors(bool calledFromVm) {
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("BIOS INT13H: Verify Sectors AL=0x{AL:X2}", State.AL);
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("BIOS INT13H: Verify Sectors AL=0x{AL:X2}", State.AL);
         }
         byte driveNumber = State.DL;
         if (State.AL == 0) {

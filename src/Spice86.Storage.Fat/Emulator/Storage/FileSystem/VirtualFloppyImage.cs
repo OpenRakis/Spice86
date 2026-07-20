@@ -1,7 +1,6 @@
 namespace Spice86.Shared.Emulator.Storage.FileSystem;
 
-using Serilog;
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using System;
 using System.Collections.Generic;
@@ -43,7 +42,7 @@ public sealed class VirtualFloppyImage {
     /// Initialises a new <see cref="VirtualFloppyImage"/> that will read from <paramref name="sourceDirectory"/>.
     /// </summary>
     /// <param name="sourceDirectory">Path to the host directory whose contents will be written to the image.</param>
-    /// <param name="logger">Serilog logger used to emit warnings for files that do not fit.</param>
+    /// <param name="logger">Logger used to emit warnings for files that do not fit.</param>
     public VirtualFloppyImage(string sourceDirectory, ILogger logger) {
         _sourceDirectory = sourceDirectory;
         _logger = logger;
@@ -254,8 +253,8 @@ public sealed class VirtualFloppyImage {
     }
 
     private void LogSkipWarning(string name, string reason) {
-        if (_logger.IsEnabled(LogEventLevel.Warning)) {
-            _logger.Warning("VirtualFloppyImage: skipping '{Name}' - {Reason}", name, reason);
+        if (_logger.IsEnabled(LogLevel.Warning)) {
+            _logger.LogWarning("VirtualFloppyImage: skipping '{Name}' - {Reason}", name, reason);
         }
     }
 }

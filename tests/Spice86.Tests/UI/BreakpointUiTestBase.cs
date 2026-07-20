@@ -1,6 +1,7 @@
 namespace Spice86.Tests.UI;
 
 using Avalonia.Controls;
+using Microsoft.Extensions.Logging;
 using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Threading;

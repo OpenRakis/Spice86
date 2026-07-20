@@ -2,7 +2,7 @@ namespace Spice86.Core.Emulator.Gdb;
 
 using System.Globalization;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Parser;
 using Spice86.Core.Emulator.Memory;
@@ -186,51 +186,51 @@ public class GdbBreakpointCommandParser {
     }
 
     private void LogDebugConditionParsed(string expression) {
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("Parsed GDB condition expression: {Condition}", expression);
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("Parsed GDB condition expression: {Condition}", expression);
         }
     }
 
     private void LogErrorInvalidCommandFormat(string command) {
-        if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-            _loggerService.Error("Invalid GDB breakpoint command format: {Command}", command);
+        if (_loggerService.IsEnabled(LogLevel.Error)) {
+            _loggerService.LogError("Invalid GDB breakpoint command format: {Command}", command);
         }
     }
 
     private void LogErrorInvalidField(string fieldName, string value) {
-        if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-            _loggerService.Error("Invalid {FieldName} value in GDB command: {Value}", fieldName, value);
+        if (_loggerService.IsEnabled(LogLevel.Error)) {
+            _loggerService.LogError("Invalid {FieldName} value in GDB command: {Value}", fieldName, value);
         }
     }
 
     private void LogErrorUnsupportedBreakpointType(int gdbType) {
-        if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-            _loggerService.Error("Unsupported GDB breakpoint type {Type}", gdbType);
+        if (_loggerService.IsEnabled(LogLevel.Error)) {
+            _loggerService.LogError("Unsupported GDB breakpoint type {Type}", gdbType);
         }
     }
 
     private void LogErrorInvalidAddressFormat(string address) {
-        if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-            _loggerService.Error("Invalid address format: {Address}", address);
+        if (_loggerService.IsEnabled(LogLevel.Error)) {
+            _loggerService.LogError("Invalid address format: {Address}", address);
         }
     }
 
     private void LogWarningAddressExceedsMemory(long address) {
-        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-            _loggerService.Warning("GDB breakpoint address {Address} exceeds memory size {MaxAddress}",
+        if (_loggerService.IsEnabled(LogLevel.Warning)) {
+            _loggerService.LogWarning("GDB breakpoint address {Address} exceeds memory size {MaxAddress}",
                 address, A20Gate.EndOfHighMemoryArea);
         }
     }
 
     private void LogInfoCompiledCondition(string expression) {
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("Compiled conditional breakpoint: {Expression}", expression);
+        if (_loggerService.IsEnabled(LogLevel.Information)) {
+            _loggerService.LogInformation("Compiled conditional breakpoint: {Expression}", expression);
         }
     }
 
     private void LogWarningConditionCompilationFailed(ExpressionParseException ex, string expression) {
-        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-            _loggerService.Warning(ex, "Failed to compile condition expression at position {Position}: {Expression}",
+        if (_loggerService.IsEnabled(LogLevel.Warning)) {
+            _loggerService.LogWarning(ex, "Failed to compile condition expression at position {Position}: {Expression}",
                 ex.Position, expression);
         }
     }

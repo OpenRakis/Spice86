@@ -1,6 +1,7 @@
 namespace Spice86.ViewModels.Services;
 
 using CommunityToolkit.Mvvm.Messaging;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Parser;

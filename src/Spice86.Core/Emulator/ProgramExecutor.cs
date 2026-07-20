@@ -1,6 +1,6 @@
 ﻿namespace Spice86.Core.Emulator;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Core.Emulator.VM;
@@ -49,8 +49,8 @@ public sealed class ProgramExecutor : IDisposable {
     /// </summary>
     public void Run() {
         try {
-            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                _loggerService.Information("Starting the emulation loop");
+            if (_loggerService.IsEnabled(LogLevel.Information)) {
+                _loggerService.LogInformation("Starting the emulation loop");
             }
 
             _executionPolicy.ApplyStartupBreakpoints();

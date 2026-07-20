@@ -4,7 +4,7 @@ using FluentAssertions;
 
 using JetBrains.Annotations;
 
-using Serilog;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
@@ -54,8 +54,7 @@ public class MachineTest
 
     static MachineTest()
     {
-        Log.Logger = new LoggerConfiguration()
-            .WriteTo.Console()
+        Serilog.Log.Logger = new Serilog.LoggerConfiguration()
             .MinimumLevel.Debug()
             .CreateLogger();
     }
@@ -1029,7 +1028,7 @@ public class MachineTest
         try {
             spice86DependencyInjection.ProgramExecutor.Run();
         } finally {
-            Log.Information("Reached POST values {portValues}. Ascii Error is {asciiError}", debugPortsHandler.PostValues, debugPortsHandler.AsciiError);
+            Serilog.Log.Information("Reached POST values {portValues}. Ascii Error is {asciiError}", debugPortsHandler.PostValues, debugPortsHandler.AsciiError);
         }
 
         //Assert

@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.LoadableFile;
 
 using Spice86.Core.Emulator.CPU;
+using Microsoft.Extensions.Logging;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -65,8 +66,8 @@ public abstract class ExecutableFileLoader {
     protected void SetEntryPoint(ushort cs, ushort ip) {
         _state.CS = cs;
         _state.IP = ip;
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Program entry point is {ProgramEntry}", ConvertUtils.ToSegmentedAddressRepresentation(cs, ip));
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("Program entry point is {ProgramEntry}", ConvertUtils.ToSegmentedAddressRepresentation(cs, ip));
         }
     }
 }

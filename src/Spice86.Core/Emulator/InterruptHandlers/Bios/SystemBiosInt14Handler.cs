@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Bios;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
@@ -46,14 +46,14 @@ public sealed class SystemBiosInt14Handler : InterruptHandler {
 
     public override void Run() {
         byte operation = State.AH;
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("BIOS INT14H: AH=0x{Function:X2} DX=0x{PortIndex:X4} AL=0x{Argument:X2}",
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("BIOS INT14H: AH=0x{Function:X2} DX=0x{PortIndex:X4} AL=0x{Argument:X2}",
                 operation, State.DX, State.AL);
         }
 
         if (!HasRunnable(operation)) {
-            if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-                LoggerService.Warning("BIOS INT14H: Unsupported function AH=0x{Function:X2}", operation);
+            if (LoggerService.IsEnabled(LogLevel.Warning)) {
+                LoggerService.LogWarning("BIOS INT14H: Unsupported function AH=0x{Function:X2}", operation);
             }
             SetCarryFlag(true, true);
             return;
@@ -158,16 +158,16 @@ public sealed class SystemBiosInt14Handler : InterruptHandler {
     private bool TryGetPort(ushort portIndex, out ushort port) {
         if (portIndex >= 4) {
             port = 0;
-            if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-                LoggerService.Warning("BIOS INT14H: Invalid serial port index DX=0x{PortIndex:X4}", portIndex);
+            if (LoggerService.IsEnabled(LogLevel.Warning)) {
+                LoggerService.LogWarning("BIOS INT14H: Invalid serial port index DX=0x{PortIndex:X4}", portIndex);
             }
             return false;
         }
 
         port = _biosDataArea.PortCom[portIndex];
         if (port == 0) {
-            if (LoggerService.IsEnabled(LogEventLevel.Information)) {
-                LoggerService.Information("BIOS INT14H: COM{PortNumber} not present", portIndex + 1);
+            if (LoggerService.IsEnabled(LogLevel.Information)) {
+                LoggerService.LogInformation("BIOS INT14H: COM{PortNumber} not present", portIndex + 1);
             }
             return false;
         }

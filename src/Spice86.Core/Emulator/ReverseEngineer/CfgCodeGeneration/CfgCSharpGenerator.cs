@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Microsoft.Extensions.Logging;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;

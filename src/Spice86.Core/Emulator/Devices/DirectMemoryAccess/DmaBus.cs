@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 
 using Spice86.Core.Emulator.CPU;
+using Microsoft.Extensions.Logging;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -88,7 +89,7 @@ public sealed class DmaBus : DefaultIOPortHandler {
             return _channels[channelIndex].PageRegisterValue;
         }
 
-        _logger.Warning("DMA: Read from undefined port 0x{Port:X4}", port);
+        _logger.LogWarning("DMA: Read from undefined port 0x{Port:X4}", port);
         return 0xFF;
     }
 
@@ -111,7 +112,7 @@ public sealed class DmaBus : DefaultIOPortHandler {
             return;
         }
 
-        _logger.Warning("DMA: Write to undefined port 0x{Port:X4} value 0x{Value:X2}", port, value);
+        _logger.LogWarning("DMA: Write to undefined port 0x{Port:X4} value 0x{Value:X2}", port, value);
     }
 
     /// <inheritdoc />

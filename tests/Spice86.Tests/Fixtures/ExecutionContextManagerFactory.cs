@@ -1,6 +1,7 @@
 namespace Spice86.Tests.Fixtures;
 
 using NSubstitute;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;

@@ -1,6 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.ReverseEngineer;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
@@ -471,8 +471,8 @@ public class CSharpOverrideHelper {
 
             string error =
                 $"There is already a function overriden at address {address} named {existingFunctionInformation.Name}. Please check your mappings for duplicates.";
-            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error(
+            if (_loggerService.IsEnabled(LogLevel.Error)) {
+                _loggerService.LogError(
                     "There is already a function defined at address {Address} named {ExistingFunctionInformationName} but you are trying to redefine it. Please check your mappings for duplicates",
                     address, existingFunctionInformation.Name);
             }
@@ -704,7 +704,7 @@ public class CSharpOverrideHelper {
             message += " Found " + actualTarget.Name + " there.";
             if (actualTarget.FunctionOverride != null) {
                 message += " Calling it.";
-                _loggerService.Warning("{Message}", message);
+                _loggerService.LogWarning("{Message}", message);
                 ExecuteCall(actualTarget.FunctionOverride, () => actualTarget.FunctionOverride.Invoke(0).Invoke());
                 actualStackAddress = State.StackPhysicalAddress;
                 actualReturnCs = State.CS;
@@ -826,8 +826,8 @@ public class CSharpOverrideHelper {
     public UnrecoverableException FailAsUntested(string message) {
         string error =
             $"Untested code reached, please tell us how to reach this state. Here is the message: {message}. Here is the Machine stack: {State}";
-        if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-            _loggerService.Error("{Error}", error);
+        if (_loggerService.IsEnabled(LogLevel.Error)) {
+            _loggerService.LogError("{Error}", error);
         }
 
         return new UnrecoverableException(error);
@@ -946,7 +946,7 @@ public class CSharpOverrideHelper {
     /// </summary>
     /// <exception cref="HaltRequestedException">The exception throw in order to exit the program.</exception>
     protected void Exit() {
-        _loggerService.Verbose("Program requested exit. Terminating now");
+        _loggerService.LogTrace("Program requested exit. Terminating now");
 
         throw new HaltRequestedException();
     }

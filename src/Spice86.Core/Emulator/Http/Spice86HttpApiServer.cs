@@ -9,8 +9,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-using Serilog.Events;
-
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Http.Contracts;
 using Spice86.Core.Emulator.Http.Controllers;
@@ -43,10 +41,7 @@ public sealed class Spice86HttpApiServer : IDisposable {
 
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
         builder.Logging.ClearProviders();
-        Serilog.SerilogServiceCollectionExtensions.AddSerilog(
-            builder.Services,
-            loggerService,
-            dispose: false);
+        builder.Logging.AddProvider(new ForwardingLoggerProvider(loggerService));
         builder.WebHost.UseKestrel();
         builder.WebHost.UseUrls($"http://{HttpApiEndpoint.Host}:{port}");
         builder.Services.AddSingleton<IHostLifetime, EmbeddedHostLifetime>();
@@ -95,8 +90,8 @@ public sealed class Spice86HttpApiServer : IDisposable {
             Port = port;
         }
 
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("HTTP API listening on http://{Host}:{Port}", HttpApiEndpoint.Host, Port);
+        if (_loggerService.IsEnabled(LogLevel.Information)) {
+            _loggerService.LogInformation("HTTP API listening on http://{Host}:{Port}", HttpApiEndpoint.Host, Port);
         }
     }
 

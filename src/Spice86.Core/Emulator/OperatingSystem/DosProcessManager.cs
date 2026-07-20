@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.OperatingSystem;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.Boot;
 using Spice86.Core.Emulator.CPU;
@@ -401,8 +401,8 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         string commandTail, DosExecLoadType loadType, ushort environmentSegment, ushort callerCS, ushort callerIP) {
 
         ushort parentPspSegment = _sda.CurrentProgramSegmentPrefix;
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("EXEC: Current PSP={CurrentPsp:X4}, will become parent",
+        if (_loggerService.IsEnabled(LogLevel.Information)) {
+            _loggerService.LogInformation("EXEC: Current PSP={CurrentPsp:X4}, will become parent",
                 parentPspSegment);
         }
 
@@ -711,8 +711,8 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         _stack.Poke16(0, terminateAddr.Offset);
         _stack.Poke16(2, terminateAddr.Segment);
 
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("TERMINATE: restored parent context SS:SP={0:X4}:{1:X4}, return CS:IP={2:X4}:{3:X4}",
+        if (_loggerService.IsEnabled(LogLevel.Information)) {
+            _loggerService.LogInformation("TERMINATE: restored parent context SS:SP={0:X4}:{1:X4}, return CS:IP={2:X4}:{3:X4}",
                 _state.SS, _state.SP, _stack.Peek16(2), _stack.Peek16(0));
         }
 
@@ -1286,8 +1286,8 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         // Copy the parent's environment variables up to and including the double null terminator.
         while (offset + 1 < MaximumEnvironmentScanLength) {
             if (offset >= maxParentBytes) {
-                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning("Environment block exceeded {Max} bytes, rebuilding from defaults.", maxParentBytes);
+                if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                    _loggerService.LogWarning("Environment block exceeded {Max} bytes, rebuilding from defaults.", maxParentBytes);
                 }
                 return CreateEnvironmentBlock(programPath);
             }
@@ -1325,8 +1325,8 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
 
         if (isLoadAndExecute) {
             SetupCpuRegistersForComFileExecution(pspSegment);
-            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                _loggerService.Verbose("COM load register state CS:IP={Cs}:{Ip} DS=ES=SS={Segment} SP={Sp}",
+            if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                _loggerService.LogTrace("COM load register state CS:IP={Cs}:{Ip} DS=ES=SS={Segment} SP={Sp}",
                     ConvertUtils.ToHex16(_state.CS), ConvertUtils.ToHex16(_state.IP), ConvertUtils.ToHex16(pspSegment), ConvertUtils.ToHex16(_state.SP));
             }
         }
@@ -1350,8 +1350,8 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     }
 
     private void LoadExeFile(DosExeFile exeFile, ushort pspSegment, DosMemoryControlBlock block, bool updateCpuState) {
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Read header: {ReadHeader}", exeFile);
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("Read header: {ReadHeader}", exeFile);
         }
         ushort pspLoadSegment = block.DataBlockSegment;
         // The program image is loaded immediately above the PSP, which is the start of
@@ -1403,8 +1403,8 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         // Finally, MS-DOS reads the initial CS and IP values from the program's file
         // header, adjusts the CS register value by adding the start-segment address to
         // it, and transfers control to the program at the adjusted address.
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("SetupCpuForExe: InitCS={InitCS:X4}, InitIP={InitIP:X4}, loadSegment={LoadSegment:X4}, final CS={FinalCS:X4}",
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("SetupCpuForExe: InitCS={InitCS:X4}, InitIP={InitIP:X4}, loadSegment={LoadSegment:X4}, final CS={FinalCS:X4}",
                 exeFile.InitCS, exeFile.InitIP, loadSegment, (ushort)(exeFile.InitCS + loadSegment));
         }
         SetEntryPoint((ushort)(exeFile.InitCS + loadSegment), exeFile.InitIP);

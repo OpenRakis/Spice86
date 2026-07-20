@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
@@ -96,8 +96,8 @@ internal sealed class ExecutionPolicy : IDisposable {
         EmulatorStateSerializer emulatorStateSerializer,
         ILoggerService loggerService) {
         if (configuration.GdbPort == 0) {
-            if (loggerService.IsEnabled(LogEventLevel.Information)) {
-                loggerService.Information("GDB port is 0, disabling GDB server.");
+            if (loggerService.IsEnabled(LogLevel.Information)) {
+                loggerService.LogInformation("GDB port is 0, disabling GDB server.");
             }
             return null;
         }

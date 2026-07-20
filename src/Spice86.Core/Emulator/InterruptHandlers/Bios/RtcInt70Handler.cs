@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Bios;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Cmos;
@@ -48,8 +48,8 @@ public sealed class RtcInt70Handler : InterruptHandler {
     /// then dispatches to appropriate handler. Acknowledges interrupt to PIC when done.
     /// </summary>
     public void HandleRtcInterrupt() {
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("INT 70h - RTC Alarm/Periodic Interrupt Handler");
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("INT 70h - RTC Alarm/Periodic Interrupt Handler");
         }
 
         _ioPortDispatcher.WriteByte(CmosPorts.Address, CmosRegisterAddresses.StatusRegisterC);
@@ -102,8 +102,8 @@ public sealed class RtcInt70Handler : InterruptHandler {
     /// Does NOT clear PIE bit - periodic interrupts remain enabled. Only explicit cancel (INT 15h, AH=83h, AL=01h) clears PIE.
     /// </summary>
     public void CompleteWait() {
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("RTC wait completed");
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("RTC wait completed");
         }
 
         _biosDataArea.UserWaitTimeout = 0;
@@ -114,8 +114,8 @@ public sealed class RtcInt70Handler : InterruptHandler {
             byte currentValue = Memory.UInt8[userFlagAddress.Segment, userFlagAddress.Offset];
             Memory.UInt8[userFlagAddress.Segment, userFlagAddress.Offset] = (byte)(currentValue | 0x80);
 
-            if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-                LoggerService.Verbose("Set user wait flag at {Segment:X4}:{Offset:X4} to 0x{Value:X2}",
+            if (LoggerService.IsEnabled(LogLevel.Trace)) {
+                LoggerService.LogTrace("Set user wait flag at {Segment:X4}:{Offset:X4} to 0x{Value:X2}",
                     userFlagAddress.Segment, userFlagAddress.Offset, currentValue | 0x80);
             }
         }
@@ -125,13 +125,13 @@ public sealed class RtcInt70Handler : InterruptHandler {
     /// Handles RTC alarm interrupt. Logs detection and notes that INT 4Ah callback should be implemented by program if needed.
     /// </summary>
     public void HandleAlarmInterrupt() {
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("RTC alarm interrupt detected");
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("RTC alarm interrupt detected");
         }
 
         _ioPortDispatcher.WriteByte(CmosPorts.Address, CmosRegisterAddresses.StatusRegisterD);
-        if (LoggerService.IsEnabled(LogEventLevel.Information)) {
-            LoggerService.Information("RTC alarm interrupt - INT 4Ah callback should be implemented by program if needed");
+        if (LoggerService.IsEnabled(LogLevel.Information)) {
+            LoggerService.LogInformation("RTC alarm interrupt - INT 4Ah callback should be implemented by program if needed");
         }
     }
 
@@ -143,8 +143,8 @@ public sealed class RtcInt70Handler : InterruptHandler {
 
         _dualPic.AcknowledgeInterrupt(8);
 
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("RTC interrupt acknowledged");
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("RTC interrupt acknowledged");
         }
     }
 }

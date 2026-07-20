@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.LoadableFile.Bios;
 
 using Spice86.Core.Emulator.CPU;
+using Microsoft.Extensions.Logging;
 using Spice86.Shared.Interfaces;
 
 using Spice86.Core.Emulator.LoadableFile;

@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Gdb;
 
 using Spice86.Core.Emulator.CPU;
+using Microsoft.Extensions.Logging;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.StateSerialization;
@@ -77,8 +78,8 @@ public class GdbCommandHandler {
     /// </summary>
     /// <param name="command">The custom GDB command string</param>
     public void RunCommand(string command) {
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Received command {Command}", command);
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("Received command {Command}", command);
         }
         char first = command[0];
         string commandContent = command[1..];
@@ -108,8 +109,8 @@ public class GdbCommandHandler {
                 '!' => DeclineExtendedMode(),
                 _ => _gdbIo.GenerateUnsupportedResponse()
             };
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                _loggerService.Verbose("Responded with {Response}", response);
+            if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                _loggerService.LogTrace("Responded with {Response}", response);
             }
             if (response != null) {
                 _gdbIo.SendResponse(response);

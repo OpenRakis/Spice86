@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
@@ -20,8 +20,8 @@ public class DosInt24Handler : InterruptHandler {
     public override byte VectorNumber => 0x24;
 
     public override void Run() {
-        if (LoggerService.IsEnabled(LogEventLevel.Information)) {
-            LoggerService.Information("INT 24h: Critical error handler invoked, returning FAIL (AL=3).");
+        if (LoggerService.IsEnabled(LogLevel.Information)) {
+            LoggerService.LogInformation("INT 24h: Critical error handler invoked, returning FAIL (AL=3).");
         }
 
         State.AL = 0x03;

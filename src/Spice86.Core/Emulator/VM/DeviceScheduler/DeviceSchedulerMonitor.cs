@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.VM.DeviceScheduler;
 
 using Spice86.Shared.Interfaces;
+using Microsoft.Extensions.Logging;
 
 /// <summary>
 /// Monitors the behavior of the <see cref="DeviceScheduler"/>, tracking lag and queue size.
@@ -81,7 +82,7 @@ public class DeviceSchedulerMonitor {
                 double avgLag = _currentWindowTotalLag / _currentWindowCount;
                 double avgQueueSize = (double)_currentWindowTotalQueueSize / _currentWindowCount;
 
-                _logger.Warning("Scheduler Monitor [{InstanceName}]: Lag between event scheduled and execution time [Min={MinLag:F4}ms Avg={AvgLag:F4}ms Max={MaxLag:F4}ms] Queue state [Min={MinQueue} Avg={AvgQueue:F2} Max={MaxQueue}]", 
+                _logger.LogWarning("Scheduler Monitor [{InstanceName}]: Lag between event scheduled and execution time [Min={MinLag:F4}ms Avg={AvgLag:F4}ms Max={MaxLag:F4}ms] Queue state [Min={MinQueue} Avg={AvgQueue:F2} Max={MaxQueue}]", 
                     _instanceName, _currentWindowMinLag, avgLag, _currentWindowMaxLag,
                     _currentWindowMinQueueSize, avgQueueSize, _currentWindowMaxQueueSize);
             }

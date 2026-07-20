@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.Gdb;
 
 using Spice86.Core.Emulator.CPU;
+using Microsoft.Extensions.Logging;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
@@ -101,7 +102,7 @@ public sealed class GdbServer : IDisposable {
                 gdbCommandHandler.RunCommand(command);
             }
         }
-        _loggerService.Verbose("Client disconnected");
+        _loggerService.LogTrace("Client disconnected");
     }
 
     /// <summary>
@@ -109,8 +110,8 @@ public sealed class GdbServer : IDisposable {
     /// </summary>
     private void RunServer() {
         int port = _configuration.GdbPort;
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("Starting GDB server on port {Port} ...", port);
+        if (_loggerService.IsEnabled(LogLevel.Information)) {
+            _loggerService.LogInformation("Starting GDB server on port {Port} ...", port);
         }
         try {
             while (_isRunning) {
@@ -122,20 +123,20 @@ public sealed class GdbServer : IDisposable {
                     _gdbIo = null;
                 } catch (IOException e) {
                     if (_isRunning) {
-                        _loggerService.Error(e, "Error in the GDB server, restarting it...");
+                        _loggerService.LogError(e, "Error in the GDB server, restarting it...");
                     } else {
                         // Error occurred while stopping the server.
-                        _loggerService.Error(e, "GDB Server connection closed and server is not running. Terminating it");
+                        _loggerService.LogError(e, "GDB Server connection closed and server is not running. Terminating it");
                     }
                 }
             }
         } catch (Exception e) {
-            _loggerService.Error(e, "Unhandled error in the GDB server. Stopping it.");
+            _loggerService.LogError(e, "Unhandled error in the GDB server. Stopping it.");
         } finally {
             _state.IsRunning = false;
             _pauseHandler.Resume();
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _loggerService.Information("GDB server stopped");
+            if (_loggerService.IsEnabled(LogLevel.Information)) {
+                _loggerService.LogInformation("GDB server stopped");
             }
         }
     }

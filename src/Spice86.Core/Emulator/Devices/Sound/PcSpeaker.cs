@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.Devices.Sound;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Timer;
@@ -175,7 +175,7 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
     /// <param name="count">The PIT reload value.</param>
     /// <param name="mode">The PIT operating mode that should be used.</param>
     public void SetCounter(int count, PitMode mode) {
-        _logger.Debug("PCSPEAKER: Configuring counter with value {Count} in mode {Mode}", count, mode);
+        _logger.LogDebug("PCSPEAKER: Configuring counter with value {Count} in mode {Mode}", count, mode);
 
         _mixerChannel.WakeUp();
 
@@ -213,7 +213,7 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
             case PitMode.SquareWave:
             case PitMode.SquareWaveAlias:
                 if (count < MinimumCounter) {
-                    _logger.Debug(
+                    _logger.LogDebug(
                         "PCSPEAKER: Counter value {Count} below minimum {Minimum}; forcing speaker inactive.",
                         count, MinimumCounter);
                     _pitChannelState.Amplitude = PositiveAmplitude;
@@ -224,7 +224,7 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
 
                 _pitChannelState.NewMaxMilliseconds = durationMs;
                 _pitChannelState.NewHalfMilliseconds = _pitChannelState.NewMaxMilliseconds / 2.0f;
-                _logger.Debug(
+                _logger.LogDebug(
                     "PCSPEAKER: Square wave period set to {Period} ms with half-period {HalfPeriod} ms.",
                     _pitChannelState.NewMaxMilliseconds, _pitChannelState.NewHalfMilliseconds);
                 if (!_pitChannelState.Mode3Counting) {
@@ -248,7 +248,7 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
                 break;
 
             default:
-                _logger.Warning("PCSPEAKER: Unhandled speaker PIT mode {Mode} with count {Count}", mode, count);
+                _logger.LogWarning("PCSPEAKER: Unhandled speaker PIT mode {Mode} with count {Count}", mode, count);
                 return;
         }
 
@@ -260,7 +260,7 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
     /// </summary>
     /// <param name="mode">The PIT mode that should now be active for the speaker.</param>
     public void SetPitControl(PitMode mode) {
-        _logger.Debug("PCSPEAKER: Updating PIT control for mode {Mode}", mode);
+        _logger.LogDebug("PCSPEAKER: Updating PIT control for mode {Mode}", mode);
 
         _mixerChannel.WakeUp();
 
@@ -285,7 +285,7 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
                 break;
 
             default:
-                _logger.Warning("PCSPEAKER: Unsupported PIT control mode {Mode}", mode);
+                _logger.LogWarning("PCSPEAKER: Unsupported PIT control mode {Mode}", mode);
                 break;
         }
     }
@@ -296,8 +296,8 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
     /// <param name="pitControl">The PIT control instance to attach.</param>
     public void AttachPitControl(IPitControl pitControl) {
         _pitControl = pitControl;
-        if (_logger.IsEnabled(LogEventLevel.Information)) {
-            _logger.Debug("PCSPEAKER: PIT control {PitControlType} attached.", pitControl.GetType().Name);
+        if (_logger.IsEnabled(LogLevel.Information)) {
+            _logger.LogDebug("PCSPEAKER: PIT control {PitControlType} attached.", pitControl.GetType().Name);
         }
     }
 
@@ -366,8 +366,8 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
         _frameCounter -= requestedFrames;
 
         if (requestedFrames > 0) {
-            if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-                _logger.Verbose("PCSPEAKER: Tick callback requestedFrames={Frames}", requestedFrames);
+            if (_logger.IsEnabled(LogLevel.Trace)) {
+                _logger.LogTrace("PCSPEAKER: Tick callback requestedFrames={Frames}", requestedFrames);
             }
             PicCallback(requestedFrames);
         }
@@ -612,7 +612,7 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
 
     private void AccumulateWaveform(int index, float value) {
         if (index < 0 || index >= _waveform.Length) {
-            _logger.Warning("PCSPEAKER: Waveform accumulation index {Index} outside buffer length {Length}", index,
+            _logger.LogWarning("PCSPEAKER: Waveform accumulation index {Index} outside buffer length {Length}", index,
                 _waveform.Length);
             return;
         }

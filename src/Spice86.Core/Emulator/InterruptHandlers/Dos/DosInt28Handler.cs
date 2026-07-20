@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
 
 using Spice86.Core.Emulator.CPU;
+using Microsoft.Extensions.Logging;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.Memory;
@@ -28,6 +29,6 @@ public class DosInt28Handler : InterruptHandler {
 
     /// <inheritdoc />
     public override void Run() {
-        LoggerService.Verbose("DOS IDLE");
+        LoggerService.LogTrace("DOS IDLE");
     }
 }

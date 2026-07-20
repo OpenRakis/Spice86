@@ -986,8 +986,8 @@ public class VgaFunctionality : IVgaFunctionality {
                 pixels |= (ushort)((operation.Pixels[pixel] & 3) << (7 - pixel) * 2);
             }
             pixels = (ushort)(pixels << 8 | pixels >> 8);
-            // if (_logger.IsEnabled(LogEventLevel.Verbose)) {
-            //     _logger.Verbose("Writing {Value:X2} to offset {Offset:X4}", pixels, offset);
+            // if (_logger.IsEnabled(LogLevel.Trace)) {
+            //     _logger.LogTrace("Writing {Value:X2} to offset {Offset:X4}", pixels, offset);
             // }
             _memory.UInt16[VgaConstants.ColorTextSegment, offset] = pixels;
         }

@@ -1,6 +1,7 @@
 namespace Spice86.Tests.UI;
 
 using Avalonia.Headless.XUnit;
+using Microsoft.Extensions.Logging;
 
 using AvaloniaHex.Document;
 
