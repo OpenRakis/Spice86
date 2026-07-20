@@ -16,10 +16,12 @@
 	</PropertyGroup>
 	<!-- Nuget package info-->
 	<PropertyGroup>
-		<Version>15</Version>
+		<Version>15.0.0</Version>
+		<AssemblyVersion>15.0.0.0</AssemblyVersion>
+		<FileVersion>15.0.0.0</FileVersion>
 		<PackageReleaseNotes>
             <![CDATA[
-            # Release Notes - https://github.com/OpenRakis/Spice86/wiki/Spice86-v14-release-notes
+            # Release Notes - https://github.com/OpenRakis/Spice86/wiki/Spice86-v15-release-notes
             ]]>
 		</PackageReleaseNotes>
 		<Authors>Alberto Marnetto, Ales Teska, Artjom Vejsel, Bruno Martinez, Edu Garcia, Ievgenii Meshcheriakov, Ivan Kuzmenko, John Källén, Joris van Eijden, Karl Lenz, Kevin Ferrare, LowLevelMahn, Maximilien Noal, Stefan Hueg, Thomas Kaiser</Authors>
