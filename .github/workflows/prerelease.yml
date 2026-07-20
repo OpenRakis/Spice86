@@ -15,16 +15,16 @@ jobs:
     runs-on: "ubuntu-latest"
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v4
 
       - name: Determine prerelease version
         run: |
-          BASE_VERSION=$(grep -oPm1 "(?<=<Version>)[^<]+" src/Directory.Build.props)
+          BASE_VERSION=$(awk -F'[<>]' '/<Version>/{print $3; exit}' src/Directory.Build.props)
           COMMIT_SHA=$(git rev-parse --short HEAD)
           echo "PRERELEASE_VERSION=${BASE_VERSION}-${COMMIT_SHA}" >> $GITHUB_ENV
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
 
