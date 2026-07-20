@@ -109,7 +109,6 @@ public class Spice86DependencyInjection : IDisposable {
     private readonly CfgNodeExecutionCompiler _cfgNodeExecutionCompiler;
     private readonly IShutdownCoordinator _shutdownCoordinator;
     private readonly DebuggerTabRegistry _debuggerTabRegistry;
-    private readonly IDosOutputHandler _dosOutputHandler;
     private bool _disposed;
 
     public Spice86DependencyInjection(Configuration configuration)
@@ -489,15 +488,13 @@ public class Spice86DependencyInjection : IDisposable {
             memory, ioPortDispatcher, biosDataArea, cfgCpu, stack, state, loggerService,
             biosKeyboardBuffer);
 
-        IDosOutputHandler dosOutputHandler = CreateDosOutputHandler(configuration);
-        _dosOutputHandler = dosOutputHandler;
         Dos dos = new Dos(configuration, memory, cfgCpu, stack,
             state, biosKeyboardBuffer,
             keyboardInt16Handler, biosDataArea, vgaFunctionality,
             new Dictionary<string, string> {
                 { "BLASTER", soundBlaster.BlasterString } }, ioPortDispatcher, loggerService,
             floppyDiskTimingService,
-            mixer, driveActivityNotifier, xms, dosOutputHandler);
+            mixer, driveActivityNotifier, xms);
 
         DmaChannel fdcDmaChannel = dmaSystem.GetChannel(2)
             ?? throw new InvalidOperationException("DMA channel 2 unavailable for Floppy Disk Controller.");
@@ -883,14 +880,6 @@ public class Spice86DependencyInjection : IDisposable {
         }
     }
 
-    private static IDosOutputHandler CreateDosOutputHandler(Configuration configuration) {
-        string? dosOutputLog = configuration.DosOutputLog;
-        if (dosOutputLog is null) {
-            return new NullDosOutputHandler();
-        }
-        return new DosOutputHandler(dosOutputLog);
-    }
-
     private static void ReloadCfgGraphIfRequested(Configuration configuration,
         EmulationStateDataReader emulationStateDataReader, CfgCpu cfgCpu, State state,
         CfgNodeExecutionCompiler cfgNodeExecutionCompiler, ILoggerService loggerService, SequentialIdAllocator cfgIdAllocator) {
@@ -975,7 +964,6 @@ public class Spice86DependencyInjection : IDisposable {
                 }
 
                 _shutdownCoordinator.Shutdown();
-                (_dosOutputHandler as IDisposable)?.Dispose();
                 _loggerService.Dispose();
             }
 

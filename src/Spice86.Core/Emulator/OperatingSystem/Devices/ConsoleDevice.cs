@@ -44,7 +44,6 @@ public class ConsoleDevice : CharacterDevice {
     public const int NoInputAvailable = 0x80D3;
 
     private readonly ILoggerService _loggerService;
-    private readonly IDosOutputHandler _dosOutputHandler;
     private readonly BiosDataArea _biosDataArea;
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
     private readonly IVgaFunctionality _vga;
@@ -75,15 +74,13 @@ public class ConsoleDevice : CharacterDevice {
     /// <param name="keyboardInt16Handler">INT 16h handler that provides blocking keystroke reads.</param>
     /// <param name="vgaFunctionality">VGA BIOS interface for cursor movement, scrolling, and character output.</param>
     /// <param name="biosKeyboardBuffer">Keyboard ring buffer used to check input availability without blocking.</param>
-    /// <param name="dosOutputHandler">Handler that captures DOS program text output to a log sink.</param>
     public ConsoleDevice(IByteReaderWriter memory, uint baseAddress,
         ILoggerService loggerService, State state, BiosDataArea biosDataArea,
         KeyboardInt16Handler keyboardInt16Handler, IVgaFunctionality vgaFunctionality,
-        BiosKeyboardBuffer biosKeyboardBuffer, IDosOutputHandler dosOutputHandler)
+        BiosKeyboardBuffer biosKeyboardBuffer)
         : base(memory, baseAddress, CON,
             DeviceAttributes.CurrentStdin | DeviceAttributes.CurrentStdout) {
         _loggerService = loggerService;
-        _dosOutputHandler = dosOutputHandler;
         _biosKeyboardBuffer = biosKeyboardBuffer;
         _keyboardInt16Handler = keyboardInt16Handler;
         _cpuState = state;
@@ -458,7 +455,6 @@ public class ConsoleDevice : CharacterDevice {
         if (!IsTextMode) {
             return;
         }
-        _dosOutputHandler.OnCharacterOutput(chr);
         byte page = _biosDataArea.CurrentVideoPage;
         ushort pos = _biosDataArea.CursorPosition[page];
         byte col = ConvertUtils.ReadLsb(pos);
