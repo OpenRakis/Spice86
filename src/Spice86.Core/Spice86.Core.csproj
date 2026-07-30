@@ -35,6 +35,7 @@
         <FrameworkReference Include="Microsoft.AspNetCore.App" />
         <PackageReference Include="Serilog.Extensions.Hosting" />
         <PackageReference Include="SkiaSharp" />
+        <PackageReference Include="SkiaSharp.NativeAssets.Linux" />
         <PackageReference Include="ModelContextProtocol.Core"/>
         <PackageReference Include="ModelContextProtocol.AspNetCore" />
     </ItemGroup>
