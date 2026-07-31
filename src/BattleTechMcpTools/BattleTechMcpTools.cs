@@ -33,6 +33,11 @@ public sealed class BattleTechMcpTools
     private const ushort TrainingCompleteOff = 0xD450;
     private const ushort MilestoneOff = 0xD451;
 
+    // Fixed segment for BattleTech game data. The runtime DS register can
+    // vary (0x1DE9=world map, 0x3858=building, etc.) but the data structures
+    // always live at (0x1DE9 << 4) + offset in physical memory.
+    private const ushort GameDataSegment = 0x1DE9;
+
     private const int StateArraySize = 256;
     private const int StorySlotSize = 125;
     private const int StorySlotCount = 8;
@@ -88,7 +93,7 @@ public sealed class BattleTechMcpTools
     }
 
     private ushort DsSegment => _services.State.DS;
-    private uint DsAddr(ushort off) => (uint)((DsSegment << 4) + off);
+    private uint DsAddr(ushort off) => (uint)((GameDataSegment << 4) + off);
     private IMemory Memory => _services.Memory;
 
     // ──────────────────────────────────────────────
@@ -469,6 +474,167 @@ public sealed class BattleTechMcpTools
                 Length = str.Length,
                 Text = str,
                 Segmented = FormatSegmented(address)
+            };
+        });
+    }
+
+    // ──────────────────────────────────────────────
+    //  Video / Screenshot Tools
+    // ──────────────────────────────────────────────
+
+    // Standard VGA 16-color palette (R,G,B each 0-63) for brightness calculation
+    private static readonly byte[,] VgaPaletteRgb = {
+        {  0,  0,  0 }, // 0  black
+        {  0,  0, 42 }, // 1  blue
+        {  0, 42,  0 }, // 2  green
+        {  0, 42, 42 }, // 3  cyan
+        { 42,  0,  0 }, // 4  red
+        { 42,  0, 42 }, // 5  magenta
+        { 42, 21,  0 }, // 6  brown
+        { 42, 42, 42 }, // 7  light gray
+        { 21, 21, 21 }, // 8  dark gray
+        { 21, 21, 63 }, // 9  light blue
+        { 21, 63, 21 }, // 10 light green
+        { 21, 63, 63 }, // 11 light cyan
+        { 63, 21, 21 }, // 12 light red
+        { 63, 21, 63 }, // 13 light magenta
+        { 63, 63, 21 }, // 14 yellow
+        { 63, 63, 63 }, // 15 bright white
+    };
+
+    private static readonly char[] AsciiRamp = " .:-=+*#%@".ToCharArray();
+
+    [McpServerTool(Name = "bt_screenshot", UseStructuredContent = true)]
+    [Description("Capture the emulator's display as ASCII art. "
+        + "Reads video mode from BIOS (0x0040:0x0049). "
+        + "For text modes (0x03): reads char/attr pairs from B800:0000, renders 80x25 text. "
+        + "For graphics modes (0x13/0x0D/0x0E): reads pixel data from A000:0000, "
+        + "converts to 80x50 ASCII via VGA palette brightness. "
+        + "Returns the text rendering + video mode info.")]
+    public CallToolResult ScreenShot()
+    {
+        return ExecuteTool(() =>
+        {
+            byte videoMode = Memory.UInt8[0x449];
+            string modeDesc;
+            string asciiArt;
+            int outCols, outRows;
+
+            if (videoMode == 0x03 || videoMode == 0x01 || videoMode == 0x02 ||
+                videoMode == 0x07 || videoMode == 0x00)
+            {
+                // ── Text mode ──
+                modeDesc = $"Text 80x25 (mode 0x{videoMode:X2})";
+                const int textCols = 80, textRows = 25;
+                uint fbAddr = 0xB8000;
+                byte[] buffer = Memory.GetData(fbAddr, (uint)(textCols * textRows * 2));
+
+                var sb = new System.Text.StringBuilder();
+                sb.Append('+').Append(new string('-', textCols)).AppendLine("+");
+                for (int r = 0; r < textRows; r++)
+                {
+                    sb.Append('|');
+                    for (int c = 0; c < textCols; c++)
+                    {
+                        int idx = (r * textCols + c) * 2;
+                        byte ch = idx < buffer.Length ? buffer[idx] : (byte)0;
+                        byte attr = idx + 1 < buffer.Length ? buffer[idx + 1] : (byte)0;
+                        // Use blink/intensity bits to vary brightness
+                        char display = (ch >= 0x20 && ch <= 0x7E) ? (char)ch :
+                                       (ch == 0xB0 ? '.' : (ch == 0xDB ? '#' : ' '));
+                        sb.Append(display);
+                    }
+                    sb.Append('|').Append('\n');
+                }
+                sb.Append('+').Append(new string('-', textCols)).Append('+');
+                asciiArt = sb.ToString();
+                outCols = textCols; outRows = textRows;
+            }
+            else
+            {
+                // ── Graphics mode ──
+                int width = videoMode == 0x0E ? 640 : 320;
+                int height = 200;
+                modeDesc = videoMode switch
+                {
+                    0x13 => "VGA 320x200 256-color (mode 13h)",
+                    0x0D => "EGA 320x200 16-color (mode 0Dh)",
+                    0x0E => "EGA 640x200 16-color (mode 0Eh)",
+                    _    => $"Graphics (0x{videoMode:X2})"
+                };
+
+                uint fbAddr = 0xA0000;
+                byte[] pixels = Memory.GetData(fbAddr, (uint)(width * height));
+
+                // Brightness lookup from standard VGA 16-color palette
+                int[] brightnessLevel = new int[256];
+                for (int i = 0; i < 256; i++)
+                {
+                    int ci = i & 0x0F;
+                    int r = VgaPaletteRgb[ci, 0];
+                    int g = VgaPaletteRgb[ci, 1];
+                    int b = VgaPaletteRgb[ci, 2];
+                    int lum = (r * 299 + g * 587 + b * 114) / 630;
+                    if (lum > 9) lum = 9;
+                    brightnessLevel[i] = lum;
+                }
+
+                int sampleW = 4, sampleH = 4;
+                int cols = width / sampleW;
+                int rows = height / sampleH;
+                var sb = new System.Text.StringBuilder();
+                sb.Append('+').Append(new string('-', cols)).AppendLine("+");
+
+                for (int y = 0; y < height; y += sampleH)
+                {
+                    sb.Append('|');
+                    for (int x = 0; x < width; x += sampleW)
+                    {
+                        int idx = y * width + x;
+                        byte color = idx < pixels.Length ? pixels[idx] : (byte)0;
+                        sb.Append(AsciiRamp[brightnessLevel[color]]);
+                    }
+                    sb.AppendLine("|");
+                }
+                sb.Append('+').Append(new string('-', cols)).Append('+');
+                asciiArt = sb.ToString();
+                outCols = cols; outRows = rows;
+            }
+
+            return new
+            {
+                VideoMode = new
+                {
+                    BiosAddress = "0x0040:0x0049",
+                    Mode = (int)videoMode,
+                    Description = modeDesc
+                },
+                AsciiArt = asciiArt,
+                Dimensions = new { Cols = outCols, Rows = outRows }
+            };
+        });
+    }
+
+    [McpServerTool(Name = "bt_read_video_mode", UseStructuredContent = true)]
+    [Description("Read current video mode from BIOS data area (0x0040:0x0049). Returns mode number + description.")]
+    public CallToolResult ReadVideoMode()
+    {
+        return ExecuteTool(() =>
+        {
+            byte videoMode = Memory.UInt8[0x449];
+            return new
+            {
+                BiosAddress = "0x0040:0x0049",
+                Mode = (int)videoMode,
+                Description = videoMode switch
+                {
+                    0x13 => "VGA 320x200 256-color (mode 13h)",
+                    0x0D => "EGA 320x200 16-color (mode 0Dh)",
+                    0x0E => "EGA 640x200 16-color (mode 0Eh)",
+                    0x03 => "Text 80x25 (mode 03h)",
+                    0x12 => "VGA 640x480 16-color (mode 12h)",
+                    _    => $"Unknown (0x{videoMode:X2})"
+                }
             };
         });
     }
