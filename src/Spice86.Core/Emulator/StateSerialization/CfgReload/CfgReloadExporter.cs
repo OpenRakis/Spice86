@@ -2,9 +2,11 @@ namespace Spice86.Core.Emulator.StateSerialization.CfgReload;
 
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
 using Spice86.Core.Emulator.ReverseEngineer.Graph;
+using Spice86.Shared.Emulator.Memory;
 
 using System.Linq;
 
@@ -19,8 +21,10 @@ internal sealed class CfgReloadExporter {
     /// Traverses from <see cref="ExecutionContextManager.ExecutionContextEntryPoints"/> following both
     /// <c>Successors</c> and <c>Predecessors</c>, collecting every reachable instruction and selector
     /// node, their typed edges, the blocks that contain them, and the entry-point addresses.
+    /// When <paramref name="poisonSet"/> is provided, includes poisoned addresses in the dump for
+    /// monotonic persistence across runs.
     /// </summary>
-    public CfgReloadDump Export(ExecutionContextManager contextManager) {
+    public CfgReloadDump Export(ExecutionContextManager contextManager, HashSet<SegmentedAddress>? poisonSet) {
         HashSet<ICfgNode> reachable = TraverseReachableNodes(contextManager);
 
         List<CfgReloadNodeInfo> nodes = new();
@@ -56,6 +60,12 @@ internal sealed class CfgReloadExporter {
             .OrderBy(s => s, StringComparer.Ordinal)
             .ToArray();
 
+        string[]? poisonedAddresses = poisonSet is { Count: > 0 }
+            ? poisonSet.Select(address => address.ToString())
+                .OrderBy(s => s, StringComparer.Ordinal)
+                .ToArray()
+            : null;
+
         return new CfgReloadDump {
             IdAllocatorNext = maxId + 1,
             EntryPoints = entryPoints,
@@ -63,7 +73,8 @@ internal sealed class CfgReloadExporter {
             Edges = edges
                 .OrderBy(e => e.From).ThenBy(e => e.To).ThenBy(e => e.Type, StringComparer.Ordinal)
                 .ToArray(),
-            Blocks = blockInfos.OrderBy(b => b.Id).ToArray()
+            Blocks = blockInfos.OrderBy(b => b.Id).ToArray(),
+            PoisonedAddresses = poisonedAddresses
         };
     }
 
@@ -84,7 +95,8 @@ internal sealed class CfgReloadExporter {
             Type = CfgReloadNodeType.Instruction,
             Addr = instruction.Address.ToString(),
             Bytes = sigHex,
-            MaxSucc = instruction.MaxSuccessorsCount
+            MaxSucc = instruction.MaxSuccessorsCount,
+            Speculative = instruction.IsSpeculative ? true : null
         };
     }
 

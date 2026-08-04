@@ -30,4 +30,23 @@ public static class DictionaryUtils {
         }
         return values;
     }
+
+    /// <summary>
+    /// Removes <paramref name="value"/> from the collection stored at <paramref name="key"/> and drops
+    /// the key entirely when that collection becomes empty. No-op when the key is absent or the value
+    /// was not present.
+    /// </summary>
+    /// <returns><c>true</c> when the value was removed, <c>false</c> otherwise.</returns>
+    public static bool RemoveFromCollection<TKey, TValue, TCollection>(
+        IDictionary<TKey, TCollection> dictionary, TKey key, TValue value)
+        where TKey : notnull
+        where TCollection : class, ICollection<TValue> {
+        if (!dictionary.TryGetValue(key, out TCollection? collection) || !collection.Remove(value)) {
+            return false;
+        }
+        if (collection.Count == 0) {
+            dictionary.Remove(key);
+        }
+        return true;
+    }
 }

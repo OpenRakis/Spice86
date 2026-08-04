@@ -6,14 +6,14 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:0010",
-  "lastExecutedBlockId": 24,
+  "lastExecutedBlockId": 39,
   "blocks": [
     {
-      "id": 24,
+      "id": 39,
       "entry": "F000:0010",
       "term": "F000:0010",
       "pred": [
-        26
+        41
       ],
       "succ": [],
       "asm": [
@@ -33,17 +33,17 @@
       ]
     },
     {
-      "id": 26,
+      "id": 41,
       "entry": "F000:0010",
       "term": "F000:0010",
       "pred": [
         12,
-        17,
-        19
+        14,
+        31
       ],
       "succ": [
-        14,
-        24
+        28,
+        39
       ],
       "asm": [
         "selector"
@@ -57,7 +57,7 @@
         2
       ],
       "succ": [
-        17
+        31
       ],
       "asm": [
         "B80000|mov AX,0",
@@ -67,15 +67,15 @@
       ]
     },
     {
-      "id": 14,
+      "id": 28,
       "entry": "F000:0010",
       "dead": true,
       "term": "F000:0015",
       "pred": [
-        26
+        41
       ],
       "succ": [
-        17
+        31
       ],
       "asm": [
         "90|nop",
@@ -91,37 +91,37 @@
         9
       ],
       "succ": [
-        26
+        41
       ],
       "asm": [
         "C3|ret near"
       ]
     },
     {
-      "id": 17,
+      "id": 31,
       "entry": "F000:000D",
       "term": "F000:000D",
       "pred": [
         3,
-        14
+        28
       ],
       "succ": [
         9,
-        26
+        41
       ],
       "asm": [
         "E80700|call near 0x0017"
       ]
     },
     {
-      "id": 19,
+      "id": 14,
       "entry": "F000:001E",
       "term": "F000:0029",
       "pred": [
         9
       ],
       "succ": [
-        26
+        41
       ],
       "asm": [
         "B800F0|mov AX,0xF000",
@@ -135,11 +135,11 @@
       "entry": "F000:0017",
       "term": "F000:001C",
       "pred": [
-        17
+        31
       ],
       "succ": [
         12,
-        19
+        14
       ],
       "asm": [
         "803E2B0000|cmp byte ptr DS:[0x002B],0",

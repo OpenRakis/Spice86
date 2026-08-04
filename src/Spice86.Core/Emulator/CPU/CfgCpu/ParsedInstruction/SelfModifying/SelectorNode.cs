@@ -43,6 +43,7 @@ public class SelectorNode(int id, SegmentedAddress address) : CfgNode(id, addres
 
     public override void UpdateSuccessorCache() {
         SuccessorsPerSignature = Successors.OfType<CfgInstruction>()
+            .Where(node => !node.IsSpeculative)
             .OrderBy(node => node.Signature)
             .ToDictionary(node => node.Signature);
     }

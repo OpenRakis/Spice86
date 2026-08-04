@@ -66,6 +66,7 @@ F000:2023 mov AX,word ptr DS:[0]
 F000:2026 mov BP,DI
 F000:2028 mov word ptr SS:[BP+SI],AX
 F000:202A jcxz short 0x202D
+F000:202C hlt
 F000:202D jmp near word ptr DS:[0x3004]
 F000:300D mov AX,0xF000
 F000:3010 mov DS,AX
@@ -80,6 +81,7 @@ F000:3021 mov AX,word ptr DS:[2]
 F000:3024 mov BP,DI
 F000:3026 mov word ptr SS:[BP+SI],AX
 F000:3028 jcxz short 0x302B
+F000:302A hlt
 F000:302B jmp near word ptr DS:[0x3008]
 F000:302F mov AX,0xF000
 F000:3032 mov DS,AX
@@ -106,6 +108,7 @@ F000:4004 popf
 F000:4005 mov CX,4
 F000:4008 rep stos word ptr ES:[DI],AX
 F000:400A jcxz short 0x400D
+F000:400C hlt
 F000:400D mov BX,0x0040
 F000:4010 push BX
 F000:4011 popf
@@ -137,12 +140,15 @@ F000:4049 jmp near CX
 F000:5000 mov CX,2
 F000:5003 rep movs byte ptr ES:[DI],byte ptr DS:[SI]
 F000:5005 jcxz short 0x5008
+F000:5007 hlt
 F000:5008 mov CX,2
 F000:500B rep lods AL,byte ptr DS:[SI]
 F000:500D jcxz short 0x5010
+F000:500F hlt
 F000:5010 mov CX,2
 F000:5013 rep stos byte ptr ES:[DI],AL
 F000:5015 jcxz short 0x5018
+F000:5017 hlt
 F000:5018 mov BX,0
 F000:501B push BX
 F000:501C popf

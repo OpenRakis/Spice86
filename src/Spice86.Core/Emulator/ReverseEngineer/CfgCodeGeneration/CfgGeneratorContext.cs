@@ -83,7 +83,7 @@ internal sealed class CfgGeneratorContext {
         };
     }
 
-    public IReadOnlyList<ResolvedCfgEdge> GetObservedEdges(CfgInstruction source, InstructionSuccessorType type) {
+    public IReadOnlyList<ResolvedCfgEdge> GetSuccessorEdges(CfgInstruction source, InstructionSuccessorType type) {
         if (!source.SuccessorsPerType.TryGetValue(type, out ISet<ICfgNode>? successors)) {
             return [];
         }
@@ -108,7 +108,7 @@ internal sealed class CfgGeneratorContext {
     /// when more than one matches (ambiguous semantic dispatch).
     /// </summary>
     public ResolvedCfgEdge? TryResolveEdge(CfgInstruction source, InstructionSuccessorType type, SegmentedAddress targetAddress) {
-        List<ResolvedCfgEdge> matches = GetObservedEdges(source, type)
+        List<ResolvedCfgEdge> matches = GetSuccessorEdges(source, type)
             .Where(edge => edge.Target.Address == targetAddress)
             .ToList();
         return matches.Count switch {
@@ -161,7 +161,7 @@ internal sealed class CfgGeneratorContext {
     public CallContinuation ResolveCallContinuation(CfgInstruction call) {
         SegmentedAddress expectedReturn = call.NextInMemoryAddress32.ToSegmentedAddress();
 
-        IReadOnlyList<ResolvedCfgEdge> aligned = GetObservedEdges(call, InstructionSuccessorType.CallToReturn);
+        IReadOnlyList<ResolvedCfgEdge> aligned = GetSuccessorEdges(call, InstructionSuccessorType.CallToReturn);
         if (aligned.Count > 1) {
             throw new NotSupportedException(
                 $"Call {call.Address} has {aligned.Count} observed aligned continuations; the generator cannot pick one continuation for a single call.");
@@ -170,7 +170,7 @@ internal sealed class CfgGeneratorContext {
             return new CallContinuation(expectedReturn, aligned[0]);
         }
 
-        IReadOnlyList<ResolvedCfgEdge> misaligned = GetObservedEdges(call, InstructionSuccessorType.CallToMisalignedReturn);
+        IReadOnlyList<ResolvedCfgEdge> misaligned = GetSuccessorEdges(call, InstructionSuccessorType.CallToMisalignedReturn);
         if (misaligned.Count == 1) {
             return new CallContinuation(expectedReturn, misaligned[0]);
         }

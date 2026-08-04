@@ -6,14 +6,14 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:D00B",
-  "lastExecutedBlockId": 70,
+  "lastExecutedBlockId": 116,
   "blocks": [
     {
-      "id": 70,
+      "id": 116,
       "entry": "F000:D000",
       "term": "F000:D00B",
       "pred": [
-        66
+        110
       ],
       "succ": [],
       "asm": [
@@ -36,14 +36,14 @@
       ]
     },
     {
-      "id": 66,
+      "id": 110,
       "entry": "F000:8013",
       "term": "F000:8017",
       "pred": [
-        61
+        95
       ],
       "succ": [
-        70
+        116
       ],
       "asm": [
         "B800D0|mov AX,0xD000",
@@ -59,7 +59,7 @@
         2
       ],
       "succ": [
-        12
+        21
       ],
       "asm": [
         "B900F0|mov CX,0xF000",
@@ -73,14 +73,14 @@
       ]
     },
     {
-      "id": 61,
+      "id": 95,
       "entry": "F000:1350",
       "term": "F000:1354",
       "pred": [
-        56
+        91
       ],
       "succ": [
-        66
+        110
       ],
       "asm": [
         "B080|mov AL,0x80",
@@ -90,14 +90,14 @@
       ]
     },
     {
-      "id": 12,
+      "id": 21,
       "entry": "F000:0097",
       "term": "F000:0099",
       "pred": [
         3
       ],
       "succ": [
-        16
+        27
       ],
       "asm": [
         "A6|cmps byte ptr DS:[SI],byte ptr ES:[DI]",
@@ -106,14 +106,15 @@
       ]
     },
     {
-      "id": 56,
+      "id": 91,
       "entry": "F000:1300",
       "term": "F000:1305",
       "pred": [
-        49
+        79
       ],
       "succ": [
-        61
+        95,
+        97
       ],
       "asm": [
         "8905|mov word ptr DS:[DI],AX",
@@ -123,14 +124,14 @@
       ]
     },
     {
-      "id": 16,
+      "id": 27,
       "entry": "F000:0046",
       "term": "F000:0048",
       "pred": [
-        12
+        21
       ],
       "succ": [
-        20
+        33
       ],
       "asm": [
         "A6|cmps byte ptr DS:[SI],byte ptr ES:[DI]",
@@ -139,14 +140,27 @@
       ]
     },
     {
-      "id": 49,
+      "id": 97,
+      "entry": "F000:1307",
+      "dead": true,
+      "term": "F000:1307",
+      "pred": [
+        91
+      ],
+      "succ": [],
+      "asm": [
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 79,
       "entry": "F000:80FF",
       "term": "F000:8107",
       "pred": [
-        44
+        71
       ],
       "succ": [
-        56
+        91
       ],
       "asm": [
         "BF0220|mov DI,0x2002",
@@ -158,14 +172,14 @@
       ]
     },
     {
-      "id": 20,
+      "id": 33,
       "entry": "F000:0082",
       "term": "F000:0084",
       "pred": [
-        16
+        27
       ],
       "succ": [
-        24
+        39
       ],
       "asm": [
         "A6|cmps byte ptr DS:[SI],byte ptr ES:[DI]",
@@ -174,14 +188,14 @@
       ]
     },
     {
-      "id": 44,
+      "id": 71,
       "entry": "F000:80C2",
       "term": "F000:80C7",
       "pred": [
-        36
+        57
       ],
       "succ": [
-        49
+        79
       ],
       "asm": [
         "8ED9|mov DS,CX",
@@ -191,14 +205,14 @@
       ]
     },
     {
-      "id": 24,
+      "id": 39,
       "entry": "F000:0812",
       "term": "F000:0814",
       "pred": [
-        20
+        33
       ],
       "succ": [
-        28
+        45
       ],
       "asm": [
         "A7|cmps word ptr DS:[SI],word ptr ES:[DI]",
@@ -207,14 +221,14 @@
       ]
     },
     {
-      "id": 36,
+      "id": 57,
       "entry": "F000:C200",
       "term": "F000:C20E",
       "pred": [
-        33
+        53
       ],
       "succ": [
-        44
+        71
       ],
       "asm": [
         "BA0010|mov DX,0x1000",
@@ -227,14 +241,14 @@
       ]
     },
     {
-      "id": 28,
+      "id": 45,
       "entry": "F000:0883",
       "term": "F000:0887",
       "pred": [
-        24
+        39
       ],
       "succ": [
-        33
+        53
       ],
       "asm": [
         "B410|mov AH,0x10",
@@ -244,14 +258,14 @@
       ]
     },
     {
-      "id": 33,
+      "id": 53,
       "entry": "F000:10C2",
       "term": "F000:10C3",
       "pred": [
-        28
+        45
       ],
       "succ": [
-        36
+        57
       ],
       "asm": [
         "AD|lods AX,word ptr DS:[SI]",

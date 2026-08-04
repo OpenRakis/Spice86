@@ -55,7 +55,7 @@ internal sealed class ProgramBootstrapper {
                 executableFileName, isDosProgram);
         }
 
-        ExecutableFileLoader loader = CreateLoader(executableFileName, isDosProgram, upperCaseExtension);
+        ExecutableFileLoader loader = CreateLoader(isDosProgram, upperCaseExtension);
 
         try {
             if (_configuration.InitializeDOS is null) {
@@ -72,7 +72,7 @@ internal sealed class ProgramBootstrapper {
         }
     }
 
-    private ExecutableFileLoader CreateLoader(string executableFileName, bool isDosProgram, string upperCaseExtension) {
+    private ExecutableFileLoader CreateLoader(bool isDosProgram, string upperCaseExtension) {
         if (!isDosProgram) {
             return new BiosLoader(_memory, _state, _loggerService);
         }

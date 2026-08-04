@@ -34,12 +34,14 @@ internal sealed class CfgGraphReloader {
     private readonly PreviousInstructions _previousInstructions;
     private readonly SequentialIdAllocator _idAllocator;
     private readonly CfgNodeExecutionCompiler _executionCompiler;
+    private readonly CfgNodeIndex _nodeIndex;
 
     public CfgGraphReloader(CfgCpu cfgCpu, State state, CfgNodeExecutionCompiler executionCompiler, SequentialIdAllocator idAllocator) {
         _state = state;
         _executionCompiler = executionCompiler;
         _executionContextManager = cfgCpu.ExecutionContextManager;
         _previousInstructions = cfgCpu.CfgNodeFeeder.InstructionsFeeder.PreviousInstructions;
+        _nodeIndex = cfgCpu.CfgNodeFeeder.NodeIndex;
         _idAllocator = idAllocator;
     }
 
@@ -54,25 +56,33 @@ internal sealed class CfgGraphReloader {
         foreach (CfgReloadNodeInfo nodeInfo in dump.Nodes) {
             ICfgNode node = reconstructor.Reconstruct(nodeInfo);
             nodesById[nodeInfo.Id] = node;
+            node.SetSpeculative(nodeInfo.Speculative == true);
         }
 
-        // 2. Force every reconstructed instruction non-live (they are born live). Execution promotes
-        //    them to live via CurrentInstructions.SetAsCurrent on first encounter, which is the only
-        //    path that also installs the memory-write breakpoints required for self-modifying-code
+        // 2. Force every reconstructed observed instruction non-live (they are born live). Execution
+        //    promotes them to live via CurrentInstructions.SetAsCurrent on first encounter, which is the
+        //    only path that also installs the memory-write breakpoints required for self-modifying-code
         //    eviction. This must run BEFORE blocks are built so each block's non-live counter
         //    initializes correctly (CfgBlock reads IsLive on Append). Selectors are always live and
-        //    carry no breakpoints, so they are left as-is.
+        //    carry no breakpoints, so they are left as-is. Speculative nodes are already non-live.
         foreach (ICfgNode node in nodesById.Values) {
             if (node is CfgInstruction instruction) {
                 instruction.SetLive(false);
             }
         }
 
-        // 3. Register every reconstructed instruction in PreviousInstructions (NOT CurrentInstructions),
-        //    so resumed execution reuses reloaded nodes via memory matching instead of parsing anew.
+        // 3. Register all reconstructed instructions in the CfgNodeIndex (the index spans every node,
+        //    observed and speculative, mirroring the live feeder path where ParseAndSetAsCurrent calls
+        //    NodeIndex.Insert for observed nodes too). Observed instructions are additionally registered
+        //    in PreviousInstructions (NOT CurrentInstructions) so resumed execution reuses reloaded
+        //    nodes via memory matching instead of parsing anew. Speculative nodes stay out of both
+        //    memory caches per the speculative invariant.
         foreach (ICfgNode node in nodesById.Values) {
             if (node is CfgInstruction instruction) {
-                _previousInstructions.AddInstructionInPrevious(instruction);
+                _nodeIndex.Insert(instruction);
+                if (!instruction.IsSpeculative) {
+                    _previousInstructions.AddInstructionInPrevious(instruction);
+                }
             }
         }
 
@@ -88,7 +98,10 @@ internal sealed class CfgGraphReloader {
         // 7. Seed the live allocator past the highest reloaded id.
         _idAllocator.NextId = dump.IdAllocatorNext;
 
-        // 8. LastExecuted / NodeToExecuteNextAccordingToGraph and the context stack stay reset (graph-only scope).
+        // 8. Restore the poison set (addresses proven byte-unstable by prior runs).
+        RestorePoisonSet(dump);
+
+        // 9. LastExecuted / NodeToExecuteNextAccordingToGraph and the context stack stay reset (graph-only scope).
     }
 
     private void RestoreEdges(CfgReloadDump dump, Dictionary<int, ICfgNode> nodesById) {
@@ -167,5 +180,15 @@ internal sealed class CfgGraphReloader {
             throw new InvalidOperationException($"Unknown instruction successor type '{type}'");
         }
         return parsed;
+    }
+
+    private void RestorePoisonSet(CfgReloadDump dump) {
+        if (dump.PoisonedAddresses is null) {
+            return;
+        }
+        foreach (string addressStr in dump.PoisonedAddresses) {
+            SegmentedAddress address = ReloadAddressParser.ParseOrThrow(addressStr, "poisoned address");
+            _nodeIndex.PoisonSet.Add(address);
+        }
     }
 }

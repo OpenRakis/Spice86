@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Utils;
 using System.Linq;
 
 /// <summary>
@@ -46,6 +47,14 @@ public class PreviousInstructions : InstructionReplacer, IClearable {
             && previousInstructionsAtAddress.Remove(oldInstruction)) {
             AddInstructionInPrevious(newInstruction);
         }
+    }
+
+    /// <summary>
+    /// Handles removal fan-out: removes <paramref name="instruction"/> from the historical set at its
+    /// address, dropping the address key when the set empties. No-op when the instruction is absent.
+    /// </summary>
+    public override void RemoveInstruction(CfgInstruction instruction) {
+        DictionaryUtils.RemoveFromCollection(_previousInstructionsAtAddress, instruction.Address, instruction);
     }
 
     public void AddInstructionInPrevious(CfgInstruction instruction) {

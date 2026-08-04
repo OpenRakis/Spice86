@@ -49,12 +49,12 @@ public class HostStorageProvider(
         if (CanSave && CanPickFolder) {
             FilePickerSaveOptions options = new() {
                 Title = "Save bitmap image...",
-                DefaultExtension = "bmp",
+                DefaultExtension = "png",
                 SuggestedStartLocation = await TryGetWellKnownFolderAsync(WellKnownFolder.Documents)
             };
             string? file = (await SaveFilePickerAsync(options))?.TryGetLocalPath();
             if (!string.IsNullOrWhiteSpace(file)) {
-                bitmap.Save(file);
+                bitmap.Save(file, options: new PngBitmapEncoderOptions());
             }
         }
     }

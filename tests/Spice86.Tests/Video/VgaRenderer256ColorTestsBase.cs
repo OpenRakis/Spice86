@@ -33,7 +33,7 @@ public abstract class VgaRenderer256ColorTestsBase {
     ///     Skips the current test when the required instruction set is not supported.
     /// </summary>
     protected void EnsureSupported() =>
-        Skip.IfNot(IsSupported, "The required CPU instruction set is not supported on this machine.");
+        Assert.SkipUnless(IsSupported, "The required CPU instruction set is not supported on this machine.");
 
     protected (Renderer renderer, VideoMemory videoMemory) CreateRenderer(VideoState state) {
         IMemory mockMemory = Substitute.For<IMemory>();
@@ -55,7 +55,7 @@ public abstract class VgaRenderer256ColorTestsBase {
 
     // ─────────── Scalar doubled rendering ───────────
 
-    [SkippableFact]
+    [Fact]
     public void Render256Color_ScalarDoubled_SinglePixel() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(1);
@@ -72,7 +72,7 @@ public abstract class VgaRenderer256ColorTestsBase {
         frame[1].Should().Be(state.DacRegisters.PaletteMap[42]);
     }
 
-    [SkippableFact]
+    [Fact]
     public void Render256Color_AllFourPlanes_ProduceEightPixels() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(1);
@@ -97,7 +97,7 @@ public abstract class VgaRenderer256ColorTestsBase {
         frame[7].Should().Be(state.DacRegisters.PaletteMap[40]);
     }
 
-    [SkippableFact]
+    [Fact]
     public void Render256Color_MultipleCharacters_Contiguous() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(1);
@@ -131,7 +131,7 @@ public abstract class VgaRenderer256ColorTestsBase {
         frame[15].Should().Be(state.DacRegisters.PaletteMap[8]);
     }
 
-    [SkippableFact]
+    [Fact]
     public void Render256Color_FullScanline_AllPixelsCorrect() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(1);
@@ -163,7 +163,7 @@ public abstract class VgaRenderer256ColorTestsBase {
         }
     }
 
-    [SkippableFact]
+    [Fact]
     public void Render256Color_MultipleScanlines_RowAddressAdvances() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(3);
@@ -186,7 +186,7 @@ public abstract class VgaRenderer256ColorTestsBase {
         frame[2 * width].Should().Be(state.DacRegisters.PaletteMap[30], "line 2");
     }
 
-    [SkippableFact]
+    [Fact]
     public void Render256Color_WithScreenStartAddress_OffsetsCorrectly() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(1);
@@ -202,7 +202,7 @@ public abstract class VgaRenderer256ColorTestsBase {
         frame[0].Should().Be(state.DacRegisters.PaletteMap[99], "should start from ScreenStartAddress");
     }
 
-    [SkippableFact]
+    [Fact]
     public void Render256Color_PaletteMapApplied() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(1);
@@ -219,7 +219,7 @@ public abstract class VgaRenderer256ColorTestsBase {
         frame[1].Should().Be(specificColor);
     }
 
-    [SkippableFact]
+    [Fact]
     public void Render256Color_ZeroValuePixels_UsesPaletteZero() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(1);
@@ -234,7 +234,7 @@ public abstract class VgaRenderer256ColorTestsBase {
         frame[0].Should().Be(backgroundColor, "zero VRAM values should use palette index 0");
     }
 
-    [SkippableFact]
+    [Fact]
     public void Render256Color_MaxPaletteIndex_Works() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(1);
@@ -250,7 +250,7 @@ public abstract class VgaRenderer256ColorTestsBase {
         frame[0].Should().Be(maxColor);
     }
 
-    [SkippableFact]
+    [Fact]
     public void Render256Color_DirtySkip_StillWorks() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(1);
@@ -272,7 +272,7 @@ public abstract class VgaRenderer256ColorTestsBase {
         second[0].Should().Be(0xDEADBEEF, "skipped frame should not overwrite");
     }
 
-    [SkippableFact]
+    [Fact]
     public void Render256Color_BytePanning_OffsetsStart() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(1);
@@ -291,7 +291,7 @@ public abstract class VgaRenderer256ColorTestsBase {
         frame[0].Should().Be(state.DacRegisters.PaletteMap[88], "byte panning offsets 256-color start");
     }
 
-    [SkippableFact]
+    [Fact]
     public void Render256Color_ConsecutiveFrames_UpdateCorrectly() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(1);
@@ -313,7 +313,7 @@ public abstract class VgaRenderer256ColorTestsBase {
 
     // ─────────── DoubleWord / Word addressing modes ───────────
 
-    [SkippableFact]
+    [Fact]
     public void Render256Color_DoubleWordMode_ReadsCorrectPhysicalAddresses() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(1);
@@ -358,7 +358,7 @@ public abstract class VgaRenderer256ColorTestsBase {
         frame[14].Should().Be(state.DacRegisters.PaletteMap[80], "char 1, plane 3 — DoubleWord addressing");
     }
 
-    [SkippableFact]
+    [Fact]
     public void Render256Color_Word13Mode_ReadsCorrectPhysicalAddresses() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(1);
@@ -399,7 +399,7 @@ public abstract class VgaRenderer256ColorTestsBase {
         frame[14].Should().Be(state.DacRegisters.PaletteMap[88], "char 1, plane 3 — Word13 addressing");
     }
 
-    [SkippableFact]
+    [Fact]
     public void Render256Color_CountByFour_RepeatsAddressForGroupedCharacters() {
         EnsureSupported();
         // With CountByFour (mask=3), the memory address counter advances only

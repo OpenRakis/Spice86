@@ -3,6 +3,7 @@
     <PropertyGroup>
         <IsPackable>False</IsPackable>
         <OutputType>Exe</OutputType>
+        <StartupObject>Spice86.MicroBenchmarkTemplate.Program</StartupObject>
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>

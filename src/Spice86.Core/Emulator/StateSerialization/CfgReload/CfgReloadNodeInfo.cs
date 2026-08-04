@@ -14,4 +14,11 @@ internal sealed record CfgReloadNodeInfo {
     [JsonPropertyName("addr")] public required string Addr { get; init; }
     [JsonPropertyName("bytes")] public string? Bytes { get; init; }
     [JsonPropertyName("maxSucc")] public int? MaxSucc { get; init; }
+
+    /// <summary>
+    /// True when the node was speculatively decoded but never confirmed by execution.
+    /// Null (omitted) means observed. Restoring this flag on reload lets the block-level
+    /// <c>_speculativeCounter</c> reconstruct correctly from contained nodes.
+    /// </summary>
+    [JsonPropertyName("speculative")] public bool? Speculative { get; init; }
 }

@@ -152,7 +152,7 @@ public class SingleStepTest : IDisposable {
                     _testRunner.RunTest(cpuTest, index++, entry.Name, _singleStepTestMinimalMachine, maxCycles, flagsMask);
                 } catch (Exception ex) {
                     testPassed = false;
-                    errorMessage = ex.Message;
+                    errorMessage = ex.ToString();
                     if (!GenerateRevocationList && OpcodeToFix == null) {
                         throw;
                     }

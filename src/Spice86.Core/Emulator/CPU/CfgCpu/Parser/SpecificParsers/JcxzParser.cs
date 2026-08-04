@@ -36,6 +36,8 @@ public class JcxzParser : BaseInstructionParser {
         InstructionNode displayAst = new InstructionNode(mnemonicOp, targetIpNode);
         IfElseNode execAst = _astBuilder.ControlFlow.ConditionalNearJump(instr, condition, targetIpNode);
         instr.AttachAsts(displayAst, execAst);
+        instr.RegisterStaticSuccessorAddress(new SegmentedAddress(instr.NextInMemoryAddress32.Segment, targetIp));
+        instr.RegisterStaticSuccessorAddress(instr.NextInMemoryAddress32.ToSegmentedAddress());
         return instr;
     }
 }

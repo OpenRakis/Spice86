@@ -176,16 +176,17 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x47, () => GetCurrentDirectory(true));
         AddAction(0x48, () => AllocateMemoryBlock(true));
         AddAction(0x49, () => FreeMemoryBlock(true));
-        AddAction(0x50, () => SetCurrentPsp());
         AddAction(0x4A, () => ModifyMemoryBlock(true));
         AddAction(0x4B, () => LoadAndOrExecute(true));
         AddAction(0x4C, QuitWithExitCode);
         AddAction(0x4D, GetReturnCode);
         AddAction(0x4E, () => FindFirstMatchingFile(true));
         AddAction(0x4F, () => FindNextMatchingFile(true));
+        AddAction(0x50, () => SetCurrentPsp());
         AddAction(0x51, GetPspAddress);
         AddAction(0x52, GetListOfLists);
         AddAction(0x55, CreateChildPsp);
+        AddAction(0x57, () => GetSetFileDateAndTime(true));
         AddAction(0x58, () => AllocationStrategyOrUpperMemoryLinkState(true));
         AddAction(0x62, GetPspAddress);
         AddAction(0x63, GetLeadByteTable);
@@ -1949,6 +1950,72 @@ public class DosInt21Handler : InterruptHandler {
                 }
             default: throw new UnhandledOperationException(State, "getSetFileAttribute operation unhandled: " + op);
         }
+    }
+
+    /// <summary>
+    /// Gets (AL: 0) or sets (AL: 1) file DateTime for the file identified via its file path at DS:DX.
+    /// </summary>
+    /// <returns>
+    /// CF is cleared on success. <br/>
+    /// CF is set on error. Possible error code in AX: 0x1 (function number invalid) 0x6 (invalid handle). <br/>
+    /// </returns>
+    /// <param name="calledFromVm">Whether this was called from internal emulator code.</param>
+    public void GetSetFileDateAndTime(bool calledFromVm) {
+        byte op = State.AL;
+        string dosFileName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
+        string? fileName = _dosFileManager.TryGetFullHostPathFromDos(dosFileName);
+        if (!File.Exists(fileName)) {
+            LogDosError(calledFromVm);
+            SetCarryFlag(true, calledFromVm);
+            State.AX = (int)DosErrorCode.InvalidHandle;
+            return;
+        }
+        switch (op) {
+            case 0: {
+                    if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+                        LoggerService.Verbose("GET FILE DATETIME {FileName}", fileName);
+                    }
+                    DateTime dateTime = File.GetLastAccessTime(fileName);
+                    State.CX = DosFileManager.ToDosTime(dateTime);
+                    State.DX = DosFileManager.ToDosDate(dateTime);
+                    SetCarryFlag(false, calledFromVm);
+                    break;
+                }
+            case 1: {
+                    ushort dosFileTime = State.CX;
+                    ushort dosFileDate = State.DX;
+                    if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
+                        LoggerService.Verbose("SET FILE DATETIME {FileName}, {FileTime}, {FileDate}",
+                            fileName, dosFileDate, dosFileTime);
+                    }
+                    DateTime fileDateTime = DateTimeFormDosDateAndTime(dosFileTime, dosFileDate);
+                    File.SetLastAccessTime(fileName, fileDateTime);
+                    SetCarryFlag(false, calledFromVm);
+                    break;
+                }
+            default: {
+                SetCarryFlag(true, calledFromVm);
+                State.AX = (int)DosErrorCode.FunctionNumberInvalid;
+                break;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Converts DOS Date and Time to DateTime
+    /// DOS date format: bits 15-9=year-1980, bits 8-5=month, bits 4-0=day.
+    /// DOS time format: bits 15-11=hour, bits 10-5=minute, bits 4-0=seconds/2.
+    /// </summary>
+    public static DateTime DateTimeFormDosDateAndTime(ushort dosDate, ushort dosTime) {
+        int day = (dosDate >> 0) & 0b11111;
+        int month = (dosDate >> 5) & 0b1111;
+        int year = (dosDate >> 9) & 0b1111111 + 1980;
+
+        int seconds = (dosTime >> 0) & 0b11111 * 2;
+        int minutes = (dosTime >> 5) & 0b111111;
+        int hours = (dosTime >> 11) & 0b11111;
+
+        return new DateTime(year, month, day, hours, minutes, seconds);
     }
 
     /// <summary>

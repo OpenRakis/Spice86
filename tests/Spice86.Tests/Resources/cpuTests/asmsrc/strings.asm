@@ -53,6 +53,11 @@ mov es,dx
 scasw              ; (8)
 jz stor
 
+; Unobserved fallthrough of the jz above runs into the rb zero-padding below.
+; A hlt here bounds speculative decoding so the explorer stops at a terminator
+; instead of decoding the padding as a long run of bogus instructions.
+hlt
+
 rb 01350h-$
 stor:
 mov  al,80h

@@ -8,6 +8,8 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM.Breakpoint;
 
+using Spice86.Shared.Emulator.Memory;
+
 using SequentialIdAllocator = Spice86.Shared.Utils.SequentialIdAllocator;
 
 /// <summary>
@@ -23,13 +25,25 @@ public class CfgNodeFeeder {
     private readonly NodeLinker _nodeLinker;
 
     public CfgNodeFeeder(IMemory memory, State state, EmulatorBreakpointsManager emulatorBreakpointsManager,
-        InstructionReplacerRegistry replacerRegistry, CfgNodeExecutionCompiler executionCompiler, SequentialIdAllocator idAllocator) {
+        InstructionReplacerRegistry replacerRegistry, CfgNodeExecutionCompiler executionCompiler, SequentialIdAllocator idAllocator,
+        bool enableSpeculativeExploration) {
         _state = state;
-        InstructionsFeeder = new(emulatorBreakpointsManager, memory, state, replacerRegistry, executionCompiler, idAllocator);
         _nodeLinker = new(replacerRegistry, executionCompiler, idAllocator);
+        InstructionsFeeder = new(emulatorBreakpointsManager, memory, state, replacerRegistry, executionCompiler, idAllocator,
+            enableSpeculativeExploration ? _nodeLinker : null);
     }
 
     public InstructionsFeeder InstructionsFeeder { get; }
+
+    /// <summary>Persistent graph index spanning all nodes (observed + speculative).</summary>
+    public CfgNodeIndex NodeIndex => InstructionsFeeder.NodeIndex;
+
+    /// <summary>
+    /// Seeds known-safe interrupt handler entry points for speculative exploration.
+    /// No-op when speculative exploration is disabled.
+    /// </summary>
+    public void SeedKnownSafeHandlers(IReadOnlyList<SegmentedAddress> handlerAddresses) =>
+        InstructionsFeeder.SeedKnownSafeHandlers(handlerAddresses);
 
     /// <summary>
     /// Parses or retrieves from cache the instruction at the current IP from memory.
@@ -90,6 +104,18 @@ public class CfgNodeFeeder {
                 "Nodes from memory and from graph don't have the same address. This should never happen. " +
                 $"From memory: {fromMemory} " +
                 $"From graph: {graphNodeAfterReconciliation}");
+        }
+
+        // Provenance-gated path: when the stale graph node is speculative, either promote it
+        // (memory match) or discard-and-replace (mismatch). This must run BEFORE the generic
+        // SelectorNode path so that speculative nodes never enter a SelectorNode. Reconciliation is
+        // owned entirely by InstructionsFeeder (which holds the reconciler); we only ask it to
+        // resolve this specific graph node.
+        if (graphNodeAfterReconciliation is CfgInstruction speculativeInGraph && speculativeInGraph.IsSpeculative) {
+            if (InstructionsFeeder.TryPromoteStaleSpeculativeNode(speculativeInGraph, fromMemory)) {
+                return speculativeInGraph;
+            }
+            return fromMemory;
         }
 
         // Genuinely different instructions at the same address. Inject a SelectorNode

@@ -209,6 +209,23 @@ public sealed partial class DualPic : DefaultIOPortHandler {
     }
 
     /// <summary>
+    ///     Enumerates the CPU interrupt vector numbers that the two PICs deliver for their hardware IRQ
+    ///     lines (8 lines per controller). Derived from each controller's programmed vector base so the
+    ///     set reflects the current programming rather than assuming the BIOS defaults
+    ///     (0x08-0x0F for the primary, 0x70-0x77 for the secondary).
+    /// </summary>
+    /// <returns>The hardware interrupt vector numbers, primary controller first.</returns>
+    public IEnumerable<byte> EnumerateHardwareInterruptVectorNumbers() {
+        const int irqLinesPerController = 8;
+        for (int line = 0; line < irqLinesPerController; line++) {
+            yield return (byte)(_primaryPic.InterruptVectorBase + line);
+        }
+        for (int line = 0; line < irqLinesPerController; line++) {
+            yield return (byte)(_secondaryPic.InterruptVectorBase + line);
+        }
+    }
+
+    /// <summary>
     ///     Resets both PIC controllers and applies the default mask/unmask configuration.
     /// </summary>
     private void InitializeControllers() {

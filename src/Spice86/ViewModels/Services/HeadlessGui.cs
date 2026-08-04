@@ -130,6 +130,12 @@ public sealed class HeadlessGui : IGuiVideoPresentation, IGuiMouseEvents,
             return;
         }
 
+        // These are process-lifetime static events; without unsubscribing they keep every
+        // HeadlessGui instance (and the whole Machine graph it references) alive for the
+        // lifetime of the process, which leaks an entire emulator per instance.
+        AppDomain.CurrentDomain.ProcessExit -= OnProcessExit;
+        Console.CancelKeyPress -= OnProcessExit;
+
         // Stop the timer to prevent any new callbacks
         _drawTimer?.Dispose();
 

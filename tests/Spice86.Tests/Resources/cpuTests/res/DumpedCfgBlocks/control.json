@@ -6,14 +6,14 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:002A",
-  "lastExecutedBlockId": 28,
+  "lastExecutedBlockId": 46,
   "blocks": [
     {
-      "id": 28,
+      "id": 46,
       "entry": "F000:001C",
       "term": "F000:002A",
       "pred": [
-        23
+        38
       ],
       "succ": [],
       "asm": [
@@ -39,14 +39,14 @@
       ]
     },
     {
-      "id": 23,
+      "id": 38,
       "entry": "F000:0018",
       "term": "F000:001B",
       "pred": [
-        21
+        27
       ],
       "succ": [
-        28
+        46
       ],
       "asm": [
         "F5|cmc",
@@ -74,14 +74,14 @@
       ]
     },
     {
-      "id": 21,
+      "id": 27,
       "entry": "F000:0017",
       "term": "F000:0017",
       "pred": [
-        14
+        20
       ],
       "succ": [
-        23
+        38
       ],
       "asm": [
         "9D|popf"
@@ -95,21 +95,21 @@
         3
       ],
       "succ": [
-        11
+        18
       ],
       "asm": [
         "9D|popf"
       ]
     },
     {
-      "id": 14,
+      "id": 20,
       "entry": "F000:000F",
       "term": "F000:0016",
       "pred": [
-        11
+        18
       ],
       "succ": [
-        21
+        27
       ],
       "asm": [
         "FA|cli",
@@ -121,14 +121,14 @@
       ]
     },
     {
-      "id": 11,
+      "id": 18,
       "entry": "F000:000D",
       "term": "F000:000E",
       "pred": [
         9
       ],
       "succ": [
-        14
+        20
       ],
       "asm": [
         "F8|clc",

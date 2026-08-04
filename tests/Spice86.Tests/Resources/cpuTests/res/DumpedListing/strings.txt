@@ -28,6 +28,7 @@ F000:1300 mov word ptr DS:[DI],AX
 F000:1302 mov ES,DX
 F000:1304 scas AX,word ptr ES:[DI]
 F000:1305 je short 0x1350
+F000:1307 hlt
 F000:1350 mov AL,0x80
 F000:1352 std
 F000:1353 stos byte ptr ES:[DI],AL

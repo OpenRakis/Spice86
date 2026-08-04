@@ -136,8 +136,9 @@ public class Signature : IComparable<Signature> {
 
     /// <inheritdoc/>
     public override int GetHashCode() {
-        // Hashcode cannot depend on the signature value because 2 values can be equals if they have null bytes 
-        return 1;
+        // Hash cannot depend on byte values because null bytes are wildcards so 2 different signatures could end up the same.
+        // Let's use the byte count to avoid keeping everything in the same bucket in dictionaries
+        return SignatureValue.Count;
     }
 
     /// <inheritdoc/>

@@ -1,0 +1,12 @@
+F000:0000 mov byte ptr DS:[0x0400],1
+F000:0005 mov AL,byte ptr DS:[0x0500]
+F000:0008 and AL,AL
+F000:000A jne short 0x0013
+F000:000C mov byte ptr DS:[0x0401],0xDD
+F000:0011 jmp short 0x0020
+F000:0013 mov byte ptr CS:[0x001A],0xEE
+F000:0019 mov byte ptr DS:[0x0401],0
+F000:001E jmp short 0x0020
+F000:0020 mov byte ptr DS:[0x0402],0xAA
+F000:0025 hlt
+F000:FFF0 jmp short 0

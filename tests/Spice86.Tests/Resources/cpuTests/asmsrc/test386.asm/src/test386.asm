@@ -1510,14 +1510,18 @@ postFF:
 ;
 DefaultExcHandler:
 error:
-	; CLI and HLT are privileged instructions, don't use them in ring3
+	; Failure handler: spin forever instead of halting. A HLT here would stop the
+	; machine the same way the successful postFF terminator does, making failure
+	; indistinguishable from success (and, under speculative CFG exploration, a HLT
+	; baked into this never-taken arm masks divergence). The self-loop keeps a failed
+	; run observably stuck instead.
+	; CLI is privileged, so it must not run in ring3.
 	mov ax, cs
 	; when in real mode, the jnz will be decoded together with test as
 	; "test eax,0xfe750007" (66A9070075FE)
 	test ax, 7     ; 66 A9 07 00
 .ring3: jnz .ring3 ; 75 FE
 	cli
-	hlt
 	jmp error
 
 

@@ -6,14 +6,14 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:1406",
-  "lastExecutedBlockId": 29,
+  "lastExecutedBlockId": 30252,
   "blocks": [
     {
-      "id": 29,
+      "id": 30252,
       "entry": "F000:1400",
       "term": "F000:1406",
       "pred": [
-        22
+        30245
       ],
       "succ": [],
       "asm": [
@@ -37,16 +37,16 @@
       ]
     },
     {
-      "id": 22,
+      "id": 30245,
       "entry": "F000:1400",
       "term": "F000:1400",
       "pred": [
-        19
+        30234
       ],
       "succ": [
-        15,
-        23,
-        29
+        30228,
+        30239,
+        30252
       ],
       "asm": [
         "selector"
@@ -60,7 +60,7 @@
         2
       ],
       "succ": [
-        19
+        30234
       ],
       "asm": [
         "B80000|mov AX,0",
@@ -70,33 +70,30 @@
       ]
     },
     {
-      "id": 15,
+      "id": 30228,
       "entry": "F000:1400",
       "dead": true,
-      "term": "F000:1407",
+      "term": "F000:1400",
       "pred": [
-        22
+        30245
       ],
       "succ": [
-        19
+        30231
       ],
       "asm": [
-        "B80100|mov AX,1",
-        "50|push AX",
-        "BE000C|mov SI,0x0C00",
-        "EA0B0000F0|jmp far F000:000B"
+        "B80100|mov AX,1"
       ]
     },
     {
-      "id": 23,
+      "id": 30239,
       "entry": "F000:1400",
       "dead": true,
       "term": "F000:1409",
       "pred": [
-        22
+        30245
       ],
       "succ": [
-        19
+        30234
       ],
       "asm": [
         "BB0100|mov BX,1",
@@ -107,16 +104,16 @@
       ]
     },
     {
-      "id": 19,
+      "id": 30234,
       "entry": "F000:000B",
       "term": "F000:001A",
       "pred": [
         3,
-        15,
-        23
+        30231,
+        30239
       ],
       "succ": [
-        22
+        30245
       ],
       "asm": [
         "B800F0|mov AX,0xF000",
@@ -126,6 +123,23 @@
         "B9E803|mov CX,0x03E8",
         "F3A5|rep movs word ptr ES:[DI],word ptr DS:[SI]",
         "E9E313|jmp near 0x1400"
+      ]
+    },
+    {
+      "id": 30231,
+      "entry": "F000:1403",
+      "dead": true,
+      "term": "F000:1407",
+      "pred": [
+        30228
+      ],
+      "succ": [
+        30234
+      ],
+      "asm": [
+        "50|push AX",
+        "BE000C|mov SI,0x0C00",
+        "EA0B0000F0|jmp far F000:000B"
       ]
     }
   ],

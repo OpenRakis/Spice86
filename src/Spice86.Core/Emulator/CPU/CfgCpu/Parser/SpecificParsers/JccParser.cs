@@ -67,11 +67,15 @@ public class JccParser : BaseInstructionParser {
         instr.AddField(offsetField);
         instr.MaxSuccessorsCount = 2;
         ushort targetIp = (ushort)(instr.NextInMemoryAddress32.Offset + offsetValue);
+        SegmentedAddress takenAddress = new(instr.NextInMemoryAddress32.Segment, targetIp);
+        SegmentedAddress fallthroughAddress = instr.NextInMemoryAddress32.ToSegmentedAddress();
         ValueNode targetIpNode = _astBuilder.Constant.ToNearAddressNode(targetIp, instr.NextInMemoryAddress32.ToSegmentedAddress());
         ValueNode conditionNode = _astBuilder.Flag.BuildSetCondition(conditionCode);
         InstructionNode displayAst = new InstructionNode(displayOps[conditionCode], targetIpNode);
         IfElseNode execAst = _astBuilder.ControlFlow.ConditionalNearJump(instr, conditionNode, targetIpNode);
         instr.AttachAsts(displayAst, execAst);
+        instr.RegisterStaticSuccessorAddress(takenAddress);
+        instr.RegisterStaticSuccessorAddress(fallthroughAddress);
         return instr;
     }
 }

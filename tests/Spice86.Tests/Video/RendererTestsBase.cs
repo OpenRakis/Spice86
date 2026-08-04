@@ -26,39 +26,39 @@ public abstract class RendererTestsBase {
 
     /// <summary>Skips the current test when the required instruction set is not supported.</summary>
     protected void EnsureSupported() =>
-        Skip.IfNot(IsSupported, "The required CPU instruction set is not supported on this machine.");
+        Assert.SkipUnless(IsSupported, "The required CPU instruction set is not supported on this machine.");
 
     // -------------------------------------------------- Width / Height --------------------------------------------------
 
-    [SkippableFact]
+    [Fact]
     public void Width_25MHz_HalfDot_Returns320() {
         EnsureSupported();
         (Renderer renderer, _) = CreateRenderer(ConfigureBase(ClockSelect.Use25175Khz, halfDot: true));
         renderer.Width.Should().Be(320);
     }
 
-    [SkippableFact]
+    [Fact]
     public void Width_25MHz_FullDot_Returns640() {
         EnsureSupported();
         (Renderer renderer, _) = CreateRenderer(ConfigureBase(ClockSelect.Use25175Khz, halfDot: false));
         renderer.Width.Should().Be(640);
     }
 
-    [SkippableFact]
+    [Fact]
     public void Width_28MHz_HalfDot_Returns360() {
         EnsureSupported();
         (Renderer renderer, _) = CreateRenderer(ConfigureBase(ClockSelect.Use28322Khz, halfDot: true));
         renderer.Width.Should().Be(360);
     }
 
-    [SkippableFact]
+    [Fact]
     public void Width_28MHz_FullDot_Returns720() {
         EnsureSupported();
         (Renderer renderer, _) = CreateRenderer(ConfigureBase(ClockSelect.Use28322Khz, halfDot: false));
         renderer.Width.Should().Be(720);
     }
 
-    [SkippableFact]
+    [Fact]
     public void Height_NoScanDouble_ReturnsVerticalDisplayEndPlusOne() {
         EnsureSupported();
         VideoState state = ConfigureBase(ClockSelect.Use25175Khz, halfDot: true);
@@ -69,7 +69,7 @@ public abstract class RendererTestsBase {
         renderer.Height.Should().Be(200);
     }
 
-    [SkippableFact]
+    [Fact]
     public void Height_WithScanDouble_ReturnsHalf() {
         EnsureSupported();
         VideoState state = ConfigureBase(ClockSelect.Use25175Khz, halfDot: true);
@@ -83,7 +83,7 @@ public abstract class RendererTestsBase {
 
     // -------------------------------------------------- Buffer Management --------------------------------------------------
 
-    [SkippableFact]
+    [Fact]
     public void BufferSize_AfterBeginFrame_MatchesWidthTimesHeight() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(1);
@@ -95,7 +95,7 @@ public abstract class RendererTestsBase {
         renderer.BufferSize.Should().Be(renderer.Width * renderer.Height);
     }
 
-    [SkippableFact]
+    [Fact]
     public void Render_NoPendingFrame_LeavesBufferUntouched() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(1);
@@ -109,7 +109,7 @@ public abstract class RendererTestsBase {
         output.Should().AllBeEquivalentTo(0xDEADBEEF);
     }
 
-    [SkippableFact]
+    [Fact]
     public void Render_WithPendingFrame_CopiesPixels() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(1);
@@ -128,7 +128,7 @@ public abstract class RendererTestsBase {
         output[1].Should().Be(state.DacRegisters.PaletteMap[7]);
     }
 
-    [SkippableFact]
+    [Fact]
     public void ResolutionChange_ReallocatesBuffer() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(1);
@@ -150,7 +150,7 @@ public abstract class RendererTestsBase {
 
     // -------------------------------------------------- 256-Color Mode --------------------------------------------------
 
-    [SkippableFact]
+    [Fact]
     public void Render256Color_DoublesPlaneBytesToPixels() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(1);
@@ -177,7 +177,7 @@ public abstract class RendererTestsBase {
         frame[7].Should().Be(state.DacRegisters.PaletteMap[40]);
     }
 
-    [SkippableFact]
+    [Fact]
     public void Render256Color_UsesPaletteMap() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(1);
@@ -195,7 +195,7 @@ public abstract class RendererTestsBase {
         frame[1].Should().Be(expectedColor);
     }
 
-    [SkippableFact]
+    [Fact]
     public void Render256Color_MultipleCharacters() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(1);
@@ -223,7 +223,7 @@ public abstract class RendererTestsBase {
         frame[11].Should().Be(state.DacRegisters.PaletteMap[6]);
     }
 
-    [SkippableFact]
+    [Fact]
     public void Render256Color_MultipleScanlines() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(2);
@@ -245,7 +245,7 @@ public abstract class RendererTestsBase {
 
     // -------------------------------------------------- EGA Graphics Mode --------------------------------------------------
 
-    [SkippableFact]
+    [Fact]
     public void RenderEgaGraphics_CombinesPlanesTo4BitIndex() {
         EnsureSupported();
         VideoState state = ConfigureGraphicsEga(1);
@@ -265,7 +265,7 @@ public abstract class RendererTestsBase {
         frame[0].Should().Be(state.DacRegisters.AttributeMap[15]);
     }
 
-    [SkippableFact]
+    [Fact]
     public void RenderEgaGraphics_EachBitProducesOnePixel() {
         EnsureSupported();
         VideoState state = ConfigureGraphicsEga(1);
@@ -288,7 +288,7 @@ public abstract class RendererTestsBase {
         }
     }
 
-    [SkippableFact]
+    [Fact]
     public void RenderEgaGraphics_AllPlanesContribute() {
         EnsureSupported();
         VideoState state = ConfigureGraphicsEga(1);
@@ -307,7 +307,7 @@ public abstract class RendererTestsBase {
         frame[0].Should().Be(state.DacRegisters.AttributeMap[7]);
     }
 
-    [SkippableFact]
+    [Fact]
     public void RenderEgaGraphics_UsesAttributeMap() {
         EnsureSupported();
         VideoState state = ConfigureGraphicsEga(1);
@@ -330,7 +330,7 @@ public abstract class RendererTestsBase {
 
     // -------------------------------------------------- CGA Graphics Mode --------------------------------------------------
 
-    [SkippableFact]
+    [Fact]
     public void RenderCgaGraphics_InterleavesPlanes02And13() {
         EnsureSupported();
         VideoState state = ConfigureGraphicsCga(1);
@@ -350,7 +350,7 @@ public abstract class RendererTestsBase {
         frame[0].Should().Be(state.DacRegisters.AttributeMap[7], "first CGA pixel from planes 0,2");
     }
 
-    [SkippableFact]
+    [Fact]
     public void RenderCgaGraphics_SecondHalfFromPlanes13() {
         EnsureSupported();
         VideoState state = ConfigureGraphicsCga(1);
@@ -370,7 +370,7 @@ public abstract class RendererTestsBase {
         frame[4].Should().Be(state.DacRegisters.AttributeMap[14]);
     }
 
-    [SkippableFact]
+    [Fact]
     public void RenderCgaGraphics_FourPixelsPerHalf() {
         EnsureSupported();
         VideoState state = ConfigureGraphicsCga(1);
@@ -394,7 +394,7 @@ public abstract class RendererTestsBase {
 
     // -------------------------------------------------- Text Mode --------------------------------------------------
 
-    [SkippableFact]
+    [Fact]
     public void RenderTextMode_UsesFontFromPlane2() {
         EnsureSupported();
         VideoState state = ConfigureTextMode(1);
@@ -419,7 +419,7 @@ public abstract class RendererTestsBase {
         }
     }
 
-    [SkippableFact]
+    [Fact]
     public void RenderTextMode_BackgroundPixelsFromAttribute() {
         EnsureSupported();
         VideoState state = ConfigureTextMode(1);
@@ -443,7 +443,7 @@ public abstract class RendererTestsBase {
         }
     }
 
-    [SkippableFact]
+    [Fact]
     public void RenderTextMode_ForegroundAndBackgroundMixed() {
         EnsureSupported();
         VideoState state = ConfigureTextMode(1);
@@ -468,7 +468,7 @@ public abstract class RendererTestsBase {
         frame[3].Should().Be(bg, "bit 4 clear â†’ background");
     }
 
-    [SkippableFact]
+    [Fact]
     public void RenderTextMode_BlinkSwapsForegroundAndBackground() {
         EnsureSupported();
         VideoState state = ConfigureTextMode(1);
@@ -504,7 +504,7 @@ public abstract class RendererTestsBase {
         frame[0].Should().Be(expectedFg, "blink low: foreground = backGroundColor & 0x7");
     }
 
-    [SkippableFact]
+    [Fact]
     public void RenderTextMode_BlinkHighShowsNormal() {
         EnsureSupported();
         VideoState state = ConfigureTextMode(1);
@@ -530,7 +530,7 @@ public abstract class RendererTestsBase {
 
     // -------------------------------------------------- Dirty-skip Optimization --------------------------------------------------
 
-    [SkippableFact]
+    [Fact]
     public void BeginFrame_NoDirty_SkipsRendering() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(1);
@@ -555,7 +555,7 @@ public abstract class RendererTestsBase {
         frame2[0].Should().Be(0xDEADBEEF);
     }
 
-    [SkippableFact]
+    [Fact]
     public void BeginFrame_MemoryDirty_Renders() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(1);
@@ -578,7 +578,7 @@ public abstract class RendererTestsBase {
         frame[0].Should().Be(state.DacRegisters.PaletteMap[99]);
     }
 
-    [SkippableFact]
+    [Fact]
     public void BeginFrame_RegisterDirty_Renders() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(1);
@@ -594,7 +594,7 @@ public abstract class RendererTestsBase {
         frame[0].Should().Be(state.DacRegisters.PaletteMap[55]);
     }
 
-    [SkippableFact]
+    [Fact]
     public void BeginFrame_BlinkDirty_Renders() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(1);
@@ -611,7 +611,7 @@ public abstract class RendererTestsBase {
         frame[0].Should().Be(state.DacRegisters.PaletteMap[77]);
     }
 
-    [SkippableFact]
+    [Fact]
     public void CompleteFrame_SkippedFrame_NoPendingFrame() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(1);
@@ -631,7 +631,7 @@ public abstract class RendererTestsBase {
         output[0].Should().Be(0xDEADBEEF, "skipped frame should not publish");
     }
 
-    [SkippableFact]
+    [Fact]
     public void MidFrameDirty_ResumesRenderingFromDirtyPoint() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(4);
@@ -678,7 +678,7 @@ public abstract class RendererTestsBase {
         frame[2 * width].Should().Be(state.DacRegisters.PaletteMap[99], "mid-frame dirty should render updated data");
     }
 
-    [SkippableFact]
+    [Fact]
     public void MidFrameDirty_CopiesPreviousFrameForAlreadySkippedLines() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(4);
@@ -718,7 +718,7 @@ public abstract class RendererTestsBase {
 
     // -------------------------------------------------- Memory Width Modes --------------------------------------------------
 
-    [SkippableFact]
+    [Fact]
     public void MemoryWidth_Byte_DirectAddressing() {
         EnsureSupported();
         VideoState state = ConfigureGraphicsEga(1);
@@ -739,7 +739,7 @@ public abstract class RendererTestsBase {
         frame[0].Should().Be(state.DacRegisters.AttributeMap[1], "byte mode reads address directly");
     }
 
-    [SkippableFact]
+    [Fact]
     public void MemoryWidth_DoubleWord_ShiftsAddressLeft2() {
         EnsureSupported();
         VideoState state = ConfigureGraphicsEga(1);
@@ -758,7 +758,7 @@ public abstract class RendererTestsBase {
         frame[0].Should().Be(state.DacRegisters.AttributeMap[1]);
     }
 
-    [SkippableFact]
+    [Fact]
     public void MemoryWidth_Word13_ShiftsAndUseBit13() {
         EnsureSupported();
         VideoState state = ConfigureGraphicsEga(1);
@@ -779,7 +779,7 @@ public abstract class RendererTestsBase {
         frame[0].Should().Be(state.DacRegisters.AttributeMap[1]);
     }
 
-    [SkippableFact]
+    [Fact]
     public void MemoryWidth_Word15_ShiftsAndUseBit15() {
         EnsureSupported();
         VideoState state = ConfigureGraphicsEga(1);
@@ -802,7 +802,7 @@ public abstract class RendererTestsBase {
 
     // -------------------------------------------------- Character Clock Mask --------------------------------------------------
 
-    [SkippableFact]
+    [Fact]
     public void CharacterClockMask_CountByFour_IncrementsEvery4thChar() {
         EnsureSupported();
         VideoState state = ConfigureGraphicsEga(1);
@@ -834,7 +834,7 @@ public abstract class RendererTestsBase {
         frame[33].Should().Be(state.DacRegisters.AttributeMap[1], "char 4 reads address 1, bit 6 = 1");
     }
 
-    [SkippableFact]
+    [Fact]
     public void CharacterClockMask_CountByTwo_IncrementsEveryOtherChar() {
         EnsureSupported();
         VideoState state = ConfigureGraphicsEga(1);
@@ -863,7 +863,7 @@ public abstract class RendererTestsBase {
 
     // -------------------------------------------------- Scanline Bit 0 for Address --------------------------------------------------
 
-    [SkippableFact]
+    [Fact]
     public void ScanlineBit0ForAddressBit13_SubstitutesOnOddScanlines() {
         EnsureSupported();
         // 2 lines tall with MaximumScanline=1 â†’ char row has scanlines 0 and 1
@@ -889,7 +889,7 @@ public abstract class RendererTestsBase {
         frame[width + 1].Should().Be(state.DacRegisters.AttributeMap[1], "scanline 1 bit 6 of addr 0x2000 (=0x40) is 1");
     }
 
-    [SkippableFact]
+    [Fact]
     public void ScanlineBit0ForAddressBit14_SubstitutesOnOddScanlines() {
         EnsureSupported();
         VideoState state = ConfigureGraphicsEga(2);
@@ -912,7 +912,7 @@ public abstract class RendererTestsBase {
 
     // -------------------------------------------------- Line Compare (Split Screen) --------------------------------------------------
 
-    [SkippableFact]
+    [Fact]
     public void LineCompare_ResetsMemoryAddressAtCompareValue() {
         EnsureSupported();
         VideoState state = ConfigureGraphicsEga(4);
@@ -946,7 +946,7 @@ public abstract class RendererTestsBase {
 
     // -------------------------------------------------- Color Plane Enable --------------------------------------------------
 
-    [SkippableFact]
+    [Fact]
     public void ColorPlaneEnable_DisabledPlaneOutputsZero() {
         EnsureSupported();
         VideoState state = ConfigureGraphicsEga(1);
@@ -966,7 +966,7 @@ public abstract class RendererTestsBase {
         frame[0].Should().Be(state.DacRegisters.AttributeMap[2], "plane 0 disabled â†’ contributes 0");
     }
 
-    [SkippableFact]
+    [Fact]
     public void ColorPlaneEnable_AllDisabled_AllZero() {
         EnsureSupported();
         VideoState state = ConfigureGraphicsEga(1);
@@ -988,7 +988,7 @@ public abstract class RendererTestsBase {
 
     // -------------------------------------------------- Screen Start Address --------------------------------------------------
 
-    [SkippableFact]
+    [Fact]
     public void ScreenStartAddress_OffsetsRendering() {
         EnsureSupported();
         VideoState state = ConfigureGraphicsEga(1);
@@ -1007,7 +1007,7 @@ public abstract class RendererTestsBase {
 
     // -------------------------------------------------- Vertical Timing Halved --------------------------------------------------
 
-    [SkippableFact]
+    [Fact]
     public void VerticalTimingHalved_BothCharsRowScanlinesShareSameAddress() {
         EnsureSupported();
         // With MaximumScanline=1, each character row has 2 scanlines (0 and 1).
@@ -1035,7 +1035,7 @@ public abstract class RendererTestsBase {
 
     // -------------------------------------------------- CrtcScanDouble --------------------------------------------------
 
-    [SkippableFact]
+    [Fact]
     public void CrtcScanDouble_DoublesEachScanline() {
         EnsureSupported();
         VideoState state = ConfigureGraphicsEga(1);
@@ -1051,7 +1051,7 @@ public abstract class RendererTestsBase {
 
     // -------------------------------------------------- DotsPerClock in Text Mode --------------------------------------------------
 
-    [SkippableFact]
+    [Fact]
     public void TextMode_9DotsPerClock_Outputs9Pixels() {
         EnsureSupported();
         VideoState state = ConfigureTextMode(1);
@@ -1084,7 +1084,7 @@ public abstract class RendererTestsBase {
 
     // -------------------------------------------------- Extended Memory (Font Select) --------------------------------------------------
 
-    [SkippableFact]
+    [Fact]
     public void TextMode_ExtendedMemory_UsesCharacterMapA() {
         EnsureSupported();
         VideoState state = ConfigureTextMode(1);
@@ -1112,7 +1112,7 @@ public abstract class RendererTestsBase {
 
     // -------------------------------------------------- Zero Buffer Size Guard --------------------------------------------------
 
-    [SkippableFact]
+    [Fact]
     public void BeginFrame_ZeroSize_DeactivatesFrame() {
         EnsureSupported();
         VideoState state = ConfigureBase(ClockSelect.Use25175Khz, halfDot: true);
@@ -1140,7 +1140,7 @@ public abstract class RendererTestsBase {
 
     // -------------------------------------------------- Multiple Consecutive Frames --------------------------------------------------
 
-    [SkippableFact]
+    [Fact]
     public void MultipleFrames_OnlyLastPendingIsDelivered() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(1);
@@ -1166,7 +1166,7 @@ public abstract class RendererTestsBase {
 
     // -------------------------------------------------- Byte Panning --------------------------------------------------
 
-    [SkippableFact]
+    [Fact]
     public void BytePanning_OffsetsStartAddress() {
         EnsureSupported();
         VideoState state = ConfigureGraphicsEga(1);
@@ -1187,7 +1187,7 @@ public abstract class RendererTestsBase {
 
     // -------------------------------------------------- Display Enable Skew --------------------------------------------------
 
-    [SkippableFact]
+    [Fact]
     public void DisplayEnableSkew_DelaysVisibleStart() {
         EnsureSupported();
         VideoState state = ConfigureGraphicsEga(1);
@@ -1219,7 +1219,7 @@ public abstract class RendererTestsBase {
 
     // -------------------------------------------------- Horizontal Pixel Panning (AR13) --------------------------------------------------
 
-    [SkippableFact]
+    [Fact]
     public void HorizontalPixelPanning_EgaMode_ShiftsPixelsLeft() {
         EnsureSupported();
         VideoState state = ConfigureGraphicsEga(1);
@@ -1241,7 +1241,7 @@ public abstract class RendererTestsBase {
             "panning=1 skips the first pixel so bit 6 (=0) becomes pixel 0");
     }
 
-    [SkippableFact]
+    [Fact]
     public void HorizontalPixelPanning_EgaMode_Pan4_ShowsFifthPixel() {
         EnsureSupported();
         VideoState state = ConfigureGraphicsEga(1);
@@ -1261,7 +1261,7 @@ public abstract class RendererTestsBase {
             "panning=4 exposes bit 3 of the first VRAM byte as pixel 0");
     }
 
-    [SkippableFact]
+    [Fact]
     public void HorizontalPixelPanning_256ColorMode_ShiftsBy2PixelsPerUnit() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(1);
@@ -1292,7 +1292,7 @@ public abstract class RendererTestsBase {
             "AR13=2 pixel 1 = plane2 index doubled");
     }
 
-    [SkippableFact]
+    [Fact]
     public void HorizontalPixelPanning_PixelPanningCompatibility_DisablesPanningBelowLineCompare() {
         EnsureSupported();
         // 4-line frame with split screen at line 2
@@ -1325,7 +1325,7 @@ public abstract class RendererTestsBase {
             "line after LineCompare with PixelPanningCompatibility: panning disabled, bit 7=1");
     }
 
-    [SkippableFact]
+    [Fact]
     public void HorizontalPixelPanning_ZeroPanning_NoShift() {
         EnsureSupported();
         VideoState state = ConfigureGraphicsEga(1);
@@ -1342,7 +1342,7 @@ public abstract class RendererTestsBase {
             "panning=0: pixel 0 shows bit 7 of addr 0 normally");
     }
 
-    [SkippableFact]
+    [Fact]
     public void HorizontalPixelPanning_TextMode_AR13_8OrAbove_ResultsInNoShift() {
         EnsureSupported();
         VideoState state = ConfigureTextMode(1);
@@ -1364,7 +1364,7 @@ public abstract class RendererTestsBase {
             "text mode AR13>=8 must produce no shift; first pixel = foreground");
     }
 
-    [SkippableFact]
+    [Fact]
     public void HorizontalPixelPanning_TextMode_9DotWithLineGraphics_AddsOnePan() {
         EnsureSupported();
         VideoState state = ConfigureTextMode(1);

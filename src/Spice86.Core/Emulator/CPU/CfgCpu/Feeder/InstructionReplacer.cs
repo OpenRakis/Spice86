@@ -7,4 +7,5 @@ public abstract class InstructionReplacer : IInstructionReplacer {
         replacerRegistry.Register(this);
     }
     public abstract void ReplaceInstruction(CfgInstruction oldInstruction, CfgInstruction newInstruction);
+    public abstract void RemoveInstruction(CfgInstruction instruction);
 }

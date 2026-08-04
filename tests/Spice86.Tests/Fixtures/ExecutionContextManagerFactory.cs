@@ -38,7 +38,7 @@ internal sealed class ExecutionContextManagerFactory : IDisposable {
         Spice86.Core.Emulator.VM.PauseHandler pauseHandler = new(loggerService);
         CfgNodeFeeder feeder = new(Memory, State, new EmulatorBreakpointsManager(
             pauseHandler, State, Memory,
-            memoryBreakpoints, new AddressReadWriteBreakpoints()), replacerRegistry, _compiler, new SequentialIdAllocator());
+            memoryBreakpoints, new AddressReadWriteBreakpoints()), replacerRegistry, _compiler, new SequentialIdAllocator(), enableSpeculativeExploration: false);
         ContextManager = new ExecutionContextManager(Memory, State, feeder, replacerRegistry,
             functionCatalogue, false, loggerService, null);
     }

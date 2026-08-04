@@ -15,10 +15,12 @@ using System.Runtime.CompilerServices;
 public class NodeLinker : InstructionReplacer {
     private readonly CfgNodeExecutionCompiler _executionCompiler;
     private readonly SequentialIdAllocator _idAllocator;
+    private readonly SpeculativeReachabilityPruner _speculativePruner;
 
     public NodeLinker(InstructionReplacerRegistry replacerRegistry, CfgNodeExecutionCompiler executionCompiler, SequentialIdAllocator idAllocator) : base(replacerRegistry) {
         _executionCompiler = executionCompiler;
         _idAllocator = idAllocator;
+        _speculativePruner = new SpeculativeReachabilityPruner(replacerRegistry);
     }
 
     /// <summary>
@@ -75,13 +77,35 @@ public class NodeLinker : InstructionReplacer {
         }
 
         if (!shouldBeNext.Equals(next)) {
-            return ResolveSuccessorConflict(current, next, shouldBeNext);
+            return ResolveSuccessorConflict(linkToNextType, current, next, shouldBeNext);
+        }
+        // Edge to this exact node already exists.
+        bool speculativelyWired = current.SpeculativelyWiredSuccessors.Contains(next);
+        // Observed execution confirms a speculatively-wired edge: retype if needed and drop speculative provenance.
+        // Genuinely observed edges keep their first-recorded type; SuccessorsCount is unchanged.
+        if (speculativelyWired && !next.IsSpeculative) {
+            bool alreadyTyped = current.SuccessorsPerType.TryGetValue(linkToNextType, out ISet<ICfgNode>? existingForType)
+                && existingForType.Contains(next);
+            if (!alreadyTyped) {
+                RetypeSuccessor(current, linkToNextType, next);
+            }
+            current.SpeculativelyWiredSuccessors.Remove(next);
         }
         return next;
     }
 
     private void AttachNewLink(InstructionSuccessorType linkToNextType, CfgInstruction current, ICfgNode next) {
         AttachToNext(current, next);
+        RecordSuccessorType(current, linkToNextType, next);
+        // Edges the explorer wires to a still-speculative target carry a speculative type guess; record
+        // their provenance so a later observed link can override the type. Observed links (target not
+        // speculative) create real edges and are never marked.
+        if (next.IsSpeculative) {
+            current.SpeculativelyWiredSuccessors.Add(next);
+        }
+    }
+
+    private static void RecordSuccessorType(CfgInstruction current, InstructionSuccessorType linkToNextType, ICfgNode next) {
         if (!current.SuccessorsPerType.TryGetValue(linkToNextType, out ISet<ICfgNode>? successorsForType)) {
             successorsForType = new HashSet<ICfgNode>();
             current.SuccessorsPerType[linkToNextType] = successorsForType;
@@ -89,12 +113,32 @@ public class NodeLinker : InstructionReplacer {
         successorsForType.Add(next);
     }
 
-    private ICfgNode ResolveSuccessorConflict(CfgInstruction current, ICfgNode next, ICfgNode shouldBeNext) {
+    private static void RetypeSuccessor(CfgInstruction current, InstructionSuccessorType linkToNextType, ICfgNode next) {
+        // Drop the target from every existing type bucket so it ends up under exactly one type.
+        foreach (ISet<ICfgNode> bucket in current.SuccessorsPerType.Values) {
+            bucket.Remove(next);
+        }
+        RecordSuccessorType(current, linkToNextType, next);
+    }
+
+    private ICfgNode ResolveSuccessorConflict(InstructionSuccessorType linkToNextType, CfgInstruction current, ICfgNode next, ICfgNode shouldBeNext) {
         if (shouldBeNext is SelectorNode selectorNode) {
             LinkSelectorNode(selectorNode, next);
             return selectorNode;
         }
-        return CreateSelectorNodeBetween((CfgInstruction)shouldBeNext, (CfgInstruction)next);
+        CfgInstruction existing = (CfgInstruction)shouldBeNext;
+        if (existing.IsSpeculative) {
+            // Discard the speculative node and its exclusively-reachable speculative subgraph since it is now known to be wrong.
+            // The new node is the only surviving variant at this address.
+            _speculativePruner.Sweep(existing);
+            AttachNewLink(linkToNextType, current, next);
+            return next;
+        }
+        if (next is CfgInstruction nextInstr && nextInstr.IsSpeculative) {
+            // next is wrong. No pruning needed: the explorer enqueues successors only after Link returns, so next has no subgraph yet.
+            return existing;
+        }
+        return CreateSelectorNodeBetween(existing, (CfgInstruction)next);
     }
 
     /// <summary>
@@ -112,6 +156,11 @@ public class NodeLinker : InstructionReplacer {
     /// selector → variant edge fires.
     /// </remarks>
     public SelectorNode CreateSelectorNodeBetween(CfgInstruction instruction1, CfgInstruction instruction2) {
+        if (instruction1.IsSpeculative || instruction2.IsSpeculative) {
+            throw new UnhandledCfgDiscrepancyException(
+                $"CreateSelectorNodeBetween must never be called with a speculative operand. " +
+                $"instruction1.IsSpeculative={instruction1.IsSpeculative}, instruction2.IsSpeculative={instruction2.IsSpeculative}");
+        }
         SelectorNode selectorNode = new SelectorNode(_idAllocator.AllocateId(), instruction1.Address);
         _executionCompiler.Compile(selectorNode);
         // Wire the instruction that already has predecessors FIRST so the selector enters a block
@@ -162,6 +211,9 @@ public class NodeLinker : InstructionReplacer {
             }
             newInstruction.SuccessorsPerType[oldEntry.Key] = successorsForType;
         }
+        // Carry the speculative-wiring provenance too, so the replacement instruction keeps the ability
+        // to have those edges re-typed by a later observed link.
+        newInstruction.SpeculativelyWiredSuccessors.UnionWith(oldInstruction.SpeculativelyWiredSuccessors);
     }
 
     private void AttachToNext(ICfgNode current, ICfgNode next) {
@@ -332,6 +384,80 @@ public class NodeLinker : InstructionReplacer {
         }
     }
 
+    // -----------------------------------------------------------------------
+    // Bidirectional edge mutation: removal API.
+    //
+    // RemoveEdge(from, to) is the inverse of LinkToNext: it drops the edge from
+    // both endpoints, refreshes derived state on the predecessor (so that a
+    // gap-filled slot re-opens for future lazy re-convergence), and does NOT
+    // touch MaxSuccessorsCount (static instruction-type cap, never lowered).
+    // -----------------------------------------------------------------------
+
+    /// <summary>
+    /// Drops the directed edge from → to from both <see cref="ICfgNode.Successors"/> and
+    /// <see cref="ICfgNode.Predecessors"/>, then refreshes derived successor state on
+    /// <paramref name="from"/> (UniqueSuccessor, CanHaveMoreSuccessors, SuccessorsPerAddress,
+    /// SuccessorsPerType). No-op when the edge does not exist.
+    /// </summary>
+    public void RemoveEdge(ICfgNode from, ICfgNode to) {
+        if (!from.Successors.Remove(to)) {
+            return;
+        }
+        to.Predecessors.Remove(from);
+        if (from is CfgInstruction fromInstr) {
+            fromInstr.SuccessorsPerAddress.Remove(to.Address);
+            foreach (ISet<ICfgNode> perTypeSet in fromInstr.SuccessorsPerType.Values) {
+                perTypeSet.Remove(to);
+            }
+            fromInstr.SpeculativelyWiredSuccessors.Remove(to);
+        }
+        SuccessorInvariant.Refresh(from);
+        from.UpdateSuccessorCache();
+    }
+
+    /// <summary>
+    /// Removes all edges leaving <paramref name="node"/> and all edges pointing to it from
+    /// its predecessors. After this call <paramref name="node"/> has no successors and no
+    /// predecessors (fully detached from the graph).
+    /// </summary>
+    public void DetachNode(ICfgNode node) {
+        foreach (ICfgNode successor in node.Successors.ToList()) {
+            successor.Predecessors.Remove(node);
+        }
+        node.Successors.Clear();
+        foreach (ICfgNode predecessor in node.Predecessors.ToList()) {
+            RemoveEdge(predecessor, node);
+        }
+    }
+
+    /// <summary>
+    /// Handles removal fan-out: fully detaches <paramref name="instruction"/>
+    /// from the graph and repairs its containing block. When the block empties it becomes an
+    /// unreferenced object (there is no Dispose: <see cref="CfgBlock"/> is not disposable); otherwise
+    /// <see cref="CfgBlock.IsDiscoveryComplete"/> is recomputed from the surviving terminator so a
+    /// non-terminator fallthrough tail leaves the block discovery-incomplete and the real successor
+    /// can extend it.
+    /// </summary>
+    /// <remarks>
+    /// Recomputing on every call is order-independent: within a block the swept nodes are always a
+    /// contiguous suffix (interior nodes have a single block-prev predecessor, so sweeping a node
+    /// sweeps all its block-successors with no gaps), and the surviving instruction list does not
+    /// depend on removal order. Transient mid-batch values are overwritten by the last removal and
+    /// never observed, since no other subscriber in a node's fan-out reads block structure.
+    /// </remarks>
+    public override void RemoveInstruction(CfgInstruction instruction) {
+        DetachNode(instruction);
+        CfgBlock? block = instruction.ContainingBlock;
+        if (block is null) {
+            return;
+        }
+        block.Remove(instruction);
+        instruction.ContainingBlock = null;
+        if (block.Instructions.Count > 0) {
+            block.IsDiscoveryComplete = block.Terminator.IsBlockTerminator;
+        }
+    }
+
     public override void ReplaceInstruction(CfgInstruction oldInstruction, CfgInstruction newInstruction) {
         // In-place block fix-up: replace oldInstruction in its block and transfer the
         // back-pointer BEFORE rewiring edges, so subsequent intra-block rewires hit
@@ -397,6 +523,12 @@ public class NodeLinker : InstructionReplacer {
                 successors.Remove(currentSuccesor);
                 successors.Add(newSuccesor);
             }
+        }
+        // Migrate speculative-wiring provenance along with the edge, otherwise the old (now detached)
+        // node lingers in SpeculativelyWiredSuccessors as a dangling reference and the new target loses
+        // its re-type ability.
+        if (instruction.SpeculativelyWiredSuccessors.Remove(currentSuccesor)) {
+            instruction.SpeculativelyWiredSuccessors.Add(newSuccesor);
         }
     }
 }
