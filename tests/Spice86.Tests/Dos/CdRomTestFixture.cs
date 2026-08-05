@@ -69,8 +69,13 @@ internal static class CdRomTestFixture {
         channelCreator
             .AddChannel(Arg.Any<Action<int>>(), Arg.Any<int>(), Arg.Any<string>(), Arg.Any<HashSet<ChannelFeature>>())
             .Returns(callInfo => {
-                Action<int> handler = (Action<int>)callInfo[0];
-                SoundChannel createdChannel = new SoundChannel(handler, (string)callInfo[2], (HashSet<ChannelFeature>)callInfo[3]);
+                if (callInfo[0] is not Action<int> handler ||
+                    callInfo[2] is not string name ||
+                    callInfo[3] is not HashSet<ChannelFeature> features) {
+                    throw new InvalidOperationException("CD audio channel registration arguments were invalid.");
+                }
+
+                SoundChannel createdChannel = new SoundChannel(handler, name, features);
                 capturedAudioCallback = handler;
                 capturedChannel = createdChannel;
                 return createdChannel;

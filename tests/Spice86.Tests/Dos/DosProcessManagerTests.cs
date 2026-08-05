@@ -396,7 +396,15 @@ public class DosProcessManagerTests {
 
         ISoundChannelCreator channelCreator = Substitute.For<ISoundChannelCreator>();
         channelCreator.AddChannel(Arg.Any<Action<int>>(), Arg.Any<int>(), Arg.Any<string>(), Arg.Any<HashSet<ChannelFeature>>())
-            .Returns(callInfo => new SoundChannel((Action<int>)callInfo[0], (string)callInfo[2], (HashSet<ChannelFeature>)callInfo[3]));
+            .Returns(callInfo => {
+                if (callInfo[0] is not Action<int> handler ||
+                    callInfo[2] is not string name ||
+                    callInfo[3] is not HashSet<ChannelFeature> features) {
+                    throw new InvalidOperationException("CD audio channel registration arguments were invalid.");
+                }
+
+                return new SoundChannel(handler, name, features);
+            });
         IDriveActivityNotifier activityNotifier = Substitute.For<IDriveActivityNotifier>();
 
         DosProcessManager processManager = new(
