@@ -23,7 +23,7 @@
     <PackageVersion Include="Dock.Avalonia" Version="12.1.0" />
     <PackageVersion Include="Dock.Avalonia.Themes.Fluent" Version="12.1.0" />
     <PackageVersion Include="Dock.Model.Avalonia" Version="12.1.0" />
-    <PackageVersion Include="Dock.Model.Mvvm" Version="12.1.0" />
+    <PackageVersion Include="Dock.Model.Mvvm" Version="12.1.0.1" />
     <PackageVersion Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2" />
     <PackageVersion Include="FluentIcons.Avalonia" Version="2.1.333" />
     <PackageVersion Include="Iced" Version="1.21.0" />
