@@ -56,10 +56,11 @@ internal sealed class McpHttpHost : IDisposable {
                 };
             })
             .WithHttpTransport(options => {
-                // Stateless mode: the server never issues Mcp-Session-Id headers.
-                // Stateful sessions cause 404 when AI clients reuse a session ID
-                // from a fresh TCP connection or skip the notifications/initialized
-                // handshake step, which is a common real-world pattern.
+                // Stateless mode keeps things simple — no session management,
+                // no Mcp-Session-Id headers, compatible with AI clients.
+                // The SDK does not map GET /mcp in stateless mode (POST only),
+                // but we add our own GET handler below to satisfy clients
+                // (like opencode remote MCP) that probe with GET first.
                 options.Stateless = true;
             })
             .WithToolsFromAssembly(typeof(EmulatorMcpTools).Assembly);
@@ -70,16 +71,26 @@ internal sealed class McpHttpHost : IDisposable {
             }
         }
 
-        builder.WebHost.ConfigureKestrel(kestrel => {
-            kestrel.ListenLocalhost(port);
-        });
-
+        builder.WebHost.UseUrls($"http://localhost:{port}");
         _app = builder.Build();
         _app.MapGet("/health", () => Results.Json(new {
             status = "ok",
             service = "Spice86 MCP Server"
         }));
         _app.MapMcp("/mcp");
+
+        // The SDK doesn't map GET /mcp in stateless mode, but some MCP clients
+        // (including opencode remote MCP) probe with GET first. Return a minimal
+        // SSE endpoint event telling the client to POST to the same URL.
+        _app.MapGet("/mcp", async (HttpContext context) =>
+        {
+            context.Response.Headers.ContentType = "text/event-stream";
+            context.Response.Headers.CacheControl = "no-cache,no-store";
+            context.Response.Headers["X-Accel-Buffering"] = "no";
+            await context.Response.WriteAsync(
+                $"event: endpoint\ndata: /mcp/\n\n");
+            await context.Response.Body.FlushAsync();
+        });
 
         _serverThread = new Thread(RunServerLoop) {
             Name = "McpHttpHost",
@@ -95,12 +106,20 @@ internal sealed class McpHttpHost : IDisposable {
         }
 
         try {
-            _app.Run();
+            _app.StartAsync().GetAwaiter().GetResult();
+            _loggerService.Information("MCP HTTP server is now listening");
+            // Block this thread indefinitely so the server keeps running.
+            // Using _app.Run() instead caused premature shutdown on background
+            // threads because ConsoleLifetime has no console to watch on a
+            // non-main thread.
         } catch (ObjectDisposedException) {
             // Host disposed while thread was exiting.
-        } catch (InvalidOperationException ex) {
-            _loggerService.Error(ex, "MCP HTTP server stopped unexpectedly");
+        } catch (Exception ex) {
+            _loggerService.Error(ex, "MCP HTTP server crashed");
         }
+
+        // Wait forever so the thread never exits.
+        new System.Threading.ManualResetEvent(false).WaitOne();
     }
 
     public void Dispose() {
