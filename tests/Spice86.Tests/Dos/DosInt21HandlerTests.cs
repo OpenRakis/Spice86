@@ -4,6 +4,7 @@ using FluentAssertions;
 
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Shared.Utils;
 
 using Xunit;
 
@@ -30,6 +31,26 @@ public class DosInt21HandlerTests : IDisposable {
         // Assert
         recordingFile.LastSeekOffset.Should().Be(-1);
         recordingFile.LastSeekOrigin.Should().Be(SeekOrigin.Current);
+    }
+
+    [Fact]
+    public void SetHandleCount_ShouldUpdateCurrentPspAndClearCarryFlag() {
+        // Arrange
+        _fixture.DosInt21Handler.GetPspAddress();
+        ushort currentPspSegment = _fixture.CpuState.BX;
+        DosProgramSegmentPrefix currentPsp =
+            new(_fixture.Memory, MemoryUtils.ToPhysicalAddress(currentPspSegment, 0));
+
+        _fixture.CpuState.AH = 0x67;
+        _fixture.CpuState.BX = 0x0030;
+        _fixture.CpuState.CarryFlag = true;
+
+        // Act
+        _fixture.DosInt21Handler.Run();
+
+        // Assert
+        currentPsp.MaximumOpenFiles.Should().Be(0x0030);
+        _fixture.CpuState.CarryFlag.Should().BeFalse();
     }
 
     private sealed class RecordingVirtualFile : VirtualFileBase {
