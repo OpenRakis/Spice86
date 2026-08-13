@@ -114,6 +114,12 @@ public static class RuntimeOptionsMapper {
             configuration.SbIrq,
             configuration.SbDma,
             configuration.SbHdma,
-            configuration.SbType);
+            configuration.SbType,
+            configuration.GusBase,
+            configuration.GusIrq,
+            configuration.GusDma,
+            configuration.GusEnable,
+            configuration.GusUltradir,
+            configuration.GusFilter);
     }
 }
