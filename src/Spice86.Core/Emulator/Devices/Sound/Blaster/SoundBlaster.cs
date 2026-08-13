@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
 
 using Serilog.Events;
 
+using Spice86.Core.CLI.RuntimeOptions;
 using Spice86.Audio.Common;
 using Spice86.Audio.Filters;
 using Spice86.Core.Emulator.CPU;
@@ -37,7 +38,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
     /// <param name="loggerService">The logger service.</param>
     /// <param name="scheduler">The event scheduler.</param>
     /// <param name="clock">The emulated clock.</param>
-    /// <param name="soundBlasterHardwareConfig">Sound Blaster hardware configuration.</param>
+    /// <param name="audioOptions">Runtime audio options projected from command-line configuration.</param>
     public SoundBlaster(
         IOPortDispatcher ioPortDispatcher,
         State state,
@@ -48,12 +49,12 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         ILoggerService loggerService,
         DeviceScheduler scheduler,
         IEmulatedClock clock,
-        SoundBlasterHardwareConfig soundBlasterHardwareConfig)
+        AudioRuntimeOptions audioOptions)
         : base(state, false, loggerService) {
         mixer.RegisterQueueNotifier(this);
         mixer.LockMixerThread();
 
-        _config = soundBlasterHardwareConfig;
+        _config = audioOptions;
         _dualPic = dualPic;
         _mixer = mixer;
         _opl = opl;
@@ -73,7 +74,7 @@ public partial class SoundBlaster : DefaultIOPortHandler, IRequestInterrupt, IBl
         // Magic 32 divisor was probably the result of experimentation
         _sb.Dsp.HotWarmupMs = ColdWarmupMs / 32;
 
-        _sb.Mixer.Enabled = soundBlasterHardwareConfig.OplConfig.SbMixer;
+        _sb.Mixer.Enabled = audioOptions.SbMixer;
         _sb.Mixer.StereoEnabled = false;
 
         _sb.Type = _config.SbType;

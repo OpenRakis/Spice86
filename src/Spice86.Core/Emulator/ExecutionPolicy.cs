@@ -2,7 +2,7 @@ namespace Spice86.Core.Emulator;
 
 using Serilog.Events;
 
-using Spice86.Core.CLI;
+using Spice86.Core.CLI.RuntimeOptions;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Gdb;
@@ -18,7 +18,7 @@ using Spice86.Shared.Interfaces;
 /// the GDB remote-debugging server, and the emulation termination breakpoint.
 /// </summary>
 internal sealed class ExecutionPolicy : IDisposable {
-    private readonly Configuration _configuration;
+    private readonly ExecutionPolicyOptions _options;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly IPauseHandler _pauseHandler;
     private readonly EmulationLoop _emulationLoop;
@@ -26,7 +26,7 @@ internal sealed class ExecutionPolicy : IDisposable {
     private bool _disposed;
 
     public ExecutionPolicy(
-        Configuration configuration,
+        ExecutionPolicyOptions options,
         IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider,
         State state,
@@ -35,20 +35,20 @@ internal sealed class ExecutionPolicy : IDisposable {
         EmulationLoop emulationLoop,
         EmulatorStateSerializer emulatorStateSerializer,
         ILoggerService loggerService) {
-        _configuration = configuration;
+        _options = options;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
         _emulationLoop = emulationLoop;
         _gdbServer = CreateGdbServer(
-            configuration, memory, functionHandlerProvider, state,
+            options.GdbServer, memory, functionHandlerProvider, state,
             pauseHandler, emulatorBreakpointsManager, emulatorStateSerializer, loggerService);
     }
 
     /// <summary>
-    /// Installs the debug-mode start/stop pause breakpoints when <see cref="Configuration.Debug"/> is set.
+    /// Installs the debug-mode start/stop pause breakpoints when <see cref="ExecutionPolicyOptions.Debug"/> is set.
     /// </summary>
     public void ApplyStartupBreakpoints() {
-        if (!_configuration.Debug) {
+        if (!_options.Debug) {
             return;
         }
 
@@ -69,7 +69,7 @@ internal sealed class ExecutionPolicy : IDisposable {
     /// Registers a one-shot breakpoint that exits the emulation loop after the configured cycle count.
     /// </summary>
     public void RegisterStopAfterCyclesBreakpoint() {
-        long cycles = _configuration.StopAfterCycles;
+        long cycles = _options.StopAfterCycles;
         long targetCycles = cycles - 1;
         if (targetCycles <= 0) {
             return;
@@ -87,7 +87,7 @@ internal sealed class ExecutionPolicy : IDisposable {
     }
 
     private static GdbServer? CreateGdbServer(
-        Configuration configuration,
+        GdbServerOptions options,
         IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider,
         State state,
@@ -95,14 +95,14 @@ internal sealed class ExecutionPolicy : IDisposable {
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         EmulatorStateSerializer emulatorStateSerializer,
         ILoggerService loggerService) {
-        if (configuration.GdbPort == 0) {
+        if (options.Port == 0) {
             if (loggerService.IsEnabled(LogEventLevel.Information)) {
                 loggerService.Information("GDB port is 0, disabling GDB server.");
             }
             return null;
         }
         return new GdbServer(
-            configuration, memory, functionHandlerProvider, state,
+            options, memory, functionHandlerProvider, state,
             pauseHandler, emulatorBreakpointsManager, emulatorStateSerializer, loggerService);
     }
 

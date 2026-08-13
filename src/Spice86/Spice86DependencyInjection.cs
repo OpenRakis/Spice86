@@ -8,6 +8,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using Serilog.Events;
 
 using Spice86.Core.CLI;
+using Spice86.Core.CLI.RuntimeOptions;
 using Spice86.Core.Emulator;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
@@ -119,6 +120,7 @@ public class Spice86DependencyInjection : IDisposable {
         LoggerService loggerService = new LoggerService();
         _loggerService = loggerService;
         SetLoggingLevel(loggerService, configuration);
+        DosRuntimeState dosRuntimeState = RuntimeOptionsMapper.CreateDosRuntimeState(configuration);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Spice86 starting...");
@@ -411,10 +413,12 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.Information("BIOS interrupt handlers created...");
         }
 
-        SoftwareMixer mixer = new(configuration.AudioEngine, pauseHandler);
+        AudioRuntimeOptions audioRuntimeOptions = RuntimeOptionsMapper.ToAudioRuntimeOptions(configuration);
+
+        SoftwareMixer mixer = new(audioRuntimeOptions.AudioEngine, pauseHandler);
         DriveActivityNotifier driveActivityNotifier = new();
         var midiDevice = new Midi(configuration, mixer, state,
-            ioPortDispatcher, configuration.Mt32RomsPath,
+            ioPortDispatcher, audioRuntimeOptions.Mt32RomsPath,
             configuration.FailOnUnhandledPort, loggerService);
         PcSpeaker pcSpeaker = new(mixer, state, ioPortDispatcher,
             loggerService, emulationLoopScheduler, _emulatedClock, configuration.FailOnUnhandledPort);
@@ -425,29 +429,22 @@ public class Spice86DependencyInjection : IDisposable {
         pcSpeaker.AttachPitControl(pitTimer);
         loggerService.Information("PIT created...");
 
-        OplConfig oplConfig = new(configuration.OplMode, configuration.SbBase, configuration.SbMixer is true);
-        SoundBlasterHardwareConfig soundBlasterHardwareConfig = new(
-            oplConfig,
-            configuration.SbIrq,
-            configuration.SbDma,
-            configuration.SbHdma,
-            configuration.SbType,
-            configuration.SbBase);
-        loggerService.Information("SoundBlaster configured with {SBConfig}", soundBlasterHardwareConfig);
+        loggerService.Information("SoundBlaster configured with {SBConfig}", audioRuntimeOptions);
 
-        Opl3Fm opl = new(oplConfig, mixer, state, _emulatedClock, ioPortDispatcher,
+        Opl3Fm opl = new(audioRuntimeOptions, mixer, state, _emulatedClock, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService);
 
         SoundBlaster soundBlaster = new(ioPortDispatcher,
             state, dmaSystem, dualPic, mixer, opl, loggerService,
             emulationLoopScheduler, _emulatedClock,
-            soundBlasterHardwareConfig);
+            audioRuntimeOptions);
         GravisUltraSound gravisUltraSound = new(state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService);
 
         loggerService.Information("Sound devices created...");
 
-        MemoryDataExporter memoryDataExporter = new(memory, callbackHandler, configuration);
+        MemoryDumpOptions memoryDumpOptions = RuntimeOptionsMapper.ToMemoryDumpOptions(dosRuntimeState);
+        MemoryDataExporter memoryDataExporter = new(memory, callbackHandler, memoryDumpOptions);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("Memory data exporter created...");
@@ -488,7 +485,8 @@ public class Spice86DependencyInjection : IDisposable {
             memory, ioPortDispatcher, biosDataArea, cfgCpu, stack, state, loggerService,
             biosKeyboardBuffer);
 
-        Dos dos = new Dos(configuration, memory, cfgCpu, stack,
+        DosOptions dosOptions = RuntimeOptionsMapper.ToDosOptions(configuration, dosRuntimeState);
+        Dos dos = new Dos(dosOptions, memory, cfgCpu, stack,
             state, biosKeyboardBuffer,
             keyboardInt16Handler, biosDataArea, vgaFunctionality,
             new Dictionary<string, string> {
@@ -587,7 +585,7 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         InterruptInstaller interruptInstaller =
-            new InterruptInstaller(interruptVectorTable, memoryAsmWriter, functionCatalogue, 
+            new InterruptInstaller(interruptVectorTable, memoryAsmWriter, functionCatalogue,
                 dualPic.EnumerateHardwareInterruptVectorNumbers());
         AssemblyRoutineInstaller assemblyRoutineInstaller =
             new AssemblyRoutineInstaller(memoryAsmWriter, functionCatalogue);
@@ -711,10 +709,12 @@ public class Spice86DependencyInjection : IDisposable {
 
         _shutdownCoordinator = shutdownCoordinator;
 
+        ProgramLoadOptions programLoadOptions = RuntimeOptionsMapper.ToProgramLoadOptions(configuration, dosRuntimeState);
         ProgramBootstrapper programBootstrapper = new ProgramBootstrapper(
-            configuration, memory, state, dos.DosInt21Handler, loggerService);
+            programLoadOptions, memory, state, dos.DosInt21Handler, loggerService);
+        ExecutionPolicyOptions executionPolicyOptions = RuntimeOptionsMapper.ToExecutionPolicyOptions(configuration);
         ExecutionPolicy executionPolicy = new ExecutionPolicy(
-            configuration, memory, cfgCpu, state, pauseHandler,
+            executionPolicyOptions, memory, cfgCpu, state, pauseHandler,
             emulatorBreakpointsManager, emulationLoop, emulatorStateSerializer, loggerService);
         ProgramExecutor createdProgramExecutor = new(
             programBootstrapper, executionPolicy, emulationLoop,

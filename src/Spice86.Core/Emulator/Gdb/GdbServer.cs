@@ -1,5 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.Gdb;
 
+using Spice86.Core.CLI.RuntimeOptions;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Function;
@@ -14,7 +15,7 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public sealed class GdbServer : IDisposable {
     private readonly ILoggerService _loggerService;
-    private readonly Configuration _configuration;
+    private readonly GdbServerOptions _options;
     private bool _disposed;
     private bool _isRunning = true;
     private Thread? _gdbServerThread;
@@ -30,7 +31,7 @@ public sealed class GdbServer : IDisposable {
     /// <summary>
     /// Creates a new instance of the GdbServer class with the specified parameters.
     /// </summary>
-    /// <param name="configuration">The Configuration object that contains the settings for the GDB server.</param>
+    /// <param name="options">Runtime options that control the GDB server endpoint.</param>
     /// <param name="memory">The memory bus.</param>
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="state">The CPU state.</param>
@@ -38,9 +39,9 @@ public sealed class GdbServer : IDisposable {
     /// <param name="emulatorBreakpointsManager">The class used to store and retrieve breakpoints.</param>
     /// <param name="emulatorStateSerializer">The class that is responsible for serializing the state of the emulator to a directory.</param>
     /// <param name="loggerService">The ILoggerService implementation used to log messages.</param>
-    public GdbServer(Configuration configuration,
+    public GdbServer(GdbServerOptions options,
         IMemory memory,
-        IFunctionHandlerProvider functionHandlerProvider, 
+        IFunctionHandlerProvider functionHandlerProvider,
         State state,
         IPauseHandler pauseHandler,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
@@ -51,7 +52,7 @@ public sealed class GdbServer : IDisposable {
         _state = state;
         _memory = memory;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
-        _configuration = configuration;
+        _options = options;
         _functionHandlerProvider = functionHandlerProvider;
         _emulatorStateSerializer = emulatorStateSerializer;
     }
@@ -108,7 +109,7 @@ public sealed class GdbServer : IDisposable {
     /// Runs the GDB server and handles incoming connections.
     /// </summary>
     private void RunServer() {
-        int port = _configuration.GdbPort;
+        int port = _options.Port;
         if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
             _loggerService.Information("Starting GDB server on port {Port} ...", port);
         }

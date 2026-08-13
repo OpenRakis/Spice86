@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.Devices.Sound.Blaster;
 
+using Spice86.Core.CLI.RuntimeOptions;
 using Spice86.Audio.Backend;
 using Spice86.Audio.Common;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
@@ -988,7 +989,7 @@ public partial class SoundBlaster {
     ];
 
     private readonly SbInfo _sb;
-    private readonly SoundBlasterHardwareConfig _config;
+    private readonly AudioRuntimeOptions _config;
     private readonly DualPic _dualPic;
     private readonly SoftwareMixer _mixer;
     private readonly SoundChannel _dacChannel;

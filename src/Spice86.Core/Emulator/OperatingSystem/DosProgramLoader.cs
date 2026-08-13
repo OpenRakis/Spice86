@@ -1,5 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.OperatingSystem;
 
+using Spice86.Core.CLI.RuntimeOptions;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.LoadableFile.Dos;
@@ -13,15 +14,15 @@ using Spice86.Shared.Interfaces;
 using System.IO;
 
 internal class DosProgramLoader : DosFileLoader {
-    private readonly Configuration _configuration;
+    private readonly ProgramLoadOptions _options;
     protected readonly DosProcessManager _processManager;
     protected readonly DosFileManager _fileManager;
 
-    public DosProgramLoader(Configuration configuration, IMemory memory,
+    public DosProgramLoader(ProgramLoadOptions options, IMemory memory,
         State state, DosInt21Handler int21Handler,
         ILoggerService loggerService)
         : base(memory, state, loggerService) {
-        _configuration = configuration;
+        _options = options;
         _processManager = int21Handler.ProcessManager;
         _fileManager = int21Handler.FileManager;
     }
@@ -31,7 +32,7 @@ internal class DosProgramLoader : DosFileLoader {
         _processManager.CreateRootCommandComPsp();
 
         // Determine C drive base path
-        string? cDrive = _configuration.CDrive;
+        string? cDrive = _options.CDrive;
 
         if (string.IsNullOrWhiteSpace(cDrive)) {
             cDrive = Path.GetDirectoryName(file) ?? "C:\\";

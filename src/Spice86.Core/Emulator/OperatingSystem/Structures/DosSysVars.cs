@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.OperatingSystem.Structures;
 
+using Spice86.Core.CLI.RuntimeOptions;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
@@ -29,11 +30,11 @@ public class DosSysVars : MemoryBasedDataStructure {
     /// <summary>
     /// Initializes a new instance of the <see cref="DosSysVars"/> class.
     /// </summary>
-    /// <param name="configuration"></param>
+    /// <param name="options">DOS runtime options projected from command-line configuration.</param>
     /// <param name="nullDevice">The DOS NUL device. Its DOS device header is copied into sysvars table.</param>
     /// <param name="byteReaderWriter">The main memory bus.</param>
     /// <param name="baseAddress">The base address of the structure in memory.</param>
-    public DosSysVars(Configuration configuration, NullDevice nullDevice,
+    public DosSysVars(DosOptions options, NullDevice nullDevice,
         IByteReaderWriter byteReaderWriter, uint baseAddress)
         : base(byteReaderWriter, baseAddress) {
         _nullDeviceHeader = nullDevice.Header;
@@ -41,7 +42,7 @@ public class DosSysVars : MemoryBasedDataStructure {
         ClockDeviceHeaderPointer = SegmentedAddress.ZERO;
         MagicWord = 0x1;
         BootDrive = 0x0;
-        if (configuration.Xms is not false) {
+        if (options.Xms is not false) {
             ExtendedMemorySize = ExtendedMemoryManager.XmsMemorySize;
         } else {
             // Size of HMA

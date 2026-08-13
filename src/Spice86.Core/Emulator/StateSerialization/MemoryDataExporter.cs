@@ -1,21 +1,22 @@
 namespace Spice86.Core.Emulator.StateSerialization;
 
+using Spice86.Core.CLI.RuntimeOptions;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.Memory;
 
 public class MemoryDataExporter {
     private readonly IMemory _memory;
     private readonly CallbackHandler _callbackHandler;
-    private readonly Configuration _configuration;
+    private readonly MemoryDumpOptions _options;
 
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
     /// <param name="callbackHandler">The class that stores callback instructions.</param>
-    /// <param name="configuration">The emulator configuration.</param>
-    public MemoryDataExporter(IMemory memory, CallbackHandler callbackHandler, Configuration configuration) {
-        _configuration = configuration;
+    /// <param name="options">Memory dump runtime options.</param>
+    public MemoryDataExporter(IMemory memory, CallbackHandler callbackHandler, MemoryDumpOptions options) {
+        _options = options;
         _memory = memory;
         _callbackHandler = callbackHandler;
     }
@@ -29,7 +30,7 @@ public class MemoryDataExporter {
     }
 
     public byte[] GenerateToolingCompliantRamDump() {
-        if (_configuration.InitializeDOS is true) {
+        if (_options.DosRuntimeState.InstallDosServices is true) {
             return _callbackHandler.ReplaceAllCallbacksInRamImage(_memory);
         }
 

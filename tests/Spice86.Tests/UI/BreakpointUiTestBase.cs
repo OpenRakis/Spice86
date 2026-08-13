@@ -13,7 +13,7 @@ using FluentAssertions;
 
 using NSubstitute;
 
-using Spice86.Core.CLI;
+using Spice86.Core.CLI.RuntimeOptions;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.Memory;
@@ -231,8 +231,9 @@ public abstract class BreakpointUiTestBase : IDisposable {
         (Memory memory, AddressReadWriteBreakpoints memoryBreakpoints, AddressReadWriteBreakpoints ioBreakpoints) = CreateMemory();
 
         CallbackHandler callbackHandler = new(state, loggerService);
-        Configuration configuration = new() { HttpApiPort = 0 };
-        MemoryDataExporter memoryDataExporter = new(memory, callbackHandler, configuration);
+        DosRuntimeState dosRuntimeState = new(installDosServices: false);
+        MemoryDumpOptions memoryDumpOptions = new(dosRuntimeState);
+        MemoryDataExporter memoryDataExporter = new(memory, callbackHandler, memoryDumpOptions);
 
         EmulatorBreakpointsManager breakpointsManager = CreateBreakpointsManager(
             pauseHandler, state, memory, memoryBreakpoints, ioBreakpoints);

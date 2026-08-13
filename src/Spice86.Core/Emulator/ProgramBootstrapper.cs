@@ -2,7 +2,7 @@ namespace Spice86.Core.Emulator;
 
 using Serilog.Events;
 
-using Spice86.Core.CLI;
+using Spice86.Core.CLI.RuntimeOptions;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.LoadableFile;
@@ -21,19 +21,19 @@ using System.Security.Cryptography;
 /// against the optional SHA-256 checksum configured for the run.
 /// </summary>
 internal sealed class ProgramBootstrapper {
-    private readonly Configuration _configuration;
+    private readonly ProgramLoadOptions _options;
     private readonly IMemory _memory;
     private readonly State _state;
     private readonly DosInt21Handler _int21Handler;
     private readonly ILoggerService _loggerService;
 
     public ProgramBootstrapper(
-        Configuration configuration,
+        ProgramLoadOptions options,
         IMemory memory,
         State state,
         DosInt21Handler int21Handler,
         ILoggerService loggerService) {
-        _configuration = configuration;
+        _options = options;
         _memory = memory;
         _state = state;
         _int21Handler = int21Handler;
@@ -44,7 +44,7 @@ internal sealed class ProgramBootstrapper {
     /// Selects the loader for the configured executable, loads it into memory, and validates its checksum.
     /// </summary>
     public void LoadInitialProgram() {
-        string? executableFileName = _configuration.Exe;
+        string? executableFileName = _options.Exe;
         ArgumentException.ThrowIfNullOrEmpty(executableFileName);
 
         string upperCaseExtension = Path.GetExtension(executableFileName.ToUpperInvariant());
@@ -58,15 +58,15 @@ internal sealed class ProgramBootstrapper {
         ExecutableFileLoader loader = CreateLoader(isDosProgram, upperCaseExtension);
 
         try {
-            if (_configuration.InitializeDOS is null) {
-                _configuration.InitializeDOS = loader.DosInitializationNeeded;
+            if (_options.DosRuntimeState.InstallDosServices is null) {
+                _options.DosRuntimeState.InstallDosServices = loader.DosInitializationNeeded;
                 if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
                     _loggerService.Verbose("InitializeDOS parameter not provided. Guessed value is: {InitializeDOS}",
-                        _configuration.InitializeDOS);
+                        _options.DosRuntimeState.InstallDosServices);
                 }
             }
-            byte[] fileContent = loader.LoadFile(executableFileName, _configuration.ExeArgs);
-            CheckSha256Checksum(fileContent, _configuration.ExpectedChecksumValue);
+            byte[] fileContent = loader.LoadFile(executableFileName, _options.ExeArgs);
+            CheckSha256Checksum(fileContent, _options.ExpectedChecksumValue);
         } catch (IOException e) {
             throw new UnrecoverableException($"Failed to read file {executableFileName}", e);
         }
@@ -78,10 +78,10 @@ internal sealed class ProgramBootstrapper {
         }
 
         if (upperCaseExtension == ".BAT") {
-            return new DosBatchProgramLoader(_configuration, _memory, _state, _int21Handler, _loggerService);
+            return new DosBatchProgramLoader(_options, _memory, _state, _int21Handler, _loggerService);
         }
 
-        return new DosProgramLoader(_configuration, _memory, _state, _int21Handler, _loggerService);
+        return new DosProgramLoader(_options, _memory, _state, _int21Handler, _loggerService);
     }
 
     private static void CheckSha256Checksum(byte[] file, byte[]? expectedHash) {

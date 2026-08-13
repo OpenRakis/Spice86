@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.OperatingSystem;
 
 using Serilog.Events;
 
+using Spice86.Core.CLI.RuntimeOptions;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Video;
@@ -171,7 +172,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
-    /// <param name="configuration">An object that describes what to run and how.</param>
+    /// <param name="options">DOS runtime options projected from the command-line configuration.</param>
     /// <param name="memory">The emulator memory.</param>
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="stack">The CPU stack.</param>
@@ -184,7 +185,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
     /// <param name="ioPortDispatcher">The I/O port dispatcher for accessing hardware ports.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="floppyDiskTimingService">Floppy I/O timing service used by absolute floppy image reads and writes.</param>
-    /// <param name="configuration">An object that describes what to run and how.</param>
+    /// <param name="options">DOS runtime options projected from the command-line configuration.</param>
     /// <param name="memory">The emulator memory.</param>
     /// <param name="functionHandlerProvider">Provides current call flow handler to peek call stack.</param>
     /// <param name="stack">The CPU stack.</param>
@@ -199,7 +200,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
     /// <param name="channelCreator">The sound channel creator, used to stream CD audio when an image is mounted.</param>
     /// <param name="activityNotifier">Notifier that surfaces per-drive read/write activity to the UI.</param>
     /// <param name="xms">Optional XMS manager to expose through DOS.</param>
-    public Dos(Configuration configuration, IMemory memory,
+    public Dos(DosOptions options, IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,
         BiosDataArea biosDataArea, IVgaFunctionality vgaFunctionality,
@@ -221,10 +222,10 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         ushort mediaIdSegment = DosTables.ReserveDosPrivateSegment((ushort)DosMediaIdTable.TableSizeInParagraphs);
         DosMediaIdTable mediaIdTable = new(memory,
             MemoryUtils.ToPhysicalAddress(mediaIdSegment, DosMediaIdTable.EntryBaseOffsetInSegment), mediaIdSegment);
-        DosDriveManager = new(_loggerService, configuration.CDrive, configuration.Exe, mediaIdTable);
+        DosDriveManager = new(_loggerService, options.CDrive, options.Exe, mediaIdTable);
 
         VirtualFileBase[] dosDevices = AddDefaultDevices(state, keyboardInt16Handler);
-        DosSysVars = new DosSysVars(configuration, (NullDevice)dosDevices[0], memory,
+        DosSysVars = new DosSysVars(options, (NullDevice)dosDevices[0], memory,
             MemoryUtils.ToPhysicalAddress(DosSysVars.Segment, 0x0));
 
         // Item 1 of devices array
@@ -243,7 +244,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
             _loggerService, Devices);
 
         // Calculate initial PSP segment from configuration (PSP is 16 paragraphs before entry point)
-        ushort initialPspSegment = (ushort)(configuration.ProgramEntryPointSegment - 0x10);
+        ushort initialPspSegment = (ushort)(options.ProgramEntryPointSegment - 0x10);
 
         // Initialize the SDA with the initial PSP segment
         DosSwappableDataArea.CurrentProgramSegmentPrefix = initialPspSegment;
@@ -278,7 +279,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
 
         InitializeBootstrapZDrive();
 
-        if (configuration.InitializeDOS is false) {
+        if (options.DosRuntimeState.InstallDosServices is false) {
             return;
         }
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
@@ -286,12 +287,12 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         }
         OpenDefaultFileHandles(dosDevices);
 
-        if (configuration.Xms is not false && xms is not null) {
+        if (options.Xms is not false && xms is not null) {
             Xms = xms;
             AddDevice(xms, ExtendedMemoryManager.DosDeviceSegment, 0);
         }
 
-        if (configuration.Ems is not false) {
+        if (options.Ems is not false) {
             Ems = new(_memory, functionHandlerProvider, stack, state, _loggerService);
             AddDevice(Ems.AsCharacterDevice(), ExpandedMemoryManager.DosDeviceSegment, 0);
         }
