@@ -446,8 +446,13 @@ public class Spice86DependencyInjection : IDisposable {
             state, dmaSystem, dualPic, mixer, opl, loggerService,
             emulationLoopScheduler, _emulatedClock,
             audioRuntimeOptions);
-        GravisUltraSound gravisUltraSound = new(state, ioPortDispatcher,
-            configuration.FailOnUnhandledPort, loggerService);
+        GravisUltraSound? gravisUltraSound = null;
+        if (configuration.GusEnable is true) {
+            gravisUltraSound = new GravisUltraSound(state, ioPortDispatcher,
+                configuration.FailOnUnhandledPort, loggerService, dmaSystem, dualPic,
+                mixer, emulationLoopScheduler, _emulatedClock, audioRuntimeOptions);
+            opl.SetAdlibCommandMirror(gravisUltraSound.MirrorAdlibCommandRegister);
+        }
 
         loggerService.LogInformation("Sound devices created...");
 
@@ -494,11 +499,17 @@ public class Spice86DependencyInjection : IDisposable {
             biosKeyboardBuffer);
 
         DosOptions dosOptions = RuntimeOptionsMapper.ToDosOptions(configuration, dosRuntimeState);
+        Dictionary<string, string> dosEnvironmentVariables = new() {
+            { "BLASTER", soundBlaster.BlasterString }
+        };
+        if (gravisUltraSound is not null) {
+            dosEnvironmentVariables.Add("ULTRASND", gravisUltraSound.UltraSndString);
+            dosEnvironmentVariables.Add("ULTRADIR", gravisUltraSound.UltraDirString);
+        }
         Dos dos = new Dos(dosOptions, memory, cfgCpu, stack,
             state, biosKeyboardBuffer,
             keyboardInt16Handler, biosDataArea, vgaFunctionality,
-            new Dictionary<string, string> {
-                { "BLASTER", soundBlaster.BlasterString } }, ioPortDispatcher, loggerService,
+            dosEnvironmentVariables, ioPortDispatcher, loggerService,
             floppyDiskTimingService,
             mixer, driveActivityNotifier, xms);
 

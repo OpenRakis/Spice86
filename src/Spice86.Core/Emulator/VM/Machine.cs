@@ -72,9 +72,10 @@ public sealed class Machine : IDisposable {
     public Dos Dos { get; }
 
     /// <summary>
-    /// The Gravis Ultrasound sound card.
+    /// The Gravis Ultrasound sound card, or <c>null</c> when GUS emulation is disabled
+    /// via the GusEnable configuration option.
     /// </summary>
-    public GravisUltraSound GravisUltraSound { get; }
+    public GravisUltraSound? GravisUltraSound { get; }
 
     /// <summary>
     /// Gives the port read or write to the registered handler.
@@ -249,7 +250,7 @@ public sealed class Machine : IDisposable {
         State cpuState,
         Stack stack,
         Dos dos,
-        GravisUltraSound gravisUltraSound,
+        GravisUltraSound? gravisUltraSound,
         IOPortDispatcher ioPortDispatcher,
         Joystick joystick,
         Intel8042Controller keyboardController,
