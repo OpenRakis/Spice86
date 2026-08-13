@@ -5,7 +5,10 @@ using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.Messaging;
 
+using Serilog;
 using Serilog.Events;
+
+using Spice86.Logging;
 
 using Spice86.Core.CLI;
 using Spice86.Core.CLI.RuntimeOptions;
@@ -59,7 +62,6 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Core.Emulator.VM.DeviceScheduler;
-using Spice86.Logging;
 using Spice86.Shared.Diagnostics;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.VM.Breakpoint.Serializable;
@@ -117,9 +119,10 @@ public class Spice86DependencyInjection : IDisposable {
     }
 
     internal Spice86DependencyInjection(Configuration configuration, MainWindow? mainWindow) {
-        LoggerService loggerService = new LoggerService();
+        Spice86LoggerState loggerState = new();
+        LoggerService loggerService = new(loggerState, CreateLoggerConfiguration);
         _loggerService = loggerService;
-        SetLoggingLevel(loggerService, configuration);
+        SetLoggingLevel(loggerState, configuration);
         DosRuntimeState dosRuntimeState = RuntimeOptionsMapper.CreateDosRuntimeState(configuration);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
@@ -317,7 +320,7 @@ public class Spice86DependencyInjection : IDisposable {
         CfgIdAllocator = cfgIdAllocator;
         CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler,
             dualPic, emulatorBreakpointsManager, pauseHandler, functionCatalogue,
-            configuration.UseCodeOverrideOption, configuration.FailOnInvalidOpcode, configuration.AllowIvtAddress0, configuration.EnableSpeculativeCfgExploration, loggerService, cfgNodeExecutionCompiler, cfgIdAllocator, cpuHeavyLogger);
+            configuration.UseCodeOverrideOption, configuration.FailOnInvalidOpcode, configuration.AllowIvtAddress0, configuration.EnableSpeculativeCfgExploration, loggerService, loggerState, cfgNodeExecutionCompiler, cfgIdAllocator, cpuHeavyLogger);
 
         if (loggerService.IsEnabled(LogEventLevel.Information)) {
             loggerService.Information("CfgCpu created...");
@@ -586,6 +589,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         InterruptInstaller interruptInstaller =
             new InterruptInstaller(interruptVectorTable, memoryAsmWriter, functionCatalogue,
+                loggerState,
                 dualPic.EnumerateHardwareInterruptVectorNumbers());
         AssemblyRoutineInstaller assemblyRoutineInstaller =
             new AssemblyRoutineInstaller(memoryAsmWriter, functionCatalogue);
@@ -789,7 +793,7 @@ public class Spice86DependencyInjection : IDisposable {
             mainWindowViewModel = new MainWindowViewModel(
                 displayViewModel, session, performanceViewModel, mcpStatusViewModel,
                 capturedDrivesMenuViewModel, capturedDiscSwapper,
-                configuration, uiDispatcher, textClipboard, loggerService, pauseHandler,
+                configuration, uiDispatcher, textClipboard, loggerState, pauseHandler,
                 pitTimer, cyclesLimiter, hostStorageProvider, dos.ProcessManager);
         }
 
@@ -870,19 +874,28 @@ public class Spice86DependencyInjection : IDisposable {
         ProgramExecutor.Run();
     }
 
-    private static void SetLoggingLevel(LoggerService loggerService, Configuration configuration) {
+    private static void SetLoggingLevel(Spice86LoggerState loggerState, Configuration configuration) {
         if (configuration.SilencedLogs) {
-            loggerService.AreLogsSilenced = true;
+            loggerState.AreLogsSilenced = true;
         } else if (configuration.WarningLogs) {
-            loggerService.LogLevelSwitch.MinimumLevel = LogEventLevel.Warning;
+            loggerState.LogLevelSwitch.MinimumLevel = LogEventLevel.Warning;
         } else if (configuration.VerboseLogs) {
-            loggerService.LogLevelSwitch.MinimumLevel = LogEventLevel.Verbose;
+            loggerState.LogLevelSwitch.MinimumLevel = LogEventLevel.Verbose;
         }
+    }
+
+    private static LoggerConfiguration CreateLoggerConfiguration(Spice86LoggerState loggerState) {
+        LoggerConfiguration configuration = Spice86LoggerConfigurationFactory.Create(loggerState);
+        configuration.WriteTo.Async(conf => conf.Console(outputTemplate: Spice86LoggerConfigurationFactory.LogFormat));
+        configuration.WriteTo.Async(conf2 => conf2.Debug(outputTemplate: Spice86LoggerConfigurationFactory.LogFormat));
+        configuration.WriteTo.Async(conf3 =>
+            conf3.File("logs/log-.txt", outputTemplate: Spice86LoggerConfigurationFactory.LogFormat, rollingInterval: RollingInterval.Day));
+        return configuration;
     }
 
     private static void ReloadCfgGraphIfRequested(Configuration configuration,
         EmulationStateDataReader emulationStateDataReader, CfgCpu cfgCpu, State state,
-        CfgNodeExecutionCompiler cfgNodeExecutionCompiler, ILoggerService loggerService, SequentialIdAllocator cfgIdAllocator) {
+        CfgNodeExecutionCompiler cfgNodeExecutionCompiler, Serilog.ILogger loggerService, SequentialIdAllocator cfgIdAllocator) {
         if (!configuration.ReloadCfgGraph) {
             return;
         }
@@ -911,7 +924,7 @@ public class Spice86DependencyInjection : IDisposable {
     }
 
     private static Dictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(
-        ILoggerService loggerService, Configuration configuration, Machine machine) {
+        ILogger loggerService, Configuration configuration, Machine machine) {
         Dictionary<SegmentedAddress, FunctionInformation> res = new();
         if (configuration.OverrideSupplier == null) {
             return res;
@@ -933,7 +946,7 @@ public class Spice86DependencyInjection : IDisposable {
     }
 
     private static Dictionary<SegmentedAddress, FunctionInformation> ReadFunctionOverrides(
-        Configuration configuration, Machine machine, ILoggerService loggerService) {
+        Configuration configuration, Machine machine, ILogger loggerService) {
         if (configuration.OverrideSupplier != null) {
             return GenerateFunctionInformations(loggerService, configuration, machine);
         }

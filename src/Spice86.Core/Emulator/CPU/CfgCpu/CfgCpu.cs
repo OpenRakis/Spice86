@@ -1,5 +1,9 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu;
 
+using Serilog;
+
+using Spice86.Logging;
+
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
@@ -16,11 +20,11 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
-using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 public class CfgCpu : IFunctionHandlerProvider, IClearable {
-    private readonly ILoggerService _loggerService;
+    private readonly ILogger _loggerService;
+    private readonly Spice86LoggerState _loggerState;
     private readonly InstructionExecutionHelper _instructionExecutionHelper;
     private readonly State _state;
     private readonly DualPic _dualPic;
@@ -34,15 +38,16 @@ public class CfgCpu : IFunctionHandlerProvider, IClearable {
         DualPic dualPic, EmulatorBreakpointsManager emulatorBreakpointsManager,
         IPauseHandler pauseHandler,
         FunctionCatalogue functionCatalogue,
-        bool useCodeOverride, bool failOnInvalidOpcode, bool allowIvtAddress0, bool enableSpeculativeExploration, ILoggerService loggerService, CfgNodeExecutionCompiler executionCompiler, SequentialIdAllocator idAllocator, CpuHeavyLogger? cpuHeavyLogger = null) {
+        bool useCodeOverride, bool failOnInvalidOpcode, bool allowIvtAddress0, bool enableSpeculativeExploration, ILogger loggerService, Spice86LoggerState loggerState, CfgNodeExecutionCompiler executionCompiler, SequentialIdAllocator idAllocator, CpuHeavyLogger? cpuHeavyLogger = null) {
         _loggerService = loggerService;
+        _loggerState = loggerState;
         _state = state;
         _dualPic = dualPic;
         _cpuHeavyLogger = cpuHeavyLogger;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
         CfgNodeFeeder = new(memory, state, emulatorBreakpointsManager, _replacerRegistry, executionCompiler, idAllocator, enableSpeculativeExploration);
-        _executionContextManager = new(memory, state, CfgNodeFeeder, _replacerRegistry, functionCatalogue, useCodeOverride, loggerService, cpuHeavyLogger);
+        _executionContextManager = new(memory, state, CfgNodeFeeder, _replacerRegistry, functionCatalogue, useCodeOverride, loggerService, loggerState, cpuHeavyLogger);
         _instructionExecutionHelper = new(state, memory, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager, _executionContextManager, failOnInvalidOpcode, allowIvtAddress0, loggerService);
     }
 
@@ -129,7 +134,7 @@ public class CfgCpu : IFunctionHandlerProvider, IClearable {
 
         bool faulted = false;
         try {
-            _loggerService.LoggerPropertyBag.CsIp = node.Address;
+            _loggerState.CsIp = node.Address;
             _cpuHeavyLogger?.LogInstruction(node);
             node.CompiledExecution(_instructionExecutionHelper);
         } catch (CpuException e) {

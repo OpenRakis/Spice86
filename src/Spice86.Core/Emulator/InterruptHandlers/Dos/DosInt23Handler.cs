@@ -17,7 +17,7 @@ public class DosInt23Handler : InterruptHandler {
     private readonly DosProcessManager _dosProcessManager;
 
     public DosInt23Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
-        DosProcessManager dosProcessManager, ILoggerService loggerService)
+        DosProcessManager dosProcessManager, Serilog.ILogger loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _dosProcessManager = dosProcessManager;
     }

@@ -43,7 +43,7 @@ public class ConsoleDevice : CharacterDevice {
     /// </summary>
     public const int NoInputAvailable = 0x80D3;
 
-    private readonly ILoggerService _loggerService;
+    private readonly Serilog.ILogger _loggerService;
     private readonly BiosDataArea _biosDataArea;
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
     private readonly IVgaFunctionality _vga;
@@ -75,7 +75,7 @@ public class ConsoleDevice : CharacterDevice {
     /// <param name="vgaFunctionality">VGA BIOS interface for cursor movement, scrolling, and character output.</param>
     /// <param name="biosKeyboardBuffer">Keyboard ring buffer used to check input availability without blocking.</param>
     public ConsoleDevice(IByteReaderWriter memory, uint baseAddress,
-        ILoggerService loggerService, State state, BiosDataArea biosDataArea,
+        Serilog.ILogger loggerService, State state, BiosDataArea biosDataArea,
         KeyboardInt16Handler keyboardInt16Handler, IVgaFunctionality vgaFunctionality,
         BiosKeyboardBuffer biosKeyboardBuffer)
         : base(memory, baseAddress, CON,

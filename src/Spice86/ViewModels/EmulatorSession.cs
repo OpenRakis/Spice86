@@ -20,7 +20,7 @@ public sealed partial class EmulatorSession : ObservableObject, IDisposable {
     private readonly ProgramExecutor _programExecutor;
     private readonly IUIDispatcher _uiDispatcher;
     private readonly IExceptionHandler _exceptionHandler;
-    private readonly ILoggerService _loggerService;
+    private readonly Serilog.ILogger _loggerService;
 
     private Thread? _emulatorThread;
     private TaskCompletionSource<bool>? _completionSource;
@@ -37,7 +37,7 @@ public sealed partial class EmulatorSession : ObservableObject, IDisposable {
         ProgramExecutor programExecutor,
         IUIDispatcher uiDispatcher,
         IExceptionHandler exceptionHandler,
-        ILoggerService loggerService) {
+        Serilog.ILogger loggerService) {
         _programExecutor = programExecutor;
         _uiDispatcher = uiDispatcher;
         _exceptionHandler = exceptionHandler;

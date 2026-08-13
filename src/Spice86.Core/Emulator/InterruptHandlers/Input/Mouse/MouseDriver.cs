@@ -37,7 +37,7 @@ public class MouseDriver : IMouseDriver {
 
     private const int VirtualScreenWidth = 640;
     private readonly IGuiMouseEvents? _gui;
-    private readonly ILoggerService _logger;
+    private readonly Serilog.ILogger _logger;
     private readonly IMouseDevice _mouseDevice;
     private readonly State _state;
     private readonly SharedMouseData _sharedMouseData;
@@ -63,7 +63,7 @@ public class MouseDriver : IMouseDriver {
     /// <param name="gui">Optional GUI mouse events interface for UI integration.</param>
     public MouseDriver(State state, SharedMouseData sharedMouseData,
         IIndexable memory, IMouseDevice mouseDevice,
-        IVgaFunctionality vgaFunctions, ILoggerService loggerService,
+        IVgaFunctionality vgaFunctions, Serilog.ILogger loggerService,
         IGuiMouseEvents? gui = null) {
         _state = state;
         _sharedMouseData = sharedMouseData;
@@ -195,10 +195,10 @@ public class MouseDriver : IMouseDriver {
     public void SetCursorPosition(int x, int y) {
         int mouseAreaWidth = CurrentMaxX - CurrentMinX;
         int mouseAreaHeight = CurrentMaxY - CurrentMinY;
-        
+
         int clampedX = Math.Clamp(x, CurrentMinX, CurrentMaxX);
         int clampedY = Math.Clamp(y, CurrentMinY, CurrentMaxY);
-        
+
         if (mouseAreaWidth <= 0) {
             _mouseDevice.MouseXRelative = 0.0;
         } else {

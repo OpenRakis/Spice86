@@ -46,7 +46,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     private readonly DosDriveManager _driveManager;
     private readonly IMemory _memory;
     private readonly State _state;
-    private readonly ILoggerService _loggerService;
+    private readonly Serilog.ILogger _loggerService;
     private readonly DosBatchExecutionEngine _batchExecutionEngine;
 
     private readonly Stack<ResidentBlockInfo> _pendingResidentBlocks = new();
@@ -125,7 +125,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         ISoundChannelCreator channelCreator,
         IDriveActivityNotifier activityNotifier,
         IBatchDisplayCommandHandler batchDisplayCommandHandler,
-        IDictionary<string, string> envVars, ILoggerService loggerService) {
+        IDictionary<string, string> envVars, Serilog.ILogger loggerService) {
         _sda = new(memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
         _memory = memory;
         _memoryManager = dosMemoryManager;

@@ -29,7 +29,7 @@ public class DosFileManager {
 
     private readonly DosDriveManager _dosDriveManager;
 
-    private readonly ILoggerService _loggerService;
+    private readonly Serilog.ILogger _loggerService;
 
     private ushort _diskTransferAreaAddressOffset;
 
@@ -76,7 +76,7 @@ public class DosFileManager {
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="dosVirtualDevices">The virtual devices from the DOS kernel.</param>
     public DosFileManager(IMemory memory, DosStringDecoder dosStringDecoder,
-        DosDriveManager dosDriveManager, ILoggerService loggerService, IList<IVirtualDevice> dosVirtualDevices) {
+        DosDriveManager dosDriveManager, Serilog.ILogger loggerService, IList<IVirtualDevice> dosVirtualDevices) {
         _loggerService = loggerService;
         _dosStringDecoder = dosStringDecoder;
         _dosPathResolver = new DosPathResolver(dosDriveManager);

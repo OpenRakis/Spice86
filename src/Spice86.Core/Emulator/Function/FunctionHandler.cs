@@ -2,12 +2,12 @@
 
 using System.Text;
 
+using Serilog;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Shared.Interfaces;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
@@ -17,7 +17,7 @@ using Spice86.Shared.Utils;
 public class FunctionHandler {
     private const int MaxCallStackDepth = 1000;
 
-    private readonly ILoggerService _loggerService;
+    private readonly ILogger _loggerService;
 
     private readonly FunctionCallStack _callerStack = new();
 
@@ -36,11 +36,11 @@ public class FunctionHandler {
     /// <param name="useCodeOverride">Whether or not to call overrides.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public FunctionHandler(
-        IMemory memory, 
-        State state, 
-        FunctionCatalogue functionCatalogue, 
+        IMemory memory,
+        State state,
+        FunctionCatalogue functionCatalogue,
         bool useCodeOverride,
-        ILoggerService loggerService) {
+        ILogger loggerService) {
         _memory = memory;
         _state = state;
         _loggerService = loggerService;
@@ -48,7 +48,7 @@ public class FunctionHandler {
         UseCodeOverride = useCodeOverride;
     }
 
-    
+
     /// <summary>
     /// Calls an interrupt handler.
     /// </summary>
@@ -211,7 +211,7 @@ public class FunctionHandler {
     private void LogVerboseReturn(CallType returnCallType, FunctionCall currentFunctionCall) {
         if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
             FunctionInformation? currentFunctionInformation = _functionCatalogue.GetFunctionInformation(currentFunctionCall);
-            _loggerService.Verbose("Returning from function {From} to function {To} ({TargetAddress})", 
+            _loggerService.Verbose("Returning from function {From} to function {To} ({TargetAddress})",
                 currentFunctionInformation,
                 _functionCatalogue.GetFunctionInformation(CurrentFunctionCall),
                 PeekReturnAddressOnMachineStack(returnCallType));

@@ -17,10 +17,10 @@ internal sealed class CfgCpuSnapshotBuilder {
     private readonly CfgBlockGraphExporter _graphExporter;
     private readonly CfgFunctionPartitioner _functionPartitioner;
     private readonly FunctionCatalogue _functionCatalogue;
-    private readonly ILoggerService _loggerService;
+    private readonly Serilog.ILogger _loggerService;
 
     public CfgCpuSnapshotBuilder(CfgBlockGraphExporter graphExporter, CfgFunctionPartitioner functionPartitioner,
-        FunctionCatalogue functionCatalogue, ILoggerService loggerService) {
+        FunctionCatalogue functionCatalogue, Serilog.ILogger loggerService) {
         _graphExporter = graphExporter;
         _functionPartitioner = functionPartitioner;
         _functionCatalogue = functionCatalogue;

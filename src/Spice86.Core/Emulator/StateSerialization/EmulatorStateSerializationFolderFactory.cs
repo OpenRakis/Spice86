@@ -1,8 +1,8 @@
 namespace Spice86.Core.Emulator.StateSerialization;
 
+using Serilog;
 using Serilog.Events;
 
-using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using System.Security.Cryptography;
@@ -10,7 +10,7 @@ using System.Security.Cryptography;
 /// <summary>
 /// Computes context information for saving or loading emulator state.
 /// </summary>
-public class EmulatorStateSerializationFolderFactory(ILoggerService loggerService) {
+public class EmulatorStateSerializationFolderFactory(ILogger loggerService) {
     /// <summary>
     /// Creates an instance of <see cref="EmulatorStateSerializationFolder"/>.
     /// The folder is created on the disk either from configuration, from env var or from current path. 

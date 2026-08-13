@@ -43,7 +43,7 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
     private readonly DeviceScheduler _scheduler;
     private readonly IEmulatedClock _clock;
     private readonly float[] _impulseLookup = new float[SincFilterWidth];
-    private readonly ILoggerService _logger;
+    private readonly Serilog.ILogger _logger;
     private readonly RWQueue<float> _outputQueue;
     private readonly PitChannelState _pitChannelState = new();
     private readonly SoundChannel _mixerChannel;
@@ -109,7 +109,7 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
         SoftwareMixer mixer,
         State state,
         IOPortDispatcher ioPortDispatcher,
-        ILoggerService loggerService,
+        Serilog.ILogger loggerService,
         DeviceScheduler scheduler,
         IEmulatedClock clock,
         bool failOnUnhandledPort)

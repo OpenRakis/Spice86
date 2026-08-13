@@ -2,6 +2,8 @@ namespace Spice86.Tests.CpuTests.SingleStepTests;
 
 using NSubstitute;
 
+using Spice86.Logging;
+
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
@@ -26,6 +28,7 @@ public class SingleStepTestMinimalMachine : IDisposable {
         State state = new State(cpuModel);
         State = state;
         ILoggerService loggerService = Substitute.For<ILoggerService>();
+        Spice86LoggerState loggerState = new();
         PauseHandler pauseHandler = new PauseHandler(loggerService);
         AddressReadWriteBreakpoints memoryBreakpoints = new();
         AddressReadWriteBreakpoints ioBreakpoints = new();
@@ -50,7 +53,7 @@ public class SingleStepTestMinimalMachine : IDisposable {
         _cfgNodeExecutionCompiler = executionCompiler;
         Cpu = new CfgCpu(memory, state, ioPortDispatcher, callbackHandler, dualPic,
             emulatorBreakpointsManager, pauseHandler, functionCatalogue, false, false, true, false, loggerService,
-            executionCompiler, new SequentialIdAllocator());
+            loggerState, executionCompiler, new SequentialIdAllocator());
     }
 
     public void RestoreMemoryAfterTest() {

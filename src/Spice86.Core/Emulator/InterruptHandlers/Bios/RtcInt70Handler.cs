@@ -27,7 +27,7 @@ public sealed class RtcInt70Handler : InterruptHandler {
     /// </summary>
     public RtcInt70Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
         Stack stack, State state, DualPic dualPic, BiosDataArea biosDataArea,
-        IOPortDispatcher ioPortDispatcher, ILoggerService loggerService)
+        IOPortDispatcher ioPortDispatcher, Serilog.ILogger loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _dualPic = dualPic;
         _biosDataArea = biosDataArea;

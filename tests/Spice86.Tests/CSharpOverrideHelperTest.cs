@@ -4,11 +4,12 @@ namespace Spice86.Tests;
 
 using NSubstitute;
 
+using Serilog;
+
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
-using Spice86.Shared.Interfaces;
 
 using System;
 using System.Collections.Generic;
@@ -16,7 +17,7 @@ using System.Collections.Generic;
 using Xunit;
 
 public class CSharpOverrideHelperTest {
-    private readonly ILoggerService _loggerServiceMock = Substitute.For<ILoggerService>();
+    private readonly ILogger _loggerServiceMock = Substitute.For<ILogger>();
 
     [Fact]
     public void TestJumpReturns() {
@@ -95,7 +96,7 @@ class RecursiveJumps : CSharpOverrideHelper {
     public int NumberOfCallsTo2 { get; set; }
 
     public RecursiveJumps(IDictionary<SegmentedAddress, FunctionInformation> functionInformations,
-        Machine machine, ILoggerService loggerService, Configuration configuration) : base(functionInformations, machine, loggerService, new()) {
+        Machine machine, ILogger loggerService, Configuration configuration) : base(functionInformations, machine, loggerService, new()) {
     }
 
     public Action JumpTarget1(int loadOffset) {
@@ -131,7 +132,7 @@ class DeepRecursiveJumps : CSharpOverrideHelper {
     public int NumberOfCallsTo2 { get; set; }
 
     public DeepRecursiveJumps(IDictionary<SegmentedAddress, FunctionInformation> functionInformations,
-        Machine machine, ILoggerService loggerService, Configuration configuration) : base(functionInformations, machine, loggerService, new()) {
+        Machine machine, ILogger loggerService, Configuration configuration) : base(functionInformations, machine, loggerService, new()) {
     }
 
     public Action JumpTarget1(int loadOffset) {
@@ -163,7 +164,7 @@ class DeepRecursiveJumps : CSharpOverrideHelper {
 
 class SimpleCallsJumpsOverrideSupplier : IOverrideSupplier {
     public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(
-        ILoggerService loggerService,
+        ILogger loggerService,
         Configuration configuration,
         ushort programStartSegment,
         Machine machine) {
@@ -180,7 +181,7 @@ class SimpleCallsJumps : CSharpOverrideHelper {
     public int FarCalled2FromStack { get; set; }
 
     public SimpleCallsJumps(IDictionary<SegmentedAddress, FunctionInformation> functionInformations,
-        Machine machine, ILoggerService loggerService, Configuration configuration) : base(functionInformations, machine, loggerService, configuration) {
+        Machine machine, ILogger loggerService, Configuration configuration) : base(functionInformations, machine, loggerService, configuration) {
         CurrentInstance = this;
         // this is the real entry point but other functions are fictional.
         // This is a synthetic test for control flow with stack modification where the whole program is overridden
@@ -237,7 +238,7 @@ class SimpleCallsJumps : CSharpOverrideHelper {
 
 class VariousOverrideSupplier : IOverrideSupplier {
     public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(
-        ILoggerService loggerService,
+        ILogger loggerService,
         Configuration configuration,
         ushort programStartSegment,
         Machine machine) {
@@ -254,7 +255,7 @@ class VariousOverrides : CSharpOverrideHelper {
     public int FirstDoOnTopOfInstructionCalled { get; set; }
 
     public VariousOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations,
-        Machine machine, ILoggerService loggerService, Configuration configuration) : base(functionInformations, machine, loggerService, configuration) {
+        Machine machine, ILogger loggerService, Configuration configuration) : base(functionInformations, machine, loggerService, configuration) {
         CurrentInstance = this;
         // those are actual functions called by actual assembly code
         DefineFunction(0xF000, 0x0000, FirstFunction_F000_0000_F0000);

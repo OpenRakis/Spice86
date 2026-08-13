@@ -13,7 +13,7 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public sealed class ProgramExecutor : IDisposable {
     private bool _disposed;
-    private readonly ILoggerService _loggerService;
+    private readonly Serilog.ILogger _loggerService;
     private readonly EmulationLoop _emulationLoop;
     private readonly EmulatorStateSerializer _emulatorStateSerializer;
     private readonly IShutdownCoordinator _shutdownCoordinator;
@@ -35,7 +35,7 @@ public sealed class ProgramExecutor : IDisposable {
         EmulationLoop emulationLoop,
         EmulatorStateSerializer emulatorStateSerializer,
         IShutdownCoordinator shutdownCoordinator,
-        ILoggerService loggerService) {
+        Serilog.ILogger loggerService) {
         _emulationLoop = emulationLoop;
         _emulatorStateSerializer = emulatorStateSerializer;
         _shutdownCoordinator = shutdownCoordinator;

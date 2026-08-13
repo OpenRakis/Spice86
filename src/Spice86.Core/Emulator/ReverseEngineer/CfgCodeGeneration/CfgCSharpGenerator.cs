@@ -52,8 +52,8 @@ internal sealed class CfgCSharpGenerator {
         writer.Line("using Spice86.Core.Emulator.Function;");
         writer.Line("using Spice86.Core.Emulator.ReverseEngineer;");
         writer.Line("using Spice86.Core.Emulator.VM;");
+        writer.Line("using Serilog;");
         writer.Line("using Spice86.Shared.Emulator.Memory;");
-        writer.Line("using Spice86.Shared.Interfaces;");
         writer.Line("using System;");
         writer.Line("using System.Collections.Generic;");
         writer.Line();
@@ -61,7 +61,7 @@ internal sealed class CfgCSharpGenerator {
 
     private static void EmitSupplier(CSharpSourceWriter writer, GenerationPlan plan) {
         writer.OpenBlock($"public sealed class {GeneratedOverrideNames.SupplierClassName} : IOverrideSupplier");
-        writer.OpenBlock("public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILoggerService loggerService, Configuration configuration, ushort programStartAddress, Machine machine)");
+        writer.OpenBlock("public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine)");
         writer.Line($"return new {GeneratedOverrideNames.OverrideClassName}(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;");
         writer.CloseBlock();
         writer.CloseBlock();
@@ -76,7 +76,7 @@ internal sealed class CfgCSharpGenerator {
     }
 
     private static void EmitConstructor(CSharpSourceWriter writer, GenerationPlan plan) {
-        writer.OpenBlock($"public {GeneratedOverrideNames.OverrideClassName}(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILoggerService loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration)");
+        writer.OpenBlock($"public {GeneratedOverrideNames.OverrideClassName}(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration)");
         foreach (SegmentFieldPlan segment in plan.SegmentFields) {
             writer.Line($"{segment.FieldName} = 0x{segment.Segment:X4};");
         }

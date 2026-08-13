@@ -29,7 +29,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     private const int OplSampleRateHz = 49716;
 
     private readonly AdlibGold? _adlibGold;
-    private readonly ILoggerService _logger;
+    private readonly Serilog.ILogger _logger;
     private readonly Opl3Chip _chip = new();
     private readonly Lock _chipLock = new();
     private readonly IEmulatedClock _clock;
@@ -108,7 +108,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     /// <param name="loggerService">The logger service.</param>
     public Opl3Fm(AudioRuntimeOptions audioOptions, SoftwareMixer mixer, State state, IEmulatedClock clock,
         IOPortDispatcher ioPortDispatcher, bool failOnUnhandledPort,
-        ILoggerService loggerService)
+        Serilog.ILogger loggerService)
         : base(state, failOnUnhandledPort, loggerService) {
         _logger = loggerService;
         mixer.LockMixerThread();

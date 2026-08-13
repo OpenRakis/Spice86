@@ -1,6 +1,9 @@
 ﻿namespace Spice86.Core.Emulator.CPU.CfgCpu;
 
+using Serilog;
 using Serilog.Events;
+
+using Spice86.Logging;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
@@ -10,13 +13,13 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
-using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using System.Linq;
 
 public class ExecutionContextManager : InstructionReplacer, IClearable {
-    private readonly ILoggerService _loggerService;
+    private readonly ILogger _loggerService;
+    private readonly Spice86LoggerState _loggerState;
     private readonly CfgNodeFeeder _cfgNodeFeeder;
     private readonly IMemory _memory;
     private readonly State _state;
@@ -31,9 +34,11 @@ public class ExecutionContextManager : InstructionReplacer, IClearable {
         InstructionReplacerRegistry replacerRegistry,
         FunctionCatalogue functionCatalogue,
         bool useCodeOverride,
-        ILoggerService loggerService,
+        ILogger loggerService,
+        Spice86LoggerState loggerState,
         CpuHeavyLogger? cpuHeavyLogger) : base(replacerRegistry) {
         _loggerService = loggerService;
+        _loggerState = loggerState;
         _cfgNodeFeeder = cfgNodeFeeder;
         _memory = memory;
         _state = state;
@@ -48,7 +53,7 @@ public class ExecutionContextManager : InstructionReplacer, IClearable {
         get;
         set {
             field = value;
-            _loggerService.LoggerPropertyBag.ContextIndex = value;
+            _loggerState.ContextIndex = value;
         }
     }
 

@@ -20,7 +20,7 @@ internal class DosProgramLoader : DosFileLoader {
 
     public DosProgramLoader(ProgramLoadOptions options, IMemory memory,
         State state, DosInt21Handler int21Handler,
-        ILoggerService loggerService)
+        Serilog.ILogger loggerService)
         : base(memory, state, loggerService) {
         _options = options;
         _processManager = int21Handler.ProcessManager;

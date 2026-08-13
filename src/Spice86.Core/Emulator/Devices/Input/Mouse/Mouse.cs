@@ -17,7 +17,7 @@ using System.Diagnostics;
 public class Mouse : DefaultIOPortHandler, IMouseDevice {
     private const int IrqNumber = 12;
     private readonly IGuiMouseEvents? _gui;
-    private readonly ILoggerService _logger;
+    private readonly Serilog.ILogger _logger;
     private long _lastUpdateTimestamp;
     private bool _previousIsLeftButtonDown;
     private bool _previousIsMiddleButtonDown;
@@ -41,7 +41,7 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     /// <param name="gui">The GUI mouse events interface, or null if not using a GUI.</param>
     public Mouse(State state, SharedMouseData sharedMouseData,
         DualPic dualPic, MouseType mouseType,
-        ILoggerService loggerService, bool failOnUnhandledPort,
+        Serilog.ILogger loggerService, bool failOnUnhandledPort,
         IGuiMouseEvents? gui = null)
         : base(state, failOnUnhandledPort, loggerService) {
         _gui = gui;
@@ -134,12 +134,12 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
             case MouseButton.XButton1:
             case MouseButton.XButton2:
             default: {
-                if (_logger.IsEnabled(LogEventLevel.Information)) {
-                    _logger.Information("Unknown mouse button clicked: {@EventArgs}", eventArgs);
-                    return;
+                    if (_logger.IsEnabled(LogEventLevel.Information)) {
+                        _logger.Information("Unknown mouse button clicked: {@EventArgs}", eventArgs);
+                        return;
+                    }
+                    break;
                 }
-                break;
-            }
         }
         UpdateMouse();
     }

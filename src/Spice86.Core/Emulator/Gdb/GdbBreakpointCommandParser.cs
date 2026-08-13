@@ -21,8 +21,8 @@ public class GdbBreakpointCommandParser {
     private const string GdbConditionTypeX = "X";
     private const string GdbConditionTypeCond = "cond";
     private const int MinimumCommandParts = 3;
-    
-    private readonly ILoggerService _loggerService;
+
+    private readonly Serilog.ILogger _loggerService;
     private readonly BreakpointConditionCompiler? _conditionCompiler;
 
     /// <summary>
@@ -30,7 +30,7 @@ public class GdbBreakpointCommandParser {
     /// </summary>
     /// <param name="loggerService">The logger service for diagnostic output.</param>
     /// <param name="conditionCompiler">Optional compiler for breakpoint condition expressions.</param>
-    public GdbBreakpointCommandParser(ILoggerService loggerService, BreakpointConditionCompiler? conditionCompiler = null) {
+    public GdbBreakpointCommandParser(Serilog.ILogger loggerService, BreakpointConditionCompiler? conditionCompiler = null) {
         _loggerService = loggerService;
         _conditionCompiler = conditionCompiler;
     }
@@ -83,7 +83,7 @@ public class GdbBreakpointCommandParser {
         string baseCommand = command[..semicolonIndex];
         string conditionPart = command[(semicolonIndex + 1)..];
         string? conditionExpression = ExtractConditionExpression(conditionPart);
-        
+
         return (baseCommand, conditionExpression);
     }
 
@@ -134,7 +134,7 @@ public class GdbBreakpointCommandParser {
         if (int.TryParse(value, out int result)) {
             return result;
         }
-        
+
         LogErrorInvalidField(fieldName, value);
         return null;
     }

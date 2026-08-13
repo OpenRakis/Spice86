@@ -29,7 +29,7 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="videoState">Represents the state of the video card.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
-    public VgaIoPortHandler(State state, IOPortDispatcher ioPortDispatcher, ILoggerService loggerService,
+    public VgaIoPortHandler(State state, IOPortDispatcher ioPortDispatcher, Serilog.ILogger loggerService,
         IVideoState videoState, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
 
         // Initialize registers.

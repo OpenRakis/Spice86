@@ -27,7 +27,7 @@ public class MouseInt33Handler : InterruptHandler {
     /// <param name="mouseDriver">The mouse driver to handle the actual functionality.</param>
     public MouseInt33Handler(IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
-        ILoggerService loggerService, IMouseDriver mouseDriver)
+        Serilog.ILogger loggerService, IMouseDriver mouseDriver)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _mouseDriver = mouseDriver;
         FillDispatchTable();
@@ -630,7 +630,7 @@ public class MouseInt33Handler : InterruptHandler {
         }
         State.CX = (ushort)x;
         State.DX = (ushort)y;
-        
+
         // Reset mickey counters after reading, similar to CuteMouse driver.
         // This prevents mouse drift when games repeatedly call INT 33h function 0x0B.
         // Games that were affected (for example): Day of the Tentacle, Cruise for a Corpse, Monkey Island 2, ...

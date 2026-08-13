@@ -20,7 +20,7 @@ public class DosInt28Handler : InterruptHandler {
     /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public DosInt28Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state
-        , ILoggerService loggerService) : base(memory, functionHandlerProvider, stack, state, loggerService) {
+        , Serilog.ILogger loggerService) : base(memory, functionHandlerProvider, stack, state, loggerService) {
     }
 
     /// <inheritdoc />

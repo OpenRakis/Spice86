@@ -16,7 +16,7 @@ using System.Diagnostics;
 [DebuggerDisplay("PS2Keyboard Set={_codeSet} Scanning={_isScanning} Buf={_keyboardFrameBuffer.Count}/{BufferSizeInScancodes} Overflowed={_bufferOverflowed} Repeat={_repeat.Key} WaitMs={_repeat.WaitMs}")]
 public partial class PS2Keyboard {
     private readonly Intel8042Controller _controller;
-    private readonly ILoggerService _loggerService;
+    private readonly Serilog.ILogger _loggerService;
     private readonly KeyboardScancodeConverter _scancodeConverter = new();
     private readonly DeviceScheduler _scheduler;
     private readonly IGuiKeyboardEvents? _gui;
@@ -64,7 +64,7 @@ public partial class PS2Keyboard {
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="gui">Optional GUI interface for keyboard events.</param>
     public PS2Keyboard(Intel8042Controller controller,
-        DeviceScheduler scheduler, ILoggerService loggerService,
+        DeviceScheduler scheduler, Serilog.ILogger loggerService,
         IGuiKeyboardEvents? gui = null) {
         _controller = controller;
         _loggerService = loggerService;
@@ -192,7 +192,7 @@ public partial class PS2Keyboard {
         // For all the other keys, follow usual behavior
         TypematicUpdate(keyType, isPressed);
     }
-    
+
     private void MaybeNotifyLedState() {
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
             _loggerService.Debug("KEYBOARD: LED state: {LedState:X2}", LedState);

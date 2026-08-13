@@ -1,10 +1,10 @@
 namespace Spice86.Core.Emulator.VM.DeviceScheduler;
 
+using Serilog;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Shared.Collections;
-using Spice86.Shared.Interfaces;
 
 using System.Collections.Generic;
 
@@ -21,11 +21,11 @@ public class DeviceScheduler {
     public const int MaxQueueSize = 8192;
 
     private readonly IEmulatedClock _clock;
-    private readonly ILoggerService _logger;
+    private readonly ILogger _logger;
 
     private readonly TimePriorityQueue<ScheduledEntry> _queue = new(MaxQueueSize);
     private readonly Stack<ScheduledEntry> _entryPool = new(MaxQueueSize);
-    
+
     private readonly DeviceSchedulerMonitor? _monitor;
 
     private bool _isServicingEvents;
@@ -43,7 +43,7 @@ public class DeviceScheduler {
     /// <param name="clock">The emulated clock that provides the master time source.</param>
     /// <param name="logger">Logger used for diagnostic reporting.</param>
     /// <param name="instanceName">The name used to identify this scheduler in logs.</param>
-    public DeviceScheduler(IEmulatedClock clock, ILoggerService logger, string instanceName) {
+    public DeviceScheduler(IEmulatedClock clock, ILogger logger, string instanceName) {
         _clock = clock;
         _logger = logger;
         _monitor = _logger.IsEnabled(LogEventLevel.Debug) ? new DeviceSchedulerMonitor(logger, instanceName) : null;

@@ -19,11 +19,11 @@ internal sealed class McpHttpHost : IDisposable {
     private static readonly TimeSpan ShutdownJoinTimeout = TimeSpan.FromMilliseconds(25);
     private WebApplication? _app;
     private Thread? _serverThread;
-    private readonly ILoggerService _loggerService;
+    private readonly Serilog.ILogger _loggerService;
     private Logger? _mcpFileLogger;
     private bool _disposed;
 
-    public McpHttpHost(ILoggerService loggerService) {
+    public McpHttpHost(Serilog.ILogger loggerService) {
         _loggerService = loggerService;
     }
 

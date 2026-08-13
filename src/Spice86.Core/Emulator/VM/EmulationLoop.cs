@@ -1,5 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.VM;
 
+using Serilog;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
@@ -8,7 +9,6 @@ using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM.CpuSpeedLimit;
-using Spice86.Shared.Interfaces;
 
 using System.Diagnostics;
 
@@ -17,7 +17,7 @@ using System.Diagnostics;
 /// triggers hardware timers, and keeps DMA transfers moving forward.
 /// </summary>
 public class EmulationLoop {
-    private readonly ILoggerService _loggerService;
+    private readonly ILogger _loggerService;
     private readonly CfgCpu _cpu;
     private readonly FunctionHandler _functionHandler;
     private readonly State _cpuState;
@@ -58,7 +58,7 @@ public class EmulationLoop {
         DeviceScheduler.DeviceScheduler emulationLoopScheduler,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         IPauseHandler pauseHandler, InputEventHub inputEventQueue,
-        ICyclesLimiter cyclesLimiter, ILoggerService loggerService) {
+        ICyclesLimiter cyclesLimiter, ILogger loggerService) {
         _loggerService = loggerService;
         _cpu = cpu;
         _functionHandler = functionHandler;

@@ -1,10 +1,10 @@
 namespace Spice86.Core.Emulator.IOPorts;
 
+using Serilog;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Shared.Interfaces;
 
 /// <summary>
 /// Handles calling the correct dispatcher depending on port number for I/O reads and writes.
@@ -21,7 +21,7 @@ public class IOPortDispatcher : DefaultIOPortHandler {
     /// <param name="loggerService">The logger service.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     public IOPortDispatcher(AddressReadWriteBreakpoints ioBreakpoints,
-        State state, ILoggerService loggerService, bool failOnUnhandledPort) :
+        State state, ILogger loggerService, bool failOnUnhandledPort) :
         base(state, failOnUnhandledPort, loggerService) {
         _ioBreakpoints = ioBreakpoints;
         _failOnUnhandledPort = failOnUnhandledPort;

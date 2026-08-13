@@ -76,7 +76,7 @@ public class DosInt21Handler : InterruptHandler {
         DosCodePageState dosCodePageState, DosStringDecoder dosStringDecoder, DosMemoryManager dosMemoryManager,
         DosFileManager dosFileManager, DosDriveManager dosDriveManager,
         DosProcessManager dosProcessManager,
-        IOPortDispatcher ioPortDispatcher, DosTables dosTables, DosSysVars dosSysVars, ILoggerService loggerService, DosFcbManager dosFcbManager)
+        IOPortDispatcher ioPortDispatcher, DosTables dosTables, DosSysVars dosSysVars, Serilog.ILogger loggerService, DosFcbManager dosFcbManager)
             : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _sda = new(memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
         _countryInfo = countryInfo;
@@ -2010,10 +2010,10 @@ public class DosInt21Handler : InterruptHandler {
                     break;
                 }
             default: {
-                SetCarryFlag(true, calledFromVm);
-                State.AX = (int)DosErrorCode.FunctionNumberInvalid;
-                break;
-            }
+                    SetCarryFlag(true, calledFromVm);
+                    State.AX = (int)DosErrorCode.FunctionNumberInvalid;
+                    break;
+                }
         }
     }
 

@@ -1,10 +1,10 @@
 namespace Spice86.Core.Emulator.StateSerialization;
 
+using Serilog;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.Function;
 using Spice86.Shared.Emulator.Memory;
-using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using System.IO;
@@ -14,13 +14,13 @@ using System.Linq;
 /// Provides functionality for dumping Ghidra symbols and labels to a file.
 /// </summary>
 public class GhidraSymbolsExporter {
-    private readonly ILoggerService _loggerService;
+    private readonly ILogger _loggerService;
 
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="loggerService">The logger service implementation.</param>
-    public GhidraSymbolsExporter(ILoggerService loggerService) => _loggerService = loggerService;
+    public GhidraSymbolsExporter(ILogger loggerService) => _loggerService = loggerService;
 
     /// <summary>
     /// Dumps function information and labels to a file.
@@ -80,7 +80,7 @@ public class GhidraSymbolsExporter {
     /// </summary>
     /// <param name="filePath">The path of the file to read the symbols and labels from.</param>
     /// <returns>A dictionary containing function names from the file.</returns>
-    public  IEnumerable<FunctionInformation>  ReadFromFileOrCreate(string filePath) {
+    public IEnumerable<FunctionInformation> ReadFromFileOrCreate(string filePath) {
         if (!File.Exists(filePath)) {
             if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                 _loggerService.Debug("File doesn't exist");
@@ -121,7 +121,7 @@ public class GhidraSymbolsExporter {
     /// <param name="loggerService">The logger service to use for logging errors during parsing.</param>
     /// <param name="nameWithAddress">The function name with address to parse.</param>
     /// <returns>A <see cref="FunctionInformation"/> instance representing the parsed function, or <c>null</c> if parsing failed.</returns>
-    public static FunctionInformation? NameToFunctionInformation(ILoggerService loggerService, string nameWithAddress) {
+    public static FunctionInformation? NameToFunctionInformation(ILogger loggerService, string nameWithAddress) {
         string[] nameSplit = nameWithAddress.Split("_");
         if (nameSplit.Length < 4) {
             // Format is not correct, we can't use this line

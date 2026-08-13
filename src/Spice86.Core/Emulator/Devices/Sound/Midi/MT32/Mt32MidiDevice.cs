@@ -30,7 +30,7 @@ public sealed class Mt32MidiDevice : MidiDevice {
     /// <param name="romsPath">The path to the MT-32 ROM files.</param>
     /// <param name="loggerService">The logger service to use for logging messages.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="romsPath"/> is <c>null</c> or empty.</exception>
-    public Mt32MidiDevice(SoftwareMixer mixer, string romsPath, ILoggerService loggerService) {
+    public Mt32MidiDevice(SoftwareMixer mixer, string romsPath, Serilog.ILogger loggerService) {
         _context = new();
         if (string.IsNullOrWhiteSpace(romsPath)) {
             throw new ArgumentNullException(nameof(romsPath));

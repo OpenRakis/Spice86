@@ -13,7 +13,7 @@ using System.Diagnostics;
 internal sealed class DmaController {
     private readonly DmaChannel[] _channels = new DmaChannel[4];
     private readonly byte _index;
-    private readonly ILoggerService _logger;
+    private readonly Serilog.ILogger _logger;
 
     private bool _flipFlop;
 
@@ -24,7 +24,7 @@ internal sealed class DmaController {
     /// <param name="memory">The emulator memory abstraction used by the channels.</param>
     /// <param name="logger">Logging facility for diagnostic output.</param>
     /// <param name="wrappingMask">Mask applied when wrapping physical addresses handled by this controller.</param>
-    public DmaController(byte controllerIndex, IMemory memory, ILoggerService logger, uint wrappingMask = 0xFFFF) {
+    public DmaController(byte controllerIndex, IMemory memory, Serilog.ILogger logger, uint wrappingMask = 0xFFFF) {
         Debug.Assert(controllerIndex is 0 or 1);
         _index = controllerIndex;
         _logger = logger;

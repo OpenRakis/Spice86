@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 
 using System.Numerics;
 
+using Serilog;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
@@ -17,13 +18,12 @@ using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
-using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using System.Runtime.CompilerServices;
 
 public class InstructionExecutionHelper {
-    private readonly ILoggerService _loggerService;
+    private readonly ILogger _loggerService;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
     private readonly ExecutionContextManager _executionContextManager;
     private readonly ReturnOperationsHelper _returnOperationsHelper;
@@ -37,7 +37,7 @@ public class InstructionExecutionHelper {
         ExecutionContextManager executionContextManager,
         bool failOnInvalidOpcode,
         bool allowIvtAddress0,
-        ILoggerService loggerService) {
+        ILogger loggerService) {
         _loggerService = loggerService;
         State = state;
         Memory = memory;
@@ -52,10 +52,10 @@ public class InstructionExecutionHelper {
         _executionContextManager = executionContextManager;
         _failOnInvalidOpcode = failOnInvalidOpcode;
         _allowIvtAddress0 = allowIvtAddress0;
-        _returnOperationsHelper = new (state, Stack);
+        _returnOperationsHelper = new(state, Stack);
     }
     public State State { get; }
-    public IMemory Memory{ get; }
+    public IMemory Memory { get; }
     public InterruptVectorTable InterruptVectorTable { get; }
     public Stack Stack { get; }
     public IOPortDispatcher IoPortDispatcher { get; }
@@ -83,14 +83,14 @@ public class InstructionExecutionHelper {
     public void NearCallWithReturnIpNextInstruction16(CfgInstruction instruction, ushort callIP) {
         MoveIpToEndOfInstruction(instruction);
         Stack.Push16(State.IP);
-        HandleCall(instruction, CallType.NEAR16, new SegmentedAddress(State.CS, State.IP),  new SegmentedAddress(State.CS, callIP));
+        HandleCall(instruction, CallType.NEAR16, new SegmentedAddress(State.CS, State.IP), new SegmentedAddress(State.CS, callIP));
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void NearCallWithReturnIpNextInstruction32(CfgInstruction instruction, ushort callIP) {
         MoveIpToEndOfInstruction(instruction);
         Stack.Push32(State.IP);
-        HandleCall(instruction, CallType.NEAR32, new SegmentedAddress(State.CS, State.IP),  new SegmentedAddress(State.CS, callIP));
+        HandleCall(instruction, CallType.NEAR32, new SegmentedAddress(State.CS, State.IP), new SegmentedAddress(State.CS, callIP));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -136,7 +136,7 @@ public class InstructionExecutionHelper {
         (SegmentedAddress target, SegmentedAddress expectedReturn) = DoInterrupt(vectorNumber);
         CurrentFunctionHandler.ICall(target, expectedReturn, instruction, vectorNumber);
     }
-    
+
     public (SegmentedAddress, SegmentedAddress) DoInterrupt(byte vectorNumber) {
         _emulatorBreakpointsManager.InterruptBreakPoints.TriggerMatchingBreakPoints(vectorNumber);
         return DoInterruptWithoutBreakpoint(vectorNumber);
@@ -227,7 +227,7 @@ public class InstructionExecutionHelper {
         }
 
         if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug(cpuException,"{ExceptionType} in {MethodName}", nameof(CpuException), nameof(HandleCpuException));
+            _loggerService.Debug(cpuException, "{ExceptionType} in {MethodName}", nameof(CpuException), nameof(HandleCpuException));
         }
         // Real-mode interrupts do NOT push an error code on the stack — that is a
         // protected-mode behavior. Spice86 is real-mode only, so any error code

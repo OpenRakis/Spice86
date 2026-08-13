@@ -24,7 +24,7 @@ public class SystemBiosInt12Handler : InterruptHandler {
     public SystemBiosInt12Handler(
         IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
         Stack stack, State state, BiosDataArea biosDataArea,
-        ILoggerService loggerService) 
+        Serilog.ILogger loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _biosDataArea = biosDataArea;
     }

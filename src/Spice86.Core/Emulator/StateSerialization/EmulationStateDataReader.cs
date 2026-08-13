@@ -1,9 +1,10 @@
 namespace Spice86.Core.Emulator.StateSerialization;
 
+using Serilog;
+
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.StateSerialization.CfgReload;
 using Spice86.Shared.Emulator.VM.Breakpoint.Serializable;
-using Spice86.Shared.Interfaces;
 
 using System.Text.Json;
 
@@ -16,7 +17,7 @@ public class EmulationStateDataReader : EmulationStateDataIoHandler {
     /// </summary>
     /// <param name="emulatorStateSerializationFolder">Where to read the data from.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public EmulationStateDataReader(EmulatorStateSerializationFolder emulatorStateSerializationFolder, ILoggerService loggerService) : base(emulatorStateSerializationFolder, loggerService) {
+    public EmulationStateDataReader(EmulatorStateSerializationFolder emulatorStateSerializationFolder, ILogger loggerService) : base(emulatorStateSerializationFolder, loggerService) {
     }
 
     /// <summary>
@@ -24,8 +25,8 @@ public class EmulationStateDataReader : EmulationStateDataIoHandler {
     /// </summary>
     /// <returns>The execution data  read from the file, or a new instance if the file does not exist.</returns>
     public ExecutionAddresses ReadExecutionDataFromFileOrCreate() {
-           return new ExecutionAddressesExporter(LoggerService)
-                .ReadFromFileOrCreate(ExecutionFlowFile);
+        return new ExecutionAddressesExporter(LoggerService)
+             .ReadFromFileOrCreate(ExecutionFlowFile);
     }
 
     /// <summary>
@@ -35,7 +36,7 @@ public class EmulationStateDataReader : EmulationStateDataIoHandler {
     public IEnumerable<FunctionInformation> ReadGhidraSymbolsFromFileOrCreate() {
         return new GhidraSymbolsExporter(LoggerService).ReadFromFileOrCreate(SymbolsFile);
     }
-    
+
     public SerializableUserBreakpointCollection ReadBreakpointsFromFileOrCreate() {
         if (!File.Exists(BreakpointsFile) || new FileInfo(BreakpointsFile).Length == 0) {
             return new();

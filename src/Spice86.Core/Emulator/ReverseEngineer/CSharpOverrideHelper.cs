@@ -1,5 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.ReverseEngineer;
 
+using Serilog;
 using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
@@ -16,7 +17,6 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.VM.Breakpoint;
-using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using System.Collections.Immutable;
@@ -49,7 +49,7 @@ public class CSharpOverrideHelper {
     /// <summary>
     /// The service used for logging.
     /// </summary>
-    protected readonly ILoggerService _loggerService;
+    protected readonly ILogger _loggerService;
 
     /// <summary>
     /// The Spice86 configuration
@@ -370,7 +370,7 @@ public class CSharpOverrideHelper {
     /// Gets or sets the <see cref="JumpDispatcher"/>
     /// </summary>
     public JumpDispatcher JumpDispatcher { get; set; }
-    
+
     public ReturnOperationsHelper ReturnOperationsHelper { get; }
 
     /// <summary>
@@ -381,7 +381,7 @@ public class CSharpOverrideHelper {
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="configuration">The emulator configuration.</param>
     public CSharpOverrideHelper(IDictionary<SegmentedAddress, FunctionInformation> functionInformations,
-        Machine machine, ILoggerService loggerService, Configuration configuration) {
+        Machine machine, ILogger loggerService, Configuration configuration) {
         Machine = machine;
         Memory = machine.Memory;
         _dualPic = machine.DualPic;
@@ -503,7 +503,7 @@ public class CSharpOverrideHelper {
     public Action FarRet(ushort numberOfBytesToPop = 0) {
         return () => ReturnOperationsHelper.FarRet16(numberOfBytesToPop);
     }
-    
+
     public Action FarRet32(ushort numberOfBytesToPop = 0) {
         return () => ReturnOperationsHelper.FarRet32(numberOfBytesToPop);
     }
@@ -533,7 +533,7 @@ public class CSharpOverrideHelper {
     public Action NearRet(ushort numberOfBytesToPop = 0) {
         return () => ReturnOperationsHelper.NearRet16(numberOfBytesToPop);
     }
-    
+
     public Action NearRet32(ushort numberOfBytesToPop = 0) {
         return () => ReturnOperationsHelper.NearRet32(numberOfBytesToPop);
     }
@@ -928,10 +928,10 @@ public class CSharpOverrideHelper {
             }
             int callback = i;
             DefineFunction(handlerAddress.Segment, handlerAddress.Offset, (offset) => {
-                    _callbackHandler.RunFromOverriden(callback);
+                _callbackHandler.RunFromOverriden(callback);
 
-                    return InterruptRet();
-                }, false, $"provided_interrupt_handler_{ConvertUtils.ToHex(i)}");
+                return InterruptRet();
+            }, false, $"provided_interrupt_handler_{ConvertUtils.ToHex(i)}");
         }
     }
 

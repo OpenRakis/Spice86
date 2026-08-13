@@ -12,7 +12,7 @@ using System.Diagnostics;
 /// </summary>
 public class VgaCard {
     private readonly IGuiVideoPresentation? _gui;
-    private readonly ILoggerService _logger;
+    private readonly Serilog.ILogger _logger;
     private readonly IVgaRenderer _renderer;
 
     /// <summary>
@@ -21,7 +21,7 @@ public class VgaCard {
     /// <param name="gui">The GUI to render to.</param>
     /// <param name="renderer">The VGA renderer to use.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public VgaCard(IGuiVideoPresentation? gui, IVgaRenderer renderer, ILoggerService loggerService) {
+    public VgaCard(IGuiVideoPresentation? gui, IVgaRenderer renderer, Serilog.ILogger loggerService) {
         _gui = gui;
         _logger = loggerService;
         _renderer = renderer;

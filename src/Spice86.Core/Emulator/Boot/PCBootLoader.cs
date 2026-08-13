@@ -24,12 +24,12 @@ public sealed class PCBootLoader {
 
     private readonly IMemory _memory;
     private readonly State _state;
-    private readonly ILoggerService _loggerService;
+    private readonly Serilog.ILogger _loggerService;
 
     /// <summary>
     /// Creates a new boot loader for floppy-based PC boot images.
     /// </summary>
-    public PCBootLoader(IMemory memory, State state, ILoggerService loggerService) {
+    public PCBootLoader(IMemory memory, State state, Serilog.ILogger loggerService) {
         _memory = memory;
         _state = state;
         _loggerService = loggerService;

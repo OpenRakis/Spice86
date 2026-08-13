@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 
-using Spice86.Shared.Interfaces;
+using Serilog;
 
 using System;
 using System.Threading;
@@ -13,7 +13,7 @@ using System.Threading;
 public class CfgNodeExecutionCompilerMonitor : IDisposable {
     private const int LogIntervalMs = 500;
 
-    private readonly ILoggerService _logger;
+    private readonly ILogger _logger;
     private readonly Timer? _timer;
     private CompilerState? _lastLoggedState;
     private readonly WindowMetrics _window = new WindowMetrics();
@@ -40,7 +40,7 @@ public class CfgNodeExecutionCompilerMonitor : IDisposable {
     /// Initializes a new instance of <see cref="CfgNodeExecutionCompilerMonitor"/>.
     /// </summary>
     /// <param name="logger">The logger service.</param>
-    public CfgNodeExecutionCompilerMonitor(ILoggerService logger) {
+    public CfgNodeExecutionCompilerMonitor(ILogger logger) {
         _logger = logger;
         _timer = new Timer(OnTimerTick, null, LogIntervalMs, LogIntervalMs);
     }

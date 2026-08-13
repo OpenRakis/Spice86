@@ -14,7 +14,7 @@ using Spice86.Shared.Interfaces;
 /// A GDB server that allows for remote debugging of the emulator.
 /// </summary>
 public sealed class GdbServer : IDisposable {
-    private readonly ILoggerService _loggerService;
+    private readonly Serilog.ILogger _loggerService;
     private readonly GdbServerOptions _options;
     private bool _disposed;
     private bool _isRunning = true;
@@ -38,7 +38,7 @@ public sealed class GdbServer : IDisposable {
     /// <param name="pauseHandler">The class that enables us to pause the emulator.</param>
     /// <param name="emulatorBreakpointsManager">The class used to store and retrieve breakpoints.</param>
     /// <param name="emulatorStateSerializer">The class that is responsible for serializing the state of the emulator to a directory.</param>
-    /// <param name="loggerService">The ILoggerService implementation used to log messages.</param>
+    /// <param name="loggerService">The logger implementation used to log messages.</param>
     public GdbServer(GdbServerOptions options,
         IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider,
@@ -46,7 +46,7 @@ public sealed class GdbServer : IDisposable {
         IPauseHandler pauseHandler,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         EmulatorStateSerializer emulatorStateSerializer,
-        ILoggerService loggerService) {
+        Serilog.ILogger loggerService) {
         _loggerService = loggerService;
         _pauseHandler = pauseHandler;
         _state = state;

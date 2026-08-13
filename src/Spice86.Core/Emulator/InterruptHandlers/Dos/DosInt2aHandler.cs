@@ -16,7 +16,7 @@ public class DosInt2aHandler : InterruptHandler {
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
-    public DosInt2aHandler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, ILoggerService loggerService)
+    public DosInt2aHandler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, Serilog.ILogger loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         FillDispatchTable();
     }

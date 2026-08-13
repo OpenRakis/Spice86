@@ -12,7 +12,7 @@ using Spice86.Shared.Interfaces;
 public sealed class Midi : DefaultIOPortHandler, IDisposable {
     private readonly MidiDevice _midiMapper;
     private readonly Queue<byte> _dataBytes = new();
-    private readonly ILoggerService _logger;
+    private readonly Serilog.ILogger _logger;
 
     /// <summary>
     /// The port number used to send and receive MIDI data.
@@ -52,7 +52,7 @@ public sealed class Midi : DefaultIOPortHandler, IDisposable {
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public Midi(Configuration configuration, SoftwareMixer mixer, State state, IOPortDispatcher ioPortDispatcher,
-        string? mt32RomsPath, bool failOnUnhandledPort, ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
+        string? mt32RomsPath, bool failOnUnhandledPort, Serilog.ILogger loggerService) : base(state, failOnUnhandledPort, loggerService) {
         _logger = loggerService;
         Mt32RomsPath = mt32RomsPath;
         // the external MIDI device (external General MIDI or external Roland MT-32).

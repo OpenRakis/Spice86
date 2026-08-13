@@ -43,7 +43,7 @@ public class DosInt2fHandler : InterruptHandler {
     /// <param name="xms">The extended memory manager. Can be <c>null</c> if XMS was not enabled.</param>
     public DosInt2fHandler(IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack,
-        State state, ILoggerService loggerService, Mscdex mscdexService,
+        State state, Serilog.ILogger loggerService, Mscdex mscdexService,
         ExtendedMemoryManager? xms = null)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _xms = xms;

@@ -36,8 +36,7 @@ using System.Text.Json.Serialization;
 
 using Xunit;
 
-public class MachineTest
-{
+public class MachineTest {
     public static IEnumerable<object[]> JitModes => [[JitMode.InterpretedOnly], [JitMode.CompiledOnly]];
 
     public static IEnumerable<object[]> CfgPartitioningGraphFixtures => [
@@ -52,8 +51,7 @@ public class MachineTest
 
     private readonly ListingExtractor _dumper = new(new(AsmRenderingConfig.CreateSpice86Style()));
 
-    static MachineTest()
-    {
+    static MachineTest() {
         Log.Logger = new LoggerConfiguration()
             .WriteTo.Console()
             .MinimumLevel.Debug()
@@ -62,22 +60,19 @@ public class MachineTest
 
     [Theory]
     [MemberData(nameof(JitModes))]
-    public void TestAdd(JitMode jitMode)
-    {
+    public void TestAdd(JitMode jitMode) {
         TestOneBin("add", jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
-    public void TestBcdcnv(JitMode jitMode)
-    {
+    public void TestBcdcnv(JitMode jitMode) {
         TestOneBin("bcdcnv", jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
-    public void TestBitwise(JitMode jitMode)
-    {
+    public void TestBitwise(JitMode jitMode) {
         byte[] expected = GetExpected("bitwise");
         // dosbox values
         expected[0x9F] = 0x12;
@@ -89,15 +84,13 @@ public class MachineTest
 
     [Theory]
     [MemberData(nameof(JitModes))]
-    public void TestCmpneg(JitMode jitMode)
-    {
+    public void TestCmpneg(JitMode jitMode) {
         TestOneBin("cmpneg", jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
-    public void TestControl(JitMode jitMode)
-    {
+    public void TestControl(JitMode jitMode) {
         byte[] expected = GetExpected("control");
         // dosbox values
         expected[0x1] = 0x78;
@@ -106,22 +99,19 @@ public class MachineTest
 
     [Theory]
     [MemberData(nameof(JitModes))]
-    public void TestDatatrnf(JitMode jitMode)
-    {
+    public void TestDatatrnf(JitMode jitMode) {
         TestOneBin("datatrnf", jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
-    public void TestDiv(JitMode jitMode)
-    {
+    public void TestDiv(JitMode jitMode) {
         TestOneBin("div", jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
-    public void TestDiv2(JitMode jitMode)
-    {
+    public void TestDiv2(JitMode jitMode) {
         byte[] expected = new byte[6];
         expected[0x00] = 0x3D; // quotient low  (AX = 0x8F3D)
         expected[0x01] = 0x8F; // quotient high
@@ -134,29 +124,25 @@ public class MachineTest
 
     [Theory]
     [MemberData(nameof(JitModes))]
-    public void TestInterrupt(JitMode jitMode)
-    {
+    public void TestInterrupt(JitMode jitMode) {
         TestOneBin("interrupt", jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
-    public void TestJump1(JitMode jitMode)
-    {
+    public void TestJump1(JitMode jitMode) {
         TestOneBin("jump1", jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
-    public void TestJump2(JitMode jitMode)
-    {
+    public void TestJump2(JitMode jitMode) {
         TestOneBin("jump2", jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
-    public void TestJmpmov(JitMode jitMode)
-    {
+    public void TestJmpmov(JitMode jitMode) {
         // 0x4001 in little endian
         byte[] expected = new byte[] { 0x01, 0x40 };
         TestOneBin("jmpmov", expected, jitMode, machine => {
@@ -169,8 +155,7 @@ public class MachineTest
 
     [Theory]
     [MemberData(nameof(JitModes))]
-    public void TestMul(JitMode jitMode)
-    {
+    public void TestMul(JitMode jitMode) {
         byte[] expected = GetExpected("mul");
         expected[0xA2] = 0x86;
         expected[0x9E] = 0x46;
@@ -192,8 +177,7 @@ public class MachineTest
 
     [Theory]
     [MemberData(nameof(JitModes))]
-    public void TestRep(JitMode jitMode)
-    {
+    public void TestRep(JitMode jitMode) {
         TestOneBin("rep", jitMode);
     }
 
@@ -210,15 +194,13 @@ public class MachineTest
 
     [Theory]
     [MemberData(nameof(JitModes))]
-    public void TestRotate(JitMode jitMode)
-    {
+    public void TestRotate(JitMode jitMode) {
         TestOneBin("rotate", jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
-    public void TestSegpr(JitMode jitMode)
-    {
+    public void TestSegpr(JitMode jitMode) {
         byte[] expected = GetExpected("segpr");
         TestOneBin("segpr", expected, jitMode, machine => {
             // Here, a division by 0 occurred causing a CPU fault. It is handled by an interrupt handler.
@@ -322,8 +304,7 @@ public class MachineTest
 
     [Theory]
     [MemberData(nameof(JitModes))]
-    public void TestShifts(JitMode jitMode)
-    {
+    public void TestShifts(JitMode jitMode) {
         byte[] expected = GetExpected("shifts");
         // Bytes 0x6F and 0x79 are the high byte of FLAGS pushed after multi-bit
         // SHL/SAL operations. Intel leaves OF undefined for shifts with count > 1,
@@ -336,22 +317,19 @@ public class MachineTest
 
     [Theory]
     [MemberData(nameof(JitModes))]
-    public void TestStrings(JitMode jitMode)
-    {
+    public void TestStrings(JitMode jitMode) {
         TestOneBin("strings", jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
-    public void TestSub(JitMode jitMode)
-    {
+    public void TestSub(JitMode jitMode) {
         TestOneBin("sub", jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
-    public void TestSelfModifyValue(JitMode jitMode)
-    {
+    public void TestSelfModifyValue(JitMode jitMode) {
         byte[] expected = new byte[4];
         expected[0x00] = 0x0a;
         expected[0x01] = 0x00;
@@ -393,8 +371,7 @@ public class MachineTest
 
     [Theory]
     [MemberData(nameof(JitModes))]
-    public void TestSelfModifyInstructions(JitMode jitMode)
-    {
+    public void TestSelfModifyInstructions(JitMode jitMode) {
         byte[] expected = new byte[6];
         expected[0x00] = 0x03;
         expected[0x01] = 0x00;
@@ -416,8 +393,7 @@ public class MachineTest
     /// </summary>
     [Theory]
     [MemberData(nameof(JitModes))]
-    public void TestSelfModifyJe(JitMode jitMode)
-    {
+    public void TestSelfModifyJe(JitMode jitMode) {
         TestOneBin("selfmodifyje", [], jitMode, machine => {
             CurrentInstructions currentInstructions = machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
             // Layout (F000:0000 = start):
@@ -443,8 +419,7 @@ public class MachineTest
 
     [Theory]
     [MemberData(nameof(JitModes))]
-    public void TestSelfModifyCall(JitMode jitMode)
-    {
+    public void TestSelfModifyCall(JitMode jitMode) {
         TestOneBin("selfmodifycall", [], jitMode, machine => {
             // Block-level assertions: SelectorNode insertion via CreateSelectorNodeBetween
             // must finalise the predecessor's CfgBlock and must not disturb the variant
@@ -484,8 +459,7 @@ public class MachineTest
 
     [Theory]
     [MemberData(nameof(JitModes))]
-    public void TestSelfModifyTerminator(JitMode jitMode)
-    {
+    public void TestSelfModifyTerminator(JitMode jitMode) {
         // Expected stack memory: 42 00 FF FF
         // First push: AX=0xFFFF (first pass marker)
         // Second push: AX=0x0042 (after patch, at 'done' label)
@@ -533,8 +507,7 @@ public class MachineTest
 
     [Theory]
     [MemberData(nameof(JitModes))]
-    public void TestExternalInt(JitMode jitMode)
-    {
+    public void TestExternalInt(JitMode jitMode) {
         byte[] expected = new byte[6];
         expected[0x00] = 0x01;
         TestOneBin("externalint", expected, jitMode, 0xFFFFFFF, true);
@@ -542,8 +515,7 @@ public class MachineTest
 
     [Theory]
     [MemberData(nameof(JitModes))]
-    public void TestDivFaultLoop(JitMode jitMode)
-    {
+    public void TestDivFaultLoop(JitMode jitMode) {
         byte[] expected = new byte[4];
         expected[0x00] = 0x03; // retrycount low
         expected[0x01] = 0x00; // retrycount high
@@ -614,12 +586,11 @@ public class MachineTest
 
     [Theory]
     [MemberData(nameof(JitModes))]
-    public void TestLinearAddressSameButSegmentedDifferent(JitMode jitMode)
-    {
+    public void TestLinearAddressSameButSegmentedDifferent(JitMode jitMode) {
         byte[] expected = new byte[2];
         expected[0x00] = 0x02;
         expected[0x01] = 0x00;
-        TestOneBin("linearsamesegmenteddifferent", expected, jitMode, enableA20Gate:true);
+        TestOneBin("linearsamesegmenteddifferent", expected, jitMode, enableA20Gate: true);
     }
 
     [Theory]
@@ -961,15 +932,13 @@ public class MachineTest
     }
 
     [AssertionMethod]
-    private void TestOneBin(string binName, JitMode jitMode)
-    {
+    private void TestOneBin(string binName, JitMode jitMode) {
         byte[] expected = GetExpected(binName);
         TestOneBin(binName, expected, jitMode);
     }
 
     [AssertionMethod]
-    private void TestOneBin(string binName, byte[] expected, JitMode jitMode, long maxCycles = 100000L, bool enablePit = false, bool enableA20Gate = false)
-    {
+    private void TestOneBin(string binName, byte[] expected, JitMode jitMode, long maxCycles = 100000L, bool enablePit = false, bool enableA20Gate = false) {
         using Spice86Creator creator = new Spice86Creator(binName: binName, maxCycles: maxCycles, enablePit: enablePit, enableA20Gate: enableA20Gate, jitMode: jitMode);
         using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
         spice86DependencyInjection.ProgramExecutor.Run();
@@ -980,8 +949,7 @@ public class MachineTest
     }
 
     [AssertionMethod]
-    private void TestOneBin(string binName, byte[] expected, JitMode jitMode, Action<Machine> assertions, long maxCycles = 100000L, bool enablePit = false, bool enableA20Gate = false)
-    {
+    private void TestOneBin(string binName, byte[] expected, JitMode jitMode, Action<Machine> assertions, long maxCycles = 100000L, bool enablePit = false, bool enableA20Gate = false) {
         using Spice86Creator creator = new Spice86Creator(binName: binName, maxCycles: maxCycles, enablePit: enablePit, enableA20Gate: enableA20Gate, jitMode: jitMode);
         using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
         spice86DependencyInjection.ProgramExecutor.Run();
@@ -1047,7 +1015,7 @@ public class MachineTest
         public List<ushort> PostValues { get; } = new();
         public string AsciiError { get; private set; } = "";
 
-        public Test386ButNotProtectedModeHandler(State state, ILoggerService loggerService,
+        public Test386ButNotProtectedModeHandler(State state, ILogger loggerService,
             IOPortDispatcher ioPortDispatcher) : base(state, true, loggerService) {
             ioPortDispatcher.AddIOPortHandler(PostPort, this);
             ioPortDispatcher.AddIOPortHandler(AsciiOutPort, this);
@@ -1066,14 +1034,12 @@ public class MachineTest
         }
     }
 
-    private static byte[] GetExpected(string binName)
-    {
+    private static byte[] GetExpected(string binName) {
         string resPath = $"Resources/cpuTests/res/MemoryDumps/{binName}.bin";
         return File.ReadAllBytes(resPath);
     }
 
-    private static List<string> GetExpectedListing(string binName)
-    {
+    private static List<string> GetExpectedListing(string binName) {
         string resPath = $"Resources/cpuTests/res/DumpedListing/{binName}.txt";
         return File.ReadAllLines(resPath).ToList();
     }
@@ -1095,8 +1061,7 @@ public class MachineTest
     }
 
     [AssertionMethod]
-    private static void CompareMemoryWithExpected(IMemory memory, byte[] expected)
-    {
+    private static void CompareMemoryWithExpected(IMemory memory, byte[] expected) {
         if (expected.Length == 0) {
             return;
         }

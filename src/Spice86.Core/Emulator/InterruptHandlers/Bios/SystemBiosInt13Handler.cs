@@ -51,7 +51,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
         IFloppyDriveAccess floppyAccess,
         IDriveActivityNotifier activityNotifier,
         FloppyDiskTimingService timingService,
-        ILoggerService loggerService)
+        Serilog.ILogger loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _floppyAccess = floppyAccess;
         _activityNotifier = activityNotifier;

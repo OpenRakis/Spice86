@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.StateSerialization;
 
+using Serilog;
 using Serilog.Events;
 
 using Spice86.Core.CLI;
@@ -66,7 +67,7 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
         ISerializableBreakpointsSource serializableBreakpointsSource,
         Configuration configuration,
         CfgNodeIndex nodeIndex,
-        ILoggerService loggerService) : base(emulatorStateSerializationFolder, loggerService) {
+        ILogger loggerService) : base(emulatorStateSerializationFolder, loggerService) {
         _executionAddressesExtractor = executionAddressesExtractor;
         _state = state;
         _memoryDataExporter = memoryDataExporter;

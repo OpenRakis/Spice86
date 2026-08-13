@@ -25,14 +25,14 @@ internal sealed class ProgramBootstrapper {
     private readonly IMemory _memory;
     private readonly State _state;
     private readonly DosInt21Handler _int21Handler;
-    private readonly ILoggerService _loggerService;
+    private readonly Serilog.ILogger _loggerService;
 
     public ProgramBootstrapper(
         ProgramLoadOptions options,
         IMemory memory,
         State state,
         DosInt21Handler int21Handler,
-        ILoggerService loggerService) {
+        Serilog.ILogger loggerService) {
         _options = options;
         _memory = memory;
         _state = state;

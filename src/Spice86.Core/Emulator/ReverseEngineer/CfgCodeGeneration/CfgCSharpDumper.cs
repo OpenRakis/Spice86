@@ -14,9 +14,9 @@ using System.IO;
 /// </summary>
 internal sealed class CfgCSharpDumper {
     private readonly CfgCSharpGenerator _generator;
-    private readonly ILoggerService _loggerService;
+    private readonly Serilog.ILogger _loggerService;
 
-    public CfgCSharpDumper(CfgCSharpGenerator generator, ILoggerService loggerService) {
+    public CfgCSharpDumper(CfgCSharpGenerator generator, Serilog.ILogger loggerService) {
         _generator = generator;
         _loggerService = loggerService;
     }

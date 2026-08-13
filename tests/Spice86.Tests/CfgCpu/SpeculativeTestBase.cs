@@ -2,6 +2,8 @@ namespace Spice86.Tests.CfgCpu;
 
 using NSubstitute;
 
+using Serilog;
+
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
@@ -14,9 +16,7 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Logging;
 using Spice86.Shared.Emulator.Memory;
-using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using System;
@@ -37,7 +37,7 @@ public abstract class SpeculativeTestBase : IDisposable {
     protected readonly NodeLinker NodeLinker;
     protected readonly SequentialIdAllocator IdAllocator;
     protected readonly CfgNodeExecutionCompiler Compiler;
-    protected readonly ILoggerService LoggerService;
+    protected readonly ILogger LoggerService;
 
     protected SpeculativeTestBase() {
         IdAllocator = new SequentialIdAllocator();
@@ -47,7 +47,7 @@ public abstract class SpeculativeTestBase : IDisposable {
         Parser = new InstructionParser(Memory, State, IdAllocator);
         ReplacerRegistry = new InstructionReplacerRegistry();
         NodeIndex = new CfgNodeIndex(ReplacerRegistry);
-        LoggerService = Substitute.For<LoggerService>();
+        LoggerService = Substitute.For<ILogger>();
         Compiler = new CfgNodeExecutionCompiler(new CfgNodeExecutionCompilerMonitor(LoggerService), LoggerService, JitMode.InterpretedOnly);
         NodeLinker = new NodeLinker(ReplacerRegistry, Compiler, IdAllocator);
     }

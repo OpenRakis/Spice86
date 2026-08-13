@@ -36,7 +36,7 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// <param name="biosKeyboardBuffer">The FIFO queue used to store keyboard keys for the BIOS.</param>
     public KeyboardInt16Handler(IMemory memory, IOPortDispatcher ioPortDispatcher, BiosDataArea biosDataArea,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
-        ILoggerService loggerService, BiosKeyboardBuffer biosKeyboardBuffer)
+        Serilog.ILogger loggerService, BiosKeyboardBuffer biosKeyboardBuffer)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _biosDataArea = biosDataArea;
         _ioPortDispatcher = ioPortDispatcher;
@@ -256,10 +256,9 @@ public class KeyboardInt16Handler : InterruptHandler {
         }
         bool enqueued = _biosKeyboardBuffer.EnqueueKeyCode(keyCode);
         State.AL = enqueued ? (byte)0 : (byte)1;
-        if(enqueued) {
+        if (enqueued) {
             SetCarryFlag(false, calledFromVm);
-        }
-        else {
+        } else {
             SetCarryFlag(true, calledFromVm);
         }
     }

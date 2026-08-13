@@ -26,7 +26,7 @@ public sealed class SystemBiosInt17Handler : InterruptHandler {
         Stack stack,
         State state,
         BiosDataArea biosDataArea,
-        ILoggerService loggerService)
+        Serilog.ILogger loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _biosDataArea = biosDataArea;
         InitializeBiosDataArea();

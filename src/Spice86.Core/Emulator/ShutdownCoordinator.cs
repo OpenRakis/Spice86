@@ -21,7 +21,7 @@ internal sealed class ShutdownCoordinator : IShutdownCoordinator {
     private readonly Spice86HttpApiServer? _httpApiServer;
     private readonly CfgNodeExecutionCompiler _cfgNodeExecutionCompiler;
     private readonly Machine _machine;
-    private readonly ILoggerService _loggerService;
+    private readonly Serilog.ILogger _loggerService;
     private bool _shutdownCompleted;
 
     internal ShutdownCoordinator(
@@ -30,7 +30,7 @@ internal sealed class ShutdownCoordinator : IShutdownCoordinator {
         Spice86HttpApiServer? httpApiServer,
         CfgNodeExecutionCompiler cfgNodeExecutionCompiler,
         Machine machine,
-        ILoggerService loggerService) {
+        Serilog.ILogger loggerService) {
         _vgaTimingThread = vgaTimingThread;
         _emulatedClock = emulatedClock;
         _httpApiServer = httpApiServer;

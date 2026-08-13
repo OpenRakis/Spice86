@@ -21,15 +21,15 @@ public abstract class ExecutableFileLoader {
     /// </summary>
     protected IMemory _memory;
 
-    protected readonly ILoggerService _loggerService;
+    protected readonly Serilog.ILogger _loggerService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ExecutableFileLoader"/> class.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
     /// <param name="state">The CPU Registers and Flags.</param>
-    /// <param name="loggerService">The <see cref="ILoggerService"/> instance.</param>
-    protected ExecutableFileLoader(IMemory memory, State state, ILoggerService loggerService) {
+    /// <param name="loggerService">The <see cref="Serilog.ILogger"/> instance.</param>
+    protected ExecutableFileLoader(IMemory memory, State state, Serilog.ILogger loggerService) {
         _loggerService = loggerService;
         _memory = memory;
         _state = state;

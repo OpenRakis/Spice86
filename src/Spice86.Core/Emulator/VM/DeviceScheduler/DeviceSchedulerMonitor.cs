@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.VM.DeviceScheduler;
 
-using Spice86.Shared.Interfaces;
+using Serilog;
 
 /// <summary>
 /// Monitors the behavior of the <see cref="DeviceScheduler"/>, tracking lag and queue size.
@@ -10,12 +10,12 @@ public class DeviceSchedulerMonitor {
     private const int DefaultMaxQueueSizeThreshold = 10;
     private const double DefaultMaxLagThreshold = 10;
 
-    private readonly ILoggerService _logger;
+    private readonly ILogger _logger;
     private readonly string _instanceName;
     private readonly long _logInterval;
     private readonly int _maxQueueSizeThreshold;
     private readonly double _maxLagThreshold;
-    
+
     private long _currentWindowCount;
     private double _currentWindowTotalLag;
     private double _currentWindowMaxLag;
@@ -30,7 +30,7 @@ public class DeviceSchedulerMonitor {
     /// </summary>
     /// <param name="logger">The logger service.</param>
     /// <param name="instanceName">The name of the scheduler instance being monitored.</param>
-    public DeviceSchedulerMonitor(ILoggerService logger, string instanceName)
+    public DeviceSchedulerMonitor(ILogger logger, string instanceName)
         : this(logger, instanceName, DefaultLogInterval, DefaultMaxQueueSizeThreshold, DefaultMaxLagThreshold) {
     }
 
@@ -41,7 +41,7 @@ public class DeviceSchedulerMonitor {
     /// <param name="logInterval">The number of events to process before logging statistics.</param>
     /// <param name="maxQueueSizeThreshold">The maximum queue size before a warning is logged.</param>
     /// <param name="maxLagThreshold">The maximum lag in milliseconds before a warning is logged.</param>
-    public DeviceSchedulerMonitor(ILoggerService logger, string instanceName, long logInterval, int maxQueueSizeThreshold, double maxLagThreshold) {
+    public DeviceSchedulerMonitor(ILogger logger, string instanceName, long logInterval, int maxQueueSizeThreshold, double maxLagThreshold) {
         _logger = logger;
         _instanceName = instanceName;
         _logInterval = logInterval;
@@ -57,11 +57,11 @@ public class DeviceSchedulerMonitor {
     /// <param name="queueSize">The current size of the event queue.</param>
     public void OnEventExecuted(double scheduledTime, double actualTime, int queueSize) {
         double lag = actualTime - scheduledTime;
-        
+
         _currentWindowCount++;
         _currentWindowTotalLag += lag;
         _currentWindowTotalQueueSize += queueSize;
-        
+
         if (lag > _currentWindowMaxLag) {
             _currentWindowMaxLag = lag;
         }
@@ -81,11 +81,11 @@ public class DeviceSchedulerMonitor {
                 double avgLag = _currentWindowTotalLag / _currentWindowCount;
                 double avgQueueSize = (double)_currentWindowTotalQueueSize / _currentWindowCount;
 
-                _logger.Warning("Scheduler Monitor [{InstanceName}]: Lag between event scheduled and execution time [Min={MinLag:F4}ms Avg={AvgLag:F4}ms Max={MaxLag:F4}ms] Queue state [Min={MinQueue} Avg={AvgQueue:F2} Max={MaxQueue}]", 
+                _logger.Warning("Scheduler Monitor [{InstanceName}]: Lag between event scheduled and execution time [Min={MinLag:F4}ms Avg={AvgLag:F4}ms Max={MaxLag:F4}ms] Queue state [Min={MinQueue} Avg={AvgQueue:F2} Max={MaxQueue}]",
                     _instanceName, _currentWindowMinLag, avgLag, _currentWindowMaxLag,
                     _currentWindowMinQueueSize, avgQueueSize, _currentWindowMaxQueueSize);
             }
-            
+
             ResetWindow();
         }
     }

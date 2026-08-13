@@ -13,7 +13,7 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public class DosInt24Handler : InterruptHandler {
     public DosInt24Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
-        ILoggerService loggerService)
+        Serilog.ILogger loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
     }
 

@@ -9,9 +9,9 @@ using System.IO;
 
 public class PrinterDevice : CharacterDevice {
     private const string LPT1 = "LPT1";
-    private readonly ILoggerService _loggerService;
+    private readonly Serilog.ILogger _loggerService;
 
-    public PrinterDevice(ILoggerService loggerService, IByteReaderWriter memory,
+    public PrinterDevice(Serilog.ILogger loggerService, IByteReaderWriter memory,
         uint baseAddress)
         : base(memory, baseAddress, LPT1) {
         _loggerService = loggerService;
@@ -29,13 +29,13 @@ public class PrinterDevice : CharacterDevice {
 
     public override long Position { get; set; } = 0;
 
-    public override bool CanRead =>  false;
+    public override bool CanRead => false;
 
     public override bool CanWrite => true;
 
     public override void Write(byte[] buffer, int offset, int count) {
         string output = System.Text.Encoding.ASCII.GetString(buffer, offset, count);
-        if(_loggerService.IsEnabled(LogEventLevel.Information)) {
+        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
             _loggerService.Information("Writing to printer: {Output}", output);
         }
     }

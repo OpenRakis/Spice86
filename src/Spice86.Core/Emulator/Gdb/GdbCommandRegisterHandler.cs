@@ -11,7 +11,7 @@ using System.Text;
 /// Handles GDB commands related to reading and writing CPU registers.
 /// </summary>
 public class GdbCommandRegisterHandler {
-    private readonly ILoggerService _loggerService;
+    private readonly Serilog.ILogger _loggerService;
     private readonly GdbFormatter _gdbFormatter = new();
     private readonly GdbIo _gdbIo;
     private readonly State _state;
@@ -21,8 +21,8 @@ public class GdbCommandRegisterHandler {
     /// </summary>
     /// <param name="state">The CPU state.</param>
     /// <param name="gdbIo">The GdbIo object to use for communication with GDB.</param>
-    /// <param name="loggerService">The ILoggerService implementation.</param>
-    public GdbCommandRegisterHandler(State state, GdbIo gdbIo, ILoggerService loggerService) {
+    /// <param name="loggerService">The logger implementation.</param>
+    public GdbCommandRegisterHandler(State state, GdbIo gdbIo, Serilog.ILogger loggerService) {
         _loggerService = loggerService;
         _state = state;
         _gdbIo = gdbIo;

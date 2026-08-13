@@ -6,8 +6,8 @@ using Spice86.Shared.Interfaces;
 using System.IO;
 
 public class AuxDevice : CharacterDevice {
-    private readonly ILoggerService _loggerService;
-    public AuxDevice(ILoggerService loggerService,
+    private readonly Serilog.ILogger _loggerService;
+    public AuxDevice(Serilog.ILogger loggerService,
         IByteReaderWriter memory, uint baseAddress)
         : base(memory, baseAddress, "AUX") {
         _loggerService = loggerService;

@@ -43,7 +43,7 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     /// Initializes the RTC/CMOS device with default register values.
     /// </summary>
     public RealTimeClock(State state, IOPortDispatcher ioPortDispatcher, DualPic dualPic,
-        DeviceScheduler scheduler, IEmulatedClock clock, bool failOnUnhandledPort, ILoggerService loggerService)
+        DeviceScheduler scheduler, IEmulatedClock clock, bool failOnUnhandledPort, Serilog.ILogger loggerService)
         : base(state, failOnUnhandledPort, loggerService) {
         _dualPic = dualPic;
         _scheduler = scheduler;
@@ -234,8 +234,7 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
             case CmosRegisterAddresses.StatusRegisterC:
                 return ReadStatusC();
 
-            case CmosRegisterAddresses.StatusRegisterB:
-                {
+            case CmosRegisterAddresses.StatusRegisterB: {
                     byte value = _cmosRegisters[reg];
                     if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
                         _loggerService.Debug("RTC: Status Register B read: value=0x{Value:X2}, PIE={PIE}",
@@ -353,7 +352,7 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     private void CancelPeriodicInterrupts() {
         _scheduler.RemoveEvents(OnPeriodicInterrupt);
     }
-    
+
     /// <summary>
     /// Callback invoked by DeviceScheduler when periodic interrupt should fire.
     /// Triggers the interrupt and schedules the next one.

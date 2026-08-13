@@ -11,7 +11,7 @@ using Spice86.Shared.Interfaces;
 internal sealed class DosBatchProgramLoader : DosProgramLoader {
     public DosBatchProgramLoader(ProgramLoadOptions options, IMemory memory,
         State state, DosInt21Handler int21Handler,
-        ILoggerService loggerService)
+        Serilog.ILogger loggerService)
         : base(options, memory, state, int21Handler, loggerService) {
     }
 

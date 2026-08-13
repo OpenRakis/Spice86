@@ -94,7 +94,7 @@ public sealed class Mscdex {
     private readonly List<MscdexDriveEntry> _drives = new();
     private readonly State _state;
     private readonly IMemory _memory;
-    private readonly ILoggerService _loggerService;
+    private readonly Serilog.ILogger _loggerService;
     private readonly IDriveActivityNotifier _activityNotifier;
     private readonly Dictionary<char, MscdexAudioState> _audioStates = new();
 
@@ -114,7 +114,7 @@ public sealed class Mscdex {
     /// <param name="memory">The memory bus.</param>
     /// <param name="loggerService">The logger service.</param>
     /// <param name="activityNotifier">Notifier that surfaces per-drive read activity to the UI (may be null).</param>
-    public Mscdex(State state, IMemory memory, ILoggerService loggerService,
+    public Mscdex(State state, IMemory memory, Serilog.ILogger loggerService,
         IDriveActivityNotifier activityNotifier) {
         _state = state;
         _memory = memory;

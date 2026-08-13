@@ -66,7 +66,7 @@ public sealed partial class DualPic : DefaultIOPortHandler {
     /// <param name="state">CPU state.</param>
     /// <param name="loggerService">Logger used for diagnostic messages.</param>
     /// <param name="failOnUnhandledPort">Whether to throw on unhandled port access.</param>
-    public DualPic(IOPortDispatcher ioPortDispatcher, State state, ILoggerService loggerService, bool failOnUnhandledPort)
+    public DualPic(IOPortDispatcher ioPortDispatcher, State state, Serilog.ILogger loggerService, bool failOnUnhandledPort)
         : base(state, failOnUnhandledPort, loggerService) {
         _ioPortDispatcher = ioPortDispatcher;
         _primaryPic = new PrimaryPic(loggerService, SetIrqCheck);
@@ -172,11 +172,11 @@ public sealed partial class DualPic : DefaultIOPortHandler {
                 WriteCommand(PrimaryPicCommandPort, (uint)(SpecificEoiBase | irq));
                 break;
             default: {
-                byte secondaryIrq = (byte)(irq - 8);
-                WriteCommand(SecondaryPicCommandPort, (uint)(SpecificEoiBase | secondaryIrq));
-                WriteCommand(PrimaryPicCommandPort, SpecificEoiBase | 2);
-                break;
-            }
+                    byte secondaryIrq = (byte)(irq - 8);
+                    WriteCommand(SecondaryPicCommandPort, (uint)(SpecificEoiBase | secondaryIrq));
+                    WriteCommand(PrimaryPicCommandPort, SpecificEoiBase | 2);
+                    break;
+                }
         }
     }
 
@@ -242,7 +242,7 @@ public sealed partial class DualPic : DefaultIOPortHandler {
         SetIrqMask(9, false); // AT-era systems expose IRQ 9 in addition to the cascade line.
         DeactivateIrq(9); // Clear any stale latch on IRQ 9 to mirror the bootstrap sequence.
     }
-    
+
     /// <summary>
     ///     Captures a snapshot of controller-facing registers for inspection.
     /// </summary>
@@ -627,7 +627,7 @@ public sealed partial class DualPic : DefaultIOPortHandler {
         _loggerService.Debug("PIC: IRQ {Irq} mask changed to {Masked}", irq, newMask);
         IrqMaskChanged?.Invoke((byte)irq, newMask);
     }
-    
+
     /// <summary>
     ///     Indicates whether the specified IRQ is currently masked on its controller.
     /// </summary>

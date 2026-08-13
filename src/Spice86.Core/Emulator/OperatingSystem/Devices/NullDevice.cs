@@ -11,8 +11,8 @@ using System.IO;
 
 public class NullDevice : VirtualDeviceBase {
     private const string NUL = "NUL";
-    private readonly ILoggerService _loggerService;
-    public NullDevice(ILoggerService loggerService, IByteReaderWriter memory, uint baseAddress)
+    private readonly Serilog.ILogger _loggerService;
+    public NullDevice(Serilog.ILogger loggerService, IByteReaderWriter memory, uint baseAddress)
         : base(new DosDeviceHeader(memory, baseAddress) {
             Attributes = Enums.DeviceAttributes.CurrentNull,
             Name = NUL

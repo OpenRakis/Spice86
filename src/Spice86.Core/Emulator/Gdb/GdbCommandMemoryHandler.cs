@@ -10,7 +10,7 @@ using System.Text;
 /// Handles GDB memory-related commands such as reading and writing memory, and searching for patterns in memory.
 /// </summary>
 public class GdbCommandMemoryHandler {
-    private readonly ILoggerService _loggerService;
+    private readonly Serilog.ILogger _loggerService;
     private readonly GdbFormatter _gdbFormatter = new();
     private readonly GdbIo _gdbIo;
     private readonly IMemory _memory;
@@ -21,7 +21,7 @@ public class GdbCommandMemoryHandler {
     /// <param name="memory">The memory bus.</param>
     /// <param name="gdbIo">The GDB I/O handler.</param>
     /// <param name="loggerService">The logger service.</param>
-    public GdbCommandMemoryHandler(IMemory memory, GdbIo gdbIo, ILoggerService loggerService) {
+    public GdbCommandMemoryHandler(IMemory memory, GdbIo gdbIo, Serilog.ILogger loggerService) {
         _loggerService = loggerService;
         _memory = memory;
         _gdbIo = gdbIo;

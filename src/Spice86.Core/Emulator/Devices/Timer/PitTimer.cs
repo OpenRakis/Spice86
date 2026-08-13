@@ -66,8 +66,8 @@ public sealed class PitTimer : DefaultIOPortHandler, IPitControl, ITimeMultiplie
     /// <param name="clock">The emulated clock.</param>
     /// <param name="loggerService">Logger for trace output.</param>
     /// <param name="failOnUnhandledPort">Whether to throw on unhandled port access.</param>
-    public PitTimer(IOPortDispatcher ioPortDispatcher, State state, DualPic pic, IPitSpeaker pcSpeaker, 
-        DeviceScheduler scheduler, IEmulatedClock clock, ILoggerService loggerService, bool failOnUnhandledPort)
+    public PitTimer(IOPortDispatcher ioPortDispatcher, State state, DualPic pic, IPitSpeaker pcSpeaker,
+        DeviceScheduler scheduler, IEmulatedClock clock, Serilog.ILogger loggerService, bool failOnUnhandledPort)
         : base(state, failOnUnhandledPort, loggerService) {
         _ioPortDispatcher = ioPortDispatcher;
         _pic = pic;
@@ -687,15 +687,15 @@ public sealed class PitTimer : DefaultIOPortHandler, IPitControl, ITimeMultiplie
             // so the interrupt is cleared immediately, while modes 2 and 3 start high. The prior output level guards the
             // edge detection, so only low-to-high transitions trigger the activation path.
             case 0: {
-                _scheduler.RemoveEvents(PitChannel0Event);
-                if (channel.Mode != PitMode.InterruptOnTerminalCount && !oldOutput) {
-                    _pic.ActivateIrq(0);
-                } else {
-                    _pic.DeactivateIrq(0);
-                }
+                    _scheduler.RemoveEvents(PitChannel0Event);
+                    if (channel.Mode != PitMode.InterruptOnTerminalCount && !oldOutput) {
+                        _pic.ActivateIrq(0);
+                    } else {
+                        _pic.DeactivateIrq(0);
+                    }
 
-                break;
-            }
+                    break;
+                }
             case 2:
                 _pcSpeaker.SetCounter(0, PitMode.SquareWave);
                 break;

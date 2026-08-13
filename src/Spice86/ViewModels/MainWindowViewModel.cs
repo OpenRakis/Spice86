@@ -10,6 +10,7 @@ using Serilog.Events;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.CpuSpeedLimit;
+using Spice86.Logging;
 using Spice86.Shared.Emulator.Dos;
 using Spice86.Shared.Interfaces;
 using Spice86.ViewModels.Services;
@@ -26,7 +27,7 @@ using System.Threading.Tasks;
 /// pause state, log level, cycles limiter, time multiplier, title, and emulator-startup orchestration.
 /// </summary>
 public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IDisposable {
-    private readonly ILoggerService _loggerService;
+    private readonly Spice86LoggerState _loggerState;
     private readonly IHostStorageProvider _hostStorageProvider;
     private readonly IPauseHandler _pauseHandler;
     private readonly ITimeMultiplier _pit;
@@ -115,7 +116,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IDis
         Configuration configuration,
         IUIDispatcher uiDispatcher,
         ITextClipboard textClipboard,
-        ILoggerService loggerService,
+        Spice86LoggerState loggerState,
         IPauseHandler pauseHandler,
         ITimeMultiplier pit,
         ICyclesLimiter cyclesLimiter,
@@ -129,7 +130,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IDis
         DrivesMenuViewModel = drivesMenuViewModel;
         DiscSwapper = discSwapper;
         Configuration = configuration;
-        _loggerService = loggerService;
+        _loggerState = loggerState;
         _hostStorageProvider = hostStorageProvider;
         _pauseHandler = pauseHandler;
         _pit = pit;
@@ -174,7 +175,7 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IDis
             _ => "ASM code overrides: none."
         };
 
-        SetLogLevel(Configuration.SilencedLogs ? "Silent" : _loggerService.LogLevelSwitch.MinimumLevel.ToString());
+        SetLogLevel(Configuration.SilencedLogs ? "Silent" : _loggerState.LogLevelSwitch.MinimumLevel.ToString());
         UpdateMainTitle(_performanceViewModel.InstructionsPerMillisecond);
 
         bool ok = await Session.StartAsync(asmOverrideStatus);
@@ -254,11 +255,11 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IDis
     private void SetLogLevel(string logLevel) {
         if (logLevel == "Silent") {
             CurrentLogLevel = logLevel;
-            _loggerService.AreLogsSilenced = true;
-            _loggerService.LogLevelSwitch.MinimumLevel = LogEventLevel.Fatal;
+            _loggerState.AreLogsSilenced = true;
+            _loggerState.LogLevelSwitch.MinimumLevel = LogEventLevel.Fatal;
         } else {
-            _loggerService.AreLogsSilenced = false;
-            _loggerService.LogLevelSwitch.MinimumLevel = Enum.Parse<LogEventLevel>(logLevel);
+            _loggerState.AreLogsSilenced = false;
+            _loggerState.LogLevelSwitch.MinimumLevel = Enum.Parse<LogEventLevel>(logLevel);
             CurrentLogLevel = logLevel;
         }
     }

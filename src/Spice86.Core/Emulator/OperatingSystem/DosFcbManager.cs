@@ -48,10 +48,10 @@ public class DosFcbManager {
     private readonly IMemory _memory;
     private readonly DosFileManager _dosFileManager;
     private readonly DosDriveManager _dosDriveManager;
-    private readonly ILoggerService _loggerService;
+    private readonly Serilog.ILogger _loggerService;
 
     public
-    DosFcbManager(IMemory memory, DosFileManager dosFileManager, DosDriveManager dosDriveManager, ILoggerService loggerService) {
+    DosFcbManager(IMemory memory, DosFileManager dosFileManager, DosDriveManager dosDriveManager, Serilog.ILogger loggerService) {
         _memory = memory;
         _dosFileManager = dosFileManager;
         _dosDriveManager = dosDriveManager;

@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.VM;
 
+using Serilog;
+
 using Spice86.Shared.Interfaces;
 
 /// <summary>
@@ -20,7 +22,7 @@ public class PauseHandler : IPauseHandler {
     /// <param name="e">Event data (empty for this event).</param>
     public delegate void ResumedEventHandler(object sender, EventArgs e);
 
-    private readonly ILoggerService _loggerService;
+    private readonly ILogger _loggerService;
     private readonly object _pauseLock = new();
     private readonly ManualResetEvent _manualResetEvent = new(false);
     private bool _disposed;
@@ -30,7 +32,7 @@ public class PauseHandler : IPauseHandler {
     /// Initializes a new instance of the <see cref="PauseHandler"/> class with the specified logger service.
     /// </summary>
     /// <param name="loggerService">The logger service to use for logging.</param>
-    public PauseHandler(ILoggerService loggerService) {
+    public PauseHandler(ILogger loggerService) {
         _loggerService = loggerService;
     }
 
