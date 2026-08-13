@@ -193,7 +193,7 @@ typedef struct PlayerState {
         memory = createdMemory;
         memory.WriteRam(programImage, 0);
 
-        ILoggerService logger = Substitute.For<ILoggerService>();
+        ILogger logger = Substitute.For<ILogger>();
         pauseHandler = CreatePauseHandler(logger);
         DataMemoryDocument document = new(memory, 0, (uint)programImage.Length);
 
@@ -204,7 +204,7 @@ typedef struct PlayerState {
 
     private StructureViewModel CreateNonAddressableViewModel(byte[] slice) {
         State state = CreateState();
-        ILoggerService logger = Substitute.For<ILoggerService>();
+        ILogger logger = Substitute.For<ILogger>();
         PauseHandler pauseHandler = CreatePauseHandler(logger);
 
         StructureInformation info = ParseHeader();

@@ -1,5 +1,7 @@
 namespace Spice86.Tests;
 
+using Microsoft.Extensions.Logging;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Shared.Interfaces;
@@ -15,7 +17,7 @@ internal sealed class Test386PostPortHandler : DefaultIOPortHandler {
     public List<ushort> PostValues { get; } = new();
     public string AsciiError { get; private set; } = "";
 
-    public Test386PostPortHandler(State state, ILoggerService loggerService, IOPortDispatcher ioPortDispatcher)
+    public Test386PostPortHandler(State state, ILogger loggerService, IOPortDispatcher ioPortDispatcher)
         : base(state, true, loggerService) {
         ioPortDispatcher.AddIOPortHandler(PostPort, this);
         ioPortDispatcher.AddIOPortHandler(AsciiOutPort, this);

@@ -2,6 +2,8 @@ namespace Spice86.Tests.Dos.Ems;
 
 using FluentAssertions;
 
+using Microsoft.Extensions.Logging;
+
 using NSubstitute;
 
 using Spice86.Core.Emulator.CPU;
@@ -38,7 +40,7 @@ public class EmsUnitTests {
     private readonly ExpandedMemoryManager _ems;
     private readonly State _state;
     private readonly Memory _memory;
-    private readonly ILoggerService _loggerService;
+    private readonly ILogger _loggerService;
     private readonly Stack _stack;
     private readonly IFunctionHandlerProvider _functionHandlerProvider;
 
@@ -47,7 +49,7 @@ public class EmsUnitTests {
         _state = new State(CpuModel.INTEL_80286);
         A20Gate a20Gate = new A20Gate(false);
         _memory = new Memory(new(), new Ram(A20Gate.EndOfHighMemoryArea), a20Gate, new RealModeMmu386(), false);
-        _loggerService = Substitute.For<ILoggerService>();
+        _loggerService = Substitute.For<ILogger>();
         _stack = new Stack(_memory, _state);
         _functionHandlerProvider = Substitute.For<IFunctionHandlerProvider>();
 

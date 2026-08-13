@@ -26,7 +26,7 @@ public class IOPortDispatcherTests {
 
     private static IOPortDispatcher CreateDispatcher(bool failOnUnhandledPort) {
         State state = new(CpuModel.INTEL_80386);
-        ILoggerService logger = Substitute.For<ILoggerService>();
+        ILogger logger = Substitute.For<ILogger>();
         return new IOPortDispatcher(new AddressReadWriteBreakpoints(), state, logger, failOnUnhandledPort);
     }
 }

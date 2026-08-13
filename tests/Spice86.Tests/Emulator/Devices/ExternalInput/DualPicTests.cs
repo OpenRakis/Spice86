@@ -2,6 +2,8 @@ namespace Spice86.Tests.Emulator.Devices.ExternalInput;
 
 using FluentAssertions;
 
+using Microsoft.Extensions.Logging;
+
 using NSubstitute;
 
 using Spice86.Core.Emulator.CPU;
@@ -50,14 +52,14 @@ public sealed class DualPicTests {
 
     private sealed class DualPicFixture {
         public DualPicFixture() {
-            Logger = Substitute.For<ILoggerService>();
+            Logger = Substitute.For<ILogger>();
             State = new State(CpuModel.ZET_86);
             var breakpoints = new AddressReadWriteBreakpoints();
             Dispatcher = new IOPortDispatcher(breakpoints, State, Logger, false);
             DualPic = new DualPic(Dispatcher, State, Logger, false);
         }
 
-        public ILoggerService Logger { get; }
+        public ILogger Logger { get; }
         public State State { get; }
         public IOPortDispatcher Dispatcher { get; }
         public DualPic DualPic { get; }

@@ -13,7 +13,7 @@ public class CfgNodeExecutionCompilerMonitorTests {
     private static CfgNodeExecutionCompilerMonitor CreateMonitor() {
         // Create the monitor and immediately dispose its timer so background logging
         // won't interfere with state assertions during tests.
-        ILoggerService logger = Substitute.For<ILoggerService>();
+        ILogger logger = Substitute.For<ILogger>();
         CfgNodeExecutionCompilerMonitor monitor = new CfgNodeExecutionCompilerMonitor(logger);
         monitor.Dispose();
         return monitor;

@@ -30,7 +30,7 @@ public sealed class CfgCpuSnapshotBuilderTest : IDisposable {
     private readonly FunctionCatalogue _functionCatalogue = new();
     private readonly ExecutionContextManagerFactory _contextManagerFactory;
     private readonly ExecutionContextManager _contextManager;
-    private readonly ILoggerService _loggerService = Substitute.For<ILoggerService>();
+    private readonly ILogger _loggerService = Substitute.For<ILogger>();
 
     public CfgCpuSnapshotBuilderTest() {
         _contextManagerFactory = new ExecutionContextManagerFactory(_functionCatalogue);

@@ -2,6 +2,8 @@ namespace Spice86.Tests.Emulator.Devices.ExternalInput;
 
 using FluentAssertions;
 
+using Microsoft.Extensions.Logging;
+
 using NSubstitute;
 
 using Spice86.Core.Emulator.CPU;
@@ -51,7 +53,7 @@ public sealed class PitTimerTests {
 
     private sealed class PitFixture {
         public PitFixture() {
-            Logger = Substitute.For<ILoggerService>();
+            Logger = Substitute.For<ILogger>();
             State = new State(CpuModel.ZET_86);
             var breakpoints = new AddressReadWriteBreakpoints();
             Dispatcher = new IOPortDispatcher(breakpoints, State, Logger, false);
@@ -62,7 +64,7 @@ public sealed class PitTimerTests {
             PitTimer = new PitTimer(Dispatcher, State, DualPic, Speaker, emulationLoopScheduler, emulatedClock, Logger, false);
         }
 
-        public ILoggerService Logger { get; }
+        public ILogger Logger { get; }
         public State State { get; }
         public IOPortDispatcher Dispatcher { get; }
         public DualPic DualPic { get; }

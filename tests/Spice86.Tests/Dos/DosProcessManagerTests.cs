@@ -362,7 +362,7 @@ public class DosProcessManagerTests {
     }
 
     private static DosProcessManagerTestContext CreateContext(ushort? programEntryPointSegment = null) {
-        ILoggerService loggerService = Substitute.For<ILoggerService>();
+        ILogger loggerService = Substitute.For<ILogger>();
 
         IMemoryDevice ram = new Ram(A20Gate.EndOfHighMemoryArea);
         AddressReadWriteBreakpoints memoryBreakpoints = new();

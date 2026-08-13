@@ -71,11 +71,11 @@ public class CfgCpuViewModelTest : IDisposable {
         private readonly CfgNodeExecutionCompiler _compiler;
         private readonly CfgNodeExecutionCompilerMonitor _monitor;
         private readonly PauseHandler _pauseHandler;
-        private readonly ILoggerService _loggerService;
+        private readonly ILogger _loggerService;
         private readonly Spice86LoggerState _loggerState;
 
         public Harness() {
-            _loggerService = Substitute.For<ILoggerService>();
+            _loggerService = Substitute.For<ILogger>();
             _loggerState = new Spice86LoggerState();
             AddressReadWriteBreakpoints memoryBreakpoints = new();
             AddressReadWriteBreakpoints ioBreakpoints = new();

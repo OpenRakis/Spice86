@@ -20,7 +20,7 @@ public sealed class FloppyDiskTimingServiceTests {
     [Fact]
     public void ScheduleFloppyIoDelay_MaximumSpeed_ProcessesDueEventsWithoutAdvancingCycles() {
         // Arrange
-        ILoggerService logger = CreateLogger();
+        ILogger logger = CreateLogger();
         State state = new(CpuModel.INTEL_8086);
         CyclesClock clock = new(state, 1000, null, DateTimeOffset.UnixEpoch);
         DeviceScheduler scheduler = new(clock, logger, "Floppy timing test");
@@ -40,7 +40,7 @@ public sealed class FloppyDiskTimingServiceTests {
     [Fact]
     public void ScheduleFloppyIoDelay_FastSpeed_AdvancesCyclesAndFiresDueEvents() {
         // Arrange
-        ILoggerService logger = CreateLogger();
+        ILogger logger = CreateLogger();
         State state = new(CpuModel.INTEL_8086);
         CyclesClock clock = new(state, 1000, null, DateTimeOffset.UnixEpoch);
         DeviceScheduler scheduler = new(clock, logger, "Floppy timing test");
@@ -57,8 +57,8 @@ public sealed class FloppyDiskTimingServiceTests {
         state.Cycles.Should().Be(5);
     }
 
-    private static ILoggerService CreateLogger() {
-        ILoggerService logger = Substitute.For<ILoggerService>();
+    private static ILogger CreateLogger() {
+        ILogger logger = Substitute.For<ILogger>();
         logger.IsEnabled(Arg.Any<LogLevel>()).Returns(false);
         return logger;
     }

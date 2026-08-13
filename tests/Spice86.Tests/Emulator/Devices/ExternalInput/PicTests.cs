@@ -29,7 +29,7 @@ public class PicTests {
     private readonly DualPic _pic;
 
     public PicTests() {
-        ILoggerService logger = Substitute.For<ILoggerService>();
+        ILogger logger = Substitute.For<ILogger>();
         State state = new(CpuModel.INTEL_80286);
         _ioPortDispatcher = new IOPortDispatcher(new AddressReadWriteBreakpoints(), state, logger, false);
         _pic = new DualPic(_ioPortDispatcher, state, logger, false);

@@ -28,7 +28,7 @@ using Spice86.Views;
 
 /// <summary>
 /// Base class for UI breakpoint tests providing shared infrastructure.
-/// Only ILoggerService and ITextClipboard are mocked; all other components use real implementations.
+/// Only ILogger and ITextClipboard are mocked; all other components use real implementations.
 /// </summary>
 public abstract class BreakpointUiTestBase : IDisposable {
     private readonly List<PauseHandler> _pauseHandlers = new();
@@ -36,14 +36,14 @@ public abstract class BreakpointUiTestBase : IDisposable {
     /// <summary>
     /// Creates a mocked logger service. This is the only interface that should be mocked.
     /// </summary>
-    protected static ILoggerService CreateMockLoggerService() {
-        return Substitute.For<ILoggerService>();
+    protected static ILogger CreateMockLoggerService() {
+        return Substitute.For<ILogger>();
     }
 
     /// <summary>
     /// Creates a real pause handler with a mocked logger.
     /// </summary>
-    protected PauseHandler CreatePauseHandler(ILoggerService loggerService) {
+    protected PauseHandler CreatePauseHandler(ILogger loggerService) {
         PauseHandler pauseHandler = new(loggerService);
         _pauseHandlers.Add(pauseHandler);
         return pauseHandler;
@@ -96,13 +96,13 @@ public abstract class BreakpointUiTestBase : IDisposable {
 
     /// <summary>
     /// Creates a BreakpointsViewModel for testing.
-    /// Uses real implementations where possible; only ILoggerService and ITextClipboard are mocked.
+    /// Uses real implementations where possible; only ILogger and ITextClipboard are mocked.
     /// </summary>
     protected BreakpointsViewModel CreateBreakpointsViewModel(
         State state,
         Memory memory,
         EmulatorBreakpointsManager breakpointsManager,
-        ILoggerService loggerService) {
+        ILogger loggerService) {
         PauseHandler pauseHandler = CreatePauseHandler(loggerService);
         UIDispatcher uiDispatcher = CreateUIDispatcher();
         IMessenger messenger = CreateMessenger();
@@ -167,7 +167,7 @@ public abstract class BreakpointUiTestBase : IDisposable {
     protected (BreakpointsView view, BreakpointsViewModel viewModel) CreateBreakpointsViewWithViewModel() {
         State state = CreateState();
         (Memory memory, AddressReadWriteBreakpoints memoryBreakpoints, AddressReadWriteBreakpoints ioBreakpoints) = CreateMemory();
-        ILoggerService loggerService = CreateMockLoggerService();
+        ILogger loggerService = CreateMockLoggerService();
         PauseHandler pauseHandler = CreatePauseHandler(loggerService);
         EmulatorBreakpointsManager breakpointsManager = CreateBreakpointsManager(
             pauseHandler, state, memory, memoryBreakpoints, ioBreakpoints);
@@ -224,7 +224,7 @@ public abstract class BreakpointUiTestBase : IDisposable {
         string memorySearchValue,
         bool useAsciiSearch) {
         State state = CreateState();
-        ILoggerService loggerService = CreateMockLoggerService();
+        ILogger loggerService = CreateMockLoggerService();
         PauseHandler pauseHandler = CreatePauseHandler(loggerService);
         pauseHandler.RequestPause("UI test");
 

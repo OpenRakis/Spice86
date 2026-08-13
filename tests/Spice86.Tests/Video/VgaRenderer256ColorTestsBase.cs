@@ -41,7 +41,7 @@ public abstract class VgaRenderer256ColorTestsBase {
         mockMemory.When(m => m.RegisterMapping(Arg.Any<uint>(), Arg.Any<uint>(), Arg.Any<IMemoryDevice>()))
             .Do(callInfo => captured = (VideoMemory)callInfo.ArgAt<IMemoryDevice>(2));
 
-        ILoggerService loggerService = Substitute.For<ILoggerService>();
+        ILogger loggerService = Substitute.For<ILogger>();
         VgaBlinkState blinkState = new();
         IVgaRenderer256Color renderer256Color = Create256ColorRenderer();
         Renderer renderer = new(mockMemory, state, blinkState, loggerService, renderer256Color);

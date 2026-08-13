@@ -42,7 +42,7 @@ public class CfgNodeFeederTest : IDisposable {
     private CfgNodeExecutionCompiler? _compiler;
 
     private (CfgNodeFeeder, ExecutionContext) CreateCfgNodeFeeder() {
-        ILoggerService loggerService = Substitute.For<ILoggerService>();
+        ILogger loggerService = Substitute.For<ILogger>();
         Spice86LoggerState loggerState = new();
         AddressReadWriteBreakpoints memoryBreakpoints = new();
         AddressReadWriteBreakpoints ioBreakpoints = new();

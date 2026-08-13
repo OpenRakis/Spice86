@@ -23,7 +23,7 @@ internal sealed class LinkerHarness : IDisposable {
     private readonly SequentialIdAllocator _idAllocator;
 
     public LinkerHarness() {
-        ILoggerService loggerService = Substitute.For<ILoggerService>();
+        ILogger loggerService = Substitute.For<ILogger>();
         _monitor = new CfgNodeExecutionCompilerMonitor(loggerService);
         _compiler = new CfgNodeExecutionCompiler(_monitor, loggerService, JitMode.InterpretedOnly);
         _idAllocator = new SequentialIdAllocator();

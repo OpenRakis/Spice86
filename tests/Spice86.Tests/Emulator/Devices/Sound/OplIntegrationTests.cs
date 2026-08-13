@@ -79,7 +79,7 @@ public class OplIntegrationTests {
 
         TestIoPortHandler testHandler = new(
             spice86DependencyInjection.Machine.CpuState,
-            NSubstitute.Substitute.For<ILoggerService>(),
+            NSubstitute.Substitute.For<ILogger>(),
             spice86DependencyInjection.Machine.IoPortDispatcher
         );
         spice86DependencyInjection.ProgramExecutor.Run();

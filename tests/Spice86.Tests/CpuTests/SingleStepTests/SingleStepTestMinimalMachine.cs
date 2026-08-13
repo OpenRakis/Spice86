@@ -1,5 +1,7 @@
 namespace Spice86.Tests.CpuTests.SingleStepTests;
 
+using Microsoft.Extensions.Logging;
+
 using NSubstitute;
 
 using Spice86.Logging;
@@ -27,7 +29,7 @@ public class SingleStepTestMinimalMachine : IDisposable {
 
         State state = new State(cpuModel);
         State = state;
-        ILoggerService loggerService = Substitute.For<ILoggerService>();
+        ILogger loggerService = Substitute.For<ILogger>();
         Spice86LoggerState loggerState = new();
         PauseHandler pauseHandler = new PauseHandler(loggerService);
         AddressReadWriteBreakpoints memoryBreakpoints = new();
@@ -81,7 +83,7 @@ public class SingleStepTestMinimalMachine : IDisposable {
         private const ushort PortA0 = 0xA0;
         private const ushort PortA1 = 0xA1;
 
-        public SstPortHandler(State state, ILoggerService loggerService, IOPortDispatcher ioPortDispatcher)
+        public SstPortHandler(State state, ILogger loggerService, IOPortDispatcher ioPortDispatcher)
             : base(state, false, loggerService) {
             ioPortDispatcher.AddIOPortHandler(Port1F, this);
             ioPortDispatcher.ReplaceIOPortHandler(Port21, this);

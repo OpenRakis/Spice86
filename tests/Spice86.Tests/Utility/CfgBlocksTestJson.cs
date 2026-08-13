@@ -67,6 +67,6 @@ internal static class CfgBlocksTestJson {
 
     private static CfgCpuSnapshotBuilder CreateSnapshotBuilder() {
         return new CfgCpuSnapshotBuilder(new CfgBlockGraphExporter(), new CfgFunctionPartitioner(),
-            new FunctionCatalogue(), Substitute.For<ILoggerService>());
+            new FunctionCatalogue(), Substitute.For<ILogger>());
     }
 }

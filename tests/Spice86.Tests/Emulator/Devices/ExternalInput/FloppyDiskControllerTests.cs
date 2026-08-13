@@ -118,7 +118,7 @@ public sealed class FloppyDiskControllerTests {
 
     private sealed class FloppyDiskControllerFixture {
         public FloppyDiskControllerFixture(FloppyDiskSpeed speed) {
-            Logger = Substitute.For<ILoggerService>();
+            Logger = Substitute.For<ILogger>();
             Logger.IsEnabled(Arg.Any<LogLevel>()).Returns(false);
 
             State = new State(CpuModel.INTEL_8086);
@@ -141,7 +141,7 @@ public sealed class FloppyDiskControllerTests {
             Controller = new FloppyDiskController(State, Dispatcher, false, Logger, DualPic, transferService);
         }
 
-        public ILoggerService Logger { get; }
+        public ILogger Logger { get; }
         public State State { get; }
         public IOPortDispatcher Dispatcher { get; }
         public Memory Memory { get; }

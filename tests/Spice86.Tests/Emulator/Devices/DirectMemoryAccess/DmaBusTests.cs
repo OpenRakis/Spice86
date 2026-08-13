@@ -88,7 +88,7 @@ public class DmaBusTests {
 
     private static DmaBus CreateSystem(out Memory memory, out State state, out IOPortDispatcher dispatcher) {
         state = new State(CpuModel.INTEL_8086);
-        ILoggerService logger = Substitute.For<ILoggerService>();
+        ILogger logger = Substitute.For<ILogger>();
         logger.IsEnabled(Arg.Any<LogLevel>()).Returns(false);
 
         AddressReadWriteBreakpoints ioBreakpoints = new();

@@ -2,6 +2,8 @@
 
 using FluentAssertions;
 
+using Microsoft.Extensions.Logging;
+
 using NSubstitute;
 
 using Spice86.Core.Emulator.CPU;
@@ -26,7 +28,7 @@ public class XmsUnitTests {
     private readonly State _state;
     private readonly Memory _memory;
     private readonly A20Gate _a20Gate;
-    private readonly ILoggerService _loggerService;
+    private readonly ILogger _loggerService;
     private readonly CallbackHandler _callbackHandler;
     private readonly MemoryAsmWriter _asmWriter;
     private readonly DosTables _dosTables;
@@ -36,7 +38,7 @@ public class XmsUnitTests {
         _state = new State(CpuModel.INTEL_80286);
         _a20Gate = new A20Gate(false);
         _memory = new Memory(new(), new Ram(A20Gate.EndOfHighMemoryArea), _a20Gate, new RealModeMmu386(), false);
-        _loggerService = Substitute.For<ILoggerService>();
+        _loggerService = Substitute.For<ILogger>();
         _callbackHandler = new CallbackHandler(_state, _loggerService);
         _dosTables = new DosTables(_memory);
         _asmWriter = new MemoryAsmWriter(_memory, new(0, 0), _callbackHandler);
@@ -138,7 +140,7 @@ public class XmsUnitTests {
         State state = new State(CpuModel.INTEL_80286);
         A20Gate a20Gate = new A20Gate(true); // A20 is ALREADY enabled at startup
         Memory memory = new Memory(new(), new Ram(A20Gate.EndOfHighMemoryArea), a20Gate, new RealModeMmu386(), false);
-        ILoggerService loggerService = Substitute.For<ILoggerService>();
+        ILogger loggerService = Substitute.For<ILogger>();
         CallbackHandler callbackHandler = new CallbackHandler(state, loggerService);
         DosTables dosTables = new DosTables(memory);
         MemoryAsmWriter asmWriter = new MemoryAsmWriter(memory, new(0, 0), callbackHandler);

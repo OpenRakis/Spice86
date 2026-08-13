@@ -30,7 +30,7 @@ internal sealed class ExecutionContextManagerFactory : IDisposable {
     public ExecutionContextManager ContextManager { get; }
 
     public ExecutionContextManagerFactory(FunctionCatalogue functionCatalogue) {
-        ILoggerService loggerService = Substitute.For<ILoggerService>();
+        ILogger loggerService = Substitute.For<ILogger>();
         Spice86LoggerState loggerState = new();
         AddressReadWriteBreakpoints memoryBreakpoints = new();
         Memory = new Memory(memoryBreakpoints, new Ram(0x100000), new A20Gate(), new RealModeMmu386(), false);
