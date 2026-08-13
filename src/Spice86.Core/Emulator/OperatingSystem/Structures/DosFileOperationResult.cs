@@ -70,6 +70,15 @@ public sealed class DosFileOperationResult : IEquatable<DosFileOperationResult?>
     }
 
     /// <summary>
+    /// Returns a new instance of the class indicating an error and preserves the error-result API used across the DOS layer.
+    /// </summary>
+    /// <param name="errorCode">The DOS error code.</param>
+    /// <returns>A new instance of the class indicating an error.</returns>
+    public static DosFileOperationResult LogError(DosErrorCode errorCode) {
+        return Error(errorCode);
+    }
+
+    /// <summary>
     /// Returns a new instance of the class with a 16-bit value.
     /// </summary>
     /// <param name="value">The 16-bit value.</param>

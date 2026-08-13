@@ -1,6 +1,6 @@
-﻿namespace Spice86.Core.Emulator.Gdb;
+using Microsoft.Extensions.Logging;
+namespace Spice86.Core.Emulator.Gdb;
 
-using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
@@ -21,7 +21,7 @@ using System.Text;
 /// Custom commands list can be seen with the monitor help command.
 /// </summary>
 public class GdbCustomCommandsHandler {
-    private readonly Serilog.ILogger _loggerService;
+    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
     private readonly EmulatorStateSerializer _emulatorStateSerializer;
     private readonly GdbIo _gdbIo;
     private readonly IFunctionHandlerProvider _functionHandlerProvider;
@@ -48,7 +48,7 @@ public class GdbCustomCommandsHandler {
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         EmulatorStateSerializer emulatorStateSerializer,
         GdbIo gdbIo,
-        Serilog.ILogger loggerService,
+        Microsoft.Extensions.Logging.ILogger loggerService,
         Action<BreakPoint> onBreakpointReached) {
         _loggerService = loggerService;
         _state = state;
@@ -88,8 +88,8 @@ public class GdbCustomCommandsHandler {
             long cyclesBreak = currentCycles + cyclesToWait;
             AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.CPU_CYCLES, cyclesBreak, _onBreakpointReached, true);
             _emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("Breakpoint added for cycles!\n{@BreakPoint}", breakPoint);
+            if (_loggerService.IsEnabled(LogLevel.Debug)) {
+                _loggerService.LogDebug("Breakpoint added for cycles!\n{@BreakPoint}", breakPoint);
             }
 
             return _gdbIo.GenerateMessageToDisplayResponse(
@@ -107,8 +107,8 @@ public class GdbCustomCommandsHandler {
             uint ip = ConvertUtils.ParseHex32(args[2]);
             AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.CPU_EXECUTION_ADDRESS, MemoryUtils.ToPhysicalAddress((ushort)cs, (ushort)ip), _onBreakpointReached, false);
             _emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("Breakpoint added for cs:ip!\n@{@BreakPoint}", breakPoint);
+            if (_loggerService.IsEnabled(LogLevel.Debug)) {
+                _loggerService.LogDebug("Breakpoint added for cs:ip!\n@{@BreakPoint}", breakPoint);
             }
 
             return _gdbIo.GenerateMessageToDisplayResponse(
@@ -121,8 +121,8 @@ public class GdbCustomCommandsHandler {
     private string BreakStop() {
         BreakPoint breakPoint = new UnconditionalBreakPoint(BreakPointType.MACHINE_STOP, _onBreakpointReached, false);
         _emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("Breakpoint added for end of execution!@\n{@BreakPoint}", breakPoint);
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("Breakpoint added for end of execution!@\n{@BreakPoint}", breakPoint);
         }
 
         return _gdbIo.GenerateMessageToDisplayResponse("Breakpoint added for end of execution.");
@@ -186,8 +186,8 @@ public class GdbCustomCommandsHandler {
         try {
             bits = int.Parse(bitsString);
         } catch (Exception e) {
-            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error(e, "{MethodName}", nameof(ReadRam));
+            if (_loggerService.IsEnabled(LogLevel.Error)) {
+                _loggerService.LogError(e, "{MethodName}", nameof(ReadRam));
             }
             return Help($"Unparseable bits value {bitsString}");
         }
@@ -221,8 +221,8 @@ public class GdbCustomCommandsHandler {
         try {
             return ConvertUtils.ParseHex16(valueOrRegisterName);
         } catch (Exception e) {
-            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error(e, "{MethodName}", nameof(ExtractValueFromHexOrRegisterName));
+            if (_loggerService.IsEnabled(LogLevel.Error)) {
+                _loggerService.LogError(e, "{MethodName}", nameof(ExtractValueFromHexOrRegisterName));
             }
             return null;
         }

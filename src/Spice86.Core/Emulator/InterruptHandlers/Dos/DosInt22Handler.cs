@@ -1,6 +1,6 @@
+using Microsoft.Extensions.Logging;
 namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
 
-using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
@@ -17,7 +17,7 @@ public class DosInt22Handler : InterruptHandler {
     private readonly DosProcessManager _dosProcessManager;
 
     public DosInt22Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
-        DosProcessManager dosProcessManager, Serilog.ILogger loggerService)
+        DosProcessManager dosProcessManager, Microsoft.Extensions.Logging.ILogger loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _dosProcessManager = dosProcessManager;
     }
@@ -25,10 +25,11 @@ public class DosInt22Handler : InterruptHandler {
     public override byte VectorNumber => 0x22;
 
     public override void Run() {
-        if (LoggerService.IsEnabled(LogEventLevel.Information)) {
-            LoggerService.Information("INT 22h: Terminate address invoked, terminating current process.");
+        if (LoggerService.IsEnabled(LogLevel.Information)) {
+            LoggerService.LogInformation("INT 22h: Terminate address invoked, terminating current process.");
         }
 
         _dosProcessManager.TerminateProcess(0, DosTerminationType.Normal);
     }
 }
+

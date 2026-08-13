@@ -1,7 +1,6 @@
 namespace Spice86.Shared.Emulator.Storage.FileSystem;
 
-using Serilog;
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using System;
 using System.Collections.Generic;
@@ -254,8 +253,8 @@ public sealed class VirtualFloppyImage {
     }
 
     private void LogSkipWarning(string name, string reason) {
-        if (_logger.IsEnabled(LogEventLevel.Warning)) {
-            _logger.Warning("VirtualFloppyImage: skipping '{Name}' - {Reason}", name, reason);
+        if (_logger.IsEnabled(LogLevel.Warning)) {
+            _logger.LogWarning("VirtualFloppyImage: skipping '{Name}' - {Reason}", name, reason);
         }
     }
 }

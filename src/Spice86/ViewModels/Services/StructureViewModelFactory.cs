@@ -2,6 +2,8 @@ namespace Spice86.ViewModels.Services;
 
 using AvaloniaHex.Document;
 
+using Microsoft.Extensions.Logging;
+
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM;
@@ -24,12 +26,12 @@ public class StructureViewModelFactory : IStructureViewModelFactory {
     private readonly StructurizerSettings _structurizerSettings = new();
     private StructureInformation? _structureInformation;
     private readonly Configuration _configuration;
-    private readonly Serilog.ILogger _logger;
+    private readonly Microsoft.Extensions.Logging.ILogger _logger;
     private readonly IPauseHandler _pauseHandler;
 
     public event EventHandler? StructureInformationChanged;
 
-    public StructureViewModelFactory(Configuration configuration, State state, Serilog.ILogger logger, IPauseHandler pauseHandler) {
+    public StructureViewModelFactory(Configuration configuration, State state, Microsoft.Extensions.Logging.ILogger logger, IPauseHandler pauseHandler) {
         _logger = logger;
         _state = state;
         _configuration = configuration;
@@ -60,7 +62,7 @@ public class StructureViewModelFactory : IStructureViewModelFactory {
     }
 
     public void Parse(string headerFilePath) {
-        _logger.Information("Parsing {HeaderFilePath} for structure information", headerFilePath);
+        _logger.LogInformation("Parsing {HeaderFilePath} for structure information", headerFilePath);
         if (_parser == null) {
             throw new InvalidOperationException("Factory not initialized.");
         }

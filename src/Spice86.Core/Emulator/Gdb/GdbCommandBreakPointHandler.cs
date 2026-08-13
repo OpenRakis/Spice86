@@ -1,6 +1,6 @@
-﻿namespace Spice86.Core.Emulator.Gdb;
+using Microsoft.Extensions.Logging;
+namespace Spice86.Core.Emulator.Gdb;
 
-using Serilog.Events;
 
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
@@ -13,7 +13,7 @@ using Spice86.Shared.Utils;
 /// Handles GDB commands related to breakpoints and stepping through instructions.
 /// </summary>
 public class GdbCommandBreakpointHandler {
-    private readonly Serilog.ILogger _loggerService;
+    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
     private readonly GdbIo _gdbIo;
     private volatile bool _resumeEmulatorOnCommandEnd = true;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
@@ -33,7 +33,7 @@ public class GdbCommandBreakpointHandler {
     /// <param name="memory">The memory interface for expression evaluation.</param>
     public GdbCommandBreakpointHandler(
         EmulatorBreakpointsManager emulatorBreakpointsManager,
-        IPauseHandler pauseHandler, GdbIo gdbIo, Serilog.ILogger loggerService,
+        IPauseHandler pauseHandler, GdbIo gdbIo, Microsoft.Extensions.Logging.ILogger loggerService,
         CPU.State state, IMemory memory) {
         _loggerService = loggerService;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
@@ -56,8 +56,8 @@ public class GdbCommandBreakpointHandler {
         if (!_resumeEmulatorOnCommandEnd) {
             return;
         }
-        if (_loggerService.Equals(LogEventLevel.Debug)) {
-            _loggerService.Debug("Notification of emulator pause from the UI to the GDB client.");
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("Notification of emulator pause from the UI to the GDB client.");
         }
         _resumeEmulatorOnCommandEnd = false;
         SendS05StringToGdb();
@@ -72,8 +72,8 @@ public class GdbCommandBreakpointHandler {
         BreakPoint? breakPoint = ParseBreakPoint(commandContent);
         if (breakPoint is not null) {
             _emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("Breakpoint added!\n{@BreakPoint}", breakPoint);
+            if (_loggerService.IsEnabled(LogLevel.Debug)) {
+                _loggerService.LogDebug("Breakpoint added!\n{@BreakPoint}", breakPoint);
             }
         }
         return _gdbIo.GenerateResponse("OK");
@@ -100,12 +100,12 @@ public class GdbCommandBreakpointHandler {
     /// </summary>
     /// <param name="breakPoint">The <see cref="BreakPoint"/> object representing the breakpoint that was hit.</param>
     public void OnBreakPointReached(BreakPoint breakPoint) {
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("Breakpoint reached!\n@{@BreakPoint}", breakPoint);
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("Breakpoint reached!\n@{@BreakPoint}", breakPoint);
         }
         if (!_gdbIo.IsClientConnected()) {
-            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                _loggerService.Verbose("Breakpoint reached but client is not connected. Nothing to do.\n{@BreakPoint}", breakPoint);
+            if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                _loggerService.LogTrace("Breakpoint reached but client is not connected. Nothing to do.\n{@BreakPoint}", breakPoint);
             }
             return;
         }
@@ -114,8 +114,8 @@ public class GdbCommandBreakpointHandler {
         try {
             SendS05StringToGdb();
         } catch (IOException e) {
-            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error(e, "IOException while sending breakpoint info");
+            if (_loggerService.IsEnabled(LogLevel.Error)) {
+                _loggerService.LogError(e, "IOException while sending breakpoint info");
             }
         }
     }
@@ -156,8 +156,8 @@ public class GdbCommandBreakpointHandler {
             return _gdbIo.GenerateResponse("");
         }
         _emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, false);
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("Breakpoint removed@!\n{@BreakPoint}", breakPoint);
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("Breakpoint removed@!\n{@BreakPoint}", breakPoint);
         }
         return _gdbIo.GenerateResponse("OK");
     }
@@ -172,8 +172,8 @@ public class GdbCommandBreakpointHandler {
         // will pause the CPU at the next instruction unconditionally
         BreakPoint stepBreakPoint = new UnconditionalBreakPoint(BreakPointType.CPU_EXECUTION_ADDRESS, OnBreakPointReached, true);
         _emulatorBreakpointsManager.ToggleBreakPoint(stepBreakPoint, true);
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("Breakpoint added for st@ep!\n{@StepBreakPoint}", stepBreakPoint);
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("Breakpoint added for st@ep!\n{@StepBreakPoint}", stepBreakPoint);
         }
 
         // Do not send anything to GDB, CPU thread will send something when breakpoint is reached

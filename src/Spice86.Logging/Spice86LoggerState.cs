@@ -1,5 +1,7 @@
 namespace Spice86.Logging;
 
+using Microsoft.Extensions.Logging;
+
 using Serilog.Core;
 
 using Spice86.Shared.Emulator.Memory;

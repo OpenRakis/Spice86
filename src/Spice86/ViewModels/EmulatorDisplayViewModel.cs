@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 namespace Spice86.ViewModels;
 
 using Avalonia;
@@ -9,7 +10,6 @@ using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
-using Serilog.Events;
 
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
@@ -34,7 +34,7 @@ public sealed partial class EmulatorDisplayViewModel : ObservableObject,
     private readonly IUIDispatcher _uiDispatcher;
     private readonly IPauseHandler _pauseHandler;
     private readonly SharedMouseData _sharedMouseData;
-    private readonly Serilog.ILogger _loggerService;
+    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
     private DispatcherTimer? _drawTimer;
     private bool _isSettingResolution;
     private bool _disposed;
@@ -44,7 +44,7 @@ public sealed partial class EmulatorDisplayViewModel : ObservableObject,
         IUIDispatcher uiDispatcher,
         IPauseHandler pauseHandler,
         SharedMouseData sharedMouseData,
-        Serilog.ILogger loggerService) {
+        Microsoft.Extensions.Logging.ILogger loggerService) {
         _uiDispatcher = uiDispatcher;
         _pauseHandler = pauseHandler;
         _sharedMouseData = sharedMouseData;
@@ -113,8 +113,8 @@ public sealed partial class EmulatorDisplayViewModel : ObservableObject,
     public void OnVideoModeChanged(object? sender, VideoModeChangedEventArgs e) {
         _uiDispatcher.Post(() => {
             AspectRatioCorrectionFactor = e.AspectRatioCorrectionFactor;
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug(
+            if (_loggerService.IsEnabled(LogLevel.Debug)) {
+                _loggerService.LogDebug(
                     "Video mode changed to {Width}x{Height}, aspect ratio correction factor: {Factor}",
                     e.NewMode.Width, e.NewMode.Height, e.AspectRatioCorrectionFactor);
             }
@@ -213,3 +213,4 @@ public sealed partial class EmulatorDisplayViewModel : ObservableObject,
         }, DispatcherPriority.MaxValue);
     }
 }
+

@@ -1,6 +1,6 @@
+using Microsoft.Extensions.Logging;
 namespace Spice86.Core.Emulator.OperatingSystem.Devices;
 
-using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Video;
@@ -43,7 +43,7 @@ public class ConsoleDevice : CharacterDevice {
     /// </summary>
     public const int NoInputAvailable = 0x80D3;
 
-    private readonly Serilog.ILogger _loggerService;
+    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
     private readonly BiosDataArea _biosDataArea;
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
     private readonly IVgaFunctionality _vga;
@@ -75,7 +75,7 @@ public class ConsoleDevice : CharacterDevice {
     /// <param name="vgaFunctionality">VGA BIOS interface for cursor movement, scrolling, and character output.</param>
     /// <param name="biosKeyboardBuffer">Keyboard ring buffer used to check input availability without blocking.</param>
     public ConsoleDevice(IByteReaderWriter memory, uint baseAddress,
-        Serilog.ILogger loggerService, State state, BiosDataArea biosDataArea,
+        Microsoft.Extensions.Logging.ILogger loggerService, State state, BiosDataArea biosDataArea,
         KeyboardInt16Handler keyboardInt16Handler, IVgaFunctionality vgaFunctionality,
         BiosKeyboardBuffer biosKeyboardBuffer)
         : base(memory, baseAddress, CON,
@@ -345,8 +345,8 @@ public class ConsoleDevice : CharacterDevice {
             _ansiState.PrefixAllowed = true;
             return;
         }
-        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-            _loggerService.Warning("ANSI: expected '[' after ESC, got 0x{Char:X2}", chr);
+        if (_loggerService.IsEnabled(LogLevel.Warning)) {
+            _loggerService.LogWarning("ANSI: expected '[' after ESC, got 0x{Char:X2}", chr);
         }
         _ansiState.Reset();
         OutputCharacter((char)chr);
@@ -400,8 +400,8 @@ public class ConsoleDevice : CharacterDevice {
         }
         // Anything else is a syntax error
         // NANSI: syntax_error → jmp f_not_ANSI, which prints the offending char.
-        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-            _loggerService.Warning("ANSI: unexpected char 0x{Char:X2} in CSI sequence", chr);
+        if (_loggerService.IsEnabled(LogLevel.Warning)) {
+            _loggerService.LogWarning("ANSI: unexpected char 0x{Char:X2} in CSI sequence", chr);
         }
         _ansiState.Reset();
         OutputCharacter((char)chr);

@@ -1,6 +1,6 @@
-﻿namespace Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
+using Microsoft.Extensions.Logging;
+namespace Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 
-using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
@@ -36,7 +36,7 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// <param name="biosKeyboardBuffer">The FIFO queue used to store keyboard keys for the BIOS.</param>
     public KeyboardInt16Handler(IMemory memory, IOPortDispatcher ioPortDispatcher, BiosDataArea biosDataArea,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
-        Serilog.ILogger loggerService, BiosKeyboardBuffer biosKeyboardBuffer)
+        Microsoft.Extensions.Logging.ILogger loggerService, BiosKeyboardBuffer biosKeyboardBuffer)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _biosDataArea = biosDataArea;
         _ioPortDispatcher = ioPortDispatcher;
@@ -106,8 +106,8 @@ public class KeyboardInt16Handler : InterruptHandler {
                 }
                 break;
             default:
-                if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-                    LoggerService.Warning(
+                if (LoggerService.IsEnabled(LogLevel.Warning)) {
+                    LoggerService.LogWarning(
                         "{ClassName} INT {Int:X2} {operation}: Unhandled {MethodName} command.",
                         nameof(KeyboardInt16Handler), VectorNumber, State.AL, nameof(SetTypematicRateAndDelay));
                 }
@@ -116,8 +116,8 @@ public class KeyboardInt16Handler : InterruptHandler {
     }
 
     private void Unsupported(int operation) {
-        if (LoggerService.IsEnabled(LogEventLevel.Warning)) {
-            LoggerService.Warning(
+        if (LoggerService.IsEnabled(LogLevel.Warning)) {
+            LoggerService.LogWarning(
                 "{ClassName} INT {Int:X2} {operation}: Unhandled/undocumented keyboard interrupt called, will ignore",
                 nameof(KeyboardInt16Handler), VectorNumber, operation);
         }
@@ -226,8 +226,8 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// <remarks>AH is the scan code, AL is the ASCII character code</remarks>
     /// <remarks>Returns <c>0</c> if no key is available. Should not happen for emulated programs, see ASM above.</remarks>
     public void GetKeystroke() {
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("READ KEY STROKE");
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("READ KEY STROKE");
         }
         if (TryGetPendingKeyCode(out ushort? keyCode)) {
             _biosKeyboardBuffer.DequeueKeyCode();
@@ -238,8 +238,8 @@ public class KeyboardInt16Handler : InterruptHandler {
     }
 
     public void GetShiftFlags() {
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("GET SHIFT FLAGS");
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("GET SHIFT FLAGS");
         }
         State.AL = _biosDataArea.KeyboardStatusFlag;
     }
@@ -251,8 +251,8 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// </summary>
     public void StoreKeystroke(bool calledFromVm) {
         ushort keyCode = State.CX;
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("STORE KEYSTROKE {KeyCode}", keyCode);
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("STORE KEYSTROKE {KeyCode}", keyCode);
         }
         bool enqueued = _biosKeyboardBuffer.EnqueueKeyCode(keyCode);
         State.AL = enqueued ? (byte)0 : (byte)1;
@@ -291,8 +291,8 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// </summary>
     /// <param name="calledFromVm"><c>True</c> ff the method was called by internal emulator code, <c>False</c> otherwise.</param>
     public void GetKeystrokeStatus(bool calledFromVm) {
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("KEY STROKE STATUS");
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("KEY STROKE STATUS");
         }
 
         // ZF = 0 if a key pressed (even in the case of Ctrl-Break)

@@ -1,6 +1,6 @@
+using Microsoft.Extensions.Logging;
 namespace Spice86.Core.Emulator;
 
-using Serilog.Events;
 
 using Spice86.Core.CLI.RuntimeOptions;
 using Spice86.Core.Emulator.CPU;
@@ -34,7 +34,7 @@ internal sealed class ExecutionPolicy : IDisposable {
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         EmulationLoop emulationLoop,
         EmulatorStateSerializer emulatorStateSerializer,
-        Serilog.ILogger loggerService) {
+        Microsoft.Extensions.Logging.ILogger loggerService) {
         _options = options;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
@@ -94,10 +94,10 @@ internal sealed class ExecutionPolicy : IDisposable {
         IPauseHandler pauseHandler,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         EmulatorStateSerializer emulatorStateSerializer,
-        Serilog.ILogger loggerService) {
+        Microsoft.Extensions.Logging.ILogger loggerService) {
         if (options.Port == 0) {
-            if (loggerService.IsEnabled(LogEventLevel.Information)) {
-                loggerService.Information("GDB port is 0, disabling GDB server.");
+            if (loggerService.IsEnabled(LogLevel.Information)) {
+                loggerService.LogInformation("GDB port is 0, disabling GDB server.");
             }
             return null;
         }
@@ -114,3 +114,4 @@ internal sealed class ExecutionPolicy : IDisposable {
         _gdbServer?.Dispose();
     }
 }
+

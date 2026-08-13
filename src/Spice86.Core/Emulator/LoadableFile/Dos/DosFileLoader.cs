@@ -14,8 +14,8 @@ public abstract class DosFileLoader : ExecutableFileLoader {
     /// </summary>
     /// <param name="memory">The memory bus.</param>
     /// <param name="state">The CPU state.</param>
-    /// <param name="loggerService">The <see cref="Serilog.ILogger"/> instance.</param>
-    protected DosFileLoader(IMemory memory, State state, Serilog.ILogger loggerService) : base(memory, state, loggerService) {
+    /// <param name="loggerService">The <see cref="Microsoft.Extensions.Logging.ILogger"/> instance.</param>
+    protected DosFileLoader(IMemory memory, State state, Microsoft.Extensions.Logging.ILogger loggerService) : base(memory, state, loggerService) {
     }
 
     /// <summary>

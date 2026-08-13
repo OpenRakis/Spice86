@@ -1,6 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers;
 
-using Serilog;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Logging;
 using Spice86.Core.Emulator.CPU;

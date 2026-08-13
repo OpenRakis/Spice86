@@ -1,6 +1,6 @@
+using Microsoft.Extensions.Logging;
 namespace Spice86.Core.Emulator.Devices.Video;
 
-using Serilog.Events;
 
 using Spice86.Shared.Emulator.Video;
 using Spice86.Shared.Interfaces;
@@ -12,7 +12,7 @@ using System.Diagnostics;
 /// </summary>
 public class VgaCard {
     private readonly IGuiVideoPresentation? _gui;
-    private readonly Serilog.ILogger _logger;
+    private readonly Microsoft.Extensions.Logging.ILogger _logger;
     private readonly IVgaRenderer _renderer;
 
     /// <summary>
@@ -21,7 +21,7 @@ public class VgaCard {
     /// <param name="gui">The GUI to render to.</param>
     /// <param name="renderer">The VGA renderer to use.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public VgaCard(IGuiVideoPresentation? gui, IVgaRenderer renderer, Serilog.ILogger loggerService) {
+    public VgaCard(IGuiVideoPresentation? gui, IVgaRenderer renderer, Microsoft.Extensions.Logging.ILogger loggerService) {
         _gui = gui;
         _logger = loggerService;
         _renderer = renderer;
@@ -60,8 +60,8 @@ public class VgaCard {
         }
         var buffer = new Span<uint>((void*)uiRenderEventArgs.Address, uiRenderEventArgs.Length);
         int requiredBufferSize = _renderer.Width * _renderer.Height;
-        if (buffer.Length < requiredBufferSize && _logger.IsEnabled(LogEventLevel.Warning)) {
-            _logger.Warning("Buffer size {BufferLength} is too small for the required buffer size {RequiredBufferSize} for render resolution {RenderWidth} x {RenderHeight}",
+        if (buffer.Length < requiredBufferSize && _logger.IsEnabled(LogLevel.Warning)) {
+            _logger.LogWarning("Buffer size {BufferLength} is too small for the required buffer size {RequiredBufferSize} for render resolution {RenderWidth} x {RenderHeight}",
                 buffer.Length, requiredBufferSize, _renderer.Width, _renderer.Height);
             return;
         }

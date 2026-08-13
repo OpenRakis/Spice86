@@ -1,6 +1,6 @@
-﻿namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
+using Microsoft.Extensions.Logging;
+namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
 
-using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
@@ -22,7 +22,7 @@ public class DosInt20Handler : InterruptHandler {
     /// <param name="dosInt21Handler">The INT21H is used to exit normally without a process exit code.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public DosInt20Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
-        Stack stack, State state, DosInt21Handler dosInt21Handler, Serilog.ILogger loggerService)
+        Stack stack, State state, DosInt21Handler dosInt21Handler, Microsoft.Extensions.Logging.ILogger loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _dosInt21Handler = dosInt21Handler;
     }
@@ -32,8 +32,8 @@ public class DosInt20Handler : InterruptHandler {
 
     /// <inheritdoc />
     public override void Run() {
-        if (LoggerService.IsEnabled(LogEventLevel.Information)) {
-            LoggerService.Information("INT 20h: PROGRAM TERMINATE (legacy CP/M INT20H handler)");
+        if (LoggerService.IsEnabled(LogLevel.Information)) {
+            LoggerService.LogInformation("INT 20h: PROGRAM TERMINATE (legacy CP/M INT20H handler)");
         }
 
         // FreeDOS calls INT 21h AH=0 to legacy CP/M programs termination

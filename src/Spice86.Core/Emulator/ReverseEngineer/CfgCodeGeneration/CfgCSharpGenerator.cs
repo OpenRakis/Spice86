@@ -52,7 +52,7 @@ internal sealed class CfgCSharpGenerator {
         writer.Line("using Spice86.Core.Emulator.Function;");
         writer.Line("using Spice86.Core.Emulator.ReverseEngineer;");
         writer.Line("using Spice86.Core.Emulator.VM;");
-        writer.Line("using Serilog;");
+        writer.Line("using Microsoft.Extensions.Logging;");
         writer.Line("using Spice86.Shared.Emulator.Memory;");
         writer.Line("using System;");
         writer.Line("using System.Collections.Generic;");

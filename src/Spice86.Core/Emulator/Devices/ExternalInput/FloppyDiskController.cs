@@ -58,7 +58,7 @@ public sealed class FloppyDiskController : DefaultIOPortHandler {
         State state,
         IOPortDispatcher ioPortDispatcher,
         bool failOnUnhandledPort,
-        Serilog.ILogger loggerService,
+        Microsoft.Extensions.Logging.ILogger loggerService,
         DualPic interruptController,
         FloppyDiskTransferService transferService)
         : base(state, failOnUnhandledPort, loggerService) {

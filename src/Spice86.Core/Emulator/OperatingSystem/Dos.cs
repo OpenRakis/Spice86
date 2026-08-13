@@ -1,6 +1,6 @@
+using Microsoft.Extensions.Logging;
 namespace Spice86.Core.Emulator.OperatingSystem;
 
-using Serilog.Events;
 
 using Spice86.Core.CLI.RuntimeOptions;
 using Spice86.Core.Emulator.CPU;
@@ -43,7 +43,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
     private readonly IVgaFunctionality _vgaFunctionality;
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
     private readonly IMemory _memory;
-    private readonly Serilog.ILogger _loggerService;
+    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
     private readonly Mscdex _mscdex;
     private readonly ISoundChannelCreator _channelCreator;
     private readonly IDriveActivityNotifier _activityNotifier;
@@ -204,7 +204,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,
         BiosDataArea biosDataArea, IVgaFunctionality vgaFunctionality,
-        IDictionary<string, string> envVars, IOPortDispatcher ioPortDispatcher, Serilog.ILogger loggerService,
+        IDictionary<string, string> envVars, IOPortDispatcher ioPortDispatcher, Microsoft.Extensions.Logging.ILogger loggerService,
         FloppyDiskTimingService floppyDiskTimingService,
         ISoundChannelCreator channelCreator,
         IDriveActivityNotifier activityNotifier,
@@ -282,8 +282,8 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         if (options.DosRuntimeState.InstallDosServices is false) {
             return;
         }
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Initializing DOS");
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("Initializing DOS");
         }
         OpenDefaultFileHandles(dosDevices);
 
@@ -422,8 +422,8 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         DosDriveManager.SwapFloppyDiscs();
         foreach (MscdexDriveEntry entry in _mscdex.Drives) {
             entry.Drive.SwapToNextDisc();
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _loggerService.Information("MOUNT: Swapping drive {Drive}: to image {Image}", entry.DriveLetter, entry.Drive.Image.ImagePath);
+            if (_loggerService.IsEnabled(LogLevel.Information)) {
+                _loggerService.LogInformation("MOUNT: Swapping drive {Drive}: to image {Image}", entry.DriveLetter, entry.Drive.Image.ImagePath);
             }
         }
     }
@@ -433,16 +433,16 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         char upper = char.ToUpperInvariant(driveLetter);
         if (DosDriveManager.TryGetFloppyDrive(upper, out FloppyDiskDrive? floppy)) {
             floppy.SwapToIndex(imageIndex);
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _loggerService.Information("MOUNT: Drive {Drive}: switched to image {Image}", upper, floppy.ImagePath);
+            if (_loggerService.IsEnabled(LogLevel.Information)) {
+                _loggerService.LogInformation("MOUNT: Drive {Drive}: switched to image {Image}", upper, floppy.ImagePath);
             }
             return;
         }
         foreach (MscdexDriveEntry entry in _mscdex.Drives) {
             if (char.ToUpperInvariant(entry.DriveLetter) == upper) {
                 entry.Drive.SwapToIndex(imageIndex);
-                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                    _loggerService.Information("MOUNT: Drive {Drive}: switched to image {Image}", upper, entry.Drive.Image.ImagePath);
+                if (_loggerService.IsEnabled(LogLevel.Information)) {
+                    _loggerService.LogInformation("MOUNT: Drive {Drive}: switched to image {Image}", upper, entry.Drive.Image.ImagePath);
                 }
                 return;
             }
@@ -456,8 +456,8 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         }
 
         DosDriveManager.MountFloppyFolder(driveLetter, hostPath);
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("MOUNT: Drive {Drive}: is now backed by folder {Path}", char.ToUpperInvariant(driveLetter), hostPath);
+        if (_loggerService.IsEnabled(LogLevel.Information)) {
+            _loggerService.LogInformation("MOUNT: Drive {Drive}: is now backed by folder {Path}", char.ToUpperInvariant(driveLetter), hostPath);
         }
     }
 
@@ -485,8 +485,8 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         MscdexDriveEntry entry = new MscdexDriveEntry(upper, driveIndex, drive);
         _mscdex.AddDrive(entry);
         DosDriveManager.RegisterCdRomDriveLetter(upper, hostPath, volumeLabel);
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("MOUNT: Drive {Drive}: is now backed by folder {Path}", upper, hostPath);
+        if (_loggerService.IsEnabled(LogLevel.Information)) {
+            _loggerService.LogInformation("MOUNT: Drive {Drive}: is now backed by folder {Path}", upper, hostPath);
         }
     }
 
@@ -504,8 +504,8 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         _mscdex.AddDrive(entry);
         string volumeLabel = image.PrimaryVolume.VolumeIdentifier ?? string.Empty;
         DosDriveManager.RegisterCdRomDriveLetter(upper, string.Empty, volumeLabel);
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("IMGMOUNT: Mounted image {Image} on drive {Drive}:", imagePath, upper);
+        if (_loggerService.IsEnabled(LogLevel.Information)) {
+            _loggerService.LogInformation("IMGMOUNT: Mounted image {Image} on drive {Drive}:", imagePath, upper);
         }
     }
 

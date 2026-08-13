@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.StateSerialization;
 
-using Serilog;
+using Microsoft.Extensions.Logging;
 
 /// <summary>
 /// An abstract class that provides a base implementation for recording execution data.

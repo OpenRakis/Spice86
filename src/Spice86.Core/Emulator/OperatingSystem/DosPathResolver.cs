@@ -48,7 +48,7 @@ internal class DosPathResolver {
             }
         }
         currentDir = "";
-        return DosFileOperationResult.Error(DosErrorCode.InvalidDrive);
+        return DosFileOperationResult.LogError(DosErrorCode.InvalidDrive);
     }
 
     private static string GetFullCurrentDosPathOnDrive(VirtualDrive virtualDrive) =>
@@ -75,14 +75,14 @@ internal class DosPathResolver {
         string? fullDosPath = GetFullDosPathIncludingRoot(dosPath);
 
         if (fullDosPath is null || !StartsWithDosDriveAndVolumeSeparator(fullDosPath)) {
-            return DosFileOperationResult.Error(DosErrorCode.PathNotFound);
+            return DosFileOperationResult.LogError(DosErrorCode.PathNotFound);
         }
 
         string? hostPath = GetFullHostPathFromDosOrDefault(fullDosPath);
         if (!string.IsNullOrWhiteSpace(hostPath)) {
             return SetCurrentDirValue(fullDosPath[0], hostPath, fullDosPath);
         } else {
-            return DosFileOperationResult.Error(DosErrorCode.PathNotFound);
+            return DosFileOperationResult.LogError(DosErrorCode.PathNotFound);
         }
     }
 
@@ -127,7 +127,7 @@ internal class DosPathResolver {
         if (string.IsNullOrWhiteSpace(hostFullPath) ||
             !IsWithinMountPoint(hostFullPath, _dosDriveManager.TryGetDrive(driveLetter, out VirtualDrive? vDrive) ? vDrive : null) ||
             Encoding.ASCII.GetByteCount(fullDosPath) > MaxPathLength) {
-            return DosFileOperationResult.Error(DosErrorCode.PathNotFound);
+            return DosFileOperationResult.LogError(DosErrorCode.PathNotFound);
         }
 
         _dosDriveManager[driveLetter].CurrentDosDirectory = fullDosPath[3..];

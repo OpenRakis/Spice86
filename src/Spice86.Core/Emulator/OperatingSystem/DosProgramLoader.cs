@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.OperatingSystem;
+namespace Spice86.Core.Emulator.OperatingSystem;
 
 using Spice86.Core.CLI.RuntimeOptions;
 using Spice86.Core.Emulator.CPU;
@@ -20,7 +20,7 @@ internal class DosProgramLoader : DosFileLoader {
 
     public DosProgramLoader(ProgramLoadOptions options, IMemory memory,
         State state, DosInt21Handler int21Handler,
-        Serilog.ILogger loggerService)
+        Microsoft.Extensions.Logging.ILogger loggerService)
         : base(memory, state, loggerService) {
         _options = options;
         _processManager = int21Handler.ProcessManager;

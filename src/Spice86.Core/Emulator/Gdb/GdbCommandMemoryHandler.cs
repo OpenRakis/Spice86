@@ -1,4 +1,5 @@
-﻿namespace Spice86.Core.Emulator.Gdb;
+using Microsoft.Extensions.Logging;
+namespace Spice86.Core.Emulator.Gdb;
 
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -10,7 +11,7 @@ using System.Text;
 /// Handles GDB memory-related commands such as reading and writing memory, and searching for patterns in memory.
 /// </summary>
 public class GdbCommandMemoryHandler {
-    private readonly Serilog.ILogger _loggerService;
+    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
     private readonly GdbFormatter _gdbFormatter = new();
     private readonly GdbIo _gdbIo;
     private readonly IMemory _memory;
@@ -21,7 +22,7 @@ public class GdbCommandMemoryHandler {
     /// <param name="memory">The memory bus.</param>
     /// <param name="gdbIo">The GDB I/O handler.</param>
     /// <param name="loggerService">The logger service.</param>
-    public GdbCommandMemoryHandler(IMemory memory, GdbIo gdbIo, Serilog.ILogger loggerService) {
+    public GdbCommandMemoryHandler(IMemory memory, GdbIo gdbIo, Microsoft.Extensions.Logging.ILogger loggerService) {
         _loggerService = loggerService;
         _memory = memory;
         _gdbIo = gdbIo;
@@ -41,8 +42,8 @@ public class GdbCommandMemoryHandler {
                 length = ConvertUtils.ParseHex32(commandContentSplit[1]);
             }
 
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                _loggerService.Verbose("Reading memory at address {Address} for a length of {Length}", address, length);
+            if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                _loggerService.LogTrace("Reading memory at address {Address} for a length of {Length}", address, length);
             }
             uint memorySize = (uint)_memory.Length;
             StringBuilder response = new StringBuilder((int)length * 2);
@@ -59,8 +60,8 @@ public class GdbCommandMemoryHandler {
 
             return _gdbIo.GenerateResponse(response.ToString());
         } catch (FormatException nfe) {
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _loggerService.Error(nfe, "Memory read requested but could not understand the request {CommandContent}", commandContent);
+            if (_loggerService.IsEnabled(LogLevel.Error)) {
+                _loggerService.LogError(nfe, "Memory read requested but could not understand the request {CommandContent}", commandContent);
             }
             return _gdbIo.GenerateUnsupportedResponse();
         }
@@ -112,8 +113,8 @@ public class GdbCommandMemoryHandler {
             _memory.LoadData(address, data);
             return _gdbIo.GenerateResponse("OK");
         } catch (FormatException nfe) {
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                _loggerService.Error(nfe, "Memory write requested but could not understand the request {CommandContent}", commandContent);
+            if (_loggerService.IsEnabled(LogLevel.Error)) {
+                _loggerService.LogError(nfe, "Memory write requested but could not understand the request {CommandContent}", commandContent);
             }
             return _gdbIo.GenerateUnsupportedResponse();
         }

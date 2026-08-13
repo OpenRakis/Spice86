@@ -1,6 +1,6 @@
+using Microsoft.Extensions.Logging;
 namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 
-using Serilog.Events;
 
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
@@ -14,9 +14,9 @@ using System.IO;
 /// </summary>
 internal sealed class CfgCSharpDumper {
     private readonly CfgCSharpGenerator _generator;
-    private readonly Serilog.ILogger _loggerService;
+    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
 
-    public CfgCSharpDumper(CfgCSharpGenerator generator, Serilog.ILogger loggerService) {
+    public CfgCSharpDumper(CfgCSharpGenerator generator, Microsoft.Extensions.Logging.ILogger loggerService) {
         _generator = generator;
         _loggerService = loggerService;
     }
@@ -73,8 +73,8 @@ internal sealed class CfgCSharpDumper {
             && spice86CsprojPath is not null) {
             // Relative reference keeps the generated project portable when the whole tree is moved together.
             string referencePath = Path.GetRelativePath(projectDirectory, spice86CsprojPath);
-            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                _loggerService.Information(
+            if (_loggerService.IsEnabled(LogLevel.Information)) {
+                _loggerService.LogInformation(
                     "Generated project references the Spice86 source tree via ProjectReference to {Spice86CsprojPath}. " +
                     "This is expected for a development build run from the source tree.",
                     spice86CsprojPath);
@@ -90,8 +90,8 @@ internal sealed class CfgCSharpDumper {
         }
 
         string version = GeneratedProjectScaffolder.GetRunningSpice86Version();
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information(
+        if (_loggerService.IsEnabled(LogLevel.Information)) {
+            _loggerService.LogInformation(
                 "Spice86 source tree not found next to the running assembly; generated project references the " +
                 "{PackageId} NuGet package version {Version} via PackageReference. Restoring it requires that this " +
                 "package version is available on a configured NuGet feed.",
@@ -100,3 +100,4 @@ internal sealed class CfgCSharpDumper {
         return GeneratedProjectScaffolder.BuildCsProjWithPackageReference(version);
     }
 }
+

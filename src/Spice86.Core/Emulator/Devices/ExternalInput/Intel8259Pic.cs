@@ -1,6 +1,6 @@
-﻿namespace Spice86.Core.Emulator.Devices.ExternalInput;
+using Microsoft.Extensions.Logging;
+namespace Spice86.Core.Emulator.Devices.ExternalInput;
 
-using Serilog.Events;
 
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
@@ -15,7 +15,7 @@ using System.Runtime.CompilerServices;
 ///     classes.
 /// </remarks>
 /// <param name="logger">Logging facility used for diagnostic messages.</param>
-internal abstract class Intel8259Pic(Serilog.ILogger logger) {
+internal abstract class Intel8259Pic(Microsoft.Extensions.Logging.ILogger logger) {
     /// <summary>
     ///     The IRQ index that presently has priority (0-7) or 8 when idle.
     /// </summary>
@@ -88,7 +88,7 @@ internal abstract class Intel8259Pic(Serilog.ILogger logger) {
 
     private byte _lowestPriorityIrq;
 
-    private Serilog.ILogger Logger => logger;
+    private Microsoft.Extensions.Logging.ILogger Logger => logger;
 
     /// <summary>
     ///     Signals the CPU or upstream controller that an IRQ is pending.
@@ -180,8 +180,8 @@ internal abstract class Intel8259Pic(Serilog.ILogger logger) {
     /// <param name="value">IRQ index to treat as lowest priority.</param>
     internal void SetLowestPriorityIrq(byte value) {
         _lowestPriorityIrq = (byte)(value & 0x07);
-        if (Logger.IsEnabled(LogEventLevel.Debug)) {
-            Logger.Debug("PIC: Lowest priority set to IRQ {Irq}", _lowestPriorityIrq);
+        if (Logger.IsEnabled(LogLevel.Debug)) {
+            Logger.LogDebug("PIC: Lowest priority set to IRQ {Irq}", _lowestPriorityIrq);
         }
     }
 
@@ -193,7 +193,7 @@ internal abstract class Intel8259Pic(Serilog.ILogger logger) {
         byte change = (byte)(InterruptMaskRegister ^ value); // Bits that have changed become 1.
         InterruptMaskRegister = value;
         InterruptMaskRegisterInverted = (byte)~value;
-        Logger.Debug("PIC: IMR updated to {Imr:X2} (changed {Changed:X2})", value, change);
+        Logger.LogDebug("PIC: IMR updated to {Imr:X2} (changed {Changed:X2})", value, change);
 
         // Test if changed bits are set in irr and are not being served at the moment.
         // Those bits have an impact on whether the cpu emulation should be paused or not.
@@ -243,7 +243,7 @@ internal abstract class Intel8259Pic(Serilog.ILogger logger) {
             return true;
         }
 
-        Logger.Error("PIC: Invalid IRQ {Irq} supplied to {Caller}", value, caller ?? "unknown");
+        Logger.LogError("PIC: Invalid IRQ {Irq} supplied to {Caller}", value, caller ?? "unknown");
         return false;
     }
 
@@ -291,10 +291,10 @@ internal abstract class Intel8259Pic(Serilog.ILogger logger) {
 
         // Value changed (as it is currently not active).
         InterruptRequestRegister |= bit;
-        Logger.Debug("PIC: IRQ {Irq} latched (irr={Irr:X2}, imr={Imr:X2})", value, InterruptRequestRegister,
+        Logger.LogDebug("PIC: IRQ {Irq} latched (irr={Irr:X2}, imr={Imr:X2})", value, InterruptRequestRegister,
             InterruptMaskRegister);
         if ((bit & InterruptMaskRegisterInverted & InServiceRegisterInverted) == 0) {
-            Logger.Verbose("PIC: IRQ {Irq} masked or already in service (imr={Imr:X2}, isr={Isr:X2})",
+            Logger.LogTrace("PIC: IRQ {Irq} masked or already in service (imr={Imr:X2}, isr={Isr:X2})",
                 value,
                 InterruptMaskRegister,
                 InServiceRegister);
@@ -305,7 +305,7 @@ internal abstract class Intel8259Pic(Serilog.ILogger logger) {
         if (IsSpecialMaskModeEnabled || HasHigherPriority(value, ActiveIrqLine)) {
             Activate();
         } else {
-            Logger.Verbose("PIC: IRQ {Irq} queued but lower priority than active IRQ {Active}", value, ActiveIrqLine);
+            Logger.LogTrace("PIC: IRQ {Irq} queued but lower priority than active IRQ {Active}", value, ActiveIrqLine);
         }
     }
 
@@ -320,16 +320,16 @@ internal abstract class Intel8259Pic(Serilog.ILogger logger) {
 
         byte bit = (byte)(1 << value);
         if ((InterruptRequestRegister & bit) == 0) {
-            Logger.Debug("PIC: Attempted to lower IRQ {Irq} that was not latched", value);
+            Logger.LogDebug("PIC: Attempted to lower IRQ {Irq} that was not latched", value);
             return;
         }
 
         // Value will change (as it is currently active).
         InterruptRequestRegister &= (byte)~bit;
-        Logger.Debug("PIC: IRQ {Irq} cleared (irr={Irr:X2})", value, InterruptRequestRegister);
+        Logger.LogDebug("PIC: IRQ {Irq} cleared (irr={Irr:X2})", value, InterruptRequestRegister);
         CheckForIrq();
-        if (Logger.IsEnabled(LogEventLevel.Verbose)) {
-            Logger.Verbose("PIC: IRQ {Irq} cleared; pending mask={Pending:X2}", value,
+        if (Logger.IsEnabled(LogLevel.Trace)) {
+            Logger.LogTrace("PIC: IRQ {Irq} cleared; pending mask={Pending:X2}", value,
                 InterruptRequestRegister & InterruptMaskRegisterInverted & InServiceRegisterInverted);
         }
     }
@@ -348,10 +348,10 @@ internal abstract class Intel8259Pic(Serilog.ILogger logger) {
             ActiveIrqLine = value;
             InServiceRegister |= (byte)(1 << value);
             InServiceRegisterInverted = (byte)~InServiceRegister;
-            Logger.Debug("PIC: IRQ {Irq} started (autoEOI={AutoEoi})", value, IsAutoEndOfInterruptEnabled);
+            Logger.LogDebug("PIC: IRQ {Irq} started (autoEOI={AutoEoi})", value, IsAutoEndOfInterruptEnabled);
         } else if (ShouldRotateOnAutoEoi) {
             SetLowestPriorityIrq(value);
-            Logger.Debug("PIC: Auto-EOI rotation applied for IRQ {Irq}", value);
+            Logger.LogDebug("PIC: Auto-EOI rotation applied for IRQ {Irq}", value);
         }
     }
 
@@ -373,7 +373,7 @@ internal abstract class Intel8259Pic(Serilog.ILogger logger) {
         InterruptMaskRegister = 0xff; // imr set to mask all IRQs until programmed
         ActiveIrqLine = 8; // active_irq set to 8 sentinel (no IRQ active)
         _lowestPriorityIrq = 7; // default lowest priority points to IRQ7
-        Logger.Debug("PIC: Controller state reset to defaults.");
+        Logger.LogDebug("PIC: Controller state reset to defaults.");
     }
 
     /// <summary>
@@ -409,7 +409,7 @@ internal abstract class Intel8259Pic(Serilog.ILogger logger) {
 /// </summary>
 /// <param name="logger">Logging facility for diagnostic output.</param>
 /// <param name="setIrqCheck">Delegate that updates the global IRQ pending flag.</param>
-internal sealed class PrimaryPic(Serilog.ILogger logger, Action<bool> setIrqCheck)
+internal sealed class PrimaryPic(Microsoft.Extensions.Logging.ILogger logger, Action<bool> setIrqCheck)
     : Intel8259Pic(logger) {
     /// <inheritdoc />
     protected override void Activate() {
@@ -436,7 +436,7 @@ internal sealed class PrimaryPic(Serilog.ILogger logger, Action<bool> setIrqChec
 /// <param name="logger">Logging facility for diagnostic output.</param>
 /// <param name="cascadeRaise">Delegate invoked when the secondary PIC asserts the cascade line.</param>
 /// <param name="cascadeLower">Delegate invoked when the secondary PIC deasserts the cascade line.</param>
-internal sealed class SecondaryPic(Serilog.ILogger logger, Action cascadeRaise, Action cascadeLower)
+internal sealed class SecondaryPic(Microsoft.Extensions.Logging.ILogger logger, Action cascadeRaise, Action cascadeLower)
     : Intel8259Pic(logger) {
     /// <inheritdoc />
     protected override void Activate() {
@@ -454,3 +454,4 @@ internal sealed class SecondaryPic(Serilog.ILogger logger, Action cascadeRaise, 
         InterruptVectorBase = 0x70;
     }
 }
+

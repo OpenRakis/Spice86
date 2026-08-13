@@ -1,4 +1,5 @@
-﻿namespace Spice86.Core.Emulator.LoadableFile;
+using Microsoft.Extensions.Logging;
+namespace Spice86.Core.Emulator.LoadableFile;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
@@ -21,15 +22,15 @@ public abstract class ExecutableFileLoader {
     /// </summary>
     protected IMemory _memory;
 
-    protected readonly Serilog.ILogger _loggerService;
+    protected readonly Microsoft.Extensions.Logging.ILogger _loggerService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ExecutableFileLoader"/> class.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
     /// <param name="state">The CPU Registers and Flags.</param>
-    /// <param name="loggerService">The <see cref="Serilog.ILogger"/> instance.</param>
-    protected ExecutableFileLoader(IMemory memory, State state, Serilog.ILogger loggerService) {
+    /// <param name="loggerService">The <see cref="Microsoft.Extensions.Logging.ILogger"/> instance.</param>
+    protected ExecutableFileLoader(IMemory memory, State state, Microsoft.Extensions.Logging.ILogger loggerService) {
         _loggerService = loggerService;
         _memory = memory;
         _state = state;
@@ -65,8 +66,8 @@ public abstract class ExecutableFileLoader {
     protected void SetEntryPoint(ushort cs, ushort ip) {
         _state.CS = cs;
         _state.IP = ip;
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Program entry point is {ProgramEntry}", ConvertUtils.ToSegmentedAddressRepresentation(cs, ip));
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("Program entry point is {ProgramEntry}", ConvertUtils.ToSegmentedAddressRepresentation(cs, ip));
         }
     }
 }

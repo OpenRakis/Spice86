@@ -1,5 +1,7 @@
 namespace Spice86.Core.Emulator.Devices.Video;
 
+using Microsoft.Extensions.Logging;
+
 using System;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -14,7 +16,7 @@ using Spice86.Shared.Interfaces;
 public class VideoMemory : IVideoMemory {
     private readonly byte[] _latches;
     private readonly IVideoState _state;
-    private readonly Serilog.ILogger _logger;
+    private readonly Microsoft.Extensions.Logging.ILogger _logger;
     // 0 = not changed, 1 = changed. Use int so we can use Interlocked/Volatile APIs.
     private int _hasChanged;
 
@@ -23,7 +25,7 @@ public class VideoMemory : IVideoMemory {
     /// </summary>
     /// <param name="state">The interface that represents the state of the video card.</param>
     /// <param name="logger">The logger service implementation.</param>
-    public VideoMemory(IVideoState state, Serilog.ILogger logger) {
+    public VideoMemory(IVideoState state, Microsoft.Extensions.Logging.ILogger logger) {
         _state = state;
         Size = 128 * 1024; // This covers the 128kb of video memory address space from 0xA0000 to 0xBFFFF
         VRam = new byte[4 * 64 * 1024];
@@ -38,7 +40,7 @@ public class VideoMemory : IVideoMemory {
     /// <inheritdoc />
     public byte Read(uint address) {
         if (IsOutsideCurrentlyMappedRange(address)) {
-            _logger.Debug("VGA read outside mapping! Returning 0x00 for address 0x{Address:X}", address);
+            _logger.LogDebug("VGA read outside mapping! Returning 0x00 for address 0x{Address:X}", address);
 
             return 0;
         }
@@ -102,7 +104,7 @@ public class VideoMemory : IVideoMemory {
         if (IsOutsideCurrentlyMappedRange(address)) {
             // TODO: this is most likely writing to a secondary monochrome monitor we have not implemented yet.
             if (value != 0x00) { // don't log initial memory clearing
-                _logger.Debug("VGA write outside mapping! Wrote 0x{Value:X2} '{C}' to 0x{Address:X}", value, (char)value, address);
+                _logger.LogDebug("VGA write outside mapping! Wrote 0x{Value:X2} '{C}' to 0x{Address:X}", value, (char)value, address);
             }
 
             return;

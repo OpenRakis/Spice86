@@ -1,6 +1,6 @@
+using Microsoft.Extensions.Logging;
 namespace Spice86.Core.Emulator.Boot;
 
-using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
@@ -24,12 +24,12 @@ public sealed class PCBootLoader {
 
     private readonly IMemory _memory;
     private readonly State _state;
-    private readonly Serilog.ILogger _loggerService;
+    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
 
     /// <summary>
     /// Creates a new boot loader for floppy-based PC boot images.
     /// </summary>
-    public PCBootLoader(IMemory memory, State state, Serilog.ILogger loggerService) {
+    public PCBootLoader(IMemory memory, State state, Microsoft.Extensions.Logging.ILogger loggerService) {
         _memory = memory;
         _state = state;
         _loggerService = loggerService;
@@ -53,8 +53,8 @@ public sealed class PCBootLoader {
 
         _memory.LoadData(BootSectorLoadAddress, imageData, BootSectorSize);
         PrepareCpuRegistersForBoot(_state, driveNumber);
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("PCBOOT: loaded {Bytes} bytes from floppy '{Path}' at 0000:7C00, DL={DL:X2}",
+        if (_loggerService.IsEnabled(LogLevel.Information)) {
+            _loggerService.LogInformation("PCBOOT: loaded {Bytes} bytes from floppy '{Path}' at 0000:7C00, DL={DL:X2}",
                 BootSectorSize, imagePathForLogging, _state.DL);
         }
         return true;

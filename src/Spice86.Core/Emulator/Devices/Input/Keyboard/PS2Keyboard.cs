@@ -1,6 +1,6 @@
+using Microsoft.Extensions.Logging;
 namespace Spice86.Core.Emulator.Devices.Input.Keyboard;
 
-using Serilog.Events;
 
 using Spice86.Core.Emulator.VM.DeviceScheduler;
 using Spice86.Shared.Emulator.Keyboard;
@@ -16,7 +16,7 @@ using System.Diagnostics;
 [DebuggerDisplay("PS2Keyboard Set={_codeSet} Scanning={_isScanning} Buf={_keyboardFrameBuffer.Count}/{BufferSizeInScancodes} Overflowed={_bufferOverflowed} Repeat={_repeat.Key} WaitMs={_repeat.WaitMs}")]
 public partial class PS2Keyboard {
     private readonly Intel8042Controller _controller;
-    private readonly Serilog.ILogger _loggerService;
+    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
     private readonly KeyboardScancodeConverter _scancodeConverter = new();
     private readonly DeviceScheduler _scheduler;
     private readonly IGuiKeyboardEvents? _gui;
@@ -64,7 +64,7 @@ public partial class PS2Keyboard {
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="gui">Optional GUI interface for keyboard events.</param>
     public PS2Keyboard(Intel8042Controller controller,
-        DeviceScheduler scheduler, Serilog.ILogger loggerService,
+        DeviceScheduler scheduler, Microsoft.Extensions.Logging.ILogger loggerService,
         IGuiKeyboardEvents? gui = null) {
         _controller = controller;
         _loggerService = loggerService;
@@ -88,20 +88,20 @@ public partial class PS2Keyboard {
     }
 
     private void WarnResend() {
-        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-            _loggerService.Warning("KEYBOARD: Resend command not implemented");
+        if (_loggerService.IsEnabled(LogLevel.Warning)) {
+            _loggerService.LogWarning("KEYBOARD: Resend command not implemented");
         }
     }
 
     private void WarnUnknownCommand(KeyboardCommand command) {
-        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-            _loggerService.Warning("KEYBOARD: Unknown command 0x{Command:X2}", (byte)command);
+        if (_loggerService.IsEnabled(LogLevel.Warning)) {
+            _loggerService.LogWarning("KEYBOARD: Unknown command 0x{Command:X2}", (byte)command);
         }
     }
 
     private void WarnUnknownScancodeSet() {
-        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-            _loggerService.Warning("KEYBOARD: Guest requested unknown scancode set");
+        if (_loggerService.IsEnabled(LogLevel.Warning)) {
+            _loggerService.LogWarning("KEYBOARD: Guest requested unknown scancode set");
         }
     }
 
@@ -194,8 +194,8 @@ public partial class PS2Keyboard {
     }
 
     private void MaybeNotifyLedState() {
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("KEYBOARD: LED state: {LedState:X2}", LedState);
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("KEYBOARD: LED state: {LedState:X2}", LedState);
         }
     }
 
@@ -216,8 +216,8 @@ public partial class PS2Keyboard {
         byte oldSet = _codeSet;
         _codeSet = requestedSet;
 
-        if (_codeSet != oldSet && _loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("KEYBOARD: Using scancode set #{CodeSet}", _codeSet);
+        if (_codeSet != oldSet && _loggerService.IsEnabled(LogLevel.Information)) {
+            _loggerService.LogInformation("KEYBOARD: Using scancode set #{CodeSet}", _codeSet);
         }
 
         ClearBuffer();
@@ -273,8 +273,8 @@ public partial class PS2Keyboard {
     }
 
     private void ExecuteCommand(KeyboardCommand command) {
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("KEYBOARD: Command 0x{Command:X2}", (byte)command);
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("KEYBOARD: Command 0x{Command:X2}", (byte)command);
         }
 
         switch (command) {
@@ -401,8 +401,8 @@ public partial class PS2Keyboard {
     }
 
     private void ExecuteCommand(KeyboardCommand command, byte param) {
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("KEYBOARD: Command 0x{Command:X2}, parameter 0x{Param:X2}", (byte)command, param);
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("KEYBOARD: Command 0x{Command:X2}, parameter 0x{Param:X2}", (byte)command, param);
         }
 
         switch (command) {
@@ -561,3 +561,4 @@ public partial class PS2Keyboard {
         // We support only 3 leds
         (byte)((_ledsAllOn ? 0xff : _ledState) & 0b0000_0111);
 }
+

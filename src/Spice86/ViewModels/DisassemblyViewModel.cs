@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 namespace Spice86.ViewModels;
 
 using Avalonia.Collections;
@@ -6,7 +7,6 @@ using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Messaging;
 
-using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
@@ -34,7 +34,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     private readonly ExpressionEvaluationService _evaluationService;
     private readonly IDictionary<SegmentedAddress, FunctionInformation> _functionsInformation;
     private readonly InstructionsDecoder _instructionsDecoder;
-    private readonly Serilog.ILogger _logger;
+    private readonly Microsoft.Extensions.Logging.ILogger _logger;
     private readonly IMemory _memory;
     private readonly IMessenger _messenger;
     private readonly IPauseHandler _pauseHandler;
@@ -121,7 +121,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     }
 
     public DisassemblyViewModel(EmulatorBreakpointsManager emulatorBreakpointsManager, IMemory memory, State state, IDictionary<SegmentedAddress, FunctionInformation> functionsInformation,
-        BreakpointsViewModel breakpointsViewModel, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher, IMessenger messenger, ITextClipboard textClipboard, Serilog.ILogger loggerService,
+        BreakpointsViewModel breakpointsViewModel, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher, IMessenger messenger, ITextClipboard textClipboard, Microsoft.Extensions.Logging.ILogger loggerService,
         bool canCloseTab = false) : base(uiDispatcher, textClipboard) {
         _logger = loggerService;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
@@ -354,8 +354,8 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
 
         // Capture the current CPU instruction pointer at the moment of pausing
         SegmentedAddress currentInstructionAddress = State.IpSegmentedAddress;
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("Pausing: Captured instruction pointer at {CurrentInstructionAddress}", currentInstructionAddress);
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("Pausing: Captured instruction pointer at {CurrentInstructionAddress}", currentInstructionAddress);
         }
 
         EnsureAddressIsLoaded(currentInstructionAddress);
@@ -420,31 +420,31 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
         if (TryGetLineByAddress(address, out DebuggerLineViewModel? debuggerLine)) {
             return debuggerLine;
         }
-        if (_logger.IsEnabled(LogEventLevel.Debug)) {
-            _logger.Debug("Current address {CurrentInstructionAddress} not found in DebuggerLines, loading instructions", address);
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("Current address {CurrentInstructionAddress} not found in DebuggerLines, loading instructions", address);
         }
 
         try {
             IsLoading = true;
 
             // Decode the instructions
-            if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                _logger.Debug("Decoding instructions for address {Address}", address);
+            if (_logger.IsEnabled(LogLevel.Debug)) {
+                _logger.LogDebug("Decoding instructions for address {Address}", address);
             }
             Dictionary<uint, EnrichedInstruction> instructions = _instructionsDecoder.DecodeInstructions(address, 256, 512);
-            if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                _logger.Debug("Decoded {Count} instructions", instructions.Count);
+            if (_logger.IsEnabled(LogLevel.Debug)) {
+                _logger.LogDebug("Decoded {Count} instructions", instructions.Count);
             }
 
             UpdateDebuggerLinesInBatch(instructions);
-            if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                _logger.Debug("Instructions loaded, now contains {DebuggerLinesCount} instructions", DebuggerLines.Count);
+            if (_logger.IsEnabled(LogLevel.Debug)) {
+                _logger.LogDebug("Instructions loaded, now contains {DebuggerLinesCount} instructions", DebuggerLines.Count);
             }
 
             // Verify that the current instruction is now in the collection
             if (!TryGetLineByAddress(address, out debuggerLine)) {
-                if (_logger.IsEnabled(LogEventLevel.Error)) {
-                    _logger.Error("Address {Address} still not found after loading instructions", address);
+                if (_logger.IsEnabled(LogLevel.Error)) {
+                    _logger.LogError("Address {Address} still not found after loading instructions", address);
                 }
 
                 throw new InvalidOperationException($"Current address {address} still not found in DebuggerLines after update");
@@ -475,8 +475,8 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
         _isUpdatingHighlighting = true;
 
         try {
-            if (_logger.IsEnabled(LogEventLevel.Debug)) {
-                _logger.Debug("Updating highlighting: CPU instruction address={CpuInstructionAddress}, Previous={PreviousInstructionAddress}", State.IpSegmentedAddress, _previousInstructionAddress);
+            if (_logger.IsEnabled(LogLevel.Debug)) {
+                _logger.LogDebug("Updating highlighting: CPU instruction address={CpuInstructionAddress}, Previous={PreviousInstructionAddress}", State.IpSegmentedAddress, _previousInstructionAddress);
             }
 
             DebuggerLineViewModel currentLine = EnsureAddressIsLoaded(State.IpSegmentedAddress);
@@ -554,8 +554,8 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     }
 
     private void LogConditionCompilationWarning(Exception ex, string? conditionExpression) {
-        if (_logger.IsEnabled(LogEventLevel.Warning)) {
-            _logger.Warning(ex, "Failed to compile breakpoint condition: {ConditionExpression}", conditionExpression);
+        if (_logger.IsEnabled(LogLevel.Warning)) {
+            _logger.LogWarning(ex, "Failed to compile breakpoint condition: {ConditionExpression}", conditionExpression);
         }
     }
 

@@ -1,6 +1,6 @@
 namespace Spice86.Shared.Interfaces;
 
-using Serilog;
+using Microsoft.Extensions.Logging;
 
 public interface ILoggerService : ILogger {
 }

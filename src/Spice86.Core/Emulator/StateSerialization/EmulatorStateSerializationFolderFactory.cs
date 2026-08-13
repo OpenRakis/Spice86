@@ -1,7 +1,6 @@
 namespace Spice86.Core.Emulator.StateSerialization;
 
-using Serilog;
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Shared.Utils;
 
@@ -31,8 +30,8 @@ public class EmulatorStateSerializationFolderFactory(ILogger loggerService) {
         // Always append program hash as subdirectory to isolate dumps per executable
         string dataDirectory = Path.GetFullPath(Path.Join(baseDirectory, programHash));
         CreateIfNotExist(dataDirectory);
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Data folder for program hash {ProgramHash} is here {DumpDirectory}",
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("Data folder for program hash {ProgramHash} is here {DumpDirectory}",
                 programHash, dataDirectory);
         }
 

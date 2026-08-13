@@ -1,6 +1,6 @@
 namespace Spice86.Tests.Dos.FileSystem;
 
-using Serilog.Core;
+using Microsoft.Extensions.Logging.Abstractions;
 
 using Spice86.Shared.Emulator.Storage.FileSystem;
 using Spice86.Tests.Utility;
@@ -36,7 +36,7 @@ internal sealed class Fat12ImageBuilder {
             File.WriteAllBytes(filePath, file.content);
         }
 
-        VirtualFloppyImage image = new(tempDirectory, Logger.None);
+        VirtualFloppyImage image = new(tempDirectory, NullLogger.Instance);
         return image.Build();
     }
 }

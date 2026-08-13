@@ -1,4 +1,5 @@
-﻿namespace Spice86.Core.Emulator.Gdb;
+using Microsoft.Extensions.Logging;
+namespace Spice86.Core.Emulator.Gdb;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
@@ -15,7 +16,7 @@ using System.Linq;
 /// The class responsible for answering to custom GDB commands.
 /// </summary>
 public class GdbCommandHandler {
-    private readonly Serilog.ILogger _loggerService;
+    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
     private readonly GdbCommandBreakpointHandler _gdbCommandBreakpointHandler;
     private readonly GdbCommandMemoryHandler _gdbCommandMemoryHandler;
     private readonly GdbCommandRegisterHandler _gdbCommandRegisterHandler;
@@ -43,7 +44,7 @@ public class GdbCommandHandler {
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         EmulatorStateSerializer emulatorStateSerializer,
         GdbIo gdbIo,
-        Serilog.ILogger loggerService) {
+        Microsoft.Extensions.Logging.ILogger loggerService) {
         _loggerService = loggerService;
         _state = state;
         _gdbIo = gdbIo;
@@ -77,8 +78,8 @@ public class GdbCommandHandler {
     /// </summary>
     /// <param name="command">The custom GDB command string</param>
     public void RunCommand(string command) {
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Received command {Command}", command);
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("Received command {Command}", command);
         }
         char first = command[0];
         string commandContent = command[1..];
@@ -108,8 +109,8 @@ public class GdbCommandHandler {
                 '!' => DeclineExtendedMode(),
                 _ => _gdbIo.GenerateUnsupportedResponse()
             };
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-                _loggerService.Verbose("Responded with {Response}", response);
+            if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                _loggerService.LogTrace("Responded with {Response}", response);
             }
             if (response != null) {
                 _gdbIo.SendResponse(response);
@@ -221,3 +222,4 @@ public class GdbCommandHandler {
         return _gdbIo.GenerateResponse("OK");
     }
 }
+

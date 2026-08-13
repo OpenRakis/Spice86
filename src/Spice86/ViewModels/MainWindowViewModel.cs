@@ -5,7 +5,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.VM;
@@ -256,10 +256,10 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IDis
         if (logLevel == "Silent") {
             CurrentLogLevel = logLevel;
             _loggerState.AreLogsSilenced = true;
-            _loggerState.LogLevelSwitch.MinimumLevel = LogEventLevel.Fatal;
+            _loggerState.LogLevelSwitch.MinimumLevel = Serilog.Events.LogEventLevel.Fatal;
         } else {
             _loggerState.AreLogsSilenced = false;
-            _loggerState.LogLevelSwitch.MinimumLevel = Enum.Parse<LogEventLevel>(logLevel);
+            _loggerState.LogLevelSwitch.MinimumLevel = Enum.Parse<Serilog.Events.LogEventLevel>(logLevel);
             CurrentLogLevel = logLevel;
         }
     }

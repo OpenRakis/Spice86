@@ -1,6 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.Function;
 
-using Serilog;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;

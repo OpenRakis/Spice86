@@ -1,19 +1,23 @@
 ﻿#pragma warning disable CA2254
 namespace Spice86.Logging;
 
+using Microsoft.Extensions.Logging;
+
 using Serilog;
 using Serilog.Core;
 using Serilog.Events;
 
+using MicrosoftLogger = Microsoft.Extensions.Logging.ILogger;
+
 /// <summary>
-/// Stateful Serilog logger wrapper used by Spice86 while runtime log control remains mutable.
+/// Stateful Serilog-based logger wrapper used by Spice86 while runtime log control remains mutable.
 /// </summary>
-public class LoggerService : ILogger, IDisposable {
+public class LoggerService : MicrosoftLogger, IDisposable {
     private static readonly object?[] EmptyProperties = [];
 
     private readonly Func<Spice86LoggerState, LoggerConfiguration> _configurationFactory;
+    private readonly Spice86LoggerState _state;
     private Logger? _logger;
-    private Spice86LoggerState _state;
     private bool _disposed;
 
     /// <summary>
@@ -116,6 +120,24 @@ public class LoggerService : ILogger, IDisposable {
         return LogLevelSwitch.MinimumLevel <= level;
     }
 
+    public IDisposable BeginScope<TState>(TState state) where TState : notnull {
+        return new NoOpDisposable();
+    }
+
+    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+        Func<TState, Exception?, string> formatter) {
+        if (!IsEnabled(logLevel)) {
+            return;
+        }
+
+        _logger ??= BuildLogger();
+        _logger.Write(Map(logLevel), exception, formatter(state, exception));
+    }
+
+    public bool IsEnabled(LogLevel logLevel) {
+        return IsEnabled(Map(logLevel));
+    }
+
     public void Dispose() {
         _disposed = true;
         _logger?.Dispose();
@@ -144,6 +166,31 @@ public class LoggerService : ILogger, IDisposable {
 
     private static object?[] Normalize(object?[]? properties) {
         return properties is { Length: > 0 } ? properties : EmptyProperties;
+    }
+
+    private static LogEventLevel Map(LogLevel logLevel) {
+        return logLevel switch {
+            LogLevel.Trace => LogEventLevel.Verbose,
+            LogLevel.Debug => LogEventLevel.Debug,
+            LogLevel.Information => LogEventLevel.Information,
+            LogLevel.Warning => LogEventLevel.Warning,
+            LogLevel.Error => LogEventLevel.Error,
+            LogLevel.Critical => LogEventLevel.Fatal,
+            LogLevel.None => LogEventLevel.Fatal,
+            _ => LogEventLevel.Information
+        };
+    }
+
+    private static LogLevel Map(LogEventLevel level) {
+        return level switch {
+            LogEventLevel.Verbose => LogLevel.Trace,
+            LogEventLevel.Debug => LogLevel.Debug,
+            LogEventLevel.Information => LogLevel.Information,
+            LogEventLevel.Warning => LogLevel.Warning,
+            LogEventLevel.Error => LogLevel.Error,
+            LogEventLevel.Fatal => LogLevel.Critical,
+            _ => LogLevel.None
+        };
     }
 
     private static LoggerConfiguration CreateDefaultLoggerConfiguration(Spice86LoggerState state) {
@@ -338,7 +385,7 @@ public class LoggerService : ILogger, IDisposable {
 
     /// <inheritdoc />
     public void Warning(Exception? e, string messageTemplate, params object?[]? properties) {
-        ILogger? logger = GetLoggerForLevel(LogEventLevel.Warning);
+        Logger? logger = GetLoggerForLevel(LogEventLevel.Warning);
         if (logger is null) {
             return;
         }
@@ -390,7 +437,7 @@ public class LoggerService : ILogger, IDisposable {
 
     /// <inheritdoc />
     public void Error(Exception? e, string messageTemplate, params object?[]? properties) {
-        ILogger? logger = GetLoggerForLevel(LogEventLevel.Error);
+        Logger? logger = GetLoggerForLevel(LogEventLevel.Error);
         if (logger is null) {
             return;
         }
@@ -442,7 +489,7 @@ public class LoggerService : ILogger, IDisposable {
 
     /// <inheritdoc />
     public void Fatal(Exception? e, string messageTemplate, params object?[]? properties) {
-        ILogger? logger = GetLoggerForLevel(LogEventLevel.Fatal);
+        Logger? logger = GetLoggerForLevel(LogEventLevel.Fatal);
         if (logger is null) {
             return;
         }
@@ -452,6 +499,11 @@ public class LoggerService : ILogger, IDisposable {
             logger.Fatal(messageTemplate, propertyValues);
         } else {
             logger.Fatal(e, messageTemplate, propertyValues);
+        }
+    }
+
+    private sealed class NoOpDisposable : IDisposable {
+        public void Dispose() {
         }
     }
 

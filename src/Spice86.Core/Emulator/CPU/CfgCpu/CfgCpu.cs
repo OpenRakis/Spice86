@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu;
 
-using Serilog;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Logging;
 

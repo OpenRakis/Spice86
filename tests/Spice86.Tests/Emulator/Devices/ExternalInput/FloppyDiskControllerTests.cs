@@ -2,9 +2,9 @@ namespace Spice86.Tests.Emulator.Devices.ExternalInput;
 
 using FluentAssertions;
 
-using NSubstitute;
+using Microsoft.Extensions.Logging;
 
-using Serilog.Events;
+using NSubstitute;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
@@ -119,7 +119,7 @@ public sealed class FloppyDiskControllerTests {
     private sealed class FloppyDiskControllerFixture {
         public FloppyDiskControllerFixture(FloppyDiskSpeed speed) {
             Logger = Substitute.For<ILoggerService>();
-            Logger.IsEnabled(Arg.Any<LogEventLevel>()).Returns(false);
+            Logger.IsEnabled(Arg.Any<LogLevel>()).Returns(false);
 
             State = new State(CpuModel.INTEL_8086);
             AddressReadWriteBreakpoints ioBreakpoints = new();

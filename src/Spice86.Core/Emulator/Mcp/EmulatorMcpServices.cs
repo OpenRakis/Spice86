@@ -40,7 +40,7 @@ public sealed class EmulatorMcpServices(
     ExtendedMemoryManager? xmsManager,
     EmulatorBreakpointsManager breakpointsManager,
     CfgBlocksJsonExporter cfgBlocksExporter,
-    Serilog.ILogger loggerService) {
+    Microsoft.Extensions.Logging.ILogger loggerService) {
     public IMemory Memory { get; } = memory;
 
     public CfgBlocksJsonExporter CfgBlocksExporter { get; } = cfgBlocksExporter;
@@ -63,7 +63,7 @@ public sealed class EmulatorMcpServices(
 
     public EmulatorBreakpointsManager BreakpointsManager { get; } = breakpointsManager;
 
-    public Serilog.ILogger LoggerService { get; } = loggerService;
+    public Microsoft.Extensions.Logging.ILogger LoggerService { get; } = loggerService;
 
     /// <summary>
     /// Gets or sets the Intel 8042 PS/2 controller used for keyboard/mouse MCP automation.

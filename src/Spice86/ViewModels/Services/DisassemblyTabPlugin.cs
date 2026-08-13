@@ -22,13 +22,13 @@ internal sealed class DisassemblyTabPlugin : IDebuggerTabPlugin {
     private readonly IUIDispatcher _uiDispatcher;
     private readonly IMessenger _messenger;
     private readonly ITextClipboard _textClipboard;
-    private readonly Serilog.ILogger _loggerService;
+    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
 
     public DisassemblyTabPlugin(EmulatorBreakpointsManager emulatorBreakpointsManager, IMemory memory,
         State state, IDictionary<SegmentedAddress, FunctionInformation> functionsInformation,
         BreakpointsViewModel breakpointsViewModel, IPauseHandler pauseHandler,
         IUIDispatcher uiDispatcher, IMessenger messenger, ITextClipboard textClipboard,
-        Serilog.ILogger loggerService) {
+        Microsoft.Extensions.Logging.ILogger loggerService) {
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _memory = memory;
         _state = state;

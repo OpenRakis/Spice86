@@ -113,7 +113,7 @@ internal sealed class McpIntegrationContext : IAsyncDisposable {
                 services.CfgCpu,
                 spice86.Machine.Stack,
                 services.State,
-                (Spice86.Shared.Interfaces.ILoggerService)services.LoggerService);
+                services.LoggerService);
         }
 
 

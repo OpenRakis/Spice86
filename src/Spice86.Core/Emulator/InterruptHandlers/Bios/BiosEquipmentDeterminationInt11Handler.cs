@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.InterruptHandlers.Bios;
+namespace Spice86.Core.Emulator.InterruptHandlers.Bios;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
@@ -17,7 +17,7 @@ public class BiosEquipmentDeterminationInt11Handler : InterruptHandler {
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation</param>
-    public BiosEquipmentDeterminationInt11Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, Serilog.ILogger loggerService)
+    public BiosEquipmentDeterminationInt11Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, Microsoft.Extensions.Logging.ILogger loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
     }
 

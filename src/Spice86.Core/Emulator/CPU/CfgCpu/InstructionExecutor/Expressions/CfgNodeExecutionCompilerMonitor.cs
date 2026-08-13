@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 
-using Serilog;
+using Microsoft.Extensions.Logging;
 
 using System;
 using System.Threading;
@@ -102,11 +102,11 @@ public class CfgNodeExecutionCompilerMonitor : IDisposable {
 
 
             if (current.TotalFailures != 0 || _window.FailureCount != 0) {
-                _logger.Information(
+                _logger.LogInformation(
                     "CfgNodeCompiler: compiled={TotalSuccess}(+{WindowSuccess}), failed={TotalFailures}(+{WindowFailure}), pending={Pending}, queue={Queue}, compileTime[Min={MinMs:F3}ms Avg={AvgMs:F3}ms Max={MaxMs:F3}ms]",
                      current.TotalSuccess, _window.SuccessCount, current.TotalFailures, _window.FailureCount, current.Pending, QueueDepth, _window.MinMs, _window.AvgMs, _window.MaxMs);
             } else {
-                _logger.Information(
+                _logger.LogInformation(
                     "CfgNodeCompiler: compiled={TotalSuccess}(+{WindowSuccess}), pending={Pending}, queue={Queue}, compileTime[Min={MinMs:F3}ms Avg={AvgMs:F3}ms Max={MaxMs:F3}ms]",
                      current.TotalSuccess, _window.SuccessCount, current.Pending, QueueDepth, _window.MinMs, _window.AvgMs, _window.MaxMs);
             }

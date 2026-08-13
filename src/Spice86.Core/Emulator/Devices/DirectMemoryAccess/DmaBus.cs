@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.Devices.DirectMemoryAccess;
+namespace Spice86.Core.Emulator.Devices.DirectMemoryAccess;
+
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
@@ -21,7 +23,7 @@ public sealed class DmaBus : DefaultIOPortHandler {
     };
 
     private readonly DmaChannel[] _channels = new DmaChannel[8];
-    private readonly Serilog.ILogger _logger;
+    private readonly Microsoft.Extensions.Logging.ILogger _logger;
     private readonly DmaController _primary;
     private readonly DmaController _secondary;
 
@@ -42,7 +44,7 @@ public sealed class DmaBus : DefaultIOPortHandler {
         State state,
         IOPortDispatcher ioPortDispatcher,
         bool failOnUnhandledPort,
-        Serilog.ILogger loggerService, uint wrappingMask = 0xFFFF) : base(state, failOnUnhandledPort, loggerService) {
+        Microsoft.Extensions.Logging.ILogger loggerService, uint wrappingMask = 0xFFFF) : base(state, failOnUnhandledPort, loggerService) {
         _logger = loggerService;
         _primary = new DmaController(0, memory, loggerService, wrappingMask);
         _secondary = new DmaController(1, memory, loggerService, wrappingMask);
@@ -88,7 +90,7 @@ public sealed class DmaBus : DefaultIOPortHandler {
             return _channels[channelIndex].PageRegisterValue;
         }
 
-        _logger.Warning("DMA: Read from undefined port 0x{Port:X4}", port);
+        _logger.LogWarning("DMA: Read from undefined port 0x{Port:X4}", port);
         return 0xFF;
     }
 
@@ -111,7 +113,7 @@ public sealed class DmaBus : DefaultIOPortHandler {
             return;
         }
 
-        _logger.Warning("DMA: Write to undefined port 0x{Port:X4} value 0x{Value:X2}", port, value);
+        _logger.LogWarning("DMA: Write to undefined port 0x{Port:X4} value 0x{Value:X2}", port, value);
     }
 
     /// <inheritdoc />

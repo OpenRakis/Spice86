@@ -2,9 +2,9 @@ using Spice86.Core.CLI;
 
 namespace Spice86.Tests;
 
-using NSubstitute;
+using Microsoft.Extensions.Logging;
 
-using Serilog;
+using NSubstitute;
 
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.ReverseEngineer;
