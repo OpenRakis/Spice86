@@ -1,6 +1,10 @@
 namespace Spice86.Tests.CpuTests.SingleStepTests;
 
+using Microsoft.Extensions.Logging;
+
 using NSubstitute;
+
+using Spice86.Logging;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
@@ -25,7 +29,8 @@ public class SingleStepTestMinimalMachine : IDisposable {
 
         State state = new State(cpuModel);
         State = state;
-        ILoggerService loggerService = Substitute.For<ILoggerService>();
+        ILogger loggerService = Substitute.For<ILogger>();
+        Spice86LoggerState loggerState = new();
         PauseHandler pauseHandler = new PauseHandler(loggerService);
         AddressReadWriteBreakpoints memoryBreakpoints = new();
         AddressReadWriteBreakpoints ioBreakpoints = new();
@@ -50,7 +55,7 @@ public class SingleStepTestMinimalMachine : IDisposable {
         _cfgNodeExecutionCompiler = executionCompiler;
         Cpu = new CfgCpu(memory, state, ioPortDispatcher, callbackHandler, dualPic,
             emulatorBreakpointsManager, pauseHandler, functionCatalogue, false, false, true, false, loggerService,
-            executionCompiler, new SequentialIdAllocator());
+            loggerState, executionCompiler, new SequentialIdAllocator());
     }
 
     public void RestoreMemoryAfterTest() {
@@ -78,7 +83,7 @@ public class SingleStepTestMinimalMachine : IDisposable {
         private const ushort PortA0 = 0xA0;
         private const ushort PortA1 = 0xA1;
 
-        public SstPortHandler(State state, ILoggerService loggerService, IOPortDispatcher ioPortDispatcher)
+        public SstPortHandler(State state, ILogger loggerService, IOPortDispatcher ioPortDispatcher)
             : base(state, false, loggerService) {
             ioPortDispatcher.AddIOPortHandler(Port1F, this);
             ioPortDispatcher.ReplaceIOPortHandler(Port21, this);

@@ -2,6 +2,8 @@ namespace Spice86.Tests.Fixtures;
 
 using NSubstitute;
 
+using Spice86.Logging;
+
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
@@ -28,7 +30,8 @@ internal sealed class ExecutionContextManagerFactory : IDisposable {
     public ExecutionContextManager ContextManager { get; }
 
     public ExecutionContextManagerFactory(FunctionCatalogue functionCatalogue) {
-        ILoggerService loggerService = Substitute.For<ILoggerService>();
+        ILogger loggerService = Substitute.For<ILogger>();
+        Spice86LoggerState loggerState = new();
         AddressReadWriteBreakpoints memoryBreakpoints = new();
         Memory = new Memory(memoryBreakpoints, new Ram(0x100000), new A20Gate(), new RealModeMmu386(), false);
         State = new State(CpuModel.INTEL_80286);
@@ -40,7 +43,7 @@ internal sealed class ExecutionContextManagerFactory : IDisposable {
             pauseHandler, State, Memory,
             memoryBreakpoints, new AddressReadWriteBreakpoints()), replacerRegistry, _compiler, new SequentialIdAllocator(), enableSpeculativeExploration: false);
         ContextManager = new ExecutionContextManager(Memory, State, feeder, replacerRegistry,
-            functionCatalogue, false, loggerService, null);
+            functionCatalogue, false, loggerService, loggerState, null);
     }
 
     public void Dispose() {

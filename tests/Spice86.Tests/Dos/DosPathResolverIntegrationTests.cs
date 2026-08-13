@@ -18,7 +18,7 @@ public class DosPathResolverIntegrationTests {
     public void ResolveProgramWithoutExtension_UsesDosExecutionPriority_BatThenComThenExe() {
         using TempFile tempFile = new("dos_path_resolver");
 
-        ILoggerService loggerService = Substitute.For<ILoggerService>();
+        ILogger loggerService = Substitute.For<ILogger>();
         DosDriveManager dosDriveManager = DosTestHelpers.CreateDriveManager(loggerService, tempFile.Path);
         DosPathResolver dosPathResolver = new DosPathResolver(dosDriveManager);
 

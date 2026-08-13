@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.OperatingSystem.Batch;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
@@ -297,8 +297,8 @@ internal sealed partial class DosBatchExecutionEngine {
             if (marker is >= '0' and <= '9') {
                 int index = marker - '0';
                 string argValue = context.GetArgument(index);
-                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                    _loggerService.Verbose("BATCH: Expand %%{Index} -> {Value}", index, argValue);
+                if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                    _loggerService.LogTrace("BATCH: Expand %%{Index} -> {Value}", index, argValue);
                 }
                 builder.Append(argValue);
                 i += 2;
@@ -314,8 +314,8 @@ internal sealed partial class DosBatchExecutionEngine {
 
             string variableName = line[(i + 1)..closingPercent];
             string? environmentValue = _host.GetEnvironmentVariable(variableName);
-            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                _loggerService.Verbose("BATCH: Expand %%{VarName}%% -> {Value}", variableName, environmentValue ?? "(null)");
+            if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                _loggerService.LogTrace("BATCH: Expand %%{VarName}%% -> {Value}", variableName, environmentValue ?? "(null)");
             }
             if (!string.IsNullOrEmpty(environmentValue)) {
                 builder.Append(environmentValue);
@@ -329,12 +329,12 @@ internal sealed partial class DosBatchExecutionEngine {
 
     private bool ApplyRedirection(CommandRedirection redirection) {
         if (!string.IsNullOrWhiteSpace(redirection.InputPath)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                _loggerService.Verbose("BATCH: Redirecting stdin from {Path}", redirection.InputPath);
+            if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                _loggerService.LogTrace("BATCH: Redirecting stdin from {Path}", redirection.InputPath);
             }
             if (!RedirectStandardInput(redirection.InputPath)) {
-                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning("BATCH: Failed to redirect stdin from {Path}", redirection.InputPath);
+                if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                    _loggerService.LogWarning("BATCH: Failed to redirect stdin from {Path}", redirection.InputPath);
                 }
                 RestoreStandardHandlesAfterLaunch();
                 return false;
@@ -342,12 +342,12 @@ internal sealed partial class DosBatchExecutionEngine {
         }
 
         if (!string.IsNullOrWhiteSpace(redirection.OutputPath)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                _loggerService.Verbose("BATCH: Redirecting stdout to {Path} (append={Append})", redirection.OutputPath, redirection.AppendOutput);
+            if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                _loggerService.LogTrace("BATCH: Redirecting stdout to {Path} (append={Append})", redirection.OutputPath, redirection.AppendOutput);
             }
             if (!RedirectStandardOutput(redirection.OutputPath, redirection.AppendOutput, (ushort)DosStandardHandle.Stdout)) {
-                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning("BATCH: Failed to redirect stdout to {Path}", redirection.OutputPath);
+                if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                    _loggerService.LogWarning("BATCH: Failed to redirect stdout to {Path}", redirection.OutputPath);
                 }
                 RestoreStandardHandlesAfterLaunch();
                 return false;
@@ -355,12 +355,12 @@ internal sealed partial class DosBatchExecutionEngine {
         }
 
         if (!string.IsNullOrWhiteSpace(redirection.ErrorPath)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                _loggerService.Verbose("BATCH: Redirecting stderr to {Path} (append={Append})", redirection.ErrorPath, redirection.AppendError);
+            if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                _loggerService.LogTrace("BATCH: Redirecting stderr to {Path} (append={Append})", redirection.ErrorPath, redirection.AppendError);
             }
             if (!RedirectStandardOutput(redirection.ErrorPath, redirection.AppendError, (ushort)DosStandardHandle.Stderr)) {
-                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning("BATCH: Failed to redirect stderr to {Path}", redirection.ErrorPath);
+                if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                    _loggerService.LogWarning("BATCH: Failed to redirect stderr to {Path}", redirection.ErrorPath);
                 }
                 RestoreStandardHandlesAfterLaunch();
                 return false;

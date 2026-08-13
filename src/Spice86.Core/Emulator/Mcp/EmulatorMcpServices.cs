@@ -1,5 +1,7 @@
 namespace Spice86.Core.Emulator.Mcp;
 
+using Microsoft.Extensions.Logging;
+
 using ModelContextProtocol.Server;
 
 using Spice86.Core.Emulator.CPU;
@@ -40,7 +42,7 @@ public sealed class EmulatorMcpServices(
     ExtendedMemoryManager? xmsManager,
     EmulatorBreakpointsManager breakpointsManager,
     CfgBlocksJsonExporter cfgBlocksExporter,
-    ILoggerService loggerService) {
+    ILogger loggerService) {
     public IMemory Memory { get; } = memory;
 
     public CfgBlocksJsonExporter CfgBlocksExporter { get; } = cfgBlocksExporter;
@@ -63,7 +65,7 @@ public sealed class EmulatorMcpServices(
 
     public EmulatorBreakpointsManager BreakpointsManager { get; } = breakpointsManager;
 
-    public ILoggerService LoggerService { get; } = loggerService;
+    public ILogger LoggerService { get; } = loggerService;
 
     /// <summary>
     /// Gets or sets the Intel 8042 PS/2 controller used for keyboard/mouse MCP automation.

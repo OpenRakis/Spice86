@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 namespace Spice86.Core.Emulator.OperatingSystem;
 
 using Spice86.Shared.Emulator.Storage;
@@ -26,7 +27,7 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
     private uint _version; // Used to prevent simultaneous collection changes and continued enumeration.
     private DriveLetterCollection? _keys;
     private DriveCollection? _values;
-    private readonly ILoggerService _loggerService;
+    private readonly ILogger _loggerService;
     private readonly DosMediaIdTable _mediaIdTable;
 
     /// <summary>
@@ -41,7 +42,7 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
     /// <param name="cDriveFolderPath">The host path to be mounted as C:.</param>
     /// <param name="executablePath">The host path to the DOS executable to be launched.</param>
     /// <param name="mediaIdTable">The DOS private-segment media ID table owned by this manager.</param>
-    public DosDriveManager(ILoggerService loggerService, string? cDriveFolderPath, string? executablePath, DosMediaIdTable mediaIdTable) {
+    public DosDriveManager(ILogger loggerService, string? cDriveFolderPath, string? executablePath, DosMediaIdTable mediaIdTable) {
         _loggerService = loggerService;
         _mediaIdTable = mediaIdTable;
         if (string.IsNullOrWhiteSpace(cDriveFolderPath)) {
@@ -55,8 +56,8 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
         CurrentDrive = cDrive;
         _mappedDriveCount = 3; // A:, B:, C:
         InitializeMediaDescriptors();
-        if (loggerService.IsEnabled(Serilog.Events.LogEventLevel.Verbose)) {
-            loggerService.Verbose("DOS Drives initialized: {@Drives}", Values);
+        if (loggerService.IsEnabled(LogLevel.Trace)) {
+            loggerService.LogTrace("DOS Drives initialized: {@Drives}", Values);
         }
     }
 
@@ -1076,8 +1077,8 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
         FloppyDiskDrive floppy = new() { DriveLetter = upper, MountedHostDirectory = string.Empty };
         floppy.MountImage(imageData, imagePath);
         ReplaceDrive(upper, floppy);
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("IMGMOUNT: Mounted image {Image} on drive {Drive}:", imagePath, upper);
+        if (_loggerService.IsEnabled(LogLevel.Information)) {
+            _loggerService.LogInformation("IMGMOUNT: Mounted image {Image} on drive {Drive}:", imagePath, upper);
         }
     }
 
@@ -1095,8 +1096,8 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
         } else {
             floppy.AddImage(imageData, imagePath);
         }
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("IMGMOUNT: Added image {Image} to drive {Drive}: ({Count} total)", imagePath, upper, floppy.ImageCount);
+        if (_loggerService.IsEnabled(LogLevel.Information)) {
+            _loggerService.LogInformation("IMGMOUNT: Added image {Image} to drive {Drive}: ({Count} total)", imagePath, upper, floppy.ImageCount);
         }
     }
 
@@ -1107,8 +1108,8 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
         for (int i = 0; i < MaxDriveCount; i++) {
             if (_driveMap[i] is FloppyDiskDrive floppy && floppy.HasImage) {
                 floppy.SwapToNextImage();
-                if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                    _loggerService.Information("MOUNT: Swapping drive {Drive}: to image {Image}", floppy.DriveLetter, floppy.ImagePath);
+                if (_loggerService.IsEnabled(LogLevel.Information)) {
+                    _loggerService.LogInformation("MOUNT: Swapping drive {Drive}: to image {Image}", floppy.DriveLetter, floppy.ImagePath);
                 }
             }
         }
@@ -1121,8 +1122,8 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
             return;
         }
         drive.SwapToIndex(index);
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("MOUNT: Drive {Drive}: switched to image {Image}", upper, drive.ImagePath);
+        if (_loggerService.IsEnabled(LogLevel.Information)) {
+            _loggerService.LogInformation("MOUNT: Drive {Drive}: switched to image {Image}", upper, drive.ImagePath);
         }
     }
 
@@ -1135,8 +1136,8 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
             DriveLetter = upper,
             MountedHostDirectory = ConvertUtils.ToSlashFolderPath(hostFolderPath),
         });
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Debug)) {
-            _loggerService.Debug("DosDriveManager: mounted folder {Path} as {Drive}:", hostFolderPath, upper);
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("DosDriveManager: mounted folder {Path} as {Drive}:", hostFolderPath, upper);
         }
     }
 
@@ -1154,8 +1155,8 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
         if (CurrentDrive.DriveLetter == upper) {
             CurrentDrive = newDrive;
         }
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("MOUNT: Drive {Drive}: is now backed by folder {Path}", upper, hostFolderPath);
+        if (_loggerService.IsEnabled(LogLevel.Information)) {
+            _loggerService.LogInformation("MOUNT: Drive {Drive}: is now backed by folder {Path}", upper, hostFolderPath);
         }
     }
 
@@ -1203,8 +1204,8 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
             if (CurrentDrive.DriveLetter == upper && TryGetDrive('C', out VirtualDrive? cDrive)) {
                 CurrentDrive = cDrive;
             }
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _loggerService.Information("SUBST: Drive {Drive}: removed (was {Path})", upper, drive.MountedHostDirectory);
+            if (_loggerService.IsEnabled(LogLevel.Information)) {
+                _loggerService.LogInformation("SUBST: Drive {Drive}: removed (was {Path})", upper, drive.MountedHostDirectory);
             }
         }
         return true;
@@ -1436,3 +1437,4 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
         }
     }
 }
+

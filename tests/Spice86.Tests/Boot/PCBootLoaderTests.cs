@@ -105,7 +105,7 @@ public class PCBootLoaderTests {
     private static PCBootLoaderContext CreateContext() {
         IMemory memory = new Memory(new(), new Ram(0x200000), new A20Gate(), new RealModeMmu386(), false);
         State state = new(CpuModel.INTEL_80286);
-        ILoggerService loggerService = Substitute.For<ILoggerService>();
+        ILogger loggerService = Substitute.For<ILogger>();
         PCBootLoader loader = new(memory, state, loggerService);
         return new PCBootLoaderContext(loader, memory, state);
     }

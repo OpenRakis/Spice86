@@ -1,4 +1,6 @@
-﻿namespace Spice86.Core.Emulator.InterruptHandlers.Bios;
+namespace Spice86.Core.Emulator.InterruptHandlers.Bios;
+
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
@@ -15,7 +17,7 @@ public sealed class DefaultIrqHandler : IInterruptHandler {
     private readonly BiosDataArea _biosDataArea;
     private readonly DualPic _dualPic;
     private readonly byte _irq;
-    private readonly ILoggerService _logger;
+    private readonly ILogger _logger;
 
     /// <summary>
     ///     Initializes a new instance targeting the specified IRQ line.
@@ -24,7 +26,7 @@ public sealed class DefaultIrqHandler : IInterruptHandler {
     /// <param name="irq">IRQ line serviced by this handler.</param>
     /// <param name="biosDataArea">BIOS data area used to record unexpected IRQs.</param>
     /// <param name="logger">Logger used for diagnostic output.</param>
-    public DefaultIrqHandler(DualPic dualPic, byte irq, BiosDataArea biosDataArea, ILoggerService logger) {
+    public DefaultIrqHandler(DualPic dualPic, byte irq, BiosDataArea biosDataArea, ILogger logger) {
         _dualPic = dualPic;
         _irq = irq;
         _biosDataArea = biosDataArea;
@@ -49,18 +51,18 @@ public sealed class DefaultIrqHandler : IInterruptHandler {
     ///     Handles an unexpected IRQ by recording it and acknowledging the PIC so the system continues to run.
     /// </summary>
     private void HandleIrq() {
-        _logger.Warning("BIOS default IRQ handler serviced unhandled IRQ{Irq}", _irq);
+        _logger.LogWarning("BIOS default IRQ handler serviced unhandled IRQ{Irq}", _irq);
 
         byte mask = ComputeBiosIrqMask();
-        _logger.Debug("BIOS_LAST_UNEXPECTED_IRQ previous value 0x{Prev:X2}", _biosDataArea.LastUnexpectedIrq);
+        _logger.LogDebug("BIOS_LAST_UNEXPECTED_IRQ previous value 0x{Prev:X2}", _biosDataArea.LastUnexpectedIrq);
 
         _biosDataArea.LastUnexpectedIrq = mask;
-        _logger.Debug("BIOS_LAST_UNEXPECTED_IRQ updated to 0x{Mask:X2}", mask);
+        _logger.LogDebug("BIOS_LAST_UNEXPECTED_IRQ updated to 0x{Mask:X2}", mask);
 
         _dualPic.AcknowledgeInterrupt(_irq);
-        _logger.Verbose("Acknowledged IRQ{Irq} on the PIC", _irq);
+        _logger.LogTrace("Acknowledged IRQ{Irq} on the PIC", _irq);
         _dualPic.SetIrqMask(_irq, true);
-        _logger.Verbose("Masked IRQ{Irq} to prevent repeated unexpected interrupts", _irq);
+        _logger.LogTrace("Masked IRQ{Irq} to prevent repeated unexpected interrupts", _irq);
     }
 
     /// <summary>

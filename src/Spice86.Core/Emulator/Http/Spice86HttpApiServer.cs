@@ -9,7 +9,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Http.Contracts;
@@ -24,7 +23,7 @@ using System.Linq;
 /// Built-in Kestrel HTTP API server.
 /// </summary>
 public sealed class Spice86HttpApiServer : IDisposable {
-    private readonly ILoggerService _loggerService;
+    private readonly ILogger _loggerService;
     private readonly WebApplication _webApplication;
     private bool _disposed;
 
@@ -38,15 +37,15 @@ public sealed class Spice86HttpApiServer : IDisposable {
     /// <param name="loggerService">Logger service.</param>
     /// <param name="port">TCP port to listen on.</param>
     public Spice86HttpApiServer(State state, IMemory memory,
-        IPauseHandler pauseHandler, ILoggerService loggerService, int port) {
+        IPauseHandler pauseHandler, ILogger loggerService, int port) {
         _loggerService = loggerService;
 
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
         builder.Logging.ClearProviders();
-        Serilog.SerilogServiceCollectionExtensions.AddSerilog(
-            builder.Services,
-            loggerService,
-            dispose: false);
+        builder.Logging.AddSimpleConsole(options => {
+            options.SingleLine = true;
+            options.TimestampFormat = "HH:mm:ss ";
+        });
         builder.WebHost.UseKestrel();
         builder.WebHost.UseUrls($"http://{HttpApiEndpoint.Host}:{port}");
         builder.Services.AddSingleton<IHostLifetime, EmbeddedHostLifetime>();
@@ -95,8 +94,8 @@ public sealed class Spice86HttpApiServer : IDisposable {
             Port = port;
         }
 
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("HTTP API listening on http://{Host}:{Port}", HttpApiEndpoint.Host, Port);
+        if (_loggerService.IsEnabled(LogLevel.Information)) {
+            _loggerService.LogInformation("HTTP API listening on http://{Host}:{Port}", HttpApiEndpoint.Host, Port);
         }
     }
 

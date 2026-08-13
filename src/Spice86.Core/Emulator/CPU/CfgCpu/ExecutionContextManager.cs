@@ -1,6 +1,8 @@
-﻿namespace Spice86.Core.Emulator.CPU.CfgCpu;
+namespace Spice86.Core.Emulator.CPU.CfgCpu;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
+
+using Spice86.Logging;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
@@ -10,13 +12,13 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
-using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using System.Linq;
 
 public class ExecutionContextManager : InstructionReplacer, IClearable {
-    private readonly ILoggerService _loggerService;
+    private readonly ILogger _loggerService;
+    private readonly Spice86LoggerState _loggerState;
     private readonly CfgNodeFeeder _cfgNodeFeeder;
     private readonly IMemory _memory;
     private readonly State _state;
@@ -31,9 +33,11 @@ public class ExecutionContextManager : InstructionReplacer, IClearable {
         InstructionReplacerRegistry replacerRegistry,
         FunctionCatalogue functionCatalogue,
         bool useCodeOverride,
-        ILoggerService loggerService,
+        ILogger loggerService,
+        Spice86LoggerState loggerState,
         CpuHeavyLogger? cpuHeavyLogger) : base(replacerRegistry) {
         _loggerService = loggerService;
+        _loggerState = loggerState;
         _cfgNodeFeeder = cfgNodeFeeder;
         _memory = memory;
         _state = state;
@@ -48,7 +52,7 @@ public class ExecutionContextManager : InstructionReplacer, IClearable {
         get;
         set {
             field = value;
-            _loggerService.LoggerPropertyBag.ContextIndex = value;
+            _loggerState.ContextIndex = value;
         }
     }
 
@@ -78,24 +82,24 @@ public class ExecutionContextManager : InstructionReplacer, IClearable {
     public void SignalNewExecutionContext(SegmentedAddress entryAddress, SegmentedAddress expectedReturnAddress) {
         // Save current execution context to be restored when expectedReturnAddress is reached
         _executionContextReturns.PushContextToRestore(expectedReturnAddress, CurrentExecutionContext);
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Context at depth {Depth} will be restored when {Address} is reached", CurrentExecutionContext.Depth, expectedReturnAddress);
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("Context at depth {Depth} will be restored when {Address} is reached", CurrentExecutionContext.Depth, expectedReturnAddress);
         }
         // Create a new one at a higher depth
         CurrentDepth++;
         CurrentExecutionContext = NewExecutionContext(entryAddress);
         RegisterCurrentInstructionAsEntryPoint(entryAddress);
         _cpuHeavyLogger?.LogEnteringContext(CurrentDepth, expectedReturnAddress);
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("New execution context created for depth {Depth}. Will be destroyed when {Address} is reached", CurrentDepth, expectedReturnAddress);
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("New execution context created for depth {Depth}. Will be destroyed when {Address} is reached", CurrentDepth, expectedReturnAddress);
         }
     }
 
     public void RestoreExecutionContextIfNeeded(SegmentedAddress returnAddress) {
         ExecutionContext? previousExecutionContext = _executionContextReturns.TryRestoreContext(returnAddress);
         if (previousExecutionContext != null) {
-            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                _loggerService.Verbose(@"Reached {Address}, restoring {Depth}", returnAddress, previousExecutionContext.Depth);
+            if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                _loggerService.LogTrace(@"Reached {Address}, restoring {Depth}", returnAddress, previousExecutionContext.Depth);
             }
             RestoreExecutionContext(previousExecutionContext, returnAddress);
         }
@@ -107,10 +111,10 @@ public class ExecutionContextManager : InstructionReplacer, IClearable {
         CurrentExecutionContext = previousExecutionContext;
         CurrentDepth--;
         if (CurrentExecutionContext.Depth != CurrentDepth) {
-            _loggerService.Warning(@"Restored {Depth} but Current depth is {CurrentDepth}", CurrentExecutionContext.Depth, CurrentDepth);
+            _loggerService.LogWarning(@"Restored {Depth} but Current depth is {CurrentDepth}", CurrentExecutionContext.Depth, CurrentDepth);
         }
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose(@"Execution context restored, depth is {Depth}", CurrentDepth);
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace(@"Execution context restored, depth is {Depth}", CurrentDepth);
         }
     }
 

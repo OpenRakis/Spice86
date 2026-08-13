@@ -1,10 +1,9 @@
 namespace Spice86.Core.Emulator.IOPorts;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Shared.Interfaces;
 
 /// <summary>
 /// Handles calling the correct dispatcher depending on port number for I/O reads and writes.
@@ -21,7 +20,7 @@ public class IOPortDispatcher : DefaultIOPortHandler {
     /// <param name="loggerService">The logger service.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     public IOPortDispatcher(AddressReadWriteBreakpoints ioBreakpoints,
-        State state, ILoggerService loggerService, bool failOnUnhandledPort) :
+        State state, ILogger loggerService, bool failOnUnhandledPort) :
         base(state, failOnUnhandledPort, loggerService) {
         _ioBreakpoints = ioBreakpoints;
         _failOnUnhandledPort = failOnUnhandledPort;
@@ -51,8 +50,8 @@ public class IOPortDispatcher : DefaultIOPortHandler {
         UpdateLastPortRead(port);
         _ioBreakpoints.MonitorReadAccess(port);
         if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                _loggerService.Verbose("{MethodName} {PortHandlerTypeName} {PortNumber}", nameof(ReadByte),
+            if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                _loggerService.LogTrace("{MethodName} {PortHandlerTypeName} {PortNumber}", nameof(ReadByte),
                     entry.GetType(), port);
             }
             entry.UpdateLastPortRead(port);
@@ -67,8 +66,8 @@ public class IOPortDispatcher : DefaultIOPortHandler {
         UpdateLastPortRead(port);
         _ioBreakpoints.MonitorReadAccess(port);
         if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                _loggerService.Verbose("{MethodName} {PortHandlerTypeName} {PortNumber}", nameof(ReadWord),
+            if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                _loggerService.LogTrace("{MethodName} {PortHandlerTypeName} {PortNumber}", nameof(ReadWord),
                     entry.GetType(), port);
             }
             entry.UpdateLastPortRead(port);
@@ -83,8 +82,8 @@ public class IOPortDispatcher : DefaultIOPortHandler {
         UpdateLastPortRead(port);
         _ioBreakpoints.MonitorReadAccess(port);
         if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                _loggerService.Verbose("{MethodName} {PortHandlerTypeName} {PortNumber}", nameof(ReadDWord),
+            if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                _loggerService.LogTrace("{MethodName} {PortHandlerTypeName} {PortNumber}", nameof(ReadDWord),
                     entry.GetType(), port);
             }
             entry.UpdateLastPortRead(port);
@@ -99,8 +98,8 @@ public class IOPortDispatcher : DefaultIOPortHandler {
         UpdateLastPortWrite(port, value);
         _ioBreakpoints.MonitorWriteAccess(port);
         if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                _loggerService.Verbose("{MethodName} {PortHandlerTypeName} {PortNumber} {WrittenValue}",
+            if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                _loggerService.LogTrace("{MethodName} {PortHandlerTypeName} {PortNumber} {WrittenValue}",
                     nameof(WriteByte), entry.GetType(), port, value);
             }
             entry.UpdateLastPortWrite(port, value);
@@ -115,8 +114,8 @@ public class IOPortDispatcher : DefaultIOPortHandler {
         UpdateLastPortWrite(port, value);
         _ioBreakpoints.MonitorWriteAccess(port);
         if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                _loggerService.Verbose("{MethodName} {PortHandlerTypeName} {PortNumber} {WrittenValue}",
+            if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                _loggerService.LogTrace("{MethodName} {PortHandlerTypeName} {PortNumber} {WrittenValue}",
                     nameof(WriteWord), entry.GetType(), port, value);
             }
             entry.UpdateLastPortWrite(port, value);
@@ -131,8 +130,8 @@ public class IOPortDispatcher : DefaultIOPortHandler {
         UpdateLastPortWrite(port, value);
         _ioBreakpoints.MonitorWriteAccess(port);
         if (_ioPortHandlers.TryGetValue(port, out IIOPortHandler? entry)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                _loggerService.Verbose("{MethodName} {PortHandlerTypeName} {PortNumber} {WrittenValue}",
+            if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                _loggerService.LogTrace("{MethodName} {PortHandlerTypeName} {PortNumber} {WrittenValue}",
                     nameof(WriteDWord), entry.GetType(), port, value);
             }
             entry.UpdateLastPortWrite(port, value);

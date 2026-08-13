@@ -2,6 +2,8 @@ namespace Spice86.Tests.Emulator.Devices.ExternalInput;
 
 using FluentAssertions;
 
+using Microsoft.Extensions.Logging;
+
 using NSubstitute;
 
 using Spice86.Core.Emulator.CPU;
@@ -12,13 +14,13 @@ using Spice86.Shared.Interfaces;
 using Xunit;
 
 public sealed class DeviceSchedulerTests {
-    private readonly ILoggerService _logger;
+    private readonly ILogger _logger;
     private readonly State _state;
     private readonly CyclesClock _cyclesClock;
     private readonly DeviceScheduler _scheduler;
 
     public DeviceSchedulerTests() {
-        _logger = Substitute.For<ILoggerService>();
+        _logger = Substitute.For<ILogger>();
         _state = new State(CpuModel.INTEL_8086);
         // 1000 cycles = 1 second for simplicity in tests
         _cyclesClock = new CyclesClock(_state, 1000, null, DateTimeOffset.UnixEpoch);

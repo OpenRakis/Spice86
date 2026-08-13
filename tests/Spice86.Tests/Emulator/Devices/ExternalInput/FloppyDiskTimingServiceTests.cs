@@ -2,9 +2,9 @@ namespace Spice86.Tests.Emulator.Devices.ExternalInput;
 
 using FluentAssertions;
 
-using NSubstitute;
+using Microsoft.Extensions.Logging;
 
-using Serilog.Events;
+using NSubstitute;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
@@ -20,7 +20,7 @@ public sealed class FloppyDiskTimingServiceTests {
     [Fact]
     public void ScheduleFloppyIoDelay_MaximumSpeed_ProcessesDueEventsWithoutAdvancingCycles() {
         // Arrange
-        ILoggerService logger = CreateLogger();
+        ILogger logger = CreateLogger();
         State state = new(CpuModel.INTEL_8086);
         CyclesClock clock = new(state, 1000, null, DateTimeOffset.UnixEpoch);
         DeviceScheduler scheduler = new(clock, logger, "Floppy timing test");
@@ -40,7 +40,7 @@ public sealed class FloppyDiskTimingServiceTests {
     [Fact]
     public void ScheduleFloppyIoDelay_FastSpeed_AdvancesCyclesAndFiresDueEvents() {
         // Arrange
-        ILoggerService logger = CreateLogger();
+        ILogger logger = CreateLogger();
         State state = new(CpuModel.INTEL_8086);
         CyclesClock clock = new(state, 1000, null, DateTimeOffset.UnixEpoch);
         DeviceScheduler scheduler = new(clock, logger, "Floppy timing test");
@@ -57,9 +57,9 @@ public sealed class FloppyDiskTimingServiceTests {
         state.Cycles.Should().Be(5);
     }
 
-    private static ILoggerService CreateLogger() {
-        ILoggerService logger = Substitute.For<ILoggerService>();
-        logger.IsEnabled(Arg.Any<LogEventLevel>()).Returns(false);
+    private static ILogger CreateLogger() {
+        ILogger logger = Substitute.For<ILogger>();
+        logger.IsEnabled(Arg.Any<LogLevel>()).Returns(false);
         return logger;
     }
 }

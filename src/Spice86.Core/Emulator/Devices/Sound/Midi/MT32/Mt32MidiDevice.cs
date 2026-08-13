@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 namespace Spice86.Core.Emulator.Devices.Sound.Midi.MT32;
 
 using Mt32emu;
@@ -30,15 +31,15 @@ public sealed class Mt32MidiDevice : MidiDevice {
     /// <param name="romsPath">The path to the MT-32 ROM files.</param>
     /// <param name="loggerService">The logger service to use for logging messages.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="romsPath"/> is <c>null</c> or empty.</exception>
-    public Mt32MidiDevice(SoftwareMixer mixer, string romsPath, ILoggerService loggerService) {
+    public Mt32MidiDevice(SoftwareMixer mixer, string romsPath, ILogger loggerService) {
         _context = new();
         if (string.IsNullOrWhiteSpace(romsPath)) {
             throw new ArgumentNullException(nameof(romsPath));
         }
 
         if (!LoadRoms(romsPath)) {
-            if (loggerService.IsEnabled(Serilog.Events.LogEventLevel.Error)) {
-                loggerService.Error("{MethodName} could not find roms in {RomsPath}, {ClassName} was not created",
+            if (loggerService.IsEnabled(LogLevel.Error)) {
+                loggerService.LogError("{MethodName} could not find roms in {RomsPath}, {ClassName} was not created",
                     nameof(LoadRoms), romsPath, nameof(Mt32MidiDevice));
             }
             return;

@@ -1,6 +1,6 @@
-﻿namespace Spice86.Core.Emulator.InterruptHandlers.SystemClock;
+using Microsoft.Extensions.Logging;
+namespace Spice86.Core.Emulator.InterruptHandlers.SystemClock;
 
-using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Cmos;
@@ -24,7 +24,7 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// </summary>
     public SystemClockInt1AHandler(IMemory memory, BiosDataArea biosDataArea,
         RealTimeClock realTimeClock, IFunctionHandlerProvider functionHandlerProvider,
-        Stack stack, State state, ILoggerService loggerService)
+        Stack stack, State state, ILogger loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _biosDataArea = biosDataArea;
         _realTimeClock = realTimeClock;
@@ -55,8 +55,8 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// Clock ticks at 18.2 Hz (approximately 1,193,180 / 65,536 times per second).
     /// </summary>
     public void GetSystemClockCounter() {
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("INT 1A, AH=00h - Get System Clock Counter");
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("INT 1A, AH=00h - Get System Clock Counter");
         }
 
         uint ticks = _biosDataArea.TimerCounter;
@@ -72,8 +72,8 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// Sets the system clock counter to the specified value.
     /// </summary>
     public void SetSystemClockCounter() {
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("INT 1A, AH=01h - Set System Clock Counter");
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("INT 1A, AH=01h - Set System Clock Counter");
         }
 
         uint ticks = ((uint)State.CX << 16) | State.DX;
@@ -86,8 +86,8 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// Returns time in BCD format from the Real-Time Clock.
     /// </summary>
     public void ReadTimeFromRTC(bool calledFromVm) {
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("INT 1A, AH=02h - Read Time from RTC");
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("INT 1A, AH=02h - Read Time from RTC");
         }
 
         DateTimeOffset now = _realTimeClock.Clock.CurrentDateTime;
@@ -104,8 +104,8 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// Programs should not rely on being able to set the system time in an emulated environment.
     /// </summary>
     public void SetRTCTime(bool calledFromVm) {
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("INT 1A, AH=03h - Set RTC Time (not permitted, returning error)");
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("INT 1A, AH=03h - Set RTC Time (not permitted, returning error)");
         }
         SetCarryFlag(true, calledFromVm);
     }
@@ -115,8 +115,8 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// Returns date in BCD format from the Real-Time Clock.
     /// </summary>
     public void ReadDateFromRTC(bool calledFromVm) {
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("INT 1A, AH=04h - Read Date from RTC");
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("INT 1A, AH=04h - Read Date from RTC");
         }
 
         DateTimeOffset now = _realTimeClock.Clock.CurrentDateTime;
@@ -133,8 +133,8 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// Programs should not rely on being able to set the system date in an emulated environment.
     /// </summary>
     public void SetRTCDate(bool calledFromVm) {
-        if (LoggerService.IsEnabled(LogEventLevel.Verbose)) {
-            LoggerService.Verbose("INT 1A, AH=05h - Set RTC Date (not permitted, returning error)");
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("INT 1A, AH=05h - Set RTC Date (not permitted, returning error)");
         }
         SetCarryFlag(true, calledFromVm);
     }

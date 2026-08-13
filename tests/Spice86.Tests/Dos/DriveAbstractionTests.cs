@@ -124,7 +124,7 @@ public class DriveAbstractionTests {
     [Fact]
     public void DosDriveManager_MountMemoryDrive_AddsZDrive() {
         // Arrange
-        ILoggerService logger = Substitute.For<ILoggerService>();
+        ILogger logger = Substitute.For<ILogger>();
         string tempCDir = System.IO.Path.GetTempPath();
         DosDriveManager manager = DosTestHelpers.CreateDriveManager(logger, tempCDir);
 

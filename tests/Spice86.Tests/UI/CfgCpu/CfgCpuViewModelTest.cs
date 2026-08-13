@@ -6,6 +6,8 @@ using FluentAssertions;
 
 using NSubstitute;
 
+using Spice86.Logging;
+
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
@@ -69,10 +71,12 @@ public class CfgCpuViewModelTest : IDisposable {
         private readonly CfgNodeExecutionCompiler _compiler;
         private readonly CfgNodeExecutionCompilerMonitor _monitor;
         private readonly PauseHandler _pauseHandler;
-        private readonly ILoggerService _loggerService;
+        private readonly ILogger _loggerService;
+        private readonly Spice86LoggerState _loggerState;
 
         public Harness() {
-            _loggerService = Substitute.For<ILoggerService>();
+            _loggerService = Substitute.For<ILogger>();
+            _loggerState = new Spice86LoggerState();
             AddressReadWriteBreakpoints memoryBreakpoints = new();
             AddressReadWriteBreakpoints ioBreakpoints = new();
             Memory = new Memory(memoryBreakpoints, new Ram(0x100000), new A20Gate(), new RealModeMmu386(), false);
@@ -90,6 +94,7 @@ public class CfgCpuViewModelTest : IDisposable {
                 new Spice86.Core.Emulator.Function.FunctionCatalogue(),
                 useCodeOverride: false,
                 loggerService: _loggerService,
+                loggerState: _loggerState,
                 cpuHeavyLogger: null);
             // Reuse the InstructionParser pattern from TestInstructionHelper but bind it to
             // OUR memory/state so parsed instructions land at the addresses we wire through

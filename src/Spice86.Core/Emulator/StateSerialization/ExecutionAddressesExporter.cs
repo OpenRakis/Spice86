@@ -1,9 +1,8 @@
 ﻿namespace Spice86.Core.Emulator.StateSerialization;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Shared.Emulator.Errors;
-using Spice86.Shared.Interfaces;
 
 using System.IO;
 using System.Text.Json;
@@ -12,13 +11,13 @@ using System.Text.Json;
 /// Provides functionality for dumping and reading execution flow data to and from a file.
 /// </summary>
 public class ExecutionAddressesExporter {
-    private readonly ILoggerService _loggerService;
+    private readonly ILogger _loggerService;
 
     /// <summary>
     /// Creates a new ExecutionFlowDumper instance.
     /// </summary>
     /// <param name="loggerService">The logger service implementation.</param>
-    public ExecutionAddressesExporter(ILoggerService loggerService) {
+    public ExecutionAddressesExporter(ILogger loggerService) {
         _loggerService = loggerService;
     }
 
@@ -41,10 +40,10 @@ public class ExecutionAddressesExporter {
     /// <exception cref="UnrecoverableException">Thrown if the file at the specified <paramref name="filePath"/> is not valid JSON.</exception>
     public ExecutionAddresses ReadFromFileOrCreate(string filePath) {
         if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("File path \"{FilePath}\" is blank or doesn't exist", filePath);
+            if (_loggerService.IsEnabled(LogLevel.Debug)) {
+                _loggerService.LogDebug("File path \"{FilePath}\" is blank or doesn't exist", filePath);
             }
-            return new ();
+            return new();
         }
         try {
             return JsonSerializer.Deserialize<ExecutionAddresses>(File.ReadAllText(filePath)) ?? new();

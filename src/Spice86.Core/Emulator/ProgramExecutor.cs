@@ -1,6 +1,6 @@
-﻿namespace Spice86.Core.Emulator;
+using Microsoft.Extensions.Logging;
+namespace Spice86.Core.Emulator;
 
-using Serilog.Events;
 
 using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Core.Emulator.VM;
@@ -13,7 +13,7 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public sealed class ProgramExecutor : IDisposable {
     private bool _disposed;
-    private readonly ILoggerService _loggerService;
+    private readonly ILogger _loggerService;
     private readonly EmulationLoop _emulationLoop;
     private readonly EmulatorStateSerializer _emulatorStateSerializer;
     private readonly IShutdownCoordinator _shutdownCoordinator;
@@ -35,7 +35,7 @@ public sealed class ProgramExecutor : IDisposable {
         EmulationLoop emulationLoop,
         EmulatorStateSerializer emulatorStateSerializer,
         IShutdownCoordinator shutdownCoordinator,
-        ILoggerService loggerService) {
+        ILogger loggerService) {
         _emulationLoop = emulationLoop;
         _emulatorStateSerializer = emulatorStateSerializer;
         _shutdownCoordinator = shutdownCoordinator;
@@ -49,8 +49,8 @@ public sealed class ProgramExecutor : IDisposable {
     /// </summary>
     public void Run() {
         try {
-            if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                _loggerService.Information("Starting the emulation loop");
+            if (_loggerService.IsEnabled(LogLevel.Information)) {
+                _loggerService.LogInformation("Starting the emulation loop");
             }
 
             _executionPolicy.ApplyStartupBreakpoints();
@@ -82,3 +82,4 @@ public sealed class ProgramExecutor : IDisposable {
         _disposed = true;
     }
 }
+

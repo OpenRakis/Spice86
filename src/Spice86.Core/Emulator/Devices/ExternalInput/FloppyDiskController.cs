@@ -1,5 +1,7 @@
 namespace Spice86.Core.Emulator.Devices.ExternalInput;
 
+using Microsoft.Extensions.Logging;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Shared.Emulator.Storage;
@@ -58,7 +60,7 @@ public sealed class FloppyDiskController : DefaultIOPortHandler {
         State state,
         IOPortDispatcher ioPortDispatcher,
         bool failOnUnhandledPort,
-        ILoggerService loggerService,
+        ILogger loggerService,
         DualPic interruptController,
         FloppyDiskTransferService transferService)
         : base(state, failOnUnhandledPort, loggerService) {

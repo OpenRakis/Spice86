@@ -28,7 +28,7 @@ using CfgSelectorNode = Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfM
 /// </summary>
 public class CfgNodeExecutionCompilerTest {
     private static CfgNodeExecutionCompiler CreateCompiler() {
-        ILoggerService loggerService = Substitute.For<ILoggerService>();
+        ILogger loggerService = Substitute.For<ILogger>();
         CfgNodeExecutionCompilerMonitor monitor = new(loggerService);
         return new CfgNodeExecutionCompiler(monitor, loggerService, JitMode.InterpretedThenCompiled);
     }
@@ -114,7 +114,7 @@ public class CfgNodeExecutionCompilerTest {
         IVisitableAstNode ast2 = CreateAssignmentAst(1);
         FixedAstNode node = new FixedAstNode(new SegmentedAddress(0x5000, 0), ast1);
         // Inline monitor creation so we can observe TotalSwapped for reliable synchronisation.
-        ILoggerService loggerService = Substitute.For<ILoggerService>();
+        ILogger loggerService = Substitute.For<ILogger>();
         CfgNodeExecutionCompilerMonitor monitor = new(loggerService);
         using CfgNodeExecutionCompiler compiler = new(monitor, loggerService, JitMode.InterpretedThenCompiled);
 

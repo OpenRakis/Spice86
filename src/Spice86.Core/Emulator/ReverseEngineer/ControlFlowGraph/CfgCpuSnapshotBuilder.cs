@@ -1,6 +1,6 @@
+using Microsoft.Extensions.Logging;
 namespace Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
 
-using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Function;
@@ -17,10 +17,10 @@ internal sealed class CfgCpuSnapshotBuilder {
     private readonly CfgBlockGraphExporter _graphExporter;
     private readonly CfgFunctionPartitioner _functionPartitioner;
     private readonly FunctionCatalogue _functionCatalogue;
-    private readonly ILoggerService _loggerService;
+    private readonly ILogger _loggerService;
 
     public CfgCpuSnapshotBuilder(CfgBlockGraphExporter graphExporter, CfgFunctionPartitioner functionPartitioner,
-        FunctionCatalogue functionCatalogue, ILoggerService loggerService) {
+        FunctionCatalogue functionCatalogue, ILogger loggerService) {
         _graphExporter = graphExporter;
         _functionPartitioner = functionPartitioner;
         _functionCatalogue = functionCatalogue;
@@ -48,8 +48,8 @@ internal sealed class CfgCpuSnapshotBuilder {
         try {
             return _functionPartitioner.Partition(exported.Graph, contextManager, _functionCatalogue);
         } catch (InvalidOperationException partitioningFailure) {
-            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error(partitioningFailure,
+            if (_loggerService.IsEnabled(LogLevel.Error)) {
+                _loggerService.LogError(partitioningFailure,
                     "CFG partitioning failed; dumping the block graph without partitions so the failure can be "
                     + "inspected. This indicates a CFG invariant violation: {Message}", partitioningFailure.Message);
             }
@@ -57,3 +57,4 @@ internal sealed class CfgCpuSnapshotBuilder {
         }
     }
 }
+

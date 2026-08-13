@@ -1,5 +1,7 @@
 namespace Spice86.Core.Emulator.Devices.Video;
 
+using Microsoft.Extensions.Logging;
+
 using System;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -14,7 +16,7 @@ using Spice86.Shared.Interfaces;
 public class VideoMemory : IVideoMemory {
     private readonly byte[] _latches;
     private readonly IVideoState _state;
-    private readonly ILoggerService _logger;
+    private readonly ILogger _logger;
     // 0 = not changed, 1 = changed. Use int so we can use Interlocked/Volatile APIs.
     private int _hasChanged;
 
@@ -23,7 +25,7 @@ public class VideoMemory : IVideoMemory {
     /// </summary>
     /// <param name="state">The interface that represents the state of the video card.</param>
     /// <param name="logger">The logger service implementation.</param>
-    public VideoMemory(IVideoState state, ILoggerService logger) {
+    public VideoMemory(IVideoState state, ILogger logger) {
         _state = state;
         Size = 128 * 1024; // This covers the 128kb of video memory address space from 0xA0000 to 0xBFFFF
         VRam = new byte[4 * 64 * 1024];
@@ -38,7 +40,7 @@ public class VideoMemory : IVideoMemory {
     /// <inheritdoc />
     public byte Read(uint address) {
         if (IsOutsideCurrentlyMappedRange(address)) {
-            _logger.Debug("VGA read outside mapping! Returning 0x00 for address 0x{Address:X}", address);
+            _logger.LogDebug("VGA read outside mapping! Returning 0x00 for address 0x{Address:X}", address);
 
             return 0;
         }
@@ -57,33 +59,33 @@ public class VideoMemory : IVideoMemory {
 
                 break;
             case ReadMode.ReadMode1: {
-                // Read mode 1 reads 8 pixels from the planes and compares each to a colorCompare register
-                // If the color matches, the corresponding bit in the result is set
-                // The colorDontCare bits indicate which bits in the colorCompare register to ignore.
+                    // Read mode 1 reads 8 pixels from the planes and compares each to a colorCompare register
+                    // If the color matches, the corresponding bit in the result is set
+                    // The colorDontCare bits indicate which bits in the colorCompare register to ignore.
 
-                // We take the inverse of the colorDontCare register and OR both the colorCompare and
-                // the extracted bits with them. This makes sure that the colorDontCare bits are always
-                // considered a match.
-                int colorDontCare = ~_state.GraphicsControllerRegisters.ColorDontCare;
-                int colorCompare = _state.GraphicsControllerRegisters.ColorCompare | colorDontCare;
-                // We loop through the 8 pixels in the latches, as well as the 8 bits in the result.
-                for (int i = 0; i < 8; i++) {
-                    // A pixel consists of 4 bits, one from each plane. We extract the bits from the
-                    // latches and OR them together to get the pixel.
-                    byte pixel = 0;
-                    for (int j = 0; j < 4; j++) {
-                        int bit = (_latches[j] >> i) & 1;
-                        pixel |= (byte)(bit << j);
+                    // We take the inverse of the colorDontCare register and OR both the colorCompare and
+                    // the extracted bits with them. This makes sure that the colorDontCare bits are always
+                    // considered a match.
+                    int colorDontCare = ~_state.GraphicsControllerRegisters.ColorDontCare;
+                    int colorCompare = _state.GraphicsControllerRegisters.ColorCompare | colorDontCare;
+                    // We loop through the 8 pixels in the latches, as well as the 8 bits in the result.
+                    for (int i = 0; i < 8; i++) {
+                        // A pixel consists of 4 bits, one from each plane. We extract the bits from the
+                        // latches and OR them together to get the pixel.
+                        byte pixel = 0;
+                        for (int j = 0; j < 4; j++) {
+                            int bit = (_latches[j] >> i) & 1;
+                            pixel |= (byte)(bit << j);
+                        }
+                        // Then we compare the pixel to the colorCompare register, and set the corresponding
+                        // bit in the result if they match.
+                        if ((pixel | colorDontCare) == colorCompare) {
+                            result |= (byte)(1 << i);
+                        }
                     }
-                    // Then we compare the pixel to the colorCompare register, and set the corresponding
-                    // bit in the result if they match.
-                    if ((pixel | colorDontCare) == colorCompare) {
-                        result |= (byte)(1 << i);
-                    }
+
+                    break;
                 }
-
-                break;
-            }
             default:
                 throw new InvalidOperationException($"Unknown readMode {_state.GraphicsControllerRegisters.GraphicsModeRegister.ReadMode}");
         }
@@ -102,7 +104,7 @@ public class VideoMemory : IVideoMemory {
         if (IsOutsideCurrentlyMappedRange(address)) {
             // TODO: this is most likely writing to a secondary monochrome monitor we have not implemented yet.
             if (value != 0x00) { // don't log initial memory clearing
-                _logger.Debug("VGA write outside mapping! Wrote 0x{Value:X2} '{C}' to 0x{Address:X}", value, (char)value, address);
+                _logger.LogDebug("VGA write outside mapping! Wrote 0x{Value:X2} '{C}' to 0x{Address:X}", value, (char)value, address);
             }
 
             return;

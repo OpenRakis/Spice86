@@ -1,10 +1,10 @@
+using Microsoft.Extensions.Logging;
 namespace Spice86.Core.Emulator.OperatingSystem;
 
 using System;
 using System.Collections.Generic;
 using System.Text;
 
-using Serilog.Events;
 
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
@@ -48,10 +48,10 @@ public class DosFcbManager {
     private readonly IMemory _memory;
     private readonly DosFileManager _dosFileManager;
     private readonly DosDriveManager _dosDriveManager;
-    private readonly ILoggerService _loggerService;
+    private readonly ILogger _loggerService;
 
     public
-    DosFcbManager(IMemory memory, DosFileManager dosFileManager, DosDriveManager dosDriveManager, ILoggerService loggerService) {
+    DosFcbManager(IMemory memory, DosFileManager dosFileManager, DosDriveManager dosDriveManager, ILogger loggerService) {
         _memory = memory;
         _dosFileManager = dosFileManager;
         _dosDriveManager = dosDriveManager;
@@ -1405,14 +1405,14 @@ public class DosFcbManager {
     }
 
     private void LogFcbWarning(string operation, uint fcbBaseAddress, string reason) {
-        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-            _loggerService.Warning("FCB {Operation} failed at 0x{Address:X} because {Reason}", operation, fcbBaseAddress, reason);
+        if (_loggerService.IsEnabled(LogLevel.Warning)) {
+            _loggerService.LogWarning("FCB {Operation} failed at 0x{Address:X} because {Reason}", operation, fcbBaseAddress, reason);
         }
     }
 
     private void LogFcbDebug(string operation, uint fcbBaseAddress, string detail, FcbStatus status) {
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("FCB {Operation} at 0x{Address:X} ({Detail}) -> {Status}", operation, fcbBaseAddress, detail, status);
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("FCB {Operation} at 0x{Address:X} ({Detail}) -> {Status}", operation, fcbBaseAddress, detail, status);
         }
     }
 }

@@ -1,5 +1,7 @@
 namespace Spice86.Core.Emulator.Devices.Sound;
 
+using Microsoft.Extensions.Logging;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Shared.Interfaces;
@@ -23,7 +25,7 @@ public class GravisUltraSound : DefaultIOPortHandler {
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public GravisUltraSound(State state, IOPortDispatcher ioPortDispatcher, bool failOnUnhandledPort,
-        ILoggerService loggerService) : base(state, failOnUnhandledPort, loggerService) {
+        ILogger loggerService) : base(state, failOnUnhandledPort, loggerService) {
         InitPortHandlers(ioPortDispatcher);
     }
 

@@ -1,6 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.VM;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
@@ -8,7 +8,6 @@ using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM.CpuSpeedLimit;
-using Spice86.Shared.Interfaces;
 
 using System.Diagnostics;
 
@@ -17,7 +16,7 @@ using System.Diagnostics;
 /// triggers hardware timers, and keeps DMA transfers moving forward.
 /// </summary>
 public class EmulationLoop {
-    private readonly ILoggerService _loggerService;
+    private readonly ILogger _loggerService;
     private readonly CfgCpu _cpu;
     private readonly FunctionHandler _functionHandler;
     private readonly State _cpuState;
@@ -58,7 +57,7 @@ public class EmulationLoop {
         DeviceScheduler.DeviceScheduler emulationLoopScheduler,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         IPauseHandler pauseHandler, InputEventHub inputEventQueue,
-        ICyclesLimiter cyclesLimiter, ILoggerService loggerService) {
+        ICyclesLimiter cyclesLimiter, ILogger loggerService) {
         _loggerService = loggerService;
         _cpu = cpu;
         _functionHandler = functionHandler;
@@ -89,14 +88,14 @@ public class EmulationLoop {
             StartRunLoop(_functionHandler);
         } catch (HaltRequestedException) {
             // Actually a signal-generated code requested Exit
-            _loggerService.Information("Emulation halted by request.");
+            _loggerService.LogInformation("Emulation halted by request.");
             return;
         } catch (InvalidVMOperationException invalidVmOperationException) {
-            _loggerService.Error(invalidVmOperationException,
+            _loggerService.LogError(invalidVmOperationException,
                 "Emulation halted because of an invalid virtual machine operation.");
             throw;
         } catch (Exception e) {
-            _loggerService.Error(e, "Emulation failed with unhandled exception.");
+            _loggerService.LogError(e, "Emulation failed with unhandled exception.");
             throw new InvalidVMOperationException(_cpuState, e);
         }
 
@@ -144,14 +143,14 @@ public class EmulationLoop {
     ///     Outputs accumulated performance statistics to the logger.
     /// </summary>
     private void OutputPerfStats() {
-        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
+        if (_loggerService.IsEnabled(LogLevel.Warning)) {
             long elapsedTimeInMilliseconds = _performanceStopwatch.ElapsedMilliseconds;
             if (elapsedTimeInMilliseconds == 0) {
                 elapsedTimeInMilliseconds = 1;
             }
 
             long cyclesPerSeconds = _cpuState.Cycles * 1000 / elapsedTimeInMilliseconds;
-            _loggerService.Warning(
+            _loggerService.LogWarning(
                 "Executed {Cycles} instructions in {ElapsedTimeMilliSeconds}ms. {CyclesPerSeconds} Instructions per seconds on average over run.",
                 _cpuState.Cycles, elapsedTimeInMilliseconds, cyclesPerSeconds);
         }

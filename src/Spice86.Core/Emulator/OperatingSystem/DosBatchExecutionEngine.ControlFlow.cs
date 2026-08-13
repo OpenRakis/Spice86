@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.OperatingSystem.Batch;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
@@ -14,21 +14,21 @@ internal sealed partial class DosBatchExecutionEngine {
         launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
 
         if (!TryExtractFirstToken(arguments, out string targetToken, out string tail)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("BATCH: CALL - no target token in: {Args}", arguments);
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning("BATCH: CALL - no target token in: {Args}", arguments);
             }
             return false;
         }
 
         string resolvedTargetToken = ResolveCommandTokenForCurrentBatchContext(targetToken);
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: CALL target='{Target}' resolved='{Resolved}' tail='{Tail}'",
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("BATCH: CALL target='{Target}' resolved='{Resolved}' tail='{Tail}'",
                 targetToken, resolvedTargetToken, tail);
         }
 
         if (resolvedTargetToken.StartsWith(':')) {
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("BATCH: CALL - label-style target (subroutine): {Target}", resolvedTargetToken);
+            if (_loggerService.IsEnabled(LogLevel.Debug)) {
+                _loggerService.LogDebug("BATCH: CALL - label-style target (subroutine): {Target}", resolvedTargetToken);
             }
             string[] callArguments = ParseArguments(tail);
             if (!TryHandleCallLabel(resolvedTargetToken, callArguments, out launchRequest)) {
@@ -40,14 +40,14 @@ internal sealed partial class DosBatchExecutionEngine {
         string[] callArguments2 = ParseArguments(tail);
 
         if (ResolveBatchCommandPath(resolvedTargetToken, out string batchTargetPath)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("BATCH: CALL - pushing batch file: '{Path}' with {ArgCount} args",
+            if (_loggerService.IsEnabled(LogLevel.Debug)) {
+                _loggerService.LogDebug("BATCH: CALL - pushing batch file: '{Path}' with {ArgCount} args",
                     batchTargetPath, callArguments2.Length);
             }
             if (!PushBatchFile(batchTargetPath, callArguments2)) {
                 _lastExitCode = 1;
-                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning("BATCH: CALL - failed to push batch file: {Path}", batchTargetPath);
+                if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                    _loggerService.LogWarning("BATCH: CALL - failed to push batch file: {Path}", batchTargetPath);
                 }
                 return false;
             }
@@ -55,8 +55,8 @@ internal sealed partial class DosBatchExecutionEngine {
             return TryPump(out launchRequest);
         }
 
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: CALL - launching external program: '{Program}'", resolvedTargetToken);
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("BATCH: CALL - launching external program: '{Program}'", resolvedTargetToken);
         }
         launchRequest = new ProgramLaunchRequest(resolvedTargetToken, JoinArguments(callArguments2), commandRedirection);
         return true;
@@ -66,8 +66,8 @@ internal sealed partial class DosBatchExecutionEngine {
         launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
 
         if (_batchFileContexts.Count == 0) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("BATCH: CALL :LABEL - no batch context, ignoring");
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning("BATCH: CALL :LABEL - no batch context, ignoring");
             }
             return false;
         }
@@ -78,8 +78,8 @@ internal sealed partial class DosBatchExecutionEngine {
         }
 
         if (string.IsNullOrWhiteSpace(label)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("BATCH: CALL :LABEL - empty label, returning");
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning("BATCH: CALL :LABEL - empty label, returning");
             }
             return true;
         }
@@ -88,17 +88,17 @@ internal sealed partial class DosBatchExecutionEngine {
 
         string[] subroutineLines = ExtractSubroutineLines(currentContext, label);
         if (subroutineLines.Length == 0) {
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("BATCH: CALL :LABEL - label not found: {Label}, continuing", label);
+            if (_loggerService.IsEnabled(LogLevel.Debug)) {
+                _loggerService.LogDebug("BATCH: CALL :LABEL - label not found: {Label}, continuing", label);
             }
             return true;
         }
 
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: CALL :LABEL - label='{Label}' subroutineLines={Count}",
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("BATCH: CALL :LABEL - label='{Label}' subroutineLines={Count}",
                 label, subroutineLines.Length);
             for (int i = 0; i < subroutineLines.Length; i++) {
-                _loggerService.Debug("BATCH: CALL :LABEL subroutine[{Index}]: {Line}", i, subroutineLines[i]);
+                _loggerService.LogDebug("BATCH: CALL :LABEL subroutine[{Index}]: {Line}", i, subroutineLines[i]);
             }
         }
 
@@ -143,8 +143,8 @@ internal sealed partial class DosBatchExecutionEngine {
 
     internal bool HandleGoto(string arguments) {
         if (_batchFileContexts.Count == 0) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("BATCH: GOTO outside of batch context, ignoring");
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning("BATCH: GOTO outside of batch context, ignoring");
             }
             return false;
         }
@@ -154,8 +154,8 @@ internal sealed partial class DosBatchExecutionEngine {
             label = label[1..];
         }
 
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: GOTO label={Label}", label);
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("BATCH: GOTO label={Label}", label);
         }
 
         if (string.IsNullOrWhiteSpace(label)) {
@@ -165,13 +165,13 @@ internal sealed partial class DosBatchExecutionEngine {
 
         BatchFileContext context = _batchFileContexts.Peek();
         if (!context.GoToLabel(label)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("BATCH: GOTO - label not found: {Label}, popping context", label);
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning("BATCH: GOTO - label not found: {Label}, popping context", label);
             }
             WriteToStandardOutput($"Label not found - {label}\r\n");
             _batchFileContexts.Pop();
-        } else if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: GOTO - jumped to label: {Label}", label);
+        } else if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("BATCH: GOTO - jumped to label: {Label}", label);
         }
 
         return false;
@@ -182,8 +182,8 @@ internal sealed partial class DosBatchExecutionEngine {
             return false;
         }
 
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("BATCH: SHIFT - shifting arguments");
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("BATCH: SHIFT - shifting arguments");
         }
         BatchFileContext context = _batchFileContexts.Peek();
         context.Shift();
@@ -196,8 +196,8 @@ internal sealed partial class DosBatchExecutionEngine {
         string working = arguments.TrimStart();
         bool hasNot = ConsumeKeyword(ref working, "NOT");
 
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: IF not={Not} args={Args}", hasNot, working);
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("BATCH: IF not={Not} args={Args}", hasNot, working);
         }
 
         if (ConsumeKeyword(ref working, "ERRORLEVEL")) {
@@ -211,8 +211,8 @@ internal sealed partial class DosBatchExecutionEngine {
             }
 
             bool condition = _lastExitCode >= threshold;
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("BATCH: IF ERRORLEVEL {Threshold} - exitCode={ExitCode} condition={Condition} (with NOT={Not})",
+            if (_loggerService.IsEnabled(LogLevel.Debug)) {
+                _loggerService.LogDebug("BATCH: IF ERRORLEVEL {Threshold} - exitCode={ExitCode} condition={Condition} (with NOT={Not})",
                     threshold, _lastExitCode, condition, hasNot);
             }
             if (condition != hasNot) {
@@ -229,8 +229,8 @@ internal sealed partial class DosBatchExecutionEngine {
             }
 
             bool exists = DoesFileExist(fileToken);
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("BATCH: IF EXIST {File} - exists={Exists} (with NOT={Not})",
+            if (_loggerService.IsEnabled(LogLevel.Debug)) {
+                _loggerService.LogDebug("BATCH: IF EXIST {File} - exists={Exists} (with NOT={Not})",
                     fileToken, exists, hasNot);
             }
             if (exists != hasNot) {
@@ -253,8 +253,8 @@ internal sealed partial class DosBatchExecutionEngine {
         }
 
         bool equals = string.Equals(left, rightToken, StringComparison.Ordinal);
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: IF compare left={Left} == right={Right} equals={Equals} (with NOT={Not})",
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("BATCH: IF compare left={Left} == right={Right} equals={Equals} (with NOT={Not})",
                 left, rightToken, equals, hasNot);
         }
         if (equals != hasNot) {
@@ -299,8 +299,8 @@ internal sealed partial class DosBatchExecutionEngine {
     internal bool TryHandleFor(string arguments, CommandRedirection commandRedirection, out LaunchRequest launchRequest) {
         launchRequest = ContinueBatchExecutionLaunchRequest.Instance;
 
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: FOR {Args}", arguments);
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("BATCH: FOR {Args}", arguments);
         }
 
         string working = arguments.TrimStart();
@@ -351,11 +351,11 @@ internal sealed partial class DosBatchExecutionEngine {
             generatedCommands[i] = AppendRedirection(generatedCommand, commandRedirection);
         }
 
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: FOR variable={Var} list={ListCount} items, template={Template}",
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("BATCH: FOR variable={Var} list={ListCount} items, template={Template}",
                 variableName, listValues.Length, commandTemplate);
             for (int g = 0; g < generatedCommands.Length; g++) {
-                _loggerService.Debug("BATCH: FOR generated[{Index}]: {Cmd}", g, generatedCommands[g]);
+                _loggerService.LogDebug("BATCH: FOR generated[{Index}]: {Cmd}", g, generatedCommands[g]);
             }
         }
 
@@ -365,17 +365,17 @@ internal sealed partial class DosBatchExecutionEngine {
 
     private bool PushBatchFile(string dosPath, string[] arguments) {
         if (!TryReadBatchFile(dosPath, out string[] lines)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("BATCH: Failed to read batch file: {DosPath}", dosPath);
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning("BATCH: Failed to read batch file: {DosPath}", dosPath);
             }
             return false;
         }
 
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("BATCH: Pushing batch file: '{DosPath}' ({LineCount} lines, {ArgCount} args, depth={Depth})",
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("BATCH: Pushing batch file: '{DosPath}' ({LineCount} lines, {ArgCount} args, depth={Depth})",
                 dosPath, lines.Length, arguments.Length, _batchFileContexts.Count + 1);
             for (int l = 0; l < lines.Length; l++) {
-                _loggerService.Debug("BATCH:   [{LineNum}] {Line}", l, lines[l]);
+                _loggerService.LogDebug("BATCH:   [{LineNum}] {Line}", l, lines[l]);
             }
         }
         BatchFileContext context = new BatchFileContext(dosPath, lines, arguments, Array.Empty<string>());
@@ -395,8 +395,8 @@ internal sealed partial class DosBatchExecutionEngine {
 
         DosFileOperationResult openResult = _dosFileManager.OpenFileOrDevice(normalizedPath, FileAccessMode.ReadOnly);
         if (openResult.IsError || openResult.Value == null) {
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("BATCH: could not open file {DosPath}", normalizedPath);
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning("BATCH: could not open file {DosPath}", normalizedPath);
             }
 
             return false;

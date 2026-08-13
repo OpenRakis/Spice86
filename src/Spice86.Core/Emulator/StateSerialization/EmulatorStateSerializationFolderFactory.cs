@@ -1,8 +1,7 @@
 namespace Spice86.Core.Emulator.StateSerialization;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
-using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using System.Security.Cryptography;
@@ -10,7 +9,7 @@ using System.Security.Cryptography;
 /// <summary>
 /// Computes context information for saving or loading emulator state.
 /// </summary>
-public class EmulatorStateSerializationFolderFactory(ILoggerService loggerService) {
+public class EmulatorStateSerializationFolderFactory(ILogger loggerService) {
     /// <summary>
     /// Creates an instance of <see cref="EmulatorStateSerializationFolder"/>.
     /// The folder is created on the disk either from configuration, from env var or from current path. 
@@ -31,8 +30,8 @@ public class EmulatorStateSerializationFolderFactory(ILoggerService loggerServic
         // Always append program hash as subdirectory to isolate dumps per executable
         string dataDirectory = Path.GetFullPath(Path.Join(baseDirectory, programHash));
         CreateIfNotExist(dataDirectory);
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Data folder for program hash {ProgramHash} is here {DumpDirectory}",
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("Data folder for program hash {ProgramHash} is here {DumpDirectory}",
                 programHash, dataDirectory);
         }
 

@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.StateSerialization;
 
-using Spice86.Shared.Interfaces;
+using Microsoft.Extensions.Logging;
 
 /// <summary>
 /// An abstract class that provides a base implementation for recording execution data.
@@ -8,7 +8,7 @@ using Spice86.Shared.Interfaces;
 public abstract class EmulationStateDataIoHandler {
     private readonly EmulatorStateSerializationFolder _emulatorStateSerializationFolder;
 
-    protected ILoggerService LoggerService { get; }
+    protected ILogger LoggerService { get; }
 
     /// <summary>
     /// The directory where data will be saved.
@@ -20,7 +20,7 @@ public abstract class EmulationStateDataIoHandler {
     /// </summary>
     /// <param name="emulatorStateSerializationFolder">Where data will be saved / loaded.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    protected EmulationStateDataIoHandler(EmulatorStateSerializationFolder emulatorStateSerializationFolder, ILoggerService loggerService) {
+    protected EmulationStateDataIoHandler(EmulatorStateSerializationFolder emulatorStateSerializationFolder, ILogger loggerService) {
         LoggerService = loggerService;
         _emulatorStateSerializationFolder = emulatorStateSerializationFolder;
     }
@@ -39,17 +39,17 @@ public abstract class EmulationStateDataIoHandler {
     /// Gets name of the file the Cpu registers dump.
     /// </summary>
     protected string CpuRegistersFile => GenerateDumpFileName($"CpuRegisters.json");
-    
+
     /// <summary>
     /// Gets name of the file the memory dump.
     /// </summary>
     protected string MemoryFile => GenerateDumpFileName($"MemoryDump.bin");
-    
+
     /// <summary>
     /// Gets name of the file the ASM listing dump.
     /// </summary>
     protected string ListingFile => GenerateDumpFileName($"Listing.asm");
-    
+
     /// <summary>
     /// Gets name of the file the ASM listing dump.
     /// </summary>

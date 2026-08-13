@@ -7,12 +7,12 @@
         <PackageId>Spice86.Shared</PackageId>
     </PropertyGroup>
     <PropertyGroup>
-        <EnvironmentVariables>
-            AVALONIA_TELEMETRY_OPTOUT=1
+        <EnvironmentVariables> AVALONIA_TELEMETRY_OPTOUT=1
         </EnvironmentVariables>
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="Avalonia"/>
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"/>
         <PackageReference Include="Serilog"/>
     </ItemGroup>
     <ItemGroup>

@@ -1,4 +1,5 @@
-﻿namespace Spice86.Core.Emulator.Gdb;
+using Microsoft.Extensions.Logging;
+namespace Spice86.Core.Emulator.Gdb;
 
 using Spice86.Core.CLI.RuntimeOptions;
 using Spice86.Core.Emulator.CPU;
@@ -14,7 +15,7 @@ using Spice86.Shared.Interfaces;
 /// A GDB server that allows for remote debugging of the emulator.
 /// </summary>
 public sealed class GdbServer : IDisposable {
-    private readonly ILoggerService _loggerService;
+    private readonly ILogger _loggerService;
     private readonly GdbServerOptions _options;
     private bool _disposed;
     private bool _isRunning = true;
@@ -38,7 +39,7 @@ public sealed class GdbServer : IDisposable {
     /// <param name="pauseHandler">The class that enables us to pause the emulator.</param>
     /// <param name="emulatorBreakpointsManager">The class used to store and retrieve breakpoints.</param>
     /// <param name="emulatorStateSerializer">The class that is responsible for serializing the state of the emulator to a directory.</param>
-    /// <param name="loggerService">The ILoggerService implementation used to log messages.</param>
+    /// <param name="loggerService">The logger implementation used to log messages.</param>
     public GdbServer(GdbServerOptions options,
         IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider,
@@ -46,7 +47,7 @@ public sealed class GdbServer : IDisposable {
         IPauseHandler pauseHandler,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         EmulatorStateSerializer emulatorStateSerializer,
-        ILoggerService loggerService) {
+        ILogger loggerService) {
         _loggerService = loggerService;
         _pauseHandler = pauseHandler;
         _state = state;
@@ -102,7 +103,7 @@ public sealed class GdbServer : IDisposable {
                 gdbCommandHandler.RunCommand(command);
             }
         }
-        _loggerService.Verbose("Client disconnected");
+        _loggerService.LogTrace("Client disconnected");
     }
 
     /// <summary>
@@ -110,8 +111,8 @@ public sealed class GdbServer : IDisposable {
     /// </summary>
     private void RunServer() {
         int port = _options.Port;
-        if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-            _loggerService.Information("Starting GDB server on port {Port} ...", port);
+        if (_loggerService.IsEnabled(LogLevel.Information)) {
+            _loggerService.LogInformation("Starting GDB server on port {Port} ...", port);
         }
         try {
             while (_isRunning) {
@@ -123,20 +124,20 @@ public sealed class GdbServer : IDisposable {
                     _gdbIo = null;
                 } catch (IOException e) {
                     if (_isRunning) {
-                        _loggerService.Error(e, "Error in the GDB server, restarting it...");
+                        _loggerService.LogError(e, "Error in the GDB server, restarting it...");
                     } else {
                         // Error occurred while stopping the server.
-                        _loggerService.Error(e, "GDB Server connection closed and server is not running. Terminating it");
+                        _loggerService.LogError(e, "GDB Server connection closed and server is not running. Terminating it");
                     }
                 }
             }
         } catch (Exception e) {
-            _loggerService.Error(e, "Unhandled error in the GDB server. Stopping it.");
+            _loggerService.LogError(e, "Unhandled error in the GDB server. Stopping it.");
         } finally {
             _state.IsRunning = false;
             _pauseHandler.Resume();
-            if (_loggerService.IsEnabled(Serilog.Events.LogEventLevel.Information)) {
-                _loggerService.Information("GDB server stopped");
+            if (_loggerService.IsEnabled(LogLevel.Information)) {
+                _loggerService.LogInformation("GDB server stopped");
             }
         }
     }

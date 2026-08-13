@@ -67,14 +67,14 @@ public class VideoMemoryTests {
     }
 
     private static VideoMemory CreateVideoMemory(VideoState state) {
-        ILoggerService logger = Substitute.For<ILoggerService>();
+        ILogger logger = Substitute.For<ILogger>();
         return new VideoMemory(state, logger);
     }
 
         [Fact]
         public void GetLinearSpan_ReturnsContiguousPixelData() {
             VideoState state = new();
-            ILoggerService logger = Substitute.For<ILoggerService>();
+            ILogger logger = Substitute.For<ILogger>();
             VideoMemory mem = new VideoMemory(state, logger);
 
             for (int i = 0; i < 16; i++) {
@@ -91,7 +91,7 @@ public class VideoMemoryTests {
         [Fact]
         public void GetLinearSpan_WithOffset_ReturnsCorrectData() {
             VideoState state = new();
-            ILoggerService logger = Substitute.For<ILoggerService>();
+            ILogger logger = Substitute.For<ILogger>();
             VideoMemory mem = new VideoMemory(state, logger);
 
             mem.VRam[100] = 0xAA;

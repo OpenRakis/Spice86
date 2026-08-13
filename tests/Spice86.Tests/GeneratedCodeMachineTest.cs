@@ -492,7 +492,7 @@ public sealed class GeneratedCodeMachineTest {
             MaxCycles = long.MaxValue,
             FailOnUnhandledPort = true,
             ConfigureMachine = machine => {
-                handler = new Test386PostPortHandler(machine.CpuState, Substitute.For<ILoggerService>(), machine.IoPortDispatcher);
+                handler = new Test386PostPortHandler(machine.CpuState, Substitute.For<ILogger>(), machine.IoPortDispatcher);
             }
         };
 

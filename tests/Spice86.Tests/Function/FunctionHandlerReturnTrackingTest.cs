@@ -122,7 +122,7 @@ public class FunctionHandlerReturnTrackingTest {
             SP = 0x0100
         };
         FunctionCatalogue functionCatalogue = new();
-        ILoggerService loggerService = Substitute.For<ILoggerService>();
+        ILogger loggerService = Substitute.For<ILogger>();
         FunctionHandler functionHandler = new(memory, state, functionCatalogue, false, loggerService);
         return new TestContext(memory, state, functionCatalogue, functionHandler);
     }

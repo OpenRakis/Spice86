@@ -1,6 +1,6 @@
+using Microsoft.Extensions.Logging;
 namespace Spice86.Core.Emulator.OperatingSystem.Devices;
 
-using Serilog.Events;
 
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
@@ -15,7 +15,7 @@ using Spice86.Shared.Interfaces;
 /// hvp, sgr, eid, eil, scp, rcp, sm, rm, il, d_l).
 /// </summary>
 public sealed class AnsiSequenceHandler {
-    private readonly ILoggerService _loggerService;
+    private readonly ILogger _loggerService;
     private readonly BiosDataArea _biosDataArea;
     private readonly IVgaFunctionality _vga;
     private readonly AnsiState _state;
@@ -34,7 +34,7 @@ public sealed class AnsiSequenceHandler {
     /// that are drained before polling the BIOS keyboard. This queue serves the same purpose,
     /// ensuring DSR responses bypass the key reassignment lookup in the Read path.
     /// </param>
-    public AnsiSequenceHandler(ILoggerService loggerService, BiosDataArea biosDataArea,
+    public AnsiSequenceHandler(ILogger loggerService, BiosDataArea biosDataArea,
         IVgaFunctionality vga, AnsiState state, Queue<byte> stuffAheadBuffer) {
         _loggerService = loggerService;
         _biosDataArea = biosDataArea;
@@ -103,8 +103,8 @@ public sealed class AnsiSequenceHandler {
                 DeviceStatusReport();
                 break;
             default:
-                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning("ANSI: unsupported CSI command '{Command}'", command);
+                if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                    _loggerService.LogWarning("ANSI: unsupported CSI command '{Command}'", command);
                 }
                 break;
         }
@@ -313,8 +313,8 @@ public sealed class AnsiSequenceHandler {
             case 46: _state.Attribute = (byte)((_state.Attribute & 0x8F) | 0x30); break;
             case 47: _state.Attribute = (byte)((_state.Attribute & 0x8F) | 0x70); break;
             default:
-                if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                    _loggerService.Information("ANSI: unsupported SGR code {Code}", code);
+                if (_loggerService.IsEnabled(LogLevel.Information)) {
+                    _loggerService.LogInformation("ANSI: unsupported SGR code {Code}", code);
                 }
                 break;
         }
@@ -491,3 +491,4 @@ public sealed class AnsiSequenceHandler {
         _state.KeyRedefinitions[keyCode] = replacement;
     }
 }
+

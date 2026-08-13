@@ -1,6 +1,6 @@
+using Microsoft.Extensions.Logging;
 namespace Spice86.Core.Emulator.Devices.Timer;
 
-using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
@@ -66,8 +66,8 @@ public sealed class PitTimer : DefaultIOPortHandler, IPitControl, ITimeMultiplie
     /// <param name="clock">The emulated clock.</param>
     /// <param name="loggerService">Logger for trace output.</param>
     /// <param name="failOnUnhandledPort">Whether to throw on unhandled port access.</param>
-    public PitTimer(IOPortDispatcher ioPortDispatcher, State state, DualPic pic, IPitSpeaker pcSpeaker, 
-        DeviceScheduler scheduler, IEmulatedClock clock, ILoggerService loggerService, bool failOnUnhandledPort)
+    public PitTimer(IOPortDispatcher ioPortDispatcher, State state, DualPic pic, IPitSpeaker pcSpeaker,
+        DeviceScheduler scheduler, IEmulatedClock clock, ILogger loggerService, bool failOnUnhandledPort)
         : base(state, failOnUnhandledPort, loggerService) {
         _ioPortDispatcher = ioPortDispatcher;
         _pic = pic;
@@ -151,8 +151,8 @@ public sealed class PitTimer : DefaultIOPortHandler, IPitControl, ITimeMultiplie
         ref PitChannel channel = ref Channel2;
         PitMode mode = channel.Mode;
 
-        if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-            _loggerService.Debug("Gate 2 input changed from {PreviousState} to {CurrentState} in mode {Mode}",
+        if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug("Gate 2 input changed from {PreviousState} to {CurrentState} in mode {Mode}",
                 _isChannel2GateHigh, input, PitModeToString(mode));
         }
 
@@ -194,8 +194,8 @@ public sealed class PitTimer : DefaultIOPortHandler, IPitControl, ITimeMultiplie
             case PitMode.SoftwareStrobe:
             case PitMode.HardwareStrobe:
             case PitMode.Inactive:
-                if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                    _loggerService.Warning("Unsupported gate 2 mode {Mode}", PitModeToString(mode));
+                if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                    _loggerService.LogWarning("Unsupported gate 2 mode {Mode}", PitModeToString(mode));
                 }
 
                 break;
@@ -217,12 +217,12 @@ public sealed class PitTimer : DefaultIOPortHandler, IPitControl, ITimeMultiplie
     /// <remarks>Non-positive inputs reset the multiplier to its neutral value (1.0).</remarks>
     public void SetTimeMultiplier(double value) {
         if (value <= 0) {
-            _loggerService.Warning("Requested time multiplier {Multiplier} is negative; reverting to 1.0.", value);
+            _loggerService.LogWarning("Requested time multiplier {Multiplier} is negative; reverting to 1.0.", value);
             _timeMultiplier = 1.0;
             return;
         }
 
-        _loggerService.Debug("Time multiplier set to {Multiplier}", value);
+        _loggerService.LogDebug("Time multiplier set to {Multiplier}", value);
 
         _timeMultiplier = value;
     }
@@ -340,8 +340,8 @@ public sealed class PitTimer : DefaultIOPortHandler, IPitControl, ITimeMultiplie
             case PitMode.Inactive:
             default:
                 // Modes 1 and 5 depend on external gating, and mode 7 is unused, so treat them as illegal in this read path.
-                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                    _loggerService.Error("Illegal Mode {Mode} for reading output", PitModeToString(channel.Mode));
+                if (_loggerService.IsEnabled(LogLevel.Error)) {
+                    _loggerService.LogError("Illegal Mode {Mode} for reading output", PitModeToString(channel.Mode));
                 }
 
                 return true;
@@ -480,8 +480,8 @@ public sealed class PitTimer : DefaultIOPortHandler, IPitControl, ITimeMultiplie
             case PitMode.HardwareStrobe:
             case PitMode.Inactive:
             default:
-                if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                    _loggerService.Error("Illegal Mode {Mode} for reading counter {Counter}",
+                if (_loggerService.IsEnabled(LogLevel.Error)) {
+                    _loggerService.LogError("Illegal Mode {Mode} for reading counter {Counter}",
                         PitModeToString(channel.Mode), count);
                 }
 
@@ -559,14 +559,14 @@ public sealed class PitTimer : DefaultIOPortHandler, IPitControl, ITimeMultiplie
                     }
 
                     _scheduler.AddEvent(PitChannel0Event, channel.Delay);
-                } else if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-                    _loggerService.Information("PIT 0 Timer set without new control word");
+                } else if (_loggerService.IsEnabled(LogLevel.Information)) {
+                    _loggerService.LogInformation("PIT 0 Timer set without new control word");
                 }
 
-                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
+                if (_loggerService.IsEnabled(LogLevel.Trace)) {
                     double frequency = 1000.0 / channel.Delay;
                     string pitMode = PitModeToString(channel.Mode);
-                    _loggerService.Verbose("PIT 0 Timer at {Frequency:F4} Hz {PitMode}", frequency, pitMode);
+                    _loggerService.LogTrace("PIT 0 Timer at {Frequency:F4} Hz {PitMode}", frequency, pitMode);
                 }
 
                 break;
@@ -576,7 +576,7 @@ public sealed class PitTimer : DefaultIOPortHandler, IPitControl, ITimeMultiplie
                 break;
 
             default:
-                _loggerService.Error("PIT: Illegal timer selected for writing: {Channel}", channelNum);
+                _loggerService.LogError("PIT: Illegal timer selected for writing: {Channel}", channelNum);
                 break;
         }
 
@@ -687,15 +687,15 @@ public sealed class PitTimer : DefaultIOPortHandler, IPitControl, ITimeMultiplie
             // so the interrupt is cleared immediately, while modes 2 and 3 start high. The prior output level guards the
             // edge detection, so only low-to-high transitions trigger the activation path.
             case 0: {
-                _scheduler.RemoveEvents(PitChannel0Event);
-                if (channel.Mode != PitMode.InterruptOnTerminalCount && !oldOutput) {
-                    _pic.ActivateIrq(0);
-                } else {
-                    _pic.DeactivateIrq(0);
-                }
+                    _scheduler.RemoveEvents(PitChannel0Event);
+                    if (channel.Mode != PitMode.InterruptOnTerminalCount && !oldOutput) {
+                        _pic.ActivateIrq(0);
+                    } else {
+                        _pic.DeactivateIrq(0);
+                    }
 
-                break;
-            }
+                    break;
+                }
             case 2:
                 _pcSpeaker.SetCounter(0, PitMode.SquareWave);
                 break;
@@ -886,3 +886,4 @@ public sealed class PitTimer : DefaultIOPortHandler, IPitControl, ITimeMultiplie
         SuppressCountLatch = 0x20
     }
 }
+

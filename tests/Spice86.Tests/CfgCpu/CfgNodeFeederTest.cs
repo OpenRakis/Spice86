@@ -2,6 +2,8 @@
 
 using NSubstitute;
 
+using Spice86.Logging;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
@@ -40,7 +42,8 @@ public class CfgNodeFeederTest : IDisposable {
     private CfgNodeExecutionCompiler? _compiler;
 
     private (CfgNodeFeeder, ExecutionContext) CreateCfgNodeFeeder() {
-        ILoggerService loggerService = Substitute.For<ILoggerService>();
+        ILogger loggerService = Substitute.For<ILogger>();
+        Spice86LoggerState loggerState = new();
         AddressReadWriteBreakpoints memoryBreakpoints = new();
         AddressReadWriteBreakpoints ioBreakpoints = new();
         _memory = new(memoryBreakpoints, new Ram(64), new A20Gate(), new RealModeMmu386(), false);
@@ -51,7 +54,7 @@ public class CfgNodeFeederTest : IDisposable {
         _compiler = new CfgNodeExecutionCompiler(new CfgNodeExecutionCompilerMonitor(loggerService), loggerService, JitMode.InterpretedOnly);
         CfgNodeFeeder cfgNodeFeeder = new(_memory, _state, emulatorBreakpointsManager, replacerRegistry,
             _compiler, new SequentialIdAllocator(), enableSpeculativeExploration: false);
-        ExecutionContextManager executionContextManager = new(_memory, _state, cfgNodeFeeder, replacerRegistry, new(), false, loggerService, null);
+        ExecutionContextManager executionContextManager = new(_memory, _state, cfgNodeFeeder, replacerRegistry, new(), false, loggerService, loggerState, null);
         ExecutionContext executionContext = executionContextManager.CurrentExecutionContext;
         return (cfgNodeFeeder, executionContext);
     }
@@ -95,7 +98,7 @@ public class CfgNodeFeederTest : IDisposable {
     [Fact]
     public void ReadInstructionViaParser() {
         // Arrange
-        (CfgNodeFeeder cfgNodeFeeder, ExecutionContext executionContext)  = CreateCfgNodeFeeder();
+        (CfgNodeFeeder cfgNodeFeeder, ExecutionContext executionContext) = CreateCfgNodeFeeder();
         WriteMovAx(ZeroAddress, DefaultValue);
 
         // Act
@@ -109,7 +112,7 @@ public class CfgNodeFeederTest : IDisposable {
     [Fact]
     public void LinkTwoInstructions() {
         // Arrange
-        (CfgNodeFeeder cfgNodeFeeder, ExecutionContext executionContext)  = CreateCfgNodeFeeder();
+        (CfgNodeFeeder cfgNodeFeeder, ExecutionContext executionContext) = CreateCfgNodeFeeder();
         WriteMovAx(ZeroAddress, DefaultValue);
         WriteMovBx(EndOfMov0Address, DefaultValue);
         ICfgNode movAx = SimulateExecution(cfgNodeFeeder, executionContext);
@@ -127,7 +130,7 @@ public class CfgNodeFeederTest : IDisposable {
     [Fact]
     public void MovAxChangedToMovBx() {
         // Arrange
-        (CfgNodeFeeder cfgNodeFeeder, ExecutionContext executionContext)  = CreateCfgNodeFeeder();
+        (CfgNodeFeeder cfgNodeFeeder, ExecutionContext executionContext) = CreateCfgNodeFeeder();
         WriteTwoMovAx();
         ICfgNode movAx0 = SimulateExecution(cfgNodeFeeder, executionContext);
         // Parse second Mov AX and insert it in graph
@@ -157,7 +160,7 @@ public class CfgNodeFeederTest : IDisposable {
     [Fact]
     public void MovAxChangedValue() {
         // Arrange
-        (CfgNodeFeeder cfgNodeFeeder, ExecutionContext executionContext)  = CreateCfgNodeFeeder();
+        (CfgNodeFeeder cfgNodeFeeder, ExecutionContext executionContext) = CreateCfgNodeFeeder();
         WriteTwoMovAx();
         SimulateExecution(cfgNodeFeeder, executionContext);
         // Just parse next and insert it in graph
@@ -177,7 +180,7 @@ public class CfgNodeFeederTest : IDisposable {
     [Fact]
     public void MovAxChangedToMovBxThenMovCx() {
         // Arrange
-        (CfgNodeFeeder cfgNodeFeeder, ExecutionContext executionContext)  = CreateCfgNodeFeeder();
+        (CfgNodeFeeder cfgNodeFeeder, ExecutionContext executionContext) = CreateCfgNodeFeeder();
         WriteTwoMovAx();
         SimulateExecution(cfgNodeFeeder, executionContext);
         ICfgNode movAx1 = cfgNodeFeeder.GetLinkedCfgNodeToExecute(executionContext);
@@ -202,7 +205,7 @@ public class CfgNodeFeederTest : IDisposable {
     [Fact]
     public void MovAxChangedToMovBxThenMovAxWithDifferentValue() {
         // Arrange
-        (CfgNodeFeeder cfgNodeFeeder, ExecutionContext executionContext)  = CreateCfgNodeFeeder();
+        (CfgNodeFeeder cfgNodeFeeder, ExecutionContext executionContext) = CreateCfgNodeFeeder();
         WriteTwoMovAx();
         SimulateExecution(cfgNodeFeeder, executionContext);
         ICfgNode movAx1 = cfgNodeFeeder.GetLinkedCfgNodeToExecute(executionContext);

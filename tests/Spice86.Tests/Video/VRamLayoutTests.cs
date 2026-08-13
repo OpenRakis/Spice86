@@ -79,7 +79,7 @@ public class VRamLayoutTests {
     [Fact]
     public void VideoMemory_VRamAndPlanes_ShareSameStorage() {
         VideoState state = new();
-        ILoggerService logger = Substitute.For<ILoggerService>();
+        ILogger logger = Substitute.For<ILogger>();
         VideoMemory mem = new VideoMemory(state, logger);
 
         mem.Planes[1, 10] = 0x77;
@@ -90,7 +90,7 @@ public class VRamLayoutTests {
     [Fact]
     public void VideoMemory_GetLinearSpan_ReturnsCorrectSlice() {
         VideoState state = new();
-        ILoggerService logger = Substitute.For<ILoggerService>();
+        ILogger logger = Substitute.For<ILogger>();
         VideoMemory mem = new VideoMemory(state, logger);
 
         mem.VRam[100] = 0xAA;
@@ -107,7 +107,7 @@ public class VRamLayoutTests {
     [Fact]
     public void VideoMemory_HasChanged_SetOnWrite() {
         VideoState state = new();
-        ILoggerService logger = Substitute.For<ILoggerService>();
+        ILogger logger = Substitute.For<ILogger>();
         VideoMemory mem = new VideoMemory(state, logger);
 
         mem.ResetChanged();
@@ -136,7 +136,7 @@ public class VRamLayoutTests {
     [Fact]
     public void VideoMemory_LatchLoad_Uses32BitInterleavedRead() {
         VideoState state = new();
-        ILoggerService logger = Substitute.For<ILoggerService>();
+        ILogger logger = Substitute.For<ILogger>();
         VideoMemory mem = new VideoMemory(state, logger);
 
         // Set up chain4 mode for read

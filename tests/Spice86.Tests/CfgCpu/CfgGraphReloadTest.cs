@@ -1,5 +1,7 @@
 namespace Spice86.Tests.CfgCpu;
 
+using Microsoft.Extensions.Logging;
+
 using NSubstitute;
 
 using Spice86.Core.CLI;
@@ -16,7 +18,6 @@ using Spice86.Core.Emulator.StateSerialization.CfgReload;
 using Spice86.Core.Emulator.VM;
 using Spice86.Logging;
 using Spice86.Shared.Emulator.Memory;
-using Spice86.Shared.Interfaces;
 using Spice86.Tests.Utility;
 
 using System.Text.Json;
@@ -97,7 +98,7 @@ public class CfgGraphReloadTest {
 
         // Reload into a fresh machine (no execution) and export.
         string reloadedJson;
-        ILoggerService loggerService = Substitute.For<ILoggerService>();
+        ILogger loggerService = Substitute.For<ILogger>();
         using (Spice86Creator creator = CreateCreator(binName))
         using (Spice86DependencyInjection di = creator.Create()) {
             using CfgNodeExecutionCompiler compiler = NewCompiler(loggerService);
@@ -122,7 +123,7 @@ public class CfgGraphReloadTest {
         // restore: typed instruction edges, per-node MaxSucc, selector dispatch edges and ids.
         CfgReloadDump original = CaptureDump(binName);
 
-        ILoggerService loggerService = Substitute.For<ILoggerService>();
+        ILogger loggerService = Substitute.For<ILogger>();
         using Spice86Creator creator = CreateCreator(binName);
         using Spice86DependencyInjection di = creator.Create();
         using CfgNodeExecutionCompiler compiler = NewCompiler(loggerService);
@@ -176,7 +177,7 @@ public class CfgGraphReloadTest {
         HashSet<int> expectedIds = new(scaledDump.Nodes.Select(n => n.Id).Concat(scaledDump.Blocks.Select(b => b.Id)));
         int maxId = expectedIds.Count == 0 ? -1 : expectedIds.Max();
 
-        ILoggerService loggerService = Substitute.For<ILoggerService>();
+        ILogger loggerService = Substitute.For<ILogger>();
         using Spice86Creator creator = CreateCreator(binName);
         using Spice86DependencyInjection di = creator.Create();
         using CfgNodeExecutionCompiler compiler = NewCompiler(loggerService);
@@ -205,7 +206,7 @@ public class CfgGraphReloadTest {
         HashSet<int> reloadedIds = new(scaledDump.Nodes.Select(n => n.Id).Concat(scaledDump.Blocks.Select(b => b.Id)));
         int maxReloadedId = reloadedIds.Max();
 
-        ILoggerService loggerService = Substitute.For<ILoggerService>();
+        ILogger loggerService = Substitute.For<ILogger>();
         using Spice86Creator creator = CreateCreator(binName);
         using Spice86DependencyInjection di = creator.Create();
         Machine machine = di.Machine;
@@ -259,7 +260,7 @@ public class CfgGraphReloadTest {
             .Select(n => n.Id)
             .Single();
 
-        ILoggerService loggerService = Substitute.For<ILoggerService>();
+        ILogger loggerService = Substitute.For<ILogger>();
         using Spice86Creator creator = CreateCreator(binName);
         using Spice86DependencyInjection di = creator.Create();
         Machine machine = di.Machine;
@@ -294,7 +295,7 @@ public class CfgGraphReloadTest {
         (CfgReloadDump dump, byte[] memoryImage) = CaptureDumpAndMemory(binName);
         SegmentedAddress entryAddress = ParseAddress(dump.EntryPoints[0]);
 
-        ILoggerService loggerService = Substitute.For<ILoggerService>();
+        ILogger loggerService = Substitute.For<ILogger>();
         using Spice86Creator creator = CreateCreator(binName);
         using Spice86DependencyInjection di = creator.Create();
         Machine machine = di.Machine;
@@ -411,7 +412,7 @@ public class CfgGraphReloadTest {
         }
     }
 
-    private static CfgNodeExecutionCompiler NewCompiler(ILoggerService loggerService) {
+    private static CfgNodeExecutionCompiler NewCompiler(ILogger loggerService) {
         return new CfgNodeExecutionCompiler(new CfgNodeExecutionCompilerMonitor(loggerService), loggerService, JitMode.InterpretedOnly);
     }
 

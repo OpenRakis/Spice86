@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.OperatingSystem.Batch;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 
@@ -93,8 +93,8 @@ internal sealed partial class DosBatchExecutionEngine {
                 string candidate = NormalizeDosPath($"{directoryPath}\\{commandToken}");
                 string? resolvedInBatchDirectory = ResolveExecutablePath(candidate);
                 if (resolvedInBatchDirectory != null) {
-                    if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                        _loggerService.Verbose("BATCH: Resolved relative command {Token} -> {Candidate} (from batch dir)",
+                    if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                        _loggerService.LogTrace("BATCH: Resolved relative command {Token} -> {Candidate} (from batch dir)",
                             commandToken, resolvedInBatchDirectory);
                     }
                     return resolvedInBatchDirectory;
@@ -105,14 +105,14 @@ internal sealed partial class DosBatchExecutionEngine {
         // Search PATH directories with .COM -> .EXE -> .BAT probe order.
         string? pathResolved = ResolveCommandFromPath(commandToken);
         if (pathResolved != null) {
-            if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                _loggerService.Verbose("BATCH: Resolved command {Token} -> {Path} (from PATH)", commandToken, pathResolved);
+            if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                _loggerService.LogTrace("BATCH: Resolved command {Token} -> {Path} (from PATH)", commandToken, pathResolved);
             }
             return pathResolved;
         }
 
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("BATCH: Command token {Token} not resolved, using as-is", commandToken);
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("BATCH: Command token {Token} not resolved, using as-is", commandToken);
         }
         return commandToken;
     }

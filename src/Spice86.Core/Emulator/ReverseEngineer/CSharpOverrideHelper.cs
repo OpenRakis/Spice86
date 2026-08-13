@@ -1,6 +1,6 @@
 ﻿namespace Spice86.Core.Emulator.ReverseEngineer;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
@@ -16,7 +16,6 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.VM.Breakpoint;
-using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using System.Collections.Immutable;
@@ -49,7 +48,7 @@ public class CSharpOverrideHelper {
     /// <summary>
     /// The service used for logging.
     /// </summary>
-    protected readonly ILoggerService _loggerService;
+    protected readonly ILogger _loggerService;
 
     /// <summary>
     /// The Spice86 configuration
@@ -370,7 +369,7 @@ public class CSharpOverrideHelper {
     /// Gets or sets the <see cref="JumpDispatcher"/>
     /// </summary>
     public JumpDispatcher JumpDispatcher { get; set; }
-    
+
     public ReturnOperationsHelper ReturnOperationsHelper { get; }
 
     /// <summary>
@@ -381,7 +380,7 @@ public class CSharpOverrideHelper {
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="configuration">The emulator configuration.</param>
     public CSharpOverrideHelper(IDictionary<SegmentedAddress, FunctionInformation> functionInformations,
-        Machine machine, ILoggerService loggerService, Configuration configuration) {
+        Machine machine, ILogger loggerService, Configuration configuration) {
         Machine = machine;
         Memory = machine.Memory;
         _dualPic = machine.DualPic;
@@ -471,8 +470,8 @@ public class CSharpOverrideHelper {
 
             string error =
                 $"There is already a function overriden at address {address} named {existingFunctionInformation.Name}. Please check your mappings for duplicates.";
-            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error(
+            if (_loggerService.IsEnabled(LogLevel.Error)) {
+                _loggerService.LogError(
                     "There is already a function defined at address {Address} named {ExistingFunctionInformationName} but you are trying to redefine it. Please check your mappings for duplicates",
                     address, existingFunctionInformation.Name);
             }
@@ -503,7 +502,7 @@ public class CSharpOverrideHelper {
     public Action FarRet(ushort numberOfBytesToPop = 0) {
         return () => ReturnOperationsHelper.FarRet16(numberOfBytesToPop);
     }
-    
+
     public Action FarRet32(ushort numberOfBytesToPop = 0) {
         return () => ReturnOperationsHelper.FarRet32(numberOfBytesToPop);
     }
@@ -533,7 +532,7 @@ public class CSharpOverrideHelper {
     public Action NearRet(ushort numberOfBytesToPop = 0) {
         return () => ReturnOperationsHelper.NearRet16(numberOfBytesToPop);
     }
-    
+
     public Action NearRet32(ushort numberOfBytesToPop = 0) {
         return () => ReturnOperationsHelper.NearRet32(numberOfBytesToPop);
     }
@@ -704,7 +703,7 @@ public class CSharpOverrideHelper {
             message += " Found " + actualTarget.Name + " there.";
             if (actualTarget.FunctionOverride != null) {
                 message += " Calling it.";
-                _loggerService.Warning("{Message}", message);
+                _loggerService.LogWarning("{Message}", message);
                 ExecuteCall(actualTarget.FunctionOverride, () => actualTarget.FunctionOverride.Invoke(0).Invoke());
                 actualStackAddress = State.StackPhysicalAddress;
                 actualReturnCs = State.CS;
@@ -826,8 +825,8 @@ public class CSharpOverrideHelper {
     public UnrecoverableException FailAsUntested(string message) {
         string error =
             $"Untested code reached, please tell us how to reach this state. Here is the message: {message}. Here is the Machine stack: {State}";
-        if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-            _loggerService.Error("{Error}", error);
+        if (_loggerService.IsEnabled(LogLevel.Error)) {
+            _loggerService.LogError("{Error}", error);
         }
 
         return new UnrecoverableException(error);
@@ -928,10 +927,10 @@ public class CSharpOverrideHelper {
             }
             int callback = i;
             DefineFunction(handlerAddress.Segment, handlerAddress.Offset, (offset) => {
-                    _callbackHandler.RunFromOverriden(callback);
+                _callbackHandler.RunFromOverriden(callback);
 
-                    return InterruptRet();
-                }, false, $"provided_interrupt_handler_{ConvertUtils.ToHex(i)}");
+                return InterruptRet();
+            }, false, $"provided_interrupt_handler_{ConvertUtils.ToHex(i)}");
         }
     }
 
@@ -946,7 +945,7 @@ public class CSharpOverrideHelper {
     /// </summary>
     /// <exception cref="HaltRequestedException">The exception throw in order to exit the program.</exception>
     protected void Exit() {
-        _loggerService.Verbose("Program requested exit. Terminating now");
+        _loggerService.LogTrace("Program requested exit. Terminating now");
 
         throw new HaltRequestedException();
     }

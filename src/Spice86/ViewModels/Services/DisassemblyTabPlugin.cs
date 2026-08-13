@@ -2,14 +2,14 @@ namespace Spice86.ViewModels.Services;
 
 using CommunityToolkit.Mvvm.Messaging;
 
+using Microsoft.Extensions.Logging;
+
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Parser;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
-using Spice86.Shared.Interfaces;
 using Spice86.ViewModels;
 
 internal sealed class DisassemblyTabPlugin : IDebuggerTabPlugin {
@@ -22,13 +22,13 @@ internal sealed class DisassemblyTabPlugin : IDebuggerTabPlugin {
     private readonly IUIDispatcher _uiDispatcher;
     private readonly IMessenger _messenger;
     private readonly ITextClipboard _textClipboard;
-    private readonly ILoggerService _loggerService;
+    private readonly ILogger _loggerService;
 
     public DisassemblyTabPlugin(EmulatorBreakpointsManager emulatorBreakpointsManager, IMemory memory,
         State state, IDictionary<SegmentedAddress, FunctionInformation> functionsInformation,
         BreakpointsViewModel breakpointsViewModel, IPauseHandler pauseHandler,
         IUIDispatcher uiDispatcher, IMessenger messenger, ITextClipboard textClipboard,
-        ILoggerService loggerService) {
+        ILogger loggerService) {
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _memory = memory;
         _state = state;

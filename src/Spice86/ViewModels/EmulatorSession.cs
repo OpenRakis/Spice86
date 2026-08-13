@@ -1,8 +1,8 @@
+using Microsoft.Extensions.Logging;
 namespace Spice86.ViewModels;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 
-using Serilog.Events;
 
 using Spice86.Core.Emulator;
 using Spice86.Shared.Interfaces;
@@ -20,7 +20,7 @@ public sealed partial class EmulatorSession : ObservableObject, IDisposable {
     private readonly ProgramExecutor _programExecutor;
     private readonly IUIDispatcher _uiDispatcher;
     private readonly IExceptionHandler _exceptionHandler;
-    private readonly ILoggerService _loggerService;
+    private readonly ILogger _loggerService;
 
     private Thread? _emulatorThread;
     private TaskCompletionSource<bool>? _completionSource;
@@ -37,7 +37,7 @@ public sealed partial class EmulatorSession : ObservableObject, IDisposable {
         ProgramExecutor programExecutor,
         IUIDispatcher uiDispatcher,
         IExceptionHandler exceptionHandler,
-        ILoggerService loggerService) {
+        ILogger loggerService) {
         _programExecutor = programExecutor;
         _uiDispatcher = uiDispatcher;
         _exceptionHandler = exceptionHandler;
@@ -72,13 +72,13 @@ public sealed partial class EmulatorSession : ObservableObject, IDisposable {
         TaskCompletionSource<bool>? completionSource = _completionSource;
         try {
             _programExecutor.Run();
-            if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-                _loggerService.Warning("Emulation exited. Closing main window...");
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning("Emulation exited. Closing main window...");
             }
             completionSource?.TrySetResult(true);
         } catch (Exception e) {
-            if (_loggerService.IsEnabled(LogEventLevel.Error)) {
-                _loggerService.Error(e, "An error occurred during execution");
+            if (_loggerService.IsEnabled(LogLevel.Error)) {
+                _loggerService.LogError(e, "An error occurred during execution");
             }
             LastException = e;
             _exceptionHandler.Handle(e);
@@ -102,3 +102,4 @@ public sealed partial class EmulatorSession : ObservableObject, IDisposable {
         }
     }
 }
+

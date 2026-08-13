@@ -1,8 +1,9 @@
 ﻿namespace Spice86.Core.Emulator.Function;
 
+using Microsoft.Extensions.Logging;
+
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
-using Spice86.Shared.Interfaces;
 
 /// <summary>
 /// Provides an interface for generating function information overrides for machine code.
@@ -18,7 +19,7 @@ public interface IOverrideSupplier {
     /// <param name="machine">The emulator machine.</param>
     /// <returns>A dictionary containing the generated function information overrides.</returns>
     public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(
-        ILoggerService loggerService,
+        ILogger loggerService,
         Configuration configuration,
         ushort programStartAddress,
         Machine machine);

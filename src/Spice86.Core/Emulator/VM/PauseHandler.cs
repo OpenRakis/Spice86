@@ -1,5 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.VM;
 
+using Microsoft.Extensions.Logging;
+
 using Spice86.Shared.Interfaces;
 
 /// <summary>
@@ -20,7 +22,7 @@ public class PauseHandler : IPauseHandler {
     /// <param name="e">Event data (empty for this event).</param>
     public delegate void ResumedEventHandler(object sender, EventArgs e);
 
-    private readonly ILoggerService _loggerService;
+    private readonly ILogger _loggerService;
     private readonly object _pauseLock = new();
     private readonly ManualResetEvent _manualResetEvent = new(false);
     private bool _disposed;
@@ -30,7 +32,7 @@ public class PauseHandler : IPauseHandler {
     /// Initializes a new instance of the <see cref="PauseHandler"/> class with the specified logger service.
     /// </summary>
     /// <param name="loggerService">The logger service to use for logging.</param>
-    public PauseHandler(ILoggerService loggerService) {
+    public PauseHandler(ILogger loggerService) {
         _loggerService = loggerService;
     }
 
@@ -67,7 +69,7 @@ public class PauseHandler : IPauseHandler {
                 return;
             }
         }
-        _loggerService.Information("Pause requested by thread '{Thread}': {Reason}",
+        _loggerService.LogInformation("Pause requested by thread '{Thread}': {Reason}",
             Thread.CurrentThread.Name ?? Environment.CurrentManagedThreadId.ToString(), reason);
         Pausing?.Invoke();
         lock (_pauseLock) {
@@ -82,7 +84,7 @@ public class PauseHandler : IPauseHandler {
 
     /// <inheritdoc />
     public void Resume() {
-        _loggerService.Debug("Pause ended by thread {Thread}", Thread.CurrentThread.Name ?? Environment.CurrentManagedThreadId.ToString());
+        _loggerService.LogDebug("Pause ended by thread {Thread}", Thread.CurrentThread.Name ?? Environment.CurrentManagedThreadId.ToString());
         lock (_pauseLock) {
             if (_disposed) {
                 return;
@@ -101,7 +103,7 @@ public class PauseHandler : IPauseHandler {
         if (_disposed) {
             return;
         }
-        _loggerService.Debug("Thread {Thread} is taking a pause", Thread.CurrentThread.Name ?? Environment.CurrentManagedThreadId.ToString());
+        _loggerService.LogDebug("Thread {Thread} is taking a pause", Thread.CurrentThread.Name ?? Environment.CurrentManagedThreadId.ToString());
         _manualResetEvent.WaitOne(Timeout.Infinite);
     }
 }

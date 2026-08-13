@@ -1,5 +1,7 @@
 namespace Spice86.Tests.Dos;
 
+using Microsoft.Extensions.Logging;
+
 using NSubstitute;
 
 using Spice86.Core.Emulator.Memory.ReaderWriter;
@@ -23,12 +25,12 @@ internal static class DosTestHelpers {
     /// <summary>
     /// Creates a <see cref="DosDriveManager"/> with a dummy media ID table.
     /// </summary>
-    internal static DosDriveManager CreateDriveManager(ILoggerService logger, string? cDrive, string? exe = null) {
+    internal static DosDriveManager CreateDriveManager(ILogger logger, string? cDrive, string? exe = null) {
         return new DosDriveManager(logger, cDrive, exe, CreateMediaIdTable());
     }
 
     /// <summary>Creates a <see cref="DosDriveManager"/> with a substituted logger and a dummy media ID table.</summary>
     internal static DosDriveManager CreateDriveManager(string? cDrive, string? exe = null) {
-        return CreateDriveManager(Substitute.For<ILoggerService>(), cDrive, exe);
+        return CreateDriveManager(Substitute.For<ILogger>(), cDrive, exe);
     }
 }

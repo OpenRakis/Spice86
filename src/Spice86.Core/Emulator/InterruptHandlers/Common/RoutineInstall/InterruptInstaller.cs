@@ -3,8 +3,10 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Common.RoutineInstall;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Interfaces;
 
 /// <summary>
 /// Handles installing interrupts in the machine: <br/>
@@ -16,6 +18,7 @@ public class InterruptInstaller : AssemblyRoutineInstaller {
     private readonly InterruptVectorTable _interruptVectorTable;
     private readonly HashSet<byte> _hardwareInterruptVectorNumbers;
     private readonly List<SegmentedAddress> _installedHardwareInterruptHandlerAddresses = new();
+    private readonly IEmulatorLoggerState _loggerState;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="InterruptInstaller"/> class.
@@ -25,8 +28,9 @@ public class InterruptInstaller : AssemblyRoutineInstaller {
     /// <param name="functionCatalogue">List of all functions.</param>
     /// <param name="hardwareInterruptVectorNumbers">Interrupts that are hardware-triggered (external event).</param>
     public InterruptInstaller(InterruptVectorTable interruptVectorTable, MemoryAsmWriter memoryAsmWriter,
-        FunctionCatalogue functionCatalogue, IEnumerable<byte> hardwareInterruptVectorNumbers) : base(memoryAsmWriter, functionCatalogue) {
+        FunctionCatalogue functionCatalogue, IEmulatorLoggerState loggerState, IEnumerable<byte> hardwareInterruptVectorNumbers) : base(memoryAsmWriter, functionCatalogue) {
         _interruptVectorTable = interruptVectorTable;
+        _loggerState = loggerState;
         _hardwareInterruptVectorNumbers = new HashSet<byte>(hardwareInterruptVectorNumbers);
     }
 
@@ -46,6 +50,10 @@ public class InterruptInstaller : AssemblyRoutineInstaller {
     /// <param name="interruptHandler">The class that implements the interrupt handling with C# functions.</param>
     /// <returns>Address of the handler ASM code</returns>
     public SegmentedAddress InstallInterruptHandler(IInterruptHandler interruptHandler) {
+        if (interruptHandler is IInterruptLoggerStateConsumer interruptLoggerStateConsumer) {
+            interruptLoggerStateConsumer.SetLoggerState(_loggerState);
+        }
+
         SegmentedAddress handlerAddress = InstallAssemblyRoutine(interruptHandler,
             $"provided_interrupt_handler_{interruptHandler.VectorNumber:X}");
 

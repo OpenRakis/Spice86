@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.LoadableFile.Bios;
+namespace Spice86.Core.Emulator.LoadableFile.Bios;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Shared.Interfaces;
@@ -6,6 +6,8 @@ using Spice86.Shared.Interfaces;
 using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Utils;
+
+using Microsoft.Extensions.Logging;
 
 /// <summary>
 /// Loader for BIOS files.<br/>
@@ -34,7 +36,7 @@ public class BiosLoader : ExecutableFileLoader {
     /// <param name="memory">The memory bus.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service to log messages to.</param>
-    public BiosLoader(IMemory memory, State state, ILoggerService loggerService) : base(memory, state, loggerService) {
+    public BiosLoader(IMemory memory, State state, ILogger loggerService) : base(memory, state, loggerService) {
     }
 
     /// <summary>

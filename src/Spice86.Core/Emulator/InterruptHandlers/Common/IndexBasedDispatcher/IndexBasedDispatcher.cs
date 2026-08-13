@@ -1,13 +1,14 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Common.IndexBasedDispatcher;
 
+using Microsoft.Extensions.Logging;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Errors;
-using Spice86.Shared.Interfaces;
 
 /// <summary>
 /// Base class for most classes having to dispatch operations depending on a numeric value, like interrupts.
 /// </summary>
-public abstract class IndexBasedDispatcher<T> where T: IRunnable {
+public abstract class IndexBasedDispatcher<T> where T : IRunnable {
     /// <summary>
     /// Defines all the available runnables. Each one has an index number and code associated with it.
     /// </summary>
@@ -16,7 +17,7 @@ public abstract class IndexBasedDispatcher<T> where T: IRunnable {
     /// <summary>
     /// The logger service implementation.
     /// </summary>
-    protected readonly ILoggerService LoggerService;
+    protected readonly ILogger LoggerService;
 
     /// <summary>
     /// The CPU state.
@@ -28,7 +29,7 @@ public abstract class IndexBasedDispatcher<T> where T: IRunnable {
     /// </summary>
     /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logging service to be used (eg. for recording warnings or errors).</param>
-    public IndexBasedDispatcher(State state, ILoggerService loggerService) {
+    public IndexBasedDispatcher(State state, ILogger loggerService) {
         State = state;
         LoggerService = loggerService;
     }

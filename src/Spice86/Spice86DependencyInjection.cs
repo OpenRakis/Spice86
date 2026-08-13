@@ -5,7 +5,13 @@ using Avalonia.Threading;
 
 using CommunityToolkit.Mvvm.Messaging;
 
+using Microsoft.Extensions.Logging;
+
+using Serilog;
 using Serilog.Events;
+using Serilog.Sinks.Async;
+
+using Spice86.Logging;
 
 using Spice86.Core.CLI;
 using Spice86.Core.CLI.RuntimeOptions;
@@ -59,7 +65,6 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.CpuSpeedLimit;
 using Spice86.Core.Emulator.VM.DeviceScheduler;
-using Spice86.Logging;
 using Spice86.Shared.Diagnostics;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.VM.Breakpoint.Serializable;
@@ -72,6 +77,8 @@ using Spice86.Views;
 using System.Net.Sockets;
 using System.Linq;
 using System.Reflection;
+
+using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 /// <summary>
 /// Class responsible for compile-time dependency injection and runtime emulator lifecycle management
@@ -117,17 +124,18 @@ public class Spice86DependencyInjection : IDisposable {
     }
 
     internal Spice86DependencyInjection(Configuration configuration, MainWindow? mainWindow) {
-        LoggerService loggerService = new LoggerService();
+        Spice86LoggerState loggerState = new();
+        LoggerService loggerService = new(loggerState, CreateLoggerConfiguration);
         _loggerService = loggerService;
-        SetLoggingLevel(loggerService, configuration);
+        SetLoggingLevel(loggerState, configuration);
         DosRuntimeState dosRuntimeState = RuntimeOptionsMapper.CreateDosRuntimeState(configuration);
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Spice86 starting...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("Spice86 starting...");
         }
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Set logging level...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("Set logging level...");
         }
 
         // Create folder for emulator state serialization / deserialization
@@ -137,31 +145,31 @@ public class Spice86DependencyInjection : IDisposable {
 
         IPauseHandler pauseHandler = new PauseHandler(loggerService);
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Pause handler created...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("Pause handler created...");
         }
 
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Wall clock created...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("Wall clock created...");
         }
 
         EmulationStateDataReader emulationStateDataReader = new(emulatorStateSerializationFolder, loggerService);
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Recorded data reader created...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("Recorded data reader created...");
         }
 
         ExecutionAddresses executionAddresses = emulationStateDataReader.ReadExecutionDataFromFileOrCreate();
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Execution data read...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("Execution data read...");
         }
 
         State state = new(configuration.CpuModel);
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("State created...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("State created...");
         }
 
         // Create breakpoint holders before EmulatorBreakpointsManager to avoid circular dependency
@@ -170,28 +178,28 @@ public class Spice86DependencyInjection : IDisposable {
 
         ICyclesLimiter cyclesLimiter = CycleLimiterFactory.Create(state, configuration);
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Cycles limiter created...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("Cycles limiter created...");
         }
 
         IOPortDispatcher ioPortDispatcher = new(
             ioReadWriteBreakpoints, state,
             loggerService, configuration.FailOnUnhandledPort);
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("IO port dispatcher created...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("IO port dispatcher created...");
         }
 
         Ram ram = new(A20Gate.EndOfHighMemoryArea);
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("RAM created...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("RAM created...");
         }
 
         A20Gate a20Gate = new(configuration.A20Gate);
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("A20 gate created...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("A20 gate created...");
         }
 
         IMmu mmu = RealModeMmuFactory.FromCpuModel(configuration.CpuModel);
@@ -201,23 +209,23 @@ public class Spice86DependencyInjection : IDisposable {
             mmu,
             initializeResetVector: configuration.InitializeDOS is true);
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Memory bus created...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("Memory bus created...");
         }
 
         EmulatorBreakpointsManager emulatorBreakpointsManager = new(pauseHandler, state, memory,
             memoryReadWriteBreakpoints, ioReadWriteBreakpoints);
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Emulator breakpoints manager created...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("Emulator breakpoints manager created...");
         }
 
         var biosDataArea =
             new BiosDataArea(memory, conventionalMemorySizeKb:
                 (ushort)Math.Clamp(ram.Size / 1024, 0, 640));
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("BIOS data area created...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("BIOS data area created...");
         }
 
         DateTimeOffset clockStartTime = configuration.ClockStartTime ?? DateTimeOffset.UtcNow;
@@ -238,61 +246,61 @@ public class Spice86DependencyInjection : IDisposable {
         var dualPic = new DualPic(ioPortDispatcher, state, loggerService, configuration.FailOnUnhandledPort);
 
         if (configuration.InitializeDOS is false) {
-            loggerService.Information("Masking all PIC IRQs...");
+            loggerService.LogInformation("Masking all PIC IRQs...");
             for (uint irq = 0; irq < 16; irq++) {
                 dualPic.SetIrqMask(irq, true);
             }
         }
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Dual PIC created...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("Dual PIC created...");
         }
 
         RealTimeClock realTimeClock = new(state, ioPortDispatcher, dualPic,
             emulationLoopScheduler, _emulatedClock, configuration.FailOnUnhandledPort, loggerService);
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("RTC/CMOS created...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("RTC/CMOS created...");
         }
 
         CallbackHandler callbackHandler = new(state, loggerService);
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Callback handler created...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("Callback handler created...");
         }
 
         InterruptVectorTable interruptVectorTable = new(memory);
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Interrupt vector table created...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("Interrupt vector table created...");
         }
 
         Stack stack = new(memory, state);
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Stack created...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("Stack created...");
         }
 
         IEnumerable<FunctionInformation> functionInformationsData =
             emulationStateDataReader.ReadGhidraSymbolsFromFileOrCreate();
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Function information data read...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("Function information data read...");
         }
 
         FunctionCatalogue functionCatalogue = new FunctionCatalogue(
             functionInformationsData);
         FunctionCatalogue = functionCatalogue;
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Function catalogue created...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("Function catalogue created...");
         }
 
         FunctionHandler functionHandler = new(memory, state,
             functionCatalogue, configuration.UseCodeOverrideOption, loggerService);
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Function handler created...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("Function handler created...");
         }
 
         // Create CPU heavy logger if enabled
@@ -303,8 +311,8 @@ public class Spice86DependencyInjection : IDisposable {
             IReadOnlyList<CompiledLogExpression> compiledLogExpressions = BuildCompiledLogExpressions(
                 configuration, state, memory);
             cpuHeavyLogger = new CpuHeavyLogger(emulatorStateSerializationFolder, configuration.CpuHeavyLogDumpFile, nodeToString, state, asmRenderingConfig, compiledLogExpressions);
-            if (loggerService.IsEnabled(LogEventLevel.Information)) {
-                loggerService.Information("CPU heavy logger created. Logging to: {LogFile}",
+            if (loggerService.IsEnabled(LogLevel.Information)) {
+                loggerService.LogInformation("CPU heavy logger created. Logging to: {LogFile}",
                     configuration.CpuHeavyLogDumpFile ?? Path.Join(emulatorStateSerializationFolder.Folder, "cpu_heavy.log"));
             }
         }
@@ -317,25 +325,25 @@ public class Spice86DependencyInjection : IDisposable {
         CfgIdAllocator = cfgIdAllocator;
         CfgCpu cfgCpu = new(memory, state, ioPortDispatcher, callbackHandler,
             dualPic, emulatorBreakpointsManager, pauseHandler, functionCatalogue,
-            configuration.UseCodeOverrideOption, configuration.FailOnInvalidOpcode, configuration.AllowIvtAddress0, configuration.EnableSpeculativeCfgExploration, loggerService, cfgNodeExecutionCompiler, cfgIdAllocator, cpuHeavyLogger);
+            configuration.UseCodeOverrideOption, configuration.FailOnInvalidOpcode, configuration.AllowIvtAddress0, configuration.EnableSpeculativeCfgExploration, loggerService, loggerState, cfgNodeExecutionCompiler, cfgIdAllocator, cpuHeavyLogger);
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("CfgCpu created...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("CfgCpu created...");
         }
 
         // IO devices
         var timerInt8Handler = new TimerInt8Handler(dualPic, biosDataArea);
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Timer int8 handler created...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("Timer int8 handler created...");
         }
 
         DmaBus dmaSystem =
             new(memory, state, ioPortDispatcher,
                 configuration.FailOnUnhandledPort, loggerService);
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("DMA controller created...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("DMA controller created...");
         }
 
         VideoState videoState = new();
@@ -364,8 +372,8 @@ public class Spice86DependencyInjection : IDisposable {
         VgaBios vgaBios = new VgaBios(memory, cfgCpu, stack,
             state, vgaFunctionality, biosDataArea, loggerService);
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Video card support classes created...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("Video card support classes created...");
         }
 
         BiosEquipmentDeterminationInt11Handler biosEquipmentDeterminationInt11Handler = new(memory,
@@ -392,8 +400,8 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         if (configuration.Xms is not false && loggerService.IsEnabled(
-                LogEventLevel.Information)) {
-            loggerService.Information("DOS XMS driver created...");
+                LogLevel.Information)) {
+            loggerService.LogInformation("DOS XMS driver created...");
         }
 
         SystemBiosInt15Handler systemBiosInt15Handler = new(configuration, memory,
@@ -409,8 +417,8 @@ public class Spice86DependencyInjection : IDisposable {
         RtcInt70Handler rtcInt70Handler = new(memory, cfgCpu, stack, state,
             dualPic, biosDataArea, ioPortDispatcher, loggerService);
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("BIOS interrupt handlers created...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("BIOS interrupt handlers created...");
         }
 
         AudioRuntimeOptions audioRuntimeOptions = RuntimeOptionsMapper.ToAudioRuntimeOptions(configuration);
@@ -427,9 +435,9 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService, configuration.FailOnUnhandledPort);
 
         pcSpeaker.AttachPitControl(pitTimer);
-        loggerService.Information("PIT created...");
+        loggerService.LogInformation("PIT created...");
 
-        loggerService.Information("SoundBlaster configured with {SBConfig}", audioRuntimeOptions);
+        loggerService.LogInformation("SoundBlaster configured with {SBConfig}", audioRuntimeOptions);
 
         Opl3Fm opl = new(audioRuntimeOptions, mixer, state, _emulatedClock, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService);
@@ -441,13 +449,13 @@ public class Spice86DependencyInjection : IDisposable {
         GravisUltraSound gravisUltraSound = new(state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService);
 
-        loggerService.Information("Sound devices created...");
+        loggerService.LogInformation("Sound devices created...");
 
         MemoryDumpOptions memoryDumpOptions = RuntimeOptionsMapper.ToMemoryDumpOptions(dosRuntimeState);
         MemoryDataExporter memoryDataExporter = new(memory, callbackHandler, memoryDumpOptions);
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Memory data exporter created...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("Memory data exporter created...");
         }
 
         ListingExporter listingExporter = new(cfgCpu, nodeToString);
@@ -467,8 +475,8 @@ public class Spice86DependencyInjection : IDisposable {
         SerializableUserBreakpointCollection deserializedUserBreakpoints =
             emulationStateDataReader.ReadBreakpointsFromFileOrCreate();
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Emulator state serializer created...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("Emulator state serializer created...");
         }
 
         ExpandedMemoryManager? mcpEmsManager = null;
@@ -502,8 +510,8 @@ public class Spice86DependencyInjection : IDisposable {
         SystemBiosInt13Handler systemBiosInt13Handler = new(memory,
             cfgCpu, stack, state, dos.DosDriveManager, driveActivityNotifier, floppyDiskTimingService, loggerService);
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Floppy controller and BIOS disk handler created...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("Floppy controller and BIOS disk handler created...");
         }
 
         MainWindowViewModel? mainWindowViewModel = null;
@@ -554,8 +562,8 @@ public class Spice86DependencyInjection : IDisposable {
         VgaCard vgaCard = new(_gui, vgaRenderer, loggerService);
         vgaCard.SubscribeToEvents();
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("VGA card created...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("VGA card created...");
         }
 
         Intel8042Controller intel8042Controller = new(
@@ -576,16 +584,17 @@ public class Spice86DependencyInjection : IDisposable {
         Joystick joystick = new(state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService);
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Input devices created...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("Input devices created...");
         }
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Emulation loop created...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("Emulation loop created...");
         }
 
         InterruptInstaller interruptInstaller =
             new InterruptInstaller(interruptVectorTable, memoryAsmWriter, functionCatalogue,
+                loggerState,
                 dualPic.EnumerateHardwareInterruptVectorNumbers());
         AssemblyRoutineInstaller assemblyRoutineInstaller =
             new AssemblyRoutineInstaller(memoryAsmWriter, functionCatalogue);
@@ -665,8 +674,8 @@ public class Spice86DependencyInjection : IDisposable {
             mouseIrq12Handler?.SetMouseDriverAddress(mouseDriverAddress);
         }
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Disk operating system created...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("Disk operating system created...");
         }
 
         Machine machine = new Machine(biosDataArea, biosEquipmentDeterminationInt11Handler,
@@ -684,8 +693,8 @@ public class Spice86DependencyInjection : IDisposable {
             dmaSystem, opl, mixer, mouse, mouseDriver,
             vgaFunctionality, pauseHandler, emulationLoopScheduler);
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Machine created...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("Machine created...");
         }
 
         if (configuration.HttpApiPort != 0) {
@@ -695,8 +704,8 @@ public class Spice86DependencyInjection : IDisposable {
         DictionaryUtils.AddAll(functionCatalogue.FunctionInformations,
             ReadFunctionOverrides(configuration, machine, loggerService));
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Function overrides added...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("Function overrides added...");
         }
 
         ShutdownCoordinator shutdownCoordinator = new(
@@ -720,8 +729,8 @@ public class Spice86DependencyInjection : IDisposable {
             programBootstrapper, executionPolicy, emulationLoop,
             emulatorStateSerializer, shutdownCoordinator, loggerService);
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("Program executor created...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("Program executor created...");
         }
 
         // Reload a previously dumped CFG graph into live state, if requested and available. Must run
@@ -758,18 +767,18 @@ public class Spice86DependencyInjection : IDisposable {
             mcpHttpTransport = new McpHttpHost(loggerService);
             try {
                 mcpHttpTransport.Start(emulatorMcpServices, configuration.McpHttpPort, additionalToolAssemblies, additionalMcpServices);
-                if (loggerService.IsEnabled(LogEventLevel.Information)) {
-                    loggerService.Information("MCP HTTP transport started on port {Port}", configuration.McpHttpPort);
+                if (loggerService.IsEnabled(LogLevel.Information)) {
+                    loggerService.LogInformation("MCP HTTP transport started on port {Port}", configuration.McpHttpPort);
                 }
             } catch (InvalidOperationException ex) {
-                loggerService.Warning(ex, "Failed to configure MCP HTTP transport on port {Port}; MCP HTTP will be unavailable", configuration.McpHttpPort);
+                loggerService.LogWarning(ex, "Failed to configure MCP HTTP transport on port {Port}; MCP HTTP will be unavailable", configuration.McpHttpPort);
                 mcpHttpTransport.Dispose();
                 mcpHttpTransport = null;
             }
         }
 
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("BIOS and DOS interrupt handlers created...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("BIOS and DOS interrupt handlers created...");
         }
 
         _debuggerTabRegistry = new DebuggerTabRegistry();
@@ -789,7 +798,7 @@ public class Spice86DependencyInjection : IDisposable {
             mainWindowViewModel = new MainWindowViewModel(
                 displayViewModel, session, performanceViewModel, mcpStatusViewModel,
                 capturedDrivesMenuViewModel, capturedDiscSwapper,
-                configuration, uiDispatcher, textClipboard, loggerService, pauseHandler,
+                configuration, uiDispatcher, textClipboard, loggerState, pauseHandler,
                 pitTimer, cyclesLimiter, hostStorageProvider, dos.ProcessManager);
         }
 
@@ -854,7 +863,7 @@ public class Spice86DependencyInjection : IDisposable {
 
     private void InstallDefaultInterruptHandlers(InterruptInstaller interruptInstaller, DualPic dualPic,
         BiosDataArea biosDataArea, LoggerService loggerService) {
-        _loggerService.Information("Installing default interrupt handlers for IRQs {IRQs}...",
+        _loggerService.LogInformation("Installing default interrupt handlers for IRQs {IRQs}...",
             string.Join(", ", _defaultIrqs));
         foreach (byte irq in _defaultIrqs) {
             interruptInstaller.InstallInterruptHandler(new DefaultIrqHandler(dualPic, irq, biosDataArea,
@@ -863,26 +872,35 @@ public class Spice86DependencyInjection : IDisposable {
     }
 
     public void HeadlessModeStart() {
-        if (_loggerService.IsEnabled(LogEventLevel.Information)) {
-            _loggerService.Information("Finally starting headless mode...");
+        if (_loggerService.IsEnabled(LogLevel.Information)) {
+            _loggerService.LogInformation("Finally starting headless mode...");
         }
 
         ProgramExecutor.Run();
     }
 
-    private static void SetLoggingLevel(LoggerService loggerService, Configuration configuration) {
+    private static void SetLoggingLevel(Spice86LoggerState loggerState, Configuration configuration) {
         if (configuration.SilencedLogs) {
-            loggerService.AreLogsSilenced = true;
+            loggerState.AreLogsSilenced = true;
         } else if (configuration.WarningLogs) {
-            loggerService.LogLevelSwitch.MinimumLevel = LogEventLevel.Warning;
+            loggerState.LogLevelSwitch.MinimumLevel = LogEventLevel.Warning;
         } else if (configuration.VerboseLogs) {
-            loggerService.LogLevelSwitch.MinimumLevel = LogEventLevel.Verbose;
+            loggerState.LogLevelSwitch.MinimumLevel = LogEventLevel.Verbose;
         }
+    }
+
+    private static Serilog.LoggerConfiguration CreateLoggerConfiguration(Spice86LoggerState loggerState) {
+        Serilog.LoggerConfiguration configuration = Spice86LoggerConfigurationFactory.Create(loggerState);
+        configuration.WriteTo.Async(conf => conf.Console(outputTemplate: Spice86LoggerConfigurationFactory.LogFormat));
+        configuration.WriteTo.Async(conf2 => conf2.Debug(outputTemplate: Spice86LoggerConfigurationFactory.LogFormat));
+        configuration.WriteTo.Async(conf3 =>
+            conf3.File("logs/log-.txt", outputTemplate: Spice86LoggerConfigurationFactory.LogFormat, rollingInterval: Serilog.RollingInterval.Day));
+        return configuration;
     }
 
     private static void ReloadCfgGraphIfRequested(Configuration configuration,
         EmulationStateDataReader emulationStateDataReader, CfgCpu cfgCpu, State state,
-        CfgNodeExecutionCompiler cfgNodeExecutionCompiler, ILoggerService loggerService, SequentialIdAllocator cfgIdAllocator) {
+        CfgNodeExecutionCompiler cfgNodeExecutionCompiler, ILogger loggerService, SequentialIdAllocator cfgIdAllocator) {
         if (!configuration.ReloadCfgGraph) {
             return;
         }
@@ -891,8 +909,8 @@ public class Spice86DependencyInjection : IDisposable {
             return;
         }
         new CfgGraphReloader(cfgCpu, state, cfgNodeExecutionCompiler, cfgIdAllocator).Reload(reloadDump);
-        if (loggerService.IsEnabled(LogEventLevel.Information)) {
-            loggerService.Information("CFG graph reloaded from dump...");
+        if (loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("CFG graph reloaded from dump...");
         }
     }
 
@@ -911,14 +929,14 @@ public class Spice86DependencyInjection : IDisposable {
     }
 
     private static Dictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(
-        ILoggerService loggerService, Configuration configuration, Machine machine) {
+        ILogger loggerService, Configuration configuration, Machine machine) {
         Dictionary<SegmentedAddress, FunctionInformation> res = new();
         if (configuration.OverrideSupplier == null) {
             return res;
         }
 
-        if (loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            loggerService.Verbose("Override supplied: {OverrideSupplier}",
+        if (loggerService.IsEnabled(LogLevel.Trace)) {
+            loggerService.LogTrace("Override supplied: {OverrideSupplier}",
                 configuration.OverrideSupplier);
         }
 
@@ -933,7 +951,7 @@ public class Spice86DependencyInjection : IDisposable {
     }
 
     private static Dictionary<SegmentedAddress, FunctionInformation> ReadFunctionOverrides(
-        Configuration configuration, Machine machine, ILoggerService loggerService) {
+        Configuration configuration, Machine machine, ILogger loggerService) {
         if (configuration.OverrideSupplier != null) {
             return GenerateFunctionInformations(loggerService, configuration, machine);
         }

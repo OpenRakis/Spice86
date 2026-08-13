@@ -14,7 +14,7 @@ using System.Security.Cryptography;
 using Xunit;
 
 public class EmulatorStateSerializationFolderTests {
-    private readonly EmulatorStateSerializationFolderFactory _factory = new(Substitute.For<ILoggerService>());
+    private readonly EmulatorStateSerializationFolderFactory _factory = new(Substitute.For<ILogger>());
 
     [Fact]
     public void Constructor_WithValidExePath_ComputesProgramHash() {

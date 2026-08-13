@@ -1,6 +1,6 @@
+using Microsoft.Extensions.Logging;
 namespace Spice86.Core.Emulator;
 
-using Serilog.Events;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.Http;
@@ -21,7 +21,7 @@ internal sealed class ShutdownCoordinator : IShutdownCoordinator {
     private readonly Spice86HttpApiServer? _httpApiServer;
     private readonly CfgNodeExecutionCompiler _cfgNodeExecutionCompiler;
     private readonly Machine _machine;
-    private readonly ILoggerService _loggerService;
+    private readonly ILogger _loggerService;
     private bool _shutdownCompleted;
 
     internal ShutdownCoordinator(
@@ -30,7 +30,7 @@ internal sealed class ShutdownCoordinator : IShutdownCoordinator {
         Spice86HttpApiServer? httpApiServer,
         CfgNodeExecutionCompiler cfgNodeExecutionCompiler,
         Machine machine,
-        ILoggerService loggerService) {
+        ILogger loggerService) {
         _vgaTimingThread = vgaTimingThread;
         _emulatedClock = emulatedClock;
         _httpApiServer = httpApiServer;
@@ -70,8 +70,8 @@ internal sealed class ShutdownCoordinator : IShutdownCoordinator {
     }
 
     private void LogShutdownIssue(Exception exception, string componentName) {
-        if (_loggerService.IsEnabled(LogEventLevel.Warning)) {
-            _loggerService.Warning(exception, "Failed to dispose {ComponentName} during shutdown.", componentName);
+        if (_loggerService.IsEnabled(LogLevel.Warning)) {
+            _loggerService.LogWarning(exception, "Failed to dispose {ComponentName} during shutdown.", componentName);
         }
     }
 }

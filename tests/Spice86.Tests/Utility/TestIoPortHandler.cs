@@ -1,5 +1,7 @@
 namespace Spice86.Tests.Utility;
 
+using Microsoft.Extensions.Logging;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Shared.Interfaces;
@@ -15,7 +17,7 @@ public sealed class TestIoPortHandler : DefaultIOPortHandler {
     public List<byte> Results { get; } = new();
     public List<byte> Details { get; } = new();
 
-    public TestIoPortHandler(State state, ILoggerService loggerService, IOPortDispatcher ioPortDispatcher)
+    public TestIoPortHandler(State state, ILogger loggerService, IOPortDispatcher ioPortDispatcher)
         : base(state, true, loggerService) {
         ioPortDispatcher.AddIOPortHandler(ResultPort, this);
         ioPortDispatcher.AddIOPortHandler(DetailsPort, this);

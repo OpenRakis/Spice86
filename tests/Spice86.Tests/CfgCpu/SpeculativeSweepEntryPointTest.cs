@@ -2,6 +2,8 @@ namespace Spice86.Tests.CfgCpu;
 
 using FluentAssertions;
 
+using Spice86.Logging;
+
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
@@ -25,8 +27,9 @@ public sealed class SpeculativeSweepEntryPointTest : SpeculativeTestBase {
 
     public SpeculativeSweepEntryPointTest() {
         _pruner = new SpeculativeReachabilityPruner(ReplacerRegistry);
+        Spice86LoggerState loggerState = new();
         _contextManager = new ExecutionContextManager(Memory, State, BuildIsolatedFeeder(), ReplacerRegistry,
-            new FunctionCatalogue(), false, LoggerService, null);
+            new FunctionCatalogue(), false, LoggerService, loggerState, null);
     }
 
     // The feeder is built on its own throwaway registry so the only subscriber joining the shared

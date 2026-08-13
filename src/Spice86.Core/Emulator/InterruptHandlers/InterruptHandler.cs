@@ -1,5 +1,8 @@
 ﻿namespace Spice86.Core.Emulator.InterruptHandlers;
 
+using Microsoft.Extensions.Logging;
+
+using Spice86.Logging;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
@@ -12,7 +15,7 @@ using Spice86.Shared.Interfaces;
 /// <summary>
 /// Base class for interrupt handlers.
 /// </summary>
-public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInterruptHandler {
+public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInterruptHandler, IInterruptLoggerStateConsumer {
     /// <summary>
     /// Call flow handler provider
     /// </summary>
@@ -32,6 +35,7 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     /// Indicates whether the interrupt stack is present.
     /// </summary>
     private bool _interruptStackPresent = true;
+    private IEmulatorLoggerState _loggerState = new Spice86LoggerState();
 
     /// <summary>
     /// Initializes a new instance.
@@ -41,10 +45,14 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     /// <param name="stack">The CPU stack.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    protected InterruptHandler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, ILoggerService loggerService) : base(state, loggerService) {
+    protected InterruptHandler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, ILogger loggerService) : base(state, loggerService) {
         Memory = memory;
         FunctionHandlerProvider = functionHandlerProvider;
         Stack = stack;
+    }
+
+    public void SetLoggerState(IEmulatorLoggerState loggerState) {
+        _loggerState = loggerState;
     }
 
     /// <inheritdoc />
@@ -82,7 +90,7 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     public override void Run(int index) {
         // By default Log the CS:IP of the caller which is more useful in most situations
         SegmentedAddress? csIp = FunctionHandlerProvider.FunctionHandlerInUse.PeekReturnAddressOnMachineStack(CallType.INTERRUPT);
-        LoggerService.LoggerPropertyBag.CsIp = csIp ?? LoggerService.LoggerPropertyBag.CsIp;
+        _loggerState.CsIp = csIp ?? _loggerState.CsIp;
         base.Run(index);
     }
 

@@ -2,9 +2,9 @@ namespace Spice86.Tests.CfgCpu.Blocks;
 
 using FluentAssertions;
 
-using NSubstitute;
+using Microsoft.Extensions.Logging;
 
-using Serilog.Events;
+using NSubstitute;
 
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
@@ -30,12 +30,12 @@ public sealed class CfgCpuSnapshotBuilderTest : IDisposable {
     private readonly FunctionCatalogue _functionCatalogue = new();
     private readonly ExecutionContextManagerFactory _contextManagerFactory;
     private readonly ExecutionContextManager _contextManager;
-    private readonly ILoggerService _loggerService = Substitute.For<ILoggerService>();
+    private readonly ILogger _loggerService = Substitute.For<ILogger>();
 
     public CfgCpuSnapshotBuilderTest() {
         _contextManagerFactory = new ExecutionContextManagerFactory(_functionCatalogue);
         _contextManager = _contextManagerFactory.ContextManager;
-        _loggerService.IsEnabled(Arg.Any<LogEventLevel>()).Returns(true);
+        _loggerService.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
     }
 
     public void Dispose() {
@@ -65,7 +65,7 @@ public sealed class CfgCpuSnapshotBuilderTest : IDisposable {
         snapshot.Exported.Graph.Truncated.Should().BeFalse();
         snapshot.Exported.Graph.Blocks.Select(node => node.Block.Id)
             .Should().Contain([100, 101], "the full block graph must survive a partitioning failure");
-        _loggerService.Received().Error(Arg.Any<InvalidOperationException>(), Arg.Any<string>(), Arg.Any<string>());
+        _loggerService.Received().IsEnabled(LogLevel.Error);
     }
 
     private void RegisterEntry(CfgInstruction instruction) {

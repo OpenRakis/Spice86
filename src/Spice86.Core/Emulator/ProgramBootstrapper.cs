@@ -1,6 +1,6 @@
+using Microsoft.Extensions.Logging;
 namespace Spice86.Core.Emulator;
 
-using Serilog.Events;
 
 using Spice86.Core.CLI.RuntimeOptions;
 using Spice86.Core.Emulator.CPU;
@@ -25,14 +25,14 @@ internal sealed class ProgramBootstrapper {
     private readonly IMemory _memory;
     private readonly State _state;
     private readonly DosInt21Handler _int21Handler;
-    private readonly ILoggerService _loggerService;
+    private readonly ILogger _loggerService;
 
     public ProgramBootstrapper(
         ProgramLoadOptions options,
         IMemory memory,
         State state,
         DosInt21Handler int21Handler,
-        ILoggerService loggerService) {
+        ILogger loggerService) {
         _options = options;
         _memory = memory;
         _state = state;
@@ -50,8 +50,8 @@ internal sealed class ProgramBootstrapper {
         string upperCaseExtension = Path.GetExtension(executableFileName.ToUpperInvariant());
         bool isDosProgram = upperCaseExtension is ".EXE" or ".COM" or ".BAT";
 
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Preparing initial load for {FileName} (DOS program: {IsDosProgram})",
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("Preparing initial load for {FileName} (DOS program: {IsDosProgram})",
                 executableFileName, isDosProgram);
         }
 
@@ -60,8 +60,8 @@ internal sealed class ProgramBootstrapper {
         try {
             if (_options.DosRuntimeState.InstallDosServices is null) {
                 _options.DosRuntimeState.InstallDosServices = loader.DosInitializationNeeded;
-                if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-                    _loggerService.Verbose("InitializeDOS parameter not provided. Guessed value is: {InitializeDOS}",
+                if (_loggerService.IsEnabled(LogLevel.Trace)) {
+                    _loggerService.LogTrace("InitializeDOS parameter not provided. Guessed value is: {InitializeDOS}",
                         _options.DosRuntimeState.InstallDosServices);
                 }
             }
@@ -99,3 +99,4 @@ internal sealed class ProgramBootstrapper {
         }
     }
 }
+

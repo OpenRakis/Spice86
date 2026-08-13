@@ -1,10 +1,9 @@
 namespace Spice86.Core.Emulator.StateSerialization;
 
-using Serilog.Events;
+using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.Function;
 using Spice86.Shared.Emulator.Memory;
-using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using System.IO;
@@ -14,13 +13,13 @@ using System.Linq;
 /// Provides functionality for dumping Ghidra symbols and labels to a file.
 /// </summary>
 public class GhidraSymbolsExporter {
-    private readonly ILoggerService _loggerService;
+    private readonly ILogger _loggerService;
 
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="loggerService">The logger service implementation.</param>
-    public GhidraSymbolsExporter(ILoggerService loggerService) => _loggerService = loggerService;
+    public GhidraSymbolsExporter(ILogger loggerService) => _loggerService = loggerService;
 
     /// <summary>
     /// Dumps function information and labels to a file.
@@ -80,10 +79,10 @@ public class GhidraSymbolsExporter {
     /// </summary>
     /// <param name="filePath">The path of the file to read the symbols and labels from.</param>
     /// <returns>A dictionary containing function names from the file.</returns>
-    public  IEnumerable<FunctionInformation>  ReadFromFileOrCreate(string filePath) {
+    public IEnumerable<FunctionInformation> ReadFromFileOrCreate(string filePath) {
         if (!File.Exists(filePath)) {
-            if (_loggerService.IsEnabled(LogEventLevel.Debug)) {
-                _loggerService.Debug("File doesn't exist");
+            if (_loggerService.IsEnabled(LogLevel.Debug)) {
+                _loggerService.LogDebug("File doesn't exist");
             }
             return new List<FunctionInformation>();
         }
@@ -97,7 +96,7 @@ public class GhidraSymbolsExporter {
     private FunctionInformation? ToFunctionInformation(string line) {
         string[] split = line.Split(" ");
         if (split.Length != 3) {
-            _loggerService.Debug("Cannot parse line {Line} into a function, only lines with 3 arguments can represent functions", line);
+            _loggerService.LogDebug("Cannot parse line {Line} into a function, only lines with 3 arguments can represent functions", line);
             // Not a function line
             return null;
         }
@@ -106,8 +105,8 @@ public class GhidraSymbolsExporter {
             return NameToFunctionInformation(_loggerService, split[0]);
         }
 
-        if (_loggerService.IsEnabled(LogEventLevel.Verbose)) {
-            _loggerService.Verbose("Cannot parse line {Line} into a function, type is not f", line);
+        if (_loggerService.IsEnabled(LogLevel.Trace)) {
+            _loggerService.LogTrace("Cannot parse line {Line} into a function, type is not f", line);
         }
 
         // Not a function line
@@ -121,12 +120,12 @@ public class GhidraSymbolsExporter {
     /// <param name="loggerService">The logger service to use for logging errors during parsing.</param>
     /// <param name="nameWithAddress">The function name with address to parse.</param>
     /// <returns>A <see cref="FunctionInformation"/> instance representing the parsed function, or <c>null</c> if parsing failed.</returns>
-    public static FunctionInformation? NameToFunctionInformation(ILoggerService loggerService, string nameWithAddress) {
+    public static FunctionInformation? NameToFunctionInformation(ILogger loggerService, string nameWithAddress) {
         string[] nameSplit = nameWithAddress.Split("_");
         if (nameSplit.Length < 4) {
             // Format is not correct, we can't use this line
-            if (loggerService.IsEnabled(LogEventLevel.Debug)) {
-                loggerService.Debug("Cannot parse function name {NameWithAddress} into a function, segmented address missing", nameWithAddress);
+            if (loggerService.IsEnabled(LogLevel.Debug)) {
+                loggerService.LogDebug("Cannot parse function name {NameWithAddress} into a function, segmented address missing", nameWithAddress);
             }
             return null;
         }
@@ -136,8 +135,8 @@ public class GhidraSymbolsExporter {
             ushort offset = ConvertUtils.ParseHex16(nameSplit[^2]);
             address = new SegmentedAddress(segment, offset);
         } catch (FormatException) {
-            if (loggerService.IsEnabled(LogEventLevel.Debug)) {
-                loggerService.Debug(
+            if (loggerService.IsEnabled(LogLevel.Debug)) {
+                loggerService.LogDebug(
                     "Cannot parse function name {NameWithAddress} into a function, the last 3 underscore segments of the name are not hexadecimal values",
                     nameWithAddress);
             }
