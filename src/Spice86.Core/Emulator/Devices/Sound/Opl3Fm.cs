@@ -4,6 +4,7 @@ using NukedOPL3Sharp;
 
 using Serilog.Events;
 
+using Spice86.Core.CLI.RuntimeOptions;
 using Spice86.Audio.Common;
 using Spice86.Audio.Filters;
 using Spice86.Core.Emulator.CPU;
@@ -98,24 +99,24 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     /// <summary>
     ///     Initializes a new instance of the OPL synth chip.
     /// </summary>
-    /// <param name="config">OPL configuration options (mode, SB base, and mixer enable).</param>
+    /// <param name="audioOptions">Runtime audio options projected from command-line configuration.</param>
     /// <param name="mixer">The global software mixer.</param>
     /// <param name="state">The CPU registers and flags.</param>
     /// <param name="clock">The emulated clock.</param>
     /// <param name="ioPortDispatcher">I/O port dispatcher.</param>
     /// <param name="failOnUnhandledPort">Whether to throw on unhandled port access.</param>
     /// <param name="loggerService">The logger service.</param>
-    public Opl3Fm(OplConfig config, SoftwareMixer mixer, State state, IEmulatedClock clock,
+    public Opl3Fm(AudioRuntimeOptions audioOptions, SoftwareMixer mixer, State state, IEmulatedClock clock,
         IOPortDispatcher ioPortDispatcher, bool failOnUnhandledPort,
         ILoggerService loggerService)
         : base(state, failOnUnhandledPort, loggerService) {
         _logger = loggerService;
         mixer.LockMixerThread();
-        _mode = config.Mode;
-        _sbBase = config.SbBase;
+        _mode = audioOptions.OplMode;
+        _sbBase = audioOptions.SbBase;
         _clock = clock;
         _timerChips = [new OplChip(clock), new OplChip(clock)];
-        _ctrl = new AdLibGoldControl(mixerEnabled: config.SbMixer);
+        _ctrl = new AdLibGoldControl(mixerEnabled: audioOptions.SbMixer);
 
         // Build channel features based on mode
         HashSet<ChannelFeature> features = [
