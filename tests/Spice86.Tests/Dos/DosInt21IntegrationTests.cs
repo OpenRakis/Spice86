@@ -116,6 +116,23 @@ public class DosInt21IntegrationTests {
     }
 
     [Fact]
+    public void MoveFilePointerUsingHandle_TreatsCxDxOffsetAsSignedValue() {
+        TestIoPortHandler testHandler = RunDosResource("move_file_pointer_signed_offset.com", fileSystemSetup: testRoot => {
+            string testFilePath = Path.Join(testRoot, "SEEKTEST.BIN");
+            byte[] testData = Enumerable.Range(0, 0x400).Select(i => (byte)i).ToArray();
+            File.WriteAllBytes(testFilePath, testData);
+        });
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    [Fact]
+    public void SetHandleCount_UpdatesCurrentPspMaximumOpenFiles() {
+        AssertResourcePasses("set_handle_count_updates_psp.com");
+    }
+
+    [Fact]
     public void GetFileAttributes_ForReadOnlyFile_ReturnsDosAttributeBits() {
         string resourceName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
             ? "file_attributes_readonly.com"

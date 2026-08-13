@@ -191,6 +191,7 @@ public class DosInt21Handler : InterruptHandler {
         AddAction(0x62, GetPspAddress);
         AddAction(0x63, GetLeadByteTable);
         AddAction(0x66, () => GetSetGlobalLoadedCodePageTable(true));
+        AddAction(0x67, () => SetHandleCount(true));
     }
 
     /// <summary>
@@ -496,6 +497,21 @@ public class DosInt21Handler : InterruptHandler {
                 SetCarryFlag(true, calledFromVm);
                 break;
         }
+    }
+
+    /// <summary>
+    /// INT 21h, AH=67h - Set handle count.
+    /// </summary>
+    /// <remarks>
+    /// Input: BX = number of file handles for the current PSP.
+    /// </remarks>
+    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
+    public void SetHandleCount(bool calledFromVm) {
+        ushort currentPspSegment = _sda.CurrentProgramSegmentPrefix;
+        uint pspAddress = MemoryUtils.ToPhysicalAddress(currentPspSegment, 0);
+        DosProgramSegmentPrefix currentPsp = new(Memory, pspAddress);
+        currentPsp.MaximumOpenFiles = State.BX;
+        SetCarryFlag(false, calledFromVm);
     }
 
     /// <summary>
@@ -2424,4 +2440,3 @@ public class DosInt21Handler : InterruptHandler {
         _ioPortDispatcher.WriteByte(CmosPorts.Data, value);
     }
 }
-
