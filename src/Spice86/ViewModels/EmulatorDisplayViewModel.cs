@@ -34,7 +34,7 @@ public sealed partial class EmulatorDisplayViewModel : ObservableObject,
     private readonly IUIDispatcher _uiDispatcher;
     private readonly IPauseHandler _pauseHandler;
     private readonly SharedMouseData _sharedMouseData;
-    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
+    private readonly ILogger _loggerService;
     private DispatcherTimer? _drawTimer;
     private bool _isSettingResolution;
     private bool _disposed;
@@ -44,7 +44,7 @@ public sealed partial class EmulatorDisplayViewModel : ObservableObject,
         IUIDispatcher uiDispatcher,
         IPauseHandler pauseHandler,
         SharedMouseData sharedMouseData,
-        Microsoft.Extensions.Logging.ILogger loggerService) {
+        ILogger loggerService) {
         _uiDispatcher = uiDispatcher;
         _pauseHandler = pauseHandler;
         _sharedMouseData = sharedMouseData;

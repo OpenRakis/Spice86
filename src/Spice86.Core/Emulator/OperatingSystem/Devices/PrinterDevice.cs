@@ -9,9 +9,9 @@ using System.IO;
 
 public class PrinterDevice : CharacterDevice {
     private const string LPT1 = "LPT1";
-    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
+    private readonly ILogger _loggerService;
 
-    public PrinterDevice(Microsoft.Extensions.Logging.ILogger loggerService, IByteReaderWriter memory,
+    public PrinterDevice(ILogger loggerService, IByteReaderWriter memory,
         uint baseAddress)
         : base(memory, baseAddress, LPT1) {
         _loggerService = loggerService;

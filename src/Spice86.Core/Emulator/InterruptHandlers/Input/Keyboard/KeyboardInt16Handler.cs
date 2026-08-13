@@ -36,7 +36,7 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// <param name="biosKeyboardBuffer">The FIFO queue used to store keyboard keys for the BIOS.</param>
     public KeyboardInt16Handler(IMemory memory, IOPortDispatcher ioPortDispatcher, BiosDataArea biosDataArea,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
-        Microsoft.Extensions.Logging.ILogger loggerService, BiosKeyboardBuffer biosKeyboardBuffer)
+        ILogger loggerService, BiosKeyboardBuffer biosKeyboardBuffer)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _biosDataArea = biosDataArea;
         _ioPortDispatcher = ioPortDispatcher;

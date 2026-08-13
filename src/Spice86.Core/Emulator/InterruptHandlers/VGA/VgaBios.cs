@@ -19,7 +19,7 @@ using Spice86.Shared.Utils;
 /// </summary>
 public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension {
     private readonly BiosDataArea _biosDataArea;
-    private readonly Microsoft.Extensions.Logging.ILogger _logger;
+    private readonly ILogger _logger;
     private readonly IVgaFunctionality _vgaFunctions;
 
     /// <summary>
@@ -297,7 +297,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     /// <param name="vgaFunctions">Provides vga functionality to use by the interrupt handler</param>
     /// <param name="biosDataArea">Contains the global bios data values</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public VgaBios(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, IVgaFunctionality vgaFunctions, BiosDataArea biosDataArea, Microsoft.Extensions.Logging.ILogger loggerService)
+    public VgaBios(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, IVgaFunctionality vgaFunctions, BiosDataArea biosDataArea, ILogger loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _biosDataArea = biosDataArea;
         _vgaFunctions = vgaFunctions;

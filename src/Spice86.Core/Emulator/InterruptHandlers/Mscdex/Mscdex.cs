@@ -94,7 +94,7 @@ public sealed class Mscdex {
     private readonly List<MscdexDriveEntry> _drives = new();
     private readonly State _state;
     private readonly IMemory _memory;
-    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
+    private readonly ILogger _loggerService;
     private readonly IDriveActivityNotifier _activityNotifier;
     private readonly Dictionary<char, MscdexAudioState> _audioStates = new();
 
@@ -114,7 +114,7 @@ public sealed class Mscdex {
     /// <param name="memory">The memory bus.</param>
     /// <param name="loggerService">The logger service.</param>
     /// <param name="activityNotifier">Notifier that surfaces per-drive read activity to the UI (may be null).</param>
-    public Mscdex(State state, IMemory memory, Microsoft.Extensions.Logging.ILogger loggerService,
+    public Mscdex(State state, IMemory memory, ILogger loggerService,
         IDriveActivityNotifier activityNotifier) {
         _state = state;
         _memory = memory;

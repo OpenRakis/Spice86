@@ -106,7 +106,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// </remarks>
     private const uint A20MaxTimesEnabled = uint.MaxValue;
 
-    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
+    private readonly ILogger _loggerService;
     private readonly State _state;
     private readonly A20Gate _a20Gate;
     private readonly IMemory _memory;
@@ -232,7 +232,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// </remarks>
     public ExtendedMemoryManager(IMemory memory, State state, A20Gate a20Gate,
         MemoryAsmWriter memoryAsmWriter, DosTables dosTables,
-        Microsoft.Extensions.Logging.ILogger loggerService) {
+        ILogger loggerService) {
         uint headerAddress = MemoryUtils.ToPhysicalAddress(DosDeviceSegment, 0);
         Header = new DosDeviceHeader(memory,
             headerAddress) {

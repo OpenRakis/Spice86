@@ -23,7 +23,7 @@ public sealed class DmaBus : DefaultIOPortHandler {
     };
 
     private readonly DmaChannel[] _channels = new DmaChannel[8];
-    private readonly Microsoft.Extensions.Logging.ILogger _logger;
+    private readonly ILogger _logger;
     private readonly DmaController _primary;
     private readonly DmaController _secondary;
 
@@ -44,7 +44,7 @@ public sealed class DmaBus : DefaultIOPortHandler {
         State state,
         IOPortDispatcher ioPortDispatcher,
         bool failOnUnhandledPort,
-        Microsoft.Extensions.Logging.ILogger loggerService, uint wrappingMask = 0xFFFF) : base(state, failOnUnhandledPort, loggerService) {
+        ILogger loggerService, uint wrappingMask = 0xFFFF) : base(state, failOnUnhandledPort, loggerService) {
         _logger = loggerService;
         _primary = new DmaController(0, memory, loggerService, wrappingMask);
         _secondary = new DmaController(1, memory, loggerService, wrappingMask);

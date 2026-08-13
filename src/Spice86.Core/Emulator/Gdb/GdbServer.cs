@@ -15,7 +15,7 @@ using Spice86.Shared.Interfaces;
 /// A GDB server that allows for remote debugging of the emulator.
 /// </summary>
 public sealed class GdbServer : IDisposable {
-    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
+    private readonly ILogger _loggerService;
     private readonly GdbServerOptions _options;
     private bool _disposed;
     private bool _isRunning = true;
@@ -47,7 +47,7 @@ public sealed class GdbServer : IDisposable {
         IPauseHandler pauseHandler,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         EmulatorStateSerializer emulatorStateSerializer,
-        Microsoft.Extensions.Logging.ILogger loggerService) {
+        ILogger loggerService) {
         _loggerService = loggerService;
         _pauseHandler = pauseHandler;
         _state = state;

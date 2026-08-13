@@ -1,5 +1,7 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Bios;
 
+using Microsoft.Extensions.Logging;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
@@ -24,7 +26,7 @@ public class SystemBiosInt12Handler : InterruptHandler {
     public SystemBiosInt12Handler(
         IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
         Stack stack, State state, BiosDataArea biosDataArea,
-        Microsoft.Extensions.Logging.ILogger loggerService)
+        ILogger loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _biosDataArea = biosDataArea;
     }

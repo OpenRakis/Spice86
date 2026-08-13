@@ -1,5 +1,7 @@
 namespace Spice86.Core.Emulator.LoadableFile.Dos;
 
+using Microsoft.Extensions.Logging;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -14,8 +16,8 @@ public abstract class DosFileLoader : ExecutableFileLoader {
     /// </summary>
     /// <param name="memory">The memory bus.</param>
     /// <param name="state">The CPU state.</param>
-    /// <param name="loggerService">The <see cref="Microsoft.Extensions.Logging.ILogger"/> instance.</param>
-    protected DosFileLoader(IMemory memory, State state, Microsoft.Extensions.Logging.ILogger loggerService) : base(memory, state, loggerService) {
+    /// <param name="loggerService">The <see cref="ILogger"/> instance.</param>
+    protected DosFileLoader(IMemory memory, State state, ILogger loggerService) : base(memory, state, loggerService) {
     }
 
     /// <summary>

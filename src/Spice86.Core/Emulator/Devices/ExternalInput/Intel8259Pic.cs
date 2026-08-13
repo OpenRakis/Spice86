@@ -15,7 +15,7 @@ using System.Runtime.CompilerServices;
 ///     classes.
 /// </remarks>
 /// <param name="logger">Logging facility used for diagnostic messages.</param>
-internal abstract class Intel8259Pic(Microsoft.Extensions.Logging.ILogger logger) {
+internal abstract class Intel8259Pic(ILogger logger) {
     /// <summary>
     ///     The IRQ index that presently has priority (0-7) or 8 when idle.
     /// </summary>
@@ -88,7 +88,7 @@ internal abstract class Intel8259Pic(Microsoft.Extensions.Logging.ILogger logger
 
     private byte _lowestPriorityIrq;
 
-    private Microsoft.Extensions.Logging.ILogger Logger => logger;
+    private ILogger Logger => logger;
 
     /// <summary>
     ///     Signals the CPU or upstream controller that an IRQ is pending.
@@ -409,7 +409,7 @@ internal abstract class Intel8259Pic(Microsoft.Extensions.Logging.ILogger logger
 /// </summary>
 /// <param name="logger">Logging facility for diagnostic output.</param>
 /// <param name="setIrqCheck">Delegate that updates the global IRQ pending flag.</param>
-internal sealed class PrimaryPic(Microsoft.Extensions.Logging.ILogger logger, Action<bool> setIrqCheck)
+internal sealed class PrimaryPic(ILogger logger, Action<bool> setIrqCheck)
     : Intel8259Pic(logger) {
     /// <inheritdoc />
     protected override void Activate() {
@@ -436,7 +436,7 @@ internal sealed class PrimaryPic(Microsoft.Extensions.Logging.ILogger logger, Ac
 /// <param name="logger">Logging facility for diagnostic output.</param>
 /// <param name="cascadeRaise">Delegate invoked when the secondary PIC asserts the cascade line.</param>
 /// <param name="cascadeLower">Delegate invoked when the secondary PIC deasserts the cascade line.</param>
-internal sealed class SecondaryPic(Microsoft.Extensions.Logging.ILogger logger, Action cascadeRaise, Action cascadeLower)
+internal sealed class SecondaryPic(ILogger logger, Action cascadeRaise, Action cascadeLower)
     : Intel8259Pic(logger) {
     /// <inheritdoc />
     protected override void Activate() {

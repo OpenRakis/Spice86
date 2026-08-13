@@ -17,7 +17,7 @@ public sealed class DefaultIrqHandler : IInterruptHandler {
     private readonly BiosDataArea _biosDataArea;
     private readonly DualPic _dualPic;
     private readonly byte _irq;
-    private readonly Microsoft.Extensions.Logging.ILogger _logger;
+    private readonly ILogger _logger;
 
     /// <summary>
     ///     Initializes a new instance targeting the specified IRQ line.
@@ -26,7 +26,7 @@ public sealed class DefaultIrqHandler : IInterruptHandler {
     /// <param name="irq">IRQ line serviced by this handler.</param>
     /// <param name="biosDataArea">BIOS data area used to record unexpected IRQs.</param>
     /// <param name="logger">Logger used for diagnostic output.</param>
-    public DefaultIrqHandler(DualPic dualPic, byte irq, BiosDataArea biosDataArea, Microsoft.Extensions.Logging.ILogger logger) {
+    public DefaultIrqHandler(DualPic dualPic, byte irq, BiosDataArea biosDataArea, ILogger logger) {
         _dualPic = dualPic;
         _irq = irq;
         _biosDataArea = biosDataArea;

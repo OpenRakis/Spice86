@@ -14,9 +14,9 @@ using System.IO;
 /// </summary>
 internal sealed class CfgCSharpDumper {
     private readonly CfgCSharpGenerator _generator;
-    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
+    private readonly ILogger _loggerService;
 
-    public CfgCSharpDumper(CfgCSharpGenerator generator, Microsoft.Extensions.Logging.ILogger loggerService) {
+    public CfgCSharpDumper(CfgCSharpGenerator generator, ILogger loggerService) {
         _generator = generator;
         _loggerService = loggerService;
     }

@@ -34,7 +34,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     private readonly ExpressionEvaluationService _evaluationService;
     private readonly IDictionary<SegmentedAddress, FunctionInformation> _functionsInformation;
     private readonly InstructionsDecoder _instructionsDecoder;
-    private readonly Microsoft.Extensions.Logging.ILogger _logger;
+    private readonly ILogger _logger;
     private readonly IMemory _memory;
     private readonly IMessenger _messenger;
     private readonly IPauseHandler _pauseHandler;
@@ -121,7 +121,7 @@ public partial class DisassemblyViewModel : ViewModelWithErrorDialog, IDisassemb
     }
 
     public DisassemblyViewModel(EmulatorBreakpointsManager emulatorBreakpointsManager, IMemory memory, State state, IDictionary<SegmentedAddress, FunctionInformation> functionsInformation,
-        BreakpointsViewModel breakpointsViewModel, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher, IMessenger messenger, ITextClipboard textClipboard, Microsoft.Extensions.Logging.ILogger loggerService,
+        BreakpointsViewModel breakpointsViewModel, IPauseHandler pauseHandler, IUIDispatcher uiDispatcher, IMessenger messenger, ITextClipboard textClipboard, ILogger loggerService,
         bool canCloseTab = false) : base(uiDispatcher, textClipboard) {
         _logger = loggerService;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;

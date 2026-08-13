@@ -43,7 +43,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
     private readonly IVgaFunctionality _vgaFunctionality;
     private readonly BiosKeyboardBuffer _biosKeyboardBuffer;
     private readonly IMemory _memory;
-    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
+    private readonly ILogger _loggerService;
     private readonly Mscdex _mscdex;
     private readonly ISoundChannelCreator _channelCreator;
     private readonly IDriveActivityNotifier _activityNotifier;
@@ -204,7 +204,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,
         BiosDataArea biosDataArea, IVgaFunctionality vgaFunctionality,
-        IDictionary<string, string> envVars, IOPortDispatcher ioPortDispatcher, Microsoft.Extensions.Logging.ILogger loggerService,
+        IDictionary<string, string> envVars, IOPortDispatcher ioPortDispatcher, ILogger loggerService,
         FloppyDiskTimingService floppyDiskTimingService,
         ISoundChannelCreator channelCreator,
         IDriveActivityNotifier activityNotifier,

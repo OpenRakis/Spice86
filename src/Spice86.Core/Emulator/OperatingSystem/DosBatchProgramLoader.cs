@@ -1,17 +1,18 @@
 namespace Spice86.Core.Emulator.OperatingSystem;
 
+using Microsoft.Extensions.Logging;
+
 using Spice86.Core.CLI.RuntimeOptions;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Batch;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
-using Spice86.Shared.Interfaces;
 
 internal sealed class DosBatchProgramLoader : DosProgramLoader {
     public DosBatchProgramLoader(ProgramLoadOptions options, IMemory memory,
         State state, DosInt21Handler int21Handler,
-        Microsoft.Extensions.Logging.ILogger loggerService)
+        ILogger loggerService)
         : base(options, memory, state, int21Handler, loggerService) {
     }
 

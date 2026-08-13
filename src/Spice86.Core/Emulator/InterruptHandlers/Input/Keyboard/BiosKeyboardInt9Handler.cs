@@ -53,7 +53,7 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
         Stack stack, State state, IFunctionHandlerProvider functionHandlerProvider,
         DualPic dualPic, SystemBiosInt15Handler systemBiosInt15Handler,
         Intel8042Controller ps2Controller, BiosKeyboardBuffer biosKeyboardBuffer,
-        Microsoft.Extensions.Logging.ILogger loggerService)
+        ILogger loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _biosDataArea = biosDataArea;
         BiosKeyboardBuffer = biosKeyboardBuffer;

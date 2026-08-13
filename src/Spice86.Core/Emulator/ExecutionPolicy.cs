@@ -34,7 +34,7 @@ internal sealed class ExecutionPolicy : IDisposable {
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         EmulationLoop emulationLoop,
         EmulatorStateSerializer emulatorStateSerializer,
-        Microsoft.Extensions.Logging.ILogger loggerService) {
+        ILogger loggerService) {
         _options = options;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;
         _pauseHandler = pauseHandler;
@@ -94,7 +94,7 @@ internal sealed class ExecutionPolicy : IDisposable {
         IPauseHandler pauseHandler,
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         EmulatorStateSerializer emulatorStateSerializer,
-        Microsoft.Extensions.Logging.ILogger loggerService) {
+        ILogger loggerService) {
         if (options.Port == 0) {
             if (loggerService.IsEnabled(LogLevel.Information)) {
                 loggerService.LogInformation("GDB port is 0, disabling GDB server.");

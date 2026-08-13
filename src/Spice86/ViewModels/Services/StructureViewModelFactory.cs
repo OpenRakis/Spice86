@@ -26,12 +26,12 @@ public class StructureViewModelFactory : IStructureViewModelFactory {
     private readonly StructurizerSettings _structurizerSettings = new();
     private StructureInformation? _structureInformation;
     private readonly Configuration _configuration;
-    private readonly Microsoft.Extensions.Logging.ILogger _logger;
+    private readonly ILogger _logger;
     private readonly IPauseHandler _pauseHandler;
 
     public event EventHandler? StructureInformationChanged;
 
-    public StructureViewModelFactory(Configuration configuration, State state, Microsoft.Extensions.Logging.ILogger logger, IPauseHandler pauseHandler) {
+    public StructureViewModelFactory(Configuration configuration, State state, ILogger logger, IPauseHandler pauseHandler) {
         _logger = logger;
         _state = state;
         _configuration = configuration;

@@ -13,7 +13,7 @@ using Spice86.Shared.Utils;
 /// Handles GDB commands related to breakpoints and stepping through instructions.
 /// </summary>
 public class GdbCommandBreakpointHandler {
-    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
+    private readonly ILogger _loggerService;
     private readonly GdbIo _gdbIo;
     private volatile bool _resumeEmulatorOnCommandEnd = true;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
@@ -33,7 +33,7 @@ public class GdbCommandBreakpointHandler {
     /// <param name="memory">The memory interface for expression evaluation.</param>
     public GdbCommandBreakpointHandler(
         EmulatorBreakpointsManager emulatorBreakpointsManager,
-        IPauseHandler pauseHandler, GdbIo gdbIo, Microsoft.Extensions.Logging.ILogger loggerService,
+        IPauseHandler pauseHandler, GdbIo gdbIo, ILogger loggerService,
         CPU.State state, IMemory memory) {
         _loggerService = loggerService;
         _emulatorBreakpointsManager = emulatorBreakpointsManager;

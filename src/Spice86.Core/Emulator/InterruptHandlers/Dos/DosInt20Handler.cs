@@ -22,7 +22,7 @@ public class DosInt20Handler : InterruptHandler {
     /// <param name="dosInt21Handler">The INT21H is used to exit normally without a process exit code.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     public DosInt20Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
-        Stack stack, State state, DosInt21Handler dosInt21Handler, Microsoft.Extensions.Logging.ILogger loggerService)
+        Stack stack, State state, DosInt21Handler dosInt21Handler, ILogger loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _dosInt21Handler = dosInt21Handler;
     }

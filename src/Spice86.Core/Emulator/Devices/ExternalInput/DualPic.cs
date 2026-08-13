@@ -66,7 +66,7 @@ public sealed partial class DualPic : DefaultIOPortHandler {
     /// <param name="state">CPU state.</param>
     /// <param name="loggerService">Logger used for diagnostic messages.</param>
     /// <param name="failOnUnhandledPort">Whether to throw on unhandled port access.</param>
-    public DualPic(IOPortDispatcher ioPortDispatcher, State state, Microsoft.Extensions.Logging.ILogger loggerService, bool failOnUnhandledPort)
+    public DualPic(IOPortDispatcher ioPortDispatcher, State state, ILogger loggerService, bool failOnUnhandledPort)
         : base(state, failOnUnhandledPort, loggerService) {
         _ioPortDispatcher = ioPortDispatcher;
         _primaryPic = new PrimaryPic(loggerService, SetIrqCheck);

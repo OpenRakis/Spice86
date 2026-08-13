@@ -48,10 +48,10 @@ public class DosFcbManager {
     private readonly IMemory _memory;
     private readonly DosFileManager _dosFileManager;
     private readonly DosDriveManager _dosDriveManager;
-    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
+    private readonly ILogger _loggerService;
 
     public
-    DosFcbManager(IMemory memory, DosFileManager dosFileManager, DosDriveManager dosDriveManager, Microsoft.Extensions.Logging.ILogger loggerService) {
+    DosFcbManager(IMemory memory, DosFileManager dosFileManager, DosDriveManager dosDriveManager, ILogger loggerService) {
         _memory = memory;
         _dosFileManager = dosFileManager;
         _dosDriveManager = dosDriveManager;

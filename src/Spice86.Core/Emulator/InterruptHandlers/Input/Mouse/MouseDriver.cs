@@ -37,7 +37,7 @@ public class MouseDriver : IMouseDriver {
 
     private const int VirtualScreenWidth = 640;
     private readonly IGuiMouseEvents? _gui;
-    private readonly Microsoft.Extensions.Logging.ILogger _logger;
+    private readonly ILogger _logger;
     private readonly IMouseDevice _mouseDevice;
     private readonly State _state;
     private readonly SharedMouseData _sharedMouseData;
@@ -63,7 +63,7 @@ public class MouseDriver : IMouseDriver {
     /// <param name="gui">Optional GUI mouse events interface for UI integration.</param>
     public MouseDriver(State state, SharedMouseData sharedMouseData,
         IIndexable memory, IMouseDevice mouseDevice,
-        IVgaFunctionality vgaFunctions, Microsoft.Extensions.Logging.ILogger loggerService,
+        IVgaFunctionality vgaFunctions, ILogger loggerService,
         IGuiMouseEvents? gui = null) {
         _state = state;
         _sharedMouseData = sharedMouseData;

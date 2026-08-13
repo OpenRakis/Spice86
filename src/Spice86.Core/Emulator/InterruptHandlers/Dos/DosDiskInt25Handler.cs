@@ -43,7 +43,7 @@ public class DosDiskInt25Handler : InterruptHandler {
     public DosDiskInt25Handler(IMemory memory, DosDriveManager dosDriveManager,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         FloppyDiskTimingService timingService,
-        Microsoft.Extensions.Logging.ILogger loggerService)
+        ILogger loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _dosDriveManager = dosDriveManager;
         _timingService = timingService;

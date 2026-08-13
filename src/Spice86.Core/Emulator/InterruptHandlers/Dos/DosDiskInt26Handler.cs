@@ -11,6 +11,8 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using Microsoft.Extensions.Logging;
+
 /// <summary>
 /// INT 26h — Absolute Disk Write.
 /// For floppy drives (AL=0/1) writes sectors directly into the floppy image via
@@ -42,7 +44,7 @@ public class DosDiskInt26Handler : InterruptHandler {
     public DosDiskInt26Handler(IMemory memory, DosDriveManager dosDriveManager,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         FloppyDiskTimingService timingService,
-        Microsoft.Extensions.Logging.ILogger loggerService)
+        ILogger loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _dosDriveManager = dosDriveManager;
         _timingService = timingService;

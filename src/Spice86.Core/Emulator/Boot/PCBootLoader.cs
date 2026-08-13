@@ -24,12 +24,12 @@ public sealed class PCBootLoader {
 
     private readonly IMemory _memory;
     private readonly State _state;
-    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
+    private readonly ILogger _loggerService;
 
     /// <summary>
     /// Creates a new boot loader for floppy-based PC boot images.
     /// </summary>
-    public PCBootLoader(IMemory memory, State state, Microsoft.Extensions.Logging.ILogger loggerService) {
+    public PCBootLoader(IMemory memory, State state, ILogger loggerService) {
         _memory = memory;
         _state = state;
         _loggerService = loggerService;

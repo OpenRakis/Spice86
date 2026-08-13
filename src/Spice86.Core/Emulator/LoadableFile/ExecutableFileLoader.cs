@@ -22,15 +22,15 @@ public abstract class ExecutableFileLoader {
     /// </summary>
     protected IMemory _memory;
 
-    protected readonly Microsoft.Extensions.Logging.ILogger _loggerService;
+    protected readonly ILogger _loggerService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ExecutableFileLoader"/> class.
     /// </summary>
     /// <param name="memory">The memory bus.</param>
     /// <param name="state">The CPU Registers and Flags.</param>
-    /// <param name="loggerService">The <see cref="Microsoft.Extensions.Logging.ILogger"/> instance.</param>
-    protected ExecutableFileLoader(IMemory memory, State state, Microsoft.Extensions.Logging.ILogger loggerService) {
+    /// <param name="loggerService">The <see cref="ILogger"/> instance.</param>
+    protected ExecutableFileLoader(IMemory memory, State state, ILogger loggerService) {
         _loggerService = loggerService;
         _memory = memory;
         _state = state;

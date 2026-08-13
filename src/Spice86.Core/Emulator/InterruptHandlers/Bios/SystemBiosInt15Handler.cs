@@ -43,7 +43,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
     public SystemBiosInt15Handler(Configuration configuration, IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack,
         State state, A20Gate a20Gate, BiosDataArea biosDataArea, DeviceScheduler emulationLoopScheduler,
-        IOPortDispatcher ioPortDispatcher, Microsoft.Extensions.Logging.ILogger loggerService, bool initializeResetVector)
+        IOPortDispatcher ioPortDispatcher, ILogger loggerService, bool initializeResetVector)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _a20Gate = a20Gate;
         _emulationLoopScheduler = emulationLoopScheduler;

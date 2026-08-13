@@ -17,10 +17,10 @@ internal sealed class CfgCpuSnapshotBuilder {
     private readonly CfgBlockGraphExporter _graphExporter;
     private readonly CfgFunctionPartitioner _functionPartitioner;
     private readonly FunctionCatalogue _functionCatalogue;
-    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
+    private readonly ILogger _loggerService;
 
     public CfgCpuSnapshotBuilder(CfgBlockGraphExporter graphExporter, CfgFunctionPartitioner functionPartitioner,
-        FunctionCatalogue functionCatalogue, Microsoft.Extensions.Logging.ILogger loggerService) {
+        FunctionCatalogue functionCatalogue, ILogger loggerService) {
         _graphExporter = graphExporter;
         _functionPartitioner = functionPartitioner;
         _functionCatalogue = functionCatalogue;

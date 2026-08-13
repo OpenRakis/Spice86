@@ -10,20 +10,21 @@ using Serilog;
 using Serilog.Core;
 
 using Spice86.Mcp;
-using Spice86.Shared.Interfaces;
 
 using System.Reflection;
 using System.Threading;
+
+using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 internal sealed class McpHttpHost : IDisposable {
     private static readonly TimeSpan ShutdownJoinTimeout = TimeSpan.FromMilliseconds(25);
     private WebApplication? _app;
     private Thread? _serverThread;
-    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
+    private readonly ILogger _loggerService;
     private Logger? _mcpFileLogger;
     private bool _disposed;
 
-    public McpHttpHost(Microsoft.Extensions.Logging.ILogger loggerService) {
+    public McpHttpHost(ILogger loggerService) {
         _loggerService = loggerService;
     }
 

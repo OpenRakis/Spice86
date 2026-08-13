@@ -12,7 +12,7 @@ using System.Text;
 /// Handles GDB commands related to reading and writing CPU registers.
 /// </summary>
 public class GdbCommandRegisterHandler {
-    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
+    private readonly ILogger _loggerService;
     private readonly GdbFormatter _gdbFormatter = new();
     private readonly GdbIo _gdbIo;
     private readonly State _state;
@@ -23,7 +23,7 @@ public class GdbCommandRegisterHandler {
     /// <param name="state">The CPU state.</param>
     /// <param name="gdbIo">The GdbIo object to use for communication with GDB.</param>
     /// <param name="loggerService">The logger implementation.</param>
-    public GdbCommandRegisterHandler(State state, GdbIo gdbIo, Microsoft.Extensions.Logging.ILogger loggerService) {
+    public GdbCommandRegisterHandler(State state, GdbIo gdbIo, ILogger loggerService) {
         _loggerService = loggerService;
         _state = state;
         _gdbIo = gdbIo;

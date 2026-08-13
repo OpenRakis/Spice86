@@ -13,7 +13,7 @@ using System.Text;
 /// Handles the I/O operations for a GDB (GNU Debugger) connection.
 /// </summary>
 public sealed class GdbIo : IDisposable {
-    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
+    private readonly ILogger _loggerService;
     private readonly GdbFormatter _gdbFormatter = new();
     private readonly List<byte> _rawCommand = new();
     private Socket? _socket;
@@ -26,7 +26,7 @@ public sealed class GdbIo : IDisposable {
     /// </summary>
     /// <param name="port">The port number to listen on.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public GdbIo(int port, Microsoft.Extensions.Logging.ILogger loggerService) {
+    public GdbIo(int port, ILogger loggerService) {
         _loggerService = loggerService;
         // Listen to connections in IPv4 or IPv6
         _tcpListener = new TcpListener(IPAddress.IPv6Any, port);

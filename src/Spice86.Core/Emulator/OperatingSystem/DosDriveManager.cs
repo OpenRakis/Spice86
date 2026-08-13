@@ -27,7 +27,7 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
     private uint _version; // Used to prevent simultaneous collection changes and continued enumeration.
     private DriveLetterCollection? _keys;
     private DriveCollection? _values;
-    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
+    private readonly ILogger _loggerService;
     private readonly DosMediaIdTable _mediaIdTable;
 
     /// <summary>
@@ -42,7 +42,7 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
     /// <param name="cDriveFolderPath">The host path to be mounted as C:.</param>
     /// <param name="executablePath">The host path to the DOS executable to be launched.</param>
     /// <param name="mediaIdTable">The DOS private-segment media ID table owned by this manager.</param>
-    public DosDriveManager(Microsoft.Extensions.Logging.ILogger loggerService, string? cDriveFolderPath, string? executablePath, DosMediaIdTable mediaIdTable) {
+    public DosDriveManager(ILogger loggerService, string? cDriveFolderPath, string? executablePath, DosMediaIdTable mediaIdTable) {
         _loggerService = loggerService;
         _mediaIdTable = mediaIdTable;
         if (string.IsNullOrWhiteSpace(cDriveFolderPath)) {

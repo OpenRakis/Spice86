@@ -16,7 +16,7 @@ using Spice86.Shared.Interfaces;
 public class VideoMemory : IVideoMemory {
     private readonly byte[] _latches;
     private readonly IVideoState _state;
-    private readonly Microsoft.Extensions.Logging.ILogger _logger;
+    private readonly ILogger _logger;
     // 0 = not changed, 1 = changed. Use int so we can use Interlocked/Volatile APIs.
     private int _hasChanged;
 
@@ -25,7 +25,7 @@ public class VideoMemory : IVideoMemory {
     /// </summary>
     /// <param name="state">The interface that represents the state of the video card.</param>
     /// <param name="logger">The logger service implementation.</param>
-    public VideoMemory(IVideoState state, Microsoft.Extensions.Logging.ILogger logger) {
+    public VideoMemory(IVideoState state, ILogger logger) {
         _state = state;
         Size = 128 * 1024; // This covers the 128kb of video memory address space from 0xA0000 to 0xBFFFF
         VRam = new byte[4 * 64 * 1024];

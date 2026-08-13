@@ -21,7 +21,7 @@ using System.Text;
 /// Custom commands list can be seen with the monitor help command.
 /// </summary>
 public class GdbCustomCommandsHandler {
-    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
+    private readonly ILogger _loggerService;
     private readonly EmulatorStateSerializer _emulatorStateSerializer;
     private readonly GdbIo _gdbIo;
     private readonly IFunctionHandlerProvider _functionHandlerProvider;
@@ -48,7 +48,7 @@ public class GdbCustomCommandsHandler {
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         EmulatorStateSerializer emulatorStateSerializer,
         GdbIo gdbIo,
-        Microsoft.Extensions.Logging.ILogger loggerService,
+        ILogger loggerService,
         Action<BreakPoint> onBreakpointReached) {
         _loggerService = loggerService;
         _state = state;

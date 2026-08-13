@@ -34,7 +34,7 @@ public sealed class SystemBiosInt14Handler : InterruptHandler {
         State state,
         BiosDataArea biosDataArea,
         IOPortDispatcher ioPortDispatcher,
-        Microsoft.Extensions.Logging.ILogger loggerService)
+        ILogger loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _biosDataArea = biosDataArea;
         _ioPortDispatcher = ioPortDispatcher;

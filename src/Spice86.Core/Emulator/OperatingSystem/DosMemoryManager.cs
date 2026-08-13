@@ -23,7 +23,7 @@ public class DosMemoryManager {
     private const byte HighMemMask = 0xC0;
     private const byte HighMemFirstThenLow = 0x40;
     private const byte HighMemOnlyNoFallback = 0x80;
-    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
+    private readonly ILogger _loggerService;
     private readonly IMemory _memory;
     private readonly DosMemoryControlBlock _start;
 
@@ -44,7 +44,7 @@ public class DosMemoryManager {
     /// <param name="memory">The memory bus.</param>
     /// <param name="initialPspSegment">The initial PSP segment for MCB chain setup.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DosMemoryManager(IMemory memory, ushort initialPspSegment, Microsoft.Extensions.Logging.ILogger loggerService) {
+    public DosMemoryManager(IMemory memory, ushort initialPspSegment, ILogger loggerService) {
         _loggerService = loggerService;
         _memory = memory;
         _sda = new(_memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));

@@ -17,7 +17,7 @@
     </ItemGroup>
     <ItemGroup>
         <!-- Spice86.Shared is referenced only for plain enums/value types (e.g. DriveClusterState).
-             Consumers use Microsoft.Extensions.Logging.ILogger through the standard abstraction. -->
+             Consumers use ILogger through the standard abstraction. -->
         <ProjectReference Include="..\Spice86.Shared\Spice86.Shared.csproj" />
     </ItemGroup>
 </Project>

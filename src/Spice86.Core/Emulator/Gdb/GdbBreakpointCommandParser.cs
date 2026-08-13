@@ -22,7 +22,7 @@ public class GdbBreakpointCommandParser {
     private const string GdbConditionTypeCond = "cond";
     private const int MinimumCommandParts = 3;
 
-    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
+    private readonly ILogger _loggerService;
     private readonly BreakpointConditionCompiler? _conditionCompiler;
 
     /// <summary>
@@ -30,7 +30,7 @@ public class GdbBreakpointCommandParser {
     /// </summary>
     /// <param name="loggerService">The logger service for diagnostic output.</param>
     /// <param name="conditionCompiler">Optional compiler for breakpoint condition expressions.</param>
-    public GdbBreakpointCommandParser(Microsoft.Extensions.Logging.ILogger loggerService, BreakpointConditionCompiler? conditionCompiler = null) {
+    public GdbBreakpointCommandParser(ILogger loggerService, BreakpointConditionCompiler? conditionCompiler = null) {
         _loggerService = loggerService;
         _conditionCompiler = conditionCompiler;
     }

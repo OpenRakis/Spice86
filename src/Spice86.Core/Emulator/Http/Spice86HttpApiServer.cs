@@ -23,7 +23,7 @@ using System.Linq;
 /// Built-in Kestrel HTTP API server.
 /// </summary>
 public sealed class Spice86HttpApiServer : IDisposable {
-    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
+    private readonly ILogger _loggerService;
     private readonly WebApplication _webApplication;
     private bool _disposed;
 
@@ -37,7 +37,7 @@ public sealed class Spice86HttpApiServer : IDisposable {
     /// <param name="loggerService">Logger service.</param>
     /// <param name="port">TCP port to listen on.</param>
     public Spice86HttpApiServer(State state, IMemory memory,
-        IPauseHandler pauseHandler, Microsoft.Extensions.Logging.ILogger loggerService, int port) {
+        IPauseHandler pauseHandler, ILogger loggerService, int port) {
         _loggerService = loggerService;
 
         WebApplicationBuilder builder = WebApplication.CreateBuilder();

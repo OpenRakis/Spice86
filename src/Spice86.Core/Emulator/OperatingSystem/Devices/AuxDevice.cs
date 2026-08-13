@@ -7,8 +7,8 @@ using Spice86.Shared.Interfaces;
 using System.IO;
 
 public class AuxDevice : CharacterDevice {
-    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
-    public AuxDevice(Microsoft.Extensions.Logging.ILogger loggerService,
+    private readonly ILogger _loggerService;
+    public AuxDevice(ILogger loggerService,
         IByteReaderWriter memory, uint baseAddress)
         : base(memory, baseAddress, "AUX") {
         _loggerService = loggerService;

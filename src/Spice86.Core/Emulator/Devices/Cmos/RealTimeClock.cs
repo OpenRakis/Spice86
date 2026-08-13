@@ -43,7 +43,7 @@ public sealed class RealTimeClock : DefaultIOPortHandler, IDisposable {
     /// Initializes the RTC/CMOS device with default register values.
     /// </summary>
     public RealTimeClock(State state, IOPortDispatcher ioPortDispatcher, DualPic dualPic,
-        DeviceScheduler scheduler, IEmulatedClock clock, bool failOnUnhandledPort, Microsoft.Extensions.Logging.ILogger loggerService)
+        DeviceScheduler scheduler, IEmulatedClock clock, bool failOnUnhandledPort, ILogger loggerService)
         : base(state, failOnUnhandledPort, loggerService) {
         _dualPic = dualPic;
         _scheduler = scheduler;

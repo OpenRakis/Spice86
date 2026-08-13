@@ -67,7 +67,7 @@ public sealed class PitTimer : DefaultIOPortHandler, IPitControl, ITimeMultiplie
     /// <param name="loggerService">Logger for trace output.</param>
     /// <param name="failOnUnhandledPort">Whether to throw on unhandled port access.</param>
     public PitTimer(IOPortDispatcher ioPortDispatcher, State state, DualPic pic, IPitSpeaker pcSpeaker,
-        DeviceScheduler scheduler, IEmulatedClock clock, Microsoft.Extensions.Logging.ILogger loggerService, bool failOnUnhandledPort)
+        DeviceScheduler scheduler, IEmulatedClock clock, ILogger loggerService, bool failOnUnhandledPort)
         : base(state, failOnUnhandledPort, loggerService) {
         _ioPortDispatcher = ioPortDispatcher;
         _pic = pic;

@@ -7,6 +7,8 @@ using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Utils;
 
+using Microsoft.Extensions.Logging;
+
 /// <summary>
 /// Loader for BIOS files.<br/>
 /// Bios entry point is at physical address 0xFFFF0 (F000:FFF0).
@@ -34,7 +36,7 @@ public class BiosLoader : ExecutableFileLoader {
     /// <param name="memory">The memory bus.</param>
     /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service to log messages to.</param>
-    public BiosLoader(IMemory memory, State state, Microsoft.Extensions.Logging.ILogger loggerService) : base(memory, state, loggerService) {
+    public BiosLoader(IMemory memory, State state, ILogger loggerService) : base(memory, state, loggerService) {
     }
 
     /// <summary>

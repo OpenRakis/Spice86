@@ -16,7 +16,7 @@ using System.Linq;
 /// The class responsible for answering to custom GDB commands.
 /// </summary>
 public class GdbCommandHandler {
-    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
+    private readonly ILogger _loggerService;
     private readonly GdbCommandBreakpointHandler _gdbCommandBreakpointHandler;
     private readonly GdbCommandMemoryHandler _gdbCommandMemoryHandler;
     private readonly GdbCommandRegisterHandler _gdbCommandRegisterHandler;
@@ -44,7 +44,7 @@ public class GdbCommandHandler {
         EmulatorBreakpointsManager emulatorBreakpointsManager,
         EmulatorStateSerializer emulatorStateSerializer,
         GdbIo gdbIo,
-        Microsoft.Extensions.Logging.ILogger loggerService) {
+        ILogger loggerService) {
         _loggerService = loggerService;
         _state = state;
         _gdbIo = gdbIo;

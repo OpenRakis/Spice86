@@ -78,6 +78,8 @@ using System.Net.Sockets;
 using System.Linq;
 using System.Reflection;
 
+using ILogger = Microsoft.Extensions.Logging.ILogger;
+
 /// <summary>
 /// Class responsible for compile-time dependency injection and runtime emulator lifecycle management
 /// </summary>
@@ -898,7 +900,7 @@ public class Spice86DependencyInjection : IDisposable {
 
     private static void ReloadCfgGraphIfRequested(Configuration configuration,
         EmulationStateDataReader emulationStateDataReader, CfgCpu cfgCpu, State state,
-        CfgNodeExecutionCompiler cfgNodeExecutionCompiler, Microsoft.Extensions.Logging.ILogger loggerService, SequentialIdAllocator cfgIdAllocator) {
+        CfgNodeExecutionCompiler cfgNodeExecutionCompiler, ILogger loggerService, SequentialIdAllocator cfgIdAllocator) {
         if (!configuration.ReloadCfgGraph) {
             return;
         }
@@ -927,7 +929,7 @@ public class Spice86DependencyInjection : IDisposable {
     }
 
     private static Dictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(
-        Microsoft.Extensions.Logging.ILogger loggerService, Configuration configuration, Machine machine) {
+        ILogger loggerService, Configuration configuration, Machine machine) {
         Dictionary<SegmentedAddress, FunctionInformation> res = new();
         if (configuration.OverrideSupplier == null) {
             return res;
@@ -949,7 +951,7 @@ public class Spice86DependencyInjection : IDisposable {
     }
 
     private static Dictionary<SegmentedAddress, FunctionInformation> ReadFunctionOverrides(
-        Configuration configuration, Machine machine, Microsoft.Extensions.Logging.ILogger loggerService) {
+        Configuration configuration, Machine machine, ILogger loggerService) {
         if (configuration.OverrideSupplier != null) {
             return GenerateFunctionInformations(loggerService, configuration, machine);
         }

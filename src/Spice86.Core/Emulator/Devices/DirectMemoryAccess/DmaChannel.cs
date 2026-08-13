@@ -29,7 +29,7 @@ public sealed class DmaChannel {
         IsUnmasked
     }
 
-    private readonly Microsoft.Extensions.Logging.ILogger _logger;
+    private readonly ILogger _logger;
 
     /// <summary>
     ///     Backing store representing the addressable DMA memory space.
@@ -116,7 +116,7 @@ public sealed class DmaChannel {
     /// <summary>
     ///     Constructs a DMA channel with the supplied number and width, binding it to memory and logging services.
     /// </summary>
-    public DmaChannel(byte num, bool dma16Bit, IMemory memory, Microsoft.Extensions.Logging.ILogger logger, uint wrappingMask = 0xFFFF) {
+    public DmaChannel(byte num, bool dma16Bit, IMemory memory, ILogger logger, uint wrappingMask = 0xFFFF) {
         ChannelNumber = num;
         ShiftCount = dma16Bit ? (byte)0x1 : (byte)0x0;
         _memory = memory;

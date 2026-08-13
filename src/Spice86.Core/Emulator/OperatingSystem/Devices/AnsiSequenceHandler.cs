@@ -15,7 +15,7 @@ using Spice86.Shared.Interfaces;
 /// hvp, sgr, eid, eil, scp, rcp, sm, rm, il, d_l).
 /// </summary>
 public sealed class AnsiSequenceHandler {
-    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
+    private readonly ILogger _loggerService;
     private readonly BiosDataArea _biosDataArea;
     private readonly IVgaFunctionality _vga;
     private readonly AnsiState _state;
@@ -34,7 +34,7 @@ public sealed class AnsiSequenceHandler {
     /// that are drained before polling the BIOS keyboard. This queue serves the same purpose,
     /// ensuring DSR responses bypass the key reassignment lookup in the Read path.
     /// </param>
-    public AnsiSequenceHandler(Microsoft.Extensions.Logging.ILogger loggerService, BiosDataArea biosDataArea,
+    public AnsiSequenceHandler(ILogger loggerService, BiosDataArea biosDataArea,
         IVgaFunctionality vga, AnsiState state, Queue<byte> stuffAheadBuffer) {
         _loggerService = loggerService;
         _biosDataArea = biosDataArea;

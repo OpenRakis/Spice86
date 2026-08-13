@@ -11,7 +11,7 @@ using System.Text;
 /// Handles GDB memory-related commands such as reading and writing memory, and searching for patterns in memory.
 /// </summary>
 public class GdbCommandMemoryHandler {
-    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
+    private readonly ILogger _loggerService;
     private readonly GdbFormatter _gdbFormatter = new();
     private readonly GdbIo _gdbIo;
     private readonly IMemory _memory;
@@ -22,7 +22,7 @@ public class GdbCommandMemoryHandler {
     /// <param name="memory">The memory bus.</param>
     /// <param name="gdbIo">The GDB I/O handler.</param>
     /// <param name="loggerService">The logger service.</param>
-    public GdbCommandMemoryHandler(IMemory memory, GdbIo gdbIo, Microsoft.Extensions.Logging.ILogger loggerService) {
+    public GdbCommandMemoryHandler(IMemory memory, GdbIo gdbIo, ILogger loggerService) {
         _loggerService = loggerService;
         _memory = memory;
         _gdbIo = gdbIo;

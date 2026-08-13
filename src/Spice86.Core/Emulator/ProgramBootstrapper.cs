@@ -25,14 +25,14 @@ internal sealed class ProgramBootstrapper {
     private readonly IMemory _memory;
     private readonly State _state;
     private readonly DosInt21Handler _int21Handler;
-    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
+    private readonly ILogger _loggerService;
 
     public ProgramBootstrapper(
         ProgramLoadOptions options,
         IMemory memory,
         State state,
         DosInt21Handler int21Handler,
-        Microsoft.Extensions.Logging.ILogger loggerService) {
+        ILogger loggerService) {
         _options = options;
         _memory = memory;
         _state = state;

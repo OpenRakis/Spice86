@@ -1,5 +1,7 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 
+using Microsoft.Extensions.Logging;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.InterruptHandlers.Common.IndexBasedDispatcher;
@@ -23,7 +25,7 @@ public class CallbackHandler : IndexBasedDispatcher<ICallback> {
     /// </summary>
     /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public CallbackHandler(State state, Microsoft.Extensions.Logging.ILogger loggerService) : base(state, loggerService) {
+    public CallbackHandler(State state, ILogger loggerService) : base(state, loggerService) {
     }
 
     /// <inheritdoc/>

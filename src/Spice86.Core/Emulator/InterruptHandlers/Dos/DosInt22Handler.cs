@@ -17,7 +17,7 @@ public class DosInt22Handler : InterruptHandler {
     private readonly DosProcessManager _dosProcessManager;
 
     public DosInt22Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
-        DosProcessManager dosProcessManager, Microsoft.Extensions.Logging.ILogger loggerService)
+        DosProcessManager dosProcessManager, ILogger loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _dosProcessManager = dosProcessManager;
     }

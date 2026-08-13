@@ -87,7 +87,7 @@ public partial class Intel8042Controller : DefaultIOPortHandler {
     /// </summary>
     public Intel8042Controller(State state, IOPortDispatcher ioPortDispatcher,
         A20Gate a20Gate, DualPic dualPic, DeviceScheduler scheduler, bool failOnUnhandledPort,
-        Microsoft.Extensions.Logging.ILogger loggerService,
+        ILogger loggerService,
         IGuiKeyboardEvents? gui = null)
         : base(state, failOnUnhandledPort, loggerService) {
         _a20Gate = a20Gate;

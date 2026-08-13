@@ -21,7 +21,7 @@ internal sealed partial class DosBatchExecutionEngine {
     private readonly DosFileManager _dosFileManager;
     private readonly IBatchDisplayCommandHandler _displayCommandHandler;
     private readonly IDosBatchExecutionHost _host;
-    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
+    private readonly ILogger _loggerService;
     private readonly DosDriveManager _driveManager;
     private readonly IDriveStatusProvider _driveStatusProvider;
     private readonly Mscdex _mscdex;
@@ -49,7 +49,7 @@ internal sealed partial class DosBatchExecutionEngine {
         IDriveActivityNotifier activityNotifier,
         IBatchDisplayCommandHandler displayCommandHandler,
         IDosBatchExecutionHost host,
-        Microsoft.Extensions.Logging.ILogger loggerService) {
+        ILogger loggerService) {
         _dosFileManager = dosFileManager;
         _driveManager = driveManager;
         _driveStatusProvider = driveStatusProvider;

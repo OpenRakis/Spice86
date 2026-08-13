@@ -43,7 +43,7 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
     private readonly DeviceScheduler _scheduler;
     private readonly IEmulatedClock _clock;
     private readonly float[] _impulseLookup = new float[SincFilterWidth];
-    private readonly Microsoft.Extensions.Logging.ILogger _logger;
+    private readonly ILogger _logger;
     private readonly RWQueue<float> _outputQueue;
     private readonly PitChannelState _pitChannelState = new();
     private readonly SoundChannel _mixerChannel;
@@ -109,7 +109,7 @@ public class PcSpeaker : DefaultIOPortHandler, IPitSpeaker, IAudioQueueDevice<fl
         SoftwareMixer mixer,
         State state,
         IOPortDispatcher ioPortDispatcher,
-        Microsoft.Extensions.Logging.ILogger loggerService,
+        ILogger loggerService,
         DeviceScheduler scheduler,
         IEmulatedClock clock,
         bool failOnUnhandledPort)

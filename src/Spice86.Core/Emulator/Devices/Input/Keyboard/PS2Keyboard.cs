@@ -16,7 +16,7 @@ using System.Diagnostics;
 [DebuggerDisplay("PS2Keyboard Set={_codeSet} Scanning={_isScanning} Buf={_keyboardFrameBuffer.Count}/{BufferSizeInScancodes} Overflowed={_bufferOverflowed} Repeat={_repeat.Key} WaitMs={_repeat.WaitMs}")]
 public partial class PS2Keyboard {
     private readonly Intel8042Controller _controller;
-    private readonly Microsoft.Extensions.Logging.ILogger _loggerService;
+    private readonly ILogger _loggerService;
     private readonly KeyboardScancodeConverter _scancodeConverter = new();
     private readonly DeviceScheduler _scheduler;
     private readonly IGuiKeyboardEvents? _gui;
@@ -64,7 +64,7 @@ public partial class PS2Keyboard {
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="gui">Optional GUI interface for keyboard events.</param>
     public PS2Keyboard(Intel8042Controller controller,
-        DeviceScheduler scheduler, Microsoft.Extensions.Logging.ILogger loggerService,
+        DeviceScheduler scheduler, ILogger loggerService,
         IGuiKeyboardEvents? gui = null) {
         _controller = controller;
         _loggerService = loggerService;

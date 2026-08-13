@@ -27,7 +27,7 @@ public class MouseInt33Handler : InterruptHandler {
     /// <param name="mouseDriver">The mouse driver to handle the actual functionality.</param>
     public MouseInt33Handler(IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
-        Microsoft.Extensions.Logging.ILogger loggerService, IMouseDriver mouseDriver)
+        ILogger loggerService, IMouseDriver mouseDriver)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _mouseDriver = mouseDriver;
         FillDispatchTable();
