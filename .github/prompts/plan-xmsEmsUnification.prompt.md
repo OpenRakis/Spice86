@@ -18,28 +18,38 @@ exists). Every phase is TDD: the failing ASM fixture(s) come first, then the imp
 
 ## Steps (5 phases, strictly sequential - each depends on the prior)
 
-### Phase 1 - Unified extended-memory backing store (foundation)
+### Phase 1 - Unified extended-memory backing store (foundation) - **STATUS: DONE**
 1. Design and document the concrete linear-address memory map: conventional (0x00000-0xFFFFF,
    unchanged) + HMA (0x100000-0x10FFEF, unchanged, already the first slice of what
-   `ExtendedMemoryManager.XmsMemorySize` computes) + a single new "unified extended pool" starting
-   at 0x110000, default size 16MB, configurable up to 64MB (new `Configuration` option, e.g.
-   `ExtendedMemorySizeKb`, mirroring dosbox-staging's configurable memory size). XMS EMBs and EMS
-   logical pages both draw their storage from sub-ranges of this ONE pool instead of two separate
-   arrays - exact sub-range split (e.g. EMS gets a reserved slice sized to its max configured pages,
-   XMS gets the rest) to be finalized when implementing this phase; document the chosen split in
-   code comments and this memory map.
-2. Grow `baseMemory`/`Ram` construction (in `Spice86DependencyInjection` and any place hardcoding
-   `A20Gate.EndOfHighMemoryArea`-sized `Ram` for production use, NOT the many small unit-test
-   `Ram(64)`-style constructions which stay as-is) to the new total size, and `RegisterMapping` the
-   unified pool region up front.
-3. TDD first: add a small ASM fixture (real-mode, `.com`, `MachineTest`/xunit-style like existing
-   `XmsTests`/`EmsTests`) that writes a byte directly to physical address 0x110000 (or wherever the
-   pool starts) via a flat/no-API raw memory write and reads it back - this MUST fail before Phase 1
-   lands (address currently unmapped/zero-filled default `Ram`) and pass after, proving the region
-   is genuinely addressable through the main `Memory` bus with no XMS/EMS API involved yet.
-4. Regression: full suite green, especially all existing `XmsUnitTests`/`Xms32BitUnitTests`/
-   `EmsUnitTests`/`EmsTests`/`XmsTests` fixtures (they still use the OLD private-array behavior at
-   this point - Phase 1 only adds the shared region, doesn't touch XMS/EMS internals yet).
+   `ExtendedMemoryManager.XmsMemorySize` computes) + the remainder of one single, unified `Ram`
+   array spanning the ENTIRE address space from physical 0. Corrected from the original draft
+   below: there is no separate "pool starting at 0x110000" with its own size - the new
+   `Configuration.RamSizeKb`/`RamSizeDefaultKb`(16*1024)/`RamSizeMaxKb`(64*1024) options (renamed
+   from the originally-planned `ExtendedMemorySizeKb`) size the TOTAL RAM from address 0 (conventional
+   + HMA + unified extended pool together), matching real hardware's flat physical address space and
+   the user's explicit "entire RAM from 0 by default should be 16 MB" direction. XMS EMBs and EMS
+   logical pages both still need to draw their storage from sub-ranges of this ONE array instead of
+   two separate private arrays - exact sub-range split (e.g. EMS gets a reserved slice sized to its
+   max configured pages, XMS gets the rest) is still open, to be finalized in Phases 2-3.
+2. DONE: `Spice86DependencyInjection.cs` now constructs `new Ram((uint)configuration.RamSizeKb * 1024)`
+   (previously `new(A20Gate.EndOfHighMemoryArea)`) - the whole flat array exists up front via the
+   constructor, no separate `RegisterMapping` call was needed since `Memory`'s default mapping already
+   covers the full `Ram` array by construction.
+3. DONE: TDD fixture `tests/Spice86.Tests/Resources/cpuTests/protectedmode_unified_pool.asm`/`.bin` +
+   `MachineTest.TestUnifiedExtendedMemoryPoolIsAddressable` - builds a flat 32-bit protected-mode GDT,
+   writes a marker byte to physical 0x500000 (5MB) via `mov byte [dword 0x500000], 0x42`, returns to
+   real mode, asserts the byte stuck. This exposed a genuine, previously-undiscovered `A20Gate` bug
+   (see Decisions) that had to be fixed before this fixture could pass - `A20Gate` was masking a whole
+   address RANGE (~1-2MB ceiling) instead of gating only bit 20 as real hardware does, which blocked
+   ANY flat address beyond ~2MB regardless of A20 state. Fixture confirmed PASSING.
+4. DONE: full regression suite green throughout (2405/2405 after the master rebase - see below),
+   including all pre-existing `XmsUnitTests`/`Xms32BitUnitTests`/`EmsUnitTests`/`EmsTests`/`XmsTests`
+   fixtures (still using the OLD private-array behavior at this point - Phase 1 only grew the shared
+   backing array and fixed A20Gate, it doesn't touch XMS/EMS internals yet - that's Phases 2-3).
+5. DONE (out-of-band): the whole `feature/protected_mode` branch (10+ commits, later squashed to one)
+   was rebased onto latest `master` (which had independently migrated logging from Serilog's
+   `ILoggerService` to `Microsoft.Extensions.Logging.ILogger` - see repo memory for conflict
+   resolution details) and pushed. All further phases build on top of that rebased state.
 
 ### Phase 2 - XMS onto the unified store (depends on Phase 1)
 1. TDD first: new ASM fixture, real mode, `enableSpeculativeCfgExploration: false`-style protected
@@ -124,10 +134,15 @@ exists). Every phase is TDD: the failing ASM fixture(s) come first, then the imp
   `EmmPage.cs`, `EmmHandle.cs` - remove private per-page `Ram`, fixed linear addressing, page-frame
   aliasing instead of copying (Phase 3), then LIM 4.0 gap closures (Phase 5).
 - `src/Spice86.Core/Emulator/Memory/Memory.cs` (`RegisterMapping`, `_memoryDevices[]`),
-  `src/Spice86.Core/Emulator/Memory/Ram.cs`, `A20Gate.cs` - backing-store sizing/registration
-  (Phase 1); no structural changes expected, just larger `baseMemory` and new mapping calls.
-- `src/Spice86/Spice86DependencyInjection.cs` - where `baseMemory`/`Ram` is constructed and sized;
-  new `Configuration.ExtendedMemorySizeKb`-style option (Phase 1).
+  `src/Spice86.Core/Emulator/Memory/Ram.cs`, `A20Gate.cs` - backing-store sizing (Phase 1, DONE);
+  `A20Gate.cs` also got a real bug fix (gates only bit 20 now, not a whole address range - see
+  Decisions) discovered by Phase 1's own TDD fixture.
+- `src/Spice86/Spice86DependencyInjection.cs` - constructs `new Ram((uint)configuration.RamSizeKb *
+  1024)` (Phase 1, DONE); `src/Spice86.Core/CLI/Configuration.cs` has the actual
+  `RamSizeKb`/`RamSizeDefaultKb`(16*1024)/`RamSizeMaxKb`(64*1024) options (renamed from the
+  originally-planned `ExtendedMemorySizeKb` - represents TOTAL ram from address 0, not an add-on
+  pool). `tests/Spice86.Tests/Spice86Creator.cs`/`McpIntegrationContext.cs` both got a passthrough
+  `ramSizeKb` test-only constructor parameter for fixtures needing a specific total size.
 - New file(s) for VCPI (Phase 4), e.g. under `src/Spice86.Core/Emulator/InterruptHandlers/Dos/Ems/`
   or a new `Vcpi` subfolder - dispatch table addition to `ExpandedMemoryManager` for AH=0xDE, plus
   whatever new GDT/IDT/TSS-construction helper is needed (reuse existing `DescriptorTableReader`/
@@ -159,8 +174,18 @@ exists). Every phase is TDD: the failing ASM fixture(s) come first, then the imp
    descriptors, switch back to V86/real mode, confirm data survived the round trip.
 
 ## Decisions
-- Backing store: single unified pool, default 16MB, extensible up to 64MB via a new configuration
-  option (mirrors dosbox-staging's own configurable memory size) - per user direction.
+- Backing store: single unified `Ram` array covering the ENTIRE address space from physical 0
+  (conventional + HMA + extended), default 16MB TOTAL, extensible up to 64MB via
+  `Configuration.RamSizeKb` (mirrors dosbox-staging's own configurable memory size) - per user's
+  explicit "entire RAM from 0 by default should be 16 MB" direction. This corrects the original plan
+  draft's wording of a separate "unified extended pool starting at 0x110000" with its own independent
+  size - in the actual implementation there is only ONE array, sized in total, not an extra pool
+  layered on top of a fixed conventional+HMA base.
+- `A20Gate` real-hardware-accuracy bug fix (Phase 1 side effect, not originally planned but required
+  for Phase 1's own TDD fixture to pass): it was masking a whole address RANGE
+  (`DisabledAddressMask=0xFFFFF`/`EnabledAddressMask=0x1FFFFF`, imposing an artificial ~1-2MB ceiling)
+  instead of gating only bit 20 (`0x100000`) as real 80286+ hardware does. Fixed to
+  `DisabledAddressMask = ~0x100000u` / `EnabledAddressMask = 0xFFFFFFFF`.
 - VCPI: target feature parity with dosbox-staging's covered subfunction set (`ems.cpp`'s 0xDE
   handler), not the full VCPI 1.0 spec beyond that - per user direction.
 - GEMMIS: OUT OF SCOPE, dropped. Confirmed dosbox-staging itself has no INT 67h AH=0x5D handler, so
