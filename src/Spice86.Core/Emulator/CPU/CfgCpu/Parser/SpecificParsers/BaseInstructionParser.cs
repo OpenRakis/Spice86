@@ -87,20 +87,20 @@ public class BaseInstructionParser {
     protected ValueNode ReadUnsignedImmediate(CfgInstruction instr, BitWidth bitWidth) {
         switch (bitWidth) {
             case BitWidth.BYTE_8: {
-                InstructionField<byte> field = _instructionReader.UInt8.NextField(false);
-                instr.AddField(field);
-                return _astBuilder.InstructionField.ToNode(field);
-            }
+                    InstructionField<byte> field = _instructionReader.UInt8.NextField(false);
+                    instr.AddField(field);
+                    return _astBuilder.InstructionField.ToNode(field);
+                }
             case BitWidth.WORD_16: {
-                InstructionField<ushort> field = _instructionReader.UInt16.NextField(false);
-                instr.AddField(field);
-                return _astBuilder.InstructionField.ToNode(field);
-            }
+                    InstructionField<ushort> field = _instructionReader.UInt16.NextField(false);
+                    instr.AddField(field);
+                    return _astBuilder.InstructionField.ToNode(field);
+                }
             case BitWidth.DWORD_32: {
-                InstructionField<uint> field = _instructionReader.UInt32.NextField(false);
-                instr.AddField(field);
-                return _astBuilder.InstructionField.ToNode(field);
-            }
+                    InstructionField<uint> field = _instructionReader.UInt32.NextField(false);
+                    instr.AddField(field);
+                    return _astBuilder.InstructionField.ToNode(field);
+                }
             default:
                 throw CreateUnsupportedBitWidthException(bitWidth);
         }
@@ -120,17 +120,17 @@ public class BaseInstructionParser {
     private (int signedValue, FieldWithValue field, ValueNode node) ReadSignedField(BitWidth width, bool isDiscriminant) {
         switch (width) {
             case BitWidth.BYTE_8: {
-                InstructionField<sbyte> field = _instructionReader.Int8.NextField(isDiscriminant);
-                return (field.Value, field, _astBuilder.InstructionField.ToNode(field));
-            }
+                    InstructionField<sbyte> field = _instructionReader.Int8.NextField(isDiscriminant);
+                    return (field.Value, field, _astBuilder.InstructionField.ToNode(field));
+                }
             case BitWidth.WORD_16: {
-                InstructionField<short> field = _instructionReader.Int16.NextField(isDiscriminant);
-                return (field.Value, field, _astBuilder.InstructionField.ToNode(field));
-            }
+                    InstructionField<short> field = _instructionReader.Int16.NextField(isDiscriminant);
+                    return (field.Value, field, _astBuilder.InstructionField.ToNode(field));
+                }
             case BitWidth.DWORD_32: {
-                InstructionField<int> field = _instructionReader.Int32.NextField(isDiscriminant);
-                return (field.Value, field, _astBuilder.InstructionField.ToNode(field));
-            }
+                    InstructionField<int> field = _instructionReader.Int32.NextField(isDiscriminant);
+                    return (field.Value, field, _astBuilder.InstructionField.ToNode(field));
+                }
             default:
                 throw CreateUnsupportedBitWidthException(width);
         }
@@ -164,15 +164,16 @@ public class BaseInstructionParser {
         CfgInstruction instr, DataType dataType, ValueNode portNode, ValueNode accumulator, bool isInput) {
         InstructionNode displayAst;
         IVisitableAstNode execAst;
+        MethodCallNode ensureIoPrivilege = new MethodCallNode(null, nameof(InstructionExecutor.InstructionExecutionHelper.EnsureIoPrivilege));
         if (isInput) {
             MethodCallValueNode ioRead = _astBuilder.Io.IoRead(dataType, portNode);
             displayAst = new InstructionNode(InstructionOperation.IN, accumulator, portNode);
             execAst = _astBuilder.WithIpAdvancement(instr,
-                _astBuilder.Assign(dataType, accumulator, ioRead));
+                ensureIoPrivilege, _astBuilder.Assign(dataType, accumulator, ioRead));
         } else {
             MethodCallNode ioWrite = _astBuilder.Io.IoWrite(dataType, portNode, accumulator);
             displayAst = new InstructionNode(InstructionOperation.OUT, portNode, accumulator);
-            execAst = _astBuilder.WithIpAdvancement(instr, ioWrite);
+            execAst = _astBuilder.WithIpAdvancement(instr, ensureIoPrivilege, ioWrite);
         }
         return (displayAst, execAst);
     }

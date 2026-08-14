@@ -11,8 +11,8 @@ public class CpuStackSegmentFaultException : CpuException {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="message">The message describing the error.</param>
-    /// <param name="errorCode">Some exceptions may have an error code pushed on the stack.</param>
-    public CpuStackSegmentFaultException(string message, ushort? errorCode = null)
+    /// <param name="errorCode">The selector-related error code, or 0 for a violation not tied to a specific selector (#SS always carries an error code on real hardware).</param>
+    public CpuStackSegmentFaultException(string message, ushort? errorCode = 0)
         : base(message, 0x0C, CpuExceptionType.Fault, "#SS", errorCode) {
     }
 }

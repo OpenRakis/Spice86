@@ -4,6 +4,8 @@ using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.CPU.DescriptorTables;
+using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
@@ -119,6 +121,134 @@ public class CSharpOverrideHelper {
     /// Gets the state of the CPU.
     /// </summary>
     public State State => Machine.CpuState;
+
+    /// <summary>
+    /// Loads a raw selector value into a segment register and refreshes its descriptor cache. Mirrors
+    /// <see cref="Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.InstructionExecutionHelper.LoadSegmentRegister"/>
+    /// so generated/hand-written overrides behave identically to interpreted execution.
+    /// </summary>
+    public void LoadSegmentRegister(uint segmentRegisterIndex, ushort selector) {
+        SegmentAndControlRegisterOperations.LoadSegmentRegister(State, Memory, segmentRegisterIndex, selector);
+    }
+
+    /// <summary>
+    /// Validates a direct (non-gate) far JMP/CALL code-segment transfer target. Called by generated code
+    /// before loading CS for a same-partition far jump, so the compiled override enforces the same
+    /// DPL/RPL rules as the interpreter (<see cref="PrivilegeChecks.ValidateFarCodeSegmentTransfer"/>).
+    /// </summary>
+    public void ValidateFarCodeSegmentTransfer(ushort selector) {
+        PrivilegeChecks.ValidateFarCodeSegmentTransfer(State, Memory, selector);
+    }
+
+    /// <summary>LGDT: loads GDTR from a 6-byte memory pointer (2-byte limit, 4-byte base).</summary>
+    public void LoadGdtr(ushort segment, uint offset) {
+        SegmentAndControlRegisterOperations.LoadGdtr(State, Memory, segment, offset);
+    }
+
+    /// <summary>SGDT: stores GDTR to a 6-byte memory pointer (2-byte limit, 4-byte base).</summary>
+    public void StoreGdtr(ushort segment, uint offset) {
+        SegmentAndControlRegisterOperations.StoreGdtr(State, Memory, segment, offset);
+    }
+
+    /// <summary>LIDT: loads IDTR from a 6-byte memory pointer (2-byte limit, 4-byte base).</summary>
+    public void LoadIdtr(ushort segment, uint offset) {
+        SegmentAndControlRegisterOperations.LoadIdtr(State, Memory, segment, offset);
+    }
+
+    /// <summary>SIDT: stores IDTR to a 6-byte memory pointer (2-byte limit, 4-byte base).</summary>
+    public void StoreIdtr(ushort segment, uint offset) {
+        SegmentAndControlRegisterOperations.StoreIdtr(State, Memory, segment, offset);
+    }
+
+    /// <summary>MOV r32, CRn: reads CR0/CR2/CR3/CR4.</summary>
+    public uint ReadControlRegister(uint crNumber) {
+        return SegmentAndControlRegisterOperations.ReadControlRegister(State, crNumber);
+    }
+
+    /// <summary>MOV CRn, r32: writes CR0/CR2/CR3/CR4.</summary>
+    public void WriteControlRegister(uint crNumber, uint value) {
+        SegmentAndControlRegisterOperations.WriteControlRegister(State, crNumber, value);
+    }
+
+    /// <summary>SMSW: reads the low 16 bits of CR0.</summary>
+    public ushort ReadMachineStatusWord() {
+        return SegmentAndControlRegisterOperations.ReadMachineStatusWord(State);
+    }
+
+    /// <summary>LMSW: writes the low 4 bits of CR0 (PE, MP, EM, TS).</summary>
+    public void LoadMachineStatusWord(ushort value) {
+        SegmentAndControlRegisterOperations.LoadMachineStatusWord(State, value);
+    }
+
+    /// <summary>CLTS: clears CR0.TS.</summary>
+    public void Clts() {
+        SegmentAndControlRegisterOperations.Clts(State);
+    }
+
+    /// <summary>Throws #GP if CPL/IOPL do not permit `IN`/`OUT`/`CLI`/`STI`.</summary>
+    public void EnsureIoPrivilege() {
+        PrivilegeChecks.EnsureIoPrivilege(State);
+    }
+
+    /// <summary>LLDT: loads LDTR from a GDT selector.</summary>
+    public void LoadLdtr(ushort selector) {
+        SegmentAndControlRegisterOperations.LoadLdtr(State, Memory, selector);
+    }
+
+    /// <summary>SLDT: reads the current LDTR selector.</summary>
+    public ushort StoreLdtr() {
+        return SegmentAndControlRegisterOperations.StoreLdtr(State);
+    }
+
+    /// <summary>LTR: loads the Task Register from a GDT selector.</summary>
+    public void LoadTr(ushort selector) {
+        SegmentAndControlRegisterOperations.LoadTr(State, Memory, selector);
+    }
+
+    /// <summary>STR: reads the current Task Register selector.</summary>
+    public ushort StoreTr() {
+        return SegmentAndControlRegisterOperations.StoreTr(State);
+    }
+
+    /// <summary>ARPL: returns the r/m operand with its RPL raised to the register operand's RPL if lower.</summary>
+    public ushort AdjustRequestedPrivilegeLevel(ushort rmSelector, ushort regSelector) {
+        return SegmentAndControlRegisterOperations.AdjustRequestedPrivilegeLevel(rmSelector, regSelector);
+    }
+
+    /// <summary>ARPL: whether the r/m operand's RPL was raised (sets ZF).</summary>
+    public bool WasPrivilegeLevelAdjusted(ushort rmSelector, ushort regSelector) {
+        return SegmentAndControlRegisterOperations.WasPrivilegeLevelAdjusted(rmSelector, regSelector);
+    }
+
+    /// <summary>LAR: whether a selector resolves to a present descriptor (sets ZF).</summary>
+    public bool IsSelectorValidForLar(ushort selector) {
+        return SegmentAndControlRegisterOperations.IsSelectorValidForLar(State, Memory, selector);
+    }
+
+    /// <summary>LAR: loads the packed access-rights doubleword for a selector.</summary>
+    public uint LoadAccessRights(ushort selector) {
+        return SegmentAndControlRegisterOperations.LoadAccessRights(State, Memory, selector);
+    }
+
+    /// <summary>LSL: whether a selector resolves to a present segment descriptor (sets ZF).</summary>
+    public bool IsSelectorValidForLsl(ushort selector) {
+        return SegmentAndControlRegisterOperations.IsSelectorValidForLsl(State, Memory, selector);
+    }
+
+    /// <summary>LSL: loads the granularity-scaled limit for a selector.</summary>
+    public uint LoadSegmentLimit(ushort selector) {
+        return SegmentAndControlRegisterOperations.LoadSegmentLimit(State, Memory, selector);
+    }
+
+    /// <summary>VERR: whether a selector is a present, readable data or code segment.</summary>
+    public bool VerifyReadable(ushort selector) {
+        return SegmentAndControlRegisterOperations.VerifyReadable(State, Memory, selector);
+    }
+
+    /// <summary>VERW: whether a selector is a present, writable data segment.</summary>
+    public bool VerifyWritable(ushort selector) {
+        return SegmentAndControlRegisterOperations.VerifyWritable(State, Memory, selector);
+    }
 
     /// <summary>
     /// Arithmetic-logic unit for 8 bit operations
@@ -366,6 +496,15 @@ public class CSharpOverrideHelper {
     public IDictionary<SegmentedAddress, FunctionInformation> FunctionInformations { get; private set; }
 
     /// <summary>
+    /// Functions registered by their protected-mode flat linear address (see <see cref="DefineFunction(uint, Func{int, Action}, bool, string?)"/>),
+    /// kept separate from <see cref="FunctionInformations"/> because a linear address has no
+    /// <see cref="Shared.Emulator.Memory.SegmentedAddress"/> to key the latter dictionary by, and because
+    /// a call target's linear address must be resolved live through the current GDT/LDT (a selector's base
+    /// can be repointed by a descriptor edit after registration) rather than cached once at registration time.
+    /// </summary>
+    public IDictionary<uint, FunctionInformation> LinearFunctionInformations { get; } = new Dictionary<uint, FunctionInformation>();
+
+    /// <summary>
     /// Gets or sets the <see cref="JumpDispatcher"/>
     /// </summary>
     public JumpDispatcher JumpDispatcher { get; set; }
@@ -456,6 +595,42 @@ public class CSharpOverrideHelper {
     }
 
     /// <summary>
+    /// Registers a function at a protected-mode flat linear address rather than a segment:offset pair, so
+    /// the override keeps firing even if a later descriptor edit repoints the selector that currently maps
+    /// to that address (see <see cref="LinearFunctionInformations"/>). The <see cref="FunctionInformation.Address"/>
+    /// stored is a synthetic placeholder (segment 0, offset truncated from the linear address) for display
+    /// purposes only - lookup is always keyed by the raw linear address, never by that placeholder.
+    /// </summary>
+    /// <param name="linearAddress">The flat linear address the function starts at.</param>
+    /// <param name="overrideFunc">The function to register.</param>
+    /// <param name="failOnExisting">Whether to fail if a function is already defined at the specified address. Default is true.</param>
+    /// <param name="name">The name of the function. If null, the name of the provided function will be parsed using the GhidraSymbolsDumper utility.</param>
+    /// <exception cref="UnrecoverableException">Thrown when <paramref name="name"/> is null and the name of the provided function cannot be parsed.</exception>
+    public void DefineFunction(uint linearAddress, Func<int, Action> overrideFunc, bool failOnExisting = true, string? name = null) {
+        if (failOnExisting && LinearFunctionInformations.TryGetValue(linearAddress, out FunctionInformation? existing)) {
+            throw new UnrecoverableException(
+                $"There is already a function overriden at linear address 0x{linearAddress:X8} named {existing.Name}. Please check your mappings for duplicates.");
+        }
+
+        string functionName;
+        if (name != null) {
+            functionName = name;
+        } else {
+            string methodName = overrideFunc.Method.Name;
+            FunctionInformation? parsedFunctionInformation = GhidraSymbolsExporter.NameToFunctionInformation(_loggerService, methodName);
+            if (parsedFunctionInformation == null) {
+                throw new UnrecoverableException("Cannot parse " + methodName +
+                    " into a spice86 function name as format is not correct.");
+            }
+
+            functionName = parsedFunctionInformation.Name;
+        }
+
+        SegmentedAddress placeholderAddress = new(0, unchecked((ushort)linearAddress));
+        LinearFunctionInformations[linearAddress] = new FunctionInformation(placeholderAddress, functionName, overrideFunc);
+    }
+
+    /// <summary>
     /// Gets the function information for the function at the specified address.
     /// </summary>
     /// <param name="failOnExisting">A flag indicating whether to throw an exception if a function already exists at the specified address.</param>
@@ -490,7 +665,12 @@ public class CSharpOverrideHelper {
     /// <returns>The <see cref="Action"/> that will mutate CS and IP when invoked.</returns>
     public Action FarJump(ushort cs, ushort ip) {
         return () => {
-            State.CS = cs;
+            if (ProtectedModeCallGateDispatcher.TryReadCallGate(State, Memory, cs, out RawGateDescriptor gate)) {
+                ProtectedModeCallGateDispatcher.DispatchJump(State, Memory, gate, cs);
+                return;
+            }
+            PrivilegeChecks.ValidateFarCodeSegmentTransfer(State, Memory, cs);
+            LoadSegmentRegister((uint)SegmentRegisterIndex.CsIndex, cs);
             State.IP = ip;
         };
     }
@@ -500,11 +680,25 @@ public class CSharpOverrideHelper {
     /// </summary>
     /// <returns>returns an <see cref="Action"/> that performs a far return instruction when invoked.</returns>
     public Action FarRet(ushort numberOfBytesToPop = 0) {
-        return () => ReturnOperationsHelper.FarRet16(numberOfBytesToPop);
+        return () => {
+            if (State.CpuMode == CpuMode.Protected) {
+                ProtectedModeInterruptDispatcher.FarReturn16(State, Memory, Stack, numberOfBytesToPop);
+            } else {
+                ReturnOperationsHelper.FarRet16(numberOfBytesToPop);
+                LoadSegmentRegister((uint)SegmentRegisterIndex.CsIndex, State.CS);
+            }
+        };
     }
 
     public Action FarRet32(ushort numberOfBytesToPop = 0) {
-        return () => ReturnOperationsHelper.FarRet32(numberOfBytesToPop);
+        return () => {
+            if (State.CpuMode == CpuMode.Protected) {
+                ProtectedModeInterruptDispatcher.FarReturn32(State, Memory, Stack, numberOfBytesToPop);
+                return;
+            }
+            ReturnOperationsHelper.FarRet32(numberOfBytesToPop);
+            LoadSegmentRegister((uint)SegmentRegisterIndex.CsIndex, State.CS);
+        };
     }
 
     /// <summary>
@@ -512,7 +706,27 @@ public class CSharpOverrideHelper {
     /// </summary>
     /// <returns>returns an <see cref="Action"/> that performs an interrupt return when invoked.</returns>
     public Action InterruptRet() {
-        return () => ReturnOperationsHelper.InterruptRet();
+        return () => {
+            if (State.CpuMode == CpuMode.Protected) {
+                ProtectedModeInterruptDispatcher.InterruptReturn16(State, Memory, Stack);
+            } else {
+                ReturnOperationsHelper.InterruptRet();
+            }
+        };
+    }
+
+    /// <summary>
+    /// Returns an <see cref="Action"/> that performs a 32-bit IRETD instruction when invoked.
+    /// </summary>
+    /// <returns>returns an <see cref="Action"/> that performs a 32-bit interrupt return when invoked.</returns>
+    public Action InterruptRet32() {
+        return () => {
+            if (State.CpuMode == CpuMode.Protected) {
+                ProtectedModeInterruptDispatcher.InterruptReturn32(State, Memory, Stack);
+            } else {
+                ReturnOperationsHelper.InterruptRet32();
+            }
+        };
     }
 
     /// <summary>
@@ -574,6 +788,32 @@ public class CSharpOverrideHelper {
     /// <param name="targetCs">The CS value of the callee, executed in for the duration of the call.</param>
     /// <param name="function">The function to call.</param>
     public void FarCall(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Func<int, Action> function) {
+        SegmentedAddress expectedReturn = new(expectedReturnCs, expectedReturnIp);
+        if (TaskSwitchOperations.TryReadAvailableTss(State, Memory, targetCs)) {
+            SegmentedAddress taskTarget = TaskSwitchOperations.SwitchToNewTask(State, Memory, targetCs, expectedReturnIp);
+            Func<int, Action>? taskFunction = SearchFunctionOverride(taskTarget);
+            if (taskFunction is null) {
+                throw FailAsUntested($"Could not find an override at address {taskTarget}");
+            }
+            ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, taskTarget.Segment, taskFunction, () => {
+                Action taskReturnAction = taskFunction.Invoke(0);
+                taskReturnAction.Invoke();
+            });
+            return;
+        }
+        if (ProtectedModeCallGateDispatcher.TryReadCallGate(State, Memory, targetCs, out RawGateDescriptor gate)) {
+            SegmentedAddress gateTarget = ProtectedModeCallGateDispatcher.Dispatch(State, Memory, Stack, gate, targetCs, expectedReturn);
+            Func<int, Action>? gateFunction = SearchFunctionOverride(gateTarget);
+            if (gateFunction is null) {
+                throw FailAsUntested($"Could not find an override at address {gateTarget}");
+            }
+            ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, gateTarget.Segment, gateFunction, () => {
+                Action gateReturnAction = gateFunction.Invoke(0);
+                gateReturnAction.Invoke();
+            });
+            return;
+        }
+        PrivilegeChecks.ValidateFarCodeSegmentTransfer(State, Memory, targetCs);
         ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, targetCs, function, () => {
             Stack.Push16(expectedReturnCs);
             Stack.Push16(expectedReturnIp);
@@ -592,6 +832,10 @@ public class CSharpOverrideHelper {
     /// <param name="targetCs">The CS value of the callee, executed in for the duration of the call.</param>
     /// <param name="function">The function to call.</param>
     public void FarCall32(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Func<int, Action> function) {
+        if (ProtectedModeCallGateDispatcher.TryReadCallGate(State, Memory, targetCs, out RawGateDescriptor gate)) {
+            throw FailAsUntested($"32-bit far call through call gate 0x{targetCs:X4} is not yet supported");
+        }
+        PrivilegeChecks.ValidateFarCodeSegmentTransfer(State, Memory, targetCs);
         ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, targetCs, function, () => {
             Stack.PushFarPointer32(new SegmentedAddress32(expectedReturnCs, expectedReturnIp));
             Action returnAction = function.Invoke(0);
@@ -633,6 +877,24 @@ public class CSharpOverrideHelper {
     /// <param name="vectorNumber">The vector number to call for the interrupt.</param>
     /// <exception cref="UnrecoverableException">If the interrupt vector number is not recognized.</exception>
     public void InterruptCall(ushort expectedReturnCs, ushort expectedReturnIp, byte vectorNumber) {
+        if (State.CpuMode is CpuMode.Protected or CpuMode.Virtual8086) {
+            // Dispatch already pushes the return frame and sets CS:IP to the gate's target, so the
+            // action below (unlike the real-mode overload) has nothing left to push. The expected return
+            // address is passed explicitly (not read from State.IP, which generated code does not keep
+            // continuously in sync).
+            SegmentedAddress expectedReturn = new(expectedReturnCs, expectedReturnIp);
+            SegmentedAddress protectedModeTarget = ProtectedModeInterruptDispatcher.Dispatch(
+                State, Memory, Stack, vectorNumber, checkGateDpl: true, errorCode: null, expectedReturn);
+            Func<int, Action>? protectedModeFunction = SearchFunctionOverride(protectedModeTarget);
+            if (protectedModeFunction is null) {
+                throw FailAsUntested($"Could not find an override at address {protectedModeTarget}");
+            }
+            ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, protectedModeTarget.Segment, protectedModeFunction, () => {
+                Action returnAction = protectedModeFunction.Invoke(0);
+                returnAction.Invoke();
+            });
+            return;
+        }
         SegmentedAddress target = Machine.InterruptVectorTable[vectorNumber];
         Func<int, Action>? function = SearchFunctionOverride(target);
         if (function is null) {
@@ -654,8 +916,26 @@ public class CSharpOverrideHelper {
         Stack.Push16(State.Flags.FlagRegister16);
         Stack.PushSegmentedAddress(new SegmentedAddress(faultingInstructionCs, faultingInstructionIp));
         InterruptFlag = false;
-        CS = target.Segment;
+        LoadSegmentRegister((uint)SegmentRegisterIndex.CsIndex, target.Segment);
         IP = target.Offset;
+    }
+
+    /// <summary>
+    /// Resolves the fault-handler target for a CPU exception caught in generated code and performs the
+    /// full entry sequence: protected mode AND Virtual-8086 mode both walk the IDT via
+    /// <see cref="ProtectedModeInterruptDispatcher"/> (respecting DPL escalation, stack switch, and
+    /// error-code push); only real mode uses the real-mode IVT via <see cref="EnterCpuFaultHandler"/>.
+    /// Mirrors
+    /// <see cref="Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.InstructionExecutionHelper.HandleCpuException"/>.
+    /// </summary>
+    public SegmentedAddress ResolveCpuFaultTarget(byte vectorNumber, ushort? errorCode, ushort faultingCs, ushort faultingIp) {
+        if (State.CpuMode is CpuMode.Protected or CpuMode.Virtual8086) {
+            return ProtectedModeInterruptDispatcher.Dispatch(
+                State, Memory, Stack, vectorNumber, checkGateDpl: false, errorCode, new SegmentedAddress(faultingCs, faultingIp));
+        }
+        SegmentedAddress target = Machine.InterruptVectorTable[vectorNumber];
+        EnterCpuFaultHandler(faultingCs, faultingIp, target);
+        return target;
     }
 
     /// <summary>
@@ -663,25 +943,44 @@ public class CSharpOverrideHelper {
     /// </summary>
     /// <param name="target">The <see cref="SegmentedAddress"/> where the function is defined.</param>
     /// <returns>The C# function override, or <c>null</c> if not found.</returns>
+    /// <summary>
+    /// Returns the C# function override, or <c>null</c> if not found. Checks <see cref="FunctionInformations"/>
+    /// (keyed by segment:offset) first, then, in protected mode only, resolves <paramref name="target"/>'s
+    /// segment live through the current GDT/LDT to a flat linear address and checks
+    /// <see cref="LinearFunctionInformations"/> - so a linear-address override keeps firing even if the
+    /// selector currently mapping to that address changed since registration.
+    /// </summary>
+    /// <param name="target">The <see cref="SegmentedAddress"/> where the function is defined.</param>
+    /// <returns>The C# function override, or <c>null</c> if not found.</returns>
     public Func<int, Action>? SearchFunctionOverride(SegmentedAddress target) {
-        if (!FunctionInformations.TryGetValue(target,
-                out FunctionInformation? functionInformation)) {
-            return null;
+        if (FunctionInformations.TryGetValue(target, out FunctionInformation? functionInformation)) {
+            return functionInformation.FunctionOverride;
         }
 
-        return functionInformation.FunctionOverride;
+        if (State.CpuMode != CpuMode.Protected) {
+            return null;
+        }
+        if (!DescriptorTableReader.TryReadDescriptor(target.Segment, State.Gdtr.Base, State.Gdtr.Limit,
+                State.Ldtr.DescriptorCache.Base, State.Ldtr.DescriptorCache.Limit, address => Memory[Memory.Mmu.TranslateLinearAddress(address, isWrite: false)], out SegmentDescriptorCache descriptor)) {
+            return null;
+        }
+        uint linearAddress = descriptor.Base + target.Offset;
+        return LinearFunctionInformations.TryGetValue(linearAddress, out FunctionInformation? linearFunctionInformation)
+            ? linearFunctionInformation.FunctionOverride
+            : null;
     }
 
     private void ExecuteCallEnsuringSameStack(ushort expectedReturnCs, ushort expectedReturnIp,
         ushort targetCs, Func<int, Action> function, Action action) {
         uint expectedStackAddress = State.StackPhysicalAddress;
         // CS is set to the callee's segment for the duration of the call: this is the segment the emulated
-        // CPU runs in while inside the callee, so reads of CS (e.g. a "push CS" idiom) observe the right value.
-        // For near calls targetCs equals expectedReturnCs so CS is unchanged. IP is set to the expected return
-        // offset as a fallback for the post-call validation below; generated code never reads State.IP mid-call
+        // CPU runs in while inside the callee, so reads of CS (e.g. a "push CS" idiom, or a protected-mode
+        // CPL/privilege check) observe the right value and descriptor cache. For near calls targetCs equals
+        // expectedReturnCs so this is a same-selector no-op reload. IP is set to the expected return offset
+        // as a fallback for the post-call validation below; generated code never reads State.IP mid-call
         // (CheckExternalEvents takes the offset explicitly), and the callee's return action overwrites CS:IP
         // with the actual return address before the loop runs.
-        State.CS = targetCs;
+        LoadSegmentRegister((uint)SegmentRegisterIndex.CsIndex, targetCs);
         State.IP = expectedReturnIp;
         ExecuteCall(function, action);
         ushort actualReturnCs = State.CS;
@@ -749,6 +1048,22 @@ public class CSharpOverrideHelper {
     }
 
     /// <summary>
+    /// Overrides the machine code at the specified flat linear address, for protected-mode code whose
+    /// selector's base may not be known/stable at registration time. See
+    /// <see cref="OverrideInstruction(ushort, ushort, Func{Action})"/> for the segment:offset overload.
+    /// </summary>
+    /// <param name="linearAddress">The flat linear address of the instruction to override.</param>
+    /// <param name="renamedOverride">An action that provides the new implementation to use for the instruction.</param>
+    public void OverrideInstruction(uint linearAddress, Func<Action> renamedOverride) {
+        AddressBreakPoint breakPoint = new(
+            BreakPointType.CPU_EXECUTION_ADDRESS,
+            linearAddress,
+            _ => renamedOverride.Invoke().Invoke()
+            , false);
+        EmulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
+    }
+
+    /// <summary>
     /// Executes the specified action on top of the instruction at the specified segment and offset.
     /// </summary>
     /// <param name="segment">The segment of the instruction to execute the action on.</param>
@@ -760,6 +1075,22 @@ public class CSharpOverrideHelper {
             MemoryUtils.ToPhysicalAddress(
                 segment,
                 offset),
+            _ => action.Invoke()
+            , false);
+        EmulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
+    }
+
+    /// <summary>
+    /// Executes the specified action on top of the instruction at the specified flat linear address, for
+    /// protected-mode code. See <see cref="DoOnTopOfInstruction(ushort, ushort, Action)"/> for the
+    /// segment:offset overload.
+    /// </summary>
+    /// <param name="linearAddress">The flat linear address of the instruction to execute the action on.</param>
+    /// <param name="action">The action to execute on top of the instruction.</param>
+    public void DoOnTopOfInstruction(uint linearAddress, Action action) {
+        AddressBreakPoint breakPoint = new(
+            BreakPointType.CPU_EXECUTION_ADDRESS,
+            linearAddress,
             _ => action.Invoke()
             , false);
         EmulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
@@ -938,7 +1269,12 @@ public class CSharpOverrideHelper {
     /// Halt the program.
     /// </summary>
     /// <returns>An <see cref="Action"/> that exits the program.</returns>
-    public Action Hlt() => Exit;
+    public Action Hlt() {
+        return () => {
+            PrivilegeChecks.EnsureCpl0(State, "HLT");
+            Exit();
+        };
+    }
 
     /// <summary>
     /// Exit the program.

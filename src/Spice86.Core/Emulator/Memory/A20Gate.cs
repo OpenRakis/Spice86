@@ -45,7 +45,7 @@ public class A20Gate {
     /// <param name="address">The memory address that is to be accessed.</param>
     /// <returns>The transformed address if the 20th address line is silenced. The same address if it isn't.</returns>
     [Pure]
-    public int TransformAddress(int address) => (int) (address & AddressMask);
+    public int TransformAddress(int address) => (int)(address & AddressMask);
 
     /// <summary>
     /// Calculates the new memory address with the 20th address line silenced. <br/>
@@ -57,14 +57,18 @@ public class A20Gate {
     public uint TransformAddress(uint address) => (address & AddressMask);
 
     /// <summary>
-    /// The value for the <see cref="AddressMask"/> when <see cref="IsEnabled"/> is <c>false</c>
+    /// The value for the <see cref="AddressMask"/> when <see cref="IsEnabled"/> is <c>false</c>:
+    /// clears bit 20 (0x100000) specifically, matching real 80286+ A20 gate hardware - which gates
+    /// exactly one address line, not a whole range - while leaving every other bit unaffected.
     /// </summary>
-    public const uint DisabledAddressMask = 0xFFFFF;
+    public const uint DisabledAddressMask = ~0x100000u;
 
     /// <summary>
-    /// The value for the <see cref="AddressMask"/> when <see cref="IsEnabled"/> is <c>true</c>
+    /// The value for the <see cref="AddressMask"/> when <see cref="IsEnabled"/> is <c>true</c>: no
+    /// masking at all, matching real hardware where an enabled A20 line simply lets bit 20 (and every
+    /// other address bit) propagate normally, with no artificial ceiling on the address space.
     /// </summary>
-    public const uint EnabledAddressMask = 0x1FFFFF;
+    public const uint EnabledAddressMask = 0xFFFFFFFF;
 
     /// <summary>
     /// The address mask used over memory accesses.

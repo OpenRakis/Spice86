@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Shared.Emulator.Memory;
@@ -30,15 +31,13 @@ public class SegRegPushPopParser : BaseInstructionParser {
     public CfgInstruction ParsePopSReg(ParsingContext context, int segRegIndex) {
         CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         ValueNode regNode = _astBuilder.Register.SReg(segRegIndex);
-        DataType addressType = DataType.UINT16;
         ushort slotSize = context.HasOperandSize32 ? (ushort)4 : (ushort)2;
-        ValueNode stackPointer = _astBuilder.Register.StackPointer(addressType);
-        ValueNode popValue = _astBuilder.Pointer.ToSegmentedPointer(DataType.UINT16, SegmentRegisterIndex.SsIndex, stackPointer);
-        ValueNode nextSp = _astBuilder.Constant.AddConstant(addressType, stackPointer, slotSize);
-        BinaryOperationNode assign = new BinaryOperationNode(DataType.UINT16, regNode, BinaryOperation.ASSIGN, popValue);
-        BinaryOperationNode advanceStackPointer = _astBuilder.Assign(addressType, stackPointer, nextSp);
+        ValueNode popValue = new MethodCallValueNode(DataType.UINT16, "Stack", nameof(Stack.PopSegmentSelector),
+            _astBuilder.Constant.ToNode((uint)slotSize));
+        ValueNode segIndexNode = _astBuilder.Constant.ToNode((uint)segRegIndex);
+        MethodCallNode loadSegment = new MethodCallNode(null, nameof(InstructionExecutionHelper.LoadSegmentRegister), segIndexNode, popValue);
         InstructionNode displayAst = new InstructionNode(InstructionOperation.POP, regNode);
-        IVisitableAstNode execAst = _astBuilder.WithIpAdvancement(instr, assign, advanceStackPointer);
+        IVisitableAstNode execAst = _astBuilder.WithIpAdvancement(instr, loadSegment);
         instr.AttachAsts(displayAst, execAst);
         return instr;
     }

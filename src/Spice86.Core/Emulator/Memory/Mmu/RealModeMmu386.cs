@@ -12,7 +12,7 @@ public sealed class RealModeMmu386 : IMmu {
     private const uint SegmentLimit = 0xFFFFu;
 
     /// <inheritdoc />
-    public void CheckAccess(ushort segment, uint offset, uint length, SegmentAccessKind accessKind) {
+    public void CheckAccess(ushort segment, uint offset, uint length, SegmentAccessKind accessKind, bool isWrite) {
         if (IsValidAccess(offset, length)) {
             return;
         }
@@ -29,7 +29,14 @@ public sealed class RealModeMmu386 : IMmu {
     }
 
     /// <inheritdoc />
-    public uint TranslateAddress(ushort segment, uint offset) {
+    public uint TranslateAddress(ushort segment, uint offset, bool isWrite) {
         return MemoryUtils.ToPhysicalAddress(segment, (ushort)offset);
+    }
+
+    /// <summary>
+    /// A no-op: paging requires protected mode and is applied by the outer <see cref="PagingMmu"/>, not here.
+    /// </summary>
+    public uint TranslateLinearAddress(uint linearAddress, bool isWrite) {
+        return linearAddress;
     }
 }

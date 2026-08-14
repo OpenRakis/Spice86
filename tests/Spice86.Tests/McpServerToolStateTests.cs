@@ -1410,8 +1410,12 @@ public class McpServerToolStateTests {
 
     [Fact]
     public async Task ReadDisassembly_ShouldTruncateNearMemoryBoundaryAsync() {
-        // Arrange
-        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        // Arrange - a RAM size matching the old conventional+HMA-only ceiling, so the fixed
+        // 16-bit segment:offset boundary below (the tool's own address-space limit) sits right at
+        // the edge of memory again, reproducing the truncation scenario deterministically.
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(
+            TestProgramName, enableXms: false, enableEms: false, initializeDos: false,
+            sbType: SbType.None, oplMode: OplMode.None, ramSizeKb: 1087);
         await context.InitializeAsync();
 
         // Act — disassemble at the very end of addressable memory (FFFF:FFFF physical = 0x10FFEF)
