@@ -236,6 +236,21 @@ public class CSharpStatementPrinterTest {
     }
 
     [Fact]
+    public void CompoundShiftConvertsAnUnsigned32BitCount() {
+        // Arrange
+        RegisterNode eax = new(DataType.UINT32, (int)RegisterIndex.AxIndex);
+        RegisterNode ecx = new(DataType.UINT32, (int)RegisterIndex.CxIndex);
+        BinaryOperationNode assignment = new(DataType.UINT32, eax, BinaryOperation.ASSIGN,
+            new BinaryOperationNode(DataType.UINT32, eax, BinaryOperation.RIGHT_SHIFT, ecx));
+
+        // Act
+        string printed = Print(assignment);
+
+        // Assert
+        printed.Should().Be(Lines("EAX >>= (int)ECX;"));
+    }
+
+    [Fact]
     public void OtherRegisterKeepsTheAssignment() {
         // Arrange
         RegisterNode bx = new(DataType.UINT16, (int)RegisterIndex.BxIndex);

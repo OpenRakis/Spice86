@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 
 using System.Collections.Generic;
+
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
@@ -41,7 +42,7 @@ public class StackAstBuilder {
     }
 
     /// <summary>
-    /// Creates an AST node for 32-bit LEAVE stack semantics.
+    /// Creates an AST node for LEAVE stack semantics.
     /// </summary>
     /// <returns>MethodCallNode representing 32-bit LEAVE.</returns>
     public MethodCallNode Leave32() {
@@ -101,12 +102,12 @@ public class StackAstBuilder {
 
     /// <summary>
     /// Dispatcher method for LEAVE stack semantics based on bit width.
-    /// For 16-bit, calls Leave16.
-    /// For 32-bit, calls Leave32.
+    /// Builds a call to <see cref="Stack.Leave"/>, passing the operand size as a constant.
     /// </summary>
-    /// <param name="bitWidth">The bit width determining which LEAVE to use</param>
-    /// <returns>MethodCallNode representing the appropriate Stack.LeaveN method</returns>
+    /// <param name="bitWidth">The bit width determining the LEAVE operand size.</param>
+    /// <returns>MethodCallNode representing Stack.Leave(operandSize32).</returns>
     public MethodCallNode Leave(BitWidth bitWidth) {
-        return bitWidth == BitWidth.DWORD_32 ? Leave32() : Leave16();
+        return new StackCallNode(StackOperation.Leave, bitWidth);
     }
+
 }

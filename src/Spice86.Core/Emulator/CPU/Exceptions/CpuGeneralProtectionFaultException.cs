@@ -15,8 +15,8 @@ public class CpuGeneralProtectionFaultException : CpuException {
     /// Initializes a new instance.
     /// </summary>
     /// <param name="message">The message describing the error.</param>
-    /// <param name="errorCode">Some exceptions may have an error code pushed on the stack.</param>
-    public CpuGeneralProtectionFaultException(string message, ushort? errorCode = null)
+    /// <param name="errorCode">The selector-related error code, or 0 for a violation not tied to a specific selector (#GP always carries an error code on real hardware).</param>
+    public CpuGeneralProtectionFaultException(string message, ushort? errorCode = 0)
         : base(message, 0x0D, CpuExceptionType.Fault, "#GP", errorCode) {
     }
 }

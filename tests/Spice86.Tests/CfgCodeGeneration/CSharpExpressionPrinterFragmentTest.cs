@@ -4,6 +4,7 @@ using FluentAssertions;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
@@ -222,6 +223,108 @@ public class CSharpExpressionPrinterFragmentTest {
 
         // Assert
         fragment.Text.Should().Be("(ushort)(DX + 1 | 1) >> 1");
+    }
+
+    [Fact]
+    public void StackAddressKeepsIts32BitWidth() {
+        // Arrange
+        BinaryOperationNode offset = new(DataType.UINT32,
+            new RegisterNode(DataType.UINT32, (int)RegisterIndex.SpIndex),
+            BinaryOperation.PLUS, new ConstantNode(DataType.UINT32, 4));
+
+        // Act
+        CSharpFragment fragment = StackWord(offset);
+
+        // Assert
+        fragment.Text.Should().Be("UInt16[SS, (uint)(ESP + 4), SegmentAccessKind.Stack]");
+    }
+
+    [Fact]
+    public void StackSegmentPointerUsesStackAccessValidationAtTheAddressLimit() {
+        // Arrange
+        SegmentedPointerNode pointer = new(DataType.UINT32,
+            new SegmentRegisterNode((int)SegmentRegisterIndex.SsIndex), null,
+            new ConstantNode(DataType.UINT32, uint.MaxValue));
+
+        // Act
+        CSharpFragment fragment = _printer.Print(pointer);
+
+        // Assert
+        fragment.Text.Should().Be("UInt32[SS, 0xFFFFFFFFu, SegmentAccessKind.Stack]");
+    }
+
+    [Fact]
+    public void ExtendedMemoryOffsetKeepsDwordAddressWidth() {
+        // Arrange
+        BinaryOperationNode offset = new(DataType.UINT32, new ConstantNode(DataType.UINT32, 0),
+            BinaryOperation.PLUS, new ConstantNode(DataType.UINT32, 0x500000));
+
+        // Act
+        CSharpFragment fragment = StackWord(offset);
+
+        // Assert
+        fragment.Text.Should().Be("UInt16[SS, (uint)(0 + 0x00500000), SegmentAccessKind.Stack]");
+    }
+
+    [Theory]
+    [InlineData(BinaryOperation.LEFT_SHIFT, "EAX << (int)ECX")]
+    [InlineData(BinaryOperation.RIGHT_SHIFT, "EAX >> (int)ECX")]
+    public void DwordShiftCountIsConvertedToInt(BinaryOperation operation, string expected) {
+        // Arrange
+        BinaryOperationNode shift = new(DataType.UINT32,
+            new RegisterNode(DataType.UINT32, (int)RegisterIndex.AxIndex), operation,
+            new RegisterNode(DataType.UINT32, (int)RegisterIndex.CxIndex));
+
+        // Act
+        CSharpFragment fragment = _printer.Print(shift);
+
+        // Assert
+        fragment.Text.Should().Be(expected);
+    }
+
+    [Fact]
+    public void UnsignedShiftPromotesItsLiteralAndConvertsTheCount() {
+        // Arrange
+        BinaryOperationNode shift = new(DataType.UINT32, new ConstantNode(DataType.UINT32, 1),
+            BinaryOperation.LEFT_SHIFT, new RegisterNode(DataType.UINT32, (int)RegisterIndex.CxIndex));
+
+        // Act
+        CSharpFragment fragment = _printer.Print(shift);
+
+        // Assert
+        fragment.Text.Should().Be("1u << (int)ECX");
+    }
+
+    [Fact]
+    public void UnsignedRightShiftTruncatesAPromotedLeftOperand() {
+        // Arrange
+        BinaryOperationNode difference = new(DataType.UINT32,
+            new RegisterNode(DataType.UINT16, (int)RegisterIndex.AxIndex), BinaryOperation.MINUS,
+            new RegisterNode(DataType.UINT16, (int)RegisterIndex.BxIndex));
+        BinaryOperationNode shift = new(DataType.UINT32, difference, BinaryOperation.RIGHT_SHIFT,
+            new ConstantNode(DataType.UINT32, 16));
+
+        // Act
+        CSharpFragment fragment = _printer.Print(shift);
+
+        // Assert
+        fragment.Text.Should().Be("(uint)(AX - BX) >> 16");
+    }
+
+    [Fact]
+    public void ProtectedModeHelperArgumentsAreConvertedToTheirParameterTypes() {
+        // Arrange
+        InstructionExecutionHelperCallNode call = new(InstructionExecutionHelperOperation.LoadSegmentRegister,
+            new ConstantNode(DataType.UINT32, 2),
+            new BinaryOperationNode(DataType.UINT16,
+                new RegisterNode(DataType.UINT16, (int)RegisterIndex.AxIndex), BinaryOperation.PLUS,
+                new ConstantNode(DataType.UINT16, 1)));
+
+        // Act
+        CSharpFragment fragment = _printer.Print(call);
+
+        // Assert
+        fragment.Text.Should().Be("LoadSegmentRegister(2, (ushort)(AX + 1))");
     }
 
     [Fact]
