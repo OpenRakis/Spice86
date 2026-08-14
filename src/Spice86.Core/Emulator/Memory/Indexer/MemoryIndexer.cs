@@ -55,11 +55,11 @@ public abstract class MemoryIndexer<T> : Indexer<T>, IList<T> {
     /// <param name="accessKind">The semantic access kind.</param>
     public virtual T this[ushort segment, uint offset, SegmentAccessKind accessKind] {
         get {
-            Mmu.CheckAccess(segment, offset, _accessSize, accessKind);
+            Mmu.CheckAccess(segment, offset, _accessSize, accessKind, isWrite: false);
             return ReadSegmented(segment, offset);
         }
         set {
-            Mmu.CheckAccess(segment, offset, _accessSize, accessKind);
+            Mmu.CheckAccess(segment, offset, _accessSize, accessKind, isWrite: true);
             WriteSegmented(segment, offset, value);
         }
     }

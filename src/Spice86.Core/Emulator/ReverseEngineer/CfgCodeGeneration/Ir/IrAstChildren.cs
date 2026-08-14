@@ -183,7 +183,7 @@ internal static class IrAstChildren {
                 or OffsetLiteralNode or SignatureFieldNode or CommentNode or InstructionStartNode
                 or CheckExternalEventsNode or SpeculativeGuardNode or BreakNode or ContinueNode
                 or GotoNode or LabelNode or EntryDispatcherLabelNode or CyclicJumpNode
-                or MethodGroupNode or LocalDeclarationNode or InterruptReturnNode or SelectorNode
+                or MethodGroupNode or UntestedFarCallTargetNode or LocalDeclarationNode or InterruptReturnNode or SelectorNode
                 or SetInterruptShadowNode or ThrowNode or CfgInstructionNode
                 or SegmentedAddressListNode or RegisterLocalNode:
                 break;
@@ -287,7 +287,7 @@ internal static class IrAstChildren {
             or SegmentVariableNode or OffsetLiteralNode or SignatureFieldNode or CommentNode
             or InstructionStartNode or CheckExternalEventsNode or SpeculativeGuardNode or BreakNode
             or ContinueNode or GotoNode or LabelNode or EntryDispatcherLabelNode or CyclicJumpNode
-            or MethodGroupNode or LocalDeclarationNode or InterruptReturnNode or SelectorNode
+            or MethodGroupNode or UntestedFarCallTargetNode or LocalDeclarationNode or InterruptReturnNode or SelectorNode
             or SetInterruptShadowNode or ThrowNode or CfgInstructionNode
             or SegmentedAddressListNode or RegisterLocalNode => node,
         RegisterWriteBackNode writeBack => Map(node, map, [writeBack.Register, writeBack.Local],

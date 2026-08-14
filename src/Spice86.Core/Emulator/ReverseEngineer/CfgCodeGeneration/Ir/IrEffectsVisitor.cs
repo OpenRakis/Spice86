@@ -107,6 +107,7 @@ internal sealed class IrEffectsVisitor : ICodeGenerationAstVisitor<IrEffects> {
     public IrEffects VisitLoadOffsetParameterNode(LoadOffsetParameterNode node) => IrEffects.None;
 
     public IrEffects VisitMethodGroupNode(MethodGroupNode node) => IrEffects.None;
+    public IrEffects VisitUntestedFarCallTargetNode(UntestedFarCallTargetNode node) => IrEffects.None;
 
     public IrEffects VisitSegmentedAddressListNode(SegmentedAddressListNode node) => IrEffects.None;
 
@@ -150,6 +151,8 @@ internal sealed class IrEffectsVisitor : ICodeGenerationAstVisitor<IrEffects> {
         ArgumentsOf(node.CallNode).Then(_typedCalls ? ValueCallEffect(node) : IrEffects.Unknown);
 
     private static IrEffects StatementCallEffect(MethodCallNode node) => node switch {
+        // Descriptor caches, control registers and CPU mode are not represented by individual IR values.
+        InstructionExecutionHelperCallNode => IrEffects.Unknown,
         ProgramInterruptCallHelperNode call => ProgramInterruptCall(call),
         StackCallNode { Operation: StackOperation.Push or StackOperation.PushAll } stack
             => Pushing(stack.Width),
@@ -165,6 +168,7 @@ internal sealed class IrEffectsVisitor : ICodeGenerationAstVisitor<IrEffects> {
     };
 
     private static IrEffects ValueCallEffect(MethodCallValueNode node) => node switch {
+        InstructionExecutionHelperCallValueNode => IrEffects.Unknown,
         StackCallValueNode { Operation: StackOperation.Pop } stack
             => StackAccess(StackPointerOf(stack.Width) | CpuValues.Ss, StackPointerOf(stack.Width),
                 IrTokens.Memory, IrTokens.None),

@@ -8,6 +8,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
@@ -204,7 +205,12 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
             return node.Arguments.Select((argument, index) =>
                 Argument(serviceCall, implementationParameters[index], argument));
         }
-        Type? targetType = ResolveKnownMethodTargetType(node.PropertyPath);
+        Type? targetType = node is InstructionExecutionHelperCallNode { PropertyPath: null }
+            ? typeof(InstructionExecutionHelper) : ResolveKnownMethodTargetType(node.PropertyPath);
+        if (node is InstructionExecutionHelperCallNode
+                { Operation: InstructionExecutionHelperOperation.ValidateFarCodeSegmentTransfer }) {
+            targetType = typeof(CSharpOverrideHelper);
+        }
         if (targetType is null) {
             return node.Arguments.Select(argument => Expr(argument).Text);
         }
@@ -495,9 +501,20 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
             left = TruncatedOperand(node.Left, leftFragment) ?? left;
             right = TruncatedOperand(node.Right, rightFragment) ?? right;
         }
-        if (node.BinaryOperation is BinaryOperation.LEFT_SHIFT or BinaryOperation.RIGHT_SHIFT
-            && rightFragment.Constant is ConstantNode shiftCount) {
-            right = ShiftCountText(shiftCount);
+        if (node.BinaryOperation is BinaryOperation.LEFT_SHIFT or BinaryOperation.RIGHT_SHIFT) {
+            if (rightFragment.Constant is ConstantNode shiftCount) {
+                right = ShiftCountText(shiftCount);
+            } else if (node.Right.DataType == DataType.UINT32) {
+                right = Cast(DataType.INT32, rightFragment);
+            }
+            if (node.DataType == DataType.UINT32) {
+                if (leftFragment.Constant is ConstantNode constantOperand
+                    && constantOperand.DataType == DataType.UINT32 && constantOperand.Value <= int.MaxValue) {
+                    left = leftFragment.Text + "u";
+                } else {
+                    left = Cast(DataType.UINT32, leftFragment);
+                }
+            }
         }
         // C# promotes byte/ushort/short/sbyte arithmetic to int, so the actual evaluated type is not the
         // node's semantic DataType; leave it unknown so a cast back to the operand width is never elided.
@@ -1008,6 +1025,10 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         }
         return new CSharpFragment($"_ => {node.MethodName}(0x{node.LoadOffset:X4})", null, AssignmentPrecedence);
     }
+
+    public CSharpFragment VisitUntestedFarCallTargetNode(UntestedFarCallTargetNode node) =>
+        new($"_ => throw FailAsUntested(\"Far call at {node.CallAddress} unexpectedly resolved to a direct target\")",
+            null, AssignmentPrecedence);
 
     public CSharpFragment VisitSignatureFieldNode(SignatureFieldNode node) => new(node.FieldName);
 

@@ -161,7 +161,7 @@ public class SpeculativeExplorer {
     /// translated like a code access (the 8086 MMU wraps it to 16 bits), the A20 gate is applied,
     /// and no memory read breakpoint fires.</summary>
     private byte SneakilyReadCodeByte(ushort segment, uint offset) {
-        uint physical = _memory.Mmu.TranslateAddress(segment, offset);
+        uint physical = _memory.Mmu.TranslateAddress(segment, offset, false);
         return _memory.SneakilyRead(_memory.A20Gate.TransformAddress(physical));
     }
 
