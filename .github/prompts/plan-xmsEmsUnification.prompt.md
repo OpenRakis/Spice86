@@ -50,9 +50,41 @@ exists). Every phase is TDD: the failing ASM fixture(s) come first, then the imp
    was rebased onto latest `master` (which had independently migrated logging from Serilog's
    `ILoggerService` to `Microsoft.Extensions.Logging.ILogger` - see repo memory for conflict
    resolution details) and pushed. All further phases build on top of that rebased state.
+6. DONE: **BIOS INT 15h, AH=87h (Copy Extended Memory, `SystemBiosInt15Handler.CopyExtendedMemory`,
+   a SeaBIOS `handle_1587` reimplementation) - a separate, legacy "extended memory" mechanism that
+   predates and is independent of XMS's own INT 2Fh API.** It already read/wrote through the shared
+   `Memory` bus directly (`Memory.GetSlice`/`Memory.Length`, no private array), so it transparently
+   gained the ability to address the FULL unified pool the moment Ram was grown in step 2 above - no
+   code change was needed, only verification. Added a new regression test (there was previously NO
+   test coverage for this handler at all) proving this: `tests/Spice86.Tests/Resources/BiosInt15Tests/
+   bios_int15h_87h.asm`/`.com` + `SystemBiosInt15HandlerTests.BiosInt15h_87h_ShouldCopyAcrossFullUnifiedMemoryRange`
+   round-trips a marker word through a raw linear address 3MB in (via the BIOS's own GDT-based
+   handle!=0 "linear address" addressing mode, `GlobalDescriptorTable.LinearSourceAddress`/
+   `LinearDestAddress`) - well beyond the old ~1.06MB conventional+HMA ceiling that would have made
+   this fail before Ram was grown. Confirmed PASSING.
 
-### Phase 2 - XMS onto the unified store (depends on Phase 1)
-1. TDD first: new ASM fixture, real mode, `enableSpeculativeCfgExploration: false`-style protected
+### Phase 2 - XMS onto the unified store (depends on Phase 1) - **STATUS: IN PROGRESS**
+0. DONE: removed `ExtendedMemoryManager.XmsRam` (the private `Ram` array) entirely. All XMS block
+   reads/writes (`MoveExtendedMemoryBlock`'s two XMS-block branches, plus the MCP `read_xms_memory`/
+   `search_xms_memory` tools and the Avalonia XMS hex-view `XmsBlockBinaryDocument`) now go through
+   the shared `IMemory` at `XmsBaseAddress + block.Offset` (`XmsBlock.Offset` was already documented
+   as "relative to XMS base address", so no addressing-math changes were needed - only the backing
+   store). Added `ExtendedMemoryManager.GetSlice(uint blockOffset, int length)` as the one shared
+   entry point UI/MCP code should use instead of reaching into the manager's internals directly.
+   **Real bug found and fixed by this change**: XMS block linear addresses always have bit 20 set
+   (they start at `XmsBaseAddress = A20Gate.StartOfHighMemoryArea = 0x100000`), and the shared
+   `Memory`'s plain (non-segmented) indexer/`GetSlice` apply `A20Gate.TransformAddress` - so any XMS
+   read/write done while A20 happens to be DISABLED now gets silently aliased to the wrong address
+   (this was invisible before since the old private `XmsRam` array bypassed A20 gating entirely).
+   This matches real hardware/HIMEM.SYS behavior (XMS specifies that A20 must be enabled to reliably
+   access extended memory; `MoveExtendedMemoryBlock` itself already force-enables A20 for the
+   duration of its own copy) - fixed the 3 XMS unit tests that directly poked/read XMS-range
+   addresses without first enabling A20 (`XmsUnitTests.cs`'s `MoveExtendedMemoryBlock_*` tests) and
+   the MCP integration test's `PrepareXmsBlockWithPattern` helper, all now explicitly enabling A20
+   before any raw XMS-range memory access, matching what a real caller must do.
+   Full regression suite confirmed green after this change (all `XmsUnitTests`/`Xms32BitFunctionsTests`
+   plus the MCP XMS tools tests).
+1. NOT YET STARTED: the TDD protected-mode round-trip ASM fixture described below.
    mode test mirroring `TestProtectedModeEntry`'s pattern: from real mode, call INT 2Fh AH=43h/09h to
    allocate an XMS block (or use the HMA claim, function 01h), note the handle/offset, enter
    protected mode via a flat descriptor covering the pool, write a marker at the block's real linear
