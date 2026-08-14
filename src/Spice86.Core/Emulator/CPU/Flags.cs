@@ -14,9 +14,11 @@ public class Flags {
         [CpuModel.INTEL_8086] = new(bitsAlwaysOn: [1, 12, 13, 14, 15], bitsAlwaysOff: [3, 5]),
         // Since we dont handle IO privilege (12 / 13) and nested task (14), let's put them as always off
         [CpuModel.INTEL_80286] = new(bitsAlwaysOn: [1], bitsAlwaysOff: [3, 5, 12, 13, 14, 15]),
-        [CpuModel.INTEL_80386] = new(bitsAlwaysOn: [1, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31], bitsAlwaysOff: [3, 5, 12, 13, 14, 15])
+        // IOPL (12-13) and NT (14) are real, software-visible bits on the 386 (privilege checks and
+        // task-switch nesting both depend on them) so they are no longer forced off here.
+        [CpuModel.INTEL_80386] = new(bitsAlwaysOn: [1, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31], bitsAlwaysOff: [3, 5, 15])
     }.ToFrozenDictionary();
-    
+
     private record BitsOnOff {
         public BitsOnOff(List<int> bitsAlwaysOn, List<int> bitsAlwaysOff) {
             BitsAlwaysOn = BitMaskUtils.BitMaskFromBitList(bitsAlwaysOn);
@@ -26,7 +28,7 @@ public class Flags {
         /// Or that into the register
         /// </summary>
         public uint BitsAlwaysOn { get; }
-        
+
         /// <summary>
         /// And that into the register
         /// </summary>
@@ -78,6 +80,24 @@ public class Flags {
     public const ushort Overflow = 0b00001000_00000000; //11
 
     /// <summary>
+    /// The I/O privilege level field bitmask (EFLAGS bits 12-13). A 2-bit field, not a single boolean
+    /// flag; use <see cref="State.IoPrivilegeLevel"/> to read/write the numeric level.
+    /// </summary>
+    public const uint IoPrivilegeLevelMask = 0b0011_0000_0000_0000; //12-13
+
+    /// <summary>
+    /// The nested-task flag bitmask (EFLAGS bit 14). Set on entry to a task via a `CALL`/`INT` to a
+    /// task gate, so `IRET` knows to return via the back-link instead of a normal stack pop.
+    /// </summary>
+    public const uint NestedTask = 0x0000_4000; //14
+
+    /// <summary>
+    /// The virtual-8086 mode flag bitmask (EFLAGS bit 17). Only meaningful once protected mode is
+    /// enabled; toggled to enter/leave V86 mode via IRET or a task switch.
+    /// </summary>
+    public const uint Virtual8086Mode = 0x0002_0000; //17
+
+    /// <summary>
     /// rflag mask to OR with flags, useful to compare with values emulated by DOSBox.
     /// </summary>
     private uint _orFlagMask;
@@ -120,6 +140,28 @@ public class Flags {
             FlagRegister |= mask;
         } else {
             FlagRegister &= (ushort)~mask;
+        }
+    }
+
+    /// <summary>
+    /// Gets the value of a particular flag outside the low 16 bits of the register (e.g. VM).
+    /// </summary>
+    /// <param name="mask">The bitmask to apply on the flags register.</param>
+    /// <returns>The value of a particular flag, as a boolean.</returns>
+    public bool GetFlag(uint mask) {
+        return (FlagRegister & mask) == mask;
+    }
+
+    /// <summary>
+    /// Sets the value of a particular flag outside the low 16 bits of the register (e.g. VM).
+    /// </summary>
+    /// <param name="mask">The bitmask to access a particular flag in the flags register.</param>
+    /// <param name="value">The boolean value of the flag.</param>
+    public void SetFlag(uint mask, bool value) {
+        if (value) {
+            FlagRegister |= mask;
+        } else {
+            FlagRegister &= ~mask;
         }
     }
 

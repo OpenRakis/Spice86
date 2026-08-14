@@ -69,17 +69,17 @@ public class State(CpuModel cpuModel) {
     /// Gets or sets the Base Register High Byte
     /// </summary>
     public byte BH { get => GeneralRegisters.UInt8High[(uint)RegisterIndex.BxIndex]; set => GeneralRegisters.UInt8High[(uint)RegisterIndex.BxIndex] = value; }
-    
+
     /// <summary>
     /// Gets or sets the Base Register Low Byte
     /// </summary>
     public byte BL { get => GeneralRegisters.UInt8Low[(uint)RegisterIndex.BxIndex]; set => GeneralRegisters.UInt8Low[(uint)RegisterIndex.BxIndex] = value; }
-    
+
     /// <summary>
     /// Gets or sets the Base Register First Word
     /// </summary>
     public ushort BX { get => GeneralRegisters.UInt16[(uint)RegisterIndex.BxIndex]; set => GeneralRegisters.UInt16[(uint)RegisterIndex.BxIndex] = value; }
-    
+
     /// <summary>
     /// Gets or sets the Extended Base general purpose register
     /// </summary>
@@ -122,7 +122,7 @@ public class State(CpuModel cpuModel) {
     /// Gets or sets the word value of the Data general purpose register.
     /// </summary>
     public ushort DX { get => GeneralRegisters.UInt16[(uint)RegisterIndex.DxIndex]; set => GeneralRegisters.UInt16[(uint)RegisterIndex.DxIndex] = value; }
-    
+
     /// <summary>
     /// Extended Data general purpose register.
     /// <para>
@@ -135,7 +135,7 @@ public class State(CpuModel cpuModel) {
     /// Gets or sets the word value of the Destination Index general purpose register.
     /// </summary>
     public ushort DI { get => GeneralRegisters.UInt16[(uint)RegisterIndex.DiIndex]; set => GeneralRegisters.UInt16[(uint)RegisterIndex.DiIndex] = value; }
-    
+
     /// <summary>
     /// Extended Destination Index general purpose register.
     /// <para>
@@ -214,9 +214,19 @@ public class State(CpuModel cpuModel) {
     public ushort SS { get => SegmentRegisters.UInt16[(uint)SegmentRegisterIndex.SsIndex]; set => SegmentRegisters.UInt16[(uint)SegmentRegisterIndex.SsIndex] = value; }
 
     /// <summary>
-    /// Gets or sets the Instruction Pointer segment register.
+    /// Gets or sets the low 16 bits of the instruction pointer (a view over <see cref="EIP"/>, mirroring
+    /// the AX/EAX relationship): the authoritative value for real mode and 16-bit-default protected-mode
+    /// code segments.
     /// </summary>
-    public ushort IP { get; set; }
+    public ushort IP { get => (ushort)EIP; set => EIP = (EIP & 0xFFFF_0000) | value; }
+
+    /// <summary>
+    /// Gets or sets the full 32-bit instruction pointer. Authoritative once a 32-bit-default code
+    /// segment (CS descriptor D/B bit set) is executing; real mode and 16-bit segments never set bits
+    /// 16-31, so <see cref="IP"/> alone is equivalent for them.
+    /// </summary>
+    public uint EIP { get; set; }
+
 
     /// <summary>
     /// Contains the flags of the CPU. This is the flags register.
@@ -253,22 +263,22 @@ public class State(CpuModel cpuModel) {
     /// </para> 
     /// </summary>
     public bool TrapFlag { get => Flags.GetFlag(Flags.Trap); set => Flags.SetFlag(Flags.Trap, value); }
-    
+
     /// <summary>
     /// Gets or sets the sign flag. Set equal to high-order bit of result (0 is positive, 1 if negative).
     /// </summary>
     public bool SignFlag { get => Flags.GetFlag(Flags.Sign); set => Flags.SetFlag(Flags.Sign, value); }
-    
+
     /// <summary>
     /// Gets or sets the value of the Zero Flag. Set if result is zero; cleared otherwise.
     /// </summary>
     public bool ZeroFlag { get => Flags.GetFlag(Flags.Zero); set => Flags.SetFlag(Flags.Zero, value); }
-    
+
     /// <summary>
     /// Gets or sets the value of the Auxiliary Flag. Set if there is a carry from bit 3 to bit 4 of the result; cleared otherwise. <br/>
     /// </summary>
     public bool AuxiliaryFlag { get => Flags.GetFlag(Flags.Auxiliary); set => Flags.SetFlag(Flags.Auxiliary, value); }
-    
+
     /// <summary>
     /// Gets or sets the value of the Parity Flag. <br/> Set if low-order eight bits of result contain an even number of 1 bits; cleared otherwise.
     /// </summary>
@@ -325,7 +335,7 @@ public class State(CpuModel cpuModel) {
     /// <summary>
     /// The physical address of the stack in memory
     /// </summary>
-    public uint StackPhysicalAddress =>  MemoryUtils.ToPhysicalAddress(SS, SP);
+    public uint StackPhysicalAddress => MemoryUtils.ToPhysicalAddress(SS, SP);
 
     /// <summary>
     /// The CPU registers
@@ -337,6 +347,68 @@ public class State(CpuModel cpuModel) {
     /// The segment registers are registers that store segment selectors, which are used to access different parts of memory.
     /// </summary>
     public SegmentRegisters SegmentRegisters { get; } = new();
+
+    /// <summary>
+    /// The hidden descriptor cache (base, limit, access rights) loaded for each segment register.
+    /// </summary>
+    public SegmentDescriptorCaches SegmentDescriptorCaches { get; } = new();
+
+    /// <summary>
+    /// The 386 control registers (CR0-CR4).
+    /// </summary>
+    public ControlRegisters ControlRegisters { get; } = new();
+
+    /// <summary>
+    /// The Global Descriptor Table register, loaded by LGDT and read back by SGDT.
+    /// </summary>
+    public DescriptorTableRegister Gdtr { get; } = new();
+
+    /// <summary>
+    /// The Interrupt Descriptor Table register, loaded by LIDT and read back by SIDT.
+    /// </summary>
+    public DescriptorTableRegister Idtr { get; } = new();
+
+    /// <summary>
+    /// The Local Descriptor Table register, loaded by LLDT and read back by SLDT.
+    /// </summary>
+    public SystemSegmentRegister Ldtr { get; } = new();
+
+    /// <summary>
+    /// The Task Register, loaded by LTR and read back by STR.
+    /// </summary>
+    public SystemSegmentRegister Tr { get; } = new();
+
+    /// <summary>
+    /// The addressing/execution mode the CPU is currently operating in, derived from
+    /// <see cref="Registers.ControlRegisters.ProtectionEnable"/> and the EFLAGS VM bit.
+    /// </summary>
+    public CpuMode CpuMode {
+        get {
+            if (!ControlRegisters.ProtectionEnable) {
+                return CpuMode.Real;
+            }
+            return Flags.GetFlag(Flags.Virtual8086Mode) ? CpuMode.Virtual8086 : CpuMode.Protected;
+        }
+    }
+
+    /// <summary>
+    /// The Current Privilege Level: 0 outside protected mode, the CS selector's RPL in protected mode
+    /// (kept in sync with CPL by every control transfer), or 3 in Virtual-8086 mode.
+    /// </summary>
+    public byte Cpl => CpuMode switch {
+        CpuMode.Real => 0,
+        CpuMode.Virtual8086 => 3,
+        _ => new SegmentSelector(CS).RequestedPrivilegeLevel
+    };
+
+    /// <summary>
+    /// Gets or sets the I/O Privilege Level (EFLAGS bits 12-13): the minimum CPL allowed to execute
+    /// `IN`/`OUT`/`CLI`/`STI` (and, in V86 mode, the level always required to be 3 for those to succeed).
+    /// </summary>
+    public byte IoPrivilegeLevel {
+        get => (byte)((Flags.FlagRegister & Flags.IoPrivilegeLevelMask) >> 12);
+        set => Flags.FlagRegister = (Flags.FlagRegister & ~Flags.IoPrivilegeLevelMask) | (((uint)value & 0b11) << 12);
+    }
 
     /// <summary>
     /// Gets or sets a value indicating whether the CPU is running.

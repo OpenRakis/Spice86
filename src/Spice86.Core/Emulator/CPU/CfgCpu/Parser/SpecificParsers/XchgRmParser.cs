@@ -21,7 +21,7 @@ public class XchgRmParser : OperationModRmParser {
         List<IVisitableAstNode> nodes = new();
         ValueNode rmNode;
         if (modRmContext.MemoryAddressType != MemoryAddressType.NONE) {
-            DataType addrType = _astBuilder.AddressType(instr);
+            DataType addrType = _astBuilder.AddressType(modRmContext.AddressSize);
             (VariableDeclarationNode cachedOffset, rmNode) =
                 _astBuilder.ModRm.ToMemoryAddressNodeWithCachedOffset(dataType, addrType, modRmContext, "xchgOffset");
             nodes.Add(cachedOffset);

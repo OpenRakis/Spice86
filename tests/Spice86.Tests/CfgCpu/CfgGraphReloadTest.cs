@@ -85,7 +85,7 @@ public class CfgGraphReloadTest {
     private static (long MaxCycles, bool EnablePit, bool EnableA20Gate) GetBinConfig(string binName) => binName switch {
         "externalint" => (0xFFFFFFF, true, false),
         "linearsamesegmenteddifferent" => (100000L, false, true),
-        "test386" => (long.MaxValue, false, false),
+        "test386" => (Spice86Creator.LongRunningMaxCycles, false, false),
         _ => (100000L, false, false),
     };
 

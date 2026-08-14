@@ -1757,7 +1757,7 @@ internal sealed class EmulatorMcpTools {
                     throw new InvalidOperationException("Read would exceed block boundary");
                 }
 
-                IList<byte> data = _services.XmsManager.XmsRam.GetSlice((int)(xmsBlock.Value.Offset + offset), length);
+                IList<byte> data = _services.XmsManager.GetSlice(xmsBlock.Value.Offset + offset, length);
                 byte[] dataArray = new byte[data.Count];
                 data.CopyTo(dataArray, 0);
 
@@ -1802,7 +1802,7 @@ internal sealed class EmulatorMcpTools {
                 if (_services.XmsManager == null) {
                     throw new InvalidOperationException("XMS is not enabled");
                 }
-                IList<byte> data = _services.XmsManager.XmsRam.GetSlice((int)(block.Offset + startOffset), searchLength);
+                IList<byte> data = _services.XmsManager.GetSlice(block.Offset + startOffset, searchLength);
                 uint[] matches = SearchArray(data, needle, startOffset, limit);
                 return new {
                     Handle = handle,

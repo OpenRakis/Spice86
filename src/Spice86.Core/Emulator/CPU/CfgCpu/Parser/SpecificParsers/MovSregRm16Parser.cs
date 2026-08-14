@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.Exceptions;
@@ -27,14 +28,15 @@ public class MovSregRm16Parser : BaseInstructionParser {
         }
         ValueNode sregNode = _astBuilder.Register.SReg(modRmContext.RegisterIndex);
         ValueNode rmNode = _astBuilder.ModRm.RmToNode(DataType.UINT16, modRmContext);
-        BinaryOperationNode assignment = _astBuilder.Assign(DataType.UINT16, sregNode, rmNode);
+        ValueNode segIndexNode = _astBuilder.Constant.ToNode((uint)modRmContext.RegisterIndex);
+        MethodCallNode loadSegment = new MethodCallNode(null, nameof(InstructionExecutionHelper.LoadSegmentRegister), segIndexNode, rmNode);
         InstructionNode displayAst = new InstructionNode(InstructionOperation.MOV, sregNode, rmNode);
         IVisitableAstNode execAst;
         if (modRmContext.RegisterIndex == (uint)SegmentRegisterIndex.SsIndex) {
             IVisitableAstNode setInterruptShadowing = _astBuilder.Flag.SetInterruptShadowing();
-            execAst = _astBuilder.WithIpAdvancement(instr, assignment, setInterruptShadowing);
+            execAst = _astBuilder.WithIpAdvancement(instr, loadSegment, setInterruptShadowing);
         } else {
-            execAst = _astBuilder.WithIpAdvancement(instr, assignment);
+            execAst = _astBuilder.WithIpAdvancement(instr, loadSegment);
         }
         instr.AttachAsts(displayAst, execAst);
         return instr;

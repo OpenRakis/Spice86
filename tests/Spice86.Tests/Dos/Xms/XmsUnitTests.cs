@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 
 using NSubstitute;
 
+using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
@@ -37,7 +38,7 @@ public class XmsUnitTests {
         // Setup memory and state
         _state = new State(CpuModel.INTEL_80286);
         _a20Gate = new A20Gate(false);
-        _memory = new Memory(new(), new Ram(A20Gate.EndOfHighMemoryArea), _a20Gate, new RealModeMmu386(), false);
+        _memory = new Memory(new(), new Ram(Configuration.RamSizeDefaultKb * 1024), _a20Gate, new RealModeMmu386(), false);
         _loggerService = Substitute.For<ILogger>();
         _callbackHandler = new CallbackHandler(_state, _loggerService);
         _dosTables = new DosTables(_memory);
@@ -139,7 +140,7 @@ public class XmsUnitTests {
         // Arrange - Create a new XMS manager with A20 already enabled
         State state = new State(CpuModel.INTEL_80286);
         A20Gate a20Gate = new A20Gate(true); // A20 is ALREADY enabled at startup
-        Memory memory = new Memory(new(), new Ram(A20Gate.EndOfHighMemoryArea), a20Gate, new RealModeMmu386(), false);
+        Memory memory = new Memory(new(), new Ram(Configuration.RamSizeDefaultKb * 1024), a20Gate, new RealModeMmu386(), false);
         ILogger loggerService = Substitute.For<ILogger>();
         CallbackHandler callbackHandler = new CallbackHandler(state, loggerService);
         DosTables dosTables = new DosTables(memory);
@@ -354,9 +355,11 @@ public class XmsUnitTests {
         _xms.RunMultiplex();
         uint destAddress = MemoryUtils.To32BitAddress(_state.DX, _state.BX);
 
-        // Verify data was copied
-        _xms.XmsRam.Read(destAddress - A20Gate.StartOfHighMemoryArea).Should().Be(0x42, "First byte should be copied");
-        _xms.XmsRam.Read(destAddress - A20Gate.StartOfHighMemoryArea + 1).Should().Be(0x43, "Second byte should be copied");
+        // XMS block addresses are above 1MB (bit 20 set) - A20 must be enabled to read them
+        // through the shared, A20-gated memory bus.
+        _a20Gate.IsEnabled = true;
+        _memory.UInt8[destAddress].Should().Be(0x42, "First byte should be copied");
+        _memory.UInt8[destAddress + 1].Should().Be(0x43, "Second byte should be copied");
     }
 
     [Fact]
@@ -629,9 +632,11 @@ public class XmsUnitTests {
         _xms.RunMultiplex();
         uint srcAddress = MemoryUtils.To32BitAddress(_state.DX, _state.BX);
 
-        // Write test pattern to XMS memory
-        _xms.XmsRam.Write(srcAddress - A20Gate.StartOfHighMemoryArea, 0x77);
-        _xms.XmsRam.Write(srcAddress - A20Gate.StartOfHighMemoryArea + 1, 0x88);
+        // Write test pattern to XMS memory - block addresses are above 1MB (bit 20 set), so A20
+        // must be enabled to reach them through the shared, A20-gated memory bus.
+        _a20Gate.IsEnabled = true;
+        _memory.UInt8[srcAddress] = 0x77;
+        _memory.UInt8[srcAddress + 1] = 0x88;
 
         // Create move structure
         uint moveStructAddr = 0x2000;
@@ -675,9 +680,11 @@ public class XmsUnitTests {
         _xms.RunMultiplex();
         uint srcAddress = MemoryUtils.To32BitAddress(_state.DX, _state.BX);
 
-        // Write test pattern to source XMS memory
-        _xms.XmsRam.Write(srcAddress - A20Gate.StartOfHighMemoryArea, 0x12);
-        _xms.XmsRam.Write(srcAddress - A20Gate.StartOfHighMemoryArea + 1, 0x34);
+        // Write test pattern to source XMS memory - block addresses are above 1MB (bit 20 set), so
+        // A20 must be enabled to reach them through the shared, A20-gated memory bus.
+        _a20Gate.IsEnabled = true;
+        _memory.UInt8[srcAddress] = 0x12;
+        _memory.UInt8[srcAddress + 1] = 0x34;
 
         // Create move structure
         uint moveStructAddr = 0x2000;
@@ -706,8 +713,8 @@ public class XmsUnitTests {
         uint destAddress = MemoryUtils.To32BitAddress(_state.DX, _state.BX);
 
         // Verify data was copied
-        _xms.XmsRam.Read(destAddress - A20Gate.StartOfHighMemoryArea).Should().Be(0x12, "First byte should be copied");
-        _xms.XmsRam.Read(destAddress - A20Gate.StartOfHighMemoryArea + 1).Should().Be(0x34, "Second byte should be copied");
+        _memory.UInt8[destAddress].Should().Be(0x12, "First byte should be copied");
+        _memory.UInt8[destAddress + 1].Should().Be(0x34, "Second byte should be copied");
     }
 
     [Fact]
