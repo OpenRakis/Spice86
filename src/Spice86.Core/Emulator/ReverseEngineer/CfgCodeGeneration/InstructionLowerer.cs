@@ -108,14 +108,28 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
         ushort? segment = TryGetConstantWord(node.TargetAddress.Segment);
         ushort? offset = TryGetConstantWord(node.TargetAddress.Offset);
         if (segment is not null && offset is not null) {
-            return Transfer.Emit(Context.ResolveEdge(node.Instruction, InstructionSuccessorType.Normal,
-                new SegmentedAddress(segment.Value, offset.Value)));
+            IVisitableAstNode continuation;
+            if (Context.GetSuccessorEdges(node.Instruction, InstructionSuccessorType.Normal).Count == 0) {
+                continuation = UntestedMessages.Jump(node.Instruction.Address);
+            } else {
+                continuation = Transfer.Emit(Context.ResolveEdge(node.Instruction, InstructionSuccessorType.Normal,
+                    new SegmentedAddress(segment.Value, offset.Value)));
+            }
+            return Sequence(PrepareFarJump(segment.Value), continuation);
         }
 
         return BuildFarRuntimeDispatch(node.Instruction, node.TargetAddress.Segment, node.TargetAddress.Offset, "jump",
             // Every matched branch ends with its own transfer, so it never falls through to the trailing untested-target failure.
-            edge => Transfer.Emit(edge));
+            edge => Sequence(PrepareFarJump(edge.Target.Address.Segment), Transfer.Emit(edge)));
     }
+
+    private static BlockNode PrepareFarJump(ushort segment) =>
+        Sequence(
+            new InstructionExecutionHelperCallNode(InstructionExecutionHelperOperation.ValidateFarCodeSegmentTransfer,
+                new ConstantNode(DataType.UINT16, segment)),
+            new InstructionExecutionHelperCallNode(InstructionExecutionHelperOperation.LoadSegmentRegister,
+                new ConstantNode(DataType.UINT32, (uint)SegmentRegisterIndex.CsIndex),
+                new ConstantNode(DataType.UINT16, segment)));
 
     public IVisitableAstNode VisitCallNearNode(CallNearNode node) {
         if (TryGetConstantWord(node.TargetIp) is not ushort targetOffset) {
@@ -139,8 +153,24 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
         }
 
         SegmentedAddress targetAddress = new SegmentedAddress(targetSegment.Value, targetOffset.Value);
-        ResolvedCfgEdge targetEdge = Context.ResolveEdge(node.Instruction, InstructionSuccessorType.Normal, targetAddress);
-        return Transfer.EmitCallHelperAndContinuation(CallDistance.Far, node.CallBitWidth, node.Instruction, Transfer.FunctionReference(targetEdge), targetSegment.Value);
+        if (Context.TryResolveEdge(node.Instruction, InstructionSuccessorType.Normal, targetAddress) is ResolvedCfgEdge targetEdge) {
+            return Transfer.EmitCallHelperAndContinuation(CallDistance.Far, node.CallBitWidth, node.Instruction, Transfer.FunctionReference(targetEdge), targetSegment.Value);
+        }
+
+        CallContinuation gateContinuation = Context.ResolveCallContinuation(node.Instruction);
+        SegmentedAddress expectedReturn = gateContinuation.ExpectedReturnAddress;
+        IVisitableAstNode[] gateArguments = [
+            new SegmentVariableNode(expectedReturn.Segment),
+            new OffsetLiteralNode(expectedReturn.Offset),
+            new ConstantNode(DataType.UINT16, targetSegment.Value),
+            new UntestedFarCallTargetNode(node.Instruction.Address)
+        ];
+        return Sequence(
+            Transfer.EmitCallWithRedirectedDispatch(node.Instruction, gateContinuation,
+                new ProcedureCallHelperNode(CallDistance.Far, node.CallBitWidth, gateArguments),
+                new ProcedureCallReturnedElsewhereHelperNode(CallDistance.Far, node.CallBitWidth,
+                    [.. gateArguments, Transfer.RedirectedAddressList(gateContinuation)])),
+            Transfer.EmitPostCallContinuation(node.Instruction, gateContinuation));
     }
 
     public IVisitableAstNode VisitInterruptCallNode(InterruptCallNode node) {

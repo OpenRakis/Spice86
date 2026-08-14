@@ -7,7 +7,9 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
+using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Propagation;
@@ -99,7 +101,11 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         Dictionary<(Type Type, string Name, int ArgumentCount), ParameterInfo[]?> ParametersByCall = [];
 
     private IEnumerable<string> FormatMethodArguments(MethodCallNode node) {
-        Type? targetType = ResolveKnownMethodTargetType(node.PropertyPath);
+        Type? targetType = node is InstructionExecutionHelperCallNode { PropertyPath: null }
+            ? typeof(InstructionExecutionHelper) : ResolveKnownMethodTargetType(node.PropertyPath);
+        if (node is InstructionExecutionHelperCallNode { Operation: InstructionExecutionHelperOperation.ValidateFarCodeSegmentTransfer }) {
+            targetType = typeof(CSharpOverrideHelper);
+        }
         if (targetType is null) {
             return node.Arguments.Select(argument => Expr(argument).Text);
         }
@@ -177,7 +183,11 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         string indexer = ToMemoryIndexer(node.DataType);
         string segment = Expr(node.Segment);
         CSharpFragment offset = Expr(node.Offset);
-        return Atomic($"{indexer}[{segment}, {MemoryOffset(offset)}]", node.DataType);
+        string accessKind = string.Empty;
+        if (node.Segment is SegmentRegisterNode { RegisterIndex: (int)SegmentRegisterIndex.SsIndex }) {
+            accessKind = ", SegmentAccessKind.Stack";
+        }
+        return Atomic($"{indexer}[{segment}, {MemoryOffset(offset, node.Offset.DataType)}{accessKind}]", node.DataType);
     }
 
     public CSharpFragment VisitAbsolutePointerNode(AbsolutePointerNode node) =>
@@ -245,9 +255,20 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
             left = TruncatedOperand(node.Left, leftFragment) ?? left;
             right = TruncatedOperand(node.Right, rightFragment) ?? right;
         }
-        if (node.BinaryOperation is BinaryOperation.LEFT_SHIFT or BinaryOperation.RIGHT_SHIFT
-            && rightFragment.Constant is ConstantNode shiftCount) {
-            right = ShiftCountText(shiftCount);
+        if (node.BinaryOperation is BinaryOperation.LEFT_SHIFT or BinaryOperation.RIGHT_SHIFT) {
+            if (rightFragment.Constant is ConstantNode shiftCount) {
+                right = ShiftCountText(shiftCount);
+            } else if (node.Right.DataType == DataType.UINT32) {
+                right = Cast(DataType.INT32, rightFragment);
+            }
+            if (node.DataType == DataType.UINT32) {
+                if (leftFragment.Constant is ConstantNode constantOperand
+                    && constantOperand.DataType == DataType.UINT32 && constantOperand.Value <= int.MaxValue) {
+                    left = leftFragment.Text + "u";
+                } else {
+                    left = Cast(DataType.UINT32, leftFragment);
+                }
+            }
         }
         // C# promotes byte/ushort/short/sbyte arithmetic to int, so the actual evaluated type is not the
         // node's semantic DataType; leave it unknown so a cast back to the operand width is never elided.
@@ -523,14 +544,14 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
 
     /// <summary>
     /// Renders a memory-indexer offset. A constant or single register/variable offset is emitted directly
-    /// (the indexer has a <c>ushort</c> overload); a compound arithmetic offset is wrapped in
-    /// <c>(ushort)(...)</c> so wrap-around matches real-mode 16-bit offset arithmetic.
+    /// (the indexer accepts both address widths); compound arithmetic is cast back to the AST address
+    /// width to preserve 16-bit wrapping without truncating 32-bit addresses.
     /// </summary>
-    private static string MemoryOffset(CSharpFragment offset) {
+    private static string MemoryOffset(CSharpFragment offset, DataType addressType) {
         if (offset.Precedence >= CSharpFragment.AtomicPrecedence) {
             return offset.Text;
         }
-        return $"(ushort)({offset.Text})";
+        return Cast(addressType, offset);
     }
 
     /// <summary>
@@ -573,6 +594,10 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         }
         return new CSharpFragment($"_ => {node.MethodName}(0x{node.LoadOffset:X4})", null, AssignmentPrecedence);
     }
+
+    public CSharpFragment VisitUntestedFarCallTargetNode(UntestedFarCallTargetNode node) =>
+        new($"_ => throw FailAsUntested(\"Far call at {node.CallAddress} unexpectedly resolved to a direct target\")",
+            null, AssignmentPrecedence);
 
     public CSharpFragment VisitSignatureFieldNode(SignatureFieldNode node) => new(node.FieldName);
 

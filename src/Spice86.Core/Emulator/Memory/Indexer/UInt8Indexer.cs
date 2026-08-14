@@ -26,12 +26,12 @@ public class UInt8Indexer : MemoryIndexer<byte> {
 
     /// <inheritdoc />
     internal override byte ReadSegmented(ushort segment, uint offset) {
-        return _byteReaderWriter[Mmu.TranslateAddress(segment, offset)];
+        return _byteReaderWriter[Mmu.TranslateAddress(segment, offset, isWrite: false)];
     }
 
     /// <inheritdoc />
     internal override void WriteSegmented(ushort segment, uint offset, byte value) {
-        _byteReaderWriter[Mmu.TranslateAddress(segment, offset)] = value;
+        _byteReaderWriter[Mmu.TranslateAddress(segment, offset, isWrite: true)] = value;
     }
 
     /// <inheritdoc/>
