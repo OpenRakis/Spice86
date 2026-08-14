@@ -282,4 +282,64 @@ public sealed class GeneratedCodeMachineTest {
         GeneratedCodeMachineTestRunner runner = new();
         runner.TestGeneratedCode(AsmFixtureCatalog.Test386());
     }
+
+    [Fact]
+    public void ProtectedModeEntryGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.ProtectedModeEntry());
+    }
+
+    [Fact]
+    public void ProtectedModeUnifiedPoolGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.ProtectedModeUnifiedPool());
+    }
+
+    [Fact]
+    public void Test386ProtectedModeGeneratedOverrideCompilesAndReachesPostFinished() {
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.Test386ProtectedMode());
+    }
+
+    [Fact]
+    public void ProtectedModeInstructionsGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.ProtectedModeInstructions());
+    }
+
+    [Fact]
+    public void ProtectedModePrivilegeHappyPathGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.ProtectedModePrivilege());
+    }
+
+    [Fact]
+    public void ProtectedModeIdtDispatchGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.ProtectedModeIdt());
+    }
+
+    [Fact]
+    public void ProtectedModeFarTransferPrivilegeViolationGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.ProtectedModeFarPrivilege());
+    }
+
+    [Fact]
+    public void ProtectedModeCallGateGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.ProtectedModeCallGate());
+    }
+
+    [Fact]
+    public void ProtectedModePagingGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.ProtectedModePaging());
+    }
+
+    [Fact]
+    public void ProtectedModeTaskSwitchGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.ProtectedModeTaskSwitch());
+    }
+
+    [Fact]
+    public void ProtectedModeV86GeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.ProtectedModeV86());
+    }
+
+    [Fact]
+    public void ProtectedModeTaskGateGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.ProtectedModeTaskGate());
+    }
 }

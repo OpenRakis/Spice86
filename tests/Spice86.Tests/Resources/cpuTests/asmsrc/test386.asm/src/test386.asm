@@ -1365,7 +1365,11 @@ arithLogicTests:
 ;   Now run a series of unverified tests for arithmetical and logical opcodes
 ;   Manually verify by comparing the tests output with a reference file
 ;
+	%if SKIP_UNVERIFIED_TESTS
+	jmp postFF
+	%else
 	jmp bcdTests
+	%endif
 
 bcdTests:
 	testBCD   daa, 0x12340503, PS_AF,         PS_CF | PS_PF | PS_ZF | PS_SF | PS_AF

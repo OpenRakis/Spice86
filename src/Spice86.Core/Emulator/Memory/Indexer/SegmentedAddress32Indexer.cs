@@ -47,15 +47,15 @@ public class SegmentedAddress32Indexer : MemoryIndexer<SegmentedAddress32> {
     /// </summary>
     public override SegmentedAddress32 this[ushort segment, uint offset, SegmentAccessKind accessKind] {
         get {
-            Mmu.CheckAccess(segment, offset, 4, accessKind);
+            Mmu.CheckAccess(segment, offset, 4, accessKind, isWrite: false);
             // Cast to ushort: models SP register wrapping between the two hardware pops.
             // Each pop checks its own 4-byte span at the wrapped 16-bit offset.
-            Mmu.CheckAccess(segment, (ushort)(offset + 4), 4, accessKind);
+            Mmu.CheckAccess(segment, (ushort)(offset + 4), 4, accessKind, isWrite: false);
             return ReadSegmented(segment, offset);
         }
         set {
-            Mmu.CheckAccess(segment, offset, 4, accessKind);
-            Mmu.CheckAccess(segment, (ushort)(offset + 4), 4, accessKind);
+            Mmu.CheckAccess(segment, offset, 4, accessKind, isWrite: true);
+            Mmu.CheckAccess(segment, (ushort)(offset + 4), 4, accessKind, isWrite: true);
             WriteSegmented(segment, offset, value);
         }
     }
@@ -72,7 +72,7 @@ public class SegmentedAddress32Indexer : MemoryIndexer<SegmentedAddress32> {
         _uInt32Indexer.WriteSegmented(segment, offset, value.Offset);
         _uInt16Indexer.WriteSegmented(segment, offset + 4u, value.Segment);
     }
-    
+
     /// <inheritdoc/>
     public override int Count => _uInt16Indexer.Count / 3;
 }

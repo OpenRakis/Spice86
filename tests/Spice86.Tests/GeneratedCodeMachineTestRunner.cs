@@ -86,7 +86,8 @@ internal sealed class GeneratedCodeMachineTestRunner {
     /// fixed suffix per enabled boolean flag of the <see cref="AsmRunSettings"/>, in a fixed
     /// order. Runs of the same bin with different options therefore get distinct goldens instead of
     /// overwriting each other. <c>MaxCycles</c> and <c>ConfigureMachine</c> are deliberately not part
-    /// of the key. Every flag is enumerated explicitly so adding one to the settings is a
+    /// of the key. CPU and RAM settings are fixture-specific; CPU logging does not affect the key.
+    /// Every execution flag is enumerated explicitly so adding one to the settings is a
     /// compile-visible decision here rather than a silent omission that lets two runs share a golden.
     /// Relocated installed callbacks append their segment because their addresses appear in generated source.
     /// </summary>
