@@ -401,11 +401,6 @@ public class InstructionExecutionHelper {
     public void Out32(ushort port, uint val) => IoPortDispatcher.WriteDWord(port, val);
 
     public void HandleCpuException(CfgInstruction instruction, CpuException cpuException) {
-        if (Environment.GetEnvironmentVariable("SPICE86_TRACE_EXC") is not null) {
-            System.IO.Directory.CreateDirectory("tmp");
-            System.IO.File.AppendAllText("tmp/exc_trace.txt",
-                $"vec=0x{cpuException.InterruptVector:X2} type={cpuException.GetType().Name} CS=0x{State.CS:X4} EIP=0x{State.EIP:X8} SS=0x{State.SS:X4} ESP=0x{State.ESP:X8} err={cpuException.ErrorCode} msg={cpuException.Message}\n");
-        }
         // Check if this is an invalid opcode exception and we should fail the emulator
         if (_failOnInvalidOpcode && cpuException is CpuInvalidOpcodeException) {
             throw new InvalidVMOperationException(State, cpuException);
