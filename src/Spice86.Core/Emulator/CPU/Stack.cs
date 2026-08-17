@@ -245,7 +245,6 @@ public class Stack {
     /// Pushes all 8 general-purpose 16-bit registers (PUSHA order: AX, CX, DX, BX, SP, BP, SI, DI).
     /// </summary>
     public void PushAll16(ushort ax, ushort cx, ushort dx, ushort bx, ushort sp, ushort bp, ushort si, ushort di) {
-        CpuStackSegmentFaultException? pendingFault = GetStackPushRangeFault(2, 8);
         uint offset = StackPointer;
         offset = MaskAddress(offset - 2); _memory.UInt16[_state.SS, offset, SegmentAccessKind.Stack] = ax;
         offset = MaskAddress(offset - 2); _memory.UInt16[_state.SS, offset, SegmentAccessKind.Stack] = cx;
@@ -255,17 +254,15 @@ public class Stack {
         offset = MaskAddress(offset - 2); _memory.UInt16[_state.SS, offset, SegmentAccessKind.Stack] = bp;
         offset = MaskAddress(offset - 2); _memory.UInt16[_state.SS, offset, SegmentAccessKind.Stack] = si;
         offset = MaskAddress(offset - 2); _memory.UInt16[_state.SS, offset, SegmentAccessKind.Stack] = di;
-        if (pendingFault != null) {
-            throw pendingFault;
-        }
         StackPointer = offset;
     }
 
     /// <summary>
     /// Pushes all 8 general-purpose 32-bit registers (PUSHAD order: EAX, ECX, EDX, EBX, ESP, EBP, ESI, EDI).
+    /// The stack pointer is committed only after all slot accesses have succeeded, so a fault during
+    /// the push leaves the stack pointer unchanged (matching real hardware's atomic fault semantics).
     /// </summary>
     public void PushAll32(uint eax, uint ecx, uint edx, uint ebx, uint esp, uint ebp, uint esi, uint edi) {
-        CpuStackSegmentFaultException? pendingFault = GetStackPushRangeFault(4, 8);
         uint offset = StackPointer;
         offset = MaskAddress(offset - 4); _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack] = eax;
         offset = MaskAddress(offset - 4); _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack] = ecx;
@@ -275,23 +272,7 @@ public class Stack {
         offset = MaskAddress(offset - 4); _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack] = ebp;
         offset = MaskAddress(offset - 4); _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack] = esi;
         offset = MaskAddress(offset - 4); _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack] = edi;
-        if (pendingFault != null) {
-            throw pendingFault;
-        }
         StackPointer = offset;
-    }
-
-    private CpuStackSegmentFaultException? GetStackPushRangeFault(ushort valueSizeBytes, ushort valueCount) {
-        uint offset = StackPointer;
-        for (ushort index = 0; index < valueCount; index++) {
-            offset = MaskAddress(offset - valueSizeBytes);
-            try {
-                _memory.Mmu.CheckAccess(_state.SS, offset, valueSizeBytes, SegmentAccessKind.Stack, isWrite: true);
-            } catch (CpuStackSegmentFaultException exception) {
-                return exception;
-            }
-        }
-        return null;
     }
 
     /// <summary>
@@ -435,6 +416,8 @@ public class Stack {
     /// - The instruction's operand size (<paramref name="operandSize32"/>, safe to fix at parse time
     ///   since it comes from CS) governs only the WIDTH of the data pushed/copied on the stack (2 vs 4
     ///   bytes) - independent of the stack's address width.
+    /// The stack pointer and frame-pointer register are committed only after the storage-allocation
+    /// validation succeeds, so a fault leaves both unchanged (matching real hardware's atomic fault semantics).
     /// </summary>
     public void Enter(ushort storageSize, byte level, bool operandSize32) {
         level = (byte)(level & 0x1F);
@@ -443,37 +426,41 @@ public class Stack {
         uint oldBaseValue = operandSize32 ? _state.EBP : _state.BP;
         uint newSp = OffsetStackPointer(-pointerSize);
         WriteFrameValue(newSp, oldBaseValue, operandSize32);
-        StackPointer = newSp;
 
         // The value the frame-pointer register will end up holding: the new stack address, with
         // EBP's untouched upper half preserved when the stack is 16-bit (matching the narrow
         // BP-only register write real hardware performs in that case).
-        uint frameTemp = StackAddressIs32Bit ? StackPointer : (_state.EBP & 0xFFFF0000) | StackPointer;
+        uint frameTemp = StackAddressIs32Bit ? newSp : (_state.EBP & 0xFFFF0000) | newSp;
 
+        uint sp = newSp;
         if (level > 0) {
             uint chainAddress = StackAddressIs32Bit ? _state.EBP : _state.BP;
             for (int i = 1; i < level; i++) {
                 chainAddress = MaskAddress(chainAddress - (uint)pointerSize);
-                uint destinationIndex = OffsetStackPointer(-pointerSize);
-                WriteFrameValue(destinationIndex, ReadFrameValue(chainAddress, operandSize32), operandSize32);
-                StackPointer = destinationIndex;
+                sp = OffsetStackPointerFrom(sp, -pointerSize);
+                WriteFrameValue(sp, ReadFrameValue(chainAddress, operandSize32), operandSize32);
             }
-            uint frameTempDestination = OffsetStackPointer(-pointerSize);
-            WriteFrameValue(frameTempDestination, frameTemp, operandSize32);
-            StackPointer = frameTempDestination;
+            sp = OffsetStackPointerFrom(sp, -pointerSize);
+            WriteFrameValue(sp, frameTemp, operandSize32);
         }
-
-        _state.EBP = frameTemp;
 
         // ENTER reserves storageSize bytes of dynamic storage without writing to it, but real hardware
         // still validates that a write at the FINAL stack pointer (after this reservation) would
         // succeed - raising the same #PF/#GP/#SS a later access there would, even though no data is
         // actually stored at that address by ENTER itself.
-        uint finalSp = OffsetStackPointer(-storageSize);
+        uint finalSp = OffsetStackPointerFrom(sp, -(int)storageSize);
         _memory.Mmu.CheckAccess(_state.SS, finalSp, 1, SegmentAccessKind.Stack, isWrite: true);
         _memory.Mmu.TranslateAddress(_state.SS, finalSp, isWrite: true);
+
         StackPointer = finalSp;
+        _state.EBP = frameTemp;
     }
+
+    /// <summary>
+    /// Computes a stack pointer offset from an explicit base value (rather than the live
+    /// <see cref="StackPointer"/>), wrapped to the current stack address width.
+    /// </summary>
+    private uint OffsetStackPointerFrom(uint baseValue, int delta) => MaskAddress(unchecked((uint)((int)baseValue + delta)));
 
     private uint ReadFrameValue(uint offset, bool operandSize32) {
         return operandSize32 ? _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack] : _memory.UInt16[_state.SS, offset, SegmentAccessKind.Stack];
