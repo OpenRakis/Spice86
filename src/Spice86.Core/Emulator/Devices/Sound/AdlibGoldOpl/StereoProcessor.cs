@@ -1,7 +1,8 @@
 namespace Spice86.Core.Emulator.Devices.Sound.AdlibGoldOpl;
 
+using Iir.RBJ;
+
 using Spice86.Audio.Common;
-using Spice86.Audio.Filters.IirFilters.Filters.RBJ;
 
 /// <summary>
 ///     Implements the AdLib Gold stereo processor, including tone controls and stereo field shaping.

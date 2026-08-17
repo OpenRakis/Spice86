@@ -1,11 +1,11 @@
 namespace Spice86.Core.Emulator.Devices.Sound;
 
+using Iir.Butterworth;
+
+using SpeexResamplerSharp;
+
 using Spice86.Audio.Common;
 using Spice86.Audio.Filters;
-using Spice86.Audio.Filters.Speex;
-
-using HighPass = Audio.Filters.IirFilters.Filters.Butterworth.HighPass;
-using LowPass = Audio.Filters.IirFilters.Filters.Butterworth.LowPass;
 
 using System.Threading;
 
@@ -16,8 +16,8 @@ using System.Threading;
 /// 2022-2025 The DOSBox Staging Team
 /// </remarks>
 public sealed class SoundChannel {
-    private const uint SpeexChannels = 2; // Always use stereo for processing
-    private const int SpeexQuality = 5; // Medium quality - good balance between CPU and quality
+    private const int SpeexChannels = 2; // Always use stereo for processing
+    private const ResamplerQuality SpeexQuality = ResamplerQuality.Desktop;
 
     private const byte EnvelopeMaxExpansionOverMs = 15; // Envelope expands over 15ms
     private const byte EnvelopeExpiresAfterSeconds = 10; // Envelope expires after 10s
@@ -48,7 +48,7 @@ public sealed class SoundChannel {
     private int _zohTargetRateHz;
 
     // Initialized ONCE when first needed (see ConfigureResampler)
-    private SpeexResamplerCSharp? _speexResampler;
+    private SpeexResampler? _speexResampler;
 
     // Pre-allocated resample buffers (avoids per-tick GC allocations)
     private float[] _resampleInputBuffer = [];
@@ -341,7 +341,7 @@ public sealed class SoundChannel {
             uint speexInRate = (uint)inRateHz;
             uint speexOutRate = (uint)mixerRateHz;
 
-            _speexResampler ??= new SpeexResamplerCSharp(
+            _speexResampler ??= new SpeexResampler(
                     SpeexChannels,
                     speexInRate,
                     speexOutRate,
@@ -986,7 +986,7 @@ public sealed class SoundChannel {
     }
 
     private void ApplySpeexResampling(int audioFramesStartingSize) {
-        if (_speexResampler is null or { IsInitialized: false }) {
+        if (_speexResampler is null) {
             throw new InvalidOperationException("Speex Resampler was null or not initialized before audio resampling");
         }
         int inFrames = _convertBuffer.Count;
@@ -1018,35 +1018,32 @@ public sealed class SoundChannel {
         }
 
         // Process through Speex resampler (interleaved stereo)
-        _speexResampler.ProcessInterleavedFloat(
+        ResamplerProcessResult framesGenerated = _speexResampler.ProcessInterleaved(
             _resampleInputBuffer.AsSpan(0, inputSize),
-            _resampleOutputBuffer.AsSpan(0, outputSize),
-            out uint _,
-            out uint outFramesGenerated);
+            _resampleOutputBuffer.AsSpan(0, outputSize));
 
         // Copy resampled frames back to audio_frames
         Span<AudioFrame> audioSpan = AudioFrames.AsSpan();
-        for (int i = 0; i < (int)outFramesGenerated; i++) {
+        for (int i = 0; i < framesGenerated.OutputProduced; i++) {
             audioSpan[audioFramesStartingSize + i] = new AudioFrame(
                 _resampleOutputBuffer[i * 2],
                 _resampleOutputBuffer[i * 2 + 1]);
         }
 
         // Trim audio_frames to actual size
-        int actualSize = audioFramesStartingSize + (int)outFramesGenerated;
+        int actualSize = audioFramesStartingSize + framesGenerated.OutputProduced;
         if (AudioFrames.Count > actualSize) {
             AudioFrames.RemoveRange(actualSize, AudioFrames.Count - actualSize);
         }
     }
 
-    private static int EstimateMaxOutFrames(SpeexResamplerCSharp resampler, int inFrames) {
-        resampler.GetRatio(out uint ratioNum, out uint ratioDen);
-        if (ratioNum == 0 || ratioDen == 0 || inFrames <= 0) {
+    private static int EstimateMaxOutFrames(SpeexResampler resampler, int inFrames) {
+        if (resampler.RatioNumerator == 0 || resampler.RatioDenominator == 0 || inFrames <= 0) {
             return inFrames;
         }
 
-        double numerator = (double)inFrames * ratioDen;
-        int estimated = (int)Math.Ceiling(numerator / ratioNum);
+        double numerator = (double)inFrames * resampler.RatioDenominator;
+        int estimated = (int)Math.Ceiling(numerator / resampler.RatioNumerator);
         return estimated <= 0 ? inFrames : estimated;
     }
 

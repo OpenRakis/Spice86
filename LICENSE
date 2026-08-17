@@ -202,8 +202,15 @@
    limitations under the License.
 
 
-   Third-party libraries are licensed as followed:
-   - Adlib Gold: Personal permission granted by John Novak from DosBox Staging
-   - Nuked-OPL3: LGPL-2.1
-   - iir1: MIT
-   - YM7128B_emu: BSD 2-Clause
+   Third-party audio components retain their respective licenses:
+   - AdLib Gold: personal porting permission granted by John Novak from
+     DOSBox Staging.
+   - NukedOPL3Sharp: LGPL-2.1-only; upstream Nuked OPL3 source is
+     LGPL-2.1-or-later.
+   - Iir1.Net and upstream iir1: MIT.
+   - MVerb.Net and upstream MVerb: GPL-3.0-or-later.
+   - SpeexResamplerSharp and upstream SpeexDSP: BSD-3-Clause.
+   - YM7128B_emu: BSD-2-Clause.
+
+   See NOTICE for copyright attribution and the corresponding dependency
+   packages and source directories for their license texts.

@@ -14,6 +14,8 @@
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
     <PackageVersion Include="bodong.Avalonia.PropertyGrid" Version="12.0.4.1" />
     <PackageVersion Include="bodong.PropertyModels" Version="12.0.0" />
+    <PackageVersion Include="Iir1.Net" Version="1.0.0" />
+    <PackageVersion Include="MVerb.Net" Version="1.0.0" />
     <PackageVersion Include="Spectre.Console.Cli" Version="0.55.0" />
     <PackageVersion Include="CommunityToolkit.HighPerformance" Version="8.4.2" />
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
@@ -38,12 +40,13 @@
     <PackageVersion Include="Mt32emu.net" Version="1.0.0" />
     <PackageVersion Include="NSubstitute" Version="6.0.0" />
     <PackageVersion Include="NSubstitute.Analyzers.CSharp" Version="1.0.17" />
-    <PackageVersion Include="NukedOPL3Sharp" Version="1.2.1" />
+    <PackageVersion Include="NukedOPL3Sharp" Version="1.3.1" />
     <PackageVersion Include="PanAndZoom" Version="12.0.0.1" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
     <PackageVersion Include="Roslynator.CodeAnalysis.Analyzers" Version="4.15.0" />
     <PackageVersion Include="Semi.Avalonia" Version="12.1.0.1" />
     <PackageVersion Include="Semi.Avalonia.Dock" Version="12.0.0.2" />
+    <PackageVersion Include="SpeexResamplerSharp" Version="1.0.0" />
     <PackageVersion Include="Spice86.DataGrid" Version="0.1.2" />
     <PackageVersion Include="Serilog" Version="4.4.0" />
     <PackageVersion Include="Serilog.Extensions.Hosting" Version="10.0.0" />

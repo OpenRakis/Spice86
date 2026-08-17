@@ -17,7 +17,9 @@
 
     <ItemGroup>
         <PackageReference Include="CommunityToolkit.HighPerformance" />
+        <PackageReference Include="Iir1.Net" />
         <PackageReference Include="JetBrains.Annotations" />
+        <PackageReference Include="MVerb.Net" />
         <PackageReference Include="Serilog" />
         <PackageReference Include="Serilog.Sinks.File" />
         <PackageReference Include="Spectre.Console.Cli" />
@@ -27,6 +29,7 @@
         </Reference>
         <PackageReference Include="MeltySynth" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+        <PackageReference Include="SpeexResamplerSharp" />
         <PackageReference Include="Swashbuckle.AspNetCore" />
         <PackageReference Include="NukedOPL3Sharp" />
         <PackageReference Include="Spice86.Audio" />
