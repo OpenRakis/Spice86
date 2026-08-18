@@ -484,7 +484,7 @@ public class Stack {
         // still validates that a write at the FINAL stack pointer (after this reservation) would
         // succeed - raising the same #PF/#GP/#SS a later access there would, even though no data is
         // actually stored at that address by ENTER itself.
-        uint finalSp = OffsetStackPointerFrom(sp, -(int)storageSize);
+        uint finalSp = OffsetStackPointerFrom(sp, -storageSize);
         _memory.Mmu.CheckAccess(_state.SS, finalSp, 1, SegmentAccessKind.Stack, isWrite: true);
         _memory.Mmu.TranslateAddress(_state.SS, finalSp, isWrite: true);
 
@@ -493,6 +493,13 @@ public class Stack {
             _state.EBP = newFrameAddress;
         } else {
             _state.BP = (ushort)newFrameAddress;
+            if (operandSize32) {
+                // 16-bit stack, 32-bit operand size: zero the upper half of EBP.
+                _state.EBP = _state.BP;
+            } else {
+                // 16-bit stack, 16-bit operand size: preserve the upper half of EBP.
+                _state.EBP = (_state.EBP & 0xFFFF0000u) | _state.BP;
+            }
         }
     }
 
