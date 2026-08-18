@@ -462,10 +462,11 @@ public class Stack {
         uint newSp = OffsetStackPointer(-pointerSize);
         WriteFrameValue(newSp, oldBaseValue, operandSize32);
 
-        // The value the frame-pointer register will end up holding: the new stack address, with
-        // EBP's untouched upper half preserved when the stack is 16-bit (matching the narrow
-        // BP-only register write real hardware performs in that case).
-        uint frameTemp = StackAddressIs32Bit ? newSp : (_state.EBP & 0xFFFF0000) | newSp;
+        // The frame-pointer register writeback width follows the stack's own address width: in real
+        // (16-bit-default) mode ENTER writes the narrow 16-bit BP, zeroing EBP's upper half (matching
+        // real hardware, where only BP's 16 bits are affected); in 32-bit mode it writes the full EBP.
+        // The value stored on the stack (and used for chain copies) is always the new stack address.
+        uint newFrameAddress = newSp;
 
         uint sp = newSp;
         if (level > 0) {
@@ -476,7 +477,7 @@ public class Stack {
                 WriteFrameValue(sp, ReadFrameValue(chainAddress, operandSize32), operandSize32);
             }
             sp = OffsetStackPointerFrom(sp, -pointerSize);
-            WriteFrameValue(sp, frameTemp, operandSize32);
+            WriteFrameValue(sp, newFrameAddress, operandSize32);
         }
 
         // ENTER reserves storageSize bytes of dynamic storage without writing to it, but real hardware
@@ -488,7 +489,11 @@ public class Stack {
         _memory.Mmu.TranslateAddress(_state.SS, finalSp, isWrite: true);
 
         StackPointer = finalSp;
-        _state.EBP = frameTemp;
+        if (StackAddressIs32Bit) {
+            _state.EBP = newFrameAddress;
+        } else {
+            _state.BP = (ushort)newFrameAddress;
+        }
     }
 
     /// <summary>
