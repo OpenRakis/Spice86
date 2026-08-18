@@ -1336,13 +1336,14 @@ public class MachineTest {
     /// (configuration.asm's SKIP_UNVERIFIED_TESTS flag) jumps straight from POST 0xEE to POST 0xFF
     /// and halts instead of running it.
     /// </summary>
-    [Fact]
-    public void Test386ProtectedMode() {
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void Test386ProtectedMode(JitMode jitMode) {
         string binName = "test386_pmode";
         using Spice86Creator creator = new Spice86Creator(
             binName: binName, cpuModel: CpuModel.INTEL_80386,
-            enablePit: false, maxCycles: 2_000_000,
-            failOnUnhandledPort: true, enableSpeculativeCfgExploration: false);
+            enablePit: false, maxCycles: long.MaxValue,
+            failOnUnhandledPort: true, jitMode: jitMode);
         using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
         Machine machine = spice86DependencyInjection.Machine;
         using LoggerService loggerService = new();
