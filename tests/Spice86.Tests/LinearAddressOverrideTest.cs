@@ -8,23 +8,21 @@ using Microsoft.Extensions.Logging;
 
 using NSubstitute;
 
-using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
-using Spice86.Shared.Interfaces;
 
 using System.Collections.Generic;
 
 using Xunit;
 
 /// <summary>
-/// Verifies the Phase 8 "minimal slice" linear-address override registration
+/// Verifies linear-address override registration
 /// (<see cref="CSharpOverrideHelper.DefineFunction(uint, Func{int, Action}, bool, string?)"/> /
 /// <see cref="CSharpOverrideHelper.SearchFunctionOverride"/>): an override registered by flat linear
 /// address keeps firing after a GDT descriptor edit repoints a DIFFERENT selector's base to alias the
-/// same linear address, which a plain segment:offset-keyed override could never do.
+/// same linear address.
 /// </summary>
 public class LinearAddressOverrideTest {
     private readonly ILogger _loggerServiceMock = Substitute.For<ILogger>();

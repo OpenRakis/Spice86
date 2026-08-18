@@ -1001,21 +1001,6 @@ public class MachineTest {
         CompareCfgBlocksJsonWithExpected(binName, machine);
     }
 
-    /// <summary>
-    /// Phase 2 protected-mode groundwork: a minimal, hand-assembled 386 fixture that builds a 3-entry
-    /// GDT, enters protected mode (<c>MOV CR0</c>), reloads CS via a far jump to a protected-mode code
-    /// selector, loads DS with a flat data selector, writes a marker byte through it, then returns to
-    /// real mode via CR0 and a far jump back to F000. Exercises <c>LGDT</c>, <c>MOV CR0/r32</c>,
-    /// <see cref="Spice86.Core.Emulator.Memory.Mmu.ProtectedModeMmu386"/>, and the descriptor-cache
-    /// refresh on every segment load (<c>MOV Sreg</c> and far <c>JMP</c>).
-    /// </summary>
-    /// <remarks>
-    /// Speculative CFG exploration is disabled here: the explorer discovers the second far jump's
-    /// target (F000:real_entry, a real-mode segment) as a successor and tries to pre-parse it while
-    /// still speculatively in <see cref="CpuMode.Protected"/> (before CR0.PE is actually cleared),
-    /// treating 0xF000 as a selector and faulting on the GDT limit. Reconciling speculative exploration
-    /// with CPU-mode transitions is deferred to the CFG/override addressing rework.
-    /// </remarks>
     [Fact]
     public void TestProtectedModeEntry() {
         //Arrange
@@ -1037,15 +1022,6 @@ public class MachineTest {
         Assert.Equal(0xF000, state.CS);
     }
 
-    /// <summary>
-    /// XMS/EMS unified-memory-backing-store plan, Phase 1: proves a flat protected-mode descriptor
-    /// can directly address physical 0x500000 (5MB in) - comfortably inside the new unified
-    /// extended-memory pool, but unreachable with the old ~1.06MB conventional+HMA-only <c>Ram</c> -
-    /// with no XMS/EMS API involved at all.
-    /// </summary>
-    /// <remarks>
-    /// Speculative CFG exploration is disabled for the same reason as <see cref="TestProtectedModeEntry"/>.
-    /// </remarks>
     [Fact]
     public void TestUnifiedExtendedMemoryPoolIsAddressable() {
         //Arrange
@@ -1066,16 +1042,6 @@ public class MachineTest {
         Assert.Equal(0xF000, state.CS);
     }
 
-    /// <summary>
-    /// Phase 3 new-instructions fixture: builds a GDT with a flat code selector (0x08), a flat
-    /// read/write data selector (0x10, also reused as the LLDT/LTR target), a read-only data selector
-    /// (0x20), and a non-readable code selector (0x28), enters protected mode, then exercises
-    /// LLDT/SLDT, LTR/STR, VERR/VERW, LAR/LSL, ARPL, SMSW/LMSW, and CLTS, writing every result to a
-    /// fixed memory address before returning to real mode and halting.
-    /// </summary>
-    /// <remarks>
-    /// Speculative CFG exploration is disabled for the same reason as <see cref="TestProtectedModeEntry"/>.
-    /// </remarks>
     [Fact]
     public void TestProtectedModeInstructions() {
         //Arrange
@@ -1109,16 +1075,6 @@ public class MachineTest {
         Assert.Equal(0x0001, memory.UInt16[0, 0x0714]); // SMSW after CLTS: TS cleared back to 0
     }
 
-    /// <summary>
-    /// Phase 4 CPL/IOPL happy-path fixture: enters protected mode at CPL 0 with IOPL 0 (the default),
-    /// loads a flat data selector into DS, executes CLI/STI and an OUT/IN pair to port 0x80, then
-    /// returns to real mode. Proves the new IOPL and DPL/RPL privilege checks (see
-    /// <see cref="PrivilegeChecksTests"/> for the violation matrix) don't spuriously reject any of
-    /// this at the privilege level every existing fixture already runs at.
-    /// </summary>
-    /// <remarks>
-    /// Speculative CFG exploration is disabled for the same reason as <see cref="TestProtectedModeEntry"/>.
-    /// </remarks>
     [Fact]
     public void TestProtectedModePrivilegeHappyPath() {
         //Arrange
@@ -1138,16 +1094,6 @@ public class MachineTest {
         Assert.True(state.InterruptFlag); // STI ran after CLI, so IF ends up set
     }
 
-    /// <summary>
-    /// Phase 4 protected-mode IDT dispatch fixture: builds a one-entry IDT with a ring-0 16-bit
-    /// interrupt gate for vector 0x20 pointing into the flat code selector, enters protected mode,
-    /// executes `INT 0x20` (same-privilege dispatch, no stack switch), lets the handler write a marker
-    /// and `IRET`, then writes a second marker after control returns to prove the exact next
-    /// instruction resumed correctly, before returning to real mode.
-    /// </summary>
-    /// <remarks>
-    /// Speculative CFG exploration is disabled for the same reason as <see cref="TestProtectedModeEntry"/>.
-    /// </remarks>
     [Fact]
     public void TestProtectedModeIdtDispatch() {
         //Arrange
@@ -1168,16 +1114,6 @@ public class MachineTest {
         Assert.Equal(0x77, machine.Memory.ReadRam(4)[3]); // IRET resumed at the correct return address
     }
 
-    /// <summary>
-    /// Phase 4 far-transfer privilege violation fixture: enters protected mode at CPL 0, then attempts a
-    /// direct far JMP to a non-conforming, ring-3 (DPL 3) code selector. Real hardware requires
-    /// DPL == CPL for a non-conforming target reached without a call gate, so this raises #GP with the
-    /// target selector as the error code; a one-entry IDT (vector 0x0D, ring-0) catches it, writes a
-    /// marker, and halts (no attempt to resume the faulting code).
-    /// </summary>
-    /// <remarks>
-    /// Speculative CFG exploration is disabled for the same reason as <see cref="TestProtectedModeEntry"/>.
-    /// </remarks>
     [Fact]
     public void TestProtectedModeFarTransferPrivilegeViolation() {
         //Arrange
@@ -1194,18 +1130,6 @@ public class MachineTest {
         Assert.Equal(0xDD, machine.Memory.ReadRam(5)[4]); // the #GP handler ran instead of the faulting jump succeeding
     }
 
-    /// <summary>
-    /// Phase 4 call-gate fixture: a 3-entry-plus ring-3 GDT (flat ring-0 code/data, a ring-3 code/data
-    /// pair, a DPL-3 16-bit call gate targeting the ring-0 code selector, and a minimal TSS carrying
-    /// SS0:ESP0) plus a real TSS loaded via LTR. Bootstraps ring 3 via a manually built stack frame and
-    /// RETF (de-escalating from CPL 0), writes a marker, then executes `CALL FAR` through the call gate:
-    /// the gate escalates CPL 3 -> 0 with a stack switch (SS0:ESP0 read from the TSS), the ring-0 handler
-    /// writes a marker and `RETF`s back, de-escalating CPL 0 -> 3 with the original ring-3 stack restored,
-    /// and a final marker after the call returns proves the resume address and stack are both correct.
-    /// </summary>
-    /// <remarks>
-    /// Speculative CFG exploration is disabled for the same reason as <see cref="TestProtectedModeEntry"/>.
-    /// </remarks>
     [Fact]
     public void TestProtectedModeCallGate() {
         //Arrange
@@ -1227,15 +1151,6 @@ public class MachineTest {
         Assert.Equal(0xEF, machine.Memory.ReadRam(9)[8]); // resumed at the correct ring-3 address after the call
     }
 
-    /// <summary>
-    /// Phase 5 paging fixture: an identity-mapped page directory/table covers linear 0x00000-0x00FFF
-    /// (stack) and 0xF0000-0xF0FFF (code/data), enables CR0.PG, writes a marker through the newly
-    /// paged translation, then deliberately writes to an unmapped page (0xF1000) to trigger #PF. A
-    /// one-entry IDT (vector 0x0E, ring-0) catches it, writes a second marker, and halts.
-    /// </summary>
-    /// <remarks>
-    /// Speculative CFG exploration is disabled for the same reason as <see cref="TestProtectedModeEntry"/>.
-    /// </remarks>
     [Fact]
     public void TestProtectedModePaging() {
         //Arrange
@@ -1256,19 +1171,6 @@ public class MachineTest {
         Assert.Equal(0xF1000u, state.ControlRegisters.Cr2); // CR2 holds the faulting linear address
     }
 
-    /// <summary>
-    /// Phase 6 hardware task-switch fixture: an initial task (TSS A, loaded via LTR) sets a general
-    /// register marker and writes a "before" marker, then far-CALLs a TSS selector (TSS B, pre-populated
-    /// with its own CS:EIP/SS:ESP/EFLAGS) instead of an ordinary code segment, triggering a full task
-    /// switch. Task B writes its own marker and executes IRET; since EFLAGS.NT was set entering B, the
-    /// IRET switches back to task A via TSS B's back-link instead of an ordinary interrupt return. Task A
-    /// resumes exactly after the CALL, writes an "after" marker, and halts. Asserts both markers, task B's
-    /// marker, the general-register round trip through TSS A, and that both TSS descriptors' busy bits
-    /// ended up in the expected state (A busy again after resuming, B no longer busy after returning).
-    /// </summary>
-    /// <remarks>
-    /// Speculative CFG exploration is disabled for the same reason as <see cref="TestProtectedModeEntry"/>.
-    /// </remarks>
     [Fact]
     public void TestProtectedModeTaskSwitch() {
         //Arrange
@@ -1294,20 +1196,6 @@ public class MachineTest {
         Assert.Equal(0x89, tssBTypeByte); // task B's descriptor is available again (its busy bit was cleared on return)
     }
 
-    /// <summary>
-    /// Phase 6/7 V86-mode fixture: task A (ring 0) far-CALLs a TSS whose saved EFLAGS has VM=1 and
-    /// IOPL=0, entering Virtual-8086 mode via the same hardware task switch as
-    /// <see cref="TestProtectedModeTaskSwitch"/>. The V86 "task" runs real-mode-style code (raw CS/DS
-    /// paragraph values, synthesized descriptor caches) that writes a marker then executes `IN AL,0x60`;
-    /// since IOPL &lt; 3 in V86 mode this raises #GP, which - unlike ordinary real mode - is reflected to
-    /// the protected-mode monitor through the IDT (CPL is 3 in V86, so the ring-0 handler's DPL 0 gate
-    /// forces the same privilege-escalation stack switch as any CPL3-to-CPL0 protected-mode fault,
-    /// reading SS0:ESP0 from the V86 task's own TSS). The ring-0 handler writes a final marker and halts
-    /// without attempting to resume V86 code.
-    /// </summary>
-    /// <remarks>
-    /// Speculative CFG exploration is disabled for the same reason as <see cref="TestProtectedModeEntry"/>.
-    /// </remarks>
     [Fact]
     public void TestProtectedModeV86() {
         //Arrange
@@ -1326,16 +1214,6 @@ public class MachineTest {
         Assert.Equal(0x55, machine.Memory.ReadRam(0xF0037)[0xF0036]); // the reflected #GP reached the ring-0 IDT handler
     }
 
-    /// <summary>
-    /// Phase 9 final acceptance: the full vendored test386.asm protected-mode suite (TEST_PMODE=1,
-    /// SKIP_UNVERIFIED_TESTS=1) passes every automatically-verified check and reaches POST 0xFF
-    /// cleanly. POST 0xEE onward is upstream test386.asm's own unverified BCD/arithmetic/logic
-    /// diagnostic-print tail (`arithLogicTests`/`bcdTests`), which has no pass/fail assertions of its
-    /// own - it only prints ASCII output meant for a deterministic full-memory-dump comparison
-    /// against a trusted reference emulator (per test386.asm's own README) - so this build
-    /// (configuration.asm's SKIP_UNVERIFIED_TESTS flag) jumps straight from POST 0xEE to POST 0xFF
-    /// and halts instead of running it.
-    /// </summary>
     [Theory]
     [MemberData(nameof(JitModes))]
     public void Test386ProtectedMode(JitMode jitMode) {
@@ -1358,18 +1236,6 @@ public class MachineTest {
         Assert.Equal(expectedPostCheckpoints, debugPortsHandler.PostValues);
     }
 
-    /// <summary>
-    /// IDT task-gate fixture: task A (ring 0, loaded via `LTR`) executes `INT 0x40`, whose one-entry IDT
-    /// gate is a TASK GATE (not an interrupt/trap gate) pointing at TSS B. Dispatch redirects through
-    /// <see cref="Spice86.Core.Emulator.CPU.DescriptorTables.TaskSwitchOperations.SwitchToNewTask"/> exactly
-    /// like a CALL to a TSS selector, saving task A's resume point (the instruction after `INT 0x40`) into
-    /// its own TSS rather than pushing it onto the stack. Task B writes a marker and executes a bare
-    /// `IRET`, which - since EFLAGS.NT was set entering B - switches back to task A via the TSS back-link.
-    /// Task A resumes exactly after `INT 0x40`, writes a final marker, and halts.
-    /// </summary>
-    /// <remarks>
-    /// Speculative CFG exploration is disabled for the same reason as <see cref="TestProtectedModeEntry"/>.
-    /// </remarks>
     [Fact]
     public void TestProtectedModeTaskGate() {
         //Arrange
