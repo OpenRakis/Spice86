@@ -243,36 +243,69 @@ public class Stack {
 
     /// <summary>
     /// Pushes all 8 general-purpose 16-bit registers (PUSHA order: AX, CX, DX, BX, SP, BP, SI, DI).
+    /// The range is validated up front, all eight slots are written, and the #SS (if any slot crossed
+    /// the segment limit) is raised only afterwards - matching real-80386 PUSHAD, which stores every
+    /// register before reporting the fault.
     /// </summary>
     public void PushAll16(ushort ax, ushort cx, ushort dx, ushort bx, ushort sp, ushort bp, ushort si, ushort di) {
-        uint offset = StackPointer;
-        offset = MaskAddress(offset - 2); _memory.UInt16[_state.SS, offset, SegmentAccessKind.Stack] = ax;
-        offset = MaskAddress(offset - 2); _memory.UInt16[_state.SS, offset, SegmentAccessKind.Stack] = cx;
-        offset = MaskAddress(offset - 2); _memory.UInt16[_state.SS, offset, SegmentAccessKind.Stack] = dx;
-        offset = MaskAddress(offset - 2); _memory.UInt16[_state.SS, offset, SegmentAccessKind.Stack] = bx;
-        offset = MaskAddress(offset - 2); _memory.UInt16[_state.SS, offset, SegmentAccessKind.Stack] = sp;
-        offset = MaskAddress(offset - 2); _memory.UInt16[_state.SS, offset, SegmentAccessKind.Stack] = bp;
-        offset = MaskAddress(offset - 2); _memory.UInt16[_state.SS, offset, SegmentAccessKind.Stack] = si;
-        offset = MaskAddress(offset - 2); _memory.UInt16[_state.SS, offset, SegmentAccessKind.Stack] = di;
+        CpuStackSegmentFaultException? pendingFault = GetStackPushRangeFault(2, 8);
+        ushort offset = (ushort)StackPointer;
+        offset = (ushort)(offset - 2); _memory.WriteUInt16Segmented(_state.SS, offset, ax);
+        offset = (ushort)(offset - 2); _memory.WriteUInt16Segmented(_state.SS, offset, cx);
+        offset = (ushort)(offset - 2); _memory.WriteUInt16Segmented(_state.SS, offset, dx);
+        offset = (ushort)(offset - 2); _memory.WriteUInt16Segmented(_state.SS, offset, bx);
+        offset = (ushort)(offset - 2); _memory.WriteUInt16Segmented(_state.SS, offset, sp);
+        offset = (ushort)(offset - 2); _memory.WriteUInt16Segmented(_state.SS, offset, bp);
+        offset = (ushort)(offset - 2); _memory.WriteUInt16Segmented(_state.SS, offset, si);
+        offset = (ushort)(offset - 2); _memory.WriteUInt16Segmented(_state.SS, offset, di);
+        if (pendingFault is not null) {
+            throw pendingFault;
+        }
         StackPointer = offset;
     }
 
     /// <summary>
     /// Pushes all 8 general-purpose 32-bit registers (PUSHAD order: EAX, ECX, EDX, EBX, ESP, EBP, ESI, EDI).
-    /// The stack pointer is committed only after all slot accesses have succeeded, so a fault during
-    /// the push leaves the stack pointer unchanged (matching real hardware's atomic fault semantics).
+    /// The range is validated up front, all eight slots are written, and the #SS (if any slot crossed
+    /// the segment limit) is raised only afterwards - matching real-80386 PUSHAD, which stores every
+    /// register before reporting the fault.
     /// </summary>
     public void PushAll32(uint eax, uint ecx, uint edx, uint ebx, uint esp, uint ebp, uint esi, uint edi) {
-        uint offset = StackPointer;
-        offset = MaskAddress(offset - 4); _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack] = eax;
-        offset = MaskAddress(offset - 4); _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack] = ecx;
-        offset = MaskAddress(offset - 4); _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack] = edx;
-        offset = MaskAddress(offset - 4); _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack] = ebx;
-        offset = MaskAddress(offset - 4); _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack] = esp;
-        offset = MaskAddress(offset - 4); _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack] = ebp;
-        offset = MaskAddress(offset - 4); _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack] = esi;
-        offset = MaskAddress(offset - 4); _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack] = edi;
+        CpuStackSegmentFaultException? pendingFault = GetStackPushRangeFault(4, 8);
+        ushort offset = (ushort)StackPointer;
+        offset = (ushort)(offset - 4); _memory.WriteUInt32Segmented(_state.SS, offset, eax);
+        offset = (ushort)(offset - 4); _memory.WriteUInt32Segmented(_state.SS, offset, ecx);
+        offset = (ushort)(offset - 4); _memory.WriteUInt32Segmented(_state.SS, offset, edx);
+        offset = (ushort)(offset - 4); _memory.WriteUInt32Segmented(_state.SS, offset, ebx);
+        offset = (ushort)(offset - 4); _memory.WriteUInt32Segmented(_state.SS, offset, esp);
+        offset = (ushort)(offset - 4); _memory.WriteUInt32Segmented(_state.SS, offset, ebp);
+        offset = (ushort)(offset - 4); _memory.WriteUInt32Segmented(_state.SS, offset, esi);
+        offset = (ushort)(offset - 4); _memory.WriteUInt32Segmented(_state.SS, offset, edi);
+        if (pendingFault is not null) {
+            throw pendingFault;
+        }
         StackPointer = offset;
+    }
+
+    /// <summary>
+    /// Walks the push slots going downward from the current stack pointer and captures the first #SS
+    /// any slot raises, without throwing. Returns null when the whole range is accessible so the caller
+    /// can complete its writes before re-raising the captured fault (deferred-fault PUSHAD semantics).
+    /// </summary>
+    /// <param name="valueSizeBytes">Size of each value in bytes (2 for 16-bit, 4 for 32-bit).</param>
+    /// <param name="valueCount">Number of values to push.</param>
+    /// <returns>The first stack-segment fault encountered, or null if all slots are valid.</returns>
+    private CpuStackSegmentFaultException? GetStackPushRangeFault(ushort valueSizeBytes, ushort valueCount) {
+        uint offset = StackPointer;
+        for (ushort i = 0; i < valueCount; i++) {
+            offset = MaskAddress(offset - valueSizeBytes);
+            try {
+                _memory.Mmu.CheckAccess(_state.SS, offset, valueSizeBytes, SegmentAccessKind.Stack, isWrite: true);
+            } catch (CpuStackSegmentFaultException exception) {
+                return exception;
+            }
+        }
+        return null;
     }
 
     /// <summary>
@@ -297,19 +330,21 @@ public class Stack {
     /// Pops all 8 general-purpose 32-bit registers (POPAD order: EDI, ESI, EBP, skip ESP, EBX, EDX, ECX, EAX).
     /// Each slot is read individually; if a slot raises #SS, earlier register assignments persist
     /// while the stack pointer is left at its original value (matches 80386 partial-pop fault semantics).
-    /// The ESP slot value on the stack is discarded (matches real hardware: POPAD never writes ESP from memory).
+    /// The ESP slot is advanced past without being popped into the register, but its upper 16 bits are
+    /// folded back into ESP (matching real hardware: POPAD never changes the high word of ESP, only the
+    /// low word advances past the 8 slots).
     /// </summary>
     public void PopAll32() {
         uint offset = StackPointer;
         _state.EDI = _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack]; offset = MaskAddress(offset + 4);
         _state.ESI = _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack]; offset = MaskAddress(offset + 4);
         _state.EBP = _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack]; offset = MaskAddress(offset + 4);
-        offset = MaskAddress(offset + 4); // skip ESP slot
+        uint espSlot = _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack]; offset = MaskAddress(offset + 4);
         _state.EBX = _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack]; offset = MaskAddress(offset + 4);
         _state.EDX = _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack]; offset = MaskAddress(offset + 4);
         _state.ECX = _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack]; offset = MaskAddress(offset + 4);
         _state.EAX = _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack]; offset = MaskAddress(offset + 4);
-        StackPointer = offset;
+        _state.ESP = (espSlot & 0xFFFF0000u) | offset;
     }
 
     /// <summary>
