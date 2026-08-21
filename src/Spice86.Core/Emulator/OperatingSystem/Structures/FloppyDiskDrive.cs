@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.OperatingSystem.Structures;
 
+using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Shared.Emulator.Storage.FileSystem;
 
 using System.Collections.Generic;
@@ -12,7 +13,7 @@ using System.Linq;
 /// When the current image contains a FAT volume, <see cref="Image"/> exposes a derived filesystem view.
 /// When more than one image is registered, Ctrl-F4 disc switching cycles through them.
 /// </summary>
-public sealed class FloppyDiskDrive : VirtualDrive, System.IDisposable {
+public sealed class FloppyDiskDrive : DosDriveBase, IDosPathContent, System.IDisposable {
     private readonly List<(byte[] Data, string Path, bool IsDirty, int PartitionByteOffset)> _images = new();
     private int _currentIndex;
 
@@ -45,7 +46,6 @@ public sealed class FloppyDiskDrive : VirtualDrive, System.IDisposable {
     /// <summary>Initialises a new empty (no media) floppy drive.</summary>
     [SetsRequiredMembers]
     public FloppyDiskDrive() {
-        MountedHostDirectory = string.Empty;
         IsRemovable = true;
     }
 
@@ -152,6 +152,50 @@ public sealed class FloppyDiskDrive : VirtualDrive, System.IDisposable {
             return null;
         }
         return _images[_currentIndex].Data;
+    }
+
+    public bool FileExists(string relativePath) {
+        return Image is not null && Image.TryGetEntry(relativePath, out FatDirectoryEntry? entry) && entry is not null && !entry.IsDirectory;
+    }
+
+    public bool DirectoryExists(string relativePath) {
+        return Image is not null && (string.IsNullOrWhiteSpace(relativePath) ||
+            Image.TryGetEntry(relativePath, out FatDirectoryEntry? entry) && entry is not null && entry.IsDirectory);
+    }
+
+    public bool TryOpenRead(string relativePath, out Stream? stream) {
+        stream = null;
+        if (!FileExists(relativePath) || Image is null || !Image.TryGetEntry(relativePath, out FatDirectoryEntry? entry) || entry is null) {
+            return false;
+        }
+        stream = new MemoryStream(Image.ReadFile(entry), writable: false);
+        return true;
+    }
+
+    public IReadOnlyList<DosContentEntry> GetDirectoryEntries(string relativePath) {
+        if (Image is null) {
+            return Array.Empty<DosContentEntry>();
+        }
+
+        FatDirectoryEntry? directory = null;
+        if (!string.IsNullOrWhiteSpace(relativePath) &&
+            (!Image.TryGetEntry(relativePath, out directory) || directory is null || !directory.IsDirectory)) {
+            return Array.Empty<DosContentEntry>();
+        }
+
+        IReadOnlyList<FatDirectoryEntry> entries = string.IsNullOrWhiteSpace(relativePath)
+            ? Image.ListRootDirectory()
+            : Image.ListSubDirectory((uint)directory!.FirstCluster);
+        List<DosContentEntry> result = new(entries.Count);
+        for (int i = 0; i < entries.Count; i++) {
+            FatDirectoryEntry entry = entries[i];
+            if (string.IsNullOrEmpty(entry.DosName) || entry.IsVolumeLabel) {
+                continue;
+            }
+            result.Add(new DosContentEntry(entry.DosName, entry.IsDirectory, entry.FileSize,
+                (DosFileAttributes)entry.Attributes, DateTime.UnixEpoch, null));
+        }
+        return result;
     }
 
     private void ApplyCurrentImage() {

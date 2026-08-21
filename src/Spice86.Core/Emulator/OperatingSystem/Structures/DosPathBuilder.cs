@@ -15,9 +15,9 @@ using System.Diagnostics;
 /// user supplied scratch buffer capacities).
 /// </remarks>
 internal ref struct DosPathBuilder {
-    internal const char VolumeSeparatorChar = DosPathResolver.VolumeSeparatorChar;
-    internal const char DirectorySeparatorChar = DosPathResolver.DirectorySeparatorChar;
-    internal const char AltDirectorySeparatorChar = DosPathResolver.AltDirectorySeparatorChar;
+    internal const char VolumeSeparatorChar = DosDriveManager.VolumeSeparatorChar;
+    internal const char DirectorySeparatorChar = DosDriveManager.DirectorySeparatorChar;
+    internal const char AltDirectorySeparatorChar = DosDriveManager.AltDirectorySeparatorChar;
 
     /// <summary>The initial number of elements the caller should stack allocate for the path stack buffer.</summary>
     public const int DefaultStackLength = 16;

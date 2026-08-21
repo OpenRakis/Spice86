@@ -5,13 +5,14 @@ using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Utils;
 
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 
 /// <summary>
 /// Translates DOS filepaths to host file paths, and vice-versa.
 /// </summary>
-internal class DosPathResolver {
+public partial class DosDriveManager {
     internal const char VolumeSeparatorChar = ':';
     internal const char DirectorySeparatorChar = '\\';
     internal const char AltDirectorySeparatorChar = '/';
@@ -22,27 +23,17 @@ internal class DosPathResolver {
     // Match DOS COMMAND.COM batch-first executable lookup order: .BAT is searched before .COM and .EXE.
     private static readonly string[] ExecutableExtensionLookupOrder = [".BAT", ".COM", ".EXE"];
 
-    private readonly DosDriveManager _dosDriveManager;
-
-    /// <summary>
-    /// Initializes a new instance.
-    /// </summary>
-    /// <param name="dosDriveManager">The shared class to get all mounted DOS drives.</param>
-    public DosPathResolver(DosDriveManager dosDriveManager) {
-        _dosDriveManager = dosDriveManager;
-    }
-
     /// <summary>
     /// Gets the current DOS directory.
     /// </summary>
     public DosFileOperationResult GetCurrentDosDirectory(byte driveNumber, out string currentDir) {
         //0 = default drive
-        if (driveNumber == 0 && _dosDriveManager.Count > 0) {
-            VirtualDrive virtualDrive = _dosDriveManager.CurrentDrive;
+        if (driveNumber == 0 && Count > 0) {
+            DosDriveBase virtualDrive = CurrentDrive;
             currentDir = virtualDrive.CurrentDosDirectory;
             return DosFileOperationResult.NoValue();
         } else {
-            if (_dosDriveManager.TryGetDriveAtIndex(driveNumber - 1, out VirtualDrive? virtualDrive)) {
+            if (TryGetDriveAtIndex(driveNumber - 1, out DosDriveBase? virtualDrive)) {
                 currentDir = virtualDrive.CurrentDosDirectory;
                 return DosFileOperationResult.NoValue();
             }
@@ -51,7 +42,7 @@ internal class DosPathResolver {
         return DosFileOperationResult.LogError(DosErrorCode.InvalidDrive);
     }
 
-    private static string GetFullCurrentDosPathOnDrive(VirtualDrive virtualDrive) =>
+    private static string GetFullCurrentDosPathOnDrive(DosDriveBase virtualDrive) =>
         Path.Join($"{virtualDrive.DosVolume}{DirectorySeparatorChar}", virtualDrive.CurrentDosDirectory);
 
     internal static string GetExeParentFolder(string? exe) {
@@ -63,7 +54,7 @@ internal class DosPathResolver {
         return string.IsNullOrWhiteSpace(parent) ? fallbackValue : ConvertUtils.ToSlashFolderPath(parent);
     }
 
-    private static bool IsWithinMountPoint(string hostFullPath, VirtualDrive? virtualDrive) =>
+    private static bool IsWithinMountPoint(string hostFullPath, FolderDrive? virtualDrive) =>
         virtualDrive is not null && hostFullPath.StartsWith(virtualDrive.MountedHostDirectory);
 
     /// <summary>
@@ -76,6 +67,12 @@ internal class DosPathResolver {
 
         if (fullDosPath is null || !StartsWithDosDriveAndVolumeSeparator(fullDosPath)) {
             return DosFileOperationResult.LogError(DosErrorCode.PathNotFound);
+        }
+
+        if (TryGetDrive(fullDosPath[0], out DosDriveBase? drive) &&
+            drive is IDosPathContent content && content.DirectoryExists(fullDosPath[3..])) {
+            drive.CurrentDosDirectory = fullDosPath[3..];
+            return DosFileOperationResult.NoValue();
         }
 
         string? hostPath = GetFullHostPathFromDosOrDefault(fullDosPath);
@@ -112,7 +109,7 @@ internal class DosPathResolver {
             isDrivePath = false;
 
             // Perform a defensive check and avoid throwing an exception if the current drive letter/index is invalid.
-            driveIndex = DosDriveManager.GetDriveIndex(_dosDriveManager.CurrentDrive.DriveLetter);
+            driveIndex = GetDriveIndex(CurrentDrive.DriveLetter);
             if (driveIndex == -1) {
                 // Current drive has a bad drive letter.
                 return false;
@@ -125,12 +122,12 @@ internal class DosPathResolver {
 
     private DosFileOperationResult SetCurrentDirValue(char driveLetter, string? hostFullPath, string fullDosPath) {
         if (string.IsNullOrWhiteSpace(hostFullPath) ||
-            !IsWithinMountPoint(hostFullPath, _dosDriveManager.TryGetDrive(driveLetter, out VirtualDrive? vDrive) ? vDrive : null) ||
+            !IsWithinMountPoint(hostFullPath, TryGetDrive(driveLetter, out FolderDrive? vDrive) ? vDrive : null) ||
             Encoding.ASCII.GetByteCount(fullDosPath) > MaxPathLength) {
             return DosFileOperationResult.LogError(DosErrorCode.PathNotFound);
         }
 
-        _dosDriveManager[driveLetter].CurrentDosDirectory = fullDosPath[3..];
+        this[driveLetter].CurrentDosDirectory = fullDosPath[3..];
         return DosFileOperationResult.NoValue();
     }
 
@@ -165,7 +162,7 @@ internal class DosPathResolver {
         bool isRelativePath = dosPathSpan.IsEmpty || dosPathSpan[0] is not (DirectorySeparatorChar or AltDirectorySeparatorChar);
 
         // Try to append current DOS directory on specified drive if resolving a relative path.
-        if (isRelativePath && _dosDriveManager.TryGetDriveAtIndex(driveIndex, out DosDriveBase? drive)) {
+        if (isRelativePath && TryGetDriveAtIndex(driveIndex, out DosDriveBase? drive)) {
             appendResult = pathBuilder.AppendRelativePath(drive.CurrentDosDirectory, out _);
             if (appendResult != DosPathBuilderResult.Success) {
                 return appendResult;
@@ -253,7 +250,7 @@ internal class DosPathResolver {
     public string? GetFullHostParentPathFromDosOrDefault(string dosPath) {
         string? parentPath = Path.GetDirectoryName(dosPath);
         if (string.IsNullOrWhiteSpace(parentPath)) {
-            parentPath = GetFullCurrentDosPathOnDrive(_dosDriveManager.CurrentDrive);
+            parentPath = GetFullCurrentDosPathOnDrive(CurrentDrive);
         }
         string? fullHostPath = GetFullHostPathFromDosOrDefault(parentPath);
         if (string.IsNullOrWhiteSpace(fullHostPath)) {
@@ -273,7 +270,7 @@ internal class DosPathResolver {
         // Avoid throwing an exception if the drive does not exist. Let the caller figure out what to do by setting the
         // host prefix path to null. Technically the drive letter will always be a valid in the drive manager, but it
         // is not always guaranteed to be a VirtualDrive.
-        if (!_dosDriveManager.TryGetDrive(dosPath[0], out VirtualDrive? drive)) {
+        if (!TryGetDrive(dosPath[0], out FolderDrive? drive)) {
             return (null, dosPath[3..]);
         }
 
@@ -292,6 +289,53 @@ internal class DosPathResolver {
         }
 
         return ResolveFileInDirectory(components.Value.resolvedHostDir, components.Value.lastSegment);
+    }
+
+    internal bool TryOpenRead(string dosPath, out string? fullDosPath, out Stream? stream) {
+        fullDosPath = GetFullDosPathIncludingRoot(dosPath);
+        stream = null;
+        if (fullDosPath is null || fullDosPath.Length < 3 ||
+            !TryGetDrive(fullDosPath[0], out DosDriveBase? drive) ||
+            drive is not IDosPathContent content) {
+            return false;
+        }
+
+        return content.TryOpenRead(fullDosPath[3..], out stream);
+    }
+
+    internal bool TryGetDirectoryEntries(string dosPath, out IReadOnlyList<DosContentEntry> entries) {
+        entries = Array.Empty<DosContentEntry>();
+        string? fullDosPath = GetFullDosPathIncludingRoot(dosPath);
+        if (fullDosPath is null || fullDosPath.Length < 3 ||
+            !TryGetDrive(fullDosPath[0], out DosDriveBase? drive) ||
+            drive is not IDosPathContent content) {
+            return false;
+        }
+
+        entries = content.GetDirectoryEntries(fullDosPath[3..]);
+        return true;
+    }
+
+    internal bool TryGetContentEntry(string dosPath, out DosContentEntry? entry) {
+        entry = null;
+        string? fullDosPath = GetFullDosPathIncludingRoot(dosPath);
+        if (fullDosPath is null || fullDosPath.Length < 3 ||
+            !TryGetDrive(fullDosPath[0], out DosDriveBase? drive) ||
+            drive is not IDosPathContent) {
+            return false;
+        }
+
+        string relativePath = fullDosPath[3..];
+        int separator = relativePath.LastIndexOf(DirectorySeparatorChar);
+        string directoryPath = separator < 0 ? string.Empty : relativePath[..separator];
+        string name = separator < 0 ? relativePath : relativePath[(separator + 1)..];
+        if (!TryGetDirectoryEntries($"{drive.DosVolume}{DirectorySeparatorChar}{directoryPath}",
+                out IReadOnlyList<DosContentEntry> entries)) {
+            return true;
+        }
+        entry = entries.FirstOrDefault(candidate =>
+            string.Equals(candidate.Name, name, StringComparison.OrdinalIgnoreCase));
+        return true;
     }
 
     /// <summary>

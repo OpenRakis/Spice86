@@ -21,6 +21,35 @@ using Xunit;
 
 public class MscdexDeviceRequestTests {
     [Fact]
+    public void GetDirectoryEntry_DirectCopy_ReturnsIsoDirectoryRecord() {
+        using TempFile tempFile = new("cdrom-mscdex-directory");
+        CdRomDrive drive = CdRomTestFixture.CreateCookedOnlyCdRomDrive(tempFile, out ICdRomImage image);
+        using (image) {
+            MscdexTestHarness harness = new(drive);
+
+            harness.DispatchGetDirectoryEntry("README.TXT", copyFlag: false);
+
+            harness.State.AX.Should().Be(0);
+            harness.Memory.UInt8[harness.BufferBaseAddress].Should().BeGreaterThan((byte)0);
+            harness.Memory.UInt8[harness.BufferBaseAddress + 32].Should().BeGreaterThan((byte)0);
+        }
+    }
+
+    [Fact]
+    public void GetDirectoryEntry_MissingEntry_ReturnsFileNotFound() {
+        using TempFile tempFile = new("cdrom-mscdex-directory-missing");
+        CdRomDrive drive = CdRomTestFixture.CreateCookedOnlyCdRomDrive(tempFile, out ICdRomImage image);
+        using (image) {
+            MscdexTestHarness harness = new(drive);
+
+            bool error = harness.DispatchGetDirectoryEntry("MISSING.TXT", copyFlag: false);
+
+            error.Should().BeTrue();
+            harness.State.AX.Should().Be((ushort)MscdexErrorCode.FileNotFound);
+        }
+    }
+
+    [Fact]
     public void SendDeviceDriverRequest_IoctlMediaChanged_UsesDosBoxSwapRequestCodes() {
         // Arrange
         using TempFile tempFile = new("cdrom-mscdex-audio");
@@ -243,6 +272,20 @@ public class MscdexDeviceRequestTests {
             Memory.UInt8[BufferBaseAddress] = controlCode;
             Memory.UInt8[BufferBaseAddress + 1] = addressMode;
             Mscdex.Dispatch();
+        }
+
+        public bool DispatchGetDirectoryEntry(string path, bool copyFlag) {
+            uint pathAddress = MemoryUtils.ToPhysicalAddress(RequestSegment, 0x0100);
+            Memory.UInt8[pathAddress] = (byte)path.Length;
+            Memory.SetZeroTerminatedString(pathAddress + 1, path, path.Length + 1);
+            State.AL = 0x0F;
+            State.CL = 3;
+            State.CH = copyFlag ? (byte)1 : (byte)0;
+            State.ES = RequestSegment;
+            State.BX = 0x0100;
+            State.SI = BufferSegment;
+            State.DI = 0;
+            return Mscdex.Dispatch();
         }
 
         public void DispatchSeek(uint lba) {

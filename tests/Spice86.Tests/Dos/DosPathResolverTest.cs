@@ -12,10 +12,10 @@ using System.IO;
 
 using Xunit;
 
-[TestSubject(typeof(DosPathResolver))]
+[TestSubject(typeof(DosDriveManager))]
 public class DosPathResolverTest {
     private static bool DoCmp(string file, string pattern) {
-        return DosPathResolver.WildFileCmp(file, pattern);
+        return DosDriveManager.WildFileCmp(file, pattern);
     }
 
     [Theory]
@@ -138,7 +138,7 @@ public class DosPathResolverTest {
         using TempFile dir = new("sfn_test");
         File.Create(Path.Join(dir.Path, "readme.txt")).Dispose();
 
-        string result = DosPathResolver.GetShortFileName("readme.txt", dir.Path);
+        string result = DosDriveManager.GetShortFileName("readme.txt", dir.Path);
 
         result.Should().Be("README.TXT");
     }
@@ -148,7 +148,7 @@ public class DosPathResolverTest {
         using TempFile dir = new("sfn_test");
         File.Create(Path.Join(dir.Path, "VeryLongFileName.txt")).Dispose();
 
-        string result = DosPathResolver.GetShortFileName("VeryLongFileName.txt", dir.Path);
+        string result = DosDriveManager.GetShortFileName("VeryLongFileName.txt", dir.Path);
 
         result.Should().Be("VERYLO~1.TXT");
     }
@@ -159,8 +159,8 @@ public class DosPathResolverTest {
         File.Create(Path.Join(dir.Path, "VeryLongFileName1.txt")).Dispose();
         File.Create(Path.Join(dir.Path, "VeryLongFileName2.txt")).Dispose();
 
-        string first = DosPathResolver.GetShortFileName("VeryLongFileName1.txt", dir.Path);
-        string second = DosPathResolver.GetShortFileName("VeryLongFileName2.txt", dir.Path);
+        string first = DosDriveManager.GetShortFileName("VeryLongFileName1.txt", dir.Path);
+        string second = DosDriveManager.GetShortFileName("VeryLongFileName2.txt", dir.Path);
 
         first.Should().Be("VERYLO~1.TXT");
         second.Should().Be("VERYLO~2.TXT");
@@ -173,9 +173,9 @@ public class DosPathResolverTest {
         File.Create(Path.Join(dir.Path, "LongDocument_Beta.doc")).Dispose();
         File.Create(Path.Join(dir.Path, "LongDocument_Gamma.doc")).Dispose();
 
-        string r1 = DosPathResolver.GetShortFileName("LongDocument_Alpha.doc", dir.Path);
-        string r2 = DosPathResolver.GetShortFileName("LongDocument_Beta.doc", dir.Path);
-        string r3 = DosPathResolver.GetShortFileName("LongDocument_Gamma.doc", dir.Path);
+        string r1 = DosDriveManager.GetShortFileName("LongDocument_Alpha.doc", dir.Path);
+        string r2 = DosDriveManager.GetShortFileName("LongDocument_Beta.doc", dir.Path);
+        string r3 = DosDriveManager.GetShortFileName("LongDocument_Gamma.doc", dir.Path);
 
         r1.Should().Be("LONGDO~1.DOC");
         r2.Should().Be("LONGDO~2.DOC");
@@ -187,7 +187,7 @@ public class DosPathResolverTest {
         using TempFile dir = new("sfn_test");
         File.Create(Path.Join(dir.Path, "readme.text")).Dispose();
 
-        string result = DosPathResolver.GetShortFileName("readme.text", dir.Path);
+        string result = DosDriveManager.GetShortFileName("readme.text", dir.Path);
 
         result.Should().Be("README~1.TEX");
     }
@@ -197,7 +197,7 @@ public class DosPathResolverTest {
         using TempFile dir = new("sfn_test");
         File.Create(Path.Join(dir.Path, "My File.txt")).Dispose();
 
-        string result = DosPathResolver.GetShortFileName("My File.txt", dir.Path);
+        string result = DosDriveManager.GetShortFileName("My File.txt", dir.Path);
 
         result.Should().Be("MYFILE~1.TXT");
     }
@@ -207,7 +207,7 @@ public class DosPathResolverTest {
         using TempFile dir = new("sfn_test");
         File.Create(Path.Join(dir.Path, "VeryLongFilenameNoExt")).Dispose();
 
-        string result = DosPathResolver.GetShortFileName("VeryLongFilenameNoExt", dir.Path);
+        string result = DosDriveManager.GetShortFileName("VeryLongFilenameNoExt", dir.Path);
 
         result.Should().Be("VERYLO~1");
     }
@@ -217,7 +217,7 @@ public class DosPathResolverTest {
         using TempFile dir = new("sfn_test");
         File.Create(Path.Join(dir.Path, "ABCDEFGH.TXT")).Dispose();
 
-        string result = DosPathResolver.GetShortFileName("ABCDEFGH.TXT", dir.Path);
+        string result = DosDriveManager.GetShortFileName("ABCDEFGH.TXT", dir.Path);
 
         result.Should().Be("ABCDEFGH.TXT");
     }
@@ -227,14 +227,14 @@ public class DosPathResolverTest {
         using TempFile dir = new("sfn_test");
         File.Create(Path.Join(dir.Path, "ABCDEFGHI.TXT")).Dispose();
 
-        string result = DosPathResolver.GetShortFileName("ABCDEFGHI.TXT", dir.Path);
+        string result = DosDriveManager.GetShortFileName("ABCDEFGHI.TXT", dir.Path);
 
         result.Should().Be("ABCDEF~1.TXT");
     }
 
     [Fact]
     public void GetShortFileName_EmptyDir_StillWorks() {
-        string result = DosPathResolver.GetShortFileName("VeryLongFileName.txt", "");
+        string result = DosDriveManager.GetShortFileName("VeryLongFileName.txt", "");
 
         result.Should().Be("VERYLO~1.TXT");
     }

@@ -36,21 +36,12 @@ public sealed class DosDriveStatusProvider : IDriveStatusProvider {
         }
 
         foreach (KeyValuePair<char, DosDriveBase> kvp in _dosDriveManager) {
-            if (kvp.Value is not VirtualDrive virtualDrive || kvp.Value is MemoryDrive) {
-                continue;
-            }
-            if (cdRomLetters.Contains(char.ToUpperInvariant(virtualDrive.DriveLetter))) {
+            if (kvp.Value is MemoryDrive || kvp.Value is EmptyDosDrive ||
+                cdRomLetters.Contains(char.ToUpperInvariant(kvp.Value.DriveLetter))) {
                 continue;
             }
 
-            DosVirtualDriveType driveType;
-            if (virtualDrive.DriveLetter is 'A' or 'B') {
-                driveType = DosVirtualDriveType.Floppy;
-            } else {
-                driveType = DosVirtualDriveType.Fixed;
-            }
-
-            if (_dosDriveManager.TryGetFloppyDrive(virtualDrive.DriveLetter, out FloppyDiskDrive? floppyDrive)) {
+            if (_dosDriveManager.TryGetFloppyDrive(kvp.Value.DriveLetter, out FloppyDiskDrive? floppyDrive)) {
                 if (floppyDrive != null) {
                     statuses.Add(new DosVirtualDriveStatus(
                         floppyDrive.DriveLetter,
@@ -63,6 +54,13 @@ public sealed class DosDriveStatusProvider : IDriveStatusProvider {
                 }
                 continue;
             }
+
+            if (kvp.Value is not FolderDrive virtualDrive) {
+                continue;
+            }
+            DosVirtualDriveType driveType = virtualDrive.DriveLetter is 'A' or 'B'
+                ? DosVirtualDriveType.Floppy
+                : DosVirtualDriveType.Fixed;
 
             bool hasMedia = !string.IsNullOrEmpty(virtualDrive.MountedHostDirectory);
             if (hasMedia && driveType == DosVirtualDriveType.Floppy) {

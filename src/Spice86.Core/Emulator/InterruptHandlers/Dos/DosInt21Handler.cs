@@ -684,23 +684,20 @@ public class DosInt21Handler : InterruptHandler {
         SetAllocationInfoRegisters(driveIndex);
     }
 
-    private bool TryGetAllocationInfoDrive(byte driveRequest, out byte driveIndex, out string mountedHostDirectory) {
-        mountedHostDirectory = string.Empty;
+    private bool TryGetAllocationInfoDrive(byte driveRequest, out byte driveIndex, out DosDriveBase? drive) {
+        drive = null;
         if (driveRequest == 0) {
             driveIndex = _dosDriveManager.CurrentDriveIndex;
         } else {
             driveIndex = (byte)(driveRequest - 1);
         }
 
-        if (!_dosDriveManager.TryGetDriveAtIndex(driveIndex, out VirtualDrive? resolvedDrive)) {
+        if (!_dosDriveManager.TryGetDriveAtIndex(driveIndex, out DosDriveBase? resolvedDrive) ||
+            resolvedDrive is EmptyDosDrive) {
             return false;
         }
 
-        if (string.IsNullOrWhiteSpace(resolvedDrive.MountedHostDirectory)) {
-            return false;
-        }
-
-        mountedHostDirectory = resolvedDrive.MountedHostDirectory;
+        drive = resolvedDrive;
         return true;
     }
 
@@ -1806,7 +1803,7 @@ public class DosInt21Handler : InterruptHandler {
     public void SelectDefaultDrive() {
         byte driveIndex = State.DL;
         if (driveIndex < DosDriveManager.MaxDriveCount) {
-            if (_dosDriveManager.TryGetDriveAtIndex(driveIndex, out VirtualDrive? mountedDrive)) {
+            if (_dosDriveManager.TryGetDriveAtIndex(driveIndex, out FolderDrive? mountedDrive)) {
                 _dosDriveManager.CurrentDrive = mountedDrive;
             }
         } else if (LoggerService.IsEnabled(LogLevel.Error)) {
@@ -1930,6 +1927,23 @@ public class DosInt21Handler : InterruptHandler {
     public void GetSetFileAttributes(bool calledFromVm) {
         byte op = State.AL;
         string dosFileName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
+        if (_dosDriveManager.TryGetContentEntry(dosFileName, out DosContentEntry? contentEntry) &&
+            contentEntry?.HostPath is null) {
+            if (contentEntry is null) {
+                LogDosError(calledFromVm);
+                SetCarryFlag(true, calledFromVm);
+                State.AX = 0x2;
+                return;
+            }
+            if (op == 0) {
+                State.CX = (ushort)contentEntry.Attributes;
+                SetCarryFlag(false, calledFromVm);
+                return;
+            }
+            SetCarryFlag(true, calledFromVm);
+            State.AX = (ushort)DosErrorCode.AccessDenied;
+            return;
+        }
         string? fileName = _dosFileManager.TryGetFullHostPathFromDos(dosFileName);
         if (!File.Exists(fileName)) {
             LogDosError(calledFromVm);
@@ -1979,6 +1993,24 @@ public class DosInt21Handler : InterruptHandler {
     public void GetSetFileDateAndTime(bool calledFromVm) {
         byte op = State.AL;
         string dosFileName = _dosStringDecoder.GetZeroTerminatedStringAtDsDx();
+        if (_dosDriveManager.TryGetContentEntry(dosFileName, out DosContentEntry? contentEntry) &&
+            contentEntry?.HostPath is null) {
+            if (contentEntry is null) {
+                SetCarryFlag(true, calledFromVm);
+                State.AX = (int)DosErrorCode.InvalidHandle;
+                return;
+            }
+            if (op == 0) {
+                DateTime dateTime = contentEntry.CreationTimeUtc.ToLocalTime();
+                State.CX = DosFileManager.ToDosTime(dateTime);
+                State.DX = DosFileManager.ToDosDate(dateTime);
+                SetCarryFlag(false, calledFromVm);
+                return;
+            }
+            SetCarryFlag(true, calledFromVm);
+            State.AX = (int)DosErrorCode.AccessDenied;
+            return;
+        }
         string? fileName = _dosFileManager.TryGetFullHostPathFromDos(dosFileName);
         if (!File.Exists(fileName)) {
             LogDosError(calledFromVm);

@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.CdRom;
 using Spice86.Core.Emulator.Devices.CdRom.Subchannel;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Emulator.Storage.CdRom;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -158,8 +159,10 @@ public sealed class Mscdex {
                 continue;
             }
 
+            MscdexDriveEntry drive = _drives[i];
             _drives.RemoveAt(i);
             _audioStates.Remove(upper);
+            drive.Drive.Image.Dispose();
             if (_loggerService.IsEnabled(LogLevel.Information)) {
                 _loggerService.LogInformation("MSCDEX: Removed drive {Drive}:", upper);
             }
@@ -407,15 +410,80 @@ public sealed class Mscdex {
     }
 
     /// <summary>
-    /// AL=0x0F: Get Directory Entry — not implemented; sets carry and returns an error.
+    /// AL=0x0F: Gets an ISO directory entry using the DOSBox MSCDEX pathname contract.
     /// </summary>
     /// <returns><see langword="true" /> if an error occured. <see langword="false"> otherwise.</returns>
     private bool GetDirectoryEntry() {
-        if (_loggerService.IsEnabled(LogLevel.Warning)) {
-            _loggerService.LogWarning("{MethodName}: not implemented", nameof(GetDirectoryEntry));
+        int driveIndex = _state.CL;
+        MscdexDriveLookup driveLookup = GetDriveByIndex(driveIndex);
+        if (!driveLookup.IsPresent) {
+            _state.AX = (ushort)MscdexErrorCode.InvalidDrive;
+            return true;
         }
-        _state.AX = (ushort)MscdexErrorCode.InvalidFunction;
-        return true;
+
+        uint pathnameAddress = MemoryUtils.ToPhysicalAddress(_state.ES, _state.BX);
+        byte pathnameLength = _memory.UInt8[pathnameAddress];
+        string pathname = _memory.GetZeroTerminatedString(pathnameAddress + 1, pathnameLength)
+            .TrimEnd('.');
+        MscdexDriveEntry driveEntry = _drives[driveLookup.DriveListIndex];
+        IsoDosPathContent content = new(driveEntry.Drive);
+        if (!content.TryGetRecord(pathname, out IsoDirectoryRecord? record) || record is null) {
+            _state.AX = (ushort)MscdexErrorCode.FileNotFound;
+            return true;
+        }
+
+        uint outputAddress = MemoryUtils.ToPhysicalAddress(_state.SI, _state.DI);
+        byte[] rawRecord = BuildRawIsoDirectoryRecord(record);
+        bool copyFlag = (_state.CH & 1) != 0;
+        if (copyFlag) {
+            byte[] copiedRecord = BuildCopyFlagDirectoryEntry(record);
+            _memory.LoadData(outputAddress, copiedRecord);
+        } else {
+            _memory.LoadData(outputAddress, rawRecord);
+        }
+        _state.AX = record.IsDirectory ? (ushort)MscdexErrorCode.Success : (ushort)MscdexErrorCode.Success;
+        return false;
+    }
+
+    private static byte[] BuildRawIsoDirectoryRecord(IsoDirectoryRecord record) {
+        byte[] name = System.Text.Encoding.ASCII.GetBytes(record.Name + (record.IsDirectory ? string.Empty : ";1"));
+        int length = 33 + name.Length;
+        if ((length & 1) != 0) {
+            length++;
+        }
+        byte[] result = new byte[length];
+        result[0] = (byte)length;
+        result[2] = (byte)record.ExtentLba;
+        result[3] = (byte)(record.ExtentLba >> 8);
+        result[4] = (byte)(record.ExtentLba >> 16);
+        result[5] = (byte)(record.ExtentLba >> 24);
+        result[10] = (byte)record.DataLength;
+        result[11] = (byte)(record.DataLength >> 8);
+        result[12] = (byte)(record.DataLength >> 16);
+        result[13] = (byte)(record.DataLength >> 24);
+        result[25] = record.IsDirectory ? (byte)2 : record.FileFlags;
+        result[32] = (byte)name.Length;
+        name.CopyTo(result, 33);
+        return result;
+    }
+
+    private static byte[] BuildCopyFlagDirectoryEntry(IsoDirectoryRecord record) {
+        byte[] raw = BuildRawIsoDirectoryRecord(record);
+        byte[] result = new byte[0x18 + 40];
+        result[0] = raw[1];
+        Array.Copy(raw, 2, result, 1, 4);
+        result[5] = 0;
+        result[6] = 8;
+        Array.Copy(raw, 10, result, 7, 4);
+        result[0x12] = raw[25];
+        result[0x13] = raw[26];
+        result[0x14] = raw[27];
+        result[0x15] = raw[28];
+        result[0x16] = raw[29];
+        result[0x17] = raw[30];
+        result[0x18] = raw[32];
+        Array.Copy(raw, 33, result, 0x19, Math.Min(raw[32], (byte)38));
+        return result;
     }
 
     /// <summary>

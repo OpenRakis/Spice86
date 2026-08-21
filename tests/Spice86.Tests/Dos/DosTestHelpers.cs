@@ -4,9 +4,15 @@ using Microsoft.Extensions.Logging;
 
 using NSubstitute;
 
+using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.InterruptHandlers.Mscdex;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
@@ -26,7 +32,12 @@ internal static class DosTestHelpers {
     /// Creates a <see cref="DosDriveManager"/> with a dummy media ID table.
     /// </summary>
     internal static DosDriveManager CreateDriveManager(ILogger logger, string? cDrive, string? exe = null) {
-        return new DosDriveManager(logger, cDrive, exe, CreateMediaIdTable());
+        IMemory memory = new Memory(new(), new Ram(0x200000), new A20Gate(), new RealModeMmu386(), false);
+        State state = new(CpuModel.INTEL_80286);
+        SoftwareMixer mixer = new(Audio.Filters.AudioEngine.Dummy, new PauseHandler(logger));
+        DriveActivityNotifier driveActivityNotifier = new();
+        Mscdex mscdex = new Mscdex(state, memory, logger, driveActivityNotifier);
+        return new DosDriveManager(mscdex, mixer, driveActivityNotifier,  cDrive, exe, CreateMediaIdTable(), logger);
     }
 
     /// <summary>Creates a <see cref="DosDriveManager"/> with a substituted logger and a dummy media ID table.</summary>

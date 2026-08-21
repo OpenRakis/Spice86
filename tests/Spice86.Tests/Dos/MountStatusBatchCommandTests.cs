@@ -27,7 +27,7 @@ public sealed class MountStatusBatchCommandTests : IDisposable {
 
     [Fact]
     public void Mount_NoArguments_ListsDriveLabels() {
-        VirtualDrive cDrive = _fixture.DriveManager.GetDrive<VirtualDrive>('C');
+        FolderDrive cDrive = _fixture.DriveManager.GetDrive<FolderDrive>('C');
         cDrive.Label = "HOSTDRV";
 
         string output = ExecuteAndReadOutput("MOUNT", "MOUNT.TXT");

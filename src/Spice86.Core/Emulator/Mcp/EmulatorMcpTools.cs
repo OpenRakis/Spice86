@@ -1097,8 +1097,8 @@ internal sealed class EmulatorMcpTools {
             lock (_services.ToolsLock) {
                 Dos dos = GetDos();
                 List<DosDriveResponse> drives = dos.DosDriveManager.Values
-                    .Where(static drive => drive is VirtualDrive)
-                    .Cast<VirtualDrive>()
+                    .Where(static drive => drive is FolderDrive)
+                    .Cast<FolderDrive>()
                     .Select(static drive => new DosDriveResponse {
                         Drive = drive.DosVolume,
                         CurrentDosDirectory = drive.CurrentDosDirectory,
@@ -1183,7 +1183,7 @@ internal sealed class EmulatorMcpTools {
                 }
 
                 char normalizedDriveLetter = char.ToUpperInvariant(driveLetter[0]);
-                if (!dos.DosDriveManager.TryGetDrive(normalizedDriveLetter, out VirtualDrive? mountedDrive)) {
+                if (!dos.DosDriveManager.TryGetDrive(normalizedDriveLetter, out DosDriveBase? mountedDrive)) {
                     throw new InvalidOperationException($"Drive '{normalizedDriveLetter}' is not mounted");
                 }
 
@@ -1468,7 +1468,7 @@ internal sealed class EmulatorMcpTools {
 
         char driveLetterChar = driveLetter[0];
         int driveIndex = DosDriveManager.GetDriveIndexOrThrow(driveLetterChar, nameof(driveLetter));
-        if (!dos.DosDriveManager.TryGetDrive(driveLetterChar, out VirtualDrive? virtualDrive)) {
+        if (!dos.DosDriveManager.TryGetDrive(driveLetterChar, out DosDriveBase? virtualDrive)) {
             throw new InvalidOperationException($"Drive '{driveLetterChar}' is not mounted");
         }
 

@@ -4,13 +4,16 @@ using FluentAssertions;
 
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Shared.Emulator.Storage.CdRom;
 using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
+using Spice86.Tests.Dos.FileSystem;
 using Spice86.Tests.Utility;
 using Spice86.ViewModels.Services;
 
 using System.Runtime.InteropServices;
+using System.Text;
 
 using Xunit;
 
@@ -113,6 +116,39 @@ public class DosInt21IntegrationTests {
     [Fact]
     public void GetAllocationInfoForAnyDrive_WithDefaultDrive_ReturnsAllocationInfoAndMediaIdPointer() {
         AssertResourcePasses("allocation_info_default_drive.com");
+    }
+
+    [Fact]
+    public void OpenAndReadFile_FromMountedCdImage() {
+        TestIoPortHandler testHandler = RunDosResource("read_cd_image_file.com",
+            fileSystemSetup: testRoot => {
+                CreateIsoFile(testRoot);
+            },
+            preRunSetup: di => {
+                string imagePath = Path.Join(GetTestRoot(di), "disc.iso");
+                di.Machine.Dos.DosDriveManager.MountImageAsCdRom('D', imagePath);
+            });
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    [Fact]
+    public void OpenAndReadFile_FromMountedFloppyImage() {
+        TestIoPortHandler testHandler = RunDosResource("read_floppy_image_file.com",
+            fileSystemSetup: testRoot => {
+                byte[] image = new Dos.FileSystem.Fat12ImageBuilder()
+                    .WithFile("SUBDIR\\HELLO.TXT", Encoding.ASCII.GetBytes("FLOPPY!"))
+                    .Build();
+                File.WriteAllBytes(Path.Join(testRoot, "disk.img"), image);
+            },
+            preRunSetup: di => {
+                string imagePath = Path.Join(GetTestRoot(di), "disk.img");
+                di.Machine.Dos.DosDriveManager.MountImageAsFloppy('A', imagePath);
+            });
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
     }
 
     [Fact]
@@ -313,9 +349,34 @@ public class DosInt21IntegrationTests {
             NSubstitute.Substitute.For<ILogger>(),
             spice86DependencyInjection.Machine.IoPortDispatcher
         );
-        spice86DependencyInjection.ProgramExecutor.Run();
+        try {
+            spice86DependencyInjection.ProgramExecutor.Run();
+            return testHandler;
+        } finally {
+            if (spice86DependencyInjection.Machine.Dos.DosDriveManager.ContainsKey('D')) {
+                spice86DependencyInjection.Machine.Dos.DosDriveManager.Unmount('D');
+            }
+        }
+    }
 
-        return testHandler;
+    private static string GetTestRoot(Spice86DependencyInjection di) {
+        return di.Machine.Dos.DosDriveManager.GetDrive<FolderDrive>('C').MountedHostDirectory;
+    }
+
+    private static void CreateIsoFile(string rootPath) {
+        string sourcePath = Path.Join(rootPath, "iso-source");
+        Directory.CreateDirectory(sourcePath);
+        File.WriteAllText(Path.Join(sourcePath, "README.TXT"), "SPICE86!");
+        using VirtualIsoImage image = new(sourcePath, "SPICE86");
+        byte[] isoBytes = new byte[image.TotalSectors * 2048];
+        for (int lba = 0; lba < image.TotalSectors; lba++) {
+            int offset = lba * 2048;
+            int bytesRead = image.Read(lba, isoBytes.AsSpan(offset, 2048), CdSectorMode.CookedData2048);
+            if (bytesRead != 2048) {
+                throw new InvalidOperationException("Expected a complete cooked ISO sector.");
+            }
+        }
+        File.WriteAllBytes(Path.Join(rootPath, "disc.iso"), isoBytes);
     }
 
     private static void RedirectStdinToByteA(Spice86DependencyInjection di) {

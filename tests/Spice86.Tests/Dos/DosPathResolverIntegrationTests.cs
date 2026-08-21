@@ -20,7 +20,7 @@ public class DosPathResolverIntegrationTests {
 
         ILogger loggerService = Substitute.For<ILogger>();
         DosDriveManager dosDriveManager = DosTestHelpers.CreateDriveManager(loggerService, tempFile.Path);
-        DosPathResolver dosPathResolver = new DosPathResolver(dosDriveManager);
+        DosDriveManager dosPathResolver = dosDriveManager;
 
         string batPath = Path.Join(tempFile.Path, "TOOL.BAT");
         string comPath = Path.Join(tempFile.Path, "TOOL.COM");
@@ -49,8 +49,7 @@ public class DosPathResolverIntegrationTests {
     public void GetFullHostExecutablePathFromDosOrDefault_ExactMatch_PreferredOver83Truncation() {
         // Arrange
         using TempFile tempFile = new("dos_path_resolver_exe_83");
-        DosPathResolver dosPathResolver = new DosPathResolver(
-            DosTestHelpers.CreateDriveManager(tempFile.Path));
+        DosDriveManager dosPathResolver = DosTestHelpers.CreateDriveManager(tempFile.Path);
 
         // Both names truncate to BIOS_INT.COM under 8.3 rules.
         // Querying without extension triggers TryResolveExecutableWithoutExtension;
@@ -76,8 +75,7 @@ public class DosPathResolverIntegrationTests {
     public void GetFullHostPathFromDosOrDefault_ExactMatch_PreferredOver83Truncation() {
         // Arrange
         using TempFile tempFile = new("dos_path_resolver_83");
-        DosPathResolver dosPathResolver = new DosPathResolver(
-            DosTestHelpers.CreateDriveManager(tempFile.Path));
+        DosDriveManager dosPathResolver = DosTestHelpers.CreateDriveManager(tempFile.Path);
 
         // Both names truncate to BIOS_INT.COM under 8.3 rules.
         // The exact match must win.

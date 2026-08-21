@@ -11,6 +11,9 @@ public enum MscdexErrorCode : ushort {
     /// <summary>Drive is not ready.</summary>
     DriveNotReady = 0x0002,
 
+    /// <summary>Directory entry or file was not found.</summary>
+    FileNotFound = 0x0002,
+
     /// <summary>Bad command or parameter.</summary>
     BadCommand = 0x0003,
 

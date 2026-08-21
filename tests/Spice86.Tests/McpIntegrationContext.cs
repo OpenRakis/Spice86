@@ -24,6 +24,9 @@ internal sealed class McpIntegrationContext : IAsyncDisposable {
     private readonly Uri _baseEndpoint;
     private readonly Uri _endpoint;
     private readonly Spice86Creator _creator;
+    private Spice86DependencyInjection? _spice86;
+    private EmulatorMcpServices? _services;
+    private McpHttpHost? _host;
     private long _requestId = 1;
     private string? _sessionId;
     private Thread? _emulationThread;
@@ -36,18 +39,18 @@ internal sealed class McpIntegrationContext : IAsyncDisposable {
         HttpClient httpClient,
         Uri baseEndpoint,
         Uri endpoint) {
-        Spice86 = spice86;
-        Services = services;
-        Host = host;
+        _spice86 = spice86;
+        _services = services;
+        _host = host;
         _httpClient = httpClient;
         _baseEndpoint = baseEndpoint;
         _endpoint = endpoint;
         _creator = creator;
     }
 
-    public Spice86DependencyInjection Spice86 { get; }
-    public EmulatorMcpServices Services { get; }
-    public McpHttpHost Host { get; }
+    public Spice86DependencyInjection Spice86 => _spice86 ?? throw new ObjectDisposedException(nameof(McpIntegrationContext));
+    public EmulatorMcpServices Services => _services ?? throw new ObjectDisposedException(nameof(McpIntegrationContext));
+    public McpHttpHost Host => _host ?? throw new ObjectDisposedException(nameof(McpIntegrationContext));
     public string? SessionId => _sessionId;
 
     public void StartEmulationLoop() {
@@ -236,14 +239,22 @@ internal sealed class McpIntegrationContext : IAsyncDisposable {
 
     public async ValueTask DisposeAsync() {
         _httpClient.Dispose();
-        Host.Dispose();
+        McpHttpHost? host = _host;
+        if (host is not null) {
+            await host.DisposeAsync();
+        }
         if (_emulationThread is { IsAlive: true }) {
             Services.State.IsRunning = false;
             Services.PauseHandler.Resume();
             _emulationThread.Join(TimeSpan.FromSeconds(5));
         }
-        Spice86.Dispose();
+        Spice86DependencyInjection? spice86 = _spice86;
+        spice86?.Dispose();
         _creator.Dispose();
+        _host = null;
+        _services = null;
+        _spice86 = null;
+        _emulationThread = null;
         await Task.CompletedTask;
     }
 

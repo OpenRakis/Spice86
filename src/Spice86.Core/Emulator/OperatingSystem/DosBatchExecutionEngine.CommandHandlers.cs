@@ -1111,11 +1111,14 @@ internal sealed partial class DosBatchExecutionEngine {
         }
 
         char driveLetter = _driveManager.CurrentDrive.DriveLetter;
-        string label = _driveManager.CurrentDrive.Label;
-
-        // For now, VOL accepts an optional drive argument (e.g., "VOL C:")
-        // but always reports the current drive (simplified implementation)
-        // Full DOSBox parity would require DriveManager enhancements
+        if (trimmed.Length >= 2 && DosDriveManager.GetDriveIndex(trimmed[0]) >= 0 && trimmed[1] == ':') {
+            driveLetter = char.ToUpperInvariant(trimmed[0]);
+        }
+        if (!_driveManager.TryGetDrive(driveLetter, out DosDriveBase? drive)) {
+            WriteToStandardOutput($" Volume in drive {driveLetter} has no label\r\n");
+            return false;
+        }
+        string label = drive.Label;
 
         WriteToStandardOutput($" Volume in drive {driveLetter} is {label}\r\n");
         return false;
@@ -1449,13 +1452,13 @@ internal sealed partial class DosBatchExecutionEngine {
             return;
         }
 
-        if (_driveManager.TryGetDrive('C', out VirtualDrive? cDrive)) {
+        if (_driveManager.TryGetDrive('C', out DosDriveBase? cDrive)) {
             _driveManager.CurrentDrive = cDrive;
             return;
         }
 
         for (char driveLetter = 'A'; driveLetter <= 'Z'; driveLetter++) {
-            if (_driveManager.TryGetDrive(driveLetter, out VirtualDrive? drive)) {
+            if (_driveManager.TryGetDrive(driveLetter, out DosDriveBase? drive)) {
                 _driveManager.CurrentDrive = drive;
                 return;
             }
@@ -1475,7 +1478,7 @@ internal sealed partial class DosBatchExecutionEngine {
             return true;
         }
 
-        if (_driveManager.TryGetDrive<VirtualDrive>(driveLetter, out VirtualDrive? virtualDrive) &&
+        if (_driveManager.TryGetDrive<FolderDrive>(driveLetter, out FolderDrive? virtualDrive) &&
             !string.IsNullOrEmpty(virtualDrive.MountedHostDirectory)) {
             return true;
         }
@@ -1555,7 +1558,7 @@ internal sealed partial class DosBatchExecutionEngine {
     }
 
     private string GetMountedHostPath(char driveLetter) {
-        if (_driveManager.TryGetDrive<VirtualDrive>(driveLetter, out VirtualDrive? virtualDrive) &&
+        if (_driveManager.TryGetDrive<FolderDrive>(driveLetter, out FolderDrive? virtualDrive) &&
             virtualDrive != null &&
             !string.IsNullOrEmpty(virtualDrive.MountedHostDirectory)) {
             return virtualDrive.MountedHostDirectory.TrimEnd('/', '\\');
@@ -1613,7 +1616,7 @@ internal sealed partial class DosBatchExecutionEngine {
                 return false;
             }
             foreach (KeyValuePair<char, string> entry in subst) {
-                if (_driveManager.TryGetDrive<VirtualDrive>(entry.Key, out VirtualDrive? drive)) {
+                if (_driveManager.TryGetDrive<FolderDrive>(entry.Key, out FolderDrive? drive)) {
                     WriteToStandardOutput($"{entry.Key}:\\: => {drive.MountedHostDirectory}\r\n");
                 }
             }
@@ -1651,7 +1654,7 @@ internal sealed partial class DosBatchExecutionEngine {
             WriteToStandardOutput($"SUBST: cannot SUBST a floppy drive ({driveLetter}:)\r\n");
             return false;
         }
-        if (_driveManager.TryGetDrive<VirtualDrive>(driveLetter, out VirtualDrive? existing)
+        if (_driveManager.TryGetDrive<FolderDrive>(driveLetter, out FolderDrive? existing)
             && !_driveManager.IsSubstDrive(driveLetter)
             && !string.IsNullOrEmpty(existing.MountedHostDirectory)) {
             WriteToStandardOutput($"SUBST: drive {driveLetter}: is already in use\r\n");
@@ -1691,7 +1694,7 @@ internal sealed partial class DosBatchExecutionEngine {
     /// </summary>
     /// <param name="driveLetter">The upper-case drive letter to select.</param>
     internal void ChangeDrive(char driveLetter) {
-        if (_driveManager.TryGetDrive<VirtualDrive>(driveLetter, out VirtualDrive? drive)) {
+        if (_driveManager.TryGetDrive(driveLetter, out DosDriveBase? drive)) {
             _driveManager.CurrentDrive = drive;
             if (_loggerService.IsEnabled(LogLevel.Debug)) {
                 _loggerService.LogDebug("BATCH: Changed drive to {Drive}:", driveLetter);
