@@ -72,6 +72,15 @@ public class BiosKeyboardInt9Handler : InterruptHandler {
 
     /// <inheritdoc />
     public override void Run() {
+        // INT 16h may invoke INT 09h as a polling mechanism.
+        // Do not reprocess the controller's previous data byte when
+        // the output buffer contains no new data.
+        byte status = _ps2Controller.ReadByte(KeyboardPorts.StatusRegister);
+        if ((status & 0x01) == 0) {
+            _dualPic.AcknowledgeInterrupt(1);
+            return;
+        }
+
         // Disable keyboard first - otherwise Prince of Persia reads it before us!
         _ps2Controller.WriteByte(KeyboardPorts.Command, (byte)KeyboardCommand.DisablePortKbd);
 
