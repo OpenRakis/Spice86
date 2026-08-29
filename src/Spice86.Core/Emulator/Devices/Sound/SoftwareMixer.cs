@@ -1,5 +1,9 @@
 namespace Spice86.Core.Emulator.Devices.Sound;
 
+using Iir.Butterworth;
+
+using MVerb;
+
 using Spice86.Audio.Backend.Audio;
 using Spice86.Audio.Common;
 using Spice86.Audio.Filters;
@@ -8,8 +12,6 @@ using Spice86.Core.Emulator.VM;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
-
-using HighPassFilter = Spice86.Audio.Filters.IirFilters.Filters.Butterworth.HighPass;
 
 /// <summary>
 /// Central audio mixer that runs in its own thread and produces final mixed output.
@@ -69,8 +71,8 @@ public sealed class SoftwareMixer : ISoundChannelCreator, IDisposable {
     private readonly float _reverbSynthSendLevel = 0.0f;
     private readonly float _reverbDigitalSendLevel = 0.0f;
 
-    private float _reverbLeftIn;
-    private float _reverbRightIn;
+    private readonly float[] _reverbLeft = new float[DefaultBlocksize];
+    private readonly float[] _reverbRight = new float[DefaultBlocksize];
 
     private readonly bool _doChorus = false;
     private readonly ChorusEngine _chorusEngine;
@@ -82,8 +84,8 @@ public sealed class SoftwareMixer : ISoundChannelCreator, IDisposable {
     private readonly float _crossfeedGlobalStrength = 0.0f; // Varies by preset: Light=0.20f, Normal=0.40f, Strong=0.60f
 
     // Used on reverb input and master output
-    private readonly HighPassFilter[] _reverbHighPassFilter;
-    private readonly HighPassFilter[] _masterHighPassFilter;
+    private readonly HighPass[] _reverbHighPassFilter;
+    private readonly HighPass[] _masterHighPassFilter;
     private const int HighPassFilterOrder = 2; // 2nd-order Butterworth
     private const float MasterHighPassCutoffHz = 20.0f;
 
@@ -105,15 +107,15 @@ public sealed class SoftwareMixer : ISoundChannelCreator, IDisposable {
         }
 
         // Initialize high-pass filters (2 channels - left and right)
-        _reverbHighPassFilter = new HighPassFilter[2];
-        _masterHighPassFilter = new HighPassFilter[2];
+        _reverbHighPassFilter = new HighPass[2];
+        _masterHighPassFilter = new HighPass[2];
         const float DefaultReverbHighPassHz = 200.0f;
 
         for (int i = 0; i < 2; i++) {
-            _reverbHighPassFilter[i] = new HighPassFilter(HighPassFilterOrder);
+            _reverbHighPassFilter[i] = new HighPass(HighPassFilterOrder);
             _reverbHighPassFilter[i].Setup(HighPassFilterOrder, _sampleRateHz, DefaultReverbHighPassHz);
 
-            _masterHighPassFilter[i] = new HighPassFilter(HighPassFilterOrder);
+            _masterHighPassFilter[i] = new HighPass(HighPassFilterOrder);
             _masterHighPassFilter[i].Setup(HighPassFilterOrder, _sampleRateHz, MasterHighPassCutoffHz);
         }
 
@@ -516,19 +518,21 @@ public sealed class SoftwareMixer : ISoundChannelCreator, IDisposable {
         // results to the master output.
         Span<AudioFrame> reverbAux = _reverbAuxBuffer.AsSpan();
         Span<AudioFrame> output = _outputBuffer.AsSpan();
+        int frameCount = reverbAux.Length;
+        Span<float> reverbLeft = _reverbLeft.AsSpan(0, frameCount);
+        Span<float> reverbRight = _reverbRight.AsSpan(0, frameCount);
 
-        for (int i = 0; i < reverbAux.Length; i++) {
+        for (int i = 0; i < frameCount; i++) {
             // High-pass filter the reverb input
             AudioFrame inFrame = reverbAux[i];
-            inFrame = new AudioFrame(
-                _reverbHighPassFilter[0].Filter(inFrame.Left),
-                _reverbHighPassFilter[1].Filter(inFrame.Right)
-            );
-            // MVerb operates on two non-interleaved sample streams
-            _reverbLeftIn = inFrame.Left;
-            _reverbRightIn = inFrame.Right;
-            _mverb.Process(ref _reverbLeftIn, ref _reverbRightIn);
-            output[i] += new AudioFrame(_reverbLeftIn, _reverbRightIn);
+            reverbLeft[i] = _reverbHighPassFilter[0].Filter(inFrame.Left);
+            reverbRight[i] = _reverbHighPassFilter[1].Filter(inFrame.Right);
+        }
+
+        _mverb.Process(reverbLeft, reverbRight, reverbLeft, reverbRight, frameCount);
+
+        for (int i = 0; i < frameCount; i++) {
+            output[i] += new AudioFrame(reverbLeft[i], reverbRight[i]);
         }
     }
 

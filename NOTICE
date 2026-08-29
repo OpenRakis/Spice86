@@ -17,11 +17,33 @@ Authors:
 - Stefan Hueg
 - Thomas Kaiser
 
-Third party authors:
+Third-party audio components:
 - Greg Divis (Aeon project: https://github.com/gregdivis/Aeon)
+- AdLib Gold audio code is ported from DOSBox Staging with personal permission
+  from project lead and original component author John Novak.
+- NukedOPL3Sharp is Stefan Hueg's C# port of Nuked OPL3 by Nuke.YKT,
+  copyright (c) 2013-2020 Nuke.YKT, licensed under LGPL-2.1-only.
+- YM7128B is ported from Andrea Zoppi's YM7128B_emu,
+  copyright (c) 2020-2023 Andrea Zoppi, licensed under BSD-2-Clause.
+- Iir1.Net is copyright (c) 2026 Stefan Hueg and is a managed derivative of
+  iir1, copyright (c) 2009 Vinnie Falco and copyright (c) 2012 Bernd Porr.
+  Both are licensed under MIT.
+- MVerb.Net is a managed derivative of MVerb, copyright (c) 2010 Martin
+  Eastwood, with the managed port copyright (c) 2026 Stefan Hueg. It is
+  licensed under GPL-3.0-or-later.
+- SpeexResamplerSharp is copyright (c) 2026 Stefan Hueg and the SpeexDSP
+  contributors. It is a managed port of the SpeexDSP resampler by Jean-Marc
+  Valin, Thorvald Natvig, and the Xiph.Org contributors, licensed under
+  BSD-3-Clause.
+
+The NuGet packages declare their applicable licenses. Iir1.Net, MVerb.Net,
+and SpeexResamplerSharp also include their upstream third-party notices. The
+YM7128B license is preserved beside its source under
+src/Spice86.Core/Emulator/Devices/Sound/YM7128B/LICENSE.
 
 
-Licensed under the Apache License, Version 2.0 (the "License");
+Spice86 project-authored code is licensed under the Apache License, Version
+2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
