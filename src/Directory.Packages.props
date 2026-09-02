@@ -20,8 +20,8 @@
     <PackageVersion Include="coverlet.collector" Version="6.0.2" />
     <PackageVersion Include="Deadpikle.AvaloniaProgressRing" Version="0.11.0" />
     <PackageVersion Include="DialogHost.Avalonia" Version="0.12.3" />
-    <PackageVersion Include="Dock.Avalonia" Version="12.1.0.1" />
-    <PackageVersion Include="Dock.Avalonia.Themes.Fluent" Version="12.1.0.1" />
+    <PackageVersion Include="Dock.Avalonia" Version="12.1.0.6" />
+    <PackageVersion Include="Dock.Avalonia.Themes.Fluent" Version="12.1.0.6" />
     <PackageVersion Include="Dock.Model.Avalonia" Version="12.1.0.1" />
     <PackageVersion Include="Dock.Model.Mvvm" Version="12.1.0.1" />
     <PackageVersion Include="ErrorProne.NET.CoreAnalyzers" Version="0.1.2" />
