@@ -1099,7 +1099,7 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
             return false;
         }
 
-        byte[] chunk = new byte[DmaTransferSizeBytes];
+        Span<byte> chunk = stackalloc byte[DmaTransferSizeBytes];
         int chunkWords = Math.Min(DmaTransferSizeBytes >> channel.ShiftCount, channel.CurrentCount + 1);
 
         uint dmaOffset = GetDmaOffset();
@@ -1112,10 +1112,10 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
             for (int i = 0; i < bytesToTransfer; i++) {
                 chunk[i] = _ram[(int)((dmaOffset + (uint)i) & 0xFFFFF)];
             }
-            int wordsWritten = channel.Write(chunkWords, chunk.AsSpan());
+            int wordsWritten = channel.Write(chunkWords, chunk.Slice(0, bytesToTransfer));
             dmaOffset = (dmaOffset + (uint)(wordsWritten << channel.ShiftCount)) & 0xFFFFF;
         } else {
-            int wordsRead = channel.Read(chunkWords, chunk.AsSpan());
+            int wordsRead = channel.Read(chunkWords, chunk);
             int bytesRead = wordsRead << channel.ShiftCount;
 
             for (int i = 0; i < bytesRead; i++) {
