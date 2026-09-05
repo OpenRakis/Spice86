@@ -57,4 +57,4 @@ report:
     hlt
 
 file_name db 'D:\README.TXT', 0
-buffer times 7 db 0
+buffer times 8 db 0

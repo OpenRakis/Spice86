@@ -35,12 +35,12 @@ public sealed class FolderDrive : DosDriveBase, IDosPathContent {
         foreach (string directoryPath in Directory.EnumerateDirectories(path)) {
             DirectoryInfo directory = new(directoryPath);
             entries.Add(new DosContentEntry(directory.Name, true, 0,
-                (DosFileAttributes)directory.Attributes, directory.CreationTimeUtc, directory.FullName));
+                (DosFileAttributes)((int)directory.Attributes & 0x37), directory.CreationTimeUtc, directory.FullName));
         }
         foreach (string filePath in Directory.EnumerateFiles(path)) {
             FileInfo file = new(filePath);
             entries.Add(new DosContentEntry(file.Name, false, (uint)file.Length,
-                (DosFileAttributes)file.Attributes, file.CreationTimeUtc, file.FullName));
+                (DosFileAttributes)((int)file.Attributes & 0x37), file.CreationTimeUtc, file.FullName));
         }
         return entries;
     }

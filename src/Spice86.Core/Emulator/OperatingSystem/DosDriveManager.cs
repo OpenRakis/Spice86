@@ -71,7 +71,7 @@ public partial class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnl
         cDriveFolderPath = ConvertUtils.ToSlashFolderPath(cDriveFolderPath);
         _driveMap[GetDriveIndex('A')] = new EmptyDosDrive('A');
         _driveMap[GetDriveIndex('B')] = new EmptyDosDrive('B');
-FolderDrive cDrive = new FolderDrive { DriveLetter = 'C', MountedHostDirectory = cDriveFolderPath };
+        FolderDrive cDrive = new FolderDrive { DriveLetter = 'C', MountedHostDirectory = cDriveFolderPath };
         _driveMap[GetDriveIndex('C')] = cDrive;
         CurrentDrive = cDrive;
         _mappedDriveCount = 3; // A:, B:, C:
@@ -1312,7 +1312,7 @@ FolderDrive cDrive = new FolderDrive { DriveLetter = 'C', MountedHostDirectory =
     }
 
     public IReadOnlyList<DosVirtualDriveStatus> GetDriveStatuses() {
-        return GetDriveStatuses();
+        return new DosDriveStatusProvider(this, _mscdex).GetDriveStatuses();
     }
 
     /// <inheritdoc/>

@@ -5,27 +5,24 @@ public enum MscdexErrorCode : ushort {
     /// <summary>Operation completed successfully.</summary>
     Success = 0x0000,
 
-    /// <summary>Write protect error (same numeric value as <see cref="Success"/>).</summary>
-    WriteProtect = 0x0000,
+    /// <summary>Invalid MSCDEX function.</summary>
+    InvalidFunction = 0x0001,
 
-    /// <summary>Drive is not ready.</summary>
-    DriveNotReady = 0x0002,
+    /// <summary>Directory entry was not found.</summary>
+    DirectoryEntryNotFound = 0x0002,
 
     /// <summary>Directory entry or file was not found.</summary>
-    FileNotFound = 0x0002,
+    FileNotFound = DirectoryEntryNotFound,
 
-    /// <summary>Bad command or parameter.</summary>
-    BadCommand = 0x0003,
+    /// <summary>Invalid CD volume format.</summary>
+    BadFormat = 0x000B,
 
-    /// <summary>Read fault.</summary>
-    ReadFault = 0x000B,
+    /// <summary>Unknown CD-ROM drive.</summary>
+    UnknownDrive = 0x000F,
 
-    /// <summary>Invalid drive specified.</summary>
-    InvalidDrive = 0x000F,
+    /// <summary>Drive is not ready.</summary>
+    DriveNotReady = 0x0015,
 
-    /// <summary>Invalid function requested (0x22).</summary>
-    InvalidFunction = 0x0016,
-
-    /// <summary>Drive is locked.</summary>
-    DriveLocked = 0x0021,
+    /// <summary>Compatibility alias for the DOSBox unknown-drive result.</summary>
+    InvalidDrive = UnknownDrive,
 }

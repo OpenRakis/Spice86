@@ -579,7 +579,7 @@ public sealed class Mscdex {
                 break;
             case MscdexIoctlInputCode.CurrentPosition:
                 if (!WriteCurrentPosition(bufferAddress, driveEntry)) {
-                    WriteRequestStatus(requestBase, driveEntry, StatusError | (ushort)MscdexErrorCode.BadCommand);
+                    WriteRequestStatus(requestBase, driveEntry, StatusError | (ushort)MscdexErrorCode.InvalidFunction);
                     return;
                 }
                 break;
@@ -597,7 +597,7 @@ public sealed class Mscdex {
                 } else if (sectorSizeMode == 1) {
                     _memory.UInt16[bufferAddress + 2] = RawSectorSize;
                 } else {
-                    WriteRequestStatus(requestBase, driveEntry, StatusError | (ushort)MscdexErrorCode.BadCommand);
+                    WriteRequestStatus(requestBase, driveEntry, StatusError | (ushort)MscdexErrorCode.InvalidFunction);
                     return;
                 }
                 break;

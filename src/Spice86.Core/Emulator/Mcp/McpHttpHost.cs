@@ -108,20 +108,7 @@ internal sealed class McpHttpHost : IDisposable, IAsyncDisposable {
         if (_disposed) {
             return;
         }
-        _disposed = true;
-
-        if (_app != null) {
-            _app.Lifetime.StopApplication();
-            if (_serverThread is { IsAlive: true }) {
-                _serverThread.Join(ShutdownJoinTimeout);
-            }
-            _app.DisposeAsync();
-            _app = null;
-            _serverThread = null;
-        }
-        _mcpFileLogger?.Dispose();
-        _mcpFileLogger = null;
-        GC.SuppressFinalize(this);
+        DisposeAsync().AsTask().GetAwaiter().GetResult();
     }
 
     public async ValueTask DisposeAsync() {
