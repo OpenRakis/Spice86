@@ -249,15 +249,15 @@ public class Stack {
     /// </summary>
     public void PushAll16(ushort ax, ushort cx, ushort dx, ushort bx, ushort sp, ushort bp, ushort si, ushort di) {
         CpuStackSegmentFaultException? pendingFault = GetStackPushRangeFault(2, 8);
-        ushort offset = (ushort)StackPointer;
-        offset = (ushort)(offset - 2); _memory.WriteUInt16Segmented(_state.SS, offset, ax);
-        offset = (ushort)(offset - 2); _memory.WriteUInt16Segmented(_state.SS, offset, cx);
-        offset = (ushort)(offset - 2); _memory.WriteUInt16Segmented(_state.SS, offset, dx);
-        offset = (ushort)(offset - 2); _memory.WriteUInt16Segmented(_state.SS, offset, bx);
-        offset = (ushort)(offset - 2); _memory.WriteUInt16Segmented(_state.SS, offset, sp);
-        offset = (ushort)(offset - 2); _memory.WriteUInt16Segmented(_state.SS, offset, bp);
-        offset = (ushort)(offset - 2); _memory.WriteUInt16Segmented(_state.SS, offset, si);
-        offset = (ushort)(offset - 2); _memory.WriteUInt16Segmented(_state.SS, offset, di);
+        uint offset = StackPointer;
+        offset = MaskAddress(offset - 2); _memory.WriteUInt16Segmented(_state.SS, offset, ax);
+        offset = MaskAddress(offset - 2); _memory.WriteUInt16Segmented(_state.SS, offset, cx);
+        offset = MaskAddress(offset - 2); _memory.WriteUInt16Segmented(_state.SS, offset, dx);
+        offset = MaskAddress(offset - 2); _memory.WriteUInt16Segmented(_state.SS, offset, bx);
+        offset = MaskAddress(offset - 2); _memory.WriteUInt16Segmented(_state.SS, offset, sp);
+        offset = MaskAddress(offset - 2); _memory.WriteUInt16Segmented(_state.SS, offset, bp);
+        offset = MaskAddress(offset - 2); _memory.WriteUInt16Segmented(_state.SS, offset, si);
+        offset = MaskAddress(offset - 2); _memory.WriteUInt16Segmented(_state.SS, offset, di);
         if (pendingFault is not null) {
             throw pendingFault;
         }
@@ -272,15 +272,15 @@ public class Stack {
     /// </summary>
     public void PushAll32(uint eax, uint ecx, uint edx, uint ebx, uint esp, uint ebp, uint esi, uint edi) {
         CpuStackSegmentFaultException? pendingFault = GetStackPushRangeFault(4, 8);
-        ushort offset = (ushort)StackPointer;
-        offset = (ushort)(offset - 4); _memory.WriteUInt32Segmented(_state.SS, offset, eax);
-        offset = (ushort)(offset - 4); _memory.WriteUInt32Segmented(_state.SS, offset, ecx);
-        offset = (ushort)(offset - 4); _memory.WriteUInt32Segmented(_state.SS, offset, edx);
-        offset = (ushort)(offset - 4); _memory.WriteUInt32Segmented(_state.SS, offset, ebx);
-        offset = (ushort)(offset - 4); _memory.WriteUInt32Segmented(_state.SS, offset, esp);
-        offset = (ushort)(offset - 4); _memory.WriteUInt32Segmented(_state.SS, offset, ebp);
-        offset = (ushort)(offset - 4); _memory.WriteUInt32Segmented(_state.SS, offset, esi);
-        offset = (ushort)(offset - 4); _memory.WriteUInt32Segmented(_state.SS, offset, edi);
+        uint offset = StackPointer;
+        offset = MaskAddress(offset - 4); _memory.WriteUInt32Segmented(_state.SS, offset, eax);
+        offset = MaskAddress(offset - 4); _memory.WriteUInt32Segmented(_state.SS, offset, ecx);
+        offset = MaskAddress(offset - 4); _memory.WriteUInt32Segmented(_state.SS, offset, edx);
+        offset = MaskAddress(offset - 4); _memory.WriteUInt32Segmented(_state.SS, offset, ebx);
+        offset = MaskAddress(offset - 4); _memory.WriteUInt32Segmented(_state.SS, offset, esp);
+        offset = MaskAddress(offset - 4); _memory.WriteUInt32Segmented(_state.SS, offset, ebp);
+        offset = MaskAddress(offset - 4); _memory.WriteUInt32Segmented(_state.SS, offset, esi);
+        offset = MaskAddress(offset - 4); _memory.WriteUInt32Segmented(_state.SS, offset, edi);
         if (pendingFault is not null) {
             throw pendingFault;
         }
@@ -330,21 +330,25 @@ public class Stack {
     /// Pops all 8 general-purpose 32-bit registers (POPAD order: EDI, ESI, EBP, skip ESP, EBX, EDX, ECX, EAX).
     /// Each slot is read individually; if a slot raises #SS, earlier register assignments persist
     /// while the stack pointer is left at its original value (matches 80386 partial-pop fault semantics).
-    /// The ESP slot is advanced past without being popped into the register, but its upper 16 bits are
-    /// folded back into ESP (matching real hardware: POPAD never changes the high word of ESP, only the
-    /// low word advances past the 8 slots).
+    /// The ESP slot is never loaded into ESP; the stack pointer just advances past all 8 slots. On a
+    /// 16-bit stack only SP is addressed, and the upper half of ESP is left holding the discarded slot's
+    /// upper half (verified against SingleStepTests); on a 32-bit stack ESP becomes the full new value.
     /// </summary>
     public void PopAll32() {
         uint offset = StackPointer;
         _state.EDI = _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack]; offset = MaskAddress(offset + 4);
         _state.ESI = _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack]; offset = MaskAddress(offset + 4);
         _state.EBP = _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack]; offset = MaskAddress(offset + 4);
-        uint espSlot = _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack]; offset = MaskAddress(offset + 4);
+        uint discardedEspSlot = _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack]; offset = MaskAddress(offset + 4);
         _state.EBX = _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack]; offset = MaskAddress(offset + 4);
         _state.EDX = _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack]; offset = MaskAddress(offset + 4);
         _state.ECX = _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack]; offset = MaskAddress(offset + 4);
         _state.EAX = _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack]; offset = MaskAddress(offset + 4);
-        _state.ESP = (espSlot & 0xFFFF0000u) | offset;
+        if (StackAddressIs32Bit) {
+            _state.ESP = offset;
+        } else {
+            _state.ESP = (discardedEspSlot & 0xFFFF0000u) | offset;
+        }
     }
 
     /// <summary>

@@ -14,6 +14,13 @@ using Xunit;
 using Spice86.Audio.Filters;
 
 public sealed class Spice86Creator : IDisposable {
+    /// <summary>
+    /// Cycle budget for the long-running whole-ROM fixtures (test386 and friends). Generous enough that a
+    /// passing run never reaches it, finite so that a stalled run fails fast instead of hanging the suite.
+    /// Never pass <see cref="long.MaxValue"/>: it disables the only infinite-loop guard the tests have.
+    /// </summary>
+    public const long LongRunningMaxCycles = 10_000_000;
+
     private readonly Configuration _configuration;
     private readonly long _maxCycles;
     private readonly string _exportFolder;
@@ -97,9 +104,13 @@ public sealed class Spice86Creator : IDisposable {
         Spice86DependencyInjection res = new(_configuration);
         MachineLeakTracker.Track(res.Machine);
         res.Machine.CpuState.Flags.CpuModel = CpuModel.ZET_86;
+        State state = res.Machine.CpuState;
         // Add a breakpoint after some cycles to ensure no infinite loop can lock the tests
         res.Machine.EmulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CPU_CYCLES, _maxCycles,
-            (breakpoint) => Assert.Fail($"Test ran for {((AddressBreakPoint)breakpoint).Address} cycles, something is wrong."), true), true);
+            (breakpoint) => Assert.Fail(
+                $"Test ran for {((AddressBreakPoint)breakpoint).Address} cycles, something is wrong. " +
+                $"Stuck at {state.CS:X4}:{state.IP:X4} (EIP {state.EIP:X8}, CPL {state.Cpl}, mode {state.CpuMode})."),
+            true), true);
         // Init VGA card to map some addresses correctly otherwise there will be errors when saving the ram image
         res.Machine.IoPortDispatcher.WriteByte(Ports.GraphicsControllerAddress, 0x6);
         res.Machine.IoPortDispatcher.WriteByte(Ports.GraphicsControllerData, 0xE);

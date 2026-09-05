@@ -60,7 +60,7 @@ public interface IMemory : IIndexable, IByteReaderWriter {
     /// <param name="segment">The segment selector.</param>
     /// <param name="offset">The offset within the segment.</param>
     /// <param name="value">The 16-bit value to write.</param>
-    void WriteUInt16Segmented(ushort segment, ushort offset, ushort value);
+    void WriteUInt16Segmented(ushort segment, uint offset, ushort value);
 
     /// <summary>
     /// Writes a 32-bit value using per-byte MMU translation, without segment-boundary validation.
@@ -69,7 +69,7 @@ public interface IMemory : IIndexable, IByteReaderWriter {
     /// <param name="segment">The segment selector.</param>
     /// <param name="offset">The offset within the segment.</param>
     /// <param name="value">The 32-bit value to write.</param>
-    void WriteUInt32Segmented(ushort segment, ushort offset, uint value);
+    void WriteUInt32Segmented(ushort segment, uint offset, uint value);
 
     /// <summary>
     /// Returns a <see cref="IList{T}"/> that represents the specified range of memory.

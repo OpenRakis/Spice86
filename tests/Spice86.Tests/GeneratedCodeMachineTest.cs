@@ -490,7 +490,7 @@ public sealed class GeneratedCodeMachineTest {
     public void Test386ButNotProtectedModeGeneratedOverrideCompilesAndReachesPostFinished() {
         Test386PostPortHandler? handler = null;
         GeneratedCodeRunOptions options = new() {
-            MaxCycles = long.MaxValue,
+            MaxCycles = Spice86Creator.LongRunningMaxCycles,
             FailOnUnhandledPort = true,
             ConfigureMachine = machine => {
                 handler = new Test386PostPortHandler(machine.CpuState, Substitute.For<ILogger>(), machine.IoPortDispatcher);

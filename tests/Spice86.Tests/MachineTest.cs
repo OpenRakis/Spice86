@@ -978,7 +978,7 @@ public class MachineTest {
         string binName = "test386";
         using Spice86Creator creator = new Spice86Creator(
             binName: binName,
-            enablePit: false, maxCycles: long.MaxValue,
+            enablePit: false, maxCycles: Spice86Creator.LongRunningMaxCycles,
             failOnUnhandledPort: true, jitMode: jitMode);
         using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
         Machine machine = spice86DependencyInjection.Machine;
@@ -1220,7 +1220,7 @@ public class MachineTest {
         string binName = "test386_pmode";
         using Spice86Creator creator = new Spice86Creator(
             binName: binName, cpuModel: CpuModel.INTEL_80386,
-            enablePit: false, maxCycles: long.MaxValue,
+            enablePit: false, maxCycles: Spice86Creator.LongRunningMaxCycles,
             failOnUnhandledPort: true, jitMode: jitMode);
         using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
         Machine machine = spice86DependencyInjection.Machine;
