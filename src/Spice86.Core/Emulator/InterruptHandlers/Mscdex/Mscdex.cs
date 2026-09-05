@@ -173,9 +173,14 @@ public sealed class Mscdex {
     }
 
     /// <summary>
-    /// Reads <see cref="State.AL"/> and dispatches to the appropriate MSCDEX subfunction.
+    /// Dispatches the MSCDEX subfunction selected by <see cref="State.AL"/>.
     /// </summary>
-    /// <returns><see langword="true" /> if an error occured. <see langword="false"> otherwise.</returns>
+    /// <remarks>
+    /// The caller must populate the CPU registers and any input buffers required by the selected subfunction.
+    /// The return value indicates whether the subfunction failed; the INT 2Fh wrapper uses it to set or clear the
+    /// carry flag. Register results and error codes are written to <see cref="State"/> and emulated memory.
+    /// </remarks>
+    /// <returns><see langword="true"/> when the selected subfunction reports an error; otherwise, <see langword="false"/>.</returns>
     public bool Dispatch() {
         switch (_state.AL) {
             case 0x00:
@@ -346,10 +351,14 @@ public sealed class Mscdex {
     }
 
     /// <summary>
-    /// AL=0x0B: Checks whether the drive index in CX corresponds to a known CD-ROM drive.
-    /// Writes BX=0xADAD unconditionally; sets AX=0x5AD8 on a match, AX=0x0000 on a miss.
+    /// Implements MSCDEX AL=0Bh, checking whether <see cref="State.CX"/> identifies a CD-ROM drive.
     /// </summary>
-    private void CdRomDriveCheck() {
+    /// <remarks>
+    /// BX is always set to ADADh. AX is set to 5AD8h when the zero-based drive index in CX is registered as a
+    /// CD-ROM drive, and to zero otherwise. The result is communicated through AX and BX; this operation does not
+    /// report failure through the carry flag.
+    /// </remarks>
+    public void CdRomDriveCheck() {
         int driveIndex = _state.CX;
         _state.BX = DriveCheckMagicBx;
         if (GetDriveByIndex(driveIndex).IsPresent) {
@@ -359,19 +368,18 @@ public sealed class Mscdex {
         }
     }
 
-    /// <summary>
-    /// AL=0x0C: Returns the MSCDEX version number.
-    /// BH = major version (2), BL = minor version (23 decimal = 0x17 hex), so BX = 0x0217.
-    /// </summary>
-    private void GetMscdexVersion() {
+    /// <summary>Implements MSCDEX AL=0Ch, returning the installed MSCDEX version in BX.</summary>
+    /// <remarks>BH contains the major version, and BL contains the minor version. This implementation returns 2.23.</remarks>
+    public void GetMscdexVersion() {
         _state.BX = (MscdexVersionMajor << 8) | MscdexVersionMinor;
     }
 
-    /// <summary>
-    /// AL=0x0D: Writes one byte per registered drive into the caller's buffer at ES:BX.
-    /// Each byte is the zero-based drive letter index (A=0, B=1, …).
-    /// </summary>
-    private void GetCdRomDriveLetters() {
+    /// <summary>Implements MSCDEX AL=0Dh, returning the DOS index of each registered CD-ROM drive.</summary>
+    /// <remarks>
+    /// ES:BX points to the output buffer. One byte is written per registered CD-ROM, containing its zero-based DOS
+    /// drive index. The caller must provide at least one byte for each registered drive.
+    /// </remarks>
+    public void GetCdRomDriveLetters() {
         uint bufferAddress = MemoryUtils.ToPhysicalAddress(_state.ES, _state.BX);
         for (int i = 0; i < _drives.Count; i++) {
             _memory.UInt8[bufferAddress + (uint)i] = _drives[i].DriveIndex;
@@ -409,11 +417,25 @@ public sealed class Mscdex {
         return false;
     }
 
-    /// <summary>
-    /// AL=0x0F: Gets an ISO directory entry using the DOSBox MSCDEX pathname contract.
-    /// </summary>
-    /// <returns><see langword="true" /> if an error occured. <see langword="false"> otherwise.</returns>
-    private bool GetDirectoryEntry() {
+    /// <summary>Implements MSCDEX AL=0Fh, retrieving one ISO9660 directory record.</summary>
+    /// <remarks>
+    /// <para>
+    /// CL contains the zero-based CD-ROM drive index. CH bit 0 selects the output format: zero requests the raw
+    /// ISO directory record and one requests the translated MSCDEX directory-entry structure.
+    /// </para>
+    /// <para>
+    /// ES:BX points to a length-prefixed pathname. The first byte is the pathname length and the following bytes are
+    /// the pathname text. SI:DI points to the output buffer. Path components are matched case-insensitively using
+    /// DOS filename rules; ISO version suffixes and trailing periods are ignored.
+    /// </para>
+    /// <para>
+    /// On success AX is zero and the method returns <see langword="false"/>. An unknown drive returns
+    /// <see cref="MscdexErrorCode.UnknownDrive"/>. A missing entry returns the directory-entry-not-found value
+    /// and the method returns <see langword="true"/>.
+    /// </para>
+    /// </remarks>
+    /// <returns><see langword="true"/> when the directory entry could not be returned; otherwise, <see langword="false"/>.</returns>
+    public bool GetDirectoryEntry() {
         int driveIndex = _state.CL;
         MscdexDriveLookup driveLookup = GetDriveByIndex(driveIndex);
         if (!driveLookup.IsPresent) {
