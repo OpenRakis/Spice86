@@ -345,24 +345,20 @@ public class Stack {
     /// Each slot is read individually; if a slot raises #SS, earlier register assignments persist
     /// while the stack pointer is left at its original value (matches 80386 partial-pop fault semantics).
     /// The ESP slot is never loaded into ESP; the stack pointer just advances past all 8 slots. On a
-    /// 16-bit stack only SP is addressed, and the upper half of ESP is left holding the discarded slot's
-    /// upper half (verified against SingleStepTests); on a 32-bit stack ESP becomes the full new value.
+    /// 16-bit stack only SP is addressed, so the upper half of ESP is preserved; on a 32-bit stack ESP
+    /// becomes the full new value.
     /// </summary>
     public void PopAll32() {
         uint offset = StackPointer;
         _state.EDI = _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack]; offset = MaskAddress(offset + 4);
         _state.ESI = _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack]; offset = MaskAddress(offset + 4);
         _state.EBP = _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack]; offset = MaskAddress(offset + 4);
-        uint discardedEspSlot = _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack]; offset = MaskAddress(offset + 4);
+        _ = _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack]; offset = MaskAddress(offset + 4);
         _state.EBX = _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack]; offset = MaskAddress(offset + 4);
         _state.EDX = _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack]; offset = MaskAddress(offset + 4);
         _state.ECX = _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack]; offset = MaskAddress(offset + 4);
         _state.EAX = _memory.UInt32[_state.SS, offset, SegmentAccessKind.Stack]; offset = MaskAddress(offset + 4);
-        if (StackAddressIs32Bit) {
-            _state.ESP = offset;
-        } else {
-            _state.ESP = (discardedEspSlot & 0xFFFF0000u) | offset;
-        }
+        StackPointer = offset;
     }
 
     /// <summary>
@@ -480,11 +476,12 @@ public class Stack {
         uint newSp = OffsetStackPointer(-pointerSize);
         WriteFrameValue(newSp, oldBaseValue, operandSize32);
 
-        // The frame-pointer register writeback width follows the stack's own address width: in real
-        // (16-bit-default) mode ENTER writes the narrow 16-bit BP, zeroing EBP's upper half (matching
-        // real hardware, where only BP's 16 bits are affected); in 32-bit mode it writes the full EBP.
-        // The value stored on the stack (and used for chain copies) is always the new stack address.
+        // A 16-bit stack updates only BP, so preserve EBP's existing upper half when the frame address
+        // is stored as a 32-bit operand and when BP is written back.
         uint newFrameAddress = newSp;
+        if (!StackAddressIs32Bit) {
+            newFrameAddress = (_state.EBP & 0xFFFF0000u) | newSp;
+        }
 
         uint sp = newSp;
         if (level > 0) {
@@ -511,13 +508,7 @@ public class Stack {
             _state.EBP = newFrameAddress;
         } else {
             _state.BP = (ushort)newFrameAddress;
-            if (operandSize32) {
-                // 16-bit stack, 32-bit operand size: zero the upper half of EBP.
-                _state.EBP = _state.BP;
-            } else {
-                // 16-bit stack, 16-bit operand size: preserve the upper half of EBP.
-                _state.EBP = (_state.EBP & 0xFFFF0000u) | _state.BP;
-            }
+            _state.EBP = (_state.EBP & 0xFFFF0000u) | _state.BP;
         }
     }
 

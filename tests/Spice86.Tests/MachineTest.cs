@@ -1221,7 +1221,8 @@ public class MachineTest {
         using Spice86Creator creator = new Spice86Creator(
             binName: binName, cpuModel: CpuModel.INTEL_80386,
             enablePit: false, maxCycles: Spice86Creator.LongRunningMaxCycles,
-            failOnUnhandledPort: true, jitMode: jitMode);
+            failOnUnhandledPort: true, jitMode: jitMode,
+            enableSpeculativeCfgExploration: false);
         using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
         Machine machine = spice86DependencyInjection.Machine;
         using LoggerService loggerService = new();
