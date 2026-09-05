@@ -639,6 +639,7 @@ public class Spice86DependencyInjection : IDisposable {
         emulatorMcpServices.Opl3Fm = opl;
         emulatorMcpServices.PcSpeaker = pcSpeaker;
         emulatorMcpServices.Midi = midiDevice;
+        emulatorMcpServices.GravisUltraSound = gravisUltraSound;
         emulatorMcpServices.VgaFunctionality = vgaFunctionality;
         emulatorMcpServices.BiosDataArea = biosDataArea;
         emulatorMcpServices.InterruptVectorTable = interruptVectorTable;

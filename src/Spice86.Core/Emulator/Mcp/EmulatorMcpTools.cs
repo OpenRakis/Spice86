@@ -62,6 +62,14 @@ internal sealed class EmulatorMcpTools {
     };
     private static readonly string ScreenshotDirectory = Path.Join(Path.GetTempPath(), "spice86-mcp-screenshots");
     private static readonly TimeSpan StepCompletionTimeout = TimeSpan.FromSeconds(2);
+
+    // GUS port offsets from the configured base port, and the two voice control registers.
+    private const int GusVoiceSelectPortOffset = 0x102;
+    private const int GusRegisterSelectPortOffset = 0x103;
+    private const int GusDataWordPortOffset = 0x104;
+    private const byte GusWaveControlRegister = 0x00;
+    private const byte GusVolControlRegister = 0x0D;
+
     private readonly EmulatorMcpServices _services;
 
     public EmulatorMcpTools(EmulatorMcpServices services) => _services = services;
@@ -880,6 +888,352 @@ internal sealed class EmulatorMcpTools {
                 };
             }
         });
+    }
+
+    [McpServerTool(Name = "read_gus_state", UseStructuredContent = true), Description("Read global Gravis UltraSound GF1 state: base port, playback/recording IRQ and DMA, reset register flags (running, DAC enabled, IRQs enabled), active voice count and mask, output sample rate, the mix/timer/sample/DMA/IRQ status registers, the currently selected voice and register, DRAM size and pointer, the ULTRASND/ULTRADIR environment variables, mixer channel info, and both hardware timers.")]
+    public CallToolResult QueryGusState() {
+        return ExecuteTool(() => {
+            lock (_services.ToolsLock) {
+                GravisUltraSound gus = GetGravisUltraSound();
+                SoundChannel mixerChannel = gus.Channel;
+                return new GusStateResponse {
+                    BasePort = gus.BasePort,
+                    PlaybackIrq = gus.PlaybackIrq,
+                    RecordingIrq = gus.RecordingIrq,
+                    PlaybackDma = gus.PlaybackDma,
+                    RecordingDma = gus.RecordingDma,
+                    IsRunning = gus.IsRunning,
+                    IsDacEnabled = gus.IsDacEnabled,
+                    AreIrqsEnabled = gus.AreIrqsEnabled,
+                    AreLatchesEnabled = gus.AreLatchesEnabled,
+                    ActiveVoices = gus.ActiveVoices,
+                    ActiveVoiceMask = gus.ActiveVoiceMask,
+                    SampleRate = gus.SampleRate,
+                    ResetRegister = gus.ResetRegister,
+                    MixControlRegister = gus.MixControlRegister,
+                    TimerControlRegister = gus.TimerControlRegister,
+                    TimerStatusRegister = gus.TimerStatusRegister,
+                    SampleControlRegister = gus.SampleControlRegister,
+                    DmaControlRegister = gus.DmaControlRegister,
+                    IrqStatusRegister = gus.IrqStatusRegister,
+                    AdlibCommandRegister = gus.AdlibCommandRegister,
+                    SelectedRegister = gus.SelectedRegister,
+                    SelectedRegisterData = gus.SelectedRegisterData,
+                    SelectedVoiceIndex = gus.SelectedVoiceIndex,
+                    DramAddress = gus.DramAddress,
+                    DramSizeBytes = GravisUltraSound.DramSizeBytes,
+                    UltraSndEnvironmentVariable = gus.UltraSndString,
+                    UltraDirEnvironmentVariable = gus.UltraDirString,
+                    MixerChannelName = mixerChannel.Name,
+                    MixerChannelSampleRate = mixerChannel.SampleRate,
+                    MixerChannelEnabled = mixerChannel.IsEnabled,
+                    Timers = ReadGusTimers(gus)
+                };
+            }
+        });
+    }
+
+    [McpServerTool(Name = "read_gus_voices", UseStructuredContent = true), Description("Read per-voice Gravis UltraSound GF1 state for a range of the 32 voices. Parameters: startVoice (0-31), count (1-32). Each entry reports wave start/end/current position and increment (fixed-point 1/512 sample units), wave rate, volume ramp start/end/position/increment and rate, pan position (0 left to 15 right), decoded wave and volume control flags (Reset, Stopped, Bit16, Loop, Bidirectional, RaiseIrq, Decreasing), pending wave/volume IRQ, and generated audio counters.")]
+    public CallToolResult QueryGusVoices(int startVoice, int count) {
+        return ExecuteTool(() => {
+            lock (_services.ToolsLock) {
+                GravisUltraSound gus = GetGravisUltraSound();
+                int voiceCount = gus.Voices.Count;
+                ValidateGusVoiceIndex(startVoice, voiceCount);
+                if (count < 1 || count > voiceCount) {
+                    throw new ArgumentException($"Count must be between 1 and {voiceCount}", nameof(count));
+                }
+
+                int endExclusive = Math.Min(startVoice + count, voiceCount);
+                GusVoiceIrqState irqState = gus.VoiceIrqState;
+                List<GusVoiceStateResponse> voices = new(endExclusive - startVoice);
+                for (int index = startVoice; index < endExclusive; index++) {
+                    voices.Add(ToGusVoiceStateResponse(gus, irqState, index));
+                }
+
+                return new GusVoicesResponse {
+                    StartVoice = startVoice,
+                    Count = voices.Count,
+                    ActiveVoices = gus.ActiveVoices,
+                    Voices = voices
+                };
+            }
+        });
+    }
+
+    [McpServerTool(Name = "read_gus_dram", UseStructuredContent = true), Description("Read raw bytes from the 1 MiB Gravis UltraSound on-board sample DRAM. Parameters: address (0-1048575), length (1-4096). Returns the bytes as a hex string. This is where DOS drivers upload instrument patches and sample data via DMA.")]
+    public CallToolResult QueryGusDram(int address, int length) {
+        return ExecuteTool(() => {
+            lock (_services.ToolsLock) {
+                GravisUltraSound gus = GetGravisUltraSound();
+                ValidateGusDramAddress(address);
+                if (length < 1 || length > 4096) {
+                    throw new ArgumentException("Length must be between 1 and 4096", nameof(length));
+                }
+
+                int clampedLength = Math.Min(length, GravisUltraSound.DramSizeBytes - address);
+                byte[] buffer = new byte[clampedLength];
+                gus.ReadDram(address, buffer);
+                return new GusDramResponse {
+                    Address = address,
+                    Length = clampedLength,
+                    Data = Convert.ToHexString(buffer)
+                };
+            }
+        });
+    }
+
+    [McpServerTool(Name = "search_gus_dram", UseStructuredContent = true), Description("Search the Gravis UltraSound on-board sample DRAM for a hex-encoded byte pattern. Parameters: pattern (hex string), startAddress (0-1048575), length (bytes to scan, 0 or negative means to the end of DRAM), limit (1-10000 matches). Returns the DRAM byte addresses of the matches.")]
+    public CallToolResult SearchGusDram([StringSyntax("Hexadecimal")] string pattern, int startAddress, int length, int limit) {
+        return ExecuteTool(() => {
+            lock (_services.ToolsLock) {
+                GravisUltraSound gus = GetGravisUltraSound();
+                byte[] needle = ParseHexPattern(pattern);
+                ValidateLimit(limit);
+                ValidateGusDramAddress(startAddress);
+
+                int maxLength = GravisUltraSound.DramSizeBytes - startAddress;
+                int searchLength = length <= 0 ? maxLength : Math.Min(length, maxLength);
+                byte[] haystack = new byte[searchLength];
+                gus.ReadDram(startAddress, haystack);
+
+                (int[] matches, bool truncated) = SearchDramMatches(haystack, needle, startAddress, limit);
+                return new GusDramSearchResponse {
+                    Pattern = Convert.ToHexString(needle),
+                    StartAddress = startAddress,
+                    Length = searchLength,
+                    Matches = matches,
+                    Truncated = truncated
+                };
+            }
+        });
+    }
+
+    [McpServerTool(Name = "read_gus_dma_state", UseStructuredContent = true), Description("Read Gravis UltraSound DMA state: playback and recording DMA channels, the DMA control register with its decoded flags (Enabled, GusToHost, Channel16Bit, RaiseIrqOnTerminalCount, Samples16Bit, InvertHighBit), the sampling control register, whether the transfer and the samples are 16-bit, the DMA DRAM address register and nibble, the resolved DRAM byte offset, and whether a terminal-count IRQ is pending.")]
+    public CallToolResult QueryGusDmaState() {
+        return ExecuteTool(() => {
+            lock (_services.ToolsLock) {
+                GravisUltraSound gus = GetGravisUltraSound();
+                return new GusDmaStateResponse {
+                    PlaybackDma = gus.PlaybackDma,
+                    RecordingDma = gus.RecordingDma,
+                    DmaControlRegister = gus.DmaControlRegister,
+                    DmaControl = (GusDmaControl)gus.DmaControlRegister,
+                    SampleControlRegister = gus.SampleControlRegister,
+                    IsTransfer16Bit = gus.IsDmaTransfer16Bit,
+                    AreSamples16Bit = gus.AreDmaSamples16Bit,
+                    DmaAddressRegister = gus.DmaAddressRegister,
+                    DmaAddressNibble = gus.DmaAddressNibble,
+                    DramOffset = gus.DmaDramOffset,
+                    TerminalCountIrqPending = ((GusIrqStatus)gus.IrqStatusRegister & GusIrqStatus.DmaTerminalCount) != 0
+                };
+            }
+        });
+    }
+
+    [McpServerTool(Name = "read_gus_irq_state", UseStructuredContent = true), Description("Read Gravis UltraSound IRQ state without clearing it: playback and recording IRQ lines, the IRQ status register with decoded flags (Timer1, Timer2, WaveTable, VolumeRamp, DmaTerminalCount), whether IRQs and the mix-control latches are enabled, the per-voice wave and volume IRQ bitmasks, the next voice the GF1 will report, and both hardware timers.")]
+    public CallToolResult QueryGusIrqState() {
+        return ExecuteTool(() => {
+            lock (_services.ToolsLock) {
+                GravisUltraSound gus = GetGravisUltraSound();
+                GusVoiceIrqState irqState = gus.VoiceIrqState;
+                return new GusIrqStateResponse {
+                    PlaybackIrq = gus.PlaybackIrq,
+                    RecordingIrq = gus.RecordingIrq,
+                    IrqStatusRegister = gus.IrqStatusRegister,
+                    IrqStatus = (GusIrqStatus)gus.IrqStatusRegister,
+                    AreIrqsEnabled = gus.AreIrqsEnabled,
+                    AreLatchesEnabled = gus.AreLatchesEnabled,
+                    VoiceWaveIrqMask = irqState.WaveStateMask,
+                    VoiceVolumeIrqMask = irqState.VolStateMask,
+                    NextVoiceToReport = irqState.NextVoiceToReport,
+                    Timers = ReadGusTimers(gus)
+                };
+            }
+        });
+    }
+
+    [McpServerTool(Name = "read_gus_register", UseStructuredContent = true), Description("Read a GF1 register through the emulated Gravis UltraSound I/O ports. Parameters: voice (0-31, selected first and ignored by global registers), register (0x00-0xFF; read registers are 0x80-0x8F for voices and 0x41-0x4C for global state). Returns the 16-bit data word. Note that reading register 0x41 clears a pending DMA terminal-count IRQ and 0x8F clears the reported voice IRQ, exactly like the hardware.")]
+    public CallToolResult QueryGusRegister(int voice, int register) {
+        return ExecuteTool(() => {
+            lock (_services.ToolsLock) {
+                GravisUltraSound gus = GetGravisUltraSound();
+                ValidateGusVoiceIndex(voice, gus.Voices.Count);
+                ValidateGusRegister(register);
+
+                SelectGusRegister(gus, voice, register);
+                ushort value = gus.ReadWord((ushort)(gus.BasePort + GusDataWordPortOffset));
+                return new GusRegisterResponse {
+                    Voice = voice,
+                    Register = register,
+                    Value = value
+                };
+            }
+        });
+    }
+
+    [McpServerTool(Name = "gus_write_register", UseStructuredContent = true), Description("Write a GF1 register through the emulated Gravis UltraSound I/O ports. Parameters: voice (0-31, selected first and ignored by global registers), register (0x00-0xFF), value (16-bit data word; single-byte registers take their value in the high byte, for example 0x0300 to run the GF1 with the DAC enabled through register 0x4C).")]
+    public CallToolResult GusWriteRegister(int voice, int register, int value) {
+        return ExecuteTool(() => {
+            lock (_services.ToolsLock) {
+                GravisUltraSound gus = GetGravisUltraSound();
+                ValidateGusVoiceIndex(voice, gus.Voices.Count);
+                ValidateGusRegister(register);
+                if (value < 0 || value > 0xFFFF) {
+                    throw new ArgumentException("Value must be between 0x0000 and 0xFFFF", nameof(value));
+                }
+
+                SelectGusRegister(gus, voice, register);
+                gus.WriteWord((ushort)(gus.BasePort + GusDataWordPortOffset), (ushort)value);
+                return new EmulatorControlResponse {
+                    Success = true,
+                    Message = $"Wrote GUS voice {voice} register 0x{register:X2} = 0x{value:X4}"
+                };
+            }
+        });
+    }
+
+    [McpServerTool(Name = "gus_set_voice_control", UseStructuredContent = true), Description("Set the wave-control (register 0x00) and volume-control (register 0x0D) bytes of a Gravis UltraSound voice. Parameters: voice (0-31), waveControl and volControl (0x00-0xFF, bit 0 Reset, bit 1 Stopped, bit 2 Bit16, bit 3 Loop, bit 4 Bidirectional, bit 5 RaiseIrq, bit 6 Decreasing).")]
+    public CallToolResult GusSetVoiceControl(int voice, int waveControl, int volControl) {
+        return ExecuteTool(() => {
+            lock (_services.ToolsLock) {
+                GravisUltraSound gus = GetGravisUltraSound();
+                ValidateGusVoiceIndex(voice, gus.Voices.Count);
+                ValidateGusControlByte(waveControl, nameof(waveControl));
+                ValidateGusControlByte(volControl, nameof(volControl));
+
+                WriteGusVoiceControl(gus, voice, GusWaveControlRegister, (byte)waveControl);
+                WriteGusVoiceControl(gus, voice, GusVolControlRegister, (byte)volControl);
+                return new EmulatorControlResponse {
+                    Success = true,
+                    Message = $"GUS voice {voice} control set: wave=0x{waveControl:X2}, volume=0x{volControl:X2}"
+                };
+            }
+        });
+    }
+
+    [McpServerTool(Name = "gus_start_stop_voice", UseStructuredContent = true), Description("Start or stop a Gravis UltraSound voice by clearing or setting the Reset and Stopped bits of its wave-control register, leaving the loop, direction, sample-width and IRQ bits untouched. Parameters: voice (0-31), start (true to run the voice, false to stop it).")]
+    public CallToolResult GusStartStopVoice(int voice, bool start) {
+        return ExecuteTool(() => {
+            lock (_services.ToolsLock) {
+                GravisUltraSound gus = GetGravisUltraSound();
+                ValidateGusVoiceIndex(voice, gus.Voices.Count);
+
+                GusVoiceControl control = gus.Voices[voice].WaveControl;
+                if (start) {
+                    control &= ~(GusVoiceControl.Reset | GusVoiceControl.Stopped);
+                } else {
+                    control |= GusVoiceControl.Stopped;
+                }
+
+                WriteGusVoiceControl(gus, voice, GusWaveControlRegister, (byte)control);
+                return new EmulatorControlResponse {
+                    Success = true,
+                    Message = $"GUS voice {voice} {(start ? "started" : "stopped")}, wave control = 0x{(byte)control:X2}"
+                };
+            }
+        });
+    }
+
+    private GravisUltraSound GetGravisUltraSound() {
+        return _services.GravisUltraSound ?? throw new InvalidOperationException("Gravis UltraSound is not available");
+    }
+
+    private static void SelectGusRegister(GravisUltraSound gus, int voice, int register) {
+        gus.WriteByte((ushort)(gus.BasePort + GusVoiceSelectPortOffset), (byte)voice);
+        gus.WriteByte((ushort)(gus.BasePort + GusRegisterSelectPortOffset), (byte)register);
+    }
+
+    private static void WriteGusVoiceControl(GravisUltraSound gus, int voice, byte register, byte control) {
+        SelectGusRegister(gus, voice, register);
+        gus.WriteWord((ushort)(gus.BasePort + GusDataWordPortOffset), (ushort)(control << 8));
+    }
+
+    private static void ValidateGusVoiceIndex(int voice, int voiceCount) {
+        if (voice < 0 || voice >= voiceCount) {
+            throw new ArgumentException($"Voice must be between 0 and {voiceCount - 1}", nameof(voice));
+        }
+    }
+
+    private static void ValidateGusRegister(int register) {
+        if (register < 0 || register > 0xFF) {
+            throw new ArgumentException("Register must be between 0x00 and 0xFF", nameof(register));
+        }
+    }
+
+    private static void ValidateGusControlByte(int control, string parameterName) {
+        if (control < 0 || control > 0xFF) {
+            throw new ArgumentException("Control byte must be between 0x00 and 0xFF", parameterName);
+        }
+    }
+
+    private static void ValidateGusDramAddress(int address) {
+        if (address < 0 || address >= GravisUltraSound.DramSizeBytes) {
+            throw new ArgumentException($"Address must be between 0 and {GravisUltraSound.DramSizeBytes - 1}", nameof(address));
+        }
+    }
+
+    private static IReadOnlyList<GusTimerStateResponse> ReadGusTimers(GravisUltraSound gus) {
+        List<GusTimerStateResponse> timers = new(gus.TimerCount);
+        for (int index = 0; index < gus.TimerCount; index++) {
+            GusTimerState timer = gus.GetTimerState(index);
+            timers.Add(new GusTimerStateResponse {
+                Index = index,
+                DelayMs = timer.DelayMs,
+                Value = timer.Value,
+                HasExpired = timer.HasExpired,
+                IsCountingDown = timer.IsCountingDown,
+                IsMasked = timer.IsMasked,
+                ShouldRaiseIrq = timer.ShouldRaiseIrq
+            });
+        }
+        return timers;
+    }
+
+    private static GusVoiceStateResponse ToGusVoiceStateResponse(GravisUltraSound gus, GusVoiceIrqState irqState, int index) {
+        GusVoice voice = gus.Voices[index];
+        uint voiceMask = 1u << index;
+        return new GusVoiceStateResponse {
+            Index = index,
+            IsActive = (gus.ActiveVoiceMask & voiceMask) != 0,
+            IsPlaying = voice.IsPlaying,
+            Is16BitSample = voice.Is16BitSample,
+            WaveStart = voice.WaveStart,
+            WaveEnd = voice.WaveEnd,
+            WavePos = voice.WavePos,
+            WaveInc = voice.WaveInc,
+            WaveRate = voice.WaveRate,
+            WaveStateRegister = voice.WaveState,
+            WaveControl = voice.WaveControl,
+            VolStart = voice.VolStart,
+            VolEnd = voice.VolEnd,
+            VolPos = voice.VolPos,
+            VolInc = voice.VolInc,
+            VolRate = voice.VolRate,
+            VolStateRegister = voice.VolState,
+            VolControl = voice.VolControl,
+            PanPosition = voice.PanPosition,
+            WaveIrqPending = (irqState.WaveStateMask & voiceMask) != 0,
+            VolumeIrqPending = (irqState.VolStateMask & voiceMask) != 0,
+            Generated8BitMs = voice.Generated8BitMs,
+            Generated16BitMs = voice.Generated16BitMs
+        };
+    }
+
+    private static (int[] Matches, bool Truncated) SearchDramMatches(byte[] haystack, byte[] needle, int startAddress, int limit) {
+        List<int> matches = new();
+        int searchFrom = 0;
+        while (matches.Count < limit) {
+            int found = haystack.AsSpan(searchFrom).IndexOf(needle);
+            if (found < 0) {
+                return (matches.ToArray(), false);
+            }
+            matches.Add(startAddress + searchFrom + found);
+            searchFrom += found + 1;
+        }
+
+        bool truncated = haystack.AsSpan(searchFrom).IndexOf(needle) >= 0;
+        return (matches.ToArray(), truncated);
     }
 
     [McpServerTool(Name = "read_video_state_detailed", UseStructuredContent = true), Description("Read detailed VGA state: BIOS video mode, VGA mode object, cursor position, screen columns/rows, and renderer dimensions. More complete than read_video_state.")]
