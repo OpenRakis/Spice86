@@ -20,6 +20,7 @@ public sealed partial class McpStatusViewModel : ViewModelBase {
     private const string OfflineColor = "#D14D4D";
     private const string OnlineColor = "#2AA876";
     private const string BusyColor = "#D3A11D";
+    private const string AllCategories = "All categories";
 
     private readonly HttpClient _httpClient = new();
     private readonly EmulatorMcpServices? _services;
@@ -41,6 +42,9 @@ public sealed partial class McpStatusViewModel : ViewModelBase {
 
     [ObservableProperty]
     private string _toolFilter = string.Empty;
+
+    [ObservableProperty]
+    private string _selectedCategory = AllCategories;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(InvokeSelectedToolCommand))]
@@ -73,6 +77,7 @@ public sealed partial class McpStatusViewModel : ViewModelBase {
 
     public ObservableCollection<McpToolViewModel> Tools { get; } = new();
     public ObservableCollection<McpToolViewModel> FilteredTools { get; } = new();
+    public ObservableCollection<string> Categories { get; } = new() { AllCategories };
 
     public string ServerEndpoint => IsServerRunning ? $"http://localhost:{Port}/mcp" : "MCP disabled";
 
@@ -81,6 +86,8 @@ public sealed partial class McpStatusViewModel : ViewModelBase {
     public bool HasSelectedTool => SelectedTool is not null;
 
     public string BuiltInGroupStatus => $"{EnabledToolsCount}/{TotalToolsCount}";
+
+    public string VisibleGroupStatus => $"{FilteredTools.Count(t => t.IsEnabled)}/{FilteredTools.Count} shown";
 
     public McpStatusViewModel() {
         _port = 0;
@@ -108,6 +115,10 @@ public sealed partial class McpStatusViewModel : ViewModelBase {
     }
 
     partial void OnToolFilterChanged(string value) {
+        RefreshFilteredTools();
+    }
+
+    partial void OnSelectedCategoryChanged(string value) {
         RefreshFilteredTools();
     }
 
@@ -144,6 +155,26 @@ public sealed partial class McpStatusViewModel : ViewModelBase {
         foreach (McpToolViewModel tool in Tools) {
             if (tool.CanToggle && tool.IsEnabled) {
                 tool.IsEnabled = false;
+            }
+        }
+
+        RefreshToolState();
+    }
+
+    [RelayCommand]
+    private void EnableVisibleTools() {
+        SetVisibleToolsEnabled(true);
+    }
+
+    [RelayCommand]
+    private void DisableVisibleTools() {
+        SetVisibleToolsEnabled(false);
+    }
+
+    private void SetVisibleToolsEnabled(bool isEnabled) {
+        foreach (McpToolViewModel tool in FilteredTools.ToArray()) {
+            if (tool.CanToggle && tool.IsEnabled != isEnabled) {
+                tool.IsEnabled = isEnabled;
             }
         }
 
@@ -204,17 +235,23 @@ public sealed partial class McpStatusViewModel : ViewModelBase {
     private void RefreshFilteredTools() {
         FilteredTools.Clear();
 
-        IEnumerable<McpToolViewModel> filtered = string.IsNullOrWhiteSpace(ToolFilter)
-            ? Tools
-            : Tools.Where(t => MatchesFilter(t, ToolFilter));
-
-        foreach (McpToolViewModel tool in filtered) {
+        foreach (McpToolViewModel tool in Tools.Where(IsVisible)) {
             FilteredTools.Add(tool);
         }
+
+        OnPropertyChanged(nameof(VisibleGroupStatus));
 
         if (SelectedTool == null && FilteredTools.Count > 0) {
             SelectedTool = FilteredTools[0];
         }
+    }
+
+    private bool IsVisible(McpToolViewModel tool) {
+        if (SelectedCategory != AllCategories && tool.Category != SelectedCategory) {
+            return false;
+        }
+
+        return string.IsNullOrWhiteSpace(ToolFilter) || MatchesFilter(tool, ToolFilter);
     }
 
     private DispatcherTimer StartNetworkProbeTimer() {
@@ -334,6 +371,10 @@ public sealed partial class McpStatusViewModel : ViewModelBase {
                 true);
             viewModel.PropertyChanged += OnToolPropertyChanged;
             Tools.Add(viewModel);
+        }
+
+        foreach (string category in Tools.Select(t => t.Category).Distinct().OrderBy(c => c, StringComparer.Ordinal)) {
+            Categories.Add(category);
         }
     }
 
