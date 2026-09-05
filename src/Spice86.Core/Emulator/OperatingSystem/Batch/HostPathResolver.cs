@@ -43,7 +43,7 @@ internal static class HostPathResolver {
         // not exist and we fall through to host/absolute-path handling below.
         if (path.Length >= 2 && char.IsLetter(path[0]) && path[1] == ':') {
             char driveLetter = char.ToUpperInvariant(path[0]);
-            if (driveManager.TryGetDrive<VirtualDrive>(driveLetter, out VirtualDrive? drive)
+            if (driveManager.TryGetDrive<FolderDrive>(driveLetter, out FolderDrive? drive)
                 && !string.IsNullOrEmpty(drive.MountedHostDirectory)) {
                 string dosRelative = path.Length >= 3 && (path[2] == '\\' || path[2] == '/')
                     ? path.Substring(3)
@@ -72,8 +72,8 @@ internal static class HostPathResolver {
         // If that resolution does not point to an existing file or directory, fall back
         // to the process working directory (which is what the user typed at the prompt
         // before launching the emulator).
-        VirtualDrive currentDrive = driveManager.CurrentDrive;
-        if (!string.IsNullOrEmpty(currentDrive.MountedHostDirectory)) {
+        if (driveManager.TryGetDrive<FolderDrive>(driveManager.CurrentDrive.DriveLetter, out FolderDrive? currentDrive) &&
+            !string.IsNullOrEmpty(currentDrive.MountedHostDirectory)) {
             string hostBase = currentDrive.MountedHostDirectory.TrimEnd(
                 Path.DirectorySeparatorChar, '/', '\\');
             string dosCurrentDir = currentDrive.CurrentDosDirectory ?? string.Empty;

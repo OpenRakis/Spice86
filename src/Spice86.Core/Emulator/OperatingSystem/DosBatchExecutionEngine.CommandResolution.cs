@@ -53,7 +53,7 @@ internal sealed partial class DosBatchExecutionEngine {
 
     private bool DosFileExists(string dosPath) {
         string normalizedPath = NormalizeDosPath(dosPath);
-        if (_zDriveFiles.ContainsKey(normalizedPath)) {
+        if (IsZDriveFile(normalizedPath)) {
             return true;
         }
 
@@ -162,11 +162,22 @@ internal sealed partial class DosBatchExecutionEngine {
 
     private bool DoesFileExist(string dosPath) {
         string normalizedPath = NormalizeDosPath(Unquote(dosPath));
-        if (_zDriveFiles.ContainsKey(normalizedPath)) {
+        if (IsZDriveFile(normalizedPath)) {
             return true;
         }
 
         return _dosFileManager.FileOrDeviceExists(normalizedPath);
+    }
+
+    private bool IsZDriveFile(string normalizedPath) {
+        if (_zDriveFiles.ContainsKey(normalizedPath)) {
+            return true;
+        }
+        if (normalizedPath.Length >= 2 && normalizedPath[1] == ':') {
+            return false;
+        }
+        string currentDrivePath = $"{_driveManager.CurrentDrive.DosVolume}\\{normalizedPath.TrimStart('\\')}";
+        return _zDriveFiles.ContainsKey(currentDrivePath);
     }
 
     private static string NormalizeDosPath(string dosPath) {

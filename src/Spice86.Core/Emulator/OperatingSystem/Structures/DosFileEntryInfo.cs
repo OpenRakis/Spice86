@@ -4,7 +4,7 @@ using Spice86.Core.Emulator.OperatingSystem.Enums;
 
 /// <summary>
 /// Encapsulates the metadata of a DOS file system entry (file or directory)
-/// as resolved by <see cref="DosPathResolver"/>.
+/// as resolved by <see cref="DosDriveManager"/>.
 /// </summary>
 /// <param name="Attributes">The DOS file attributes.</param>
 /// <param name="FileSize">The size in bytes (0 for directories).</param>

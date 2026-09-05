@@ -38,7 +38,7 @@ public sealed class SubstBatchCommandTests : IDisposable {
             "SUBST D: C:\\games", out _);
 
         launched.Should().BeFalse();
-        _fixture.DriveManager.TryGetDrive<VirtualDrive>('D', out VirtualDrive? drive).Should().BeTrue();
+        _fixture.DriveManager.TryGetDrive<FolderDrive>('D', out FolderDrive? drive).Should().BeTrue();
         if (drive == null) {
             throw new InvalidOperationException("Expected D: drive to be mounted.");
         }

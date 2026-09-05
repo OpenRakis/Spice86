@@ -1,5 +1,7 @@
 namespace Spice86.Core.Emulator.OperatingSystem.Structures;
 
+using Spice86.Core.Emulator.OperatingSystem.Enums;
+
 using System.Diagnostics.CodeAnalysis;
 using System.Collections.Generic;
 using System.IO;
@@ -8,7 +10,7 @@ using System.Linq;
 /// <summary>
 /// Represents an in-memory read-only virtual drive (typically Z: for AUTOEXEC.BAT).
 /// </summary>
-public class MemoryDrive : VirtualDrive {
+public class MemoryDrive : DosDriveBase, IDosPathContent {
     private readonly Dictionary<string, byte[]> _files = new(StringComparer.OrdinalIgnoreCase);
 
     private static string NormalizePath(string path) => path.Replace('/', '\\');
@@ -18,7 +20,7 @@ public class MemoryDrive : VirtualDrive {
     /// </summary>
     [SetsRequiredMembers]
     public MemoryDrive() {
-        MountedHostDirectory = string.Empty;
+        IsReadOnlyMedium = true;
     }
 
     /// <summary>
@@ -63,6 +65,37 @@ public class MemoryDrive : VirtualDrive {
             normalizedPath += "\\";
         }
         return _files.Keys.Any(f => f.StartsWith(normalizedPath, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public bool TryOpenRead(string relativePath, out Stream? stream) {
+        stream = null;
+        if (!FileExists(relativePath)) {
+            return false;
+        }
+        stream = new MemoryStream(GetFile(relativePath), writable: false);
+        return true;
+    }
+
+    public IReadOnlyList<DosContentEntry> GetDirectoryEntries(string relativePath) {
+        string prefix = NormalizePath(relativePath).TrimEnd('\\');
+        if (prefix.Length > 0) {
+            prefix += "\\";
+        }
+        Dictionary<string, DosContentEntry> entries = new(StringComparer.OrdinalIgnoreCase);
+        foreach (string filePath in _files.Keys) {
+            if (!filePath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) {
+                continue;
+            }
+            string remainder = filePath[prefix.Length..];
+            int separator = remainder.IndexOf('\\');
+            string name = separator >= 0 ? remainder[..separator] : remainder;
+            if (separator >= 0) {
+                entries[name] = new DosContentEntry(name, true, 0, DosFileAttributes.Directory, DateTime.UnixEpoch, null);
+            } else {
+                entries[name] = new DosContentEntry(name, false, (uint)_files[filePath].Length, 0, DateTime.UnixEpoch, null);
+            }
+        }
+        return entries.Values.ToArray();
     }
 
     /// <summary>

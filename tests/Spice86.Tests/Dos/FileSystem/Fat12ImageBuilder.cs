@@ -28,7 +28,10 @@ internal sealed class Fat12ImageBuilder {
 
         for (int i = 0; i < _files.Count; i++) {
             (string fileName, byte[] content) file = _files[i];
-            string filePath = Path.Join(tempDirectory, file.fileName);
+            string normalizedFileName = file.fileName
+                .Replace('\\', Path.DirectorySeparatorChar)
+                .Replace('/', Path.DirectorySeparatorChar);
+            string filePath = Path.Join(tempDirectory, normalizedFileName);
             string? directoryPath = Path.GetDirectoryName(filePath);
             if (!string.IsNullOrEmpty(directoryPath)) {
                 Directory.CreateDirectory(directoryPath);

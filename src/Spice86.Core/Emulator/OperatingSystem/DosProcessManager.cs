@@ -147,7 +147,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         _interruptVectorTable = new(memory);
 
         if (!envVars.ContainsKey("PATH")) {
-            envVars.Add("PATH", $"{_driveManager.CurrentDrive.DosVolume}{DosPathResolver.DirectorySeparatorChar}");
+            envVars.Add("PATH", $"{_driveManager.CurrentDrive.DosVolume}{DosDriveManager.DirectorySeparatorChar}");
         }
 
         foreach (KeyValuePair<string, string> envVar in envVars) {

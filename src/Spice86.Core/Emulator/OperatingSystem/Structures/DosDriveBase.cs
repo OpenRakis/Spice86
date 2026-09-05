@@ -27,7 +27,7 @@ public abstract class DosDriveBase {
     /// <summary>
     /// Gets the DOS assigned drive letter, with a volume separator character appended to it.
     /// </summary>
-    public string DosVolume => $"{DriveLetter}{DosPathResolver.VolumeSeparatorChar}";
+    public string DosVolume => $"{DriveLetter}{DosDriveManager.VolumeSeparatorChar}";
 
     /// <summary>
     /// Gets the absolute path to the current DOS directory in use on the drive.
