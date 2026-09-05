@@ -64,9 +64,9 @@ public static class ProtectedModeInterruptDispatcher {
         if (targetCode.DescriptorPrivilegeLevel < state.Cpl) {
             // CS must be loaded before SS: state.Cpl (used to validate the new stack segment's RPL/DPL)
             // is derived from CS, so SS validation must see the NEW (more privileged) CPL, not the old one.
-            (ushort newSs, ushort newSp) = ReadRing0StackFromTss(state, memory);
+            (ushort newSs, uint newSp) = ReadRing0StackFromTss(state, memory);
             ushort oldSs = state.SS;
-            ushort oldSp = state.SP;
+            uint oldSp = stack.GetStackPointer();
             // Reflecting from V86 mode always leaves it (real hardware treats the handler as running in
             // ordinary protected mode): clear VM only now, after every CPL-dependent check above has
             // already read the V86-implies-CPL3 value, so the CS/SS loads below resolve through the GDT
@@ -75,13 +75,16 @@ public static class ProtectedModeInterruptDispatcher {
             ushort escalatedCs = (ushort)((gate.Selector & 0xFFFC) | targetCode.DescriptorPrivilegeLevel);
             SegmentAndControlRegisterOperations.LoadSegmentRegister(state, memory, (uint)SegmentRegisterIndex.CsIndex, escalatedCs);
             SegmentAndControlRegisterOperations.LoadSegmentRegister(state, memory, (uint)SegmentRegisterIndex.SsIndex, newSs);
-            state.SP = newSp;
             if (is32Bit) {
+                stack.SetStackPointer(newSp);
+                // Real x86 pushes [old SS, old ESP] on the target ring's stack, then the return frame.
+                // The outer ring restores in reverse order: old ESP first, then old SS.
                 stack.Push32(oldSs);
                 stack.Push32(oldSp);
             } else {
+                stack.SetStackPointer(newSp);
                 stack.Push16(oldSs);
-                stack.Push16(oldSp);
+                stack.Push16((ushort)oldSp);
             }
         } else {
             // Same-privilege dispatch (conforming target, or DPL == CPL): CPL is unchanged, so the loaded
@@ -104,6 +107,9 @@ public static class ProtectedModeInterruptDispatcher {
         }
         if (gate.GateType is GateType.InterruptGate16 or GateType.InterruptGate32) {
             state.InterruptFlag = false;
+        }
+        if (is32Bit) {
+            state.EIP = gate.Offset;
         }
         state.IP = (ushort)gate.Offset;
         return new SegmentedAddress(gate.Selector, (ushort)gate.Offset);
@@ -149,10 +155,11 @@ public static class ProtectedModeInterruptDispatcher {
         SegmentAndControlRegisterOperations.LoadSegmentRegister(state, memory, (uint)SegmentRegisterIndex.CsIndex, poppedCsEip.Segment);
         state.Flags.FlagRegister = poppedEflags;
         if (returningRpl > cplBeforeReturn) {
+            // Real x86 restores the old stack pointer before reloading SS.
             uint poppedEsp = stack.Pop32();
-            uint poppedSs = stack.Pop32();
-            SegmentAndControlRegisterOperations.LoadSegmentRegister(state, memory, (uint)SegmentRegisterIndex.SsIndex, (ushort)poppedSs);
-            state.ESP = poppedEsp;
+            ushort poppedSs = (ushort)stack.Pop32();
+            SegmentAndControlRegisterOperations.LoadSegmentRegister(state, memory, (uint)SegmentRegisterIndex.SsIndex, poppedSs);
+            stack.SetStackPointer(poppedEsp);
             PrivilegeChecks.NullifyInaccessibleDataSegments(state);
         }
     }
@@ -177,10 +184,11 @@ public static class ProtectedModeInterruptDispatcher {
         SegmentAndControlRegisterOperations.LoadSegmentRegister(state, memory, (uint)SegmentRegisterIndex.CsIndex, poppedCs);
         state.Flags.FlagRegister16 = poppedFlags;
         if (returningRpl > cplBeforeReturn) {
+            // 16-bit IRET restores SP before SS, matching the real stack-save order.
             ushort poppedSp = stack.Pop16();
             ushort poppedSs = stack.Pop16();
             SegmentAndControlRegisterOperations.LoadSegmentRegister(state, memory, (uint)SegmentRegisterIndex.SsIndex, poppedSs);
-            state.SP = poppedSp;
+            stack.SetStackPointer(poppedSp);
             PrivilegeChecks.NullifyInaccessibleDataSegments(state);
         }
     }
@@ -208,7 +216,7 @@ public static class ProtectedModeInterruptDispatcher {
             ushort poppedSp = stack.Pop16();
             ushort poppedSs = stack.Pop16();
             SegmentAndControlRegisterOperations.LoadSegmentRegister(state, memory, (uint)SegmentRegisterIndex.SsIndex, poppedSs);
-            state.SP = (ushort)(poppedSp + numberOfBytesToPop);
+            stack.SetStackPointer((ushort)(poppedSp + numberOfBytesToPop));
             PrivilegeChecks.NullifyInaccessibleDataSegments(state);
         }
     }
@@ -232,10 +240,12 @@ public static class ProtectedModeInterruptDispatcher {
         SegmentAndControlRegisterOperations.LoadSegmentRegister(state, memory, (uint)SegmentRegisterIndex.CsIndex, poppedCsEip.Segment);
         stack.Discard(numberOfBytesToPop);
         if (returningRpl > cplBeforeReturn) {
+            // RETF restores the old stack pointer before SS, in reverse of the push order used during the
+            // privilege change.
             uint poppedEsp = stack.Pop32();
-            uint poppedSs = stack.Pop32();
-            SegmentAndControlRegisterOperations.LoadSegmentRegister(state, memory, (uint)SegmentRegisterIndex.SsIndex, (ushort)poppedSs);
-            state.ESP = poppedEsp + numberOfBytesToPop;
+            ushort poppedSs = (ushort)stack.Pop32();
+            SegmentAndControlRegisterOperations.LoadSegmentRegister(state, memory, (uint)SegmentRegisterIndex.SsIndex, poppedSs);
+            stack.SetStackPointer(poppedEsp + numberOfBytesToPop);
             PrivilegeChecks.NullifyInaccessibleDataSegments(state);
         }
     }
@@ -266,10 +276,10 @@ public static class ProtectedModeInterruptDispatcher {
     /// <see cref="ProtectedModeCallGateDispatcher"/>, which needs the identical ring-0-stack lookup for
     /// privilege-escalating CALLs through a call gate.
     /// </summary>
-    internal static (ushort ss0, ushort sp0) ReadRing0StackFromTss(State state, IMemory memory) {
+    internal static (ushort ss0, uint sp0) ReadRing0StackFromTss(State state, IMemory memory) {
         uint tssBase = state.Tr.DescriptorCache.Base;
         uint esp0 = memory.UInt32[memory.Mmu.TranslateLinearAddress(tssBase + 4, isWrite: false)];
         ushort ss0 = memory.UInt16[memory.Mmu.TranslateLinearAddress(tssBase + 8, isWrite: false)];
-        return (ss0, (ushort)esp0);
+        return (ss0, esp0);
     }
 }

@@ -72,6 +72,20 @@ public class Stack {
     }
 
     /// <summary>
+    /// Gets the active stack pointer for the current SS descriptor width.
+    /// </summary>
+    public uint GetStackPointer() {
+        return StackPointer;
+    }
+
+    /// <summary>
+    /// Updates the active stack pointer using the current SS descriptor width.
+    /// </summary>
+    public void SetStackPointer(uint value) {
+        StackPointer = value;
+    }
+
+    /// <summary>
     /// Wraps an address computation to the current stack address width: full 32-bit range when SS is
     /// 32-bit-default, or 16-bit (matching real hardware SP register wraparound) otherwise.
     /// </summary>

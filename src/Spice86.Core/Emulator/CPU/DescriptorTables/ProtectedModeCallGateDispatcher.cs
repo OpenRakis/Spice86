@@ -91,19 +91,22 @@ public static class ProtectedModeCallGateDispatcher {
         if (targetCode.DescriptorPrivilegeLevel < cpl) {
             // CS must be loaded before SS: state.Cpl (used to validate the new stack segment's RPL/DPL)
             // is derived from CS, so SS validation must see the NEW (more privileged) CPL, not the old one.
-            (ushort newSs, ushort newSp) = ProtectedModeInterruptDispatcher.ReadRing0StackFromTss(state, memory);
+            (ushort newSs, uint newSp) = ProtectedModeInterruptDispatcher.ReadRing0StackFromTss(state, memory);
             ushort oldSs = state.SS;
-            ushort oldSp = state.SP;
+            uint oldSp = stack.GetStackPointer();
+            state.Flags.SetFlag(Flags.Virtual8086Mode, false);
             ushort escalatedCs = (ushort)((gate.Selector & 0xFFFC) | targetCode.DescriptorPrivilegeLevel);
             SegmentAndControlRegisterOperations.LoadSegmentRegister(state, memory, (uint)SegmentRegisterIndex.CsIndex, escalatedCs);
             SegmentAndControlRegisterOperations.LoadSegmentRegister(state, memory, (uint)SegmentRegisterIndex.SsIndex, newSs);
-            state.SP = newSp;
             if (is32Bit) {
+                stack.SetStackPointer(newSp);
+                // Call-gate privilege escalation uses the same [old SS, old ESP] save order as interrupts.
                 stack.Push32(oldSs);
                 stack.Push32(oldSp);
             } else {
+                stack.SetStackPointer(newSp);
                 stack.Push16(oldSs);
-                stack.Push16(oldSp);
+                stack.Push16((ushort)oldSp);
             }
         } else {
             // Same-privilege dispatch (conforming target, or DPL == CPL): CPL is unchanged, so the loaded
@@ -114,6 +117,7 @@ public static class ProtectedModeCallGateDispatcher {
         if (is32Bit) {
             stack.PushFarPointer32(new SegmentedAddress32(expectedReturn.Segment, expectedReturn.Offset));
             state.EIP = gate.Offset;
+            state.IP = (ushort)gate.Offset;
         } else {
             stack.PushSegmentedAddress(expectedReturn);
             state.IP = (ushort)gate.Offset;
@@ -156,6 +160,7 @@ public static class ProtectedModeCallGateDispatcher {
         }
         ushort sameLevelCs = (ushort)((gate.Selector & 0xFFFC) | cpl);
         SegmentAndControlRegisterOperations.LoadSegmentRegister(state, memory, (uint)SegmentRegisterIndex.CsIndex, sameLevelCs);
+        state.EIP = gate.Offset;
         state.IP = (ushort)gate.Offset;
         return new SegmentedAddress(gate.Selector, (ushort)gate.Offset);
     }
