@@ -832,8 +832,30 @@ public class CSharpOverrideHelper {
     /// <param name="targetCs">The CS value of the callee, executed in for the duration of the call.</param>
     /// <param name="function">The function to call.</param>
     public void FarCall32(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Func<int, Action> function) {
+        SegmentedAddress expectedReturn = new(expectedReturnCs, expectedReturnIp);
+        if (TaskSwitchOperations.TryReadAvailableTss(State, Memory, targetCs)) {
+            SegmentedAddress taskTarget = TaskSwitchOperations.SwitchToNewTask(State, Memory, targetCs, expectedReturnIp);
+            Func<int, Action>? taskFunction = SearchFunctionOverride(taskTarget);
+            if (taskFunction is null) {
+                throw FailAsUntested($"Could not find an override at address {taskTarget}");
+            }
+            ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, taskTarget.Segment, taskFunction, () => {
+                Action taskReturnAction = taskFunction.Invoke(0);
+                taskReturnAction.Invoke();
+            });
+            return;
+        }
         if (ProtectedModeCallGateDispatcher.TryReadCallGate(State, Memory, targetCs, out RawGateDescriptor gate)) {
-            throw FailAsUntested($"32-bit far call through call gate 0x{targetCs:X4} is not yet supported");
+            SegmentedAddress gateTarget = ProtectedModeCallGateDispatcher.Dispatch(State, Memory, Stack, gate, targetCs, expectedReturn);
+            Func<int, Action>? gateFunction = SearchFunctionOverride(gateTarget);
+            if (gateFunction is null) {
+                throw FailAsUntested($"Could not find an override at address {gateTarget}");
+            }
+            ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, gateTarget.Segment, gateFunction, () => {
+                Action gateReturnAction = gateFunction.Invoke(0);
+                gateReturnAction.Invoke();
+            });
+            return;
         }
         PrivilegeChecks.ValidateFarCodeSegmentTransfer(State, Memory, targetCs);
         ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, targetCs, function, () => {
