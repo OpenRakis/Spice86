@@ -241,9 +241,26 @@ public class DosMemoryManager {
 
         if (newSizeInParagraphs < total) {
             // Grows, but only partially consumes the following free MCB.
-            byte followingType = block.IsLast ? block.TypeField : next!.TypeField;
+            byte followingType;
+            if (block.IsLast) {
+                followingType = block.TypeField;
+            } else {
+                if (next is null) {
+                    if (_loggerService.IsEnabled(LogLevel.Error)) {
+                        _loggerService.LogError("MCB chain corrupted while resizing {Block}", block);
+                    }
+                    return DosErrorCode.MemoryControlBlockDestroyed;
+                }
+                followingType = next.TypeField;
+            }
             block.Size = newSizeInParagraphs;
-            DosMemoryControlBlock newNext = block.GetNextOrDefault() ?? next!;
+            DosMemoryControlBlock? newNext = block.GetNextOrDefault() ?? next;
+            if (newNext is null) {
+                if (_loggerService.IsEnabled(LogLevel.Error)) {
+                    _loggerService.LogError("MCB chain corrupted while resizing {Block}", block);
+                }
+                return DosErrorCode.MemoryControlBlockDestroyed;
+            }
             newNext.TypeField = followingType;
             newNext.SetFree();
             newNext.Size = (ushort)(total - newSizeInParagraphs - 1);
