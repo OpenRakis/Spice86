@@ -71,7 +71,7 @@ public partial class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnl
         cDriveFolderPath = ConvertUtils.ToSlashFolderPath(cDriveFolderPath);
         _driveMap[GetDriveIndex('A')] = new EmptyDosDrive('A');
         _driveMap[GetDriveIndex('B')] = new EmptyDosDrive('B');
-        var cDrive = new FolderDrive { DriveLetter = 'C', MountedHostDirectory = cDriveFolderPath };
+FolderDrive cDrive = new FolderDrive { DriveLetter = 'C', MountedHostDirectory = cDriveFolderPath };
         _driveMap[GetDriveIndex('C')] = cDrive;
         CurrentDrive = cDrive;
         _mappedDriveCount = 3; // A:, B:, C:
