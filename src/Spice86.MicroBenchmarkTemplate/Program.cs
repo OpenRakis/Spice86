@@ -2,8 +2,6 @@
 
 using System.Numerics;
 
-using Xunit;
-
 /// <summary>
 /// Optionally, you can use BenchmarkDotNet to test some code for performance. <br/> <br/>
 /// see <see href="https://github.com/dotnet/performance/blob/main/docs/microbenchmark-design-guidelines.md" />
@@ -69,7 +67,7 @@ internal class Program {
         BenchmarkDotNet.Reports.Summary summary = BenchmarkRunner.Run<BenchmarkTest>();
 #endif
 #if DEBUG
-        Assert.Fail("Please run in Release mode to get accurate results");
+        throw new InvalidOperationException("Please run in Release mode to get accurate results");
 #endif
     }
 }
