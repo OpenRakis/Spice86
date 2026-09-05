@@ -16,7 +16,7 @@ using System.Threading;
 
 using ILogger = Microsoft.Extensions.Logging.ILogger;
 
-internal sealed class McpHttpHost : IDisposable, IAsyncDisposable {
+internal sealed class McpHttpHost : IAsyncDisposable {
     private static readonly TimeSpan ShutdownJoinTimeout = TimeSpan.FromSeconds(5);
     private WebApplication? _app;
     private Thread? _serverThread;
@@ -104,11 +104,19 @@ internal sealed class McpHttpHost : IDisposable, IAsyncDisposable {
         }
     }
 
-    public void Dispose() {
+    public void Stop() {
         if (_disposed) {
             return;
         }
-        DisposeAsync().AsTask().GetAwaiter().GetResult();
+        _disposed = true;
+        _app?.Lifetime.StopApplication();
+        if (_serverThread is { IsAlive: true }) {
+            _serverThread.Join(ShutdownJoinTimeout);
+        }
+        _app = null;
+        _serverThread = null;
+        _mcpFileLogger?.Dispose();
+        _mcpFileLogger = null;
     }
 
     public async ValueTask DisposeAsync() {
