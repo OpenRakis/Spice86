@@ -106,6 +106,9 @@ public class DosMemoryManager {
     /// <param name="requestedSizeInParagraphs">The requested size in paragraphs of the memory block.</param>
     /// <returns>The allocated <see cref="DosMemoryControlBlock"/> or <c>null</c> if no memory block could be found.</returns>
     public DosMemoryControlBlock? AllocateMemoryBlock(ushort requestedSizeInParagraphs) {
+        // Matches DOS_AllocateMemory in dosbox-staging's dos_memory.cpp: compress the whole chain
+        // (merge every adjacent free/free pair) before searching for a candidate block.
+        CompressMemory();
         IEnumerable<DosMemoryControlBlock> candidates = FindCandidatesForAllocation(requestedSizeInParagraphs);
 
         // Select block based on allocation strategy
@@ -211,32 +214,61 @@ public class DosMemoryManager {
             newSizeInParagraphs = DosProgramSegmentPrefix.PspSizeInParagraphs;
         }
 
-        // Make the block the biggest it can get
-        if (!JoinBlocks(block, false)) {
-            if (_loggerService.IsEnabled(LogLevel.Error)) {
-                _loggerService.LogError("Could not join MCB {Block}", block);
+        // Mirrors dosbox-staging's DOS_ResizeMemory (dos_memory.cpp) exactly, including its
+        // three-way shrink / partial-grow / grow-to-max-then-fail structure.
+        CompressMemory();
+
+        ushort total = block.Size;
+        if (newSizeInParagraphs <= total) {
+            if (newSizeInParagraphs == total) {
+                // Size unchanged
+                block.PspSegment = _sda.CurrentProgramSegmentPrefix;
+                return DosErrorCode.NoError;
             }
-            return DosErrorCode.InsufficientMemory;
-        }
 
-        if (block.Size < newSizeInParagraphs) {
-            if (_loggerService.IsEnabled(LogLevel.Error)) {
-                _loggerService.LogError("MCB {Block} is too small for requested size {RequestedSize}",
-                    block, newSizeInParagraphs);
-
-                if (_loggerService.IsEnabled(LogLevel.Trace) && !block.IsLast) {
-                    DosMemoryControlBlock? nextBlock = block.GetNextOrDefault();
-                    _loggerService.LogTrace("Next MCB is {Block}", nextBlock);
-                }
-            }
-            return DosErrorCode.InsufficientMemory;
-        }
-
-        if (block.Size > newSizeInParagraphs) {
+            // Shrinking MCB
             SplitBlock(block, newSizeInParagraphs);
+            block.PspSegment = _sda.CurrentProgramSegmentPrefix;
+            CompressMemory();
+            return DosErrorCode.NoError;
         }
+
+        // MCB will grow: try to join with the following MCB first.
+        DosMemoryControlBlock? next = block.IsLast ? null : block.GetNextOrDefault();
+        if (next?.IsFree == true) {
+            total = (ushort)(total + next.Size + 1);
+        }
+
+        if (newSizeInParagraphs < total) {
+            // Grows, but only partially consumes the following free MCB.
+            byte followingType = block.IsLast ? block.TypeField : next!.TypeField;
+            block.Size = newSizeInParagraphs;
+            DosMemoryControlBlock newNext = block.GetNextOrDefault() ?? next!;
+            newNext.TypeField = followingType;
+            newNext.SetFree();
+            newNext.Size = (ushort)(total - newSizeInParagraphs - 1);
+            block.SetNonLast();
+            block.PspSegment = _sda.CurrentProgramSegmentPrefix;
+            CompressMemory();
+            return DosErrorCode.NoError;
+        }
+
+        // requestedSize == total (fits exactly) or requestedSize > total (grow to the maximum
+        // available and report failure with that maximum in `block.Size`, matching real DOS).
+        if (next?.IsFree == true) {
+            block.TypeField = next.TypeField;
+        }
+        block.Size = total;
         block.PspSegment = _sda.CurrentProgramSegmentPrefix;
-        return DosErrorCode.NoError;
+        if (newSizeInParagraphs == total) {
+            return DosErrorCode.NoError;
+        }
+
+        if (_loggerService.IsEnabled(LogLevel.Error)) {
+            _loggerService.LogError("MCB {Block} is too small for requested size {RequestedSize}",
+                block, newSizeInParagraphs);
+        }
+        return DosErrorCode.InsufficientMemory;
     }
 
     /// <summary>
@@ -487,7 +519,6 @@ public class DosMemoryManager {
             if (!CheckValidOrLogError(current)) {
                 return new List<DosMemoryControlBlock>();
             }
-            JoinBlocks(current, true);
             if (current?.IsFree == true && current.Size >= requestedSize) {
                 candidates.Add(current);
             }
@@ -507,30 +538,25 @@ public class DosMemoryManager {
         return new DosMemoryControlBlock(_memory, MemoryUtils.ToPhysicalAddress(blockSegment, 0));
     }
 
-    private bool JoinBlocks(DosMemoryControlBlock? block, bool onlyIfFree) {
-        if (onlyIfFree && block?.IsFree == false) {
-            // Do not touch blocks in use
-            return true;
-        }
-
-        while (block?.IsNonLast == true) {
-            DosMemoryControlBlock? next = block.GetNextOrDefault();
-            if (next is null || !next.IsFree) {
-                // end of the free blocks reached
+    /// <summary>
+    /// Mirrors dosbox-staging's <c>DOS_CompressMemory</c> (dos_memory.cpp): walks the whole MCB
+    /// chain from the start, merging every adjacent free/free pair it finds, including chains of
+    /// more than two consecutive free blocks.
+    /// </summary>
+    private void CompressMemory() {
+        DosMemoryControlBlock? current = _start;
+        while (current is not null && !current.IsLast) {
+            DosMemoryControlBlock? next = current.GetNextOrDefault();
+            if (next is null) {
                 break;
             }
-
-            if (!CheckValidOrLogError(next)) {
-                if (_loggerService.IsEnabled(LogLevel.Error)) {
-                    _loggerService.LogError("MCB {NextBlock} is not valid", next);
-                }
-                return false;
+            if (current.IsFree && next.IsFree) {
+                JoinContiguousBlocks(current, next);
+                // Stay on the same block and re-check its (now bigger) next block.
+                continue;
             }
-
-            JoinContiguousBlocks(block, next);
+            current = next;
         }
-
-        return true;
     }
 
     private static void JoinContiguousBlocks(DosMemoryControlBlock destination, DosMemoryControlBlock next) {
@@ -685,8 +711,6 @@ public class DosMemoryManager {
             // Free blocks owned by this PSP
             if (current.PspSegment == pspSegment) {
                 current.SetFree();
-                // Coalesce adjacent free blocks
-                JoinBlocks(current, true);
             }
 
             if (current.IsLast) {
@@ -696,6 +720,9 @@ public class DosMemoryManager {
             current = current.GetNextOrDefault();
         }
 
+        // Matches dosbox-staging's DOS_FreeProcessMemory, which compresses the whole chain once
+        // at the end rather than after each individual block.
+        CompressMemory();
         return true;
     }
 
@@ -726,7 +753,7 @@ public class DosMemoryManager {
         }
 
         block.SetFree();
-        JoinBlocks(_start, true);
+        CompressMemory();
         return true;
     }
 }
