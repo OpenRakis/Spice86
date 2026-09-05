@@ -195,7 +195,7 @@ internal sealed class EmulatorMcpTools {
                         "execution_control_pause_resume_step_step_over",
                         "function_listing_and_cfg_graph",
                         "video_and_screenshot",
-                        "sound_devices_sb_opl_midi_speaker",
+                        "sound_devices_sb_opl_midi_speaker_gus",
                         "dos_and_bios",
                         "ems_and_xms"
                     ],
