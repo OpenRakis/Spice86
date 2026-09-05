@@ -297,7 +297,7 @@ Also, while in Seer, set Settings/Configuration/Assembly/Disassembly Mode to
 | SoundBlaster | ✅ Full | Ported from DOSBox Staging |
 | Adlib Gold | ✅ Full | Ported from DOSBox Staging |
 | MT-32 | ⚠️ Partial | Not available on macOS |
-| Gravis Ultrasound | ⚠️ Experimental | Classic GF1 PCM voices, DRAM, DMA, timers, IRQs, filtering, and AdLib command mirroring; no onboard MIDI UART, recording input, or InterWave extensions |
+| Gravis Ultrasound | ✅ Full | Ported from DOSBox Staging |
 | General MIDI | ✅ Full | Supported |
 
 Gravis UltraSound emulation is enabled by default. The default card is configured as
