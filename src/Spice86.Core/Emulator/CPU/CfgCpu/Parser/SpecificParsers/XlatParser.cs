@@ -19,7 +19,7 @@ public class XlatParser : BaseInstructionParser {
         CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         int segRegIndex = GetSegmentRegisterOverrideOrDs(context);
         int defaultSegRegIndex = (int)SegmentRegisterIndex.DsIndex;
-        DataType addrType = _astBuilder.AddressType(instr);
+        DataType addrType = _astBuilder.AddressType(context.AddressWidthFromPrefixes);
         ValueNode bxNode = _astBuilder.Register.Reg(addrType, RegisterIndex.BxIndex);
         ValueNode alNode = _astBuilder.Register.Accumulator(DataType.UINT8);
         BinaryOperationNode displayOffset = new BinaryOperationNode(addrType, bxNode, BinaryOperation.PLUS, alNode);

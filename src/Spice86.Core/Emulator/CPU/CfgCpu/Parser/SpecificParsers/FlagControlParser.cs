@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Shared.Emulator.Memory;
 
@@ -29,7 +30,10 @@ public class FlagControlParser : BaseInstructionParser {
         CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         BinaryOperationNode flagAssignment = _astBuilder.Assign(DataType.BOOL, flagNode, _astBuilder.Constant.ToNode(DataType.BOOL, value));
         InstructionNode displayAst = new InstructionNode(displayOp);
-        IVisitableAstNode execAst = _astBuilder.WithIpAdvancement(instr, flagAssignment);
+        // CLI requires IOPL clearance, like STI; the other flag-control ops (CLC/STC/CLD/STD) don't.
+        IVisitableAstNode execAst = displayOp == InstructionOperation.CLI
+            ? _astBuilder.WithIpAdvancement(instr, new MethodCallNode(null, nameof(InstructionExecutionHelper.EnsureIoPrivilege)), flagAssignment)
+            : _astBuilder.WithIpAdvancement(instr, flagAssignment);
         instr.AttachAsts(displayAst, execAst);
         // CLI (opcode 0xFA) must start a new CfgBlock so external interrupt delivery
         // happens at the boundary just before interrupts are disabled.
@@ -42,10 +46,11 @@ public class FlagControlParser : BaseInstructionParser {
     public CfgInstruction ParseSti(ParsingContext context) {
         CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         CpuFlagNode flagNode = _astBuilder.Flag.Interrupt();
+        MethodCallNode ensureIoPrivilege = new MethodCallNode(null, nameof(InstructionExecutionHelper.EnsureIoPrivilege));
         BinaryOperationNode flagAssignment = _astBuilder.Assign(DataType.BOOL, flagNode, _astBuilder.Constant.ToNode(DataType.BOOL, 1UL));
         IVisitableAstNode setInterruptShadowing = _astBuilder.Flag.SetInterruptShadowingIfInterruptDisabled();
         InstructionNode displayAst = new InstructionNode(InstructionOperation.STI);
-        IVisitableAstNode execAst = _astBuilder.WithIpAdvancement(instr, setInterruptShadowing, flagAssignment);
+        IVisitableAstNode execAst = _astBuilder.WithIpAdvancement(instr, ensureIoPrivilege, setInterruptShadowing, flagAssignment);
         instr.AttachAsts(displayAst, execAst);
         // STI must terminate its CfgBlock so external interrupt delivery happens at the
         // boundary just after interrupts are enabled (after the one-instruction shadow).

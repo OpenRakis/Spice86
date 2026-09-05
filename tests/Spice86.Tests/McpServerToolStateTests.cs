@@ -966,10 +966,14 @@ public class McpServerToolStateTests {
             return 0;
         }
 
-        xmsManager.XmsRam.Write(block.Value.Offset + 0, 0xDE);
-        xmsManager.XmsRam.Write(block.Value.Offset + 1, 0xAD);
-        xmsManager.XmsRam.Write(block.Value.Offset + 2, 0xBE);
-        xmsManager.XmsRam.Write(block.Value.Offset + 3, 0xEF);
+        uint blockAddress = ExtendedMemoryManager.XmsBaseAddress + block.Value.Offset;
+        // XMS block addresses are above 1MB (bit 20 set) - A20 must be enabled to reach them
+        // through the shared, A20-gated memory bus.
+        context.Services.Memory.A20Gate.IsEnabled = true;
+        context.Services.Memory.UInt8[blockAddress + 0] = 0xDE;
+        context.Services.Memory.UInt8[blockAddress + 1] = 0xAD;
+        context.Services.Memory.UInt8[blockAddress + 2] = 0xBE;
+        context.Services.Memory.UInt8[blockAddress + 3] = 0xEF;
         return handle;
     }
 
@@ -1410,8 +1414,12 @@ public class McpServerToolStateTests {
 
     [Fact]
     public async Task ReadDisassembly_ShouldTruncateNearMemoryBoundaryAsync() {
-        // Arrange
-        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        // Arrange - a RAM size matching the old conventional+HMA-only ceiling, so the fixed
+        // 16-bit segment:offset boundary below (the tool's own address-space limit) sits right at
+        // the edge of memory again, reproducing the truncation scenario deterministically.
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(
+            TestProgramName, enableXms: false, enableEms: false, initializeDos: false,
+            sbType: SbType.None, oplMode: OplMode.None, ramSizeKb: 1087);
         await context.InitializeAsync();
 
         // Act — disassemble at the very end of addressable memory (FFFF:FFFF physical = 0x10FFEF)

@@ -79,17 +79,17 @@ public sealed class Memory : Indexable.Indexable, IMemory {
     }
 
     /// <inheritdoc />
-    public void WriteUInt16Segmented(ushort segment, ushort offset, ushort value) {
-        this[Mmu.TranslateAddress(segment, offset)] = (byte)value;
-        this[Mmu.TranslateAddress(segment, (uint)offset + 1u)] = (byte)(value >> 8);
+    public void WriteUInt16Segmented(ushort segment, uint offset, ushort value) {
+        this[Mmu.TranslateAddress(segment, offset, isWrite: true)] = (byte)value;
+        this[Mmu.TranslateAddress(segment, offset + 1u, isWrite: true)] = (byte)(value >> 8);
     }
 
     /// <inheritdoc />
-    public void WriteUInt32Segmented(ushort segment, ushort offset, uint value) {
-        this[Mmu.TranslateAddress(segment, offset)] = (byte)value;
-        this[Mmu.TranslateAddress(segment, (uint)offset + 1u)] = (byte)(value >> 8);
-        this[Mmu.TranslateAddress(segment, (uint)offset + 2u)] = (byte)(value >> 16);
-        this[Mmu.TranslateAddress(segment, (uint)offset + 3u)] = (byte)(value >> 24);
+    public void WriteUInt32Segmented(ushort segment, uint offset, uint value) {
+        this[Mmu.TranslateAddress(segment, offset, isWrite: true)] = (byte)value;
+        this[Mmu.TranslateAddress(segment, offset + 1u, isWrite: true)] = (byte)(value >> 8);
+        this[Mmu.TranslateAddress(segment, offset + 2u, isWrite: true)] = (byte)(value >> 16);
+        this[Mmu.TranslateAddress(segment, offset + 3u, isWrite: true)] = (byte)(value >> 24);
     }
 
     /// <inheritdoc/>

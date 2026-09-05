@@ -12,6 +12,7 @@ using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
@@ -489,7 +490,7 @@ public sealed class GeneratedCodeMachineTest {
     public void Test386ButNotProtectedModeGeneratedOverrideCompilesAndReachesPostFinished() {
         Test386PostPortHandler? handler = null;
         GeneratedCodeRunOptions options = new() {
-            MaxCycles = long.MaxValue,
+            MaxCycles = Spice86Creator.LongRunningMaxCycles,
             FailOnUnhandledPort = true,
             ConfigureMachine = machine => {
                 handler = new Test386PostPortHandler(machine.CpuState, Substitute.For<ILogger>(), machine.IoPortDispatcher);
@@ -501,6 +502,158 @@ public sealed class GeneratedCodeMachineTest {
             postHandler.PostValues.Count.Should().Be(8);
             // FF means test finished normally.
             postHandler.PostValues[^1].Should().Be(0xFF);
+        });
+    }
+
+    [Fact]
+    public void ProtectedModeInstructionsGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        GeneratedCodeRunOptions options = new() {
+            MaxCycles = 1000,
+            CpuModel = CpuModel.INTEL_80386,
+            EnableSpeculativeCfgExploration = false
+        };
+
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode("protectedmode_instructions", [], options, machine => {
+            IMemory memory = machine.Memory;
+            memory.UInt16[0, 0x0700].Should().Be(0x18);
+            memory.UInt16[0, 0x0702].Should().Be(0x18);
+            memory.UInt8[0, 0x0704].Should().Be(1);
+            memory.UInt8[0, 0x0705].Should().Be(0);
+            memory.UInt8[0, 0x0706].Should().Be(1);
+            memory.UInt8[0, 0x0707].Should().Be(0);
+            memory.UInt16[0, 0x0708].Should().Be(0x9200);
+            memory.UInt16[0, 0x070A].Should().Be(0xFFFF);
+            memory.UInt16[0, 0x070C].Should().Be(0x000B);
+            memory.UInt8[0, 0x070E].Should().Be(1);
+            memory.UInt16[0, 0x0710].Should().Be(0x0001);
+            memory.UInt16[0, 0x0712].Should().Be(0x0009);
+            memory.UInt16[0, 0x0714].Should().Be(0x0001);
+        });
+    }
+
+    [Fact]
+    public void ProtectedModePrivilegeHappyPathGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        GeneratedCodeRunOptions options = new() {
+            MaxCycles = 1000,
+            CpuModel = CpuModel.INTEL_80386,
+            EnableSpeculativeCfgExploration = false
+        };
+
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode("protectedmode_privilege", [], options, machine => {
+            machine.CpuState.ControlRegisters.ProtectionEnable.Should().BeFalse();
+            machine.CpuState.CS.Should().Be(0xF000);
+            machine.CpuState.InterruptFlag.Should().BeTrue();
+        });
+    }
+
+    [Fact]
+    public void ProtectedModeIdtDispatchGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        GeneratedCodeRunOptions options = new() {
+            MaxCycles = 1000,
+            CpuModel = CpuModel.INTEL_80386,
+            EnableSpeculativeCfgExploration = false
+        };
+
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode("protectedmode_idt", [], options, machine => {
+            machine.CpuState.ControlRegisters.ProtectionEnable.Should().BeFalse();
+            machine.CpuState.CS.Should().Be(0xF000);
+            machine.Memory.ReadRam(3)[2].Should().Be(0x99);
+            machine.Memory.ReadRam(4)[3].Should().Be(0x77);
+        });
+    }
+
+    [Fact]
+    public void ProtectedModeFarTransferPrivilegeViolationGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        GeneratedCodeRunOptions options = new() {
+            MaxCycles = 1000,
+            CpuModel = CpuModel.INTEL_80386,
+            EnableSpeculativeCfgExploration = false
+        };
+
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode("protectedmode_far_privilege", [], options, machine => {
+            machine.Memory.ReadRam(5)[4].Should().Be(0xDD);
+        });
+    }
+
+    [Fact]
+    public void ProtectedModeCallGateGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        GeneratedCodeRunOptions options = new() {
+            MaxCycles = 1000,
+            CpuModel = CpuModel.INTEL_80386,
+            EnableSpeculativeCfgExploration = false
+        };
+
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode("protectedmode_callgate", [], options, machine => {
+            machine.CpuState.ControlRegisters.ProtectionEnable.Should().BeFalse();
+            machine.CpuState.CS.Should().Be(0xF000);
+            machine.Memory.ReadRam(7)[6].Should().Be(0xAB);
+            machine.Memory.ReadRam(8)[7].Should().Be(0xCD);
+            machine.Memory.ReadRam(9)[8].Should().Be(0xEF);
+        });
+    }
+
+    [Fact]
+    public void ProtectedModePagingGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        GeneratedCodeRunOptions options = new() {
+            MaxCycles = 1000,
+            CpuModel = CpuModel.INTEL_80386,
+            EnableSpeculativeCfgExploration = false
+        };
+
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode("protectedmode_paging", [], options, machine => {
+            machine.CpuState.ControlRegisters.PagingEnable.Should().BeTrue();
+            machine.Memory.ReadRam(0xF0011)[0xF0010].Should().Be(0xAA);
+            machine.Memory.ReadRam(0xF0021)[0xF0020].Should().Be(0xCC);
+            machine.CpuState.ControlRegisters.Cr2.Should().Be(0xF1000u);
+        });
+    }
+
+    [Fact]
+    public void ProtectedModeTaskSwitchGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        GeneratedCodeRunOptions options = new() {
+            MaxCycles = 1000,
+            CpuModel = CpuModel.INTEL_80386,
+            EnableSpeculativeCfgExploration = false
+        };
+
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode("protectedmode_taskswitch", [], options, machine => {
+            machine.Memory.ReadRam(0xF0031)[0xF0030].Should().Be(0x11);
+            machine.Memory.ReadRam(0xF0032)[0xF0031].Should().Be(0x22);
+            machine.Memory.ReadRam(0xF0033)[0xF0032].Should().Be(0x33);
+            machine.CpuState.EAX.Should().Be(0x11111111u);
+            machine.CpuState.Tr.Selector.Should().Be(0x18);
+        });
+    }
+
+    [Fact]
+    public void ProtectedModeV86GeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        GeneratedCodeRunOptions options = new() {
+            MaxCycles = 1000,
+            CpuModel = CpuModel.INTEL_80386,
+            EnableSpeculativeCfgExploration = false
+        };
+
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode("protectedmode_v86", [], options, machine => {
+            machine.Memory.ReadRam(0xF0031)[0xF0030].Should().Be(0x11);
+            machine.Memory.ReadRam(0xF0035)[0xF0034].Should().Be(0x44);
+            machine.Memory.ReadRam(0xF0037)[0xF0036].Should().Be(0x55);
+        });
+    }
+
+    [Fact]
+    public void ProtectedModeTaskGateGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        GeneratedCodeRunOptions options = new() {
+            MaxCycles = 1000,
+            CpuModel = CpuModel.INTEL_80386,
+            EnableSpeculativeCfgExploration = false
+        };
+
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode("protectedmode_taskgate", [], options, machine => {
+            machine.Memory.ReadRam(0xF0031)[0xF0030].Should().Be(0x11);
+            machine.Memory.ReadRam(0xF0032)[0xF0031].Should().Be(0x22);
+            machine.Memory.ReadRam(0xF0033)[0xF0032].Should().Be(0x33);
+            machine.CpuState.EAX.Should().Be(0x11111111u);
+            machine.CpuState.Tr.Selector.Should().Be(0x18);
         });
     }
 }

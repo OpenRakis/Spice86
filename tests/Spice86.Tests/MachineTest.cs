@@ -978,7 +978,7 @@ public class MachineTest {
         string binName = "test386";
         using Spice86Creator creator = new Spice86Creator(
             binName: binName,
-            enablePit: false, maxCycles: long.MaxValue,
+            enablePit: false, maxCycles: Spice86Creator.LongRunningMaxCycles,
             failOnUnhandledPort: true, jitMode: jitMode);
         using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
         Machine machine = spice86DependencyInjection.Machine;
@@ -1001,9 +1001,270 @@ public class MachineTest {
         CompareCfgBlocksJsonWithExpected(binName, machine);
     }
 
+    [Fact]
+    public void TestProtectedModeEntry() {
+        //Arrange
+        using Spice86Creator creator = new Spice86Creator(
+            binName: "protectedmode_entry", cpuModel: CpuModel.INTEL_80386, maxCycles: 1000,
+            enableSpeculativeCfgExploration: false);
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
+        Machine machine = spice86DependencyInjection.Machine;
+
+        //Act
+        spice86DependencyInjection.ProgramExecutor.Run();
+
+        //Assert
+        State state = machine.CpuState;
+        // The marker byte was written to physical address 0 through a protected-mode flat data selector.
+        Assert.Equal(0x42, machine.Memory.ReadRam(1)[0]);
+        // Execution returned to real mode and reloaded CS as a real-mode segment before halting.
+        Assert.False(state.ControlRegisters.ProtectionEnable);
+        Assert.Equal(0xF000, state.CS);
+    }
+
+    [Fact]
+    public void TestUnifiedExtendedMemoryPoolIsAddressable() {
+        //Arrange
+        using Spice86Creator creator = new Spice86Creator(
+            binName: "protectedmode_unified_pool", cpuModel: CpuModel.INTEL_80386, maxCycles: 1000,
+            enableSpeculativeCfgExploration: false, enableA20Gate: true);
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
+        Machine machine = spice86DependencyInjection.Machine;
+
+        //Act
+        spice86DependencyInjection.ProgramExecutor.Run();
+
+        //Assert
+        State state = machine.CpuState;
+        // The marker byte was written to physical address 0x500000, inside the unified pool.
+        Assert.Equal(0x42, machine.Memory.ReadRam(0x500001)[0x500000]);
+        Assert.False(state.ControlRegisters.ProtectionEnable);
+        Assert.Equal(0xF000, state.CS);
+    }
+
+    [Fact]
+    public void TestProtectedModeInstructions() {
+        //Arrange
+        using Spice86Creator creator = new Spice86Creator(
+            binName: "protectedmode_instructions", cpuModel: CpuModel.INTEL_80386, maxCycles: 1000,
+            enableSpeculativeCfgExploration: false);
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
+        Machine machine = spice86DependencyInjection.Machine;
+
+        //Act
+        spice86DependencyInjection.ProgramExecutor.Run();
+
+        //Assert
+        State state = machine.CpuState;
+        IMemory memory = machine.Memory;
+        Assert.False(state.ControlRegisters.ProtectionEnable);
+        Assert.Equal(0xF000, state.CS);
+
+        Assert.Equal(0x18, memory.UInt16[0, 0x0700]); // SLDT: LDTR selector loaded via LLDT
+        Assert.Equal(0x18, memory.UInt16[0, 0x0702]); // STR: TR selector loaded via LTR
+        Assert.Equal(1, memory.UInt8[0, 0x0704]); // VERR(0x10): flat data segment is readable
+        Assert.Equal(0, memory.UInt8[0, 0x0705]); // VERR(0x28): non-readable code segment
+        Assert.Equal(1, memory.UInt8[0, 0x0706]); // VERW(0x10): flat data segment is writable
+        Assert.Equal(0, memory.UInt8[0, 0x0707]); // VERW(0x20): read-only data segment
+        Assert.Equal(0x9200, memory.UInt16[0, 0x0708]); // LAR(0x10): packed access-rights byte 0x92
+        Assert.Equal(0xFFFF, memory.UInt16[0, 0x070A]); // LSL(0x10): byte-granular 0xFFFF limit
+        Assert.Equal(0x000B, memory.UInt16[0, 0x070C]); // ARPL: RPL raised from 0 to 3
+        Assert.Equal(1, memory.UInt8[0, 0x070E]); // ARPL: ZF set because the RPL was adjusted
+        Assert.Equal(0x0001, memory.UInt16[0, 0x0710]); // SMSW right after entering protected mode: PE=1, TS=0
+        Assert.Equal(0x0009, memory.UInt16[0, 0x0712]); // SMSW after LMSW: PE=1, TS=1
+        Assert.Equal(0x0001, memory.UInt16[0, 0x0714]); // SMSW after CLTS: TS cleared back to 0
+    }
+
+    [Fact]
+    public void TestProtectedModePrivilegeHappyPath() {
+        //Arrange
+        using Spice86Creator creator = new Spice86Creator(
+            binName: "protectedmode_privilege", cpuModel: CpuModel.INTEL_80386, maxCycles: 1000,
+            enableSpeculativeCfgExploration: false);
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
+        Machine machine = spice86DependencyInjection.Machine;
+
+        //Act
+        spice86DependencyInjection.ProgramExecutor.Run();
+
+        //Assert
+        State state = machine.CpuState;
+        Assert.False(state.ControlRegisters.ProtectionEnable);
+        Assert.Equal(0xF000, state.CS);
+        Assert.True(state.InterruptFlag); // STI ran after CLI, so IF ends up set
+    }
+
+    [Fact]
+    public void TestProtectedModeIdtDispatch() {
+        //Arrange
+        using Spice86Creator creator = new Spice86Creator(
+            binName: "protectedmode_idt", cpuModel: CpuModel.INTEL_80386, maxCycles: 1000,
+            enableSpeculativeCfgExploration: false);
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
+        Machine machine = spice86DependencyInjection.Machine;
+
+        //Act
+        spice86DependencyInjection.ProgramExecutor.Run();
+
+        //Assert
+        State state = machine.CpuState;
+        Assert.False(state.ControlRegisters.ProtectionEnable);
+        Assert.Equal(0xF000, state.CS);
+        Assert.Equal(0x99, machine.Memory.ReadRam(3)[2]); // the IDT-dispatched handler ran
+        Assert.Equal(0x77, machine.Memory.ReadRam(4)[3]); // IRET resumed at the correct return address
+    }
+
+    [Fact]
+    public void TestProtectedModeFarTransferPrivilegeViolation() {
+        //Arrange
+        using Spice86Creator creator = new Spice86Creator(
+            binName: "protectedmode_far_privilege", cpuModel: CpuModel.INTEL_80386, maxCycles: 1000,
+            enableSpeculativeCfgExploration: false);
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
+        Machine machine = spice86DependencyInjection.Machine;
+
+        //Act
+        spice86DependencyInjection.ProgramExecutor.Run();
+
+        //Assert
+        Assert.Equal(0xDD, machine.Memory.ReadRam(5)[4]); // the #GP handler ran instead of the faulting jump succeeding
+    }
+
+    [Fact]
+    public void TestProtectedModeCallGate() {
+        //Arrange
+        using Spice86Creator creator = new Spice86Creator(
+            binName: "protectedmode_callgate", cpuModel: CpuModel.INTEL_80386, maxCycles: 1000,
+            enableSpeculativeCfgExploration: false);
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
+        Machine machine = spice86DependencyInjection.Machine;
+
+        //Act
+        spice86DependencyInjection.ProgramExecutor.Run();
+
+        //Assert
+        State state = machine.CpuState;
+        Assert.False(state.ControlRegisters.ProtectionEnable);
+        Assert.Equal(0xF000, state.CS);
+        Assert.Equal(0xAB, machine.Memory.ReadRam(7)[6]); // reached ring 3 via the bootstrap RETF
+        Assert.Equal(0xCD, machine.Memory.ReadRam(8)[7]); // reached ring 0 via the call gate
+        Assert.Equal(0xEF, machine.Memory.ReadRam(9)[8]); // resumed at the correct ring-3 address after the call
+    }
+
+    [Fact]
+    public void TestProtectedModePaging() {
+        //Arrange
+        using Spice86Creator creator = new Spice86Creator(
+            binName: "protectedmode_paging", cpuModel: CpuModel.INTEL_80386, maxCycles: 1000,
+            enableSpeculativeCfgExploration: false);
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
+        Machine machine = spice86DependencyInjection.Machine;
+
+        //Act
+        spice86DependencyInjection.ProgramExecutor.Run();
+
+        //Assert
+        State state = machine.CpuState;
+        Assert.True(state.ControlRegisters.PagingEnable);
+        Assert.Equal(0xAA, machine.Memory.ReadRam(0xF0011)[0xF0010]); // normal access through the identity mapping
+        Assert.Equal(0xCC, machine.Memory.ReadRam(0xF0021)[0xF0020]); // the #PF handler ran
+        Assert.Equal(0xF1000u, state.ControlRegisters.Cr2); // CR2 holds the faulting linear address
+    }
+
+    [Fact]
+    public void TestProtectedModeTaskSwitch() {
+        //Arrange
+        using Spice86Creator creator = new Spice86Creator(
+            binName: "protectedmode_taskswitch", cpuModel: CpuModel.INTEL_80386, maxCycles: 1000,
+            enableSpeculativeCfgExploration: false);
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
+        Machine machine = spice86DependencyInjection.Machine;
+
+        //Act
+        spice86DependencyInjection.ProgramExecutor.Run();
+
+        //Assert
+        State state = machine.CpuState;
+        Assert.Equal(0x11, machine.Memory.ReadRam(0xF0031)[0xF0030]); // task A ran before the switch
+        Assert.Equal(0x22, machine.Memory.ReadRam(0xF0032)[0xF0031]); // task B ran after the switch
+        Assert.Equal(0x33, machine.Memory.ReadRam(0xF0033)[0xF0032]); // task A resumed after IRET switched back
+        Assert.Equal(0x11111111u, state.EAX); // EAX survived the round trip through TSS A's save/restore
+        Assert.Equal(0x18, state.Tr.Selector); // TR is back on task A after the switch-back
+        byte tssATypeByte = machine.Memory.ReadRam(0x61E)[0x61D];
+        byte tssBTypeByte = machine.Memory.ReadRam(0x626)[0x625];
+        Assert.Equal(0x89, tssATypeByte); // task A's own busy bit is never touched (CALL-triggered switches don't clear it)
+        Assert.Equal(0x89, tssBTypeByte); // task B's descriptor is available again (its busy bit was cleared on return)
+    }
+
+    [Fact]
+    public void TestProtectedModeV86() {
+        //Arrange
+        using Spice86Creator creator = new Spice86Creator(
+            binName: "protectedmode_v86", cpuModel: CpuModel.INTEL_80386, maxCycles: 1000,
+            enableSpeculativeCfgExploration: false);
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
+        Machine machine = spice86DependencyInjection.Machine;
+
+        //Act
+        spice86DependencyInjection.ProgramExecutor.Run();
+
+        //Assert
+        Assert.Equal(0x11, machine.Memory.ReadRam(0xF0031)[0xF0030]); // task A ran before the task switch
+        Assert.Equal(0x44, machine.Memory.ReadRam(0xF0035)[0xF0034]); // V86 code ran before faulting
+        Assert.Equal(0x55, machine.Memory.ReadRam(0xF0037)[0xF0036]); // the reflected #GP reached the ring-0 IDT handler
+    }
+
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void Test386ProtectedMode(JitMode jitMode) {
+        string binName = "test386_pmode";
+        using Spice86Creator creator = new Spice86Creator(
+            binName: binName, cpuModel: CpuModel.INTEL_80386,
+            enablePit: false, maxCycles: Spice86Creator.LongRunningMaxCycles,
+            failOnUnhandledPort: true, jitMode: jitMode,
+            enableSpeculativeCfgExploration: false);
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
+        Machine machine = spice86DependencyInjection.Machine;
+        using LoggerService loggerService = new();
+        Test386ButNotProtectedModeHandler debugPortsHandler = new(machine.CpuState, loggerService, machine.IoPortDispatcher);
+
+        spice86DependencyInjection.ProgramExecutor.Run();
+
+        List<ushort> expectedPostCheckpoints = [
+            0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+            20, 21, 22, 23, 24, 25, 26, 27, 28, 224, 238, 255
+        ];
+        Assert.Equal(expectedPostCheckpoints, debugPortsHandler.PostValues);
+    }
+
+    [Fact]
+    public void TestProtectedModeTaskGate() {
+        //Arrange
+        using Spice86Creator creator = new Spice86Creator(
+            binName: "protectedmode_taskgate", cpuModel: CpuModel.INTEL_80386, maxCycles: 1000,
+            enableSpeculativeCfgExploration: false);
+        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
+        Machine machine = spice86DependencyInjection.Machine;
+
+        //Act
+        spice86DependencyInjection.ProgramExecutor.Run();
+
+        //Assert
+        State state = machine.CpuState;
+        Assert.Equal(0x11, machine.Memory.ReadRam(0xF0031)[0xF0030]); // task A ran before INT 0x40
+        Assert.Equal(0x22, machine.Memory.ReadRam(0xF0032)[0xF0031]); // task B ran after the task-gate switch
+        Assert.Equal(0x33, machine.Memory.ReadRam(0xF0033)[0xF0032]); // task A resumed after IRET switched back
+        Assert.Equal(0x11111111u, state.EAX); // EAX survived the round trip through TSS A's save/restore
+        Assert.Equal(0x18, state.Tr.Selector); // TR is back on task A after the switch-back
+    }
+
     private class Test386ButNotProtectedModeHandler : DefaultIOPortHandler {
         private const int PostPort = 0x999;
         private const int AsciiOutPort = 0x998;
+        // test386.asm's printChar routine does `out OUT_PORT, al` with the 8-bit-immediate OUT opcode,
+        // which NASM truncates OUT_PORT (0x998) down to its low byte (0x98) - the truncated port must
+        // be wired to the same ASCII buffer or protected-mode-only debug output crashes as unhandled.
+        private const int TruncatedAsciiOutPort = 0x98;
 
         public List<ushort> PostValues { get; } = new();
         public string AsciiError { get; private set; } = "";
@@ -1012,16 +1273,16 @@ public class MachineTest {
             IOPortDispatcher ioPortDispatcher) : base(state, true, loggerService) {
             ioPortDispatcher.AddIOPortHandler(PostPort, this);
             ioPortDispatcher.AddIOPortHandler(AsciiOutPort, this);
+            ioPortDispatcher.AddIOPortHandler(TruncatedAsciiOutPort, this);
         }
 
         public override void WriteByte(ushort port, byte value) {
-            if (port == AsciiOutPort) {
+            if (port == AsciiOutPort || port == TruncatedAsciiOutPort) {
                 AsciiError += Encoding.ASCII.GetString(new byte[] { value });
             } else if (port == PostPort) {
                 if (PostValues.Contains(value)) {
                     throw new UnhandledOperationException(_state, $"POST value {value} already sent. Is test looping?");
                 }
-
                 PostValues.Add(value);
             }
         }

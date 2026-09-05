@@ -32,7 +32,7 @@ internal sealed class GeneratedCodeMachineTestRunner {
         using Spice86Creator creator = new(binName: binName, maxCycles: options.MaxCycles, enablePit: options.EnablePit,
             installInterruptVectors: options.InstallInterruptVectors, failOnUnhandledPort: options.FailOnUnhandledPort,
             enableA20Gate: options.EnableA20Gate, jitMode: JitMode.InterpretedOnly, overrideSupplier: compiledOverride.Supplier,
-            enableSpeculativeCfgExploration: options.EnableSpeculativeCfgExploration);
+            enableSpeculativeCfgExploration: options.EnableSpeculativeCfgExploration, cpuModel: options.CpuModel);
         using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
         options.ConfigureMachine?.Invoke(spice86DependencyInjection.Machine);
         spice86DependencyInjection.FunctionCatalogue.FunctionInformations.Values
@@ -81,7 +81,7 @@ internal sealed class GeneratedCodeMachineTestRunner {
         using Spice86Creator creator = new(binName: binName, maxCycles: options.MaxCycles, enablePit: options.EnablePit,
             installInterruptVectors: options.InstallInterruptVectors, failOnUnhandledPort: options.FailOnUnhandledPort,
             enableA20Gate: options.EnableA20Gate, jitMode: JitMode.InterpretedOnly,
-            enableSpeculativeCfgExploration: options.EnableSpeculativeCfgExploration);
+            enableSpeculativeCfgExploration: options.EnableSpeculativeCfgExploration, cpuModel: options.CpuModel);
         using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
         options.ConfigureMachine?.Invoke(spice86DependencyInjection.Machine);
         spice86DependencyInjection.ProgramExecutor.Run();
