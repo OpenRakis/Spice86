@@ -317,8 +317,10 @@ public class DosMemoryManagerTests {
         block.AllocationSizeInBytes.Should().Be(260800);
     }
 
+
     /// <summary>
-    /// Ensures that the memory manager cannot extend the size of a free block.
+    /// Ensures that the memory manager cannot extend the size of a free block past what's
+    /// actually available.
     /// </summary>
     /// <remarks>
     /// A free memory block is always going to consume as much contiguous free space as is
@@ -327,7 +329,11 @@ public class DosMemoryManagerTests {
     /// conjoining free blocks of memory. Therefore even though a free memory block can effectively
     /// be allocated by trying to reduce its size, it can never be allocated by trying to increase
     /// it because there will never be enough free space to do that. This test case verifies that it
-    /// always fails so that we don't end up allocating any overlapping memory.
+    /// always fails so that we don't end up allocating any overlapping memory.<br/><br/>
+    /// Matches dosbox-staging's <c>DOS_ResizeMemory</c> (dos_memory.cpp): it unconditionally sets
+    /// the block's owner to the calling PSP before checking whether the requested size was
+    /// actually satisfied, so a failed grow attempt on a previously free block still takes
+    /// ownership of it (grown to the maximum available size) even though the call reports failure.
     /// </remarks>
     [Fact]
     public void ExtendSizeOfFreeBlock() {
@@ -338,13 +344,14 @@ public class DosMemoryManagerTests {
         // Assert
         errorCode.Should().Be(DosErrorCode.InsufficientMemory);
         block.IsValid.Should().BeTrue();
-        block.IsFree.Should().BeTrue();
+        block.IsFree.Should().BeFalse();
         block.IsLast.Should().BeTrue();
-        block.PspSegment.Should().Be(DosMemoryControlBlock.FreeMcbMarker);
+        block.PspSegment.Should().Be(_initialPspSegment);
         block.DataBlockSegment.Should().Be(0xFF0);
         block.Size.Should().Be(36880);
         block.AllocationSizeInBytes.Should().Be(590080);
     }
+
 
     /// <summary>
     /// Ensures that the memory manager can extend the size of a free block to allocate the full
