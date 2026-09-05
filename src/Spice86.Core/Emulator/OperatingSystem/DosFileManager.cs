@@ -439,7 +439,8 @@ public class DosFileManager {
         dta.FileDate = ToDosDate(entry.CreationTimeUtc.ToLocalTime());
         dta.FileTime = ToDosTime(entry.CreationTimeUtc.ToLocalTime());
         dta.FileSize = entry.Size;
-        dta.FileName = entry.Name;
+        string parentDir = !string.IsNullOrWhiteSpace(entry.HostPath) ? Path.GetDirectoryName(entry.HostPath) ?? string.Empty : string.Empty;
+        dta.FileName = DosDriveManager.GetShortFileName(entry.Name, parentDir);
     }
 
     private static void UpdateDosTransferAreaWithFcbContentMatch(DosDiskTransferArea dta,

@@ -291,6 +291,51 @@ public class DosInt21IntegrationTests {
             "DSR response should be ESC[5;10R\\r for cursor at row 4, col 9");
     }
 
+    [Fact]
+    public void FindFirst_WildcardMatching_MatchesDosRules() {
+        TestIoPortHandler testHandler = RunDosResource("find_first_wildcard.com", fileSystemSetup: testRoot => {
+            string[] files = [
+                "README.TXT", "READ.TXT", "RE.TXT", "README",
+                "FILE.EXE", "FILE.E", "FILE", "FILE.BIN", "FILE.T", "FILE.TXT",
+                "A.TXT", "AB.TXT", "ABC.TXT", "AB", "A", "A.T",
+                "ABCDE.TXT", "ABCDEF.TXT",
+                "FOO", "FOO.TXT", "FOOBAR.BAZ",
+                "MYPROG.COM", "MYPROG.XOM", "MYTEST.TXT",
+                "HIGHSCOR.DAT"
+            ];
+            foreach (string file in files) {
+                File.WriteAllText(Path.Join(testRoot, file), "test");
+            }
+        });
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    [Fact]
+    public void FindFirst_ShortFileNameGeneration_MatchesDosRules() {
+        TestIoPortHandler testHandler = RunDosResource("find_first_short_filename.com", fileSystemSetup: testRoot => {
+            string[] files = [
+                "README.TXT",
+                "VeryLongFileName.txt",
+                "LongDocument_Alpha.doc",
+                "LongDocument_Beta.doc",
+                "LongDocument_Gamma.doc",
+                "readme.text",
+                "My File.txt",
+                "VeryLongFilenameNoExt",
+                "ABCDEFGH.TXT",
+                "XYZDEFGHI.TXT"
+            ];
+            foreach (string file in files) {
+                File.WriteAllText(Path.Join(testRoot, file), "test");
+            }
+        });
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success, $"Details: {(testHandler.Details.Count > 0 ? testHandler.Details[0] : -1)}");
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
     private static void AssertResourcePasses(string resourceName) {
         TestIoPortHandler testHandler = RunDosResource(resourceName);
 
