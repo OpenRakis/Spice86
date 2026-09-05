@@ -100,6 +100,11 @@ public sealed class EmulatorMcpServices(
     public Midi? Midi { get; set; }
 
     /// <summary>
+    /// Gets or sets the Gravis UltraSound device used by MCP GUS tools.
+    /// </summary>
+    public GravisUltraSound? GravisUltraSound { get; set; }
+
+    /// <summary>
     /// Gets or sets the high-level VGA functionality used by video MCP tools.
     /// </summary>
     public IVgaFunctionality? VgaFunctionality { get; set; }

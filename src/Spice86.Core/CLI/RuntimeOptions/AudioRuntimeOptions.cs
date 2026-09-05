@@ -16,6 +16,12 @@ using Spice86.Core.Emulator.Devices.Sound.Blaster;
 /// <param name="SbDma">8-bit DMA channel used by the emulated Sound Blaster card.</param>
 /// <param name="SbHdma">16-bit DMA channel used by the emulated Sound Blaster card.</param>
 /// <param name="SbType">Sound Blaster model to emulate.</param>
+/// <param name="GusBase">Gravis UltraSound I/O base address.</param>
+/// <param name="GusIrq">Gravis UltraSound IRQ number.</param>
+/// <param name="GusDma">Gravis UltraSound DMA channel.</param>
+/// <param name="GusEnable">Whether Gravis UltraSound emulation is enabled.</param>
+/// <param name="GusUltradir">Path exported to DOS as the ULTRADIR environment variable.</param>
+/// <param name="GusFilter">Whether the Gravis UltraSound output low-pass filter is enabled.</param>
 public sealed record class AudioRuntimeOptions(
     AudioEngine AudioEngine,
     string? Mt32RomsPath,
@@ -25,7 +31,13 @@ public sealed record class AudioRuntimeOptions(
     byte SbIrq,
     byte SbDma,
     byte SbHdma,
-    SbType SbType) {
+    SbType SbType,
+    ushort GusBase,
+    byte GusIrq,
+    byte GusDma,
+    bool GusEnable,
+    string GusUltradir,
+    bool GusFilter) {
     /// <summary>
     /// Sound Blaster base I/O address.
     /// </summary>
