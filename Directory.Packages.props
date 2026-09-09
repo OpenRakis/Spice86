@@ -65,7 +65,7 @@
         <PackageVersion Include="SingleStepTests.Intel80386.67.00-67.7F" Version="2025.11.5" />
         <PackageVersion Include="SingleStepTests.Intel80386.67.80-67.FF" Version="2025.11.5" />
         <PackageVersion Include="SingleStepTests.Intel80386.68-FF" Version="2025.11.5" />
-        <PackageVersion Include="Spice86.Audio" Version="11.4.0" />
+        <PackageVersion Include="Spice86.Audio" Version="13.0.0" />
         <PackageVersion Include="Spice86.DataGrid" Version="0.1.2" />
         <PackageVersion Include="SpeexResamplerSharp" Version="1.0.0" />
         <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.2.3" />
