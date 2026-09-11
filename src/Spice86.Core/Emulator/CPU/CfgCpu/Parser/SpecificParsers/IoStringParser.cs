@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Shared.Emulator.Memory;
@@ -22,8 +23,9 @@ public class IoStringParser : BaseInstructionParser {
         BitWidth bitWidth = GetBitWidth(context.OpcodeField, context.HasOperandSize32);
         DataType dataType = _astBuilder.UType(bitWidth);
         CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
-        DataType addressType = _astBuilder.AddressType(instr);
+        DataType addressType = _astBuilder.AddressType(context.AddressWidthFromPrefixes);
         ValueNode dx = _astBuilder.Register.Reg16(RegisterIndex.DxIndex);
+        MethodCallNode ensureIoPrivilege = new MethodCallNode(null, nameof(InstructionExecutor.InstructionExecutionHelper.EnsureIoPrivilege));
         BlockNode coreOperation;
         RepPrefix? repPrefix = _astBuilder.Rep(instr.RepPrefix, false);
         InstructionNode displayAst;
@@ -32,7 +34,7 @@ public class IoStringParser : BaseInstructionParser {
             ValueNode destPointer = _astBuilder.StringOperation.DestPointerDi(dataType, addressType);
             BinaryOperationNode storeOperation = _astBuilder.Assign(dataType, destPointer, ioRead);
             BinaryOperationNode advanceDi = _astBuilder.StringOperation.AdvanceDi(addressType, (int)bitWidth);
-            coreOperation = new BlockNode(storeOperation, advanceDi);
+            coreOperation = new BlockNode(ensureIoPrivilege, storeOperation, advanceDi);
             displayAst = new InstructionNode(repPrefix, InstructionOperation.INS,
                 _astBuilder.Pointer.ToSegmentedPointer(dataType, SegmentRegisterIndex.EsIndex,
                     _astBuilder.Register.Reg(addressType, RegisterIndex.DiIndex)));
@@ -42,7 +44,7 @@ public class IoStringParser : BaseInstructionParser {
                 segmentRegisterIndex, (int)SegmentRegisterIndex.DsIndex);
             MethodCallNode ioWrite = new MethodCallNode(null, $"Out{(int)bitWidth}", dx, sourcePointer);
             BinaryOperationNode advanceSi = _astBuilder.StringOperation.AdvanceSi(addressType, (int)bitWidth);
-            coreOperation = new BlockNode(ioWrite, advanceSi);
+            coreOperation = new BlockNode(ensureIoPrivilege, ioWrite, advanceSi);
             displayAst = new InstructionNode(repPrefix, InstructionOperation.OUTS,
                 _astBuilder.Pointer.ToSegmentedPointer(dataType, segmentRegisterIndex, (int)SegmentRegisterIndex.DsIndex,
                     _astBuilder.Register.Reg(addressType, RegisterIndex.SiIndex)));

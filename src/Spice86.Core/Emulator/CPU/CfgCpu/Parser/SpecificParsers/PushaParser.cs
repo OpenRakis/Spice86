@@ -17,7 +17,6 @@ public class PushaParser : BaseInstructionParser {
     public CfgInstruction Parse(ParsingContext context) {
         BitWidth bitWidth = GetBitWidth(false, context.HasOperandSize32);
         DataType dataType = _astBuilder.UType(bitWidth);
-        DataType addressType = _astBuilder.UType(BitWidth.WORD_16);
         CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
 
         string methodName = bitWidth == BitWidth.DWORD_32 ? nameof(Stack.PushAll32) : nameof(Stack.PushAll16);
@@ -27,7 +26,7 @@ public class PushaParser : BaseInstructionParser {
             _astBuilder.Register.Reg(dataType, RegisterIndex.CxIndex),
             _astBuilder.Register.Reg(dataType, RegisterIndex.DxIndex),
             _astBuilder.Register.Reg(dataType, RegisterIndex.BxIndex),
-            _astBuilder.Register.StackPointer(addressType),
+            _astBuilder.Register.StackPointer(dataType),
             _astBuilder.Register.Reg(dataType, RegisterIndex.BpIndex),
             _astBuilder.Register.Reg(dataType, RegisterIndex.SiIndex),
             _astBuilder.Register.Reg(dataType, RegisterIndex.DiIndex));

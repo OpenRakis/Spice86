@@ -38,6 +38,13 @@ TEST_UNDEF equ 0
 ; Enable PMODE tests
 TEST_PMODE equ 0
 
+; Skip the unverified arithmetic/logic/BCD diagnostic-print tests that run after POST EE.
+; They have no pass/fail assertions of their own (meant for manual comparison against a
+; reference file) and print a very large amount of ASCII output. Enabling this jumps straight
+; from POST EE to POST FF and halts.
+; Possible values: 1=skip straight to POST FF, 0=run the unverified tests (upstream default)
+SKIP_UNVERIFIED_TESTS equ 0
+
 ; The CPU family option is used only when POST E0 is enabled.
 ; Possible values: 3=80386
 CPU_FAMILY equ 3
