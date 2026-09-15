@@ -1,0 +1,233 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+    protected readonly ushort cs2;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0x016D;
+        cs2 = 0xF000;
+
+        DefineFunction(cs1, 0x0100, unknown_016D_0100_017D0);
+        DefineFunction(cs2, 0x0005, unknown_F000_0005_F0005);
+        DefineFunction(cs2, 0x0006, unknown_F000_0006_F0006);
+        DefineFunction(cs2, 0x0011, unknown_F000_0011_F0011);
+        DefineFunction(cs2, 0x0057, unknown_F000_0057_F0057);
+        DefineFunction(cs2, 0x005D, unknown_F000_005D_F005D);
+        DefineFunction(cs2, 0x0067, unknown_F000_0067_F0067);
+        DefineFunction(cs2, 0x006C, unknown_F000_006C_F006C);
+        DefineFunction(cs2, 0x0071, unknown_F000_0071_F0071);
+        DefineFunction(cs2, 0x0076, unknown_F000_0076_F0076);
+        DefineFunction(cs2, 0x007B, unknown_F000_007B_F007B);
+        DefineFunction(cs2, 0x0080, unknown_F000_0080_F0080);
+        DefineFunction(cs2, 0x00E2, unknown_F000_00E2_F00E2);
+        DefineFunction(cs2, 0x00E3, unknown_F000_00E3_F00E3);
+    }
+
+    public virtual Action unknown_016D_0100_017D0(int loadOffset) {
+    label_016D_0100_017D0_56:
+        CheckExternalEvents(cs1, 0x0100);
+        // 016D:0100 int 8
+        InterruptCall(cs1, 0x0102, unchecked((byte)((byte)0x08)));
+    label_016D_0102_017D2_64:
+        CheckExternalEvents(cs1, 0x0102);
+        // 016D:0102 hlt
+        return Hlt();
+    }
+
+    public virtual Action unknown_F000_0005_F0005(int loadOffset) {
+    label_F000_0005_F0005_60:
+        CheckExternalEvents(cs2, 0x0005);
+        // F000:0005 iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_0006_F0006(int loadOffset) {
+    label_F000_0006_F0006_0:
+        CheckExternalEvents(cs2, 0x0006);
+        // F000:0006 callback 8
+        Callback(unchecked((ushort)((ushort)0x0008)));
+    label_F000_000A_F000A_1:
+        CheckExternalEvents(cs2, 0x000A);
+        // F000:000A int 0x1C
+        InterruptCall(cs2, 0x000C, unchecked((byte)((byte)0x1C)));
+    label_F000_000C_F000C_4:
+        CheckExternalEvents(cs2, 0x000C);
+        // F000:000C callback 0x0100
+        Callback(unchecked((ushort)((ushort)0x0100)));
+    label_F000_0010_F0010_6:
+        CheckExternalEvents(cs2, 0x0010);
+        // F000:0010 iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_0011_F0011(int loadOffset) {
+    label_F000_0011_F0011_8:
+        CheckExternalEvents(cs2, 0x0011);
+        VerifySpeculativeEntryOrFail(cs2, 0x0011, [(byte)0xFE, (byte)0x38, (byte)0x09, (byte)0x00]);
+        // F000:0011 callback 9
+        Callback(unchecked((ushort)((ushort)0x0009)));
+    label_F000_0015_F0015_9:
+        CheckExternalEvents(cs2, 0x0015);
+        VerifySpeculativeEntryOrFail(cs2, 0x0015, [(byte)0xCF]);
+        // F000:0015 iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_0057_F0057(int loadOffset) {
+    label_F000_0057_F0057_12:
+        CheckExternalEvents(cs2, 0x0057);
+        VerifySpeculativeEntryOrFail(cs2, 0x0057, [(byte)0xFE, (byte)0x38, (byte)0x70, (byte)0x00]);
+        // F000:0057 callback 0x0070
+        Callback(unchecked((ushort)((ushort)0x0070)));
+    label_F000_005B_F005B_13:
+        CheckExternalEvents(cs2, 0x005B);
+        VerifySpeculativeEntryOrFail(cs2, 0x005B, [(byte)0xCF]);
+        // F000:005B iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_005D_F005D(int loadOffset) {
+    label_F000_005D_F005D_16:
+        CheckExternalEvents(cs2, 0x005D);
+        VerifySpeculativeEntryOrFail(cs2, 0x005D, [(byte)0x9A, (byte)0xE3, (byte)0x00, (byte)0x00, (byte)0xF0]);
+        // F000:005D call far F000:00E3
+        FarCall(cs2, 0x0062, cs2, unknown_F000_00E3_F00E3);
+    label_F000_0062_F0062_20:
+        CheckExternalEvents(cs2, 0x0062);
+        VerifySpeculativeEntryOrFail(cs2, 0x0062, [(byte)0xFE, (byte)0x38, (byte)0x74, (byte)0x00]);
+        // F000:0062 callback 0x0074
+        Callback(unchecked((ushort)((ushort)0x0074)));
+    label_F000_0066_F0066_24:
+        CheckExternalEvents(cs2, 0x0066);
+        VerifySpeculativeEntryOrFail(cs2, 0x0066, [(byte)0xCF]);
+        // F000:0066 iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_0067_F0067(int loadOffset) {
+    label_F000_0067_F0067_32:
+        CheckExternalEvents(cs2, 0x0067);
+        VerifySpeculativeEntryOrFail(cs2, 0x0067, [(byte)0xFE, (byte)0x38, (byte)0x03, (byte)0x01]);
+        // F000:0067 callback 0x0103
+        Callback(unchecked((ushort)((ushort)0x0103)));
+    label_F000_006B_F006B_33:
+        CheckExternalEvents(cs2, 0x006B);
+        VerifySpeculativeEntryOrFail(cs2, 0x006B, [(byte)0xCF]);
+        // F000:006B iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_006C_F006C(int loadOffset) {
+    label_F000_006C_F006C_36:
+        CheckExternalEvents(cs2, 0x006C);
+        VerifySpeculativeEntryOrFail(cs2, 0x006C, [(byte)0xFE, (byte)0x38, (byte)0x04, (byte)0x01]);
+        // F000:006C callback 0x0104
+        Callback(unchecked((ushort)((ushort)0x0104)));
+    label_F000_0070_F0070_37:
+        CheckExternalEvents(cs2, 0x0070);
+        VerifySpeculativeEntryOrFail(cs2, 0x0070, [(byte)0xCF]);
+        // F000:0070 iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_0071_F0071(int loadOffset) {
+    label_F000_0071_F0071_40:
+        CheckExternalEvents(cs2, 0x0071);
+        VerifySpeculativeEntryOrFail(cs2, 0x0071, [(byte)0xFE, (byte)0x38, (byte)0x05, (byte)0x01]);
+        // F000:0071 callback 0x0105
+        Callback(unchecked((ushort)((ushort)0x0105)));
+    label_F000_0075_F0075_41:
+        CheckExternalEvents(cs2, 0x0075);
+        VerifySpeculativeEntryOrFail(cs2, 0x0075, [(byte)0xCF]);
+        // F000:0075 iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_0076_F0076(int loadOffset) {
+    label_F000_0076_F0076_44:
+        CheckExternalEvents(cs2, 0x0076);
+        VerifySpeculativeEntryOrFail(cs2, 0x0076, [(byte)0xFE, (byte)0x38, (byte)0x06, (byte)0x01]);
+        // F000:0076 callback 0x0106
+        Callback(unchecked((ushort)((ushort)0x0106)));
+    label_F000_007A_F007A_45:
+        CheckExternalEvents(cs2, 0x007A);
+        VerifySpeculativeEntryOrFail(cs2, 0x007A, [(byte)0xCF]);
+        // F000:007A iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_007B_F007B(int loadOffset) {
+    label_F000_007B_F007B_48:
+        CheckExternalEvents(cs2, 0x007B);
+        VerifySpeculativeEntryOrFail(cs2, 0x007B, [(byte)0xFE, (byte)0x38, (byte)0x07, (byte)0x01]);
+        // F000:007B callback 0x0107
+        Callback(unchecked((ushort)((ushort)0x0107)));
+    label_F000_007F_F007F_49:
+        CheckExternalEvents(cs2, 0x007F);
+        VerifySpeculativeEntryOrFail(cs2, 0x007F, [(byte)0xCF]);
+        // F000:007F iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_0080_F0080(int loadOffset) {
+    label_F000_0080_F0080_52:
+        CheckExternalEvents(cs2, 0x0080);
+        VerifySpeculativeEntryOrFail(cs2, 0x0080, [(byte)0xFE, (byte)0x38, (byte)0x08, (byte)0x01]);
+        // F000:0080 callback 0x0108
+        Callback(unchecked((ushort)((ushort)0x0108)));
+    label_F000_0084_F0084_53:
+        CheckExternalEvents(cs2, 0x0084);
+        VerifySpeculativeEntryOrFail(cs2, 0x0084, [(byte)0xCF]);
+        // F000:0084 iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_00E2_F00E2(int loadOffset) {
+    label_F000_00E2_F00E2_26:
+        CheckExternalEvents(cs2, 0x00E2);
+        VerifySpeculativeEntryOrFail(cs2, 0x00E2, [(byte)0xCB]);
+        // F000:00E2 ret far
+        return FarRet((ushort)0x0000);
+    }
+
+    public virtual Action unknown_F000_00E3_F00E3(int loadOffset) {
+    label_F000_00E3_F00E3_17:
+        CheckExternalEvents(cs2, 0x00E3);
+        VerifySpeculativeEntryOrFail(cs2, 0x00E3, [(byte)0xFE, (byte)0x38, (byte)0x0B, (byte)0x01]);
+        // F000:00E3 callback 0x010B
+        Callback(unchecked((ushort)((ushort)0x010B)));
+    label_F000_00E7_F00E7_22:
+        CheckExternalEvents(cs2, 0x00E7);
+        VerifySpeculativeEntryOrFail(cs2, 0x00E7, [(byte)0x9A, (byte)0xE2, (byte)0x00, (byte)0x00, (byte)0xF0]);
+        // F000:00E7 call far F000:00E2
+        FarCall(cs2, 0x00EC, cs2, unknown_F000_00E2_F00E2);
+    label_F000_00EC_F00EC_28:
+        CheckExternalEvents(cs2, 0x00EC);
+        VerifySpeculativeEntryOrFail(cs2, 0x00EC, [(byte)0xFE, (byte)0x38, (byte)0x0C, (byte)0x01]);
+        // F000:00EC callback 0x010C
+        Callback(unchecked((ushort)((ushort)0x010C)));
+    label_F000_00F0_F00F0_30:
+        CheckExternalEvents(cs2, 0x00F0);
+        VerifySpeculativeEntryOrFail(cs2, 0x00F0, [(byte)0xCB]);
+        // F000:00F0 ret far
+        return FarRet((ushort)0x0000);
+    }
+
+}

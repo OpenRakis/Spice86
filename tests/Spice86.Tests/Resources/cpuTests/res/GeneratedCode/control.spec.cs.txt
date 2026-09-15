@@ -1,0 +1,108 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0xF000;
+
+        DefineFunction(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0);
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        goto label_F000_FFF0_FFFF0_0;
+
+    label_F000_0000_F0000_1:
+        CheckExternalEvents(cs1, 0x0000);
+        // F000:0000 mov AX,0x1000
+        AX = (ushort)0x1000;
+        // F000:0003 mov SS,AX
+        SS = AX;
+        State.InterruptShadowing = true;
+        // F000:0005 mov SP,0x1000
+        SP = (ushort)0x1000;
+        // F000:0008 mov CX,0xFEFF
+        CX = (ushort)0xFEFF;
+        // F000:000B push CX
+        Stack.Push16(CX);
+    label_F000_000C_F000C_8:
+        CheckExternalEvents(cs1, 0x000C);
+        // F000:000C popf
+        FlagRegister16 = Stack.Pop16();
+    label_F000_000D_F000D_16:
+        CheckExternalEvents(cs1, 0x000D);
+        // F000:000D clc
+        CarryFlag = false;
+        // F000:000E cld
+        DirectionFlag = false;
+    label_F000_000F_F000F_19:
+        CheckExternalEvents(cs1, 0x000F);
+        // F000:000F cli
+        InterruptFlag = false;
+        // F000:0010 nop
+        // F000:0011 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:0012 pop AX
+        AX = Stack.Pop16();
+        // F000:0013 mov DX,1
+        DX = (ushort)0x0001;
+        // F000:0016 push DX
+        Stack.Push16(DX);
+    label_F000_0017_F0017_26:
+        CheckExternalEvents(cs1, 0x0017);
+        // F000:0017 popf
+        FlagRegister16 = Stack.Pop16();
+    label_F000_0018_F0018_36:
+        CheckExternalEvents(cs1, 0x0018);
+        // F000:0018 cmc
+        CarryFlag = !CarryFlag;
+        // F000:0019 stc
+        CarryFlag = true;
+        // F000:001A std
+        DirectionFlag = true;
+        // F000:001B sti
+        if (!InterruptFlag) {
+            State.InterruptShadowing = true;
+        }
+        else {
+        }
+        InterruptFlag = true;
+    label_F000_001C_F001C_44:
+        CheckExternalEvents(cs1, 0x001C);
+        // F000:001C pushf
+        Stack.Push16(FlagRegister16);
+        // F000:001D pop BX
+        BX = Stack.Pop16();
+        // F000:001E mov CX,0
+        CX = (ushort)0x0000;
+        // F000:0021 mov DS,CX
+        DS = CX;
+        // F000:0023 mov word ptr DS:[0],AX
+        UInt16[DS, (ushort)0x0000] = AX;
+        // F000:0026 mov word ptr DS:[2],BX
+        UInt16[DS, (ushort)0x0002] = BX;
+        // F000:002A hlt
+        return Hlt();
+    label_F000_FFF0_FFFF0_0:
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        goto label_F000_0000_F0000_1;
+    }
+
+}

@@ -1,0 +1,4615 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0xF000;
+
+        DefineFunction(cs1, 0x0633, unknown_F000_0633_F0633);
+        DefineFunction(cs1, 0x06A8, unknown_F000_06A8_F06A8);
+        DefineFunction(cs1, 0x136F, unknown_F000_136F_F136F);
+        DefineFunction(cs1, 0x138D, unknown_F000_138D_F138D);
+        DefineFunction(cs1, 0x13C5, unknown_F000_13C5_F13C5);
+        DefineFunction(cs1, 0x13E5, unknown_F000_13E5_F13E5);
+        DefineFunction(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0);
+        DefineFunction(cs1, 0x15C7, unknown_F000_15C7_F15C7);
+    }
+
+    public virtual Action unknown_F000_0633_F0633(int loadOffset) {
+    label_F000_0633_F0633_1053:
+        CheckExternalEvents(cs1, 0x0633);
+        // F000:0633 cmp SP,-7
+        Alu16.Sub(SP, unchecked((ushort)unchecked((short)(sbyte)-7)));
+        // F000:0636 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_063A_F063A_1057:
+        CheckExternalEvents(cs1, 0x063A);
+        // F000:063A cmp word ptr SS:[0xFFFB],0xF000
+        Alu16.Sub(UInt16[SS, (ushort)0xFFFB], (ushort)0xF000);
+        // F000:0641 cmp word ptr SS:[0xFFF9],0x062E
+        Alu16.Sub(UInt16[SS, (ushort)0xFFF9], (ushort)0x062E);
+        // F000:0648 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_064C_F064C_1062:
+        CheckExternalEvents(cs1, 0x064C);
+        // F000:064C mov AX,0
+        AX = (ushort)0x0000;
+        // F000:064F mov DS,AX
+        DS = AX;
+        // F000:0651 mov word ptr DS:[0x0018],0x15C7
+        UInt16[DS, (ushort)0x0018] = (ushort)0x15C7;
+        // F000:0657 mov word ptr DS:[0x001A],0xF000
+        UInt16[DS, (ushort)0x001A] = (ushort)0xF000;
+        // F000:065D xor AX,AX
+        AX = Alu16.Xor(AX, AX);
+        // F000:065F mov AX,CS
+        AX = CS;
+        // F000:0661 cmp AX,DX
+        Alu16.Sub(AX, DX);
+        // F000:0663 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0667_F0667_1072:
+        CheckExternalEvents(cs1, 0x0667);
+        // F000:0667 mov EAX,0xFFFFFFFF
+        EAX = 0xFFFFFFFFu;
+        // F000:066D mov EAX,CS
+        EAX = unchecked((uint)CS);
+        // F000:0670 cmp AX,DX
+        Alu16.Sub(AX, DX);
+        // F000:0672 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0676_F0676_1078:
+        CheckExternalEvents(cs1, 0x0676);
+        // F000:0676 mov word ptr DS:[0],0xBEEF
+        UInt16[DS, (ushort)0x0000] = (ushort)0xBEEF;
+        // F000:067C mov word ptr DS:[0],CS
+        UInt16[DS, (ushort)0x0000] = CS;
+        // F000:0680 cmp word ptr DS:[0],DX
+        Alu16.Sub(UInt16[DS, (ushort)0x0000], DX);
+        // F000:0684 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0688_F0688_1084:
+        CheckExternalEvents(cs1, 0x0688);
+        // F000:0688 mov AX,0
+        AX = (ushort)0x0000;
+        // F000:068B mov DS,AX
+        DS = AX;
+        // F000:068D mov word ptr DS:[0x0018],0x06A8
+        UInt16[DS, (ushort)0x0018] = (ushort)0x06A8;
+        // F000:0693 mov word ptr DS:[0x001A],0xF000
+        UInt16[DS, (ushort)0x001A] = (ushort)0xF000;
+        // F000:0699 mov AX,0x1000
+        AX = (ushort)0x1000;
+        // F000:069C mov SS,AX
+        SS = AX;
+        State.InterruptShadowing = true;
+        // F000:069E mov SP,0xFFFF
+        SP = (ushort)0xFFFF;
+        // F000:06A1 invalid
+        try {
+            throw new Spice86.Core.Emulator.CPU.Exceptions.CpuInvalidOpcodeException("Attempted to write to CS register with MOV instruction");
+        }
+        catch (CpuException cpuException) {
+            SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
+            if (cpuFaultTarget == new SegmentedAddress(cs1, 0x06A8)) {
+                EnterCpuFaultHandler(cs1, 0x06A1, cpuFaultTarget);
+                return unknown_F000_06A8_F06A8(0x0000);
+            }
+            throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:06A1");
+        }
+        throw FailAsUntested("Generated partition reached the end without a terminating control-flow instruction.");
+    }
+
+    public virtual Action unknown_F000_06A8_F06A8(int loadOffset) {
+    label_F000_06A8_F06A8_1123:
+        CheckExternalEvents(cs1, 0x06A8);
+        // F000:06A8 cmp SP,-7
+        Alu16.Sub(SP, unchecked((ushort)unchecked((short)(sbyte)-7)));
+        // F000:06AB jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_06AF_F06AF_1127:
+        CheckExternalEvents(cs1, 0x06AF);
+        // F000:06AF cmp word ptr SS:[0xFFFB],0xF000
+        Alu16.Sub(UInt16[SS, (ushort)0xFFFB], (ushort)0xF000);
+        // F000:06B6 cmp word ptr SS:[0xFFF9],0x06A1
+        Alu16.Sub(UInt16[SS, (ushort)0xFFF9], (ushort)0x06A1);
+        // F000:06BD jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_06C1_F06C1_1132:
+        CheckExternalEvents(cs1, 0x06C1);
+        // F000:06C1 mov AX,0
+        AX = (ushort)0x0000;
+        // F000:06C4 mov DS,AX
+        DS = AX;
+        // F000:06C6 mov word ptr DS:[0x0018],0x15C7
+        UInt16[DS, (ushort)0x0018] = (ushort)0x15C7;
+        // F000:06CC mov word ptr DS:[0x001A],0xF000
+        UInt16[DS, (ushort)0x001A] = (ushort)0xF000;
+        // F000:06D2 mov DX,0x2100
+        DX = (ushort)0x2100;
+        // F000:06D5 mov DS,DX
+        DS = DX;
+        // F000:06D7 mov DX,0x6100
+        DX = (ushort)0x6100;
+        // F000:06DA mov ES,DX
+        ES = DX;
+        // F000:06DC mov AL,4
+        AL = (byte)0x04;
+        // F000:06DE mov DX,0x0999
+        DX = (ushort)0x0999;
+        // F000:06E1 out DX,AL
+        Machine.IoPortDispatcher.WriteByte(DX, AL);
+        // F000:06E2 cld
+        DirectionFlag = false;
+        // F000:06E3 mov EDI,0x0001FFFF
+        EDI = 0x0001FFFFu;
+        // F000:06E9 mov EBX,0x0000FFFF
+        EBX = 0x0000FFFFu;
+        // F000:06EF mov AL,0
+        AL = (byte)0x00;
+        // F000:06F1 mov byte ptr ES:[EBX],AL
+        UInt8[ES, EBX] = AL;
+        // F000:06F5 mov AL,0x78
+        AL = (byte)0x78;
+        // F000:06F7 stos byte ptr ES:[DI],AL
+        UInt8[ES, DI] = AL;
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+        // F000:06F8 cmp byte ptr ES:[EBX],AL
+        Alu8.Sub(UInt8[ES, EBX], AL);
+        // F000:06FC jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0700_F0700_1154:
+        CheckExternalEvents(cs1, 0x0700);
+        // F000:0700 cmp EDI,0x00010000
+        Alu32.Sub(EDI, 0x00010000u);
+        // F000:0707 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_070B_F070B_1158:
+        CheckExternalEvents(cs1, 0x070B);
+        // F000:070B mov ESI,0x0001FFFF
+        ESI = 0x0001FFFFu;
+        // F000:0711 mov EDI,0x0001FFFF
+        EDI = 0x0001FFFFu;
+        // F000:0717 mov EBX,0x0000FFFF
+        EBX = 0x0000FFFFu;
+        // F000:071D mov byte ptr DS:[EBX],AL
+        UInt8[DS, EBX] = AL;
+        // F000:0721 mov byte ptr ES:[EBX],AL
+        UInt8[ES, EBX] = AL;
+        // F000:0725 cmp AL,0
+        Alu8.Sub(AL, (byte)0x00);
+        // F000:0727 je near 0x15C7
+        if (ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_072B_F072B_1167:
+        CheckExternalEvents(cs1, 0x072B);
+        // F000:072B cmps byte ptr DS:[SI],byte ptr ES:[DI]
+        Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
+        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+        // F000:072C jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0730_F0730_1171:
+        CheckExternalEvents(cs1, 0x0730);
+        // F000:0730 cmp EDI,0x00010000
+        Alu32.Sub(EDI, 0x00010000u);
+        // F000:0737 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_073B_F073B_1175:
+        CheckExternalEvents(cs1, 0x073B);
+        // F000:073B cmp ESI,0x00010000
+        Alu32.Sub(ESI, 0x00010000u);
+        // F000:0742 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0746_F0746_1179:
+        CheckExternalEvents(cs1, 0x0746);
+        // F000:0746 mov EDI,0x0001FFFF
+        EDI = 0x0001FFFFu;
+        // F000:074C mov AL,0x78
+        AL = (byte)0x78;
+        // F000:074E mov byte ptr ES:[EBX],AL
+        UInt8[ES, EBX] = AL;
+        // F000:0752 cmp AL,0
+        Alu8.Sub(AL, (byte)0x00);
+        // F000:0754 scas AL,byte ptr ES:[DI]
+        Alu8.Sub(AL, UInt8[ES, DI]);
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+        // F000:0755 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0759_F0759_1187:
+        CheckExternalEvents(cs1, 0x0759);
+        // F000:0759 cmp EDI,0x00010000
+        Alu32.Sub(EDI, 0x00010000u);
+        // F000:0760 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0764_F0764_1191:
+        CheckExternalEvents(cs1, 0x0764);
+        // F000:0764 mov ESI,0x0001FFFF
+        ESI = 0x0001FFFFu;
+        // F000:076A mov EDI,0x0001FFFF
+        EDI = 0x0001FFFFu;
+        // F000:0770 mov AL,0x78
+        AL = (byte)0x78;
+        // F000:0772 mov byte ptr DS:[EBX],AL
+        UInt8[DS, EBX] = AL;
+        // F000:0776 mov AL,0
+        AL = (byte)0x00;
+        // F000:0778 mov byte ptr ES:[EBX],AL
+        UInt8[ES, EBX] = AL;
+        // F000:077C movs byte ptr ES:[DI],byte ptr DS:[SI]
+        UInt8[ES, DI] = UInt8[DS, SI];
+        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+        // F000:077D mov AL,0x78
+        AL = (byte)0x78;
+        // F000:077F cmp byte ptr ES:[EBX],AL
+        Alu8.Sub(UInt8[ES, EBX], AL);
+        // F000:0783 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0787_F0787_1203:
+        CheckExternalEvents(cs1, 0x0787);
+        // F000:0787 cmp EDI,0x00010000
+        Alu32.Sub(EDI, 0x00010000u);
+        // F000:078E jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0792_F0792_1207:
+        CheckExternalEvents(cs1, 0x0792);
+        // F000:0792 cmp ESI,0x00010000
+        Alu32.Sub(ESI, 0x00010000u);
+        // F000:0799 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_079D_F079D_1211:
+        CheckExternalEvents(cs1, 0x079D);
+        // F000:079D mov ESI,0x0001FFFF
+        ESI = 0x0001FFFFu;
+        // F000:07A3 mov AL,0x78
+        AL = (byte)0x78;
+        // F000:07A5 mov byte ptr ES:[EBX],AL
+        UInt8[ES, EBX] = AL;
+        // F000:07A9 xor EAX,EAX
+        EAX = Alu32.Xor(EAX, EAX);
+        // F000:07AC lods AL,byte ptr DS:[SI]
+        AL = UInt8[DS, SI];
+        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
+        // F000:07AD cmp AL,0x78
+        Alu8.Sub(AL, (byte)0x78);
+        // F000:07AF jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_07B3_F07B3_1220:
+        CheckExternalEvents(cs1, 0x07B3);
+        // F000:07B3 cmp ESI,0x00010000
+        Alu32.Sub(ESI, 0x00010000u);
+        // F000:07BA jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_07BE_F07BE_1224:
+        CheckExternalEvents(cs1, 0x07BE);
+        // F000:07BE cld
+        DirectionFlag = false;
+        // F000:07BF mov EDI,0x0001FFFE
+        EDI = 0x0001FFFEu;
+        // F000:07C5 mov EBX,0x0000FFFE
+        EBX = 0x0000FFFEu;
+        // F000:07CB mov AX,0
+        AX = (ushort)0x0000;
+        // F000:07CE mov word ptr ES:[EBX],AX
+        UInt16[ES, EBX] = AX;
+        // F000:07D2 mov AX,0x5678
+        AX = (ushort)0x5678;
+        // F000:07D5 stos word ptr ES:[DI],AX
+        UInt16[ES, DI] = AX;
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+        // F000:07D6 cmp word ptr ES:[EBX],AX
+        Alu16.Sub(UInt16[ES, EBX], AX);
+        // F000:07DA jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_07DE_F07DE_1235:
+        CheckExternalEvents(cs1, 0x07DE);
+        // F000:07DE cmp EDI,0x00010000
+        Alu32.Sub(EDI, 0x00010000u);
+        // F000:07E5 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_07E9_F07E9_1239:
+        CheckExternalEvents(cs1, 0x07E9);
+        // F000:07E9 mov ESI,0x0001FFFE
+        ESI = 0x0001FFFEu;
+        // F000:07EF mov EDI,0x0001FFFE
+        EDI = 0x0001FFFEu;
+        // F000:07F5 mov EBX,0x0000FFFE
+        EBX = 0x0000FFFEu;
+        // F000:07FB mov word ptr DS:[EBX],AX
+        UInt16[DS, EBX] = AX;
+        // F000:07FF mov word ptr ES:[EBX],AX
+        UInt16[ES, EBX] = AX;
+        // F000:0803 cmp AX,0
+        Alu16.Sub(AX, unchecked((ushort)unchecked((short)(sbyte)0)));
+        // F000:0806 je near 0x15C7
+        if (ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_080A_F080A_1248:
+        CheckExternalEvents(cs1, 0x080A);
+        // F000:080A cmps word ptr DS:[SI],word ptr ES:[DI]
+        Alu16.Sub(UInt16[DS, SI], UInt16[ES, DI]);
+        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction16)));
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+        // F000:080B jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_080F_F080F_1252:
+        CheckExternalEvents(cs1, 0x080F);
+        // F000:080F cmp EDI,0x00010000
+        Alu32.Sub(EDI, 0x00010000u);
+        // F000:0816 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_081A_F081A_1256:
+        CheckExternalEvents(cs1, 0x081A);
+        // F000:081A cmp ESI,0x00010000
+        Alu32.Sub(ESI, 0x00010000u);
+        // F000:0821 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0825_F0825_1260:
+        CheckExternalEvents(cs1, 0x0825);
+        // F000:0825 mov EDI,0x0001FFFE
+        EDI = 0x0001FFFEu;
+        // F000:082B mov AX,0x5678
+        AX = (ushort)0x5678;
+        // F000:082E mov word ptr ES:[EBX],AX
+        UInt16[ES, EBX] = AX;
+        // F000:0832 cmp AX,0
+        Alu16.Sub(AX, unchecked((ushort)unchecked((short)(sbyte)0)));
+        // F000:0835 scas AX,word ptr ES:[DI]
+        Alu16.Sub(AX, UInt16[ES, DI]);
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+        // F000:0836 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_083A_F083A_1268:
+        CheckExternalEvents(cs1, 0x083A);
+        // F000:083A cmp EDI,0x00010000
+        Alu32.Sub(EDI, 0x00010000u);
+        // F000:0841 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0845_F0845_1272:
+        CheckExternalEvents(cs1, 0x0845);
+        // F000:0845 mov ESI,0x0001FFFE
+        ESI = 0x0001FFFEu;
+        // F000:084B mov EDI,0x0001FFFE
+        EDI = 0x0001FFFEu;
+        // F000:0851 mov AX,0x5678
+        AX = (ushort)0x5678;
+        // F000:0854 mov word ptr DS:[EBX],AX
+        UInt16[DS, EBX] = AX;
+        // F000:0858 mov AX,0
+        AX = (ushort)0x0000;
+        // F000:085B mov word ptr ES:[EBX],AX
+        UInt16[ES, EBX] = AX;
+        // F000:085F movs word ptr ES:[DI],word ptr DS:[SI]
+        UInt16[ES, DI] = UInt16[DS, SI];
+        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction16)));
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+        // F000:0860 mov AX,0x5678
+        AX = (ushort)0x5678;
+        // F000:0863 cmp word ptr ES:[EBX],AX
+        Alu16.Sub(UInt16[ES, EBX], AX);
+        // F000:0867 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_086B_F086B_1284:
+        CheckExternalEvents(cs1, 0x086B);
+        // F000:086B cmp EDI,0x00010000
+        Alu32.Sub(EDI, 0x00010000u);
+        // F000:0872 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0876_F0876_1288:
+        CheckExternalEvents(cs1, 0x0876);
+        // F000:0876 cmp ESI,0x00010000
+        Alu32.Sub(ESI, 0x00010000u);
+        // F000:087D jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0881_F0881_1292:
+        CheckExternalEvents(cs1, 0x0881);
+        // F000:0881 mov ESI,0x0001FFFE
+        ESI = 0x0001FFFEu;
+        // F000:0887 mov AX,0x5678
+        AX = (ushort)0x5678;
+        // F000:088A mov word ptr ES:[EBX],AX
+        UInt16[ES, EBX] = AX;
+        // F000:088E xor EAX,EAX
+        EAX = Alu32.Xor(EAX, EAX);
+        // F000:0891 lods AX,word ptr DS:[SI]
+        AX = UInt16[DS, SI];
+        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction16)));
+        // F000:0892 cmp AX,0x5678
+        Alu16.Sub(AX, (ushort)0x5678);
+        // F000:0895 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0899_F0899_1301:
+        CheckExternalEvents(cs1, 0x0899);
+        // F000:0899 cmp ESI,0x00010000
+        Alu32.Sub(ESI, 0x00010000u);
+        // F000:08A0 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_08A4_F08A4_1305:
+        CheckExternalEvents(cs1, 0x08A4);
+        // F000:08A4 cld
+        DirectionFlag = false;
+        // F000:08A5 mov EDI,0x0001FFFC
+        EDI = 0x0001FFFCu;
+        // F000:08AB mov EBX,0x0000FFFC
+        EBX = 0x0000FFFCu;
+        // F000:08B1 mov EAX,0
+        EAX = 0x00000000u;
+        // F000:08B7 mov dword ptr ES:[EBX],EAX
+        UInt32[ES, EBX] = EAX;
+        // F000:08BC mov EAX,0x12345678
+        EAX = 0x12345678u;
+        // F000:08C2 stos dword ptr ES:[DI],EAX
+        UInt32[ES, DI] = EAX;
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
+        // F000:08C4 cmp dword ptr ES:[EBX],EAX
+        Alu32.Sub(UInt32[ES, EBX], EAX);
+        // F000:08C9 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_08CD_F08CD_1316:
+        CheckExternalEvents(cs1, 0x08CD);
+        // F000:08CD cmp EDI,0x00010000
+        Alu32.Sub(EDI, 0x00010000u);
+        // F000:08D4 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_08D8_F08D8_1320:
+        CheckExternalEvents(cs1, 0x08D8);
+        // F000:08D8 mov ESI,0x0001FFFC
+        ESI = 0x0001FFFCu;
+        // F000:08DE mov EDI,0x0001FFFC
+        EDI = 0x0001FFFCu;
+        // F000:08E4 mov EBX,0x0000FFFC
+        EBX = 0x0000FFFCu;
+        // F000:08EA mov dword ptr DS:[EBX],EAX
+        UInt32[DS, EBX] = EAX;
+        // F000:08EF mov dword ptr ES:[EBX],EAX
+        UInt32[ES, EBX] = EAX;
+        // F000:08F4 cmp EAX,0
+        Alu32.Sub(EAX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:08F8 je near 0x15C7
+        if (ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_08FC_F08FC_1329:
+        CheckExternalEvents(cs1, 0x08FC);
+        // F000:08FC cmps dword ptr DS:[SI],dword ptr ES:[DI]
+        Alu32.Sub(UInt32[DS, SI], UInt32[ES, DI]);
+        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction32)));
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
+        // F000:08FE jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0902_F0902_1333:
+        CheckExternalEvents(cs1, 0x0902);
+        // F000:0902 cmp EDI,0x00010000
+        Alu32.Sub(EDI, 0x00010000u);
+        // F000:0909 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_090D_F090D_1337:
+        CheckExternalEvents(cs1, 0x090D);
+        // F000:090D cmp ESI,0x00010000
+        Alu32.Sub(ESI, 0x00010000u);
+        // F000:0914 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0918_F0918_1341:
+        CheckExternalEvents(cs1, 0x0918);
+        // F000:0918 mov EDI,0x0001FFFC
+        EDI = 0x0001FFFCu;
+        // F000:091E mov EAX,0x12345678
+        EAX = 0x12345678u;
+        // F000:0924 mov dword ptr ES:[EBX],EAX
+        UInt32[ES, EBX] = EAX;
+        // F000:0929 cmp EAX,0
+        Alu32.Sub(EAX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:092D scas EAX,dword ptr ES:[DI]
+        Alu32.Sub(EAX, UInt32[ES, DI]);
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
+        // F000:092F jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0933_F0933_1349:
+        CheckExternalEvents(cs1, 0x0933);
+        // F000:0933 cmp EDI,0x00010000
+        Alu32.Sub(EDI, 0x00010000u);
+        // F000:093A jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_093E_F093E_1353:
+        CheckExternalEvents(cs1, 0x093E);
+        // F000:093E mov ESI,0x0001FFFC
+        ESI = 0x0001FFFCu;
+        // F000:0944 mov EDI,0x0001FFFC
+        EDI = 0x0001FFFCu;
+        // F000:094A mov EAX,0x12345678
+        EAX = 0x12345678u;
+        // F000:0950 mov dword ptr DS:[EBX],EAX
+        UInt32[DS, EBX] = EAX;
+        // F000:0955 mov EAX,0
+        EAX = 0x00000000u;
+        // F000:095B mov dword ptr ES:[EBX],EAX
+        UInt32[ES, EBX] = EAX;
+        // F000:0960 movs dword ptr ES:[DI],dword ptr DS:[SI]
+        UInt32[ES, DI] = UInt32[DS, SI];
+        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction32)));
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
+        // F000:0962 mov EAX,0x12345678
+        EAX = 0x12345678u;
+        // F000:0968 cmp dword ptr ES:[EBX],EAX
+        Alu32.Sub(UInt32[ES, EBX], EAX);
+        // F000:096D jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0971_F0971_1365:
+        CheckExternalEvents(cs1, 0x0971);
+        // F000:0971 cmp EDI,0x00010000
+        Alu32.Sub(EDI, 0x00010000u);
+        // F000:0978 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_097C_F097C_1369:
+        CheckExternalEvents(cs1, 0x097C);
+        // F000:097C cmp ESI,0x00010000
+        Alu32.Sub(ESI, 0x00010000u);
+        // F000:0983 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0987_F0987_1373:
+        CheckExternalEvents(cs1, 0x0987);
+        // F000:0987 mov ESI,0x0001FFFC
+        ESI = 0x0001FFFCu;
+        // F000:098D mov EAX,0x12345678
+        EAX = 0x12345678u;
+        // F000:0993 mov dword ptr ES:[EBX],EAX
+        UInt32[ES, EBX] = EAX;
+        // F000:0998 xor EAX,EAX
+        EAX = Alu32.Xor(EAX, EAX);
+        // F000:099B lods EAX,dword ptr DS:[SI]
+        EAX = UInt32[DS, SI];
+        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction32)));
+        // F000:099D cmp EAX,0x12345678
+        Alu32.Sub(EAX, 0x12345678u);
+        // F000:09A3 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_09A7_F09A7_1382:
+        CheckExternalEvents(cs1, 0x09A7);
+        // F000:09A7 cmp ESI,0x00010000
+        Alu32.Sub(ESI, 0x00010000u);
+        // F000:09AE jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_09B2_F09B2_1386:
+        CheckExternalEvents(cs1, 0x09B2);
+        // F000:09B2 std
+        DirectionFlag = true;
+        // F000:09B3 mov EDI,0x00010000
+        EDI = 0x00010000u;
+        // F000:09B9 mov EBX,0
+        EBX = 0x00000000u;
+        // F000:09BF mov AL,0
+        AL = (byte)0x00;
+        // F000:09C1 mov byte ptr ES:[EBX],AL
+        UInt8[ES, EBX] = AL;
+        // F000:09C5 mov AL,0x78
+        AL = (byte)0x78;
+        // F000:09C7 stos byte ptr ES:[DI],AL
+        UInt8[ES, DI] = AL;
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+        // F000:09C8 cmp byte ptr ES:[EBX],AL
+        Alu8.Sub(UInt8[ES, EBX], AL);
+        // F000:09CC jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_09D0_F09D0_1397:
+        CheckExternalEvents(cs1, 0x09D0);
+        // F000:09D0 cmp EDI,0x0001FFFF
+        Alu32.Sub(EDI, 0x0001FFFFu);
+        // F000:09D7 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_09DB_F09DB_1401:
+        CheckExternalEvents(cs1, 0x09DB);
+        // F000:09DB mov ESI,0x00010000
+        ESI = 0x00010000u;
+        // F000:09E1 mov EDI,0x00010000
+        EDI = 0x00010000u;
+        // F000:09E7 mov EBX,0
+        EBX = 0x00000000u;
+        // F000:09ED mov byte ptr DS:[EBX],AL
+        UInt8[DS, EBX] = AL;
+        // F000:09F1 mov byte ptr ES:[EBX],AL
+        UInt8[ES, EBX] = AL;
+        // F000:09F5 cmp AL,0
+        Alu8.Sub(AL, (byte)0x00);
+        // F000:09F7 je near 0x15C7
+        if (ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_09FB_F09FB_1410:
+        CheckExternalEvents(cs1, 0x09FB);
+        // F000:09FB cmps byte ptr DS:[SI],byte ptr ES:[DI]
+        Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
+        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+        // F000:09FC jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0A00_F0A00_1414:
+        CheckExternalEvents(cs1, 0x0A00);
+        // F000:0A00 cmp EDI,0x0001FFFF
+        Alu32.Sub(EDI, 0x0001FFFFu);
+        // F000:0A07 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0A0B_F0A0B_1418:
+        CheckExternalEvents(cs1, 0x0A0B);
+        // F000:0A0B cmp ESI,0x0001FFFF
+        Alu32.Sub(ESI, 0x0001FFFFu);
+        // F000:0A12 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0A16_F0A16_1422:
+        CheckExternalEvents(cs1, 0x0A16);
+        // F000:0A16 mov EDI,0x00010000
+        EDI = 0x00010000u;
+        // F000:0A1C mov AL,0x78
+        AL = (byte)0x78;
+        // F000:0A1E mov byte ptr ES:[EBX],AL
+        UInt8[ES, EBX] = AL;
+        // F000:0A22 cmp AL,0
+        Alu8.Sub(AL, (byte)0x00);
+        // F000:0A24 scas AL,byte ptr ES:[DI]
+        Alu8.Sub(AL, UInt8[ES, DI]);
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+        // F000:0A25 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0A29_F0A29_1430:
+        CheckExternalEvents(cs1, 0x0A29);
+        // F000:0A29 cmp EDI,0x0001FFFF
+        Alu32.Sub(EDI, 0x0001FFFFu);
+        // F000:0A30 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0A34_F0A34_1434:
+        CheckExternalEvents(cs1, 0x0A34);
+        // F000:0A34 mov ESI,0x00010000
+        ESI = 0x00010000u;
+        // F000:0A3A mov EDI,0x00010000
+        EDI = 0x00010000u;
+        // F000:0A40 mov AL,0x78
+        AL = (byte)0x78;
+        // F000:0A42 mov byte ptr DS:[EBX],AL
+        UInt8[DS, EBX] = AL;
+        // F000:0A46 mov AL,0
+        AL = (byte)0x00;
+        // F000:0A48 mov byte ptr ES:[EBX],AL
+        UInt8[ES, EBX] = AL;
+        // F000:0A4C movs byte ptr ES:[DI],byte ptr DS:[SI]
+        UInt8[ES, DI] = UInt8[DS, SI];
+        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+        // F000:0A4D mov AL,0x78
+        AL = (byte)0x78;
+        // F000:0A4F cmp byte ptr ES:[EBX],AL
+        Alu8.Sub(UInt8[ES, EBX], AL);
+        // F000:0A53 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0A57_F0A57_1446:
+        CheckExternalEvents(cs1, 0x0A57);
+        // F000:0A57 cmp EDI,0x0001FFFF
+        Alu32.Sub(EDI, 0x0001FFFFu);
+        // F000:0A5E jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0A62_F0A62_1450:
+        CheckExternalEvents(cs1, 0x0A62);
+        // F000:0A62 cmp ESI,0x0001FFFF
+        Alu32.Sub(ESI, 0x0001FFFFu);
+        // F000:0A69 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0A6D_F0A6D_1454:
+        CheckExternalEvents(cs1, 0x0A6D);
+        // F000:0A6D mov ESI,0x00010000
+        ESI = 0x00010000u;
+        // F000:0A73 mov AL,0x78
+        AL = (byte)0x78;
+        // F000:0A75 mov byte ptr ES:[EBX],AL
+        UInt8[ES, EBX] = AL;
+        // F000:0A79 xor EAX,EAX
+        EAX = Alu32.Xor(EAX, EAX);
+        // F000:0A7C lods AL,byte ptr DS:[SI]
+        AL = UInt8[DS, SI];
+        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
+        // F000:0A7D cmp AL,0x78
+        Alu8.Sub(AL, (byte)0x78);
+        // F000:0A7F jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0A83_F0A83_1463:
+        CheckExternalEvents(cs1, 0x0A83);
+        // F000:0A83 cmp ESI,0x0001FFFF
+        Alu32.Sub(ESI, 0x0001FFFFu);
+        // F000:0A8A jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0A8E_F0A8E_1467:
+        CheckExternalEvents(cs1, 0x0A8E);
+        // F000:0A8E std
+        DirectionFlag = true;
+        // F000:0A8F mov EDI,0x00010000
+        EDI = 0x00010000u;
+        // F000:0A95 mov EBX,0
+        EBX = 0x00000000u;
+        // F000:0A9B mov AX,0
+        AX = (ushort)0x0000;
+        // F000:0A9E mov word ptr ES:[EBX],AX
+        UInt16[ES, EBX] = AX;
+        // F000:0AA2 mov AX,0x5678
+        AX = (ushort)0x5678;
+        // F000:0AA5 stos word ptr ES:[DI],AX
+        UInt16[ES, DI] = AX;
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+        // F000:0AA6 cmp word ptr ES:[EBX],AX
+        Alu16.Sub(UInt16[ES, EBX], AX);
+        // F000:0AAA jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0AAE_F0AAE_1478:
+        CheckExternalEvents(cs1, 0x0AAE);
+        // F000:0AAE cmp EDI,0x0001FFFE
+        Alu32.Sub(EDI, 0x0001FFFEu);
+        // F000:0AB5 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0AB9_F0AB9_1482:
+        CheckExternalEvents(cs1, 0x0AB9);
+        // F000:0AB9 mov ESI,0x00010000
+        ESI = 0x00010000u;
+        // F000:0ABF mov EDI,0x00010000
+        EDI = 0x00010000u;
+        // F000:0AC5 mov EBX,0
+        EBX = 0x00000000u;
+        // F000:0ACB mov word ptr DS:[EBX],AX
+        UInt16[DS, EBX] = AX;
+        // F000:0ACF mov word ptr ES:[EBX],AX
+        UInt16[ES, EBX] = AX;
+        // F000:0AD3 cmp AX,0
+        Alu16.Sub(AX, unchecked((ushort)unchecked((short)(sbyte)0)));
+        // F000:0AD6 je near 0x15C7
+        if (ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0ADA_F0ADA_1491:
+        CheckExternalEvents(cs1, 0x0ADA);
+        // F000:0ADA cmps word ptr DS:[SI],word ptr ES:[DI]
+        Alu16.Sub(UInt16[DS, SI], UInt16[ES, DI]);
+        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction16)));
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+        // F000:0ADB jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0ADF_F0ADF_1495:
+        CheckExternalEvents(cs1, 0x0ADF);
+        // F000:0ADF cmp EDI,0x0001FFFE
+        Alu32.Sub(EDI, 0x0001FFFEu);
+        // F000:0AE6 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0AEA_F0AEA_1499:
+        CheckExternalEvents(cs1, 0x0AEA);
+        // F000:0AEA cmp ESI,0x0001FFFE
+        Alu32.Sub(ESI, 0x0001FFFEu);
+        // F000:0AF1 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0AF5_F0AF5_1503:
+        CheckExternalEvents(cs1, 0x0AF5);
+        // F000:0AF5 mov EDI,0x00010000
+        EDI = 0x00010000u;
+        // F000:0AFB mov AX,0x5678
+        AX = (ushort)0x5678;
+        // F000:0AFE mov word ptr ES:[EBX],AX
+        UInt16[ES, EBX] = AX;
+        // F000:0B02 cmp AX,0
+        Alu16.Sub(AX, unchecked((ushort)unchecked((short)(sbyte)0)));
+        // F000:0B05 scas AX,word ptr ES:[DI]
+        Alu16.Sub(AX, UInt16[ES, DI]);
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+        // F000:0B06 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0B0A_F0B0A_1511:
+        CheckExternalEvents(cs1, 0x0B0A);
+        // F000:0B0A cmp EDI,0x0001FFFE
+        Alu32.Sub(EDI, 0x0001FFFEu);
+        // F000:0B11 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0B15_F0B15_1515:
+        CheckExternalEvents(cs1, 0x0B15);
+        // F000:0B15 mov ESI,0x00010000
+        ESI = 0x00010000u;
+        // F000:0B1B mov EDI,0x00010000
+        EDI = 0x00010000u;
+        // F000:0B21 mov AX,0x5678
+        AX = (ushort)0x5678;
+        // F000:0B24 mov word ptr DS:[EBX],AX
+        UInt16[DS, EBX] = AX;
+        // F000:0B28 mov AX,0
+        AX = (ushort)0x0000;
+        // F000:0B2B mov word ptr ES:[EBX],AX
+        UInt16[ES, EBX] = AX;
+        // F000:0B2F movs word ptr ES:[DI],word ptr DS:[SI]
+        UInt16[ES, DI] = UInt16[DS, SI];
+        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction16)));
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+        // F000:0B30 mov AX,0x5678
+        AX = (ushort)0x5678;
+        // F000:0B33 cmp word ptr ES:[EBX],AX
+        Alu16.Sub(UInt16[ES, EBX], AX);
+        // F000:0B37 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0B3B_F0B3B_1527:
+        CheckExternalEvents(cs1, 0x0B3B);
+        // F000:0B3B cmp EDI,0x0001FFFE
+        Alu32.Sub(EDI, 0x0001FFFEu);
+        // F000:0B42 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0B46_F0B46_1531:
+        CheckExternalEvents(cs1, 0x0B46);
+        // F000:0B46 cmp ESI,0x0001FFFE
+        Alu32.Sub(ESI, 0x0001FFFEu);
+        // F000:0B4D jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0B51_F0B51_1535:
+        CheckExternalEvents(cs1, 0x0B51);
+        // F000:0B51 mov ESI,0x00010000
+        ESI = 0x00010000u;
+        // F000:0B57 mov AX,0x5678
+        AX = (ushort)0x5678;
+        // F000:0B5A mov word ptr ES:[EBX],AX
+        UInt16[ES, EBX] = AX;
+        // F000:0B5E xor EAX,EAX
+        EAX = Alu32.Xor(EAX, EAX);
+        // F000:0B61 lods AX,word ptr DS:[SI]
+        AX = UInt16[DS, SI];
+        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction16)));
+        // F000:0B62 cmp AX,0x5678
+        Alu16.Sub(AX, (ushort)0x5678);
+        // F000:0B65 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0B69_F0B69_1544:
+        CheckExternalEvents(cs1, 0x0B69);
+        // F000:0B69 cmp ESI,0x0001FFFE
+        Alu32.Sub(ESI, 0x0001FFFEu);
+        // F000:0B70 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0B74_F0B74_1548:
+        CheckExternalEvents(cs1, 0x0B74);
+        // F000:0B74 std
+        DirectionFlag = true;
+        // F000:0B75 mov EDI,0x00010000
+        EDI = 0x00010000u;
+        // F000:0B7B mov EBX,0
+        EBX = 0x00000000u;
+        // F000:0B81 mov EAX,0
+        EAX = 0x00000000u;
+        // F000:0B87 mov dword ptr ES:[EBX],EAX
+        UInt32[ES, EBX] = EAX;
+        // F000:0B8C mov EAX,0x12345678
+        EAX = 0x12345678u;
+        // F000:0B92 stos dword ptr ES:[DI],EAX
+        UInt32[ES, DI] = EAX;
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
+        // F000:0B94 cmp dword ptr ES:[EBX],EAX
+        Alu32.Sub(UInt32[ES, EBX], EAX);
+        // F000:0B99 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0B9D_F0B9D_1559:
+        CheckExternalEvents(cs1, 0x0B9D);
+        // F000:0B9D cmp EDI,0x0001FFFC
+        Alu32.Sub(EDI, 0x0001FFFCu);
+        // F000:0BA4 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0BA8_F0BA8_1563:
+        CheckExternalEvents(cs1, 0x0BA8);
+        // F000:0BA8 mov ESI,0x00010000
+        ESI = 0x00010000u;
+        // F000:0BAE mov EDI,0x00010000
+        EDI = 0x00010000u;
+        // F000:0BB4 mov EBX,0
+        EBX = 0x00000000u;
+        // F000:0BBA mov dword ptr DS:[EBX],EAX
+        UInt32[DS, EBX] = EAX;
+        // F000:0BBF mov dword ptr ES:[EBX],EAX
+        UInt32[ES, EBX] = EAX;
+        // F000:0BC4 cmp EAX,0
+        Alu32.Sub(EAX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:0BC8 je near 0x15C7
+        if (ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0BCC_F0BCC_1572:
+        CheckExternalEvents(cs1, 0x0BCC);
+        // F000:0BCC cmps dword ptr DS:[SI],dword ptr ES:[DI]
+        Alu32.Sub(UInt32[DS, SI], UInt32[ES, DI]);
+        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction32)));
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
+        // F000:0BCE jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0BD2_F0BD2_1576:
+        CheckExternalEvents(cs1, 0x0BD2);
+        // F000:0BD2 cmp EDI,0x0001FFFC
+        Alu32.Sub(EDI, 0x0001FFFCu);
+        // F000:0BD9 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0BDD_F0BDD_1580:
+        CheckExternalEvents(cs1, 0x0BDD);
+        // F000:0BDD cmp ESI,0x0001FFFC
+        Alu32.Sub(ESI, 0x0001FFFCu);
+        // F000:0BE4 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0BE8_F0BE8_1584:
+        CheckExternalEvents(cs1, 0x0BE8);
+        // F000:0BE8 mov EDI,0x00010000
+        EDI = 0x00010000u;
+        // F000:0BEE mov EAX,0x12345678
+        EAX = 0x12345678u;
+        // F000:0BF4 mov dword ptr ES:[EBX],EAX
+        UInt32[ES, EBX] = EAX;
+        // F000:0BF9 cmp EAX,0
+        Alu32.Sub(EAX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:0BFD scas EAX,dword ptr ES:[DI]
+        Alu32.Sub(EAX, UInt32[ES, DI]);
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
+        // F000:0BFF jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0C03_F0C03_1592:
+        CheckExternalEvents(cs1, 0x0C03);
+        // F000:0C03 cmp EDI,0x0001FFFC
+        Alu32.Sub(EDI, 0x0001FFFCu);
+        // F000:0C0A jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0C0E_F0C0E_1596:
+        CheckExternalEvents(cs1, 0x0C0E);
+        // F000:0C0E mov ESI,0x00010000
+        ESI = 0x00010000u;
+        // F000:0C14 mov EDI,0x00010000
+        EDI = 0x00010000u;
+        // F000:0C1A mov EAX,0x12345678
+        EAX = 0x12345678u;
+        // F000:0C20 mov dword ptr DS:[EBX],EAX
+        UInt32[DS, EBX] = EAX;
+        // F000:0C25 mov EAX,0
+        EAX = 0x00000000u;
+        // F000:0C2B mov dword ptr ES:[EBX],EAX
+        UInt32[ES, EBX] = EAX;
+        // F000:0C30 movs dword ptr ES:[DI],dword ptr DS:[SI]
+        UInt32[ES, DI] = UInt32[DS, SI];
+        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction32)));
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
+        // F000:0C32 mov EAX,0x12345678
+        EAX = 0x12345678u;
+        // F000:0C38 cmp dword ptr ES:[EBX],EAX
+        Alu32.Sub(UInt32[ES, EBX], EAX);
+        // F000:0C3D jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0C41_F0C41_1608:
+        CheckExternalEvents(cs1, 0x0C41);
+        // F000:0C41 cmp EDI,0x0001FFFC
+        Alu32.Sub(EDI, 0x0001FFFCu);
+        // F000:0C48 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0C4C_F0C4C_1612:
+        CheckExternalEvents(cs1, 0x0C4C);
+        // F000:0C4C cmp ESI,0x0001FFFC
+        Alu32.Sub(ESI, 0x0001FFFCu);
+        // F000:0C53 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0C57_F0C57_1616:
+        CheckExternalEvents(cs1, 0x0C57);
+        // F000:0C57 mov ESI,0x00010000
+        ESI = 0x00010000u;
+        // F000:0C5D mov EAX,0x12345678
+        EAX = 0x12345678u;
+        // F000:0C63 mov dword ptr ES:[EBX],EAX
+        UInt32[ES, EBX] = EAX;
+        // F000:0C68 xor EAX,EAX
+        EAX = Alu32.Xor(EAX, EAX);
+        // F000:0C6B lods EAX,dword ptr DS:[SI]
+        EAX = UInt32[DS, SI];
+        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction32)));
+        // F000:0C6D cmp EAX,0x12345678
+        Alu32.Sub(EAX, 0x12345678u);
+        // F000:0C73 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0C77_F0C77_1625:
+        CheckExternalEvents(cs1, 0x0C77);
+        // F000:0C77 cmp ESI,0x0001FFFC
+        Alu32.Sub(ESI, 0x0001FFFCu);
+        // F000:0C7E jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0C82_F0C82_1629:
+        CheckExternalEvents(cs1, 0x0C82);
+        // F000:0C82 cld
+        DirectionFlag = false;
+        // F000:0C83 mov EAX,0x12345678
+        EAX = 0x12345678u;
+        // F000:0C89 mov ESI,0x0001FF00
+        ESI = 0x0001FF00u;
+        // F000:0C8F mov EDI,0x0001FF00
+        EDI = 0x0001FF00u;
+        // F000:0C95 mov EAX,0x12345678
+        EAX = 0x12345678u;
+        // F000:0C9B mov ESI,0x0001FF00
+        ESI = 0x0001FF00u;
+        // F000:0CA1 mov EDI,0x0001FF00
+        EDI = 0x0001FF00u;
+        // F000:0CA7 mov ECX,0x00000100
+        ECX = 0x00000100u;
+        // F000:0CAD rep stos byte ptr ES:[DI],AL
+        while (CX != (ushort)0x0000) {
+            UInt8[ES, DI] = AL;
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+        }
+        // F000:0CAF cmp ECX,0
+        Alu32.Sub(ECX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:0CB3 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0CB7_F0CB7_1642:
+        CheckExternalEvents(cs1, 0x0CB7);
+        // F000:0CB7 cmp EDI,0x00010000
+        Alu32.Sub(EDI, 0x00010000u);
+        // F000:0CBE jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0CC2_F0CC2_1646:
+        CheckExternalEvents(cs1, 0x0CC2);
+        // F000:0CC2 mov EDI,0x0001FF00
+        EDI = 0x0001FF00u;
+        // F000:0CC8 mov DX,ES
+        DX = ES;
+        // F000:0CCA mov CX,DS
+        CX = DS;
+        // F000:0CCC xchg DX,CX
+        ushort temp_F000_0CCC_F0CCC = DX;
+        DX = CX;
+        CX = unchecked((ushort)temp_F000_0CCC_F0CCC);
+        // F000:0CCE mov ES,DX
+        ES = DX;
+        // F000:0CD0 mov DS,CX
+        DS = CX;
+        // F000:0CD2 xchg EDI,ESI
+        uint temp_F000_0CD2_F0CD2 = EDI;
+        EDI = ESI;
+        ESI = unchecked((uint)temp_F000_0CD2_F0CD2);
+        // F000:0CD5 mov ECX,0x00000100
+        ECX = 0x00000100u;
+        // F000:0CDB rep stos byte ptr ES:[DI],AL
+        while (CX != (ushort)0x0000) {
+            UInt8[ES, DI] = AL;
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+        }
+        // F000:0CDD mov EDI,0x0001FF00
+        EDI = 0x0001FF00u;
+        // F000:0CE3 mov ECX,0x00000100
+        ECX = 0x00000100u;
+        // F000:0CE9 repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
+        bool shouldContinue_F000_0CE9_F0CE9 = true;
+        while (CX != (ushort)0x0000 && shouldContinue_F000_0CE9_F0CE9) {
+            Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
+            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+            shouldContinue_F000_0CE9_F0CE9 = ZeroFlag == true;
+        }
+        // F000:0CEB cmp ECX,0
+        Alu32.Sub(ECX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:0CEF jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0CF3_F0CF3_1662:
+        CheckExternalEvents(cs1, 0x0CF3);
+        // F000:0CF3 cmp ESI,0x00010000
+        Alu32.Sub(ESI, 0x00010000u);
+        // F000:0CFA jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0CFE_F0CFE_1666:
+        CheckExternalEvents(cs1, 0x0CFE);
+        // F000:0CFE cmp EDI,0x00010000
+        Alu32.Sub(EDI, 0x00010000u);
+        // F000:0D05 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0D09_F0D09_1670:
+        CheckExternalEvents(cs1, 0x0D09);
+        // F000:0D09 mov EDI,0x0001FF00
+        EDI = 0x0001FF00u;
+        // F000:0D0F mov ESI,0x0001FF00
+        ESI = 0x0001FF00u;
+        // F000:0D15 mov ECX,0x00000100
+        ECX = 0x00000100u;
+        // F000:0D1B repe scas AL,byte ptr ES:[DI]
+        bool shouldContinue_F000_0D1B_F0D1B = true;
+        while (CX != (ushort)0x0000 && shouldContinue_F000_0D1B_F0D1B) {
+            Alu8.Sub(AL, UInt8[ES, DI]);
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+            shouldContinue_F000_0D1B_F0D1B = ZeroFlag == true;
+        }
+        // F000:0D1D cmp ECX,0
+        Alu32.Sub(ECX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:0D21 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0D25_F0D25_1678:
+        CheckExternalEvents(cs1, 0x0D25);
+        // F000:0D25 cmp EDI,0x00010000
+        Alu32.Sub(EDI, 0x00010000u);
+        // F000:0D2C jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0D30_F0D30_1682:
+        CheckExternalEvents(cs1, 0x0D30);
+        // F000:0D30 mov EDI,0x0001FF00
+        EDI = 0x0001FF00u;
+        // F000:0D36 mov EAX,0
+        EAX = 0x00000000u;
+        // F000:0D3C mov ECX,0x00000100
+        ECX = 0x00000100u;
+        // F000:0D42 rep stos byte ptr ES:[DI],AL
+        while (CX != (ushort)0x0000) {
+            UInt8[ES, DI] = AL;
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+        }
+        // F000:0D44 mov EDI,0x0001FF00
+        EDI = 0x0001FF00u;
+        // F000:0D4A mov ECX,0x00000100
+        ECX = 0x00000100u;
+        // F000:0D50 rep movs byte ptr ES:[DI],byte ptr DS:[SI]
+        while (CX != (ushort)0x0000) {
+            UInt8[ES, DI] = UInt8[DS, SI];
+            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+        }
+        // F000:0D52 cmp ECX,0
+        Alu32.Sub(ECX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:0D56 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0D5A_F0D5A_1693:
+        CheckExternalEvents(cs1, 0x0D5A);
+        // F000:0D5A cmp ESI,0x00010000
+        Alu32.Sub(ESI, 0x00010000u);
+        // F000:0D61 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0D65_F0D65_1697:
+        CheckExternalEvents(cs1, 0x0D65);
+        // F000:0D65 cmp EDI,0x00010000
+        Alu32.Sub(EDI, 0x00010000u);
+        // F000:0D6C jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0D70_F0D70_1701:
+        CheckExternalEvents(cs1, 0x0D70);
+        // F000:0D70 mov ECX,0x00000100
+        ECX = 0x00000100u;
+        // F000:0D76 mov EDI,0x0001FF00
+        EDI = 0x0001FF00u;
+        // F000:0D7C mov ESI,0x0001FF00
+        ESI = 0x0001FF00u;
+        // F000:0D82 repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
+        bool shouldContinue_F000_0D82_F0D82 = true;
+        while (CX != (ushort)0x0000 && shouldContinue_F000_0D82_F0D82) {
+            Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
+            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+            shouldContinue_F000_0D82_F0D82 = ZeroFlag == true;
+        }
+        // F000:0D84 cmp ECX,0
+        Alu32.Sub(ECX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:0D88 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0D8C_F0D8C_1709:
+        CheckExternalEvents(cs1, 0x0D8C);
+        // F000:0D8C cmp ESI,0x00010000
+        Alu32.Sub(ESI, 0x00010000u);
+        // F000:0D93 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0D97_F0D97_1713:
+        CheckExternalEvents(cs1, 0x0D97);
+        // F000:0D97 cmp EDI,0x00010000
+        Alu32.Sub(EDI, 0x00010000u);
+        // F000:0D9E jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0DA2_F0DA2_1717:
+        CheckExternalEvents(cs1, 0x0DA2);
+        // F000:0DA2 cld
+        DirectionFlag = false;
+        // F000:0DA3 mov EAX,0x12345678
+        EAX = 0x12345678u;
+        // F000:0DA9 mov ESI,0x0001FF00
+        ESI = 0x0001FF00u;
+        // F000:0DAF mov EDI,0x0001FF00
+        EDI = 0x0001FF00u;
+        // F000:0DB5 mov EAX,0x12345678
+        EAX = 0x12345678u;
+        // F000:0DBB mov ESI,0x0001FF00
+        ESI = 0x0001FF00u;
+        // F000:0DC1 mov EDI,0x0001FF00
+        EDI = 0x0001FF00u;
+        // F000:0DC7 mov ECX,0x00000080
+        ECX = 0x00000080u;
+        // F000:0DCD rep stos word ptr ES:[DI],AX
+        while (CX != (ushort)0x0000) {
+            UInt16[ES, DI] = AX;
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+        }
+        // F000:0DCF cmp ECX,0
+        Alu32.Sub(ECX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:0DD3 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0DD7_F0DD7_1730:
+        CheckExternalEvents(cs1, 0x0DD7);
+        // F000:0DD7 cmp EDI,0x00010000
+        Alu32.Sub(EDI, 0x00010000u);
+        // F000:0DDE jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0DE2_F0DE2_1734:
+        CheckExternalEvents(cs1, 0x0DE2);
+        // F000:0DE2 mov EDI,0x0001FF00
+        EDI = 0x0001FF00u;
+        // F000:0DE8 mov DX,ES
+        DX = ES;
+        // F000:0DEA mov CX,DS
+        CX = DS;
+        // F000:0DEC xchg DX,CX
+        ushort temp_F000_0DEC_F0DEC = DX;
+        DX = CX;
+        CX = unchecked((ushort)temp_F000_0DEC_F0DEC);
+        // F000:0DEE mov ES,DX
+        ES = DX;
+        // F000:0DF0 mov DS,CX
+        DS = CX;
+        // F000:0DF2 xchg EDI,ESI
+        uint temp_F000_0DF2_F0DF2 = EDI;
+        EDI = ESI;
+        ESI = unchecked((uint)temp_F000_0DF2_F0DF2);
+        // F000:0DF5 mov ECX,0x00000080
+        ECX = 0x00000080u;
+        // F000:0DFB rep stos word ptr ES:[DI],AX
+        while (CX != (ushort)0x0000) {
+            UInt16[ES, DI] = AX;
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+        }
+        // F000:0DFD mov EDI,0x0001FF00
+        EDI = 0x0001FF00u;
+        // F000:0E03 mov ECX,0x00000080
+        ECX = 0x00000080u;
+        // F000:0E09 repe cmps word ptr DS:[SI],word ptr ES:[DI]
+        bool shouldContinue_F000_0E09_F0E09 = true;
+        while (CX != (ushort)0x0000 && shouldContinue_F000_0E09_F0E09) {
+            Alu16.Sub(UInt16[DS, SI], UInt16[ES, DI]);
+            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction16)));
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+            shouldContinue_F000_0E09_F0E09 = ZeroFlag == true;
+        }
+        // F000:0E0B cmp ECX,0
+        Alu32.Sub(ECX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:0E0F jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0E13_F0E13_1750:
+        CheckExternalEvents(cs1, 0x0E13);
+        // F000:0E13 cmp ESI,0x00010000
+        Alu32.Sub(ESI, 0x00010000u);
+        // F000:0E1A jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0E1E_F0E1E_1754:
+        CheckExternalEvents(cs1, 0x0E1E);
+        // F000:0E1E cmp EDI,0x00010000
+        Alu32.Sub(EDI, 0x00010000u);
+        // F000:0E25 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0E29_F0E29_1758:
+        CheckExternalEvents(cs1, 0x0E29);
+        // F000:0E29 mov EDI,0x0001FF00
+        EDI = 0x0001FF00u;
+        // F000:0E2F mov ESI,0x0001FF00
+        ESI = 0x0001FF00u;
+        // F000:0E35 mov ECX,0x00000080
+        ECX = 0x00000080u;
+        // F000:0E3B repe scas AX,word ptr ES:[DI]
+        bool shouldContinue_F000_0E3B_F0E3B = true;
+        while (CX != (ushort)0x0000 && shouldContinue_F000_0E3B_F0E3B) {
+            Alu16.Sub(AX, UInt16[ES, DI]);
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+            shouldContinue_F000_0E3B_F0E3B = ZeroFlag == true;
+        }
+        // F000:0E3D cmp ECX,0
+        Alu32.Sub(ECX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:0E41 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0E45_F0E45_1766:
+        CheckExternalEvents(cs1, 0x0E45);
+        // F000:0E45 cmp EDI,0x00010000
+        Alu32.Sub(EDI, 0x00010000u);
+        // F000:0E4C jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0E50_F0E50_1770:
+        CheckExternalEvents(cs1, 0x0E50);
+        // F000:0E50 mov EDI,0x0001FF00
+        EDI = 0x0001FF00u;
+        // F000:0E56 mov EAX,0
+        EAX = 0x00000000u;
+        // F000:0E5C mov ECX,0x00000080
+        ECX = 0x00000080u;
+        // F000:0E62 rep stos word ptr ES:[DI],AX
+        while (CX != (ushort)0x0000) {
+            UInt16[ES, DI] = AX;
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+        }
+        // F000:0E64 mov EDI,0x0001FF00
+        EDI = 0x0001FF00u;
+        // F000:0E6A mov ECX,0x00000080
+        ECX = 0x00000080u;
+        // F000:0E70 rep movs word ptr ES:[DI],word ptr DS:[SI]
+        while (CX != (ushort)0x0000) {
+            UInt16[ES, DI] = UInt16[DS, SI];
+            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction16)));
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+        }
+        // F000:0E72 cmp ECX,0
+        Alu32.Sub(ECX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:0E76 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0E7A_F0E7A_1781:
+        CheckExternalEvents(cs1, 0x0E7A);
+        // F000:0E7A cmp ESI,0x00010000
+        Alu32.Sub(ESI, 0x00010000u);
+        // F000:0E81 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0E85_F0E85_1785:
+        CheckExternalEvents(cs1, 0x0E85);
+        // F000:0E85 cmp EDI,0x00010000
+        Alu32.Sub(EDI, 0x00010000u);
+        // F000:0E8C jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0E90_F0E90_1789:
+        CheckExternalEvents(cs1, 0x0E90);
+        // F000:0E90 mov ECX,0x00000080
+        ECX = 0x00000080u;
+        // F000:0E96 mov EDI,0x0001FF00
+        EDI = 0x0001FF00u;
+        // F000:0E9C mov ESI,0x0001FF00
+        ESI = 0x0001FF00u;
+        // F000:0EA2 repe cmps word ptr DS:[SI],word ptr ES:[DI]
+        bool shouldContinue_F000_0EA2_F0EA2 = true;
+        while (CX != (ushort)0x0000 && shouldContinue_F000_0EA2_F0EA2) {
+            Alu16.Sub(UInt16[DS, SI], UInt16[ES, DI]);
+            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction16)));
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+            shouldContinue_F000_0EA2_F0EA2 = ZeroFlag == true;
+        }
+        // F000:0EA4 cmp ECX,0
+        Alu32.Sub(ECX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:0EA8 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0EAC_F0EAC_1797:
+        CheckExternalEvents(cs1, 0x0EAC);
+        // F000:0EAC cmp ESI,0x00010000
+        Alu32.Sub(ESI, 0x00010000u);
+        // F000:0EB3 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0EB7_F0EB7_1801:
+        CheckExternalEvents(cs1, 0x0EB7);
+        // F000:0EB7 cmp EDI,0x00010000
+        Alu32.Sub(EDI, 0x00010000u);
+        // F000:0EBE jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0EC2_F0EC2_1805:
+        CheckExternalEvents(cs1, 0x0EC2);
+        // F000:0EC2 cld
+        DirectionFlag = false;
+        // F000:0EC3 mov EAX,0x12345678
+        EAX = 0x12345678u;
+        // F000:0EC9 mov ESI,0x0001FF00
+        ESI = 0x0001FF00u;
+        // F000:0ECF mov EDI,0x0001FF00
+        EDI = 0x0001FF00u;
+        // F000:0ED5 mov EAX,0x12345678
+        EAX = 0x12345678u;
+        // F000:0EDB mov ESI,0x0001FF00
+        ESI = 0x0001FF00u;
+        // F000:0EE1 mov EDI,0x0001FF00
+        EDI = 0x0001FF00u;
+        // F000:0EE7 mov ECX,0x00000040
+        ECX = 0x00000040u;
+        // F000:0EED rep stos dword ptr ES:[DI],EAX
+        while (CX != (ushort)0x0000) {
+            UInt32[ES, DI] = EAX;
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+        }
+        // F000:0EF0 cmp ECX,0
+        Alu32.Sub(ECX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:0EF4 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0EF8_F0EF8_1818:
+        CheckExternalEvents(cs1, 0x0EF8);
+        // F000:0EF8 cmp EDI,0x00010000
+        Alu32.Sub(EDI, 0x00010000u);
+        // F000:0EFF jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0F03_F0F03_1822:
+        CheckExternalEvents(cs1, 0x0F03);
+        // F000:0F03 mov EDI,0x0001FF00
+        EDI = 0x0001FF00u;
+        // F000:0F09 mov DX,ES
+        DX = ES;
+        // F000:0F0B mov CX,DS
+        CX = DS;
+        // F000:0F0D xchg DX,CX
+        ushort temp_F000_0F0D_F0F0D = DX;
+        DX = CX;
+        CX = unchecked((ushort)temp_F000_0F0D_F0F0D);
+        // F000:0F0F mov ES,DX
+        ES = DX;
+        // F000:0F11 mov DS,CX
+        DS = CX;
+        // F000:0F13 xchg EDI,ESI
+        uint temp_F000_0F13_F0F13 = EDI;
+        EDI = ESI;
+        ESI = unchecked((uint)temp_F000_0F13_F0F13);
+        // F000:0F16 mov ECX,0x00000040
+        ECX = 0x00000040u;
+        // F000:0F1C rep stos dword ptr ES:[DI],EAX
+        while (CX != (ushort)0x0000) {
+            UInt32[ES, DI] = EAX;
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+        }
+        // F000:0F1F mov EDI,0x0001FF00
+        EDI = 0x0001FF00u;
+        // F000:0F25 mov ECX,0x00000040
+        ECX = 0x00000040u;
+        // F000:0F2B repe cmps dword ptr DS:[SI],dword ptr ES:[DI]
+        bool shouldContinue_F000_0F2B_F0F2B = true;
+        while (CX != (ushort)0x0000 && shouldContinue_F000_0F2B_F0F2B) {
+            Alu32.Sub(UInt32[DS, SI], UInt32[ES, DI]);
+            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction32)));
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+            shouldContinue_F000_0F2B_F0F2B = ZeroFlag == true;
+        }
+        // F000:0F2E cmp ECX,0
+        Alu32.Sub(ECX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:0F32 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0F36_F0F36_1838:
+        CheckExternalEvents(cs1, 0x0F36);
+        // F000:0F36 cmp ESI,0x00010000
+        Alu32.Sub(ESI, 0x00010000u);
+        // F000:0F3D jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0F41_F0F41_1842:
+        CheckExternalEvents(cs1, 0x0F41);
+        // F000:0F41 cmp EDI,0x00010000
+        Alu32.Sub(EDI, 0x00010000u);
+        // F000:0F48 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0F4C_F0F4C_1846:
+        CheckExternalEvents(cs1, 0x0F4C);
+        // F000:0F4C mov EDI,0x0001FF00
+        EDI = 0x0001FF00u;
+        // F000:0F52 mov ESI,0x0001FF00
+        ESI = 0x0001FF00u;
+        // F000:0F58 mov ECX,0x00000040
+        ECX = 0x00000040u;
+        // F000:0F5E repe scas EAX,dword ptr ES:[DI]
+        bool shouldContinue_F000_0F5E_F0F5E = true;
+        while (CX != (ushort)0x0000 && shouldContinue_F000_0F5E_F0F5E) {
+            Alu32.Sub(EAX, UInt32[ES, DI]);
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+            shouldContinue_F000_0F5E_F0F5E = ZeroFlag == true;
+        }
+        // F000:0F61 cmp ECX,0
+        Alu32.Sub(ECX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:0F65 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0F69_F0F69_1854:
+        CheckExternalEvents(cs1, 0x0F69);
+        // F000:0F69 cmp EDI,0x00010000
+        Alu32.Sub(EDI, 0x00010000u);
+        // F000:0F70 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0F74_F0F74_1858:
+        CheckExternalEvents(cs1, 0x0F74);
+        // F000:0F74 mov EDI,0x0001FF00
+        EDI = 0x0001FF00u;
+        // F000:0F7A mov EAX,0
+        EAX = 0x00000000u;
+        // F000:0F80 mov ECX,0x00000040
+        ECX = 0x00000040u;
+        // F000:0F86 rep stos dword ptr ES:[DI],EAX
+        while (CX != (ushort)0x0000) {
+            UInt32[ES, DI] = EAX;
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+        }
+        // F000:0F89 mov EDI,0x0001FF00
+        EDI = 0x0001FF00u;
+        // F000:0F8F mov ECX,0x00000040
+        ECX = 0x00000040u;
+        // F000:0F95 rep movs dword ptr ES:[DI],dword ptr DS:[SI]
+        while (CX != (ushort)0x0000) {
+            UInt32[ES, DI] = UInt32[DS, SI];
+            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction32)));
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+        }
+        // F000:0F98 cmp ECX,0
+        Alu32.Sub(ECX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:0F9C jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0FA0_F0FA0_1869:
+        CheckExternalEvents(cs1, 0x0FA0);
+        // F000:0FA0 cmp ESI,0x00010000
+        Alu32.Sub(ESI, 0x00010000u);
+        // F000:0FA7 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0FAB_F0FAB_1873:
+        CheckExternalEvents(cs1, 0x0FAB);
+        // F000:0FAB cmp EDI,0x00010000
+        Alu32.Sub(EDI, 0x00010000u);
+        // F000:0FB2 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0FB6_F0FB6_1877:
+        CheckExternalEvents(cs1, 0x0FB6);
+        // F000:0FB6 mov ECX,0x00000040
+        ECX = 0x00000040u;
+        // F000:0FBC mov EDI,0x0001FF00
+        EDI = 0x0001FF00u;
+        // F000:0FC2 mov ESI,0x0001FF00
+        ESI = 0x0001FF00u;
+        // F000:0FC8 repe cmps dword ptr DS:[SI],dword ptr ES:[DI]
+        bool shouldContinue_F000_0FC8_F0FC8 = true;
+        while (CX != (ushort)0x0000 && shouldContinue_F000_0FC8_F0FC8) {
+            Alu32.Sub(UInt32[DS, SI], UInt32[ES, DI]);
+            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction32)));
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+            shouldContinue_F000_0FC8_F0FC8 = ZeroFlag == true;
+        }
+        // F000:0FCB cmp ECX,0
+        Alu32.Sub(ECX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:0FCF jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0FD3_F0FD3_1885:
+        CheckExternalEvents(cs1, 0x0FD3);
+        // F000:0FD3 cmp ESI,0x00010000
+        Alu32.Sub(ESI, 0x00010000u);
+        // F000:0FDA jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0FDE_F0FDE_1889:
+        CheckExternalEvents(cs1, 0x0FDE);
+        // F000:0FDE cmp EDI,0x00010000
+        Alu32.Sub(EDI, 0x00010000u);
+        // F000:0FE5 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0FE9_F0FE9_1893:
+        CheckExternalEvents(cs1, 0x0FE9);
+        // F000:0FE9 std
+        DirectionFlag = true;
+        // F000:0FEA mov EAX,0x12345678
+        EAX = 0x12345678u;
+        // F000:0FF0 mov ESI,0x000100FF
+        ESI = 0x000100FFu;
+        // F000:0FF6 mov EDI,0x000100FF
+        EDI = 0x000100FFu;
+        // F000:0FFC mov EAX,0x12345678
+        EAX = 0x12345678u;
+        // F000:1002 mov ESI,0x000100FF
+        ESI = 0x000100FFu;
+        // F000:1008 mov EDI,0x000100FF
+        EDI = 0x000100FFu;
+        // F000:100E mov ECX,0x00000100
+        ECX = 0x00000100u;
+        // F000:1014 rep stos byte ptr ES:[DI],AL
+        while (CX != (ushort)0x0000) {
+            UInt8[ES, DI] = AL;
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+        }
+        // F000:1016 cmp ECX,0
+        Alu32.Sub(ECX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:101A jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_101E_F101E_1906:
+        CheckExternalEvents(cs1, 0x101E);
+        // F000:101E cmp EDI,0x0001FFFF
+        Alu32.Sub(EDI, 0x0001FFFFu);
+        // F000:1025 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_1029_F1029_1910:
+        CheckExternalEvents(cs1, 0x1029);
+        // F000:1029 mov EDI,0x000100FF
+        EDI = 0x000100FFu;
+        // F000:102F mov DX,ES
+        DX = ES;
+        // F000:1031 mov CX,DS
+        CX = DS;
+        // F000:1033 xchg DX,CX
+        ushort temp_F000_1033_F1033 = DX;
+        DX = CX;
+        CX = unchecked((ushort)temp_F000_1033_F1033);
+        // F000:1035 mov ES,DX
+        ES = DX;
+        // F000:1037 mov DS,CX
+        DS = CX;
+        // F000:1039 xchg EDI,ESI
+        uint temp_F000_1039_F1039 = EDI;
+        EDI = ESI;
+        ESI = unchecked((uint)temp_F000_1039_F1039);
+        // F000:103C mov ECX,0x00000100
+        ECX = 0x00000100u;
+        // F000:1042 rep stos byte ptr ES:[DI],AL
+        while (CX != (ushort)0x0000) {
+            UInt8[ES, DI] = AL;
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+        }
+        // F000:1044 mov EDI,0x000100FF
+        EDI = 0x000100FFu;
+        // F000:104A mov ECX,0x00000100
+        ECX = 0x00000100u;
+        // F000:1050 repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
+        bool shouldContinue_F000_1050_F1050 = true;
+        while (CX != (ushort)0x0000 && shouldContinue_F000_1050_F1050) {
+            Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
+            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+            shouldContinue_F000_1050_F1050 = ZeroFlag == true;
+        }
+        // F000:1052 cmp ECX,0
+        Alu32.Sub(ECX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:1056 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_105A_F105A_1926:
+        CheckExternalEvents(cs1, 0x105A);
+        // F000:105A cmp ESI,0x0001FFFF
+        Alu32.Sub(ESI, 0x0001FFFFu);
+        // F000:1061 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_1065_F1065_1930:
+        CheckExternalEvents(cs1, 0x1065);
+        // F000:1065 cmp EDI,0x0001FFFF
+        Alu32.Sub(EDI, 0x0001FFFFu);
+        // F000:106C jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_1070_F1070_1934:
+        CheckExternalEvents(cs1, 0x1070);
+        // F000:1070 mov EDI,0x000100FF
+        EDI = 0x000100FFu;
+        // F000:1076 mov ESI,0x000100FF
+        ESI = 0x000100FFu;
+        // F000:107C mov ECX,0x00000100
+        ECX = 0x00000100u;
+        // F000:1082 repe scas AL,byte ptr ES:[DI]
+        bool shouldContinue_F000_1082_F1082 = true;
+        while (CX != (ushort)0x0000 && shouldContinue_F000_1082_F1082) {
+            Alu8.Sub(AL, UInt8[ES, DI]);
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+            shouldContinue_F000_1082_F1082 = ZeroFlag == true;
+        }
+        // F000:1084 cmp ECX,0
+        Alu32.Sub(ECX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:1088 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_108C_F108C_1942:
+        CheckExternalEvents(cs1, 0x108C);
+        // F000:108C cmp EDI,0x0001FFFF
+        Alu32.Sub(EDI, 0x0001FFFFu);
+        // F000:1093 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_1097_F1097_1946:
+        CheckExternalEvents(cs1, 0x1097);
+        // F000:1097 mov EDI,0x000100FF
+        EDI = 0x000100FFu;
+        // F000:109D mov EAX,0
+        EAX = 0x00000000u;
+        // F000:10A3 mov ECX,0x00000100
+        ECX = 0x00000100u;
+        // F000:10A9 rep stos byte ptr ES:[DI],AL
+        while (CX != (ushort)0x0000) {
+            UInt8[ES, DI] = AL;
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+        }
+        // F000:10AB mov EDI,0x000100FF
+        EDI = 0x000100FFu;
+        // F000:10B1 mov ECX,0x00000100
+        ECX = 0x00000100u;
+        // F000:10B7 rep movs byte ptr ES:[DI],byte ptr DS:[SI]
+        while (CX != (ushort)0x0000) {
+            UInt8[ES, DI] = UInt8[DS, SI];
+            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+        }
+        // F000:10B9 cmp ECX,0
+        Alu32.Sub(ECX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:10BD jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_10C1_F10C1_1957:
+        CheckExternalEvents(cs1, 0x10C1);
+        // F000:10C1 cmp ESI,0x0001FFFF
+        Alu32.Sub(ESI, 0x0001FFFFu);
+        // F000:10C8 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_10CC_F10CC_1961:
+        CheckExternalEvents(cs1, 0x10CC);
+        // F000:10CC cmp EDI,0x0001FFFF
+        Alu32.Sub(EDI, 0x0001FFFFu);
+        // F000:10D3 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_10D7_F10D7_1965:
+        CheckExternalEvents(cs1, 0x10D7);
+        // F000:10D7 mov ECX,0x00000100
+        ECX = 0x00000100u;
+        // F000:10DD mov EDI,0x000100FF
+        EDI = 0x000100FFu;
+        // F000:10E3 mov ESI,0x000100FF
+        ESI = 0x000100FFu;
+        // F000:10E9 repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
+        bool shouldContinue_F000_10E9_F10E9 = true;
+        while (CX != (ushort)0x0000 && shouldContinue_F000_10E9_F10E9) {
+            Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
+            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+            shouldContinue_F000_10E9_F10E9 = ZeroFlag == true;
+        }
+        // F000:10EB cmp ECX,0
+        Alu32.Sub(ECX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:10EF jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_10F3_F10F3_1973:
+        CheckExternalEvents(cs1, 0x10F3);
+        // F000:10F3 cmp ESI,0x0001FFFF
+        Alu32.Sub(ESI, 0x0001FFFFu);
+        // F000:10FA jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_10FE_F10FE_1977:
+        CheckExternalEvents(cs1, 0x10FE);
+        // F000:10FE cmp EDI,0x0001FFFF
+        Alu32.Sub(EDI, 0x0001FFFFu);
+        // F000:1105 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_1109_F1109_1981:
+        CheckExternalEvents(cs1, 0x1109);
+        // F000:1109 std
+        DirectionFlag = true;
+        // F000:110A mov EAX,0x12345678
+        EAX = 0x12345678u;
+        // F000:1110 mov ESI,0x000100FF
+        ESI = 0x000100FFu;
+        // F000:1116 mov EDI,0x000100FF
+        EDI = 0x000100FFu;
+        // F000:111C mov EAX,0x12345678
+        EAX = 0x12345678u;
+        // F000:1122 mov ESI,0x000100FF
+        ESI = 0x000100FFu;
+        // F000:1128 mov EDI,0x000100FF
+        EDI = 0x000100FFu;
+        // F000:112E mov ECX,0x00000080
+        ECX = 0x00000080u;
+        // F000:1134 rep stos word ptr ES:[DI],AX
+        while (CX != (ushort)0x0000) {
+            UInt16[ES, DI] = AX;
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+        }
+        // F000:1136 cmp ECX,0
+        Alu32.Sub(ECX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:113A jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_113E_F113E_1994:
+        CheckExternalEvents(cs1, 0x113E);
+        // F000:113E cmp EDI,0x0001FFFF
+        Alu32.Sub(EDI, 0x0001FFFFu);
+        // F000:1145 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_1149_F1149_1998:
+        CheckExternalEvents(cs1, 0x1149);
+        // F000:1149 mov EDI,0x000100FF
+        EDI = 0x000100FFu;
+        // F000:114F mov DX,ES
+        DX = ES;
+        // F000:1151 mov CX,DS
+        CX = DS;
+        // F000:1153 xchg DX,CX
+        ushort temp_F000_1153_F1153 = DX;
+        DX = CX;
+        CX = unchecked((ushort)temp_F000_1153_F1153);
+        // F000:1155 mov ES,DX
+        ES = DX;
+        // F000:1157 mov DS,CX
+        DS = CX;
+        // F000:1159 xchg EDI,ESI
+        uint temp_F000_1159_F1159 = EDI;
+        EDI = ESI;
+        ESI = unchecked((uint)temp_F000_1159_F1159);
+        // F000:115C mov ECX,0x00000080
+        ECX = 0x00000080u;
+        // F000:1162 rep stos word ptr ES:[DI],AX
+        while (CX != (ushort)0x0000) {
+            UInt16[ES, DI] = AX;
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+        }
+        // F000:1164 mov EDI,0x000100FF
+        EDI = 0x000100FFu;
+        // F000:116A mov ECX,0x00000080
+        ECX = 0x00000080u;
+        // F000:1170 repe cmps word ptr DS:[SI],word ptr ES:[DI]
+        bool shouldContinue_F000_1170_F1170 = true;
+        while (CX != (ushort)0x0000 && shouldContinue_F000_1170_F1170) {
+            Alu16.Sub(UInt16[DS, SI], UInt16[ES, DI]);
+            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction16)));
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+            shouldContinue_F000_1170_F1170 = ZeroFlag == true;
+        }
+        // F000:1172 cmp ECX,0
+        Alu32.Sub(ECX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:1176 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_117A_F117A_2014:
+        CheckExternalEvents(cs1, 0x117A);
+        // F000:117A cmp ESI,0x0001FFFF
+        Alu32.Sub(ESI, 0x0001FFFFu);
+        // F000:1181 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_1185_F1185_2018:
+        CheckExternalEvents(cs1, 0x1185);
+        // F000:1185 cmp EDI,0x0001FFFF
+        Alu32.Sub(EDI, 0x0001FFFFu);
+        // F000:118C jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_1190_F1190_2022:
+        CheckExternalEvents(cs1, 0x1190);
+        // F000:1190 mov EDI,0x000100FF
+        EDI = 0x000100FFu;
+        // F000:1196 mov ESI,0x000100FF
+        ESI = 0x000100FFu;
+        // F000:119C mov ECX,0x00000080
+        ECX = 0x00000080u;
+        // F000:11A2 repe scas AX,word ptr ES:[DI]
+        bool shouldContinue_F000_11A2_F11A2 = true;
+        while (CX != (ushort)0x0000 && shouldContinue_F000_11A2_F11A2) {
+            Alu16.Sub(AX, UInt16[ES, DI]);
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+            shouldContinue_F000_11A2_F11A2 = ZeroFlag == true;
+        }
+        // F000:11A4 cmp ECX,0
+        Alu32.Sub(ECX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:11A8 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_11AC_F11AC_2030:
+        CheckExternalEvents(cs1, 0x11AC);
+        // F000:11AC cmp EDI,0x0001FFFF
+        Alu32.Sub(EDI, 0x0001FFFFu);
+        // F000:11B3 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_11B7_F11B7_2034:
+        CheckExternalEvents(cs1, 0x11B7);
+        // F000:11B7 mov EDI,0x000100FF
+        EDI = 0x000100FFu;
+        // F000:11BD mov EAX,0
+        EAX = 0x00000000u;
+        // F000:11C3 mov ECX,0x00000080
+        ECX = 0x00000080u;
+        // F000:11C9 rep stos word ptr ES:[DI],AX
+        while (CX != (ushort)0x0000) {
+            UInt16[ES, DI] = AX;
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+        }
+        // F000:11CB mov EDI,0x000100FF
+        EDI = 0x000100FFu;
+        // F000:11D1 mov ECX,0x00000080
+        ECX = 0x00000080u;
+        // F000:11D7 rep movs word ptr ES:[DI],word ptr DS:[SI]
+        while (CX != (ushort)0x0000) {
+            UInt16[ES, DI] = UInt16[DS, SI];
+            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction16)));
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+        }
+        // F000:11D9 cmp ECX,0
+        Alu32.Sub(ECX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:11DD jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_11E1_F11E1_2045:
+        CheckExternalEvents(cs1, 0x11E1);
+        // F000:11E1 cmp ESI,0x0001FFFF
+        Alu32.Sub(ESI, 0x0001FFFFu);
+        // F000:11E8 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_11EC_F11EC_2049:
+        CheckExternalEvents(cs1, 0x11EC);
+        // F000:11EC cmp EDI,0x0001FFFF
+        Alu32.Sub(EDI, 0x0001FFFFu);
+        // F000:11F3 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_11F7_F11F7_2053:
+        CheckExternalEvents(cs1, 0x11F7);
+        // F000:11F7 mov ECX,0x00000080
+        ECX = 0x00000080u;
+        // F000:11FD mov EDI,0x000100FF
+        EDI = 0x000100FFu;
+        // F000:1203 mov ESI,0x000100FF
+        ESI = 0x000100FFu;
+        // F000:1209 repe cmps word ptr DS:[SI],word ptr ES:[DI]
+        bool shouldContinue_F000_1209_F1209 = true;
+        while (CX != (ushort)0x0000 && shouldContinue_F000_1209_F1209) {
+            Alu16.Sub(UInt16[DS, SI], UInt16[ES, DI]);
+            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction16)));
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+            shouldContinue_F000_1209_F1209 = ZeroFlag == true;
+        }
+        // F000:120B cmp ECX,0
+        Alu32.Sub(ECX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:120F jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_1213_F1213_2061:
+        CheckExternalEvents(cs1, 0x1213);
+        // F000:1213 cmp ESI,0x0001FFFF
+        Alu32.Sub(ESI, 0x0001FFFFu);
+        // F000:121A jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_121E_F121E_2065:
+        CheckExternalEvents(cs1, 0x121E);
+        // F000:121E cmp EDI,0x0001FFFF
+        Alu32.Sub(EDI, 0x0001FFFFu);
+        // F000:1225 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_1229_F1229_2069:
+        CheckExternalEvents(cs1, 0x1229);
+        // F000:1229 std
+        DirectionFlag = true;
+        // F000:122A mov EAX,0x12345678
+        EAX = 0x12345678u;
+        // F000:1230 mov ESI,0x000100FF
+        ESI = 0x000100FFu;
+        // F000:1236 mov EDI,0x000100FF
+        EDI = 0x000100FFu;
+        // F000:123C mov EAX,0x12345678
+        EAX = 0x12345678u;
+        // F000:1242 mov ESI,0x000100FF
+        ESI = 0x000100FFu;
+        // F000:1248 mov EDI,0x000100FF
+        EDI = 0x000100FFu;
+        // F000:124E mov ECX,0x00000040
+        ECX = 0x00000040u;
+        // F000:1254 rep stos dword ptr ES:[DI],EAX
+        while (CX != (ushort)0x0000) {
+            UInt32[ES, DI] = EAX;
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+        }
+        // F000:1257 cmp ECX,0
+        Alu32.Sub(ECX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:125B jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_125F_F125F_2082:
+        CheckExternalEvents(cs1, 0x125F);
+        // F000:125F cmp EDI,0x0001FFFF
+        Alu32.Sub(EDI, 0x0001FFFFu);
+        // F000:1266 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_126A_F126A_2086:
+        CheckExternalEvents(cs1, 0x126A);
+        // F000:126A mov EDI,0x000100FF
+        EDI = 0x000100FFu;
+        // F000:1270 mov DX,ES
+        DX = ES;
+        // F000:1272 mov CX,DS
+        CX = DS;
+        // F000:1274 xchg DX,CX
+        ushort temp_F000_1274_F1274 = DX;
+        DX = CX;
+        CX = unchecked((ushort)temp_F000_1274_F1274);
+        // F000:1276 mov ES,DX
+        ES = DX;
+        // F000:1278 mov DS,CX
+        DS = CX;
+        // F000:127A xchg EDI,ESI
+        uint temp_F000_127A_F127A = EDI;
+        EDI = ESI;
+        ESI = unchecked((uint)temp_F000_127A_F127A);
+        // F000:127D mov ECX,0x00000040
+        ECX = 0x00000040u;
+        // F000:1283 rep stos dword ptr ES:[DI],EAX
+        while (CX != (ushort)0x0000) {
+            UInt32[ES, DI] = EAX;
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+        }
+        // F000:1286 mov EDI,0x000100FF
+        EDI = 0x000100FFu;
+        // F000:128C mov ECX,0x00000040
+        ECX = 0x00000040u;
+        // F000:1292 repe cmps dword ptr DS:[SI],dword ptr ES:[DI]
+        bool shouldContinue_F000_1292_F1292 = true;
+        while (CX != (ushort)0x0000 && shouldContinue_F000_1292_F1292) {
+            Alu32.Sub(UInt32[DS, SI], UInt32[ES, DI]);
+            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction32)));
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+            shouldContinue_F000_1292_F1292 = ZeroFlag == true;
+        }
+        // F000:1295 cmp ECX,0
+        Alu32.Sub(ECX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:1299 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_129D_F129D_2102:
+        CheckExternalEvents(cs1, 0x129D);
+        // F000:129D cmp ESI,0x0001FFFF
+        Alu32.Sub(ESI, 0x0001FFFFu);
+        // F000:12A4 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_12A8_F12A8_2106:
+        CheckExternalEvents(cs1, 0x12A8);
+        // F000:12A8 cmp EDI,0x0001FFFF
+        Alu32.Sub(EDI, 0x0001FFFFu);
+        // F000:12AF jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_12B3_F12B3_2110:
+        CheckExternalEvents(cs1, 0x12B3);
+        // F000:12B3 mov EDI,0x000100FF
+        EDI = 0x000100FFu;
+        // F000:12B9 mov ESI,0x000100FF
+        ESI = 0x000100FFu;
+        // F000:12BF mov ECX,0x00000040
+        ECX = 0x00000040u;
+        // F000:12C5 repe scas EAX,dword ptr ES:[DI]
+        bool shouldContinue_F000_12C5_F12C5 = true;
+        while (CX != (ushort)0x0000 && shouldContinue_F000_12C5_F12C5) {
+            Alu32.Sub(EAX, UInt32[ES, DI]);
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+            shouldContinue_F000_12C5_F12C5 = ZeroFlag == true;
+        }
+        // F000:12C8 cmp ECX,0
+        Alu32.Sub(ECX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:12CC jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_12D0_F12D0_2118:
+        CheckExternalEvents(cs1, 0x12D0);
+        // F000:12D0 cmp EDI,0x0001FFFF
+        Alu32.Sub(EDI, 0x0001FFFFu);
+        // F000:12D7 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_12DB_F12DB_2122:
+        CheckExternalEvents(cs1, 0x12DB);
+        // F000:12DB mov EDI,0x000100FF
+        EDI = 0x000100FFu;
+        // F000:12E1 mov EAX,0
+        EAX = 0x00000000u;
+        // F000:12E7 mov ECX,0x00000040
+        ECX = 0x00000040u;
+        // F000:12ED rep stos dword ptr ES:[DI],EAX
+        while (CX != (ushort)0x0000) {
+            UInt32[ES, DI] = EAX;
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+        }
+        // F000:12F0 mov EDI,0x000100FF
+        EDI = 0x000100FFu;
+        // F000:12F6 mov ECX,0x00000040
+        ECX = 0x00000040u;
+        // F000:12FC rep movs dword ptr ES:[DI],dword ptr DS:[SI]
+        while (CX != (ushort)0x0000) {
+            UInt32[ES, DI] = UInt32[DS, SI];
+            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction32)));
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+        }
+        // F000:12FF cmp ECX,0
+        Alu32.Sub(ECX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:1303 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_1307_F1307_2133:
+        CheckExternalEvents(cs1, 0x1307);
+        // F000:1307 cmp ESI,0x0001FFFF
+        Alu32.Sub(ESI, 0x0001FFFFu);
+        // F000:130E jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_1312_F1312_2137:
+        CheckExternalEvents(cs1, 0x1312);
+        // F000:1312 cmp EDI,0x0001FFFF
+        Alu32.Sub(EDI, 0x0001FFFFu);
+        // F000:1319 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_131D_F131D_2141:
+        CheckExternalEvents(cs1, 0x131D);
+        // F000:131D mov ECX,0x00000040
+        ECX = 0x00000040u;
+        // F000:1323 mov EDI,0x000100FF
+        EDI = 0x000100FFu;
+        // F000:1329 mov ESI,0x000100FF
+        ESI = 0x000100FFu;
+        // F000:132F repe cmps dword ptr DS:[SI],dword ptr ES:[DI]
+        bool shouldContinue_F000_132F_F132F = true;
+        while (CX != (ushort)0x0000 && shouldContinue_F000_132F_F132F) {
+            Alu32.Sub(UInt32[DS, SI], UInt32[ES, DI]);
+            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction32)));
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+            shouldContinue_F000_132F_F132F = ZeroFlag == true;
+        }
+        // F000:1332 cmp ECX,0
+        Alu32.Sub(ECX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:1336 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_133A_F133A_2149:
+        CheckExternalEvents(cs1, 0x133A);
+        // F000:133A cmp ESI,0x0001FFFF
+        Alu32.Sub(ESI, 0x0001FFFFu);
+        // F000:1341 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_1345_F1345_2153:
+        CheckExternalEvents(cs1, 0x1345);
+        // F000:1345 cmp EDI,0x0001FFFF
+        Alu32.Sub(EDI, 0x0001FFFFu);
+        // F000:134C jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_1350_F1350_2157:
+        CheckExternalEvents(cs1, 0x1350);
+        // F000:1350 mov DX,0x2200
+        DX = (ushort)0x2200;
+        // F000:1353 mov DS,DX
+        DS = DX;
+        // F000:1355 mov DX,0x6200
+        DX = (ushort)0x6200;
+        // F000:1358 mov ES,DX
+        ES = DX;
+        // F000:135A mov AL,5
+        AL = (byte)0x05;
+        // F000:135C mov DX,0x0999
+        DX = (ushort)0x0999;
+        // F000:135F out DX,AL
+        Machine.IoPortDispatcher.WriteByte(DX, AL);
+        // F000:1360 mov SI,0
+        SI = (ushort)0x0000;
+        // F000:1363 mov AX,SP
+        AX = SP;
+        // F000:1365 clc
+        CarryFlag = false;
+        // F000:1366 call near 0x136F
+        NearCall(cs1, 0x1369, unknown_F000_136F_F136F);
+    label_F000_1369_F1369_2912:
+        CheckExternalEvents(cs1, 0x1369);
+        // F000:1369 jae near 0x15C7
+        if (!CarryFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_136D_F136D_2915:
+        CheckExternalEvents(cs1, 0x136D);
+        // F000:136D jmp short 0x1380
+    label_F000_1380_F1380_2917:
+        CheckExternalEvents(cs1, 0x1380);
+        // F000:1380 clc
+        CarryFlag = false;
+        // F000:1381 call near 0x138D
+        NearCall32(cs1, 0x1387, unknown_F000_138D_F138D);
+    label_F000_1387_F1387_2938:
+        CheckExternalEvents(cs1, 0x1387);
+        // F000:1387 jae near 0x15C7
+        if (!CarryFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_138B_F138B_2941:
+        CheckExternalEvents(cs1, 0x138B);
+        // F000:138B jmp short 0x139F
+    label_F000_139F_F139F_2943:
+        CheckExternalEvents(cs1, 0x139F);
+        // F000:139F clc
+        CarryFlag = false;
+        // F000:13A0 mov BX,0x136F
+        BX = (ushort)0x136F;
+        // F000:13A3 call near BX
+        switch ((ushort)(BX)) {
+            case 0x136F:
+                NearCall(cs1, 0x13A5, unknown_F000_136F_F136F);
+                break;
+            default:
+                throw FailAsUntested($"Unknown near call target 0x{((ushort)(BX)):X4} at F000:13A3");
+        }
+    label_F000_13A5_F13A5_2951:
+        CheckExternalEvents(cs1, 0x13A5);
+        // F000:13A5 jae near 0x15C7
+        if (!CarryFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_13A9_F13A9_2954:
+        CheckExternalEvents(cs1, 0x13A9);
+        // F000:13A9 clc
+        CarryFlag = false;
+        // F000:13AA mov EBX,0x0000138D
+        EBX = 0x0000138Du;
+        // F000:13B0 call near EBX
+        switch ((ushort)(unchecked((ushort)EBX))) {
+            case 0x138D:
+                NearCall32(cs1, 0x13B3, unknown_F000_138D_F138D);
+                break;
+            default:
+                throw FailAsUntested($"Unknown near call target 0x{((ushort)(unchecked((ushort)EBX))):X4} at F000:13B0");
+        }
+    label_F000_13B3_F13B3_2961:
+        CheckExternalEvents(cs1, 0x13B3);
+        // F000:13B3 jae near 0x15C7
+        if (!CarryFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_13B7_F13B7_2964:
+        CheckExternalEvents(cs1, 0x13B7);
+        // F000:13B7 mov AX,SP
+        AX = SP;
+        // F000:13B9 clc
+        CarryFlag = false;
+        // F000:13BA call far F000:13C5
+        FarCall(cs1, 0x13BF, cs1, unknown_F000_13C5_F13C5);
+    label_F000_13BF_F13BF_2986:
+        CheckExternalEvents(cs1, 0x13BF);
+        // F000:13BF jae near 0x15C7
+        if (!CarryFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_13C3_F13C3_2989:
+        CheckExternalEvents(cs1, 0x13C3);
+        // F000:13C3 jmp short 0x13D6
+    label_F000_13D6_F13D6_2991:
+        CheckExternalEvents(cs1, 0x13D6);
+        // F000:13D6 clc
+        CarryFlag = false;
+        // F000:13D7 call far F000:13E5
+        FarCall32(cs1, 0x13DF, cs1, unknown_F000_13E5_F13E5);
+    label_F000_13DF_F13DF_3012:
+        CheckExternalEvents(cs1, 0x13DF);
+        // F000:13DF jae near 0x15C7
+        if (!CarryFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_13E3_F13E3_3015:
+        CheckExternalEvents(cs1, 0x13E3);
+        // F000:13E3 jmp short 0x13F7
+    label_F000_13F7_F13F7_3017:
+        CheckExternalEvents(cs1, 0x13F7);
+        // F000:13F7 clc
+        CarryFlag = false;
+        // F000:13F8 mov word ptr DS:[SI],0x13C5
+        UInt16[DS, SI] = (ushort)0x13C5;
+        // F000:13FC mov word ptr DS:[SI+2],0xF000
+        UInt16[DS, (ushort)(SI + (sbyte)2)] = (ushort)0xF000;
+        // F000:1401 call far dword ptr DS:[SI]
+        ushort targetSegment_3021 = unchecked((ushort)(UInt16[DS, (ushort)(SI + (ushort)0x0002)]));
+        ushort targetOffset_3021 = unchecked((ushort)(UInt16[DS, SI]));
+        if (targetSegment_3021 == cs1 && targetOffset_3021 == 0x13C5) {
+            FarCall(cs1, 0x1403, cs1, unknown_F000_13C5_F13C5);
+            goto label_F000_1403_F1403_3027;
+        }
+        throw FailAsUntested($"Unknown far call target {targetSegment_3021:X4}:{targetOffset_3021:X4} at F000:1401");
+    label_F000_1403_F1403_3027:
+        CheckExternalEvents(cs1, 0x1403);
+        // F000:1403 jae near 0x15C7
+        if (!CarryFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_1407_F1407_3030:
+        CheckExternalEvents(cs1, 0x1407);
+        // F000:1407 clc
+        CarryFlag = false;
+        // F000:1408 mov dword ptr DS:[SI],0x000013E5
+        UInt32[DS, SI] = 0x000013E5u;
+        // F000:140F mov word ptr DS:[SI+4],0xF000
+        UInt16[DS, (ushort)(SI + (sbyte)4)] = (ushort)0xF000;
+        // F000:1414 call far dword ptr DS:[SI]
+        ushort targetSegment_3034 = unchecked((ushort)(UInt16[DS, (ushort)(SI + (ushort)0x0004)]));
+        ushort targetOffset_3034 = unchecked((ushort)(UInt32[DS, SI]));
+        if (targetSegment_3034 == cs1 && targetOffset_3034 == 0x13E5) {
+            FarCall32(cs1, 0x1417, cs1, unknown_F000_13E5_F13E5);
+            goto label_F000_1417_F1417_3039;
+        }
+        throw FailAsUntested($"Unknown far call target {targetSegment_3034:X4}:{targetOffset_3034:X4} at F000:1414");
+    label_F000_1417_F1417_3039:
+        CheckExternalEvents(cs1, 0x1417);
+        // F000:1417 jae near 0x15C7
+        if (!CarryFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_141B_F141B_3042:
+        CheckExternalEvents(cs1, 0x141B);
+        // F000:141B mov DX,0x2300
+        DX = (ushort)0x2300;
+        // F000:141E mov DS,DX
+        DS = DX;
+        // F000:1420 mov DX,0x6300
+        DX = (ushort)0x6300;
+        // F000:1423 mov ES,DX
+        ES = DX;
+        // F000:1425 mov AL,6
+        AL = (byte)0x06;
+        // F000:1427 mov DX,0x0999
+        DX = (ushort)0x0999;
+        // F000:142A out DX,AL
+        Machine.IoPortDispatcher.WriteByte(DX, AL);
+        // F000:142B mov DI,0
+        DI = (ushort)0x0000;
+        // F000:142E mov CX,SS
+        CX = SS;
+        // F000:1430 mov DX,ES
+        DX = ES;
+        // F000:1432 mov word ptr ES:[DI],0x1234
+        UInt16[ES, DI] = (ushort)0x1234;
+        // F000:1437 mov word ptr ES:[DI+2],0xABCD
+        UInt16[ES, (ushort)(DI + (sbyte)2)] = (ushort)0xABCD;
+        // F000:143D lss BX,word ptr ES:[DI]
+        ushort lxsOffset_F000_143D_F143D = DI;
+        ushort lxsValue_F000_143D_F143D = UInt16[ES, lxsOffset_F000_143D_F143D];
+        ushort lxsSegment_F000_143D_F143D = UInt16[ES, (ushort)(lxsOffset_F000_143D_F143D + (ushort)0x0002)];
+        BX = unchecked((ushort)lxsValue_F000_143D_F143D);
+        SS = unchecked((ushort)lxsSegment_F000_143D_F143D);
+        State.InterruptShadowing = true;
+        // F000:1441 mov AX,SS
+        AX = SS;
+        // F000:1443 cmp AX,0xABCD
+        Alu16.Sub(AX, (ushort)0xABCD);
+        // F000:1446 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_144A_F144A_3060:
+        CheckExternalEvents(cs1, 0x144A);
+        // F000:144A cmp BX,0x1234
+        Alu16.Sub(BX, (ushort)0x1234);
+        // F000:144E jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_1452_F1452_3064:
+        CheckExternalEvents(cs1, 0x1452);
+        // F000:1452 mov ES,DX
+        ES = DX;
+        // F000:1454 mov dword ptr ES:[DI],0x12345678
+        UInt32[ES, DI] = 0x12345678u;
+        // F000:145C mov word ptr ES:[DI+4],0xBCDE
+        UInt16[ES, (ushort)(DI + (sbyte)4)] = (ushort)0xBCDE;
+        // F000:1462 lss EBX,dword ptr ES:[DI]
+        ushort lxsOffset_F000_1462_F1462 = DI;
+        uint lxsValue_F000_1462_F1462 = UInt32[ES, lxsOffset_F000_1462_F1462];
+        ushort lxsSegment_F000_1462_F1462 = UInt16[ES, (ushort)(lxsOffset_F000_1462_F1462 + (ushort)0x0004)];
+        EBX = unchecked((uint)lxsValue_F000_1462_F1462);
+        SS = unchecked((ushort)lxsSegment_F000_1462_F1462);
+        State.InterruptShadowing = true;
+        // F000:1467 mov AX,SS
+        AX = SS;
+        // F000:1469 cmp AX,0xBCDE
+        Alu16.Sub(AX, (ushort)0xBCDE);
+        // F000:146C jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_1470_F1470_3073:
+        CheckExternalEvents(cs1, 0x1470);
+        // F000:1470 cmp EBX,0x12345678
+        Alu32.Sub(EBX, 0x12345678u);
+        // F000:1477 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_147B_F147B_3077:
+        CheckExternalEvents(cs1, 0x147B);
+        // F000:147B mov ES,DX
+        ES = DX;
+        // F000:147D mov SS,CX
+        SS = CX;
+        State.InterruptShadowing = true;
+        // F000:147F mov CX,DS
+        CX = DS;
+        // F000:1481 mov DX,ES
+        DX = ES;
+        // F000:1483 mov word ptr ES:[DI],0x1234
+        UInt16[ES, DI] = (ushort)0x1234;
+        // F000:1488 mov word ptr ES:[DI+2],0xABCD
+        UInt16[ES, (ushort)(DI + (sbyte)2)] = (ushort)0xABCD;
+        // F000:148E lds BX,word ptr ES:[DI]
+        ushort lxsOffset_F000_148E_F148E = DI;
+        ushort lxsValue_F000_148E_F148E = UInt16[ES, lxsOffset_F000_148E_F148E];
+        ushort lxsSegment_F000_148E_F148E = UInt16[ES, (ushort)(lxsOffset_F000_148E_F148E + (ushort)0x0002)];
+        BX = unchecked((ushort)lxsValue_F000_148E_F148E);
+        DS = unchecked((ushort)lxsSegment_F000_148E_F148E);
+        // F000:1491 mov AX,DS
+        AX = DS;
+        // F000:1493 cmp AX,0xABCD
+        Alu16.Sub(AX, (ushort)0xABCD);
+        // F000:1496 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_149A_F149A_3089:
+        CheckExternalEvents(cs1, 0x149A);
+        // F000:149A cmp BX,0x1234
+        Alu16.Sub(BX, (ushort)0x1234);
+        // F000:149E jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_14A2_F14A2_3093:
+        CheckExternalEvents(cs1, 0x14A2);
+        // F000:14A2 mov ES,DX
+        ES = DX;
+        // F000:14A4 mov dword ptr ES:[DI],0x12345678
+        UInt32[ES, DI] = 0x12345678u;
+        // F000:14AC mov word ptr ES:[DI+4],0xBCDE
+        UInt16[ES, (ushort)(DI + (sbyte)4)] = (ushort)0xBCDE;
+        // F000:14B2 lds EBX,dword ptr ES:[DI]
+        ushort lxsOffset_F000_14B2_F14B2 = DI;
+        uint lxsValue_F000_14B2_F14B2 = UInt32[ES, lxsOffset_F000_14B2_F14B2];
+        ushort lxsSegment_F000_14B2_F14B2 = UInt16[ES, (ushort)(lxsOffset_F000_14B2_F14B2 + (ushort)0x0004)];
+        EBX = unchecked((uint)lxsValue_F000_14B2_F14B2);
+        DS = unchecked((ushort)lxsSegment_F000_14B2_F14B2);
+        // F000:14B6 mov AX,DS
+        AX = DS;
+        // F000:14B8 cmp AX,0xBCDE
+        Alu16.Sub(AX, (ushort)0xBCDE);
+        // F000:14BB jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_14BF_F14BF_3102:
+        CheckExternalEvents(cs1, 0x14BF);
+        // F000:14BF cmp EBX,0x12345678
+        Alu32.Sub(EBX, 0x12345678u);
+        // F000:14C6 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_14CA_F14CA_3106:
+        CheckExternalEvents(cs1, 0x14CA);
+        // F000:14CA mov ES,DX
+        ES = DX;
+        // F000:14CC mov DS,CX
+        DS = CX;
+        // F000:14CE mov CX,ES
+        CX = ES;
+        // F000:14D0 mov DX,ES
+        DX = ES;
+        // F000:14D2 mov word ptr ES:[DI],0x1234
+        UInt16[ES, DI] = (ushort)0x1234;
+        // F000:14D7 mov word ptr ES:[DI+2],0xABCD
+        UInt16[ES, (ushort)(DI + (sbyte)2)] = (ushort)0xABCD;
+        // F000:14DD les BX,word ptr ES:[DI]
+        ushort lxsOffset_F000_14DD_F14DD = DI;
+        ushort lxsValue_F000_14DD_F14DD = UInt16[ES, lxsOffset_F000_14DD_F14DD];
+        ushort lxsSegment_F000_14DD_F14DD = UInt16[ES, (ushort)(lxsOffset_F000_14DD_F14DD + (ushort)0x0002)];
+        BX = unchecked((ushort)lxsValue_F000_14DD_F14DD);
+        ES = unchecked((ushort)lxsSegment_F000_14DD_F14DD);
+        // F000:14E0 mov AX,ES
+        AX = ES;
+        // F000:14E2 cmp AX,0xABCD
+        Alu16.Sub(AX, (ushort)0xABCD);
+        // F000:14E5 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_14E9_F14E9_3118:
+        CheckExternalEvents(cs1, 0x14E9);
+        // F000:14E9 cmp BX,0x1234
+        Alu16.Sub(BX, (ushort)0x1234);
+        // F000:14ED jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_14F1_F14F1_3122:
+        CheckExternalEvents(cs1, 0x14F1);
+        // F000:14F1 mov ES,DX
+        ES = DX;
+        // F000:14F3 mov dword ptr ES:[DI],0x12345678
+        UInt32[ES, DI] = 0x12345678u;
+        // F000:14FB mov word ptr ES:[DI+4],0xBCDE
+        UInt16[ES, (ushort)(DI + (sbyte)4)] = (ushort)0xBCDE;
+        // F000:1501 les EBX,dword ptr ES:[DI]
+        ushort lxsOffset_F000_1501_F1501 = DI;
+        uint lxsValue_F000_1501_F1501 = UInt32[ES, lxsOffset_F000_1501_F1501];
+        ushort lxsSegment_F000_1501_F1501 = UInt16[ES, (ushort)(lxsOffset_F000_1501_F1501 + (ushort)0x0004)];
+        EBX = unchecked((uint)lxsValue_F000_1501_F1501);
+        ES = unchecked((ushort)lxsSegment_F000_1501_F1501);
+        // F000:1505 mov AX,ES
+        AX = ES;
+        // F000:1507 cmp AX,0xBCDE
+        Alu16.Sub(AX, (ushort)0xBCDE);
+        // F000:150A jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_150E_F150E_3131:
+        CheckExternalEvents(cs1, 0x150E);
+        // F000:150E cmp EBX,0x12345678
+        Alu32.Sub(EBX, 0x12345678u);
+        // F000:1515 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_1519_F1519_3135:
+        CheckExternalEvents(cs1, 0x1519);
+        // F000:1519 mov ES,DX
+        ES = DX;
+        // F000:151B mov ES,CX
+        ES = CX;
+        // F000:151D mov CX,FS
+        CX = FS;
+        // F000:151F mov DX,ES
+        DX = ES;
+        // F000:1521 mov word ptr ES:[DI],0x1234
+        UInt16[ES, DI] = (ushort)0x1234;
+        // F000:1526 mov word ptr ES:[DI+2],0xABCD
+        UInt16[ES, (ushort)(DI + (sbyte)2)] = (ushort)0xABCD;
+        // F000:152C lfs BX,word ptr ES:[DI]
+        ushort lxsOffset_F000_152C_F152C = DI;
+        ushort lxsValue_F000_152C_F152C = UInt16[ES, lxsOffset_F000_152C_F152C];
+        ushort lxsSegment_F000_152C_F152C = UInt16[ES, (ushort)(lxsOffset_F000_152C_F152C + (ushort)0x0002)];
+        BX = unchecked((ushort)lxsValue_F000_152C_F152C);
+        FS = unchecked((ushort)lxsSegment_F000_152C_F152C);
+        // F000:1530 mov AX,FS
+        AX = FS;
+        // F000:1532 cmp AX,0xABCD
+        Alu16.Sub(AX, (ushort)0xABCD);
+        // F000:1535 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_1539_F1539_3147:
+        CheckExternalEvents(cs1, 0x1539);
+        // F000:1539 cmp BX,0x1234
+        Alu16.Sub(BX, (ushort)0x1234);
+        // F000:153D jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_1541_F1541_3151:
+        CheckExternalEvents(cs1, 0x1541);
+        // F000:1541 mov ES,DX
+        ES = DX;
+        // F000:1543 mov dword ptr ES:[DI],0x12345678
+        UInt32[ES, DI] = 0x12345678u;
+        // F000:154B mov word ptr ES:[DI+4],0xBCDE
+        UInt16[ES, (ushort)(DI + (sbyte)4)] = (ushort)0xBCDE;
+        // F000:1551 lfs EBX,dword ptr ES:[DI]
+        ushort lxsOffset_F000_1551_F1551 = DI;
+        uint lxsValue_F000_1551_F1551 = UInt32[ES, lxsOffset_F000_1551_F1551];
+        ushort lxsSegment_F000_1551_F1551 = UInt16[ES, (ushort)(lxsOffset_F000_1551_F1551 + (ushort)0x0004)];
+        EBX = unchecked((uint)lxsValue_F000_1551_F1551);
+        FS = unchecked((ushort)lxsSegment_F000_1551_F1551);
+        // F000:1556 mov AX,FS
+        AX = FS;
+        // F000:1558 cmp AX,0xBCDE
+        Alu16.Sub(AX, (ushort)0xBCDE);
+        // F000:155B jne short 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_155D_F155D_3160:
+        CheckExternalEvents(cs1, 0x155D);
+        // F000:155D cmp EBX,0x12345678
+        Alu32.Sub(EBX, 0x12345678u);
+        // F000:1564 jne short 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_1566_F1566_3164:
+        CheckExternalEvents(cs1, 0x1566);
+        // F000:1566 mov ES,DX
+        ES = DX;
+        // F000:1568 mov FS,CX
+        FS = CX;
+        // F000:156A mov CX,GS
+        CX = GS;
+        // F000:156C mov DX,ES
+        DX = ES;
+        // F000:156E mov word ptr ES:[DI],0x1234
+        UInt16[ES, DI] = (ushort)0x1234;
+        // F000:1573 mov word ptr ES:[DI+2],0xABCD
+        UInt16[ES, (ushort)(DI + (sbyte)2)] = (ushort)0xABCD;
+        // F000:1579 lgs BX,word ptr ES:[DI]
+        ushort lxsOffset_F000_1579_F1579 = DI;
+        ushort lxsValue_F000_1579_F1579 = UInt16[ES, lxsOffset_F000_1579_F1579];
+        ushort lxsSegment_F000_1579_F1579 = UInt16[ES, (ushort)(lxsOffset_F000_1579_F1579 + (ushort)0x0002)];
+        BX = unchecked((ushort)lxsValue_F000_1579_F1579);
+        GS = unchecked((ushort)lxsSegment_F000_1579_F1579);
+        // F000:157D mov AX,GS
+        AX = GS;
+        // F000:157F cmp AX,0xABCD
+        Alu16.Sub(AX, (ushort)0xABCD);
+        // F000:1582 jne short 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_1584_F1584_3176:
+        CheckExternalEvents(cs1, 0x1584);
+        // F000:1584 cmp BX,0x1234
+        Alu16.Sub(BX, (ushort)0x1234);
+        // F000:1588 jne short 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_158A_F158A_3180:
+        CheckExternalEvents(cs1, 0x158A);
+        // F000:158A mov ES,DX
+        ES = DX;
+        // F000:158C mov dword ptr ES:[DI],0x12345678
+        UInt32[ES, DI] = 0x12345678u;
+        // F000:1594 mov word ptr ES:[DI+4],0xBCDE
+        UInt16[ES, (ushort)(DI + (sbyte)4)] = (ushort)0xBCDE;
+        // F000:159A lgs EBX,dword ptr ES:[DI]
+        ushort lxsOffset_F000_159A_F159A = DI;
+        uint lxsValue_F000_159A_F159A = UInt32[ES, lxsOffset_F000_159A_F159A];
+        ushort lxsSegment_F000_159A_F159A = UInt16[ES, (ushort)(lxsOffset_F000_159A_F159A + (ushort)0x0004)];
+        EBX = unchecked((uint)lxsValue_F000_159A_F159A);
+        GS = unchecked((ushort)lxsSegment_F000_159A_F159A);
+        // F000:159F mov AX,GS
+        AX = GS;
+        // F000:15A1 cmp AX,0xBCDE
+        Alu16.Sub(AX, (ushort)0xBCDE);
+        // F000:15A4 jne short 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_15A6_F15A6_3189:
+        CheckExternalEvents(cs1, 0x15A6);
+        // F000:15A6 cmp EBX,0x12345678
+        Alu32.Sub(EBX, 0x12345678u);
+        // F000:15AD jne short 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_15AF_F15AF_3193:
+        CheckExternalEvents(cs1, 0x15AF);
+        // F000:15AF mov ES,DX
+        ES = DX;
+        // F000:15B1 mov GS,CX
+        GS = CX;
+        // F000:15B3 mov DX,0x2400
+        DX = (ushort)0x2400;
+        // F000:15B6 mov DS,DX
+        DS = DX;
+        // F000:15B8 mov DX,0x6400
+        DX = (ushort)0x6400;
+        // F000:15BB mov ES,DX
+        ES = DX;
+        // F000:15BD mov AL,0xFF
+        AL = (byte)0xFF;
+        // F000:15BF mov DX,0x0999
+        DX = (ushort)0x0999;
+        // F000:15C2 out DX,AL
+        Machine.IoPortDispatcher.WriteByte(DX, AL);
+    label_F000_15C3_F15C3_3203:
+        CheckExternalEvents(cs1, 0x15C3);
+        // F000:15C3 cli
+        InterruptFlag = false;
+        // F000:15C4 hlt
+        return Hlt();
+    }
+
+    public virtual Action unknown_F000_136F_F136F(int loadOffset) {
+    label_F000_136F_F136F_2169:
+        CheckExternalEvents(cs1, 0x136F);
+        // F000:136F sub AX,2
+        AX = Alu16.Sub(AX, unchecked((ushort)unchecked((short)(sbyte)2)));
+        // F000:1372 cmp SP,AX
+        Alu16.Sub(SP, AX);
+        // F000:1374 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_1378_F1378_2174:
+        CheckExternalEvents(cs1, 0x1378);
+        // F000:1378 add AX,2
+        AX = Alu16.Add(AX, unchecked((ushort)unchecked((short)(sbyte)2)));
+        // F000:137B stc
+        CarryFlag = true;
+        // F000:137C ret near
+        return NearRet((ushort)0x0000);
+    }
+
+    public virtual Action unknown_F000_138D_F138D(int loadOffset) {
+    label_F000_138D_F138D_2920:
+        CheckExternalEvents(cs1, 0x138D);
+        // F000:138D sub AX,4
+        AX = Alu16.Sub(AX, unchecked((ushort)unchecked((short)(sbyte)4)));
+        // F000:1390 cmp SP,AX
+        Alu16.Sub(SP, AX);
+        // F000:1392 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_1396_F1396_2925:
+        CheckExternalEvents(cs1, 0x1396);
+        // F000:1396 add AX,4
+        AX = Alu16.Add(AX, unchecked((ushort)unchecked((short)(sbyte)4)));
+        // F000:1399 stc
+        CarryFlag = true;
+        // F000:139A ret near
+        return NearRet32((ushort)0x0000);
+    }
+
+    public virtual Action unknown_F000_13C5_F13C5(int loadOffset) {
+    label_F000_13C5_F13C5_2968:
+        CheckExternalEvents(cs1, 0x13C5);
+        // F000:13C5 sub AX,4
+        AX = Alu16.Sub(AX, unchecked((ushort)unchecked((short)(sbyte)4)));
+        // F000:13C8 cmp SP,AX
+        Alu16.Sub(SP, AX);
+        // F000:13CA jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_13CE_F13CE_2973:
+        CheckExternalEvents(cs1, 0x13CE);
+        // F000:13CE add AX,4
+        AX = Alu16.Add(AX, unchecked((ushort)unchecked((short)(sbyte)4)));
+        // F000:13D1 stc
+        CarryFlag = true;
+        // F000:13D2 ret far
+        return FarRet((ushort)0x0000);
+    }
+
+    public virtual Action unknown_F000_13E5_F13E5(int loadOffset) {
+    label_F000_13E5_F13E5_2994:
+        CheckExternalEvents(cs1, 0x13E5);
+        // F000:13E5 sub AX,8
+        AX = Alu16.Sub(AX, unchecked((ushort)unchecked((short)(sbyte)8)));
+        // F000:13E8 cmp SP,AX
+        Alu16.Sub(SP, AX);
+        // F000:13EA jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_13EE_F13EE_2999:
+        CheckExternalEvents(cs1, 0x13EE);
+        // F000:13EE add AX,8
+        AX = Alu16.Add(AX, unchecked((ushort)unchecked((short)(sbyte)8)));
+        // F000:13F1 stc
+        CarryFlag = true;
+        // F000:13F2 ret far
+        return FarRet32((ushort)0x0000);
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        goto label_F000_FFF0_FFFF0_0;
+
+    label_F000_0045_F0045_1:
+        CheckExternalEvents(cs1, 0x0045);
+        // F000:0045 cli
+        InterruptFlag = false;
+        // F000:0046 mov AL,0
+        AL = (byte)0x00;
+        // F000:0048 mov DX,0x0999
+        DX = (ushort)0x0999;
+        // F000:004B out DX,AL
+        Machine.IoPortDispatcher.WriteByte(DX, AL);
+        // F000:004C xor EAX,EAX
+        EAX = Alu32.Xor(EAX, EAX);
+        // F000:004F mov DS,AX
+        DS = AX;
+        // F000:0051 mov CX,0x0011
+        CX = (ushort)0x0011;
+    label_F000_0054_F0054_10:
+        CheckExternalEvents(cs1, 0x0054);
+        // F000:0054 mov word ptr DS:[4*EAX],0x15C7
+        UInt16[DS, (ushort)(0x00000000u + 0x00000004u * EAX)] = (ushort)0x15C7;
+        // F000:005E mov word ptr DS:[2+4*EAX],0xF000
+        UInt16[DS, (ushort)(0x00000002u + 0x00000004u * EAX)] = (ushort)0xF000;
+        // F000:0068 inc AX
+        AX = Alu16.Inc(AX);
+        // F000:0069 loop 0x0054
+        CX = unchecked((ushort)(CX - (ushort)0x0001));
+        if (CX != (ushort)0x0000) {
+            goto label_F000_0054_F0054_10;
+        }
+    label_F000_006B_F006B_16:
+        CheckExternalEvents(cs1, 0x006B);
+        // F000:006B mov AX,0x1000
+        AX = (ushort)0x1000;
+        // F000:006E mov SS,AX
+        SS = AX;
+        State.InterruptShadowing = true;
+        // F000:0070 mov SP,0xFFFF
+        SP = (ushort)0xFFFF;
+        // F000:0073 mov DX,0x2000
+        DX = (ushort)0x2000;
+        // F000:0076 mov DS,DX
+        DS = DX;
+        // F000:0078 mov DX,0x6000
+        DX = (ushort)0x6000;
+        // F000:007B mov ES,DX
+        ES = DX;
+        // F000:007D mov AL,1
+        AL = (byte)0x01;
+        // F000:007F mov DX,0x0999
+        DX = (ushort)0x0999;
+        // F000:0082 out DX,AL
+        Machine.IoPortDispatcher.WriteByte(DX, AL);
+        // F000:0083 mov AH,1
+        AH = (byte)0x01;
+        // F000:0085 sahf
+        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        // F000:0086 jae short 0x00AC
+        if (!CarryFlag) {
+            goto label_F000_00AC_F00AC_30;
+        }
+    label_F000_0088_F0088_32:
+        CheckExternalEvents(cs1, 0x0088);
+        // F000:0088 jb short 0x00AD
+        if (CarryFlag) {
+            goto label_F000_00AD_F00AD_34;
+        }
+    label_F000_008A_F008A_36:
+        CheckExternalEvents(cs1, 0x008A);
+        VerifySpeculativeEntryOrFail(cs1, 0x008A, [(byte)0xF4]);
+        // F000:008A hlt
+        return Hlt();
+    label_F000_008B_F008B_38:
+        CheckExternalEvents(cs1, 0x008B);
+        // F000:008B mov AH,0x40
+        AH = (byte)0x40;
+        // F000:008D sahf
+        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        // F000:008E jne short 0x00AC
+        if (!ZeroFlag) {
+            goto label_F000_00AC_F00AC_30;
+        }
+    label_F000_0090_F0090_54:
+        CheckExternalEvents(cs1, 0x0090);
+        // F000:0090 je short 0x00AF
+        if (ZeroFlag) {
+            goto label_F000_00AF_F00AF_40;
+        }
+    label_F000_0092_F0092_63:
+        CheckExternalEvents(cs1, 0x0092);
+        VerifySpeculativeEntryOrFail(cs1, 0x0092, [(byte)0xF4]);
+        // F000:0092 hlt
+        return Hlt();
+    label_F000_0093_F0093_43:
+        CheckExternalEvents(cs1, 0x0093);
+        // F000:0093 mov AH,4
+        AH = (byte)0x04;
+        // F000:0095 sahf
+        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        // F000:0096 jnp short 0x00AC
+        if (!ParityFlag) {
+            goto label_F000_00AC_F00AC_30;
+        }
+    label_F000_0098_F0098_66:
+        CheckExternalEvents(cs1, 0x0098);
+        // F000:0098 jp short 0x00B1
+        if (ParityFlag) {
+            goto label_F000_00B1_F00B1_45;
+        }
+    label_F000_009A_F009A_75:
+        CheckExternalEvents(cs1, 0x009A);
+        VerifySpeculativeEntryOrFail(cs1, 0x009A, [(byte)0xF4]);
+        // F000:009A hlt
+        return Hlt();
+    label_F000_009B_F009B_49:
+        CheckExternalEvents(cs1, 0x009B);
+        // F000:009B mov AH,0x80
+        AH = (byte)0x80;
+        // F000:009D sahf
+        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        // F000:009E jns short 0x00AC
+        if (!SignFlag) {
+            goto label_F000_00AC_F00AC_30;
+        }
+    label_F000_00A0_F00A0_78:
+        CheckExternalEvents(cs1, 0x00A0);
+        // F000:00A0 js short 0x00B3
+        if (SignFlag) {
+            goto label_F000_00B3_F00B3_51;
+        }
+    label_F000_00A2_F00A2_84:
+        CheckExternalEvents(cs1, 0x00A2);
+        VerifySpeculativeEntryOrFail(cs1, 0x00A2, [(byte)0xF4]);
+        // F000:00A2 hlt
+        return Hlt();
+    label_F000_00A3_F00A3_58:
+        CheckExternalEvents(cs1, 0x00A3);
+        // F000:00A3 mov AH,0x41
+        AH = (byte)0x41;
+        // F000:00A5 sahf
+        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        // F000:00A6 ja short 0x00AC
+        if (!CarryFlag && !ZeroFlag) {
+            goto label_F000_00AC_F00AC_30;
+        }
+    label_F000_00A8_F00A8_87:
+        CheckExternalEvents(cs1, 0x00A8);
+        // F000:00A8 jbe short 0x00B5
+        if (CarryFlag || ZeroFlag) {
+            goto label_F000_00B5_F00B5_60;
+        }
+    label_F000_00AA_F00AA_70:
+        CheckExternalEvents(cs1, 0x00AA);
+        // F000:00AA jmp short 0x00B7
+        goto label_F000_00B7_F00B7_72;
+    label_F000_00AC_F00AC_30:
+        CheckExternalEvents(cs1, 0x00AC);
+        VerifySpeculativeEntryOrFail(cs1, 0x00AC, [(byte)0xF4]);
+        // F000:00AC hlt
+        return Hlt();
+    label_F000_00AD_F00AD_34:
+        CheckExternalEvents(cs1, 0x00AD);
+        // F000:00AD jb short 0x008B
+        if (CarryFlag) {
+            goto label_F000_008B_F008B_38;
+        }
+    label_F000_00AF_F00AF_40:
+        CheckExternalEvents(cs1, 0x00AF);
+        // F000:00AF je short 0x0093
+        if (ZeroFlag) {
+            goto label_F000_0093_F0093_43;
+        }
+    label_F000_00B1_F00B1_45:
+        CheckExternalEvents(cs1, 0x00B1);
+        // F000:00B1 jp short 0x009B
+        if (ParityFlag) {
+            goto label_F000_009B_F009B_49;
+        }
+    label_F000_00B3_F00B3_51:
+        CheckExternalEvents(cs1, 0x00B3);
+        // F000:00B3 js short 0x00A3
+        if (SignFlag) {
+            goto label_F000_00A3_F00A3_58;
+        }
+    label_F000_00B5_F00B5_60:
+        CheckExternalEvents(cs1, 0x00B5);
+        // F000:00B5 jbe short 0x00AA
+        if (CarryFlag || ZeroFlag) {
+            goto label_F000_00AA_F00AA_70;
+        }
+    label_F000_00B7_F00B7_72:
+        CheckExternalEvents(cs1, 0x00B7);
+        // F000:00B7 mov AH,0xD4
+        AH = (byte)0xD4;
+        // F000:00B9 sahf
+        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        // F000:00BA mov AX,0
+        AX = (ushort)0x0000;
+        // F000:00BD sahf
+        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        // F000:00BE jae short 0x00DB
+        if (!CarryFlag) {
+            goto label_F000_00DB_F00DB_94;
+        }
+    label_F000_00C0_F00C0_96:
+        CheckExternalEvents(cs1, 0x00C0);
+        VerifySpeculativeEntryOrFail(cs1, 0x00C0, [(byte)0xF4]);
+        // F000:00C0 hlt
+        return Hlt();
+    label_F000_00C1_F00C1_98:
+        CheckExternalEvents(cs1, 0x00C1);
+        // F000:00C1 mov AH,0x95
+        AH = (byte)0x95;
+        // F000:00C3 sahf
+        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        // F000:00C4 jne short 0x00DD
+        if (!ZeroFlag) {
+            goto label_F000_00DD_F00DD_100;
+        }
+    label_F000_00C6_F00C6_114:
+        CheckExternalEvents(cs1, 0x00C6);
+        VerifySpeculativeEntryOrFail(cs1, 0x00C6, [(byte)0xF4]);
+        // F000:00C6 hlt
+        return Hlt();
+    label_F000_00C7_F00C7_103:
+        CheckExternalEvents(cs1, 0x00C7);
+        // F000:00C7 mov AH,0xD1
+        AH = (byte)0xD1;
+        // F000:00C9 sahf
+        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        // F000:00CA jnp short 0x00DF
+        if (!ParityFlag) {
+            goto label_F000_00DF_F00DF_105;
+        }
+    label_F000_00CC_F00CC_123:
+        CheckExternalEvents(cs1, 0x00CC);
+        VerifySpeculativeEntryOrFail(cs1, 0x00CC, [(byte)0xF4]);
+        // F000:00CC hlt
+        return Hlt();
+    label_F000_00CD_F00CD_109:
+        CheckExternalEvents(cs1, 0x00CD);
+        // F000:00CD mov AH,0x55
+        AH = (byte)0x55;
+        // F000:00CF sahf
+        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        // F000:00D0 jns short 0x00E1
+        if (!SignFlag) {
+            goto label_F000_00E1_F00E1_111;
+        }
+    label_F000_00D2_F00D2_132:
+        CheckExternalEvents(cs1, 0x00D2);
+        VerifySpeculativeEntryOrFail(cs1, 0x00D2, [(byte)0xF4]);
+        // F000:00D2 hlt
+        return Hlt();
+    label_F000_00D3_F00D3_118:
+        CheckExternalEvents(cs1, 0x00D3);
+        // F000:00D3 mov AH,0x94
+        AH = (byte)0x94;
+        // F000:00D5 sahf
+        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        // F000:00D6 ja short 0x00E3
+        if (!CarryFlag && !ZeroFlag) {
+            goto label_F000_00E3_F00E3_120;
+        }
+    label_F000_00D8_F00D8_138:
+        CheckExternalEvents(cs1, 0x00D8);
+        VerifySpeculativeEntryOrFail(cs1, 0x00D8, [(byte)0xF4]);
+        // F000:00D8 hlt
+        return Hlt();
+    label_F000_00D9_F00D9_127:
+        CheckExternalEvents(cs1, 0x00D9);
+        // F000:00D9 jmp short 0x00E5
+        goto label_F000_00E5_F00E5_129;
+    label_F000_00DB_F00DB_94:
+        CheckExternalEvents(cs1, 0x00DB);
+        // F000:00DB jae short 0x00C1
+        if (!CarryFlag) {
+            goto label_F000_00C1_F00C1_98;
+        }
+    label_F000_00DD_F00DD_100:
+        CheckExternalEvents(cs1, 0x00DD);
+        // F000:00DD jne short 0x00C7
+        if (!ZeroFlag) {
+            goto label_F000_00C7_F00C7_103;
+        }
+    label_F000_00DF_F00DF_105:
+        CheckExternalEvents(cs1, 0x00DF);
+        // F000:00DF jnp short 0x00CD
+        if (!ParityFlag) {
+            goto label_F000_00CD_F00CD_109;
+        }
+    label_F000_00E1_F00E1_111:
+        CheckExternalEvents(cs1, 0x00E1);
+        // F000:00E1 jns short 0x00D3
+        if (!SignFlag) {
+            goto label_F000_00D3_F00D3_118;
+        }
+    label_F000_00E3_F00E3_120:
+        CheckExternalEvents(cs1, 0x00E3);
+        // F000:00E3 ja short 0x00D9
+        if (!CarryFlag && !ZeroFlag) {
+            goto label_F000_00D9_F00D9_127;
+        }
+    label_F000_00E5_F00E5_129:
+        CheckExternalEvents(cs1, 0x00E5);
+        // F000:00E5 mov AH,0
+        AH = (byte)0x00;
+        // F000:00E7 sahf
+        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        // F000:00E8 mov AL,0x40
+        AL = (byte)0x40;
+        // F000:00EA shl AL,1
+        AL = Alu8.Shl(AL, 1);
+        // F000:00EC jno short 0x0122
+        if (!OverflowFlag) {
+            goto label_F000_0122_F0122_143;
+        }
+    label_F000_00EE_F00EE_145:
+        CheckExternalEvents(cs1, 0x00EE);
+        // F000:00EE jo short 0x0123
+        if (OverflowFlag) {
+            goto label_F000_0123_F0123_147;
+        }
+    label_F000_00F0_F00F0_149:
+        CheckExternalEvents(cs1, 0x00F0);
+        VerifySpeculativeEntryOrFail(cs1, 0x00F0, [(byte)0xF4]);
+        // F000:00F0 hlt
+        return Hlt();
+    label_F000_00F1_F00F1_151:
+        CheckExternalEvents(cs1, 0x00F1);
+        // F000:00F1 jl short 0x0122
+        if (SignFlag != OverflowFlag) {
+            goto label_F000_0122_F0122_143;
+        }
+    label_F000_00F3_F00F3_156:
+        CheckExternalEvents(cs1, 0x00F3);
+        // F000:00F3 jge short 0x0125
+        if (SignFlag == OverflowFlag) {
+            goto label_F000_0125_F0125_153;
+        }
+    label_F000_00F5_F00F5_163:
+        CheckExternalEvents(cs1, 0x00F5);
+        VerifySpeculativeEntryOrFail(cs1, 0x00F5, [(byte)0xF4]);
+        // F000:00F5 hlt
+        return Hlt();
+    label_F000_00F6_F00F6_158:
+        CheckExternalEvents(cs1, 0x00F6);
+        // F000:00F6 jle short 0x0122
+        if (ZeroFlag || SignFlag != OverflowFlag) {
+            goto label_F000_0122_F0122_143;
+        }
+    label_F000_00F8_F00F8_166:
+        CheckExternalEvents(cs1, 0x00F8);
+        // F000:00F8 jg short 0x0127
+        if (!ZeroFlag && SignFlag == OverflowFlag) {
+            goto label_F000_0127_F0127_160;
+        }
+    label_F000_00FA_F00FA_173:
+        CheckExternalEvents(cs1, 0x00FA);
+        VerifySpeculativeEntryOrFail(cs1, 0x00FA, [(byte)0xF4]);
+        // F000:00FA hlt
+        return Hlt();
+    label_F000_00FB_F00FB_168:
+        CheckExternalEvents(cs1, 0x00FB);
+        // F000:00FB mov AH,0x40
+        AH = (byte)0x40;
+        // F000:00FD sahf
+        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        // F000:00FE jl short 0x0129
+        if (SignFlag != OverflowFlag) {
+            goto label_F000_0129_F0129_170;
+        }
+    label_F000_0100_F0100_189:
+        CheckExternalEvents(cs1, 0x0100);
+        VerifySpeculativeEntryOrFail(cs1, 0x0100, [(byte)0xF4]);
+        // F000:0100 hlt
+        return Hlt();
+    label_F000_0101_F0101_176:
+        CheckExternalEvents(cs1, 0x0101);
+        // F000:0101 jle short 0x012B
+        if (ZeroFlag || SignFlag != OverflowFlag) {
+            goto label_F000_012B_F012B_178;
+        }
+    label_F000_0103_F0103_182:
+        CheckExternalEvents(cs1, 0x0103);
+        VerifySpeculativeEntryOrFail(cs1, 0x0103, [(byte)0xF4]);
+        // F000:0103 hlt
+        return Hlt();
+    label_F000_0104_F0104_184:
+        CheckExternalEvents(cs1, 0x0104);
+        // F000:0104 mov ECX,1
+        ECX = 0x00000001u;
+        // F000:010A jcxz short 0x0122
+        if (CX == (ushort)0x0000) {
+            goto label_F000_0122_F0122_143;
+        }
+    label_F000_010C_F010C_197:
+        CheckExternalEvents(cs1, 0x010C);
+        // F000:010C mov ECX,0x00010000
+        ECX = 0x00010000u;
+        // F000:0112 jcxz short 0x012D
+        if (CX == (ushort)0x0000) {
+            goto label_F000_012D_F012D_186;
+        }
+    label_F000_0114_F0114_192:
+        CheckExternalEvents(cs1, 0x0114);
+        // F000:0114 jecxz short 0x0122
+        if (ECX == 0x00000000u) {
+            goto label_F000_0122_F0122_143;
+        }
+    label_F000_0117_F0117_200:
+        CheckExternalEvents(cs1, 0x0117);
+        // F000:0117 mov ECX,0
+        ECX = 0x00000000u;
+        // F000:011D jecxz short 0x012F
+        if (ECX == 0x00000000u) {
+            goto label_F000_012F_F012F_194;
+        }
+    label_F000_0120_F0120_202:
+        CheckExternalEvents(cs1, 0x0120);
+        // F000:0120 jmp short 0x0132
+        goto label_F000_0132_F0132_204;
+    label_F000_0122_F0122_143:
+        CheckExternalEvents(cs1, 0x0122);
+        VerifySpeculativeEntryOrFail(cs1, 0x0122, [(byte)0xF4]);
+        // F000:0122 hlt
+        return Hlt();
+    label_F000_0123_F0123_147:
+        CheckExternalEvents(cs1, 0x0123);
+        // F000:0123 jo short 0x00F1
+        if (OverflowFlag) {
+            goto label_F000_00F1_F00F1_151;
+        }
+    label_F000_0125_F0125_153:
+        CheckExternalEvents(cs1, 0x0125);
+        // F000:0125 jge short 0x00F6
+        if (SignFlag == OverflowFlag) {
+            goto label_F000_00F6_F00F6_158;
+        }
+    label_F000_0127_F0127_160:
+        CheckExternalEvents(cs1, 0x0127);
+        // F000:0127 jg short 0x00FB
+        if (!ZeroFlag && SignFlag == OverflowFlag) {
+            goto label_F000_00FB_F00FB_168;
+        }
+    label_F000_0129_F0129_170:
+        CheckExternalEvents(cs1, 0x0129);
+        // F000:0129 jl short 0x0101
+        if (SignFlag != OverflowFlag) {
+            goto label_F000_0101_F0101_176;
+        }
+    label_F000_012B_F012B_178:
+        CheckExternalEvents(cs1, 0x012B);
+        // F000:012B jle short 0x0104
+        if (ZeroFlag || SignFlag != OverflowFlag) {
+            goto label_F000_0104_F0104_184;
+        }
+    label_F000_012D_F012D_186:
+        CheckExternalEvents(cs1, 0x012D);
+        // F000:012D jcxz short 0x0114
+        if (CX == (ushort)0x0000) {
+            goto label_F000_0114_F0114_192;
+        }
+    label_F000_012F_F012F_194:
+        CheckExternalEvents(cs1, 0x012F);
+        // F000:012F jecxz short 0x0120
+        if (ECX == 0x00000000u) {
+            goto label_F000_0120_F0120_202;
+        }
+    label_F000_0132_F0132_204:
+        CheckExternalEvents(cs1, 0x0132);
+        // F000:0132 mov AH,1
+        AH = (byte)0x01;
+        // F000:0134 sahf
+        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        // F000:0135 jae near 0x01F0
+        if (!CarryFlag) {
+            goto label_F000_01F0_F01F0_215;
+        }
+    label_F000_0139_F0139_217:
+        CheckExternalEvents(cs1, 0x0139);
+        // F000:0139 jb near 0x01F1
+        if (CarryFlag) {
+            goto label_F000_01F1_F01F1_219;
+        }
+    label_F000_013D_F013D_221:
+        CheckExternalEvents(cs1, 0x013D);
+        VerifySpeculativeEntryOrFail(cs1, 0x013D, [(byte)0xF4]);
+        // F000:013D hlt
+        return Hlt();
+    label_F000_013E_F013E_223:
+        CheckExternalEvents(cs1, 0x013E);
+        // F000:013E mov AH,0x40
+        AH = (byte)0x40;
+        // F000:0140 sahf
+        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        // F000:0141 jne near 0x01F0
+        if (!ZeroFlag) {
+            goto label_F000_01F0_F01F0_215;
+        }
+    label_F000_0145_F0145_239:
+        CheckExternalEvents(cs1, 0x0145);
+        // F000:0145 je near 0x01F5
+        if (ZeroFlag) {
+            goto label_F000_01F5_F01F5_225;
+        }
+    label_F000_0149_F0149_248:
+        CheckExternalEvents(cs1, 0x0149);
+        VerifySpeculativeEntryOrFail(cs1, 0x0149, [(byte)0xF4]);
+        // F000:0149 hlt
+        return Hlt();
+    label_F000_014A_F014A_228:
+        CheckExternalEvents(cs1, 0x014A);
+        // F000:014A mov AH,4
+        AH = (byte)0x04;
+        // F000:014C sahf
+        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        // F000:014D jnp near 0x01F0
+        if (!ParityFlag) {
+            goto label_F000_01F0_F01F0_215;
+        }
+    label_F000_0151_F0151_251:
+        CheckExternalEvents(cs1, 0x0151);
+        // F000:0151 jp near 0x01F9
+        if (ParityFlag) {
+            goto label_F000_01F9_F01F9_230;
+        }
+    label_F000_0155_F0155_260:
+        CheckExternalEvents(cs1, 0x0155);
+        VerifySpeculativeEntryOrFail(cs1, 0x0155, [(byte)0xF4]);
+        // F000:0155 hlt
+        return Hlt();
+    label_F000_0156_F0156_234:
+        CheckExternalEvents(cs1, 0x0156);
+        // F000:0156 mov AH,0x80
+        AH = (byte)0x80;
+        // F000:0158 sahf
+        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        // F000:0159 jns near 0x01F0
+        if (!SignFlag) {
+            goto label_F000_01F0_F01F0_215;
+        }
+    label_F000_015D_F015D_263:
+        CheckExternalEvents(cs1, 0x015D);
+        // F000:015D js near 0x01FD
+        if (SignFlag) {
+            goto label_F000_01FD_F01FD_236;
+        }
+    label_F000_0161_F0161_269:
+        CheckExternalEvents(cs1, 0x0161);
+        VerifySpeculativeEntryOrFail(cs1, 0x0161, [(byte)0xF4]);
+        // F000:0161 hlt
+        return Hlt();
+    label_F000_0162_F0162_243:
+        CheckExternalEvents(cs1, 0x0162);
+        // F000:0162 mov AH,0x41
+        AH = (byte)0x41;
+        // F000:0164 sahf
+        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        // F000:0165 ja near 0x01F0
+        if (!CarryFlag && !ZeroFlag) {
+            goto label_F000_01F0_F01F0_215;
+        }
+    label_F000_0169_F0169_272:
+        CheckExternalEvents(cs1, 0x0169);
+        // F000:0169 jbe near 0x0201
+        if (CarryFlag || ZeroFlag) {
+            goto label_F000_0201_F0201_245;
+        }
+    label_F000_016D_F016D_255:
+        CheckExternalEvents(cs1, 0x016D);
+        // F000:016D jmp near 0x0205
+        goto label_F000_0205_F0205_257;
+    label_F000_01F0_F01F0_215:
+        CheckExternalEvents(cs1, 0x01F0);
+        VerifySpeculativeEntryOrFail(cs1, 0x01F0, [(byte)0xF4]);
+        // F000:01F0 hlt
+        return Hlt();
+    label_F000_01F1_F01F1_219:
+        CheckExternalEvents(cs1, 0x01F1);
+        // F000:01F1 jb near 0x013E
+        if (CarryFlag) {
+            goto label_F000_013E_F013E_223;
+        }
+    label_F000_01F5_F01F5_225:
+        CheckExternalEvents(cs1, 0x01F5);
+        // F000:01F5 je near 0x014A
+        if (ZeroFlag) {
+            goto label_F000_014A_F014A_228;
+        }
+    label_F000_01F9_F01F9_230:
+        CheckExternalEvents(cs1, 0x01F9);
+        // F000:01F9 jp near 0x0156
+        if (ParityFlag) {
+            goto label_F000_0156_F0156_234;
+        }
+    label_F000_01FD_F01FD_236:
+        CheckExternalEvents(cs1, 0x01FD);
+        // F000:01FD js near 0x0162
+        if (SignFlag) {
+            goto label_F000_0162_F0162_243;
+        }
+    label_F000_0201_F0201_245:
+        CheckExternalEvents(cs1, 0x0201);
+        // F000:0201 jbe near 0x016D
+        if (CarryFlag || ZeroFlag) {
+            goto label_F000_016D_F016D_255;
+        }
+    label_F000_0205_F0205_257:
+        CheckExternalEvents(cs1, 0x0205);
+        // F000:0205 mov AH,0xD4
+        AH = (byte)0xD4;
+        // F000:0207 sahf
+        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        // F000:0208 mov AX,0
+        AX = (ushort)0x0000;
+        // F000:020B sahf
+        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        // F000:020C jae near 0x02B4
+        if (!CarryFlag) {
+            goto label_F000_02B4_F02B4_279;
+        }
+    label_F000_0210_F0210_281:
+        CheckExternalEvents(cs1, 0x0210);
+        VerifySpeculativeEntryOrFail(cs1, 0x0210, [(byte)0xF4]);
+        // F000:0210 hlt
+        return Hlt();
+    label_F000_0211_F0211_283:
+        CheckExternalEvents(cs1, 0x0211);
+        // F000:0211 mov AH,0x95
+        AH = (byte)0x95;
+        // F000:0213 sahf
+        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        // F000:0214 jne near 0x02B8
+        if (!ZeroFlag) {
+            goto label_F000_02B8_F02B8_285;
+        }
+    label_F000_0218_F0218_299:
+        CheckExternalEvents(cs1, 0x0218);
+        VerifySpeculativeEntryOrFail(cs1, 0x0218, [(byte)0xF4]);
+        // F000:0218 hlt
+        return Hlt();
+    label_F000_0219_F0219_288:
+        CheckExternalEvents(cs1, 0x0219);
+        // F000:0219 mov AH,0xD1
+        AH = (byte)0xD1;
+        // F000:021B sahf
+        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        // F000:021C jnp near 0x02BC
+        if (!ParityFlag) {
+            goto label_F000_02BC_F02BC_290;
+        }
+    label_F000_0220_F0220_308:
+        CheckExternalEvents(cs1, 0x0220);
+        VerifySpeculativeEntryOrFail(cs1, 0x0220, [(byte)0xF4]);
+        // F000:0220 hlt
+        return Hlt();
+    label_F000_0221_F0221_294:
+        CheckExternalEvents(cs1, 0x0221);
+        // F000:0221 mov AH,0x55
+        AH = (byte)0x55;
+        // F000:0223 sahf
+        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        // F000:0224 jns near 0x02C0
+        if (!SignFlag) {
+            goto label_F000_02C0_F02C0_296;
+        }
+    label_F000_0228_F0228_317:
+        CheckExternalEvents(cs1, 0x0228);
+        VerifySpeculativeEntryOrFail(cs1, 0x0228, [(byte)0xF4]);
+        // F000:0228 hlt
+        return Hlt();
+    label_F000_0229_F0229_303:
+        CheckExternalEvents(cs1, 0x0229);
+        // F000:0229 mov AH,0x94
+        AH = (byte)0x94;
+        // F000:022B sahf
+        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        // F000:022C ja near 0x02C4
+        if (!CarryFlag && !ZeroFlag) {
+            goto label_F000_02C4_F02C4_305;
+        }
+    label_F000_0230_F0230_323:
+        CheckExternalEvents(cs1, 0x0230);
+        VerifySpeculativeEntryOrFail(cs1, 0x0230, [(byte)0xF4]);
+        // F000:0230 hlt
+        return Hlt();
+    label_F000_0231_F0231_312:
+        CheckExternalEvents(cs1, 0x0231);
+        // F000:0231 jmp near 0x02C8
+        goto label_F000_02C8_F02C8_314;
+    label_F000_02B4_F02B4_279:
+        CheckExternalEvents(cs1, 0x02B4);
+        // F000:02B4 jae near 0x0211
+        if (!CarryFlag) {
+            goto label_F000_0211_F0211_283;
+        }
+    label_F000_02B8_F02B8_285:
+        CheckExternalEvents(cs1, 0x02B8);
+        // F000:02B8 jne near 0x0219
+        if (!ZeroFlag) {
+            goto label_F000_0219_F0219_288;
+        }
+    label_F000_02BC_F02BC_290:
+        CheckExternalEvents(cs1, 0x02BC);
+        // F000:02BC jnp near 0x0221
+        if (!ParityFlag) {
+            goto label_F000_0221_F0221_294;
+        }
+    label_F000_02C0_F02C0_296:
+        CheckExternalEvents(cs1, 0x02C0);
+        // F000:02C0 jns near 0x0229
+        if (!SignFlag) {
+            goto label_F000_0229_F0229_303;
+        }
+    label_F000_02C4_F02C4_305:
+        CheckExternalEvents(cs1, 0x02C4);
+        // F000:02C4 ja near 0x0231
+        if (!CarryFlag && !ZeroFlag) {
+            goto label_F000_0231_F0231_312;
+        }
+    label_F000_02C8_F02C8_314:
+        CheckExternalEvents(cs1, 0x02C8);
+        // F000:02C8 mov AH,0
+        AH = (byte)0x00;
+        // F000:02CA sahf
+        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        // F000:02CB mov AL,0x40
+        AL = (byte)0x40;
+        // F000:02CD shl AL,1
+        AL = Alu8.Shl(AL, 1);
+        // F000:02CF jno near 0x037A
+        if (!OverflowFlag) {
+            goto label_F000_037A_F037A_328;
+        }
+    label_F000_02D3_F02D3_330:
+        CheckExternalEvents(cs1, 0x02D3);
+        // F000:02D3 jo near 0x037B
+        if (OverflowFlag) {
+            goto label_F000_037B_F037B_332;
+        }
+    label_F000_02D7_F02D7_334:
+        CheckExternalEvents(cs1, 0x02D7);
+        VerifySpeculativeEntryOrFail(cs1, 0x02D7, [(byte)0xF4]);
+        // F000:02D7 hlt
+        return Hlt();
+    label_F000_02D8_F02D8_336:
+        CheckExternalEvents(cs1, 0x02D8);
+        // F000:02D8 jl near 0x037A
+        if (SignFlag != OverflowFlag) {
+            goto label_F000_037A_F037A_328;
+        }
+    label_F000_02DC_F02DC_341:
+        CheckExternalEvents(cs1, 0x02DC);
+        // F000:02DC jge near 0x037F
+        if (SignFlag == OverflowFlag) {
+            goto label_F000_037F_F037F_338;
+        }
+    label_F000_02E0_F02E0_348:
+        CheckExternalEvents(cs1, 0x02E0);
+        VerifySpeculativeEntryOrFail(cs1, 0x02E0, [(byte)0xF4]);
+        // F000:02E0 hlt
+        return Hlt();
+    label_F000_02E1_F02E1_343:
+        CheckExternalEvents(cs1, 0x02E1);
+        // F000:02E1 jle near 0x037A
+        if (ZeroFlag || SignFlag != OverflowFlag) {
+            goto label_F000_037A_F037A_328;
+        }
+    label_F000_02E5_F02E5_351:
+        CheckExternalEvents(cs1, 0x02E5);
+        // F000:02E5 jg near 0x0383
+        if (!ZeroFlag && SignFlag == OverflowFlag) {
+            goto label_F000_0383_F0383_345;
+        }
+    label_F000_02E9_F02E9_358:
+        CheckExternalEvents(cs1, 0x02E9);
+        VerifySpeculativeEntryOrFail(cs1, 0x02E9, [(byte)0xF4]);
+        // F000:02E9 hlt
+        return Hlt();
+    label_F000_02EA_F02EA_353:
+        CheckExternalEvents(cs1, 0x02EA);
+        // F000:02EA mov AH,0x40
+        AH = (byte)0x40;
+        // F000:02EC sahf
+        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        // F000:02ED jl near 0x0387
+        if (SignFlag != OverflowFlag) {
+            goto label_F000_0387_F0387_355;
+        }
+    label_F000_02F1_F02F1_374:
+        CheckExternalEvents(cs1, 0x02F1);
+        VerifySpeculativeEntryOrFail(cs1, 0x02F1, [(byte)0xF4]);
+        // F000:02F1 hlt
+        return Hlt();
+    label_F000_02F2_F02F2_361:
+        CheckExternalEvents(cs1, 0x02F2);
+        // F000:02F2 jle near 0x038B
+        if (ZeroFlag || SignFlag != OverflowFlag) {
+            goto label_F000_038B_F038B_363;
+        }
+    label_F000_02F6_F02F6_367:
+        CheckExternalEvents(cs1, 0x02F6);
+        VerifySpeculativeEntryOrFail(cs1, 0x02F6, [(byte)0xF4]);
+        // F000:02F6 hlt
+        return Hlt();
+    label_F000_02F7_F02F7_369:
+        CheckExternalEvents(cs1, 0x02F7);
+        // F000:02F7 jmp near 0x038F
+        goto label_F000_038F_F038F_371;
+    label_F000_037A_F037A_328:
+        CheckExternalEvents(cs1, 0x037A);
+        VerifySpeculativeEntryOrFail(cs1, 0x037A, [(byte)0xF4]);
+        // F000:037A hlt
+        return Hlt();
+    label_F000_037B_F037B_332:
+        CheckExternalEvents(cs1, 0x037B);
+        // F000:037B jo near 0x02D8
+        if (OverflowFlag) {
+            goto label_F000_02D8_F02D8_336;
+        }
+    label_F000_037F_F037F_338:
+        CheckExternalEvents(cs1, 0x037F);
+        // F000:037F jge near 0x02E1
+        if (SignFlag == OverflowFlag) {
+            goto label_F000_02E1_F02E1_343;
+        }
+    label_F000_0383_F0383_345:
+        CheckExternalEvents(cs1, 0x0383);
+        // F000:0383 jg near 0x02EA
+        if (!ZeroFlag && SignFlag == OverflowFlag) {
+            goto label_F000_02EA_F02EA_353;
+        }
+    label_F000_0387_F0387_355:
+        CheckExternalEvents(cs1, 0x0387);
+        // F000:0387 jl near 0x02F2
+        if (SignFlag != OverflowFlag) {
+            goto label_F000_02F2_F02F2_361;
+        }
+    label_F000_038B_F038B_363:
+        CheckExternalEvents(cs1, 0x038B);
+        // F000:038B jle near 0x02F7
+        if (ZeroFlag || SignFlag != OverflowFlag) {
+            goto label_F000_02F7_F02F7_369;
+        }
+    label_F000_038F_F038F_371:
+        CheckExternalEvents(cs1, 0x038F);
+        // F000:038F mov ECX,0x00020000
+        ECX = 0x00020000u;
+        // F000:0395 mov EAX,0
+        EAX = 0x00000000u;
+    label_F000_039B_F039B_378:
+        CheckExternalEvents(cs1, 0x039B);
+        // F000:039B inc EAX
+        EAX = Alu32.Inc(EAX);
+        // F000:039D loop 0x039B
+        CX = unchecked((ushort)(CX - (ushort)0x0001));
+        if (CX != (ushort)0x0000) {
+            goto label_F000_039B_F039B_378;
+        }
+    label_F000_039F_F039F_382:
+        CheckExternalEvents(cs1, 0x039F);
+        // F000:039F cmp EAX,0x00010000
+        Alu32.Sub(EAX, 0x00010000u);
+        // F000:03A5 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_03A9_F03A9_387:
+        CheckExternalEvents(cs1, 0x03A9);
+        // F000:03A9 cmp ECX,0x00020000
+        Alu32.Sub(ECX, 0x00020000u);
+        // F000:03B0 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_03B4_F03B4_393:
+        CheckExternalEvents(cs1, 0x03B4);
+        // F000:03B4 mov ECX,0x00020000
+        ECX = 0x00020000u;
+        // F000:03BA mov EAX,0
+        EAX = 0x00000000u;
+    label_F000_03C0_F03C0_401:
+        CheckExternalEvents(cs1, 0x03C0);
+        // F000:03C0 inc EAX
+        EAX = Alu32.Inc(EAX);
+        // F000:03C2 loop 0x03C0
+        ECX = unchecked((uint)(ECX - 0x00000001u));
+        if (ECX != 0x00000000u) {
+            goto label_F000_03C0_F03C0_401;
+        }
+    label_F000_03C5_F03C5_406:
+        CheckExternalEvents(cs1, 0x03C5);
+        // F000:03C5 cmp EAX,0x00020000
+        Alu32.Sub(EAX, 0x00020000u);
+        // F000:03CB jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_03CF_F03CF_410:
+        CheckExternalEvents(cs1, 0x03CF);
+        // F000:03CF cmp ECX,0
+        Alu32.Sub(ECX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:03D3 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_03D7_F03D7_414:
+        CheckExternalEvents(cs1, 0x03D7);
+        // F000:03D7 mov CX,0xFFFF
+        CX = (ushort)0xFFFF;
+        // F000:03DA mov AX,0
+        AX = (ushort)0x0000;
+    label_F000_03DD_F03DD_417:
+        CheckExternalEvents(cs1, 0x03DD);
+        // F000:03DD inc AX
+        AX = Alu16.Inc(AX);
+        // F000:03DE cmp AH,0
+        Alu8.Sub(AH, (byte)0x00);
+        // F000:03E1 loope 0x03DD
+        CX = unchecked((ushort)(CX - (ushort)0x0001));
+        if (CX != (ushort)0x0000 && ZeroFlag) {
+            goto label_F000_03DD_F03DD_417;
+        }
+    label_F000_03E3_F03E3_422:
+        CheckExternalEvents(cs1, 0x03E3);
+        // F000:03E3 cmp AX,0x0100
+        Alu16.Sub(AX, (ushort)0x0100);
+        // F000:03E6 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_03EA_F03EA_426:
+        CheckExternalEvents(cs1, 0x03EA);
+        // F000:03EA cmp CX,0xFEFF
+        Alu16.Sub(CX, (ushort)0xFEFF);
+        // F000:03EE jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_03F2_F03F2_430:
+        CheckExternalEvents(cs1, 0x03F2);
+        // F000:03F2 mov CX,0x00FF
+        CX = (ushort)0x00FF;
+        // F000:03F5 mov AX,0
+        AX = (ushort)0x0000;
+    label_F000_03F8_F03F8_433:
+        CheckExternalEvents(cs1, 0x03F8);
+        // F000:03F8 inc AX
+        AX = Alu16.Inc(AX);
+        // F000:03F9 cmp AH,0
+        Alu8.Sub(AH, (byte)0x00);
+        // F000:03FC loope 0x03F8
+        CX = unchecked((ushort)(CX - (ushort)0x0001));
+        if (CX != (ushort)0x0000 && ZeroFlag) {
+            goto label_F000_03F8_F03F8_433;
+        }
+    label_F000_03FE_F03FE_438:
+        CheckExternalEvents(cs1, 0x03FE);
+        // F000:03FE cmp AX,0x00FF
+        Alu16.Sub(AX, (ushort)0x00FF);
+        // F000:0401 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0405_F0405_442:
+        CheckExternalEvents(cs1, 0x0405);
+        // F000:0405 cmp CX,0
+        Alu16.Sub(CX, unchecked((ushort)unchecked((short)(sbyte)0)));
+        // F000:0408 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_040C_F040C_446:
+        CheckExternalEvents(cs1, 0x040C);
+        // F000:040C mov ECX,0x00020000
+        ECX = 0x00020000u;
+        // F000:0412 mov EAX,0
+        EAX = 0x00000000u;
+    label_F000_0418_F0418_449:
+        CheckExternalEvents(cs1, 0x0418);
+        // F000:0418 inc EAX
+        EAX = Alu32.Inc(EAX);
+        // F000:041A test EAX,0x00010000
+        Alu32.And(EAX, 0x00010000u);
+        // F000:0420 loope 0x0418
+        ECX = unchecked((uint)(ECX - 0x00000001u));
+        if (ECX != 0x00000000u && ZeroFlag) {
+            goto label_F000_0418_F0418_449;
+        }
+    label_F000_0423_F0423_454:
+        CheckExternalEvents(cs1, 0x0423);
+        // F000:0423 cmp EAX,0x00010000
+        Alu32.Sub(EAX, 0x00010000u);
+        // F000:0429 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_042D_F042D_458:
+        CheckExternalEvents(cs1, 0x042D);
+        // F000:042D cmp ECX,0x00010000
+        Alu32.Sub(ECX, 0x00010000u);
+        // F000:0434 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0438_F0438_462:
+        CheckExternalEvents(cs1, 0x0438);
+        // F000:0438 mov CX,0xFFFF
+        CX = (ushort)0xFFFF;
+        // F000:043B mov AX,0
+        AX = (ushort)0x0000;
+    label_F000_043E_F043E_465:
+        CheckExternalEvents(cs1, 0x043E);
+        // F000:043E inc AX
+        AX = Alu16.Inc(AX);
+        // F000:043F test AL,0xFF
+        Alu8.And(AL, (byte)0xFF);
+        // F000:0441 loopne 0x043E
+        CX = unchecked((ushort)(CX - (ushort)0x0001));
+        if (CX != (ushort)0x0000 && !ZeroFlag) {
+            goto label_F000_043E_F043E_465;
+        }
+    label_F000_0443_F0443_470:
+        CheckExternalEvents(cs1, 0x0443);
+        // F000:0443 cmp AX,0x0100
+        Alu16.Sub(AX, (ushort)0x0100);
+        // F000:0446 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_044A_F044A_474:
+        CheckExternalEvents(cs1, 0x044A);
+        // F000:044A cmp CX,0xFEFF
+        Alu16.Sub(CX, (ushort)0xFEFF);
+        // F000:044E jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0452_F0452_478:
+        CheckExternalEvents(cs1, 0x0452);
+        // F000:0452 mov CX,0x00FF
+        CX = (ushort)0x00FF;
+        // F000:0455 mov AX,0
+        AX = (ushort)0x0000;
+    label_F000_0458_F0458_481:
+        CheckExternalEvents(cs1, 0x0458);
+        // F000:0458 inc AX
+        AX = Alu16.Inc(AX);
+        // F000:0459 test AL,0xFF
+        Alu8.And(AL, (byte)0xFF);
+        // F000:045B loopne 0x0458
+        CX = unchecked((ushort)(CX - (ushort)0x0001));
+        if (CX != (ushort)0x0000 && !ZeroFlag) {
+            goto label_F000_0458_F0458_481;
+        }
+    label_F000_045D_F045D_486:
+        CheckExternalEvents(cs1, 0x045D);
+        // F000:045D cmp AX,0x00FF
+        Alu16.Sub(AX, (ushort)0x00FF);
+        // F000:0460 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0464_F0464_490:
+        CheckExternalEvents(cs1, 0x0464);
+        // F000:0464 cmp CX,0
+        Alu16.Sub(CX, unchecked((ushort)unchecked((short)(sbyte)0)));
+        // F000:0467 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_046B_F046B_494:
+        CheckExternalEvents(cs1, 0x046B);
+        // F000:046B mov ECX,0x00010000
+        ECX = 0x00010000u;
+        // F000:0471 mov EAX,0
+        EAX = 0x00000000u;
+    label_F000_0477_F0477_497:
+        CheckExternalEvents(cs1, 0x0477);
+        // F000:0477 inc EAX
+        EAX = Alu32.Inc(EAX);
+        // F000:0479 test EAX,0x0000FFFF
+        Alu32.And(EAX, 0x0000FFFFu);
+        // F000:047F loopne 0x0477
+        ECX = unchecked((uint)(ECX - 0x00000001u));
+        if (ECX != 0x00000000u && !ZeroFlag) {
+            goto label_F000_0477_F0477_497;
+        }
+    label_F000_0482_F0482_502:
+        CheckExternalEvents(cs1, 0x0482);
+        // F000:0482 cmp EAX,0x00010000
+        Alu32.Sub(EAX, 0x00010000u);
+        // F000:0488 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_048C_F048C_506:
+        CheckExternalEvents(cs1, 0x048C);
+        // F000:048C cmp ECX,0
+        Alu32.Sub(ECX, unchecked((uint)unchecked((int)(sbyte)0)));
+        // F000:0490 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0494_F0494_510:
+        CheckExternalEvents(cs1, 0x0494);
+        // F000:0494 mov AL,2
+        AL = (byte)0x02;
+        // F000:0496 mov DX,0x0999
+        DX = (ushort)0x0999;
+        // F000:0499 out DX,AL
+        Machine.IoPortDispatcher.WriteByte(DX, AL);
+        // F000:049A mov EAX,0x80000001
+        EAX = 0x80000001u;
+        // F000:04A0 imul EAX
+        long result_F000_04A0_F04A0 = Alu32.Imul(unchecked((int)EAX), unchecked((int)EAX));
+        EDX = unchecked((uint)(result_F000_04A0_F04A0 >> 32));
+        EAX = unchecked((uint)result_F000_04A0_F04A0);
+        // F000:04A3 mov EAX,0x44332211
+        EAX = 0x44332211u;
+        // F000:04A9 mov EBX,EAX
+        EBX = EAX;
+        // F000:04AC mov ECX,0x88776655
+        ECX = 0x88776655u;
+        // F000:04B2 mul ECX
+        ulong result_F000_04B2_F04B2 = Alu32.Mul(EAX, unchecked((uint)unchecked((int)ECX)));
+        EDX = unchecked((uint)(result_F000_04B2_F04B2 >> 32));
+        EAX = unchecked((uint)result_F000_04B2_F04B2);
+        // F000:04B5 div ECX
+        uint divisor_F000_04B5_F04B5 = ECX;
+        ulong dividend_F000_04B5_F04B5 = unchecked((ulong)(unchecked((ulong)EDX) << 32 | unchecked((ulong)EAX)));
+        uint quotient_F000_04B5_F04B5 = Alu32.Div(unchecked((ulong)dividend_F000_04B5_F04B5), unchecked((uint)divisor_F000_04B5_F04B5));
+        EAX = unchecked((uint)quotient_F000_04B5_F04B5);
+        EDX = unchecked((uint)(dividend_F000_04B5_F04B5 % unchecked((ulong)divisor_F000_04B5_F04B5)));
+        // F000:04B8 cmp EAX,EBX
+        Alu32.Sub(EAX, EBX);
+        // F000:04BB jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_04BF_F04BF_524:
+        CheckExternalEvents(cs1, 0x04BF);
+        // F000:04BF mov AL,3
+        AL = (byte)0x03;
+        // F000:04C1 mov DX,0x0999
+        DX = (ushort)0x0999;
+        // F000:04C4 out DX,AL
+        Machine.IoPortDispatcher.WriteByte(DX, AL);
+        // F000:04C5 mov DX,0x2000
+        DX = (ushort)0x2000;
+        // F000:04C8 mov SS,DX
+        SS = DX;
+        State.InterruptShadowing = true;
+        // F000:04CA xor AX,AX
+        AX = Alu16.Xor(AX, AX);
+        // F000:04CC mov AX,SS
+        AX = SS;
+        // F000:04CE cmp AX,DX
+        Alu16.Sub(AX, DX);
+        // F000:04D0 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_04D4_F04D4_535:
+        CheckExternalEvents(cs1, 0x04D4);
+        // F000:04D4 mov EAX,0xFFFFFFFF
+        EAX = 0xFFFFFFFFu;
+        // F000:04DA mov EAX,SS
+        EAX = unchecked((uint)SS);
+        // F000:04DD cmp AX,DX
+        Alu16.Sub(AX, DX);
+        // F000:04DF jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_04E3_F04E3_541:
+        CheckExternalEvents(cs1, 0x04E3);
+        // F000:04E3 mov word ptr DS:[0],0xBEEF
+        UInt16[DS, (ushort)0x0000] = (ushort)0xBEEF;
+        // F000:04E9 mov word ptr DS:[0],SS
+        UInt16[DS, (ushort)0x0000] = SS;
+        // F000:04ED cmp word ptr DS:[0],DX
+        Alu16.Sub(UInt16[DS, (ushort)0x0000], DX);
+        // F000:04F1 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_04F5_F04F5_547:
+        CheckExternalEvents(cs1, 0x04F5);
+        // F000:04F5 mov CX,DS
+        CX = DS;
+        // F000:04F7 xor AX,AX
+        AX = Alu16.Xor(AX, AX);
+        // F000:04F9 mov SS,AX
+        SS = AX;
+        State.InterruptShadowing = true;
+        // F000:04FB mov SS,word ptr DS:[0]
+        SS = UInt16[DS, (ushort)0x0000];
+        State.InterruptShadowing = true;
+        // F000:04FF mov AX,SS
+        AX = SS;
+        // F000:0501 cmp AX,DX
+        Alu16.Sub(AX, DX);
+        // F000:0503 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0507_F0507_556:
+        CheckExternalEvents(cs1, 0x0507);
+        // F000:0507 mov DX,0x2000
+        DX = (ushort)0x2000;
+        // F000:050A mov DS,DX
+        DS = DX;
+        // F000:050C xor AX,AX
+        AX = Alu16.Xor(AX, AX);
+        // F000:050E mov AX,DS
+        AX = DS;
+        // F000:0510 cmp AX,DX
+        Alu16.Sub(AX, DX);
+        // F000:0512 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0516_F0516_564:
+        CheckExternalEvents(cs1, 0x0516);
+        // F000:0516 mov EAX,0xFFFFFFFF
+        EAX = 0xFFFFFFFFu;
+        // F000:051C mov EAX,DS
+        EAX = unchecked((uint)DS);
+        // F000:051F cmp AX,DX
+        Alu16.Sub(AX, DX);
+        // F000:0521 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0525_F0525_570:
+        CheckExternalEvents(cs1, 0x0525);
+        // F000:0525 mov word ptr DS:[0],0xBEEF
+        UInt16[DS, (ushort)0x0000] = (ushort)0xBEEF;
+        // F000:052B mov word ptr DS:[0],DS
+        UInt16[DS, (ushort)0x0000] = DS;
+        // F000:052F cmp word ptr DS:[0],DX
+        Alu16.Sub(UInt16[DS, (ushort)0x0000], DX);
+        // F000:0533 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0537_F0537_576:
+        CheckExternalEvents(cs1, 0x0537);
+        // F000:0537 mov CX,DS
+        CX = DS;
+        // F000:0539 xor AX,AX
+        AX = Alu16.Xor(AX, AX);
+        // F000:053B mov DS,AX
+        DS = AX;
+        // F000:053D mov ES,CX
+        ES = CX;
+        // F000:053F mov DS,word ptr ES:[0]
+        DS = UInt16[ES, (ushort)0x0000];
+        // F000:0544 mov AX,DS
+        AX = DS;
+        // F000:0546 cmp AX,DX
+        Alu16.Sub(AX, DX);
+        // F000:0548 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_054C_F054C_586:
+        CheckExternalEvents(cs1, 0x054C);
+        // F000:054C mov DX,0x2000
+        DX = (ushort)0x2000;
+        // F000:054F mov ES,DX
+        ES = DX;
+        // F000:0551 xor AX,AX
+        AX = Alu16.Xor(AX, AX);
+        // F000:0553 mov AX,ES
+        AX = ES;
+        // F000:0555 cmp AX,DX
+        Alu16.Sub(AX, DX);
+        // F000:0557 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_055B_F055B_594:
+        CheckExternalEvents(cs1, 0x055B);
+        // F000:055B mov EAX,0xFFFFFFFF
+        EAX = 0xFFFFFFFFu;
+        // F000:0561 mov EAX,ES
+        EAX = unchecked((uint)ES);
+        // F000:0564 cmp AX,DX
+        Alu16.Sub(AX, DX);
+        // F000:0566 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_056A_F056A_600:
+        CheckExternalEvents(cs1, 0x056A);
+        // F000:056A mov word ptr DS:[0],0xBEEF
+        UInt16[DS, (ushort)0x0000] = (ushort)0xBEEF;
+        // F000:0570 mov word ptr DS:[0],ES
+        UInt16[DS, (ushort)0x0000] = ES;
+        // F000:0574 cmp word ptr DS:[0],DX
+        Alu16.Sub(UInt16[DS, (ushort)0x0000], DX);
+        // F000:0578 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_057C_F057C_606:
+        CheckExternalEvents(cs1, 0x057C);
+        // F000:057C mov CX,DS
+        CX = DS;
+        // F000:057E xor AX,AX
+        AX = Alu16.Xor(AX, AX);
+        // F000:0580 mov ES,AX
+        ES = AX;
+        // F000:0582 mov ES,word ptr DS:[0]
+        ES = UInt16[DS, (ushort)0x0000];
+        // F000:0586 mov AX,ES
+        AX = ES;
+        // F000:0588 cmp AX,DX
+        Alu16.Sub(AX, DX);
+        // F000:058A jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_058E_F058E_615:
+        CheckExternalEvents(cs1, 0x058E);
+        // F000:058E mov DX,0x2000
+        DX = (ushort)0x2000;
+        // F000:0591 mov FS,DX
+        FS = DX;
+        // F000:0593 xor AX,AX
+        AX = Alu16.Xor(AX, AX);
+        // F000:0595 mov AX,FS
+        AX = FS;
+        // F000:0597 cmp AX,DX
+        Alu16.Sub(AX, DX);
+        // F000:0599 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_059D_F059D_623:
+        CheckExternalEvents(cs1, 0x059D);
+        // F000:059D mov EAX,0xFFFFFFFF
+        EAX = 0xFFFFFFFFu;
+        // F000:05A3 mov EAX,FS
+        EAX = unchecked((uint)FS);
+        // F000:05A6 cmp AX,DX
+        Alu16.Sub(AX, DX);
+        // F000:05A8 jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_05AC_F05AC_629:
+        CheckExternalEvents(cs1, 0x05AC);
+        // F000:05AC mov word ptr DS:[0],0xBEEF
+        UInt16[DS, (ushort)0x0000] = (ushort)0xBEEF;
+        // F000:05B2 mov word ptr DS:[0],FS
+        UInt16[DS, (ushort)0x0000] = FS;
+        // F000:05B6 cmp word ptr DS:[0],DX
+        Alu16.Sub(UInt16[DS, (ushort)0x0000], DX);
+        // F000:05BA jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_05BE_F05BE_635:
+        CheckExternalEvents(cs1, 0x05BE);
+        // F000:05BE mov CX,DS
+        CX = DS;
+        // F000:05C0 xor AX,AX
+        AX = Alu16.Xor(AX, AX);
+        // F000:05C2 mov FS,AX
+        FS = AX;
+        // F000:05C4 mov FS,word ptr DS:[0]
+        FS = UInt16[DS, (ushort)0x0000];
+        // F000:05C8 mov AX,FS
+        AX = FS;
+        // F000:05CA cmp AX,DX
+        Alu16.Sub(AX, DX);
+        // F000:05CC jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_05D0_F05D0_644:
+        CheckExternalEvents(cs1, 0x05D0);
+        // F000:05D0 mov DX,0x2000
+        DX = (ushort)0x2000;
+        // F000:05D3 mov GS,DX
+        GS = DX;
+        // F000:05D5 xor AX,AX
+        AX = Alu16.Xor(AX, AX);
+        // F000:05D7 mov AX,GS
+        AX = GS;
+        // F000:05D9 cmp AX,DX
+        Alu16.Sub(AX, DX);
+        // F000:05DB jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_05DF_F05DF_652:
+        CheckExternalEvents(cs1, 0x05DF);
+        // F000:05DF mov EAX,0xFFFFFFFF
+        EAX = 0xFFFFFFFFu;
+        // F000:05E5 mov EAX,GS
+        EAX = unchecked((uint)GS);
+        // F000:05E8 cmp AX,DX
+        Alu16.Sub(AX, DX);
+        // F000:05EA jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_05EE_F05EE_658:
+        CheckExternalEvents(cs1, 0x05EE);
+        // F000:05EE mov word ptr DS:[0],0xBEEF
+        UInt16[DS, (ushort)0x0000] = (ushort)0xBEEF;
+        // F000:05F4 mov word ptr DS:[0],GS
+        UInt16[DS, (ushort)0x0000] = GS;
+        // F000:05F8 cmp word ptr DS:[0],DX
+        Alu16.Sub(UInt16[DS, (ushort)0x0000], DX);
+        // F000:05FC jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0600_F0600_664:
+        CheckExternalEvents(cs1, 0x0600);
+        // F000:0600 mov CX,DS
+        CX = DS;
+        // F000:0602 xor AX,AX
+        AX = Alu16.Xor(AX, AX);
+        // F000:0604 mov GS,AX
+        GS = AX;
+        // F000:0606 mov GS,word ptr DS:[0]
+        GS = UInt16[DS, (ushort)0x0000];
+        // F000:060A mov AX,GS
+        AX = GS;
+        // F000:060C cmp AX,DX
+        Alu16.Sub(AX, DX);
+        // F000:060E jne near 0x15C7
+        if (!ZeroFlag) {
+            return unknown_F000_15C7_F15C7(0x0000);
+        }
+    label_F000_0612_F0612_673:
+        CheckExternalEvents(cs1, 0x0612);
+        // F000:0612 mov DX,0xF000
+        DX = (ushort)0xF000;
+        // F000:0615 mov AX,0
+        AX = (ushort)0x0000;
+        // F000:0618 mov DS,AX
+        DS = AX;
+        // F000:061A mov word ptr DS:[0x0018],0x0633
+        UInt16[DS, (ushort)0x0018] = (ushort)0x0633;
+        // F000:0620 mov word ptr DS:[0x001A],0xF000
+        UInt16[DS, (ushort)0x001A] = (ushort)0xF000;
+        // F000:0626 mov AX,0x1000
+        AX = (ushort)0x1000;
+        // F000:0629 mov SS,AX
+        SS = AX;
+        State.InterruptShadowing = true;
+        // F000:062B mov SP,0xFFFF
+        SP = (ushort)0xFFFF;
+        // F000:062E invalid
+        try {
+            throw new Spice86.Core.Emulator.CPU.Exceptions.CpuInvalidOpcodeException("Attempted to write to CS register with MOV instruction");
+        }
+        catch (CpuException cpuException) {
+            SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
+            if (cpuFaultTarget == new SegmentedAddress(cs1, 0x0633)) {
+                EnterCpuFaultHandler(cs1, 0x062E, cpuFaultTarget);
+                return unknown_F000_0633_F0633(0x0000);
+            }
+            throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:062E");
+        }
+    label_F000_FFF0_FFFF0_0:
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 jmp far F000:0045
+        goto label_F000_0045_F0045_1;
+    }
+
+    public virtual Action unknown_F000_15C7_F15C7(int loadOffset) {
+    label_F000_15C7_F15C7_385:
+        CheckExternalEvents(cs1, 0x15C7);
+        VerifySpeculativeEntryOrFail(cs1, 0x15C7, [(byte)0x8C, (byte)0xC8]);
+        // F000:15C7 mov AX,CS
+        AX = CS;
+        VerifySpeculativeEntryOrFail(cs1, 0x15C9, [(byte)0xA9, (byte)0x07, (byte)0x00]);
+        // F000:15C9 test AX,7
+        Alu16.And(AX, (ushort)0x0007);
+    label_F000_15CC_F15CC_391:
+        CheckExternalEvents(cs1, 0x15CC);
+        VerifySpeculativeEntryOrFail(cs1, 0x15CC, [(byte)0x75, (byte)0xFE]);
+        // F000:15CC jne short 0x15CC
+        if (!ZeroFlag) {
+            goto label_F000_15CC_F15CC_391;
+        }
+    label_F000_15CE_F15CE_397:
+        CheckExternalEvents(cs1, 0x15CE);
+        VerifySpeculativeEntryOrFail(cs1, 0x15CE, [(byte)0xFA]);
+        // F000:15CE cli
+        InterruptFlag = false;
+        VerifySpeculativeEntryOrFail(cs1, 0x15CF, [(byte)0xEB, (byte)0xF6]);
+        // F000:15CF jmp short 0x15C7
+        goto label_F000_15C7_F15C7_385;
+    }
+
+}

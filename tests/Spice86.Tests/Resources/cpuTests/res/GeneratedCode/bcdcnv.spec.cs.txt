@@ -1,0 +1,785 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0xF000;
+
+        DefineFunction(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0);
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        goto label_F000_FFF0_FFFF0_0;
+
+    label_F000_0000_F0000_1:
+        CheckExternalEvents(cs1, 0x0000);
+        // F000:0000 mov BX,1
+        BX = (ushort)0x0001;
+        // F000:0003 mov CX,0
+        CX = (ushort)0x0000;
+        // F000:0006 mov SP,0x0090
+        SP = (ushort)0x0090;
+        // F000:0009 mov AX,0x000A
+        AX = (ushort)0x000A;
+        // F000:000C aaa
+        bool finalAuxiliaryFlag_F000_000C_F000C = false;
+        bool finalCarryFlag_F000_000C_F000C = false;
+        if ((AL & (byte)0x0F) > (byte)0x09 || AuxiliaryFlag) {
+            AX = unchecked((ushort)(AX + (ushort)0x0106));
+            finalAuxiliaryFlag_F000_000C_F000C = true;
+            finalCarryFlag_F000_000C_F000C = true;
+        }
+        else {
+        }
+        Alu8.UpdateFlags(AL);
+        AL = unchecked((byte)(AL & (byte)0x0F));
+        AuxiliaryFlag = finalAuxiliaryFlag_F000_000C_F000C;
+        CarryFlag = finalCarryFlag_F000_000C_F000C;
+        OverflowFlag = false;
+        // F000:000D mov word ptr DS:[0],AX
+        UInt16[DS, (ushort)0x0000] = AX;
+        // F000:0010 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:0011 mov AX,0xFFF9
+        AX = (ushort)0xFFF9;
+        // F000:0014 aaa
+        bool finalAuxiliaryFlag_F000_0014_F0014 = false;
+        bool finalCarryFlag_F000_0014_F0014 = false;
+        if ((AL & (byte)0x0F) > (byte)0x09 || AuxiliaryFlag) {
+            AX = unchecked((ushort)(AX + (ushort)0x0106));
+            finalAuxiliaryFlag_F000_0014_F0014 = true;
+            finalCarryFlag_F000_0014_F0014 = true;
+        }
+        else {
+        }
+        Alu8.UpdateFlags(AL);
+        AL = unchecked((byte)(AL & (byte)0x0F));
+        AuxiliaryFlag = finalAuxiliaryFlag_F000_0014_F0014;
+        CarryFlag = finalCarryFlag_F000_0014_F0014;
+        OverflowFlag = false;
+        // F000:0015 mov word ptr DS:[2],AX
+        UInt16[DS, (ushort)0x0002] = AX;
+        // F000:0018 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:0019 push BX
+        Stack.Push16(BX);
+    label_F000_001A_F001A_15:
+        CheckExternalEvents(cs1, 0x001A);
+        // F000:001A popf
+        FlagRegister16 = Stack.Pop16();
+    label_F000_001B_F001B_30:
+        CheckExternalEvents(cs1, 0x001B);
+        // F000:001B mov AX,0xFFF9
+        AX = (ushort)0xFFF9;
+        // F000:001E aaa
+        bool finalAuxiliaryFlag_F000_001E_F001E = false;
+        bool finalCarryFlag_F000_001E_F001E = false;
+        if ((AL & (byte)0x0F) > (byte)0x09 || AuxiliaryFlag) {
+            AX = unchecked((ushort)(AX + (ushort)0x0106));
+            finalAuxiliaryFlag_F000_001E_F001E = true;
+            finalCarryFlag_F000_001E_F001E = true;
+        }
+        else {
+        }
+        Alu8.UpdateFlags(AL);
+        AL = unchecked((byte)(AL & (byte)0x0F));
+        AuxiliaryFlag = finalAuxiliaryFlag_F000_001E_F001E;
+        CarryFlag = finalCarryFlag_F000_001E_F001E;
+        OverflowFlag = false;
+        // F000:001F mov word ptr DS:[4],AX
+        UInt16[DS, (ushort)0x0004] = AX;
+        // F000:0022 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:0023 mov AX,0x5D50
+        AX = (ushort)0x5D50;
+        // F000:0026 aaa
+        bool finalAuxiliaryFlag_F000_0026_F0026 = false;
+        bool finalCarryFlag_F000_0026_F0026 = false;
+        if ((AL & (byte)0x0F) > (byte)0x09 || AuxiliaryFlag) {
+            AX = unchecked((ushort)(AX + (ushort)0x0106));
+            finalAuxiliaryFlag_F000_0026_F0026 = true;
+            finalCarryFlag_F000_0026_F0026 = true;
+        }
+        else {
+        }
+        Alu8.UpdateFlags(AL);
+        AL = unchecked((byte)(AL & (byte)0x0F));
+        AuxiliaryFlag = finalAuxiliaryFlag_F000_0026_F0026;
+        CarryFlag = finalCarryFlag_F000_0026_F0026;
+        OverflowFlag = false;
+        // F000:0027 mov word ptr DS:[6],AX
+        UInt16[DS, (ushort)0x0006] = AX;
+        // F000:002A pushf
+        Stack.Push16(FlagRegister16);
+        // F000:002B mov AX,0x4726
+        AX = (ushort)0x4726;
+        // F000:002E aaa
+        bool finalAuxiliaryFlag_F000_002E_F002E = false;
+        bool finalCarryFlag_F000_002E_F002E = false;
+        if ((AL & (byte)0x0F) > (byte)0x09 || AuxiliaryFlag) {
+            AX = unchecked((ushort)(AX + (ushort)0x0106));
+            finalAuxiliaryFlag_F000_002E_F002E = true;
+            finalCarryFlag_F000_002E_F002E = true;
+        }
+        else {
+        }
+        Alu8.UpdateFlags(AL);
+        AL = unchecked((byte)(AL & (byte)0x0F));
+        AuxiliaryFlag = finalAuxiliaryFlag_F000_002E_F002E;
+        CarryFlag = finalCarryFlag_F000_002E_F002E;
+        OverflowFlag = false;
+        // F000:002F mov word ptr DS:[8],AX
+        UInt16[DS, (ushort)0x0008] = AX;
+        // F000:0032 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:0033 mov AX,0x000A
+        AX = (ushort)0x000A;
+        // F000:0036 aas
+        bool finalAuxiliaryFlag_F000_0036_F0036 = false;
+        bool finalCarryFlag_F000_0036_F0036 = false;
+        if ((AL & (byte)0x0F) > (byte)0x09 || AuxiliaryFlag) {
+            AX = unchecked((ushort)(AX - (ushort)0x0006));
+            AH = unchecked((byte)(AH - (byte)0x01));
+            finalAuxiliaryFlag_F000_0036_F0036 = true;
+            finalCarryFlag_F000_0036_F0036 = true;
+        }
+        else {
+        }
+        Alu8.UpdateFlags(AL);
+        AL = unchecked((byte)(AL & (byte)0x0F));
+        AuxiliaryFlag = finalAuxiliaryFlag_F000_0036_F0036;
+        CarryFlag = finalCarryFlag_F000_0036_F0036;
+        OverflowFlag = false;
+        // F000:0037 mov word ptr DS:[0x000A],AX
+        UInt16[DS, (ushort)0x000A] = AX;
+        // F000:003A pushf
+        Stack.Push16(FlagRegister16);
+        // F000:003B mov AX,0xFFF9
+        AX = (ushort)0xFFF9;
+        // F000:003E aas
+        bool finalAuxiliaryFlag_F000_003E_F003E = false;
+        bool finalCarryFlag_F000_003E_F003E = false;
+        if ((AL & (byte)0x0F) > (byte)0x09 || AuxiliaryFlag) {
+            AX = unchecked((ushort)(AX - (ushort)0x0006));
+            AH = unchecked((byte)(AH - (byte)0x01));
+            finalAuxiliaryFlag_F000_003E_F003E = true;
+            finalCarryFlag_F000_003E_F003E = true;
+        }
+        else {
+        }
+        Alu8.UpdateFlags(AL);
+        AL = unchecked((byte)(AL & (byte)0x0F));
+        AuxiliaryFlag = finalAuxiliaryFlag_F000_003E_F003E;
+        CarryFlag = finalCarryFlag_F000_003E_F003E;
+        OverflowFlag = false;
+        // F000:003F mov word ptr DS:[0x000C],AX
+        UInt16[DS, (ushort)0x000C] = AX;
+        // F000:0042 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:0043 push BX
+        Stack.Push16(BX);
+    label_F000_0044_F0044_52:
+        CheckExternalEvents(cs1, 0x0044);
+        // F000:0044 popf
+        FlagRegister16 = Stack.Pop16();
+    label_F000_0045_F0045_75:
+        CheckExternalEvents(cs1, 0x0045);
+        // F000:0045 mov AX,0xFFF9
+        AX = (ushort)0xFFF9;
+        // F000:0048 aas
+        bool finalAuxiliaryFlag_F000_0048_F0048 = false;
+        bool finalCarryFlag_F000_0048_F0048 = false;
+        if ((AL & (byte)0x0F) > (byte)0x09 || AuxiliaryFlag) {
+            AX = unchecked((ushort)(AX - (ushort)0x0006));
+            AH = unchecked((byte)(AH - (byte)0x01));
+            finalAuxiliaryFlag_F000_0048_F0048 = true;
+            finalCarryFlag_F000_0048_F0048 = true;
+        }
+        else {
+        }
+        Alu8.UpdateFlags(AL);
+        AL = unchecked((byte)(AL & (byte)0x0F));
+        AuxiliaryFlag = finalAuxiliaryFlag_F000_0048_F0048;
+        CarryFlag = finalCarryFlag_F000_0048_F0048;
+        OverflowFlag = false;
+        // F000:0049 mov word ptr DS:[0x000E],AX
+        UInt16[DS, (ushort)0x000E] = AX;
+        // F000:004C pushf
+        Stack.Push16(FlagRegister16);
+        // F000:004D mov AX,0xDCC0
+        AX = (ushort)0xDCC0;
+        // F000:0050 aas
+        bool finalAuxiliaryFlag_F000_0050_F0050 = false;
+        bool finalCarryFlag_F000_0050_F0050 = false;
+        if ((AL & (byte)0x0F) > (byte)0x09 || AuxiliaryFlag) {
+            AX = unchecked((ushort)(AX - (ushort)0x0006));
+            AH = unchecked((byte)(AH - (byte)0x01));
+            finalAuxiliaryFlag_F000_0050_F0050 = true;
+            finalCarryFlag_F000_0050_F0050 = true;
+        }
+        else {
+        }
+        Alu8.UpdateFlags(AL);
+        AL = unchecked((byte)(AL & (byte)0x0F));
+        AuxiliaryFlag = finalAuxiliaryFlag_F000_0050_F0050;
+        CarryFlag = finalCarryFlag_F000_0050_F0050;
+        OverflowFlag = false;
+        // F000:0051 mov word ptr DS:[0x0010],AX
+        UInt16[DS, (ushort)0x0010] = AX;
+        // F000:0054 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:0055 mov AX,0x5FFB
+        AX = (ushort)0x5FFB;
+        // F000:0058 aas
+        bool finalAuxiliaryFlag_F000_0058_F0058 = false;
+        bool finalCarryFlag_F000_0058_F0058 = false;
+        if ((AL & (byte)0x0F) > (byte)0x09 || AuxiliaryFlag) {
+            AX = unchecked((ushort)(AX - (ushort)0x0006));
+            AH = unchecked((byte)(AH - (byte)0x01));
+            finalAuxiliaryFlag_F000_0058_F0058 = true;
+            finalCarryFlag_F000_0058_F0058 = true;
+        }
+        else {
+        }
+        Alu8.UpdateFlags(AL);
+        AL = unchecked((byte)(AL & (byte)0x0F));
+        AuxiliaryFlag = finalAuxiliaryFlag_F000_0058_F0058;
+        CarryFlag = finalCarryFlag_F000_0058_F0058;
+        OverflowFlag = false;
+        // F000:0059 mov word ptr DS:[0x0012],AX
+        UInt16[DS, (ushort)0x0012] = AX;
+        // F000:005C pushf
+        Stack.Push16(FlagRegister16);
+        // F000:005D mov AX,0x00AC
+        AX = (ushort)0x00AC;
+        // F000:0060 daa
+        byte initialAl_F000_0060_F0060 = AL;
+        bool initialCf_F000_0060_F0060 = CarryFlag;
+        bool finalAuxiliaryFlag_F000_0060_F0060 = false;
+        bool finalCarryFlag_F000_0060_F0060 = false;
+        if ((AL & (byte)0x0F) > (byte)0x09 || AuxiliaryFlag) {
+            AL = unchecked((byte)(AL + (byte)0x06));
+            finalAuxiliaryFlag_F000_0060_F0060 = true;
+        }
+        else {
+        }
+        if (initialAl_F000_0060_F0060 > (byte)0x99 || initialCf_F000_0060_F0060) {
+            AL = unchecked((byte)(AL + (byte)0x60));
+            finalCarryFlag_F000_0060_F0060 = true;
+        }
+        else {
+            finalCarryFlag_F000_0060_F0060 = false;
+        }
+        Alu8.UpdateFlags(AL);
+        AuxiliaryFlag = finalAuxiliaryFlag_F000_0060_F0060;
+        CarryFlag = finalCarryFlag_F000_0060_F0060;
+        OverflowFlag = false;
+        // F000:0061 mov word ptr DS:[0x0014],AX
+        UInt16[DS, (ushort)0x0014] = AX;
+        // F000:0064 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:0065 mov AX,0xFFF9
+        AX = (ushort)0xFFF9;
+        // F000:0068 daa
+        byte initialAl_F000_0068_F0068 = AL;
+        bool initialCf_F000_0068_F0068 = CarryFlag;
+        bool finalAuxiliaryFlag_F000_0068_F0068 = false;
+        bool finalCarryFlag_F000_0068_F0068 = false;
+        if ((AL & (byte)0x0F) > (byte)0x09 || AuxiliaryFlag) {
+            AL = unchecked((byte)(AL + (byte)0x06));
+            finalAuxiliaryFlag_F000_0068_F0068 = true;
+        }
+        else {
+        }
+        if (initialAl_F000_0068_F0068 > (byte)0x99 || initialCf_F000_0068_F0068) {
+            AL = unchecked((byte)(AL + (byte)0x60));
+            finalCarryFlag_F000_0068_F0068 = true;
+        }
+        else {
+            finalCarryFlag_F000_0068_F0068 = false;
+        }
+        Alu8.UpdateFlags(AL);
+        AuxiliaryFlag = finalAuxiliaryFlag_F000_0068_F0068;
+        CarryFlag = finalCarryFlag_F000_0068_F0068;
+        OverflowFlag = false;
+        // F000:0069 mov word ptr DS:[0x0016],AX
+        UInt16[DS, (ushort)0x0016] = AX;
+        // F000:006C pushf
+        Stack.Push16(FlagRegister16);
+        // F000:006D push BX
+        Stack.Push16(BX);
+    label_F000_006E_F006E_97:
+        CheckExternalEvents(cs1, 0x006E);
+        // F000:006E popf
+        FlagRegister16 = Stack.Pop16();
+    label_F000_006F_F006F_120:
+        CheckExternalEvents(cs1, 0x006F);
+        // F000:006F mov AX,0xFFF8
+        AX = (ushort)0xFFF8;
+        // F000:0072 daa
+        byte initialAl_F000_0072_F0072 = AL;
+        bool initialCf_F000_0072_F0072 = CarryFlag;
+        bool finalAuxiliaryFlag_F000_0072_F0072 = false;
+        bool finalCarryFlag_F000_0072_F0072 = false;
+        if ((AL & (byte)0x0F) > (byte)0x09 || AuxiliaryFlag) {
+            AL = unchecked((byte)(AL + (byte)0x06));
+            finalAuxiliaryFlag_F000_0072_F0072 = true;
+        }
+        else {
+        }
+        if (initialAl_F000_0072_F0072 > (byte)0x99 || initialCf_F000_0072_F0072) {
+            AL = unchecked((byte)(AL + (byte)0x60));
+            finalCarryFlag_F000_0072_F0072 = true;
+        }
+        else {
+            finalCarryFlag_F000_0072_F0072 = false;
+        }
+        Alu8.UpdateFlags(AL);
+        AuxiliaryFlag = finalAuxiliaryFlag_F000_0072_F0072;
+        CarryFlag = finalCarryFlag_F000_0072_F0072;
+        OverflowFlag = false;
+        // F000:0073 mov word ptr DS:[0x0018],AX
+        UInt16[DS, (ushort)0x0018] = AX;
+        // F000:0076 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:0077 push CX
+        Stack.Push16(CX);
+    label_F000_0078_F0078_126:
+        CheckExternalEvents(cs1, 0x0078);
+        // F000:0078 popf
+        FlagRegister16 = Stack.Pop16();
+    label_F000_0079_F0079_133:
+        CheckExternalEvents(cs1, 0x0079);
+        // F000:0079 mov AX,0xFF8B
+        AX = (ushort)0xFF8B;
+        // F000:007C daa
+        byte initialAl_F000_007C_F007C = AL;
+        bool initialCf_F000_007C_F007C = CarryFlag;
+        bool finalAuxiliaryFlag_F000_007C_F007C = false;
+        bool finalCarryFlag_F000_007C_F007C = false;
+        if ((AL & (byte)0x0F) > (byte)0x09 || AuxiliaryFlag) {
+            AL = unchecked((byte)(AL + (byte)0x06));
+            finalAuxiliaryFlag_F000_007C_F007C = true;
+        }
+        else {
+        }
+        if (initialAl_F000_007C_F007C > (byte)0x99 || initialCf_F000_007C_F007C) {
+            AL = unchecked((byte)(AL + (byte)0x60));
+            finalCarryFlag_F000_007C_F007C = true;
+        }
+        else {
+            finalCarryFlag_F000_007C_F007C = false;
+        }
+        Alu8.UpdateFlags(AL);
+        AuxiliaryFlag = finalAuxiliaryFlag_F000_007C_F007C;
+        CarryFlag = finalCarryFlag_F000_007C_F007C;
+        OverflowFlag = false;
+        // F000:007D mov word ptr DS:[0x001A],AX
+        UInt16[DS, (ushort)0x001A] = AX;
+        // F000:0080 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:0081 push CX
+        Stack.Push16(CX);
+    label_F000_0082_F0082_139:
+        CheckExternalEvents(cs1, 0x0082);
+        // F000:0082 popf
+        FlagRegister16 = Stack.Pop16();
+    label_F000_0083_F0083_146:
+        CheckExternalEvents(cs1, 0x0083);
+        // F000:0083 mov AX,0x0082
+        AX = (ushort)0x0082;
+        // F000:0086 daa
+        byte initialAl_F000_0086_F0086 = AL;
+        bool initialCf_F000_0086_F0086 = CarryFlag;
+        bool finalAuxiliaryFlag_F000_0086_F0086 = false;
+        bool finalCarryFlag_F000_0086_F0086 = false;
+        if ((AL & (byte)0x0F) > (byte)0x09 || AuxiliaryFlag) {
+            AL = unchecked((byte)(AL + (byte)0x06));
+            finalAuxiliaryFlag_F000_0086_F0086 = true;
+        }
+        else {
+        }
+        if (initialAl_F000_0086_F0086 > (byte)0x99 || initialCf_F000_0086_F0086) {
+            AL = unchecked((byte)(AL + (byte)0x60));
+            finalCarryFlag_F000_0086_F0086 = true;
+        }
+        else {
+            finalCarryFlag_F000_0086_F0086 = false;
+        }
+        Alu8.UpdateFlags(AL);
+        AuxiliaryFlag = finalAuxiliaryFlag_F000_0086_F0086;
+        CarryFlag = finalCarryFlag_F000_0086_F0086;
+        OverflowFlag = false;
+        // F000:0087 mov word ptr DS:[0x001C],AX
+        UInt16[DS, (ushort)0x001C] = AX;
+        // F000:008A pushf
+        Stack.Push16(FlagRegister16);
+        // F000:008B mov AX,0xCD3C
+        AX = (ushort)0xCD3C;
+        // F000:008E daa
+        byte initialAl_F000_008E_F008E = AL;
+        bool initialCf_F000_008E_F008E = CarryFlag;
+        bool finalAuxiliaryFlag_F000_008E_F008E = false;
+        bool finalCarryFlag_F000_008E_F008E = false;
+        if ((AL & (byte)0x0F) > (byte)0x09 || AuxiliaryFlag) {
+            AL = unchecked((byte)(AL + (byte)0x06));
+            finalAuxiliaryFlag_F000_008E_F008E = true;
+        }
+        else {
+        }
+        if (initialAl_F000_008E_F008E > (byte)0x99 || initialCf_F000_008E_F008E) {
+            AL = unchecked((byte)(AL + (byte)0x60));
+            finalCarryFlag_F000_008E_F008E = true;
+        }
+        else {
+            finalCarryFlag_F000_008E_F008E = false;
+        }
+        Alu8.UpdateFlags(AL);
+        AuxiliaryFlag = finalAuxiliaryFlag_F000_008E_F008E;
+        CarryFlag = finalCarryFlag_F000_008E_F008E;
+        OverflowFlag = false;
+        // F000:008F mov word ptr DS:[0x001E],AX
+        UInt16[DS, (ushort)0x001E] = AX;
+        // F000:0092 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:0093 mov AX,0x3F00
+        AX = (ushort)0x3F00;
+        // F000:0096 daa
+        byte initialAl_F000_0096_F0096 = AL;
+        bool initialCf_F000_0096_F0096 = CarryFlag;
+        bool finalAuxiliaryFlag_F000_0096_F0096 = false;
+        bool finalCarryFlag_F000_0096_F0096 = false;
+        if ((AL & (byte)0x0F) > (byte)0x09 || AuxiliaryFlag) {
+            AL = unchecked((byte)(AL + (byte)0x06));
+            finalAuxiliaryFlag_F000_0096_F0096 = true;
+        }
+        else {
+        }
+        if (initialAl_F000_0096_F0096 > (byte)0x99 || initialCf_F000_0096_F0096) {
+            AL = unchecked((byte)(AL + (byte)0x60));
+            finalCarryFlag_F000_0096_F0096 = true;
+        }
+        else {
+            finalCarryFlag_F000_0096_F0096 = false;
+        }
+        Alu8.UpdateFlags(AL);
+        AuxiliaryFlag = finalAuxiliaryFlag_F000_0096_F0096;
+        CarryFlag = finalCarryFlag_F000_0096_F0096;
+        OverflowFlag = false;
+        // F000:0097 mov word ptr DS:[0x0020],AX
+        UInt16[DS, (ushort)0x0020] = AX;
+        // F000:009A pushf
+        Stack.Push16(FlagRegister16);
+        // F000:009B mov AX,0x00AC
+        AX = (ushort)0x00AC;
+        // F000:009E das
+        byte initialAl_F000_009E_F009E = AL;
+        bool initialCf_F000_009E_F009E = CarryFlag;
+        bool finalAuxiliaryFlag_F000_009E_F009E = false;
+        bool finalCarryFlag_F000_009E_F009E = false;
+        CarryFlag = false;
+        if ((AL & (byte)0x0F) > (byte)0x09 || AuxiliaryFlag) {
+            AL = unchecked((byte)(AL - (byte)0x06));
+            finalCarryFlag_F000_009E_F009E = initialAl_F000_009E_F009E < (byte)0x06 || initialCf_F000_009E_F009E;
+            finalAuxiliaryFlag_F000_009E_F009E = true;
+        }
+        else {
+        }
+        if (initialAl_F000_009E_F009E > (byte)0x99 || initialCf_F000_009E_F009E) {
+            AL = unchecked((byte)(AL - (byte)0x60));
+            finalCarryFlag_F000_009E_F009E = true;
+        }
+        else {
+        }
+        Alu8.UpdateFlags(AL);
+        AuxiliaryFlag = finalAuxiliaryFlag_F000_009E_F009E;
+        CarryFlag = finalCarryFlag_F000_009E_F009E;
+        OverflowFlag = false;
+        // F000:009F mov word ptr DS:[0x0022],AX
+        UInt16[DS, (ushort)0x0022] = AX;
+        // F000:00A2 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:00A3 mov AX,0xFFF9
+        AX = (ushort)0xFFF9;
+        // F000:00A6 das
+        byte initialAl_F000_00A6_F00A6 = AL;
+        bool initialCf_F000_00A6_F00A6 = CarryFlag;
+        bool finalAuxiliaryFlag_F000_00A6_F00A6 = false;
+        bool finalCarryFlag_F000_00A6_F00A6 = false;
+        CarryFlag = false;
+        if ((AL & (byte)0x0F) > (byte)0x09 || AuxiliaryFlag) {
+            AL = unchecked((byte)(AL - (byte)0x06));
+            finalCarryFlag_F000_00A6_F00A6 = initialAl_F000_00A6_F00A6 < (byte)0x06 || initialCf_F000_00A6_F00A6;
+            finalAuxiliaryFlag_F000_00A6_F00A6 = true;
+        }
+        else {
+        }
+        if (initialAl_F000_00A6_F00A6 > (byte)0x99 || initialCf_F000_00A6_F00A6) {
+            AL = unchecked((byte)(AL - (byte)0x60));
+            finalCarryFlag_F000_00A6_F00A6 = true;
+        }
+        else {
+        }
+        Alu8.UpdateFlags(AL);
+        AuxiliaryFlag = finalAuxiliaryFlag_F000_00A6_F00A6;
+        CarryFlag = finalCarryFlag_F000_00A6_F00A6;
+        OverflowFlag = false;
+        // F000:00A7 mov word ptr DS:[0x0024],AX
+        UInt16[DS, (ushort)0x0024] = AX;
+        // F000:00AA pushf
+        Stack.Push16(FlagRegister16);
+        // F000:00AB push BX
+        Stack.Push16(BX);
+    label_F000_00AC_F00AC_168:
+        CheckExternalEvents(cs1, 0x00AC);
+        // F000:00AC popf
+        FlagRegister16 = Stack.Pop16();
+    label_F000_00AD_F00AD_191:
+        CheckExternalEvents(cs1, 0x00AD);
+        // F000:00AD mov AX,0xFFF8
+        AX = (ushort)0xFFF8;
+        // F000:00B0 das
+        byte initialAl_F000_00B0_F00B0 = AL;
+        bool initialCf_F000_00B0_F00B0 = CarryFlag;
+        bool finalAuxiliaryFlag_F000_00B0_F00B0 = false;
+        bool finalCarryFlag_F000_00B0_F00B0 = false;
+        CarryFlag = false;
+        if ((AL & (byte)0x0F) > (byte)0x09 || AuxiliaryFlag) {
+            AL = unchecked((byte)(AL - (byte)0x06));
+            finalCarryFlag_F000_00B0_F00B0 = initialAl_F000_00B0_F00B0 < (byte)0x06 || initialCf_F000_00B0_F00B0;
+            finalAuxiliaryFlag_F000_00B0_F00B0 = true;
+        }
+        else {
+        }
+        if (initialAl_F000_00B0_F00B0 > (byte)0x99 || initialCf_F000_00B0_F00B0) {
+            AL = unchecked((byte)(AL - (byte)0x60));
+            finalCarryFlag_F000_00B0_F00B0 = true;
+        }
+        else {
+        }
+        Alu8.UpdateFlags(AL);
+        AuxiliaryFlag = finalAuxiliaryFlag_F000_00B0_F00B0;
+        CarryFlag = finalCarryFlag_F000_00B0_F00B0;
+        OverflowFlag = false;
+        // F000:00B1 mov word ptr DS:[0x0026],AX
+        UInt16[DS, (ushort)0x0026] = AX;
+        // F000:00B4 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:00B5 push CX
+        Stack.Push16(CX);
+    label_F000_00B6_F00B6_197:
+        CheckExternalEvents(cs1, 0x00B6);
+        // F000:00B6 popf
+        FlagRegister16 = Stack.Pop16();
+    label_F000_00B7_F00B7_204:
+        CheckExternalEvents(cs1, 0x00B7);
+        // F000:00B7 mov AX,0xFF8B
+        AX = (ushort)0xFF8B;
+        // F000:00BA das
+        byte initialAl_F000_00BA_F00BA = AL;
+        bool initialCf_F000_00BA_F00BA = CarryFlag;
+        bool finalAuxiliaryFlag_F000_00BA_F00BA = false;
+        bool finalCarryFlag_F000_00BA_F00BA = false;
+        CarryFlag = false;
+        if ((AL & (byte)0x0F) > (byte)0x09 || AuxiliaryFlag) {
+            AL = unchecked((byte)(AL - (byte)0x06));
+            finalCarryFlag_F000_00BA_F00BA = initialAl_F000_00BA_F00BA < (byte)0x06 || initialCf_F000_00BA_F00BA;
+            finalAuxiliaryFlag_F000_00BA_F00BA = true;
+        }
+        else {
+        }
+        if (initialAl_F000_00BA_F00BA > (byte)0x99 || initialCf_F000_00BA_F00BA) {
+            AL = unchecked((byte)(AL - (byte)0x60));
+            finalCarryFlag_F000_00BA_F00BA = true;
+        }
+        else {
+        }
+        Alu8.UpdateFlags(AL);
+        AuxiliaryFlag = finalAuxiliaryFlag_F000_00BA_F00BA;
+        CarryFlag = finalCarryFlag_F000_00BA_F00BA;
+        OverflowFlag = false;
+        // F000:00BB mov word ptr DS:[0x0028],AX
+        UInt16[DS, (ushort)0x0028] = AX;
+        // F000:00BE pushf
+        Stack.Push16(FlagRegister16);
+        // F000:00BF push CX
+        Stack.Push16(CX);
+    label_F000_00C0_F00C0_210:
+        CheckExternalEvents(cs1, 0x00C0);
+        // F000:00C0 popf
+        FlagRegister16 = Stack.Pop16();
+    label_F000_00C1_F00C1_217:
+        CheckExternalEvents(cs1, 0x00C1);
+        // F000:00C1 mov AX,0x0082
+        AX = (ushort)0x0082;
+        // F000:00C4 das
+        byte initialAl_F000_00C4_F00C4 = AL;
+        bool initialCf_F000_00C4_F00C4 = CarryFlag;
+        bool finalAuxiliaryFlag_F000_00C4_F00C4 = false;
+        bool finalCarryFlag_F000_00C4_F00C4 = false;
+        CarryFlag = false;
+        if ((AL & (byte)0x0F) > (byte)0x09 || AuxiliaryFlag) {
+            AL = unchecked((byte)(AL - (byte)0x06));
+            finalCarryFlag_F000_00C4_F00C4 = initialAl_F000_00C4_F00C4 < (byte)0x06 || initialCf_F000_00C4_F00C4;
+            finalAuxiliaryFlag_F000_00C4_F00C4 = true;
+        }
+        else {
+        }
+        if (initialAl_F000_00C4_F00C4 > (byte)0x99 || initialCf_F000_00C4_F00C4) {
+            AL = unchecked((byte)(AL - (byte)0x60));
+            finalCarryFlag_F000_00C4_F00C4 = true;
+        }
+        else {
+        }
+        Alu8.UpdateFlags(AL);
+        AuxiliaryFlag = finalAuxiliaryFlag_F000_00C4_F00C4;
+        CarryFlag = finalCarryFlag_F000_00C4_F00C4;
+        OverflowFlag = false;
+        // F000:00C5 mov word ptr DS:[0x002A],AX
+        UInt16[DS, (ushort)0x002A] = AX;
+        // F000:00C8 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:00C9 mov AX,0x059A
+        AX = (ushort)0x059A;
+        // F000:00CC das
+        byte initialAl_F000_00CC_F00CC = AL;
+        bool initialCf_F000_00CC_F00CC = CarryFlag;
+        bool finalAuxiliaryFlag_F000_00CC_F00CC = false;
+        bool finalCarryFlag_F000_00CC_F00CC = false;
+        CarryFlag = false;
+        if ((AL & (byte)0x0F) > (byte)0x09 || AuxiliaryFlag) {
+            AL = unchecked((byte)(AL - (byte)0x06));
+            finalCarryFlag_F000_00CC_F00CC = initialAl_F000_00CC_F00CC < (byte)0x06 || initialCf_F000_00CC_F00CC;
+            finalAuxiliaryFlag_F000_00CC_F00CC = true;
+        }
+        else {
+        }
+        if (initialAl_F000_00CC_F00CC > (byte)0x99 || initialCf_F000_00CC_F00CC) {
+            AL = unchecked((byte)(AL - (byte)0x60));
+            finalCarryFlag_F000_00CC_F00CC = true;
+        }
+        else {
+        }
+        Alu8.UpdateFlags(AL);
+        AuxiliaryFlag = finalAuxiliaryFlag_F000_00CC_F00CC;
+        CarryFlag = finalCarryFlag_F000_00CC_F00CC;
+        OverflowFlag = false;
+        // F000:00CD mov word ptr DS:[0x002C],AX
+        UInt16[DS, (ushort)0x002C] = AX;
+        // F000:00D0 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:00D1 mov AX,0x54F6
+        AX = (ushort)0x54F6;
+        // F000:00D4 das
+        byte initialAl_F000_00D4_F00D4 = AL;
+        bool initialCf_F000_00D4_F00D4 = CarryFlag;
+        bool finalAuxiliaryFlag_F000_00D4_F00D4 = false;
+        bool finalCarryFlag_F000_00D4_F00D4 = false;
+        CarryFlag = false;
+        if ((AL & (byte)0x0F) > (byte)0x09 || AuxiliaryFlag) {
+            AL = unchecked((byte)(AL - (byte)0x06));
+            finalCarryFlag_F000_00D4_F00D4 = initialAl_F000_00D4_F00D4 < (byte)0x06 || initialCf_F000_00D4_F00D4;
+            finalAuxiliaryFlag_F000_00D4_F00D4 = true;
+        }
+        else {
+        }
+        if (initialAl_F000_00D4_F00D4 > (byte)0x99 || initialCf_F000_00D4_F00D4) {
+            AL = unchecked((byte)(AL - (byte)0x60));
+            finalCarryFlag_F000_00D4_F00D4 = true;
+        }
+        else {
+        }
+        Alu8.UpdateFlags(AL);
+        AuxiliaryFlag = finalAuxiliaryFlag_F000_00D4_F00D4;
+        CarryFlag = finalCarryFlag_F000_00D4_F00D4;
+        OverflowFlag = false;
+        // F000:00D5 mov word ptr DS:[0x002E],AX
+        UInt16[DS, (ushort)0x002E] = AX;
+        // F000:00D8 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:00D9 mov AX,0xFF7F
+        AX = (ushort)0xFF7F;
+        // F000:00DC cbw
+        AX = unchecked((ushort)unchecked((short)unchecked((sbyte)AL)));
+        // F000:00DD mov word ptr DS:[0x0030],AX
+        UInt16[DS, (ushort)0x0030] = AX;
+        // F000:00E0 mov word ptr DS:[0x0032],DX
+        UInt16[DS, (ushort)0x0032] = DX;
+        // F000:00E4 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:00E5 mov AX,0x0080
+        AX = (ushort)0x0080;
+        // F000:00E8 cbw
+        AX = unchecked((ushort)unchecked((short)unchecked((sbyte)AL)));
+        // F000:00E9 mov word ptr DS:[0x0034],AX
+        UInt16[DS, (ushort)0x0034] = AX;
+        // F000:00EC mov word ptr DS:[0x0036],DX
+        UInt16[DS, (ushort)0x0036] = DX;
+        // F000:00F0 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:00F1 mov AX,0xF1ED
+        AX = (ushort)0xF1ED;
+        // F000:00F4 cbw
+        AX = unchecked((ushort)unchecked((short)unchecked((sbyte)AL)));
+        // F000:00F5 mov word ptr DS:[0x0038],AX
+        UInt16[DS, (ushort)0x0038] = AX;
+        // F000:00F8 mov word ptr DS:[0x003A],DX
+        UInt16[DS, (ushort)0x003A] = DX;
+        // F000:00FC pushf
+        Stack.Push16(FlagRegister16);
+        // F000:00FD mov AX,0x8000
+        AX = (ushort)0x8000;
+        // F000:0100 cwd
+        DX = unchecked((ushort)(unchecked((short)AX) >> 15));
+        // F000:0101 mov word ptr DS:[0x003C],AX
+        UInt16[DS, (ushort)0x003C] = AX;
+        // F000:0104 mov word ptr DS:[0x003E],DX
+        UInt16[DS, (ushort)0x003E] = DX;
+        // F000:0108 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:0109 mov AX,0x7FFF
+        AX = (ushort)0x7FFF;
+        // F000:010C cwd
+        DX = unchecked((ushort)(unchecked((short)AX) >> 15));
+        // F000:010D mov word ptr DS:[0x0040],AX
+        UInt16[DS, (ushort)0x0040] = AX;
+        // F000:0110 mov word ptr DS:[0x0042],DX
+        UInt16[DS, (ushort)0x0042] = DX;
+        // F000:0114 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:0115 mov AX,0x43F1
+        AX = (ushort)0x43F1;
+        // F000:0118 cwd
+        DX = unchecked((ushort)(unchecked((short)AX) >> 15));
+        // F000:0119 mov word ptr DS:[0x0044],AX
+        UInt16[DS, (ushort)0x0044] = AX;
+        // F000:011C mov word ptr DS:[0x0046],DX
+        UInt16[DS, (ushort)0x0046] = DX;
+        // F000:0120 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:0121 hlt
+        return Hlt();
+    label_F000_FFF0_FFFF0_0:
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        goto label_F000_0000_F0000_1;
+    }
+
+}

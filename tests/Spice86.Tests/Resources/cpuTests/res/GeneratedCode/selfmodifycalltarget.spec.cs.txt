@@ -1,0 +1,145 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0xF000;
+
+        DefineFunction(cs1, 0x0028, unknown_23_F000_0028_F0028);
+        DefineFunction(cs1, 0x0040, unknown_F000_0040_F0040);
+        DefineFunction(cs1, 0x0048, unknown_F000_0048_F0048);
+        DefineFunction(cs1, 0x0050, unknown_F000_0050_F0050);
+        DefineFunction(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0);
+    }
+
+    public virtual Action unknown_23_F000_0028_F0028(int loadOffset) {
+    label_F000_0028_F0028_23:
+        CheckExternalEvents(cs1, 0x0028);
+        // F000:0028 jmp far F000:002E
+    label_F000_002E_F002E_26:
+        CheckExternalEvents(cs1, 0x002E);
+        // F000:002E mov byte ptr DS:[0x0010],0xAA
+        UInt8[DS, (ushort)0x0010] = (byte)0xAA;
+        // F000:0033 ret far
+        return FarRet((ushort)0x0000);
+    }
+
+    public virtual Action unknown_40_F000_0028_F0028(int loadOffset) {
+    label_F000_0028_F0028_40:
+        CheckExternalEvents(cs1, 0x0028);
+        // F000:0028 jmp far F000:0034
+    label_F000_0034_F0034_43:
+        CheckExternalEvents(cs1, 0x0034);
+        // F000:0034 mov byte ptr DS:[0x0011],0xBB
+        UInt8[DS, (ushort)0x0011] = (byte)0xBB;
+        // F000:0039 ret far
+        return FarRet((ushort)0x0000);
+    }
+
+    public virtual Action unknown_57_F000_0028_F0028(int loadOffset) {
+    label_F000_0028_F0028_57:
+        CheckExternalEvents(cs1, 0x0028);
+        // F000:0028 jmp far F000:003A
+    label_F000_003A_F003A_60:
+        CheckExternalEvents(cs1, 0x003A);
+        // F000:003A mov byte ptr DS:[0x0012],0xCC
+        UInt8[DS, (ushort)0x0012] = (byte)0xCC;
+        // F000:003F ret far
+        return FarRet((ushort)0x0000);
+    }
+
+    public virtual Action unknown_F000_0040_F0040(int loadOffset) {
+    label_F000_0040_F0040_10:
+        CheckExternalEvents(cs1, 0x0040);
+        // F000:0040 mov word ptr ES:[0x0029],0x002E
+        UInt16[ES, (ushort)0x0029] = (ushort)0x002E;
+        // F000:0047 ret near
+        return NearRet((ushort)0x0000);
+    }
+
+    public virtual Action unknown_F000_0048_F0048(int loadOffset) {
+    label_F000_0048_F0048_33:
+        CheckExternalEvents(cs1, 0x0048);
+        // F000:0048 mov word ptr ES:[0x0029],0x0034
+        UInt16[ES, (ushort)0x0029] = (ushort)0x0034;
+        // F000:004F ret near
+        return NearRet((ushort)0x0000);
+    }
+
+    public virtual Action unknown_F000_0050_F0050(int loadOffset) {
+    label_F000_0050_F0050_50:
+        CheckExternalEvents(cs1, 0x0050);
+        // F000:0050 mov word ptr ES:[0x0029],0x003A
+        UInt16[ES, (ushort)0x0029] = (ushort)0x003A;
+        // F000:0057 ret near
+        return NearRet((ushort)0x0000);
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        goto label_F000_FFF0_FFFF0_0;
+
+    label_F000_0000_F0000_1:
+        CheckExternalEvents(cs1, 0x0000);
+        // F000:0000 mov AX,0
+        AX = (ushort)0x0000;
+        // F000:0003 mov DS,AX
+        DS = AX;
+        // F000:0005 mov SS,AX
+        SS = AX;
+        State.InterruptShadowing = true;
+        // F000:0007 mov SP,0x0100
+        SP = (ushort)0x0100;
+        // F000:000A mov AX,0xF000
+        AX = (ushort)0xF000;
+        // F000:000D mov ES,AX
+        ES = AX;
+        // F000:000F call near 0x0040
+        NearCall(cs1, 0x0012, unknown_F000_0040_F0040);
+    label_F000_0012_F0012_22:
+        CheckExternalEvents(cs1, 0x0012);
+        // F000:0012 call far F000:0028
+        FarCall(cs1, 0x0017, cs1, unknown_23_F000_0028_F0028);
+    label_F000_0017_F0017_32:
+        CheckExternalEvents(cs1, 0x0017);
+        // F000:0017 call near 0x0048
+        NearCall(cs1, 0x001A, unknown_F000_0048_F0048);
+    label_F000_001A_F001A_39:
+        CheckExternalEvents(cs1, 0x001A);
+        // F000:001A call far F000:0028
+        FarCall(cs1, 0x001F, cs1, unknown_40_F000_0028_F0028);
+    label_F000_001F_F001F_49:
+        CheckExternalEvents(cs1, 0x001F);
+        // F000:001F call near 0x0050
+        NearCall(cs1, 0x0022, unknown_F000_0050_F0050);
+    label_F000_0022_F0022_56:
+        CheckExternalEvents(cs1, 0x0022);
+        // F000:0022 call far F000:0028
+        FarCall(cs1, 0x0027, cs1, unknown_57_F000_0028_F0028);
+    label_F000_0027_F0027_66:
+        CheckExternalEvents(cs1, 0x0027);
+        // F000:0027 hlt
+        return Hlt();
+    label_F000_FFF0_FFFF0_0:
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        goto label_F000_0000_F0000_1;
+    }
+
+}

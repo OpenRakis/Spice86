@@ -1,0 +1,195 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0xF000;
+
+        DefineFunction(cs1, 0x0065, unknown_F000_0065_F0065);
+        DefineFunction(cs1, 0x1100, unknown_F000_1100_F1100);
+        DefineFunction(cs1, 0x1200, unknown_F000_1200_F1200);
+        DefineFunction(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0);
+    }
+
+    public virtual Action unknown_F000_0065_F0065(int loadOffset) {
+    label_F000_0065_F0065_31:
+        CheckExternalEvents(cs1, 0x0065);
+        // F000:0065 sub SP,6
+        SP = Alu16.Sub(SP, unchecked((ushort)unchecked((short)(sbyte)6)));
+        // F000:0068 mov word ptr DS:[0x0014],0x1200
+        UInt16[DS, (ushort)0x0014] = (ushort)0x1200;
+        // F000:006E mov BX,5
+        BX = (ushort)0x0005;
+        // F000:0071 mov SI,3
+        SI = (ushort)0x0003;
+        // F000:0074 call near word ptr SS:[BX+SI-4]
+        switch ((ushort)(UInt16[SS, (ushort)(BX + SI + (sbyte)-4)])) {
+            case 0x1200:
+                NearCall(cs1, 0x0079, unknown_F000_1200_F1200);
+                throw FailAsUntested("Call at F000:0074 returned to F000:0079, but no continuation was observed during discovery.");
+            default:
+                throw FailAsUntested($"Unknown near call target 0x{((ushort)(UInt16[SS, (ushort)(BX + SI + (sbyte)-4)])):X4} at F000:0074");
+        }
+    }
+
+    public virtual Action unknown_F000_1100_F1100(int loadOffset) {
+    label_F000_1100_F1100_64:
+        CheckExternalEvents(cs1, 0x1100);
+        // F000:1100 mov SI,SP
+        SI = SP;
+        // F000:1102 mov SI,word ptr SS:[SI]
+        SI = UInt16[SS, SI];
+        // F000:1105 mov word ptr DS:[0x000E],SI
+        UInt16[DS, (ushort)0x000E] = SI;
+        // F000:1109 add SI,6
+        SI = Alu16.Add(SI, unchecked((ushort)unchecked((short)(sbyte)6)));
+        // F000:110C mov DI,SP
+        DI = SP;
+        // F000:110E mov word ptr SS:[DI],SI
+        UInt16[SS, DI] = SI;
+        // F000:1111 iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_1200_F1200(int loadOffset) {
+    label_F000_1200_F1200_84:
+        CheckExternalEvents(cs1, 0x1200);
+        // F000:1200 mov CX,0xF120
+        CX = (ushort)0xF120;
+        // F000:1203 mov ES,CX
+        ES = CX;
+        // F000:1205 mov SI,0x0200
+        SI = (ushort)0x0200;
+        // F000:1208 mov DI,0x0E01
+        DI = (ushort)0x0E01;
+        // F000:120B cmps byte ptr ES:[SI],byte ptr ES:[DI]
+        Alu8.Sub(UInt8[ES, SI], UInt8[ES, DI]);
+        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+        // F000:120D pushf
+        Stack.Push16(FlagRegister16);
+        // F000:120E mov AX,1
+        AX = (ushort)0x0001;
+        // F000:1211 mov ES,AX
+        ES = AX;
+        // F000:1213 mov DI,6
+        DI = (ushort)0x0006;
+        // F000:1216 mov SI,0x1400
+        SI = (ushort)0x1400;
+        // F000:1219 mov CX,6
+        CX = (ushort)0x0006;
+        // F000:121C rep movs byte ptr ES:[DI],byte ptr CS:[SI]
+        while (CX != (ushort)0x0000) {
+            UInt8[ES, DI] = UInt8[CS, SI];
+            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
+            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+            CX = unchecked((ushort)(CX - (ushort)0x0001));
+        }
+        // F000:121F hlt
+        return Hlt();
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        goto label_F000_FFF0_FFFF0_0;
+
+    label_F000_0000_F0000_1:
+        CheckExternalEvents(cs1, 0x0000);
+        // F000:0000 mov BX,0xF100
+        BX = (ushort)0xF100;
+        // F000:0003 mov ES,BX
+        ES = BX;
+        // F000:0005 mov BX,word ptr ES:[0]
+        BX = UInt16[ES, (ushort)0x0000];
+        // F000:000A mov AX,word ptr ES:[2]
+        AX = UInt16[ES, (ushort)0x0002];
+        // F000:000E mov word ptr DS:[2],AX
+        UInt16[DS, (ushort)0x0002] = AX;
+        // F000:0011 mov SP,2
+        SP = (ushort)0x0002;
+        // F000:0014 push BX
+        Stack.Push16(BX);
+        // F000:0016 les DX,word ptr ES:[0]
+        ushort lxsOffset_F000_0016_F0016 = (ushort)0x0000;
+        ushort lxsValue_F000_0016_F0016 = UInt16[ES, lxsOffset_F000_0016_F0016];
+        ushort lxsSegment_F000_0016_F0016 = UInt16[ES, (ushort)(lxsOffset_F000_0016_F0016 + (ushort)0x0002)];
+        DX = unchecked((ushort)lxsValue_F000_0016_F0016);
+        ES = unchecked((ushort)lxsSegment_F000_0016_F0016);
+        // F000:001B mov word ptr DS:[4],DX
+        UInt16[DS, (ushort)0x0004] = DX;
+        // F000:001F mov DX,ES
+        DX = ES;
+        // F000:0021 mov word ptr DS:[6],DX
+        UInt16[DS, (ushort)0x0006] = DX;
+        // F000:0025 mov DI,5
+        DI = (ushort)0x0005;
+        // F000:0028 lea SI,BP+DI+0x17
+        SI = unchecked((ushort)(BP + DI + (sbyte)23));
+        // F000:002C mov word ptr DS:[8],SI
+        UInt16[DS, (ushort)0x0008] = SI;
+        // F000:0030 mov BX,5
+        BX = (ushort)0x0005;
+        // F000:0033 mov AX,5
+        AX = (ushort)0x0005;
+        // F000:0036 mov word ptr DS:[0x000A],0x2345
+        UInt16[DS, (ushort)0x000A] = (ushort)0x2345;
+        // F000:003C mov DX,0xF100
+        DX = (ushort)0xF100;
+        // F000:003F mov ES,DX
+        ES = DX;
+        // F000:0041 xlat byte ptr ES:[BX+AL]
+        AL = UInt8[ES, (ushort)(BX + unchecked((ushort)AL))];
+        // F000:0043 mov word ptr DS:[0x000C],AX
+        UInt16[DS, (ushort)0x000C] = AX;
+        // F000:0046 mov AX,1
+        AX = (ushort)0x0001;
+        // F000:0049 mov SS,AX
+        SS = AX;
+        State.InterruptShadowing = true;
+        // F000:004B mov word ptr DS:[0x0010],6
+        UInt16[DS, (ushort)0x0010] = (ushort)0x0006;
+        // F000:0051 inc word ptr SS:[0]
+        UInt16[SS, (ushort)0x0000] = Alu16.Inc(UInt16[SS, (ushort)0x0000]);
+        // F000:0056 mov SP,0x0020
+        SP = (ushort)0x0020;
+        // F000:0059 mov word ptr DS:[0x0012],0
+        UInt16[DS, (ushort)0x0012] = (ushort)0x0000;
+        // F000:005F div word ptr SS:[2]
+        try {
+            ushort divisor_F000_005F_F005F = UInt16[SS, (ushort)0x0002];
+            uint dividend_F000_005F_F005F = unchecked((uint)(unchecked((uint)DX) << 16 | unchecked((uint)AX)));
+            ushort quotient_F000_005F_F005F = Alu16.Div(unchecked((uint)dividend_F000_005F_F005F), unchecked((ushort)divisor_F000_005F_F005F));
+            AX = unchecked((ushort)quotient_F000_005F_F005F);
+            DX = unchecked((ushort)(dividend_F000_005F_F005F % unchecked((uint)divisor_F000_005F_F005F)));
+        }
+        catch (CpuException cpuException) {
+            SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
+            if (cpuFaultTarget == new SegmentedAddress(cs1, 0x1100)) {
+                EnterCpuFaultHandler(cs1, 0x005F, cpuFaultTarget);
+                return unknown_F000_1100_F1100(0x0000);
+            }
+            throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:005F");
+        }
+    label_F000_FFF0_FFFF0_0:
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        goto label_F000_0000_F0000_1;
+    }
+
+}

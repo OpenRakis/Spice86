@@ -1,0 +1,187 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+    protected readonly ushort cs2;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0xE342;
+        cs2 = 0xF000;
+
+        DefineFunction(cs1, 0xEBE0, unknown_E342_EBE0_F2000);
+        DefineFunction(cs2, 0x3001, unknown_F000_3001_F3001);
+        DefineFunction(cs2, 0x4002, unknown_F000_4002_F4002);
+        DefineFunction(cs2, 0x4013, unknown_F000_4013_F4013);
+        DefineFunction(cs2, 0xFFF0, unknown_F000_FFF0_FFFF0);
+    }
+
+    public virtual Action unknown_E342_EBE0_F2000(int loadOffset) {
+    label_E342_EBE0_F2000_26:
+        CheckExternalEvents(cs1, 0xEBE0);
+        // E342:EBE0 mov byte ptr DS:[1],1
+        UInt8[DS, (ushort)0x0001] = (byte)0x01;
+        // E342:EBE5 pushf
+        Stack.Push16(FlagRegister16);
+        // E342:EBE6 pop AX
+        AX = Stack.Pop16();
+        // E342:EBE7 clc
+        CarryFlag = false;
+        // E342:EBE8 iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_3001_F3001(int loadOffset) {
+    label_F000_3001_F3001_60:
+        CheckExternalEvents(cs2, 0x3001);
+        // F000:3001 mov byte ptr DS:[5],5
+        UInt8[DS, (ushort)0x0005] = (byte)0x05;
+        // F000:3006 pop CX
+        CX = Stack.Pop16();
+        // F000:3007 mov CX,0x4002
+        CX = (ushort)0x4002;
+        // F000:300A push CX
+        Stack.Push16(CX);
+        // F000:300B iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_4002_F4002(int loadOffset) {
+    label_F000_4002_F4002_70:
+        CheckExternalEvents(cs2, 0x4002);
+        // F000:4002 mov byte ptr DS:[6],6
+        UInt8[DS, (ushort)0x0006] = (byte)0x06;
+        // F000:4007 mov DX,0x04FF
+        DX = (ushort)0x04FF;
+        // F000:400A push DX
+        Stack.Push16(DX);
+    label_F000_400B_F400B_74:
+        CheckExternalEvents(cs2, 0x400B);
+        // F000:400B popf
+        FlagRegister16 = Stack.Pop16();
+    label_F000_400C_F400C_79:
+        CheckExternalEvents(cs2, 0x400C);
+        // F000:400C mov word ptr DS:[0x0010],0x5000
+        UInt16[DS, (ushort)0x0010] = (ushort)0x5000;
+        // F000:4012 into
+        if (OverflowFlag) {
+            InterruptCall(cs2, 0x4013, unchecked((byte)((byte)0x04)));
+            throw FailAsUntested("Call at F000:4012 returned to F000:4013, but no continuation was observed during discovery.");
+        }
+        else {
+            return unknown_F000_4013_F4013(0x0000);
+        }
+        throw FailAsUntested("Generated partition reached the end without a terminating control-flow instruction.");
+    }
+
+    public virtual Action unknown_F000_4013_F4013(int loadOffset) {
+    label_F000_4013_F4013_83:
+        CheckExternalEvents(cs2, 0x4013);
+        // F000:4013 mov word ptr DS:[8],AX
+        UInt16[DS, (ushort)0x0008] = AX;
+        // F000:4016 mov word ptr DS:[0x000A],BX
+        UInt16[DS, (ushort)0x000A] = BX;
+        // F000:401A mov word ptr DS:[0x000C],CX
+        UInt16[DS, (ushort)0x000C] = CX;
+        // F000:401E mov word ptr DS:[0x000E],DX
+        UInt16[DS, (ushort)0x000E] = DX;
+        // F000:4022 mov word ptr DS:[0x0010],SP
+        UInt16[DS, (ushort)0x0010] = SP;
+        // F000:4026 hlt
+        return Hlt();
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        goto label_F000_FFF0_FFFF0_0;
+
+    label_F000_0000_F0000_1:
+        CheckExternalEvents(cs2, 0x0000);
+        // F000:0000 mov DX,0
+        DX = (ushort)0x0000;
+        // F000:0003 mov DS,DX
+        DS = DX;
+        // F000:0005 mov SP,0x1000
+        SP = (ushort)0x1000;
+        // F000:0008 mov SP,SS
+        SP = SS;
+        // F000:000A mov word ptr DS:[0x0034],0xEBE0
+        UInt16[DS, (ushort)0x0034] = (ushort)0xEBE0;
+        // F000:0010 mov word ptr DS:[0x0036],0xE342
+        UInt16[DS, (ushort)0x0036] = (ushort)0xE342;
+        // F000:0016 mov AX,0x0EFF
+        AX = (ushort)0x0EFF;
+        // F000:0019 push AX
+        Stack.Push16(AX);
+    label_F000_001A_F001A_11:
+        CheckExternalEvents(cs2, 0x001A);
+        // F000:001A popf
+        FlagRegister16 = Stack.Pop16();
+    label_F000_001B_F001B_22:
+        CheckExternalEvents(cs2, 0x001B);
+        // F000:001B mov byte ptr DS:[0],0
+        UInt8[DS, (ushort)0x0000] = (byte)0x00;
+        // F000:0020 int 0x0D
+        InterruptCall(cs2, 0x0022, unchecked((byte)((byte)0x0D)));
+    label_F000_0022_F0022_36:
+        CheckExternalEvents(cs2, 0x0022);
+        // F000:0022 mov byte ptr DS:[2],2
+        UInt8[DS, (ushort)0x0002] = (byte)0x02;
+        // F000:0027 jmp near AX
+        switch ((ushort)(AX)) {
+            case 0x0CD7:
+                break;
+            default:
+                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(AX)):X4} at F000:0027");
+        }
+    label_F000_0CD7_F0CD7_40:
+        CheckExternalEvents(cs2, 0x0CD7);
+        // F000:0CD7 mov byte ptr DS:[3],3
+        UInt8[DS, (ushort)0x0003] = (byte)0x03;
+        // F000:0CDC pushf
+        Stack.Push16(FlagRegister16);
+        // F000:0CDD pop BX
+        BX = Stack.Pop16();
+        // F000:0CDE mov word ptr DS:[0x000C],0xEBE0
+        UInt16[DS, (ushort)0x000C] = (ushort)0xEBE0;
+        // F000:0CE4 mov word ptr DS:[0x000E],0xE342
+        UInt16[DS, (ushort)0x000E] = (ushort)0xE342;
+        // F000:0CEA int 3
+        InterruptCall(cs2, 0x0CEC, unchecked((byte)((byte)0x03)));
+    label_F000_0CEC_F0CEC_52:
+        CheckExternalEvents(cs2, 0x0CEC);
+        // F000:0CEC mov byte ptr DS:[4],4
+        UInt8[DS, (ushort)0x0004] = (byte)0x04;
+        // F000:0CF1 mov word ptr DS:[0x0010],0x3001
+        UInt16[DS, (ushort)0x0010] = (ushort)0x3001;
+        // F000:0CF7 mov word ptr DS:[0x0012],0xF000
+        UInt16[DS, (ushort)0x0012] = (ushort)0xF000;
+        // F000:0CFD into
+        if (OverflowFlag) {
+            InterruptCall(cs2, 0x0CFE, unchecked((byte)((byte)0x04)));
+            return unknown_F000_4002_F4002(0x0000);
+        }
+        else {
+            throw FailAsUntested("Unobserved conditional fallthrough at F000:0CFD");
+        }
+    label_F000_FFF0_FFFF0_0:
+        CheckExternalEvents(cs2, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        goto label_F000_0000_F0000_1;
+    }
+
+}

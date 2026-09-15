@@ -1,0 +1,143 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+    protected readonly ushort cs2;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0xE342;
+        cs2 = 0xF000;
+
+        DefineFunction(cs2, 0xFFF0, unknown_F000_FFF0_FFFF0);
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        goto label_F000_FFF0_FFFF0_0;
+
+    label_F000_0000_F0000_1:
+        CheckExternalEvents(cs2, 0x0000);
+        // F000:0000 jmp short 0x000E
+    label_F000_000E_F000E_4:
+        CheckExternalEvents(cs2, 0x000E);
+        // F000:000E mov BX,0xF000
+        BX = (ushort)0xF000;
+        // F000:0011 mov DS,BX
+        DS = BX;
+        // F000:0013 mov AX,word ptr DS:[0xFFF2]
+        AX = UInt16[DS, (ushort)0xFFF2];
+        // F000:0016 jmp near AX
+        switch ((ushort)(AX)) {
+            case 0x1290:
+                break;
+            default:
+                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(AX)):X4} at F000:0016");
+        }
+    label_F000_1290_F1290_14:
+        CheckExternalEvents(cs2, 0x1290);
+        // F000:1290 jmp far E342:EBE0
+    label_E342_EBE0_F2000_15:
+        CheckExternalEvents(cs1, 0xEBE0);
+        // E342:EBE0 mov BX,0x1000
+        BX = (ushort)0x1000;
+        // E342:EBE3 mov DS,BX
+        DS = BX;
+        // E342:EBE5 mov AH,0xFB
+        AH = (byte)0xFB;
+        // E342:EBE7 mov AL,0xE1
+        AL = (byte)0xE1;
+        // E342:EBE9 mov word ptr DS:[0x2501],AX
+        UInt16[DS, (ushort)0x2501] = AX;
+        // E342:EBEC mov word ptr DS:[0x2600],0x1001
+        UInt16[DS, (ushort)0x2600] = (ushort)0x1001;
+        // E342:EBF2 mov SS,word ptr DS:[0x2600]
+        SS = UInt16[DS, (ushort)0x2600];
+        State.InterruptShadowing = true;
+        // E342:EBF6 mov word ptr DS:[0x2601],SS
+        UInt16[DS, (ushort)0x2601] = SS;
+        // E342:EBFA mov DL,byte ptr DS:[0x2601]
+        DL = UInt8[DS, (ushort)0x2601];
+        // E342:EBFE mov DH,0
+        DH = (byte)0x00;
+        // E342:EC00 mov DI,DX
+        DI = DX;
+        // E342:EC02 mov BP,0x2506
+        BP = (ushort)0x2506;
+        // E342:EC05 jmp near word ptr SS:[BP+DI-22]
+        switch ((ushort)(UInt16[SS, (ushort)(BP + DI + (sbyte)-22)])) {
+            case 0xFBE1:
+                break;
+            default:
+                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(UInt16[SS, (ushort)(BP + DI + (sbyte)-22)])):X4} at E342:EC05");
+        }
+    label_E342_FBE1_F3001_43:
+        CheckExternalEvents(cs1, 0xFBE1);
+        // E342:FBE1 mov DX,0xF100
+        DX = (ushort)0xF100;
+        // E342:FBE4 mov AX,0x2536
+        AX = (ushort)0x2536;
+        // E342:FBE7 out DX,AX
+        Machine.IoPortDispatcher.WriteWord(DX, AX);
+        // E342:FBE8 mov AX,0x4001
+        AX = (ushort)0x4001;
+        // E342:FBEC mov BX,0x2501
+        BX = (ushort)0x2501;
+        // E342:FBEF mov word ptr DS:[BX],AX
+        UInt16[DS, BX] = AX;
+        // E342:FBF1 mov DI,2
+        DI = (ushort)0x0002;
+        // E342:FBF4 mov byte ptr DS:[BX+DI],0
+        UInt8[DS, (ushort)(BX + DI)] = (byte)0x00;
+        // E342:FBF7 mov CH,4
+        CH = (byte)0x04;
+        // E342:FBF9 mov CL,CH
+        CL = CH;
+        // E342:FBFB mov CH,0
+        CH = (byte)0x00;
+        // E342:FBFD mov SI,CX
+        SI = CX;
+        // E342:FBFF mov byte ptr DS:[BX+SI-1],0xF0
+        UInt8[DS, (ushort)(BX + SI + (sbyte)-1)] = (byte)0xF0;
+        // E342:FC03 mov SI,3
+        SI = (ushort)0x0003;
+        // E342:FC06 jmp far dword ptr SS:[BP+SI-24]
+        ushort targetSegment_58 = unchecked((ushort)(UInt16[SS, (ushort)(BP + SI + (sbyte)-24 + (ushort)0x0002)]));
+        ushort targetOffset_58 = unchecked((ushort)(UInt16[SS, (ushort)(BP + SI + (sbyte)-24)]));
+        if (targetSegment_58 == cs2 && targetOffset_58 == 0x4001) {
+            goto label_F000_4001_F4001_73;
+        }
+        throw FailAsUntested($"Unknown far jump target {targetSegment_58:X4}:{targetOffset_58:X4} at E342:FC06");
+    label_F000_4001_F4001_73:
+        CheckExternalEvents(cs2, 0x4001);
+        // F000:4001 mov AX,word ptr DS:[BX+SI-3]
+        AX = UInt16[DS, (ushort)(BX + SI + (sbyte)-3)];
+        // F000:4004 mov DX,0
+        DX = (ushort)0x0000;
+        // F000:4007 mov DS,DX
+        DS = DX;
+        // F000:4009 mov word ptr DS:[0],AX
+        UInt16[DS, (ushort)0x0000] = AX;
+        // F000:400C hlt
+        return Hlt();
+    label_F000_FFF0_FFFF0_0:
+        CheckExternalEvents(cs2, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        goto label_F000_0000_F0000_1;
+    }
+
+}

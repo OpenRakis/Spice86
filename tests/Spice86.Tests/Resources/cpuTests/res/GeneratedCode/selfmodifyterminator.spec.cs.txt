@@ -1,0 +1,127 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0xF000;
+
+        DefineFunction(cs1, 0x0022, unknown_F000_0022_F0022);
+        DefineFunction(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0);
+    }
+
+    public virtual Action unknown_F000_0022_F0022(int loadOffset) {
+    label_F000_0022_F0022_10:
+        CheckExternalEvents(cs1, 0x0022);
+        // F000:0022 cmp byte ptr DS:[0x0040],0
+        Alu8.Sub(UInt8[DS, (ushort)0x0040], (byte)0x00);
+        // F000:0027 je short 0x003B
+        if (ZeroFlag) {
+            goto label_F000_003B_F003B_13;
+        }
+    label_F000_0029_F0029_15:
+        CheckExternalEvents(cs1, 0x0029);
+        // F000:0029 mov AX,0xF000
+        AX = (ushort)0xF000;
+        // F000:002C mov ES,AX
+        ES = AX;
+        // F000:002E mov byte ptr ES:[0x0019],0xEB
+        UInt8[ES, (ushort)0x0019] = (byte)0xEB;
+        // F000:0034 mov byte ptr ES:[0x001A],5
+        UInt8[ES, (ushort)0x001A] = (byte)0x05;
+        // F000:003A ret near
+        return NearRet((ushort)0x0000);
+    label_F000_003B_F003B_13:
+        CheckExternalEvents(cs1, 0x003B);
+        // F000:003B inc byte ptr DS:[0x0040]
+        UInt8[DS, (ushort)0x0040] = Alu8.Inc(UInt8[DS, (ushort)0x0040]);
+        // F000:003F ret near
+        return NearRet((ushort)0x0000);
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        goto label_F000_FFF0_FFFF0_0;
+
+    label_F000_0000_F0000_1:
+        CheckExternalEvents(cs1, 0x0000);
+        // F000:0000 mov AX,0
+        AX = (ushort)0x0000;
+        // F000:0003 mov SS,AX
+        SS = AX;
+        State.InterruptShadowing = true;
+        // F000:0005 mov SP,4
+        SP = (ushort)0x0004;
+        // F000:0008 mov AX,0xFFFF
+        AX = (ushort)0xFFFF;
+        // F000:000B mov byte ptr DS:[0x0040],0
+        UInt8[DS, (ushort)0x0040] = (byte)0x00;
+    label_F000_0010_F0010_8:
+        CheckExternalEvents(cs1, 0x0010);
+        // F000:0010 push AX
+        Stack.Push16(AX);
+        // F000:0011 call near 0x0022
+        NearCall(cs1, 0x0014, unknown_F000_0022_F0022);
+    label_F000_0014_F0014_33:
+        CheckExternalEvents(cs1, 0x0014);
+        // F000:0014 mov AX,0x0042
+        AX = (ushort)0x0042;
+        // F000:0017 or AX,AX
+        AX = Alu16.Or(AX, AX);
+        // F000:0019 selector
+        if (SelectorSignatureMatches(cs1, 0x0019, [(byte)0x75, (byte)0xF5])) {
+            goto label_F000_0019_F0019_36;
+        }
+        if (SelectorSignatureMatches(cs1, 0x0019, [(byte)0xEB, (byte)0x05])) {
+            goto label_F000_0019_F0019_50;
+        }
+        throw FailAsUntested("No selector signature matched at F000:0019");
+    label_F000_0019_F0019_50:
+        CheckExternalEvents(cs1, 0x0019);
+        // F000:0019 jmp short 0x0020
+        goto label_F000_0020_F0020_51;
+    label_F000_0019_F0019_36:
+        CheckExternalEvents(cs1, 0x0019);
+        // F000:0019 jne short 0x0010
+        if (!ZeroFlag) {
+            goto label_F000_0010_F0010_8;
+        }
+    label_F000_001B_F001B_39:
+        CheckExternalEvents(cs1, 0x001B);
+        VerifySpeculativeEntryOrFail(cs1, 0x001B, [(byte)0xB8, (byte)0xAD, (byte)0xDE]);
+        // F000:001B mov AX,0xDEAD
+        AX = (ushort)0xDEAD;
+        VerifySpeculativeEntryOrFail(cs1, 0x001E, [(byte)0x50]);
+        // F000:001E push AX
+        Stack.Push16(AX);
+        VerifySpeculativeEntryOrFail(cs1, 0x001F, [(byte)0xF4]);
+        // F000:001F hlt
+        return Hlt();
+    label_F000_0020_F0020_51:
+        CheckExternalEvents(cs1, 0x0020);
+        // F000:0020 push AX
+        Stack.Push16(AX);
+        // F000:0021 hlt
+        return Hlt();
+    label_F000_FFF0_FFFF0_0:
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        goto label_F000_0000_F0000_1;
+    }
+
+}
