@@ -58,7 +58,7 @@
         <PackageVersion Include="Serilog.Sinks.Debug" Version="3.0.0" />
         <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
         <PackageVersion Include="SkiaSharp" Version="4.151.2" />
-        <PackageVersion Include="SkiaSharp.NativeAssets.Linux" Version="4.151.2" />
+        <PackageVersion Include="SkiaSharp.NativeAssets.Linux" Version="4.152.0" />
         <PackageVersion Include="Silk.NET.SDL" Version="2.23.0" />
         <PackageVersion Include="SingleStepTests.Intel80386.00-65" Version="2025.11.5" />
         <PackageVersion Include="SingleStepTests.Intel80386.66-66" Version="2025.11.5" />
