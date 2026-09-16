@@ -508,6 +508,15 @@ public class MachineTest {
 
     [Theory]
     [MemberData(nameof(JitModes))]
+    public void TestStiPending(JitMode jitMode) {
+        byte[] expected = new byte[2];
+        expected[0x00] = 0x01;
+        expected[0x01] = 0x01;
+        TestOneBin("stipending", expected, jitMode, 0xFFFFFFF, true);
+    }
+
+    [Theory]
+    [MemberData(nameof(JitModes))]
     public void TestDivFaultLoop(JitMode jitMode) {
         byte[] expected = new byte[4];
         expected[0x00] = 0x03; // retrycount low

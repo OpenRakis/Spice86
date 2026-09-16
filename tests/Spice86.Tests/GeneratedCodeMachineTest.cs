@@ -387,6 +387,15 @@ public sealed class GeneratedCodeMachineTest {
     }
 
     [Fact]
+    public void StiPendingGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        byte[] expected = new byte[2];
+        expected[0x00] = 0x01;
+        expected[0x01] = 0x01;
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode("stipending", expected,
+            new GeneratedCodeRunOptions { MaxCycles = 0xFFFFFFF, EnablePit = true });
+    }
+
+    [Fact]
     public void LinearAddressSameButSegmentedDifferentGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
         byte[] expected = new byte[2];
         expected[0x00] = 0x02;
