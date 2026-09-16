@@ -1,0 +1,263 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0xF000;
+
+        DefineFunction(cs1, 0x0046, unknown_F000_0046_F0046);
+        DefineFunction(cs1, 0x0082, unknown_F000_0082_F0082);
+        DefineFunction(cs1, 0x0097, unknown_F000_0097_F0097);
+        DefineFunction(cs1, 0x0812, unknown_F000_0812_F0812);
+        DefineFunction(cs1, 0x0883, unknown_F000_0883_F0883);
+        DefineFunction(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0);
+    }
+
+    public virtual Action unknown_F000_0046_F0046(int loadOffset) {
+    label_F000_0046_F0046_25:
+        CheckExternalEvents(cs1, 0x0046);
+        // F000:0046 cmps byte ptr DS:[SI],byte ptr ES:[DI]
+        Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
+        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+        // F000:0047 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:0048 ret near
+        return NearRet((ushort)0x0000);
+    }
+
+    public virtual Action unknown_F000_0082_F0082(int loadOffset) {
+    label_F000_0082_F0082_31:
+        CheckExternalEvents(cs1, 0x0082);
+        // F000:0082 cmps byte ptr DS:[SI],byte ptr ES:[DI]
+        Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
+        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+        // F000:0083 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:0084 ret near
+        return NearRet((ushort)0x0000);
+    }
+
+    public virtual Action unknown_F000_0097_F0097(int loadOffset) {
+    label_F000_0097_F0097_19:
+        CheckExternalEvents(cs1, 0x0097);
+        // F000:0097 cmps byte ptr DS:[SI],byte ptr ES:[DI]
+        Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
+        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+        // F000:0098 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:0099 ret near
+        return NearRet((ushort)0x0000);
+    }
+
+    public virtual Action unknown_F000_0812_F0812(int loadOffset) {
+    label_F000_0812_F0812_37:
+        CheckExternalEvents(cs1, 0x0812);
+        // F000:0812 cmps word ptr DS:[SI],word ptr ES:[DI]
+        Alu16.Sub(UInt16[DS, SI], UInt16[ES, DI]);
+        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction16)));
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+        // F000:0813 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:0814 ret near
+        return NearRet((ushort)0x0000);
+    }
+
+    public virtual Action unknown_F000_0883_F0883(int loadOffset) {
+    label_F000_0883_F0883_43:
+        CheckExternalEvents(cs1, 0x0883);
+        // F000:0883 mov AH,0x10
+        AH = (byte)0x10;
+        // F000:0885 std
+        DirectionFlag = true;
+        // F000:0886 lods AL,byte ptr DS:[SI]
+        AL = UInt8[DS, SI];
+        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
+        // F000:0887 jmp near AX
+        switch ((ushort)(AX)) {
+            case 0x10C2:
+                break;
+            default:
+                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(AX)):X4} at F000:0887");
+        }
+    label_F000_10C2_F10C2_51:
+        CheckExternalEvents(cs1, 0x10C2);
+        // F000:10C2 lods AX,word ptr DS:[SI]
+        AX = UInt16[DS, SI];
+        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction16)));
+        // F000:10C3 jmp near AX
+        switch ((ushort)(AX)) {
+            case 0xC200:
+                goto label_F000_C200_FC200_55;
+            default:
+                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(AX)):X4} at F000:10C3");
+        }
+    label_F000_1300_F1300_89:
+        CheckExternalEvents(cs1, 0x1300);
+        // F000:1300 mov word ptr DS:[DI],AX
+        UInt16[DS, DI] = AX;
+        // F000:1302 mov ES,DX
+        ES = DX;
+        // F000:1304 scas AX,word ptr ES:[DI]
+        Alu16.Sub(AX, UInt16[ES, DI]);
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+        // F000:1305 je short 0x1350
+        if (ZeroFlag) {
+            goto label_F000_1350_F1350_94;
+        }
+    label_F000_1307_F1307_96:
+        CheckExternalEvents(cs1, 0x1307);
+        VerifySpeculativeEntryOrFail(cs1, 0x1307, [(byte)0xF4]);
+        // F000:1307 hlt
+        return Hlt();
+    label_F000_1350_F1350_94:
+        CheckExternalEvents(cs1, 0x1350);
+        // F000:1350 mov AL,0x80
+        AL = (byte)0x80;
+        // F000:1352 std
+        DirectionFlag = true;
+        // F000:1353 stos byte ptr ES:[DI],AL
+        UInt8[ES, DI] = AL;
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+        // F000:1354 jmp near word ptr DS:[DI]
+        switch ((ushort)(UInt16[DS, DI])) {
+            case 0x8013:
+                break;
+            default:
+                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(UInt16[DS, DI])):X4} at F000:1354");
+        }
+    label_F000_8013_F8013_108:
+        CheckExternalEvents(cs1, 0x8013);
+        // F000:8013 mov AX,0xD000
+        AX = (ushort)0xD000;
+        // F000:8016 stos word ptr ES:[DI],AX
+        UInt16[ES, DI] = AX;
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+        // F000:8017 jmp near word ptr DS:[DI+2]
+        switch ((ushort)(UInt16[DS, (ushort)(DI + (sbyte)2)])) {
+            case 0xD000:
+                goto label_F000_D000_FD000_114;
+            default:
+                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(UInt16[DS, (ushort)(DI + (sbyte)2)])):X4} at F000:8017");
+        }
+    label_F000_80C2_F80C2_69:
+        CheckExternalEvents(cs1, 0x80C2);
+        // F000:80C2 mov DS,CX
+        DS = CX;
+        // F000:80C4 movs word ptr ES:[DI],word ptr DS:[SI]
+        UInt16[ES, DI] = UInt16[DS, SI];
+        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction16)));
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+        // F000:80C5 mov DS,DX
+        DS = DX;
+        // F000:80C7 jmp near word ptr DS:[DI+2]
+        switch ((ushort)(UInt16[DS, (ushort)(DI + (sbyte)2)])) {
+            case 0x80FF:
+                break;
+            default:
+                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(UInt16[DS, (ushort)(DI + (sbyte)2)])):X4} at F000:80C7");
+        }
+    label_F000_80FF_F80FF_77:
+        CheckExternalEvents(cs1, 0x80FF);
+        // F000:80FF mov DI,0x2002
+        DI = (ushort)0x2002;
+        // F000:8102 mov ES,CX
+        ES = CX;
+        // F000:8104 cld
+        DirectionFlag = false;
+        // F000:8105 scas AL,byte ptr ES:[DI]
+        Alu8.Sub(AL, UInt8[ES, DI]);
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+        // F000:8106 lahf
+        AH = unchecked((byte)FlagRegister16);
+        // F000:8107 jmp near AX
+        switch ((ushort)(AX)) {
+            case 0x1300:
+                goto label_F000_1300_F1300_89;
+            default:
+                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(AX)):X4} at F000:8107");
+        }
+    label_F000_C200_FC200_55:
+        CheckExternalEvents(cs1, 0xC200);
+        // F000:C200 mov DX,0x1000
+        DX = (ushort)0x1000;
+        // F000:C203 mov ES,DX
+        ES = DX;
+        // F000:C205 mov DI,0xFFFF
+        DI = (ushort)0xFFFF;
+        // F000:C208 movs byte ptr ES:[DI],byte ptr DS:[SI]
+        UInt8[ES, DI] = UInt8[DS, SI];
+        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+        // F000:C209 mov DS,DX
+        DS = DX;
+        // F000:C20B mov byte ptr DS:[DI],0xC2
+        UInt8[DS, DI] = (byte)0xC2;
+        // F000:C20E jmp near word ptr DS:[DI]
+        switch ((ushort)(UInt16[DS, DI])) {
+            case 0x80C2:
+                goto label_F000_80C2_F80C2_69;
+            default:
+                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(UInt16[DS, DI])):X4} at F000:C20E");
+        }
+    label_F000_D000_FD000_114:
+        CheckExternalEvents(cs1, 0xD000);
+        // F000:D000 mov DX,0
+        DX = (ushort)0x0000;
+        // F000:D003 mov DS,DX
+        DS = DX;
+        // F000:D005 mov word ptr DS:[2],0x1234
+        UInt16[DS, (ushort)0x0002] = (ushort)0x1234;
+        // F000:D00B hlt
+        return Hlt();
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        goto label_F000_FFF0_FFFF0_0;
+
+    label_F000_0000_F0000_1:
+        CheckExternalEvents(cs1, 0x0000);
+        // F000:0000 mov CX,0xF000
+        CX = (ushort)0xF000;
+        // F000:0003 mov DS,CX
+        DS = CX;
+        // F000:0005 mov ES,CX
+        ES = CX;
+        // F000:0007 mov SI,0x1000
+        SI = (ushort)0x1000;
+        // F000:000A mov DI,0x2001
+        DI = (ushort)0x2001;
+        // F000:000D cmps byte ptr DS:[SI],byte ptr ES:[DI]
+        Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
+        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
+        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+        // F000:000E pushf
+        Stack.Push16(FlagRegister16);
+        // F000:000F ret near
+        return NearRet((ushort)0x0000);
+    label_F000_FFF0_FFFF0_0:
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        goto label_F000_0000_F0000_1;
+    }
+
+}

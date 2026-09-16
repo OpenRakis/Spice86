@@ -1,0 +1,86 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0xF000;
+
+        DefineFunction(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0);
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        goto label_F000_FFF0_FFFF0_0;
+
+    label_F000_0000_F0000_1:
+        CheckExternalEvents(cs1, 0x0000);
+        // F000:0000 mov byte ptr DS:[0x0400],1
+        UInt8[DS, (ushort)0x0400] = (byte)0x01;
+        // F000:0005 mov AL,byte ptr DS:[0x0500]
+        AL = UInt8[DS, (ushort)0x0500];
+        // F000:0008 and AL,AL
+        Alu8.And(AL, AL);
+        // F000:000A jne short 0x0013
+        if (!ZeroFlag) {
+            goto label_F000_0013_F0013_7;
+        }
+    label_F000_000C_F000C_9:
+        CheckExternalEvents(cs1, 0x000C);
+        // F000:000C mov byte ptr DS:[0x0401],0xDD
+        UInt8[DS, (ushort)0x0401] = (byte)0xDD;
+        // F000:0011 jmp short 0x0024
+        goto label_F000_0024_F0024_14;
+    label_F000_0013_F0013_7:
+        CheckExternalEvents(cs1, 0x0013);
+        VerifySpeculativeEntryOrFail(cs1, 0x0013, [(byte)0xB9, (byte)0x03, (byte)0x00]);
+        // F000:0013 mov CX,3
+        CX = (ushort)0x0003;
+        VerifySpeculativeEntryOrFail(cs1, 0x0016, [(byte)0xC6, (byte)0x06, (byte)0x01, (byte)0x04, (byte)0x00]);
+        // F000:0016 mov byte ptr DS:[0x0401],0
+        UInt8[DS, (ushort)0x0401] = (byte)0x00;
+    label_F000_001B_F001B_13:
+        CheckExternalEvents(cs1, 0x001B);
+        VerifySpeculativeEntryOrFail(cs1, 0x001B, [(byte)0xFE, (byte)0x06, (byte)0x01, (byte)0x04]);
+        // F000:001B inc byte ptr DS:[0x0401]
+        UInt8[DS, (ushort)0x0401] = Alu8.Inc(UInt8[DS, (ushort)0x0401]);
+        VerifySpeculativeEntryOrFail(cs1, 0x001F, [(byte)0x49]);
+        // F000:001F dec CX
+        CX = Alu16.Dec(CX);
+        VerifySpeculativeEntryOrFail(cs1, 0x0020, [(byte)0x75, (byte)0xF9]);
+        // F000:0020 jne short 0x001B
+        if (!ZeroFlag) {
+            goto label_F000_001B_F001B_13;
+        }
+    label_F000_0022_F0022_21:
+        CheckExternalEvents(cs1, 0x0022);
+        VerifySpeculativeEntryOrFail(cs1, 0x0022, [(byte)0xEB, (byte)0x00]);
+        // F000:0022 jmp short 0x0024
+    label_F000_0024_F0024_14:
+        CheckExternalEvents(cs1, 0x0024);
+        // F000:0024 mov byte ptr DS:[0x0402],0xBB
+        UInt8[DS, (ushort)0x0402] = (byte)0xBB;
+        // F000:0029 hlt
+        return Hlt();
+    label_F000_FFF0_FFFF0_0:
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        goto label_F000_0000_F0000_1;
+    }
+
+}

@@ -1,0 +1,230 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0xF000;
+
+        DefineFunction(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0);
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        goto label_F000_FFF0_FFFF0_0;
+
+    label_F000_0000_F0000_1:
+        CheckExternalEvents(cs1, 0x0000);
+        // F000:0000 mov AH,0xED
+        AH = (byte)0xED;
+        // F000:0002 sahf
+        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        // F000:0003 lahf
+        AH = unchecked((byte)FlagRegister16);
+        // F000:0004 mov byte ptr DS:[0],AH
+        UInt8[DS, (ushort)0x0000] = AH;
+        // F000:0008 mov AL,AH
+        AL = AH;
+        // F000:000A mov AX,0x00B7
+        AX = (ushort)0x00B7;
+        // F000:000D mov DX,AX
+        DX = AX;
+        // F000:000F mov AH,0xA5
+        AH = (byte)0xA5;
+        // F000:0011 mov AL,0xC7
+        AL = (byte)0xC7;
+        // F000:0013 mov word ptr DS:[2],AX
+        UInt16[DS, (ushort)0x0002] = AX;
+        // F000:0016 sahf
+        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        // F000:0017 lahf
+        AH = unchecked((byte)FlagRegister16);
+        // F000:0018 mov word ptr DS:[0x0020],AX
+        UInt16[DS, (ushort)0x0020] = AX;
+        // F000:001B mov AX,0xF752
+        AX = (ushort)0xF752;
+        // F000:001E mov BX,AX
+        BX = AX;
+        // F000:0020 mov AX,0x87C7
+        AX = (ushort)0x87C7;
+        // F000:0023 xchg BX,AX
+        ushort temp_F000_0023_F0023 = BX;
+        BX = AX;
+        AX = unchecked((ushort)temp_F000_0023_F0023);
+        // F000:0024 mov DS,AX
+        DS = AX;
+        // F000:0026 lds SI,word ptr DS:[BX+0x030D]
+        ushort lxsOffset_F000_0026_F0026 = unchecked((ushort)(BX + (short)781));
+        ushort lxsValue_F000_0026_F0026 = UInt16[DS, lxsOffset_F000_0026_F0026];
+        ushort lxsSegment_F000_0026_F0026 = UInt16[DS, (ushort)(lxsOffset_F000_0026_F0026 + (ushort)0x0002)];
+        SI = unchecked((ushort)lxsValue_F000_0026_F0026);
+        DS = unchecked((ushort)lxsSegment_F000_0026_F0026);
+        // F000:002A mov AX,0
+        AX = (ushort)0x0000;
+        // F000:002D mov BX,DS
+        BX = DS;
+        // F000:002F mov DS,AX
+        DS = AX;
+        // F000:0031 mov word ptr DS:[4],BX
+        UInt16[DS, (ushort)0x0004] = BX;
+        // F000:0035 mov word ptr DS:[6],SI
+        UInt16[DS, (ushort)0x0006] = SI;
+        // F000:0039 mov DS,BX
+        DS = BX;
+        // F000:003B mov BX,0xFFFF
+        BX = (ushort)0xFFFF;
+        // F000:003E mov AX,0x1000
+        AX = (ushort)0x1000;
+        // F000:0041 mov AX,0x5798
+        AX = (ushort)0x5798;
+        // F000:0044 mov SS,AX
+        SS = AX;
+        State.InterruptShadowing = true;
+        // F000:0046 mov SP,9
+        SP = (ushort)0x0009;
+        // F000:0049 mov CX,0xABCD
+        CX = (ushort)0xABCD;
+        // F000:004C push CX
+        Stack.Push16(CX);
+        // F000:004D mov CX,0x8CF1
+        CX = (ushort)0x8CF1;
+        // F000:0050 mov ES,CX
+        ES = CX;
+        // F000:0052 push ES
+        Stack.Push16(ES);
+    label_F000_0053_F0053_38:
+        CheckExternalEvents(cs1, 0x0053);
+        // F000:0053 popf
+        FlagRegister16 = Stack.Pop16();
+    label_F000_0054_F0054_76:
+        CheckExternalEvents(cs1, 0x0054);
+        // F000:0054 les DI,word ptr DS:[BX+SI-46]
+        ushort lxsOffset_F000_0054_F0054 = unchecked((ushort)(BX + SI + (sbyte)-46));
+        ushort lxsValue_F000_0054_F0054 = UInt16[DS, lxsOffset_F000_0054_F0054];
+        ushort lxsSegment_F000_0054_F0054 = UInt16[DS, (ushort)(lxsOffset_F000_0054_F0054 + (ushort)0x0002)];
+        DI = unchecked((ushort)lxsValue_F000_0054_F0054);
+        ES = unchecked((ushort)lxsSegment_F000_0054_F0054);
+        // F000:0057 lea SI,BP+DI-452
+        SI = unchecked((ushort)(BP + DI + (short)-452));
+        // F000:005B pushf
+        Stack.Push16(FlagRegister16);
+        // F000:005C mov AX,0
+        AX = (ushort)0x0000;
+        // F000:005F mov DS,AX
+        DS = AX;
+        // F000:0061 mov word ptr DS:[8],DI
+        UInt16[DS, (ushort)0x0008] = DI;
+        // F000:0065 mov AX,ES
+        AX = ES;
+        // F000:0067 mov word ptr DS:[0x000A],AX
+        UInt16[DS, (ushort)0x000A] = AX;
+        // F000:006A mov word ptr DS:[0x000C],SI
+        UInt16[DS, (ushort)0x000C] = SI;
+        // F000:006E mov AX,0x1000
+        AX = (ushort)0x1000;
+        // F000:0071 mov DS,AX
+        DS = AX;
+        // F000:0073 pop word ptr DS:[SI+1]
+        ushort popStackCheck_F000_0073_F0073 = Stack.Peek16(unchecked((int)0x00000000u));
+        ushort popDestinationCheck_F000_0073_F0073 = UInt16[DS, (ushort)(SI + (sbyte)1)];
+        ushort poppedValue_F000_0073_F0073 = Stack.Pop16();
+        UInt16[DS, (ushort)(SI + (sbyte)1)] = unchecked((ushort)poppedValue_F000_0073_F0073);
+        // F000:0076 xchg DI,word ptr DS:[BX+SI+2]
+        ushort xchgOffset_F000_0076_F0076 = unchecked((ushort)(BX + SI + (sbyte)2));
+        ushort temp_F000_0076_F0076 = DI;
+        DI = UInt16[DS, xchgOffset_F000_0076_F0076];
+        UInt16[DS, xchgOffset_F000_0076_F0076] = unchecked((ushort)temp_F000_0076_F0076);
+        // F000:0079 push word ptr DS:[BX+SI+2]
+        Stack.Push16(UInt16[DS, (ushort)(BX + SI + (sbyte)2)]);
+        // F000:007C pop ES
+        ES = UInt16[SS, SP];
+        SP = unchecked((ushort)(SP + (ushort)0x0002));
+        // F000:007D mov DX,ES
+        DX = ES;
+        // F000:007F mov AX,DS
+        AX = DS;
+        // F000:0081 mov CX,0
+        CX = (ushort)0x0000;
+        // F000:0084 mov DS,CX
+        DS = CX;
+        // F000:0086 mov word ptr DS:[0x000E],DI
+        UInt16[DS, (ushort)0x000E] = DI;
+        // F000:008A mov word ptr DS:[0x0010],DX
+        UInt16[DS, (ushort)0x0010] = DX;
+        // F000:008E mov DS,AX
+        DS = AX;
+        // F000:0090 pop DX
+        DX = Stack.Pop16();
+        // F000:0091 push DX
+        Stack.Push16(DX);
+        // F000:0092 pop CX
+        ushort poppedValue_F000_0092_F0092 = Stack.Pop16();
+        CX = unchecked((ushort)poppedValue_F000_0092_F0092);
+        // F000:0094 xchg CX,BX
+        ushort temp_F000_0094_F0094 = CX;
+        CX = BX;
+        BX = unchecked((ushort)temp_F000_0094_F0094);
+        // F000:0096 mov AX,DS
+        AX = DS;
+        // F000:0098 mov DX,0
+        DX = (ushort)0x0000;
+        // F000:009B mov DS,DX
+        DS = DX;
+        // F000:009D mov word ptr DS:[0x0012],BX
+        UInt16[DS, (ushort)0x0012] = BX;
+        // F000:00A1 mov word ptr DS:[0x0014],CX
+        UInt16[DS, (ushort)0x0014] = CX;
+        // F000:00A5 mov DS,AX
+        DS = AX;
+        // F000:00A7 mov word ptr DS:[BX+DI],ES
+        UInt16[DS, (ushort)(BX + DI)] = ES;
+        // F000:00A9 mov BX,0xB800
+        BX = (ushort)0xB800;
+        // F000:00AC mov AX,0xA0A1
+        AX = (ushort)0xA0A1;
+        // F000:00AF xlat byte ptr DS:[BX+AL]
+        AL = UInt8[DS, (ushort)(BX + unchecked((ushort)AL))];
+        // F000:00B0 xchg AH,AL
+        byte temp_F000_00B0_F00B0 = AH;
+        AH = AL;
+        AL = unchecked((byte)temp_F000_00B0_F00B0);
+        // F000:00B2 xlat byte ptr DS:[BX+AL]
+        AL = UInt8[DS, (ushort)(BX + unchecked((ushort)AL))];
+        // F000:00B3 mov DX,0
+        DX = (ushort)0x0000;
+        // F000:00B6 mov DS,DX
+        DS = DX;
+        // F000:00B8 mov word ptr DS:[0x0016],AX
+        UInt16[DS, (ushort)0x0016] = AX;
+        // F000:00BB mov DX,0x00B7
+        DX = (ushort)0x00B7;
+        // F000:00BE mov AL,0xFF
+        AL = (byte)0xFF;
+        // F000:00C0 mov AL,0xF1
+        AL = (byte)0xF1;
+        // F000:00C2 mov word ptr DS:[0x0018],AX
+        UInt16[DS, (ushort)0x0018] = AX;
+        // F000:00C5 hlt
+        return Hlt();
+    label_F000_FFF0_FFFF0_0:
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        goto label_F000_0000_F0000_1;
+    }
+
+}

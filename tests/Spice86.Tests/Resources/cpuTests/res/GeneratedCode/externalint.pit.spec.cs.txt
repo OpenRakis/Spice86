@@ -1,0 +1,127 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0xF000;
+
+        DefineFunction(cs1, 0x003F, unknown_F000_003F_F003F);
+        DefineFunction(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0);
+    }
+
+    public virtual Action unknown_F000_003F_F003F(int loadOffset) {
+    label_F000_003F_F003F_51:
+        CheckExternalEvents(cs1, 0x003F);
+        // F000:003F push AX
+        Stack.Push16(AX);
+        // F000:0040 mov DX,1
+        DX = (ushort)0x0001;
+        // F000:0043 mov AL,0x20
+        AL = (byte)0x20;
+        // F000:0045 out 0x20,AL
+        Machine.IoPortDispatcher.WriteByte(unchecked((ushort)(byte)0x20), AL);
+        // F000:0047 pop AX
+        AX = Stack.Pop16();
+        // F000:0048 iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        goto label_F000_FFF0_FFFF0_0;
+
+    label_F000_0000_F0000_1:
+        CheckExternalEvents(cs1, 0x0000);
+        // F000:0000 mov AX,0
+        AX = (ushort)0x0000;
+        // F000:0003 mov SS,AX
+        SS = AX;
+        State.InterruptShadowing = true;
+        // F000:0005 mov SP,2
+        SP = (ushort)0x0002;
+        // F000:0008 mov DX,0
+        DX = (ushort)0x0000;
+        // F000:000B mov word ptr DS:[0x0020],0x003F
+        UInt16[DS, (ushort)0x0020] = (ushort)0x003F;
+        // F000:0011 mov word ptr DS:[0x0022],CS
+        UInt16[DS, (ushort)0x0022] = CS;
+        // F000:0015 mov AL,0x36
+        AL = (byte)0x36;
+        // F000:0017 out 0x43,AL
+        Machine.IoPortDispatcher.WriteByte(unchecked((ushort)(byte)0x43), AL);
+        // F000:0019 mov AL,0x51
+        AL = (byte)0x51;
+        // F000:001B out 0x40,AL
+        Machine.IoPortDispatcher.WriteByte(unchecked((ushort)(byte)0x40), AL);
+        // F000:001D mov AL,0x22
+        AL = (byte)0x22;
+        // F000:001F out 0x40,AL
+        Machine.IoPortDispatcher.WriteByte(unchecked((ushort)(byte)0x40), AL);
+        // F000:0021 mov AL,0
+        AL = (byte)0x00;
+        // F000:0023 out 0x21,AL
+        Machine.IoPortDispatcher.WriteByte(unchecked((ushort)(byte)0x21), AL);
+        // F000:0025 sti
+        if (!InterruptFlag) {
+            State.InterruptShadowing = true;
+        }
+        else {
+        }
+        InterruptFlag = true;
+    label_F000_0026_F0026_33:
+        CheckExternalEvents(cs1, 0x0026);
+        // F000:0026 mov ECX,0x00FFFFFF
+        ECX = 0x00FFFFFFu;
+    label_F000_002C_F002C_34:
+        CheckExternalEvents(cs1, 0x002C);
+        // F000:002C inc AX
+        AX = Alu16.Inc(AX);
+        // F000:002D mov BX,AX
+        BX = AX;
+        // F000:002F shr BX,1
+        BX = Alu16.Shr(BX, 1);
+        // F000:0031 loop 0x002C
+        CX = unchecked((ushort)(CX - (ushort)0x0001));
+        if (CX != (ushort)0x0000) {
+            goto label_F000_002C_F002C_34;
+        }
+    label_F000_0033_F0033_41:
+        CheckExternalEvents(cs1, 0x0033);
+        // F000:0033 cmp DX,0
+        Alu16.Sub(DX, (ushort)0x0000);
+        // F000:0037 setne AL
+        if (!ZeroFlag) {
+            AL = (byte)0x01;
+        }
+        else {
+            AL = (byte)0x00;
+        }
+        // F000:003A movsz AX,AL
+        AX = unchecked((ushort)AL);
+        // F000:003D push AX
+        Stack.Push16(AX);
+        // F000:003E hlt
+        return Hlt();
+    label_F000_FFF0_FFFF0_0:
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        goto label_F000_0000_F0000_1;
+    }
+
+}

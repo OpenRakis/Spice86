@@ -1,0 +1,933 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0xF000;
+
+        DefineFunction(cs1, 0x0061, unknown_F000_0061_F0061);
+        DefineFunction(cs1, 0x0085, unknown_F000_0085_F0085);
+        DefineFunction(cs1, 0x00A0, unknown_F000_00A0_F00A0);
+        DefineFunction(cs1, 0x010F, unknown_F000_010F_F010F);
+        DefineFunction(cs1, 0x012C, unknown_F000_012C_F012C);
+        DefineFunction(cs1, 0x019B, unknown_F000_019B_F019B);
+        DefineFunction(cs1, 0x0211, unknown_F000_0211_F0211);
+        DefineFunction(cs1, 0x024D, unknown_F000_024D_F024D);
+        DefineFunction(cs1, 0x02B1, unknown_F000_02B1_F02B1);
+        DefineFunction(cs1, 0x02C6, unknown_F000_02C6_F02C6);
+        DefineFunction(cs1, 0x02F6, unknown_F000_02F6_F02F6);
+        DefineFunction(cs1, 0x1000, unknown_F000_1000_F1000);
+        DefineFunction(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0);
+    }
+
+    public virtual Action unknown_F000_0061_F0061(int loadOffset) {
+    entrydispatcher:
+    label_F000_0061_F0061_31:
+        CheckExternalEvents(cs1, 0x0061);
+        // F000:0061 add BP,2
+        BP = Alu16.Add(BP, unchecked((ushort)unchecked((short)(sbyte)2)));
+        // F000:0064 mov word ptr DS:[0x000C],AX
+        UInt16[DS, (ushort)0x000C] = AX;
+        // F000:0067 mov word ptr DS:[0x000E],CX
+        UInt16[DS, (ushort)0x000E] = CX;
+        // F000:006B mov word ptr DS:[0x0010],DX
+        UInt16[DS, (ushort)0x0010] = DX;
+        // F000:006F pushf
+        Stack.Push16(FlagRegister16);
+        // F000:0070 mov DX,0xFFFF
+        DX = (ushort)0xFFFF;
+        // F000:0073 mov AX,0xFFFF
+        AX = (ushort)0xFFFF;
+        // F000:0076 mov word ptr DS:[0x0012],0xFFFF
+        UInt16[DS, (ushort)0x0012] = (ushort)0xFFFF;
+        // F000:007C mov word ptr SS:[BP],4
+        UInt16[SS, (ushort)(BP + (sbyte)0)] = (ushort)0x0004;
+        // F000:0081 div word ptr DS:[0x0012]
+        try {
+            ushort divisor_F000_0081_F0081 = UInt16[DS, (ushort)0x0012];
+            uint dividend_F000_0081_F0081 = unchecked((uint)(unchecked((uint)DX) << 16 | unchecked((uint)AX)));
+            ushort quotient_F000_0081_F0081 = Alu16.Div(unchecked((uint)dividend_F000_0081_F0081), unchecked((ushort)divisor_F000_0081_F0081));
+            AX = unchecked((ushort)quotient_F000_0081_F0081);
+            DX = unchecked((ushort)(dividend_F000_0081_F0081 % unchecked((uint)divisor_F000_0081_F0081)));
+        }
+        catch (CpuException cpuException) {
+            SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
+            if (cpuFaultTarget == new SegmentedAddress(cs1, 0x1000)) {
+                EnterCpuFaultHandler(cs1, 0x0081, cpuFaultTarget);
+                return unknown_F000_1000_F1000(0x0000);
+            }
+            throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:0081");
+        }
+        throw FailAsUntested("Generated partition reached the end without a terminating control-flow instruction.");
+    }
+
+    public virtual Action unknown_F000_0085_F0085(int loadOffset) {
+    entrydispatcher:
+    label_F000_0085_F0085_41:
+        CheckExternalEvents(cs1, 0x0085);
+        // F000:0085 add BP,2
+        BP = Alu16.Add(BP, unchecked((ushort)unchecked((short)(sbyte)2)));
+        // F000:0088 mov word ptr DS:[0x0014],AX
+        UInt16[DS, (ushort)0x0014] = AX;
+        // F000:008B mov word ptr DS:[0x0016],DX
+        UInt16[DS, (ushort)0x0016] = DX;
+        // F000:008F pushf
+        Stack.Push16(FlagRegister16);
+        // F000:0090 mov DX,0xFBB4
+        DX = (ushort)0xFBB4;
+        // F000:0093 mov AX,0xC3DA
+        AX = (ushort)0xC3DA;
+        // F000:0096 mov CX,0xAE8E
+        CX = (ushort)0xAE8E;
+        // F000:0099 mov word ptr SS:[BP],2
+        UInt16[SS, (ushort)(BP + (sbyte)0)] = (ushort)0x0002;
+        // F000:009E div CX
+        try {
+            ushort divisor_F000_009E_F009E = CX;
+            uint dividend_F000_009E_F009E = unchecked((uint)(unchecked((uint)DX) << 16 | unchecked((uint)AX)));
+            ushort quotient_F000_009E_F009E = Alu16.Div(unchecked((uint)dividend_F000_009E_F009E), unchecked((ushort)divisor_F000_009E_F009E));
+            AX = unchecked((ushort)quotient_F000_009E_F009E);
+            DX = unchecked((ushort)(dividend_F000_009E_F009E % unchecked((uint)divisor_F000_009E_F009E)));
+        }
+        catch (CpuException cpuException) {
+            SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
+            if (cpuFaultTarget == new SegmentedAddress(cs1, 0x1000)) {
+                EnterCpuFaultHandler(cs1, 0x009E, cpuFaultTarget);
+                return unknown_F000_1000_F1000(0x0000);
+            }
+            throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:009E");
+        }
+        throw FailAsUntested("Generated partition reached the end without a terminating control-flow instruction.");
+    }
+
+    public virtual Action unknown_F000_00A0_F00A0(int loadOffset) {
+    entrydispatcher:
+    label_F000_00A0_F00A0_50:
+        CheckExternalEvents(cs1, 0x00A0);
+        // F000:00A0 add BP,2
+        BP = Alu16.Add(BP, unchecked((ushort)unchecked((short)(sbyte)2)));
+        // F000:00A3 mov word ptr DS:[0x0018],AX
+        UInt16[DS, (ushort)0x0018] = AX;
+        // F000:00A6 mov word ptr DS:[0x001A],CX
+        UInt16[DS, (ushort)0x001A] = CX;
+        // F000:00AA mov word ptr DS:[0x001C],DX
+        UInt16[DS, (ushort)0x001C] = DX;
+        // F000:00AE pushf
+        Stack.Push16(FlagRegister16);
+        // F000:00AF mov DX,0x25C9
+        DX = (ushort)0x25C9;
+        // F000:00B2 mov AX,0xF110
+        AX = (ushort)0xF110;
+        // F000:00B5 mov word ptr SS:[BP],2
+        UInt16[SS, (ushort)(BP + (sbyte)0)] = (ushort)0x0002;
+        // F000:00BA div AX
+        ushort divisor_F000_00BA_F00BA = AX;
+        uint dividend_F000_00BA_F00BA = unchecked((uint)(unchecked((uint)DX) << 16 | unchecked((uint)AX)));
+        ushort quotient_F000_00BA_F00BA = Alu16.Div(unchecked((uint)dividend_F000_00BA_F00BA), unchecked((ushort)divisor_F000_00BA_F00BA));
+        AX = unchecked((ushort)quotient_F000_00BA_F00BA);
+        DX = unchecked((ushort)(dividend_F000_00BA_F00BA % unchecked((uint)divisor_F000_00BA_F00BA)));
+        // F000:00BC add BP,2
+        BP = Alu16.Add(BP, unchecked((ushort)unchecked((short)(sbyte)2)));
+        // F000:00BF mov word ptr DS:[0x001E],AX
+        UInt16[DS, (ushort)0x001E] = AX;
+        // F000:00C2 mov word ptr DS:[0x0020],DX
+        UInt16[DS, (ushort)0x0020] = DX;
+        // F000:00C6 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:00C7 mov AX,0x0014
+        AX = (ushort)0x0014;
+        // F000:00CA mov BX,5
+        BX = (ushort)0x0005;
+        // F000:00CD mov word ptr SS:[BP],2
+        UInt16[SS, (ushort)(BP + (sbyte)0)] = (ushort)0x0002;
+        // F000:00D2 div BL
+        byte divisor_F000_00D2_F00D2 = BL;
+        ushort dividend_F000_00D2_F00D2 = AX;
+        byte quotient_F000_00D2_F00D2 = Alu8.Div(unchecked((ushort)dividend_F000_00D2_F00D2), unchecked((byte)divisor_F000_00D2_F00D2));
+        AL = unchecked((byte)quotient_F000_00D2_F00D2);
+        AH = unchecked((byte)(dividend_F000_00D2_F00D2 % unchecked((ushort)divisor_F000_00D2_F00D2)));
+        // F000:00D4 add BP,2
+        BP = Alu16.Add(BP, unchecked((ushort)unchecked((short)(sbyte)2)));
+        // F000:00D7 mov word ptr DS:[0x0022],AX
+        UInt16[DS, (ushort)0x0022] = AX;
+        // F000:00DA mov word ptr DS:[0x0024],BX
+        UInt16[DS, (ushort)0x0024] = BX;
+        // F000:00DE mov word ptr DS:[0x0026],DX
+        UInt16[DS, (ushort)0x0026] = DX;
+        // F000:00E2 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:00E3 mov DX,0xA320
+        DX = (ushort)0xA320;
+        // F000:00E6 mov AX,0xC3DA
+        AX = (ushort)0xC3DA;
+        // F000:00E9 mov word ptr DS:[0x0028],0x00FF
+        UInt16[DS, (ushort)0x0028] = (ushort)0x00FF;
+        // F000:00EF mov word ptr SS:[BP],4
+        UInt16[SS, (ushort)(BP + (sbyte)0)] = (ushort)0x0004;
+        // F000:00F4 div byte ptr DS:[0x0028]
+        byte divisor_F000_00F4_F00F4 = UInt8[DS, (ushort)0x0028];
+        ushort dividend_F000_00F4_F00F4 = AX;
+        byte quotient_F000_00F4_F00F4 = Alu8.Div(unchecked((ushort)dividend_F000_00F4_F00F4), unchecked((byte)divisor_F000_00F4_F00F4));
+        AL = unchecked((byte)quotient_F000_00F4_F00F4);
+        AH = unchecked((byte)(dividend_F000_00F4_F00F4 % unchecked((ushort)divisor_F000_00F4_F00F4)));
+        // F000:00F8 add BP,2
+        BP = Alu16.Add(BP, unchecked((ushort)unchecked((short)(sbyte)2)));
+        // F000:00FB mov word ptr DS:[0x002A],AX
+        UInt16[DS, (ushort)0x002A] = AX;
+        // F000:00FE mov word ptr DS:[0x002C],DX
+        UInt16[DS, (ushort)0x002C] = DX;
+        // F000:0102 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:0103 mov AX,0xFFFF
+        AX = (ushort)0xFFFF;
+        // F000:0106 mov DH,1
+        DH = (byte)0x01;
+        // F000:0108 mov word ptr SS:[BP],2
+        UInt16[SS, (ushort)(BP + (sbyte)0)] = (ushort)0x0002;
+        // F000:010D div DH
+        try {
+            byte divisor_F000_010D_F010D = DH;
+            ushort dividend_F000_010D_F010D = AX;
+            byte quotient_F000_010D_F010D = Alu8.Div(unchecked((ushort)dividend_F000_010D_F010D), unchecked((byte)divisor_F000_010D_F010D));
+            AL = unchecked((byte)quotient_F000_010D_F010D);
+            AH = unchecked((byte)(dividend_F000_010D_F010D % unchecked((ushort)divisor_F000_010D_F010D)));
+        }
+        catch (CpuException cpuException) {
+            SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
+            if (cpuFaultTarget == new SegmentedAddress(cs1, 0x1000)) {
+                EnterCpuFaultHandler(cs1, 0x010D, cpuFaultTarget);
+                return unknown_F000_1000_F1000(0x0000);
+            }
+            throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:010D");
+        }
+        throw FailAsUntested("Generated partition reached the end without a terminating control-flow instruction.");
+    }
+
+    public virtual Action unknown_F000_010F_F010F(int loadOffset) {
+    entrydispatcher:
+    label_F000_010F_F010F_85:
+        CheckExternalEvents(cs1, 0x010F);
+        // F000:010F add BP,2
+        BP = Alu16.Add(BP, unchecked((ushort)unchecked((short)(sbyte)2)));
+        // F000:0112 mov word ptr DS:[0x002E],AX
+        UInt16[DS, (ushort)0x002E] = AX;
+        // F000:0115 mov word ptr DS:[0x0030],DX
+        UInt16[DS, (ushort)0x0030] = DX;
+        // F000:0119 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:011A mov AX,0xFFFF
+        AX = (ushort)0xFFFF;
+        // F000:011D mov word ptr DS:[0x0032],0xFFFF
+        UInt16[DS, (ushort)0x0032] = (ushort)0xFFFF;
+        // F000:0123 mov word ptr SS:[BP],4
+        UInt16[SS, (ushort)(BP + (sbyte)0)] = (ushort)0x0004;
+        // F000:0128 div byte ptr DS:[0x0033]
+        try {
+            byte divisor_F000_0128_F0128 = UInt8[DS, (ushort)0x0033];
+            ushort dividend_F000_0128_F0128 = AX;
+            byte quotient_F000_0128_F0128 = Alu8.Div(unchecked((ushort)dividend_F000_0128_F0128), unchecked((byte)divisor_F000_0128_F0128));
+            AL = unchecked((byte)quotient_F000_0128_F0128);
+            AH = unchecked((byte)(dividend_F000_0128_F0128 % unchecked((ushort)divisor_F000_0128_F0128)));
+        }
+        catch (CpuException cpuException) {
+            SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
+            if (cpuFaultTarget == new SegmentedAddress(cs1, 0x1000)) {
+                EnterCpuFaultHandler(cs1, 0x0128, cpuFaultTarget);
+                return unknown_F000_1000_F1000(0x0000);
+            }
+            throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:0128");
+        }
+        throw FailAsUntested("Generated partition reached the end without a terminating control-flow instruction.");
+    }
+
+    public virtual Action unknown_F000_012C_F012C(int loadOffset) {
+    entrydispatcher:
+    label_F000_012C_F012C_93:
+        CheckExternalEvents(cs1, 0x012C);
+        // F000:012C add BP,2
+        BP = Alu16.Add(BP, unchecked((ushort)unchecked((short)(sbyte)2)));
+        // F000:012F mov word ptr DS:[0x0034],AX
+        UInt16[DS, (ushort)0x0034] = AX;
+        // F000:0132 mov word ptr DS:[0x0036],DX
+        UInt16[DS, (ushort)0x0036] = DX;
+        // F000:0136 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:0137 mov AX,0x008A
+        AX = (ushort)0x008A;
+        // F000:013A mov CX,0xAE8E
+        CX = (ushort)0xAE8E;
+        // F000:013D mov word ptr SS:[BP],2
+        UInt16[SS, (ushort)(BP + (sbyte)0)] = (ushort)0x0002;
+        // F000:0142 div CL
+        byte divisor_F000_0142_F0142 = CL;
+        ushort dividend_F000_0142_F0142 = AX;
+        byte quotient_F000_0142_F0142 = Alu8.Div(unchecked((ushort)dividend_F000_0142_F0142), unchecked((byte)divisor_F000_0142_F0142));
+        AL = unchecked((byte)quotient_F000_0142_F0142);
+        AH = unchecked((byte)(dividend_F000_0142_F0142 % unchecked((ushort)divisor_F000_0142_F0142)));
+        // F000:0144 add BP,2
+        BP = Alu16.Add(BP, unchecked((ushort)unchecked((short)(sbyte)2)));
+        // F000:0147 mov word ptr DS:[0x0038],AX
+        UInt16[DS, (ushort)0x0038] = AX;
+        // F000:014A mov word ptr DS:[0x003A],CX
+        UInt16[DS, (ushort)0x003A] = CX;
+        // F000:014E pushf
+        Stack.Push16(FlagRegister16);
+        // F000:014F mov DX,0x0669
+        DX = (ushort)0x0669;
+        // F000:0152 mov AX,0x89F3
+        AX = (ushort)0x89F3;
+        // F000:0155 mov word ptr SS:[BP],2
+        UInt16[SS, (ushort)(BP + (sbyte)0)] = (ushort)0x0002;
+        // F000:015A div AL
+        byte divisor_F000_015A_F015A = AL;
+        ushort dividend_F000_015A_F015A = AX;
+        byte quotient_F000_015A_F015A = Alu8.Div(unchecked((ushort)dividend_F000_015A_F015A), unchecked((byte)divisor_F000_015A_F015A));
+        AL = unchecked((byte)quotient_F000_015A_F015A);
+        AH = unchecked((byte)(dividend_F000_015A_F015A % unchecked((ushort)divisor_F000_015A_F015A)));
+        // F000:015C add BP,2
+        BP = Alu16.Add(BP, unchecked((ushort)unchecked((short)(sbyte)2)));
+        // F000:015F mov word ptr DS:[0x003C],AX
+        UInt16[DS, (ushort)0x003C] = AX;
+        // F000:0162 mov word ptr DS:[0x003E],DX
+        UInt16[DS, (ushort)0x003E] = DX;
+        // F000:0166 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:0167 mov DX,0
+        DX = (ushort)0x0000;
+        // F000:016A mov AX,0x0014
+        AX = (ushort)0x0014;
+        // F000:016D mov BX,0x00FA
+        BX = (ushort)0x00FA;
+        // F000:0170 mov word ptr SS:[BP],2
+        UInt16[SS, (ushort)(BP + (sbyte)0)] = (ushort)0x0002;
+        // F000:0175 idiv BX
+        short divisor_F000_0175_F0175 = unchecked((short)BX);
+        int dividend_F000_0175_F0175 = unchecked((int)(unchecked((uint)DX) << 16 | unchecked((uint)AX)));
+        short quotient_F000_0175_F0175 = Alu16.Idiv(unchecked((int)dividend_F000_0175_F0175), unchecked((short)divisor_F000_0175_F0175));
+        AX = unchecked((ushort)quotient_F000_0175_F0175);
+        DX = unchecked((ushort)(dividend_F000_0175_F0175 % unchecked((int)divisor_F000_0175_F0175)));
+        // F000:0177 add BP,2
+        BP = Alu16.Add(BP, unchecked((ushort)unchecked((short)(sbyte)2)));
+        // F000:017A mov word ptr DS:[0x0040],AX
+        UInt16[DS, (ushort)0x0040] = AX;
+        // F000:017D mov word ptr DS:[0x0042],BX
+        UInt16[DS, (ushort)0x0042] = BX;
+        // F000:0181 mov word ptr DS:[0x0044],DX
+        UInt16[DS, (ushort)0x0044] = DX;
+        // F000:0185 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:0186 mov DX,0xA320
+        DX = (ushort)0xA320;
+        // F000:0189 mov AX,0xC3DA
+        AX = (ushort)0xC3DA;
+        // F000:018C mov word ptr DS:[0x0046],0xFFFF
+        UInt16[DS, (ushort)0x0046] = (ushort)0xFFFF;
+        // F000:0192 mov word ptr SS:[BP],4
+        UInt16[SS, (ushort)(BP + (sbyte)0)] = (ushort)0x0004;
+        // F000:0197 idiv word ptr DS:[0x0046]
+        try {
+            short divisor_F000_0197_F0197 = unchecked((short)UInt16[DS, (ushort)0x0046]);
+            int dividend_F000_0197_F0197 = unchecked((int)(unchecked((uint)DX) << 16 | unchecked((uint)AX)));
+            short quotient_F000_0197_F0197 = Alu16.Idiv(unchecked((int)dividend_F000_0197_F0197), unchecked((short)divisor_F000_0197_F0197));
+            AX = unchecked((ushort)quotient_F000_0197_F0197);
+            DX = unchecked((ushort)(dividend_F000_0197_F0197 % unchecked((int)divisor_F000_0197_F0197)));
+        }
+        catch (CpuException cpuException) {
+            SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
+            if (cpuFaultTarget == new SegmentedAddress(cs1, 0x1000)) {
+                EnterCpuFaultHandler(cs1, 0x0197, cpuFaultTarget);
+                return unknown_F000_1000_F1000(0x0000);
+            }
+            throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:0197");
+        }
+        throw FailAsUntested("Generated partition reached the end without a terminating control-flow instruction.");
+    }
+
+    public virtual Action unknown_F000_019B_F019B(int loadOffset) {
+    entrydispatcher:
+    label_F000_019B_F019B_128:
+        CheckExternalEvents(cs1, 0x019B);
+        // F000:019B add BP,2
+        BP = Alu16.Add(BP, unchecked((ushort)unchecked((short)(sbyte)2)));
+        // F000:019E mov word ptr DS:[0x0048],AX
+        UInt16[DS, (ushort)0x0048] = AX;
+        // F000:01A1 mov word ptr DS:[0x004A],DX
+        UInt16[DS, (ushort)0x004A] = DX;
+        // F000:01A5 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:01A6 mov DX,0xFFFF
+        DX = (ushort)0xFFFF;
+        // F000:01A9 mov AX,0xFFFF
+        AX = (ushort)0xFFFF;
+        // F000:01AC mov CX,1
+        CX = (ushort)0x0001;
+        // F000:01AF mov word ptr SS:[BP],2
+        UInt16[SS, (ushort)(BP + (sbyte)0)] = (ushort)0x0002;
+        // F000:01B4 idiv CX
+        short divisor_F000_01B4_F01B4 = unchecked((short)CX);
+        int dividend_F000_01B4_F01B4 = unchecked((int)(unchecked((uint)DX) << 16 | unchecked((uint)AX)));
+        short quotient_F000_01B4_F01B4 = Alu16.Idiv(unchecked((int)dividend_F000_01B4_F01B4), unchecked((short)divisor_F000_01B4_F01B4));
+        AX = unchecked((ushort)quotient_F000_01B4_F01B4);
+        DX = unchecked((ushort)(dividend_F000_01B4_F01B4 % unchecked((int)divisor_F000_01B4_F01B4)));
+        // F000:01B6 add BP,2
+        BP = Alu16.Add(BP, unchecked((ushort)unchecked((short)(sbyte)2)));
+        // F000:01B9 mov word ptr DS:[0x004C],AX
+        UInt16[DS, (ushort)0x004C] = AX;
+        // F000:01BC mov word ptr DS:[0x004E],CX
+        UInt16[DS, (ushort)0x004E] = CX;
+        // F000:01C0 mov word ptr DS:[0x0050],DX
+        UInt16[DS, (ushort)0x0050] = DX;
+        // F000:01C4 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:01C5 mov DX,0xFFFF
+        DX = (ushort)0xFFFF;
+        // F000:01C8 mov AX,0xFFFF
+        AX = (ushort)0xFFFF;
+        // F000:01CB mov word ptr DS:[0x0052],0xFFFF
+        UInt16[DS, (ushort)0x0052] = (ushort)0xFFFF;
+        // F000:01D1 mov word ptr SS:[BP],4
+        UInt16[SS, (ushort)(BP + (sbyte)0)] = (ushort)0x0004;
+        // F000:01D6 idiv word ptr DS:[0x0052]
+        short divisor_F000_01D6_F01D6 = unchecked((short)UInt16[DS, (ushort)0x0052]);
+        int dividend_F000_01D6_F01D6 = unchecked((int)(unchecked((uint)DX) << 16 | unchecked((uint)AX)));
+        short quotient_F000_01D6_F01D6 = Alu16.Idiv(unchecked((int)dividend_F000_01D6_F01D6), unchecked((short)divisor_F000_01D6_F01D6));
+        AX = unchecked((ushort)quotient_F000_01D6_F01D6);
+        DX = unchecked((ushort)(dividend_F000_01D6_F01D6 % unchecked((int)divisor_F000_01D6_F01D6)));
+        // F000:01DA add BP,2
+        BP = Alu16.Add(BP, unchecked((ushort)unchecked((short)(sbyte)2)));
+        // F000:01DD mov word ptr DS:[0x0054],AX
+        UInt16[DS, (ushort)0x0054] = AX;
+        // F000:01E0 mov word ptr DS:[0x0056],DX
+        UInt16[DS, (ushort)0x0056] = DX;
+        // F000:01E4 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:01E5 mov DX,0xFBB4
+        DX = (ushort)0xFBB4;
+        // F000:01E8 mov AX,0xC3DA
+        AX = (ushort)0xC3DA;
+        // F000:01EB mov CX,0xAE8E
+        CX = (ushort)0xAE8E;
+        // F000:01EE mov word ptr SS:[BP],2
+        UInt16[SS, (ushort)(BP + (sbyte)0)] = (ushort)0x0002;
+        // F000:01F3 idiv CX
+        short divisor_F000_01F3_F01F3 = unchecked((short)CX);
+        int dividend_F000_01F3_F01F3 = unchecked((int)(unchecked((uint)DX) << 16 | unchecked((uint)AX)));
+        short quotient_F000_01F3_F01F3 = Alu16.Idiv(unchecked((int)dividend_F000_01F3_F01F3), unchecked((short)divisor_F000_01F3_F01F3));
+        AX = unchecked((ushort)quotient_F000_01F3_F01F3);
+        DX = unchecked((ushort)(dividend_F000_01F3_F01F3 % unchecked((int)divisor_F000_01F3_F01F3)));
+        // F000:01F5 add BP,2
+        BP = Alu16.Add(BP, unchecked((ushort)unchecked((short)(sbyte)2)));
+        // F000:01F8 mov word ptr DS:[0x0058],AX
+        UInt16[DS, (ushort)0x0058] = AX;
+        // F000:01FB mov word ptr DS:[0x005A],CX
+        UInt16[DS, (ushort)0x005A] = CX;
+        // F000:01FF mov word ptr DS:[0x005C],DX
+        UInt16[DS, (ushort)0x005C] = DX;
+        // F000:0203 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:0204 mov DX,0x25C9
+        DX = (ushort)0x25C9;
+        // F000:0207 mov AX,0xF110
+        AX = (ushort)0xF110;
+        // F000:020A mov word ptr SS:[BP],2
+        UInt16[SS, (ushort)(BP + (sbyte)0)] = (ushort)0x0002;
+        // F000:020F idiv AX
+        try {
+            short divisor_F000_020F_F020F = unchecked((short)AX);
+            int dividend_F000_020F_F020F = unchecked((int)(unchecked((uint)DX) << 16 | unchecked((uint)AX)));
+            short quotient_F000_020F_F020F = Alu16.Idiv(unchecked((int)dividend_F000_020F_F020F), unchecked((short)divisor_F000_020F_F020F));
+            AX = unchecked((ushort)quotient_F000_020F_F020F);
+            DX = unchecked((ushort)(dividend_F000_020F_F020F % unchecked((int)divisor_F000_020F_F020F)));
+        }
+        catch (CpuException cpuException) {
+            SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
+            if (cpuFaultTarget == new SegmentedAddress(cs1, 0x1000)) {
+                EnterCpuFaultHandler(cs1, 0x020F, cpuFaultTarget);
+                return unknown_F000_1000_F1000(0x0000);
+            }
+            throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:020F");
+        }
+        throw FailAsUntested("Generated partition reached the end without a terminating control-flow instruction.");
+    }
+
+    public virtual Action unknown_F000_0211_F0211(int loadOffset) {
+    entrydispatcher:
+    label_F000_0211_F0211_165:
+        CheckExternalEvents(cs1, 0x0211);
+        // F000:0211 add BP,2
+        BP = Alu16.Add(BP, unchecked((ushort)unchecked((short)(sbyte)2)));
+        // F000:0214 mov word ptr DS:[0x005E],AX
+        UInt16[DS, (ushort)0x005E] = AX;
+        // F000:0217 mov word ptr DS:[0x0060],DX
+        UInt16[DS, (ushort)0x0060] = DX;
+        // F000:021B pushf
+        Stack.Push16(FlagRegister16);
+        // F000:021C mov AX,0x0014
+        AX = (ushort)0x0014;
+        // F000:021F mov BX,5
+        BX = (ushort)0x0005;
+        // F000:0222 mov word ptr SS:[BP],2
+        UInt16[SS, (ushort)(BP + (sbyte)0)] = (ushort)0x0002;
+        // F000:0227 idiv BL
+        sbyte divisor_F000_0227_F0227 = unchecked((sbyte)BL);
+        short dividend_F000_0227_F0227 = unchecked((short)AX);
+        sbyte quotient_F000_0227_F0227 = Alu8.Idiv(unchecked((short)dividend_F000_0227_F0227), unchecked((sbyte)divisor_F000_0227_F0227));
+        AL = unchecked((byte)quotient_F000_0227_F0227);
+        AH = unchecked((byte)(dividend_F000_0227_F0227 % unchecked((short)divisor_F000_0227_F0227)));
+        // F000:0229 add BP,2
+        BP = Alu16.Add(BP, unchecked((ushort)unchecked((short)(sbyte)2)));
+        // F000:022C mov word ptr DS:[0x0062],AX
+        UInt16[DS, (ushort)0x0062] = AX;
+        // F000:022F mov word ptr DS:[0x0064],BX
+        UInt16[DS, (ushort)0x0064] = BX;
+        // F000:0233 mov word ptr DS:[0x0066],DX
+        UInt16[DS, (ushort)0x0066] = DX;
+        // F000:0237 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:0238 mov DX,0xA320
+        DX = (ushort)0xA320;
+        // F000:023B mov AX,0xC3DA
+        AX = (ushort)0xC3DA;
+        // F000:023E mov word ptr DS:[0x0068],0x00FF
+        UInt16[DS, (ushort)0x0068] = (ushort)0x00FF;
+        // F000:0244 mov word ptr SS:[BP],4
+        UInt16[SS, (ushort)(BP + (sbyte)0)] = (ushort)0x0004;
+        // F000:0249 idiv byte ptr DS:[0x0068]
+        try {
+            sbyte divisor_F000_0249_F0249 = unchecked((sbyte)UInt8[DS, (ushort)0x0068]);
+            short dividend_F000_0249_F0249 = unchecked((short)AX);
+            sbyte quotient_F000_0249_F0249 = Alu8.Idiv(unchecked((short)dividend_F000_0249_F0249), unchecked((sbyte)divisor_F000_0249_F0249));
+            AL = unchecked((byte)quotient_F000_0249_F0249);
+            AH = unchecked((byte)(dividend_F000_0249_F0249 % unchecked((short)divisor_F000_0249_F0249)));
+        }
+        catch (CpuException cpuException) {
+            SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
+            if (cpuFaultTarget == new SegmentedAddress(cs1, 0x1000)) {
+                EnterCpuFaultHandler(cs1, 0x0249, cpuFaultTarget);
+                return unknown_F000_1000_F1000(0x0000);
+            }
+            throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:0249");
+        }
+        throw FailAsUntested("Generated partition reached the end without a terminating control-flow instruction.");
+    }
+
+    public virtual Action unknown_F000_024D_F024D(int loadOffset) {
+    entrydispatcher:
+    label_F000_024D_F024D_183:
+        CheckExternalEvents(cs1, 0x024D);
+        // F000:024D add BP,2
+        BP = Alu16.Add(BP, unchecked((ushort)unchecked((short)(sbyte)2)));
+        // F000:0250 mov word ptr DS:[0x006A],AX
+        UInt16[DS, (ushort)0x006A] = AX;
+        // F000:0253 mov word ptr DS:[0x006C],DX
+        UInt16[DS, (ushort)0x006C] = DX;
+        // F000:0257 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:0258 mov AX,0xFFFF
+        AX = (ushort)0xFFFF;
+        // F000:025B mov DH,1
+        DH = (byte)0x01;
+        // F000:025D mov word ptr SS:[BP],2
+        UInt16[SS, (ushort)(BP + (sbyte)0)] = (ushort)0x0002;
+        // F000:0262 idiv DH
+        sbyte divisor_F000_0262_F0262 = unchecked((sbyte)DH);
+        short dividend_F000_0262_F0262 = unchecked((short)AX);
+        sbyte quotient_F000_0262_F0262 = Alu8.Idiv(unchecked((short)dividend_F000_0262_F0262), unchecked((sbyte)divisor_F000_0262_F0262));
+        AL = unchecked((byte)quotient_F000_0262_F0262);
+        AH = unchecked((byte)(dividend_F000_0262_F0262 % unchecked((short)divisor_F000_0262_F0262)));
+        // F000:0264 add BP,2
+        BP = Alu16.Add(BP, unchecked((ushort)unchecked((short)(sbyte)2)));
+        // F000:0267 mov word ptr DS:[0x006E],AX
+        UInt16[DS, (ushort)0x006E] = AX;
+        // F000:026A mov word ptr DS:[0x0070],DX
+        UInt16[DS, (ushort)0x0070] = DX;
+        // F000:026E pushf
+        Stack.Push16(FlagRegister16);
+        // F000:026F mov AX,0xFFFF
+        AX = (ushort)0xFFFF;
+        // F000:0272 mov word ptr DS:[0x0072],0xFFFF
+        UInt16[DS, (ushort)0x0072] = (ushort)0xFFFF;
+        // F000:0278 mov word ptr SS:[BP],4
+        UInt16[SS, (ushort)(BP + (sbyte)0)] = (ushort)0x0004;
+        // F000:027D idiv byte ptr DS:[0x0073]
+        sbyte divisor_F000_027D_F027D = unchecked((sbyte)UInt8[DS, (ushort)0x0073]);
+        short dividend_F000_027D_F027D = unchecked((short)AX);
+        sbyte quotient_F000_027D_F027D = Alu8.Idiv(unchecked((short)dividend_F000_027D_F027D), unchecked((sbyte)divisor_F000_027D_F027D));
+        AL = unchecked((byte)quotient_F000_027D_F027D);
+        AH = unchecked((byte)(dividend_F000_027D_F027D % unchecked((short)divisor_F000_027D_F027D)));
+        // F000:0281 add BP,2
+        BP = Alu16.Add(BP, unchecked((ushort)unchecked((short)(sbyte)2)));
+        // F000:0284 mov word ptr DS:[0x0074],AX
+        UInt16[DS, (ushort)0x0074] = AX;
+        // F000:0287 mov word ptr DS:[0x0076],DX
+        UInt16[DS, (ushort)0x0076] = DX;
+        // F000:028B pushf
+        Stack.Push16(FlagRegister16);
+        // F000:028C mov AX,0x008A
+        AX = (ushort)0x008A;
+        // F000:028F mov CX,0xAE8E
+        CX = (ushort)0xAE8E;
+        // F000:0292 mov word ptr SS:[BP],2
+        UInt16[SS, (ushort)(BP + (sbyte)0)] = (ushort)0x0002;
+        // F000:0297 idiv CL
+        sbyte divisor_F000_0297_F0297 = unchecked((sbyte)CL);
+        short dividend_F000_0297_F0297 = unchecked((short)AX);
+        sbyte quotient_F000_0297_F0297 = Alu8.Idiv(unchecked((short)dividend_F000_0297_F0297), unchecked((sbyte)divisor_F000_0297_F0297));
+        AL = unchecked((byte)quotient_F000_0297_F0297);
+        AH = unchecked((byte)(dividend_F000_0297_F0297 % unchecked((short)divisor_F000_0297_F0297)));
+        // F000:0299 add BP,2
+        BP = Alu16.Add(BP, unchecked((ushort)unchecked((short)(sbyte)2)));
+        // F000:029C mov word ptr DS:[0x0078],AX
+        UInt16[DS, (ushort)0x0078] = AX;
+        // F000:029F mov word ptr DS:[0x007A],CX
+        UInt16[DS, (ushort)0x007A] = CX;
+        // F000:02A3 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:02A4 mov DX,0x0669
+        DX = (ushort)0x0669;
+        // F000:02A7 mov AX,0x89F3
+        AX = (ushort)0x89F3;
+        // F000:02AA mov word ptr SS:[BP],2
+        UInt16[SS, (ushort)(BP + (sbyte)0)] = (ushort)0x0002;
+        // F000:02AF idiv AL
+        try {
+            sbyte divisor_F000_02AF_F02AF = unchecked((sbyte)AL);
+            short dividend_F000_02AF_F02AF = unchecked((short)AX);
+            sbyte quotient_F000_02AF_F02AF = Alu8.Idiv(unchecked((short)dividend_F000_02AF_F02AF), unchecked((sbyte)divisor_F000_02AF_F02AF));
+            AL = unchecked((byte)quotient_F000_02AF_F02AF);
+            AH = unchecked((byte)(dividend_F000_02AF_F02AF % unchecked((short)divisor_F000_02AF_F02AF)));
+        }
+        catch (CpuException cpuException) {
+            SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
+            if (cpuFaultTarget == new SegmentedAddress(cs1, 0x1000)) {
+                EnterCpuFaultHandler(cs1, 0x02AF, cpuFaultTarget);
+                return unknown_F000_1000_F1000(0x0000);
+            }
+            throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:02AF");
+        }
+        throw FailAsUntested("Generated partition reached the end without a terminating control-flow instruction.");
+    }
+
+    public virtual Action unknown_F000_02B1_F02B1(int loadOffset) {
+    entrydispatcher:
+    label_F000_02B1_F02B1_215:
+        CheckExternalEvents(cs1, 0x02B1);
+        // F000:02B1 add BP,2
+        BP = Alu16.Add(BP, unchecked((ushort)unchecked((short)(sbyte)2)));
+        // F000:02B4 mov word ptr DS:[0x007C],AX
+        UInt16[DS, (ushort)0x007C] = AX;
+        // F000:02B7 mov word ptr DS:[0x007E],DX
+        UInt16[DS, (ushort)0x007E] = DX;
+        // F000:02BB pushf
+        Stack.Push16(FlagRegister16);
+        // F000:02BC mov AX,0xFFFF
+        AX = (ushort)0xFFFF;
+        // F000:02BF mov word ptr SS:[BP],2
+        UInt16[SS, (ushort)(BP + (sbyte)0)] = (ushort)0x0002;
+        // F000:02C4 aam
+        try {
+            byte v2_F000_02C4_F02C4 = (byte)0x00;
+            byte v1_F000_02C4_F02C4 = AL;
+            Alu8.UpdateFlags(unchecked((byte)(v1_F000_02C4_F02C4 >> (byte)0x01)));
+            if (v2_F000_02C4_F02C4 == (byte)0x00) {
+                throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
+            }
+            else {
+            }
+            byte result_F000_02C4_F02C4 = unchecked((byte)(v1_F000_02C4_F02C4 % v2_F000_02C4_F02C4));
+            AH = unchecked((byte)(v1_F000_02C4_F02C4 / v2_F000_02C4_F02C4));
+            AL = unchecked((byte)result_F000_02C4_F02C4);
+            Alu8.UpdateFlags(unchecked((byte)result_F000_02C4_F02C4));
+        }
+        catch (CpuException cpuException) {
+            SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
+            if (cpuFaultTarget == new SegmentedAddress(cs1, 0x1000)) {
+                EnterCpuFaultHandler(cs1, 0x02C4, cpuFaultTarget);
+                return unknown_F000_1000_F1000(0x0000);
+            }
+            throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:02C4");
+        }
+        throw FailAsUntested("Generated partition reached the end without a terminating control-flow instruction.");
+    }
+
+    public virtual Action unknown_F000_02C6_F02C6(int loadOffset) {
+    entrydispatcher:
+    label_F000_02C6_F02C6_222:
+        CheckExternalEvents(cs1, 0x02C6);
+        // F000:02C6 add BP,2
+        BP = Alu16.Add(BP, unchecked((ushort)unchecked((short)(sbyte)2)));
+        // F000:02C9 mov word ptr DS:[0x0084],AX
+        UInt16[DS, (ushort)0x0084] = AX;
+        // F000:02CC pushf
+        Stack.Push16(FlagRegister16);
+        // F000:02CD mov word ptr SS:[BP],2
+        UInt16[SS, (ushort)(BP + (sbyte)0)] = (ushort)0x0002;
+        // F000:02D2 aam
+        byte v2_F000_02D2_F02D2 = (byte)0x01;
+        byte v1_F000_02D2_F02D2 = AL;
+        Alu8.UpdateFlags(unchecked((byte)(v1_F000_02D2_F02D2 >> (byte)0x01)));
+        if (v2_F000_02D2_F02D2 == (byte)0x00) {
+            throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
+        }
+        else {
+        }
+        byte result_F000_02D2_F02D2 = unchecked((byte)(v1_F000_02D2_F02D2 % v2_F000_02D2_F02D2));
+        AH = unchecked((byte)(v1_F000_02D2_F02D2 / v2_F000_02D2_F02D2));
+        AL = unchecked((byte)result_F000_02D2_F02D2);
+        Alu8.UpdateFlags(unchecked((byte)result_F000_02D2_F02D2));
+        // F000:02D4 add BP,2
+        BP = Alu16.Add(BP, unchecked((ushort)unchecked((short)(sbyte)2)));
+        // F000:02D7 mov word ptr DS:[0x0086],AX
+        UInt16[DS, (ushort)0x0086] = AX;
+        // F000:02DA pushf
+        Stack.Push16(FlagRegister16);
+        // F000:02DB mov AX,0xFFFF
+        AX = (ushort)0xFFFF;
+        // F000:02DE mov word ptr SS:[BP],2
+        UInt16[SS, (ushort)(BP + (sbyte)0)] = (ushort)0x0002;
+        // F000:02E3 aam
+        byte v2_F000_02E3_F02E3 = (byte)0x0A;
+        byte v1_F000_02E3_F02E3 = AL;
+        Alu8.UpdateFlags(unchecked((byte)(v1_F000_02E3_F02E3 >> (byte)0x01)));
+        if (v2_F000_02E3_F02E3 == (byte)0x00) {
+            throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
+        }
+        else {
+        }
+        byte result_F000_02E3_F02E3 = unchecked((byte)(v1_F000_02E3_F02E3 % v2_F000_02E3_F02E3));
+        AH = unchecked((byte)(v1_F000_02E3_F02E3 / v2_F000_02E3_F02E3));
+        AL = unchecked((byte)result_F000_02E3_F02E3);
+        Alu8.UpdateFlags(unchecked((byte)result_F000_02E3_F02E3));
+        // F000:02E5 add BP,2
+        BP = Alu16.Add(BP, unchecked((ushort)unchecked((short)(sbyte)2)));
+        // F000:02E8 mov word ptr DS:[0x0088],AX
+        UInt16[DS, (ushort)0x0088] = AX;
+        // F000:02EB pushf
+        Stack.Push16(FlagRegister16);
+        // F000:02EC mov AX,0xFF00
+        AX = (ushort)0xFF00;
+        // F000:02EF mov word ptr SS:[BP],2
+        UInt16[SS, (ushort)(BP + (sbyte)0)] = (ushort)0x0002;
+        // F000:02F4 aam
+        try {
+            byte v2_F000_02F4_F02F4 = (byte)0x00;
+            byte v1_F000_02F4_F02F4 = AL;
+            Alu8.UpdateFlags(unchecked((byte)(v1_F000_02F4_F02F4 >> (byte)0x01)));
+            if (v2_F000_02F4_F02F4 == (byte)0x00) {
+                throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
+            }
+            else {
+            }
+            byte result_F000_02F4_F02F4 = unchecked((byte)(v1_F000_02F4_F02F4 % v2_F000_02F4_F02F4));
+            AH = unchecked((byte)(v1_F000_02F4_F02F4 / v2_F000_02F4_F02F4));
+            AL = unchecked((byte)result_F000_02F4_F02F4);
+            Alu8.UpdateFlags(unchecked((byte)result_F000_02F4_F02F4));
+        }
+        catch (CpuException cpuException) {
+            SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
+            if (cpuFaultTarget == new SegmentedAddress(cs1, 0x1000)) {
+                EnterCpuFaultHandler(cs1, 0x02F4, cpuFaultTarget);
+                return unknown_F000_1000_F1000(0x0000);
+            }
+            throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:02F4");
+        }
+        throw FailAsUntested("Generated partition reached the end without a terminating control-flow instruction.");
+    }
+
+    public virtual Action unknown_F000_02F6_F02F6(int loadOffset) {
+    label_F000_02F6_F02F6_239:
+        CheckExternalEvents(cs1, 0x02F6);
+        // F000:02F6 add BP,2
+        BP = Alu16.Add(BP, unchecked((ushort)unchecked((short)(sbyte)2)));
+        // F000:02F9 mov word ptr DS:[0x008A],AX
+        UInt16[DS, (ushort)0x008A] = AX;
+        // F000:02FC pushf
+        Stack.Push16(FlagRegister16);
+        // F000:02FD mov word ptr SS:[BP],2
+        UInt16[SS, (ushort)(BP + (sbyte)0)] = (ushort)0x0002;
+        // F000:0302 aam
+        byte v2_F000_0302_F0302 = (byte)0x01;
+        byte v1_F000_0302_F0302 = AL;
+        Alu8.UpdateFlags(unchecked((byte)(v1_F000_0302_F0302 >> (byte)0x01)));
+        if (v2_F000_0302_F0302 == (byte)0x00) {
+            throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
+        }
+        else {
+        }
+        byte result_F000_0302_F0302 = unchecked((byte)(v1_F000_0302_F0302 % v2_F000_0302_F0302));
+        AH = unchecked((byte)(v1_F000_0302_F0302 / v2_F000_0302_F0302));
+        AL = unchecked((byte)result_F000_0302_F0302);
+        Alu8.UpdateFlags(unchecked((byte)result_F000_0302_F0302));
+        // F000:0304 add BP,2
+        BP = Alu16.Add(BP, unchecked((ushort)unchecked((short)(sbyte)2)));
+        // F000:0307 mov word ptr DS:[0x008C],AX
+        UInt16[DS, (ushort)0x008C] = AX;
+        // F000:030A pushf
+        Stack.Push16(FlagRegister16);
+        // F000:030B mov AX,0x3FFB
+        AX = (ushort)0x3FFB;
+        // F000:030E mov word ptr SS:[BP],2
+        UInt16[SS, (ushort)(BP + (sbyte)0)] = (ushort)0x0002;
+        // F000:0313 aam
+        byte v2_F000_0313_F0313 = (byte)0x0A;
+        byte v1_F000_0313_F0313 = AL;
+        Alu8.UpdateFlags(unchecked((byte)(v1_F000_0313_F0313 >> (byte)0x01)));
+        if (v2_F000_0313_F0313 == (byte)0x00) {
+            throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
+        }
+        else {
+        }
+        byte result_F000_0313_F0313 = unchecked((byte)(v1_F000_0313_F0313 % v2_F000_0313_F0313));
+        AH = unchecked((byte)(v1_F000_0313_F0313 / v2_F000_0313_F0313));
+        AL = unchecked((byte)result_F000_0313_F0313);
+        Alu8.UpdateFlags(unchecked((byte)result_F000_0313_F0313));
+        // F000:0315 add BP,2
+        BP = Alu16.Add(BP, unchecked((ushort)unchecked((short)(sbyte)2)));
+        // F000:0318 mov word ptr DS:[0x008E],AX
+        UInt16[DS, (ushort)0x008E] = AX;
+        // F000:031B pushf
+        Stack.Push16(FlagRegister16);
+        // F000:031C hlt
+        return Hlt();
+    }
+
+    public virtual Action unknown_F000_1000_F1000(int loadOffset) {
+    label_F000_1000_F1000_282:
+        CheckExternalEvents(cs1, 0x1000);
+        // F000:1000 push AX
+        Stack.Push16(AX);
+        // F000:1001 push DI
+        Stack.Push16(DI);
+        // F000:1002 mov AX,word ptr SS:[BP]
+        AX = UInt16[SS, (ushort)(BP + (sbyte)0)];
+        // F000:1005 mov SI,SP
+        SI = SP;
+        // F000:1007 add SI,4
+        SI = Alu16.Add(SI, unchecked((ushort)unchecked((short)(sbyte)4)));
+        // F000:100A mov SI,word ptr DS:[SI]
+        SI = UInt16[DS, SI];
+        // F000:100C mov word ptr SS:[BP],SI
+        UInt16[SS, (ushort)(BP + (sbyte)0)] = SI;
+        // F000:100F add SI,AX
+        SI = Alu16.Add(SI, AX);
+        // F000:1011 mov DI,SP
+        DI = SP;
+        // F000:1013 add DI,4
+        DI = Alu16.Add(DI, unchecked((ushort)unchecked((short)(sbyte)4)));
+        // F000:1016 mov word ptr DS:[DI],SI
+        UInt16[DS, DI] = SI;
+        // F000:1018 pop DI
+        DI = Stack.Pop16();
+        // F000:1019 pop AX
+        AX = Stack.Pop16();
+        // F000:101A iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        goto label_F000_FFF0_FFFF0_0;
+
+    label_F000_0000_F0000_1:
+        CheckExternalEvents(cs1, 0x0000);
+        // F000:0000 mov SP,0x00D0
+        SP = (ushort)0x00D0;
+        // F000:0003 mov word ptr DS:[0],0x1000
+        UInt16[DS, (ushort)0x0000] = (ushort)0x1000;
+        // F000:0009 mov word ptr DS:[2],0xF000
+        UInt16[DS, (ushort)0x0002] = (ushort)0xF000;
+        // F000:000F mov BP,0x00D0
+        BP = (ushort)0x00D0;
+        // F000:0012 mov DX,0
+        DX = (ushort)0x0000;
+        // F000:0015 mov AX,0x0014
+        AX = (ushort)0x0014;
+        // F000:0018 mov BX,5
+        BX = (ushort)0x0005;
+        // F000:001B mov word ptr SS:[BP],2
+        UInt16[SS, (ushort)(BP + (sbyte)0)] = (ushort)0x0002;
+        // F000:0020 div BX
+        ushort divisor_F000_0020_F0020 = BX;
+        uint dividend_F000_0020_F0020 = unchecked((uint)(unchecked((uint)DX) << 16 | unchecked((uint)AX)));
+        ushort quotient_F000_0020_F0020 = Alu16.Div(unchecked((uint)dividend_F000_0020_F0020), unchecked((ushort)divisor_F000_0020_F0020));
+        AX = unchecked((ushort)quotient_F000_0020_F0020);
+        DX = unchecked((ushort)(dividend_F000_0020_F0020 % unchecked((uint)divisor_F000_0020_F0020)));
+        // F000:0022 add BP,2
+        BP = Alu16.Add(BP, unchecked((ushort)unchecked((short)(sbyte)2)));
+        // F000:0025 mov word ptr DS:[0x0080],AX
+        UInt16[DS, (ushort)0x0080] = AX;
+        // F000:0028 mov word ptr DS:[0x0082],BX
+        UInt16[DS, (ushort)0x0082] = BX;
+        // F000:002C mov word ptr DS:[4],DX
+        UInt16[DS, (ushort)0x0004] = DX;
+        // F000:0030 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:0031 mov DX,0xA320
+        DX = (ushort)0xA320;
+        // F000:0034 mov AX,0xC3DA
+        AX = (ushort)0xC3DA;
+        // F000:0037 mov word ptr DS:[6],0xFFFF
+        UInt16[DS, (ushort)0x0006] = (ushort)0xFFFF;
+        // F000:003D mov word ptr SS:[BP],4
+        UInt16[SS, (ushort)(BP + (sbyte)0)] = (ushort)0x0004;
+        // F000:0042 div word ptr DS:[6]
+        ushort divisor_F000_0042_F0042 = UInt16[DS, (ushort)0x0006];
+        uint dividend_F000_0042_F0042 = unchecked((uint)(unchecked((uint)DX) << 16 | unchecked((uint)AX)));
+        ushort quotient_F000_0042_F0042 = Alu16.Div(unchecked((uint)dividend_F000_0042_F0042), unchecked((ushort)divisor_F000_0042_F0042));
+        AX = unchecked((ushort)quotient_F000_0042_F0042);
+        DX = unchecked((ushort)(dividend_F000_0042_F0042 % unchecked((uint)divisor_F000_0042_F0042)));
+        // F000:0046 add BP,2
+        BP = Alu16.Add(BP, unchecked((ushort)unchecked((short)(sbyte)2)));
+        // F000:0049 mov word ptr DS:[8],AX
+        UInt16[DS, (ushort)0x0008] = AX;
+        // F000:004C mov word ptr DS:[0x000A],DX
+        UInt16[DS, (ushort)0x000A] = DX;
+        // F000:0050 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:0051 mov DX,0xFFFF
+        DX = (ushort)0xFFFF;
+        // F000:0054 mov AX,0xFFFF
+        AX = (ushort)0xFFFF;
+        // F000:0057 mov CX,1
+        CX = (ushort)0x0001;
+        // F000:005A mov word ptr SS:[BP],2
+        UInt16[SS, (ushort)(BP + (sbyte)0)] = (ushort)0x0002;
+        // F000:005F div CX
+        try {
+            ushort divisor_F000_005F_F005F = CX;
+            uint dividend_F000_005F_F005F = unchecked((uint)(unchecked((uint)DX) << 16 | unchecked((uint)AX)));
+            ushort quotient_F000_005F_F005F = Alu16.Div(unchecked((uint)dividend_F000_005F_F005F), unchecked((ushort)divisor_F000_005F_F005F));
+            AX = unchecked((ushort)quotient_F000_005F_F005F);
+            DX = unchecked((ushort)(dividend_F000_005F_F005F % unchecked((uint)divisor_F000_005F_F005F)));
+        }
+        catch (CpuException cpuException) {
+            SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
+            if (cpuFaultTarget == new SegmentedAddress(cs1, 0x1000)) {
+                EnterCpuFaultHandler(cs1, 0x005F, cpuFaultTarget);
+                return unknown_F000_1000_F1000(0x0000);
+            }
+            throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:005F");
+        }
+    label_F000_FFF0_FFFF0_0:
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        goto label_F000_0000_F0000_1;
+    }
+
+}

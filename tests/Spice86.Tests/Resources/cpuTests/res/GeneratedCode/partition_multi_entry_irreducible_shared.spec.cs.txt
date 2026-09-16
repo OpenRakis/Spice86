@@ -1,0 +1,115 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0xF000;
+
+        DefineFunction(cs1, 0x0015, unknown_F000_0015_F0015);
+        DefineFunction(cs1, 0x0017, unknown_F000_0017_F0017);
+        DefineFunction(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0);
+        DefineFunction(cs1, 0x0019, unknown_F000_0019_F0019);
+        DefineFunction(cs1, 0x001F, _ => unknown_F000_0019_F0019(0x001F), name: "unknown_entry");
+    }
+
+    public virtual Action unknown_F000_0015_F0015(int loadOffset) {
+    label_F000_0015_F0015_8:
+        CheckExternalEvents(cs1, 0x0015);
+        // F000:0015 jmp short 0x0019
+        return unknown_F000_0019_F0019(0x0000);
+    }
+
+    public virtual Action unknown_F000_0017_F0017(int loadOffset) {
+    label_F000_0017_F0017_35:
+        CheckExternalEvents(cs1, 0x0017);
+        // F000:0017 jmp short 0x001F
+        return unknown_F000_0019_F0019(0x001F);
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        goto label_F000_FFF0_FFFF0_0;
+
+    label_F000_0000_F0000_1:
+        CheckExternalEvents(cs1, 0x0000);
+        // F000:0000 mov AX,0x1000
+        AX = (ushort)0x1000;
+        // F000:0003 mov SS,AX
+        SS = AX;
+        State.InterruptShadowing = true;
+        // F000:0005 mov SP,0x0100
+        SP = (ushort)0x0100;
+        // F000:0008 mov CX,0
+        CX = (ushort)0x0000;
+        // F000:000B call near 0x0015
+        NearCall(cs1, 0x000E, unknown_F000_0015_F0015);
+    label_F000_000E_F000E_32:
+        CheckExternalEvents(cs1, 0x000E);
+        // F000:000E mov CX,1
+        CX = (ushort)0x0001;
+        // F000:0011 call near 0x0017
+        NearCall(cs1, 0x0014, unknown_F000_0017_F0017);
+    label_F000_0014_F0014_41:
+        CheckExternalEvents(cs1, 0x0014);
+        // F000:0014 hlt
+        return Hlt();
+    label_F000_FFF0_FFFF0_0:
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        goto label_F000_0000_F0000_1;
+    }
+
+    public virtual Action unknown_F000_0019_F0019(int loadOffset) {
+    entrydispatcher:
+        switch (loadOffset) {
+            case 0x0000:
+                goto label_F000_0019_F0019_10;
+            case 0x001F:
+                goto label_F000_001F_F001F_13;
+            default:
+                throw FailAsUntested($"Unknown generated entry loadOffset 0x{loadOffset:X4}");
+        }
+
+    label_F000_0019_F0019_10:
+        CheckExternalEvents(cs1, 0x0019);
+        // F000:0019 cmp CX,0
+        Alu16.Sub(CX, unchecked((ushort)unchecked((short)(sbyte)0)));
+        // F000:001C je short 0x001F
+        if (ZeroFlag) {
+            goto label_F000_001F_F001F_13;
+        }
+    label_F000_001E_F001E_15:
+        CheckExternalEvents(cs1, 0x001E);
+        // F000:001E ret near
+        return NearRet((ushort)0x0000);
+    label_F000_001F_F001F_13:
+        CheckExternalEvents(cs1, 0x001F);
+        // F000:001F cmp CX,1
+        Alu16.Sub(CX, unchecked((ushort)unchecked((short)(sbyte)1)));
+        // F000:0022 je short 0x0019
+        if (ZeroFlag) {
+            goto label_F000_0019_F0019_10;
+        }
+    label_F000_0024_F0024_19:
+        CheckExternalEvents(cs1, 0x0024);
+        // F000:0024 ret near
+        return NearRet((ushort)0x0000);
+    }
+
+}

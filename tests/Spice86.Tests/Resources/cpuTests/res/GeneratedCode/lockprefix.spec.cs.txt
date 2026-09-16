@@ -1,0 +1,152 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0xF000;
+
+        DefineFunction(cs1, 0x0045, unknown_F000_0045_F0045);
+        DefineFunction(cs1, 0x004E, unknown_F000_004E_F004E);
+        DefineFunction(cs1, 0x0057, unknown_F000_0057_F0057);
+        DefineFunction(cs1, 0x005A, unknown_F000_005A_F005A);
+        DefineFunction(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0);
+    }
+
+    public virtual Action unknown_F000_0045_F0045(int loadOffset) {
+    entrydispatcher:
+    label_F000_0045_F0045_49:
+        CheckExternalEvents(cs1, 0x0045);
+        // F000:0045 mov word ptr DS:[4],0x004E
+        UInt16[DS, (ushort)0x0004] = (ushort)0x004E;
+        // F000:004B invalid
+        try {
+            throw new Spice86.Core.Emulator.CPU.Exceptions.CpuInvalidOpcodeException("LOCK prefix is invalid with instruction ADD at F000:004B: no memory destination operand");
+        }
+        catch (CpuException cpuException) {
+            SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
+            if (cpuFaultTarget == new SegmentedAddress(cs1, 0x005A)) {
+                EnterCpuFaultHandler(cs1, 0x004B, cpuFaultTarget);
+                return unknown_F000_005A_F005A(0x0000);
+            }
+            throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:004B");
+        }
+        throw FailAsUntested("Generated partition reached the end without a terminating control-flow instruction.");
+    }
+
+    public virtual Action unknown_F000_004E_F004E(int loadOffset) {
+    entrydispatcher:
+    label_F000_004E_F004E_55:
+        CheckExternalEvents(cs1, 0x004E);
+        // F000:004E mov word ptr DS:[4],0x0057
+        UInt16[DS, (ushort)0x0004] = (ushort)0x0057;
+        // F000:0054 invalid
+        try {
+            throw new Spice86.Core.Emulator.CPU.Exceptions.CpuInvalidOpcodeException("LOCK prefix is invalid with instruction INC at F000:0054: no memory destination operand");
+        }
+        catch (CpuException cpuException) {
+            SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
+            if (cpuFaultTarget == new SegmentedAddress(cs1, 0x005A)) {
+                EnterCpuFaultHandler(cs1, 0x0054, cpuFaultTarget);
+                return unknown_F000_005A_F005A(0x0000);
+            }
+            throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:0054");
+        }
+        throw FailAsUntested("Generated partition reached the end without a terminating control-flow instruction.");
+    }
+
+    public virtual Action unknown_F000_0057_F0057(int loadOffset) {
+    label_F000_0057_F0057_61:
+        CheckExternalEvents(cs1, 0x0057);
+        // F000:0057 hlt
+        return Hlt();
+    }
+
+    public virtual Action unknown_F000_005A_F005A(int loadOffset) {
+    label_F000_005A_F005A_35:
+        CheckExternalEvents(cs1, 0x005A);
+        // F000:005A push BP
+        Stack.Push16(BP);
+        // F000:005B mov BP,SP
+        BP = SP;
+        // F000:005D mov AX,word ptr DS:[4]
+        AX = UInt16[DS, (ushort)0x0004];
+        // F000:0060 mov word ptr SS:[BP+2],AX
+        UInt16[SS, (ushort)(BP + (sbyte)2)] = AX;
+        // F000:0063 pop BP
+        BP = Stack.Pop16();
+        // F000:0064 inc word ptr DS:[0]
+        UInt16[DS, (ushort)0x0000] = Alu16.Inc(UInt16[DS, (ushort)0x0000]);
+        // F000:0068 iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        goto label_F000_FFF0_FFFF0_0;
+
+    label_F000_0000_F0000_1:
+        CheckExternalEvents(cs1, 0x0000);
+        // F000:0000 xor AX,AX
+        AX = Alu16.Xor(AX, AX);
+        // F000:0002 mov DS,AX
+        DS = AX;
+        // F000:0004 mov SS,AX
+        SS = AX;
+        State.InterruptShadowing = true;
+        // F000:0006 mov SP,0x8000
+        SP = (ushort)0x8000;
+        // F000:0009 mov word ptr DS:[0x0018],0x005A
+        UInt16[DS, (ushort)0x0018] = (ushort)0x005A;
+        // F000:000F mov word ptr DS:[0x001A],CS
+        UInt16[DS, (ushort)0x001A] = CS;
+        // F000:0013 mov word ptr DS:[0],0
+        UInt16[DS, (ushort)0x0000] = (ushort)0x0000;
+        // F000:0019 mov word ptr DS:[2],0
+        UInt16[DS, (ushort)0x0002] = (ushort)0x0000;
+        // F000:001F mov word ptr DS:[0x0010],1
+        UInt16[DS, (ushort)0x0010] = (ushort)0x0001;
+        // F000:0025 add word ptr DS:[0x0010],AX
+        UInt16[DS, (ushort)0x0010] = Alu16.Add(UInt16[DS, (ushort)0x0010], AX);
+        // F000:002A inc word ptr DS:[0x0010]
+        UInt16[DS, (ushort)0x0010] = Alu16.Inc(UInt16[DS, (ushort)0x0010]);
+        // F000:002F dec word ptr DS:[0x0010]
+        UInt16[DS, (ushort)0x0010] = Alu16.Dec(UInt16[DS, (ushort)0x0010]);
+        // F000:0034 mov word ptr DS:[2],3
+        UInt16[DS, (ushort)0x0002] = (ushort)0x0003;
+        // F000:003A mov word ptr DS:[4],0x0045
+        UInt16[DS, (ushort)0x0004] = (ushort)0x0045;
+        // F000:0040 invalid
+        try {
+            throw new Spice86.Core.Emulator.CPU.Exceptions.CpuInvalidOpcodeException("LOCK prefix is invalid with instruction MOV at F000:0040: not in the LOCK-allowed instruction set");
+        }
+        catch (CpuException cpuException) {
+            SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
+            if (cpuFaultTarget == new SegmentedAddress(cs1, 0x005A)) {
+                EnterCpuFaultHandler(cs1, 0x0040, cpuFaultTarget);
+                return unknown_F000_005A_F005A(0x0000);
+            }
+            throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:0040");
+        }
+    label_F000_FFF0_FFFF0_0:
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        goto label_F000_0000_F0000_1;
+    }
+
+}

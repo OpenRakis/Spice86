@@ -1,0 +1,230 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+    protected readonly ushort cs2;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0xE342;
+        cs2 = 0xF000;
+
+        DefineFunction(cs2, 0x0000, unknown_F000_0000_F0000);
+        DefineFunction(cs2, 0x1290, unknown_F000_1290_F1290);
+        DefineFunction(cs1, 0xEBE0, unknown_E342_EBE0_F2000);
+        DefineFunction(cs1, 0xFDE0, unknown_E342_FDE0_F3200);
+        DefineFunction(cs2, 0x4000, unknown_F000_4000_F4000);
+        DefineFunction(cs2, 0xFFF0, unknown_F000_FFF0_FFFF0);
+    }
+
+    public virtual Action unknown_F000_0000_F0000(int loadOffset) {
+    label_F000_0000_F0000_4:
+        CheckExternalEvents(cs2, 0x0000);
+        // F000:0000 mov BX,0xF000
+        BX = (ushort)0xF000;
+        // F000:0003 mov DS,BX
+        DS = BX;
+        // F000:0005 mov AX,0x1290
+        AX = (ushort)0x1290;
+        // F000:0008 mov CX,5
+        CX = (ushort)0x0005;
+    label_F000_000B_F000B_9:
+        CheckExternalEvents(cs2, 0x000B);
+        // F000:000B push CX
+        Stack.Push16(CX);
+        // F000:000C loop 0x000B
+        CX = unchecked((ushort)(CX - (ushort)0x0001));
+        if (CX != (ushort)0x0000) {
+            goto label_F000_000B_F000B_9;
+        }
+    label_F000_000E_F000E_13:
+        CheckExternalEvents(cs2, 0x000E);
+        // F000:000E call near AX
+        switch ((ushort)(AX)) {
+            case 0x1290:
+                NearCall(cs2, 0x0010, unknown_F000_1290_F1290);
+                break;
+            default:
+                throw FailAsUntested($"Unknown near call target 0x{((ushort)(AX)):X4} at F000:000E");
+        }
+    label_F000_0010_F0010_92:
+        CheckExternalEvents(cs2, 0x0010);
+        // F000:0010 ret near
+        return NearRet((ushort)0x0000);
+    }
+
+    public virtual Action unknown_F000_1290_F1290(int loadOffset) {
+    label_F000_1290_F1290_24:
+        CheckExternalEvents(cs2, 0x1290);
+        // F000:1290 mov CX,0xFFFF
+        CX = (ushort)0xFFFF;
+        // F000:1293 loope 0x1290
+        CX = unchecked((ushort)(CX - (ushort)0x0001));
+        if (CX != (ushort)0x0000 && ZeroFlag) {
+            goto label_F000_1290_F1290_24;
+        }
+    label_F000_1295_F1295_28:
+        CheckExternalEvents(cs2, 0x1295);
+        // F000:1295 mov DX,0x0040
+        DX = (ushort)0x0040;
+        // F000:1298 push DX
+        Stack.Push16(DX);
+    label_F000_1299_F1299_31:
+        CheckExternalEvents(cs2, 0x1299);
+        // F000:1299 popf
+        FlagRegister16 = Stack.Pop16();
+    label_F000_129A_F129A_37:
+        CheckExternalEvents(cs2, 0x129A);
+        // F000:129A loope 0x129D
+        CX = unchecked((ushort)(CX - (ushort)0x0001));
+        if (CX != (ushort)0x0000 && ZeroFlag) {
+            goto label_F000_129D_F129D_38;
+        }
+    label_F000_129C_F129C_41:
+        CheckExternalEvents(cs2, 0x129C);
+        VerifySpeculativeEntryOrFail(cs2, 0x129C, [(byte)0xF4]);
+        // F000:129C hlt
+        return Hlt();
+    label_F000_129D_F129D_38:
+        CheckExternalEvents(cs2, 0x129D);
+        // F000:129D call far E342:EBE0
+        FarCall(cs2, 0x12A2, cs1, unknown_E342_EBE0_F2000);
+    label_F000_12A2_F12A2_79:
+        CheckExternalEvents(cs2, 0x12A2);
+        // F000:12A2 jcxz short 0x129D
+        if (CX == (ushort)0x0000) {
+            goto label_F000_129D_F129D_38;
+        }
+    label_F000_12A4_F12A4_82:
+        CheckExternalEvents(cs2, 0x12A4);
+        // F000:12A4 mov CX,0
+        CX = (ushort)0x0000;
+        // F000:12A7 jcxz short 0x12AA
+        if (CX == (ushort)0x0000) {
+            goto label_F000_12AA_F12AA_85;
+        }
+    label_F000_12A9_F12A9_87:
+        CheckExternalEvents(cs2, 0x12A9);
+        VerifySpeculativeEntryOrFail(cs2, 0x12A9, [(byte)0xF4]);
+        // F000:12A9 hlt
+        return Hlt();
+    label_F000_12AA_F12AA_85:
+        CheckExternalEvents(cs2, 0x12AA);
+        // F000:12AA ret near 0x000A
+        return NearRet((ushort)0x000A);
+    }
+
+    public virtual Action unknown_E342_EBE0_F2000(int loadOffset) {
+    label_E342_EBE0_F2000_43:
+        CheckExternalEvents(cs1, 0xEBE0);
+        // E342:EBE0 call near word ptr DS:[0x3000]
+        switch ((ushort)(UInt16[DS, (ushort)0x3000])) {
+            case 0xFDE0:
+                NearCall(cs1, 0xEBE4, unknown_E342_FDE0_F3200);
+                break;
+            default:
+                throw FailAsUntested($"Unknown near call target 0x{((ushort)(UInt16[DS, (ushort)0x3000])):X4} at E342:EBE0");
+        }
+    label_E342_EBE4_F2004_59:
+        CheckExternalEvents(cs1, 0xEBE4);
+        // E342:EBE4 mov DX,0
+        DX = (ushort)0x0000;
+        // E342:EBE7 push DX
+        Stack.Push16(DX);
+    label_E342_EBE8_F2008_62:
+        CheckExternalEvents(cs1, 0xEBE8);
+        // E342:EBE8 popf
+        FlagRegister16 = Stack.Pop16();
+    label_E342_EBE9_F2009_66:
+        CheckExternalEvents(cs1, 0xEBE9);
+        // E342:EBE9 mov CX,1
+        CX = (ushort)0x0001;
+        // E342:EBEC loopne 0xEBE9
+        CX = unchecked((ushort)(CX - (ushort)0x0001));
+        if (CX != (ushort)0x0000 && !ZeroFlag) {
+            goto label_E342_EBE9_F2009_66;
+        }
+    label_E342_EBEE_F200E_70:
+        CheckExternalEvents(cs1, 0xEBEE);
+        // E342:EBEE loopne 0xEBF1
+        CX = unchecked((ushort)(CX - (ushort)0x0001));
+        if (CX != (ushort)0x0000 && !ZeroFlag) {
+            goto label_E342_EBF1_F2011_72;
+        }
+    label_E342_EBF0_F2010_74:
+        CheckExternalEvents(cs1, 0xEBF0);
+        VerifySpeculativeEntryOrFail(cs1, 0xEBF0, [(byte)0xF4]);
+        // E342:EBF0 hlt
+        return Hlt();
+    label_E342_EBF1_F2011_72:
+        CheckExternalEvents(cs1, 0xEBF1);
+        // E342:EBF1 ret far
+        return FarRet((ushort)0x0000);
+    }
+
+    public virtual Action unknown_E342_FDE0_F3200(int loadOffset) {
+    label_E342_FDE0_F3200_47:
+        CheckExternalEvents(cs1, 0xFDE0);
+        // E342:FDE0 mov BX,0x2FF0
+        BX = (ushort)0x2FF0;
+        // E342:FDE3 mov SI,0x0010
+        SI = (ushort)0x0010;
+        // E342:FDE6 push DX
+        Stack.Push16(DX);
+        // E342:FDE7 call far dword ptr DS:[BX+SI+2]
+        ushort targetSegment_51 = unchecked((ushort)(UInt16[DS, (ushort)(BX + SI + (sbyte)2 + (ushort)0x0002)]));
+        ushort targetOffset_51 = unchecked((ushort)(UInt16[DS, (ushort)(BX + SI + (sbyte)2)]));
+        if (targetSegment_51 == cs2 && targetOffset_51 == 0x4000) {
+            FarCall(cs1, 0xFDEA, cs2, unknown_F000_4000_F4000);
+            goto label_E342_FDEA_F320A_57;
+        }
+        throw FailAsUntested($"Unknown far call target {targetSegment_51:X4}:{targetOffset_51:X4} at E342:FDE7");
+    label_E342_FDEA_F320A_57:
+        CheckExternalEvents(cs1, 0xFDEA);
+        // E342:FDEA ret near
+        return NearRet((ushort)0x0000);
+    }
+
+    public virtual Action unknown_F000_4000_F4000(int loadOffset) {
+    label_F000_4000_F4000_55:
+        CheckExternalEvents(cs2, 0x4000);
+        // F000:4000 ret far 2
+        return FarRet((ushort)0x0002);
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+    label_F000_FFF0_FFFF0_0:
+        CheckExternalEvents(cs2, 0xFFF0);
+        // F000:FFF0 mov SP,0x1000
+        SP = (ushort)0x1000;
+        // F000:FFF3 mov SS,SP
+        SS = SP;
+        State.InterruptShadowing = true;
+        // F000:FFF5 call near 0
+        NearCall(cs2, 0xFFF8, unknown_F000_0000_F0000);
+    label_F000_FFF8_FFFF8_94:
+        CheckExternalEvents(cs2, 0xFFF8);
+        // F000:FFF8 mov DS,CX
+        DS = CX;
+        // F000:FFFA mov word ptr DS:[0],BX
+        UInt16[DS, (ushort)0x0000] = BX;
+        // F000:FFFE hlt
+        return Hlt();
+    }
+
+}
