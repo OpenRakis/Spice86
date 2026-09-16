@@ -40,7 +40,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             goto label_F000_0013_F0013_7;
         }
-    label_F000_000C_F000C_9:
         CheckExternalEvents(cs1, 0x000C);
         // F000:000C mov byte ptr DS:[0x0401],0xDD
         UInt8[DS, (ushort)0x0401] = (byte)0xDD;
@@ -67,7 +66,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             goto label_F000_001B_F001B_13;
         }
-    label_F000_0022_F0022_21:
         CheckExternalEvents(cs1, 0x0022);
         VerifySpeculativeEntryOrFail(cs1, 0x0022, [(byte)0xEB, (byte)0x00]);
         // F000:0022 jmp short 0x0024

@@ -40,7 +40,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (ZeroFlag) {
             goto label_F000_0009_F0009_30;
         }
-    label_F000_0008_F0008_8:
         CheckExternalEvents(cs1, 0x0008);
         // F000:0008 hlt
         return Hlt();
@@ -58,7 +57,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (ZeroFlag) {
             goto label_F000_0003_F0003_4;
         }
-    label_F000_001B_F001B_16:
         CheckExternalEvents(cs1, 0x001B);
         // F000:001B mov CX,0
         CX = (ushort)0x0000;

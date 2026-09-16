@@ -32,7 +32,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
 
     public virtual Action unknown_F000_0014_F0014(int loadOffset) {
     entrydispatcher:
-    label_F000_0014_F0014_44:
         CheckExternalEvents(cs1, 0x0014);
         // F000:0014 mov byte ptr DS:[0x0010],0xAA
         UInt8[DS, (ushort)0x0010] = (byte)0xAA;
@@ -46,7 +45,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
 
     public virtual Action unknown_F000_001B_F001B(int loadOffset) {
     entrydispatcher:
-    label_F000_001B_F001B_55:
         CheckExternalEvents(cs1, 0x001B);
         // F000:001B mov byte ptr DS:[0x0011],0xBB
         UInt8[DS, (ushort)0x0011] = (byte)0xBB;
@@ -59,19 +57,16 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_0022_F0022(int loadOffset) {
-    label_F000_0022_F0022_63:
         CheckExternalEvents(cs1, 0x0022);
         // F000:0022 mov byte ptr DS:[0x0012],0xCC
         UInt8[DS, (ushort)0x0012] = (byte)0xCC;
         // F000:0027 jmp short 0x0029
-    label_F000_0029_F0029_66:
         CheckExternalEvents(cs1, 0x0029);
         // F000:0029 hlt
         return Hlt();
     }
 
     public virtual Action unknown_F000_002A_F002A(int loadOffset) {
-    label_F000_002A_F002A_9:
         CheckExternalEvents(cs1, 0x002A);
         // F000:002A pop AX
         AX = Stack.Pop16();
@@ -85,7 +80,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (ZeroFlag) {
             goto label_F000_0042_F0042_15;
         }
-    label_F000_0038_F0038_17:
         CheckExternalEvents(cs1, 0x0038);
         // F000:0038 cmp BX,1
         Alu16.Sub(BX, unchecked((ushort)unchecked((short)(sbyte)1)));
@@ -93,7 +87,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (ZeroFlag) {
             goto label_F000_0047_F0047_22;
         }
-    label_F000_003D_F003D_24:
         CheckExternalEvents(cs1, 0x003D);
         // F000:003D mov AX,0x0022
         AX = (ushort)0x0022;
@@ -143,8 +136,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_0010_F0010(int loadOffset) {
-    entrydispatcher:
-    label_F000_0010_F0010_8:
         CheckExternalEvents(cs1, 0x0010);
         // F000:0010 call near 0x002A
         NearCall(cs1, 0x0013, unknown_F000_002A_F002A);

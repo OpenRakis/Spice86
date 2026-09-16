@@ -32,7 +32,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_E342_EBE0_F2000(int loadOffset) {
-    label_E342_EBE0_F2000_26:
         CheckExternalEvents(cs1, 0xEBE0);
         // E342:EBE0 mov byte ptr DS:[1],1
         UInt8[DS, (ushort)0x0001] = (byte)0x01;
@@ -47,7 +46,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_3001_F3001(int loadOffset) {
-    label_F000_3001_F3001_60:
         CheckExternalEvents(cs2, 0x3001);
         // F000:3001 mov byte ptr DS:[5],5
         UInt8[DS, (ushort)0x0005] = (byte)0x05;
@@ -62,7 +60,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_4002_F4002(int loadOffset) {
-    label_F000_4002_F4002_70:
         CheckExternalEvents(cs2, 0x4002);
         // F000:4002 mov byte ptr DS:[6],6
         UInt8[DS, (ushort)0x0006] = (byte)0x06;
@@ -70,11 +67,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         DX = (ushort)0x04FF;
         // F000:400A push DX
         Stack.Push16(DX);
-    label_F000_400B_F400B_74:
         CheckExternalEvents(cs2, 0x400B);
         // F000:400B popf
         FlagRegister16 = Stack.Pop16();
-    label_F000_400C_F400C_79:
         CheckExternalEvents(cs2, 0x400C);
         // F000:400C mov word ptr DS:[0x0010],0x5000
         UInt16[DS, (ushort)0x0010] = (ushort)0x5000;
@@ -90,7 +85,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_4013_F4013(int loadOffset) {
-    label_F000_4013_F4013_83:
         CheckExternalEvents(cs2, 0x4013);
         // F000:4013 mov word ptr DS:[8],AX
         UInt16[DS, (ushort)0x0008] = AX;
@@ -127,17 +121,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AX = (ushort)0x0EFF;
         // F000:0019 push AX
         Stack.Push16(AX);
-    label_F000_001A_F001A_11:
         CheckExternalEvents(cs2, 0x001A);
         // F000:001A popf
         FlagRegister16 = Stack.Pop16();
-    label_F000_001B_F001B_22:
         CheckExternalEvents(cs2, 0x001B);
         // F000:001B mov byte ptr DS:[0],0
         UInt8[DS, (ushort)0x0000] = (byte)0x00;
         // F000:0020 int 0x0D
         InterruptCall(cs2, 0x0022, unchecked((byte)((byte)0x0D)));
-    label_F000_0022_F0022_36:
         CheckExternalEvents(cs2, 0x0022);
         // F000:0022 mov byte ptr DS:[2],2
         UInt8[DS, (ushort)0x0002] = (byte)0x02;
@@ -148,7 +139,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             default:
                 throw FailAsUntested($"Unknown near jump target 0x{((ushort)(AX)):X4} at F000:0027");
         }
-    label_F000_0CD7_F0CD7_40:
         CheckExternalEvents(cs2, 0x0CD7);
         // F000:0CD7 mov byte ptr DS:[3],3
         UInt8[DS, (ushort)0x0003] = (byte)0x03;
@@ -162,7 +152,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt16[DS, (ushort)0x000E] = (ushort)0xE342;
         // F000:0CEA int 3
         InterruptCall(cs2, 0x0CEC, unchecked((byte)((byte)0x03)));
-    label_F000_0CEC_F0CEC_52:
         CheckExternalEvents(cs2, 0x0CEC);
         // F000:0CEC mov byte ptr DS:[4],4
         UInt8[DS, (ushort)0x0004] = (byte)0x04;

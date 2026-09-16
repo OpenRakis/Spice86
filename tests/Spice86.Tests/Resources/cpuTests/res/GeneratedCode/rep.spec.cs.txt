@@ -142,11 +142,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         BX = (ushort)0x0040;
         // F000:0021 push BX
         Stack.Push16(BX);
-    label_F000_0022_F0022_22:
         CheckExternalEvents(cs1, 0x0022);
         // F000:0022 popf
         FlagRegister16 = Stack.Pop16();
-    label_F000_0023_F0023_44:
         CheckExternalEvents(cs1, 0x0023);
         // F000:0023 rep movs byte ptr ES:[DI],byte ptr DS:[SI]
         while (CX != (ushort)0x0000) {
@@ -286,7 +284,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             default:
                 throw FailAsUntested($"Unknown near jump target 0x{((ushort)(CX)):X4} at F000:100E");
         }
-    label_F000_110A_F110A_90:
         CheckExternalEvents(cs1, 0x110A);
         // F000:110A mov CX,5
         CX = (ushort)0x0005;
@@ -294,11 +291,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         DX = (ushort)0x0000;
         // F000:1110 push DX
         Stack.Push16(DX);
-    label_F000_1111_F1111_94:
         CheckExternalEvents(cs1, 0x1111);
         // F000:1111 popf
         FlagRegister16 = Stack.Pop16();
-    label_F000_1112_F1112_99:
         CheckExternalEvents(cs1, 0x1112);
         // F000:1112 pop CX
         CX = Stack.Pop16();
@@ -325,11 +320,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0x200A);
         // F000:200A push BX
         Stack.Push16(BX);
-    label_F000_200B_F200B_108:
         CheckExternalEvents(cs1, 0x200B);
         // F000:200B popf
         FlagRegister16 = Stack.Pop16();
-    label_F000_200C_F200C_112:
         CheckExternalEvents(cs1, 0x200C);
         // F000:200C mov CX,2
         CX = (ushort)0x0002;
@@ -364,7 +357,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (CX == (ushort)0x0000) {
             goto label_F000_202D_F202D_126;
         }
-    label_F000_202C_F202C_128:
         CheckExternalEvents(cs1, 0x202C);
         VerifySpeculativeEntryOrFail(cs1, 0x202C, [(byte)0xF4]);
         // F000:202C hlt
@@ -390,11 +382,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AX = (ushort)0x0000;
         // F000:3018 push AX
         Stack.Push16(AX);
-    label_F000_3019_F3019_151:
         CheckExternalEvents(cs1, 0x3019);
         // F000:3019 popf
         FlagRegister16 = Stack.Pop16();
-    label_F000_301A_F301A_159:
         CheckExternalEvents(cs1, 0x301A);
         // F000:301A rep movs word ptr ES:[DI],word ptr DS:[SI]
         while (CX != (ushort)0x0000) {
@@ -417,7 +407,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (CX == (ushort)0x0000) {
             goto label_F000_302B_F302B_167;
         }
-    label_F000_302A_F302A_169:
         CheckExternalEvents(cs1, 0x302A);
         VerifySpeculativeEntryOrFail(cs1, 0x302A, [(byte)0xF4]);
         // F000:302A hlt
@@ -458,11 +447,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         BX = (ushort)0x0040;
         // F000:303F push BX
         Stack.Push16(BX);
-    label_F000_3040_F3040_196:
         CheckExternalEvents(cs1, 0x3040);
         // F000:3040 popf
         FlagRegister16 = Stack.Pop16();
-    label_F000_3041_F3041_201:
         CheckExternalEvents(cs1, 0x3041);
         // F000:3041 mov AX,0xF000
         AX = (ushort)0xF000;
@@ -506,17 +493,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             default:
                 throw FailAsUntested($"Unknown near jump target 0x{((ushort)(UInt16[DS, (ushort)0x0006])):X4} at F000:305A");
         }
-    label_F000_4000_F4000_226:
         CheckExternalEvents(cs1, 0x4000);
         // F000:4000 mov BX,0
         BX = (ushort)0x0000;
         // F000:4003 push BX
         Stack.Push16(BX);
-    label_F000_4004_F4004_229:
         CheckExternalEvents(cs1, 0x4004);
         // F000:4004 popf
         FlagRegister16 = Stack.Pop16();
-    label_F000_4005_F4005_233:
         CheckExternalEvents(cs1, 0x4005);
         // F000:4005 mov CX,4
         CX = (ushort)0x0004;
@@ -530,7 +514,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (CX == (ushort)0x0000) {
             goto label_F000_400D_F400D_237;
         }
-    label_F000_400C_F400C_239:
         CheckExternalEvents(cs1, 0x400C);
         VerifySpeculativeEntryOrFail(cs1, 0x400C, [(byte)0xF4]);
         // F000:400C hlt
@@ -541,11 +524,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         BX = (ushort)0x0040;
         // F000:4010 push BX
         Stack.Push16(BX);
-    label_F000_4011_F4011_242:
         CheckExternalEvents(cs1, 0x4011);
         // F000:4011 popf
         FlagRegister16 = Stack.Pop16();
-    label_F000_4012_F4012_249:
         CheckExternalEvents(cs1, 0x4012);
         // F000:4012 mov CX,0x1234
         CX = (ushort)0x1234;
@@ -579,11 +560,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         BX = (ushort)0x0040;
         // F000:4027 push BX
         Stack.Push16(BX);
-    label_F000_4028_F4028_268:
         CheckExternalEvents(cs1, 0x4028);
         // F000:4028 popf
         FlagRegister16 = Stack.Pop16();
-    label_F000_4029_F4029_273:
         CheckExternalEvents(cs1, 0x4029);
         // F000:4029 mov AX,0x0040
         AX = (ushort)0x0040;
@@ -629,11 +608,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         BX = (ushort)0x0040;
         // F000:403D push BX
         Stack.Push16(BX);
-    label_F000_403E_F403E_288:
         CheckExternalEvents(cs1, 0x403E);
         // F000:403E popf
         FlagRegister16 = Stack.Pop16();
-    label_F000_403F_F403F_297:
         CheckExternalEvents(cs1, 0x403F);
         // F000:403F mov SI,0x3000
         SI = (ushort)0x3000;
@@ -663,7 +640,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             default:
                 throw FailAsUntested($"Unknown near jump target 0x{((ushort)(CX)):X4} at F000:4049");
         }
-    label_F000_5000_F5000_307:
         CheckExternalEvents(cs1, 0x5000);
         // F000:5000 mov CX,2
         CX = (ushort)0x0002;
@@ -678,7 +654,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (CX == (ushort)0x0000) {
             goto label_F000_5008_F5008_311;
         }
-    label_F000_5007_F5007_313:
         CheckExternalEvents(cs1, 0x5007);
         VerifySpeculativeEntryOrFail(cs1, 0x5007, [(byte)0xF4]);
         // F000:5007 hlt
@@ -697,7 +672,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (CX == (ushort)0x0000) {
             goto label_F000_5010_F5010_317;
         }
-    label_F000_500F_F500F_319:
         CheckExternalEvents(cs1, 0x500F);
         VerifySpeculativeEntryOrFail(cs1, 0x500F, [(byte)0xF4]);
         // F000:500F hlt
@@ -716,7 +690,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (CX == (ushort)0x0000) {
             goto label_F000_5018_F5018_323;
         }
-    label_F000_5017_F5017_325:
         CheckExternalEvents(cs1, 0x5017);
         VerifySpeculativeEntryOrFail(cs1, 0x5017, [(byte)0xF4]);
         // F000:5017 hlt
@@ -727,11 +700,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         BX = (ushort)0x0000;
         // F000:501B push BX
         Stack.Push16(BX);
-    label_F000_501C_F501C_328:
         CheckExternalEvents(cs1, 0x501C);
         // F000:501C popf
         FlagRegister16 = Stack.Pop16();
-    label_F000_501D_F501D_341:
         CheckExternalEvents(cs1, 0x501D);
         // F000:501D mov CX,0x6023
         CX = (ushort)0x6023;
@@ -756,11 +727,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         BX = (ushort)0x0000;
         // F000:502F push BX
         Stack.Push16(BX);
-    label_F000_5030_F5030_350:
         CheckExternalEvents(cs1, 0x5030);
         // F000:5030 popf
         FlagRegister16 = Stack.Pop16();
-    label_F000_5031_F5031_360:
         CheckExternalEvents(cs1, 0x5031);
         // F000:5031 cld
         DirectionFlag = false;
@@ -779,7 +748,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             default:
                 throw FailAsUntested($"Unknown near jump target 0x{((ushort)(CX)):X4} at F000:5034");
         }
-    label_F000_601B_F601B_366:
         CheckExternalEvents(cs1, 0x601B);
         // F000:601B mov DX,0
         DX = (ushort)0x0000;

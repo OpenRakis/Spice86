@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Statement;
 
@@ -8,20 +9,20 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Statement;
 /// nothing about control flow or semantics — it just formats lines, braces, indentation, and switch cases
 /// from the already-decided <see cref="StatementItem"/> tree.
 /// </summary>
-internal static class EmittedCodeRenderer {
-    public static void Render(EmittedCode code, CSharpSourceWriter writer) {
+internal sealed class EmittedCodeRenderer(Func<ICfgNode, string> labelOf) {
+    public void Render(EmittedCode code, CSharpSourceWriter writer) {
         foreach (StatementItem item in code.AsStatements()) {
             Render(item, writer);
         }
     }
 
-    private static void Render(IReadOnlyList<StatementItem> items, CSharpSourceWriter writer) {
+    private void Render(IReadOnlyList<StatementItem> items, CSharpSourceWriter writer) {
         foreach (StatementItem item in items) {
             Render(item, writer);
         }
     }
 
-    private static void Render(StatementItem item, CSharpSourceWriter writer) {
+    private void Render(StatementItem item, CSharpSourceWriter writer) {
         switch (item) {
             case LineStatement line:
                 writer.Line(line.Text);
@@ -30,6 +31,12 @@ internal static class EmittedCodeRenderer {
                 writer.OpenBlock(block.Header);
                 Render(block.Body, writer);
                 writer.CloseBlock();
+                return;
+            case GotoStatement gotoStatement:
+                writer.Line($"goto {labelOf(gotoStatement.Target)};");
+                return;
+            case GotoEntryDispatcherStatement:
+                writer.Line("goto entrydispatcher;");
                 return;
             case SwitchStatement switchStatement:
                 writer.OpenBlock(switchStatement.Header);

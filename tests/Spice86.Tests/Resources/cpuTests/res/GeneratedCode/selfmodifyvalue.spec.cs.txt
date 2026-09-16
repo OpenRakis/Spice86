@@ -42,7 +42,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_000B_F000B_7:
         CheckExternalEvents(cs1, 0x000B);
         // F000:000B jmp short 0x000D
-    label_F000_000D_F000D_30:
         CheckExternalEvents(cs1, 0x000D);
         // F000:000D mov AX,word ptr [0x000F000E]
         AX = UInt16[unchecked((uint)(0x000F000Eu))];
@@ -58,7 +57,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             goto label_F000_000B_F000B_7;
         }
-    label_F000_001C_F001C_17:
         CheckExternalEvents(cs1, 0x001C);
         // F000:001C hlt
         return Hlt();

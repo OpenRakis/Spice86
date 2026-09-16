@@ -45,7 +45,7 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
                 return EmittedCode.Statements(
                     new BlockStatement($"if (JumpDispatcher.Jump({methodName}, 0x{loadOffset:X4}))", [
                         new LineStatement("loadOffset = JumpDispatcher.NextEntryAddress;"),
-                        new LineStatement("goto entrydispatcher;", Diverges: true)
+                        new GotoEntryDispatcherStatement()
                     ]),
                     new LineStatement("return JumpDispatcher.RequiredJumpAsmReturn;", Diverges: true));
             case CfgCodePartitionTransferKind.CallOut:
@@ -129,7 +129,7 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
         if (!forceGoto && ReferenceEquals(target, next)) {
             return EmittedCode.None;
         }
-        return EmittedCode.Diverging($"goto {context.GetLabel(target)};");
+        return EmittedCode.Statements(new GotoStatement(target));
     }
 
     private static EmittedCode PartitionReturn(string methodName, int loadOffset) =>

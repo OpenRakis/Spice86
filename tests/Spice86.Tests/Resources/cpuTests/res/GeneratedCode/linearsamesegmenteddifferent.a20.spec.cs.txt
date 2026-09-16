@@ -30,10 +30,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_FFEF_000D_FFEFD(int loadOffset) {
-    label_FFEF_000D_FFEFD_28:
         CheckExternalEvents(cs2, 0x000D);
         // FFEF:000D jmp near 0x0110
-    label_FFEF_0110_100000_29:
         CheckExternalEvents(cs2, 0x0110);
         // FFEF:0110 mov AX,2
         AX = (ushort)0x0002;

@@ -11,4 +11,7 @@ internal abstract record StatementItem {
     /// emitted only for a body that can actually fall off its end.
     /// </summary>
     public abstract bool CompletesNormally { get; }
+
+    /// <summary>The statement lists nested inside this item (bodies of blocks, switch cases, if/else arms, try/catch); empty for leaves.</summary>
+    public abstract IEnumerable<IReadOnlyList<StatementItem>> NestedBodies { get; }
 }

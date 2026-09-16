@@ -6,4 +6,5 @@ namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Statemen
 /// </summary>
 internal sealed record LineStatement(string Text, bool Diverges = false) : StatementItem {
     public override bool CompletesNormally => !Diverges;
+    public override IEnumerable<IReadOnlyList<StatementItem>> NestedBodies => [];
 }

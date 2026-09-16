@@ -40,7 +40,7 @@ internal static class GeneratedCodeMetricsCollector {
             Lines = lines,
             Labels = walker.Labels,
             GotoStatements = walker.GotoStatements,
-            DistinctGotoTargets = walker.GotoTargets.Count,
+            DistinctGotoTargets = walker.DistinctGotoTargetsPerMethod,
             CheckExternalEvents = walker.CheckExternalEvents,
             VerifySpeculativeEntryOrFail = walker.VerifySpeculativeEntryOrFail,
             FailAsUntested = walker.FailAsUntested,
@@ -57,6 +57,7 @@ internal static class GeneratedCodeMetricsCollector {
         public int Labels { get; private set; }
         public int GotoStatements { get; private set; }
         public HashSet<string> GotoTargets { get; } = new(StringComparer.Ordinal);
+        public int DistinctGotoTargetsPerMethod { get; private set; }
         public int CheckExternalEvents { get; private set; }
         public int VerifySpeculativeEntryOrFail { get; private set; }
         public int FailAsUntested { get; private set; }
@@ -66,7 +67,9 @@ internal static class GeneratedCodeMetricsCollector {
 
         public override void VisitMethodDeclaration(MethodDeclarationSyntax node) {
             Methods++;
+            GotoTargets.Clear();
             base.VisitMethodDeclaration(node);
+            DistinctGotoTargetsPerMethod += GotoTargets.Count;
         }
 
         public override void VisitLabeledStatement(LabeledStatementSyntax node) {
