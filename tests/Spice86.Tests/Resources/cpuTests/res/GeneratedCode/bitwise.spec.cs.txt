@@ -350,11 +350,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AX = (ushort)0x12B1;
         // F000:01D8 push AX
         Stack.Push16(AX);
-    label_F000_01D9_F01D9_163:
         CheckExternalEvents(cs1, 0x01D9);
         // F000:01D9 popf
         FlagRegister16 = Stack.Pop16();
-    label_F000_01DA_F01DA_326:
         CheckExternalEvents(cs1, 0x01DA);
         // F000:01DA not DX
         DX = unchecked((ushort)~DX);

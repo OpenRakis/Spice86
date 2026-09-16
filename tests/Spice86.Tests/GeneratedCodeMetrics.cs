@@ -14,6 +14,7 @@ internal sealed record GeneratedCodeMetrics {
     public required int Lines { get; init; }
     public required int Labels { get; init; }
     public required int GotoStatements { get; init; }
+    /// <summary>Distinct goto target identifiers summed per method (not file-wide), since the same label text can appear in multiple methods.</summary>
     public required int DistinctGotoTargets { get; init; }
     public required int CheckExternalEvents { get; init; }
     public required int VerifySpeculativeEntryOrFail { get; init; }

@@ -16,4 +16,6 @@ internal sealed record SwitchStatement(string Header, IReadOnlyList<SwitchCase> 
     public override bool CompletesNormally =>
         Cases.Any(switchCase => EmittedCode.SequenceCompletesNormally(switchCase.Body))
         || EmittedCode.SequenceCompletesNormally(Default);
+    public override IEnumerable<IReadOnlyList<StatementItem>> NestedBodies =>
+        Cases.Select(switchCase => switchCase.Body).Append(Default);
 }

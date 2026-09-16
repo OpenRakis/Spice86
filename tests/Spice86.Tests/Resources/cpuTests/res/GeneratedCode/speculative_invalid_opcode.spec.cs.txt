@@ -40,12 +40,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             throw FailAsUntested("Unobserved conditional jump target at F000:000A");
         }
-    label_F000_000C_F000C_8:
         CheckExternalEvents(cs1, 0x000C);
         // F000:000C mov byte ptr DS:[0x0401],0xDD
         UInt8[DS, (ushort)0x0401] = (byte)0xDD;
         // F000:0011 jmp short 0x0017
-    label_F000_0017_F0017_11:
         CheckExternalEvents(cs1, 0x0017);
         // F000:0017 mov byte ptr DS:[0x0402],0xEE
         UInt8[DS, (ushort)0x0402] = (byte)0xEE;

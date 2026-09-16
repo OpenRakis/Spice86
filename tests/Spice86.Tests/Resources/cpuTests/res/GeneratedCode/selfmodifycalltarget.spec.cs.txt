@@ -30,10 +30,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_23_F000_0028_F0028(int loadOffset) {
-    label_F000_0028_F0028_23:
         CheckExternalEvents(cs1, 0x0028);
         // F000:0028 jmp far F000:002E
-    label_F000_002E_F002E_26:
         CheckExternalEvents(cs1, 0x002E);
         // F000:002E mov byte ptr DS:[0x0010],0xAA
         UInt8[DS, (ushort)0x0010] = (byte)0xAA;
@@ -42,10 +40,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_40_F000_0028_F0028(int loadOffset) {
-    label_F000_0028_F0028_40:
         CheckExternalEvents(cs1, 0x0028);
         // F000:0028 jmp far F000:0034
-    label_F000_0034_F0034_43:
         CheckExternalEvents(cs1, 0x0034);
         // F000:0034 mov byte ptr DS:[0x0011],0xBB
         UInt8[DS, (ushort)0x0011] = (byte)0xBB;
@@ -54,10 +50,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_57_F000_0028_F0028(int loadOffset) {
-    label_F000_0028_F0028_57:
         CheckExternalEvents(cs1, 0x0028);
         // F000:0028 jmp far F000:003A
-    label_F000_003A_F003A_60:
         CheckExternalEvents(cs1, 0x003A);
         // F000:003A mov byte ptr DS:[0x0012],0xCC
         UInt8[DS, (ushort)0x0012] = (byte)0xCC;
@@ -66,7 +60,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_0040_F0040(int loadOffset) {
-    label_F000_0040_F0040_10:
         CheckExternalEvents(cs1, 0x0040);
         // F000:0040 mov word ptr ES:[0x0029],0x002E
         UInt16[ES, (ushort)0x0029] = (ushort)0x002E;
@@ -75,7 +68,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_0048_F0048(int loadOffset) {
-    label_F000_0048_F0048_33:
         CheckExternalEvents(cs1, 0x0048);
         // F000:0048 mov word ptr ES:[0x0029],0x0034
         UInt16[ES, (ushort)0x0029] = (ushort)0x0034;
@@ -84,7 +76,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_0050_F0050(int loadOffset) {
-    label_F000_0050_F0050_50:
         CheckExternalEvents(cs1, 0x0050);
         // F000:0050 mov word ptr ES:[0x0029],0x003A
         UInt16[ES, (ushort)0x0029] = (ushort)0x003A;
@@ -112,27 +103,21 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         ES = AX;
         // F000:000F call near 0x0040
         NearCall(cs1, 0x0012, unknown_F000_0040_F0040);
-    label_F000_0012_F0012_22:
         CheckExternalEvents(cs1, 0x0012);
         // F000:0012 call far F000:0028
         FarCall(cs1, 0x0017, cs1, unknown_23_F000_0028_F0028);
-    label_F000_0017_F0017_32:
         CheckExternalEvents(cs1, 0x0017);
         // F000:0017 call near 0x0048
         NearCall(cs1, 0x001A, unknown_F000_0048_F0048);
-    label_F000_001A_F001A_39:
         CheckExternalEvents(cs1, 0x001A);
         // F000:001A call far F000:0028
         FarCall(cs1, 0x001F, cs1, unknown_40_F000_0028_F0028);
-    label_F000_001F_F001F_49:
         CheckExternalEvents(cs1, 0x001F);
         // F000:001F call near 0x0050
         NearCall(cs1, 0x0022, unknown_F000_0050_F0050);
-    label_F000_0022_F0022_56:
         CheckExternalEvents(cs1, 0x0022);
         // F000:0022 call far F000:0028
         FarCall(cs1, 0x0027, cs1, unknown_57_F000_0028_F0028);
-    label_F000_0027_F0027_66:
         CheckExternalEvents(cs1, 0x0027);
         // F000:0027 hlt
         return Hlt();

@@ -29,7 +29,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_000F_F000F(int loadOffset) {
-    label_F000_000F_F000F_7:
         CheckExternalEvents(cs1, 0x000F);
         // F000:000F mov AX,0x1111
         AX = (ushort)0x1111;
@@ -38,7 +37,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_0014_F0014(int loadOffset) {
-    label_F000_0014_F0014_22:
         CheckExternalEvents(cs1, 0x0014);
         // F000:0014 mov BX,0x2222
         BX = (ushort)0x2222;
@@ -60,11 +58,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         SP = (ushort)0x0100;
         // F000:0008 call near 0x000F
         NearCall(cs1, 0x000B, unknown_F000_000F_F000F);
-    label_F000_000B_F000B_21:
         CheckExternalEvents(cs1, 0x000B);
         // F000:000B call near 0x0014
         NearCall(cs1, 0x000E, unknown_F000_0014_F0014);
-    label_F000_000E_F000E_29:
         CheckExternalEvents(cs1, 0x000E);
         // F000:000E hlt
         return Hlt();
@@ -75,7 +71,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_0019_F0019(int loadOffset) {
-    label_F000_0019_F0019_10:
         CheckExternalEvents(cs1, 0x0019);
         // F000:0019 mov CX,0x3333
         CX = (ushort)0x3333;

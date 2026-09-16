@@ -27,7 +27,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_0012_F0012(int loadOffset) {
-    label_F000_0012_F0012_13:
         CheckExternalEvents(cs1, 0x0012);
         // F000:0012 mov AX,0x1111
         AX = (ushort)0x1111;
@@ -57,7 +56,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             default:
                 throw FailAsUntested($"Unknown near call target 0x{((ushort)(BX)):X4} at F000:000B");
         }
-    label_F000_000D_F000D_17:
         CheckExternalEvents(cs1, 0x000D);
         // F000:000D mov BX,0x0016
         BX = (ushort)0x0016;
@@ -68,7 +66,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             default:
                 throw FailAsUntested($"Unknown near jump target 0x{((ushort)(BX)):X4} at F000:0010");
         }
-    label_F000_0016_F0016_21:
         CheckExternalEvents(cs1, 0x0016);
         // F000:0016 hlt
         return Hlt();

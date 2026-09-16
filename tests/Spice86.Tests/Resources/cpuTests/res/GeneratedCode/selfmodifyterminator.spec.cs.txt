@@ -27,7 +27,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_0022_F0022(int loadOffset) {
-    label_F000_0022_F0022_10:
         CheckExternalEvents(cs1, 0x0022);
         // F000:0022 cmp byte ptr DS:[0x0040],0
         Alu8.Sub(UInt8[DS, (ushort)0x0040], (byte)0x00);
@@ -35,7 +34,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (ZeroFlag) {
             goto label_F000_003B_F003B_13;
         }
-    label_F000_0029_F0029_15:
         CheckExternalEvents(cs1, 0x0029);
         // F000:0029 mov AX,0xF000
         AX = (ushort)0xF000;
@@ -77,7 +75,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Stack.Push16(AX);
         // F000:0011 call near 0x0022
         NearCall(cs1, 0x0014, unknown_F000_0022_F0022);
-    label_F000_0014_F0014_33:
         CheckExternalEvents(cs1, 0x0014);
         // F000:0014 mov AX,0x0042
         AX = (ushort)0x0042;
@@ -101,7 +98,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             goto label_F000_0010_F0010_8;
         }
-    label_F000_001B_F001B_39:
         CheckExternalEvents(cs1, 0x001B);
         VerifySpeculativeEntryOrFail(cs1, 0x001B, [(byte)0xB8, (byte)0xAD, (byte)0xDE]);
         // F000:001B mov AX,0xDEAD

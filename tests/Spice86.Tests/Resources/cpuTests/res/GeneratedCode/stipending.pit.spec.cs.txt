@@ -27,7 +27,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_004E_F004E(int loadOffset) {
-    label_F000_004E_F004E_51:
         CheckExternalEvents(cs1, 0x004E);
         // F000:004E push AX
         Stack.Push16(AX);
@@ -79,7 +78,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AL = (byte)0x00;
         // F000:0025 out 0x21,AL
         Machine.IoPortDispatcher.WriteByte(unchecked((ushort)(byte)0x21), AL);
-    label_F000_0027_F0027_18:
         CheckExternalEvents(cs1, 0x0027);
         // F000:0027 cli
         InterruptFlag = false;
@@ -94,7 +92,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (CX != (ushort)0x0000) {
             goto label_F000_0031_F0031_22;
         }
-    label_F000_0033_F0033_25:
         CheckExternalEvents(cs1, 0x0033);
         // F000:0033 sti
         if (!InterruptFlag) {
@@ -103,7 +100,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         else {
         }
         InterruptFlag = true;
-    label_F000_0034_F0034_47:
         CheckExternalEvents(cs1, 0x0034);
         // F000:0034 nop
         // F000:0035 mov word ptr DS:[0],DX
@@ -115,11 +111,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         else {
         }
         InterruptFlag = true;
-    label_F000_003A_F003A_65:
         CheckExternalEvents(cs1, 0x003A);
         // F000:003A pushf
         Stack.Push16(FlagRegister16);
-    label_F000_003B_F003B_66:
         CheckExternalEvents(cs1, 0x003B);
         // F000:003B cli
         InterruptFlag = false;
@@ -134,11 +128,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (CX != (ushort)0x0000) {
             goto label_F000_0045_F0045_71;
         }
-    label_F000_0047_F0047_74:
         CheckExternalEvents(cs1, 0x0047);
         // F000:0047 popf
         FlagRegister16 = Stack.Pop16();
-    label_F000_0048_F0048_81:
         CheckExternalEvents(cs1, 0x0048);
         // F000:0048 nop
         // F000:0049 mov word ptr DS:[1],DX
