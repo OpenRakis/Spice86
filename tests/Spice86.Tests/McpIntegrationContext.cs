@@ -141,6 +141,7 @@ internal sealed class McpIntegrationContext : IAsyncDisposable {
         services.Opl3Fm = spice86.McpServices.Opl3Fm;
         services.PcSpeaker = spice86.McpServices.PcSpeaker;
         services.Midi = spice86.McpServices.Midi;
+        services.GravisUltraSound = spice86.McpServices.GravisUltraSound;
         services.VgaFunctionality = spice86.McpServices.VgaFunctionality;
         services.BiosDataArea = spice86.McpServices.BiosDataArea;
         services.InterruptVectorTable = spice86.McpServices.InterruptVectorTable;
