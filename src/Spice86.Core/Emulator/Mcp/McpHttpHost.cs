@@ -22,6 +22,7 @@ internal sealed class McpHttpHost : IAsyncDisposable {
     private Thread? _serverThread;
     private readonly ILogger _loggerService;
     private Logger? _mcpFileLogger;
+    private readonly ManualResetEvent _shutdownRequested = new(false);
     private bool _disposed;
 
     public McpHttpHost(ILogger loggerService) {
@@ -71,16 +72,24 @@ internal sealed class McpHttpHost : IAsyncDisposable {
             }
         }
 
-        builder.WebHost.ConfigureKestrel(kestrel => {
-            kestrel.ListenLocalhost(port);
-        });
-
+        builder.WebHost.UseUrls($"http://localhost:{port}");
         _app = builder.Build();
         _app.MapGet("/health", () => Results.Json(new {
             status = "ok",
             service = "Spice86 MCP Server"
         }));
         _app.MapMcp("/mcp");
+
+        // The MCP SDK does not map GET /mcp in stateless mode (POST only), but
+        // some clients (including opencode remote MCP) probe with GET first.
+        // Return a minimal SSE endpoint event telling the client to POST here.
+        _app.MapGet("/mcp", async (HttpContext context) => {
+            context.Response.Headers.ContentType = "text/event-stream";
+            context.Response.Headers.CacheControl = "no-cache,no-store";
+            context.Response.Headers["X-Accel-Buffering"] = "no";
+            await context.Response.WriteAsync("event: endpoint\ndata: /mcp/\n\n");
+            await context.Response.Body.FlushAsync();
+        });
 
         _serverThread = new Thread(RunServerLoop) {
             Name = "McpHttpHost",
@@ -96,12 +105,20 @@ internal sealed class McpHttpHost : IAsyncDisposable {
         }
 
         try {
-            _app.Run();
+            _app.StartAsync().GetAwaiter().GetResult();
+            _loggerService.LogInformation("MCP HTTP server is now listening");
         } catch (ObjectDisposedException) {
             // Host disposed while thread was exiting.
-        } catch (InvalidOperationException ex) {
-            _loggerService.LogError(ex, "MCP HTTP server stopped unexpectedly");
+            return;
+        } catch (Exception ex) {
+            _loggerService.LogError(ex, "MCP HTTP server crashed");
+            return;
         }
+
+        // Keep this thread alive until the host is asked to stop. Using _app.Run()
+        // here caused premature shutdown on background threads because
+        // ConsoleLifetime has no console to watch on a non-main thread.
+        _shutdownRequested.WaitOne();
     }
 
     public void Stop() {
@@ -109,12 +126,14 @@ internal sealed class McpHttpHost : IAsyncDisposable {
             return;
         }
         _disposed = true;
+        _shutdownRequested.Set();
         _app?.Lifetime.StopApplication();
         if (_serverThread is { IsAlive: true }) {
             _serverThread.Join(ShutdownJoinTimeout);
         }
         _app = null;
         _serverThread = null;
+        _shutdownRequested.Dispose();
         _mcpFileLogger?.Dispose();
         _mcpFileLogger = null;
     }
@@ -124,6 +143,7 @@ internal sealed class McpHttpHost : IAsyncDisposable {
             return;
         }
         _disposed = true;
+        _shutdownRequested.Set();
         if (_app != null) {
             _app.Lifetime.StopApplication();
             if (_serverThread is { IsAlive: true }) {
@@ -133,6 +153,7 @@ internal sealed class McpHttpHost : IAsyncDisposable {
             _app = null;
             _serverThread = null;
         }
+        _shutdownRequested.Dispose();
         _mcpFileLogger?.Dispose();
         _mcpFileLogger = null;
         GC.SuppressFinalize(this);
