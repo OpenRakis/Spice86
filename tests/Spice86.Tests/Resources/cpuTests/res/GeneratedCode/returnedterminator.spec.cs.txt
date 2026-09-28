@@ -38,7 +38,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0005 mov SP,8
         SP = (ushort)0x0008;
         // F000:0008 jmp short 0x000A
-    label_F000_000A_F000A_7:
         CheckExternalEvents(cs1, 0x000A);
         // F000:000A mov AX,0x1111
         AX = (ushort)0x1111;
@@ -49,7 +48,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0011 push AX
         Stack.Push16(AX);
         // F000:0012 jmp short 0x0019
-    label_F000_0019_F0019_13:
         CheckExternalEvents(cs1, 0x0019);
         // F000:0019 hlt
         return Hlt();

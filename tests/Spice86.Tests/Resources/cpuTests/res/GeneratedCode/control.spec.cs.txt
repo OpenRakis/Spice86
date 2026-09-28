@@ -41,17 +41,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CX = (ushort)0xFEFF;
         // F000:000B push CX
         Stack.Push16(CX);
-    label_F000_000C_F000C_8:
         CheckExternalEvents(cs1, 0x000C);
         // F000:000C popf
         FlagRegister16 = Stack.Pop16();
-    label_F000_000D_F000D_16:
         CheckExternalEvents(cs1, 0x000D);
         // F000:000D clc
         CarryFlag = false;
         // F000:000E cld
         DirectionFlag = false;
-    label_F000_000F_F000F_19:
         CheckExternalEvents(cs1, 0x000F);
         // F000:000F cli
         InterruptFlag = false;
@@ -64,11 +61,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         DX = (ushort)0x0001;
         // F000:0016 push DX
         Stack.Push16(DX);
-    label_F000_0017_F0017_26:
         CheckExternalEvents(cs1, 0x0017);
         // F000:0017 popf
         FlagRegister16 = Stack.Pop16();
-    label_F000_0018_F0018_36:
         CheckExternalEvents(cs1, 0x0018);
         // F000:0018 cmc
         CarryFlag = !CarryFlag;
@@ -83,7 +78,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         else {
         }
         InterruptFlag = true;
-    label_F000_001C_F001C_44:
         CheckExternalEvents(cs1, 0x001C);
         // F000:001C pushf
         Stack.Push16(FlagRegister16);

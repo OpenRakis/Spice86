@@ -40,7 +40,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (ZeroFlag) {
             goto label_F000_0013_F0013_7;
         }
-    label_F000_000C_F000C_9:
         CheckExternalEvents(cs1, 0x000C);
         VerifySpeculativeEntryOrFail(cs1, 0x000C, [(byte)0xC6, (byte)0x06, (byte)0x01, (byte)0x04, (byte)0xEE]);
         // F000:000C mov byte ptr DS:[0x0401],0xEE

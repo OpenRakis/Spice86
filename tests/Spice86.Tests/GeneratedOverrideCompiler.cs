@@ -20,7 +20,8 @@ internal sealed class GeneratedOverrideCompiler {
             assemblyName: "Spice86.GeneratedCode.Tests." + Guid.NewGuid().ToString("N"),
             syntaxTrees: [syntaxTree],
             references: PlatformMetadataReferences,
-            options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+            options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
+                .WithGeneralDiagnosticOption(ReportDiagnostic.Error));
 
         MemoryStream peStream = new();
         EmitResult emitResult = compilation.Emit(peStream);

@@ -31,7 +31,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_001D_F001D(int loadOffset) {
-    label_F000_001D_F001D_8:
         CheckExternalEvents(cs1, 0x001D);
         // F000:001D cmp AL,0
         Alu8.Sub(AL, (byte)0x00);
@@ -39,14 +38,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (ZeroFlag) {
             return unknown_F000_0029_F0029(0x0000);
         }
-    label_F000_0021_F0021_13:
         CheckExternalEvents(cs1, 0x0021);
         // F000:0021 jmp short 0x002E
         return unknown_F000_002E_F002E(0x0000);
     }
 
     public virtual Action unknown_F000_0023_F0023(int loadOffset) {
-    label_F000_0023_F0023_45:
         CheckExternalEvents(cs1, 0x0023);
         // F000:0023 cmp AL,0
         Alu8.Sub(AL, (byte)0x00);
@@ -54,7 +51,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (ZeroFlag) {
             return unknown_F000_0029_F0029(0x0000);
         }
-    label_F000_0027_F0027_49:
         CheckExternalEvents(cs1, 0x0027);
         // F000:0027 jmp short 0x002E
         return unknown_F000_002E_F002E(0x0000);
@@ -76,25 +72,21 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AL = (byte)0x00;
         // F000:000A call near 0x001D
         NearCall(cs1, 0x000D, unknown_F000_001D_F001D);
-    label_F000_000D_F000D_34:
         CheckExternalEvents(cs1, 0x000D);
         // F000:000D mov AL,1
         AL = (byte)0x01;
         // F000:000F call near 0x001D
         NearCall(cs1, 0x0012, unknown_F000_001D_F001D);
-    label_F000_0012_F0012_42:
         CheckExternalEvents(cs1, 0x0012);
         // F000:0012 mov AL,0
         AL = (byte)0x00;
         // F000:0014 call near 0x0023
         NearCall(cs1, 0x0017, unknown_F000_0023_F0023);
-    label_F000_0017_F0017_55:
         CheckExternalEvents(cs1, 0x0017);
         // F000:0017 mov AL,1
         AL = (byte)0x01;
         // F000:0019 call near 0x0023
         NearCall(cs1, 0x001C, unknown_F000_0023_F0023);
-    label_F000_001C_F001C_61:
         CheckExternalEvents(cs1, 0x001C);
         // F000:001C hlt
         return Hlt();
@@ -105,7 +97,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_0029_F0029(int loadOffset) {
-    label_F000_0029_F0029_11:
         CheckExternalEvents(cs1, 0x0029);
         // F000:0029 mov BX,0xA111
         BX = (ushort)0xA111;
@@ -114,7 +105,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_002E_F002E(int loadOffset) {
-    label_F000_002E_F002E_16:
         CheckExternalEvents(cs1, 0x002E);
         // F000:002E mov BX,0xB222
         BX = (ushort)0xB222;
@@ -123,7 +113,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_0033_F0033(int loadOffset) {
-    label_F000_0033_F0033_18:
         CheckExternalEvents(cs1, 0x0033);
         // F000:0033 mov CX,0xC333
         CX = (ushort)0xC333;

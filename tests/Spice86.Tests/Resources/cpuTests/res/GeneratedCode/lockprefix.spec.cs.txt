@@ -30,8 +30,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_0045_F0045(int loadOffset) {
-    entrydispatcher:
-    label_F000_0045_F0045_49:
         CheckExternalEvents(cs1, 0x0045);
         // F000:0045 mov word ptr DS:[4],0x004E
         UInt16[DS, (ushort)0x0004] = (ushort)0x004E;
@@ -51,8 +49,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_004E_F004E(int loadOffset) {
-    entrydispatcher:
-    label_F000_004E_F004E_55:
         CheckExternalEvents(cs1, 0x004E);
         // F000:004E mov word ptr DS:[4],0x0057
         UInt16[DS, (ushort)0x0004] = (ushort)0x0057;
@@ -72,14 +68,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_0057_F0057(int loadOffset) {
-    label_F000_0057_F0057_61:
         CheckExternalEvents(cs1, 0x0057);
         // F000:0057 hlt
         return Hlt();
     }
 
     public virtual Action unknown_F000_005A_F005A(int loadOffset) {
-    label_F000_005A_F005A_35:
         CheckExternalEvents(cs1, 0x005A);
         // F000:005A push BP
         Stack.Push16(BP);

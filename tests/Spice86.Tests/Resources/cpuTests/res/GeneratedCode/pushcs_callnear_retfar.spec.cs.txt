@@ -30,13 +30,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F100_0000_F1000(int loadOffset) {
-    label_F100_0000_F1000_7:
         CheckExternalEvents(cs2, 0x0000);
         // F100:0000 push CS
         Stack.Push16(CS);
         // F100:0001 call near 8
         NearCall(cs2, 0x0004, unknown_F100_0008_F1008);
-    label_F100_0004_F1004_21:
         CheckExternalEvents(cs2, 0x0004);
         // F100:0004 mov AX,0x0042
         AX = (ushort)0x0042;
@@ -45,7 +43,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F100_0008_F1008(int loadOffset) {
-    label_F100_0008_F1008_10:
         CheckExternalEvents(cs2, 0x0008);
         // F100:0008 xor BX,BX
         BX = Alu16.Xor(BX, BX);
@@ -67,7 +64,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         SP = (ushort)0x0100;
         // F000:0008 call far F100:0000
         FarCall(cs1, 0x000D, cs2, unknown_F100_0000_F1000);
-    label_F000_000D_F000D_25:
         CheckExternalEvents(cs1, 0x000D);
         // F000:000D mov word ptr DS:[0],AX
         UInt16[DS, (ushort)0x0000] = AX;

@@ -27,7 +27,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_0017_F0017(int loadOffset) {
-    label_F000_0017_F0017_8:
         CheckExternalEvents(cs1, 0x0017);
         // F000:0017 cmp byte ptr DS:[0x002B],0
         Alu8.Sub(UInt8[DS, (ushort)0x002B], (byte)0x00);
@@ -35,7 +34,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (ZeroFlag) {
             goto label_F000_002A_F002A_11;
         }
-    label_F000_001E_F001E_13:
         CheckExternalEvents(cs1, 0x001E);
         // F000:001E mov AX,0xF000
         AX = (ushort)0xF000;

@@ -11,4 +11,5 @@ internal sealed record BlockStatement(string Header, IReadOnlyList<StatementItem
     // composed by the visitor as two BlockStatements; recognizing that pairing is intentionally out of
     // scope here, so a conservative `true` keeps the trailing throw whenever completion is uncertain.
     public override bool CompletesNormally => true;
+    public override IEnumerable<IReadOnlyList<StatementItem>> NestedBodies => [Body];
 }

@@ -27,7 +27,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_001B_F001B(int loadOffset) {
-    label_F000_001B_F001B_11:
         CheckExternalEvents(cs1, 0x001B);
         VerifySpeculativeEntryOrFail(cs1, 0x001B, [(byte)0xB0, (byte)0x42]);
         // F000:001B mov AL,0x42
@@ -52,7 +51,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             goto label_F000_0013_F0013_7;
         }
-    label_F000_000C_F000C_9:
         CheckExternalEvents(cs1, 0x000C);
         // F000:000C mov byte ptr DS:[0x0401],0xDD
         UInt8[DS, (ushort)0x0401] = (byte)0xDD;

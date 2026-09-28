@@ -41,11 +41,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         else {
         }
         InterruptFlag = true;
-    label_F000_0006_F0006_9:
         CheckExternalEvents(cs1, 0x0006);
         // F000:0006 mov AX,0x1234
         AX = (ushort)0x1234;
-    label_F000_0009_F0009_10:
         CheckExternalEvents(cs1, 0x0009);
         // F000:0009 cli
         InterruptFlag = false;

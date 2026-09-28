@@ -33,7 +33,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_0000_F0000_1:
         CheckExternalEvents(cs2, 0x0000);
         // F000:0000 jmp short 0x000E
-    label_F000_000E_F000E_4:
         CheckExternalEvents(cs2, 0x000E);
         // F000:000E mov BX,0xF000
         BX = (ushort)0xF000;
@@ -48,10 +47,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             default:
                 throw FailAsUntested($"Unknown near jump target 0x{((ushort)(AX)):X4} at F000:0016");
         }
-    label_F000_1290_F1290_14:
         CheckExternalEvents(cs2, 0x1290);
         // F000:1290 jmp far E342:EBE0
-    label_E342_EBE0_F2000_15:
         CheckExternalEvents(cs1, 0xEBE0);
         // E342:EBE0 mov BX,0x1000
         BX = (ushort)0x1000;
@@ -85,7 +82,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             default:
                 throw FailAsUntested($"Unknown near jump target 0x{((ushort)(UInt16[SS, (ushort)(BP + DI + (sbyte)-22)])):X4} at E342:EC05");
         }
-    label_E342_FBE1_F3001_43:
         CheckExternalEvents(cs1, 0xFBE1);
         // E342:FBE1 mov DX,0xF100
         DX = (ushort)0xF100;

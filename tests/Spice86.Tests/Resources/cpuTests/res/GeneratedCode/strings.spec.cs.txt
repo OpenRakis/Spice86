@@ -31,7 +31,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_0046_F0046(int loadOffset) {
-    label_F000_0046_F0046_25:
         CheckExternalEvents(cs1, 0x0046);
         // F000:0046 cmps byte ptr DS:[SI],byte ptr ES:[DI]
         Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
@@ -44,7 +43,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_0082_F0082(int loadOffset) {
-    label_F000_0082_F0082_31:
         CheckExternalEvents(cs1, 0x0082);
         // F000:0082 cmps byte ptr DS:[SI],byte ptr ES:[DI]
         Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
@@ -57,7 +55,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_0097_F0097(int loadOffset) {
-    label_F000_0097_F0097_19:
         CheckExternalEvents(cs1, 0x0097);
         // F000:0097 cmps byte ptr DS:[SI],byte ptr ES:[DI]
         Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
@@ -70,7 +67,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_0812_F0812(int loadOffset) {
-    label_F000_0812_F0812_37:
         CheckExternalEvents(cs1, 0x0812);
         // F000:0812 cmps word ptr DS:[SI],word ptr ES:[DI]
         Alu16.Sub(UInt16[DS, SI], UInt16[ES, DI]);
@@ -83,7 +79,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_0883_F0883(int loadOffset) {
-    label_F000_0883_F0883_43:
         CheckExternalEvents(cs1, 0x0883);
         // F000:0883 mov AH,0x10
         AH = (byte)0x10;
@@ -99,7 +94,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             default:
                 throw FailAsUntested($"Unknown near jump target 0x{((ushort)(AX)):X4} at F000:0887");
         }
-    label_F000_10C2_F10C2_51:
         CheckExternalEvents(cs1, 0x10C2);
         // F000:10C2 lods AX,word ptr DS:[SI]
         AX = UInt16[DS, SI];
@@ -124,7 +118,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (ZeroFlag) {
             goto label_F000_1350_F1350_94;
         }
-    label_F000_1307_F1307_96:
         CheckExternalEvents(cs1, 0x1307);
         VerifySpeculativeEntryOrFail(cs1, 0x1307, [(byte)0xF4]);
         // F000:1307 hlt
@@ -145,7 +138,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             default:
                 throw FailAsUntested($"Unknown near jump target 0x{((ushort)(UInt16[DS, DI])):X4} at F000:1354");
         }
-    label_F000_8013_F8013_108:
         CheckExternalEvents(cs1, 0x8013);
         // F000:8013 mov AX,0xD000
         AX = (ushort)0xD000;
@@ -176,7 +168,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             default:
                 throw FailAsUntested($"Unknown near jump target 0x{((ushort)(UInt16[DS, (ushort)(DI + (sbyte)2)])):X4} at F000:80C7");
         }
-    label_F000_80FF_F80FF_77:
         CheckExternalEvents(cs1, 0x80FF);
         // F000:80FF mov DI,0x2002
         DI = (ushort)0x2002;

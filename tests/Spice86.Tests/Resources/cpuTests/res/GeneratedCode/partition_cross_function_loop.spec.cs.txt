@@ -29,7 +29,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
 
     public virtual Action unknown_F000_0015_F0015(int loadOffset) {
     entrydispatcher:
-    label_F000_0015_F0015_8:
         CheckExternalEvents(cs1, 0x0015);
         // F000:0015 dec CX
         CX = Alu16.Dec(CX);
@@ -37,7 +36,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (ZeroFlag) {
             goto label_F000_001A_F001A_11;
         }
-    label_F000_0018_F0018_13:
         CheckExternalEvents(cs1, 0x0018);
         // F000:0018 jmp short 0x001B
         if (JumpDispatcher.Jump(unknown_F000_001B_F001B, 0x0000)) {
@@ -53,7 +51,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
 
     public virtual Action unknown_F000_001B_F001B(int loadOffset) {
     entrydispatcher:
-    label_F000_001B_F001B_15:
         CheckExternalEvents(cs1, 0x001B);
         // F000:001B dec CX
         CX = Alu16.Dec(CX);
@@ -61,7 +58,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (ZeroFlag) {
             goto label_F000_0020_F0020_18;
         }
-    label_F000_001E_F001E_20:
         CheckExternalEvents(cs1, 0x001E);
         // F000:001E jmp short 0x0015
         if (JumpDispatcher.Jump(unknown_F000_0015_F0015, 0x0000)) {
@@ -91,13 +87,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CX = (ushort)0x0002;
         // F000:000B call near 0x0015
         NearCall(cs1, 0x000E, unknown_F000_0015_F0015);
-    label_F000_000E_F000E_34:
         CheckExternalEvents(cs1, 0x000E);
         // F000:000E mov CX,2
         CX = (ushort)0x0002;
         // F000:0011 call near 0x001B
         NearCall(cs1, 0x0014, unknown_F000_001B_F001B);
-    label_F000_0014_F0014_41:
         CheckExternalEvents(cs1, 0x0014);
         // F000:0014 hlt
         return Hlt();

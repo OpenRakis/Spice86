@@ -40,7 +40,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             goto label_F000_0013_F0013_7;
         }
-    label_F000_000C_F000C_9:
         CheckExternalEvents(cs1, 0x000C);
         // F000:000C mov byte ptr DS:[0x0401],0xAA
         UInt8[DS, (ushort)0x0401] = (byte)0xAA;

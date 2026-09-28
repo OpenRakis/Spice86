@@ -29,7 +29,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_0065_F0065(int loadOffset) {
-    label_F000_0065_F0065_31:
         CheckExternalEvents(cs1, 0x0065);
         // F000:0065 sub SP,6
         SP = Alu16.Sub(SP, unchecked((ushort)unchecked((short)(sbyte)6)));
@@ -50,7 +49,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_1100_F1100(int loadOffset) {
-    label_F000_1100_F1100_64:
         CheckExternalEvents(cs1, 0x1100);
         // F000:1100 mov SI,SP
         SI = SP;
@@ -69,7 +67,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_1200_F1200(int loadOffset) {
-    label_F000_1200_F1200_84:
         CheckExternalEvents(cs1, 0x1200);
         // F000:1200 mov CX,0xF120
         CX = (ushort)0xF120;

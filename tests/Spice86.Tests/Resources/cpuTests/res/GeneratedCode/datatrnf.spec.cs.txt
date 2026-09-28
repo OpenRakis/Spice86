@@ -107,11 +107,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         ES = CX;
         // F000:0052 push ES
         Stack.Push16(ES);
-    label_F000_0053_F0053_38:
         CheckExternalEvents(cs1, 0x0053);
         // F000:0053 popf
         FlagRegister16 = Stack.Pop16();
-    label_F000_0054_F0054_76:
         CheckExternalEvents(cs1, 0x0054);
         // F000:0054 les DI,word ptr DS:[BX+SI-46]
         ushort lxsOffset_F000_0054_F0054 = unchecked((ushort)(BX + SI + (sbyte)-46));

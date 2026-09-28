@@ -27,7 +27,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_003F_F003F(int loadOffset) {
-    label_F000_003F_F003F_51:
         CheckExternalEvents(cs1, 0x003F);
         // F000:003F push AX
         Stack.Push16(AX);
@@ -84,7 +83,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         else {
         }
         InterruptFlag = true;
-    label_F000_0026_F0026_33:
         CheckExternalEvents(cs1, 0x0026);
         // F000:0026 mov ECX,0x00FFFFFF
         ECX = 0x00FFFFFFu;
@@ -101,7 +99,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (CX != (ushort)0x0000) {
             goto label_F000_002C_F002C_34;
         }
-    label_F000_0033_F0033_41:
         CheckExternalEvents(cs1, 0x0033);
         // F000:0033 cmp DX,0
         Alu16.Sub(DX, (ushort)0x0000);

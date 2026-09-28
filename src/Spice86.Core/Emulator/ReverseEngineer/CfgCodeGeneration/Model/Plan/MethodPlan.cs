@@ -13,8 +13,7 @@ internal sealed class MethodPlan {
         IReadOnlyList<CfgBlock> blocks,
         IReadOnlyList<ICfgNode> nodes,
         IReadOnlyList<NodeEmissionPlan> nodeEmissionPlans,
-        Dictionary<ICfgNode, ICfgNode?> nextNodeByNode,
-        bool isCyclicFlowParticipant) {
+        Dictionary<ICfgNode, ICfgNode?> nextNodeByNode) {
         Partition = partition;
         MethodName = methodName;
         Entries = entries;
@@ -22,7 +21,6 @@ internal sealed class MethodPlan {
         Nodes = nodes;
         NodeEmissionPlans = nodeEmissionPlans;
         _nextNodeByNode = nextNodeByNode;
-        IsCyclicFlowParticipant = isCyclicFlowParticipant;
     }
 
     public CfgCodePartition Partition { get; }
@@ -33,19 +31,6 @@ internal sealed class MethodPlan {
     public IReadOnlyList<ICfgNode> Nodes { get; }
     public IReadOnlyList<NodeEmissionPlan> NodeEmissionPlans { get; }
     public bool NeedsEntryDispatch => Entries.Count > 1;
-
-    /// <summary>
-    /// True when this partition is the source or target of a <c>CyclicCrossPartitionFlow</c> transfer. Such a
-    /// transfer's back-edge re-enters the target method's <c>entrydispatcher</c> label, so a participant must
-    /// emit that label even with a single entry.
-    /// </summary>
-    public bool IsCyclicFlowParticipant { get; }
-
-    /// <summary>
-    /// Whether the <c>entrydispatcher</c> label must be emitted: for multi-entry methods (the
-    /// <c>loadOffset</c> switch) or cyclic-flow participants (the back-edge target).
-    /// </summary>
-    public bool NeedsEntryDispatchLabel => NeedsEntryDispatch || IsCyclicFlowParticipant;
 
     public ICfgNode? GetNextEmittedNode(ICfgNode node) => _nextNodeByNode[node];
 }
