@@ -31,7 +31,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_0000_F0000_1:
         CheckExternalEvents(cs1, 0x0000);
         // F000:0000 mov AX,0x1000
-        AX = (ushort)0x1000;
+        AX = 0x1000;
         // F000:0003 mov DS,AX
         DS = AX;
         // F000:0005 sti
@@ -43,7 +43,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         InterruptFlag = true;
         CheckExternalEvents(cs1, 0x0006);
         // F000:0006 mov AX,0x1234
-        AX = (ushort)0x1234;
+        AX = 0x1234;
         CheckExternalEvents(cs1, 0x0009);
         // F000:0009 cli
         InterruptFlag = false;

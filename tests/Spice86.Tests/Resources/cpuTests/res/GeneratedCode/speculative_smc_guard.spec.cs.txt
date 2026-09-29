@@ -31,9 +31,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_0000_F0000_1:
         CheckExternalEvents(cs1, 0x0000);
         // F000:0000 mov byte ptr DS:[0x0400],1
-        UInt8[DS, (ushort)0x0400] = (byte)0x01;
+        UInt8[DS, 0x0400] = 1;
         // F000:0005 mov AL,byte ptr DS:[0x0500]
-        AL = UInt8[DS, (ushort)0x0500];
+        AL = UInt8[DS, 0x0500];
         // F000:0008 and AL,AL
         Alu8.And(AL, AL);
         // F000:000A jne short 0x0013
@@ -42,23 +42,23 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         CheckExternalEvents(cs1, 0x000C);
         // F000:000C mov byte ptr DS:[0x0401],0xDD
-        UInt8[DS, (ushort)0x0401] = (byte)0xDD;
+        UInt8[DS, 0x0401] = 0xDD;
         // F000:0011 jmp short 0x0020
         goto label_F000_0020_F0020_14;
     label_F000_0013_F0013_7:
         CheckExternalEvents(cs1, 0x0013);
         VerifySpeculativeEntryOrFail(cs1, 0x0013, [(byte)0x2E, (byte)0xC6, (byte)0x06, (byte)0x1A, (byte)0x00, (byte)0xEE]);
         // F000:0013 mov byte ptr CS:[0x001A],0xEE
-        UInt8[CS, (ushort)0x001A] = (byte)0xEE;
+        UInt8[CS, 0x001A] = 0xEE;
         VerifySpeculativeEntryOrFail(cs1, 0x0019, [(byte)0xC6, (byte)0x06, (byte)0x01, (byte)0x04, (byte)0x00]);
         // F000:0019 mov byte ptr DS:[0x0401],0
-        UInt8[DS, (ushort)0x0401] = (byte)0x00;
+        UInt8[DS, 0x0401] = 0;
         VerifySpeculativeEntryOrFail(cs1, 0x001E, [(byte)0xEB, (byte)0x00]);
         // F000:001E jmp short 0x0020
     label_F000_0020_F0020_14:
         CheckExternalEvents(cs1, 0x0020);
         // F000:0020 mov byte ptr DS:[0x0402],0xAA
-        UInt8[DS, (ushort)0x0402] = (byte)0xAA;
+        UInt8[DS, 0x0402] = 0xAA;
         // F000:0025 hlt
         return Hlt();
     label_F000_FFF0_FFFF0_0:

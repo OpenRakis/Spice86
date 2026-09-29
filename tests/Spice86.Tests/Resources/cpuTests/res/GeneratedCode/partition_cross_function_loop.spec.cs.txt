@@ -46,7 +46,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_001A_F001A_11:
         CheckExternalEvents(cs1, 0x001A);
         // F000:001A ret near
-        return NearRet((ushort)0x0000);
+        return NearRet(0);
     }
 
     public virtual Action unknown_F000_001B_F001B(int loadOffset) {
@@ -68,7 +68,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_0020_F0020_18:
         CheckExternalEvents(cs1, 0x0020);
         // F000:0020 ret near
-        return NearRet((ushort)0x0000);
+        return NearRet(0);
     }
 
     public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
@@ -77,19 +77,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_0000_F0000_1:
         CheckExternalEvents(cs1, 0x0000);
         // F000:0000 mov AX,0x1000
-        AX = (ushort)0x1000;
+        AX = 0x1000;
         // F000:0003 mov SS,AX
         SS = AX;
         State.InterruptShadowing = true;
         // F000:0005 mov SP,0x0100
-        SP = (ushort)0x0100;
+        SP = 0x0100;
         // F000:0008 mov CX,2
-        CX = (ushort)0x0002;
+        CX = 2;
         // F000:000B call near 0x0015
         NearCall(cs1, 0x000E, unknown_F000_0015_F0015);
         CheckExternalEvents(cs1, 0x000E);
         // F000:000E mov CX,2
-        CX = (ushort)0x0002;
+        CX = 2;
         // F000:0011 call near 0x001B
         NearCall(cs1, 0x0014, unknown_F000_001B_F001B);
         CheckExternalEvents(cs1, 0x0014);

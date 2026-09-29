@@ -37,9 +37,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         NearCall(cs2, 0x0004, unknown_F100_0008_F1008);
         CheckExternalEvents(cs2, 0x0004);
         // F100:0004 mov AX,0x0042
-        AX = (ushort)0x0042;
+        AX = 0x0042;
         // F100:0007 ret far
-        return FarRet((ushort)0x0000);
+        return FarRet(0);
     }
 
     public virtual Action unknown_F100_0008_F1008(int loadOffset) {
@@ -47,7 +47,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F100:0008 xor BX,BX
         BX = Alu16.Xor(BX, BX);
         // F100:000A ret far
-        return FarRet((ushort)0x0000);
+        return FarRet(0);
     }
 
     public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
@@ -56,17 +56,17 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_0000_F0000_1:
         CheckExternalEvents(cs1, 0x0000);
         // F000:0000 mov AX,0x1000
-        AX = (ushort)0x1000;
+        AX = 0x1000;
         // F000:0003 mov SS,AX
         SS = AX;
         State.InterruptShadowing = true;
         // F000:0005 mov SP,0x0100
-        SP = (ushort)0x0100;
+        SP = 0x0100;
         // F000:0008 call far F100:0000
         FarCall(cs1, 0x000D, cs2, unknown_F100_0000_F1000);
         CheckExternalEvents(cs1, 0x000D);
         // F000:000D mov word ptr DS:[0],AX
-        UInt16[DS, (ushort)0x0000] = AX;
+        UInt16[DS, 0] = AX;
         // F000:0010 hlt
         return Hlt();
     label_F000_FFF0_FFFF0_0:

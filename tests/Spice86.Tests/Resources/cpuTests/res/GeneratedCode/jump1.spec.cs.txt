@@ -31,11 +31,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_0000_F0000_1:
         CheckExternalEvents(cs1, 0x0000);
         // F000:0000 mov CX,0
-        CX = (ushort)0x0000;
+        CX = 0;
         // F000:0003 mov BX,0x0040
-        BX = (ushort)0x0040;
+        BX = 0x0040;
         // F000:0006 mov SP,0x1000
-        SP = (ushort)0x1000;
+        SP = 0x1000;
         // F000:0009 mov SS,SP
         SS = SP;
         State.InterruptShadowing = true;
@@ -158,7 +158,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_0039_F0039_88:
         CheckExternalEvents(cs1, 0x0039);
         // F000:0039 mov DX,0x08C0
-        DX = (ushort)0x08C0;
+        DX = 0x08C0;
         // F000:003C push DX
         Stack.Push16(DX);
         CheckExternalEvents(cs1, 0x003D);
@@ -171,7 +171,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         CheckExternalEvents(cs1, 0x0040);
         // F000:0040 mov DX,0x0880
-        DX = (ushort)0x0880;
+        DX = 0x0880;
         // F000:0043 push DX
         Stack.Push16(DX);
         CheckExternalEvents(cs1, 0x0044);
@@ -190,7 +190,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_0049_F0049_112:
         CheckExternalEvents(cs1, 0x0049);
         // F000:0049 mov DX,0x0080
-        DX = (ushort)0x0080;
+        DX = 0x0080;
         // F000:004C push DX
         Stack.Push16(DX);
         CheckExternalEvents(cs1, 0x004D);
@@ -225,7 +225,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         CheckExternalEvents(cs1, 0x0058);
         // F000:0058 mov DX,0x0800
-        DX = (ushort)0x0800;
+        DX = 0x0800;
         // F000:005B push DX
         Stack.Push16(DX);
         CheckExternalEvents(cs1, 0x005C);
@@ -277,7 +277,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         CheckExternalEvents(cs1, 0x006D);
         // F000:006D mov DX,0x0CBF
-        DX = (ushort)0x0CBF;
+        DX = 0x0CBF;
         // F000:0070 push DX
         Stack.Push16(DX);
         CheckExternalEvents(cs1, 0x0071);
@@ -296,7 +296,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_0077_F0077_188:
         CheckExternalEvents(cs1, 0x0077);
         // F000:0077 mov DX,0x0800
-        DX = (ushort)0x0800;
+        DX = 0x0800;
         // F000:007A push DX
         Stack.Push16(DX);
         CheckExternalEvents(cs1, 0x007B);
@@ -309,7 +309,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         CheckExternalEvents(cs1, 0x007E);
         // F000:007E mov DX,0x06FF
-        DX = (ushort)0x06FF;
+        DX = 0x06FF;
         // F000:0081 push DX
         Stack.Push16(DX);
         CheckExternalEvents(cs1, 0x0082);
@@ -328,7 +328,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_0088_F0088_212:
         CheckExternalEvents(cs1, 0x0088);
         // F000:0088 mov DX,4
-        DX = (ushort)0x0004;
+        DX = 4;
         // F000:008B push DX
         Stack.Push16(DX);
         CheckExternalEvents(cs1, 0x008C);
@@ -358,7 +358,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_0096_F0096_234:
         CheckExternalEvents(cs1, 0x0096);
         // F000:0096 mov DX,0x0EFF
-        DX = (ushort)0x0EFF;
+        DX = 0x0EFF;
         // F000:0099 push DX
         Stack.Push16(DX);
         CheckExternalEvents(cs1, 0x009A);
@@ -393,7 +393,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         CheckExternalEvents(cs1, 0x00A6);
         // F000:00A6 mov DX,0x0800
-        DX = (ushort)0x0800;
+        DX = 0x0800;
         // F000:00A9 push DX
         Stack.Push16(DX);
         CheckExternalEvents(cs1, 0x00AA);
@@ -417,7 +417,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         CheckExternalEvents(cs1, 0x00B2);
         // F000:00B2 mov DX,0x0804
-        DX = (ushort)0x0804;
+        DX = 0x0804;
         // F000:00B5 push DX
         Stack.Push16(DX);
         CheckExternalEvents(cs1, 0x00B6);
@@ -441,7 +441,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         CheckExternalEvents(cs1, 0x00BE);
         // F000:00BE mov DX,0x0884
-        DX = (ushort)0x0884;
+        DX = 0x0884;
         // F000:00C1 push DX
         Stack.Push16(DX);
         CheckExternalEvents(cs1, 0x00C2);
@@ -459,7 +459,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_00C8_F00C8_307:
         CheckExternalEvents(cs1, 0x00C8);
         // F000:00C8 mov word ptr DS:[0],0x1234
-        UInt16[DS, (ushort)0x0000] = (ushort)0x1234;
+        UInt16[DS, 0] = 0x1234;
         // F000:00CE hlt
         return Hlt();
     label_F000_FFF0_FFFF0_0:
