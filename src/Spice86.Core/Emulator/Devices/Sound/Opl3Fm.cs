@@ -50,6 +50,7 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
 
     private readonly SoundChannel _mixerChannel;
 
+    private Action<byte>? _adlibCommandMirror;
     private bool _disposed;
 
     // OPL3 new mode flag
@@ -233,6 +234,10 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     }
 
     private void PortWrite(ushort port, byte value) {
+        if (port == 0x388) {
+            _adlibCommandMirror?.Invoke(value);
+        }
+
         bool isDataPort = (port & 0x01) != 0;
         if (isDataPort) {
             // Data write
@@ -370,6 +375,14 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     ///     Exposes the OPL mixer channel for other components (e.g., SoundBlaster hardware mixer).
     /// </summary>
     public SoundChannel MixerChannel => _mixerChannel;
+
+    /// <summary>
+    /// Registers a receiver for writes to the AdLib command port (0x388).
+    /// </summary>
+    /// <param name="adlibCommandMirror">Receiver that stores the command byte observed at port 0x388.</param>
+    public void SetAdlibCommandMirror(Action<byte>? adlibCommandMirror) {
+        _adlibCommandMirror = adlibCommandMirror;
+    }
 
     /// <summary>
     ///     Gets the current OPL synthesis mode.

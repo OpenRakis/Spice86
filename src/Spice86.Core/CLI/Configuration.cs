@@ -370,4 +370,60 @@ public sealed class Configuration : CommandSettings {
     [DefaultValue(true)]
     public bool EnableSpeculativeCfgExploration { get; init; } = true;
 
+    /// <summary>
+    /// Gravis UltraSound I/O base address (default: 0x240).
+    /// Common values: 0x210, 0x220, 0x230, 0x240, 0x250, 0x260.
+    /// </summary>
+    [CommandOption("--GusBase <GUSBASE>")]
+    [DefaultValue((ushort)0x240)]
+    public ushort GusBase { get; init; } = 0x240;
+
+    /// <summary>
+    /// Gravis UltraSound IRQ number (default: 5).
+    /// Valid values: 2, 3, 5, 7, 11, 12, 15.
+    /// Default of 5 allows coexistence with a Sound Blaster card.
+    /// </summary>
+    [CommandOption("--GusIrq <GUSIRQ>")]
+    [DefaultValue((byte)5)]
+    public byte GusIrq { get; init; } = 5;
+
+    /// <summary>
+    /// Gravis UltraSound DMA channel (default: 3).
+    /// Valid values: 1, 3, 5, 6, 7.
+    /// Default of 3 allows coexistence with a Sound Blaster card.
+    /// </summary>
+    [CommandOption("--GusDma <GUSDMA>")]
+    [DefaultValue((byte)3)]
+    public byte GusDma { get; init; } = 3;
+
+    /// <summary>
+    /// Enables Gravis UltraSound emulation (default: true).
+    /// When false, the GUS I/O ports are not registered and the ULTRASND/ULTRADIR
+    /// environment variables are not exported to the emulated DOS environment.
+    /// </summary>
+    [CommandOption("--GusEnable <GUSENABLE>")]
+    [DefaultValue(true)]
+    public bool GusEnable { get; init; } = true;
+
+    /// <summary>
+    /// Path exported to DOS as the ULTRADIR environment variable (default: C:\ULTRASND).
+    /// This is the DOS-side directory where the real Gravis drivers and patch files live:
+    /// the folder is expected to contain the Gravis driver files (ULTRAMID.EXE, ULTRASND.COM)
+    /// and a MIDI\ subfolder with the *.PAT instrument patches. Place it under the host
+    /// folder mounted via --CDrive. The emulator does not parse patch files itself; the
+    /// DOS-side Gravis drivers load them and upload the samples to the card via DMA.
+    /// </summary>
+    [CommandOption("--GusUltradir <GUSULTRADIR>")]
+    [DefaultValue(@"C:\ULTRASND")]
+    public string GusUltradir { get; init; } = @"C:\ULTRASND";
+
+    /// <summary>
+    /// Applies a first-order low-pass filter at 8 kHz to the Gravis UltraSound output
+    /// (default: true), emulating the analog output stage of the real card.
+    /// Matches the dosbox-staging gus_filter = on behaviour.
+    /// </summary>
+    [CommandOption("--GusFilter <GUSFILTER>")]
+    [DefaultValue(true)]
+    public bool GusFilter { get; init; } = true;
+
 }
