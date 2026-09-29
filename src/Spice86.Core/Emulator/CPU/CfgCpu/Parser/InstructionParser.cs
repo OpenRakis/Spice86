@@ -29,6 +29,7 @@ public class InstructionParser {
     private readonly ParsingTools _parsingTools;
 
     private readonly AluOperationParser _aluOperationParser;
+    private readonly ArplParser _arplParser;
     private readonly BcdAdjustParser _bcdAdjustParser;
     private readonly BitScanRmParser _bitScanBsfParser;
     private readonly BitScanRmParser _bitScanBsrParser;
@@ -39,7 +40,9 @@ public class InstructionParser {
     private readonly CallParser _callParser;
     private readonly CbwParser _cbwParser;
     private readonly CmpxchgRmParser _cmpxchgRmParser;
+    private readonly ControlRegisterParser _controlRegisterParser;
     private readonly CwdParser _cwdParser;
+    private readonly DescriptorTableParser _descriptorTableParser;
     private readonly EnterParser _enterParser;
     private readonly FlagControlParser _flagControlParser;
     private readonly FlagTransferParser _flagTransferParser;
@@ -59,6 +62,7 @@ public class InstructionParser {
     private readonly JccParser _jccParser;
     private readonly JcxzParser _jcxzParser;
     private readonly JmpParser _jmpParser;
+    private readonly LarLslParser _larLslParser;
     private readonly LeaParser _leaParser;
     private readonly LeaveParser _leaveParser;
     private readonly LoopParser _loopParser;
@@ -85,6 +89,7 @@ public class InstructionParser {
     private readonly SetRmccParser _setRmccParser;
     private readonly ShxdRmParser _shxdRmParser;
     private readonly SimpleInstructionParser _simpleInstructionParser;
+    private readonly SystemSegmentParser _systemSegmentParser;
     private readonly TestAccImmParser _testAccImmParser;
     private readonly TestRmRegParser _testRmRegParser;
     private readonly XaddRmParser _xaddRmParser;
@@ -94,6 +99,7 @@ public class InstructionParser {
     public InstructionParser(IIndexable memory, State state, SequentialIdAllocator idAllocator) {
         _parsingTools = new(memory, state, idAllocator);
         _aluOperationParser = new(_parsingTools);
+        _arplParser = new(_parsingTools);
         _bcdAdjustParser = new(_parsingTools);
         _bitScanBsfParser = new(_parsingTools, InstructionOperation.BSF, "BitScanForward");
         _bitScanBsrParser = new(_parsingTools, InstructionOperation.BSR, "BitScanReverse");
@@ -104,7 +110,9 @@ public class InstructionParser {
         _callParser = new(_parsingTools);
         _cbwParser = new(_parsingTools);
         _cmpxchgRmParser = new CmpxchgRmParser(_parsingTools);
+        _controlRegisterParser = new(_parsingTools);
         _cwdParser = new(_parsingTools);
+        _descriptorTableParser = new(_parsingTools);
         _enterParser = new(_parsingTools);
         _flagControlParser = new(_parsingTools);
         _flagTransferParser = new(_parsingTools);
@@ -124,6 +132,7 @@ public class InstructionParser {
         _jccParser = new(_parsingTools);
         _jcxzParser = new(_parsingTools);
         _jmpParser = new(_parsingTools);
+        _larLslParser = new(_parsingTools);
         _leaParser = new(_parsingTools);
         _leaveParser = new(_parsingTools);
         _loopParser = new(_parsingTools);
@@ -150,6 +159,7 @@ public class InstructionParser {
         _setRmccParser = new(_parsingTools);
         _shxdRmParser = new(_parsingTools);
         _simpleInstructionParser = new(_parsingTools);
+        _systemSegmentParser = new(_parsingTools);
         _testAccImmParser = new(_parsingTools);
         _testRmRegParser = new(_parsingTools);
         _xaddRmParser = new(_parsingTools);
@@ -171,7 +181,8 @@ public class InstructionParser {
         _parsingTools.InstructionReader.InstructionReaderAddressSource.InstructionAddress = address;
         List<InstructionPrefix> prefixes = ParsePrefixes();
         InstructionField<ushort> opcodeField = ReadOpcode();
-        ParsingContext context = new(address, opcodeField, prefixes);
+        bool codeSegmentDefaultBig = _parsingTools.State.SegmentDescriptorCaches[SegmentRegisterIndex.CsIndex].DefaultBig;
+        ParsingContext context = new(address, opcodeField, prefixes, codeSegmentDefaultBig);
         try {
             CfgInstruction parsed = ParseCfgInstruction(context);
             ValidateLockPrefix(parsed, prefixes);
@@ -270,6 +281,7 @@ public class InstructionParser {
         _handlers[0x60] = _pushaParser.Parse;
         _handlers[0x61] = _popaParser.Parse;
         _handlers[0x62] = _boundParser.Parse;
+        _handlers[0x63] = _arplParser.Parse;
         _handlers[0x68] = ctx => _pushImmParser.Parse(ctx, imm8SignExtended: false);
         _handlers[0x69] = ctx => _imulImmRmParser.Parse(ctx, imm8: false);
         _handlers[0x6A] = ctx => _pushImmParser.Parse(ctx, imm8SignExtended: true);
@@ -498,7 +510,13 @@ public class InstructionParser {
     }
 
     private void Populate0FHandlers() {
+        _handlers0F[0x01] = _descriptorTableParser.Parse;
+        _handlers0F[0x00] = _systemSegmentParser.Parse;
+        _handlers0F[0x02] = _larLslParser.ParseLar;
+        _handlers0F[0x03] = _larLslParser.ParseLsl;
         _handlers0F[0x06] = _simpleInstructionParser.ParseClts;
+        _handlers0F[0x20] = _controlRegisterParser.ParseMovRegFromCr;
+        _handlers0F[0x22] = _controlRegisterParser.ParseMovCrFromReg;
 
         // Jcc near: 16 condition codes (same encoding as Jcc short)
         for (int cc = 0; cc < 16; cc++) {

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 
 using NSubstitute;
 
+using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
@@ -35,7 +36,7 @@ public class Xms32BitFunctionsTests {
         // Setup memory and state
         _state = new State(CpuModel.INTEL_80286);
         _a20Gate = new A20Gate(false);
-        _memory = new Memory(new(), new Ram(A20Gate.EndOfHighMemoryArea), _a20Gate, new RealModeMmu386(), false);
+        _memory = new Memory(new(), new Ram(Configuration.RamSizeDefaultKb * 1024), _a20Gate, new RealModeMmu386(), false);
         _loggerService = Substitute.For<ILogger>();
         _callbackHandler = new CallbackHandler(_state, _loggerService);
         _dosTables = new DosTables(_memory);

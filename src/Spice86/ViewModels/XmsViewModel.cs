@@ -289,7 +289,7 @@ public partial class XmsViewModel : TimerRefreshViewModelBase, IMemorySearchView
             return;
         }
 
-        SelectedBlockDocument = new XmsBlockBinaryDocument(_xms.XmsRam, SelectedBlock.Offset, SelectedBlock.Length);
+        SelectedBlockDocument = new XmsBlockBinaryDocument(_xms, SelectedBlock.Offset, SelectedBlock.Length);
         string handleText;
         if (SelectedBlock.IsFree) {
             handleText = "Free";

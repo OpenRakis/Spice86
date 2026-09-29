@@ -8,12 +8,17 @@ using Spice86.Shared.Utils;
 /// </summary>
 public sealed class RealModeMmu8086 : IMmu {
     /// <inheritdoc />
-    public void CheckAccess(ushort segment, uint offset, uint length, SegmentAccessKind accessKind) {
+    public void CheckAccess(ushort segment, uint offset, uint length, SegmentAccessKind accessKind, bool isWrite) {
         // 8086 wraps within segment — all accesses are valid.
     }
 
     /// <inheritdoc />
-    public uint TranslateAddress(ushort segment, uint offset) {
+    public uint TranslateAddress(ushort segment, uint offset, bool isWrite) {
         return MemoryUtils.ToPhysicalAddress(segment, (ushort)offset);
+    }
+
+    /// <summary>The 8086 has no paging concept: returns <paramref name="linearAddress"/> unchanged.</summary>
+    public uint TranslateLinearAddress(uint linearAddress, bool isWrite) {
+        return linearAddress;
     }
 }

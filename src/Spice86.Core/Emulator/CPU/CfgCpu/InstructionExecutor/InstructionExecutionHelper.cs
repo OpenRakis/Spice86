@@ -8,6 +8,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
+using Spice86.Core.Emulator.CPU.DescriptorTables;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.Errors;
@@ -70,8 +71,133 @@ public class InstructionExecutionHelper {
 
     // Real mode: jump targets are already truncated to 16-bit IP by the parser/AST
     public void JumpFar(CfgInstruction instruction, ushort cs, ushort ip) {
-        State.CS = cs;
+        if (ProtectedModeCallGateDispatcher.TryReadCallGate(State, Memory, cs, out RawGateDescriptor gate)) {
+            ProtectedModeCallGateDispatcher.DispatchJump(State, Memory, gate, cs);
+            return;
+        }
+        PrivilegeChecks.ValidateFarCodeSegmentTransfer(State, Memory, cs);
+        LoadSegmentRegister((uint)SegmentRegisterIndex.CsIndex, cs);
         State.IP = ip;
+    }
+
+    /// <summary>
+    /// Loads a raw selector value into a segment register and refreshes its descriptor cache: the
+    /// real-mode synthesized cache (base = selector*16) outside protected mode, or the decoded GDT/LDT
+    /// descriptor once <see cref="CpuMode.Protected"/> is active. This is the single path every
+    /// segment-register write (MOV Sreg, POP Sreg, far transfers) goes through.
+    /// </summary>
+    public void LoadSegmentRegister(uint segmentRegisterIndex, ushort selector) {
+        SegmentAndControlRegisterOperations.LoadSegmentRegister(State, Memory, segmentRegisterIndex, selector);
+    }
+
+    /// <summary>LGDT: loads GDTR from a 6-byte memory pointer (2-byte limit, 4-byte base).</summary>
+    public void LoadGdtr(ushort segment, uint offset) {
+        SegmentAndControlRegisterOperations.LoadGdtr(State, Memory, segment, offset);
+    }
+
+    /// <summary>SGDT: stores GDTR to a 6-byte memory pointer (2-byte limit, 4-byte base).</summary>
+    public void StoreGdtr(ushort segment, uint offset) {
+        SegmentAndControlRegisterOperations.StoreGdtr(State, Memory, segment, offset);
+    }
+
+    /// <summary>LIDT: loads IDTR from a 6-byte memory pointer (2-byte limit, 4-byte base).</summary>
+    public void LoadIdtr(ushort segment, uint offset) {
+        SegmentAndControlRegisterOperations.LoadIdtr(State, Memory, segment, offset);
+    }
+
+    /// <summary>SIDT: stores IDTR to a 6-byte memory pointer (2-byte limit, 4-byte base).</summary>
+    public void StoreIdtr(ushort segment, uint offset) {
+        SegmentAndControlRegisterOperations.StoreIdtr(State, Memory, segment, offset);
+    }
+
+    /// <summary>MOV r32, CRn: reads CR0/CR2/CR3/CR4.</summary>
+    public uint ReadControlRegister(uint crNumber) {
+        return SegmentAndControlRegisterOperations.ReadControlRegister(State, crNumber);
+    }
+
+    /// <summary>MOV CRn, r32: writes CR0/CR2/CR3/CR4.</summary>
+    public void WriteControlRegister(uint crNumber, uint value) {
+        SegmentAndControlRegisterOperations.WriteControlRegister(State, crNumber, value);
+    }
+
+    /// <summary>SMSW: reads the low 16 bits of CR0.</summary>
+    public ushort ReadMachineStatusWord() {
+        return SegmentAndControlRegisterOperations.ReadMachineStatusWord(State);
+    }
+
+    /// <summary>LMSW: writes the low 4 bits of CR0 (PE, MP, EM, TS).</summary>
+    public void LoadMachineStatusWord(ushort value) {
+        SegmentAndControlRegisterOperations.LoadMachineStatusWord(State, value);
+    }
+
+    /// <summary>CLTS: clears CR0.TS.</summary>
+    public void Clts() {
+        SegmentAndControlRegisterOperations.Clts(State);
+    }
+
+    /// <summary>Throws #GP if CPL/IOPL do not permit `IN`/`OUT`/`CLI`/`STI`.</summary>
+    public void EnsureIoPrivilege() {
+        PrivilegeChecks.EnsureIoPrivilege(State);
+    }
+
+    /// <summary>LLDT: loads LDTR from a GDT selector.</summary>
+    public void LoadLdtr(ushort selector) {
+        SegmentAndControlRegisterOperations.LoadLdtr(State, Memory, selector);
+    }
+
+    /// <summary>SLDT: reads the current LDTR selector.</summary>
+    public ushort StoreLdtr() {
+        return SegmentAndControlRegisterOperations.StoreLdtr(State);
+    }
+
+    /// <summary>LTR: loads the Task Register from a GDT selector.</summary>
+    public void LoadTr(ushort selector) {
+        SegmentAndControlRegisterOperations.LoadTr(State, Memory, selector);
+    }
+
+    /// <summary>STR: reads the current Task Register selector.</summary>
+    public ushort StoreTr() {
+        return SegmentAndControlRegisterOperations.StoreTr(State);
+    }
+
+    /// <summary>ARPL: returns the r/m operand with its RPL raised to the register operand's RPL if lower.</summary>
+    public ushort AdjustRequestedPrivilegeLevel(ushort rmSelector, ushort regSelector) {
+        return SegmentAndControlRegisterOperations.AdjustRequestedPrivilegeLevel(rmSelector, regSelector);
+    }
+
+    /// <summary>ARPL: whether the r/m operand's RPL was raised (sets ZF).</summary>
+    public bool WasPrivilegeLevelAdjusted(ushort rmSelector, ushort regSelector) {
+        return SegmentAndControlRegisterOperations.WasPrivilegeLevelAdjusted(rmSelector, regSelector);
+    }
+
+    /// <summary>LAR: whether a selector resolves to a present descriptor (sets ZF).</summary>
+    public bool IsSelectorValidForLar(ushort selector) {
+        return SegmentAndControlRegisterOperations.IsSelectorValidForLar(State, Memory, selector);
+    }
+
+    /// <summary>LAR: loads the packed access-rights doubleword for a selector.</summary>
+    public uint LoadAccessRights(ushort selector) {
+        return SegmentAndControlRegisterOperations.LoadAccessRights(State, Memory, selector);
+    }
+
+    /// <summary>LSL: whether a selector resolves to a present segment descriptor (sets ZF).</summary>
+    public bool IsSelectorValidForLsl(ushort selector) {
+        return SegmentAndControlRegisterOperations.IsSelectorValidForLsl(State, Memory, selector);
+    }
+
+    /// <summary>LSL: loads the granularity-scaled limit for a selector.</summary>
+    public uint LoadSegmentLimit(ushort selector) {
+        return SegmentAndControlRegisterOperations.LoadSegmentLimit(State, Memory, selector);
+    }
+
+    /// <summary>VERR: whether a selector is a present, readable data or code segment.</summary>
+    public bool VerifyReadable(ushort selector) {
+        return SegmentAndControlRegisterOperations.VerifyReadable(State, Memory, selector);
+    }
+
+    /// <summary>VERW: whether a selector is a present, writable data segment.</summary>
+    public bool VerifyWritable(ushort selector) {
+        return SegmentAndControlRegisterOperations.VerifyWritable(State, Memory, selector);
     }
 
     public void JumpNear(CfgInstruction instruction, ushort ip) {
@@ -95,14 +221,30 @@ public class InstructionExecutionHelper {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void FarCallWithReturnIpNextInstruction16(CfgInstruction instruction, SegmentedAddress target) {
         SegmentedAddress returnAddress = instruction.NextInMemoryAddress32.ToSegmentedAddress();
+        if (TaskSwitchOperations.TryReadAvailableTss(State, Memory, target.Segment)) {
+            SegmentedAddress taskTarget = TaskSwitchOperations.SwitchToNewTask(State, Memory, target.Segment, returnAddress.Offset);
+            CurrentFunctionHandler.Call(CallType.FAR16, taskTarget, returnAddress, instruction);
+            return;
+        }
+        if (ProtectedModeCallGateDispatcher.TryReadCallGate(State, Memory, target.Segment, out RawGateDescriptor gate)) {
+            SegmentedAddress gateTarget = ProtectedModeCallGateDispatcher.Dispatch(State, Memory, Stack, gate, target.Segment, returnAddress);
+            CurrentFunctionHandler.Call(CallType.FAR16, gateTarget, returnAddress, instruction);
+            return;
+        }
         Stack.PushSegmentedAddress(returnAddress);
         HandleCall(instruction, CallType.FAR16, returnAddress, target);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void FarCallWithReturnIpNextInstruction32(CfgInstruction instruction, SegmentedAddress32 target) {
+        SegmentedAddress returnAddress = instruction.NextInMemoryAddress32.ToSegmentedAddress();
+        if (ProtectedModeCallGateDispatcher.TryReadCallGate(State, Memory, target.Segment, out RawGateDescriptor gate)) {
+            SegmentedAddress gateTarget = ProtectedModeCallGateDispatcher.Dispatch(State, Memory, Stack, gate, target.Segment, returnAddress);
+            CurrentFunctionHandler.Call(CallType.FAR32, gateTarget, returnAddress, instruction);
+            return;
+        }
         Stack.PushFarPointer32(instruction.NextInMemoryAddress32);
-        HandleCall(instruction, CallType.FAR32, instruction.NextInMemoryAddress32.ToSegmentedAddress(), target.ToSegmentedAddress());
+        HandleCall(instruction, CallType.FAR32, returnAddress, target.ToSegmentedAddress());
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -110,7 +252,10 @@ public class InstructionExecutionHelper {
         CallType callType,
         SegmentedAddress returnAddress,
         SegmentedAddress target) {
-        State.CS = target.Segment;
+        if (callType is CallType.FAR16 or CallType.FAR32) {
+            PrivilegeChecks.ValidateFarCodeSegmentTransfer(State, Memory, target.Segment);
+        }
+        LoadSegmentRegister((uint)SegmentRegisterIndex.CsIndex, target.Segment);
         State.IP = target.Offset;
         CurrentFunctionHandler.Call(callType, target, returnAddress, instruction);
     }
@@ -126,7 +271,7 @@ public class InstructionExecutionHelper {
         // This ensures the debugger sees State.IP pointing to the INT instruction
         _emulatorBreakpointsManager.InterruptBreakPoints.TriggerMatchingBreakPoints(vectorNumber);
         MoveIpToEndOfInstruction(instruction);
-        (SegmentedAddress target, SegmentedAddress expectedReturn) = DoInterruptWithoutBreakpoint(vectorNumber);
+        (SegmentedAddress target, SegmentedAddress expectedReturn) = DoInterruptWithoutBreakpoint(vectorNumber, checkGateDpl: true);
         CurrentFunctionHandler.ICall(target, expectedReturn, instruction, vectorNumber);
     }
 
@@ -136,12 +281,27 @@ public class InstructionExecutionHelper {
         CurrentFunctionHandler.ICall(target, expectedReturn, instruction, vectorNumber);
     }
 
-    public (SegmentedAddress, SegmentedAddress) DoInterrupt(byte vectorNumber) {
+    public (SegmentedAddress, SegmentedAddress) DoInterrupt(byte vectorNumber, ushort? errorCode = null) {
         _emulatorBreakpointsManager.InterruptBreakPoints.TriggerMatchingBreakPoints(vectorNumber);
-        return DoInterruptWithoutBreakpoint(vectorNumber);
+        return DoInterruptWithoutBreakpoint(vectorNumber, checkGateDpl: false, errorCode);
     }
 
-    private (SegmentedAddress, SegmentedAddress) DoInterruptWithoutBreakpoint(byte vectorNumber) {
+    /// <summary>
+    /// Dispatches an interrupt or exception. Real mode semantics are unchanged (the real-mode IVT);
+    /// protected mode AND Virtual-8086 mode both walk the IDT instead (see
+    /// <see cref="ProtectedModeInterruptDispatcher"/>) - on real hardware, V86 code always reflects
+    /// interrupts/exceptions to the protected-mode monitor rather than handling them directly, since CPL
+    /// is 3 in V86 and the monitor's handlers live at DPL 0, forcing the same escalation-via-TSS path
+    /// used by ordinary CPL3-to-CPL0 protected-mode dispatch. <paramref name="checkGateDpl"/> is true only
+    /// for a software `INT n`: hardware interrupts and CPU exceptions bypass the gate's DPL.
+    /// </summary>
+    private (SegmentedAddress, SegmentedAddress) DoInterruptWithoutBreakpoint(byte vectorNumber, bool checkGateDpl, ushort? errorCode = null) {
+        if (State.CpuMode is CpuMode.Protected or CpuMode.Virtual8086) {
+            SegmentedAddress expectedReturnBeforeDispatch = State.IpSegmentedAddress;
+            SegmentedAddress protectedModeTarget = ProtectedModeInterruptDispatcher.Dispatch(
+                State, Memory, Stack, vectorNumber, checkGateDpl, errorCode, expectedReturnBeforeDispatch);
+            return (protectedModeTarget, expectedReturnBeforeDispatch);
+        }
         SegmentedAddress target = InterruptVectorTable[vectorNumber];
         if (target.Segment == 0 && target.Offset == 0 && !_allowIvtAddress0) {
             throw new UnhandledOperationException(State,
@@ -152,20 +312,30 @@ public class InstructionExecutionHelper {
         Stack.PushSegmentedAddress(expectedReturn);
         State.InterruptFlag = false;
         State.IP = target.Offset;
-        State.CS = target.Segment;
+        LoadSegmentRegister((uint)SegmentRegisterIndex.CsIndex, target.Segment);
         return (target, expectedReturn);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void HandleInterruptRet(CfgInstruction instruction) {
         CurrentFunctionHandler.Ret(CallType.INTERRUPT, instruction);
-        _returnOperationsHelper.InterruptRet();
+        if (State.CpuMode == CpuMode.Protected) {
+            ProtectedModeInterruptDispatcher.InterruptReturn16(State, Memory, Stack);
+        } else {
+            _returnOperationsHelper.InterruptRet();
+            LoadSegmentRegister((uint)SegmentRegisterIndex.CsIndex, State.CS);
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void HandleInterruptRet32(CfgInstruction instruction) {
         CurrentFunctionHandler.Ret(CallType.INTERRUPT, instruction);
+        if (State.CpuMode == CpuMode.Protected) {
+            ProtectedModeInterruptDispatcher.InterruptReturn32(State, Memory, Stack);
+            return;
+        }
         _returnOperationsHelper.InterruptRet32();
+        LoadSegmentRegister((uint)SegmentRegisterIndex.CsIndex, State.CS);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -183,13 +353,23 @@ public class InstructionExecutionHelper {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void HandleFarRet16(CfgInstruction instruction, ushort numberOfBytesToPop = 0) {
         CurrentFunctionHandler.Ret(CallType.FAR16, instruction);
-        _returnOperationsHelper.FarRet16(numberOfBytesToPop);
+        if (State.CpuMode == CpuMode.Protected) {
+            ProtectedModeInterruptDispatcher.FarReturn16(State, Memory, Stack, numberOfBytesToPop);
+        } else {
+            _returnOperationsHelper.FarRet16(numberOfBytesToPop);
+            LoadSegmentRegister((uint)SegmentRegisterIndex.CsIndex, State.CS);
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void HandleFarRet32(CfgInstruction instruction, ushort numberOfBytesToPop = 0) {
         CurrentFunctionHandler.Ret(CallType.FAR32, instruction);
+        if (State.CpuMode == CpuMode.Protected) {
+            ProtectedModeInterruptDispatcher.FarReturn32(State, Memory, Stack, numberOfBytesToPop);
+            return;
+        }
         _returnOperationsHelper.FarRet32(numberOfBytesToPop);
+        LoadSegmentRegister((uint)SegmentRegisterIndex.CsIndex, State.CS);
     }
 
     public void MoveIpToEndOfInstruction(CfgInstruction instruction) {
@@ -197,6 +377,7 @@ public class InstructionExecutionHelper {
     }
 
     public void ExecuteHlt(CfgInstruction instruction) {
+        PrivilegeChecks.EnsureCpl0(State, "HLT");
         State.IsRunning = false;
         MoveIpToEndOfInstruction(instruction);
     }
@@ -228,13 +409,13 @@ public class InstructionExecutionHelper {
         if (_loggerService.IsEnabled(LogLevel.Debug)) {
             _loggerService.LogDebug(cpuException, "{ExceptionType} in {MethodName}", nameof(CpuException), nameof(HandleCpuException));
         }
-        // Real-mode interrupts do NOT push an error code on the stack — that is a
-        // protected-mode behavior. Spice86 is real-mode only, so any error code
-        // carried by the exception object is informational and must not be pushed.
+        // Real mode has no error-code concept; only protected-mode dispatch (DoInterrupt) actually
+        // pushes it, and only when the gate/frame layout supports it.
         try {
             // Link to the interrupt handler will likely need to be added
             instruction.IncreaseMaxSuccessorsCount(InterruptVectorTable[cpuException.InterruptVector]);
-            HandleInterruptCall(instruction, cpuException.InterruptVector);
+            (SegmentedAddress target, SegmentedAddress expectedReturn) = DoInterrupt(cpuException.InterruptVector, cpuException.ErrorCode);
+            CurrentFunctionHandler.ICall(target, expectedReturn, instruction, cpuException.InterruptVector);
             CurrentExecutionContext.CpuFault = true;
         } catch (UnhandledOperationException e) {
             throw new AggregateException(cpuException, e);

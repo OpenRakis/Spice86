@@ -2,16 +2,16 @@ namespace Spice86.ViewModels.DataModels;
 
 using AvaloniaHex.Document;
 
-using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 
 /// <inheritdoc cref="IBinaryDocument" />
 public sealed class XmsBlockBinaryDocument : IBinaryDocument {
-    private readonly Ram _xmsRam;
+    private readonly ExtendedMemoryManager _xms;
     private readonly uint _blockOffset;
     private readonly uint _blockLength;
 
-    public XmsBlockBinaryDocument(Ram xmsRam, uint blockOffset, uint blockLength) {
-        _xmsRam = xmsRam;
+    public XmsBlockBinaryDocument(ExtendedMemoryManager xms, uint blockOffset, uint blockLength) {
+        _xms = xms;
         _blockOffset = blockOffset;
         _blockLength = blockLength;
         IsReadOnly = true;
@@ -53,7 +53,7 @@ public sealed class XmsBlockBinaryDocument : IBinaryDocument {
             return;
         }
         int readableLength = (int)Math.Min((ulong)buffer.Length, _blockLength - startOffset);
-        IList<byte> blockSlice = _xmsRam.GetSlice((int)(_blockOffset + startOffset), readableLength);
+        IList<byte> blockSlice = _xms.GetSlice(_blockOffset + startOffset, readableLength);
         for (int index = 0; index < readableLength; index++) {
             buffer[index] = blockSlice[index];
         }

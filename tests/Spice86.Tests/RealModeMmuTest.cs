@@ -12,7 +12,7 @@ public class RealModeMmuTest {
         IMmu mmu = new RealModeMmu386();
 
         // Act & Assert
-        mmu.CheckAccess(0, 0xFFFF, 1, SegmentAccessKind.Data);
+        mmu.CheckAccess(0, 0xFFFF, 1, SegmentAccessKind.Data, isWrite: false);
     }
 
     [Fact]
@@ -21,7 +21,7 @@ public class RealModeMmuTest {
         IMmu mmu = new RealModeMmu386();
 
         // Act & Assert
-        Assert.Throws<CpuGeneralProtectionFaultException>(() => mmu.CheckAccess(0, 0xFFFF, 2, SegmentAccessKind.Data));
+        Assert.Throws<CpuGeneralProtectionFaultException>(() => mmu.CheckAccess(0, 0xFFFF, 2, SegmentAccessKind.Data, isWrite: false));
     }
 
     [Fact]
@@ -30,7 +30,7 @@ public class RealModeMmuTest {
         IMmu mmu = new RealModeMmu386();
 
         // Act & Assert
-        Assert.Throws<CpuStackSegmentFaultException>(() => mmu.CheckAccess(0, 0xFFFF, 2, SegmentAccessKind.Stack));
+        Assert.Throws<CpuStackSegmentFaultException>(() => mmu.CheckAccess(0, 0xFFFF, 2, SegmentAccessKind.Stack, isWrite: true));
     }
 
     [Theory]
@@ -41,7 +41,7 @@ public class RealModeMmuTest {
         IMmu mmu = new RealModeMmu386();
 
         // Act & Assert
-        Assert.Throws<CpuGeneralProtectionFaultException>(() => mmu.CheckAccess(0, offset, 4, SegmentAccessKind.Data));
+        Assert.Throws<CpuGeneralProtectionFaultException>(() => mmu.CheckAccess(0, offset, 4, SegmentAccessKind.Data, isWrite: false));
     }
 
     [Fact]
@@ -50,8 +50,8 @@ public class RealModeMmuTest {
         IMmu mmu = new RealModeMmu8086();
 
         // Act
-        uint wrappedAddress = mmu.TranslateAddress(0x1234, 0x10000);
-        uint zeroAddress = mmu.TranslateAddress(0x1234, 0);
+        uint wrappedAddress = mmu.TranslateAddress(0x1234, 0x10000, isWrite: false);
+        uint zeroAddress = mmu.TranslateAddress(0x1234, 0, isWrite: false);
 
         // Assert
         Assert.Equal(zeroAddress, wrappedAddress);
@@ -63,7 +63,7 @@ public class RealModeMmuTest {
         IMmu mmu = new RealModeMmu8086();
 
         // Act & Assert
-        mmu.CheckAccess(0, 0xFFFF, 4, SegmentAccessKind.Data);
+        mmu.CheckAccess(0, 0xFFFF, 4, SegmentAccessKind.Data, isWrite: false);
     }
 
     [Fact]
@@ -72,7 +72,7 @@ public class RealModeMmuTest {
         IMmu mmu = new RealModeMmu386();
 
         // Act & Assert — 1-byte instruction at 0xFFFE: next IP = 0xFFFF, within segment
-        mmu.CheckAccess(0, 0xFFFF, 1, SegmentAccessKind.Data);
+        mmu.CheckAccess(0, 0xFFFF, 1, SegmentAccessKind.Data, isWrite: false);
     }
 
     [Fact]
@@ -81,7 +81,7 @@ public class RealModeMmuTest {
         IMmu mmu = new RealModeMmu386();
 
         // Act & Assert — 1-byte instruction at 0xFFFF: next IP = 0x10000, overflows segment
-        Assert.Throws<CpuGeneralProtectionFaultException>(() => mmu.CheckAccess(0, 0x10000u, 1, SegmentAccessKind.Data));
+        Assert.Throws<CpuGeneralProtectionFaultException>(() => mmu.CheckAccess(0, 0x10000u, 1, SegmentAccessKind.Data, isWrite: false));
     }
 
     [Fact]
@@ -90,6 +90,6 @@ public class RealModeMmuTest {
         IMmu mmu = new RealModeMmu8086();
 
         // Act & Assert — 2-byte instruction at 0xFFFF: next IP = 0x10001, wraps on 8086
-        mmu.CheckAccess(0, 0x10001u, 1, SegmentAccessKind.Data);
+        mmu.CheckAccess(0, 0x10001u, 1, SegmentAccessKind.Data, isWrite: false);
     }
 }

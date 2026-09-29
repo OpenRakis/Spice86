@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Core.Emulator.CPU.Exceptions;
@@ -27,7 +28,7 @@ public class LxsParser : BaseInstructionParser {
             throw new CpuInvalidOpcodeException($"{displayOp} with register source operand is invalid");
         }
 
-        DataType addrType = _astBuilder.AddressType(instr);
+        DataType addrType = _astBuilder.AddressType(context.AddressWidthFromPrefixes);
         (VariableDeclarationNode cachedOffset, ValueNode memValue) =
             _astBuilder.ModRm.ToMemoryAddressNodeWithCachedOffset(dataType, addrType, modRmContext, "lxsOffset");
 
@@ -41,17 +42,17 @@ public class LxsParser : BaseInstructionParser {
         ValueNode adjustedOffset = new BinaryOperationNode(addrType, cachedOffset.Reference, BinaryOperation.PLUS, sizeInBytes);
         ValueNode segPointer = _astBuilder.ModRm.ToMemoryAddressNodeWithCustomOffset(DataType.UINT16, modRmContext, adjustedOffset);
         VariableDeclarationNode segmentValue = _astBuilder.DeclareVariable(DataType.UINT16, "lxsSegment", segPointer);
-        ValueNode segRegNode = _astBuilder.Register.SReg(segmentRegisterIndex);
-        BinaryOperationNode assignSeg = _astBuilder.Assign(DataType.UINT16, segRegNode, segmentValue.Reference);
+        ValueNode segIndexNode = _astBuilder.Constant.ToNode((uint)segmentRegisterIndex);
+        MethodCallNode loadSegment = new MethodCallNode(null, nameof(InstructionExecutionHelper.LoadSegmentRegister), segIndexNode, segmentValue.Reference);
 
         InstructionNode displayAst = new InstructionNode(displayOp, rNode, _astBuilder.ModRm.RmToNode(dataType, modRmContext));
 
         IVisitableAstNode execAst;
         if (segmentRegisterIndex == SegmentRegisterIndex.SsIndex) {
             IVisitableAstNode setInterruptShadowingNode = _astBuilder.Flag.SetInterruptShadowing();
-            execAst = _astBuilder.WithIpAdvancement(instr, cachedOffset, offsetValue, segmentValue, assignR, assignSeg, setInterruptShadowingNode);
+            execAst = _astBuilder.WithIpAdvancement(instr, cachedOffset, offsetValue, segmentValue, assignR, loadSegment, setInterruptShadowingNode);
         } else {
-            execAst = _astBuilder.WithIpAdvancement(instr, cachedOffset, offsetValue, segmentValue, assignR, assignSeg);
+            execAst = _astBuilder.WithIpAdvancement(instr, cachedOffset, offsetValue, segmentValue, assignR, loadSegment);
         }
         instr.AttachAsts(displayAst, execAst);
         return instr;

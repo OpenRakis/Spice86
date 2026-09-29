@@ -164,7 +164,7 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
             _ => throw new InvalidOperationException($"Unhandled Operation: {unaryOperation}")
         };
     }
-    
+
     private T EnsureNonNull<T>(T? argument) {
         ArgumentNullException.ThrowIfNull(argument);
         return argument;
@@ -193,7 +193,7 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     private PropertyInfo FindSingleParameterIndexer(Type type) {
         return EnsureNonNull(type.GetProperty("Item", [typeof(uint)]));
     }
-    
+
     private PropertyInfo FindSegmentedIndexer(Type type) {
         return EnsureNonNull(type.GetProperty("Item", [typeof(ushort), typeof(uint), typeof(SegmentAccessKind)]));
     }
@@ -209,7 +209,7 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
         PropertyInfo indexer = FindSingleParameterIndexer(ToMemoryIndexerType(dataType));
         return Expression.Property(indexerProperty, indexer, indexExpression);
     }
-    
+
     private IndexExpression ToMemoryIndexer(DataType dataType, Expression segmentExpression, Expression offsetExpression, bool isStackSegment) {
         if (segmentExpression.Type != typeof(ushort)) {
             segmentExpression = Expression.Convert(segmentExpression, typeof(ushort));
@@ -222,7 +222,7 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
         SegmentAccessKind accessKind = isStackSegment ? SegmentAccessKind.Stack : SegmentAccessKind.Data;
         return Expression.Property(indexerProperty, indexer, segmentExpression, offsetExpression, Expression.Constant(accessKind));
     }
-    
+
     private MemberExpression ToRegisterProperty(int registerIndex, DataType dataType, bool isSegmentRegister) {
         string name = isSegmentRegister ? _registerRenderer.ToStringSegmentRegister(registerIndex) : _registerRenderer.ToStringRegister(dataType.BitWidth, registerIndex);
         PropertyInfo stateRegisterProperty = EnsureNonNull(typeof(State).GetProperty(name));
@@ -230,7 +230,7 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     }
 
     public Expression VisitSegmentRegisterNode(SegmentRegisterNode node) {
-       return ToRegisterProperty(node.RegisterIndex, node.DataType, true);
+        return ToRegisterProperty(node.RegisterIndex, node.DataType, true);
     }
 
     public Expression VisitSegmentedPointer(SegmentedPointerNode node) {
@@ -279,10 +279,10 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
         Expression flagsObject = Expression.Property(_stateParameter, flagsProperty);
 
         // Select the appropriate property based on the DataType
-        string propertyName = node.DataType.BitWidth == BitWidth.WORD_16 
-            ? nameof(Flags.FlagRegister16) 
+        string propertyName = node.DataType.BitWidth == BitWidth.WORD_16
+            ? nameof(Flags.FlagRegister16)
             : nameof(Flags.FlagRegister);
-        
+
         PropertyInfo flagRegisterProperty = EnsureNonNull(typeof(Flags).GetProperty(propertyName));
         return Expression.Property(flagsObject, flagRegisterProperty);
     }
@@ -299,24 +299,24 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
         ConstructorInfo constructorInfo = EnsureNonNull(typeof(SegmentedAddress).GetConstructor([typeof(ushort), typeof(ushort)]));
         return Expression.New(constructorInfo, segment, offset);
     }
-    
+
     public Expression VisitBinaryOperationNode(BinaryOperationNode node) {
         Expression left = node.Left.Accept(this);
         Expression right = node.Right.Accept(this);
         return ToExpression(node.BinaryOperation, left, right, node.DataType);
     }
-    
+
     public Expression VisitUnaryOperationNode(UnaryOperationNode node) {
         Expression value = node.Value.Accept(this);
         return ToExpression(node.UnaryOperation, value);
     }
-    
+
     public Expression VisitTypeConversionNode(TypeConversionNode node) {
         Expression value = node.Value.Accept(this);
         Type targetType = FromDataType(node.DataType);
         return Expression.Convert(value, targetType);
     }
-    
+
     public Expression VisitInstructionNode(InstructionNode node) {
         throw new InvalidOperationException(
             $"InstructionNode is for assembly parsing and rendering, not execution. " +
@@ -343,7 +343,7 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
             _ => throw new UnsupportedBitWidthException(node.DataType.BitWidth)
         };
     }
-    
+
     public Expression VisitNearAddressNode(NearAddressNode node) {
         return VisitConstantNode(node);
     }
@@ -356,19 +356,19 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     public Expression<Action<State, Memory>> ToAction(Expression expression) {
         return Expression.Lambda<Action<State, Memory>>(expression, _allParameters);
     }
-    
+
     public Expression<Func<State, Memory, byte>> ToFuncUInt8(Expression expression) {
         return Expression.Lambda<Func<State, Memory, byte>>(expression, _allParameters);
     }
-    
+
     public Expression<Func<State, Memory, sbyte>> ToFuncInt8(Expression expression) {
         return Expression.Lambda<Func<State, Memory, sbyte>>(expression, _allParameters);
     }
-    
+
     public Expression<Func<State, Memory, ushort>> ToFuncUInt16(Expression expression) {
         return Expression.Lambda<Func<State, Memory, ushort>>(expression, _allParameters);
     }
-    
+
     public Expression<Func<State, Memory, short>> ToFuncInt16(Expression expression) {
         return Expression.Lambda<Func<State, Memory, short>>(expression, _allParameters);
     }
@@ -377,11 +377,11 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
         Expression converted = Expression.Convert(expression, typeof(uint));
         return Expression.Lambda<Func<State, Memory, uint>>(converted, _allParameters);
     }
-    
+
     public Expression<Func<State, Memory, int>> ToFuncInt32(Expression expression) {
         return Expression.Lambda<Func<State, Memory, int>>(expression, _allParameters);
     }
-    
+
     public Expression<Func<State, Memory, bool>> ToFuncBool(Expression expression) {
         return Expression.Lambda<Func<State, Memory, bool>>(expression, _allParameters);
     }
@@ -553,15 +553,16 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
             csExpression,
             nextIpAsUint,
             Expression.Constant(1u),
-            Expression.Constant(SegmentAccessKind.Data));
+            Expression.Constant(SegmentAccessKind.Data),
+            Expression.Constant(false));
 
         return Expression.Block(assignIp, checkAccess);
     }
 
     public Expression VisitCallNearNode(CallNearNode node) {
         // helper.NearCallWithReturnIpNextInstructionXX(instruction, targetIp)
-        string methodName = node.CallBitWidth == BitWidth.WORD_16 
-            ? nameof(InstructionExecutionHelper.NearCallWithReturnIpNextInstruction16) 
+        string methodName = node.CallBitWidth == BitWidth.WORD_16
+            ? nameof(InstructionExecutionHelper.NearCallWithReturnIpNextInstruction16)
             : nameof(InstructionExecutionHelper.NearCallWithReturnIpNextInstruction32);
 
         return CallHelperMethodWithInstruction(methodName, node,
@@ -571,8 +572,8 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     public Expression VisitCallFarNode(CallFarNode node) {
         Expression targetAddress = node.TargetAddress.Accept(this);
 
-        string methodName = node.CallBitWidth == BitWidth.WORD_16 
-            ? nameof(InstructionExecutionHelper.FarCallWithReturnIpNextInstruction16) 
+        string methodName = node.CallBitWidth == BitWidth.WORD_16
+            ? nameof(InstructionExecutionHelper.FarCallWithReturnIpNextInstruction16)
             : nameof(InstructionExecutionHelper.FarCallWithReturnIpNextInstruction32);
 
         return CallHelperMethodWithInstruction(methodName, node,
@@ -583,7 +584,7 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
         string methodName = node.RetBitWidth == BitWidth.WORD_16
             ? nameof(InstructionExecutionHelper.HandleNearRet16)
             : nameof(InstructionExecutionHelper.HandleNearRet32);
-            
+
         return CallHelperMethodWithInstruction(methodName, node,
             node.BytesToPop.Accept(this));
     }
@@ -592,7 +593,7 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
         string methodName = node.RetBitWidth == BitWidth.WORD_16
             ? nameof(InstructionExecutionHelper.HandleFarRet16)
             : nameof(InstructionExecutionHelper.HandleFarRet32);
-            
+
         return CallHelperMethodWithInstruction(methodName, node,
             node.BytesToPop.Accept(this));
     }
@@ -601,7 +602,7 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
         return CallHelperMethodWithInstruction(nameof(InstructionExecutionHelper.JumpNear), node,
             node.Ip.Accept(this));
     }
-    
+
     public Expression VisitJumpFarNode(JumpFarNode node) {
         return CallHelperMethodWithInstruction(nameof(InstructionExecutionHelper.JumpFar), node,
             node.TargetAddress.Segment.Accept(this),
@@ -647,7 +648,7 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
         Expression[] allArgs = new Expression[args.Length + 1];
         allArgs[0] = Expression.Constant(node.Instruction, node.Instruction.GetType());
         Array.Copy(args, 0, allArgs, 1, args.Length);
-        
+
         return CallHelperMethod(methodName, allArgs);
     }
 
@@ -659,16 +660,16 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
         if (method == null) {
             method = typeof(InstructionExecutionHelper).GetMethods()
                 .FirstOrDefault(m => m.Name == methodName && m.GetParameters().Length == arguments.Length);
-                
+
             if (method != null && method.IsGenericMethodDefinition) {
-                 method = method.MakeGenericMethod(arguments[0].Type);
+                method = method.MakeGenericMethod(arguments[0].Type);
             }
         }
 
         if (method == null) {
-             throw new InvalidOperationException($"Method {methodName} not found on InstructionExecutionHelper with {arguments.Length} arguments");
+            throw new InvalidOperationException($"Method {methodName} not found on InstructionExecutionHelper with {arguments.Length} arguments");
         }
-        
+
         return Expression.Call(_helperParameter, method, arguments);
     }
 

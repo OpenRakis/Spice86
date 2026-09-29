@@ -140,8 +140,17 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
         ushort? segment = TryGetConstantWord(node.TargetAddress.Segment);
         ushort? offset = TryGetConstantWord(node.TargetAddress.Offset);
         if (segment is not null && offset is not null) {
-            return Transfer.Emit(Context.ResolveEdge(node.Instruction, InstructionSuccessorType.Normal,
-                new SegmentedAddress(segment.Value, offset.Value)), CurrentMethod);
+            EmittedCode transfer = EmittedCode.Concat(
+                EmittedCode.Line($"ValidateFarCodeSegmentTransfer(0x{segment.Value:X4});"),
+                EmittedCode.Line($"LoadSegmentRegister(0x{(uint)SegmentRegisterIndex.CsIndex:X8}u, 0x{segment.Value:X4});"));
+            // A far jump observed to always fault during discovery (e.g. a privilege violation) has no
+            // Normal successor at all - only the CpuFaultWrapper's surrounding try/catch, which every real
+            // execution actually takes, has anywhere to go. There is genuinely no continuation to lower.
+            if (Context.GetSuccessorEdges(node.Instruction, InstructionSuccessorType.Normal).Count == 0) {
+                return transfer;
+            }
+            return EmittedCode.Concat(transfer, Transfer.Emit(Context.ResolveEdge(node.Instruction, InstructionSuccessorType.Normal,
+                new SegmentedAddress(segment.Value, offset.Value)), CurrentMethod));
         }
 
         return BuildFarRuntimeDispatch(node.Instruction, Expr(node.TargetAddress.Segment), Expr(node.TargetAddress.Offset), "jump",
@@ -149,7 +158,10 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
             // throw as the next sibling (unlike the near switch, whose `break` exits past the construct to
             // the next node). An empty matched branch would fall through the remaining checks into that
             // throw, so the adjacency-fallthrough optimization cannot apply here.
-            edge => Transfer.Emit(edge, CurrentMethod, forceSameMethodGoto: true).AsStatements());
+            edge => EmittedCode.Concat(
+                EmittedCode.Line($"ValidateFarCodeSegmentTransfer(0x{edge.Target.Address.Segment:X4});"),
+                EmittedCode.Line($"LoadSegmentRegister(0x{(uint)SegmentRegisterIndex.CsIndex:X8}u, 0x{edge.Target.Address.Segment:X4});"),
+                Transfer.Emit(edge, CurrentMethod, forceSameMethodGoto: true)).AsStatements());
     }
 
     public EmittedCode VisitCallNearNode(CallNearNode node) {
@@ -176,8 +188,24 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
         }
 
         SegmentedAddress targetAddress = new SegmentedAddress(targetSegment.Value, targetOffset.Value);
-        ResolvedCfgEdge targetEdge = Context.ResolveEdge(node.Instruction, InstructionSuccessorType.Normal, targetAddress);
-        return Transfer.EmitCallHelperAndContinuation(helperName, node.Instruction, Transfer.FunctionExpression(targetEdge), CurrentMethod, farCallTargetCs: targetSegment.Value);
+        if (Context.TryResolveEdge(node.Instruction, InstructionSuccessorType.Normal, targetAddress) is ResolvedCfgEdge targetEdge) {
+            return Transfer.EmitCallHelperAndContinuation(helperName, node.Instruction, Transfer.FunctionExpression(targetEdge), CurrentMethod, farCallTargetCs: targetSegment.Value);
+        }
+
+        // No direct-target edge was ever observed for this literal operand selector: during discovery
+        // this call always redirected through a call gate (or another selector-driven indirection) to a
+        // different real target, so the CFG edge lives there instead. There is nothing to statically
+        // resolve here - FarCall/FarCall32 perform the gate detection and dynamic dispatch themselves
+        // (mirroring InterruptCall), so the "static" function argument is unreachable by construction.
+        // The literal selector is emitted as a raw hex constant (not via GetSegmentVariable): a gate
+        // selector is never itself a segment code ever executes in, so it has no registered csN field.
+        CallContinuation gateContinuation = Context.ResolveCallContinuation(node.Instruction);
+        string neverCalledFunction = $"_ => throw FailAsUntested(\"Far call at {node.Instruction.Address} unexpectedly resolved to a direct target\")";
+        SegmentedAddress gateExpectedReturn = gateContinuation.ExpectedReturnAddress;
+        string callLine = $"{helperName}({Context.GetSegmentVariable(gateExpectedReturn.Segment)}, 0x{gateExpectedReturn.Offset:X4}, 0x{targetSegment.Value:X4}, {neverCalledFunction});";
+        return EmittedCode.Concat(
+            EmittedCode.Line(callLine),
+            Transfer.EmitPostCallContinuation(node.Instruction, gateContinuation, CurrentMethod));
     }
 
     public EmittedCode VisitInterruptCallNode(InterruptCallNode node) {
@@ -444,7 +472,8 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
 
     public EmittedCode VisitReturnNearNode(ReturnNearNode node) => LowerReturn(NearRetExpression(node));
     public EmittedCode VisitReturnFarNode(ReturnFarNode node) => LowerReturn(FarRetExpression(node));
-    public EmittedCode VisitReturnInterruptNode(ReturnInterruptNode node) => LowerReturn("InterruptRet()");
+    public EmittedCode VisitReturnInterruptNode(ReturnInterruptNode node) =>
+        LowerReturn(node.OperandSize == BitWidth.DWORD_32 ? "InterruptRet32()" : "InterruptRet()");
 
     private static EmittedCode LowerReturn(string returnActionExpression) =>
         EmittedCode.Diverging($"return {returnActionExpression};");

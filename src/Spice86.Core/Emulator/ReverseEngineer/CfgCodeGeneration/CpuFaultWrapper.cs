@@ -27,14 +27,12 @@ internal sealed class CpuFaultWrapper(CfgGeneratorContext context, TransferEmitt
         }
 
         List<StatementItem> catchBody = [
-            new LineStatement("SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];")
+            new LineStatement($"SegmentedAddress cpuFaultTarget = ResolveCpuFaultTarget(cpuException.InterruptVector, cpuException.ErrorCode, {context.GetSegmentVariable(instruction.Address.Segment)}, 0x{instruction.Address.Offset:X4});")
         ];
         foreach (ResolvedCfgEdge edge in faultEdges) {
             catchBody.Add(new BlockStatement(
-                $"if (cpuFaultTarget == new SegmentedAddress({context.GetSegmentVariable(edge.Target.Address.Segment)}, 0x{edge.Target.Address.Offset:X4}))", [
-                    new LineStatement($"EnterCpuFaultHandler({context.GetSegmentVariable(instruction.Address.Segment)}, 0x{instruction.Address.Offset:X4}, cpuFaultTarget);"),
-                    .. transferEmitter.Emit(edge, method).AsStatements()
-                ]));
+                $"if (cpuFaultTarget == new SegmentedAddress({context.GetSegmentVariable(edge.Target.Address.Segment)}, 0x{edge.Target.Address.Offset:X4}))",
+                transferEmitter.Emit(edge, method).AsStatements()));
         }
         catchBody.Add(new LineStatement($"throw FailAsUntested($\"Unknown CPU fault target {{cpuFaultTarget}} at {instruction.Address}\");", Diverges: true));
 

@@ -171,11 +171,6 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
 
 
     /// <summary>
-    /// XMS plain old memory.
-    /// </summary>
-    public Ram XmsRam { get; private set; } = new(XmsMemorySize * 1024);
-
-    /// <summary>
     /// DOS Device Driver Name.
     /// </summary>
     /// <remarks>
@@ -262,7 +257,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         // Initialize XMS memory as a single free block
         if (TryGetFreeHandle(out ushort? handle)) {
             _xmsBlocksLinkedList.AddLast(new XmsBlock(handle.Value, offset: 0,
-                XmsRam.Size, free: true));
+                XmsMemorySize * 1024u, free: true));
         }
         _canChangeA20Line = !a20Gate.IsEnabled;
     }
@@ -297,6 +292,13 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// Gets a snapshot of current XMS blocks (free and allocated).
     /// </summary>
     public IReadOnlyList<XmsBlock> BlocksSnapshot => _xmsBlocksLinkedList.ToList();
+
+    /// <summary>
+    /// Reads a slice of bytes from the shared memory bus at a block-relative offset.
+    /// </summary>
+    /// <param name="blockOffset">Offset of the block from <see cref="XmsBaseAddress"/>.</param>
+    /// <param name="length">Number of bytes to read.</param>
+    public IList<byte> GetSlice(uint blockOffset, int length) => _memory.GetSlice((int)(XmsBaseAddress + blockOffset), length);
 
     /// <summary>
     /// Gets a snapshot of allocated handles and their lock counts.
@@ -1196,7 +1198,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
                 _state.BL = (byte)XmsErrorCodes.XmsInvalidLength;
                 return;
             }
-            srcBytes = XmsRam.GetSlice((int)(srcBlock.Value.Offset + move.SourceOffset), (int)move.Length);
+            srcBytes = _memory.GetSlice((int)(XmsBaseAddress + srcBlock.Value.Offset + move.SourceOffset), (int)move.Length);
         }
 
         // Determine destination
@@ -1228,7 +1230,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
                 _state.BL = (byte)XmsErrorCodes.XmsInvalidLength;
                 return;
             }
-            dstBytes = XmsRam.GetSlice((int)(dstBlock.Value.Offset + move.DestOffset), (int)move.Length);
+            dstBytes = _memory.GetSlice((int)(XmsBaseAddress + dstBlock.Value.Offset + move.DestOffset), (int)move.Length);
         }
 
         // Check for overlap if both source and destination are in the same XMS block

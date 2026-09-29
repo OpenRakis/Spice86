@@ -12,7 +12,6 @@ using Xunit;
 
 /// <summary>
 /// Tests for drive abstraction strategy (host-backed vs memory-backed).
-/// Phase 2 architecture: foundational for Z: memory drive and AUTOEXEC.BAT generation.
 /// </summary>
 public class DriveAbstractionTests {
 

@@ -45,14 +45,12 @@ public class SimpleInstructionParser : BaseInstructionParser {
         return instr;
     }
 
-    /// <summary>
-    /// CLTS — Clear Task-Switched flag in CR0. Treated as NOP since CR0 is not emulated in real mode.
-    /// Encoded as a 2-byte 0F 06 instruction.
-    /// </summary>
+    /// <summary>CLTS — Clear Task-Switched flag in CR0. Encoded as a 2-byte 0F 06 instruction.</summary>
     public CfgInstruction ParseClts(ParsingContext context) {
         CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
+        MethodCallNode cltsCall = new MethodCallNode(null, nameof(Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.InstructionExecutionHelper.Clts));
         InstructionNode displayAst = new InstructionNode(InstructionOperation.CLTS);
-        IVisitableAstNode execAst = _astBuilder.WithIpAdvancement(instr);
+        IVisitableAstNode execAst = _astBuilder.WithIpAdvancement(instr, cltsCall);
         instr.AttachAsts(displayAst, execAst);
         return instr;
     }
