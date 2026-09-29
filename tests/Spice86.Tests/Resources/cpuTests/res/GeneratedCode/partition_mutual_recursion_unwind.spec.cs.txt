@@ -46,13 +46,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_001A_F001A_11:
         CheckExternalEvents(cs1, 0x001A);
         // F000:001A mov AX,0
-        AX = (ushort)0x0000;
+        AX = 0;
         // F000:001D mov DS,AX
         DS = AX;
         // F000:001F mov byte ptr DS:[0x0010],0xAA
-        UInt8[DS, (ushort)0x0010] = (byte)0xAA;
+        UInt8[DS, 0x0010] = 0xAA;
         // F000:0024 ret near
-        return NearRet((ushort)0x0000);
+        return NearRet(0);
     }
 
     public virtual Action unknown_F000_0025_F0025(int loadOffset) {
@@ -74,13 +74,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_002A_F002A_21:
         CheckExternalEvents(cs1, 0x002A);
         // F000:002A mov AX,0
-        AX = (ushort)0x0000;
+        AX = 0;
         // F000:002D mov DS,AX
         DS = AX;
         // F000:002F mov byte ptr DS:[0x0011],0xBB
-        UInt8[DS, (ushort)0x0011] = (byte)0xBB;
+        UInt8[DS, 0x0011] = 0xBB;
         // F000:0034 ret near
-        return NearRet((ushort)0x0000);
+        return NearRet(0);
     }
 
     public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
@@ -89,19 +89,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_0000_F0000_1:
         CheckExternalEvents(cs1, 0x0000);
         // F000:0000 mov AX,0x1000
-        AX = (ushort)0x1000;
+        AX = 0x1000;
         // F000:0003 mov SS,AX
         SS = AX;
         State.InterruptShadowing = true;
         // F000:0005 mov SP,0x0100
-        SP = (ushort)0x0100;
+        SP = 0x0100;
         // F000:0008 mov CX,3
-        CX = (ushort)0x0003;
+        CX = 3;
         // F000:000B call near 0x0015
         NearCall(cs1, 0x000E, unknown_F000_0015_F0015);
         CheckExternalEvents(cs1, 0x000E);
         // F000:000E mov CX,1
-        CX = (ushort)0x0001;
+        CX = 1;
         // F000:0011 call near 0x0025
         NearCall(cs1, 0x0014, unknown_F000_0025_F0025);
         CheckExternalEvents(cs1, 0x0014);

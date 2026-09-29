@@ -30,13 +30,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_F000_0020_F0020(int loadOffset) {
         CheckExternalEvents(cs1, 0x0020);
         // F000:0020 mov AX,0x000A
-        AX = (ushort)0x000A;
+        AX = 0x000A;
         // F000:0023 mov BX,word ptr CS:[0x0102]
-        BX = UInt16[CS, (ushort)0x0102];
+        BX = UInt16[CS, 0x0102];
         // F000:0028 div BX
         try {
             ushort divisor_F000_0028_F0028 = BX;
-            uint dividend_F000_0028_F0028 = unchecked((uint)(unchecked((uint)DX) << 16 | unchecked((uint)AX)));
+            uint dividend_F000_0028_F0028 = unchecked((uint)(unchecked((uint)DX) << 0x00000010 | unchecked((uint)AX)));
             ushort quotient_F000_0028_F0028 = Alu16.Div(unchecked((uint)dividend_F000_0028_F0028), unchecked((ushort)divisor_F000_0028_F0028));
             AX = unchecked((ushort)quotient_F000_0028_F0028);
             DX = unchecked((ushort)(dividend_F000_0028_F0028 % unchecked((uint)divisor_F000_0028_F0028)));
@@ -51,11 +51,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         CheckExternalEvents(cs1, 0x002A);
         // F000:002A mov BX,word ptr CS:[0x0100]
-        BX = UInt16[CS, (ushort)0x0100];
+        BX = UInt16[CS, 0x0100];
         // F000:002F mov word ptr DS:[0],BX
-        UInt16[DS, (ushort)0x0000] = BX;
+        UInt16[DS, 0] = BX;
         // F000:0033 mov word ptr DS:[2],AX
-        UInt16[DS, (ushort)0x0002] = AX;
+        UInt16[DS, 2] = AX;
         // F000:0036 hlt
         return Hlt();
     }
@@ -69,24 +69,24 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:003A push BX
         Stack.Push16(BX);
         // F000:003B mov BX,word ptr CS:[0x0100]
-        BX = UInt16[CS, (ushort)0x0100];
+        BX = UInt16[CS, 0x0100];
         // F000:0040 inc BX
         BX = Alu16.Inc(BX);
         // F000:0041 mov word ptr CS:[0x0100],BX
-        UInt16[CS, (ushort)0x0100] = BX;
+        UInt16[CS, 0x0100] = BX;
         // F000:0046 cmp BX,3
-        Alu16.Sub(BX, unchecked((ushort)unchecked((short)(sbyte)3)));
+        Alu16.Sub(BX, 3);
         // F000:0049 jne short 0x0052
         if (!ZeroFlag) {
             goto label_F000_0052_F0052_36;
         }
         CheckExternalEvents(cs1, 0x004B);
         // F000:004B mov word ptr CS:[0x0102],5
-        UInt16[CS, (ushort)0x0102] = (ushort)0x0005;
+        UInt16[CS, 0x0102] = 5;
     label_F000_0052_F0052_36:
         CheckExternalEvents(cs1, 0x0052);
         // F000:0052 mov word ptr SS:[BP+2],0x0020
-        UInt16[SS, (ushort)(BP + (sbyte)2)] = (ushort)0x0020;
+        UInt16[SS, (ushort)(BP + 2)] = 0x0020;
         // F000:0057 pop BX
         BX = Stack.Pop16();
         // F000:0058 pop BP
@@ -101,20 +101,20 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_0000_F0000_1:
         CheckExternalEvents(cs1, 0x0000);
         // F000:0000 mov AX,0
-        AX = (ushort)0x0000;
+        AX = 0;
         // F000:0003 mov SS,AX
         SS = AX;
         State.InterruptShadowing = true;
         // F000:0005 mov SP,0x0200
-        SP = (ushort)0x0200;
+        SP = 0x0200;
         // F000:0008 mov word ptr DS:[0],0x0037
-        UInt16[DS, (ushort)0x0000] = (ushort)0x0037;
+        UInt16[DS, 0] = 0x0037;
         // F000:000E mov word ptr DS:[2],CS
-        UInt16[DS, (ushort)0x0002] = CS;
+        UInt16[DS, 2] = CS;
         // F000:0012 mov word ptr CS:[0x0100],0
-        UInt16[CS, (ushort)0x0100] = (ushort)0x0000;
+        UInt16[CS, 0x0100] = 0;
         // F000:0019 mov word ptr CS:[0x0102],0
-        UInt16[CS, (ushort)0x0102] = (ushort)0x0000;
+        UInt16[CS, 0x0102] = 0;
         return unknown_F000_0020_F0020(0x0000);
     label_F000_FFF0_FFFF0_0:
         CheckExternalEvents(cs1, 0xFFF0);

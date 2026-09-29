@@ -47,12 +47,12 @@ public class CSharpAstEmitterFragmentTest {
     }
 
     [Fact]
-    public void ConstantNodeRendersTypedLiteral() {
+    public void ConstantNodeRendersUnprefixedLiteral() {
         ConstantNode constant = new(DataType.UINT16, 0x111C);
 
         CSharpFragment fragment = constant.Accept(_emitter).AsExpression();
 
-        fragment.Text.Should().Be("(ushort)0x111C");
+        fragment.Text.Should().Be("0x111C");
     }
 
     [Fact]
@@ -64,7 +64,7 @@ public class CSharpAstEmitterFragmentTest {
         CSharpFragment fragment = pointer.Accept(_emitter).AsExpression();
 
         // A constant offset is emitted directly (the indexer has a ushort overload), not wrapped in (uint).
-        fragment.Text.Should().Be("UInt16[DS, (ushort)0x0050]");
+        fragment.Text.Should().Be("UInt16[DS, 0x0050]");
     }
 
     [Fact]
@@ -76,7 +76,17 @@ public class CSharpAstEmitterFragmentTest {
         CSharpFragment fragment = addition.Accept(_emitter).AsExpression();
 
         // Redundant outer parentheses are dropped; precedence-required ones are kept.
-        fragment.Text.Should().Be("AX + (ushort)0x0001");
+        fragment.Text.Should().Be("AX + 1");
+    }
+
+    [Fact]
+    public void NegateOfNegativeConstantIsParenthesized() {
+        ConstantNode inner = new(DataType.INT16, 0xFFFE); // -2
+        UnaryOperationNode negate = new(DataType.INT16, UnaryOperation.NEGATE, inner);
+
+        CSharpFragment fragment = negate.Accept(_emitter).AsExpression();
+
+        fragment.Text.Should().Be("-(-2)");
     }
 
     [Fact]

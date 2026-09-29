@@ -43,7 +43,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_016D_0100_017D0(int loadOffset) {
         CheckExternalEvents(cs1, 0x0100);
         // 016D:0100 int 8
-        InterruptCall(cs1, 0x0102, unchecked((byte)((byte)0x08)));
+        InterruptCall(cs1, 0x0102, 8);
         CheckExternalEvents(cs1, 0x0102);
         // 016D:0102 hlt
         return Hlt();
@@ -58,13 +58,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_F000_0006_F0006(int loadOffset) {
         CheckExternalEvents(cs2, 0x0006);
         // F000:0006 callback 8
-        Callback(unchecked((ushort)((ushort)0x0008)));
+        Callback(8);
         CheckExternalEvents(cs2, 0x000A);
         // F000:000A int 0x1C
-        InterruptCall(cs2, 0x000C, unchecked((byte)((byte)0x1C)));
+        InterruptCall(cs2, 0x000C, 0x1C);
         CheckExternalEvents(cs2, 0x000C);
         // F000:000C callback 0x0100
-        Callback(unchecked((ushort)((ushort)0x0100)));
+        Callback(0x0100);
         CheckExternalEvents(cs2, 0x0010);
         // F000:0010 iret
         return InterruptRet();
@@ -74,7 +74,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs2, 0x0011);
         VerifySpeculativeEntryOrFail(cs2, 0x0011, [(byte)0xFE, (byte)0x38, (byte)0x09, (byte)0x00]);
         // F000:0011 callback 9
-        Callback(unchecked((ushort)((ushort)0x0009)));
+        Callback(9);
         CheckExternalEvents(cs2, 0x0015);
         VerifySpeculativeEntryOrFail(cs2, 0x0015, [(byte)0xCF]);
         // F000:0015 iret
@@ -85,7 +85,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs2, 0x0057);
         VerifySpeculativeEntryOrFail(cs2, 0x0057, [(byte)0xFE, (byte)0x38, (byte)0x70, (byte)0x00]);
         // F000:0057 callback 0x0070
-        Callback(unchecked((ushort)((ushort)0x0070)));
+        Callback(0x0070);
         CheckExternalEvents(cs2, 0x005B);
         VerifySpeculativeEntryOrFail(cs2, 0x005B, [(byte)0xCF]);
         // F000:005B iret
@@ -100,7 +100,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs2, 0x0062);
         VerifySpeculativeEntryOrFail(cs2, 0x0062, [(byte)0xFE, (byte)0x38, (byte)0x74, (byte)0x00]);
         // F000:0062 callback 0x0074
-        Callback(unchecked((ushort)((ushort)0x0074)));
+        Callback(0x0074);
         CheckExternalEvents(cs2, 0x0066);
         VerifySpeculativeEntryOrFail(cs2, 0x0066, [(byte)0xCF]);
         // F000:0066 iret
@@ -111,7 +111,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs2, 0x0067);
         VerifySpeculativeEntryOrFail(cs2, 0x0067, [(byte)0xFE, (byte)0x38, (byte)0x03, (byte)0x01]);
         // F000:0067 callback 0x0103
-        Callback(unchecked((ushort)((ushort)0x0103)));
+        Callback(0x0103);
         CheckExternalEvents(cs2, 0x006B);
         VerifySpeculativeEntryOrFail(cs2, 0x006B, [(byte)0xCF]);
         // F000:006B iret
@@ -122,7 +122,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs2, 0x006C);
         VerifySpeculativeEntryOrFail(cs2, 0x006C, [(byte)0xFE, (byte)0x38, (byte)0x04, (byte)0x01]);
         // F000:006C callback 0x0104
-        Callback(unchecked((ushort)((ushort)0x0104)));
+        Callback(0x0104);
         CheckExternalEvents(cs2, 0x0070);
         VerifySpeculativeEntryOrFail(cs2, 0x0070, [(byte)0xCF]);
         // F000:0070 iret
@@ -133,7 +133,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs2, 0x0071);
         VerifySpeculativeEntryOrFail(cs2, 0x0071, [(byte)0xFE, (byte)0x38, (byte)0x05, (byte)0x01]);
         // F000:0071 callback 0x0105
-        Callback(unchecked((ushort)((ushort)0x0105)));
+        Callback(0x0105);
         CheckExternalEvents(cs2, 0x0075);
         VerifySpeculativeEntryOrFail(cs2, 0x0075, [(byte)0xCF]);
         // F000:0075 iret
@@ -144,7 +144,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs2, 0x0076);
         VerifySpeculativeEntryOrFail(cs2, 0x0076, [(byte)0xFE, (byte)0x38, (byte)0x06, (byte)0x01]);
         // F000:0076 callback 0x0106
-        Callback(unchecked((ushort)((ushort)0x0106)));
+        Callback(0x0106);
         CheckExternalEvents(cs2, 0x007A);
         VerifySpeculativeEntryOrFail(cs2, 0x007A, [(byte)0xCF]);
         // F000:007A iret
@@ -155,7 +155,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs2, 0x007B);
         VerifySpeculativeEntryOrFail(cs2, 0x007B, [(byte)0xFE, (byte)0x38, (byte)0x07, (byte)0x01]);
         // F000:007B callback 0x0107
-        Callback(unchecked((ushort)((ushort)0x0107)));
+        Callback(0x0107);
         CheckExternalEvents(cs2, 0x007F);
         VerifySpeculativeEntryOrFail(cs2, 0x007F, [(byte)0xCF]);
         // F000:007F iret
@@ -166,7 +166,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs2, 0x0080);
         VerifySpeculativeEntryOrFail(cs2, 0x0080, [(byte)0xFE, (byte)0x38, (byte)0x08, (byte)0x01]);
         // F000:0080 callback 0x0108
-        Callback(unchecked((ushort)((ushort)0x0108)));
+        Callback(0x0108);
         CheckExternalEvents(cs2, 0x0084);
         VerifySpeculativeEntryOrFail(cs2, 0x0084, [(byte)0xCF]);
         // F000:0084 iret
@@ -177,14 +177,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs2, 0x00E2);
         VerifySpeculativeEntryOrFail(cs2, 0x00E2, [(byte)0xCB]);
         // F000:00E2 ret far
-        return FarRet((ushort)0x0000);
+        return FarRet(0);
     }
 
     public virtual Action unknown_F000_00E3_F00E3(int loadOffset) {
         CheckExternalEvents(cs2, 0x00E3);
         VerifySpeculativeEntryOrFail(cs2, 0x00E3, [(byte)0xFE, (byte)0x38, (byte)0x0B, (byte)0x01]);
         // F000:00E3 callback 0x010B
-        Callback(unchecked((ushort)((ushort)0x010B)));
+        Callback(0x010B);
         CheckExternalEvents(cs2, 0x00E7);
         VerifySpeculativeEntryOrFail(cs2, 0x00E7, [(byte)0x9A, (byte)0xE2, (byte)0x00, (byte)0x00, (byte)0xF0]);
         // F000:00E7 call far F000:00E2
@@ -192,11 +192,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs2, 0x00EC);
         VerifySpeculativeEntryOrFail(cs2, 0x00EC, [(byte)0xFE, (byte)0x38, (byte)0x0C, (byte)0x01]);
         // F000:00EC callback 0x010C
-        Callback(unchecked((ushort)((ushort)0x010C)));
+        Callback(0x010C);
         CheckExternalEvents(cs2, 0x00F0);
         VerifySpeculativeEntryOrFail(cs2, 0x00F0, [(byte)0xCB]);
         // F000:00F0 ret far
-        return FarRet((ushort)0x0000);
+        return FarRet(0);
     }
 
 }

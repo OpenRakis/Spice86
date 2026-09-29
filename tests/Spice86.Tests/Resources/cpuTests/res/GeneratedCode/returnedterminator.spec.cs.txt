@@ -31,20 +31,20 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_0000_F0000_1:
         CheckExternalEvents(cs1, 0x0000);
         // F000:0000 mov AX,0
-        AX = (ushort)0x0000;
+        AX = 0;
         // F000:0003 mov SS,AX
         SS = AX;
         State.InterruptShadowing = true;
         // F000:0005 mov SP,8
-        SP = (ushort)0x0008;
+        SP = 8;
         // F000:0008 jmp short 0x000A
         CheckExternalEvents(cs1, 0x000A);
         // F000:000A mov AX,0x1111
-        AX = (ushort)0x1111;
+        AX = 0x1111;
         // F000:000D push AX
         Stack.Push16(AX);
         // F000:000E mov AX,0x2222
-        AX = (ushort)0x2222;
+        AX = 0x2222;
         // F000:0011 push AX
         Stack.Push16(AX);
         // F000:0012 jmp short 0x0019

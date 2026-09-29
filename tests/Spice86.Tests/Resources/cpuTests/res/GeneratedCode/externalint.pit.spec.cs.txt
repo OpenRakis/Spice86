@@ -31,11 +31,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:003F push AX
         Stack.Push16(AX);
         // F000:0040 mov DX,1
-        DX = (ushort)0x0001;
+        DX = 1;
         // F000:0043 mov AL,0x20
-        AL = (byte)0x20;
+        AL = 0x20;
         // F000:0045 out 0x20,AL
-        Machine.IoPortDispatcher.WriteByte(unchecked((ushort)(byte)0x20), AL);
+        Machine.IoPortDispatcher.WriteByte(0x0020, AL);
         // F000:0047 pop AX
         AX = Stack.Pop16();
         // F000:0048 iret
@@ -48,34 +48,34 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_0000_F0000_1:
         CheckExternalEvents(cs1, 0x0000);
         // F000:0000 mov AX,0
-        AX = (ushort)0x0000;
+        AX = 0;
         // F000:0003 mov SS,AX
         SS = AX;
         State.InterruptShadowing = true;
         // F000:0005 mov SP,2
-        SP = (ushort)0x0002;
+        SP = 2;
         // F000:0008 mov DX,0
-        DX = (ushort)0x0000;
+        DX = 0;
         // F000:000B mov word ptr DS:[0x0020],0x003F
-        UInt16[DS, (ushort)0x0020] = (ushort)0x003F;
+        UInt16[DS, 0x0020] = 0x003F;
         // F000:0011 mov word ptr DS:[0x0022],CS
-        UInt16[DS, (ushort)0x0022] = CS;
+        UInt16[DS, 0x0022] = CS;
         // F000:0015 mov AL,0x36
-        AL = (byte)0x36;
+        AL = 0x36;
         // F000:0017 out 0x43,AL
-        Machine.IoPortDispatcher.WriteByte(unchecked((ushort)(byte)0x43), AL);
+        Machine.IoPortDispatcher.WriteByte(0x0043, AL);
         // F000:0019 mov AL,0x51
-        AL = (byte)0x51;
+        AL = 0x51;
         // F000:001B out 0x40,AL
-        Machine.IoPortDispatcher.WriteByte(unchecked((ushort)(byte)0x40), AL);
+        Machine.IoPortDispatcher.WriteByte(0x0040, AL);
         // F000:001D mov AL,0x22
-        AL = (byte)0x22;
+        AL = 0x22;
         // F000:001F out 0x40,AL
-        Machine.IoPortDispatcher.WriteByte(unchecked((ushort)(byte)0x40), AL);
+        Machine.IoPortDispatcher.WriteByte(0x0040, AL);
         // F000:0021 mov AL,0
-        AL = (byte)0x00;
+        AL = 0;
         // F000:0023 out 0x21,AL
-        Machine.IoPortDispatcher.WriteByte(unchecked((ushort)(byte)0x21), AL);
+        Machine.IoPortDispatcher.WriteByte(0x0021, AL);
         // F000:0025 sti
         if (!InterruptFlag) {
             State.InterruptShadowing = true;
@@ -85,7 +85,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         InterruptFlag = true;
         CheckExternalEvents(cs1, 0x0026);
         // F000:0026 mov ECX,0x00FFFFFF
-        ECX = 0x00FFFFFFu;
+        ECX = 0x00FFFFFF;
     label_F000_002C_F002C_34:
         CheckExternalEvents(cs1, 0x002C);
         // F000:002C inc AX
@@ -95,19 +95,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:002F shr BX,1
         BX = Alu16.Shr(BX, 1);
         // F000:0031 loop 0x002C
-        CX = unchecked((ushort)(CX - (ushort)0x0001));
-        if (CX != (ushort)0x0000) {
+        CX = unchecked((ushort)(CX - 1));
+        if (CX != 0) {
             goto label_F000_002C_F002C_34;
         }
         CheckExternalEvents(cs1, 0x0033);
         // F000:0033 cmp DX,0
-        Alu16.Sub(DX, (ushort)0x0000);
+        Alu16.Sub(DX, 0);
         // F000:0037 setne AL
         if (!ZeroFlag) {
-            AL = (byte)0x01;
+            AL = 1;
         }
         else {
-            AL = (byte)0x00;
+            AL = 0;
         }
         // F000:003A movsz AX,AL
         AX = unchecked((ushort)AL);

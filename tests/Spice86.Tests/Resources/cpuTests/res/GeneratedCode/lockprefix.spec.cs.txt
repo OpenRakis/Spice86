@@ -32,7 +32,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_F000_0045_F0045(int loadOffset) {
         CheckExternalEvents(cs1, 0x0045);
         // F000:0045 mov word ptr DS:[4],0x004E
-        UInt16[DS, (ushort)0x0004] = (ushort)0x004E;
+        UInt16[DS, 4] = 0x004E;
         // F000:004B invalid
         try {
             throw new Spice86.Core.Emulator.CPU.Exceptions.CpuInvalidOpcodeException("LOCK prefix is invalid with instruction ADD at F000:004B: no memory destination operand");
@@ -51,7 +51,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_F000_004E_F004E(int loadOffset) {
         CheckExternalEvents(cs1, 0x004E);
         // F000:004E mov word ptr DS:[4],0x0057
-        UInt16[DS, (ushort)0x0004] = (ushort)0x0057;
+        UInt16[DS, 4] = 0x0057;
         // F000:0054 invalid
         try {
             throw new Spice86.Core.Emulator.CPU.Exceptions.CpuInvalidOpcodeException("LOCK prefix is invalid with instruction INC at F000:0054: no memory destination operand");
@@ -80,13 +80,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:005B mov BP,SP
         BP = SP;
         // F000:005D mov AX,word ptr DS:[4]
-        AX = UInt16[DS, (ushort)0x0004];
+        AX = UInt16[DS, 4];
         // F000:0060 mov word ptr SS:[BP+2],AX
-        UInt16[SS, (ushort)(BP + (sbyte)2)] = AX;
+        UInt16[SS, (ushort)(BP + 2)] = AX;
         // F000:0063 pop BP
         BP = Stack.Pop16();
         // F000:0064 inc word ptr DS:[0]
-        UInt16[DS, (ushort)0x0000] = Alu16.Inc(UInt16[DS, (ushort)0x0000]);
+        UInt16[DS, 0] = Alu16.Inc(UInt16[DS, 0]);
         // F000:0068 iret
         return InterruptRet();
     }
@@ -104,27 +104,27 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         SS = AX;
         State.InterruptShadowing = true;
         // F000:0006 mov SP,0x8000
-        SP = (ushort)0x8000;
+        SP = 0x8000;
         // F000:0009 mov word ptr DS:[0x0018],0x005A
-        UInt16[DS, (ushort)0x0018] = (ushort)0x005A;
+        UInt16[DS, 0x0018] = 0x005A;
         // F000:000F mov word ptr DS:[0x001A],CS
-        UInt16[DS, (ushort)0x001A] = CS;
+        UInt16[DS, 0x001A] = CS;
         // F000:0013 mov word ptr DS:[0],0
-        UInt16[DS, (ushort)0x0000] = (ushort)0x0000;
+        UInt16[DS, 0] = 0;
         // F000:0019 mov word ptr DS:[2],0
-        UInt16[DS, (ushort)0x0002] = (ushort)0x0000;
+        UInt16[DS, 2] = 0;
         // F000:001F mov word ptr DS:[0x0010],1
-        UInt16[DS, (ushort)0x0010] = (ushort)0x0001;
+        UInt16[DS, 0x0010] = 1;
         // F000:0025 add word ptr DS:[0x0010],AX
-        UInt16[DS, (ushort)0x0010] = Alu16.Add(UInt16[DS, (ushort)0x0010], AX);
+        UInt16[DS, 0x0010] = Alu16.Add(UInt16[DS, 0x0010], AX);
         // F000:002A inc word ptr DS:[0x0010]
-        UInt16[DS, (ushort)0x0010] = Alu16.Inc(UInt16[DS, (ushort)0x0010]);
+        UInt16[DS, 0x0010] = Alu16.Inc(UInt16[DS, 0x0010]);
         // F000:002F dec word ptr DS:[0x0010]
-        UInt16[DS, (ushort)0x0010] = Alu16.Dec(UInt16[DS, (ushort)0x0010]);
+        UInt16[DS, 0x0010] = Alu16.Dec(UInt16[DS, 0x0010]);
         // F000:0034 mov word ptr DS:[2],3
-        UInt16[DS, (ushort)0x0002] = (ushort)0x0003;
+        UInt16[DS, 2] = 3;
         // F000:003A mov word ptr DS:[4],0x0045
-        UInt16[DS, (ushort)0x0004] = (ushort)0x0045;
+        UInt16[DS, 4] = 0x0045;
         // F000:0040 invalid
         try {
             throw new Spice86.Core.Emulator.CPU.Exceptions.CpuInvalidOpcodeException("LOCK prefix is invalid with instruction MOV at F000:0040: not in the LOCK-allowed instruction set");

@@ -31,11 +31,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_0000_F0000_1:
         CheckExternalEvents(cs1, 0x0000);
         // F000:0000 mov CX,0
-        CX = (ushort)0x0000;
+        CX = 0;
     label_F000_0003_F0003_4:
         CheckExternalEvents(cs1, 0x0003);
         // F000:0003 cmp CX,0
-        Alu16.Sub(CX, unchecked((ushort)unchecked((short)(sbyte)0)));
+        Alu16.Sub(CX, 0);
         // F000:0006 je short 9
         if (ZeroFlag) {
             goto label_F000_0009_F0009_30;
@@ -46,20 +46,20 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_0009_F0009_30:
         CheckExternalEvents(cs1, 0x0009);
         // F000:0009 mov AX,word ptr [0x000F000A]
-        AX = UInt16[unchecked((uint)(0x000F000Au))];
+        AX = UInt16[unchecked((uint)(0x000F000A))];
         // F000:000C mov word ptr CS:[0x000A],0x162E
-        UInt16[CS, (ushort)0x000A] = (ushort)0x162E;
+        UInt16[CS, 0x000A] = 0x162E;
         // F000:0013 mov CX,1
-        CX = (ushort)0x0001;
+        CX = 1;
         // F000:0016 cmp AX,0x162E
-        Alu16.Sub(AX, (ushort)0x162E);
+        Alu16.Sub(AX, 0x162E);
         // F000:0019 je short 3
         if (ZeroFlag) {
             goto label_F000_0003_F0003_4;
         }
         CheckExternalEvents(cs1, 0x001B);
         // F000:001B mov CX,0
-        CX = (ushort)0x0000;
+        CX = 0;
         // F000:001E jmp short 3
         goto label_F000_0003_F0003_4;
     label_F000_FFF0_FFFF0_0:

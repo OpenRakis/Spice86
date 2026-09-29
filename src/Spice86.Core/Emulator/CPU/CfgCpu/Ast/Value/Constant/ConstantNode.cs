@@ -38,7 +38,10 @@ public record ConstantNode(DataType DataType, ulong Value) : ValueNode(DataType)
         return Value & Mask(targetType.BitWidth);
     }
 
-    private ulong Mask(BitWidth bitWidth) {
+    /// <summary>
+    /// Returns the bit mask covering the given bit width.
+    /// </summary>
+    public static ulong Mask(BitWidth bitWidth) {
         return bitWidth switch {
             BitWidth.NIBBLE_4 => 0x0F,
             BitWidth.QUIBBLE_5 => 0b11111,
@@ -49,6 +52,19 @@ public record ConstantNode(DataType DataType, ulong Value) : ValueNode(DataType)
             BitWidth.QWORD_64 => 0xFFFFFFFFFFFFFFFF,
             _ => throw new InvalidOperationException($"Unsupported bit width {bitWidth}")
         };
+    }
+
+    /// <summary>
+    /// Converts the value the way an unchecked C# cast does: a signed source is sign-extended before
+    /// truncation to the target width, regardless of the target's signedness. Converting to bool yields 1 for
+    /// any non-zero value.
+    /// </summary>
+    public ulong ConvertAsCSharpCast(DataType targetType) {
+        if (targetType == DataType.BOOL) {
+            return Value == 0 ? 0UL : 1UL;
+        }
+        long widened = DataType.Signed ? SignedValue : unchecked((long)Value);
+        return unchecked((ulong)widened) & Mask(targetType.BitWidth);
     }
 
     public override T Accept<T>(IAstVisitor<T> astVisitor) {

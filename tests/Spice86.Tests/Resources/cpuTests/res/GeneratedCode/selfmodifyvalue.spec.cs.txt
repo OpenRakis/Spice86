@@ -31,28 +31,28 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_0000_F0000_1:
         CheckExternalEvents(cs1, 0x0000);
         // F000:0000 mov AX,0
-        AX = (ushort)0x0000;
+        AX = 0;
         // F000:0003 mov SS,AX
         SS = AX;
         State.InterruptShadowing = true;
         // F000:0005 mov SP,4
-        SP = (ushort)0x0004;
+        SP = 4;
         // F000:0008 mov BX,0x000A
-        BX = (ushort)0x000A;
+        BX = 0x000A;
     label_F000_000B_F000B_7:
         CheckExternalEvents(cs1, 0x000B);
         // F000:000B jmp short 0x000D
         CheckExternalEvents(cs1, 0x000D);
         // F000:000D mov AX,word ptr [0x000F000E]
-        AX = UInt16[unchecked((uint)(0x000F000Eu))];
+        AX = UInt16[unchecked((uint)(0x000F000E))];
         // F000:0010 push AX
         Stack.Push16(AX);
         // F000:0011 mov word ptr CS:[0x000E],BX
-        UInt16[CS, (ushort)0x000E] = BX;
+        UInt16[CS, 0x000E] = BX;
         // F000:0016 dec BX
         BX = Alu16.Dec(BX);
         // F000:0017 cmp AX,0
-        Alu16.Sub(AX, unchecked((ushort)unchecked((short)(sbyte)0)));
+        Alu16.Sub(AX, 0);
         // F000:001A jne short 0x000B
         if (!ZeroFlag) {
             goto label_F000_000B_F000B_7;

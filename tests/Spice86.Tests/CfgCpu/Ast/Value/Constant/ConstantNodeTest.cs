@@ -1,5 +1,6 @@
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
+using Spice86.Shared.Emulator.Memory;
 using Xunit;
 
 namespace Spice86.Tests.CfgCpu.Ast.Value.Constant;
@@ -109,5 +110,40 @@ public class ConstantNodeTest {
         var node = new ConstantNode(DataType.UINT4, 0xF);
         ulong result = node.Convert(DataType.UINT8);
         Assert.Equal(0x0Fu, result);
+    }
+
+    public static TheoryData<DataType, ulong, DataType, ulong> CSharpCastCases => new() {
+        { DataType.INT8, 0xFF, DataType.UINT16, 0xFFFF },
+        { DataType.INT16, 0xFFFF, DataType.UINT32, 0xFFFFFFFF },
+        { DataType.UINT16, 0x8000, DataType.INT16, 0x8000 },
+        { DataType.UINT8, 0xFF, DataType.INT8, 0xFF },
+        { DataType.UINT16, 0x1234, DataType.UINT8, 0x34 },
+        { DataType.UINT8, 0x00, DataType.BOOL, 0 },
+        { DataType.UINT16, 0x0100, DataType.BOOL, 1 }
+    };
+
+    [Theory]
+    [MemberData(nameof(CSharpCastCases))]
+    public void ConvertAsCSharpCast_MatchesUncheckedCSharpCast(DataType sourceType, ulong sourceValue, DataType targetType, ulong expected) {
+        // Arrange
+        ConstantNode node = new(sourceType, sourceValue);
+
+        // Act
+        ulong result = node.ConvertAsCSharpCast(targetType);
+
+        // Assert
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData(BitWidth.NIBBLE_4, 0x0FUL)]
+    [InlineData(BitWidth.QUIBBLE_5, 0x1FUL)]
+    [InlineData(BitWidth.BYTE_8, 0xFFUL)]
+    [InlineData(BitWidth.WORD_16, 0xFFFFUL)]
+    [InlineData(BitWidth.DWORD_32, 0xFFFFFFFFUL)]
+    [InlineData(BitWidth.BOOL_1, 0x1UL)]
+    [InlineData(BitWidth.QWORD_64, 0xFFFFFFFFFFFFFFFFUL)]
+    public void Mask_CoversBitWidth(BitWidth bitWidth, ulong expected) {
+        Assert.Equal(expected, ConstantNode.Mask(bitWidth));
     }
 }

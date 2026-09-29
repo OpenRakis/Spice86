@@ -31,9 +31,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_0000_F0000_1:
         CheckExternalEvents(cs1, 0x0000);
         // F000:0000 mov byte ptr DS:[0x0400],1
-        UInt8[DS, (ushort)0x0400] = (byte)0x01;
+        UInt8[DS, 0x0400] = 1;
         // F000:0005 mov AL,byte ptr DS:[0x0500]
-        AL = UInt8[DS, (ushort)0x0500];
+        AL = UInt8[DS, 0x0500];
         // F000:0008 and AL,AL
         Alu8.And(AL, AL);
         // F000:000A jne short 0x0013
@@ -42,22 +42,22 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         CheckExternalEvents(cs1, 0x000C);
         // F000:000C mov byte ptr DS:[0x0401],0xAA
-        UInt8[DS, (ushort)0x0401] = (byte)0xAA;
+        UInt8[DS, 0x0401] = 0xAA;
         // F000:0011 jmp short 0x001A
         goto label_F000_001A_F001A_13;
     label_F000_0013_F0013_7:
         CheckExternalEvents(cs1, 0x0013);
         VerifySpeculativeEntryOrFail(cs1, 0x0013, [(byte)0xC6, (byte)0x06, (byte)0x01, (byte)0x04, (byte)0xBB]);
         // F000:0013 mov byte ptr DS:[0x0401],0xBB
-        UInt8[DS, (ushort)0x0401] = (byte)0xBB;
+        UInt8[DS, 0x0401] = 0xBB;
         VerifySpeculativeEntryOrFail(cs1, 0x0018, [(byte)0xEB, (byte)0x00]);
         // F000:0018 jmp short 0x001A
     label_F000_001A_F001A_13:
         CheckExternalEvents(cs1, 0x001A);
         // F000:001A mov byte ptr DS:[0x0402],0xCC
-        UInt8[DS, (ushort)0x0402] = (byte)0xCC;
+        UInt8[DS, 0x0402] = 0xCC;
         // F000:001F mov byte ptr DS:[0x0403],0xFF
-        UInt8[DS, (ushort)0x0403] = (byte)0xFF;
+        UInt8[DS, 0x0403] = 0xFF;
         // F000:0024 hlt
         return Hlt();
     label_F000_FFF0_FFFF0_0:

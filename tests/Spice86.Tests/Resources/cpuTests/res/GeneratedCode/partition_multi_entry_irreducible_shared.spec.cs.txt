@@ -47,19 +47,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_0000_F0000_1:
         CheckExternalEvents(cs1, 0x0000);
         // F000:0000 mov AX,0x1000
-        AX = (ushort)0x1000;
+        AX = 0x1000;
         // F000:0003 mov SS,AX
         SS = AX;
         State.InterruptShadowing = true;
         // F000:0005 mov SP,0x0100
-        SP = (ushort)0x0100;
+        SP = 0x0100;
         // F000:0008 mov CX,0
-        CX = (ushort)0x0000;
+        CX = 0;
         // F000:000B call near 0x0015
         NearCall(cs1, 0x000E, unknown_F000_0015_F0015);
         CheckExternalEvents(cs1, 0x000E);
         // F000:000E mov CX,1
-        CX = (ushort)0x0001;
+        CX = 1;
         // F000:0011 call near 0x0017
         NearCall(cs1, 0x0014, unknown_F000_0017_F0017);
         CheckExternalEvents(cs1, 0x0014);
@@ -84,25 +84,25 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_0019_F0019_10:
         CheckExternalEvents(cs1, 0x0019);
         // F000:0019 cmp CX,0
-        Alu16.Sub(CX, unchecked((ushort)unchecked((short)(sbyte)0)));
+        Alu16.Sub(CX, 0);
         // F000:001C je short 0x001F
         if (ZeroFlag) {
             goto label_F000_001F_F001F_13;
         }
         CheckExternalEvents(cs1, 0x001E);
         // F000:001E ret near
-        return NearRet((ushort)0x0000);
+        return NearRet(0);
     label_F000_001F_F001F_13:
         CheckExternalEvents(cs1, 0x001F);
         // F000:001F cmp CX,1
-        Alu16.Sub(CX, unchecked((ushort)unchecked((short)(sbyte)1)));
+        Alu16.Sub(CX, 1);
         // F000:0022 je short 0x0019
         if (ZeroFlag) {
             goto label_F000_0019_F0019_10;
         }
         CheckExternalEvents(cs1, 0x0024);
         // F000:0024 ret near
-        return NearRet((ushort)0x0000);
+        return NearRet(0);
     }
 
 }

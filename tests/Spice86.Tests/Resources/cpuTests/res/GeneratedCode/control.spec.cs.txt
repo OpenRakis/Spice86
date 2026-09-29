@@ -31,14 +31,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_0000_F0000_1:
         CheckExternalEvents(cs1, 0x0000);
         // F000:0000 mov AX,0x1000
-        AX = (ushort)0x1000;
+        AX = 0x1000;
         // F000:0003 mov SS,AX
         SS = AX;
         State.InterruptShadowing = true;
         // F000:0005 mov SP,0x1000
-        SP = (ushort)0x1000;
+        SP = 0x1000;
         // F000:0008 mov CX,0xFEFF
-        CX = (ushort)0xFEFF;
+        CX = 0xFEFF;
         // F000:000B push CX
         Stack.Push16(CX);
         CheckExternalEvents(cs1, 0x000C);
@@ -58,7 +58,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0012 pop AX
         AX = Stack.Pop16();
         // F000:0013 mov DX,1
-        DX = (ushort)0x0001;
+        DX = 1;
         // F000:0016 push DX
         Stack.Push16(DX);
         CheckExternalEvents(cs1, 0x0017);
@@ -84,13 +84,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:001D pop BX
         BX = Stack.Pop16();
         // F000:001E mov CX,0
-        CX = (ushort)0x0000;
+        CX = 0;
         // F000:0021 mov DS,CX
         DS = CX;
         // F000:0023 mov word ptr DS:[0],AX
-        UInt16[DS, (ushort)0x0000] = AX;
+        UInt16[DS, 0] = AX;
         // F000:0026 mov word ptr DS:[2],BX
-        UInt16[DS, (ushort)0x0002] = BX;
+        UInt16[DS, 2] = BX;
         // F000:002A hlt
         return Hlt();
     label_F000_FFF0_FFFF0_0:

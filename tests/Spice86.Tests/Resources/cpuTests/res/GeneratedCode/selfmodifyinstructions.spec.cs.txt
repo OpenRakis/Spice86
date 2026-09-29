@@ -31,50 +31,50 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_0000_F0000_1:
         CheckExternalEvents(cs1, 0x0000);
         // F000:0000 mov AX,0
-        AX = (ushort)0x0000;
+        AX = 0;
         // F000:0003 mov SS,AX
         SS = AX;
         State.InterruptShadowing = true;
         // F000:0005 mov SP,6
-        SP = (ushort)0x0006;
+        SP = 6;
         // F000:0008 mov SI,0x0800
-        SI = (ushort)0x0800;
+        SI = 0x0800;
     label_F000_000B_F000B_7:
         CheckExternalEvents(cs1, 0x000B);
         // F000:000B mov AX,0xF000
-        AX = (ushort)0xF000;
+        AX = 0xF000;
         // F000:000E mov DS,AX
         DS = AX;
         // F000:0010 mov ES,AX
         ES = AX;
         // F000:0012 mov DI,0x1400
-        DI = (ushort)0x1400;
+        DI = 0x1400;
         // F000:0015 mov CX,0x03E8
-        CX = (ushort)0x03E8;
+        CX = 0x03E8;
         // F000:0018 rep movs word ptr ES:[DI],word ptr DS:[SI]
-        while (CX != (ushort)0x0000) {
+        while (CX != 0) {
             UInt16[ES, DI] = UInt16[DS, SI];
             SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction16)));
             DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
-            CX = unchecked((ushort)(CX - (ushort)0x0001));
+            CX = unchecked((ushort)(CX - 1));
         }
         // F000:001A jmp near 0x1400
         goto label_F000_1400_F1400_30244;
     label_F000_1400_F1400_30227:
         CheckExternalEvents(cs1, 0x1400);
         // F000:1400 mov AX,1
-        AX = (ushort)0x0001;
+        AX = 1;
         goto label_F000_1403_F1403_30229;
     label_F000_1400_F1400_30237:
         CheckExternalEvents(cs1, 0x1400);
         // F000:1400 mov BX,1
-        BX = (ushort)0x0001;
+        BX = 1;
         // F000:1403 shl BX,1
         BX = Alu16.Shl(BX, 1);
         // F000:1405 push BX
         Stack.Push16(BX);
         // F000:1406 mov SI,0x1000
-        SI = (ushort)0x1000;
+        SI = 0x1000;
         // F000:1409 jmp far F000:000B
         goto label_F000_000B_F000B_7;
     label_F000_1400_F1400_30244:
@@ -93,7 +93,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_1400_F1400_30250:
         CheckExternalEvents(cs1, 0x1400);
         // F000:1400 mov CX,1
-        CX = (ushort)0x0001;
+        CX = 1;
         // F000:1403 inc CX
         CX = Alu16.Inc(CX);
         // F000:1404 inc CX
@@ -107,7 +107,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1403 push AX
         Stack.Push16(AX);
         // F000:1404 mov SI,0x0C00
-        SI = (ushort)0x0C00;
+        SI = 0x0C00;
         // F000:1407 jmp far F000:000B
         goto label_F000_000B_F000B_7;
     label_F000_FFF0_FFFF0_0:
