@@ -17,7 +17,7 @@
         <PackageVersion Include="bodong.PropertyModels" Version="12.0.0" />
         <PackageVersion Include="Iir1.Net" Version="1.0.0" />
         <PackageVersion Include="MVerb.Net" Version="1.0.0" />
-        <PackageVersion Include="Spectre.Console.Cli" Version="0.55.0" />
+        <PackageVersion Include="Spectre.Console.Cli" Version="0.57.2" />
         <PackageVersion Include="CommunityToolkit.HighPerformance" Version="8.4.2" />
         <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
         <PackageVersion Include="coverlet.collector" Version="10.0.1" />
