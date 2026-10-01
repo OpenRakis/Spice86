@@ -72,7 +72,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0012 mov BX,0x2222
         BX = 0x2222;
         // F000:0015 ret near
-        return NearRet(0);
+        return NearRet();
     }
 
 }

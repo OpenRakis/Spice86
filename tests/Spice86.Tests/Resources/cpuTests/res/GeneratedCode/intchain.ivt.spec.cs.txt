@@ -177,7 +177,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs2, 0x00E2);
         VerifySpeculativeEntryOrFail(cs2, 0x00E2, [(byte)0xCB]);
         // F000:00E2 ret far
-        return FarRet(0);
+        return FarRet();
     }
 
     public virtual Action unknown_F000_00E3_F00E3(int loadOffset) {
@@ -196,7 +196,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs2, 0x00F0);
         VerifySpeculativeEntryOrFail(cs2, 0x00F0, [(byte)0xCB]);
         // F000:00F0 ret far
-        return FarRet(0);
+        return FarRet();
     }
 
 }

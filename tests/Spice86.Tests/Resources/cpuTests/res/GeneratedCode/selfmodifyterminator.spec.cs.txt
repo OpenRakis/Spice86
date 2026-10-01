@@ -44,13 +44,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0034 mov byte ptr ES:[0x001A],5
         UInt8[ES, 0x001A] = 5;
         // F000:003A ret near
-        return NearRet(0);
+        return NearRet();
     label_F000_003B_F003B_13:
         CheckExternalEvents(cs1, 0x003B);
         // F000:003B inc byte ptr DS:[0x0040]
         UInt8[DS, 0x0040] = Alu8.Inc(UInt8[DS, 0x0040]);
         // F000:003F ret near
-        return NearRet(0);
+        return NearRet();
     }
 
     public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {

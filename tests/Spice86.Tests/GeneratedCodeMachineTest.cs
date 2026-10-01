@@ -38,6 +38,16 @@ public sealed class GeneratedCodeMachineTest {
     }
 
     [Fact]
+    public void ReturnWithoutBytesToPopOmitsDefaultArgument() {
+        GeneratedCodeMachineTestRunner runner = new();
+        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("partition_cross_function_loop", maxCycles: 10000);
+        string source = generatedProgram.SourceText;
+
+        source.Should().Contain("return NearRet();");
+        source.Should().NotContain("NearRet(0)");
+    }
+
+    [Fact]
     public void CpuFaultTransfersUseDedicatedFaultLowering() {
         GeneratedCodeMachineTestRunner runner = new();
         (CfgPartitionedProgram program, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("divfaultloop", maxCycles: 1000);

@@ -53,7 +53,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0005 push 0x0D
         Stack.Push16(0x000D);
         // F000:0007 ret far
-        return FarRet(0);
+        return FarRet();
     label_F000_FEFD_FFEFD_17:
         CheckExternalEvents(cs1, 0xFEFD);
         // F000:FEFD jmp near 0
@@ -79,7 +79,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0016 push 0xFEFD
         Stack.Push16(0xFEFD);
         // F000:0019 ret far
-        return FarRet(0);
+        return FarRet();
     label_F000_FFF0_FFFF0_0:
         CheckExternalEvents(cs1, 0xFFF0);
         // F000:FFF0 jmp short 8

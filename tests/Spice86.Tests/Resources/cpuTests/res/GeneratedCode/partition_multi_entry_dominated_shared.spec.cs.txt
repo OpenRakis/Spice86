@@ -117,7 +117,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0033 mov CX,0xC333
         CX = 0xC333;
         // F000:0036 ret near
-        return NearRet(0);
+        return NearRet();
     }
 
 }

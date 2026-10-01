@@ -2833,7 +2833,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:137B stc
         CarryFlag = true;
         // F000:137C ret near
-        return NearRet(0);
+        return NearRet();
     }
 
     public virtual Action unknown_F000_138D_F138D(int loadOffset) {
@@ -2852,7 +2852,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1399 stc
         CarryFlag = true;
         // F000:139A ret near
-        return NearRet32(0);
+        return NearRet32();
     }
 
     public virtual Action unknown_F000_13C5_F13C5(int loadOffset) {
@@ -2871,7 +2871,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:13D1 stc
         CarryFlag = true;
         // F000:13D2 ret far
-        return FarRet(0);
+        return FarRet();
     }
 
     public virtual Action unknown_F000_13E5_F13E5(int loadOffset) {
@@ -2890,7 +2890,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:13F1 stc
         CarryFlag = true;
         // F000:13F2 ret far
-        return FarRet32(0);
+        return FarRet32();
     }
 
     public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {

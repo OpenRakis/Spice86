@@ -39,7 +39,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0047 pushf
         Stack.Push16(FlagRegister16);
         // F000:0048 ret near
-        return NearRet(0);
+        return NearRet();
     }
 
     public virtual Action unknown_F000_0082_F0082(int loadOffset) {
@@ -51,7 +51,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0083 pushf
         Stack.Push16(FlagRegister16);
         // F000:0084 ret near
-        return NearRet(0);
+        return NearRet();
     }
 
     public virtual Action unknown_F000_0097_F0097(int loadOffset) {
@@ -63,7 +63,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0098 pushf
         Stack.Push16(FlagRegister16);
         // F000:0099 ret near
-        return NearRet(0);
+        return NearRet();
     }
 
     public virtual Action unknown_F000_0812_F0812(int loadOffset) {
@@ -75,7 +75,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0813 pushf
         Stack.Push16(FlagRegister16);
         // F000:0814 ret near
-        return NearRet(0);
+        return NearRet();
     }
 
     public virtual Action unknown_F000_0883_F0883(int loadOffset) {
@@ -244,7 +244,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:000E pushf
         Stack.Push16(FlagRegister16);
         // F000:000F ret near
-        return NearRet(0);
+        return NearRet();
     label_F000_FFF0_FFFF0_0:
         CheckExternalEvents(cs1, 0xFFF0);
         // F000:FFF0 jmp short 0
