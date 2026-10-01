@@ -47,7 +47,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_001A_F001A_15:
         CheckExternalEvents(cs1, 0x001A);
         // F000:001A ret near
-        return NearRet(0);
+        return NearRet();
     }
 
     public virtual Action unknown_F000_001B_F001B(int loadOffset) {
@@ -56,7 +56,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         NearCall(cs1, 0x001E, unknown_F000_001F_F001F);
         CheckExternalEvents(cs1, 0x001E);
         // F000:001E ret near
-        return NearRet(0);
+        return NearRet();
     }
 
     public virtual Action unknown_F000_001F_F001F(int loadOffset) {

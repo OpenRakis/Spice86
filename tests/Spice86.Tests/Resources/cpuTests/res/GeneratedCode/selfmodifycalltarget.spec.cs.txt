@@ -36,7 +36,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:002E mov byte ptr DS:[0x0010],0xAA
         UInt8[DS, 0x0010] = 0xAA;
         // F000:0033 ret far
-        return FarRet(0);
+        return FarRet();
     }
 
     public virtual Action unknown_40_F000_0028_F0028(int loadOffset) {
@@ -46,7 +46,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0034 mov byte ptr DS:[0x0011],0xBB
         UInt8[DS, 0x0011] = 0xBB;
         // F000:0039 ret far
-        return FarRet(0);
+        return FarRet();
     }
 
     public virtual Action unknown_57_F000_0028_F0028(int loadOffset) {
@@ -56,7 +56,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:003A mov byte ptr DS:[0x0012],0xCC
         UInt8[DS, 0x0012] = 0xCC;
         // F000:003F ret far
-        return FarRet(0);
+        return FarRet();
     }
 
     public virtual Action unknown_F000_0040_F0040(int loadOffset) {
@@ -64,7 +64,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0040 mov word ptr ES:[0x0029],0x002E
         UInt16[ES, 0x0029] = 0x002E;
         // F000:0047 ret near
-        return NearRet(0);
+        return NearRet();
     }
 
     public virtual Action unknown_F000_0048_F0048(int loadOffset) {
@@ -72,7 +72,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0048 mov word ptr ES:[0x0029],0x0034
         UInt16[ES, 0x0029] = 0x0034;
         // F000:004F ret near
-        return NearRet(0);
+        return NearRet();
     }
 
     public virtual Action unknown_F000_0050_F0050(int loadOffset) {
@@ -80,7 +80,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0050 mov word ptr ES:[0x0029],0x003A
         UInt16[ES, 0x0029] = 0x003A;
         // F000:0057 ret near
-        return NearRet(0);
+        return NearRet();
     }
 
     public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {

@@ -33,7 +33,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AL = 0x42;
         VerifySpeculativeEntryOrFail(cs1, 0x001D, [(byte)0xC3]);
         // F000:001D ret near
-        return NearRet(0);
+        return NearRet();
     }
 
     public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {

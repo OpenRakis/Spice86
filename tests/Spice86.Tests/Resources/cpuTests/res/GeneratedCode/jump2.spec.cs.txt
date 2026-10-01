@@ -62,7 +62,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         CheckExternalEvents(cs2, 0x0010);
         // F000:0010 ret near
-        return NearRet(0);
+        return NearRet();
     }
 
     public virtual Action unknown_F000_1290_F1290(int loadOffset) {
@@ -159,7 +159,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_E342_EBF1_F2011_72:
         CheckExternalEvents(cs1, 0xEBF1);
         // E342:EBF1 ret far
-        return FarRet(0);
+        return FarRet();
     }
 
     public virtual Action unknown_E342_FDE0_F3200(int loadOffset) {
@@ -181,7 +181,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_E342_FDEA_F320A_57:
         CheckExternalEvents(cs1, 0xFDEA);
         // E342:FDEA ret near
-        return NearRet(0);
+        return NearRet();
     }
 
     public virtual Action unknown_F000_4000_F4000(int loadOffset) {

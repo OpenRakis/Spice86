@@ -39,7 +39,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F100:0004 mov AX,0x0042
         AX = 0x0042;
         // F100:0007 ret far
-        return FarRet(0);
+        return FarRet();
     }
 
     public virtual Action unknown_F100_0008_F1008(int loadOffset) {
@@ -47,7 +47,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F100:0008 xor BX,BX
         BX = Alu16.Xor(BX, BX);
         // F100:000A ret far
-        return FarRet(0);
+        return FarRet();
     }
 
     public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {

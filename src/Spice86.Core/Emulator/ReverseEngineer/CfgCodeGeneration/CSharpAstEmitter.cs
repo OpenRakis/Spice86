@@ -648,14 +648,21 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
     public EmittedCode VisitSegmentedAddressNode(SegmentedAddressNode node) =>
         (CSharpFragment)$"new SegmentedAddress({Cast(DataType.UINT16, Expr(node.Segment))}, {Cast(DataType.UINT16, Expr(node.Offset))})";
 
+    private string RetHelper(string helperName, IVisitableAstNode bytesToPop) {
+        if (bytesToPop is ConstantNode { Value: 0 }) {
+            return $"{helperName}()";
+        }
+        return $"{helperName}({Cast(DataType.UINT16, Expr(bytesToPop))})";
+    }
+
     private string NearRetExpression(ReturnNearNode node) {
         string helperName = node.RetBitWidth == BitWidth.WORD_16 ? "NearRet" : "NearRet32";
-        return $"{helperName}({Expr(node.BytesToPop)})";
+        return RetHelper(helperName, node.BytesToPop);
     }
 
     private string FarRetExpression(ReturnFarNode node) {
         string helperName = node.RetBitWidth == BitWidth.WORD_16 ? "FarRet" : "FarRet32";
-        return $"{helperName}({Expr(node.BytesToPop)})";
+        return RetHelper(helperName, node.BytesToPop);
     }
 
     private string EmitAssignmentRight(BinaryOperationNode assignment) {
