@@ -356,7 +356,7 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
         return EmittedCode.Statements(new SwitchStatement($"switch ((ushort)({targetExpression}))", cases, defaultBody));
     }
 
-    private EmittedCode BuildFarRuntimeDispatch(CfgInstruction instruction, string segmentExpression, string offsetExpression, string targetKind,
+    private EmittedCode BuildFarRuntimeDispatch(CfgInstruction instruction, CSharpFragment segmentExpression, CSharpFragment offsetExpression, string targetKind,
         Func<ResolvedCfgEdge, IReadOnlyList<StatementItem>> bodyForEdge) {
         if (!TryGetObservedDispatchEdges(instruction, $"far {targetKind}", out IReadOnlyList<ResolvedCfgEdge> edges, out EmittedCode failure)) {
             return failure;
@@ -364,8 +364,8 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
         string segmentVariable = $"targetSegment_{instruction.Id}";
         string offsetVariable = $"targetOffset_{instruction.Id}";
         List<StatementItem> items = [
-            new LineStatement($"ushort {segmentVariable} = unchecked((ushort)({segmentExpression}));"),
-            new LineStatement($"ushort {offsetVariable} = unchecked((ushort)({offsetExpression}));")
+            new LineStatement($"ushort {segmentVariable} = {Cast(DataType.UINT16, segmentExpression)};"),
+            new LineStatement($"ushort {offsetVariable} = {Cast(DataType.UINT16, offsetExpression)};")
         ];
         foreach (ResolvedCfgEdge edge in edges.OrderBy(edge => edge.Target.Address.Segment).ThenBy(edge => edge.Target.Address.Offset)) {
             // The matched branch must transfer explicitly (the body uses forceSameMethodGoto) so it never
@@ -548,7 +548,7 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
     }
 
     public EmittedCode VisitAbsolutePointerNode(AbsolutePointerNode node) =>
-        Atomic($"{ToMemoryIndexer(node.DataType)}[unchecked((uint)({Expr(node.AbsoluteAddress)}))]", node.DataType);
+        Atomic($"{ToMemoryIndexer(node.DataType)}[{Cast(DataType.UINT32, Expr(node.AbsoluteAddress))}]", node.DataType);
 
     public EmittedCode VisitConstantNode(ConstantNode node) => ConstantLiteral(node);
 
@@ -619,7 +619,7 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
             return inner;
         }
         string text = Cast(node.DataType, inner);
-        return new CSharpFragment(text, node.DataType, CSharpFragment.AtomicPrecedence);
+        return new CSharpFragment(text, node.DataType, CastPrecedence);
     }
 
     public EmittedCode VisitFlagRegisterNode(FlagRegisterNode node) =>
@@ -703,10 +703,7 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
 
         string targetType = ToCSharpType(dataType);
         string inner = Parenthesize(expression, CastPrecedence);
-        // Always wrap in unchecked so a narrowing cast truncates (matching x86 wraparound) regardless of
-        // whether the consuming project compiles in a checked overflow context. This applies to signed and
-        // unsigned targets alike.
-        return $"unchecked(({targetType}){inner})";
+        return $"({targetType}){inner}";
     }
 
     private static string Cast(Type targetType, CSharpFragment expression) {

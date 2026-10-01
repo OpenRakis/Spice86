@@ -44,7 +44,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:000B jmp short 0x000D
         CheckExternalEvents(cs1, 0x000D);
         // F000:000D mov AX,word ptr [0x000F000E]
-        AX = UInt16[unchecked((uint)(0x000F000E))];
+        AX = UInt16[0x000F000E];
         // F000:0010 push AX
         Stack.Push16(AX);
         // F000:0011 mov word ptr CS:[0x000E],BX

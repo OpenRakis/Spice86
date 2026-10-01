@@ -36,10 +36,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0028 div BX
         try {
             ushort divisor_F000_0028_F0028 = BX;
-            uint dividend_F000_0028_F0028 = unchecked((uint)(unchecked((uint)DX) << 0x00000010 | unchecked((uint)AX)));
-            ushort quotient_F000_0028_F0028 = Alu16.Div(unchecked((uint)dividend_F000_0028_F0028), unchecked((ushort)divisor_F000_0028_F0028));
-            AX = unchecked((ushort)quotient_F000_0028_F0028);
-            DX = unchecked((ushort)(dividend_F000_0028_F0028 % unchecked((uint)divisor_F000_0028_F0028)));
+            uint dividend_F000_0028_F0028 = (uint)((uint)DX << 0x00000010 | (uint)AX);
+            ushort quotient_F000_0028_F0028 = Alu16.Div((uint)dividend_F000_0028_F0028, (ushort)divisor_F000_0028_F0028);
+            AX = (ushort)quotient_F000_0028_F0028;
+            DX = (ushort)(dividend_F000_0028_F0028 % (uint)divisor_F000_0028_F0028);
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];

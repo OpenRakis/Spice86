@@ -88,7 +88,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_0031_F0031_22:
         CheckExternalEvents(cs1, 0x0031);
         // F000:0031 loop 0x0031
-        CX = unchecked((ushort)(CX - 1));
+        CX = (ushort)(CX - 1);
         if (CX != 0) {
             goto label_F000_0031_F0031_22;
         }
@@ -124,7 +124,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_0045_F0045_71:
         CheckExternalEvents(cs1, 0x0045);
         // F000:0045 loop 0x0045
-        CX = unchecked((ushort)(CX - 1));
+        CX = (ushort)(CX - 1);
         if (CX != 0) {
             goto label_F000_0045_F0045_71;
         }
