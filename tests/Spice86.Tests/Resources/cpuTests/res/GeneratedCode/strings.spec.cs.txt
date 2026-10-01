@@ -34,8 +34,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0x0046);
         // F000:0046 cmps byte ptr DS:[SI],byte ptr ES:[DI]
         Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
-        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+        SI = (ushort)(SI + (ushort)State.Direction8);
+        DI = (ushort)(DI + (ushort)State.Direction8);
         // F000:0047 pushf
         Stack.Push16(FlagRegister16);
         // F000:0048 ret near
@@ -46,8 +46,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0x0082);
         // F000:0082 cmps byte ptr DS:[SI],byte ptr ES:[DI]
         Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
-        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+        SI = (ushort)(SI + (ushort)State.Direction8);
+        DI = (ushort)(DI + (ushort)State.Direction8);
         // F000:0083 pushf
         Stack.Push16(FlagRegister16);
         // F000:0084 ret near
@@ -58,8 +58,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0x0097);
         // F000:0097 cmps byte ptr DS:[SI],byte ptr ES:[DI]
         Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
-        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+        SI = (ushort)(SI + (ushort)State.Direction8);
+        DI = (ushort)(DI + (ushort)State.Direction8);
         // F000:0098 pushf
         Stack.Push16(FlagRegister16);
         // F000:0099 ret near
@@ -70,8 +70,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0x0812);
         // F000:0812 cmps word ptr DS:[SI],word ptr ES:[DI]
         Alu16.Sub(UInt16[DS, SI], UInt16[ES, DI]);
-        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction16)));
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+        SI = (ushort)(SI + (ushort)State.Direction16);
+        DI = (ushort)(DI + (ushort)State.Direction16);
         // F000:0813 pushf
         Stack.Push16(FlagRegister16);
         // F000:0814 ret near
@@ -86,7 +86,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         DirectionFlag = true;
         // F000:0886 lods AL,byte ptr DS:[SI]
         AL = UInt8[DS, SI];
-        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
+        SI = (ushort)(SI + (ushort)State.Direction8);
         // F000:0887 jmp near AX
         switch ((ushort)(AX)) {
             case 0x10C2:
@@ -97,7 +97,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0x10C2);
         // F000:10C2 lods AX,word ptr DS:[SI]
         AX = UInt16[DS, SI];
-        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction16)));
+        SI = (ushort)(SI + (ushort)State.Direction16);
         // F000:10C3 jmp near AX
         switch ((ushort)(AX)) {
             case 0xC200:
@@ -113,7 +113,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         ES = DX;
         // F000:1304 scas AX,word ptr ES:[DI]
         Alu16.Sub(AX, UInt16[ES, DI]);
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+        DI = (ushort)(DI + (ushort)State.Direction16);
         // F000:1305 je short 0x1350
         if (ZeroFlag) {
             goto label_F000_1350_F1350_94;
@@ -130,7 +130,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         DirectionFlag = true;
         // F000:1353 stos byte ptr ES:[DI],AL
         UInt8[ES, DI] = AL;
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+        DI = (ushort)(DI + (ushort)State.Direction8);
         // F000:1354 jmp near word ptr DS:[DI]
         switch ((ushort)(UInt16[DS, DI])) {
             case 0x8013:
@@ -143,7 +143,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AX = 0xD000;
         // F000:8016 stos word ptr ES:[DI],AX
         UInt16[ES, DI] = AX;
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+        DI = (ushort)(DI + (ushort)State.Direction16);
         // F000:8017 jmp near word ptr DS:[DI+2]
         switch ((ushort)(UInt16[DS, (ushort)(DI + 2)])) {
             case 0xD000:
@@ -157,8 +157,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         DS = CX;
         // F000:80C4 movs word ptr ES:[DI],word ptr DS:[SI]
         UInt16[ES, DI] = UInt16[DS, SI];
-        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction16)));
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+        SI = (ushort)(SI + (ushort)State.Direction16);
+        DI = (ushort)(DI + (ushort)State.Direction16);
         // F000:80C5 mov DS,DX
         DS = DX;
         // F000:80C7 jmp near word ptr DS:[DI+2]
@@ -177,9 +177,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         DirectionFlag = false;
         // F000:8105 scas AL,byte ptr ES:[DI]
         Alu8.Sub(AL, UInt8[ES, DI]);
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+        DI = (ushort)(DI + (ushort)State.Direction8);
         // F000:8106 lahf
-        AH = unchecked((byte)FlagRegister16);
+        AH = (byte)FlagRegister16;
         // F000:8107 jmp near AX
         switch ((ushort)(AX)) {
             case 0x1300:
@@ -197,8 +197,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         DI = 0xFFFF;
         // F000:C208 movs byte ptr ES:[DI],byte ptr DS:[SI]
         UInt8[ES, DI] = UInt8[DS, SI];
-        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+        SI = (ushort)(SI + (ushort)State.Direction8);
+        DI = (ushort)(DI + (ushort)State.Direction8);
         // F000:C209 mov DS,DX
         DS = DX;
         // F000:C20B mov byte ptr DS:[DI],0xC2
@@ -239,8 +239,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         DI = 0x2001;
         // F000:000D cmps byte ptr DS:[SI],byte ptr ES:[DI]
         Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
-        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+        SI = (ushort)(SI + (ushort)State.Direction8);
+        DI = (ushort)(DI + (ushort)State.Direction8);
         // F000:000E pushf
         Stack.Push16(FlagRegister16);
         // F000:000F ret near

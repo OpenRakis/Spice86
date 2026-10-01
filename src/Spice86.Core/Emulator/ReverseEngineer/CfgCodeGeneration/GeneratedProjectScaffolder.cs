@@ -110,6 +110,7 @@ internal static class GeneratedProjectScaffolder {
                 <AssemblyName>{ProjectAssemblyName}</AssemblyName>
                 <RootNamespace>{GeneratedOverrideNames.GeneratedNamespace}</RootNamespace>
                 <Nullable>enable</Nullable>
+                <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
                 <ImplicitUsings>enable</ImplicitUsings>
                 <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
               </PropertyGroup>

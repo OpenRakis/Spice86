@@ -78,8 +78,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         DI = 0x0E01;
         // F000:120B cmps byte ptr ES:[SI],byte ptr ES:[DI]
         Alu8.Sub(UInt8[ES, SI], UInt8[ES, DI]);
-        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+        SI = (ushort)(SI + (ushort)State.Direction8);
+        DI = (ushort)(DI + (ushort)State.Direction8);
         // F000:120D pushf
         Stack.Push16(FlagRegister16);
         // F000:120E mov AX,1
@@ -95,9 +95,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:121C rep movs byte ptr ES:[DI],byte ptr CS:[SI]
         while (CX != 0) {
             UInt8[ES, DI] = UInt8[CS, SI];
-            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
-            CX = unchecked((ushort)(CX - 1));
+            SI = (ushort)(SI + (ushort)State.Direction8);
+            DI = (ushort)(DI + (ushort)State.Direction8);
+            CX = (ushort)(CX - 1);
         }
         // F000:121F hlt
         return Hlt();
@@ -126,8 +126,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         ushort lxsOffset_F000_0016_F0016 = 0;
         ushort lxsValue_F000_0016_F0016 = UInt16[ES, lxsOffset_F000_0016_F0016];
         ushort lxsSegment_F000_0016_F0016 = UInt16[ES, (ushort)(lxsOffset_F000_0016_F0016 + 2)];
-        DX = unchecked((ushort)lxsValue_F000_0016_F0016);
-        ES = unchecked((ushort)lxsSegment_F000_0016_F0016);
+        DX = (ushort)lxsValue_F000_0016_F0016;
+        ES = (ushort)lxsSegment_F000_0016_F0016;
         // F000:001B mov word ptr DS:[4],DX
         UInt16[DS, 4] = DX;
         // F000:001F mov DX,ES
@@ -137,7 +137,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0025 mov DI,5
         DI = 5;
         // F000:0028 lea SI,BP+DI+0x17
-        SI = unchecked((ushort)(BP + DI + 0x17));
+        SI = (ushort)(BP + DI + 0x17);
         // F000:002C mov word ptr DS:[8],SI
         UInt16[DS, 8] = SI;
         // F000:0030 mov BX,5
@@ -151,7 +151,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:003F mov ES,DX
         ES = DX;
         // F000:0041 xlat byte ptr ES:[BX+AL]
-        AL = UInt8[ES, (ushort)(BX + unchecked((ushort)AL))];
+        AL = UInt8[ES, (ushort)(BX + (ushort)AL)];
         // F000:0043 mov word ptr DS:[0x000C],AX
         UInt16[DS, 0x000C] = AX;
         // F000:0046 mov AX,1
@@ -170,10 +170,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:005F div word ptr SS:[2]
         try {
             ushort divisor_F000_005F_F005F = UInt16[SS, 2];
-            uint dividend_F000_005F_F005F = unchecked((uint)(unchecked((uint)DX) << 0x00000010 | unchecked((uint)AX)));
-            ushort quotient_F000_005F_F005F = Alu16.Div(unchecked((uint)dividend_F000_005F_F005F), unchecked((ushort)divisor_F000_005F_F005F));
-            AX = unchecked((ushort)quotient_F000_005F_F005F);
-            DX = unchecked((ushort)(dividend_F000_005F_F005F % unchecked((uint)divisor_F000_005F_F005F)));
+            uint dividend_F000_005F_F005F = (uint)((uint)DX << 0x00000010 | (uint)AX);
+            ushort quotient_F000_005F_F005F = Alu16.Div((uint)dividend_F000_005F_F005F, (ushort)divisor_F000_005F_F005F);
+            AX = (ushort)quotient_F000_005F_F005F;
+            DX = (ushort)(dividend_F000_005F_F005F % (uint)divisor_F000_005F_F005F);
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];

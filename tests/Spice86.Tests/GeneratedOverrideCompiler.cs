@@ -21,7 +21,8 @@ internal sealed class GeneratedOverrideCompiler {
             syntaxTrees: [syntaxTree],
             references: PlatformMetadataReferences,
             options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
-                .WithGeneralDiagnosticOption(ReportDiagnostic.Error));
+                .WithGeneralDiagnosticOption(ReportDiagnostic.Error)
+                .WithOverflowChecks(false));
 
         MemoryStream peStream = new();
         EmitResult emitResult = compilation.Emit(peStream);

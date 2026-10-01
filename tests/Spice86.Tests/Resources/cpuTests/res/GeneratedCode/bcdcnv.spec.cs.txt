@@ -42,14 +42,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool finalAuxiliaryFlag_F000_000C_F000C = false;
         bool finalCarryFlag_F000_000C_F000C = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AX = unchecked((ushort)(AX + 0x0106));
+            AX = (ushort)(AX + 0x0106);
             finalAuxiliaryFlag_F000_000C_F000C = true;
             finalCarryFlag_F000_000C_F000C = true;
         }
         else {
         }
         Alu8.UpdateFlags(AL);
-        AL = unchecked((byte)(AL & 0x0F));
+        AL = (byte)(AL & 0x0F);
         AuxiliaryFlag = finalAuxiliaryFlag_F000_000C_F000C;
         CarryFlag = finalCarryFlag_F000_000C_F000C;
         OverflowFlag = false;
@@ -63,14 +63,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool finalAuxiliaryFlag_F000_0014_F0014 = false;
         bool finalCarryFlag_F000_0014_F0014 = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AX = unchecked((ushort)(AX + 0x0106));
+            AX = (ushort)(AX + 0x0106);
             finalAuxiliaryFlag_F000_0014_F0014 = true;
             finalCarryFlag_F000_0014_F0014 = true;
         }
         else {
         }
         Alu8.UpdateFlags(AL);
-        AL = unchecked((byte)(AL & 0x0F));
+        AL = (byte)(AL & 0x0F);
         AuxiliaryFlag = finalAuxiliaryFlag_F000_0014_F0014;
         CarryFlag = finalCarryFlag_F000_0014_F0014;
         OverflowFlag = false;
@@ -90,14 +90,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool finalAuxiliaryFlag_F000_001E_F001E = false;
         bool finalCarryFlag_F000_001E_F001E = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AX = unchecked((ushort)(AX + 0x0106));
+            AX = (ushort)(AX + 0x0106);
             finalAuxiliaryFlag_F000_001E_F001E = true;
             finalCarryFlag_F000_001E_F001E = true;
         }
         else {
         }
         Alu8.UpdateFlags(AL);
-        AL = unchecked((byte)(AL & 0x0F));
+        AL = (byte)(AL & 0x0F);
         AuxiliaryFlag = finalAuxiliaryFlag_F000_001E_F001E;
         CarryFlag = finalCarryFlag_F000_001E_F001E;
         OverflowFlag = false;
@@ -111,14 +111,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool finalAuxiliaryFlag_F000_0026_F0026 = false;
         bool finalCarryFlag_F000_0026_F0026 = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AX = unchecked((ushort)(AX + 0x0106));
+            AX = (ushort)(AX + 0x0106);
             finalAuxiliaryFlag_F000_0026_F0026 = true;
             finalCarryFlag_F000_0026_F0026 = true;
         }
         else {
         }
         Alu8.UpdateFlags(AL);
-        AL = unchecked((byte)(AL & 0x0F));
+        AL = (byte)(AL & 0x0F);
         AuxiliaryFlag = finalAuxiliaryFlag_F000_0026_F0026;
         CarryFlag = finalCarryFlag_F000_0026_F0026;
         OverflowFlag = false;
@@ -132,14 +132,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool finalAuxiliaryFlag_F000_002E_F002E = false;
         bool finalCarryFlag_F000_002E_F002E = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AX = unchecked((ushort)(AX + 0x0106));
+            AX = (ushort)(AX + 0x0106);
             finalAuxiliaryFlag_F000_002E_F002E = true;
             finalCarryFlag_F000_002E_F002E = true;
         }
         else {
         }
         Alu8.UpdateFlags(AL);
-        AL = unchecked((byte)(AL & 0x0F));
+        AL = (byte)(AL & 0x0F);
         AuxiliaryFlag = finalAuxiliaryFlag_F000_002E_F002E;
         CarryFlag = finalCarryFlag_F000_002E_F002E;
         OverflowFlag = false;
@@ -153,15 +153,15 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool finalAuxiliaryFlag_F000_0036_F0036 = false;
         bool finalCarryFlag_F000_0036_F0036 = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AX = unchecked((ushort)(AX - 6));
-            AH = unchecked((byte)(AH - 1));
+            AX = (ushort)(AX - 6);
+            AH = (byte)(AH - 1);
             finalAuxiliaryFlag_F000_0036_F0036 = true;
             finalCarryFlag_F000_0036_F0036 = true;
         }
         else {
         }
         Alu8.UpdateFlags(AL);
-        AL = unchecked((byte)(AL & 0x0F));
+        AL = (byte)(AL & 0x0F);
         AuxiliaryFlag = finalAuxiliaryFlag_F000_0036_F0036;
         CarryFlag = finalCarryFlag_F000_0036_F0036;
         OverflowFlag = false;
@@ -175,15 +175,15 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool finalAuxiliaryFlag_F000_003E_F003E = false;
         bool finalCarryFlag_F000_003E_F003E = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AX = unchecked((ushort)(AX - 6));
-            AH = unchecked((byte)(AH - 1));
+            AX = (ushort)(AX - 6);
+            AH = (byte)(AH - 1);
             finalAuxiliaryFlag_F000_003E_F003E = true;
             finalCarryFlag_F000_003E_F003E = true;
         }
         else {
         }
         Alu8.UpdateFlags(AL);
-        AL = unchecked((byte)(AL & 0x0F));
+        AL = (byte)(AL & 0x0F);
         AuxiliaryFlag = finalAuxiliaryFlag_F000_003E_F003E;
         CarryFlag = finalCarryFlag_F000_003E_F003E;
         OverflowFlag = false;
@@ -203,15 +203,15 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool finalAuxiliaryFlag_F000_0048_F0048 = false;
         bool finalCarryFlag_F000_0048_F0048 = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AX = unchecked((ushort)(AX - 6));
-            AH = unchecked((byte)(AH - 1));
+            AX = (ushort)(AX - 6);
+            AH = (byte)(AH - 1);
             finalAuxiliaryFlag_F000_0048_F0048 = true;
             finalCarryFlag_F000_0048_F0048 = true;
         }
         else {
         }
         Alu8.UpdateFlags(AL);
-        AL = unchecked((byte)(AL & 0x0F));
+        AL = (byte)(AL & 0x0F);
         AuxiliaryFlag = finalAuxiliaryFlag_F000_0048_F0048;
         CarryFlag = finalCarryFlag_F000_0048_F0048;
         OverflowFlag = false;
@@ -225,15 +225,15 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool finalAuxiliaryFlag_F000_0050_F0050 = false;
         bool finalCarryFlag_F000_0050_F0050 = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AX = unchecked((ushort)(AX - 6));
-            AH = unchecked((byte)(AH - 1));
+            AX = (ushort)(AX - 6);
+            AH = (byte)(AH - 1);
             finalAuxiliaryFlag_F000_0050_F0050 = true;
             finalCarryFlag_F000_0050_F0050 = true;
         }
         else {
         }
         Alu8.UpdateFlags(AL);
-        AL = unchecked((byte)(AL & 0x0F));
+        AL = (byte)(AL & 0x0F);
         AuxiliaryFlag = finalAuxiliaryFlag_F000_0050_F0050;
         CarryFlag = finalCarryFlag_F000_0050_F0050;
         OverflowFlag = false;
@@ -247,15 +247,15 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool finalAuxiliaryFlag_F000_0058_F0058 = false;
         bool finalCarryFlag_F000_0058_F0058 = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AX = unchecked((ushort)(AX - 6));
-            AH = unchecked((byte)(AH - 1));
+            AX = (ushort)(AX - 6);
+            AH = (byte)(AH - 1);
             finalAuxiliaryFlag_F000_0058_F0058 = true;
             finalCarryFlag_F000_0058_F0058 = true;
         }
         else {
         }
         Alu8.UpdateFlags(AL);
-        AL = unchecked((byte)(AL & 0x0F));
+        AL = (byte)(AL & 0x0F);
         AuxiliaryFlag = finalAuxiliaryFlag_F000_0058_F0058;
         CarryFlag = finalCarryFlag_F000_0058_F0058;
         OverflowFlag = false;
@@ -271,13 +271,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool finalAuxiliaryFlag_F000_0060_F0060 = false;
         bool finalCarryFlag_F000_0060_F0060 = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AL = unchecked((byte)(AL + 6));
+            AL = (byte)(AL + 6);
             finalAuxiliaryFlag_F000_0060_F0060 = true;
         }
         else {
         }
         if (initialAl_F000_0060_F0060 > 0x99 || initialCf_F000_0060_F0060) {
-            AL = unchecked((byte)(AL + 0x60));
+            AL = (byte)(AL + 0x60);
             finalCarryFlag_F000_0060_F0060 = true;
         }
         else {
@@ -299,13 +299,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool finalAuxiliaryFlag_F000_0068_F0068 = false;
         bool finalCarryFlag_F000_0068_F0068 = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AL = unchecked((byte)(AL + 6));
+            AL = (byte)(AL + 6);
             finalAuxiliaryFlag_F000_0068_F0068 = true;
         }
         else {
         }
         if (initialAl_F000_0068_F0068 > 0x99 || initialCf_F000_0068_F0068) {
-            AL = unchecked((byte)(AL + 0x60));
+            AL = (byte)(AL + 0x60);
             finalCarryFlag_F000_0068_F0068 = true;
         }
         else {
@@ -333,13 +333,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool finalAuxiliaryFlag_F000_0072_F0072 = false;
         bool finalCarryFlag_F000_0072_F0072 = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AL = unchecked((byte)(AL + 6));
+            AL = (byte)(AL + 6);
             finalAuxiliaryFlag_F000_0072_F0072 = true;
         }
         else {
         }
         if (initialAl_F000_0072_F0072 > 0x99 || initialCf_F000_0072_F0072) {
-            AL = unchecked((byte)(AL + 0x60));
+            AL = (byte)(AL + 0x60);
             finalCarryFlag_F000_0072_F0072 = true;
         }
         else {
@@ -367,13 +367,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool finalAuxiliaryFlag_F000_007C_F007C = false;
         bool finalCarryFlag_F000_007C_F007C = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AL = unchecked((byte)(AL + 6));
+            AL = (byte)(AL + 6);
             finalAuxiliaryFlag_F000_007C_F007C = true;
         }
         else {
         }
         if (initialAl_F000_007C_F007C > 0x99 || initialCf_F000_007C_F007C) {
-            AL = unchecked((byte)(AL + 0x60));
+            AL = (byte)(AL + 0x60);
             finalCarryFlag_F000_007C_F007C = true;
         }
         else {
@@ -401,13 +401,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool finalAuxiliaryFlag_F000_0086_F0086 = false;
         bool finalCarryFlag_F000_0086_F0086 = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AL = unchecked((byte)(AL + 6));
+            AL = (byte)(AL + 6);
             finalAuxiliaryFlag_F000_0086_F0086 = true;
         }
         else {
         }
         if (initialAl_F000_0086_F0086 > 0x99 || initialCf_F000_0086_F0086) {
-            AL = unchecked((byte)(AL + 0x60));
+            AL = (byte)(AL + 0x60);
             finalCarryFlag_F000_0086_F0086 = true;
         }
         else {
@@ -429,13 +429,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool finalAuxiliaryFlag_F000_008E_F008E = false;
         bool finalCarryFlag_F000_008E_F008E = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AL = unchecked((byte)(AL + 6));
+            AL = (byte)(AL + 6);
             finalAuxiliaryFlag_F000_008E_F008E = true;
         }
         else {
         }
         if (initialAl_F000_008E_F008E > 0x99 || initialCf_F000_008E_F008E) {
-            AL = unchecked((byte)(AL + 0x60));
+            AL = (byte)(AL + 0x60);
             finalCarryFlag_F000_008E_F008E = true;
         }
         else {
@@ -457,13 +457,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool finalAuxiliaryFlag_F000_0096_F0096 = false;
         bool finalCarryFlag_F000_0096_F0096 = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AL = unchecked((byte)(AL + 6));
+            AL = (byte)(AL + 6);
             finalAuxiliaryFlag_F000_0096_F0096 = true;
         }
         else {
         }
         if (initialAl_F000_0096_F0096 > 0x99 || initialCf_F000_0096_F0096) {
-            AL = unchecked((byte)(AL + 0x60));
+            AL = (byte)(AL + 0x60);
             finalCarryFlag_F000_0096_F0096 = true;
         }
         else {
@@ -486,14 +486,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool finalCarryFlag_F000_009E_F009E = false;
         CarryFlag = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AL = unchecked((byte)(AL - 6));
+            AL = (byte)(AL - 6);
             finalCarryFlag_F000_009E_F009E = initialAl_F000_009E_F009E < 6 || initialCf_F000_009E_F009E;
             finalAuxiliaryFlag_F000_009E_F009E = true;
         }
         else {
         }
         if (initialAl_F000_009E_F009E > 0x99 || initialCf_F000_009E_F009E) {
-            AL = unchecked((byte)(AL - 0x60));
+            AL = (byte)(AL - 0x60);
             finalCarryFlag_F000_009E_F009E = true;
         }
         else {
@@ -515,14 +515,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool finalCarryFlag_F000_00A6_F00A6 = false;
         CarryFlag = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AL = unchecked((byte)(AL - 6));
+            AL = (byte)(AL - 6);
             finalCarryFlag_F000_00A6_F00A6 = initialAl_F000_00A6_F00A6 < 6 || initialCf_F000_00A6_F00A6;
             finalAuxiliaryFlag_F000_00A6_F00A6 = true;
         }
         else {
         }
         if (initialAl_F000_00A6_F00A6 > 0x99 || initialCf_F000_00A6_F00A6) {
-            AL = unchecked((byte)(AL - 0x60));
+            AL = (byte)(AL - 0x60);
             finalCarryFlag_F000_00A6_F00A6 = true;
         }
         else {
@@ -550,14 +550,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool finalCarryFlag_F000_00B0_F00B0 = false;
         CarryFlag = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AL = unchecked((byte)(AL - 6));
+            AL = (byte)(AL - 6);
             finalCarryFlag_F000_00B0_F00B0 = initialAl_F000_00B0_F00B0 < 6 || initialCf_F000_00B0_F00B0;
             finalAuxiliaryFlag_F000_00B0_F00B0 = true;
         }
         else {
         }
         if (initialAl_F000_00B0_F00B0 > 0x99 || initialCf_F000_00B0_F00B0) {
-            AL = unchecked((byte)(AL - 0x60));
+            AL = (byte)(AL - 0x60);
             finalCarryFlag_F000_00B0_F00B0 = true;
         }
         else {
@@ -585,14 +585,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool finalCarryFlag_F000_00BA_F00BA = false;
         CarryFlag = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AL = unchecked((byte)(AL - 6));
+            AL = (byte)(AL - 6);
             finalCarryFlag_F000_00BA_F00BA = initialAl_F000_00BA_F00BA < 6 || initialCf_F000_00BA_F00BA;
             finalAuxiliaryFlag_F000_00BA_F00BA = true;
         }
         else {
         }
         if (initialAl_F000_00BA_F00BA > 0x99 || initialCf_F000_00BA_F00BA) {
-            AL = unchecked((byte)(AL - 0x60));
+            AL = (byte)(AL - 0x60);
             finalCarryFlag_F000_00BA_F00BA = true;
         }
         else {
@@ -620,14 +620,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool finalCarryFlag_F000_00C4_F00C4 = false;
         CarryFlag = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AL = unchecked((byte)(AL - 6));
+            AL = (byte)(AL - 6);
             finalCarryFlag_F000_00C4_F00C4 = initialAl_F000_00C4_F00C4 < 6 || initialCf_F000_00C4_F00C4;
             finalAuxiliaryFlag_F000_00C4_F00C4 = true;
         }
         else {
         }
         if (initialAl_F000_00C4_F00C4 > 0x99 || initialCf_F000_00C4_F00C4) {
-            AL = unchecked((byte)(AL - 0x60));
+            AL = (byte)(AL - 0x60);
             finalCarryFlag_F000_00C4_F00C4 = true;
         }
         else {
@@ -649,14 +649,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool finalCarryFlag_F000_00CC_F00CC = false;
         CarryFlag = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AL = unchecked((byte)(AL - 6));
+            AL = (byte)(AL - 6);
             finalCarryFlag_F000_00CC_F00CC = initialAl_F000_00CC_F00CC < 6 || initialCf_F000_00CC_F00CC;
             finalAuxiliaryFlag_F000_00CC_F00CC = true;
         }
         else {
         }
         if (initialAl_F000_00CC_F00CC > 0x99 || initialCf_F000_00CC_F00CC) {
-            AL = unchecked((byte)(AL - 0x60));
+            AL = (byte)(AL - 0x60);
             finalCarryFlag_F000_00CC_F00CC = true;
         }
         else {
@@ -678,14 +678,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool finalCarryFlag_F000_00D4_F00D4 = false;
         CarryFlag = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AL = unchecked((byte)(AL - 6));
+            AL = (byte)(AL - 6);
             finalCarryFlag_F000_00D4_F00D4 = initialAl_F000_00D4_F00D4 < 6 || initialCf_F000_00D4_F00D4;
             finalAuxiliaryFlag_F000_00D4_F00D4 = true;
         }
         else {
         }
         if (initialAl_F000_00D4_F00D4 > 0x99 || initialCf_F000_00D4_F00D4) {
-            AL = unchecked((byte)(AL - 0x60));
+            AL = (byte)(AL - 0x60);
             finalCarryFlag_F000_00D4_F00D4 = true;
         }
         else {
@@ -701,7 +701,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00D9 mov AX,0xFF7F
         AX = 0xFF7F;
         // F000:00DC cbw
-        AX = unchecked((ushort)unchecked((short)unchecked((sbyte)AL)));
+        AX = (ushort)(short)(sbyte)AL;
         // F000:00DD mov word ptr DS:[0x0030],AX
         UInt16[DS, 0x0030] = AX;
         // F000:00E0 mov word ptr DS:[0x0032],DX
@@ -711,7 +711,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00E5 mov AX,0x0080
         AX = 0x0080;
         // F000:00E8 cbw
-        AX = unchecked((ushort)unchecked((short)unchecked((sbyte)AL)));
+        AX = (ushort)(short)(sbyte)AL;
         // F000:00E9 mov word ptr DS:[0x0034],AX
         UInt16[DS, 0x0034] = AX;
         // F000:00EC mov word ptr DS:[0x0036],DX
@@ -721,7 +721,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00F1 mov AX,0xF1ED
         AX = 0xF1ED;
         // F000:00F4 cbw
-        AX = unchecked((ushort)unchecked((short)unchecked((sbyte)AL)));
+        AX = (ushort)(short)(sbyte)AL;
         // F000:00F5 mov word ptr DS:[0x0038],AX
         UInt16[DS, 0x0038] = AX;
         // F000:00F8 mov word ptr DS:[0x003A],DX
@@ -731,7 +731,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00FD mov AX,0x8000
         AX = 0x8000;
         // F000:0100 cwd
-        DX = unchecked((ushort)(unchecked((short)AX) >> 0x0000000F));
+        DX = (ushort)((short)AX >> 0x0000000F);
         // F000:0101 mov word ptr DS:[0x003C],AX
         UInt16[DS, 0x003C] = AX;
         // F000:0104 mov word ptr DS:[0x003E],DX
@@ -741,7 +741,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0109 mov AX,0x7FFF
         AX = 0x7FFF;
         // F000:010C cwd
-        DX = unchecked((ushort)(unchecked((short)AX) >> 0x0000000F));
+        DX = (ushort)((short)AX >> 0x0000000F);
         // F000:010D mov word ptr DS:[0x0040],AX
         UInt16[DS, 0x0040] = AX;
         // F000:0110 mov word ptr DS:[0x0042],DX
@@ -751,7 +751,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0115 mov AX,0x43F1
         AX = 0x43F1;
         // F000:0118 cwd
-        DX = unchecked((ushort)(unchecked((short)AX) >> 0x0000000F));
+        DX = (ushort)((short)AX >> 0x0000000F);
         // F000:0119 mov word ptr DS:[0x0044],AX
         UInt16[DS, 0x0044] = AX;
         // F000:011C mov word ptr DS:[0x0046],DX
