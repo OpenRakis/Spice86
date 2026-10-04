@@ -112,8 +112,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // E342:FC03 mov SI,3
         SI = 3;
         // E342:FC06 jmp far dword ptr SS:[BP+SI-24]
-        ushort targetSegment_58 = unchecked((ushort)(UInt16[SS, (ushort)(BP + SI + -0x18 + 2)]));
-        ushort targetOffset_58 = unchecked((ushort)(UInt16[SS, (ushort)(BP + SI + -0x18)]));
+        ushort targetSegment_58 = UInt16[SS, (ushort)(BP + SI + -0x18 + 2)];
+        ushort targetOffset_58 = UInt16[SS, (ushort)(BP + SI + -0x18)];
         if (targetSegment_58 == cs2 && targetOffset_58 == 0x4001) {
             goto label_F000_4001_F4001_73;
         }

@@ -355,23 +355,23 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(cs1, 0x01DA);
         // F000:01DA not DX
-        DX = unchecked((ushort)~DX);
+        DX = (ushort)~DX;
         // F000:01DC pushf
         Stack.Push16(FlagRegister16);
         // F000:01DD mov word ptr DS:[0x0050],DX
         UInt16[DS, 0x0050] = DX;
         // F000:01E1 not word ptr DS:[0x0016]
-        UInt16[DS, 0x0016] = unchecked((ushort)~UInt16[DS, 0x0016]);
+        UInt16[DS, 0x0016] = (ushort)~UInt16[DS, 0x0016];
         // F000:01E5 pushf
         Stack.Push16(FlagRegister16);
         // F000:01E6 not DL
-        DL = unchecked((byte)~DL);
+        DL = (byte)~DL;
         // F000:01E8 pushf
         Stack.Push16(FlagRegister16);
         // F000:01E9 mov byte ptr DS:[0x0052],DL
         UInt8[DS, 0x0052] = DL;
         // F000:01ED not byte ptr DS:[0x0018]
-        UInt8[DS, 0x0018] = unchecked((byte)~UInt8[DS, 0x0018]);
+        UInt8[DS, 0x0018] = (byte)~UInt8[DS, 0x0018];
         // F000:01F1 pushf
         Stack.Push16(FlagRegister16);
         // F000:01F2 hlt

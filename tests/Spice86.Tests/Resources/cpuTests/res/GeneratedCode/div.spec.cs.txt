@@ -60,10 +60,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0081 div word ptr DS:[0x0012]
         try {
             ushort divisor_F000_0081_F0081 = UInt16[DS, 0x0012];
-            uint dividend_F000_0081_F0081 = unchecked((uint)(unchecked((uint)DX) << 0x00000010 | unchecked((uint)AX)));
-            ushort quotient_F000_0081_F0081 = Alu16.Div(unchecked((uint)dividend_F000_0081_F0081), unchecked((ushort)divisor_F000_0081_F0081));
-            AX = unchecked((ushort)quotient_F000_0081_F0081);
-            DX = unchecked((ushort)(dividend_F000_0081_F0081 % unchecked((uint)divisor_F000_0081_F0081)));
+            uint dividend_F000_0081_F0081 = (uint)((uint)DX << 0x00000010 | (uint)AX);
+            ushort quotient_F000_0081_F0081 = Alu16.Div((uint)dividend_F000_0081_F0081, (ushort)divisor_F000_0081_F0081);
+            AX = (ushort)quotient_F000_0081_F0081;
+            DX = (ushort)(dividend_F000_0081_F0081 % (uint)divisor_F000_0081_F0081);
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -97,10 +97,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:009E div CX
         try {
             ushort divisor_F000_009E_F009E = CX;
-            uint dividend_F000_009E_F009E = unchecked((uint)(unchecked((uint)DX) << 0x00000010 | unchecked((uint)AX)));
-            ushort quotient_F000_009E_F009E = Alu16.Div(unchecked((uint)dividend_F000_009E_F009E), unchecked((ushort)divisor_F000_009E_F009E));
-            AX = unchecked((ushort)quotient_F000_009E_F009E);
-            DX = unchecked((ushort)(dividend_F000_009E_F009E % unchecked((uint)divisor_F000_009E_F009E)));
+            uint dividend_F000_009E_F009E = (uint)((uint)DX << 0x00000010 | (uint)AX);
+            ushort quotient_F000_009E_F009E = Alu16.Div((uint)dividend_F000_009E_F009E, (ushort)divisor_F000_009E_F009E);
+            AX = (ushort)quotient_F000_009E_F009E;
+            DX = (ushort)(dividend_F000_009E_F009E % (uint)divisor_F000_009E_F009E);
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -133,10 +133,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt16[SS, (ushort)(BP + 0)] = 2;
         // F000:00BA div AX
         ushort divisor_F000_00BA_F00BA = AX;
-        uint dividend_F000_00BA_F00BA = unchecked((uint)(unchecked((uint)DX) << 0x00000010 | unchecked((uint)AX)));
-        ushort quotient_F000_00BA_F00BA = Alu16.Div(unchecked((uint)dividend_F000_00BA_F00BA), unchecked((ushort)divisor_F000_00BA_F00BA));
-        AX = unchecked((ushort)quotient_F000_00BA_F00BA);
-        DX = unchecked((ushort)(dividend_F000_00BA_F00BA % unchecked((uint)divisor_F000_00BA_F00BA)));
+        uint dividend_F000_00BA_F00BA = (uint)((uint)DX << 0x00000010 | (uint)AX);
+        ushort quotient_F000_00BA_F00BA = Alu16.Div((uint)dividend_F000_00BA_F00BA, (ushort)divisor_F000_00BA_F00BA);
+        AX = (ushort)quotient_F000_00BA_F00BA;
+        DX = (ushort)(dividend_F000_00BA_F00BA % (uint)divisor_F000_00BA_F00BA);
         // F000:00BC add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:00BF mov word ptr DS:[0x001E],AX
@@ -154,9 +154,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00D2 div BL
         byte divisor_F000_00D2_F00D2 = BL;
         ushort dividend_F000_00D2_F00D2 = AX;
-        byte quotient_F000_00D2_F00D2 = Alu8.Div(unchecked((ushort)dividend_F000_00D2_F00D2), unchecked((byte)divisor_F000_00D2_F00D2));
-        AL = unchecked((byte)quotient_F000_00D2_F00D2);
-        AH = unchecked((byte)(dividend_F000_00D2_F00D2 % unchecked((ushort)divisor_F000_00D2_F00D2)));
+        byte quotient_F000_00D2_F00D2 = Alu8.Div((ushort)dividend_F000_00D2_F00D2, (byte)divisor_F000_00D2_F00D2);
+        AL = (byte)quotient_F000_00D2_F00D2;
+        AH = (byte)(dividend_F000_00D2_F00D2 % (ushort)divisor_F000_00D2_F00D2);
         // F000:00D4 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:00D7 mov word ptr DS:[0x0022],AX
@@ -178,9 +178,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00F4 div byte ptr DS:[0x0028]
         byte divisor_F000_00F4_F00F4 = UInt8[DS, 0x0028];
         ushort dividend_F000_00F4_F00F4 = AX;
-        byte quotient_F000_00F4_F00F4 = Alu8.Div(unchecked((ushort)dividend_F000_00F4_F00F4), unchecked((byte)divisor_F000_00F4_F00F4));
-        AL = unchecked((byte)quotient_F000_00F4_F00F4);
-        AH = unchecked((byte)(dividend_F000_00F4_F00F4 % unchecked((ushort)divisor_F000_00F4_F00F4)));
+        byte quotient_F000_00F4_F00F4 = Alu8.Div((ushort)dividend_F000_00F4_F00F4, (byte)divisor_F000_00F4_F00F4);
+        AL = (byte)quotient_F000_00F4_F00F4;
+        AH = (byte)(dividend_F000_00F4_F00F4 % (ushort)divisor_F000_00F4_F00F4);
         // F000:00F8 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:00FB mov word ptr DS:[0x002A],AX
@@ -199,9 +199,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         try {
             byte divisor_F000_010D_F010D = DH;
             ushort dividend_F000_010D_F010D = AX;
-            byte quotient_F000_010D_F010D = Alu8.Div(unchecked((ushort)dividend_F000_010D_F010D), unchecked((byte)divisor_F000_010D_F010D));
-            AL = unchecked((byte)quotient_F000_010D_F010D);
-            AH = unchecked((byte)(dividend_F000_010D_F010D % unchecked((ushort)divisor_F000_010D_F010D)));
+            byte quotient_F000_010D_F010D = Alu8.Div((ushort)dividend_F000_010D_F010D, (byte)divisor_F000_010D_F010D);
+            AL = (byte)quotient_F000_010D_F010D;
+            AH = (byte)(dividend_F000_010D_F010D % (ushort)divisor_F000_010D_F010D);
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -234,9 +234,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         try {
             byte divisor_F000_0128_F0128 = UInt8[DS, 0x0033];
             ushort dividend_F000_0128_F0128 = AX;
-            byte quotient_F000_0128_F0128 = Alu8.Div(unchecked((ushort)dividend_F000_0128_F0128), unchecked((byte)divisor_F000_0128_F0128));
-            AL = unchecked((byte)quotient_F000_0128_F0128);
-            AH = unchecked((byte)(dividend_F000_0128_F0128 % unchecked((ushort)divisor_F000_0128_F0128)));
+            byte quotient_F000_0128_F0128 = Alu8.Div((ushort)dividend_F000_0128_F0128, (byte)divisor_F000_0128_F0128);
+            AL = (byte)quotient_F000_0128_F0128;
+            AH = (byte)(dividend_F000_0128_F0128 % (ushort)divisor_F000_0128_F0128);
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -268,9 +268,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0142 div CL
         byte divisor_F000_0142_F0142 = CL;
         ushort dividend_F000_0142_F0142 = AX;
-        byte quotient_F000_0142_F0142 = Alu8.Div(unchecked((ushort)dividend_F000_0142_F0142), unchecked((byte)divisor_F000_0142_F0142));
-        AL = unchecked((byte)quotient_F000_0142_F0142);
-        AH = unchecked((byte)(dividend_F000_0142_F0142 % unchecked((ushort)divisor_F000_0142_F0142)));
+        byte quotient_F000_0142_F0142 = Alu8.Div((ushort)dividend_F000_0142_F0142, (byte)divisor_F000_0142_F0142);
+        AL = (byte)quotient_F000_0142_F0142;
+        AH = (byte)(dividend_F000_0142_F0142 % (ushort)divisor_F000_0142_F0142);
         // F000:0144 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:0147 mov word ptr DS:[0x0038],AX
@@ -288,9 +288,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:015A div AL
         byte divisor_F000_015A_F015A = AL;
         ushort dividend_F000_015A_F015A = AX;
-        byte quotient_F000_015A_F015A = Alu8.Div(unchecked((ushort)dividend_F000_015A_F015A), unchecked((byte)divisor_F000_015A_F015A));
-        AL = unchecked((byte)quotient_F000_015A_F015A);
-        AH = unchecked((byte)(dividend_F000_015A_F015A % unchecked((ushort)divisor_F000_015A_F015A)));
+        byte quotient_F000_015A_F015A = Alu8.Div((ushort)dividend_F000_015A_F015A, (byte)divisor_F000_015A_F015A);
+        AL = (byte)quotient_F000_015A_F015A;
+        AH = (byte)(dividend_F000_015A_F015A % (ushort)divisor_F000_015A_F015A);
         // F000:015C add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:015F mov word ptr DS:[0x003C],AX
@@ -308,11 +308,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0170 mov word ptr SS:[BP],2
         UInt16[SS, (ushort)(BP + 0)] = 2;
         // F000:0175 idiv BX
-        short divisor_F000_0175_F0175 = unchecked((short)BX);
-        int dividend_F000_0175_F0175 = unchecked((int)(unchecked((uint)DX) << 0x00000010 | unchecked((uint)AX)));
-        short quotient_F000_0175_F0175 = Alu16.Idiv(unchecked((int)dividend_F000_0175_F0175), unchecked((short)divisor_F000_0175_F0175));
-        AX = unchecked((ushort)quotient_F000_0175_F0175);
-        DX = unchecked((ushort)(dividend_F000_0175_F0175 % unchecked((int)divisor_F000_0175_F0175)));
+        short divisor_F000_0175_F0175 = (short)BX;
+        int dividend_F000_0175_F0175 = (int)((uint)DX << 0x00000010 | (uint)AX);
+        short quotient_F000_0175_F0175 = Alu16.Idiv((int)dividend_F000_0175_F0175, (short)divisor_F000_0175_F0175);
+        AX = (ushort)quotient_F000_0175_F0175;
+        DX = (ushort)(dividend_F000_0175_F0175 % (int)divisor_F000_0175_F0175);
         // F000:0177 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:017A mov word ptr DS:[0x0040],AX
@@ -333,11 +333,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt16[SS, (ushort)(BP + 0)] = 4;
         // F000:0197 idiv word ptr DS:[0x0046]
         try {
-            short divisor_F000_0197_F0197 = unchecked((short)UInt16[DS, 0x0046]);
-            int dividend_F000_0197_F0197 = unchecked((int)(unchecked((uint)DX) << 0x00000010 | unchecked((uint)AX)));
-            short quotient_F000_0197_F0197 = Alu16.Idiv(unchecked((int)dividend_F000_0197_F0197), unchecked((short)divisor_F000_0197_F0197));
-            AX = unchecked((ushort)quotient_F000_0197_F0197);
-            DX = unchecked((ushort)(dividend_F000_0197_F0197 % unchecked((int)divisor_F000_0197_F0197)));
+            short divisor_F000_0197_F0197 = (short)UInt16[DS, 0x0046];
+            int dividend_F000_0197_F0197 = (int)((uint)DX << 0x00000010 | (uint)AX);
+            short quotient_F000_0197_F0197 = Alu16.Idiv((int)dividend_F000_0197_F0197, (short)divisor_F000_0197_F0197);
+            AX = (ushort)quotient_F000_0197_F0197;
+            DX = (ushort)(dividend_F000_0197_F0197 % (int)divisor_F000_0197_F0197);
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -369,11 +369,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:01AF mov word ptr SS:[BP],2
         UInt16[SS, (ushort)(BP + 0)] = 2;
         // F000:01B4 idiv CX
-        short divisor_F000_01B4_F01B4 = unchecked((short)CX);
-        int dividend_F000_01B4_F01B4 = unchecked((int)(unchecked((uint)DX) << 0x00000010 | unchecked((uint)AX)));
-        short quotient_F000_01B4_F01B4 = Alu16.Idiv(unchecked((int)dividend_F000_01B4_F01B4), unchecked((short)divisor_F000_01B4_F01B4));
-        AX = unchecked((ushort)quotient_F000_01B4_F01B4);
-        DX = unchecked((ushort)(dividend_F000_01B4_F01B4 % unchecked((int)divisor_F000_01B4_F01B4)));
+        short divisor_F000_01B4_F01B4 = (short)CX;
+        int dividend_F000_01B4_F01B4 = (int)((uint)DX << 0x00000010 | (uint)AX);
+        short quotient_F000_01B4_F01B4 = Alu16.Idiv((int)dividend_F000_01B4_F01B4, (short)divisor_F000_01B4_F01B4);
+        AX = (ushort)quotient_F000_01B4_F01B4;
+        DX = (ushort)(dividend_F000_01B4_F01B4 % (int)divisor_F000_01B4_F01B4);
         // F000:01B6 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:01B9 mov word ptr DS:[0x004C],AX
@@ -393,11 +393,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:01D1 mov word ptr SS:[BP],4
         UInt16[SS, (ushort)(BP + 0)] = 4;
         // F000:01D6 idiv word ptr DS:[0x0052]
-        short divisor_F000_01D6_F01D6 = unchecked((short)UInt16[DS, 0x0052]);
-        int dividend_F000_01D6_F01D6 = unchecked((int)(unchecked((uint)DX) << 0x00000010 | unchecked((uint)AX)));
-        short quotient_F000_01D6_F01D6 = Alu16.Idiv(unchecked((int)dividend_F000_01D6_F01D6), unchecked((short)divisor_F000_01D6_F01D6));
-        AX = unchecked((ushort)quotient_F000_01D6_F01D6);
-        DX = unchecked((ushort)(dividend_F000_01D6_F01D6 % unchecked((int)divisor_F000_01D6_F01D6)));
+        short divisor_F000_01D6_F01D6 = (short)UInt16[DS, 0x0052];
+        int dividend_F000_01D6_F01D6 = (int)((uint)DX << 0x00000010 | (uint)AX);
+        short quotient_F000_01D6_F01D6 = Alu16.Idiv((int)dividend_F000_01D6_F01D6, (short)divisor_F000_01D6_F01D6);
+        AX = (ushort)quotient_F000_01D6_F01D6;
+        DX = (ushort)(dividend_F000_01D6_F01D6 % (int)divisor_F000_01D6_F01D6);
         // F000:01DA add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:01DD mov word ptr DS:[0x0054],AX
@@ -415,11 +415,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:01EE mov word ptr SS:[BP],2
         UInt16[SS, (ushort)(BP + 0)] = 2;
         // F000:01F3 idiv CX
-        short divisor_F000_01F3_F01F3 = unchecked((short)CX);
-        int dividend_F000_01F3_F01F3 = unchecked((int)(unchecked((uint)DX) << 0x00000010 | unchecked((uint)AX)));
-        short quotient_F000_01F3_F01F3 = Alu16.Idiv(unchecked((int)dividend_F000_01F3_F01F3), unchecked((short)divisor_F000_01F3_F01F3));
-        AX = unchecked((ushort)quotient_F000_01F3_F01F3);
-        DX = unchecked((ushort)(dividend_F000_01F3_F01F3 % unchecked((int)divisor_F000_01F3_F01F3)));
+        short divisor_F000_01F3_F01F3 = (short)CX;
+        int dividend_F000_01F3_F01F3 = (int)((uint)DX << 0x00000010 | (uint)AX);
+        short quotient_F000_01F3_F01F3 = Alu16.Idiv((int)dividend_F000_01F3_F01F3, (short)divisor_F000_01F3_F01F3);
+        AX = (ushort)quotient_F000_01F3_F01F3;
+        DX = (ushort)(dividend_F000_01F3_F01F3 % (int)divisor_F000_01F3_F01F3);
         // F000:01F5 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:01F8 mov word ptr DS:[0x0058],AX
@@ -438,11 +438,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt16[SS, (ushort)(BP + 0)] = 2;
         // F000:020F idiv AX
         try {
-            short divisor_F000_020F_F020F = unchecked((short)AX);
-            int dividend_F000_020F_F020F = unchecked((int)(unchecked((uint)DX) << 0x00000010 | unchecked((uint)AX)));
-            short quotient_F000_020F_F020F = Alu16.Idiv(unchecked((int)dividend_F000_020F_F020F), unchecked((short)divisor_F000_020F_F020F));
-            AX = unchecked((ushort)quotient_F000_020F_F020F);
-            DX = unchecked((ushort)(dividend_F000_020F_F020F % unchecked((int)divisor_F000_020F_F020F)));
+            short divisor_F000_020F_F020F = (short)AX;
+            int dividend_F000_020F_F020F = (int)((uint)DX << 0x00000010 | (uint)AX);
+            short quotient_F000_020F_F020F = Alu16.Idiv((int)dividend_F000_020F_F020F, (short)divisor_F000_020F_F020F);
+            AX = (ushort)quotient_F000_020F_F020F;
+            DX = (ushort)(dividend_F000_020F_F020F % (int)divisor_F000_020F_F020F);
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -472,11 +472,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0222 mov word ptr SS:[BP],2
         UInt16[SS, (ushort)(BP + 0)] = 2;
         // F000:0227 idiv BL
-        sbyte divisor_F000_0227_F0227 = unchecked((sbyte)BL);
-        short dividend_F000_0227_F0227 = unchecked((short)AX);
-        sbyte quotient_F000_0227_F0227 = Alu8.Idiv(unchecked((short)dividend_F000_0227_F0227), unchecked((sbyte)divisor_F000_0227_F0227));
-        AL = unchecked((byte)quotient_F000_0227_F0227);
-        AH = unchecked((byte)(dividend_F000_0227_F0227 % unchecked((short)divisor_F000_0227_F0227)));
+        sbyte divisor_F000_0227_F0227 = (sbyte)BL;
+        short dividend_F000_0227_F0227 = (short)AX;
+        sbyte quotient_F000_0227_F0227 = Alu8.Idiv((short)dividend_F000_0227_F0227, (sbyte)divisor_F000_0227_F0227);
+        AL = (byte)quotient_F000_0227_F0227;
+        AH = (byte)(dividend_F000_0227_F0227 % (short)divisor_F000_0227_F0227);
         // F000:0229 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:022C mov word ptr DS:[0x0062],AX
@@ -497,11 +497,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt16[SS, (ushort)(BP + 0)] = 4;
         // F000:0249 idiv byte ptr DS:[0x0068]
         try {
-            sbyte divisor_F000_0249_F0249 = unchecked((sbyte)UInt8[DS, 0x0068]);
-            short dividend_F000_0249_F0249 = unchecked((short)AX);
-            sbyte quotient_F000_0249_F0249 = Alu8.Idiv(unchecked((short)dividend_F000_0249_F0249), unchecked((sbyte)divisor_F000_0249_F0249));
-            AL = unchecked((byte)quotient_F000_0249_F0249);
-            AH = unchecked((byte)(dividend_F000_0249_F0249 % unchecked((short)divisor_F000_0249_F0249)));
+            sbyte divisor_F000_0249_F0249 = (sbyte)UInt8[DS, 0x0068];
+            short dividend_F000_0249_F0249 = (short)AX;
+            sbyte quotient_F000_0249_F0249 = Alu8.Idiv((short)dividend_F000_0249_F0249, (sbyte)divisor_F000_0249_F0249);
+            AL = (byte)quotient_F000_0249_F0249;
+            AH = (byte)(dividend_F000_0249_F0249 % (short)divisor_F000_0249_F0249);
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -531,11 +531,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:025D mov word ptr SS:[BP],2
         UInt16[SS, (ushort)(BP + 0)] = 2;
         // F000:0262 idiv DH
-        sbyte divisor_F000_0262_F0262 = unchecked((sbyte)DH);
-        short dividend_F000_0262_F0262 = unchecked((short)AX);
-        sbyte quotient_F000_0262_F0262 = Alu8.Idiv(unchecked((short)dividend_F000_0262_F0262), unchecked((sbyte)divisor_F000_0262_F0262));
-        AL = unchecked((byte)quotient_F000_0262_F0262);
-        AH = unchecked((byte)(dividend_F000_0262_F0262 % unchecked((short)divisor_F000_0262_F0262)));
+        sbyte divisor_F000_0262_F0262 = (sbyte)DH;
+        short dividend_F000_0262_F0262 = (short)AX;
+        sbyte quotient_F000_0262_F0262 = Alu8.Idiv((short)dividend_F000_0262_F0262, (sbyte)divisor_F000_0262_F0262);
+        AL = (byte)quotient_F000_0262_F0262;
+        AH = (byte)(dividend_F000_0262_F0262 % (short)divisor_F000_0262_F0262);
         // F000:0264 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:0267 mov word ptr DS:[0x006E],AX
@@ -551,11 +551,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0278 mov word ptr SS:[BP],4
         UInt16[SS, (ushort)(BP + 0)] = 4;
         // F000:027D idiv byte ptr DS:[0x0073]
-        sbyte divisor_F000_027D_F027D = unchecked((sbyte)UInt8[DS, 0x0073]);
-        short dividend_F000_027D_F027D = unchecked((short)AX);
-        sbyte quotient_F000_027D_F027D = Alu8.Idiv(unchecked((short)dividend_F000_027D_F027D), unchecked((sbyte)divisor_F000_027D_F027D));
-        AL = unchecked((byte)quotient_F000_027D_F027D);
-        AH = unchecked((byte)(dividend_F000_027D_F027D % unchecked((short)divisor_F000_027D_F027D)));
+        sbyte divisor_F000_027D_F027D = (sbyte)UInt8[DS, 0x0073];
+        short dividend_F000_027D_F027D = (short)AX;
+        sbyte quotient_F000_027D_F027D = Alu8.Idiv((short)dividend_F000_027D_F027D, (sbyte)divisor_F000_027D_F027D);
+        AL = (byte)quotient_F000_027D_F027D;
+        AH = (byte)(dividend_F000_027D_F027D % (short)divisor_F000_027D_F027D);
         // F000:0281 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:0284 mov word ptr DS:[0x0074],AX
@@ -571,11 +571,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0292 mov word ptr SS:[BP],2
         UInt16[SS, (ushort)(BP + 0)] = 2;
         // F000:0297 idiv CL
-        sbyte divisor_F000_0297_F0297 = unchecked((sbyte)CL);
-        short dividend_F000_0297_F0297 = unchecked((short)AX);
-        sbyte quotient_F000_0297_F0297 = Alu8.Idiv(unchecked((short)dividend_F000_0297_F0297), unchecked((sbyte)divisor_F000_0297_F0297));
-        AL = unchecked((byte)quotient_F000_0297_F0297);
-        AH = unchecked((byte)(dividend_F000_0297_F0297 % unchecked((short)divisor_F000_0297_F0297)));
+        sbyte divisor_F000_0297_F0297 = (sbyte)CL;
+        short dividend_F000_0297_F0297 = (short)AX;
+        sbyte quotient_F000_0297_F0297 = Alu8.Idiv((short)dividend_F000_0297_F0297, (sbyte)divisor_F000_0297_F0297);
+        AL = (byte)quotient_F000_0297_F0297;
+        AH = (byte)(dividend_F000_0297_F0297 % (short)divisor_F000_0297_F0297);
         // F000:0299 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:029C mov word ptr DS:[0x0078],AX
@@ -592,11 +592,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt16[SS, (ushort)(BP + 0)] = 2;
         // F000:02AF idiv AL
         try {
-            sbyte divisor_F000_02AF_F02AF = unchecked((sbyte)AL);
-            short dividend_F000_02AF_F02AF = unchecked((short)AX);
-            sbyte quotient_F000_02AF_F02AF = Alu8.Idiv(unchecked((short)dividend_F000_02AF_F02AF), unchecked((sbyte)divisor_F000_02AF_F02AF));
-            AL = unchecked((byte)quotient_F000_02AF_F02AF);
-            AH = unchecked((byte)(dividend_F000_02AF_F02AF % unchecked((short)divisor_F000_02AF_F02AF)));
+            sbyte divisor_F000_02AF_F02AF = (sbyte)AL;
+            short dividend_F000_02AF_F02AF = (short)AX;
+            sbyte quotient_F000_02AF_F02AF = Alu8.Idiv((short)dividend_F000_02AF_F02AF, (sbyte)divisor_F000_02AF_F02AF);
+            AL = (byte)quotient_F000_02AF_F02AF;
+            AH = (byte)(dividend_F000_02AF_F02AF % (short)divisor_F000_02AF_F02AF);
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -627,16 +627,16 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         try {
             byte v2_F000_02C4_F02C4 = 0;
             byte v1_F000_02C4_F02C4 = AL;
-            Alu8.UpdateFlags(unchecked((byte)(v1_F000_02C4_F02C4 >> 1)));
+            Alu8.UpdateFlags((byte)(v1_F000_02C4_F02C4 >> 1));
             if (v2_F000_02C4_F02C4 == 0) {
                 throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
             }
             else {
             }
-            byte result_F000_02C4_F02C4 = unchecked((byte)(v1_F000_02C4_F02C4 % v2_F000_02C4_F02C4));
-            AH = unchecked((byte)(v1_F000_02C4_F02C4 / v2_F000_02C4_F02C4));
-            AL = unchecked((byte)result_F000_02C4_F02C4);
-            Alu8.UpdateFlags(unchecked((byte)result_F000_02C4_F02C4));
+            byte result_F000_02C4_F02C4 = (byte)(v1_F000_02C4_F02C4 % v2_F000_02C4_F02C4);
+            AH = (byte)(v1_F000_02C4_F02C4 / v2_F000_02C4_F02C4);
+            AL = (byte)result_F000_02C4_F02C4;
+            Alu8.UpdateFlags((byte)result_F000_02C4_F02C4);
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -662,16 +662,16 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:02D2 aam
         byte v2_F000_02D2_F02D2 = 1;
         byte v1_F000_02D2_F02D2 = AL;
-        Alu8.UpdateFlags(unchecked((byte)(v1_F000_02D2_F02D2 >> 1)));
+        Alu8.UpdateFlags((byte)(v1_F000_02D2_F02D2 >> 1));
         if (v2_F000_02D2_F02D2 == 0) {
             throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
         }
         else {
         }
-        byte result_F000_02D2_F02D2 = unchecked((byte)(v1_F000_02D2_F02D2 % v2_F000_02D2_F02D2));
-        AH = unchecked((byte)(v1_F000_02D2_F02D2 / v2_F000_02D2_F02D2));
-        AL = unchecked((byte)result_F000_02D2_F02D2);
-        Alu8.UpdateFlags(unchecked((byte)result_F000_02D2_F02D2));
+        byte result_F000_02D2_F02D2 = (byte)(v1_F000_02D2_F02D2 % v2_F000_02D2_F02D2);
+        AH = (byte)(v1_F000_02D2_F02D2 / v2_F000_02D2_F02D2);
+        AL = (byte)result_F000_02D2_F02D2;
+        Alu8.UpdateFlags((byte)result_F000_02D2_F02D2);
         // F000:02D4 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:02D7 mov word ptr DS:[0x0086],AX
@@ -685,16 +685,16 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:02E3 aam
         byte v2_F000_02E3_F02E3 = 0x0A;
         byte v1_F000_02E3_F02E3 = AL;
-        Alu8.UpdateFlags(unchecked((byte)(v1_F000_02E3_F02E3 >> 1)));
+        Alu8.UpdateFlags((byte)(v1_F000_02E3_F02E3 >> 1));
         if (v2_F000_02E3_F02E3 == 0) {
             throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
         }
         else {
         }
-        byte result_F000_02E3_F02E3 = unchecked((byte)(v1_F000_02E3_F02E3 % v2_F000_02E3_F02E3));
-        AH = unchecked((byte)(v1_F000_02E3_F02E3 / v2_F000_02E3_F02E3));
-        AL = unchecked((byte)result_F000_02E3_F02E3);
-        Alu8.UpdateFlags(unchecked((byte)result_F000_02E3_F02E3));
+        byte result_F000_02E3_F02E3 = (byte)(v1_F000_02E3_F02E3 % v2_F000_02E3_F02E3);
+        AH = (byte)(v1_F000_02E3_F02E3 / v2_F000_02E3_F02E3);
+        AL = (byte)result_F000_02E3_F02E3;
+        Alu8.UpdateFlags((byte)result_F000_02E3_F02E3);
         // F000:02E5 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:02E8 mov word ptr DS:[0x0088],AX
@@ -709,16 +709,16 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         try {
             byte v2_F000_02F4_F02F4 = 0;
             byte v1_F000_02F4_F02F4 = AL;
-            Alu8.UpdateFlags(unchecked((byte)(v1_F000_02F4_F02F4 >> 1)));
+            Alu8.UpdateFlags((byte)(v1_F000_02F4_F02F4 >> 1));
             if (v2_F000_02F4_F02F4 == 0) {
                 throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
             }
             else {
             }
-            byte result_F000_02F4_F02F4 = unchecked((byte)(v1_F000_02F4_F02F4 % v2_F000_02F4_F02F4));
-            AH = unchecked((byte)(v1_F000_02F4_F02F4 / v2_F000_02F4_F02F4));
-            AL = unchecked((byte)result_F000_02F4_F02F4);
-            Alu8.UpdateFlags(unchecked((byte)result_F000_02F4_F02F4));
+            byte result_F000_02F4_F02F4 = (byte)(v1_F000_02F4_F02F4 % v2_F000_02F4_F02F4);
+            AH = (byte)(v1_F000_02F4_F02F4 / v2_F000_02F4_F02F4);
+            AL = (byte)result_F000_02F4_F02F4;
+            Alu8.UpdateFlags((byte)result_F000_02F4_F02F4);
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -744,16 +744,16 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0302 aam
         byte v2_F000_0302_F0302 = 1;
         byte v1_F000_0302_F0302 = AL;
-        Alu8.UpdateFlags(unchecked((byte)(v1_F000_0302_F0302 >> 1)));
+        Alu8.UpdateFlags((byte)(v1_F000_0302_F0302 >> 1));
         if (v2_F000_0302_F0302 == 0) {
             throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
         }
         else {
         }
-        byte result_F000_0302_F0302 = unchecked((byte)(v1_F000_0302_F0302 % v2_F000_0302_F0302));
-        AH = unchecked((byte)(v1_F000_0302_F0302 / v2_F000_0302_F0302));
-        AL = unchecked((byte)result_F000_0302_F0302);
-        Alu8.UpdateFlags(unchecked((byte)result_F000_0302_F0302));
+        byte result_F000_0302_F0302 = (byte)(v1_F000_0302_F0302 % v2_F000_0302_F0302);
+        AH = (byte)(v1_F000_0302_F0302 / v2_F000_0302_F0302);
+        AL = (byte)result_F000_0302_F0302;
+        Alu8.UpdateFlags((byte)result_F000_0302_F0302);
         // F000:0304 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:0307 mov word ptr DS:[0x008C],AX
@@ -767,16 +767,16 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0313 aam
         byte v2_F000_0313_F0313 = 0x0A;
         byte v1_F000_0313_F0313 = AL;
-        Alu8.UpdateFlags(unchecked((byte)(v1_F000_0313_F0313 >> 1)));
+        Alu8.UpdateFlags((byte)(v1_F000_0313_F0313 >> 1));
         if (v2_F000_0313_F0313 == 0) {
             throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
         }
         else {
         }
-        byte result_F000_0313_F0313 = unchecked((byte)(v1_F000_0313_F0313 % v2_F000_0313_F0313));
-        AH = unchecked((byte)(v1_F000_0313_F0313 / v2_F000_0313_F0313));
-        AL = unchecked((byte)result_F000_0313_F0313);
-        Alu8.UpdateFlags(unchecked((byte)result_F000_0313_F0313));
+        byte result_F000_0313_F0313 = (byte)(v1_F000_0313_F0313 % v2_F000_0313_F0313);
+        AH = (byte)(v1_F000_0313_F0313 / v2_F000_0313_F0313);
+        AL = (byte)result_F000_0313_F0313;
+        Alu8.UpdateFlags((byte)result_F000_0313_F0313);
         // F000:0315 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:0318 mov word ptr DS:[0x008E],AX
@@ -842,10 +842,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt16[SS, (ushort)(BP + 0)] = 2;
         // F000:0020 div BX
         ushort divisor_F000_0020_F0020 = BX;
-        uint dividend_F000_0020_F0020 = unchecked((uint)(unchecked((uint)DX) << 0x00000010 | unchecked((uint)AX)));
-        ushort quotient_F000_0020_F0020 = Alu16.Div(unchecked((uint)dividend_F000_0020_F0020), unchecked((ushort)divisor_F000_0020_F0020));
-        AX = unchecked((ushort)quotient_F000_0020_F0020);
-        DX = unchecked((ushort)(dividend_F000_0020_F0020 % unchecked((uint)divisor_F000_0020_F0020)));
+        uint dividend_F000_0020_F0020 = (uint)((uint)DX << 0x00000010 | (uint)AX);
+        ushort quotient_F000_0020_F0020 = Alu16.Div((uint)dividend_F000_0020_F0020, (ushort)divisor_F000_0020_F0020);
+        AX = (ushort)quotient_F000_0020_F0020;
+        DX = (ushort)(dividend_F000_0020_F0020 % (uint)divisor_F000_0020_F0020);
         // F000:0022 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:0025 mov word ptr DS:[0x0080],AX
@@ -866,10 +866,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt16[SS, (ushort)(BP + 0)] = 4;
         // F000:0042 div word ptr DS:[6]
         ushort divisor_F000_0042_F0042 = UInt16[DS, 6];
-        uint dividend_F000_0042_F0042 = unchecked((uint)(unchecked((uint)DX) << 0x00000010 | unchecked((uint)AX)));
-        ushort quotient_F000_0042_F0042 = Alu16.Div(unchecked((uint)dividend_F000_0042_F0042), unchecked((ushort)divisor_F000_0042_F0042));
-        AX = unchecked((ushort)quotient_F000_0042_F0042);
-        DX = unchecked((ushort)(dividend_F000_0042_F0042 % unchecked((uint)divisor_F000_0042_F0042)));
+        uint dividend_F000_0042_F0042 = (uint)((uint)DX << 0x00000010 | (uint)AX);
+        ushort quotient_F000_0042_F0042 = Alu16.Div((uint)dividend_F000_0042_F0042, (ushort)divisor_F000_0042_F0042);
+        AX = (ushort)quotient_F000_0042_F0042;
+        DX = (ushort)(dividend_F000_0042_F0042 % (uint)divisor_F000_0042_F0042);
         // F000:0046 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:0049 mov word ptr DS:[8],AX
@@ -889,10 +889,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:005F div CX
         try {
             ushort divisor_F000_005F_F005F = CX;
-            uint dividend_F000_005F_F005F = unchecked((uint)(unchecked((uint)DX) << 0x00000010 | unchecked((uint)AX)));
-            ushort quotient_F000_005F_F005F = Alu16.Div(unchecked((uint)dividend_F000_005F_F005F), unchecked((ushort)divisor_F000_005F_F005F));
-            AX = unchecked((ushort)quotient_F000_005F_F005F);
-            DX = unchecked((ushort)(dividend_F000_005F_F005F % unchecked((uint)divisor_F000_005F_F005F)));
+            uint dividend_F000_005F_F005F = (uint)((uint)DX << 0x00000010 | (uint)AX);
+            ushort quotient_F000_005F_F005F = Alu16.Div((uint)dividend_F000_005F_F005F, (ushort)divisor_F000_005F_F005F);
+            AX = (ushort)quotient_F000_005F_F005F;
+            DX = (ushort)(dividend_F000_005F_F005F % (uint)divisor_F000_005F_F005F);
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];

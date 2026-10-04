@@ -46,7 +46,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_0009_F0009_30:
         CheckExternalEvents(cs1, 0x0009);
         // F000:0009 mov AX,word ptr [0x000F000A]
-        AX = UInt16[unchecked((uint)(0x000F000A))];
+        AX = UInt16[0x000F000A];
         // F000:000C mov word ptr CS:[0x000A],0x162E
         UInt16[CS, 0x000A] = 0x162E;
         // F000:0013 mov CX,1

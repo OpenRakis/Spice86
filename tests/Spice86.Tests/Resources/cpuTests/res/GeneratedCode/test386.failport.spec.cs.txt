@@ -72,7 +72,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0667 mov EAX,0xFFFFFFFF
         EAX = 0xFFFFFFFFu;
         // F000:066D mov EAX,CS
-        EAX = unchecked((uint)CS);
+        EAX = (uint)CS;
         // F000:0670 cmp AX,DX
         Alu16.Sub(AX, DX);
         // F000:0672 jne near 0x15C7
@@ -175,7 +175,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AL = 0x78;
         // F000:06F7 stos byte ptr ES:[DI],AL
         UInt8[ES, DI] = AL;
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+        DI = (ushort)(DI + (ushort)State.Direction8);
         // F000:06F8 cmp byte ptr ES:[EBX],AL
         Alu8.Sub(UInt8[ES, EBX], AL);
         // F000:06FC jne near 0x15C7
@@ -209,8 +209,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0x072B);
         // F000:072B cmps byte ptr DS:[SI],byte ptr ES:[DI]
         Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
-        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+        SI = (ushort)(SI + (ushort)State.Direction8);
+        DI = (ushort)(DI + (ushort)State.Direction8);
         // F000:072C jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
@@ -240,7 +240,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Alu8.Sub(AL, 0);
         // F000:0754 scas AL,byte ptr ES:[DI]
         Alu8.Sub(AL, UInt8[ES, DI]);
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+        DI = (ushort)(DI + (ushort)State.Direction8);
         // F000:0755 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
@@ -267,8 +267,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt8[ES, EBX] = AL;
         // F000:077C movs byte ptr ES:[DI],byte ptr DS:[SI]
         UInt8[ES, DI] = UInt8[DS, SI];
-        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+        SI = (ushort)(SI + (ushort)State.Direction8);
+        DI = (ushort)(DI + (ushort)State.Direction8);
         // F000:077D mov AL,0x78
         AL = 0x78;
         // F000:077F cmp byte ptr ES:[EBX],AL
@@ -302,7 +302,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         EAX = Alu32.Xor(EAX, EAX);
         // F000:07AC lods AL,byte ptr DS:[SI]
         AL = UInt8[DS, SI];
-        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
+        SI = (ushort)(SI + (ushort)State.Direction8);
         // F000:07AD cmp AL,0x78
         Alu8.Sub(AL, 0x78);
         // F000:07AF jne near 0x15C7
@@ -331,7 +331,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AX = 0x5678;
         // F000:07D5 stos word ptr ES:[DI],AX
         UInt16[ES, DI] = AX;
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+        DI = (ushort)(DI + (ushort)State.Direction16);
         // F000:07D6 cmp word ptr ES:[EBX],AX
         Alu16.Sub(UInt16[ES, EBX], AX);
         // F000:07DA jne near 0x15C7
@@ -365,8 +365,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0x080A);
         // F000:080A cmps word ptr DS:[SI],word ptr ES:[DI]
         Alu16.Sub(UInt16[DS, SI], UInt16[ES, DI]);
-        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction16)));
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+        SI = (ushort)(SI + (ushort)State.Direction16);
+        DI = (ushort)(DI + (ushort)State.Direction16);
         // F000:080B jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
@@ -396,7 +396,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Alu16.Sub(AX, 0);
         // F000:0835 scas AX,word ptr ES:[DI]
         Alu16.Sub(AX, UInt16[ES, DI]);
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+        DI = (ushort)(DI + (ushort)State.Direction16);
         // F000:0836 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
@@ -423,8 +423,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt16[ES, EBX] = AX;
         // F000:085F movs word ptr ES:[DI],word ptr DS:[SI]
         UInt16[ES, DI] = UInt16[DS, SI];
-        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction16)));
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+        SI = (ushort)(SI + (ushort)State.Direction16);
+        DI = (ushort)(DI + (ushort)State.Direction16);
         // F000:0860 mov AX,0x5678
         AX = 0x5678;
         // F000:0863 cmp word ptr ES:[EBX],AX
@@ -458,7 +458,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         EAX = Alu32.Xor(EAX, EAX);
         // F000:0891 lods AX,word ptr DS:[SI]
         AX = UInt16[DS, SI];
-        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction16)));
+        SI = (ushort)(SI + (ushort)State.Direction16);
         // F000:0892 cmp AX,0x5678
         Alu16.Sub(AX, 0x5678);
         // F000:0895 jne near 0x15C7
@@ -487,7 +487,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         EAX = 0x12345678;
         // F000:08C2 stos dword ptr ES:[DI],EAX
         UInt32[ES, DI] = EAX;
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
+        DI = (ushort)(DI + (ushort)State.Direction32);
         // F000:08C4 cmp dword ptr ES:[EBX],EAX
         Alu32.Sub(UInt32[ES, EBX], EAX);
         // F000:08C9 jne near 0x15C7
@@ -521,8 +521,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0x08FC);
         // F000:08FC cmps dword ptr DS:[SI],dword ptr ES:[DI]
         Alu32.Sub(UInt32[DS, SI], UInt32[ES, DI]);
-        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction32)));
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
+        SI = (ushort)(SI + (ushort)State.Direction32);
+        DI = (ushort)(DI + (ushort)State.Direction32);
         // F000:08FE jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
@@ -552,7 +552,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Alu32.Sub(EAX, 0);
         // F000:092D scas EAX,dword ptr ES:[DI]
         Alu32.Sub(EAX, UInt32[ES, DI]);
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
+        DI = (ushort)(DI + (ushort)State.Direction32);
         // F000:092F jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
@@ -579,8 +579,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt32[ES, EBX] = EAX;
         // F000:0960 movs dword ptr ES:[DI],dword ptr DS:[SI]
         UInt32[ES, DI] = UInt32[DS, SI];
-        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction32)));
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
+        SI = (ushort)(SI + (ushort)State.Direction32);
+        DI = (ushort)(DI + (ushort)State.Direction32);
         // F000:0962 mov EAX,0x12345678
         EAX = 0x12345678;
         // F000:0968 cmp dword ptr ES:[EBX],EAX
@@ -614,7 +614,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         EAX = Alu32.Xor(EAX, EAX);
         // F000:099B lods EAX,dword ptr DS:[SI]
         EAX = UInt32[DS, SI];
-        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction32)));
+        SI = (ushort)(SI + (ushort)State.Direction32);
         // F000:099D cmp EAX,0x12345678
         Alu32.Sub(EAX, 0x12345678);
         // F000:09A3 jne near 0x15C7
@@ -643,7 +643,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AL = 0x78;
         // F000:09C7 stos byte ptr ES:[DI],AL
         UInt8[ES, DI] = AL;
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+        DI = (ushort)(DI + (ushort)State.Direction8);
         // F000:09C8 cmp byte ptr ES:[EBX],AL
         Alu8.Sub(UInt8[ES, EBX], AL);
         // F000:09CC jne near 0x15C7
@@ -677,8 +677,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0x09FB);
         // F000:09FB cmps byte ptr DS:[SI],byte ptr ES:[DI]
         Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
-        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+        SI = (ushort)(SI + (ushort)State.Direction8);
+        DI = (ushort)(DI + (ushort)State.Direction8);
         // F000:09FC jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
@@ -708,7 +708,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Alu8.Sub(AL, 0);
         // F000:0A24 scas AL,byte ptr ES:[DI]
         Alu8.Sub(AL, UInt8[ES, DI]);
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+        DI = (ushort)(DI + (ushort)State.Direction8);
         // F000:0A25 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
@@ -735,8 +735,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt8[ES, EBX] = AL;
         // F000:0A4C movs byte ptr ES:[DI],byte ptr DS:[SI]
         UInt8[ES, DI] = UInt8[DS, SI];
-        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
+        SI = (ushort)(SI + (ushort)State.Direction8);
+        DI = (ushort)(DI + (ushort)State.Direction8);
         // F000:0A4D mov AL,0x78
         AL = 0x78;
         // F000:0A4F cmp byte ptr ES:[EBX],AL
@@ -770,7 +770,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         EAX = Alu32.Xor(EAX, EAX);
         // F000:0A7C lods AL,byte ptr DS:[SI]
         AL = UInt8[DS, SI];
-        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
+        SI = (ushort)(SI + (ushort)State.Direction8);
         // F000:0A7D cmp AL,0x78
         Alu8.Sub(AL, 0x78);
         // F000:0A7F jne near 0x15C7
@@ -799,7 +799,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AX = 0x5678;
         // F000:0AA5 stos word ptr ES:[DI],AX
         UInt16[ES, DI] = AX;
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+        DI = (ushort)(DI + (ushort)State.Direction16);
         // F000:0AA6 cmp word ptr ES:[EBX],AX
         Alu16.Sub(UInt16[ES, EBX], AX);
         // F000:0AAA jne near 0x15C7
@@ -833,8 +833,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0x0ADA);
         // F000:0ADA cmps word ptr DS:[SI],word ptr ES:[DI]
         Alu16.Sub(UInt16[DS, SI], UInt16[ES, DI]);
-        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction16)));
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+        SI = (ushort)(SI + (ushort)State.Direction16);
+        DI = (ushort)(DI + (ushort)State.Direction16);
         // F000:0ADB jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
@@ -864,7 +864,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Alu16.Sub(AX, 0);
         // F000:0B05 scas AX,word ptr ES:[DI]
         Alu16.Sub(AX, UInt16[ES, DI]);
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+        DI = (ushort)(DI + (ushort)State.Direction16);
         // F000:0B06 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
@@ -891,8 +891,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt16[ES, EBX] = AX;
         // F000:0B2F movs word ptr ES:[DI],word ptr DS:[SI]
         UInt16[ES, DI] = UInt16[DS, SI];
-        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction16)));
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
+        SI = (ushort)(SI + (ushort)State.Direction16);
+        DI = (ushort)(DI + (ushort)State.Direction16);
         // F000:0B30 mov AX,0x5678
         AX = 0x5678;
         // F000:0B33 cmp word ptr ES:[EBX],AX
@@ -926,7 +926,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         EAX = Alu32.Xor(EAX, EAX);
         // F000:0B61 lods AX,word ptr DS:[SI]
         AX = UInt16[DS, SI];
-        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction16)));
+        SI = (ushort)(SI + (ushort)State.Direction16);
         // F000:0B62 cmp AX,0x5678
         Alu16.Sub(AX, 0x5678);
         // F000:0B65 jne near 0x15C7
@@ -955,7 +955,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         EAX = 0x12345678;
         // F000:0B92 stos dword ptr ES:[DI],EAX
         UInt32[ES, DI] = EAX;
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
+        DI = (ushort)(DI + (ushort)State.Direction32);
         // F000:0B94 cmp dword ptr ES:[EBX],EAX
         Alu32.Sub(UInt32[ES, EBX], EAX);
         // F000:0B99 jne near 0x15C7
@@ -989,8 +989,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0x0BCC);
         // F000:0BCC cmps dword ptr DS:[SI],dword ptr ES:[DI]
         Alu32.Sub(UInt32[DS, SI], UInt32[ES, DI]);
-        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction32)));
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
+        SI = (ushort)(SI + (ushort)State.Direction32);
+        DI = (ushort)(DI + (ushort)State.Direction32);
         // F000:0BCE jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
@@ -1020,7 +1020,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Alu32.Sub(EAX, 0);
         // F000:0BFD scas EAX,dword ptr ES:[DI]
         Alu32.Sub(EAX, UInt32[ES, DI]);
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
+        DI = (ushort)(DI + (ushort)State.Direction32);
         // F000:0BFF jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
@@ -1047,8 +1047,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt32[ES, EBX] = EAX;
         // F000:0C30 movs dword ptr ES:[DI],dword ptr DS:[SI]
         UInt32[ES, DI] = UInt32[DS, SI];
-        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction32)));
-        DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
+        SI = (ushort)(SI + (ushort)State.Direction32);
+        DI = (ushort)(DI + (ushort)State.Direction32);
         // F000:0C32 mov EAX,0x12345678
         EAX = 0x12345678;
         // F000:0C38 cmp dword ptr ES:[EBX],EAX
@@ -1082,7 +1082,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         EAX = Alu32.Xor(EAX, EAX);
         // F000:0C6B lods EAX,dword ptr DS:[SI]
         EAX = UInt32[DS, SI];
-        SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction32)));
+        SI = (ushort)(SI + (ushort)State.Direction32);
         // F000:0C6D cmp EAX,0x12345678
         Alu32.Sub(EAX, 0x12345678);
         // F000:0C73 jne near 0x15C7
@@ -1116,8 +1116,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0CAD rep stos byte ptr ES:[DI],AL
         while (CX != 0) {
             UInt8[ES, DI] = AL;
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
-            CX = unchecked((ushort)(CX - 1));
+            DI = (ushort)(DI + (ushort)State.Direction8);
+            CX = (ushort)(CX - 1);
         }
         // F000:0CAF cmp ECX,0
         Alu32.Sub(ECX, 0);
@@ -1142,7 +1142,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0CCC xchg DX,CX
         ushort temp_F000_0CCC_F0CCC = DX;
         DX = CX;
-        CX = unchecked((ushort)temp_F000_0CCC_F0CCC);
+        CX = (ushort)temp_F000_0CCC_F0CCC;
         // F000:0CCE mov ES,DX
         ES = DX;
         // F000:0CD0 mov DS,CX
@@ -1150,14 +1150,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0CD2 xchg EDI,ESI
         uint temp_F000_0CD2_F0CD2 = EDI;
         EDI = ESI;
-        ESI = unchecked((uint)temp_F000_0CD2_F0CD2);
+        ESI = (uint)temp_F000_0CD2_F0CD2;
         // F000:0CD5 mov ECX,0x00000100
         ECX = 0x00000100;
         // F000:0CDB rep stos byte ptr ES:[DI],AL
         while (CX != 0) {
             UInt8[ES, DI] = AL;
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
-            CX = unchecked((ushort)(CX - 1));
+            DI = (ushort)(DI + (ushort)State.Direction8);
+            CX = (ushort)(CX - 1);
         }
         // F000:0CDD mov EDI,0x0001FF00
         EDI = 0x0001FF00;
@@ -1167,9 +1167,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool shouldContinue_F000_0CE9_F0CE9 = true;
         while (CX != 0 && shouldContinue_F000_0CE9_F0CE9) {
             Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
-            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
-            CX = unchecked((ushort)(CX - 1));
+            SI = (ushort)(SI + (ushort)State.Direction8);
+            DI = (ushort)(DI + (ushort)State.Direction8);
+            CX = (ushort)(CX - 1);
             shouldContinue_F000_0CE9_F0CE9 = ZeroFlag == true;
         }
         // F000:0CEB cmp ECX,0
@@ -1203,8 +1203,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool shouldContinue_F000_0D1B_F0D1B = true;
         while (CX != 0 && shouldContinue_F000_0D1B_F0D1B) {
             Alu8.Sub(AL, UInt8[ES, DI]);
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
-            CX = unchecked((ushort)(CX - 1));
+            DI = (ushort)(DI + (ushort)State.Direction8);
+            CX = (ushort)(CX - 1);
             shouldContinue_F000_0D1B_F0D1B = ZeroFlag == true;
         }
         // F000:0D1D cmp ECX,0
@@ -1230,8 +1230,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0D42 rep stos byte ptr ES:[DI],AL
         while (CX != 0) {
             UInt8[ES, DI] = AL;
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
-            CX = unchecked((ushort)(CX - 1));
+            DI = (ushort)(DI + (ushort)State.Direction8);
+            CX = (ushort)(CX - 1);
         }
         // F000:0D44 mov EDI,0x0001FF00
         EDI = 0x0001FF00;
@@ -1240,9 +1240,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0D50 rep movs byte ptr ES:[DI],byte ptr DS:[SI]
         while (CX != 0) {
             UInt8[ES, DI] = UInt8[DS, SI];
-            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
-            CX = unchecked((ushort)(CX - 1));
+            SI = (ushort)(SI + (ushort)State.Direction8);
+            DI = (ushort)(DI + (ushort)State.Direction8);
+            CX = (ushort)(CX - 1);
         }
         // F000:0D52 cmp ECX,0
         Alu32.Sub(ECX, 0);
@@ -1275,9 +1275,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool shouldContinue_F000_0D82_F0D82 = true;
         while (CX != 0 && shouldContinue_F000_0D82_F0D82) {
             Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
-            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
-            CX = unchecked((ushort)(CX - 1));
+            SI = (ushort)(SI + (ushort)State.Direction8);
+            DI = (ushort)(DI + (ushort)State.Direction8);
+            CX = (ushort)(CX - 1);
             shouldContinue_F000_0D82_F0D82 = ZeroFlag == true;
         }
         // F000:0D84 cmp ECX,0
@@ -1320,8 +1320,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0DCD rep stos word ptr ES:[DI],AX
         while (CX != 0) {
             UInt16[ES, DI] = AX;
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
-            CX = unchecked((ushort)(CX - 1));
+            DI = (ushort)(DI + (ushort)State.Direction16);
+            CX = (ushort)(CX - 1);
         }
         // F000:0DCF cmp ECX,0
         Alu32.Sub(ECX, 0);
@@ -1346,7 +1346,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0DEC xchg DX,CX
         ushort temp_F000_0DEC_F0DEC = DX;
         DX = CX;
-        CX = unchecked((ushort)temp_F000_0DEC_F0DEC);
+        CX = (ushort)temp_F000_0DEC_F0DEC;
         // F000:0DEE mov ES,DX
         ES = DX;
         // F000:0DF0 mov DS,CX
@@ -1354,14 +1354,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0DF2 xchg EDI,ESI
         uint temp_F000_0DF2_F0DF2 = EDI;
         EDI = ESI;
-        ESI = unchecked((uint)temp_F000_0DF2_F0DF2);
+        ESI = (uint)temp_F000_0DF2_F0DF2;
         // F000:0DF5 mov ECX,0x00000080
         ECX = 0x00000080;
         // F000:0DFB rep stos word ptr ES:[DI],AX
         while (CX != 0) {
             UInt16[ES, DI] = AX;
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
-            CX = unchecked((ushort)(CX - 1));
+            DI = (ushort)(DI + (ushort)State.Direction16);
+            CX = (ushort)(CX - 1);
         }
         // F000:0DFD mov EDI,0x0001FF00
         EDI = 0x0001FF00;
@@ -1371,9 +1371,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool shouldContinue_F000_0E09_F0E09 = true;
         while (CX != 0 && shouldContinue_F000_0E09_F0E09) {
             Alu16.Sub(UInt16[DS, SI], UInt16[ES, DI]);
-            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction16)));
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
-            CX = unchecked((ushort)(CX - 1));
+            SI = (ushort)(SI + (ushort)State.Direction16);
+            DI = (ushort)(DI + (ushort)State.Direction16);
+            CX = (ushort)(CX - 1);
             shouldContinue_F000_0E09_F0E09 = ZeroFlag == true;
         }
         // F000:0E0B cmp ECX,0
@@ -1407,8 +1407,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool shouldContinue_F000_0E3B_F0E3B = true;
         while (CX != 0 && shouldContinue_F000_0E3B_F0E3B) {
             Alu16.Sub(AX, UInt16[ES, DI]);
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
-            CX = unchecked((ushort)(CX - 1));
+            DI = (ushort)(DI + (ushort)State.Direction16);
+            CX = (ushort)(CX - 1);
             shouldContinue_F000_0E3B_F0E3B = ZeroFlag == true;
         }
         // F000:0E3D cmp ECX,0
@@ -1434,8 +1434,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0E62 rep stos word ptr ES:[DI],AX
         while (CX != 0) {
             UInt16[ES, DI] = AX;
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
-            CX = unchecked((ushort)(CX - 1));
+            DI = (ushort)(DI + (ushort)State.Direction16);
+            CX = (ushort)(CX - 1);
         }
         // F000:0E64 mov EDI,0x0001FF00
         EDI = 0x0001FF00;
@@ -1444,9 +1444,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0E70 rep movs word ptr ES:[DI],word ptr DS:[SI]
         while (CX != 0) {
             UInt16[ES, DI] = UInt16[DS, SI];
-            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction16)));
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
-            CX = unchecked((ushort)(CX - 1));
+            SI = (ushort)(SI + (ushort)State.Direction16);
+            DI = (ushort)(DI + (ushort)State.Direction16);
+            CX = (ushort)(CX - 1);
         }
         // F000:0E72 cmp ECX,0
         Alu32.Sub(ECX, 0);
@@ -1479,9 +1479,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool shouldContinue_F000_0EA2_F0EA2 = true;
         while (CX != 0 && shouldContinue_F000_0EA2_F0EA2) {
             Alu16.Sub(UInt16[DS, SI], UInt16[ES, DI]);
-            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction16)));
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
-            CX = unchecked((ushort)(CX - 1));
+            SI = (ushort)(SI + (ushort)State.Direction16);
+            DI = (ushort)(DI + (ushort)State.Direction16);
+            CX = (ushort)(CX - 1);
             shouldContinue_F000_0EA2_F0EA2 = ZeroFlag == true;
         }
         // F000:0EA4 cmp ECX,0
@@ -1524,8 +1524,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0EED rep stos dword ptr ES:[DI],EAX
         while (CX != 0) {
             UInt32[ES, DI] = EAX;
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
-            CX = unchecked((ushort)(CX - 1));
+            DI = (ushort)(DI + (ushort)State.Direction32);
+            CX = (ushort)(CX - 1);
         }
         // F000:0EF0 cmp ECX,0
         Alu32.Sub(ECX, 0);
@@ -1550,7 +1550,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0F0D xchg DX,CX
         ushort temp_F000_0F0D_F0F0D = DX;
         DX = CX;
-        CX = unchecked((ushort)temp_F000_0F0D_F0F0D);
+        CX = (ushort)temp_F000_0F0D_F0F0D;
         // F000:0F0F mov ES,DX
         ES = DX;
         // F000:0F11 mov DS,CX
@@ -1558,14 +1558,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0F13 xchg EDI,ESI
         uint temp_F000_0F13_F0F13 = EDI;
         EDI = ESI;
-        ESI = unchecked((uint)temp_F000_0F13_F0F13);
+        ESI = (uint)temp_F000_0F13_F0F13;
         // F000:0F16 mov ECX,0x00000040
         ECX = 0x00000040;
         // F000:0F1C rep stos dword ptr ES:[DI],EAX
         while (CX != 0) {
             UInt32[ES, DI] = EAX;
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
-            CX = unchecked((ushort)(CX - 1));
+            DI = (ushort)(DI + (ushort)State.Direction32);
+            CX = (ushort)(CX - 1);
         }
         // F000:0F1F mov EDI,0x0001FF00
         EDI = 0x0001FF00;
@@ -1575,9 +1575,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool shouldContinue_F000_0F2B_F0F2B = true;
         while (CX != 0 && shouldContinue_F000_0F2B_F0F2B) {
             Alu32.Sub(UInt32[DS, SI], UInt32[ES, DI]);
-            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction32)));
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
-            CX = unchecked((ushort)(CX - 1));
+            SI = (ushort)(SI + (ushort)State.Direction32);
+            DI = (ushort)(DI + (ushort)State.Direction32);
+            CX = (ushort)(CX - 1);
             shouldContinue_F000_0F2B_F0F2B = ZeroFlag == true;
         }
         // F000:0F2E cmp ECX,0
@@ -1611,8 +1611,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool shouldContinue_F000_0F5E_F0F5E = true;
         while (CX != 0 && shouldContinue_F000_0F5E_F0F5E) {
             Alu32.Sub(EAX, UInt32[ES, DI]);
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
-            CX = unchecked((ushort)(CX - 1));
+            DI = (ushort)(DI + (ushort)State.Direction32);
+            CX = (ushort)(CX - 1);
             shouldContinue_F000_0F5E_F0F5E = ZeroFlag == true;
         }
         // F000:0F61 cmp ECX,0
@@ -1638,8 +1638,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0F86 rep stos dword ptr ES:[DI],EAX
         while (CX != 0) {
             UInt32[ES, DI] = EAX;
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
-            CX = unchecked((ushort)(CX - 1));
+            DI = (ushort)(DI + (ushort)State.Direction32);
+            CX = (ushort)(CX - 1);
         }
         // F000:0F89 mov EDI,0x0001FF00
         EDI = 0x0001FF00;
@@ -1648,9 +1648,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0F95 rep movs dword ptr ES:[DI],dword ptr DS:[SI]
         while (CX != 0) {
             UInt32[ES, DI] = UInt32[DS, SI];
-            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction32)));
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
-            CX = unchecked((ushort)(CX - 1));
+            SI = (ushort)(SI + (ushort)State.Direction32);
+            DI = (ushort)(DI + (ushort)State.Direction32);
+            CX = (ushort)(CX - 1);
         }
         // F000:0F98 cmp ECX,0
         Alu32.Sub(ECX, 0);
@@ -1683,9 +1683,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool shouldContinue_F000_0FC8_F0FC8 = true;
         while (CX != 0 && shouldContinue_F000_0FC8_F0FC8) {
             Alu32.Sub(UInt32[DS, SI], UInt32[ES, DI]);
-            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction32)));
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
-            CX = unchecked((ushort)(CX - 1));
+            SI = (ushort)(SI + (ushort)State.Direction32);
+            DI = (ushort)(DI + (ushort)State.Direction32);
+            CX = (ushort)(CX - 1);
             shouldContinue_F000_0FC8_F0FC8 = ZeroFlag == true;
         }
         // F000:0FCB cmp ECX,0
@@ -1728,8 +1728,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1014 rep stos byte ptr ES:[DI],AL
         while (CX != 0) {
             UInt8[ES, DI] = AL;
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
-            CX = unchecked((ushort)(CX - 1));
+            DI = (ushort)(DI + (ushort)State.Direction8);
+            CX = (ushort)(CX - 1);
         }
         // F000:1016 cmp ECX,0
         Alu32.Sub(ECX, 0);
@@ -1754,7 +1754,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1033 xchg DX,CX
         ushort temp_F000_1033_F1033 = DX;
         DX = CX;
-        CX = unchecked((ushort)temp_F000_1033_F1033);
+        CX = (ushort)temp_F000_1033_F1033;
         // F000:1035 mov ES,DX
         ES = DX;
         // F000:1037 mov DS,CX
@@ -1762,14 +1762,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1039 xchg EDI,ESI
         uint temp_F000_1039_F1039 = EDI;
         EDI = ESI;
-        ESI = unchecked((uint)temp_F000_1039_F1039);
+        ESI = (uint)temp_F000_1039_F1039;
         // F000:103C mov ECX,0x00000100
         ECX = 0x00000100;
         // F000:1042 rep stos byte ptr ES:[DI],AL
         while (CX != 0) {
             UInt8[ES, DI] = AL;
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
-            CX = unchecked((ushort)(CX - 1));
+            DI = (ushort)(DI + (ushort)State.Direction8);
+            CX = (ushort)(CX - 1);
         }
         // F000:1044 mov EDI,0x000100FF
         EDI = 0x000100FF;
@@ -1779,9 +1779,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool shouldContinue_F000_1050_F1050 = true;
         while (CX != 0 && shouldContinue_F000_1050_F1050) {
             Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
-            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
-            CX = unchecked((ushort)(CX - 1));
+            SI = (ushort)(SI + (ushort)State.Direction8);
+            DI = (ushort)(DI + (ushort)State.Direction8);
+            CX = (ushort)(CX - 1);
             shouldContinue_F000_1050_F1050 = ZeroFlag == true;
         }
         // F000:1052 cmp ECX,0
@@ -1815,8 +1815,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool shouldContinue_F000_1082_F1082 = true;
         while (CX != 0 && shouldContinue_F000_1082_F1082) {
             Alu8.Sub(AL, UInt8[ES, DI]);
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
-            CX = unchecked((ushort)(CX - 1));
+            DI = (ushort)(DI + (ushort)State.Direction8);
+            CX = (ushort)(CX - 1);
             shouldContinue_F000_1082_F1082 = ZeroFlag == true;
         }
         // F000:1084 cmp ECX,0
@@ -1842,8 +1842,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:10A9 rep stos byte ptr ES:[DI],AL
         while (CX != 0) {
             UInt8[ES, DI] = AL;
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
-            CX = unchecked((ushort)(CX - 1));
+            DI = (ushort)(DI + (ushort)State.Direction8);
+            CX = (ushort)(CX - 1);
         }
         // F000:10AB mov EDI,0x000100FF
         EDI = 0x000100FF;
@@ -1852,9 +1852,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:10B7 rep movs byte ptr ES:[DI],byte ptr DS:[SI]
         while (CX != 0) {
             UInt8[ES, DI] = UInt8[DS, SI];
-            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
-            CX = unchecked((ushort)(CX - 1));
+            SI = (ushort)(SI + (ushort)State.Direction8);
+            DI = (ushort)(DI + (ushort)State.Direction8);
+            CX = (ushort)(CX - 1);
         }
         // F000:10B9 cmp ECX,0
         Alu32.Sub(ECX, 0);
@@ -1887,9 +1887,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool shouldContinue_F000_10E9_F10E9 = true;
         while (CX != 0 && shouldContinue_F000_10E9_F10E9) {
             Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
-            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction8)));
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction8)));
-            CX = unchecked((ushort)(CX - 1));
+            SI = (ushort)(SI + (ushort)State.Direction8);
+            DI = (ushort)(DI + (ushort)State.Direction8);
+            CX = (ushort)(CX - 1);
             shouldContinue_F000_10E9_F10E9 = ZeroFlag == true;
         }
         // F000:10EB cmp ECX,0
@@ -1932,8 +1932,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1134 rep stos word ptr ES:[DI],AX
         while (CX != 0) {
             UInt16[ES, DI] = AX;
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
-            CX = unchecked((ushort)(CX - 1));
+            DI = (ushort)(DI + (ushort)State.Direction16);
+            CX = (ushort)(CX - 1);
         }
         // F000:1136 cmp ECX,0
         Alu32.Sub(ECX, 0);
@@ -1958,7 +1958,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1153 xchg DX,CX
         ushort temp_F000_1153_F1153 = DX;
         DX = CX;
-        CX = unchecked((ushort)temp_F000_1153_F1153);
+        CX = (ushort)temp_F000_1153_F1153;
         // F000:1155 mov ES,DX
         ES = DX;
         // F000:1157 mov DS,CX
@@ -1966,14 +1966,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1159 xchg EDI,ESI
         uint temp_F000_1159_F1159 = EDI;
         EDI = ESI;
-        ESI = unchecked((uint)temp_F000_1159_F1159);
+        ESI = (uint)temp_F000_1159_F1159;
         // F000:115C mov ECX,0x00000080
         ECX = 0x00000080;
         // F000:1162 rep stos word ptr ES:[DI],AX
         while (CX != 0) {
             UInt16[ES, DI] = AX;
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
-            CX = unchecked((ushort)(CX - 1));
+            DI = (ushort)(DI + (ushort)State.Direction16);
+            CX = (ushort)(CX - 1);
         }
         // F000:1164 mov EDI,0x000100FF
         EDI = 0x000100FF;
@@ -1983,9 +1983,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool shouldContinue_F000_1170_F1170 = true;
         while (CX != 0 && shouldContinue_F000_1170_F1170) {
             Alu16.Sub(UInt16[DS, SI], UInt16[ES, DI]);
-            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction16)));
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
-            CX = unchecked((ushort)(CX - 1));
+            SI = (ushort)(SI + (ushort)State.Direction16);
+            DI = (ushort)(DI + (ushort)State.Direction16);
+            CX = (ushort)(CX - 1);
             shouldContinue_F000_1170_F1170 = ZeroFlag == true;
         }
         // F000:1172 cmp ECX,0
@@ -2019,8 +2019,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool shouldContinue_F000_11A2_F11A2 = true;
         while (CX != 0 && shouldContinue_F000_11A2_F11A2) {
             Alu16.Sub(AX, UInt16[ES, DI]);
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
-            CX = unchecked((ushort)(CX - 1));
+            DI = (ushort)(DI + (ushort)State.Direction16);
+            CX = (ushort)(CX - 1);
             shouldContinue_F000_11A2_F11A2 = ZeroFlag == true;
         }
         // F000:11A4 cmp ECX,0
@@ -2046,8 +2046,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:11C9 rep stos word ptr ES:[DI],AX
         while (CX != 0) {
             UInt16[ES, DI] = AX;
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
-            CX = unchecked((ushort)(CX - 1));
+            DI = (ushort)(DI + (ushort)State.Direction16);
+            CX = (ushort)(CX - 1);
         }
         // F000:11CB mov EDI,0x000100FF
         EDI = 0x000100FF;
@@ -2056,9 +2056,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:11D7 rep movs word ptr ES:[DI],word ptr DS:[SI]
         while (CX != 0) {
             UInt16[ES, DI] = UInt16[DS, SI];
-            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction16)));
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
-            CX = unchecked((ushort)(CX - 1));
+            SI = (ushort)(SI + (ushort)State.Direction16);
+            DI = (ushort)(DI + (ushort)State.Direction16);
+            CX = (ushort)(CX - 1);
         }
         // F000:11D9 cmp ECX,0
         Alu32.Sub(ECX, 0);
@@ -2091,9 +2091,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool shouldContinue_F000_1209_F1209 = true;
         while (CX != 0 && shouldContinue_F000_1209_F1209) {
             Alu16.Sub(UInt16[DS, SI], UInt16[ES, DI]);
-            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction16)));
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
-            CX = unchecked((ushort)(CX - 1));
+            SI = (ushort)(SI + (ushort)State.Direction16);
+            DI = (ushort)(DI + (ushort)State.Direction16);
+            CX = (ushort)(CX - 1);
             shouldContinue_F000_1209_F1209 = ZeroFlag == true;
         }
         // F000:120B cmp ECX,0
@@ -2136,8 +2136,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1254 rep stos dword ptr ES:[DI],EAX
         while (CX != 0) {
             UInt32[ES, DI] = EAX;
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
-            CX = unchecked((ushort)(CX - 1));
+            DI = (ushort)(DI + (ushort)State.Direction32);
+            CX = (ushort)(CX - 1);
         }
         // F000:1257 cmp ECX,0
         Alu32.Sub(ECX, 0);
@@ -2162,7 +2162,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1274 xchg DX,CX
         ushort temp_F000_1274_F1274 = DX;
         DX = CX;
-        CX = unchecked((ushort)temp_F000_1274_F1274);
+        CX = (ushort)temp_F000_1274_F1274;
         // F000:1276 mov ES,DX
         ES = DX;
         // F000:1278 mov DS,CX
@@ -2170,14 +2170,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:127A xchg EDI,ESI
         uint temp_F000_127A_F127A = EDI;
         EDI = ESI;
-        ESI = unchecked((uint)temp_F000_127A_F127A);
+        ESI = (uint)temp_F000_127A_F127A;
         // F000:127D mov ECX,0x00000040
         ECX = 0x00000040;
         // F000:1283 rep stos dword ptr ES:[DI],EAX
         while (CX != 0) {
             UInt32[ES, DI] = EAX;
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
-            CX = unchecked((ushort)(CX - 1));
+            DI = (ushort)(DI + (ushort)State.Direction32);
+            CX = (ushort)(CX - 1);
         }
         // F000:1286 mov EDI,0x000100FF
         EDI = 0x000100FF;
@@ -2187,9 +2187,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool shouldContinue_F000_1292_F1292 = true;
         while (CX != 0 && shouldContinue_F000_1292_F1292) {
             Alu32.Sub(UInt32[DS, SI], UInt32[ES, DI]);
-            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction32)));
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
-            CX = unchecked((ushort)(CX - 1));
+            SI = (ushort)(SI + (ushort)State.Direction32);
+            DI = (ushort)(DI + (ushort)State.Direction32);
+            CX = (ushort)(CX - 1);
             shouldContinue_F000_1292_F1292 = ZeroFlag == true;
         }
         // F000:1295 cmp ECX,0
@@ -2223,8 +2223,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool shouldContinue_F000_12C5_F12C5 = true;
         while (CX != 0 && shouldContinue_F000_12C5_F12C5) {
             Alu32.Sub(EAX, UInt32[ES, DI]);
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
-            CX = unchecked((ushort)(CX - 1));
+            DI = (ushort)(DI + (ushort)State.Direction32);
+            CX = (ushort)(CX - 1);
             shouldContinue_F000_12C5_F12C5 = ZeroFlag == true;
         }
         // F000:12C8 cmp ECX,0
@@ -2250,8 +2250,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:12ED rep stos dword ptr ES:[DI],EAX
         while (CX != 0) {
             UInt32[ES, DI] = EAX;
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
-            CX = unchecked((ushort)(CX - 1));
+            DI = (ushort)(DI + (ushort)State.Direction32);
+            CX = (ushort)(CX - 1);
         }
         // F000:12F0 mov EDI,0x000100FF
         EDI = 0x000100FF;
@@ -2260,9 +2260,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:12FC rep movs dword ptr ES:[DI],dword ptr DS:[SI]
         while (CX != 0) {
             UInt32[ES, DI] = UInt32[DS, SI];
-            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction32)));
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
-            CX = unchecked((ushort)(CX - 1));
+            SI = (ushort)(SI + (ushort)State.Direction32);
+            DI = (ushort)(DI + (ushort)State.Direction32);
+            CX = (ushort)(CX - 1);
         }
         // F000:12FF cmp ECX,0
         Alu32.Sub(ECX, 0);
@@ -2295,9 +2295,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool shouldContinue_F000_132F_F132F = true;
         while (CX != 0 && shouldContinue_F000_132F_F132F) {
             Alu32.Sub(UInt32[DS, SI], UInt32[ES, DI]);
-            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction32)));
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction32)));
-            CX = unchecked((ushort)(CX - 1));
+            SI = (ushort)(SI + (ushort)State.Direction32);
+            DI = (ushort)(DI + (ushort)State.Direction32);
+            CX = (ushort)(CX - 1);
             shouldContinue_F000_132F_F132F = ZeroFlag == true;
         }
         // F000:1332 cmp ECX,0
@@ -2386,12 +2386,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:13AA mov EBX,0x0000138D
         EBX = 0x0000138D;
         // F000:13B0 call near EBX
-        switch ((ushort)(unchecked((ushort)EBX))) {
+        switch ((ushort)((ushort)EBX)) {
             case 0x138D:
                 NearCall32(cs1, 0x13B3, unknown_F000_138D_F138D);
                 break;
             default:
-                throw FailAsUntested($"Unknown near call target 0x{((ushort)(unchecked((ushort)EBX))):X4} at F000:13B0");
+                throw FailAsUntested($"Unknown near call target 0x{((ushort)((ushort)EBX)):X4} at F000:13B0");
         }
         CheckExternalEvents(cs1, 0x13B3);
         // F000:13B3 jae near 0x15C7
@@ -2432,8 +2432,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:13FC mov word ptr DS:[SI+2],0xF000
         UInt16[DS, (ushort)(SI + 2)] = 0xF000;
         // F000:1401 call far dword ptr DS:[SI]
-        ushort targetSegment_3021 = unchecked((ushort)(UInt16[DS, (ushort)(SI + 2)]));
-        ushort targetOffset_3021 = unchecked((ushort)(UInt16[DS, SI]));
+        ushort targetSegment_3021 = UInt16[DS, (ushort)(SI + 2)];
+        ushort targetOffset_3021 = UInt16[DS, SI];
         if (targetSegment_3021 == cs1 && targetOffset_3021 == 0x13C5) {
             FarCall(cs1, 0x1403, cs1, unknown_F000_13C5_F13C5);
             goto label_F000_1403_F1403_3027;
@@ -2453,8 +2453,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:140F mov word ptr DS:[SI+4],0xF000
         UInt16[DS, (ushort)(SI + 4)] = 0xF000;
         // F000:1414 call far dword ptr DS:[SI]
-        ushort targetSegment_3034 = unchecked((ushort)(UInt16[DS, (ushort)(SI + 4)]));
-        ushort targetOffset_3034 = unchecked((ushort)(UInt32[DS, SI]));
+        ushort targetSegment_3034 = UInt16[DS, (ushort)(SI + 4)];
+        ushort targetOffset_3034 = (ushort)UInt32[DS, SI];
         if (targetSegment_3034 == cs1 && targetOffset_3034 == 0x13E5) {
             FarCall32(cs1, 0x1417, cs1, unknown_F000_13E5_F13E5);
             goto label_F000_1417_F1417_3039;
@@ -2495,8 +2495,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         ushort lxsOffset_F000_143D_F143D = DI;
         ushort lxsValue_F000_143D_F143D = UInt16[ES, lxsOffset_F000_143D_F143D];
         ushort lxsSegment_F000_143D_F143D = UInt16[ES, (ushort)(lxsOffset_F000_143D_F143D + 2)];
-        BX = unchecked((ushort)lxsValue_F000_143D_F143D);
-        SS = unchecked((ushort)lxsSegment_F000_143D_F143D);
+        BX = (ushort)lxsValue_F000_143D_F143D;
+        SS = (ushort)lxsSegment_F000_143D_F143D;
         State.InterruptShadowing = true;
         // F000:1441 mov AX,SS
         AX = SS;
@@ -2524,8 +2524,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         ushort lxsOffset_F000_1462_F1462 = DI;
         uint lxsValue_F000_1462_F1462 = UInt32[ES, lxsOffset_F000_1462_F1462];
         ushort lxsSegment_F000_1462_F1462 = UInt16[ES, (ushort)(lxsOffset_F000_1462_F1462 + 4)];
-        EBX = unchecked((uint)lxsValue_F000_1462_F1462);
-        SS = unchecked((ushort)lxsSegment_F000_1462_F1462);
+        EBX = (uint)lxsValue_F000_1462_F1462;
+        SS = (ushort)lxsSegment_F000_1462_F1462;
         State.InterruptShadowing = true;
         // F000:1467 mov AX,SS
         AX = SS;
@@ -2560,8 +2560,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         ushort lxsOffset_F000_148E_F148E = DI;
         ushort lxsValue_F000_148E_F148E = UInt16[ES, lxsOffset_F000_148E_F148E];
         ushort lxsSegment_F000_148E_F148E = UInt16[ES, (ushort)(lxsOffset_F000_148E_F148E + 2)];
-        BX = unchecked((ushort)lxsValue_F000_148E_F148E);
-        DS = unchecked((ushort)lxsSegment_F000_148E_F148E);
+        BX = (ushort)lxsValue_F000_148E_F148E;
+        DS = (ushort)lxsSegment_F000_148E_F148E;
         // F000:1491 mov AX,DS
         AX = DS;
         // F000:1493 cmp AX,0xABCD
@@ -2588,8 +2588,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         ushort lxsOffset_F000_14B2_F14B2 = DI;
         uint lxsValue_F000_14B2_F14B2 = UInt32[ES, lxsOffset_F000_14B2_F14B2];
         ushort lxsSegment_F000_14B2_F14B2 = UInt16[ES, (ushort)(lxsOffset_F000_14B2_F14B2 + 4)];
-        EBX = unchecked((uint)lxsValue_F000_14B2_F14B2);
-        DS = unchecked((ushort)lxsSegment_F000_14B2_F14B2);
+        EBX = (uint)lxsValue_F000_14B2_F14B2;
+        DS = (ushort)lxsSegment_F000_14B2_F14B2;
         // F000:14B6 mov AX,DS
         AX = DS;
         // F000:14B8 cmp AX,0xBCDE
@@ -2622,8 +2622,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         ushort lxsOffset_F000_14DD_F14DD = DI;
         ushort lxsValue_F000_14DD_F14DD = UInt16[ES, lxsOffset_F000_14DD_F14DD];
         ushort lxsSegment_F000_14DD_F14DD = UInt16[ES, (ushort)(lxsOffset_F000_14DD_F14DD + 2)];
-        BX = unchecked((ushort)lxsValue_F000_14DD_F14DD);
-        ES = unchecked((ushort)lxsSegment_F000_14DD_F14DD);
+        BX = (ushort)lxsValue_F000_14DD_F14DD;
+        ES = (ushort)lxsSegment_F000_14DD_F14DD;
         // F000:14E0 mov AX,ES
         AX = ES;
         // F000:14E2 cmp AX,0xABCD
@@ -2650,8 +2650,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         ushort lxsOffset_F000_1501_F1501 = DI;
         uint lxsValue_F000_1501_F1501 = UInt32[ES, lxsOffset_F000_1501_F1501];
         ushort lxsSegment_F000_1501_F1501 = UInt16[ES, (ushort)(lxsOffset_F000_1501_F1501 + 4)];
-        EBX = unchecked((uint)lxsValue_F000_1501_F1501);
-        ES = unchecked((ushort)lxsSegment_F000_1501_F1501);
+        EBX = (uint)lxsValue_F000_1501_F1501;
+        ES = (ushort)lxsSegment_F000_1501_F1501;
         // F000:1505 mov AX,ES
         AX = ES;
         // F000:1507 cmp AX,0xBCDE
@@ -2684,8 +2684,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         ushort lxsOffset_F000_152C_F152C = DI;
         ushort lxsValue_F000_152C_F152C = UInt16[ES, lxsOffset_F000_152C_F152C];
         ushort lxsSegment_F000_152C_F152C = UInt16[ES, (ushort)(lxsOffset_F000_152C_F152C + 2)];
-        BX = unchecked((ushort)lxsValue_F000_152C_F152C);
-        FS = unchecked((ushort)lxsSegment_F000_152C_F152C);
+        BX = (ushort)lxsValue_F000_152C_F152C;
+        FS = (ushort)lxsSegment_F000_152C_F152C;
         // F000:1530 mov AX,FS
         AX = FS;
         // F000:1532 cmp AX,0xABCD
@@ -2712,8 +2712,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         ushort lxsOffset_F000_1551_F1551 = DI;
         uint lxsValue_F000_1551_F1551 = UInt32[ES, lxsOffset_F000_1551_F1551];
         ushort lxsSegment_F000_1551_F1551 = UInt16[ES, (ushort)(lxsOffset_F000_1551_F1551 + 4)];
-        EBX = unchecked((uint)lxsValue_F000_1551_F1551);
-        FS = unchecked((ushort)lxsSegment_F000_1551_F1551);
+        EBX = (uint)lxsValue_F000_1551_F1551;
+        FS = (ushort)lxsSegment_F000_1551_F1551;
         // F000:1556 mov AX,FS
         AX = FS;
         // F000:1558 cmp AX,0xBCDE
@@ -2746,8 +2746,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         ushort lxsOffset_F000_1579_F1579 = DI;
         ushort lxsValue_F000_1579_F1579 = UInt16[ES, lxsOffset_F000_1579_F1579];
         ushort lxsSegment_F000_1579_F1579 = UInt16[ES, (ushort)(lxsOffset_F000_1579_F1579 + 2)];
-        BX = unchecked((ushort)lxsValue_F000_1579_F1579);
-        GS = unchecked((ushort)lxsSegment_F000_1579_F1579);
+        BX = (ushort)lxsValue_F000_1579_F1579;
+        GS = (ushort)lxsSegment_F000_1579_F1579;
         // F000:157D mov AX,GS
         AX = GS;
         // F000:157F cmp AX,0xABCD
@@ -2774,8 +2774,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         ushort lxsOffset_F000_159A_F159A = DI;
         uint lxsValue_F000_159A_F159A = UInt32[ES, lxsOffset_F000_159A_F159A];
         ushort lxsSegment_F000_159A_F159A = UInt16[ES, (ushort)(lxsOffset_F000_159A_F159A + 4)];
-        EBX = unchecked((uint)lxsValue_F000_159A_F159A);
-        GS = unchecked((ushort)lxsSegment_F000_159A_F159A);
+        EBX = (uint)lxsValue_F000_159A_F159A;
+        GS = (ushort)lxsSegment_F000_159A_F159A;
         // F000:159F mov AX,GS
         AX = GS;
         // F000:15A1 cmp AX,0xBCDE
@@ -2921,7 +2921,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0068 inc AX
         AX = Alu16.Inc(AX);
         // F000:0069 loop 0x0054
-        CX = unchecked((ushort)(CX - 1));
+        CX = (ushort)(CX - 1);
         if (CX != 0) {
             goto label_F000_0054_F0054_10;
         }
@@ -2950,7 +2950,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0083 mov AH,1
         AH = 1;
         // F000:0085 sahf
-        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
         // F000:0086 jae short 0x00AC
         if (!CarryFlag) {
             goto label_F000_00AC_F00AC_30;
@@ -2969,7 +2969,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:008B mov AH,0x40
         AH = 0x40;
         // F000:008D sahf
-        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
         // F000:008E jne short 0x00AC
         if (!ZeroFlag) {
             goto label_F000_00AC_F00AC_30;
@@ -2988,7 +2988,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0093 mov AH,4
         AH = 4;
         // F000:0095 sahf
-        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
         // F000:0096 jnp short 0x00AC
         if (!ParityFlag) {
             goto label_F000_00AC_F00AC_30;
@@ -3007,7 +3007,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:009B mov AH,0x80
         AH = 0x80;
         // F000:009D sahf
-        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
         // F000:009E jns short 0x00AC
         if (!SignFlag) {
             goto label_F000_00AC_F00AC_30;
@@ -3026,7 +3026,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00A3 mov AH,0x41
         AH = 0x41;
         // F000:00A5 sahf
-        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
         // F000:00A6 ja short 0x00AC
         if (!CarryFlag && !ZeroFlag) {
             goto label_F000_00AC_F00AC_30;
@@ -3080,11 +3080,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00B7 mov AH,0xD4
         AH = 0xD4;
         // F000:00B9 sahf
-        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
         // F000:00BA mov AX,0
         AX = 0;
         // F000:00BD sahf
-        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
         // F000:00BE jae short 0x00DB
         if (!CarryFlag) {
             goto label_F000_00DB_F00DB_94;
@@ -3098,7 +3098,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00C1 mov AH,0x95
         AH = 0x95;
         // F000:00C3 sahf
-        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
         // F000:00C4 jne short 0x00DD
         if (!ZeroFlag) {
             goto label_F000_00DD_F00DD_100;
@@ -3112,7 +3112,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00C7 mov AH,0xD1
         AH = 0xD1;
         // F000:00C9 sahf
-        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
         // F000:00CA jnp short 0x00DF
         if (!ParityFlag) {
             goto label_F000_00DF_F00DF_105;
@@ -3126,7 +3126,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00CD mov AH,0x55
         AH = 0x55;
         // F000:00CF sahf
-        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
         // F000:00D0 jns short 0x00E1
         if (!SignFlag) {
             goto label_F000_00E1_F00E1_111;
@@ -3140,7 +3140,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00D3 mov AH,0x94
         AH = 0x94;
         // F000:00D5 sahf
-        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
         // F000:00D6 ja short 0x00E3
         if (!CarryFlag && !ZeroFlag) {
             goto label_F000_00E3_F00E3_120;
@@ -3188,7 +3188,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00E5 mov AH,0
         AH = 0;
         // F000:00E7 sahf
-        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
         // F000:00E8 mov AL,0x40
         AL = 0x40;
         // F000:00EA shl AL,1
@@ -3241,7 +3241,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00FB mov AH,0x40
         AH = 0x40;
         // F000:00FD sahf
-        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
         // F000:00FE jl short 0x0129
         if (SignFlag != OverflowFlag) {
             goto label_F000_0129_F0129_170;
@@ -3344,7 +3344,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0132 mov AH,1
         AH = 1;
         // F000:0134 sahf
-        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
         // F000:0135 jae near 0x01F0
         if (!CarryFlag) {
             goto label_F000_01F0_F01F0_215;
@@ -3363,7 +3363,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:013E mov AH,0x40
         AH = 0x40;
         // F000:0140 sahf
-        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
         // F000:0141 jne near 0x01F0
         if (!ZeroFlag) {
             goto label_F000_01F0_F01F0_215;
@@ -3382,7 +3382,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:014A mov AH,4
         AH = 4;
         // F000:014C sahf
-        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
         // F000:014D jnp near 0x01F0
         if (!ParityFlag) {
             goto label_F000_01F0_F01F0_215;
@@ -3401,7 +3401,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0156 mov AH,0x80
         AH = 0x80;
         // F000:0158 sahf
-        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
         // F000:0159 jns near 0x01F0
         if (!SignFlag) {
             goto label_F000_01F0_F01F0_215;
@@ -3420,7 +3420,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0162 mov AH,0x41
         AH = 0x41;
         // F000:0164 sahf
-        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
         // F000:0165 ja near 0x01F0
         if (!CarryFlag && !ZeroFlag) {
             goto label_F000_01F0_F01F0_215;
@@ -3474,11 +3474,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0205 mov AH,0xD4
         AH = 0xD4;
         // F000:0207 sahf
-        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
         // F000:0208 mov AX,0
         AX = 0;
         // F000:020B sahf
-        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
         // F000:020C jae near 0x02B4
         if (!CarryFlag) {
             goto label_F000_02B4_F02B4_279;
@@ -3492,7 +3492,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0211 mov AH,0x95
         AH = 0x95;
         // F000:0213 sahf
-        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
         // F000:0214 jne near 0x02B8
         if (!ZeroFlag) {
             goto label_F000_02B8_F02B8_285;
@@ -3506,7 +3506,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0219 mov AH,0xD1
         AH = 0xD1;
         // F000:021B sahf
-        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
         // F000:021C jnp near 0x02BC
         if (!ParityFlag) {
             goto label_F000_02BC_F02BC_290;
@@ -3520,7 +3520,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0221 mov AH,0x55
         AH = 0x55;
         // F000:0223 sahf
-        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
         // F000:0224 jns near 0x02C0
         if (!SignFlag) {
             goto label_F000_02C0_F02C0_296;
@@ -3534,7 +3534,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0229 mov AH,0x94
         AH = 0x94;
         // F000:022B sahf
-        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
         // F000:022C ja near 0x02C4
         if (!CarryFlag && !ZeroFlag) {
             goto label_F000_02C4_F02C4_305;
@@ -3582,7 +3582,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:02C8 mov AH,0
         AH = 0;
         // F000:02CA sahf
-        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
         // F000:02CB mov AL,0x40
         AL = 0x40;
         // F000:02CD shl AL,1
@@ -3635,7 +3635,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:02EA mov AH,0x40
         AH = 0x40;
         // F000:02EC sahf
-        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
         // F000:02ED jl near 0x0387
         if (SignFlag != OverflowFlag) {
             goto label_F000_0387_F0387_355;
@@ -3704,7 +3704,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:039B inc EAX
         EAX = Alu32.Inc(EAX);
         // F000:039D loop 0x039B
-        CX = unchecked((ushort)(CX - 1));
+        CX = (ushort)(CX - 1);
         if (CX != 0) {
             goto label_F000_039B_F039B_378;
         }
@@ -3732,7 +3732,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:03C0 inc EAX
         EAX = Alu32.Inc(EAX);
         // F000:03C2 loop 0x03C0
-        ECX = unchecked((uint)(ECX - 1));
+        ECX = (uint)(ECX - 1);
         if (ECX != 0) {
             goto label_F000_03C0_F03C0_401;
         }
@@ -3762,7 +3762,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:03DE cmp AH,0
         Alu8.Sub(AH, 0);
         // F000:03E1 loope 0x03DD
-        CX = unchecked((ushort)(CX - 1));
+        CX = (ushort)(CX - 1);
         if (CX != 0 && ZeroFlag) {
             goto label_F000_03DD_F03DD_417;
         }
@@ -3792,7 +3792,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:03F9 cmp AH,0
         Alu8.Sub(AH, 0);
         // F000:03FC loope 0x03F8
-        CX = unchecked((ushort)(CX - 1));
+        CX = (ushort)(CX - 1);
         if (CX != 0 && ZeroFlag) {
             goto label_F000_03F8_F03F8_433;
         }
@@ -3822,7 +3822,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:041A test EAX,0x00010000
         Alu32.And(EAX, 0x00010000);
         // F000:0420 loope 0x0418
-        ECX = unchecked((uint)(ECX - 1));
+        ECX = (uint)(ECX - 1);
         if (ECX != 0 && ZeroFlag) {
             goto label_F000_0418_F0418_449;
         }
@@ -3852,7 +3852,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:043F test AL,0xFF
         Alu8.And(AL, 0xFF);
         // F000:0441 loopne 0x043E
-        CX = unchecked((ushort)(CX - 1));
+        CX = (ushort)(CX - 1);
         if (CX != 0 && !ZeroFlag) {
             goto label_F000_043E_F043E_465;
         }
@@ -3882,7 +3882,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0459 test AL,0xFF
         Alu8.And(AL, 0xFF);
         // F000:045B loopne 0x0458
-        CX = unchecked((ushort)(CX - 1));
+        CX = (ushort)(CX - 1);
         if (CX != 0 && !ZeroFlag) {
             goto label_F000_0458_F0458_481;
         }
@@ -3912,7 +3912,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0479 test EAX,0x0000FFFF
         Alu32.And(EAX, 0x0000FFFF);
         // F000:047F loopne 0x0477
-        ECX = unchecked((uint)(ECX - 1));
+        ECX = (uint)(ECX - 1);
         if (ECX != 0 && !ZeroFlag) {
             goto label_F000_0477_F0477_497;
         }
@@ -3940,9 +3940,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:049A mov EAX,0x80000001
         EAX = 0x80000001u;
         // F000:04A0 imul EAX
-        long result_F000_04A0_F04A0 = Alu32.Imul(unchecked((int)EAX), unchecked((int)EAX));
-        EDX = unchecked((uint)(result_F000_04A0_F04A0 >> 0x00000020));
-        EAX = unchecked((uint)result_F000_04A0_F04A0);
+        long result_F000_04A0_F04A0 = Alu32.Imul((int)EAX, (int)EAX);
+        EDX = (uint)(result_F000_04A0_F04A0 >> 0x00000020);
+        EAX = (uint)result_F000_04A0_F04A0;
         // F000:04A3 mov EAX,0x44332211
         EAX = 0x44332211;
         // F000:04A9 mov EBX,EAX
@@ -3950,15 +3950,15 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:04AC mov ECX,0x88776655
         ECX = 0x88776655u;
         // F000:04B2 mul ECX
-        ulong result_F000_04B2_F04B2 = Alu32.Mul(EAX, unchecked((uint)unchecked((int)ECX)));
-        EDX = unchecked((uint)(result_F000_04B2_F04B2 >> 0x00000020));
-        EAX = unchecked((uint)result_F000_04B2_F04B2);
+        ulong result_F000_04B2_F04B2 = Alu32.Mul(EAX, (uint)(int)ECX);
+        EDX = (uint)(result_F000_04B2_F04B2 >> 0x00000020);
+        EAX = (uint)result_F000_04B2_F04B2;
         // F000:04B5 div ECX
         uint divisor_F000_04B5_F04B5 = ECX;
-        ulong dividend_F000_04B5_F04B5 = unchecked((ulong)(unchecked((ulong)EDX) << 0x00000020 | unchecked((ulong)EAX)));
-        uint quotient_F000_04B5_F04B5 = Alu32.Div(unchecked((ulong)dividend_F000_04B5_F04B5), unchecked((uint)divisor_F000_04B5_F04B5));
-        EAX = unchecked((uint)quotient_F000_04B5_F04B5);
-        EDX = unchecked((uint)(dividend_F000_04B5_F04B5 % unchecked((ulong)divisor_F000_04B5_F04B5)));
+        ulong dividend_F000_04B5_F04B5 = (ulong)((ulong)EDX << 0x00000020 | (ulong)EAX);
+        uint quotient_F000_04B5_F04B5 = Alu32.Div((ulong)dividend_F000_04B5_F04B5, (uint)divisor_F000_04B5_F04B5);
+        EAX = (uint)quotient_F000_04B5_F04B5;
+        EDX = (uint)(dividend_F000_04B5_F04B5 % (ulong)divisor_F000_04B5_F04B5);
         // F000:04B8 cmp EAX,EBX
         Alu32.Sub(EAX, EBX);
         // F000:04BB jne near 0x15C7
@@ -3991,7 +3991,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:04D4 mov EAX,0xFFFFFFFF
         EAX = 0xFFFFFFFFu;
         // F000:04DA mov EAX,SS
-        EAX = unchecked((uint)SS);
+        EAX = (uint)SS;
         // F000:04DD cmp AX,DX
         Alu16.Sub(AX, DX);
         // F000:04DF jne near 0x15C7
@@ -4047,7 +4047,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0516 mov EAX,0xFFFFFFFF
         EAX = 0xFFFFFFFFu;
         // F000:051C mov EAX,DS
-        EAX = unchecked((uint)DS);
+        EAX = (uint)DS;
         // F000:051F cmp AX,DX
         Alu16.Sub(AX, DX);
         // F000:0521 jne near 0x15C7
@@ -4103,7 +4103,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:055B mov EAX,0xFFFFFFFF
         EAX = 0xFFFFFFFFu;
         // F000:0561 mov EAX,ES
-        EAX = unchecked((uint)ES);
+        EAX = (uint)ES;
         // F000:0564 cmp AX,DX
         Alu16.Sub(AX, DX);
         // F000:0566 jne near 0x15C7
@@ -4157,7 +4157,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:059D mov EAX,0xFFFFFFFF
         EAX = 0xFFFFFFFFu;
         // F000:05A3 mov EAX,FS
-        EAX = unchecked((uint)FS);
+        EAX = (uint)FS;
         // F000:05A6 cmp AX,DX
         Alu16.Sub(AX, DX);
         // F000:05A8 jne near 0x15C7
@@ -4211,7 +4211,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:05DF mov EAX,0xFFFFFFFF
         EAX = 0xFFFFFFFFu;
         // F000:05E5 mov EAX,GS
-        EAX = unchecked((uint)GS);
+        EAX = (uint)GS;
         // F000:05E8 cmp AX,DX
         Alu16.Sub(AX, DX);
         // F000:05EA jne near 0x15C7

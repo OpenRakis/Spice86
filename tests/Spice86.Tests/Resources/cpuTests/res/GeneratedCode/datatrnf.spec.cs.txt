@@ -33,9 +33,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0000 mov AH,0xED
         AH = 0xED;
         // F000:0002 sahf
-        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
         // F000:0003 lahf
-        AH = unchecked((byte)FlagRegister16);
+        AH = (byte)FlagRegister16;
         // F000:0004 mov byte ptr DS:[0],AH
         UInt8[DS, 0] = AH;
         // F000:0008 mov AL,AH
@@ -51,9 +51,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0013 mov word ptr DS:[2],AX
         UInt16[DS, 2] = AX;
         // F000:0016 sahf
-        FlagRegister = unchecked((uint)(FlagRegister & 0xFFFFFF00u | unchecked((uint)AH)));
+        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
         // F000:0017 lahf
-        AH = unchecked((byte)FlagRegister16);
+        AH = (byte)FlagRegister16;
         // F000:0018 mov word ptr DS:[0x0020],AX
         UInt16[DS, 0x0020] = AX;
         // F000:001B mov AX,0xF752
@@ -65,15 +65,15 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0023 xchg BX,AX
         ushort temp_F000_0023_F0023 = BX;
         BX = AX;
-        AX = unchecked((ushort)temp_F000_0023_F0023);
+        AX = (ushort)temp_F000_0023_F0023;
         // F000:0024 mov DS,AX
         DS = AX;
         // F000:0026 lds SI,word ptr DS:[BX+0x030D]
-        ushort lxsOffset_F000_0026_F0026 = unchecked((ushort)(BX + 0x030D));
+        ushort lxsOffset_F000_0026_F0026 = (ushort)(BX + 0x030D);
         ushort lxsValue_F000_0026_F0026 = UInt16[DS, lxsOffset_F000_0026_F0026];
         ushort lxsSegment_F000_0026_F0026 = UInt16[DS, (ushort)(lxsOffset_F000_0026_F0026 + 2)];
-        SI = unchecked((ushort)lxsValue_F000_0026_F0026);
-        DS = unchecked((ushort)lxsSegment_F000_0026_F0026);
+        SI = (ushort)lxsValue_F000_0026_F0026;
+        DS = (ushort)lxsSegment_F000_0026_F0026;
         // F000:002A mov AX,0
         AX = 0;
         // F000:002D mov BX,DS
@@ -112,13 +112,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(cs1, 0x0054);
         // F000:0054 les DI,word ptr DS:[BX+SI-46]
-        ushort lxsOffset_F000_0054_F0054 = unchecked((ushort)(BX + SI + -0x2E));
+        ushort lxsOffset_F000_0054_F0054 = (ushort)(BX + SI + -0x2E);
         ushort lxsValue_F000_0054_F0054 = UInt16[DS, lxsOffset_F000_0054_F0054];
         ushort lxsSegment_F000_0054_F0054 = UInt16[DS, (ushort)(lxsOffset_F000_0054_F0054 + 2)];
-        DI = unchecked((ushort)lxsValue_F000_0054_F0054);
-        ES = unchecked((ushort)lxsSegment_F000_0054_F0054);
+        DI = (ushort)lxsValue_F000_0054_F0054;
+        ES = (ushort)lxsSegment_F000_0054_F0054;
         // F000:0057 lea SI,BP+DI-452
-        SI = unchecked((ushort)(BP + DI + -0x01C4));
+        SI = (ushort)(BP + DI + -0x01C4);
         // F000:005B pushf
         Stack.Push16(FlagRegister16);
         // F000:005C mov AX,0
@@ -138,20 +138,20 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0071 mov DS,AX
         DS = AX;
         // F000:0073 pop word ptr DS:[SI+1]
-        ushort popStackCheck_F000_0073_F0073 = Stack.Peek16(unchecked((int)0));
+        ushort popStackCheck_F000_0073_F0073 = Stack.Peek16((int)0);
         ushort popDestinationCheck_F000_0073_F0073 = UInt16[DS, (ushort)(SI + 1)];
         ushort poppedValue_F000_0073_F0073 = Stack.Pop16();
-        UInt16[DS, (ushort)(SI + 1)] = unchecked((ushort)poppedValue_F000_0073_F0073);
+        UInt16[DS, (ushort)(SI + 1)] = (ushort)poppedValue_F000_0073_F0073;
         // F000:0076 xchg DI,word ptr DS:[BX+SI+2]
-        ushort xchgOffset_F000_0076_F0076 = unchecked((ushort)(BX + SI + 2));
+        ushort xchgOffset_F000_0076_F0076 = (ushort)(BX + SI + 2);
         ushort temp_F000_0076_F0076 = DI;
         DI = UInt16[DS, xchgOffset_F000_0076_F0076];
-        UInt16[DS, xchgOffset_F000_0076_F0076] = unchecked((ushort)temp_F000_0076_F0076);
+        UInt16[DS, xchgOffset_F000_0076_F0076] = (ushort)temp_F000_0076_F0076;
         // F000:0079 push word ptr DS:[BX+SI+2]
         Stack.Push16(UInt16[DS, (ushort)(BX + SI + 2)]);
         // F000:007C pop ES
         ES = UInt16[SS, SP];
-        SP = unchecked((ushort)(SP + 2));
+        SP = (ushort)(SP + 2);
         // F000:007D mov DX,ES
         DX = ES;
         // F000:007F mov AX,DS
@@ -172,11 +172,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Stack.Push16(DX);
         // F000:0092 pop CX
         ushort poppedValue_F000_0092_F0092 = Stack.Pop16();
-        CX = unchecked((ushort)poppedValue_F000_0092_F0092);
+        CX = (ushort)poppedValue_F000_0092_F0092;
         // F000:0094 xchg CX,BX
         ushort temp_F000_0094_F0094 = CX;
         CX = BX;
-        BX = unchecked((ushort)temp_F000_0094_F0094);
+        BX = (ushort)temp_F000_0094_F0094;
         // F000:0096 mov AX,DS
         AX = DS;
         // F000:0098 mov DX,0
@@ -196,13 +196,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00AC mov AX,0xA0A1
         AX = 0xA0A1;
         // F000:00AF xlat byte ptr DS:[BX+AL]
-        AL = UInt8[DS, (ushort)(BX + unchecked((ushort)AL))];
+        AL = UInt8[DS, (ushort)(BX + (ushort)AL)];
         // F000:00B0 xchg AH,AL
         byte temp_F000_00B0_F00B0 = AH;
         AH = AL;
-        AL = unchecked((byte)temp_F000_00B0_F00B0);
+        AL = (byte)temp_F000_00B0_F00B0;
         // F000:00B2 xlat byte ptr DS:[BX+AL]
-        AL = UInt8[DS, (ushort)(BX + unchecked((ushort)AL))];
+        AL = UInt8[DS, (ushort)(BX + (ushort)AL)];
         // F000:00B3 mov DX,0
         DX = 0;
         // F000:00B6 mov DS,DX

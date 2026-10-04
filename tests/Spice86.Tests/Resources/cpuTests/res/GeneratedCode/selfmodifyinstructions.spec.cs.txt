@@ -54,9 +54,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0018 rep movs word ptr ES:[DI],word ptr DS:[SI]
         while (CX != 0) {
             UInt16[ES, DI] = UInt16[DS, SI];
-            SI = unchecked((ushort)(SI + unchecked((ushort)State.Direction16)));
-            DI = unchecked((ushort)(DI + unchecked((ushort)State.Direction16)));
-            CX = unchecked((ushort)(CX - 1));
+            SI = (ushort)(SI + (ushort)State.Direction16);
+            DI = (ushort)(DI + (ushort)State.Direction16);
+            CX = (ushort)(CX - 1);
         }
         // F000:001A jmp near 0x1400
         goto label_F000_1400_F1400_30244;
