@@ -56,7 +56,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0076 mov word ptr DS:[0x0012],0xFFFF
         UInt16[DS, 0x0012] = 0xFFFF;
         // F000:007C mov word ptr SS:[BP],4
-        UInt16[SS, (ushort)(BP + 0)] = 4;
+        UInt16[SS, BP] = 4;
         // F000:0081 div word ptr DS:[0x0012]
         try {
             ushort divisor_F000_0081_F0081 = UInt16[DS, 0x0012];
@@ -93,7 +93,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0096 mov CX,0xAE8E
         CX = 0xAE8E;
         // F000:0099 mov word ptr SS:[BP],2
-        UInt16[SS, (ushort)(BP + 0)] = 2;
+        UInt16[SS, BP] = 2;
         // F000:009E div CX
         try {
             ushort divisor_F000_009E_F009E = CX;
@@ -130,7 +130,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00B2 mov AX,0xF110
         AX = 0xF110;
         // F000:00B5 mov word ptr SS:[BP],2
-        UInt16[SS, (ushort)(BP + 0)] = 2;
+        UInt16[SS, BP] = 2;
         // F000:00BA div AX
         ushort divisor_F000_00BA_F00BA = AX;
         uint dividend_F000_00BA_F00BA = (uint)((uint)DX << 0x00000010 | (uint)AX);
@@ -150,7 +150,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00CA mov BX,5
         BX = 5;
         // F000:00CD mov word ptr SS:[BP],2
-        UInt16[SS, (ushort)(BP + 0)] = 2;
+        UInt16[SS, BP] = 2;
         // F000:00D2 div BL
         byte divisor_F000_00D2_F00D2 = BL;
         ushort dividend_F000_00D2_F00D2 = AX;
@@ -174,7 +174,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00E9 mov word ptr DS:[0x0028],0x00FF
         UInt16[DS, 0x0028] = 0x00FF;
         // F000:00EF mov word ptr SS:[BP],4
-        UInt16[SS, (ushort)(BP + 0)] = 4;
+        UInt16[SS, BP] = 4;
         // F000:00F4 div byte ptr DS:[0x0028]
         byte divisor_F000_00F4_F00F4 = UInt8[DS, 0x0028];
         ushort dividend_F000_00F4_F00F4 = AX;
@@ -194,7 +194,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0106 mov DH,1
         DH = 1;
         // F000:0108 mov word ptr SS:[BP],2
-        UInt16[SS, (ushort)(BP + 0)] = 2;
+        UInt16[SS, BP] = 2;
         // F000:010D div DH
         try {
             byte divisor_F000_010D_F010D = DH;
@@ -229,7 +229,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:011D mov word ptr DS:[0x0032],0xFFFF
         UInt16[DS, 0x0032] = 0xFFFF;
         // F000:0123 mov word ptr SS:[BP],4
-        UInt16[SS, (ushort)(BP + 0)] = 4;
+        UInt16[SS, BP] = 4;
         // F000:0128 div byte ptr DS:[0x0033]
         try {
             byte divisor_F000_0128_F0128 = UInt8[DS, 0x0033];
@@ -264,7 +264,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:013A mov CX,0xAE8E
         CX = 0xAE8E;
         // F000:013D mov word ptr SS:[BP],2
-        UInt16[SS, (ushort)(BP + 0)] = 2;
+        UInt16[SS, BP] = 2;
         // F000:0142 div CL
         byte divisor_F000_0142_F0142 = CL;
         ushort dividend_F000_0142_F0142 = AX;
@@ -284,7 +284,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0152 mov AX,0x89F3
         AX = 0x89F3;
         // F000:0155 mov word ptr SS:[BP],2
-        UInt16[SS, (ushort)(BP + 0)] = 2;
+        UInt16[SS, BP] = 2;
         // F000:015A div AL
         byte divisor_F000_015A_F015A = AL;
         ushort dividend_F000_015A_F015A = AX;
@@ -306,7 +306,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:016D mov BX,0x00FA
         BX = 0x00FA;
         // F000:0170 mov word ptr SS:[BP],2
-        UInt16[SS, (ushort)(BP + 0)] = 2;
+        UInt16[SS, BP] = 2;
         // F000:0175 idiv BX
         short divisor_F000_0175_F0175 = (short)BX;
         int dividend_F000_0175_F0175 = (int)((uint)DX << 0x00000010 | (uint)AX);
@@ -330,7 +330,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:018C mov word ptr DS:[0x0046],0xFFFF
         UInt16[DS, 0x0046] = 0xFFFF;
         // F000:0192 mov word ptr SS:[BP],4
-        UInt16[SS, (ushort)(BP + 0)] = 4;
+        UInt16[SS, BP] = 4;
         // F000:0197 idiv word ptr DS:[0x0046]
         try {
             short divisor_F000_0197_F0197 = (short)UInt16[DS, 0x0046];
@@ -367,7 +367,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:01AC mov CX,1
         CX = 1;
         // F000:01AF mov word ptr SS:[BP],2
-        UInt16[SS, (ushort)(BP + 0)] = 2;
+        UInt16[SS, BP] = 2;
         // F000:01B4 idiv CX
         short divisor_F000_01B4_F01B4 = (short)CX;
         int dividend_F000_01B4_F01B4 = (int)((uint)DX << 0x00000010 | (uint)AX);
@@ -391,7 +391,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:01CB mov word ptr DS:[0x0052],0xFFFF
         UInt16[DS, 0x0052] = 0xFFFF;
         // F000:01D1 mov word ptr SS:[BP],4
-        UInt16[SS, (ushort)(BP + 0)] = 4;
+        UInt16[SS, BP] = 4;
         // F000:01D6 idiv word ptr DS:[0x0052]
         short divisor_F000_01D6_F01D6 = (short)UInt16[DS, 0x0052];
         int dividend_F000_01D6_F01D6 = (int)((uint)DX << 0x00000010 | (uint)AX);
@@ -413,7 +413,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:01EB mov CX,0xAE8E
         CX = 0xAE8E;
         // F000:01EE mov word ptr SS:[BP],2
-        UInt16[SS, (ushort)(BP + 0)] = 2;
+        UInt16[SS, BP] = 2;
         // F000:01F3 idiv CX
         short divisor_F000_01F3_F01F3 = (short)CX;
         int dividend_F000_01F3_F01F3 = (int)((uint)DX << 0x00000010 | (uint)AX);
@@ -435,7 +435,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0207 mov AX,0xF110
         AX = 0xF110;
         // F000:020A mov word ptr SS:[BP],2
-        UInt16[SS, (ushort)(BP + 0)] = 2;
+        UInt16[SS, BP] = 2;
         // F000:020F idiv AX
         try {
             short divisor_F000_020F_F020F = (short)AX;
@@ -470,7 +470,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:021F mov BX,5
         BX = 5;
         // F000:0222 mov word ptr SS:[BP],2
-        UInt16[SS, (ushort)(BP + 0)] = 2;
+        UInt16[SS, BP] = 2;
         // F000:0227 idiv BL
         sbyte divisor_F000_0227_F0227 = (sbyte)BL;
         short dividend_F000_0227_F0227 = (short)AX;
@@ -494,7 +494,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:023E mov word ptr DS:[0x0068],0x00FF
         UInt16[DS, 0x0068] = 0x00FF;
         // F000:0244 mov word ptr SS:[BP],4
-        UInt16[SS, (ushort)(BP + 0)] = 4;
+        UInt16[SS, BP] = 4;
         // F000:0249 idiv byte ptr DS:[0x0068]
         try {
             sbyte divisor_F000_0249_F0249 = (sbyte)UInt8[DS, 0x0068];
@@ -529,7 +529,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:025B mov DH,1
         DH = 1;
         // F000:025D mov word ptr SS:[BP],2
-        UInt16[SS, (ushort)(BP + 0)] = 2;
+        UInt16[SS, BP] = 2;
         // F000:0262 idiv DH
         sbyte divisor_F000_0262_F0262 = (sbyte)DH;
         short dividend_F000_0262_F0262 = (short)AX;
@@ -549,7 +549,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0272 mov word ptr DS:[0x0072],0xFFFF
         UInt16[DS, 0x0072] = 0xFFFF;
         // F000:0278 mov word ptr SS:[BP],4
-        UInt16[SS, (ushort)(BP + 0)] = 4;
+        UInt16[SS, BP] = 4;
         // F000:027D idiv byte ptr DS:[0x0073]
         sbyte divisor_F000_027D_F027D = (sbyte)UInt8[DS, 0x0073];
         short dividend_F000_027D_F027D = (short)AX;
@@ -569,7 +569,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:028F mov CX,0xAE8E
         CX = 0xAE8E;
         // F000:0292 mov word ptr SS:[BP],2
-        UInt16[SS, (ushort)(BP + 0)] = 2;
+        UInt16[SS, BP] = 2;
         // F000:0297 idiv CL
         sbyte divisor_F000_0297_F0297 = (sbyte)CL;
         short dividend_F000_0297_F0297 = (short)AX;
@@ -589,7 +589,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:02A7 mov AX,0x89F3
         AX = 0x89F3;
         // F000:02AA mov word ptr SS:[BP],2
-        UInt16[SS, (ushort)(BP + 0)] = 2;
+        UInt16[SS, BP] = 2;
         // F000:02AF idiv AL
         try {
             sbyte divisor_F000_02AF_F02AF = (sbyte)AL;
@@ -622,7 +622,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:02BC mov AX,0xFFFF
         AX = 0xFFFF;
         // F000:02BF mov word ptr SS:[BP],2
-        UInt16[SS, (ushort)(BP + 0)] = 2;
+        UInt16[SS, BP] = 2;
         // F000:02C4 aam
         try {
             byte v2_F000_02C4_F02C4 = 0;
@@ -658,7 +658,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:02CC pushf
         Stack.Push16(FlagRegister16);
         // F000:02CD mov word ptr SS:[BP],2
-        UInt16[SS, (ushort)(BP + 0)] = 2;
+        UInt16[SS, BP] = 2;
         // F000:02D2 aam
         byte v2_F000_02D2_F02D2 = 1;
         byte v1_F000_02D2_F02D2 = AL;
@@ -681,7 +681,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:02DB mov AX,0xFFFF
         AX = 0xFFFF;
         // F000:02DE mov word ptr SS:[BP],2
-        UInt16[SS, (ushort)(BP + 0)] = 2;
+        UInt16[SS, BP] = 2;
         // F000:02E3 aam
         byte v2_F000_02E3_F02E3 = 0x0A;
         byte v1_F000_02E3_F02E3 = AL;
@@ -704,7 +704,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:02EC mov AX,0xFF00
         AX = 0xFF00;
         // F000:02EF mov word ptr SS:[BP],2
-        UInt16[SS, (ushort)(BP + 0)] = 2;
+        UInt16[SS, BP] = 2;
         // F000:02F4 aam
         try {
             byte v2_F000_02F4_F02F4 = 0;
@@ -740,7 +740,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:02FC pushf
         Stack.Push16(FlagRegister16);
         // F000:02FD mov word ptr SS:[BP],2
-        UInt16[SS, (ushort)(BP + 0)] = 2;
+        UInt16[SS, BP] = 2;
         // F000:0302 aam
         byte v2_F000_0302_F0302 = 1;
         byte v1_F000_0302_F0302 = AL;
@@ -763,7 +763,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:030B mov AX,0x3FFB
         AX = 0x3FFB;
         // F000:030E mov word ptr SS:[BP],2
-        UInt16[SS, (ushort)(BP + 0)] = 2;
+        UInt16[SS, BP] = 2;
         // F000:0313 aam
         byte v2_F000_0313_F0313 = 0x0A;
         byte v1_F000_0313_F0313 = AL;
@@ -794,7 +794,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1001 push DI
         Stack.Push16(DI);
         // F000:1002 mov AX,word ptr SS:[BP]
-        AX = UInt16[SS, (ushort)(BP + 0)];
+        AX = UInt16[SS, BP];
         // F000:1005 mov SI,SP
         SI = SP;
         // F000:1007 add SI,4
@@ -802,7 +802,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:100A mov SI,word ptr DS:[SI]
         SI = UInt16[DS, SI];
         // F000:100C mov word ptr SS:[BP],SI
-        UInt16[SS, (ushort)(BP + 0)] = SI;
+        UInt16[SS, BP] = SI;
         // F000:100F add SI,AX
         SI = Alu16.Add(SI, AX);
         // F000:1011 mov DI,SP
@@ -839,7 +839,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0018 mov BX,5
         BX = 5;
         // F000:001B mov word ptr SS:[BP],2
-        UInt16[SS, (ushort)(BP + 0)] = 2;
+        UInt16[SS, BP] = 2;
         // F000:0020 div BX
         ushort divisor_F000_0020_F0020 = BX;
         uint dividend_F000_0020_F0020 = (uint)((uint)DX << 0x00000010 | (uint)AX);
@@ -863,7 +863,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0037 mov word ptr DS:[6],0xFFFF
         UInt16[DS, 6] = 0xFFFF;
         // F000:003D mov word ptr SS:[BP],4
-        UInt16[SS, (ushort)(BP + 0)] = 4;
+        UInt16[SS, BP] = 4;
         // F000:0042 div word ptr DS:[6]
         ushort divisor_F000_0042_F0042 = UInt16[DS, 6];
         uint dividend_F000_0042_F0042 = (uint)((uint)DX << 0x00000010 | (uint)AX);
@@ -885,7 +885,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0057 mov CX,1
         CX = 1;
         // F000:005A mov word ptr SS:[BP],2
-        UInt16[SS, (ushort)(BP + 0)] = 2;
+        UInt16[SS, BP] = 2;
         // F000:005F div CX
         try {
             ushort divisor_F000_005F_F005F = CX;

@@ -1170,7 +1170,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             SI = (ushort)(SI + (ushort)State.Direction8);
             DI = (ushort)(DI + (ushort)State.Direction8);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_0CE9_F0CE9 = ZeroFlag == true;
+            shouldContinue_F000_0CE9_F0CE9 = ZeroFlag;
         }
         // F000:0CEB cmp ECX,0
         Alu32.Sub(ECX, 0);
@@ -1205,7 +1205,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             Alu8.Sub(AL, UInt8[ES, DI]);
             DI = (ushort)(DI + (ushort)State.Direction8);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_0D1B_F0D1B = ZeroFlag == true;
+            shouldContinue_F000_0D1B_F0D1B = ZeroFlag;
         }
         // F000:0D1D cmp ECX,0
         Alu32.Sub(ECX, 0);
@@ -1278,7 +1278,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             SI = (ushort)(SI + (ushort)State.Direction8);
             DI = (ushort)(DI + (ushort)State.Direction8);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_0D82_F0D82 = ZeroFlag == true;
+            shouldContinue_F000_0D82_F0D82 = ZeroFlag;
         }
         // F000:0D84 cmp ECX,0
         Alu32.Sub(ECX, 0);
@@ -1374,7 +1374,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             SI = (ushort)(SI + (ushort)State.Direction16);
             DI = (ushort)(DI + (ushort)State.Direction16);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_0E09_F0E09 = ZeroFlag == true;
+            shouldContinue_F000_0E09_F0E09 = ZeroFlag;
         }
         // F000:0E0B cmp ECX,0
         Alu32.Sub(ECX, 0);
@@ -1409,7 +1409,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             Alu16.Sub(AX, UInt16[ES, DI]);
             DI = (ushort)(DI + (ushort)State.Direction16);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_0E3B_F0E3B = ZeroFlag == true;
+            shouldContinue_F000_0E3B_F0E3B = ZeroFlag;
         }
         // F000:0E3D cmp ECX,0
         Alu32.Sub(ECX, 0);
@@ -1482,7 +1482,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             SI = (ushort)(SI + (ushort)State.Direction16);
             DI = (ushort)(DI + (ushort)State.Direction16);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_0EA2_F0EA2 = ZeroFlag == true;
+            shouldContinue_F000_0EA2_F0EA2 = ZeroFlag;
         }
         // F000:0EA4 cmp ECX,0
         Alu32.Sub(ECX, 0);
@@ -1578,7 +1578,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             SI = (ushort)(SI + (ushort)State.Direction32);
             DI = (ushort)(DI + (ushort)State.Direction32);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_0F2B_F0F2B = ZeroFlag == true;
+            shouldContinue_F000_0F2B_F0F2B = ZeroFlag;
         }
         // F000:0F2E cmp ECX,0
         Alu32.Sub(ECX, 0);
@@ -1613,7 +1613,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             Alu32.Sub(EAX, UInt32[ES, DI]);
             DI = (ushort)(DI + (ushort)State.Direction32);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_0F5E_F0F5E = ZeroFlag == true;
+            shouldContinue_F000_0F5E_F0F5E = ZeroFlag;
         }
         // F000:0F61 cmp ECX,0
         Alu32.Sub(ECX, 0);
@@ -1686,7 +1686,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             SI = (ushort)(SI + (ushort)State.Direction32);
             DI = (ushort)(DI + (ushort)State.Direction32);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_0FC8_F0FC8 = ZeroFlag == true;
+            shouldContinue_F000_0FC8_F0FC8 = ZeroFlag;
         }
         // F000:0FCB cmp ECX,0
         Alu32.Sub(ECX, 0);
@@ -1782,7 +1782,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             SI = (ushort)(SI + (ushort)State.Direction8);
             DI = (ushort)(DI + (ushort)State.Direction8);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_1050_F1050 = ZeroFlag == true;
+            shouldContinue_F000_1050_F1050 = ZeroFlag;
         }
         // F000:1052 cmp ECX,0
         Alu32.Sub(ECX, 0);
@@ -1817,7 +1817,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             Alu8.Sub(AL, UInt8[ES, DI]);
             DI = (ushort)(DI + (ushort)State.Direction8);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_1082_F1082 = ZeroFlag == true;
+            shouldContinue_F000_1082_F1082 = ZeroFlag;
         }
         // F000:1084 cmp ECX,0
         Alu32.Sub(ECX, 0);
@@ -1890,7 +1890,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             SI = (ushort)(SI + (ushort)State.Direction8);
             DI = (ushort)(DI + (ushort)State.Direction8);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_10E9_F10E9 = ZeroFlag == true;
+            shouldContinue_F000_10E9_F10E9 = ZeroFlag;
         }
         // F000:10EB cmp ECX,0
         Alu32.Sub(ECX, 0);
@@ -1986,7 +1986,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             SI = (ushort)(SI + (ushort)State.Direction16);
             DI = (ushort)(DI + (ushort)State.Direction16);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_1170_F1170 = ZeroFlag == true;
+            shouldContinue_F000_1170_F1170 = ZeroFlag;
         }
         // F000:1172 cmp ECX,0
         Alu32.Sub(ECX, 0);
@@ -2021,7 +2021,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             Alu16.Sub(AX, UInt16[ES, DI]);
             DI = (ushort)(DI + (ushort)State.Direction16);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_11A2_F11A2 = ZeroFlag == true;
+            shouldContinue_F000_11A2_F11A2 = ZeroFlag;
         }
         // F000:11A4 cmp ECX,0
         Alu32.Sub(ECX, 0);
@@ -2094,7 +2094,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             SI = (ushort)(SI + (ushort)State.Direction16);
             DI = (ushort)(DI + (ushort)State.Direction16);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_1209_F1209 = ZeroFlag == true;
+            shouldContinue_F000_1209_F1209 = ZeroFlag;
         }
         // F000:120B cmp ECX,0
         Alu32.Sub(ECX, 0);
@@ -2190,7 +2190,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             SI = (ushort)(SI + (ushort)State.Direction32);
             DI = (ushort)(DI + (ushort)State.Direction32);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_1292_F1292 = ZeroFlag == true;
+            shouldContinue_F000_1292_F1292 = ZeroFlag;
         }
         // F000:1295 cmp ECX,0
         Alu32.Sub(ECX, 0);
@@ -2225,7 +2225,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             Alu32.Sub(EAX, UInt32[ES, DI]);
             DI = (ushort)(DI + (ushort)State.Direction32);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_12C5_F12C5 = ZeroFlag == true;
+            shouldContinue_F000_12C5_F12C5 = ZeroFlag;
         }
         // F000:12C8 cmp ECX,0
         Alu32.Sub(ECX, 0);
@@ -2298,7 +2298,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             SI = (ushort)(SI + (ushort)State.Direction32);
             DI = (ushort)(DI + (ushort)State.Direction32);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_132F_F132F = ZeroFlag == true;
+            shouldContinue_F000_132F_F132F = ZeroFlag;
         }
         // F000:1332 cmp ECX,0
         Alu32.Sub(ECX, 0);

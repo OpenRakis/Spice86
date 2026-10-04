@@ -562,6 +562,12 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
             return new CSharpFragment(assignment, node.DataType, AssignmentPrecedence);
         }
 
+        CSharpFragment leftFragment = Expr(node.Left);
+        CSharpFragment rightFragment = Expr(node.Right);
+        if (TrySimplifyBinaryOperation(node.BinaryOperation, leftFragment, rightFragment) is CSharpFragment simplified) {
+            return simplified;
+        }
+
         (string op, int precedence) = node.BinaryOperation switch {
             BinaryOperation.MULTIPLY => ("*", MultiplicativePrecedence),
             BinaryOperation.DIVIDE => ("/", MultiplicativePrecedence),
@@ -586,12 +592,58 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
 
         // Left-associative: the left operand may share the operator's precedence without parentheses; the
         // right operand needs them when it binds equally or more loosely.
-        string left = Parenthesize(Expr(node.Left), precedence);
-        string right = Parenthesize(Expr(node.Right), precedence + 1);
+        string left = Parenthesize(leftFragment, precedence);
+        string right = Parenthesize(rightFragment, precedence + 1);
         // C# promotes byte/ushort/short/sbyte arithmetic to int, so the actual evaluated type is not the
         // node's semantic DataType; leave it unknown so a cast back to the operand width is never elided.
         DataType? resultType = node.DataType == DataType.BOOL ? DataType.BOOL : null;
         return new CSharpFragment($"{left} {op} {right}", resultType, precedence);
+    }
+
+    private static CSharpFragment? TrySimplifyBinaryOperation(BinaryOperation operation, CSharpFragment left, CSharpFragment right) {
+        if (operation is BinaryOperation.EQUAL or BinaryOperation.NOT_EQUAL) {
+            return TrySimplifyBoolComparison(operation == BinaryOperation.EQUAL, left, right);
+        }
+        if (operation == BinaryOperation.PLUS && right.Constant is ConstantNode constant) {
+            return TrySimplifyConstantAddition(left, constant);
+        }
+        return null;
+    }
+
+    private static CSharpFragment? TrySimplifyBoolComparison(bool isEqual, CSharpFragment left, CSharpFragment right) {
+        if (right.Constant is ConstantNode rightConstant && rightConstant.DataType == DataType.BOOL
+            && left.Constant is null && left.Type == DataType.BOOL) {
+            return BoolComparisonResult(isEqual, left, rightConstant);
+        }
+        if (left.Constant is ConstantNode leftConstant && leftConstant.DataType == DataType.BOOL
+            && right.Constant is null && right.Type == DataType.BOOL) {
+            return BoolComparisonResult(isEqual, right, leftConstant);
+        }
+        return null;
+    }
+
+    private static CSharpFragment BoolComparisonResult(bool isEqual, CSharpFragment operand, ConstantNode boolConstant) {
+        bool keepOperand = (boolConstant.Value != 0) == isEqual;
+        if (keepOperand) {
+            return operand;
+        }
+        return new CSharpFragment($"!{Parenthesize(operand, UnaryPrecedence)}", DataType.BOOL, UnaryPrecedence);
+    }
+
+    private static CSharpFragment? TrySimplifyConstantAddition(CSharpFragment left, ConstantNode constant) {
+        if (constant.Value == 0) {
+            return left;
+        }
+        if (!IsSubtractableNegativeConstant(constant)) {
+            return null;
+        }
+        ConstantNode magnitude = new(DataType.UnsignedFromBitWidth(constant.DataType.BitWidth), (ulong)(-constant.SignedValue));
+        return new CSharpFragment($"{Parenthesize(left, AdditivePrecedence)} - {ConstantLiteral(magnitude).Text}", null, AdditivePrecedence);
+    }
+
+    private static bool IsSubtractableNegativeConstant(ConstantNode constant) {
+        bool supportedType = constant.DataType == DataType.INT8 || constant.DataType == DataType.INT16 || constant.DataType == DataType.INT32;
+        return supportedType && constant.IsNegative && constant.SignedValue != int.MinValue;
     }
 
     public EmittedCode VisitUnaryOperationNode(UnaryOperationNode node) {

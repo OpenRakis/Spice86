@@ -112,13 +112,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(cs1, 0x0054);
         // F000:0054 les DI,word ptr DS:[BX+SI-46]
-        ushort lxsOffset_F000_0054_F0054 = (ushort)(BX + SI + -0x2E);
+        ushort lxsOffset_F000_0054_F0054 = (ushort)(BX + SI - 0x2E);
         ushort lxsValue_F000_0054_F0054 = UInt16[DS, lxsOffset_F000_0054_F0054];
         ushort lxsSegment_F000_0054_F0054 = UInt16[DS, (ushort)(lxsOffset_F000_0054_F0054 + 2)];
         DI = (ushort)lxsValue_F000_0054_F0054;
         ES = (ushort)lxsSegment_F000_0054_F0054;
         // F000:0057 lea SI,BP+DI-452
-        SI = (ushort)(BP + DI + -0x01C4);
+        SI = (ushort)(BP + DI - 0x01C4);
         // F000:005B pushf
         Stack.Push16(FlagRegister16);
         // F000:005C mov AX,0

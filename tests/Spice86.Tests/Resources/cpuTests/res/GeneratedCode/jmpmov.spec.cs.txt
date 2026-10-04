@@ -76,11 +76,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // E342:EC02 mov BP,0x2506
         BP = 0x2506;
         // E342:EC05 jmp near word ptr SS:[BP+DI-22]
-        switch ((ushort)(UInt16[SS, (ushort)(BP + DI + -0x16)])) {
+        switch ((ushort)(UInt16[SS, (ushort)(BP + DI - 0x16)])) {
             case 0xFBE1:
                 break;
             default:
-                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(UInt16[SS, (ushort)(BP + DI + -0x16)])):X4} at E342:EC05");
+                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(UInt16[SS, (ushort)(BP + DI - 0x16)])):X4} at E342:EC05");
         }
         CheckExternalEvents(cs1, 0xFBE1);
         // E342:FBE1 mov DX,0xF100
@@ -108,12 +108,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // E342:FBFD mov SI,CX
         SI = CX;
         // E342:FBFF mov byte ptr DS:[BX+SI-1],0xF0
-        UInt8[DS, (ushort)(BX + SI + -1)] = 0xF0;
+        UInt8[DS, (ushort)(BX + SI - 1)] = 0xF0;
         // E342:FC03 mov SI,3
         SI = 3;
         // E342:FC06 jmp far dword ptr SS:[BP+SI-24]
-        ushort targetSegment_58 = UInt16[SS, (ushort)(BP + SI + -0x18 + 2)];
-        ushort targetOffset_58 = UInt16[SS, (ushort)(BP + SI + -0x18)];
+        ushort targetSegment_58 = UInt16[SS, (ushort)(BP + SI - 0x18 + 2)];
+        ushort targetOffset_58 = UInt16[SS, (ushort)(BP + SI - 0x18)];
         if (targetSegment_58 == cs2 && targetOffset_58 == 0x4001) {
             goto label_F000_4001_F4001_73;
         }
@@ -121,7 +121,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     label_F000_4001_F4001_73:
         CheckExternalEvents(cs2, 0x4001);
         // F000:4001 mov AX,word ptr DS:[BX+SI-3]
-        AX = UInt16[DS, (ushort)(BX + SI + -3)];
+        AX = UInt16[DS, (ushort)(BX + SI - 3)];
         // F000:4004 mov DX,0
         DX = 0;
         // F000:4007 mov DS,DX
