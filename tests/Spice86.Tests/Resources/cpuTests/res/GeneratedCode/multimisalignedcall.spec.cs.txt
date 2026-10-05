@@ -94,14 +94,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Stack.Push16(AX);
         // F000:0041 ret near
         return NearRet();
-    label_F000_0042_F0042_15:
-        CheckExternalEvents(cs1, 0x0042);
-        // F000:0042 mov AX,0x0014
-        AX = 0x0014;
-        // F000:0045 push AX
-        Stack.Push16(AX);
-        // F000:0046 ret near
-        return NearRet();
     label_F000_0047_F0047_22:
         CheckExternalEvents(cs1, 0x0047);
         // F000:0047 mov AX,0x001B
@@ -110,12 +102,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Stack.Push16(AX);
         // F000:004B ret near
         return NearRet();
+    label_F000_0042_F0042_15:
+        CheckExternalEvents(cs1, 0x0042);
+        // F000:0042 mov AX,0x0014
+        AX = 0x0014;
+        // F000:0045 push AX
+        Stack.Push16(AX);
+        // F000:0046 ret near
+        return NearRet();
     }
 
     public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
-        goto label_F000_FFF0_FFFF0_0;
-
-    label_F000_0000_F0000_1:
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 jmp short 0
         CheckExternalEvents(cs1, 0x0000);
         // F000:0000 mov AX,0
         AX = 0;
@@ -129,10 +128,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:000A mov word ptr DS:[0],0
         UInt16[DS, 0] = 0;
         return unknown_F000_0010_F0010(0x0000);
-    label_F000_FFF0_FFFF0_0:
-        CheckExternalEvents(cs1, 0xFFF0);
-        // F000:FFF0 jmp short 0
-        goto label_F000_0000_F0000_1;
     }
 
     public virtual Action unknown_F000_0010_F0010(int loadOffset) {

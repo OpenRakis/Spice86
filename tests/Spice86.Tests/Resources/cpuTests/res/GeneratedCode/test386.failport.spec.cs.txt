@@ -2894,9 +2894,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
-        goto label_F000_FFF0_FFFF0_0;
-
-    label_F000_0045_F0045_1:
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 jmp far F000:0045
         CheckExternalEvents(cs1, 0x0045);
         // F000:0045 cli
         InterruptFlag = false;
@@ -2964,7 +2963,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         VerifySpeculativeEntryOrFail(cs1, 0x008A, [(byte)0xF4]);
         // F000:008A hlt
         return Hlt();
-    label_F000_008B_F008B_38:
+    label_F000_00AD_F00AD_34:
+        CheckExternalEvents(cs1, 0x00AD);
+        // F000:00AD jb short 0x008B
+        if (!CarryFlag) {
+            goto label_F000_00AF_F00AF_40;
+        }
         CheckExternalEvents(cs1, 0x008B);
         // F000:008B mov AH,0x40
         AH = 0x40;
@@ -2983,7 +2987,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         VerifySpeculativeEntryOrFail(cs1, 0x0092, [(byte)0xF4]);
         // F000:0092 hlt
         return Hlt();
-    label_F000_0093_F0093_43:
+    label_F000_00AF_F00AF_40:
+        CheckExternalEvents(cs1, 0x00AF);
+        // F000:00AF je short 0x0093
+        if (!ZeroFlag) {
+            goto label_F000_00B1_F00B1_45;
+        }
         CheckExternalEvents(cs1, 0x0093);
         // F000:0093 mov AH,4
         AH = 4;
@@ -3002,7 +3011,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         VerifySpeculativeEntryOrFail(cs1, 0x009A, [(byte)0xF4]);
         // F000:009A hlt
         return Hlt();
-    label_F000_009B_F009B_49:
+    label_F000_00B1_F00B1_45:
+        CheckExternalEvents(cs1, 0x00B1);
+        // F000:00B1 jp short 0x009B
+        if (!ParityFlag) {
+            goto label_F000_00B3_F00B3_51;
+        }
         CheckExternalEvents(cs1, 0x009B);
         // F000:009B mov AH,0x80
         AH = 0x80;
@@ -3021,7 +3035,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         VerifySpeculativeEntryOrFail(cs1, 0x00A2, [(byte)0xF4]);
         // F000:00A2 hlt
         return Hlt();
-    label_F000_00A3_F00A3_58:
+    label_F000_00B3_F00B3_51:
+        CheckExternalEvents(cs1, 0x00B3);
+        // F000:00B3 js short 0x00A3
+        if (!SignFlag) {
+            goto label_F000_00B5_F00B5_60;
+        }
         CheckExternalEvents(cs1, 0x00A3);
         // F000:00A3 mov AH,0x41
         AH = 0x41;
@@ -3033,48 +3052,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         CheckExternalEvents(cs1, 0x00A8);
         // F000:00A8 jbe short 0x00B5
-        if (CarryFlag || ZeroFlag) {
-            goto label_F000_00B5_F00B5_60;
-        }
-    label_F000_00AA_F00AA_70:
-        CheckExternalEvents(cs1, 0x00AA);
-        // F000:00AA jmp short 0x00B7
-        goto label_F000_00B7_F00B7_72;
-    label_F000_00AC_F00AC_30:
-        CheckExternalEvents(cs1, 0x00AC);
-        VerifySpeculativeEntryOrFail(cs1, 0x00AC, [(byte)0xF4]);
-        // F000:00AC hlt
-        return Hlt();
-    label_F000_00AD_F00AD_34:
-        CheckExternalEvents(cs1, 0x00AD);
-        // F000:00AD jb short 0x008B
-        if (CarryFlag) {
-            goto label_F000_008B_F008B_38;
-        }
-    label_F000_00AF_F00AF_40:
-        CheckExternalEvents(cs1, 0x00AF);
-        // F000:00AF je short 0x0093
-        if (ZeroFlag) {
-            goto label_F000_0093_F0093_43;
-        }
-    label_F000_00B1_F00B1_45:
-        CheckExternalEvents(cs1, 0x00B1);
-        // F000:00B1 jp short 0x009B
-        if (ParityFlag) {
-            goto label_F000_009B_F009B_49;
-        }
-    label_F000_00B3_F00B3_51:
-        CheckExternalEvents(cs1, 0x00B3);
-        // F000:00B3 js short 0x00A3
-        if (SignFlag) {
-            goto label_F000_00A3_F00A3_58;
+        if (!(CarryFlag || ZeroFlag)) {
+            goto label_F000_00AA_F00AA_70;
         }
     label_F000_00B5_F00B5_60:
         CheckExternalEvents(cs1, 0x00B5);
         // F000:00B5 jbe short 0x00AA
-        if (CarryFlag || ZeroFlag) {
-            goto label_F000_00AA_F00AA_70;
+        if (!(CarryFlag || ZeroFlag)) {
+            goto label_F000_00B7_F00B7_72;
         }
+    label_F000_00AA_F00AA_70:
+        CheckExternalEvents(cs1, 0x00AA);
+        // F000:00AA jmp short 0x00B7
     label_F000_00B7_F00B7_72:
         CheckExternalEvents(cs1, 0x00B7);
         // F000:00B7 mov AH,0xD4
@@ -3093,7 +3082,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         VerifySpeculativeEntryOrFail(cs1, 0x00C0, [(byte)0xF4]);
         // F000:00C0 hlt
         return Hlt();
-    label_F000_00C1_F00C1_98:
+    label_F000_00DB_F00DB_94:
+        CheckExternalEvents(cs1, 0x00DB);
+        // F000:00DB jae short 0x00C1
+        if (CarryFlag) {
+            goto label_F000_00DD_F00DD_100;
+        }
         CheckExternalEvents(cs1, 0x00C1);
         // F000:00C1 mov AH,0x95
         AH = 0x95;
@@ -3107,7 +3101,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         VerifySpeculativeEntryOrFail(cs1, 0x00C6, [(byte)0xF4]);
         // F000:00C6 hlt
         return Hlt();
-    label_F000_00C7_F00C7_103:
+    label_F000_00DD_F00DD_100:
+        CheckExternalEvents(cs1, 0x00DD);
+        // F000:00DD jne short 0x00C7
+        if (ZeroFlag) {
+            goto label_F000_00DF_F00DF_105;
+        }
         CheckExternalEvents(cs1, 0x00C7);
         // F000:00C7 mov AH,0xD1
         AH = 0xD1;
@@ -3121,7 +3120,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         VerifySpeculativeEntryOrFail(cs1, 0x00CC, [(byte)0xF4]);
         // F000:00CC hlt
         return Hlt();
-    label_F000_00CD_F00CD_109:
+    label_F000_00DF_F00DF_105:
+        CheckExternalEvents(cs1, 0x00DF);
+        // F000:00DF jnp short 0x00CD
+        if (ParityFlag) {
+            goto label_F000_00E1_F00E1_111;
+        }
         CheckExternalEvents(cs1, 0x00CD);
         // F000:00CD mov AH,0x55
         AH = 0x55;
@@ -3135,7 +3139,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         VerifySpeculativeEntryOrFail(cs1, 0x00D2, [(byte)0xF4]);
         // F000:00D2 hlt
         return Hlt();
-    label_F000_00D3_F00D3_118:
+    label_F000_00E1_F00E1_111:
+        CheckExternalEvents(cs1, 0x00E1);
+        // F000:00E1 jns short 0x00D3
+        if (SignFlag) {
+            goto label_F000_00E3_F00E3_120;
+        }
         CheckExternalEvents(cs1, 0x00D3);
         // F000:00D3 mov AH,0x94
         AH = 0x94;
@@ -3149,40 +3158,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         VerifySpeculativeEntryOrFail(cs1, 0x00D8, [(byte)0xF4]);
         // F000:00D8 hlt
         return Hlt();
-    label_F000_00D9_F00D9_127:
-        CheckExternalEvents(cs1, 0x00D9);
-        // F000:00D9 jmp short 0x00E5
-        goto label_F000_00E5_F00E5_129;
-    label_F000_00DB_F00DB_94:
-        CheckExternalEvents(cs1, 0x00DB);
-        // F000:00DB jae short 0x00C1
-        if (!CarryFlag) {
-            goto label_F000_00C1_F00C1_98;
-        }
-    label_F000_00DD_F00DD_100:
-        CheckExternalEvents(cs1, 0x00DD);
-        // F000:00DD jne short 0x00C7
-        if (!ZeroFlag) {
-            goto label_F000_00C7_F00C7_103;
-        }
-    label_F000_00DF_F00DF_105:
-        CheckExternalEvents(cs1, 0x00DF);
-        // F000:00DF jnp short 0x00CD
-        if (!ParityFlag) {
-            goto label_F000_00CD_F00CD_109;
-        }
-    label_F000_00E1_F00E1_111:
-        CheckExternalEvents(cs1, 0x00E1);
-        // F000:00E1 jns short 0x00D3
-        if (!SignFlag) {
-            goto label_F000_00D3_F00D3_118;
-        }
     label_F000_00E3_F00E3_120:
         CheckExternalEvents(cs1, 0x00E3);
         // F000:00E3 ja short 0x00D9
-        if (!CarryFlag && !ZeroFlag) {
-            goto label_F000_00D9_F00D9_127;
+        if (!(!CarryFlag && !ZeroFlag)) {
+            goto label_F000_00E5_F00E5_129;
         }
+        CheckExternalEvents(cs1, 0x00D9);
+        // F000:00D9 jmp short 0x00E5
     label_F000_00E5_F00E5_129:
         CheckExternalEvents(cs1, 0x00E5);
         // F000:00E5 mov AH,0
@@ -3206,7 +3189,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         VerifySpeculativeEntryOrFail(cs1, 0x00F0, [(byte)0xF4]);
         // F000:00F0 hlt
         return Hlt();
-    label_F000_00F1_F00F1_151:
+    label_F000_0123_F0123_147:
+        CheckExternalEvents(cs1, 0x0123);
+        // F000:0123 jo short 0x00F1
+        if (!OverflowFlag) {
+            goto label_F000_0125_F0125_153;
+        }
         CheckExternalEvents(cs1, 0x00F1);
         // F000:00F1 jl short 0x0122
         if (SignFlag != OverflowFlag) {
@@ -3221,7 +3209,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         VerifySpeculativeEntryOrFail(cs1, 0x00F5, [(byte)0xF4]);
         // F000:00F5 hlt
         return Hlt();
-    label_F000_00F6_F00F6_158:
+    label_F000_0125_F0125_153:
+        CheckExternalEvents(cs1, 0x0125);
+        // F000:0125 jge short 0x00F6
+        if (!(SignFlag == OverflowFlag)) {
+            goto label_F000_0127_F0127_160;
+        }
         CheckExternalEvents(cs1, 0x00F6);
         // F000:00F6 jle short 0x0122
         if (ZeroFlag || SignFlag != OverflowFlag) {
@@ -3236,7 +3229,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         VerifySpeculativeEntryOrFail(cs1, 0x00FA, [(byte)0xF4]);
         // F000:00FA hlt
         return Hlt();
-    label_F000_00FB_F00FB_168:
+    label_F000_0127_F0127_160:
+        CheckExternalEvents(cs1, 0x0127);
+        // F000:0127 jg short 0x00FB
+        if (!(!ZeroFlag && SignFlag == OverflowFlag)) {
+            goto label_F000_0129_F0129_170;
+        }
         CheckExternalEvents(cs1, 0x00FB);
         // F000:00FB mov AH,0x40
         AH = 0x40;
@@ -3250,7 +3248,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         VerifySpeculativeEntryOrFail(cs1, 0x0100, [(byte)0xF4]);
         // F000:0100 hlt
         return Hlt();
-    label_F000_0101_F0101_176:
+    label_F000_0129_F0129_170:
+        CheckExternalEvents(cs1, 0x0129);
+        // F000:0129 jl short 0x0101
+        if (!(SignFlag != OverflowFlag)) {
+            goto label_F000_012B_F012B_178;
+        }
         CheckExternalEvents(cs1, 0x0101);
         // F000:0101 jle short 0x012B
         if (ZeroFlag || SignFlag != OverflowFlag) {
@@ -3260,7 +3263,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         VerifySpeculativeEntryOrFail(cs1, 0x0103, [(byte)0xF4]);
         // F000:0103 hlt
         return Hlt();
-    label_F000_0104_F0104_184:
+    label_F000_012B_F012B_178:
+        CheckExternalEvents(cs1, 0x012B);
+        // F000:012B jle short 0x0104
+        if (!(ZeroFlag || SignFlag != OverflowFlag)) {
+            goto label_F000_012D_F012D_186;
+        }
         CheckExternalEvents(cs1, 0x0104);
         // F000:0104 mov ECX,1
         ECX = 1;
@@ -3272,8 +3280,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:010C mov ECX,0x00010000
         ECX = 0x00010000;
         // F000:0112 jcxz short 0x012D
-        if (CX == 0) {
-            goto label_F000_012D_F012D_186;
+        if (!(CX == 0)) {
+            goto label_F000_0114_F0114_192;
+        }
+    label_F000_012D_F012D_186:
+        CheckExternalEvents(cs1, 0x012D);
+        // F000:012D jcxz short 0x0114
+        if (!(CX == 0)) {
+            goto label_F000_012F_F012F_194;
         }
     label_F000_0114_F0114_192:
         CheckExternalEvents(cs1, 0x0114);
@@ -3285,60 +3299,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0117 mov ECX,0
         ECX = 0;
         // F000:011D jecxz short 0x012F
-        if (ECX == 0) {
-            goto label_F000_012F_F012F_194;
-        }
-    label_F000_0120_F0120_202:
-        CheckExternalEvents(cs1, 0x0120);
-        // F000:0120 jmp short 0x0132
-        goto label_F000_0132_F0132_204;
-    label_F000_0122_F0122_143:
-        CheckExternalEvents(cs1, 0x0122);
-        VerifySpeculativeEntryOrFail(cs1, 0x0122, [(byte)0xF4]);
-        // F000:0122 hlt
-        return Hlt();
-    label_F000_0123_F0123_147:
-        CheckExternalEvents(cs1, 0x0123);
-        // F000:0123 jo short 0x00F1
-        if (OverflowFlag) {
-            goto label_F000_00F1_F00F1_151;
-        }
-    label_F000_0125_F0125_153:
-        CheckExternalEvents(cs1, 0x0125);
-        // F000:0125 jge short 0x00F6
-        if (SignFlag == OverflowFlag) {
-            goto label_F000_00F6_F00F6_158;
-        }
-    label_F000_0127_F0127_160:
-        CheckExternalEvents(cs1, 0x0127);
-        // F000:0127 jg short 0x00FB
-        if (!ZeroFlag && SignFlag == OverflowFlag) {
-            goto label_F000_00FB_F00FB_168;
-        }
-    label_F000_0129_F0129_170:
-        CheckExternalEvents(cs1, 0x0129);
-        // F000:0129 jl short 0x0101
-        if (SignFlag != OverflowFlag) {
-            goto label_F000_0101_F0101_176;
-        }
-    label_F000_012B_F012B_178:
-        CheckExternalEvents(cs1, 0x012B);
-        // F000:012B jle short 0x0104
-        if (ZeroFlag || SignFlag != OverflowFlag) {
-            goto label_F000_0104_F0104_184;
-        }
-    label_F000_012D_F012D_186:
-        CheckExternalEvents(cs1, 0x012D);
-        // F000:012D jcxz short 0x0114
-        if (CX == 0) {
-            goto label_F000_0114_F0114_192;
+        if (!(ECX == 0)) {
+            goto label_F000_0120_F0120_202;
         }
     label_F000_012F_F012F_194:
         CheckExternalEvents(cs1, 0x012F);
         // F000:012F jecxz short 0x0120
-        if (ECX == 0) {
-            goto label_F000_0120_F0120_202;
+        if (!(ECX == 0)) {
+            goto label_F000_0132_F0132_204;
         }
+    label_F000_0120_F0120_202:
+        CheckExternalEvents(cs1, 0x0120);
+        // F000:0120 jmp short 0x0132
     label_F000_0132_F0132_204:
         CheckExternalEvents(cs1, 0x0132);
         // F000:0132 mov AH,1
@@ -3358,7 +3330,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         VerifySpeculativeEntryOrFail(cs1, 0x013D, [(byte)0xF4]);
         // F000:013D hlt
         return Hlt();
-    label_F000_013E_F013E_223:
+    label_F000_01F1_F01F1_219:
+        CheckExternalEvents(cs1, 0x01F1);
+        // F000:01F1 jb near 0x013E
+        if (!CarryFlag) {
+            goto label_F000_01F5_F01F5_225;
+        }
         CheckExternalEvents(cs1, 0x013E);
         // F000:013E mov AH,0x40
         AH = 0x40;
@@ -3377,7 +3354,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         VerifySpeculativeEntryOrFail(cs1, 0x0149, [(byte)0xF4]);
         // F000:0149 hlt
         return Hlt();
-    label_F000_014A_F014A_228:
+    label_F000_01F5_F01F5_225:
+        CheckExternalEvents(cs1, 0x01F5);
+        // F000:01F5 je near 0x014A
+        if (!ZeroFlag) {
+            goto label_F000_01F9_F01F9_230;
+        }
         CheckExternalEvents(cs1, 0x014A);
         // F000:014A mov AH,4
         AH = 4;
@@ -3396,7 +3378,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         VerifySpeculativeEntryOrFail(cs1, 0x0155, [(byte)0xF4]);
         // F000:0155 hlt
         return Hlt();
-    label_F000_0156_F0156_234:
+    label_F000_01F9_F01F9_230:
+        CheckExternalEvents(cs1, 0x01F9);
+        // F000:01F9 jp near 0x0156
+        if (!ParityFlag) {
+            goto label_F000_01FD_F01FD_236;
+        }
         CheckExternalEvents(cs1, 0x0156);
         // F000:0156 mov AH,0x80
         AH = 0x80;
@@ -3415,7 +3402,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         VerifySpeculativeEntryOrFail(cs1, 0x0161, [(byte)0xF4]);
         // F000:0161 hlt
         return Hlt();
-    label_F000_0162_F0162_243:
+    label_F000_01FD_F01FD_236:
+        CheckExternalEvents(cs1, 0x01FD);
+        // F000:01FD js near 0x0162
+        if (!SignFlag) {
+            goto label_F000_0201_F0201_245;
+        }
         CheckExternalEvents(cs1, 0x0162);
         // F000:0162 mov AH,0x41
         AH = 0x41;
@@ -3427,48 +3419,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         CheckExternalEvents(cs1, 0x0169);
         // F000:0169 jbe near 0x0201
-        if (CarryFlag || ZeroFlag) {
-            goto label_F000_0201_F0201_245;
-        }
-    label_F000_016D_F016D_255:
-        CheckExternalEvents(cs1, 0x016D);
-        // F000:016D jmp near 0x0205
-        goto label_F000_0205_F0205_257;
-    label_F000_01F0_F01F0_215:
-        CheckExternalEvents(cs1, 0x01F0);
-        VerifySpeculativeEntryOrFail(cs1, 0x01F0, [(byte)0xF4]);
-        // F000:01F0 hlt
-        return Hlt();
-    label_F000_01F1_F01F1_219:
-        CheckExternalEvents(cs1, 0x01F1);
-        // F000:01F1 jb near 0x013E
-        if (CarryFlag) {
-            goto label_F000_013E_F013E_223;
-        }
-    label_F000_01F5_F01F5_225:
-        CheckExternalEvents(cs1, 0x01F5);
-        // F000:01F5 je near 0x014A
-        if (ZeroFlag) {
-            goto label_F000_014A_F014A_228;
-        }
-    label_F000_01F9_F01F9_230:
-        CheckExternalEvents(cs1, 0x01F9);
-        // F000:01F9 jp near 0x0156
-        if (ParityFlag) {
-            goto label_F000_0156_F0156_234;
-        }
-    label_F000_01FD_F01FD_236:
-        CheckExternalEvents(cs1, 0x01FD);
-        // F000:01FD js near 0x0162
-        if (SignFlag) {
-            goto label_F000_0162_F0162_243;
+        if (!(CarryFlag || ZeroFlag)) {
+            goto label_F000_016D_F016D_255;
         }
     label_F000_0201_F0201_245:
         CheckExternalEvents(cs1, 0x0201);
         // F000:0201 jbe near 0x016D
-        if (CarryFlag || ZeroFlag) {
-            goto label_F000_016D_F016D_255;
+        if (!(CarryFlag || ZeroFlag)) {
+            goto label_F000_0205_F0205_257;
         }
+    label_F000_016D_F016D_255:
+        CheckExternalEvents(cs1, 0x016D);
+        // F000:016D jmp near 0x0205
     label_F000_0205_F0205_257:
         CheckExternalEvents(cs1, 0x0205);
         // F000:0205 mov AH,0xD4
@@ -3487,7 +3449,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         VerifySpeculativeEntryOrFail(cs1, 0x0210, [(byte)0xF4]);
         // F000:0210 hlt
         return Hlt();
-    label_F000_0211_F0211_283:
+    label_F000_02B4_F02B4_279:
+        CheckExternalEvents(cs1, 0x02B4);
+        // F000:02B4 jae near 0x0211
+        if (CarryFlag) {
+            goto label_F000_02B8_F02B8_285;
+        }
         CheckExternalEvents(cs1, 0x0211);
         // F000:0211 mov AH,0x95
         AH = 0x95;
@@ -3501,7 +3468,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         VerifySpeculativeEntryOrFail(cs1, 0x0218, [(byte)0xF4]);
         // F000:0218 hlt
         return Hlt();
-    label_F000_0219_F0219_288:
+    label_F000_02B8_F02B8_285:
+        CheckExternalEvents(cs1, 0x02B8);
+        // F000:02B8 jne near 0x0219
+        if (ZeroFlag) {
+            goto label_F000_02BC_F02BC_290;
+        }
         CheckExternalEvents(cs1, 0x0219);
         // F000:0219 mov AH,0xD1
         AH = 0xD1;
@@ -3515,7 +3487,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         VerifySpeculativeEntryOrFail(cs1, 0x0220, [(byte)0xF4]);
         // F000:0220 hlt
         return Hlt();
-    label_F000_0221_F0221_294:
+    label_F000_02BC_F02BC_290:
+        CheckExternalEvents(cs1, 0x02BC);
+        // F000:02BC jnp near 0x0221
+        if (ParityFlag) {
+            goto label_F000_02C0_F02C0_296;
+        }
         CheckExternalEvents(cs1, 0x0221);
         // F000:0221 mov AH,0x55
         AH = 0x55;
@@ -3529,7 +3506,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         VerifySpeculativeEntryOrFail(cs1, 0x0228, [(byte)0xF4]);
         // F000:0228 hlt
         return Hlt();
-    label_F000_0229_F0229_303:
+    label_F000_02C0_F02C0_296:
+        CheckExternalEvents(cs1, 0x02C0);
+        // F000:02C0 jns near 0x0229
+        if (SignFlag) {
+            goto label_F000_02C4_F02C4_305;
+        }
         CheckExternalEvents(cs1, 0x0229);
         // F000:0229 mov AH,0x94
         AH = 0x94;
@@ -3543,40 +3525,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         VerifySpeculativeEntryOrFail(cs1, 0x0230, [(byte)0xF4]);
         // F000:0230 hlt
         return Hlt();
-    label_F000_0231_F0231_312:
-        CheckExternalEvents(cs1, 0x0231);
-        // F000:0231 jmp near 0x02C8
-        goto label_F000_02C8_F02C8_314;
-    label_F000_02B4_F02B4_279:
-        CheckExternalEvents(cs1, 0x02B4);
-        // F000:02B4 jae near 0x0211
-        if (!CarryFlag) {
-            goto label_F000_0211_F0211_283;
-        }
-    label_F000_02B8_F02B8_285:
-        CheckExternalEvents(cs1, 0x02B8);
-        // F000:02B8 jne near 0x0219
-        if (!ZeroFlag) {
-            goto label_F000_0219_F0219_288;
-        }
-    label_F000_02BC_F02BC_290:
-        CheckExternalEvents(cs1, 0x02BC);
-        // F000:02BC jnp near 0x0221
-        if (!ParityFlag) {
-            goto label_F000_0221_F0221_294;
-        }
-    label_F000_02C0_F02C0_296:
-        CheckExternalEvents(cs1, 0x02C0);
-        // F000:02C0 jns near 0x0229
-        if (!SignFlag) {
-            goto label_F000_0229_F0229_303;
-        }
     label_F000_02C4_F02C4_305:
         CheckExternalEvents(cs1, 0x02C4);
         // F000:02C4 ja near 0x0231
-        if (!CarryFlag && !ZeroFlag) {
-            goto label_F000_0231_F0231_312;
+        if (!(!CarryFlag && !ZeroFlag)) {
+            goto label_F000_02C8_F02C8_314;
         }
+        CheckExternalEvents(cs1, 0x0231);
+        // F000:0231 jmp near 0x02C8
     label_F000_02C8_F02C8_314:
         CheckExternalEvents(cs1, 0x02C8);
         // F000:02C8 mov AH,0
@@ -3600,7 +3556,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         VerifySpeculativeEntryOrFail(cs1, 0x02D7, [(byte)0xF4]);
         // F000:02D7 hlt
         return Hlt();
-    label_F000_02D8_F02D8_336:
+    label_F000_037B_F037B_332:
+        CheckExternalEvents(cs1, 0x037B);
+        // F000:037B jo near 0x02D8
+        if (!OverflowFlag) {
+            goto label_F000_037F_F037F_338;
+        }
         CheckExternalEvents(cs1, 0x02D8);
         // F000:02D8 jl near 0x037A
         if (SignFlag != OverflowFlag) {
@@ -3615,7 +3576,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         VerifySpeculativeEntryOrFail(cs1, 0x02E0, [(byte)0xF4]);
         // F000:02E0 hlt
         return Hlt();
-    label_F000_02E1_F02E1_343:
+    label_F000_037F_F037F_338:
+        CheckExternalEvents(cs1, 0x037F);
+        // F000:037F jge near 0x02E1
+        if (!(SignFlag == OverflowFlag)) {
+            goto label_F000_0383_F0383_345;
+        }
         CheckExternalEvents(cs1, 0x02E1);
         // F000:02E1 jle near 0x037A
         if (ZeroFlag || SignFlag != OverflowFlag) {
@@ -3630,7 +3596,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         VerifySpeculativeEntryOrFail(cs1, 0x02E9, [(byte)0xF4]);
         // F000:02E9 hlt
         return Hlt();
-    label_F000_02EA_F02EA_353:
+    label_F000_0383_F0383_345:
+        CheckExternalEvents(cs1, 0x0383);
+        // F000:0383 jg near 0x02EA
+        if (!(!ZeroFlag && SignFlag == OverflowFlag)) {
+            goto label_F000_0387_F0387_355;
+        }
         CheckExternalEvents(cs1, 0x02EA);
         // F000:02EA mov AH,0x40
         AH = 0x40;
@@ -3644,7 +3615,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         VerifySpeculativeEntryOrFail(cs1, 0x02F1, [(byte)0xF4]);
         // F000:02F1 hlt
         return Hlt();
-    label_F000_02F2_F02F2_361:
+    label_F000_0387_F0387_355:
+        CheckExternalEvents(cs1, 0x0387);
+        // F000:0387 jl near 0x02F2
+        if (!(SignFlag != OverflowFlag)) {
+            goto label_F000_038B_F038B_363;
+        }
         CheckExternalEvents(cs1, 0x02F2);
         // F000:02F2 jle near 0x038B
         if (ZeroFlag || SignFlag != OverflowFlag) {
@@ -3654,45 +3630,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         VerifySpeculativeEntryOrFail(cs1, 0x02F6, [(byte)0xF4]);
         // F000:02F6 hlt
         return Hlt();
-    label_F000_02F7_F02F7_369:
-        CheckExternalEvents(cs1, 0x02F7);
-        // F000:02F7 jmp near 0x038F
-        goto label_F000_038F_F038F_371;
-    label_F000_037A_F037A_328:
-        CheckExternalEvents(cs1, 0x037A);
-        VerifySpeculativeEntryOrFail(cs1, 0x037A, [(byte)0xF4]);
-        // F000:037A hlt
-        return Hlt();
-    label_F000_037B_F037B_332:
-        CheckExternalEvents(cs1, 0x037B);
-        // F000:037B jo near 0x02D8
-        if (OverflowFlag) {
-            goto label_F000_02D8_F02D8_336;
-        }
-    label_F000_037F_F037F_338:
-        CheckExternalEvents(cs1, 0x037F);
-        // F000:037F jge near 0x02E1
-        if (SignFlag == OverflowFlag) {
-            goto label_F000_02E1_F02E1_343;
-        }
-    label_F000_0383_F0383_345:
-        CheckExternalEvents(cs1, 0x0383);
-        // F000:0383 jg near 0x02EA
-        if (!ZeroFlag && SignFlag == OverflowFlag) {
-            goto label_F000_02EA_F02EA_353;
-        }
-    label_F000_0387_F0387_355:
-        CheckExternalEvents(cs1, 0x0387);
-        // F000:0387 jl near 0x02F2
-        if (SignFlag != OverflowFlag) {
-            goto label_F000_02F2_F02F2_361;
-        }
     label_F000_038B_F038B_363:
         CheckExternalEvents(cs1, 0x038B);
         // F000:038B jle near 0x02F7
-        if (ZeroFlag || SignFlag != OverflowFlag) {
-            goto label_F000_02F7_F02F7_369;
+        if (!(ZeroFlag || SignFlag != OverflowFlag)) {
+            goto label_F000_038F_F038F_371;
         }
+        CheckExternalEvents(cs1, 0x02F7);
+        // F000:02F7 jmp near 0x038F
     label_F000_038F_F038F_371:
         CheckExternalEvents(cs1, 0x038F);
         // F000:038F mov ECX,0x00020000
@@ -4276,10 +4221,26 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             }
             throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:062E");
         }
-    label_F000_FFF0_FFFF0_0:
-        CheckExternalEvents(cs1, 0xFFF0);
-        // F000:FFF0 jmp far F000:0045
-        goto label_F000_0045_F0045_1;
+    label_F000_037A_F037A_328:
+        CheckExternalEvents(cs1, 0x037A);
+        VerifySpeculativeEntryOrFail(cs1, 0x037A, [(byte)0xF4]);
+        // F000:037A hlt
+        return Hlt();
+    label_F000_01F0_F01F0_215:
+        CheckExternalEvents(cs1, 0x01F0);
+        VerifySpeculativeEntryOrFail(cs1, 0x01F0, [(byte)0xF4]);
+        // F000:01F0 hlt
+        return Hlt();
+    label_F000_0122_F0122_143:
+        CheckExternalEvents(cs1, 0x0122);
+        VerifySpeculativeEntryOrFail(cs1, 0x0122, [(byte)0xF4]);
+        // F000:0122 hlt
+        return Hlt();
+    label_F000_00AC_F00AC_30:
+        CheckExternalEvents(cs1, 0x00AC);
+        VerifySpeculativeEntryOrFail(cs1, 0x00AC, [(byte)0xF4]);
+        // F000:00AC hlt
+        return Hlt();
     }
 
     public virtual Action unknown_F000_15C7_F15C7(int loadOffset) {

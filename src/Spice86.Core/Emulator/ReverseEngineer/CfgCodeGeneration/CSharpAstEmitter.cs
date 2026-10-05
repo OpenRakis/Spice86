@@ -257,10 +257,17 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
         // The taken arm is empty (e.g. a fallthrough that is the next emitted node). Emit only the
         // remaining arm under the negated condition rather than an empty `if` with a populated `else`.
         if (!falseArm.IsEmpty) {
-            return EmittedCode.Statements(new BlockStatement($"if (!({condition}))", falseArm.AsStatements()));
+            return EmittedCode.Statements(new BlockStatement($"if ({NegatedCondition(node.Condition)})", falseArm.AsStatements()));
         }
 
         return EmittedCode.None;
+    }
+
+    private string NegatedCondition(IVisitableAstNode condition) {
+        if (condition is UnaryOperationNode { UnaryOperation: UnaryOperation.NOT } notNode) {
+            return Expr(notNode.Value);
+        }
+        return $"!{Parenthesize(Expr(condition), UnaryPrecedence)}";
     }
 
     private static CfgInstruction? FindArmInstruction(IfElseNode node) =>

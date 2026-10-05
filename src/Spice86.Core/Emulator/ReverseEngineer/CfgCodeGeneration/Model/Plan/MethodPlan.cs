@@ -1,7 +1,9 @@
 namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph.Analysis;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
+using Spice86.Core.Emulator.ReverseEngineer.Graph;
 
 internal sealed class MethodPlan {
     private readonly Dictionary<ICfgNode, ICfgNode?> _nextNodeByNode;
@@ -13,7 +15,9 @@ internal sealed class MethodPlan {
         IReadOnlyList<CfgBlock> blocks,
         IReadOnlyList<ICfgNode> nodes,
         IReadOnlyList<NodeEmissionPlan> nodeEmissionPlans,
-        Dictionary<ICfgNode, ICfgNode?> nextNodeByNode) {
+        Dictionary<ICfgNode, ICfgNode?> nextNodeByNode,
+        PartitionBlockGraph blockGraph,
+        DepthFirstOrdering<CfgBlock> blockTraversal) {
         Partition = partition;
         MethodName = methodName;
         Entries = entries;
@@ -21,6 +25,8 @@ internal sealed class MethodPlan {
         Nodes = nodes;
         NodeEmissionPlans = nodeEmissionPlans;
         _nextNodeByNode = nextNodeByNode;
+        BlockGraph = blockGraph;
+        BlockTraversal = blockTraversal;
     }
 
     public CfgCodePartition Partition { get; }
@@ -30,6 +36,8 @@ internal sealed class MethodPlan {
     public IReadOnlyList<CfgBlock> Blocks { get; }
     public IReadOnlyList<ICfgNode> Nodes { get; }
     public IReadOnlyList<NodeEmissionPlan> NodeEmissionPlans { get; }
+    public PartitionBlockGraph BlockGraph { get; }
+    public DepthFirstOrdering<CfgBlock> BlockTraversal { get; }
     public bool NeedsEntryDispatch => Entries.Count > 1;
 
     public ICfgNode? GetNextEmittedNode(ICfgNode node) => _nextNodeByNode[node];
