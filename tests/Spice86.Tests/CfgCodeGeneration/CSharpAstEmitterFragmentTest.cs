@@ -2,6 +2,7 @@ namespace Spice86.Tests.CfgCodeGeneration;
 
 using FluentAssertions;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
@@ -96,5 +97,111 @@ public class CSharpAstEmitterFragmentTest {
         CSharpFragment fragment = constant.Accept(_emitter).AsExpression();
 
         fragment.ToString().Should().Be(fragment.Text);
+    }
+
+    [Fact]
+    public void FlagEqualToTrueRendersBareFlag() {
+        BinaryOperationNode comparison = new(DataType.BOOL, new CpuFlagNode(Flags.Zero), BinaryOperation.EQUAL, new ConstantNode(DataType.BOOL, 1));
+
+        CSharpFragment fragment = comparison.Accept(_emitter).AsExpression();
+
+        fragment.Text.Should().Be("ZeroFlag");
+    }
+
+    [Fact]
+    public void FlagEqualToFalseRendersNegatedFlag() {
+        BinaryOperationNode comparison = new(DataType.BOOL, new CpuFlagNode(Flags.Zero), BinaryOperation.EQUAL, new ConstantNode(DataType.BOOL, 0));
+
+        CSharpFragment fragment = comparison.Accept(_emitter).AsExpression();
+
+        fragment.Text.Should().Be("!ZeroFlag");
+    }
+
+    [Fact]
+    public void FlagNotEqualToTrueRendersNegatedFlag() {
+        BinaryOperationNode comparison = new(DataType.BOOL, new CpuFlagNode(Flags.Zero), BinaryOperation.NOT_EQUAL, new ConstantNode(DataType.BOOL, 1));
+
+        CSharpFragment fragment = comparison.Accept(_emitter).AsExpression();
+
+        fragment.Text.Should().Be("!ZeroFlag");
+    }
+
+    [Fact]
+    public void TrueEqualToFlagRendersBareFlag() {
+        BinaryOperationNode comparison = new(DataType.BOOL, new ConstantNode(DataType.BOOL, 1), BinaryOperation.EQUAL, new CpuFlagNode(Flags.Zero));
+
+        CSharpFragment fragment = comparison.Accept(_emitter).AsExpression();
+
+        fragment.Text.Should().Be("ZeroFlag");
+    }
+
+    [Fact]
+    public void WordEqualToZeroKeepsComparison() {
+        BinaryOperationNode comparison = new(DataType.BOOL, new RegisterNode(DataType.UINT16, 1), BinaryOperation.EQUAL, new ConstantNode(DataType.UINT16, 0));
+
+        CSharpFragment fragment = comparison.Accept(_emitter).AsExpression();
+
+        fragment.Text.Should().Be("CX == 0");
+    }
+
+    [Fact]
+    public void ZeroDisplacementRendersBareBaseRegisterOffset() {
+        BinaryOperationNode offset = new(DataType.UINT16, new RegisterNode(DataType.UINT16, 5), BinaryOperation.PLUS, new ConstantNode(DataType.INT8, 0));
+
+        CSharpFragment fragment = StackWord(offset);
+
+        fragment.Text.Should().Be("UInt16[SS, BP]");
+    }
+
+    [Fact]
+    public void ZeroDisplacementKeepsCompoundOffsetWrapped() {
+        BinaryOperationNode baseAndIndex = new(DataType.UINT16, new RegisterNode(DataType.UINT16, 3), BinaryOperation.PLUS, new RegisterNode(DataType.UINT16, 6));
+        BinaryOperationNode offset = new(DataType.UINT16, baseAndIndex, BinaryOperation.PLUS, new ConstantNode(DataType.INT8, 0));
+
+        CSharpFragment fragment = StackWord(offset);
+
+        fragment.Text.Should().Be("UInt16[SS, (ushort)(BX + SI)]");
+    }
+
+    [Fact]
+    public void NegativeByteDisplacementRendersSubtraction() {
+        BinaryOperationNode offset = new(DataType.UINT16, new RegisterNode(DataType.UINT16, 5), BinaryOperation.PLUS, new ConstantNode(DataType.INT8, 0xF2));
+
+        CSharpFragment fragment = StackWord(offset);
+
+        fragment.Text.Should().Be("UInt16[SS, (ushort)(BP - 0x0E)]");
+    }
+
+    [Fact]
+    public void NegativeWordDisplacementRendersSubtraction() {
+        BinaryOperationNode baseAndIndex = new(DataType.UINT16, new RegisterNode(DataType.UINT16, 5), BinaryOperation.PLUS, new RegisterNode(DataType.UINT16, 7));
+        BinaryOperationNode offset = new(DataType.UINT16, baseAndIndex, BinaryOperation.PLUS, new ConstantNode(DataType.INT16, 0xFE3C));
+
+        CSharpFragment fragment = StackWord(offset);
+
+        fragment.Text.Should().Be("UInt16[SS, (ushort)(BP + DI - 0x01C4)]");
+    }
+
+    [Fact]
+    public void ByteMinValueDisplacementRendersUnsignedMagnitude() {
+        BinaryOperationNode offset = new(DataType.UINT16, new RegisterNode(DataType.UINT16, 5), BinaryOperation.PLUS, new ConstantNode(DataType.INT8, 0x80));
+
+        CSharpFragment fragment = StackWord(offset);
+
+        fragment.Text.Should().Be("UInt16[SS, (ushort)(BP - 0x80)]");
+    }
+
+    [Fact]
+    public void Int32MinValueDisplacementKeepsAddition() {
+        BinaryOperationNode sum = new(DataType.UINT32, new RegisterNode(DataType.UINT32, 3), BinaryOperation.PLUS, new ConstantNode(DataType.INT32, 0x80000000));
+
+        CSharpFragment fragment = sum.Accept(_emitter).AsExpression();
+
+        fragment.Text.Should().Be("EBX + int.MinValue");
+    }
+
+    private CSharpFragment StackWord(ValueNode offset) {
+        SegmentedPointerNode pointer = new(DataType.UINT16, new SegmentRegisterNode(2), null, offset);
+        return pointer.Accept(_emitter).AsExpression();
     }
 }

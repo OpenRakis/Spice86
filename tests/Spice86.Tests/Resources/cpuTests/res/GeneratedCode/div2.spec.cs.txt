@@ -44,13 +44,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:000A mov BP,0x0100
         BP = 0x0100;
         // F000:000D mov word ptr SS:[BP-14],0xE4C3
-        UInt16[SS, (ushort)(BP + -0x0E)] = 0xE4C3;
+        UInt16[SS, (ushort)(BP - 0x0E)] = 0xE4C3;
         // F000:0012 mov AX,0
         AX = 0;
         // F000:0015 mov DX,0x8000
         DX = 0x8000;
         // F000:0018 div word ptr SS:[BP-14]
-        ushort divisor_F000_0018_F0018 = UInt16[SS, (ushort)(BP + -0x0E)];
+        ushort divisor_F000_0018_F0018 = UInt16[SS, (ushort)(BP - 0x0E)];
         uint dividend_F000_0018_F0018 = (uint)((uint)DX << 0x00000010 | (uint)AX);
         ushort quotient_F000_0018_F0018 = Alu16.Div((uint)dividend_F000_0018_F0018, (ushort)divisor_F000_0018_F0018);
         AX = (ushort)quotient_F000_0018_F0018;
@@ -60,7 +60,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:001E mov word ptr DS:[2],DX
         UInt16[DS, 2] = DX;
         // F000:0022 mov CX,word ptr SS:[BP-14]
-        CX = UInt16[SS, (ushort)(BP + -0x0E)];
+        CX = UInt16[SS, (ushort)(BP - 0x0E)];
         // F000:0025 mov word ptr DS:[4],CX
         UInt16[DS, 4] = CX;
         // F000:0029 hlt

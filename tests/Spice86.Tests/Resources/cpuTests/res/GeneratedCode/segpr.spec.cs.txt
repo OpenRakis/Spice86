@@ -39,12 +39,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0071 mov SI,3
         SI = 3;
         // F000:0074 call near word ptr SS:[BX+SI-4]
-        switch ((ushort)(UInt16[SS, (ushort)(BX + SI + -4)])) {
+        switch ((ushort)(UInt16[SS, (ushort)(BX + SI - 4)])) {
             case 0x1200:
                 NearCall(cs1, 0x0079, unknown_F000_1200_F1200);
                 throw FailAsUntested("Call at F000:0074 returned to F000:0079, but no continuation was observed during discovery.");
             default:
-                throw FailAsUntested($"Unknown near call target 0x{((ushort)(UInt16[SS, (ushort)(BX + SI + -4)])):X4} at F000:0074");
+                throw FailAsUntested($"Unknown near call target 0x{((ushort)(UInt16[SS, (ushort)(BX + SI - 4)])):X4} at F000:0074");
         }
     }
 
