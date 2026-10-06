@@ -15,8 +15,8 @@ using CfgSelectorNode = Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfM
 /// <summary>
 /// Drives the emission of one C# method per CFG partition. It walks the plan's ordered list of nodes,
 /// asks the AST emitter to lower each node's body, wraps it with fault handling if needed, then hands
-/// the result to the renderer. Also emits the method skeleton: signature, entry dispatch switch,
-/// block labels, and the trailing safety-net throw.
+/// the result to the renderer. Also emits the method skeleton: signature, entry dispatch switch
+/// and block labels.
 /// </summary>
 internal sealed class MethodEmitter(
     CfgGeneratorContext context,
@@ -53,12 +53,10 @@ internal sealed class MethodEmitter(
             renderer.Render(lowered.Code, writer);
             bodyCompletesNormally = lowered.Code.CompletesNormally;
         }
-        // The trailing untested-failure throw is a real safety net only when control can fall off the end of
-        // the body. A body whose last node diverges (ret/hlt/goto/partition-return/throw) never reaches it, so
-        // emitting it there would be dead code. Completion is read from the emitted-code structure, not by
-        // re-parsing generated text.
+        // The last node has no next node, so every same-method fallthrough from it is a goto, and an unobserved
+        // fallthrough is a throw: a body that can still fall off its end is a generator bug.
         if (bodyCompletesNormally) {
-            writer.Line("throw FailAsUntested(\"Generated partition reached the end without a terminating control-flow instruction.\");");
+            throw new InvalidOperationException($"Generated method {method.MethodName} can fall off its end: its last node does not diverge.");
         }
         writer.CloseBlock();
         writer.Line();
