@@ -231,11 +231,8 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
 
     public EmittedCode VisitIfElseNode(IfElseNode node) {
         if (!NodeContainsControlFlow(node)) {
-            // Pure data conditional (ternary-like): both arms are always emitted, including an empty `else`
-            // block, matching the historical statement emitter.
-            return EmittedCode.Statements(
-                new BlockStatement($"if ({Expr(node.Condition)})", node.TrueCase.Accept(this).AsStatements()),
-                new BlockStatement("else", node.FalseCase.Accept(this).AsStatements()));
+            // Pure data conditional (ternary-like): an empty false arm renders no `else`.
+            return EmittedCode.Statements(new IfElseStatement(Expr(node.Condition), node.TrueCase.Accept(this).AsStatements(), node.FalseCase.Accept(this).AsStatements()));
         }
 
         // Control-flow conditional: at least one arm transfers, so it carries the source instruction.
@@ -247,17 +244,13 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
         EmittedCode falseArm = LowerConditionalArm(instruction, node.FalseCase);
 
         if (!trueArm.IsEmpty) {
-            List<StatementItem> items = [new BlockStatement($"if ({condition})", trueArm.AsStatements())];
-            if (!falseArm.IsEmpty) {
-                items.Add(new BlockStatement("else", falseArm.AsStatements()));
-            }
-            return EmittedCode.Statements(items);
+            return EmittedCode.Statements(new IfElseStatement(condition, trueArm.AsStatements(), falseArm.AsStatements()));
         }
 
         // The taken arm is empty (e.g. a fallthrough that is the next emitted node). Emit only the
         // remaining arm under the negated condition rather than an empty `if` with a populated `else`.
         if (!falseArm.IsEmpty) {
-            return EmittedCode.Statements(new BlockStatement($"if ({NegatedCondition(node.Condition)})", falseArm.AsStatements()));
+            return EmittedCode.Statements(new IfElseStatement(NegatedCondition(node.Condition), falseArm.AsStatements(), []));
         }
 
         return EmittedCode.None;

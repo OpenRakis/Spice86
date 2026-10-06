@@ -79,8 +79,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!InterruptFlag) {
             State.InterruptShadowing = true;
         }
-        else {
-        }
         InterruptFlag = true;
         CheckExternalEvents(cs1, 0x0026);
         // F000:0026 mov ECX,0x00FFFFFF

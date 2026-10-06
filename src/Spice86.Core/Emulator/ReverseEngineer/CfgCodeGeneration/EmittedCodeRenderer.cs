@@ -32,6 +32,24 @@ internal sealed class EmittedCodeRenderer(Func<ICfgNode, string> labelOf) {
                 Render(block.Body, writer);
                 writer.CloseBlock();
                 return;
+            case IfElseStatement ifElse:
+                writer.OpenBlock($"if ({ifElse.Condition})");
+                Render(ifElse.TrueBody, writer);
+                writer.CloseBlock();
+                if (ifElse.FalseBody.Count > 0) {
+                    writer.OpenBlock("else");
+                    Render(ifElse.FalseBody, writer);
+                    writer.CloseBlock();
+                }
+                return;
+            case TryCatchStatement tryCatch:
+                writer.OpenBlock("try");
+                Render(tryCatch.TryBody, writer);
+                writer.CloseBlock();
+                writer.OpenBlock(tryCatch.CatchHeader);
+                Render(tryCatch.CatchBody, writer);
+                writer.CloseBlock();
+                return;
             case GotoStatement gotoStatement:
                 writer.Line($"goto {labelOf(gotoStatement.Target)};");
                 return;
