@@ -22,19 +22,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
         cs1 = 0xF000;
 
-        DefineFunction(cs1, 0x0061, unknown_F000_0061_F0061);
-        DefineFunction(cs1, 0x0085, unknown_F000_0085_F0085);
-        DefineFunction(cs1, 0x00A0, unknown_F000_00A0_F00A0);
-        DefineFunction(cs1, 0x010F, unknown_F000_010F_F010F);
-        DefineFunction(cs1, 0x012C, unknown_F000_012C_F012C);
-        DefineFunction(cs1, 0x019B, unknown_F000_019B_F019B);
-        DefineFunction(cs1, 0x0211, unknown_F000_0211_F0211);
-        DefineFunction(cs1, 0x024D, unknown_F000_024D_F024D);
-        DefineFunction(cs1, 0x02B1, unknown_F000_02B1_F02B1);
-        DefineFunction(cs1, 0x02C6, unknown_F000_02C6_F02C6);
-        DefineFunction(cs1, 0x02F6, unknown_F000_02F6_F02F6);
-        DefineFunction(cs1, 0x1000, unknown_F000_1000_F1000);
-        DefineFunction(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0);
+        DefineFunction(cs1, 0x0061, unknown_F000_0061_F0061, name: "unknown");
+        DefineFunction(cs1, 0x0085, unknown_F000_0085_F0085, name: "unknown");
+        DefineFunction(cs1, 0x00A0, unknown_F000_00A0_F00A0, name: "unknown");
+        DefineFunction(cs1, 0x010F, unknown_F000_010F_F010F, name: "unknown");
+        DefineFunction(cs1, 0x012C, unknown_F000_012C_F012C, name: "unknown");
+        DefineFunction(cs1, 0x019B, unknown_F000_019B_F019B, name: "unknown");
+        DefineFunction(cs1, 0x0211, unknown_F000_0211_F0211, name: "unknown");
+        DefineFunction(cs1, 0x024D, unknown_F000_024D_F024D, name: "unknown");
+        DefineFunction(cs1, 0x02B1, unknown_F000_02B1_F02B1, name: "unknown");
+        DefineFunction(cs1, 0x02C6, unknown_F000_02C6_F02C6, name: "unknown");
+        DefineFunction(cs1, 0x02F6, unknown_F000_02F6_F02F6, name: "unknown");
+        DefineFunction(cs1, 0x1000, unknown_F000_1000_F1000, name: "unknown");
+        DefineFunction(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, name: "unknown");
     }
 
     public virtual Action unknown_F000_0061_F0061(int loadOffset) {

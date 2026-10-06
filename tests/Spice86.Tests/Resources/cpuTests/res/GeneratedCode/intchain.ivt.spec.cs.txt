@@ -24,20 +24,20 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         cs1 = 0x016D;
         cs2 = 0xF000;
 
-        DefineFunction(cs1, 0x0100, unknown_016D_0100_017D0);
-        DefineFunction(cs2, 0x0005, unknown_F000_0005_F0005);
-        DefineFunction(cs2, 0x0006, unknown_F000_0006_F0006);
-        DefineFunction(cs2, 0x0011, unknown_F000_0011_F0011);
-        DefineFunction(cs2, 0x0057, unknown_F000_0057_F0057);
-        DefineFunction(cs2, 0x005D, unknown_F000_005D_F005D);
-        DefineFunction(cs2, 0x0067, unknown_F000_0067_F0067);
-        DefineFunction(cs2, 0x006C, unknown_F000_006C_F006C);
-        DefineFunction(cs2, 0x0071, unknown_F000_0071_F0071);
-        DefineFunction(cs2, 0x0076, unknown_F000_0076_F0076);
-        DefineFunction(cs2, 0x007B, unknown_F000_007B_F007B);
-        DefineFunction(cs2, 0x0080, unknown_F000_0080_F0080);
-        DefineFunction(cs2, 0x00E2, unknown_F000_00E2_F00E2);
-        DefineFunction(cs2, 0x00E3, unknown_F000_00E3_F00E3);
+        DefineFunction(cs1, 0x0100, unknown_016D_0100_017D0, name: "unknown");
+        DefineFunction(cs2, 0x0005, unknown_F000_0005_F0005, name: "unknown");
+        DefineFunction(cs2, 0x0006, unknown_F000_0006_F0006, name: "unknown");
+        DefineFunction(cs2, 0x0011, unknown_F000_0011_F0011, name: "unknown");
+        DefineFunction(cs2, 0x0057, unknown_F000_0057_F0057, name: "unknown");
+        DefineFunction(cs2, 0x005D, unknown_F000_005D_F005D, name: "unknown");
+        DefineFunction(cs2, 0x0067, unknown_F000_0067_F0067, name: "unknown");
+        DefineFunction(cs2, 0x006C, unknown_F000_006C_F006C, name: "unknown");
+        DefineFunction(cs2, 0x0071, unknown_F000_0071_F0071, name: "unknown");
+        DefineFunction(cs2, 0x0076, unknown_F000_0076_F0076, name: "unknown");
+        DefineFunction(cs2, 0x007B, unknown_F000_007B_F007B, name: "unknown");
+        DefineFunction(cs2, 0x0080, unknown_F000_0080_F0080, name: "unknown");
+        DefineFunction(cs2, 0x00E2, unknown_F000_00E2_F00E2, name: "unknown");
+        DefineFunction(cs2, 0x00E3, unknown_F000_00E3_F00E3, name: "unknown");
     }
 
     public virtual Action unknown_016D_0100_017D0(int loadOffset) {

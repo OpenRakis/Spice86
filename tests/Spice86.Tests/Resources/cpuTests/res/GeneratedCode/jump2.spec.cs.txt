@@ -24,12 +24,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         cs1 = 0xE342;
         cs2 = 0xF000;
 
-        DefineFunction(cs2, 0x0000, unknown_F000_0000_F0000);
-        DefineFunction(cs2, 0x1290, unknown_F000_1290_F1290);
-        DefineFunction(cs1, 0xEBE0, unknown_E342_EBE0_F2000);
-        DefineFunction(cs1, 0xFDE0, unknown_E342_FDE0_F3200);
-        DefineFunction(cs2, 0x4000, unknown_F000_4000_F4000);
-        DefineFunction(cs2, 0xFFF0, unknown_F000_FFF0_FFFF0);
+        DefineFunction(cs2, 0x0000, unknown_F000_0000_F0000, name: "unknown");
+        DefineFunction(cs2, 0x1290, unknown_F000_1290_F1290, name: "unknown");
+        DefineFunction(cs1, 0xEBE0, unknown_E342_EBE0_F2000, name: "unknown");
+        DefineFunction(cs1, 0xFDE0, unknown_E342_FDE0_F3200, name: "unknown");
+        DefineFunction(cs2, 0x4000, unknown_F000_4000_F4000, name: "unknown");
+        DefineFunction(cs2, 0xFFF0, unknown_F000_FFF0_FFFF0, name: "unknown");
     }
 
     public virtual Action unknown_F000_0000_F0000(int loadOffset) {
