@@ -7,8 +7,8 @@ namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Statemen
 internal abstract record StatementItem {
     /// <summary>
     /// Whether control can fall through past this item to the next statement. Drives method-body completion
-    /// analysis (see <see cref="EmittedCode.CompletesNormally"/>) so the trailing untested-failure throw is
-    /// emitted only for a body that can actually fall off its end.
+    /// analysis (see <see cref="EmittedCode.CompletesNormally"/>) so the method emitter can reject a
+    /// method body that can fall off its end.
     /// </summary>
     public abstract bool CompletesNormally { get; }
 

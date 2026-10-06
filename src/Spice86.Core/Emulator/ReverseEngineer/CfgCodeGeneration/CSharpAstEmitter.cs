@@ -98,8 +98,8 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
 
     /// <summary>
     /// Lowers the body of an instruction whose execution AST is rooted at <paramref name="node"/> through the
-    /// AST's own <c>Accept</c> dispatch, then appends the fallthrough transfer to the instruction's unique
-    /// successor unless the body already terminates control flow.
+    /// AST's own <c>Accept</c> dispatch, then appends the fallthrough transfer
+    /// (<see cref="TransferEmitter.EmitFallthroughIfNeeded"/>) unless the body already terminates control flow.
     /// </summary>
     public EmittedCode LowerInstructionBody(CfgInstruction instruction, IVisitableAstNode node) {
         EmittedCode body = node.Accept(this);

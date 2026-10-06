@@ -116,20 +116,6 @@ public sealed class GeneratedCodeMachineTest {
         source.Should().NotContain("Unobserved conditional jump target at F000:12A2");
     }
 
-
-    [Fact]
-    public void MethodEndingInTerminatorEmitsNoTrailingUntestedThrow() {
-        // A method whose last emitted node diverges (ret/hlt/goto/partition-return) can never reach the
-        // trailing "reached the end without a terminating control-flow instruction" throw, so completion
-        // analysis must suppress that dead safety net. add ends in a terminator, so no method body in its
-        // generated source should carry the trailing throw.
-        GeneratedCodeMachineTestRunner runner = new();
-        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("add", maxCycles: 1000);
-
-        generatedProgram.SourceText.Should().NotContain(
-            "Generated partition reached the end without a terminating control-flow instruction.");
-    }
-
     [Fact]
     public void PartitionSharedTailGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
         new GeneratedCodeMachineTestRunner().TestGeneratedCode("partition_shared_tail", maxCycles: 1000);

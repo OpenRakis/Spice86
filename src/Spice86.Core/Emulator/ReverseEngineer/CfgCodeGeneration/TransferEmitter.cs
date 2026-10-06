@@ -61,13 +61,23 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
         }
     }
 
-    public EmittedCode EmitFallthroughIfNeeded(ICfgNode source, MethodPlan methodPlan) {
+    /// <summary>
+    /// Lowers the fallthrough of a non-terminating instruction or callback: its observed <see cref="InstructionSuccessorType.Normal"/> successor, or a <c>FailAsUntested</c> throw when discovery never observed it falling through (it only faulted, or discovery stopped on it).
+    /// </summary>
+    public EmittedCode EmitFallthroughIfNeeded(CfgInstruction source, MethodPlan methodPlan) {
         if (source.UniqueSuccessor is not null) {
             return Emit(new ResolvedCfgEdge(source, source.UniqueSuccessor, InstructionSuccessorType.Normal,
                 context.FindTransfer(source, source.UniqueSuccessor, InstructionSuccessorType.Normal)?.Kind), methodPlan);
         }
 
-        return EmittedCode.None;
+        IReadOnlyList<ResolvedCfgEdge> normalEdges = context.GetSuccessorEdges(source, InstructionSuccessorType.Normal);
+        if (normalEdges.Count == 1) {
+            return Emit(normalEdges[0], methodPlan);
+        }
+        if (normalEdges.Count == 0) {
+            return EmittedCode.Diverging($"throw FailAsUntested(\"Unobserved fallthrough after {source.Address}\");");
+        }
+        throw new NotSupportedException($"Non-terminating instruction at {source.Address} has {normalEdges.Count} observed fallthrough successors.");
     }
 
     /// <summary>

@@ -9,8 +9,8 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Statement;
 using Xunit;
 
 /// <summary>
-/// Locks in the completion analysis the method emitter relies on to decide whether the trailing
-/// untested-failure throw is reachable. Completion is computed from the emitted-code structure: a sequence
+/// Locks in the completion analysis the method emitter relies on to reject a method body
+/// that can fall off its end. Completion is computed from the emitted-code structure: a sequence
 /// completes normally unless its last item diverges, and a diverging line (<c>return</c>/<c>goto</c>/
 /// <c>throw</c>) is what marks the boundary.
 /// </summary>

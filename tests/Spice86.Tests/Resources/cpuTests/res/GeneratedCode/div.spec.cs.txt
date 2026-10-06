@@ -64,6 +64,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             ushort quotient_F000_0081_F0081 = Alu16.Div((uint)dividend_F000_0081_F0081, (ushort)divisor_F000_0081_F0081);
             AX = (ushort)quotient_F000_0081_F0081;
             DX = (ushort)(dividend_F000_0081_F0081 % (uint)divisor_F000_0081_F0081);
+            throw FailAsUntested("Unobserved fallthrough after F000:0081");
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -73,7 +74,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             }
             throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:0081");
         }
-        throw FailAsUntested("Generated partition reached the end without a terminating control-flow instruction.");
     }
 
     public virtual Action unknown_F000_0085_F0085(int loadOffset) {
@@ -101,6 +101,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             ushort quotient_F000_009E_F009E = Alu16.Div((uint)dividend_F000_009E_F009E, (ushort)divisor_F000_009E_F009E);
             AX = (ushort)quotient_F000_009E_F009E;
             DX = (ushort)(dividend_F000_009E_F009E % (uint)divisor_F000_009E_F009E);
+            throw FailAsUntested("Unobserved fallthrough after F000:009E");
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -110,7 +111,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             }
             throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:009E");
         }
-        throw FailAsUntested("Generated partition reached the end without a terminating control-flow instruction.");
     }
 
     public virtual Action unknown_F000_00A0_F00A0(int loadOffset) {
@@ -202,6 +202,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             byte quotient_F000_010D_F010D = Alu8.Div((ushort)dividend_F000_010D_F010D, (byte)divisor_F000_010D_F010D);
             AL = (byte)quotient_F000_010D_F010D;
             AH = (byte)(dividend_F000_010D_F010D % (ushort)divisor_F000_010D_F010D);
+            throw FailAsUntested("Unobserved fallthrough after F000:010D");
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -211,7 +212,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             }
             throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:010D");
         }
-        throw FailAsUntested("Generated partition reached the end without a terminating control-flow instruction.");
     }
 
     public virtual Action unknown_F000_010F_F010F(int loadOffset) {
@@ -237,6 +237,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             byte quotient_F000_0128_F0128 = Alu8.Div((ushort)dividend_F000_0128_F0128, (byte)divisor_F000_0128_F0128);
             AL = (byte)quotient_F000_0128_F0128;
             AH = (byte)(dividend_F000_0128_F0128 % (ushort)divisor_F000_0128_F0128);
+            throw FailAsUntested("Unobserved fallthrough after F000:0128");
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -246,7 +247,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             }
             throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:0128");
         }
-        throw FailAsUntested("Generated partition reached the end without a terminating control-flow instruction.");
     }
 
     public virtual Action unknown_F000_012C_F012C(int loadOffset) {
@@ -338,6 +338,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             short quotient_F000_0197_F0197 = Alu16.Idiv((int)dividend_F000_0197_F0197, (short)divisor_F000_0197_F0197);
             AX = (ushort)quotient_F000_0197_F0197;
             DX = (ushort)(dividend_F000_0197_F0197 % (int)divisor_F000_0197_F0197);
+            throw FailAsUntested("Unobserved fallthrough after F000:0197");
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -347,7 +348,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             }
             throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:0197");
         }
-        throw FailAsUntested("Generated partition reached the end without a terminating control-flow instruction.");
     }
 
     public virtual Action unknown_F000_019B_F019B(int loadOffset) {
@@ -443,6 +443,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             short quotient_F000_020F_F020F = Alu16.Idiv((int)dividend_F000_020F_F020F, (short)divisor_F000_020F_F020F);
             AX = (ushort)quotient_F000_020F_F020F;
             DX = (ushort)(dividend_F000_020F_F020F % (int)divisor_F000_020F_F020F);
+            throw FailAsUntested("Unobserved fallthrough after F000:020F");
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -452,7 +453,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             }
             throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:020F");
         }
-        throw FailAsUntested("Generated partition reached the end without a terminating control-flow instruction.");
     }
 
     public virtual Action unknown_F000_0211_F0211(int loadOffset) {
@@ -502,6 +502,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             sbyte quotient_F000_0249_F0249 = Alu8.Idiv((short)dividend_F000_0249_F0249, (sbyte)divisor_F000_0249_F0249);
             AL = (byte)quotient_F000_0249_F0249;
             AH = (byte)(dividend_F000_0249_F0249 % (short)divisor_F000_0249_F0249);
+            throw FailAsUntested("Unobserved fallthrough after F000:0249");
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -511,7 +512,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             }
             throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:0249");
         }
-        throw FailAsUntested("Generated partition reached the end without a terminating control-flow instruction.");
     }
 
     public virtual Action unknown_F000_024D_F024D(int loadOffset) {
@@ -597,6 +597,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             sbyte quotient_F000_02AF_F02AF = Alu8.Idiv((short)dividend_F000_02AF_F02AF, (sbyte)divisor_F000_02AF_F02AF);
             AL = (byte)quotient_F000_02AF_F02AF;
             AH = (byte)(dividend_F000_02AF_F02AF % (short)divisor_F000_02AF_F02AF);
+            throw FailAsUntested("Unobserved fallthrough after F000:02AF");
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -606,7 +607,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             }
             throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:02AF");
         }
-        throw FailAsUntested("Generated partition reached the end without a terminating control-flow instruction.");
     }
 
     public virtual Action unknown_F000_02B1_F02B1(int loadOffset) {
@@ -635,6 +635,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             AH = (byte)(v1_F000_02C4_F02C4 / v2_F000_02C4_F02C4);
             AL = (byte)result_F000_02C4_F02C4;
             Alu8.UpdateFlags((byte)result_F000_02C4_F02C4);
+            throw FailAsUntested("Unobserved fallthrough after F000:02C4");
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -644,7 +645,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             }
             throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:02C4");
         }
-        throw FailAsUntested("Generated partition reached the end without a terminating control-flow instruction.");
     }
 
     public virtual Action unknown_F000_02C6_F02C6(int loadOffset) {
@@ -711,6 +711,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             AH = (byte)(v1_F000_02F4_F02F4 / v2_F000_02F4_F02F4);
             AL = (byte)result_F000_02F4_F02F4;
             Alu8.UpdateFlags((byte)result_F000_02F4_F02F4);
+            throw FailAsUntested("Unobserved fallthrough after F000:02F4");
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -720,7 +721,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             }
             throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:02F4");
         }
-        throw FailAsUntested("Generated partition reached the end without a terminating control-flow instruction.");
     }
 
     public virtual Action unknown_F000_02F6_F02F6(int loadOffset) {
@@ -880,6 +880,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             ushort quotient_F000_005F_F005F = Alu16.Div((uint)dividend_F000_005F_F005F, (ushort)divisor_F000_005F_F005F);
             AX = (ushort)quotient_F000_005F_F005F;
             DX = (ushort)(dividend_F000_005F_F005F % (uint)divisor_F000_005F_F005F);
+            throw FailAsUntested("Unobserved fallthrough after F000:005F");
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -889,7 +890,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             }
             throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:005F");
         }
-        throw FailAsUntested("Generated partition reached the end without a terminating control-flow instruction.");
     }
 
 }
