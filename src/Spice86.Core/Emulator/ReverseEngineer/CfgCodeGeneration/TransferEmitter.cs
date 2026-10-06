@@ -62,7 +62,8 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
     }
 
     /// <summary>
-    /// Lowers the fallthrough of a non-terminating instruction or callback: its observed <see cref="InstructionSuccessorType.Normal"/> successor, or a <c>FailAsUntested</c> throw when discovery never observed it falling through (it only faulted, or discovery stopped on it).
+    /// Lowers the fallthrough of a non-terminating instruction or callback: its observed <see cref="InstructionSuccessorType.Normal"/> successor at the next address in memory, or a <c>FailAsUntested</c> throw when discovery never observed it falling through (it only faulted, or discovery stopped on it).
+    /// A callback whose handler moved CS:IP elsewhere (DOS EXEC, terminate) also has <see cref="InstructionSuccessorType.Normal"/> successors at those targets; generated code does not follow them.
     /// </summary>
     public EmittedCode EmitFallthroughIfNeeded(CfgInstruction source, MethodPlan methodPlan) {
         if (source.UniqueSuccessor is not null) {
@@ -70,14 +71,11 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
                 context.FindTransfer(source, source.UniqueSuccessor, InstructionSuccessorType.Normal)?.Kind), methodPlan);
         }
 
-        IReadOnlyList<ResolvedCfgEdge> normalEdges = context.GetSuccessorEdges(source, InstructionSuccessorType.Normal);
-        if (normalEdges.Count == 1) {
-            return Emit(normalEdges[0], methodPlan);
+        if (context.TryResolveEdge(source, InstructionSuccessorType.Normal,
+                source.NextInMemoryAddress32.ToSegmentedAddress()) is ResolvedCfgEdge fallthrough) {
+            return Emit(fallthrough, methodPlan);
         }
-        if (normalEdges.Count == 0) {
-            return EmittedCode.Diverging($"throw FailAsUntested(\"Unobserved fallthrough after {source.Address}\");");
-        }
-        throw new NotSupportedException($"Non-terminating instruction at {source.Address} has {normalEdges.Count} observed fallthrough successors.");
+        return EmittedCode.Diverging($"throw FailAsUntested(\"Unobserved fallthrough after {source.Address}\");");
     }
 
     /// <summary>
