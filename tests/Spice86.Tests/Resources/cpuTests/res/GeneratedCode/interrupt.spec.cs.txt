@@ -81,7 +81,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         else {
             return unknown_F000_4013_F4013(0x0000);
         }
-        throw FailAsUntested("Generated partition reached the end without a terminating control-flow instruction.");
     }
 
     public virtual Action unknown_F000_4013_F4013(int loadOffset) {
@@ -166,7 +165,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         else {
             throw FailAsUntested("Unobserved conditional fallthrough at F000:0CFD");
         }
-        throw FailAsUntested("Generated partition reached the end without a terminating control-flow instruction.");
     }
 
 }

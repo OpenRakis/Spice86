@@ -52,9 +52,7 @@ public class EmittedCodeCompletionTest {
 
     [Fact]
     public void BlockCompletesNormallyEvenWhenBodyDiverges() {
-        // A bare block (e.g. an `if` without `else`) can always fall through past itself; recognizing
-        // paired if/else divergence is intentionally out of scope, so the conservative answer keeps the
-        // trailing throw rather than risk eliding a reachable safety net.
+        // A bare block (e.g. an `if` without `else`) can always fall through past itself, even when its body diverges.
         EmittedCode code = EmittedCode.Statements(
             new BlockStatement("if (ZeroFlag)", [new LineStatement("goto label_a;", Diverges: true)]));
 
@@ -81,6 +79,62 @@ public class EmittedCodeCompletionTest {
             "switch ((ushort)(AX))",
             [new SwitchCase("0x0001", [new LineStatement("goto label_a;", Diverges: true)])],
             [new LineStatement("throw FailAsUntested(\"x\");", Diverges: true)]));
+
+        code.CompletesNormally.Should().BeFalse();
+    }
+
+    [Fact]
+    public void IfElseCompletesNormallyWhenOnlyTheFalseArmCompletes() {
+        EmittedCode code = EmittedCode.Statements(new IfElseStatement("ZeroFlag",
+            [new LineStatement("goto label_a;", Diverges: true)],
+            [new LineStatement("CX = (ushort)0x0001;")]));
+
+        code.CompletesNormally.Should().BeTrue();
+    }
+
+    [Fact]
+    public void IfElseCompletesNormallyWhenOnlyTheTrueArmCompletes() {
+        EmittedCode code = EmittedCode.Statements(new IfElseStatement("ZeroFlag",
+            [new LineStatement("CX = (ushort)0x0001;")],
+            [new LineStatement("goto label_a;", Diverges: true)]));
+
+        code.CompletesNormally.Should().BeTrue();
+    }
+
+    [Fact]
+    public void IfElseWithEmptyFalseBodyCompletesNormally() {
+        EmittedCode code = EmittedCode.Statements(new IfElseStatement("ZeroFlag",
+            [new LineStatement("goto label_a;", Diverges: true)],
+            []));
+
+        code.CompletesNormally.Should().BeTrue();
+    }
+
+    [Fact]
+    public void IfElseDoesNotCompleteNormallyWhenBothArmsDiverge() {
+        EmittedCode code = EmittedCode.Statements(new IfElseStatement("ZeroFlag",
+            [new LineStatement("goto label_a;", Diverges: true)],
+            [new LineStatement("throw FailAsUntested(\"x\");", Diverges: true)]));
+
+        code.CompletesNormally.Should().BeFalse();
+    }
+
+    [Fact]
+    public void TryCatchCompletesNormallyWhenTheTryBodyCompletes() {
+        EmittedCode code = EmittedCode.Statements(new TryCatchStatement(
+            [new LineStatement("CX = (ushort)0x0001;")],
+            "catch (CpuException cpuException)",
+            [new LineStatement("throw FailAsUntested(\"x\");", Diverges: true)]));
+
+        code.CompletesNormally.Should().BeTrue();
+    }
+
+    [Fact]
+    public void TryCatchDoesNotCompleteNormallyWhenBothBodiesDiverge() {
+        EmittedCode code = EmittedCode.Statements(new TryCatchStatement(
+            [new LineStatement("throw FailAsUntested(\"x\");", Diverges: true)],
+            "catch (CpuException cpuException)",
+            [new LineStatement("return NearRet();", Diverges: true)]));
 
         code.CompletesNormally.Should().BeFalse();
     }

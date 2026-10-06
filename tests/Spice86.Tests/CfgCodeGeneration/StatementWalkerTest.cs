@@ -23,4 +23,22 @@ public class StatementWalkerTest {
         descendants.Should().Equal(switchItem, gotoItem, block, dispatcher);
         descendants.OfType<GotoStatement>().Should().ContainSingle();
     }
+
+    [Fact]
+    public void DescendantsWalksIfElseArmsThenTryCatchBodiesInOrder() {
+        ICfgNode targetA = Substitute.For<ICfgNode>();
+        ICfgNode targetB = Substitute.For<ICfgNode>();
+        ICfgNode targetC = Substitute.For<ICfgNode>();
+        ICfgNode targetD = Substitute.For<ICfgNode>();
+        StatementItem gotoA = new GotoStatement(targetA);
+        StatementItem gotoB = new GotoStatement(targetB);
+        StatementItem gotoC = new GotoStatement(targetC);
+        StatementItem gotoD = new GotoStatement(targetD);
+        StatementItem ifElse = new IfElseStatement("ZeroFlag", [gotoA], [gotoB]);
+        StatementItem tryCatch = new TryCatchStatement([gotoC], "catch (CpuException cpuException)", [gotoD]);
+
+        List<StatementItem> descendants = StatementWalker.Descendants([ifElse, tryCatch]).ToList();
+
+        descendants.Should().Equal(ifElse, gotoA, gotoB, tryCatch, gotoC, gotoD);
+    }
 }

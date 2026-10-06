@@ -118,7 +118,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             }
             throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:06A1");
         }
-        throw FailAsUntested("Generated partition reached the end without a terminating control-flow instruction.");
     }
 
     public virtual Action unknown_F000_06A8_F06A8(int loadOffset) {

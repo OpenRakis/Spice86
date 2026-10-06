@@ -631,8 +631,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             if (v2_F000_02C4_F02C4 == 0) {
                 throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
             }
-            else {
-            }
             byte result_F000_02C4_F02C4 = (byte)(v1_F000_02C4_F02C4 % v2_F000_02C4_F02C4);
             AH = (byte)(v1_F000_02C4_F02C4 / v2_F000_02C4_F02C4);
             AL = (byte)result_F000_02C4_F02C4;
@@ -666,8 +664,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (v2_F000_02D2_F02D2 == 0) {
             throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
         }
-        else {
-        }
         byte result_F000_02D2_F02D2 = (byte)(v1_F000_02D2_F02D2 % v2_F000_02D2_F02D2);
         AH = (byte)(v1_F000_02D2_F02D2 / v2_F000_02D2_F02D2);
         AL = (byte)result_F000_02D2_F02D2;
@@ -688,8 +684,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Alu8.UpdateFlags((byte)(v1_F000_02E3_F02E3 >> 1));
         if (v2_F000_02E3_F02E3 == 0) {
             throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
-        }
-        else {
         }
         byte result_F000_02E3_F02E3 = (byte)(v1_F000_02E3_F02E3 % v2_F000_02E3_F02E3);
         AH = (byte)(v1_F000_02E3_F02E3 / v2_F000_02E3_F02E3);
@@ -712,8 +706,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             Alu8.UpdateFlags((byte)(v1_F000_02F4_F02F4 >> 1));
             if (v2_F000_02F4_F02F4 == 0) {
                 throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
-            }
-            else {
             }
             byte result_F000_02F4_F02F4 = (byte)(v1_F000_02F4_F02F4 % v2_F000_02F4_F02F4);
             AH = (byte)(v1_F000_02F4_F02F4 / v2_F000_02F4_F02F4);
@@ -748,8 +740,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (v2_F000_0302_F0302 == 0) {
             throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
         }
-        else {
-        }
         byte result_F000_0302_F0302 = (byte)(v1_F000_0302_F0302 % v2_F000_0302_F0302);
         AH = (byte)(v1_F000_0302_F0302 / v2_F000_0302_F0302);
         AL = (byte)result_F000_0302_F0302;
@@ -770,8 +760,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Alu8.UpdateFlags((byte)(v1_F000_0313_F0313 >> 1));
         if (v2_F000_0313_F0313 == 0) {
             throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
-        }
-        else {
         }
         byte result_F000_0313_F0313 = (byte)(v1_F000_0313_F0313 % v2_F000_0313_F0313);
         AH = (byte)(v1_F000_0313_F0313 / v2_F000_0313_F0313);

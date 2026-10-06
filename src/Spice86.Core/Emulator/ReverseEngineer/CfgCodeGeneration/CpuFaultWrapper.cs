@@ -39,7 +39,6 @@ internal sealed class CpuFaultWrapper(CfgGeneratorContext context, TransferEmitt
         catchBody.Add(new LineStatement($"throw FailAsUntested($\"Unknown CPU fault target {{cpuFaultTarget}} at {instruction.Address}\");", Diverges: true));
 
         return EmittedCode.Statements(
-            new BlockStatement("try", body.AsStatements()),
-            new BlockStatement("catch (CpuException cpuException)", catchBody));
+            new TryCatchStatement(body.AsStatements(), "catch (CpuException cpuException)", catchBody));
     }
 }
