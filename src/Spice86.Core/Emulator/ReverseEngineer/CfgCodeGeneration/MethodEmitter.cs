@@ -76,13 +76,12 @@ internal sealed class MethodEmitter(
             return EmittedCode.Statements(new SwitchStatement("switch (loadOffset)", cases, defaultBody));
         }
 
-        // Single entry: only jump when the entry is not already the first node emitted in the body
-        // (the entry point can be a reset vector at a higher address than the first emitted block).
+        // Single entry: the block layout starts with the primary entry block, so no jump is needed.
         ICfgNode primaryEntry = method.PrimaryEntry.Node;
-        if (method.NodeEmissionPlans.Count > 0 && method.NodeEmissionPlans[0].Node.Equals(primaryEntry)) {
-            return EmittedCode.None;
+        if (!method.NodeEmissionPlans[0].Node.Equals(primaryEntry)) {
+            throw new InvalidOperationException($"Primary entry {primaryEntry.Address} of {method.MethodName} is not the first emitted node.");
         }
-        return EmittedCode.Statements(new GotoStatement(primaryEntry));
+        return EmittedCode.None;
     }
 
     private LoweredNode Lower(NodeEmissionPlan plan, MethodPlan method) {

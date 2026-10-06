@@ -26,9 +26,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
-        goto label_F000_FFF0_FFFF0_0;
-
-    label_F000_0000_F0000_1:
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 jmp short 0
         CheckExternalEvents(cs1, 0x0000);
         // F000:0000 mov AX,0x6EC5
         AX = 0x6EC5;
@@ -274,10 +273,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Stack.Push16(FlagRegister16);
         // F000:014D hlt
         return Hlt();
-    label_F000_FFF0_FFFF0_0:
-        CheckExternalEvents(cs1, 0xFFF0);
-        // F000:FFF0 jmp short 0
-        goto label_F000_0000_F0000_1;
     }
 
 }

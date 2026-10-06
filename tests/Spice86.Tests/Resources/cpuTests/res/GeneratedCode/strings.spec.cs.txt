@@ -101,11 +101,67 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:10C3 jmp near AX
         switch ((ushort)(AX)) {
             case 0xC200:
-                goto label_F000_C200_FC200_55;
+                break;
             default:
                 throw FailAsUntested($"Unknown near jump target 0x{((ushort)(AX)):X4} at F000:10C3");
         }
-    label_F000_1300_F1300_89:
+        CheckExternalEvents(cs1, 0xC200);
+        // F000:C200 mov DX,0x1000
+        DX = 0x1000;
+        // F000:C203 mov ES,DX
+        ES = DX;
+        // F000:C205 mov DI,0xFFFF
+        DI = 0xFFFF;
+        // F000:C208 movs byte ptr ES:[DI],byte ptr DS:[SI]
+        UInt8[ES, DI] = UInt8[DS, SI];
+        SI = (ushort)(SI + (ushort)State.Direction8);
+        DI = (ushort)(DI + (ushort)State.Direction8);
+        // F000:C209 mov DS,DX
+        DS = DX;
+        // F000:C20B mov byte ptr DS:[DI],0xC2
+        UInt8[DS, DI] = 0xC2;
+        // F000:C20E jmp near word ptr DS:[DI]
+        switch ((ushort)(UInt16[DS, DI])) {
+            case 0x80C2:
+                break;
+            default:
+                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(UInt16[DS, DI])):X4} at F000:C20E");
+        }
+        CheckExternalEvents(cs1, 0x80C2);
+        // F000:80C2 mov DS,CX
+        DS = CX;
+        // F000:80C4 movs word ptr ES:[DI],word ptr DS:[SI]
+        UInt16[ES, DI] = UInt16[DS, SI];
+        SI = (ushort)(SI + (ushort)State.Direction16);
+        DI = (ushort)(DI + (ushort)State.Direction16);
+        // F000:80C5 mov DS,DX
+        DS = DX;
+        // F000:80C7 jmp near word ptr DS:[DI+2]
+        switch ((ushort)(UInt16[DS, (ushort)(DI + 2)])) {
+            case 0x80FF:
+                break;
+            default:
+                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(UInt16[DS, (ushort)(DI + 2)])):X4} at F000:80C7");
+        }
+        CheckExternalEvents(cs1, 0x80FF);
+        // F000:80FF mov DI,0x2002
+        DI = 0x2002;
+        // F000:8102 mov ES,CX
+        ES = CX;
+        // F000:8104 cld
+        DirectionFlag = false;
+        // F000:8105 scas AL,byte ptr ES:[DI]
+        Alu8.Sub(AL, UInt8[ES, DI]);
+        DI = (ushort)(DI + (ushort)State.Direction8);
+        // F000:8106 lahf
+        AH = (byte)FlagRegister16;
+        // F000:8107 jmp near AX
+        switch ((ushort)(AX)) {
+            case 0x1300:
+                break;
+            default:
+                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(AX)):X4} at F000:8107");
+        }
         CheckExternalEvents(cs1, 0x1300);
         // F000:1300 mov word ptr DS:[DI],AX
         UInt16[DS, DI] = AX;
@@ -147,70 +203,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:8017 jmp near word ptr DS:[DI+2]
         switch ((ushort)(UInt16[DS, (ushort)(DI + 2)])) {
             case 0xD000:
-                goto label_F000_D000_FD000_114;
+                break;
             default:
                 throw FailAsUntested($"Unknown near jump target 0x{((ushort)(UInt16[DS, (ushort)(DI + 2)])):X4} at F000:8017");
         }
-    label_F000_80C2_F80C2_69:
-        CheckExternalEvents(cs1, 0x80C2);
-        // F000:80C2 mov DS,CX
-        DS = CX;
-        // F000:80C4 movs word ptr ES:[DI],word ptr DS:[SI]
-        UInt16[ES, DI] = UInt16[DS, SI];
-        SI = (ushort)(SI + (ushort)State.Direction16);
-        DI = (ushort)(DI + (ushort)State.Direction16);
-        // F000:80C5 mov DS,DX
-        DS = DX;
-        // F000:80C7 jmp near word ptr DS:[DI+2]
-        switch ((ushort)(UInt16[DS, (ushort)(DI + 2)])) {
-            case 0x80FF:
-                break;
-            default:
-                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(UInt16[DS, (ushort)(DI + 2)])):X4} at F000:80C7");
-        }
-        CheckExternalEvents(cs1, 0x80FF);
-        // F000:80FF mov DI,0x2002
-        DI = 0x2002;
-        // F000:8102 mov ES,CX
-        ES = CX;
-        // F000:8104 cld
-        DirectionFlag = false;
-        // F000:8105 scas AL,byte ptr ES:[DI]
-        Alu8.Sub(AL, UInt8[ES, DI]);
-        DI = (ushort)(DI + (ushort)State.Direction8);
-        // F000:8106 lahf
-        AH = (byte)FlagRegister16;
-        // F000:8107 jmp near AX
-        switch ((ushort)(AX)) {
-            case 0x1300:
-                goto label_F000_1300_F1300_89;
-            default:
-                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(AX)):X4} at F000:8107");
-        }
-    label_F000_C200_FC200_55:
-        CheckExternalEvents(cs1, 0xC200);
-        // F000:C200 mov DX,0x1000
-        DX = 0x1000;
-        // F000:C203 mov ES,DX
-        ES = DX;
-        // F000:C205 mov DI,0xFFFF
-        DI = 0xFFFF;
-        // F000:C208 movs byte ptr ES:[DI],byte ptr DS:[SI]
-        UInt8[ES, DI] = UInt8[DS, SI];
-        SI = (ushort)(SI + (ushort)State.Direction8);
-        DI = (ushort)(DI + (ushort)State.Direction8);
-        // F000:C209 mov DS,DX
-        DS = DX;
-        // F000:C20B mov byte ptr DS:[DI],0xC2
-        UInt8[DS, DI] = 0xC2;
-        // F000:C20E jmp near word ptr DS:[DI]
-        switch ((ushort)(UInt16[DS, DI])) {
-            case 0x80C2:
-                goto label_F000_80C2_F80C2_69;
-            default:
-                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(UInt16[DS, DI])):X4} at F000:C20E");
-        }
-    label_F000_D000_FD000_114:
         CheckExternalEvents(cs1, 0xD000);
         // F000:D000 mov DX,0
         DX = 0;
@@ -223,9 +219,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
-        goto label_F000_FFF0_FFFF0_0;
-
-    label_F000_0000_F0000_1:
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 jmp short 0
         CheckExternalEvents(cs1, 0x0000);
         // F000:0000 mov CX,0xF000
         CX = 0xF000;
@@ -245,10 +240,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Stack.Push16(FlagRegister16);
         // F000:000F ret near
         return NearRet();
-    label_F000_FFF0_FFFF0_0:
-        CheckExternalEvents(cs1, 0xFFF0);
-        // F000:FFF0 jmp short 0
-        goto label_F000_0000_F0000_1;
     }
 
 }

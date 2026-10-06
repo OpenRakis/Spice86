@@ -37,9 +37,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
-        goto label_F000_FFF0_FFFF0_0;
-
-    label_F000_0000_F0000_1:
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 jmp short 0
         CheckExternalEvents(cs1, 0x0000);
         // F000:0000 mov byte ptr DS:[0x0400],1
         UInt8[DS, 0x0400] = 1;
@@ -55,23 +54,17 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:000C mov byte ptr DS:[0x0401],0xDD
         UInt8[DS, 0x0401] = 0xDD;
         // F000:0011 jmp short 0x001E
-        goto label_F000_001E_F001E_15;
+        CheckExternalEvents(cs1, 0x001E);
+        // F000:001E mov byte ptr DS:[0x0402],0xAA
+        UInt8[DS, 0x0402] = 0xAA;
+        // F000:0023 hlt
+        return Hlt();
     label_F000_0013_F0013_7:
         CheckExternalEvents(cs1, 0x0013);
         VerifySpeculativeEntryOrFail(cs1, 0x0013, [(byte)0xE8, (byte)0x05, (byte)0x00]);
         // F000:0013 call near 0x001B
         NearCall(cs1, 0x0016, unknown_F000_001B_F001B);
         throw FailAsUntested("Call at F000:0013 returned to F000:0016, but no continuation was observed during discovery.");
-    label_F000_001E_F001E_15:
-        CheckExternalEvents(cs1, 0x001E);
-        // F000:001E mov byte ptr DS:[0x0402],0xAA
-        UInt8[DS, 0x0402] = 0xAA;
-        // F000:0023 hlt
-        return Hlt();
-    label_F000_FFF0_FFFF0_0:
-        CheckExternalEvents(cs1, 0xFFF0);
-        // F000:FFF0 jmp short 0
-        goto label_F000_0000_F0000_1;
     }
 
 }

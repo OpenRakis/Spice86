@@ -26,9 +26,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
-        goto label_F000_FFF0_FFFF0_0;
-
-    label_F000_0000_F0000_4:
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 mov SP,0x1000
+        SP = 0x1000;
+        // F000:FFF3 mov SS,SP
+        SS = SP;
+        State.InterruptShadowing = true;
+        // F000:FFF5 jmp short 0
         CheckExternalEvents(cs1, 0x0000);
         // F000:0000 rep movs byte ptr ES:[DI],byte ptr DS:[SI]
         while (CX != 0) {
@@ -225,31 +229,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:003B jmp near AX
         switch ((ushort)(AX)) {
             case 0x1000:
-                goto label_F000_1000_F1000_70;
+                break;
             default:
                 throw FailAsUntested($"Unknown near jump target 0x{((ushort)(AX)):X4} at F000:003B");
         }
-    label_F000_0102_F0102_211:
-        CheckExternalEvents(cs1, 0x0102);
-        // F000:0102 jmp near 0x304D
-        goto label_F000_304D_F304D_212;
-    label_F000_0607_F0607_178:
-        CheckExternalEvents(cs1, 0x0607);
-        // F000:0607 jmp near 0x302F
-        goto label_F000_302F_F302F_179;
-    label_F000_0809_F0809_143:
-        CheckExternalEvents(cs1, 0x0809);
-        // F000:0809 jmp near 0x300D
-        goto label_F000_300D_F300D_144;
-    label_F000_0FFC_F0FFC_85:
-        CheckExternalEvents(cs1, 0x0FFC);
-        // F000:0FFC jmp short 0x100E
-        goto label_F000_100E_F100E_86;
-    label_F000_0FFE_F0FFE_76:
-        CheckExternalEvents(cs1, 0x0FFE);
-        // F000:0FFE jmp short 0x1007
-        goto label_F000_1007_F1007_77;
-    label_F000_1000_F1000_70:
         CheckExternalEvents(cs1, 0x1000);
         // F000:1000 mov CX,0
         CX = 0;
@@ -258,11 +241,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1005 jmp near SP
         switch ((ushort)(SP)) {
             case 0x0FFE:
-                goto label_F000_0FFE_F0FFE_76;
+                break;
             default:
                 throw FailAsUntested($"Unknown near jump target 0x{((ushort)(SP)):X4} at F000:1005");
         }
-    label_F000_1007_F1007_77:
+        CheckExternalEvents(cs1, 0x0FFE);
+        // F000:0FFE jmp short 0x1007
         CheckExternalEvents(cs1, 0x1007);
         // F000:1007 mov CX,0x110A
         CX = 0x110A;
@@ -271,11 +255,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:100C jmp near SP
         switch ((ushort)(SP)) {
             case 0x0FFC:
-                goto label_F000_0FFC_F0FFC_85;
+                break;
             default:
                 throw FailAsUntested($"Unknown near jump target 0x{((ushort)(SP)):X4} at F000:100C");
         }
-    label_F000_100E_F100E_86:
+        CheckExternalEvents(cs1, 0x0FFC);
+        // F000:0FFC jmp short 0x100E
         CheckExternalEvents(cs1, 0x100E);
         // F000:100E jmp near CX
         switch ((ushort)(CX)) {
@@ -304,19 +289,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1118 jmp near AX
         switch ((ushort)(AX)) {
             case 0x200A:
-                goto label_F000_200A_F200A_107;
+                break;
             default:
                 throw FailAsUntested($"Unknown near jump target 0x{((ushort)(AX)):X4} at F000:1118");
         }
-    label_F000_122C_F122C_279:
-        CheckExternalEvents(cs1, 0x122C);
-        // F000:122C jmp near 0x4030
-        goto label_F000_4030_F4030_280;
-    label_F000_122F_F122F_263:
-        CheckExternalEvents(cs1, 0x122F);
-        // F000:122F jmp near 0x4024
-        goto label_F000_4024_F4024_264;
-    label_F000_200A_F200A_107:
         CheckExternalEvents(cs1, 0x200A);
         // F000:200A push BX
         Stack.Push16(BX);
@@ -366,11 +342,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:202D jmp near word ptr DS:[0x3004]
         switch ((ushort)(UInt16[DS, 0x3004])) {
             case 0x0809:
-                goto label_F000_0809_F0809_143;
+                break;
             default:
                 throw FailAsUntested($"Unknown near jump target 0x{((ushort)(UInt16[DS, 0x3004])):X4} at F000:202D");
         }
-    label_F000_300D_F300D_144:
+        CheckExternalEvents(cs1, 0x0809);
+        // F000:0809 jmp near 0x300D
         CheckExternalEvents(cs1, 0x300D);
         // F000:300D mov AX,0xF000
         AX = 0xF000;
@@ -416,11 +393,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:302B jmp near word ptr DS:[0x3008]
         switch ((ushort)(UInt16[DS, 0x3008])) {
             case 0x0607:
-                goto label_F000_0607_F0607_178;
+                break;
             default:
                 throw FailAsUntested($"Unknown near jump target 0x{((ushort)(UInt16[DS, 0x3008])):X4} at F000:302B");
         }
-    label_F000_302F_F302F_179:
+        CheckExternalEvents(cs1, 0x0607);
+        // F000:0607 jmp near 0x302F
         CheckExternalEvents(cs1, 0x302F);
         // F000:302F mov AX,0xF000
         AX = 0xF000;
@@ -437,11 +415,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:3039 jmp near AX
         switch ((ushort)(AX)) {
             case 0xF003:
-                goto label_F000_F003_FF003_191;
+                break;
             default:
                 throw FailAsUntested($"Unknown near jump target 0x{((ushort)(AX)):X4} at F000:3039");
         }
-    label_F000_303C_F303C_192:
+        CheckExternalEvents(cs1, 0xF003);
+        // F000:F003 jmp near 0x303C
         CheckExternalEvents(cs1, 0x303C);
         // F000:303C mov BX,0x0040
         BX = 0x0040;
@@ -466,11 +445,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:304B jmp near AX
         switch ((ushort)(AX)) {
             case 0x0102:
-                goto label_F000_0102_F0102_211;
+                break;
             default:
                 throw FailAsUntested($"Unknown near jump target 0x{((ushort)(AX)):X4} at F000:304B");
         }
-    label_F000_304D_F304D_212:
+        CheckExternalEvents(cs1, 0x0102);
+        // F000:0102 jmp near 0x304D
         CheckExternalEvents(cs1, 0x304D);
         // F000:304D mov CX,2
         CX = 2;
@@ -550,11 +530,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:4022 jmp near CX
         switch ((ushort)(CX)) {
             case 0x122F:
-                goto label_F000_122F_F122F_263;
+                break;
             default:
                 throw FailAsUntested($"Unknown near jump target 0x{((ushort)(CX)):X4} at F000:4022");
         }
-    label_F000_4024_F4024_264:
+        CheckExternalEvents(cs1, 0x122F);
+        // F000:122F jmp near 0x4024
         CheckExternalEvents(cs1, 0x4024);
         // F000:4024 mov BX,0x0040
         BX = 0x0040;
@@ -577,11 +558,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:402E jmp near CX
         switch ((ushort)(CX)) {
             case 0x122C:
-                goto label_F000_122C_F122C_279;
+                break;
             default:
                 throw FailAsUntested($"Unknown near jump target 0x{((ushort)(CX)):X4} at F000:402E");
         }
-    label_F000_4030_F4030_280:
+        CheckExternalEvents(cs1, 0x122C);
+        // F000:122C jmp near 0x4030
         CheckExternalEvents(cs1, 0x4030);
         // F000:4030 mov AX,0x0607
         AX = 0x0607;
@@ -757,19 +739,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt16[DS, 4] = 0x1234;
         // F000:6026 hlt
         return Hlt();
-    label_F000_F003_FF003_191:
-        CheckExternalEvents(cs1, 0xF003);
-        // F000:F003 jmp near 0x303C
-        goto label_F000_303C_F303C_192;
-    label_F000_FFF0_FFFF0_0:
-        CheckExternalEvents(cs1, 0xFFF0);
-        // F000:FFF0 mov SP,0x1000
-        SP = 0x1000;
-        // F000:FFF3 mov SS,SP
-        SS = SP;
-        State.InterruptShadowing = true;
-        // F000:FFF5 jmp short 0
-        goto label_F000_0000_F0000_4;
     }
 
 }
