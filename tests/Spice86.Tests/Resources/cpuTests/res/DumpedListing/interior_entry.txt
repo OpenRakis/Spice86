@@ -1,0 +1,119 @@
+F000:0000 cli
+F000:0001 xor AX,AX
+F000:0003 mov DS,AX
+F000:0005 mov SS,AX
+F000:0007 mov SP,0x8000
+F000:000A mov AL,0xFF
+F000:000C out 0x21,AL
+F000:000E out 0xA1,AL
+F000:0010 mov byte ptr DS:[0x0400],0
+F000:0015 mov byte ptr DS:[0x0401],0
+F000:001A mov byte ptr DS:[0x0402],0
+F000:001F mov byte ptr DS:[0x0403],0
+F000:0024 mov byte ptr DS:[0x040C],0
+F000:0029 mov byte ptr DS:[0x040D],0
+F000:002E mov word ptr DS:[0x0404],0
+F000:0034 mov word ptr DS:[0x0406],0x7FFA
+F000:003A mov word ptr DS:[0x0408],0
+F000:0040 mov word ptr DS:[0x040A],0x7FFE
+F000:0046 mov word ptr DS:[0x040E],0
+F000:004C mov word ptr DS:[0x0410],0
+F000:0052 mov word ptr DS:[0x0020],0x0200
+F000:0058 mov word ptr DS:[0x0022],CS
+F000:005C mov AL,0x30
+F000:005E out 0x43,AL
+F000:0060 mov AL,0xA9
+F000:0062 out 0x40,AL
+F000:0064 mov AL,4
+F000:0066 out 0x40,AL
+F000:0068 mov AL,0xFE
+F000:006A out 0x21,AL
+F000:006C sti
+F000:006D nop
+F000:006E cmp byte ptr DS:[0x0401],1
+F000:0073 jne short 0x006E
+F000:0075 cli
+F000:0076 mov word ptr DS:[0x0020],0x020C
+F000:007C mov AL,0x30
+F000:007E out 0x43,AL
+F000:0080 mov AL,0xA9
+F000:0082 out 0x40,AL
+F000:0084 mov AL,4
+F000:0086 out 0x40,AL
+F000:0088 mov AL,0xFE
+F000:008A out 0x21,AL
+F000:008C sti
+F000:008D nop
+F000:008E cmp byte ptr DS:[0x0401],2
+F000:0093 jne short 0x008E
+F000:0095 cli
+F000:0096 mov AL,0xFF
+F000:0098 out 0x21,AL
+F000:009A mov word ptr DS:[0x0020],0x0300
+F000:00A0 mov byte ptr DS:[0x0403],1
+F000:00A5 mov word ptr DS:[0x0404],0x1000
+F000:00AB mov word ptr DS:[0x0406],0x9000
+F000:00B1 mov AL,0x30
+F000:00B3 out 0x43,AL
+F000:00B5 mov AL,0xA9
+F000:00B7 out 0x40,AL
+F000:00B9 mov AL,4
+F000:00BB out 0x40,AL
+F000:00BD mov AL,0x0A
+F000:00BF out 0x20,AL
+F000:00C1 in AL,0x20
+F000:00C3 test AL,1
+F000:00C5 je short 0x00C1
+F000:00C7 sti
+F000:00C8 nop
+F000:00C9 call near 0x0200
+F000:00CC cli
+F000:00CD mov byte ptr DS:[0x0402],0xA5
+F000:00D2 hlt
+F000:0200 inc byte ptr DS:[0x0400]
+F000:0204 mov AL,0xFE
+F000:0206 out 0x21,AL
+F000:0208 mov SS,word ptr DS:[0x0404]
+F000:020C mov SP,word ptr DS:[0x0406]
+F000:0210 inc byte ptr DS:[0x0401]
+F000:0214 cmp byte ptr DS:[0x0403],1
+F000:0219 je short 0x0226
+F000:021B push AX
+F000:021C mov AL,0xFF
+F000:021E out 0x21,AL
+F000:0220 mov AL,0x20
+F000:0222 out 0x20,AL
+F000:0224 pop AX
+F000:0225 iret
+F000:0226 cmp byte ptr DS:[0x040C],1
+F000:022B jne short 0x0226
+F000:022D mov SS,word ptr DS:[0x0408]
+F000:0231 mov SP,word ptr DS:[0x040A]
+F000:0235 ret near
+F000:0300 mov word ptr DS:[0x040E],SS
+F000:0304 mov word ptr DS:[0x0410],SP
+F000:0308 push AX
+F000:0309 push BX
+F000:030A mov AX,word ptr DS:[0x040E]
+F000:030D cmp AX,0
+F000:0310 sete BL
+F000:0313 cmp word ptr DS:[0x0410],0x7FF8
+F000:0319 sete BH
+F000:031C and BL,BH
+F000:031E cmp AX,0x1000
+F000:0321 sete AL
+F000:0324 cmp word ptr DS:[0x0410],0x8FFA
+F000:032A sete AH
+F000:032D and AL,AH
+F000:032F or AL,BL
+F000:0331 xor AL,1
+F000:0333 or byte ptr DS:[0x040D],AL
+F000:0337 inc byte ptr DS:[0x040C]
+F000:033B mov AL,0xFF
+F000:033D out 0x21,AL
+F000:033F mov AL,0x20
+F000:0341 out 0x20,AL
+F000:0343 pop BX
+F000:0344 pop AX
+F000:0345 iret
+F000:FFF0 jmp short 0

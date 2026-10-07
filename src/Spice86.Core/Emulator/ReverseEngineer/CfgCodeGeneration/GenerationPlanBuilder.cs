@@ -142,7 +142,7 @@ internal static class GenerationPlanBuilder {
             // First instruction of each block is the entry: it gets the label.
             bool isBlockEntry = true;
             foreach (ICfgNode node in block.Instructions) {
-                bool emitsExternalEventCheck = (isBlockEntry && checkedBlocks.Contains(block)) || entryNodes.Contains(node);
+                bool emitsExternalEventCheck = isBlockEntry && checkedBlocks.Contains(block);
                 bool emitsExternalEventCheckAfter = node is CfgInstruction instruction
                     && InterruptEnableDetectorVisitor.EnablesInterrupts(instruction.ExecutionAst)
                     && !FallthroughBlockChecks(node, block, blockGraph, checkedBlocks);
