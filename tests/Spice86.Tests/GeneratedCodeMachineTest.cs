@@ -222,6 +222,32 @@ public sealed class GeneratedCodeMachineTest {
     }
 
     [Fact]
+    public void NearWordJumpDispatchOmitsRedundantCasts() {
+        GeneratedCodeMachineTestRunner runner = new();
+        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("rep", maxCycles: 10000);
+        string source = generatedProgram.SourceText;
+
+        source.Should().Contain("switch (AX)");
+        source.Should().Contain("switch (UInt16[DS, 0x3004])");
+        source.Should().Contain("Untested near jump target 0x{AX:X4} at F000:003B");
+        source.Should().Contain("Untested near jump target 0x{UInt16[DS, 0x3004]:X4} at F000:202D");
+        source.Should().NotContain("switch ((ushort)(");
+    }
+
+    [Fact]
+    public void NearWordCallDispatchOmitsRedundantCasts() {
+        GeneratedCodeMachineTestRunner runner = new();
+        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("jump2", maxCycles: 10000);
+        string source = generatedProgram.SourceText;
+
+        source.Should().Contain("switch (AX)");
+        source.Should().Contain("switch (UInt16[DS, 0x3000])");
+        source.Should().Contain("Untested near call target 0x{AX:X4} at F000:000E");
+        source.Should().Contain("Untested near call target 0x{UInt16[DS, 0x3000]:X4} at E342:EBE0");
+        source.Should().NotContain("switch ((ushort)(");
+    }
+
+    [Fact]
     public void CallWithoutObservedContinuationFailsAsUntestedOnReturn() {
         // segpr contains a direct call whose callee never returns during discovery, so there is no observed
         // continuation edge. The generator must still emit the call helper with the statically-known expected
@@ -546,6 +572,14 @@ public sealed class GeneratedCodeMachineTest {
                 handler = new Test386PostPortHandler(machine.CpuState, Substitute.For<ILogger>(), machine.IoPortDispatcher);
             }
         };
+
+        GeneratedCodeMachineTestRunner runner = new();
+        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("test386", options);
+        string source = generatedProgram.SourceText;
+        source.Should().Contain("switch ((ushort)EBX)");
+        source.Should().Contain("Untested near call target 0x{(ushort)EBX:X4} at F000:13B0");
+        source.Should().NotContain("switch (EBX)");
+        source.Should().NotContain("switch ((ushort)((ushort)EBX))");
 
         new GeneratedCodeMachineTestRunner().TestGeneratedCode("test386", [], options, _ => {
             Test386PostPortHandler postHandler = handler ?? throw new InvalidOperationException("The test386 POST port handler was not installed.");

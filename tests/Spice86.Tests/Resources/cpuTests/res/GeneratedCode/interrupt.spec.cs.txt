@@ -127,11 +127,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0022 mov byte ptr DS:[2],2
         UInt8[DS, 2] = 2;
         // F000:0027 jmp near AX
-        switch ((ushort)(AX)) {
+        switch (AX) {
             case 0x0CD7:
                 break;
             default:
-                throw FailAsUntested($"Untested near jump target 0x{((ushort)(AX)):X4} at F000:0027");
+                throw FailAsUntested($"Untested near jump target 0x{AX:X4} at F000:0027");
         }
         // F000:0CD7 mov byte ptr DS:[3],3
         UInt8[DS, 3] = 3;

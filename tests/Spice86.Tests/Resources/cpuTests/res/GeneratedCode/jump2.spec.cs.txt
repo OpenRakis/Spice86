@@ -52,12 +52,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             goto L_000B;
         }
         // F000:000E call near AX
-        switch ((ushort)(AX)) {
+        switch (AX) {
             case 0x1290:
                 NearCall(cs2, 0x0010, unknown_F000_1290_F1290);
                 break;
             default:
-                throw FailAsUntested($"Untested near call target 0x{((ushort)(AX)):X4} at F000:000E");
+                throw FailAsUntested($"Untested near call target 0x{AX:X4} at F000:000E");
         }
         // F000:0010 ret near
         return NearRet();
@@ -113,12 +113,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_E342_EBE0_F2000(int loadOffset) {
         CheckExternalEvents(cs1, 0xEBE0);
         // E342:EBE0 call near word ptr DS:[0x3000]
-        switch ((ushort)(UInt16[DS, 0x3000])) {
+        switch (UInt16[DS, 0x3000]) {
             case 0xFDE0:
                 NearCall(cs1, 0xEBE4, unknown_E342_FDE0_F3200);
                 break;
             default:
-                throw FailAsUntested($"Untested near call target 0x{((ushort)(UInt16[DS, 0x3000])):X4} at E342:EBE0");
+                throw FailAsUntested($"Untested near call target 0x{UInt16[DS, 0x3000]:X4} at E342:EBE0");
         }
         // E342:EBE4 mov DX,0
         DX = 0;

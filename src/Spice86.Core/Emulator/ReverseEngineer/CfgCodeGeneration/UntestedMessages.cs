@@ -19,9 +19,14 @@ internal static class UntestedMessages {
     /// <summary>An indirect jump or call with no observed targets.</summary>
     public static string IndirectWithoutTargets(string targetKind, SegmentedAddress at) => $"throw FailAsUntested(\"Untested indirect {targetKind} at {at}\");";
 
-    /// <summary>A near jump or call with an unknown runtime target.</summary>
-    public static string NearTarget(string targetKind, string targetExpression, SegmentedAddress at) =>
-        $"throw FailAsUntested($\"Untested near {targetKind} target 0x{{((ushort)({targetExpression})):X4}} at {at}\");";
+    /// <summary>Formats an already normalized near target in an untested-target failure.</summary>
+    public static string NearTarget(string targetKind, string targetExpression, SegmentedAddress at) {
+        string formattedTarget = targetExpression;
+        if (formattedTarget.Contains(':') || formattedTarget.Contains('?')) {
+            formattedTarget = $"({formattedTarget})";
+        }
+        return $"throw FailAsUntested($\"Untested near {targetKind} target 0x{{{formattedTarget}:X4}} at {at}\");";
+    }
 
     /// <summary>A far jump or call with an unknown runtime target.</summary>
     public static string FarTarget(string targetKind, string segmentVariable, string offsetVariable, SegmentedAddress at) =>

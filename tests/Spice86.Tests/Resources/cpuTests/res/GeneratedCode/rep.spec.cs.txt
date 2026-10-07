@@ -225,22 +225,22 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0039 mov AH,0x10
         AH = 0x10;
         // F000:003B jmp near AX
-        switch ((ushort)(AX)) {
+        switch (AX) {
             case 0x1000:
                 break;
             default:
-                throw FailAsUntested($"Untested near jump target 0x{((ushort)(AX)):X4} at F000:003B");
+                throw FailAsUntested($"Untested near jump target 0x{AX:X4} at F000:003B");
         }
         // F000:1000 mov CX,0
         CX = 0;
         // F000:1003 push CX
         Stack.Push16(CX);
         // F000:1005 jmp near SP
-        switch ((ushort)(SP)) {
+        switch (SP) {
             case 0x0FFE:
                 break;
             default:
-                throw FailAsUntested($"Untested near jump target 0x{((ushort)(SP)):X4} at F000:1005");
+                throw FailAsUntested($"Untested near jump target 0x{SP:X4} at F000:1005");
         }
         // F000:0FFE jmp short 0x1007
         // F000:1007 mov CX,0x110A
@@ -248,19 +248,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:100A push CX
         Stack.Push16(CX);
         // F000:100C jmp near SP
-        switch ((ushort)(SP)) {
+        switch (SP) {
             case 0x0FFC:
                 break;
             default:
-                throw FailAsUntested($"Untested near jump target 0x{((ushort)(SP)):X4} at F000:100C");
+                throw FailAsUntested($"Untested near jump target 0x{SP:X4} at F000:100C");
         }
         // F000:0FFC jmp short 0x100E
         // F000:100E jmp near CX
-        switch ((ushort)(CX)) {
+        switch (CX) {
             case 0x110A:
                 break;
             default:
-                throw FailAsUntested($"Untested near jump target 0x{((ushort)(CX)):X4} at F000:100E");
+                throw FailAsUntested($"Untested near jump target 0x{CX:X4} at F000:100E");
         }
         // F000:110A mov CX,5
         CX = 5;
@@ -278,11 +278,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1116 mov AH,0x20
         AH = 0x20;
         // F000:1118 jmp near AX
-        switch ((ushort)(AX)) {
+        switch (AX) {
             case 0x200A:
                 break;
             default:
-                throw FailAsUntested($"Untested near jump target 0x{((ushort)(AX)):X4} at F000:1118");
+                throw FailAsUntested($"Untested near jump target 0x{AX:X4} at F000:1118");
         }
         // F000:200A push BX
         Stack.Push16(BX);
@@ -327,11 +327,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         return Hlt();
     L_202D:
         // F000:202D jmp near word ptr DS:[0x3004]
-        switch ((ushort)(UInt16[DS, 0x3004])) {
+        switch (UInt16[DS, 0x3004]) {
             case 0x0809:
                 break;
             default:
-                throw FailAsUntested($"Untested near jump target 0x{((ushort)(UInt16[DS, 0x3004])):X4} at F000:202D");
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, 0x3004]:X4} at F000:202D");
         }
         // F000:0809 jmp near 0x300D
         // F000:300D mov AX,0xF000
@@ -373,11 +373,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         return Hlt();
     L_302B:
         // F000:302B jmp near word ptr DS:[0x3008]
-        switch ((ushort)(UInt16[DS, 0x3008])) {
+        switch (UInt16[DS, 0x3008]) {
             case 0x0607:
                 break;
             default:
-                throw FailAsUntested($"Untested near jump target 0x{((ushort)(UInt16[DS, 0x3008])):X4} at F000:302B");
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, 0x3008]:X4} at F000:302B");
         }
         // F000:0607 jmp near 0x302F
         // F000:302F mov AX,0xF000
@@ -393,11 +393,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             CX = (ushort)(CX - 1);
         }
         // F000:3039 jmp near AX
-        switch ((ushort)(AX)) {
+        switch (AX) {
             case 0xF003:
                 break;
             default:
-                throw FailAsUntested($"Untested near jump target 0x{((ushort)(AX)):X4} at F000:3039");
+                throw FailAsUntested($"Untested near jump target 0x{AX:X4} at F000:3039");
         }
         // F000:F003 jmp near 0x303C
         // F000:303C mov BX,0x0040
@@ -420,11 +420,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             CX = (ushort)(CX - 1);
         }
         // F000:304B jmp near AX
-        switch ((ushort)(AX)) {
+        switch (AX) {
             case 0x0102:
                 break;
             default:
-                throw FailAsUntested($"Untested near jump target 0x{((ushort)(AX)):X4} at F000:304B");
+                throw FailAsUntested($"Untested near jump target 0x{AX:X4} at F000:304B");
         }
         // F000:0102 jmp near 0x304D
         // F000:304D mov CX,2
@@ -442,11 +442,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:3058 mov DS,AX
         DS = AX;
         // F000:305A jmp near word ptr DS:[6]
-        switch ((ushort)(UInt16[DS, 6])) {
+        switch (UInt16[DS, 6]) {
             case 0x4000:
                 break;
             default:
-                throw FailAsUntested($"Untested near jump target 0x{((ushort)(UInt16[DS, 6])):X4} at F000:305A");
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, 6]:X4} at F000:305A");
         }
         // F000:4000 mov BX,0
         BX = 0;
@@ -498,11 +498,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             shouldContinue_4020 = ZeroFlag;
         }
         // F000:4022 jmp near CX
-        switch ((ushort)(CX)) {
+        switch (CX) {
             case 0x122F:
                 break;
             default:
-                throw FailAsUntested($"Untested near jump target 0x{((ushort)(CX)):X4} at F000:4022");
+                throw FailAsUntested($"Untested near jump target 0x{CX:X4} at F000:4022");
         }
         // F000:122F jmp near 0x4024
         // F000:4024 mov BX,0x0040
@@ -523,11 +523,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             shouldContinue_402C = ZeroFlag;
         }
         // F000:402E jmp near CX
-        switch ((ushort)(CX)) {
+        switch (CX) {
             case 0x122C:
                 break;
             default:
-                throw FailAsUntested($"Untested near jump target 0x{((ushort)(CX)):X4} at F000:402E");
+                throw FailAsUntested($"Untested near jump target 0x{CX:X4} at F000:402E");
         }
         // F000:122C jmp near 0x4030
         // F000:4030 mov AX,0x0607
@@ -580,11 +580,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             shouldContinue_4047 = !ZeroFlag;
         }
         // F000:4049 jmp near CX
-        switch ((ushort)(CX)) {
+        switch (CX) {
             case 0x5000:
                 break;
             default:
-                throw FailAsUntested($"Untested near jump target 0x{((ushort)(CX)):X4} at F000:4049");
+                throw FailAsUntested($"Untested near jump target 0x{CX:X4} at F000:4049");
         }
         // F000:5000 mov CX,2
         CX = 2;
@@ -679,11 +679,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             shouldContinue_5032 = !ZeroFlag;
         }
         // F000:5034 jmp near CX
-        switch ((ushort)(CX)) {
+        switch (CX) {
             case 0x601B:
                 break;
             default:
-                throw FailAsUntested($"Untested near jump target 0x{((ushort)(CX)):X4} at F000:5034");
+                throw FailAsUntested($"Untested near jump target 0x{CX:X4} at F000:5034");
         }
         // F000:601B mov DX,0
         DX = 0;

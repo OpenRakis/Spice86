@@ -2198,12 +2198,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:13A0 mov BX,0x136F
         BX = 0x136F;
         // F000:13A3 call near BX
-        switch ((ushort)(BX)) {
+        switch (BX) {
             case 0x136F:
                 NearCall(cs1, 0x13A5, unknown_F000_136F_F136F);
                 break;
             default:
-                throw FailAsUntested($"Untested near call target 0x{((ushort)(BX)):X4} at F000:13A3");
+                throw FailAsUntested($"Untested near call target 0x{BX:X4} at F000:13A3");
         }
         // F000:13A5 jae near 0x15C7
         if (!CarryFlag) {
@@ -2214,12 +2214,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:13AA mov EBX,0x0000138D
         EBX = 0x0000138D;
         // F000:13B0 call near EBX
-        switch ((ushort)((ushort)EBX)) {
+        switch ((ushort)EBX) {
             case 0x138D:
                 NearCall32(cs1, 0x13B3, unknown_F000_138D_F138D);
                 break;
             default:
-                throw FailAsUntested($"Untested near call target 0x{((ushort)((ushort)EBX)):X4} at F000:13B0");
+                throw FailAsUntested($"Untested near call target 0x{(ushort)EBX:X4} at F000:13B0");
         }
         // F000:13B3 jae near 0x15C7
         if (!CarryFlag) {
