@@ -11,15 +11,20 @@ using NSubstitute;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
 
 using System.Reflection;
@@ -417,6 +422,16 @@ public sealed class GeneratedCodeMachineTest {
         expected[0x01] = 0x01;
         new GeneratedCodeMachineTestRunner().TestGeneratedCode("stipending", expected,
             new GeneratedCodeRunOptions { MaxCycles = 0xFFFFFFF, EnablePit = true });
+    }
+
+    [Fact]
+    public void InteriorEntryIrqGeneratedOverrideMatchesMachineTestOracle() {
+        GeneratedCodeRunOptions options = new() {
+            MaxCycles = InteriorEntryTestOracle.MaxCycles,
+            EnablePit = true
+        };
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(InteriorEntryTestOracle.BinName, [], options,
+            machine => InteriorEntryTestOracle.AssertCompleted(machine.Memory, machine.CpuState));
     }
 
     [Fact]

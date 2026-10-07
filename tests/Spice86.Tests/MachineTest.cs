@@ -517,6 +517,14 @@ public class MachineTest {
 
     [Theory]
     [MemberData(nameof(JitModes))]
+    public void TestInteriorEntryIrq(JitMode jitMode) {
+        TestOneBin(InteriorEntryTestOracle.BinName, [], jitMode,
+            machine => InteriorEntryTestOracle.AssertCompleted(machine.Memory, machine.CpuState),
+            maxCycles: InteriorEntryTestOracle.MaxCycles, enablePit: true);
+    }
+
+    [Theory]
+    [MemberData(nameof(JitModes))]
     public void TestDivFaultLoop(JitMode jitMode) {
         byte[] expected = new byte[4];
         expected[0x00] = 0x03; // retrycount low

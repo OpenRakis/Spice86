@@ -69,7 +69,12 @@ internal sealed class MethodEmitter(
             List<SwitchCase> cases = [];
             List<StatementItem> defaultBody = [new LineStatement(UntestedMessages.EntryOffset(), Diverges: true)];
             foreach (CfgCodePartitionEntry entry in method.Entries) {
-                cases.Add(new SwitchCase($"0x{context.GetEntryLoadOffset(method.Partition, entry.Node):X4}", [new GotoStatement(entry.Node)]));
+                List<StatementItem> body = [];
+                if (!entry.Node.Equals(entry.Block.Entry)) {
+                    body.Add(new LineStatement($"CheckExternalEvents({context.GetSegmentVariable(entry.Address.Segment)}, 0x{entry.Address.Offset:X4});"));
+                }
+                body.Add(new GotoStatement(entry.Node));
+                cases.Add(new SwitchCase($"0x{context.GetEntryLoadOffset(method.Partition, entry.Node):X4}", body));
             }
             return EmittedCode.Statements(new SwitchStatement("switch (loadOffset)", cases, defaultBody));
         }
