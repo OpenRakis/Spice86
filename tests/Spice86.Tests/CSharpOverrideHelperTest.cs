@@ -1,13 +1,17 @@
 using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Shared.Emulator.Errors;
 
 namespace Spice86.Tests;
+
+using FluentAssertions;
 
 using Microsoft.Extensions.Logging;
 
 using NSubstitute;
 
 using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
 
@@ -87,6 +91,162 @@ public class CSharpOverrideHelperTest {
         Assert.Equal(1, overrides.ThirdFunctionCalled);
         Assert.Equal(1, overrides.FirstInstructionOverridenCalled);
         Assert.Equal(1, overrides.FirstDoOnTopOfInstructionCalled);
+    }
+
+    [Fact]
+    public void DispatchCpuFault_FirstExactMatchEntersBeforeInvocationAndReturnsWithoutExecutingAction() {
+        // Arrange
+        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection res = creator.Create();
+        Machine machine = res.Machine;
+        machine.CpuState.SS = 0x3000;
+        machine.CpuState.SP = 0x0100;
+        machine.CpuState.CS = 0x2000;
+        machine.CpuState.IP = 0x0042;
+        machine.CpuState.InterruptFlag = true;
+        ushort originalFlags = machine.CpuState.Flags.FlagRegister16;
+
+        machine.InterruptVectorTable[0] = new SegmentedAddress(0x3456, 0x0078);
+
+        CSharpOverrideHelper helper = new(
+            new Dictionary<SegmentedAddress, FunctionInformation>(),
+            machine,
+            _loggerServiceMock,
+            new Configuration { HttpApiPort = 0 });
+
+        int invocationCounter = 0;
+        int executionCounter = 0;
+        Action markerAction = () => executionCounter++;
+
+        List<CpuFaultTarget> targets = [
+            new(new SegmentedAddress(0x3457, 0x0068), () => { invocationCounter++; return helper.NearRet(); }), // same physical address, different segmented
+            new(new SegmentedAddress(0x3456, 0x0078), () => { invocationCounter++; return markerAction; }),
+            new(new SegmentedAddress(0x3456, 0x0078), () => { invocationCounter++; return helper.NearRet(); }) // duplicate, should never run
+        ];
+
+        CpuDivisionErrorException exception = new("Division by zero");
+
+        // Act
+        Action returnedAction = helper.DispatchCpuFault(exception, 0x2000, 0x0042, targets);
+
+        // Assert
+        returnedAction.Should().BeSameAs(markerAction);
+        invocationCounter.Should().Be(1, "only the first matching delegate should run");
+        executionCounter.Should().Be(0, "the returned action should not be executed");
+
+        // Verify fault entry was performed
+        helper.CS.Should().Be(0x3456);
+        helper.IP.Should().Be(0x0078);
+        helper.InterruptFlag.Should().BeFalse();
+        helper.SP.Should().Be(0x00FA);
+
+        // Stack frame: [0]=faulting IP, [2]=faulting CS, [4]=original flags
+        helper.Stack.Peek16(0).Should().Be(0x0042);
+        helper.Stack.Peek16(2).Should().Be(0x2000);
+        helper.Stack.Peek16(4).Should().Be(originalFlags);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void DispatchCpuFault_UnmatchedAndEmptyListsLeaveMachineUntouched(bool useNonEmptyList) {
+        // Arrange
+        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection res = creator.Create();
+        Machine machine = res.Machine;
+        machine.CpuState.SS = 0x3000;
+        machine.CpuState.SP = 0x0100;
+        machine.CpuState.CS = 0x2000;
+        machine.CpuState.IP = 0x0042;
+        machine.CpuState.InterruptFlag = true;
+        ushort originalFlags = machine.CpuState.Flags.FlagRegister16;
+        ushort originalCs = machine.CpuState.CS;
+        ushort originalIp = machine.CpuState.IP;
+        ushort originalSp = machine.CpuState.SP;
+
+        machine.InterruptVectorTable[0] = new SegmentedAddress(0x3456, 0x0078);
+
+        CSharpOverrideHelper helper = new(
+            new Dictionary<SegmentedAddress, FunctionInformation>(),
+            machine,
+            _loggerServiceMock,
+            new Configuration { HttpApiPort = 0 });
+
+        List<CpuFaultTarget> targets = useNonEmptyList
+            ? [new(new SegmentedAddress(0x3457, 0x0068), () => helper.NearRet())] // segmented alias, doesn't match
+            : [];
+
+        CpuDivisionErrorException exception = new("Division by zero");
+
+        // Act & Assert
+        Action act = () => helper.DispatchCpuFault(exception, 0x2000, 0x0042, targets);
+        act.Should().Throw<UnrecoverableException>()
+            .WithMessage("*Untested CPU fault target*")
+            .WithMessage("*3456:0078*")
+            .WithMessage("*2000:0042*");
+
+        // Machine state should be unchanged
+        helper.CS.Should().Be(originalCs);
+        helper.IP.Should().Be(originalIp);
+        helper.SP.Should().Be(originalSp);
+        helper.State.Flags.FlagRegister16.Should().Be(originalFlags);
+        helper.InterruptFlag.Should().BeTrue();
+
+        // Stack frame words should be unchanged
+        helper.Stack.Peek16(0).Should().Be(0);
+        helper.Stack.Peek16(2).Should().Be(0);
+        helper.Stack.Peek16(4).Should().Be(0);
+    }
+
+    [Fact]
+    public void DispatchCpuFault_IvtIsReadAgainOnEachCall() {
+        // Arrange
+        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection res = creator.Create();
+        Machine machine = res.Machine;
+        machine.CpuState.SS = 0x3000;
+        machine.CpuState.SP = 0x0100;
+        machine.CpuState.CS = 0x2000;
+        machine.CpuState.IP = 0x0042;
+        machine.CpuState.InterruptFlag = true;
+
+        CSharpOverrideHelper helper = new(
+            new Dictionary<SegmentedAddress, FunctionInformation>(),
+            machine,
+            _loggerServiceMock,
+            new Configuration { HttpApiPort = 0 });
+
+        Action markerAction1 = () => { };
+        Action markerAction2 = () => { };
+        int invocationCounter1 = 0;
+        int invocationCounter2 = 0;
+
+        List<CpuFaultTarget> targets = [
+            new(new SegmentedAddress(0x3456, 0x0078), () => { invocationCounter1++; return markerAction1; }),
+            new(new SegmentedAddress(0x4567, 0x0089), () => { invocationCounter2++; return markerAction2; })
+        ];
+
+        CpuDivisionErrorException exception = new("Division by zero");
+
+        // Act 1 - IVT points to first handler
+        machine.InterruptVectorTable[0] = new SegmentedAddress(0x3456, 0x0078);
+        Action returnedAction1 = helper.DispatchCpuFault(exception, 0x2000, 0x0042, targets);
+
+        // Reset CPU state for second call
+        machine.CpuState.SP = 0x0100;
+        machine.CpuState.CS = 0x2000;
+        machine.CpuState.IP = 0x0042;
+        machine.CpuState.InterruptFlag = true;
+
+        // Act 2 - IVT points to second handler
+        machine.InterruptVectorTable[0] = new SegmentedAddress(0x4567, 0x0089);
+        Action returnedAction2 = helper.DispatchCpuFault(exception, 0x2000, 0x0042, targets);
+
+        // Assert
+        returnedAction1.Should().BeSameAs(markerAction1);
+        returnedAction2.Should().BeSameAs(markerAction2);
+        invocationCounter1.Should().Be(1);
+        invocationCounter2.Should().Be(1);
     }
 }
 

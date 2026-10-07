@@ -4,12 +4,14 @@ using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Indexer;
+using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
@@ -59,6 +61,8 @@ public class CSharpOverrideHelper {
     /// The emulator machine.
     /// </summary>
     public Machine Machine { get; }
+
+    private readonly InterruptVectorTable _interruptVectorTable;
 
     /// <summary>
     /// The memory bus of the IBM PC.
@@ -391,6 +395,7 @@ public class CSharpOverrideHelper {
         Configuration = configuration;
         FunctionInformations = functionInformations;
         Machine = machine;
+        _interruptVectorTable = machine.InterruptVectorTable;
         JumpDispatcher = new();
         Alu8 = new(machine.CpuState);
         Alu16 = new(machine.CpuState);
@@ -656,6 +661,26 @@ public class CSharpOverrideHelper {
         InterruptFlag = false;
         CS = target.Segment;
         IP = target.Offset;
+    }
+
+    /// <summary>
+    /// Dispatches a CPU fault to the matching generated handler partition.
+    /// </summary>
+    /// <param name="exception">The CPU exception that triggered the fault.</param>
+    /// <param name="faultCs">The CS of the faulting instruction.</param>
+    /// <param name="faultIp">The IP of the faulting instruction.</param>
+    /// <param name="targets">The list of fault handler targets to match against the live IVT.</param>
+    /// <returns>The return action from the matching handler partition.</returns>
+    /// <exception cref="UnrecoverableException">Thrown when no target matches the live IVT handler.</exception>
+    public Action DispatchCpuFault(CpuException exception, ushort faultCs, ushort faultIp, IReadOnlyList<CpuFaultTarget> targets) {
+        SegmentedAddress handler = _interruptVectorTable[exception.InterruptVector];
+        foreach (CpuFaultTarget target in targets) {
+            if (target.Handler == handler) {
+                EnterCpuFaultHandler(faultCs, faultIp, handler);
+                return target.Invoke();
+            }
+        }
+        throw FailAsUntested($"Untested CPU fault target {handler} at {faultCs:X4}:{faultIp:X4}");
     }
 
     /// <summary>

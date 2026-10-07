@@ -175,12 +175,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             throw FailAsUntested("Untested fallthrough after F000:005F");
         }
         catch (CpuException cpuException) {
-            SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
-            if (cpuFaultTarget == new SegmentedAddress(cs1, 0x1100)) {
-                EnterCpuFaultHandler(cs1, 0x005F, cpuFaultTarget);
-                return unknown_F000_1100_F1100(0x0000);
-            }
-            throw FailAsUntested($"Untested CPU fault target {cpuFaultTarget} at F000:005F");
+            return DispatchCpuFault(cpuException, cs1, 0x005F, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x1100), () => unknown_F000_1100_F1100(0x0000))]);
         }
     }
 

@@ -106,12 +106,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             throw new Spice86.Core.Emulator.CPU.Exceptions.CpuInvalidOpcodeException("Attempted to write to CS register with MOV instruction");
         }
         catch (CpuException cpuException) {
-            SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
-            if (cpuFaultTarget == new SegmentedAddress(cs1, 0x06A8)) {
-                EnterCpuFaultHandler(cs1, 0x06A1, cpuFaultTarget);
-                return unknown_F000_06A8_F06A8(0x0000);
-            }
-            throw FailAsUntested($"Untested CPU fault target {cpuFaultTarget} at F000:06A1");
+            return DispatchCpuFault(cpuException, cs1, 0x06A1, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x06A8), () => unknown_F000_06A8_F06A8(0x0000))]);
         }
     }
 
@@ -3842,12 +3837,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             throw new Spice86.Core.Emulator.CPU.Exceptions.CpuInvalidOpcodeException("Attempted to write to CS register with MOV instruction");
         }
         catch (CpuException cpuException) {
-            SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
-            if (cpuFaultTarget == new SegmentedAddress(cs1, 0x0633)) {
-                EnterCpuFaultHandler(cs1, 0x062E, cpuFaultTarget);
-                return unknown_F000_0633_F0633(0x0000);
-            }
-            throw FailAsUntested($"Untested CPU fault target {cpuFaultTarget} at F000:062E");
+            return DispatchCpuFault(cpuException, cs1, 0x062E, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x0633), () => unknown_F000_0633_F0633(0x0000))]);
         }
     L_037A:
         VerifySpeculativeEntryOrFail(cs1, 0x037A, [(byte)0xF4]);
