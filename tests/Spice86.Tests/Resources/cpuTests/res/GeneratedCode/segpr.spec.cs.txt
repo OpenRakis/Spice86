@@ -22,10 +22,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
         cs1 = 0xF000;
 
-        DefineFunction(cs1, 0x0065, unknown_F000_0065_F0065);
-        DefineFunction(cs1, 0x1100, unknown_F000_1100_F1100);
-        DefineFunction(cs1, 0x1200, unknown_F000_1200_F1200);
-        DefineFunction(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0);
+        DefineFunction(cs1, 0x0065, unknown_F000_0065_F0065, name: "unknown");
+        DefineFunction(cs1, 0x1100, unknown_F000_1100_F1100, name: "unknown");
+        DefineFunction(cs1, 0x1200, unknown_F000_1200_F1200, name: "unknown");
+        DefineFunction(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, name: "unknown");
     }
 
     public virtual Action unknown_F000_0065_F0065(int loadOffset) {

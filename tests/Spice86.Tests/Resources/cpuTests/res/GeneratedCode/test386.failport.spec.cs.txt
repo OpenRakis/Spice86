@@ -22,14 +22,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
         cs1 = 0xF000;
 
-        DefineFunction(cs1, 0x0633, unknown_F000_0633_F0633);
-        DefineFunction(cs1, 0x06A8, unknown_F000_06A8_F06A8);
-        DefineFunction(cs1, 0x136F, unknown_F000_136F_F136F);
-        DefineFunction(cs1, 0x138D, unknown_F000_138D_F138D);
-        DefineFunction(cs1, 0x13C5, unknown_F000_13C5_F13C5);
-        DefineFunction(cs1, 0x13E5, unknown_F000_13E5_F13E5);
-        DefineFunction(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0);
-        DefineFunction(cs1, 0x15C7, unknown_F000_15C7_F15C7);
+        DefineFunction(cs1, 0x0633, unknown_F000_0633_F0633, name: "unknown");
+        DefineFunction(cs1, 0x06A8, unknown_F000_06A8_F06A8, name: "unknown");
+        DefineFunction(cs1, 0x136F, unknown_F000_136F_F136F, name: "unknown");
+        DefineFunction(cs1, 0x138D, unknown_F000_138D_F138D, name: "unknown");
+        DefineFunction(cs1, 0x13C5, unknown_F000_13C5_F13C5, name: "unknown");
+        DefineFunction(cs1, 0x13E5, unknown_F000_13E5_F13E5, name: "unknown");
+        DefineFunction(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, name: "unknown");
+        DefineFunction(cs1, 0x15C7, unknown_F000_15C7_F15C7, name: "unknown");
     }
 
     public virtual Action unknown_F000_0633_F0633(int loadOffset) {

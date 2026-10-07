@@ -83,7 +83,7 @@ internal sealed class CfgCSharpGenerator {
         writer.Line();
         foreach (OverrideRegistration registration in plan.OverrideRegistrations) {
             if (registration.LoadOffset == 0) {
-                writer.Line($"DefineFunction({registration.SegmentVariable}, 0x{registration.Offset:X4}, {registration.MethodName});");
+                writer.Line($"DefineFunction({registration.SegmentVariable}, 0x{registration.Offset:X4}, {registration.MethodName}, name: \"{registration.BaseName}\");");
             } else {
                 string entryName = BuildSecondaryEntryName(registration.BaseName);
                 writer.Line($"DefineFunction({registration.SegmentVariable}, 0x{registration.Offset:X4}, _ => {registration.MethodName}(0x{registration.LoadOffset:X4}), name: \"{entryName}\");");
