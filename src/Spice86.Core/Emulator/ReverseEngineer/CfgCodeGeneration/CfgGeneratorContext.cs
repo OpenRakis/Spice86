@@ -9,15 +9,14 @@ using Spice86.Shared.Emulator.Memory;
 using System.Linq;
 
 /// <summary>
-/// The shared lookup table all emitters read from: "which partition owns this node?", "what label does it
-/// have?", "what segment variable name?", "where does this edge go?". Built once during analysis, then
-/// treated as a frozen dictionary for the rest of the pipeline.
+/// The shared lookup table all emitters read from: "which partition owns this node?", "what segment variable
+/// name?", "where does this edge go?". Built once during analysis, then treated as a frozen dictionary for the
+/// rest of the pipeline.
 /// </summary>
 internal sealed class CfgGeneratorContext {
     private readonly Dictionary<ICfgNode, CfgCodePartition> _partitionByNode;
     private readonly Dictionary<CfgCodePartition, string> _methodNames;
     private readonly Dictionary<CfgCodePartition, string> _partitionBaseNames;
-    private readonly Dictionary<ICfgNode, string> _labels;
     private readonly Dictionary<ResolvedCfgEdge, CfgCodePartitionTransfer> _transfersByEdge;
     private readonly Dictionary<CfgCodePartition, IReadOnlyList<CfgCodePartitionEntry>> _entriesByPartition;
     private readonly Dictionary<SegmentedAddress, ICfgNode> _blockEntryByAddress;
@@ -27,7 +26,6 @@ internal sealed class CfgGeneratorContext {
         Dictionary<ICfgNode, CfgCodePartition> partitionByNode,
         Dictionary<CfgCodePartition, string> methodNames,
         Dictionary<CfgCodePartition, string> partitionBaseNames,
-        Dictionary<ICfgNode, string> labels,
         Dictionary<ushort, string> segmentVariables,
         Dictionary<ResolvedCfgEdge, CfgCodePartitionTransfer> transfersByEdge,
         Dictionary<CfgCodePartition, IReadOnlyList<CfgCodePartitionEntry>> entriesByPartition,
@@ -36,7 +34,6 @@ internal sealed class CfgGeneratorContext {
         _partitionByNode = partitionByNode;
         _methodNames = methodNames;
         _partitionBaseNames = partitionBaseNames;
-        _labels = labels;
         SegmentVariables = segmentVariables;
         _transfersByEdge = transfersByEdge;
         _entriesByPartition = entriesByPartition;
@@ -55,7 +52,6 @@ internal sealed class CfgGeneratorContext {
     /// address triplet and round-trips through the Ghidra symbol file without accumulating duplicates.
     /// </summary>
     public string GetPartitionBaseName(CfgCodePartition partition) => _partitionBaseNames[partition];
-    public string GetLabel(ICfgNode node) => _labels[node];
     public string GetSegmentVariable(ushort segment) => SegmentVariables[segment];
     public IReadOnlyDictionary<ushort, string> SegmentVariables { get; }
     public IReadOnlyList<CfgCodePartitionEntry> GetEntries(CfgCodePartition partition) => _entriesByPartition[partition];

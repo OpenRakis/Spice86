@@ -83,12 +83,13 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
     public void SetCurrentMethod(MethodPlan method) => _currentMethod = method;
 
     /// <summary>
-    /// Sets the address suffix appended to local variable declarations/references emitted for the current
+    /// Sets the per-method suffix appended to local variable declarations/references emitted for the current
     /// instruction, so temps of the same name declared by different instructions in one method body do not
-    /// collide.
+    /// collide. The suffix is the instruction's offset, plus the instruction id when several instructions of the
+    /// method share that offset.
     /// </summary>
-    public void SetCurrentInstructionAddress(SegmentedAddress address) {
-        _localVariableSuffix = $"{address.Segment:X4}_{address.Offset:X4}_{address.Linear:X5}";
+    public void SetCurrentInstruction(CfgInstruction instruction) {
+        _localVariableSuffix = CurrentMethod.GetLocalSuffix(instruction);
     }
 
     // ----------------------------------------------------------------------------------------------------
@@ -220,7 +221,7 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
                 Context.FindTransfer(selectorNode, target, InstructionSuccessorType.Normal)?.Kind);
             items.Add(new BlockStatement($"if ({condition})", Transfer.Emit(edge, CurrentMethod, forceSameMethodGoto: true).AsStatements()));
         }
-        items.Add(new LineStatement($"throw FailAsUntested(\"No selector signature matched at {selectorNode.Address}\");", Diverges: true));
+        items.Add(new LineStatement(UntestedMessages.CodeVariant(selectorNode.Address), Diverges: true));
         return EmittedCode.Statements(items);
     }
 
@@ -304,7 +305,7 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
             if (Context.TryResolveSamePartitionBlockEntry(node.Instruction, targetAddress) is ResolvedCfgEdge blockEntryEdge) {
                 return Transfer.Emit(blockEntryEdge, CurrentMethod);
             }
-            return EmittedCode.Diverging($"throw FailAsUntested(\"Unobserved conditional jump target at {node.Instruction.Address}\");");
+            return EmittedCode.Diverging(UntestedMessages.Jump(node.Instruction.Address));
         }
         return BuildNearRuntimeDispatch(node.Instruction, Expr(node.Ip), "jump",
             edge => Transfer.Emit(edge, CurrentMethod).AsStatements());
@@ -325,7 +326,7 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
         if (Context.TryResolveSamePartitionBlockEntry(instruction, fallthroughAddress) is ResolvedCfgEdge blockEntryEdge) {
             return Transfer.Emit(blockEntryEdge, CurrentMethod);
         }
-        return EmittedCode.Diverging($"throw FailAsUntested(\"Unobserved conditional fallthrough at {instruction.Address}\");");
+        return EmittedCode.Diverging(UntestedMessages.ConditionalFallthrough(instruction.Address));
     }
 
     private ResolvedCfgEdge? TryResolveNearJump(JumpNearNode node) {
@@ -358,7 +359,7 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
             .OrderBy(edge => edge.Target.Address.Offset)
             .Select(edge => new SwitchCase($"0x{edge.Target.Address.Offset:X4}", bodyForEdge(edge)))
             .ToList();
-        List<StatementItem> defaultBody = [new LineStatement($"throw FailAsUntested($\"Unknown near {targetKind} target 0x{{((ushort)({targetExpression})):X4}} at {instruction.Address}\");", Diverges: true)];
+        List<StatementItem> defaultBody = [new LineStatement(UntestedMessages.NearTarget(targetKind, targetExpression, instruction.Address), Diverges: true)];
         return EmittedCode.Statements(new SwitchStatement($"switch ((ushort)({targetExpression}))", cases, defaultBody));
     }
 
@@ -367,8 +368,8 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
         if (!TryGetObservedDispatchEdges(instruction, $"far {targetKind}", out IReadOnlyList<ResolvedCfgEdge> edges, out EmittedCode failure)) {
             return failure;
         }
-        string segmentVariable = $"targetSegment_{instruction.Id}";
-        string offsetVariable = $"targetOffset_{instruction.Id}";
+        string segmentVariable = LocalVariableName("targetSegment");
+        string offsetVariable = LocalVariableName("targetOffset");
         List<StatementItem> items = [
             new LineStatement($"ushort {segmentVariable} = {Cast(DataType.UINT16, segmentExpression)};"),
             new LineStatement($"ushort {offsetVariable} = {Cast(DataType.UINT16, offsetExpression)};")
@@ -380,7 +381,7 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
                 $"if ({segmentVariable} == {Context.GetSegmentVariable(edge.Target.Address.Segment)} && {offsetVariable} == 0x{edge.Target.Address.Offset:X4})",
                 bodyForEdge(edge)));
         }
-        items.Add(new LineStatement($"throw FailAsUntested($\"Unknown far {targetKind} target {{{segmentVariable}:X4}}:{{{offsetVariable}:X4}} at {instruction.Address}\");", Diverges: true));
+        items.Add(new LineStatement(UntestedMessages.FarTarget(targetKind, segmentVariable, offsetVariable, instruction.Address), Diverges: true));
         return EmittedCode.Statements(items);
     }
 
@@ -395,7 +396,7 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
         out IReadOnlyList<ResolvedCfgEdge> edges, out EmittedCode failure) {
         edges = Context.GetSuccessorEdges(instruction, InstructionSuccessorType.Normal);
         if (edges.Count == 0) {
-            failure = EmittedCode.Diverging($"throw FailAsUntested(\"Indirect {targetKind} at {instruction.Address} has no observed targets.\");");
+            failure = EmittedCode.Diverging(UntestedMessages.IndirectWithoutTargets(targetKind, instruction.Address));
             return false;
         }
         failure = EmittedCode.None;

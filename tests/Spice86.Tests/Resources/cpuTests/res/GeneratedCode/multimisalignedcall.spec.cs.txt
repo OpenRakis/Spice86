@@ -77,13 +77,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Alu16.Sub(BX, 0);
         // F000:0036 je short 0x0042
         if (ZeroFlag) {
-            goto label_F000_0042_F0042_15;
+            goto L_0042;
         }
         // F000:0038 cmp BX,1
         Alu16.Sub(BX, 1);
         // F000:003B je short 0x0047
         if (ZeroFlag) {
-            goto label_F000_0047_F0047_22;
+            goto L_0047;
         }
         // F000:003D mov AX,0x0022
         AX = 0x0022;
@@ -91,14 +91,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Stack.Push16(AX);
         // F000:0041 ret near
         return NearRet();
-    label_F000_0047_F0047_22:
+    L_0047:
         // F000:0047 mov AX,0x001B
         AX = 0x001B;
         // F000:004A push AX
         Stack.Push16(AX);
         // F000:004B ret near
         return NearRet();
-    label_F000_0042_F0042_15:
+    L_0042:
         // F000:0042 mov AX,0x0014
         AX = 0x0014;
         // F000:0045 push AX
@@ -128,7 +128,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0x0010);
         // F000:0010 call near 0x002A
         NearCall(cs1, 0x0013, unknown_F000_002A_F002A);
-        throw FailAsUntested("Call at F000:0010 returned to F000:0013, but no continuation was observed during discovery.");
+        throw FailAsUntested("Untested return from call at F000:0010");
     }
 
 }

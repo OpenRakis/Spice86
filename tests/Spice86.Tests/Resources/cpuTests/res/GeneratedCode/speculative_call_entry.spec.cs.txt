@@ -47,7 +47,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Alu8.And(AL, AL);
         // F000:000A jne short 0x0013
         if (!ZeroFlag) {
-            goto label_F000_0013_F0013_7;
+            goto L_0013;
         }
         // F000:000C mov byte ptr DS:[0x0401],0xDD
         UInt8[DS, 0x0401] = 0xDD;
@@ -56,11 +56,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt8[DS, 0x0402] = 0xAA;
         // F000:0023 hlt
         return Hlt();
-    label_F000_0013_F0013_7:
+    L_0013:
         VerifySpeculativeEntryOrFail(cs1, 0x0013, [(byte)0xE8, (byte)0x05, (byte)0x00]);
         // F000:0013 call near 0x001B
         NearCall(cs1, 0x0016, unknown_F000_001B_F001B);
-        throw FailAsUntested("Call at F000:0013 returned to F000:0016, but no continuation was observed during discovery.");
+        throw FailAsUntested("Untested return from call at F000:0013");
     }
 
 }

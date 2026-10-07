@@ -51,7 +51,7 @@ public sealed class SpeculativeCfgTest {
         // for the unobserved conditional jump target (F000:000A -> F000:0013).
         source.Should().Contain("VerifySpeculativeEntryOrFail",
             "the emitter must produce a speculative guard for the unobserved JNZ arm, not FailAsUntested");
-        source.Should().NotContain("Unobserved conditional jump target at F000:000A",
+        source.Should().NotContain("Untested jump at F000:000A",
             "the speculative block at F000:0013 is reachable from the observed conditional and must not be treated as untested");
 
         // Compile the override generated from selector=0 discovery
@@ -157,11 +157,11 @@ public sealed class SpeculativeCfgTest {
         string source = generatedProgram.SourceText;
 
         // jump1's always-taken conditional jumps leave their fallthrough edge unobserved. With
-        // speculation off those edges lower to FailAsUntested guarded by an "Unobserved conditional
-        // fallthrough" comment. With speculation on, every such fallthrough target is a block entry
+        // speculation off those edges lower to FailAsUntested guarded by an "Untested fallthrough at"
+        // message. With speculation on, every such fallthrough target is a block entry
         // reachable from an observed terminator in the same partition, so it must be resolved rather
         // than left untested.
-        source.Should().NotContain("Unobserved conditional fallthrough",
+        source.Should().NotContain("Untested fallthrough at",
             "speculation must resolve jump1's unobserved fallthrough edges to their same-partition block entries");
         source.Should().NotContain("FailAsUntested",
             "no jump1 arm should remain untested once speculation resolves the fallthrough edges");
@@ -192,7 +192,7 @@ public sealed class SpeculativeCfgTest {
         // Assert speculative guard is emitted for the closure entry
         source.Should().Contain("VerifySpeculativeEntryOrFail",
             "the emitter must produce a speculative guard for the unobserved JNZ arm leading to the loop closure");
-        source.Should().NotContain("Unobserved conditional jump target",
+        source.Should().NotContain("Untested jump at",
             "the speculative closure must be resolved, not treated as untested");
 
         // Compile the override generated from selector=0 discovery
@@ -233,7 +233,7 @@ public sealed class SpeculativeCfgTest {
     /// Hard-stop on indirect transfer. The 'segpr' fixture has a direct call whose callee never
     /// returns (no observed continuation). With speculation on, the call continuation is still NOT
     /// speculated (it's out of scope by design). The generated source must still contain
-    /// "no continuation was observed during discovery" for that call.
+    /// "Untested return from call at" for that call.
     /// </summary>
     [Fact]
     public void CallContinuationStaysOutOfScope() {
@@ -241,7 +241,7 @@ public sealed class SpeculativeCfgTest {
         (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("segpr", maxCycles: 10000);
         string source = generatedProgram.SourceText;
 
-        source.Should().Contain("but no continuation was observed during discovery.");
+        source.Should().Contain("Untested return from call at");
     }
 
     /// <summary>
@@ -366,7 +366,7 @@ public sealed class SpeculativeCfgTest {
     /// Direct call entry on speculative path. Discovery run (selector=0) never calls the
     /// subroutine. The speculative path explores into the callee but does NOT speculate the
     /// call continuation. When run with selector=1, the generated code enters the callee via
-    /// the speculative guard but after ret hits "no continuation was observed" (expected).
+    /// the speculative guard but after ret hits "Untested return from call at" (expected).
     /// This validates that call entry IS explored but call continuation is NOT.
     /// </summary>
     [Fact]
@@ -384,7 +384,7 @@ public sealed class SpeculativeCfgTest {
             "the speculative call path must be guarded");
 
         // Call continuation is NOT speculated - it should produce FailAsUntested
-        source.Should().Contain("but no continuation was observed during discovery",
+        source.Should().Contain("Untested return from call at",
             "call continuations are not speculated per design - they stay as untested");
     }
 

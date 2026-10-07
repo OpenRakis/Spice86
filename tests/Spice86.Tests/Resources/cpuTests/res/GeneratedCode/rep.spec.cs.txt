@@ -55,55 +55,55 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             CX = (ushort)(CX - 1);
         }
         // F000:0006 repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
-        bool shouldContinue_F000_0006_F0006 = true;
-        while (CX != 0 && shouldContinue_F000_0006_F0006) {
+        bool shouldContinue_0006 = true;
+        while (CX != 0 && shouldContinue_0006) {
             Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
             SI = (ushort)(SI + (ushort)State.Direction8);
             DI = (ushort)(DI + (ushort)State.Direction8);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_0006_F0006 = ZeroFlag;
+            shouldContinue_0006 = ZeroFlag;
         }
         // F000:0008 repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
-        bool shouldContinue_F000_0008_F0008 = true;
-        while (CX != 0 && shouldContinue_F000_0008_F0008) {
+        bool shouldContinue_0008 = true;
+        while (CX != 0 && shouldContinue_0008) {
             Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
             SI = (ushort)(SI + (ushort)State.Direction8);
             DI = (ushort)(DI + (ushort)State.Direction8);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_0008_F0008 = ZeroFlag;
+            shouldContinue_0008 = ZeroFlag;
         }
         // F000:000A repne cmps byte ptr DS:[SI],byte ptr ES:[DI]
-        bool shouldContinue_F000_000A_F000A = true;
-        while (CX != 0 && shouldContinue_F000_000A_F000A) {
+        bool shouldContinue_000A = true;
+        while (CX != 0 && shouldContinue_000A) {
             Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
             SI = (ushort)(SI + (ushort)State.Direction8);
             DI = (ushort)(DI + (ushort)State.Direction8);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_000A_F000A = !ZeroFlag;
+            shouldContinue_000A = !ZeroFlag;
         }
         // F000:000C repe scas AL,byte ptr ES:[DI]
-        bool shouldContinue_F000_000C_F000C = true;
-        while (CX != 0 && shouldContinue_F000_000C_F000C) {
+        bool shouldContinue_000C = true;
+        while (CX != 0 && shouldContinue_000C) {
             Alu8.Sub(AL, UInt8[ES, DI]);
             DI = (ushort)(DI + (ushort)State.Direction8);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_000C_F000C = ZeroFlag;
+            shouldContinue_000C = ZeroFlag;
         }
         // F000:000E repe scas AL,byte ptr ES:[DI]
-        bool shouldContinue_F000_000E_F000E = true;
-        while (CX != 0 && shouldContinue_F000_000E_F000E) {
+        bool shouldContinue_000E = true;
+        while (CX != 0 && shouldContinue_000E) {
             Alu8.Sub(AL, UInt8[ES, DI]);
             DI = (ushort)(DI + (ushort)State.Direction8);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_000E_F000E = ZeroFlag;
+            shouldContinue_000E = ZeroFlag;
         }
         // F000:0010 repne scas AL,byte ptr ES:[DI]
-        bool shouldContinue_F000_0010_F0010 = true;
-        while (CX != 0 && shouldContinue_F000_0010_F0010) {
+        bool shouldContinue_0010 = true;
+        while (CX != 0 && shouldContinue_0010) {
             Alu8.Sub(AL, UInt8[ES, DI]);
             DI = (ushort)(DI + (ushort)State.Direction8);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_0010_F0010 = !ZeroFlag;
+            shouldContinue_0010 = !ZeroFlag;
         }
         // F000:0012 rep lods AL,byte ptr DS:[SI]
         while (CX != 0) {
@@ -163,38 +163,38 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             CX = (ushort)(CX - 1);
         }
         // F000:0027 repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
-        bool shouldContinue_F000_0027_F0027 = true;
-        while (CX != 0 && shouldContinue_F000_0027_F0027) {
+        bool shouldContinue_0027 = true;
+        while (CX != 0 && shouldContinue_0027) {
             Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
             SI = (ushort)(SI + (ushort)State.Direction8);
             DI = (ushort)(DI + (ushort)State.Direction8);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_0027_F0027 = ZeroFlag;
+            shouldContinue_0027 = ZeroFlag;
         }
         // F000:0029 repne cmps byte ptr DS:[SI],byte ptr ES:[DI]
-        bool shouldContinue_F000_0029_F0029 = true;
-        while (CX != 0 && shouldContinue_F000_0029_F0029) {
+        bool shouldContinue_0029 = true;
+        while (CX != 0 && shouldContinue_0029) {
             Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
             SI = (ushort)(SI + (ushort)State.Direction8);
             DI = (ushort)(DI + (ushort)State.Direction8);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_0029_F0029 = !ZeroFlag;
+            shouldContinue_0029 = !ZeroFlag;
         }
         // F000:002B repe scas AL,byte ptr ES:[DI]
-        bool shouldContinue_F000_002B_F002B = true;
-        while (CX != 0 && shouldContinue_F000_002B_F002B) {
+        bool shouldContinue_002B = true;
+        while (CX != 0 && shouldContinue_002B) {
             Alu8.Sub(AL, UInt8[ES, DI]);
             DI = (ushort)(DI + (ushort)State.Direction8);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_002B_F002B = ZeroFlag;
+            shouldContinue_002B = ZeroFlag;
         }
         // F000:002D repne scas AL,byte ptr ES:[DI]
-        bool shouldContinue_F000_002D_F002D = true;
-        while (CX != 0 && shouldContinue_F000_002D_F002D) {
+        bool shouldContinue_002D = true;
+        while (CX != 0 && shouldContinue_002D) {
             Alu8.Sub(AL, UInt8[ES, DI]);
             DI = (ushort)(DI + (ushort)State.Direction8);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_002D_F002D = !ZeroFlag;
+            shouldContinue_002D = !ZeroFlag;
         }
         // F000:002F rep lods AL,byte ptr DS:[SI]
         while (CX != 0) {
@@ -229,7 +229,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             case 0x1000:
                 break;
             default:
-                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(AX)):X4} at F000:003B");
+                throw FailAsUntested($"Untested near jump target 0x{((ushort)(AX)):X4} at F000:003B");
         }
         // F000:1000 mov CX,0
         CX = 0;
@@ -240,7 +240,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             case 0x0FFE:
                 break;
             default:
-                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(SP)):X4} at F000:1005");
+                throw FailAsUntested($"Untested near jump target 0x{((ushort)(SP)):X4} at F000:1005");
         }
         // F000:0FFE jmp short 0x1007
         // F000:1007 mov CX,0x110A
@@ -252,7 +252,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             case 0x0FFC:
                 break;
             default:
-                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(SP)):X4} at F000:100C");
+                throw FailAsUntested($"Untested near jump target 0x{((ushort)(SP)):X4} at F000:100C");
         }
         // F000:0FFC jmp short 0x100E
         // F000:100E jmp near CX
@@ -260,7 +260,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             case 0x110A:
                 break;
             default:
-                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(CX)):X4} at F000:100E");
+                throw FailAsUntested($"Untested near jump target 0x{((ushort)(CX)):X4} at F000:100E");
         }
         // F000:110A mov CX,5
         CX = 5;
@@ -282,7 +282,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             case 0x200A:
                 break;
             default:
-                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(AX)):X4} at F000:1118");
+                throw FailAsUntested($"Untested near jump target 0x{((ushort)(AX)):X4} at F000:1118");
         }
         // F000:200A push BX
         Stack.Push16(BX);
@@ -320,18 +320,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt16[SS, (ushort)(BP + SI)] = AX;
         // F000:202A jcxz short 0x202D
         if (CX == 0) {
-            goto label_F000_202D_F202D_126;
+            goto L_202D;
         }
         VerifySpeculativeEntryOrFail(cs1, 0x202C, [(byte)0xF4]);
         // F000:202C hlt
         return Hlt();
-    label_F000_202D_F202D_126:
+    L_202D:
         // F000:202D jmp near word ptr DS:[0x3004]
         switch ((ushort)(UInt16[DS, 0x3004])) {
             case 0x0809:
                 break;
             default:
-                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(UInt16[DS, 0x3004])):X4} at F000:202D");
+                throw FailAsUntested($"Untested near jump target 0x{((ushort)(UInt16[DS, 0x3004])):X4} at F000:202D");
         }
         // F000:0809 jmp near 0x300D
         // F000:300D mov AX,0xF000
@@ -366,18 +366,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt16[SS, (ushort)(BP + SI)] = AX;
         // F000:3028 jcxz short 0x302B
         if (CX == 0) {
-            goto label_F000_302B_F302B_167;
+            goto L_302B;
         }
         VerifySpeculativeEntryOrFail(cs1, 0x302A, [(byte)0xF4]);
         // F000:302A hlt
         return Hlt();
-    label_F000_302B_F302B_167:
+    L_302B:
         // F000:302B jmp near word ptr DS:[0x3008]
         switch ((ushort)(UInt16[DS, 0x3008])) {
             case 0x0607:
                 break;
             default:
-                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(UInt16[DS, 0x3008])):X4} at F000:302B");
+                throw FailAsUntested($"Untested near jump target 0x{((ushort)(UInt16[DS, 0x3008])):X4} at F000:302B");
         }
         // F000:0607 jmp near 0x302F
         // F000:302F mov AX,0xF000
@@ -397,7 +397,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             case 0xF003:
                 break;
             default:
-                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(AX)):X4} at F000:3039");
+                throw FailAsUntested($"Untested near jump target 0x{((ushort)(AX)):X4} at F000:3039");
         }
         // F000:F003 jmp near 0x303C
         // F000:303C mov BX,0x0040
@@ -424,7 +424,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             case 0x0102:
                 break;
             default:
-                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(AX)):X4} at F000:304B");
+                throw FailAsUntested($"Untested near jump target 0x{((ushort)(AX)):X4} at F000:304B");
         }
         // F000:0102 jmp near 0x304D
         // F000:304D mov CX,2
@@ -446,7 +446,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             case 0x4000:
                 break;
             default:
-                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(UInt16[DS, 6])):X4} at F000:305A");
+                throw FailAsUntested($"Untested near jump target 0x{((ushort)(UInt16[DS, 6])):X4} at F000:305A");
         }
         // F000:4000 mov BX,0
         BX = 0;
@@ -465,12 +465,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         // F000:400A jcxz short 0x400D
         if (CX == 0) {
-            goto label_F000_400D_F400D_237;
+            goto L_400D;
         }
         VerifySpeculativeEntryOrFail(cs1, 0x400C, [(byte)0xF4]);
         // F000:400C hlt
         return Hlt();
-    label_F000_400D_F400D_237:
+    L_400D:
         // F000:400D mov BX,0x0040
         BX = 0x0040;
         // F000:4010 push BX
@@ -489,20 +489,20 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:401E mov DS,AX
         DS = AX;
         // F000:4020 repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
-        bool shouldContinue_F000_4020_F4020 = true;
-        while (CX != 0 && shouldContinue_F000_4020_F4020) {
+        bool shouldContinue_4020 = true;
+        while (CX != 0 && shouldContinue_4020) {
             Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
             SI = (ushort)(SI + (ushort)State.Direction8);
             DI = (ushort)(DI + (ushort)State.Direction8);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_4020_F4020 = ZeroFlag;
+            shouldContinue_4020 = ZeroFlag;
         }
         // F000:4022 jmp near CX
         switch ((ushort)(CX)) {
             case 0x122F:
                 break;
             default:
-                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(CX)):X4} at F000:4022");
+                throw FailAsUntested($"Untested near jump target 0x{((ushort)(CX)):X4} at F000:4022");
         }
         // F000:122F jmp near 0x4024
         // F000:4024 mov BX,0x0040
@@ -515,19 +515,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:4029 mov AX,0x0040
         AX = 0x0040;
         // F000:402C repe scas AX,word ptr ES:[DI]
-        bool shouldContinue_F000_402C_F402C = true;
-        while (CX != 0 && shouldContinue_F000_402C_F402C) {
+        bool shouldContinue_402C = true;
+        while (CX != 0 && shouldContinue_402C) {
             Alu16.Sub(AX, UInt16[ES, DI]);
             DI = (ushort)(DI + (ushort)State.Direction16);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_402C_F402C = ZeroFlag;
+            shouldContinue_402C = ZeroFlag;
         }
         // F000:402E jmp near CX
         switch ((ushort)(CX)) {
             case 0x122C:
                 break;
             default:
-                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(CX)):X4} at F000:402E");
+                throw FailAsUntested($"Untested near jump target 0x{((ushort)(CX)):X4} at F000:402E");
         }
         // F000:122C jmp near 0x4030
         // F000:4030 mov AX,0x0607
@@ -535,21 +535,21 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:4033 mov CX,0x5004
         CX = 0x5004;
         // F000:4036 repe cmps word ptr DS:[SI],word ptr ES:[DI]
-        bool shouldContinue_F000_4036_F4036 = true;
-        while (CX != 0 && shouldContinue_F000_4036_F4036) {
+        bool shouldContinue_4036 = true;
+        while (CX != 0 && shouldContinue_4036) {
             Alu16.Sub(UInt16[DS, SI], UInt16[ES, DI]);
             SI = (ushort)(SI + (ushort)State.Direction16);
             DI = (ushort)(DI + (ushort)State.Direction16);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_4036_F4036 = ZeroFlag;
+            shouldContinue_4036 = ZeroFlag;
         }
         // F000:4038 repe scas AX,word ptr ES:[DI]
-        bool shouldContinue_F000_4038_F4038 = true;
-        while (CX != 0 && shouldContinue_F000_4038_F4038) {
+        bool shouldContinue_4038 = true;
+        while (CX != 0 && shouldContinue_4038) {
             Alu16.Sub(AX, UInt16[ES, DI]);
             DI = (ushort)(DI + (ushort)State.Direction16);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_4038_F4038 = ZeroFlag;
+            shouldContinue_4038 = ZeroFlag;
         }
         // F000:403A mov BX,0x0040
         BX = 0x0040;
@@ -563,28 +563,28 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:4042 mov DI,0
         DI = 0;
         // F000:4045 repne cmps word ptr DS:[SI],word ptr ES:[DI]
-        bool shouldContinue_F000_4045_F4045 = true;
-        while (CX != 0 && shouldContinue_F000_4045_F4045) {
+        bool shouldContinue_4045 = true;
+        while (CX != 0 && shouldContinue_4045) {
             Alu16.Sub(UInt16[DS, SI], UInt16[ES, DI]);
             SI = (ushort)(SI + (ushort)State.Direction16);
             DI = (ushort)(DI + (ushort)State.Direction16);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_4045_F4045 = !ZeroFlag;
+            shouldContinue_4045 = !ZeroFlag;
         }
         // F000:4047 repne scas AX,word ptr ES:[DI]
-        bool shouldContinue_F000_4047_F4047 = true;
-        while (CX != 0 && shouldContinue_F000_4047_F4047) {
+        bool shouldContinue_4047 = true;
+        while (CX != 0 && shouldContinue_4047) {
             Alu16.Sub(AX, UInt16[ES, DI]);
             DI = (ushort)(DI + (ushort)State.Direction16);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_4047_F4047 = !ZeroFlag;
+            shouldContinue_4047 = !ZeroFlag;
         }
         // F000:4049 jmp near CX
         switch ((ushort)(CX)) {
             case 0x5000:
                 break;
             default:
-                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(CX)):X4} at F000:4049");
+                throw FailAsUntested($"Untested near jump target 0x{((ushort)(CX)):X4} at F000:4049");
         }
         // F000:5000 mov CX,2
         CX = 2;
@@ -597,12 +597,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         // F000:5005 jcxz short 0x5008
         if (CX == 0) {
-            goto label_F000_5008_F5008_311;
+            goto L_5008;
         }
         VerifySpeculativeEntryOrFail(cs1, 0x5007, [(byte)0xF4]);
         // F000:5007 hlt
         return Hlt();
-    label_F000_5008_F5008_311:
+    L_5008:
         // F000:5008 mov CX,2
         CX = 2;
         // F000:500B rep lods AL,byte ptr DS:[SI]
@@ -613,12 +613,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         // F000:500D jcxz short 0x5010
         if (CX == 0) {
-            goto label_F000_5010_F5010_317;
+            goto L_5010;
         }
         VerifySpeculativeEntryOrFail(cs1, 0x500F, [(byte)0xF4]);
         // F000:500F hlt
         return Hlt();
-    label_F000_5010_F5010_317:
+    L_5010:
         // F000:5010 mov CX,2
         CX = 2;
         // F000:5013 rep stos byte ptr ES:[DI],AL
@@ -629,12 +629,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         // F000:5015 jcxz short 0x5018
         if (CX == 0) {
-            goto label_F000_5018_F5018_323;
+            goto L_5018;
         }
         VerifySpeculativeEntryOrFail(cs1, 0x5017, [(byte)0xF4]);
         // F000:5017 hlt
         return Hlt();
-    label_F000_5018_F5018_323:
+    L_5018:
         // F000:5018 mov BX,0
         BX = 0;
         // F000:501B push BX
@@ -651,13 +651,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:5024 mov SI,0x3006
         SI = 0x3006;
         // F000:5027 repne cmps word ptr DS:[SI],word ptr ES:[DI]
-        bool shouldContinue_F000_5027_F5027 = true;
-        while (CX != 0 && shouldContinue_F000_5027_F5027) {
+        bool shouldContinue_5027 = true;
+        while (CX != 0 && shouldContinue_5027) {
             Alu16.Sub(UInt16[DS, SI], UInt16[ES, DI]);
             SI = (ushort)(SI + (ushort)State.Direction16);
             DI = (ushort)(DI + (ushort)State.Direction16);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_5027_F5027 = !ZeroFlag;
+            shouldContinue_5027 = !ZeroFlag;
         }
         // F000:5029 mov AX,0x1000
         AX = 0x1000;
@@ -671,19 +671,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:5031 cld
         DirectionFlag = false;
         // F000:5032 repne scas AX,word ptr ES:[DI]
-        bool shouldContinue_F000_5032_F5032 = true;
-        while (CX != 0 && shouldContinue_F000_5032_F5032) {
+        bool shouldContinue_5032 = true;
+        while (CX != 0 && shouldContinue_5032) {
             Alu16.Sub(AX, UInt16[ES, DI]);
             DI = (ushort)(DI + (ushort)State.Direction16);
             CX = (ushort)(CX - 1);
-            shouldContinue_F000_5032_F5032 = !ZeroFlag;
+            shouldContinue_5032 = !ZeroFlag;
         }
         // F000:5034 jmp near CX
         switch ((ushort)(CX)) {
             case 0x601B:
                 break;
             default:
-                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(CX)):X4} at F000:5034");
+                throw FailAsUntested($"Untested near jump target 0x{((ushort)(CX)):X4} at F000:5034");
         }
         // F000:601B mov DX,0
         DX = 0;

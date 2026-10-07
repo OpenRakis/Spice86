@@ -35,7 +35,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CX = Alu16.Dec(CX);
         // F000:0016 je short 0x001A
         if (ZeroFlag) {
-            goto label_F000_001A_F001A_15;
+            goto L_001A;
         }
         // F000:0018 jmp short 0x001B
         if (JumpDispatcher.Jump(unknown_F000_001B_F001B, 0x0000)) {
@@ -43,7 +43,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             goto entrydispatcher;
         }
         return JumpDispatcher.RequiredJumpAsmReturn;
-    label_F000_001A_F001A_15:
+    L_001A:
         // F000:001A ret near
         return NearRet();
     }

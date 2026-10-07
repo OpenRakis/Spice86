@@ -42,7 +42,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             case 0x1290:
                 break;
             default:
-                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(AX)):X4} at F000:0016");
+                throw FailAsUntested($"Untested near jump target 0x{((ushort)(AX)):X4} at F000:0016");
         }
         // F000:1290 jmp far E342:EBE0
         // E342:EBE0 mov BX,0x1000
@@ -75,7 +75,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             case 0xFBE1:
                 break;
             default:
-                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(UInt16[SS, (ushort)(BP + DI - 0x16)])):X4} at E342:EC05");
+                throw FailAsUntested($"Untested near jump target 0x{((ushort)(UInt16[SS, (ushort)(BP + DI - 0x16)])):X4} at E342:EC05");
         }
         // E342:FBE1 mov DX,0xF100
         DX = 0xF100;
@@ -106,13 +106,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // E342:FC03 mov SI,3
         SI = 3;
         // E342:FC06 jmp far dword ptr SS:[BP+SI-24]
-        ushort targetSegment_58 = UInt16[SS, (ushort)(BP + SI - 0x18 + 2)];
-        ushort targetOffset_58 = UInt16[SS, (ushort)(BP + SI - 0x18)];
-        if (targetSegment_58 == cs2 && targetOffset_58 == 0x4001) {
-            goto label_F000_4001_F4001_73;
+        ushort targetSegment_FC06 = UInt16[SS, (ushort)(BP + SI - 0x18 + 2)];
+        ushort targetOffset_FC06 = UInt16[SS, (ushort)(BP + SI - 0x18)];
+        if (targetSegment_FC06 == cs2 && targetOffset_FC06 == 0x4001) {
+            goto L_4001;
         }
-        throw FailAsUntested($"Unknown far jump target {targetSegment_58:X4}:{targetOffset_58:X4} at E342:FC06");
-    label_F000_4001_F4001_73:
+        throw FailAsUntested($"Untested far jump target {targetSegment_FC06:X4}:{targetOffset_FC06:X4} at E342:FC06");
+    L_4001:
         // F000:4001 mov AX,word ptr DS:[BX+SI-3]
         AX = UInt16[DS, (ushort)(BX + SI - 3)];
         // F000:4004 mov DX,0

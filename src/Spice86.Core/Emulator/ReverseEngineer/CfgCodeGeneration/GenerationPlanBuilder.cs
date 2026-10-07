@@ -5,6 +5,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Naming;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph.Analysis;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Core.Emulator.ReverseEngineer.Graph;
@@ -115,16 +116,37 @@ internal static class GenerationPlanBuilder {
 
         List<CfgBlock> blocks = traversal.ReversePostOrder.ToList();
         List<ICfgNode> nodes = blocks.SelectMany(block => block.Instructions).ToList();
+
+        // A partition entry can sit in the middle of a block (no edge leads to it, so the block is never
+        // split): it still needs a label for the entry dispatch goto.
+        HashSet<ICfgNode> entryNodes = context.GetEntries(partition).Select(entry => entry.Node).ToHashSet();
+        foreach (ICfgNode entryNode in entryNodes) {
+            if (!nodes.Contains(entryNode)) {
+                throw new InvalidOperationException(
+                    $"Entry {entryNode.Address} (id {entryNode.Id}) of {context.GetMethodName(partition)} is not a node of the method.");
+            }
+        }
+
+        Dictionary<ICfgNode, string> labelByNode = DisambiguatedNames.Build(
+            blocks.Select(block => block.Entry).Concat(entryNodes).Distinct(),
+            node => $"L_{node.Address.Offset:X4}",
+            node => node.Id.ToString());
+
+        Dictionary<CfgInstruction, string> localSuffixByInstruction = DisambiguatedNames.Build(
+            nodes.OfType<CfgInstruction>(),
+            instruction => $"{instruction.Address.Offset:X4}",
+            instruction => instruction.Id.ToString());
+
         List<NodeEmissionPlan> nodeEmissionPlans = [];
         foreach (CfgBlock block in blocks) {
             // First instruction of each block is the entry: it gets the label.
             bool isBlockEntry = true;
             foreach (ICfgNode node in block.Instructions) {
-                bool emitsExternalEventCheck = isBlockEntry && checkedBlocks.Contains(block);
+                bool emitsExternalEventCheck = (isBlockEntry && checkedBlocks.Contains(block)) || entryNodes.Contains(node);
                 bool emitsExternalEventCheckAfter = node is CfgInstruction instruction
                     && InterruptEnableDetectorVisitor.EnablesInterrupts(instruction.ExecutionAst)
                     && !FallthroughBlockChecks(node, block, blockGraph, checkedBlocks);
-                nodeEmissionPlans.Add(new NodeEmissionPlan(node, block, context.GetLabel(node), isBlockEntry, emitsExternalEventCheck, emitsExternalEventCheckAfter));
+                nodeEmissionPlans.Add(new NodeEmissionPlan(node, block, isBlockEntry, emitsExternalEventCheck, emitsExternalEventCheckAfter));
                 isBlockEntry = false;
             }
         }
@@ -135,7 +157,7 @@ internal static class GenerationPlanBuilder {
         }
 
         return new MethodPlan(partition, context.GetMethodName(partition), context.GetEntries(partition), blocks,
-            nodes, nodeEmissionPlans, nextNodeByNode, blockGraph, traversal);
+            nodes, nodeEmissionPlans, nextNodeByNode, blockGraph, traversal, labelByNode, localSuffixByInstruction);
     }
 
     /// <summary>

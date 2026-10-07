@@ -92,7 +92,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             case 0x10C2:
                 break;
             default:
-                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(AX)):X4} at F000:0887");
+                throw FailAsUntested($"Untested near jump target 0x{((ushort)(AX)):X4} at F000:0887");
         }
         // F000:10C2 lods AX,word ptr DS:[SI]
         AX = UInt16[DS, SI];
@@ -102,7 +102,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             case 0xC200:
                 break;
             default:
-                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(AX)):X4} at F000:10C3");
+                throw FailAsUntested($"Untested near jump target 0x{((ushort)(AX)):X4} at F000:10C3");
         }
         // F000:C200 mov DX,0x1000
         DX = 0x1000;
@@ -123,7 +123,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             case 0x80C2:
                 break;
             default:
-                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(UInt16[DS, DI])):X4} at F000:C20E");
+                throw FailAsUntested($"Untested near jump target 0x{((ushort)(UInt16[DS, DI])):X4} at F000:C20E");
         }
         // F000:80C2 mov DS,CX
         DS = CX;
@@ -138,7 +138,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             case 0x80FF:
                 break;
             default:
-                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(UInt16[DS, (ushort)(DI + 2)])):X4} at F000:80C7");
+                throw FailAsUntested($"Untested near jump target 0x{((ushort)(UInt16[DS, (ushort)(DI + 2)])):X4} at F000:80C7");
         }
         // F000:80FF mov DI,0x2002
         DI = 0x2002;
@@ -156,7 +156,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             case 0x1300:
                 break;
             default:
-                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(AX)):X4} at F000:8107");
+                throw FailAsUntested($"Untested near jump target 0x{((ushort)(AX)):X4} at F000:8107");
         }
         // F000:1300 mov word ptr DS:[DI],AX
         UInt16[DS, DI] = AX;
@@ -167,12 +167,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         DI = (ushort)(DI + (ushort)State.Direction16);
         // F000:1305 je short 0x1350
         if (ZeroFlag) {
-            goto label_F000_1350_F1350_94;
+            goto L_1350;
         }
         VerifySpeculativeEntryOrFail(cs1, 0x1307, [(byte)0xF4]);
         // F000:1307 hlt
         return Hlt();
-    label_F000_1350_F1350_94:
+    L_1350:
         // F000:1350 mov AL,0x80
         AL = 0x80;
         // F000:1352 std
@@ -185,7 +185,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             case 0x8013:
                 break;
             default:
-                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(UInt16[DS, DI])):X4} at F000:1354");
+                throw FailAsUntested($"Untested near jump target 0x{((ushort)(UInt16[DS, DI])):X4} at F000:1354");
         }
         // F000:8013 mov AX,0xD000
         AX = 0xD000;
@@ -197,7 +197,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             case 0xD000:
                 break;
             default:
-                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(UInt16[DS, (ushort)(DI + 2)])):X4} at F000:8017");
+                throw FailAsUntested($"Untested near jump target 0x{((ushort)(UInt16[DS, (ushort)(DI + 2)])):X4} at F000:8017");
         }
         // F000:D000 mov DX,0
         DX = 0;
