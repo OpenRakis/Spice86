@@ -3,8 +3,8 @@ namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Naming;
 using System.Linq;
 
 /// <summary>
-/// Assigns each item its base name when unique among <paramref name="items"/>, and base name plus
-/// <c>_</c> plus <paramref name="suffix"/> for every member of a group that shares a base name.
+/// Assigns each item its base name when unique in the input, and appends an underscore plus the item's
+/// suffix for every member of a group that shares a base name.
 /// </summary>
 internal static class DisambiguatedNames {
     /// <summary>
