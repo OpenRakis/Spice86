@@ -1,6 +1,8 @@
 namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Visitor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph.Analysis;
@@ -107,14 +109,22 @@ internal static class GenerationPlanBuilder {
                 $"Block traversal of {context.GetMethodName(partition)} visited {traversal.PostOrder.Count} of {blockGraph.Blocks.Count} blocks.");
         }
 
+        // Blocks that emit CheckExternalEvents at their entry: method entry blocks and loop back-edge targets.
+        HashSet<CfgBlock> checkedBlocks = blockGraph.EntryBlocks.ToHashSet();
+        checkedBlocks.UnionWith(traversal.RetreatingEdges.Select(edge => edge.Target));
+
         List<CfgBlock> blocks = traversal.ReversePostOrder.ToList();
         List<ICfgNode> nodes = blocks.SelectMany(block => block.Instructions).ToList();
         List<NodeEmissionPlan> nodeEmissionPlans = [];
         foreach (CfgBlock block in blocks) {
-            // First instruction of each block is the entry: it gets the label and event check.
+            // First instruction of each block is the entry: it gets the label.
             bool isBlockEntry = true;
             foreach (ICfgNode node in block.Instructions) {
-                nodeEmissionPlans.Add(new NodeEmissionPlan(node, block, context.GetLabel(node), isBlockEntry));
+                bool emitsExternalEventCheck = isBlockEntry && checkedBlocks.Contains(block);
+                bool emitsExternalEventCheckAfter = node is CfgInstruction instruction
+                    && InterruptEnableDetectorVisitor.EnablesInterrupts(instruction.ExecutionAst)
+                    && !FallthroughBlockChecks(node, block, blockGraph, checkedBlocks);
+                nodeEmissionPlans.Add(new NodeEmissionPlan(node, block, context.GetLabel(node), isBlockEntry, emitsExternalEventCheck, emitsExternalEventCheckAfter));
                 isBlockEntry = false;
             }
         }
@@ -142,5 +152,13 @@ internal static class GenerationPlanBuilder {
         if (fallthrough != null) {
             yield return fallthrough;
         }
+    }
+
+    private static bool FallthroughBlockChecks(ICfgNode node, CfgBlock block, PartitionBlockGraph graph, HashSet<CfgBlock> checkedBlocks) {
+        if (!node.Equals(block.Terminator)) {
+            return false;
+        }
+        CfgBlock? fallthrough = graph.GetFallthroughSuccessor(block);
+        return fallthrough != null && checkedBlocks.Contains(fallthrough);
     }
 }

@@ -28,7 +28,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
         CheckExternalEvents(cs1, 0xFFF0);
         // F000:FFF0 jmp short 0
-        CheckExternalEvents(cs1, 0x0000);
         // F000:0000 mov AX,0
         AX = 0;
         // F000:0003 mov SS,AX
@@ -37,7 +36,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0005 mov SP,8
         SP = 8;
         // F000:0008 jmp short 0x000A
-        CheckExternalEvents(cs1, 0x000A);
         // F000:000A mov AX,0x1111
         AX = 0x1111;
         // F000:000D push AX
@@ -47,7 +45,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0011 push AX
         Stack.Push16(AX);
         // F000:0012 jmp short 0x0019
-        CheckExternalEvents(cs1, 0x0019);
         // F000:0019 hlt
         return Hlt();
     }

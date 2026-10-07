@@ -28,7 +28,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
         CheckExternalEvents(cs1, 0xFFF0);
         // F000:FFF0 jmp short 0
-        CheckExternalEvents(cs1, 0x0000);
         // F000:0000 mov AX,0
         AX = 0;
         // F000:0003 mov SS,AX
@@ -58,7 +57,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             CX = (ushort)(CX - 1);
         }
         // F000:001A jmp near 0x1400
-        CheckExternalEvents(cs1, 0x1400);
         // F000:1400 selector
         if (SelectorSignatureMatches(cs1, 0x1400, [(byte)0xB8, (byte)0x01, (byte)0x00])) {
             goto label_F000_1400_F1400_30227;
@@ -71,10 +69,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         throw FailAsUntested("No selector signature matched at F000:1400");
     label_F000_1400_F1400_30227:
-        CheckExternalEvents(cs1, 0x1400);
         // F000:1400 mov AX,1
         AX = 1;
-        CheckExternalEvents(cs1, 0x1403);
         // F000:1403 push AX
         Stack.Push16(AX);
         // F000:1404 mov SI,0x0C00
@@ -82,7 +78,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1407 jmp far F000:000B
         goto label_F000_000B_F000B_7;
     label_F000_1400_F1400_30237:
-        CheckExternalEvents(cs1, 0x1400);
         // F000:1400 mov BX,1
         BX = 1;
         // F000:1403 shl BX,1
@@ -94,7 +89,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1409 jmp far F000:000B
         goto label_F000_000B_F000B_7;
     label_F000_1400_F1400_30250:
-        CheckExternalEvents(cs1, 0x1400);
         // F000:1400 mov CX,1
         CX = 1;
         // F000:1403 inc CX

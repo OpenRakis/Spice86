@@ -142,7 +142,7 @@ public class MemoryWriteDetectorVisitorTest {
 
     [Fact]
     public void NestedIfInsideBlock_ReturnsTrue() {
-        // Arrange — a memory write nested inside an if, inside a block
+        // Arrange - a memory write nested inside an if, inside a block
         AbsolutePointerNode pointer = new(DataType.UINT16, Address);
         BinaryOperationNode assign = new(DataType.UINT16, pointer, BinaryOperation.ASSIGN, Value);
         IfElseNode ifNode = new(new ConstantNode(DataType.BOOL, 1), assign, new BlockNode());
@@ -157,7 +157,7 @@ public class MemoryWriteDetectorVisitorTest {
 
     [Fact]
     public void MethodCallNode_ReturnsFalse() {
-        // Arrange — a method call with no memory write
+        // Arrange - a method call with no memory write
         MethodCallNode methodCall = new("Alu16", "Add", Register, Value);
 
         // Act
@@ -186,6 +186,30 @@ public class MemoryWriteDetectorVisitorTest {
 
         // Act
         bool result = MemoryWriteDetectorVisitor.ContainsMemoryWrite(block);
+
+        // Assert
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ParsedMovToMemory_ReturnsTrue() {
+        // Arrange
+        IVisitableAstNode ast = ParsedExecutionAst.Of(0x89, 0x06, 0x00, 0x00);
+
+        // Act
+        bool result = MemoryWriteDetectorVisitor.ContainsMemoryWrite(ast);
+
+        // Assert
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ParsedMovToRegister_ReturnsFalse() {
+        // Arrange
+        IVisitableAstNode ast = ParsedExecutionAst.Of(0x89, 0xC0);
+
+        // Act
+        bool result = MemoryWriteDetectorVisitor.ContainsMemoryWrite(ast);
 
         // Assert
         result.Should().BeFalse();

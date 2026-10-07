@@ -40,7 +40,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x063A);
         // F000:063A cmp word ptr SS:[0xFFFB],0xF000
         Alu16.Sub(UInt16[SS, 0xFFFB], 0xF000);
         // F000:0641 cmp word ptr SS:[0xFFF9],0x062E
@@ -49,7 +48,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x064C);
         // F000:064C mov AX,0
         AX = 0;
         // F000:064F mov DS,AX
@@ -68,7 +66,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0667);
         // F000:0667 mov EAX,0xFFFFFFFF
         EAX = 0xFFFFFFFFu;
         // F000:066D mov EAX,CS
@@ -79,7 +76,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0676);
         // F000:0676 mov word ptr DS:[0],0xBEEF
         UInt16[DS, 0] = 0xBEEF;
         // F000:067C mov word ptr DS:[0],CS
@@ -90,7 +86,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0688);
         // F000:0688 mov AX,0
         AX = 0;
         // F000:068B mov DS,AX
@@ -128,7 +123,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x06AF);
         // F000:06AF cmp word ptr SS:[0xFFFB],0xF000
         Alu16.Sub(UInt16[SS, 0xFFFB], 0xF000);
         // F000:06B6 cmp word ptr SS:[0xFFF9],0x06A1
@@ -137,7 +131,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x06C1);
         // F000:06C1 mov AX,0
         AX = 0;
         // F000:06C4 mov DS,AX
@@ -181,14 +174,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0700);
         // F000:0700 cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0707 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x070B);
         // F000:070B mov ESI,0x0001FFFF
         ESI = 0x0001FFFF;
         // F000:0711 mov EDI,0x0001FFFF
@@ -205,7 +196,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x072B);
         // F000:072B cmps byte ptr DS:[SI],byte ptr ES:[DI]
         Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
         SI = (ushort)(SI + (ushort)State.Direction8);
@@ -214,21 +204,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0730);
         // F000:0730 cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0737 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x073B);
         // F000:073B cmp ESI,0x00010000
         Alu32.Sub(ESI, 0x00010000);
         // F000:0742 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0746);
         // F000:0746 mov EDI,0x0001FFFF
         EDI = 0x0001FFFF;
         // F000:074C mov AL,0x78
@@ -244,14 +231,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0759);
         // F000:0759 cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0760 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0764);
         // F000:0764 mov ESI,0x0001FFFF
         ESI = 0x0001FFFF;
         // F000:076A mov EDI,0x0001FFFF
@@ -276,21 +261,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0787);
         // F000:0787 cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:078E jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0792);
         // F000:0792 cmp ESI,0x00010000
         Alu32.Sub(ESI, 0x00010000);
         // F000:0799 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x079D);
         // F000:079D mov ESI,0x0001FFFF
         ESI = 0x0001FFFF;
         // F000:07A3 mov AL,0x78
@@ -308,14 +290,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x07B3);
         // F000:07B3 cmp ESI,0x00010000
         Alu32.Sub(ESI, 0x00010000);
         // F000:07BA jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x07BE);
         // F000:07BE cld
         DirectionFlag = false;
         // F000:07BF mov EDI,0x0001FFFE
@@ -337,14 +317,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x07DE);
         // F000:07DE cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:07E5 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x07E9);
         // F000:07E9 mov ESI,0x0001FFFE
         ESI = 0x0001FFFE;
         // F000:07EF mov EDI,0x0001FFFE
@@ -361,7 +339,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x080A);
         // F000:080A cmps word ptr DS:[SI],word ptr ES:[DI]
         Alu16.Sub(UInt16[DS, SI], UInt16[ES, DI]);
         SI = (ushort)(SI + (ushort)State.Direction16);
@@ -370,21 +347,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x080F);
         // F000:080F cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0816 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x081A);
         // F000:081A cmp ESI,0x00010000
         Alu32.Sub(ESI, 0x00010000);
         // F000:0821 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0825);
         // F000:0825 mov EDI,0x0001FFFE
         EDI = 0x0001FFFE;
         // F000:082B mov AX,0x5678
@@ -400,14 +374,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x083A);
         // F000:083A cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0841 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0845);
         // F000:0845 mov ESI,0x0001FFFE
         ESI = 0x0001FFFE;
         // F000:084B mov EDI,0x0001FFFE
@@ -432,21 +404,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x086B);
         // F000:086B cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0872 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0876);
         // F000:0876 cmp ESI,0x00010000
         Alu32.Sub(ESI, 0x00010000);
         // F000:087D jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0881);
         // F000:0881 mov ESI,0x0001FFFE
         ESI = 0x0001FFFE;
         // F000:0887 mov AX,0x5678
@@ -464,14 +433,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0899);
         // F000:0899 cmp ESI,0x00010000
         Alu32.Sub(ESI, 0x00010000);
         // F000:08A0 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x08A4);
         // F000:08A4 cld
         DirectionFlag = false;
         // F000:08A5 mov EDI,0x0001FFFC
@@ -493,14 +460,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x08CD);
         // F000:08CD cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:08D4 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x08D8);
         // F000:08D8 mov ESI,0x0001FFFC
         ESI = 0x0001FFFC;
         // F000:08DE mov EDI,0x0001FFFC
@@ -517,7 +482,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x08FC);
         // F000:08FC cmps dword ptr DS:[SI],dword ptr ES:[DI]
         Alu32.Sub(UInt32[DS, SI], UInt32[ES, DI]);
         SI = (ushort)(SI + (ushort)State.Direction32);
@@ -526,21 +490,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0902);
         // F000:0902 cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0909 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x090D);
         // F000:090D cmp ESI,0x00010000
         Alu32.Sub(ESI, 0x00010000);
         // F000:0914 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0918);
         // F000:0918 mov EDI,0x0001FFFC
         EDI = 0x0001FFFC;
         // F000:091E mov EAX,0x12345678
@@ -556,14 +517,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0933);
         // F000:0933 cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:093A jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x093E);
         // F000:093E mov ESI,0x0001FFFC
         ESI = 0x0001FFFC;
         // F000:0944 mov EDI,0x0001FFFC
@@ -588,21 +547,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0971);
         // F000:0971 cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0978 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x097C);
         // F000:097C cmp ESI,0x00010000
         Alu32.Sub(ESI, 0x00010000);
         // F000:0983 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0987);
         // F000:0987 mov ESI,0x0001FFFC
         ESI = 0x0001FFFC;
         // F000:098D mov EAX,0x12345678
@@ -620,14 +576,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x09A7);
         // F000:09A7 cmp ESI,0x00010000
         Alu32.Sub(ESI, 0x00010000);
         // F000:09AE jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x09B2);
         // F000:09B2 std
         DirectionFlag = true;
         // F000:09B3 mov EDI,0x00010000
@@ -649,14 +603,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x09D0);
         // F000:09D0 cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:09D7 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x09DB);
         // F000:09DB mov ESI,0x00010000
         ESI = 0x00010000;
         // F000:09E1 mov EDI,0x00010000
@@ -673,7 +625,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x09FB);
         // F000:09FB cmps byte ptr DS:[SI],byte ptr ES:[DI]
         Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
         SI = (ushort)(SI + (ushort)State.Direction8);
@@ -682,21 +633,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0A00);
         // F000:0A00 cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:0A07 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0A0B);
         // F000:0A0B cmp ESI,0x0001FFFF
         Alu32.Sub(ESI, 0x0001FFFF);
         // F000:0A12 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0A16);
         // F000:0A16 mov EDI,0x00010000
         EDI = 0x00010000;
         // F000:0A1C mov AL,0x78
@@ -712,14 +660,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0A29);
         // F000:0A29 cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:0A30 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0A34);
         // F000:0A34 mov ESI,0x00010000
         ESI = 0x00010000;
         // F000:0A3A mov EDI,0x00010000
@@ -744,21 +690,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0A57);
         // F000:0A57 cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:0A5E jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0A62);
         // F000:0A62 cmp ESI,0x0001FFFF
         Alu32.Sub(ESI, 0x0001FFFF);
         // F000:0A69 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0A6D);
         // F000:0A6D mov ESI,0x00010000
         ESI = 0x00010000;
         // F000:0A73 mov AL,0x78
@@ -776,14 +719,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0A83);
         // F000:0A83 cmp ESI,0x0001FFFF
         Alu32.Sub(ESI, 0x0001FFFF);
         // F000:0A8A jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0A8E);
         // F000:0A8E std
         DirectionFlag = true;
         // F000:0A8F mov EDI,0x00010000
@@ -805,14 +746,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0AAE);
         // F000:0AAE cmp EDI,0x0001FFFE
         Alu32.Sub(EDI, 0x0001FFFE);
         // F000:0AB5 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0AB9);
         // F000:0AB9 mov ESI,0x00010000
         ESI = 0x00010000;
         // F000:0ABF mov EDI,0x00010000
@@ -829,7 +768,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0ADA);
         // F000:0ADA cmps word ptr DS:[SI],word ptr ES:[DI]
         Alu16.Sub(UInt16[DS, SI], UInt16[ES, DI]);
         SI = (ushort)(SI + (ushort)State.Direction16);
@@ -838,21 +776,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0ADF);
         // F000:0ADF cmp EDI,0x0001FFFE
         Alu32.Sub(EDI, 0x0001FFFE);
         // F000:0AE6 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0AEA);
         // F000:0AEA cmp ESI,0x0001FFFE
         Alu32.Sub(ESI, 0x0001FFFE);
         // F000:0AF1 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0AF5);
         // F000:0AF5 mov EDI,0x00010000
         EDI = 0x00010000;
         // F000:0AFB mov AX,0x5678
@@ -868,14 +803,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0B0A);
         // F000:0B0A cmp EDI,0x0001FFFE
         Alu32.Sub(EDI, 0x0001FFFE);
         // F000:0B11 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0B15);
         // F000:0B15 mov ESI,0x00010000
         ESI = 0x00010000;
         // F000:0B1B mov EDI,0x00010000
@@ -900,21 +833,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0B3B);
         // F000:0B3B cmp EDI,0x0001FFFE
         Alu32.Sub(EDI, 0x0001FFFE);
         // F000:0B42 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0B46);
         // F000:0B46 cmp ESI,0x0001FFFE
         Alu32.Sub(ESI, 0x0001FFFE);
         // F000:0B4D jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0B51);
         // F000:0B51 mov ESI,0x00010000
         ESI = 0x00010000;
         // F000:0B57 mov AX,0x5678
@@ -932,14 +862,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0B69);
         // F000:0B69 cmp ESI,0x0001FFFE
         Alu32.Sub(ESI, 0x0001FFFE);
         // F000:0B70 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0B74);
         // F000:0B74 std
         DirectionFlag = true;
         // F000:0B75 mov EDI,0x00010000
@@ -961,14 +889,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0B9D);
         // F000:0B9D cmp EDI,0x0001FFFC
         Alu32.Sub(EDI, 0x0001FFFC);
         // F000:0BA4 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0BA8);
         // F000:0BA8 mov ESI,0x00010000
         ESI = 0x00010000;
         // F000:0BAE mov EDI,0x00010000
@@ -985,7 +911,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0BCC);
         // F000:0BCC cmps dword ptr DS:[SI],dword ptr ES:[DI]
         Alu32.Sub(UInt32[DS, SI], UInt32[ES, DI]);
         SI = (ushort)(SI + (ushort)State.Direction32);
@@ -994,21 +919,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0BD2);
         // F000:0BD2 cmp EDI,0x0001FFFC
         Alu32.Sub(EDI, 0x0001FFFC);
         // F000:0BD9 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0BDD);
         // F000:0BDD cmp ESI,0x0001FFFC
         Alu32.Sub(ESI, 0x0001FFFC);
         // F000:0BE4 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0BE8);
         // F000:0BE8 mov EDI,0x00010000
         EDI = 0x00010000;
         // F000:0BEE mov EAX,0x12345678
@@ -1024,14 +946,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0C03);
         // F000:0C03 cmp EDI,0x0001FFFC
         Alu32.Sub(EDI, 0x0001FFFC);
         // F000:0C0A jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0C0E);
         // F000:0C0E mov ESI,0x00010000
         ESI = 0x00010000;
         // F000:0C14 mov EDI,0x00010000
@@ -1056,21 +976,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0C41);
         // F000:0C41 cmp EDI,0x0001FFFC
         Alu32.Sub(EDI, 0x0001FFFC);
         // F000:0C48 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0C4C);
         // F000:0C4C cmp ESI,0x0001FFFC
         Alu32.Sub(ESI, 0x0001FFFC);
         // F000:0C53 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0C57);
         // F000:0C57 mov ESI,0x00010000
         ESI = 0x00010000;
         // F000:0C5D mov EAX,0x12345678
@@ -1088,14 +1005,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0C77);
         // F000:0C77 cmp ESI,0x0001FFFC
         Alu32.Sub(ESI, 0x0001FFFC);
         // F000:0C7E jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0C82);
         // F000:0C82 cld
         DirectionFlag = false;
         // F000:0C83 mov EAX,0x12345678
@@ -1124,14 +1039,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0CB7);
         // F000:0CB7 cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0CBE jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0CC2);
         // F000:0CC2 mov EDI,0x0001FF00
         EDI = 0x0001FF00;
         // F000:0CC8 mov DX,ES
@@ -1177,21 +1090,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0CF3);
         // F000:0CF3 cmp ESI,0x00010000
         Alu32.Sub(ESI, 0x00010000);
         // F000:0CFA jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0CFE);
         // F000:0CFE cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0D05 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0D09);
         // F000:0D09 mov EDI,0x0001FF00
         EDI = 0x0001FF00;
         // F000:0D0F mov ESI,0x0001FF00
@@ -1212,14 +1122,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0D25);
         // F000:0D25 cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0D2C jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0D30);
         // F000:0D30 mov EDI,0x0001FF00
         EDI = 0x0001FF00;
         // F000:0D36 mov EAX,0
@@ -1249,21 +1157,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0D5A);
         // F000:0D5A cmp ESI,0x00010000
         Alu32.Sub(ESI, 0x00010000);
         // F000:0D61 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0D65);
         // F000:0D65 cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0D6C jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0D70);
         // F000:0D70 mov ECX,0x00000100
         ECX = 0x00000100;
         // F000:0D76 mov EDI,0x0001FF00
@@ -1285,21 +1190,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0D8C);
         // F000:0D8C cmp ESI,0x00010000
         Alu32.Sub(ESI, 0x00010000);
         // F000:0D93 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0D97);
         // F000:0D97 cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0D9E jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0DA2);
         // F000:0DA2 cld
         DirectionFlag = false;
         // F000:0DA3 mov EAX,0x12345678
@@ -1328,14 +1230,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0DD7);
         // F000:0DD7 cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0DDE jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0DE2);
         // F000:0DE2 mov EDI,0x0001FF00
         EDI = 0x0001FF00;
         // F000:0DE8 mov DX,ES
@@ -1381,21 +1281,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0E13);
         // F000:0E13 cmp ESI,0x00010000
         Alu32.Sub(ESI, 0x00010000);
         // F000:0E1A jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0E1E);
         // F000:0E1E cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0E25 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0E29);
         // F000:0E29 mov EDI,0x0001FF00
         EDI = 0x0001FF00;
         // F000:0E2F mov ESI,0x0001FF00
@@ -1416,14 +1313,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0E45);
         // F000:0E45 cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0E4C jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0E50);
         // F000:0E50 mov EDI,0x0001FF00
         EDI = 0x0001FF00;
         // F000:0E56 mov EAX,0
@@ -1453,21 +1348,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0E7A);
         // F000:0E7A cmp ESI,0x00010000
         Alu32.Sub(ESI, 0x00010000);
         // F000:0E81 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0E85);
         // F000:0E85 cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0E8C jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0E90);
         // F000:0E90 mov ECX,0x00000080
         ECX = 0x00000080;
         // F000:0E96 mov EDI,0x0001FF00
@@ -1489,21 +1381,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0EAC);
         // F000:0EAC cmp ESI,0x00010000
         Alu32.Sub(ESI, 0x00010000);
         // F000:0EB3 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0EB7);
         // F000:0EB7 cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0EBE jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0EC2);
         // F000:0EC2 cld
         DirectionFlag = false;
         // F000:0EC3 mov EAX,0x12345678
@@ -1532,14 +1421,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0EF8);
         // F000:0EF8 cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0EFF jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0F03);
         // F000:0F03 mov EDI,0x0001FF00
         EDI = 0x0001FF00;
         // F000:0F09 mov DX,ES
@@ -1585,21 +1472,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0F36);
         // F000:0F36 cmp ESI,0x00010000
         Alu32.Sub(ESI, 0x00010000);
         // F000:0F3D jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0F41);
         // F000:0F41 cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0F48 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0F4C);
         // F000:0F4C mov EDI,0x0001FF00
         EDI = 0x0001FF00;
         // F000:0F52 mov ESI,0x0001FF00
@@ -1620,14 +1504,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0F69);
         // F000:0F69 cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0F70 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0F74);
         // F000:0F74 mov EDI,0x0001FF00
         EDI = 0x0001FF00;
         // F000:0F7A mov EAX,0
@@ -1657,21 +1539,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0FA0);
         // F000:0FA0 cmp ESI,0x00010000
         Alu32.Sub(ESI, 0x00010000);
         // F000:0FA7 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0FAB);
         // F000:0FAB cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0FB2 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0FB6);
         // F000:0FB6 mov ECX,0x00000040
         ECX = 0x00000040;
         // F000:0FBC mov EDI,0x0001FF00
@@ -1693,21 +1572,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0FD3);
         // F000:0FD3 cmp ESI,0x00010000
         Alu32.Sub(ESI, 0x00010000);
         // F000:0FDA jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0FDE);
         // F000:0FDE cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0FE5 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0FE9);
         // F000:0FE9 std
         DirectionFlag = true;
         // F000:0FEA mov EAX,0x12345678
@@ -1736,14 +1612,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x101E);
         // F000:101E cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:1025 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x1029);
         // F000:1029 mov EDI,0x000100FF
         EDI = 0x000100FF;
         // F000:102F mov DX,ES
@@ -1789,21 +1663,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x105A);
         // F000:105A cmp ESI,0x0001FFFF
         Alu32.Sub(ESI, 0x0001FFFF);
         // F000:1061 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x1065);
         // F000:1065 cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:106C jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x1070);
         // F000:1070 mov EDI,0x000100FF
         EDI = 0x000100FF;
         // F000:1076 mov ESI,0x000100FF
@@ -1824,14 +1695,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x108C);
         // F000:108C cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:1093 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x1097);
         // F000:1097 mov EDI,0x000100FF
         EDI = 0x000100FF;
         // F000:109D mov EAX,0
@@ -1861,21 +1730,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x10C1);
         // F000:10C1 cmp ESI,0x0001FFFF
         Alu32.Sub(ESI, 0x0001FFFF);
         // F000:10C8 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x10CC);
         // F000:10CC cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:10D3 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x10D7);
         // F000:10D7 mov ECX,0x00000100
         ECX = 0x00000100;
         // F000:10DD mov EDI,0x000100FF
@@ -1897,21 +1763,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x10F3);
         // F000:10F3 cmp ESI,0x0001FFFF
         Alu32.Sub(ESI, 0x0001FFFF);
         // F000:10FA jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x10FE);
         // F000:10FE cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:1105 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x1109);
         // F000:1109 std
         DirectionFlag = true;
         // F000:110A mov EAX,0x12345678
@@ -1940,14 +1803,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x113E);
         // F000:113E cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:1145 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x1149);
         // F000:1149 mov EDI,0x000100FF
         EDI = 0x000100FF;
         // F000:114F mov DX,ES
@@ -1993,21 +1854,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x117A);
         // F000:117A cmp ESI,0x0001FFFF
         Alu32.Sub(ESI, 0x0001FFFF);
         // F000:1181 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x1185);
         // F000:1185 cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:118C jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x1190);
         // F000:1190 mov EDI,0x000100FF
         EDI = 0x000100FF;
         // F000:1196 mov ESI,0x000100FF
@@ -2028,14 +1886,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x11AC);
         // F000:11AC cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:11B3 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x11B7);
         // F000:11B7 mov EDI,0x000100FF
         EDI = 0x000100FF;
         // F000:11BD mov EAX,0
@@ -2065,21 +1921,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x11E1);
         // F000:11E1 cmp ESI,0x0001FFFF
         Alu32.Sub(ESI, 0x0001FFFF);
         // F000:11E8 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x11EC);
         // F000:11EC cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:11F3 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x11F7);
         // F000:11F7 mov ECX,0x00000080
         ECX = 0x00000080;
         // F000:11FD mov EDI,0x000100FF
@@ -2101,21 +1954,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x1213);
         // F000:1213 cmp ESI,0x0001FFFF
         Alu32.Sub(ESI, 0x0001FFFF);
         // F000:121A jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x121E);
         // F000:121E cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:1225 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x1229);
         // F000:1229 std
         DirectionFlag = true;
         // F000:122A mov EAX,0x12345678
@@ -2144,14 +1994,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x125F);
         // F000:125F cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:1266 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x126A);
         // F000:126A mov EDI,0x000100FF
         EDI = 0x000100FF;
         // F000:1270 mov DX,ES
@@ -2197,21 +2045,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x129D);
         // F000:129D cmp ESI,0x0001FFFF
         Alu32.Sub(ESI, 0x0001FFFF);
         // F000:12A4 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x12A8);
         // F000:12A8 cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:12AF jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x12B3);
         // F000:12B3 mov EDI,0x000100FF
         EDI = 0x000100FF;
         // F000:12B9 mov ESI,0x000100FF
@@ -2232,14 +2077,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x12D0);
         // F000:12D0 cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:12D7 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x12DB);
         // F000:12DB mov EDI,0x000100FF
         EDI = 0x000100FF;
         // F000:12E1 mov EAX,0
@@ -2269,21 +2112,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x1307);
         // F000:1307 cmp ESI,0x0001FFFF
         Alu32.Sub(ESI, 0x0001FFFF);
         // F000:130E jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x1312);
         // F000:1312 cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:1319 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x131D);
         // F000:131D mov ECX,0x00000040
         ECX = 0x00000040;
         // F000:1323 mov EDI,0x000100FF
@@ -2305,21 +2145,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x133A);
         // F000:133A cmp ESI,0x0001FFFF
         Alu32.Sub(ESI, 0x0001FFFF);
         // F000:1341 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x1345);
         // F000:1345 cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:134C jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x1350);
         // F000:1350 mov DX,0x2200
         DX = 0x2200;
         // F000:1353 mov DS,DX
@@ -2342,26 +2179,20 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CarryFlag = false;
         // F000:1366 call near 0x136F
         NearCall(cs1, 0x1369, unknown_F000_136F_F136F);
-        CheckExternalEvents(cs1, 0x1369);
         // F000:1369 jae near 0x15C7
         if (!CarryFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x136D);
         // F000:136D jmp short 0x1380
-        CheckExternalEvents(cs1, 0x1380);
         // F000:1380 clc
         CarryFlag = false;
         // F000:1381 call near 0x138D
         NearCall32(cs1, 0x1387, unknown_F000_138D_F138D);
-        CheckExternalEvents(cs1, 0x1387);
         // F000:1387 jae near 0x15C7
         if (!CarryFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x138B);
         // F000:138B jmp short 0x139F
-        CheckExternalEvents(cs1, 0x139F);
         // F000:139F clc
         CarryFlag = false;
         // F000:13A0 mov BX,0x136F
@@ -2374,12 +2205,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             default:
                 throw FailAsUntested($"Unknown near call target 0x{((ushort)(BX)):X4} at F000:13A3");
         }
-        CheckExternalEvents(cs1, 0x13A5);
         // F000:13A5 jae near 0x15C7
         if (!CarryFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x13A9);
         // F000:13A9 clc
         CarryFlag = false;
         // F000:13AA mov EBX,0x0000138D
@@ -2392,38 +2221,30 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             default:
                 throw FailAsUntested($"Unknown near call target 0x{((ushort)((ushort)EBX)):X4} at F000:13B0");
         }
-        CheckExternalEvents(cs1, 0x13B3);
         // F000:13B3 jae near 0x15C7
         if (!CarryFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x13B7);
         // F000:13B7 mov AX,SP
         AX = SP;
         // F000:13B9 clc
         CarryFlag = false;
         // F000:13BA call far F000:13C5
         FarCall(cs1, 0x13BF, cs1, unknown_F000_13C5_F13C5);
-        CheckExternalEvents(cs1, 0x13BF);
         // F000:13BF jae near 0x15C7
         if (!CarryFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x13C3);
         // F000:13C3 jmp short 0x13D6
-        CheckExternalEvents(cs1, 0x13D6);
         // F000:13D6 clc
         CarryFlag = false;
         // F000:13D7 call far F000:13E5
         FarCall32(cs1, 0x13DF, cs1, unknown_F000_13E5_F13E5);
-        CheckExternalEvents(cs1, 0x13DF);
         // F000:13DF jae near 0x15C7
         if (!CarryFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x13E3);
         // F000:13E3 jmp short 0x13F7
-        CheckExternalEvents(cs1, 0x13F7);
         // F000:13F7 clc
         CarryFlag = false;
         // F000:13F8 mov word ptr DS:[SI],0x13C5
@@ -2439,12 +2260,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         throw FailAsUntested($"Unknown far call target {targetSegment_3021:X4}:{targetOffset_3021:X4} at F000:1401");
     label_F000_1403_F1403_3027:
-        CheckExternalEvents(cs1, 0x1403);
         // F000:1403 jae near 0x15C7
         if (!CarryFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x1407);
         // F000:1407 clc
         CarryFlag = false;
         // F000:1408 mov dword ptr DS:[SI],0x000013E5
@@ -2460,12 +2279,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         throw FailAsUntested($"Unknown far call target {targetSegment_3034:X4}:{targetOffset_3034:X4} at F000:1414");
     label_F000_1417_F1417_3039:
-        CheckExternalEvents(cs1, 0x1417);
         // F000:1417 jae near 0x15C7
         if (!CarryFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x141B);
         // F000:141B mov DX,0x2300
         DX = 0x2300;
         // F000:141E mov DS,DX
@@ -2505,14 +2322,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x144A);
         // F000:144A cmp BX,0x1234
         Alu16.Sub(BX, 0x1234);
         // F000:144E jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x1452);
         // F000:1452 mov ES,DX
         ES = DX;
         // F000:1454 mov dword ptr ES:[DI],0x12345678
@@ -2534,14 +2349,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x1470);
         // F000:1470 cmp EBX,0x12345678
         Alu32.Sub(EBX, 0x12345678);
         // F000:1477 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x147B);
         // F000:147B mov ES,DX
         ES = DX;
         // F000:147D mov SS,CX
@@ -2569,14 +2382,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x149A);
         // F000:149A cmp BX,0x1234
         Alu16.Sub(BX, 0x1234);
         // F000:149E jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x14A2);
         // F000:14A2 mov ES,DX
         ES = DX;
         // F000:14A4 mov dword ptr ES:[DI],0x12345678
@@ -2597,14 +2408,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x14BF);
         // F000:14BF cmp EBX,0x12345678
         Alu32.Sub(EBX, 0x12345678);
         // F000:14C6 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x14CA);
         // F000:14CA mov ES,DX
         ES = DX;
         // F000:14CC mov DS,CX
@@ -2631,14 +2440,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x14E9);
         // F000:14E9 cmp BX,0x1234
         Alu16.Sub(BX, 0x1234);
         // F000:14ED jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x14F1);
         // F000:14F1 mov ES,DX
         ES = DX;
         // F000:14F3 mov dword ptr ES:[DI],0x12345678
@@ -2659,14 +2466,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x150E);
         // F000:150E cmp EBX,0x12345678
         Alu32.Sub(EBX, 0x12345678);
         // F000:1515 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x1519);
         // F000:1519 mov ES,DX
         ES = DX;
         // F000:151B mov ES,CX
@@ -2693,14 +2498,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x1539);
         // F000:1539 cmp BX,0x1234
         Alu16.Sub(BX, 0x1234);
         // F000:153D jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x1541);
         // F000:1541 mov ES,DX
         ES = DX;
         // F000:1543 mov dword ptr ES:[DI],0x12345678
@@ -2721,14 +2524,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x155D);
         // F000:155D cmp EBX,0x12345678
         Alu32.Sub(EBX, 0x12345678);
         // F000:1564 jne short 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x1566);
         // F000:1566 mov ES,DX
         ES = DX;
         // F000:1568 mov FS,CX
@@ -2755,14 +2556,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x1584);
         // F000:1584 cmp BX,0x1234
         Alu16.Sub(BX, 0x1234);
         // F000:1588 jne short 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x158A);
         // F000:158A mov ES,DX
         ES = DX;
         // F000:158C mov dword ptr ES:[DI],0x12345678
@@ -2783,14 +2582,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x15A6);
         // F000:15A6 cmp EBX,0x12345678
         Alu32.Sub(EBX, 0x12345678);
         // F000:15AD jne short 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x15AF);
         // F000:15AF mov ES,DX
         ES = DX;
         // F000:15B1 mov GS,CX
@@ -2809,7 +2606,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         DX = 0x0999;
         // F000:15C2 out DX,AL
         Machine.IoPortDispatcher.WriteByte(DX, AL);
-        CheckExternalEvents(cs1, 0x15C3);
         // F000:15C3 cli
         InterruptFlag = false;
         // F000:15C4 hlt
@@ -2826,7 +2622,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x1378);
         // F000:1378 add AX,2
         AX = Alu16.Add(AX, 2);
         // F000:137B stc
@@ -2845,7 +2640,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x1396);
         // F000:1396 add AX,4
         AX = Alu16.Add(AX, 4);
         // F000:1399 stc
@@ -2864,7 +2658,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x13CE);
         // F000:13CE add AX,4
         AX = Alu16.Add(AX, 4);
         // F000:13D1 stc
@@ -2883,7 +2676,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x13EE);
         // F000:13EE add AX,8
         AX = Alu16.Add(AX, 8);
         // F000:13F1 stc
@@ -2895,7 +2687,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
         CheckExternalEvents(cs1, 0xFFF0);
         // F000:FFF0 jmp far F000:0045
-        CheckExternalEvents(cs1, 0x0045);
         // F000:0045 cli
         InterruptFlag = false;
         // F000:0046 mov AL,0
@@ -2923,7 +2714,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (CX != 0) {
             goto label_F000_0054_F0054_10;
         }
-        CheckExternalEvents(cs1, 0x006B);
         // F000:006B mov AX,0x1000
         AX = 0x1000;
         // F000:006E mov SS,AX
@@ -2953,22 +2743,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!CarryFlag) {
             goto label_F000_00AC_F00AC_30;
         }
-        CheckExternalEvents(cs1, 0x0088);
         // F000:0088 jb short 0x00AD
         if (CarryFlag) {
             goto label_F000_00AD_F00AD_34;
         }
-        CheckExternalEvents(cs1, 0x008A);
         VerifySpeculativeEntryOrFail(cs1, 0x008A, [(byte)0xF4]);
         // F000:008A hlt
         return Hlt();
     label_F000_00AD_F00AD_34:
-        CheckExternalEvents(cs1, 0x00AD);
         // F000:00AD jb short 0x008B
         if (!CarryFlag) {
             goto label_F000_00AF_F00AF_40;
         }
-        CheckExternalEvents(cs1, 0x008B);
         // F000:008B mov AH,0x40
         AH = 0x40;
         // F000:008D sahf
@@ -2977,22 +2763,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             goto label_F000_00AC_F00AC_30;
         }
-        CheckExternalEvents(cs1, 0x0090);
         // F000:0090 je short 0x00AF
         if (ZeroFlag) {
             goto label_F000_00AF_F00AF_40;
         }
-        CheckExternalEvents(cs1, 0x0092);
         VerifySpeculativeEntryOrFail(cs1, 0x0092, [(byte)0xF4]);
         // F000:0092 hlt
         return Hlt();
     label_F000_00AF_F00AF_40:
-        CheckExternalEvents(cs1, 0x00AF);
         // F000:00AF je short 0x0093
         if (!ZeroFlag) {
             goto label_F000_00B1_F00B1_45;
         }
-        CheckExternalEvents(cs1, 0x0093);
         // F000:0093 mov AH,4
         AH = 4;
         // F000:0095 sahf
@@ -3001,22 +2783,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ParityFlag) {
             goto label_F000_00AC_F00AC_30;
         }
-        CheckExternalEvents(cs1, 0x0098);
         // F000:0098 jp short 0x00B1
         if (ParityFlag) {
             goto label_F000_00B1_F00B1_45;
         }
-        CheckExternalEvents(cs1, 0x009A);
         VerifySpeculativeEntryOrFail(cs1, 0x009A, [(byte)0xF4]);
         // F000:009A hlt
         return Hlt();
     label_F000_00B1_F00B1_45:
-        CheckExternalEvents(cs1, 0x00B1);
         // F000:00B1 jp short 0x009B
         if (!ParityFlag) {
             goto label_F000_00B3_F00B3_51;
         }
-        CheckExternalEvents(cs1, 0x009B);
         // F000:009B mov AH,0x80
         AH = 0x80;
         // F000:009D sahf
@@ -3025,22 +2803,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!SignFlag) {
             goto label_F000_00AC_F00AC_30;
         }
-        CheckExternalEvents(cs1, 0x00A0);
         // F000:00A0 js short 0x00B3
         if (SignFlag) {
             goto label_F000_00B3_F00B3_51;
         }
-        CheckExternalEvents(cs1, 0x00A2);
         VerifySpeculativeEntryOrFail(cs1, 0x00A2, [(byte)0xF4]);
         // F000:00A2 hlt
         return Hlt();
     label_F000_00B3_F00B3_51:
-        CheckExternalEvents(cs1, 0x00B3);
         // F000:00B3 js short 0x00A3
         if (!SignFlag) {
             goto label_F000_00B5_F00B5_60;
         }
-        CheckExternalEvents(cs1, 0x00A3);
         // F000:00A3 mov AH,0x41
         AH = 0x41;
         // F000:00A5 sahf
@@ -3049,22 +2823,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!CarryFlag && !ZeroFlag) {
             goto label_F000_00AC_F00AC_30;
         }
-        CheckExternalEvents(cs1, 0x00A8);
         // F000:00A8 jbe short 0x00B5
         if (!(CarryFlag || ZeroFlag)) {
             goto label_F000_00AA_F00AA_70;
         }
     label_F000_00B5_F00B5_60:
-        CheckExternalEvents(cs1, 0x00B5);
         // F000:00B5 jbe short 0x00AA
         if (!(CarryFlag || ZeroFlag)) {
             goto label_F000_00B7_F00B7_72;
         }
     label_F000_00AA_F00AA_70:
-        CheckExternalEvents(cs1, 0x00AA);
         // F000:00AA jmp short 0x00B7
     label_F000_00B7_F00B7_72:
-        CheckExternalEvents(cs1, 0x00B7);
         // F000:00B7 mov AH,0xD4
         AH = 0xD4;
         // F000:00B9 sahf
@@ -3077,17 +2847,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!CarryFlag) {
             goto label_F000_00DB_F00DB_94;
         }
-        CheckExternalEvents(cs1, 0x00C0);
         VerifySpeculativeEntryOrFail(cs1, 0x00C0, [(byte)0xF4]);
         // F000:00C0 hlt
         return Hlt();
     label_F000_00DB_F00DB_94:
-        CheckExternalEvents(cs1, 0x00DB);
         // F000:00DB jae short 0x00C1
         if (CarryFlag) {
             goto label_F000_00DD_F00DD_100;
         }
-        CheckExternalEvents(cs1, 0x00C1);
         // F000:00C1 mov AH,0x95
         AH = 0x95;
         // F000:00C3 sahf
@@ -3096,17 +2863,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             goto label_F000_00DD_F00DD_100;
         }
-        CheckExternalEvents(cs1, 0x00C6);
         VerifySpeculativeEntryOrFail(cs1, 0x00C6, [(byte)0xF4]);
         // F000:00C6 hlt
         return Hlt();
     label_F000_00DD_F00DD_100:
-        CheckExternalEvents(cs1, 0x00DD);
         // F000:00DD jne short 0x00C7
         if (ZeroFlag) {
             goto label_F000_00DF_F00DF_105;
         }
-        CheckExternalEvents(cs1, 0x00C7);
         // F000:00C7 mov AH,0xD1
         AH = 0xD1;
         // F000:00C9 sahf
@@ -3115,17 +2879,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ParityFlag) {
             goto label_F000_00DF_F00DF_105;
         }
-        CheckExternalEvents(cs1, 0x00CC);
         VerifySpeculativeEntryOrFail(cs1, 0x00CC, [(byte)0xF4]);
         // F000:00CC hlt
         return Hlt();
     label_F000_00DF_F00DF_105:
-        CheckExternalEvents(cs1, 0x00DF);
         // F000:00DF jnp short 0x00CD
         if (ParityFlag) {
             goto label_F000_00E1_F00E1_111;
         }
-        CheckExternalEvents(cs1, 0x00CD);
         // F000:00CD mov AH,0x55
         AH = 0x55;
         // F000:00CF sahf
@@ -3134,17 +2895,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!SignFlag) {
             goto label_F000_00E1_F00E1_111;
         }
-        CheckExternalEvents(cs1, 0x00D2);
         VerifySpeculativeEntryOrFail(cs1, 0x00D2, [(byte)0xF4]);
         // F000:00D2 hlt
         return Hlt();
     label_F000_00E1_F00E1_111:
-        CheckExternalEvents(cs1, 0x00E1);
         // F000:00E1 jns short 0x00D3
         if (SignFlag) {
             goto label_F000_00E3_F00E3_120;
         }
-        CheckExternalEvents(cs1, 0x00D3);
         // F000:00D3 mov AH,0x94
         AH = 0x94;
         // F000:00D5 sahf
@@ -3153,20 +2911,16 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!CarryFlag && !ZeroFlag) {
             goto label_F000_00E3_F00E3_120;
         }
-        CheckExternalEvents(cs1, 0x00D8);
         VerifySpeculativeEntryOrFail(cs1, 0x00D8, [(byte)0xF4]);
         // F000:00D8 hlt
         return Hlt();
     label_F000_00E3_F00E3_120:
-        CheckExternalEvents(cs1, 0x00E3);
         // F000:00E3 ja short 0x00D9
         if (!(!CarryFlag && !ZeroFlag)) {
             goto label_F000_00E5_F00E5_129;
         }
-        CheckExternalEvents(cs1, 0x00D9);
         // F000:00D9 jmp short 0x00E5
     label_F000_00E5_F00E5_129:
-        CheckExternalEvents(cs1, 0x00E5);
         // F000:00E5 mov AH,0
         AH = 0;
         // F000:00E7 sahf
@@ -3179,62 +2933,50 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!OverflowFlag) {
             goto label_F000_0122_F0122_143;
         }
-        CheckExternalEvents(cs1, 0x00EE);
         // F000:00EE jo short 0x0123
         if (OverflowFlag) {
             goto label_F000_0123_F0123_147;
         }
-        CheckExternalEvents(cs1, 0x00F0);
         VerifySpeculativeEntryOrFail(cs1, 0x00F0, [(byte)0xF4]);
         // F000:00F0 hlt
         return Hlt();
     label_F000_0123_F0123_147:
-        CheckExternalEvents(cs1, 0x0123);
         // F000:0123 jo short 0x00F1
         if (!OverflowFlag) {
             goto label_F000_0125_F0125_153;
         }
-        CheckExternalEvents(cs1, 0x00F1);
         // F000:00F1 jl short 0x0122
         if (SignFlag != OverflowFlag) {
             goto label_F000_0122_F0122_143;
         }
-        CheckExternalEvents(cs1, 0x00F3);
         // F000:00F3 jge short 0x0125
         if (SignFlag == OverflowFlag) {
             goto label_F000_0125_F0125_153;
         }
-        CheckExternalEvents(cs1, 0x00F5);
         VerifySpeculativeEntryOrFail(cs1, 0x00F5, [(byte)0xF4]);
         // F000:00F5 hlt
         return Hlt();
     label_F000_0125_F0125_153:
-        CheckExternalEvents(cs1, 0x0125);
         // F000:0125 jge short 0x00F6
         if (!(SignFlag == OverflowFlag)) {
             goto label_F000_0127_F0127_160;
         }
-        CheckExternalEvents(cs1, 0x00F6);
         // F000:00F6 jle short 0x0122
         if (ZeroFlag || SignFlag != OverflowFlag) {
             goto label_F000_0122_F0122_143;
         }
-        CheckExternalEvents(cs1, 0x00F8);
         // F000:00F8 jg short 0x0127
         if (!ZeroFlag && SignFlag == OverflowFlag) {
             goto label_F000_0127_F0127_160;
         }
-        CheckExternalEvents(cs1, 0x00FA);
         VerifySpeculativeEntryOrFail(cs1, 0x00FA, [(byte)0xF4]);
         // F000:00FA hlt
         return Hlt();
     label_F000_0127_F0127_160:
-        CheckExternalEvents(cs1, 0x0127);
         // F000:0127 jg short 0x00FB
         if (!(!ZeroFlag && SignFlag == OverflowFlag)) {
             goto label_F000_0129_F0129_170;
         }
-        CheckExternalEvents(cs1, 0x00FB);
         // F000:00FB mov AH,0x40
         AH = 0x40;
         // F000:00FD sahf
@@ -3243,39 +2985,32 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (SignFlag != OverflowFlag) {
             goto label_F000_0129_F0129_170;
         }
-        CheckExternalEvents(cs1, 0x0100);
         VerifySpeculativeEntryOrFail(cs1, 0x0100, [(byte)0xF4]);
         // F000:0100 hlt
         return Hlt();
     label_F000_0129_F0129_170:
-        CheckExternalEvents(cs1, 0x0129);
         // F000:0129 jl short 0x0101
         if (!(SignFlag != OverflowFlag)) {
             goto label_F000_012B_F012B_178;
         }
-        CheckExternalEvents(cs1, 0x0101);
         // F000:0101 jle short 0x012B
         if (ZeroFlag || SignFlag != OverflowFlag) {
             goto label_F000_012B_F012B_178;
         }
-        CheckExternalEvents(cs1, 0x0103);
         VerifySpeculativeEntryOrFail(cs1, 0x0103, [(byte)0xF4]);
         // F000:0103 hlt
         return Hlt();
     label_F000_012B_F012B_178:
-        CheckExternalEvents(cs1, 0x012B);
         // F000:012B jle short 0x0104
         if (!(ZeroFlag || SignFlag != OverflowFlag)) {
             goto label_F000_012D_F012D_186;
         }
-        CheckExternalEvents(cs1, 0x0104);
         // F000:0104 mov ECX,1
         ECX = 1;
         // F000:010A jcxz short 0x0122
         if (CX == 0) {
             goto label_F000_0122_F0122_143;
         }
-        CheckExternalEvents(cs1, 0x010C);
         // F000:010C mov ECX,0x00010000
         ECX = 0x00010000;
         // F000:0112 jcxz short 0x012D
@@ -3283,18 +3018,15 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             goto label_F000_0114_F0114_192;
         }
     label_F000_012D_F012D_186:
-        CheckExternalEvents(cs1, 0x012D);
         // F000:012D jcxz short 0x0114
         if (!(CX == 0)) {
             goto label_F000_012F_F012F_194;
         }
     label_F000_0114_F0114_192:
-        CheckExternalEvents(cs1, 0x0114);
         // F000:0114 jecxz short 0x0122
         if (ECX == 0) {
             goto label_F000_0122_F0122_143;
         }
-        CheckExternalEvents(cs1, 0x0117);
         // F000:0117 mov ECX,0
         ECX = 0;
         // F000:011D jecxz short 0x012F
@@ -3302,16 +3034,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             goto label_F000_0120_F0120_202;
         }
     label_F000_012F_F012F_194:
-        CheckExternalEvents(cs1, 0x012F);
         // F000:012F jecxz short 0x0120
         if (!(ECX == 0)) {
             goto label_F000_0132_F0132_204;
         }
     label_F000_0120_F0120_202:
-        CheckExternalEvents(cs1, 0x0120);
         // F000:0120 jmp short 0x0132
     label_F000_0132_F0132_204:
-        CheckExternalEvents(cs1, 0x0132);
         // F000:0132 mov AH,1
         AH = 1;
         // F000:0134 sahf
@@ -3320,22 +3049,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!CarryFlag) {
             goto label_F000_01F0_F01F0_215;
         }
-        CheckExternalEvents(cs1, 0x0139);
         // F000:0139 jb near 0x01F1
         if (CarryFlag) {
             goto label_F000_01F1_F01F1_219;
         }
-        CheckExternalEvents(cs1, 0x013D);
         VerifySpeculativeEntryOrFail(cs1, 0x013D, [(byte)0xF4]);
         // F000:013D hlt
         return Hlt();
     label_F000_01F1_F01F1_219:
-        CheckExternalEvents(cs1, 0x01F1);
         // F000:01F1 jb near 0x013E
         if (!CarryFlag) {
             goto label_F000_01F5_F01F5_225;
         }
-        CheckExternalEvents(cs1, 0x013E);
         // F000:013E mov AH,0x40
         AH = 0x40;
         // F000:0140 sahf
@@ -3344,22 +3069,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             goto label_F000_01F0_F01F0_215;
         }
-        CheckExternalEvents(cs1, 0x0145);
         // F000:0145 je near 0x01F5
         if (ZeroFlag) {
             goto label_F000_01F5_F01F5_225;
         }
-        CheckExternalEvents(cs1, 0x0149);
         VerifySpeculativeEntryOrFail(cs1, 0x0149, [(byte)0xF4]);
         // F000:0149 hlt
         return Hlt();
     label_F000_01F5_F01F5_225:
-        CheckExternalEvents(cs1, 0x01F5);
         // F000:01F5 je near 0x014A
         if (!ZeroFlag) {
             goto label_F000_01F9_F01F9_230;
         }
-        CheckExternalEvents(cs1, 0x014A);
         // F000:014A mov AH,4
         AH = 4;
         // F000:014C sahf
@@ -3368,22 +3089,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ParityFlag) {
             goto label_F000_01F0_F01F0_215;
         }
-        CheckExternalEvents(cs1, 0x0151);
         // F000:0151 jp near 0x01F9
         if (ParityFlag) {
             goto label_F000_01F9_F01F9_230;
         }
-        CheckExternalEvents(cs1, 0x0155);
         VerifySpeculativeEntryOrFail(cs1, 0x0155, [(byte)0xF4]);
         // F000:0155 hlt
         return Hlt();
     label_F000_01F9_F01F9_230:
-        CheckExternalEvents(cs1, 0x01F9);
         // F000:01F9 jp near 0x0156
         if (!ParityFlag) {
             goto label_F000_01FD_F01FD_236;
         }
-        CheckExternalEvents(cs1, 0x0156);
         // F000:0156 mov AH,0x80
         AH = 0x80;
         // F000:0158 sahf
@@ -3392,22 +3109,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!SignFlag) {
             goto label_F000_01F0_F01F0_215;
         }
-        CheckExternalEvents(cs1, 0x015D);
         // F000:015D js near 0x01FD
         if (SignFlag) {
             goto label_F000_01FD_F01FD_236;
         }
-        CheckExternalEvents(cs1, 0x0161);
         VerifySpeculativeEntryOrFail(cs1, 0x0161, [(byte)0xF4]);
         // F000:0161 hlt
         return Hlt();
     label_F000_01FD_F01FD_236:
-        CheckExternalEvents(cs1, 0x01FD);
         // F000:01FD js near 0x0162
         if (!SignFlag) {
             goto label_F000_0201_F0201_245;
         }
-        CheckExternalEvents(cs1, 0x0162);
         // F000:0162 mov AH,0x41
         AH = 0x41;
         // F000:0164 sahf
@@ -3416,22 +3129,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!CarryFlag && !ZeroFlag) {
             goto label_F000_01F0_F01F0_215;
         }
-        CheckExternalEvents(cs1, 0x0169);
         // F000:0169 jbe near 0x0201
         if (!(CarryFlag || ZeroFlag)) {
             goto label_F000_016D_F016D_255;
         }
     label_F000_0201_F0201_245:
-        CheckExternalEvents(cs1, 0x0201);
         // F000:0201 jbe near 0x016D
         if (!(CarryFlag || ZeroFlag)) {
             goto label_F000_0205_F0205_257;
         }
     label_F000_016D_F016D_255:
-        CheckExternalEvents(cs1, 0x016D);
         // F000:016D jmp near 0x0205
     label_F000_0205_F0205_257:
-        CheckExternalEvents(cs1, 0x0205);
         // F000:0205 mov AH,0xD4
         AH = 0xD4;
         // F000:0207 sahf
@@ -3444,17 +3153,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!CarryFlag) {
             goto label_F000_02B4_F02B4_279;
         }
-        CheckExternalEvents(cs1, 0x0210);
         VerifySpeculativeEntryOrFail(cs1, 0x0210, [(byte)0xF4]);
         // F000:0210 hlt
         return Hlt();
     label_F000_02B4_F02B4_279:
-        CheckExternalEvents(cs1, 0x02B4);
         // F000:02B4 jae near 0x0211
         if (CarryFlag) {
             goto label_F000_02B8_F02B8_285;
         }
-        CheckExternalEvents(cs1, 0x0211);
         // F000:0211 mov AH,0x95
         AH = 0x95;
         // F000:0213 sahf
@@ -3463,17 +3169,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             goto label_F000_02B8_F02B8_285;
         }
-        CheckExternalEvents(cs1, 0x0218);
         VerifySpeculativeEntryOrFail(cs1, 0x0218, [(byte)0xF4]);
         // F000:0218 hlt
         return Hlt();
     label_F000_02B8_F02B8_285:
-        CheckExternalEvents(cs1, 0x02B8);
         // F000:02B8 jne near 0x0219
         if (ZeroFlag) {
             goto label_F000_02BC_F02BC_290;
         }
-        CheckExternalEvents(cs1, 0x0219);
         // F000:0219 mov AH,0xD1
         AH = 0xD1;
         // F000:021B sahf
@@ -3482,17 +3185,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ParityFlag) {
             goto label_F000_02BC_F02BC_290;
         }
-        CheckExternalEvents(cs1, 0x0220);
         VerifySpeculativeEntryOrFail(cs1, 0x0220, [(byte)0xF4]);
         // F000:0220 hlt
         return Hlt();
     label_F000_02BC_F02BC_290:
-        CheckExternalEvents(cs1, 0x02BC);
         // F000:02BC jnp near 0x0221
         if (ParityFlag) {
             goto label_F000_02C0_F02C0_296;
         }
-        CheckExternalEvents(cs1, 0x0221);
         // F000:0221 mov AH,0x55
         AH = 0x55;
         // F000:0223 sahf
@@ -3501,17 +3201,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!SignFlag) {
             goto label_F000_02C0_F02C0_296;
         }
-        CheckExternalEvents(cs1, 0x0228);
         VerifySpeculativeEntryOrFail(cs1, 0x0228, [(byte)0xF4]);
         // F000:0228 hlt
         return Hlt();
     label_F000_02C0_F02C0_296:
-        CheckExternalEvents(cs1, 0x02C0);
         // F000:02C0 jns near 0x0229
         if (SignFlag) {
             goto label_F000_02C4_F02C4_305;
         }
-        CheckExternalEvents(cs1, 0x0229);
         // F000:0229 mov AH,0x94
         AH = 0x94;
         // F000:022B sahf
@@ -3520,20 +3217,16 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!CarryFlag && !ZeroFlag) {
             goto label_F000_02C4_F02C4_305;
         }
-        CheckExternalEvents(cs1, 0x0230);
         VerifySpeculativeEntryOrFail(cs1, 0x0230, [(byte)0xF4]);
         // F000:0230 hlt
         return Hlt();
     label_F000_02C4_F02C4_305:
-        CheckExternalEvents(cs1, 0x02C4);
         // F000:02C4 ja near 0x0231
         if (!(!CarryFlag && !ZeroFlag)) {
             goto label_F000_02C8_F02C8_314;
         }
-        CheckExternalEvents(cs1, 0x0231);
         // F000:0231 jmp near 0x02C8
     label_F000_02C8_F02C8_314:
-        CheckExternalEvents(cs1, 0x02C8);
         // F000:02C8 mov AH,0
         AH = 0;
         // F000:02CA sahf
@@ -3546,62 +3239,50 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!OverflowFlag) {
             goto label_F000_037A_F037A_328;
         }
-        CheckExternalEvents(cs1, 0x02D3);
         // F000:02D3 jo near 0x037B
         if (OverflowFlag) {
             goto label_F000_037B_F037B_332;
         }
-        CheckExternalEvents(cs1, 0x02D7);
         VerifySpeculativeEntryOrFail(cs1, 0x02D7, [(byte)0xF4]);
         // F000:02D7 hlt
         return Hlt();
     label_F000_037B_F037B_332:
-        CheckExternalEvents(cs1, 0x037B);
         // F000:037B jo near 0x02D8
         if (!OverflowFlag) {
             goto label_F000_037F_F037F_338;
         }
-        CheckExternalEvents(cs1, 0x02D8);
         // F000:02D8 jl near 0x037A
         if (SignFlag != OverflowFlag) {
             goto label_F000_037A_F037A_328;
         }
-        CheckExternalEvents(cs1, 0x02DC);
         // F000:02DC jge near 0x037F
         if (SignFlag == OverflowFlag) {
             goto label_F000_037F_F037F_338;
         }
-        CheckExternalEvents(cs1, 0x02E0);
         VerifySpeculativeEntryOrFail(cs1, 0x02E0, [(byte)0xF4]);
         // F000:02E0 hlt
         return Hlt();
     label_F000_037F_F037F_338:
-        CheckExternalEvents(cs1, 0x037F);
         // F000:037F jge near 0x02E1
         if (!(SignFlag == OverflowFlag)) {
             goto label_F000_0383_F0383_345;
         }
-        CheckExternalEvents(cs1, 0x02E1);
         // F000:02E1 jle near 0x037A
         if (ZeroFlag || SignFlag != OverflowFlag) {
             goto label_F000_037A_F037A_328;
         }
-        CheckExternalEvents(cs1, 0x02E5);
         // F000:02E5 jg near 0x0383
         if (!ZeroFlag && SignFlag == OverflowFlag) {
             goto label_F000_0383_F0383_345;
         }
-        CheckExternalEvents(cs1, 0x02E9);
         VerifySpeculativeEntryOrFail(cs1, 0x02E9, [(byte)0xF4]);
         // F000:02E9 hlt
         return Hlt();
     label_F000_0383_F0383_345:
-        CheckExternalEvents(cs1, 0x0383);
         // F000:0383 jg near 0x02EA
         if (!(!ZeroFlag && SignFlag == OverflowFlag)) {
             goto label_F000_0387_F0387_355;
         }
-        CheckExternalEvents(cs1, 0x02EA);
         // F000:02EA mov AH,0x40
         AH = 0x40;
         // F000:02EC sahf
@@ -3610,35 +3291,28 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (SignFlag != OverflowFlag) {
             goto label_F000_0387_F0387_355;
         }
-        CheckExternalEvents(cs1, 0x02F1);
         VerifySpeculativeEntryOrFail(cs1, 0x02F1, [(byte)0xF4]);
         // F000:02F1 hlt
         return Hlt();
     label_F000_0387_F0387_355:
-        CheckExternalEvents(cs1, 0x0387);
         // F000:0387 jl near 0x02F2
         if (!(SignFlag != OverflowFlag)) {
             goto label_F000_038B_F038B_363;
         }
-        CheckExternalEvents(cs1, 0x02F2);
         // F000:02F2 jle near 0x038B
         if (ZeroFlag || SignFlag != OverflowFlag) {
             goto label_F000_038B_F038B_363;
         }
-        CheckExternalEvents(cs1, 0x02F6);
         VerifySpeculativeEntryOrFail(cs1, 0x02F6, [(byte)0xF4]);
         // F000:02F6 hlt
         return Hlt();
     label_F000_038B_F038B_363:
-        CheckExternalEvents(cs1, 0x038B);
         // F000:038B jle near 0x02F7
         if (!(ZeroFlag || SignFlag != OverflowFlag)) {
             goto label_F000_038F_F038F_371;
         }
-        CheckExternalEvents(cs1, 0x02F7);
         // F000:02F7 jmp near 0x038F
     label_F000_038F_F038F_371:
-        CheckExternalEvents(cs1, 0x038F);
         // F000:038F mov ECX,0x00020000
         ECX = 0x00020000;
         // F000:0395 mov EAX,0
@@ -3652,21 +3326,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (CX != 0) {
             goto label_F000_039B_F039B_378;
         }
-        CheckExternalEvents(cs1, 0x039F);
         // F000:039F cmp EAX,0x00010000
         Alu32.Sub(EAX, 0x00010000);
         // F000:03A5 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x03A9);
         // F000:03A9 cmp ECX,0x00020000
         Alu32.Sub(ECX, 0x00020000);
         // F000:03B0 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x03B4);
         // F000:03B4 mov ECX,0x00020000
         ECX = 0x00020000;
         // F000:03BA mov EAX,0
@@ -3680,21 +3351,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (ECX != 0) {
             goto label_F000_03C0_F03C0_401;
         }
-        CheckExternalEvents(cs1, 0x03C5);
         // F000:03C5 cmp EAX,0x00020000
         Alu32.Sub(EAX, 0x00020000);
         // F000:03CB jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x03CF);
         // F000:03CF cmp ECX,0
         Alu32.Sub(ECX, 0);
         // F000:03D3 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x03D7);
         // F000:03D7 mov CX,0xFFFF
         CX = 0xFFFF;
         // F000:03DA mov AX,0
@@ -3710,21 +3378,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (CX != 0 && ZeroFlag) {
             goto label_F000_03DD_F03DD_417;
         }
-        CheckExternalEvents(cs1, 0x03E3);
         // F000:03E3 cmp AX,0x0100
         Alu16.Sub(AX, 0x0100);
         // F000:03E6 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x03EA);
         // F000:03EA cmp CX,0xFEFF
         Alu16.Sub(CX, 0xFEFF);
         // F000:03EE jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x03F2);
         // F000:03F2 mov CX,0x00FF
         CX = 0x00FF;
         // F000:03F5 mov AX,0
@@ -3740,21 +3405,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (CX != 0 && ZeroFlag) {
             goto label_F000_03F8_F03F8_433;
         }
-        CheckExternalEvents(cs1, 0x03FE);
         // F000:03FE cmp AX,0x00FF
         Alu16.Sub(AX, 0x00FF);
         // F000:0401 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0405);
         // F000:0405 cmp CX,0
         Alu16.Sub(CX, 0);
         // F000:0408 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x040C);
         // F000:040C mov ECX,0x00020000
         ECX = 0x00020000;
         // F000:0412 mov EAX,0
@@ -3770,21 +3432,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (ECX != 0 && ZeroFlag) {
             goto label_F000_0418_F0418_449;
         }
-        CheckExternalEvents(cs1, 0x0423);
         // F000:0423 cmp EAX,0x00010000
         Alu32.Sub(EAX, 0x00010000);
         // F000:0429 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x042D);
         // F000:042D cmp ECX,0x00010000
         Alu32.Sub(ECX, 0x00010000);
         // F000:0434 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0438);
         // F000:0438 mov CX,0xFFFF
         CX = 0xFFFF;
         // F000:043B mov AX,0
@@ -3800,21 +3459,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (CX != 0 && !ZeroFlag) {
             goto label_F000_043E_F043E_465;
         }
-        CheckExternalEvents(cs1, 0x0443);
         // F000:0443 cmp AX,0x0100
         Alu16.Sub(AX, 0x0100);
         // F000:0446 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x044A);
         // F000:044A cmp CX,0xFEFF
         Alu16.Sub(CX, 0xFEFF);
         // F000:044E jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0452);
         // F000:0452 mov CX,0x00FF
         CX = 0x00FF;
         // F000:0455 mov AX,0
@@ -3830,21 +3486,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (CX != 0 && !ZeroFlag) {
             goto label_F000_0458_F0458_481;
         }
-        CheckExternalEvents(cs1, 0x045D);
         // F000:045D cmp AX,0x00FF
         Alu16.Sub(AX, 0x00FF);
         // F000:0460 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0464);
         // F000:0464 cmp CX,0
         Alu16.Sub(CX, 0);
         // F000:0467 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x046B);
         // F000:046B mov ECX,0x00010000
         ECX = 0x00010000;
         // F000:0471 mov EAX,0
@@ -3860,21 +3513,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (ECX != 0 && !ZeroFlag) {
             goto label_F000_0477_F0477_497;
         }
-        CheckExternalEvents(cs1, 0x0482);
         // F000:0482 cmp EAX,0x00010000
         Alu32.Sub(EAX, 0x00010000);
         // F000:0488 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x048C);
         // F000:048C cmp ECX,0
         Alu32.Sub(ECX, 0);
         // F000:0490 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0494);
         // F000:0494 mov AL,2
         AL = 2;
         // F000:0496 mov DX,0x0999
@@ -3909,7 +3559,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x04BF);
         // F000:04BF mov AL,3
         AL = 3;
         // F000:04C1 mov DX,0x0999
@@ -3931,7 +3580,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x04D4);
         // F000:04D4 mov EAX,0xFFFFFFFF
         EAX = 0xFFFFFFFFu;
         // F000:04DA mov EAX,SS
@@ -3942,7 +3590,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x04E3);
         // F000:04E3 mov word ptr DS:[0],0xBEEF
         UInt16[DS, 0] = 0xBEEF;
         // F000:04E9 mov word ptr DS:[0],SS
@@ -3953,7 +3600,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x04F5);
         // F000:04F5 mov CX,DS
         CX = DS;
         // F000:04F7 xor AX,AX
@@ -3972,7 +3618,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0507);
         // F000:0507 mov DX,0x2000
         DX = 0x2000;
         // F000:050A mov DS,DX
@@ -3987,7 +3632,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0516);
         // F000:0516 mov EAX,0xFFFFFFFF
         EAX = 0xFFFFFFFFu;
         // F000:051C mov EAX,DS
@@ -3998,7 +3642,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0525);
         // F000:0525 mov word ptr DS:[0],0xBEEF
         UInt16[DS, 0] = 0xBEEF;
         // F000:052B mov word ptr DS:[0],DS
@@ -4009,7 +3652,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0537);
         // F000:0537 mov CX,DS
         CX = DS;
         // F000:0539 xor AX,AX
@@ -4028,7 +3670,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x054C);
         // F000:054C mov DX,0x2000
         DX = 0x2000;
         // F000:054F mov ES,DX
@@ -4043,7 +3684,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x055B);
         // F000:055B mov EAX,0xFFFFFFFF
         EAX = 0xFFFFFFFFu;
         // F000:0561 mov EAX,ES
@@ -4054,7 +3694,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x056A);
         // F000:056A mov word ptr DS:[0],0xBEEF
         UInt16[DS, 0] = 0xBEEF;
         // F000:0570 mov word ptr DS:[0],ES
@@ -4065,7 +3704,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x057C);
         // F000:057C mov CX,DS
         CX = DS;
         // F000:057E xor AX,AX
@@ -4082,7 +3720,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x058E);
         // F000:058E mov DX,0x2000
         DX = 0x2000;
         // F000:0591 mov FS,DX
@@ -4097,7 +3734,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x059D);
         // F000:059D mov EAX,0xFFFFFFFF
         EAX = 0xFFFFFFFFu;
         // F000:05A3 mov EAX,FS
@@ -4108,7 +3744,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x05AC);
         // F000:05AC mov word ptr DS:[0],0xBEEF
         UInt16[DS, 0] = 0xBEEF;
         // F000:05B2 mov word ptr DS:[0],FS
@@ -4119,7 +3754,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x05BE);
         // F000:05BE mov CX,DS
         CX = DS;
         // F000:05C0 xor AX,AX
@@ -4136,7 +3770,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x05D0);
         // F000:05D0 mov DX,0x2000
         DX = 0x2000;
         // F000:05D3 mov GS,DX
@@ -4151,7 +3784,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x05DF);
         // F000:05DF mov EAX,0xFFFFFFFF
         EAX = 0xFFFFFFFFu;
         // F000:05E5 mov EAX,GS
@@ -4162,7 +3794,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x05EE);
         // F000:05EE mov word ptr DS:[0],0xBEEF
         UInt16[DS, 0] = 0xBEEF;
         // F000:05F4 mov word ptr DS:[0],GS
@@ -4173,7 +3804,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0600);
         // F000:0600 mov CX,DS
         CX = DS;
         // F000:0602 xor AX,AX
@@ -4190,7 +3820,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
-        CheckExternalEvents(cs1, 0x0612);
         // F000:0612 mov DX,0xF000
         DX = 0xF000;
         // F000:0615 mov AX,0
@@ -4221,22 +3850,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:062E");
         }
     label_F000_037A_F037A_328:
-        CheckExternalEvents(cs1, 0x037A);
         VerifySpeculativeEntryOrFail(cs1, 0x037A, [(byte)0xF4]);
         // F000:037A hlt
         return Hlt();
     label_F000_01F0_F01F0_215:
-        CheckExternalEvents(cs1, 0x01F0);
         VerifySpeculativeEntryOrFail(cs1, 0x01F0, [(byte)0xF4]);
         // F000:01F0 hlt
         return Hlt();
     label_F000_0122_F0122_143:
-        CheckExternalEvents(cs1, 0x0122);
         VerifySpeculativeEntryOrFail(cs1, 0x0122, [(byte)0xF4]);
         // F000:0122 hlt
         return Hlt();
     label_F000_00AC_F00AC_30:
-        CheckExternalEvents(cs1, 0x00AC);
         VerifySpeculativeEntryOrFail(cs1, 0x00AC, [(byte)0xF4]);
         // F000:00AC hlt
         return Hlt();
@@ -4258,7 +3883,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             goto label_F000_15CC_F15CC_391;
         }
-        CheckExternalEvents(cs1, 0x15CE);
         VerifySpeculativeEntryOrFail(cs1, 0x15CE, [(byte)0xFA]);
         // F000:15CE cli
         InterruptFlag = false;

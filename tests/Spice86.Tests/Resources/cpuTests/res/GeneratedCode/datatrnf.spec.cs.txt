@@ -28,7 +28,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
         CheckExternalEvents(cs1, 0xFFF0);
         // F000:FFF0 jmp short 0
-        CheckExternalEvents(cs1, 0x0000);
         // F000:0000 mov AH,0xED
         AH = 0xED;
         // F000:0002 sahf
@@ -106,7 +105,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         ES = CX;
         // F000:0052 push ES
         Stack.Push16(ES);
-        CheckExternalEvents(cs1, 0x0053);
         // F000:0053 popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(cs1, 0x0054);

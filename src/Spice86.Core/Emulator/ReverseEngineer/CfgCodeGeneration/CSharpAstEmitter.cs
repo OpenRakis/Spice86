@@ -101,7 +101,7 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
     /// AST's own <c>Accept</c> dispatch, then appends the fallthrough transfer
     /// (<see cref="TransferEmitter.EmitFallthroughIfNeeded"/>) unless the body already terminates control flow.
     /// </summary>
-    public EmittedCode LowerInstructionBody(CfgInstruction instruction, IVisitableAstNode node) {
+    public EmittedCode LowerInstructionBody(CfgInstruction instruction, IVisitableAstNode node, bool emitExternalEventCheckAfter) {
         EmittedCode body = node.Accept(this);
         // Skip the fallthrough transfer when the node owns its control flow, or when the lowered body already
         // diverges (e.g. a CPUID/throw node lowering to a `throw`): appending a fallthrough after a diverging
@@ -109,8 +109,14 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
         if (TerminatesControlFlow(node) || !body.CompletesNormally) {
             return body;
         }
+        if (emitExternalEventCheckAfter) {
+            body = EmittedCode.Concat(body, ExternalEventCheckAfter(instruction));
+        }
         return EmittedCode.Concat(body, Transfer.EmitFallthroughIfNeeded(instruction, CurrentMethod));
     }
+
+    private EmittedCode ExternalEventCheckAfter(CfgInstruction instruction) =>
+        EmittedCode.Line($"CheckExternalEvents({Context.GetSegmentVariable(instruction.Address.Segment)}, 0x{(ushort)instruction.NextInMemoryAddress32.Offset:X4});");
 
     private static bool TerminatesControlFlow(IVisitableAstNode node) =>
         NodeContainsControlFlow(node) || node is InvalidInstructionNode;

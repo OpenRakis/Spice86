@@ -51,7 +51,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (CX != 0) {
             goto label_F000_000B_F000B_9;
         }
-        CheckExternalEvents(cs2, 0x000E);
         // F000:000E call near AX
         switch ((ushort)(AX)) {
             case 0x1290:
@@ -60,7 +59,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             default:
                 throw FailAsUntested($"Unknown near call target 0x{((ushort)(AX)):X4} at F000:000E");
         }
-        CheckExternalEvents(cs2, 0x0010);
         // F000:0010 ret near
         return NearRet();
     }
@@ -75,12 +73,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (CX != 0 && ZeroFlag) {
             goto label_F000_1290_F1290_24;
         }
-        CheckExternalEvents(cs2, 0x1295);
         // F000:1295 mov DX,0x0040
         DX = 0x0040;
         // F000:1298 push DX
         Stack.Push16(DX);
-        CheckExternalEvents(cs2, 0x1299);
         // F000:1299 popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(cs2, 0x129A);
@@ -89,7 +85,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (CX != 0 && ZeroFlag) {
             goto label_F000_129D_F129D_38;
         }
-        CheckExternalEvents(cs2, 0x129C);
         VerifySpeculativeEntryOrFail(cs2, 0x129C, [(byte)0xF4]);
         // F000:129C hlt
         return Hlt();
@@ -97,24 +92,20 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs2, 0x129D);
         // F000:129D call far E342:EBE0
         FarCall(cs2, 0x12A2, cs1, unknown_E342_EBE0_F2000);
-        CheckExternalEvents(cs2, 0x12A2);
         // F000:12A2 jcxz short 0x129D
         if (CX == 0) {
             goto label_F000_129D_F129D_38;
         }
-        CheckExternalEvents(cs2, 0x12A4);
         // F000:12A4 mov CX,0
         CX = 0;
         // F000:12A7 jcxz short 0x12AA
         if (CX == 0) {
             goto label_F000_12AA_F12AA_85;
         }
-        CheckExternalEvents(cs2, 0x12A9);
         VerifySpeculativeEntryOrFail(cs2, 0x12A9, [(byte)0xF4]);
         // F000:12A9 hlt
         return Hlt();
     label_F000_12AA_F12AA_85:
-        CheckExternalEvents(cs2, 0x12AA);
         // F000:12AA ret near 0x000A
         return NearRet(0x000A);
     }
@@ -129,12 +120,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             default:
                 throw FailAsUntested($"Unknown near call target 0x{((ushort)(UInt16[DS, 0x3000])):X4} at E342:EBE0");
         }
-        CheckExternalEvents(cs1, 0xEBE4);
         // E342:EBE4 mov DX,0
         DX = 0;
         // E342:EBE7 push DX
         Stack.Push16(DX);
-        CheckExternalEvents(cs1, 0xEBE8);
         // E342:EBE8 popf
         FlagRegister16 = Stack.Pop16();
     label_E342_EBE9_F2009_66:
@@ -146,18 +135,15 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (CX != 0 && !ZeroFlag) {
             goto label_E342_EBE9_F2009_66;
         }
-        CheckExternalEvents(cs1, 0xEBEE);
         // E342:EBEE loopne 0xEBF1
         CX = (ushort)(CX - 1);
         if (CX != 0 && !ZeroFlag) {
             goto label_E342_EBF1_F2011_72;
         }
-        CheckExternalEvents(cs1, 0xEBF0);
         VerifySpeculativeEntryOrFail(cs1, 0xEBF0, [(byte)0xF4]);
         // E342:EBF0 hlt
         return Hlt();
     label_E342_EBF1_F2011_72:
-        CheckExternalEvents(cs1, 0xEBF1);
         // E342:EBF1 ret far
         return FarRet();
     }
@@ -179,7 +165,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         throw FailAsUntested($"Unknown far call target {targetSegment_51:X4}:{targetOffset_51:X4} at E342:FDE7");
     label_E342_FDEA_F320A_57:
-        CheckExternalEvents(cs1, 0xFDEA);
         // E342:FDEA ret near
         return NearRet();
     }
@@ -199,7 +184,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         State.InterruptShadowing = true;
         // F000:FFF5 call near 0
         NearCall(cs2, 0xFFF8, unknown_F000_0000_F0000);
-        CheckExternalEvents(cs2, 0xFFF8);
         // F000:FFF8 mov DS,CX
         DS = CX;
         // F000:FFFA mov word ptr DS:[0],BX

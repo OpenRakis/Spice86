@@ -24,6 +24,7 @@ using Spice86.Shared.Interfaces;
 
 using System.Reflection;
 using System.Runtime.Loader;
+using System.Text.RegularExpressions;
 
 using Xunit;
 
@@ -184,7 +185,7 @@ public sealed class GeneratedCodeMachineTest {
         (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("selfmodifycalltarget", maxCycles: 20000);
         string source = generatedProgram.SourceText;
 
-        System.Text.RegularExpressions.Regex.Matches(source, @"DefineFunction\(cs1, 0x0028,").Count
+        Regex.Matches(source, @"DefineFunction\(cs1, 0x0028,").Count
             .Should().Be(1, "the address-keyed override catalogue must be registered exactly once per address");
     }
 
@@ -538,4 +539,108 @@ public sealed class GeneratedCodeMachineTest {
             postHandler.PostValues[^1].Should().Be(0xFF);
         });
     }
+
+    [Fact]
+    public void EveryInterruptEnablingInstructionIsFollowedByAnEventCheck() {
+        // Arrange
+        GeneratedCodeMachineTestRunner runner = new();
+        GeneratedCodeRunOptions jump1Options = new GeneratedCodeRunOptions { MaxCycles = 1000 };
+        GeneratedCodeRunOptions stiPendingOptions = new GeneratedCodeRunOptions { MaxCycles = 0xFFFFFFF, EnablePit = true };
+
+        // Act
+        (_, GeneratedCSharpProgram jump1Program) = runner.GenerateProgramAndSource("jump1", jump1Options);
+        (_, GeneratedCSharpProgram stiPendingProgram) = runner.GenerateProgramAndSource("stipending", stiPendingOptions);
+
+        // Assert
+        AssertEveryInterruptEnablingInstructionIsFollowedByAnEventCheck(jump1Program.SourceText);
+        AssertEveryInterruptEnablingInstructionIsFollowedByAnEventCheck(stiPendingProgram.SourceText);
+    }
+
+    [Fact]
+    public void LoopHeaderKeepsExternalEventCheck() {
+        // F000:002C is a self-loop whose block is not a method entry, so only the loop-head rule keeps its check.
+        // Arrange
+        GeneratedCodeMachineTestRunner runner = new();
+        GeneratedCodeRunOptions options = new GeneratedCodeRunOptions { MaxCycles = 0xFFFFFFF, EnablePit = true };
+
+        // Act
+        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("externalint", options);
+        string[] lines = SourceLines(generatedProgram.SourceText);
+        int labelIndex = -1;
+        for (int i = 0; i < lines.Length; i++) {
+            if (LoopHeaderLabelRegex.IsMatch(lines[i])) {
+                labelIndex = i;
+                break;
+            }
+        }
+
+        // Assert
+        labelIndex.Should().NotBe(-1, "the externalint loop head label_F000_002C_F002C_<id> must be emitted");
+        string nextLine = lines[labelIndex + 1].Trim();
+        nextLine.Should().Be("CheckExternalEvents(cs1, 0x002C);");
+    }
+
+    [Fact]
+    public void NoConsecutiveDuplicateExternalEventChecks() {
+        // Arrange
+        GeneratedCodeMachineTestRunner runner = new();
+        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("jump2", maxCycles: 10000);
+        string[] lines = SourceLines(generatedProgram.SourceText);
+
+        // Assert
+        List<string> duplicates = ConsecutiveDuplicateExternalEventChecks(lines);
+        duplicates.Should().BeEmpty("no two CheckExternalEvents calls should be identical when only label lines lie between them");
+    }
+
+    private static List<string> ConsecutiveDuplicateExternalEventChecks(string[] lines) {
+        List<string> duplicates = new();
+        string? lastCheckLine = null;
+        for (int i = 0; i < lines.Length; i++) {
+            string trimmed = lines[i].Trim();
+            if (LabelLineRegex.IsMatch(trimmed)) {
+                continue;
+            }
+            if (trimmed.Contains("CheckExternalEvents(")) {
+                if (lastCheckLine != null && trimmed == lastCheckLine) {
+                    duplicates.Add(trimmed);
+                }
+                lastCheckLine = trimmed;
+            }
+        }
+        return duplicates;
+    }
+
+    private static string[] SourceLines(string sourceText) {
+        return sourceText.Replace("\r\n", "\n").Split('\n');
+    }
+
+    private static void AssertEveryInterruptEnablingInstructionIsFollowedByAnEventCheck(string sourceText) {
+        string[] lines = SourceLines(sourceText);
+        bool foundAtLeastOne = false;
+        for (int i = 0; i < lines.Length; i++) {
+            if (InterruptEnablingAsmCommentRegex.IsMatch(lines[i])) {
+                foundAtLeastOne = true;
+                bool foundCheck = HasEventCheckBeforeNextInstruction(lines, i);
+                foundCheck.Should().BeTrue($"CheckExternalEvents not found after interrupt-enabling instruction at line {i + 1}: {lines[i].Trim()}");
+            }
+        }
+        foundAtLeastOne.Should().BeTrue("at least one sti/popf/popfd instruction should exist in the fixture");
+    }
+
+    private static bool HasEventCheckBeforeNextInstruction(string[] lines, int instructionLineIndex) {
+        for (int j = instructionLineIndex + 1; j < lines.Length; j++) {
+            if (AsmCommentRegex.IsMatch(lines[j])) {
+                return false;
+            }
+            if (lines[j].Contains("CheckExternalEvents(")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static readonly Regex InterruptEnablingAsmCommentRegex = new(@"^\s*// [0-9A-F]{4}:[0-9A-F]{4} (sti|popf|popfd)$");
+    private static readonly Regex AsmCommentRegex = new(@"^\s*// [0-9A-F]{4}:[0-9A-F]{4} ");
+    private static readonly Regex LoopHeaderLabelRegex = new(@"^\s*label_F000_002C_F002C_\d+:$");
+    private static readonly Regex LabelLineRegex = new(@"^\s*label_\w+:$");
 }
