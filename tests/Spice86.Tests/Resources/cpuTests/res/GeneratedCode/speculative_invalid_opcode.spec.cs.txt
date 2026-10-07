@@ -36,7 +36,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Alu8.And(AL, AL);
         // F000:000A jne short 0x0013
         if (!ZeroFlag) {
-            throw FailAsUntested("Unobserved conditional jump target at F000:000A");
+            throw FailAsUntested("Untested jump at F000:000A");
         }
         // F000:000C mov byte ptr DS:[0x0401],0xDD
         UInt8[DS, 0x0401] = 0xDD;

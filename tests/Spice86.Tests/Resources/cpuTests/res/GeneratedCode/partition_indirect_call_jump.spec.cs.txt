@@ -52,7 +52,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 NearCall(cs1, 0x000D, unknown_F000_0012_F0012);
                 break;
             default:
-                throw FailAsUntested($"Unknown near call target 0x{((ushort)(BX)):X4} at F000:000B");
+                throw FailAsUntested($"Untested near call target 0x{((ushort)(BX)):X4} at F000:000B");
         }
         // F000:000D mov BX,0x0016
         BX = 0x0016;
@@ -61,7 +61,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             case 0x0016:
                 break;
             default:
-                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(BX)):X4} at F000:0010");
+                throw FailAsUntested($"Untested near jump target 0x{((ushort)(BX)):X4} at F000:0010");
         }
         // F000:0016 hlt
         return Hlt();

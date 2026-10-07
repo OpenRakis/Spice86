@@ -37,7 +37,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         SP = 6;
         // F000:0008 mov SI,0x0800
         SI = 0x0800;
-    label_F000_000B_F000B_7:
+    L_000B:
         CheckExternalEvents(cs1, 0x000B);
         // F000:000B mov AX,0xF000
         AX = 0xF000;
@@ -59,16 +59,16 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:001A jmp near 0x1400
         // F000:1400 selector
         if (SelectorSignatureMatches(cs1, 0x1400, [(byte)0xB8, (byte)0x01, (byte)0x00])) {
-            goto label_F000_1400_F1400_30227;
+            goto L_1400_30227;
         }
         if (SelectorSignatureMatches(cs1, 0x1400, [(byte)0xB9, (byte)0x01, (byte)0x00])) {
-            goto label_F000_1400_F1400_30250;
+            goto L_1400_30250;
         }
         if (SelectorSignatureMatches(cs1, 0x1400, [(byte)0xBB, (byte)0x01, (byte)0x00])) {
-            goto label_F000_1400_F1400_30237;
+            goto L_1400_30237;
         }
-        throw FailAsUntested("No selector signature matched at F000:1400");
-    label_F000_1400_F1400_30227:
+        throw FailAsUntested("Untested code variant at F000:1400");
+    L_1400_30227:
         // F000:1400 mov AX,1
         AX = 1;
         // F000:1403 push AX
@@ -76,8 +76,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1404 mov SI,0x0C00
         SI = 0x0C00;
         // F000:1407 jmp far F000:000B
-        goto label_F000_000B_F000B_7;
-    label_F000_1400_F1400_30237:
+        goto L_000B;
+    L_1400_30237:
         // F000:1400 mov BX,1
         BX = 1;
         // F000:1403 shl BX,1
@@ -87,8 +87,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1406 mov SI,0x1000
         SI = 0x1000;
         // F000:1409 jmp far F000:000B
-        goto label_F000_000B_F000B_7;
-    label_F000_1400_F1400_30250:
+        goto L_000B;
+    L_1400_30250:
         // F000:1400 mov CX,1
         CX = 1;
         // F000:1403 inc CX

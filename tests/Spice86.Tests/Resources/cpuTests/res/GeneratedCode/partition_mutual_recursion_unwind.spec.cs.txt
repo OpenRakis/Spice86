@@ -34,7 +34,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CX = Alu16.Dec(CX);
         // F000:0016 je short 0x001A
         if (ZeroFlag) {
-            goto label_F000_001A_F001A_11;
+            goto L_001A;
         }
         // F000:0018 jmp short 0x0025
         if (JumpDispatcher.Jump(unknown_F000_0025_F0025, 0x0000)) {
@@ -42,7 +42,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             goto entrydispatcher;
         }
         return JumpDispatcher.RequiredJumpAsmReturn;
-    label_F000_001A_F001A_11:
+    L_001A:
         // F000:001A mov AX,0
         AX = 0;
         // F000:001D mov DS,AX
@@ -60,7 +60,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CX = Alu16.Dec(CX);
         // F000:0026 je short 0x002A
         if (ZeroFlag) {
-            goto label_F000_002A_F002A_21;
+            goto L_002A;
         }
         // F000:0028 jmp short 0x0015
         if (JumpDispatcher.Jump(unknown_F000_0015_F0015, 0x0000)) {
@@ -68,7 +68,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             goto entrydispatcher;
         }
         return JumpDispatcher.RequiredJumpAsmReturn;
-    label_F000_002A_F002A_21:
+    L_002A:
         // F000:002A mov AX,0
         AX = 0;
         // F000:002D mov DS,AX

@@ -30,7 +30,6 @@ public class CSharpAstEmitterFragmentTest {
             partitionByNode: new(),
             methodNames: new(),
             partitionBaseNames: new(),
-            labels: new(),
             segmentVariables: new(),
             transfersByEdge: new(),
             entriesByPartition: new(),

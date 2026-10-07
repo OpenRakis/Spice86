@@ -36,7 +36,7 @@ internal sealed class MethodEmitter(
         HashSet<ICfgNode> gotoTargets = allStatements.OfType<GotoStatement>().Select(gotoStatement => gotoStatement.Target).ToHashSet();
         bool needsEntryDispatcherLabel = allStatements.OfType<GotoEntryDispatcherStatement>().Any();
 
-        EmittedCodeRenderer renderer = new(context.GetLabel);
+        EmittedCodeRenderer renderer = new(method.GetLabel);
         writer.OpenBlock($"public virtual Action {method.MethodName}(int loadOffset)");
         if (needsEntryDispatcherLabel) {
             writer.Label("entrydispatcher");
@@ -47,8 +47,8 @@ internal sealed class MethodEmitter(
         }
         bool bodyCompletesNormally = true;
         foreach (LoweredNode lowered in loweredNodes) {
-            if (lowered.Plan.IsBlockEntry && gotoTargets.Contains(lowered.Plan.Node)) {
-                writer.Label(lowered.Plan.Label);
+            if (gotoTargets.Contains(lowered.Plan.Node)) {
+                writer.Label(method.GetLabel(lowered.Plan.Node));
             }
             renderer.Render(lowered.Code, writer);
             bodyCompletesNormally = lowered.Code.CompletesNormally;
@@ -67,7 +67,7 @@ internal sealed class MethodEmitter(
     private EmittedCode EmitEntryDispatch(MethodPlan method) {
         if (method.NeedsEntryDispatch) {
             List<SwitchCase> cases = [];
-            List<StatementItem> defaultBody = [new LineStatement("throw FailAsUntested($\"Unknown generated entry loadOffset 0x{loadOffset:X4}\");", Diverges: true)];
+            List<StatementItem> defaultBody = [new LineStatement(UntestedMessages.EntryOffset(), Diverges: true)];
             foreach (CfgCodePartitionEntry entry in method.Entries) {
                 cases.Add(new SwitchCase($"0x{context.GetEntryLoadOffset(method.Partition, entry.Node):X4}", [new GotoStatement(entry.Node)]));
             }
@@ -83,22 +83,22 @@ internal sealed class MethodEmitter(
     }
 
     private LoweredNode Lower(NodeEmissionPlan plan, MethodPlan method) {
-        EmittedCode eventCheck = BlockEntryEventCheck(plan);
+        EmittedCode eventCheck = EntryEventCheck(plan);
         EmittedCode speculativeGuard = SpeculativeGuard(plan.Node);
         EmittedCode assemblyComment = AsmComment(plan.Node);
         EmittedCode body = BuildNodeBody(plan, method);
         return new LoweredNode(plan, EmittedCode.Concat(eventCheck, speculativeGuard, assemblyComment, body));
     }
 
-    private EmittedCode BlockEntryEventCheck(NodeEmissionPlan plan) {
+    private EmittedCode EntryEventCheck(NodeEmissionPlan plan) {
         if (!plan.EmitsExternalEventCheck) {
             return EmittedCode.None;
         }
 
         // Checks run at method entries and loop back-edge targets, so every execution path that
-        // repeats passes one. Anchoring to the block entry keeps the expected resume point aligned with the label
-        // other transfers goto.
-        ICfgNode entry = plan.Block.Entry;
+        // repeats passes one. Anchoring to the node keeps the expected resume point aligned with its label;
+        // for block entries the node is the block entry, so the emitted check is unchanged.
+        ICfgNode entry = plan.Node;
         return EmittedCode.Line($"CheckExternalEvents({context.GetSegmentVariable(entry.Address.Segment)}, 0x{entry.Address.Offset:X4});");
     }
 
@@ -142,7 +142,7 @@ internal sealed class MethodEmitter(
     private EmittedCode BuildNodeBody(NodeEmissionPlan plan, MethodPlan method) {
         switch (plan.Node) {
             case CfgInstruction instruction:
-                astEmitter.SetCurrentInstructionAddress(instruction.Address);
+                astEmitter.SetCurrentInstruction(instruction);
                 EmittedCode body = astEmitter.LowerInstructionBody(instruction, instruction.ExecutionAst, plan.EmitsExternalEventCheckAfter);
                 return cpuFaultWrapper.Wrap(instruction, body, method);
             case CfgSelectorNode selectorNode:

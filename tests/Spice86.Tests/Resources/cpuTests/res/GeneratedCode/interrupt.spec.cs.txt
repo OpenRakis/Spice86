@@ -75,7 +75,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:4012 into
         if (OverflowFlag) {
             InterruptCall(cs2, 0x4013, 4);
-            throw FailAsUntested("Call at F000:4012 returned to F000:4013, but no continuation was observed during discovery.");
+            throw FailAsUntested("Untested return from call at F000:4012");
         }
         else {
             return unknown_F000_4013_F4013(0x0000);
@@ -131,7 +131,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             case 0x0CD7:
                 break;
             default:
-                throw FailAsUntested($"Unknown near jump target 0x{((ushort)(AX)):X4} at F000:0027");
+                throw FailAsUntested($"Untested near jump target 0x{((ushort)(AX)):X4} at F000:0027");
         }
         // F000:0CD7 mov byte ptr DS:[3],3
         UInt8[DS, 3] = 3;
@@ -157,7 +157,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             return unknown_F000_4002_F4002(0x0000);
         }
         else {
-            throw FailAsUntested("Unobserved conditional fallthrough at F000:0CFD");
+            throw FailAsUntested("Untested fallthrough at F000:0CFD");
         }
     }
 

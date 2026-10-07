@@ -48,11 +48,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0015 mov DX,0x8000
         DX = 0x8000;
         // F000:0018 div word ptr SS:[BP-14]
-        ushort divisor_F000_0018_F0018 = UInt16[SS, (ushort)(BP - 0x0E)];
-        uint dividend_F000_0018_F0018 = (uint)((uint)DX << 0x00000010 | (uint)AX);
-        ushort quotient_F000_0018_F0018 = Alu16.Div((uint)dividend_F000_0018_F0018, (ushort)divisor_F000_0018_F0018);
-        AX = (ushort)quotient_F000_0018_F0018;
-        DX = (ushort)(dividend_F000_0018_F0018 % (uint)divisor_F000_0018_F0018);
+        ushort divisor_0018 = UInt16[SS, (ushort)(BP - 0x0E)];
+        uint dividend_0018 = (uint)((uint)DX << 0x00000010 | (uint)AX);
+        ushort quotient_0018 = Alu16.Div((uint)dividend_0018, (ushort)divisor_0018);
+        AX = (ushort)quotient_0018;
+        DX = (ushort)(dividend_0018 % (uint)divisor_0018);
         // F000:001B mov word ptr DS:[0],AX
         UInt16[DS, 0] = AX;
         // F000:001E mov word ptr DS:[2],DX

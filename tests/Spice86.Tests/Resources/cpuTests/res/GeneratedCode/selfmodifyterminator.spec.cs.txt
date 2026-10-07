@@ -32,7 +32,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Alu8.Sub(UInt8[DS, 0x0040], 0);
         // F000:0027 je short 0x003B
         if (ZeroFlag) {
-            goto label_F000_003B_F003B_13;
+            goto L_003B;
         }
         // F000:0029 mov AX,0xF000
         AX = 0xF000;
@@ -44,7 +44,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt8[ES, 0x001A] = 5;
         // F000:003A ret near
         return NearRet();
-    label_F000_003B_F003B_13:
+    L_003B:
         // F000:003B inc byte ptr DS:[0x0040]
         UInt8[DS, 0x0040] = Alu8.Inc(UInt8[DS, 0x0040]);
         // F000:003F ret near
@@ -65,7 +65,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AX = 0xFFFF;
         // F000:000B mov byte ptr DS:[0x0040],0
         UInt8[DS, 0x0040] = 0;
-    label_F000_0010_F0010_8:
+    L_0010:
         CheckExternalEvents(cs1, 0x0010);
         // F000:0010 push AX
         Stack.Push16(AX);
@@ -77,22 +77,22 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AX = Alu16.Or(AX, AX);
         // F000:0019 selector
         if (SelectorSignatureMatches(cs1, 0x0019, [(byte)0x75, (byte)0xF5])) {
-            goto label_F000_0019_F0019_36;
+            goto L_0019_36;
         }
         if (SelectorSignatureMatches(cs1, 0x0019, [(byte)0xEB, (byte)0x05])) {
-            goto label_F000_0019_F0019_50;
+            goto L_0019_50;
         }
-        throw FailAsUntested("No selector signature matched at F000:0019");
-    label_F000_0019_F0019_50:
+        throw FailAsUntested("Untested code variant at F000:0019");
+    L_0019_50:
         // F000:0019 jmp short 0x0020
         // F000:0020 push AX
         Stack.Push16(AX);
         // F000:0021 hlt
         return Hlt();
-    label_F000_0019_F0019_36:
+    L_0019_36:
         // F000:0019 jne short 0x0010
         if (!ZeroFlag) {
-            goto label_F000_0010_F0010_8;
+            goto L_0010;
         }
         VerifySpeculativeEntryOrFail(cs1, 0x001B, [(byte)0xB8, (byte)0xAD, (byte)0xDE]);
         // F000:001B mov AX,0xDEAD

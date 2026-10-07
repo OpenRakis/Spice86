@@ -9,7 +9,7 @@ using Spice86.Shared.Emulator.Memory;
 using System.Linq;
 
 /// <summary>
-/// The first pass of the generator: walks the partitioned program, assigns names and labels to every node,
+/// The first pass of the generator: walks the partitioned program, assigns names to every node,
 /// maps edges to their partition transfers, and produces the frozen <see cref="CfgGeneratorContext"/> that
 /// the rest of the pipeline reads from.
 /// </summary>
@@ -44,8 +44,6 @@ internal sealed class GeneratorAnalysis {
         // Method name = base name + the lowest entry address, so the symbol carries exactly one address.
         Dictionary<CfgCodePartition, string> methodNames = BuildMethodNames(program.Partitions, partitionBaseNames);
 
-        // One goto label per node; Id disambiguates self-modifying variants that share an address.
-        Dictionary<ICfgNode, string> labels = partitionByNode.Keys.ToDictionary(node => node, node => $"label_{AddressSuffix(node.Address)}_{node.Id}");
         // Stable cs1, cs2, ... field names assigned in segment order so output is deterministic across runs.
         Dictionary<ushort, string> segmentVariables = partitionByNode.Keys
             .Select(node => node.Address.Segment)
@@ -79,7 +77,7 @@ internal sealed class GeneratorAnalysis {
 
         Dictionary<SegmentedAddress, ICfgNode> blockEntryByAddress = BuildBlockEntryIndex(program);
 
-        CfgGeneratorContext context = new(program, partitionByNode, methodNames, partitionBaseNames, labels,
+        CfgGeneratorContext context = new(program, partitionByNode, methodNames, partitionBaseNames,
             segmentVariables, transfersByEdge, entriesByPartition, blockEntryByAddress);
         return new GeneratorAnalysis(program, context);
     }
@@ -92,9 +90,9 @@ internal sealed class GeneratorAnalysis {
     /// instruction variants all live at one address but are distinct CFG nodes in distinct partitions). Those
     /// partitions would otherwise collapse to one identical method name and produce duplicate C# methods
     /// (CS0111). When two or more partitions collide on a name, the primary entry node id is inserted ahead of
-    /// the address triplet (<c>{baseName}_{nodeId}_{SEG}_{OFF}_{LIN}</c>) to disambiguate them, mirroring how
-    /// labels already append the node id. The id stays before the trailing three tokens, so the address still
-    /// round-trips through the Ghidra symbol parser. Names with no collision are left unchanged.
+    /// the address triplet (<c>{baseName}_{nodeId}_{SEG}_{OFF}_{LIN}</c>) to disambiguate them. The id stays
+    /// before the trailing three tokens, so the address still round-trips through the Ghidra symbol parser.
+    /// Names with no collision are left unchanged.
     /// </para>
     /// </summary>
     private static Dictionary<CfgCodePartition, string> BuildMethodNames(

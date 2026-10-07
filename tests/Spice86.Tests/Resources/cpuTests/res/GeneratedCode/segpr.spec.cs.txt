@@ -42,9 +42,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         switch ((ushort)(UInt16[SS, (ushort)(BX + SI - 4)])) {
             case 0x1200:
                 NearCall(cs1, 0x0079, unknown_F000_1200_F1200);
-                throw FailAsUntested("Call at F000:0074 returned to F000:0079, but no continuation was observed during discovery.");
+                throw FailAsUntested("Untested return from call at F000:0074");
             default:
-                throw FailAsUntested($"Unknown near call target 0x{((ushort)(UInt16[SS, (ushort)(BX + SI - 4)])):X4} at F000:0074");
+                throw FailAsUntested($"Untested near call target 0x{((ushort)(UInt16[SS, (ushort)(BX + SI - 4)])):X4} at F000:0074");
         }
     }
 
@@ -121,11 +121,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0014 push BX
         Stack.Push16(BX);
         // F000:0016 les DX,word ptr ES:[0]
-        ushort lxsOffset_F000_0016_F0016 = 0;
-        ushort lxsValue_F000_0016_F0016 = UInt16[ES, lxsOffset_F000_0016_F0016];
-        ushort lxsSegment_F000_0016_F0016 = UInt16[ES, (ushort)(lxsOffset_F000_0016_F0016 + 2)];
-        DX = (ushort)lxsValue_F000_0016_F0016;
-        ES = (ushort)lxsSegment_F000_0016_F0016;
+        ushort lxsOffset_0016 = 0;
+        ushort lxsValue_0016 = UInt16[ES, lxsOffset_0016];
+        ushort lxsSegment_0016 = UInt16[ES, (ushort)(lxsOffset_0016 + 2)];
+        DX = (ushort)lxsValue_0016;
+        ES = (ushort)lxsSegment_0016;
         // F000:001B mov word ptr DS:[4],DX
         UInt16[DS, 4] = DX;
         // F000:001F mov DX,ES
@@ -167,12 +167,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt16[DS, 0x0012] = 0;
         // F000:005F div word ptr SS:[2]
         try {
-            ushort divisor_F000_005F_F005F = UInt16[SS, 2];
-            uint dividend_F000_005F_F005F = (uint)((uint)DX << 0x00000010 | (uint)AX);
-            ushort quotient_F000_005F_F005F = Alu16.Div((uint)dividend_F000_005F_F005F, (ushort)divisor_F000_005F_F005F);
-            AX = (ushort)quotient_F000_005F_F005F;
-            DX = (ushort)(dividend_F000_005F_F005F % (uint)divisor_F000_005F_F005F);
-            throw FailAsUntested("Unobserved fallthrough after F000:005F");
+            ushort divisor_005F = UInt16[SS, 2];
+            uint dividend_005F = (uint)((uint)DX << 0x00000010 | (uint)AX);
+            ushort quotient_005F = Alu16.Div((uint)dividend_005F, (ushort)divisor_005F);
+            AX = (ushort)quotient_005F;
+            DX = (ushort)(dividend_005F % (uint)divisor_005F);
+            throw FailAsUntested("Untested fallthrough after F000:005F");
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -180,7 +180,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 EnterCpuFaultHandler(cs1, 0x005F, cpuFaultTarget);
                 return unknown_F000_1100_F1100(0x0000);
             }
-            throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:005F");
+            throw FailAsUntested($"Untested CPU fault target {cpuFaultTarget} at F000:005F");
         }
     }
 

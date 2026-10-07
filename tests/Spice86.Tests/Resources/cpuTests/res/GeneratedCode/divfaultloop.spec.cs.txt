@@ -35,11 +35,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         BX = UInt16[CS, 0x0102];
         // F000:0028 div BX
         try {
-            ushort divisor_F000_0028_F0028 = BX;
-            uint dividend_F000_0028_F0028 = (uint)((uint)DX << 0x00000010 | (uint)AX);
-            ushort quotient_F000_0028_F0028 = Alu16.Div((uint)dividend_F000_0028_F0028, (ushort)divisor_F000_0028_F0028);
-            AX = (ushort)quotient_F000_0028_F0028;
-            DX = (ushort)(dividend_F000_0028_F0028 % (uint)divisor_F000_0028_F0028);
+            ushort divisor_0028 = BX;
+            uint dividend_0028 = (uint)((uint)DX << 0x00000010 | (uint)AX);
+            ushort quotient_0028 = Alu16.Div((uint)dividend_0028, (ushort)divisor_0028);
+            AX = (ushort)quotient_0028;
+            DX = (ushort)(dividend_0028 % (uint)divisor_0028);
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -47,7 +47,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 EnterCpuFaultHandler(cs1, 0x0028, cpuFaultTarget);
                 return unknown_F000_0037_F0037(0x0000);
             }
-            throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:0028");
+            throw FailAsUntested($"Untested CPU fault target {cpuFaultTarget} at F000:0028");
         }
         // F000:002A mov BX,word ptr CS:[0x0100]
         BX = UInt16[CS, 0x0100];
@@ -77,11 +77,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Alu16.Sub(BX, 3);
         // F000:0049 jne short 0x0052
         if (!ZeroFlag) {
-            goto label_F000_0052_F0052_36;
+            goto L_0052;
         }
         // F000:004B mov word ptr CS:[0x0102],5
         UInt16[CS, 0x0102] = 5;
-    label_F000_0052_F0052_36:
+    L_0052:
         // F000:0052 mov word ptr SS:[BP+2],0x0020
         UInt16[SS, (ushort)(BP + 2)] = 0x0020;
         // F000:0057 pop BX

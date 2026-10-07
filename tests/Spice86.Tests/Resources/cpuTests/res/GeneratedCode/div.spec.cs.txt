@@ -59,12 +59,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt16[SS, BP] = 4;
         // F000:0081 div word ptr DS:[0x0012]
         try {
-            ushort divisor_F000_0081_F0081 = UInt16[DS, 0x0012];
-            uint dividend_F000_0081_F0081 = (uint)((uint)DX << 0x00000010 | (uint)AX);
-            ushort quotient_F000_0081_F0081 = Alu16.Div((uint)dividend_F000_0081_F0081, (ushort)divisor_F000_0081_F0081);
-            AX = (ushort)quotient_F000_0081_F0081;
-            DX = (ushort)(dividend_F000_0081_F0081 % (uint)divisor_F000_0081_F0081);
-            throw FailAsUntested("Unobserved fallthrough after F000:0081");
+            ushort divisor_0081 = UInt16[DS, 0x0012];
+            uint dividend_0081 = (uint)((uint)DX << 0x00000010 | (uint)AX);
+            ushort quotient_0081 = Alu16.Div((uint)dividend_0081, (ushort)divisor_0081);
+            AX = (ushort)quotient_0081;
+            DX = (ushort)(dividend_0081 % (uint)divisor_0081);
+            throw FailAsUntested("Untested fallthrough after F000:0081");
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -72,7 +72,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 EnterCpuFaultHandler(cs1, 0x0081, cpuFaultTarget);
                 return unknown_F000_1000_F1000(0x0000);
             }
-            throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:0081");
+            throw FailAsUntested($"Untested CPU fault target {cpuFaultTarget} at F000:0081");
         }
     }
 
@@ -96,12 +96,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt16[SS, BP] = 2;
         // F000:009E div CX
         try {
-            ushort divisor_F000_009E_F009E = CX;
-            uint dividend_F000_009E_F009E = (uint)((uint)DX << 0x00000010 | (uint)AX);
-            ushort quotient_F000_009E_F009E = Alu16.Div((uint)dividend_F000_009E_F009E, (ushort)divisor_F000_009E_F009E);
-            AX = (ushort)quotient_F000_009E_F009E;
-            DX = (ushort)(dividend_F000_009E_F009E % (uint)divisor_F000_009E_F009E);
-            throw FailAsUntested("Unobserved fallthrough after F000:009E");
+            ushort divisor_009E = CX;
+            uint dividend_009E = (uint)((uint)DX << 0x00000010 | (uint)AX);
+            ushort quotient_009E = Alu16.Div((uint)dividend_009E, (ushort)divisor_009E);
+            AX = (ushort)quotient_009E;
+            DX = (ushort)(dividend_009E % (uint)divisor_009E);
+            throw FailAsUntested("Untested fallthrough after F000:009E");
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -109,7 +109,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 EnterCpuFaultHandler(cs1, 0x009E, cpuFaultTarget);
                 return unknown_F000_1000_F1000(0x0000);
             }
-            throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:009E");
+            throw FailAsUntested($"Untested CPU fault target {cpuFaultTarget} at F000:009E");
         }
     }
 
@@ -132,11 +132,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00B5 mov word ptr SS:[BP],2
         UInt16[SS, BP] = 2;
         // F000:00BA div AX
-        ushort divisor_F000_00BA_F00BA = AX;
-        uint dividend_F000_00BA_F00BA = (uint)((uint)DX << 0x00000010 | (uint)AX);
-        ushort quotient_F000_00BA_F00BA = Alu16.Div((uint)dividend_F000_00BA_F00BA, (ushort)divisor_F000_00BA_F00BA);
-        AX = (ushort)quotient_F000_00BA_F00BA;
-        DX = (ushort)(dividend_F000_00BA_F00BA % (uint)divisor_F000_00BA_F00BA);
+        ushort divisor_00BA = AX;
+        uint dividend_00BA = (uint)((uint)DX << 0x00000010 | (uint)AX);
+        ushort quotient_00BA = Alu16.Div((uint)dividend_00BA, (ushort)divisor_00BA);
+        AX = (ushort)quotient_00BA;
+        DX = (ushort)(dividend_00BA % (uint)divisor_00BA);
         // F000:00BC add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:00BF mov word ptr DS:[0x001E],AX
@@ -152,11 +152,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00CD mov word ptr SS:[BP],2
         UInt16[SS, BP] = 2;
         // F000:00D2 div BL
-        byte divisor_F000_00D2_F00D2 = BL;
-        ushort dividend_F000_00D2_F00D2 = AX;
-        byte quotient_F000_00D2_F00D2 = Alu8.Div((ushort)dividend_F000_00D2_F00D2, (byte)divisor_F000_00D2_F00D2);
-        AL = (byte)quotient_F000_00D2_F00D2;
-        AH = (byte)(dividend_F000_00D2_F00D2 % (ushort)divisor_F000_00D2_F00D2);
+        byte divisor_00D2 = BL;
+        ushort dividend_00D2 = AX;
+        byte quotient_00D2 = Alu8.Div((ushort)dividend_00D2, (byte)divisor_00D2);
+        AL = (byte)quotient_00D2;
+        AH = (byte)(dividend_00D2 % (ushort)divisor_00D2);
         // F000:00D4 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:00D7 mov word ptr DS:[0x0022],AX
@@ -176,11 +176,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00EF mov word ptr SS:[BP],4
         UInt16[SS, BP] = 4;
         // F000:00F4 div byte ptr DS:[0x0028]
-        byte divisor_F000_00F4_F00F4 = UInt8[DS, 0x0028];
-        ushort dividend_F000_00F4_F00F4 = AX;
-        byte quotient_F000_00F4_F00F4 = Alu8.Div((ushort)dividend_F000_00F4_F00F4, (byte)divisor_F000_00F4_F00F4);
-        AL = (byte)quotient_F000_00F4_F00F4;
-        AH = (byte)(dividend_F000_00F4_F00F4 % (ushort)divisor_F000_00F4_F00F4);
+        byte divisor_00F4 = UInt8[DS, 0x0028];
+        ushort dividend_00F4 = AX;
+        byte quotient_00F4 = Alu8.Div((ushort)dividend_00F4, (byte)divisor_00F4);
+        AL = (byte)quotient_00F4;
+        AH = (byte)(dividend_00F4 % (ushort)divisor_00F4);
         // F000:00F8 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:00FB mov word ptr DS:[0x002A],AX
@@ -197,12 +197,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt16[SS, BP] = 2;
         // F000:010D div DH
         try {
-            byte divisor_F000_010D_F010D = DH;
-            ushort dividend_F000_010D_F010D = AX;
-            byte quotient_F000_010D_F010D = Alu8.Div((ushort)dividend_F000_010D_F010D, (byte)divisor_F000_010D_F010D);
-            AL = (byte)quotient_F000_010D_F010D;
-            AH = (byte)(dividend_F000_010D_F010D % (ushort)divisor_F000_010D_F010D);
-            throw FailAsUntested("Unobserved fallthrough after F000:010D");
+            byte divisor_010D = DH;
+            ushort dividend_010D = AX;
+            byte quotient_010D = Alu8.Div((ushort)dividend_010D, (byte)divisor_010D);
+            AL = (byte)quotient_010D;
+            AH = (byte)(dividend_010D % (ushort)divisor_010D);
+            throw FailAsUntested("Untested fallthrough after F000:010D");
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -210,7 +210,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 EnterCpuFaultHandler(cs1, 0x010D, cpuFaultTarget);
                 return unknown_F000_1000_F1000(0x0000);
             }
-            throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:010D");
+            throw FailAsUntested($"Untested CPU fault target {cpuFaultTarget} at F000:010D");
         }
     }
 
@@ -232,12 +232,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt16[SS, BP] = 4;
         // F000:0128 div byte ptr DS:[0x0033]
         try {
-            byte divisor_F000_0128_F0128 = UInt8[DS, 0x0033];
-            ushort dividend_F000_0128_F0128 = AX;
-            byte quotient_F000_0128_F0128 = Alu8.Div((ushort)dividend_F000_0128_F0128, (byte)divisor_F000_0128_F0128);
-            AL = (byte)quotient_F000_0128_F0128;
-            AH = (byte)(dividend_F000_0128_F0128 % (ushort)divisor_F000_0128_F0128);
-            throw FailAsUntested("Unobserved fallthrough after F000:0128");
+            byte divisor_0128 = UInt8[DS, 0x0033];
+            ushort dividend_0128 = AX;
+            byte quotient_0128 = Alu8.Div((ushort)dividend_0128, (byte)divisor_0128);
+            AL = (byte)quotient_0128;
+            AH = (byte)(dividend_0128 % (ushort)divisor_0128);
+            throw FailAsUntested("Untested fallthrough after F000:0128");
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -245,7 +245,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 EnterCpuFaultHandler(cs1, 0x0128, cpuFaultTarget);
                 return unknown_F000_1000_F1000(0x0000);
             }
-            throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:0128");
+            throw FailAsUntested($"Untested CPU fault target {cpuFaultTarget} at F000:0128");
         }
     }
 
@@ -266,11 +266,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:013D mov word ptr SS:[BP],2
         UInt16[SS, BP] = 2;
         // F000:0142 div CL
-        byte divisor_F000_0142_F0142 = CL;
-        ushort dividend_F000_0142_F0142 = AX;
-        byte quotient_F000_0142_F0142 = Alu8.Div((ushort)dividend_F000_0142_F0142, (byte)divisor_F000_0142_F0142);
-        AL = (byte)quotient_F000_0142_F0142;
-        AH = (byte)(dividend_F000_0142_F0142 % (ushort)divisor_F000_0142_F0142);
+        byte divisor_0142 = CL;
+        ushort dividend_0142 = AX;
+        byte quotient_0142 = Alu8.Div((ushort)dividend_0142, (byte)divisor_0142);
+        AL = (byte)quotient_0142;
+        AH = (byte)(dividend_0142 % (ushort)divisor_0142);
         // F000:0144 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:0147 mov word ptr DS:[0x0038],AX
@@ -286,11 +286,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0155 mov word ptr SS:[BP],2
         UInt16[SS, BP] = 2;
         // F000:015A div AL
-        byte divisor_F000_015A_F015A = AL;
-        ushort dividend_F000_015A_F015A = AX;
-        byte quotient_F000_015A_F015A = Alu8.Div((ushort)dividend_F000_015A_F015A, (byte)divisor_F000_015A_F015A);
-        AL = (byte)quotient_F000_015A_F015A;
-        AH = (byte)(dividend_F000_015A_F015A % (ushort)divisor_F000_015A_F015A);
+        byte divisor_015A = AL;
+        ushort dividend_015A = AX;
+        byte quotient_015A = Alu8.Div((ushort)dividend_015A, (byte)divisor_015A);
+        AL = (byte)quotient_015A;
+        AH = (byte)(dividend_015A % (ushort)divisor_015A);
         // F000:015C add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:015F mov word ptr DS:[0x003C],AX
@@ -308,11 +308,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0170 mov word ptr SS:[BP],2
         UInt16[SS, BP] = 2;
         // F000:0175 idiv BX
-        short divisor_F000_0175_F0175 = (short)BX;
-        int dividend_F000_0175_F0175 = (int)((uint)DX << 0x00000010 | (uint)AX);
-        short quotient_F000_0175_F0175 = Alu16.Idiv((int)dividend_F000_0175_F0175, (short)divisor_F000_0175_F0175);
-        AX = (ushort)quotient_F000_0175_F0175;
-        DX = (ushort)(dividend_F000_0175_F0175 % (int)divisor_F000_0175_F0175);
+        short divisor_0175 = (short)BX;
+        int dividend_0175 = (int)((uint)DX << 0x00000010 | (uint)AX);
+        short quotient_0175 = Alu16.Idiv((int)dividend_0175, (short)divisor_0175);
+        AX = (ushort)quotient_0175;
+        DX = (ushort)(dividend_0175 % (int)divisor_0175);
         // F000:0177 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:017A mov word ptr DS:[0x0040],AX
@@ -333,12 +333,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt16[SS, BP] = 4;
         // F000:0197 idiv word ptr DS:[0x0046]
         try {
-            short divisor_F000_0197_F0197 = (short)UInt16[DS, 0x0046];
-            int dividend_F000_0197_F0197 = (int)((uint)DX << 0x00000010 | (uint)AX);
-            short quotient_F000_0197_F0197 = Alu16.Idiv((int)dividend_F000_0197_F0197, (short)divisor_F000_0197_F0197);
-            AX = (ushort)quotient_F000_0197_F0197;
-            DX = (ushort)(dividend_F000_0197_F0197 % (int)divisor_F000_0197_F0197);
-            throw FailAsUntested("Unobserved fallthrough after F000:0197");
+            short divisor_0197 = (short)UInt16[DS, 0x0046];
+            int dividend_0197 = (int)((uint)DX << 0x00000010 | (uint)AX);
+            short quotient_0197 = Alu16.Idiv((int)dividend_0197, (short)divisor_0197);
+            AX = (ushort)quotient_0197;
+            DX = (ushort)(dividend_0197 % (int)divisor_0197);
+            throw FailAsUntested("Untested fallthrough after F000:0197");
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -346,7 +346,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 EnterCpuFaultHandler(cs1, 0x0197, cpuFaultTarget);
                 return unknown_F000_1000_F1000(0x0000);
             }
-            throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:0197");
+            throw FailAsUntested($"Untested CPU fault target {cpuFaultTarget} at F000:0197");
         }
     }
 
@@ -369,11 +369,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:01AF mov word ptr SS:[BP],2
         UInt16[SS, BP] = 2;
         // F000:01B4 idiv CX
-        short divisor_F000_01B4_F01B4 = (short)CX;
-        int dividend_F000_01B4_F01B4 = (int)((uint)DX << 0x00000010 | (uint)AX);
-        short quotient_F000_01B4_F01B4 = Alu16.Idiv((int)dividend_F000_01B4_F01B4, (short)divisor_F000_01B4_F01B4);
-        AX = (ushort)quotient_F000_01B4_F01B4;
-        DX = (ushort)(dividend_F000_01B4_F01B4 % (int)divisor_F000_01B4_F01B4);
+        short divisor_01B4 = (short)CX;
+        int dividend_01B4 = (int)((uint)DX << 0x00000010 | (uint)AX);
+        short quotient_01B4 = Alu16.Idiv((int)dividend_01B4, (short)divisor_01B4);
+        AX = (ushort)quotient_01B4;
+        DX = (ushort)(dividend_01B4 % (int)divisor_01B4);
         // F000:01B6 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:01B9 mov word ptr DS:[0x004C],AX
@@ -393,11 +393,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:01D1 mov word ptr SS:[BP],4
         UInt16[SS, BP] = 4;
         // F000:01D6 idiv word ptr DS:[0x0052]
-        short divisor_F000_01D6_F01D6 = (short)UInt16[DS, 0x0052];
-        int dividend_F000_01D6_F01D6 = (int)((uint)DX << 0x00000010 | (uint)AX);
-        short quotient_F000_01D6_F01D6 = Alu16.Idiv((int)dividend_F000_01D6_F01D6, (short)divisor_F000_01D6_F01D6);
-        AX = (ushort)quotient_F000_01D6_F01D6;
-        DX = (ushort)(dividend_F000_01D6_F01D6 % (int)divisor_F000_01D6_F01D6);
+        short divisor_01D6 = (short)UInt16[DS, 0x0052];
+        int dividend_01D6 = (int)((uint)DX << 0x00000010 | (uint)AX);
+        short quotient_01D6 = Alu16.Idiv((int)dividend_01D6, (short)divisor_01D6);
+        AX = (ushort)quotient_01D6;
+        DX = (ushort)(dividend_01D6 % (int)divisor_01D6);
         // F000:01DA add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:01DD mov word ptr DS:[0x0054],AX
@@ -415,11 +415,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:01EE mov word ptr SS:[BP],2
         UInt16[SS, BP] = 2;
         // F000:01F3 idiv CX
-        short divisor_F000_01F3_F01F3 = (short)CX;
-        int dividend_F000_01F3_F01F3 = (int)((uint)DX << 0x00000010 | (uint)AX);
-        short quotient_F000_01F3_F01F3 = Alu16.Idiv((int)dividend_F000_01F3_F01F3, (short)divisor_F000_01F3_F01F3);
-        AX = (ushort)quotient_F000_01F3_F01F3;
-        DX = (ushort)(dividend_F000_01F3_F01F3 % (int)divisor_F000_01F3_F01F3);
+        short divisor_01F3 = (short)CX;
+        int dividend_01F3 = (int)((uint)DX << 0x00000010 | (uint)AX);
+        short quotient_01F3 = Alu16.Idiv((int)dividend_01F3, (short)divisor_01F3);
+        AX = (ushort)quotient_01F3;
+        DX = (ushort)(dividend_01F3 % (int)divisor_01F3);
         // F000:01F5 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:01F8 mov word ptr DS:[0x0058],AX
@@ -438,12 +438,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt16[SS, BP] = 2;
         // F000:020F idiv AX
         try {
-            short divisor_F000_020F_F020F = (short)AX;
-            int dividend_F000_020F_F020F = (int)((uint)DX << 0x00000010 | (uint)AX);
-            short quotient_F000_020F_F020F = Alu16.Idiv((int)dividend_F000_020F_F020F, (short)divisor_F000_020F_F020F);
-            AX = (ushort)quotient_F000_020F_F020F;
-            DX = (ushort)(dividend_F000_020F_F020F % (int)divisor_F000_020F_F020F);
-            throw FailAsUntested("Unobserved fallthrough after F000:020F");
+            short divisor_020F = (short)AX;
+            int dividend_020F = (int)((uint)DX << 0x00000010 | (uint)AX);
+            short quotient_020F = Alu16.Idiv((int)dividend_020F, (short)divisor_020F);
+            AX = (ushort)quotient_020F;
+            DX = (ushort)(dividend_020F % (int)divisor_020F);
+            throw FailAsUntested("Untested fallthrough after F000:020F");
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -451,7 +451,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 EnterCpuFaultHandler(cs1, 0x020F, cpuFaultTarget);
                 return unknown_F000_1000_F1000(0x0000);
             }
-            throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:020F");
+            throw FailAsUntested($"Untested CPU fault target {cpuFaultTarget} at F000:020F");
         }
     }
 
@@ -472,11 +472,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0222 mov word ptr SS:[BP],2
         UInt16[SS, BP] = 2;
         // F000:0227 idiv BL
-        sbyte divisor_F000_0227_F0227 = (sbyte)BL;
-        short dividend_F000_0227_F0227 = (short)AX;
-        sbyte quotient_F000_0227_F0227 = Alu8.Idiv((short)dividend_F000_0227_F0227, (sbyte)divisor_F000_0227_F0227);
-        AL = (byte)quotient_F000_0227_F0227;
-        AH = (byte)(dividend_F000_0227_F0227 % (short)divisor_F000_0227_F0227);
+        sbyte divisor_0227 = (sbyte)BL;
+        short dividend_0227 = (short)AX;
+        sbyte quotient_0227 = Alu8.Idiv((short)dividend_0227, (sbyte)divisor_0227);
+        AL = (byte)quotient_0227;
+        AH = (byte)(dividend_0227 % (short)divisor_0227);
         // F000:0229 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:022C mov word ptr DS:[0x0062],AX
@@ -497,12 +497,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt16[SS, BP] = 4;
         // F000:0249 idiv byte ptr DS:[0x0068]
         try {
-            sbyte divisor_F000_0249_F0249 = (sbyte)UInt8[DS, 0x0068];
-            short dividend_F000_0249_F0249 = (short)AX;
-            sbyte quotient_F000_0249_F0249 = Alu8.Idiv((short)dividend_F000_0249_F0249, (sbyte)divisor_F000_0249_F0249);
-            AL = (byte)quotient_F000_0249_F0249;
-            AH = (byte)(dividend_F000_0249_F0249 % (short)divisor_F000_0249_F0249);
-            throw FailAsUntested("Unobserved fallthrough after F000:0249");
+            sbyte divisor_0249 = (sbyte)UInt8[DS, 0x0068];
+            short dividend_0249 = (short)AX;
+            sbyte quotient_0249 = Alu8.Idiv((short)dividend_0249, (sbyte)divisor_0249);
+            AL = (byte)quotient_0249;
+            AH = (byte)(dividend_0249 % (short)divisor_0249);
+            throw FailAsUntested("Untested fallthrough after F000:0249");
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -510,7 +510,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 EnterCpuFaultHandler(cs1, 0x0249, cpuFaultTarget);
                 return unknown_F000_1000_F1000(0x0000);
             }
-            throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:0249");
+            throw FailAsUntested($"Untested CPU fault target {cpuFaultTarget} at F000:0249");
         }
     }
 
@@ -531,11 +531,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:025D mov word ptr SS:[BP],2
         UInt16[SS, BP] = 2;
         // F000:0262 idiv DH
-        sbyte divisor_F000_0262_F0262 = (sbyte)DH;
-        short dividend_F000_0262_F0262 = (short)AX;
-        sbyte quotient_F000_0262_F0262 = Alu8.Idiv((short)dividend_F000_0262_F0262, (sbyte)divisor_F000_0262_F0262);
-        AL = (byte)quotient_F000_0262_F0262;
-        AH = (byte)(dividend_F000_0262_F0262 % (short)divisor_F000_0262_F0262);
+        sbyte divisor_0262 = (sbyte)DH;
+        short dividend_0262 = (short)AX;
+        sbyte quotient_0262 = Alu8.Idiv((short)dividend_0262, (sbyte)divisor_0262);
+        AL = (byte)quotient_0262;
+        AH = (byte)(dividend_0262 % (short)divisor_0262);
         // F000:0264 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:0267 mov word ptr DS:[0x006E],AX
@@ -551,11 +551,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0278 mov word ptr SS:[BP],4
         UInt16[SS, BP] = 4;
         // F000:027D idiv byte ptr DS:[0x0073]
-        sbyte divisor_F000_027D_F027D = (sbyte)UInt8[DS, 0x0073];
-        short dividend_F000_027D_F027D = (short)AX;
-        sbyte quotient_F000_027D_F027D = Alu8.Idiv((short)dividend_F000_027D_F027D, (sbyte)divisor_F000_027D_F027D);
-        AL = (byte)quotient_F000_027D_F027D;
-        AH = (byte)(dividend_F000_027D_F027D % (short)divisor_F000_027D_F027D);
+        sbyte divisor_027D = (sbyte)UInt8[DS, 0x0073];
+        short dividend_027D = (short)AX;
+        sbyte quotient_027D = Alu8.Idiv((short)dividend_027D, (sbyte)divisor_027D);
+        AL = (byte)quotient_027D;
+        AH = (byte)(dividend_027D % (short)divisor_027D);
         // F000:0281 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:0284 mov word ptr DS:[0x0074],AX
@@ -571,11 +571,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0292 mov word ptr SS:[BP],2
         UInt16[SS, BP] = 2;
         // F000:0297 idiv CL
-        sbyte divisor_F000_0297_F0297 = (sbyte)CL;
-        short dividend_F000_0297_F0297 = (short)AX;
-        sbyte quotient_F000_0297_F0297 = Alu8.Idiv((short)dividend_F000_0297_F0297, (sbyte)divisor_F000_0297_F0297);
-        AL = (byte)quotient_F000_0297_F0297;
-        AH = (byte)(dividend_F000_0297_F0297 % (short)divisor_F000_0297_F0297);
+        sbyte divisor_0297 = (sbyte)CL;
+        short dividend_0297 = (short)AX;
+        sbyte quotient_0297 = Alu8.Idiv((short)dividend_0297, (sbyte)divisor_0297);
+        AL = (byte)quotient_0297;
+        AH = (byte)(dividend_0297 % (short)divisor_0297);
         // F000:0299 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:029C mov word ptr DS:[0x0078],AX
@@ -592,12 +592,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt16[SS, BP] = 2;
         // F000:02AF idiv AL
         try {
-            sbyte divisor_F000_02AF_F02AF = (sbyte)AL;
-            short dividend_F000_02AF_F02AF = (short)AX;
-            sbyte quotient_F000_02AF_F02AF = Alu8.Idiv((short)dividend_F000_02AF_F02AF, (sbyte)divisor_F000_02AF_F02AF);
-            AL = (byte)quotient_F000_02AF_F02AF;
-            AH = (byte)(dividend_F000_02AF_F02AF % (short)divisor_F000_02AF_F02AF);
-            throw FailAsUntested("Unobserved fallthrough after F000:02AF");
+            sbyte divisor_02AF = (sbyte)AL;
+            short dividend_02AF = (short)AX;
+            sbyte quotient_02AF = Alu8.Idiv((short)dividend_02AF, (sbyte)divisor_02AF);
+            AL = (byte)quotient_02AF;
+            AH = (byte)(dividend_02AF % (short)divisor_02AF);
+            throw FailAsUntested("Untested fallthrough after F000:02AF");
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -605,7 +605,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 EnterCpuFaultHandler(cs1, 0x02AF, cpuFaultTarget);
                 return unknown_F000_1000_F1000(0x0000);
             }
-            throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:02AF");
+            throw FailAsUntested($"Untested CPU fault target {cpuFaultTarget} at F000:02AF");
         }
     }
 
@@ -625,17 +625,17 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt16[SS, BP] = 2;
         // F000:02C4 aam
         try {
-            byte v2_F000_02C4_F02C4 = 0;
-            byte v1_F000_02C4_F02C4 = AL;
-            Alu8.UpdateFlags((byte)(v1_F000_02C4_F02C4 >> 1));
-            if (v2_F000_02C4_F02C4 == 0) {
+            byte v2_02C4 = 0;
+            byte v1_02C4 = AL;
+            Alu8.UpdateFlags((byte)(v1_02C4 >> 1));
+            if (v2_02C4 == 0) {
                 throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
             }
-            byte result_F000_02C4_F02C4 = (byte)(v1_F000_02C4_F02C4 % v2_F000_02C4_F02C4);
-            AH = (byte)(v1_F000_02C4_F02C4 / v2_F000_02C4_F02C4);
-            AL = (byte)result_F000_02C4_F02C4;
-            Alu8.UpdateFlags((byte)result_F000_02C4_F02C4);
-            throw FailAsUntested("Unobserved fallthrough after F000:02C4");
+            byte result_02C4 = (byte)(v1_02C4 % v2_02C4);
+            AH = (byte)(v1_02C4 / v2_02C4);
+            AL = (byte)result_02C4;
+            Alu8.UpdateFlags((byte)result_02C4);
+            throw FailAsUntested("Untested fallthrough after F000:02C4");
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -643,7 +643,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 EnterCpuFaultHandler(cs1, 0x02C4, cpuFaultTarget);
                 return unknown_F000_1000_F1000(0x0000);
             }
-            throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:02C4");
+            throw FailAsUntested($"Untested CPU fault target {cpuFaultTarget} at F000:02C4");
         }
     }
 
@@ -658,16 +658,16 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:02CD mov word ptr SS:[BP],2
         UInt16[SS, BP] = 2;
         // F000:02D2 aam
-        byte v2_F000_02D2_F02D2 = 1;
-        byte v1_F000_02D2_F02D2 = AL;
-        Alu8.UpdateFlags((byte)(v1_F000_02D2_F02D2 >> 1));
-        if (v2_F000_02D2_F02D2 == 0) {
+        byte v2_02D2 = 1;
+        byte v1_02D2 = AL;
+        Alu8.UpdateFlags((byte)(v1_02D2 >> 1));
+        if (v2_02D2 == 0) {
             throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
         }
-        byte result_F000_02D2_F02D2 = (byte)(v1_F000_02D2_F02D2 % v2_F000_02D2_F02D2);
-        AH = (byte)(v1_F000_02D2_F02D2 / v2_F000_02D2_F02D2);
-        AL = (byte)result_F000_02D2_F02D2;
-        Alu8.UpdateFlags((byte)result_F000_02D2_F02D2);
+        byte result_02D2 = (byte)(v1_02D2 % v2_02D2);
+        AH = (byte)(v1_02D2 / v2_02D2);
+        AL = (byte)result_02D2;
+        Alu8.UpdateFlags((byte)result_02D2);
         // F000:02D4 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:02D7 mov word ptr DS:[0x0086],AX
@@ -679,16 +679,16 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:02DE mov word ptr SS:[BP],2
         UInt16[SS, BP] = 2;
         // F000:02E3 aam
-        byte v2_F000_02E3_F02E3 = 0x0A;
-        byte v1_F000_02E3_F02E3 = AL;
-        Alu8.UpdateFlags((byte)(v1_F000_02E3_F02E3 >> 1));
-        if (v2_F000_02E3_F02E3 == 0) {
+        byte v2_02E3 = 0x0A;
+        byte v1_02E3 = AL;
+        Alu8.UpdateFlags((byte)(v1_02E3 >> 1));
+        if (v2_02E3 == 0) {
             throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
         }
-        byte result_F000_02E3_F02E3 = (byte)(v1_F000_02E3_F02E3 % v2_F000_02E3_F02E3);
-        AH = (byte)(v1_F000_02E3_F02E3 / v2_F000_02E3_F02E3);
-        AL = (byte)result_F000_02E3_F02E3;
-        Alu8.UpdateFlags((byte)result_F000_02E3_F02E3);
+        byte result_02E3 = (byte)(v1_02E3 % v2_02E3);
+        AH = (byte)(v1_02E3 / v2_02E3);
+        AL = (byte)result_02E3;
+        Alu8.UpdateFlags((byte)result_02E3);
         // F000:02E5 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:02E8 mov word ptr DS:[0x0088],AX
@@ -701,17 +701,17 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt16[SS, BP] = 2;
         // F000:02F4 aam
         try {
-            byte v2_F000_02F4_F02F4 = 0;
-            byte v1_F000_02F4_F02F4 = AL;
-            Alu8.UpdateFlags((byte)(v1_F000_02F4_F02F4 >> 1));
-            if (v2_F000_02F4_F02F4 == 0) {
+            byte v2_02F4 = 0;
+            byte v1_02F4 = AL;
+            Alu8.UpdateFlags((byte)(v1_02F4 >> 1));
+            if (v2_02F4 == 0) {
                 throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
             }
-            byte result_F000_02F4_F02F4 = (byte)(v1_F000_02F4_F02F4 % v2_F000_02F4_F02F4);
-            AH = (byte)(v1_F000_02F4_F02F4 / v2_F000_02F4_F02F4);
-            AL = (byte)result_F000_02F4_F02F4;
-            Alu8.UpdateFlags((byte)result_F000_02F4_F02F4);
-            throw FailAsUntested("Unobserved fallthrough after F000:02F4");
+            byte result_02F4 = (byte)(v1_02F4 % v2_02F4);
+            AH = (byte)(v1_02F4 / v2_02F4);
+            AL = (byte)result_02F4;
+            Alu8.UpdateFlags((byte)result_02F4);
+            throw FailAsUntested("Untested fallthrough after F000:02F4");
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -719,7 +719,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 EnterCpuFaultHandler(cs1, 0x02F4, cpuFaultTarget);
                 return unknown_F000_1000_F1000(0x0000);
             }
-            throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:02F4");
+            throw FailAsUntested($"Untested CPU fault target {cpuFaultTarget} at F000:02F4");
         }
     }
 
@@ -734,16 +734,16 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:02FD mov word ptr SS:[BP],2
         UInt16[SS, BP] = 2;
         // F000:0302 aam
-        byte v2_F000_0302_F0302 = 1;
-        byte v1_F000_0302_F0302 = AL;
-        Alu8.UpdateFlags((byte)(v1_F000_0302_F0302 >> 1));
-        if (v2_F000_0302_F0302 == 0) {
+        byte v2_0302 = 1;
+        byte v1_0302 = AL;
+        Alu8.UpdateFlags((byte)(v1_0302 >> 1));
+        if (v2_0302 == 0) {
             throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
         }
-        byte result_F000_0302_F0302 = (byte)(v1_F000_0302_F0302 % v2_F000_0302_F0302);
-        AH = (byte)(v1_F000_0302_F0302 / v2_F000_0302_F0302);
-        AL = (byte)result_F000_0302_F0302;
-        Alu8.UpdateFlags((byte)result_F000_0302_F0302);
+        byte result_0302 = (byte)(v1_0302 % v2_0302);
+        AH = (byte)(v1_0302 / v2_0302);
+        AL = (byte)result_0302;
+        Alu8.UpdateFlags((byte)result_0302);
         // F000:0304 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:0307 mov word ptr DS:[0x008C],AX
@@ -755,16 +755,16 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:030E mov word ptr SS:[BP],2
         UInt16[SS, BP] = 2;
         // F000:0313 aam
-        byte v2_F000_0313_F0313 = 0x0A;
-        byte v1_F000_0313_F0313 = AL;
-        Alu8.UpdateFlags((byte)(v1_F000_0313_F0313 >> 1));
-        if (v2_F000_0313_F0313 == 0) {
+        byte v2_0313 = 0x0A;
+        byte v1_0313 = AL;
+        Alu8.UpdateFlags((byte)(v1_0313 >> 1));
+        if (v2_0313 == 0) {
             throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
         }
-        byte result_F000_0313_F0313 = (byte)(v1_F000_0313_F0313 % v2_F000_0313_F0313);
-        AH = (byte)(v1_F000_0313_F0313 / v2_F000_0313_F0313);
-        AL = (byte)result_F000_0313_F0313;
-        Alu8.UpdateFlags((byte)result_F000_0313_F0313);
+        byte result_0313 = (byte)(v1_0313 % v2_0313);
+        AH = (byte)(v1_0313 / v2_0313);
+        AL = (byte)result_0313;
+        Alu8.UpdateFlags((byte)result_0313);
         // F000:0315 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:0318 mov word ptr DS:[0x008E],AX
@@ -827,11 +827,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:001B mov word ptr SS:[BP],2
         UInt16[SS, BP] = 2;
         // F000:0020 div BX
-        ushort divisor_F000_0020_F0020 = BX;
-        uint dividend_F000_0020_F0020 = (uint)((uint)DX << 0x00000010 | (uint)AX);
-        ushort quotient_F000_0020_F0020 = Alu16.Div((uint)dividend_F000_0020_F0020, (ushort)divisor_F000_0020_F0020);
-        AX = (ushort)quotient_F000_0020_F0020;
-        DX = (ushort)(dividend_F000_0020_F0020 % (uint)divisor_F000_0020_F0020);
+        ushort divisor_0020 = BX;
+        uint dividend_0020 = (uint)((uint)DX << 0x00000010 | (uint)AX);
+        ushort quotient_0020 = Alu16.Div((uint)dividend_0020, (ushort)divisor_0020);
+        AX = (ushort)quotient_0020;
+        DX = (ushort)(dividend_0020 % (uint)divisor_0020);
         // F000:0022 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:0025 mov word ptr DS:[0x0080],AX
@@ -851,11 +851,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:003D mov word ptr SS:[BP],4
         UInt16[SS, BP] = 4;
         // F000:0042 div word ptr DS:[6]
-        ushort divisor_F000_0042_F0042 = UInt16[DS, 6];
-        uint dividend_F000_0042_F0042 = (uint)((uint)DX << 0x00000010 | (uint)AX);
-        ushort quotient_F000_0042_F0042 = Alu16.Div((uint)dividend_F000_0042_F0042, (ushort)divisor_F000_0042_F0042);
-        AX = (ushort)quotient_F000_0042_F0042;
-        DX = (ushort)(dividend_F000_0042_F0042 % (uint)divisor_F000_0042_F0042);
+        ushort divisor_0042 = UInt16[DS, 6];
+        uint dividend_0042 = (uint)((uint)DX << 0x00000010 | (uint)AX);
+        ushort quotient_0042 = Alu16.Div((uint)dividend_0042, (ushort)divisor_0042);
+        AX = (ushort)quotient_0042;
+        DX = (ushort)(dividend_0042 % (uint)divisor_0042);
         // F000:0046 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:0049 mov word ptr DS:[8],AX
@@ -874,12 +874,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt16[SS, BP] = 2;
         // F000:005F div CX
         try {
-            ushort divisor_F000_005F_F005F = CX;
-            uint dividend_F000_005F_F005F = (uint)((uint)DX << 0x00000010 | (uint)AX);
-            ushort quotient_F000_005F_F005F = Alu16.Div((uint)dividend_F000_005F_F005F, (ushort)divisor_F000_005F_F005F);
-            AX = (ushort)quotient_F000_005F_F005F;
-            DX = (ushort)(dividend_F000_005F_F005F % (uint)divisor_F000_005F_F005F);
-            throw FailAsUntested("Unobserved fallthrough after F000:005F");
+            ushort divisor_005F = CX;
+            uint dividend_005F = (uint)((uint)DX << 0x00000010 | (uint)AX);
+            ushort quotient_005F = Alu16.Div((uint)dividend_005F, (ushort)divisor_005F);
+            AX = (ushort)quotient_005F;
+            DX = (ushort)(dividend_005F % (uint)divisor_005F);
+            throw FailAsUntested("Untested fallthrough after F000:005F");
         }
         catch (CpuException cpuException) {
             SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
@@ -887,7 +887,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 EnterCpuFaultHandler(cs1, 0x005F, cpuFaultTarget);
                 return unknown_F000_1000_F1000(0x0000);
             }
-            throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:005F");
+            throw FailAsUntested($"Untested CPU fault target {cpuFaultTarget} at F000:005F");
         }
     }
 

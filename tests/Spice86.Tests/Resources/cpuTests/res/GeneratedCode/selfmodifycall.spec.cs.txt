@@ -32,7 +32,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Alu8.Sub(UInt8[DS, 0x002B], 0);
         // F000:001C je short 0x002A
         if (ZeroFlag) {
-            goto label_F000_002A_F002A_11;
+            goto L_002A;
         }
         // F000:001E mov AX,0xF000
         AX = 0xF000;
@@ -42,7 +42,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt8[ES, 0x0010] = 0xF4;
         // F000:0029 ret near
         return NearRet();
-    label_F000_002A_F002A_11:
+    L_002A:
         // F000:002A ret near
         return NearRet();
     }
@@ -59,25 +59,25 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         SP = 0x0100;
         // F000:0008 mov byte ptr DS:[0x002B],0
         UInt8[DS, 0x002B] = 0;
-    label_F000_000D_F000D_7:
+    L_000D:
         CheckExternalEvents(cs1, 0x000D);
         // F000:000D call near 0x0017
         NearCall(cs1, 0x0010, unknown_F000_0017_F0017);
         // F000:0010 selector
         if (SelectorSignatureMatches(cs1, 0x0010, [(byte)0x90])) {
-            goto label_F000_0010_F0010_26;
+            goto L_0010_26;
         }
         if (SelectorSignatureMatches(cs1, 0x0010, [(byte)0xF4])) {
-            goto label_F000_0010_F0010_38;
+            goto L_0010_38;
         }
-        throw FailAsUntested("No selector signature matched at F000:0010");
-    label_F000_0010_F0010_26:
+        throw FailAsUntested("Untested code variant at F000:0010");
+    L_0010_26:
         // F000:0010 nop
         // F000:0011 inc byte ptr DS:[0x002B]
         UInt8[DS, 0x002B] = Alu8.Inc(UInt8[DS, 0x002B]);
         // F000:0015 jmp short 0x000D
-        goto label_F000_000D_F000D_7;
-    label_F000_0010_F0010_38:
+        goto L_000D;
+    L_0010_38:
         // F000:0010 hlt
         return Hlt();
     }

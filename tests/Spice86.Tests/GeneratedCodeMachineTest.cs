@@ -99,7 +99,7 @@ public sealed class GeneratedCodeMachineTest {
         GeneratedCodeMachineTestRunner runner = new();
         (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("jump1", options);
 
-        generatedProgram.SourceText.Should().Contain("Unobserved conditional fallthrough");
+        generatedProgram.SourceText.Should().Contain("Untested fallthrough at");
     }
 
     [Fact]
@@ -113,8 +113,8 @@ public sealed class GeneratedCodeMachineTest {
         string source = generatedProgram.SourceText;
 
         source.Should().Contain("// F000:12A2 jcxz short 0x129D");
-        source.Should().MatchRegex(@"goto label_F000_129D_F129D_\d+;");
-        source.Should().NotContain("Unobserved conditional jump target at F000:12A2");
+        source.Should().Contain("goto L_129D;");
+        source.Should().NotContain("Untested jump at F000:12A2");
     }
 
     [Fact]
@@ -230,7 +230,7 @@ public sealed class GeneratedCodeMachineTest {
         (CfgPartitionedProgram program, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("segpr", maxCycles: 10000);
 
         program.Transfers.Should().Contain(transfer => transfer.Kind == CfgCodePartitionTransferKind.CallOut);
-        generatedProgram.SourceText.Should().Contain("but no continuation was observed during discovery.");
+        generatedProgram.SourceText.Should().Contain("Untested return from call at");
         runner.TestGeneratedCode("segpr", maxCycles: 10000);
     }
 
@@ -522,6 +522,21 @@ public sealed class GeneratedCodeMachineTest {
     }
 
     [Fact]
+    public void MethodEntryInsideABlockGetsALabel() {
+        // Arrange
+        GeneratedCodeMachineTestRunner runner = new();
+        GeneratedCodeRunOptions options = new GeneratedCodeRunOptions { MaxCycles = 10000, InstallInterruptVectors = true };
+
+        // Act
+        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("interrupt", options);
+        string source = generatedProgram.SourceText;
+
+        // Assert
+        source.Should().Contain("goto L_005D");
+        AssertLabelsMatchGotoTargets(source);
+    }
+
+    [Fact]
     public void Test386ButNotProtectedModeGeneratedOverrideCompilesAndReachesPostFinished() {
         Test386PostPortHandler? handler = null;
         GeneratedCodeRunOptions options = new() {
@@ -575,7 +590,7 @@ public sealed class GeneratedCodeMachineTest {
         }
 
         // Assert
-        labelIndex.Should().NotBe(-1, "the externalint loop head label_F000_002C_F002C_<id> must be emitted");
+        labelIndex.Should().NotBe(-1, "the externalint loop head L_002C must be emitted");
         string nextLine = lines[labelIndex + 1].Trim();
         nextLine.Should().Be("CheckExternalEvents(cs1, 0x002C);");
     }
@@ -641,6 +656,6 @@ public sealed class GeneratedCodeMachineTest {
 
     private static readonly Regex InterruptEnablingAsmCommentRegex = new(@"^\s*// [0-9A-F]{4}:[0-9A-F]{4} (sti|popf|popfd)$");
     private static readonly Regex AsmCommentRegex = new(@"^\s*// [0-9A-F]{4}:[0-9A-F]{4} ");
-    private static readonly Regex LoopHeaderLabelRegex = new(@"^\s*label_F000_002C_F002C_\d+:$");
-    private static readonly Regex LabelLineRegex = new(@"^\s*label_\w+:$");
+    private static readonly Regex LoopHeaderLabelRegex = new(@"^\s*L_002C:$");
+    private static readonly Regex LabelLineRegex = new(@"^\s*L_\w+:$");
 }

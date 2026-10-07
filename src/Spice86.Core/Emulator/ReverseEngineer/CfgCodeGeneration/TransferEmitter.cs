@@ -75,7 +75,7 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
                 source.NextInMemoryAddress32.ToSegmentedAddress()) is ResolvedCfgEdge fallthrough) {
             return Emit(fallthrough, methodPlan);
         }
-        return EmittedCode.Diverging($"throw FailAsUntested(\"Unobserved fallthrough after {source.Address}\");");
+        return EmittedCode.Diverging(UntestedMessages.FallthroughAfter(source.Address));
     }
 
     /// <summary>
@@ -118,7 +118,7 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
             return Emit(edge, method, forceSameMethodGoto: forceSameMethodGoto, allowCallOutContinuation: true);
         }
 
-        return EmittedCode.Diverging($"throw FailAsUntested(\"Call at {call.Address} returned to {continuation.ExpectedReturnAddress}, but no continuation was observed during discovery.\");");
+        return EmittedCode.Diverging(UntestedMessages.ReturnFromCall(call.Address));
     }
 
     /// <summary>
