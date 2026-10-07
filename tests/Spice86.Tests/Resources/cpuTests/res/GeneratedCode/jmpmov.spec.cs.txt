@@ -38,11 +38,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0013 mov AX,word ptr DS:[0xFFF2]
         AX = UInt16[DS, 0xFFF2];
         // F000:0016 jmp near AX
-        switch ((ushort)(AX)) {
+        switch (AX) {
             case 0x1290:
                 break;
             default:
-                throw FailAsUntested($"Untested near jump target 0x{((ushort)(AX)):X4} at F000:0016");
+                throw FailAsUntested($"Untested near jump target 0x{AX:X4} at F000:0016");
         }
         // F000:1290 jmp far E342:EBE0
         // E342:EBE0 mov BX,0x1000
@@ -71,11 +71,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // E342:EC02 mov BP,0x2506
         BP = 0x2506;
         // E342:EC05 jmp near word ptr SS:[BP+DI-22]
-        switch ((ushort)(UInt16[SS, (ushort)(BP + DI - 0x16)])) {
+        switch (UInt16[SS, (ushort)(BP + DI - 0x16)]) {
             case 0xFBE1:
                 break;
             default:
-                throw FailAsUntested($"Untested near jump target 0x{((ushort)(UInt16[SS, (ushort)(BP + DI - 0x16)])):X4} at E342:EC05");
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[SS, (ushort)(BP + DI - 0x16)]:X4} at E342:EC05");
         }
         // E342:FBE1 mov DX,0xF100
         DX = 0xF100;

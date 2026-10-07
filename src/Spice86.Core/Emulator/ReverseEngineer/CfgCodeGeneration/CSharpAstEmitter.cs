@@ -350,17 +350,18 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
     // transfer for jumps, a call helper plus continuation for calls), so it is supplied by the caller.
     // ----------------------------------------------------------------------------------------------------
 
-    private EmittedCode BuildNearRuntimeDispatch(CfgInstruction instruction, string targetExpression, string targetKind,
+    private EmittedCode BuildNearRuntimeDispatch(CfgInstruction instruction, CSharpFragment targetExpression, string targetKind,
         Func<ResolvedCfgEdge, IReadOnlyList<StatementItem>> bodyForEdge) {
         if (!TryGetObservedDispatchEdges(instruction, targetKind, out IReadOnlyList<ResolvedCfgEdge> edges, out EmittedCode failure)) {
             return failure;
         }
+        string switchValue = Cast(DataType.UINT16, targetExpression);
         List<SwitchCase> cases = edges
             .OrderBy(edge => edge.Target.Address.Offset)
             .Select(edge => new SwitchCase($"0x{edge.Target.Address.Offset:X4}", bodyForEdge(edge)))
             .ToList();
-        List<StatementItem> defaultBody = [new LineStatement(UntestedMessages.NearTarget(targetKind, targetExpression, instruction.Address), Diverges: true)];
-        return EmittedCode.Statements(new SwitchStatement($"switch ((ushort)({targetExpression}))", cases, defaultBody));
+        List<StatementItem> defaultBody = [new LineStatement(UntestedMessages.NearTarget(targetKind, switchValue, instruction.Address), Diverges: true)];
+        return EmittedCode.Statements(new SwitchStatement($"switch ({switchValue})", cases, defaultBody));
     }
 
     private EmittedCode BuildFarRuntimeDispatch(CfgInstruction instruction, CSharpFragment segmentExpression, CSharpFragment offsetExpression, string targetKind,
