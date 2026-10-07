@@ -30,9 +30,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
         CheckExternalEvents(cs2, 0xFFF0);
         // F000:FFF0 jmp short 0
-        CheckExternalEvents(cs2, 0x0000);
         // F000:0000 jmp short 0x000E
-        CheckExternalEvents(cs2, 0x000E);
         // F000:000E mov BX,0xF000
         BX = 0xF000;
         // F000:0011 mov DS,BX
@@ -46,9 +44,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             default:
                 throw FailAsUntested($"Unknown near jump target 0x{((ushort)(AX)):X4} at F000:0016");
         }
-        CheckExternalEvents(cs2, 0x1290);
         // F000:1290 jmp far E342:EBE0
-        CheckExternalEvents(cs1, 0xEBE0);
         // E342:EBE0 mov BX,0x1000
         BX = 0x1000;
         // E342:EBE3 mov DS,BX
@@ -81,7 +77,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             default:
                 throw FailAsUntested($"Unknown near jump target 0x{((ushort)(UInt16[SS, (ushort)(BP + DI - 0x16)])):X4} at E342:EC05");
         }
-        CheckExternalEvents(cs1, 0xFBE1);
         // E342:FBE1 mov DX,0xF100
         DX = 0xF100;
         // E342:FBE4 mov AX,0x2536
@@ -118,7 +113,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         throw FailAsUntested($"Unknown far jump target {targetSegment_58:X4}:{targetOffset_58:X4} at E342:FC06");
     label_F000_4001_F4001_73:
-        CheckExternalEvents(cs2, 0x4001);
         // F000:4001 mov AX,word ptr DS:[BX+SI-3]
         AX = UInt16[DS, (ushort)(BX + SI - 3)];
         // F000:4004 mov DX,0

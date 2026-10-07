@@ -67,7 +67,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         DX = 0x04FF;
         // F000:400A push DX
         Stack.Push16(DX);
-        CheckExternalEvents(cs2, 0x400B);
         // F000:400B popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(cs2, 0x400C);
@@ -102,7 +101,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
         CheckExternalEvents(cs2, 0xFFF0);
         // F000:FFF0 jmp short 0
-        CheckExternalEvents(cs2, 0x0000);
         // F000:0000 mov DX,0
         DX = 0;
         // F000:0003 mov DS,DX
@@ -119,7 +117,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AX = 0x0EFF;
         // F000:0019 push AX
         Stack.Push16(AX);
-        CheckExternalEvents(cs2, 0x001A);
         // F000:001A popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(cs2, 0x001B);
@@ -127,7 +124,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt8[DS, 0] = 0;
         // F000:0020 int 0x0D
         InterruptCall(cs2, 0x0022, 0x0D);
-        CheckExternalEvents(cs2, 0x0022);
         // F000:0022 mov byte ptr DS:[2],2
         UInt8[DS, 2] = 2;
         // F000:0027 jmp near AX
@@ -137,7 +133,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             default:
                 throw FailAsUntested($"Unknown near jump target 0x{((ushort)(AX)):X4} at F000:0027");
         }
-        CheckExternalEvents(cs2, 0x0CD7);
         // F000:0CD7 mov byte ptr DS:[3],3
         UInt8[DS, 3] = 3;
         // F000:0CDC pushf
@@ -150,7 +145,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt16[DS, 0x000E] = 0xE342;
         // F000:0CEA int 3
         InterruptCall(cs2, 0x0CEC, 3);
-        CheckExternalEvents(cs2, 0x0CEC);
         // F000:0CEC mov byte ptr DS:[4],4
         UInt8[DS, 4] = 4;
         // F000:0CF1 mov word ptr DS:[0x0010],0x3001

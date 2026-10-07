@@ -36,7 +36,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (ZeroFlag) {
             goto label_F000_001A_F001A_11;
         }
-        CheckExternalEvents(cs1, 0x0018);
         // F000:0018 jmp short 0x0025
         if (JumpDispatcher.Jump(unknown_F000_0025_F0025, 0x0000)) {
             loadOffset = JumpDispatcher.NextEntryAddress;
@@ -44,7 +43,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         return JumpDispatcher.RequiredJumpAsmReturn;
     label_F000_001A_F001A_11:
-        CheckExternalEvents(cs1, 0x001A);
         // F000:001A mov AX,0
         AX = 0;
         // F000:001D mov DS,AX
@@ -64,7 +62,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (ZeroFlag) {
             goto label_F000_002A_F002A_21;
         }
-        CheckExternalEvents(cs1, 0x0028);
         // F000:0028 jmp short 0x0015
         if (JumpDispatcher.Jump(unknown_F000_0015_F0015, 0x0000)) {
             loadOffset = JumpDispatcher.NextEntryAddress;
@@ -72,7 +69,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         return JumpDispatcher.RequiredJumpAsmReturn;
     label_F000_002A_F002A_21:
-        CheckExternalEvents(cs1, 0x002A);
         // F000:002A mov AX,0
         AX = 0;
         // F000:002D mov DS,AX
@@ -86,7 +82,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
         CheckExternalEvents(cs1, 0xFFF0);
         // F000:FFF0 jmp short 0
-        CheckExternalEvents(cs1, 0x0000);
         // F000:0000 mov AX,0x1000
         AX = 0x1000;
         // F000:0003 mov SS,AX
@@ -98,12 +93,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CX = 3;
         // F000:000B call near 0x0015
         NearCall(cs1, 0x000E, unknown_F000_0015_F0015);
-        CheckExternalEvents(cs1, 0x000E);
         // F000:000E mov CX,1
         CX = 1;
         // F000:0011 call near 0x0025
         NearCall(cs1, 0x0014, unknown_F000_0025_F0025);
-        CheckExternalEvents(cs1, 0x0014);
         // F000:0014 hlt
         return Hlt();
     }

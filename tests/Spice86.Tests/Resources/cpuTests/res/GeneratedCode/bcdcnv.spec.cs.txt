@@ -28,7 +28,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
         CheckExternalEvents(cs1, 0xFFF0);
         // F000:FFF0 jmp short 0
-        CheckExternalEvents(cs1, 0x0000);
         // F000:0000 mov BX,1
         BX = 1;
         // F000:0003 mov CX,0
@@ -75,7 +74,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Stack.Push16(FlagRegister16);
         // F000:0019 push BX
         Stack.Push16(BX);
-        CheckExternalEvents(cs1, 0x001A);
         // F000:001A popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(cs1, 0x001B);
@@ -178,7 +176,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Stack.Push16(FlagRegister16);
         // F000:0043 push BX
         Stack.Push16(BX);
-        CheckExternalEvents(cs1, 0x0044);
         // F000:0044 popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(cs1, 0x0045);
@@ -296,7 +293,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Stack.Push16(FlagRegister16);
         // F000:006D push BX
         Stack.Push16(BX);
-        CheckExternalEvents(cs1, 0x006E);
         // F000:006E popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(cs1, 0x006F);
@@ -328,7 +324,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Stack.Push16(FlagRegister16);
         // F000:0077 push CX
         Stack.Push16(CX);
-        CheckExternalEvents(cs1, 0x0078);
         // F000:0078 popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(cs1, 0x0079);
@@ -360,7 +355,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Stack.Push16(FlagRegister16);
         // F000:0081 push CX
         Stack.Push16(CX);
-        CheckExternalEvents(cs1, 0x0082);
         // F000:0082 popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(cs1, 0x0083);
@@ -494,7 +488,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Stack.Push16(FlagRegister16);
         // F000:00AB push BX
         Stack.Push16(BX);
-        CheckExternalEvents(cs1, 0x00AC);
         // F000:00AC popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(cs1, 0x00AD);
@@ -525,7 +518,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Stack.Push16(FlagRegister16);
         // F000:00B5 push CX
         Stack.Push16(CX);
-        CheckExternalEvents(cs1, 0x00B6);
         // F000:00B6 popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(cs1, 0x00B7);
@@ -556,7 +548,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Stack.Push16(FlagRegister16);
         // F000:00BF push CX
         Stack.Push16(CX);
-        CheckExternalEvents(cs1, 0x00C0);
         // F000:00C0 popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(cs1, 0x00C1);

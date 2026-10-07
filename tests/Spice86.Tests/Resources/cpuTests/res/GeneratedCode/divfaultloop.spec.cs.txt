@@ -49,7 +49,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             }
             throw FailAsUntested($"Unknown CPU fault target {cpuFaultTarget} at F000:0028");
         }
-        CheckExternalEvents(cs1, 0x002A);
         // F000:002A mov BX,word ptr CS:[0x0100]
         BX = UInt16[CS, 0x0100];
         // F000:002F mov word ptr DS:[0],BX
@@ -80,11 +79,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             goto label_F000_0052_F0052_36;
         }
-        CheckExternalEvents(cs1, 0x004B);
         // F000:004B mov word ptr CS:[0x0102],5
         UInt16[CS, 0x0102] = 5;
     label_F000_0052_F0052_36:
-        CheckExternalEvents(cs1, 0x0052);
         // F000:0052 mov word ptr SS:[BP+2],0x0020
         UInt16[SS, (ushort)(BP + 2)] = 0x0020;
         // F000:0057 pop BX
@@ -98,7 +95,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
         CheckExternalEvents(cs1, 0xFFF0);
         // F000:FFF0 jmp short 0
-        CheckExternalEvents(cs1, 0x0000);
         // F000:0000 mov AX,0
         AX = 0;
         // F000:0003 mov SS,AX

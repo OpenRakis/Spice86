@@ -28,7 +28,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
         CheckExternalEvents(cs1, 0xFFF0);
         // F000:FFF0 jmp short 0
-        CheckExternalEvents(cs1, 0x0000);
         // F000:0000 mov byte ptr DS:[0x0400],1
         UInt8[DS, 0x0400] = 1;
         // F000:0005 mov AL,byte ptr DS:[0x0500]
@@ -39,13 +38,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             goto label_F000_0013_F0013_7;
         }
-        CheckExternalEvents(cs1, 0x000C);
         // F000:000C mov byte ptr DS:[0x0401],0xDD
         UInt8[DS, 0x0401] = 0xDD;
         // F000:0011 jmp short 0x0024
         goto label_F000_0024_F0024_14;
     label_F000_0013_F0013_7:
-        CheckExternalEvents(cs1, 0x0013);
         VerifySpeculativeEntryOrFail(cs1, 0x0013, [(byte)0xB9, (byte)0x03, (byte)0x00]);
         // F000:0013 mov CX,3
         CX = 3;
@@ -65,11 +62,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             goto label_F000_001B_F001B_13;
         }
-        CheckExternalEvents(cs1, 0x0022);
         VerifySpeculativeEntryOrFail(cs1, 0x0022, [(byte)0xEB, (byte)0x00]);
         // F000:0022 jmp short 0x0024
     label_F000_0024_F0024_14:
-        CheckExternalEvents(cs1, 0x0024);
         // F000:0024 mov byte ptr DS:[0x0402],0xBB
         UInt8[DS, 0x0402] = 0xBB;
         // F000:0029 hlt

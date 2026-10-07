@@ -28,7 +28,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
         CheckExternalEvents(cs1, 0xFFF0);
         // F000:FFF0 jmp short 0
-        CheckExternalEvents(cs1, 0x0000);
         // F000:0000 mov byte ptr DS:[0x0400],1
         UInt8[DS, 0x0400] = 1;
         // F000:0005 mov AL,byte ptr DS:[0x0500]
@@ -39,11 +38,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             throw FailAsUntested("Unobserved conditional jump target at F000:000A");
         }
-        CheckExternalEvents(cs1, 0x000C);
         // F000:000C mov byte ptr DS:[0x0401],0xDD
         UInt8[DS, 0x0401] = 0xDD;
         // F000:0011 jmp short 0x0017
-        CheckExternalEvents(cs1, 0x0017);
         // F000:0017 mov byte ptr DS:[0x0402],0xEE
         UInt8[DS, 0x0402] = 0xEE;
         // F000:001C hlt
