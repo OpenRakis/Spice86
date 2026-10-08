@@ -82,7 +82,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // E342:FBE4 mov AX,0x2536
         AX = 0x2536;
         // E342:FBE7 out DX,AX
-        Machine.IoPortDispatcher.WriteWord(DX, AX);
+        Out16(DX, AX);
         // E342:FBE8 mov AX,0x4001
         AX = 0x4001;
         // E342:FBEC mov BX,0x2501

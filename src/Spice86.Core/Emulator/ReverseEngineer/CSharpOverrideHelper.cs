@@ -1034,6 +1034,48 @@ public class CSharpOverrideHelper {
     }
 
     /// <summary>
+    /// Reads a byte from an I/O port, like the <c>in</c> instruction.
+    /// </summary>
+    /// <param name="port">The I/O port to read from.</param>
+    /// <returns>The byte read from the port.</returns>
+    public byte In8(ushort port) => Machine.IoPortDispatcher.ReadByte(port);
+
+    /// <summary>
+    /// Reads a word from an I/O port, like the <c>in</c> instruction.
+    /// </summary>
+    /// <param name="port">The I/O port to read from.</param>
+    /// <returns>The word read from the port.</returns>
+    public ushort In16(ushort port) => Machine.IoPortDispatcher.ReadWord(port);
+
+    /// <summary>
+    /// Reads a double word from an I/O port, like the <c>in</c> instruction.
+    /// </summary>
+    /// <param name="port">The I/O port to read from.</param>
+    /// <returns>The double word read from the port.</returns>
+    public uint In32(ushort port) => Machine.IoPortDispatcher.ReadDWord(port);
+
+    /// <summary>
+    /// Writes a byte to an I/O port, like the <c>out</c> instruction.
+    /// </summary>
+    /// <param name="port">The I/O port to write to.</param>
+    /// <param name="value">The byte to write.</param>
+    public void Out8(ushort port, byte value) => Machine.IoPortDispatcher.WriteByte(port, value);
+
+    /// <summary>
+    /// Writes a word to an I/O port, like the <c>out</c> instruction.
+    /// </summary>
+    /// <param name="port">The I/O port to write to.</param>
+    /// <param name="value">The word to write.</param>
+    public void Out16(ushort port, ushort value) => Machine.IoPortDispatcher.WriteWord(port, value);
+
+    /// <summary>
+    /// Writes a double word to an I/O port, like the <c>out</c> instruction.
+    /// </summary>
+    /// <param name="port">The I/O port to write to.</param>
+    /// <param name="value">The double word to write.</param>
+    public void Out32(ushort port, uint value) => Machine.IoPortDispatcher.WriteDWord(port, value);
+
+    /// <summary>
     /// Halt the program.
     /// </summary>
     /// <returns>An <see cref="Action"/> that exits the program.</returns>
