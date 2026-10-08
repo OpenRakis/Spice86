@@ -28,7 +28,7 @@ internal sealed class CpuFaultWrapper(CfgGeneratorContext context, TransferEmitt
             return body;
         }
 
-        var orderedEdges = faultEdges
+        List<ResolvedCfgEdge> orderedEdges = faultEdges
             .OrderBy(e => e.Target.Address.Segment)
             .ThenBy(e => e.Target.Address.Offset)
             .ToList();

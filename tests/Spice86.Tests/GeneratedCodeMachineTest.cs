@@ -5,79 +5,25 @@ using FluentAssertions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Emit;
 
 using NSubstitute;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
-using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
-using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
-using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
-using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
-using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
-using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Core.Emulator.VM;
-using Spice86.Core.Emulator.VM.Breakpoint;
-using Spice86.Shared.Emulator.Memory;
-using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
 
-using System.Reflection;
-using System.Runtime.Loader;
 using System.Text.RegularExpressions;
 
 using Xunit;
 
 public sealed class GeneratedCodeMachineTest {
     [Fact]
-    public void AlignedReturnTransfersReturnHelperAction() {
-        GeneratedCodeMachineTestRunner runner = new();
-        (CfgPartitionedProgram program, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("partition_shared_tail", maxCycles: 1000);
-
-        program.Transfers.Should().Contain(transfer => transfer.Kind == CfgCodePartitionTransferKind.AlignedReturn);
-        generatedProgram.SourceText.Should().Contain("return NearRet(");
-    }
-
-    [Fact]
-    public void ReturnWithoutBytesToPopOmitsDefaultArgument() {
-        GeneratedCodeMachineTestRunner runner = new();
-        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("partition_cross_function_loop", maxCycles: 10000);
-        string source = generatedProgram.SourceText;
-
-        source.Should().Contain("return NearRet();");
-        source.Should().NotContain("NearRet(0)");
-    }
-
-    [Fact]
-    public void CpuFaultTransfersUseDedicatedFaultLowering() {
-        GeneratedCodeMachineTestRunner runner = new();
-        (CfgPartitionedProgram program, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("divfaultloop", maxCycles: 1000);
-
-        program.Transfers.Should().Contain(transfer => transfer.Kind == CfgCodePartitionTransferKind.CpuFault);
-        // CPU-fault transfers enter the handler partition directly: the catch block delegates to
-        // DispatchCpuFault which reads the live IVT, performs the fault entry sequence (push flags/return
-        // address, clear InterruptFlag, set CS/IP), then invokes the handler partition.
-        generatedProgram.SourceText.Should().NotContain("CpuFaultTransfer");
-        generatedProgram.SourceText.Should().NotContain("Machine.InterruptVectorTable");
-        generatedProgram.SourceText.Should().NotContain("EnterCpuFaultHandler");
-        generatedProgram.SourceText.Should().NotContain("cpuFaultTarget");
-        generatedProgram.SourceText.Should().Contain("return DispatchCpuFault(");
-        generatedProgram.SourceText.Should().Contain("new CpuFaultTarget(new SegmentedAddress(cs1, 0x0037)");
-        generatedProgram.SourceText.Should().Contain("() => unknown_F000_0037_F0037(0x0000)");
-    }
-
-    [Fact]
     public void AddGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
-        new GeneratedCodeMachineTestRunner().TestGeneratedCode("add", maxCycles: 1000);
-    }
-
-    [Fact]
-    public void GenerateProgramAndSourceWritesGeneratedSourceToBuildFolder() {
         string outputDirectory = Path.Join(AppContext.BaseDirectory, "generated-code");
         string outputFile = Path.Join(outputDirectory, "add.generated.cs");
         if (Directory.Exists(outputDirectory)) {
@@ -85,7 +31,7 @@ public sealed class GeneratedCodeMachineTest {
         }
 
         GeneratedCodeMachineTestRunner runner = new();
-        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("add", maxCycles: 1000);
+        (_, GeneratedCSharpProgram generatedProgram) = runner.TestGeneratedCode("add", maxCycles: 1000);
 
         File.Exists(outputFile).Should().BeTrue("the generated C# source should be written to the test build output folder");
         File.ReadAllText(outputFile).Should().Be(generatedProgram.SourceText);
@@ -93,7 +39,11 @@ public sealed class GeneratedCodeMachineTest {
 
     [Fact]
     public void Jump1GeneratedOverrideCompilesAndMatchesMachineTestOracle() {
-        new GeneratedCodeMachineTestRunner().TestGeneratedCode("jump1", maxCycles: 1000);
+        GeneratedCodeMachineTestRunner runner = new();
+        (_, GeneratedCSharpProgram generatedProgram) = runner.TestGeneratedCode("jump1", maxCycles: 1000);
+
+        AssertLabelsMatchGotoTargets(generatedProgram.SourceText);
+        AssertEveryInterruptEnablingInstructionIsFollowedByAnEventCheck(generatedProgram.SourceText);
     }
 
     [Fact]
@@ -114,23 +64,11 @@ public sealed class GeneratedCodeMachineTest {
     }
 
     [Fact]
-    public void UnobservedConditionalArmToDiscoveredSamePartitionBlockLowersToGoto() {
-        // jump2 contains `F000:12A2 jcxz short 0x129D`: the taken arm to 0x129D was never observed during
-        // discovery (CX was never zero there), but 0x129D is a block entry discovered through another path in
-        // the same partition. The generator must synthesize that edge and emit a plain `goto` to the existing
-        // label rather than failing as untested: only the edge is untested, not the target instruction.
-        GeneratedCodeMachineTestRunner runner = new();
-        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("jump2", maxCycles: 10000);
-        string source = generatedProgram.SourceText;
-
-        source.Should().Contain("// F000:12A2 jcxz short 0x129D");
-        source.Should().Contain("goto L_129D;");
-        source.Should().NotContain("Untested jump at F000:12A2");
-    }
-
-    [Fact]
     public void PartitionSharedTailGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
-        new GeneratedCodeMachineTestRunner().TestGeneratedCode("partition_shared_tail", maxCycles: 1000);
+        GeneratedCodeMachineTestRunner runner = new();
+        (CfgPartitionedProgram program, _) = runner.TestGeneratedCode("partition_shared_tail", maxCycles: 1000);
+
+        program.Transfers.Should().Contain(transfer => transfer.Kind == CfgCodePartitionTransferKind.AlignedReturn);
     }
 
     [Fact]
@@ -153,7 +91,10 @@ public sealed class GeneratedCodeMachineTest {
 
     [Fact]
     public void DivFaultLoopGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
-        new GeneratedCodeMachineTestRunner().TestGeneratedCode("divfaultloop", [0x03, 0x00, 0x02, 0x00], maxCycles: 1000);
+        GeneratedCodeMachineTestRunner runner = new();
+        (CfgPartitionedProgram program, _) = runner.TestGeneratedCode("divfaultloop", [0x03, 0x00, 0x02, 0x00], maxCycles: 1000);
+
+        program.Transfers.Should().Contain(transfer => transfer.Kind == CfgCodePartitionTransferKind.CpuFault);
     }
 
     [Fact]
@@ -187,19 +128,6 @@ public sealed class GeneratedCodeMachineTest {
         new GeneratedCodeMachineTestRunner().TestGeneratedCode("selfmodifycalltarget", expected, maxCycles: 20000);
     }
 
-    [Fact]
-    public void SelfModifyingCallTargetSharedAddressEmitsUniqueNamesAndSingleRegistration() {
-        // The same fixture asserted at the source level: the shared call-target address yields several
-        // partitions, but the generated source must declare distinct method names for them and register the
-        // address exactly once (the override catalogue is keyed by address).
-        GeneratedCodeMachineTestRunner runner = new();
-        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("selfmodifycalltarget", maxCycles: 20000);
-        string source = generatedProgram.SourceText;
-
-        Regex.Matches(source, @"DefineFunction\(cs1, 0x0028,").Count
-            .Should().Be(1, "the address-keyed override catalogue must be registered exactly once per address");
-    }
-
     [Theory]
     [InlineData("selfmodifycall")]
     [InlineData("partition_cross_function_loop")]
@@ -213,49 +141,21 @@ public sealed class GeneratedCodeMachineTest {
     }
 
     [Fact]
-    public void IoPortInstructionsLowerThroughIoPortDispatcher() {
-        GeneratedCodeMachineTestRunner runner = new();
-        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("jmpmov", maxCycles: 10000);
-
-        // IN/OUT execution-AST helper calls must reach the I/O bus through Machine.IoPortDispatcher,
-        // not through non-existent In8/Out16 members of CSharpOverrideHelper.
-        generatedProgram.SourceText.Should().Contain("Machine.IoPortDispatcher.WriteWord(");
-        generatedProgram.SourceText.Should().NotContain("Out16(");
-    }
-
-    [Fact]
-    public void FarJumpAndFarCallGeneratedOverridesCompileAndRun() {
-        // jmpmov exercises a runtime far-jump dispatch; jump2 exercises a runtime far-call dispatch.
-        // Both must transfer explicitly on a matched observed target instead of falling through to the
-        // trailing untested-target failure.
+    public void JmpMovGeneratedOverrideCompilesAndRuns() {
+        // jmpmov exercises a runtime far-jump dispatch; it must transfer explicitly on a matched
+        // observed target instead of falling through to the trailing untested-target failure.
         new GeneratedCodeMachineTestRunner().TestGeneratedCode("jmpmov", maxCycles: 10000);
-        new GeneratedCodeMachineTestRunner().TestGeneratedCode("jump2", maxCycles: 10000);
     }
 
     [Fact]
-    public void NearWordJumpDispatchOmitsRedundantCasts() {
+    public void Jump2GeneratedOverrideCompilesAndRuns() {
+        // jump2 exercises a runtime far-call dispatch; it must transfer explicitly on a matched
+        // observed target instead of falling through to the trailing untested-target failure.
         GeneratedCodeMachineTestRunner runner = new();
-        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("rep", maxCycles: 10000);
-        string source = generatedProgram.SourceText;
+        (_, GeneratedCSharpProgram generatedProgram) = runner.TestGeneratedCode("jump2", maxCycles: 10000);
 
-        source.Should().Contain("switch (AX)");
-        source.Should().Contain("switch (UInt16[DS, 0x3004])");
-        source.Should().Contain("Untested near jump target 0x{AX:X4} at F000:003B");
-        source.Should().Contain("Untested near jump target 0x{UInt16[DS, 0x3004]:X4} at F000:202D");
-        source.Should().NotContain("switch ((ushort)(");
-    }
-
-    [Fact]
-    public void NearWordCallDispatchOmitsRedundantCasts() {
-        GeneratedCodeMachineTestRunner runner = new();
-        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("jump2", maxCycles: 10000);
-        string source = generatedProgram.SourceText;
-
-        source.Should().Contain("switch (AX)");
-        source.Should().Contain("switch (UInt16[DS, 0x3000])");
-        source.Should().Contain("Untested near call target 0x{AX:X4} at F000:000E");
-        source.Should().Contain("Untested near call target 0x{UInt16[DS, 0x3000]:X4} at E342:EBE0");
-        source.Should().NotContain("switch ((ushort)(");
+        ConsecutiveDuplicateExternalEventChecks(SourceLines(generatedProgram.SourceText))
+            .Should().BeEmpty("no two CheckExternalEvents calls should be identical when only label lines lie between them");
     }
 
     [Fact]
@@ -264,33 +164,9 @@ public sealed class GeneratedCodeMachineTest {
         // continuation edge. The generator must still emit the call helper with the statically-known expected
         // return address, then guard the unobserved post-call path with an explicit untested failure.
         GeneratedCodeMachineTestRunner runner = new();
-        (CfgPartitionedProgram program, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("segpr", maxCycles: 10000);
+        (CfgPartitionedProgram program, _) = runner.TestGeneratedCode("segpr", maxCycles: 10000);
 
         program.Transfers.Should().Contain(transfer => transfer.Kind == CfgCodePartitionTransferKind.CallOut);
-        generatedProgram.SourceText.Should().Contain("Untested return from call at");
-        runner.TestGeneratedCode("segpr", maxCycles: 10000);
-    }
-
-    [Fact]
-    public void WideSegmentSpanProgramInitializesSegmentFieldsFromObservedConstants() {
-        // intchain.com is loaded near the DOS PSP but reaches BIOS code at segment 0xF000, so its observed
-        // generated-code segments span both relocatable program code and the fixed-address BIOS. Relocation is
-        // out of scope: every segment field must be initialized directly to its observed constant, so the
-        // fixed-address 0xF000 segment is reproduced exactly regardless of any runtime entry segment.
-        string comFileName = Path.GetFullPath("Resources/cpuTests/intchain.com");
-        GeneratedCodeMachineTestRunner runner = new();
-        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource(
-            comFileName, maxCycles: 1000, installInterruptVectors: true);
-        string source = generatedProgram.SourceText;
-
-        // The fixed-address BIOS segment is emitted as a direct constant assignment, not a relocated value.
-        source.Should().Contain("= 0xF000;");
-        // The relocation machinery is gone from generated output.
-        source.Should().NotContain("GetRelocationBaseSegment");
-        source.Should().NotContain("relocationBaseSegment");
-        source.Should().NotContain("relocated from the runtime entry segment");
-        // The generated source still compiles.
-        using CompiledGeneratedOverride compiledOverride = new GeneratedOverrideCompiler().CompileSupplier(source);
     }
 
     [Fact]
@@ -327,7 +203,11 @@ public sealed class GeneratedCodeMachineTest {
     [InlineData("strings")]
     [InlineData("sub")]
     public void BasicCpuGeneratedOverridesCompileAndMatchMachineTestOracle(string binName) {
-        new GeneratedCodeMachineTestRunner().TestGeneratedCode(binName, maxCycles: 10000);
+        GeneratedCodeMachineTestRunner runner = new();
+        (_, GeneratedCSharpProgram generatedProgram) = runner.TestGeneratedCode(binName, maxCycles: 10000);
+        if (binName == "rep") {
+            AssertLabelsMatchGotoTargets(generatedProgram.SourceText);
+        }
     }
 
     [Fact]
@@ -426,8 +306,11 @@ public sealed class GeneratedCodeMachineTest {
         byte[] expected = new byte[2];
         expected[0x00] = 0x01;
         expected[0x01] = 0x01;
-        new GeneratedCodeMachineTestRunner().TestGeneratedCode("stipending", expected,
+        GeneratedCodeMachineTestRunner runner = new();
+        (_, GeneratedCSharpProgram generatedProgram) = runner.TestGeneratedCode("stipending", expected,
             new GeneratedCodeRunOptions { MaxCycles = 0xFFFFFFF, EnablePit = true });
+
+        AssertEveryInterruptEnablingInstructionIsFollowedByAnEventCheck(generatedProgram.SourceText);
     }
 
     [Fact]
@@ -459,47 +342,6 @@ public sealed class GeneratedCodeMachineTest {
     }
 
     [Fact]
-    public void SpeculativeBranchGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
-        byte[] expected = new byte[0x403];
-        expected[0x400] = 0x01;
-        expected[0x401] = 0xDD;
-        expected[0x402] = 0xAA;
-        new GeneratedCodeMachineTestRunner().TestGeneratedCode("speculative_branch", expected,
-            new GeneratedCodeRunOptions { MaxCycles = 1000, EnableSpeculativeCfgExploration = true });
-    }
-
-    [Fact]
-    public void SpeculativeClosureGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
-        byte[] expected = new byte[0x403];
-        expected[0x400] = 0x01;
-        expected[0x401] = 0xDD;
-        expected[0x402] = 0xBB;
-        new GeneratedCodeMachineTestRunner().TestGeneratedCode("speculative_closure", expected,
-            new GeneratedCodeRunOptions { MaxCycles = 1000, EnableSpeculativeCfgExploration = true });
-    }
-
-    [Fact]
-    public void SpeculativeConvergenceGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
-        byte[] expected = new byte[0x404];
-        expected[0x400] = 0x01;
-        expected[0x401] = 0xAA;
-        expected[0x402] = 0xCC;
-        expected[0x403] = 0xFF;
-        new GeneratedCodeMachineTestRunner().TestGeneratedCode("speculative_convergence", expected,
-            new GeneratedCodeRunOptions { MaxCycles = 1000, EnableSpeculativeCfgExploration = true });
-    }
-
-    [Fact]
-    public void SpeculativeInvalidOpcodeGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
-        byte[] expected = new byte[0x403];
-        expected[0x400] = 0x01;
-        expected[0x401] = 0xDD;
-        expected[0x402] = 0xEE;
-        new GeneratedCodeMachineTestRunner().TestGeneratedCode("speculative_invalid_opcode", expected,
-            new GeneratedCodeRunOptions { MaxCycles = 1000, EnableSpeculativeCfgExploration = true });
-    }
-
-    [Fact]
     public void SpeculativeCallEntryGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
         byte[] expected = new byte[0x403];
         expected[0x400] = 0x01;
@@ -510,32 +352,12 @@ public sealed class GeneratedCodeMachineTest {
     }
 
     [Fact]
-    public void SpeculativeSmcGuardGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+    public void SpeculativeInvalidOpcodeGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
         byte[] expected = new byte[0x403];
         expected[0x400] = 0x01;
         expected[0x401] = 0xDD;
-        expected[0x402] = 0xAA;
-        new GeneratedCodeMachineTestRunner().TestGeneratedCode("speculative_smc_guard", expected,
-            new GeneratedCodeRunOptions { MaxCycles = 1000, EnableSpeculativeCfgExploration = true });
-    }
-
-    [Fact]
-    public void SpeculativeDiscardGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
-        byte[] expected = new byte[0x403];
-        expected[0x400] = 0x01;
-        expected[0x401] = 0xDD;
-        expected[0x402] = 0xAA;
-        new GeneratedCodeMachineTestRunner().TestGeneratedCode("speculative_discard", expected,
-            new GeneratedCodeRunOptions { MaxCycles = 1000, EnableSpeculativeCfgExploration = true });
-    }
-
-    [Fact]
-    public void SpeculativeMixedBlockGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
-        byte[] expected = new byte[0x403];
-        expected[0x400] = 0x01;
-        expected[0x401] = 0xDD;
-        expected[0x402] = 0xAA;
-        new GeneratedCodeMachineTestRunner().TestGeneratedCode("speculative_mixed_block", expected,
+        expected[0x402] = 0xEE;
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode("speculative_invalid_opcode", expected,
             new GeneratedCodeRunOptions { MaxCycles = 1000, EnableSpeculativeCfgExploration = true });
     }
 
@@ -557,15 +379,6 @@ public sealed class GeneratedCodeMachineTest {
             labels.Should().BeEquivalentTo(gotoTargets,
                 $"method {method.Identifier.Text} labels must match goto targets");
         }
-    }
-
-    [Fact]
-    public void EveryEmittedLabelIsAGotoTarget() {
-        GeneratedCodeMachineTestRunner runner = new();
-        (_, GeneratedCSharpProgram generatedProgram1) = runner.GenerateProgramAndSource("jump1", maxCycles: 1000);
-        AssertLabelsMatchGotoTargets(generatedProgram1.SourceText);
-        (_, GeneratedCSharpProgram generatedProgram2) = runner.GenerateProgramAndSource("rep", maxCycles: 10000);
-        AssertLabelsMatchGotoTargets(generatedProgram2.SourceText);
     }
 
     [Fact]
@@ -595,71 +408,12 @@ public sealed class GeneratedCodeMachineTest {
         };
 
         GeneratedCodeMachineTestRunner runner = new();
-        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("test386", options);
-        string source = generatedProgram.SourceText;
-        source.Should().Contain("switch ((ushort)EBX)");
-        source.Should().Contain("Untested near call target 0x{(ushort)EBX:X4} at F000:13B0");
-        source.Should().NotContain("switch (EBX)");
-        source.Should().NotContain("switch ((ushort)((ushort)EBX))");
-
-        new GeneratedCodeMachineTestRunner().TestGeneratedCode("test386", [], options, _ => {
+        runner.TestGeneratedCode("test386", [], options, _ => {
             Test386PostPortHandler postHandler = handler ?? throw new InvalidOperationException("The test386 POST port handler was not installed.");
             postHandler.PostValues.Count.Should().Be(8);
             // FF means test finished normally.
             postHandler.PostValues[^1].Should().Be(0xFF);
         });
-    }
-
-    [Fact]
-    public void EveryInterruptEnablingInstructionIsFollowedByAnEventCheck() {
-        // Arrange
-        GeneratedCodeMachineTestRunner runner = new();
-        GeneratedCodeRunOptions jump1Options = new GeneratedCodeRunOptions { MaxCycles = 1000 };
-        GeneratedCodeRunOptions stiPendingOptions = new GeneratedCodeRunOptions { MaxCycles = 0xFFFFFFF, EnablePit = true };
-
-        // Act
-        (_, GeneratedCSharpProgram jump1Program) = runner.GenerateProgramAndSource("jump1", jump1Options);
-        (_, GeneratedCSharpProgram stiPendingProgram) = runner.GenerateProgramAndSource("stipending", stiPendingOptions);
-
-        // Assert
-        AssertEveryInterruptEnablingInstructionIsFollowedByAnEventCheck(jump1Program.SourceText);
-        AssertEveryInterruptEnablingInstructionIsFollowedByAnEventCheck(stiPendingProgram.SourceText);
-    }
-
-    [Fact]
-    public void LoopHeaderKeepsExternalEventCheck() {
-        // F000:002C is a self-loop whose block is not a method entry, so only the loop-head rule keeps its check.
-        // Arrange
-        GeneratedCodeMachineTestRunner runner = new();
-        GeneratedCodeRunOptions options = new GeneratedCodeRunOptions { MaxCycles = 0xFFFFFFF, EnablePit = true };
-
-        // Act
-        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("externalint", options);
-        string[] lines = SourceLines(generatedProgram.SourceText);
-        int labelIndex = -1;
-        for (int i = 0; i < lines.Length; i++) {
-            if (LoopHeaderLabelRegex.IsMatch(lines[i])) {
-                labelIndex = i;
-                break;
-            }
-        }
-
-        // Assert
-        labelIndex.Should().NotBe(-1, "the externalint loop head L_002C must be emitted");
-        string nextLine = lines[labelIndex + 1].Trim();
-        nextLine.Should().Be("CheckExternalEvents(cs1, 0x002C);");
-    }
-
-    [Fact]
-    public void NoConsecutiveDuplicateExternalEventChecks() {
-        // Arrange
-        GeneratedCodeMachineTestRunner runner = new();
-        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("jump2", maxCycles: 10000);
-        string[] lines = SourceLines(generatedProgram.SourceText);
-
-        // Assert
-        List<string> duplicates = ConsecutiveDuplicateExternalEventChecks(lines);
-        duplicates.Should().BeEmpty("no two CheckExternalEvents calls should be identical when only label lines lie between them");
     }
 
     private static List<string> ConsecutiveDuplicateExternalEventChecks(string[] lines) {
@@ -711,6 +465,5 @@ public sealed class GeneratedCodeMachineTest {
 
     private static readonly Regex InterruptEnablingAsmCommentRegex = new(@"^\s*// [0-9A-F]{4}:[0-9A-F]{4} (sti|popf|popfd)$");
     private static readonly Regex AsmCommentRegex = new(@"^\s*// [0-9A-F]{4}:[0-9A-F]{4} ");
-    private static readonly Regex LoopHeaderLabelRegex = new(@"^\s*L_002C:$");
     private static readonly Regex LabelLineRegex = new(@"^\s*L_\w+:$");
 }

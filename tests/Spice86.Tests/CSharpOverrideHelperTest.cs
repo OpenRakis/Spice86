@@ -120,7 +120,18 @@ public class CSharpOverrideHelperTest {
 
         List<CpuFaultTarget> targets = [
             new(new SegmentedAddress(0x3457, 0x0068), () => { invocationCounter++; return helper.NearRet(); }), // same physical address, different segmented
-            new(new SegmentedAddress(0x3456, 0x0078), () => { invocationCounter++; return markerAction; }),
+            new(new SegmentedAddress(0x3456, 0x0078), () => {
+                invocationCounter++;
+                // Fault entry assertions inside the matching delegate
+                helper.CS.Should().Be(0x3456);
+                helper.IP.Should().Be(0x0078);
+                helper.InterruptFlag.Should().BeFalse();
+                helper.SP.Should().Be(0x00FA);
+                helper.Stack.Peek16(0).Should().Be(0x0042);
+                helper.Stack.Peek16(2).Should().Be(0x2000);
+                helper.Stack.Peek16(4).Should().Be(originalFlags);
+                return markerAction;
+            }),
             new(new SegmentedAddress(0x3456, 0x0078), () => { invocationCounter++; return helper.NearRet(); }) // duplicate, should never run
         ];
 
@@ -133,17 +144,6 @@ public class CSharpOverrideHelperTest {
         returnedAction.Should().BeSameAs(markerAction);
         invocationCounter.Should().Be(1, "only the first matching delegate should run");
         executionCounter.Should().Be(0, "the returned action should not be executed");
-
-        // Verify fault entry was performed
-        helper.CS.Should().Be(0x3456);
-        helper.IP.Should().Be(0x0078);
-        helper.InterruptFlag.Should().BeFalse();
-        helper.SP.Should().Be(0x00FA);
-
-        // Stack frame: [0]=faulting IP, [2]=faulting CS, [4]=original flags
-        helper.Stack.Peek16(0).Should().Be(0x0042);
-        helper.Stack.Peek16(2).Should().Be(0x2000);
-        helper.Stack.Peek16(4).Should().Be(originalFlags);
     }
 
     [Theory]
@@ -172,9 +172,21 @@ public class CSharpOverrideHelperTest {
             _loggerServiceMock,
             new Configuration { HttpApiPort = 0 });
 
-        List<CpuFaultTarget> targets = useNonEmptyList
-            ? [new(new SegmentedAddress(0x3457, 0x0068), () => helper.NearRet())] // segmented alias, doesn't match
-            : [];
+        // Seed the would-be fault frame at SS:SP-6, SS:SP-4, SS:SP-2 (with initial SP=0x0100, these are 0x00FA, 0x00FC, 0x00FE)
+        helper.Stack.Poke16(-6, 0xA1B2);
+        helper.Stack.Poke16(-4, 0xC3D4);
+        helper.Stack.Poke16(-2, 0xE5F6);
+        ushort frameWord0 = helper.Stack.Peek16(-6);
+        ushort frameWord2 = helper.Stack.Peek16(-4);
+        ushort frameWord4 = helper.Stack.Peek16(-2);
+
+        int invocationCounter = 0;
+        List<CpuFaultTarget> targets;
+        if (useNonEmptyList) {
+            targets = [new(new SegmentedAddress(0x3457, 0x0068), () => { invocationCounter++; return helper.NearRet(); })]; // segmented alias, doesn't match
+        } else {
+            targets = [];
+        }
 
         CpuDivisionErrorException exception = new("Division by zero");
 
@@ -192,10 +204,13 @@ public class CSharpOverrideHelperTest {
         helper.State.Flags.FlagRegister16.Should().Be(originalFlags);
         helper.InterruptFlag.Should().BeTrue();
 
-        // Stack frame words should be unchanged
-        helper.Stack.Peek16(0).Should().Be(0);
-        helper.Stack.Peek16(2).Should().Be(0);
-        helper.Stack.Peek16(4).Should().Be(0);
+        // Invocation counter should be zero
+        invocationCounter.Should().Be(0);
+
+        // Would-be stack frame words should be unchanged
+        helper.Stack.Peek16(-6).Should().Be(frameWord0);
+        helper.Stack.Peek16(-4).Should().Be(frameWord2);
+        helper.Stack.Peek16(-2).Should().Be(frameWord4);
     }
 
     [Fact]

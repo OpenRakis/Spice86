@@ -45,17 +45,10 @@ public sealed class SpeculativeCfgTest {
         };
         GeneratedCodeMachineTestRunner runner = new();
         (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("speculative_branch", discoveryOptions);
-        string source = generatedProgram.SourceText;
-
-        // Assert the generated source emits a speculative guard, NOT FailAsUntested,
-        // for the unobserved conditional jump target (F000:000A -> F000:0013).
-        source.Should().Contain("VerifySpeculativeEntryOrFail",
-            "the emitter must produce a speculative guard for the unobserved JNZ arm, not FailAsUntested");
-        source.Should().NotContain("Untested jump at F000:000A",
-            "the speculative block at F000:0013 is reachable from the observed conditional and must not be treated as untested");
 
         // Compile the override generated from selector=0 discovery
-        CompiledGeneratedOverride compiledOverride = new GeneratedOverrideCompiler().CompileSupplier(source);
+        using CompiledGeneratedOverride compiledOverride =
+            runner.CompileGeneratedProgram("speculative_branch", generatedProgram, discoveryOptions);
 
         // Run with selector=0 (observed path) - should produce 0xDD
         byte[] expectedDiscovery = new byte[0x403];
@@ -74,6 +67,9 @@ public sealed class SpeculativeCfgTest {
 
         RunWithCompiledOverride("speculative_branch", compiledOverride, expectedSpeculative, 1000,
             machine => { machine.Memory.UInt8[0, 0x0500] = 0x01; });
+
+        runner.CompareGeneratedSourceWithExpected(
+            GeneratedCodeMachineTestRunner.GoldenKey("speculative_branch", discoveryOptions), generatedProgram);
     }
 
     /// <summary>
@@ -128,51 +124,6 @@ public sealed class SpeculativeCfgTest {
     }
 
     /// <summary>
-    /// Source-level: the speculative branch fixture compiles and runs successfully via the
-    /// generated override on the observed path.
-    /// </summary>
-    [Fact]
-    public void SpeculativeBranchGeneratedOverrideCompilesAndRuns() {
-        byte[] expectedDiscovery = new byte[0x403];
-        expectedDiscovery[0x400] = 0x01;
-        expectedDiscovery[0x401] = 0xDD;
-        expectedDiscovery[0x402] = 0xAA;
-        new GeneratedCodeMachineTestRunner().TestGeneratedCode("speculative_branch", expectedDiscovery,
-            new GeneratedCodeRunOptions { MaxCycles = 1000 });
-    }
-
-    /// <summary>
-    /// Flag-off parity / speculation-on behavior for jump1.
-    /// With speculation enabled (default), jump1's unobserved fallthrough paths are resolved
-    /// via same-partition block entry lookup (speculative blocks are reachable from observed terminators).
-    /// </summary>
-    [Fact]
-    public void SpeculationOnJump1ResolvesUnobservedFallthroughs() {
-        GeneratedCodeRunOptions options = new() {
-            MaxCycles = 1000,
-            EnableSpeculativeCfgExploration = true
-        };
-        GeneratedCodeMachineTestRunner runner = new();
-        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("jump1", options);
-        string source = generatedProgram.SourceText;
-
-        // jump1's always-taken conditional jumps leave their fallthrough edge unobserved. With
-        // speculation off those edges lower to FailAsUntested guarded by an "Untested fallthrough at"
-        // message. With speculation on, every such fallthrough target is a block entry
-        // reachable from an observed terminator in the same partition, so it must be resolved rather
-        // than left untested.
-        source.Should().NotContain("Untested fallthrough at",
-            "speculation must resolve jump1's unobserved fallthrough edges to their same-partition block entries");
-        source.Should().NotContain("FailAsUntested",
-            "no jump1 arm should remain untested once speculation resolves the fallthrough edges");
-
-        // The resolved code must still compile and execute to the correct result via the override.
-        string memoryDumpPath = "Resources/cpuTests/res/MemoryDumps/jump1.bin";
-        byte[] expected = File.Exists(memoryDumpPath) ? File.ReadAllBytes(memoryDumpPath) : [];
-        runner.TestGeneratedCode("jump1", expected, options);
-    }
-
-    /// <summary>
     /// Recursive closure (multi-block unobserved arm).
     /// A single discovery run (selector=0) observes only the fallthrough. The generated code must
     /// emit a guarded speculative closure for the loop path (selector=1). Running the same generated
@@ -187,16 +138,10 @@ public sealed class SpeculativeCfgTest {
         };
         GeneratedCodeMachineTestRunner runner = new();
         (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("speculative_closure", discoveryOptions);
-        string source = generatedProgram.SourceText;
-
-        // Assert speculative guard is emitted for the closure entry
-        source.Should().Contain("VerifySpeculativeEntryOrFail",
-            "the emitter must produce a speculative guard for the unobserved JNZ arm leading to the loop closure");
-        source.Should().NotContain("Untested jump at",
-            "the speculative closure must be resolved, not treated as untested");
 
         // Compile the override generated from selector=0 discovery
-        CompiledGeneratedOverride compiledOverride = new GeneratedOverrideCompiler().CompileSupplier(source);
+        using CompiledGeneratedOverride compiledOverride =
+            runner.CompileGeneratedProgram("speculative_closure", generatedProgram, discoveryOptions);
 
         // Run with selector=0 (observed path) - should produce 0xDD
         byte[] expectedDiscovery = new byte[0x403];
@@ -214,115 +159,9 @@ public sealed class SpeculativeCfgTest {
 
         RunWithCompiledOverride("speculative_closure", compiledOverride, expectedSpeculative, 1000,
             machine => { machine.Memory.UInt8[0, 0x0500] = 0x01; });
-    }
 
-    /// <summary>
-    /// Source-level: the speculative closure fixture compiles and runs successfully on the observed path.
-    /// </summary>
-    [Fact]
-    public void SpeculativeClosureGeneratedOverrideCompilesAndRuns() {
-        byte[] expectedDiscovery = new byte[0x403];
-        expectedDiscovery[0x400] = 0x01;
-        expectedDiscovery[0x401] = 0xDD;
-        expectedDiscovery[0x402] = 0xBB;
-        new GeneratedCodeMachineTestRunner().TestGeneratedCode("speculative_closure", expectedDiscovery,
-            new GeneratedCodeRunOptions { MaxCycles = 1000 });
-    }
-
-    /// <summary>
-    /// Hard-stop on indirect transfer. The 'segpr' fixture has a direct call whose callee never
-    /// returns (no observed continuation). With speculation on, the call continuation is still NOT
-    /// speculated (it's out of scope by design). The generated source must still contain
-    /// "Untested return from call at" for that call.
-    /// </summary>
-    [Fact]
-    public void CallContinuationStaysOutOfScope() {
-        GeneratedCodeMachineTestRunner runner = new();
-        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("segpr", maxCycles: 10000);
-        string source = generatedProgram.SourceText;
-
-        source.Should().Contain("Untested return from call at");
-    }
-
-    /// <summary>
-    /// Mixed-block guard placed mid-block after observed prefix.
-    /// The speculative_branch fixture contains a conditional where the fallthrough is observed and
-    /// the JNZ target is speculative. The block containing the JNZ arm starts with the speculative
-    /// instruction. The guard must appear BEFORE the first speculative instruction's generated comment.
-    /// </summary>
-    [Fact]
-    public void MixedBlockGuardPlacedBeforeFirstSpeculativeInstruction() {
-        GeneratedCodeRunOptions options = new() {
-            MaxCycles = 1000,
-            EnableSpeculativeCfgExploration = true
-        };
-        GeneratedCodeMachineTestRunner runner = new();
-        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("speculative_branch", options);
-        string source = generatedProgram.SourceText;
-
-        // The guard must appear in the generated source
-        source.Should().Contain("VerifySpeculativeEntryOrFail(");
-
-        // The guard must come BEFORE the first speculative block's instructions in the source
-        int guardIndex = source.IndexOf("VerifySpeculativeEntryOrFail(", StringComparison.Ordinal);
-        // F000:0013 is the alt_path entry (speculative JNZ target)
-        int speculativeInstructionIndex = source.IndexOf("// F000:0013", StringComparison.Ordinal);
-        speculativeInstructionIndex.Should().BeGreaterThanOrEqualTo(0,
-            "the first speculative instruction comment (F000:0013) must be present in the generated source");
-        guardIndex.Should().BeLessThan(speculativeInstructionIndex,
-            "the speculative guard must be emitted before the first speculative instruction comment");
-    }
-
-    /// <summary>
-    /// Flag-off produces FailAsUntested, no guard.
-    /// With EnableSpeculativeCfgExploration = false, the generated code should NOT contain
-    /// VerifySpeculativeEntryOrFail and should still contain FailAsUntested for unobserved arms.
-    /// </summary>
-    [Fact]
-    public void FlagOffProducesFailAsUntestedNoGuard() {
-        GeneratedCodeRunOptions options = new() {
-            MaxCycles = 1000,
-            EnableSpeculativeCfgExploration = false
-        };
-        GeneratedCodeMachineTestRunner runner = new();
-        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("speculative_branch", options);
-        string source = generatedProgram.SourceText;
-
-        source.Should().NotContain("VerifySpeculativeEntryOrFail",
-            "with speculation disabled, no speculative guards should be emitted");
-        source.Should().Contain("FailAsUntested",
-            "with speculation disabled, unobserved arms must still produce FailAsUntested");
-    }
-
-    /// <summary>
-    /// Convergence onto observed block emits plain goto, no guard.
-    /// When a speculative arm targets a block that was already observed (in the same partition),
-    /// the generated code should emit a plain goto to that label, not a VerifySpeculativeEntryOrFail guard.
-    /// The observed target is already confirmed by execution - no verification needed.
-    /// </summary>
-    [Fact]
-    public void ConvergenceOntoObservedBlockEmitsPlainGotoNoGuard() {
-        // The speculative arm of speculative_branch converges onto the 'done' block, which was observed
-        // during discovery (reached via the fallthrough path). Speculative instructions are guarded
-        // per-instruction, but the JMP into 'done' must be a plain goto: the observed convergence target
-        // is already confirmed by execution and must never be re-verified.
-        GeneratedCodeRunOptions options = new() {
-            MaxCycles = 1000,
-            EnableSpeculativeCfgExploration = true
-        };
-        GeneratedCodeMachineTestRunner runner = new();
-        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("speculative_branch", options);
-        string source = generatedProgram.SourceText;
-
-        // The speculative block entry at F000:0013 is guarded.
-        source.Should().Contain("VerifySpeculativeEntryOrFail(cs1, 0x0013",
-            "the speculative block entry at F000:0013 must be guarded");
-
-        // The observed convergence target 'done' (F000:001A) must NOT be guarded: the speculative arm
-        // reaches it via a plain goto, not a guarded entry. Per-instruction guards cover the speculative
-        // instructions themselves (e.g. the JMP at F000:0018), but never the observed target they jump to.
-        source.Should().NotContain("VerifySpeculativeEntryOrFail(cs1, 0x001A",
-            "the observed 'done' block at F000:001A is a convergence target and must be reached by a plain goto, never a speculative guard");
+        runner.CompareGeneratedSourceWithExpected(
+            GeneratedCodeMachineTestRunner.GoldenKey("speculative_closure", discoveryOptions), generatedProgram);
     }
 
     /// <summary>
@@ -363,32 +202,6 @@ public sealed class SpeculativeCfgTest {
     }
 
     /// <summary>
-    /// Direct call entry on speculative path. Discovery run (selector=0) never calls the
-    /// subroutine. The speculative path explores into the callee but does NOT speculate the
-    /// call continuation. When run with selector=1, the generated code enters the callee via
-    /// the speculative guard but after ret hits "Untested return from call at" (expected).
-    /// This validates that call entry IS explored but call continuation is NOT.
-    /// </summary>
-    [Fact]
-    public void SpeculativeCallEntryExploresCalleeButNotContinuation() {
-        GeneratedCodeRunOptions discoveryOptions = new() {
-            MaxCycles = 1000,
-            EnableSpeculativeCfgExploration = true
-        };
-        GeneratedCodeMachineTestRunner runner = new();
-        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("speculative_call_entry", discoveryOptions);
-        string source = generatedProgram.SourceText;
-
-        // The speculative call path must be guarded
-        source.Should().Contain("VerifySpeculativeEntryOrFail",
-            "the speculative call path must be guarded");
-
-        // Call continuation is NOT speculated - it should produce FailAsUntested
-        source.Should().Contain("Untested return from call at",
-            "call continuations are not speculated per design - they stay as untested");
-    }
-
-    /// <summary>
     /// Convergence onto observed code - both paths reach the same merge point.
     /// Discovery (selector=0) observes the mergepoint via path A. Speculative path B (selector=1)
     /// converges onto the same observed mergepoint block. No duplicate, just a goto.
@@ -401,9 +214,9 @@ public sealed class SpeculativeCfgTest {
         };
         GeneratedCodeMachineTestRunner runner = new();
         (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("speculative_convergence", discoveryOptions);
-        string source = generatedProgram.SourceText;
 
-        CompiledGeneratedOverride compiledOverride = new GeneratedOverrideCompiler().CompileSupplier(source);
+        using CompiledGeneratedOverride compiledOverride =
+            runner.CompileGeneratedProgram("speculative_convergence", generatedProgram, discoveryOptions);
 
         // Discovery path (selector=0): path A writes 0xAA, mergepoint writes 0xCC, 0xFF
         byte[] expectedDiscovery = new byte[0x404];
@@ -421,30 +234,9 @@ public sealed class SpeculativeCfgTest {
         expectedSpeculative[0x403] = 0xFF;
         RunWithCompiledOverride("speculative_convergence", compiledOverride, expectedSpeculative, 1000,
             machine => { machine.Memory.UInt8[0, 0x0500] = 0x01; });
-    }
 
-    /// <summary>
-    /// Invalid opcode hard-stop. The generated source still has FailAsUntested for the arm
-    /// that would decode into invalid opcodes (the explorer hard-stopped).
-    /// </summary>
-    [Fact]
-    public void SpeculativeInvalidOpcodeStaysFailAsUntested() {
-        GeneratedCodeRunOptions options = new() {
-            MaxCycles = 1000,
-            EnableSpeculativeCfgExploration = true
-        };
-        GeneratedCodeMachineTestRunner runner = new();
-        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("speculative_invalid_opcode", options);
-        string source = generatedProgram.SourceText;
-
-        source.Should().Contain("FailAsUntested",
-            "an arm that decodes to invalid opcodes should remain untested (explorer hard-stopped)");
-
-        // F000:0013 is the JNZ target that decodes into the data region (0xFF 0xFF invalid opcodes).
-        // The explorer hard-stops there, so that arm must stay FailAsUntested and must NOT get a
-        // speculative guard - a guard would imply the explorer successfully speculated the path.
-        source.Should().NotContain("VerifySpeculativeEntryOrFail(cs1, 0x0013",
-            "the invalid-opcode data region at F000:0013 must not be guarded; the explorer hard-stopped on it");
+        runner.CompareGeneratedSourceWithExpected(
+            GeneratedCodeMachineTestRunner.GoldenKey("speculative_convergence", discoveryOptions), generatedProgram);
     }
 
     /// <summary>
@@ -459,12 +251,9 @@ public sealed class SpeculativeCfgTest {
         };
         GeneratedCodeMachineTestRunner runner = new();
         (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("speculative_mixed_block", discoveryOptions);
-        string source = generatedProgram.SourceText;
 
-        source.Should().Contain("VerifySpeculativeEntryOrFail",
-            "the unobserved fallthrough arm must be guarded");
-
-        CompiledGeneratedOverride compiledOverride = new GeneratedOverrideCompiler().CompileSupplier(source);
+        using CompiledGeneratedOverride compiledOverride =
+            runner.CompileGeneratedProgram("speculative_mixed_block", generatedProgram, discoveryOptions);
 
         // Discovery path (selector=0): JE taken, writes 0xDD
         byte[] expectedDiscovery = new byte[0x403];
@@ -480,26 +269,9 @@ public sealed class SpeculativeCfgTest {
         expectedSpeculative[0x402] = 0xAA;
         RunWithCompiledOverride("speculative_mixed_block", compiledOverride, expectedSpeculative, 1000,
             machine => { machine.Memory.UInt8[0, 0x0500] = 0x01; });
-    }
 
-    /// <summary>
-    /// SMC inside speculative run triggers guard failure.
-    /// The speculative_smc_guard fixture writes to its own code bytes on the speculative path.
-    /// The generated source must have VerifySpeculativeEntryOrFail. When the speculative path
-    /// is taken, the SMC invalidates the run signature and the guard fires.
-    /// </summary>
-    [Fact]
-    public void SpeculativeSmcGuardSourceContainsGuard() {
-        GeneratedCodeRunOptions options = new() {
-            MaxCycles = 1000,
-            EnableSpeculativeCfgExploration = true
-        };
-        GeneratedCodeMachineTestRunner runner = new();
-        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("speculative_smc_guard", options);
-        string source = generatedProgram.SourceText;
-
-        source.Should().Contain("VerifySpeculativeEntryOrFail",
-            "the speculative SMC path must be guarded so that runtime SMC invalidates the run");
+        runner.CompareGeneratedSourceWithExpected(
+            GeneratedCodeMachineTestRunner.GoldenKey("speculative_mixed_block", discoveryOptions), generatedProgram);
     }
 
     /// <summary>
@@ -526,12 +298,9 @@ public sealed class SpeculativeCfgTest {
         };
         GeneratedCodeMachineTestRunner runner = new();
         (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("speculative_smc_guard", discoveryOptions);
-        string source = generatedProgram.SourceText;
 
-        source.Should().Contain("VerifySpeculativeEntryOrFail",
-            "the speculative SMC path must be guarded");
-
-        CompiledGeneratedOverride compiledOverride = new GeneratedOverrideCompiler().CompileSupplier(source);
+        using CompiledGeneratedOverride compiledOverride =
+            runner.CompileGeneratedProgram("speculative_smc_guard", generatedProgram, discoveryOptions);
 
         // Discovery path (selector=0): no SMC on this path, runs to completion.
         byte[] expectedDiscovery = new byte[0x403];
@@ -551,6 +320,9 @@ public sealed class SpeculativeCfgTest {
         act.Should().Throw<Spice86.Core.Emulator.Errors.InvalidVMOperationException>()
             .WithInnerException<Spice86.Shared.Emulator.Errors.UnrecoverableException>()
             .WithMessage("*Speculative code at F000:0019 no longer matches memory*");
+
+        runner.CompareGeneratedSourceWithExpected(
+            GeneratedCodeMachineTestRunner.GoldenKey("speculative_smc_guard", discoveryOptions), generatedProgram);
     }
 
     /// <summary>
@@ -566,12 +338,9 @@ public sealed class SpeculativeCfgTest {
         };
         GeneratedCodeMachineTestRunner runner = new();
         (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("speculative_discard", discoveryOptions);
-        string source = generatedProgram.SourceText;
 
-        source.Should().Contain("VerifySpeculativeEntryOrFail",
-            "the speculative arm must have a guard");
-
-        CompiledGeneratedOverride compiledOverride = new GeneratedOverrideCompiler().CompileSupplier(source);
+        using CompiledGeneratedOverride compiledOverride =
+            runner.CompileGeneratedProgram("speculative_discard", generatedProgram, discoveryOptions);
 
         // Discovery path (selector=0): works fine
         byte[] expectedDiscovery = new byte[0x403];
@@ -592,6 +361,9 @@ public sealed class SpeculativeCfgTest {
         act.Should().Throw<Spice86.Core.Emulator.Errors.InvalidVMOperationException>()
             .WithInnerException<Spice86.Shared.Emulator.Errors.UnrecoverableException>()
             .WithMessage("*Speculative code at F000:0013 no longer matches memory*");
+
+        runner.CompareGeneratedSourceWithExpected(
+            GeneratedCodeMachineTestRunner.GoldenKey("speculative_discard", discoveryOptions), generatedProgram);
     }
 
     /// <summary>
@@ -696,43 +468,6 @@ public sealed class SpeculativeCfgTest {
     }
 
     /// <summary>
-    /// Generation validation: the mouse IRQ handler (vector 0x74, BiosMouseInt74Handler) never
-    /// fires during headless discovery because there's no mouse activity. With speculation + seeding,
-    /// it must still appear in the generated source as a DefineFunction at its F000 address and the
-    /// generated code must compile. This is the exact crash scenario the feature was designed to fix.
-    /// </summary>
-    [Fact]
-    public void MouseIrqHandlerEmittedInGeneratedCodeDespiteNeverFiring() {
-        string comFileName = Path.GetFullPath("Resources/cpuTests/intchain.com");
-        GeneratedCodeRunOptions options = new() {
-            MaxCycles = 1000,
-            InstallInterruptVectors = true,
-            EnableSpeculativeCfgExploration = true
-        };
-        GeneratedCodeMachineTestRunner runner = new();
-        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource(comFileName, options);
-        string source = generatedProgram.SourceText;
-
-        // The mouse IRQ handler (vector 0x74) is at F000:005D in the standard layout.
-        // It must have a DefineFunction even though no mouse event fired during discovery.
-        // Look for a DefineFunction that references 0x005D (the mouse handler offset).
-        source.Should().Contain("0x005D",
-            "the mouse IRQ handler (BiosMouseInt74Handler, vector 0x74) must be emitted as a function "
-            + "even though no mouse event fires during headless discovery - this is the exact crash scenario");
-
-        // The generated source must contain the far call to the RETF stub. Now that far call imm
-        // registers its target as a static successor, the callee IS explored speculatively and the
-        // code generator emits a direct call (not SearchFunctionOverride). Verify the far call target
-        // (the RETF stub) is present as a defined function in the generated source.
-        source.Should().Contain("FarCall",
-            "the mouse handler's far call to the RETF stub must be lowered as a FarCall "
-            + "since far call imm now registers its callee as a static successor for speculative exploration");
-
-        // Must compile.
-        new GeneratedOverrideCompiler().CompileSupplier(source);
-    }
-
-    /// <summary>
     /// End-to-end: with DOS initialized and speculation on, the generated code for
     /// intchain.com (which exercises INT chains through F000 handlers) compiles AND runs
     /// successfully as an override. This proves seeded handlers reach generation and execute.
@@ -772,7 +507,7 @@ public sealed class SpeculativeCfgTest {
         source.Should().NotContain("VerifySpeculativeEntryOrFail",
             "with speculation off no speculative guard is emitted");
 
-        CompiledGeneratedOverride compiledOverride = new GeneratedOverrideCompiler().CompileSupplier(source);
+        using CompiledGeneratedOverride compiledOverride = new GeneratedOverrideCompiler().CompileSupplier(source);
 
         // Observed path (selector=0): runs to the correct result.
         byte[] expectedDiscovery = new byte[0x403];
