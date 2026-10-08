@@ -478,7 +478,7 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
         EmittedCode.Diverging($"return {returnActionExpression};");
 
     public EmittedCode VisitMethodCallNode(MethodCallNode node) {
-        if (TryEmitIoPortCall(node, out string ioPortCall)) {
+        if (TryEmitIoPortHelperCall(node, out string ioPortCall)) {
             return (CSharpFragment)ioPortCall;
         }
 
@@ -488,38 +488,36 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
     }
 
     /// <summary>
-    /// IN/OUT execution AST nodes are emitted as root-helper calls (In8/Out16/...) by the IO AST builder.
-    /// Those helpers do not exist on <see cref="CSharpOverrideHelper"/>, so generated overrides reach the I/O
-    /// bus through <c>Machine.IoPortDispatcher</c> instead.
+    /// IN/OUT and INS/OUTS AST nodes are root calls named <c>In8</c>...<c>Out32</c>. They are emitted as
+    /// calls to the <see cref="CSharpOverrideHelper"/> methods of the same names, with the port narrowed to
+    /// <c>ushort</c> and the OUT value narrowed to the operand width.
     /// </summary>
-    private bool TryEmitIoPortCall(MethodCallNode node, out string result) {
+    private bool TryEmitIoPortHelperCall(MethodCallNode node, out string result) {
         if (node.PropertyPath is not null) {
             result = string.Empty;
             return false;
         }
 
-        (string dispatcherMethod, DataType? valueType) = node.MethodName switch {
-            "In8" => ("ReadByte", null),
-            "In16" => ("ReadWord", null),
-            "In32" => ("ReadDWord", null),
-            "Out8" => ("WriteByte", DataType.UINT8),
-            "Out16" => ("WriteWord", DataType.UINT16),
-            "Out32" => ("WriteDWord", DataType.UINT32),
-            _ => (string.Empty, null)
+        (bool isIoHelper, DataType? valueType) = node.MethodName switch {
+            "In8" or "In16" or "In32" => (true, null),
+            "Out8" => (true, DataType.UINT8),
+            "Out16" => (true, DataType.UINT16),
+            "Out32" => (true, DataType.UINT32),
+            _ => (false, null)
         };
-        if (dispatcherMethod.Length == 0) {
+        if (!isIoHelper) {
             result = string.Empty;
             return false;
         }
 
         string port = Cast(DataType.UINT16, Expr(node.Arguments[0]));
         if (valueType is null) {
-            result = $"Machine.IoPortDispatcher.{dispatcherMethod}({port})";
+            result = $"{node.MethodName}({port})";
             return true;
         }
 
         string value = Cast(valueType, Expr(node.Arguments[1]));
-        result = $"Machine.IoPortDispatcher.{dispatcherMethod}({port}, {value})";
+        result = $"{node.MethodName}({port}, {value})";
         return true;
     }
 

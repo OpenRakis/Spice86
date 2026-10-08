@@ -46,7 +46,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0204 mov AL,0xFE
         AL = 0xFE;
         // F000:0206 out 0x21,AL
-        Machine.IoPortDispatcher.WriteByte(0x0021, AL);
+        Out8(0x0021, AL);
         // F000:0208 mov SS,word ptr DS:[0x0404]
         SS = UInt16[DS, 0x0404];
         State.InterruptShadowing = true;
@@ -66,11 +66,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:021C mov AL,0xFF
         AL = 0xFF;
         // F000:021E out 0x21,AL
-        Machine.IoPortDispatcher.WriteByte(0x0021, AL);
+        Out8(0x0021, AL);
         // F000:0220 mov AL,0x20
         AL = 0x20;
         // F000:0222 out 0x20,AL
-        Machine.IoPortDispatcher.WriteByte(0x0020, AL);
+        Out8(0x0020, AL);
         // F000:0224 pop AX
         AX = Stack.Pop16();
         // F000:0225 iret
@@ -155,11 +155,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:033B mov AL,0xFF
         AL = 0xFF;
         // F000:033D out 0x21,AL
-        Machine.IoPortDispatcher.WriteByte(0x0021, AL);
+        Out8(0x0021, AL);
         // F000:033F mov AL,0x20
         AL = 0x20;
         // F000:0341 out 0x20,AL
-        Machine.IoPortDispatcher.WriteByte(0x0020, AL);
+        Out8(0x0020, AL);
         // F000:0343 pop BX
         BX = Stack.Pop16();
         // F000:0344 pop AX
@@ -185,9 +185,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:000A mov AL,0xFF
         AL = 0xFF;
         // F000:000C out 0x21,AL
-        Machine.IoPortDispatcher.WriteByte(0x0021, AL);
+        Out8(0x0021, AL);
         // F000:000E out 0xA1,AL
-        Machine.IoPortDispatcher.WriteByte(0x00A1, AL);
+        Out8(0x00A1, AL);
         // F000:0010 mov byte ptr DS:[0x0400],0
         UInt8[DS, 0x0400] = 0;
         // F000:0015 mov byte ptr DS:[0x0401],0
@@ -219,19 +219,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:005C mov AL,0x30
         AL = 0x30;
         // F000:005E out 0x43,AL
-        Machine.IoPortDispatcher.WriteByte(0x0043, AL);
+        Out8(0x0043, AL);
         // F000:0060 mov AL,0xA9
         AL = 0xA9;
         // F000:0062 out 0x40,AL
-        Machine.IoPortDispatcher.WriteByte(0x0040, AL);
+        Out8(0x0040, AL);
         // F000:0064 mov AL,4
         AL = 4;
         // F000:0066 out 0x40,AL
-        Machine.IoPortDispatcher.WriteByte(0x0040, AL);
+        Out8(0x0040, AL);
         // F000:0068 mov AL,0xFE
         AL = 0xFE;
         // F000:006A out 0x21,AL
-        Machine.IoPortDispatcher.WriteByte(0x0021, AL);
+        Out8(0x0021, AL);
         // F000:006C sti
         if (!InterruptFlag) {
             State.InterruptShadowing = true;
@@ -254,19 +254,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:007C mov AL,0x30
         AL = 0x30;
         // F000:007E out 0x43,AL
-        Machine.IoPortDispatcher.WriteByte(0x0043, AL);
+        Out8(0x0043, AL);
         // F000:0080 mov AL,0xA9
         AL = 0xA9;
         // F000:0082 out 0x40,AL
-        Machine.IoPortDispatcher.WriteByte(0x0040, AL);
+        Out8(0x0040, AL);
         // F000:0084 mov AL,4
         AL = 4;
         // F000:0086 out 0x40,AL
-        Machine.IoPortDispatcher.WriteByte(0x0040, AL);
+        Out8(0x0040, AL);
         // F000:0088 mov AL,0xFE
         AL = 0xFE;
         // F000:008A out 0x21,AL
-        Machine.IoPortDispatcher.WriteByte(0x0021, AL);
+        Out8(0x0021, AL);
         // F000:008C sti
         if (!InterruptFlag) {
             State.InterruptShadowing = true;
@@ -287,7 +287,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0096 mov AL,0xFF
         AL = 0xFF;
         // F000:0098 out 0x21,AL
-        Machine.IoPortDispatcher.WriteByte(0x0021, AL);
+        Out8(0x0021, AL);
         // F000:009A mov word ptr DS:[0x0020],0x0300
         UInt16[DS, 0x0020] = 0x0300;
         // F000:00A0 mov byte ptr DS:[0x0403],1
@@ -299,23 +299,23 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00B1 mov AL,0x30
         AL = 0x30;
         // F000:00B3 out 0x43,AL
-        Machine.IoPortDispatcher.WriteByte(0x0043, AL);
+        Out8(0x0043, AL);
         // F000:00B5 mov AL,0xA9
         AL = 0xA9;
         // F000:00B7 out 0x40,AL
-        Machine.IoPortDispatcher.WriteByte(0x0040, AL);
+        Out8(0x0040, AL);
         // F000:00B9 mov AL,4
         AL = 4;
         // F000:00BB out 0x40,AL
-        Machine.IoPortDispatcher.WriteByte(0x0040, AL);
+        Out8(0x0040, AL);
         // F000:00BD mov AL,0x0A
         AL = 0x0A;
         // F000:00BF out 0x20,AL
-        Machine.IoPortDispatcher.WriteByte(0x0020, AL);
+        Out8(0x0020, AL);
     L_00C1:
         CheckExternalEvents(cs1, 0x00C1);
         // F000:00C1 in AL,0x20
-        AL = Machine.IoPortDispatcher.ReadByte(0x0020);
+        AL = In8(0x0020);
         // F000:00C3 test AL,1
         Alu8.And(AL, 1);
         // F000:00C5 je short 0x00C1

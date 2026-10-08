@@ -147,7 +147,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:06DE mov DX,0x0999
         DX = 0x0999;
         // F000:06E1 out DX,AL
-        Machine.IoPortDispatcher.WriteByte(DX, AL);
+        Out8(DX, AL);
         // F000:06E2 cld
         DirectionFlag = false;
         // F000:06E3 mov EDI,0x0001FFFF
@@ -2165,7 +2165,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:135C mov DX,0x0999
         DX = 0x0999;
         // F000:135F out DX,AL
-        Machine.IoPortDispatcher.WriteByte(DX, AL);
+        Out8(DX, AL);
         // F000:1360 mov SI,0
         SI = 0;
         // F000:1363 mov AX,SP
@@ -2291,7 +2291,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1427 mov DX,0x0999
         DX = 0x0999;
         // F000:142A out DX,AL
-        Machine.IoPortDispatcher.WriteByte(DX, AL);
+        Out8(DX, AL);
         // F000:142B mov DI,0
         DI = 0;
         // F000:142E mov CX,SS
@@ -2600,7 +2600,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:15BF mov DX,0x0999
         DX = 0x0999;
         // F000:15C2 out DX,AL
-        Machine.IoPortDispatcher.WriteByte(DX, AL);
+        Out8(DX, AL);
         // F000:15C3 cli
         InterruptFlag = false;
         // F000:15C4 hlt
@@ -2689,7 +2689,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0048 mov DX,0x0999
         DX = 0x0999;
         // F000:004B out DX,AL
-        Machine.IoPortDispatcher.WriteByte(DX, AL);
+        Out8(DX, AL);
         // F000:004C xor EAX,EAX
         EAX = Alu32.Xor(EAX, EAX);
         // F000:004F mov DS,AX
@@ -2729,7 +2729,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:007F mov DX,0x0999
         DX = 0x0999;
         // F000:0082 out DX,AL
-        Machine.IoPortDispatcher.WriteByte(DX, AL);
+        Out8(DX, AL);
         // F000:0083 mov AH,1
         AH = 1;
         // F000:0085 sahf
@@ -3525,7 +3525,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0496 mov DX,0x0999
         DX = 0x0999;
         // F000:0499 out DX,AL
-        Machine.IoPortDispatcher.WriteByte(DX, AL);
+        Out8(DX, AL);
         // F000:049A mov EAX,0x80000001
         EAX = 0x80000001u;
         // F000:04A0 imul EAX
@@ -3555,7 +3555,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:04C1 mov DX,0x0999
         DX = 0x0999;
         // F000:04C4 out DX,AL
-        Machine.IoPortDispatcher.WriteByte(DX, AL);
+        Out8(DX, AL);
         // F000:04C5 mov DX,0x2000
         DX = 0x2000;
         // F000:04C8 mov SS,DX

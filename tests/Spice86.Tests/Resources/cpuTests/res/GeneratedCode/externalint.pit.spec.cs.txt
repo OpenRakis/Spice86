@@ -35,7 +35,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0043 mov AL,0x20
         AL = 0x20;
         // F000:0045 out 0x20,AL
-        Machine.IoPortDispatcher.WriteByte(0x0020, AL);
+        Out8(0x0020, AL);
         // F000:0047 pop AX
         AX = Stack.Pop16();
         // F000:0048 iret
@@ -61,19 +61,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0015 mov AL,0x36
         AL = 0x36;
         // F000:0017 out 0x43,AL
-        Machine.IoPortDispatcher.WriteByte(0x0043, AL);
+        Out8(0x0043, AL);
         // F000:0019 mov AL,0x51
         AL = 0x51;
         // F000:001B out 0x40,AL
-        Machine.IoPortDispatcher.WriteByte(0x0040, AL);
+        Out8(0x0040, AL);
         // F000:001D mov AL,0x22
         AL = 0x22;
         // F000:001F out 0x40,AL
-        Machine.IoPortDispatcher.WriteByte(0x0040, AL);
+        Out8(0x0040, AL);
         // F000:0021 mov AL,0
         AL = 0;
         // F000:0023 out 0x21,AL
-        Machine.IoPortDispatcher.WriteByte(0x0021, AL);
+        Out8(0x0021, AL);
         // F000:0025 sti
         if (!InterruptFlag) {
             State.InterruptShadowing = true;
