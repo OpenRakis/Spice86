@@ -3543,11 +3543,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         EDX = (uint)(result_04B2 >> 0x00000020);
         EAX = (uint)result_04B2;
         // F000:04B5 div ECX
-        uint divisor_04B5 = ECX;
-        ulong dividend_04B5 = (ulong)((ulong)EDX << 0x00000020 | (ulong)EAX);
-        uint quotient_04B5 = Alu32.Div((ulong)dividend_04B5, (uint)divisor_04B5);
-        EAX = (uint)quotient_04B5;
-        EDX = (uint)(dividend_04B5 % (ulong)divisor_04B5);
+        (EAX, EDX) = Div32(divisor: ECX, dividend: (ulong)((ulong)EDX << 0x00000020 | (ulong)EAX));
         // F000:04B8 cmp EAX,EBX
         Alu32.Sub(EAX, EBX);
         // F000:04BB jne near 0x15C7

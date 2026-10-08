@@ -103,7 +103,12 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
     /// (<see cref="TransferEmitter.EmitFallthroughIfNeeded"/>) unless the body already terminates control flow.
     /// </summary>
     public EmittedCode LowerInstructionBody(CfgInstruction instruction, IVisitableAstNode node, bool emitExternalEventCheckAfter) {
-        EmittedCode body = node.Accept(this);
+        EmittedCode body;
+        if (DivisionPattern.TryMatch(node, instruction.Address) is DivisionPattern division) {
+            body = LowerDivision(division);
+        } else {
+            body = node.Accept(this);
+        }
         // Skip the fallthrough transfer when the node owns its control flow, or when the lowered body already
         // diverges (e.g. a CPUID/throw node lowering to a `throw`): appending a fallthrough after a diverging
         // body would be unreachable code (CS0162).
@@ -114,6 +119,20 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
             body = EmittedCode.Concat(body, ExternalEventCheckAfter(instruction));
         }
         return EmittedCode.Concat(body, Transfer.EmitFallthroughIfNeeded(instruction, CurrentMethod));
+    }
+
+    /// <summary>
+    /// Lowers a recognized division pattern to a single tuple assignment calling the appropriate helper.
+    /// </summary>
+    private EmittedCode LowerDivision(DivisionPattern division) {
+        string prefix = division.Signed ? "IDiv" : "Div";
+        string helperName = $"{prefix}{(int)division.Width}";
+        DataType divisorType = DataType.FromBitWidth(division.Width, division.Signed);
+        DataType dividendType = DataType.FromBitWidth(division.Width.Double(), division.Signed);
+        string divisor = Cast(divisorType, Expr(division.Divisor));
+        string dividend = Cast(dividendType, Expr(division.Dividend));
+        return EmittedCode.Line(
+            $"({Expr(division.Low)}, {Expr(division.High)}) = {helperName}(divisor: {divisor}, dividend: {dividend});");
     }
 
     private EmittedCode ExternalEventCheckAfter(CfgInstruction instruction) =>

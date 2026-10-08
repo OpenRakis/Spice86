@@ -960,6 +960,80 @@ public class CSharpOverrideHelper {
     }
 
     /// <summary>
+    /// Performs unsigned 8-bit division.
+    /// </summary>
+    /// <param name="dividend">The 16-bit dividend (AX).</param>
+    /// <param name="divisor">The 8-bit divisor.</param>
+    /// <returns>A tuple containing the 8-bit quotient (AL) and 8-bit remainder (AH) as unsigned register bits.</returns>
+    /// <exception cref="CpuDivisionErrorException">Thrown when the divisor is zero or the quotient does not fit in a byte.</exception>
+    public (byte Quotient, byte Remainder) Div8(ushort dividend, byte divisor) {
+        byte quotient = Alu8.Div(dividend, divisor);
+        return (quotient, (byte)(dividend % divisor));
+    }
+
+    /// <summary>
+    /// Performs unsigned 16-bit division.
+    /// </summary>
+    /// <param name="dividend">The 32-bit dividend (DX:AX).</param>
+    /// <param name="divisor">The 16-bit divisor.</param>
+    /// <returns>A tuple containing the 16-bit quotient (AX) and 16-bit remainder (DX) as unsigned register bits.</returns>
+    /// <exception cref="CpuDivisionErrorException">Thrown when the divisor is zero or the quotient does not fit in a word.</exception>
+    public (ushort Quotient, ushort Remainder) Div16(uint dividend, ushort divisor) {
+        ushort quotient = Alu16.Div(dividend, divisor);
+        return (quotient, (ushort)(dividend % divisor));
+    }
+
+    /// <summary>
+    /// Performs unsigned 32-bit division.
+    /// </summary>
+    /// <param name="dividend">The 64-bit dividend (EDX:EAX).</param>
+    /// <param name="divisor">The 32-bit divisor.</param>
+    /// <returns>A tuple containing the 32-bit quotient (EAX) and 32-bit remainder (EDX) as unsigned register bits.</returns>
+    /// <exception cref="CpuDivisionErrorException">Thrown when the divisor is zero or the quotient does not fit in a dword.</exception>
+    public (uint Quotient, uint Remainder) Div32(ulong dividend, uint divisor) {
+        uint quotient = Alu32.Div(dividend, divisor);
+        return (quotient, (uint)(dividend % divisor));
+    }
+
+    /// <summary>
+    /// Performs signed 8-bit division.
+    /// </summary>
+    /// <param name="dividend">The 16-bit signed dividend (AX).</param>
+    /// <param name="divisor">The 8-bit signed divisor.</param>
+    /// <returns>A tuple containing the 8-bit quotient (AL) and 8-bit remainder (AH) as unsigned register bits.</returns>
+    /// <exception cref="CpuDivisionErrorException">Thrown when the divisor is zero or the quotient does not fit in a signed byte.</exception>
+    public (byte Quotient, byte Remainder) IDiv8(short dividend, sbyte divisor) {
+        sbyte quotient = Alu8.Idiv(dividend, divisor);
+        return (unchecked((byte)quotient), unchecked((byte)(dividend % divisor)));
+    }
+
+    /// <summary>
+    /// Performs signed 16-bit division.
+    /// </summary>
+    /// <param name="dividend">The 32-bit signed dividend (DX:AX).</param>
+    /// <param name="divisor">The 16-bit signed divisor.</param>
+    /// <returns>A tuple containing the 16-bit quotient (AX) and 16-bit remainder (DX) as unsigned register bits.</returns>
+    /// <exception cref="CpuDivisionErrorException">Thrown when the divisor is zero or the quotient does not fit in a signed word.</exception>
+    /// <exception cref="OverflowException">Thrown when the dividend is <see cref="int.MinValue"/> and the divisor is -1 (inherited ALU behavior).</exception>
+    public (ushort Quotient, ushort Remainder) IDiv16(int dividend, short divisor) {
+        short quotient = Alu16.Idiv(dividend, divisor);
+        return (unchecked((ushort)quotient), unchecked((ushort)(dividend % divisor)));
+    }
+
+    /// <summary>
+    /// Performs signed 32-bit division.
+    /// </summary>
+    /// <param name="dividend">The 64-bit signed dividend (EDX:EAX).</param>
+    /// <param name="divisor">The 32-bit signed divisor.</param>
+    /// <returns>A tuple containing the 32-bit quotient (EAX) and 32-bit remainder (EDX) as unsigned register bits.</returns>
+    /// <exception cref="CpuDivisionErrorException">Thrown when the divisor is zero or the quotient does not fit in a signed dword.</exception>
+    /// <exception cref="OverflowException">Thrown when the dividend is <see cref="long.MinValue"/> and the divisor is -1 (inherited ALU behavior).</exception>
+    public (uint Quotient, uint Remainder) IDiv32(long dividend, int divisor) {
+        int quotient = Alu32.Idiv(dividend, divisor);
+        return (unchecked((uint)quotient), unchecked((uint)(dividend % divisor)));
+    }
+
+    /// <summary>
     /// Halt the program.
     /// </summary>
     /// <returns>An <see cref="Action"/> that exits the program.</returns>

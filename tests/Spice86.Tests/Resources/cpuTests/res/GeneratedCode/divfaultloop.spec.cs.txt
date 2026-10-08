@@ -35,11 +35,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         BX = UInt16[CS, 0x0102];
         // F000:0028 div BX
         try {
-            ushort divisor_0028 = BX;
-            uint dividend_0028 = (uint)((uint)DX << 0x00000010 | (uint)AX);
-            ushort quotient_0028 = Alu16.Div((uint)dividend_0028, (ushort)divisor_0028);
-            AX = (ushort)quotient_0028;
-            DX = (ushort)(dividend_0028 % (uint)divisor_0028);
+            (AX, DX) = Div16(divisor: BX, dividend: (uint)((uint)DX << 0x00000010 | (uint)AX));
         }
         catch (CpuException cpuException) {
             return DispatchCpuFault(cpuException, cs1, 0x0028, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x0037), () => unknown_F000_0037_F0037(0x0000))]);
