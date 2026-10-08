@@ -20,19 +20,19 @@ internal sealed class GeneratedCodeMachineTestRunner {
         return File.ReadAllBytes($"Resources/cpuTests/res/MemoryDumps/{binName}.bin");
     }
 
-    public void TestGeneratedCode(string binName, long maxCycles = 100000) {
+    public (CfgPartitionedProgram Program, GeneratedCSharpProgram GeneratedProgram) TestGeneratedCode(string binName, long maxCycles = 100000) {
         string memoryDumpPath = $"Resources/cpuTests/res/MemoryDumps/{binName}.bin";
         byte[] expected = File.Exists(memoryDumpPath) ? File.ReadAllBytes(memoryDumpPath) : [];
-        TestGeneratedCode(binName, expected, maxCycles);
+        return TestGeneratedCode(binName, expected, maxCycles);
     }
 
-    public void TestGeneratedCode(string binName, byte[] expected, long maxCycles = 100000) {
-        TestGeneratedCode(binName, expected, new GeneratedCodeRunOptions { MaxCycles = maxCycles });
+    public (CfgPartitionedProgram Program, GeneratedCSharpProgram GeneratedProgram) TestGeneratedCode(string binName, byte[] expected, long maxCycles = 100000) {
+        return TestGeneratedCode(binName, expected, new GeneratedCodeRunOptions { MaxCycles = maxCycles });
     }
 
-    public void TestGeneratedCode(string binName, byte[] expected, GeneratedCodeRunOptions options, Action<Machine>? assertions = null) {
-        (CompiledGeneratedOverride compiledOverride, GeneratedCSharpProgram generatedProgram) = GenerateAndCompileSupplier(binName, options);
-        using CompiledGeneratedOverride ownedOverride = compiledOverride;
+    public (CfgPartitionedProgram Program, GeneratedCSharpProgram GeneratedProgram) TestGeneratedCode(string binName, byte[] expected, GeneratedCodeRunOptions options, Action<Machine>? assertions = null) {
+        (CfgPartitionedProgram program, GeneratedCSharpProgram generatedProgram) = GenerateProgramAndSource(binName, options);
+        using CompiledGeneratedOverride compiledOverride = CompileGeneratedProgram(binName, generatedProgram, options);
 
         using Spice86Creator creator = new(binName: binName, maxCycles: options.MaxCycles, enablePit: options.EnablePit,
             installInterruptVectors: options.InstallInterruptVectors, failOnUnhandledPort: options.FailOnUnhandledPort,
@@ -54,6 +54,25 @@ internal sealed class GeneratedCodeMachineTestRunner {
         // important failure and must be the one xunit reports when both a behavioural and a golden
         // mismatch occur on the same run.
         CompareGeneratedSourceWithExpected(GoldenKey(binName, options), generatedProgram);
+
+        return (program, generatedProgram);
+    }
+
+    /// <summary>
+    /// Compiles an existing generated program and records its metrics.
+    /// </summary>
+    /// <param name="binName">The fixture name or path used for discovery.</param>
+    /// <param name="generatedProgram">The source produced by that discovery run.</param>
+    /// <param name="options">The options used for discovery and the golden key.</param>
+    /// <returns>The compiled override, which the caller must dispose.</returns>
+    public CompiledGeneratedOverride CompileGeneratedProgram(
+        string binName, GeneratedCSharpProgram generatedProgram, GeneratedCodeRunOptions options) {
+        GeneratedOverrideCompiler compiler = new();
+        GeneratedCompilation compilation = compiler.Compile(generatedProgram.SourceText);
+        GeneratedCodeMetrics metrics = GeneratedCodeMetricsCollector.Collect(
+            GoldenKey(binName, options), compilation.SyntaxTree, compilation.EmitResult.Diagnostics);
+        WriteMetrics(metrics);
+        return compiler.CompileSupplier(compilation);
     }
 
     /// <summary>
@@ -136,15 +155,6 @@ internal sealed class GeneratedCodeMachineTestRunner {
             fileName = fileName.Replace(invalidChar, '_');
         }
         File.WriteAllText(Path.Join(outputDirectory, fileName + ".generated.cs"), generatedProgram.SourceText);
-    }
-
-    private static (CompiledGeneratedOverride CompiledOverride, GeneratedCSharpProgram GeneratedProgram) GenerateAndCompileSupplier(string binName, GeneratedCodeRunOptions options) {
-        (_, GeneratedCSharpProgram generatedProgram) = new GeneratedCodeMachineTestRunner().GenerateProgramAndSource(binName, options);
-
-        GeneratedCompilation compilation = new GeneratedOverrideCompiler().Compile(generatedProgram.SourceText);
-        GeneratedCodeMetrics metrics = GeneratedCodeMetricsCollector.Collect(GoldenKey(binName, options), compilation.SyntaxTree, compilation.EmitResult.Diagnostics);
-        WriteMetrics(metrics);
-        return (new GeneratedOverrideCompiler().CompileSupplier(compilation), generatedProgram);
     }
 
     private static readonly object MetricsFileLock = new();
