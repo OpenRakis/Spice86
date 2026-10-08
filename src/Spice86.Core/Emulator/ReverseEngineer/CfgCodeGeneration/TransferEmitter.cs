@@ -132,6 +132,33 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
         return loadOffset == 0 ? methodName : $"_ => {methodName}(0x{loadOffset:X4})";
     }
 
+    /// <summary>
+    /// Builds the direct invocation expression for a partition transfer edge of kind <see cref="CfgCodePartitionTransferKind.CpuFault"/> or <see cref="CfgCodePartitionTransferKind.CrossPartitionFlow"/>.
+    /// </summary>
+    /// <param name="edge">The resolved CFG edge with validated transfer metadata.</param>
+    /// <returns>A method invocation expression with the load offset, e.g., <c>MethodName(0x0000)</c>.</returns>
+    /// <exception cref="NotSupportedException">Thrown when the edge is a same-partition CPU fault, missing transfer metadata, or has an unsupported transfer kind.</exception>
+    public string PartitionCallExpression(ResolvedCfgEdge edge) {
+        CfgCodePartition sourcePartition = context.GetPartition(edge.Source);
+        CfgCodePartition targetPartition = context.GetPartition(edge.Target);
+        if (sourcePartition == targetPartition) {
+            throw new NotSupportedException($"CPU fault transfer from {edge.Source.Address} to {edge.Target.Address} cannot be lowered as same-method control flow.");
+        }
+
+        CfgCodePartitionTransfer? transfer = context.FindTransfer(edge);
+        if (transfer is null) {
+            throw new NotSupportedException($"Missing partition transfer metadata for edge {edge.Source.Address} -> {edge.Target.Address}.");
+        }
+
+        if (transfer.Kind != CfgCodePartitionTransferKind.CpuFault && transfer.Kind != CfgCodePartitionTransferKind.CrossPartitionFlow) {
+            throw new NotSupportedException($"Partition transfer kind {transfer.Kind} from {edge.Source.Address} to {edge.Target.Address} is not supported for direct partition call lowering.");
+        }
+
+        string methodName = context.GetMethodName(targetPartition);
+        int loadOffset = context.GetEntryLoadOffset(targetPartition, edge.Target);
+        return $"{methodName}(0x{loadOffset:X4})";
+    }
+
     private EmittedCode EmitSameMethodTransfer(ICfgNode source, ICfgNode target, MethodPlan methodPlan, bool forceGoto) {
         ICfgNode? next = methodPlan.GetNextEmittedNode(source);
         if (!forceGoto && ReferenceEquals(target, next)) {

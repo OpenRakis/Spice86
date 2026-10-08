@@ -67,12 +67,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             throw FailAsUntested("Untested fallthrough after F000:0081");
         }
         catch (CpuException cpuException) {
-            SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
-            if (cpuFaultTarget == new SegmentedAddress(cs1, 0x1000)) {
-                EnterCpuFaultHandler(cs1, 0x0081, cpuFaultTarget);
-                return unknown_F000_1000_F1000(0x0000);
-            }
-            throw FailAsUntested($"Untested CPU fault target {cpuFaultTarget} at F000:0081");
+            return DispatchCpuFault(cpuException, cs1, 0x0081, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x1000), () => unknown_F000_1000_F1000(0x0000))]);
         }
     }
 
@@ -104,12 +99,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             throw FailAsUntested("Untested fallthrough after F000:009E");
         }
         catch (CpuException cpuException) {
-            SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
-            if (cpuFaultTarget == new SegmentedAddress(cs1, 0x1000)) {
-                EnterCpuFaultHandler(cs1, 0x009E, cpuFaultTarget);
-                return unknown_F000_1000_F1000(0x0000);
-            }
-            throw FailAsUntested($"Untested CPU fault target {cpuFaultTarget} at F000:009E");
+            return DispatchCpuFault(cpuException, cs1, 0x009E, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x1000), () => unknown_F000_1000_F1000(0x0000))]);
         }
     }
 
@@ -205,12 +195,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             throw FailAsUntested("Untested fallthrough after F000:010D");
         }
         catch (CpuException cpuException) {
-            SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
-            if (cpuFaultTarget == new SegmentedAddress(cs1, 0x1000)) {
-                EnterCpuFaultHandler(cs1, 0x010D, cpuFaultTarget);
-                return unknown_F000_1000_F1000(0x0000);
-            }
-            throw FailAsUntested($"Untested CPU fault target {cpuFaultTarget} at F000:010D");
+            return DispatchCpuFault(cpuException, cs1, 0x010D, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x1000), () => unknown_F000_1000_F1000(0x0000))]);
         }
     }
 
@@ -240,12 +225,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             throw FailAsUntested("Untested fallthrough after F000:0128");
         }
         catch (CpuException cpuException) {
-            SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
-            if (cpuFaultTarget == new SegmentedAddress(cs1, 0x1000)) {
-                EnterCpuFaultHandler(cs1, 0x0128, cpuFaultTarget);
-                return unknown_F000_1000_F1000(0x0000);
-            }
-            throw FailAsUntested($"Untested CPU fault target {cpuFaultTarget} at F000:0128");
+            return DispatchCpuFault(cpuException, cs1, 0x0128, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x1000), () => unknown_F000_1000_F1000(0x0000))]);
         }
     }
 
@@ -341,12 +321,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             throw FailAsUntested("Untested fallthrough after F000:0197");
         }
         catch (CpuException cpuException) {
-            SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
-            if (cpuFaultTarget == new SegmentedAddress(cs1, 0x1000)) {
-                EnterCpuFaultHandler(cs1, 0x0197, cpuFaultTarget);
-                return unknown_F000_1000_F1000(0x0000);
-            }
-            throw FailAsUntested($"Untested CPU fault target {cpuFaultTarget} at F000:0197");
+            return DispatchCpuFault(cpuException, cs1, 0x0197, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x1000), () => unknown_F000_1000_F1000(0x0000))]);
         }
     }
 
@@ -446,12 +421,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             throw FailAsUntested("Untested fallthrough after F000:020F");
         }
         catch (CpuException cpuException) {
-            SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
-            if (cpuFaultTarget == new SegmentedAddress(cs1, 0x1000)) {
-                EnterCpuFaultHandler(cs1, 0x020F, cpuFaultTarget);
-                return unknown_F000_1000_F1000(0x0000);
-            }
-            throw FailAsUntested($"Untested CPU fault target {cpuFaultTarget} at F000:020F");
+            return DispatchCpuFault(cpuException, cs1, 0x020F, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x1000), () => unknown_F000_1000_F1000(0x0000))]);
         }
     }
 
@@ -505,12 +475,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             throw FailAsUntested("Untested fallthrough after F000:0249");
         }
         catch (CpuException cpuException) {
-            SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
-            if (cpuFaultTarget == new SegmentedAddress(cs1, 0x1000)) {
-                EnterCpuFaultHandler(cs1, 0x0249, cpuFaultTarget);
-                return unknown_F000_1000_F1000(0x0000);
-            }
-            throw FailAsUntested($"Untested CPU fault target {cpuFaultTarget} at F000:0249");
+            return DispatchCpuFault(cpuException, cs1, 0x0249, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x1000), () => unknown_F000_1000_F1000(0x0000))]);
         }
     }
 
@@ -600,12 +565,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             throw FailAsUntested("Untested fallthrough after F000:02AF");
         }
         catch (CpuException cpuException) {
-            SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
-            if (cpuFaultTarget == new SegmentedAddress(cs1, 0x1000)) {
-                EnterCpuFaultHandler(cs1, 0x02AF, cpuFaultTarget);
-                return unknown_F000_1000_F1000(0x0000);
-            }
-            throw FailAsUntested($"Untested CPU fault target {cpuFaultTarget} at F000:02AF");
+            return DispatchCpuFault(cpuException, cs1, 0x02AF, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x1000), () => unknown_F000_1000_F1000(0x0000))]);
         }
     }
 
@@ -638,12 +598,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             throw FailAsUntested("Untested fallthrough after F000:02C4");
         }
         catch (CpuException cpuException) {
-            SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
-            if (cpuFaultTarget == new SegmentedAddress(cs1, 0x1000)) {
-                EnterCpuFaultHandler(cs1, 0x02C4, cpuFaultTarget);
-                return unknown_F000_1000_F1000(0x0000);
-            }
-            throw FailAsUntested($"Untested CPU fault target {cpuFaultTarget} at F000:02C4");
+            return DispatchCpuFault(cpuException, cs1, 0x02C4, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x1000), () => unknown_F000_1000_F1000(0x0000))]);
         }
     }
 
@@ -714,12 +669,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             throw FailAsUntested("Untested fallthrough after F000:02F4");
         }
         catch (CpuException cpuException) {
-            SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
-            if (cpuFaultTarget == new SegmentedAddress(cs1, 0x1000)) {
-                EnterCpuFaultHandler(cs1, 0x02F4, cpuFaultTarget);
-                return unknown_F000_1000_F1000(0x0000);
-            }
-            throw FailAsUntested($"Untested CPU fault target {cpuFaultTarget} at F000:02F4");
+            return DispatchCpuFault(cpuException, cs1, 0x02F4, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x1000), () => unknown_F000_1000_F1000(0x0000))]);
         }
     }
 
@@ -882,12 +832,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             throw FailAsUntested("Untested fallthrough after F000:005F");
         }
         catch (CpuException cpuException) {
-            SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
-            if (cpuFaultTarget == new SegmentedAddress(cs1, 0x1000)) {
-                EnterCpuFaultHandler(cs1, 0x005F, cpuFaultTarget);
-                return unknown_F000_1000_F1000(0x0000);
-            }
-            throw FailAsUntested($"Untested CPU fault target {cpuFaultTarget} at F000:005F");
+            return DispatchCpuFault(cpuException, cs1, 0x005F, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x1000), () => unknown_F000_1000_F1000(0x0000))]);
         }
     }
 

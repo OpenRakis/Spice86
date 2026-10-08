@@ -42,12 +42,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             DX = (ushort)(dividend_0028 % (uint)divisor_0028);
         }
         catch (CpuException cpuException) {
-            SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];
-            if (cpuFaultTarget == new SegmentedAddress(cs1, 0x0037)) {
-                EnterCpuFaultHandler(cs1, 0x0028, cpuFaultTarget);
-                return unknown_F000_0037_F0037(0x0000);
-            }
-            throw FailAsUntested($"Untested CPU fault target {cpuFaultTarget} at F000:0028");
+            return DispatchCpuFault(cpuException, cs1, 0x0028, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x0037), () => unknown_F000_0037_F0037(0x0000))]);
         }
         // F000:002A mov BX,word ptr CS:[0x0100]
         BX = UInt16[CS, 0x0100];

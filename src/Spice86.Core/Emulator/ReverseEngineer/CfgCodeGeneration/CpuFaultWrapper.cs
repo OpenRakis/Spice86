@@ -5,13 +5,15 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Statement;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
+using Spice86.Core.Emulator.ReverseEngineer;
 
 using System.Linq;
+using System.Collections.Generic;
 
 /// <summary>
 /// Wraps an instruction body in <c>try/catch(CpuException)</c> when that instruction was observed to trigger
-/// a CPU fault (e.g. divide-by-zero). The catch block looks up the interrupt handler through the IVT, pushes
-/// flags and return address like the real hardware would, then transfers to the handler partition.
+/// a CPU fault (e.g. divide-by-zero). The catch block delegates to <see cref="CSharpOverrideHelper.DispatchCpuFault"/>
+/// which reads the live IVT, matches the handler, performs the fault entry sequence, and invokes the handler partition.
 /// Only applied when the instruction actually faulted during discovery; otherwise the body passes through
 /// unchanged.
 /// </summary>
@@ -26,19 +28,23 @@ internal sealed class CpuFaultWrapper(CfgGeneratorContext context, TransferEmitt
             return body;
         }
 
-        List<StatementItem> catchBody = [
-            new LineStatement("SegmentedAddress cpuFaultTarget = Machine.InterruptVectorTable[cpuException.InterruptVector];")
-        ];
-        foreach (ResolvedCfgEdge edge in faultEdges) {
-            catchBody.Add(new BlockStatement(
-                $"if (cpuFaultTarget == new SegmentedAddress({context.GetSegmentVariable(edge.Target.Address.Segment)}, 0x{edge.Target.Address.Offset:X4}))", [
-                    new LineStatement($"EnterCpuFaultHandler({context.GetSegmentVariable(instruction.Address.Segment)}, 0x{instruction.Address.Offset:X4}, cpuFaultTarget);"),
-                    .. transferEmitter.Emit(edge, method).AsStatements()
-                ]));
+        var orderedEdges = faultEdges
+            .OrderBy(e => e.Target.Address.Segment)
+            .ThenBy(e => e.Target.Address.Offset)
+            .ToList();
+
+        List<string> targetDescriptors = new();
+        foreach (ResolvedCfgEdge edge in orderedEdges) {
+            string handlerVariable = context.GetSegmentVariable(edge.Target.Address.Segment);
+            string callExpression = transferEmitter.PartitionCallExpression(edge);
+            targetDescriptors.Add($"new CpuFaultTarget(new SegmentedAddress({handlerVariable}, 0x{edge.Target.Address.Offset:X4}), () => {callExpression})");
         }
-        catchBody.Add(new LineStatement(UntestedMessages.CpuFaultTarget(instruction.Address), Diverges: true));
+
+        string targetsCollection = string.Join(", ", targetDescriptors);
+        string catchLine = $"return DispatchCpuFault(cpuException, {context.GetSegmentVariable(instruction.Address.Segment)}, 0x{instruction.Address.Offset:X4}, [{targetsCollection}]);";
 
         return EmittedCode.Statements(
-            new TryCatchStatement(body.AsStatements(), "catch (CpuException cpuException)", catchBody));
+            new TryCatchStatement(body.AsStatements(), "catch (CpuException cpuException)",
+                [new LineStatement(catchLine, Diverges: true)]));
     }
 }

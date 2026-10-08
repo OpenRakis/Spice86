@@ -59,10 +59,16 @@ public sealed class GeneratedCodeMachineTest {
         (CfgPartitionedProgram program, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("divfaultloop", maxCycles: 1000);
 
         program.Transfers.Should().Contain(transfer => transfer.Kind == CfgCodePartitionTransferKind.CpuFault);
-        // CPU-fault transfers enter the handler partition directly: by the transfer point the fault-specific
-        // work (push flags/return address, clear InterruptFlag, set CS/IP) already ran in the catch block, so
-        // entering the handler is a normal partition entry (no CpuFaultTransfer wrapper).
+        // CPU-fault transfers enter the handler partition directly: the catch block delegates to
+        // DispatchCpuFault which reads the live IVT, performs the fault entry sequence (push flags/return
+        // address, clear InterruptFlag, set CS/IP), then invokes the handler partition.
         generatedProgram.SourceText.Should().NotContain("CpuFaultTransfer");
+        generatedProgram.SourceText.Should().NotContain("Machine.InterruptVectorTable");
+        generatedProgram.SourceText.Should().NotContain("EnterCpuFaultHandler");
+        generatedProgram.SourceText.Should().NotContain("cpuFaultTarget");
+        generatedProgram.SourceText.Should().Contain("return DispatchCpuFault(");
+        generatedProgram.SourceText.Should().Contain("new CpuFaultTarget(new SegmentedAddress(cs1, 0x0037)");
+        generatedProgram.SourceText.Should().Contain("() => unknown_F000_0037_F0037(0x0000)");
     }
 
     [Fact]
