@@ -1408,7 +1408,8 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Returns the current MS-DOS time in CH (hour), CL (minute), DH (second), and DL (millisecond) from the host's DateTime.Now.
+    /// Returns the current MS-DOS time in CH (hour), CL (minute), DH (second), and DL (hundredths of a second).
+    /// CH, CL and DH come from the CMOS RTC; DL comes from the host clock because the RTC only has one second resolution.
     /// </summary>
     public void GetTime() {
         byte hourBcd = ReadCmosRegister(CmosRegisterAddresses.Hours);
@@ -1419,7 +1420,9 @@ public class DosInt21Handler : InterruptHandler {
         byte minute = BcdConverter.FromBcd(minuteBcd);
         byte second = BcdConverter.FromBcd(secondBcd);
 
-        byte hundredths = 0;
+        // The CMOS RTC only has a one second resolution, so the sub-second part is
+        // taken from the host clock. Games measure short elapsed times with this field.
+        byte hundredths = (byte)(DateTime.Now.Millisecond / 10);
 
         State.CH = hour;
         State.CL = minute;
