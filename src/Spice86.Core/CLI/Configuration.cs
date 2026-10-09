@@ -202,6 +202,13 @@ public sealed class Configuration : CommandSettings {
     public bool? Ems { get; init; }
 
     /// <summary>
+    /// Determines whether DOS Upper Memory Blocks (UMBs) are available.
+    /// </summary>
+    [CommandOption("--Umb <UMB>")]
+    [DefaultValue(true)]
+    public bool Umb { get; set; } = true;
+
+    /// <summary>
     /// Specify the type of mouse to use.
     /// </summary>
     [CommandOption("--Mouse <MOUSE>")]

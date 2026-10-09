@@ -755,10 +755,9 @@ public class DosInt21Handler : InterruptHandler {
             LogDosError(calledFromVm);
             // did not find something good, error
             SetCarryFlag(true, calledFromVm);
-            DosMemoryControlBlock largest = _dosMemoryManager.FindLargestFree();
             // INSUFFICIENT MEMORY
             State.AX = (byte)DosErrorCode.InsufficientMemory;
-            State.BX = largest.Size;
+            State.BX = _dosMemoryManager.FindLargestFreeSizeForAllocation();
             return;
         }
         State.AX = res.DataBlockSegment;
@@ -1751,20 +1750,26 @@ public class DosInt21Handler : InterruptHandler {
     public void AllocationStrategyOrUpperMemoryLinkState(bool calledFromVm) {
         byte op = State.AL;
         if (op == (byte)AllocationStrategySubFunction.QueryMemoryAllocationStrategy) {
-            State.AX = (ushort)_dosMemoryManager.AllocationStrategy;
+            State.AX = _dosMemoryManager.AllocationStrategyValue;
             SetCarryFlag(false, calledFromVm);
         } else if (op == (byte)AllocationStrategySubFunction.SetMemoryAllocationStrategy) {
-            _dosMemoryManager.AllocationStrategy = (DosMemoryAllocationStrategy)State.BX;
-            State.AX = 0;
-            SetCarryFlag(false, calledFromVm);
+            if (_dosMemoryManager.TrySetAllocationStrategy(State.BX)) {
+                State.AX = 0;
+                SetCarryFlag(false, calledFromVm);
+            } else {
+                State.AX = 1;
+                SetCarryFlag(true, calledFromVm);
+            }
         } else if (op == (byte)AllocationStrategySubFunction.QueryUpperMemoryBlockState) {
-            // 01H = upper memory is currently linked
-            // 00H = not linked (all allocations go to conventional mem)
-            State.AL = 0x00;
+            State.AL = _dosMemoryManager.UmbChainState;
             SetCarryFlag(false, calledFromVm);
         } else if (op == (byte)AllocationStrategySubFunction.SetUpperMemoryBlockState) {
-            State.AX = 0x01; // 0001h (invalid function)
-            SetCarryFlag(true, calledFromVm);
+            if (_dosMemoryManager.SetUmbChainLinkState(State.BX)) {
+                SetCarryFlag(false, calledFromVm);
+            } else {
+                State.AX = 0x01;
+                SetCarryFlag(true, calledFromVm);
+            }
         } else {
             throw GenerateUnhandledOperationException(op);
         }

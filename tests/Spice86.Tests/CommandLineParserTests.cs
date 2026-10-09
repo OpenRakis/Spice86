@@ -68,6 +68,22 @@ public class CommandLineParserTests {
     }
 
     [Fact]
+    public void ParseCommandLine_UmbDefaultsEnabledAndCanBeDisabled() {
+        string executablePath = CreateTemporaryExecutablePath();
+        try {
+            Configuration enabledConfiguration = Parse(["-e", executablePath])
+                ?? throw new InvalidOperationException("Configuration should be created with an executable path.");
+            Configuration disabledConfiguration = Parse(["-e", executablePath, "--Umb", "false"])
+                ?? throw new InvalidOperationException("Configuration should be created with an executable path.");
+
+            enabledConfiguration.Umb.Should().BeTrue();
+            disabledConfiguration.Umb.Should().BeFalse();
+        } finally {
+            File.Delete(executablePath);
+        }
+    }
+
+    [Fact]
     public void ParseCommandLine_ShouldApplyPostProcessingRules() {
         // Arrange
         string executablePath = CreateTemporaryExecutablePath();

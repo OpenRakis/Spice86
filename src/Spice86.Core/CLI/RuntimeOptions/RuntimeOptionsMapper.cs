@@ -80,6 +80,7 @@ public static class RuntimeOptionsMapper {
             configuration.ProgramEntryPointSegment,
             configuration.Xms,
             configuration.Ems,
+            configuration.Umb,
             dosRuntimeState);
     }
 

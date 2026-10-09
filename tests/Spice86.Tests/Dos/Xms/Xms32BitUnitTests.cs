@@ -12,6 +12,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Mmu;
+using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 
@@ -40,10 +41,11 @@ public class Xms32BitFunctionsTests {
         _callbackHandler = new CallbackHandler(_state, _loggerService);
         _dosTables = new DosTables(_memory);
         _asmWriter = new MemoryAsmWriter(_memory, new(0, 0), _callbackHandler);
+        DosMemoryManager dosMemoryManager = new(_memory, 0x1000, _loggerService);
 
         // Create XMS manager
         _xms = new ExtendedMemoryManager(_memory, _state, _a20Gate, _asmWriter,
-            _dosTables, _loggerService);
+            _dosTables, dosMemoryManager, _loggerService);
     }
 
     [Fact]
