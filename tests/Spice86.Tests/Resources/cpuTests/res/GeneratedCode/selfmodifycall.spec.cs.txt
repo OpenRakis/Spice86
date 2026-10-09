@@ -19,6 +19,9 @@ public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
 public class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort cs1;
 
+    private static readonly byte?[] Signature_0010_nop = [0x90];
+    private static readonly byte?[] Signature_0010_hlt = [0xF4];
+
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
         cs1 = 0xF000;
 
@@ -64,10 +67,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:000D call near 0x0017
         NearCall(cs1, 0x0010, unknown_F000_0017_F0017);
         // F000:0010 selector
-        if (SelectorSignatureMatches(cs1, 0x0010, [(byte)0x90])) {
+        if (SelectorSignatureMatches(cs1, 0x0010, Signature_0010_nop)) {
             goto L_0010_26;
         }
-        if (SelectorSignatureMatches(cs1, 0x0010, [(byte)0xF4])) {
+        if (SelectorSignatureMatches(cs1, 0x0010, Signature_0010_hlt)) {
             goto L_0010_38;
         }
         throw FailAsUntested("Untested code variant at F000:0010");

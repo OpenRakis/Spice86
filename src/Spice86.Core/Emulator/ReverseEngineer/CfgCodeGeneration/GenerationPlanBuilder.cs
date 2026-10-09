@@ -16,8 +16,9 @@ using SelectorNode = Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModi
 
 /// <summary>
 /// Converts the analyzed CFG into the ordered list of "what to write": which segment fields to declare,
-/// which overrides to register, and which methods to emit (with their node order and labels). The plan is
-/// pure data — emitters read it top to bottom without re-analyzing the graph.
+/// which signature fields to declare, which overrides to register, and which methods to emit (with their
+/// node order and labels). The plan is pure data — emitters read it top to bottom without re-analyzing the
+/// graph.
 /// </summary>
 internal static class GenerationPlanBuilder {
     public static GenerationPlan Build(CfgGeneratorContext context) {
@@ -27,6 +28,7 @@ internal static class GenerationPlanBuilder {
             .ToList();
         return new GenerationPlan {
             SegmentFields = BuildSegmentFields(context),
+            SignatureFields = context.SignatureFields,
             OverrideRegistrations = BuildOverrideRegistrations(context, methods),
             Methods = methods
         };

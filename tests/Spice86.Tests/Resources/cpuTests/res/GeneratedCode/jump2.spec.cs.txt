@@ -20,6 +20,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort cs1;
     protected readonly ushort cs2;
 
+    private static readonly byte?[] Signature_129C_hlt = [0xF4];
+    private static readonly byte?[] Signature_12A9_hlt = [0xF4];
+    private static readonly byte?[] Signature_EBF0_hlt = [0xF4];
+
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
         cs1 = 0xE342;
         cs2 = 0xF000;
@@ -85,7 +89,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (CX != 0 && ZeroFlag) {
             goto L_129D;
         }
-        VerifySpeculativeEntryOrFail(cs2, 0x129C, [(byte)0xF4]);
+        VerifySpeculativeEntryOrFail(cs2, 0x129C, Signature_129C_hlt);
         // F000:129C hlt
         return Hlt();
     L_129D:
@@ -102,7 +106,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (CX == 0) {
             goto L_12AA;
         }
-        VerifySpeculativeEntryOrFail(cs2, 0x12A9, [(byte)0xF4]);
+        VerifySpeculativeEntryOrFail(cs2, 0x12A9, Signature_12A9_hlt);
         // F000:12A9 hlt
         return Hlt();
     L_12AA:
@@ -140,7 +144,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (CX != 0 && !ZeroFlag) {
             goto L_EBF1;
         }
-        VerifySpeculativeEntryOrFail(cs1, 0xEBF0, [(byte)0xF4]);
+        VerifySpeculativeEntryOrFail(cs1, 0xEBF0, Signature_EBF0_hlt);
         // E342:EBF0 hlt
         return Hlt();
     L_EBF1:

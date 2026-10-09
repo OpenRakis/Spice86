@@ -33,7 +33,8 @@ public class CSharpAstEmitterFragmentTest {
             segmentVariables: new(),
             transfersByEdge: new(),
             entriesByPartition: new(),
-            blockEntryByAddress: new());
+            blockEntryByAddress: new(),
+            signatureFields: []);
         return new CSharpAstEmitter(context, new TransferEmitter(context));
     }
 

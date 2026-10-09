@@ -19,6 +19,10 @@ public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
 public class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort cs1;
 
+    private static readonly byte?[] Signature_1400_mov_30227 = [0xB8, 0x01, 0x00];
+    private static readonly byte?[] Signature_1400_mov_30237 = [0xBB, 0x01, 0x00];
+    private static readonly byte?[] Signature_1400_mov_30250 = [0xB9, 0x01, 0x00];
+
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
         cs1 = 0xF000;
 
@@ -58,13 +62,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         // F000:001A jmp near 0x1400
         // F000:1400 selector
-        if (SelectorSignatureMatches(cs1, 0x1400, [(byte)0xB8, (byte)0x01, (byte)0x00])) {
+        if (SelectorSignatureMatches(cs1, 0x1400, Signature_1400_mov_30227)) {
             goto L_1400_30227;
         }
-        if (SelectorSignatureMatches(cs1, 0x1400, [(byte)0xB9, (byte)0x01, (byte)0x00])) {
+        if (SelectorSignatureMatches(cs1, 0x1400, Signature_1400_mov_30250)) {
             goto L_1400_30250;
         }
-        if (SelectorSignatureMatches(cs1, 0x1400, [(byte)0xBB, (byte)0x01, (byte)0x00])) {
+        if (SelectorSignatureMatches(cs1, 0x1400, Signature_1400_mov_30237)) {
             goto L_1400_30237;
         }
         throw FailAsUntested("Untested code variant at F000:1400");

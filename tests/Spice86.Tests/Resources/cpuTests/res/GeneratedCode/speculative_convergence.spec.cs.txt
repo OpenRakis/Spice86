@@ -19,6 +19,9 @@ public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
 public class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort cs1;
 
+    private static readonly byte?[] Signature_0013_mov = [0xC6, 0x06, 0x01, 0x04, 0xBB];
+    private static readonly byte?[] Signature_0018_jmp = [0xEB, 0x00];
+
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
         cs1 = 0xF000;
 
@@ -43,10 +46,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0011 jmp short 0x001A
         goto L_001A;
     L_0013:
-        VerifySpeculativeEntryOrFail(cs1, 0x0013, [(byte)0xC6, (byte)0x06, (byte)0x01, (byte)0x04, (byte)0xBB]);
+        VerifySpeculativeEntryOrFail(cs1, 0x0013, Signature_0013_mov);
         // F000:0013 mov byte ptr DS:[0x0401],0xBB
         UInt8[DS, 0x0401] = 0xBB;
-        VerifySpeculativeEntryOrFail(cs1, 0x0018, [(byte)0xEB, (byte)0x00]);
+        VerifySpeculativeEntryOrFail(cs1, 0x0018, Signature_0018_jmp);
         // F000:0018 jmp short 0x001A
     L_001A:
         // F000:001A mov byte ptr DS:[0x0402],0xCC

@@ -19,6 +19,13 @@ public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
 public class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort cs1;
 
+    private static readonly byte?[] Signature_202C_hlt = [0xF4];
+    private static readonly byte?[] Signature_302A_hlt = [0xF4];
+    private static readonly byte?[] Signature_400C_hlt = [0xF4];
+    private static readonly byte?[] Signature_5007_hlt = [0xF4];
+    private static readonly byte?[] Signature_500F_hlt = [0xF4];
+    private static readonly byte?[] Signature_5017_hlt = [0xF4];
+
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
         cs1 = 0xF000;
 
@@ -322,7 +329,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (CX == 0) {
             goto L_202D;
         }
-        VerifySpeculativeEntryOrFail(cs1, 0x202C, [(byte)0xF4]);
+        VerifySpeculativeEntryOrFail(cs1, 0x202C, Signature_202C_hlt);
         // F000:202C hlt
         return Hlt();
     L_202D:
@@ -368,7 +375,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (CX == 0) {
             goto L_302B;
         }
-        VerifySpeculativeEntryOrFail(cs1, 0x302A, [(byte)0xF4]);
+        VerifySpeculativeEntryOrFail(cs1, 0x302A, Signature_302A_hlt);
         // F000:302A hlt
         return Hlt();
     L_302B:
@@ -467,7 +474,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (CX == 0) {
             goto L_400D;
         }
-        VerifySpeculativeEntryOrFail(cs1, 0x400C, [(byte)0xF4]);
+        VerifySpeculativeEntryOrFail(cs1, 0x400C, Signature_400C_hlt);
         // F000:400C hlt
         return Hlt();
     L_400D:
@@ -599,7 +606,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (CX == 0) {
             goto L_5008;
         }
-        VerifySpeculativeEntryOrFail(cs1, 0x5007, [(byte)0xF4]);
+        VerifySpeculativeEntryOrFail(cs1, 0x5007, Signature_5007_hlt);
         // F000:5007 hlt
         return Hlt();
     L_5008:
@@ -615,7 +622,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (CX == 0) {
             goto L_5010;
         }
-        VerifySpeculativeEntryOrFail(cs1, 0x500F, [(byte)0xF4]);
+        VerifySpeculativeEntryOrFail(cs1, 0x500F, Signature_500F_hlt);
         // F000:500F hlt
         return Hlt();
     L_5010:
@@ -631,7 +638,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (CX == 0) {
             goto L_5018;
         }
-        VerifySpeculativeEntryOrFail(cs1, 0x5017, [(byte)0xF4]);
+        VerifySpeculativeEntryOrFail(cs1, 0x5017, Signature_5017_hlt);
         // F000:5017 hlt
         return Hlt();
     L_5018:

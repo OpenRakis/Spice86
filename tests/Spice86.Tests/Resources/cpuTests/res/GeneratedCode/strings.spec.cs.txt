@@ -19,6 +19,8 @@ public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
 public class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort cs1;
 
+    private static readonly byte?[] Signature_1307_hlt = [0xF4];
+
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
         cs1 = 0xF000;
 
@@ -169,7 +171,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (ZeroFlag) {
             goto L_1350;
         }
-        VerifySpeculativeEntryOrFail(cs1, 0x1307, [(byte)0xF4]);
+        VerifySpeculativeEntryOrFail(cs1, 0x1307, Signature_1307_hlt);
         // F000:1307 hlt
         return Hlt();
     L_1350:

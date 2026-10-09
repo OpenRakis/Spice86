@@ -19,6 +19,25 @@ public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
 public class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort cs1;
 
+    private static readonly byte?[] Signature_000E_jmp = [0xEB, 0xE2];
+    private static readonly byte?[] Signature_0016_jmp = [0xEB, 0xDA];
+    private static readonly byte?[] Signature_001E_jmp = [0xEB, 0xD2];
+    private static readonly byte?[] Signature_0025_jmp = [0xEB, 0xCB];
+    private static readonly byte?[] Signature_002D_jmp = [0xEB, 0xC3];
+    private static readonly byte?[] Signature_0037_jmp = [0xEB, 0xB9];
+    private static readonly byte?[] Signature_0047_jmp = [0xEB, 0xA9];
+    private static readonly byte?[] Signature_0054_jmp = [0xEB, 0x9C];
+    private static readonly byte?[] Signature_005F_jmp = [0xEB, 0x91];
+    private static readonly byte?[] Signature_0069_jmp = [0xEB, 0x87];
+    private static readonly byte?[] Signature_0074_jmp = [0xE9, 0x7B, 0xFF];
+    private static readonly byte?[] Signature_0085_jmp = [0xE9, 0x6A, 0xFF];
+    private static readonly byte?[] Signature_0093_jmp = [0xE9, 0x5C, 0xFF];
+    private static readonly byte?[] Signature_00A1_jmp = [0xE9, 0x4E, 0xFF];
+    private static readonly byte?[] Signature_00AD_jmp = [0xE9, 0x42, 0xFF];
+    private static readonly byte?[] Signature_00B9_jmp = [0xE9, 0x36, 0xFF];
+    private static readonly byte?[] Signature_00C5_jmp = [0xE9, 0x2A, 0xFF];
+    private static readonly byte?[] Signature_FFF2_hlt = [0xF4];
+
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
         cs1 = 0xF000;
 
@@ -302,7 +321,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (SignFlag) {
             goto L_00C8;
         }
-        VerifySpeculativeEntryOrFail(cs1, 0x00C5, [(byte)0xE9, (byte)0x2A, (byte)0xFF]);
+        VerifySpeculativeEntryOrFail(cs1, 0x00C5, Signature_00C5_jmp);
         // F000:00C5 jmp near 0xFFF2
         goto L_FFF2;
     L_00C8:
@@ -311,70 +330,70 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00CE hlt
         return Hlt();
     L_00B9:
-        VerifySpeculativeEntryOrFail(cs1, 0x00B9, [(byte)0xE9, (byte)0x36, (byte)0xFF]);
+        VerifySpeculativeEntryOrFail(cs1, 0x00B9, Signature_00B9_jmp);
         // F000:00B9 jmp near 0xFFF2
         goto L_FFF2;
     L_00AD:
-        VerifySpeculativeEntryOrFail(cs1, 0x00AD, [(byte)0xE9, (byte)0x42, (byte)0xFF]);
+        VerifySpeculativeEntryOrFail(cs1, 0x00AD, Signature_00AD_jmp);
         // F000:00AD jmp near 0xFFF2
         goto L_FFF2;
     L_00A1:
-        VerifySpeculativeEntryOrFail(cs1, 0x00A1, [(byte)0xE9, (byte)0x4E, (byte)0xFF]);
+        VerifySpeculativeEntryOrFail(cs1, 0x00A1, Signature_00A1_jmp);
         // F000:00A1 jmp near 0xFFF2
         goto L_FFF2;
     L_0093:
-        VerifySpeculativeEntryOrFail(cs1, 0x0093, [(byte)0xE9, (byte)0x5C, (byte)0xFF]);
+        VerifySpeculativeEntryOrFail(cs1, 0x0093, Signature_0093_jmp);
         // F000:0093 jmp near 0xFFF2
         goto L_FFF2;
     L_0085:
-        VerifySpeculativeEntryOrFail(cs1, 0x0085, [(byte)0xE9, (byte)0x6A, (byte)0xFF]);
+        VerifySpeculativeEntryOrFail(cs1, 0x0085, Signature_0085_jmp);
         // F000:0085 jmp near 0xFFF2
         goto L_FFF2;
     L_0074:
-        VerifySpeculativeEntryOrFail(cs1, 0x0074, [(byte)0xE9, (byte)0x7B, (byte)0xFF]);
+        VerifySpeculativeEntryOrFail(cs1, 0x0074, Signature_0074_jmp);
         // F000:0074 jmp near 0xFFF2
         goto L_FFF2;
     L_0069:
-        VerifySpeculativeEntryOrFail(cs1, 0x0069, [(byte)0xEB, (byte)0x87]);
+        VerifySpeculativeEntryOrFail(cs1, 0x0069, Signature_0069_jmp);
         // F000:0069 jmp short 0xFFF2
         goto L_FFF2;
     L_005F:
-        VerifySpeculativeEntryOrFail(cs1, 0x005F, [(byte)0xEB, (byte)0x91]);
+        VerifySpeculativeEntryOrFail(cs1, 0x005F, Signature_005F_jmp);
         // F000:005F jmp short 0xFFF2
         goto L_FFF2;
     L_0054:
-        VerifySpeculativeEntryOrFail(cs1, 0x0054, [(byte)0xEB, (byte)0x9C]);
+        VerifySpeculativeEntryOrFail(cs1, 0x0054, Signature_0054_jmp);
         // F000:0054 jmp short 0xFFF2
         goto L_FFF2;
     L_0047:
-        VerifySpeculativeEntryOrFail(cs1, 0x0047, [(byte)0xEB, (byte)0xA9]);
+        VerifySpeculativeEntryOrFail(cs1, 0x0047, Signature_0047_jmp);
         // F000:0047 jmp short 0xFFF2
         goto L_FFF2;
     L_0037:
-        VerifySpeculativeEntryOrFail(cs1, 0x0037, [(byte)0xEB, (byte)0xB9]);
+        VerifySpeculativeEntryOrFail(cs1, 0x0037, Signature_0037_jmp);
         // F000:0037 jmp short 0xFFF2
         goto L_FFF2;
     L_002D:
-        VerifySpeculativeEntryOrFail(cs1, 0x002D, [(byte)0xEB, (byte)0xC3]);
+        VerifySpeculativeEntryOrFail(cs1, 0x002D, Signature_002D_jmp);
         // F000:002D jmp short 0xFFF2
         goto L_FFF2;
     L_0025:
-        VerifySpeculativeEntryOrFail(cs1, 0x0025, [(byte)0xEB, (byte)0xCB]);
+        VerifySpeculativeEntryOrFail(cs1, 0x0025, Signature_0025_jmp);
         // F000:0025 jmp short 0xFFF2
         goto L_FFF2;
     L_001E:
-        VerifySpeculativeEntryOrFail(cs1, 0x001E, [(byte)0xEB, (byte)0xD2]);
+        VerifySpeculativeEntryOrFail(cs1, 0x001E, Signature_001E_jmp);
         // F000:001E jmp short 0xFFF2
         goto L_FFF2;
     L_0016:
-        VerifySpeculativeEntryOrFail(cs1, 0x0016, [(byte)0xEB, (byte)0xDA]);
+        VerifySpeculativeEntryOrFail(cs1, 0x0016, Signature_0016_jmp);
         // F000:0016 jmp short 0xFFF2
         goto L_FFF2;
     L_000E:
-        VerifySpeculativeEntryOrFail(cs1, 0x000E, [(byte)0xEB, (byte)0xE2]);
+        VerifySpeculativeEntryOrFail(cs1, 0x000E, Signature_000E_jmp);
         // F000:000E jmp short 0xFFF2
     L_FFF2:
-        VerifySpeculativeEntryOrFail(cs1, 0xFFF2, [(byte)0xF4]);
+        VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
         // F000:FFF2 hlt
         return Hlt();
     }

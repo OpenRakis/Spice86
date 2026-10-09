@@ -127,9 +127,9 @@ internal sealed class MethodEmitter(
         if (signatureValue.Count == 0) {
             return EmittedCode.None;
         }
-        string signatureBytes = string.Join(", ", signatureValue.Select(value => value is byte byteValue ? $"(byte)0x{byteValue:X2}" : "null"));
+        string fieldName = context.GetSignatureField(speculativeInstruction);
         string segmentVariable = context.GetSegmentVariable(speculativeInstruction.Address.Segment);
-        return EmittedCode.Line($"VerifySpeculativeEntryOrFail({segmentVariable}, 0x{speculativeInstruction.Address.Offset:X4}, [{signatureBytes}]);");
+        return EmittedCode.Line($"VerifySpeculativeEntryOrFail({segmentVariable}, 0x{speculativeInstruction.Address.Offset:X4}, {fieldName});");
     }
 
     /// <summary>Creates the source comment that identifies the instruction or selector node being emitted.</summary>

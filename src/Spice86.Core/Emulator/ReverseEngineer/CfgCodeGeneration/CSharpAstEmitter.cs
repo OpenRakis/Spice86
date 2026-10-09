@@ -233,9 +233,10 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
     /// </summary>
     private EmittedCode LowerSelector(CfgSelectorNode selectorNode) {
         List<StatementItem> items = [];
-        foreach ((Signature signature, CfgInstruction target) in selectorNode.SuccessorsPerSignature
-                     .OrderBy(entry => entry.Key)) {
-            string condition = BuildSignatureCondition(selectorNode, signature);
+        foreach (CfgInstruction target in selectorNode.SuccessorsPerSignature
+                     .OrderBy(entry => entry.Key)
+                     .Select(entry => entry.Value)) {
+            string condition = BuildSignatureCondition(selectorNode, target);
             ResolvedCfgEdge edge = new(selectorNode, target, InstructionSuccessorType.Normal,
                 Context.FindTransfer(selectorNode, target, InstructionSuccessorType.Normal)?.Kind);
             items.Add(new BlockStatement($"if ({condition})", Transfer.Emit(edge, CurrentMethod, forceSameMethodGoto: true).AsStatements()));
@@ -244,9 +245,8 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
         return EmittedCode.Statements(items);
     }
 
-    private string BuildSignatureCondition(CfgSelectorNode selectorNode, Signature signature) {
-        string signatureBytes = string.Join(", ", signature.SignatureValue.Select(value => value is byte byteValue ? $"(byte)0x{byteValue:X2}" : "null"));
-        return $"SelectorSignatureMatches({Context.GetSegmentVariable(selectorNode.Address.Segment)}, 0x{selectorNode.Address.Offset:X4}, [{signatureBytes}])";
+    private string BuildSignatureCondition(CfgSelectorNode selectorNode, CfgInstruction target) {
+        return $"SelectorSignatureMatches({Context.GetSegmentVariable(selectorNode.Address.Segment)}, 0x{selectorNode.Address.Offset:X4}, {Context.GetSignatureField(target)})";
     }
 
     // ----------------------------------------------------------------------------------------------------
