@@ -4,7 +4,10 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Naming;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
+
+using System.Linq;
 
 /// <summary>
 /// The top-level orchestrator: takes a partitioned CFG program and produces a complete, compilable C# source
@@ -20,7 +23,8 @@ internal sealed class CfgCSharpGenerator {
             throw new InvalidOperationException("Cannot generate C# for an empty CFG partitioned program.");
         }
 
-        GeneratorAnalysis analysis = GeneratorAnalysis.Build(program);
+        InstructionMnemonic instructionMnemonic = new(_assemblyRenderer);
+        GeneratorAnalysis analysis = GeneratorAnalysis.Build(program, instructionMnemonic);
         CfgGeneratorContext context = analysis.Context;
         GenerationPlan plan = GenerationPlanBuilder.Build(context);
         TransferEmitter transferEmitter = new(context);
@@ -35,6 +39,7 @@ internal sealed class CfgCSharpGenerator {
         EmitSupplier(writer, plan);
         writer.OpenBlock($"public class {GeneratedOverrideNames.OverrideClassName} : CSharpOverrideHelper");
         EmitSegmentFields(writer, plan);
+        EmitSignatureFields(writer, plan);
         EmitConstructor(writer, plan);
         foreach (MethodPlan method in plan.Methods) {
             methodEmitter.Emit(writer, method);
@@ -71,6 +76,22 @@ internal sealed class CfgCSharpGenerator {
     private static void EmitSegmentFields(CSharpSourceWriter writer, GenerationPlan plan) {
         foreach (SegmentFieldPlan segment in plan.SegmentFields) {
             writer.Line($"protected readonly ushort {segment.FieldName};");
+        }
+        writer.Line();
+    }
+
+    /// <summary>
+    /// Declares one <c>static readonly</c> byte array per signature, so call sites reference a named field
+    /// instead of repeating the bytes inline. Writes nothing when the program has no signature.
+    /// </summary>
+    private static void EmitSignatureFields(CSharpSourceWriter writer, GenerationPlan plan) {
+        if (plan.SignatureFields.Count == 0) {
+            return;
+        }
+
+        foreach (SignatureFieldPlan field in plan.SignatureFields) {
+            string bytes = string.Join(", ", field.Bytes.Select(value => value is byte byteValue ? $"0x{byteValue:X2}" : "null"));
+            writer.Line($"private static readonly byte?[] {field.FieldName} = [{bytes}];");
         }
         writer.Line();
     }

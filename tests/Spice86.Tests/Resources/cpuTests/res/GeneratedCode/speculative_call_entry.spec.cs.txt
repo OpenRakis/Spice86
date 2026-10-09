@@ -19,6 +19,10 @@ public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
 public class CfgGeneratedOverrides : CSharpOverrideHelper {
     protected readonly ushort cs1;
 
+    private static readonly byte?[] Signature_0013_call = [0xE8, 0x05, 0x00];
+    private static readonly byte?[] Signature_001B_mov = [0xB0, 0x42];
+    private static readonly byte?[] Signature_001D_ret = [0xC3];
+
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
         cs1 = 0xF000;
 
@@ -28,10 +32,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
 
     public virtual Action unknown_F000_001B_F001B(int loadOffset) {
         CheckExternalEvents(cs1, 0x001B);
-        VerifySpeculativeEntryOrFail(cs1, 0x001B, [(byte)0xB0, (byte)0x42]);
+        VerifySpeculativeEntryOrFail(cs1, 0x001B, Signature_001B_mov);
         // F000:001B mov AL,0x42
         AL = 0x42;
-        VerifySpeculativeEntryOrFail(cs1, 0x001D, [(byte)0xC3]);
+        VerifySpeculativeEntryOrFail(cs1, 0x001D, Signature_001D_ret);
         // F000:001D ret near
         return NearRet();
     }
@@ -57,7 +61,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0023 hlt
         return Hlt();
     L_0013:
-        VerifySpeculativeEntryOrFail(cs1, 0x0013, [(byte)0xE8, (byte)0x05, (byte)0x00]);
+        VerifySpeculativeEntryOrFail(cs1, 0x0013, Signature_0013_call);
         // F000:0013 call near 0x001B
         NearCall(cs1, 0x0016, unknown_F000_001B_F001B);
         throw FailAsUntested("Untested return from call at F000:0013");

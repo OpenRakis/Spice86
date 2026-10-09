@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Shared.Emulator.Memory;
 
@@ -20,6 +21,7 @@ internal sealed class CfgGeneratorContext {
     private readonly Dictionary<ResolvedCfgEdge, CfgCodePartitionTransfer> _transfersByEdge;
     private readonly Dictionary<CfgCodePartition, IReadOnlyList<CfgCodePartitionEntry>> _entriesByPartition;
     private readonly Dictionary<SegmentedAddress, ICfgNode> _blockEntryByAddress;
+    private readonly Dictionary<CfgInstruction, string> _signatureFieldByInstruction;
 
     public CfgGeneratorContext(
         CfgPartitionedProgram program,
@@ -29,7 +31,8 @@ internal sealed class CfgGeneratorContext {
         Dictionary<ushort, string> segmentVariables,
         Dictionary<ResolvedCfgEdge, CfgCodePartitionTransfer> transfersByEdge,
         Dictionary<CfgCodePartition, IReadOnlyList<CfgCodePartitionEntry>> entriesByPartition,
-        Dictionary<SegmentedAddress, ICfgNode> blockEntryByAddress) {
+        Dictionary<SegmentedAddress, ICfgNode> blockEntryByAddress,
+        IReadOnlyList<SignatureFieldPlan> signatureFields) {
         Program = program;
         _partitionByNode = partitionByNode;
         _methodNames = methodNames;
@@ -38,9 +41,31 @@ internal sealed class CfgGeneratorContext {
         _transfersByEdge = transfersByEdge;
         _entriesByPartition = entriesByPartition;
         _blockEntryByAddress = blockEntryByAddress;
+        SignatureFields = signatureFields;
+        _signatureFieldByInstruction = signatureFields.ToDictionary(
+            field => field.Instruction,
+            field => field.FieldName);
     }
 
     public CfgPartitionedProgram Program { get; }
+
+    /// <summary>Every signature field the generated class declares, in emission order.</summary>
+    public IReadOnlyList<SignatureFieldPlan> SignatureFields { get; }
+
+    /// <summary>
+    /// The name of the generated field holding <paramref name="instruction"/>'s signature bytes.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// No field was planned for the instruction. The collection and the emission rules disagree, which is a
+    /// generator bug rather than a property of the program under test.
+    /// </exception>
+    public string GetSignatureField(CfgInstruction instruction) {
+        if (!_signatureFieldByInstruction.TryGetValue(instruction, out string? fieldName)) {
+            throw new InvalidOperationException(
+                $"No signature field was planned for instruction {instruction.Address} (id {instruction.Id}).");
+        }
+        return fieldName;
+    }
 
     public CfgCodePartition GetPartition(ICfgNode node) => _partitionByNode[node];
     public string GetMethodName(CfgCodePartition partition) => _methodNames[partition];

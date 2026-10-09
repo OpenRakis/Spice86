@@ -375,6 +375,17 @@ public class MachineTest {
         TestOneBin("selfmodifyinstructions", expected, jitMode);
     }
 
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestSelfModifyRep(JitMode jitMode) {
+        byte[] expected = new byte[0x21];
+        for (int i = 0; i < 8; i++) {
+            expected[i] = 0xAB;
+        }
+        expected[0x20] = 0x02;
+        TestOneBin("selfmodifyrep", expected, jitMode);
+    }
+
     /// <summary>
     /// Regression test for the bug in <see cref="NodeLinker"/> where
     /// <c>SwitchPredecessorsToNew</c> adds the new successor before removing the old one.

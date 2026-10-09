@@ -5,8 +5,10 @@ using FluentAssertions;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
+using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Naming;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Shared.Emulator.Memory;
 
@@ -60,7 +62,8 @@ public class SelfModifyingPartitionNamingTest {
             Transfers = []
         };
 
-        GeneratorAnalysis analysis = GeneratorAnalysis.Build(program);
+        GeneratorAnalysis analysis = GeneratorAnalysis.Build(program,
+            new InstructionMnemonic(new AstInstructionRenderer(AsmRenderingConfig.CreateSpice86Style())));
 
         List<string> names = [
             analysis.Context.GetMethodName(selectorPartition),
@@ -83,7 +86,8 @@ public class SelfModifyingPartitionNamingTest {
             Transfers = []
         };
 
-        GeneratorAnalysis analysis = GeneratorAnalysis.Build(program);
+        GeneratorAnalysis analysis = GeneratorAnalysis.Build(program,
+            new InstructionMnemonic(new AstInstructionRenderer(AsmRenderingConfig.CreateSpice86Style())));
         GenerationPlan plan = GenerationPlanBuilder.Build(analysis.Context);
 
         List<OverrideRegistration> atSharedAddress = plan.OverrideRegistrations

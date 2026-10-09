@@ -294,6 +294,16 @@ public sealed class GeneratedCodeMachineTest {
     }
 
     [Fact]
+    public void SelfModifyRepGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        byte[] expected = new byte[0x21];
+        for (int i = 0; i < 8; i++) {
+            expected[i] = 0xAB;
+        }
+        expected[0x20] = 0x02;
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode("selfmodifyrep", expected, maxCycles: 10000);
+    }
+
+    [Fact]
     public void ExternalIntGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
         byte[] expected = new byte[6];
         expected[0x00] = 0x01;

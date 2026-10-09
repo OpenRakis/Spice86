@@ -1,0 +1,22 @@
+F000:0000 xor AX,AX
+F000:0002 mov SS,AX
+F000:0004 mov SP,0x0100
+F000:0007 mov DS,AX
+F000:0009 mov ES,AX
+F000:000B cld
+F000:000C mov DI,0
+F000:000F mov AL,0xAB
+F000:0011 mov byte ptr DS:[0x0020],0
+F000:0016 mov SI,0
+F000:0019 mov CX,4
+F000:001C selector
+F000:001C rep movs byte ptr ES:[DI],byte ptr DS:[SI]
+F000:001C rep stos byte ptr ES:[DI],AL
+F000:001E inc byte ptr DS:[0x0020]
+F000:0022 cmp byte ptr DS:[0x0020],2
+F000:0027 je short 0x0033
+F000:0029 mov byte ptr CS:[0x001D],0xA4
+F000:002F mov AL,0xCD
+F000:0031 jmp short 0x0016
+F000:0033 hlt
+F000:FFF0 jmp short 0

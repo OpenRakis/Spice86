@@ -1,0 +1,140 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "F000:FFF0",
+  "totalEntryPoints": 1,
+  "entryPointAddresses": [
+    "F000:FFF0"
+  ],
+  "lastExecutedAddress": "F000:0033",
+  "lastExecutedBlockId": 19,
+  "blocks": [
+    {
+      "id": 19,
+      "entry": "F000:0033",
+      "term": "F000:0033",
+      "pred": [
+        47
+      ],
+      "succ": [],
+      "asm": [
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 2,
+      "entry": "F000:FFF0",
+      "term": "F000:FFF0",
+      "pred": [],
+      "succ": [
+        3
+      ],
+      "asm": [
+        "EB0E|jmp short 0"
+      ]
+    },
+    {
+      "id": 47,
+      "entry": "F000:001E",
+      "term": "F000:0027",
+      "pred": [
+        46,
+        49
+      ],
+      "succ": [
+        19,
+        21
+      ],
+      "asm": [
+        "FE062000|inc byte ptr DS:[0x0020]",
+        "803E200002|cmp byte ptr DS:[0x0020],2",
+        "740A|je short 0x0033"
+      ]
+    },
+    {
+      "id": 3,
+      "entry": "F000:0000",
+      "term": "F000:0011",
+      "pred": [
+        2
+      ],
+      "succ": [
+        25
+      ],
+      "asm": [
+        "31C0|xor AX,AX",
+        "8ED0|mov SS,AX",
+        "BC0001|mov SP,0x0100",
+        "8ED8|mov DS,AX",
+        "8EC0|mov ES,AX",
+        "FC|cld",
+        "BF0000|mov DI,0",
+        "B0AB|mov AL,0xAB",
+        "C606200000|mov byte ptr DS:[0x0020],0"
+      ]
+    },
+    {
+      "id": 21,
+      "entry": "F000:0029",
+      "term": "F000:0031",
+      "pred": [
+        47
+      ],
+      "succ": [
+        25
+      ],
+      "asm": [
+        "2EC6061D00A4|mov byte ptr CS:[0x001D],0xA4",
+        "B0CD|mov AL,0xCD",
+        "EBE3|jmp short 0x0016"
+      ]
+    },
+    {
+      "id": 49,
+      "entry": "F000:001C",
+      "dead": true,
+      "term": "F000:001C",
+      "pred": [
+        25
+      ],
+      "succ": [
+        47
+      ],
+      "asm": [
+        "F3AA|rep stos byte ptr ES:[DI],AL"
+      ]
+    },
+    {
+      "id": 46,
+      "entry": "F000:001C",
+      "term": "F000:001C",
+      "pred": [
+        25
+      ],
+      "succ": [
+        47
+      ],
+      "asm": [
+        "F3A4|rep movs byte ptr ES:[DI],byte ptr DS:[SI]"
+      ]
+    },
+    {
+      "id": 25,
+      "entry": "F000:0016",
+      "term": "F000:001C",
+      "pred": [
+        3,
+        21
+      ],
+      "succ": [
+        46,
+        49
+      ],
+      "asm": [
+        "BE0000|mov SI,0",
+        "B90400|mov CX,4",
+        "selector"
+      ]
+    }
+  ],
+  "truncated": false
+}

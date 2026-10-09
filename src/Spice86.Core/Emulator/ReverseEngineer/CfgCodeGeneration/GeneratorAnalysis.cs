@@ -3,10 +3,14 @@ namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Naming;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Shared.Emulator.Memory;
 
 using System.Linq;
+
+using CfgSelectorNode = Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying.SelectorNode;
 
 /// <summary>
 /// The first pass of the generator: walks the partitioned program, assigns names to every node,
@@ -22,7 +26,7 @@ internal sealed class GeneratorAnalysis {
     public CfgPartitionedProgram Program { get; }
     public CfgGeneratorContext Context { get; }
 
-    public static GeneratorAnalysis Build(CfgPartitionedProgram program) {
+    public static GeneratorAnalysis Build(CfgPartitionedProgram program, InstructionMnemonic mnemonic) {
         // Reverse index: every instruction back to its owning partition, so emitters can answer
         // "same method or cross-partition?" for any edge endpoint in O(1).
         Dictionary<ICfgNode, CfgCodePartition> partitionByNode = new();
@@ -77,9 +81,69 @@ internal sealed class GeneratorAnalysis {
 
         Dictionary<SegmentedAddress, ICfgNode> blockEntryByAddress = BuildBlockEntryIndex(program);
 
+        List<SignatureFieldPlan> signatureFields = BuildSignatureFields(program, mnemonic);
+
         CfgGeneratorContext context = new(program, partitionByNode, methodNames, partitionBaseNames,
-            segmentVariables, transfersByEdge, entriesByPartition, blockEntryByAddress);
+            segmentVariables, transfersByEdge, entriesByPartition, blockEntryByAddress, signatureFields);
         return new GeneratorAnalysis(program, context);
+    }
+
+    /// <summary>
+    /// Collects the signature bytes every emitted call site needs: one entry per speculative instruction
+    /// that carries a non-empty signature (the <c>VerifySpeculativeEntryOrFail</c> guards) and one per
+    /// selector branch (the <c>SelectorSignatureMatches</c> conditions). Both are keyed by the instruction
+    /// so each one is named once and emitted once as a <c>static readonly</c> field.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// Two call sites for the same instruction carried different bytes: a parser or CFG inconsistency.
+    /// </exception>
+    private static List<SignatureFieldPlan> BuildSignatureFields(CfgPartitionedProgram program, InstructionMnemonic mnemonic) {
+        Dictionary<CfgInstruction, IReadOnlyList<byte?>> bytesByInstruction = [];
+        foreach (CfgCodePartition partition in program.Partitions) {
+            foreach (CfgBlock block in partition.Blocks) {
+                foreach (ICfgNode node in block.Instructions) {
+                    CollectSignatureBytes(node, bytesByInstruction);
+                }
+            }
+        }
+
+        Dictionary<CfgInstruction, string> fieldNames = DisambiguatedNames.Build(
+            bytesByInstruction.Keys,
+            instruction => $"Signature_{instruction.Address.Offset:X4}_{mnemonic.Of(instruction)}",
+            instruction => instruction.Id.ToString());
+
+        return bytesByInstruction
+            .Select(entry => new SignatureFieldPlan(entry.Key, fieldNames[entry.Key], entry.Value))
+            .OrderBy(field => field.Instruction.Address.Linear)
+            .ThenBy(field => field.Instruction.Id)
+            .ToList();
+    }
+
+    private static void CollectSignatureBytes(ICfgNode node, Dictionary<CfgInstruction, IReadOnlyList<byte?>> bytesByInstruction) {
+        switch (node) {
+            case CfgInstruction { IsSpeculative: true } speculative when speculative.Signature.SignatureValue.Count > 0:
+                AddSignatureBytes(bytesByInstruction, speculative, speculative.Signature.SignatureValue);
+                break;
+            case CfgSelectorNode selector:
+                foreach (KeyValuePair<Signature, CfgInstruction> entry in selector.SuccessorsPerSignature) {
+                    AddSignatureBytes(bytesByInstruction, entry.Value, entry.Key.SignatureValue);
+                }
+                break;
+        }
+    }
+
+    private static void AddSignatureBytes(
+        Dictionary<CfgInstruction, IReadOnlyList<byte?>> bytesByInstruction,
+        CfgInstruction instruction,
+        IReadOnlyList<byte?> bytes) {
+        if (bytesByInstruction.TryGetValue(instruction, out IReadOnlyList<byte?>? existingBytes)) {
+            if (!existingBytes.SequenceEqual(bytes)) {
+                throw new InvalidOperationException(
+                    $"Instruction {instruction.Address} (id {instruction.Id}) was seen with conflicting signature bytes.");
+            }
+            return;
+        }
+        bytesByInstruction[instruction] = bytes;
     }
 
     /// <summary>
