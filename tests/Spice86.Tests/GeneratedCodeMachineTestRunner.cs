@@ -11,111 +11,109 @@ using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Core.Emulator.VM;
 
+using Spice86.Tests.AsmFixtures;
+
 using System.Runtime.CompilerServices;
 
 using Xunit;
 
 internal sealed class GeneratedCodeMachineTestRunner {
-    public static byte[] GetExpectedMemoryDump(string binName) {
-        return File.ReadAllBytes($"Resources/cpuTests/res/MemoryDumps/{binName}.bin");
+    /// <summary>
+    /// Generates C# for one fixture, compiles it, re-runs the fixture as an override run and compares the
+    /// generated source with its golden.
+    /// </summary>
+    /// <param name="fixture">Fixture used for discovery and for the override run.</param>
+    /// <returns>The generated program.</returns>
+    public GeneratedCSharpProgram TestGeneratedCode(AsmFixture fixture) {
+        return TestGeneratedCode(fixture, [fixture]);
     }
 
-    public (CfgPartitionedProgram Program, GeneratedCSharpProgram GeneratedProgram) TestGeneratedCode(string binName, long maxCycles = 100000) {
-        string memoryDumpPath = $"Resources/cpuTests/res/MemoryDumps/{binName}.bin";
-        byte[] expected = File.Exists(memoryDumpPath) ? File.ReadAllBytes(memoryDumpPath) : [];
-        return TestGeneratedCode(binName, expected, maxCycles);
-    }
-
-    public (CfgPartitionedProgram Program, GeneratedCSharpProgram GeneratedProgram) TestGeneratedCode(string binName, byte[] expected, long maxCycles = 100000) {
-        return TestGeneratedCode(binName, expected, new GeneratedCodeRunOptions { MaxCycles = maxCycles });
-    }
-
-    public (CfgPartitionedProgram Program, GeneratedCSharpProgram GeneratedProgram) TestGeneratedCode(string binName, byte[] expected, GeneratedCodeRunOptions options, Action<Machine>? assertions = null) {
-        (CfgPartitionedProgram program, GeneratedCSharpProgram generatedProgram) = GenerateProgramAndSource(binName, options);
-        using CompiledGeneratedOverride compiledOverride = CompileGeneratedProgram(binName, generatedProgram, options);
-
-        using Spice86Creator creator = new(binName: binName, maxCycles: options.MaxCycles, enablePit: options.EnablePit,
-            installInterruptVectors: options.InstallInterruptVectors, failOnUnhandledPort: options.FailOnUnhandledPort,
-            enableA20Gate: options.EnableA20Gate, jitMode: JitMode.InterpretedOnly, overrideSupplier: compiledOverride.Supplier,
-            enableSpeculativeCfgExploration: options.EnableSpeculativeCfgExploration);
-        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
-        options.ConfigureMachine?.Invoke(spice86DependencyInjection.Machine);
-        spice86DependencyInjection.FunctionCatalogue.FunctionInformations.Values
-            .Should().Contain(functionInformation => functionInformation.HasOverride);
-        spice86DependencyInjection.ProgramExecutor.Run();
-
-        if (expected.Length != 0) {
-            byte[] actual = spice86DependencyInjection.Machine.Memory.ReadRam((uint)expected.Length);
-            actual.Should().Equal(expected);
+    /// <summary>
+    /// Generates C# from one discovery fixture, compiles it, then runs every execution fixture with the
+    /// compiled override installed and checks that execution's oracle. The generated source is compared
+    /// with its golden at the end.
+    /// </summary>
+    /// <param name="discovery">Fixture whose run is recorded for code generation.</param>
+    /// <param name="executions">Fixtures run with the compiled override, in order, one fresh emulator each.</param>
+    /// <returns>The generated program.</returns>
+    /// <exception cref="ArgumentException">Discovery and execution do not share the same golden key.</exception>
+    public GeneratedCSharpProgram TestGeneratedCode(AsmFixture discovery, IReadOnlyList<AsmFixture> executions) {
+        string goldenKey = GoldenKey(discovery.Settings);
+        foreach (AsmFixture execution in executions) {
+            string executionKey = GoldenKey(execution.Settings);
+            if (executionKey != goldenKey) {
+                throw new ArgumentException(
+                    $"Discovery golden key '{goldenKey}' differs from execution golden key '{executionKey}'.");
+            }
         }
-        assertions?.Invoke(spice86DependencyInjection.Machine);
+
+        (GeneratedCSharpProgram generatedProgram, AsmFinalState discoveryFinalState) =
+            GenerateSourceAndFinalState(discovery.Settings);
+        using CompiledGeneratedOverride compiledOverride = CompileGeneratedProgram(discovery.Settings, generatedProgram);
+        foreach (AsmFixture execution in executions) {
+            using AsmFixtureRun run = AsmFixtureRunner.RunWithOverride(execution, compiledOverride.Supplier);
+            if (execution.Settings == discovery.Settings) {
+                GeneratedCodeDifferentialReport.Append(goldenKey, discoveryFinalState, AsmFinalState.Capture(run.Result));
+            }
+        }
 
         // Compared last: a behavioural regression (memory dump or caller assertion) is the more
         // important failure and must be the one xunit reports when both a behavioural and a golden
         // mismatch occur on the same run.
-        CompareGeneratedSourceWithExpected(GoldenKey(binName, options), generatedProgram);
+        CompareGeneratedSourceWithExpected(goldenKey, generatedProgram);
 
-        return (program, generatedProgram);
+        return generatedProgram;
     }
 
     /// <summary>
     /// Compiles an existing generated program and records its metrics.
     /// </summary>
-    /// <param name="binName">The fixture name or path used for discovery.</param>
+    /// <param name="settings">The settings used for discovery and the golden key.</param>
     /// <param name="generatedProgram">The source produced by that discovery run.</param>
-    /// <param name="options">The options used for discovery and the golden key.</param>
     /// <returns>The compiled override, which the caller must dispose.</returns>
-    public CompiledGeneratedOverride CompileGeneratedProgram(
-        string binName, GeneratedCSharpProgram generatedProgram, GeneratedCodeRunOptions options) {
+    public CompiledGeneratedOverride CompileGeneratedProgram(AsmRunSettings settings, GeneratedCSharpProgram generatedProgram) {
         GeneratedOverrideCompiler compiler = new();
         GeneratedCompilation compilation = compiler.Compile(generatedProgram.SourceText);
         GeneratedCodeMetrics metrics = GeneratedCodeMetricsCollector.Collect(
-            GoldenKey(binName, options), compilation.SyntaxTree, compilation.EmitResult.Diagnostics);
+            GoldenKey(settings), compilation.SyntaxTree, compilation.EmitResult.Diagnostics);
         WriteMetrics(metrics);
+        GeneratedCodeMetricsAssertions.AssertInvariants(metrics, generatedProgram.SourceText);
         return compiler.CompileSupplier(compilation);
     }
 
     /// <summary>
     /// Builds the golden-file key for a run: the bin file name without extension, followed by one
-    /// fixed suffix per enabled boolean flag in <see cref="GeneratedCodeRunOptions"/>, in a fixed
+    /// fixed suffix per enabled boolean flag of the <see cref="AsmRunSettings"/>, in a fixed
     /// order. Runs of the same bin with different options therefore get distinct goldens instead of
     /// overwriting each other. <c>MaxCycles</c> and <c>ConfigureMachine</c> are deliberately not part
-    /// of the key. Every flag is enumerated explicitly so adding one to the options is a
+    /// of the key. Every flag is enumerated explicitly so adding one to the settings is a
     /// compile-visible decision here rather than a silent omission that lets two runs share a golden.
     /// </summary>
-    public static string GoldenKey(string binName, GeneratedCodeRunOptions options) {
-        string key = Path.GetFileNameWithoutExtension(binName);
-        if (options.EnablePit) {
+    /// <param name="settings">Settings to build the key from.</param>
+    /// <returns>The golden-file key.</returns>
+    public static string GoldenKey(AsmRunSettings settings) {
+        string key = Path.GetFileNameWithoutExtension(settings.BinName);
+        if (settings.EnablePit) {
             key += ".pit";
         }
-        if (options.EnableA20Gate) {
+        if (settings.EnableA20Gate) {
             key += ".a20";
         }
-        if (options.InstallInterruptVectors) {
+        if (settings.InstallInterruptVectors) {
             key += ".ivt";
         }
-        if (options.FailOnUnhandledPort) {
+        if (settings.FailOnUnhandledPort) {
             key += ".failport";
         }
-        if (options.EnableSpeculativeCfgExploration) {
+        if (settings.EnableSpeculativeCfgExploration) {
             key += ".spec";
         }
         return key;
     }
 
-    public (CfgPartitionedProgram Program, GeneratedCSharpProgram GeneratedProgram) GenerateProgramAndSource(string binName, long maxCycles) {
-        return GenerateProgramAndSource(binName, new GeneratedCodeRunOptions { MaxCycles = maxCycles });
-    }
-
-    public (CfgPartitionedProgram Program, GeneratedCSharpProgram GeneratedProgram) GenerateProgramAndSource(string binName, long maxCycles, bool installInterruptVectors) {
-        return GenerateProgramAndSource(binName, new GeneratedCodeRunOptions { MaxCycles = maxCycles, InstallInterruptVectors = installInterruptVectors });
-    }
-
-    public (CfgPartitionedProgram Program, GeneratedCSharpProgram GeneratedProgram) GenerateProgramAndSource(string binName, GeneratedCodeRunOptions options) {
-        CfgPartitionedProgram program = GenerateProgram(binName, options);
-        GeneratedCSharpProgram generatedProgram = new CfgCSharpGenerator().Generate(program);
-        WriteGeneratedSource(binName, generatedProgram);
-        return (program, generatedProgram);
+    public GeneratedCSharpProgram GenerateProgramAndSource(AsmRunSettings settings) {
+        (GeneratedCSharpProgram generatedProgram, _) = GenerateSourceAndFinalState(settings);
+        return generatedProgram;
     }
 
     public void CompareGeneratedSourceWithExpected(string goldenKey, GeneratedCSharpProgram generatedProgram) {
@@ -147,10 +145,10 @@ internal sealed class GeneratedCodeMachineTestRunner {
             ?? throw new InvalidOperationException($"No directory for path: {path}");
     }
 
-    private static void WriteGeneratedSource(string binName, GeneratedCSharpProgram generatedProgram) {
+    private static void WriteGeneratedSource(string fileKey, GeneratedCSharpProgram generatedProgram) {
         string outputDirectory = Path.Join(AppContext.BaseDirectory, "generated-code");
         Directory.CreateDirectory(outputDirectory);
-        string fileName = Path.GetFileNameWithoutExtension(binName);
+        string fileName = fileKey;
         foreach (char invalidChar in Path.GetInvalidFileNameChars()) {
             fileName = fileName.Replace(invalidChar, '_');
         }
@@ -174,19 +172,22 @@ internal sealed class GeneratedCodeMachineTestRunner {
         }
     }
 
-    private static CfgPartitionedProgram GenerateProgram(string binName, GeneratedCodeRunOptions options) {
-        using Spice86Creator creator = new(binName: binName, maxCycles: options.MaxCycles, enablePit: options.EnablePit,
-            installInterruptVectors: options.InstallInterruptVectors, failOnUnhandledPort: options.FailOnUnhandledPort,
-            enableA20Gate: options.EnableA20Gate, jitMode: JitMode.InterpretedOnly,
-            enableSpeculativeCfgExploration: options.EnableSpeculativeCfgExploration);
-        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
-        options.ConfigureMachine?.Invoke(spice86DependencyInjection.Machine);
-        spice86DependencyInjection.ProgramExecutor.Run();
+    private (GeneratedCSharpProgram GeneratedProgram, AsmFinalState FinalState) GenerateSourceAndFinalState(AsmRunSettings settings) {
+        (CfgPartitionedProgram program, AsmFinalState finalState) = GenerateProgram(settings);
+        GeneratedCSharpProgram generatedProgram = new CfgCSharpGenerator().Generate(program);
+        WriteGeneratedSource(GoldenKey(settings), generatedProgram);
+        return (generatedProgram, finalState);
+    }
 
-        Machine machine = spice86DependencyInjection.Machine;
+    private static (CfgPartitionedProgram Program, AsmFinalState FinalState) GenerateProgram(AsmRunSettings settings) {
+        using AsmFixtureRun run = AsmFixtureRunner.RunSettings(settings, JitMode.InterpretedOnly);
+
+        Machine machine = run.Machine;
         CfgBlockGraph graph = new CfgBlockGraphExporter().ExportFromExecutionContext(machine.CfgCpu.ExecutionContextManager, null).Graph;
         graph.Truncated.Should().BeFalse();
 
-        return new CfgFunctionPartitioner().Partition(graph, machine.CfgCpu.ExecutionContextManager, new FunctionCatalogue());
+        CfgPartitionedProgram program = new CfgFunctionPartitioner().Partition(graph, machine.CfgCpu.ExecutionContextManager, new FunctionCatalogue());
+        AsmFinalState finalState = AsmFinalState.Capture(run.Result);
+        return (program, finalState);
     }
 }

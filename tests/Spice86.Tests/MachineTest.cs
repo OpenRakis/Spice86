@@ -4,8 +4,6 @@ using FluentAssertions;
 
 using JetBrains.Annotations;
 
-using Microsoft.Extensions.Logging;
-
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
@@ -14,23 +12,20 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
-using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Mcp.Response;
 using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
 using Spice86.Core.Emulator.VM;
-using Spice86.Logging;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
+using Spice86.Tests.AsmFixtures;
 using Spice86.Tests.Utility;
 
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -54,91 +49,79 @@ public class MachineTest {
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestAdd(JitMode jitMode) {
-        TestOneBin("add", jitMode);
+        TestOneBin(AsmFixtureCatalog.Dump("add"), jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestBcdcnv(JitMode jitMode) {
-        TestOneBin("bcdcnv", jitMode);
+        TestOneBin(AsmFixtureCatalog.Dump("bcdcnv"), jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestBitwise(JitMode jitMode) {
-        byte[] expected = GetExpected("bitwise");
-        // dosbox values
-        expected[0x9F] = 0x12;
-        expected[0x9D] = 0x12;
-        expected[0x9B] = 0x12;
-        expected[0x99] = 0x12;
-        TestOneBin("bitwise", expected, jitMode);
+        TestOneBin(AsmFixtureCatalog.Bitwise(), jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestCmpneg(JitMode jitMode) {
-        TestOneBin("cmpneg", jitMode);
+        TestOneBin(AsmFixtureCatalog.Dump("cmpneg"), jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestControl(JitMode jitMode) {
-        byte[] expected = GetExpected("control");
-        // dosbox values
-        expected[0x1] = 0x78;
-        TestOneBin("control", expected, jitMode);
+        TestOneBin(AsmFixtureCatalog.Control(), jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestDatatrnf(JitMode jitMode) {
-        TestOneBin("datatrnf", jitMode);
+        TestOneBin(AsmFixtureCatalog.Dump("datatrnf"), jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestDiv(JitMode jitMode) {
-        TestOneBin("div", jitMode);
+        TestOneBin(AsmFixtureCatalog.Dump("div"), jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestDiv2(JitMode jitMode) {
-        byte[] expected = new byte[6];
-        expected[0x00] = 0x3D; // quotient low  (AX = 0x8F3D)
-        expected[0x01] = 0x8F; // quotient high
-        expected[0x02] = 0x89; // remainder low (DX = 0x9089)
-        expected[0x03] = 0x90; // remainder high
-        expected[0x04] = 0xC3; // divisor low   (CX = 0xE4C3)
-        expected[0x05] = 0xE4; // divisor high
-        TestOneBin("div2", expected, jitMode);
+        TestOneBin(AsmFixtureCatalog.Div2(), jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestInterrupt(JitMode jitMode) {
-        TestOneBin("interrupt", jitMode);
+        TestOneBin(AsmFixtureCatalog.Dump("interrupt"), jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestJump1(JitMode jitMode) {
-        TestOneBin("jump1", jitMode);
+        TestOneBin(AsmFixtureCatalog.Dump("jump1"), jitMode);
+    }
+
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestJump1NoSpec(JitMode jitMode) {
+        TestOneBin(AsmFixtureCatalog.Jump1WithoutSpeculation(), jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestJump2(JitMode jitMode) {
-        TestOneBin("jump2", jitMode);
+        TestOneBin(AsmFixtureCatalog.Dump("jump2"), jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestJmpmov(JitMode jitMode) {
-        // 0x4001 in little endian
-        byte[] expected = new byte[] { 0x01, 0x40 };
-        TestOneBin("jmpmov", expected, jitMode, machine => {
+        TestOneBin(AsmFixtureCatalog.JmpMov(), jitMode, machine => {
             State state = machine.CpuState;
             uint endAddress = MemoryUtils.ToPhysicalAddress(state.CS, state.IP);
             // Last instruction HLT is one byte long and is at 0xF400C
@@ -149,53 +132,31 @@ public class MachineTest {
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestMul(JitMode jitMode) {
-        byte[] expected = GetExpected("mul");
-        expected[0xA2] = 0x86;
-        expected[0x9E] = 0x46;
-        expected[0x9C] = 0x87;
-        expected[0x9A] = 0x83;
-        expected[0x98] = 0x82;
-        expected[0x96] = 0x86;
-        expected[0x92] = 0x46;
-        expected[0x73] = 0x2;
-        expected[0xAA] = 0x42;
-        expected[0xAE] = 0x2;
-        expected[0xB0] = 0x3;
-        expected[0xB2] = 0x2;
-        expected[0xB4] = 0x3;
-        expected[0xB6] = 0x42;
-        expected[0xBA] = 0x2;
-        TestOneBin("mul", expected, jitMode);
+        TestOneBin(AsmFixtureCatalog.Mul(), jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestRep(JitMode jitMode) {
-        TestOneBin("rep", jitMode);
+        TestOneBin(AsmFixtureCatalog.Dump("rep"), jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestReturnedTerminator(JitMode jitMode) {
-        byte[] expected = new byte[8];
-        expected[0x04] = 0x22;
-        expected[0x05] = 0x22;
-        expected[0x06] = 0x11;
-        expected[0x07] = 0x11;
-        TestOneBin("returnedterminator", expected, jitMode, maxCycles: 1000);
+        TestOneBin(AsmFixtureCatalog.ReturnedTerminator(), jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestRotate(JitMode jitMode) {
-        TestOneBin("rotate", jitMode);
+        TestOneBin(AsmFixtureCatalog.Dump("rotate"), jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestSegpr(JitMode jitMode) {
-        byte[] expected = GetExpected("segpr");
-        TestOneBin("segpr", expected, jitMode, machine => {
+        TestOneBin(AsmFixtureCatalog.Dump("segpr"), jitMode, machine => {
             // Here, a division by 0 occurred causing a CPU fault. It is handled by an interrupt handler.
             CurrentInstructions currentInstructions = machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
             CfgInstruction? divBy0 = currentInstructions.GetAtAddress(new(0xF000, 0x005F));
@@ -262,6 +223,11 @@ public class MachineTest {
 
             // Normal edge: IRET block -> post-fault block.
             iretBlock.Successors.Select(s => s.ContainingBlock).Should().Contain(nextBlock);
+
+            CfgCpuGraph graph = CfgBlocksTestJson.BuildGraph(machine.CfgCpu.ExecutionContextManager);
+            graph.Transfers.Should().NotBeNull();
+            graph.Transfers.Should().Contain(t => t.Kind == "callOut",
+                "the call whose callee never returns must produce a callOut transfer");
         });
     }
 
@@ -282,53 +248,31 @@ public class MachineTest {
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestLockPrefixValidation(JitMode jitMode) {
-        TestOneBin("lockprefix", [], jitMode, machine => {
-            IMemory memory = machine.Memory;
-
-            // [0x0000] = invalid_lock_count: LOCK MOV [mem], LOCK ADD reg, LOCK INC reg
-            ushort invalidCount = memory.UInt16[0, 0x0000];
-            // [0x0002] = valid_lock_count: set to 3 after the three valid tests complete
-            ushort validCount = memory.UInt16[0, 0x0002];
-
-            invalidCount.Should().Be(3, "three invalid LOCK uses should each trigger INT 6");
-            validCount.Should().Be(3, "three valid LOCK uses should complete without triggering INT 6");
-        });
+        TestOneBin(AsmFixtureCatalog.LockPrefix(), jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestShifts(JitMode jitMode) {
-        byte[] expected = GetExpected("shifts");
-        // Bytes 0x6F and 0x79 are the high byte of FLAGS pushed after multi-bit
-        // SHL/SAL operations. Intel leaves OF undefined for shifts with count > 1,
-        // so the recorded value is implementation-specific. Match what the current
-        // emulator produces (OF cleared) instead of the original recording.
-        expected[0x6F] = 0x00;
-        expected[0x79] = 0x00;
-        TestOneBin("shifts", expected, jitMode);
+        TestOneBin(AsmFixtureCatalog.Dump("shifts"), jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestStrings(JitMode jitMode) {
-        TestOneBin("strings", jitMode);
+        TestOneBin(AsmFixtureCatalog.Dump("strings"), jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestSub(JitMode jitMode) {
-        TestOneBin("sub", jitMode);
+        TestOneBin(AsmFixtureCatalog.Dump("sub"), jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestSelfModifyValue(JitMode jitMode) {
-        byte[] expected = new byte[4];
-        expected[0x00] = 0x0a;
-        expected[0x01] = 0x00;
-        expected[0x02] = 0xff;
-        expected[0x03] = 0xff;
-        TestOneBin("selfmodifyvalue", expected, jitMode, machine => {
+        TestOneBin(AsmFixtureCatalog.SelfModifyValue(), jitMode, machine => {
             CurrentInstructions currentInstructions = machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
             CfgInstruction? instruction = currentInstructions.GetAtAddress(new SegmentedAddress(0xF000, 0x00D));
             Assert.NotNull(instruction);
@@ -365,25 +309,13 @@ public class MachineTest {
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestSelfModifyInstructions(JitMode jitMode) {
-        byte[] expected = new byte[6];
-        expected[0x00] = 0x03;
-        expected[0x01] = 0x00;
-        expected[0x02] = 0x02;
-        expected[0x03] = 0x00;
-        expected[0x04] = 0x01;
-        expected[0x05] = 0x00;
-        TestOneBin("selfmodifyinstructions", expected, jitMode);
+        TestOneBin(AsmFixtureCatalog.SelfModifyInstructions(), jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestSelfModifyRep(JitMode jitMode) {
-        byte[] expected = new byte[0x21];
-        for (int i = 0; i < 8; i++) {
-            expected[i] = 0xAB;
-        }
-        expected[0x20] = 0x02;
-        TestOneBin("selfmodifyrep", expected, jitMode);
+        TestOneBin(AsmFixtureCatalog.SelfModifyRep(), jitMode);
     }
 
     /// <summary>
@@ -398,7 +330,7 @@ public class MachineTest {
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestSelfModifyJe(JitMode jitMode) {
-        TestOneBin("selfmodifyje", [], jitMode, machine => {
+        TestOneBin(AsmFixtureCatalog.SelfModifyJe(), jitMode, machine => {
             CurrentInstructions currentInstructions = machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
             // Layout (F000:0000 = start):
             //   0000: mov cx, 0       (3 bytes)
@@ -424,7 +356,7 @@ public class MachineTest {
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestSelfModifyCall(JitMode jitMode) {
-        TestOneBin("selfmodifycall", [], jitMode, machine => {
+        TestOneBin(AsmFixtureCatalog.SelfModifyCall(), jitMode, machine => {
             // Block-level assertions: SelectorNode insertion via CreateSelectorNodeBetween
             // must finalise the predecessor's CfgBlock and must not disturb the variant
             // CfgInstructions' containing-block back-pointers.
@@ -464,15 +396,7 @@ public class MachineTest {
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestSelfModifyTerminator(JitMode jitMode) {
-        // Expected stack memory: 42 00 FF FF
-        // First push: AX=0xFFFF (first pass marker)
-        // Second push: AX=0x0042 (after patch, at 'done' label)
-        byte[] expected = new byte[4];
-        expected[0x00] = 0x42;
-        expected[0x01] = 0x00;
-        expected[0x02] = 0xFF;
-        expected[0x03] = 0xFF;
-        TestOneBin("selfmodifyterminator", expected, jitMode, machine => {
+        TestOneBin(AsmFixtureCatalog.SelfModifyTerminator(), jitMode, machine => {
             // Block-level assertions: Case T continuation — the SelectorNode injected at the
             // terminator's address (F000:0019) is absorbed into the predecessor's block because
             // the predecessor (or ax, ax at F000:0017) is a non-terminator whose
@@ -512,37 +436,25 @@ public class MachineTest {
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestExternalInt(JitMode jitMode) {
-        byte[] expected = new byte[6];
-        expected[0x00] = 0x01;
-        TestOneBin("externalint", expected, jitMode, 0xFFFFFFF, true);
+        TestOneBin(AsmFixtureCatalog.ExternalInt(), jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestStiPending(JitMode jitMode) {
-        byte[] expected = new byte[2];
-        expected[0x00] = 0x01;
-        expected[0x01] = 0x01;
-        TestOneBin("stipending", expected, jitMode, 0xFFFFFFF, true);
+        TestOneBin(AsmFixtureCatalog.StiPending(), jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestInteriorEntryIrq(JitMode jitMode) {
-        TestOneBin(InteriorEntryTestOracle.BinName, [], jitMode,
-            machine => InteriorEntryTestOracle.AssertCompleted(machine.Memory, machine.CpuState),
-            maxCycles: InteriorEntryTestOracle.MaxCycles, enablePit: true);
+        TestOneBin(AsmFixtureCatalog.InteriorEntry(), jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestDivFaultLoop(JitMode jitMode) {
-        byte[] expected = new byte[4];
-        expected[0x00] = 0x03; // retrycount low
-        expected[0x01] = 0x00; // retrycount high
-        expected[0x02] = 0x02; // quotient low (10 / 5 = 2)
-        expected[0x03] = 0x00; // quotient high
-        TestOneBin("divfaultloop", expected, jitMode, machine => {
+        TestOneBin(AsmFixtureCatalog.DivFaultLoop(), jitMode, machine => {
             CurrentInstructions currentInstructions =
                 machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
 
@@ -602,108 +514,131 @@ public class MachineTest {
             // divBlock itself — so the block-level successor list includes divBlock (self-loop).
             divBlockSuccessors.Should().Contain(divBlock,
                 "handler rewrites return to divblock entry, creating a self-loop at block level");
+
+            CfgCpuGraph graph = CfgBlocksTestJson.BuildGraph(machine.CfgCpu.ExecutionContextManager);
+            graph.Transfers.Should().NotBeNull();
+            graph.Transfers.Should().Contain(t => t.Kind == "cpuFault",
+                "the div fault edge to the handler must produce a cpuFault transfer");
         });
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestLinearAddressSameButSegmentedDifferent(JitMode jitMode) {
-        byte[] expected = new byte[2];
-        expected[0x00] = 0x02;
-        expected[0x01] = 0x00;
-        TestOneBin("linearsamesegmenteddifferent", expected, jitMode, enableA20Gate: true);
+        TestOneBin(AsmFixtureCatalog.LinearSameSegmentedDifferent(), jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestSpeculativeBranch(JitMode jitMode) {
-        byte[] expected = new byte[0x403];
-        expected[0x400] = 0x01;
-        expected[0x401] = 0xDD;
-        expected[0x402] = 0xAA;
-        TestOneBin("speculative_branch", expected, jitMode, maxCycles: 1000);
+        TestOneBin(AsmFixtureCatalog.SpeculativeBranch(SpeculativeArm.Observed), jitMode);
+    }
+
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestSpeculativeBranchUnobservedArm(JitMode jitMode) {
+        TestOneBin(AsmFixtureCatalog.SpeculativeBranch(SpeculativeArm.Unobserved), jitMode);
+    }
+
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestSpeculativeBranchNoSpec(JitMode jitMode) {
+        TestOneBin(AsmFixtureCatalog.SpeculativeBranchWithoutSpeculation(), jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestSpeculativeClosure(JitMode jitMode) {
-        byte[] expected = new byte[0x403];
-        expected[0x400] = 0x01;
-        expected[0x401] = 0xDD;
-        expected[0x402] = 0xBB;
-        TestOneBin("speculative_closure", expected, jitMode, maxCycles: 1000);
+        TestOneBin(AsmFixtureCatalog.SpeculativeClosure(SpeculativeArm.Observed), jitMode);
+    }
+
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestSpeculativeClosureUnobservedArm(JitMode jitMode) {
+        TestOneBin(AsmFixtureCatalog.SpeculativeClosure(SpeculativeArm.Unobserved), jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestSpeculativeConvergence(JitMode jitMode) {
-        byte[] expected = new byte[0x404];
-        expected[0x400] = 0x01;
-        expected[0x401] = 0xAA;
-        expected[0x402] = 0xCC;
-        expected[0x403] = 0xFF;
-        TestOneBin("speculative_convergence", expected, jitMode, maxCycles: 1000);
+        TestOneBin(AsmFixtureCatalog.SpeculativeConvergence(SpeculativeArm.Observed), jitMode);
+    }
+
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestSpeculativeConvergenceUnobservedArm(JitMode jitMode) {
+        TestOneBin(AsmFixtureCatalog.SpeculativeConvergence(SpeculativeArm.Unobserved), jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestSpeculativeInvalidOpcode(JitMode jitMode) {
-        byte[] expected = new byte[0x403];
-        expected[0x400] = 0x01;
-        expected[0x401] = 0xDD;
-        expected[0x402] = 0xEE;
-        TestOneBin("speculative_invalid_opcode", expected, jitMode, maxCycles: 1000);
+        TestOneBin(AsmFixtureCatalog.SpeculativeInvalidOpcode(), jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestSpeculativeCallEntry(JitMode jitMode) {
-        byte[] expected = new byte[0x403];
-        expected[0x400] = 0x01;
-        expected[0x401] = 0xDD;
-        expected[0x402] = 0xAA;
-        TestOneBin("speculative_call_entry", expected, jitMode, maxCycles: 1000);
+        TestOneBin(AsmFixtureCatalog.SpeculativeCallEntry(), jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestSpeculativeSmcGuard(JitMode jitMode) {
-        byte[] expected = new byte[0x403];
-        expected[0x400] = 0x01;
-        expected[0x401] = 0xDD;
-        expected[0x402] = 0xAA;
-        TestOneBin("speculative_smc_guard", expected, jitMode, maxCycles: 1000);
+        TestOneBin(AsmFixtureCatalog.SpeculativeSmcGuard(), jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestSpeculativeDiscard(JitMode jitMode) {
-        byte[] expected = new byte[0x403];
-        expected[0x400] = 0x01;
-        expected[0x401] = 0xDD;
-        expected[0x402] = 0xAA;
-        TestOneBin("speculative_discard", expected, jitMode, maxCycles: 1000);
+        TestOneBin(AsmFixtureCatalog.SpeculativeDiscard(), jitMode);
     }
 
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestSpeculativeMixedBlock(JitMode jitMode) {
-        byte[] expected = new byte[0x403];
-        expected[0x400] = 0x01;
-        expected[0x401] = 0xDD;
-        expected[0x402] = 0xAA;
-        TestOneBin("speculative_mixed_block", expected, jitMode, maxCycles: 1000);
+        TestOneBin(AsmFixtureCatalog.SpeculativeMixedBlock(SpeculativeArm.Observed), jitMode);
+    }
+
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestSpeculativeMixedBlockUnobservedArm(JitMode jitMode) {
+        TestOneBin(AsmFixtureCatalog.SpeculativeMixedBlock(SpeculativeArm.Unobserved), jitMode);
+    }
+
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestPartitionMutualRecursionUnwind(JitMode jitMode) {
+        TestOneBin(AsmFixtureCatalog.PartitionMutualRecursionUnwind(), jitMode);
+    }
+
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestSelfModifyCallTarget(JitMode jitMode) {
+        TestOneBin(AsmFixtureCatalog.SelfModifyCallTarget(), jitMode);
+    }
+
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestMultiMisalignedCall(JitMode jitMode) {
+        TestOneBin(AsmFixtureCatalog.MultiMisalignedCall(), jitMode);
+    }
+
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestPushCsCallNearRetFar(JitMode jitMode) {
+        TestOneBin(AsmFixtureCatalog.PushCsCallNearRetFar(), jitMode);
     }
 
     [Theory]
     [MemberData(nameof(CfgPartitioningGraphFixtures))]
     public void TestCfgPartitioningGraphFixture(string binName) {
-        TestOneBin(binName, [], JitMode.InterpretedOnly, maxCycles: 1000);
+        TestOneBin(AsmFixtureCatalog.Partition(binName), JitMode.InterpretedOnly);
     }
 
     [Fact]
     public void TestPartitionIndirectCallJump_HasCallOutAndAlignedReturn() {
-        TestOneBin("partition_indirect_call_jump", [], JitMode.InterpretedOnly, machine => {
+        TestOneBin(AsmFixtureCatalog.Partition("partition_indirect_call_jump"), JitMode.InterpretedOnly, machine => {
             CfgCpuGraph graph = CfgBlocksTestJson.BuildGraph(machine.CfgCpu.ExecutionContextManager);
 
             graph.Partitions.Should().NotBeNull();
@@ -711,7 +646,17 @@ public class MachineTest {
             graph.Transfers.Should().NotBeNull();
             graph.Transfers.Should().Contain(t => t.Kind == "callOut", "indirect call via BX must produce a callOut transfer");
             graph.Transfers.Should().Contain(t => t.Kind == "alignedReturn", "ret from indirect target must produce an alignedReturn transfer");
-        }, maxCycles: 1000);
+        });
+    }
+
+    [Fact]
+    public void TestPartitionSharedTail_HasAlignedReturn() {
+        TestOneBin(AsmFixtureCatalog.Partition("partition_shared_tail"), JitMode.InterpretedOnly, machine => {
+            CfgCpuGraph graph = CfgBlocksTestJson.BuildGraph(machine.CfgCpu.ExecutionContextManager);
+            graph.Transfers.Should().NotBeNull();
+            graph.Transfers.Should().Contain(t => t.Kind == "alignedReturn",
+                "the ret of the shared tail back to each caller must produce an alignedReturn transfer");
+        });
     }
 
     /// <summary>
@@ -727,7 +672,7 @@ public class MachineTest {
     /// </summary>
     [Fact]
     public void TestOwnerlessCallCycle_AssignsEveryBlockToAPartition() {
-        TestOneBin("ownerlesscallcycle", [], JitMode.InterpretedOnly, machine => {
+        TestOneBin(AsmFixtureCatalog.OwnerlessCallCycle(), JitMode.InterpretedOnly, machine => {
             CfgCpuGraph graph = CfgBlocksTestJson.BuildGraph(machine.CfgCpu.ExecutionContextManager);
 
             graph.Truncated.Should().BeFalse("the graph is small and fully exported");
@@ -737,7 +682,7 @@ public class MachineTest {
             int[] partitionedBlocks = partitions.SelectMany(partition => partition.Blocks).Distinct().ToArray();
             partitionedBlocks.Should().BeEquivalentTo(graph.Blocks.Select(block => block.Id),
                 "every exported block, including the rescued ownership-preserving cycle, must belong to exactly one partition");
-        }, maxCycles: 1000);
+        });
     }
 
     [Theory]
@@ -885,7 +830,7 @@ public class MachineTest {
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestStiCli(JitMode jitMode) {
-        TestOneBin("sticli", [], jitMode, machine => {
+        TestOneBin(AsmFixtureCatalog.StiCli(), jitMode, machine => {
             machine.CpuState.IsRunning.Should().BeFalse(
                 "the program is expected to reach HLT");
             machine.CpuState.InterruptShadowing.Should().BeFalse(
@@ -949,42 +894,39 @@ public class MachineTest {
             // Block-level successors: STI -> MID -> CLI.
             stiBlock.Successors.Select(s => s.ContainingBlock).Should().Contain(midBlock);
             midBlock.Successors.Select(s => s.ContainingBlock).Should().Contain(cliBlock);
-        }, maxCycles: 1000);
+        });
     }
 
     [AssertionMethod]
-    private void TestOneBin(string binName, JitMode jitMode) {
-        byte[] expected = GetExpected(binName);
-        TestOneBin(binName, expected, jitMode);
+    private void TestOneBin(AsmFixture fixture, JitMode jitMode) {
+        TestOneBin(fixture, jitMode, _ => { });
     }
 
     [AssertionMethod]
-    private void TestOneBin(string binName, byte[] expected, JitMode jitMode, long maxCycles = 100000L, bool enablePit = false, bool enableA20Gate = false) {
-        using Spice86Creator creator = new Spice86Creator(binName: binName, maxCycles: maxCycles, enablePit: enablePit, enableA20Gate: enableA20Gate, jitMode: jitMode);
-        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
-        spice86DependencyInjection.ProgramExecutor.Run();
-        Machine machine = spice86DependencyInjection.Machine;
-        CompareMemoryWithExpected(machine.Memory, expected);
-        CompareListingWithExpected(binName, machine);
-        CompareCfgBlocksJsonWithExpected(binName, machine);
+    private void TestOneBin(AsmFixture fixture, JitMode jitMode, Action<Machine> engineAssertions) {
+        using AsmFixtureRun run = AsmFixtureRunner.RunEmulated(fixture, jitMode);
+        string goldenKey = MachineGoldenKey(fixture);
+        CompareListingWithExpected(goldenKey, run.Machine);
+        CompareCfgBlocksJsonWithExpected(goldenKey, run.Machine);
+        engineAssertions(run.Machine);
     }
 
-    [AssertionMethod]
-    private void TestOneBin(string binName, byte[] expected, JitMode jitMode, Action<Machine> assertions, long maxCycles = 100000L, bool enablePit = false, bool enableA20Gate = false) {
-        using Spice86Creator creator = new Spice86Creator(binName: binName, maxCycles: maxCycles, enablePit: enablePit, enableA20Gate: enableA20Gate, jitMode: jitMode);
-        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
-        spice86DependencyInjection.ProgramExecutor.Run();
-        Machine machine = spice86DependencyInjection.Machine;
-        CompareMemoryWithExpected(machine.Memory, expected);
-        CompareListingWithExpected(binName, machine);
-        CompareCfgBlocksJsonWithExpected(binName, machine);
-        assertions(machine);
+    /// <summary>Builds the golden-file key of a fixture: its bin name plus the suffixes of its non-default configuration.</summary>
+    private static string MachineGoldenKey(AsmFixture fixture) {
+        string key = fixture.Settings.BinName;
+        if (!fixture.Settings.EnableSpeculativeCfgExploration) {
+            key += ".nospec";
+        }
+        if (fixture.MachineGoldenVariant.Length > 0) {
+            key += "." + fixture.MachineGoldenVariant;
+        }
+        return key;
     }
 
-    private void CompareListingWithExpected(string binName, Machine machine) {
+    private void CompareListingWithExpected(string goldenKey, Machine machine) {
         List<string> actualLines = _dumper.ToAssemblyListing(machine.CfgCpu);
-        //WriteExpectedListing(binName, actualLines);
-        List<string> expectedLines = GetExpectedListing(binName);
+        //WriteExpectedListing(goldenKey, actualLines);
+        List<string> expectedLines = GetExpectedListing(goldenKey);
         Assert.Equal(expectedLines, actualLines);
     }
 
@@ -1002,74 +944,19 @@ public class MachineTest {
     [Theory]
     [MemberData(nameof(JitModes))]
     public void Test386ButNotProtectedMode(JitMode jitMode) {
-        //Arrange
-        string binName = "test386";
-        using Spice86Creator creator = new Spice86Creator(
-            binName: binName,
-            enablePit: false, maxCycles: long.MaxValue,
-            failOnUnhandledPort: true, jitMode: jitMode);
-        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
-        Machine machine = spice86DependencyInjection.Machine;
-        IMemory memory = machine.Memory;
-        using LoggerService loggerService = new();
-        Test386ButNotProtectedModeHandler debugPortsHandler = new(machine.CpuState, loggerService, machine.IoPortDispatcher);
-
-        //Act
-        try {
-            spice86DependencyInjection.ProgramExecutor.Run();
-        } finally {
-            loggerService.LogInformation("Reached POST values {portValues}. Ascii Error is {asciiError}", debugPortsHandler.PostValues, debugPortsHandler.AsciiError);
-        }
-
-        //Assert
-        Assert.Equal(8, debugPortsHandler.PostValues.Count);
-        // FF means test finished normally
-        Assert.Equal(0xFF, debugPortsHandler.PostValues.Last());
-        CompareListingWithExpected(binName, machine);
-        CompareCfgBlocksJsonWithExpected(binName, machine);
+        TestOneBin(AsmFixtureCatalog.Test386(), jitMode);
     }
 
-    private class Test386ButNotProtectedModeHandler : DefaultIOPortHandler {
-        private const int PostPort = 0x999;
-        private const int AsciiOutPort = 0x998;
-
-        public List<ushort> PostValues { get; } = new();
-        public string AsciiError { get; private set; } = "";
-
-        public Test386ButNotProtectedModeHandler(State state, ILogger loggerService,
-            IOPortDispatcher ioPortDispatcher) : base(state, true, loggerService) {
-            ioPortDispatcher.AddIOPortHandler(PostPort, this);
-            ioPortDispatcher.AddIOPortHandler(AsciiOutPort, this);
-        }
-
-        public override void WriteByte(ushort port, byte value) {
-            if (port == AsciiOutPort) {
-                AsciiError += Encoding.ASCII.GetString(new byte[] { value });
-            } else if (port == PostPort) {
-                if (PostValues.Contains(value)) {
-                    throw new UnhandledOperationException(_state, $"POST value {value} already sent. Is test looping?");
-                }
-
-                PostValues.Add(value);
-            }
-        }
-    }
-
-    private static byte[] GetExpected(string binName) {
-        string resPath = $"Resources/cpuTests/res/MemoryDumps/{binName}.bin";
-        return File.ReadAllBytes(resPath);
-    }
-
-    private static List<string> GetExpectedListing(string binName) {
-        string resPath = $"Resources/cpuTests/res/DumpedListing/{binName}.txt";
+    private static List<string> GetExpectedListing(string goldenKey) {
+        string resPath = $"Resources/cpuTests/res/DumpedListing/{goldenKey}.txt";
         return File.ReadAllLines(resPath).ToList();
     }
 
-    private static void WriteExpectedListing(string binName, List<string> expected) {
+    private static void WriteExpectedListing(string goldenKey, List<string> expected) {
         // Write directly to the source tree so the golden file is committed alongside the code.
         // CallerFilePath gives us the location of MachineTest.cs in the source tree.
         string sourceDir = GetDirectoryName(GetSourceFilePath());
-        string fileName = Path.GetFileName(binName) + ".txt";
+        string fileName = Path.GetFileName(goldenKey) + ".txt";
         string resPath = Path.Join(sourceDir, "Resources", "cpuTests", "res", "DumpedListing", fileName);
         File.WriteAllLines(resPath, expected);
     }
@@ -1081,45 +968,28 @@ public class MachineTest {
             ?? throw new InvalidOperationException($"No directory for path: {path}");
     }
 
-    [AssertionMethod]
-    private static void CompareMemoryWithExpected(IMemory memory, byte[] expected) {
-        if (expected.Length == 0) {
-            return;
-        }
-        byte[] actual = memory.ReadRam((uint)expected.Length);
-        if (!actual.SequenceEqual(expected)) {
-            System.Text.StringBuilder sb = new();
-            for (int i = 0; i < expected.Length; i++) {
-                if (actual[i] != expected[i]) {
-                    sb.AppendLine($"  [{i:X2}] expected=0x{expected[i]:X2} actual=0x{actual[i]:X2}");
-                }
-            }
-            throw new Xunit.Sdk.XunitException("Memory diff:\n" + sb);
-        }
-    }
-
-    private void CompareCfgBlocksJsonWithExpected(string binName, Machine machine) {
+    private void CompareCfgBlocksJsonWithExpected(string goldenKey, Machine machine) {
         ExecutionContextManager contextManager = machine.CfgCpu.ExecutionContextManager;
         string actualBlocksJson = CfgBlocksTestJson.SerializeBlocks(contextManager);
         string actualPartitionsJson = CfgBlocksTestJson.SerializePartitions(contextManager);
-        //WriteExpectedCfgJson(binName, actualBlocksJson, actualPartitionsJson);
-        Assert.Equal(GetExpectedCfgJson(binName, "DumpedCfgBlocks"), actualBlocksJson);
-        Assert.Equal(GetExpectedCfgJson(binName, "DumpedCfgPartitions"), actualPartitionsJson);
+        //WriteExpectedCfgJson(goldenKey, actualBlocksJson, actualPartitionsJson);
+        Assert.Equal(GetExpectedCfgJson(goldenKey, "DumpedCfgBlocks"), actualBlocksJson);
+        Assert.Equal(GetExpectedCfgJson(goldenKey, "DumpedCfgPartitions"), actualPartitionsJson);
     }
 
-    private static string GetExpectedCfgJson(string binName, string subDirectory) {
-        string resPath = $"Resources/cpuTests/res/{subDirectory}/{binName}.json";
+    private static string GetExpectedCfgJson(string goldenKey, string subDirectory) {
+        string resPath = $"Resources/cpuTests/res/{subDirectory}/{goldenKey}.json";
         return File.ReadAllText(resPath);
     }
 
-    private static void WriteExpectedCfgJson(string binName, string blocksJson, string partitionsJson) {
-        WriteCfgResource(binName, "DumpedCfgBlocks", blocksJson);
-        WriteCfgResource(binName, "DumpedCfgPartitions", partitionsJson);
+    private static void WriteExpectedCfgJson(string goldenKey, string blocksJson, string partitionsJson) {
+        WriteCfgResource(goldenKey, "DumpedCfgBlocks", blocksJson);
+        WriteCfgResource(goldenKey, "DumpedCfgPartitions", partitionsJson);
     }
 
-    private static void WriteCfgResource(string binName, string subDirectory, string json) {
+    private static void WriteCfgResource(string goldenKey, string subDirectory, string json) {
         string sourceDir = GetDirectoryName(GetSourceFilePath());
-        string fileName = Path.GetFileName(binName) + ".json";
+        string fileName = Path.GetFileName(goldenKey) + ".json";
         string resPath = Path.Join(sourceDir, "Resources", "cpuTests", "res", subDirectory, fileName);
         Directory.CreateDirectory(GetDirectoryName(resPath));
         File.WriteAllText(resPath, json);

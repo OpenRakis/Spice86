@@ -415,6 +415,32 @@ public sealed class SpeculativeExplorerEdgeWiringTest : SpeculativeTestBase {
     }
 
     /// <summary>
+    /// Under trust the explorer follows the memory continuation of callback instructions only;
+    /// HLT ends the run, so the bytes after it are not decoded.
+    /// </summary>
+    [Fact]
+    public void SeedKnownSafeDoesNotExplorePastHlt() {
+        // Arrange: NOP at 0:0x2000, HLT at 0:0x2001, NOP at 0:0x2002
+        SegmentedAddress entry = new(0, 0x2000);
+        WriteNop(entry);
+        uint physHlt = MemoryUtils.ToPhysicalAddress(0, 0x2001);
+        Memory.UInt8[physHlt] = 0xF4;
+        WriteNop(new SegmentedAddress(0, 0x2002));
+
+        // Act
+        _explorer.SeedKnownSafe(entry);
+
+        // Assert
+        SegmentedAddress hltAddress = new(0, 0x2001);
+        SegmentedAddress afterHltAddress = new(0, 0x2002);
+        NodeIndex.HasAddress(hltAddress).Should().BeTrue("the HLT is reached from the entry");
+        NodeIndex.HasAddress(afterHltAddress).Should().BeFalse(
+            "HLT ends the run, so the explorer must not decode the bytes after it");
+        CfgInstruction hltNode = NodeIndex.GetAtAddress(hltAddress).First();
+        hltNode.Successors.Should().BeEmpty("HLT has no successor");
+    }
+
+    /// <summary>
     /// SeedKnownSafe is a no-op when the explorer is disabled (no node created).
     /// We test this by verifying that when no explorer exists in the feeder, the seed does nothing.
     /// Since we test the explorer directly here, we verify it's a no-op when address is already indexed.

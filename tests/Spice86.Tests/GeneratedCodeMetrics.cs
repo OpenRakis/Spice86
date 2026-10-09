@@ -6,7 +6,8 @@ using System.Linq;
 /// <summary>
 /// Readability metrics for a single generated-code fixture, computed from the Roslyn syntax tree and the
 /// compilation diagnostics. Used by the code-generator quality harness to track how later phases change the
-/// generated output. No assertions are made on these numbers yet; they run dark and are recorded to a file.
+/// generated output. Each row is written to <c>metrics.txt</c> and checked by
+/// <see cref="GeneratedCodeMetricsAssertions"/> on every compile.
 /// </summary>
 internal sealed record GeneratedCodeMetrics {
     public required string Fixture { get; init; }

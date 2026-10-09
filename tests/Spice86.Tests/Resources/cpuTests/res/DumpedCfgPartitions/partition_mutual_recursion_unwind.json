@@ -1,0 +1,116 @@
+{
+  "partitions": [
+    {
+      "id": 1,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        9,
+        14,
+        12
+      ],
+      "entries": [
+        {
+          "block": 9,
+          "address": "F000:0015",
+          "kind": "functionEntry"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        17,
+        24,
+        22
+      ],
+      "entries": [
+        {
+          "block": 17,
+          "address": "F000:0025",
+          "kind": "functionEntry"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        3,
+        46,
+        54,
+        2
+      ],
+      "entries": [
+        {
+          "block": 2,
+          "address": "F000:FFF0",
+          "kind": "executionContextEntry"
+        }
+      ]
+    }
+  ],
+  "transfers": [
+    {
+      "kind": "cyclicCrossPartitionFlow",
+      "fromPartition": 1,
+      "toPartition": 2,
+      "fromBlock": 14,
+      "toBlock": 17,
+      "from": "F000:0018",
+      "target": "F000:0025"
+    },
+    {
+      "kind": "alignedReturn",
+      "fromPartition": 1,
+      "toPartition": 3,
+      "fromBlock": 12,
+      "toBlock": 46,
+      "from": "F000:0024",
+      "target": "F000:000E"
+    },
+    {
+      "kind": "cyclicCrossPartitionFlow",
+      "fromPartition": 2,
+      "toPartition": 1,
+      "fromBlock": 24,
+      "toBlock": 9,
+      "from": "F000:0028",
+      "target": "F000:0015"
+    },
+    {
+      "kind": "alignedReturn",
+      "fromPartition": 2,
+      "toPartition": 3,
+      "fromBlock": 22,
+      "toBlock": 54,
+      "from": "F000:0034",
+      "target": "F000:0014"
+    },
+    {
+      "kind": "callOut",
+      "fromPartition": 3,
+      "toPartition": 1,
+      "fromBlock": 3,
+      "toBlock": 9,
+      "from": "F000:000B",
+      "target": "F000:0015",
+      "callContinuationBlock": 46,
+      "callContinuationAddress": "F000:000E"
+    },
+    {
+      "kind": "callOut",
+      "fromPartition": 3,
+      "toPartition": 2,
+      "fromBlock": 46,
+      "toBlock": 17,
+      "from": "F000:0011",
+      "target": "F000:0025",
+      "callContinuationBlock": 54,
+      "callContinuationAddress": "F000:0014"
+    }
+  ]
+}

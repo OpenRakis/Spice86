@@ -1,0 +1,29 @@
+F000:0000 mov AX,0
+F000:0003 mov DS,AX
+F000:0005 mov SS,AX
+F000:0007 mov SP,0x0100
+F000:000A mov AX,0xF000
+F000:000D mov ES,AX
+F000:000F call near 0x0040
+F000:0012 call far F000:0028
+F000:0017 call near 0x0048
+F000:001A call far F000:0028
+F000:001F call near 0x0050
+F000:0022 call far F000:0028
+F000:0027 hlt
+F000:0028 jmp far F000:003A
+F000:0028 jmp far F000:0034
+F000:0028 jmp far F000:002E
+F000:002E mov byte ptr DS:[0x0010],0xAA
+F000:0033 ret far
+F000:0034 mov byte ptr DS:[0x0011],0xBB
+F000:0039 ret far
+F000:003A mov byte ptr DS:[0x0012],0xCC
+F000:003F ret far
+F000:0040 mov word ptr ES:[0x0029],0x002E
+F000:0047 ret near
+F000:0048 mov word ptr ES:[0x0029],0x0034
+F000:004F ret near
+F000:0050 mov word ptr ES:[0x0029],0x003A
+F000:0057 ret near
+F000:FFF0 jmp short 0

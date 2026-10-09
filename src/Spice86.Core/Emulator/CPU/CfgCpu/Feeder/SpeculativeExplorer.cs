@@ -160,7 +160,7 @@ public class SpeculativeExplorer {
         }
         // No static successors and not a call: either a callback instruction, a RET/IRET, or an indirect jump.
         // Only callback instructions have a meaningful memory continuation; follow it under trust.
-        if (followContinuations && !node.IsReturn && !node.IsJump && !node.IsInvalid) {
+        if (followContinuations && node.MaxSuccessorsCount is null && !node.IsReturn && !node.IsJump && !node.IsInvalid) {
             EnqueueContinuation(node, worklist, InstructionSuccessorType.Normal, followContinuations);
         }
     }
