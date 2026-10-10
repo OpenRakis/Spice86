@@ -6,11 +6,13 @@ using Microsoft.Extensions.Logging;
 
 using NSubstitute;
 
+using Spice86.Core.CLI.RuntimeOptions;
 using Spice86.Core.Emulator.LoadableFile.Dos;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.OperatingSystem;
+using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM.Breakpoint;
@@ -1125,6 +1127,42 @@ public class DosMemoryManagerTests {
         _memoryManager.AllocationStrategy.Should().Be(DosMemoryAllocationStrategy.FirstFit);
     }
 
+    [Fact]
+    public void FreeProcessMemoryCoalescesAdjacentUnlinkedUmbBlocks() {
+        DosMemoryManager memoryManager = CreateUmbMemoryManager(_loggerService);
+        memoryManager.TrySetAllocationStrategy((ushort)DosMemoryAllocationStrategy.FirstFitHighOnlyNoFallback)
+            .Should().BeTrue();
+
+        DosMemoryControlBlock? firstBlock = memoryManager.AllocateMemoryBlock(100);
+        DosMemoryControlBlock? secondBlock = memoryManager.AllocateMemoryBlock(200);
+
+        firstBlock.Should().NotBeNull();
+        secondBlock.Should().NotBeNull();
+        secondBlock!.DataBlockSegment.Should().Be((ushort)(firstBlock!.DataBlockSegment + firstBlock.Size + 1));
+        memoryManager.UmbChainState.Should().Be(0);
+
+        memoryManager.FreeProcessMemory(_initialPspSegment).Should().BeTrue();
+
+        DosMemoryControlBlock firstUmb = new(_memory, MemoryUtils.ToPhysicalAddress(0xD000, 0));
+        firstUmb.IsValid.Should().BeTrue();
+        firstUmb.IsFree.Should().BeTrue();
+        firstUmb.IsLast.Should().BeTrue();
+        firstUmb.Size.Should().Be(0x1FFF);
+    }
+
+    [Fact]
+    public void MemoryMapIsWrittenAtDebugLevel() {
+        CapturingLogger logger = new();
+        DosMemoryManager memoryManager = new(_memory, _initialPspSegment, logger);
+
+        logger.Messages.Should().Contain(message => message.Contains("DOS Memory Map (startup)", StringComparison.Ordinal));
+
+        memoryManager.AllocateMemoryBlock(100).Should().NotBeNull();
+
+        logger.Messages.Should().Contain(message =>
+            message.Contains("DOS Memory Map (AllocateMemoryBlock - allocated", StringComparison.Ordinal));
+    }
+
     /// <summary>
     /// Ensures that the MCB chain check returns true for a valid chain.
     /// </summary>
@@ -1191,17 +1229,35 @@ public class DosMemoryManagerTests {
     }
 
     /// <summary>
-    /// Ensures that setting an invalid allocation strategy (invalid high memory bits) is ignored.
+    /// Ensures that allocation strategies with both DOS high-memory bits set are accepted.
     /// </summary>
     [Fact]
-    public void InvalidAllocationStrategyHighMemBitsIsIgnored() {
-        // Arrange
-        DosMemoryAllocationStrategy originalStrategy = _memoryManager.AllocationStrategy;
+    public void AllocationStrategyAcceptsDosHighMemoryBits() {
+        bool accepted = _memoryManager.TrySetAllocationStrategy(0xC0);
 
-        // Act - try to set invalid high memory bits (0xC0 - both bits 6 and 7 set)
-        _memoryManager.AllocationStrategy = (DosMemoryAllocationStrategy)0xC0;
+        accepted.Should().BeTrue();
+        _memoryManager.AllocationStrategyValue.Should().Be(0xC0);
+    }
 
-        // Assert - should remain unchanged
-        _memoryManager.AllocationStrategy.Should().Be(originalStrategy);
+    private DosMemoryManager CreateUmbMemoryManager(ILogger logger) {
+        DosOptions options = new(null, string.Empty, _initialPspSegment, true, false, true, new DosRuntimeState(null));
+        NullDevice nullDevice = new(logger, _memory, MemoryUtils.ToPhysicalAddress(MemoryMap.DeviceDriversSegment, 0));
+        DosSysVars dosSysVars = new(options, nullDevice, _memory, MemoryUtils.ToPhysicalAddress(DosSysVars.Segment, 0));
+        return new DosMemoryManager(_memory, _initialPspSegment, logger, dosSysVars, true, false);
+    }
+
+    private sealed class CapturingLogger : ILogger {
+        public List<string> Messages { get; } = new();
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => logLevel >= LogLevel.Debug;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+            Func<TState, Exception?, string> formatter) {
+            if (IsEnabled(logLevel)) {
+                Messages.Add(formatter(state, exception));
+            }
+        }
     }
 }

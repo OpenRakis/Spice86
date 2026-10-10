@@ -10,22 +10,28 @@ using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using System.Linq;
+using System.Text;
 
 /// <summary>
 /// Implements DOS memory operations, such as allocating and releasing MCBs.
 /// </summary>
 public class DosMemoryManager {
     internal const ushort LastFreeSegment = MemoryMap.GraphicVideoMemorySegment - 1;
+    private const ushort UmbChainStartSegment = 0x9FFF;
+    private const ushort FirstUmbMcbSegment = 0xD000;
+    private const ushort UmbBridgeOwner = 0x0008;
+    private const ushort UmbWithoutEmsParagraphs = 0x2000;
+    private const ushort UmbWithEmsParagraphs = 0x1000;
     private const ushort FakeMcbSize = 0xFFFF;
     private const byte FitTypeMask = 0x03;
     private const byte MaxValidFitType = 0x02;
-    private const byte ReservedBitsMask = 0x3C;
     private const byte HighMemMask = 0xC0;
-    private const byte HighMemFirstThenLow = 0x40;
-    private const byte HighMemOnlyNoFallback = 0x80;
+    private const byte HighMemFirstThenLow = 0x80;
     private readonly ILogger _loggerService;
     private readonly IMemory _memory;
     private readonly DosMemoryControlBlock _start;
+    private readonly DosMemoryControlBlock? _umbChainStart;
+    private readonly DosSysVars? _dosSysVars;
 
     private readonly DosSwappableDataArea _sda;
 
@@ -36,7 +42,7 @@ public class DosMemoryManager {
     /// The default strategy is <see cref="DosMemoryAllocationStrategy.FirstFit"/> to match MS-DOS behavior.
     /// This can be changed via INT 21h/58h (Get/Set Memory Allocation Strategy).
     /// </remarks>
-    private DosMemoryAllocationStrategy _allocationStrategy = DosMemoryAllocationStrategy.FirstFit;
+    private ushort _allocationStrategy = (ushort)DosMemoryAllocationStrategy.FirstFit;
 
     /// <summary>
     /// Initializes a new instance.
@@ -44,10 +50,29 @@ public class DosMemoryManager {
     /// <param name="memory">The memory bus.</param>
     /// <param name="initialPspSegment">The initial PSP segment for MCB chain setup.</param>
     /// <param name="loggerService">The logger service implementation.</param>
-    public DosMemoryManager(IMemory memory, ushort initialPspSegment, ILogger loggerService) {
+    public DosMemoryManager(IMemory memory, ushort initialPspSegment, ILogger loggerService)
+        : this(memory, initialPspSegment, loggerService, new UmbSetup(null, false, false)) {
+    }
+
+    /// <summary>
+    /// Initializes DOS memory with an optional DOSBox-compatible UMB chain.
+    /// </summary>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="initialPspSegment">The initial PSP segment for MCB chain setup.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="dosSysVars">The DOS InfoBlock containing UMB chain state.</param>
+    /// <param name="umbEnabled">Whether UMBs should be created.</param>
+    /// <param name="emsActive">Whether EMS reserves the upper half of the UMB area.</param>
+    public DosMemoryManager(IMemory memory, ushort initialPspSegment, ILogger loggerService,
+        DosSysVars dosSysVars, bool umbEnabled, bool emsActive)
+        : this(memory, initialPspSegment, loggerService, new UmbSetup(dosSysVars, umbEnabled, emsActive)) {
+    }
+
+    private DosMemoryManager(IMemory memory, ushort initialPspSegment, ILogger loggerService, UmbSetup umbSetup) {
         _loggerService = loggerService;
         _memory = memory;
         _sda = new(_memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
+        _dosSysVars = umbSetup.DosSysVars;
 
         ushort pspSegment = initialPspSegment;
         // The MCB starts 1 paragraph (16 bytes) before the 16 paragraph (256 bytes) PSP. Since
@@ -55,17 +80,20 @@ public class DosMemoryManager {
         // with its address by subtracting 1 paragraph from the PSP.
         ushort loadSegment = (ushort)(pspSegment - 1);
         _start = GetDosMemoryControlBlockFromSegment(loadSegment);
-        // LastFreeSegment and loadSegment are both valid segments that may be allocated, so we
-        // need to add 1 paragraph to the result to ensure that our calculated size doesn't exclude
-        // LastFreeSegment from being allocated. Some games do their own math to calculate the
-        // maximum free conventional memory from the last block that was allocated rather than
-        // asking the memory manager, and if we were off by one, allocation would fail.
-        ushort size = (ushort)((LastFreeSegment - loadSegment) + 1);
-        // We adjusted the start address above so that it starts with the MCB, but the MCB itself
-        // isn't actually useable space. We need it here in the DOS memory manager for accounting.
-        // Therefore subtract the size of the MCB (1 paragraph, which is 16 bytes) from the total
-        // size to get the useable space that we can allocate.
-        _start.Size = (ushort)(size - 1);
+        ushort size;
+        if (umbSetup.IsEnabled) {
+            size = (ushort)(UmbChainStartSegment - loadSegment - 1);
+        } else {
+            // LastFreeSegment and loadSegment are both valid segments that may be allocated, so we
+            // need to add 1 paragraph to the result to ensure that our calculated size doesn't exclude
+            // LastFreeSegment from being allocated. Some games do their own math to calculate the
+            // maximum free conventional memory from the last block that was allocated rather than
+            // asking the memory manager, and if we were off by one, allocation would fail.
+            size = (ushort)((LastFreeSegment - loadSegment) + 1);
+            // The MCB itself isn't usable space, so subtract its paragraph from the total.
+            size = (ushort)(size - 1);
+        }
+        _start.Size = size;
         if (_loggerService.IsEnabled(LogLevel.Information)) {
             _loggerService.LogInformation(
                 "DOS available memory: {ConventionalFree} - in paragraphs: {DosFreeParagraphs}",
@@ -73,31 +101,111 @@ public class DosMemoryManager {
         }
         _start.SetFree();
         _start.SetLast();
+
+        if (umbSetup.IsEnabled) {
+            _umbChainStart = GetDosMemoryControlBlockFromSegment(UmbChainStartSegment);
+            _umbChainStart.PspSegment = UmbBridgeOwner;
+            _umbChainStart.Size = (ushort)(FirstUmbMcbSegment - UmbChainStartSegment - 1);
+            _umbChainStart.SetNonLast();
+            _umbChainStart.SetOwnerName("SC");
+
+            DosMemoryControlBlock firstUmb = GetDosMemoryControlBlockFromSegment(FirstUmbMcbSegment);
+            firstUmb.SetFree();
+            firstUmb.Size = (ushort)((umbSetup.EmsActive ? UmbWithEmsParagraphs : UmbWithoutEmsParagraphs) - 1);
+            firstUmb.SetLast();
+            if (_dosSysVars is not null) {
+                _dosSysVars.StartOfUMBChain = UmbChainStartSegment;
+                _dosSysVars.ChainingUMB = 0;
+            }
+        } else {
+            _umbChainStart = null;
+            if (_dosSysVars is not null) {
+                _dosSysVars.StartOfUMBChain = 0xFFFF;
+                _dosSysVars.ChainingUMB = 0;
+            }
+        }
+
+        // Initial detailed memory map for diagnostics
+        LogMemoryGraphic("startup");
+    }
+
+    private readonly record struct UmbSetup(DosSysVars? DosSysVars, bool IsEnabled, bool EmsActive);
+
+    /// <summary>
+    /// Gets whether an upper-memory chain was created.
+    /// </summary>
+    public bool HasUpperMemoryBlocks => _umbChainStart is not null;
+
+    /// <summary>
+    /// Gets the low bit of the DOS UMB chain link state.
+    /// </summary>
+    public byte UmbChainState => (byte)((_dosSysVars?.ChainingUMB ?? 0) & 1);
+
+    /// <summary>
+    /// Links or unlinks the UMB chain from the conventional MCB chain.
+    /// </summary>
+    /// <param name="linkState">Zero to unlink, one to link.</param>
+    /// <returns>Whether the requested link state was applied.</returns>
+    public bool SetUmbChainLinkState(ushort linkState) {
+        if (!HasUpperMemoryBlocks || _dosSysVars is null || linkState > 1) {
+            return false;
+        }
+        if (UmbChainState == linkState) {
+            return true;
+        }
+
+        DosMemoryControlBlock current = _start;
+        while (true) {
+            ushort currentSegment = MemoryUtils.ToSegment(current.BaseAddress);
+            ushort nextSegment = (ushort)(currentSegment + current.Size + 1);
+            if (nextSegment == UmbChainStartSegment) {
+                if (linkState == 1) {
+                    current.SetNonLast();
+                } else {
+                    current.SetLast();
+                }
+                _dosSysVars.ChainingUMB = (byte)linkState;
+                return true;
+            }
+
+            if (current.IsLast) {
+                return false;
+            }
+
+            DosMemoryControlBlock? next = current.GetNextOrDefault();
+            if (next is null || !next.IsValid) {
+                return false;
+            }
+            current = next;
+        }
     }
 
     /// <summary>
     /// Gets or sets the current memory allocation strategy (INT 21h/58h).
     /// </summary>
     public DosMemoryAllocationStrategy AllocationStrategy {
-        get => _allocationStrategy;
+        get => (DosMemoryAllocationStrategy)_allocationStrategy;
         set {
-            // Validate the strategy - only allow valid combinations
-            byte fitType = (byte)((byte)value & FitTypeMask);
-            if (fitType > MaxValidFitType) {
-                // Invalid fit type, ignore
-                return;
-            }
-            // Validate bits 2-5 must be zero per DOS specification
-            if (((byte)value & ReservedBitsMask) != 0) {
-                return;
-            }
-            byte highMemBits = (byte)((byte)value & HighMemMask);
-            if (highMemBits is not 0x00 and not HighMemFirstThenLow and not HighMemOnlyNoFallback) {
-                // Invalid high memory bits, ignore
-                return;
-            }
-            _allocationStrategy = value;
+            TrySetAllocationStrategy((ushort)value);
         }
+    }
+
+    /// <summary>
+    /// Gets the full allocation strategy value returned by INT 21h/58h.
+    /// </summary>
+    public ushort AllocationStrategyValue => _allocationStrategy;
+
+    /// <summary>
+    /// Validates and updates the DOS memory allocation strategy.
+    /// </summary>
+    /// <param name="strategy">The strategy value from BX.</param>
+    /// <returns>Whether the strategy was accepted.</returns>
+    public bool TrySetAllocationStrategy(ushort strategy) {
+        if ((strategy & 0x3F) > MaxValidFitType) {
+            return false;
+        }
+        _allocationStrategy = strategy;
+        return true;
     }
 
     /// <summary>
@@ -106,6 +214,7 @@ public class DosMemoryManager {
     /// <param name="requestedSizeInParagraphs">The requested size in paragraphs of the memory block.</param>
     /// <returns>The allocated <see cref="DosMemoryControlBlock"/> or <c>null</c> if no memory block could be found.</returns>
     public DosMemoryControlBlock? AllocateMemoryBlock(ushort requestedSizeInParagraphs) {
+        LogMemoryGraphic($"AllocateMemoryBlock - before requested:{requestedSizeInParagraphs}");
         IEnumerable<DosMemoryControlBlock> candidates = FindCandidatesForAllocation(requestedSizeInParagraphs);
 
         // Select block based on allocation strategy
@@ -115,19 +224,33 @@ public class DosMemoryManager {
             if (_loggerService.IsEnabled(LogLevel.Error)) {
                 _loggerService.LogError("Could not find any MCB to fit {RequestedSize}", requestedSizeInParagraphs);
             }
+            LogMemoryGraphic($"AllocateMemoryBlock - failed requested:{requestedSizeInParagraphs}");
             return null;
         }
 
         DosMemoryControlBlock block = blockOptional;
-        if (!SplitBlock(block, requestedSizeInParagraphs)) {
+        byte fitType = (byte)(_allocationStrategy & FitTypeMask);
+        if (fitType == (byte)DosMemoryAllocationStrategy.LastFit) {
+            DosMemoryControlBlock? allocatedBlock = SplitBlockFromEnd(block, requestedSizeInParagraphs);
+            if (allocatedBlock is null) {
+                if (_loggerService.IsEnabled(LogLevel.Error)) {
+                    _loggerService.LogError("Could not split block {Block}", block);
+                }
+                LogMemoryGraphic($"AllocateMemoryBlock - split_failed block:{ConvertUtils.ToHex16(block.DataBlockSegment)}");
+                return null;
+            }
+            block = allocatedBlock;
+        } else if (!SplitBlock(block, requestedSizeInParagraphs)) {
             // An issue occurred while splitting the block
             if (_loggerService.IsEnabled(LogLevel.Error)) {
                 _loggerService.LogError("Could not split block {Block}", block);
             }
+            LogMemoryGraphic($"AllocateMemoryBlock - split_failed block:{ConvertUtils.ToHex16(block.DataBlockSegment)}");
             return null;
         }
 
         block.PspSegment = _sda.CurrentProgramSegmentPrefix;
+        LogMemoryGraphic($"AllocateMemoryBlock - allocated seg:{ConvertUtils.ToHex16(block.DataBlockSegment)} size:{block.Size} psp:{ConvertUtils.ToHex16(block.PspSegment)}");
         return block;
     }
 
@@ -136,9 +259,24 @@ public class DosMemoryManager {
     /// </summary>
     /// <returns>The largest free <see cref="DosMemoryControlBlock"/></returns>
     public DosMemoryControlBlock FindLargestFree() {
-        return EnumerateBlocks()
+        LogMemoryGraphic("FindLargestFree - before");
+        DosMemoryControlBlock res = EnumerateAllocationBlocks()
             .Where(block => block.IsFree)
             .MaxBy(block => block.Size) ?? _start;
+        LogMemoryGraphic("FindLargestFree - after");
+        return res;
+    }
+
+    /// <summary>
+    /// Finds the largest free block considered by the current allocation strategy.
+    /// </summary>
+    /// <returns>The largest free block size, or zero if the strategy's chains have no free blocks.</returns>
+    public ushort FindLargestFreeSizeForAllocation() {
+        return EnumerateAllocationBlocks()
+            .Where(static block => block.IsFree)
+            .Select(static block => block.Size)
+            .DefaultIfEmpty((ushort)0)
+            .Max();
     }
 
     /// <summary>
@@ -171,12 +309,45 @@ public class DosMemoryManager {
     /// <param name="block">The MCB to free.</param>
     /// <returns>Whether the operation was successful.</returns>
     public bool FreeMemoryBlock(DosMemoryControlBlock block) {
+        LogMemoryGraphic($"FreeMemoryBlock - before seg:{ConvertUtils.ToHex16(block.DataBlockSegment)}");
         if (!CheckValidOrLogError(block)) {
+            LogMemoryGraphic($"FreeMemoryBlock - invalid seg:{ConvertUtils.ToHex16(block.DataBlockSegment)}");
             return false;
         }
 
         block.SetFree();
+        LogMemoryGraphic($"FreeMemoryBlock - after freed seg:{ConvertUtils.ToHex16(block.DataBlockSegment)}");
         return true;
+    }
+
+    /// <summary>
+    /// Releases an allocated block in the UMB chain.
+    /// </summary>
+    /// <param name="dataBlockSegment">The segment address of the UMB data block.</param>
+    /// <returns><c>true</c> if an allocated UMB was released; otherwise, <c>false</c>.</returns>
+    public bool FreeUpperMemoryBlock(ushort dataBlockSegment) {
+        if (_umbChainStart is null || dataBlockSegment == 0) {
+            return false;
+        }
+
+        DosMemoryControlBlock? current = _umbChainStart;
+        bool isBridge = true;
+        while (current is not null) {
+            if (!CheckValidOrLogError(current)) {
+                return false;
+            }
+
+            if (!isBridge && current.DataBlockSegment == dataBlockSegment) {
+                return !current.IsFree && FreeMemoryBlock(current);
+            }
+
+            if (current.IsLast) {
+                break;
+            }
+            current = current.GetNextOrDefault();
+            isBridge = false;
+        }
+        return false;
     }
 
     /// <summary>
@@ -199,10 +370,12 @@ public class DosMemoryManager {
     /// <returns>Whether the operation was successful.</returns>
     public DosErrorCode TryModifyBlock(in ushort blockSegment, in ushort requestedSizeInParagraphs,
         out DosMemoryControlBlock block) {
+        LogMemoryGraphic($"TryModifyBlock - start seg:{ConvertUtils.ToHex16(blockSegment)} req:{requestedSizeInParagraphs}");
         block = GetDosMemoryControlBlockFromSegment((ushort)(blockSegment - 1));
         ushort newSizeInParagraphs = requestedSizeInParagraphs;
 
         if (!CheckValidOrLogError(block)) {
+            LogMemoryGraphic($"TryModifyBlock - invalid mcb seg:{ConvertUtils.ToHex16(blockSegment)}");
             return DosErrorCode.MemoryControlBlockDestroyed;
         }
 
@@ -216,6 +389,7 @@ public class DosMemoryManager {
             if (_loggerService.IsEnabled(LogLevel.Error)) {
                 _loggerService.LogError("Could not join MCB {Block}", block);
             }
+            LogMemoryGraphic($"TryModifyBlock - join_failed seg:{ConvertUtils.ToHex16(block.DataBlockSegment)}");
             return DosErrorCode.InsufficientMemory;
         }
 
@@ -229,6 +403,7 @@ public class DosMemoryManager {
                     _loggerService.LogTrace("Next MCB is {Block}", nextBlock);
                 }
             }
+            LogMemoryGraphic($"TryModifyBlock - too_small seg:{ConvertUtils.ToHex16(block.DataBlockSegment)} req:{newSizeInParagraphs} size:{block.Size}");
             return DosErrorCode.InsufficientMemory;
         }
 
@@ -236,6 +411,7 @@ public class DosMemoryManager {
             SplitBlock(block, newSizeInParagraphs);
         }
         block.PspSegment = _sda.CurrentProgramSegmentPrefix;
+        LogMemoryGraphic($"TryModifyBlock - success seg:{ConvertUtils.ToHex16(block.DataBlockSegment)} size:{block.Size}");
         return DosErrorCode.NoError;
     }
 
@@ -481,30 +657,122 @@ public class DosMemoryManager {
     }
 
     private List<DosMemoryControlBlock> FindCandidatesForAllocation(int requestedSize) {
-        DosMemoryControlBlock? current = _start;
         List<DosMemoryControlBlock> candidates = new();
-        while (true) {
-            if (!CheckValidOrLogError(current)) {
-                return new List<DosMemoryControlBlock>();
-            }
-            JoinBlocks(current, true);
-            if (current?.IsFree == true && current.Size >= requestedSize) {
-                candidates.Add(current);
-            }
-            if (current?.IsLast == true) {
+        byte highMemoryStrategy = (byte)(_allocationStrategy & HighMemMask);
+        if (highMemoryStrategy != 0 && _umbChainStart is not null) {
+            AddAllocationCandidates(_umbChainStart, requestedSize, UmbChainState != 0, candidates);
+            if ((highMemoryStrategy & HighMemFirstThenLow) == 0) {
                 return candidates;
             }
+        }
+        AddAllocationCandidates(_start, requestedSize, true, candidates);
+        return candidates;
+    }
 
-            DosMemoryControlBlock? next = current?.GetNextOrDefault();
-
-            if (next is not null) {
-                current = next;
+    private void AddAllocationCandidates(DosMemoryControlBlock start, int requestedSize,
+        bool compressChain, List<DosMemoryControlBlock> candidates) {
+        DosMemoryControlBlock? current = start;
+        while (current is not null) {
+            if (!CheckValidOrLogError(current)) {
+                candidates.Clear();
+                return;
             }
+            if (compressChain) {
+                JoinBlocks(current, true);
+            }
+            if (current.IsFree && current.Size >= requestedSize) {
+                candidates.Add(current);
+            }
+            if (current.IsLast) {
+                return;
+            }
+            current = current.GetNextOrDefault();
+        }
+    }
+
+    private IEnumerable<DosMemoryControlBlock> EnumerateAllocationBlocks() {
+        byte highMemoryStrategy = (byte)(_allocationStrategy & HighMemMask);
+        if (highMemoryStrategy != 0 && _umbChainStart is not null) {
+            foreach (DosMemoryControlBlock block in EnumerateChain(_umbChainStart)) {
+                yield return block;
+            }
+            if ((highMemoryStrategy & HighMemFirstThenLow) == 0) {
+                yield break;
+            }
+        }
+        foreach (DosMemoryControlBlock block in EnumerateChain(_start)) {
+            yield return block;
+        }
+    }
+
+    private static IEnumerable<DosMemoryControlBlock> EnumerateChain(DosMemoryControlBlock start) {
+        DosMemoryControlBlock? current = start;
+        while (current is not null) {
+            yield return current;
+            if (current.IsLast) {
+                yield break;
+            }
+            current = current.GetNextOrDefault();
         }
     }
 
     private DosMemoryControlBlock GetDosMemoryControlBlockFromSegment(ushort blockSegment) {
         return new DosMemoryControlBlock(_memory, MemoryUtils.ToPhysicalAddress(blockSegment, 0));
+    }
+
+    /// <summary>
+    /// Dumps an ASCII memory map at debug level for diagnostic comparison across calls.
+    /// </summary>
+    /// <param name="context">A short context string indicating the caller or event.</param>
+    private void LogMemoryGraphic(string context) {
+        if (!_loggerService.IsEnabled(LogLevel.Debug)) {
+            return;
+        }
+
+        var blocks = EnumerateBlocks().ToList();
+        if (blocks.Count == 0) {
+            _loggerService.LogDebug("DOS Memory Map ({Context}): no blocks", context);
+            return;
+        }
+
+        int totalParagraphs = blocks.Sum(b => (int)b.Size + 1);
+        int width = 96; // fixed output width for comparability
+        int paragraphsPerChar = Math.Max(1, (int)Math.Ceiling(totalParagraphs / (double)width));
+
+        var sb = new StringBuilder();
+        sb.AppendLine($"DOS Memory Map ({context}) total paragraphs: {totalParagraphs} (par/char~{paragraphsPerChar})");
+
+        var bar = new StringBuilder();
+        foreach (var b in blocks) {
+            int blockParagraphs = (int)b.Size + 1;
+            int chars = Math.Max(1, (int)Math.Round(blockParagraphs / (double)paragraphsPerChar));
+            char ch;
+            if (!b.IsValid) {
+                ch = '!';
+            } else if (b.Size == FakeMcbSize) {
+                ch = 'x';
+            } else if (b.IsFree) {
+                ch = '.';
+            } else {
+                ch = '#';
+            }
+
+            for (int i = 0; i < chars; i++) {
+                bar.Append(ch);
+            }
+        }
+
+        sb.AppendLine(bar.ToString());
+
+        // Detailed legend per block to match positions roughly. Include start segment and size
+        foreach (var b in blocks) {
+            string seg = ConvertUtils.ToHex16(b.DataBlockSegment);
+            string psp = ConvertUtils.ToHex16(b.PspSegment);
+            string owner = string.IsNullOrEmpty(b.Owner) ? "" : b.Owner.Trim();
+            sb.AppendLine($"{seg} | {(b.IsFree ? "FREE " : "USED ")} Size:{b.Size,5} par Owner:{owner,-8} PSP:{psp} Last:{b.IsLast}");
+        }
+
+        _loggerService.LogDebug(sb.ToString());
     }
 
     private bool JoinBlocks(DosMemoryControlBlock? block, bool onlyIfFree) {
@@ -589,20 +857,36 @@ public class DosMemoryManager {
         return true;
     }
 
+    private DosMemoryControlBlock? SplitBlockFromEnd(DosMemoryControlBlock block, ushort size) {
+        ushort blockSize = block.Size;
+        if (blockSize < size) {
+            return null;
+        }
+        if (blockSize == size) {
+            return block;
+        }
+
+        ushort mcbSegment = MemoryUtils.ToSegment(block.BaseAddress);
+        ushort allocationMcbSegment = (ushort)(mcbSegment + blockSize - size);
+        byte originalType = block.TypeField;
+        block.Size = (ushort)(blockSize - size - 1);
+        block.SetNonLast();
+        block.SetFree();
+
+        DosMemoryControlBlock allocatedBlock = GetDosMemoryControlBlockFromSegment(allocationMcbSegment);
+        allocatedBlock.TypeField = originalType;
+        allocatedBlock.Size = size;
+        return allocatedBlock;
+    }
+
     /// <summary>
     /// Selects a memory block based on the current allocation strategy.
     /// </summary>
     /// <param name="candidates">List of candidate blocks that fit the requested size.</param>
     /// <returns>The selected block or null if none found.</returns>
-    /// <remarks>
-    /// Note: High memory bits (bits 6-7) of the allocation strategy are currently not handled.
-    /// This method only implements low memory allocation strategies. UMB (Upper Memory Block)
-    /// support would need to be added to handle strategies like FirstFitHighThenLow (0x40) or
-    /// FirstFitHighOnlyNoFallback (0x80).
-    /// </remarks>
     private DosMemoryControlBlock? SelectBlockByStrategy(IEnumerable<DosMemoryControlBlock> candidates) {
         // Get the fit type from the lower 2 bits of the strategy
-        byte fitType = (byte)((byte)_allocationStrategy & FitTypeMask);
+        byte fitType = (byte)(_allocationStrategy & FitTypeMask);
 
         DosMemoryControlBlock? selectedBlock = null;
 
@@ -672,8 +956,23 @@ public class DosMemoryManager {
     /// <param name="pspSegment">The PSP segment whose memory should be freed.</param>
     /// <returns><c>true</c> if all blocks were freed successfully, <c>false</c> if an error occurred.</returns>
     public bool FreeProcessMemory(ushort pspSegment) {
-        DosMemoryControlBlock? current = _start;
+        LogMemoryGraphic($"FreeProcessMemory - start psp:{ConvertUtils.ToHex16(pspSegment)}");
+        if (!FreeProcessMemoryChain(_start, pspSegment, true)) {
+            LogMemoryGraphic($"FreeProcessMemory - failed corrupted psp:{ConvertUtils.ToHex16(pspSegment)}");
+            return false;
+        }
+        if (_umbChainStart is not null && UmbChainState == 0 &&
+            !FreeProcessMemoryChain(_umbChainStart, pspSegment, true)) {
+            LogMemoryGraphic($"FreeProcessMemory - failed corrupted psp:{ConvertUtils.ToHex16(pspSegment)}");
+            return false;
+        }
 
+        LogMemoryGraphic($"FreeProcessMemory - done psp:{ConvertUtils.ToHex16(pspSegment)}");
+        return true;
+    }
+
+    private bool FreeProcessMemoryChain(DosMemoryControlBlock? current, ushort pspSegment, bool compressFreeBlocks) {
+        DosMemoryControlBlock? chainStart = current;
         while (current is not null) {
             if (!current.IsValid) {
                 if (_loggerService.IsEnabled(LogLevel.Error)) {
@@ -681,21 +980,37 @@ public class DosMemoryManager {
                 }
                 return false;
             }
-
-            // Free blocks owned by this PSP
             if (current.PspSegment == pspSegment) {
                 current.SetFree();
-                // Coalesce adjacent free blocks
-                JoinBlocks(current, true);
             }
-
             if (current.IsLast) {
                 break;
             }
-
             current = current.GetNextOrDefault();
         }
 
+        if (!compressFreeBlocks) {
+            return true;
+        }
+
+        // Free all process blocks before coalescing so adjacent blocks owned by the same process
+        // are merged even when the chain was traversed from low to high addresses.
+        current = chainStart;
+        while (current is not null) {
+            if (!current.IsValid) {
+                if (_loggerService.IsEnabled(LogLevel.Error)) {
+                    _loggerService.LogError("MCB chain corrupted while coalescing process memory");
+                }
+                return false;
+            }
+            if (current.IsFree && !JoinBlocks(current, true)) {
+                return false;
+            }
+            if (current.IsLast) {
+                break;
+            }
+            current = current.GetNextOrDefault();
+        }
         return true;
     }
 
@@ -710,9 +1025,12 @@ public class DosMemoryManager {
             return true;
         }
 
+        LogMemoryGraphic($"FreeEnvironmentBlock - start env:{ConvertUtils.ToHex16(environmentSegment)} owner:{ConvertUtils.ToHex16(ownerPspSegment)}");
+
         ushort mcbSegment = (ushort)(environmentSegment - 1);
         DosMemoryControlBlock block = GetDosMemoryControlBlockFromSegment(mcbSegment);
         if (!CheckValidOrLogError(block)) {
+            LogMemoryGraphic($"FreeEnvironmentBlock - invalid mcb env:{ConvertUtils.ToHex16(environmentSegment)}");
             return false;
         }
 
@@ -722,12 +1040,13 @@ public class DosMemoryManager {
                     "Environment block at {EnvSegment:X4} not owned by PSP {Owner:X4}, skipping free",
                     environmentSegment, ownerPspSegment);
             }
+            LogMemoryGraphic($"FreeEnvironmentBlock - skipped not owner env:{ConvertUtils.ToHex16(environmentSegment)} owner:{ConvertUtils.ToHex16(ownerPspSegment)}");
             return true;
         }
 
         block.SetFree();
         JoinBlocks(_start, true);
+        LogMemoryGraphic($"FreeEnvironmentBlock - freed env:{ConvertUtils.ToHex16(environmentSegment)} owner:{ConvertUtils.ToHex16(ownerPspSegment)}");
         return true;
     }
 }
-

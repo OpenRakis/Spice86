@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
+using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
@@ -192,7 +193,8 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="channelCreator">The sound channel creator, used to stream CD audio when an image is mounted.</param>
     /// <param name="activityNotifier">Notifier that surfaces per-drive read/write activity to the UI.</param>
-    /// <param name="xms">Optional XMS manager to expose through DOS.</param>
+    /// <param name="a20Gate">The A20 gate used by XMS.</param>
+    /// <param name="memoryAsmWriter">Writes the XMS callback into emulated memory.</param>
     public Dos(DosOptions options, IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,
@@ -201,9 +203,9 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         FloppyDiskTimingService floppyDiskTimingService,
         ISoundChannelCreator channelCreator,
         IDriveActivityNotifier activityNotifier,
-        ExtendedMemoryManager? xms) {
+        A20Gate a20Gate,
+        MemoryAsmWriter memoryAsmWriter) {
         _loggerService = loggerService;
-        Xms = xms;
         _biosKeyboardBuffer = biosKeyboardBuffer;
         _memory = memory;
         _biosDataArea = biosDataArea;
@@ -245,7 +247,13 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         // Initialize memory manager first - it must know about the root COMMAND.COM reserved space
         // Root PSP is at 0x60, environment at 0x68, so MCB chain starts after 0x6F
         // This matches FreeDOS where DOS_PSP + 16 paragraphs is reserved
-        MemoryManager = new DosMemoryManager(_memory, initialPspSegment, loggerService);
+        bool umbEnabled = options.Umb && options.Xms is not false;
+        MemoryManager = new DosMemoryManager(_memory, initialPspSegment, loggerService,
+            DosSysVars, umbEnabled, options.Ems is not false);
+        if (options.Xms is not false) {
+            Xms = new ExtendedMemoryManager(memory, state, a20Gate, memoryAsmWriter,
+                DosTables, MemoryManager, loggerService);
+        }
 
         FcbManager = new(_memory, FileManager, DosDriveManager, _loggerService);
         IBatchDisplayCommandHandler batchDisplayCommandHandler = new DosBatchDisplayCommandHandler(_vgaFunctionality);
@@ -261,7 +269,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, DosInt21Handler, _loggerService);
         DosInt2aHandler = new DosInt2aHandler(_memory, functionHandlerProvider, stack, state, _loggerService);
         DosInt2FHandler = new DosInt2fHandler(_memory,
-            functionHandlerProvider, stack, state, _loggerService, _mscdex, xms);
+            functionHandlerProvider, stack, state, _loggerService, _mscdex, Xms);
         DosInt25Handler = new DosDiskInt25Handler(_memory, DosDriveManager,
             functionHandlerProvider, stack, state, floppyDiskTimingService, _loggerService);
         DosInt26Handler = new DosDiskInt26Handler(_memory, DosDriveManager,
@@ -279,9 +287,8 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         }
         OpenDefaultFileHandles(dosDevices);
 
-        if (options.Xms is not false && xms is not null) {
-            Xms = xms;
-            AddDevice(xms, ExtendedMemoryManager.DosDeviceSegment, 0);
+        if (options.Xms is not false && Xms is not null) {
+            AddDevice(Xms, ExtendedMemoryManager.DosDeviceSegment, 0);
         }
 
         if (options.Ems is not false) {
