@@ -447,6 +447,12 @@ public class MachineTest {
 
     [Theory]
     [MemberData(nameof(JitModes))]
+    public void TestIoPorts(JitMode jitMode) {
+        TestOneBin(AsmFixtureCatalog.IoPorts(), jitMode);
+    }
+
+    [Theory]
+    [MemberData(nameof(JitModes))]
     public void TestInteriorEntryIrq(JitMode jitMode) {
         TestOneBin(AsmFixtureCatalog.InteriorEntry(), jitMode);
     }

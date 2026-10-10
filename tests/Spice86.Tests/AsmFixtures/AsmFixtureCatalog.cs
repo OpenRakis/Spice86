@@ -181,6 +181,24 @@ internal static class AsmFixtureCatalog {
         return MemoryFixture(settings, expectedMemory);
     }
 
+    /// <summary>Runs ioports: every IN/OUT/INS/OUTS form reads back through a latch port.</summary>
+    public static AsmFixture IoPorts() {
+        byte[] expectedMemory = [
+            0x5A, 0x00, 0x5A, 0xA5, 0x78, 0x56, 0x34, 0x12,
+            0xC3, 0x00, 0xC3, 0x3C, 0x21, 0x43, 0x65, 0x87,
+            0x11, 0x00, 0x1A, 0x2B, 0x0A, 0x0B, 0x0C, 0x0D,
+            0xEE, 0xEE, 0xEE, 0xEE, 0x9A, 0x00, 0xA6, 0xB7,
+            0xC4, 0xD3, 0xE2, 0xF1, 0x03,
+        ];
+        AsmRunSettings settings = new() {
+            BinName = "ioports",
+            MaxCycles = 10000,
+            FailOnUnhandledPort = true,
+            ConfigureMachine = machine => new LatchIoPortHandler(machine.CpuState, Substitute.For<ILogger>(), machine.IoPortDispatcher, 0xE0)
+        };
+        return MemoryFixture(settings, expectedMemory);
+    }
+
     /// <summary>Runs the interior-entry IRQ fixture: all three phases finish without an IRQ seeing a broken stack.</summary>
     public static AsmFixture InteriorEntry() {
         AsmRunSettings settings = new() {
