@@ -1,0 +1,311 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0xF000;
+
+        DefineFunction(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, name: "unknown");
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        // F000:0000 mov CX,0
+        CX = 0;
+        // F000:0003 mov BX,0x0040
+        BX = 0x0040;
+        // F000:0006 mov SP,0x1000
+        SP = 0x1000;
+        // F000:0009 mov SS,SP
+        SS = SP;
+        State.InterruptShadowing = true;
+        // F000:000B push BX
+        Stack.Push16(BX);
+        // F000:000C jmp short 0x0010
+        // F000:0010 stc
+        CarryFlag = true;
+        // F000:0011 ja short 0x000E
+        if (!CarryFlag && !ZeroFlag) {
+            throw FailAsUntested("Untested jump at F000:0011");
+        }
+        // F000:0013 clc
+        CarryFlag = false;
+        // F000:0014 ja short 0x0018
+        if (!(!CarryFlag && !ZeroFlag)) {
+            throw FailAsUntested("Untested fallthrough at F000:0014");
+        }
+        // F000:0018 stc
+        CarryFlag = true;
+        // F000:0019 jae short 0x0016
+        if (!CarryFlag) {
+            throw FailAsUntested("Untested jump at F000:0019");
+        }
+        // F000:001B clc
+        CarryFlag = false;
+        // F000:001C jae short 0x0020
+        if (CarryFlag) {
+            throw FailAsUntested("Untested fallthrough at F000:001C");
+        }
+        // F000:0020 jb short 0x001E
+        if (CarryFlag) {
+            throw FailAsUntested("Untested jump at F000:0020");
+        }
+        // F000:0022 stc
+        CarryFlag = true;
+        // F000:0023 jb short 0x0027
+        if (!CarryFlag) {
+            throw FailAsUntested("Untested fallthrough at F000:0023");
+        }
+        // F000:0027 clc
+        CarryFlag = false;
+        // F000:0028 jbe short 0x0025
+        if (CarryFlag || ZeroFlag) {
+            throw FailAsUntested("Untested jump at F000:0028");
+        }
+        // F000:002A popf
+        FlagRegister16 = Stack.Pop16();
+        CheckExternalEvents(cs1, 0x002B);
+        // F000:002B jbe short 0x002F
+        if (!(CarryFlag || ZeroFlag)) {
+            throw FailAsUntested("Untested fallthrough at F000:002B");
+        }
+        // F000:002F push CX
+        Stack.Push16(CX);
+        // F000:0030 popf
+        FlagRegister16 = Stack.Pop16();
+        CheckExternalEvents(cs1, 0x0031);
+        // F000:0031 je short 0x002D
+        if (ZeroFlag) {
+            throw FailAsUntested("Untested jump at F000:0031");
+        }
+        // F000:0033 push BX
+        Stack.Push16(BX);
+        // F000:0034 popf
+        FlagRegister16 = Stack.Pop16();
+        CheckExternalEvents(cs1, 0x0035);
+        // F000:0035 je short 0x0039
+        if (!ZeroFlag) {
+            throw FailAsUntested("Untested fallthrough at F000:0035");
+        }
+        // F000:0039 mov DX,0x08C0
+        DX = 0x08C0;
+        // F000:003C push DX
+        Stack.Push16(DX);
+        // F000:003D popf
+        FlagRegister16 = Stack.Pop16();
+        CheckExternalEvents(cs1, 0x003E);
+        // F000:003E jg short 0x0037
+        if (!ZeroFlag && SignFlag == OverflowFlag) {
+            throw FailAsUntested("Untested jump at F000:003E");
+        }
+        // F000:0040 mov DX,0x0880
+        DX = 0x0880;
+        // F000:0043 push DX
+        Stack.Push16(DX);
+        // F000:0044 popf
+        FlagRegister16 = Stack.Pop16();
+        CheckExternalEvents(cs1, 0x0045);
+        // F000:0045 jg short 0x0049
+        if (!(!ZeroFlag && SignFlag == OverflowFlag)) {
+            throw FailAsUntested("Untested fallthrough at F000:0045");
+        }
+        // F000:0049 mov DX,0x0080
+        DX = 0x0080;
+        // F000:004C push DX
+        Stack.Push16(DX);
+        // F000:004D popf
+        FlagRegister16 = Stack.Pop16();
+        CheckExternalEvents(cs1, 0x004E);
+        // F000:004E jge short 0x0047
+        if (SignFlag == OverflowFlag) {
+            throw FailAsUntested("Untested jump at F000:004E");
+        }
+        // F000:0050 push CX
+        Stack.Push16(CX);
+        // F000:0051 popf
+        FlagRegister16 = Stack.Pop16();
+        CheckExternalEvents(cs1, 0x0052);
+        // F000:0052 jge short 0x0056
+        if (!(SignFlag == OverflowFlag)) {
+            throw FailAsUntested("Untested fallthrough at F000:0052");
+        }
+        // F000:0056 jl short 0x0054
+        if (SignFlag != OverflowFlag) {
+            throw FailAsUntested("Untested jump at F000:0056");
+        }
+        // F000:0058 mov DX,0x0800
+        DX = 0x0800;
+        // F000:005B push DX
+        Stack.Push16(DX);
+        // F000:005C popf
+        FlagRegister16 = Stack.Pop16();
+        CheckExternalEvents(cs1, 0x005D);
+        // F000:005D jl short 0x0061
+        if (!(SignFlag != OverflowFlag)) {
+            throw FailAsUntested("Untested fallthrough at F000:005D");
+        }
+        // F000:0061 push CX
+        Stack.Push16(CX);
+        // F000:0062 popf
+        FlagRegister16 = Stack.Pop16();
+        CheckExternalEvents(cs1, 0x0063);
+        // F000:0063 jle short 0x005F
+        if (ZeroFlag || SignFlag != OverflowFlag) {
+            throw FailAsUntested("Untested jump at F000:0063");
+        }
+        // F000:0065 push BX
+        Stack.Push16(BX);
+        // F000:0066 popf
+        FlagRegister16 = Stack.Pop16();
+        CheckExternalEvents(cs1, 0x0067);
+        // F000:0067 jle short 0x006B
+        if (!(ZeroFlag || SignFlag != OverflowFlag)) {
+            throw FailAsUntested("Untested fallthrough at F000:0067");
+        }
+        // F000:006B jne short 0x0069
+        if (!ZeroFlag) {
+            throw FailAsUntested("Untested jump at F000:006B");
+        }
+        // F000:006D mov DX,0x0CBF
+        DX = 0x0CBF;
+        // F000:0070 push DX
+        Stack.Push16(DX);
+        // F000:0071 popf
+        FlagRegister16 = Stack.Pop16();
+        CheckExternalEvents(cs1, 0x0072);
+        // F000:0072 jne short 0x0077
+        if (ZeroFlag) {
+            throw FailAsUntested("Untested fallthrough at F000:0072");
+        }
+        // F000:0077 mov DX,0x0800
+        DX = 0x0800;
+        // F000:007A push DX
+        Stack.Push16(DX);
+        // F000:007B popf
+        FlagRegister16 = Stack.Pop16();
+        CheckExternalEvents(cs1, 0x007C);
+        // F000:007C jno short 0x0074
+        if (!OverflowFlag) {
+            throw FailAsUntested("Untested jump at F000:007C");
+        }
+        // F000:007E mov DX,0x06FF
+        DX = 0x06FF;
+        // F000:0081 push DX
+        Stack.Push16(DX);
+        // F000:0082 popf
+        FlagRegister16 = Stack.Pop16();
+        CheckExternalEvents(cs1, 0x0083);
+        // F000:0083 jno short 0x0088
+        if (OverflowFlag) {
+            throw FailAsUntested("Untested fallthrough at F000:0083");
+        }
+        // F000:0088 mov DX,4
+        DX = 4;
+        // F000:008B push DX
+        Stack.Push16(DX);
+        // F000:008C popf
+        FlagRegister16 = Stack.Pop16();
+        CheckExternalEvents(cs1, 0x008D);
+        // F000:008D jnp short 0x0085
+        if (!ParityFlag) {
+            throw FailAsUntested("Untested jump at F000:008D");
+        }
+        // F000:008F push CX
+        Stack.Push16(CX);
+        // F000:0090 popf
+        FlagRegister16 = Stack.Pop16();
+        CheckExternalEvents(cs1, 0x0091);
+        // F000:0091 jnp short 0x0096
+        if (ParityFlag) {
+            throw FailAsUntested("Untested fallthrough at F000:0091");
+        }
+        // F000:0096 mov DX,0x0EFF
+        DX = 0x0EFF;
+        // F000:0099 push DX
+        Stack.Push16(DX);
+        // F000:009A popf
+        FlagRegister16 = Stack.Pop16();
+        CheckExternalEvents(cs1, 0x009B);
+        // F000:009B jns short 0x0093
+        if (!SignFlag) {
+            throw FailAsUntested("Untested jump at F000:009B");
+        }
+        // F000:009D push CX
+        Stack.Push16(CX);
+        // F000:009E popf
+        FlagRegister16 = Stack.Pop16();
+        CheckExternalEvents(cs1, 0x009F);
+        // F000:009F jns short 0x00A4
+        if (SignFlag) {
+            throw FailAsUntested("Untested fallthrough at F000:009F");
+        }
+        // F000:00A4 jo short 0x00A1
+        if (OverflowFlag) {
+            throw FailAsUntested("Untested jump at F000:00A4");
+        }
+        // F000:00A6 mov DX,0x0800
+        DX = 0x0800;
+        // F000:00A9 push DX
+        Stack.Push16(DX);
+        // F000:00AA popf
+        FlagRegister16 = Stack.Pop16();
+        CheckExternalEvents(cs1, 0x00AB);
+        // F000:00AB jo short 0x00B0
+        if (!OverflowFlag) {
+            throw FailAsUntested("Untested fallthrough at F000:00AB");
+        }
+        // F000:00B0 jp short 0x00AD
+        if (ParityFlag) {
+            throw FailAsUntested("Untested jump at F000:00B0");
+        }
+        // F000:00B2 mov DX,0x0804
+        DX = 0x0804;
+        // F000:00B5 push DX
+        Stack.Push16(DX);
+        // F000:00B6 popf
+        FlagRegister16 = Stack.Pop16();
+        CheckExternalEvents(cs1, 0x00B7);
+        // F000:00B7 jp short 0x00BC
+        if (!ParityFlag) {
+            throw FailAsUntested("Untested fallthrough at F000:00B7");
+        }
+        // F000:00BC js short 0x00B9
+        if (SignFlag) {
+            throw FailAsUntested("Untested jump at F000:00BC");
+        }
+        // F000:00BE mov DX,0x0884
+        DX = 0x0884;
+        // F000:00C1 push DX
+        Stack.Push16(DX);
+        // F000:00C2 popf
+        FlagRegister16 = Stack.Pop16();
+        CheckExternalEvents(cs1, 0x00C3);
+        // F000:00C3 js short 0x00C8
+        if (!SignFlag) {
+            throw FailAsUntested("Untested fallthrough at F000:00C3");
+        }
+        // F000:00C8 mov word ptr DS:[0],0x1234
+        UInt16[DS, 0] = 0x1234;
+        // F000:00CE hlt
+        return Hlt();
+    }
+
+}

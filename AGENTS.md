@@ -226,10 +226,12 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 - **Prefer ASM-based tests over unit tests** for testing the emulator
   - Unit tests are acceptable for interrupt handlers that don't override `WriteAssemblyInRam` and deal with few dependencies
   - Use assembly-based integration tests for comprehensive emulator validation
-- **Every `MachineTest` scenario must also be covered by `GeneratedCodeMachineTest`**
-  - `MachineTest` (`TestOneBin`) only runs the interpreter and compares golden listings/dumps; it never invokes the C# generator.
-  - `GeneratedCodeMachineTest` (via `GeneratedCodeMachineTestRunner.TestGeneratedCode`) is the execute-then-generate-from-trace path: it runs the bin in the interpreter, generates C# from the recorded CFG/trace, compiles it, then re-runs the bin with the compiled override installed and asserts the memory dump.
-  - When adding or changing an ASM fixture in `MachineTest`, add the matching `GeneratedCodeMachineTest` entry for the same bin so the code generator is exercised on it too. Bugs in code generation (e.g. control-flow lowering) are only caught by the generated-code path.
+- **Every ASM fixture runs in both `MachineTest` and `GeneratedCodeMachineTest`**
+  - Every ASM fixture has one behavioral oracle (expected memory and/or program-result checks) in `tests/Spice86.Tests/AsmFixtures/AsmFixtureCatalog.cs`. `MachineTest` and `GeneratedCodeMachineTest` both take the fixture from the catalogue; never copy expected values into a test class.
+  - `MachineTest` (`TestOneBin`) only runs the interpreter. It checks the oracle, the listing and CFG goldens, and engine state (CFG nodes, `CS:IP`, `IsRunning`) in its own callbacks. It never invokes the C# generator.
+  - `GeneratedCodeMachineTest` (via `GeneratedCodeMachineTestRunner.TestGeneratedCode`) runs the bin in the interpreter, generates C# from the recorded CFG, compiles it, re-runs the bin with the compiled override installed, checks the same oracle, then compares the generated-code golden.
+  - When adding or changing an ASM fixture, add or update its catalogue method and both tests. Code-generation bugs are only caught by the generated-code path, and emulator CFG changes only by the MachineTest goldens.
+  - This holds for every configuration of a bin: a fixture with speculation off or on the unobserved arm of a speculative bin gets its own MachineTest run, with listing / CFG goldens named <bin>.nospec / <bin>.unobserved (MachineTest.MachineGoldenKey). The only exceptions are engine-only fixtures without an oracle, listed in AsmFixtureGoldenCoverageTest.
 - Use FluentAssertions for assertions: `result.Should().Be(expected)`
 - Mock with NSubstitute: `Substitute.For<IInterface>()`
 - CPU tests in `tests/Spice86.Tests/CpuTests/` use SingleStepTests NuGet packages for validation

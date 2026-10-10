@@ -2,19 +2,18 @@ namespace Spice86.Tests;
 
 using FluentAssertions;
 
-using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
-using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
 
+using Spice86.Tests.AsmFixtures;
+
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 
 using Xunit;
@@ -38,38 +37,10 @@ public sealed class SpeculativeCfgTest {
     /// </summary>
     [Fact]
     public void SpeculativeBranchExecutesCorrectlyOnBothPaths() {
-        // Single discovery run with selector=0 (only observes fallthrough path)
-        GeneratedCodeRunOptions discoveryOptions = new() {
-            MaxCycles = 1000,
-            EnableSpeculativeCfgExploration = true
-        };
-        GeneratedCodeMachineTestRunner runner = new();
-        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("speculative_branch", discoveryOptions);
-
-        // Compile the override generated from selector=0 discovery
-        using CompiledGeneratedOverride compiledOverride =
-            runner.CompileGeneratedProgram("speculative_branch", generatedProgram, discoveryOptions);
-
-        // Run with selector=0 (observed path) - should produce 0xDD
-        byte[] expectedDiscovery = new byte[0x403];
-        expectedDiscovery[0x400] = 0x01;
-        expectedDiscovery[0x401] = 0xDD;
-        expectedDiscovery[0x402] = 0xAA;
-
-        RunWithCompiledOverride("speculative_branch", compiledOverride, expectedDiscovery, 1000);
-
-        // Run with selector=1 (speculative path) using the SAME generated code
-        // The override must handle this path via the guarded speculative branch.
-        byte[] expectedSpeculative = new byte[0x403];
-        expectedSpeculative[0x400] = 0x01;
-        expectedSpeculative[0x401] = 0xEE;
-        expectedSpeculative[0x402] = 0xAA;
-
-        RunWithCompiledOverride("speculative_branch", compiledOverride, expectedSpeculative, 1000,
-            machine => { machine.Memory.UInt8[0, 0x0500] = 0x01; });
-
-        runner.CompareGeneratedSourceWithExpected(
-            GeneratedCodeMachineTestRunner.GoldenKey("speculative_branch", discoveryOptions), generatedProgram);
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(
+            AsmFixtureCatalog.SpeculativeBranch(SpeculativeArm.Observed),
+            [AsmFixtureCatalog.SpeculativeBranch(SpeculativeArm.Observed),
+             AsmFixtureCatalog.SpeculativeBranch(SpeculativeArm.Unobserved)]);
     }
 
     /// <summary>
@@ -131,37 +102,10 @@ public sealed class SpeculativeCfgTest {
     /// </summary>
     [Fact]
     public void SpeculativeClosureMultiBlockLoopExecutesCorrectly() {
-        // Single discovery run with selector=0 (only observes fallthrough)
-        GeneratedCodeRunOptions discoveryOptions = new() {
-            MaxCycles = 1000,
-            EnableSpeculativeCfgExploration = true
-        };
-        GeneratedCodeMachineTestRunner runner = new();
-        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("speculative_closure", discoveryOptions);
-
-        // Compile the override generated from selector=0 discovery
-        using CompiledGeneratedOverride compiledOverride =
-            runner.CompileGeneratedProgram("speculative_closure", generatedProgram, discoveryOptions);
-
-        // Run with selector=0 (observed path) - should produce 0xDD
-        byte[] expectedDiscovery = new byte[0x403];
-        expectedDiscovery[0x400] = 0x01;
-        expectedDiscovery[0x401] = 0xDD;
-        expectedDiscovery[0x402] = 0xBB;
-
-        RunWithCompiledOverride("speculative_closure", compiledOverride, expectedDiscovery, 1000);
-
-        // Run with selector=1 (speculative loop path) using the SAME generated code
-        byte[] expectedSpeculative = new byte[0x403];
-        expectedSpeculative[0x400] = 0x01;
-        expectedSpeculative[0x401] = 0x03;
-        expectedSpeculative[0x402] = 0xBB;
-
-        RunWithCompiledOverride("speculative_closure", compiledOverride, expectedSpeculative, 1000,
-            machine => { machine.Memory.UInt8[0, 0x0500] = 0x01; });
-
-        runner.CompareGeneratedSourceWithExpected(
-            GeneratedCodeMachineTestRunner.GoldenKey("speculative_closure", discoveryOptions), generatedProgram);
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(
+            AsmFixtureCatalog.SpeculativeClosure(SpeculativeArm.Observed),
+            [AsmFixtureCatalog.SpeculativeClosure(SpeculativeArm.Observed),
+             AsmFixtureCatalog.SpeculativeClosure(SpeculativeArm.Unobserved)]);
     }
 
     /// <summary>
@@ -208,35 +152,10 @@ public sealed class SpeculativeCfgTest {
     /// </summary>
     [Fact]
     public void SpeculativeConvergenceOntoObservedCodeExecutesCorrectly() {
-        GeneratedCodeRunOptions discoveryOptions = new() {
-            MaxCycles = 1000,
-            EnableSpeculativeCfgExploration = true
-        };
-        GeneratedCodeMachineTestRunner runner = new();
-        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("speculative_convergence", discoveryOptions);
-
-        using CompiledGeneratedOverride compiledOverride =
-            runner.CompileGeneratedProgram("speculative_convergence", generatedProgram, discoveryOptions);
-
-        // Discovery path (selector=0): path A writes 0xAA, mergepoint writes 0xCC, 0xFF
-        byte[] expectedDiscovery = new byte[0x404];
-        expectedDiscovery[0x400] = 0x01;
-        expectedDiscovery[0x401] = 0xAA;
-        expectedDiscovery[0x402] = 0xCC;
-        expectedDiscovery[0x403] = 0xFF;
-        RunWithCompiledOverride("speculative_convergence", compiledOverride, expectedDiscovery, 1000);
-
-        // Speculative path (selector=1): path B writes 0xBB, same mergepoint writes 0xCC, 0xFF
-        byte[] expectedSpeculative = new byte[0x404];
-        expectedSpeculative[0x400] = 0x01;
-        expectedSpeculative[0x401] = 0xBB;
-        expectedSpeculative[0x402] = 0xCC;
-        expectedSpeculative[0x403] = 0xFF;
-        RunWithCompiledOverride("speculative_convergence", compiledOverride, expectedSpeculative, 1000,
-            machine => { machine.Memory.UInt8[0, 0x0500] = 0x01; });
-
-        runner.CompareGeneratedSourceWithExpected(
-            GeneratedCodeMachineTestRunner.GoldenKey("speculative_convergence", discoveryOptions), generatedProgram);
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(
+            AsmFixtureCatalog.SpeculativeConvergence(SpeculativeArm.Observed),
+            [AsmFixtureCatalog.SpeculativeConvergence(SpeculativeArm.Observed),
+             AsmFixtureCatalog.SpeculativeConvergence(SpeculativeArm.Unobserved)]);
     }
 
     /// <summary>
@@ -245,33 +164,10 @@ public sealed class SpeculativeCfgTest {
     /// </summary>
     [Fact]
     public void SpeculativeMixedBlockGuardPlacement() {
-        GeneratedCodeRunOptions discoveryOptions = new() {
-            MaxCycles = 1000,
-            EnableSpeculativeCfgExploration = true
-        };
-        GeneratedCodeMachineTestRunner runner = new();
-        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("speculative_mixed_block", discoveryOptions);
-
-        using CompiledGeneratedOverride compiledOverride =
-            runner.CompileGeneratedProgram("speculative_mixed_block", generatedProgram, discoveryOptions);
-
-        // Discovery path (selector=0): JE taken, writes 0xDD
-        byte[] expectedDiscovery = new byte[0x403];
-        expectedDiscovery[0x400] = 0x01;
-        expectedDiscovery[0x401] = 0xDD;
-        expectedDiscovery[0x402] = 0xAA;
-        RunWithCompiledOverride("speculative_mixed_block", compiledOverride, expectedDiscovery, 1000);
-
-        // Speculative path (selector=1): JE not taken, fallthrough writes 0xEE
-        byte[] expectedSpeculative = new byte[0x403];
-        expectedSpeculative[0x400] = 0x01;
-        expectedSpeculative[0x401] = 0xEE;
-        expectedSpeculative[0x402] = 0xAA;
-        RunWithCompiledOverride("speculative_mixed_block", compiledOverride, expectedSpeculative, 1000,
-            machine => { machine.Memory.UInt8[0, 0x0500] = 0x01; });
-
-        runner.CompareGeneratedSourceWithExpected(
-            GeneratedCodeMachineTestRunner.GoldenKey("speculative_mixed_block", discoveryOptions), generatedProgram);
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(
+            AsmFixtureCatalog.SpeculativeMixedBlock(SpeculativeArm.Observed),
+            [AsmFixtureCatalog.SpeculativeMixedBlock(SpeculativeArm.Observed),
+             AsmFixtureCatalog.SpeculativeMixedBlock(SpeculativeArm.Unobserved)]);
     }
 
     /// <summary>
@@ -292,37 +188,30 @@ public sealed class SpeculativeCfgTest {
     /// </summary>
     [Fact]
     public void SpeculativeSmcGuardMidBlockSelfModificationGuardFires() {
-        GeneratedCodeRunOptions discoveryOptions = new() {
-            MaxCycles = 1000,
-            EnableSpeculativeCfgExploration = true
-        };
+        AsmFixture fixture = AsmFixtureCatalog.SpeculativeSmcGuard();
         GeneratedCodeMachineTestRunner runner = new();
-        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("speculative_smc_guard", discoveryOptions);
-
-        using CompiledGeneratedOverride compiledOverride =
-            runner.CompileGeneratedProgram("speculative_smc_guard", generatedProgram, discoveryOptions);
+        GeneratedCSharpProgram generatedProgram = runner.GenerateProgramAndSource(fixture.Settings);
+        using CompiledGeneratedOverride compiledOverride = runner.CompileGeneratedProgram(fixture.Settings, generatedProgram);
 
         // Discovery path (selector=0): no SMC on this path, runs to completion.
-        byte[] expectedDiscovery = new byte[0x403];
-        expectedDiscovery[0x400] = 0x01;
-        expectedDiscovery[0x401] = 0xDD;
-        expectedDiscovery[0x402] = 0xAA;
-        RunWithCompiledOverride("speculative_smc_guard", compiledOverride, expectedDiscovery, 1000);
+        AsmFixtureRunner.RunWithOverride(fixture, compiledOverride.Supplier).Dispose();
 
         // Speculative path (selector=1): the first speculative instruction (F000:0013) rewrites the
         // ModRM byte of the second speculative instruction (F000:0019) in the same block. The guard
         // emitted before that second instruction detects the divergence and throws. The fired guard
         // is the one at F000:0019, not the block-entry guard at F000:0013, which proves the
         // detection happens mid-block rather than only at entry.
-        Action act = () => RunWithCompiledOverride("speculative_smc_guard", compiledOverride, [], 1000,
-            machine => { machine.Memory.UInt8[0, 0x0500] = 0x01; });
+        AsmRunSettings unobservedSettings = fixture.Settings with { ConfigureMachine = AsmFixtureCatalog.SelectUnobservedArm };
+        Action act = () => {
+            using AsmFixtureRun run = AsmFixtureRunner.RunSettingsWithOverride(unobservedSettings, compiledOverride.Supplier);
+        };
 
         act.Should().Throw<Spice86.Core.Emulator.Errors.InvalidVMOperationException>()
             .WithInnerException<Spice86.Shared.Emulator.Errors.UnrecoverableException>()
             .WithMessage("*Speculative code at F000:0019 no longer matches memory*");
 
         runner.CompareGeneratedSourceWithExpected(
-            GeneratedCodeMachineTestRunner.GoldenKey("speculative_smc_guard", discoveryOptions), generatedProgram);
+            GeneratedCodeMachineTestRunner.GoldenKey(fixture.Settings), generatedProgram);
     }
 
     /// <summary>
@@ -332,38 +221,33 @@ public sealed class SpeculativeCfgTest {
     /// </summary>
     [Fact]
     public void SpeculativeDiscardOnDivergenceGuardFires() {
-        GeneratedCodeRunOptions discoveryOptions = new() {
-            MaxCycles = 1000,
-            EnableSpeculativeCfgExploration = true
-        };
+        AsmFixture fixture = AsmFixtureCatalog.SpeculativeDiscard();
         GeneratedCodeMachineTestRunner runner = new();
-        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("speculative_discard", discoveryOptions);
-
-        using CompiledGeneratedOverride compiledOverride =
-            runner.CompileGeneratedProgram("speculative_discard", generatedProgram, discoveryOptions);
+        GeneratedCSharpProgram generatedProgram = runner.GenerateProgramAndSource(fixture.Settings);
+        using CompiledGeneratedOverride compiledOverride = runner.CompileGeneratedProgram(fixture.Settings, generatedProgram);
 
         // Discovery path (selector=0): works fine
-        byte[] expectedDiscovery = new byte[0x403];
-        expectedDiscovery[0x400] = 0x01;
-        expectedDiscovery[0x401] = 0xDD;
-        expectedDiscovery[0x402] = 0xAA;
-        RunWithCompiledOverride("speculative_discard", compiledOverride, expectedDiscovery, 1000);
+        AsmFixtureRunner.RunWithOverride(fixture, compiledOverride.Supplier).Dispose();
 
         // Speculative path (selector=1) with memory modification: guard fires and throws.
         // This proves the guard detects byte-level divergence and prevents silent wrong execution.
-        Action act = () => RunWithCompiledOverride("speculative_discard", compiledOverride, [], 1000,
-            machine => {
+        AsmRunSettings unobservedSettings = fixture.Settings with {
+            ConfigureMachine = machine => {
                 machine.Memory.UInt8[0, 0x0500] = 0x01;
                 // Modify the immediate byte at F000:0017 from 0xEE to 0xEF
                 machine.Memory.UInt8[0xF000, 0x0017] = 0xEF;
-            });
+            }
+        };
+        Action act = () => {
+            using AsmFixtureRun run = AsmFixtureRunner.RunSettingsWithOverride(unobservedSettings, compiledOverride.Supplier);
+        };
 
         act.Should().Throw<Spice86.Core.Emulator.Errors.InvalidVMOperationException>()
             .WithInnerException<Spice86.Shared.Emulator.Errors.UnrecoverableException>()
             .WithMessage("*Speculative code at F000:0013 no longer matches memory*");
 
         runner.CompareGeneratedSourceWithExpected(
-            GeneratedCodeMachineTestRunner.GoldenKey("speculative_discard", discoveryOptions), generatedProgram);
+            GeneratedCodeMachineTestRunner.GoldenKey(fixture.Settings), generatedProgram);
     }
 
     /// <summary>
@@ -471,16 +355,11 @@ public sealed class SpeculativeCfgTest {
     /// End-to-end: with DOS initialized and speculation on, the generated code for
     /// intchain.com (which exercises INT chains through F000 handlers) compiles AND runs
     /// successfully as an override. This proves seeded handlers reach generation and execute.
+    /// The run checks the BIOS tick counter: the INT 8 handler increments it once.
     /// </summary>
     [Fact]
     public void ExternalEventHandlerGeneratedOverrideCompilesAndRuns() {
-        string comFileName = Path.GetFullPath("Resources/cpuTests/intchain.com");
-        GeneratedCodeRunOptions options = new() {
-            MaxCycles = 1000,
-            InstallInterruptVectors = true,
-            EnableSpeculativeCfgExploration = true
-        };
-        new GeneratedCodeMachineTestRunner().TestGeneratedCode(comFileName, [], options);
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.IntChain());
     }
 
     /// <summary>
@@ -488,123 +367,33 @@ public sealed class SpeculativeCfgTest {
     ///
     /// Discovery observes only the fallthrough arm (selector=0). With speculation off the unobserved
     /// JNZ arm is never explored, so the generator emits FailAsUntested for it instead of a guarded
-    /// speculative branch. The override therefore runs correctly on the observed path but, when run
-    /// with selector=1 (the path speculative discovery would have explored), reaches the untested arm
-    /// and throws. This is the missing-node crash that speculative discovery prevents.
+    /// speculative branch. The `speculative_branch` golden without suffix shows that FailAsUntested on
+    /// the unobserved arm; the runtime throw below proves the behavior. The override therefore runs
+    /// correctly on the observed path but, when run with selector=1 (the path speculative discovery
+    /// would have explored), reaches the untested arm and throws. This is the missing-node crash that
+    /// speculative discovery prevents.
     /// </summary>
     [Fact]
     public void SpeculationOffLeavesUnobservedArmUntestedAndCrashesOnThatPath() {
-        GeneratedCodeRunOptions options = new() {
-            MaxCycles = 1000,
-            EnableSpeculativeCfgExploration = false
-        };
+        AsmFixture fixture = AsmFixtureCatalog.SpeculativeBranchWithoutSpeculation();
         GeneratedCodeMachineTestRunner runner = new();
-        (_, GeneratedCSharpProgram generatedProgram) = runner.GenerateProgramAndSource("speculative_branch", options);
-        string source = generatedProgram.SourceText;
-
-        source.Should().Contain("FailAsUntested",
-            "with speculation off the unobserved JNZ arm must be left untested");
-        source.Should().NotContain("VerifySpeculativeEntryOrFail",
-            "with speculation off no speculative guard is emitted");
-
-        using CompiledGeneratedOverride compiledOverride = new GeneratedOverrideCompiler().CompileSupplier(source);
+        GeneratedCSharpProgram generatedProgram = runner.GenerateProgramAndSource(fixture.Settings);
+        using CompiledGeneratedOverride compiledOverride = runner.CompileGeneratedProgram(fixture.Settings, generatedProgram);
 
         // Observed path (selector=0): runs to the correct result.
-        byte[] expectedDiscovery = new byte[0x403];
-        expectedDiscovery[0x400] = 0x01;
-        expectedDiscovery[0x401] = 0xDD;
-        expectedDiscovery[0x402] = 0xAA;
-        RunWithCompiledOverride("speculative_branch", compiledOverride, expectedDiscovery, 1000);
+        AsmFixtureRunner.RunWithOverride(fixture, compiledOverride.Supplier).Dispose();
 
         // Unobserved path (selector=1): the untested arm is reached and the generated code throws,
         // proving the speculative node omitted by discovery is actually needed at runtime.
-        Action act = () => RunWithCompiledOverride("speculative_branch", compiledOverride, [], 1000,
-            machine => { machine.Memory.UInt8[0, 0x0500] = 0x01; });
+        AsmRunSettings unobservedSettings = fixture.Settings with { ConfigureMachine = AsmFixtureCatalog.SelectUnobservedArm };
+        Action act = () => {
+            using AsmFixtureRun run = AsmFixtureRunner.RunSettingsWithOverride(unobservedSettings, compiledOverride.Supplier);
+        };
 
         act.Should().Throw<Spice86.Core.Emulator.Errors.InvalidVMOperationException>()
             .WithInnerException<Spice86.Shared.Emulator.Errors.UnrecoverableException>()
             .WithMessage("*Untested code reached*");
-    }
 
-    /// <summary>
-    /// Interpreter-side selector=1 coverage. The golden MachineTest fixtures only run the observed
-    /// (selector=0) path; the selector=1 arm of each fixture is otherwise exercised only through a
-    /// generated override. These tests run the same bins in the pure interpreter (no override) with
-    /// selector=1 selected and assert the resulting memory dump, validating that the interpreter
-    /// itself executes the speculative arm to the correct result.
-    /// </summary>
-    [Fact]
-    public void InterpreterExecutesSpeculativeBranchSelectorOnePath() {
-        byte[] expected = new byte[0x403];
-        expected[0x400] = 0x01;
-        expected[0x401] = 0xEE;
-        expected[0x402] = 0xAA;
-        RunInterpreter("speculative_branch", expected, 1000,
-            machine => { machine.Memory.UInt8[0, 0x0500] = 0x01; });
-    }
-
-    [Fact]
-    public void InterpreterExecutesSpeculativeClosureSelectorOnePath() {
-        byte[] expected = new byte[0x403];
-        expected[0x400] = 0x01;
-        expected[0x401] = 0x03;
-        expected[0x402] = 0xBB;
-        RunInterpreter("speculative_closure", expected, 1000,
-            machine => { machine.Memory.UInt8[0, 0x0500] = 0x01; });
-    }
-
-    [Fact]
-    public void InterpreterExecutesSpeculativeConvergenceSelectorOnePath() {
-        byte[] expected = new byte[0x404];
-        expected[0x400] = 0x01;
-        expected[0x401] = 0xBB;
-        expected[0x402] = 0xCC;
-        expected[0x403] = 0xFF;
-        RunInterpreter("speculative_convergence", expected, 1000,
-            machine => { machine.Memory.UInt8[0, 0x0500] = 0x01; });
-    }
-
-    [Fact]
-    public void InterpreterExecutesSpeculativeMixedBlockSelectorOnePath() {
-        byte[] expected = new byte[0x403];
-        expected[0x400] = 0x01;
-        expected[0x401] = 0xEE;
-        expected[0x402] = 0xAA;
-        RunInterpreter("speculative_mixed_block", expected, 1000,
-            machine => { machine.Memory.UInt8[0, 0x0500] = 0x01; });
-    }
-
-    /// <summary>
-    /// Runs the binary in the pure interpreter (no generated override), applying an optional machine
-    /// configuration before execution, then asserts the memory dump matches expected.
-    /// </summary>
-    private static void RunInterpreter(string binName, byte[] expected, long maxCycles,
-        Action<Machine> configureMachine) {
-        using Spice86Creator creator = new(binName: binName, maxCycles: maxCycles,
-            jitMode: JitMode.InterpretedOnly);
-        using Spice86DependencyInjection di = creator.Create();
-        configureMachine(di.Machine);
-        di.ProgramExecutor.Run();
-
-        byte[] actual = di.Machine.Memory.ReadRam((uint)expected.Length);
-        actual.Should().Equal(expected);
-    }
-
-    /// <summary>
-    /// Runs the binary with a pre-compiled override supplier and asserts memory matches expected.
-    /// This allows testing a generated override compiled from one discovery run against different inputs.
-    /// </summary>
-    private static void RunWithCompiledOverride(string binName, CompiledGeneratedOverride compiledOverride,
-        byte[] expected, long maxCycles, Action<Machine>? configureMachine = null) {
-        using Spice86Creator creator = new(binName: binName, maxCycles: maxCycles,
-            jitMode: JitMode.InterpretedOnly, overrideSupplier: compiledOverride.Supplier);
-        using Spice86DependencyInjection di = creator.Create();
-        configureMachine?.Invoke(di.Machine);
-        di.FunctionCatalogue.FunctionInformations.Values
-            .Should().Contain(fi => fi.HasOverride);
-        di.ProgramExecutor.Run();
-
-        byte[] actual = di.Machine.Memory.ReadRam((uint)expected.Length);
-        actual.Should().Equal(expected);
+        runner.CompareGeneratedSourceWithExpected(GeneratedCodeMachineTestRunner.GoldenKey(fixture.Settings), generatedProgram);
     }
 }

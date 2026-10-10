@@ -1,0 +1,13 @@
+F000:0000 mov AX,0x1000
+F000:0003 mov SS,AX
+F000:0005 mov SP,0x0100
+F000:0008 call far F100:0000
+F000:000D mov word ptr DS:[0],AX
+F000:0010 hlt
+F100:0000 push CS
+F100:0001 call near 8
+F100:0004 mov AX,0x0042
+F100:0007 ret far
+F100:0008 xor BX,BX
+F100:000A ret far
+F000:FFF0 jmp short 0

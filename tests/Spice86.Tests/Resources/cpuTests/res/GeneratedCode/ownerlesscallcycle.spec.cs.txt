@@ -1,0 +1,77 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0xF000;
+
+        DefineFunction(cs1, 0x0024, unknown_F000_0024_F0024, name: "unknown");
+        DefineFunction(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, name: "unknown");
+        DefineFunction(cs1, 0x0016, unknown_F000_0016_F0016, name: "unknown");
+    }
+
+    public virtual Action unknown_F000_0024_F0024(int loadOffset) {
+        CheckExternalEvents(cs1, 0x0024);
+        // F000:0024 ret near
+        return NearRet();
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        // F000:0000 mov AX,0
+        AX = 0;
+        // F000:0003 mov SS,AX
+        SS = AX;
+        State.InterruptShadowing = true;
+        // F000:0005 mov SP,0x0100
+        SP = 0x0100;
+        // F000:0008 mov byte ptr CS:[0x0025],0
+        UInt8[CS, 0x0025] = 0;
+        // F000:000E mov AX,0x0016
+        AX = 0x0016;
+        // F000:0011 push AX
+        Stack.Push16(AX);
+        // F000:0012 ret near
+        return NearRet();
+    }
+
+    public virtual Action unknown_F000_0016_F0016(int loadOffset) {
+    L_0016:
+        CheckExternalEvents(cs1, 0x0016);
+        // F000:0016 inc byte ptr CS:[0x0025]
+        UInt8[CS, 0x0025] = Alu8.Inc(UInt8[CS, 0x0025]);
+        // F000:001B mov AL,byte ptr CS:[0x0025]
+        AL = UInt8[CS, 0x0025];
+        // F000:001F cmp AL,3
+        Alu8.Sub(AL, 3);
+        // F000:0021 jb short 0x0013
+        if (CarryFlag) {
+            goto L_0013;
+        }
+        // F000:0023 hlt
+        return Hlt();
+    L_0013:
+        // F000:0013 call near 0x0024
+        NearCall(cs1, 0x0016, unknown_F000_0024_F0024);
+        goto L_0016;
+    }
+
+}

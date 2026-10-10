@@ -1,0 +1,170 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "F000:FFF0",
+  "totalEntryPoints": 1,
+  "entryPointAddresses": [
+    "F000:FFF0"
+  ],
+  "lastExecutedAddress": "F000:0014",
+  "lastExecutedBlockId": 54,
+  "blocks": [
+    {
+      "id": 54,
+      "entry": "F000:0014",
+      "term": "F000:0014",
+      "pred": [
+        22,
+        46
+      ],
+      "succ": [],
+      "asm": [
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 2,
+      "entry": "F000:FFF0",
+      "term": "F000:FFF0",
+      "pred": [],
+      "succ": [
+        3
+      ],
+      "asm": [
+        "EB0E|jmp short 0"
+      ]
+    },
+    {
+      "id": 22,
+      "entry": "F000:002A",
+      "term": "F000:0034",
+      "pred": [
+        17
+      ],
+      "succ": [
+        54
+      ],
+      "asm": [
+        "B80000|mov AX,0",
+        "8ED8|mov DS,AX",
+        "C6061100BB|mov byte ptr DS:[0x0011],0xBB",
+        "C3|ret near"
+      ]
+    },
+    {
+      "id": 46,
+      "entry": "F000:000E",
+      "term": "F000:0011",
+      "pred": [
+        3,
+        12
+      ],
+      "succ": [
+        17,
+        54
+      ],
+      "asm": [
+        "B90100|mov CX,1",
+        "E81100|call near 0x0025"
+      ]
+    },
+    {
+      "id": 3,
+      "entry": "F000:0000",
+      "term": "F000:000B",
+      "pred": [
+        2
+      ],
+      "succ": [
+        9,
+        46
+      ],
+      "asm": [
+        "B80010|mov AX,0x1000",
+        "8ED0|mov SS,AX",
+        "BC0001|mov SP,0x0100",
+        "B90300|mov CX,3",
+        "E80700|call near 0x0015"
+      ]
+    },
+    {
+      "id": 17,
+      "entry": "F000:0025",
+      "term": "F000:0026",
+      "pred": [
+        14,
+        46
+      ],
+      "succ": [
+        22,
+        24
+      ],
+      "asm": [
+        "49|dec CX",
+        "7402|je short 0x002A"
+      ]
+    },
+    {
+      "id": 12,
+      "entry": "F000:001A",
+      "term": "F000:0024",
+      "pred": [
+        9
+      ],
+      "succ": [
+        46
+      ],
+      "asm": [
+        "B80000|mov AX,0",
+        "8ED8|mov DS,AX",
+        "C6061000AA|mov byte ptr DS:[0x0010],0xAA",
+        "C3|ret near"
+      ]
+    },
+    {
+      "id": 9,
+      "entry": "F000:0015",
+      "term": "F000:0016",
+      "pred": [
+        3,
+        24
+      ],
+      "succ": [
+        12,
+        14
+      ],
+      "asm": [
+        "49|dec CX",
+        "7402|je short 0x001A"
+      ]
+    },
+    {
+      "id": 24,
+      "entry": "F000:0028",
+      "term": "F000:0028",
+      "pred": [
+        17
+      ],
+      "succ": [
+        9
+      ],
+      "asm": [
+        "EBEB|jmp short 0x0015"
+      ]
+    },
+    {
+      "id": 14,
+      "entry": "F000:0018",
+      "term": "F000:0018",
+      "pred": [
+        9
+      ],
+      "succ": [
+        17
+      ],
+      "asm": [
+        "EB0B|jmp short 0x0025"
+      ]
+    }
+  ],
+  "truncated": false
+}
