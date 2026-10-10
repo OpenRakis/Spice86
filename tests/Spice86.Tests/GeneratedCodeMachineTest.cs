@@ -219,6 +219,11 @@ public sealed class GeneratedCodeMachineTest {
     }
 
     [Fact]
+    public void IoPortsGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.IoPorts());
+    }
+
+    [Fact]
     public void InteriorEntryIrqGeneratedOverrideMatchesMachineTestOracle() {
         new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.InteriorEntry());
     }

@@ -12,7 +12,6 @@ using Microsoft.Extensions.Logging;
 using NSubstitute;
 
 using Spice86.Core.Emulator.Function;
-using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
 
@@ -22,7 +21,6 @@ using System.Collections.Generic;
 using Xunit;
 
 public class CSharpOverrideHelperTest {
-    private const ushort IoTestPort = 0x0999;
     private readonly ILogger _loggerServiceMock = Substitute.For<ILogger>();
 
     [Fact]
@@ -579,117 +577,6 @@ public class CSharpOverrideHelperTest {
 
         // Assert
         machine.CpuState.AX.Should().Be(0x0180);
-    }
-
-    [Fact]
-    public void In8_ReturnsValueFromRegisteredPortHandler() {
-        // Arrange
-        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
-        using Spice86DependencyInjection res = creator.Create();
-        Machine machine = res.Machine;
-        CSharpOverrideHelper helper = CreateHelper(machine);
-        IIOPortHandler handler = Substitute.For<IIOPortHandler>();
-        handler.ReadByte(IoTestPort).Returns((byte)0xAB);
-        machine.IoPortDispatcher.ReplaceIOPortHandler(IoTestPort, handler);
-
-        // Act
-        byte result = helper.In8(IoTestPort);
-
-        // Assert
-        result.Should().Be(0xAB);
-        handler.Received(1).ReadByte(IoTestPort);
-    }
-
-    [Fact]
-    public void In16_ReturnsValueFromRegisteredPortHandler() {
-        // Arrange
-        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
-        using Spice86DependencyInjection res = creator.Create();
-        Machine machine = res.Machine;
-        CSharpOverrideHelper helper = CreateHelper(machine);
-        IIOPortHandler handler = Substitute.For<IIOPortHandler>();
-        handler.ReadWord(IoTestPort).Returns((ushort)0xABCD);
-        machine.IoPortDispatcher.ReplaceIOPortHandler(IoTestPort, handler);
-
-        // Act
-        ushort result = helper.In16(IoTestPort);
-
-        // Assert
-        result.Should().Be(0xABCD);
-        handler.Received(1).ReadWord(IoTestPort);
-    }
-
-    [Fact]
-    public void In32_ReturnsValueFromRegisteredPortHandler() {
-        // Arrange
-        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
-        using Spice86DependencyInjection res = creator.Create();
-        Machine machine = res.Machine;
-        CSharpOverrideHelper helper = CreateHelper(machine);
-        IIOPortHandler handler = Substitute.For<IIOPortHandler>();
-        handler.ReadDWord(IoTestPort).Returns(0x12345678U);
-        machine.IoPortDispatcher.ReplaceIOPortHandler(IoTestPort, handler);
-
-        // Act
-        uint result = helper.In32(IoTestPort);
-
-        // Assert
-        result.Should().Be(0x12345678U);
-        handler.Received(1).ReadDWord(IoTestPort);
-    }
-
-    [Fact]
-    public void Out8_ForwardsPortAndValueToRegisteredPortHandler() {
-        // Arrange
-        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
-        using Spice86DependencyInjection res = creator.Create();
-        Machine machine = res.Machine;
-        CSharpOverrideHelper helper = CreateHelper(machine);
-        IIOPortHandler handler = Substitute.For<IIOPortHandler>();
-        machine.IoPortDispatcher.ReplaceIOPortHandler(IoTestPort, handler);
-
-        // Act
-        helper.Out8(IoTestPort, 0xAB);
-
-        // Assert
-        handler.Received(1).WriteByte(IoTestPort, 0xAB);
-    }
-
-    [Fact]
-    public void Out16_ForwardsPortAndValueToRegisteredPortHandler() {
-        // Arrange
-        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
-        using Spice86DependencyInjection res = creator.Create();
-        Machine machine = res.Machine;
-        CSharpOverrideHelper helper = CreateHelper(machine);
-        IIOPortHandler handler = Substitute.For<IIOPortHandler>();
-        machine.IoPortDispatcher.ReplaceIOPortHandler(IoTestPort, handler);
-
-        // Act
-        helper.Out16(IoTestPort, 0xABCD);
-
-        // Assert
-        handler.Received(1).WriteWord(IoTestPort, 0xABCD);
-        handler.DidNotReceiveWithAnyArgs().WriteByte(default, default);
-    }
-
-    [Fact]
-    public void Out32_ForwardsPortAndValueToRegisteredPortHandler() {
-        // Arrange
-        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
-        using Spice86DependencyInjection res = creator.Create();
-        Machine machine = res.Machine;
-        CSharpOverrideHelper helper = CreateHelper(machine);
-        IIOPortHandler handler = Substitute.For<IIOPortHandler>();
-        machine.IoPortDispatcher.ReplaceIOPortHandler(IoTestPort, handler);
-
-        // Act
-        helper.Out32(IoTestPort, 0x12345678U);
-
-        // Assert
-        handler.Received(1).WriteDWord(IoTestPort, 0x12345678U);
-        handler.DidNotReceiveWithAnyArgs().WriteByte(default, default);
-        handler.DidNotReceiveWithAnyArgs().WriteWord(default, default);
     }
 
     private CSharpOverrideHelper CreateHelper(Machine machine) {
