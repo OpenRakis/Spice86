@@ -64,7 +64,7 @@
                     BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
                     BorderThickness="1"
                     ClipToBounds="True">
-                <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="12">
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto,*" RowSpacing="12">
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                         <StackPanel>
                             <TextBlock Text="Tool Catalogue" FontSize="22" FontWeight="SemiBold" />
@@ -85,7 +85,12 @@
                              PlaceholderText="Filter by tool name or description"
                              Text="{Binding ToolFilter, UpdateSourceTrigger=PropertyChanged}" />
 
-                    <Grid Grid.Row="2" ColumnDefinitions="*,*" ColumnSpacing="8">
+                    <ComboBox Grid.Row="2"
+                              HorizontalAlignment="Stretch"
+                              ItemsSource="{Binding Categories}"
+                              SelectedItem="{Binding SelectedCategory}" />
+
+                    <Grid Grid.Row="3" ColumnDefinitions="*,*" ColumnSpacing="8" RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
                         <Button Command="{Binding EnableAllToolsCommand}">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6">
                                 <fluent:SymbolIcon Symbol="CheckmarkCircle" />
@@ -98,9 +103,25 @@
                                 <TextBlock Text="Disable all" />
                             </StackPanel>
                         </Button>
+                        <Button Grid.Row="1" Command="{Binding EnableVisibleToolsCommand}">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6">
+                                <fluent:SymbolIcon Symbol="CheckmarkCircle" />
+                                <TextBlock Text="Enable shown" />
+                            </StackPanel>
+                        </Button>
+                        <Button Grid.Row="1" Grid.Column="1" Command="{Binding DisableVisibleToolsCommand}">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6">
+                                <fluent:SymbolIcon Symbol="DismissCircle" />
+                                <TextBlock Text="Disable shown" />
+                            </StackPanel>
+                        </Button>
+                        <TextBlock Grid.Row="2"
+                                   Grid.ColumnSpan="2"
+                                   Text="{Binding VisibleGroupStatus, StringFormat='Enabled in current view: {0}'}"
+                                   Opacity="0.72" />
                     </Grid>
 
-                    <ListBox Grid.Row="3"
+                    <ListBox Grid.Row="4"
                              ItemsSource="{Binding FilteredTools}"
                              SelectedItem="{Binding SelectedTool}"
                              BorderThickness="0"
@@ -123,6 +144,12 @@
                                                   IsEnabled="{Binding CanToggle}"
                                                   VerticalAlignment="Top" />
                                         <TextBlock Grid.Row="1"
+                                                   Grid.ColumnSpan="2"
+                                                   Text="{Binding Category}"
+                                                   FontSize="11"
+                                                   FontWeight="SemiBold"
+                                                   Opacity="0.65" />
+                                        <TextBlock Grid.Row="2"
                                                    Grid.ColumnSpan="2"
                                                    Text="{Binding Description}"
                                                    TextWrapping="Wrap"

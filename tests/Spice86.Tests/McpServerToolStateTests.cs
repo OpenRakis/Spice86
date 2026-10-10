@@ -490,8 +490,272 @@ public class McpServerToolStateTests {
     }
 
     [Fact]
-    public async Task QueryPcSpeakerState_ShouldExposeControlAndMixerStateAsync() {
+    public async Task QueryGusState_ShouldExposeConfigurationAndTimersAsync() {
         // Arrange
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await context.InitializeAsync();
+
+        // Act
+        JsonDocument response = await context.CallToolAsync("read_gus_state", new Dictionary<string, object?>());
+
+        // Assert
+        JsonElement structured = GetSuccessfulStructuredContent(response);
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "basePort", out JsonElement basePort).Should().BeTrue();
+        basePort.GetInt32().Should().Be(0x240);
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "playbackIrq", out JsonElement playbackIrq).Should().BeTrue();
+        playbackIrq.GetInt32().Should().Be(5);
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "playbackDma", out JsonElement playbackDma).Should().BeTrue();
+        playbackDma.GetInt32().Should().Be(3);
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "dramSizeBytes", out JsonElement dramSizeBytes).Should().BeTrue();
+        dramSizeBytes.GetInt32().Should().Be(1024 * 1024);
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "mixerChannelName", out JsonElement mixerChannelName).Should().BeTrue();
+        mixerChannelName.GetString().Should().Be("GravisUltraSound");
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "timers", out JsonElement timers).Should().BeTrue();
+        timers.GetArrayLength().Should().Be(2);
+    }
+
+    [Fact]
+    public async Task QueryGusVoices_ShouldReturnRequestedRangeAsync() {
+        // Arrange
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await context.InitializeAsync();
+
+        // Act
+        JsonDocument response = await context.CallToolAsync("read_gus_voices", new Dictionary<string, object?> {
+            ["startVoice"] = 2,
+            ["count"] = 4
+        });
+
+        // Assert
+        JsonElement structured = GetSuccessfulStructuredContent(response);
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "voices", out JsonElement voices).Should().BeTrue();
+        voices.GetArrayLength().Should().Be(4);
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(voices[0], "index", out JsonElement firstIndex).Should().BeTrue();
+        firstIndex.GetInt32().Should().Be(2);
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(voices[0], "waveControl", out JsonElement waveControl).Should().BeTrue();
+        waveControl.GetString().Should().Contain("Stopped");
+    }
+
+    [Fact]
+    public async Task QueryGusVoices_ShouldRejectOutOfRangeVoiceAsync() {
+        // Arrange
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await context.InitializeAsync();
+
+        // Act
+        JsonDocument response = await context.CallToolAsync("read_gus_voices", new Dictionary<string, object?> {
+            ["startVoice"] = 32,
+            ["count"] = 1
+        });
+
+        // Assert
+        JsonElement toolResult = McpJsonRpcAssertions.GetJsonRpcResult(response);
+        McpJsonRpcAssertions.GetToolErrorMessage(toolResult).Should().Contain("Voice must be between 0 and 31");
+    }
+
+    [Fact]
+    public async Task QueryGusDram_ShouldReturnStoredSampleBytesAsync() {
+        // Arrange
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await context.InitializeAsync();
+        PokeGusDram(context, 0x1000, new byte[] { 0xDE, 0xAD, 0xBE, 0xEF });
+
+        // Act
+        JsonDocument response = await context.CallToolAsync("read_gus_dram", new Dictionary<string, object?> {
+            ["address"] = 0x1000,
+            ["length"] = 4
+        });
+
+        // Assert
+        JsonElement structured = GetSuccessfulStructuredContent(response);
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "data", out JsonElement data).Should().BeTrue();
+        data.GetString().Should().Be("DEADBEEF");
+    }
+
+    [Fact]
+    public async Task SearchGusDram_ShouldFindStoredPatternAsync() {
+        // Arrange
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await context.InitializeAsync();
+        PokeGusDram(context, 0x2000, new byte[] { 0x12, 0x34, 0x56 });
+
+        // Act
+        JsonDocument response = await context.CallToolAsync("search_gus_dram", new Dictionary<string, object?> {
+            ["pattern"] = "123456",
+            ["startAddress"] = 0,
+            ["length"] = 0x4000,
+            ["limit"] = 10
+        });
+
+        // Assert
+        JsonElement structured = GetSuccessfulStructuredContent(response);
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "matches", out JsonElement matches).Should().BeTrue();
+        matches.GetArrayLength().Should().Be(1);
+        matches[0].GetInt32().Should().Be(0x2000);
+    }
+
+    [Fact]
+    public async Task QueryGusDmaState_ShouldExposeChannelsAsync() {
+        // Arrange
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await context.InitializeAsync();
+
+        // Act
+        JsonDocument response = await context.CallToolAsync("read_gus_dma_state", new Dictionary<string, object?>());
+
+        // Assert
+        JsonElement structured = GetSuccessfulStructuredContent(response);
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "playbackDma", out JsonElement playbackDma).Should().BeTrue();
+        playbackDma.GetInt32().Should().Be(3);
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "dmaControl", out JsonElement dmaControl).Should().BeTrue();
+        dmaControl.GetString().Should().Be("None");
+    }
+
+    [Fact]
+    public async Task QueryGusIrqState_ShouldExposeIrqLinesWithoutClearingStatusAsync() {
+        // Arrange
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await context.InitializeAsync();
+
+        // Act
+        JsonDocument response = await context.CallToolAsync("read_gus_irq_state", new Dictionary<string, object?>());
+
+        // Assert
+        JsonElement structured = GetSuccessfulStructuredContent(response);
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "playbackIrq", out JsonElement playbackIrq).Should().BeTrue();
+        playbackIrq.GetInt32().Should().Be(5);
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "irqStatus", out JsonElement irqStatus).Should().BeTrue();
+        irqStatus.GetString().Should().Be("None");
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "timers", out JsonElement timers).Should().BeTrue();
+        timers.GetArrayLength().Should().Be(2);
+    }
+
+    [Fact]
+    public async Task GusWriteAndReadRegister_ShouldRoundTripResetRegisterAsync() {
+        // Arrange
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await context.InitializeAsync();
+
+        // Act
+        JsonDocument write = await context.CallToolAsync("gus_write_register", new Dictionary<string, object?> {
+            ["voice"] = 0,
+            ["register"] = 0x4C,
+            ["value"] = 0x0300
+        });
+        JsonDocument read = await context.CallToolAsync("read_gus_register", new Dictionary<string, object?> {
+            ["voice"] = 0,
+            ["register"] = 0x4C
+        });
+
+        // Assert
+        AssertToolSucceeded(write);
+        JsonElement structured = GetSuccessfulStructuredContent(read);
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "value", out JsonElement value).Should().BeTrue();
+        value.GetInt32().Should().Be(0x0300);
+    }
+
+    [Fact]
+    public async Task GusWriteRegister_ShouldUpdateVoiceWaveRateAsync() {
+        // Arrange
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await context.InitializeAsync();
+
+        // Act
+        JsonDocument write = await context.CallToolAsync("gus_write_register", new Dictionary<string, object?> {
+            ["voice"] = 3,
+            ["register"] = 0x01,
+            ["value"] = 0x1234
+        });
+        JsonDocument voices = await context.CallToolAsync("read_gus_voices", new Dictionary<string, object?> {
+            ["startVoice"] = 3,
+            ["count"] = 1
+        });
+
+        // Assert
+        AssertToolSucceeded(write);
+        JsonElement structured = GetSuccessfulStructuredContent(voices);
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "voices", out JsonElement voiceArray).Should().BeTrue();
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(voiceArray[0], "waveRate", out JsonElement waveRate).Should().BeTrue();
+        waveRate.GetInt32().Should().Be(0x1234);
+    }
+
+    [Fact]
+    public async Task GusSetVoiceControl_ShouldUpdateDecodedFlagsAsync() {
+        // Arrange
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await context.InitializeAsync();
+
+        // Act
+        JsonDocument setControl = await context.CallToolAsync("gus_set_voice_control", new Dictionary<string, object?> {
+            ["voice"] = 1,
+            ["waveControl"] = 0x0C,
+            ["volControl"] = 0x08
+        });
+        JsonDocument voices = await context.CallToolAsync("read_gus_voices", new Dictionary<string, object?> {
+            ["startVoice"] = 1,
+            ["count"] = 1
+        });
+
+        // Assert
+        AssertToolSucceeded(setControl);
+        JsonElement structured = GetSuccessfulStructuredContent(voices);
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "voices", out JsonElement voiceArray).Should().BeTrue();
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(voiceArray[0], "waveControl", out JsonElement waveControl).Should().BeTrue();
+        waveControl.GetString().Should().Be("Bit16, Loop");
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(voiceArray[0], "volControl", out JsonElement volControl).Should().BeTrue();
+        volControl.GetString().Should().Be("Loop");
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(voiceArray[0], "is16BitSample", out JsonElement is16BitSample).Should().BeTrue();
+        is16BitSample.GetBoolean().Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task GusStartStopVoice_ShouldToggleStoppedFlagAsync() {
+        // Arrange
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await context.InitializeAsync();
+
+        // Act
+        JsonDocument start = await context.CallToolAsync("gus_start_stop_voice", new Dictionary<string, object?> {
+            ["voice"] = 0,
+            ["start"] = true
+        });
+        JsonDocument started = await context.CallToolAsync("read_gus_voices", new Dictionary<string, object?> {
+            ["startVoice"] = 0,
+            ["count"] = 1
+        });
+        JsonDocument stop = await context.CallToolAsync("gus_start_stop_voice", new Dictionary<string, object?> {
+            ["voice"] = 0,
+            ["start"] = false
+        });
+        JsonDocument stopped = await context.CallToolAsync("read_gus_voices", new Dictionary<string, object?> {
+            ["startVoice"] = 0,
+            ["count"] = 1
+        });
+
+        // Assert
+        AssertToolSucceeded(start);
+        AssertToolSucceeded(stop);
+        GetVoiceIsPlaying(started).Should().BeTrue();
+        GetVoiceIsPlaying(stopped).Should().BeFalse();
+    }
+
+    private static void PokeGusDram(McpIntegrationContext context, int address, byte[] bytes) {
+        GravisUltraSound gus = context.Services.GravisUltraSound
+            ?? throw new InvalidOperationException("GUS should be enabled by default for the test harness.");
+        for (int i = 0; i < bytes.Length; i++) {
+            gus.PokeDramByte(address + i, bytes[i]);
+        }
+    }
+
+    private static bool GetVoiceIsPlaying(JsonDocument voicesResponse) {
+        JsonElement structured = GetSuccessfulStructuredContent(voicesResponse);
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structured, "voices", out JsonElement voices).Should().BeTrue();
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(voices[0], "isPlaying", out JsonElement isPlaying).Should().BeTrue();
+        return isPlaying.GetBoolean();
+    }
+
+    [Fact]
+    public async Task QueryPcSpeakerState_ShouldExposeControlAndMixerStateAsync() {        // Arrange
         await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
         await context.InitializeAsync();
 
