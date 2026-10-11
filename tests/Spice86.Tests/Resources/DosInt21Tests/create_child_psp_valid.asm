@@ -8,7 +8,7 @@ failure equ 0FFh
 scratch_psp_segment equ 2000h
 
 start:
-    ; AH=55h creates a child PSP while leaving the current PSP as the parent.
+    ; AH=55h creates a child PSP and makes it the current PSP (MS-DOS and DOSBox behavior).
     mov ah, 62h
     int 21h
     mov bp, bx
@@ -23,8 +23,11 @@ start:
 
     mov ah, 62h
     int 21h
-    cmp bx, bp
+    cmp bx, scratch_psp_segment
     jne failed
+    mov bx, bp
+    mov ah, 50h
+    int 21h
 
     mov ax, scratch_psp_segment
     mov es, ax

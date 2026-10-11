@@ -65,6 +65,8 @@ public class DosFileManager {
     /// </summary>
     public VirtualFileBase?[] OpenFiles { get; } = new VirtualFileBase[0xFF];
 
+    private readonly byte[] _jobFileTableReferenceCounts = new byte[0xFF];
+
     private readonly IList<IVirtualDevice> _dosVirtualDevices;
 
     /// <summary>
@@ -96,12 +98,11 @@ public class DosFileManager {
     public VirtualFileBase? Stdin => OpenFiles[(ushort)DosStandardHandle.Stdin];
 
     /// <summary>
-    /// Checks whether input is available on the stdin handle (0).
+    /// Checks whether input is available on a file handle.
     /// For character devices, checks the device information bits.
     /// For regular files, checks whether the file position is before the end.
     /// </summary>
-    public bool IsStdinInputAvailable() {
-        VirtualFileBase? file = OpenFiles[(ushort)DosStandardHandle.Stdin];
+    public bool IsInputAvailable(VirtualFileBase? file) {
         if (file is IVirtualDevice device && (device.Information & 0x8000) > 0) {
             return (device.Information & 0x40) == 0;
         }
@@ -155,14 +156,6 @@ public class DosFileManager {
 
         return DosFileOperationResult.NoValueWithRefCount(refCount);
     }
-
-    /// <summary>
-    /// Attempts to duplicate an existing file handle for inheritance without exposing the new handle to callers.
-    /// Increments the underlying system file table reference count when successful.
-    /// </summary>
-    /// <param name="fileHandle">The original DOS handle.</param>
-    /// <returns>The new DOS handle or an error if duplication is not possible.</returns>
-    public DosFileOperationResult DuplicateHandleForChild(byte fileHandle) => DuplicateFileHandle(fileHandle);
 
     /// <summary>
     /// Creates a file and returns the handle to the file.
@@ -1138,7 +1131,57 @@ public class DosFileManager {
         return DosFileOperationResult.Value16(dosIndex);
     }
 
-    private void SetOpenFile(ushort fileHandle, VirtualFileBase? openFile) => OpenFiles[fileHandle] = openFile;
+    private void SetOpenFile(ushort fileHandle, VirtualFileBase? openFile) {
+        OpenFiles[fileHandle] = openFile;
+        _jobFileTableReferenceCounts[fileHandle] = openFile is null ? (byte)0 : (byte)1;
+    }
+
+    /// <summary>
+    /// Gets how many job file table entries reference a system file table entry.
+    /// </summary>
+    /// <param name="systemFileTableIndex">The index in <see cref="OpenFiles"/>.</param>
+    /// <returns>0 when the entry is not open, at least 1 otherwise.</returns>
+    public byte GetHandleReferenceCount(byte systemFileTableIndex) {
+        if (!IsHandleInRange(systemFileTableIndex) || OpenFiles[systemFileTableIndex] is null) {
+            return 0;
+        }
+        return Math.Max(_jobFileTableReferenceCounts[systemFileTableIndex], (byte)1);
+    }
+
+    /// <summary>
+    /// Adds a job file table reference to an open system file table entry, as done by handle duplication and process inheritance.
+    /// </summary>
+    /// <param name="systemFileTableIndex">The index in <see cref="OpenFiles"/>.</param>
+    /// <returns><c>true</c> when the entry is open and the reference was added.</returns>
+    public bool AddHandleReference(byte systemFileTableIndex) {
+        byte referenceCount = GetHandleReferenceCount(systemFileTableIndex);
+        if (referenceCount is 0 or byte.MaxValue) {
+            return false;
+        }
+        _jobFileTableReferenceCounts[systemFileTableIndex] = (byte)(referenceCount + 1);
+        return true;
+    }
+
+    /// <summary>
+    /// Releases a job file table reference to a system file table entry. The entry is closed when its last reference is released.
+    /// </summary>
+    /// <param name="systemFileTableIndex">The index in <see cref="OpenFiles"/>.</param>
+    /// <returns>A <see cref="DosFileOperationResult"/> holding the remaining reference count.</returns>
+    public DosFileOperationResult ReleaseHandleReference(byte systemFileTableIndex) {
+        byte referenceCount = GetHandleReferenceCount(systemFileTableIndex);
+        if (referenceCount == 0) {
+            return FileNotOpenedError(systemFileTableIndex);
+        }
+        if (referenceCount > 1) {
+            _jobFileTableReferenceCounts[systemFileTableIndex] = (byte)(referenceCount - 1);
+            return DosFileOperationResult.NoValueWithRefCount((byte)(referenceCount - 1));
+        }
+        if (OpenFiles[systemFileTableIndex] is DosFile) {
+            return CloseFileOrDevice(systemFileTableIndex);
+        }
+        SetOpenFile(systemFileTableIndex, null);
+        return DosFileOperationResult.NoValueWithRefCount(0);
+    }
 
     private void UpdateDosTransferAreaWithFileMatch(DosDiskTransferArea dta, string fileSpec,
         string matchingFileSystemEntry, string searchFolder) {
@@ -1501,6 +1544,22 @@ public class DosFileManager {
     public DosFileOperationResult GetCurrentDir(byte driveNumber, out string currentDir) =>
         _driveManager.GetCurrentDosDirectory(driveNumber, out currentDir);
 
+    /// <summary>
+    /// Tells whether an INT 21h AH=44h subfunction takes a file handle in BX.
+    /// </summary>
+    /// <param name="subfunction">The IOCTL subfunction in AL.</param>
+    public static bool IsIoctlHandleSubfunction(byte subfunction) {
+        return (IoctlSubfunction)subfunction is < IoctlSubfunction.ReadBlockControlChannel or
+            IoctlSubfunction.GetInputStatus or IoctlSubfunction.GetOutputStatus or
+            IoctlSubfunction.IsHandleRemote or IoctlSubfunction.GenericCharDeviceRequest or
+            IoctlSubfunction.QueryIoctlHandle;
+    }
+
+    /// <summary>
+    /// Executes an INT 21h AH=44h IOCTL subfunction. Handle subfunctions take a system file table index in BX.
+    /// </summary>
+    /// <param name="state">The CPU state holding the IOCTL registers.</param>
+    /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult IoControl(State state) {
         byte handle = 0;
         byte drive = 0;
@@ -1508,10 +1567,7 @@ public class DosFileManager {
 
         IoctlSubfunction subfunction = (IoctlSubfunction)state.AL;
 
-        if (subfunction is < IoctlSubfunction.ReadBlockControlChannel or
-            IoctlSubfunction.GetInputStatus or IoctlSubfunction.GetOutputStatus or
-            IoctlSubfunction.IsHandleRemote or IoctlSubfunction.GenericCharDeviceRequest or
-            IoctlSubfunction.QueryIoctlHandle) {
+        if (IsIoctlHandleSubfunction(state.AL)) {
             handle = (byte)state.BX;
             if (handle >= OpenFiles.Length || OpenFiles[handle] == null) {
                 if (_loggerService.IsEnabled(LogLevel.Warning)) {
@@ -1812,4 +1868,3 @@ public class DosFileManager {
         return dosPath;
     }
 }
-

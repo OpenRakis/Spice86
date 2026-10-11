@@ -8,6 +8,7 @@ using Spice86.Shared.Emulator.Storage.CdRom;
 using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
+using Spice86.Shared.Utils;
 using Spice86.Tests.Dos.FileSystem;
 using Spice86.Tests.Utility;
 using Spice86.ViewModels.Services;
@@ -106,6 +107,58 @@ public class DosInt21IntegrationTests {
         testHandler.Results.Should().Contain((byte)TestResult.Success);
         testHandler.Results.Should().NotContain((byte)TestResult.Failure);
         testHandler.Details.Take(3).Should().Equal(0, 1, 2);
+    }
+
+    [Fact]
+    public void FileHandles_AreLowestFreeJobFileTableSlot() {
+        AssertResourcePassesWithHandleTestFiles("file_handles_are_lowest_free_jft_slot.com");
+    }
+
+    [Fact]
+    public void CreateChildPsp_InheritsJobFileTableSlots() {
+        AssertResourcePassesWithHandleTestFiles("child_psp_inherits_jft_slots.com");
+    }
+
+    [Fact]
+    public void CloseHandleHook_InChildPsp_SeesHandle8LikeAloneInTheDarkCrack() {
+        // Arrange
+        string resourceName = "crack_close_handle8_hook.com";
+
+        // Act
+        TestIoPortHandler testHandler = RunDosResource(resourceName, fileSystemSetup: CreateHandleTestFiles);
+
+        // Assert
+        testHandler.Details.Should().Equal(19);
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    [Fact]
+    public void ChildTermination_ReleasesAllChildFileHandles() {
+        // Arrange
+        string resourceName = "child_exec_terminate_releases_handles.com";
+
+        // Act
+        TestIoPortHandler testHandler = RunDosResource(resourceName, fileSystemSetup: testRoot => {
+            CreateHandleTestFiles(testRoot);
+            string childPath = Path.Join(AppContext.BaseDirectory, "Resources", "DosInt21Tests",
+                "child_opens_files_without_closing.com");
+            File.Copy(childPath, Path.Join(testRoot, "CHILD.COM"));
+        });
+
+        // Assert
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    [Fact]
+    public void TerminateAfterCreateChildPsp_RestoresParentStackFromLastInt21Call() {
+        AssertResourcePasses("terminate_after_create_child_psp_restores_parent_stack.com");
+    }
+
+    [Fact]
+    public void SetHandleCount_AboveTwenty_RelocatesJobFileTable() {
+        AssertResourcePassesWithHandleTestFiles("set_handle_count_relocates_jft.com");
     }
 
     [Fact]
@@ -343,6 +396,19 @@ public class DosInt21IntegrationTests {
         testHandler.Results.Should().NotContain((byte)TestResult.Failure);
     }
 
+    private static void AssertResourcePassesWithHandleTestFiles(string resourceName) {
+        TestIoPortHandler testHandler = RunDosResource(resourceName, fileSystemSetup: CreateHandleTestFiles);
+
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    private static void CreateHandleTestFiles(string testRoot) {
+        foreach (string name in new[] { "A", "B", "C", "D" }) {
+            File.WriteAllText(Path.Join(testRoot, $"{name}.TXT"), name);
+        }
+    }
+
     private static TestIoPortHandler RunDosResource(string resourceName,
         Action<HeadlessGui>? keyInjectionAction = null,
         Action<Spice86DependencyInjection>? preRunSetup = null,
@@ -427,14 +493,23 @@ public class DosInt21IntegrationTests {
     private static void RedirectStdinToByteA(Spice86DependencyInjection di) {
         MemoryStream stream = new(new byte[] { 0x41 });
         DosFile stdinFile = new("STDIN", 0, stream);
-        di.Machine.Dos.FileManager.OpenFiles[0] = stdinFile;
+        RedirectStdin(di, stdinFile);
     }
 
     private static void RedirectStdinToHelloCr(Spice86DependencyInjection di) {
         byte[] data = { 0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x0D };
         MemoryStream stream = new(data);
         DosFile stdinFile = new("STDIN", 0, stream);
-        di.Machine.Dos.FileManager.OpenFiles[0] = stdinFile;
+        RedirectStdin(di, stdinFile);
+    }
+
+    private static void RedirectStdin(Spice86DependencyInjection di, DosFile stdinFile) {
+        const byte systemFileTableIndex = 10;
+        di.Machine.Dos.FileManager.OpenFiles[systemFileTableIndex] = stdinFile;
+        ushort pspSegment = di.Machine.Dos.DosSwappableDataArea.CurrentProgramSegmentPrefix;
+        DosProgramSegmentPrefix psp = new(di.Machine.Memory, MemoryUtils.ToPhysicalAddress(pspSegment, 0));
+        uint stdinEntryAddress = MemoryUtils.ToPhysicalAddress(psp.FileTableAddress.Segment, psp.FileTableAddress.Offset);
+        di.Machine.Memory.UInt8[stdinEntryAddress] = systemFileTableIndex;
     }
 
     private static void SimulateCtrlC(HeadlessGui gui) {

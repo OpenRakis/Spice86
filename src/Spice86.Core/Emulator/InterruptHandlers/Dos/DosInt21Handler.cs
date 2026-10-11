@@ -42,6 +42,7 @@ public class DosInt21Handler : InterruptHandler {
     private readonly DosSwappableDataArea _sda;
     private readonly DosFcbManager _dosFcbManager;
     private readonly DosSysVars _dosSysVars;
+    private readonly DosJobFileTable _jobFileTable;
     private uint _stdinReadyFlagLinearAddress;
     private bool _isCtrlCFlag;
 
@@ -50,6 +51,11 @@ public class DosInt21Handler : InterruptHandler {
     private const ushort DefaultBytesPerSector = 0x200;
     private const byte DefaultSectorsPerCluster = 0x20;
     private const ushort DefaultTotalClusters = 0x7FFD;
+    private const ushort MaximumJobFileTableSize = 0xFF;
+    private const ushort PspJobFileTableOffset = 0x18;
+    private const byte SetCurrentPspFunction = 0x50;
+    private const byte GetCurrentPspFunction = 0x51;
+    private const byte GetPspAddressFunction = 0x62;
 
     /// <summary>
     /// Initializes a new instance.
@@ -92,6 +98,7 @@ public class DosInt21Handler : InterruptHandler {
         _dosSysVars = dosSysVars;
         _interruptVectorTable = new InterruptVectorTable(memory);
         _dosFcbManager = dosFcbManager;
+        _jobFileTable = new DosJobFileTable(memory);
         FillDispatchTable();
     }
 
@@ -303,7 +310,7 @@ public class DosInt21Handler : InterruptHandler {
     /// Used by the ASM wait loop for AH=07h/08h/0Ah.
     /// </summary>
     public void CallbackCheckStdinReady() {
-        Memory[_stdinReadyFlagLinearAddress] = _dosFileManager.IsStdinInputAvailable() ? (byte)1 : (byte)0;
+        Memory[_stdinReadyFlagLinearAddress] = IsStandardInputAvailable() ? (byte)1 : (byte)0;
     }
 
     /// <summary>
@@ -328,7 +335,7 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("CHARACTER INPUT WITH ECHO");
         }
-        VirtualFileBase? stdin = _dosFileManager.Stdin;
+        VirtualFileBase? stdin = GetStandardFile(DosStandardHandle.Stdin);
         if (stdin != null && stdin.CanRead) {
             ConsoleDevice? consoleDevice = stdin as ConsoleDevice;
             bool previousEchoState = false;
@@ -510,8 +517,44 @@ public class DosInt21Handler : InterruptHandler {
         ushort currentPspSegment = _sda.CurrentProgramSegmentPrefix;
         uint pspAddress = MemoryUtils.ToPhysicalAddress(currentPspSegment, 0);
         DosProgramSegmentPrefix currentPsp = new(Memory, pspAddress);
-        currentPsp.MaximumOpenFiles = State.BX;
+        ushort currentSize = _jobFileTable.GetSize(currentPspSegment);
+        ushort requestedSize = Math.Clamp(State.BX, DosFileManager.MaxOpenFilesPerProcess, MaximumJobFileTableSize);
+        if (requestedSize == currentSize) {
+            SetCarryFlag(false, calledFromVm);
+            return;
+        }
+        for (ushort handle = requestedSize; handle < currentSize; handle++) {
+            if (_jobFileTable.GetEntry(currentPspSegment, handle) != DosJobFileTable.UnusedEntry) {
+                SetStateFromDosFileOperationResult(calledFromVm, DosFileOperationResult.LogError(DosErrorCode.TooManyOpenFiles));
+                return;
+            }
+        }
+        SegmentedAddress newTableAddress = new(currentPspSegment, PspJobFileTableOffset);
+        if (requestedSize > DosFileManager.MaxOpenFilesPerProcess) {
+            try {
+                ushort tableSegment = _dosTables.GetJobFileTableSegment(currentPspSegment);
+                newTableAddress = new SegmentedAddress(tableSegment, 0);
+            } catch (InvalidOperationException) {
+                SetStateFromDosFileOperationResult(calledFromVm,
+                    DosFileOperationResult.LogError(DosErrorCode.InsufficientMemory));
+                return;
+            }
+        }
+        byte[] entries = new byte[requestedSize];
+        Array.Fill(entries, DosJobFileTable.UnusedEntry);
+        for (ushort handle = 0; handle < Math.Min(requestedSize, currentSize); handle++) {
+            entries[handle] = _jobFileTable.GetEntry(currentPspSegment, handle);
+        }
+        currentPsp.FileTableAddress = newTableAddress;
+        currentPsp.MaximumOpenFiles = requestedSize;
+        for (ushort handle = 0; handle < requestedSize; handle++) {
+            _jobFileTable.SetEntry(currentPspSegment, handle, entries[handle]);
+        }
         SetCarryFlag(false, calledFromVm);
+    }
+
+    private bool IsStandardInputAvailable() {
+        return _dosFileManager.IsInputAvailable(GetStandardFile(DosStandardHandle.Stdin));
     }
 
     /// <summary>
@@ -577,7 +620,7 @@ public class DosInt21Handler : InterruptHandler {
         if (_isCtrlCFlag && CheckCtrlCOrCtrlBreakInKeyboardBuffer()) {
             return;
         }
-        State.AL = _dosFileManager.IsStdinInputAvailable() ? (byte)0xFF : (byte)0x0;
+        State.AL = IsStandardInputAvailable() ? (byte)0xFF : (byte)0x0;
     }
 
     /// <summary>
@@ -591,7 +634,7 @@ public class DosInt21Handler : InterruptHandler {
     /// then dispatches here via <c>callback(Run)</c>.
     /// </remarks>
     public void DirectStandardInputWithoutEcho() {
-        VirtualFileBase? stdin = _dosFileManager.Stdin;
+        VirtualFileBase? stdin = GetStandardFile(DosStandardHandle.Stdin);
         if (stdin != null && stdin.CanRead) {
             byte[] bytes = new byte[1];
             int readCount = stdin.Read(bytes, 0, 1);
@@ -791,7 +834,7 @@ public class DosInt21Handler : InterruptHandler {
         }
         _keyboardInt16Handler.FlushKeyboardBuffer();
         // NANSI dosfn7: also clears all device-level stuffahead buffers.
-        _dosFileManager.Stdin?.Flush();
+        GetStandardFile(DosStandardHandle.Stdin)?.Flush();
         if (operation is not 0x0 and not 0x6 and not 0x7 and not 0x8 and not 0xA) {
             return;
         }
@@ -811,8 +854,13 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("CLOSE FILE handle {FileHandle}", ConvertUtils.ToHex(fileHandle));
         }
-        DosFileOperationResult dosFileOperationResult = _dosFileManager.CloseFileOrDevice(
-            fileHandle);
+        ushort pspSegment = _sda.CurrentProgramSegmentPrefix;
+        if (!_jobFileTable.TryResolve(pspSegment, fileHandle, out byte systemFileTableIndex)) {
+            SetStateFromDosFileOperationResult(calledFromVm, DosFileOperationResult.LogError(DosErrorCode.InvalidHandle));
+            return;
+        }
+        DosFileOperationResult dosFileOperationResult = _dosFileManager.ReleaseHandleReference(systemFileTableIndex);
+        _jobFileTable.SetEntry(pspSegment, fileHandle, DosJobFileTable.UnusedEntry);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
         if (!dosFileOperationResult.IsError) {
             State.AL = dosFileOperationResult.RefCount;
@@ -834,7 +882,8 @@ public class DosInt21Handler : InterruptHandler {
             LoggerService.LogTrace("CREATE FILE USING HANDLE: {FileName} with attribute {FileAttribute}",
                 fileName, fileAttribute);
         }
-        DosFileOperationResult dosFileOperationResult = _dosFileManager.CreateFileUsingHandle(fileName, fileAttribute);
+        DosFileOperationResult dosFileOperationResult = AssignJobFileTableHandle(
+            _dosFileManager.CreateFileUsingHandle(fileName, fileAttribute));
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
@@ -857,8 +906,8 @@ public class DosInt21Handler : InterruptHandler {
         DosInputBuffer dosInputBuffer = new DosInputBuffer(Memory, address);
         int charCount = 0;
         bool endedWithCr = false;
-        VirtualFileBase? stdin = _dosFileManager.Stdin;
-        VirtualFileBase? stdout = _dosFileManager.Stdout;
+        VirtualFileBase? stdin = GetStandardFile(DosStandardHandle.Stdin);
+        VirtualFileBase? stdout = GetStandardFile(DosStandardHandle.Stdout);
         if (stdin == null || stdout == null) {
             return;
         }
@@ -923,8 +972,8 @@ public class DosInt21Handler : InterruptHandler {
             if (LoggerService.IsEnabled(LogLevel.Trace)) {
                 LoggerService.LogTrace("DOS INT21H DirectConsoleIo, INPUT REQUESTED");
             }
-            VirtualFileBase? stdin = _dosFileManager.Stdin;
-            if (stdin != null && _dosFileManager.IsStdinInputAvailable()) {
+            VirtualFileBase? stdin = GetStandardFile(DosStandardHandle.Stdin);
+            if (stdin != null && _dosFileManager.IsInputAvailable(stdin)) {
                 byte[] bytes = new byte[1];
                 int readCount = stdin.Read(bytes, 0, 1);
                 if (readCount < 1) {
@@ -944,7 +993,7 @@ public class DosInt21Handler : InterruptHandler {
                 LoggerService.LogTrace("DOS INT21H DirectConsoleIo, OUTPUT REQUESTED: {Character}, {Ascii}",
                     character, ConvertUtils.ToChar(character));
             }
-            VirtualFileBase? stdout = _dosFileManager.Stdout;
+            VirtualFileBase? stdout = GetStandardFile(DosStandardHandle.Stdout);
             if (stdout != null) {
                 ConsoleDevice? console = stdout as ConsoleDevice;
                 if (console != null) {
@@ -999,7 +1048,7 @@ public class DosInt21Handler : InterruptHandler {
     /// FreeDOS equivalent of write_char_stdout: routes through the stdout SFT entry.
     /// </summary>
     private void WriteCharToStdout(byte character) {
-        VirtualFileBase? stdout = _dosFileManager.Stdout;
+        VirtualFileBase? stdout = GetStandardFile(DosStandardHandle.Stdout);
         if (stdout != null && stdout.CanWrite) {
             stdout.WriteByte(character);
         }
@@ -1018,13 +1067,26 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("DUPLICATE FILE HANDLE. {FileHandle}", fileHandle);
         }
-        DosFileOperationResult dosFileOperationResult = _dosFileManager.DuplicateFileHandle(fileHandle);
-        SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
+        ushort pspSegment = _sda.CurrentProgramSegmentPrefix;
+        if (!_jobFileTable.TryResolve(pspSegment, fileHandle, out byte systemFileTableIndex)) {
+            SetStateFromDosFileOperationResult(calledFromVm, DosFileOperationResult.LogError(DosErrorCode.InvalidHandle));
+            return;
+        }
+        if (!_jobFileTable.TryFindFreeHandle(pspSegment, out ushort newHandle)
+            || !_dosFileManager.AddHandleReference(systemFileTableIndex)) {
+            SetStateFromDosFileOperationResult(calledFromVm, DosFileOperationResult.LogError(DosErrorCode.TooManyOpenFiles));
+            return;
+        }
+        _jobFileTable.SetEntry(pspSegment, newHandle, systemFileTableIndex);
+        SetStateFromDosFileOperationResult(calledFromVm, DosFileOperationResult.Value16(newHandle));
     }
 
     /// <summary>
-    /// Force duplicates a file handle. The handle is in BX. The new handle is in DX.
+    /// Force duplicates a file handle. The handle is in BX. The new handle is in CX.
     /// </summary>
+    /// <remarks>
+    /// When the new handle is already open, it is closed first.
+    /// </remarks>
     /// <returns>
     /// CF is cleared on success. <br/>
     /// CF is set on error.
@@ -1032,16 +1094,56 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="calledFromVm">Whether this was called by the emulator.</param>
     public void ForceDuplicateFileHandle(bool calledFromVm) {
         ushort fileHandle = State.BX;
-        ushort newHandle = State.DX;
+        ushort newHandle = State.CX;
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("FORCE DUPLICATE FILE HANDLE. {FileHandle}, {NewHandle}",
                 fileHandle, newHandle);
         }
-        DosFileOperationResult dosFileOperationResult = _dosFileManager.ForceDuplicateFileHandle(fileHandle, newHandle);
-        SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
-        if (!dosFileOperationResult.IsError) {
-            State.AX = State.CX; // Not all sources agree on this, but it seems to be the case.
+        ushort pspSegment = _sda.CurrentProgramSegmentPrefix;
+        if (newHandle == fileHandle || newHandle >= _jobFileTable.GetSize(pspSegment)
+            || !_jobFileTable.TryResolve(pspSegment, fileHandle, out byte systemFileTableIndex)) {
+            SetStateFromDosFileOperationResult(calledFromVm, DosFileOperationResult.LogError(DosErrorCode.InvalidHandle));
+            return;
         }
+        if (_jobFileTable.TryResolve(pspSegment, newHandle, out byte replacedSystemFileTableIndex)) {
+            _dosFileManager.ReleaseHandleReference(replacedSystemFileTableIndex);
+            _jobFileTable.SetEntry(pspSegment, newHandle, DosJobFileTable.UnusedEntry);
+        }
+        if (!_dosFileManager.AddHandleReference(systemFileTableIndex)) {
+            SetStateFromDosFileOperationResult(calledFromVm, DosFileOperationResult.LogError(DosErrorCode.TooManyOpenFiles));
+            return;
+        }
+        _jobFileTable.SetEntry(pspSegment, newHandle, systemFileTableIndex);
+        SetStateFromDosFileOperationResult(calledFromVm, DosFileOperationResult.NoValue());
+        State.AX = newHandle;
+    }
+
+    private DosFileOperationResult AssignJobFileTableHandle(DosFileOperationResult systemFileTableResult) {
+        if (systemFileTableResult.IsError || systemFileTableResult.Value is null) {
+            return systemFileTableResult;
+        }
+        byte systemFileTableIndex = (byte)systemFileTableResult.Value.Value;
+        ushort pspSegment = _sda.CurrentProgramSegmentPrefix;
+        if (!_jobFileTable.TryFindFreeHandle(pspSegment, out ushort handle)) {
+            _dosFileManager.ReleaseHandleReference(systemFileTableIndex);
+            return DosFileOperationResult.LogError(DosErrorCode.TooManyOpenFiles);
+        }
+        _jobFileTable.SetEntry(pspSegment, handle, systemFileTableIndex);
+        return DosFileOperationResult.Value16(handle);
+    }
+
+    private bool TryResolveFileHandle(ushort fileHandle, out byte systemFileTableIndex) {
+        return _jobFileTable.TryResolve(_sda.CurrentProgramSegmentPrefix, fileHandle, out systemFileTableIndex);
+    }
+
+    private VirtualFileBase? GetStandardFile(DosStandardHandle standardHandle) {
+        if (_sda.CurrentProgramSegmentPrefix == 0) {
+            return _dosFileManager.OpenFiles[(ushort)standardHandle];
+        }
+        if (TryResolveFileHandle((ushort)standardHandle, out byte systemFileTableIndex)) {
+            return _dosFileManager.OpenFiles[systemFileTableIndex];
+        }
+        return null;
     }
 
     /// <summary>
@@ -1586,8 +1688,12 @@ public class DosInt21Handler : InterruptHandler {
                 originOfMove, fileHandle, offset);
         }
 
+        if (!TryResolveFileHandle(fileHandle, out byte systemFileTableIndex)) {
+            SetStateFromDosFileOperationResult(calledFromVm, DosFileOperationResult.LogError(DosErrorCode.InvalidHandle));
+            return;
+        }
         DosFileOperationResult dosFileOperationResult =
-            _dosFileManager.MoveFilePointerUsingHandle(originOfMove, fileHandle, offset);
+            _dosFileManager.MoveFilePointerUsingHandle(originOfMove, systemFileTableIndex, offset);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
@@ -1608,8 +1714,8 @@ public class DosInt21Handler : InterruptHandler {
                 fileName, fileAccessMode,
                 ConvertUtils.ToHex8(State.AL));
         }
-        DosFileOperationResult dosFileOperationResult = _dosFileManager.OpenFileOrDevice(
-            fileName, fileAccessMode);
+        DosFileOperationResult dosFileOperationResult = AssignJobFileTableHandle(
+            _dosFileManager.OpenFileOrDevice(fileName, fileAccessMode));
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
@@ -1627,7 +1733,7 @@ public class DosInt21Handler : InterruptHandler {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("PRINT STRING: {String}", str);
         }
-        VirtualFileBase? stdout = _dosFileManager.Stdout;
+        VirtualFileBase? stdout = GetStandardFile(DosStandardHandle.Stdout);
         if (stdout != null) {
             byte[] bytes = Encoding.ASCII.GetBytes(str);
             stdout.Write(bytes, 0, bytes.Length);
@@ -1704,7 +1810,7 @@ public class DosInt21Handler : InterruptHandler {
 
     /// <summary>
     /// INT 21h, AH=55h - Create Child PSP.
-    /// Creates a child PSP at DX with size SI paragraphs and returns AL=0xF0 without switching the current PSP.
+    /// Creates a child PSP at DX with size SI paragraphs, makes it the current PSP, and returns AL=0xF0.
     /// </summary>
     public void CreateChildPsp() {
         ushort childSegment = State.DX;
@@ -1716,6 +1822,7 @@ public class DosInt21Handler : InterruptHandler {
         }
 
         _dosProcessManager.CreateChildPsp(childSegment, sizeInParagraphs);
+        _sda.CurrentProgramSegmentPrefix = childSegment;
         State.AL = ExpectedValueOfALInCreateChildPsp;
     }
 
@@ -1786,15 +1893,36 @@ public class DosInt21Handler : InterruptHandler {
                 ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
         }
         uint targetMemory = MemoryUtils.ToPhysicalAddress(State.DS, State.DX);
+        if (!TryResolveFileHandle(fileHandle, out byte systemFileTableIndex)) {
+            SetStateFromDosFileOperationResult(calledFromVm, DosFileOperationResult.LogError(DosErrorCode.InvalidHandle));
+            return;
+        }
         DosFileOperationResult dosFileOperationResult = _dosFileManager.ReadFileOrDevice(
-            fileHandle, readLength, targetMemory);
+            systemFileTableIndex, readLength, targetMemory);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Like MS-DOS, the caller SS:SP is saved into the current PSP (offset 2Eh) on entry, except for the
+    /// PSP get/set functions. Process termination restores the parent's stack from this field.
+    /// </remarks>
     public override void Run() {
         byte operation = State.AH;
+        SaveCallerStackInCurrentPsp(operation);
         Run(operation);
+    }
+
+    private void SaveCallerStackInCurrentPsp(byte operation) {
+        if (operation is SetCurrentPspFunction or GetCurrentPspFunction or GetPspAddressFunction) {
+            return;
+        }
+        ushort currentPspSegment = _sda.CurrentProgramSegmentPrefix;
+        if (currentPspSegment == 0) {
+            return;
+        }
+        DosProgramSegmentPrefix currentPsp = new(Memory, MemoryUtils.ToPhysicalAddress(currentPspSegment, 0));
+        currentPsp.StackPointer = new SegmentedAddress(State.SS, State.SP);
     }
 
     /// <summary>
@@ -1881,8 +2009,12 @@ public class DosInt21Handler : InterruptHandler {
                 ConvertUtils.ToHex(writeLength),
                 ConvertUtils.ToSegmentedAddressRepresentation(State.DS, State.DX));
         }
+        if (!TryResolveFileHandle(fileHandle, out byte systemFileTableIndex)) {
+            SetStateFromDosFileOperationResult(calledFromVm, DosFileOperationResult.LogError(DosErrorCode.InvalidHandle));
+            return;
+        }
         DosFileOperationResult dosFileOperationResult =
-            _dosFileManager.WriteToFileOrDevice(fileHandle, writeLength, bufferAddress);
+            _dosFileManager.WriteToFileOrDevice(systemFileTableIndex, writeLength, bufferAddress);
         SetStateFromDosFileOperationResult(calledFromVm, dosFileOperationResult);
     }
 
@@ -2424,7 +2556,18 @@ public class DosInt21Handler : InterruptHandler {
     /// </list>
     /// </remarks>
     public void IoControl(bool calledFromVm) {
+        if (!DosFileManager.IsIoctlHandleSubfunction(State.AL)) {
+            SetStateFromDosFileOperationResult(calledFromVm, _dosFileManager.IoControl(State));
+            return;
+        }
+        if (!TryResolveFileHandle(State.BX, out byte systemFileTableIndex)) {
+            SetStateFromDosFileOperationResult(calledFromVm, DosFileOperationResult.LogError(DosErrorCode.InvalidHandle));
+            return;
+        }
+        ushort fileHandle = State.BX;
+        State.BX = systemFileTableIndex;
         DosFileOperationResult result = _dosFileManager.IoControl(State);
+        State.BX = fileHandle;
         SetStateFromDosFileOperationResult(calledFromVm, result);
     }
 
