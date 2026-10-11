@@ -88,6 +88,7 @@ internal sealed class GeneratedCodeMachineTestRunner {
     /// overwriting each other. <c>MaxCycles</c> and <c>ConfigureMachine</c> are deliberately not part
     /// of the key. Every flag is enumerated explicitly so adding one to the settings is a
     /// compile-visible decision here rather than a silent omission that lets two runs share a golden.
+    /// Relocated installed callbacks append their segment because their addresses appear in generated source.
     /// </summary>
     /// <param name="settings">Settings to build the key from.</param>
     /// <returns>The golden-file key.</returns>
@@ -108,7 +109,7 @@ internal sealed class GeneratedCodeMachineTestRunner {
         if (settings.EnableSpeculativeCfgExploration) {
             key += ".spec";
         }
-        return key;
+        return key + settings.HandlerSegmentGoldenSuffix;
     }
 
     public GeneratedCSharpProgram GenerateProgramAndSource(AsmRunSettings settings) {

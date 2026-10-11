@@ -36,6 +36,16 @@ internal sealed record AsmRunSettings {
     /// <summary>Segment for installed BIOS callbacks, separate from BIOS-image fixture code when needed.</summary>
     public ushort AsmHandlersSegment { get; init; } = 0xF000;
 
+    /// <summary>Golden suffix for relocated callbacks; unchanged when callbacks are not installed.</summary>
+    public string HandlerSegmentGoldenSuffix {
+        get {
+            if (!InstallInterruptVectors || AsmHandlersSegment == 0xF000) {
+                return "";
+            }
+            return $".handlers{AsmHandlersSegment:X4}";
+        }
+    }
+
     /// <summary>Runs on the fresh machine before the program runs. Never null.</summary>
     public Action<Machine> ConfigureMachine { get; init; } = NoMachineConfiguration;
 

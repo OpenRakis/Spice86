@@ -17,6 +17,8 @@ public sealed class AsmFixtureGoldenCoverageTest {
         // Arrange
         string[] generatedGoldens = Directory.GetFiles(Path.Join("Resources", "cpuTests", "res", "GeneratedCode"), "*.cs.txt")
             .Select(Path.GetFileName).OfType<string>().ToArray();
+        string[] listingGoldens = Directory.GetFiles(Path.Join("Resources", "cpuTests", "res", "DumpedListing"), "*.txt")
+            .Select(Path.GetFileName).OfType<string>().ToArray();
         string[] binNames = Directory.GetFiles(Path.Join("Resources", "cpuTests"), "*.bin")
             .Select(Path.GetFileNameWithoutExtension).OfType<string>()
             .Where(binName => !EngineOnlyBins.Contains(binName)).ToArray();
@@ -24,7 +26,7 @@ public sealed class AsmFixtureGoldenCoverageTest {
         // Act
         List<string> missing = new();
         foreach (string binName in binNames) {
-            if (!File.Exists(Path.Join("Resources", "cpuTests", "res", "DumpedListing", binName + ".txt"))) {
+            if (!listingGoldens.Any(golden => golden == binName + ".txt" || golden.StartsWith(binName + ".", StringComparison.Ordinal))) {
                 missing.Add($"{binName}: no MachineTest listing golden");
             }
             if (!generatedGoldens.Any(golden => golden == binName + ".cs.txt" || golden.StartsWith(binName + ".", StringComparison.Ordinal))) {

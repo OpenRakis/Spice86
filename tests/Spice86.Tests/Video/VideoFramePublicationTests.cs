@@ -15,6 +15,24 @@ using Spice86.Tests.AsmFixtures;
 using Xunit;
 
 public sealed class VideoFramePublicationTests {
+    [Fact]
+    public void DisabledOutputUsesNewFrameWidthAfterResolutionReduction() {
+        // Arrange
+        using AsmFixtureRun run = AsmFixtureRunner.RunEmulated(AsmFixtureCatalog.FlashbackVideo(false), JitMode.InterpretedOnly);
+        run.Result.VideoRenderer.Width.Should().Be(320);
+        run.Result.VideoState.CrtControllerRegisters.HorizontalDisplayEnd = 39;
+        run.Result.VideoState.GeneralRegisters.CgaBitsPerPixel = 2;
+        run.Result.VideoState.GeneralRegisters.CgaModeControl = 0;
+
+        // Act
+        uint[] pixels = run.Result.CaptureVideoFrame();
+
+        // Assert
+        run.Result.VideoRenderer.Width.Should().Be(160);
+        pixels.Length.Should().Be(160 * 200);
+        pixels.Should().OnlyContain(pixel => pixel == 0xFF000000);
+    }
+
     [Theory]
     [InlineData(0, 1, false, false, 1, 2)]
     [InlineData(448, 1, false, false, 225, 226)]
