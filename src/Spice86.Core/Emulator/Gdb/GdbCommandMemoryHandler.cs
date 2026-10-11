@@ -117,7 +117,15 @@ public class GdbCommandMemoryHandler {
             }
 
             _memory.LoadData(address, data);
-            if (length > 0 && !_memory.ReadRam(length, address).AsSpan().SequenceEqual(data)) {
+            bool writePersisted = true;
+            for (int i = 0; i < data.Length; i++) {
+                uint readAddress = _memory.A20Gate.TransformAddress(address + (uint)i);
+                if (_memory.SneakilyRead(readAddress) != data[i]) {
+                    writePersisted = false;
+                    break;
+                }
+            }
+            if (length > 0 && !writePersisted) {
                 if (_loggerService.IsEnabled(LogLevel.Warning)) {
                     _loggerService.LogWarning("Memory write at {Address:X6} did not persist for {Length} bytes", address, length);
                 }
