@@ -62,7 +62,7 @@ public class CfgGraphReloadTest {
         "lockprefix", "mul", "partition_cross_function_loop", "partition_indirect_call_jump",
         "partition_jump_into_function_middle", "partition_mixed_activation_cycle",
         "partition_multi_entry_dominated_shared", "partition_multi_entry_irreducible_shared",
-        "partition_shared_tail", "rep", "returnedterminator", "rotate", "segpr", "selfmodifycall",
+        "partition_shared_tail", "rep", "returnedterminator", "romwrite", "rotate", "segpr", "selfmodifycall",
         "selfmodifyinstructions", "selfmodifyrep", "selfmodifyje", "selfmodifyterminator", "selfmodifyvalue", "shifts",
         "sticli", "strings", "sub", "test386",
     }.Select(name => new object[] { name });

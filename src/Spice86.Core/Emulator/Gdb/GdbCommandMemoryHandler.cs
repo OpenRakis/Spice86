@@ -92,13 +92,19 @@ public class GdbCommandMemoryHandler {
     }
 
     /// <summary>
-    /// Writes data to the specified memory address.
+    /// Writes data to the specified memory address and verifies readback.
     /// </summary>
     /// <param name="commandContent">The command content in the format "address,length:data".</param>
     /// <returns>The GDB response.</returns>
     public string WriteMemory(string commandContent) {
         try {
-            string[] commandContentSplit = commandContent.Split("[,:]");
+            string[] commandContentSplit = commandContent.Split(',', ':');
+            if (commandContentSplit.Length != 3) {
+                if (_loggerService.IsEnabled(LogLevel.Error)) {
+                    _loggerService.LogError("Malformed memory write request {CommandContent}", commandContent);
+                }
+                return _gdbIo.GenerateResponse("E01");
+            }
             uint address = ConvertUtils.ParseHex32(commandContentSplit[0]);
             uint length = ConvertUtils.ParseHex32(commandContentSplit[1]);
             byte[] data = ConvertUtils.HexToByteArray(commandContentSplit[2]);
@@ -106,11 +112,17 @@ public class GdbCommandMemoryHandler {
                 return _gdbIo.GenerateResponse("E01");
             }
 
-            if (address + length > _memory.Length) {
+            if (address > _memory.Length || length > _memory.Length - address) {
                 return _gdbIo.GenerateResponse("E02");
             }
 
             _memory.LoadData(address, data);
+            if (length > 0 && !_memory.ReadRam(length, address).AsSpan().SequenceEqual(data)) {
+                if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                    _loggerService.LogWarning("Memory write at {Address:X6} did not persist for {Length} bytes", address, length);
+                }
+                return _gdbIo.GenerateResponse("E03");
+            }
             return _gdbIo.GenerateResponse("OK");
         } catch (FormatException nfe) {
             if (_loggerService.IsEnabled(LogLevel.Error)) {

@@ -1,5 +1,7 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.VGA;
 
+using Microsoft.Extensions.Logging;
+
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Data;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
@@ -17,11 +19,14 @@ public class VgaRom : IMemoryDevice {
     public const int Segment = 0xC000;
 
     private readonly byte[] _storage;
+    private readonly ILogger _logger;
 
     /// <summary>
     ///     Creates a new instance of the <see cref="VgaRom" /> class.
     /// </summary>
-    public VgaRom() {
+    /// <param name="logger">Logger for ignored ROM writes.</param>
+    public VgaRom(ILogger logger) {
+        _logger = logger;
         // Create some storage.
         byte[] font8 = Fonts.VgaFont8;
         byte[] font14 = Fonts.VgaFont14;
@@ -70,9 +75,11 @@ public class VgaRom : IMemoryDevice {
         return _storage[address - BaseAddress];
     }
 
-    /// <inheritdoc />
+    /// <summary>Ignores writes, preserving the video BIOS ROM contents as hardware does.</summary>
     public void Write(uint address, byte value) {
-        throw new NotSupportedException($"Video BIOS ROM is read-only. Writing {value:X2} to {address:X6} is not supported.");
+        if (_logger.IsEnabled(LogLevel.Debug)) {
+            _logger.LogDebug("Ignoring write of {Value:X2} to VGA ROM at {Address:X6}", value, address);
+        }
     }
 
     /// <inheritdoc />

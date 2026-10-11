@@ -21,6 +21,7 @@ public class VgaFunctionality : IVgaFunctionality {
     private readonly IIndexable _memory;
     private readonly VgaRom _vgaRom;
     private readonly InterruptVectorTable _interruptVectorTable;
+    private readonly IVideoState _videoState;
 
     /// <summary>
     /// Creates a new instance of the <see cref="VgaFunctionality"/> class.
@@ -30,13 +31,15 @@ public class VgaFunctionality : IVgaFunctionality {
     /// <param name="ioPortDispatcher">The IOPortDispatcher, used to read from or write to VGA ports.</param>
     /// <param name="biosDataArea">The global BIOS variables.</param>
     /// <param name="vgaRom">The VGA ROM, so we can access the IBM fonts.</param>
+    /// <param name="videoState">The shared video registers.</param>
     /// <param name="bootUpInTextMode">Whether we begin with mode 0x03.</param>
-    public VgaFunctionality(IIndexable memory, InterruptVectorTable interruptVectorTable, IIOPortHandler ioPortDispatcher, BiosDataArea biosDataArea, VgaRom vgaRom, bool bootUpInTextMode) {
+    public VgaFunctionality(IIndexable memory, InterruptVectorTable interruptVectorTable, IIOPortHandler ioPortDispatcher, BiosDataArea biosDataArea, VgaRom vgaRom, IVideoState videoState, bool bootUpInTextMode) {
         _memory = memory;
         _ioPortDispatcher = ioPortDispatcher;
         _biosDataArea = biosDataArea;
         _vgaRom = vgaRom;
         _interruptVectorTable = interruptVectorTable;
+        _videoState = videoState;
         if (bootUpInTextMode) {
             VgaSetMode(0x03, ModeFlags.Legacy);
         }
@@ -95,6 +98,11 @@ public class VgaFunctionality : IVgaFunctionality {
 
     /// <inheritdoc />
     public void SetPalette(byte paletteId) {
+        if (_videoState.GeneralRegisters.CgaBitsPerPixel != 0) {
+            _biosDataArea.VideoPal = (byte)((_biosDataArea.VideoPal & ~0x20) | ((paletteId & 1) << 5));
+            _ioPortDispatcher.WriteByte(Ports.CgaColorSelect, _biosDataArea.VideoPal);
+            return;
+        }
         for (byte i = 1; i < 4; i++) {
             WriteMaskedToAttributeController(i, 0x01, (byte)(paletteId & 0x01));
         }
@@ -102,6 +110,11 @@ public class VgaFunctionality : IVgaFunctionality {
 
     /// <inheritdoc />
     public void SetBorderColor(byte color) {
+        if (_videoState.GeneralRegisters.CgaBitsPerPixel != 0) {
+            _biosDataArea.VideoPal = (byte)((_biosDataArea.VideoPal & 0xE0) | (color & 0x1F));
+            _ioPortDispatcher.WriteByte(Ports.CgaColorSelect, _biosDataArea.VideoPal);
+            return;
+        }
         byte value = (byte)(color & 0x0F);
         if ((value & 0x08) != 0) {
             value += 0x08;
@@ -231,6 +244,10 @@ public class VgaFunctionality : IVgaFunctionality {
     public void VgaSetMode(int modeId, ModeFlags flags) {
         VideoMode videoMode = GetVideoMode(modeId);
         VgaMode vgaMode = videoMode.VgaMode;
+        _videoState.GeneralRegisters.CgaBitsPerPixel = 0;
+        if (vgaMode.MemoryModel == MemoryModel.Cga) {
+            _videoState.GeneralRegisters.CgaBitsPerPixel = vgaMode.BitsPerPixel;
+        }
 
         // Calculate aspect ratio correction factor based on the mode
         double aspectRatioCorrectionFactor = AspectRatioCorrectionHelper
@@ -686,6 +703,17 @@ public class VgaFunctionality : IVgaFunctionality {
         MemoryModel memoryModel = vgaMode.MemoryModel;
         ushort characterHeight = vgaMode.CharacterHeight;
         _biosDataArea.VideoMode = modeId < 0x100 ? (byte)modeId : (byte)0xff;
+        if (memoryModel == MemoryModel.Cga) {
+            _biosDataArea.VideoMsr = modeId switch {
+                4 => 0x2A,
+                5 => 0x2E,
+                6 => 0x1E,
+                _ => throw new ArgumentOutOfRangeException(nameof(modeId))
+            };
+            _biosDataArea.VideoPal = modeId == 6 ? (byte)0x3F : (byte)0x30;
+            _ioPortDispatcher.WriteByte(Ports.CgaModeControl, _biosDataArea.VideoMsr);
+            _ioPortDispatcher.WriteByte(Ports.CgaColorSelect, _biosDataArea.VideoPal);
+        }
 
         if (memoryModel == MemoryModel.Text) {
             _biosDataArea.ScreenColumns = (byte)width;

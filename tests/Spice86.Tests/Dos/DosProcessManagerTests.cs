@@ -383,8 +383,8 @@ public class DosProcessManagerTests {
         sda.CurrentProgramSegmentPrefix = initialPspSegment;
         BiosDataArea biosDataArea = new(memory, 640);
         InterruptVectorTable interruptVectorTable = new(memory);
-        VgaRom vgaRom = new();
-        VgaFunctionality vgaFunctionality = new(memory, interruptVectorTable, ioPortDispatcher, biosDataArea, vgaRom, true);
+        VgaRom vgaRom = new(loggerService);
+        VgaFunctionality vgaFunctionality = new(memory, interruptVectorTable, ioPortDispatcher, biosDataArea, vgaRom, new VideoState(), true);
 
         DosDriveManager driveManager = DosTestHelpers.CreateDriveManager(loggerService, null);
         DosSysVars dosSysVars = DosTestHelpers.CreateDosSysVars(memory, loggerService,

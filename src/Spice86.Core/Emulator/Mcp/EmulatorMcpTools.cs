@@ -281,7 +281,7 @@ internal sealed class EmulatorMcpTools {
         });
     }
 
-    [McpServerTool(Name = "write_memory", UseStructuredContent = true), Description("Write hex-encoded bytes to memory. Parameters: segment (ushort), offset (ushort), data (hex string like 'B80200'). Address is two separate integers, not a combined string. Max 4096 bytes.")]
+    [McpServerTool(Name = "write_memory", UseStructuredContent = true), Description("Write hex-encoded bytes to memory and verify readback. Ignored ROM writes return an error. Parameters: segment (ushort), offset (ushort), data (hex string like 'B80200'). Address is two separate integers, not a combined string. Max 4096 bytes.")]
     public CallToolResult WriteMemory(ushort segment, ushort offset, [StringSyntax("Hexadecimal")] string data) {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
@@ -293,6 +293,10 @@ internal sealed class EmulatorMcpTools {
                 uint address = MemoryUtils.ToPhysicalAddress(segment, offset);
                 ValidateMemoryWriteRange(address, bytesToWrite.Length);
                 _services.Memory.WriteRam(bytesToWrite, address);
+                byte[] readback = _services.Memory.ReadRam((uint)bytesToWrite.Length, address);
+                if (!readback.AsSpan().SequenceEqual(bytesToWrite)) {
+                    throw new InvalidOperationException("Memory write did not persist; the range may contain read-only or device memory.");
+                }
                 return new {
                     Address = new SegmentedAddress(segment, offset),
                     Length = bytesToWrite.Length,
