@@ -23,7 +23,6 @@ public class DosSysVars : MemoryBasedDataStructure {
     public const ushort SizeInBytes = 0x8C;
     public const ushort SizeInParagraphs = SizeInBytes / ParagraphSizeInBytes;
     public const int Segment = DosProcessManager.CommandComSegment + DosProgramSegmentPrefix.PspSizeInParagraphs;
-    public const int FirstMcbSegment = Segment + SizeInParagraphs;
 
     private readonly DosDeviceHeader _nullDeviceHeader;
 
@@ -50,7 +49,6 @@ public class DosSysVars : MemoryBasedDataStructure {
         }
         MinMemForExec = 0x0;
         A20GateFixRoutineOffset = 0x0;
-        MemAllocScanStart = FirstMcbSegment;
         MaxSectorLength = 0x200;
         RegCXfrom5e = 0x0;
         CountLRUCache = 0x0;
@@ -58,7 +56,6 @@ public class DosSysVars : MemoryBasedDataStructure {
         SharingCount = 0x0;
         SharingDelay = 0x0;
         PtrCONInput = 0x0;
-        FirstMCB = FirstMcbSegment;
         DirtyDiskBuffers = 0x0;
         LookaheadBufPt = SegmentedAddress.ZERO;
         LookaheadBufNumber = 0x0;

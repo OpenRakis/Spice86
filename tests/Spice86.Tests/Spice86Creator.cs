@@ -19,6 +19,8 @@ public sealed class Spice86Creator : IDisposable {
     private readonly string _exportFolder;
     private readonly bool _ownsExportFolder;
 
+    public bool EnableUmb { get; set; } = true;
+
     public Spice86Creator(string binName, bool enablePit = false,
         long maxCycles = 100000, bool installInterruptVectors = false, bool failOnUnhandledPort = false, bool enableA20Gate = false,
         bool enableXms = false, bool enableEms = false, string? overrideSupplierClassName = null, string? cDrive = null,
@@ -90,6 +92,7 @@ public sealed class Spice86Creator : IDisposable {
     }
 
     public Spice86DependencyInjection Create() {
+        _configuration.Umb = EnableUmb;
         Spice86DependencyInjection res = new(_configuration);
         MachineLeakTracker.Track(res.Machine);
         res.Machine.CpuState.Flags.CpuModel = CpuModel.ZET_86;

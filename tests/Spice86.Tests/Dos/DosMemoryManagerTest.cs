@@ -6,11 +6,13 @@ using Microsoft.Extensions.Logging;
 
 using NSubstitute;
 
+using Spice86.Core.CLI.RuntimeOptions;
 using Spice86.Core.Emulator.LoadableFile.Dos;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.OperatingSystem;
+using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM.Breakpoint;
@@ -28,6 +30,7 @@ public class DosMemoryManagerTests {
     // Dependencies needed to construct DosMemoryManager
     private readonly ILogger _loggerService;
     private readonly IMemory _memory;
+    private readonly DosSysVars _dosSysVars;
 
     /// <summary>
     /// The initial PSP segment used for tests (PSP is 16 paragraphs before entry point).
@@ -74,8 +77,13 @@ public class DosMemoryManagerTests {
         DosSwappableDataArea dosSwappableDataArea = new(_memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
         dosSwappableDataArea.CurrentProgramSegmentPrefix = _initialPspSegment;
 
-        // Arrange
-        _memoryManager = new DosMemoryManager(_memory, _initialPspSegment, _loggerService);
+        DosOptions options = new(null, string.Empty, programEntryPointSegment, false, false, false,
+            new DosRuntimeState(null));
+        NullDevice nullDevice = new(_loggerService, _memory, 0);
+        _dosSysVars = new DosSysVars(options, nullDevice, _memory,
+            MemoryUtils.ToPhysicalAddress(DosSysVars.Segment, 0));
+        _memoryManager = new DosMemoryManager(_memory, _initialPspSegment, _loggerService,
+            _dosSysVars, false, false);
     }
 
     /// <summary>
@@ -158,6 +166,56 @@ public class DosMemoryManagerTests {
         block.DataBlockSegment.Should().Be(0xFF0);
         block.Size.Should().Be(36880);
         block.AllocationSizeInBytes.Should().Be(590080);
+        _dosSysVars.FirstMCB.Should().Be(0xFEF);
+        _dosSysVars.MemAllocScanStart.Should().Be(0xFEF);
+        _dosSysVars.StartOfUMBChain.Should().Be(0xFFFF);
+        _dosSysVars.ChainingUMB.Should().Be(0);
+    }
+
+    /// <summary>
+    /// Ensures that inspecting UMBs exposes allocatable upper-memory blocks without linking the
+    /// conventional chain or including its bridge MCB.
+    /// </summary>
+    [Fact]
+    public void EnumerateUpperMemoryBlocksExcludesBridgeWithoutLinkingChain() {
+        // Arrange
+        DosMemoryManager upperMemoryManager = new(_memory, _initialPspSegment, _loggerService,
+            _dosSysVars, true, false);
+        List<DosMemoryControlBlock> upperMemoryBlocks = new();
+
+        // Act
+        foreach (DosMemoryControlBlock block in upperMemoryManager.EnumerateUpperMemoryBlocks()) {
+            upperMemoryBlocks.Add(block);
+        }
+
+        // Assert
+        upperMemoryBlocks.Should().ContainSingle();
+        DosMemoryControlBlock firstUpperMemoryBlock = upperMemoryBlocks[0];
+        firstUpperMemoryBlock.DataBlockSegment.Should().Be(0xD001);
+        firstUpperMemoryBlock.IsFree.Should().BeTrue();
+        firstUpperMemoryBlock.IsLast.Should().BeTrue();
+        _dosSysVars.ChainingUMB.Should().Be(0);
+    }
+
+    /// <summary>
+    /// Ensures conventional enumeration does not follow a linked UMB chain or include its bridge.
+    /// </summary>
+    [Fact]
+    public void EnumerateConventionalBlocksExcludesLinkedUmbChain() {
+        // Arrange
+        DosMemoryManager upperMemoryManager = new(_memory, _initialPspSegment, _loggerService,
+            _dosSysVars, true, false);
+        List<DosMemoryControlBlock> unlinkedBlocks = upperMemoryManager.EnumerateConventionalBlocks().ToList();
+
+        // Act
+        upperMemoryManager.SetUmbChainLinkState(1).Should().BeTrue();
+        List<DosMemoryControlBlock> linkedBlocks = upperMemoryManager.EnumerateConventionalBlocks().ToList();
+
+        // Assert
+        unlinkedBlocks.Should().ContainSingle();
+        linkedBlocks.Should().ContainSingle();
+        linkedBlocks[0].DataBlockSegment.Should().Be(unlinkedBlocks[0].DataBlockSegment);
+        linkedBlocks[0].DataBlockSegment.Should().NotBe(0xA000);
     }
 
     /// <summary>
@@ -1191,17 +1249,27 @@ public class DosMemoryManagerTests {
     }
 
     /// <summary>
-    /// Ensures that setting an invalid allocation strategy (invalid high memory bits) is ignored.
+    /// Ensures that DOSBox-compatible high-memory strategy bits are accepted.
     /// </summary>
     [Fact]
-    public void InvalidAllocationStrategyHighMemBitsIsIgnored() {
-        // Arrange
-        DosMemoryAllocationStrategy originalStrategy = _memoryManager.AllocationStrategy;
-
-        // Act - try to set invalid high memory bits (0xC0 - both bits 6 and 7 set)
+    public void AllocationStrategyHighMemBitsAreAccepted() {
+        // Act - both high-memory strategy bits are accepted by DOSBox.
         _memoryManager.AllocationStrategy = (DosMemoryAllocationStrategy)0xC0;
 
-        // Assert - should remain unchanged
-        _memoryManager.AllocationStrategy.Should().Be(originalStrategy);
+        // Assert
+        _memoryManager.AllocationStrategyValue.Should().Be((ushort)0xC0);
+    }
+
+    /// <summary>
+    /// Ensures that upper allocation strategy bits are accepted and preserved.
+    /// </summary>
+    [Fact]
+    public void AllocationStrategyHighByteIsAcceptedAndPreserved() {
+        // Act
+        bool accepted = _memoryManager.TrySetAllocationStrategy(0xAB00);
+
+        // Assert
+        accepted.Should().BeTrue();
+        _memoryManager.AllocationStrategyValue.Should().Be((ushort)0xAB00);
     }
 }

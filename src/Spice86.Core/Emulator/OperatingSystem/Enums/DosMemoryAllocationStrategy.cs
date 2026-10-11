@@ -28,38 +28,38 @@ public enum DosMemoryAllocationStrategy : byte {
     LastFit = 0x02,
 
     /// <summary>
-    /// First fit, try high memory first, then low.
-    /// Used when UMBs are linked to the MCB chain.
+    /// First fit in UMBs only.
+    /// Used whether or not UMBs are linked to the conventional MCB chain.
     /// </summary>
-    FirstFitHighThenLow = 0x40,
+    FirstFitHighOnlyNoFallback = 0x40,
 
     /// <summary>
-    /// Best fit, try high memory first, then low.
-    /// Used when UMBs are linked to the MCB chain.
+    /// Best fit in UMBs only.
+    /// Used whether or not UMBs are linked to the conventional MCB chain.
     /// </summary>
-    BestFitHighThenLow = 0x41,
+    BestFitHighOnlyNoFallback = 0x41,
 
     /// <summary>
-    /// Last fit, try high memory first, then low.
-    /// Used when UMBs are linked to the MCB chain.
+    /// Last fit in UMBs only.
+    /// Used whether or not UMBs are linked to the conventional MCB chain.
     /// </summary>
-    LastFitHighThenLow = 0x42,
+    LastFitHighOnlyNoFallback = 0x42,
 
     /// <summary>
-    /// First fit, high memory only (no fallback to low).
+    /// First fit, try UMBs first, then conventional memory.
     /// Used when UMBs are linked to the MCB chain.
     /// </summary>
-    FirstFitHighOnlyNoFallback = 0x80,
+    FirstFitHighThenLow = 0x80,
 
     /// <summary>
-    /// Best fit, high memory only (no fallback to low).
+    /// Best fit, try UMBs first, then conventional memory.
     /// Used when UMBs are linked to the MCB chain.
     /// </summary>
-    BestFitHighOnlyNoFallback = 0x81,
+    BestFitHighThenLow = 0x81,
 
     /// <summary>
-    /// Last fit, high memory only (no fallback to low).
+    /// Last fit, try UMBs first, then conventional memory.
     /// Used when UMBs are linked to the MCB chain.
     /// </summary>
-    LastFitHighOnlyNoFallback = 0x82
+    LastFitHighThenLow = 0x82
 }

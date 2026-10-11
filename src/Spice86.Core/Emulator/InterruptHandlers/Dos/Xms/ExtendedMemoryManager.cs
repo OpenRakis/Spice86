@@ -6,6 +6,7 @@ using Spice86.Core;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Emulator.Memory;
@@ -110,6 +111,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     private readonly State _state;
     private readonly A20Gate _a20Gate;
     private readonly IMemory _memory;
+    private readonly DosMemoryManager _dosMemoryManager;
     /// <summary>
     /// Set on DOS XMS driver startup - we don't touch it if was enabled at startup.
     /// </summary>
@@ -221,6 +223,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// <param name="state">The CPU state for accessing registers during XMS operations.</param>
     /// <param name="memoryAsmWriter">Helper for writing assembly code to memory.</param>
     /// <param name="dosTables">DOS memory tables for placing the XMS driver in memory.</param>
+    /// <param name="dosMemoryManager">The DOS memory manager used for UMB operations.</param>
     /// <param name="loggerService">The logger service for recording XMS operations.</param>
     /// <remarks>
     /// This constructor:
@@ -232,7 +235,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// </remarks>
     public ExtendedMemoryManager(IMemory memory, State state, A20Gate a20Gate,
         MemoryAsmWriter memoryAsmWriter, DosTables dosTables,
-        ILogger loggerService) {
+        DosMemoryManager dosMemoryManager, ILogger loggerService) {
         uint headerAddress = MemoryUtils.ToPhysicalAddress(DosDeviceSegment, 0);
         Header = new DosDeviceHeader(memory,
             headerAddress) {
@@ -243,6 +246,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         _state = state;
         _a20Gate = a20Gate;
         _memory = memory;
+        _dosMemoryManager = dosMemoryManager;
         _loggerService = loggerService;
         // Place hookable callback in writable memory area
         var hookableCodeAddress = new SegmentedAddress((ushort)(dosTables
@@ -1522,7 +1526,37 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// </remarks>
     public void RequestUpperMemoryBlock() {
         _state.AX = 0;
-        _state.BL = (byte)XmsErrorCodes.UmbNoBlocksAvailable;
+        _state.BL = (byte)XmsErrorCodes.NotImplemented;
+        DosMemoryManager dosMemoryManager = _dosMemoryManager;
+        if (!dosMemoryManager.HasUpperMemoryBlocks) {
+            return;
+        }
+
+        ushort previousStrategy = dosMemoryManager.AllocationStrategyValue;
+        byte previousLinkState = dosMemoryManager.UmbChainState;
+        if (previousLinkState == 0) {
+            dosMemoryManager.SetUmbChainLinkState(1);
+        }
+        dosMemoryManager.TrySetAllocationStrategy(0x40);
+        try {
+            DosMemoryControlBlock? block = dosMemoryManager.AllocateMemoryBlock(_state.DX);
+            if (block is not null) {
+                _state.AX = 1;
+                _state.BX = block.DataBlockSegment;
+                return;
+            }
+
+            ushort largestUmbBlock = dosMemoryManager.FindLargestFreeSizeForAllocation();
+            _state.DX = largestUmbBlock;
+            _state.BL = largestUmbBlock == 0
+                ? (byte)XmsErrorCodes.UmbNoBlocksAvailable
+                : (byte)XmsErrorCodes.UmbOnlySmallerBlock;
+        } finally {
+            if (dosMemoryManager.UmbChainState != previousLinkState) {
+                dosMemoryManager.SetUmbChainLinkState(previousLinkState);
+            }
+            dosMemoryManager.TrySetAllocationStrategy(previousStrategy);
+        }
     }
 
     /// <summary>
@@ -1540,7 +1574,16 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
     /// </remarks>
     public void ReleaseUpperMemoryBlock() {
         _state.AX = 0;
-        _state.BL = (byte)XmsErrorCodes.NotImplemented;
+        _state.BL = (byte)XmsErrorCodes.UmbInvalidSegment;
+        DosMemoryManager dosMemoryManager = _dosMemoryManager;
+        if (!dosMemoryManager.HasUpperMemoryBlocks) {
+            return;
+        }
+
+        if (dosMemoryManager.FreeUpperMemoryBlock(_state.DX)) {
+            _state.AX = 1;
+            _state.BL = (byte)XmsErrorCodes.Ok;
+        }
     }
 
     /// <summary>

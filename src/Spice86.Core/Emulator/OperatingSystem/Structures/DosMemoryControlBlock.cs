@@ -60,6 +60,22 @@ public class DosMemoryControlBlock : MemoryBasedDataStructure {
     }
 
     /// <summary>
+    /// Writes the fixed-width, space-padded DOS MCB owner-name field.
+    /// </summary>
+    /// <param name="ownerName">The owner name, up to eight ASCII characters.</param>
+    public void SetOwnerName(string ownerName) {
+        ArgumentNullException.ThrowIfNull(ownerName);
+        if (ownerName.Length > FilenameFieldSize) {
+            throw new ArgumentOutOfRangeException(nameof(ownerName));
+        }
+        for (int index = 0; index < FilenameFieldSize; index++) {
+            UInt8[FilenameFieldOffset + index] = index < ownerName.Length
+                ? (byte)ownerName[index]
+                : (byte)' ';
+        }
+    }
+
+    /// <summary>
     /// Gets or sets the PSP segment associated with the MCB.
     /// </summary>
     public ushort PspSegment { get => UInt16[PspSegmentFieldOffset]; set => UInt16[PspSegmentFieldOffset] = value; }

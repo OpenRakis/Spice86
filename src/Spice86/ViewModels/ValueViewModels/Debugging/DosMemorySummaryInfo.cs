@@ -40,6 +40,36 @@ public partial class DosMemorySummaryInfo : InspectorInfoBase {
 
     [ObservableProperty]
     [property: ReadOnly(true)]
+    [property: Category("UMB")]
+    [property: DisplayName("Free UMB (bytes)")]
+    private long _upperMemoryFreeBytes;
+
+    [ObservableProperty]
+    [property: ReadOnly(true)]
+    [property: Category("UMB")]
+    [property: DisplayName("Used UMB (bytes)")]
+    private long _upperMemoryUsedBytes;
+
+    [ObservableProperty]
+    [property: ReadOnly(true)]
+    [property: Category("UMB")]
+    [property: DisplayName("Largest free UMB (bytes)")]
+    private long _largestFreeUpperMemoryBlockBytes;
+
+    [ObservableProperty]
+    [property: ReadOnly(true)]
+    [property: Category("UMB")]
+    [property: DisplayName("Total UMBs")]
+    private int _upperMemoryBlockCount;
+
+    [ObservableProperty]
+    [property: ReadOnly(true)]
+    [property: Category("UMB")]
+    [property: DisplayName("Free UMBs")]
+    private int _freeUpperMemoryBlockCount;
+
+    [ObservableProperty]
+    [property: ReadOnly(true)]
     [property: Category("EMS")]
     [property: DisplayName("EMS enabled")]
     private bool _emsEnabled;

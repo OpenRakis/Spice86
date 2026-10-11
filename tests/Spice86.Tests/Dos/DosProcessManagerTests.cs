@@ -387,7 +387,9 @@ public class DosProcessManagerTests {
         VgaFunctionality vgaFunctionality = new(memory, interruptVectorTable, ioPortDispatcher, biosDataArea, vgaRom, true);
 
         DosDriveManager driveManager = DosTestHelpers.CreateDriveManager(loggerService, null);
-        DosMemoryManager memoryManager = new(memory, initialPspSegment, loggerService);
+        DosSysVars dosSysVars = DosTestHelpers.CreateDosSysVars(memory, loggerService,
+            configuration.ProgramEntryPointSegment);
+        DosMemoryManager memoryManager = new(memory, initialPspSegment, loggerService, dosSysVars, false, false);
         DosTables dosTables = new(memory);
         DosCodePageState dosCodePageState = DosCodePageState.Create(850, CountryId.UnitedStates);
         DosFileManager fileManager = new(memory, new DosStringDecoder(memory, state, dosCodePageState), driveManager, loggerService, new List<IVirtualDevice>());

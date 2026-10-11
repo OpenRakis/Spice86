@@ -20,6 +20,25 @@ public class McpServerToolStateTests {
     private const string TestProgramName = "add";
 
     [Fact]
+    public async Task DosAndMcpServices_ShouldShareEmsAndXmsManagersAsync() {
+        // Arrange
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(
+            TestProgramName, enableXms: true, enableEms: true, initializeDos: true);
+
+        // Act
+        Spice86.Core.Emulator.OperatingSystem.Dos dos = context.Services.Dos
+            ?? throw new InvalidOperationException("DOS services were not initialized.");
+        ExpandedMemoryManager? emsManager = context.Services.EmsManager;
+        ExtendedMemoryManager? xmsManager = context.Services.XmsManager;
+
+        // Assert
+        context.Services.EmsManager.Should().NotBeNull();
+        emsManager.Should().BeSameAs(dos.Ems);
+        context.Services.XmsManager.Should().NotBeNull();
+        xmsManager.Should().BeSameAs(dos.Xms);
+    }
+
+    [Fact]
     public async Task McpAbout_ShouldExposeDiscoverabilityMetadataAsync() {
         await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
         await context.InitializeAsync();

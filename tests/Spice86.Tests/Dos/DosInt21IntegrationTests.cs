@@ -36,6 +36,58 @@ public class DosInt21IntegrationTests {
     }
 
     [Fact]
+    public void UmbChain_UsesSysVarsMcbChainHeadAndCanBeQueriedLinkedAndUnlinked() {
+        // Arrange
+        string resourceName = "umb_chain_link.com";
+
+        // Act
+        TestIoPortHandler testHandler = RunDosResource(resourceName, enableXms: true);
+
+        // Assert
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    [Fact]
+    public void UmbMcbSize_IsReducedWhenEmsIsEnabled() {
+        // Arrange
+        string resourceName = "umb_ems_size.com";
+
+        // Act
+        TestIoPortHandler testHandler = RunDosResource(resourceName, true, true, true);
+
+        // Assert
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    [Fact]
+    public void UmbDisabled_ReportsNoChainAndRejectsLinking() {
+        // Arrange
+        string resourceName = "umb_disabled.com";
+
+        // Act
+        TestIoPortHandler testHandler = RunDosResource(resourceName, true, false, false);
+
+        // Assert
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    [Fact]
+    public void UmbAllocation_UsesHighOnlyAndHighThenLowStrategies() {
+        // Arrange
+        string resourceName = "umb_alloc_strategy.com";
+
+        // Act
+        TestIoPortHandler testHandler = RunDosResource(resourceName, enableXms: true);
+
+        // Assert
+        testHandler.Results.Should().Contain((byte)TestResult.Success);
+        testHandler.Results.Should().NotContain((byte)TestResult.Failure);
+    }
+
+    [Fact]
     public void GetDbcsLeadByteTable_WithInvalidAL_ReturnsError() {
         AssertResourcePasses("dbcs_lead_byte_table_invalid_al.com");
     }
@@ -413,6 +465,26 @@ public class DosInt21IntegrationTests {
         Action<HeadlessGui>? keyInjectionAction = null,
         Action<Spice86DependencyInjection>? preRunSetup = null,
         Action<string>? fileSystemSetup = null) {
+        return RunDosResource(resourceName, keyInjectionAction, preRunSetup, fileSystemSetup,
+            enableXms: false, enableEms: false, enableUmb: true);
+    }
+
+    private static TestIoPortHandler RunDosResource(string resourceName, bool enableXms) {
+        return RunDosResource(resourceName, null, null, null, enableXms, enableEms: false, enableUmb: true);
+    }
+
+    private static TestIoPortHandler RunDosResource(string resourceName, bool enableXms, bool enableEms,
+        bool enableUmb) {
+        return RunDosResource(resourceName, null, null, null, enableXms, enableEms, enableUmb);
+    }
+
+    private static TestIoPortHandler RunDosResource(string resourceName,
+        Action<HeadlessGui>? keyInjectionAction,
+        Action<Spice86DependencyInjection>? preRunSetup,
+        Action<string>? fileSystemSetup,
+        bool enableXms,
+        bool enableEms,
+        bool enableUmb) {
         string resourcePath = Path.Join(AppContext.BaseDirectory, "Resources", "DosInt21Tests", resourceName);
         if (!string.Equals(Path.GetExtension(resourcePath), ".com", StringComparison.OrdinalIgnoreCase)) {
             throw new ArgumentException("DOS INT 21h resource tests require a DOS COM program.", nameof(resourceName));
@@ -437,9 +509,12 @@ public class DosInt21IntegrationTests {
             maxCycles: 100000L,
             installInterruptVectors: true,
             enableA20Gate: true,
+            enableEms: enableEms,
+            enableXms: enableXms,
             cDrive: cDrive,
             instructionTimeScale: instructionsPerSecond
         );
+        creator.EnableUmb = enableUmb;
         using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
 
         if (keyInjectionAction is not null) {
