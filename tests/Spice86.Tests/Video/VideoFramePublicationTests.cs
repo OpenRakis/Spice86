@@ -6,6 +6,8 @@ using NSubstitute;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.Devices.Video;
+using Spice86.Core.Emulator.VM.Clock;
+using Spice86.Core.Emulator.VM.DeviceScheduler;
 using Spice86.Shared.Emulator.Video;
 using Spice86.Shared.Interfaces;
 using Spice86.Tests.AsmFixtures;
@@ -13,10 +15,67 @@ using Spice86.Tests.AsmFixtures;
 using Xunit;
 
 public sealed class VideoFramePublicationTests {
+    [Theory]
+    [InlineData(0, 1, false, false, 1, 2)]
+    [InlineData(448, 1, false, false, 225, 226)]
+    [InlineData(447, 1, false, false, 224, 225)]
+    [InlineData(0, 0, true, false, 2, 3)]
+    [InlineData(1, 0, true, false, 4, 5)]
+    [InlineData(1, 1, true, false, 2, 3)]
+    [InlineData(448, 0, false, true, 225, 226)]
+    [InlineData(0, 0, false, true, 1, 2)]
+    public void SchedulerPublishesFinalVisiblePhysicalScanline(
+        int verticalDisplayEnd, byte maximumScanline, bool verticalTimingHalved, bool scanDouble,
+        int expectedHeight, int lastPaletteIndex) {
+        // Arrange
+        using AsmFixtureRun run = AsmFixtureRunner.RunEmulated(AsmFixtureCatalog.FlashbackVideo(true), JitMode.InterpretedOnly);
+        IVideoState state = run.Result.VideoState;
+        state.CrtControllerRegisters.VerticalDisplayEnd = (byte)verticalDisplayEnd;
+        const byte verticalTotalBit9 = 0x20;
+        state.CrtControllerRegisters.OverflowRegister.Value =
+            (byte)(verticalTotalBit9 | ((verticalDisplayEnd >> 8) << 1));
+        state.CrtControllerRegisters.MaximumScanlineRegister.MaximumScanline = maximumScanline;
+        state.CrtControllerRegisters.MaximumScanlineRegister.CrtcScanDouble = scanDouble;
+        state.CrtControllerRegisters.CrtModeControlRegister.VerticalTimingHalved = verticalTimingHalved;
+        state.IsRenderingDirty = true;
+        IEmulatedClock clock = Substitute.For<IEmulatedClock>();
+        DeviceScheduler scheduler = new(clock, Substitute.For<ILogger>(), "Video timing test");
+        VgaTimingEngine timing = new(state, scheduler, clock, run.Result.VideoRenderer, new VgaBlinkState());
+        int visibleScanlines = verticalDisplayEnd + 1;
+        if (verticalTimingHalved) {
+            visibleScanlines *= 2;
+        }
+
+        // Act
+        for (int eventIndex = 0; eventIndex < visibleScanlines * 2 + 2; eventIndex++) {
+            double nextTime = scheduler.NextEventTime ?? throw new InvalidOperationException("Missing VGA timing event.");
+            clock.ElapsedTimeMs.Returns(nextTime);
+            scheduler.ProcessEvents();
+            if (state.GeneralRegisters.InputStatusRegister1.VerticalRetrace) {
+                break;
+            }
+        }
+        uint[] pixels = new uint[run.Result.VideoRenderer.BufferSize];
+        run.Result.VideoRenderer.CopyLastFrame(pixels);
+
+        // Assert
+        state.GeneralRegisters.InputStatusRegister1.VerticalRetrace.Should().BeTrue();
+        run.Result.VideoRenderer.Height.Should().Be(expectedHeight);
+        pixels[(expectedHeight - 1) * 256].Should().Be(state.DacRegisters.PaletteMap[lastPaletteIndex]);
+        timing.LastFrameDuration.TotalMilliseconds.Should().BeApproximately(visibleScanlines * 1000.0 / 31469.0, 0.0001);
+        int totalScanlines = state.CrtControllerRegisters.VerticalTotalValue + 2;
+        if (verticalTimingHalved) {
+            totalScanlines *= 2;
+        }
+        double nextFrameTime = scheduler.NextEventTime ?? throw new InvalidOperationException("Missing next frame event.");
+        nextFrameTime.Should().BeApproximately(totalScanlines * 1000.0 / 31469.0, 0.0001);
+    }
+
     [Fact]
     public void PitchedDestinationPreservesPaddingAndCopiesEveryRow() {
         // Arrange
         using AsmFixtureRun run = AsmFixtureRunner.RunEmulated(AsmFixtureCatalog.FlashbackVideo(true), JitMode.InterpretedOnly);
+        run.DependencyInjection.HeadlessGui?.Dispose();
         Renderer renderer = run.Result.VideoRenderer;
         uint[] expected = run.Result.CaptureVideoFrame();
         VideoFrameInfo info = renderer.FrameInfo;
@@ -39,6 +98,7 @@ public sealed class VideoFramePublicationTests {
     public void GeometryChangeDoesNotRelabelPublishedPixelsOrConsumeFrameOnResizeMismatch() {
         // Arrange
         using AsmFixtureRun run = AsmFixtureRunner.RunEmulated(AsmFixtureCatalog.FlashbackVideo(true), JitMode.InterpretedOnly);
+        run.DependencyInjection.HeadlessGui?.Dispose();
         Renderer renderer = run.Result.VideoRenderer;
         VideoFrameInfo oldInfo = renderer.FrameInfo;
         run.Result.VideoState.CrtControllerRegisters.HorizontalDisplayEnd = 31;
