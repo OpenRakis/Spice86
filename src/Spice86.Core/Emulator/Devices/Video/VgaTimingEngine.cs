@@ -20,7 +20,7 @@ public class VgaTimingEngine {
     private readonly VgaBlinkState _blinkState;
 
     private int _totalScanlines;
-    private int _verticalDisplayEndScanline;
+    private int _visibleScanlines;
     private double _lastFrameStartMs;
     private double _activeDisplayMs;
     private double _hblankDurationMs;
@@ -51,15 +51,15 @@ public class VgaTimingEngine {
 
     private void RecomputeTimingParameters() {
         int totalHeight = _state.CrtControllerRegisters.VerticalTotalValue + 2;
-        int verticalDisplayEnd = _state.CrtControllerRegisters.VerticalDisplayEndValue;
+        int visibleScanlines = _state.CrtControllerRegisters.VerticalDisplayEndValue + 1;
         bool verticalTimingHalved = _state.CrtControllerRegisters.CrtModeControlRegister.VerticalTimingHalved;
 
         _totalScanlines = totalHeight;
-        _verticalDisplayEndScanline = verticalDisplayEnd;
+        _visibleScanlines = visibleScanlines;
 
         if (verticalTimingHalved) {
             _totalScanlines = totalHeight * 2;
-            _verticalDisplayEndScanline = verticalDisplayEnd * 2;
+            _visibleScanlines = visibleScanlines * 2;
         }
 
         int horizontalDisplayEnd = _state.CrtControllerRegisters.HorizontalDisplayEnd + 1;
@@ -79,11 +79,7 @@ public class VgaTimingEngine {
 
         _renderer.BeginFrame();
 
-        if (_verticalDisplayEndScanline > 0) {
-            _scheduler.AddEvent(OnScanlineActive, 0, 0);
-        } else {
-            _scheduler.AddEvent(OnVerticalRetraceStart, 0);
-        }
+        _scheduler.AddEvent(OnScanlineActive, 0, 0);
     }
 
     private void OnScanlineActive(uint scanline) {
@@ -95,7 +91,7 @@ public class VgaTimingEngine {
     private void OnScanlineHBlank(uint scanline) {
         _state.GeneralRegisters.InputStatusRegister1.DisplayDisabled = true;
 
-        if (scanline + 1 < (uint)_verticalDisplayEndScanline) {
+        if (scanline + 1 < (uint)_visibleScanlines) {
             _scheduler.AddEvent(OnScanlineActive, _hblankDurationMs, scanline + 1);
         } else {
             _scheduler.AddEvent(OnVerticalRetraceStart, _hblankDurationMs);
@@ -109,7 +105,7 @@ public class VgaTimingEngine {
 
         _renderer.CompleteFrame();
 
-        int blankingLines = _totalScanlines - _verticalDisplayEndScanline;
+        int blankingLines = _totalScanlines - _visibleScanlines;
         double vBlankDurationMs = blankingLines * HorizontalLineDurationMs;
         _scheduler.AddEvent(OnFrameStart, vBlankDurationMs);
     }
