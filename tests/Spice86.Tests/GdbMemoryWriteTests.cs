@@ -44,6 +44,37 @@ public sealed class GdbMemoryWriteTests {
         memory.ReadRam(2, 0xC1190).Should().Equal(original);
     }
 
+    [Fact]
+    public void WriteMemory_VerifiesA20DisabledHighMemoryWritesAtTranslatedAddresses() {
+        // Arrange
+        Memory memory = CreateMemoryWithA20Disabled();
+        using GdbIo io = new(0, NullLogger.Instance);
+        GdbCommandMemoryHandler handler = new(memory, io, NullLogger.Instance);
+
+        // Act
+        string response = handler.WriteMemory("100000,2:C0FF");
+
+        // Assert
+        response.Should().Be(io.GenerateResponse("OK"));
+        memory.ReadRam(2, 0).Should().Equal(0xC0, 0xFF);
+    }
+
+    [Fact]
+    public void WriteMemory_VerifiesA20DisabledWritesAcrossTheOneMegabyteBoundary() {
+        // Arrange
+        Memory memory = CreateMemoryWithA20Disabled();
+        using GdbIo io = new(0, NullLogger.Instance);
+        GdbCommandMemoryHandler handler = new(memory, io, NullLogger.Instance);
+
+        // Act
+        string response = handler.WriteMemory("FFFFF,2:C0FF");
+
+        // Assert
+        response.Should().Be(io.GenerateResponse("OK"));
+        memory.ReadRam(1, 0xFFFFF).Should().Equal(0xC0);
+        memory.ReadRam(1, 0).Should().Equal(0xFF);
+    }
+
     [Theory]
     [InlineData("500,3:C0FF", "E01")]
     [InlineData("FFFFF,2:C0FF", "E02")]
@@ -81,5 +112,9 @@ public sealed class GdbMemoryWriteTests {
         VgaRom rom = new(NullLogger.Instance);
         memory.RegisterMapping(VgaRom.Segment << 4, rom.Size, rom);
         return memory;
+    }
+
+    private static Memory CreateMemoryWithA20Disabled() {
+        return new(new(), new Ram(0x110000), new A20Gate(false), new RealModeMmu386(), false);
     }
 }
