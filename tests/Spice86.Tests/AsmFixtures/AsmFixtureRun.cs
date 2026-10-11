@@ -1,6 +1,7 @@
 namespace Spice86.Tests.AsmFixtures;
 
 using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.Devices.Video;
 
 /// <summary>One finished fixture run: the emulator graph, the machine and the result an oracle may read.</summary>
 internal sealed class AsmFixtureRun : IDisposable {
@@ -12,7 +13,8 @@ internal sealed class AsmFixtureRun : IDisposable {
         _creator = creator;
         DependencyInjection = creator.Create();
         Machine = DependencyInjection.Machine;
-        Result = new AsmFixtureResult(Machine.Memory, Machine.CpuState);
+        Result = new AsmFixtureResult(Machine.Memory, Machine.CpuState,
+            (Renderer)Machine.VgaRenderer, Machine.VgaRegisters);
     }
 
     /// <summary>The emulator graph of the run.</summary>

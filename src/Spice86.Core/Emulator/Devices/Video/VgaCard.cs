@@ -14,6 +14,7 @@ public class VgaCard {
     private readonly IGuiVideoPresentation? _gui;
     private readonly ILogger _logger;
     private readonly IVgaRenderer _renderer;
+    private VideoFrameInfo? _requestedFrameInfo;
 
     /// <summary>
     ///     Create a new VGA card.
@@ -35,17 +36,21 @@ public class VgaCard {
     public void SubscribeToEvents() {
         if (_gui is not null) {
             // Init bitmaps, needed for GUI to start calling Render function
-            _gui.UpdateResolution(_renderer.Width, _renderer.Height);
+            VideoFrameInfo info = _renderer.FrameInfo;
+            _gui.UpdateResolution(info.Width, info.Height, info.AspectRatioCorrectionFactor);
+            _requestedFrameInfo = info;
             _gui.RenderScreen += (_, e) => Render(e);
         }
     }
 
     private bool EnsureGuiResolutionMatchesHardware() {
-        if (_renderer.Width == _gui?.Width && _renderer.Height == _gui?.Height) {
+        VideoFrameInfo info = _renderer.FrameInfo;
+        if (info == _requestedFrameInfo && info.Width == _gui?.Width && info.Height == _gui?.Height) {
             // Resolution is matching, nothing to do.
             return true;
         }
-        _gui?.UpdateResolution(_renderer.Width, _renderer.Height);
+        _gui?.UpdateResolution(info.Width, info.Height, info.AspectRatioCorrectionFactor);
+        _requestedFrameInfo = info;
         // Resolution change is asynchronous via Dispatcher.Post; skip this frame
         // to avoid blocking the UI thread (the previous busy-wait would deadlock
         // now that DrawScreen runs on the UI thread via DispatcherTimer).
@@ -58,13 +63,15 @@ public class VgaCard {
             // Gui resolution had to be changed, UI event is not valid anymore.
             return;
         }
-        var buffer = new Span<uint>((void*)uiRenderEventArgs.Address, uiRenderEventArgs.Length);
-        int requiredBufferSize = _renderer.Width * _renderer.Height;
-        if (buffer.Length < requiredBufferSize && _logger.IsEnabled(LogLevel.Warning)) {
-            _logger.LogWarning("Buffer size {BufferLength} is too small for the required buffer size {RequiredBufferSize} for render resolution {RenderWidth} x {RenderHeight}",
-                buffer.Length, requiredBufferSize, _renderer.Width, _renderer.Height);
+        Span<uint> buffer = new((void*)uiRenderEventArgs.Address, uiRenderEventArgs.Length);
+        int requiredBufferSize = uiRenderEventArgs.RowStride * uiRenderEventArgs.Height;
+        if (buffer.Length < requiredBufferSize) {
+            if (_logger.IsEnabled(LogLevel.Warning)) {
+                _logger.LogWarning("Buffer size {BufferLength} is too small for the required buffer size {RequiredBufferSize} for render resolution {RenderWidth} x {RenderHeight}",
+                    buffer.Length, requiredBufferSize, _renderer.Width, _renderer.Height);
+            }
             return;
         }
-        _renderer.Render(buffer);
+        _renderer.Render(buffer, uiRenderEventArgs.Width, uiRenderEventArgs.Height, uiRenderEventArgs.RowStride);
     }
 }

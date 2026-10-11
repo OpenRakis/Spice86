@@ -53,10 +53,59 @@ public abstract class VgaRenderer256ColorTestsBase {
         return (renderer, captured);
     }
 
-    // ─────────── Scalar doubled rendering ───────────
+    // ----------- Logical-pixel rendering -----------
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(3)]
+    [InlineData(4)]
+    [InlineData(5)]
+    [InlineData(7)]
+    [InlineData(8)]
+    [InlineData(9)]
+    [InlineData(15)]
+    [InlineData(16)]
+    [InlineData(17)]
+    [InlineData(31)]
+    [InlineData(32)]
+    [InlineData(33)]
+    [InlineData(319)]
+    [InlineData(320)]
+    [InlineData(321)]
+    public void RenderScanline_ExactByteCount_MapsLogicalPixelsAndPreservesDestinationGuards(int byteCount) {
+        EnsureSupported();
+
+        // Arrange
+        VideoState state = ConfigureGraphics256Color(1);
+        SetIdentityPaletteMap(state);
+        IVgaRenderer256Color strategy = Create256ColorRenderer();
+        byte[] indices = new byte[byteCount];
+        for (int i = 0; i < indices.Length; i++) {
+            indices[i] = (byte)((i * 37 + 255) & 0xFF);
+        }
+        const uint guard = 0xDEADBEEF;
+        uint[] destination = new uint[byteCount + 8];
+        Array.Fill(destination, guard);
+        int destinationOffset = 2;
+
+        // Act
+        strategy.RenderScanline(destination.AsSpan(1, byteCount + 6), indices,
+            state.DacRegisters.PaletteMap, byteCount, ref destinationOffset);
+
+        // Assert
+        destinationOffset.Should().Be(byteCount + 2, "one output pixel is written per input byte");
+        for (int i = 0; i < destination.Length; i++) {
+            if (i >= 3 && i < byteCount + 3) {
+                destination[i].Should().Be(state.DacRegisters.PaletteMap[indices[i - 3]], $"logical pixel {i - 3}");
+            } else {
+                destination[i].Should().Be(guard, $"destination guard at {i} must remain untouched");
+            }
+        }
+    }
 
     [Fact]
-    public void Render256Color_ScalarDoubled_SinglePixel() {
+    public void Render256Color_PlaneByte_ProducesOneLogicalPixel() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(1);
         (Renderer renderer, VideoMemory vram) = CreateRenderer(state);
@@ -67,13 +116,13 @@ public abstract class VgaRenderer256ColorTestsBase {
         state.IsRenderingDirty = true;
         uint[] frame = RenderAndCapture(renderer, state);
 
-        // Each plane byte → 2 identical pixels
+        // Each plane byte produces one logical pixel.
         frame[0].Should().Be(state.DacRegisters.PaletteMap[42]);
-        frame[1].Should().Be(state.DacRegisters.PaletteMap[42]);
+        frame[1].Should().Be(state.DacRegisters.PaletteMap[0]);
     }
 
     [Fact]
-    public void Render256Color_AllFourPlanes_ProduceEightPixels() {
+    public void Render256Color_AllFourPlanes_ProduceFourLogicalPixels() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(1);
         (Renderer renderer, VideoMemory vram) = CreateRenderer(state);
@@ -88,13 +137,9 @@ public abstract class VgaRenderer256ColorTestsBase {
         uint[] frame = RenderAndCapture(renderer, state);
 
         frame[0].Should().Be(state.DacRegisters.PaletteMap[10]);
-        frame[1].Should().Be(state.DacRegisters.PaletteMap[10]);
-        frame[2].Should().Be(state.DacRegisters.PaletteMap[20]);
-        frame[3].Should().Be(state.DacRegisters.PaletteMap[20]);
-        frame[4].Should().Be(state.DacRegisters.PaletteMap[30]);
-        frame[5].Should().Be(state.DacRegisters.PaletteMap[30]);
-        frame[6].Should().Be(state.DacRegisters.PaletteMap[40]);
-        frame[7].Should().Be(state.DacRegisters.PaletteMap[40]);
+        frame[1].Should().Be(state.DacRegisters.PaletteMap[20]);
+        frame[2].Should().Be(state.DacRegisters.PaletteMap[30]);
+        frame[3].Should().Be(state.DacRegisters.PaletteMap[40]);
     }
 
     [Fact]
@@ -118,17 +163,17 @@ public abstract class VgaRenderer256ColorTestsBase {
         state.IsRenderingDirty = true;
         uint[] frame = RenderAndCapture(renderer, state);
 
-        // First character: 8 pixels
+        // First character: 4 logical pixels
         frame[0].Should().Be(state.DacRegisters.PaletteMap[1]);
-        frame[1].Should().Be(state.DacRegisters.PaletteMap[1]);
-        frame[6].Should().Be(state.DacRegisters.PaletteMap[4]);
-        frame[7].Should().Be(state.DacRegisters.PaletteMap[4]);
+        frame[1].Should().Be(state.DacRegisters.PaletteMap[2]);
+        frame[2].Should().Be(state.DacRegisters.PaletteMap[3]);
+        frame[3].Should().Be(state.DacRegisters.PaletteMap[4]);
 
-        // Second character: starts at pixel 8
-        frame[8].Should().Be(state.DacRegisters.PaletteMap[5]);
-        frame[9].Should().Be(state.DacRegisters.PaletteMap[5]);
-        frame[14].Should().Be(state.DacRegisters.PaletteMap[8]);
-        frame[15].Should().Be(state.DacRegisters.PaletteMap[8]);
+        // Second character: starts at logical pixel 4
+        frame[4].Should().Be(state.DacRegisters.PaletteMap[5]);
+        frame[5].Should().Be(state.DacRegisters.PaletteMap[6]);
+        frame[6].Should().Be(state.DacRegisters.PaletteMap[7]);
+        frame[7].Should().Be(state.DacRegisters.PaletteMap[8]);
     }
 
     [Fact]
@@ -138,8 +183,8 @@ public abstract class VgaRenderer256ColorTestsBase {
         (Renderer renderer, VideoMemory vram) = CreateRenderer(state);
         SetIdentityPaletteMap(state);
 
-        // Fill all 40 characters (160 VRAM bytes) with sequential values
-        for (int charPos = 0; charPos < 40; charPos++) {
+        // Fill all 80 characters (320 VRAM bytes) with sequential palette indices.
+        for (int charPos = 0; charPos < 80; charPos++) {
             for (int plane = 0; plane < 4; plane++) {
                 vram.Planes[plane, charPos] = (byte)(charPos * 4 + plane);
             }
@@ -148,17 +193,16 @@ public abstract class VgaRenderer256ColorTestsBase {
         state.IsRenderingDirty = true;
         uint[] frame = RenderAndCapture(renderer, state);
 
-        // Verify all 320 pixels
-        for (int charPos = 0; charPos < 40; charPos++) {
+        // Verify all 320 logical pixels.
+        frame.Length.Should().Be(320);
+        for (int charPos = 0; charPos < 80; charPos++) {
             for (int plane = 0; plane < 4; plane++) {
-                int pixelIndex = charPos * 8 + plane * 2;
+                int pixelIndex = charPos * 4 + plane;
                 byte expectedPaletteIndex = (byte)(charPos * 4 + plane);
                 uint expectedColor = state.DacRegisters.PaletteMap[expectedPaletteIndex];
 
                 frame[pixelIndex].Should().Be(expectedColor,
                     $"pixel {pixelIndex} (char {charPos}, plane {plane}) should map to palette index {expectedPaletteIndex}");
-                frame[pixelIndex + 1].Should().Be(expectedColor,
-                    $"pixel {pixelIndex + 1} (doubled) should match");
             }
         }
     }
@@ -216,7 +260,7 @@ public abstract class VgaRenderer256ColorTestsBase {
         uint[] frame = RenderAndCapture(renderer, state);
 
         frame[0].Should().Be(specificColor);
-        frame[1].Should().Be(specificColor);
+        frame[1].Should().Be(state.DacRegisters.PaletteMap[0]);
     }
 
     [Fact]
@@ -347,15 +391,15 @@ public abstract class VgaRenderer256ColorTestsBase {
 
         // Char 0 pixels
         frame[0].Should().Be(state.DacRegisters.PaletteMap[10], "char 0, plane 0");
-        frame[2].Should().Be(state.DacRegisters.PaletteMap[20], "char 0, plane 1");
-        frame[4].Should().Be(state.DacRegisters.PaletteMap[30], "char 0, plane 2");
-        frame[6].Should().Be(state.DacRegisters.PaletteMap[40], "char 0, plane 3");
+        frame[1].Should().Be(state.DacRegisters.PaletteMap[20], "char 0, plane 1");
+        frame[2].Should().Be(state.DacRegisters.PaletteMap[30], "char 0, plane 2");
+        frame[3].Should().Be(state.DacRegisters.PaletteMap[40], "char 0, plane 3");
 
-        // Char 1 pixels — must use physical address 4, NOT physical address 1
-        frame[8].Should().Be(state.DacRegisters.PaletteMap[50], "char 1, plane 0 — DoubleWord addressing");
-        frame[10].Should().Be(state.DacRegisters.PaletteMap[60], "char 1, plane 1 — DoubleWord addressing");
-        frame[12].Should().Be(state.DacRegisters.PaletteMap[70], "char 1, plane 2 — DoubleWord addressing");
-        frame[14].Should().Be(state.DacRegisters.PaletteMap[80], "char 1, plane 3 — DoubleWord addressing");
+        // Char 1 pixels must use physical address 4, NOT physical address 1.
+        frame[4].Should().Be(state.DacRegisters.PaletteMap[50], "char 1, plane 0 - DoubleWord addressing");
+        frame[5].Should().Be(state.DacRegisters.PaletteMap[60], "char 1, plane 1 - DoubleWord addressing");
+        frame[6].Should().Be(state.DacRegisters.PaletteMap[70], "char 1, plane 2 - DoubleWord addressing");
+        frame[7].Should().Be(state.DacRegisters.PaletteMap[80], "char 1, plane 3 - DoubleWord addressing");
     }
 
     [Fact]
@@ -391,12 +435,12 @@ public abstract class VgaRenderer256ColorTestsBase {
         uint[] frame = RenderAndCapture(renderer, state);
 
         frame[0].Should().Be(state.DacRegisters.PaletteMap[11], "char 0, plane 0");
-        frame[2].Should().Be(state.DacRegisters.PaletteMap[22], "char 0, plane 1");
+        frame[1].Should().Be(state.DacRegisters.PaletteMap[22], "char 0, plane 1");
 
-        frame[8].Should().Be(state.DacRegisters.PaletteMap[55], "char 1, plane 0 — Word13 addressing");
-        frame[10].Should().Be(state.DacRegisters.PaletteMap[66], "char 1, plane 1 — Word13 addressing");
-        frame[12].Should().Be(state.DacRegisters.PaletteMap[77], "char 1, plane 2 — Word13 addressing");
-        frame[14].Should().Be(state.DacRegisters.PaletteMap[88], "char 1, plane 3 — Word13 addressing");
+        frame[4].Should().Be(state.DacRegisters.PaletteMap[55], "char 1, plane 0 - Word13 addressing");
+        frame[5].Should().Be(state.DacRegisters.PaletteMap[66], "char 1, plane 1 - Word13 addressing");
+        frame[6].Should().Be(state.DacRegisters.PaletteMap[77], "char 1, plane 2 - Word13 addressing");
+        frame[7].Should().Be(state.DacRegisters.PaletteMap[88], "char 1, plane 3 - Word13 addressing");
     }
 
     [Fact]
@@ -416,25 +460,27 @@ public abstract class VgaRenderer256ColorTestsBase {
         // Chars 1-3 read C=1 (no advance). Char 4 reads C=1, advance → C=2.
         // Chars 5-7 read C=2 (no advance).
         vram.Planes[0, 0] = 10;  // read by char 0
-        vram.Planes[0, 1] = 50;  // read by chars 1–4
-        vram.Planes[0, 2] = 90;  // read by chars 5–7
+        vram.Planes[0, 1] = 50;  // read by chars 1-4
+        vram.Planes[0, 2] = 90;  // read by chars 5-7
 
         state.IsRenderingDirty = true;
         uint[] frame = RenderAndCapture(renderer, state);
+        renderer.Width.Should().Be(32, "eight character clocks produce four logical pixels each");
+        frame.Length.Should().Be(32);
 
         // Char 0: unique address (counter=0)
         frame[0].Should().Be(state.DacRegisters.PaletteMap[10], "char 0 uses counter 0");
 
-        // Chars 1–4: all share counter=1
-        frame[8].Should().Be(state.DacRegisters.PaletteMap[50], "char 1 uses counter 1");
-        frame[16].Should().Be(state.DacRegisters.PaletteMap[50], "char 2 uses counter 1");
-        frame[24].Should().Be(state.DacRegisters.PaletteMap[50], "char 3 uses counter 1");
-        frame[32].Should().Be(state.DacRegisters.PaletteMap[50], "char 4 uses counter 1");
+        // Chars 1-4: all share counter=1
+        frame[4].Should().Be(state.DacRegisters.PaletteMap[50], "char 1 uses counter 1");
+        frame[8].Should().Be(state.DacRegisters.PaletteMap[50], "char 2 uses counter 1");
+        frame[12].Should().Be(state.DacRegisters.PaletteMap[50], "char 3 uses counter 1");
+        frame[16].Should().Be(state.DacRegisters.PaletteMap[50], "char 4 uses counter 1");
 
-        // Chars 5–7: all share counter=2
-        frame[40].Should().Be(state.DacRegisters.PaletteMap[90], "char 5 uses counter 2");
-        frame[48].Should().Be(state.DacRegisters.PaletteMap[90], "char 6 uses counter 2");
-        frame[56].Should().Be(state.DacRegisters.PaletteMap[90], "char 7 uses counter 2");
+        // Chars 5-7: all share counter=2
+        frame[20].Should().Be(state.DacRegisters.PaletteMap[90], "char 5 uses counter 2");
+        frame[24].Should().Be(state.DacRegisters.PaletteMap[90], "char 6 uses counter 2");
+        frame[28].Should().Be(state.DacRegisters.PaletteMap[90], "char 7 uses counter 2");
     }
 
     // ─────────── Helpers ───────────
@@ -465,8 +511,12 @@ public abstract class VgaRenderer256ColorTestsBase {
         state.CrtControllerRegisters.VerticalTotal = (byte)(lines - 1);
         state.CrtControllerRegisters.MaximumScanlineRegister.MaximumScanline = 0;
         state.CrtControllerRegisters.MaximumScanlineRegister.CrtcScanDouble = false;
-        state.CrtControllerRegisters.HorizontalDisplayEnd = 39;
-        state.CrtControllerRegisters.HorizontalTotal = 49;
+        // Keep the split-screen compare outside the visible synthetic frame.
+        state.CrtControllerRegisters.LineCompare = 0xFF;
+        state.CrtControllerRegisters.OverflowRegister.Value |= 0x10;
+        state.CrtControllerRegisters.MaximumScanlineRegister.Value |= 0x40;
+        state.CrtControllerRegisters.HorizontalDisplayEnd = 79;
+        state.CrtControllerRegisters.HorizontalTotal = 99;
         state.CrtControllerRegisters.Offset = 40;
         state.CrtControllerRegisters.CrtModeControlRegister.ByteWordMode = ByteWordMode.Byte;
         state.CrtControllerRegisters.CrtModeControlRegister.CompatibilityModeSupport = true;

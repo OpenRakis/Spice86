@@ -11,13 +11,13 @@ public interface IVgaRenderer256Color {
 
 
     /// <summary>
-    ///     Renders a 256-color scanline with pixel doubling (each VRAM byte produces two identical pixels).
+    ///     Renders a 256-color scanline: each VRAM byte produces one logical pixel.
     /// </summary>
     /// <param name="frameBuffer">The destination ARGB frame buffer.</param>
     /// <param name="vram">The VRAM span containing palette indices.</param>
     /// <param name="paletteMap">The 256-entry palette lookup table.</param>
-    /// <param name="byteCount">The number of VRAM bytes to process (produces 2× pixels).</param>
+    /// <param name="byteCount">The number of VRAM bytes and output pixels to process.</param>
     /// <param name="destOffset">Current write position; updated on return.</param>
-    void RenderDoubledScanline(Span<uint> frameBuffer, ReadOnlySpan<byte> vram,
+    void RenderScanline(Span<uint> frameBuffer, ReadOnlySpan<byte> vram,
         uint[] paletteMap, int byteCount, ref int destOffset);
 }

@@ -21,7 +21,8 @@ public interface IGuiVideoPresentation {
     /// </summary>
     /// <param name="videoWidth">The width in pixels</param>
     /// <param name="videoHeight">The height in pixels</param>
-    void UpdateResolution(int videoWidth, int videoHeight);
+    /// <param name="aspectRatioCorrectionFactor">Vertical presentation scale for the logical framebuffer.</param>
+    void UpdateResolution(int videoWidth, int videoHeight, double aspectRatioCorrectionFactor);
 
     /// <summary>
     /// Invoked when the GUI asks the VideoCard to render the screen contents in the WriteableBitmap's buffer pointer.

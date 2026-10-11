@@ -69,7 +69,7 @@ public sealed class HeadlessGui : IGuiVideoPresentation, IGuiMouseEvents,
 
     public double MouseY { get; set; }
 
-    public void UpdateResolution(int width, int height) {
+    public void UpdateResolution(int width, int height, double aspectRatioCorrectionFactor) {
         if (width <= 0 || height <= 0) {
             throw new ArgumentOutOfRangeException($"Invalid resolution: {width}x{height}");
         }
@@ -115,7 +115,7 @@ public sealed class HeadlessGui : IGuiVideoPresentation, IGuiMouseEvents,
             int rowBytes = Width * 4; // 4 bytes per pixel (BGRA)
             int length = rowBytes * Height / 4;
 
-            UIRenderEventArgs uiRenderEventArgs = new UIRenderEventArgs((IntPtr)bufferPtr, length);
+            UIRenderEventArgs uiRenderEventArgs = new UIRenderEventArgs((IntPtr)bufferPtr, length, Width, Height, Width);
             RenderScreen.Invoke(this, uiRenderEventArgs);
         }
     }

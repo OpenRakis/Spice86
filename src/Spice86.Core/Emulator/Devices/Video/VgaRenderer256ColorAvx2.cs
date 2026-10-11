@@ -12,7 +12,7 @@ using System.Runtime.Intrinsics.X86;
 internal sealed class VgaRenderer256ColorAvx2 : IVgaRenderer256Color {
     /// <inheritdoc />
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    public unsafe void RenderDoubledScanline(Span<uint> frameBuffer, ReadOnlySpan<byte> vram,
+    public unsafe void RenderScanline(Span<uint> frameBuffer, ReadOnlySpan<byte> vram,
         uint[] paletteMap, int byteCount, ref int destOffset) {
         int dest = destOffset;
         int i = 0;
@@ -26,21 +26,13 @@ internal sealed class VgaRenderer256ColorAvx2 : IVgaRenderer256Color {
                 Vector256<int> idx = Avx2.ConvertToVector256Int32(raw);
                 Vector256<int> pixels = Avx2.GatherVector256((int*)palPtr, idx, 4);
 
-                Vector256<int> lo = Avx2.UnpackLow(pixels, pixels);
-                Vector256<int> hi = Avx2.UnpackHigh(pixels, pixels);
-
-                Vector256<int> first8 = Avx2.Permute2x128(lo, hi, 0x20);
-                Vector256<int> second8 = Avx2.Permute2x128(lo, hi, 0x31);
-
-                Avx2.Store((int*)(destPtr + dest), first8);
-                Avx2.Store((int*)(destPtr + dest + 8), second8);
-                dest += 16;
+                Avx2.Store((int*)(destPtr + dest), pixels);
+                dest += 8;
                 i += 8;
             }
 
             while (i < byteCount) {
                 uint color = palPtr[vramPtr[i++]];
-                destPtr[dest++] = color;
                 destPtr[dest++] = color;
             }
         }

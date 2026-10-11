@@ -47,6 +47,28 @@ public class MachineTest {
     private readonly ListingExtractor _dumper = new(new(AsmRenderingConfig.CreateSpice86Style()));
 
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TestFlashbackVideo(bool unchained) {
+        TestOneBin(AsmFixtureCatalog.FlashbackVideo(unchained), JitMode.InterpretedOnly);
+    }
+
+    [Theory]
+    [InlineData(0, false, true)]
+    [InlineData(1, false, false)]
+    [InlineData(2, false, false)]
+    [InlineData(3, false, false)]
+    [InlineData(4, false, false)]
+    [InlineData(5, false, false)]
+    [InlineData(6, false, false)]
+    [InlineData(7, false, false)]
+    [InlineData(15, false, false)]
+    [InlineData(6, true, false)]
+    public void TestFlashbackVideoPanning(byte panning, bool splitScreen, bool alternatePage) {
+        TestOneBin(AsmFixtureCatalog.FlashbackVideoPanning(panning, splitScreen, alternatePage), JitMode.InterpretedOnly);
+    }
+
+    [Theory]
     [MemberData(nameof(JitModes))]
     public void TestAdd(JitMode jitMode) {
         TestOneBin(AsmFixtureCatalog.Dump("add"), jitMode);

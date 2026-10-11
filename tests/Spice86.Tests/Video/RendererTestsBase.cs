@@ -31,31 +31,75 @@ public abstract class RendererTestsBase {
     // -------------------------------------------------- Width / Height --------------------------------------------------
 
     [Fact]
-    public void Width_25MHz_HalfDot_Returns320() {
+    public void Width_TextMode_25MHz_HalfDot_Returns320() {
         EnsureSupported();
         (Renderer renderer, _) = CreateRenderer(ConfigureBase(ClockSelect.Use25175Khz, halfDot: true));
         renderer.Width.Should().Be(320);
     }
 
     [Fact]
-    public void Width_25MHz_FullDot_Returns640() {
+    public void Width_TextMode_25MHz_FullDot_Returns640() {
         EnsureSupported();
         (Renderer renderer, _) = CreateRenderer(ConfigureBase(ClockSelect.Use25175Khz, halfDot: false));
         renderer.Width.Should().Be(640);
     }
 
     [Fact]
-    public void Width_28MHz_HalfDot_Returns360() {
+    public void Width_TextMode_28MHz_HalfDot_Returns360() {
         EnsureSupported();
         (Renderer renderer, _) = CreateRenderer(ConfigureBase(ClockSelect.Use28322Khz, halfDot: true));
         renderer.Width.Should().Be(360);
     }
 
     [Fact]
-    public void Width_28MHz_FullDot_Returns720() {
+    public void Width_TextMode_28MHz_FullDot_Returns720() {
         EnsureSupported();
         (Renderer renderer, _) = CreateRenderer(ConfigureBase(ClockSelect.Use28322Khz, halfDot: false));
         renderer.Width.Should().Be(720);
+    }
+
+    [Theory]
+    [InlineData(true, 0, 4)]
+    [InlineData(true, 39, 160)]
+    [InlineData(true, 79, 320)]
+    [InlineData(false, 0, 8)]
+    [InlineData(false, 39, 320)]
+    [InlineData(false, 79, 640)]
+    public void Width_Graphics_UsesLogicalPixelsPerCharacterClock(bool in256ColorMode, byte horizontalDisplayEnd, int expectedWidth) {
+        EnsureSupported();
+        VideoState state = ConfigureGraphics256Color(1);
+        state.GraphicsControllerRegisters.GraphicsModeRegister.In256ColorMode = in256ColorMode;
+        state.CrtControllerRegisters.HorizontalDisplayEnd = horizontalDisplayEnd;
+        (Renderer renderer, _) = CreateRenderer(state);
+
+        renderer.Width.Should().Be(expectedWidth);
+
+        state.GeneralRegisters.MiscellaneousOutput.ClockSelect = ClockSelect.Use28322Khz;
+        state.SequencerRegisters.ClockingModeRegister.HalfDotClock = false;
+        renderer.Width.Should().Be(expectedWidth, "graphics width is independent of clock select and HalfDotClock");
+    }
+
+    [Theory]
+    [InlineData(0, false, false, 5)]
+    [InlineData(1, false, false, 3)]
+    [InlineData(2, false, false, 5)]
+    [InlineData(3, false, false, 3)]
+    [InlineData(0, true, false, 3)]
+    [InlineData(1, true, false, 3)]
+    [InlineData(0, false, true, 10)]
+    [InlineData(1, false, true, 5)]
+    [InlineData(1, true, true, 5)]
+    public void Height_256Color_CollapsesPhysicalPairsAndRoundsUp(
+        byte maximumScanline, bool scanDouble, bool verticalTimingHalved, int expectedHeight) {
+        EnsureSupported();
+        VideoState state = ConfigureGraphics256Color(5);
+        state.CrtControllerRegisters.MaximumScanlineRegister.MaximumScanline = maximumScanline;
+        state.CrtControllerRegisters.MaximumScanlineRegister.CrtcScanDouble = scanDouble;
+        state.CrtControllerRegisters.CrtModeControlRegister.VerticalTimingHalved = verticalTimingHalved;
+        (Renderer renderer, _) = CreateRenderer(state);
+
+        renderer.Height.Should().Be(expectedHeight);
+        renderer.BufferSize.Should().Be(320 * expectedHeight);
     }
 
     [Fact]
@@ -123,9 +167,112 @@ public abstract class RendererTestsBase {
         uint[] output = new uint[renderer.Width * renderer.Height];
         renderer.Render(output);
 
-        // First two pixels should be PaletteMap[7]
+        // Plane 0 produces the first logical pixel; plane 1 remains palette index 0.
         output[0].Should().Be(state.DacRegisters.PaletteMap[7]);
-        output[1].Should().Be(state.DacRegisters.PaletteMap[7]);
+        output[1].Should().Be(state.DacRegisters.PaletteMap[0]);
+    }
+
+    [Fact]
+    public void PublishedGeometry_RemainsCoherentUntilNewFrameCompletes() {
+        EnsureSupported();
+
+        // Arrange
+        VideoState state = ConfigureGraphics256Color(1);
+        (Renderer renderer, VideoMemory vram) = CreateRenderer(state);
+        SetIdentityPaletteMap(state);
+        vram.Planes[0, 0] = 42;
+        RenderFullFrame(renderer, state);
+
+        // Act
+        state.CrtControllerRegisters.HorizontalDisplayEnd = 39;
+        state.CrtControllerRegisters.VerticalDisplayEnd = 1;
+        state.CrtControllerRegisters.VerticalTotal = 1;
+        renderer.BeginFrame();
+
+        // Assert
+        renderer.Width.Should().Be(320);
+        renderer.Height.Should().Be(1);
+        renderer.BufferSize.Should().Be(320);
+        uint[] previous = new uint[320];
+        renderer.CopyLastFrame(previous);
+        previous[0].Should().Be(state.DacRegisters.PaletteMap[42]);
+        uint[] pending = new uint[320];
+        renderer.Render(pending);
+        pending.Should().Equal(previous);
+        for (int i = 0; i < 12; i++) {
+            renderer.RenderScanline();
+        }
+        renderer.CompleteFrame();
+
+        renderer.Width.Should().Be(160);
+        renderer.Height.Should().Be(2);
+        renderer.BufferSize.Should().Be(320);
+        uint[] completed = new uint[320];
+        renderer.Render(completed, 160, 2, 160);
+        completed[0].Should().Be(state.DacRegisters.PaletteMap[42]);
+        uint[] snapshot = new uint[320];
+        renderer.CopyLastFrame(snapshot);
+        snapshot.Should().Equal(completed);
+    }
+
+    [Theory]
+    [InlineData(319, 2)]
+    [InlineData(320, 1)]
+    [InlineData(160, 4)]
+    public void Render_MismatchedDimensions_PreservesPendingFrameAndDestination(int width, int height) {
+        EnsureSupported();
+        VideoState state = ConfigureGraphics256Color(2);
+        (Renderer renderer, VideoMemory vram) = CreateRenderer(state);
+        SetIdentityPaletteMap(state);
+        vram.Planes[0, 0] = 42;
+        RenderFullFrame(renderer, state);
+        uint[] destination = new uint[640];
+        Array.Fill(destination, 0xDEADBEEF);
+
+        renderer.Render(destination, width, height, width);
+
+        destination.Should().AllBeEquivalentTo(0xDEADBEEF);
+        renderer.Render(destination, 320, 2, 320);
+        destination[0].Should().Be(state.DacRegisters.PaletteMap[42],
+            "a dimensions mismatch must not consume the pending frame");
+    }
+
+    [Fact]
+    public void Render_PaddedRows_CopiesLogicalPixelsWithoutTouchingPaddingOrGuards() {
+        EnsureSupported();
+        VideoState state = ConfigureGraphics256Color(2);
+        (Renderer renderer, VideoMemory vram) = CreateRenderer(state);
+        SetIdentityPaletteMap(state);
+        vram.Planes[0, 0] = 10;
+        vram.Planes[0, 80] = 20;
+        RenderFullFrame(renderer, state);
+        const int width = 320;
+        const int rowStride = width + 7;
+        const uint guard = 0xDEADBEEF;
+        uint[] destination = new uint[rowStride * 2 + 2];
+        Array.Fill(destination, guard);
+        uint[] expected = new uint[width * 2];
+        renderer.CopyLastFrame(expected);
+
+        renderer.Render(destination.AsSpan(1, rowStride * 2), width, 2, rowStride);
+
+        destination[0].Should().Be(guard);
+        destination[^1].Should().Be(guard);
+        for (int row = 0; row < 2; row++) {
+            for (int column = 0; column < rowStride; column++) {
+                uint actual = destination[1 + row * rowStride + column];
+                if (column < width) {
+                    actual.Should().Be(expected[row * width + column], $"row {row}, column {column}");
+                } else {
+                    actual.Should().Be(guard, $"padding at row {row}, column {column}");
+                }
+            }
+        }
+        destination[1].Should().Be(state.DacRegisters.PaletteMap[10]);
+        destination[1 + rowStride].Should().Be(state.DacRegisters.PaletteMap[20]);
+        Array.Fill(destination, guard);
+        renderer.Render(destination.AsSpan(1, rowStride * 2), width, 2, rowStride);
+        destination.Should().AllBeEquivalentTo(guard, "a successful copy consumes the pending frame");
     }
 
     [Fact]
@@ -151,7 +298,7 @@ public abstract class RendererTestsBase {
     // -------------------------------------------------- 256-Color Mode --------------------------------------------------
 
     [Fact]
-    public void Render256Color_DoublesPlaneBytesToPixels() {
+    public void Render256Color_MapsPlaneBytesToLogicalPixels() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(1);
         (Renderer renderer, VideoMemory vram) = CreateRenderer(state);
@@ -166,15 +313,11 @@ public abstract class RendererTestsBase {
         state.IsRenderingDirty = true;
         uint[] frame = RenderAndCapture(renderer, state);
 
-        // Each plane byte produces 2 consecutive identical pixels
+        // Each plane byte produces one logical pixel.
         frame[0].Should().Be(state.DacRegisters.PaletteMap[10]);
-        frame[1].Should().Be(state.DacRegisters.PaletteMap[10]);
-        frame[2].Should().Be(state.DacRegisters.PaletteMap[20]);
-        frame[3].Should().Be(state.DacRegisters.PaletteMap[20]);
-        frame[4].Should().Be(state.DacRegisters.PaletteMap[30]);
-        frame[5].Should().Be(state.DacRegisters.PaletteMap[30]);
-        frame[6].Should().Be(state.DacRegisters.PaletteMap[40]);
-        frame[7].Should().Be(state.DacRegisters.PaletteMap[40]);
+        frame[1].Should().Be(state.DacRegisters.PaletteMap[20]);
+        frame[2].Should().Be(state.DacRegisters.PaletteMap[30]);
+        frame[3].Should().Be(state.DacRegisters.PaletteMap[40]);
     }
 
     [Fact]
@@ -192,7 +335,7 @@ public abstract class RendererTestsBase {
         uint[] frame = RenderAndCapture(renderer, state);
 
         frame[0].Should().Be(expectedColor);
-        frame[1].Should().Be(expectedColor);
+        frame[1].Should().Be(state.DacRegisters.PaletteMap[0]);
     }
 
     [Fact]
@@ -216,11 +359,11 @@ public abstract class RendererTestsBase {
         state.IsRenderingDirty = true;
         uint[] frame = RenderAndCapture(renderer, state);
 
-        // Second character (address 1) starts at pixel 8
-        frame[8].Should().Be(state.DacRegisters.PaletteMap[5]);
-        frame[9].Should().Be(state.DacRegisters.PaletteMap[5]);
-        frame[10].Should().Be(state.DacRegisters.PaletteMap[6]);
-        frame[11].Should().Be(state.DacRegisters.PaletteMap[6]);
+        // Second character (address 1) starts at logical pixel 4.
+        frame[4].Should().Be(state.DacRegisters.PaletteMap[5]);
+        frame[5].Should().Be(state.DacRegisters.PaletteMap[6]);
+        frame[6].Should().Be(state.DacRegisters.PaletteMap[7]);
+        frame[7].Should().Be(state.DacRegisters.PaletteMap[8]);
     }
 
     [Fact]
@@ -239,8 +382,71 @@ public abstract class RendererTestsBase {
         uint[] frame = RenderAndCapture(renderer, state);
 
         int width = renderer.Width;
-        frame[0].Should().Be(state.DacRegisters.PaletteMap[10], "line 0, first pixel pair");
-        frame[width].Should().Be(state.DacRegisters.PaletteMap[20], "line 1, first pixel pair");
+        frame[0].Should().Be(state.DacRegisters.PaletteMap[10], "line 0, first logical pixel");
+        frame[width].Should().Be(state.DacRegisters.PaletteMap[20], "line 1, first logical pixel");
+    }
+
+    [Fact]
+    public void Render256Color_NormalScanlinePairs_ProduceDistinctLogicalRows() {
+        EnsureSupported();
+        VideoState state = ConfigureGraphics256Color(4);
+        state.CrtControllerRegisters.MaximumScanlineRegister.MaximumScanline = 1;
+        (Renderer renderer, VideoMemory vram) = CreateRenderer(state);
+        SetIdentityPaletteMap(state);
+        vram.Planes[0, 0] = 10;
+        vram.Planes[0, 80] = 20;
+
+        uint[] frame = RenderAndCapture(renderer, state);
+
+        renderer.Width.Should().Be(320);
+        renderer.Height.Should().Be(2);
+        frame.Length.Should().Be(640);
+        frame[0].Should().Be(state.DacRegisters.PaletteMap[10]);
+        frame[320].Should().Be(state.DacRegisters.PaletteMap[20],
+            "the next logical row follows a pair of physical scanlines, not a horizontal pixel duplication");
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(7)]
+    public void Render256Color_MidFrameCharacterCountChange_KeepsFixedBoundedRowDestinations(byte newHorizontalDisplayEnd) {
+        EnsureSupported();
+        VideoState state = ConfigureGraphics256Color(3);
+        state.CrtControllerRegisters.HorizontalDisplayEnd = 3;
+        (Renderer renderer, VideoMemory vram) = CreateRenderer(state);
+        SetIdentityPaletteMap(state);
+        for (int row = 0; row < 3; row++) {
+            for (int character = 0; character < 8; character++) {
+                for (int plane = 0; plane < 4; plane++) {
+                    vram.Planes[plane, row * 80 + character] = (byte)((row + 1) * 10);
+                }
+            }
+        }
+
+        renderer.BeginFrame();
+        state.CrtControllerRegisters.HorizontalDisplayEnd = newHorizontalDisplayEnd;
+        for (int i = 0; i < 13; i++) {
+            renderer.RenderScanline();
+        }
+        renderer.CompleteFrame();
+        uint[] frame = new uint[renderer.BufferSize];
+        renderer.Render(frame);
+
+        renderer.Width.Should().Be(16, "frame geometry is latched separately from per-character-row registers");
+        frame.Length.Should().Be(48);
+        for (int row = 0; row < 3; row++) {
+            int renderedWidth = 16;
+            if (row > 0 && newHorizontalDisplayEnd == 0) {
+                renderedWidth = 4;
+            }
+            for (int column = 0; column < 16; column++) {
+                uint expected = 0;
+                if (column < renderedWidth) {
+                    expected = state.DacRegisters.PaletteMap[(row + 1) * 10];
+                }
+                frame[row * 16 + column].Should().Be(expected, $"fixed row {row}, column {column}");
+            }
+        }
     }
 
     // -------------------------------------------------- EGA Graphics Mode --------------------------------------------------
@@ -616,8 +822,10 @@ public abstract class RendererTestsBase {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(1);
         (Renderer renderer, _) = CreateRenderer(state);
+        RenderFullFrame(renderer, state);
+        renderer.Render(new uint[renderer.BufferSize]);
 
-        // Frame with no dirty â†’ skip
+        // An unchanged frame with already-published geometry is skipped.
         renderer.BeginFrame();
         for (int i = 0; i < 10; i++) {
             renderer.RenderScanline();
@@ -686,7 +894,7 @@ public abstract class RendererTestsBase {
         SetIdentityPaletteMap(state);
 
         // First frame: fill line 0 with value 50
-        for (int addr = 0; addr < 40; addr++) {
+        for (int addr = 0; addr < 80; addr++) {
             vram.Planes[0, addr] = 50;
         }
         state.IsRenderingDirty = true;
@@ -913,22 +1121,24 @@ public abstract class RendererTestsBase {
     // -------------------------------------------------- Line Compare (Split Screen) --------------------------------------------------
 
     [Fact]
-    public void LineCompare_ResetsMemoryAddressAtCompareValue() {
+    public void LineCompare_NextScanlineStartsAtZeroAfterAddressAdvancement() {
         EnsureSupported();
-        VideoState state = ConfigureGraphicsEga(4);
+        VideoState state = ConfigureGraphicsEga(5);
         (Renderer renderer, VideoMemory vram) = CreateRenderer(state);
         SetIdentityAttributeMap(state);
 
         int offset = state.CrtControllerRegisters.Offset;
         // Set line compare to line 2
         state.CrtControllerRegisters.LineCompare = 2;
+        state.CrtControllerRegisters.OverflowRegister.Value &= 0xEF;
+        state.CrtControllerRegisters.MaximumScanlineRegister.Value &= 0xBF;
 
         // Line 0 at address 0
         vram.Planes[0, 0] = 0x80; // index 1
 
-        // Line 2 normally reads from address 2*offset*2 = 2*40*2=160
-        // But line compare resets address to 0 at line 2
-        // So after reset, line 3 reads from address 0 + offset*2 = 80
+        // Line 2 still reads its normal address; line 3 starts at zero after the reset.
+        // Line 4 then advances from zero by offset*2.
+        vram.Planes[0, offset * 4] = 0x20;
         vram.Planes[0, offset * 2] = 0x40; // index 1 at bit 6, at address offset*2
 
         state.IsRenderingDirty = true;
@@ -938,10 +1148,40 @@ public abstract class RendererTestsBase {
         // Line 0: reads from address 0, bit 7 = 1 â†’ index 1
         frame[0].Should().Be(state.DacRegisters.AttributeMap[1], "line 0");
 
-        // Line 3 should read from address offset*2 (after line compare reset at line 2)
-        // Line 2 reset address to 0, line 3 = 0 + offset*2
-        frame[3 * width + 1].Should().Be(state.DacRegisters.AttributeMap[1],
-            "line 3 reads from address offset*2 after line compare reset, bit 6 set");
+        frame[2 * width + 2].Should().Be(state.DacRegisters.AttributeMap[1],
+            "the compare scanline still reads its normal address");
+        frame[3 * width].Should().Be(state.DacRegisters.AttributeMap[1],
+            "the scanline after line compare starts at address zero");
+        frame[3 * width + 1].Should().Be(state.DacRegisters.AttributeMap[0],
+            "the reset must not be followed by an extra offset advancement");
+        frame[4 * width + 1].Should().Be(state.DacRegisters.AttributeMap[1],
+            "the following scanline advances from address zero by offset*2");
+    }
+
+    [Fact]
+    public void LineCompare_ResetsRowScanCounterForNextPhysicalScanline() {
+        EnsureSupported();
+        VideoState state = ConfigureGraphicsEga(4);
+        state.CrtControllerRegisters.MaximumScanlineRegister.MaximumScanline = 1;
+        state.CrtControllerRegisters.CrtModeControlRegister.CompatibilityModeSupport = false;
+        state.CrtControllerRegisters.LineCompare = 0;
+        state.CrtControllerRegisters.OverflowRegister.Value &= 0xEF;
+        state.CrtControllerRegisters.MaximumScanlineRegister.Value &= 0xBF;
+        state.CrtControllerRegisters.ScreenStartAddress = 5;
+        (Renderer renderer, VideoMemory vram) = CreateRenderer(state);
+        SetIdentityAttributeMap(state);
+        vram.Planes[0, 5] = 0x80;
+        vram.Planes[0, 0] = 0x40;
+        vram.Planes[0, 0x2000] = 0x20;
+
+        uint[] frame = RenderAndCapture(renderer, state);
+
+        frame[0].Should().Be(state.DacRegisters.AttributeMap[1]);
+        frame[renderer.Width].Should().Be(state.DacRegisters.AttributeMap[0]);
+        frame[renderer.Width + 1].Should().Be(state.DacRegisters.AttributeMap[1],
+            "the first scanline below the split uses address zero and row-scan counter zero");
+        frame[2 * renderer.Width + 2].Should().Be(state.DacRegisters.AttributeMap[1],
+            "only the next physical scanline substitutes row-scan bit zero into address bit 13");
     }
 
     // -------------------------------------------------- Color Plane Enable --------------------------------------------------
@@ -1110,32 +1350,33 @@ public abstract class RendererTestsBase {
         frame[0].Should().Be(state.DacRegisters.AttributeMap[7], "first pixel = foreground from charMapA font");
     }
 
-    // -------------------------------------------------- Zero Buffer Size Guard --------------------------------------------------
+    // -------------------------------------------------- Partial Scanline Pair --------------------------------------------------
 
     [Fact]
-    public void BeginFrame_ZeroSize_DeactivatesFrame() {
+    public void BeginFrame_PartialScanDoublePair_PublishesOneLogicalRow() {
         EnsureSupported();
-        VideoState state = ConfigureBase(ClockSelect.Use25175Khz, halfDot: true);
-        // VerticalDisplayEnd = 0 with ScanDouble = true â†’ Height = (0+1)/2 = 0
+        VideoState state = ConfigureGraphics256Color(1);
+        // One physical scanline is a partial pair, rounded up to one logical row.
         state.CrtControllerRegisters.VerticalDisplayEnd = 0;
         state.CrtControllerRegisters.MaximumScanlineRegister.CrtcScanDouble = true;
 
-        (Renderer renderer, _) = CreateRenderer(state);
+        (Renderer renderer, VideoMemory vram) = CreateRenderer(state);
+        SetIdentityPaletteMap(state);
+        vram.Planes[0, 0] = 42;
 
         state.IsRenderingDirty = true;
         renderer.BeginFrame();
 
-        // Width=320, Height=0, BufferSize=0
-        renderer.BufferSize.Should().Be(0);
+        renderer.Height.Should().Be(1);
+        renderer.BufferSize.Should().Be(320);
 
-        // Scanlines should be no-ops
         renderer.RenderScanline();
         renderer.CompleteFrame();
 
-        uint[] output = new uint[1];
-        Array.Fill(output, 0xDEADBEEF);
+        uint[] output = new uint[renderer.BufferSize];
         renderer.Render(output);
-        output[0].Should().Be(0xDEADBEEF, "no frame should be published for zero-size buffer");
+        output[0].Should().Be(state.DacRegisters.PaletteMap[42],
+            "a partial scanline pair must still publish its logical row");
     }
 
     // -------------------------------------------------- Multiple Consecutive Frames --------------------------------------------------
@@ -1262,34 +1503,71 @@ public abstract class RendererTestsBase {
     }
 
     [Fact]
-    public void HorizontalPixelPanning_256ColorMode_ShiftsBy2PixelsPerUnit() {
+    public void HorizontalPixelPanning_256ColorMode_TwoRawUnitsShiftOneLogicalPixel() {
         EnsureSupported();
         VideoState state = ConfigureGraphics256Color(1);
         (Renderer renderer, VideoMemory vram) = CreateRenderer(state);
         SetIdentityPaletteMap(state);
 
-        // Set two distinct palette entries in the first VRAM character (4 bytes = 8 pixels)
+        // The first VRAM character contains four distinct logical pixels.
         vram.Planes[0, 0] = 10; // planes 0..3 at char 0
         vram.Planes[1, 0] = 20;
         vram.Planes[2, 0] = 30;
         vram.Planes[3, 0] = 40;
 
-        // No panning: first 2 pixels should map to palette[10]
+        // No panning: each plane byte maps to its own logical pixel.
         state.AttributeControllerRegisters.HorizontalPixelPanning = 0;
         state.IsRenderingDirty = true;
         uint[] frameNoPan = RenderAndCapture(renderer, state);
         frameNoPan[0].Should().Be(state.DacRegisters.PaletteMap[10], "no panning: pixel 0 = plane0 index");
-        frameNoPan[1].Should().Be(state.DacRegisters.PaletteMap[10], "no panning: pixel 1 = plane0 index doubled");
+        frameNoPan[1].Should().Be(state.DacRegisters.PaletteMap[20], "no panning: pixel 1 = plane1 index");
 
-        // AR13=2 in 256-color mode shifts by 4 displayed pixels (2 VRAM bytes × 2 pixels each)
+        // AR13=2 shifts by (2 & 7)/2 = one logical pixel.
         state.AttributeControllerRegisters.HorizontalPixelPanning = 2;
         state.IsRenderingDirty = true;
         uint[] framePan2 = RenderAndCapture(renderer, state);
-        // After 4-pixel shift, pixel 0 corresponds to VRAM byte 2 (plane 2) → palette[30]
-        framePan2[0].Should().Be(state.DacRegisters.PaletteMap[30],
-            "AR13=2 in 256-color mode shifts by 4 pixels; pixel 0 = plane2 index");
+        framePan2[0].Should().Be(state.DacRegisters.PaletteMap[20],
+            "AR13=2 shifts one logical pixel; pixel 0 = plane1 index");
         framePan2[1].Should().Be(state.DacRegisters.PaletteMap[30],
-            "AR13=2 pixel 1 = plane2 index doubled");
+            "AR13=2 pixel 1 = plane2 index");
+    }
+
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(1, 0)]
+    [InlineData(2, 1)]
+    [InlineData(3, 1)]
+    [InlineData(4, 2)]
+    [InlineData(5, 2)]
+    [InlineData(6, 3)]
+    [InlineData(7, 3)]
+    [InlineData(8, 0)]
+    [InlineData(9, 0)]
+    [InlineData(10, 1)]
+    [InlineData(11, 1)]
+    [InlineData(12, 2)]
+    [InlineData(13, 2)]
+    [InlineData(14, 3)]
+    [InlineData(15, 3)]
+    public void HorizontalPixelPanning_256ColorMode_MasksAndTruncatesRawUnits(byte rawPanning, int logicalShift) {
+        EnsureSupported();
+        VideoState state = ConfigureGraphics256Color(1);
+        (Renderer renderer, VideoMemory vram) = CreateRenderer(state);
+        SetIdentityPaletteMap(state);
+        for (int character = 0; character < 82; character++) {
+            for (int plane = 0; plane < 4; plane++) {
+                vram.Planes[plane, character] = (byte)((character * 4 + plane) & 0xFF);
+            }
+        }
+        state.AttributeControllerRegisters.HorizontalPixelPanning = rawPanning;
+
+        uint[] frame = RenderAndCapture(renderer, state);
+
+        frame.Length.Should().Be(320);
+        for (int pixel = 0; pixel < frame.Length; pixel++) {
+            int expectedIndex = (pixel + logicalShift) & 0xFF;
+            frame[pixel].Should().Be(state.DacRegisters.PaletteMap[expectedIndex], $"logical pixel {pixel}");
+        }
     }
 
     [Fact]
@@ -1301,16 +1579,16 @@ public abstract class RendererTestsBase {
         SetIdentityAttributeMap(state);
 
         state.CrtControllerRegisters.LineCompare = 2;
-        // PixelPanningCompatibility=true: panning resets to 0 at/below LineCompare
+        state.CrtControllerRegisters.OverflowRegister.Value &= 0xEF;
+        state.CrtControllerRegisters.MaximumScanlineRegister.Value &= 0xBF;
+        // PixelPanningCompatibility=true: panning resets after the compare scanline.
         state.AttributeControllerRegisters.AttributeControllerModeRegister.PixelPanningCompatibility = true;
         state.AttributeControllerRegisters.HorizontalPixelPanning = 1;
 
-        int offset = state.CrtControllerRegisters.Offset;
         // Line 0 uses address 0 (above LineCompare, panning active)
         vram.Planes[0, 0] = 0x80; // bit 7 set → with pan=1, pixel 0 shows bit 6 (=0)
-        // Configure memory so that line 3 uses address offset*2
-        // Line 3 reads from address offset*2
-        vram.Planes[0, offset * 2] = 0x80; // bit 7 set at address offset*2 for line 3
+        // Line 3 reads from address zero after the split-screen reset.
+        vram.Planes[0, state.CrtControllerRegisters.Offset * 4] = 0x80;
 
         state.IsRenderingDirty = true;
         uint[] frame = RenderAndCapture(renderer, state);
@@ -1319,8 +1597,9 @@ public abstract class RendererTestsBase {
         // Line 0 (above LineCompare): panning=1 active → pixel 0 = bit 6 of addr 0 = 0
         frame[0].Should().Be(state.DacRegisters.AttributeMap[0],
             "above LineCompare: panning active, bit 6 of addr 0 is 0");
-        // Line 3 (first line after LineCompare reset + PixelPanningCompatibility): panning=0
-        // → pixel 0 = bit 7 of addr (offset*2) = 1 → index 1
+        frame[2 * width].Should().Be(state.DacRegisters.AttributeMap[0],
+            "the compare scanline still uses horizontal panning");
+        // Line 3 is the first scanline after reset: panning=0, address=0.
         frame[3 * width].Should().Be(state.DacRegisters.AttributeMap[1],
             "line after LineCompare with PixelPanningCompatibility: panning disabled, bit 7=1");
     }
@@ -1463,6 +1742,7 @@ public abstract class RendererTestsBase {
     /// </summary>
     private static VideoState ConfigureBase(ClockSelect clock, bool halfDot) {
         VideoState state = new();
+        state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.GraphicsMode = false;
         state.GeneralRegisters.MiscellaneousOutput.ClockSelect = clock;
         state.SequencerRegisters.ClockingModeRegister.HalfDotClock = halfDot;
         state.SequencerRegisters.ClockingModeRegister.DotsPerClock = 8;
@@ -1471,6 +1751,10 @@ public abstract class RendererTestsBase {
         state.CrtControllerRegisters.VerticalTotal = 0;
         state.CrtControllerRegisters.MaximumScanlineRegister.MaximumScanline = 0;
         state.CrtControllerRegisters.MaximumScanlineRegister.CrtcScanDouble = false;
+        // Keep the split-screen compare outside the visible synthetic frame.
+        state.CrtControllerRegisters.LineCompare = 0xFF;
+        state.CrtControllerRegisters.OverflowRegister.Value |= 0x10;
+        state.CrtControllerRegisters.MaximumScanlineRegister.Value |= 0x40;
         state.CrtControllerRegisters.HorizontalTotal = 99;
         state.CrtControllerRegisters.HorizontalDisplayEnd = 79;
         state.CrtControllerRegisters.Offset = 40;
@@ -1487,8 +1771,8 @@ public abstract class RendererTestsBase {
         VideoState state = ConfigureBase(ClockSelect.Use25175Khz, halfDot: true);
         state.CrtControllerRegisters.VerticalDisplayEnd = (byte)(lines - 1);
         state.CrtControllerRegisters.VerticalTotal = (byte)(lines - 1);
-        state.CrtControllerRegisters.HorizontalDisplayEnd = 39;
-        state.CrtControllerRegisters.HorizontalTotal = 49;
+        state.CrtControllerRegisters.HorizontalDisplayEnd = 79;
+        state.CrtControllerRegisters.HorizontalTotal = 99;
         state.CrtControllerRegisters.Offset = 40;
         state.GraphicsControllerRegisters.GraphicsModeRegister.In256ColorMode = true;
         state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.GraphicsMode = true;
@@ -1555,4 +1839,3 @@ public abstract class RendererTestsBase {
         }
     }
 }
-

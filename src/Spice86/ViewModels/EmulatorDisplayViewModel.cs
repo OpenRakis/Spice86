@@ -90,9 +90,10 @@ public sealed partial class EmulatorDisplayViewModel : ObservableObject,
     public double MouseX { get; set; }
     public double MouseY { get; set; }
 
-    public void UpdateResolution(int videoWidth, int videoHeight) {
+    public void UpdateResolution(int videoWidth, int videoHeight, double aspectRatioCorrectionFactor) {
         _uiDispatcher.Post(() => {
             _isSettingResolution = true;
+            AspectRatioCorrectionFactor = aspectRatioCorrectionFactor;
             if (Width != videoWidth || Height != videoHeight) {
                 Width = videoWidth;
                 Height = videoHeight;
@@ -112,7 +113,6 @@ public sealed partial class EmulatorDisplayViewModel : ObservableObject,
 
     public void OnVideoModeChanged(object? sender, VideoModeChangedEventArgs e) {
         _uiDispatcher.Post(() => {
-            AspectRatioCorrectionFactor = e.AspectRatioCorrectionFactor;
             if (_loggerService.IsEnabled(LogLevel.Debug)) {
                 _loggerService.LogDebug(
                     "Video mode changed to {Width}x{Height}, aspect ratio correction factor: {Factor}",
@@ -190,7 +190,7 @@ public sealed partial class EmulatorDisplayViewModel : ObservableObject,
         }
         using ILockedFramebuffer pixels = Bitmap.Lock();
         UIRenderEventArgs args = new UIRenderEventArgs(pixels.Address,
-            pixels.RowBytes * pixels.Size.Height / 4);
+            pixels.RowBytes * pixels.Size.Height / 4, pixels.Size.Width, pixels.Size.Height, pixels.RowBytes / 4);
         RenderScreen.Invoke(this, args);
         InvalidateBitmap?.Invoke();
     }
@@ -213,4 +213,3 @@ public sealed partial class EmulatorDisplayViewModel : ObservableObject,
         }, DispatcherPriority.MaxValue);
     }
 }
-

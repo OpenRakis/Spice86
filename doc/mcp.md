@@ -22,6 +22,12 @@ The HTTP transport is **stateless** by default to maximize compatibility with re
 
 ## Endpoints
 
+Video inspection and PNG captures use the last completed logical framebuffer.
+Mode 13h produces 320x200 pixels; a program can change VGA registers without
+changing the BIOS mode record (for example, 256x224 unchained graphics).
+Pixel and scanline doubling are presentation concerns, not duplicate pixels
+in the returned framebuffer. GUI graphics retain 4:3 aspect correction.
+
 | Endpoint | Description |
 |----------|-------------|
 | `http://localhost:<port>/mcp` | MCP protocol endpoint (JSON-RPC over HTTP) |

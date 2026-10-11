@@ -12,7 +12,7 @@ using System.Runtime.Intrinsics.X86;
 internal sealed class VgaRenderer256ColorSse41 : IVgaRenderer256Color {
     /// <inheritdoc />
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-    public unsafe void RenderDoubledScanline(Span<uint> frameBuffer, ReadOnlySpan<byte> vram,
+    public unsafe void RenderScanline(Span<uint> frameBuffer, ReadOnlySpan<byte> vram,
         uint[] paletteMap, int byteCount, ref int destOffset) {
         int dest = destOffset;
         int i = 0;
@@ -30,17 +30,14 @@ internal sealed class VgaRenderer256ColorSse41 : IVgaRenderer256Color {
                 uint p2 = palPtr[(uint)Sse41.Extract(idx, 2)];
                 uint p3 = palPtr[(uint)Sse41.Extract(idx, 3)];
 
-                Vector128<uint> doubled0 = Vector128.Create(p0, p0, p1, p1);
-                Vector128<uint> doubled1 = Vector128.Create(p2, p2, p3, p3);
-                Sse2.Store(destPtr + dest, doubled0);
-                Sse2.Store(destPtr + dest + 4, doubled1);
-                dest += 8;
+                Vector128<uint> pixels = Vector128.Create(p0, p1, p2, p3);
+                Sse2.Store(destPtr + dest, pixels);
+                dest += 4;
                 i += 4;
             }
 
             while (i < byteCount) {
                 uint color = palPtr[vramPtr[i++]];
-                destPtr[dest++] = color;
                 destPtr[dest++] = color;
             }
         }

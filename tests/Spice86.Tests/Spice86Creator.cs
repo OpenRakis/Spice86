@@ -31,7 +31,27 @@ public sealed class Spice86Creator : IDisposable {
         string? exeArgs = null, long? instructionTimeScale = null,
         JitMode jitMode = JitMode.InterpretedOnly, bool failOnInvalidOpcode = false,
         string? recordedDataDirectory = null, bool reloadCfgGraph = false,
-        bool enableSpeculativeCfgExploration = true) {
+        bool enableSpeculativeCfgExploration = true) : this(binName, enablePit, maxCycles,
+            installInterruptVectors, failOnUnhandledPort, enableA20Gate, enableXms, enableEms,
+            overrideSupplierClassName, cDrive, overrideSupplier, programEntryPointSegment, sbType, oplMode,
+            sbBase, sbIrq, sbDma, sbHdma, exeArgs, instructionTimeScale, jitMode, failOnInvalidOpcode,
+            recordedDataDirectory, reloadCfgGraph, enableSpeculativeCfgExploration, RenderingMode.Async, 0xF000) {
+    }
+
+    internal Spice86Creator(AsmFixtures.AsmRunSettings settings, JitMode jitMode, IOverrideSupplier? overrideSupplier)
+        : this(settings.BinName, settings.EnablePit, settings.MaxCycles, settings.InstallInterruptVectors,
+            settings.FailOnUnhandledPort, settings.EnableA20Gate, false, false, null, null, overrideSupplier,
+            0x170, SbType.None, OplMode.None, 0x220, 7, 1, 5, null, null, jitMode, false, null, false,
+            settings.EnableSpeculativeCfgExploration, settings.RenderingMode, settings.AsmHandlersSegment) {
+    }
+
+    private Spice86Creator(string binName, bool enablePit, long maxCycles, bool installInterruptVectors,
+        bool failOnUnhandledPort, bool enableA20Gate, bool enableXms, bool enableEms,
+        string? overrideSupplierClassName, string? cDrive, IOverrideSupplier? overrideSupplier,
+        ushort programEntryPointSegment, SbType sbType, OplMode oplMode, ushort sbBase, byte sbIrq,
+        byte sbDma, byte sbHdma, string? exeArgs, long? instructionTimeScale, JitMode jitMode,
+        bool failOnInvalidOpcode, string? recordedDataDirectory, bool reloadCfgGraph,
+        bool enableSpeculativeCfgExploration, RenderingMode renderingMode, ushort asmHandlersSegment) {
         string executablePath = Path.IsPathRooted(binName) ? binName : $"Resources/cpuTests/{binName}.bin";
         if (overrideSupplierClassName != null && overrideSupplier != null) {
             throw new ArgumentException("Provide either an override supplier instance or an override supplier class name, not both.");
@@ -55,7 +75,7 @@ public sealed class Spice86Creator : IDisposable {
             ExpectedChecksumValue = [],
             // when false: making sure int8 is not going to be triggered during the tests
             InitializeDOS = installInterruptVectors,
-            ProvidedAsmHandlersSegment = 0xF000,
+            ProvidedAsmHandlersSegment = asmHandlersSegment,
             ProgramEntryPointSegment = programEntryPointSegment,
             TimeMultiplier = enablePit ? 1 : 0,
             //Don"t need nor want to instantiate the UI in emulator unit tests
@@ -86,6 +106,7 @@ public sealed class Spice86Creator : IDisposable {
             FailOnInvalidOpcode = failOnInvalidOpcode,
             ReloadCfgGraph = reloadCfgGraph,
             EnableSpeculativeCfgExploration = enableSpeculativeCfgExploration,
+            RenderingMode = renderingMode,
         };
 
         _maxCycles = maxCycles;
