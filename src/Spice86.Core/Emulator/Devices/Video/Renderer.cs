@@ -22,10 +22,9 @@ public class Renderer : IVgaRenderer {
 
     private uint[] _frontBuffer = Array.Empty<uint>();
     private uint[] _backBuffer = Array.Empty<uint>();
-    private uint[] _renderBuffer = Array.Empty<uint>();
-    // Holds the most recently completed frame. Written only by the renderer
-    // CompleteFrame(), read only by the renderer in InitBackBufferFromFront().
-    // Never touched by the UI-thread buffer rotation, so it is always exactly one frame old.
+    private readonly object _publicationLock = new();
+    private VideoFrameInfo? _publishedFrameInfo;
+    // Completed pixels shared by presentation and non-destructive inspection reads.
     private uint[] _lastPublishedFrame = Array.Empty<uint>();
     private int _hasPendingFrame;
     // Guard to prevent re-entrant Render() calls on the UI path.
@@ -44,6 +43,12 @@ public class Renderer : IVgaRenderer {
     private int _frameVerticalDisplayEnd;
     private int _frameTotalHeight;
     private bool _frameActive;
+    private int _frameWidth;
+    private int _frameHeight;
+    private int _framePhysicalScanline;
+    private int _frameOutputRepeat;
+    private bool _frameInGraphicsMode;
+    private bool _frameIn256ColorMode;
 
     // Mutable state (advances per scanline via RenderScanline).
     private int _frameRowMemoryAddressCounter;
@@ -86,26 +91,71 @@ public class Renderer : IVgaRenderer {
     }
 
     /// <inheritdoc />
-    public int Width => (_state.GeneralRegisters.MiscellaneousOutput.ClockSelect, _state.SequencerRegisters.ClockingModeRegister.HalfDotClock) switch {
+    public int Width => FrameInfo.Width;
+
+    /// <inheritdoc />
+    public VideoFrameInfo FrameInfo => Volatile.Read(ref _publishedFrameInfo) ?? CalculateFrameInfo();
+
+    private int CalculateWidth() {
+        if (_state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.GraphicsMode) {
+            int pixelsPerClock = _state.GraphicsControllerRegisters.GraphicsModeRegister.In256ColorMode ? 4 : 8;
+            return (_state.CrtControllerRegisters.HorizontalDisplayEnd + 1) * pixelsPerClock;
+        }
+        return (_state.GeneralRegisters.MiscellaneousOutput.ClockSelect, _state.SequencerRegisters.ClockingModeRegister.HalfDotClock) switch {
         (ClockSelect.Use25175Khz, true) => 320,
         (ClockSelect.Use25175Khz, false) => 640,
         (ClockSelect.Use28322Khz, true) => 360,
         (ClockSelect.Use28322Khz, false) => 720,
         _ => throw new ArgumentOutOfRangeException()
-    };
+        };
+    }
 
     /// <inheritdoc />
-    public int Height => (_state.CrtControllerRegisters.VerticalDisplayEndValue + 1) / (_state.CrtControllerRegisters.MaximumScanlineRegister.CrtcScanDouble ? 2 : 1);
+    public int Height => FrameInfo.Height;
+
+    private int CalculateOutputRepeat() {
+        if (_state.CrtControllerRegisters.MaximumScanlineRegister.CrtcScanDouble) {
+            return 2;
+        }
+        if (_state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.GraphicsMode
+            && _state.GraphicsControllerRegisters.GraphicsModeRegister.In256ColorMode
+            && (_state.CrtControllerRegisters.MaximumScanlineRegister.MaximumScanline & 1) != 0) {
+            return 2;
+        }
+        return 1;
+    }
+
+    private VideoFrameInfo CalculateFrameInfo() {
+        int width = CalculateWidth();
+        int physicalHeight = _state.CrtControllerRegisters.VerticalDisplayEndValue + 1;
+        if (_state.CrtControllerRegisters.CrtModeControlRegister.VerticalTimingHalved) {
+            physicalHeight *= 2;
+        }
+        int repeat = CalculateOutputRepeat();
+        int height = (physicalHeight + repeat - 1) / repeat;
+        double aspectRatio = 1;
+        if (_state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.GraphicsMode) {
+            aspectRatio = 3.0 * width / (4.0 * height);
+        }
+        return new VideoFrameInfo(width, height, aspectRatio);
+    }
 
     /// <inheritdoc />
-    public int BufferSize { get; private set; }
+    public int BufferSize {
+        get {
+            VideoFrameInfo info = FrameInfo;
+            return info.Width * info.Height;
+        }
+    }
 
     /// <summary>
     ///     Called by <see cref="VgaTimingEngine"/> at frame start on the emulation thread.
     ///     Latches per-frame register values and prepares the back buffer for scanline rendering.
     /// </summary>
     public void BeginFrame() {
-        bool isDirty = _memory.HasChanged || _state.IsRenderingDirty || _blinkState.HasChanged;
+        VideoFrameInfo frameInfo = CalculateFrameInfo();
+        bool isDirty = _memory.HasChanged || _state.IsRenderingDirty || _blinkState.HasChanged
+            || frameInfo != _publishedFrameInfo;
         _memory.ResetChanged();
         _state.IsRenderingDirty = false;
         _blinkState.ResetChanged();
@@ -113,8 +163,14 @@ public class Renderer : IVgaRenderer {
         _skipThisFrame = !isDirty;
         _frameOutputRows = 0;
 
-        int width = Width;
-        int height = Height;
+        int width = frameInfo.Width;
+        int height = frameInfo.Height;
+        _frameWidth = width;
+        _frameHeight = height;
+        _frameOutputRepeat = CalculateOutputRepeat();
+        _framePhysicalScanline = 0;
+        _frameInGraphicsMode = _state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.GraphicsMode;
+        _frameIn256ColorMode = _frameInGraphicsMode && _state.GraphicsControllerRegisters.GraphicsModeRegister.In256ColorMode;
         int requiredSize = width * height;
         if (requiredSize <= 0) {
             _frameActive = false;
@@ -123,7 +179,6 @@ public class Renderer : IVgaRenderer {
         if (_backBuffer.Length != requiredSize) {
             _backBuffer = new uint[requiredSize];
         }
-        BufferSize = requiredSize;
         _frameActive = true;
 
         _frameVerticalDisplayEnd = _state.CrtControllerRegisters.VerticalDisplayEndValue;
@@ -142,8 +197,8 @@ public class Renderer : IVgaRenderer {
 
         _frameDestinationAddress = 0;
         _frameVerticalBlanking = false;
-        _frameLineCounter = _state.CrtControllerRegisters.PresetRowScanRegister.PresetRowScan;
-        _frameCharRowScanline = 0;
+        _frameLineCounter = 0;
+        _frameCharRowScanline = _state.CrtControllerRegisters.PresetRowScanRegister.PresetRowScan;
         _frameDoubleScanIndex = 0;
         _frameDestinationAddressLatch = 0;
 
@@ -153,7 +208,7 @@ public class Renderer : IVgaRenderer {
         // Reserve space for up to 2 extra rendered characters (max 9 pixels each in 9-dot text
         // mode) so the panning copy (scratch[panShift..panShift+Width]) always stays in bounds
         // for all effective AR13 values: 0-15 in 8/9-dot modes (clamped with & 0x0F), 0-7 in
-        // 256-color modes (×2 pixel units, max horizontal shift 14).
+        // 256-color modes (logical pixel units, max horizontal shift 3).
         const int panningOverhead = 18;
         int scratchSize = width + panningOverhead;
         if (_rowScratch.Length < scratchSize) {
@@ -172,29 +227,29 @@ public class Renderer : IVgaRenderer {
             return;
         }
 
+        _frameOutputRows = _framePhysicalScanline / _frameOutputRepeat;
         if (_skipThisFrame && (_memory.HasChanged || _state.IsRenderingDirty)) {
             _skipThisFrame = false;
             InitBackBufferFromFront();
-            _frameDestinationAddressLatch = _frameOutputRows * Width;
+            _frameDestinationAddressLatch = _frameOutputRows * _frameWidth;
             _frameDestinationAddress = _frameDestinationAddressLatch;
         }
 
-        Span<uint> frameBuffer = _backBuffer.AsSpan();
-
-        if (_frameDoubleScanIndex == 0) {
-            _frameDestinationAddressLatch = _frameDestinationAddress;
-        }
+        _frameDestinationAddressLatch = _frameOutputRows * _frameWidth;
+        int rowEnd = Math.Min(_backBuffer.Length, _frameDestinationAddressLatch + _frameWidth);
+        Span<uint> frameBuffer = _backBuffer.AsSpan(0, rowEnd);
 
         int memoryAddressCounter = _frameRowMemoryAddressCounter;
         _frameDestinationAddress = _frameDestinationAddressLatch;
 
-        if (!_skipThisFrame) {
+        if (!_skipThisFrame && !_frameVerticalBlanking && _frameOutputRows < _frameHeight) {
+            frameBuffer.Slice(_frameDestinationAddressLatch, _frameWidth).Clear();
             // Hoist per-scanline constants out of the per-character loop to avoid
             // repeated interface dispatch and property-chain traversals.
             uint[] paletteMap = _state.DacRegisters.PaletteMap;
             uint[] attrMap = _state.DacRegisters.AttributeMap;
-            bool in256ColorMode = _state.GraphicsControllerRegisters.GraphicsModeRegister.In256ColorMode;
-            bool inGraphicsMode = _state.GraphicsControllerRegisters.MiscellaneousGraphicsRegister.GraphicsMode;
+            bool in256ColorMode = _frameIn256ColorMode;
+            bool inGraphicsMode = _frameInGraphicsMode;
             int pixelsPerChar = inGraphicsMode ? 8 : _state.SequencerRegisters.ClockingModeRegister.DotsPerClock;
 
             VgaAddressMapper addressMapper = new VgaAddressMapper(
@@ -228,25 +283,21 @@ public class Renderer : IVgaRenderer {
             }
         }
 
-        if (_frameLineCounter == _state.CrtControllerRegisters.LineCompareValue) {
-            _frameRowMemoryAddressCounter = 0;
-            _frameAboveLineCompare = false;
-        }
-        if (_frameLineCounter == _frameVerticalDisplayEnd) {
+        bool advanceLineCounter = !_state.CrtControllerRegisters.CrtModeControlRegister.VerticalTimingHalved
+            || (_framePhysicalScanline & 1) != 0;
+        bool splitScreen = advanceLineCounter && _frameLineCounter == _state.CrtControllerRegisters.LineCompareValue;
+        if (advanceLineCounter && _frameLineCounter == _frameVerticalDisplayEnd) {
             _frameVerticalBlanking = true;
         }
 
-        if (!(_state.CrtControllerRegisters.CrtModeControlRegister.VerticalTimingHalved
-              && (_frameCharRowScanline & 1) != 1)) {
+        if (advanceLineCounter) {
             _frameLineCounter++;
         }
 
         _frameDoubleScanIndex++;
+        _framePhysicalScanline++;
         if (_frameDoubleScanIndex >= _frameDrawLinesPerScanLine) {
             _frameDoubleScanIndex = 0;
-            if (!_frameVerticalBlanking) {
-                _frameOutputRows++;
-            }
             _frameCharRowScanline++;
             if (_frameCharRowScanline > _frameMaximumScanline) {
                 _frameCharRowScanline = 0;
@@ -255,6 +306,12 @@ public class Renderer : IVgaRenderer {
                     InitCharRow();
                 }
             }
+        }
+        if (splitScreen) {
+            _frameRowMemoryAddressCounter = 0;
+            _frameCharRowScanline = 0;
+            _frameDoubleScanIndex = 0;
+            _frameAboveLineCompare = false;
         }
     }
 
@@ -270,32 +327,47 @@ public class Renderer : IVgaRenderer {
             _frameActive = false;
             return;
         }
-        _backBuffer = Interlocked.Exchange(ref _frontBuffer, _backBuffer);
-        // Publish the most recently completed frame with a release store so
-        // readers that observe `_hasPendingFrame` will see the fully-published
-        // buffer contents when they do a Volatile.Read on `_lastPublishedFrame`.
-        Volatile.Write(ref _lastPublishedFrame, Volatile.Read(ref _frontBuffer));
-        Volatile.Write(ref _hasPendingFrame, 1);
+        lock (_publicationLock) {
+            _backBuffer = Interlocked.Exchange(ref _frontBuffer, _backBuffer);
+            // Publish the most recently completed frame with a release store so
+            // readers that observe `_hasPendingFrame` will see the fully-published
+            // buffer contents when they do a Volatile.Read on `_lastPublishedFrame`.
+            Volatile.Write(ref _lastPublishedFrame, Volatile.Read(ref _frontBuffer));
+            double aspect = _frameInGraphicsMode ? 3.0 * _frameWidth / (4.0 * _frameHeight) : 1;
+            Volatile.Write(ref _publishedFrameInfo, new VideoFrameInfo(_frameWidth, _frameHeight, aspect));
+            Volatile.Write(ref _hasPendingFrame, 1);
+        }
         _frameActive = false;
     }
 
     /// <inheritdoc />
     public void Render(Span<uint> frameBuffer) {
+        VideoFrameInfo info = FrameInfo;
+        Render(frameBuffer, info.Width, info.Height, info.Width);
+    }
+
+    /// <inheritdoc />
+    public void Render(Span<uint> frameBuffer, int width, int height, int rowStride) {
         // Prevent re-entrant UI callbacks from overlapping this method.
         if (Interlocked.CompareExchange(ref _renderInProgress, 1, 0) != 0) {
             return;
         }
 
         try {
-            if (Interlocked.Exchange(ref _hasPendingFrame, 0) == 0) {
-                return;
-            }
-
-            _renderBuffer = Interlocked.Exchange(ref _frontBuffer, _renderBuffer);
-
-            uint[] render = Volatile.Read(ref _renderBuffer);
-            if (render.Length > 0 && render.Length <= frameBuffer.Length) {
-                render.AsSpan().CopyTo(frameBuffer);
+            lock (_publicationLock) {
+                VideoFrameInfo? info = _publishedFrameInfo;
+                if (info == null || width != info.Width || height != info.Height) {
+                    return;
+                }
+                if (rowStride < width || frameBuffer.Length < rowStride * height) {
+                    throw new ArgumentException("Destination buffer does not contain the complete frame.", nameof(frameBuffer));
+                }
+                if (Interlocked.Exchange(ref _hasPendingFrame, 0) == 0) {
+                    return;
+                }
+                for (int row = 0; row < height; row++) {
+                    _frontBuffer.AsSpan(row * width, width).CopyTo(frameBuffer.Slice(row * rowStride, width));
+                }
             }
         } finally {
             Interlocked.Exchange(ref _renderInProgress, 0);
@@ -304,14 +376,16 @@ public class Renderer : IVgaRenderer {
 
     /// <inheritdoc />
     public void CopyLastFrame(Span<uint> buffer) {
-        uint[] lastFrame = Volatile.Read(ref _lastPublishedFrame);
-        if (lastFrame.Length == 0) {
-            return;
+        lock (_publicationLock) {
+            uint[] lastFrame = Volatile.Read(ref _lastPublishedFrame);
+            if (lastFrame.Length == 0) {
+                return;
+            }
+            if (buffer.Length < lastFrame.Length) {
+                throw new ArgumentException("Destination buffer is smaller than the last published frame.", nameof(buffer));
+            }
+            lastFrame.AsSpan().CopyTo(buffer);
         }
-        if (buffer.Length < lastFrame.Length) {
-            throw new ArgumentException("Destination buffer is smaller than the last published frame.", nameof(buffer));
-        }
-        lastFrame.AsSpan().CopyTo(buffer);
     }
 
     private void InitCharRow() {
@@ -323,11 +397,13 @@ public class Renderer : IVgaRenderer {
     }
 
     private void InitBackBufferFromFront() {
-        // Use an acquire read to ensure we see the contents published by
-        // `CompleteFrame()` which does a release write.
-        uint[] last = Volatile.Read(ref _lastPublishedFrame);
-        if (last.Length == _backBuffer.Length) {
-            last.AsSpan().CopyTo(_backBuffer.AsSpan());
+        lock (_publicationLock) {
+            // Use an acquire read to ensure we see the contents published by
+            // `CompleteFrame()` which does a release write.
+            uint[] last = Volatile.Read(ref _lastPublishedFrame);
+            if (last.Length == _backBuffer.Length) {
+                last.AsSpan().CopyTo(_backBuffer.AsSpan());
+            }
         }
     }
 
@@ -387,7 +463,7 @@ public class Renderer : IVgaRenderer {
 
         ReadOnlySpan<byte> vram = _memory.GetLinearSpan(vramLinearStart, vramByteCount);
 
-        int pixelCount = vramByteCount * 2;
+        int pixelCount = vramByteCount;
         if (destAddr + pixelCount > target.Length) {
             pixelCount = target.Length - destAddr;
         }
@@ -395,7 +471,7 @@ public class Renderer : IVgaRenderer {
             return;
         }
 
-        _renderer256Color.RenderDoubledScanline(target, vram, paletteMap, pixelCount / 2, ref destAddr);
+        _renderer256Color.RenderScanline(target, vram, paletteMap, pixelCount, ref destAddr);
     }
 
     private void RenderDirect256(Span<uint> target, ref int destAddr, uint[] paletteMap,
@@ -406,7 +482,7 @@ public class Renderer : IVgaRenderer {
         for (int i = 0; i < visibleChars; i++) {
             ushort physical = addressMapper.ComputeAddress(currCounter);
             int baseIdx = physical * 4;
-            if (baseIdx + 4 > vram.Length || dest + 8 > target.Length) {
+            if (baseIdx + 4 > vram.Length || dest + 4 > target.Length) {
                 break;
             }
             uint c0 = paletteMap[vram[baseIdx]];
@@ -414,14 +490,10 @@ public class Renderer : IVgaRenderer {
             uint c2 = paletteMap[vram[baseIdx + 2]];
             uint c3 = paletteMap[vram[baseIdx + 3]];
             target[dest] = c0;
-            target[dest + 1] = c0;
-            target[dest + 2] = c1;
-            target[dest + 3] = c1;
-            target[dest + 4] = c2;
-            target[dest + 5] = c2;
-            target[dest + 6] = c3;
-            target[dest + 7] = c3;
-            dest += 8;
+            target[dest + 1] = c1;
+            target[dest + 2] = c2;
+            target[dest + 3] = c3;
+            dest += 4;
             int characterCounter = _frameSkew + i;
             currCounter += (characterCounter & _frameCharacterClockMask) == 0 ? 1 : 0;
         }
@@ -448,7 +520,7 @@ public class Renderer : IVgaRenderer {
         if (_framePixelPanningCompatibility && !_frameAboveLineCompare) {
             return 0;
         }
-        return in256ColorMode ? panUnits * 2 : panUnits;
+        return in256ColorMode ? panUnits / 2 : panUnits;
     }
 
     /// <summary>
@@ -473,21 +545,21 @@ public class Renderer : IVgaRenderer {
     /// <summary>
     ///     Copies the panned row from <see cref="_rowScratch"/> into <paramref name="frameBuffer"/>,
     ///     skipping the first <paramref name="panShift"/> pixels, and advances
-    ///     <see cref="_frameDestinationAddress"/> by exactly <see cref="Width"/> pixels.
+    /// <see cref="_frameDestinationAddress"/> by exactly the latched frame width.
     /// </summary>
     private void ApplyPannedRow(Span<uint> frameBuffer, int panShift, int scratchLength) {
         int destStart = _frameDestinationAddressLatch;
         int destinationRemaining = frameBuffer.Length - destStart;
         if (destinationRemaining <= 0) {
-            _frameDestinationAddress = destStart + Width;
+            _frameDestinationAddress = destStart + _frameWidth;
             return;
         }
         int sourceRemaining = scratchLength - panShift;
-        int available = Math.Min(destinationRemaining, sourceRemaining);
+        int available = Math.Min(_frameWidth, Math.Min(destinationRemaining, sourceRemaining));
         if (available > 0) {
             _rowScratch.AsSpan(panShift, available).CopyTo(frameBuffer.Slice(destStart, available));
         }
-        _frameDestinationAddress = destStart + Width;
+        _frameDestinationAddress = destStart + _frameWidth;
     }
 
     /// <summary>

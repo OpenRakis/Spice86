@@ -9,6 +9,27 @@ using Spice86.Tests.AsmFixtures;
 using Xunit;
 
 public sealed class GeneratedCodeMachineTest {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void FlashbackVideoGeneratedOverrideMatchesPixels(bool unchained) {
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.FlashbackVideo(unchained));
+    }
+
+    [Theory]
+    [InlineData(0, false, true)]
+    [InlineData(1, false, false)]
+    [InlineData(2, false, false)]
+    [InlineData(3, false, false)]
+    [InlineData(4, false, false)]
+    [InlineData(5, false, false)]
+    [InlineData(6, false, false)]
+    [InlineData(7, false, false)]
+    [InlineData(15, false, false)]
+    [InlineData(6, true, false)]
+    public void FlashbackVideoPanningGeneratedOverrideMatchesPixels(byte panning, bool splitScreen, bool alternatePage) {
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.FlashbackVideoPanning(panning, splitScreen, alternatePage));
+    }
     [Fact]
     public void TestRomWrite() {
         new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.RomWrite());

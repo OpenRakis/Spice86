@@ -1,0 +1,287 @@
+{
+  "partitions": [
+    {
+      "id": 1,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        73,
+        74
+      ],
+      "entries": [
+        {
+          "block": 73,
+          "address": "D000:0000",
+          "kind": "functionEntry"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        2,
+        3,
+        5,
+        7
+      ],
+      "entries": [
+        {
+          "block": 2,
+          "address": "D000:0006",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        10,
+        11
+      ],
+      "entries": [
+        {
+          "block": 10,
+          "address": "D000:0011",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        14,
+        15
+      ],
+      "entries": [
+        {
+          "block": 14,
+          "address": "D000:0057",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        18,
+        21,
+        25
+      ],
+      "entries": [
+        {
+          "block": 18,
+          "address": "D000:005D",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        34,
+        35
+      ],
+      "entries": [
+        {
+          "block": 34,
+          "address": "D000:0067",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        38,
+        39
+      ],
+      "entries": [
+        {
+          "block": 38,
+          "address": "D000:006C",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        42,
+        43
+      ],
+      "entries": [
+        {
+          "block": 42,
+          "address": "D000:0071",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        46,
+        47
+      ],
+      "entries": [
+        {
+          "block": 46,
+          "address": "D000:0076",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        50,
+        51
+      ],
+      "entries": [
+        {
+          "block": 50,
+          "address": "D000:007B",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        54,
+        55
+      ],
+      "entries": [
+        {
+          "block": 54,
+          "address": "D000:0080",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        27
+      ],
+      "entries": [
+        {
+          "block": 27,
+          "address": "D000:00E2",
+          "kind": "functionEntry"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        19,
+        23,
+        29,
+        31
+      ],
+      "entries": [
+        {
+          "block": 19,
+          "address": "D000:00E3",
+          "kind": "functionEntry"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        59,
+        78,
+        157,
+        133,
+        127,
+        129,
+        135,
+        151,
+        145,
+        147,
+        153,
+        159,
+        58
+      ],
+      "entries": [
+        {
+          "block": 58,
+          "address": "F000:FFF0",
+          "kind": "executionContextEntry"
+        }
+      ]
+    }
+  ],
+  "transfers": [
+    {
+      "kind": "alignedReturn",
+      "fromPartition": 1,
+      "toPartition": 14,
+      "fromBlock": 74,
+      "toBlock": 78,
+      "from": "D000:0004",
+      "target": "F000:400E"
+    },
+    {
+      "kind": "callOut",
+      "fromPartition": 5,
+      "toPartition": 13,
+      "fromBlock": 18,
+      "toBlock": 19,
+      "from": "D000:005D",
+      "target": "D000:00E3",
+      "callContinuationBlock": 21,
+      "callContinuationAddress": "D000:0062"
+    },
+    {
+      "kind": "callOut",
+      "fromPartition": 13,
+      "toPartition": 12,
+      "fromBlock": 23,
+      "toBlock": 27,
+      "from": "D000:00E7",
+      "target": "D000:00E2",
+      "callContinuationBlock": 29,
+      "callContinuationAddress": "D000:00EC"
+    },
+    {
+      "kind": "callOut",
+      "fromPartition": 14,
+      "toPartition": 1,
+      "fromBlock": 59,
+      "toBlock": 73,
+      "from": "F000:400C",
+      "target": "D000:0000",
+      "callContinuationBlock": 78,
+      "callContinuationAddress": "F000:400E"
+    }
+  ]
+}

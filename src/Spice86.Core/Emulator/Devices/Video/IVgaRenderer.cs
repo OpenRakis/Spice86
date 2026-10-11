@@ -4,18 +4,20 @@ namespace Spice86.Core.Emulator.Devices.Video;
 ///     Represents a VGA renderer.
 /// </summary>
 public interface IVgaRenderer {
+    /// <summary>Dimensions and presentation scale of the last completed logical frame, or initial hardware geometry.</summary>
+    VideoFrameInfo FrameInfo { get; }
     /// <summary>
-    ///     Calculate the current width required to render.
+    ///     Gets the logical width of <see cref="FrameInfo"/>.
     /// </summary>
     int Width { get; }
 
     /// <summary>
-    ///     Calculate the current height required to render.
+    ///     Gets the logical height of <see cref="FrameInfo"/>, excluding collapsed physical scanline repeats.
     /// </summary>
     int Height { get; }
 
     /// <summary>
-    ///     Gets the size of the buffer that was presented to the renderer.
+    ///     Gets the tightly packed logical framebuffer size in pixels.
     /// </summary>
     int BufferSize { get; }
 
@@ -24,6 +26,14 @@ public interface IVgaRenderer {
     /// </summary>
     /// <param name="buffer">The framebuffer used by the VGA card to draw the image on screen.</param>
     void Render(Span<uint> buffer);
+
+    /// <summary>Copies a pending frame to a pitched presentation buffer only when its dimensions match.</summary>
+    /// <param name="buffer">Destination pixel storage.</param>
+    /// <param name="width">Destination width in pixels.</param>
+    /// <param name="height">Destination height in pixels.</param>
+    /// <param name="rowStride">Destination row stride in pixels, including padding.</param>
+    /// <exception cref="ArgumentException">The matching destination has an insufficient stride or buffer length.</exception>
+    void Render(Span<uint> buffer, int width, int height, int rowStride);
 
     /// <summary>
     ///     Copy the last published frame without consuming the pending-frame flag.

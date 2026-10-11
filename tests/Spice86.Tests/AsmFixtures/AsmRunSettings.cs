@@ -30,6 +30,12 @@ internal sealed record AsmRunSettings {
     /// <summary>Whether speculative CFG exploration runs during discovery.</summary>
     public bool EnableSpeculativeCfgExploration { get; init; } = true;
 
+    /// <summary>Scheduler mode used by this fixture's video device.</summary>
+    public RenderingMode RenderingMode { get; init; } = RenderingMode.Async;
+
+    /// <summary>Segment for installed BIOS callbacks, separate from BIOS-image fixture code when needed.</summary>
+    public ushort AsmHandlersSegment { get; init; } = 0xF000;
+
     /// <summary>Runs on the fresh machine before the program runs. Never null.</summary>
     public Action<Machine> ConfigureMachine { get; init; } = NoMachineConfiguration;
 
@@ -37,19 +43,13 @@ internal sealed record AsmRunSettings {
     /// <param name="jitMode">JIT mode to run in.</param>
     /// <returns>The creator, ready to build the emulator.</returns>
     public Spice86Creator CreateEmulatedCreator(JitMode jitMode) {
-        return new Spice86Creator(binName: BinName, maxCycles: MaxCycles, enablePit: EnablePit,
-            installInterruptVectors: InstallInterruptVectors, failOnUnhandledPort: FailOnUnhandledPort,
-            enableA20Gate: EnableA20Gate, jitMode: jitMode,
-            enableSpeculativeCfgExploration: EnableSpeculativeCfgExploration);
+        return new Spice86Creator(this, jitMode, null);
     }
 
     /// <summary>Creates the creator that runs the program in interpreted-only mode with an override supplier.</summary>
     /// <param name="overrideSupplier">Supplier of the code overrides to install.</param>
     /// <returns>The creator, ready to build the emulator.</returns>
     public Spice86Creator CreateOverrideCreator(IOverrideSupplier overrideSupplier) {
-        return new Spice86Creator(binName: BinName, maxCycles: MaxCycles, enablePit: EnablePit,
-            installInterruptVectors: InstallInterruptVectors, failOnUnhandledPort: FailOnUnhandledPort,
-            enableA20Gate: EnableA20Gate, jitMode: JitMode.InterpretedOnly,
-            enableSpeculativeCfgExploration: EnableSpeculativeCfgExploration, overrideSupplier: overrideSupplier);
+        return new Spice86Creator(this, JitMode.InterpretedOnly, overrideSupplier);
     }
 }

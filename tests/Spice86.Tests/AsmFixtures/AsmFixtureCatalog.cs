@@ -9,6 +9,7 @@ using NSubstitute;
 
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.VM;
+using Spice86.Core.CLI;
 
 /// <summary>One method per fixture scenario. Every call returns a new fixture, so per-run state stays private.</summary>
 internal static class AsmFixtureCatalog {
@@ -31,6 +32,61 @@ internal static class AsmFixtureCatalog {
             result.State.DS.Should().Be(0x1000);
             result.State.ES.Should().Be(0xB800);
             result.State.AX.Should().Be(0x600D);
+        });
+    }
+
+    /// <summary>Runs synthetic Flashback-style unchained scanout or standard BIOS mode 13h.</summary>
+    public static AsmFixture FlashbackVideo(bool unchained) {
+        return FlashbackVideo(unchained, 0, false, true);
+    }
+
+    /// <summary>Runs a Flashback-style page with logical panning and an optional split below its first row.</summary>
+    public static AsmFixture FlashbackVideoPanning(byte panning, bool splitScreen, bool alternatePage) {
+        return FlashbackVideo(true, panning, splitScreen, !alternatePage);
+    }
+
+    private static AsmFixture FlashbackVideo(bool unchained, byte panning, bool splitScreen, bool mainPage) {
+        string binName = unchained ? "flashback_video" : "flashback_mode13";
+        return ResultFixture(new AsmRunSettings {
+            BinName = binName,
+            InstallInterruptVectors = true,
+            MaxCycles = 2000000,
+            RenderingMode = RenderingMode.Sync,
+            AsmHandlersSegment = 0xD000,
+            ConfigureMachine = machine => {
+                machine.Memory.UInt8[0, 0x0500] = panning;
+                machine.Memory.UInt8[0, 0x0501] = splitScreen ? (byte)0x01 : (byte)0x41;
+                machine.Memory.UInt8[0, 0x0502] = splitScreen ? (byte)0x01 : (byte)0xFF;
+                machine.Memory.UInt8[0, 0x0503] = mainPage ? (byte)0x3A : (byte)0;
+                machine.Memory.UInt8[0, 0x0504] = splitScreen ? (byte)0x2E : (byte)0x3E;
+            }
+        }, result => {
+            uint[] frame = result.CaptureVideoFrame();
+            int width = unchained ? 256 : 320;
+            int height = unchained ? 224 : 200;
+            result.VideoRenderer.Width.Should().Be(width);
+            result.VideoRenderer.Height.Should().Be(height);
+            frame.Length.Should().Be(width * height);
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    int index = y + x;
+                    if (unchained) {
+                        int pan = (panning & 7) / 2;
+                        int sourceRow = y;
+                        int pageOffset = mainPage ? 1 : 65;
+                        if (splitScreen && y > 0) {
+                            sourceRow = y - 1;
+                            pan = 0;
+                            pageOffset = 65;
+                        }
+                        int sourcePixel = x + pan;
+                        index = sourceRow + sourcePixel / 256 + sourcePixel % 256 / 4
+                            + pageOffset + (1 << (sourcePixel & 3));
+                    }
+                    uint color = result.VideoState.DacRegisters.PaletteMap[(byte)index];
+                    frame[y * width + x].Should().Be(color, $"pixel ({x}, {y})");
+                }
+            }
         });
     }
 

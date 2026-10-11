@@ -4,6 +4,7 @@ using FluentAssertions;
 
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
+using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.Mcp;
@@ -646,6 +647,52 @@ public class McpServerToolStateTests {
         memoryModel.GetString().Should().NotBeNullOrWhiteSpace();
         McpJsonRpcAssertions.TryGetPropertyIgnoreCase(videoStructured, "rendererWidth", out JsonElement rendererWidth).Should().BeTrue();
         rendererWidth.GetInt32().Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task QueryVideoState_ShouldReportPublishedLogicalGeometryWithoutChangingBiosModeAsync() {
+        // Arrange
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await context.InitializeAsync();
+        JsonDocument modeResponse = await context.CallToolAsync("video_set_mode", new Dictionary<string, object?> {
+            ["modeId"] = 0x13,
+            ["clearVideoMemory"] = true
+        });
+        AssertToolSucceeded(modeResponse);
+        if (context.Services.VgaRenderer is not Renderer renderer) {
+            throw new InvalidOperationException("The composed VGA renderer is required.");
+        }
+        context.Services.IoPortDispatcher.WriteWord(0x3D4, 0x0011);
+        context.Services.IoPortDispatcher.WriteWord(0x3D4, 0x3F01);
+        context.Services.IoPortDispatcher.WriteWord(0x3D4, 0x3E07);
+        context.Services.IoPortDispatcher.WriteWord(0x3D4, 0x4109);
+        context.Services.IoPortDispatcher.WriteWord(0x3D4, 0xBF12);
+        renderer.BeginFrame();
+        for (int scanline = 0; scanline < 1200; scanline++) {
+            renderer.RenderScanline();
+        }
+        renderer.CompleteFrame();
+
+        // Act
+        JsonDocument detailed = await context.CallToolAsync("read_video_state_detailed", new Dictionary<string, object?>());
+        JsonDocument basic = await context.CallToolAsync("read_video_state", new Dictionary<string, object?>());
+
+        // Assert
+        JsonElement detailedContent = GetSuccessfulStructuredContent(detailed);
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(detailedContent, "biosVideoMode", out JsonElement biosMode).Should().BeTrue();
+        biosMode.GetInt32().Should().Be(0x13);
+        foreach ((JsonDocument response, string widthProperty, string heightProperty) in new[] {
+            (detailed, "rendererWidth", "rendererHeight"),
+            (basic, "width", "height")
+        }) {
+            JsonElement content = GetSuccessfulStructuredContent(response);
+            McpJsonRpcAssertions.TryGetPropertyIgnoreCase(content, widthProperty, out JsonElement width).Should().BeTrue();
+            width.GetInt32().Should().Be(256);
+            McpJsonRpcAssertions.TryGetPropertyIgnoreCase(content, heightProperty, out JsonElement height).Should().BeTrue();
+            height.GetInt32().Should().Be(224);
+            McpJsonRpcAssertions.TryGetPropertyIgnoreCase(content, "bufferSize", out JsonElement size).Should().BeTrue();
+            size.GetInt32().Should().Be(57344);
+        }
     }
 
     [Fact]
