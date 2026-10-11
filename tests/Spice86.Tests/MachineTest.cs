@@ -232,6 +232,15 @@ public class MachineTest {
     }
 
     /// <summary>
+    /// Ignores guest byte-string and word writes to ROM in both execution modes.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestRomWrite(JitMode jitMode) {
+        TestOneBin(AsmFixtureCatalog.RomWrite(), jitMode);
+    }
+
+    /// <summary>
     /// Tests that the LOCK prefix validation logic correctly fires INT 6 (#UD) for
     /// architecturally invalid uses of LOCK and does NOT fire it for valid uses.
     ///

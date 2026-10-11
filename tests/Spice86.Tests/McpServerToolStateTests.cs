@@ -20,6 +20,29 @@ public class McpServerToolStateTests {
     private const string TestProgramName = "add";
 
     [Fact]
+    public async Task WriteMemory_ShouldReportIgnoredRomWritesThroughHttpAsync() {
+        // Arrange
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await context.InitializeAsync();
+        byte[] original = context.Services.Memory.ReadRam(4, 0xC1190);
+        string data = Convert.ToHexString(original.Select(value => (byte)~value).ToArray());
+
+        // Act
+        using JsonDocument response = await context.CallToolAsync("write_memory", new Dictionary<string, object?> {
+            ["segment"] = 0xB800,
+            ["offset"] = 0x9190,
+            ["data"] = data
+        });
+
+        // Assert
+        JsonElement result = McpJsonRpcAssertions.GetJsonRpcResult(response);
+        result.TryGetProperty("isError", out JsonElement isError).Should().BeTrue();
+        isError.GetBoolean().Should().BeTrue();
+        McpJsonRpcAssertions.GetToolErrorMessage(result).Should().Contain("did not persist");
+        context.Services.Memory.ReadRam(4, 0xC1190).Should().Equal(original);
+    }
+
+    [Fact]
     public async Task DosAndMcpServices_ShouldShareEmsAndXmsManagersAsync() {
         // Arrange
         await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(

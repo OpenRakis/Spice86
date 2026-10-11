@@ -3,13 +3,37 @@ namespace Spice86.Tests.AsmFixtures;
 using FluentAssertions;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 using NSubstitute;
 
+using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.VM;
 
 /// <summary>One method per fixture scenario. Every call returns a new fixture, so per-run state stays private.</summary>
 internal static class AsmFixtureCatalog {
+    /// <summary>Runs byte-string and word writes to mapped ROM without changing its contents.</summary>
+    public static AsmFixture RomWrite() {
+        byte[] originalRom = [];
+        AsmRunSettings settings = new() {
+            BinName = "romwrite",
+            MaxCycles = 1000,
+            ConfigureMachine = machine => {
+                VgaRom rom = new(NullLogger.Instance);
+                originalRom = machine.Memory.ReadRam(rom.Size, VgaRom.Segment << 4);
+            }
+        };
+        return ResultFixture(settings, result => {
+            result.Memory.ReadRam((uint)originalRom.Length, VgaRom.Segment << 4).Should().Equal(originalRom);
+            result.State.SI.Should().Be(0x0104);
+            result.State.DI.Should().Be(0x9194);
+            result.State.CX.Should().Be(0);
+            result.State.DS.Should().Be(0x1000);
+            result.State.ES.Should().Be(0xB800);
+            result.State.AX.Should().Be(0x600D);
+        });
+    }
+
     /// <summary>Selects the unobserved arm of a speculative fixture, selector byte 0000:0500 = 1.</summary>
     public static readonly Action<Machine> SelectUnobservedArm = machine => machine.Memory.UInt8[0, 0x0500] = 0x01;
 

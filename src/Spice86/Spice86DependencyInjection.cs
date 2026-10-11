@@ -363,11 +363,11 @@ public class Spice86DependencyInjection : IDisposable {
 
         VgaTimingEngine vgaTimingEngine = new(videoState, vgaScheduler,
             _emulatedClock, vgaRenderer, vgaBlinkState);
-        VgaRom vgaRom = new();
+        VgaRom vgaRom = new(loggerService);
         memory.RegisterMapping(VgaRom.Segment << 4, vgaRom.Size, vgaRom);
         VgaFunctionality vgaFunctionality = new VgaFunctionality(memory,
             interruptVectorTable, ioPortDispatcher,
-            biosDataArea, vgaRom,
+            biosDataArea, vgaRom, videoState,
             bootUpInTextMode: configuration.InitializeDOS is not false);
         VgaBios vgaBios = new VgaBios(memory, cfgCpu, stack,
             state, vgaFunctionality, biosDataArea, loggerService);

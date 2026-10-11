@@ -10,6 +10,11 @@ using Xunit;
 
 public sealed class GeneratedCodeMachineTest {
     [Fact]
+    public void TestRomWrite() {
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.RomWrite());
+    }
+
+    [Fact]
     public void AddGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
         string outputDirectory = Path.Join(AppContext.BaseDirectory, "generated-code");
         string outputFile = Path.Join(outputDirectory, "add.spec.generated.cs");

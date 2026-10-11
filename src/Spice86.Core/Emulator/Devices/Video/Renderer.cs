@@ -206,7 +206,10 @@ public class Renderer : IVgaRenderer {
             int effectivePanShift = ComputeEffectivePanShift(in256ColorMode, inGraphicsMode, pixelsPerChar);
             int visibleChars = _frameHorizontalDisplayEnd - _frameSkew;
 
-            if (in256ColorMode && !_frameVerticalBlanking) {
+            if (!_state.GeneralRegisters.CgaVideoEnabled && !_frameVerticalBlanking) {
+                frameBuffer.Slice(_frameDestinationAddress, Width).Fill(0xFF000000);
+                _frameDestinationAddress += Width;
+            } else if (in256ColorMode && !_frameVerticalBlanking) {
                 if (effectivePanShift > 0) {
                     int scratchDest = 0;
                     Render256ColorScanline(_rowScratch.AsSpan(), ref scratchDest, paletteMap, addressMapper, memoryAddressCounter, visibleChars + 2);

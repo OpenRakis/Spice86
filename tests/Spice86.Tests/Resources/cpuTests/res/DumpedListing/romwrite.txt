@@ -1,0 +1,16 @@
+F000:0000 cli
+F000:0001 cld
+F000:0002 mov AX,0x1000
+F000:0005 mov DS,AX
+F000:0007 mov word ptr DS:[0x0100],0xC1C0
+F000:000D mov word ptr DS:[0x0102],0xC3C2
+F000:0013 mov AX,0xB800
+F000:0016 mov ES,AX
+F000:0018 mov SI,0x0100
+F000:001B mov DI,0x9190
+F000:001E mov CX,4
+F000:0021 rep movs byte ptr ES:[DI],byte ptr DS:[SI]
+F000:0023 mov word ptr ES:[0x9190],0xA55A
+F000:002A mov AX,0x600D
+F000:002D hlt
+F000:FFF0 jmp near 0

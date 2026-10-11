@@ -177,17 +177,11 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
                     _loggerService.LogDebug("[{Port:X4}] Read MiscOutput: {Value:X2} {@Explained}", port, value, value);
                 }
                 break;
-            case Ports.CgaModeControl:
+            case Ports.CgaModeControl or Ports.CgaColorSelect:
                 if (_loggerService.IsEnabled(LogLevel.Debug)) {
-                    _loggerService.LogDebug("[{Port:X4}] Read CgaModeControl: Not Implemented", port);
+                    _loggerService.LogDebug("[{Port:X4}] Read write-only CGA register", port);
                 }
-                value = 0;
-                break;
-            case Ports.CgaColorSelect:
-                if (_loggerService.IsEnabled(LogLevel.Debug)) {
-                    _loggerService.LogDebug("[{Port:X4}] Read CgaColorSelect: Not Implemented", port);
-                }
-                value = 0;
+                value = 0xFF;
                 break;
             default:
                 value = base.ReadByte(port);
@@ -341,18 +335,53 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
                 break;
             case Ports.CgaModeControl:
                 if (_loggerService.IsEnabled(LogLevel.Debug)) {
-                    _loggerService.LogDebug("[{Port:X4}] Write to CgaModeControl: Not Implemented", port);
+                    _loggerService.LogDebug("[{Port:X4}] Write to CgaModeControl: {Value:X2}", port, value);
                 }
+                _generalRegisters.CgaModeControl = value;
+                UpdateCgaPalette();
                 break;
             case Ports.CgaColorSelect:
                 if (_loggerService.IsEnabled(LogLevel.Debug)) {
-                    _loggerService.LogDebug("[{Port:X4}] Write to CgaColorSelect: Not Implemented", port);
+                    _loggerService.LogDebug("[{Port:X4}] Write to CgaColorSelect: {Value:X2}", port, value);
                 }
+                _generalRegisters.CgaColorSelect = value;
+                UpdateCgaPalette();
                 break;
             default:
                 base.WriteByte(port, value);
                 break;
         }
+    }
+
+    private void UpdateCgaPalette() {
+        if (_generalRegisters.CgaBitsPerPixel == 0) {
+            return;
+        }
+
+        byte colorSelect = _generalRegisters.CgaColorSelect;
+        byte[] palette = _attributeRegisters.InternalPalette;
+        if (_generalRegisters.CgaBitsPerPixel == 1) {
+            palette[0] = 0;
+            palette[1] = ToVgaAttribute(colorSelect);
+        } else {
+            palette[0] = ToVgaAttribute(colorSelect);
+            int intensity = (colorSelect & 0x10) >> 1;
+            bool monochrome = (_generalRegisters.CgaModeControl & 0x04) != 0;
+            int paletteSelect = (colorSelect & 0x20) >> 5;
+            for (int i = 1; i < 4; i++) {
+                int color = i * 2 + paletteSelect;
+                if (monochrome) {
+                    color = i * 2 + (i & 1);
+                }
+                palette[i] = ToVgaAttribute((byte)(color | intensity));
+            }
+        }
+        _attributeRegisters.OverscanColor = palette[0];
+        _dacRegisters.RebuildAttributeMap(_attributeRegisters);
+    }
+
+    private static byte ToVgaAttribute(byte color) {
+        return (byte)((color & 0x07) | ((color & 0x08) << 1));
     }
 
     /// <summary>
