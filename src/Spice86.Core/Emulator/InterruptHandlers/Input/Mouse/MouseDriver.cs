@@ -329,13 +329,13 @@ public class MouseDriver : IMouseDriver {
     /// <inheritdoc />
     public void Reset() {
         _vgaMode = _vgaFunctions.GetCurrentMode();
-        SetCursorPosition(VirtualScreenWidth / 2, _vgaMode.Height / 2);
         _mouseCursorHidden = -1;
         _gui?.HideMouseCursor();
         CurrentMinX = 0;
         CurrentMinY = 0;
         CurrentMaxX = VirtualScreenWidth - 1;
         CurrentMaxY = _vgaMode.Height - 1;
+        SetCursorPosition(VirtualScreenWidth / 2, _vgaMode.Height / 2);
         HorizontalMickeysPerPixel = 8;
         VerticalMickeysPerPixel = 16;
         DoubleSpeedThreshold = 64;

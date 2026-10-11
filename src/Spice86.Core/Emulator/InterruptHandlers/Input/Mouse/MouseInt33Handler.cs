@@ -295,8 +295,8 @@ public class MouseInt33Handler : InterruptHandler {
     }
 
     /// <summary>
-    ///     CX    minimum Y coordinate (vertical pixel position) <br/>
-    ///     DX    maximum Y coordinate (vertical pixel position) <br/>
+    ///     CX    minimum X coordinate (horizontal pixel position) <br/>
+    ///     DX    maximum X coordinate (horizontal pixel position) <br/>
     /// Returns: none <br/>
     /// ────────────────────────────────────────────────────────────────── <br/>
     /// Info: This sets a horizontal range out of which the mouse pointer will not be able to move.  Attempts by the user <br/>
@@ -304,6 +304,7 @@ public class MouseInt33Handler : InterruptHandler {
     ///     remain at the minimum or maximum value in the range. <br/> <br/>
     ///
     ///     Use INT 33H 0008H to limit motion on the vertical axis. <br/> <br/>
+    ///     Reversed endpoints are exchanged to keep the range ordered. <br/> <br/>
     ///
     /// Notes: All X,Y coordinates are virtual coordinates and when working with text mode, you must divide each value by
     ///     8 to get a character column,row.
@@ -313,8 +314,8 @@ public class MouseInt33Handler : InterruptHandler {
             LoggerService.LogTrace("{ClassName} INT {Int:X2} 07 {MethodName}: min = {Min}, max = {Max}",
                 nameof(MouseInt33Handler), VectorNumber, nameof(SetMouseHorizontalMinMaxPosition), State.CX, State.DX);
         }
-        _mouseDriver.CurrentMinX = State.CX;
-        _mouseDriver.CurrentMaxX = State.DX;
+        _mouseDriver.CurrentMinX = Math.Min(State.CX, State.DX);
+        _mouseDriver.CurrentMaxX = Math.Max(State.CX, State.DX);
     }
 
     /// <summary>
@@ -327,6 +328,7 @@ public class MouseInt33Handler : InterruptHandler {
     ///     minimum or maximum value in the range. <br/> <br/>
     ///
     ///     Use INT 33H 0007H to limit motion on the horizontal axis. <br/> <br/>
+    ///     Reversed endpoints are exchanged to keep the range ordered. <br/> <br/>
     ///
     /// Notes: All X,Y coordinates are virtual coordinates and when working with text mode, you must divide each value by
     ///     8 to get a character column,row.
@@ -336,8 +338,8 @@ public class MouseInt33Handler : InterruptHandler {
             LoggerService.LogTrace("{ClassName} INT {Int:X2} 08 {MethodName}: min Y = {MinY}, max Y = {MaxY}",
                 nameof(MouseInt33Handler), VectorNumber, nameof(SetMouseVerticalMinMaxPosition), State.CX, State.DX);
         }
-        _mouseDriver.CurrentMinY = State.CX;
-        _mouseDriver.CurrentMaxY = State.DX;
+        _mouseDriver.CurrentMinY = Math.Min(State.CX, State.DX);
+        _mouseDriver.CurrentMaxY = Math.Max(State.CX, State.DX);
     }
 
     /// <summary>
