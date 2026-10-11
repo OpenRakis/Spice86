@@ -29,7 +29,7 @@ internal static class DosMapperExtensions {
         long largestFreeBytes = 0;
         int mcbCount = 0;
         int freeMcbCount = 0;
-        foreach (DosMemoryControlBlock block in memoryManager.EnumerateBlocks()) {
+        foreach (DosMemoryControlBlock block in memoryManager.EnumerateConventionalBlocks()) {
             if (!block.IsValid) {
                 break;
             }
@@ -50,6 +50,33 @@ internal static class DosMapperExtensions {
         info.LargestFreeBlockBytes = largestFreeBytes;
         info.McbCount = mcbCount;
         info.FreeMcbCount = freeMcbCount;
+
+        long upperMemoryFreeBytes = 0;
+        long upperMemoryUsedBytes = 0;
+        long largestFreeUpperMemoryBlockBytes = 0;
+        int upperMemoryBlockCount = 0;
+        int freeUpperMemoryBlockCount = 0;
+        foreach (DosMemoryControlBlock block in memoryManager.EnumerateUpperMemoryBlocks()) {
+            if (!block.IsValid) {
+                break;
+            }
+            upperMemoryBlockCount++;
+            long sizeBytes = block.AllocationSizeInBytes;
+            if (block.IsFree) {
+                freeUpperMemoryBlockCount++;
+                upperMemoryFreeBytes += sizeBytes;
+                if (sizeBytes > largestFreeUpperMemoryBlockBytes) {
+                    largestFreeUpperMemoryBlockBytes = sizeBytes;
+                }
+            } else {
+                upperMemoryUsedBytes += sizeBytes;
+            }
+        }
+        info.UpperMemoryFreeBytes = upperMemoryFreeBytes;
+        info.UpperMemoryUsedBytes = upperMemoryUsedBytes;
+        info.LargestFreeUpperMemoryBlockBytes = largestFreeUpperMemoryBlockBytes;
+        info.UpperMemoryBlockCount = upperMemoryBlockCount;
+        info.FreeUpperMemoryBlockCount = freeUpperMemoryBlockCount;
 
         info.EmsEnabled = ems is not null;
         if (ems is not null) {

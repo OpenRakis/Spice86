@@ -1,7 +1,7 @@
 namespace Spice86.ViewModels.DataModels;
 
 /// <summary>
-/// One block in the conventional memory bar: a single MCB sized by <see cref="SizeBytes"/>.
+/// One block in the DOS memory bar: a single MCB sized by <see cref="SizeBytes"/>.
 /// </summary>
 /// <param name="HeaderSegment">MCB header segment as a hex string (e.g. <c>0x0800</c>).</param>
 /// <param name="SizeBytes">Total size of the block (header excluded) in bytes.</param>

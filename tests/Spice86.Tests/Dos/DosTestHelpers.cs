@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 
 using NSubstitute;
 
+using Spice86.Core.CLI.RuntimeOptions;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.InterruptHandlers.Mscdex;
@@ -11,9 +12,11 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.OperatingSystem;
+using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Interfaces;
+using Spice86.Shared.Utils;
 
 /// <summary>
 /// Factory helpers shared across DOS unit tests.
@@ -43,5 +46,16 @@ internal static class DosTestHelpers {
     /// <summary>Creates a <see cref="DosDriveManager"/> with a substituted logger and a dummy media ID table.</summary>
     internal static DosDriveManager CreateDriveManager(string? cDrive, string? exe = null) {
         return CreateDriveManager(Substitute.For<ILogger>(), cDrive, exe);
+    }
+
+    /// <summary>
+    /// Creates DOS system variables for a memory manager test setup.
+    /// </summary>
+    internal static DosSysVars CreateDosSysVars(IMemory memory, ILogger logger, ushort programEntryPointSegment) {
+        DosOptions options = new(null, string.Empty, programEntryPointSegment, false, false, false,
+            new DosRuntimeState(null));
+        NullDevice nullDevice = new(logger, memory, 0);
+        return new DosSysVars(options, nullDevice, memory,
+            MemoryUtils.ToPhysicalAddress(DosSysVars.Segment, 0));
     }
 }

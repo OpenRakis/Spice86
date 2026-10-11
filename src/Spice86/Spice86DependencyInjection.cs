@@ -389,20 +389,7 @@ public class Spice86DependencyInjection : IDisposable {
                 configuration.ProvidedAsmHandlersSegment, 0),
             callbackHandler);
 
-        ExtendedMemoryManager? xms = null;
-
-        DosTables dosTables = new(memory);
-
         SharedMouseData sharedMouseData = new();
-
-        if (configuration.Xms is not false) {
-            xms = new(memory, state, a20Gate, memoryAsmWriter, dosTables, loggerService);
-        }
-
-        if (configuration.Xms is not false && loggerService.IsEnabled(
-                LogLevel.Information)) {
-            loggerService.LogInformation("DOS XMS driver created...");
-        }
 
         SystemBiosInt15Handler systemBiosInt15Handler = new(configuration, memory,
             cfgCpu, stack, state, a20Gate, biosDataArea, emulationLoopScheduler,
@@ -479,19 +466,15 @@ public class Spice86DependencyInjection : IDisposable {
             loggerService.LogInformation("Emulator state serializer created...");
         }
 
-        ExpandedMemoryManager? mcpEmsManager = null;
-        if (configuration.Ems is not false || xms != null) {
-            mcpEmsManager = new ExpandedMemoryManager(memory, cfgCpu, stack, state, loggerService);
-        }
-
-        EmulatorMcpServices emulatorMcpServices = new(memory, state, functionCatalogue, cfgCpu,
-            ioPortDispatcher, vgaRenderer, pauseHandler, mcpEmsManager, xms,
-            emulatorBreakpointsManager, cfgBlocksJsonExporter, loggerService);
-
         BiosKeyboardBuffer biosKeyboardBuffer = new BiosKeyboardBuffer(memory, biosDataArea);
         KeyboardInt16Handler keyboardInt16Handler = new(
             memory, ioPortDispatcher, biosDataArea, cfgCpu, stack, state, loggerService,
             biosKeyboardBuffer);
+
+        ExpandedMemoryManager? emsManager = null;
+        if (configuration.Ems is not false || configuration.Xms is not false) {
+            emsManager = new ExpandedMemoryManager(memory, cfgCpu, stack, state, loggerService);
+        }
 
         DosOptions dosOptions = RuntimeOptionsMapper.ToDosOptions(configuration, dosRuntimeState);
         Dos dos = new Dos(dosOptions, memory, cfgCpu, stack,
@@ -500,7 +483,15 @@ public class Spice86DependencyInjection : IDisposable {
             new Dictionary<string, string> {
                 { "BLASTER", soundBlaster.BlasterString } }, ioPortDispatcher, loggerService,
             floppyDiskTimingService,
-            mixer, driveActivityNotifier, xms);
+            mixer, driveActivityNotifier, a20Gate, memoryAsmWriter, emsManager);
+
+        if (configuration.Xms is not false && loggerService.IsEnabled(LogLevel.Information)) {
+            loggerService.LogInformation("DOS XMS driver created...");
+        }
+
+        EmulatorMcpServices emulatorMcpServices = new(memory, state, functionCatalogue, cfgCpu,
+            ioPortDispatcher, vgaRenderer, pauseHandler, emsManager, dos.Xms,
+            emulatorBreakpointsManager, cfgBlocksJsonExporter, loggerService);
 
         DmaChannel fdcDmaChannel = dmaSystem.GetChannel(2)
             ?? throw new InvalidOperationException("DMA channel 2 unavailable for Floppy Disk Controller.");

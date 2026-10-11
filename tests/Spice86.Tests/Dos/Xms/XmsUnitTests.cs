@@ -12,9 +12,11 @@ using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Mmu;
+using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
+using Spice86.Tests.Dos;
 
 using Xunit;
 
@@ -42,10 +44,12 @@ public class XmsUnitTests {
         _callbackHandler = new CallbackHandler(_state, _loggerService);
         _dosTables = new DosTables(_memory);
         _asmWriter = new MemoryAsmWriter(_memory, new(0, 0), _callbackHandler);
+        DosSysVars dosSysVars = DosTestHelpers.CreateDosSysVars(_memory, _loggerService, 0x1000);
+        DosMemoryManager dosMemoryManager = new(_memory, 0x1000, _loggerService, dosSysVars, false, false);
 
         // Create XMS manager
         _xms = new ExtendedMemoryManager(_memory, _state, _a20Gate, _asmWriter,
-            _dosTables, _loggerService);
+            _dosTables, dosMemoryManager, _loggerService);
     }
 
     [Fact]
@@ -144,7 +148,10 @@ public class XmsUnitTests {
         CallbackHandler callbackHandler = new CallbackHandler(state, loggerService);
         DosTables dosTables = new DosTables(memory);
         MemoryAsmWriter asmWriter = new MemoryAsmWriter(memory, new(0, 0), callbackHandler);
-        ExtendedMemoryManager xms = new ExtendedMemoryManager(memory, state, a20Gate, asmWriter, dosTables, loggerService);
+        DosSysVars dosSysVars = DosTestHelpers.CreateDosSysVars(memory, loggerService, 0x1000);
+        DosMemoryManager dosMemoryManager = new(memory, 0x1000, loggerService, dosSysVars, false, false);
+        ExtendedMemoryManager xms = new ExtendedMemoryManager(memory, state, a20Gate,
+            asmWriter, dosTables, dosMemoryManager, loggerService);
 
         // Verify initial state
         a20Gate.IsEnabled.Should().BeTrue("A20 gate should be enabled at startup");

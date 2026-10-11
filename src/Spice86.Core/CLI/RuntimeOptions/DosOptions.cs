@@ -8,6 +8,7 @@ namespace Spice86.Core.CLI.RuntimeOptions;
 /// <param name="ProgramEntryPointSegment">Program load segment in emulated memory.</param>
 /// <param name="Xms">Whether XMS services are enabled.</param>
 /// <param name="Ems">Whether EMS services are enabled.</param>
+/// <param name="Umb">Whether DOS UMB support is enabled.</param>
 /// <param name="DosRuntimeState">Shared mutable DOS runtime state.</param>
 public sealed record class DosOptions(
     string? CDrive,
@@ -15,4 +16,5 @@ public sealed record class DosOptions(
     ushort ProgramEntryPointSegment,
     bool? Xms,
     bool? Ems,
+    bool Umb,
     DosRuntimeState DosRuntimeState);

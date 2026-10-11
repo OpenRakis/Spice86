@@ -47,9 +47,28 @@ public sealed partial class DosMcbsViewModel : TimerRefreshViewModelBase {
     [ObservableProperty]
     private int _freeMcbCount;
 
+    [ObservableProperty]
+    private long _totalUpperMemoryBytes;
+
+    [ObservableProperty]
+    private long _freeUpperMemoryBytes;
+
+    [ObservableProperty]
+    private long _usedUpperMemoryBytes;
+
+    [ObservableProperty]
+    private long _largestFreeUpperMemoryBlockBytes;
+
+    [ObservableProperty]
+    private int _totalUpperMemoryMcbCount;
+
+    [ObservableProperty]
+    private int _freeUpperMemoryMcbCount;
+
     /// <summary>One-line layout summary suitable for a status header.</summary>
     public string LayoutSummary =>
-        $"Total: {TotalConventionalBytes:N0} bytes / Used: {UsedConventionalBytes:N0} / Free: {FreeConventionalBytes:N0} / Largest free MCB: {LargestFreeBlockBytes:N0} / MCBs: {TotalMcbCount} (free: {FreeMcbCount})";
+        $"Conventional: Total {TotalConventionalBytes:N0} bytes / Used {UsedConventionalBytes:N0} / Free {FreeConventionalBytes:N0} / Largest free MCB {LargestFreeBlockBytes:N0} / MCBs {TotalMcbCount} (free: {FreeMcbCount})"
+        + $" / UMB: Total {TotalUpperMemoryBytes:N0} bytes / Used {UsedUpperMemoryBytes:N0} / Free {FreeUpperMemoryBytes:N0} / Largest free MCB {LargestFreeUpperMemoryBlockBytes:N0} / MCBs {TotalUpperMemoryMcbCount} (free: {FreeUpperMemoryMcbCount})";
 
     /// <summary>Initializes a new <see cref="DosMcbsViewModel"/>.</summary>
     public DosMcbsViewModel(DosMemoryManager memoryManager, IPauseHandler pauseHandler) : base(400, pauseHandler) {
@@ -60,18 +79,20 @@ public sealed partial class DosMcbsViewModel : TimerRefreshViewModelBase {
     protected override void RefreshCore() {
         List<DosMcbInfo> built = new();
         List<DosMcbBarItem> blocks = new();
+        HashSet<string> displayedHeaderSegments = new();
         long total = 0;
         long free = 0;
         long used = 0;
         long largestFree = 0;
+        int conventionalCount = 0;
         int freeCount = 0;
-        foreach (DosMemoryControlBlock block in _memoryManager.EnumerateBlocks()) {
-            DosMcbInfo info = new();
-            block.CopyToDosMcbInfo(info);
-            built.Add(info);
+        foreach (DosMemoryControlBlock block in _memoryManager.EnumerateConventionalBlocks()) {
+            AddBlockToDisplay(block, built, blocks, displayedHeaderSegments);
             if (block.IsValid) {
+                DosMcbInfo info = built[^1];
                 long sizeBytes = info.SizeBytes;
                 total += sizeBytes;
+                conventionalCount++;
                 if (info.IsFree) {
                     free += sizeBytes;
                     freeCount++;
@@ -81,16 +102,34 @@ public sealed partial class DosMcbsViewModel : TimerRefreshViewModelBase {
                 } else {
                     used += sizeBytes;
                 }
-                string ownerLabel;
+            }
+            if (!block.IsValid) {
+                break;
+            }
+        }
+
+        long upperMemoryTotal = 0;
+        long upperMemoryFree = 0;
+        long upperMemoryUsed = 0;
+        long largestUpperMemoryFree = 0;
+        int upperMemoryCount = 0;
+        int upperMemoryFreeCount = 0;
+        foreach (DosMemoryControlBlock block in _memoryManager.EnumerateUpperMemoryBlocks()) {
+            AddBlockToDisplay(block, built, blocks, displayedHeaderSegments);
+            if (block.IsValid) {
+                DosMcbInfo info = built[^1];
+                long sizeBytes = info.SizeBytes;
+                upperMemoryTotal += sizeBytes;
+                upperMemoryCount++;
                 if (info.IsFree) {
-                    ownerLabel = "(free)";
-                } else if (string.IsNullOrEmpty(info.OwnerName)) {
-                    ownerLabel = info.OwnerPspSegment;
+                    upperMemoryFree += sizeBytes;
+                    upperMemoryFreeCount++;
+                    if (sizeBytes > largestUpperMemoryFree) {
+                        largestUpperMemoryFree = sizeBytes;
+                    }
                 } else {
-                    ownerLabel = info.OwnerName;
+                    upperMemoryUsed += sizeBytes;
                 }
-                string tip = $"seg:{info.HeaderSegment}  size={sizeBytes:N0} bytes  owner={ownerLabel}";
-                blocks.Add(new DosMcbBarItem(info.HeaderSegment, sizeBytes, info.IsFree, info.IsLast, info.OwnerName, tip));
             }
             if (!block.IsValid) {
                 break;
@@ -109,8 +148,14 @@ public sealed partial class DosMcbsViewModel : TimerRefreshViewModelBase {
         FreeConventionalBytes = free;
         UsedConventionalBytes = used;
         LargestFreeBlockBytes = largestFree;
-        TotalMcbCount = blocks.Count;
+        TotalMcbCount = conventionalCount;
         FreeMcbCount = freeCount;
+        TotalUpperMemoryBytes = upperMemoryTotal;
+        FreeUpperMemoryBytes = upperMemoryFree;
+        UsedUpperMemoryBytes = upperMemoryUsed;
+        LargestFreeUpperMemoryBlockBytes = largestUpperMemoryFree;
+        TotalUpperMemoryMcbCount = upperMemoryCount;
+        FreeUpperMemoryMcbCount = upperMemoryFreeCount;
         OnPropertyChanged(nameof(LayoutSummary));
         if (previouslySelected is null) {
             if (Items.Count > 0) {
@@ -128,5 +173,31 @@ public sealed partial class DosMcbsViewModel : TimerRefreshViewModelBase {
                 SelectedItem = null;
             }
         }
+    }
+
+    private static void AddBlockToDisplay(DosMemoryControlBlock block, List<DosMcbInfo> items,
+        List<DosMcbBarItem> blocks, HashSet<string> displayedHeaderSegments) {
+        DosMcbInfo info = new();
+        block.CopyToDosMcbInfo(info);
+        if (!displayedHeaderSegments.Add(info.HeaderSegment)) {
+            return;
+        }
+
+        items.Add(info);
+        if (!block.IsValid) {
+            return;
+        }
+
+        string ownerLabel;
+        if (info.IsFree) {
+            ownerLabel = "(free)";
+        } else if (string.IsNullOrEmpty(info.OwnerName)) {
+            ownerLabel = info.OwnerPspSegment;
+        } else {
+            ownerLabel = info.OwnerName;
+        }
+        string tip = $"seg:{info.HeaderSegment}  size={info.SizeBytes:N0} bytes  owner={ownerLabel}";
+        blocks.Add(new DosMcbBarItem(info.HeaderSegment, info.SizeBytes, info.IsFree, info.IsLast,
+            info.OwnerName, tip));
     }
 }

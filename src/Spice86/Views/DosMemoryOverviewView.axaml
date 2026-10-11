@@ -78,9 +78,9 @@
                       HeadersVisibility="Column">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Memory Type" Binding="{CompiledBinding Category}" Width="180" />
-                    <DataGridTextColumn Header="Total" Binding="{CompiledBinding TotalBytes, StringFormat='{}{0:N0} B'}" Width="140" />
-                    <DataGridTextColumn Header="Used" Binding="{CompiledBinding UsedBytes, StringFormat='{}{0:N0} B'}" Width="140" />
-                    <DataGridTextColumn Header="Free" Binding="{CompiledBinding FreeBytes, StringFormat='{}{0:N0} B'}" Width="140" />
+                    <DataGridTextColumn Header="Total (KB)" Binding="{CompiledBinding TotalKilobytes, StringFormat='{}{0:N2} KB'}" Width="140" />
+                    <DataGridTextColumn Header="Used (KB)" Binding="{CompiledBinding UsedKilobytes, StringFormat='{}{0:N2} KB'}" Width="140" />
+                    <DataGridTextColumn Header="Free (KB)" Binding="{CompiledBinding FreeKilobytes, StringFormat='{}{0:N2} KB'}" Width="140" />
                     <DataGridTextColumn Header="Notes" Binding="{CompiledBinding Notes}" Width="*" />
                 </DataGrid.Columns>
             </DataGrid>

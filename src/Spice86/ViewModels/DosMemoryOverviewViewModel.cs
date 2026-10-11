@@ -103,6 +103,7 @@ public sealed partial class DosMemoryOverviewViewModel : TimerRefreshViewModelBa
     /// <inheritdoc />
     protected override void RefreshCore() {
         RefreshConventional(out long convTotal, out long convUsed, out long convFree);
+        RefreshUpperMemory(out long umbTotal, out long umbUsed, out long umbFree);
 
         long xmsTotal = 0;
         long xmsFree = 0;
@@ -132,11 +133,18 @@ public sealed partial class DosMemoryOverviewViewModel : TimerRefreshViewModelBa
 
         Rows.Clear();
         Rows.Add(new MemoryReportRow {
-            Category = "Conventional",
+            Category = "Conventional memory",
             TotalBytes = convTotal,
             UsedBytes = convUsed,
             FreeBytes = convFree,
             Notes = $"Largest free MCB: {LargestFreeConventionalBytes:N0} bytes"
+        });
+        Rows.Add(new MemoryReportRow {
+            Category = "Upper memory (UMB)",
+            TotalBytes = umbTotal,
+            UsedBytes = umbUsed,
+            FreeBytes = umbFree,
+            Notes = "MCBs excluded from conventional memory"
         });
 
         long hmaUsed;
@@ -196,14 +204,14 @@ public sealed partial class DosMemoryOverviewViewModel : TimerRefreshViewModelBa
             Notes = emsNotes
         });
 
-        long allTotal = convTotal + hmaTotal + xmsTotal + emsTotal;
-        long allFree = convFree + hmaFree + xmsFree + emsFree;
+        long allTotal = convTotal + umbTotal + hmaTotal + xmsTotal + emsTotal;
+        long allFree = convFree + umbFree + hmaFree + xmsFree + emsFree;
         Rows.Add(new MemoryReportRow {
-            Category = "Total",
+            Category = "System total",
             TotalBytes = allTotal,
             UsedBytes = allTotal - allFree,
             FreeBytes = allFree,
-            Notes = string.Empty
+            Notes = "Includes conventional, UMB, HMA, XMS, and EMS"
         });
 
         XmsLoaded = xmsEnabled;
@@ -223,7 +231,7 @@ public sealed partial class DosMemoryOverviewViewModel : TimerRefreshViewModelBa
         int mcbs = 0;
         int frees = 0;
 
-        foreach (DosMemoryControlBlock block in _memoryManager.EnumerateBlocks()) {
+        foreach (DosMemoryControlBlock block in _memoryManager.EnumerateConventionalBlocks()) {
             if (!block.IsValid) {
                 break;
             }
@@ -264,5 +272,22 @@ public sealed partial class DosMemoryOverviewViewModel : TimerRefreshViewModelBa
         ConventionalSummary =
             $"MCBs: {mcbs} ({frees} free) / Total: {total:N0} B / Used: {used:N0} B / Free: {free:N0} B / Largest free: {largestFree:N0} B";
         SegmentsVersion++;
+    }
+
+    private void RefreshUpperMemory(out long total, out long used, out long free) {
+        total = 0;
+        free = 0;
+        foreach (DosMemoryControlBlock block in _memoryManager.EnumerateUpperMemoryBlocks()) {
+            if (!block.IsValid) {
+                break;
+            }
+
+            long sizeBytes = block.AllocationSizeInBytes;
+            total += sizeBytes;
+            if (block.IsFree) {
+                free += sizeBytes;
+            }
+        }
+        used = total - free;
     }
 }
