@@ -949,7 +949,7 @@ public class MachineTest {
     }
 
     /// <summary>Builds the golden-file key of a fixture: its bin name plus the suffixes of its non-default configuration.</summary>
-    private static string MachineGoldenKey(AsmFixture fixture) {
+    internal static string MachineGoldenKey(AsmFixture fixture) {
         string key = fixture.Settings.BinName;
         if (!fixture.Settings.EnableSpeculativeCfgExploration) {
             key += ".nospec";
@@ -957,7 +957,7 @@ public class MachineTest {
         if (fixture.MachineGoldenVariant.Length > 0) {
             key += "." + fixture.MachineGoldenVariant;
         }
-        return key;
+        return key + fixture.Settings.HandlerSegmentGoldenSuffix;
     }
 
     private void CompareListingWithExpected(string goldenKey, Machine machine) {
