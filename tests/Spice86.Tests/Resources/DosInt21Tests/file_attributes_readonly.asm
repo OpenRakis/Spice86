@@ -7,21 +7,18 @@ details_port equ 0998h
 success equ 00h
 failure equ 0FFh
 readonly_attribute equ 001h
-archive_attribute equ 020h
 
 start:
-    ; AH=43h AL=0 gets TESTATTR.TXT attributes from DS:DX.
+    ; The archive bit depends on the host file system, so this program checks ReadOnly only and reports
+    ; CL as a detail byte for the oracle.
     mov dx, file_name
     mov ax, 4300h
     int 21h
     jc failed
 
-    ; Report CL for diagnostics, then require Archive and ReadOnly bits.
     mov al, cl
     mov dx, details_port
     out dx, al
-    test cl, archive_attribute
-    jz failed
     test cl, readonly_attribute
     jz failed
 

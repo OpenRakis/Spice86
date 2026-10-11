@@ -1,0 +1,272 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+    protected readonly ushort cs2;
+
+    private static readonly byte?[] Signature_0006_callback = [0xFE, 0x38, 0x08, 0x00];
+    private static readonly byte?[] Signature_000A_int = [0xCD, 0x1C];
+    private static readonly byte?[] Signature_000C_callback = [0xFE, 0x38, 0x00, 0x01];
+    private static readonly byte?[] Signature_0010_iret = [0xCF];
+    private static readonly byte?[] Signature_0011_callback = [0xFE, 0x38, 0x09, 0x00];
+    private static readonly byte?[] Signature_0015_iret = [0xCF];
+    private static readonly byte?[] Signature_0057_callback = [0xFE, 0x38, 0x70, 0x00];
+    private static readonly byte?[] Signature_005B_iret = [0xCF];
+    private static readonly byte?[] Signature_005D_call = [0x9A, 0xE3, 0x00, 0x00, 0xF0];
+    private static readonly byte?[] Signature_0062_callback = [0xFE, 0x38, 0x74, 0x00];
+    private static readonly byte?[] Signature_0066_iret = [0xCF];
+    private static readonly byte?[] Signature_0067_callback = [0xFE, 0x38, 0x03, 0x01];
+    private static readonly byte?[] Signature_006B_iret = [0xCF];
+    private static readonly byte?[] Signature_006C_callback = [0xFE, 0x38, 0x04, 0x01];
+    private static readonly byte?[] Signature_0070_iret = [0xCF];
+    private static readonly byte?[] Signature_0071_callback = [0xFE, 0x38, 0x05, 0x01];
+    private static readonly byte?[] Signature_0075_iret = [0xCF];
+    private static readonly byte?[] Signature_0076_callback = [0xFE, 0x38, 0x06, 0x01];
+    private static readonly byte?[] Signature_007A_iret = [0xCF];
+    private static readonly byte?[] Signature_007B_callback = [0xFE, 0x38, 0x07, 0x01];
+    private static readonly byte?[] Signature_007F_iret = [0xCF];
+    private static readonly byte?[] Signature_0080_callback = [0xFE, 0x38, 0x08, 0x01];
+    private static readonly byte?[] Signature_0084_iret = [0xCF];
+    private static readonly byte?[] Signature_00A4_sti = [0xFB];
+    private static readonly byte?[] Signature_00E2_ret = [0xCB];
+    private static readonly byte?[] Signature_00E3_callback = [0xFE, 0x38, 0x0B, 0x01];
+    private static readonly byte?[] Signature_00E7_call = [0x9A, 0xE2, 0x00, 0x00, 0xF0];
+    private static readonly byte?[] Signature_00EC_callback = [0xFE, 0x38, 0x0C, 0x01];
+    private static readonly byte?[] Signature_00F0_ret = [0xCB];
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0x016D;
+        cs2 = 0xF000;
+
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016D_0100_017D0, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs2, 0x0006, unknown_F000_0006_F0006, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs2, 0x0011, unknown_F000_0011_F0011, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs2, 0x0057, unknown_F000_0057_F0057, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs2, 0x005D, unknown_F000_005D_F005D, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs2, 0x0067, unknown_F000_0067_F0067, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs2, 0x006C, unknown_F000_006C_F006C, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs2, 0x0071, unknown_F000_0071_F0071, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs2, 0x0076, unknown_F000_0076_F0076, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs2, 0x007B, unknown_F000_007B_F007B, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs2, 0x0080, unknown_F000_0080_F0080, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs2, 0x0090, unknown_F000_0090_F0090, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs2, 0x00E2, unknown_F000_00E2_F00E2, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs2, 0x00E3, unknown_F000_00E3_F00E3, "unknown");
+    }
+
+    public virtual Action unknown_016D_0100_017D0(int loadOffset) {
+        CheckExternalEvents(cs1, 0x0100);
+        // 016D:0100 mov BX,0
+        BX = 0;
+        // 016D:0103 mov DX,0x0120
+        DX = 0x0120;
+        // 016D:0106 mov CX,1
+        CX = 1;
+        // 016D:0109 mov AH,0x3F
+        AH = 0x3F;
+        // 016D:010B int 0x21
+        InterruptCall(cs1, 0x010D, 0x21);
+        // 016D:010D mov AX,0xB800
+        AX = 0xB800;
+        // 016D:0110 mov ES,AX
+        ES = AX;
+        // 016D:0112 mov DI,0
+        DI = 0;
+        // 016D:0115 mov AL,byte ptr DS:[0x0120]
+        AL = UInt8[DS, 0x0120];
+        // 016D:0118 mov AH,7
+        AH = 7;
+        // 016D:011A stos word ptr ES:[DI],AX
+        UInt16[ES, DI] = AX;
+        DI = (ushort)(DI + (ushort)State.Direction16);
+        // 016D:011B mov AX,0x4C00
+        AX = 0x4C00;
+        // 016D:011E int 0x21
+        InterruptCall(cs1, 0x0120, 0x21);
+        throw FailAsUntested("Untested return from call at 016D:011E");
+    }
+
+    public virtual Action unknown_F000_0006_F0006(int loadOffset) {
+        CheckExternalEvents(cs2, 0x0006);
+        VerifySpeculativeEntryOrFail(cs2, 0x0006, Signature_0006_callback);
+        // F000:0006 callback 8
+        Callback(cs2, 0x0006, 8);
+        VerifySpeculativeEntryOrFail(cs2, 0x000A, Signature_000A_int);
+        // F000:000A int 0x1C
+        InterruptCall(cs2, 0x000C, 0x1C);
+        VerifySpeculativeEntryOrFail(cs2, 0x000C, Signature_000C_callback);
+        // F000:000C callback 0x0100
+        Callback(cs2, 0x000C, 0x0100);
+        VerifySpeculativeEntryOrFail(cs2, 0x0010, Signature_0010_iret);
+        // F000:0010 iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_0011_F0011(int loadOffset) {
+        CheckExternalEvents(cs2, 0x0011);
+        VerifySpeculativeEntryOrFail(cs2, 0x0011, Signature_0011_callback);
+        // F000:0011 callback 9
+        Callback(cs2, 0x0011, 9);
+        VerifySpeculativeEntryOrFail(cs2, 0x0015, Signature_0015_iret);
+        // F000:0015 iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_0057_F0057(int loadOffset) {
+        CheckExternalEvents(cs2, 0x0057);
+        VerifySpeculativeEntryOrFail(cs2, 0x0057, Signature_0057_callback);
+        // F000:0057 callback 0x0070
+        Callback(cs2, 0x0057, 0x0070);
+        VerifySpeculativeEntryOrFail(cs2, 0x005B, Signature_005B_iret);
+        // F000:005B iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_005D_F005D(int loadOffset) {
+        CheckExternalEvents(cs2, 0x005D);
+        VerifySpeculativeEntryOrFail(cs2, 0x005D, Signature_005D_call);
+        // F000:005D call far F000:00E3
+        FarCall(cs2, 0x0062, cs2, unknown_F000_00E3_F00E3);
+        VerifySpeculativeEntryOrFail(cs2, 0x0062, Signature_0062_callback);
+        // F000:0062 callback 0x0074
+        Callback(cs2, 0x0062, 0x0074);
+        VerifySpeculativeEntryOrFail(cs2, 0x0066, Signature_0066_iret);
+        // F000:0066 iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_0067_F0067(int loadOffset) {
+        CheckExternalEvents(cs2, 0x0067);
+        VerifySpeculativeEntryOrFail(cs2, 0x0067, Signature_0067_callback);
+        // F000:0067 callback 0x0103
+        Callback(cs2, 0x0067, 0x0103);
+        VerifySpeculativeEntryOrFail(cs2, 0x006B, Signature_006B_iret);
+        // F000:006B iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_006C_F006C(int loadOffset) {
+        CheckExternalEvents(cs2, 0x006C);
+        VerifySpeculativeEntryOrFail(cs2, 0x006C, Signature_006C_callback);
+        // F000:006C callback 0x0104
+        Callback(cs2, 0x006C, 0x0104);
+        VerifySpeculativeEntryOrFail(cs2, 0x0070, Signature_0070_iret);
+        // F000:0070 iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_0071_F0071(int loadOffset) {
+        CheckExternalEvents(cs2, 0x0071);
+        VerifySpeculativeEntryOrFail(cs2, 0x0071, Signature_0071_callback);
+        // F000:0071 callback 0x0105
+        Callback(cs2, 0x0071, 0x0105);
+        VerifySpeculativeEntryOrFail(cs2, 0x0075, Signature_0075_iret);
+        // F000:0075 iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_0076_F0076(int loadOffset) {
+        CheckExternalEvents(cs2, 0x0076);
+        VerifySpeculativeEntryOrFail(cs2, 0x0076, Signature_0076_callback);
+        // F000:0076 callback 0x0106
+        Callback(cs2, 0x0076, 0x0106);
+        VerifySpeculativeEntryOrFail(cs2, 0x007A, Signature_007A_iret);
+        // F000:007A iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_007B_F007B(int loadOffset) {
+        CheckExternalEvents(cs2, 0x007B);
+        VerifySpeculativeEntryOrFail(cs2, 0x007B, Signature_007B_callback);
+        // F000:007B callback 0x0107
+        Callback(cs2, 0x007B, 0x0107);
+        VerifySpeculativeEntryOrFail(cs2, 0x007F, Signature_007F_iret);
+        // F000:007F iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_0080_F0080(int loadOffset) {
+        CheckExternalEvents(cs2, 0x0080);
+        VerifySpeculativeEntryOrFail(cs2, 0x0080, Signature_0080_callback);
+        // F000:0080 callback 0x0108
+        Callback(cs2, 0x0080, 0x0108);
+        VerifySpeculativeEntryOrFail(cs2, 0x0084, Signature_0084_iret);
+        // F000:0084 iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_0090_F0090(int loadOffset) {
+        CheckExternalEvents(cs2, 0x0090);
+        // F000:0090 cmp AH,7
+        Alu8.Sub(AH, 7);
+        // F000:0093 je short 0x00A4
+        if (ZeroFlag) {
+            goto L_00A4;
+        }
+        // F000:0095 cmp AH,8
+        Alu8.Sub(AH, 8);
+        // F000:0098 je short 0x00A4
+        if (ZeroFlag) {
+            goto L_00A4;
+        }
+        // F000:009A cmp AH,0x0A
+        Alu8.Sub(AH, 0x0A);
+        // F000:009D je short 0x00A4
+        if (ZeroFlag) {
+            goto L_00A4;
+        }
+        // F000:009F callback 0x0021
+        Callback(cs2, 0x009F, 0x0021);
+        // F000:00A3 iret
+        return InterruptRet();
+    L_00A4:
+        VerifySpeculativeEntryOrFail(cs2, 0x00A4, Signature_00A4_sti);
+        // F000:00A4 sti
+        if (!InterruptFlag) {
+            State.InterruptShadowing = true;
+        }
+        InterruptFlag = true;
+        CheckExternalEvents(cs2, 0x00A5);
+        throw FailAsUntested("Untested fallthrough after F000:00A4");
+    }
+
+    public virtual Action unknown_F000_00E2_F00E2(int loadOffset) {
+        CheckExternalEvents(cs2, 0x00E2);
+        VerifySpeculativeEntryOrFail(cs2, 0x00E2, Signature_00E2_ret);
+        // F000:00E2 ret far
+        return FarRet();
+    }
+
+    public virtual Action unknown_F000_00E3_F00E3(int loadOffset) {
+        CheckExternalEvents(cs2, 0x00E3);
+        VerifySpeculativeEntryOrFail(cs2, 0x00E3, Signature_00E3_callback);
+        // F000:00E3 callback 0x010B
+        Callback(cs2, 0x00E3, 0x010B);
+        VerifySpeculativeEntryOrFail(cs2, 0x00E7, Signature_00E7_call);
+        // F000:00E7 call far F000:00E2
+        FarCall(cs2, 0x00EC, cs2, unknown_F000_00E2_F00E2);
+        VerifySpeculativeEntryOrFail(cs2, 0x00EC, Signature_00EC_callback);
+        // F000:00EC callback 0x010C
+        Callback(cs2, 0x00EC, 0x010C);
+        VerifySpeculativeEntryOrFail(cs2, 0x00F0, Signature_00F0_ret);
+        // F000:00F0 ret far
+        return FarRet();
+    }
+
+}

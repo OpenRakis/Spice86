@@ -9,7 +9,6 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
-using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
 using Spice86.Core.Emulator.Function;
@@ -43,8 +42,6 @@ public class MachineTest {
         ["partition_mixed_activation_cycle"],
         ["partition_indirect_call_jump"]
     ];
-
-    private readonly ListingExtractor _dumper = new(new(AsmRenderingConfig.CreateSpice86Style()));
 
     [Theory]
     [InlineData(false)]
@@ -644,6 +641,17 @@ public class MachineTest {
     }
 
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TestCallStackUnwind(bool useUnobservedArm) {
+        SpeculativeArm arm = SpeculativeArm.Observed;
+        if (useUnobservedArm) {
+            arm = SpeculativeArm.Unobserved;
+        }
+        TestOneBin(AsmFixtureCatalog.CallStackUnwind(arm), JitMode.InterpretedOnly);
+    }
+
+    [Theory]
     [MemberData(nameof(JitModes))]
     public void TestPartitionMutualRecursionUnwind(JitMode jitMode) {
         TestOneBin(AsmFixtureCatalog.PartitionMutualRecursionUnwind(), jitMode);
@@ -722,17 +730,43 @@ public class MachineTest {
         });
     }
 
+    /// <summary>
+    /// Runs sameretloop: a function whose near return pops its own entry address, so CS:IP does not move
+    /// when the return executes. The CFG must still record the return as a real transfer into the loop
+    /// body, and partitioning must attribute every block of the loop, so the generated-code run can keep
+    /// dispatching the override instead of reading the unchanged address as a completion.
+    /// </summary>
+    [Fact]
+    public void TestSameretLoop_DispatchesSameAddressReturns() {
+        TestOneBin(AsmFixtureCatalog.SameretLoop(), JitMode.InterpretedOnly, machine => {
+            CfgCpuGraph graph = CfgBlocksTestJson.BuildGraph(machine.CfgCpu.ExecutionContextManager);
+
+            graph.Truncated.Should().BeFalse("the graph is small and fully exported");
+            graph.Partitions.Should().NotBeNull("partitioning must attribute the same-address return loop");
+            CfgPartitionInfo[] partitions = graph.Partitions ?? [];
+            int[] partitionedBlocks = partitions.SelectMany(partition => partition.Blocks).Distinct().ToArray();
+            partitionedBlocks.Should().BeEquivalentTo(graph.Blocks.Select(block => block.Id),
+                "every block of the same-address return loop must belong to exactly one partition");
+        });
+    }
+
     [Theory]
     [MemberData(nameof(JitModes))]
     public void TestCallbacks(JitMode jitMode) {
-        string comFileName = Path.GetFullPath("Resources/cpuTests/intchain.com");
-        using Spice86Creator creator = new Spice86Creator(binName: comFileName, maxCycles: 1000, enablePit: false, installInterruptVectors: true, enableA20Gate: false, jitMode: jitMode);
-        using Spice86DependencyInjection spice86DependencyInjection = creator.Create();
-        Machine machine = spice86DependencyInjection.Machine;
-        IMemory memory = machine.Memory;
-        SegmentedAddress entryPoint = machine.CpuState.IpSegmentedAddress;
-        spice86DependencyInjection.ProgramExecutor.Run();
+        TestOneBin(AsmFixtureCatalog.IntChain(), jitMode, AssertCallbackChain);
+    }
 
+    /// <summary>
+    /// Callback CFG assertions of intchain.com: the INT 8 chain, the layout of the handler behind IVT[8]
+    /// and the block level edges around them. They run on the shared route, after the fixture's behavioral
+    /// oracle and the listing and CFG goldens of the same run.
+    /// </summary>
+    /// <param name="scope">Prepared run, holding the entry point observed before the program ran.</param>
+    /// <param name="machine">Machine of the finished run.</param>
+    private void AssertCallbackChain(AsmRunScope scope, Machine machine) {
+        IMemory memory = machine.Memory;
+        // Entry INT 8 in the COM, observed on the fresh machine before the program ran
+        SegmentedAddress entryPoint = scope.Observations.Get<SegmentedAddress>(AsmRunScope.EntryPointObservation);
         InterruptVectorTable ivt = new(memory);
         CurrentInstructions currentInstructions =
             machine.CfgCpu.CfgNodeFeeder.InstructionsFeeder.CurrentInstructions;
@@ -941,30 +975,17 @@ public class MachineTest {
 
     [AssertionMethod]
     private void TestOneBin(AsmFixture fixture, JitMode jitMode, Action<Machine> engineAssertions) {
-        using AsmFixtureRun run = AsmFixtureRunner.RunEmulated(fixture, jitMode);
-        string goldenKey = MachineGoldenKey(fixture);
-        CompareListingWithExpected(goldenKey, run.Machine);
-        CompareCfgBlocksJsonWithExpected(goldenKey, run.Machine);
-        engineAssertions(run.Machine);
+        TestOneBin(fixture, jitMode, (_, machine) => engineAssertions(machine));
     }
 
-    /// <summary>Builds the golden-file key of a fixture: its bin name plus the suffixes of its non-default configuration.</summary>
-    internal static string MachineGoldenKey(AsmFixture fixture) {
-        string key = fixture.Settings.BinName;
-        if (!fixture.Settings.EnableSpeculativeCfgExploration) {
-            key += ".nospec";
-        }
-        if (fixture.MachineGoldenVariant.Length > 0) {
-            key += "." + fixture.MachineGoldenVariant;
-        }
-        return key + fixture.Settings.HandlerSegmentGoldenSuffix;
-    }
-
-    private void CompareListingWithExpected(string goldenKey, Machine machine) {
-        List<string> actualLines = _dumper.ToAssemblyListing(machine.CfgCpu);
-        //WriteExpectedListing(goldenKey, actualLines);
-        List<string> expectedLines = GetExpectedListing(goldenKey);
-        Assert.Equal(expectedLines, actualLines);
+    [AssertionMethod]
+    private void TestOneBin(AsmFixture fixture, JitMode jitMode, Action<AsmRunScope, Machine> engineAssertions) {
+        using AsmRunScope scope = new(fixture);
+        using AsmFixtureRun run = AsmFixtureRunner.RunEmulated(scope, jitMode);
+        string goldenKey = MachineGoldens.GoldenKey(fixture);
+        MachineGoldens.CompareListingWithExpected(goldenKey, run.Machine);
+        MachineGoldens.CompareCfgBlocksJsonWithExpected(goldenKey, run.Machine);
+        engineAssertions(scope, run.Machine);
     }
 
     /// <summary>
@@ -982,53 +1003,5 @@ public class MachineTest {
     [MemberData(nameof(JitModes))]
     public void Test386ButNotProtectedMode(JitMode jitMode) {
         TestOneBin(AsmFixtureCatalog.Test386(), jitMode);
-    }
-
-    private static List<string> GetExpectedListing(string goldenKey) {
-        string resPath = $"Resources/cpuTests/res/DumpedListing/{goldenKey}.txt";
-        return File.ReadAllLines(resPath).ToList();
-    }
-
-    private static void WriteExpectedListing(string goldenKey, List<string> expected) {
-        // Write directly to the source tree so the golden file is committed alongside the code.
-        // CallerFilePath gives us the location of MachineTest.cs in the source tree.
-        string sourceDir = GetDirectoryName(GetSourceFilePath());
-        string fileName = Path.GetFileName(goldenKey) + ".txt";
-        string resPath = Path.Join(sourceDir, "Resources", "cpuTests", "res", "DumpedListing", fileName);
-        File.WriteAllLines(resPath, expected);
-    }
-
-    private static string GetSourceFilePath([System.Runtime.CompilerServices.CallerFilePath] string path = "") => path;
-
-    private static string GetDirectoryName(string path) {
-        return Path.GetDirectoryName(path)
-            ?? throw new InvalidOperationException($"No directory for path: {path}");
-    }
-
-    private void CompareCfgBlocksJsonWithExpected(string goldenKey, Machine machine) {
-        ExecutionContextManager contextManager = machine.CfgCpu.ExecutionContextManager;
-        string actualBlocksJson = CfgBlocksTestJson.SerializeBlocks(contextManager);
-        string actualPartitionsJson = CfgBlocksTestJson.SerializePartitions(contextManager);
-        //WriteExpectedCfgJson(goldenKey, actualBlocksJson, actualPartitionsJson);
-        Assert.Equal(GetExpectedCfgJson(goldenKey, "DumpedCfgBlocks"), actualBlocksJson);
-        Assert.Equal(GetExpectedCfgJson(goldenKey, "DumpedCfgPartitions"), actualPartitionsJson);
-    }
-
-    private static string GetExpectedCfgJson(string goldenKey, string subDirectory) {
-        string resPath = $"Resources/cpuTests/res/{subDirectory}/{goldenKey}.json";
-        return File.ReadAllText(resPath);
-    }
-
-    private static void WriteExpectedCfgJson(string goldenKey, string blocksJson, string partitionsJson) {
-        WriteCfgResource(goldenKey, "DumpedCfgBlocks", blocksJson);
-        WriteCfgResource(goldenKey, "DumpedCfgPartitions", partitionsJson);
-    }
-
-    private static void WriteCfgResource(string goldenKey, string subDirectory, string json) {
-        string sourceDir = GetDirectoryName(GetSourceFilePath());
-        string fileName = Path.GetFileName(goldenKey) + ".json";
-        string resPath = Path.Join(sourceDir, "Resources", "cpuTests", "res", subDirectory, fileName);
-        Directory.CreateDirectory(GetDirectoryName(resPath));
-        File.WriteAllText(resPath, json);
     }
 }

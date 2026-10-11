@@ -53,26 +53,26 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         cs1 = 0xD000;
         cs2 = 0xF000;
 
-        DefineFunction(cs1, 0x0000, unknown_D000_0000_D0000, name: "unknown");
-        DefineFunction(cs1, 0x0006, unknown_D000_0006_D0006, name: "unknown");
-        DefineFunction(cs1, 0x0011, unknown_D000_0011_D0011, name: "unknown");
-        DefineFunction(cs1, 0x0057, unknown_D000_0057_D0057, name: "unknown");
-        DefineFunction(cs1, 0x005D, unknown_D000_005D_D005D, name: "unknown");
-        DefineFunction(cs1, 0x0067, unknown_D000_0067_D0067, name: "unknown");
-        DefineFunction(cs1, 0x006C, unknown_D000_006C_D006C, name: "unknown");
-        DefineFunction(cs1, 0x0071, unknown_D000_0071_D0071, name: "unknown");
-        DefineFunction(cs1, 0x0076, unknown_D000_0076_D0076, name: "unknown");
-        DefineFunction(cs1, 0x007B, unknown_D000_007B_D007B, name: "unknown");
-        DefineFunction(cs1, 0x0080, unknown_D000_0080_D0080, name: "unknown");
-        DefineFunction(cs1, 0x00E2, unknown_D000_00E2_D00E2, name: "unknown");
-        DefineFunction(cs1, 0x00E3, unknown_D000_00E3_D00E3, name: "unknown");
-        DefineFunction(cs2, 0xFFF0, unknown_F000_FFF0_FFFF0, name: "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0000, unknown_D000_0000_D0000, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0006, unknown_D000_0006_D0006, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0011, unknown_D000_0011_D0011, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0057, unknown_D000_0057_D0057, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x005D, unknown_D000_005D_D005D, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0067, unknown_D000_0067_D0067, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x006C, unknown_D000_006C_D006C, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0071, unknown_D000_0071_D0071, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0076, unknown_D000_0076_D0076, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x007B, unknown_D000_007B_D007B, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0080, unknown_D000_0080_D0080, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x00E2, unknown_D000_00E2_D00E2, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x00E3, unknown_D000_00E3_D00E3, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs2, 0xFFF0, unknown_F000_FFF0_FFFF0, "unknown");
     }
 
     public virtual Action unknown_D000_0000_D0000(int loadOffset) {
         CheckExternalEvents(cs1, 0x0000);
         // D000:0000 callback 0x0010
-        Callback(0x0010);
+        Callback(cs1, 0x0000, 0x0010);
         // D000:0004 iret
         return InterruptRet();
     }
@@ -81,13 +81,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0x0006);
         VerifySpeculativeEntryOrFail(cs1, 0x0006, Signature_0006_callback);
         // D000:0006 callback 8
-        Callback(8);
+        Callback(cs1, 0x0006, 8);
         VerifySpeculativeEntryOrFail(cs1, 0x000A, Signature_000A_int);
         // D000:000A int 0x1C
         InterruptCall(cs1, 0x000C, 0x1C);
         VerifySpeculativeEntryOrFail(cs1, 0x000C, Signature_000C_callback);
         // D000:000C callback 0x0100
-        Callback(0x0100);
+        Callback(cs1, 0x000C, 0x0100);
         VerifySpeculativeEntryOrFail(cs1, 0x0010, Signature_0010_iret);
         // D000:0010 iret
         return InterruptRet();
@@ -97,7 +97,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0x0011);
         VerifySpeculativeEntryOrFail(cs1, 0x0011, Signature_0011_callback);
         // D000:0011 callback 9
-        Callback(9);
+        Callback(cs1, 0x0011, 9);
         VerifySpeculativeEntryOrFail(cs1, 0x0015, Signature_0015_iret);
         // D000:0015 iret
         return InterruptRet();
@@ -107,7 +107,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0x0057);
         VerifySpeculativeEntryOrFail(cs1, 0x0057, Signature_0057_callback);
         // D000:0057 callback 0x0070
-        Callback(0x0070);
+        Callback(cs1, 0x0057, 0x0070);
         VerifySpeculativeEntryOrFail(cs1, 0x005B, Signature_005B_iret);
         // D000:005B iret
         return InterruptRet();
@@ -120,7 +120,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         FarCall(cs1, 0x0062, cs1, unknown_D000_00E3_D00E3);
         VerifySpeculativeEntryOrFail(cs1, 0x0062, Signature_0062_callback);
         // D000:0062 callback 0x0074
-        Callback(0x0074);
+        Callback(cs1, 0x0062, 0x0074);
         VerifySpeculativeEntryOrFail(cs1, 0x0066, Signature_0066_iret);
         // D000:0066 iret
         return InterruptRet();
@@ -130,7 +130,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0x0067);
         VerifySpeculativeEntryOrFail(cs1, 0x0067, Signature_0067_callback);
         // D000:0067 callback 0x0103
-        Callback(0x0103);
+        Callback(cs1, 0x0067, 0x0103);
         VerifySpeculativeEntryOrFail(cs1, 0x006B, Signature_006B_iret);
         // D000:006B iret
         return InterruptRet();
@@ -140,7 +140,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0x006C);
         VerifySpeculativeEntryOrFail(cs1, 0x006C, Signature_006C_callback);
         // D000:006C callback 0x0104
-        Callback(0x0104);
+        Callback(cs1, 0x006C, 0x0104);
         VerifySpeculativeEntryOrFail(cs1, 0x0070, Signature_0070_iret);
         // D000:0070 iret
         return InterruptRet();
@@ -150,7 +150,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0x0071);
         VerifySpeculativeEntryOrFail(cs1, 0x0071, Signature_0071_callback);
         // D000:0071 callback 0x0105
-        Callback(0x0105);
+        Callback(cs1, 0x0071, 0x0105);
         VerifySpeculativeEntryOrFail(cs1, 0x0075, Signature_0075_iret);
         // D000:0075 iret
         return InterruptRet();
@@ -160,7 +160,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0x0076);
         VerifySpeculativeEntryOrFail(cs1, 0x0076, Signature_0076_callback);
         // D000:0076 callback 0x0106
-        Callback(0x0106);
+        Callback(cs1, 0x0076, 0x0106);
         VerifySpeculativeEntryOrFail(cs1, 0x007A, Signature_007A_iret);
         // D000:007A iret
         return InterruptRet();
@@ -170,7 +170,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0x007B);
         VerifySpeculativeEntryOrFail(cs1, 0x007B, Signature_007B_callback);
         // D000:007B callback 0x0107
-        Callback(0x0107);
+        Callback(cs1, 0x007B, 0x0107);
         VerifySpeculativeEntryOrFail(cs1, 0x007F, Signature_007F_iret);
         // D000:007F iret
         return InterruptRet();
@@ -180,7 +180,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0x0080);
         VerifySpeculativeEntryOrFail(cs1, 0x0080, Signature_0080_callback);
         // D000:0080 callback 0x0108
-        Callback(0x0108);
+        Callback(cs1, 0x0080, 0x0108);
         VerifySpeculativeEntryOrFail(cs1, 0x0084, Signature_0084_iret);
         // D000:0084 iret
         return InterruptRet();
@@ -197,13 +197,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0x00E3);
         VerifySpeculativeEntryOrFail(cs1, 0x00E3, Signature_00E3_callback);
         // D000:00E3 callback 0x010B
-        Callback(0x010B);
+        Callback(cs1, 0x00E3, 0x010B);
         VerifySpeculativeEntryOrFail(cs1, 0x00E7, Signature_00E7_call);
         // D000:00E7 call far D000:00E2
         FarCall(cs1, 0x00EC, cs1, unknown_D000_00E2_D00E2);
         VerifySpeculativeEntryOrFail(cs1, 0x00EC, Signature_00EC_callback);
         // D000:00EC callback 0x010C
-        Callback(0x010C);
+        Callback(cs1, 0x00EC, 0x010C);
         VerifySpeculativeEntryOrFail(cs1, 0x00F0, Signature_00F0_ret);
         // D000:00F0 ret far
         return FarRet();

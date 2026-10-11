@@ -374,6 +374,18 @@ internal static class AsmFixtureCatalog {
         return SpeculativeFixture("speculative_discard", SpeculativeMemory(0x01, 0xDD, 0xAA), SpeculativeArm.Observed);
     }
 
+    /// <summary>Runs callstackunwind on the given arm: the observed arm returns leaf to recovery, while the
+    /// unobserved arm's leaf discards its immediate return and returns straight to inner_return.</summary>
+    /// <param name="arm">Selector arm of the program.</param>
+    /// <returns>The fixture for that arm.</returns>
+    public static AsmFixture CallStackUnwind(SpeculativeArm arm) {
+        byte[] expectedMemory = new byte[0x13];
+        expectedMemory[0x10] = 0xAA;
+        expectedMemory[0x11] = 0xBB;
+        expectedMemory[0x12] = arm == SpeculativeArm.Unobserved ? (byte)0xEE : (byte)0xDD;
+        return SpeculativeFixture("callstackunwind", expectedMemory, arm);
+    }
+
     /// <summary>Returns the register oracle of the given partition fixture bin.</summary>
     /// <param name="binName">Partition bin name.</param>
     /// <returns>The fixture for that bin.</returns>
@@ -522,6 +534,15 @@ internal static class AsmFixtureCatalog {
         });
     }
 
+    /// <summary>Runs sameretloop: the same-address return loop ran four times and the hlt ended the run.</summary>
+    public static AsmFixture SameretLoop() {
+        return ResultFixture(new AsmRunSettings { BinName = "sameretloop", MaxCycles = 1000 }, result => {
+            result.Memory.UInt8[0xF000, 0x0024].Should().Be(4, "sameretloop: the counter byte counts the same-address returns");
+            result.State.SS.Should().Be(0, "sameretloop: start sets SS to 0");
+            result.State.SP.Should().Be(0x0100, "sameretloop: every loop iteration pushes one word and the ret pops it back");
+        });
+    }
+
     /// <summary>Runs test386 until its POST port reports the eight values of a normally finished test.</summary>
     public static AsmFixture Test386() {
         Test386PostPortHandler? handler = null;
@@ -582,8 +603,8 @@ internal static class AsmFixtureCatalog {
         if (arm == SpeculativeArm.Observed) {
             return MemoryFixture(settings, expectedMemory);
         }
-        settings = settings with { ConfigureMachine = SelectUnobservedArm };
-        return new AsmFixture(settings, expectedMemory, AsmFixture.NoResultAssertion) { MachineGoldenVariant = "unobserved" };
+        settings = settings with { ConfigureMachine = SelectUnobservedArm, VariantName = "unobserved" };
+        return MemoryFixture(settings, expectedMemory);
     }
 
     private static byte[] SpeculativeMemory(byte b400, byte b401, byte b402) {

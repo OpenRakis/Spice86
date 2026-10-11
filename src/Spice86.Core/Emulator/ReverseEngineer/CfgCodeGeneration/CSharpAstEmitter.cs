@@ -215,10 +215,47 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
             Transfer.EmitPostCallContinuation(node.Instruction, continuation, CurrentMethod));
     }
 
-    public EmittedCode VisitCallbackNode(CallbackNode node) =>
-        EmittedCode.Concat(
-            EmittedCode.Line($"Callback({Cast(DataType.UINT16, Expr(node.CallbackNumber))});"),
+    public EmittedCode VisitCallbackNode(CallbackNode node) {
+        IReadOnlyList<ResolvedCfgEdge> movedTargets = Context.GetSuccessorEdges(node.Instruction, InstructionSuccessorType.Normal)
+            .Where(edge => edge.Target.Address != node.Instruction.NextInMemoryAddress32.ToSegmentedAddress())
+            .ToList();
+        EmittedCode callback = movedTargets.Count == 0
+            ? EmitDirectCallback(node)
+            : BuildCallbackTargetDispatch(node, movedTargets);
+        return EmittedCode.Concat(
+            callback,
             Transfer.EmitFallthroughIfNeeded(node.Instruction, CurrentMethod));
+    }
+
+    /// <summary>
+    /// Lowers a callback whose handler kept CS:IP at the callback during discovery: a direct
+    /// <c>Callback</c> call that returns into the emitted fallthrough.
+    /// </summary>
+    private EmittedCode EmitDirectCallback(CallbackNode node) {
+        return EmittedCode.Line($"Callback({Context.GetSegmentVariable(node.Instruction.Address.Segment)}, 0x{node.Instruction.Address.Offset:X4}, {Cast(DataType.UINT16, Expr(node.CallbackNumber))});");
+    }
+
+    /// <summary>
+    /// Lowers a callback whose handler moved CS:IP during discovery (DOS EXEC, terminate, TSR): run the
+    /// callback, and when it moved CS:IP again dispatch over the observed targets, failing as untested on a
+    /// target discovery never saw. The instruction's own fallthrough is still emitted after this block; it is
+    /// reachable only when the handler kept CS:IP at the callback.
+    /// </summary>
+    private EmittedCode BuildCallbackTargetDispatch(CallbackNode node, IReadOnlyList<ResolvedCfgEdge> movedTargets) {
+        List<StatementItem> targets = [];
+        foreach (ResolvedCfgEdge edge in movedTargets
+                     .OrderBy(edge => edge.Target.Address.Segment)
+                     .ThenBy(edge => edge.Target.Address.Offset)) {
+            targets.Add(new BlockStatement(
+                $"if (CS == {Context.GetSegmentVariable(edge.Target.Address.Segment)} && IP == 0x{edge.Target.Address.Offset:X4})",
+                Transfer.Emit(edge, CurrentMethod, forceSameMethodGoto: true).AsStatements()));
+        }
+        targets.Add(new LineStatement(UntestedMessages.CallbackTarget(node.Instruction.Address), Diverges: true));
+        string callbackNumber = Cast(DataType.UINT16, Expr(node.CallbackNumber));
+        return EmittedCode.Statements(new BlockStatement(
+            $"if (CallbackMovedCsIp({Context.GetSegmentVariable(node.Instruction.Address.Segment)}, 0x{node.Instruction.Address.Offset:X4}, {callbackNumber}))",
+            targets));
+    }
 
     public EmittedCode VisitSelectorNode(SelectorNode node) => LowerSelector(node.CfgSelector);
 

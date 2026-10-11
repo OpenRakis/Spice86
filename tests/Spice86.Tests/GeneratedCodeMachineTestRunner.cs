@@ -3,6 +3,8 @@ namespace Spice86.Tests;
 using FluentAssertions;
 
 using Spice86.Core.CLI;
+using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
@@ -38,9 +40,72 @@ internal sealed class GeneratedCodeMachineTestRunner {
     /// <returns>The generated program.</returns>
     /// <exception cref="ArgumentException">Discovery and execution do not share the same golden key.</exception>
     public GeneratedCSharpProgram TestGeneratedCode(AsmFixture discovery, IReadOnlyList<AsmFixture> executions) {
-        string goldenKey = GoldenKey(discovery.Settings);
+        using AsmRunScope discoveryScope = new(discovery);
+        using OwnedRunScopes executionScopes = new();
         foreach (AsmFixture execution in executions) {
-            string executionKey = GoldenKey(execution.Settings);
+            executionScopes.Add(new AsmRunScope(execution));
+        }
+        return TestGeneratedCodeCore(discoveryScope, executionScopes.Scopes);
+    }
+
+    /// <summary>
+    /// Runs one scenario through the whole generated-code pipeline: a fresh preparation for discovery,
+    /// whose oracle is checked first and whose finished machine is then compared with the listing and
+    /// CFG goldens, generation, compilation with the metrics gate, a second fresh preparation for the
+    /// override run whose oracle is the same one, and the generated-source golden last.
+    /// </summary>
+    /// <param name="scenario">Scenario to discover, generate and re-run.</param>
+    /// <returns>The generated program.</returns>
+    public GeneratedCSharpProgram TestGeneratedCode(AsmScenario scenario) {
+        return TestGeneratedCode(scenario, [scenario]);
+    }
+
+    /// <summary>
+    /// Discovers one scenario, generates and compiles its source, then runs every execution scenario
+    /// with the compiled override installed, each from a fresh preparation whose oracle is checked.
+    /// Every scope is disposed whether the pipeline succeeds or fails.
+    /// </summary>
+    /// <param name="discovery">Scenario whose run is recorded for code generation.</param>
+    /// <param name="executions">Scenarios executed with the compiled override, in order.</param>
+    /// <returns>The generated program.</returns>
+    /// <exception cref="ArgumentException">Discovery and executions do not share the same golden key.</exception>
+    public GeneratedCSharpProgram TestGeneratedCode(AsmScenario discovery, IReadOnlyList<AsmScenario> executions) {
+        using AsmRunScope discoveryScope = discovery.Prepare();
+        using OwnedRunScopes executionScopes = new();
+        foreach (AsmScenario execution in executions) {
+            executionScopes.Add(execution.Prepare());
+        }
+        return TestGeneratedCodeCore(discoveryScope, executionScopes.Scopes);
+    }
+
+    /// <summary>
+    /// Generates C# from one prepared discovery run, compiles it, then runs every prepared execution run
+    /// with the compiled override installed and checks its oracle. The generated source is compared with
+    /// its golden at the end.
+    /// </summary>
+    /// <param name="discovery">Prepared discovery run whose execution is recorded for code generation.</param>
+    /// <param name="executions">Prepared runs executed with the compiled override, in order.</param>
+    /// <returns>The generated program.</returns>
+    /// <exception cref="ArgumentException">Discovery and execution do not share the same golden key.</exception>
+    public GeneratedCSharpProgram TestGeneratedCode(AsmRunScope discovery, IReadOnlyList<AsmRunScope> executions) {
+        return TestGeneratedCodeCore(discovery, executions);
+    }
+
+    private GeneratedCSharpProgram TestGeneratedCodeCore(AsmRunScope discovery, IReadOnlyList<AsmRunScope> executions) {
+        string goldenKey = GoldenKey(discovery.Fixture.Settings);
+        GeneratedCSharpProgram generatedProgram = GenerateCompileAndRun(discovery, executions);
+        // Compared last: a behavioural regression (memory dump or caller assertion) is the more
+        // important failure and must be the one xunit reports when both a behavioural and a golden
+        // mismatch occur on the same run.
+        CompareGeneratedSourceWithExpected(goldenKey, generatedProgram);
+
+        return generatedProgram;
+    }
+
+    private GeneratedCSharpProgram GenerateCompileAndRun(AsmRunScope discovery, IReadOnlyList<AsmRunScope> executions) {
+        AsmRunSettings discoverySettings = discovery.Fixture.Settings;
+        string goldenKey = GoldenKey(discoverySettings);
+        foreach (string executionKey in executions.Select(execution => GoldenKey(execution.Fixture.Settings))) {
             if (executionKey != goldenKey) {
                 throw new ArgumentException(
                     $"Discovery golden key '{goldenKey}' differs from execution golden key '{executionKey}'.");
@@ -48,21 +113,26 @@ internal sealed class GeneratedCodeMachineTestRunner {
         }
 
         (GeneratedCSharpProgram generatedProgram, AsmFinalState discoveryFinalState) =
-            GenerateSourceAndFinalState(discovery.Settings);
-        using CompiledGeneratedOverride compiledOverride = CompileGeneratedProgram(discovery.Settings, generatedProgram);
-        foreach (AsmFixture execution in executions) {
+            GenerateSourceAndFinalState(discovery);
+        using CompiledGeneratedOverride compiledOverride = CompileGeneratedProgram(discoverySettings, generatedProgram);
+        foreach (AsmRunScope execution in executions) {
             using AsmFixtureRun run = AsmFixtureRunner.RunWithOverride(execution, compiledOverride.Supplier);
-            if (execution.Settings == discovery.Settings) {
+            if (IsEquivalentScenarioVariant(discoverySettings, execution.Fixture.Settings)) {
                 GeneratedCodeDifferentialReport.Append(goldenKey, discoveryFinalState, AsmFinalState.Capture(run.Result));
             }
         }
 
-        // Compared last: a behavioural regression (memory dump or caller assertion) is the more
-        // important failure and must be the one xunit reports when both a behavioural and a golden
-        // mismatch occur on the same run.
-        CompareGeneratedSourceWithExpected(goldenKey, generatedProgram);
-
         return generatedProgram;
+    }
+
+    /// <summary>
+    /// Whether an execution run is another run of the same scenario variant as the discovery run: same
+    /// stable identity and same logical variant. Compared by identity, not by delegate or host-path
+    /// equality, so independently prepared but equivalent runs are still reported as a differential.
+    /// </summary>
+    private static bool IsEquivalentScenarioVariant(AsmRunSettings discovery, AsmRunSettings execution) {
+        return discovery.ScenarioIdentity == execution.ScenarioIdentity
+            && discovery.VariantName == execution.VariantName;
     }
 
     /// <summary>
@@ -82,18 +152,23 @@ internal sealed class GeneratedCodeMachineTestRunner {
     }
 
     /// <summary>
-    /// Builds the golden-file key for a run: the bin file name without extension, followed by one
-    /// fixed suffix per enabled boolean flag of the <see cref="AsmRunSettings"/>, in a fixed
-    /// order. Runs of the same bin with different options therefore get distinct goldens instead of
-    /// overwriting each other. <c>MaxCycles</c> and <c>ConfigureMachine</c> are deliberately not part
-    /// of the key. Every flag is enumerated explicitly so adding one to the settings is a
-    /// compile-visible decision here rather than a silent omission that lets two runs share a golden.
-    /// Relocated installed callbacks append their segment because their addresses appear in generated source.
+    /// Builds the golden-file key for a run: the stable scenario identity, followed by one fixed suffix
+    /// per enabled configuration of the <see cref="AsmRunSettings"/>, in a fixed order (PIT, A20, interrupt
+    /// vectors, fail-on-port, XMS, EMS, non-default UMB, Sound Blaster model, OPL mode, speculation,
+    /// relocated handler segment). Runs of the same
+    /// bin with different options therefore get distinct goldens instead of overwriting each other, and
+    /// two scenarios that execute the same-named program (two START.BAT scenarios) get distinct goldens
+    /// through their distinct identities. <c>MaxCycles</c>, <c>CDrive</c>, <c>VariantName</c> and
+    /// <c>ConfigureMachine</c> are deliberately not part of the key. Every option is enumerated explicitly
+    /// so adding one to the settings is a compile-visible decision here rather than a silent omission
+    /// that lets two runs share a golden. Relocated installed callbacks append their segment because
+    /// their addresses appear in generated source, and a run with DOS upper memory blocks disabled
+    /// appends <c>.noumb</c> because it changes the machine the generated source encodes.
     /// </summary>
     /// <param name="settings">Settings to build the key from.</param>
     /// <returns>The golden-file key.</returns>
     public static string GoldenKey(AsmRunSettings settings) {
-        string key = Path.GetFileNameWithoutExtension(settings.BinName);
+        string key = settings.ScenarioIdentity;
         if (settings.EnablePit) {
             key += ".pit";
         }
@@ -106,33 +181,56 @@ internal sealed class GeneratedCodeMachineTestRunner {
         if (settings.FailOnUnhandledPort) {
             key += ".failport";
         }
+        if (settings.EnableXms) {
+            key += ".xms";
+        }
+        if (settings.EnableEms) {
+            key += ".ems";
+        }
+        if (!settings.EnableUmb) {
+            key += ".noumb";
+        }
+        if (settings.SbType != SbType.None) {
+            key += "." + settings.SbType.ToString().ToLowerInvariant();
+        }
+        if (settings.OplMode != OplMode.None) {
+            key += "." + settings.OplMode.ToString().ToLowerInvariant();
+        }
         if (settings.EnableSpeculativeCfgExploration) {
             key += ".spec";
         }
         return key + settings.HandlerSegmentGoldenSuffix;
     }
 
-    public GeneratedCSharpProgram GenerateProgramAndSource(AsmRunSettings settings) {
-        (GeneratedCSharpProgram generatedProgram, _) = GenerateSourceAndFinalState(settings);
+    public GeneratedCSharpProgram GenerateProgramAndSource(AsmRunScope scope) {
+        (GeneratedCSharpProgram generatedProgram, _) = GenerateSourceAndFinalState(scope);
         return generatedProgram;
     }
 
     public void CompareGeneratedSourceWithExpected(string goldenKey, GeneratedCSharpProgram generatedProgram) {
         List<string> actualLines = NormalizeLines(generatedProgram.SourceText);
         //WriteExpectedGeneratedSource(goldenKey, generatedProgram.SourceText);
-        string resPath = Path.Join("Resources", "cpuTests", "res", "GeneratedCode", goldenKey + ".cs.txt");
+        string resPath = GetGoldenPath(goldenKey + ".cs.txt");
         File.Exists(resPath).Should().BeTrue(
-            $"golden '{goldenKey}.cs.txt' is missing; regenerate it by uncommenting the WriteExpectedGeneratedSource call in GeneratedCodeMachineTestRunner.CompareGeneratedSourceWithExpected, running GeneratedCodeMachineTest and SpeculativeCfgTest once, then re-commenting it");
+            $"golden '{goldenKey}.cs.txt' is missing; regenerate it by uncommenting the WriteExpectedGeneratedSource call in GeneratedCodeMachineTestRunner.CompareGeneratedSourceWithExpected, running the generated entry points once, then re-commenting it");
         List<string> expectedLines = NormalizeLines(File.ReadAllText(resPath));
         Assert.Equal(expectedLines, actualLines);
     }
 
     private static void WriteExpectedGeneratedSource(string goldenKey, string sourceText) {
-        // Write directly to the source tree so the golden file is committed alongside the code.
-        // CallerFilePath gives the location of this file in the source tree.
+        // Write directly to the source tree so the golden file is committed alongside the code. The
+        // comparison reads the same path, so a golden written during a regeneration pass is readable
+        // again in that same pass.
+        File.WriteAllText(GetGoldenPath(goldenKey + ".cs.txt"), sourceText);
+    }
+
+    /// <summary>Path of a committed generated-source golden in the source tree, the file both the writer
+    /// and the comparison use.</summary>
+    /// <param name="fileName">File name of the golden.</param>
+    /// <returns>Absolute path of that golden.</returns>
+    private static string GetGoldenPath(string fileName) {
         string sourceDir = GetDirectoryName(GetSourceFilePath());
-        string resPath = Path.Join(sourceDir, "Resources", "cpuTests", "res", "GeneratedCode", goldenKey + ".cs.txt");
-        File.WriteAllText(resPath, sourceText);
+        return Path.Join(sourceDir, "Resources", "cpuTests", "res", "GeneratedCode", fileName);
     }
 
     private static List<string> NormalizeLines(string text) {
@@ -173,22 +271,47 @@ internal sealed class GeneratedCodeMachineTestRunner {
         }
     }
 
-    private (GeneratedCSharpProgram GeneratedProgram, AsmFinalState FinalState) GenerateSourceAndFinalState(AsmRunSettings settings) {
-        (CfgPartitionedProgram program, AsmFinalState finalState) = GenerateProgram(settings);
+    private (GeneratedCSharpProgram GeneratedProgram, AsmFinalState FinalState) GenerateSourceAndFinalState(AsmRunScope scope) {
+        (CfgPartitionedProgram program, AsmFinalState finalState) = GenerateProgram(scope);
         GeneratedCSharpProgram generatedProgram = new CfgCSharpGenerator().Generate(program);
-        WriteGeneratedSource(GoldenKey(settings), generatedProgram);
+        WriteGeneratedSource(GoldenKey(scope.Fixture.Settings), generatedProgram);
         return (generatedProgram, finalState);
     }
 
-    private static (CfgPartitionedProgram Program, AsmFinalState FinalState) GenerateProgram(AsmRunSettings settings) {
-        using AsmFixtureRun run = AsmFixtureRunner.RunSettings(settings, JitMode.InterpretedOnly);
+    private static (CfgPartitionedProgram Program, AsmFinalState FinalState) GenerateProgram(AsmRunScope scope) {
+        // The discovery run checks the scenario's oracle before anything is generated: a wrong expected
+        // value fails discovery instead of surfacing later as a generated-code difference. The finished
+        // machine is then compared with the listing and CFG goldens before the graph is exported.
+        using AsmFixtureRun run = AsmFixtureRunner.RunEmulated(scope, JitMode.InterpretedOnly);
 
         Machine machine = run.Machine;
+        string machineGoldenKey = MachineGoldens.GoldenKey(scope.Fixture);
+        MachineGoldens.CompareListingWithExpected(machineGoldenKey, machine);
+        MachineGoldens.CompareCfgBlocksJsonWithExpected(machineGoldenKey, machine);
+
         CfgBlockGraph graph = new CfgBlockGraphExporter().ExportFromExecutionContext(machine.CfgCpu.ExecutionContextManager, null).Graph;
         graph.Truncated.Should().BeFalse();
 
         CfgPartitionedProgram program = new CfgFunctionPartitioner().Partition(graph, machine.CfgCpu.ExecutionContextManager, new FunctionCatalogue());
         AsmFinalState finalState = AsmFinalState.Capture(run.Result);
         return (program, finalState);
+    }
+
+    /// <summary>Owns the execution run scopes of one pipeline run: they are disposed when the run ends,
+    /// before the discovery scope a <c>using</c> declaration disposes afterwards.</summary>
+    private sealed class OwnedRunScopes : IDisposable {
+        private readonly List<AsmRunScope> _scopes = new();
+
+        public IReadOnlyList<AsmRunScope> Scopes => _scopes;
+
+        public void Add(AsmRunScope scope) {
+            _scopes.Add(scope);
+        }
+
+        public void Dispose() {
+            foreach (AsmRunScope scope in _scopes) {
+                scope.Dispose();
+            }
+        }
     }
 }

@@ -1,0 +1,48 @@
+{
+  "partitions": [
+    {
+      "id": 1,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        19,
+        24,
+        22
+      ],
+      "entries": [
+        {
+          "block": 19,
+          "address": "F000:0013",
+          "kind": "returnTargetEntry"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        3,
+        2
+      ],
+      "entries": [
+        {
+          "block": 2,
+          "address": "F000:FFF0",
+          "kind": "executionContextEntry"
+        }
+      ]
+    }
+  ],
+  "transfers": [
+    {
+      "kind": "dynamicReturn",
+      "fromPartition": 2,
+      "toPartition": 1,
+      "fromBlock": 3,
+      "toBlock": 19,
+      "from": "F000:0012",
+      "target": "F000:0013"
+    }
+  ]
+}
