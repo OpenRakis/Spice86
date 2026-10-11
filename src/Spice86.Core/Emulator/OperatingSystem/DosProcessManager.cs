@@ -42,6 +42,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     private const byte CriticalErrorVectorNumber = 0x24;
     private const byte RetfOpcode = 0xCB;
     private readonly DosMemoryManager _memoryManager;
+    private readonly DosTables _dosTables;
     private readonly DosFileManager _fileManager;
     private readonly DosJobFileTable _jobFileTable;
     private readonly DosDriveManager _driveManager;
@@ -120,6 +121,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     /// <param name="loggerService">Logger for emitting diagnostic information during process lifecycle changes.</param>
     public DosProcessManager(IMemory memory, Stack stack, State state,
         DosMemoryManager dosMemoryManager,
+        DosTables dosTables,
         DosFileManager dosFileManager, DosDriveManager dosDriveManager,
         IDriveStatusProvider driveStatusProvider,
         Mscdex mscdex,
@@ -130,6 +132,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         _sda = new(memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
         _memory = memory;
         _memoryManager = dosMemoryManager;
+        _dosTables = dosTables;
         _stack = stack;
         _fileManager = dosFileManager;
         _jobFileTable = new DosJobFileTable(memory);
@@ -677,6 +680,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         // TSR keeps program resident; others free memory.
         if (terminationType != DosTerminationType.TSR) {
             _memoryManager.FreeProcessMemory(currentPspSegment);
+            _dosTables.ReleaseJobFileTable(currentPspSegment);
         } else {
             _memoryManager.FreeEnvironmentBlock(currentPsp.EnvironmentTableSegment, currentPspSegment);
             if (residentBlock is not null) {

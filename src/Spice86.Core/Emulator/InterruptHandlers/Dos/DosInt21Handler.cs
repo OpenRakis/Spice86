@@ -310,7 +310,7 @@ public class DosInt21Handler : InterruptHandler {
     /// Used by the ASM wait loop for AH=07h/08h/0Ah.
     /// </summary>
     public void CallbackCheckStdinReady() {
-        Memory[_stdinReadyFlagLinearAddress] = _dosFileManager.IsStdinInputAvailable() ? (byte)1 : (byte)0;
+        Memory[_stdinReadyFlagLinearAddress] = IsStandardInputAvailable() ? (byte)1 : (byte)0;
     }
 
     /// <summary>
@@ -532,10 +532,11 @@ public class DosInt21Handler : InterruptHandler {
         SegmentedAddress newTableAddress = new(currentPspSegment, PspJobFileTableOffset);
         if (requestedSize > DosFileManager.MaxOpenFilesPerProcess) {
             try {
-                ushort paragraphs = (ushort)((requestedSize + 0xF) / 0x10);
-                newTableAddress = new SegmentedAddress(_dosTables.ReserveDosPrivateSegment(paragraphs), 0);
+                ushort tableSegment = _dosTables.GetJobFileTableSegment(currentPspSegment);
+                newTableAddress = new SegmentedAddress(tableSegment, 0);
             } catch (InvalidOperationException) {
-                SetStateFromDosFileOperationResult(calledFromVm, DosFileOperationResult.LogError(DosErrorCode.InsufficientMemory));
+                SetStateFromDosFileOperationResult(calledFromVm,
+                    DosFileOperationResult.LogError(DosErrorCode.InsufficientMemory));
                 return;
             }
         }
@@ -550,6 +551,10 @@ public class DosInt21Handler : InterruptHandler {
             _jobFileTable.SetEntry(currentPspSegment, handle, entries[handle]);
         }
         SetCarryFlag(false, calledFromVm);
+    }
+
+    private bool IsStandardInputAvailable() {
+        return _dosFileManager.IsInputAvailable(GetStandardFile(DosStandardHandle.Stdin));
     }
 
     /// <summary>
@@ -615,7 +620,7 @@ public class DosInt21Handler : InterruptHandler {
         if (_isCtrlCFlag && CheckCtrlCOrCtrlBreakInKeyboardBuffer()) {
             return;
         }
-        State.AL = _dosFileManager.IsStdinInputAvailable() ? (byte)0xFF : (byte)0x0;
+        State.AL = IsStandardInputAvailable() ? (byte)0xFF : (byte)0x0;
     }
 
     /// <summary>
@@ -968,7 +973,7 @@ public class DosInt21Handler : InterruptHandler {
                 LoggerService.LogTrace("DOS INT21H DirectConsoleIo, INPUT REQUESTED");
             }
             VirtualFileBase? stdin = GetStandardFile(DosStandardHandle.Stdin);
-            if (stdin != null && _dosFileManager.IsStdinInputAvailable()) {
+            if (stdin != null && _dosFileManager.IsInputAvailable(stdin)) {
                 byte[] bytes = new byte[1];
                 int readCount = stdin.Read(bytes, 0, 1);
                 if (readCount < 1) {

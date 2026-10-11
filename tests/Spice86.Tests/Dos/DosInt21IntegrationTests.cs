@@ -8,6 +8,7 @@ using Spice86.Shared.Emulator.Storage.CdRom;
 using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Shared.Emulator.VM.Breakpoint;
 using Spice86.Shared.Interfaces;
+using Spice86.Shared.Utils;
 using Spice86.Tests.Dos.FileSystem;
 using Spice86.Tests.Utility;
 using Spice86.ViewModels.Services;
@@ -492,14 +493,23 @@ public class DosInt21IntegrationTests {
     private static void RedirectStdinToByteA(Spice86DependencyInjection di) {
         MemoryStream stream = new(new byte[] { 0x41 });
         DosFile stdinFile = new("STDIN", 0, stream);
-        di.Machine.Dos.FileManager.OpenFiles[0] = stdinFile;
+        RedirectStdin(di, stdinFile);
     }
 
     private static void RedirectStdinToHelloCr(Spice86DependencyInjection di) {
         byte[] data = { 0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x0D };
         MemoryStream stream = new(data);
         DosFile stdinFile = new("STDIN", 0, stream);
-        di.Machine.Dos.FileManager.OpenFiles[0] = stdinFile;
+        RedirectStdin(di, stdinFile);
+    }
+
+    private static void RedirectStdin(Spice86DependencyInjection di, DosFile stdinFile) {
+        const byte systemFileTableIndex = 10;
+        di.Machine.Dos.FileManager.OpenFiles[systemFileTableIndex] = stdinFile;
+        ushort pspSegment = di.Machine.Dos.DosSwappableDataArea.CurrentProgramSegmentPrefix;
+        DosProgramSegmentPrefix psp = new(di.Machine.Memory, MemoryUtils.ToPhysicalAddress(pspSegment, 0));
+        uint stdinEntryAddress = MemoryUtils.ToPhysicalAddress(psp.FileTableAddress.Segment, psp.FileTableAddress.Offset);
+        di.Machine.Memory.UInt8[stdinEntryAddress] = systemFileTableIndex;
     }
 
     private static void SimulateCtrlC(HeadlessGui gui) {

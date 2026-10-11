@@ -7,6 +7,7 @@ using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
 using System;
+using System.Collections.Generic;
 
 /// <summary>
 /// Centralizes global DOS memory structures
@@ -16,6 +17,9 @@ public class DosTables {
     public const ushort DosPrivateTablesSegmentEnd = 0xD000;
 
     public ushort CurrentMemorySegment { get; set; } = DosPrivateTablesSegmentStart;
+
+    private readonly Dictionary<ushort, ushort> _jobFileTableSegments = new();
+    private readonly Stack<ushort> _freeJobFileTableSegments = new();
 
     /// <summary>
     /// The current country information
@@ -70,5 +74,33 @@ public class DosTables {
         ushort segmentNumber = CurrentMemorySegment;
         CurrentMemorySegment = (ushort)requestedEndSegment;
         return segmentNumber;
+    }
+
+    /// <summary>
+    /// Gets the extended job file table segment for a PSP, allocating one if needed.
+    /// </summary>
+    /// <param name="pspSegment">The PSP that owns the job file table.</param>
+    /// <returns>The segment containing the table.</returns>
+    public ushort GetJobFileTableSegment(ushort pspSegment) {
+        if (_jobFileTableSegments.TryGetValue(pspSegment, out ushort segment)) {
+            return segment;
+        }
+        if (_freeJobFileTableSegments.Count > 0) {
+            segment = _freeJobFileTableSegments.Pop();
+        } else {
+            segment = ReserveDosPrivateSegment(0x10);
+        }
+        _jobFileTableSegments.Add(pspSegment, segment);
+        return segment;
+    }
+
+    /// <summary>
+    /// Releases the extended job file table owned by a terminated PSP.
+    /// </summary>
+    /// <param name="pspSegment">The PSP whose table should be released.</param>
+    public void ReleaseJobFileTable(ushort pspSegment) {
+        if (_jobFileTableSegments.Remove(pspSegment, out ushort segment)) {
+            _freeJobFileTableSegments.Push(segment);
+        }
     }
 }

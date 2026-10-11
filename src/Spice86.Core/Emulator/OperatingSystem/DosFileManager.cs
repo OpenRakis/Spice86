@@ -98,12 +98,11 @@ public class DosFileManager {
     public VirtualFileBase? Stdin => OpenFiles[(ushort)DosStandardHandle.Stdin];
 
     /// <summary>
-    /// Checks whether input is available on the stdin handle (0).
+    /// Checks whether input is available on a file handle.
     /// For character devices, checks the device information bits.
     /// For regular files, checks whether the file position is before the end.
     /// </summary>
-    public bool IsStdinInputAvailable() {
-        VirtualFileBase? file = OpenFiles[(ushort)DosStandardHandle.Stdin];
+    public bool IsInputAvailable(VirtualFileBase? file) {
         if (file is IVirtualDevice device && (device.Information & 0x8000) > 0) {
             return (device.Information & 0x40) == 0;
         }
@@ -1869,4 +1868,3 @@ public class DosFileManager {
         return dosPath;
     }
 }
-
