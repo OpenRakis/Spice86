@@ -43,6 +43,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     private const byte RetfOpcode = 0xCB;
     private readonly DosMemoryManager _memoryManager;
     private readonly DosFileManager _fileManager;
+    private readonly DosJobFileTable _jobFileTable;
     private readonly DosDriveManager _driveManager;
     private readonly IMemory _memory;
     private readonly State _state;
@@ -131,6 +132,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         _memoryManager = dosMemoryManager;
         _stack = stack;
         _fileManager = dosFileManager;
+        _jobFileTable = new DosJobFileTable(memory);
         _driveManager = dosDriveManager;
         _state = state;
         _loggerService = loggerService;
@@ -669,7 +671,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
 
         // Close non-standard handles only when the process fully terminates; TSR keeps them resident
         if (terminationType != DosTerminationType.TSR) {
-            CloseProcessFileHandles(currentPsp);
+            CloseProcessFileHandles(currentPspSegment);
         }
 
         // TSR keeps program resident; others free memory.
@@ -825,10 +827,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         // File table layout and cloning (start unused then clone handles).
         childPsp.MaximumOpenFiles = DosFileManager.MaxOpenFilesPerProcess;
         childPsp.FileTableAddress = new SegmentedAddress(childSegment, FileTableOffset);
-        for (int i = 0; i < JobFileTableLength; i++) {
-            childPsp.Files[i] = UnusedFileHandle;
-        }
-        CopyFileTableFromParent(childPsp, parentPsp);
+        InheritFileTable(parentPspSegment, childPsp);
 
         // FCBs cleared (FreeDOS resets to drive 0, space-filled names).
         ResetFcb(childPsp.FirstFileControlBlock);
@@ -861,50 +860,41 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         psp.CriticalErrorAddress = _interruptVectorTable[CriticalErrorVectorNumber];
     }
 
-    private void CopyFileTableFromParent(DosProgramSegmentPrefix childPsp, DosProgramSegmentPrefix parentPsp) {
-        for (int i = 0; i < JobFileTableLength; i++) {
-            byte parentHandle = parentPsp.Files[i];
-
-            if (parentHandle == UnusedFileHandle) {
-                childPsp.Files[i] = UnusedFileHandle;
+    /// <summary>
+    /// Copies the first <see cref="JobFileTableLength"/> handles of the parent job file table into the child PSP table.
+    /// Each inherited handle takes a reference on the shared system file table entry. Files opened with the
+    /// no-inherit flag are not inherited.
+    /// </summary>
+    private void InheritFileTable(ushort parentPspSegment, DosProgramSegmentPrefix childPsp) {
+        ushort parentSize = _jobFileTable.GetSize(parentPspSegment);
+        for (ushort handle = 0; handle < JobFileTableLength; handle++) {
+            childPsp.Files[handle] = UnusedFileHandle;
+            if (handle >= parentSize) {
                 continue;
             }
-
-            if (parentHandle < _fileManager.OpenFiles.Length) {
-                VirtualFileBase? file = _fileManager.OpenFiles[parentHandle];
-                if (file is DosFile dosFile && (dosFile.Flags & (byte)FileAccessMode.Private) != 0) {
-                    childPsp.Files[i] = UnusedFileHandle;
-                    continue;
-                }
-            }
-
-            DosFileOperationResult duplicationResult = _fileManager.DuplicateHandleForChild(parentHandle);
-            if (duplicationResult.IsError || duplicationResult.Value == null) {
-                childPsp.Files[i] = UnusedFileHandle;
+            byte systemFileTableIndex = _jobFileTable.GetEntry(parentPspSegment, handle);
+            if (systemFileTableIndex >= _fileManager.OpenFiles.Length) {
                 continue;
             }
-
-            childPsp.Files[i] = (byte)duplicationResult.Value.Value;
+            if (_fileManager.OpenFiles[systemFileTableIndex] is DosFile dosFile
+                && (dosFile.Flags & (byte)FileAccessMode.Private) != 0) {
+                continue;
+            }
+            if (_fileManager.AddHandleReference(systemFileTableIndex)) {
+                childPsp.Files[handle] = systemFileTableIndex;
+            }
         }
     }
 
-    private void CloseProcessFileHandles(DosProgramSegmentPrefix psp) {
-        HashSet<byte> closedHandles = new();
-
-        for (int i = StandardFileHandleCount; i < JobFileTableLength; i++) {
-            byte handle = psp.Files[i];
-            if (handle == UnusedFileHandle) {
+    private void CloseProcessFileHandles(ushort pspSegment) {
+        ushort size = _jobFileTable.GetSize(pspSegment);
+        for (ushort handle = 0; handle < size; handle++) {
+            byte systemFileTableIndex = _jobFileTable.GetEntry(pspSegment, handle);
+            if (systemFileTableIndex == UnusedFileHandle) {
                 continue;
             }
-
-            if (!closedHandles.Add(handle)) {
-                continue;
-            }
-
-            DosFileOperationResult result = _fileManager.CloseFileOrDevice(handle);
-            if (!result.IsError) {
-                psp.Files[i] = UnusedFileHandle;
-            }
+            _fileManager.ReleaseHandleReference(systemFileTableIndex);
+            _jobFileTable.SetEntry(pspSegment, handle, UnusedFileHandle);
         }
     }
 
@@ -1041,19 +1031,9 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         psp.FileTableAddress = new SegmentedAddress(pspSegment, FileTableOffset);
         psp.PreviousPspAddress = new SegmentedAddress(parentPspSegment, 0);
 
-        for (int i = 0; i < psp.Files.Count; i++) {
-            psp.Files[i] = (byte)Enums.DosPspFileTableEntry.Unused;
-        }
+        InheritFileTable(parentPspSegment, psp);
 
-        // Inherit parent's JFT entries except those marked as DoNotInherit or Unused
         DosProgramSegmentPrefix parentPsp = new(_memory, MemoryUtils.ToPhysicalAddress(parentPspSegment, 0));
-        for (int i = 0; i < parentPsp.Files.Count; i++) {
-            byte parentEntry = parentPsp.Files[i];
-            if (parentEntry != (byte)Enums.DosPspFileTableEntry.Unused &&
-                (parentEntry & (byte)Enums.DosPspFileTableEntry.DoNotInherit) == 0) {
-                psp.Files[i] = parentEntry;
-            }
-        }
 
         ResetFcb(psp.FirstFileControlBlock);
         ResetFcb(psp.SecondFileControlBlock);
