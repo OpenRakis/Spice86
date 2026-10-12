@@ -567,10 +567,10 @@ public class Spice86DependencyInjection : IDisposable {
             intel8042Controller, biosKeyboardBuffer, loggerService);
         Mouse mouse = new(state, sharedMouseData, dualPic,
             configuration.Mouse, loggerService, configuration.FailOnUnhandledPort,
-            _gui as IGuiMouseEvents);
+            inputEventHub);
         MouseDriver mouseDriver = new(state, sharedMouseData, memory, mouse,
             vgaFunctionality, loggerService,
-            _gui as IGuiMouseEvents);
+            inputEventHub);
 
         Joystick joystick = new(state, ioPortDispatcher,
             configuration.FailOnUnhandledPort, loggerService);
