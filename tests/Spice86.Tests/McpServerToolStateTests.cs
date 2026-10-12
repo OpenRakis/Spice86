@@ -7,7 +7,10 @@ using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
+using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.Mcp;
+using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Emulator.Mouse;
 
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -19,6 +22,44 @@ using Xunit;
 
 public class McpServerToolStateTests {
     private const string TestProgramName = "add";
+
+    [Theory]
+    [InlineData(true, 1)]
+    [InlineData(false, 0)]
+    public async Task MouseTools_ShouldReachDosMouseDriverThroughHttpAsync(bool isPressed, int expectedButtons) {
+        // Arrange
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await context.InitializeAsync();
+        InputEventHub hub = context.Services.InputEventHub
+            ?? throw new InvalidOperationException("Input event hub was not initialized.");
+        IMouseDriver driver = context.Spice86.Machine.MouseDriver;
+        driver.CurrentMinX = 0;
+        driver.CurrentMaxX = 639;
+        driver.CurrentMinY = 0;
+        driver.CurrentMaxY = 399;
+        hub.PostMouseButtonEvent(new MouseButtonEventArgs(MouseButton.Left, !isPressed));
+        hub.ProcessAllPendingInputEvents();
+
+        // Act
+        using JsonDocument moveResponse = await context.CallToolAsync("send_mouse_move", new Dictionary<string, object?> {
+            ["x"] = 0.25,
+            ["y"] = 0.75
+        });
+        using JsonDocument buttonResponse = await context.CallToolAsync("send_mouse_button", new Dictionary<string, object?> {
+            ["button"] = "Left",
+            ["isPressed"] = isPressed
+        });
+        hub.ProcessAllPendingInputEvents();
+
+        // Assert
+        McpJsonRpcAssertions.GetJsonRpcResult(moveResponse).TryGetProperty("isError", out JsonElement _).Should().BeFalse();
+        McpJsonRpcAssertions.GetJsonRpcResult(buttonResponse).TryGetProperty("isError", out JsonElement _).Should().BeFalse();
+        driver.CurrentMouseStatus.X.Should().Be(159);
+        driver.CurrentMouseStatus.Y.Should().Be(299);
+        driver.CurrentMouseStatus.ButtonFlags.Should().Be((ushort)expectedButtons);
+        driver.GetButtonPressCount(MouseButton.Left).Should().Be(1);
+        driver.GetButtonsReleaseCount(MouseButton.Left).Should().Be(1);
+    }
 
     [Fact]
     public async Task WriteMemory_ShouldReportIgnoredRomWritesThroughHttpAsync() {
