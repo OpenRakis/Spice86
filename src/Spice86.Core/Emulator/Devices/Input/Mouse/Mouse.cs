@@ -6,10 +6,10 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.VM.Clock;
+using Spice86.Core.Emulator.VM.DeviceScheduler;
 using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Interfaces;
-
-using System.Diagnostics;
 
 /// <summary>
 ///     Basic implementation of a mouse
@@ -18,14 +18,17 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     private const int IrqNumber = 12;
     private readonly IGuiMouseEvents? _gui;
     private readonly ILogger _logger;
-    private long _lastUpdateTimestamp;
+    private readonly IEmulatedClock _clock;
+    private readonly DeviceScheduler _scheduler;
+    private double _lastUpdateTimeMs = double.NegativeInfinity;
+    private bool _updateScheduled;
+    private MouseEventMask _pendingTrigger;
     private bool _previousIsLeftButtonDown;
     private bool _previousIsMiddleButtonDown;
     private bool _previousIsRightButtonDown;
     private double _previousMouseXRelative;
     private double _previousMouseYRelative;
     private int _sampleRate = 100;
-    private long _sampleRateTicks;
     private readonly DualPic _dualPic;
     private readonly SharedMouseData _sharedMouseData;
 
@@ -38,10 +41,12 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     /// <param name="mouseType">The type of mouse to emulate.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O wasn't handled.</param>
+    /// <param name="clock">Clock used to pace mouse samples.</param>
+    /// <param name="scheduler">Emulator-thread scheduler for deferred mouse samples.</param>
     /// <param name="gui">The GUI mouse events interface, or null if not using a GUI.</param>
     public Mouse(State state, SharedMouseData sharedMouseData,
         DualPic dualPic, MouseType mouseType,
-        ILogger loggerService, bool failOnUnhandledPort,
+        ILogger loggerService, bool failOnUnhandledPort, IEmulatedClock clock, DeviceScheduler scheduler,
         IGuiMouseEvents? gui = null)
         : base(state, failOnUnhandledPort, loggerService) {
         _gui = gui;
@@ -49,7 +54,8 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
         _dualPic = dualPic;
         MouseType = mouseType;
         _logger = loggerService;
-        _sampleRateTicks = TimeSpan.TicksPerSecond / _sampleRate;
+        _clock = clock;
+        _scheduler = scheduler;
         Initialize();
         _dualPic.SetIrqMask(IrqNumber, false);
     }
@@ -76,8 +82,8 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     public int SampleRate {
         get => _sampleRate;
         set {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
             _sampleRate = value;
-            _sampleRateTicks = TimeSpan.TicksPerSecond / _sampleRate;
         }
     }
 
@@ -145,18 +151,12 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
     }
 
     private void UpdateMouse() {
-        long timestamp = Stopwatch.GetTimestamp();
-        // Check the sample rate to see if we need to send an update yet.
-        long ticksElapsed = timestamp - _lastUpdateTimestamp;
-        if (ticksElapsed < _sampleRateTicks) {
-            return;
-        }
-        _lastUpdateTimestamp = timestamp;
-
         MouseEventMask trigger = 0;
-        DeltaX = MouseXRelative - _previousMouseXRelative;
-        DeltaY = MouseYRelative - _previousMouseYRelative;
-        if (Math.Abs(DeltaX) > double.Epsilon || Math.Abs(DeltaY) > double.Epsilon) {
+        double deltaX = MouseXRelative - _previousMouseXRelative;
+        double deltaY = MouseYRelative - _previousMouseYRelative;
+        DeltaX += deltaX;
+        DeltaY += deltaY;
+        if (Math.Abs(deltaX) > double.Epsilon || Math.Abs(deltaY) > double.Epsilon) {
             trigger |= MouseEventMask.Movement;
         }
         _previousMouseXRelative = MouseXRelative;
@@ -177,8 +177,34 @@ public class Mouse : DefaultIOPortHandler, IMouseDevice {
         }
         _previousIsMiddleButtonDown = IsMiddleButtonDown;
 
-        LastTrigger = trigger;
+        _pendingTrigger |= trigger;
+        if (_pendingTrigger == 0) {
+            return;
+        }
+
+        double now = _clock.ElapsedTimeMs;
+        double delay = _lastUpdateTimeMs + 1000.0 / _sampleRate - now;
+        if (delay > 0) {
+            if (!_updateScheduled) {
+                _scheduler.AddEvent(DeliverPendingUpdate, delay);
+                _updateScheduled = true;
+            }
+            return;
+        }
+
+        if (_updateScheduled) {
+            _scheduler.RemoveEvents(DeliverPendingUpdate);
+            _updateScheduled = false;
+        }
+        _lastUpdateTimeMs = now;
+        LastTrigger = _pendingTrigger;
+        _pendingTrigger = 0;
         TriggerInterruptRequest();
+    }
+
+    private void DeliverPendingUpdate(uint _) {
+        _updateScheduled = false;
+        UpdateMouse();
     }
 
     private void TriggerInterruptRequest() {

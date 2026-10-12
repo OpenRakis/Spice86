@@ -23,6 +23,24 @@ using Xunit;
 public class McpServerToolStateTests {
     private const string TestProgramName = "add";
 
+    [Fact]
+    public async Task QueuedMouseInputIsDeliveredBeforeShortProgramExitsAsync() {
+        // Arrange
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await context.InitializeAsync();
+        using JsonDocument response = await context.CallToolAsync("send_mouse_button", new Dictionary<string, object?> {
+            ["button"] = "Left",
+            ["isPressed"] = true
+        });
+
+        // Act
+        context.Spice86.ProgramExecutor.Run();
+
+        // Assert
+        McpJsonRpcAssertions.GetJsonRpcResult(response).TryGetProperty("isError", out JsonElement _).Should().BeFalse();
+        context.Spice86.Machine.MouseDriver.GetButtonPressCount(MouseButton.Left).Should().Be(1);
+    }
+
     [Theory]
     [InlineData(true, 1)]
     [InlineData(false, 0)]
@@ -59,28 +77,6 @@ public class McpServerToolStateTests {
         driver.CurrentMouseStatus.ButtonFlags.Should().Be((ushort)expectedButtons);
         driver.GetButtonPressCount(MouseButton.Left).Should().Be(1);
         driver.GetButtonsReleaseCount(MouseButton.Left).Should().Be(1);
-    }
-
-    [Fact]
-    public async Task MouseTools_ShouldReachDosMouseDriverThroughHttpAsync() {
-        // Arrange
-        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
-        await context.InitializeAsync();
-        context.Services.PauseHandler.RequestPause("Inspecting queued mouse input");
-
-        // Act
-        using JsonDocument moveResponse = await context.CallToolAsync("send_mouse_move", new Dictionary<string, object?> {
-            ["x"] = 0.25,
-            ["y"] = 0.75
-        });
-        using JsonDocument buttonResponse = await context.CallToolAsync("send_mouse_button", new Dictionary<string, object?> {
-            ["button"] = "Left",
-            ["isPressed"] = true
-        });
-        context.Services.InputEventHub?.ProcessAllPendingInputEvents();
-
-        // Assert
-        context.Spice86.Machine.MouseDriver.GetButtonPressCount(Spice86.Shared.Emulator.Mouse.MouseButton.Left).Should().Be(1);
     }
 
     [Fact]

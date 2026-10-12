@@ -18,6 +18,7 @@ public delegate void EventHandler(uint value);
 /// </summary>
 public class DeviceScheduler {
     public const int MaxQueueSize = 8192;
+    internal const int MaxEventsPerPump = 1024;
 
     private readonly IEmulatedClock _clock;
     private readonly ILogger _logger;
@@ -113,7 +114,7 @@ public class DeviceScheduler {
     }
 
     /// <summary>
-    ///     Executes all events that are due as of the current time provided by the clock.
+    ///     Executes a bounded batch of due events, preserving remaining deadlines for the next pump.
     /// </summary>
     public void ProcessEvents() {
         if (_queue.Count == 0) {
@@ -124,20 +125,24 @@ public class DeviceScheduler {
         double currentTime = _clock.ElapsedTimeMs;
         _loopEntryTime = currentTime;
 
-        while (_queue.Count > 0 && _queue.First.Priority <= currentTime) {
-            ScheduledEntry entry = _queue.Dequeue();
-            _monitor?.OnEventExecuted(entry.Priority, currentTime, _queue.Count);
+        try {
+            int executions = 0;
+            while (_queue.Count > 0 && _queue.First.Priority <= currentTime && executions < MaxEventsPerPump) {
+                ScheduledEntry entry = _queue.Dequeue();
+                _monitor?.OnEventExecuted(entry.Priority, currentTime, _queue.Count);
 
-            // Important for events that re-schedules another event, to ensure it will fire at the correct time not taking into account lag
-            _activeEventScheduledTime = entry.Priority;
-            try {
-                entry.Handler.Invoke(entry.Value);
-            } finally {
-                ReturnEntry(entry);
+                // Important for events that re-schedules another event, to ensure it will fire at the correct time not taking into account lag
+                _activeEventScheduledTime = entry.Priority;
+                try {
+                    entry.Handler.Invoke(entry.Value);
+                } finally {
+                    ReturnEntry(entry);
+                }
+                executions++;
             }
+        } finally {
+            _isServicingEvents = false;
         }
-
-        _isServicingEvents = false;
     }
 
     private ScheduledEntry GetEntry(EventHandler handler, uint value) {

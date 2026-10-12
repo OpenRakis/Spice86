@@ -36,6 +36,11 @@ so guest polling loops can observe short retrace pulses.
 
 MCP mouse tools and GUI mouse input use the same emulator-thread input queue,
 feeding both mouse hardware and the DOS mouse driver.
+The emulation loop drains input before each instruction. Mouse samples use the
+emulated clock and schedule deferred delivery, accumulating movement and
+button transition masks instead of discarding events inside a sample interval.
+Scheduler catch-up processes at most 1024 callbacks per pump and retains
+remaining deadlines for subsequent pumps.
 
 | Endpoint | Description |
 |----------|-------------|

@@ -566,7 +566,7 @@ public class Spice86DependencyInjection : IDisposable {
             stack, state, cfgCpu, dualPic, systemBiosInt15Handler,
             intel8042Controller, biosKeyboardBuffer, loggerService);
         Mouse mouse = new(state, sharedMouseData, dualPic,
-            configuration.Mouse, loggerService, configuration.FailOnUnhandledPort,
+            configuration.Mouse, loggerService, configuration.FailOnUnhandledPort, _emulatedClock, emulationLoopScheduler,
             inputEventHub);
         MouseDriver mouseDriver = new(state, sharedMouseData, memory, mouse,
             vgaFunctionality, loggerService,
