@@ -2,6 +2,7 @@ namespace Spice86.Tests;
 
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Video;
@@ -80,6 +81,7 @@ public sealed class Spice86Creator : IDisposable {
             TimeMultiplier = enablePit ? 1 : 0,
             //Don"t need nor want to instantiate the UI in emulator unit tests
             HeadlessMode = HeadlessType.Minimal,
+            Mouse = MouseType.Ps2,
             AudioEngine = AudioEngine.Dummy,
             SbType = sbType,
             SbBase = sbBase,

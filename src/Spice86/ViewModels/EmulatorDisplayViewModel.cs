@@ -162,10 +162,19 @@ public sealed partial class EmulatorDisplayViewModel : ObservableObject,
         if (image.Source is null || _pauseHandler.IsPaused) {
             return;
         }
-        MouseX = e.GetPosition(image).X / image.Source.Size.Width;
-        MouseY = e.GetPosition(image).Y / image.Source.Size.Height;
+        Point position = e.GetPosition(image);
+        MouseX = NormalizeMouseCoordinate(position.X, image.Source.Size.Width);
+        MouseY = NormalizeMouseCoordinate(position.Y, image.Source.Size.Height);
         MouseMoved?.Invoke(this, new MouseMoveEventArgs(MouseX, MouseY));
         UpdateShownEmulatorMouseCursorPosition();
+    }
+
+    private static double NormalizeMouseCoordinate(double position, double size) {
+        if (size <= 1) {
+            return 0;
+        }
+        // DOS mouse ranges are inclusive: the last display pixel must reach the maximum.
+        return Math.Clamp(position / (size - 1), 0.0, 1.0);
     }
 
     /// <summary>

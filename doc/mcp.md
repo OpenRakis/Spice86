@@ -153,6 +153,10 @@ Spice86 ships with **65+ MCP tools** organized into these capability scopes:
 - `send_mouse_move`: Move mouse cursor
 - `send_mouse_button`: Press/release mouse button
 
+Mouse input follows the same emulator-thread event queue as GUI input. Queued
+events are processed when execution resumes; they do not move the DOS cursor
+while the emulator remains paused.
+
 ### DOS & BIOS Structures
 - `read_dos_psp`: Read the DOS Program Segment Prefix
 - `read_dos_mcb_chain`: Dump the DOS Memory Control Block chain
