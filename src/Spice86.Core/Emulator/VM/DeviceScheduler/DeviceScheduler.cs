@@ -63,19 +63,19 @@ public class DeviceScheduler {
             return;
         }
 
-        // Compute absolute scheduled time taking into account we're currently servicing events.
-        // Use the active event's scheduled time + delay when that yields a time in the future
-        // relative to the loop entry. Otherwise schedule just after the loop entry to avoid
-        // putting events in the past (prevents infinite re-queuing on slow machines).
+        // Positive delays preserve device cadence even when the host processes events late.
+        // Overdue non-positive delays yield instead of re-queuing indefinitely in the past.
         const double MinFutureOffsetMs = 0.0001;
         double absoluteScheduledTime;
         if (!_isServicingEvents) {
             absoluteScheduledTime = _clock.ElapsedTimeMs + delay;
         } else {
             double candidate = _activeEventScheduledTime + delay;
-            absoluteScheduledTime = candidate >= _loopEntryTime
-                ? candidate
-                : _loopEntryTime + MinFutureOffsetMs;
+            if (delay > 0 || candidate >= _loopEntryTime) {
+                absoluteScheduledTime = candidate;
+            } else {
+                absoluteScheduledTime = _loopEntryTime + MinFutureOffsetMs;
+            }
         }
 
         ScheduledEntry entry = GetEntry(handler, val);

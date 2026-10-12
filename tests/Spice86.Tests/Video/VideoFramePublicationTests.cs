@@ -16,6 +16,26 @@ using Xunit;
 
 public sealed class VideoFramePublicationTests {
     [Fact]
+    public void MillisecondSchedulerPumpsPreserveScanlineTiming() {
+        // Arrange
+        using AsmFixtureRun run = AsmFixtureRunner.RunEmulated(AsmFixtureCatalog.FlashbackVideo(true), JitMode.InterpretedOnly);
+        IEmulatedClock clock = Substitute.For<IEmulatedClock>();
+        DeviceScheduler scheduler = new(clock, Substitute.For<ILogger>(), "Late video timing test");
+        VgaTimingEngine timing = new(run.Result.VideoState, scheduler, clock, run.Result.VideoRenderer, new VgaBlinkState());
+        int visibleScanlines = run.Result.VideoState.CrtControllerRegisters.VerticalDisplayEndValue + 1;
+
+        // Act
+        for (int millisecond = 0; millisecond <= 100; millisecond++) {
+            clock.ElapsedTimeMs.Returns((double)millisecond);
+            scheduler.ProcessEvents();
+        }
+
+        // Assert
+        timing.LastFrameDuration.TotalMilliseconds.Should().BeGreaterThan(0);
+        timing.LastFrameDuration.TotalMilliseconds.Should().BeApproximately(visibleScanlines * 1000.0 / 31469.0, 2);
+    }
+
+    [Fact]
     public void DisabledOutputUsesNewFrameWidthAfterResolutionReduction() {
         // Arrange
         using AsmFixtureRun run = AsmFixtureRunner.RunEmulated(AsmFixtureCatalog.FlashbackVideo(false), JitMode.InterpretedOnly);

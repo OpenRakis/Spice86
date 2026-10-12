@@ -11,7 +11,7 @@ using Spice86.Core.Emulator.VM.DeviceScheduler;
 /// </summary>
 public class VgaTimingEngine {
     private const double BlinkPeriodMs = 500.0;
-    private const double HorizontalLineDurationMs = 1000.0 / 31469.0;
+    internal const double HorizontalLineDurationMs = 1000.0 / 31469.0;
 
     private readonly IVideoState _state;
     private readonly DeviceScheduler _scheduler;

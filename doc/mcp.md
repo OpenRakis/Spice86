@@ -28,6 +28,15 @@ changing the BIOS mode record (for example, 256x224 unchained graphics).
 Pixel and scanline doubling are presentation concerns, not duplicate pixels
 in the returned framebuffer. GUI graphics retain 4:3 aspect correction.
 
+VGA input status ports follow the emulated clock and programmed beam timing,
+independently of framebuffer rendering. Late device scheduler pumps preserve
+periodic event deadlines rather than slowing hardware clocks.
+Real-time clock reads are fresh, and CPU throttling uses sub-millisecond slices
+so guest polling loops can observe short retrace pulses.
+
+MCP mouse tools and GUI mouse input use the same emulator-thread input queue,
+feeding both mouse hardware and the DOS mouse driver.
+
 | Endpoint | Description |
 |----------|-------------|
 | `http://localhost:<port>/mcp` | MCP protocol endpoint (JSON-RPC over HTTP) |

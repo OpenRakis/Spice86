@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Devices.Video.Registers.Enums;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
@@ -19,6 +20,7 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
     private readonly GraphicsControllerRegisters _graphicsRegisters;
     private readonly SequencerRegisters _sequencerRegisters;
     private readonly IVideoState _videoState;
+    private readonly IEmulatedClock _clock;
     private bool _attributeDataMode;
 
     /// <summary>
@@ -28,9 +30,10 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
     /// <param name="ioPortDispatcher">The class that is responsible for dispatching ports reads and writes to classes that respond to them.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="videoState">Represents the state of the video card.</param>
+    /// <param name="clock">The emulated clock driving the beam independently of rendering.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     public VgaIoPortHandler(State state, IOPortDispatcher ioPortDispatcher, ILogger loggerService,
-        IVideoState videoState, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
+        IVideoState videoState, IEmulatedClock clock, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
 
         // Initialize registers.
         _attributeRegisters = videoState.AttributeControllerRegisters;
@@ -40,6 +43,7 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
         _generalRegisters = videoState.GeneralRegisters;
         _dacRegisters = videoState.DacRegisters;
         _videoState = videoState;
+        _clock = clock;
         InitPortHandlers(ioPortDispatcher);
     }
 
@@ -160,7 +164,7 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
                 break;
             case Ports.InputStatus1Read or Ports.InputStatus1ReadAlt:
                 _attributeDataMode = false; // Reset the attribute data mode for port 0x03C0 to "Index"
-                value = _generalRegisters.InputStatusRegister1.Value;
+                value = ReadBeamStatus();
                 if (_loggerService.IsEnabled(LogLevel.Trace)) {
                     _loggerService.LogTrace("[{Port:X4}] Read byte from port InputStatus1Read: {Value:X2} {Binary}", port, value, Convert.ToString(value, 2).PadLeft(8, '0'));
                 }
@@ -189,6 +193,48 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
         }
 
         return value;
+    }
+
+    private byte ReadBeamStatus() {
+        const int HorizontalBlankingMask = 0x3F;
+        const int VerticalRetraceEndMask = 0x0F;
+        const byte DisplayDisabledBit = 0x01;
+        const byte VerticalRetraceBit = 0x08;
+        int verticalScale = _crtRegisters.CrtModeControlRegister.VerticalTimingHalved ? 2 : 1;
+        int totalScanlines = _crtRegisters.VerticalTotalValue + 2;
+        double lineDuration = VgaTimingEngine.HorizontalLineDurationMs;
+        double elapsed = _clock.ElapsedTimeMs;
+        double verticalPosition = elapsed / (lineDuration * verticalScale) % totalScanlines;
+        int totalCharacterClocks = _crtRegisters.HorizontalTotal + 5;
+        double horizontalPosition = elapsed % lineDuration / lineDuration * totalCharacterClocks;
+
+        int retraceStart = _crtRegisters.VerticalSyncStartValue;
+        int retraceLength = (_crtRegisters.VerticalSyncEndRegister.VerticalSyncEnd - retraceStart) & VerticalRetraceEndMask;
+        if (retraceLength == 0) {
+            retraceLength = VerticalRetraceEndMask + 1;
+        }
+        int blankingStart = _crtRegisters.HorizontalBlankingStart;
+        int blankingEnd = (blankingStart & ~HorizontalBlankingMask) | _crtRegisters.HorizontalBlankingEndValue;
+        if (blankingEnd <= blankingStart) {
+            blankingEnd += HorizontalBlankingMask + 1;
+        }
+
+        byte status = (byte)(_generalRegisters.InputStatusRegister1.Value & ~(DisplayDisabledBit | VerticalRetraceBit));
+        if (IsInBeamInterval(verticalPosition, retraceStart, retraceStart + retraceLength, totalScanlines)) {
+            status |= VerticalRetraceBit;
+        }
+        if (verticalPosition >= _crtRegisters.VerticalDisplayEndValue + 1
+            || IsInBeamInterval(horizontalPosition, blankingStart, blankingEnd, totalCharacterClocks)) {
+            status |= DisplayDisabledBit;
+        }
+        return status;
+    }
+
+    private static bool IsInBeamInterval(double position, int start, int end, int period) {
+        if (position >= start && position < end) {
+            return true;
+        }
+        return end > period && position < end - period;
     }
 
     /// <inheritdoc />

@@ -13,6 +13,7 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Mmu;
+using Spice86.Core.Emulator.VM.Clock;
 
 using Xunit;
 
@@ -248,7 +249,8 @@ public sealed class CgaIntegrationTests {
             State cpuState = new(CpuModel.ZET_86);
             Ports = new IOPortDispatcher(new(), cpuState, NullLogger.Instance, true);
             State = new VideoState();
-            _ = new VgaIoPortHandler(cpuState, Ports, NullLogger.Instance, State, true);
+            _ = new VgaIoPortHandler(cpuState, Ports, NullLogger.Instance, State,
+                new CyclesClock(cpuState, 1000, null, DateTimeOffset.UnixEpoch), true);
             Renderer = new Renderer(Memory, State, new VgaBlinkState(), NullLogger.Instance, new VgaRenderer256ColorScalar());
             VgaRom rom = new(NullLogger.Instance);
             Memory.RegisterMapping(VgaRom.Segment << 4, rom.Size, rom);

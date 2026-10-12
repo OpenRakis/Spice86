@@ -31,8 +31,8 @@ public class PitModeTests {
         _speaker = Substitute.For<IPitSpeaker>();
         State state = new(CpuModel.INTEL_80286);
         _ioPortDispatcher = new IOPortDispatcher(new AddressReadWriteBreakpoints(), state, logger, false);
-        _clock = new EmulatedClock(null, DateTimeOffset.UnixEpoch);
-        var emulationLoopScheduler = new DeviceScheduler(_clock, logger, "Emulation loop");
+        _clock = new CyclesClock(state, 1000, null, DateTimeOffset.UnixEpoch);
+        DeviceScheduler emulationLoopScheduler = new(_clock, logger, "Emulation loop");
         _pic = new DualPic(_ioPortDispatcher, state, logger, false);
         _pit = new PitTimer(_ioPortDispatcher, state, _pic, _speaker, emulationLoopScheduler, _clock, logger, false);
     }
