@@ -1,4 +1,8 @@
-namespace Spice86.Core.Emulator.Devices.Sound;
+// SPDX-FileCopyrightText: 2020-2025 The DOSBox Staging Team
+// SPDX-FileCopyrightText: 2002-2021 The DOSBox Team
+// SPDX-License-Identifier: GPL-2.0-or-later
+
+namespace Spice86.Core.Emulator.Devices.Audio;
 
 /// <summary>
 /// Shared IRQ state for all GUS voices.

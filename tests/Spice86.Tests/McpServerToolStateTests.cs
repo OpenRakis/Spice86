@@ -576,7 +576,7 @@ public class McpServerToolStateTests {
     [Fact]
     public async Task QueryGusState_ShouldExposeConfigurationAndTimersAsync() {
         // Arrange
-        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateGusAsync(TestProgramName);
         await context.InitializeAsync();
 
         // Act
@@ -601,7 +601,7 @@ public class McpServerToolStateTests {
     [Fact]
     public async Task QueryGusVoices_ShouldReturnRequestedRangeAsync() {
         // Arrange
-        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateGusAsync(TestProgramName);
         await context.InitializeAsync();
 
         // Act
@@ -623,7 +623,7 @@ public class McpServerToolStateTests {
     [Fact]
     public async Task QueryGusVoices_ShouldRejectOutOfRangeVoiceAsync() {
         // Arrange
-        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateGusAsync(TestProgramName);
         await context.InitializeAsync();
 
         // Act
@@ -640,7 +640,7 @@ public class McpServerToolStateTests {
     [Fact]
     public async Task QueryGusDram_ShouldReturnStoredSampleBytesAsync() {
         // Arrange
-        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateGusAsync(TestProgramName);
         await context.InitializeAsync();
         PokeGusDram(context, 0x1000, new byte[] { 0xDE, 0xAD, 0xBE, 0xEF });
 
@@ -659,7 +659,7 @@ public class McpServerToolStateTests {
     [Fact]
     public async Task SearchGusDram_ShouldFindStoredPatternAsync() {
         // Arrange
-        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateGusAsync(TestProgramName);
         await context.InitializeAsync();
         PokeGusDram(context, 0x2000, new byte[] { 0x12, 0x34, 0x56 });
 
@@ -681,7 +681,7 @@ public class McpServerToolStateTests {
     [Fact]
     public async Task QueryGusDmaState_ShouldExposeChannelsAsync() {
         // Arrange
-        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateGusAsync(TestProgramName);
         await context.InitializeAsync();
 
         // Act
@@ -698,7 +698,7 @@ public class McpServerToolStateTests {
     [Fact]
     public async Task QueryGusIrqState_ShouldExposeIrqLinesWithoutClearingStatusAsync() {
         // Arrange
-        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateGusAsync(TestProgramName);
         await context.InitializeAsync();
 
         // Act
@@ -717,7 +717,7 @@ public class McpServerToolStateTests {
     [Fact]
     public async Task GusWriteAndReadRegister_ShouldRoundTripResetRegisterAsync() {
         // Arrange
-        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateGusAsync(TestProgramName);
         await context.InitializeAsync();
 
         // Act
@@ -741,7 +741,7 @@ public class McpServerToolStateTests {
     [Fact]
     public async Task GusWriteRegister_ShouldUpdateVoiceWaveRateAsync() {
         // Arrange
-        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateGusAsync(TestProgramName);
         await context.InitializeAsync();
 
         // Act
@@ -766,7 +766,7 @@ public class McpServerToolStateTests {
     [Fact]
     public async Task GusSetVoiceControl_ShouldUpdateDecodedFlagsAsync() {
         // Arrange
-        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateGusAsync(TestProgramName);
         await context.InitializeAsync();
 
         // Act
@@ -795,7 +795,7 @@ public class McpServerToolStateTests {
     [Fact]
     public async Task GusStartStopVoice_ShouldToggleStoppedFlagAsync() {
         // Arrange
-        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateGusAsync(TestProgramName);
         await context.InitializeAsync();
 
         // Act
@@ -825,7 +825,7 @@ public class McpServerToolStateTests {
 
     private static void PokeGusDram(McpIntegrationContext context, int address, byte[] bytes) {
         GravisUltraSound gus = context.Services.GravisUltraSound
-            ?? throw new InvalidOperationException("GUS should be enabled by default for the test harness.");
+            ?? throw new InvalidOperationException("GUS was explicitly enabled for this scenario.");
         for (int i = 0; i < bytes.Length; i++) {
             gus.PokeDramByte(address + i, bytes[i]);
         }

@@ -1,4 +1,8 @@
-namespace Spice86.Core.Emulator.Devices.Sound;
+// SPDX-FileCopyrightText: 2020-2026 The DOSBox Staging Team
+// SPDX-FileCopyrightText: 2002-2021 The DOSBox Team
+// SPDX-License-Identifier: GPL-2.0-or-later
+
+namespace Spice86.Core.Emulator.Devices.Audio;
 
 using Spice86.Audio.Backend;
 using Spice86.Audio.Common;
@@ -9,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
+using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.DeviceScheduler;
@@ -16,6 +21,7 @@ using Spice86.Shared.Interfaces;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 /// <summary>
 /// Gravis UltraSound (GF1 chip) emulation.
@@ -53,7 +59,7 @@ using System.Collections.Generic;
 /// Reference implementation: dosbox-staging gus.cpp / gus.h
 /// (c) 2022-2025 The DOSBox Staging Team
 /// </remarks>
-public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, IAudioQueueDevice<AudioFrame>, IMixerQueueNotifier {
+public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, IAudioQueueDevice<AudioFrame>, IMixerQueueNotifier, IDisposable {
 
     // Public constants used by GusVoice
 
@@ -139,6 +145,7 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
     private readonly DmaBus _dmaBus;
     private readonly DualPic _dualPic;
     private readonly SoftwareMixer _mixer;
+    private readonly IOPortDispatcher _ioPortDispatcher;
     private readonly DeviceScheduler _scheduler;
     private readonly IEmulatedClock _clock;
     private readonly Spice86.Core.Emulator.VM.DeviceScheduler.EventHandler[] _timerEventHandlers;
@@ -146,8 +153,10 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
     private readonly Spice86.Core.Emulator.VM.DeviceScheduler.EventHandler _tickEventHandler;
     private readonly SoundChannel _channel;
     private readonly RWQueue<AudioFrame> _outputQueue = new RWQueue<AudioFrame>(4096);
+    private readonly List<AudioFrame> _fifo = new();
 
     private readonly string _ultraDir;
+    private readonly string _ultraSnd;
     private readonly ushort _gusBase;
 
     // Not readonly: these can be reassigned at runtime via port 0x20B.
@@ -174,12 +183,16 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
     private bool _shouldChangeIrqDma;
     private bool _irqPreviouslyInterrupted;
 
-    private int _activeVoices = MinVoices;
-    private uint _activeVoiceMask = 0xFFFFFFFFu >> (MaxVoices - MinVoices);
+    private int _activeVoices;
+    private uint _activeVoiceMask;
+    private int _sampleRateHz;
+    private int _previousLoggedVoices;
     private GusVoice? _targetVoice;
     private float _frameCounter;
     private double _lastRenderedMs;
     private double _millisecondsPerFrame;
+    private bool _hasDmaTransferCallback;
+    private bool _disposed;
 
     // Render scratch buffer (grows on demand, never shrinks)
     private AudioFrame[] _renderBuf;
@@ -202,17 +215,27 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
         AudioRuntimeOptions audioOptions)
         : base(state, failOnUnhandledPort, loggerService) {
 
+        if (audioOptions.GusBase is not (0x210 or 0x220 or 0x230 or 0x240 or 0x250 or 0x260)) {
+            throw new ArgumentOutOfRangeException(nameof(audioOptions), "Invalid GUS base port.");
+        }
+        if (audioOptions.GusIrq is not (2 or 3 or 5 or 7 or 11 or 12 or 15)) {
+            throw new ArgumentOutOfRangeException(nameof(audioOptions), "Invalid GUS IRQ.");
+        }
+        if (audioOptions.GusDma is not (1 or 3 or 5 or 6 or 7)) {
+            throw new ArgumentOutOfRangeException(nameof(audioOptions), "Invalid GUS DMA channel.");
+        }
         _dmaBus = dmaBus;
         _dualPic = dualPic;
         _mixer = mixer;
+        _ioPortDispatcher = ioPortDispatcher;
         _scheduler = scheduler;
         _clock = clock;
         _irq = ToInternalIrq(audioOptions.GusIrq);
         _irq2 = _irq;
-        _dma = audioOptions.GusDma;
-        _dma2 = _dma;
+        _dma2 = audioOptions.GusDma;
         _gusBase = audioOptions.GusBase;
         _ultraDir = audioOptions.GusUltradir;
+        _ultraSnd = $"{_gusBase:x},{audioOptions.GusDma},{audioOptions.GusDma},{audioOptions.GusIrq},{audioOptions.GusIrq}";
 
         int portBase = _gusBase - 0x200;
 
@@ -238,39 +261,32 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
         // Mixer setup
         mixer.RegisterQueueNotifier(this);
         mixer.LockMixerThread();
+        try {
+            HashSet<ChannelFeature> features = new HashSet<ChannelFeature> {
+                ChannelFeature.DigitalAudio,
+                ChannelFeature.Stereo,
+                ChannelFeature.Sleep,
+                ChannelFeature.ReverbSend,
+                ChannelFeature.ChorusSend
+            };
+            _channel = mixer.AddChannel(MixerCallback, 0, "GravisUltraSound", features);
+            _channel.SetResampleMethod(ResampleMethod.ZeroOrderHoldAndResample);
+            _channel.SetZeroOrderHoldUpsamplerTargetRate(GusOutputSampleRateHz);
+            _millisecondsPerFrame = 1000.0 / _channel.SampleRate;
 
-        HashSet<ChannelFeature> features = new HashSet<ChannelFeature> {
-            ChannelFeature.DigitalAudio,
-            ChannelFeature.Stereo,
-            ChannelFeature.Sleep,
-            ChannelFeature.ReverbSend,
-            ChannelFeature.ChorusSend
-        };
-        _channel = mixer.AddChannel(MixerCallback, GetSampleRate(), "GravisUltraSound", features);
-        _channel.SetZeroOrderHoldUpsamplerTargetRate(GusOutputSampleRateHz);
-        _channel.SetResampleMethod(ResampleMethod.ZeroOrderHoldAndResample);
-        _millisecondsPerFrame = 1000.0 / GetSampleRate();
-        _lastRenderedMs = _clock.ElapsedTimeMs;
-        _scheduler.AddEvent(_tickEventHandler, 1, 0);
+            int queueCapacity = (int)Math.Ceiling(_channel.FramesPerBlock * 2.0f);
+            _outputQueue.Resize(queueCapacity);
+            _renderBuf = new AudioFrame[Math.Max(1, (int)_channel.FramesPerBlock)];
 
-        int queueCapacity = (int)Math.Ceiling(_channel.FramesPerBlock * 2.0f);
-        _outputQueue.Resize(queueCapacity);
-        _renderBuf = new AudioFrame[Math.Max(1, (int)_channel.FramesPerBlock)];
-
-        if (audioOptions.GusFilter) {
-            // First-order low-pass at 8 kHz, emulating the analog output stage of the real
-            // card (dosbox-staging gus_filter = on).
-            _channel.ConfigureLowPassFilter(1, 8000);
-            _channel.LowPassFilter = FilterState.On;
+            SetFilter(audioOptions.GusFilter);
+            UpdatePlaybackDmaAddress(audioOptions.GusDma);
+            UpdateRecordingDmaAddress(audioOptions.GusDma);
+            _scheduler.AddEvent(_tickEventHandler, 1, 0);
+            _loggerService.LogInformation("GUS: Running on port {Port:x}h, IRQ {Irq}, and DMA {Dma}.",
+                _gusBase, ToExternalIrq(_irq), _dma);
+        } finally {
+            mixer.UnlockMixerThread();
         }
-
-        mixer.UnlockMixerThread();
-
-        _dualPic.SetIrqMask(_irq, false);
-
-        DmaChannel? dmaChannel = _dmaBus.GetChannel(_dma);
-        dmaChannel?.ReserveFor("GravisUltraSound", OnDmaChannelEvicted);
-        dmaChannel?.RegisterCallback(OnDmaEvent);
     }
 
     // Interface implementations
@@ -298,32 +314,39 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
         _irqPreviouslyInterrupted = shouldInterrupt;
     }
 
-    // Moves the IRQ line at runtime (port 0x20B selection): drops any pending request on
-    // the old line, masks it, then unmasks the new line and re-evaluates pending IRQs.
-    private void ChangeIrq(byte newIrq) {
-        if (newIrq == _irq) {
-            return;
-        }
-        _dualPic.DeactivateIrq(_irq);
-        _dualPic.SetIrqMask(_irq, true);
-        _irq = newIrq;
-        _irqPreviouslyInterrupted = false;
-        _dualPic.SetIrqMask(_irq, false);
-        RaiseInterruptRequest();
-    }
-
     /// <summary>
     /// Returns the ULTRASND environment variable value, in the standard
     /// "base,dma1,dma2,irq1,irq2" format (for example "240,3,3,5,5").
     /// </summary>
-    public string UltraSndString =>
-        $"{_gusBase:X3},{_dma},{_dma2},{ToExternalIrq(_irq)},{ToExternalIrq(_irq2)}";
+    public string UltraSndString => _ultraSnd;
 
     /// <summary>
     /// Returns the ULTRADIR environment variable value: the DOS-side directory holding the
     /// Gravis drivers and instrument patches, set via the GusUltradir configuration option.
     /// </summary>
     public string UltraDirString => _ultraDir;
+
+    /// <summary>Raised when the card shuts down, including DMA eviction.</summary>
+    public event Action? Disposed;
+
+    /// <summary>Whether the device has shut down.</summary>
+    public bool IsDisposed => _disposed;
+
+    /// <summary>Applies the DOSBox-staging GUS output filter setting.</summary>
+    public void SetFilter(string preferences) {
+        if (SoundChannel.TryParseFilterSwitch(preferences, out bool enabled)) {
+            if (!enabled) {
+                _channel.LowPassFilter = FilterState.Off;
+                return;
+            }
+        } else if (_channel.TryParseAndSetCustomFilter(preferences, _loggerService)) {
+            return;
+        } else {
+            _loggerService.LogWarning("GUS: Invalid gus_filter setting '{Setting}'; using 'on'.", preferences);
+        }
+        _channel.ConfigureLowPassFilter(1, 8000);
+        _channel.LowPassFilter = FilterState.On;
+    }
 
     /// <summary>
     /// Mirrors an AdLib command-port write into the GUS command register.
@@ -391,7 +414,7 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
     /// <summary>DMA control register 0x41.</summary>
     public byte DmaControlRegister => _dmaControlReg;
 
-    /// <summary>Pending IRQ status bits. Unlike the port 0x246 read, this does not clear them.</summary>
+    /// <summary>Pending IRQ status bits, also returned by the non-destructive status port read.</summary>
     public byte IrqStatusRegister => _irqStatus;
 
     /// <summary>Timer/AdLib status bits, as reported by a port 0x248 read.</summary>
@@ -509,12 +532,11 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
 
     /// <inheritdoc/>
     public override byte ReadByte(ushort port) {
-        RenderUpToNow();
-
+        ObjectDisposedException.ThrowIf(_disposed, this);
         int offset = port - _gusBase;
         switch (offset) {
             case 0x06:  // IRQ status
-                return GetIrqStatus();
+                return _irqStatus;
             case 0x08:  // Timer/AdLib status
                 return GetTimerStatus();
             case 0x0A:  // AdLib command mirror
@@ -542,17 +564,24 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
 
     /// <inheritdoc/>
     public override ushort ReadWord(ushort port) {
-        RenderUpToNow();
-
+        ObjectDisposedException.ThrowIf(_disposed, this);
         int highOffset = port - (_gusBase + 0x100);
         if (highOffset == 0x04) {
             return ReadFromRegister();
         }
-        return base.ReadWord(port);
+        return (ushort)(_ioPortDispatcher.ReadByte(port) | (_ioPortDispatcher.ReadByte((ushort)(port + 1)) << 8));
+    }
+
+    /// <inheritdoc/>
+    public override uint ReadDWord(ushort port) {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        return _ioPortDispatcher.ReadWord(port) |
+            ((uint)_ioPortDispatcher.ReadWord((ushort)(port + 2)) << 16);
     }
 
     /// <inheritdoc/>
     public override void WriteByte(ushort port, byte value) {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         RenderUpToNow();
 
         int offset = port - _gusBase;
@@ -585,7 +614,7 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
                 _registerData = 0;
                 return;
             case 0x04: // data low byte – latch only, no register write yet
-                _registerData = (ushort)((_registerData & 0xFF00) | value);
+                _registerData = value;
                 return;
             case 0x05: // data high byte – latch then commit
                 _registerData = (ushort)((_registerData & 0x00FF) | (value << 8));
@@ -604,15 +633,24 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
 
     /// <inheritdoc/>
     public override void WriteWord(ushort port, ushort value) {
-        RenderUpToNow();
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
         int highOffset = port - (_gusBase + 0x100);
         if (highOffset == 0x04) {
+            RenderUpToNow();
             _registerData = value;
             WriteToRegister();
             return;
         }
-        base.WriteWord(port, value);
+        _ioPortDispatcher.WriteByte(port, (byte)value);
+        _ioPortDispatcher.WriteByte((ushort)(port + 1), (byte)(value >> 8));
+    }
+
+    /// <inheritdoc/>
+    public override void WriteDWord(ushort port, uint value) {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        _ioPortDispatcher.WriteWord(port, (ushort)value);
+        _ioPortDispatcher.WriteWord((ushort)(port + 2), (ushort)(value >> 16));
     }
 
     // Mixer callback
@@ -622,14 +660,11 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
     }
 
     private void OnSchedulerTick() {
-        _lastRenderedMs = _clock.ElapsedTimeMs;
         if (_channel.IsEnabled) {
             _frameCounter += _channel.FramesPerTick;
             int requestedFrames = (int)Math.Floor(_frameCounter);
             _frameCounter -= requestedFrames;
-            if (requestedFrames > 0) {
-                RenderFrames(requestedFrames);
-            }
+            PicCallback(requestedFrames);
         }
         _scheduler.AddEvent(_tickEventHandler, 1, 0);
     }
@@ -641,13 +676,30 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
             return;
         }
 
-        int elapsedFrames = (int)Math.Floor((now - _lastRenderedMs) / _millisecondsPerFrame);
-        if (elapsedFrames <= 0) {
-            return;
+        double elapsedMs = now - _lastRenderedMs;
+        if (elapsedMs > _millisecondsPerFrame) {
+            int elapsedFrames = (int)Math.Floor(elapsedMs / _millisecondsPerFrame);
+            RenderFrames(elapsedFrames);
+            _fifo.AddRange(_renderBuf.AsSpan(0, elapsedFrames));
+            _lastRenderedMs += elapsedFrames * _millisecondsPerFrame;
         }
+    }
 
-        RenderFrames(elapsedFrames);
-        _lastRenderedMs += elapsedFrames * _millisecondsPerFrame;
+    private void PicCallback(int framesRequested) {
+        int remaining = framesRequested;
+        if (_fifo.Count > 0 && remaining > 0) {
+            int fromFifo = Math.Min(remaining, _fifo.Count);
+            EnsureRenderBuf(fromFifo);
+            _fifo.CopyTo(0, _renderBuf, 0, fromFifo);
+            int enqueued = _outputQueue.NonblockingBulkEnqueue(_renderBuf.AsSpan(0, fromFifo), fromFifo);
+            _fifo.RemoveRange(0, enqueued);
+            remaining -= fromFifo;
+        }
+        if (remaining > 0) {
+            RenderFrames(remaining);
+            _outputQueue.NonblockingBulkEnqueue(_renderBuf.AsSpan(0, remaining), remaining);
+        }
+        _lastRenderedMs = _clock.ElapsedTimeMs;
     }
 
     private void RenderFrames(int framesRequested) {
@@ -663,7 +715,6 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
 
         CheckVoiceIrqs();
 
-        _outputQueue.NonblockingBulkEnqueue(_renderBuf.AsSpan(0, framesRequested), framesRequested);
     }
 
     // GF1 register reads
@@ -673,9 +724,7 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
         switch (_selectedReg) {
             case 0x41: { // DMA control register – read clears TC IRQ
                     byte reg = _dmaControlReg;
-                    if ((_irqStatus & IrqDmaFinished) != 0) {
-                        reg |= DmaCtrlTcIrqPending;
-                    }
+                    _dmaControlReg &= unchecked((byte)~DmaCtrlTcIrqPending);
                     _irqStatus &= unchecked((byte)~IrqDmaFinished);
                     RaiseInterruptRequest();
                     return (ushort)(reg << 8);
@@ -685,7 +734,7 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
             case 0x45: // Timer control
                 return (ushort)(_timerCtrl << 8);
             case 0x49: // DMA sampling control
-                return (ushort)(_sampleCtrl << 8);
+                return (ushort)(_dmaControlReg << 8);
             case 0x4C: // Reset register
                 return (ushort)(_resetReg << 8);
             case 0x8F: // Voice IRQ status
@@ -709,7 +758,7 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
                 return (ushort)(voice.WaveStart & 0xFFFF);
             case 0x89: { // Voice volume position
                     int i = CeilSdivide(voice.VolPos, VolumeIncScalar);
-                    i = Math.Max(0, Math.Min(i, VolLevels - 1));
+                    Debug.Assert(i >= 0 && i < VolLevels);
                     return (ushort)(i << 4);
                 }
             case 0x8A: // Voice wave current position MSW
@@ -726,6 +775,7 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
     // GF1 register writes
 
     private void WriteToRegister() {
+        RenderUpToNow();
         // Global DSP registers
         switch (_selectedReg) {
             case 0x0E: { // Set number of active voices
@@ -740,6 +790,7 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
             case 0x41: // DMA control register
                 _dmaControlReg = (byte)(_registerData >> 8);
                 _dmaSamples16Bit = (_dmaControlReg & DmaCtrlSamples16Bit) != 0;
+                _hasDmaTransferCallback = true;
                 if ((_dmaControlReg & DmaCtrlEnabled) != 0) {
                     StartDmaTransfer();
                 }
@@ -786,8 +837,6 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
                 _resetReg = (byte)(_registerData >> 8);
                 if ((_resetReg & ResetRegIsRunning) == 0) {
                     DoReset();
-                } else {
-                    _channel.Enable(IsDacEnabled);
                 }
                 return;
             default:
@@ -887,7 +936,6 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
             bool start = (value & (1 << t)) != 0;
             if (start && !timer.IsCountingDown) {
                 timer.IsCountingDown = true;
-                timer.HasExpired = false;
                 _scheduler.AddEvent(_timerEventHandlers[t], timer.Delay, 0);
             } else if (!start) {
                 timer.IsCountingDown = false;
@@ -897,7 +945,6 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
 
     private void OnTimerExpired(int timerIndex) {
         GusTimer timer = _timers[timerIndex];
-        if (!timer.IsCountingDown) { return; }
         if (!timer.IsMasked) {
             timer.HasExpired = true;
         }
@@ -934,10 +981,12 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
 
         if ((_mixControl & MixCtrlIrqCtrlSelected) != 0) {
             if (ch1Selector < IrqAddresses.Length && IrqAddresses[ch1Selector] != 0) {
-                ChangeIrq(IrqAddresses[ch1Selector]);
+                _irq = ToInternalIrq(IrqAddresses[ch1Selector]);
             }
-            if (combineChannels && ch2Selector == 0) {
-                _irq2 = _irq;
+            if (combineChannels) {
+                if (ch2Selector == 0) {
+                    _irq2 = _irq;
+                }
             } else if (ch2Selector < IrqAddresses.Length && IrqAddresses[ch2Selector] != 0) {
                 _irq2 = ToInternalIrq(IrqAddresses[ch2Selector]);
             }
@@ -946,8 +995,10 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
                 byte newDma = DmaAddresses[ch1Selector];
                 UpdatePlaybackDmaAddress(newDma);
             }
-            if (combineChannels && ch2Selector == 0) {
-                UpdateRecordingDmaAddress(_dma);
+            if (combineChannels) {
+                if (ch2Selector == 0) {
+                    UpdateRecordingDmaAddress(_dma);
+                }
             } else if (ch2Selector < DmaAddresses.Length && DmaAddresses[ch2Selector] != 0) {
                 UpdateRecordingDmaAddress(DmaAddresses[ch2Selector]);
             }
@@ -955,14 +1006,6 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
     }
 
     // IRQ handling
-
-    private byte GetIrqStatus() {
-        byte result = _irqStatus;
-        _irqStatus = 0;
-        _irqPreviouslyInterrupted = false;
-        _dualPic.DeactivateIrq(_irq);
-        return result;
-    }
 
     private ushort GetVoiceIrqStatus() {
         // Returns the voice index with pending IRQ and clears its bits.
@@ -1019,13 +1062,10 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
         foreach (Spice86.Core.Emulator.VM.DeviceScheduler.EventHandler timerEventHandler in _timerEventHandlers) {
             _scheduler.RemoveEvents(timerEventHandler);
         }
-        _scheduler.RemoveEvents(_dmaEventHandler);
-
         _irqStatus = 0;
         _irqPreviouslyInterrupted = false;
         _adlibCommandReg = AdlibCmdDefault;
         _dmaControlReg = 0;
-        _dmaSamples16Bit = false;
         _sampleCtrl = 0;
         _timerCtrl = 0;
         _timers[0] = new GusTimer(Timer1DefaultDelayMs);
@@ -1047,9 +1087,9 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
         _selectedReg = 0;
         _shouldChangeIrqDma = false;
         _mixControl = MixControlDefault;
-        _activeVoices = MinVoices;
-        _activeVoiceMask = 0xFFFFFFFFu >> (MaxVoices - MinVoices);
-        _lastRenderedMs = _clock.ElapsedTimeMs;
+        _activeVoices = 0;
+        _resetReg = 0;
+        _fifo.Clear();
     }
 
     // DMA handling
@@ -1064,13 +1104,13 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
             return;
         }
 
-        _scheduler.RemoveEvents(_dmaEventHandler);
         DmaChannel? oldChannel = _dmaBus.GetChannel(_dma);
         oldChannel?.Reset();
         _dma = newDma;
-        DmaChannel? newChannel = _dmaBus.GetChannel(newDma);
-        newChannel?.ReserveFor("GravisUltraSound", OnDmaChannelEvicted);
-        newChannel?.RegisterCallback(OnDmaEvent);
+        DmaChannel newChannel = _dmaBus.GetChannel(newDma)
+            ?? throw new InvalidOperationException($"GUS: DMA channel {newDma} is unavailable.");
+        newChannel.ReserveFor("GravisUltraSound", OnDmaChannelEvicted);
+        newChannel.RegisterCallback(OnDmaEvent);
     }
 
     private void UpdateRecordingDmaAddress(byte newDma) {
@@ -1085,11 +1125,17 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
 
     private void OnDmaChannelEvicted() {
         // DMA was forcibly released by another device.
+        Dispose();
     }
 
     private void ProcessDmaTransfer() {
-        DmaChannel? channel = _dmaBus.GetChannel(_dma);
-        if (channel is not null && PerformDmaTransfer(channel)) {
+        if (!_hasDmaTransferCallback) {
+            _loggerService.LogWarning("GUS: DMA event fired without a configured transfer callback.");
+            return;
+        }
+        DmaChannel channel = _dmaBus.GetChannel(_dma)
+            ?? throw new InvalidOperationException($"GUS: DMA channel {_dma} is unavailable.");
+        if (PerformDmaTransfer(channel)) {
             _scheduler.AddEvent(_dmaEventHandler, DmaTransferDelayMs, 0);
         }
     }
@@ -1099,46 +1145,41 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
             return false;
         }
 
-        Span<byte> chunk = stackalloc byte[DmaTransferSizeBytes];
-        int chunkWords = Math.Min(DmaTransferSizeBytes >> channel.ShiftCount, channel.CurrentCount + 1);
-
         uint dmaOffset = GetDmaOffset();
+        int desired = channel.CurrentCount + 1;
+        int byteCount = desired << channel.ShiftCount;
+        Span<byte> samples = _ram.AsSpan((int)dmaOffset, byteCount);
         bool invert = (_dmaControlReg & DmaCtrlInvertHighBit) != 0;
-        bool samples16 = _dmaSamples16Bit;
         bool gusToHost = (_dmaControlReg & DmaCtrlGusToHost) != 0;
-
+        int transferred;
         if (gusToHost) {
-            int bytesToTransfer = chunkWords << channel.ShiftCount;
-            for (int i = 0; i < bytesToTransfer; i++) {
-                chunk[i] = _ram[(int)((dmaOffset + (uint)i) & 0xFFFFF)];
-            }
-            int wordsWritten = channel.Write(chunkWords, chunk.Slice(0, bytesToTransfer));
-            dmaOffset = (dmaOffset + (uint)(wordsWritten << channel.ShiftCount)) & 0xFFFFF;
+            transferred = channel.Write(desired, samples);
         } else {
-            int wordsRead = channel.Read(chunkWords, chunk);
-            int bytesRead = wordsRead << channel.ShiftCount;
-
-            for (int i = 0; i < bytesRead; i++) {
-                int dest = (int)((dmaOffset + (uint)i) & 0xFFFFF);
-                byte sample = chunk[i];
-                if (invert && (!samples16 || ((dmaOffset + (uint)i) & 1) != 0)) {
-                    sample ^= 0x80;
-                }
-                _ram[dest] = sample;
-            }
-
-            dmaOffset = (dmaOffset + (uint)bytesRead) & 0xFFFFF;
+            transferred = channel.Read(desired, samples);
         }
+        Debug.Assert(transferred == desired);
+        int bytesTransferred = transferred << channel.ShiftCount;
+        UpdateDmaAddr(dmaOffset + (uint)bytesTransferred);
 
-        UpdateDmaAddr(dmaOffset);
+        if (!gusToHost && invert) {
+            int start = _dmaSamples16Bit ? 1 : 0;
+            int skip = _dmaSamples16Bit ? 2 : 1;
+            for (int i = start; i < bytesTransferred; i += skip) {
+                samples[i] ^= 0x80;
+            }
+        }
 
         // The DMA terminal-count IRQ only fires when the channel actually reached TC.
-        if (channel.HasReachedTerminalCount && (_dmaControlReg & DmaCtrlWantsIrqOnTc) != 0) {
-            _irqStatus |= IrqDmaFinished;
-            RaiseInterruptRequest();
+        if (channel.HasReachedTerminalCount) {
+            _dmaControlReg |= DmaCtrlTcIrqPending;
+            if ((_dmaControlReg & DmaCtrlWantsIrqOnTc) != 0) {
+                _irqStatus |= IrqDmaFinished;
+                RaiseInterruptRequest();
+            }
+            return false;
         }
 
-        return !channel.HasReachedTerminalCount;
+        return true;
     }
 
     private uint GetDmaOffset() {
@@ -1177,13 +1218,18 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
         if (clamped != _activeVoices) {
             _activeVoices = clamped;
             _activeVoiceMask = 0xFFFFFFFFu >> (MaxVoices - _activeVoices);
+            _sampleRateHz = (int)Math.Floor(1000000.0 / (1.619695497 * _activeVoices));
             _channel.SampleRate = GetSampleRate();
             _millisecondsPerFrame = 1000.0 / GetSampleRate();
+        }
+        if (_activeVoices != 0 && _previousLoggedVoices != _activeVoices) {
+            _loggerService.LogInformation("GUS: Activated {Voices} voices at {SampleRate} Hz.", _activeVoices, _sampleRateHz);
+            _previousLoggedVoices = _activeVoices;
         }
     }
 
     private int GetSampleRate() {
-        return (int)(1000000.0 / (1.619695497 * _activeVoices));
+        return _sampleRateHz;
     }
 
     private static byte ToInternalIrq(byte irq) => irq == 2 ? (byte)9 : irq;
@@ -1220,20 +1266,14 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
     // Port registration
 
     private void InitPortHandlers(IOPortDispatcher dispatcher, int portBase) {
-        // Low group (around gusBase)
-        dispatcher.AddIOPortHandler((ushort)(0x200 + portBase), this);  // mix control
-        dispatcher.AddIOPortHandler((ushort)(0x206 + portBase), this);  // IRQ status
-        dispatcher.AddIOPortHandler((ushort)(0x208 + portBase), this);  // timer status / AdLib mirror
-        dispatcher.AddIOPortHandler((ushort)(0x209 + portBase), this);  // timer control
-        dispatcher.AddIOPortHandler((ushort)(0x20A + portBase), this);  // adlib command mirror
-        dispatcher.AddIOPortHandler((ushort)(0x20B + portBase), this);  // IRQ/DMA select
-
-        // High group (gusBase + 0x100)
-        dispatcher.AddIOPortHandler((ushort)(0x302 + portBase), this);  // voice index
-        dispatcher.AddIOPortHandler((ushort)(0x303 + portBase), this);  // GF1 reg select
-        dispatcher.AddIOPortHandler((ushort)(0x304 + portBase), this);  // data word
-        dispatcher.AddIOPortHandler((ushort)(0x305 + portBase), this);  // data high byte
-        dispatcher.AddIOPortHandler((ushort)(0x307 + portBase), this);  // DRAM byte
+        int[] readPorts = [0x302, 0x303, 0x304, 0x305, 0x206, 0x208, 0x307, 0x20A];
+        foreach (int port in readPorts) {
+            dispatcher.ReplaceIOPortReadHandler(port + portBase, this);
+        }
+        int[] writePorts = [0x302, 0x303, 0x304, 0x305, 0x208, 0x209, 0x307, 0x200, 0x20B];
+        foreach (int port in writePorts) {
+            dispatcher.ReplaceIOPortWriteHandler(port + portBase, this);
+        }
     }
 
     // Helpers
@@ -1245,8 +1285,64 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
     }
 
     private static int CeilSdivide(int a, int b) {
-        if (b == 0) { return 0; }
         if (a >= 0) { return (a + b - 1) / b; }
         return a / b;
+    }
+
+    /// <inheritdoc/>
+    public void Dispose() {
+        if (_disposed) {
+            return;
+        }
+        _disposed = true;
+        _mixer.LockMixerThread();
+        try {
+            PrintStats();
+            DoReset();
+            _scheduler.RemoveEvents(_dmaEventHandler);
+            _scheduler.RemoveEvents(_tickEventHandler);
+            int[] ports = [0x00, 0x06, 0x08, 0x09, 0x0A, 0x0B, 0x102, 0x103, 0x104, 0x105, 0x107];
+            foreach (int port in ports) {
+                _ioPortDispatcher.RemoveIOPortHandler(_gusBase + port, this);
+            }
+            _mixer.RemoveChannel(_channel);
+            _dmaBus.GetChannel(_dma)?.Reset();
+            _mixer.UnregisterQueueNotifier(this);
+            Disposed?.Invoke();
+        } finally {
+            _mixer.UnlockMixerThread();
+        }
+        GC.SuppressFinalize(this);
+    }
+
+    private void PrintStats() {
+        uint combined8BitMs = 0;
+        uint combined16BitMs = 0;
+        uint used8BitVoices = 0;
+        uint used16BitVoices = 0;
+        foreach (GusVoice voice in _voices) {
+            if (voice.Generated8BitMs != 0) {
+                combined8BitMs += voice.Generated8BitMs;
+                used8BitVoices++;
+            }
+            if (voice.Generated16BitMs != 0) {
+                combined16BitMs += voice.Generated16BitMs;
+                used16BitVoices++;
+            }
+        }
+        uint combinedMs = combined8BitMs + combined16BitMs;
+        if (combinedMs < 10000 || used8BitVoices + used16BitVoices == 0) {
+            return;
+        }
+        if (used16BitVoices == 0) {
+            _loggerService.LogInformation("GUS: Audio comprised of 8-bit samples from {Voices} voices.", used8BitVoices);
+        } else if (used8BitVoices == 0) {
+            _loggerService.LogInformation("GUS: Audio comprised of 16-bit samples from {Voices} voices.", used16BitVoices);
+        } else {
+            uint ratio8Bit = (100 * combined8BitMs + combinedMs - 1) / combinedMs;
+            uint ratio16Bit = (100 * combined16BitMs + combinedMs - 1) / combinedMs;
+            _loggerService.LogInformation("GUS: Audio was made up of {Ratio8Bit}% 8-bit {Voices8Bit}-voice and {Ratio16Bit}% 16-bit {Voices16Bit}-voice samples.",
+                ratio8Bit, used8BitVoices, ratio16Bit, used16BitVoices);
+        }
     }
 }

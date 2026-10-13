@@ -37,7 +37,7 @@ public sealed record class AudioRuntimeOptions(
     byte GusDma,
     bool GusEnable,
     string GusUltradir,
-    bool GusFilter) {
+    string GusFilter) {
     /// <summary>
     /// Sound Blaster base I/O address.
     /// </summary>

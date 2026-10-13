@@ -15,6 +15,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
 using Spice86.Core.Emulator.Debugger;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
+using Spice86.Core.Emulator.Devices.Audio;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Shared.Emulator.Keyboard;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
@@ -1030,7 +1031,7 @@ internal sealed class EmulatorMcpTools {
                     DmaAddressRegister = gus.DmaAddressRegister,
                     DmaAddressNibble = gus.DmaAddressNibble,
                     DramOffset = gus.DmaDramOffset,
-                    TerminalCountIrqPending = ((GusIrqStatus)gus.IrqStatusRegister & GusIrqStatus.DmaTerminalCount) != 0
+                    TerminalCountIrqPending = ((GusDmaControl)gus.DmaControlRegister & GusDmaControl.Samples16Bit) != 0
                 };
             }
         });

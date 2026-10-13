@@ -3,6 +3,7 @@
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Devices.Cmos;
+using Spice86.Core.Emulator.Devices.Audio;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
@@ -331,6 +332,7 @@ public sealed class Machine : IDisposable {
     private void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
+                GravisUltraSound?.Dispose();
                 MidiDevice.Dispose();
                 OPL.Dispose();
                 PcSpeaker.Dispose();

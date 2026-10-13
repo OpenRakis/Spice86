@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.Devices.Sound;
+namespace Spice86.Core.Emulator.Devices.Audio;
 
 /// <summary>
 /// Read-only snapshot of the IRQ state shared by all 32 GF1 voices.

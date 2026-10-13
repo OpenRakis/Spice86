@@ -32,18 +32,20 @@ public sealed class Spice86Creator : IDisposable {
         string? exeArgs = null, long? instructionTimeScale = null,
         JitMode jitMode = JitMode.InterpretedOnly, bool failOnInvalidOpcode = false,
         string? recordedDataDirectory = null, bool reloadCfgGraph = false,
-        bool enableSpeculativeCfgExploration = true) : this(binName, enablePit, maxCycles,
+        bool enableSpeculativeCfgExploration = true, bool enableGus = false) : this(binName, enablePit, maxCycles,
             installInterruptVectors, failOnUnhandledPort, enableA20Gate, enableXms, enableEms,
             overrideSupplierClassName, cDrive, overrideSupplier, programEntryPointSegment, sbType, oplMode,
             sbBase, sbIrq, sbDma, sbHdma, exeArgs, instructionTimeScale, jitMode, failOnInvalidOpcode,
-            recordedDataDirectory, reloadCfgGraph, enableSpeculativeCfgExploration, RenderingMode.Async, 0xF000) {
+            recordedDataDirectory, reloadCfgGraph, enableSpeculativeCfgExploration, RenderingMode.Async, 0xF000,
+            enableGus) {
     }
 
     internal Spice86Creator(AsmFixtures.AsmRunSettings settings, JitMode jitMode, IOverrideSupplier? overrideSupplier)
         : this(settings.BinName, settings.EnablePit, settings.MaxCycles, settings.InstallInterruptVectors,
             settings.FailOnUnhandledPort, settings.EnableA20Gate, false, false, null, null, overrideSupplier,
             0x170, SbType.None, OplMode.None, 0x220, 7, 1, 5, null, null, jitMode, false, null, false,
-            settings.EnableSpeculativeCfgExploration, settings.RenderingMode, settings.AsmHandlersSegment) {
+            settings.EnableSpeculativeCfgExploration, settings.RenderingMode, settings.AsmHandlersSegment,
+            false) {
     }
 
     private Spice86Creator(string binName, bool enablePit, long maxCycles, bool installInterruptVectors,
@@ -52,7 +54,8 @@ public sealed class Spice86Creator : IDisposable {
         ushort programEntryPointSegment, SbType sbType, OplMode oplMode, ushort sbBase, byte sbIrq,
         byte sbDma, byte sbHdma, string? exeArgs, long? instructionTimeScale, JitMode jitMode,
         bool failOnInvalidOpcode, string? recordedDataDirectory, bool reloadCfgGraph,
-        bool enableSpeculativeCfgExploration, RenderingMode renderingMode, ushort asmHandlersSegment) {
+        bool enableSpeculativeCfgExploration, RenderingMode renderingMode, ushort asmHandlersSegment,
+        bool enableGus) {
         string executablePath = Path.IsPathRooted(binName) ? binName : $"Resources/cpuTests/{binName}.bin";
         if (overrideSupplierClassName != null && overrideSupplier != null) {
             throw new ArgumentException("Provide either an override supplier instance or an override supplier class name, not both.");
@@ -89,6 +92,7 @@ public sealed class Spice86Creator : IDisposable {
             SbDma = sbDma,
             SbHdma = sbHdma,
             OplMode = oplMode,
+            GusEnable = enableGus,
             FailOnUnhandledPort = failOnUnhandledPort,
             A20Gate = enableA20Gate,
             OverrideSupplier = overrideSupplier,

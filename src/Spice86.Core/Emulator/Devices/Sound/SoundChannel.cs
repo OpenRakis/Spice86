@@ -1,12 +1,18 @@
+// SPDX-FileCopyrightText: 2020-2026 The DOSBox Staging Team
+// SPDX-FileCopyrightText: 2002-2021 The DOSBox Team
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 namespace Spice86.Core.Emulator.Devices.Sound;
 
+using Microsoft.Extensions.Logging;
 using Spice86.Audio.Common;
 using Spice86.Audio.Filters;
 using Spice86.Audio.Filters.Speex;
 
-using HighPass = Audio.Filters.IirFilters.Filters.Butterworth.HighPass;
-using LowPass = Audio.Filters.IirFilters.Filters.Butterworth.LowPass;
+using HighPass = Spice86.Audio.Filters.IirFilters.Filters.Butterworth.HighPass;
+using LowPass = Spice86.Audio.Filters.IirFilters.Filters.Butterworth.LowPass;
 
+using System.Globalization;
 using System.Threading;
 
 /// <summary>
@@ -1235,10 +1241,82 @@ public sealed class SoundChannel {
         if (!_doSleep) {
             return false;
         }
-
         lock (_mutex) {
             return _sleeper.WakeUp();
         }
+    }
+
+    /// <summary>Parses the boolean filter settings accepted by DOSBox-staging.</summary>
+    internal static bool TryParseFilterSwitch(string setting, out bool enabled) {
+        enabled = false;
+        switch (setting) {
+            case "enabled":
+            case "true":
+            case "on":
+            case "yes":
+                enabled = true;
+                return true;
+            case "disabled":
+            case "false":
+            case "off":
+            case "no":
+            case "none":
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /// <summary>Applies one or two DOSBox-staging custom output filters.</summary>
+    internal bool TryParseAndSetCustomFilter(string preferences, ILogger logger) {
+        lock (_mutex) {
+            LowPassFilter = FilterState.Off;
+            HighPassFilter = FilterState.Off;
+            if (!preferences.StartsWith("lpf", StringComparison.Ordinal) &&
+                !preferences.StartsWith("hpf", StringComparison.Ordinal)) {
+                return false;
+            }
+            string[] parts = preferences.Split(' ');
+            if (parts.Length is not (3 or 6)) {
+                return false;
+            }
+            if (parts.Length == 6 && parts[0] == parts[3]) {
+                return false;
+            }
+            for (int i = 0; i < parts.Length; i += 3) {
+                if (!TrySetCustomFilter(parts[i], parts[i + 1], parts[i + 2], logger)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+
+    private bool TrySetCustomFilter(string type, string orderSetting, string cutoffSetting, ILogger logger) {
+        const int MaxFilterOrder = 16;
+        const NumberStyles FilterNumberStyles = NumberStyles.AllowLeadingWhite | NumberStyles.AllowLeadingSign;
+        if (!int.TryParse(orderSetting, FilterNumberStyles, CultureInfo.InvariantCulture, out int order) ||
+            order is < 1 or > MaxFilterOrder ||
+            !int.TryParse(cutoffSetting, FilterNumberStyles, CultureInfo.InvariantCulture, out int cutoffHz) ||
+            cutoffHz <= 0) {
+            return false;
+        }
+        int maxCutoffHz = _mixerSampleRateHz / 2 - 1;
+        if (cutoffHz > maxCutoffHz) {
+            logger.LogDebug("{Channel}: Filter cutoff frequency {CutoffHz} Hz is above half the sample rate, clamping to {MaxCutoffHz} Hz.",
+                Name, cutoffHz, maxCutoffHz);
+            cutoffHz = maxCutoffHz;
+        }
+        if (type == "lpf") {
+            ConfigureLowPassFilter(order, cutoffHz);
+            LowPassFilter = FilterState.On;
+        } else if (type == "hpf") {
+            ConfigureHighPassFilter(order, cutoffHz);
+            HighPassFilter = FilterState.On;
+        } else {
+            return false;
+        }
+        return true;
     }
 
     /// <summary>

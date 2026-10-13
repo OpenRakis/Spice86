@@ -25,6 +25,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.Logging;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.Devices.Cmos;
+using Spice86.Core.Emulator.Devices.Audio;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
@@ -503,6 +504,17 @@ public class Spice86DependencyInjection : IDisposable {
         EmulatorMcpServices emulatorMcpServices = new(memory, state, functionCatalogue, cfgCpu,
             ioPortDispatcher, vgaRenderer, pauseHandler, emsManager, dos.Xms,
             emulatorBreakpointsManager, cfgBlocksJsonExporter, loggerService);
+        if (gravisUltraSound is not null) {
+            gravisUltraSound.Disposed += () => {
+                opl.SetAdlibCommandMirror(null);
+                emulatorMcpServices.GravisUltraSound = null;
+                bool ultraSndCleared = dos.ProcessManager.TrySetEnvironmentVariable("ULTRASND", string.Empty);
+                bool ultraDirCleared = dos.ProcessManager.TrySetEnvironmentVariable("ULTRADIR", string.Empty);
+                if (!ultraSndCleared || !ultraDirCleared) {
+                    loggerService.LogWarning("GUS: Failed to clear the DOS environment during shutdown.");
+                }
+            };
+        }
 
         DmaChannel fdcDmaChannel = dmaSystem.GetChannel(2)
             ?? throw new InvalidOperationException("DMA channel 2 unavailable for Floppy Disk Controller.");
@@ -630,7 +642,9 @@ public class Spice86DependencyInjection : IDisposable {
         emulatorMcpServices.Opl3Fm = opl;
         emulatorMcpServices.PcSpeaker = pcSpeaker;
         emulatorMcpServices.Midi = midiDevice;
-        emulatorMcpServices.GravisUltraSound = gravisUltraSound;
+        if (gravisUltraSound is { IsDisposed: false }) {
+            emulatorMcpServices.GravisUltraSound = gravisUltraSound;
+        }
         emulatorMcpServices.VgaFunctionality = vgaFunctionality;
         emulatorMcpServices.BiosDataArea = biosDataArea;
         emulatorMcpServices.InterruptVectorTable = interruptVectorTable;

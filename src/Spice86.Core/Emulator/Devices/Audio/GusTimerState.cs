@@ -1,4 +1,4 @@
-namespace Spice86.Core.Emulator.Devices.Sound;
+namespace Spice86.Core.Emulator.Devices.Audio;
 
 /// <summary>
 /// Read-only snapshot of one of the two GUS hardware timers.

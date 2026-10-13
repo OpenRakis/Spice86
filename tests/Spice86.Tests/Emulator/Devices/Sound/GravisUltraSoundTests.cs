@@ -26,10 +26,10 @@ public sealed class GravisUltraSoundTests {
     [Fact]
     public void ResetThenStartWithDacEnabled_EnablesMixerChannel() {
         // Arrange
-        using Spice86Creator creator = new("add");
+        using Spice86Creator creator = new("add", enableGus: true);
         using Spice86DependencyInjection dependencyInjection = creator.Create();
         GravisUltraSound gus = dependencyInjection.Machine.GravisUltraSound
-            ?? throw new InvalidOperationException("GUS should be enabled by default for the test harness.");
+            ?? throw new InvalidOperationException("GUS was explicitly enabled for this scenario.");
 
         // Act
         gus.WriteByte(GusRegisterSelectPort, ResetRegister);
@@ -44,10 +44,10 @@ public sealed class GravisUltraSoundTests {
     [Fact]
     public void EnabledTimer_RaisesIrqForEachEmulatedTimerPeriod() {
         // Arrange
-        using Spice86Creator creator = new("add");
+        using Spice86Creator creator = new("add", enableGus: true);
         using Spice86DependencyInjection dependencyInjection = creator.Create();
         GravisUltraSound gus = dependencyInjection.Machine.GravisUltraSound
-            ?? throw new InvalidOperationException("GUS should be enabled by default for the test harness.");
+            ?? throw new InvalidOperationException("GUS was explicitly enabled for this scenario.");
 
         gus.WriteByte(GusRegisterSelectPort, TimerControlRegister);
         gus.WriteByte(GusRegisterDataHighPort, 0x04);
@@ -70,7 +70,7 @@ public sealed class GravisUltraSoundTests {
     [Fact]
     public void AdlibCommandWrite_IsMirroredToGus() {
         // Arrange
-        using Spice86Creator creator = new("add", oplMode: OplMode.Opl3);
+        using Spice86Creator creator = new("add", oplMode: OplMode.Opl3, enableGus: true);
         using Spice86DependencyInjection dependencyInjection = creator.Create();
 
         // Act
@@ -84,13 +84,15 @@ public sealed class GravisUltraSoundTests {
     [Fact]
     public void IoWrite_RendersElapsedEmulatedTimeBeforeMutatingGusState() {
         // Arrange
-        using Spice86Creator creator = new("add");
+        using Spice86Creator creator = new("add", enableGus: true);
         using Spice86DependencyInjection dependencyInjection = creator.Create();
         GravisUltraSound gus = dependencyInjection.Machine.GravisUltraSound
-            ?? throw new InvalidOperationException("GUS should be enabled by default for the test harness.");
+            ?? throw new InvalidOperationException("GUS was explicitly enabled for this scenario.");
 
         gus.WriteByte(GusRegisterSelectPort, ResetRegister);
         gus.WriteByte(GusRegisterDataHighPort, RunningWithDacEnabled);
+        gus.WriteByte(GusRegisterSelectPort, 0x0E);
+        gus.WriteByte(GusRegisterDataHighPort, 13);
         GusVoice voice = gus.Voices[0];
         voice.WaveStart = 0;
         voice.WaveEnd = 100_000;
@@ -109,15 +111,17 @@ public sealed class GravisUltraSoundTests {
     }
 
     [Fact]
-    public void IoRead_RendersElapsedEmulatedTimeBeforeReportingGusState() {
+    public void IoRead_DoesNotRenderElapsedEmulatedTime() {
         // Arrange
-        using Spice86Creator creator = new("add");
+        using Spice86Creator creator = new("add", enableGus: true);
         using Spice86DependencyInjection dependencyInjection = creator.Create();
         GravisUltraSound gus = dependencyInjection.Machine.GravisUltraSound
-            ?? throw new InvalidOperationException("GUS should be enabled by default for the test harness.");
+            ?? throw new InvalidOperationException("GUS was explicitly enabled for this scenario.");
 
         gus.WriteByte(GusRegisterSelectPort, ResetRegister);
         gus.WriteByte(GusRegisterDataHighPort, RunningWithDacEnabled);
+        gus.WriteByte(GusRegisterSelectPort, 0x0E);
+        gus.WriteByte(GusRegisterDataHighPort, 13);
         GusVoice voice = gus.Voices[0];
         voice.WaveStart = 0;
         voice.WaveEnd = 100_000;
@@ -132,16 +136,16 @@ public sealed class GravisUltraSoundTests {
         gus.ReadByte(GusIrqStatusPort);
 
         // Assert
-        voice.WavePos.Should().BeGreaterThan(0);
+        voice.WavePos.Should().Be(0);
     }
 
     [Fact]
     public void EnabledDma_TransfersHostMemoryToGusDramAtScheduledInterval() {
         // Arrange
-        using Spice86Creator creator = new("add");
+        using Spice86Creator creator = new("add", enableGus: true);
         using Spice86DependencyInjection dependencyInjection = creator.Create();
         GravisUltraSound gus = dependencyInjection.Machine.GravisUltraSound
-            ?? throw new InvalidOperationException("GUS should be enabled by default for the test harness.");
+            ?? throw new InvalidOperationException("GUS was explicitly enabled for this scenario.");
         dependencyInjection.Machine.Memory[0] = 0x11;
         dependencyInjection.Machine.Memory[1] = 0x22;
         dependencyInjection.Machine.Memory[2] = 0x33;
@@ -171,12 +175,14 @@ public sealed class GravisUltraSoundTests {
     }
 
     [Fact]
-    public void DmaSamplingControlRegister_ReadsBackItsOwnValue() {
+    public void DmaSamplingControlRegister_ReadsDmaControlWithoutAcknowledgingIt() {
         // Arrange
-        using Spice86Creator creator = new("add");
+        using Spice86Creator creator = new("add", enableGus: true);
         using Spice86DependencyInjection dependencyInjection = creator.Create();
         GravisUltraSound gus = dependencyInjection.Machine.GravisUltraSound
-            ?? throw new InvalidOperationException("GUS should be enabled by default for the test harness.");
+            ?? throw new InvalidOperationException("GUS was explicitly enabled for this scenario.");
+        gus.WriteByte(GusRegisterSelectPort, DmaControlRegister);
+        gus.WriteByte(GusRegisterDataHighPort, 0x40);
 
         // Act
         gus.WriteByte(GusRegisterSelectPort, DmaSamplingControlRegister);
@@ -184,16 +190,18 @@ public sealed class GravisUltraSoundTests {
         ushort sampleControl = gus.ReadWord(0x344);
 
         // Assert
-        sampleControl.Should().Be(0xAA00);
+        sampleControl.Should().Be(0x4000);
+        gus.SampleControlRegister.Should().Be(0xAA);
+        gus.DmaControlRegister.Should().Be(0x40);
     }
 
     [Fact]
     public void VoiceIndexPort_SelectsVoiceForSubsequentRegisterWrites() {
         // Arrange
-        using Spice86Creator creator = new("add");
+        using Spice86Creator creator = new("add", enableGus: true);
         using Spice86DependencyInjection dependencyInjection = creator.Create();
         GravisUltraSound gus = dependencyInjection.Machine.GravisUltraSound
-            ?? throw new InvalidOperationException("GUS should be enabled by default for the test harness.");
+            ?? throw new InvalidOperationException("GUS was explicitly enabled for this scenario.");
 
         // Act
         gus.WriteByte(GusVoiceIndexPort, 3);
@@ -208,13 +216,15 @@ public sealed class GravisUltraSoundTests {
     [Fact]
     public void SchedulerTick_RendersGusVoicesWithoutFurtherPortAccess() {
         // Arrange
-        using Spice86Creator creator = new("add");
+        using Spice86Creator creator = new("add", enableGus: true);
         using Spice86DependencyInjection dependencyInjection = creator.Create();
         GravisUltraSound gus = dependencyInjection.Machine.GravisUltraSound
-            ?? throw new InvalidOperationException("GUS should be enabled by default for the test harness.");
+            ?? throw new InvalidOperationException("GUS was explicitly enabled for this scenario.");
 
         gus.WriteByte(GusRegisterSelectPort, ResetRegister);
         gus.WriteByte(GusRegisterDataHighPort, RunningWithDacEnabled);
+        gus.WriteByte(GusRegisterSelectPort, 0x0E);
+        gus.WriteByte(GusRegisterDataHighPort, 13);
         GusVoice voice = gus.Voices[0];
         voice.WaveStart = 0;
         voice.WaveEnd = 100_000;

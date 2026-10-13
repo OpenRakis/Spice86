@@ -337,19 +337,19 @@ public sealed class DmaChannel {
                     ChannelNumber,
                     words);
                 break;
-            case > ushort.MaxValue:
+            case > ushort.MaxValue + 1:
                 _logger.LogWarning(
                     "DMA[{Channel}]: Requested transfer of {Words} words exceeds counter width; clamping to {MaxWords}",
                     ChannelNumber,
                     words,
-                    ushort.MaxValue);
+                    ushort.MaxValue + 1);
                 break;
         }
 
         unchecked {
             // DMA math must not raise an OverFlowException to simulate the ISA hardare
-            ushort want = (ushort)Math.Clamp(words, 0, ushort.MaxValue);
-            ushort done = 0;
+            int want = Math.Clamp(words, 0, ushort.MaxValue + 1);
+            int done = 0;
             CurrentAddress &= _wrappingMask;
 
             int bufferOffsetBytes = 0;
@@ -357,16 +357,16 @@ public sealed class DmaChannel {
                 uint left = (uint)(CurrentCount + 1);
                 if (want < left) {
                     if (direction == DmaDirection.Read) {
-                        PerformRead(PageBase, CurrentAddress, want, readBuffer, IsIncremented, bufferOffsetBytes);
+                        PerformRead(PageBase, CurrentAddress, (uint)want, readBuffer, IsIncremented, bufferOffsetBytes);
                     } else {
-                        PerformWrite(PageBase, CurrentAddress, want, writeBuffer, IsIncremented, bufferOffsetBytes);
+                        PerformWrite(PageBase, CurrentAddress, (uint)want, writeBuffer, IsIncremented, bufferOffsetBytes);
                     }
 
                     done += want;
                     CurrentAddress = IsIncremented
-                        ? unchecked(CurrentAddress + want)
-                        : unchecked(CurrentAddress - want);
-                    CurrentCount -= want;
+                        ? unchecked(CurrentAddress + (uint)want)
+                        : unchecked(CurrentAddress - (uint)want);
+                    CurrentCount -= (ushort)want;
                     want = 0;
                 } else {
                     if (direction == DmaDirection.Read) {
@@ -376,8 +376,8 @@ public sealed class DmaChannel {
                     }
 
                     bufferOffsetBytes += (int)(left << ShiftCount);
-                    want -= (ushort)left;
-                    done += (ushort)left;
+                    want -= (int)left;
+                    done += (int)left;
                     ReachedTerminalCount();
 
                     if (IsAutoiniting) {

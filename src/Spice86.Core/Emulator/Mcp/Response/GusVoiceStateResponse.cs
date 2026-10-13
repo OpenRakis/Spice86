@@ -1,6 +1,6 @@
 namespace Spice86.Core.Emulator.Mcp.Response;
 
-using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.Devices.Audio;
 
 internal sealed record GusVoiceStateResponse
 {

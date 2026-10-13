@@ -1,4 +1,8 @@
-namespace Spice86.Core.Emulator.Devices.Sound;
+// SPDX-FileCopyrightText: 2020-2026 The DOSBox Staging Team
+// SPDX-FileCopyrightText: 2002-2021 The DOSBox Team
+// SPDX-License-Identifier: GPL-2.0-or-later
+
+namespace Spice86.Core.Emulator.Devices.Audio;
 
 using Spice86.Audio.Common;
 
@@ -155,7 +159,7 @@ public sealed class GusVoice {
     /// Decodes a volume-rate register value into a per-sample volume-index increment.
     /// The register encodes four banks of fractional increments via bits 6-7.
     /// </summary>
-    public void WriteVolRate(byte val) {
+    public void WriteVolRate(ushort val) {
         VolRate = val;
         const byte BankLength = 63;
         int posInBank = val & BankLength;
@@ -216,7 +220,6 @@ public sealed class GusVoice {
 
     private float PopVolScalar(float[] volScalars) {
         int i = CeilSdivide(VolPos, GravisUltraSound.VolumeIncScalar);
-        i = Math.Max(0, Math.Min(i, volScalars.Length - 1));
         CtrlPosUpdate update = IncrementCtrlPos(VolPos, VolState, VolInc, VolStart, VolEnd,
             _voiceIrq.VolState, false);
         VolPos = update.Pos;
@@ -304,13 +307,11 @@ public sealed class GusVoice {
     }
 
     private static int CeilSdivide(int a, int b) {
-        if (b == 0) { return 0; }
         if (a >= 0) { return (a + b - 1) / b; }
         return a / b;
     }
 
     private static int CeilUdivide(uint a, uint b) {
-        if (b == 0) { return 0; }
         return (int)((a + b - 1) / b);
     }
 }
