@@ -13,6 +13,7 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Mmu;
+using Spice86.Core.Emulator.VM.Clock;
 
 using Xunit;
 
@@ -242,13 +243,32 @@ public sealed class CgaIntegrationTests {
         video.BiosDataArea.VideoMsr.Should().Be(0x2A);
     }
 
+    [Theory]
+    [InlineData(0x03, 28322000, 0.0317774258251326, 70.08659)]
+    [InlineData(0x12, 25175000, 0.031777557100297914, 59.94048)]
+    [InlineData(0x13, 25175000, 0.031777557100297914, 70.08630)]
+    public void BiosProgrammedTimingsMatchOscillatorAndPhysicalTotals(
+        int mode, int pixelClockHz, double lineDurationMs, double refreshRateHz) {
+        // Arrange
+        VideoHarness harness = new(mode);
+
+        // Act
+        VgaTimingParameters timing = VgaTimingParameters.Calculate(harness.State);
+
+        // Assert
+        timing.PixelClockHz.Should().Be(pixelClockHz);
+        timing.LineDurationMs.Should().BeApproximately(lineDurationMs, 1e-12);
+        timing.RefreshRateHz.Should().BeApproximately(refreshRateHz, 0.00001);
+    }
+
     private sealed class VideoHarness {
         public VideoHarness(int mode) {
             Memory = new Memory(new(), new Ram(0x100000), new A20Gate(), new RealModeMmu386(), false);
             State cpuState = new(CpuModel.ZET_86);
             Ports = new IOPortDispatcher(new(), cpuState, NullLogger.Instance, true);
             State = new VideoState();
-            _ = new VgaIoPortHandler(cpuState, Ports, NullLogger.Instance, State, true);
+            _ = new VgaIoPortHandler(cpuState, Ports, NullLogger.Instance, State,
+                new CyclesClock(cpuState, 1000, null, DateTimeOffset.UnixEpoch), true);
             Renderer = new Renderer(Memory, State, new VgaBlinkState(), NullLogger.Instance, new VgaRenderer256ColorScalar());
             VgaRom rom = new(NullLogger.Instance);
             Memory.RegisterMapping(VgaRom.Segment << 4, rom.Size, rom);

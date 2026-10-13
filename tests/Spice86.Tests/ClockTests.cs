@@ -1,6 +1,8 @@
 namespace Spice86.Tests;
 
 using FluentAssertions;
+using System.Diagnostics;
+using System.Threading;
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Sound;
@@ -11,6 +13,21 @@ using Xunit;
 /// Tests for clock synchronization architecture.
 /// </summary>
 public class ClockTests {
+    [Fact]
+    public void EmulatedClock_ReadsCurrentTimeWithoutWaitingForMoreClockReads() {
+        // Arrange
+        using EmulatedClock clock = new(null, DateTimeOffset.UnixEpoch);
+        double before = clock.ElapsedTimeMs;
+        Stopwatch elapsed = Stopwatch.StartNew();
+
+        // Act
+        SpinWait.SpinUntil(() => elapsed.ElapsedMilliseconds >= 2);
+        double after = clock.ElapsedTimeMs;
+
+        // Assert
+        after.Should().BeGreaterThanOrEqualTo(before + 1);
+    }
+
     /// <summary>
     /// Tests that CyclesClock correctly calculates CurrentDateTime from StartTime and cycles.
     /// </summary>
@@ -175,7 +192,6 @@ public class ClockTests {
     public void EmulatedClock_WithSeed_ElapsedTimeMsIsNonNegative() {
         EmulatedClock clock = new EmulatedClock(99, DateTimeOffset.UnixEpoch);
 
-        // Force multiple cache refreshes to exercise the jitter code path.
         for (int i = 0; i < 300; i++) {
             clock.ElapsedTimeMs.Should().BeGreaterThanOrEqualTo(0.0);
         }

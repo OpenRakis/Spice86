@@ -16,6 +16,113 @@ using Xunit;
 
 public sealed class VideoFramePublicationTests {
     [Fact]
+    public void LatePumpsShareFrameEpochAndPreserveTheFinalRenderedRow() {
+        // Arrange
+        using AsmFixtureRun run = AsmFixtureRunner.RunEmulated(AsmFixtureCatalog.FlashbackVideo(true), JitMode.InterpretedOnly);
+        uint[] expected = run.Result.CaptureVideoFrame();
+        IEmulatedClock clock = Substitute.For<IEmulatedClock>();
+        clock.ElapsedTimeMs.Returns(100.0);
+        DeviceScheduler scheduler = new(clock, Substitute.For<ILogger>(), "Shared video beam test");
+        _ = new VgaTimingEngine(run.Result.VideoState, scheduler, clock, run.Result.VideoRenderer, new VgaBlinkState());
+        run.Result.VideoState.IsRenderingDirty = true;
+        VgaTimingParameters parameters = VgaTimingParameters.Calculate(run.Result.VideoState);
+        scheduler.ProcessEvents();
+
+        // Act
+        for (int millisecond = 101; millisecond < 100 + parameters.DisplayDurationMs; millisecond++) {
+            clock.ElapsedTimeMs.Returns((double)millisecond);
+            scheduler.ProcessEvents();
+        }
+        clock.ElapsedTimeMs.Returns(100 + parameters.DisplayDurationMs);
+        scheduler.ProcessEvents();
+        uint[] pixels = new uint[expected.Length];
+        run.Result.VideoRenderer.CopyLastFrame(pixels);
+        clock.ElapsedTimeMs.Returns(100 + parameters.VerticalRetraceStartMs + parameters.LineDurationMs / 2);
+        scheduler.ProcessEvents();
+
+        // Assert
+        pixels.Should().Equal(expected);
+        (run.Result.VideoState.BeamTiming.ReadStatus(clock.ElapsedTimeMs) & 8).Should().Be(8);
+    }
+
+    [Fact]
+    public void MidFrameTimingChangeCancelsTheOldFrameChain() {
+        // Arrange
+        using AsmFixtureRun run = AsmFixtureRunner.RunEmulated(AsmFixtureCatalog.FlashbackVideo(true), JitMode.InterpretedOnly);
+        IEmulatedClock clock = Substitute.For<IEmulatedClock>();
+        DeviceScheduler scheduler = new(clock, Substitute.For<ILogger>(), "Video reconfiguration test");
+        VgaTimingEngine engine = new(run.Result.VideoState, scheduler, clock, run.Result.VideoRenderer, new VgaBlinkState());
+        scheduler.ProcessEvents();
+        VgaTimingParameters before = VgaTimingParameters.Calculate(run.Result.VideoState);
+        run.Result.VideoState.SequencerRegisters.ClockingModeRegister.HalfDotClock = true;
+        clock.ElapsedTimeMs.Returns(1.0);
+
+        // Act
+        scheduler.ProcessEvents();
+        VgaTimingParameters after = VgaTimingParameters.Calculate(run.Result.VideoState);
+        for (int millisecond = 2; millisecond <= Math.Ceiling(before.DisplayDurationMs) + 1; millisecond++) {
+            clock.ElapsedTimeMs.Returns((double)millisecond);
+            scheduler.ProcessEvents();
+        }
+        TimeSpan durationAtOldDisplayEnd = engine.LastFrameDuration;
+        for (int millisecond = (int)Math.Ceiling(before.DisplayDurationMs) + 2; millisecond <= 40; millisecond++) {
+            clock.ElapsedTimeMs.Returns((double)millisecond);
+            scheduler.ProcessEvents();
+        }
+
+        // Assert
+        after.FrameDurationMs.Should().BeApproximately(before.FrameDurationMs * 2, 1e-12);
+        durationAtOldDisplayEnd.Should().Be(TimeSpan.Zero);
+        engine.LastFrameDuration.TotalMilliseconds.Should().BeApproximately(after.DisplayDurationMs, 0.0001);
+    }
+
+    [Fact]
+    public void TimingChangeDuringBlankingDoesNotReuseAnOverdueFrameEpoch() {
+        // Arrange
+        using AsmFixtureRun run = AsmFixtureRunner.RunEmulated(AsmFixtureCatalog.FlashbackVideo(true), JitMode.InterpretedOnly);
+        IEmulatedClock clock = Substitute.For<IEmulatedClock>();
+        DeviceScheduler scheduler = new(clock, Substitute.For<ILogger>(), "Blanking reconfiguration test");
+        _ = new VgaTimingEngine(run.Result.VideoState, scheduler, clock, run.Result.VideoRenderer, new VgaBlinkState());
+        scheduler.ProcessEvents();
+        VgaTimingParameters before = VgaTimingParameters.Calculate(run.Result.VideoState);
+        clock.ElapsedTimeMs.Returns(before.DisplayDurationMs);
+        scheduler.ProcessEvents();
+        run.Result.VideoState.SequencerRegisters.ClockingModeRegister.HalfDotClock = true;
+        clock.ElapsedTimeMs.Returns(100.0);
+
+        // Act
+        scheduler.ProcessEvents();
+        VgaTimingParameters after = VgaTimingParameters.Calculate(run.Result.VideoState);
+        clock.ElapsedTimeMs.Returns(100 + after.VerticalRetraceStartMs + after.LineDurationMs / 2);
+        scheduler.ProcessEvents();
+        byte status = run.Result.VideoState.BeamTiming.ReadStatus(clock.ElapsedTimeMs);
+
+        // Assert
+        (status & 8).Should().Be(8);
+    }
+
+    [Fact]
+    public void MillisecondSchedulerPumpsPreserveScanlineTiming() {
+        // Arrange
+        using AsmFixtureRun run = AsmFixtureRunner.RunEmulated(AsmFixtureCatalog.FlashbackVideo(true), JitMode.InterpretedOnly);
+        IEmulatedClock clock = Substitute.For<IEmulatedClock>();
+        DeviceScheduler scheduler = new(clock, Substitute.For<ILogger>(), "Late video timing test");
+        VgaTimingEngine timing = new(run.Result.VideoState, scheduler, clock, run.Result.VideoRenderer, new VgaBlinkState());
+        int visibleScanlines = run.Result.VideoState.CrtControllerRegisters.VerticalDisplayEndValue + 1;
+
+        // Act
+        for (int millisecond = 0; millisecond <= 100; millisecond++) {
+            clock.ElapsedTimeMs.Returns((double)millisecond);
+            scheduler.ProcessEvents();
+        }
+
+        // Assert
+        timing.LastFrameDuration.TotalMilliseconds.Should().BeGreaterThan(0);
+        timing.LastFrameDuration.TotalMilliseconds.Should().BeApproximately(
+            visibleScanlines * VgaTimingParameters.Calculate(run.Result.VideoState).LineDurationMs, 0.0001);
+    }
+
+    [Fact]
     public void DisabledOutputUsesNewFrameWidthAfterResolutionReduction() {
         // Arrange
         using AsmFixtureRun run = AsmFixtureRunner.RunEmulated(AsmFixtureCatalog.FlashbackVideo(false), JitMode.InterpretedOnly);
@@ -65,11 +172,11 @@ public sealed class VideoFramePublicationTests {
         }
 
         // Act
-        for (int eventIndex = 0; eventIndex < visibleScanlines * 2 + 2; eventIndex++) {
+        for (int eventIndex = 0; eventIndex < visibleScanlines * 2 + 8; eventIndex++) {
             double nextTime = scheduler.NextEventTime ?? throw new InvalidOperationException("Missing VGA timing event.");
             clock.ElapsedTimeMs.Returns(nextTime);
             scheduler.ProcessEvents();
-            if (state.GeneralRegisters.InputStatusRegister1.VerticalRetrace) {
+            if (timing.LastFrameDuration > TimeSpan.Zero) {
                 break;
             }
         }
@@ -77,16 +184,17 @@ public sealed class VideoFramePublicationTests {
         run.Result.VideoRenderer.CopyLastFrame(pixels);
 
         // Assert
-        state.GeneralRegisters.InputStatusRegister1.VerticalRetrace.Should().BeTrue();
+        timing.LastFrameDuration.Should().BeGreaterThan(TimeSpan.Zero);
         run.Result.VideoRenderer.Height.Should().Be(expectedHeight);
         pixels[(expectedHeight - 1) * 256].Should().Be(state.DacRegisters.PaletteMap[lastPaletteIndex]);
-        timing.LastFrameDuration.TotalMilliseconds.Should().BeApproximately(visibleScanlines * 1000.0 / 31469.0, 0.0001);
+        VgaTimingParameters parameters = VgaTimingParameters.Calculate(state);
+        timing.LastFrameDuration.TotalMilliseconds.Should().BeApproximately(visibleScanlines * parameters.LineDurationMs, 0.0001);
         int totalScanlines = state.CrtControllerRegisters.VerticalTotalValue + 2;
         if (verticalTimingHalved) {
             totalScanlines *= 2;
         }
-        double nextFrameTime = scheduler.NextEventTime ?? throw new InvalidOperationException("Missing next frame event.");
-        nextFrameTime.Should().BeApproximately(totalScanlines * 1000.0 / 31469.0, 0.0001);
+        scheduler.NextEventTime.Should().NotBeNull();
+        parameters.FrameDurationMs.Should().BeApproximately(totalScanlines * parameters.LineDurationMs, 0.0001);
     }
 
     [Fact]

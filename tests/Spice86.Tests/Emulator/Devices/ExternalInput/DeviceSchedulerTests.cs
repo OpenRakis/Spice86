@@ -78,6 +78,81 @@ public sealed class DeviceSchedulerTests {
     }
 
     [Fact]
+    public void PeriodicEventsCatchUpWithoutShiftingTheirDeadline() {
+        // Arrange
+        int executions = 0;
+        void Reschedule(uint _) {
+            executions++;
+            _scheduler.AddEvent(Reschedule, 5);
+        }
+        _scheduler.AddEvent(Reschedule, 5);
+        AdvanceCycles(16);
+
+        // Act
+        _scheduler.ProcessEvents();
+
+        // Assert
+        executions.Should().Be(3);
+        _scheduler.NextEventTime.Should().Be(20);
+    }
+
+    [Fact]
+    public void OverdueZeroDelayRecurringEventYieldsUntilNextPump() {
+        // Arrange
+        int executions = 0;
+        void Reschedule(uint _) {
+            executions++;
+            _scheduler.AddEvent(Reschedule, 0);
+        }
+        _scheduler.AddEvent(Reschedule, 1);
+        AdvanceCycles(5);
+
+        // Act
+        _scheduler.ProcessEvents();
+
+        // Assert
+        executions.Should().Be(1);
+        _scheduler.NextEventTime.Should().BeGreaterThan(5);
+    }
+
+    [Fact]
+    public void LargePeriodicBacklogYieldsWithoutDroppingDeadlines() {
+        // Arrange
+        int executions = 0;
+        void Reschedule(uint _) {
+            executions++;
+            _scheduler.AddEvent(Reschedule, 1);
+        }
+        _scheduler.AddEvent(Reschedule, 1);
+        AdvanceCycles(DeviceScheduler.MaxEventsPerPump + 1);
+
+        // Act
+        _scheduler.ProcessEvents();
+
+        // Assert
+        executions.Should().Be(DeviceScheduler.MaxEventsPerPump);
+        _scheduler.NextEventTime.Should().Be(DeviceScheduler.MaxEventsPerPump + 1);
+        _scheduler.ProcessEvents();
+        executions.Should().Be(DeviceScheduler.MaxEventsPerPump + 1);
+        _scheduler.NextEventTime.Should().Be(DeviceScheduler.MaxEventsPerPump + 2);
+    }
+
+    [Fact]
+    public void CallbackFailureDoesNotLeaveSchedulerInEventService() {
+        // Arrange
+        _scheduler.AddEvent(_ => throw new InvalidOperationException("Device failed"), 1);
+        AdvanceCycles(5);
+
+        // Act
+        Action process = _scheduler.ProcessEvents;
+        process.Should().Throw<InvalidOperationException>();
+        _scheduler.AddEvent(_ => { }, 1);
+
+        // Assert
+        _scheduler.NextEventTime.Should().Be(6);
+    }
+
+    [Fact]
     public void RemoveEvents_ShouldCancelEvents() {
         bool invoked = false;
         EventHandler handler = _ => invoked = true;
@@ -177,7 +252,9 @@ public sealed class DeviceSchedulerTests {
 
         // Advance time enough to process all potential events
         AdvanceCycles(100 + eventsCount);
-        _scheduler.ProcessEvents();
+        for (int remaining = maxQueueSize; remaining > 0; remaining -= DeviceScheduler.MaxEventsPerPump) {
+            _scheduler.ProcessEvents();
+        }
 
         // Verify that only the first maxQueueSize events were executed
         executedEvents.Count.Should().Be(maxQueueSize);

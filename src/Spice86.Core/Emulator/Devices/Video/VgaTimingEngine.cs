@@ -11,7 +11,6 @@ using Spice86.Core.Emulator.VM.DeviceScheduler;
 /// </summary>
 public class VgaTimingEngine {
     private const double BlinkPeriodMs = 500.0;
-    private const double HorizontalLineDurationMs = 1000.0 / 31469.0;
 
     private readonly IVideoState _state;
     private readonly DeviceScheduler _scheduler;
@@ -19,7 +18,7 @@ public class VgaTimingEngine {
     private readonly Renderer _renderer;
     private readonly VgaBlinkState _blinkState;
 
-    private int _totalScanlines;
+    private VgaTimingParameters _timing;
     private int _visibleScanlines;
     private double _lastFrameStartMs;
     private double _activeDisplayMs;
@@ -45,69 +44,92 @@ public class VgaTimingEngine {
         _clock = clock;
         _renderer = renderer;
         _blinkState = blinkState;
+        _timing = state.BeamTiming.Refresh(0);
         _scheduler.AddEvent(OnFrameStart, 0);
         _scheduler.AddEvent(OnBlinkToggle, BlinkPeriodMs);
     }
 
-    private void RecomputeTimingParameters() {
-        int totalHeight = _state.CrtControllerRegisters.VerticalTotalValue + 2;
-        int visibleScanlines = _state.CrtControllerRegisters.VerticalDisplayEndValue + 1;
-        bool verticalTimingHalved = _state.CrtControllerRegisters.CrtModeControlRegister.VerticalTimingHalved;
-
-        _totalScanlines = totalHeight;
-        _visibleScanlines = visibleScanlines;
-
-        if (verticalTimingHalved) {
-            _totalScanlines = totalHeight * 2;
-            _visibleScanlines = visibleScanlines * 2;
-        }
-
-        int horizontalDisplayEnd = _state.CrtControllerRegisters.HorizontalDisplayEnd + 1;
-        int skew = _state.CrtControllerRegisters.HorizontalBlankingEndRegister.DisplayEnableSkew;
-        int totalWidth = _state.CrtControllerRegisters.HorizontalTotal + 3;
-        double characterClockDurationMs = HorizontalLineDurationMs / totalWidth;
-        _activeDisplayMs = (horizontalDisplayEnd + skew) * characterClockDurationMs;
-        _hblankDurationMs = HorizontalLineDurationMs - _activeDisplayMs;
-    }
-
     private void OnFrameStart(uint value) {
-        RecomputeTimingParameters();
-        _lastFrameStartMs = _clock.ElapsedTimeMs;
-
-        _state.GeneralRegisters.InputStatusRegister1.VerticalRetrace = false;
-        _state.GeneralRegisters.InputStatusRegister1.DisplayDisabled = false;
-
+        if (RestartIfTimingChanged()) {
+            return;
+        }
+        _lastFrameStartMs = _scheduler.EventTimeMs;
+        _timing = _state.BeamTiming.StartFrame(_lastFrameStartMs);
+        _visibleScanlines = Math.Min(_timing.VisibleScanlines, _timing.TotalScanlines);
+        _activeDisplayMs = _timing.HorizontalDisplayEndMs;
+        _hblankDurationMs = _timing.LineDurationMs - _activeDisplayMs;
+        UpdateBeamStatus();
         _renderer.BeginFrame();
-
-        _scheduler.AddEvent(OnScanlineActive, 0, 0);
+        _scheduler.AddEvent(OnDisplayEnd, _visibleScanlines * _timing.LineDurationMs);
+        _scheduler.AddEvent(OnFrameStart, _timing.FrameDurationMs);
+        if (_timing.VerticalRetraceStartMs < _timing.FrameDurationMs) {
+            if (_timing.VerticalRetraceStartMs > 0) {
+                _scheduler.AddEvent(OnBeamStatusChange, _timing.VerticalRetraceStartMs);
+            }
+            double retraceEndMs = _timing.VerticalRetraceEndMs % _timing.FrameDurationMs;
+            if (retraceEndMs > 0) {
+                _scheduler.AddEvent(OnBeamStatusChange, retraceEndMs);
+            }
+        }
+        OnScanlineActive(0);
     }
 
     private void OnScanlineActive(uint scanline) {
-        _state.GeneralRegisters.InputStatusRegister1.DisplayDisabled = false;
+        if (RestartIfTimingChanged()) {
+            return;
+        }
+        UpdateBeamStatus();
         _renderer.RenderScanline();
         _scheduler.AddEvent(OnScanlineHBlank, _activeDisplayMs, scanline);
     }
 
     private void OnScanlineHBlank(uint scanline) {
-        _state.GeneralRegisters.InputStatusRegister1.DisplayDisabled = true;
-
+        if (RestartIfTimingChanged()) {
+            return;
+        }
+        UpdateBeamStatus();
         if (scanline + 1 < (uint)_visibleScanlines) {
-            _scheduler.AddEvent(OnScanlineActive, _hblankDurationMs, scanline + 1);
-        } else {
-            _scheduler.AddEvent(OnVerticalRetraceStart, _hblankDurationMs);
+            if (_hblankDurationMs <= 0) {
+                OnScanlineActive(scanline + 1);
+            } else {
+                _scheduler.AddEvent(OnScanlineActive, _hblankDurationMs, scanline + 1);
+            }
         }
     }
 
-    private void OnVerticalRetraceStart(uint value) {
-        _state.GeneralRegisters.InputStatusRegister1.VerticalRetrace = true;
-        _state.GeneralRegisters.InputStatusRegister1.DisplayDisabled = true;
-        LastFrameDuration = TimeSpan.FromMilliseconds(_clock.ElapsedTimeMs - _lastFrameStartMs);
-
+    private void OnDisplayEnd(uint value) {
+        if (RestartIfTimingChanged()) {
+            return;
+        }
+        UpdateBeamStatus();
+        LastFrameDuration = TimeSpan.FromMilliseconds(_scheduler.EventTimeMs - _lastFrameStartMs);
         _renderer.CompleteFrame();
+    }
 
-        int blankingLines = _totalScanlines - _visibleScanlines;
-        double vBlankDurationMs = blankingLines * HorizontalLineDurationMs;
-        _scheduler.AddEvent(OnFrameStart, vBlankDurationMs);
+    private void OnBeamStatusChange(uint value) {
+        if (!RestartIfTimingChanged()) {
+            UpdateBeamStatus();
+        }
+    }
+
+    private void UpdateBeamStatus() {
+        _state.GeneralRegisters.InputStatusRegister1.Value = _state.BeamTiming.ReadStatus(_scheduler.EventTimeMs);
+    }
+
+    private bool RestartIfTimingChanged() {
+        VgaTimingParameters timing = _state.BeamTiming.Refresh(_clock.ElapsedTimeMs);
+        if (ReferenceEquals(timing, _timing)) {
+            return false;
+        }
+        _scheduler.RemoveEvents(OnFrameStart);
+        _scheduler.RemoveEvents(OnScanlineActive);
+        _scheduler.RemoveEvents(OnScanlineHBlank);
+        _scheduler.RemoveEvents(OnDisplayEnd);
+        _scheduler.RemoveEvents(OnBeamStatusChange);
+        _timing = timing;
+        _state.IsRenderingDirty = true;
+        _scheduler.AddEvent(OnFrameStart, 0);
+        return true;
     }
 
     private void OnBlinkToggle(uint value) {

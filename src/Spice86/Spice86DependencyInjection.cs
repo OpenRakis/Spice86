@@ -348,7 +348,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         VideoState videoState = new();
         VgaIoPortHandler vgaIoPortHandler = new(state, ioPortDispatcher,
-            loggerService, videoState, configuration.FailOnUnhandledPort);
+            loggerService, videoState, _emulatedClock, configuration.FailOnUnhandledPort);
         VgaBlinkState vgaBlinkState = new();
         IVgaRenderer256Color renderer256Color = VgaRenderer256ColorSimd.CreateBestRenderer();
         Renderer vgaRenderer = new(memory, videoState, vgaBlinkState, loggerService, renderer256Color);
@@ -566,7 +566,7 @@ public class Spice86DependencyInjection : IDisposable {
             stack, state, cfgCpu, dualPic, systemBiosInt15Handler,
             intel8042Controller, biosKeyboardBuffer, loggerService);
         Mouse mouse = new(state, sharedMouseData, dualPic,
-            configuration.Mouse, loggerService, configuration.FailOnUnhandledPort,
+            configuration.Mouse, loggerService, configuration.FailOnUnhandledPort, _emulatedClock, emulationLoopScheduler,
             inputEventHub);
         MouseDriver mouseDriver = new(state, sharedMouseData, memory, mouse,
             vgaFunctionality, loggerService,

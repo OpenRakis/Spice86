@@ -23,6 +23,24 @@ using Xunit;
 public class McpServerToolStateTests {
     private const string TestProgramName = "add";
 
+    [Fact]
+    public async Task QueuedMouseInputIsDeliveredBeforeShortProgramExitsAsync() {
+        // Arrange
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await context.InitializeAsync();
+        using JsonDocument response = await context.CallToolAsync("send_mouse_button", new Dictionary<string, object?> {
+            ["button"] = "Left",
+            ["isPressed"] = true
+        });
+
+        // Act
+        context.Spice86.ProgramExecutor.Run();
+
+        // Assert
+        McpJsonRpcAssertions.GetJsonRpcResult(response).TryGetProperty("isError", out JsonElement _).Should().BeFalse();
+        context.Spice86.Machine.MouseDriver.GetButtonPressCount(MouseButton.Left).Should().Be(1);
+    }
+
     [Theory]
     [InlineData(true, 1)]
     [InlineData(false, 0)]

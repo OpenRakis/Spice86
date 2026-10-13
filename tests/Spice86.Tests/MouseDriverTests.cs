@@ -17,6 +17,8 @@ using Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Mmu;
+using Spice86.Core.Emulator.VM.Clock;
+using Spice86.Core.Emulator.VM.DeviceScheduler;
 
 using Xunit;
 
@@ -30,7 +32,9 @@ public sealed class MouseDriverTests {
         Memory memory = new(new(), new Ram(A20Gate.EndOfHighMemoryArea), new A20Gate(false), new RealModeMmu386(), false);
         IOPortDispatcher ports = new(new(), _state, NullLogger.Instance, false);
         DualPic pic = new(ports, _state, NullLogger.Instance, false);
-        Mouse mouse = new(_state, _sharedMouseData, pic, MouseType.Ps2, NullLogger.Instance, false);
+        CyclesClock clock = new(_state, 1000, null, DateTimeOffset.UnixEpoch);
+        DeviceScheduler scheduler = new(clock, NullLogger.Instance, "Mouse driver test");
+        Mouse mouse = new(_state, _sharedMouseData, pic, MouseType.Ps2, NullLogger.Instance, false, clock, scheduler);
         IVgaFunctionality video = Substitute.For<IVgaFunctionality>();
         video.GetCurrentMode().Returns(new VgaMode(MemoryModel.Packed, 320, 200, 8, 8, 8, 0xA000, 1.0));
         _driver = new MouseDriver(_state, _sharedMouseData, memory, mouse, video, NullLogger.Instance);

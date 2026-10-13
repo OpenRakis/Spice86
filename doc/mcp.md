@@ -28,6 +28,28 @@ changing the BIOS mode record (for example, 256x224 unchained graphics).
 Pixel and scanline doubling are presentation concerns, not duplicate pixels
 in the returned framebuffer. GUI graphics retain 4:3 aspect correction.
 
+VGA input status ports follow the emulated clock and programmed beam timing,
+independently of framebuffer rendering. The status reader and frame scheduler
+share one beam epoch and register-derived model: 25.175/28.322 MHz oscillators,
+8/9-dot character clocks, `HorizontalTotal + 5`, and `VerticalTotalValue + 2`.
+The sequencer half-dot flag doubles the horizontal period; the CRTC vertical
+divide flag doubles physical vertical intervals. Blanking and retrace have
+separate wrapped counters; frame publication occurs at display
+end, not at retrace start. Timing changes invalidate old frame callbacks on the
+video scheduler's next callback; repeated or non-timing writes preserve phase.
+Late device scheduler pumps preserve periodic event deadlines rather than
+slowing hardware clocks.
+Real-time clock reads are fresh, and CPU throttling uses sub-millisecond slices
+so guest polling loops can observe short retrace pulses.
+
+MCP mouse tools and GUI mouse input use the same emulator-thread input queue,
+feeding both mouse hardware and the DOS mouse driver.
+The emulation loop drains input before each instruction. Mouse samples use the
+emulated clock and schedule deferred delivery, accumulating movement and
+button transition masks instead of discarding events inside a sample interval.
+Scheduler catch-up processes at most 1024 callbacks per pump and retains
+remaining deadlines for subsequent pumps.
+
 | Endpoint | Description |
 |----------|-------------|
 | `http://localhost:<port>/mcp` | MCP protocol endpoint (JSON-RPC over HTTP) |
