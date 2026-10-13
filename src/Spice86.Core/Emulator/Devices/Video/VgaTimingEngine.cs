@@ -89,7 +89,7 @@ public class VgaTimingEngine {
         }
         UpdateBeamStatus();
         if (scanline + 1 < (uint)_visibleScanlines) {
-            if (_hblankDurationMs == 0) {
+            if (_hblankDurationMs <= 0) {
                 OnScanlineActive(scanline + 1);
             } else {
                 _scheduler.AddEvent(OnScanlineActive, _hblankDurationMs, scanline + 1);

@@ -61,6 +61,7 @@ public sealed record VgaTimingParameters {
         }
         int verticalScale = registers.VerticalTimingHalved ? 2 : 1;
         double lineDurationMs = horizontalTotal * characterDurationMs;
+        double verticalCounterDurationMs = verticalScale * lineDurationMs;
         int blankingStart = registers.VerticalBlankingStart;
         int blankingEnd = registers.VerticalBlankingEnd & 0x7F;
         if (blankingStart != 0) {
@@ -81,11 +82,11 @@ public sealed record VgaTimingParameters {
             HorizontalRetraceEndMs = WrappedEnd(registers.HorizontalSyncStart, registers.HorizontalSyncEnd, 0x1F) * characterDurationMs,
             TotalScanlines = (registers.VerticalTotal + 2) * verticalScale,
             VisibleScanlines = (registers.VerticalDisplayEnd + 1) * verticalScale,
-            VerticalBlankingStartMs = blankingStart * verticalScale * lineDurationMs,
-            VerticalBlankingEndMs = blankingEnd * verticalScale * lineDurationMs,
-            VerticalRetraceStartMs = registers.VerticalSyncStart * verticalScale * lineDurationMs,
+            VerticalBlankingStartMs = blankingStart * verticalCounterDurationMs,
+            VerticalBlankingEndMs = blankingEnd * verticalCounterDurationMs,
+            VerticalRetraceStartMs = registers.VerticalSyncStart * verticalCounterDurationMs,
             VerticalRetraceEndMs = WrappedEnd(registers.VerticalSyncStart, registers.VerticalSyncEnd, 0x0F)
-                * verticalScale * lineDurationMs
+                * verticalCounterDurationMs
         };
     }
 
