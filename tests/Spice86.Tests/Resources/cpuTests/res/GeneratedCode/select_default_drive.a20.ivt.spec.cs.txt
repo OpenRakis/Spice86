@@ -1,6 +1,7 @@
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Microsoft.Extensions.Logging;
@@ -88,7 +89,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0106 mov DX,0x0998
         DX = 0x0998;
         // 016D:0109 out DX,AL
-        Out8(0x0998, AL);
+        EnsureIoPrivilege();
+        Out8(DX, AL);
         // 016D:010A cmp AL,0x1A
         Alu8.Sub(AL, 0x1A);
         // 016D:010C jne short 0x0130
@@ -100,7 +102,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // 016D:0112 mov DX,0x0998
             DX = 0x0998;
             // 016D:0115 out DX,AL
-            Out8(0x0998, AL);
+            EnsureIoPrivilege();
+            Out8(DX, AL);
             // 016D:0116 cmp AL,2
             Alu8.Sub(AL, 2);
             // 016D:0118 jne short 0x0130
@@ -118,7 +121,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 // 016D:0124 mov DX,0x0998
                 DX = 0x0998;
                 // 016D:0127 out DX,AL
-                Out8(0x0998, AL);
+                EnsureIoPrivilege();
+                Out8(DX, AL);
                 // 016D:0128 cmp AL,2
                 Alu8.Sub(AL, 2);
                 // 016D:012A jne short 0x0130
@@ -139,7 +143,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0132 mov DX,0x0999
         DX = 0x0999;
         // 016D:0135 out DX,AL
-        Out8(0x0999, AL);
+        EnsureIoPrivilege();
+        Out8(DX, AL);
         // 016D:0136 hlt
         return Hlt();
     }
@@ -277,6 +282,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         VerifySpeculativeEntryOrFail(cs2, 0x00A4, Signature_00A4_sti);
         // F000:00A4 sti
+        EnsureIoPrivilege();
         InterruptFlag = true;
         CheckExternalEvents(cs2, 0x00A5);
         VerifySpeculativeEntryOrFail(cs2, 0x00A5, Signature_00A5_callback);

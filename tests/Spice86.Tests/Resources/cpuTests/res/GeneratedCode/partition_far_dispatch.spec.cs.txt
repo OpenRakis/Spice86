@@ -1,6 +1,7 @@
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Microsoft.Extensions.Logging;
@@ -49,7 +50,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0000 mov AX,0x1000
         AX = 0x1000;
         // F000:0003 mov SS,AX
-        SS = 0x1000;
+        LoadSegmentRegister(2, AX);
         // F000:0005 mov SP,0x0100
         SP = 0x0100;
         // F000:0008 xor DX,DX
@@ -85,25 +86,37 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         do {
             CheckExternalEvents(cs1, 0x001C);
             // F000:001C mov BX,CX
+            BX = CX;
             // F000:001E dec BX
+            BX = Alu16.Dec(BX);
             // F000:001F shl BX,2
-            BX = (ushort)(CX - 1 << 2);
+            BX = Alu16.Shl(BX, 2);
             // F000:0022 jmp far dword ptr CS:[BX+0x45]
             ushort targetSegment_0022 = UInt16[CS, (ushort)(BX + 0x0047)];
             ushort targetOffset_0022 = UInt16[CS, (ushort)(BX + 0x45)];
-            if (targetSegment_0022 == cs1 && targetOffset_0022 == 0x0031) {
-                // F000:0031 add DX,0x0100
-                DX = Alu16.Add(DX, 0x0100);
-                // F000:0035 jmp short 0x0026
+            if (targetSegment_0022 != cs1 || targetOffset_0022 != 0x0031) {
+                goto L_0022_1;
             }
-            else {
-                if (targetSegment_0022 != cs1 || targetOffset_0022 != 0x0037) {
-                    throw FailAsUntested($"Untested far jump target {targetSegment_0022:X4}:{targetOffset_0022:X4} at F000:0022");
-                }
-                // F000:0037 add DX,0x1000
-                DX = Alu16.Add(DX, 0x1000);
-                // F000:003B jmp short 0x0026
+            ValidateFarCodeSegmentTransfer(0xF000);
+            LoadSegmentRegister(1, 0xF000);
+            goto L_0031;
+        L_0022_1:
+            if (targetSegment_0022 != cs1 || targetOffset_0022 != 0x0037) {
+                throw FailAsUntested($"Untested far jump target {targetSegment_0022:X4}:{targetOffset_0022:X4} at F000:0022");
             }
+            ValidateFarCodeSegmentTransfer(0xF000);
+            LoadSegmentRegister(1, 0xF000);
+            goto L_0037;
+        L_0031:
+            // F000:0031 add DX,0x0100
+            DX = Alu16.Add(DX, 0x0100);
+            // F000:0035 jmp short 0x0026
+            goto L_0026;
+        L_0037:
+            // F000:0037 add DX,0x1000
+            DX = Alu16.Add(DX, 0x1000);
+            // F000:003B jmp short 0x0026
+        L_0026:
             // F000:0026 loop 0x001C
             CX--;
         } while (CX != 0);

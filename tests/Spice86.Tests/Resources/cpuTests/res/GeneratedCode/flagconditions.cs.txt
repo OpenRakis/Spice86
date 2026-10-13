@@ -1,6 +1,7 @@
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Microsoft.Extensions.Logging;
@@ -50,16 +51,17 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov AX,0x1000
+        AX = 0x1000;
         // F000:0003 mov SS,AX
-        SS = 0x1000;
+        LoadSegmentRegister(2, AX);
         // F000:0005 mov SP,0x0100
         SP = 0x0100;
         // F000:0008 xor AX,AX
-        AX = 0;
+        AX = Alu16.Xor(AX, AX);
         // F000:000A mov DS,AX
-        DS = 0;
+        LoadSegmentRegister(3, AX);
         // F000:000C mov ES,AX
-        ES = 0;
+        LoadSegmentRegister(0, AX);
         // F000:000E cld
         DirectionFlag = false;
         // F000:000F mov BX,0
@@ -431,6 +433,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:0219 cmp AX,CX
             Alu16.Sub(AX, CX);
             // F000:021B sti
+            EnsureIoPrivilege();
             InterruptFlag = true;
             CheckExternalEvents(cs1, 0x021C);
             // F000:021C jb short 0x0222
@@ -439,6 +442,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 UInt8[DS, (ushort)(BX + 0x25)] = 2;
             }
             // F000:0222 cli
+            EnsureIoPrivilege();
             InterruptFlag = false;
             // F000:0223 mov byte ptr DS:[BX+0x26],1
             UInt8[DS, (ushort)(BX + 0x26)] = 1;

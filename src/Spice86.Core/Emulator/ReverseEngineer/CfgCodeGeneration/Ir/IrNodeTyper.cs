@@ -135,7 +135,7 @@ internal static class IrNodeTyper {
                     alu.Operation, alu.Width);
             case StackCallNode { Operation: StackOperation.Push or StackOperation.Leave
                     or StackOperation.PushAll or StackOperation.PopAll }:
-            case InstructionExecutionHelperCallNode or PortWriteCallNode or BoundCheckCallNode or ProcedureCallHelperNode
+            case StackEnterHelperNode or InstructionExecutionHelperCallNode or PortWriteCallNode or BoundCheckCallNode or ProcedureCallHelperNode
                 or InterruptCallHelperNode or CallbackHelperNode:
                 return call.WithArguments(arguments);
             default:

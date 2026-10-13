@@ -1,6 +1,7 @@
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Microsoft.Extensions.Logging;
@@ -37,7 +38,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:FFF0 mov SP,0x1000
         SP = 0x1000;
         // F000:FFF3 mov SS,SP
-        SS = SP;
+        LoadSegmentRegister(2, SP);
         // F000:FFF5 jmp short 0
         // F000:0000 rep movs byte ptr ES:[DI],byte ptr DS:[SI]
         while (CX != 0) {
@@ -310,11 +311,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:200F mov SI,0x3000
         SI = 0x3000;
         // F000:2012 mov AX,0xF000
+        AX = 0xF000;
         // F000:2015 mov DS,AX
-        DS = 0xF000;
+        LoadSegmentRegister(3, AX);
         // F000:2017 mov AX,0x1000
+        AX = 0x1000;
         // F000:201A mov ES,AX
-        ES = 0x1000;
+        LoadSegmentRegister(0, AX);
         // F000:201C mov DI,0
         DI = 0;
         // F000:201F rep movs byte ptr ES:[DI],byte ptr DS:[SI]
@@ -325,13 +328,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             CX--;
         }
         // F000:2021 mov DS,AX
-        DS = 0x1000;
+        LoadSegmentRegister(3, AX);
         // F000:2023 mov AX,word ptr DS:[0]
         AX = UInt16[DS, 0];
         // F000:2026 mov BP,DI
         BP = DI;
         // F000:2028 mov word ptr SS:[BP+SI],AX
-        UInt16[SS, (ushort)(BP + SI)] = AX;
+        UInt16[SS, (ushort)(BP + SI), SegmentAccessKind.Stack] = AX;
         // F000:202A jcxz short 0x202D
         if (CX != 0) {
             VerifySpeculativeEntryOrFail(cs1, 0x202C, Signature_202C_hlt);
@@ -347,8 +350,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         // F000:0809 jmp near 0x300D
         // F000:300D mov AX,0xF000
+        AX = 0xF000;
         // F000:3010 mov DS,AX
-        DS = 0xF000;
+        LoadSegmentRegister(3, AX);
         // F000:3012 mov CX,1
         CX = 1;
         // F000:3015 mov AX,0
@@ -366,14 +370,15 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             CX--;
         }
         // F000:301C mov AX,0x1000
+        AX = 0x1000;
         // F000:301F mov DS,AX
-        DS = 0x1000;
+        LoadSegmentRegister(3, AX);
         // F000:3021 mov AX,word ptr DS:[2]
         AX = UInt16[DS, 2];
         // F000:3024 mov BP,DI
         BP = DI;
         // F000:3026 mov word ptr SS:[BP+SI],AX
-        UInt16[SS, (ushort)(BP + SI)] = AX;
+        UInt16[SS, (ushort)(BP + SI), SegmentAccessKind.Stack] = AX;
         // F000:3028 jcxz short 0x302B
         if (CX != 0) {
             VerifySpeculativeEntryOrFail(cs1, 0x302A, Signature_302A_hlt);
@@ -391,7 +396,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:302F mov AX,0xF000
         AX = 0xF000;
         // F000:3032 mov DS,AX
-        DS = 0xF000;
+        LoadSegmentRegister(3, AX);
         // F000:3034 mov CX,3
         CX = 3;
         // F000:3037 rep lods AL,byte ptr DS:[SI]
@@ -418,7 +423,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:3041 mov AX,0xF000
         AX = 0xF000;
         // F000:3044 mov DS,AX
-        DS = 0xF000;
+        LoadSegmentRegister(3, AX);
         // F000:3046 mov CX,1
         CX = 1;
         // F000:3049 rep lods AX,word ptr DS:[SI]
@@ -448,7 +453,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:3055 mov AX,0x1000
         AX = 0x1000;
         // F000:3058 mov DS,AX
-        DS = 0x1000;
+        LoadSegmentRegister(3, AX);
         // F000:305A jmp near word ptr DS:[6]
         switch (UInt16[DS, 6]) {
             case 0x4000:
@@ -493,7 +498,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:401B mov AX,0xF000
         AX = 0xF000;
         // F000:401E mov DS,AX
-        DS = 0xF000;
+        LoadSegmentRegister(3, AX);
         // F000:4020 repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
         while (CX != 0) {
             bool equal_4020 = UInt8[DS, SI] == UInt8[ES, DI];
@@ -696,7 +701,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:601B mov DX,0
         DX = 0;
         // F000:601E mov DS,DX
-        DS = 0;
+        LoadSegmentRegister(3, DX);
         // F000:6020 mov word ptr DS:[4],0x1234
         UInt16[DS, 4] = 0x1234;
         // F000:6026 hlt

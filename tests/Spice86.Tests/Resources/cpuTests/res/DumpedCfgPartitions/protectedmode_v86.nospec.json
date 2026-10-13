@@ -1,0 +1,71 @@
+{
+  "partitions": [
+    {
+      "id": 1,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        50
+      ],
+      "entries": [
+        {
+          "block": 50,
+          "address": "0008:00ED",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        47
+      ],
+      "entries": [
+        {
+          "block": 47,
+          "address": "F000:00E5",
+          "kind": "functionEntry"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        38,
+        3,
+        2
+      ],
+      "entries": [
+        {
+          "block": 2,
+          "address": "F000:FFF0",
+          "kind": "executionContextEntry"
+        }
+      ]
+    }
+  ],
+  "transfers": [
+    {
+      "kind": "cpuFault",
+      "fromPartition": 2,
+      "toPartition": 1,
+      "fromBlock": 47,
+      "toBlock": 50,
+      "from": "F000:00EA",
+      "target": "0008:00ED"
+    },
+    {
+      "kind": "callOut",
+      "fromPartition": 3,
+      "toPartition": 2,
+      "fromBlock": 38,
+      "toBlock": 47,
+      "from": "0008:00DA",
+      "target": "F000:00E5"
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Microsoft.Extensions.Logging;
@@ -87,7 +88,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0103 mov AL,1
         AL = 1;
         // 016D:0105 out DX,AL
-        Out8(0x0998, AL);
+        EnsureIoPrivilege();
+        Out8(DX, AL);
         // 016D:0106 mov AH,0x2A
         AH = 0x2A;
         // 016D:0108 int 0x21
@@ -117,7 +119,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                             // 016D:0131 mov AL,2
                             AL = 2;
                             // 016D:0133 out DX,AL
-                            Out8(0x0998, AL);
+                            EnsureIoPrivilege();
+                            Out8(DX, AL);
                             // 016D:0134 mov AH,0x2B
                             AH = 0x2B;
                             // 016D:0136 mov CX,0x07E8
@@ -137,7 +140,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                 // 016D:0148 mov AL,3
                                 AL = 3;
                                 // 016D:014A out DX,AL
-                                Out8(0x0998, AL);
+                                EnsureIoPrivilege();
+                                Out8(DX, AL);
                                 // 016D:014B mov AH,0x2B
                                 AH = 0x2B;
                                 // 016D:014D mov CX,0x07BB
@@ -157,7 +161,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                     // 016D:015F mov AL,4
                                     AL = 4;
                                     // 016D:0161 out DX,AL
-                                    Out8(0x0998, AL);
+                                    EnsureIoPrivilege();
+                                    Out8(DX, AL);
                                     // 016D:0162 mov AH,0x2B
                                     AH = 0x2B;
                                     // 016D:0164 mov CX,0x07E8
@@ -177,7 +182,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                         // 016D:0176 mov AL,5
                                         AL = 5;
                                         // 016D:0178 out DX,AL
-                                        Out8(0x0998, AL);
+                                        EnsureIoPrivilege();
+                                        Out8(DX, AL);
                                         // 016D:0179 mov AH,0x2B
                                         AH = 0x2B;
                                         // 016D:017B mov CX,0x07E8
@@ -197,7 +203,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                             // 016D:018D mov AL,6
                                             AL = 6;
                                             // 016D:018F out DX,AL
-                                            Out8(0x0998, AL);
+                                            EnsureIoPrivilege();
+                                            Out8(DX, AL);
                                             // 016D:0190 mov AH,0x2C
                                             AH = 0x2C;
                                             // 016D:0192 int 0x21
@@ -223,7 +230,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                                             // 016D:01AD mov AL,7
                                                             AL = 7;
                                                             // 016D:01AF out DX,AL
-                                                            Out8(0x0998, AL);
+                                                            EnsureIoPrivilege();
+                                                            Out8(DX, AL);
                                                             // 016D:01B0 mov AH,0x2D
                                                             AH = 0x2D;
                                                             // 016D:01B2 mov CH,0x0C
@@ -245,7 +253,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                                                 // 016D:01C3 mov AL,8
                                                                 AL = 8;
                                                                 // 016D:01C5 out DX,AL
-                                                                Out8(0x0998, AL);
+                                                                EnsureIoPrivilege();
+                                                                Out8(DX, AL);
                                                                 // 016D:01C6 mov AH,0x2D
                                                                 AH = 0x2D;
                                                                 // 016D:01C8 mov CH,0x18
@@ -267,7 +276,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                                                     // 016D:01D9 mov AL,9
                                                                     AL = 9;
                                                                     // 016D:01DB out DX,AL
-                                                                    Out8(0x0998, AL);
+                                                                    EnsureIoPrivilege();
+                                                                    Out8(DX, AL);
                                                                     // 016D:01DC mov AH,0x2D
                                                                     AH = 0x2D;
                                                                     // 016D:01DE mov CH,0
@@ -289,7 +299,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                                                         // 016D:01EF mov AL,0x0A
                                                                         AL = 0x0A;
                                                                         // 016D:01F1 out DX,AL
-                                                                        Out8(0x0998, AL);
+                                                                        EnsureIoPrivilege();
+                                                                        Out8(DX, AL);
                                                                         // 016D:01F2 mov AH,0x2D
                                                                         AH = 0x2D;
                                                                         // 016D:01F4 mov CH,0
@@ -311,7 +322,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                                                             // 016D:0205 mov AL,0x0B
                                                                             AL = 0x0B;
                                                                             // 016D:0207 out DX,AL
-                                                                            Out8(0x0998, AL);
+                                                                            EnsureIoPrivilege();
+                                                                            Out8(DX, AL);
                                                                             // 016D:0208 mov AH,0x2D
                                                                             AH = 0x2D;
                                                                             // 016D:020A mov CH,0
@@ -333,7 +345,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                                                                 // 016D:021B mov AL,0
                                                                                 AL = 0;
                                                                                 // 016D:021D out DX,AL
-                                                                                Out8(0x0999, AL);
+                                                                                EnsureIoPrivilege();
+                                                                                Out8(DX, AL);
                                                                                 // 016D:021E hlt
                                                                                 return Hlt();
                                                                             }
@@ -362,7 +375,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AL = 0xFF;
         VerifySpeculativeEntryOrFail(cs1, 0x0224, Signature_0224_out);
         // 016D:0224 out DX,AL
-        Out8(0x0999, AL);
+        EnsureIoPrivilege();
+        Out8(DX, AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0225, Signature_0225_hlt);
         // 016D:0225 hlt
         return Hlt();
@@ -501,6 +515,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         VerifySpeculativeEntryOrFail(cs2, 0x00A4, Signature_00A4_sti);
         // F000:00A4 sti
+        EnsureIoPrivilege();
         InterruptFlag = true;
         CheckExternalEvents(cs2, 0x00A5);
         VerifySpeculativeEntryOrFail(cs2, 0x00A5, Signature_00A5_callback);

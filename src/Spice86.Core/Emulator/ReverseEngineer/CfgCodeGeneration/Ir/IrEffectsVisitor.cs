@@ -27,6 +27,10 @@ internal sealed class IrEffectsVisitor : ICodeGenerationAstVisitor<IrEffects> {
         new(IrValues.None, IrValues.None, IrValues.None, IrTokens.None, IrTokens.Memory, false, false);
     private static readonly IrEffects ReadWriteIo =
         new(IrValues.None, IrValues.None, IrValues.None, IrTokens.Io, IrTokens.Io, false, false);
+    // SS's runtime address width determines whether ENTER also replaces ESP/EBP's upper halves.
+    private static readonly IrEffects EnterFrame =
+        new(IrValues.Esp | IrValues.Ebp | IrValues.Ss, IrValues.Sp | IrValues.Bp,
+            IrValues.Esp | IrValues.Ebp, IrTokens.Memory, IrTokens.Memory, false, false);
     /// <summary>The registers a hardware interrupt handler can observe and clobber: every general and
     /// segment register except SP/ESP and SS (its iret restores the stack pointer). No status flag or
     /// DF: the iret restores FLAGS.</summary>
@@ -150,6 +154,7 @@ internal sealed class IrEffectsVisitor : ICodeGenerationAstVisitor<IrEffects> {
     private static IrEffects StatementCallEffect(MethodCallNode node) => node switch {
         // Descriptor caches, control registers and CPU mode are not represented by individual IR values.
         InstructionExecutionHelperCallNode => IrEffects.Unknown,
+        StackEnterHelperNode => EnterFrame,
         StackCallNode { Operation: StackOperation.Push or StackOperation.PushAll } stack
             => Pushing(stack.Width),
         StackCallNode { Operation: StackOperation.PopAll } stack => PopAll(stack.Width),

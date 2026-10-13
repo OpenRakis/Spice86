@@ -1,6 +1,7 @@
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Microsoft.Extensions.Logging;
@@ -47,7 +48,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0047 mov BP,SP
         BP = SP;
         // F000:0049 inc word ptr SS:[BP]
-        UInt16[SS, BP] = Alu16.Inc(UInt16[SS, BP]);
+        UInt16[SS, BP, SegmentAccessKind.Stack] = Alu16.Inc(UInt16[SS, BP, SegmentAccessKind.Stack]);
         // F000:004C ret near 2
         return NearRet(2);
     }
@@ -57,7 +58,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:004F mov BP,SP
         BP = SP;
         // F000:0051 inc word ptr SS:[BP]
-        UInt16[SS, BP] = Alu16.Inc(UInt16[SS, BP]);
+        UInt16[SS, BP, SegmentAccessKind.Stack] = Alu16.Inc(UInt16[SS, BP, SegmentAccessKind.Stack]);
         // F000:0054 push 0x57
         Stack.Push16(0x0057);
         // F000:0056 ret near
@@ -77,9 +78,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0000 mov AX,0
         AX = 0;
         // F000:0003 mov DS,AX
-        DS = 0;
+        LoadSegmentRegister(3, AX);
         // F000:0005 mov SS,AX
-        SS = 0;
+        LoadSegmentRegister(2, AX);
         // F000:0007 mov SP,0x0100
         SP = 0x0100;
         // F000:000A mov word ptr DS:[0x0200],0x004F

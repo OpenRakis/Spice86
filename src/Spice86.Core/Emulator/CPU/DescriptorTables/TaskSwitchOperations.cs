@@ -114,6 +114,18 @@ public static class TaskSwitchOperations {
         return new SegmentedAddress(state.CS, state.IP);
     }
 
+    /// <summary>Reads the nested task's IRET target from its caller's TSS without switching tasks.</summary>
+    public static SegmentedAddress PeekBackLinkReturnAddress(State state, IMemory memory) {
+        uint linkAddress = memory.Mmu.TranslateLinearAddress(state.Tr.DescriptorCache.Base + TaskStateSegment.LinkOffset, isWrite: false);
+        ushort callerTssSelector = memory.UInt16[linkAddress];
+        if (!DescriptorTableReader.TryReadDescriptor(callerTssSelector, state.Gdtr.Base, state.Gdtr.Limit,
+                state.Ldtr.DescriptorCache.Base, state.Ldtr.DescriptorCache.Limit,
+                address => memory[memory.Mmu.TranslateLinearAddress(address, isWrite: false)], out SegmentDescriptorCache callerTssDescriptor)) {
+            throw new CpuGeneralProtectionFaultException($"Back-link TSS selector 0x{callerTssSelector:X4} is invalid", new SegmentSelector(callerTssSelector).ErrorCode);
+        }
+        return TaskStateSegment.PeekReturnAddress(memory, callerTssDescriptor.Base);
+    }
+
     private static void ApplySnapshotSegments(State state, IMemory memory, TaskStateSegment.TssSnapshot snapshot) {
         SegmentAndControlRegisterOperations.LoadLdtr(state, memory, snapshot.LdtSelector);
         // CS must be loaded before SS: state.Cpl (used to validate the new stack segment) is derived

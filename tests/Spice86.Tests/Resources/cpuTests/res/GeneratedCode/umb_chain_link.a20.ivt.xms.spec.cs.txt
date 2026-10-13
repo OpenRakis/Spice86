@@ -1,6 +1,7 @@
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Microsoft.Extensions.Logging;
@@ -102,7 +103,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0100 mov AX,0x0040
         AX = 0x0040;
         // 016D:0103 mov ES,AX
-        ES = 0x0040;
+        LoadSegmentRegister(0, AX);
         // 016D:0105 cmp word ptr ES:[0x0013],0x0280
         flagOperand_0105 = UInt16[ES, 0x0013];
         Alu16.Sub(flagOperand_0105, 0x0280);
@@ -124,7 +125,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 // 016D:0125 jne near 0x022C
                 if (flagOperand_0121 == DX) {
                     // 016D:0129 mov ES,DX
-                    ES = DX;
+                    LoadSegmentRegister(0, DX);
                     // 016D:012B cmp byte ptr ES:[0],0x4D
                     flagOperand_012B = UInt8[ES, 0];
                     Alu8.Sub(flagOperand_012B, 0x4D);
@@ -157,7 +158,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                             // 016D:0155 mov AX,0x9FFF
                             AX = 0x9FFF;
                             // 016D:0158 mov ES,AX
-                            ES = 0x9FFF;
+                            LoadSegmentRegister(0, AX);
                             // 016D:015A cmp byte ptr ES:[0],0x4D
                             flagOperand_015A = UInt8[ES, 0];
                             Alu8.Sub(flagOperand_015A, 0x4D);
@@ -191,7 +192,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                                     // 016D:0197 mov AX,0xD000
                                                     AX = 0xD000;
                                                     // 016D:019A mov ES,AX
-                                                    ES = 0xD000;
+                                                    LoadSegmentRegister(0, AX);
                                                     // 016D:019C cmp byte ptr ES:[0],0x5A
                                                     flagOperand_019C = UInt8[ES, 0];
                                                     Alu8.Sub(flagOperand_019C, 0x5A);
@@ -240,7 +241,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                                                                 // 016D:01DB mov AX,word ptr ES:[BX-2]
                                                                                 AX = UInt16[ES, (ushort)(BX - 2)];
                                                                                 // 016D:01DF mov ES,AX
-                                                                                ES = AX;
+                                                                                LoadSegmentRegister(0, AX);
                                                                                 // 016D:01E1 mov CX,0x0020
                                                                                 CX = 0x0020;
                                                                                 do {
@@ -266,7 +267,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                                                                     // 016D:01FA inc DX
                                                                                     DX = Alu16.Inc(DX);
                                                                                     // 016D:01FB mov ES,DX
-                                                                                    ES = DX;
+                                                                                    LoadSegmentRegister(0, DX);
                                                                                     // 016D:01FD loop 0x01E4
                                                                                     CX--;
                                                                                 } while (CX != 0);
@@ -344,7 +345,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:022E mov DX,0x0999
         DX = 0x0999;
         // 016D:0231 out DX,AL
-        Out8(0x0999, AL);
+        EnsureIoPrivilege();
+        Out8(DX, AL);
         // 016D:0232 hlt
         return Hlt();
     }
@@ -482,6 +484,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         VerifySpeculativeEntryOrFail(cs2, 0x00A4, Signature_00A4_sti);
         // F000:00A4 sti
+        EnsureIoPrivilege();
         InterruptFlag = true;
         CheckExternalEvents(cs2, 0x00A5);
         VerifySpeculativeEntryOrFail(cs2, 0x00A5, Signature_00A5_callback);

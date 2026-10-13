@@ -16,13 +16,13 @@ internal static class GeneratedCodeMetricsAssertions {
 
     private static readonly Dictionary<string, (int GotoStatements, int CheckExternalEvents, int Lines,
         int AluCalls, int StatusFlagReads, int Casts)> UpperBounds = new() {
-        ["jump1.spec"] = (15, 21, 412, 0, 48, 0),
-        ["partition_cross_function_loop.spec"] = (2, 3, 88, 2, 0, 0),
-        ["rep.spec"] = (0, 12, 711, 3, 3, 61),
-        ["div.spec"] = (0, 13, 757, 43, 0, 74),
-        ["selfmodifyje.spec"] = (0, 2, 61, 1, 0, 0),
-        ["test386.failport.spec"] = (8, 18, 3844, 239, 142, 86),
-        ["flagconditions"] = (0, 6, 655, 20, 15, 137)
+        ["jump1.spec"] = (15, 21, 413, 0, 48, 0),
+        ["partition_cross_function_loop.spec"] = (2, 3, 89, 2, 0, 0),
+        ["rep.spec"] = (0, 12, 712, 3, 3, 61),
+        ["div.spec"] = (0, 13, 758, 43, 0, 74),
+        ["selfmodifyje.spec"] = (0, 2, 62, 1, 0, 0),
+        ["test386.failport.spec"] = (8, 18, 3844, 239, 142, 129),
+        ["flagconditions"] = (0, 6, 655, 21, 15, 137)
     };
 
     /// <summary>
