@@ -112,7 +112,7 @@ public static class ProtectedModeInterruptDispatcher {
             state.EIP = gate.Offset;
         }
         state.IP = (ushort)gate.Offset;
-        return new SegmentedAddress(gate.Selector, (ushort)gate.Offset);
+        return state.IpSegmentedAddress;
     }
 
     /// <summary>

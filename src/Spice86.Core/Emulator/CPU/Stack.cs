@@ -215,6 +215,12 @@ public class Stack {
         }
     }
 
+    /// <summary>Performs LEAVE with a 16-bit operand and the active stack address width.</summary>
+    public void Leave16() => Leave(false);
+
+    /// <summary>Performs LEAVE with a 32-bit operand and the active stack address width.</summary>
+    public void Leave32() => Leave(true);
+
     /// <summary>
     /// Pushes a 32 bit value on the stack
     /// </summary>

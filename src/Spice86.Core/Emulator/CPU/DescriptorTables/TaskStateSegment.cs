@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.CPU.DescriptorTables;
 
 using Spice86.Core.Emulator.Memory;
+using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
 /// The raw 32-bit TSS (Task State Segment) field layout used by hardware task switching, and the
@@ -41,6 +42,13 @@ public static class TaskStateSegment {
     /// the caller via full segment-load validation (which needs the already-updated CPL to order the
     /// loads correctly - CS before SS).</summary>
     public readonly record struct TssSnapshot(uint Eip, ushort Es, ushort Cs, ushort Ss, ushort Ds, ushort Fs, ushort Gs, ushort LdtSelector);
+
+    /// <summary>Reads a saved task's return address without loading its CPU state.</summary>
+    public static SegmentedAddress PeekReturnAddress(IMemory memory, uint tssBase) {
+        ushort cs = memory.UInt16[Lin(memory, tssBase + CsOffset, isWrite: false)];
+        ushort ip = (ushort)memory.UInt32[Lin(memory, tssBase + EipOffset, isWrite: false)];
+        return new SegmentedAddress(cs, ip);
+    }
 
     /// <summary>
     /// Writes the current CPU state into the TSS at <paramref name="tssBase"/> (the task being left),

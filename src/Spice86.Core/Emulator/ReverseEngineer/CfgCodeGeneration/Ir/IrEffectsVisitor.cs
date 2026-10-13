@@ -36,6 +36,10 @@ internal sealed class IrEffectsVisitor : ICodeGenerationAstVisitor<IrEffects> {
         new(CpuValues.Halted, CpuValues.None, CpuValues.None, IrTokens.None, IrTokens.None, false, false);
     private static readonly IrEffects WriteHalted =
         new(CpuValues.None, CpuValues.Halted, CpuValues.None, IrTokens.None, IrTokens.None, false, false);
+    // SS's runtime address width determines whether ENTER also replaces ESP/EBP's upper halves.
+    private static readonly IrEffects EnterFrame =
+        new(CpuValues.Esp | CpuValues.Ebp | CpuValues.Ss, CpuValues.Sp | CpuValues.Bp,
+            CpuValues.Esp | CpuValues.Ebp, IrTokens.Memory, IrTokens.Memory, false, false);
     private static readonly IrEffects InterruptReturnUse =
         new(CpuValues.Registers, CpuValues.None, CpuValues.None, IrTokens.All, IrTokens.None, false, false);
     private const CpuValues PopAllRegisters16 = CpuValues.Ax | CpuValues.Cx | CpuValues.Dx | CpuValues.Bx
@@ -158,6 +162,7 @@ internal sealed class IrEffectsVisitor : ICodeGenerationAstVisitor<IrEffects> {
         // Descriptor caches, control registers and CPU mode are not represented by individual IR values.
         InstructionExecutionHelperCallNode => IrEffects.Unknown,
         ProgramInterruptCallHelperNode call => ProgramInterruptCall(call),
+        StackEnterHelperNode => EnterFrame,
         StackCallNode { Operation: StackOperation.Push or StackOperation.PushAll } stack
             => Pushing(stack.Width),
         StackCallNode { Operation: StackOperation.PopAll } stack => PopAll(stack.Width),

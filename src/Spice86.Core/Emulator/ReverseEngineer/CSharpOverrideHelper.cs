@@ -2155,9 +2155,10 @@ public class CSharpOverrideHelper {
     /// Halt the program.
     /// </summary>
     /// <returns>An <see cref="Action"/> that exits the program.</returns>
+    /// <exception cref="CpuGeneralProtectionFaultException">HLT is attempted outside CPL 0.</exception>
     public Action Hlt() {
+        PrivilegeChecks.EnsureCpl0(State, "HLT");
         return () => {
-            PrivilegeChecks.EnsureCpl0(State, "HLT");
             Exit();
         };
     }
