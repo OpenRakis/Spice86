@@ -2,6 +2,7 @@
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Microsoft.Extensions.Logging;
@@ -82,6 +83,8 @@ public partial class CfgGeneratedOverrides {
         DS = ds;
         CheckExternalEvents(biosSegment, 0x0028);
         // F000:0028 jmp far F000:002E
+        ValidateFarCodeSegmentTransfer(0xF000);
+        LoadSegmentRegister(1, 0xF000);
         // F000:002E mov byte ptr DS:[0x0010],0xAA
         Segment0000Globals.Byte0010 = 0xAA;
         // F000:0033 ret far
@@ -100,6 +103,8 @@ public partial class CfgGeneratedOverrides {
         DS = ds;
         CheckExternalEvents(biosSegment, 0x0028);
         // F000:0028 jmp far F000:0034
+        ValidateFarCodeSegmentTransfer(0xF000);
+        LoadSegmentRegister(1, 0xF000);
         // F000:0034 mov byte ptr DS:[0x0011],0xBB
         Segment0000Globals.Byte0011 = 0xBB;
         // F000:0039 ret far
@@ -118,6 +123,8 @@ public partial class CfgGeneratedOverrides {
         DS = ds;
         CheckExternalEvents(biosSegment, 0x0028);
         // F000:0028 jmp far F000:003A
+        ValidateFarCodeSegmentTransfer(0xF000);
+        LoadSegmentRegister(1, 0xF000);
         // F000:003A mov byte ptr DS:[0x0012],0xCC
         Segment0000Globals.Byte0012 = 0xCC;
         // F000:003F ret far
@@ -186,16 +193,17 @@ public partial class CfgGeneratedOverrides {
         CheckExternalEvents(biosSegment, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov AX,0
+        AX = 0;
         // F000:0003 mov DS,AX
-        DS = 0;
+        LoadSegmentRegister(3, AX);
         // F000:0005 mov SS,AX
-        SS = 0;
+        LoadSegmentRegister(2, AX);
         // F000:0007 mov SP,0x0100
         SP = 0x0100;
         // F000:000A mov AX,0xF000
         AX = 0xF000;
         // F000:000D mov ES,AX
-        ES = 0xF000;
+        LoadSegmentRegister(0, AX);
         // F000:000F call near 0x0040
         NearCall(biosSegment, 0x0012, () => unknown_F000_0040_F0040(ES));
         // F000:0012 call far F000:0028

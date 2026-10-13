@@ -613,7 +613,11 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
     // printing is entirely delegated to CSharpExpressionPrinter.
     // ----------------------------------------------------------------------------------------------------
 
-    public IVisitableAstNode VisitMethodCallNode(MethodCallNode node) => node;
+    public IVisitableAstNode VisitMethodCallNode(MethodCallNode node) => node switch {
+        { PropertyPath: nameof(Stack), MethodName: nameof(Stack.Enter) } =>
+            new StackEnterHelperNode(node.Arguments.ToArray()),
+        _ => node
+    };
     public IVisitableAstNode VisitMethodCallValueNode(MethodCallValueNode node) => node;
     public IVisitableAstNode VisitRegisterNode(RegisterNode node) => node;
     public IVisitableAstNode VisitSegmentRegisterNode(SegmentRegisterNode node) => node;
