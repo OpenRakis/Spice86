@@ -1,6 +1,7 @@
 namespace Spice86.Tests.AsmFixtures;
 
 using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM;
 
@@ -14,6 +15,15 @@ internal sealed record AsmRunSettings {
 
     /// <summary>Cycle failsafe: reaching it fails the test. Not a bound on a healthy run.</summary>
     public long MaxCycles { get; init; } = 100000;
+
+    /// <summary>CPU model used for decoding, execution and flags.</summary>
+    public CpuModel CpuModel { get; init; } = CpuModel.ZET_86;
+
+    /// <summary>Whether detailed CPU logging is enabled.</summary>
+    public bool CpuHeavyLog { get; init; }
+
+    /// <summary>Size of the unified physical RAM pool in KiB.</summary>
+    public int RamSizeKb { get; init; } = Configuration.RamSizeDefaultKb;
 
     /// <summary>Whether the PIT runs during the program.</summary>
     public bool EnablePit { get; init; }

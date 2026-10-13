@@ -43,8 +43,8 @@ public class AstBuilder {
         return DataType.UnsignedFromBitWidth(bitWidth);
     }
 
-    public DataType AddressType(CfgInstruction instruction) {
-        return instruction.AddressSize32Prefix == null ? DataType.UINT16 : DataType.UINT32;
+    public DataType AddressType(BitWidth addressWidthFromPrefixes) {
+        return UType(addressWidthFromPrefixes);
     }
 
     /// <summary>

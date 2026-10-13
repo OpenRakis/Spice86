@@ -1,6 +1,7 @@
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Microsoft.Extensions.Logging;
@@ -104,7 +105,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0000 mov DX,0
         DX = 0;
         // F000:0003 mov DS,DX
-        DS = DX;
+        LoadSegmentRegister(3, DX);
         // F000:0005 mov SP,0x1000
         SP = 0x1000;
         // F000:0008 mov SP,SS

@@ -167,8 +167,17 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
         ushort? segment = TryGetConstantWord(node.TargetAddress.Segment);
         ushort? offset = TryGetConstantWord(node.TargetAddress.Offset);
         if (segment is not null && offset is not null) {
-            return Transfer.Emit(Context.ResolveEdge(node.Instruction, InstructionSuccessorType.Normal,
-                new SegmentedAddress(segment.Value, offset.Value)), CurrentMethod);
+            EmittedCode transfer = EmittedCode.Concat(
+                EmittedCode.Line($"ValidateFarCodeSegmentTransfer(0x{segment.Value:X4});"),
+                EmittedCode.Line($"LoadSegmentRegister(0x{(uint)SegmentRegisterIndex.CsIndex:X8}u, 0x{segment.Value:X4});"));
+            // A far jump observed to always fault during discovery (e.g. a privilege violation) has no
+            // Normal successor at all - only the CpuFaultWrapper's surrounding try/catch, which every real
+            // execution actually takes, has anywhere to go. There is genuinely no continuation to lower.
+            if (Context.GetSuccessorEdges(node.Instruction, InstructionSuccessorType.Normal).Count == 0) {
+                return EmittedCode.Concat(transfer, EmittedCode.Diverging(UntestedMessages.Jump(node.Instruction.Address)));
+            }
+            return EmittedCode.Concat(transfer, Transfer.Emit(Context.ResolveEdge(node.Instruction, InstructionSuccessorType.Normal,
+                new SegmentedAddress(segment.Value, offset.Value)), CurrentMethod));
         }
 
         return BuildFarRuntimeDispatch(node.Instruction, Expr(node.TargetAddress.Segment), Expr(node.TargetAddress.Offset), "jump",
@@ -176,7 +185,10 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
             // throw as the next sibling (unlike the near switch, whose `break` exits past the construct to
             // the next node). An empty matched branch would fall through the remaining checks into that
             // throw, so the adjacency-fallthrough optimization cannot apply here.
-            edge => Transfer.Emit(edge, CurrentMethod, forceSameMethodGoto: true).AsStatements());
+            edge => EmittedCode.Concat(
+                EmittedCode.Line($"ValidateFarCodeSegmentTransfer(0x{edge.Target.Address.Segment:X4});"),
+                EmittedCode.Line($"LoadSegmentRegister(0x{(uint)SegmentRegisterIndex.CsIndex:X8}u, 0x{edge.Target.Address.Segment:X4});"),
+                Transfer.Emit(edge, CurrentMethod, forceSameMethodGoto: true)).AsStatements());
     }
 
     public EmittedCode VisitCallNearNode(CallNearNode node) {
@@ -203,8 +215,24 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
         }
 
         SegmentedAddress targetAddress = new SegmentedAddress(targetSegment.Value, targetOffset.Value);
-        ResolvedCfgEdge targetEdge = Context.ResolveEdge(node.Instruction, InstructionSuccessorType.Normal, targetAddress);
-        return Transfer.EmitCallHelperAndContinuation(helperName, node.Instruction, Transfer.FunctionExpression(targetEdge), CurrentMethod, farCallTargetCs: targetSegment.Value);
+        if (Context.TryResolveEdge(node.Instruction, InstructionSuccessorType.Normal, targetAddress) is ResolvedCfgEdge targetEdge) {
+            return Transfer.EmitCallHelperAndContinuation(helperName, node.Instruction, Transfer.FunctionExpression(targetEdge), CurrentMethod, farCallTargetCs: targetSegment.Value);
+        }
+
+        // No direct-target edge was ever observed for this literal operand selector: during discovery
+        // this call always redirected through a call gate (or another selector-driven indirection) to a
+        // different real target, so the CFG edge lives there instead. There is nothing to statically
+        // resolve here - FarCall/FarCall32 perform the gate detection and dynamic dispatch themselves
+        // (mirroring InterruptCall), so the "static" function argument is unreachable by construction.
+        // The literal selector is emitted as a raw hex constant (not via GetSegmentVariable): a gate
+        // selector is never itself a segment code ever executes in, so it has no registered csN field.
+        CallContinuation gateContinuation = Context.ResolveCallContinuation(node.Instruction);
+        string neverCalledFunction = $"_ => throw FailAsUntested(\"Far call at {node.Instruction.Address} unexpectedly resolved to a direct target\")";
+        SegmentedAddress gateExpectedReturn = gateContinuation.ExpectedReturnAddress;
+        string callLine = $"{helperName}({Context.GetSegmentVariable(gateExpectedReturn.Segment)}, 0x{gateExpectedReturn.Offset:X4}, 0x{targetSegment.Value:X4}, {neverCalledFunction});";
+        return EmittedCode.Concat(
+            EmittedCode.Line(callLine),
+            Transfer.EmitPostCallContinuation(node.Instruction, gateContinuation, CurrentMethod));
     }
 
     public EmittedCode VisitInterruptCallNode(InterruptCallNode node) {
@@ -472,7 +500,8 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
 
     public EmittedCode VisitReturnNearNode(ReturnNearNode node) => LowerReturn(NearRetExpression(node));
     public EmittedCode VisitReturnFarNode(ReturnFarNode node) => LowerReturn(FarRetExpression(node));
-    public EmittedCode VisitReturnInterruptNode(ReturnInterruptNode node) => LowerReturn("InterruptRet()");
+    public EmittedCode VisitReturnInterruptNode(ReturnInterruptNode node) =>
+        LowerReturn(node.OperandSize == BitWidth.DWORD_32 ? "InterruptRet32()" : "InterruptRet()");
 
     private static EmittedCode LowerReturn(string returnActionExpression) =>
         EmittedCode.Diverging($"return {returnActionExpression};");
@@ -569,7 +598,11 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
         string indexer = ToMemoryIndexer(node.DataType);
         string segment = Expr(node.Segment);
         CSharpFragment offset = Expr(node.Offset);
-        return Atomic($"{indexer}[{segment}, {MemoryOffset(offset)}]", node.DataType);
+        string accessKind = string.Empty;
+        if (node.Segment is SegmentRegisterNode { RegisterIndex: (int)SegmentRegisterIndex.SsIndex }) {
+            accessKind = ", SegmentAccessKind.Stack";
+        }
+        return Atomic($"{indexer}[{segment}, {MemoryOffset(offset, node.Offset.DataType)}{accessKind}]", node.DataType);
     }
 
     public EmittedCode VisitAbsolutePointerNode(AbsolutePointerNode node) =>
@@ -619,6 +652,19 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
         // right operand needs them when it binds equally or more loosely.
         string left = Parenthesize(leftFragment, precedence);
         string right = Parenthesize(rightFragment, precedence + 1);
+        if (node.BinaryOperation is BinaryOperation.LEFT_SHIFT or BinaryOperation.RIGHT_SHIFT) {
+            if (node.Right.DataType == DataType.UINT32) {
+                right = Cast(DataType.INT32, rightFragment);
+            }
+            if (node.DataType == DataType.UINT32) {
+                if (leftFragment.Constant is ConstantNode constantOperand && constantOperand.DataType == DataType.UINT32
+                    && constantOperand.Value <= int.MaxValue) {
+                    left = leftFragment.Text + "u";
+                } else {
+                    left = Cast(DataType.UINT32, leftFragment);
+                }
+            }
+        }
         // C# promotes byte/ushort/short/sbyte arithmetic to int, so the actual evaluated type is not the
         // node's semantic DataType; leave it unknown so a cast back to the operand width is never elided.
         DataType? resultType = node.DataType == DataType.BOOL ? DataType.BOOL : null;
@@ -854,14 +900,14 @@ internal sealed class CSharpAstEmitter : IAstVisitor<EmittedCode> {
 
     /// <summary>
     /// Renders a memory-indexer offset. A constant or single register/variable offset is emitted directly
-    /// (the indexer has a <c>ushort</c> overload); a compound arithmetic offset is wrapped in
-    /// <c>(ushort)(...)</c> so wrap-around matches real-mode 16-bit offset arithmetic.
+    /// (the indexer accepts 16-bit and 32-bit offsets); a compound arithmetic offset is cast to the
+    /// AST address width so wrap-around preserves both 16-bit and 32-bit addressing.
     /// </summary>
-    private static string MemoryOffset(CSharpFragment offset) {
+    private static string MemoryOffset(CSharpFragment offset, DataType addressType) {
         if (offset.Precedence >= CSharpFragment.AtomicPrecedence) {
             return offset.Text;
         }
-        return $"(ushort)({offset.Text})";
+        return Cast(addressType, offset);
     }
 
     /// <summary>

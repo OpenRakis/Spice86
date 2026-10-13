@@ -962,7 +962,7 @@ public class MachineTest {
 
     private void CompareListingWithExpected(string goldenKey, Machine machine) {
         List<string> actualLines = _dumper.ToAssemblyListing(machine.CfgCpu);
-        //WriteExpectedListing(goldenKey, actualLines);
+        // WriteExpectedListing(goldenKey, actualLines);
         List<string> expectedLines = GetExpectedListing(goldenKey);
         Assert.Equal(expectedLines, actualLines);
     }
@@ -982,6 +982,67 @@ public class MachineTest {
     [MemberData(nameof(JitModes))]
     public void Test386ButNotProtectedMode(JitMode jitMode) {
         TestOneBin(AsmFixtureCatalog.Test386(), jitMode);
+    }
+
+    [Fact]
+    public void TestProtectedModeEntry() {
+        TestOneBin(AsmFixtureCatalog.ProtectedModeEntry(), JitMode.InterpretedOnly);
+    }
+
+    [Fact]
+    public void TestUnifiedExtendedMemoryPoolIsAddressable() {
+        TestOneBin(AsmFixtureCatalog.ProtectedModeUnifiedPool(), JitMode.InterpretedOnly);
+    }
+
+    [Fact]
+    public void TestProtectedModeInstructions() {
+        TestOneBin(AsmFixtureCatalog.ProtectedModeInstructions(), JitMode.InterpretedOnly);
+    }
+
+    [Fact]
+    public void TestProtectedModePrivilegeHappyPath() {
+        TestOneBin(AsmFixtureCatalog.ProtectedModePrivilege(), JitMode.InterpretedOnly);
+    }
+
+    [Fact]
+    public void TestProtectedModeIdtDispatch() {
+        TestOneBin(AsmFixtureCatalog.ProtectedModeIdt(), JitMode.InterpretedOnly);
+    }
+
+    [Fact]
+    public void TestProtectedModeFarTransferPrivilegeViolation() {
+        TestOneBin(AsmFixtureCatalog.ProtectedModeFarPrivilege(), JitMode.InterpretedOnly);
+    }
+
+    [Fact]
+    public void TestProtectedModeCallGate() {
+        TestOneBin(AsmFixtureCatalog.ProtectedModeCallGate(), JitMode.InterpretedOnly);
+    }
+
+    [Fact]
+    public void TestProtectedModePaging() {
+        TestOneBin(AsmFixtureCatalog.ProtectedModePaging(), JitMode.InterpretedOnly);
+    }
+
+    [Fact]
+    public void TestProtectedModeTaskSwitch() {
+        TestOneBin(AsmFixtureCatalog.ProtectedModeTaskSwitch(), JitMode.InterpretedOnly);
+    }
+
+    [Fact]
+    public void TestProtectedModeV86() {
+        TestOneBin(AsmFixtureCatalog.ProtectedModeV86(), JitMode.InterpretedOnly);
+    }
+
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void Test386ProtectedMode(JitMode jitMode) {
+        TestOneBin(AsmFixtureCatalog.Test386ProtectedMode(), jitMode);
+    }
+
+    [Fact]
+    public void TestProtectedModeTaskGate() {
+        TestOneBin(AsmFixtureCatalog.ProtectedModeTaskGate(), JitMode.InterpretedOnly);
     }
 
     private static List<string> GetExpectedListing(string goldenKey) {
@@ -1009,7 +1070,7 @@ public class MachineTest {
         ExecutionContextManager contextManager = machine.CfgCpu.ExecutionContextManager;
         string actualBlocksJson = CfgBlocksTestJson.SerializeBlocks(contextManager);
         string actualPartitionsJson = CfgBlocksTestJson.SerializePartitions(contextManager);
-        //WriteExpectedCfgJson(goldenKey, actualBlocksJson, actualPartitionsJson);
+        // WriteExpectedCfgJson(goldenKey, actualBlocksJson, actualPartitionsJson);
         Assert.Equal(GetExpectedCfgJson(goldenKey, "DumpedCfgBlocks"), actualBlocksJson);
         Assert.Equal(GetExpectedCfgJson(goldenKey, "DumpedCfgPartitions"), actualPartitionsJson);
     }

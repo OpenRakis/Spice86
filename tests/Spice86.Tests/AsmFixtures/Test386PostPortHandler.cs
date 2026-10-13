@@ -13,6 +13,8 @@ using Spice86.Core.Emulator.IOPorts;
 internal sealed class Test386PostPortHandler : DefaultIOPortHandler {
     private const int PostPort = 0x999;
     private const int AsciiOutPort = 0x998;
+    // The immediate OUT instruction truncates test386's ASCII port to its low byte.
+    private const int TruncatedAsciiOutPort = 0x98;
 
     /// <summary>The POST values the program sent, in order of arrival.</summary>
     public List<ushort> PostValues { get; } = new();
@@ -28,11 +30,12 @@ internal sealed class Test386PostPortHandler : DefaultIOPortHandler {
         : base(state, true, loggerService) {
         ioPortDispatcher.AddIOPortHandler(PostPort, this);
         ioPortDispatcher.AddIOPortHandler(AsciiOutPort, this);
+        ioPortDispatcher.AddIOPortHandler(TruncatedAsciiOutPort, this);
     }
 
     /// <inheritdoc />
     public override void WriteByte(ushort port, byte value) {
-        if (port == AsciiOutPort) {
+        if (port == AsciiOutPort || port == TruncatedAsciiOutPort) {
             AsciiError += System.Text.Encoding.ASCII.GetString([value]);
         } else if (port == PostPort) {
             if (PostValues.Contains(value)) {

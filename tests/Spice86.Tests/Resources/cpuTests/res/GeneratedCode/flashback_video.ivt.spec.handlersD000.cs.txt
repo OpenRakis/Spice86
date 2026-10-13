@@ -1,6 +1,7 @@
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Microsoft.Extensions.Logging;
@@ -213,11 +214,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs2, 0xFFF0);
         // F000:FFF0 jmp near 0x4000
         // F000:4000 cli
+        EnsureIoPrivilege();
         InterruptFlag = false;
         // F000:4001 mov AX,0x1000
         AX = 0x1000;
         // F000:4004 mov SS,AX
-        SS = AX;
+        LoadSegmentRegister(2, AX);
         State.InterruptShadowing = true;
         // F000:4006 mov SP,0xFFFE
         SP = 0xFFFE;
@@ -226,59 +228,71 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:400C int 0x10
         InterruptCall(cs2, 0x400E, 0x10);
         // F000:400E cli
+        EnsureIoPrivilege();
         InterruptFlag = false;
         // F000:400F mov DX,0x03C4
         DX = 0x03C4;
         // F000:4012 mov AX,0x0604
         AX = 0x0604;
         // F000:4015 out DX,AX
+        EnsureIoPrivilege();
         Out16(DX, AX);
         // F000:4016 mov AX,0x0101
         AX = 0x0101;
         // F000:4019 out DX,AX
+        EnsureIoPrivilege();
         Out16(DX, AX);
         // F000:401A mov DX,0x03D4
         DX = 0x03D4;
         // F000:401D mov AX,0x2C11
         AX = 0x2C11;
         // F000:4020 out DX,AX
+        EnsureIoPrivilege();
         Out16(DX, AX);
         // F000:4021 mov AX,0x3F01
         AX = 0x3F01;
         // F000:4024 out DX,AX
+        EnsureIoPrivilege();
         Out16(DX, AX);
         // F000:4025 mov AX,0x3E07
         AX = 0x3E07;
         // F000:4028 out DX,AX
+        EnsureIoPrivilege();
         Out16(DX, AX);
         // F000:4029 mov AX,0x4109
         AX = 0x4109;
         // F000:402C out DX,AX
+        EnsureIoPrivilege();
         Out16(DX, AX);
         // F000:402D mov AX,0xBF12
         AX = 0xBF12;
         // F000:4030 out DX,AX
+        EnsureIoPrivilege();
         Out16(DX, AX);
         // F000:4031 mov AX,0x2013
         AX = 0x2013;
         // F000:4034 out DX,AX
+        EnsureIoPrivilege();
         Out16(DX, AX);
         // F000:4035 mov AX,0x0014
         AX = 0x0014;
         // F000:4038 out DX,AX
+        EnsureIoPrivilege();
         Out16(DX, AX);
         // F000:4039 mov AX,0xE317
         AX = 0xE317;
         // F000:403C out DX,AX
+        EnsureIoPrivilege();
         Out16(DX, AX);
         // F000:403D mov AX,0xFF18
         AX = 0xFF18;
         // F000:4040 out DX,AX
+        EnsureIoPrivilege();
         Out16(DX, AX);
         // F000:4041 mov AX,0xA000
         AX = 0xA000;
         // F000:4044 mov ES,AX
-        ES = AX;
+        LoadSegmentRegister(0, AX);
         // F000:4046 cld
         DirectionFlag = false;
         // F000:4047 mov DX,0x03C4
@@ -286,6 +300,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:404A mov AX,0x0F02
         AX = 0x0F02;
         // F000:404D out DX,AX
+        EnsureIoPrivilege();
         Out16(DX, AX);
         // F000:404E xor DI,DI
         DI = Alu16.Xor(DI, DI);
@@ -310,6 +325,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:405E mov AL,2
         AL = 2;
         // F000:4060 out DX,AX
+        EnsureIoPrivilege();
         Out16(DX, AX);
         // F000:4061 xor DI,DI
         DI = Alu16.Xor(DI, DI);
@@ -392,60 +408,71 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:409E xor AX,AX
         AX = Alu16.Xor(AX, AX);
         // F000:40A0 mov DS,AX
-        DS = AX;
+        LoadSegmentRegister(3, AX);
         // F000:40A2 mov AH,byte ptr DS:[0x0503]
         AH = UInt8[DS, 0x0503];
         // F000:40A6 mov AL,0x0C
         AL = 0x0C;
         // F000:40A8 out DX,AX
+        EnsureIoPrivilege();
         Out16(DX, AX);
         // F000:40A9 mov AX,0x000D
         AX = 0x000D;
         // F000:40AC out DX,AX
+        EnsureIoPrivilege();
         Out16(DX, AX);
         // F000:40AD mov AH,byte ptr DS:[0x0501]
         AH = UInt8[DS, 0x0501];
         // F000:40B1 mov AL,9
         AL = 9;
         // F000:40B3 out DX,AX
+        EnsureIoPrivilege();
         Out16(DX, AX);
         // F000:40B4 mov AH,byte ptr DS:[0x0502]
         AH = UInt8[DS, 0x0502];
         // F000:40B8 mov AL,0x18
         AL = 0x18;
         // F000:40BA out DX,AX
+        EnsureIoPrivilege();
         Out16(DX, AX);
         // F000:40BB mov AH,byte ptr DS:[0x0504]
         AH = UInt8[DS, 0x0504];
         // F000:40BF mov AL,7
         AL = 7;
         // F000:40C1 out DX,AX
+        EnsureIoPrivilege();
         Out16(DX, AX);
         // F000:40C2 mov DX,0x03DA
         DX = 0x03DA;
         // F000:40C5 in AL,DX
+        EnsureIoPrivilege();
         AL = In8(DX);
         // F000:40C6 mov DX,0x03C0
         DX = 0x03C0;
         // F000:40C9 mov AL,0x30
         AL = 0x30;
         // F000:40CB out DX,AL
+        EnsureIoPrivilege();
         Out8(DX, AL);
         // F000:40CC mov AL,0x61
         AL = 0x61;
         // F000:40CE out DX,AL
+        EnsureIoPrivilege();
         Out8(DX, AL);
         // F000:40CF mov AL,0x33
         AL = 0x33;
         // F000:40D1 out DX,AL
+        EnsureIoPrivilege();
         Out8(DX, AL);
         // F000:40D2 mov AL,byte ptr DS:[0x0500]
         AL = UInt8[DS, 0x0500];
         // F000:40D5 out DX,AL
+        EnsureIoPrivilege();
         Out8(DX, AL);
         // F000:40D6 mov AL,0x20
         AL = 0x20;
         // F000:40D8 out DX,AL
+        EnsureIoPrivilege();
         Out8(DX, AL);
         // F000:40D9 hlt
         return Hlt();

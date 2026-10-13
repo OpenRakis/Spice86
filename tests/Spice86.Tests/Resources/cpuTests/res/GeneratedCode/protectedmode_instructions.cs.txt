@@ -1,0 +1,237 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+    protected readonly ushort cs2;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0x0008;
+        cs2 = 0xF000;
+
+        DefineFunction(cs2, 0xFFF0, unknown_F000_FFF0_FFFF0, name: "unknown");
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        CheckExternalEvents(cs2, 0xFFF0);
+        // F000:FFF0 jmp near 0
+        // F000:0000 mov SP,0x1000
+        SP = 0x1000;
+        // F000:0003 mov word ptr DS:[0x0608],0xFFFF
+        UInt16[DS, 0x0608] = 0xFFFF;
+        // F000:0009 mov word ptr DS:[0x060A],0
+        UInt16[DS, 0x060A] = 0;
+        // F000:000F mov byte ptr DS:[0x060C],0x0F
+        UInt8[DS, 0x060C] = 0x0F;
+        // F000:0014 mov byte ptr DS:[0x060D],0x9A
+        UInt8[DS, 0x060D] = 0x9A;
+        // F000:0019 mov byte ptr DS:[0x060E],0
+        UInt8[DS, 0x060E] = 0;
+        // F000:001E mov byte ptr DS:[0x060F],0
+        UInt8[DS, 0x060F] = 0;
+        // F000:0023 mov word ptr DS:[0x0610],0xFFFF
+        UInt16[DS, 0x0610] = 0xFFFF;
+        // F000:0029 mov word ptr DS:[0x0612],0
+        UInt16[DS, 0x0612] = 0;
+        // F000:002F mov byte ptr DS:[0x0614],0
+        UInt8[DS, 0x0614] = 0;
+        // F000:0034 mov byte ptr DS:[0x0615],0x92
+        UInt8[DS, 0x0615] = 0x92;
+        // F000:0039 mov byte ptr DS:[0x0616],0
+        UInt8[DS, 0x0616] = 0;
+        // F000:003E mov byte ptr DS:[0x0617],0
+        UInt8[DS, 0x0617] = 0;
+        // F000:0043 mov word ptr DS:[0x0618],0xFFFF
+        UInt16[DS, 0x0618] = 0xFFFF;
+        // F000:0049 mov word ptr DS:[0x061A],0
+        UInt16[DS, 0x061A] = 0;
+        // F000:004F mov byte ptr DS:[0x061C],0
+        UInt8[DS, 0x061C] = 0;
+        // F000:0054 mov byte ptr DS:[0x061D],0x92
+        UInt8[DS, 0x061D] = 0x92;
+        // F000:0059 mov byte ptr DS:[0x061E],0
+        UInt8[DS, 0x061E] = 0;
+        // F000:005E mov byte ptr DS:[0x061F],0
+        UInt8[DS, 0x061F] = 0;
+        // F000:0063 mov word ptr DS:[0x0620],0xFFFF
+        UInt16[DS, 0x0620] = 0xFFFF;
+        // F000:0069 mov word ptr DS:[0x0622],0
+        UInt16[DS, 0x0622] = 0;
+        // F000:006F mov byte ptr DS:[0x0624],0
+        UInt8[DS, 0x0624] = 0;
+        // F000:0074 mov byte ptr DS:[0x0625],0x90
+        UInt8[DS, 0x0625] = 0x90;
+        // F000:0079 mov byte ptr DS:[0x0626],0
+        UInt8[DS, 0x0626] = 0;
+        // F000:007E mov byte ptr DS:[0x0627],0
+        UInt8[DS, 0x0627] = 0;
+        // F000:0083 mov word ptr DS:[0x0628],0xFFFF
+        UInt16[DS, 0x0628] = 0xFFFF;
+        // F000:0089 mov word ptr DS:[0x062A],0
+        UInt16[DS, 0x062A] = 0;
+        // F000:008F mov byte ptr DS:[0x062C],0
+        UInt8[DS, 0x062C] = 0;
+        // F000:0094 mov byte ptr DS:[0x062D],0x98
+        UInt8[DS, 0x062D] = 0x98;
+        // F000:0099 mov byte ptr DS:[0x062E],0
+        UInt8[DS, 0x062E] = 0;
+        // F000:009E mov byte ptr DS:[0x062F],0
+        UInt8[DS, 0x062F] = 0;
+        // F000:00A3 mov word ptr DS:[0x0640],0x002F
+        UInt16[DS, 0x0640] = 0x002F;
+        // F000:00A9 mov dword ptr DS:[0x0642],0x00000600
+        UInt32[DS, 0x0642] = 0x00000600;
+        // F000:00B2 lgdt dword ptr DS:[0x0640]
+        LoadGdtr(DS, 0x00000640);
+        // F000:00B7 mov EAX,0
+        EAX = ReadControlRegister(0);
+        // F000:00BA or EAX,1
+        EAX = Alu32.Or(EAX, 1);
+        // F000:00C0 mov 0,EAX
+        WriteControlRegister(0, EAX);
+        // F000:00C3 jmp far 0008:00C8
+        ValidateFarCodeSegmentTransfer(0x0008);
+        LoadSegmentRegister(0x00000001u, 0x0008);
+        // 0008:00C8 mov AX,0x0010
+        AX = 0x0010;
+        // 0008:00CB mov DS,AX
+        LoadSegmentRegister(3, AX);
+        // 0008:00CD mov AX,0x0018
+        AX = 0x0018;
+        // 0008:00D0 lldt AX
+        LoadLdtr(AX);
+        // 0008:00D3 sldt word ptr DS:[0x0700]
+        UInt16[DS, 0x0700] = StoreLdtr();
+        // 0008:00D8 ltr AX
+        LoadTr(AX);
+        // 0008:00DB str word ptr DS:[0x0702]
+        UInt16[DS, 0x0702] = StoreTr();
+        // 0008:00E0 mov AX,0x0010
+        AX = 0x0010;
+        // 0008:00E3 verr AX
+        ZeroFlag = VerifyReadable(AX);
+        // 0008:00E6 sete byte ptr DS:[0x0704]
+        if (ZeroFlag) {
+            UInt8[DS, 0x0704] = 1;
+        }
+        else {
+            UInt8[DS, 0x0704] = 0;
+        }
+        // 0008:00EB mov AX,0x0028
+        AX = 0x0028;
+        // 0008:00EE verr AX
+        ZeroFlag = VerifyReadable(AX);
+        // 0008:00F1 sete byte ptr DS:[0x0705]
+        if (ZeroFlag) {
+            UInt8[DS, 0x0705] = 1;
+        }
+        else {
+            UInt8[DS, 0x0705] = 0;
+        }
+        // 0008:00F6 mov AX,0x0010
+        AX = 0x0010;
+        // 0008:00F9 verw AX
+        ZeroFlag = VerifyWritable(AX);
+        // 0008:00FC sete byte ptr DS:[0x0706]
+        if (ZeroFlag) {
+            UInt8[DS, 0x0706] = 1;
+        }
+        else {
+            UInt8[DS, 0x0706] = 0;
+        }
+        // 0008:0101 mov AX,0x0020
+        AX = 0x0020;
+        // 0008:0104 verw AX
+        ZeroFlag = VerifyWritable(AX);
+        // 0008:0107 sete byte ptr DS:[0x0707]
+        if (ZeroFlag) {
+            UInt8[DS, 0x0707] = 1;
+        }
+        else {
+            UInt8[DS, 0x0707] = 0;
+        }
+        // 0008:010C mov AX,0x0010
+        AX = 0x0010;
+        // 0008:010F lar CX,AX
+        if (IsSelectorValidForLar(AX)) {
+            CX = (ushort)LoadAccessRights(AX);
+            ZeroFlag = true;
+        }
+        else {
+            ZeroFlag = false;
+        }
+        // 0008:0112 mov word ptr DS:[0x0708],CX
+        UInt16[DS, 0x0708] = CX;
+        // 0008:0116 lsl DX,AX
+        if (IsSelectorValidForLsl(AX)) {
+            DX = (ushort)LoadSegmentLimit(AX);
+            ZeroFlag = true;
+        }
+        else {
+            ZeroFlag = false;
+        }
+        // 0008:0119 mov word ptr DS:[0x070A],DX
+        UInt16[DS, 0x070A] = DX;
+        // 0008:011D mov BX,8
+        BX = 8;
+        // 0008:0120 mov DX,3
+        DX = 3;
+        // 0008:0123 arpl BX,DX
+        if (WasPrivilegeLevelAdjusted(BX, DX)) {
+            ZeroFlag = true;
+            BX = AdjustRequestedPrivilegeLevel(BX, DX);
+        }
+        else {
+            ZeroFlag = false;
+        }
+        // 0008:0125 mov word ptr DS:[0x070C],BX
+        UInt16[DS, 0x070C] = BX;
+        // 0008:0129 sete byte ptr DS:[0x070E]
+        if (ZeroFlag) {
+            UInt8[DS, 0x070E] = 1;
+        }
+        else {
+            UInt8[DS, 0x070E] = 0;
+        }
+        // 0008:012E smsw word ptr DS:[0x0710]
+        UInt16[DS, 0x0710] = ReadMachineStatusWord();
+        // 0008:0133 mov DI,9
+        DI = 9;
+        // 0008:0136 lmsw DI
+        LoadMachineStatusWord(DI);
+        // 0008:0139 smsw word ptr DS:[0x0712]
+        UInt16[DS, 0x0712] = ReadMachineStatusWord();
+        // 0008:013E clts
+        Clts();
+        // 0008:0140 smsw word ptr DS:[0x0714]
+        UInt16[DS, 0x0714] = ReadMachineStatusWord();
+        // 0008:0145 mov EAX,0
+        EAX = ReadControlRegister(0);
+        // 0008:0148 and EAX,0xFFFFFFFE
+        EAX = Alu32.And(EAX, 0xFFFFFFFEu);
+        // 0008:014E mov 0,EAX
+        WriteControlRegister(0, EAX);
+        // 0008:0151 jmp far F000:0156
+        ValidateFarCodeSegmentTransfer(0xF000);
+        LoadSegmentRegister(0x00000001u, 0xF000);
+        // F000:0156 hlt
+        return Hlt();
+    }
+
+}

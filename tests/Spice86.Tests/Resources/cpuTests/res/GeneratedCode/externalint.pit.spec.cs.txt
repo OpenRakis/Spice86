@@ -1,6 +1,7 @@
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Microsoft.Extensions.Logging;
@@ -35,6 +36,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0043 mov AL,0x20
         AL = 0x20;
         // F000:0045 out 0x20,AL
+        EnsureIoPrivilege();
         Out8(0x0020, AL);
         // F000:0047 pop AX
         AX = Stack.Pop16();
@@ -48,7 +50,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0000 mov AX,0
         AX = 0;
         // F000:0003 mov SS,AX
-        SS = AX;
+        LoadSegmentRegister(2, AX);
         State.InterruptShadowing = true;
         // F000:0005 mov SP,2
         SP = 2;
@@ -61,20 +63,25 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0015 mov AL,0x36
         AL = 0x36;
         // F000:0017 out 0x43,AL
+        EnsureIoPrivilege();
         Out8(0x0043, AL);
         // F000:0019 mov AL,0x51
         AL = 0x51;
         // F000:001B out 0x40,AL
+        EnsureIoPrivilege();
         Out8(0x0040, AL);
         // F000:001D mov AL,0x22
         AL = 0x22;
         // F000:001F out 0x40,AL
+        EnsureIoPrivilege();
         Out8(0x0040, AL);
         // F000:0021 mov AL,0
         AL = 0;
         // F000:0023 out 0x21,AL
+        EnsureIoPrivilege();
         Out8(0x0021, AL);
         // F000:0025 sti
+        EnsureIoPrivilege();
         if (!InterruptFlag) {
             State.InterruptShadowing = true;
         }

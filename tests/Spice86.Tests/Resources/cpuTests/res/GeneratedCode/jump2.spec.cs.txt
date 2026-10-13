@@ -1,6 +1,7 @@
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Microsoft.Extensions.Logging;
@@ -41,7 +42,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0000 mov BX,0xF000
         BX = 0xF000;
         // F000:0003 mov DS,BX
-        DS = BX;
+        LoadSegmentRegister(3, BX);
         // F000:0005 mov AX,0x1290
         AX = 0x1290;
         // F000:0008 mov CX,5
@@ -184,12 +185,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:FFF0 mov SP,0x1000
         SP = 0x1000;
         // F000:FFF3 mov SS,SP
-        SS = SP;
+        LoadSegmentRegister(2, SP);
         State.InterruptShadowing = true;
         // F000:FFF5 call near 0
         NearCall(cs2, 0xFFF8, unknown_F000_0000_F0000);
         // F000:FFF8 mov DS,CX
-        DS = CX;
+        LoadSegmentRegister(3, CX);
         // F000:FFFA mov word ptr DS:[0],BX
         UInt16[DS, 0] = BX;
         // F000:FFFE hlt

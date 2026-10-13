@@ -1,5 +1,6 @@
 namespace Spice86.Tests;
 
+using Spice86.Core.CLI;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
@@ -96,7 +97,8 @@ internal sealed class McpIntegrationContext : IAsyncDisposable {
         bool enableEms,
         bool initializeDos,
         SbType sbType,
-        OplMode oplMode) {
+        OplMode oplMode,
+        int ramSizeKb = Configuration.RamSizeDefaultKb) {
         Spice86Creator creator = new(
             testProgramName,
             enablePit: false,
@@ -104,7 +106,8 @@ internal sealed class McpIntegrationContext : IAsyncDisposable {
             enableXms: enableXms,
             enableEms: enableEms,
             sbType: sbType,
-            oplMode: oplMode);
+            oplMode: oplMode,
+            ramSizeKb: ramSizeKb);
         Spice86DependencyInjection spice86 = creator.Create();
         EmulatorMcpServices services = spice86.McpServices;
 

@@ -69,6 +69,19 @@ public class CSharpAstEmitterFragmentTest {
     }
 
     [Fact]
+    public void StackSegmentPointerUsesStackAccessValidation() {
+        // Arrange
+        SegmentedPointerNode pointer = new(
+            DataType.UINT32, new SegmentRegisterNode(2), null, new ConstantNode(DataType.UINT32, uint.MaxValue));
+
+        // Act
+        CSharpFragment fragment = pointer.Accept(_emitter).AsExpression();
+
+        // Assert
+        fragment.Text.Should().Be("UInt32[SS, 0xFFFFFFFFu, SegmentAccessKind.Stack]");
+    }
+
+    [Fact]
     public void BinaryOperationNodeRendersParenthesizedExpression() {
         RegisterNode left = new(DataType.UINT16, 0); // AX
         ConstantNode right = new(DataType.UINT16, 0x1);
@@ -150,7 +163,7 @@ public class CSharpAstEmitterFragmentTest {
 
         CSharpFragment fragment = StackWord(offset);
 
-        fragment.Text.Should().Be("UInt16[SS, BP]");
+        fragment.Text.Should().Be("UInt16[SS, BP, SegmentAccessKind.Stack]");
     }
 
     [Fact]
@@ -160,7 +173,7 @@ public class CSharpAstEmitterFragmentTest {
 
         CSharpFragment fragment = StackWord(offset);
 
-        fragment.Text.Should().Be("UInt16[SS, (ushort)(BX + SI)]");
+        fragment.Text.Should().Be("UInt16[SS, (ushort)(BX + SI), SegmentAccessKind.Stack]");
     }
 
     [Fact]
@@ -169,7 +182,7 @@ public class CSharpAstEmitterFragmentTest {
 
         CSharpFragment fragment = StackWord(offset);
 
-        fragment.Text.Should().Be("UInt16[SS, (ushort)(BP - 0x0E)]");
+        fragment.Text.Should().Be("UInt16[SS, (ushort)(BP - 0x0E), SegmentAccessKind.Stack]");
     }
 
     [Fact]
@@ -179,7 +192,7 @@ public class CSharpAstEmitterFragmentTest {
 
         CSharpFragment fragment = StackWord(offset);
 
-        fragment.Text.Should().Be("UInt16[SS, (ushort)(BP + DI - 0x01C4)]");
+        fragment.Text.Should().Be("UInt16[SS, (ushort)(BP + DI - 0x01C4), SegmentAccessKind.Stack]");
     }
 
     [Fact]
@@ -188,7 +201,7 @@ public class CSharpAstEmitterFragmentTest {
 
         CSharpFragment fragment = StackWord(offset);
 
-        fragment.Text.Should().Be("UInt16[SS, (ushort)(BP - 0x80)]");
+        fragment.Text.Should().Be("UInt16[SS, (ushort)(BP - 0x80), SegmentAccessKind.Stack]");
     }
 
     [Fact]
@@ -198,6 +211,47 @@ public class CSharpAstEmitterFragmentTest {
         CSharpFragment fragment = sum.Accept(_emitter).AsExpression();
 
         fragment.Text.Should().Be("EBX + int.MinValue");
+    }
+
+    [Fact]
+    public void ExtendedMemoryOffsetKeepsDwordAddressWidth() {
+        // Arrange
+        BinaryOperationNode offset = new(DataType.UINT32, new ConstantNode(DataType.UINT32, 0),
+            BinaryOperation.PLUS, new ConstantNode(DataType.UINT32, 0x500000));
+
+        // Act
+        CSharpFragment fragment = StackWord(offset);
+
+        // Assert
+        fragment.Text.Should().Be("UInt16[SS, (uint)(0 + 0x00500000), SegmentAccessKind.Stack]");
+    }
+
+    [Theory]
+    [InlineData(BinaryOperation.LEFT_SHIFT, "EAX << (int)ECX")]
+    [InlineData(BinaryOperation.RIGHT_SHIFT, "EAX >> (int)ECX")]
+    public void DwordShiftCountIsConvertedToInt(BinaryOperation operation, string expected) {
+        // Arrange
+        BinaryOperationNode shift = new(DataType.UINT32, new RegisterNode(DataType.UINT32, 0),
+            operation, new RegisterNode(DataType.UINT32, 1));
+
+        // Act
+        CSharpFragment fragment = shift.Accept(_emitter).AsExpression();
+
+        // Assert
+        fragment.Text.Should().Be(expected);
+    }
+
+    [Fact]
+    public void DwordBitMaskUsesUnsignedShiftOperand() {
+        // Arrange
+        BinaryOperationNode shift = new(DataType.UINT32, new ConstantNode(DataType.UINT32, 1),
+            BinaryOperation.LEFT_SHIFT, new RegisterNode(DataType.UINT32, 1));
+
+        // Act
+        CSharpFragment fragment = shift.Accept(_emitter).AsExpression();
+
+        // Assert
+        fragment.Text.Should().Be("1u << (int)ECX");
     }
 
     private CSharpFragment StackWord(ValueNode offset) {

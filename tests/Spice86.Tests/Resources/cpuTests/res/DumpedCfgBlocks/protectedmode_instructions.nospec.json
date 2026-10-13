@@ -1,0 +1,140 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "F000:FFF0",
+  "totalEntryPoints": 1,
+  "entryPointAddresses": [
+    "F000:FFF0"
+  ],
+  "lastExecutedAddress": "F000:0156",
+  "lastExecutedBlockId": 82,
+  "blocks": [
+    {
+      "id": 82,
+      "entry": "F000:0156",
+      "term": "F000:0156",
+      "pred": [
+        42
+      ],
+      "succ": [],
+      "asm": [
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 2,
+      "entry": "F000:FFF0",
+      "term": "F000:FFF0",
+      "pred": [],
+      "succ": [
+        3
+      ],
+      "asm": [
+        "E90D00|jmp near 0"
+      ]
+    },
+    {
+      "id": 42,
+      "entry": "0008:00C8",
+      "term": "0008:0151",
+      "pred": [
+        3
+      ],
+      "succ": [
+        82
+      ],
+      "asm": [
+        "B81000|mov AX,0x0010",
+        "8ED8|mov DS,AX",
+        "B81800|mov AX,0x0018",
+        "0F00D0|lldt AX",
+        "0F00060007|sldt word ptr DS:[0x0700]",
+        "0F00D8|ltr AX",
+        "0F000E0207|str word ptr DS:[0x0702]",
+        "B81000|mov AX,0x0010",
+        "0F00E0|verr AX",
+        "0F94060407|sete byte ptr DS:[0x0704]",
+        "B82800|mov AX,0x0028",
+        "0F00E0|verr AX",
+        "0F94060507|sete byte ptr DS:[0x0705]",
+        "B81000|mov AX,0x0010",
+        "0F00E8|verw AX",
+        "0F94060607|sete byte ptr DS:[0x0706]",
+        "B82000|mov AX,0x0020",
+        "0F00E8|verw AX",
+        "0F94060707|sete byte ptr DS:[0x0707]",
+        "B81000|mov AX,0x0010",
+        "0F02C8|lar CX,AX",
+        "890E0807|mov word ptr DS:[0x0708],CX",
+        "0F03D0|lsl DX,AX",
+        "89160A07|mov word ptr DS:[0x070A],DX",
+        "BB0800|mov BX,8",
+        "BA0300|mov DX,3",
+        "63D3|arpl BX,DX",
+        "891E0C07|mov word ptr DS:[0x070C],BX",
+        "0F94060E07|sete byte ptr DS:[0x070E]",
+        "0F01261007|smsw word ptr DS:[0x0710]",
+        "BF0900|mov DI,9",
+        "0F01F7|lmsw DI",
+        "0F01261207|smsw word ptr DS:[0x0712]",
+        "0F06|clts",
+        "0F01261407|smsw word ptr DS:[0x0714]",
+        "0F20C0|mov EAX,0",
+        "6625FEFFFFFF|and EAX,0xFFFFFFFE",
+        "0F22C0|mov 0,EAX",
+        "EA560100F0|jmp far F000:0156"
+      ]
+    },
+    {
+      "id": 3,
+      "entry": "F000:0000",
+      "term": "F000:00C3",
+      "pred": [
+        2
+      ],
+      "succ": [
+        42
+      ],
+      "asm": [
+        "BC0010|mov SP,0x1000",
+        "C7060806FFFF|mov word ptr DS:[0x0608],0xFFFF",
+        "C7060A060000|mov word ptr DS:[0x060A],0",
+        "C6060C060F|mov byte ptr DS:[0x060C],0x0F",
+        "C6060D069A|mov byte ptr DS:[0x060D],0x9A",
+        "C6060E0600|mov byte ptr DS:[0x060E],0",
+        "C6060F0600|mov byte ptr DS:[0x060F],0",
+        "C7061006FFFF|mov word ptr DS:[0x0610],0xFFFF",
+        "C70612060000|mov word ptr DS:[0x0612],0",
+        "C606140600|mov byte ptr DS:[0x0614],0",
+        "C606150692|mov byte ptr DS:[0x0615],0x92",
+        "C606160600|mov byte ptr DS:[0x0616],0",
+        "C606170600|mov byte ptr DS:[0x0617],0",
+        "C7061806FFFF|mov word ptr DS:[0x0618],0xFFFF",
+        "C7061A060000|mov word ptr DS:[0x061A],0",
+        "C6061C0600|mov byte ptr DS:[0x061C],0",
+        "C6061D0692|mov byte ptr DS:[0x061D],0x92",
+        "C6061E0600|mov byte ptr DS:[0x061E],0",
+        "C6061F0600|mov byte ptr DS:[0x061F],0",
+        "C7062006FFFF|mov word ptr DS:[0x0620],0xFFFF",
+        "C70622060000|mov word ptr DS:[0x0622],0",
+        "C606240600|mov byte ptr DS:[0x0624],0",
+        "C606250690|mov byte ptr DS:[0x0625],0x90",
+        "C606260600|mov byte ptr DS:[0x0626],0",
+        "C606270600|mov byte ptr DS:[0x0627],0",
+        "C7062806FFFF|mov word ptr DS:[0x0628],0xFFFF",
+        "C7062A060000|mov word ptr DS:[0x062A],0",
+        "C6062C0600|mov byte ptr DS:[0x062C],0",
+        "C6062D0698|mov byte ptr DS:[0x062D],0x98",
+        "C6062E0600|mov byte ptr DS:[0x062E],0",
+        "C6062F0600|mov byte ptr DS:[0x062F],0",
+        "C70640062F00|mov word ptr DS:[0x0640],0x002F",
+        "66C706420600060000|mov dword ptr DS:[0x0642],0x00000600",
+        "0F01164006|lgdt dword ptr DS:[0x0640]",
+        "0F20C0|mov EAX,0",
+        "660D01000000|or EAX,1",
+        "0F22C0|mov 0,EAX",
+        "EAC8000800|jmp far 0008:00C8"
+      ]
+    }
+  ],
+  "truncated": false
+}

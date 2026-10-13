@@ -54,7 +54,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0006 mov SP,0x1000
         SP = 0x1000;
         // F000:0009 mov SS,SP
-        SS = SP;
+        LoadSegmentRegister(2, SP);
         State.InterruptShadowing = true;
         // F000:000B push BX
         Stack.Push16(BX);

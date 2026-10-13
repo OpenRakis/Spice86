@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.CLI;
 
@@ -527,7 +528,7 @@ internal static class AsmFixtureCatalog {
         Test386PostPortHandler? handler = null;
         AsmRunSettings settings = new() {
             BinName = "test386",
-            MaxCycles = long.MaxValue,
+            MaxCycles = Spice86Creator.LongRunningMaxCycles,
             FailOnUnhandledPort = true,
             ConfigureMachine = machine => {
                 handler = new Test386PostPortHandler(machine.CpuState, Substitute.For<ILogger>(), machine.IoPortDispatcher);
@@ -542,6 +543,153 @@ internal static class AsmFixtureCatalog {
             postHandler.PostValues.Count.Should().Be(8, context);
             postHandler.PostValues.Last().Should().Be(0xFF, context);
         });
+    }
+
+    /// <summary>Enters protected mode, writes through a flat data selector and returns to real mode.</summary>
+    public static AsmFixture ProtectedModeEntry() {
+        return ResultFixture(ProtectedModeSettings("protectedmode_entry"), result => {
+            result.Memory.ReadRam(1)[0].Should().Be(0x42);
+            AssertReturnedToRealMode(result);
+        });
+    }
+
+    /// <summary>Writes to the unified extended RAM pool through a flat protected-mode selector.</summary>
+    public static AsmFixture ProtectedModeUnifiedPool() {
+        AsmRunSettings settings = ProtectedModeSettings("protectedmode_unified_pool") with { EnableA20Gate = true };
+        return ResultFixture(settings, result => {
+            result.Memory.ReadRam(0x500001)[0x500000].Should().Be(0x42);
+            AssertReturnedToRealMode(result);
+        });
+    }
+
+    /// <summary>Checks descriptor-query, selector-privilege and machine-status instructions.</summary>
+    public static AsmFixture ProtectedModeInstructions() {
+        return ResultFixture(ProtectedModeSettings("protectedmode_instructions"), result => {
+            AssertReturnedToRealMode(result);
+            result.Memory.UInt16[0, 0x0700].Should().Be(0x18);
+            result.Memory.UInt16[0, 0x0702].Should().Be(0x18);
+            result.Memory.UInt8[0, 0x0704].Should().Be(1);
+            result.Memory.UInt8[0, 0x0705].Should().Be(0);
+            result.Memory.UInt8[0, 0x0706].Should().Be(1);
+            result.Memory.UInt8[0, 0x0707].Should().Be(0);
+            result.Memory.UInt16[0, 0x0708].Should().Be(0x9200);
+            result.Memory.UInt16[0, 0x070A].Should().Be(0xFFFF);
+            result.Memory.UInt16[0, 0x070C].Should().Be(0x000B);
+            result.Memory.UInt8[0, 0x070E].Should().Be(1);
+            result.Memory.UInt16[0, 0x0710].Should().Be(0x0001);
+            result.Memory.UInt16[0, 0x0712].Should().Be(0x0009);
+            result.Memory.UInt16[0, 0x0714].Should().Be(0x0001);
+        });
+    }
+
+    /// <summary>Checks privileged flag instructions and the return to real mode.</summary>
+    public static AsmFixture ProtectedModePrivilege() {
+        return ResultFixture(ProtectedModeSettings("protectedmode_privilege"), result => {
+            AssertReturnedToRealMode(result);
+            result.State.InterruptFlag.Should().BeTrue();
+        });
+    }
+
+    /// <summary>Dispatches an IDT interrupt handler and resumes at its return address.</summary>
+    public static AsmFixture ProtectedModeIdt() {
+        return ResultFixture(ProtectedModeSettings("protectedmode_idt"), result => {
+            AssertReturnedToRealMode(result);
+            result.Memory.ReadRam(3)[2].Should().Be(0x99);
+            result.Memory.ReadRam(4)[3].Should().Be(0x77);
+        });
+    }
+
+    /// <summary>Rejects a far transfer with a general protection fault.</summary>
+    public static AsmFixture ProtectedModeFarPrivilege() {
+        return ResultFixture(ProtectedModeSettings("protectedmode_far_privilege"), result =>
+            result.Memory.ReadRam(5)[4].Should().Be(0xDD));
+    }
+
+    /// <summary>Transfers from ring three through a call gate and returns to the caller.</summary>
+    public static AsmFixture ProtectedModeCallGate() {
+        return ResultFixture(ProtectedModeSettings("protectedmode_callgate"), result => {
+            AssertReturnedToRealMode(result);
+            result.Memory.ReadRam(7)[6].Should().Be(0xAB);
+            result.Memory.ReadRam(8)[7].Should().Be(0xCD);
+            result.Memory.ReadRam(9)[8].Should().Be(0xEF);
+        });
+    }
+
+    /// <summary>Checks an identity-mapped access and a page fault's handler and faulting address.</summary>
+    public static AsmFixture ProtectedModePaging() {
+        return ResultFixture(ProtectedModeSettings("protectedmode_paging"), result => {
+            result.State.ControlRegisters.PagingEnable.Should().BeTrue();
+            result.Memory.ReadRam(0xF0011)[0xF0010].Should().Be(0xAA);
+            result.Memory.ReadRam(0xF0021)[0xF0020].Should().Be(0xCC);
+            result.State.ControlRegisters.Cr2.Should().Be(0xF1000u);
+        });
+    }
+
+    /// <summary>Switches tasks with CALL and IRET, preserving saved registers and descriptor availability.</summary>
+    public static AsmFixture ProtectedModeTaskSwitch() {
+        return ResultFixture(ProtectedModeSettings("protectedmode_taskswitch"), result => {
+            AssertTaskRoundTrip(result);
+            result.Memory.ReadRam(0x61E)[0x61D].Should().Be(0x89);
+            result.Memory.ReadRam(0x626)[0x625].Should().Be(0x89);
+        });
+    }
+
+    /// <summary>Executes a virtual-8086 task and reflects its general protection fault to ring zero.</summary>
+    public static AsmFixture ProtectedModeV86() {
+        return ResultFixture(ProtectedModeSettings("protectedmode_v86"), result => {
+            result.Memory.ReadRam(0xF0031)[0xF0030].Should().Be(0x11);
+            result.Memory.ReadRam(0xF0035)[0xF0034].Should().Be(0x44);
+            result.Memory.ReadRam(0xF0037)[0xF0036].Should().Be(0x55);
+        });
+    }
+
+    /// <summary>Dispatches a task gate and restores the caller's task with IRET.</summary>
+    public static AsmFixture ProtectedModeTaskGate() {
+        return ResultFixture(ProtectedModeSettings("protectedmode_taskgate"), AssertTaskRoundTrip);
+    }
+
+    /// <summary>Runs the full protected-mode test386 ROM and checks every POST checkpoint.</summary>
+    public static AsmFixture Test386ProtectedMode() {
+        Test386PostPortHandler? handler = null;
+        AsmRunSettings settings = ProtectedModeSettings("test386_pmode") with {
+            MaxCycles = Spice86Creator.LongRunningMaxCycles,
+            FailOnUnhandledPort = true,
+            ConfigureMachine = machine => {
+                handler = new Test386PostPortHandler(machine.CpuState, Substitute.For<ILogger>(), machine.IoPortDispatcher);
+            }
+        };
+        return ResultFixture(settings, result => {
+            Test386PostPortHandler postHandler = handler
+                ?? throw new InvalidOperationException("The test386 protected-mode POST port handler was not installed.");
+            ushort[] expectedPostCheckpoints = [
+                0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+                20, 21, 22, 23, 24, 25, 26, 27, 28, 224, 238, 255
+            ];
+            postHandler.PostValues.Should().Equal(expectedPostCheckpoints,
+                $"test386_pmode ASCII error [{postHandler.AsciiError}]");
+        });
+    }
+
+    private static AsmRunSettings ProtectedModeSettings(string binName) {
+        return new AsmRunSettings {
+            BinName = binName,
+            CpuModel = CpuModel.INTEL_80386,
+            MaxCycles = 1000,
+            EnableSpeculativeCfgExploration = false
+        };
+    }
+
+    private static void AssertReturnedToRealMode(AsmFixtureResult result) {
+        result.State.ControlRegisters.ProtectionEnable.Should().BeFalse();
+        result.State.CS.Should().Be(0xF000);
+    }
+
+    private static void AssertTaskRoundTrip(AsmFixtureResult result) {
+        result.Memory.ReadRam(0xF0031)[0xF0030].Should().Be(0x11);
+        result.Memory.ReadRam(0xF0032)[0xF0031].Should().Be(0x22);
+        result.Memory.ReadRam(0xF0033)[0xF0032].Should().Be(0x33);
+        result.State.EAX.Should().Be(0x11111111u);
+        result.State.Tr.Selector.Should().Be(0x18);
     }
 
     private const uint HookCountAddress = 0x0400;

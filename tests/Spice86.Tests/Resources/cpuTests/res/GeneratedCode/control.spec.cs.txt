@@ -1,6 +1,7 @@
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Microsoft.Extensions.Logging;
@@ -31,7 +32,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0000 mov AX,0x1000
         AX = 0x1000;
         // F000:0003 mov SS,AX
-        SS = AX;
+        LoadSegmentRegister(2, AX);
         State.InterruptShadowing = true;
         // F000:0005 mov SP,0x1000
         SP = 0x1000;
@@ -47,6 +48,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:000E cld
         DirectionFlag = false;
         // F000:000F cli
+        EnsureIoPrivilege();
         InterruptFlag = false;
         // F000:0010 nop
         // F000:0011 pushf
@@ -67,6 +69,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:001A std
         DirectionFlag = true;
         // F000:001B sti
+        EnsureIoPrivilege();
         if (!InterruptFlag) {
             State.InterruptShadowing = true;
         }
@@ -79,7 +82,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:001E mov CX,0
         CX = 0;
         // F000:0021 mov DS,CX
-        DS = CX;
+        LoadSegmentRegister(3, CX);
         // F000:0023 mov word ptr DS:[0],AX
         UInt16[DS, 0] = AX;
         // F000:0026 mov word ptr DS:[2],BX

@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
@@ -24,6 +25,8 @@ public class FunctionHandler {
 
     private readonly IMemory _memory;
 
+    private readonly Stack _stack;
+
     private readonly FunctionCatalogue _functionCatalogue;
 
     /// <summary>
@@ -42,6 +45,7 @@ public class FunctionHandler {
         ILogger loggerService) {
         _memory = memory;
         _state = state;
+        _stack = new Stack(memory, state);
         _loggerService = loggerService;
         _functionCatalogue = functionCatalogue;
         UseCodeOverride = useCodeOverride;
@@ -126,7 +130,20 @@ public class FunctionHandler {
     /// <param name="returnCallType">The type of the return call.</param>
     /// <returns>The return address of the specified call type from the machine stack without removing it.</returns>
     public SegmentedAddress? PeekReturnAddressOnMachineStack(CallType returnCallType) {
-        return PeekReturnAddressOnMachineStack(returnCallType, _state.StackPhysicalAddress);
+        return returnCallType switch {
+            CallType.NEAR16 => new SegmentedAddress(_state.CS, _stack.Peek16(0)),
+            CallType.NEAR32 => new SegmentedAddress(_state.CS, (ushort)_stack.Peek32(0)),
+            CallType.FAR16 or CallType.INTERRUPT or CallType.EXTERNAL_INTERRUPT => _stack.PeekSegmentedAddress(0),
+            CallType.FAR32 => PeekFarReturn32(),
+            CallType.MACHINE => null,
+            _ => throw new ArgumentOutOfRangeException(nameof(returnCallType), returnCallType, "Unknown CallType")
+        };
+    }
+
+    private SegmentedAddress PeekFarReturn32() {
+        ushort offset = (ushort)_stack.Peek32(0);
+        ushort segment = (ushort)_stack.Peek32(4);
+        return new SegmentedAddress(segment, offset);
     }
 
     /// <summary>
@@ -181,7 +198,12 @@ public class FunctionHandler {
             return;
         }
 
-        SegmentedAddress? actualReturnAddress = PeekReturnAddressOnMachineStack(returnCallType);
+        SegmentedAddress? actualReturnAddress;
+        if (returnCallType == CallType.INTERRUPT && ret?.ExecutionAst is ReturnInterruptNode { OperandSize: BitWidth.DWORD_32 }) {
+            actualReturnAddress = PeekFarReturn32();
+        } else {
+            actualReturnAddress = PeekReturnAddressOnMachineStack(returnCallType);
+        }
         FunctionCallStackMatch? returnMatch = _callerStack.FindReturnMatch(actualReturnAddress);
         if (returnMatch == null) {
             if (ret is not null && ret.IsReturn) {

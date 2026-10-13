@@ -5,6 +5,7 @@ using FluentAssertions;
 using NSubstitute;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Mmu;
@@ -15,6 +16,54 @@ using Spice86.Shared.Interfaces;
 using Xunit;
 
 public class FunctionHandlerReturnTrackingTest {
+    [Theory]
+    [InlineData(CallType.NEAR16, false)]
+    [InlineData(CallType.NEAR16, true)]
+    [InlineData(CallType.NEAR32, false)]
+    [InlineData(CallType.NEAR32, true)]
+    [InlineData(CallType.FAR16, false)]
+    [InlineData(CallType.FAR16, true)]
+    [InlineData(CallType.FAR32, false)]
+    [InlineData(CallType.FAR32, true)]
+    public void ProtectedReturnTrackingUsesCachedStackBaseAndActivePointerWidth(CallType callType, bool wideStack) {
+        // Arrange
+        const uint stackBase = 0x50000;
+        State state = new(CpuModel.INTEL_80386) {
+            CS = 0x10,
+            SS = 0x18,
+            ESP = 0x10100
+        };
+        state.ControlRegisters.ProtectionEnable = true;
+        state.SegmentDescriptorCaches[SegmentRegisterIndex.SsIndex] =
+            new SegmentDescriptorCache(stackBase, 0xFFFFF, 0x93, wideStack, false, true);
+        Ram ram = new(A20Gate.EndOfHighMemoryArea);
+        Memory memory = new(new AddressReadWriteBreakpoints(), ram, new A20Gate(),
+            CpuMmuFactory.Create(CpuModel.INTEL_80386, state, ram), false);
+        FunctionCatalogue catalogue = new();
+        FunctionHandler handler = new(memory, state, catalogue, false, Substitute.For<ILogger>());
+        TestContext context = new(memory, state, catalogue, handler);
+        SegmentedAddress entry = new(state.CS, 0x2000);
+        SegmentedAddress expectedReturn = new(state.CS, 0x0101);
+        Stack stack = new(memory, state);
+        handler.Call(callType, entry, expectedReturn, null, "callee");
+        uint stackAddress = stackBase + stack.GetStackPointer();
+        if (callType is CallType.FAR16 or CallType.FAR32) {
+            memory.UInt32[stackAddress] = expectedReturn.Offset;
+            uint selectorOffset = callType == CallType.FAR32 ? 4u : 2u;
+            memory.UInt32[stackAddress + selectorOffset] = expectedReturn.Segment;
+        } else {
+            memory.UInt32[stackAddress] = expectedReturn.Offset;
+        }
+
+        // Act
+        context.FunctionHandler.Ret(callType, null);
+
+        // Assert
+        catalogue.FunctionInformations[entry].Returns.Should().ContainSingle();
+        catalogue.FunctionInformations[entry].UnalignedReturns.Should().BeEmpty();
+        handler.DumpCallStack().Should().BeEmpty();
+    }
+
     [Theory]
     [InlineData(CallType.NEAR16)]
     [InlineData(CallType.NEAR32)]

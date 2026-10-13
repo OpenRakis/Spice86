@@ -1,6 +1,7 @@
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Microsoft.Extensions.Logging;
@@ -38,7 +39,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         DX = 0xFFFF;
         // F000:000C mul BX
         uint result_000C = Alu16.Mul(AX, (ushort)(short)BX);
-        DX = (ushort)(result_000C >> 0x00000010);
+        DX = (ushort)((uint)result_000C >> 0x00000010);
         AX = (ushort)result_000C;
         // F000:000E mov word ptr DS:[0],AX
         UInt16[DS, 0] = AX;
@@ -52,7 +53,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AX = 0xFFFF;
         // F000:001C mul DX
         uint result_001C = Alu16.Mul(AX, (ushort)(short)DX);
-        DX = (ushort)(result_001C >> 0x00000010);
+        DX = (ushort)((uint)result_001C >> 0x00000010);
         AX = (ushort)result_001C;
         // F000:001E mov word ptr DS:[4],AX
         UInt16[DS, 4] = AX;
@@ -66,7 +67,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt16[DS, 8] = 1;
         // F000:002F mul word ptr DS:[8]
         uint result_002F = Alu16.Mul(AX, (ushort)(short)UInt16[DS, 8]);
-        DX = (ushort)(result_002F >> 0x00000010);
+        DX = (ushort)((uint)result_002F >> 0x00000010);
         AX = (ushort)result_002F;
         // F000:0033 mov word ptr DS:[0x000A],AX
         UInt16[DS, 0x000A] = AX;
@@ -80,7 +81,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt16[DS, 0x000E] = 0xFFFF;
         // F000:0044 mul word ptr DS:[0x000E]
         uint result_0044 = Alu16.Mul(AX, (ushort)(short)UInt16[DS, 0x000E]);
-        DX = (ushort)(result_0044 >> 0x00000010);
+        DX = (ushort)((uint)result_0044 >> 0x00000010);
         AX = (ushort)result_0044;
         // F000:0048 mov word ptr DS:[0x0010],AX
         UInt16[DS, 0x0010] = AX;
@@ -94,7 +95,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         BP = 0;
         // F000:0056 mul BP
         uint result_0056 = Alu16.Mul(AX, (ushort)(short)BP);
-        DX = (ushort)(result_0056 >> 0x00000010);
+        DX = (ushort)((uint)result_0056 >> 0x00000010);
         AX = (ushort)result_0056;
         // F000:0058 mov word ptr DS:[0x0014],BP
         UInt16[DS, 0x0014] = BP;
@@ -110,7 +111,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         SI = 0xEEEB;
         // F000:006A mul SI
         uint result_006A = Alu16.Mul(AX, (ushort)(short)SI);
-        DX = (ushort)(result_006A >> 0x00000010);
+        DX = (ushort)((uint)result_006A >> 0x00000010);
         AX = (ushort)result_006A;
         // F000:006C mov word ptr DS:[0x001A],SI
         UInt16[DS, 0x001A] = SI;

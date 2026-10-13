@@ -55,6 +55,7 @@ internal sealed class CfgCSharpGenerator {
         writer.Line("using Spice86.Core.CLI;");
         writer.Line("using Spice86.Core.Emulator.CPU.Exceptions;");
         writer.Line("using Spice86.Core.Emulator.Function;");
+        writer.Line("using Spice86.Core.Emulator.Memory.Mmu;");
         writer.Line("using Spice86.Core.Emulator.ReverseEngineer;");
         writer.Line("using Spice86.Core.Emulator.VM;");
         writer.Line("using Microsoft.Extensions.Logging;");

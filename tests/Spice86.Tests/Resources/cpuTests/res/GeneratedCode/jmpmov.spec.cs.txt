@@ -1,6 +1,7 @@
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Microsoft.Extensions.Logging;
@@ -34,7 +35,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:000E mov BX,0xF000
         BX = 0xF000;
         // F000:0011 mov DS,BX
-        DS = BX;
+        LoadSegmentRegister(3, BX);
         // F000:0013 mov AX,word ptr DS:[0xFFF2]
         AX = UInt16[DS, 0xFFF2];
         // F000:0016 jmp near AX
@@ -45,10 +46,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 throw FailAsUntested($"Untested near jump target 0x{AX:X4} at F000:0016");
         }
         // F000:1290 jmp far E342:EBE0
+        ValidateFarCodeSegmentTransfer(0xE342);
+        LoadSegmentRegister(0x00000001u, 0xE342);
         // E342:EBE0 mov BX,0x1000
         BX = 0x1000;
         // E342:EBE3 mov DS,BX
-        DS = BX;
+        LoadSegmentRegister(3, BX);
         // E342:EBE5 mov AH,0xFB
         AH = 0xFB;
         // E342:EBE7 mov AL,0xE1
@@ -58,7 +61,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // E342:EBEC mov word ptr DS:[0x2600],0x1001
         UInt16[DS, 0x2600] = 0x1001;
         // E342:EBF2 mov SS,word ptr DS:[0x2600]
-        SS = UInt16[DS, 0x2600];
+        LoadSegmentRegister(2, UInt16[DS, 0x2600]);
         State.InterruptShadowing = true;
         // E342:EBF6 mov word ptr DS:[0x2601],SS
         UInt16[DS, 0x2601] = SS;
@@ -71,17 +74,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // E342:EC02 mov BP,0x2506
         BP = 0x2506;
         // E342:EC05 jmp near word ptr SS:[BP+DI-22]
-        switch (UInt16[SS, (ushort)(BP + DI - 0x16)]) {
+        switch (UInt16[SS, (ushort)(BP + DI - 0x16), SegmentAccessKind.Stack]) {
             case 0xFBE1:
                 break;
             default:
-                throw FailAsUntested($"Untested near jump target 0x{UInt16[SS, (ushort)(BP + DI - 0x16)]:X4} at E342:EC05");
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[SS, (ushort)(BP + DI - 0x16), SegmentAccessKind.Stack]:X4} at E342:EC05");
         }
         // E342:FBE1 mov DX,0xF100
         DX = 0xF100;
         // E342:FBE4 mov AX,0x2536
         AX = 0x2536;
         // E342:FBE7 out DX,AX
+        EnsureIoPrivilege();
         Out16(DX, AX);
         // E342:FBE8 mov AX,0x4001
         AX = 0x4001;
@@ -106,9 +110,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // E342:FC03 mov SI,3
         SI = 3;
         // E342:FC06 jmp far dword ptr SS:[BP+SI-24]
-        ushort targetSegment_FC06 = UInt16[SS, (ushort)(BP + SI - 0x18 + 2)];
-        ushort targetOffset_FC06 = UInt16[SS, (ushort)(BP + SI - 0x18)];
+        ushort targetSegment_FC06 = UInt16[SS, (ushort)(BP + SI - 0x18 + 2), SegmentAccessKind.Stack];
+        ushort targetOffset_FC06 = UInt16[SS, (ushort)(BP + SI - 0x18), SegmentAccessKind.Stack];
         if (targetSegment_FC06 == cs2 && targetOffset_FC06 == 0x4001) {
+            ValidateFarCodeSegmentTransfer(0xF000);
+            LoadSegmentRegister(0x00000001u, 0xF000);
             goto L_4001;
         }
         throw FailAsUntested($"Untested far jump target {targetSegment_FC06:X4}:{targetOffset_FC06:X4} at E342:FC06");
@@ -118,7 +124,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:4004 mov DX,0
         DX = 0;
         // F000:4007 mov DS,DX
-        DS = DX;
+        LoadSegmentRegister(3, DX);
         // F000:4009 mov word ptr DS:[0],AX
         UInt16[DS, 0] = AX;
         // F000:400C hlt

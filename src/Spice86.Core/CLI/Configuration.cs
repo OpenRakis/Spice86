@@ -34,6 +34,21 @@ public sealed class Configuration : CommandSettings {
     public bool A20Gate { get; init; }
 
     /// <summary>
+    /// Total RAM size, in KB, from physical address 0. Backs conventional memory, the HMA, and the
+    /// unified extended-memory pool shared by XMS and EMS. Default is 16MB (16384), can be raised up
+    /// to 64MB (65536) for demanding DOS extenders.
+    /// </summary>
+    [CommandOption("--RamSizeKb <RAMSIZEKB>")]
+    [DefaultValue(RamSizeDefaultKb)]
+    public int RamSizeKb { get; init; } = RamSizeDefaultKb;
+
+    /// <summary>Default value for <see cref="RamSizeKb"/>: 16MB.</summary>
+    public const int RamSizeDefaultKb = 16 * 1024;
+
+    /// <summary>Maximum allowed value for <see cref="RamSizeKb"/>: 64MB.</summary>
+    public const int RamSizeMaxKb = 64 * 1024;
+
+    /// <summary>
     /// Gets if the program will be paused on start and stop. If <see cref="GdbPort"/> is set, the program will be paused anyway.
     /// </summary>
     [CommandOption("--Debug")]
