@@ -32,6 +32,9 @@ public class DeviceScheduler {
     private double _activeEventScheduledTime;
     private double _loopEntryTime;
 
+    /// <summary>Deadline of the active callback, or current clock time outside event service.</summary>
+    internal double EventTimeMs => _isServicingEvents ? _activeEventScheduledTime : _clock.ElapsedTimeMs;
+
     /// <summary>
     ///     Gets the scheduled time of the next queued event, or <see cref="double.MaxValue"/> if the queue is empty.
     /// </summary>

@@ -44,6 +44,7 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
         _dacRegisters = videoState.DacRegisters;
         _videoState = videoState;
         _clock = clock;
+        _videoState.BeamTiming.Refresh(0);
         InitPortHandlers(ioPortDispatcher);
     }
 
@@ -196,45 +197,7 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
     }
 
     private byte ReadBeamStatus() {
-        const int HorizontalBlankingMask = 0x3F;
-        const int VerticalRetraceEndMask = 0x0F;
-        const byte DisplayDisabledBit = 0x01;
-        const byte VerticalRetraceBit = 0x08;
-        int verticalScale = _crtRegisters.CrtModeControlRegister.VerticalTimingHalved ? 2 : 1;
-        int totalScanlines = _crtRegisters.VerticalTotalValue + 2;
-        double lineDuration = VgaTimingEngine.HorizontalLineDurationMs;
-        double elapsed = _clock.ElapsedTimeMs;
-        double verticalPosition = elapsed / (lineDuration * verticalScale) % totalScanlines;
-        int totalCharacterClocks = _crtRegisters.HorizontalTotal + 5;
-        double horizontalPosition = elapsed % lineDuration / lineDuration * totalCharacterClocks;
-
-        int retraceStart = _crtRegisters.VerticalSyncStartValue;
-        int retraceLength = (_crtRegisters.VerticalSyncEndRegister.VerticalSyncEnd - retraceStart) & VerticalRetraceEndMask;
-        if (retraceLength == 0) {
-            retraceLength = VerticalRetraceEndMask + 1;
-        }
-        int blankingStart = _crtRegisters.HorizontalBlankingStart;
-        int blankingEnd = (blankingStart & ~HorizontalBlankingMask) | _crtRegisters.HorizontalBlankingEndValue;
-        if (blankingEnd <= blankingStart) {
-            blankingEnd += HorizontalBlankingMask + 1;
-        }
-
-        byte status = (byte)(_generalRegisters.InputStatusRegister1.Value & ~(DisplayDisabledBit | VerticalRetraceBit));
-        if (IsInBeamInterval(verticalPosition, retraceStart, retraceStart + retraceLength, totalScanlines)) {
-            status |= VerticalRetraceBit;
-        }
-        if (verticalPosition >= _crtRegisters.VerticalDisplayEndValue + 1
-            || IsInBeamInterval(horizontalPosition, blankingStart, blankingEnd, totalCharacterClocks)) {
-            status |= DisplayDisabledBit;
-        }
-        return status;
-    }
-
-    private static bool IsInBeamInterval(double position, int start, int end, int period) {
-        if (position >= start && position < end) {
-            return true;
-        }
-        return end > period && position < end - period;
+        return _videoState.BeamTiming.ReadStatus(_clock.ElapsedTimeMs);
     }
 
     /// <inheritdoc />
@@ -329,6 +292,9 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
                     _loggerService.LogDebug("[{Port:X4}] Write to Sequencer register {Register}: {Value:X2} {Explained}", port, _sequencerRegisters.Address, value, _sequencerRegisters.Address.Explain(value));
                 }
                 _sequencerRegisters.WriteRegister(_sequencerRegisters.Address, value);
+                if (_sequencerRegisters.Address == SequencerRegister.ClockingMode) {
+                    _videoState.BeamTiming.Refresh(_clock.ElapsedTimeMs);
+                }
                 break;
 
             case Ports.AttributeAddress:
@@ -371,10 +337,11 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
                     _loggerService.LogTrace("Setting Video display to 0x{Value:X4}", (_graphicsRegisters.MiscellaneousGraphicsRegister.BaseAddress + _crtRegisters.ScreenStartAddress) >> 4);
                 }
                 _crtRegisters.WriteRegister(_crtRegisters.AddressRegister, value);
-
+                _videoState.BeamTiming.Refresh(_clock.ElapsedTimeMs);
                 break;
             case Ports.MiscOutputWrite:
                 _generalRegisters.MiscellaneousOutput.Value = value;
+                _videoState.BeamTiming.Refresh(_clock.ElapsedTimeMs);
                 if (_loggerService.IsEnabled(LogLevel.Debug)) {
                     _loggerService.LogDebug("[{Port:X4}] Write to MiscOutputWrite: {Value:X2} {@Explained}", port, value, _generalRegisters.MiscellaneousOutput);
                 }

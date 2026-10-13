@@ -243,6 +243,24 @@ public sealed class CgaIntegrationTests {
         video.BiosDataArea.VideoMsr.Should().Be(0x2A);
     }
 
+    [Theory]
+    [InlineData(0x03, 28322000, 0.0317774258251326, 70.08659)]
+    [InlineData(0x12, 25175000, 0.031777557100297914, 59.94048)]
+    [InlineData(0x13, 25175000, 0.031777557100297914, 70.08630)]
+    public void BiosProgrammedTimingsMatchOscillatorAndPhysicalTotals(
+        int mode, int pixelClockHz, double lineDurationMs, double refreshRateHz) {
+        // Arrange
+        VideoHarness harness = new(mode);
+
+        // Act
+        VgaTimingParameters timing = VgaTimingParameters.Calculate(harness.State);
+
+        // Assert
+        timing.PixelClockHz.Should().Be(pixelClockHz);
+        timing.LineDurationMs.Should().BeApproximately(lineDurationMs, 1e-12);
+        timing.RefreshRateHz.Should().BeApproximately(refreshRateHz, 0.00001);
+    }
+
     private sealed class VideoHarness {
         public VideoHarness(int mode) {
             Memory = new Memory(new(), new Ram(0x100000), new A20Gate(), new RealModeMmu386(), false);
