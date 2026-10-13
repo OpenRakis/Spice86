@@ -7,6 +7,7 @@ using ModelContextProtocol.Server;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
+using Spice86.Core.Emulator.Devices.Audio;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Sound.Midi;
@@ -98,6 +99,11 @@ public sealed class EmulatorMcpServices(
     /// Gets or sets the MPU-401 MIDI device used by MCP MIDI tools.
     /// </summary>
     public Midi? Midi { get; set; }
+
+    /// <summary>
+    /// Gets or sets the Gravis UltraSound device used by MCP GUS tools.
+    /// </summary>
+    public GravisUltraSound? GravisUltraSound { get; set; }
 
     /// <summary>
     /// Gets or sets the high-level VGA functionality used by video MCP tools.

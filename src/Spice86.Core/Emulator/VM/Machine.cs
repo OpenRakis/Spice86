@@ -3,6 +3,7 @@
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Devices.Cmos;
+using Spice86.Core.Emulator.Devices.Audio;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
@@ -72,9 +73,10 @@ public sealed class Machine : IDisposable {
     public Dos Dos { get; }
 
     /// <summary>
-    /// The Gravis Ultrasound sound card.
+    /// The Gravis Ultrasound sound card, or <c>null</c> when GUS emulation is disabled
+    /// via the GusEnable configuration option.
     /// </summary>
-    public GravisUltraSound GravisUltraSound { get; }
+    public GravisUltraSound? GravisUltraSound { get; }
 
     /// <summary>
     /// Gives the port read or write to the registered handler.
@@ -249,7 +251,7 @@ public sealed class Machine : IDisposable {
         State cpuState,
         Stack stack,
         Dos dos,
-        GravisUltraSound gravisUltraSound,
+        GravisUltraSound? gravisUltraSound,
         IOPortDispatcher ioPortDispatcher,
         Joystick joystick,
         Intel8042Controller keyboardController,
@@ -330,6 +332,7 @@ public sealed class Machine : IDisposable {
     private void Dispose(bool disposing) {
         if (!_disposed) {
             if (disposing) {
+                GravisUltraSound?.Dispose();
                 MidiDevice.Dispose();
                 OPL.Dispose();
                 PcSpeaker.Dispose();

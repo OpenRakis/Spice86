@@ -50,7 +50,7 @@ Spice86 also dumps Ghidra-compatible symbols, so you can **optionally** load the
 ## Dumping data
 
 | Setting | Description |
-|---------|-------------|
+| --------- | ------------- |
 | Environment Variable | `SPICE86_DUMPS_FOLDER` - Set this to control the base directory where data is dumped |
 | Command Line | Use `--RecordedDataDirectory` to specify the base dump location |
 | Default Location | Current directory if neither of the above is specified |
@@ -80,7 +80,7 @@ For detailed debugging, you can enable CPU heavy logging which records every exe
 **⚠️ Warning:** This feature has a significant performance impact and should only be used for debugging purposes.
 
 | Setting | Description |
-|---------|-------------|
+| --------- | ------------- |
 | `--CpuHeavyLog` | Enables CPU heavy logging (default: false) |
 | `--CpuHeavyLogDumpFile` | Custom path for the log file (optional). If set, will enable CpuHeavyLog as well. Default Location: `{DumpDirectory}/cpu_heavy.log` |
 | `--CpuHeavyLogExpressions` | Named expressions appended to every CPU heavy log line. Repeat the option for each expression to append (for example: `--CpuHeavyLogExpressions "life=AX+1" --CpuHeavyLogExpressions "myvalue=word ptr DS:[0x456]"`). Only active when `--CpuHeavyLog` is true. |
@@ -109,7 +109,6 @@ Spice86 -e program.exe --CpuHeavyLog \
   --CpuHeavyLogExpressions "life=AX+1" \
   --CpuHeavyLogExpressions "myvalue=word ptr DS:[0x456]"
 ```
-
 
 ## Command line options
 
@@ -266,45 +265,52 @@ Also, while in Seer, set Settings/Configuration/Assembly/Disassembly Mode to
 ## Emulator features
 
 | Component | Support Level |
-|-----------|--------------|
+| ----------- | -------------- |
 | **CPU** | 8086/8088 fully implemented and tested |
-|  | 80186 (BOUND instruction missing) |
-|  | 80286 (protected mode not implemented) |
-|  | 80386 (partial support, protected mode not implemented) |
-|  | Only 16-bit instructions fully supported |
-|  | Most 32-bit instructions implemented but not fully tested |
-|  | No FPU except detection instructions |
+| | 80186 (BOUND instruction missing) |
+| | 80286 (protected mode not implemented) |
+| | 80386 (partial support, protected mode not implemented) |
+| | Only 16-bit instructions fully supported |
+| | Most 32-bit instructions implemented but not fully tested |
+| | No FPU except detection instructions |
 | **Memory** | 1MB address space with segmented addressing |
-|  | A20 Gate support |
-|  | EMS 3.2 implemented |
-|  | XMS 4.0 is implemented |
-|  | HMA is implemented |
-|  | No paging support |
+| | A20 Gate support |
+| | EMS 3.2 implemented |
+| | XMS 4.0 is implemented |
+| | HMA is implemented |
+| | No paging support |
 | **Graphics** | Text modes, VGA, EGA, and CGA implemented |
-|  | EGA and CGA modes are best effort (you may find bugs) |
-|  | VESA VBE 1.2 is supported |
+| | EGA and CGA modes are best effort (you may find bugs) |
+| | VESA VBE 1.2 is supported |
 | **DOS** | Largely complete DOS and INT 21h implementation (DOS 5.0) |
 | **Input** | Keyboard and mouse supported |
-|  | No joystick support |
+| | No joystick support |
 | **CD-ROM** | MSCDEX and CDDA support is implemented, including CD images |
 | **Floppy** | Floppy disk emulation is implemented, including floppy images and booting on a floppy image |
 
 ## Sound support
 
 | Sound Type | Support Level | Notes |
-|------------|---------------|-------|
+| ------------ | --------------- | ------- |
 | PC Speaker | ✅ Full | Implemented |
 | Adlib/SB OPL | ✅ Full | Ported from DOSBox Staging |
 | SoundBlaster | ✅ Full | Ported from DOSBox Staging |
 | Adlib Gold | ✅ Full | Ported from DOSBox Staging |
 | MT-32 | ⚠️ Partial | Not available on macOS |
-| Gravis Ultrasound | ❌ None | Not implemented yet |
+| Gravis Ultrasound | ✅ Full | Ported from DOSBox Staging |
 | General MIDI | ✅ Full | Supported |
+
+Gravis UltraSound emulation is enabled by default. The default card is configured as
+`ULTRASND=240,3,3,5,5`; override it with `--GusBase`, `--GusDma`, and `--GusIrq`, or
+disable the card with `--GusEnable false`. Spice86 exports `ULTRASND` and `ULTRADIR` to
+the DOS environment. To use real GUS drivers and MIDI patch sets, place the driver files
+and the `MIDI` patch directory under the host folder mounted with `--CDrive`, then set
+`--GusUltradir` to their DOS-visible path (default: `C:\ULTRASND`).
 
 ## Misc
 
 | Feature | Details |
-|---------|---------|
+| --------- | --------- |
 | **C Drive** | Configurable with `--CDrive`, defaults to current folder |
 | **Program Arguments** | Pass up to 127 chars with `--ExeArgs` |
 | **Time Handling** | Real elapsed time (adjustable with `--TimeMultiplier`) or instruction-based timing with `--InstructionTimeScale` |
@@ -462,7 +468,7 @@ Spice86 includes a built-in HTTP server for quick runtime inspection and memory 
 Available endpoints:
 
 | Method | Route | Description |
-|--------|-------|-------------|
+| -------- | ------- | ------------- |
 | `GET` | `/api` | API metadata and endpoint list |
 | `GET` | `/api/status` | Current emulator status (pause state, CPU state, CS:IP, cycles, memory size) |
 | `GET` | `/api/memory/{address}/byte` | Read one byte at address |

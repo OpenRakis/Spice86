@@ -25,6 +25,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.Logging;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.Devices.Cmos;
+using Spice86.Core.Emulator.Devices.Audio;
 using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Joystick;
@@ -433,8 +434,13 @@ public class Spice86DependencyInjection : IDisposable {
             state, dmaSystem, dualPic, mixer, opl, loggerService,
             emulationLoopScheduler, _emulatedClock,
             audioRuntimeOptions);
-        GravisUltraSound gravisUltraSound = new(state, ioPortDispatcher,
-            configuration.FailOnUnhandledPort, loggerService);
+        GravisUltraSound? gravisUltraSound = null;
+        if (configuration.GusEnable is true) {
+            gravisUltraSound = new GravisUltraSound(state, ioPortDispatcher,
+                configuration.FailOnUnhandledPort, loggerService, dmaSystem, dualPic,
+                mixer, emulationLoopScheduler, _emulatedClock, audioRuntimeOptions);
+            opl.SetAdlibCommandMirror(gravisUltraSound.MirrorAdlibCommandRegister);
+        }
 
         loggerService.LogInformation("Sound devices created...");
 
@@ -477,11 +483,17 @@ public class Spice86DependencyInjection : IDisposable {
         }
 
         DosOptions dosOptions = RuntimeOptionsMapper.ToDosOptions(configuration, dosRuntimeState);
+        Dictionary<string, string> dosEnvironmentVariables = new() {
+            { "BLASTER", soundBlaster.BlasterString }
+        };
+        if (gravisUltraSound is not null) {
+            dosEnvironmentVariables.Add("ULTRASND", gravisUltraSound.UltraSndString);
+            dosEnvironmentVariables.Add("ULTRADIR", gravisUltraSound.UltraDirString);
+        }
         Dos dos = new Dos(dosOptions, memory, cfgCpu, stack,
             state, biosKeyboardBuffer,
             keyboardInt16Handler, biosDataArea, vgaFunctionality,
-            new Dictionary<string, string> {
-                { "BLASTER", soundBlaster.BlasterString } }, ioPortDispatcher, loggerService,
+            dosEnvironmentVariables, ioPortDispatcher, loggerService,
             floppyDiskTimingService,
             mixer, driveActivityNotifier, a20Gate, memoryAsmWriter, emsManager);
 
@@ -492,6 +504,17 @@ public class Spice86DependencyInjection : IDisposable {
         EmulatorMcpServices emulatorMcpServices = new(memory, state, functionCatalogue, cfgCpu,
             ioPortDispatcher, vgaRenderer, pauseHandler, emsManager, dos.Xms,
             emulatorBreakpointsManager, cfgBlocksJsonExporter, loggerService);
+        if (gravisUltraSound is not null) {
+            gravisUltraSound.Disposed += () => {
+                opl.SetAdlibCommandMirror(null);
+                emulatorMcpServices.GravisUltraSound = null;
+                bool ultraSndCleared = dos.ProcessManager.TrySetEnvironmentVariable("ULTRASND", string.Empty);
+                bool ultraDirCleared = dos.ProcessManager.TrySetEnvironmentVariable("ULTRADIR", string.Empty);
+                if (!ultraSndCleared || !ultraDirCleared) {
+                    loggerService.LogWarning("GUS: Failed to clear the DOS environment during shutdown.");
+                }
+            };
+        }
 
         DmaChannel fdcDmaChannel = dmaSystem.GetChannel(2)
             ?? throw new InvalidOperationException("DMA channel 2 unavailable for Floppy Disk Controller.");
@@ -619,6 +642,9 @@ public class Spice86DependencyInjection : IDisposable {
         emulatorMcpServices.Opl3Fm = opl;
         emulatorMcpServices.PcSpeaker = pcSpeaker;
         emulatorMcpServices.Midi = midiDevice;
+        if (gravisUltraSound is { IsDisposed: false }) {
+            emulatorMcpServices.GravisUltraSound = gravisUltraSound;
+        }
         emulatorMcpServices.VgaFunctionality = vgaFunctionality;
         emulatorMcpServices.BiosDataArea = biosDataArea;
         emulatorMcpServices.InterruptVectorTable = interruptVectorTable;
