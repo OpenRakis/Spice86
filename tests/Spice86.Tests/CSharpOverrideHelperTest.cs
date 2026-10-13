@@ -24,6 +24,39 @@ public class CSharpOverrideHelperTest {
     private readonly ILogger _loggerServiceMock = Substitute.For<ILogger>();
 
     [Fact]
+    public void NearCall_ReturnToAncestorSkipsAbandonedContinuationAndRestoresDispatcher() {
+        // Arrange
+        using Spice86Creator creator = new(binName: "jump2");
+        using Spice86DependencyInjection res = creator.Create();
+        CSharpOverrideHelper helper = new(
+            new Dictionary<SegmentedAddress, FunctionInformation>(),
+            res.Machine, _loggerServiceMock, new Configuration { HttpApiPort = 0 });
+        helper.SS = 0x3000;
+        helper.SP = 0x0100;
+        JumpDispatcher originalDispatcher = helper.JumpDispatcher;
+        bool abandonedContinuationReached = false;
+        ushort callerCs = helper.CS;
+
+        // Act
+        helper.NearCall(callerCs, 0x0042, _ => {
+            helper.NearCall(callerCs, 0x0078, _ => {
+                helper.Stack.Pop16();
+                return helper.NearRet();
+            });
+            abandonedContinuationReached = true;
+            return helper.NearRet();
+        });
+        helper.NearCall(callerCs, 0x009A, _ => helper.NearRet());
+
+        // Assert
+        abandonedContinuationReached.Should().BeFalse();
+        helper.CS.Should().Be(callerCs);
+        helper.IP.Should().Be(0x009A);
+        helper.SP.Should().Be(0x0100);
+        helper.JumpDispatcher.Should().BeSameAs(originalDispatcher);
+    }
+
+    [Fact]
     public void TestJumpReturns() {
         using Spice86Creator creator = new Spice86Creator(binName: "jump2");
         using Spice86DependencyInjection res = creator.Create();

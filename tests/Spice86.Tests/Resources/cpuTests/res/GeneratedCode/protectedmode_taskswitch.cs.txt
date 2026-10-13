@@ -1,0 +1,117 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+    protected readonly ushort cs2;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0x0008;
+        cs2 = 0xF000;
+
+        DefineFunction(cs1, 0x00AB, unknown_0008_00AB_0012B, name: "unknown");
+        DefineFunction(cs2, 0xFFF0, unknown_F000_FFF0_FFFF0, name: "unknown");
+    }
+
+    public virtual Action unknown_0008_00AB_0012B(int loadOffset) {
+        CheckExternalEvents(cs1, 0x00AB);
+        // 0008:00AB mov byte ptr DS:[0x0031],0x22
+        UInt8[DS, 0x0031] = 0x22;
+        // 0008:00B0 iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        CheckExternalEvents(cs2, 0xFFF0);
+        // F000:FFF0 jmp near 0
+        // F000:0000 mov SP,0x1000
+        SP = 0x1000;
+        // F000:0003 mov word ptr DS:[0x0608],0xFFFF
+        UInt16[DS, 0x0608] = 0xFFFF;
+        // F000:0009 mov byte ptr DS:[0x060C],0x0F
+        UInt8[DS, 0x060C] = 0x0F;
+        // F000:000E mov byte ptr DS:[0x060D],0x9A
+        UInt8[DS, 0x060D] = 0x9A;
+        // F000:0013 mov word ptr DS:[0x0610],0xFFFF
+        UInt16[DS, 0x0610] = 0xFFFF;
+        // F000:0019 mov byte ptr DS:[0x0614],0x0F
+        UInt8[DS, 0x0614] = 0x0F;
+        // F000:001E mov byte ptr DS:[0x0615],0x92
+        UInt8[DS, 0x0615] = 0x92;
+        // F000:0023 mov word ptr DS:[0x0618],0x0067
+        UInt16[DS, 0x0618] = 0x0067;
+        // F000:0029 mov word ptr DS:[0x061A],0x0700
+        UInt16[DS, 0x061A] = 0x0700;
+        // F000:002F mov byte ptr DS:[0x061D],0x89
+        UInt8[DS, 0x061D] = 0x89;
+        // F000:0034 mov word ptr DS:[0x0620],0x0067
+        UInt16[DS, 0x0620] = 0x0067;
+        // F000:003A mov word ptr DS:[0x0622],0x0800
+        UInt16[DS, 0x0622] = 0x0800;
+        // F000:0040 mov byte ptr DS:[0x0625],0x89
+        UInt8[DS, 0x0625] = 0x89;
+        // F000:0045 mov word ptr DS:[0x0820],0x00AB
+        UInt16[DS, 0x0820] = 0x00AB;
+        // F000:004B mov word ptr DS:[0x0838],0x0900
+        UInt16[DS, 0x0838] = 0x0900;
+        // F000:0051 mov word ptr DS:[0x084C],8
+        UInt16[DS, 0x084C] = 8;
+        // F000:0057 mov word ptr DS:[0x0850],0x0010
+        UInt16[DS, 0x0850] = 0x0010;
+        // F000:005D mov word ptr DS:[0x0854],0x0010
+        UInt16[DS, 0x0854] = 0x0010;
+        // F000:0063 mov word ptr DS:[0x0630],0x0027
+        UInt16[DS, 0x0630] = 0x0027;
+        // F000:0069 mov dword ptr DS:[0x0632],0x00000600
+        UInt32[DS, 0x0632] = 0x00000600;
+        // F000:0072 lgdt dword ptr DS:[0x0630]
+        LoadGdtr(DS, 0x00000630);
+        // F000:0077 mov EAX,0
+        EAX = ReadControlRegister(0);
+        // F000:007A or EAX,1
+        EAX = Alu32.Or(EAX, 1);
+        // F000:0080 mov 0,EAX
+        WriteControlRegister(0, EAX);
+        // F000:0083 jmp far 0008:0088
+        ValidateFarCodeSegmentTransfer(0x0008);
+        LoadSegmentRegister(0x00000001u, 0x0008);
+        // 0008:0088 mov AX,0x0010
+        AX = 0x0010;
+        // 0008:008B mov DS,AX
+        LoadSegmentRegister(3, AX);
+        // 0008:008D mov SS,AX
+        LoadSegmentRegister(2, AX);
+        State.InterruptShadowing = true;
+        // 0008:008F mov AX,0x0018
+        AX = 0x0018;
+        // 0008:0092 ltr AX
+        LoadTr(AX);
+        // 0008:0095 mov EAX,0x11111111
+        EAX = 0x11111111;
+        // 0008:009B mov byte ptr DS:[0x0030],0x11
+        UInt8[DS, 0x0030] = 0x11;
+        // 0008:00A0 call far 0020:0000
+        FarCall(cs1, 0x00A5, 0x0020, _ => throw FailAsUntested("Far call at 0008:00A0 unexpectedly resolved to a direct target"));
+        // 0008:00A5 mov byte ptr DS:[0x0032],0x33
+        UInt8[DS, 0x0032] = 0x33;
+        // 0008:00AA hlt
+        return Hlt();
+    }
+
+}

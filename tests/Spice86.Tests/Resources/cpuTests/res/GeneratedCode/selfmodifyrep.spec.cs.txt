@@ -1,6 +1,7 @@
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Microsoft.Extensions.Logging;
@@ -34,14 +35,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0000 xor AX,AX
         AX = Alu16.Xor(AX, AX);
         // F000:0002 mov SS,AX
-        SS = AX;
+        LoadSegmentRegister(2, AX);
         State.InterruptShadowing = true;
         // F000:0004 mov SP,0x0100
         SP = 0x0100;
         // F000:0007 mov DS,AX
-        DS = AX;
+        LoadSegmentRegister(3, AX);
         // F000:0009 mov ES,AX
-        ES = AX;
+        LoadSegmentRegister(0, AX);
         // F000:000B cld
         DirectionFlag = false;
         // F000:000C mov DI,0

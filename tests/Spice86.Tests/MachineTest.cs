@@ -962,7 +962,7 @@ public class MachineTest {
 
     private void CompareListingWithExpected(string goldenKey, Machine machine) {
         List<string> actualLines = _dumper.ToAssemblyListing(machine.CfgCpu);
-        //WriteExpectedListing(goldenKey, actualLines);
+        // WriteExpectedListing(goldenKey, actualLines);
         List<string> expectedLines = GetExpectedListing(goldenKey);
         Assert.Equal(expectedLines, actualLines);
     }
@@ -1070,7 +1070,7 @@ public class MachineTest {
         ExecutionContextManager contextManager = machine.CfgCpu.ExecutionContextManager;
         string actualBlocksJson = CfgBlocksTestJson.SerializeBlocks(contextManager);
         string actualPartitionsJson = CfgBlocksTestJson.SerializePartitions(contextManager);
-        //WriteExpectedCfgJson(goldenKey, actualBlocksJson, actualPartitionsJson);
+        // WriteExpectedCfgJson(goldenKey, actualBlocksJson, actualPartitionsJson);
         Assert.Equal(GetExpectedCfgJson(goldenKey, "DumpedCfgBlocks"), actualBlocksJson);
         Assert.Equal(GetExpectedCfgJson(goldenKey, "DumpedCfgPartitions"), actualPartitionsJson);
     }

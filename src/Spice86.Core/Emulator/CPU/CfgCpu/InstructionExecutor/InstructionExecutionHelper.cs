@@ -501,10 +501,7 @@ public class InstructionExecutionHelper {
     /// Throws <see cref="CpuBoundRangeExceededException"/> if the check fails.
     /// </summary>
     public void CheckBound(short index, short lower, short upper) {
-        if (index < lower || index > upper) {
-            throw new CpuBoundRangeExceededException(
-                $"BOUND check failed: index={index}, lower={lower}, upper={upper}.");
-        }
+        BoundChecks.Check(index, lower, upper);
     }
 
     /// <summary>
@@ -512,9 +509,6 @@ public class InstructionExecutionHelper {
     /// Throws <see cref="CpuBoundRangeExceededException"/> if the check fails.
     /// </summary>
     public void CheckBound(int index, int lower, int upper) {
-        if (index < lower || index > upper) {
-            throw new CpuBoundRangeExceededException(
-                $"BOUND check failed: index={index}, lower={lower}, upper={upper}.");
-        }
+        BoundChecks.Check(index, lower, upper);
     }
 }

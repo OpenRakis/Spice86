@@ -1,0 +1,148 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+    protected readonly ushort cs2;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0x0008;
+        cs2 = 0xF000;
+
+        DefineFunction(cs1, 0x00ED, unknown_0008_00ED_0016D, name: "unknown");
+        DefineFunction(cs2, 0x00E5, unknown_F000_00E5_F00E5, name: "unknown");
+        DefineFunction(cs2, 0xFFF0, unknown_F000_FFF0_FFFF0, name: "unknown");
+    }
+
+    public virtual Action unknown_0008_00ED_0016D(int loadOffset) {
+        CheckExternalEvents(cs1, 0x00ED);
+        // 0008:00ED mov byte ptr DS:[0x0036],0x55
+        UInt8[DS, 0x0036] = 0x55;
+        // 0008:00F2 hlt
+        return Hlt();
+    }
+
+    public virtual Action unknown_F000_00E5_F00E5(int loadOffset) {
+        CheckExternalEvents(cs2, 0x00E5);
+        // F000:00E5 mov byte ptr DS:[0x0034],0x44
+        UInt8[DS, 0x0034] = 0x44;
+        // F000:00EA in AL,0x60
+        try {
+            EnsureIoPrivilege();
+            AL = In8(0x0060);
+            throw FailAsUntested("Untested fallthrough after F000:00EA");
+        }
+        catch (CpuException cpuException) {
+            return DispatchCpuFault(cpuException, cs2, 0x00EA, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x00ED), () => unknown_0008_00ED_0016D(0x0000))]);
+        }
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        CheckExternalEvents(cs2, 0xFFF0);
+        // F000:FFF0 jmp near 0
+        // F000:0000 mov SP,0x1000
+        SP = 0x1000;
+        // F000:0003 mov word ptr DS:[0x0608],0xFFFF
+        UInt16[DS, 0x0608] = 0xFFFF;
+        // F000:0009 mov byte ptr DS:[0x060C],0x0F
+        UInt8[DS, 0x060C] = 0x0F;
+        // F000:000E mov byte ptr DS:[0x060D],0x9A
+        UInt8[DS, 0x060D] = 0x9A;
+        // F000:0013 mov word ptr DS:[0x0610],0xFFFF
+        UInt16[DS, 0x0610] = 0xFFFF;
+        // F000:0019 mov byte ptr DS:[0x0614],0x0F
+        UInt8[DS, 0x0614] = 0x0F;
+        // F000:001E mov byte ptr DS:[0x0615],0x92
+        UInt8[DS, 0x0615] = 0x92;
+        // F000:0023 mov word ptr DS:[0x0618],0x0067
+        UInt16[DS, 0x0618] = 0x0067;
+        // F000:0029 mov word ptr DS:[0x061A],0x0700
+        UInt16[DS, 0x061A] = 0x0700;
+        // F000:002F mov byte ptr DS:[0x061D],0x89
+        UInt8[DS, 0x061D] = 0x89;
+        // F000:0034 mov word ptr DS:[0x0620],0x0067
+        UInt16[DS, 0x0620] = 0x0067;
+        // F000:003A mov word ptr DS:[0x0622],0x0800
+        UInt16[DS, 0x0622] = 0x0800;
+        // F000:0040 mov byte ptr DS:[0x0625],0x89
+        UInt8[DS, 0x0625] = 0x89;
+        // F000:0045 mov word ptr DS:[0x0804],0x0980
+        UInt16[DS, 0x0804] = 0x0980;
+        // F000:004B mov word ptr DS:[0x0808],0x0010
+        UInt16[DS, 0x0808] = 0x0010;
+        // F000:0051 mov word ptr DS:[0x0820],0x00E5
+        UInt16[DS, 0x0820] = 0x00E5;
+        // F000:0057 mov dword ptr DS:[0x0824],0x00020000
+        UInt32[DS, 0x0824] = 0x00020000;
+        // F000:0060 mov word ptr DS:[0x0838],0x1000
+        UInt16[DS, 0x0838] = 0x1000;
+        // F000:0066 mov word ptr DS:[0x084C],0xF000
+        UInt16[DS, 0x084C] = 0xF000;
+        // F000:006C mov word ptr DS:[0x0850],0
+        UInt16[DS, 0x0850] = 0;
+        // F000:0072 mov word ptr DS:[0x0854],0xF000
+        UInt16[DS, 0x0854] = 0xF000;
+        // F000:0078 mov word ptr DS:[0x0968],0x00ED
+        UInt16[DS, 0x0968] = 0x00ED;
+        // F000:007E mov word ptr DS:[0x096A],8
+        UInt16[DS, 0x096A] = 8;
+        // F000:0084 mov byte ptr DS:[0x096D],0x86
+        UInt8[DS, 0x096D] = 0x86;
+        // F000:0089 mov word ptr DS:[0x0630],0x0027
+        UInt16[DS, 0x0630] = 0x0027;
+        // F000:008F mov dword ptr DS:[0x0632],0x00000600
+        UInt32[DS, 0x0632] = 0x00000600;
+        // F000:0098 mov word ptr DS:[0x0638],0x006F
+        UInt16[DS, 0x0638] = 0x006F;
+        // F000:009E mov dword ptr DS:[0x063A],0x00000900
+        UInt32[DS, 0x063A] = 0x00000900;
+        // F000:00A7 lgdt dword ptr DS:[0x0630]
+        LoadGdtr(DS, 0x00000630);
+        // F000:00AC lidt dword ptr DS:[0x0638]
+        LoadIdtr(DS, 0x00000638);
+        // F000:00B1 mov EAX,0
+        EAX = ReadControlRegister(0);
+        // F000:00B4 or EAX,1
+        EAX = Alu32.Or(EAX, 1);
+        // F000:00BA mov 0,EAX
+        WriteControlRegister(0, EAX);
+        // F000:00BD jmp far 0008:00C2
+        ValidateFarCodeSegmentTransfer(0x0008);
+        LoadSegmentRegister(0x00000001u, 0x0008);
+        // 0008:00C2 mov AX,0x0010
+        AX = 0x0010;
+        // 0008:00C5 mov DS,AX
+        LoadSegmentRegister(3, AX);
+        // 0008:00C7 mov SS,AX
+        LoadSegmentRegister(2, AX);
+        State.InterruptShadowing = true;
+        // 0008:00C9 mov AX,0x0018
+        AX = 0x0018;
+        // 0008:00CC ltr AX
+        LoadTr(AX);
+        // 0008:00CF mov EAX,0x11111111
+        EAX = 0x11111111;
+        // 0008:00D5 mov byte ptr DS:[0x0030],0x11
+        UInt8[DS, 0x0030] = 0x11;
+        // 0008:00DA call far 0020:0000
+        FarCall(cs1, 0x00DF, 0x0020, _ => throw FailAsUntested("Far call at 0008:00DA unexpectedly resolved to a direct target"));
+        throw FailAsUntested("Untested return from call at 0008:00DA");
+    }
+
+}

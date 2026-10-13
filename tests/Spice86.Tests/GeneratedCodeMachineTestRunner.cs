@@ -120,7 +120,7 @@ internal sealed class GeneratedCodeMachineTestRunner {
 
     public void CompareGeneratedSourceWithExpected(string goldenKey, GeneratedCSharpProgram generatedProgram) {
         List<string> actualLines = NormalizeLines(generatedProgram.SourceText);
-        //WriteExpectedGeneratedSource(goldenKey, generatedProgram.SourceText);
+        // WriteExpectedGeneratedSource(goldenKey, generatedProgram.SourceText);
         string resPath = Path.Join("Resources", "cpuTests", "res", "GeneratedCode", goldenKey + ".cs.txt");
         File.Exists(resPath).Should().BeTrue(
             $"golden '{goldenKey}.cs.txt' is missing; regenerate it by uncommenting the WriteExpectedGeneratedSource call in GeneratedCodeMachineTestRunner.CompareGeneratedSourceWithExpected, running GeneratedCodeMachineTest and SpeculativeCfgTest once, then re-commenting it");

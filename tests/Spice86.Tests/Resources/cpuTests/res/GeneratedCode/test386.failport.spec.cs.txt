@@ -1,6 +1,7 @@
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Microsoft.Extensions.Logging;
@@ -79,9 +80,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:063A cmp word ptr SS:[0xFFFB],0xF000
-        Alu16.Sub(UInt16[SS, 0xFFFB], 0xF000);
+        Alu16.Sub(UInt16[SS, 0xFFFB, SegmentAccessKind.Stack], 0xF000);
         // F000:0641 cmp word ptr SS:[0xFFF9],0x062E
-        Alu16.Sub(UInt16[SS, 0xFFF9], 0x062E);
+        Alu16.Sub(UInt16[SS, 0xFFF9, SegmentAccessKind.Stack], 0x062E);
         // F000:0648 jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
@@ -89,7 +90,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:064C mov AX,0
         AX = 0;
         // F000:064F mov DS,AX
-        DS = AX;
+        LoadSegmentRegister(3, AX);
         // F000:0651 mov word ptr DS:[0x0018],0x15C7
         UInt16[DS, 0x0018] = 0x15C7;
         // F000:0657 mov word ptr DS:[0x001A],0xF000
@@ -127,7 +128,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0688 mov AX,0
         AX = 0;
         // F000:068B mov DS,AX
-        DS = AX;
+        LoadSegmentRegister(3, AX);
         // F000:068D mov word ptr DS:[0x0018],0x06A8
         UInt16[DS, 0x0018] = 0x06A8;
         // F000:0693 mov word ptr DS:[0x001A],0xF000
@@ -135,7 +136,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0699 mov AX,0x1000
         AX = 0x1000;
         // F000:069C mov SS,AX
-        SS = AX;
+        LoadSegmentRegister(2, AX);
         State.InterruptShadowing = true;
         // F000:069E mov SP,0xFFFF
         SP = 0xFFFF;
@@ -157,9 +158,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:06AF cmp word ptr SS:[0xFFFB],0xF000
-        Alu16.Sub(UInt16[SS, 0xFFFB], 0xF000);
+        Alu16.Sub(UInt16[SS, 0xFFFB, SegmentAccessKind.Stack], 0xF000);
         // F000:06B6 cmp word ptr SS:[0xFFF9],0x06A1
-        Alu16.Sub(UInt16[SS, 0xFFF9], 0x06A1);
+        Alu16.Sub(UInt16[SS, 0xFFF9, SegmentAccessKind.Stack], 0x06A1);
         // F000:06BD jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
@@ -167,7 +168,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:06C1 mov AX,0
         AX = 0;
         // F000:06C4 mov DS,AX
-        DS = AX;
+        LoadSegmentRegister(3, AX);
         // F000:06C6 mov word ptr DS:[0x0018],0x15C7
         UInt16[DS, 0x0018] = 0x15C7;
         // F000:06CC mov word ptr DS:[0x001A],0xF000
@@ -175,16 +176,17 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:06D2 mov DX,0x2100
         DX = 0x2100;
         // F000:06D5 mov DS,DX
-        DS = DX;
+        LoadSegmentRegister(3, DX);
         // F000:06D7 mov DX,0x6100
         DX = 0x6100;
         // F000:06DA mov ES,DX
-        ES = DX;
+        LoadSegmentRegister(0, DX);
         // F000:06DC mov AL,4
         AL = 4;
         // F000:06DE mov DX,0x0999
         DX = 0x0999;
         // F000:06E1 out DX,AL
+        EnsureIoPrivilege();
         Out8(DX, AL);
         // F000:06E2 cld
         DirectionFlag = false;
@@ -1089,9 +1091,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         DX = CX;
         CX = (ushort)temp_0CCC;
         // F000:0CCE mov ES,DX
-        ES = DX;
+        LoadSegmentRegister(0, DX);
         // F000:0CD0 mov DS,CX
-        DS = CX;
+        LoadSegmentRegister(3, CX);
         // F000:0CD2 xchg EDI,ESI
         uint temp_0CD2 = EDI;
         EDI = ESI;
@@ -1280,9 +1282,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         DX = CX;
         CX = (ushort)temp_0DEC;
         // F000:0DEE mov ES,DX
-        ES = DX;
+        LoadSegmentRegister(0, DX);
         // F000:0DF0 mov DS,CX
-        DS = CX;
+        LoadSegmentRegister(3, CX);
         // F000:0DF2 xchg EDI,ESI
         uint temp_0DF2 = EDI;
         EDI = ESI;
@@ -1471,9 +1473,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         DX = CX;
         CX = (ushort)temp_0F0D;
         // F000:0F0F mov ES,DX
-        ES = DX;
+        LoadSegmentRegister(0, DX);
         // F000:0F11 mov DS,CX
-        DS = CX;
+        LoadSegmentRegister(3, CX);
         // F000:0F13 xchg EDI,ESI
         uint temp_0F13 = EDI;
         EDI = ESI;
@@ -1662,9 +1664,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         DX = CX;
         CX = (ushort)temp_1033;
         // F000:1035 mov ES,DX
-        ES = DX;
+        LoadSegmentRegister(0, DX);
         // F000:1037 mov DS,CX
-        DS = CX;
+        LoadSegmentRegister(3, CX);
         // F000:1039 xchg EDI,ESI
         uint temp_1039 = EDI;
         EDI = ESI;
@@ -1853,9 +1855,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         DX = CX;
         CX = (ushort)temp_1153;
         // F000:1155 mov ES,DX
-        ES = DX;
+        LoadSegmentRegister(0, DX);
         // F000:1157 mov DS,CX
-        DS = CX;
+        LoadSegmentRegister(3, CX);
         // F000:1159 xchg EDI,ESI
         uint temp_1159 = EDI;
         EDI = ESI;
@@ -2044,9 +2046,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         DX = CX;
         CX = (ushort)temp_1274;
         // F000:1276 mov ES,DX
-        ES = DX;
+        LoadSegmentRegister(0, DX);
         // F000:1278 mov DS,CX
-        DS = CX;
+        LoadSegmentRegister(3, CX);
         // F000:127A xchg EDI,ESI
         uint temp_127A = EDI;
         EDI = ESI;
@@ -2193,16 +2195,17 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1350 mov DX,0x2200
         DX = 0x2200;
         // F000:1353 mov DS,DX
-        DS = DX;
+        LoadSegmentRegister(3, DX);
         // F000:1355 mov DX,0x6200
         DX = 0x6200;
         // F000:1358 mov ES,DX
-        ES = DX;
+        LoadSegmentRegister(0, DX);
         // F000:135A mov AL,5
         AL = 5;
         // F000:135C mov DX,0x0999
         DX = 0x0999;
         // F000:135F out DX,AL
+        EnsureIoPrivilege();
         Out8(DX, AL);
         // F000:1360 mov SI,0
         SI = 0;
@@ -2319,16 +2322,17 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:141B mov DX,0x2300
         DX = 0x2300;
         // F000:141E mov DS,DX
-        DS = DX;
+        LoadSegmentRegister(3, DX);
         // F000:1420 mov DX,0x6300
         DX = 0x6300;
         // F000:1423 mov ES,DX
-        ES = DX;
+        LoadSegmentRegister(0, DX);
         // F000:1425 mov AL,6
         AL = 6;
         // F000:1427 mov DX,0x0999
         DX = 0x0999;
         // F000:142A out DX,AL
+        EnsureIoPrivilege();
         Out8(DX, AL);
         // F000:142B mov DI,0
         DI = 0;
@@ -2345,7 +2349,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         ushort lxsValue_143D = UInt16[ES, lxsOffset_143D];
         ushort lxsSegment_143D = UInt16[ES, (ushort)(lxsOffset_143D + 2)];
         BX = (ushort)lxsValue_143D;
-        SS = (ushort)lxsSegment_143D;
+        LoadSegmentRegister(2, lxsSegment_143D);
         State.InterruptShadowing = true;
         // F000:1441 mov AX,SS
         AX = SS;
@@ -2362,7 +2366,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:1452 mov ES,DX
-        ES = DX;
+        LoadSegmentRegister(0, DX);
         // F000:1454 mov dword ptr ES:[DI],0x12345678
         UInt32[ES, DI] = 0x12345678;
         // F000:145C mov word ptr ES:[DI+4],0xBCDE
@@ -2372,7 +2376,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         uint lxsValue_1462 = UInt32[ES, lxsOffset_1462];
         ushort lxsSegment_1462 = UInt16[ES, (ushort)(lxsOffset_1462 + 4)];
         EBX = (uint)lxsValue_1462;
-        SS = (ushort)lxsSegment_1462;
+        LoadSegmentRegister(2, lxsSegment_1462);
         State.InterruptShadowing = true;
         // F000:1467 mov AX,SS
         AX = SS;
@@ -2389,9 +2393,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:147B mov ES,DX
-        ES = DX;
+        LoadSegmentRegister(0, DX);
         // F000:147D mov SS,CX
-        SS = CX;
+        LoadSegmentRegister(2, CX);
         State.InterruptShadowing = true;
         // F000:147F mov CX,DS
         CX = DS;
@@ -2406,7 +2410,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         ushort lxsValue_148E = UInt16[ES, lxsOffset_148E];
         ushort lxsSegment_148E = UInt16[ES, (ushort)(lxsOffset_148E + 2)];
         BX = (ushort)lxsValue_148E;
-        DS = (ushort)lxsSegment_148E;
+        LoadSegmentRegister(3, lxsSegment_148E);
         // F000:1491 mov AX,DS
         AX = DS;
         // F000:1493 cmp AX,0xABCD
@@ -2422,7 +2426,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:14A2 mov ES,DX
-        ES = DX;
+        LoadSegmentRegister(0, DX);
         // F000:14A4 mov dword ptr ES:[DI],0x12345678
         UInt32[ES, DI] = 0x12345678;
         // F000:14AC mov word ptr ES:[DI+4],0xBCDE
@@ -2432,7 +2436,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         uint lxsValue_14B2 = UInt32[ES, lxsOffset_14B2];
         ushort lxsSegment_14B2 = UInt16[ES, (ushort)(lxsOffset_14B2 + 4)];
         EBX = (uint)lxsValue_14B2;
-        DS = (ushort)lxsSegment_14B2;
+        LoadSegmentRegister(3, lxsSegment_14B2);
         // F000:14B6 mov AX,DS
         AX = DS;
         // F000:14B8 cmp AX,0xBCDE
@@ -2448,9 +2452,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:14CA mov ES,DX
-        ES = DX;
+        LoadSegmentRegister(0, DX);
         // F000:14CC mov DS,CX
-        DS = CX;
+        LoadSegmentRegister(3, CX);
         // F000:14CE mov CX,ES
         CX = ES;
         // F000:14D0 mov DX,ES
@@ -2464,7 +2468,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         ushort lxsValue_14DD = UInt16[ES, lxsOffset_14DD];
         ushort lxsSegment_14DD = UInt16[ES, (ushort)(lxsOffset_14DD + 2)];
         BX = (ushort)lxsValue_14DD;
-        ES = (ushort)lxsSegment_14DD;
+        LoadSegmentRegister(0, lxsSegment_14DD);
         // F000:14E0 mov AX,ES
         AX = ES;
         // F000:14E2 cmp AX,0xABCD
@@ -2480,7 +2484,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:14F1 mov ES,DX
-        ES = DX;
+        LoadSegmentRegister(0, DX);
         // F000:14F3 mov dword ptr ES:[DI],0x12345678
         UInt32[ES, DI] = 0x12345678;
         // F000:14FB mov word ptr ES:[DI+4],0xBCDE
@@ -2490,7 +2494,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         uint lxsValue_1501 = UInt32[ES, lxsOffset_1501];
         ushort lxsSegment_1501 = UInt16[ES, (ushort)(lxsOffset_1501 + 4)];
         EBX = (uint)lxsValue_1501;
-        ES = (ushort)lxsSegment_1501;
+        LoadSegmentRegister(0, lxsSegment_1501);
         // F000:1505 mov AX,ES
         AX = ES;
         // F000:1507 cmp AX,0xBCDE
@@ -2506,9 +2510,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:1519 mov ES,DX
-        ES = DX;
+        LoadSegmentRegister(0, DX);
         // F000:151B mov ES,CX
-        ES = CX;
+        LoadSegmentRegister(0, CX);
         // F000:151D mov CX,FS
         CX = FS;
         // F000:151F mov DX,ES
@@ -2522,7 +2526,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         ushort lxsValue_152C = UInt16[ES, lxsOffset_152C];
         ushort lxsSegment_152C = UInt16[ES, (ushort)(lxsOffset_152C + 2)];
         BX = (ushort)lxsValue_152C;
-        FS = (ushort)lxsSegment_152C;
+        LoadSegmentRegister(4, lxsSegment_152C);
         // F000:1530 mov AX,FS
         AX = FS;
         // F000:1532 cmp AX,0xABCD
@@ -2538,7 +2542,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:1541 mov ES,DX
-        ES = DX;
+        LoadSegmentRegister(0, DX);
         // F000:1543 mov dword ptr ES:[DI],0x12345678
         UInt32[ES, DI] = 0x12345678;
         // F000:154B mov word ptr ES:[DI+4],0xBCDE
@@ -2548,7 +2552,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         uint lxsValue_1551 = UInt32[ES, lxsOffset_1551];
         ushort lxsSegment_1551 = UInt16[ES, (ushort)(lxsOffset_1551 + 4)];
         EBX = (uint)lxsValue_1551;
-        FS = (ushort)lxsSegment_1551;
+        LoadSegmentRegister(4, lxsSegment_1551);
         // F000:1556 mov AX,FS
         AX = FS;
         // F000:1558 cmp AX,0xBCDE
@@ -2564,9 +2568,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:1566 mov ES,DX
-        ES = DX;
+        LoadSegmentRegister(0, DX);
         // F000:1568 mov FS,CX
-        FS = CX;
+        LoadSegmentRegister(4, CX);
         // F000:156A mov CX,GS
         CX = GS;
         // F000:156C mov DX,ES
@@ -2580,7 +2584,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         ushort lxsValue_1579 = UInt16[ES, lxsOffset_1579];
         ushort lxsSegment_1579 = UInt16[ES, (ushort)(lxsOffset_1579 + 2)];
         BX = (ushort)lxsValue_1579;
-        GS = (ushort)lxsSegment_1579;
+        LoadSegmentRegister(5, lxsSegment_1579);
         // F000:157D mov AX,GS
         AX = GS;
         // F000:157F cmp AX,0xABCD
@@ -2596,7 +2600,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:158A mov ES,DX
-        ES = DX;
+        LoadSegmentRegister(0, DX);
         // F000:158C mov dword ptr ES:[DI],0x12345678
         UInt32[ES, DI] = 0x12345678;
         // F000:1594 mov word ptr ES:[DI+4],0xBCDE
@@ -2606,7 +2610,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         uint lxsValue_159A = UInt32[ES, lxsOffset_159A];
         ushort lxsSegment_159A = UInt16[ES, (ushort)(lxsOffset_159A + 4)];
         EBX = (uint)lxsValue_159A;
-        GS = (ushort)lxsSegment_159A;
+        LoadSegmentRegister(5, lxsSegment_159A);
         // F000:159F mov AX,GS
         AX = GS;
         // F000:15A1 cmp AX,0xBCDE
@@ -2622,24 +2626,26 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:15AF mov ES,DX
-        ES = DX;
+        LoadSegmentRegister(0, DX);
         // F000:15B1 mov GS,CX
-        GS = CX;
+        LoadSegmentRegister(5, CX);
         // F000:15B3 mov DX,0x2400
         DX = 0x2400;
         // F000:15B6 mov DS,DX
-        DS = DX;
+        LoadSegmentRegister(3, DX);
         // F000:15B8 mov DX,0x6400
         DX = 0x6400;
         // F000:15BB mov ES,DX
-        ES = DX;
+        LoadSegmentRegister(0, DX);
         // F000:15BD mov AL,0xFF
         AL = 0xFF;
         // F000:15BF mov DX,0x0999
         DX = 0x0999;
         // F000:15C2 out DX,AL
+        EnsureIoPrivilege();
         Out8(DX, AL);
         // F000:15C3 cli
+        EnsureIoPrivilege();
         InterruptFlag = false;
         // F000:15C4 hlt
         return Hlt();
@@ -2720,26 +2726,30 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
         CheckExternalEvents(cs1, 0xFFF0);
         // F000:FFF0 jmp far F000:0045
+        ValidateFarCodeSegmentTransfer(0xF000);
+        LoadSegmentRegister(0x00000001u, 0xF000);
         // F000:0045 cli
+        EnsureIoPrivilege();
         InterruptFlag = false;
         // F000:0046 mov AL,0
         AL = 0;
         // F000:0048 mov DX,0x0999
         DX = 0x0999;
         // F000:004B out DX,AL
+        EnsureIoPrivilege();
         Out8(DX, AL);
         // F000:004C xor EAX,EAX
         EAX = Alu32.Xor(EAX, EAX);
         // F000:004F mov DS,AX
-        DS = AX;
+        LoadSegmentRegister(3, AX);
         // F000:0051 mov CX,0x0011
         CX = 0x0011;
     L_0054:
         CheckExternalEvents(cs1, 0x0054);
         // F000:0054 mov word ptr DS:[4*EAX],0x15C7
-        UInt16[DS, (ushort)(0 + 4 * EAX)] = 0x15C7;
+        UInt16[DS, (uint)(0 + 4 * EAX)] = 0x15C7;
         // F000:005E mov word ptr DS:[2+4*EAX],0xF000
-        UInt16[DS, (ushort)(2 + 4 * EAX)] = 0xF000;
+        UInt16[DS, (uint)(2 + 4 * EAX)] = 0xF000;
         // F000:0068 inc AX
         AX = Alu16.Inc(AX);
         // F000:0069 loop 0x0054
@@ -2750,23 +2760,24 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:006B mov AX,0x1000
         AX = 0x1000;
         // F000:006E mov SS,AX
-        SS = AX;
+        LoadSegmentRegister(2, AX);
         State.InterruptShadowing = true;
         // F000:0070 mov SP,0xFFFF
         SP = 0xFFFF;
         // F000:0073 mov DX,0x2000
         DX = 0x2000;
         // F000:0076 mov DS,DX
-        DS = DX;
+        LoadSegmentRegister(3, DX);
         // F000:0078 mov DX,0x6000
         DX = 0x6000;
         // F000:007B mov ES,DX
-        ES = DX;
+        LoadSegmentRegister(0, DX);
         // F000:007D mov AL,1
         AL = 1;
         // F000:007F mov DX,0x0999
         DX = 0x0999;
         // F000:0082 out DX,AL
+        EnsureIoPrivilege();
         Out8(DX, AL);
         // F000:0083 mov AH,1
         AH = 1;
@@ -3563,6 +3574,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0496 mov DX,0x0999
         DX = 0x0999;
         // F000:0499 out DX,AL
+        EnsureIoPrivilege();
         Out8(DX, AL);
         // F000:049A mov EAX,0x80000001
         EAX = 0x80000001u;
@@ -3593,11 +3605,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:04C1 mov DX,0x0999
         DX = 0x0999;
         // F000:04C4 out DX,AL
+        EnsureIoPrivilege();
         Out8(DX, AL);
         // F000:04C5 mov DX,0x2000
         DX = 0x2000;
         // F000:04C8 mov SS,DX
-        SS = DX;
+        LoadSegmentRegister(2, DX);
         State.InterruptShadowing = true;
         // F000:04CA xor AX,AX
         AX = Alu16.Xor(AX, AX);
@@ -3634,10 +3647,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:04F7 xor AX,AX
         AX = Alu16.Xor(AX, AX);
         // F000:04F9 mov SS,AX
-        SS = AX;
+        LoadSegmentRegister(2, AX);
         State.InterruptShadowing = true;
         // F000:04FB mov SS,word ptr DS:[0]
-        SS = UInt16[DS, 0];
+        LoadSegmentRegister(2, UInt16[DS, 0]);
         State.InterruptShadowing = true;
         // F000:04FF mov AX,SS
         AX = SS;
@@ -3650,7 +3663,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0507 mov DX,0x2000
         DX = 0x2000;
         // F000:050A mov DS,DX
-        DS = DX;
+        LoadSegmentRegister(3, DX);
         // F000:050C xor AX,AX
         AX = Alu16.Xor(AX, AX);
         // F000:050E mov AX,DS
@@ -3686,11 +3699,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0539 xor AX,AX
         AX = Alu16.Xor(AX, AX);
         // F000:053B mov DS,AX
-        DS = AX;
+        LoadSegmentRegister(3, AX);
         // F000:053D mov ES,CX
-        ES = CX;
+        LoadSegmentRegister(0, CX);
         // F000:053F mov DS,word ptr ES:[0]
-        DS = UInt16[ES, 0];
+        LoadSegmentRegister(3, UInt16[ES, 0]);
         // F000:0544 mov AX,DS
         AX = DS;
         // F000:0546 cmp AX,DX
@@ -3702,7 +3715,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:054C mov DX,0x2000
         DX = 0x2000;
         // F000:054F mov ES,DX
-        ES = DX;
+        LoadSegmentRegister(0, DX);
         // F000:0551 xor AX,AX
         AX = Alu16.Xor(AX, AX);
         // F000:0553 mov AX,ES
@@ -3738,9 +3751,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:057E xor AX,AX
         AX = Alu16.Xor(AX, AX);
         // F000:0580 mov ES,AX
-        ES = AX;
+        LoadSegmentRegister(0, AX);
         // F000:0582 mov ES,word ptr DS:[0]
-        ES = UInt16[DS, 0];
+        LoadSegmentRegister(0, UInt16[DS, 0]);
         // F000:0586 mov AX,ES
         AX = ES;
         // F000:0588 cmp AX,DX
@@ -3752,7 +3765,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:058E mov DX,0x2000
         DX = 0x2000;
         // F000:0591 mov FS,DX
-        FS = DX;
+        LoadSegmentRegister(4, DX);
         // F000:0593 xor AX,AX
         AX = Alu16.Xor(AX, AX);
         // F000:0595 mov AX,FS
@@ -3788,9 +3801,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:05C0 xor AX,AX
         AX = Alu16.Xor(AX, AX);
         // F000:05C2 mov FS,AX
-        FS = AX;
+        LoadSegmentRegister(4, AX);
         // F000:05C4 mov FS,word ptr DS:[0]
-        FS = UInt16[DS, 0];
+        LoadSegmentRegister(4, UInt16[DS, 0]);
         // F000:05C8 mov AX,FS
         AX = FS;
         // F000:05CA cmp AX,DX
@@ -3802,7 +3815,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:05D0 mov DX,0x2000
         DX = 0x2000;
         // F000:05D3 mov GS,DX
-        GS = DX;
+        LoadSegmentRegister(5, DX);
         // F000:05D5 xor AX,AX
         AX = Alu16.Xor(AX, AX);
         // F000:05D7 mov AX,GS
@@ -3838,9 +3851,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0602 xor AX,AX
         AX = Alu16.Xor(AX, AX);
         // F000:0604 mov GS,AX
-        GS = AX;
+        LoadSegmentRegister(5, AX);
         // F000:0606 mov GS,word ptr DS:[0]
-        GS = UInt16[DS, 0];
+        LoadSegmentRegister(5, UInt16[DS, 0]);
         // F000:060A mov AX,GS
         AX = GS;
         // F000:060C cmp AX,DX
@@ -3854,7 +3867,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0615 mov AX,0
         AX = 0;
         // F000:0618 mov DS,AX
-        DS = AX;
+        LoadSegmentRegister(3, AX);
         // F000:061A mov word ptr DS:[0x0018],0x0633
         UInt16[DS, 0x0018] = 0x0633;
         // F000:0620 mov word ptr DS:[0x001A],0xF000
@@ -3862,7 +3875,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0626 mov AX,0x1000
         AX = 0x1000;
         // F000:0629 mov SS,AX
-        SS = AX;
+        LoadSegmentRegister(2, AX);
         State.InterruptShadowing = true;
         // F000:062B mov SP,0xFFFF
         SP = 0xFFFF;
@@ -3909,6 +3922,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         VerifySpeculativeEntryOrFail(cs1, 0x15CE, Signature_15CE_cli);
         // F000:15CE cli
+        EnsureIoPrivilege();
         InterruptFlag = false;
         VerifySpeculativeEntryOrFail(cs1, 0x15CF, Signature_15CF_jmp);
         // F000:15CF jmp short 0x15C7

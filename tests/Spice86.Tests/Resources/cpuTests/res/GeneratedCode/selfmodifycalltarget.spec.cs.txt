@@ -1,6 +1,7 @@
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Microsoft.Extensions.Logging;
@@ -32,6 +33,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_23_F000_0028_F0028(int loadOffset) {
         CheckExternalEvents(cs1, 0x0028);
         // F000:0028 jmp far F000:002E
+        ValidateFarCodeSegmentTransfer(0xF000);
+        LoadSegmentRegister(0x00000001u, 0xF000);
         // F000:002E mov byte ptr DS:[0x0010],0xAA
         UInt8[DS, 0x0010] = 0xAA;
         // F000:0033 ret far
@@ -41,6 +44,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_40_F000_0028_F0028(int loadOffset) {
         CheckExternalEvents(cs1, 0x0028);
         // F000:0028 jmp far F000:0034
+        ValidateFarCodeSegmentTransfer(0xF000);
+        LoadSegmentRegister(0x00000001u, 0xF000);
         // F000:0034 mov byte ptr DS:[0x0011],0xBB
         UInt8[DS, 0x0011] = 0xBB;
         // F000:0039 ret far
@@ -50,6 +55,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_57_F000_0028_F0028(int loadOffset) {
         CheckExternalEvents(cs1, 0x0028);
         // F000:0028 jmp far F000:003A
+        ValidateFarCodeSegmentTransfer(0xF000);
+        LoadSegmentRegister(0x00000001u, 0xF000);
         // F000:003A mov byte ptr DS:[0x0012],0xCC
         UInt8[DS, 0x0012] = 0xCC;
         // F000:003F ret far
@@ -86,16 +93,16 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0000 mov AX,0
         AX = 0;
         // F000:0003 mov DS,AX
-        DS = AX;
+        LoadSegmentRegister(3, AX);
         // F000:0005 mov SS,AX
-        SS = AX;
+        LoadSegmentRegister(2, AX);
         State.InterruptShadowing = true;
         // F000:0007 mov SP,0x0100
         SP = 0x0100;
         // F000:000A mov AX,0xF000
         AX = 0xF000;
         // F000:000D mov ES,AX
-        ES = AX;
+        LoadSegmentRegister(0, AX);
         // F000:000F call near 0x0040
         NearCall(cs1, 0x0012, unknown_F000_0040_F0040);
         // F000:0012 call far F000:0028

@@ -1,0 +1,90 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "F000:FFF0",
+  "totalEntryPoints": 1,
+  "entryPointAddresses": [
+    "F000:FFF0"
+  ],
+  "lastExecutedAddress": "F000:0083",
+  "lastExecutedBlockId": 32,
+  "blocks": [
+    {
+      "id": 32,
+      "entry": "F000:0083",
+      "term": "F000:0083",
+      "pred": [
+        24
+      ],
+      "succ": [],
+      "asm": [
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 2,
+      "entry": "F000:FFF0",
+      "term": "F000:FFF0",
+      "pred": [],
+      "succ": [
+        3
+      ],
+      "asm": [
+        "E90D00|jmp near 0"
+      ]
+    },
+    {
+      "id": 24,
+      "entry": "0008:0068",
+      "term": "0008:007E",
+      "pred": [
+        3
+      ],
+      "succ": [
+        32
+      ],
+      "asm": [
+        "B81000|mov AX,0x0010",
+        "8ED8|mov DS,AX",
+        "C606000042|mov byte ptr DS:[0],0x42",
+        "0F20C0|mov EAX,0",
+        "6625FEFFFFFF|and EAX,0xFFFFFFFE",
+        "0F22C0|mov 0,EAX",
+        "EA830000F0|jmp far F000:0083"
+      ]
+    },
+    {
+      "id": 3,
+      "entry": "F000:0000",
+      "term": "F000:0063",
+      "pred": [
+        2
+      ],
+      "succ": [
+        24
+      ],
+      "asm": [
+        "BC0010|mov SP,0x1000",
+        "C7060806FFFF|mov word ptr DS:[0x0608],0xFFFF",
+        "C7060A060000|mov word ptr DS:[0x060A],0",
+        "C6060C060F|mov byte ptr DS:[0x060C],0x0F",
+        "C6060D069A|mov byte ptr DS:[0x060D],0x9A",
+        "C6060E0600|mov byte ptr DS:[0x060E],0",
+        "C6060F0600|mov byte ptr DS:[0x060F],0",
+        "C7061006FFFF|mov word ptr DS:[0x0610],0xFFFF",
+        "C70612060000|mov word ptr DS:[0x0612],0",
+        "C606140600|mov byte ptr DS:[0x0614],0",
+        "C606150692|mov byte ptr DS:[0x0615],0x92",
+        "C606160600|mov byte ptr DS:[0x0616],0",
+        "C606170600|mov byte ptr DS:[0x0617],0",
+        "C70620061700|mov word ptr DS:[0x0620],0x0017",
+        "66C706220600060000|mov dword ptr DS:[0x0622],0x00000600",
+        "0F01162006|lgdt dword ptr DS:[0x0620]",
+        "0F20C0|mov EAX,0",
+        "660D01000000|or EAX,1",
+        "0F22C0|mov 0,EAX",
+        "EA68000800|jmp far 0008:0068"
+      ]
+    }
+  ],
+  "truncated": false
+}

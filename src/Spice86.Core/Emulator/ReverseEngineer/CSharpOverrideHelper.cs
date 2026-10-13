@@ -24,6 +24,7 @@ using Spice86.Shared.Utils;
 
 using System.Collections.Immutable;
 using System.Linq;
+using System.Numerics;
 
 /// <summary>
 /// Provides a set of properties and methods to facilitate the creation of C# overrides of machine code.
@@ -65,6 +66,8 @@ public class CSharpOverrideHelper {
     public Machine Machine { get; }
 
     private readonly InterruptVectorTable _interruptVectorTable;
+
+    private readonly Stack<SegmentedAddress> _activeReturnTargets = new();
 
     /// <summary>
     /// The memory bus of the IBM PC.
@@ -253,6 +256,33 @@ public class CSharpOverrideHelper {
     public bool VerifyWritable(ushort selector) {
         return SegmentAndControlRegisterOperations.VerifyWritable(State, Memory, selector);
     }
+
+    /// <summary>Finds the least significant set bit of a 16-bit operand for BSF.</summary>
+    /// <param name="value">The operand to scan.</param>
+    /// <returns>The bit index returned by the interpreter's bit scan.</returns>
+    public ushort BitScanForward16(ushort value) => (ushort)BitOperations.TrailingZeroCount(value);
+
+    /// <summary>Finds the least significant set bit of a 32-bit operand for BSF.</summary>
+    /// <param name="value">The operand to scan.</param>
+    /// <returns>The bit index returned by the interpreter's bit scan.</returns>
+    public uint BitScanForward32(uint value) => (uint)BitOperations.TrailingZeroCount(value);
+
+    /// <summary>Finds the most significant set bit of a 16-bit operand for BSR.</summary>
+    /// <param name="value">The operand to scan.</param>
+    /// <returns>The bit index returned by the interpreter's bit scan.</returns>
+    public ushort BitScanReverse16(ushort value) => (ushort)BitOperations.Log2(value);
+
+    /// <summary>Finds the most significant set bit of a 32-bit operand for BSR.</summary>
+    /// <param name="value">The operand to scan.</param>
+    /// <returns>The bit index returned by the interpreter's bit scan.</returns>
+    public uint BitScanReverse32(uint value) => (uint)BitOperations.Log2(value);
+
+    /// <summary>Checks the signed inclusive bounds of a generated BOUND instruction.</summary>
+    /// <param name="index">The signed index.</param>
+    /// <param name="lower">The inclusive lower bound.</param>
+    /// <param name="upper">The inclusive upper bound.</param>
+    /// <exception cref="CpuBoundRangeExceededException">The index is outside the bounds.</exception>
+    public void CheckBound(int index, int lower, int upper) => BoundChecks.Check(index, lower, upper);
 
     /// <summary>
     /// Arithmetic-logic unit for 8 bit operations
@@ -1032,6 +1062,19 @@ public class CSharpOverrideHelper {
 
     private void ExecuteCallEnsuringSameStack(ushort expectedReturnCs, ushort expectedReturnIp,
         ushort targetCs, Func<int, Action> function, Action action) {
+        SegmentedAddress expectedReturn = new(expectedReturnCs, expectedReturnIp);
+        _activeReturnTargets.Push(expectedReturn);
+        try {
+            ExecuteCallAndValidateReturn(expectedReturnCs, expectedReturnIp, targetCs, function, action);
+        } catch (GeneratedReturnUnwindException exception) when (exception.Target == expectedReturn) {
+            _loggerService.LogTrace("Resuming generated caller at {ReturnTarget}", exception.Target);
+        } finally {
+            _activeReturnTargets.Pop();
+        }
+    }
+
+    private void ExecuteCallAndValidateReturn(ushort expectedReturnCs, ushort expectedReturnIp,
+        ushort targetCs, Func<int, Action> function, Action action) {
         uint expectedStackAddress = State.StackPhysicalAddress;
         // CS is set to the callee's segment for the duration of the call: this is the segment the emulated
         // CPU runs in while inside the callee, so reads of CS (e.g. a "push CS" idiom, or a protected-mode
@@ -1051,6 +1094,9 @@ public class CSharpOverrideHelper {
                actualReturnIp != expectedReturnIp) {
             SegmentedAddress expectedReturn = new SegmentedAddress(expectedReturnCs, expectedReturnIp);
             SegmentedAddress actualReturn = new SegmentedAddress(actualReturnCs, actualReturnIp);
+            if (_activeReturnTargets.Contains(actualReturn)) {
+                throw new GeneratedReturnUnwindException(actualReturn);
+            }
             string message =
                 "The original code is trying to jump via call stack modification. Expected to return at: " +
                 expectedReturn + " but actually returning to: " + actualReturn + " Stack address before: " +
@@ -1086,8 +1132,16 @@ public class CSharpOverrideHelper {
         JumpDispatcher currentJumpDispatcher = JumpDispatcher;
         // Ensure the jump dispatcher has the function we are calling as starting point
         JumpDispatcher = JumpDispatcher.CreateNew(function);
-        action.Invoke();
-        JumpDispatcher = currentJumpDispatcher;
+        try {
+            action.Invoke();
+        } finally {
+            JumpDispatcher = currentJumpDispatcher;
+        }
+    }
+
+    private sealed class GeneratedReturnUnwindException(SegmentedAddress target)
+        : Exception($"Generated return to ancestor caller at {target}") {
+        public SegmentedAddress Target { get; } = target;
     }
 
     /// <summary>
@@ -1445,9 +1499,10 @@ public class CSharpOverrideHelper {
     /// Halt the program.
     /// </summary>
     /// <returns>An <see cref="Action"/> that exits the program.</returns>
+    /// <exception cref="CpuGeneralProtectionFaultException">HLT is attempted outside CPL 0.</exception>
     public Action Hlt() {
+        PrivilegeChecks.EnsureCpl0(State, "HLT");
         return () => {
-            PrivilegeChecks.EnsureCpl0(State, "HLT");
             Exit();
         };
     }

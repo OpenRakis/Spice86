@@ -1,0 +1,106 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "F000:FFF0",
+  "totalEntryPoints": 1,
+  "entryPointAddresses": [
+    "F000:FFF0"
+  ],
+  "lastExecutedAddress": "0008:00E1",
+  "lastExecutedBlockId": 46,
+  "blocks": [
+    {
+      "id": 46,
+      "entry": "0008:00DC",
+      "term": "0008:00E1",
+      "pred": [
+        38
+      ],
+      "succ": [],
+      "asm": [
+        "C6062000CC|mov byte ptr DS:[0x0020],0xCC",
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 2,
+      "entry": "F000:FFF0",
+      "term": "F000:FFF0",
+      "pred": [],
+      "succ": [
+        3
+      ],
+      "asm": [
+        "E90D00|jmp near 0"
+      ]
+    },
+    {
+      "id": 38,
+      "entry": "0008:00C0",
+      "term": "0008:00D6",
+      "pred": [
+        3
+      ],
+      "succ": [
+        46
+      ],
+      "asm": [
+        "B81000|mov AX,0x0010",
+        "8ED8|mov DS,AX",
+        "0F20C0|mov EAX,0",
+        "660D00000080|or EAX,0x80000000",
+        "0F22C0|mov 0,EAX",
+        "C6061000AA|mov byte ptr DS:[0x0010],0xAA",
+        "C6060010BB|mov byte ptr DS:[0x1000],0xBB"
+      ]
+    },
+    {
+      "id": 3,
+      "entry": "F000:0000",
+      "dead": true,
+      "term": "F000:00BB",
+      "pred": [
+        2
+      ],
+      "succ": [
+        38
+      ],
+      "asm": [
+        "BC0010|mov SP,0x1000",
+        "C7060806FFFF|mov word ptr DS:[0x0608],0xFFFF",
+        "C7060A060000|mov word ptr DS:[0x060A],0",
+        "C6060C060F|mov byte ptr DS:[0x060C],0x0F",
+        "C6060D069A|mov byte ptr DS:[0x060D],0x9A",
+        "C6060E0600|mov byte ptr DS:[0x060E],0",
+        "C6060F0600|mov byte ptr DS:[0x060F],0",
+        "C7061006FFFF|mov word ptr DS:[0x0610],0xFFFF",
+        "C70612060000|mov word ptr DS:[0x0612],0",
+        "C60614060F|mov byte ptr DS:[0x0614],0x0F",
+        "C606150692|mov byte ptr DS:[0x0615],0x92",
+        "C606160600|mov byte ptr DS:[0x0616],0",
+        "C606170600|mov byte ptr DS:[0x0617],0",
+        "C70630061700|mov word ptr DS:[0x0630],0x0017",
+        "66C706320600060000|mov dword ptr DS:[0x0632],0x00000600",
+        "C7067007DC00|mov word ptr DS:[0x0770],0x00DC",
+        "C70672070800|mov word ptr DS:[0x0772],8",
+        "C606740700|mov byte ptr DS:[0x0774],0",
+        "C606750786|mov byte ptr DS:[0x0775],0x86",
+        "C606760700|mov byte ptr DS:[0x0776],0",
+        "C606770700|mov byte ptr DS:[0x0777],0",
+        "C70638067700|mov word ptr DS:[0x0638],0x0077",
+        "66C7063A0600070000|mov dword ptr DS:[0x063A],0x00000700",
+        "66C706003003400000|mov dword ptr DS:[0x3000],0x00004003",
+        "66C706004003000000|mov dword ptr DS:[0x4000],3",
+        "66C706C04303000F00|mov dword ptr DS:[0x43C0],0x000F0003",
+        "66B800300000|mov EAX,0x00003000",
+        "0F22D8|mov 3,EAX",
+        "0F01163006|lgdt dword ptr DS:[0x0630]",
+        "0F011E3806|lidt dword ptr DS:[0x0638]",
+        "0F20C0|mov EAX,0",
+        "660D01000000|or EAX,1",
+        "0F22C0|mov 0,EAX",
+        "EAC0000800|jmp far 0008:00C0"
+      ]
+    }
+  ],
+  "truncated": false
+}
