@@ -68,7 +68,7 @@
         <PackageVersion Include="Spice86.Audio" Version="11.4.0" />
         <PackageVersion Include="Spice86.DataGrid" Version="0.1.2" />
         <PackageVersion Include="SpeexResamplerSharp" Version="1.0.0" />
-        <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.2.3" />
+        <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.3.0" />
         <PackageVersion Include="System.Buffers" Version="4.6.1" />
         <PackageVersion Include="System.Memory" Version="4.6.3" />
         <PackageVersion Include="System.Text.Encoding.CodePages" Version="10.0.0" />
