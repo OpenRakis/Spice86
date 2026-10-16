@@ -9,12 +9,13 @@ internal sealed class AsmFixtureRun : IDisposable {
 
     /// <summary>Builds the emulator for the given creator. The program is not run here.</summary>
     /// <param name="creator">Creator that builds the emulator to run the fixture.</param>
-    public AsmFixtureRun(Spice86Creator creator) {
+    /// <param name="scope">Preparation scope whose observations the oracle reads.</param>
+    public AsmFixtureRun(Spice86Creator creator, AsmRunScope scope) {
         _creator = creator;
         DependencyInjection = creator.Create();
         Machine = DependencyInjection.Machine;
         Result = new AsmFixtureResult(Machine.Memory, Machine.CpuState,
-            (Renderer)Machine.VgaRenderer, Machine.VgaRegisters);
+            (Renderer)Machine.VgaRenderer, Machine.VgaRegisters, scope.Observations);
     }
 
     /// <summary>The emulator graph of the run.</summary>

@@ -63,7 +63,7 @@ public class JumpDispatcher {
         NextEntryAddress = entryAddress;
         if (!_jumpStack.Contains(target)) {
             _jumpStack.Push(target);
-            JumpAsmReturn = target.Invoke(entryAddress);
+            JumpAsmReturn = InvokeRemovingTargetOnException(target, entryAddress);
         } else {
             _returnTo = target;
         }
@@ -75,5 +75,20 @@ public class JumpDispatcher {
             return true;
         }
         return false;
+    }
+
+    private Action InvokeRemovingTargetOnException(Func<int, Action> target, int entryAddress) {
+        bool returned = false;
+        try {
+            Action result = target.Invoke(entryAddress);
+            returned = true;
+            return result;
+        } finally {
+            if (!returned) {
+                // A target left on the stack would make a later jump to it look like mutual recursion.
+                _jumpStack.Pop();
+                _returnTo = null;
+            }
+        }
     }
 }

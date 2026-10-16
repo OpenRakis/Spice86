@@ -69,9 +69,9 @@ internal static class GenerationPlanBuilder {
     }
 
     /// <summary>
-    /// Collapses override registrations that resolve to the same <c>DefineFunction</c> address. The override
+    /// Collapses override registrations that resolve to the same <c>DefineFunctionWithoutInterpreterFallback</c> address. The override
     /// catalogue is keyed by segmented address, so only one override can be installed per address; emitting a
-    /// second <c>DefineFunction</c> at the same address throws at runtime.
+    /// second <c>DefineFunctionWithoutInterpreterFallback</c> at the same address throws at runtime.
     /// <para>
     /// Self-modifying code is the source of these collisions: a selector node and its instruction variants
     /// live at one address but become distinct partitions, and several can carry a primary (loadOffset 0)

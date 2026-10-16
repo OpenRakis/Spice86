@@ -1,150 +1,16 @@
 ﻿namespace Spice86.Tests.Dos;
 
-using FluentAssertions;
-
-using Spice86.Core.Emulator;
-using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
-using Spice86.Shared.Utils;
-using Spice86.Tests.Utility;
-
-using System;
-using System.IO;
 using System.Text;
 
+using Spice86.Shared.Utils;
+
 /// <summary>
-/// Shared infrastructure for DOS batch integration tests.
-/// Provides COM program builders, Spice86 runners, and temp directory management.
+/// Shared COM program builders and file helpers for DOS batch/console integration test scenarios.
+/// This is the minimal set used by <see cref="AsmFixtures.DosBatchScenarioCatalog"/> and
+/// <see cref="AsmFixtures.ConsoleProgramScenarioCatalog"/>.
 /// </summary>
 internal static class BatchTestHelpers {
-
-    internal static char[] RunAndCaptureVideoCells(string executablePath, string cDrivePath, int cellCount,
-        string? exeArgs = null) {
-        using Spice86Creator creator = new Spice86Creator(
-            binName: executablePath,
-            enablePit: true,
-            maxCycles: 300000,
-            installInterruptVectors: true,
-            cDrive: cDrivePath,
-            exeArgs: exeArgs);
-        using Spice86DependencyInjection spice86 = creator.Create();
-
-        spice86.ProgramExecutor.Run();
-
-        char[] cells = new char[cellCount];
-        for (int i = 0; i < cellCount; i++) {
-            uint videoAddress = MemoryUtils.ToPhysicalAddress(0xB800, (ushort)(i * 2));
-            cells[i] = (char)spice86.Machine.Memory.UInt8[videoAddress];
-        }
-
-        return cells;
-    }
-
-    internal static char RunAndCaptureVideoCell(string executablePath, string cDrivePath,
-        string? exeArgs = null) {
-        return RunAndCaptureVideoCells(executablePath, cDrivePath, 1, exeArgs)[0];
-    }
-
-    internal static void RunAndAssertVideoCell(string executablePath, string cDrivePath, char expectedChar) {
-        char[] cells = RunAndCaptureVideoCells(executablePath, cDrivePath, 1);
-        cells[0].Should().Be(expectedChar);
-    }
-
-    internal static void RunWithoutVideoRead(string executablePath, string cDrivePath, bool enablePit = true) {
-        using Spice86Creator creator = new Spice86Creator(
-            binName: executablePath,
-            enablePit: enablePit,
-            maxCycles: 300000,
-            installInterruptVectors: true,
-            cDrive: cDrivePath);
-        using Spice86DependencyInjection spice86 = creator.Create();
-
-        spice86.ProgramExecutor.Run();
-    }
-
-    internal static void RunBatchScript(string cDrivePath, string script) {
-        string startBatchPath = WriteStartBatchScript(cDrivePath, script);
-        RunWithoutVideoRead(startBatchPath, cDrivePath);
-    }
-
-    internal static byte[] RunWithPreloadedKeysAndCaptureVideoBytes(string executablePath, string cDrivePath,
-        int byteCount, ushort[] keyCodes) {
-        using Spice86Creator creator = new Spice86Creator(
-            binName: executablePath,
-            enablePit: true,
-            maxCycles: 300000,
-            installInterruptVectors: true,
-            cDrive: cDrivePath);
-        using Spice86DependencyInjection spice86 = creator.Create();
-
-        BiosKeyboardBuffer buffer = spice86.Machine.BiosKeyboardInt9Handler.BiosKeyboardBuffer;
-        for (int i = 0; i < keyCodes.Length; i++) {
-            buffer.EnqueueKeyCode(keyCodes[i]);
-        }
-
-        spice86.ProgramExecutor.Run();
-
-        byte[] bytes = new byte[byteCount];
-        for (int i = 0; i < byteCount; i++) {
-            uint videoAddress = MemoryUtils.ToPhysicalAddress(0xB800, (ushort)(i * 2));
-            bytes[i] = spice86.Machine.Memory.UInt8[videoAddress];
-        }
-
-        return bytes;
-    }
-
-    internal static char[] RunWithPreloadedKeysAndCaptureVideoCells(string executablePath, string cDrivePath,
-        int cellCount, ushort[] keyCodes) {
-        byte[] bytes = RunWithPreloadedKeysAndCaptureVideoBytes(executablePath, cDrivePath, cellCount, keyCodes);
-        char[] cells = new char[cellCount];
-        for (int i = 0; i < cellCount; i++) {
-            cells[i] = (char)bytes[i];
-        }
-
-        return cells;
-    }
-
-    internal static void AssertFirstVideoByteWithPreloadedKeys(string executablePath, string cDrivePath,
-        ushort[] keyCodes, byte expected, string because) {
-        byte[] bytes = RunWithPreloadedKeysAndCaptureVideoBytes(executablePath, cDrivePath, 1, keyCodes);
-        bytes[0].Should().Be(expected, because);
-    }
-
-    internal static void AssertFirstVideoByteFromScript(string cDrivePath, string script,
-        byte expected, string because) {
-        string startBatchPath = WriteStartBatchScript(cDrivePath, script);
-        char firstCell = RunAndCaptureVideoCell(startBatchPath, cDrivePath);
-        byte firstByte = (byte)firstCell;
-        firstByte.Should().Be(expected, because);
-    }
-
-    internal static void RunAndAssertVideoCellFromScript(string cDrivePath, string script, char expectedChar) {
-        string startBatchPath = WriteStartBatchScript(cDrivePath, script);
-        RunAndAssertVideoCell(startBatchPath, cDrivePath, expectedChar);
-    }
-
-    internal static void RunAndAssertVideoCellNotWrittenFromScript(string cDrivePath, string script,
-        char unexpectedChar) {
-        string startBatchPath = WriteStartBatchScript(cDrivePath, script);
-        char[] cells = RunAndCaptureVideoCells(startBatchPath, cDrivePath, 1);
-        cells[0].Should().NotBe(unexpectedChar);
-    }
-
-    internal static void RunAndAssertVideoCellsFromScript(string cDrivePath, string script,
-        char[] expectedChars) {
-        string startBatchPath = WriteStartBatchScript(cDrivePath, script);
-        char[] cells = RunAndCaptureVideoCells(startBatchPath, cDrivePath, expectedChars.Length);
-        for (int i = 0; i < expectedChars.Length; i++) {
-            cells[i].Should().Be(expectedChars[i], $"video cell {i} should match");
-        }
-    }
-
-    private static string WriteStartBatchScript(string cDrivePath, string script) {
-        string startBatchPath = Path.Join(cDrivePath, "START.BAT");
-        File.WriteAllText(startBatchPath, script);
-        return startBatchPath;
-    }
-
-
+    /// <summary>Builds a COM program that writes a character to video memory at the given offset.</summary>
     internal static byte[] BuildVideoWriterCom(char value, ushort videoOffset) {
         return new byte[] {
             0xB8, 0x00, 0xB8,                                               // MOV AX, B800h
@@ -158,33 +24,22 @@ internal static class BatchTestHelpers {
         };
     }
 
+    /// <summary>Builds a COM program that terminates with the given exit code.</summary>
     internal static byte[] BuildExitCodeCom(byte exitCode) {
         return new byte[] {
-            0xB8, exitCode, 0x4C,                                           // MOV AX, 4C##h  (AH=4Ch terminate, AL=exitCode)
+            0xB8, exitCode, 0x4C,                                           // MOV AX, 4C##h (AH=4Ch terminate, AL=exitCode)
             0xCD, 0x21                                                      // INT 21h
         };
     }
 
-    /// <summary>
-    /// Builds a COM program that calls IOCTL Get Input Status (INT 21h AH=44h AL=06h) on stdin (handle 0),
+    /// <summary>Builds a COM program that calls IOCTL Get Input Status (INT 21h AH=44h AL=06h) on stdin (handle 0),
     /// then writes the AL result byte to video memory at the given offset.
-    /// AL=0xFF means input available, AL=0x00 means no input.
-    /// </summary>
+    /// AL=0xFF means input available, AL=0x00 means no input.</summary>
     internal static byte[] BuildIoctlInputStatusCom(ushort videoOffset) {
         return BuildIoctlStatusCom(0x06, 0, videoOffset);
     }
 
     internal static byte[] BuildIoctlStatusCom(byte ioctlSubFunction, ushort handle, ushort videoOffset) {
-        // mov ah, 44h
-        // mov al, ioctlSubFunction
-        // mov bx, handle
-        // int 21h            ; AL = status byte
-        // mov ah, 07h        ; video attribute
-        // mov es, 0B800h
-        // mov di, videoOffset
-        // stosw              ; writes AL + AH
-        // mov ax, 4C00h
-        // int 21h
         return new byte[] {
             0xB4, 0x44,                                                     // MOV AH, 44h
             0xB0, ioctlSubFunction,                                         // MOV AL, subfunction
@@ -200,29 +55,11 @@ internal static class BatchTestHelpers {
         };
     }
 
-    /// <summary>
-    /// Builds a COM program that polls IOCTL 06 (Get Input Status) on stdin in a loop,
-    /// then reads a character via INT 21h AH=07h (direct stdin without echo) when input is available,
-    /// and writes the read character to video memory. This demonstrates the real-world CHOICE-like
-    /// polling pattern that requires correct IOCTL 06 behavior.
-    /// </summary>
+    /// <summary>Builds a COM program that polls IOCTL 06 (Get Input Status) on stdin in a loop,
+    /// then reads a character via INT 21h AH=07h when input is available, and writes the read
+    /// character to video memory. This demonstrates the real-world CHOICE-like polling pattern
+    /// that requires correct IOCTL 06 behavior.</summary>
     internal static byte[] BuildIoctlPollAndReadCom(ushort videoOffset) {
-        // poll_loop:
-        //   MOV AH, 44h       ; IOCTL function
-        //   MOV AL, 06h       ; Get Input Status
-        //   XOR BX, BX        ; Handle 0 (stdin)
-        //   INT 21h           ; Call DOS — AL has status
-        //   OR AL, AL         ; Test if 0
-        //   JZ poll_loop      ; If no input, keep polling
-        //   MOV AH, 07h       ; Direct stdin without echo
-        //   INT 21h           ; Read character → AL
-        //   MOV AH, 07h       ; Video attribute
-        //   MOV BX, B800h
-        //   MOV ES, BX
-        //   MOV DI, videoOffset
-        //   STOSW
-        //   MOV AX, 4C00h
-        //   INT 21h
         return new byte[] {
             // poll_loop (offset 0):
             0xB4, 0x44,                                                     // MOV AH, 44h
@@ -230,10 +67,10 @@ internal static class BatchTestHelpers {
             0x31, 0xDB,                                                     // XOR BX, BX
             0xCD, 0x21,                                                     // INT 21h
             0x08, 0xC0,                                                     // OR AL, AL
-            0x74, 0xF4,                                                     // JZ poll_loop (-12 → offset 0)
+            0x74, 0xF4,                                                     // JZ poll_loop (-12 -> offset 0)
             // read_key:
             0xB4, 0x07,                                                     // MOV AH, 07h
-            0xCD, 0x21,                                                     // INT 21h (read char → AL)
+            0xCD, 0x21,                                                     // INT 21h (read char -> AL)
             0xB4, 0x07,                                                     // MOV AH, 07h (attribute)
             0xBB, 0x00, 0xB8,                                               // MOV BX, B800h
             0x8E, 0xC3,                                                     // MOV ES, BX
@@ -244,11 +81,9 @@ internal static class BatchTestHelpers {
         };
     }
 
-    /// <summary>
-    /// Builds a COM program that reads a character via INT 21h with the given AH function
+    /// <summary>Builds a COM program that reads a character via INT 21h with the given AH function
     /// (e.g. 0x07 for Direct Standard Input Without Echo, 0x08 for Direct Standard Input Without Echo
-    /// checking for Ctrl-Break) and writes it to video memory at the given offset.
-    /// </summary>
+    /// checking for Ctrl-Break) and writes it to video memory at the given offset.</summary>
     internal static byte[] BuildConsoleReadToVideoCom(byte ahFunction, ushort videoOffset) {
         return new byte[] {
             0xB4, ahFunction,                                               // MOV AH, ahFunction
@@ -263,32 +98,26 @@ internal static class BatchTestHelpers {
         };
     }
 
-    /// <summary>
-    /// Builds a COM program that reads a character via INT 21h AH=07h (Direct Standard Input Without Echo)
-    /// and writes it to video memory at the given offset.
-    /// </summary>
+    /// <summary>Builds a COM program that reads a character via INT 21h AH=07h (Direct Standard Input Without Echo)
+    /// and writes it to video memory at the given offset.</summary>
     internal static byte[] BuildDirectInputToVideoCom(ushort videoOffset) {
         return BuildConsoleReadToVideoCom(0x07, videoOffset);
     }
 
-    /// <summary>
-    /// Builds a COM program that reads a character via INT 21h AH=01h (Character Input With Echo)
-    /// and writes it to video memory at the given offset.
-    /// </summary>
+    /// <summary>Builds a COM program that reads a character via INT 21h AH=01h (Character Input With Echo)
+    /// and writes it to video memory at the given offset.</summary>
     internal static byte[] BuildCharInputWithEchoToVideoCom(ushort videoOffset) {
         return BuildConsoleReadToVideoCom(0x01, videoOffset);
     }
 
-    /// <summary>
-    /// Builds a COM program that calls IOCTL Get Device Information (INT 21h AH=44h AL=00h) on the given handle,
-    /// then writes DL (low byte of device info) and DH (high byte) to video memory at consecutive offsets.
-    /// </summary>
+    /// <summary>Builds a COM program that calls IOCTL Get Device Information (INT 21h AH=44h AL=00h) on the given handle,
+    /// then writes DL (low byte of device info) and DH (high byte) to video memory at consecutive offsets.</summary>
     internal static byte[] BuildIoctlDeviceInfoCom(ushort handle, ushort videoOffset) {
         return new byte[] {
             0xB4, 0x44,                                                     // MOV AH, 44h
             0xB0, 0x00,                                                     // MOV AL, 00h (Get Device Info)
             0xBB, (byte)(handle & 0xFF), (byte)(handle >> 8),               // MOV BX, handle
-            0xCD, 0x21,                                                     // INT 21h — result in DX
+            0xCD, 0x21,                                                     // INT 21h -- result in DX
             0x88, 0xD0,                                                     // MOV AL, DL
             0xB4, 0x07,                                                     // MOV AH, 07h (attribute)
             0xBB, 0x00, 0xB8,                                               // MOV BX, B800h
@@ -300,21 +129,16 @@ internal static class BatchTestHelpers {
         };
     }
 
-    /// <summary>
-    /// Builds a COM program that calls IOCTL Get Output Status (INT 21h AH=44h AL=07h) on the given handle,
+    /// <summary>Builds a COM program that calls IOCTL Get Output Status (INT 21h AH=44h AL=07h) on the given handle,
     /// then writes the AL result byte to video memory at the given offset.
-    /// AL=0xFF means output ready, AL=0x00 means not ready.
-    /// </summary>
+    /// AL=0xFF means output ready, AL=0x00 means not ready.</summary>
     internal static byte[] BuildIoctlOutputStatusCom(ushort handle, ushort videoOffset) {
         return BuildIoctlStatusCom(0x07, handle, videoOffset);
     }
 
-    /// <summary>
-    /// Builds a COM program that reads 1 byte from stdin (AH=3Fh handle 0), then calls IOCTL 06 on stdin,
-    /// and writes the IOCTL result to video memory. Used to test IOCTL 06 on file handles at EOF.
-    /// </summary>
+    /// <summary>Builds a COM program that reads 1 byte from stdin (AH=3Fh handle 0), then calls IOCTL 06 on stdin,
+    /// and writes the IOCTL result to video memory. Used to test IOCTL 06 on file handles at EOF.</summary>
     internal static byte[] BuildReadThenIoctlInputStatusCom(ushort videoOffset) {
-        // Data buffer for the 1-byte read is placed after the code at offset 0x100 + codeLength
         const int codeLength = 37;
         ushort bufferOffset = (ushort)(0x100 + codeLength);
         return new byte[] {
@@ -328,7 +152,7 @@ internal static class BatchTestHelpers {
             0xB4, 0x44,                                                     // MOV AH, 44h
             0xB0, 0x06,                                                     // MOV AL, 06h (Get Input Status)
             0x31, 0xDB,                                                     // XOR BX, BX (stdin)
-            0xCD, 0x21,                                                     // INT 21h — result in AL
+            0xCD, 0x21,                                                     // INT 21h -- result in AL
             // Write AL to video
             0xB4, 0x07,                                                     // MOV AH, 07h (attribute)
             0xBB, 0x00, 0xB8,                                               // MOV BX, B800h
@@ -341,18 +165,13 @@ internal static class BatchTestHelpers {
         };
     }
 
-    /// <summary>
-    /// Builds a COM program that performs INT 21h AH=06h (Direct Console I/O) with DL=0xFF (input mode),
-    /// then writes the AL result byte to video memory at the given offset.
-    /// </summary>
+    /// <summary>Builds a COM program that performs INT 21h AH=06h (Direct Console I/O) with DL=0xFF (input mode),
+    /// then writes the AL result byte to video memory at the given offset.</summary>
     internal static byte[] BuildDirectConsoleIoInputCom(ushort videoOffset) {
         return BuildDirectConsoleIoCom(0xFF, true, videoOffset);
     }
 
     private static byte[] BuildDirectConsoleIoCom(byte dl, bool writeResultToVideo, ushort videoOffset) {
-        // mov ah, 06h
-        // mov dl, value       ; DL=FFh -> input mode, otherwise output mode
-        // int 21h             ; input mode: AL has char/status
         if (!writeResultToVideo) {
             return new byte[] {
                 0xB4, 0x06,                                                 // MOV AH, 06h
@@ -363,12 +182,6 @@ internal static class BatchTestHelpers {
             };
         }
 
-        // mov ah, 07h         ; video attribute
-        // mov es, 0B800h
-        // mov di, videoOffset
-        // stosw               ; AL + AH
-        // mov ax, 4C00h
-        // int 21h
         return new byte[] {
             0xB4, 0x06,                                                     // MOV AH, 06h
             0xB2, dl,                                                       // MOV DL, value
@@ -383,23 +196,18 @@ internal static class BatchTestHelpers {
         };
     }
 
-    /// <summary>
-    /// Builds a COM program that writes a single character to stdout via INT 21h AH=06h
-    /// (Direct Console I/O, output mode: DL != 0xFF), then exits.
-    /// </summary>
+    /// <summary>Builds a COM program that writes a single character to stdout via INT 21h AH=06h
+    /// (Direct Console I/O, output mode: DL != 0xFF), then exits.</summary>
     internal static byte[] BuildDirectConsoleIoOutputCom(byte character) {
         return BuildDirectConsoleIoCom(character, false, 0);
     }
 
-    /// <summary>
-    /// Builds a COM program that:
+    /// <summary>Builds a COM program that:
     /// 1) calls INT 21h AH=02h (Display Output) with the supplied character in DL,
     /// 2) then writes a sentinel byte directly to video memory,
     /// 3) then exits.
-    ///
     /// If AH=02h performs a Ctrl-C/Ctrl-Break check and triggers INT 23h,
-    /// step 2 is never reached and the sentinel is not written.
-    /// </summary>
+    /// step 2 is never reached and the sentinel is not written.</summary>
     internal static byte[] BuildDisplayOutputThenWriteSentinelCom(byte outputCharacter, byte sentinel) {
         return new byte[] {
             0xB2, outputCharacter,                                           // MOV DL, outputCharacter
@@ -416,11 +224,9 @@ internal static class BatchTestHelpers {
         };
     }
 
-    /// <summary>
-    /// Builds a COM program that calls INT 21h with the provided AH value,
+    /// <summary>Builds a COM program that calls INT 21h with the provided AH value,
     /// then writes a sentinel byte directly to the first text video cell.
-    /// If the INT 21h call triggers break handling, sentinel write is never reached.
-    /// </summary>
+    /// If the INT 21h call triggers break handling, sentinel write is never reached.</summary>
     internal static byte[] BuildInt21CallThenWriteSentinelCom(byte ah, byte sentinel) {
         return new byte[] {
             0xB4, ah,                                                        // MOV AH, ah
@@ -436,22 +242,9 @@ internal static class BatchTestHelpers {
         };
     }
 
-    /// <summary>
-    /// Builds a COM program that writes AL via AH=09h (DS:DX -> "$" terminated string),
-    /// then writes a sentinel to video cell 0.
-    /// </summary>
+    /// <summary>Builds a COM program that writes a $-terminated string via INT 21h AH=09h,
+    /// then writes a sentinel to video cell 0.</summary>
     internal static byte[] BuildPrintStringThenWriteSentinelCom(string text, byte sentinel) {
-        // MOV DX, dataOffset    ; DS:DX -> $-terminated string
-        // MOV AH, 09h
-        // INT 21h               ; print string
-        // MOV AL, sentinel
-        // MOV AH, 07h           ; video attribute
-        // MOV BX, B800h
-        // MOV ES, BX
-        // MOV DI, 0000h         ; cell 0
-        // STOSW                 ; write sentinel + attr
-        // RET                   ; terminate
-        // [text + "$" + NUL]
         byte[] textBytes = Encoding.ASCII.GetBytes(text + "$\0");
         const int codeLength = 21;
         ushort dataOffset = (ushort)(0x100 + codeLength);
@@ -473,10 +266,8 @@ internal static class BatchTestHelpers {
         return machineCode;
     }
 
-    /// <summary>
-    /// Builds a COM program that executes AH=0Ch with AL=06h (flush + direct console input status),
-    /// then writes AL to video memory.
-    /// </summary>
+    /// <summary>Builds a COM program that executes AH=0Ch with AL=06h (flush + direct console input status),
+    /// then writes AL to video memory.</summary>
     internal static byte[] BuildAh0CFlushThenAh06InputStatusToVideoCom(ushort videoOffset) {
         return new byte[] {
             0xB0, 0x06,                                                     // MOV AL, 06h (subfunction)
@@ -493,12 +284,10 @@ internal static class BatchTestHelpers {
         };
     }
 
-    /// <summary>
-    /// Builds a COM program that calls IOCTL AH=44h with the given AL subfunction,
+    /// <summary>Builds a COM program that calls IOCTL AH=44h with the given AL subfunction,
     /// then writes two bytes to video:
     /// - byte 0: Carry Flag (0 or 1)
-    /// - byte 1: AX low byte returned by INT 21h
-    /// </summary>
+    /// - byte 1: AX low byte returned by INT 21h</summary>
     internal static byte[] BuildIoctlUnsupportedFunctionProbeCom(byte subFunction) {
         return new byte[] {
             0xB4, 0x44,                                                     // MOV AH, 44h
@@ -522,10 +311,8 @@ internal static class BatchTestHelpers {
         };
     }
 
-    /// <summary>
-    /// Builds a COM program that calls a drive-based IOCTL subfunction (INT 21h AH=44h with BX=drive number),
-    /// then writes AX and DX to video memory as four consecutive bytes: AL, AH, DL, DH.
-    /// </summary>
+    /// <summary>Builds a COM program that calls a drive-based IOCTL subfunction (INT 21h AH=44h with BX=drive number),
+    /// then writes AX and DX to video memory as four consecutive bytes: AL, AH, DL, DH.</summary>
     internal static byte[] BuildIoctlDriveRegisterProbeCom(byte ioctlSubFunction, ushort driveNumber, ushort videoOffset) {
         return new byte[] {
             0xB4, 0x44,                                                     // MOV AH, 44h
@@ -559,16 +346,9 @@ internal static class BatchTestHelpers {
         };
     }
 
-    /// <summary>
-    /// Builds a COM program that prints a $-terminated string via INT 21h AH=09h, then exits.
-    /// The string data is placed immediately after the code.
-    /// </summary>
+    /// <summary>Builds a COM program that prints a $-terminated string via INT 21h AH=09h, then exits.
+    /// The string data is placed immediately after the code.</summary>
     internal static byte[] BuildPrintDollarStringCom(string text) {
-        // MOV DX, dataOffset    ; DS:DX -> $-terminated string
-        // MOV AH, 09h
-        // INT 21h               ; print until '$'
-        // RET                   ; terminate (PSP INT 20h via RET)
-        // [text + "$"]
         byte[] textBytes = Encoding.ASCII.GetBytes(text + "$");
         const int codeLength = 8;
         ushort dataOffset = (ushort)(0x100 + codeLength);
@@ -584,15 +364,13 @@ internal static class BatchTestHelpers {
         return machineCode;
     }
 
-    /// <summary>
-    /// Builds a COM program that calls INT 21h AH=0Bh (Check Standard Input Status),
+    /// <summary>Builds a COM program that calls INT 21h AH=0Bh (Check Standard Input Status),
     /// then writes the AL result byte to video memory at the given offset.
-    /// AL=0xFF means input available, AL=0x00 means no input.
-    /// </summary>
+    /// AL=0xFF means input available, AL=0x00 means no input.</summary>
     internal static byte[] BuildCheckStdinStatusCom(ushort videoOffset) {
         return new byte[] {
             0xB4, 0x0B,                                                     // MOV AH, 0Bh
-            0xCD, 0x21,                                                     // INT 21h — result in AL
+            0xCD, 0x21,                                                     // INT 21h -- result in AL
             0xB4, 0x07,                                                     // MOV AH, 07h (attribute)
             0xBB, 0x00, 0xB8,                                               // MOV BX, B800h
             0x8E, 0xC3,                                                     // MOV ES, BX
@@ -603,15 +381,8 @@ internal static class BatchTestHelpers {
         };
     }
 
+    /// <summary>Builds a COM program that writes text to stdout via INT 21h AH=40h, then exits.</summary>
     internal static byte[] BuildStdoutWriterCom(string text) {
-        // MOV BX, 0001h         ; handle 1 = stdout
-        // MOV DX, dataOffset    ; DS:DX -> text data
-        // MOV CX, len(text)     ; byte count
-        // MOV AH, 40h           ; Write File/Device
-        // INT 21h
-        // MOV AX, 4C00h
-        // INT 21h
-        // [text data]
         byte[] ascii = Encoding.ASCII.GetBytes(text);
         const int codeLength = 18;
         ushort dataOffset = (ushort)(0x100 + codeLength);
@@ -630,20 +401,8 @@ internal static class BatchTestHelpers {
         return machineCode;
     }
 
+    /// <summary>Builds a COM program that reads 1 byte from stdin and writes it to stdout, then exits.</summary>
     internal static byte[] BuildStdinToStdoutCom() {
-        // MOV BX, 0000h         ; handle 0 = stdin
-        // MOV DX, dataOffset    ; DS:DX -> 1-byte buffer
-        // MOV CX, 0001h
-        // MOV AH, 3Fh           ; Read File/Device
-        // INT 21h
-        // MOV BX, 0001h         ; handle 1 = stdout
-        // MOV DX, dataOffset    ; same buffer
-        // MOV CX, 0001h
-        // MOV AH, 40h           ; Write File/Device
-        // INT 21h
-        // MOV AX, 4C00h
-        // INT 21h
-        // [1-byte buffer]
         const int codeLength = 31;
         ushort dataOffset = (ushort)(0x100 + codeLength);
         byte[] code = new byte[] {
@@ -665,21 +424,8 @@ internal static class BatchTestHelpers {
         return machineCode;
     }
 
+    /// <summary>Builds a COM program that reads 1 byte from stdin and writes it to video memory, then exits.</summary>
     internal static byte[] BuildStdinToVideoWriterCom(ushort videoOffset) {
-        // MOV BX, 0000h         ; handle 0 = stdin
-        // MOV DX, dataOffset    ; DS:DX -> 1-byte buffer
-        // MOV CX, 0001h
-        // MOV AH, 3Fh           ; Read File/Device
-        // INT 21h
-        // MOV AX, B800h
-        // MOV ES, AX            ; ES -> video segment
-        // MOV DI, videoOffset
-        // MOV AL, [dataOffset]  ; load byte read from stdin
-        // MOV AH, 07h           ; video attribute
-        // STOSW                 ; write char + attr
-        // MOV AX, 4C00h
-        // INT 21h
-        // [1-byte buffer]
         const int codeLength = 32;
         ushort dataOffset = (ushort)(0x100 + codeLength);
         byte[] code = new byte[] {
@@ -702,25 +448,28 @@ internal static class BatchTestHelpers {
         return machineCode;
     }
 
-
+    /// <summary>Creates a binary file in the given directory.</summary>
     internal static string CreateBinaryFile(string directoryPath, string fileName, byte[] content) {
         string filePath = Path.Join(directoryPath, fileName);
         File.WriteAllBytes(filePath, content);
         return filePath;
     }
 
+    /// <summary>Creates a text file in the given directory.</summary>
     internal static string CreateTextFile(string directoryPath, string fileName, string content) {
         string filePath = Path.Join(directoryPath, fileName);
         File.WriteAllText(filePath, content);
         return filePath;
     }
 
+    /// <summary>Creates a directory path under the root.</summary>
     internal static string CreateDirectoryPath(string rootPath, params string[] segments) {
         string directoryPath = Path.Join([rootPath, .. segments]);
         Directory.CreateDirectory(directoryPath);
         return directoryPath;
     }
 
+    /// <summary>Resolves the first existing path from a list of candidates.</summary>
     internal static string ResolveExistingPath(params string[] candidatePaths) {
         string? existingPath = candidatePaths.FirstOrDefault(File.Exists);
         if (existingPath is null) {
@@ -729,10 +478,5 @@ internal static class BatchTestHelpers {
         }
 
         return existingPath;
-    }
-
-    internal static void WithTempFile(string prefix, Action<string> test) {
-        using TempFile tempFile = new(prefix);
-        test(tempFile.Path);
     }
 }

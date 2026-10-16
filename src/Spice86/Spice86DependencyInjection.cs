@@ -682,7 +682,7 @@ public class Spice86DependencyInjection : IDisposable {
             vgaCard, videoState, vgaIoPortHandler,
             vgaRenderer, vgaBios, vgaRom,
             dmaSystem, opl, mixer, mouse, mouseDriver,
-            vgaFunctionality, pauseHandler, emulationLoopScheduler);
+            vgaFunctionality, pauseHandler, inputEventHub, emulationLoopScheduler);
 
         if (loggerService.IsEnabled(LogLevel.Information)) {
             loggerService.LogInformation("Machine created...");

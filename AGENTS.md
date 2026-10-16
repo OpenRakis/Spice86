@@ -35,9 +35,9 @@ The entire emulator is assembled in `Spice86DependencyInjection.cs` (~600 lines)
 ## Critical Workflows
 
 ### Building & Running
-```powershell
-# Build from solution root
-dotnet build
+```text
+# Build from repository root
+dotnet build src/Spice86.sln
 
 # Run with executable
 dotnet run --project src/Spice86 -- -e path\to\program.exe
@@ -48,6 +48,9 @@ dotnet test tests/Spice86.Tests -- --filter-not-class '*SingleStepTest*'
 # Run a single test class / method
 dotnet test tests/Spice86.Tests -- --filter-class '*GeneratedCodeMachineTest*'
 dotnet test tests/Spice86.Tests -- --filter-method '*TestStiPending*'
+
+# Opt-in: compile the C# every test generates and append one row per test to a TSV coverage report (path must be absolute)
+SPICE86_GENERATED_CODE_COVERAGE=$PWD/tmp/generated-code-coverage.tsv dotnet test tests/Spice86.Tests -- --filter-not-class '*SingleStepTest*' --filter-not-class '*GeneratedCodeCoverageReportTest*'
 ```
 
 > **Test filter syntax rule**: the test project runs on xUnit v3 through Microsoft.Testing.Platform (`TestingPlatformDotnetTestSupport` in `tests/Directory.Build.props`). The VSTest-style `--filter 'FullyQualifiedName~...'` is **silently ignored** (warning `MTP0001`) and runs the whole suite, SingleStepTest included. Always pass filters after `--` using `--filter-class`, `--filter-not-class`, `--filter-method`, `--filter-not-method` with `*` wildcards.
@@ -56,9 +59,25 @@ dotnet test tests/Spice86.Tests -- --filter-method '*TestStiPending*'
 
 > **Test output rule (agents only)**: no need to redirect `dotnet test` output to a file. On success the console summary is short (a single `Passed! - Failed: 0, Passed: N ...` line), so run it directly and read the summary. Only capture to a file when a run actually fails and you need the full failure detail.
 
+> **Direct failure diagnostics**: if the MTP summary points to an inaccessible ignored `bin/` log, `dotnet run --project tests/Spice86.Tests --no-build -- -class- '*SingleStepTest*' -reporter quiet -noLogo -noColor` runs the xUnit executable directly and prints failures. This direct runner uses `-class` / `-class-` / `-method`, not the MTP `--filter-*` syntax above.
+
+> **Temporary generated projects**: setting `TMPDIR` inside this repository makes the HTTP generated-client tests' temporary consumer projects inherit ancestor `Directory.Packages.props`; the reviewed tests then fail with NU1008. This is separate from ASM code generation. Do not change package security/settings to hide it.
+
+> **Compile report scope**: `SPICE86_GENERATED_CODE_COVERAGE` only compiles dumps; it does not execute them or enforce golden coverage. Rows represent emulator lifetimes, not unique ASM scenarios. A report with zero compile errors is not proof of generated-mode behavioral coverage.
+
 > **Long-running test rule (Kiro agents only)**: the foreground shell tool (`execute_bash`) enforces a hard wall-clock cap (roughly 25-60s in practice) that fires *before* the `timeout` argument. When it trips it force-returns exit 1 while the detached `dotnet` process keeps running and completes normally, which looks exactly like a crash (abrupt exit 1, no test summary, no dump) but is not one. Any test run expected to exceed ~25s (the full suite is ~2 min; `CfgGraphReloadTest` alone is ~55s) MUST be launched with the background-process tool (which has no such cap), writing a completion marker, then polled with short (<20s) foreground calls until the marker appears. Do not conclude a suite "crashed" from a bare exit 1 with no summary; re-run it in the background and check the real result first. Splitting the run with `--filter-class` so each foreground run stays under the cap also works.
 
-> **Generated-code golden regeneration rule**: every `GeneratedCodeMachineTestRunner.TestGeneratedCode` call in `GeneratedCodeMachineTest` and `SpeculativeCfgTest` compares the generated C# against a committed golden under `tests/Spice86.Tests/Resources/cpuTests/res/GeneratedCode/<key>.cs.txt`, where `<key>` is the bin name plus one suffix per enabled run option (e.g. `jump1.spec`, `test386.failport.spec`, `intchain.ivt.spec`). Any change that alters generated output will fail these tests; that is intended. **Regenerate rather than hand-edit the goldens**: uncomment the `WriteExpectedGeneratedSource(...)` call in `GeneratedCodeMachineTestRunner.CompareGeneratedSourceWithExpected`, run both `GeneratedCodeMachineTest` and `SpeculativeCfgTest`, re-comment the call, then review the golden diff as the primary artefact of the change (the write goes into the source tree via `[CallerFilePath]`, one file per run). With the write enabled, run the two classes single-threaded (`-- --parallel none`; `--maximum-parallel-threads` is not a valid option for this runner, which then prints its help and runs zero tests): the goldens are written and read during the run, and parallel execution can otherwise race on the same file and leave a golden unwritten. There are around fifty goldens; the `speculative_*` and ALU (`add`, `sub`, `mul`, `div`, `shifts`, ...) fixtures mostly repeat the same change, so read `jump1`, `partition_cross_function_loop`, `rep`, `div` and `selfmodifyje` closely and skim the rest as regression guards. This mirrors the existing `WriteExpectedListing`/`WriteExpectedCfgJson` workflow in `MachineTest`.
+> **ASM golden regeneration rule**: normal test runs must never write committed goldens. The three source-tree writer calls (`MachineGoldens.WriteExpectedListing`, `MachineGoldens.WriteExpectedCfgJson`, and `GeneratedCodeMachineTestRunner.WriteExpectedGeneratedSource`) stay commented out except during deliberate regeneration. To regenerate, enable all three writers, rebuild, run the catalogue command below twice serially, require the second pass to make no changes, disable the writers again, rebuild, and review the complete golden diff. Regenerate files instead of editing them by hand.
+>
+> Machine goldens use `MachineGoldens.GoldenKey(fixture)` and live in `DumpedListing`, `DumpedCfgBlocks`, and `DumpedCfgPartitions`. Generated-source goldens use `GeneratedCodeMachineTestRunner.GoldenKey(settings)` and live in `GeneratedCode`; this key intentionally omits the scenario variant because several executions may share one generated program. `AsmFixtureGoldenCoverageTest` derives the expected file sets for both key spaces from the scenario catalogue and rejects missing and orphan files.
+>
+> Run regeneration serially because several tests can address the same golden (`--maximum-parallel-threads` is not a valid option for this runner):
+>
+> ```text
+> dotnet test tests/Spice86.Tests --no-build -- --filter-class '*GeneratedCodeScenarioTest*' --filter-class '*GeneratedCodeMachineTest*' --filter-class '*SpeculativeCfgTest*' --parallel none
+> ```
+>
+> `GeneratedCodeScenarioTest` covers the catalogue. `GeneratedCodeMachineTest` and `SpeculativeCfgTest` retain focused engine and speculative cases. Treat the generated diff as the primary review artifact; passing tests alone do not prove that regenerated expectations are correct.
 
 ### Debugging Workflow
 - **GDB Integration**: Server runs on port 10000 by default (`--GdbPort 10000`)
@@ -102,6 +121,8 @@ public class MyOverrides : CSharpOverrideHelper {
     }
 }
 ```
+
+Hand-written overrides registered with `DefineFunction` hand control back to the interpreter at whatever CS:IP their action leaves. Generated code registers with `DefineFunctionWithoutInterpreterFallback`, whose transfers must land on another override or the expected return address and never fall back to the interpreter.
 
 ### CSharpOverrideHelper Capabilities
 - Access CPU state via `State`, `Stack`, `Memory`, `UInt8/16/32` indexers
@@ -226,12 +247,11 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 - **Prefer ASM-based tests over unit tests** for testing the emulator
   - Unit tests are acceptable for interrupt handlers that don't override `WriteAssemblyInRam` and deal with few dependencies
   - Use assembly-based integration tests for comprehensive emulator validation
-- **Every ASM fixture runs in both `MachineTest` and `GeneratedCodeMachineTest`**
-  - Every ASM fixture has one behavioral oracle (expected memory and/or program-result checks) in `tests/Spice86.Tests/AsmFixtures/AsmFixtureCatalog.cs`. `MachineTest` and `GeneratedCodeMachineTest` both take the fixture from the catalogue; never copy expected values into a test class.
-  - `MachineTest` (`TestOneBin`) only runs the interpreter. It checks the oracle, the listing and CFG goldens, and engine state (CFG nodes, `CS:IP`, `IsRunning`) in its own callbacks. It never invokes the C# generator.
-  - `GeneratedCodeMachineTest` (via `GeneratedCodeMachineTestRunner.TestGeneratedCode`) runs the bin in the interpreter, generates C# from the recorded CFG, compiles it, re-runs the bin with the compiled override installed, checks the same oracle, then compares the generated-code golden.
-  - When adding or changing an ASM fixture, add or update its catalogue method and both tests. Code-generation bugs are only caught by the generated-code path, and emulator CFG changes only by the MachineTest goldens.
-  - This holds for every configuration of a bin: a fixture with speculation off or on the unobserved arm of a speculative bin gets its own MachineTest run, with listing / CFG goldens named <bin>.nospec / <bin>.unobserved (MachineTest.MachineGoldenKey). The only exceptions are engine-only fixtures without an oracle, listed in AsmFixtureGoldenCoverageTest.
+- **Every runnable ASM scenario is catalogue-driven**
+  - Register it in `tests/Spice86.Tests/AsmFixtures/AsmScenarioCatalog.cs` with one behavioral oracle. Keep child programs, overlays, includes, and data files as dependencies of the scenario that loads them, not as standalone scenarios.
+  - `GeneratedCodeScenarioTest.CatalogueCaseRunsAsGeneratedCode` derives its cases from the catalogue. It performs interpreted discovery, checks the machine goldens, generates and compiles C#, executes each registered variant with the same oracle, and checks the generated-source golden. Adding a scenario therefore adds generated coverage automatically.
+  - `MachineTest`, `GeneratedCodeMachineTest`, and `SpeculativeCfgTest` retain focused engine, speculative, and fault-injection checks. They are not the registration source of truth.
+  - Follow the golden-key and regeneration rules above. Do not force machine-golden and generated-source keys to match, and do not add exceptions for missing or orphan files.
 - Use FluentAssertions for assertions: `result.Should().Be(expected)`
 - Mock with NSubstitute: `Substitute.For<IInterface>()`
 - CPU tests in `tests/Spice86.Tests/CpuTests/` use SingleStepTests NuGet packages for validation

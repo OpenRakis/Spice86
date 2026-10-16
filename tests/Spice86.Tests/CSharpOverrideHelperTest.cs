@@ -15,6 +15,8 @@ using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
 
+using EmulatedCallback = Spice86.Core.Emulator.InterruptHandlers.Common.Callback.Callback;
+
 using System;
 using System.Collections.Generic;
 
@@ -579,6 +581,323 @@ public class CSharpOverrideHelperTest {
         machine.CpuState.AX.Should().Be(0x0180);
     }
 
+    [Fact]
+    public void CallbackThatKeepsCsIpRunsHandlerAndLeavesCsIpAtCallback() {
+        // Arrange
+        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection res = creator.Create();
+        Machine machine = res.Machine;
+        CSharpOverrideHelper helper = CreateHelper(machine);
+        ushort number = machine.CallbackHandler.AllocateNextCallback();
+        bool ran = false;
+        machine.CallbackHandler.AddCallback(new EmulatedCallback(number, () => ran = true, new SegmentedAddress(0xF000, 0x1000)));
+
+        // Act
+        helper.Callback(0xF000, 0x1000, number);
+
+        // Assert
+        ran.Should().BeTrue();
+        machine.CpuState.CS.Should().Be(0xF000);
+        machine.CpuState.IP.Should().Be(0x1000);
+    }
+
+    [Fact]
+    public void CallbackThatMovesCsIpFailsAsUntested() {
+        // Arrange
+        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection res = creator.Create();
+        Machine machine = res.Machine;
+        CSharpOverrideHelper helper = CreateHelper(machine);
+        ushort number = machine.CallbackHandler.AllocateNextCallback();
+        machine.CallbackHandler.AddCallback(new EmulatedCallback(number, () => {
+            machine.CpuState.CS = 0x1234;
+            machine.CpuState.IP = 0x0100;
+        }, new SegmentedAddress(0xF000, 0x1000)));
+
+        // Act & Assert
+        Action act = () => helper.Callback(0xF000, 0x1000, number);
+        act.Should().Throw<UnrecoverableException>()
+            .WithMessage("*Untested callback CS:IP change at F000:1000*1234:0100*");
+    }
+
+    [Fact]
+    public void CallbackThatStopsTheMachineExits() {
+        // Arrange
+        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection res = creator.Create();
+        Machine machine = res.Machine;
+        CSharpOverrideHelper helper = CreateHelper(machine);
+        ushort number = machine.CallbackHandler.AllocateNextCallback();
+        machine.CallbackHandler.AddCallback(new EmulatedCallback(number, () => machine.CpuState.IsRunning = false,
+            new SegmentedAddress(0xF000, 0x1000)));
+
+        // Act & Assert
+        Action act = () => helper.Callback(0xF000, 0x1000, number);
+        act.Should().Throw<HaltRequestedException>();
+    }
+
+    [Fact]
+    public void ReturnToAnOuterExpectedAddressUnwindsToThatCall() {
+        // Arrange
+        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection res = creator.Create();
+        Machine machine = res.Machine;
+        machine.CpuState.SS = 0x3000;
+        machine.CpuState.SP = 0x100;
+        CSharpOverrideHelper helper = CreateHelper(machine);
+
+        // Act
+        helper.InterruptCall(0x1000, 0x0010, 0x2000, _ => {
+            helper.NearCall(0x2000, 0x0050, _ => () => {
+                machine.CpuState.CS = 0x1000;
+                machine.CpuState.IP = 0x0010;
+            });
+            return () => { };
+        });
+
+        // Assert
+        machine.CpuState.CS.Should().Be(0x1000);
+        machine.CpuState.IP.Should().Be(0x0010);
+    }
+
+    [Fact]
+    public void ANestedCallReturningToAnOverriddenAddressResumesTheWaitingCaller() {
+        // Arrange: the return address of the nested call is itself a registered override
+        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection res = creator.Create();
+        Machine machine = res.Machine;
+        machine.CpuState.SS = 0x3000;
+        machine.CpuState.SP = 0x100;
+        Dictionary<SegmentedAddress, FunctionInformation> functionInformations = new();
+        SegmentedAddress overriddenReturnAddress = new(0x2000, 0x0050);
+        bool returnAddressOverrideInvoked = false;
+        functionInformations[overriddenReturnAddress] =
+            new FunctionInformation(overriddenReturnAddress, "return_address_partition",
+                _ => () => returnAddressOverrideInvoked = true);
+        CSharpOverrideHelper helper = new(functionInformations, machine, _loggerServiceMock,
+            new Configuration { HttpApiPort = 0 });
+
+        // Act
+        helper.InterruptCall(0x1000, 0x0010, 0x2000, _ => {
+            helper.NearCall(0x2000, 0x0050, _ => () => {
+                machine.CpuState.CS = 0x2000;
+                machine.CpuState.IP = 0x0050;
+            });
+            machine.CpuState.CS = 0x1000;
+            machine.CpuState.IP = 0x0010;
+            return () => { };
+        });
+
+        // Assert: the generated caller waiting at the return address resumes, the override there does not run
+        returnAddressOverrideInvoked.Should().BeFalse();
+        machine.CpuState.CS.Should().Be(0x1000);
+        machine.CpuState.IP.Should().Be(0x0010);
+    }
+
+    [Fact]
+    public void ReturnToAnAddressNoCallExpectsFailsAsAnUnwind() {
+        // Arrange
+        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection res = creator.Create();
+        Machine machine = res.Machine;
+        machine.CpuState.SS = 0x3000;
+        machine.CpuState.SP = 0x100;
+        CSharpOverrideHelper helper = CreateHelper(machine);
+
+        // Act & Assert
+        Action act = () => helper.InterruptCall(0x1000, 0x0010, 0x2000, _ => {
+            helper.NearCall(0x2000, 0x0050, _ => () => {
+                machine.CpuState.CS = 0x1000;
+                machine.CpuState.IP = 0x0099;
+            });
+            return () => { };
+        });
+        CallStackUnwindException exception = act.Should().Throw<CallStackUnwindException>().Which;
+        exception.Target.Should().Be(new SegmentedAddress(0x1000, 0x0099));
+        exception.Message.Should().Contain("no C# override");
+    }
+
+    [Fact]
+    public void ANestedCallLandingOnACatalogueOverrideRunsIt() {
+        // Arrange: the helper's own dictionary is empty, only the catalogue knows the override
+        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection dependencyInjection = creator.Create();
+        Machine machine = dependencyInjection.Machine;
+        machine.CpuState.SS = 0x3000;
+        machine.CpuState.SP = 0x100;
+        CSharpOverrideHelper helper = CreateHelper(machine);
+        SegmentedAddress cataloguedOverride = new(0x2000, 0x0080);
+        bool overrideInvoked = false;
+        dependencyInjection.FunctionCatalogue.FunctionInformations[cataloguedOverride] =
+            new FunctionInformation(cataloguedOverride, "catalogued_partition", _ => () => {
+                overrideInvoked = true;
+                machine.CpuState.CS = 0x2000;
+                machine.CpuState.IP = 0x0050;
+            });
+
+        // Act
+        helper.NearCall(0x2000, 0x0050, _ => () => {
+            machine.CpuState.CS = 0x2000;
+            machine.CpuState.IP = 0x0080;
+        });
+
+        // Assert: the catalogue override ran and the chain resumed the waiting caller after it
+        overrideInvoked.Should().BeTrue();
+        machine.CpuState.CS.Should().Be(0x2000);
+        machine.CpuState.IP.Should().Be(0x0050);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ANestedCallLandingOnAnAddressWithoutAnOverrideFailsAsAnUnwind(bool registerTargetWithoutOverride) {
+        // Arrange: the callee transfers control to an address no call expects to return to
+        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection dependencyInjection = creator.Create();
+        Machine machine = dependencyInjection.Machine;
+        machine.CpuState.SS = 0x3000;
+        machine.CpuState.SP = 0x100;
+        Dictionary<SegmentedAddress, FunctionInformation> helperFunctions = new();
+        CSharpOverrideHelper helper = new(helperFunctions, machine, _loggerServiceMock,
+            new Configuration { HttpApiPort = 0 });
+        SegmentedAddress target = new(0x2000, 0x0099);
+        if (registerTargetWithoutOverride) {
+            FunctionInformation knownWithoutOverride = new(target, "known_without_override");
+            helperFunctions.Add(target, knownWithoutOverride);
+            dependencyInjection.FunctionCatalogue.FunctionInformations[target] = knownWithoutOverride;
+        }
+
+        // Act
+        Action act = () => helper.NearCall(0x2000, 0x0050, _ => () => {
+            machine.CpuState.CS = target.Segment;
+            machine.CpuState.IP = target.Offset;
+        });
+
+        // Assert
+        CallStackUnwindException exception = act.Should().Throw<CallStackUnwindException>().Which;
+        exception.Target.Should().Be(target);
+        exception.Message.Should().Contain("no C# override");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ANestedCallThatStopsTheMachineExits(bool returnsToExpectedAddress) {
+        // Arrange: the callee stops the machine, with CS:IP at the expected return or elsewhere
+        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection dependencyInjection = creator.Create();
+        Machine machine = dependencyInjection.Machine;
+        machine.CpuState.SS = 0x3000;
+        machine.CpuState.SP = 0x100;
+        CSharpOverrideHelper helper = CreateHelper(machine);
+
+        // Act
+        Action act = () => helper.NearCall(0x2000, 0x0050, _ => () => {
+            machine.CpuState.IsRunning = false;
+            if (returnsToExpectedAddress) {
+                machine.CpuState.CS = 0x2000;
+                machine.CpuState.IP = 0x0050;
+            } else {
+                machine.CpuState.CS = 0x2000;
+                machine.CpuState.IP = 0x0099;
+            }
+        });
+
+        // Assert: a stopped machine must not let the waiting C# caller continue
+        act.Should().Throw<HaltRequestedException>();
+    }
+
+    [Fact]
+    public void CallbackMovedCsIpReportsTheMove() {
+        // Arrange
+        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection res = creator.Create();
+        Machine machine = res.Machine;
+        CSharpOverrideHelper helper = CreateHelper(machine);
+        ushort movingNumber = machine.CallbackHandler.AllocateNextCallback();
+        machine.CallbackHandler.AddCallback(new EmulatedCallback(movingNumber, () => {
+            machine.CpuState.CS = 0x1234;
+            machine.CpuState.IP = 0x0100;
+        }, new SegmentedAddress(0xF000, 0x1000)));
+        ushort stayingNumber = machine.CallbackHandler.AllocateNextCallback();
+        machine.CallbackHandler.AddCallback(new EmulatedCallback(stayingNumber, () => { },
+            new SegmentedAddress(0xF000, 0x1000)));
+
+        // Act
+        bool moved = helper.CallbackMovedCsIp(0xF000, 0x1000, movingNumber);
+        bool stayed = helper.CallbackMovedCsIp(0xF000, 0x1000, stayingNumber);
+
+        // Assert
+        moved.Should().BeTrue("the handler set CS:IP to another address");
+        stayed.Should().BeFalse("the handler left CS:IP at the callback");
+    }
+
+    [Fact]
+    public void CheckExternalEventsProcessesPendingInput() {
+        // Arrange
+        using Spice86Creator creator = new(binName: "jump2");
+        using Spice86DependencyInjection dependencyInjection = creator.Create();
+        Machine machine = dependencyInjection.Machine;
+        CSharpOverrideHelper helper = CreateHelper(machine);
+        bool processed = false;
+        machine.InputEventHub.PostToEmulatorThread(() => processed = true);
+
+        // Act
+        helper.CheckExternalEvents(machine.CpuState.CS, machine.CpuState.IP);
+
+        // Assert
+        processed.Should().BeTrue();
+    }
+
+    [Fact]
+    public void DefineFunctionRegistersAnOverrideThatAllowsInterpreterFallback() {
+        // Arrange
+        using Spice86Creator creator = new(binName: "jump2");
+        using Spice86DependencyInjection res = creator.Create();
+        Machine machine = res.Machine;
+        CSharpOverrideHelper helper = CreateHelper(machine);
+        SegmentedAddress address = new(0x1000, 0x0010);
+
+        // Act
+        helper.DefineFunction(address.Segment, address.Offset, _ => () => { }, name: "hand_written");
+
+        // Assert: a hand-written override is permissive, the interpreter continues at its CS:IP
+        helper.FunctionInformations[address].ForbidsInterpreterFallback.Should().BeFalse();
+    }
+
+    [Fact]
+    public void DefineFunctionWithoutInterpreterFallbackRegistersAnOverrideThatForbidsInterpreterFallback() {
+        // Arrange
+        using Spice86Creator creator = new(binName: "jump2");
+        using Spice86DependencyInjection res = creator.Create();
+        Machine machine = res.Machine;
+        CSharpOverrideHelper helper = CreateHelper(machine);
+        SegmentedAddress address = new(0x1000, 0x0010);
+
+        // Act
+        helper.DefineFunctionWithoutInterpreterFallback(address.Segment, address.Offset, _ => () => { }, "generated");
+
+        // Assert: generated code owns the complete control flow of its partitions
+        helper.FunctionInformations[address].ForbidsInterpreterFallback.Should().BeTrue();
+    }
+
+    [Fact]
+    public void DefineFunctionWithoutInterpreterFallbackFailsOnAnExistingRegistration() {
+        // Arrange
+        using Spice86Creator creator = new(binName: "jump2");
+        using Spice86DependencyInjection res = creator.Create();
+        Machine machine = res.Machine;
+        CSharpOverrideHelper helper = CreateHelper(machine);
+        SegmentedAddress address = new(0x1000, 0x0010);
+        helper.DefineFunctionWithoutInterpreterFallback(address.Segment, address.Offset, _ => () => { }, "generated");
+
+        // Act
+        Action act = () => helper.DefineFunctionWithoutInterpreterFallback(address.Segment, address.Offset, _ => () => { }, "generated_again");
+
+        // Assert
+        act.Should().Throw<UnrecoverableException>();
+    }
+
     private CSharpOverrideHelper CreateHelper(Machine machine) {
         return new CSharpOverrideHelper(
             new Dictionary<SegmentedAddress, FunctionInformation>(),
@@ -794,13 +1113,13 @@ class VariousOverrides : CSharpOverrideHelper {
     public Action FirstFunction_F000_0000_F0000(int loadOffset) {
         FirstFunctionCalled++;
         // Execute code as if there were no override
-        return FarJump(0xF000, 0000);
+        return FarJump(0xF000, 0x0000);
     }
 
     public Action SecondFunction_F000_1290_F1290(int loadOffset) {
         SecondFunctionCalled++;
         // Execute code as if there were no override
-        return FarJump(0xF000, 1290);
+        return FarJump(0xF000, 0x1290);
     }
 
     public Action ThirdFunction_E342_EBE0_F2000(int loadOffset) {

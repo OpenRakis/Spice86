@@ -1,0 +1,97 @@
+0060:0100 add word ptr DS:[BX+SI],AX
+0060:0102 add byte ptr DS:[BX+SI],AL
+0060:0104 add byte ptr DS:[BX+SI],AL
+0060:0106 add byte ptr DS:[BX+SI],AL
+0060:0108 add byte ptr DS:[BX+SI],AL
+0060:010A add byte ptr DS:[BX+SI],AL
+0060:010C add byte ptr DS:[BX+SI],AL
+0060:010E add byte ptr DS:[BX+SI],AL
+0060:0110 add byte ptr DS:[BX+SI],AL
+0060:0112 add byte ptr DS:[BX+SI],AL
+0060:0114 add byte ptr DS:[BX+SI],AL
+0060:0116 add byte ptr DS:[BX+SI],AL
+0060:0118 add byte ptr DS:[BX+SI],AL
+0060:011A add byte ptr DS:[BX+SI],AL
+0060:011C add byte ptr DS:[BX+SI],AL
+0060:011E add byte ptr DS:[BX+SI],AL
+0060:0120 pop DI
+0060:0121 add word ptr DS:[BX+SI],AX
+0060:0123 add byte ptr DS:[BX+SI],AL
+0060:0125 add byte ptr DS:[BX+SI],AL
+0060:0127 add byte ptr DS:[BX+SI],AL
+0060:0129 add byte ptr DS:[BX+SI],AL
+0060:012B add byte ptr DS:[BX+SI],AL
+0060:012D add byte ptr SS:[BP+SI],DL
+0060:012F add byte ptr DS:[BX+SI],AL
+0060:0131 clc
+0060:0132 add byte ptr SS:[BP+SI],AL
+0060:0134 add byte ptr DS:[BX+SI],AL
+0060:0136 add byte ptr DS:[BX+SI],AL
+0060:0138 add byte ptr DS:[BX+SI],AL
+0060:013A add AL,CL
+0060:013C add byte ptr DS:[BX+SI],AL
+0060:013E add byte ptr DS:[BX+SI],AL
+0060:0140 add byte ptr DS:[BX+SI],AL
+0060:0142 add word ptr SS:[BP+SI],BX
+0060:0144 adc AL,byte ptr DS:[BX+SI]
+0060:0146 add AL,BH
+0060:0148 add byte ptr DS:[BX+SI],AL
+0060:014A add byte ptr DS:[BX+SI],AL
+0060:014C add byte ptr DS:[BX+SI],AL
+0060:014E add byte ptr DS:[BX+SI],AL
+0060:0150 add byte ptr DS:[BX+SI],AL
+0060:0152 add byte ptr DS:[BX+SI],AL
+0060:0154 add byte ptr DS:[BX+SI],AL
+0060:0156 add byte ptr DS:[BX+SI],AL
+0060:0158 add byte ptr DS:[BX+SI],AL
+0060:015A add byte ptr DS:[BX+SI],AL
+0060:015C add byte ptr DS:[BX+SI],AL
+0060:015E add byte ptr DS:[BX+SI],AL
+0060:0160 add byte ptr DS:[BX+SI],DL
+0060:0163 push AX
+0060:0164 add byte ptr DS:[BX+SI],AL
+0060:0166 add DI,BP
+0060:0168 inc word ptr DS:[BX+SI]
+0060:016A add byte ptr DS:[BX+SI],AL
+0060:016C add byte ptr DS:[BX+SI],AL
+0060:016E add byte ptr DS:[BX+SI],AL
+0060:0170 add byte ptr DS:[BX+SI],AL
+0060:0172 add byte ptr DS:[BX+SI],AL
+0060:0174 add byte ptr DS:[BX+SI],AL
+0060:0176 add byte ptr DS:[BX+SI],AL
+0060:0178 add byte ptr DS:[BX+SI],AL
+0060:017A add byte ptr DS:[BX+SI],AL
+0060:017C add byte ptr DS:[BX+SI],AL
+0060:017E add byte ptr DS:[BX+SI],AL
+0060:0180 add byte ptr DS:[BX+SI],AL
+0060:0182 add byte ptr DS:[BX+SI],AL
+0060:0184 add byte ptr DS:[BX+SI],AL
+0060:0186 add byte ptr DS:[BX+SI],AL
+F000:0006 callback 8
+F000:000A int 0x1C
+F000:000C callback 0x0100
+F000:0010 iret
+F000:0011 callback 9
+F000:0015 iret
+F000:0057 callback 0x0070
+F000:005B iret
+F000:005D call far F000:00E3
+F000:0062 callback 0x0074
+F000:0066 iret
+F000:0067 callback 0x0103
+F000:006B iret
+F000:006C callback 0x0104
+F000:0070 iret
+F000:0071 callback 0x0105
+F000:0075 iret
+F000:0076 callback 0x0106
+F000:007A iret
+F000:007B callback 0x0107
+F000:007F iret
+F000:0080 callback 0x0108
+F000:0084 iret
+F000:00E2 ret far
+F000:00E3 callback 0x010B
+F000:00E7 call far F000:00E2
+F000:00EC callback 0x010C
+F000:00F0 ret far

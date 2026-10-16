@@ -1,0 +1,482 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+    protected readonly ushort cs2;
+
+    private static readonly byte?[] Signature_0102_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0104_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0106_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0108_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_010A_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_010C_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_010E_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0110_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0112_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0114_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0116_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0118_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_011A_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_011C_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_011E_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0120_pop = [0x5F];
+    private static readonly byte?[] Signature_0121_add = [0x01, 0x00];
+    private static readonly byte?[] Signature_0123_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0125_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0127_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0129_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_012B_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_012D_add = [0x00, 0x12];
+    private static readonly byte?[] Signature_012F_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0131_clc = [0xF8];
+    private static readonly byte?[] Signature_0132_add = [0x00, 0x02];
+    private static readonly byte?[] Signature_0134_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0136_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0138_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_013A_add = [0x00, 0xC8];
+    private static readonly byte?[] Signature_013C_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_013E_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0140_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0142_add = [0x01, 0x1A];
+    private static readonly byte?[] Signature_0144_adc = [0x12, 0x00];
+    private static readonly byte?[] Signature_0146_add = [0x00, 0xF8];
+    private static readonly byte?[] Signature_0148_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_014A_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_014C_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_014E_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0150_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0152_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0154_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0156_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0158_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_015A_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_015C_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_015E_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0160_add = [0x00, 0x50, 0x00];
+    private static readonly byte?[] Signature_0163_push = [0x50];
+    private static readonly byte?[] Signature_0164_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0166_add = [0x01, 0xEF];
+    private static readonly byte?[] Signature_0168_inc = [0xFF, 0x00];
+    private static readonly byte?[] Signature_016A_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_016C_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_016E_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0170_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0172_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0174_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0176_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0178_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_017A_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_017C_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_017E_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0180_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0182_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0184_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0186_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0006_callback = [0xFE, 0x38, 0x08, 0x00];
+    private static readonly byte?[] Signature_000A_int = [0xCD, 0x1C];
+    private static readonly byte?[] Signature_000C_callback = [0xFE, 0x38, 0x00, 0x01];
+    private static readonly byte?[] Signature_0010_iret = [0xCF];
+    private static readonly byte?[] Signature_0011_callback = [0xFE, 0x38, 0x09, 0x00];
+    private static readonly byte?[] Signature_0015_iret = [0xCF];
+    private static readonly byte?[] Signature_0057_callback = [0xFE, 0x38, 0x70, 0x00];
+    private static readonly byte?[] Signature_005B_iret = [0xCF];
+    private static readonly byte?[] Signature_005D_call = [0x9A, 0xE3, 0x00, 0x00, 0xF0];
+    private static readonly byte?[] Signature_0062_callback = [0xFE, 0x38, 0x74, 0x00];
+    private static readonly byte?[] Signature_0066_iret = [0xCF];
+    private static readonly byte?[] Signature_0067_callback = [0xFE, 0x38, 0x03, 0x01];
+    private static readonly byte?[] Signature_006B_iret = [0xCF];
+    private static readonly byte?[] Signature_006C_callback = [0xFE, 0x38, 0x04, 0x01];
+    private static readonly byte?[] Signature_0070_iret = [0xCF];
+    private static readonly byte?[] Signature_0071_callback = [0xFE, 0x38, 0x05, 0x01];
+    private static readonly byte?[] Signature_0075_iret = [0xCF];
+    private static readonly byte?[] Signature_0076_callback = [0xFE, 0x38, 0x06, 0x01];
+    private static readonly byte?[] Signature_007A_iret = [0xCF];
+    private static readonly byte?[] Signature_007B_callback = [0xFE, 0x38, 0x07, 0x01];
+    private static readonly byte?[] Signature_007F_iret = [0xCF];
+    private static readonly byte?[] Signature_0080_callback = [0xFE, 0x38, 0x08, 0x01];
+    private static readonly byte?[] Signature_0084_iret = [0xCF];
+    private static readonly byte?[] Signature_00E2_ret = [0xCB];
+    private static readonly byte?[] Signature_00E3_callback = [0xFE, 0x38, 0x0B, 0x01];
+    private static readonly byte?[] Signature_00E7_call = [0x9A, 0xE2, 0x00, 0x00, 0xF0];
+    private static readonly byte?[] Signature_00EC_callback = [0xFE, 0x38, 0x0C, 0x01];
+    private static readonly byte?[] Signature_00F0_ret = [0xCB];
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0x0060;
+        cs2 = 0xF000;
+
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_0060_0100_00700, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs2, 0x0006, unknown_F000_0006_F0006, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs2, 0x0011, unknown_F000_0011_F0011, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs2, 0x0057, unknown_F000_0057_F0057, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs2, 0x005D, unknown_F000_005D_F005D, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs2, 0x0067, unknown_F000_0067_F0067, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs2, 0x006C, unknown_F000_006C_F006C, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs2, 0x0071, unknown_F000_0071_F0071, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs2, 0x0076, unknown_F000_0076_F0076, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs2, 0x007B, unknown_F000_007B_F007B, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs2, 0x0080, unknown_F000_0080_F0080, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs2, 0x00E2, unknown_F000_00E2_F00E2, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs2, 0x00E3, unknown_F000_00E3_F00E3, "unknown");
+    }
+
+    public virtual Action unknown_0060_0100_00700(int loadOffset) {
+        CheckExternalEvents(cs1, 0x0100);
+        // 0060:0100 add word ptr DS:[BX+SI],AX
+        UInt16[DS, (ushort)(BX + SI)] = Alu16.Add(UInt16[DS, (ushort)(BX + SI)], AX);
+        VerifySpeculativeEntryOrFail(cs1, 0x0102, Signature_0102_add);
+        // 0060:0102 add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0104, Signature_0104_add);
+        // 0060:0104 add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0106, Signature_0106_add);
+        // 0060:0106 add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0108, Signature_0108_add);
+        // 0060:0108 add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x010A, Signature_010A_add);
+        // 0060:010A add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x010C, Signature_010C_add);
+        // 0060:010C add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x010E, Signature_010E_add);
+        // 0060:010E add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0110, Signature_0110_add);
+        // 0060:0110 add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0112, Signature_0112_add);
+        // 0060:0112 add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0114, Signature_0114_add);
+        // 0060:0114 add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0116, Signature_0116_add);
+        // 0060:0116 add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0118, Signature_0118_add);
+        // 0060:0118 add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x011A, Signature_011A_add);
+        // 0060:011A add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x011C, Signature_011C_add);
+        // 0060:011C add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x011E, Signature_011E_add);
+        // 0060:011E add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0120, Signature_0120_pop);
+        // 0060:0120 pop DI
+        DI = Stack.Pop16();
+        VerifySpeculativeEntryOrFail(cs1, 0x0121, Signature_0121_add);
+        // 0060:0121 add word ptr DS:[BX+SI],AX
+        UInt16[DS, (ushort)(BX + SI)] = Alu16.Add(UInt16[DS, (ushort)(BX + SI)], AX);
+        VerifySpeculativeEntryOrFail(cs1, 0x0123, Signature_0123_add);
+        // 0060:0123 add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0125, Signature_0125_add);
+        // 0060:0125 add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0127, Signature_0127_add);
+        // 0060:0127 add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0129, Signature_0129_add);
+        // 0060:0129 add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x012B, Signature_012B_add);
+        // 0060:012B add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x012D, Signature_012D_add);
+        // 0060:012D add byte ptr SS:[BP+SI],DL
+        UInt8[SS, (ushort)(BP + SI)] = Alu8.Add(UInt8[SS, (ushort)(BP + SI)], DL);
+        VerifySpeculativeEntryOrFail(cs1, 0x012F, Signature_012F_add);
+        // 0060:012F add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0131, Signature_0131_clc);
+        // 0060:0131 clc
+        CarryFlag = false;
+        VerifySpeculativeEntryOrFail(cs1, 0x0132, Signature_0132_add);
+        // 0060:0132 add byte ptr SS:[BP+SI],AL
+        UInt8[SS, (ushort)(BP + SI)] = Alu8.Add(UInt8[SS, (ushort)(BP + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0134, Signature_0134_add);
+        // 0060:0134 add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0136, Signature_0136_add);
+        // 0060:0136 add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0138, Signature_0138_add);
+        // 0060:0138 add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x013A, Signature_013A_add);
+        // 0060:013A add AL,CL
+        AL = Alu8.Add(AL, CL);
+        VerifySpeculativeEntryOrFail(cs1, 0x013C, Signature_013C_add);
+        // 0060:013C add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x013E, Signature_013E_add);
+        // 0060:013E add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0140, Signature_0140_add);
+        // 0060:0140 add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0142, Signature_0142_add);
+        // 0060:0142 add word ptr SS:[BP+SI],BX
+        UInt16[SS, (ushort)(BP + SI)] = Alu16.Add(UInt16[SS, (ushort)(BP + SI)], BX);
+        VerifySpeculativeEntryOrFail(cs1, 0x0144, Signature_0144_adc);
+        // 0060:0144 adc AL,byte ptr DS:[BX+SI]
+        AL = Alu8.Adc(AL, UInt8[DS, (ushort)(BX + SI)]);
+        VerifySpeculativeEntryOrFail(cs1, 0x0146, Signature_0146_add);
+        // 0060:0146 add AL,BH
+        AL = Alu8.Add(AL, BH);
+        VerifySpeculativeEntryOrFail(cs1, 0x0148, Signature_0148_add);
+        // 0060:0148 add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x014A, Signature_014A_add);
+        // 0060:014A add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x014C, Signature_014C_add);
+        // 0060:014C add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x014E, Signature_014E_add);
+        // 0060:014E add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0150, Signature_0150_add);
+        // 0060:0150 add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0152, Signature_0152_add);
+        // 0060:0152 add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0154, Signature_0154_add);
+        // 0060:0154 add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0156, Signature_0156_add);
+        // 0060:0156 add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0158, Signature_0158_add);
+        // 0060:0158 add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x015A, Signature_015A_add);
+        // 0060:015A add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x015C, Signature_015C_add);
+        // 0060:015C add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x015E, Signature_015E_add);
+        // 0060:015E add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0160, Signature_0160_add);
+        // 0060:0160 add byte ptr DS:[BX+SI],DL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], DL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0163, Signature_0163_push);
+        // 0060:0163 push AX
+        Stack.Push16(AX);
+        VerifySpeculativeEntryOrFail(cs1, 0x0164, Signature_0164_add);
+        // 0060:0164 add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0166, Signature_0166_add);
+        // 0060:0166 add DI,BP
+        DI = Alu16.Add(DI, BP);
+        VerifySpeculativeEntryOrFail(cs1, 0x0168, Signature_0168_inc);
+        // 0060:0168 inc word ptr DS:[BX+SI]
+        UInt16[DS, (ushort)(BX + SI)] = Alu16.Inc(UInt16[DS, (ushort)(BX + SI)]);
+        VerifySpeculativeEntryOrFail(cs1, 0x016A, Signature_016A_add);
+        // 0060:016A add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x016C, Signature_016C_add);
+        // 0060:016C add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x016E, Signature_016E_add);
+        // 0060:016E add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0170, Signature_0170_add);
+        // 0060:0170 add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0172, Signature_0172_add);
+        // 0060:0172 add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0174, Signature_0174_add);
+        // 0060:0174 add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0176, Signature_0176_add);
+        // 0060:0176 add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0178, Signature_0178_add);
+        // 0060:0178 add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x017A, Signature_017A_add);
+        // 0060:017A add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x017C, Signature_017C_add);
+        // 0060:017C add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x017E, Signature_017E_add);
+        // 0060:017E add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0180, Signature_0180_add);
+        // 0060:0180 add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0182, Signature_0182_add);
+        // 0060:0182 add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0184, Signature_0184_add);
+        // 0060:0184 add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        VerifySpeculativeEntryOrFail(cs1, 0x0186, Signature_0186_add);
+        // 0060:0186 add byte ptr DS:[BX+SI],AL
+        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        throw FailAsUntested("Untested fallthrough after 0060:0186");
+    }
+
+    public virtual Action unknown_F000_0006_F0006(int loadOffset) {
+        CheckExternalEvents(cs2, 0x0006);
+        VerifySpeculativeEntryOrFail(cs2, 0x0006, Signature_0006_callback);
+        // F000:0006 callback 8
+        Callback(cs2, 0x0006, 8);
+        VerifySpeculativeEntryOrFail(cs2, 0x000A, Signature_000A_int);
+        // F000:000A int 0x1C
+        InterruptCall(cs2, 0x000C, 0x1C);
+        VerifySpeculativeEntryOrFail(cs2, 0x000C, Signature_000C_callback);
+        // F000:000C callback 0x0100
+        Callback(cs2, 0x000C, 0x0100);
+        VerifySpeculativeEntryOrFail(cs2, 0x0010, Signature_0010_iret);
+        // F000:0010 iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_0011_F0011(int loadOffset) {
+        CheckExternalEvents(cs2, 0x0011);
+        VerifySpeculativeEntryOrFail(cs2, 0x0011, Signature_0011_callback);
+        // F000:0011 callback 9
+        Callback(cs2, 0x0011, 9);
+        VerifySpeculativeEntryOrFail(cs2, 0x0015, Signature_0015_iret);
+        // F000:0015 iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_0057_F0057(int loadOffset) {
+        CheckExternalEvents(cs2, 0x0057);
+        VerifySpeculativeEntryOrFail(cs2, 0x0057, Signature_0057_callback);
+        // F000:0057 callback 0x0070
+        Callback(cs2, 0x0057, 0x0070);
+        VerifySpeculativeEntryOrFail(cs2, 0x005B, Signature_005B_iret);
+        // F000:005B iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_005D_F005D(int loadOffset) {
+        CheckExternalEvents(cs2, 0x005D);
+        VerifySpeculativeEntryOrFail(cs2, 0x005D, Signature_005D_call);
+        // F000:005D call far F000:00E3
+        FarCall(cs2, 0x0062, cs2, unknown_F000_00E3_F00E3);
+        VerifySpeculativeEntryOrFail(cs2, 0x0062, Signature_0062_callback);
+        // F000:0062 callback 0x0074
+        Callback(cs2, 0x0062, 0x0074);
+        VerifySpeculativeEntryOrFail(cs2, 0x0066, Signature_0066_iret);
+        // F000:0066 iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_0067_F0067(int loadOffset) {
+        CheckExternalEvents(cs2, 0x0067);
+        VerifySpeculativeEntryOrFail(cs2, 0x0067, Signature_0067_callback);
+        // F000:0067 callback 0x0103
+        Callback(cs2, 0x0067, 0x0103);
+        VerifySpeculativeEntryOrFail(cs2, 0x006B, Signature_006B_iret);
+        // F000:006B iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_006C_F006C(int loadOffset) {
+        CheckExternalEvents(cs2, 0x006C);
+        VerifySpeculativeEntryOrFail(cs2, 0x006C, Signature_006C_callback);
+        // F000:006C callback 0x0104
+        Callback(cs2, 0x006C, 0x0104);
+        VerifySpeculativeEntryOrFail(cs2, 0x0070, Signature_0070_iret);
+        // F000:0070 iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_0071_F0071(int loadOffset) {
+        CheckExternalEvents(cs2, 0x0071);
+        VerifySpeculativeEntryOrFail(cs2, 0x0071, Signature_0071_callback);
+        // F000:0071 callback 0x0105
+        Callback(cs2, 0x0071, 0x0105);
+        VerifySpeculativeEntryOrFail(cs2, 0x0075, Signature_0075_iret);
+        // F000:0075 iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_0076_F0076(int loadOffset) {
+        CheckExternalEvents(cs2, 0x0076);
+        VerifySpeculativeEntryOrFail(cs2, 0x0076, Signature_0076_callback);
+        // F000:0076 callback 0x0106
+        Callback(cs2, 0x0076, 0x0106);
+        VerifySpeculativeEntryOrFail(cs2, 0x007A, Signature_007A_iret);
+        // F000:007A iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_007B_F007B(int loadOffset) {
+        CheckExternalEvents(cs2, 0x007B);
+        VerifySpeculativeEntryOrFail(cs2, 0x007B, Signature_007B_callback);
+        // F000:007B callback 0x0107
+        Callback(cs2, 0x007B, 0x0107);
+        VerifySpeculativeEntryOrFail(cs2, 0x007F, Signature_007F_iret);
+        // F000:007F iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_0080_F0080(int loadOffset) {
+        CheckExternalEvents(cs2, 0x0080);
+        VerifySpeculativeEntryOrFail(cs2, 0x0080, Signature_0080_callback);
+        // F000:0080 callback 0x0108
+        Callback(cs2, 0x0080, 0x0108);
+        VerifySpeculativeEntryOrFail(cs2, 0x0084, Signature_0084_iret);
+        // F000:0084 iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_00E2_F00E2(int loadOffset) {
+        CheckExternalEvents(cs2, 0x00E2);
+        VerifySpeculativeEntryOrFail(cs2, 0x00E2, Signature_00E2_ret);
+        // F000:00E2 ret far
+        return FarRet();
+    }
+
+    public virtual Action unknown_F000_00E3_F00E3(int loadOffset) {
+        CheckExternalEvents(cs2, 0x00E3);
+        VerifySpeculativeEntryOrFail(cs2, 0x00E3, Signature_00E3_callback);
+        // F000:00E3 callback 0x010B
+        Callback(cs2, 0x00E3, 0x010B);
+        VerifySpeculativeEntryOrFail(cs2, 0x00E7, Signature_00E7_call);
+        // F000:00E7 call far F000:00E2
+        FarCall(cs2, 0x00EC, cs2, unknown_F000_00E2_F00E2);
+        VerifySpeculativeEntryOrFail(cs2, 0x00EC, Signature_00EC_callback);
+        // F000:00EC callback 0x010C
+        Callback(cs2, 0x00EC, 0x010C);
+        VerifySpeculativeEntryOrFail(cs2, 0x00F0, Signature_00F0_ret);
+        // F000:00F0 ret far
+        return FarRet();
+    }
+
+}

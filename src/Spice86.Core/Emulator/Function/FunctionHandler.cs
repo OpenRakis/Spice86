@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Utils;
 
@@ -80,8 +81,8 @@ public class FunctionHandler {
     /// <param name="name">Name to give to the function.</param>
     public void Call(CallType callType, SegmentedAddress entryAddress, SegmentedAddress? expectedReturnAddress, CfgInstruction? call, string? name) {
         FunctionInformation currentFunction = _functionCatalogue.GetOrCreateFunctionInformation(entryAddress, name);
-        if (UseCodeOverride && currentFunction.HasOverride) {
-            currentFunction.CallOverride();
+        if (UseCodeOverride && currentFunction.FunctionOverride is { } functionOverride) {
+            OverrideUntilControlReturnsToInterpreter(currentFunction, functionOverride, expectedReturnAddress);
             // No need to register the function call, no associated ret was executed.
             return;
         }
@@ -218,6 +219,80 @@ public class FunctionHandler {
     }
 
     /// <summary>
+    /// Runs the entered override and every override its control transfer lands on, then hands control back
+    /// to the interpreter. A permissive override, which is every override registered by hand, ends its
+    /// activation unconditionally: the interpreter continues at the CS:IP its action left, including the
+    /// override's own address. A strict override, which generated code registers through
+    /// <see cref="FunctionInformation.ForbidsInterpreterFallback"/>, owns the complete control flow of its
+    /// code, so <see cref="RunOverrideChain"/> keeps dispatching until control reaches another override or
+    /// the call's expected return address. A stopped machine ends the dispatch, and a non-matching unwind,
+    /// or an unwind with no expected return address, propagates.
+    /// </summary>
+    /// <param name="initialFunction">The override the call itself entered.</param>
+    /// <param name="initialOverride">The code of the override the call itself entered.</param>
+    /// <param name="expectedReturnAddress">Return address of the call, or null when the call defines none.</param>
+    /// <exception cref="CallStackUnwindException">A strict override transferred control to an address with
+    /// no override that is not the call's expected return address, so continuing would fall back to the
+    /// interpreter.</exception>
+    private void OverrideUntilControlReturnsToInterpreter(FunctionInformation initialFunction,
+        Func<int, Action> initialOverride, SegmentedAddress? expectedReturnAddress) {
+        InterpreterChainCaller caller = new(expectedReturnAddress);
+        if (caller.RunOverride(initialFunction, initialOverride)) {
+            return;
+        }
+        RunOverrideChain(caller, initialFunction);
+    }
+
+    /// <summary>
+    /// Runs the overrides that control transfers land on until control reaches the call's expected return
+    /// address. Landing on an address that has no override and is not the expected return throws, because
+    /// continuing would let the interpreter run code that the override chain owns.
+    /// </summary>
+    /// <param name="caller">The code waiting for the chain.</param>
+    /// <param name="lastRunOverride">The override whose activation started the chain, or null when the
+    /// caller's own C# code did.</param>
+    /// <exception cref="CallStackUnwindException">Control landed on an address with no override that is not
+    /// the expected return address.</exception>
+    internal void RunOverrideChain(IOverrideChainCaller caller, FunctionInformation? lastRunOverride) {
+        while (true) {
+            if (!_state.IsRunning) {
+                caller.OnMachineStopped();
+                return;
+            }
+            SegmentedAddress landedAddress = _state.IpSegmentedAddress;
+            bool atExpectedReturn = caller.ExpectedReturnAddress is { } expectedReturn && landedAddress == expectedReturn;
+            if (atExpectedReturn && caller.ContinuesAtExpectedReturn) {
+                return;
+            }
+            if (FindOverride(landedAddress) is { FunctionOverride: { } nextOverride } next) {
+                if (caller.RunOverride(next, nextOverride)) {
+                    return;
+                }
+                lastRunOverride = next;
+                continue;
+            }
+            if (atExpectedReturn) {
+                return;
+            }
+            string origin = lastRunOverride is null
+                ? $"The call expecting to return to {caller.ExpectedReturnAddress}"
+                : $"Override of {lastRunOverride}";
+            throw new CallStackUnwindException(landedAddress,
+                $"{origin} transferred control to {landedAddress} but there is no C# override at {landedAddress} " +
+                "and it is not the call's expected return address. Refusing to fall back to the interpreter.");
+        }
+    }
+
+    private FunctionInformation? FindOverride(SegmentedAddress address) {
+        if (_functionCatalogue.FunctionInformations.TryGetValue(address, out FunctionInformation? function) &&
+            function.HasOverride) {
+            return function;
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// Gets or sets whether we call the C# override or the original machine code.
     /// </summary>
     public bool UseCodeOverride { get; set; }
@@ -293,5 +368,42 @@ public class FunctionHandler {
 
     private bool UseOverride(FunctionInformation? functionInformation) {
         return UseCodeOverride && functionInformation != null && functionInformation.HasOverride;
+    }
+
+    /// <summary>The interpreter, which executed the call instruction and owns the continuation at the
+    /// call's expected return address.</summary>
+    private sealed class InterpreterChainCaller : IOverrideChainCaller {
+        private readonly SegmentedAddress? _expectedReturnAddress;
+
+        /// <summary>Creates the caller for a call that expects to return to <paramref name="expectedReturnAddress"/>.</summary>
+        /// <param name="expectedReturnAddress">Return address of the call, or null when the call defines none.</param>
+        public InterpreterChainCaller(SegmentedAddress? expectedReturnAddress) {
+            _expectedReturnAddress = expectedReturnAddress;
+        }
+
+        /// <inheritdoc />
+        public SegmentedAddress? ExpectedReturnAddress => _expectedReturnAddress;
+
+        /// <inheritdoc />
+        public bool ContinuesAtExpectedReturn => false;
+
+        /// <inheritdoc />
+        public bool RunOverride(FunctionInformation function, Func<int, Action> functionOverride) {
+            try {
+                Action? returnAction = functionOverride.Invoke(0);
+                returnAction?.Invoke();
+            } catch (CallStackUnwindException exception) when (_expectedReturnAddress is not null && exception.Target == _expectedReturnAddress.Value) {
+                // An override that unwound the call stack back to the address this call was expected to
+                // return to has completed the call: the interpreter continues at the unwind target.
+                return true;
+            }
+
+            // A permissive override hands control back to the interpreter, a strict one keeps the chain.
+            return !function.ForbidsInterpreterFallback;
+        }
+
+        /// <inheritdoc />
+        public void OnMachineStopped() {
+        }
     }
 }

@@ -63,7 +63,7 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
 
     /// <summary>
     /// Lowers the fallthrough of a non-terminating instruction or callback: its observed <see cref="InstructionSuccessorType.Normal"/> successor at the next address in memory, or a <c>FailAsUntested</c> throw when discovery never observed it falling through (it only faulted, or discovery stopped on it).
-    /// A callback whose handler moved CS:IP elsewhere (DOS EXEC, terminate) also has <see cref="InstructionSuccessorType.Normal"/> successors at those targets; generated code does not follow them.
+    /// A callback whose handler moved CS:IP elsewhere (DOS EXEC, terminate) also has <see cref="InstructionSuccessorType.Normal"/> successors at those targets; those are dispatched over by the callback lowering itself, and this fallthrough is what runs when the handler kept CS:IP at the callback.
     /// </summary>
     public EmittedCode EmitFallthroughIfNeeded(CfgInstruction source, MethodPlan methodPlan) {
         if (source.UniqueSuccessor is not null) {

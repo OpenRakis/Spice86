@@ -81,6 +81,7 @@ public class EmulationLoop {
         } catch (HaltRequestedException) {
             // Actually a signal-generated code requested Exit
             _loggerService.LogInformation("Emulation halted by request.");
+            _emulatorBreakpointsManager.OnMachineStop();
             return;
         } catch (InvalidVMOperationException invalidVmOperationException) {
             _loggerService.LogError(invalidVmOperationException,
