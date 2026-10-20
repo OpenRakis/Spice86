@@ -178,7 +178,7 @@ CfgCodeGeneration/
 |   |   |-- GenerationPlan.cs       segment fields, signature fields, registrations, methods
 |   |   |-- MethodPlan.cs           one method: blocks, nodes, labels, traversal, entry dispatch
 |   |   |-- NodeEmissionPlan.cs     per-node emission decisions
-|   |   |-- OverrideRegistration.cs one DefineFunction registration
+|   |   |-- OverrideRegistration.cs one DefineFunctionWithoutInterpreterFallback registration
 |   |   |-- SegmentFieldPlan.cs     one segment field declaration
 |   |   `-- SignatureFieldPlan.cs   one byte?[] signature field
 |   `-- Statement/

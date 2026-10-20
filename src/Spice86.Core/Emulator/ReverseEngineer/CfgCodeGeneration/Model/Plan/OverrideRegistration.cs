@@ -1,7 +1,7 @@
 namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
 
 /// <summary>
-/// A single <c>DefineFunction</c> registration the generated constructor emits for a partition entry.
+/// A single <c>DefineFunctionWithoutInterpreterFallback</c> registration the generated constructor emits for a partition entry.
 /// <see cref="LoadOffset"/> is <c>0</c> for the primary entry (registered directly) and the entry offset
 /// otherwise (registered through a <c>loadOffset</c>-passing lambda).
 /// <para>

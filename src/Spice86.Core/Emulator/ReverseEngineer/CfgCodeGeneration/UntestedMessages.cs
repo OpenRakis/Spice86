@@ -35,6 +35,9 @@ internal static class UntestedMessages {
     /// <summary>A self-modifying code selector with no matching signature.</summary>
     public static string CodeVariant(SegmentedAddress at) => $"throw FailAsUntested(\"Untested code variant at {at}\");";
 
+    /// <summary>A callback whose handler moved CS:IP to a target discovery never observed.</summary>
+    public static string CallbackTarget(SegmentedAddress at) => $"throw FailAsUntested($\"Untested callback target {{CS:X4}}:{{IP:X4}} at {at}\");";
+
     /// <summary>A call that returned but no continuation was observed during discovery.</summary>
     public static string ReturnFromCall(SegmentedAddress at) => $"throw FailAsUntested(\"Untested return from call at {at}\");";
 

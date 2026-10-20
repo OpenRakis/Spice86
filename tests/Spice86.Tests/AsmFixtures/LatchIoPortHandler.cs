@@ -5,9 +5,13 @@ using Microsoft.Extensions.Logging;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.IOPorts;
 
-/// <summary>A test port that returns the last value written, truncated to the read width.</summary>
+/// <summary>A test port that returns the last value written, truncated to the read width, and records every
+/// value written to it so an oracle can observe the program's port output.</summary>
 internal sealed class LatchIoPortHandler : DefaultIOPortHandler {
     private uint _value;
+
+    /// <summary>Every value written to the port, in write order.</summary>
+    public List<uint> WrittenValues { get; } = new();
 
     /// <summary>Creates the handler and registers it on the given port.</summary>
     /// <param name="state">CPU state, used by error reporting.</param>
@@ -36,16 +40,19 @@ internal sealed class LatchIoPortHandler : DefaultIOPortHandler {
 
     /// <inheritdoc />
     public override void WriteByte(ushort port, byte value) {
+        WrittenValues.Add(value);
         _value = value;
     }
 
     /// <inheritdoc />
     public override void WriteWord(ushort port, ushort value) {
+        WrittenValues.Add(value);
         _value = value;
     }
 
     /// <inheritdoc />
     public override void WriteDWord(ushort port, uint value) {
+        WrittenValues.Add(value);
         _value = value;
     }
 }

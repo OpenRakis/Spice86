@@ -1,0 +1,47 @@
+016D:0100 mov AX,word ptr [0x000017D1]
+016D:0103 selector
+016D:0103 mov ES,AX
+016D:0103 int 0x21
+016D:0105 mov DI,0
+016D:0108 mov AL,0x45
+016D:010A mov AH,7
+016D:010C stos word ptr ES:[DI],AX
+016D:010D mov AX,0x4C00
+016D:0110 int 0x21
+F000:0006 callback 8
+F000:000A int 0x1C
+F000:000C callback 0x0100
+F000:0010 iret
+F000:0011 callback 9
+F000:0015 iret
+F000:0057 callback 0x0070
+F000:005B iret
+F000:005D call far F000:00E3
+F000:0062 callback 0x0074
+F000:0066 iret
+F000:0067 callback 0x0103
+F000:006B iret
+F000:006C callback 0x0104
+F000:0070 iret
+F000:0071 callback 0x0105
+F000:0075 iret
+F000:0076 callback 0x0106
+F000:007A iret
+F000:007B callback 0x0107
+F000:007F iret
+F000:0080 callback 0x0108
+F000:0084 iret
+F000:0090 cmp AH,7
+F000:0093 je short 0x00A4
+F000:0095 cmp AH,8
+F000:0098 je short 0x00A4
+F000:009A cmp AH,0x0A
+F000:009D je short 0x00A4
+F000:009F callback 0x0021
+F000:00A3 iret
+F000:00A4 sti
+F000:00E2 ret far
+F000:00E3 callback 0x010B
+F000:00E7 call far F000:00E2
+F000:00EC callback 0x010C
+F000:00F0 ret far
