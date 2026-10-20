@@ -22,7 +22,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
 
     private static readonly byte?[] Signature_0006_callback = [0xFE, 0x38, 0x08, 0x00];
     private static readonly byte?[] Signature_000A_int = [0xCD, 0x1C];
-    private static readonly byte?[] Signature_000C_callback = [0xFE, 0x38, 0x00, 0x01];
+    private static readonly byte?[] Signature_000C_callback = [0xFE, 0x38, 0x01, 0x01];
     private static readonly byte?[] Signature_0010_iret = [0xCF];
     private static readonly byte?[] Signature_0011_callback = [0xFE, 0x38, 0x09, 0x00];
     private static readonly byte?[] Signature_0015_iret = [0xCF];
@@ -31,22 +31,22 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_005D_call = [0x9A, 0xE3, 0x00, 0x00, 0xD0];
     private static readonly byte?[] Signature_0062_callback = [0xFE, 0x38, 0x74, 0x00];
     private static readonly byte?[] Signature_0066_iret = [0xCF];
-    private static readonly byte?[] Signature_0067_callback = [0xFE, 0x38, 0x03, 0x01];
+    private static readonly byte?[] Signature_0067_callback = [0xFE, 0x38, 0x04, 0x01];
     private static readonly byte?[] Signature_006B_iret = [0xCF];
-    private static readonly byte?[] Signature_006C_callback = [0xFE, 0x38, 0x04, 0x01];
+    private static readonly byte?[] Signature_006C_callback = [0xFE, 0x38, 0x05, 0x01];
     private static readonly byte?[] Signature_0070_iret = [0xCF];
-    private static readonly byte?[] Signature_0071_callback = [0xFE, 0x38, 0x05, 0x01];
+    private static readonly byte?[] Signature_0071_callback = [0xFE, 0x38, 0x06, 0x01];
     private static readonly byte?[] Signature_0075_iret = [0xCF];
-    private static readonly byte?[] Signature_0076_callback = [0xFE, 0x38, 0x06, 0x01];
+    private static readonly byte?[] Signature_0076_callback = [0xFE, 0x38, 0x07, 0x01];
     private static readonly byte?[] Signature_007A_iret = [0xCF];
-    private static readonly byte?[] Signature_007B_callback = [0xFE, 0x38, 0x07, 0x01];
+    private static readonly byte?[] Signature_007B_callback = [0xFE, 0x38, 0x08, 0x01];
     private static readonly byte?[] Signature_007F_iret = [0xCF];
-    private static readonly byte?[] Signature_0080_callback = [0xFE, 0x38, 0x08, 0x01];
+    private static readonly byte?[] Signature_0080_callback = [0xFE, 0x38, 0x09, 0x01];
     private static readonly byte?[] Signature_0084_iret = [0xCF];
     private static readonly byte?[] Signature_00E2_ret = [0xCB];
-    private static readonly byte?[] Signature_00E3_callback = [0xFE, 0x38, 0x0B, 0x01];
+    private static readonly byte?[] Signature_00E3_callback = [0xFE, 0x38, 0x0C, 0x01];
     private static readonly byte?[] Signature_00E7_call = [0x9A, 0xE2, 0x00, 0x00, 0xD0];
-    private static readonly byte?[] Signature_00EC_callback = [0xFE, 0x38, 0x0C, 0x01];
+    private static readonly byte?[] Signature_00EC_callback = [0xFE, 0x38, 0x0D, 0x01];
     private static readonly byte?[] Signature_00F0_ret = [0xCB];
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
@@ -86,8 +86,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // D000:000A int 0x1C
         InterruptCall(cs1, 0x000C, 0x1C);
         VerifySpeculativeEntryOrFail(cs1, 0x000C, Signature_000C_callback);
-        // D000:000C callback 0x0100
-        Callback(cs1, 0x000C, 0x0100);
+        // D000:000C callback 0x0101
+        Callback(cs1, 0x000C, 0x0101);
         VerifySpeculativeEntryOrFail(cs1, 0x0010, Signature_0010_iret);
         // D000:0010 iret
         return InterruptRet();
@@ -129,8 +129,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_D000_0067_D0067(int loadOffset) {
         CheckExternalEvents(cs1, 0x0067);
         VerifySpeculativeEntryOrFail(cs1, 0x0067, Signature_0067_callback);
-        // D000:0067 callback 0x0103
-        Callback(cs1, 0x0067, 0x0103);
+        // D000:0067 callback 0x0104
+        Callback(cs1, 0x0067, 0x0104);
         VerifySpeculativeEntryOrFail(cs1, 0x006B, Signature_006B_iret);
         // D000:006B iret
         return InterruptRet();
@@ -139,8 +139,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_D000_006C_D006C(int loadOffset) {
         CheckExternalEvents(cs1, 0x006C);
         VerifySpeculativeEntryOrFail(cs1, 0x006C, Signature_006C_callback);
-        // D000:006C callback 0x0104
-        Callback(cs1, 0x006C, 0x0104);
+        // D000:006C callback 0x0105
+        Callback(cs1, 0x006C, 0x0105);
         VerifySpeculativeEntryOrFail(cs1, 0x0070, Signature_0070_iret);
         // D000:0070 iret
         return InterruptRet();
@@ -149,8 +149,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_D000_0071_D0071(int loadOffset) {
         CheckExternalEvents(cs1, 0x0071);
         VerifySpeculativeEntryOrFail(cs1, 0x0071, Signature_0071_callback);
-        // D000:0071 callback 0x0105
-        Callback(cs1, 0x0071, 0x0105);
+        // D000:0071 callback 0x0106
+        Callback(cs1, 0x0071, 0x0106);
         VerifySpeculativeEntryOrFail(cs1, 0x0075, Signature_0075_iret);
         // D000:0075 iret
         return InterruptRet();
@@ -159,8 +159,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_D000_0076_D0076(int loadOffset) {
         CheckExternalEvents(cs1, 0x0076);
         VerifySpeculativeEntryOrFail(cs1, 0x0076, Signature_0076_callback);
-        // D000:0076 callback 0x0106
-        Callback(cs1, 0x0076, 0x0106);
+        // D000:0076 callback 0x0107
+        Callback(cs1, 0x0076, 0x0107);
         VerifySpeculativeEntryOrFail(cs1, 0x007A, Signature_007A_iret);
         // D000:007A iret
         return InterruptRet();
@@ -169,8 +169,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_D000_007B_D007B(int loadOffset) {
         CheckExternalEvents(cs1, 0x007B);
         VerifySpeculativeEntryOrFail(cs1, 0x007B, Signature_007B_callback);
-        // D000:007B callback 0x0107
-        Callback(cs1, 0x007B, 0x0107);
+        // D000:007B callback 0x0108
+        Callback(cs1, 0x007B, 0x0108);
         VerifySpeculativeEntryOrFail(cs1, 0x007F, Signature_007F_iret);
         // D000:007F iret
         return InterruptRet();
@@ -179,8 +179,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_D000_0080_D0080(int loadOffset) {
         CheckExternalEvents(cs1, 0x0080);
         VerifySpeculativeEntryOrFail(cs1, 0x0080, Signature_0080_callback);
-        // D000:0080 callback 0x0108
-        Callback(cs1, 0x0080, 0x0108);
+        // D000:0080 callback 0x0109
+        Callback(cs1, 0x0080, 0x0109);
         VerifySpeculativeEntryOrFail(cs1, 0x0084, Signature_0084_iret);
         // D000:0084 iret
         return InterruptRet();
@@ -196,14 +196,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_D000_00E3_D00E3(int loadOffset) {
         CheckExternalEvents(cs1, 0x00E3);
         VerifySpeculativeEntryOrFail(cs1, 0x00E3, Signature_00E3_callback);
-        // D000:00E3 callback 0x010B
-        Callback(cs1, 0x00E3, 0x010B);
+        // D000:00E3 callback 0x010C
+        Callback(cs1, 0x00E3, 0x010C);
         VerifySpeculativeEntryOrFail(cs1, 0x00E7, Signature_00E7_call);
         // D000:00E7 call far D000:00E2
         FarCall(cs1, 0x00EC, cs1, unknown_D000_00E2_D00E2);
         VerifySpeculativeEntryOrFail(cs1, 0x00EC, Signature_00EC_callback);
-        // D000:00EC callback 0x010C
-        Callback(cs1, 0x00EC, 0x010C);
+        // D000:00EC callback 0x010D
+        Callback(cs1, 0x00EC, 0x010D);
         VerifySpeculativeEntryOrFail(cs1, 0x00F0, Signature_00F0_ret);
         // D000:00F0 ret far
         return FarRet();

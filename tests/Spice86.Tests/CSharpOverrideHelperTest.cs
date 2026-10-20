@@ -23,6 +23,9 @@ using System.Collections.Generic;
 using Xunit;
 
 public class CSharpOverrideHelperTest {
+    private const ushort TestCallbackNumber = 0x1000;
+    private const ushort SecondTestCallbackNumber = 0x1001;
+
     private readonly ILogger _loggerServiceMock = Substitute.For<ILogger>();
 
     [Fact]
@@ -588,7 +591,7 @@ public class CSharpOverrideHelperTest {
         using Spice86DependencyInjection res = creator.Create();
         Machine machine = res.Machine;
         CSharpOverrideHelper helper = CreateHelper(machine);
-        ushort number = machine.CallbackHandler.AllocateNextCallback();
+        ushort number = TestCallbackNumber;
         bool ran = false;
         machine.CallbackHandler.AddCallback(new EmulatedCallback(number, () => ran = true, new SegmentedAddress(0xF000, 0x1000)));
 
@@ -608,7 +611,7 @@ public class CSharpOverrideHelperTest {
         using Spice86DependencyInjection res = creator.Create();
         Machine machine = res.Machine;
         CSharpOverrideHelper helper = CreateHelper(machine);
-        ushort number = machine.CallbackHandler.AllocateNextCallback();
+        ushort number = TestCallbackNumber;
         machine.CallbackHandler.AddCallback(new EmulatedCallback(number, () => {
             machine.CpuState.CS = 0x1234;
             machine.CpuState.IP = 0x0100;
@@ -627,7 +630,7 @@ public class CSharpOverrideHelperTest {
         using Spice86DependencyInjection res = creator.Create();
         Machine machine = res.Machine;
         CSharpOverrideHelper helper = CreateHelper(machine);
-        ushort number = machine.CallbackHandler.AllocateNextCallback();
+        ushort number = TestCallbackNumber;
         machine.CallbackHandler.AddCallback(new EmulatedCallback(number, () => machine.CpuState.IsRunning = false,
             new SegmentedAddress(0xF000, 0x1000)));
 
@@ -814,12 +817,12 @@ public class CSharpOverrideHelperTest {
         using Spice86DependencyInjection res = creator.Create();
         Machine machine = res.Machine;
         CSharpOverrideHelper helper = CreateHelper(machine);
-        ushort movingNumber = machine.CallbackHandler.AllocateNextCallback();
+        ushort movingNumber = TestCallbackNumber;
         machine.CallbackHandler.AddCallback(new EmulatedCallback(movingNumber, () => {
             machine.CpuState.CS = 0x1234;
             machine.CpuState.IP = 0x0100;
         }, new SegmentedAddress(0xF000, 0x1000)));
-        ushort stayingNumber = machine.CallbackHandler.AllocateNextCallback();
+        ushort stayingNumber = SecondTestCallbackNumber;
         machine.CallbackHandler.AddCallback(new EmulatedCallback(stayingNumber, () => { },
             new SegmentedAddress(0xF000, 0x1000)));
 

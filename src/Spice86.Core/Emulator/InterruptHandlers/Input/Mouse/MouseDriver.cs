@@ -5,6 +5,7 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Video;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
@@ -409,10 +410,10 @@ public class MouseDriver : IMouseDriver {
         memoryAsmWriter.WriteFarRet();
 
         SegmentedAddress driverAddress = memoryAsmWriter.CurrentAddress;
-        memoryAsmWriter.RegisterAndWriteCallback(BeforeUserHandlerExecution);
+        memoryAsmWriter.RegisterAndWriteCallback(CallbackNumbers.MouseBeforeUserHandler, BeforeUserHandlerExecution);
         // Far call to default handler, can be changed via _inMemoryAddressSwitcher
         memoryAsmWriter.WriteFarCallToSwitcherDefaultAddress(_userHandlerAddressSwitcher);
-        memoryAsmWriter.RegisterAndWriteCallback(AfterUserHandlerExecution);
+        memoryAsmWriter.RegisterAndWriteCallback(CallbackNumbers.MouseAfterUserHandler, AfterUserHandlerExecution);
         // Far ret to return to caller
         memoryAsmWriter.WriteFarRet();
         return driverAddress;
