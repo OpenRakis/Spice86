@@ -7,17 +7,17 @@ using Spice86.Tests.Dos;
 using System.Text;
 
 using static Spice86.Tests.AsmFixtures.DosProgramRun;
-using static Spice86.Tests.Dos.BatchTestHelpers;
 
 /// <summary>
-/// Scenarios of the console and keyboard programs that are built from byte arrays rather than from a
-/// committed binary: the INT 21h console IOCTL subfunctions, the console input and break-check services
-/// and the enhanced INT 16h keystroke services. Each program runs in its own directory mounted as C:, so
-/// the redirected files and preloaded keys of one run never reach another, and the same oracle checks the
-/// reported status byte, the video cell or the redirected output in the interpreted and in the generated
-/// mode.
+/// Scenarios of the console and keyboard programs committed under
+/// <c>Resources/DosConsoleProgramTests</c>: the INT 21h console IOCTL subfunctions, the console input and
+/// break-check services and the enhanced INT 16h keystroke services. Each program runs in its own
+/// directory mounted as C:, so the redirected files and preloaded keys of one run never reach another,
+/// and the same oracle checks the reported status byte, the video cell or the redirected output in the
+/// interpreted and in the generated mode.
 /// </summary>
 internal static class ConsoleProgramScenarioCatalog {
+    private const string ProgramDirectory = "DosConsoleProgramTests";
     private const ushort CtrlCBiosKeyCode = 0x0003;
     private const byte CharacterDeviceBit = 0x80;
     private const byte CarryFlagReported = 0x01;
@@ -27,36 +27,6 @@ internal static class ConsoleProgramScenarioCatalog {
     private const byte SentinelByte = (byte)'X';
 
     private static readonly IReadOnlyList<ushort> NoKeys = [];
-
-    /// <summary>The enhanced keystroke reader: INT 16h AH=10h returns the scan code of the pressed key in
-    /// AH, which the program copies into AL and writes to the first video cell.</summary>
-    private static readonly byte[] ReadExtendedKeyAh10 = {
-        0xB4, 0x10,                                                     // MOV AH, 10h
-        0xCD, 0x16,                                                     // INT 16h
-        0x88, 0xE0,                                                     // MOV AL, AH
-        0xB4, 0x07,                                                     // MOV AH, 07h (attribute)
-        0xBB, 0x00, 0xB8,                                               // MOV BX, B800h
-        0x8E, 0xC3,                                                     // MOV ES, BX
-        0xBF, 0x00, 0x00,                                               // MOV DI, 0000h
-        0xAB,                                                           // STOSW
-        0xB8, 0x00, 0x4C,                                               // MOV AX, 4C00h
-        0xCD, 0x21                                                      // INT 21h
-    };
-
-    /// <summary>The enhanced keystroke status reader: INT 16h AH=11h returns the scan code of the pending
-    /// key in AH without dequeuing any other data.</summary>
-    private static readonly byte[] ReadExtendedKeyAh11 = {
-        0xB4, 0x11,                                                     // MOV AH, 11h
-        0xCD, 0x16,                                                     // INT 16h
-        0x88, 0xE0,                                                     // MOV AL, AH
-        0xB4, 0x07,                                                     // MOV AH, 07h (attribute)
-        0xBB, 0x00, 0xB8,                                               // MOV BX, B800h
-        0x8E, 0xC3,                                                     // MOV ES, BX
-        0xBF, 0x00, 0x00,                                               // MOV DI, 0000h
-        0xAB,                                                           // STOSW
-        0xB8, 0x00, 0x4C,                                               // MOV AX, 4C00h
-        0xCD, 0x21                                                      // INT 21h
-    };
 
     /// <summary>Every console and keyboard program scenario, in the order of the service it exercises:
     /// the console and IOCTL scenarios first, then the enhanced INT 16h keyboard scenarios.</summary>
@@ -110,7 +80,7 @@ internal static class ConsoleProgramScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario Ioctl06KeyboardBufferState(string identity, byte expectedStatus, ushort keyCode) {
         return Scenario(identity, run => run
-            .Binary("IOST.COM", BuildIoctlInputStatusCom(0))
+            .ResourceCopy(ProgramDirectory, "ioctl_status_6_0.com", "IOST.COM")
             .RunWithKeys("IOST.COM", Keys(keyCode), result =>
                 VideoByte(result, 0).Should().Be(expectedStatus, "IOCTL 06 should reflect keyboard buffer availability")));
     }
@@ -120,7 +90,7 @@ internal static class ConsoleProgramScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario Ioctl06PollAndReadPreloadedKey() {
         return Scenario("console_ioctl06_poll_and_read", run => run
-            .Binary("POLL.COM", BuildIoctlPollAndReadCom(0))
+            .ResourceCopy(ProgramDirectory, "ioctl_poll_and_read.com", "POLL.COM")
             .RunWithKeys("POLL.COM", [0x1579], result =>
                 Cell(result, 0).Should().Be('y',
                     "the poll-and-read pattern should successfully read the pre-loaded keystroke")));
@@ -136,7 +106,7 @@ internal static class ConsoleProgramScenarioCatalog {
     private static AsmScenario ConsoleReadThroughInt16BlockingPath(string identity, byte ahFunction, ushort keyCode,
         char expectedChar) {
         return Scenario(identity, run => run
-            .Binary("READK.COM", BuildConsoleReadToVideoCom(ahFunction, 0))
+            .ResourceCopy(ProgramDirectory, $"console_read_to_video_{ahFunction:x}.com", "READK.COM")
             .RunWithKeys("READK.COM", [keyCode], result =>
                 Cell(result, 0).Should().Be(expectedChar,
                     $"AH={ahFunction:X2} should read the key via INT 16h blocking path")));
@@ -146,7 +116,7 @@ internal static class ConsoleProgramScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario Ioctl00ReportsCharacterDeviceBit() {
         return Scenario("console_ioctl00_stdin_character_device", run => run
-            .Binary("DEVINFO.COM", BuildIoctlDeviceInfoCom(0, 0))
+            .ResourceCopy(ProgramDirectory, "ioctl_device_info.com", "DEVINFO.COM")
             .RunWithKeys("DEVINFO.COM", NoKeys, result =>
                 (VideoByte(result, 0) & CharacterDeviceBit).Should().NotBe(0,
                     "IOCTL 00 on stdin should report character device (bit 7 set in DL)")));
@@ -157,7 +127,7 @@ internal static class ConsoleProgramScenarioCatalog {
     private static AsmScenario Ioctl06ReportsDataForRedirectedFile() {
         return Scenario("console_ioctl06_redirect_file_data", run => run
             .Text("DATA.TXT", "A")
-            .Binary("IOST.COM", BuildIoctlInputStatusCom(0))
+            .ResourceCopy(ProgramDirectory, "ioctl_status_6_0.com", "IOST.COM")
             .StartBatch("IOST.COM < DATA.TXT\r\n", result =>
                 VideoByte(result, 0).Should().Be(InputAvailable,
                     "IOCTL 06 on file with remaining data should report 0xFF (input available)")));
@@ -168,7 +138,7 @@ internal static class ConsoleProgramScenarioCatalog {
     private static AsmScenario Ioctl06ReportsNoDataForEmptyRedirectedFile() {
         return Scenario("console_ioctl06_redirect_file_empty", run => run
             .Text("EMPTY.TXT", "")
-            .Binary("IOST.COM", BuildIoctlInputStatusCom(0))
+            .ResourceCopy(ProgramDirectory, "ioctl_status_6_0.com", "IOST.COM")
             .StartBatch("IOST.COM < EMPTY.TXT\r\n", result =>
                 VideoByte(result, 0).Should().Be(NoInputAvailable,
                     "IOCTL 06 on empty file should report 0x00 (no input at EOF)")));
@@ -180,7 +150,7 @@ internal static class ConsoleProgramScenarioCatalog {
     private static AsmScenario Ioctl06ReportsNoDataAtEndOfFile() {
         return Scenario("console_ioctl06_redirect_file_eof_after_read", run => run
             .Text("DATA.TXT", "X")
-            .Binary("READCHK.COM", BuildReadThenIoctlInputStatusCom(0))
+            .ResourceCopy(ProgramDirectory, "read_then_ioctl_input_status.com", "READCHK.COM")
             .StartBatch("READCHK.COM < DATA.TXT\r\n", result =>
                 VideoByte(result, 0).Should().Be(NoInputAvailable,
                     "IOCTL 06 after reading all file data should report 0x00 (at EOF)")));
@@ -190,7 +160,7 @@ internal static class ConsoleProgramScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario Ioctl07ReportsStdoutReady() {
         return Scenario("console_ioctl07_stdout_ready", run => run
-            .Binary("OUTST.COM", BuildIoctlOutputStatusCom(1, 0))
+            .ResourceCopy(ProgramDirectory, "ioctl_status_7_1.com", "OUTST.COM")
             .RunWithKeys("OUTST.COM", NoKeys, result =>
                 VideoByte(result, 0).Should().Be(InputAvailable,
                     "IOCTL 07 on stdout should report 0xFF (output ready)")));
@@ -200,7 +170,7 @@ internal static class ConsoleProgramScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario Ioctl09FixedDriveRegisters() {
         return Scenario("console_ioctl09_fixed_drive", run => run
-            .Binary("DRV09.COM", BuildIoctlDriveRegisterProbeCom(0x09, 3, 0))
+            .ResourceCopy(ProgramDirectory, "ioctl_drive_register_probe_9_3.com", "DRV09.COM")
             .RunWithKeys("DRV09.COM", NoKeys, result => {
                 VideoByte(result, 0).Should().Be(0x00,
                     "IOCTL 09 should return AL=00h for a successful local-drive probe");
@@ -217,7 +187,7 @@ internal static class ConsoleProgramScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario Ioctl0EFloppyDriveRegisters() {
         return Scenario("console_ioctl0e_floppy_drive", run => run
-            .Binary("DRV0E.COM", BuildIoctlDriveRegisterProbeCom(0x0E, 1, 0))
+            .ResourceCopy(ProgramDirectory, "ioctl_drive_register_probe_e_1.com", "DRV0E.COM")
             .RunWithKeys("DRV0E.COM", NoKeys, result => {
                 VideoByte(result, 0).Should().Be(0x01,
                     "IOCTL 0E should map floppy drive A: to logical drive 1");
@@ -230,7 +200,7 @@ internal static class ConsoleProgramScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario Ioctl09ZDriveRegisters() {
         return Scenario("console_ioctl09_z_drive", run => run
-            .Binary("DRV09Z.COM", BuildIoctlDriveRegisterProbeCom(0x09, 26, 0))
+            .ResourceCopy(ProgramDirectory, "ioctl_drive_register_probe_9_1a.com", "DRV09Z.COM")
             .RunWithKeys("DRV09Z.COM", NoKeys, result => {
                 VideoByte(result, 0).Should().Be(0x00,
                     "IOCTL 09 should succeed for a mounted high-letter drive such as Z:");
@@ -247,7 +217,7 @@ internal static class ConsoleProgramScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario Ioctl0EZDriveRegisters() {
         return Scenario("console_ioctl0e_z_drive", run => run
-            .Binary("DRV0EZ.COM", BuildIoctlDriveRegisterProbeCom(0x0E, 26, 0))
+            .ResourceCopy(ProgramDirectory, "ioctl_drive_register_probe_e_1a.com", "DRV0EZ.COM")
             .RunWithKeys("DRV0EZ.COM", NoKeys, result => {
                 VideoByte(result, 0).Should().Be(0x00,
                     "IOCTL 0E should return AL=00h for mounted Z: because it has a single logical assignment");
@@ -264,7 +234,7 @@ internal static class ConsoleProgramScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario DirectConsoleIoInput(string identity, ushort keyCode, byte expectedAl) {
         return Scenario(identity, run => run
-            .Binary("DCIO.COM", BuildDirectConsoleIoInputCom(0))
+            .ResourceCopy(ProgramDirectory, "direct_console_io_to_video.com", "DCIO.COM")
             .RunWithKeys("DCIO.COM", Keys(keyCode), result =>
                 VideoByte(result, 0).Should().Be(expectedAl,
                     "AH=06h with DL=FFh should return the expected AL value in input mode")));
@@ -274,7 +244,7 @@ internal static class ConsoleProgramScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario DirectConsoleIoOutputRedirected() {
         return Scenario("console_ah06_output_redirect", run => run
-            .Binary("DCOUT.COM", BuildDirectConsoleIoOutputCom((byte)'Q'))
+            .ResourceCopy(ProgramDirectory, "direct_console_io.com", "DCOUT.COM")
             .StartBatch("DCOUT.COM > OUTPUT.TXT\r\n",
                 _ => run.TextFile("OUTPUT.TXT").Should().Contain("Q",
                     "AH=06h output mode should write the character to stdout")));
@@ -285,7 +255,7 @@ internal static class ConsoleProgramScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario DisplayOutputChecksForPendingBreak() {
         return Scenario("console_ah02_ctrl_c_break", run => run
-            .Binary("AH02C.COM", BuildDisplayOutputThenWriteSentinelCom((byte)'Q', SentinelByte))
+            .ResourceCopy(ProgramDirectory, "display_output_then_write_sentinel.com", "AH02C.COM")
             .RunWithKeys("AH02C.COM", [CtrlCBiosKeyCode], result =>
                 VideoByte(result, 0).Should().NotBe(SentinelByte,
                     "AH=02h should perform break check and terminate before subsequent instructions")));
@@ -298,7 +268,7 @@ internal static class ConsoleProgramScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario BreakCheckAfterCall(string identity, byte ahFunction) {
         return Scenario(identity, run => run
-            .Binary("BRKCHK.COM", BuildInt21CallThenWriteSentinelCom(ahFunction, SentinelByte))
+            .ResourceCopy(ProgramDirectory, $"int21_call_then_write_sentinel_{ahFunction:x}.com", "BRKCHK.COM")
             .RunWithKeys("BRKCHK.COM", [CtrlCBiosKeyCode], result =>
                 VideoByte(result, 0).Should().NotBe(SentinelByte,
                     $"AH={ahFunction:X2} should perform break check and terminate before subsequent instructions")));
@@ -308,7 +278,7 @@ internal static class ConsoleProgramScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario PrintStringRedirected() {
         return Scenario("console_ah09_print_string", run => run
-            .Binary("PRINT.COM", BuildPrintDollarStringCom("Hello DOS"))
+            .ResourceCopy(ProgramDirectory, "print_dollar_string.com", "PRINT.COM")
             .StartBatch("PRINT.COM > OUTPUT.TXT\r\n",
                 _ => run.TextFile("OUTPUT.TXT").Should().Contain("Hello DOS",
                     "AH=09h should write the string to stdout (stopping at $)")));
@@ -319,7 +289,7 @@ internal static class ConsoleProgramScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario PrintStringChecksForPendingBreak() {
         return Scenario("console_ah09_ctrl_c_break", run => run
-            .Binary("AH09C.COM", BuildPrintStringThenWriteSentinelCom("HELLO", SentinelByte))
+            .ResourceCopy(ProgramDirectory, "print_string_then_write_sentinel.com", "AH09C.COM")
             .RunWithKeys("AH09C.COM", [CtrlCBiosKeyCode], result =>
                 VideoByte(result, 0).Should().NotBe(SentinelByte,
                     "AH=09h should perform break check and terminate before subsequent instructions")));
@@ -329,7 +299,7 @@ internal static class ConsoleProgramScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario CheckStdinStatusReportsPendingKey() {
         return Scenario("console_ah0b_input_available", run => run
-            .Binary("CHKST.COM", BuildCheckStdinStatusCom(0))
+            .ResourceCopy(ProgramDirectory, "check_stdin_status.com", "CHKST.COM")
             .RunWithKeys("CHKST.COM", [0x1F73], result =>
                 VideoByte(result, 0).Should().Be(InputAvailable,
                     "AH=0Bh should return 0xFF when keyboard buffer has a pending keystroke")));
@@ -340,7 +310,7 @@ internal static class ConsoleProgramScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario FlushThenDirectConsoleIoStatus() {
         return Scenario("console_ah0c_flushes_keyboard", run => run
-            .Binary("AH0C06.COM", BuildAh0CFlushThenAh06InputStatusToVideoCom(0))
+            .ResourceCopy(ProgramDirectory, "ah0c_flush_then_ah06_input_status_to_video.com", "AH0C06.COM")
             .RunWithKeys("AH0C06.COM", [0x1E61], result =>
                 VideoByte(result, 0).Should().Be(NoInputAvailable,
                     "AH=0Ch should clear keyboard buffer before invoking subfunction AL=06h")));
@@ -353,7 +323,7 @@ internal static class ConsoleProgramScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario UnsupportedIoctlFunction(string identity, byte subFunction) {
         return Scenario(identity, run => run
-            .Binary("IOERR.COM", BuildIoctlUnsupportedFunctionProbeCom(subFunction))
+            .ResourceCopy(ProgramDirectory, $"ioctl_unsupported_function_probe_{subFunction:x}.com", "IOERR.COM")
             .RunWithKeys("IOERR.COM", NoKeys, result => {
                 VideoByte(result, 0).Should().Be(CarryFlagReported,
                     $"IOCTL AL={subFunction:X2} should set carry on unsupported function");
@@ -367,7 +337,7 @@ internal static class ConsoleProgramScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario Int16Ah10ReturnsExtendedKeyScanCode() {
         return Scenario("int16_ah10_extended_key_scan_code", run => run
-            .Binary("READ10.COM", ReadExtendedKeyAh10)
+            .ResourceCopy(ProgramDirectory, "read_extended_key_10.com", "READ10.COM")
             .RunWithKeys("READ10.COM", [0x3B00], result =>
                 VideoByte(result, 0).Should().Be(0x3B, "AH=10h should return the scan code of F1 in AH")));
     }
@@ -377,7 +347,7 @@ internal static class ConsoleProgramScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario Int16Ah11ReturnsExtendedKeyScanCode() {
         return Scenario("int16_ah11_extended_key_scan_code", run => run
-            .Binary("READ11.COM", ReadExtendedKeyAh11)
+            .ResourceCopy(ProgramDirectory, "read_extended_key_11.com", "READ11.COM")
             .RunWithKeys("READ11.COM", [0x3C00], result =>
                 VideoByte(result, 0).Should().Be(0x3C, "AH=11h should return the scan code of F2 in AH")));
     }

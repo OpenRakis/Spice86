@@ -28,6 +28,7 @@ using Spice86.Shared.Utils;
 using Spice86.Tests.Utility;
 
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -36,6 +37,8 @@ using Xunit;
 
 public class DosProcessManagerTests {
     private const ushort AdditionalEnvironmentStringsCount = 1;
+    private const string ResourceDirectory = "DosProcessManagerTests";
+
     [Fact]
     public void CreateRootCommandComPsp_MatchesFreeDosLayout() {
         DosProcessManagerTestContext context = CreateContext();
@@ -65,7 +68,7 @@ public class DosProcessManagerTests {
         rootPsp.NNFlags = 0xABCD;
 
         using TempFile tempFile = new("DosProcessManagerTests");
-        string comFilePath = tempFile.CreateFile("load_child.com", [0xC3]);
+        string comFilePath = CreateFileFromResource(tempFile, "load_child.com", "nop_sled_ret_1.com");
         DosExecParameterBlock parameterBlock = CreateParameterBlock();
 
         DosExecResult result = context.ProcessManager.LoadOrLoadAndExecute(
@@ -93,7 +96,7 @@ public class DosProcessManagerTests {
         context.State.SP = 0x00FE;
 
         using TempFile tempFile = new("DosProcessManagerTests");
-        string comFilePath = CreateTemporaryComFile(tempFile);
+        string comFilePath = CreateFileFromResource(tempFile, "program.com", "nop_sled_ret_1.com");
         DosExecParameterBlock parameterBlock = CreateParameterBlock();
 
         DosExecResult result = context.ProcessManager.LoadOrLoadAndExecute(
@@ -113,7 +116,7 @@ public class DosProcessManagerTests {
         context.ProcessManager.CreateRootCommandComPsp();
 
         using TempFile tempFile = new("DosProcessManagerTests");
-        string comFilePath = CreateTemporaryComFile(tempFile);
+        string comFilePath = CreateFileFromResource(tempFile, "program.com", "nop_sled_ret_1.com");
         DosExecParameterBlock parameterBlock = CreateParameterBlock();
         DosExecResult parentExec = context.ProcessManager.LoadOrLoadAndExecute(
             comFilePath,
@@ -166,7 +169,7 @@ public class DosProcessManagerTests {
         context.ProcessManager.CreateRootCommandComPsp();
 
         using TempFile tempFile = new("DosProcessManagerTests");
-        string comFilePath = CreateTemporaryComFile(tempFile, 0x200);
+        string comFilePath = CreateFileFromResource(tempFile, "program.com", "nop_sled_ret_200.com");
         DosExecParameterBlock parameterBlock = CreateParameterBlock();
 
         DosExecResult execResult = context.ProcessManager.LoadOrLoadAndExecute(
@@ -207,7 +210,7 @@ public class DosProcessManagerTests {
         context.ProcessManager.CreateRootCommandComPsp();
 
         using TempFile tempFile = new("DosProcessManagerTests");
-        string comFilePath = CreateTemporaryComFile(tempFile, 0x200);
+        string comFilePath = CreateFileFromResource(tempFile, "program.com", "nop_sled_ret_200.com");
         DosExecParameterBlock parameterBlock = CreateParameterBlock();
 
         DosExecResult execResult = context.ProcessManager.LoadOrLoadAndExecute(
@@ -256,7 +259,7 @@ public class DosProcessManagerTests {
         rootPsp.EnvironmentTableSegment = envBlock.DataBlockSegment;
 
         using TempFile tempFile = new("DosProcessManagerTests");
-        string comFilePath = CreateTemporaryComFile(tempFile);
+        string comFilePath = CreateFileFromResource(tempFile, "program.com", "nop_sled_ret_1.com");
         DosExecParameterBlock parameterBlock = CreateParameterBlock();
         string expectedDosFileName = Path.GetFileName(comFilePath).ToUpperInvariant();
 
@@ -289,7 +292,7 @@ public class DosProcessManagerTests {
         context.State.DI = 0xFFFF;
 
         using TempFile tempFile = new("DosProcessManagerTests");
-        string exeFilePath = CreateTemporaryExeFile(tempFile);
+        string exeFilePath = CreateFileFromResource(tempFile, "program.exe", "exe_image_0_ffff.bin");
         DosExecParameterBlock parameterBlock = CreateParameterBlock();
 
         DosExecResult execResult = context.ProcessManager.LoadOrLoadAndExecute(
@@ -316,10 +319,10 @@ public class DosProcessManagerTests {
 
         const ushort relocationTargetOffset = 0;
         const ushort relocationInitialValue = 0x0042;
-        byte[] overlayBytes = BuildOverlayExeImageWithRelocation(relocationTargetOffset, relocationInitialValue);
 
         using TempFile tempFile = new("DosProcessManagerTests");
-        string overlayFilePath = tempFile.CreateFile("overlay.exe", overlayBytes);
+        string overlayFilePath =
+            CreateFileFromResource(tempFile, "overlay.exe", "overlay_exe_image_with_relocation.bin");
 
         const ushort loadSegment = 0x4000;
         const ushort relocationFactor = 0x1234;
@@ -344,11 +347,16 @@ public class DosProcessManagerTests {
 
         // 640 KB expressed in paragraphs so we mirror the FreeDOS allocation threshold.
         const ushort desiredMinimumParagraphs = (ushort)(Machine.ConventionalMemorySizeKb * 64);
-        const ushort programParagraphsFromHeader = 0x001C; // Derived from BuildExeImage layout.
+        const ushort programParagraphsFromHeader = 0x001C; // One 512-byte page minus the four header paragraphs of exe_image.inc.
         const ushort requiredMinAlloc = (ushort)(desiredMinimumParagraphs - (DosProgramSegmentPrefix.PspSizeInParagraphs + programParagraphsFromHeader));
 
         using TempFile tempFile = new("DosProcessManagerTests");
-        string exeFilePath = CreateTemporaryExeFile(tempFile, requiredMinAlloc, requiredMinAlloc);
+        string exeFilePath = CreateFileFromResource(tempFile, "program.exe", "exe_image_9fd4_9fd4.bin");
+        byte[] exeImage = File.ReadAllBytes(exeFilePath);
+        BinaryPrimitives.ReadUInt16LittleEndian(exeImage.AsSpan(0x0A)).Should().Be(requiredMinAlloc,
+            "the min extra paragraphs of exe_image_9fd4_9fd4.bin must match the 640 KB requirement");
+        BinaryPrimitives.ReadUInt16LittleEndian(exeImage.AsSpan(0x0C)).Should().Be(requiredMinAlloc,
+            "the max extra paragraphs of exe_image_9fd4_9fd4.bin must match the 640 KB requirement");
         DosExecParameterBlock parameterBlock = CreateParameterBlock();
 
         DosExecResult execResult = context.ProcessManager.LoadOrLoadAndExecute(
@@ -438,86 +446,9 @@ public class DosProcessManagerTests {
         return new DosExecParameterBlock(buffer.ReaderWriter, 0);
     }
 
-    private static void WriteUInt16LittleEndian(byte[] buffer, int offset, ushort value) {
-        buffer[offset] = (byte)(value & 0xFF);
-        buffer[offset + 1] = (byte)(value >> 8);
-    }
-
-    private static string CreateTemporaryComFile(TempFile tempFile, int payloadLength = 1) {
-        if (payloadLength < 1) {
-            payloadLength = 1;
-        }
-
-        byte[] bytes = new byte[payloadLength];
-        for (int i = 0; i < payloadLength - 1; i++) {
-            bytes[i] = 0x90;
-        }
-        bytes[payloadLength - 1] = 0xC3;
-        return tempFile.CreateFile("program.com", bytes);
-    }
-
-    private static string CreateTemporaryExeFile(TempFile tempFile) {
-        return CreateTemporaryExeFile(tempFile, 0, 0xFFFF);
-    }
-
-    private static string CreateTemporaryExeFile(TempFile tempFile, ushort minExtraParagraphs, ushort maxExtraParagraphs) {
-        byte[] exeBytes = BuildExeImage(minExtraParagraphs, maxExtraParagraphs);
-        return tempFile.CreateFile("program.exe", exeBytes);
-    }
-
-    private static byte[] BuildExeImage(ushort minExtraParagraphs, ushort maxExtraParagraphs) {
-        byte[] image = new byte[512];
-
-        image[0] = (byte)'M';
-        image[1] = (byte)'Z';
-        WriteUInt16LittleEndian(image, 0x02, 0);
-        WriteUInt16LittleEndian(image, 0x04, 1);
-        WriteUInt16LittleEndian(image, 0x06, 0);
-        WriteUInt16LittleEndian(image, 0x08, 4);
-        WriteUInt16LittleEndian(image, 0x0A, minExtraParagraphs);
-        WriteUInt16LittleEndian(image, 0x0C, maxExtraParagraphs);
-        WriteUInt16LittleEndian(image, 0x0E, 0);
-        WriteUInt16LittleEndian(image, 0x10, 0xFFFE);
-        WriteUInt16LittleEndian(image, 0x12, 0);
-        WriteUInt16LittleEndian(image, 0x14, 0);
-        WriteUInt16LittleEndian(image, 0x16, 0);
-        WriteUInt16LittleEndian(image, 0x18, 0x40);
-        WriteUInt16LittleEndian(image, 0x1A, 0);
-
-        byte[] program = new byte[] { 0xB8, 0x00, 0x4C, 0xCD, 0x21 };
-        Array.Copy(program, 0, image, 0x40, program.Length);
-
-        return image;
-    }
-
-    private static byte[] BuildOverlayExeImageWithRelocation(ushort relocationTargetOffset, ushort initialWordValue) {
-        const ushort headerParagraphs = 2;
-        int headerSizeBytes = headerParagraphs * 16;
-        byte[] image = new byte[512];
-
-        image[0] = (byte)'M';
-        image[1] = (byte)'Z';
-        WriteUInt16LittleEndian(image, 0x02, 0);
-        WriteUInt16LittleEndian(image, 0x04, 1);
-        WriteUInt16LittleEndian(image, 0x06, 1);
-        WriteUInt16LittleEndian(image, 0x08, headerParagraphs);
-        WriteUInt16LittleEndian(image, 0x0A, 0);
-        WriteUInt16LittleEndian(image, 0x0C, 0);
-        WriteUInt16LittleEndian(image, 0x0E, 0);
-        WriteUInt16LittleEndian(image, 0x10, 0);
-        WriteUInt16LittleEndian(image, 0x12, 0);
-        WriteUInt16LittleEndian(image, 0x14, 0);
-        WriteUInt16LittleEndian(image, 0x16, 0);
-        WriteUInt16LittleEndian(image, 0x18, 0x1C);
-        WriteUInt16LittleEndian(image, 0x1A, 0);
-
-        WriteUInt16LittleEndian(image, 0x1C, relocationTargetOffset);
-        WriteUInt16LittleEndian(image, 0x1E, 0);
-
-        int wordOffset = headerSizeBytes + relocationTargetOffset;
-        WriteUInt16LittleEndian(image, wordOffset, initialWordValue);
-
-        return image;
+    private static string CreateFileFromResource(TempFile tempFile, string targetFileName, string resourceFileName) {
+        byte[] content = File.ReadAllBytes(Path.Join(AppContext.BaseDirectory, "Resources", ResourceDirectory, resourceFileName));
+        return tempFile.CreateFile(targetFileName, content);
     }
 
     private static byte[] BuildLargeEnvironmentBytes(int totalLength) {
