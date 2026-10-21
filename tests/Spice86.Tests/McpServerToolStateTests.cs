@@ -1166,6 +1166,77 @@ public class McpServerToolStateTests {
         McpJsonRpcAssertions.TryGetPropertyIgnoreCase(McpJsonRpcAssertions.GetStructuredContent(McpJsonRpcAssertions.GetJsonRpcResult(listFuncs)), "functions", out JsonElement _).Should().BeTrue();
         McpJsonRpcAssertions.TryGetPropertyIgnoreCase(McpJsonRpcAssertions.GetStructuredContent(McpJsonRpcAssertions.GetJsonRpcResult(video)), "width", out JsonElement _).Should().BeTrue();
         AssertScreenshotResultIsValid(McpJsonRpcAssertions.GetStructuredContent(McpJsonRpcAssertions.GetJsonRpcResult(screenshot)));
+        AssertScreenshotImageContentIsBase64Png(McpJsonRpcAssertions.GetJsonRpcResult(screenshot));
+    }
+
+    [Fact]
+    public async Task Screenshot_ShouldReturnBase64EncodedPngImageContentAsync() {
+        // Arrange
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await context.InitializeAsync();
+        await RenderFrameWithVisiblePixelsAsync(context);
+
+        // Act
+        JsonDocument screenshot = await context.CallToolAsync("screenshot", new Dictionary<string, object?>());
+
+        // Assert
+        JsonElement result = McpJsonRpcAssertions.GetJsonRpcResult(screenshot);
+        AssertScreenshotResultIsValid(McpJsonRpcAssertions.GetStructuredContent(result));
+        AssertScreenshotImageContentIsBase64Png(result);
+    }
+
+    private static async Task RenderFrameWithVisiblePixelsAsync(McpIntegrationContext context) {
+        JsonDocument setMode13 = await context.CallToolAsync("video_set_mode", new Dictionary<string, object?> {
+            ["modeId"] = 0x13,
+            ["clearVideoMemory"] = true
+        });
+        AssertToolSucceeded(setMode13);
+
+        for (int y = 0; y < 8; y++) {
+            for (int x = 0; x < 8; x++) {
+                JsonDocument writePixel = await context.CallToolAsync("video_write_pixel", new Dictionary<string, object?> {
+                    ["x"] = x,
+                    ["y"] = y,
+                    ["color"] = 0x0C
+                });
+                AssertToolSucceeded(writePixel);
+            }
+        }
+
+        if (context.Services.VgaRenderer is not Renderer renderer) {
+            throw new InvalidOperationException("The composed VGA renderer is required.");
+        }
+        renderer.BeginFrame();
+        for (int scanline = 0; scanline < 1200; scanline++) {
+            renderer.RenderScanline();
+        }
+        renderer.CompleteFrame();
+    }
+
+    private static void AssertScreenshotImageContentIsBase64Png(JsonElement toolResult) {
+        bool hasStructuredContent = McpJsonRpcAssertions.TryGetPropertyIgnoreCase(toolResult, "structuredContent", out JsonElement structuredContent);
+        bool noFrameAvailable = hasStructuredContent
+            && McpJsonRpcAssertions.TryGetPropertyIgnoreCase(structuredContent, "message", out JsonElement noFrameMessage)
+            && noFrameMessage.GetString() == "No video frame is available for screenshot capture.";
+        if (noFrameAvailable) {
+            return;
+        }
+
+        toolResult.TryGetProperty("content", out JsonElement content).Should().BeTrue("the screenshot tool must return an image content block");
+        content.ValueKind.Should().Be(JsonValueKind.Array);
+        content.GetArrayLength().Should().Be(1);
+
+        JsonElement imageBlock = content[0];
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(imageBlock, "type", out JsonElement type).Should().BeTrue();
+        type.GetString().Should().Be("image");
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(imageBlock, "mimeType", out JsonElement mimeType).Should().BeTrue();
+        mimeType.GetString().Should().Be("image/png");
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(imageBlock, "data", out JsonElement data).Should().BeTrue();
+
+        string base64Payload = data.GetString() ?? throw new InvalidOperationException("Screenshot image data must not be null.");
+        byte[] pngBytes = Convert.FromBase64String(base64Payload);
+        pngBytes.Should().StartWith(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A },
+            "the image data must base64-decode to a PNG signature rather than carrying raw bytes");
     }
 
     private static void AssertScreenshotResultIsValid(JsonElement shot) {
