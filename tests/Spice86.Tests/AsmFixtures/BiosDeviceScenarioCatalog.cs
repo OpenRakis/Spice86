@@ -45,8 +45,9 @@ internal static class BiosDeviceScenarioCatalog {
         RtcProgram("bios_int70_wait.com", 0x07, RtcWaitMaxCycles)
     ];
 
-    /// <summary>VGA BIOS programs: the scroll-up that must clear every column of the vacated row.</summary>
-    public static IReadOnlyList<AsmScenario> VgaScenarios => [VgaScrollClearsFullRow()];
+    /// <summary>VGA BIOS programs: the scroll-up that must clear every column of the vacated row,
+    /// and the graphics-mode scroll-up that must actually move the rows it scrolls.</summary>
+    public static IReadOnlyList<AsmScenario> VgaScenarios => [VgaScrollClearsFullRow(), VgaGraphicsScrollMovesRows()];
 
     /// <summary>Sound programs: the two OPL timer/write-delay programs and the Sound Blaster DSP reset
     /// delay, each run with the sound model the original test exposed to the machine.</summary>
@@ -89,8 +90,41 @@ internal static class BiosDeviceScenarioCatalog {
         }, [$"{VgaSubDirectory}/{fileName}"]);
     }
 
-    /// <summary>The OPL write-delay program: the classic Adlib detection sequence must overflow Timer 1
-    /// before the first poll iteration completes, so the iteration count the program reports is exactly 1.</summary>
+    /// <summary>The VGA graphics scroll-up program: it fills character rows 0-2 in mode 4 through
+    /// INT 10h AH=09h, scrolls the window up one line and must move the rows rather than blank
+    /// them. The graphics move path takes its copy width from the window extent and its height
+    /// from the window row count, so a full-width scroll whose destination is the window origin
+    /// must still copy the full width.</summary>
+    /// <returns>The scenario for graphics_scroll_moves_rows.com.</returns>
+    public static AsmScenario VgaGraphicsScrollMovesRows() {
+        const string fileName = "graphics_scroll_moves_rows.com";
+        const string identity = "graphics_scroll_moves_rows";
+        return new AsmScenario(identity, scope => {
+            string directory = scope.CreateWorkingDirectory(identity);
+            string programPath = CopyResourceFile(VgaSubDirectory, fileName, directory);
+            AsmRunSettings settings = new() {
+                BinName = programPath,
+                ScenarioName = identity,
+                EnablePit = true,
+                MaxCycles = VgaMaxCycles,
+                InstallInterruptVectors = true,
+                CDrive = directory,
+                ConfigureMachine = machine => RegisterTestPortHandler(scope, machine)
+            };
+            return new AsmFixture(settings, [], AssertGraphicsScrollMovedRows);
+        }, [$"{VgaSubDirectory}/{fileName}"]);
+    }
+
+    private static void AssertGraphicsScrollMovedRows(AsmFixtureResult result) {
+        TestIoPortHandler testHandler =
+            result.Observations.Get<TestIoPortHandler>(TestPortResultsObservation);
+        testHandler.Results.Should().Contain(TestPortSuccess,
+            "scrolling up in graphics mode must copy the rows it scrolls");
+        testHandler.Results.Should().NotContain(TestPortFailure,
+            "a zero-width move blanks the rows instead of shifting them");
+    }
+
+    /// <summary>The OPL write-delay program: the classic Adlib detection sequence must overflow Timer 1    /// before the first poll iteration completes, so the iteration count the program reports is exactly 1.</summary>
     /// <returns>The scenario for opl_write_delay.com.</returns>
     public static AsmScenario OplWriteDelay() {
         const string fileName = "opl_write_delay.com";
