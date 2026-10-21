@@ -618,7 +618,8 @@ public sealed class AsmScenarioPipelineTest {
             string directory = scope.CreateWorkingDirectory(identity);
             scope.Register(WorkingDirectoryObservation, directory);
             string program = Path.Join(directory, "EXIT.COM");
-            File.WriteAllBytes(program, BatchTestHelpers.BuildExitCodeCom(0));
+            File.Copy(Path.Join(AppContext.BaseDirectory, "Resources", "DosConsoleProgramTests", "exit_code_0.com"),
+                program, overwrite: true);
             File.WriteAllText(Path.Join(directory, "SEED.TXT"), "original");
             AsmRunSettings settings = new() {
                 BinName = program,

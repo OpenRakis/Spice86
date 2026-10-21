@@ -10,7 +10,6 @@ using Spice86.Tests.Dos.FileSystem;
 using System.Text;
 
 using static Spice86.Tests.AsmFixtures.DosProgramRun;
-using static Spice86.Tests.Dos.BatchTestHelpers;
 
 /// <summary>
 /// Scenarios of the DOS batch routing programs and of the AUTOEXEC bootstrap routing. Every scenario
@@ -22,6 +21,7 @@ using static Spice86.Tests.Dos.BatchTestHelpers;
 /// interpreted and in the generated mode.
 /// </summary>
 internal static class DosBatchScenarioCatalog {
+    private const string ProgramDirectory = "DosConsoleProgramTests";
     private const string TestfkeyResourceDirectory = "DosBatchTests";
     private const string TestfkeyResourceFile = "TESTFKEY.COM";
 
@@ -308,7 +308,7 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario HostRequestedComRunsThroughBatchRouting() {
         return Scenario("batch_host_requested_com", run => run
-            .Binary("WRITER.COM", BuildVideoWriterCom('C', 0))
+            .ResourceCopy(ProgramDirectory, "video_writer_c_0.com", "WRITER.COM")
             .Run("WRITER.COM", result => Cell(result, 0).Should().Be('C')));
     }
 
@@ -317,7 +317,7 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario CallLaunchesComProgram() {
         return Scenario("batch_call_launches_com", run => run
-            .Binary("WRITER.COM", BuildVideoWriterCom('A', 0))
+            .ResourceCopy(ProgramDirectory, "video_writer_a_0.com", "WRITER.COM")
             .StartBatch("CALL WRITER.COM\r\n",
                 result => Cell(result, 0).Should().Be('A')));
     }
@@ -327,8 +327,8 @@ internal static class DosBatchScenarioCatalog {
     private static AsmScenario CallWithoutExtensionPrefersComOverBat() {
         return Scenario("batch_call_noext_prefers_com_over_bat", run => run
             .Text("TOOL.BAT", "CALL BATWIN.COM\r\n")
-            .Binary("TOOL.COM", BuildVideoWriterCom('C', 0))
-            .Binary("BATWIN.COM", BuildVideoWriterCom('B', 0))
+            .ResourceCopy(ProgramDirectory, "video_writer_c_0.com", "TOOL.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_b_0.com", "BATWIN.COM")
             .StartBatch("CALL TOOL\r\n",
                 result => Cell(result, 0).Should().Be('C')));
     }
@@ -337,8 +337,8 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario CallWithoutExtensionFallsBackToCom() {
         return Scenario("batch_call_noext_falls_back_to_com", run => run
-            .Binary("TOOL.COM", BuildVideoWriterCom('C', 0))
-            .Binary("TOOL.EXE", BuildVideoWriterCom('E', 0))
+            .ResourceCopy(ProgramDirectory, "video_writer_c_0.com", "TOOL.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_e_0.com", "TOOL.EXE")
             .StartBatch("CALL TOOL\r\n",
                 result => Cell(result, 0).Should().Be('C')));
     }
@@ -348,7 +348,7 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario CallWithoutExtensionFallsBackToExe() {
         return Scenario("batch_call_noext_falls_back_to_exe", run => run
-            .Binary("TOOL.EXE", BuildVideoWriterCom('E', 0))
+            .ResourceCopy(ProgramDirectory, "video_writer_e_0.com", "TOOL.EXE")
             .StartBatch("CALL TOOL\r\n",
                 result => Cell(result, 0).Should().Be('E')));
     }
@@ -359,7 +359,7 @@ internal static class DosBatchScenarioCatalog {
     private static AsmScenario MaupitiTatouRunsFromNestedDirectory() {
         return Scenario("batch_maupiti_tatou_nested_directory", run => run
             .TextIn("JEUX/MAUPITI", "TATOU.BAT", "CALL MAUPITIW.COM > C:\\JEUX\\MAUPITI\\MAUPITI.TXT\r\n")
-            .BinaryIn("JEUX/MAUPITI", "MAUPITIW.COM", BuildStdoutWriterCom("M"))
+            .Folder("JEUX/MAUPITI").ResourceCopy(ProgramDirectory, "stdout_writer_m.com", "JEUX/MAUPITI/MAUPITIW.COM")
             .RunWithoutPit("JEUX/MAUPITI/TATOU.BAT",
                 result => run.TextFile("JEUX/MAUPITI/MAUPITI.TXT").Should().Be("M")));
     }
@@ -370,8 +370,8 @@ internal static class DosBatchScenarioCatalog {
     private static AsmScenario AitdTatouWithoutExtensionPrefersCom() {
         return Scenario("batch_aitd_tatou_noext_prefers_com", run => run
             .TextIn("JEUX/AITD", "TATOU.BAT", "ECHO BAT> C:\\JEUX\\AITD\\WINNER.TXT\r\n")
-            .BinaryIn("JEUX/AITD", "TATOU.COM", BuildVideoWriterCom('C', 0))
-            .BinaryIn("JEUX/AITD", "TATOU.EXE", BuildVideoWriterCom('E', 0))
+            .Folder("JEUX/AITD").ResourceCopy(ProgramDirectory, "video_writer_c_0.com", "JEUX/AITD/TATOU.COM")
+            .Folder("JEUX/AITD").ResourceCopy(ProgramDirectory, "video_writer_e_0.com", "JEUX/AITD/TATOU.EXE")
             .StartBatch("CALL c:\\jeux\\aitd\\tatou\r\n", result => {
                 Cell(result, 0).Should().Be('C');
                 run.HostFileExists("JEUX/AITD/WINNER.TXT").Should().BeFalse();
@@ -383,7 +383,7 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario NestedBatchCall() {
         return Scenario("batch_nested_batch_call", run => run
-            .Binary("WRITER.COM", BuildVideoWriterCom('B', 0))
+            .ResourceCopy(ProgramDirectory, "video_writer_b_0.com", "WRITER.COM")
             .Text("CHILD.BAT", "CALL WRITER.COM\r\n")
             .StartBatch("CALL CHILD.BAT\r\n",
                 result => Cell(result, 0).Should().Be('B')));
@@ -407,8 +407,8 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario GotoSkipsCommands() {
         return Scenario("batch_goto_skips_commands", run => run
-            .Binary("SKIP.COM", BuildVideoWriterCom('S', 2))
-            .Binary("PASS.COM", BuildVideoWriterCom('G', 0))
+            .ResourceCopy(ProgramDirectory, "video_writer_s_2.com", "SKIP.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_g_0.com", "PASS.COM")
             .StartBatch("GOTO RUN\r\nCALL SKIP.COM\r\n:RUN\r\nCALL PASS.COM\r\n", result => {
                 Cell(result, 0).Should().Be('G');
                 Cell(result, 1).Should().NotBe('S');
@@ -436,8 +436,8 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario IfErrorLevelDispatchesCommand() {
         return Scenario("batch_if_errorlevel_dispatches", run => run
-            .Binary("RET5.COM", BuildExitCodeCom(5))
-            .Binary("W5.COM", BuildVideoWriterCom('E', 0))
+            .ResourceCopy(ProgramDirectory, "exit_code_5.com", "RET5.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_e_0.com", "W5.COM")
             .StartBatch("CALL RET5.COM\r\nIF ERRORLEVEL 5 CALL W5.COM\r\n",
                 result => Cell(result, 0).Should().Be('E')));
     }
@@ -446,8 +446,8 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario IfErrorLevelEqualsSyntaxDispatchesCommand() {
         return Scenario("batch_if_errorlevel_equals_dispatches", run => run
-            .Binary("RET10.COM", BuildExitCodeCom(10))
-            .Binary("W10.COM", BuildVideoWriterCom('X', 0))
+            .ResourceCopy(ProgramDirectory, "exit_code_a.com", "RET10.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_x_0.com", "W10.COM")
             .StartBatch("CALL RET10.COM\r\nIF ERRORLEVEL = 10 CALL W10.COM\r\n",
                 result => Cell(result, 0).Should().Be('X')));
     }
@@ -461,10 +461,10 @@ internal static class DosBatchScenarioCatalog {
     private static AsmScenario AlphaWavesRoutesFunctionKey(string identity, ushort keyCode, char expectedAction) {
         return ResourceScenario(identity, TestfkeyDependency, run => run
             .ResourceCopy(TestfkeyResourceDirectory, TestfkeyResourceFile, TestfkeyResourceFile)
-            .Binary("ALPHA_F.COM", BuildVideoWriterCom('F', 0))
-            .Binary("ALPHA_E.COM", BuildVideoWriterCom('E', 0))
-            .Binary("ALPHA_D.COM", BuildVideoWriterCom('D', 0))
-            .Binary("ALPHA_X.COM", BuildVideoWriterCom('X', 6))
+            .ResourceCopy(ProgramDirectory, "video_writer_f_0.com", "ALPHA_F.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_e_0.com", "ALPHA_E.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_d_0.com", "ALPHA_D.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_x_6.com", "ALPHA_X.COM")
             .StartBatch(AlphaWavesScript, [keyCode], result => {
                 Cell(result, 0).Should().Be(expectedAction);
                 Cell(result, 3).Should().Be('X');
@@ -477,10 +477,10 @@ internal static class DosBatchScenarioCatalog {
     private static AsmScenario AlphaWavesF10BypassesBranches() {
         return ResourceScenario("batch_alpha_waves_f10_bypasses_branches", TestfkeyDependency, run => run
             .ResourceCopy(TestfkeyResourceDirectory, TestfkeyResourceFile, TestfkeyResourceFile)
-            .Binary("ALPHA_F.COM", BuildVideoWriterCom('F', 0))
-            .Binary("ALPHA_E.COM", BuildVideoWriterCom('E', 0))
-            .Binary("ALPHA_D.COM", BuildVideoWriterCom('D', 0))
-            .Binary("ALPHA_X.COM", BuildVideoWriterCom('X', 6))
+            .ResourceCopy(ProgramDirectory, "video_writer_f_0.com", "ALPHA_F.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_e_0.com", "ALPHA_E.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_d_0.com", "ALPHA_D.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_x_6.com", "ALPHA_X.COM")
             .StartBatch(AlphaWavesScript, [0x4400], result => {
                 Cell(result, 0).Should().NotBe('F');
                 Cell(result, 0).Should().NotBe('E');
@@ -501,9 +501,9 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario IfNotErrorLevelSkipsCommand() {
         return Scenario("batch_if_not_errorlevel_skips", run => run
-            .Binary("RET5.COM", BuildExitCodeCom(5))
-            .Binary("SKIP.COM", BuildVideoWriterCom('S', 0))
-            .Binary("PASS.COM", BuildVideoWriterCom('P', 2))
+            .ResourceCopy(ProgramDirectory, "exit_code_5.com", "RET5.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_s_0.com", "SKIP.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_p_2.com", "PASS.COM")
             .StartBatch("CALL RET5.COM\r\nIF NOT ERRORLEVEL 5 CALL SKIP.COM\r\nIF ERRORLEVEL 5 CALL PASS.COM\r\n",
                 result => {
                     Cell(result, 0).Should().NotBe('S');
@@ -515,8 +515,8 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario IfNotStringComparisonExecutesExpectedBranch() {
         return Scenario("batch_if_not_string_comparison", run => run
-            .Binary("SKIP.COM", BuildVideoWriterCom('S', 0))
-            .Binary("PASS.COM", BuildVideoWriterCom('N', 2))
+            .ResourceCopy(ProgramDirectory, "video_writer_s_0.com", "SKIP.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_n_2.com", "PASS.COM")
             .StartBatch("IF NOT \"ONE\"==\"ONE\" CALL SKIP.COM\r\nIF NOT \"ONE\"==\"TWO\" CALL PASS.COM\r\n",
                 result => {
                     Cell(result, 0).Should().NotBe('S');
@@ -528,8 +528,8 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario IfExistAndIfNotExistUseCorrectBranch() {
         return Scenario("batch_if_exist_and_not_exist", run => run
-            .Binary("EXISTS.COM", BuildVideoWriterCom('E', 0))
-            .Binary("MISSING.COM", BuildVideoWriterCom('M', 2))
+            .ResourceCopy(ProgramDirectory, "video_writer_e_0.com", "EXISTS.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_m_2.com", "MISSING.COM")
             .Text("FLAG.TXT", "1")
             .StartBatch("IF EXIST FLAG.TXT CALL EXISTS.COM\r\nIF NOT EXIST FLAG.TXT CALL MISSING.COM\r\n",
                 result => {
@@ -542,8 +542,8 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario ShiftUpdatesArguments() {
         return Scenario("batch_shift_updates_arguments", run => run
-            .Binary("W1.COM", BuildVideoWriterCom('1', 0))
-            .Binary("W2.COM", BuildVideoWriterCom('2', 2))
+            .ResourceCopy(ProgramDirectory, "video_writer_1_0.com", "W1.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_2_2.com", "W2.COM")
             .Text("ROUTE.BAT", "IF \"%1\"==\"ONE\" CALL W1.COM\r\nSHIFT\r\nIF \"%1\"==\"TWO\" CALL W2.COM\r\n")
             .StartBatch("CALL ROUTE.BAT ONE TWO\r\n", result => {
                 Cell(result, 0).Should().Be('1');
@@ -555,8 +555,8 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario ForIteratesAndCallsBatch() {
         return Scenario("batch_for_iterates", run => run
-            .Binary("W1.COM", BuildVideoWriterCom('O', 0))
-            .Binary("W2.COM", BuildVideoWriterCom('T', 2))
+            .ResourceCopy(ProgramDirectory, "video_writer_o_0.com", "W1.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_t_2.com", "W2.COM")
             .Text("ROUTE.BAT", "IF \"%1\"==\"ONE\" CALL W1.COM\r\nIF \"%1\"==\"TWO\" CALL W2.COM\r\n")
             .StartBatch("FOR %%I IN(ONE TWO) DO CALL ROUTE.BAT %%I\r\n", result => {
                 Cell(result, 0).Should().Be('O');
@@ -568,9 +568,9 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario ForSupportsCommaAndSemicolonDelimiters() {
         return Scenario("batch_for_comma_semicolon_delimiters", run => run
-            .Binary("W1.COM", BuildVideoWriterCom('A', 0))
-            .Binary("W2.COM", BuildVideoWriterCom('B', 2))
-            .Binary("W3.COM", BuildVideoWriterCom('C', 4))
+            .ResourceCopy(ProgramDirectory, "video_writer_a_0.com", "W1.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_b_2.com", "W2.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_c_4.com", "W3.COM")
             .Text("ROUTE.BAT",
                 "IF \"%1\"==\"ONE\" CALL W1.COM\r\nIF \"%1\"==\"TWO\" CALL W2.COM\r\nIF \"%1\"==\"THREE\" CALL W3.COM\r\n")
             .StartBatch("FOR %%I IN (ONE,TWO;THREE) DO CALL ROUTE.BAT %%I\r\n", result => {
@@ -584,9 +584,9 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario ForSupportsEqualsDelimiter() {
         return Scenario("batch_for_equals_delimiter", run => run
-            .Binary("W1.COM", BuildVideoWriterCom('A', 0))
-            .Binary("W2.COM", BuildVideoWriterCom('B', 2))
-            .Binary("W3.COM", BuildVideoWriterCom('C', 4))
+            .ResourceCopy(ProgramDirectory, "video_writer_a_0.com", "W1.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_b_2.com", "W2.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_c_4.com", "W3.COM")
             .Text("ROUTE.BAT",
                 "IF \"%1\"==\"ONE\" CALL W1.COM\r\nIF \"%1\"==\"TWO\" CALL W2.COM\r\nIF \"%1\"==\"THREE\" CALL W3.COM\r\n")
             .StartBatch("FOR %%I IN (ONE=TWO=THREE) DO CALL ROUTE.BAT %%I\r\n", result => {
@@ -600,7 +600,7 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario OutputRedirectionWritesToFile() {
         return Scenario("batch_output_redirection", run => run
-            .Binary("OUT.COM", BuildStdoutWriterCom("OK"))
+            .ResourceCopy(ProgramDirectory, "stdout_writer_ok.com", "OUT.COM")
             .StartBatch("CALL OUT.COM > OUT.TXT\r\n",
                 _ => run.TextFile("OUT.TXT").Should().Be("OK")));
     }
@@ -620,8 +620,8 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario AppendRedirectionAppendsToFile() {
         return Scenario("batch_append_redirection", run => run
-            .Binary("FIRST.COM", BuildStdoutWriterCom("AA"))
-            .Binary("SECOND.COM", BuildStdoutWriterCom("BB"))
+            .ResourceCopy(ProgramDirectory, "stdout_writer_aa.com", "FIRST.COM")
+            .ResourceCopy(ProgramDirectory, "stdout_writer_bb.com", "SECOND.COM")
             .StartBatch("CALL FIRST.COM > OUT.TXT\r\nCALL SECOND.COM >> OUT.TXT\r\n",
                 _ => run.TextFile("OUT.TXT").Should().Be("AABB")));
     }
@@ -633,8 +633,8 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario PipeTransfersStdoutToStdin(string identity, string batchLine) {
         return Scenario(identity, run => run
-            .Binary("PROD.COM", BuildStdoutWriterCom("P"))
-            .Binary("CONS.COM", BuildStdinToVideoWriterCom(0))
+            .ResourceCopy(ProgramDirectory, "stdout_writer_p.com", "PROD.COM")
+            .ResourceCopy(ProgramDirectory, "stdin_to_video_writer.com", "CONS.COM")
             .StartBatch(batchLine + "\r\n",
                 result => Cell(result, 0).Should().Be('P')));
     }
@@ -643,8 +643,8 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario PipelineSupportsInputRedirectionOnFirstSegment() {
         return Scenario("batch_pipe_input_first_segment", run => run
-            .Binary("PASS.COM", BuildStdinToStdoutCom())
-            .Binary("CONS.COM", BuildStdinToVideoWriterCom(0))
+            .ResourceCopy(ProgramDirectory, "stdin_to_stdout.com", "PASS.COM")
+            .ResourceCopy(ProgramDirectory, "stdin_to_video_writer.com", "CONS.COM")
             .Text("IN.TXT", "Q")
             .StartBatch("CALL PASS.COM < IN.TXT | CALL CONS.COM\r\n",
                 result => Cell(result, 0).Should().Be('Q')));
@@ -654,7 +654,7 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario InputRedirectionFeedsStdIn() {
         return Scenario("batch_input_redirection", run => run
-            .Binary("READ.COM", BuildStdinToVideoWriterCom(0))
+            .ResourceCopy(ProgramDirectory, "stdin_to_video_writer.com", "READ.COM")
             .Text("IN.TXT", "R")
             .StartBatch("CALL READ.COM < IN.TXT\r\n",
                 result => Cell(result, 0).Should().Be('R')));
@@ -664,7 +664,7 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario SetUpdatesDosEnvironmentForExpansion() {
         return Scenario("batch_set_env_expansion", run => run
-            .Binary("WENV.COM", BuildVideoWriterCom('V', 0))
+            .ResourceCopy(ProgramDirectory, "video_writer_v_0.com", "WENV.COM")
             .StartBatch("SET SPICE86_BATCH_VAR=YES\r\nIF \"%SPICE86_BATCH_VAR%\"==\"YES\" CALL WENV.COM\r\n",
                 result => Cell(result, 0).Should().Be('V')));
     }
@@ -673,7 +673,7 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario SetEmptyAssignmentClearsVariable() {
         return Scenario("batch_set_empty_clears_env", run => run
-            .Binary("WCLEAR.COM", BuildVideoWriterCom('C', 0))
+            .ResourceCopy(ProgramDirectory, "video_writer_c_0.com", "WCLEAR.COM")
             .StartBatch(
                 "SET SPICE86_BATCH_VAR=YES\r\nSET SPICE86_BATCH_VAR=\r\nIF \"%SPICE86_BATCH_VAR%\"==\"\" CALL WCLEAR.COM\r\n",
                 result => Cell(result, 0).Should().Be('C')));
@@ -725,7 +725,7 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario MultipleInputRedirectionsLastOneWins(string identity, string batchLine) {
         return Scenario(identity, run => run
-            .Binary("READ.COM", BuildStdinToVideoWriterCom(0))
+            .ResourceCopy(ProgramDirectory, "stdin_to_video_writer.com", "READ.COM")
             .Text("IN1.TXT", "A")
             .Text("IN2.TXT", "B")
             .StartBatch(batchLine + "\r\n",
@@ -736,7 +736,7 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario DoubleInputOperatorLastOneWins() {
         return Scenario("batch_double_input_operator", run => run
-            .Binary("READ.COM", BuildStdinToVideoWriterCom(0))
+            .ResourceCopy(ProgramDirectory, "stdin_to_video_writer.com", "READ.COM")
             .Text("IN1.TXT", "X")
             .Text("IN2.TXT", "Y")
             .StartBatch("CALL READ.COM << IN1.TXT << IN2.TXT\r\n",
@@ -749,7 +749,7 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario InvalidRedirectionLaunchesNoCommand(string identity, string batchLine) {
         return Scenario(identity, run => run
-            .Binary("WRITE.COM", BuildVideoWriterCom('Z', 0))
+            .ResourceCopy(ProgramDirectory, "video_writer_z_0.com", "WRITE.COM")
             .Text("IN.TXT", "I")
             .StartBatch(batchLine + "\r\n", result => {
                 Cell(result, 0).Should().NotBe('Z');
@@ -821,7 +821,7 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario IfUnquotedComparisonExecutesCommand() {
         return Scenario("batch_if_unquoted_comparison", run => run
-            .Binary("WRITE.COM", BuildVideoWriterCom('Q', 0))
+            .ResourceCopy(ProgramDirectory, "video_writer_q_0.com", "WRITE.COM")
             .StartBatch("IF ONE==ONE CALL WRITE.COM\r\n",
                 result => Cell(result, 0).Should().Be('Q')));
     }
@@ -832,7 +832,7 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario ForMalformedSyntaxSkips(string identity, string batchLine) {
         return Scenario(identity, run => run
-            .Binary("WRITE.COM", BuildVideoWriterCom('Z', 0))
+            .ResourceCopy(ProgramDirectory, "video_writer_z_0.com", "WRITE.COM")
             .StartBatch(batchLine + "\r\n",
                 result => Cell(result, 0).Should().NotBe('Z')));
     }
@@ -849,8 +849,8 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario ErrorlevelPropagatesFromCalledProgram() {
         return Scenario("batch_errorlevel_propagates", run => run
-            .Binary("EXIT42.COM", BuildExitCodeCom(42))
-            .Binary("WRITE.COM", BuildVideoWriterCom('E', 0))
+            .ResourceCopy(ProgramDirectory, "exit_code_2a.com", "EXIT42.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_e_0.com", "WRITE.COM")
             .StartBatch("CALL EXIT42.COM\r\nIF ERRORLEVEL 42 CALL WRITE.COM\r\n",
                 result => Cell(result, 0).Should().Be('E')));
     }
@@ -859,8 +859,8 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario CallNestedBatchPreservesContext() {
         return Scenario("batch_call_nested_batch_context", run => run
-            .Binary("WRITE1.COM", BuildVideoWriterCom('A', 0))
-            .Binary("WRITE2.COM", BuildVideoWriterCom('B', 2))
+            .ResourceCopy(ProgramDirectory, "video_writer_a_0.com", "WRITE1.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_b_2.com", "WRITE2.COM")
             .Text("CHILD.BAT", "CALL WRITE2.COM\r\n")
             .StartBatch("CALL WRITE1.COM\r\nCALL CHILD.BAT\r\n", result => {
                 Cell(result, 0).Should().Be('A');
@@ -872,8 +872,8 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario CallLabelInvokesInternalSubroutine() {
         return Scenario("batch_call_label_subroutine", run => run
-            .Binary("W1.COM", BuildVideoWriterCom('X', 0))
-            .Binary("W2.COM", BuildVideoWriterCom('Y', 2))
+            .ResourceCopy(ProgramDirectory, "video_writer_x_0.com", "W1.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_y_2.com", "W2.COM")
             .StartBatch("CALL :MYSUB\r\nCALL W2.COM\r\n:MYSUB\r\nCALL W1.COM\r\nGOTO :EOF\r\n", result => {
                 Cell(result, 0).Should().Be('X');
                 Cell(result, 1).Should().Be('Y');
@@ -884,9 +884,9 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario CallLabelNestedSubroutines() {
         return Scenario("batch_call_label_nested", run => run
-            .Binary("W1.COM", BuildVideoWriterCom('A', 0))
-            .Binary("W2.COM", BuildVideoWriterCom('B', 2))
-            .Binary("W3.COM", BuildVideoWriterCom('C', 4))
+            .ResourceCopy(ProgramDirectory, "video_writer_a_0.com", "W1.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_b_2.com", "W2.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_c_4.com", "W3.COM")
             .StartBatch(
                 "CALL :SUB1\r\nCALL W3.COM\r\n:SUB1\r\nCALL W1.COM\r\nCALL :SUB2\r\nGOTO :EOF\r\n:SUB2\r\nCALL W2.COM\r\nGOTO :EOF\r\n",
                 result => {
@@ -900,8 +900,8 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario CallLabelCallsBatchFile() {
         return Scenario("batch_call_label_with_batch", run => run
-            .Binary("P1.COM", BuildVideoWriterCom('A', 0))
-            .Binary("P2.COM", BuildVideoWriterCom('B', 2))
+            .ResourceCopy(ProgramDirectory, "video_writer_a_0.com", "P1.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_b_2.com", "P2.COM")
             .Text("MYSUB.BAT", "CALL P1.COM\r\nCALL P2.COM\r\n")
             .StartBatch("CALL :TESTS\r\n:TESTS\r\nCALL MYSUB.BAT\r\nGOTO :EOF\r\n", result => {
                 Cell(result, 0).Should().Be('A');
@@ -913,8 +913,8 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario CallLabelUnknownLabelReturnsToNextLine() {
         return Scenario("batch_call_label_unknown", run => run
-            .Binary("W1.COM", BuildVideoWriterCom('A', 0))
-            .Binary("W2.COM", BuildVideoWriterCom('B', 2))
+            .ResourceCopy(ProgramDirectory, "video_writer_a_0.com", "W1.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_b_2.com", "W2.COM")
             .StartBatch("CALL :NOTFOUND\r\nCALL W1.COM\r\nCALL W2.COM\r\n", result => {
                 Cell(result, 0).Should().Be('A');
                 Cell(result, 1).Should().Be('B');
@@ -925,8 +925,8 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario ForWithWildcardExpandsMatchingFiles() {
         return Scenario("batch_for_wildcard_expands", run => run
-            .Binary("W1.COM", BuildVideoWriterCom('A', 0))
-            .Binary("W2.COM", BuildVideoWriterCom('B', 2))
+            .ResourceCopy(ProgramDirectory, "video_writer_a_0.com", "W1.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_b_2.com", "W2.COM")
             .Text("ALPHA.TXT", "alpha")
             .Text("BETA.TXT", "beta")
             .Text("ROUTE.BAT",
@@ -957,7 +957,7 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario PathCommandSetsEnvironmentForExpansion() {
         return Scenario("batch_path_command_expansion", run => run
-            .Binary("WPATH.COM", BuildVideoWriterCom('P', 0))
+            .ResourceCopy(ProgramDirectory, "video_writer_p_0.com", "WPATH.COM")
             .StartBatch("PATH C:\\TOOLS\r\nIF \"%PATH%\"==\"C:\\TOOLS\" CALL WPATH.COM\r\n",
                 result => Cell(result, 0).Should().Be('P')));
     }
@@ -977,7 +977,7 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario ForWildcardWithoutMatchesSkips() {
         return Scenario("batch_for_wildcard_nomatch_skips", run => run
-            .Binary("WRITE.COM", BuildVideoWriterCom('Z', 0))
+            .ResourceCopy(ProgramDirectory, "video_writer_z_0.com", "WRITE.COM")
             .StartBatch("FOR %%I IN (*.DAT) DO CALL WRITE.COM\r\n",
                 result => Cell(result, 0).Should().NotBe('Z')));
     }
@@ -986,8 +986,8 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario ForMixesLiteralsAndWildcards() {
         return Scenario("batch_for_mixed_literals_wildcards", run => run
-            .Binary("W1.COM", BuildVideoWriterCom('M', 0))
-            .Binary("W2.COM", BuildVideoWriterCom('N', 2))
+            .ResourceCopy(ProgramDirectory, "video_writer_m_0.com", "W1.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_n_2.com", "W2.COM")
             .Text("DATA.TXT", "data")
             .Text("ROUTE.BAT",
                 "IF \"%1\"==\"DATA.TXT\" CALL W1.COM\r\nIF \"%1\"==\"LITERAL\" CALL W2.COM\r\n")
@@ -1010,8 +1010,8 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario ClsClearsScreenAndContinues() {
         return Scenario("batch_cls_clears_screen", run => run
-            .Binary("WRITE_X.COM", BuildVideoWriterCom('X', 0))
-            .Binary("WRITE_Y.COM", BuildVideoWriterCom('Y', 4))
+            .ResourceCopy(ProgramDirectory, "video_writer_x_0.com", "WRITE_X.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_y_4.com", "WRITE_Y.COM")
             .StartBatch("@ECHO OFF\r\nCALL WRITE_X.COM\r\nCLS\r\nCALL WRITE_Y.COM\r\n", result => {
                 Cell(result, 0).Should().Be(' ', "CLS should have cleared the screen");
                 Cell(result, 2).Should().Be('Y', "execution should continue after CLS");
@@ -1022,7 +1022,7 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario ChoiceDefaultYnSelectsY() {
         return Scenario("batch_choice_default_yn_selects_y", run => run
-            .Binary("W1.COM", BuildVideoWriterCom('Y', 0))
+            .ResourceCopy(ProgramDirectory, "video_writer_y_0.com", "W1.COM")
             .Text("KEY.TXT", "Y")
             .StartBatch("CHOICE /C:YN < KEY.TXT\r\nIF ERRORLEVEL 1 CALL W1.COM\r\n",
                 result => Cell(result, 0).Should().Be('Y')));
@@ -1033,8 +1033,8 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario ChoiceDefaultYnSelectsN() {
         return Scenario("batch_choice_default_yn_selects_n", run => run
-            .Binary("W2.COM", BuildVideoWriterCom('N', 0))
-            .Binary("SKIP.COM", BuildVideoWriterCom('S', 2))
+            .ResourceCopy(ProgramDirectory, "video_writer_n_0.com", "W2.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_s_2.com", "SKIP.COM")
             .Text("KEY.TXT", "N")
             .StartBatch(
                 "CHOICE /C:YN < KEY.TXT\r\n" +
@@ -1047,7 +1047,7 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario ChoiceCustomKeysSelectsThirdOption() {
         return Scenario("batch_choice_custom_keys_third", run => run
-            .Binary("W3.COM", BuildVideoWriterCom('3', 0))
+            .ResourceCopy(ProgramDirectory, "video_writer_3_0.com", "W3.COM")
             .Text("KEY.TXT", "C")
             .StartBatch("CHOICE /C:ABC < KEY.TXT\r\nIF ERRORLEVEL 3 CALL W3.COM\r\n",
                 result => Cell(result, 0).Should().Be('3')));
@@ -1057,7 +1057,7 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario ChoiceIsCaseInsensitiveByDefault() {
         return Scenario("batch_choice_case_insensitive", run => run
-            .Binary("W2.COM", BuildVideoWriterCom('2', 0))
+            .ResourceCopy(ProgramDirectory, "video_writer_2_0.com", "W2.COM")
             .Text("KEY.TXT", "b")
             .StartBatch("CHOICE /C:ABC < KEY.TXT\r\nIF ERRORLEVEL 2 CALL W2.COM\r\n",
                 result => Cell(result, 0).Should().Be('2')));
@@ -1068,8 +1068,8 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario ChoiceWithSFlagIsCaseSensitive() {
         return Scenario("batch_choice_case_sensitive_flag", run => run
-            .Binary("W1.COM", BuildVideoWriterCom('1', 0))
-            .Binary("W2.COM", BuildVideoWriterCom('2', 0))
+            .ResourceCopy(ProgramDirectory, "video_writer_1_0.com", "W1.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_2_0.com", "W2.COM")
             .StartBatch(
                 "CHOICE /S /C:AB\r\n" +
                 "IF ERRORLEVEL 2 W2.COM\r\n" +
@@ -1082,7 +1082,7 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario ChoiceWithoutChoiceArgumentDefaultsToYN() {
         return Scenario("batch_choice_default_choices_yn", run => run
-            .Binary("W1.COM", BuildVideoWriterCom('1', 0))
+            .ResourceCopy(ProgramDirectory, "video_writer_1_0.com", "W1.COM")
             .Text("KEY.TXT", "Y")
             .StartBatch("CHOICE < KEY.TXT\r\nIF ERRORLEVEL 1 CALL W1.COM\r\n",
                 result => Cell(result, 0).Should().Be('1')));
@@ -1110,7 +1110,7 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario ChoiceTimeoutSelectsDefaultOnEof() {
         return Scenario("batch_choice_timeout_default", run => run
-            .Binary("W1.COM", BuildVideoWriterCom('T', 0))
+            .ResourceCopy(ProgramDirectory, "video_writer_t_0.com", "W1.COM")
             .StartBatch("CHOICE /C:YN /T:Y,5\r\nIF ERRORLEVEL 1 CALL W1.COM\r\n",
                 result => Cell(result, 0).Should().Be('T')));
     }
@@ -1119,8 +1119,8 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario ChoiceTimeoutKeypressTakesPrecedence() {
         return Scenario("batch_choice_timeout_keypress", run => run
-            .Binary("WA.COM", BuildVideoWriterCom('A', 0))
-            .Binary("WB.COM", BuildVideoWriterCom('B', 2))
+            .ResourceCopy(ProgramDirectory, "video_writer_a_0.com", "WA.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_b_2.com", "WB.COM")
             .Text("KEY.TXT", "A")
             .StartBatch(
                 "CHOICE /C:AB /T:B,3 < KEY.TXT\r\n" +
@@ -1134,10 +1134,10 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario JillMenuRoutesViaErrorlevelGotoChain() {
         return Scenario("batch_jill_menu_errorlevel_goto", run => run
-            .Binary("GAME.COM", BuildVideoWriterCom('G', 0))
-            .Binary("STORY.COM", BuildVideoWriterCom('S', 2))
-            .Binary("ORDER.COM", BuildVideoWriterCom('O', 4))
-            .Binary("EXIT.COM", BuildExitCodeCom(0))
+            .ResourceCopy(ProgramDirectory, "video_writer_g_0.com", "GAME.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_s_2.com", "STORY.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_o_4.com", "ORDER.COM")
+            .ResourceCopy(ProgramDirectory, "exit_code_0.com", "EXIT.COM")
             .Text("KEY.TXT", "2")
             .StartBatch(JillMenuScript, result => {
                 Cell(result, 0).Should().NotBe('G', "should not reach GAME");
@@ -1217,9 +1217,9 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario IfStringComparisonIsCaseSensitive() {
         return Scenario("batch_if_string_case_sensitive", run => run
-            .Binary("MISS.COM", BuildVideoWriterCom('M', 0))
-            .Binary("EXACT.COM", BuildVideoWriterCom('E', 0))
-            .Binary("BAD.COM", BuildVideoWriterCom('B', 2))
+            .ResourceCopy(ProgramDirectory, "video_writer_m_0.com", "MISS.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_e_0.com", "EXACT.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_b_2.com", "BAD.COM")
             .StartBatch("IF hello==HELLO CALL BAD.COM\r\nIF hello==hello CALL EXACT.COM\r\n", result => {
                 Cell(result, 0).Should().Be('E', "exact case match should execute");
                 Cell(result, 1).Should().NotBe('B', "case-insensitive match should NOT execute");
@@ -1230,7 +1230,7 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario IfStringComparisonPreservesQuotes() {
         return Scenario("batch_if_string_preserves_quotes", run => run
-            .Binary("WRITE.COM", BuildVideoWriterCom('W', 0))
+            .ResourceCopy(ProgramDirectory, "video_writer_w_0.com", "WRITE.COM")
             .StartBatch("IF \"A B\"==\"A B\" CALL WRITE.COM\r\n",
                 result => Cell(result, 0).Should().Be('W')));
     }
@@ -1239,7 +1239,7 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario GotoMissingLabelStopsBatch() {
         return Scenario("batch_goto_missing_label_stops", run => run
-            .Binary("NEVER.COM", BuildVideoWriterCom('N', 0))
+            .ResourceCopy(ProgramDirectory, "video_writer_n_0.com", "NEVER.COM")
             .StartBatch("GOTO NONEXIST\r\nCALL NEVER.COM\r\n",
                 result => Cell(result, 0).Should().NotBe('N')));
     }
@@ -1257,7 +1257,7 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario ChoiceSkipsInvalidKeys() {
         return Scenario("batch_choice_skips_invalid_keys", run => run
-            .Binary("W2.COM", BuildVideoWriterCom('2', 0))
+            .ResourceCopy(ProgramDirectory, "video_writer_2_0.com", "W2.COM")
             .Text("KEY.TXT", "XN")
             .StartBatch("CHOICE /C:YN < KEY.TXT\r\nIF ERRORLEVEL 2 CALL W2.COM\r\n",
                 result => Cell(result, 0).Should().Be('2')));
@@ -1276,8 +1276,8 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario BatchFileReadingStopsAtCtrlZ() {
         return Scenario("batch_reading_stops_at_ctrl_z", run => run
-            .Binary("W1.COM", BuildVideoWriterCom('H', 0))
-            .Binary("W2.COM", BuildVideoWriterCom('W', 2))
+            .ResourceCopy(ProgramDirectory, "video_writer_h_0.com", "W1.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_w_2.com", "W2.COM")
             .Binary("TEST.BAT", Encoding.ASCII.GetBytes(
                 "CALL W1.COM\r\n" +
                 "\x1a" +
@@ -1292,8 +1292,8 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario ExitStopsExecution() {
         return Scenario("batch_exit_stops_execution", run => run
-            .Binary("W1.COM", BuildVideoWriterCom('A', 0))
-            .Binary("W2.COM", BuildVideoWriterCom('B', 2))
+            .ResourceCopy(ProgramDirectory, "video_writer_a_0.com", "W1.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_b_2.com", "W2.COM")
             .StartBatch("W1\r\nEXIT\r\nW2\r\n", result => {
                 Cell(result, 0).Should().Be('A');
                 Cell(result, 1).Should().NotBe('B');
@@ -1304,8 +1304,8 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario ExitInsideCallStopsAllBatches() {
         return Scenario("batch_exit_inside_call_stops_all", run => run
-            .Binary("W1.COM", BuildVideoWriterCom('A', 0))
-            .Binary("W2.COM", BuildVideoWriterCom('B', 2))
+            .ResourceCopy(ProgramDirectory, "video_writer_a_0.com", "W1.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_b_2.com", "W2.COM")
             .Text("INNER.BAT", "W1\r\nEXIT\r\n")
             .StartBatch("CALL INNER.BAT\r\nW2\r\n", result => {
                 Cell(result, 0).Should().Be('A');
@@ -1317,8 +1317,8 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario BareBatInvocationReplacesCurrentBatch() {
         return Scenario("batch_bare_bat_replaces_context", run => run
-            .Binary("W1.COM", BuildVideoWriterCom('A', 0))
-            .Binary("W2.COM", BuildVideoWriterCom('B', 2))
+            .ResourceCopy(ProgramDirectory, "video_writer_a_0.com", "W1.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_b_2.com", "W2.COM")
             .Text("SUB.BAT", "W1\r\n")
             .StartBatch("SUB.BAT\r\nW2\r\n", result => {
                 Cell(result, 0).Should().Be('A');
@@ -1331,7 +1331,7 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario BareMissingBatKeepsCurrentContext() {
         return Scenario("batch_bare_missing_bat_keeps_context", run => run
-            .Binary("PASS.COM", BuildVideoWriterCom('P', 0))
+            .ResourceCopy(ProgramDirectory, "video_writer_p_0.com", "PASS.COM")
             .StartBatch("MISSING.BAT\r\nCALL PASS.COM\r\n",
                 result => Cell(result, 0).Should().Be('P',
                     "missing bare batch invocation should not abort remaining parent batch lines")));
@@ -1995,9 +1995,9 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario JillOfTheJungleChoiceDispatchesToExeStub() {
         return Scenario("batch_jill_choice_dispatches_exe", run => run
-            .Binary("JILL1.EXE", BuildVideoWriterCom('1', 0))
-            .Binary("JILL2.EXE", BuildVideoWriterCom('2', 0))
-            .Binary("JILL3.EXE", BuildVideoWriterCom('3', 0))
+            .ResourceCopy(ProgramDirectory, "video_writer_1_0.com", "JILL1.EXE")
+            .ResourceCopy(ProgramDirectory, "video_writer_2_0.com", "JILL2.EXE")
+            .ResourceCopy(ProgramDirectory, "video_writer_3_0.com", "JILL3.EXE")
             .Text("KEY.TXT", "3")
             .Text("JILLEP.BAT", JillOfTheJungleScript)
             .Run("JILLEP.BAT",
@@ -2008,7 +2008,7 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario ChoiceWithoutColonParsesChoiceKeys() {
         return Scenario("batch_choice_without_colon", run => run
-            .Binary("W2.COM", BuildVideoWriterCom('2', 0))
+            .ResourceCopy(ProgramDirectory, "video_writer_2_0.com", "W2.COM")
             .Text("KEY.TXT", "2")
             .StartBatch("CHOICE /c123 < KEY.TXT\r\nIF ERRORLEVEL 2 CALL W2.COM\r\n",
                 result => Cell(result, 0).Should().Be('2')));
@@ -2031,8 +2031,8 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario ChoiceWithPreloadedKeySetsErrorlevel() {
         return Scenario("batch_choice_preloaded_key", run => run
-            .Binary("W1.COM", BuildVideoWriterCom('1', 0))
-            .Binary("W2.COM", BuildVideoWriterCom('2', 0))
+            .ResourceCopy(ProgramDirectory, "video_writer_1_0.com", "W1.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_2_0.com", "W2.COM")
             .StartBatch(
                 "CHOICE /C:AB\r\n" +
                 "IF ERRORLEVEL 2 W2.COM\r\n" +
@@ -2045,7 +2045,7 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario PauseWithPreloadedKeyContinues() {
         return Scenario("batch_pause_preloaded_key", run => run
-            .Binary("MARK.COM", BuildVideoWriterCom('P', 0))
+            .ResourceCopy(ProgramDirectory, "video_writer_p_0.com", "MARK.COM")
             .StartBatch("PAUSE\r\nMARK.COM\r\n",
                 new ushort[] { 0x3920 },
                 result => Cell(result, 0).Should().Be('P')));
@@ -2056,7 +2056,7 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario HostRequestedExeExecutesThroughAutoexec() {
         return Scenario("bootstrap_host_requested_exe", run => run
-            .Binary("GAME.EXE", BuildVideoWriterCom('X', 0))
+            .ResourceCopy(ProgramDirectory, "video_writer_x_0.com", "GAME.EXE")
             .Run("GAME.EXE",
                 result => Cell(result, 0).Should().Be('X')));
     }
@@ -2065,7 +2065,7 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario HostRequestedExeInSubdirectoryExecutesThroughAutoexec() {
         return Scenario("bootstrap_host_requested_exe_subdirectory", run => run
-            .BinaryIn("GAMES/DUNE", "DUNE.EXE", BuildVideoWriterCom('D', 0))
+            .Folder("GAMES/DUNE").ResourceCopy(ProgramDirectory, "video_writer_d_0.com", "GAMES/DUNE/DUNE.EXE")
             .Run("GAMES/DUNE/DUNE.EXE",
                 result => Cell(result, 0).Should().Be('D')));
     }
@@ -2074,7 +2074,7 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario HostRequestedProgramWithSpacesInPathIsQuoted() {
         return Scenario("bootstrap_host_requested_path_with_spaces", run => run
-            .BinaryIn("MY GAMES", "APP.COM", BuildVideoWriterCom('S', 0))
+            .Folder("MY GAMES").ResourceCopy(ProgramDirectory, "video_writer_s_0.com", "MY GAMES/APP.COM")
             .Run("MY GAMES/APP.COM",
                 result => Cell(result, 0).Should().Be('S')));
     }
@@ -2083,7 +2083,7 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario HostRequestedBatchUsesCallToRoute() {
         return Scenario("bootstrap_host_requested_batch", run => run
-            .Binary("WRITER.COM", BuildVideoWriterCom('B', 0))
+            .ResourceCopy(ProgramDirectory, "video_writer_b_0.com", "WRITER.COM")
             .Text(StartBatchFileName, "CALL WRITER.COM\r\n")
             .Run(StartBatchFileName,
                 result => Cell(result, 0).Should().Be('B')));
@@ -2111,7 +2111,7 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario HostArgumentsArePreservedThroughAutoexec() {
         return Scenario("bootstrap_arguments_from_host", run => run
-            .Binary("W_YES.COM", BuildVideoWriterCom('Y', 0))
+            .ResourceCopy(ProgramDirectory, "video_writer_y_0.com", "W_YES.COM")
             .Text("ROUTE.BAT", "IF \"%1\"==\"RUN\" CALL W_YES.COM\r\n")
             .RunWithArguments("ROUTE.BAT", "RUN",
                 result => Cell(result, 0).Should().Be('Y')));
@@ -2122,8 +2122,8 @@ internal static class DosBatchScenarioCatalog {
     /// <returns>The scenario.</returns>
     private static AsmScenario HostErrorlevelPropagatesThroughAutoexecChain() {
         return Scenario("bootstrap_errorlevel_propagates", run => run
-            .Binary("EXIT3.COM", BuildExitCodeCom(3))
-            .Binary("W_OK.COM", BuildVideoWriterCom('K', 0))
+            .ResourceCopy(ProgramDirectory, "exit_code_3.com", "EXIT3.COM")
+            .ResourceCopy(ProgramDirectory, "video_writer_k_0.com", "W_OK.COM")
             .Text("CHECK.BAT", "CALL EXIT3.COM\r\nIF ERRORLEVEL 3 CALL W_OK.COM\r\n")
             .Run("CHECK.BAT",
                 result => Cell(result, 0).Should().Be('K')));

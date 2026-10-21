@@ -32,7 +32,8 @@ public class DosTestFixture : IDisposable {
         _tempExeDir = new TempFile("DosTestFixture");
         string exePath = Path.Join(_tempExeDir.Path, "EXIT.COM");
         // MOV AX, 4C00h / INT 21h -- minimal DOS exit stub
-        File.WriteAllBytes(exePath, new byte[] { 0xB8, 0x00, 0x4C, 0xCD, 0x21 });
+        File.Copy(Path.Join(AppContext.BaseDirectory, "Resources", "DosConsoleProgramTests", "exit_code_0.com"),
+            exePath, overwrite: true);
         _creator = new Spice86Creator(
             binName: exePath,
             installInterruptVectors: true,

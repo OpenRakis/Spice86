@@ -222,8 +222,9 @@ internal static class AsmScenarioCatalog {
         return new AsmScenario(identity, scope => {
             string directory = scope.CreateWorkingDirectory(identity);
             CopyResourceFile("DosTsrTests", "tsr_basic.com", "TSR_BASIC.COM", directory);
-            BatchTestHelpers.CreateBinaryFile(directory, "WRITER.COM", BatchTestHelpers.BuildVideoWriterCom('Z', 0));
-            string startBatch = BatchTestHelpers.CreateTextFile(directory, "START.BAT", "TSR_BASIC.COM\r\nWRITER.COM\r\n");
+            CopyResourceFile("DosConsoleProgramTests", "video_writer_z_0.com", "WRITER.COM", directory);
+            string startBatch = Path.Join(directory, "START.BAT");
+            File.WriteAllText(startBatch, "TSR_BASIC.COM\r\nWRITER.COM\r\n");
             AsmRunSettings settings = new() {
                 BinName = startBatch,
                 ScenarioName = identity,
