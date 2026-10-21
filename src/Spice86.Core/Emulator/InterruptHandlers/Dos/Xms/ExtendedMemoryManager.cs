@@ -4,6 +4,7 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 
 using Spice86.Core;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
@@ -258,7 +259,7 @@ public sealed class ExtendedMemoryManager : IVirtualDevice {
         memoryAsmWriter.WriteNop();
         memoryAsmWriter.WriteNop();
         memoryAsmWriter.WriteNop();
-        memoryAsmWriter.RegisterAndWriteCallback(RunMultiplex);
+        memoryAsmWriter.RegisterAndWriteCallback(CallbackNumbers.XmsMultiplex, RunMultiplex);
         memoryAsmWriter.WriteFarRet();
         memoryAsmWriter.CurrentAddress = savedAddress;
         Name = XmsIdentifier;

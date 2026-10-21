@@ -108,7 +108,7 @@
         35
       ],
       "asm": [
-        "FE380301|callback 0x0103"
+        "FE380401|callback 0x0104"
       ]
     },
     {
@@ -121,7 +121,7 @@
         39
       ],
       "asm": [
-        "FE380401|callback 0x0104"
+        "FE380501|callback 0x0105"
       ]
     },
     {
@@ -134,7 +134,7 @@
         43
       ],
       "asm": [
-        "FE380501|callback 0x0105"
+        "FE380601|callback 0x0106"
       ]
     },
     {
@@ -147,7 +147,7 @@
         47
       ],
       "asm": [
-        "FE380601|callback 0x0106"
+        "FE380701|callback 0x0107"
       ]
     },
     {
@@ -160,7 +160,7 @@
         51
       ],
       "asm": [
-        "FE380701|callback 0x0107"
+        "FE380801|callback 0x0108"
       ]
     },
     {
@@ -173,7 +173,7 @@
         55
       ],
       "asm": [
-        "FE380801|callback 0x0108"
+        "FE380901|callback 0x0109"
       ]
     },
     {
@@ -243,7 +243,7 @@
         23
       ],
       "asm": [
-        "FE380B01|callback 0x010B"
+        "FE380C01|callback 0x010C"
       ]
     },
     {
@@ -351,7 +351,7 @@
         7
       ],
       "asm": [
-        "FE380001|callback 0x0100"
+        "FE380101|callback 0x0101"
       ]
     },
     {
@@ -422,7 +422,7 @@
         31
       ],
       "asm": [
-        "FE380C01|callback 0x010C"
+        "FE380D01|callback 0x010D"
       ]
     },
     {

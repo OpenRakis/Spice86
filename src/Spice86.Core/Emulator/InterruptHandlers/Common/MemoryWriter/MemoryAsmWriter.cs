@@ -39,19 +39,12 @@ public class MemoryAsmWriter : MemoryWriter {
     }
 
     /// <summary>
-    /// Registers a new callback that will call the given runnable.<br/>
-    /// Callback number is automatically allocated.
+    /// Registers a new callback that will call the given runnable with the manually defined callback number.<br/>
+    /// The number must come from a fixed constant: generated code contains it as a literal.
     /// </summary>
-    /// <param name="runnable"></param>
-    public void RegisterAndWriteCallback(Action runnable) {
-        if (_callbackHandler is null) {
-            throw new UnrecoverableException("Cannot register callbacks without a CallbackHandler.");
-        }
-        ushort callbackNumber = _callbackHandler.AllocateNextCallback();
-        RegisterAndWriteCallback(callbackNumber, runnable);
-    }
-
-    private void RegisterAndWriteCallback(ushort callbackNumber, Action runnable) {
+    /// <param name="callbackNumber">Callback index, from <see cref="CallbackNumbers"/> or an interrupt vector number.</param>
+    /// <param name="runnable">Action to run when this callback is executed by the CPU</param>
+    public void RegisterAndWriteCallback(ushort callbackNumber, Action runnable) {
         if (_callbackHandler is null) {
             throw new UnrecoverableException("Cannot register callbacks without a CallbackHandler.");
         }

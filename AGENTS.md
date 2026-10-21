@@ -287,6 +287,39 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 - **Pause Handling**: `IPauseHandler` allows pausing/resuming from UI or debugger
 - **Function Tracking**: `FunctionHandler` intercepts calls/rets for CFG building and override dispatch
 
+## Writing Task Files for an Implementer (e.g. a local LLM)
+
+Task files (for example under `tasks/phase1/`) are executed by an implementer that does not share the
+author's context. Write them so the implementer executes, not researches or redesigns:
+
+- **Start with the intent**: one short paragraph on what the maintainer wants and why, before any detail.
+- **Settled facts**: put everything the author measured or verified in one section that starts with:
+  "These facts were measured by the task author. Do not re-check or re-derive them. The failing-first
+  test is their check: if it does not fail exactly as described, stop and report." Give each surprising
+  fact its one-line cause, and the path of the raw evidence (command output saved under `tmp/`).
+- **Decisions (do not revisit)**: list the maintainer's choices separately from facts. Leave no options
+  open for the implementer; if something really is open, say so explicitly and say who decides.
+- **Exact design**: give the file, visibility and signature of every new or changed member, and say where
+  each piece goes (a table works well). Show code for the tricky parts. Name the existing helper or seam
+  to reuse.
+- **Exact tests**: give the class, method names, arrange data and assertions; write the code for the
+  central test. For each failing-first test, state the failure expected today.
+- **Behavior changes**: list every intended behavior change. Everything else must stay the same.
+- **Acceptance on behavior, not incidental details**: do not require an existing test to pass "unedited"
+  when it also pins an implementation detail (such as host stack depth) the new design may change.
+- **Stop conditions**: list the situations where the implementer must stop and report instead of working
+  around them, and say what to report.
+- **Golden changes**: describe the expected golden diff and give commands that prove it (for example an
+  `rg` over `git diff -U0` that must print nothing). Never let the implementer edit goldens by hand.
+- **File operations**: list every file the implementer may delete, restore or rename. Nothing else.
+- **Verification**: give the narrowest commands that cover the change, plus one full-suite run. Check
+  that every test class named in a filter exists when writing the task.
+- **No stale references**: check that referenced tasks, classes, line numbers and baselines are current;
+  refer to code by member name, with line numbers only as hints.
+- **Completion report**: say exactly what to append (failing-first output, changed files, check outputs,
+  build and test summary lines). Ask for honest gaps instead of invented evidence.
+- **Plain language**: short sentences, one fact per sentence, ASCII only.
+
 ## Common Gotchas
 - **Segmented addressing**: Use `SegmentedAddress` not raw offsets; linear address = segment * 16 + offset. Avoid computing addresses from `SegmentedAddress.Linear` because segmented addresses can roll over and `.Linear` does not handle this correctly. Use the `IMmu` (`TranslateAddress`) for address translation instead, as it handles rollover and access validation. Passing `.Linear` to an API that already expects a linear address is fine.
 - **A20 Gate**: Memory wrapping at 1MB boundary controlled by `A20Gate` (toggle via `--A20Gate` flag)

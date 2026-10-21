@@ -191,7 +191,7 @@ public class KeyboardInt16Handler : InterruptHandler {
 
         // L_GET_KEY:
         // callback HasKey (sets ZF=0 when key present)
-        memoryAsmWriter.RegisterAndWriteCallback(CallbackHasKey);
+        memoryAsmWriter.RegisterAndWriteCallback(CallbackNumbers.KeyboardHasKey, CallbackHasKey);
         // JNZ have_key (+0x04 to skip INT 09h and the backward jump)
         memoryAsmWriter.WriteJnz(4);
         // INT 09h
@@ -199,7 +199,7 @@ public class KeyboardInt16Handler : InterruptHandler {
         // JMP short back to L_AH00 (-0x10)
         memoryAsmWriter.WriteJumpShort(-10);
         // have_key: dequeue and set AX, then IRET
-        memoryAsmWriter.RegisterAndWriteCallback(CallbackDequeueAndSetAx);
+        memoryAsmWriter.RegisterAndWriteCallback(CallbackNumbers.KeyboardDequeueAndSetAx, CallbackDequeueAndSetAx);
         memoryAsmWriter.WriteIret();
 
         return handlerAddress;

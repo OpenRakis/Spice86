@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Cmos;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.IOPorts;
@@ -282,7 +283,7 @@ public class DosInt21Handler : InterruptHandler {
         // This matches FreeDOS (INT 21h starts with STI) and DOSBox (idle uses STI+HLT).
         memoryAsmWriter.WriteSti();
         // callback(CheckStdinReady) — writes flag byte, 4 bytes
-        memoryAsmWriter.RegisterAndWriteCallback(CallbackCheckStdinReady);
+        memoryAsmWriter.RegisterAndWriteCallback(CallbackNumbers.DosInt21CheckStdinReady, CallbackCheckStdinReady);
         // CMP byte CS:[flagOffset], 0 — 6 bytes
         memoryAsmWriter.WriteUInt8(0x2E); // CS: segment override
         memoryAsmWriter.WriteUInt8(0x80); // CMP Eb, Ib
@@ -297,7 +298,7 @@ public class DosInt21Handler : InterruptHandler {
         memoryAsmWriter.WriteJumpShort(-17);
 
         // L_DISPATCH: dispatch to C# handler for AH=07h/08h/0Ah
-        memoryAsmWriter.RegisterAndWriteCallback(Run);
+        memoryAsmWriter.RegisterAndWriteCallback(CallbackNumbers.DosInt21StdinInputDispatch, Run);
         memoryAsmWriter.WriteIret();
 
         return handlerAddress;
