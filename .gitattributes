@@ -4,6 +4,16 @@
 *            text=crlf
 
 ###############################################################################
+# DOS programs and CPU test images are binary. Some of them contain 0Ah bytes
+# and no 00h byte, so Git would guess "text" and convert LF to CRLF on checkout.
+###############################################################################
+*.com        binary
+*.COM        binary
+*.exe        binary
+*.EXE        binary
+*.bin        binary
+
+###############################################################################
 # Set the merge driver for project and solution files
 #
 # Merging from the command prompt will add diff markers to the files if there
