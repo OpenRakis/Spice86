@@ -289,7 +289,7 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 
 ## Writing Task Files for an Implementer (e.g. a local LLM)
 
-Task files (for example under `tasks/phase1/`) are executed by an implementer that does not share the
+Task files (for example under `tasks/phase2/`) are executed by an implementer that does not share the
 author's context. Write them so the implementer executes, not researches or redesigns:
 
 - **Start with the intent**: one short paragraph on what the maintainer wants and why, before any detail.
