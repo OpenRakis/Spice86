@@ -562,6 +562,7 @@ public class Spice86DependencyInjection : IDisposable {
             configuration.FailOnUnhandledPort, loggerService, inputEventHub);
         emulatorMcpServices.Intel8042Controller = intel8042Controller;
         emulatorMcpServices.BiosKeyboardBuffer = biosKeyboardBuffer;
+        inputEventHub.KeyboardDevice = intel8042Controller.KeyboardDevice;
         BiosKeyboardInt9Handler biosKeyboardInt9Handler = new(memory, biosDataArea,
             stack, state, cfgCpu, dualPic, systemBiosInt15Handler,
             intel8042Controller, biosKeyboardBuffer, loggerService);
@@ -795,6 +796,7 @@ public class Spice86DependencyInjection : IDisposable {
 
         if (mainWindow != null && uiDispatcher != null &&
             hostStorageProvider != null && textClipboard != null && mainWindowViewModel != null) {
+            mainWindowViewModel.OnWindowDeactivated = () => inputEventHub.ReleaseAllKeys();
             IMessenger messenger = WeakReferenceMessenger.Default;
 
             BreakpointsTabPlugin breakpointsTabPlugin = new(state, pauseHandler, messenger,

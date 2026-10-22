@@ -60,6 +60,20 @@ public class InputEventHub : IGuiKeyboardEvents, IGuiMouseEvents {
     public void PostToEmulatorThread(Action action) => Enqueue(action);
 
     /// <summary>
+    /// Thread-safe request to release every key the keyboard device still believes is down, emitting a
+    /// proper BREAK frame for each one. Call this when the host's key state can no longer be trusted
+    /// (e.g. the window lost activation and a key-up was never delivered), so the guest does not keep a
+    /// modifier latched. The release is enqueued and runs on the emulator thread with the rest of the input.
+    /// </summary>
+    public void ReleaseAllKeys() =>
+        Enqueue(() => KeyboardDevice?.ReleaseAllKeys());
+
+    /// <summary>
+    /// The PS/2 keyboard device whose held-key state is reconciled by <see cref="ReleaseAllKeys"/>.
+    /// </summary>
+    internal PS2Keyboard? KeyboardDevice { get; set; }
+
+    /// <summary>
     /// Enqueues a keyboard event to be fired on the emulator thread, following
     /// the same path as UI keyboard events (PhysicalKey → PS2Keyboard scancode pipeline).
     /// </summary>

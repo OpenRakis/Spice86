@@ -70,7 +70,17 @@ public sealed class EmulatorMcpServices(
     /// <summary>
     /// Gets or sets the Intel 8042 PS/2 controller used for keyboard/mouse MCP automation.
     /// </summary>
-    public Intel8042Controller? Intel8042Controller { get; set; }
+    public Intel8042Controller? Intel8042Controller {
+        get => _intel8042Controller;
+        set {
+            _intel8042Controller = value;
+            if (value is not null) {
+                SubscribeKeyboardReconcileOnPause();
+            }
+        }
+    }
+
+    private Intel8042Controller? _intel8042Controller;
 
     /// <summary>
     /// Gets or sets the input event hub. MCP tools must post keyboard/mouse
@@ -123,6 +133,26 @@ public sealed class EmulatorMcpServices(
     /// Gets or sets the DOS kernel used by DOS MCP tools.
     /// </summary>
     public Dos? Dos { get; set; }
+
+    private bool _keyboardReconcileSubscribed;
+
+    /// <summary>
+    /// Subscribes the keyboard device to release all held keys whenever the emulator pauses. Key-ups
+    /// dropped while paused (or lost when the window deactivates) would otherwise leave a modifier
+    /// latched in the guest's BIOS state. The release is marshalled onto the emulator thread via
+    /// <see cref="InputEventHub"/> so it is safe to call from the UI thread.
+    /// </summary>
+    internal void SubscribeKeyboardReconcileOnPause() {
+        if (_keyboardReconcileSubscribed
+            || Intel8042Controller is null
+            || InputEventHub is null) {
+            return;
+        }
+
+        InputEventHub inputEventHub = InputEventHub;
+        PauseHandler.Pausing += () => inputEventHub.ReleaseAllKeys();
+        _keyboardReconcileSubscribed = true;
+    }
 
     // Shared MCP breakpoint tracking state (survives transient tool instances)
     private readonly object _mcpBreakpointsLock = new();
