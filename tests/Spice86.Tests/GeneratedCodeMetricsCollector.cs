@@ -16,6 +16,11 @@ internal static class GeneratedCodeMetricsCollector {
     private const string CheckExternalEventsName = "CheckExternalEvents";
     private const string VerifySpeculativeEntryOrFailName = "VerifySpeculativeEntryOrFail";
     private const string FailAsUntestedName = "FailAsUntested";
+    private const string ShouldContinuePrefix = "shouldContinue";
+    private static readonly HashSet<string> AluTargetNames = new(StringComparer.Ordinal) { "Alu8", "Alu16", "Alu32" };
+    private static readonly HashSet<string> StatusFlagNames = new(StringComparer.Ordinal) {
+        "CarryFlag", "ParityFlag", "AuxiliaryFlag", "ZeroFlag", "SignFlag", "OverflowFlag"
+    };
 
     public static GeneratedCodeMetrics Collect(string fixture, SyntaxTree tree, ImmutableArray<Diagnostic> diagnostics) {
         SyntaxNode root = tree.GetRoot();
@@ -47,6 +52,9 @@ internal static class GeneratedCodeMetricsCollector {
             UncheckedExpressions = walker.UncheckedExpressions,
             Casts = walker.Casts,
             TryStatements = walker.TryStatements,
+            AluCalls = walker.AluCalls,
+            StatusFlagReads = walker.StatusFlagReads,
+            ShouldContinueTemps = walker.ShouldContinueTemps,
             Warnings = warnings.Length,
             WarningIds = warningIds
         };
@@ -64,6 +72,9 @@ internal static class GeneratedCodeMetricsCollector {
         public int UncheckedExpressions { get; private set; }
         public int Casts { get; private set; }
         public int TryStatements { get; private set; }
+        public int AluCalls { get; private set; }
+        public int StatusFlagReads { get; private set; }
+        public int ShouldContinueTemps { get; private set; }
 
         public override void VisitMethodDeclaration(MethodDeclarationSyntax node) {
             Methods++;
@@ -94,7 +105,25 @@ internal static class GeneratedCodeMetricsCollector {
             } else if (name == FailAsUntestedName) {
                 FailAsUntested++;
             }
+            if (node.Expression is MemberAccessExpressionSyntax { Expression: IdentifierNameSyntax target }
+                && AluTargetNames.Contains(target.Identifier.ValueText)) {
+                AluCalls++;
+            }
             base.VisitInvocationExpression(node);
+        }
+
+        public override void VisitIdentifierName(IdentifierNameSyntax node) {
+            if (StatusFlagNames.Contains(node.Identifier.ValueText) && !IsAssignmentTarget(node)) {
+                StatusFlagReads++;
+            }
+            base.VisitIdentifierName(node);
+        }
+
+        public override void VisitVariableDeclarator(VariableDeclaratorSyntax node) {
+            if (node.Identifier.ValueText.StartsWith(ShouldContinuePrefix, StringComparison.Ordinal)) {
+                ShouldContinueTemps++;
+            }
+            base.VisitVariableDeclarator(node);
         }
 
         public override void VisitCheckedExpression(CheckedExpressionSyntax node) {
@@ -122,6 +151,14 @@ internal static class GeneratedCodeMetricsCollector {
                 return memberAccess.Name.Identifier.ValueText;
             }
             return null;
+        }
+
+        private static bool IsAssignmentTarget(IdentifierNameSyntax node) {
+            ExpressionSyntax target = node;
+            if (node.Parent is MemberAccessExpressionSyntax memberAccess && memberAccess.Name == node) {
+                target = memberAccess;
+            }
+            return target.Parent is AssignmentExpressionSyntax assignment && assignment.Left == target;
         }
     }
 }

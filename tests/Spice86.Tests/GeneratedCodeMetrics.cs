@@ -23,6 +23,12 @@ internal sealed record GeneratedCodeMetrics {
     public required int UncheckedExpressions { get; init; }
     public required int Casts { get; init; }
     public required int TryStatements { get; init; }
+    /// <summary>Invocations of any method on <c>Alu8</c>, <c>Alu16</c> or <c>Alu32</c>.</summary>
+    public required int AluCalls { get; init; }
+    /// <summary>Reads of the six status flags (C, P, A, Z, S, O); assignments to them are not counted.</summary>
+    public required int StatusFlagReads { get; init; }
+    /// <summary>Declarations of <c>shouldContinue*</c> locals emitted for <c>rep</c> loops with a zero-flag condition.</summary>
+    public required int ShouldContinueTemps { get; init; }
     public required int Warnings { get; init; }
     public required ImmutableArray<string> WarningIds { get; init; }
 
@@ -44,6 +50,9 @@ internal sealed record GeneratedCodeMetrics {
         ("unchecked", NumberWidth),
         ("casts", NumberWidth),
         ("tries", NumberWidth),
+        ("aluCalls", NumberWidth),
+        ("flagReads", NumberWidth),
+        ("contTemps", NumberWidth),
         ("warnings", NumberWidth),
         ("warningIds", 0)
     ];
@@ -67,6 +76,9 @@ internal sealed record GeneratedCodeMetrics {
             UncheckedExpressions.ToString(),
             Casts.ToString(),
             TryStatements.ToString(),
+            AluCalls.ToString(),
+            StatusFlagReads.ToString(),
+            ShouldContinueTemps.ToString(),
             Warnings.ToString(),
             warningIds
         ];
