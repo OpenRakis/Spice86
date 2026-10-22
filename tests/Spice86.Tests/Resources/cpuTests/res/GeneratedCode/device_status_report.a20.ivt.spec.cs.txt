@@ -114,7 +114,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0126 out DX,AL
         Out8(DX, AL);
         // 016D:0127 loop 0x011F
-        CX = (ushort)(CX - 1);
+        CX--;
         if (CX != 0) {
             goto L_011F;
         }

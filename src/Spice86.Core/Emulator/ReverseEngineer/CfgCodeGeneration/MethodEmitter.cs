@@ -6,6 +6,8 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Conditions;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Liveness;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 
@@ -30,8 +32,12 @@ internal sealed class MethodEmitter(
 
     public void Emit(CSharpSourceWriter writer, MethodPlan method) {
         lowerer.SetCurrentMethod(method);
+        FlagLiveness liveness = FlagLiveness.Compute(method, context);
+        ConditionFusion fusion = ConditionFusionPlanner.Plan(method, liveness);
+        // Fused jumps no longer read flags, so the lowering uses the liveness of the code it actually emits.
+        FlagLiveness emittedLiveness = FlagLiveness.Compute(method, context, fusion.ExecutionAstOf);
         BlockNode entryDispatch = BuildEntryDispatch(method);
-        List<InstructionBoundaryNode> boundaries = method.NodeEmissionPlans.Select(plan => BuildBoundary(plan, method)).ToList();
+        List<InstructionBoundaryNode> boundaries = method.NodeEmissionPlans.Select(plan => BuildBoundary(plan, method, fusion, emittedLiveness)).ToList();
         GotoTargets targets = GotoTargetCollector.Collect(Sequence(entryDispatch, Sequence(boundaries)));
         BlockNode body = WithLabels(boundaries, targets);
         // The last node has no next node, so every same-method fallthrough from it is a goto, and an unobserved
@@ -86,7 +92,8 @@ internal sealed class MethodEmitter(
         return Empty();
     }
 
-    private InstructionBoundaryNode BuildBoundary(NodeEmissionPlan plan, MethodPlan method) {
+    private InstructionBoundaryNode BuildBoundary(NodeEmissionPlan plan, MethodPlan method, ConditionFusion fusion,
+        FlagLiveness liveness) {
         IVisitableAstNode eventCheck = EntryEventCheck(plan);
         IVisitableAstNode guard = SpeculativeGuard(plan.Node);
         IVisitableAstNode comment = AsmComment(plan.Node);
@@ -95,7 +102,7 @@ internal sealed class MethodEmitter(
         if (plan.Node is CfgInstruction instruction) {
             suffix = method.GetLocalSuffix(instruction);
             body = cpuFaultWrapper.Wrap(instruction,
-                lowerer.LowerInstructionBody(instruction, instruction.ExecutionAst, plan.EmitsExternalEventCheckAfter), method);
+                lowerer.LowerInstructionBody(instruction, fusion.ExecutionAstOf(instruction), plan.EmitsExternalEventCheckAfter, liveness.LiveAfter(instruction)), method);
         } else if (plan.Node is CfgSelectorNode selectorNode) {
             // Uniform Accept dispatch: the selector's ExecutionAst is the AST SelectorNode marker, whose
             // Accept routes to VisitSelectorNode. A selector is always a block terminator, so it never has

@@ -33,6 +33,10 @@ internal abstract class StatementPredicateVisitor : IAstVisitor<bool> {
         return node.Body.Accept(this);
     }
 
+    public bool VisitWhileWithExitNode(WhileWithExitNode node) {
+        return node.Body.Accept(this);
+    }
+
     // Every other node returns false; override one in a predicate whose effect it can carry.
     public virtual bool VisitInstructionFieldNode(InstructionFieldNode node) => false;
     public virtual bool VisitSegmentRegisterNode(SegmentRegisterNode node) => false;

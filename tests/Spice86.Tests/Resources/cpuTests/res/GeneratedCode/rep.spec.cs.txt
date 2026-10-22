@@ -45,108 +45,114 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             UInt8[ES, DI] = UInt8[DS, SI];
             SI = (ushort)(SI + (ushort)State.Direction8);
             DI = (ushort)(DI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
+            CX--;
         }
         // F000:0002 rep movs byte ptr ES:[DI],byte ptr DS:[SI]
         while (CX != 0) {
             UInt8[ES, DI] = UInt8[DS, SI];
             SI = (ushort)(SI + (ushort)State.Direction8);
             DI = (ushort)(DI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
+            CX--;
         }
         // F000:0004 rep movs byte ptr ES:[DI],byte ptr DS:[SI]
         while (CX != 0) {
             UInt8[ES, DI] = UInt8[DS, SI];
             SI = (ushort)(SI + (ushort)State.Direction8);
             DI = (ushort)(DI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
+            CX--;
         }
         // F000:0006 repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
-        bool shouldContinue_0006 = true;
-        while (CX != 0 && shouldContinue_0006) {
-            Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
+        while (CX != 0) {
+            bool equal_0006 = UInt8[DS, SI] == UInt8[ES, DI];
             SI = (ushort)(SI + (ushort)State.Direction8);
             DI = (ushort)(DI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
-            shouldContinue_0006 = ZeroFlag;
+            CX--;
+            if (!equal_0006) {
+                break;
+            }
         }
         // F000:0008 repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
-        bool shouldContinue_0008 = true;
-        while (CX != 0 && shouldContinue_0008) {
-            Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
+        while (CX != 0) {
+            bool equal_0008 = UInt8[DS, SI] == UInt8[ES, DI];
             SI = (ushort)(SI + (ushort)State.Direction8);
             DI = (ushort)(DI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
-            shouldContinue_0008 = ZeroFlag;
+            CX--;
+            if (!equal_0008) {
+                break;
+            }
         }
         // F000:000A repne cmps byte ptr DS:[SI],byte ptr ES:[DI]
-        bool shouldContinue_000A = true;
-        while (CX != 0 && shouldContinue_000A) {
-            Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
+        while (CX != 0) {
+            bool equal_000A = UInt8[DS, SI] == UInt8[ES, DI];
             SI = (ushort)(SI + (ushort)State.Direction8);
             DI = (ushort)(DI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
-            shouldContinue_000A = !ZeroFlag;
+            CX--;
+            if (equal_000A) {
+                break;
+            }
         }
         // F000:000C repe scas AL,byte ptr ES:[DI]
-        bool shouldContinue_000C = true;
-        while (CX != 0 && shouldContinue_000C) {
-            Alu8.Sub(AL, UInt8[ES, DI]);
+        while (CX != 0) {
+            bool equal_000C = AL == UInt8[ES, DI];
             DI = (ushort)(DI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
-            shouldContinue_000C = ZeroFlag;
+            CX--;
+            if (!equal_000C) {
+                break;
+            }
         }
         // F000:000E repe scas AL,byte ptr ES:[DI]
-        bool shouldContinue_000E = true;
-        while (CX != 0 && shouldContinue_000E) {
-            Alu8.Sub(AL, UInt8[ES, DI]);
+        while (CX != 0) {
+            bool equal_000E = AL == UInt8[ES, DI];
             DI = (ushort)(DI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
-            shouldContinue_000E = ZeroFlag;
+            CX--;
+            if (!equal_000E) {
+                break;
+            }
         }
         // F000:0010 repne scas AL,byte ptr ES:[DI]
-        bool shouldContinue_0010 = true;
-        while (CX != 0 && shouldContinue_0010) {
-            Alu8.Sub(AL, UInt8[ES, DI]);
+        while (CX != 0) {
+            bool equal_0010 = AL == UInt8[ES, DI];
             DI = (ushort)(DI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
-            shouldContinue_0010 = !ZeroFlag;
+            CX--;
+            if (equal_0010) {
+                break;
+            }
         }
         // F000:0012 rep lods AL,byte ptr DS:[SI]
         while (CX != 0) {
             AL = UInt8[DS, SI];
             SI = (ushort)(SI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
+            CX--;
         }
         // F000:0014 rep lods AL,byte ptr DS:[SI]
         while (CX != 0) {
             AL = UInt8[DS, SI];
             SI = (ushort)(SI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
+            CX--;
         }
         // F000:0016 rep lods AL,byte ptr DS:[SI]
         while (CX != 0) {
             AL = UInt8[DS, SI];
             SI = (ushort)(SI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
+            CX--;
         }
         // F000:0018 rep stos byte ptr ES:[DI],AL
         while (CX != 0) {
             UInt8[ES, DI] = AL;
             DI = (ushort)(DI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
+            CX--;
         }
         // F000:001A rep stos byte ptr ES:[DI],AL
         while (CX != 0) {
             UInt8[ES, DI] = AL;
             DI = (ushort)(DI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
+            CX--;
         }
         // F000:001C rep stos byte ptr ES:[DI],AL
         while (CX != 0) {
             UInt8[ES, DI] = AL;
             DI = (ushort)(DI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
+            CX--;
         }
         // F000:001E mov BX,0x0040
         BX = 0x0040;
@@ -160,72 +166,76 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             UInt8[ES, DI] = UInt8[DS, SI];
             SI = (ushort)(SI + (ushort)State.Direction8);
             DI = (ushort)(DI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
+            CX--;
         }
         // F000:0025 rep movs byte ptr ES:[DI],byte ptr DS:[SI]
         while (CX != 0) {
             UInt8[ES, DI] = UInt8[DS, SI];
             SI = (ushort)(SI + (ushort)State.Direction8);
             DI = (ushort)(DI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
+            CX--;
         }
         // F000:0027 repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
-        bool shouldContinue_0027 = true;
-        while (CX != 0 && shouldContinue_0027) {
-            Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
+        while (CX != 0) {
+            bool equal_0027 = UInt8[DS, SI] == UInt8[ES, DI];
             SI = (ushort)(SI + (ushort)State.Direction8);
             DI = (ushort)(DI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
-            shouldContinue_0027 = ZeroFlag;
+            CX--;
+            if (!equal_0027) {
+                break;
+            }
         }
         // F000:0029 repne cmps byte ptr DS:[SI],byte ptr ES:[DI]
-        bool shouldContinue_0029 = true;
-        while (CX != 0 && shouldContinue_0029) {
-            Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
+        while (CX != 0) {
+            bool equal_0029 = UInt8[DS, SI] == UInt8[ES, DI];
             SI = (ushort)(SI + (ushort)State.Direction8);
             DI = (ushort)(DI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
-            shouldContinue_0029 = !ZeroFlag;
+            CX--;
+            if (equal_0029) {
+                break;
+            }
         }
         // F000:002B repe scas AL,byte ptr ES:[DI]
-        bool shouldContinue_002B = true;
-        while (CX != 0 && shouldContinue_002B) {
-            Alu8.Sub(AL, UInt8[ES, DI]);
+        while (CX != 0) {
+            bool equal_002B = AL == UInt8[ES, DI];
             DI = (ushort)(DI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
-            shouldContinue_002B = ZeroFlag;
+            CX--;
+            if (!equal_002B) {
+                break;
+            }
         }
         // F000:002D repne scas AL,byte ptr ES:[DI]
-        bool shouldContinue_002D = true;
-        while (CX != 0 && shouldContinue_002D) {
-            Alu8.Sub(AL, UInt8[ES, DI]);
+        while (CX != 0) {
+            bool equal_002D = AL == UInt8[ES, DI];
             DI = (ushort)(DI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
-            shouldContinue_002D = !ZeroFlag;
+            CX--;
+            if (equal_002D) {
+                break;
+            }
         }
         // F000:002F rep lods AL,byte ptr DS:[SI]
         while (CX != 0) {
             AL = UInt8[DS, SI];
             SI = (ushort)(SI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
+            CX--;
         }
         // F000:0031 rep lods AL,byte ptr DS:[SI]
         while (CX != 0) {
             AL = UInt8[DS, SI];
             SI = (ushort)(SI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
+            CX--;
         }
         // F000:0033 rep stos byte ptr ES:[DI],AL
         while (CX != 0) {
             UInt8[ES, DI] = AL;
             DI = (ushort)(DI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
+            CX--;
         }
         // F000:0035 rep stos byte ptr ES:[DI],AL
         while (CX != 0) {
             UInt8[ES, DI] = AL;
             DI = (ushort)(DI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
+            CX--;
         }
         // F000:0037 mov AX,DI
         AX = DI;
@@ -315,7 +325,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             UInt8[ES, DI] = UInt8[DS, SI];
             SI = (ushort)(SI + (ushort)State.Direction8);
             DI = (ushort)(DI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
+            CX--;
         }
         // F000:2021 mov DS,AX
         DS = AX;
@@ -359,7 +369,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             UInt16[ES, DI] = UInt16[DS, SI];
             SI = (ushort)(SI + (ushort)State.Direction16);
             DI = (ushort)(DI + (ushort)State.Direction16);
-            CX = (ushort)(CX - 1);
+            CX--;
         }
         // F000:301C mov AX,0x1000
         AX = 0x1000;
@@ -397,7 +407,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         while (CX != 0) {
             AL = UInt8[DS, SI];
             SI = (ushort)(SI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
+            CX--;
         }
         // F000:3039 jmp near AX
         switch (AX) {
@@ -424,7 +434,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         while (CX != 0) {
             AX = UInt16[DS, SI];
             SI = (ushort)(SI + (ushort)State.Direction16);
-            CX = (ushort)(CX - 1);
+            CX--;
         }
         // F000:304B jmp near AX
         switch (AX) {
@@ -442,7 +452,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         while (CX != 0) {
             UInt16[ES, DI] = AX;
             DI = (ushort)(DI + (ushort)State.Direction16);
-            CX = (ushort)(CX - 1);
+            CX--;
         }
         // F000:3055 mov AX,0x1000
         AX = 0x1000;
@@ -468,7 +478,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         while (CX != 0) {
             UInt16[ES, DI] = AX;
             DI = (ushort)(DI + (ushort)State.Direction16);
-            CX = (ushort)(CX - 1);
+            CX--;
         }
         // F000:400A jcxz short 0x400D
         if (CX == 0) {
@@ -496,13 +506,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:401E mov DS,AX
         DS = AX;
         // F000:4020 repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
-        bool shouldContinue_4020 = true;
-        while (CX != 0 && shouldContinue_4020) {
-            Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
+        while (CX != 0) {
+            bool equal_4020 = UInt8[DS, SI] == UInt8[ES, DI];
             SI = (ushort)(SI + (ushort)State.Direction8);
             DI = (ushort)(DI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
-            shouldContinue_4020 = ZeroFlag;
+            CX--;
+            if (!equal_4020) {
+                break;
+            }
         }
         // F000:4022 jmp near CX
         switch (CX) {
@@ -522,12 +533,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:4029 mov AX,0x0040
         AX = 0x0040;
         // F000:402C repe scas AX,word ptr ES:[DI]
-        bool shouldContinue_402C = true;
-        while (CX != 0 && shouldContinue_402C) {
-            Alu16.Sub(AX, UInt16[ES, DI]);
+        while (CX != 0) {
+            bool equal_402C = AX == UInt16[ES, DI];
             DI = (ushort)(DI + (ushort)State.Direction16);
-            CX = (ushort)(CX - 1);
-            shouldContinue_402C = ZeroFlag;
+            CX--;
+            if (!equal_402C) {
+                break;
+            }
         }
         // F000:402E jmp near CX
         switch (CX) {
@@ -542,21 +554,23 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:4033 mov CX,0x5004
         CX = 0x5004;
         // F000:4036 repe cmps word ptr DS:[SI],word ptr ES:[DI]
-        bool shouldContinue_4036 = true;
-        while (CX != 0 && shouldContinue_4036) {
-            Alu16.Sub(UInt16[DS, SI], UInt16[ES, DI]);
+        while (CX != 0) {
+            bool equal_4036 = UInt16[DS, SI] == UInt16[ES, DI];
             SI = (ushort)(SI + (ushort)State.Direction16);
             DI = (ushort)(DI + (ushort)State.Direction16);
-            CX = (ushort)(CX - 1);
-            shouldContinue_4036 = ZeroFlag;
+            CX--;
+            if (!equal_4036) {
+                break;
+            }
         }
         // F000:4038 repe scas AX,word ptr ES:[DI]
-        bool shouldContinue_4038 = true;
-        while (CX != 0 && shouldContinue_4038) {
-            Alu16.Sub(AX, UInt16[ES, DI]);
+        while (CX != 0) {
+            bool equal_4038 = AX == UInt16[ES, DI];
             DI = (ushort)(DI + (ushort)State.Direction16);
-            CX = (ushort)(CX - 1);
-            shouldContinue_4038 = ZeroFlag;
+            CX--;
+            if (!equal_4038) {
+                break;
+            }
         }
         // F000:403A mov BX,0x0040
         BX = 0x0040;
@@ -570,21 +584,23 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:4042 mov DI,0
         DI = 0;
         // F000:4045 repne cmps word ptr DS:[SI],word ptr ES:[DI]
-        bool shouldContinue_4045 = true;
-        while (CX != 0 && shouldContinue_4045) {
+        while (CX != 0) {
             Alu16.Sub(UInt16[DS, SI], UInt16[ES, DI]);
             SI = (ushort)(SI + (ushort)State.Direction16);
             DI = (ushort)(DI + (ushort)State.Direction16);
-            CX = (ushort)(CX - 1);
-            shouldContinue_4045 = !ZeroFlag;
+            CX--;
+            if (ZeroFlag) {
+                break;
+            }
         }
         // F000:4047 repne scas AX,word ptr ES:[DI]
-        bool shouldContinue_4047 = true;
-        while (CX != 0 && shouldContinue_4047) {
+        while (CX != 0) {
             Alu16.Sub(AX, UInt16[ES, DI]);
             DI = (ushort)(DI + (ushort)State.Direction16);
-            CX = (ushort)(CX - 1);
-            shouldContinue_4047 = !ZeroFlag;
+            CX--;
+            if (ZeroFlag) {
+                break;
+            }
         }
         // F000:4049 jmp near CX
         switch (CX) {
@@ -600,7 +616,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             UInt8[ES, DI] = UInt8[DS, SI];
             SI = (ushort)(SI + (ushort)State.Direction8);
             DI = (ushort)(DI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
+            CX--;
         }
         // F000:5005 jcxz short 0x5008
         if (CX == 0) {
@@ -616,7 +632,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         while (CX != 0) {
             AL = UInt8[DS, SI];
             SI = (ushort)(SI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
+            CX--;
         }
         // F000:500D jcxz short 0x5010
         if (CX == 0) {
@@ -632,7 +648,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         while (CX != 0) {
             UInt8[ES, DI] = AL;
             DI = (ushort)(DI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
+            CX--;
         }
         // F000:5015 jcxz short 0x5018
         if (CX == 0) {
@@ -658,13 +674,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:5024 mov SI,0x3006
         SI = 0x3006;
         // F000:5027 repne cmps word ptr DS:[SI],word ptr ES:[DI]
-        bool shouldContinue_5027 = true;
-        while (CX != 0 && shouldContinue_5027) {
-            Alu16.Sub(UInt16[DS, SI], UInt16[ES, DI]);
+        while (CX != 0) {
+            bool equal_5027 = UInt16[DS, SI] == UInt16[ES, DI];
             SI = (ushort)(SI + (ushort)State.Direction16);
             DI = (ushort)(DI + (ushort)State.Direction16);
-            CX = (ushort)(CX - 1);
-            shouldContinue_5027 = !ZeroFlag;
+            CX--;
+            if (equal_5027) {
+                break;
+            }
         }
         // F000:5029 mov AX,0x1000
         AX = 0x1000;
@@ -678,12 +695,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:5031 cld
         DirectionFlag = false;
         // F000:5032 repne scas AX,word ptr ES:[DI]
-        bool shouldContinue_5032 = true;
-        while (CX != 0 && shouldContinue_5032) {
+        while (CX != 0) {
             Alu16.Sub(AX, UInt16[ES, DI]);
             DI = (ushort)(DI + (ushort)State.Direction16);
-            CX = (ushort)(CX - 1);
-            shouldContinue_5032 = !ZeroFlag;
+            CX--;
+            if (ZeroFlag) {
+                break;
+            }
         }
         // F000:5034 jmp near CX
         switch (CX) {

@@ -652,17 +652,17 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1005 mov SI,SP
         SI = SP;
         // F000:1007 add SI,4
-        SI = Alu16.Add(SI, 4);
+        SI = (ushort)(SI + 4);
         // F000:100A mov SI,word ptr DS:[SI]
         SI = UInt16[DS, SI];
         // F000:100C mov word ptr SS:[BP],SI
         UInt16[SS, BP] = SI;
         // F000:100F add SI,AX
-        SI = Alu16.Add(SI, AX);
+        SI = (ushort)(SI + AX);
         // F000:1011 mov DI,SP
         DI = SP;
         // F000:1013 add DI,4
-        DI = Alu16.Add(DI, 4);
+        DI = (ushort)(DI + 4);
         // F000:1016 mov word ptr DS:[DI],SI
         UInt16[DS, DI] = SI;
         // F000:1018 pop DI

@@ -139,106 +139,106 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_0060_0100_00700(int loadOffset) {
         CheckExternalEvents(cs1, 0x0100);
         // 0060:0100 add word ptr DS:[BX+SI],AX
-        UInt16[DS, (ushort)(BX + SI)] = Alu16.Add(UInt16[DS, (ushort)(BX + SI)], AX);
+        UInt16[DS, (ushort)(BX + SI)] = (ushort)(UInt16[DS, (ushort)(BX + SI)] + AX);
         VerifySpeculativeEntryOrFail(cs1, 0x0102, Signature_0102_add);
         // 0060:0102 add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0104, Signature_0104_add);
         // 0060:0104 add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0106, Signature_0106_add);
         // 0060:0106 add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0108, Signature_0108_add);
         // 0060:0108 add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x010A, Signature_010A_add);
         // 0060:010A add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x010C, Signature_010C_add);
         // 0060:010C add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x010E, Signature_010E_add);
         // 0060:010E add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0110, Signature_0110_add);
         // 0060:0110 add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0112, Signature_0112_add);
         // 0060:0112 add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0114, Signature_0114_add);
         // 0060:0114 add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0116, Signature_0116_add);
         // 0060:0116 add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0118, Signature_0118_add);
         // 0060:0118 add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x011A, Signature_011A_add);
         // 0060:011A add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x011C, Signature_011C_add);
         // 0060:011C add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x011E, Signature_011E_add);
         // 0060:011E add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0120, Signature_0120_pop);
         // 0060:0120 pop DI
         DI = Stack.Pop16();
         VerifySpeculativeEntryOrFail(cs1, 0x0121, Signature_0121_add);
         // 0060:0121 add word ptr DS:[BX+SI],AX
-        UInt16[DS, (ushort)(BX + SI)] = Alu16.Add(UInt16[DS, (ushort)(BX + SI)], AX);
+        UInt16[DS, (ushort)(BX + SI)] = (ushort)(UInt16[DS, (ushort)(BX + SI)] + AX);
         VerifySpeculativeEntryOrFail(cs1, 0x0123, Signature_0123_add);
         // 0060:0123 add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0125, Signature_0125_add);
         // 0060:0125 add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0127, Signature_0127_add);
         // 0060:0127 add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0129, Signature_0129_add);
         // 0060:0129 add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x012B, Signature_012B_add);
         // 0060:012B add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x012D, Signature_012D_add);
         // 0060:012D add byte ptr SS:[BP+SI],DL
-        UInt8[SS, (ushort)(BP + SI)] = Alu8.Add(UInt8[SS, (ushort)(BP + SI)], DL);
+        UInt8[SS, (ushort)(BP + SI)] = (byte)(UInt8[SS, (ushort)(BP + SI)] + DL);
         VerifySpeculativeEntryOrFail(cs1, 0x012F, Signature_012F_add);
         // 0060:012F add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0131, Signature_0131_clc);
         // 0060:0131 clc
         CarryFlag = false;
         VerifySpeculativeEntryOrFail(cs1, 0x0132, Signature_0132_add);
         // 0060:0132 add byte ptr SS:[BP+SI],AL
-        UInt8[SS, (ushort)(BP + SI)] = Alu8.Add(UInt8[SS, (ushort)(BP + SI)], AL);
+        UInt8[SS, (ushort)(BP + SI)] = (byte)(UInt8[SS, (ushort)(BP + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0134, Signature_0134_add);
         // 0060:0134 add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0136, Signature_0136_add);
         // 0060:0136 add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0138, Signature_0138_add);
         // 0060:0138 add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x013A, Signature_013A_add);
         // 0060:013A add AL,CL
-        AL = Alu8.Add(AL, CL);
+        AL = (byte)(AL + CL);
         VerifySpeculativeEntryOrFail(cs1, 0x013C, Signature_013C_add);
         // 0060:013C add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x013E, Signature_013E_add);
         // 0060:013E add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0140, Signature_0140_add);
         // 0060:0140 add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0142, Signature_0142_add);
         // 0060:0142 add word ptr SS:[BP+SI],BX
         UInt16[SS, (ushort)(BP + SI)] = Alu16.Add(UInt16[SS, (ushort)(BP + SI)], BX);
@@ -247,103 +247,103 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AL = Alu8.Adc(AL, UInt8[DS, (ushort)(BX + SI)]);
         VerifySpeculativeEntryOrFail(cs1, 0x0146, Signature_0146_add);
         // 0060:0146 add AL,BH
-        AL = Alu8.Add(AL, BH);
+        AL = (byte)(AL + BH);
         VerifySpeculativeEntryOrFail(cs1, 0x0148, Signature_0148_add);
         // 0060:0148 add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x014A, Signature_014A_add);
         // 0060:014A add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x014C, Signature_014C_add);
         // 0060:014C add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x014E, Signature_014E_add);
         // 0060:014E add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0150, Signature_0150_add);
         // 0060:0150 add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0152, Signature_0152_add);
         // 0060:0152 add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0154, Signature_0154_add);
         // 0060:0154 add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0156, Signature_0156_add);
         // 0060:0156 add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0158, Signature_0158_add);
         // 0060:0158 add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x015A, Signature_015A_add);
         // 0060:015A add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x015C, Signature_015C_add);
         // 0060:015C add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x015E, Signature_015E_add);
         // 0060:015E add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0160, Signature_0160_add);
         // 0060:0160 add byte ptr DS:[BX+SI],DL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], DL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + DL);
         VerifySpeculativeEntryOrFail(cs1, 0x0163, Signature_0163_push);
         // 0060:0163 push AX
         Stack.Push16(AX);
         VerifySpeculativeEntryOrFail(cs1, 0x0164, Signature_0164_add);
         // 0060:0164 add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0166, Signature_0166_add);
         // 0060:0166 add DI,BP
-        DI = Alu16.Add(DI, BP);
+        DI = (ushort)(DI + BP);
         VerifySpeculativeEntryOrFail(cs1, 0x0168, Signature_0168_inc);
         // 0060:0168 inc word ptr DS:[BX+SI]
-        UInt16[DS, (ushort)(BX + SI)] = Alu16.Inc(UInt16[DS, (ushort)(BX + SI)]);
+        UInt16[DS, (ushort)(BX + SI)] = (ushort)(UInt16[DS, (ushort)(BX + SI)] + 1);
         VerifySpeculativeEntryOrFail(cs1, 0x016A, Signature_016A_add);
         // 0060:016A add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x016C, Signature_016C_add);
         // 0060:016C add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x016E, Signature_016E_add);
         // 0060:016E add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0170, Signature_0170_add);
         // 0060:0170 add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0172, Signature_0172_add);
         // 0060:0172 add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0174, Signature_0174_add);
         // 0060:0174 add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0176, Signature_0176_add);
         // 0060:0176 add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0178, Signature_0178_add);
         // 0060:0178 add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x017A, Signature_017A_add);
         // 0060:017A add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x017C, Signature_017C_add);
         // 0060:017C add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x017E, Signature_017E_add);
         // 0060:017E add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0180, Signature_0180_add);
         // 0060:0180 add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0182, Signature_0182_add);
         // 0060:0182 add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0184, Signature_0184_add);
         // 0060:0184 add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0186, Signature_0186_add);
         // 0060:0186 add byte ptr DS:[BX+SI],AL
-        UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], AL);
+        UInt8[DS, (ushort)(BX + SI)] = (byte)(UInt8[DS, (ushort)(BX + SI)] + AL);
         throw FailAsUntested("Untested fallthrough after 0060:0186");
     }
 

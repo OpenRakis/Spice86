@@ -24,6 +24,7 @@ public interface IAstVisitor<T> {
     public T VisitBlockNode(BlockNode node);
     public T VisitIfElseNode(IfElseNode node);
     public T VisitWhileNode(WhileNode node);
+    public T VisitWhileWithExitNode(WhileWithExitNode node);
     public T VisitCpuFlagNode(CpuFlagNode node);
     public T VisitFlagRegisterNode(FlagRegisterNode node);
     public T VisitVariableReferenceNode(VariableReferenceNode node);

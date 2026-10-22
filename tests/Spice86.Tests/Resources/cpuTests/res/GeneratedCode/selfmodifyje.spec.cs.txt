@@ -48,9 +48,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0013 mov CX,1
         CX = 1;
         // F000:0016 cmp AX,0x162E
-        Alu16.Sub(AX, 0x162E);
         // F000:0019 je short 3
-        if (ZeroFlag) {
+        if (AX == 0x162E) {
             goto L_0003;
         }
         // F000:001B mov CX,0

@@ -175,7 +175,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0144 call near 0x01D8
         NearCall(cs1, 0x0147, unknown_016D_01D8_018A8);
         // 016D:0147 xor CX,CX
-        CX = Alu16.Xor(CX, CX);
+        CX = 0;
         // 016D:0149 mov DX,0x0388
         DX = 0x0388;
     L_014C:
@@ -189,7 +189,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0152 in AL,DX
         AL = In8(DX);
         // 016D:0153 inc CX
-        CX = Alu16.Inc(CX);
+        CX++;
         // 016D:0154 test AL,0xC0
         Alu8.And(AL, 0xC0);
         // 016D:0156 jne short 0x017C
@@ -328,7 +328,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:01D2 in AL,DX
         AL = In8(DX);
         // 016D:01D3 loop 0x01D2
-        CX = (ushort)(CX - 1);
+        CX--;
         if (CX != 0) {
             goto L_01D2;
         }
@@ -355,7 +355,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:01E0 in AL,DX
         AL = In8(DX);
         // 016D:01E1 loop 0x01E0
-        CX = (ushort)(CX - 1);
+        CX--;
         if (CX != 0) {
             goto L_01E0;
         }
@@ -376,7 +376,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:01E7 or AL,AL
         AL = Alu8.Or(AL, AL);
         // 016D:01E9 je short 0x01F4
-        if (ZeroFlag) {
+        if (AL == 0) {
             goto L_01F4;
         }
         // 016D:01EB mov AH,0x0E
@@ -401,23 +401,23 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:01F7 push DX
         Stack.Push16(DX);
         // 016D:01F8 xor CX,CX
-        CX = Alu16.Xor(CX, CX);
+        CX = 0;
         // 016D:01FA mov BX,0x000A
         BX = 0x000A;
     L_01FD:
         CheckExternalEvents(cs1, 0x01FD);
         // 016D:01FD xor DX,DX
-        DX = Alu16.Xor(DX, DX);
+        DX = 0;
         // 016D:01FF div BX
         (AX, DX) = Div16(divisor: BX, dividend: (uint)((uint)DX << 0x00000010 | (uint)AX));
         // 016D:0201 push DX
         Stack.Push16(DX);
         // 016D:0202 inc CX
-        CX = Alu16.Inc(CX);
+        CX++;
         // 016D:0203 or AX,AX
-        AX = Alu16.Or(AX, AX);
+        AX = (ushort)(AX | AX);
         // 016D:0205 jne short 0x01FD
-        if (!ZeroFlag) {
+        if (AX != 0) {
             goto L_01FD;
         }
     L_0207:
@@ -433,7 +433,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:020F int 0x10
         InterruptCall(cs1, 0x0211, 0x10);
         // 016D:0211 loop 0x0207
-        CX = (ushort)(CX - 1);
+        CX--;
         if (CX != 0) {
             goto L_0207;
         }

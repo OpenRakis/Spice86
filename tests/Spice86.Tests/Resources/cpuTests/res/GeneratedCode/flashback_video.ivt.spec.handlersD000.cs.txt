@@ -288,16 +288,16 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:404D out DX,AX
         Out16(DX, AX);
         // F000:404E xor DI,DI
-        DI = Alu16.Xor(DI, DI);
+        DI = 0;
         // F000:4050 xor AX,AX
-        AX = Alu16.Xor(AX, AX);
+        AX = 0;
         // F000:4052 mov CX,0x8000
         CX = 0x8000;
         // F000:4055 rep stos word ptr ES:[DI],AX
         while (CX != 0) {
             UInt16[ES, DI] = AX;
             DI = (ushort)(DI + (ushort)State.Direction16);
-            CX = (ushort)(CX - 1);
+            CX--;
         }
         // F000:4057 mov BP,1
         BP = 1;
@@ -312,9 +312,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:4060 out DX,AX
         Out16(DX, AX);
         // F000:4061 xor DI,DI
-        DI = Alu16.Xor(DI, DI);
+        DI = 0;
         // F000:4063 xor BX,BX
-        BX = Alu16.Xor(BX, BX);
+        BX = 0;
     L_4065:
         CheckExternalEvents(cs2, 0x4065);
         // F000:4065 mov CX,0x0040
@@ -322,33 +322,32 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:4068 mov AX,BX
         AX = BX;
         // F000:406A add AX,BP
-        AX = Alu16.Add(AX, BP);
+        AX = (ushort)(AX + BP);
         // F000:406C add AL,0x41
-        AL = Alu8.Add(AL, 0x41);
+        AL = (byte)(AL + 0x41);
     L_406E:
         CheckExternalEvents(cs2, 0x406E);
         // F000:406E stos byte ptr ES:[DI],AL
         UInt8[ES, DI] = AL;
         DI = (ushort)(DI + (ushort)State.Direction8);
         // F000:406F inc AL
-        AL = Alu8.Inc(AL);
+        AL++;
         // F000:4071 loop 0x406E
-        CX = (ushort)(CX - 1);
+        CX--;
         if (CX != 0) {
             goto L_406E;
         }
         // F000:4073 inc BX
-        BX = Alu16.Inc(BX);
+        BX++;
         // F000:4074 cmp BX,0x00E1
-        Alu16.Sub(BX, 0x00E1);
         // F000:4078 jb short 0x4065
-        if (CarryFlag) {
+        if (BX < 0x00E1) {
             goto L_4065;
         }
         // F000:407A mov DI,0x3A00
         DI = 0x3A00;
         // F000:407D xor BX,BX
-        BX = Alu16.Xor(BX, BX);
+        BX = 0;
     L_407F:
         CheckExternalEvents(cs2, 0x407F);
         // F000:407F mov CX,0x0040
@@ -356,35 +355,33 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:4082 mov AX,BX
         AX = BX;
         // F000:4084 add AL,1
-        AL = Alu8.Add(AL, 1);
+        AL++;
         // F000:4086 add AX,BP
-        AX = Alu16.Add(AX, BP);
+        AX = (ushort)(AX + BP);
     L_4088:
         CheckExternalEvents(cs2, 0x4088);
         // F000:4088 stos byte ptr ES:[DI],AL
         UInt8[ES, DI] = AL;
         DI = (ushort)(DI + (ushort)State.Direction8);
         // F000:4089 inc AL
-        AL = Alu8.Inc(AL);
+        AL++;
         // F000:408B loop 0x4088
-        CX = (ushort)(CX - 1);
+        CX--;
         if (CX != 0) {
             goto L_4088;
         }
         // F000:408D inc BX
-        BX = Alu16.Inc(BX);
+        BX++;
         // F000:408E cmp BX,0x00E1
-        Alu16.Sub(BX, 0x00E1);
         // F000:4092 jb short 0x407F
-        if (CarryFlag) {
+        if (BX < 0x00E1) {
             goto L_407F;
         }
         // F000:4094 shl BP,1
         BP = Alu16.Shl(BP, 1);
         // F000:4096 cmp BP,0x0010
-        Alu16.Sub(BP, 0x0010);
         // F000:4099 jb short 0x405A
-        if (CarryFlag) {
+        if (BP < 0x0010) {
             goto L_405A;
         }
         // F000:409B mov DX,0x03D4

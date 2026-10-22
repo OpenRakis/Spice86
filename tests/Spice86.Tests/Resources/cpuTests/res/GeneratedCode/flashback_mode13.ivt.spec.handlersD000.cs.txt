@@ -232,9 +232,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:4012 mov ES,AX
         ES = AX;
         // F000:4014 xor DI,DI
-        DI = Alu16.Xor(DI, DI);
+        DI = 0;
         // F000:4016 xor BX,BX
-        BX = Alu16.Xor(BX, BX);
+        BX = 0;
         // F000:4018 cld
         DirectionFlag = false;
     L_4019:
@@ -249,14 +249,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt8[ES, DI] = AL;
         DI = (ushort)(DI + (ushort)State.Direction8);
         // F000:401F inc AL
-        AL = Alu8.Inc(AL);
+        AL++;
         // F000:4021 loop 0x401E
-        CX = (ushort)(CX - 1);
+        CX--;
         if (CX != 0) {
             goto L_401E;
         }
         // F000:4023 inc BX
-        BX = Alu16.Inc(BX);
+        BX++;
         // F000:4024 cmp BX,0x00C8
         Alu16.Sub(BX, 0x00C8);
         // F000:4028 jb short 0x4019

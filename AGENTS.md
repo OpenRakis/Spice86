@@ -51,6 +51,9 @@ dotnet test tests/Spice86.Tests -- --filter-method '*TestStiPending*'
 
 # Opt-in: compile the C# every test generates and append one row per test to a TSV coverage report (path must be absolute)
 SPICE86_GENERATED_CODE_COVERAGE=$PWD/tmp/generated-code-coverage.tsv dotnet test tests/Spice86.Tests -- --filter-not-class '*SingleStepTest*' --filter-not-class '*GeneratedCodeCoverageReportTest*'
+
+# Opt-in: run the tests with the JIT executing the ALU expansion of the code generator instead of the ALU calls (no filter, so SingleStepTest is included)
+SPICE86_JIT_ALU_EXPANSION=1 dotnet test tests/Spice86.Tests
 ```
 
 > **Test filter syntax rule**: the test project runs on xUnit v3 through Microsoft.Testing.Platform (`TestingPlatformDotnetTestSupport` in `tests/Directory.Build.props`). The VSTest-style `--filter 'FullyQualifiedName~...'` is **silently ignored** (warning `MTP0001`) and runs the whole suite, SingleStepTest included. Always pass filters after `--` using `--filter-class`, `--filter-not-class`, `--filter-method`, `--filter-not-method` with `*` wildcards.

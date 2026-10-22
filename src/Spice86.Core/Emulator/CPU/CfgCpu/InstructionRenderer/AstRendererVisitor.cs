@@ -417,6 +417,10 @@ public class AstRendererVisitor<TOutput> : IAstVisitor<TOutput> {
         throw CreateUnsupportedNodeException(nameof(WhileNode));
     }
 
+    public TOutput VisitWhileWithExitNode(WhileWithExitNode node) {
+        throw CreateUnsupportedNodeException(nameof(WhileWithExitNode));
+    }
+
     public TOutput VisitThrowNode(ThrowNode node) {
         throw CreateUnsupportedNodeException(nameof(ThrowNode));
     }

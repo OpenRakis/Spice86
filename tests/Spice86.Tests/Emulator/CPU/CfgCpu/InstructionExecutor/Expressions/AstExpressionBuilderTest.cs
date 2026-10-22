@@ -761,6 +761,30 @@ public class AstExpressionBuilderTest {
         Assert.Equal(5, _state.AX);
     }
 
+    [Theory]
+    [InlineData(3, 3)]
+    [InlineData(9, 5)]
+    [InlineData(1, 1)]
+    public void TestWhileWithExitLoop(int exitValue, int expectedAx) {
+        // Arrange: uint16 x = 0; while (x < 5) { x = x + 1; if (x == exitValue) break; }; AX = x
+        VariableDeclarationNode varDecl = new VariableDeclarationNode(DataType.UINT16, "x", new ConstantNode(DataType.UINT16, 0));
+        VariableReferenceNode xRef = new VariableReferenceNode(DataType.UINT16, "x");
+        BinaryOperationNode condition = new BinaryOperationNode(DataType.BOOL, xRef, BinaryOperation.LESS_THAN, new ConstantNode(DataType.UINT16, 5));
+        BinaryOperationNode addOne = new BinaryOperationNode(DataType.UINT16, xRef, BinaryOperation.PLUS, new ConstantNode(DataType.UINT16, 1));
+        BlockNode body = new BlockNode(new BinaryOperationNode(DataType.UINT16, xRef, BinaryOperation.ASSIGN, addOne));
+        BinaryOperationNode exitCondition = new BinaryOperationNode(DataType.BOOL, xRef, BinaryOperation.EQUAL, new ConstantNode(DataType.UINT16, (ulong)exitValue));
+        WhileWithExitNode loop = new WhileWithExitNode(condition, body, exitCondition);
+        RegisterNode axReg = new RegisterNode(DataType.UINT16, (int)RegisterIndex.AxIndex);
+        BlockNode outerBlock = new BlockNode(varDecl, loop, new BinaryOperationNode(DataType.UINT16, axReg, BinaryOperation.ASSIGN, xRef));
+
+        // Act
+        _state.AX = 0;
+        Execute(outerBlock);
+
+        // Assert
+        Assert.Equal(expectedAx, _state.AX);
+    }
+
     // ── MoveIpNextNode tests ──
 
     [Fact]

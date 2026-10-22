@@ -2,7 +2,9 @@ namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Shared.Emulator.Memory;
@@ -70,6 +72,10 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
                 return;
             case SpeculativeGuardNode speculativeGuard:
                 PrintSpeculativeGuard(speculativeGuard);
+                return;
+            case BinaryOperationNode { BinaryOperation: BinaryOperation.ASSIGN, Left: RegisterNode register } assignment
+                when IncrementOrDecrement(register, assignment.Right) is string step:
+                writer.Line($"{expressions.Print(register).Text}{step};");
                 return;
             default:
                 writer.Line(expressions.Print(node).Text + ";");
@@ -211,4 +217,19 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
         string segment = expressions.SegmentVariable(node.Address.Segment);
         writer.Line($"VerifySpeculativeEntryOrFail({segment}, 0x{node.Address.Offset:X4}, {node.SignatureField});");
     }
+
+    /// <summary>
+    /// <c>++</c> or <c>--</c> when <paramref name="value"/> is <paramref name="register"/> plus or minus one in the
+    /// register's own type, otherwise <c>null</c>.
+    /// </summary>
+    private static string? IncrementOrDecrement(RegisterNode register, ValueNode value) {
+        if (value is not BinaryOperationNode { BinaryOperation: BinaryOperation.PLUS or BinaryOperation.MINUS } arithmetic
+            || arithmetic.Left != register || arithmetic.DataType != register.DataType || !IsOne(arithmetic.Right)) {
+            return null;
+        }
+        return arithmetic.BinaryOperation == BinaryOperation.PLUS ? "++" : "--";
+    }
+
+    private static bool IsOne(ValueNode node) =>
+        node is ConstantNode { Value: 1 } or InstructionFieldNode { ResolvedNode: ConstantNode { Value: 1 } };
 }

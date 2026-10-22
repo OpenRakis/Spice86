@@ -6,6 +6,8 @@ using NSubstitute;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using System.Collections.Immutable;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
@@ -349,6 +351,110 @@ public class CSharpStatementPrinterTest {
         // Assert
         visit.Should().Throw<NotSupportedException>();
     }
+
+    [Theory]
+    [InlineData(BinaryOperation.PLUS, "AX++;")]
+    [InlineData(BinaryOperation.MINUS, "AX--;")]
+    public void RegisterPlusOrMinusOneIsAnIncrementOrADecrement(BinaryOperation operation, string expected) {
+        // Arrange
+        BinaryOperationNode assignment = Assign(Ax, new BinaryOperationNode(DataType.UINT16, Ax, operation,
+            new ConstantNode(DataType.UINT16, 1)));
+
+        // Act
+        string printed = Print(assignment);
+
+        // Assert
+        printed.Should().Be(Lines(expected));
+    }
+
+    [Fact]
+    public void ByteRegisterIncrementUsesItsOwnName() {
+        // Arrange
+        RegisterNode al = new(DataType.UINT8, (int)RegisterIndex.AxIndex);
+        BinaryOperationNode assignment = new(DataType.UINT8, al, BinaryOperation.ASSIGN,
+            new BinaryOperationNode(DataType.UINT8, al, BinaryOperation.PLUS, new ConstantNode(DataType.UINT8, 1)));
+
+        // Act
+        string printed = Print(assignment);
+
+        // Assert
+        printed.Should().Be(Lines("AL++;"));
+    }
+
+    [Fact]
+    public void ImmediateOneIsAnIncrementWhileItIsUsedAsAValue() {
+        // Arrange
+        InstructionField<ushort> field = new(1, 2, 0x00100, 1, ImmutableList.Create<byte?>(1, 0), true);
+        BinaryOperationNode assignment = Assign(Ax, new BinaryOperationNode(DataType.UINT16, Ax, BinaryOperation.PLUS,
+            new InstructionFieldNode(DataType.UINT16, field, 1)));
+
+        // Act
+        string printedAsValue = Print(assignment);
+        field.UseValue = false;
+        string printedAsMemoryRead = Print(assignment);
+
+        // Assert
+        printedAsValue.Should().Be(Lines("AX++;"));
+        printedAsMemoryRead.Should().NotContain("++");
+    }
+
+    [Fact]
+    public void OtherStepKeepsTheAssignment() {
+        // Arrange
+        BinaryOperationNode assignment = Assign(Ax, new BinaryOperationNode(DataType.UINT16, Ax, BinaryOperation.PLUS,
+            new ConstantNode(DataType.UINT16, 2)));
+
+        // Act
+        string printed = Print(assignment);
+
+        // Assert
+        printed.Should().Be(Lines("AX = (ushort)(AX + 2);"));
+    }
+
+    [Fact]
+    public void OtherRegisterKeepsTheAssignment() {
+        // Arrange
+        RegisterNode bx = new(DataType.UINT16, (int)RegisterIndex.BxIndex);
+        BinaryOperationNode assignment = Assign(Ax, new BinaryOperationNode(DataType.UINT16, bx, BinaryOperation.PLUS,
+            new ConstantNode(DataType.UINT16, 1)));
+
+        // Act
+        string printed = Print(assignment);
+
+        // Assert
+        printed.Should().Be(Lines("AX = (ushort)(BX + 1);"));
+    }
+
+    [Fact]
+    public void WiderArithmeticKeepsTheAssignment() {
+        // Arrange
+        BinaryOperationNode assignment = Assign(Ax, new BinaryOperationNode(DataType.UINT32, Ax, BinaryOperation.PLUS,
+            new ConstantNode(DataType.UINT32, 1)));
+
+        // Act
+        string printed = Print(assignment);
+
+        // Assert
+        printed.Should().NotContain("++");
+    }
+
+    [Fact]
+    public void MemoryDestinationKeepsTheAssignment() {
+        // Arrange
+        SegmentedPointerNode memory = new(DataType.UINT16, new SegmentRegisterNode((int)SegmentRegisterIndex.DsIndex), null,
+            new ConstantNode(DataType.UINT16, 0x0010));
+        BinaryOperationNode assignment = Assign(memory, new BinaryOperationNode(DataType.UINT16, memory, BinaryOperation.PLUS,
+            new ConstantNode(DataType.UINT16, 1)));
+
+        // Act
+        string printed = Print(assignment);
+
+        // Assert
+        printed.Should().Be(Lines("UInt16[DS, 0x0010] = (ushort)(UInt16[DS, 0x0010] + 1);"));
+    }
+
+    private static BinaryOperationNode Assign(ValueNode destination, ValueNode value) =>
+        new(DataType.UINT16, destination, BinaryOperation.ASSIGN, value);
 
     private string Print(IVisitableAstNode node) {
         CSharpSourceWriter writer = new();

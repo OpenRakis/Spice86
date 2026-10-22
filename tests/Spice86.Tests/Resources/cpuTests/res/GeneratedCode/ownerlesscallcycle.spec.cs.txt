@@ -57,7 +57,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     L_0016:
         CheckExternalEvents(cs1, 0x0016);
         // F000:0016 inc byte ptr CS:[0x0025]
-        UInt8[CS, 0x0025] = Alu8.Inc(UInt8[CS, 0x0025]);
+        UInt8[CS, 0x0025] = (byte)(UInt8[CS, 0x0025] + 1);
         // F000:001B mov AL,byte ptr CS:[0x0025]
         AL = UInt8[CS, 0x0025];
         // F000:001F cmp AL,3

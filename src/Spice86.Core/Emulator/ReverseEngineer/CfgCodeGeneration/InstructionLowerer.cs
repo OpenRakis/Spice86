@@ -6,6 +6,8 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Visitor;
+using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.CPU.Registers;
@@ -61,10 +63,9 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
     /// AST's own <c>Accept</c> dispatch, then appends the fallthrough transfer
     /// (<see cref="TransferEmitter.EmitFallthroughIfNeeded"/>) unless the body already terminates control flow.
     /// </summary>
-    public BlockNode LowerInstructionBody(CfgInstruction instruction, IVisitableAstNode node, bool emitExternalEventCheckAfter) {
-        BlockNode body = DivisionPattern.TryMatch(node, instruction.Address) is DivisionPattern division
-            ? Sequence(new DivisionNode(division))
-            : Sequence(node.Accept(this));
+    /// <param name="flagsLiveAfter">The status flags live after the instruction.</param>
+    public BlockNode LowerInstructionBody(CfgInstruction instruction, IVisitableAstNode node, bool emitExternalEventCheckAfter, StatusFlags flagsLiveAfter) {
+        BlockNode body = LowerBody(instruction, node, emitExternalEventCheckAfter, flagsLiveAfter);
         // Skip the fallthrough transfer when the node owns its control flow, or when the lowered body already
         // diverges (e.g. a CPUID/throw node lowering to a `throw`): appending a fallthrough after a diverging
         // body would be unreachable code (CS0162).
@@ -77,6 +78,38 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
         }
         return Sequence(body, eventCheck, Transfer.EmitFallthroughIfNeeded(instruction, CurrentMethod));
     }
+
+    private BlockNode LowerBody(CfgInstruction instruction, IVisitableAstNode node, bool emitExternalEventCheckAfter,
+        StatusFlags flagsLiveAfter) {
+        if (DivisionPattern.TryMatch(node, instruction.Address) is DivisionPattern division) {
+            return Sequence(new DivisionNode(division));
+        }
+        if (flagsLiveAfter == StatusFlags.None && !HasCpuFaultSuccessor(instruction)
+            && RepCompareLoopPattern.TryMatch(node) is RepCompareLoopPattern compare) {
+            return Sequence(LowerRepCompareLoop(compare));
+        }
+        if (!emitExternalEventCheckAfter && !HasCpuFaultSuccessor(instruction)
+            && AluAssignmentRewrite.TryRewrite(node, flagsLiveAfter) is BlockNode rewritten) {
+            return Sequence(rewritten.Accept(this));
+        }
+        return Sequence(node.Accept(this));
+    }
+
+    private WhileNode LowerRepCompareLoop(RepCompareLoopPattern compare) {
+        VariableDeclarationNode equal = new(DataType.BOOL, "equal",
+            new BinaryOperationNode(DataType.BOOL, compare.Left, BinaryOperation.EQUAL, compare.Right));
+        ValueNode stop = equal.Reference;
+        if (!compare.StopWhenEqual) {
+            stop = new UnaryOperationNode(DataType.BOOL, UnaryOperation.NOT, equal.Reference);
+        }
+        IfElseNode stopIf = new(stop, new BlockNode(new BreakNode()), Empty());
+        return new WhileNode(compare.CounterCondition,
+            Sequence(compare.Updates.Select(statement => statement.Accept(this)).Prepend(equal).Append(stopIf)));
+    }
+
+    private static bool HasCpuFaultSuccessor(CfgInstruction instruction) =>
+        instruction.SuccessorsPerType.TryGetValue(InstructionSuccessorType.CpuFault, out ISet<ICfgNode>? successors)
+        && successors.Count > 0;
 
     private static bool TerminatesControlFlow(IVisitableAstNode node) =>
         NodeContainsControlFlow(node) || node is InvalidInstructionNode;
@@ -266,12 +299,26 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
         return Empty();
     }
 
-    private static ValueNode NegatedCondition(ValueNode condition) {
+    /// <summary>The negation of a condition: the operand of a <c>!</c>, the opposite comparison, or <c>!</c> around the condition.</summary>
+    internal static ValueNode NegatedCondition(ValueNode condition) {
         if (condition is UnaryOperationNode { UnaryOperation: UnaryOperation.NOT } notNode) {
             return notNode.Value;
         }
+        if (condition is BinaryOperationNode comparison && InvertedComparison(comparison.BinaryOperation) is BinaryOperation inverted) {
+            return new BinaryOperationNode(DataType.BOOL, comparison.Left, inverted, comparison.Right);
+        }
         return new UnaryOperationNode(DataType.BOOL, UnaryOperation.NOT, condition);
     }
+
+    private static BinaryOperation? InvertedComparison(BinaryOperation operation) => operation switch {
+        BinaryOperation.EQUAL => BinaryOperation.NOT_EQUAL,
+        BinaryOperation.NOT_EQUAL => BinaryOperation.EQUAL,
+        BinaryOperation.LESS_THAN => BinaryOperation.GREATER_THAN_OR_EQUAL,
+        BinaryOperation.GREATER_THAN_OR_EQUAL => BinaryOperation.LESS_THAN,
+        BinaryOperation.GREATER_THAN => BinaryOperation.LESS_THAN_OR_EQUAL,
+        BinaryOperation.LESS_THAN_OR_EQUAL => BinaryOperation.GREATER_THAN,
+        _ => null
+    };
 
     private static CfgInstruction? FindArmInstruction(IfElseNode node) =>
         FindArmInstruction(node.TrueCase) ?? FindArmInstruction(node.FalseCase);
@@ -435,6 +482,9 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
 
     public IVisitableAstNode VisitWhileNode(WhileNode node) =>
         new WhileNode(node.Condition, Sequence(node.Body.Accept(this)));
+
+    public IVisitableAstNode VisitWhileWithExitNode(WhileWithExitNode node) =>
+        new WhileNode(node.Condition, Sequence(node.Body.Accept(this), new IfElseNode(node.ExitCondition, new BlockNode(new BreakNode()), Empty())));
 
     public IVisitableAstNode VisitHltNode(HltNode node) => new ReturnNode(new MethodCallNode(null, "Hlt"));
 

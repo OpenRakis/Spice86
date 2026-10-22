@@ -60,13 +60,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0x001B);
         VerifySpeculativeEntryOrFail(cs1, 0x001B, Signature_001B_inc);
         // F000:001B inc byte ptr DS:[0x0401]
-        UInt8[DS, 0x0401] = Alu8.Inc(UInt8[DS, 0x0401]);
+        UInt8[DS, 0x0401] = (byte)(UInt8[DS, 0x0401] + 1);
         VerifySpeculativeEntryOrFail(cs1, 0x001F, Signature_001F_dec);
         // F000:001F dec CX
         CX = Alu16.Dec(CX);
         VerifySpeculativeEntryOrFail(cs1, 0x0020, Signature_0020_jne);
         // F000:0020 jne short 0x001B
-        if (!ZeroFlag) {
+        if (CX != 0) {
             goto L_001B;
         }
         VerifySpeculativeEntryOrFail(cs1, 0x0022, Signature_0022_jmp);
