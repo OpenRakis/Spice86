@@ -8,6 +8,7 @@ using Spice86.Shared.Interfaces;
 
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 /// <summary>
 /// Emulates a PS/2 keyboard device, handling key events, scancode translation, and communication with a keyboard
@@ -32,6 +33,14 @@ public partial class PS2Keyboard {
     private bool _bufferOverflowed = false;
     private RepeatData _repeat = new() { Key = PcKeyboardKey.None, WaitMs = 0, PauseMs = 500, RateMs = 33 };
     private readonly Dictionary<byte, Set3CodeInfoEntry> _set3CodeInfo = new();
+
+    /// <summary>
+    /// Keys the device currently believes are held down. A host key-up can be lost (window lost focus,
+    /// input dropped while paused, frame-buffer overflow) and the guest only ever clears a modifier on its
+    /// BREAK scancode, so this set is the bookkeeping that lets the device reconcile and release what it
+    /// still thinks is down.
+    /// </summary>
+    private readonly HashSet<PcKeyboardKey> _pressedKeys = new();
 
     /// <summary>
     /// State of keyboard LEDs, as requested via keyboard controller
@@ -130,6 +139,11 @@ public partial class PS2Keyboard {
         if (_keyboardFrameBuffer.Count == BufferSizeInScancodes) {
             _keyboardFrameBuffer.Clear();
             _bufferOverflowed = true;
+            // A discarded key-up would otherwise latch that key (and its modifier bits) in the guest forever.
+            // Reconcile the held-key set so no key is believed to be down any more.
+            _pressedKeys.Clear();
+            _repeat.Key = PcKeyboardKey.None;
+            _repeat.WaitMs = 0;
             return;
         }
 
@@ -522,6 +536,44 @@ public partial class PS2Keyboard {
     }
 
     /// <summary>
+    /// Releases every key the device still believes is down, emitting a proper BREAK frame for each one,
+    /// and stops any in-flight typematic repeat.
+    /// </summary>
+    /// <remarks>
+    /// Call this when the host's key state can no longer be trusted: the window lost activation, the
+    /// emulator was paused, or the keyboard frame buffer overflowed and discarded a key-up. The guest only
+    /// clears a modifier on its BREAK scancode, so a lost key-up otherwise latches it forever (e.g. Alt
+    /// left in <c>KB_FLAG</c>), silently changing how every other key is translated. This method is safe to
+    /// call on the emulator thread only; marshal cross-thread calls onto the emulator thread first.
+    /// </remarks>
+    public void ReleaseAllKeys() {
+        if (_pressedKeys.Count == 0) {
+            _repeat.Key = PcKeyboardKey.None;
+            _repeat.WaitMs = 0;
+            return;
+        }
+
+        // Emit a BREAK frame for each held key in a deterministic order so the guest sees a stable sequence.
+        List<PcKeyboardKey> heldKeys = _pressedKeys.OrderBy(key => key).ToList();
+        foreach (PcKeyboardKey key in heldKeys) {
+            EnqueueScanCodeFrame(GetReleaseScanCode(key));
+        }
+
+        _pressedKeys.Clear();
+        _repeat.Key = PcKeyboardKey.None;
+        _repeat.WaitMs = 0;
+    }
+
+    private List<byte> GetReleaseScanCode(PcKeyboardKey keyType) {
+        return _codeSet switch {
+            1 => _scancodeConverter.GetScanCode1(keyType, isPressed: false),
+            2 => _scancodeConverter.GetScanCode2(keyType, isPressed: false),
+            3 => _scancodeConverter.GetScanCode3(keyType, isPressed: false),
+            _ => _scancodeConverter.GetScanCode1(keyType, isPressed: false),
+        };
+    }
+
+    /// <summary>
     /// Adds a key event to be processed by the keyboard.
     /// </summary>
     /// <param name="keyType">The key type.</param>
@@ -529,6 +581,16 @@ public partial class PS2Keyboard {
     public void EnqueueKeyEvent(PcKeyboardKey keyType, bool isPressed) {
         if (!_isScanning) {
             return;
+        }
+
+        if (keyType is PcKeyboardKey.None or PcKeyboardKey.Pause or PcKeyboardKey.PrintScreen) {
+            // Keys that are not tracked as held: Pause has no BREAK frame, PrintScreen is a momentary
+            // key-chord, and None is an unsupported key. Keeping them out of the held-key set means a
+            // later release-all does not try to emit a BREAK scancode that does not exist.
+        } else if (isPressed) {
+            _pressedKeys.Add(keyType);
+        } else {
+            _pressedKeys.Remove(keyType);
         }
 
         List<byte> scanCode = new();

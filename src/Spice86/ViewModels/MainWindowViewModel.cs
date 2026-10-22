@@ -106,6 +106,13 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IDis
     /// <summary>Fired when this view model is being disposed so the composition root can tear down.</summary>
     internal event Action? Disposing;
 
+    /// <summary>
+    /// Thread-safe action that releases every key the keyboard device still believes is down. Invoked when
+    /// the window loses activation, so a key-up swallowed by the shell (e.g. Alt+Tab) does not latch a
+    /// modifier in the guest. Assigned by the composition root; null in headless mode.
+    /// </summary>
+    public Action? OnWindowDeactivated { get; set; }
+
     public MainWindowViewModel(
         EmulatorDisplayViewModel display,
         EmulatorSession session,

@@ -162,6 +162,9 @@ internal partial class MainWindow : Window {
 
     private void OnWindowDeactivated(object? sender, EventArgs e) {
         ReleaseCapture();
+        // The shell may swallow key-ups (e.g. Alt+Tab) while the window is inactive. Release any key the
+        // device still believes is down so the guest does not keep a modifier latched.
+        (DataContext as MainWindowViewModel)?.OnWindowDeactivated?.Invoke();
     }
 
     private void OnWindowPositionChanged(object? sender, PixelPointEventArgs e) {
