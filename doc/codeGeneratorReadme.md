@@ -18,15 +18,17 @@ flowchart TD
     planBuilder["GenerationPlanBuilder<br/>segment fields, signature fields, override registrations,<br/>one MethodPlan per partition: block order, labels, node plans"]
     classParts["CfgCSharpGenerator<br/>header, supplier, segment and signature fields, constructor"]
 
-    subgraph methodEmitter["MethodEmitter: one C# method per MethodPlan (signature, entry dispatch, labels, body)"]
-        astEmitter["CSharpAstEmitter<br/>lowers the instruction AST into statements and expressions"]
-        faultWrapper["CpuFaultWrapper<br/>wraps a faulting instruction in try/catch(CpuException)"]
-        transfer["TransferEmitter<br/>lowers one CFG edge to goto / return / dispatcher / call helper"]
-        renderer["EmittedCodeRenderer<br/>dumb printer: lines, braces, switch cases from the statement tree"]
-        astEmitter --> transfer
+    subgraph methodEmitter["MethodEmitter: one AST per MethodPlan, then printed (signature, entry dispatch, labels, body)"]
+        lowerer["InstructionLowerer<br/>copies the instruction AST and replaces its control flow with code-generation nodes"]
+        faultWrapper["CpuFaultWrapper<br/>wraps a faulting instruction in a CpuFaultTryCatchNode"]
+        transfer["TransferEmitter<br/>lowers one CFG edge to goto / return / dispatcher / call helper nodes"]
+        statementPrinter["CSharpStatementPrinter<br/>prints the statements of the method AST"]
+        expressionPrinter["CSharpExpressionPrinter<br/>prints expressions: casts, precedence, constants"]
+        lowerer --> transfer
         faultWrapper --> transfer
-        astEmitter -- "statement tree" --> renderer
-        faultWrapper -- "statement tree" --> renderer
+        lowerer -- "method AST" --> statementPrinter
+        faultWrapper -- "method AST" --> statementPrinter
+        statementPrinter --> expressionPrinter
     end
 
     writer["CSharpSourceWriter<br/>indentation and brace management, line buffer"]
@@ -38,7 +40,7 @@ flowchart TD
     planBuilder -- "fields and registrations" --> classParts
     planBuilder -- "MethodPlan" --> methodEmitter
     classParts --> writer
-    renderer --> writer
+    statementPrinter --> writer
     writer --> output
 ```
 
@@ -57,31 +59,45 @@ The generator works in two phases:
 The plan built by `GenerationPlanBuilder.Build` holds, per program: the segment fields, the override registrations and the signature fields (`SignatureFieldPlan`, one `private static readonly byte?[]` per instruction whose bytes are re-read at runtime). Per method (`MethodPlan`): a `PartitionBlockGraph` (`MethodPlan.BlockGraph`), a `DepthFirstOrdering<CfgBlock>` (`MethodPlan.BlockTraversal`), the block order, one `NodeEmissionPlan` per node (carrying `EmitsExternalEventCheck` and `EmitsExternalEventCheckAfter`), the label names and the local variable suffixes.
 
 `MethodEmitter.Emit` then works over that plan like this:
-1. lower every node into an `EmittedCode` (a statement tree), without writing any text;
-2. collect the goto targets: every `GotoStatement.Target` found with `StatementWalker.Descendants`, and whether a `GotoEntryDispatcherStatement` exists (in which case the `entrydispatcher:` label is written);
-3. render: write a label only for nodes that are goto targets, then render each node.
+1. build the method AST without writing any text: the entry dispatch (`BuildEntryDispatch`) and one `InstructionBoundaryNode` per node (`BuildBoundary`), whose body is the event check, the speculative guard, the asm comment and the lowered instruction;
+2. collect the goto targets with `GotoTargetCollector`: every `GotoNode` target, and whether a `CyclicJumpNode` exists (in which case the `entrydispatcher:` label is written);
+3. insert a `LabelNode` only before the nodes that are goto targets;
+4. print the method with `CSharpStatementPrinter`.
 
-`MethodEmitter` throws `InvalidOperationException` when the last emitted node of a method can still complete normally, because such a body would fall off its end.
+`MethodEmitter` throws `InvalidOperationException` when the method body can still complete normally (`CompletesNormallyVisitor`), because such a body would fall off its end.
 
 ### Block layout
 
 Blocks are emitted in reverse post-order of a depth-first traversal that starts at the primary entry block (`GenerationPlanBuilder.BuildMethodPlan`). Successors are visited non-fallthrough first, in descending address order, and the fallthrough successor last (`GenerationPlanBuilder.LayoutSuccessors`), so the fallthrough block is usually placed right after its predecessor and needs no `goto`. The primary entry is always the first emitted node, so a single-entry method needs no jump at its start.
 
-### Statement tree
+### Method AST
 
-The intermediate representation between lowering and printing, one record per C# statement shape in `Model/Statement/`:
+One method is one AST. Its leaves are the instruction ASTs: the same runtime nodes the interpreter and the JIT use (`BlockNode`, `IfElseNode`, `WhileNode`, registers, memory, ALU calls, ...). Everything that only generated code needs is a code-generation node in `CfgCodeGeneration/Ast/`, visited through `ICodeGenerationAstVisitor<T>`:
 
-| record | what it is |
+| node | what it is |
 |---|---|
-| `LineStatement` | one source line; `Diverges` marks `return` / `goto` / `throw` lines that never fall through |
-| `BlockStatement` | a braced block with a header, e.g. `while (...)` or an `if` with no `else` |
-| `SwitchStatement` / `SwitchCase` | a `switch` over runtime-dispatched values with one body per case |
-| `GotoStatement` | a same-method jump to a target node; the label text is resolved at render time |
-| `GotoEntryDispatcherStatement` | a jump back to the method's entry dispatcher (cyclic cross-partition re-entry) |
-| `IfElseStatement` | an `if` with an optional `else`; the `else` is rendered only when the false body is non-empty |
-| `TryCatchStatement` | a `try` body plus one `catch` block with a full header |
+| `InstructionBoundaryNode` | one CFG node: its event check, speculative guard, asm comment and lowered body; carries the local-variable suffix |
+| `GotoNode` / `LabelNode` | a same-method jump to a block entry, and its label; the label text is resolved when printing |
+| `EntryDispatcherLabelNode` / `CyclicJumpNode` | the `entrydispatcher:` label, and the cyclic cross-partition re-entry that jumps to it |
+| `SwitchNode` / `SwitchSection` / `BreakNode` | entry dispatch and near runtime dispatch; the printer never adds `break;`, `CodeGenerationAst.Section` does |
+| `ReturnNode` | `return` of an `Action`: `NearRet()`, `Hlt()`, `OtherMethod(0x0010)`, ... |
+| `CpuFaultTryCatchNode` / `CpuFaultHandler` | the `try/catch (CpuException)` of an instruction that faulted during discovery |
+| `FailAsUntestedNode` / `UntestedMessagePart` | a `throw FailAsUntested(...)`; the holes of the message are expression nodes |
+| `CheckExternalEventsNode`, `SpeculativeGuardNode`, `CommentNode`, `DivisionNode` | the helper calls and the comment of an instruction boundary, and the `Div16` / `IDiv16` tuple call |
+| `SegmentVariableNode`, `OffsetLiteralNode`, `InstructionPointerNode`, `LoadOffsetParameterNode`, `MethodGroupNode`, `SignatureFieldNode`, `ExplicitCastNode` | expression leaves: `cs1`, `0x0010`, `IP`, `loadOffset`, a method group or a `_ => M(0x0004)` lambda, a `Signature_...` field, a cast |
 
-`StatementItem.NestedBodies` plus `StatementWalker.Descendants` is how a pass finds nested statements without knowing the concrete record. The tree is transitional: it is meant to be replaced by one AST per method, so do not add new semantic fields or new analysis passes to it.
+Helper calls (`NearCall`, `InterruptCall`, `Callback`, `SelectorSignatureMatches`, ...) reuse the runtime `MethodCallNode` and `MethodCallValueNode`.
+
+Completion rules (`CompletesNormallyVisitor`): a sequence follows its last statement; an `if` completes when one of its arms does; a `while` always completes; a `switch` completes when a section ends with `break` or its default completes; `return`, `goto`, `throw`, `FailAsUntested`, the cyclic jump and `break` never complete.
+
+Rules for code that builds or walks the method AST:
+
+- Lowered code is an `IVisitableAstNode`; "nothing" is an empty `BlockNode`. Build sequences with `CodeGenerationAst.Sequence`, which flattens nested `BlockNode`s, and test emptiness with `CodeGenerationAst.IsEmpty`.
+- A lowered tree never contains runtime control-flow nodes (`JumpNearNode`, `CallNearNode`, `MoveIpNextNode`, ...). `CompletesNormallyVisitor` and `GotoTargetCollector` throw `InvalidOperationException` when they meet one.
+- Instruction ASTs are shared with the interpreter and the JIT. A rewrite builds new nodes and never changes an existing one; returning an unchanged expression node is allowed because the nodes are immutable.
+- A cast the generator adds is an `ExplicitCastNode`, which prints like `CSharpExpressionPrinter.Cast` and never folds constants. `TypeConversionNode` folds constants; it is only for conversions that come from the instruction AST.
+- A new code-generation node is added to `ICodeGenerationAstVisitor<T>`, so every visitor (`CSharpExpressionPrinter`, `CompletesNormallyVisitor`, `GotoTargetCollector`) must decide what to do with it. `CSharpStatementPrinter` is a type switch: a new statement node needs its own case there.
+- `CSharpStatementPrinter` and `CSharpExpressionPrinter` are the only producers of generated code text. No node holds generated code as a string; identifiers and comment text are not code.
 
 ### Edge lowering
 
@@ -100,7 +116,7 @@ Every jump/call/return in the original assembly becomes a "resolved CFG edge" - 
 
 `CheckExternalEvents(cs, ip)` tells the emulator to deliver pending interrupts and advance emulated time. It is emitted in exactly three places:
 
-1. at the entry of every method entry block; for an entry that sits in the middle of a block, inside its `switch (loadOffset)` case, before the `goto` (`MethodEmitter.EmitEntryDispatch` / `MethodEmitter.EntryEventCheck`);
+1. at the entry of every method entry block; for an entry that sits in the middle of a block, inside its `switch (loadOffset)` case, before the `goto` (`MethodEmitter.BuildEntryDispatch` / `MethodEmitter.EntryEventCheck`);
 2. at the entry of every block that is the target of a retreating edge of the layout traversal (loop heads), so every repeating path passes a check;
 3. after the body of an instruction that may enable interrupts (`sti`, `popf`, `popfd`), detected on the instruction AST by `InterruptEnableDetectorVisitor` (`sahf` does not count), unless its fallthrough block already checks at its entry.
 
@@ -119,7 +135,7 @@ The generated class derives from `CSharpOverrideHelper`, which provides:
 
 ### Naming
 
-Labels are `L_<offset>` (for example `L_0003`), unique per method; the node id is appended only when two nodes of the method share an offset (self-modifying code). Temps use the instruction offset as suffix, per method, with the same collision rule (for example `popDestinationCheck_0073`). Signature fields are `private static readonly byte?[] Signature_<offset>_<mnemonic>` (for example `Signature_0019_jne`), one per instruction, same collision rule. The mnemonic comes from `InstructionMnemonic`, and the collision rule itself is `DisambiguatedNames.Build`, called from `GenerationPlanBuilder` for labels and local suffixes and from `GeneratorAnalysis` for signature fields. Every `throw FailAsUntested(...)` line comes from `UntestedMessages`, one method per kind: `Jump`, `ConditionalFallthrough`, `FallthroughAfter`, `IndirectWithoutTargets`, `NearTarget`, `FarTarget`, `CodeVariant`, `ReturnFromCall`, `CpuFaultTarget`, `EntryOffset`.
+Labels are `L_<offset>` (for example `L_0003`), unique per method; the node id is appended only when two nodes of the method share an offset (self-modifying code). Temps use the instruction offset as suffix, per method, with the same collision rule (for example `popDestinationCheck_0073`). Signature fields are `private static readonly byte?[] Signature_<offset>_<mnemonic>` (for example `Signature_0019_jne`), one per instruction, same collision rule. The mnemonic comes from `InstructionMnemonic`, and the collision rule itself is `DisambiguatedNames.Build`, called from `GenerationPlanBuilder` for labels and local suffixes and from `GeneratorAnalysis` for signature fields. Every `FailAsUntestedNode` comes from `UntestedMessages`, one method per kind: `Jump`, `ConditionalFallthrough`, `FallthroughAfter`, `IndirectWithoutTargets`, `NearTarget`, `FarTarget`, `CodeVariant`, `CallbackTarget`, `ReturnFromCall`, `EntryOffset`.
 
 ### Untested paths
 
@@ -141,7 +157,7 @@ Use these before writing a new traversal, graph or naming helper:
 |---|---|---|
 | `PartitionBlockGraph` | `ControlFlowGraph/Analysis/` | blocks, entries, successors, predecessors and fallthrough successor of one partition |
 | `DepthFirstOrdering<T>` and `GraphEdge<T>` | `Graph/` | post-order, reverse post-order and retreating edges for any successor function |
-| `StatementItem.NestedBodies` + `StatementWalker` | `CfgCodeGeneration/Model/Statement/` | pre-order walk of the statement tree |
+| `CodeGenerationAst`, `CompletesNormallyVisitor`, `GotoTargetCollector` | `CfgCodeGeneration/Ast/` | statement sequences and switch sections, completion analysis and goto targets of a lowered tree |
 | `InterruptEnableDetectorVisitor` / `StatementPredicateVisitor` | `CPU/CfgCpu/Ast/Visitor/` | boolean predicates over an instruction AST, searching statement containers recursively |
 | `DisambiguatedNames` and `InstructionMnemonic` | `CfgCodeGeneration/Naming/` | collision-free names from a base name plus a suffix; an instruction mnemonic as an identifier token |
 
@@ -152,46 +168,42 @@ The dependency rule is `CfgCodeGeneration -> ControlFlowGraph.Analysis -> Graph`
 ```
 CfgCodeGeneration/
 |-- CfgCSharpDumper.cs              writes the generated override file to the recording directory
-|-- CfgCSharpGenerator.cs           top-level orchestrator: analyze -> plan -> lower -> render
+|-- CfgCSharpGenerator.cs           top-level orchestrator: analyze -> plan -> build method ASTs -> print
 |-- CfgGeneratorContext.cs          frozen lookup table shared by every stage
-|-- CpuFaultWrapper.cs              try/catch(CpuException) + DispatchCpuFault for faulting instructions
-|-- CSharpAstEmitter.cs             lowers the instruction AST into C# statements and expressions
+|-- CpuFaultWrapper.cs              wraps a faulting instruction in a CpuFaultTryCatchNode
+|-- CSharpExpressionPrinter.cs      prints expression nodes as C# fragments: casts, precedence, constants
 |-- CSharpSourceWriter.cs           indentation, braces and line buffer
+|-- CSharpStatementPrinter.cs       prints a method AST as C# statements
 |-- DivisionPattern.cs              recognizes the DIV/IDIV statement pattern and carries its operands
-|-- EmittedCodeRenderer.cs          dumb printer over the statement tree
 |-- GeneratedProjectScaffolder.cs   csproj + Program.cs scaffold for a runnable project
 |-- GenerationPlanBuilder.cs        builds the plan (fields, registrations, per-method plans)
 |-- GeneratorAnalysis.cs            first pass: names, transfers, signature bytes
-|-- MethodEmitter.cs                drives per-method emission
-|-- TransferEmitter.cs              lowers one CFG edge to goto / return / dispatcher / call
-|-- UntestedMessages.cs             the throw FailAsUntested(...) messages
+|-- InstructionLowerer.cs           lowers an instruction AST; control flow becomes code-generation nodes
+|-- MethodEmitter.cs                builds one AST per method, then prints it
+|-- TransferEmitter.cs              lowers one CFG edge to goto / return / dispatcher / call nodes
+|-- UntestedMessages.cs             the FailAsUntested nodes, one per untested situation
+|-- Ast/
+|   |-- ICodeGenerationAstVisitor.cs    visitor over runtime and code-generation nodes
+|   |-- CodeGenerationNode.cs           the Accept rule shared by the code-generation nodes
+|   |-- CodeGenerationAst.cs            Sequence / Empty / IsEmpty / Section helpers
+|   |-- CompletesNormallyVisitor.cs     completion analysis of a lowered tree
+|   |-- GotoTargetCollector.cs          goto targets of a lowered tree
+|   |-- GotoTargets.cs                  target labels + entry dispatcher flag
+|   `-- *Node.cs, SwitchSection.cs, CpuFaultHandler.cs, UntestedMessagePart.cs
+|                                       the code-generation nodes (see "Method AST")
 |-- Model/
 |   |-- CallContinuation.cs         expected return address + observed post-call edge
-|   |-- CSharpFragment.cs           a rendered expression with its type and precedence
-|   |-- EmittedCode.cs              expression-or-statements result of lowering
-|   |-- ExpressionCode.cs           the expression arm of EmittedCode
+|   |-- CSharpFragment.cs           a printed expression with its type and precedence
 |   |-- GeneratedCSharpProgram.cs   the produced source text
 |   |-- GeneratedOverrideNames.cs   namespace, class and file names baked into the output
 |   |-- ResolvedCfgEdge.cs          a source/target edge with its successor kind
-|   |-- StatementsCode.cs           the statement-sequence arm of EmittedCode
-|   |-- Plan/
-|   |   |-- GenerationPlan.cs       segment fields, signature fields, registrations, methods
-|   |   |-- MethodPlan.cs           one method: blocks, nodes, labels, traversal, entry dispatch
-|   |   |-- NodeEmissionPlan.cs     per-node emission decisions
-|   |   |-- OverrideRegistration.cs one DefineFunctionWithoutInterpreterFallback registration
-|   |   |-- SegmentFieldPlan.cs     one segment field declaration
-|   |   `-- SignatureFieldPlan.cs   one byte?[] signature field
-|   `-- Statement/
-|       |-- BlockStatement.cs
-|       |-- GotoEntryDispatcherStatement.cs
-|       |-- GotoStatement.cs
-|       |-- IfElseStatement.cs
-|       |-- LineStatement.cs
-|       |-- StatementItem.cs        base record: CompletesNormally + NestedBodies
-|       |-- StatementWalker.cs      pre-order traversal
-|       |-- SwitchCase.cs
-|       |-- SwitchStatement.cs
-|       `-- TryCatchStatement.cs
+|   `-- Plan/
+|       |-- GenerationPlan.cs       segment fields, signature fields, registrations, methods
+|       |-- MethodPlan.cs           one method: blocks, nodes, labels, traversal, entry dispatch
+|       |-- NodeEmissionPlan.cs     per-node emission decisions
+|       |-- OverrideRegistration.cs one DefineFunctionWithoutInterpreterFallback registration
+|       |-- SegmentFieldPlan.cs     one segment field declaration
+|       `-- SignatureFieldPlan.cs   one byte?[] signature field
 `-- Naming/
     |-- DisambiguatedNames.cs       base name + suffix disambiguation
     `-- InstructionMnemonic.cs      instruction mnemonic as an identifier token

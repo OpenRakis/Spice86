@@ -11,9 +11,9 @@ using Spice86.Shared.Emulator.Memory;
 using Xunit;
 
 /// <summary>
-/// Unit tests for constant literal rendering in <see cref="CSharpAstEmitter"/>.
+/// Unit tests for constant literal rendering in <see cref="CSharpExpressionPrinter"/>.
 /// </summary>
-public class CSharpAstEmitterConstantTest {
+public class CSharpExpressionPrinterConstantTest {
     public static TheoryData<DataType, ulong, string, bool> ConstantLiteralCases => new() {
         // BOOL
         { DataType.BOOL, 0UL, "false", true },
@@ -79,7 +79,7 @@ public class CSharpAstEmitterConstantTest {
         ConstantNode node = new(dataType, value);
 
         // Act
-        CSharpFragment fragment = CSharpAstEmitter.ConstantLiteral(node);
+        CSharpFragment fragment = CSharpExpressionPrinter.ConstantLiteral(node);
 
         // Assert
         fragment.Text.Should().Be(expectedText);

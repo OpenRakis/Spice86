@@ -1,49 +1,56 @@
 namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
-/// The generated <c>throw FailAsUntested(...)</c> lines, one per untested situation; each message keeps the address
-/// because the runtime log is where it is read.
+/// The generated <c>throw FailAsUntested(...)</c> statements, one per untested situation; each message keeps the
+/// address because the runtime log is where it is read.
 /// </summary>
 internal static class UntestedMessages {
     /// <summary>A conditional jump arm whose target was never observed.</summary>
-    public static string Jump(SegmentedAddress at) => $"throw FailAsUntested(\"Untested jump at {at}\");";
+    public static FailAsUntestedNode Jump(SegmentedAddress at) => Plain($"Untested jump at {at}");
 
     /// <summary>A conditional fallthrough arm that was never observed.</summary>
-    public static string ConditionalFallthrough(SegmentedAddress at) => $"throw FailAsUntested(\"Untested fallthrough at {at}\");";
+    public static FailAsUntestedNode ConditionalFallthrough(SegmentedAddress at) => Plain($"Untested fallthrough at {at}");
 
     /// <summary>A fallthrough after an instruction that was never observed.</summary>
-    public static string FallthroughAfter(SegmentedAddress at) => $"throw FailAsUntested(\"Untested fallthrough after {at}\");";
+    public static FailAsUntestedNode FallthroughAfter(SegmentedAddress at) => Plain($"Untested fallthrough after {at}");
 
     /// <summary>An indirect jump or call with no observed targets.</summary>
-    public static string IndirectWithoutTargets(string targetKind, SegmentedAddress at) => $"throw FailAsUntested(\"Untested indirect {targetKind} at {at}\");";
+    public static FailAsUntestedNode IndirectWithoutTargets(string targetKind, SegmentedAddress at) =>
+        Plain($"Untested indirect {targetKind} at {at}");
 
     /// <summary>Formats an already normalized near target in an untested-target failure.</summary>
-    public static string NearTarget(string targetKind, string targetExpression, SegmentedAddress at) {
-        string formattedTarget = targetExpression;
-        if (formattedTarget.Contains(':') || formattedTarget.Contains('?')) {
-            formattedTarget = $"({formattedTarget})";
-        }
-        return $"throw FailAsUntested($\"Untested near {targetKind} target 0x{{{formattedTarget}:X4}} at {at}\");";
-    }
+    public static FailAsUntestedNode NearTarget(string targetKind, ValueNode target, SegmentedAddress at) => new([
+        UntestedMessagePart.Literal($"Untested near {targetKind} target 0x"), UntestedMessagePart.Hole(target, "X4"),
+        UntestedMessagePart.Literal($" at {at}")]);
 
     /// <summary>A far jump or call with an unknown runtime target.</summary>
-    public static string FarTarget(string targetKind, string segmentVariable, string offsetVariable, SegmentedAddress at) =>
-        $"throw FailAsUntested($\"Untested far {targetKind} target {{{segmentVariable}:X4}}:{{{offsetVariable}:X4}} at {at}\");";
+    public static FailAsUntestedNode FarTarget(string targetKind, ValueNode segment, ValueNode offset, SegmentedAddress at) => new([
+        UntestedMessagePart.Literal($"Untested far {targetKind} target "), UntestedMessagePart.Hole(segment, "X4"),
+        UntestedMessagePart.Literal(":"), UntestedMessagePart.Hole(offset, "X4"), UntestedMessagePart.Literal($" at {at}")]);
 
     /// <summary>A self-modifying code selector with no matching signature.</summary>
-    public static string CodeVariant(SegmentedAddress at) => $"throw FailAsUntested(\"Untested code variant at {at}\");";
+    public static FailAsUntestedNode CodeVariant(SegmentedAddress at) => Plain($"Untested code variant at {at}");
 
     /// <summary>A callback whose handler moved CS:IP to a target discovery never observed.</summary>
-    public static string CallbackTarget(SegmentedAddress at) => $"throw FailAsUntested($\"Untested callback target {{CS:X4}}:{{IP:X4}} at {at}\");";
+    public static FailAsUntestedNode CallbackTarget(SegmentedAddress at) => new([
+        UntestedMessagePart.Literal("Untested callback target "),
+        UntestedMessagePart.Hole(new SegmentRegisterNode((int)SegmentRegisterIndex.CsIndex), "X4"),
+        UntestedMessagePart.Literal(":"), UntestedMessagePart.Hole(new InstructionPointerNode(), "X4"),
+        UntestedMessagePart.Literal($" at {at}")]);
 
     /// <summary>A call that returned but no continuation was observed during discovery.</summary>
-    public static string ReturnFromCall(SegmentedAddress at) => $"throw FailAsUntested(\"Untested return from call at {at}\");";
-
-    /// <summary>A CPU fault with an unknown target.</summary>
-    public static string CpuFaultTarget(SegmentedAddress at) => $"throw FailAsUntested($\"Untested CPU fault target {{cpuFaultTarget}} at {at}\");";
+    public static FailAsUntestedNode ReturnFromCall(SegmentedAddress at) => Plain($"Untested return from call at {at}");
 
     /// <summary>An entry dispatch with an unknown load offset.</summary>
-    public static string EntryOffset() => "throw FailAsUntested($\"Untested entry offset 0x{loadOffset:X4}\");";
+    public static FailAsUntestedNode EntryOffset() => new([
+        UntestedMessagePart.Literal("Untested entry offset 0x"), UntestedMessagePart.Hole(new LoadOffsetParameterNode(), "X4")]);
+
+    private static FailAsUntestedNode Plain(string message) => new([UntestedMessagePart.Literal(message)]);
 }

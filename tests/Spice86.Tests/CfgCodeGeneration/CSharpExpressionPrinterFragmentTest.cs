@@ -8,41 +8,24 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
-using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 
 using Xunit;
 
 /// <summary>
-/// Locks in the behavior-preserving contract for the expression arm of <see cref="EmittedCode"/>: the
-/// fragment <see cref="CSharpAstEmitter"/> returns for an expression-shaped node must render exactly the
-/// expected text for representative AST nodes (register, memory, binary op, constant). The fragment is a
-/// transparent carrier of the rendered text. Expression lowering reads no CFG context, so the emitter is
-/// built over an empty context.
+/// Locks in the behavior-preserving contract of <see cref="CSharpExpressionPrinter"/>: the fragment it
+/// returns for an expression-shaped node must render exactly the expected text for representative AST nodes
+/// (register, memory, binary op, constant). The fragment is a transparent carrier of the rendered text.
 /// </summary>
-public class CSharpAstEmitterFragmentTest {
-    private readonly CSharpAstEmitter _emitter = CreateExpressionEmitter();
-
-    private static CSharpAstEmitter CreateExpressionEmitter() {
-        CfgPartitionedProgram program = new() { Partitions = [], Transfers = [] };
-        CfgGeneratorContext context = new(
-            program,
-            partitionByNode: new(),
-            methodNames: new(),
-            partitionBaseNames: new(),
-            segmentVariables: new(),
-            transfersByEdge: new(),
-            entriesByPartition: new(),
-            blockEntryByAddress: new(),
-            signatureFields: []);
-        return new CSharpAstEmitter(context, new TransferEmitter(context));
-    }
+public class CSharpExpressionPrinterFragmentTest {
+    private readonly CSharpExpressionPrinter _printer = new(new Dictionary<ushort, string>());
 
     [Fact]
     public void RegisterNodeRendersBareRegisterName() {
         RegisterNode register = new(DataType.UINT16, 0); // AX
 
-        CSharpFragment fragment = register.Accept(_emitter).AsExpression();
+        CSharpFragment fragment = _printer.Print(register);
 
         fragment.Text.Should().Be("AX");
     }
@@ -51,7 +34,7 @@ public class CSharpAstEmitterFragmentTest {
     public void ConstantNodeRendersUnprefixedLiteral() {
         ConstantNode constant = new(DataType.UINT16, 0x111C);
 
-        CSharpFragment fragment = constant.Accept(_emitter).AsExpression();
+        CSharpFragment fragment = _printer.Print(constant);
 
         fragment.Text.Should().Be("0x111C");
     }
@@ -62,7 +45,7 @@ public class CSharpAstEmitterFragmentTest {
         ConstantNode offset = new(DataType.UINT16, 0x50);
         SegmentedPointerNode pointer = new(DataType.UINT16, segment, null, offset);
 
-        CSharpFragment fragment = pointer.Accept(_emitter).AsExpression();
+        CSharpFragment fragment = _printer.Print(pointer);
 
         // A constant offset is emitted directly (the indexer has a ushort overload), not wrapped in (uint).
         fragment.Text.Should().Be("UInt16[DS, 0x0050]");
@@ -74,7 +57,7 @@ public class CSharpAstEmitterFragmentTest {
         ConstantNode right = new(DataType.UINT16, 0x1);
         BinaryOperationNode addition = new(DataType.UINT16, left, BinaryOperation.PLUS, right);
 
-        CSharpFragment fragment = addition.Accept(_emitter).AsExpression();
+        CSharpFragment fragment = _printer.Print(addition);
 
         // Redundant outer parentheses are dropped; precedence-required ones are kept.
         fragment.Text.Should().Be("AX + 1");
@@ -85,7 +68,7 @@ public class CSharpAstEmitterFragmentTest {
         ConstantNode inner = new(DataType.INT16, 0xFFFE); // -2
         UnaryOperationNode negate = new(DataType.INT16, UnaryOperation.NEGATE, inner);
 
-        CSharpFragment fragment = negate.Accept(_emitter).AsExpression();
+        CSharpFragment fragment = _printer.Print(negate);
 
         fragment.Text.Should().Be("-(-2)");
     }
@@ -94,7 +77,7 @@ public class CSharpAstEmitterFragmentTest {
     public void FragmentTextEqualsToString() {
         ConstantNode constant = new(DataType.UINT16, 0x2A);
 
-        CSharpFragment fragment = constant.Accept(_emitter).AsExpression();
+        CSharpFragment fragment = _printer.Print(constant);
 
         fragment.ToString().Should().Be(fragment.Text);
     }
@@ -103,7 +86,7 @@ public class CSharpAstEmitterFragmentTest {
     public void FlagEqualToTrueRendersBareFlag() {
         BinaryOperationNode comparison = new(DataType.BOOL, new CpuFlagNode(Flags.Zero), BinaryOperation.EQUAL, new ConstantNode(DataType.BOOL, 1));
 
-        CSharpFragment fragment = comparison.Accept(_emitter).AsExpression();
+        CSharpFragment fragment = _printer.Print(comparison);
 
         fragment.Text.Should().Be("ZeroFlag");
     }
@@ -112,7 +95,7 @@ public class CSharpAstEmitterFragmentTest {
     public void FlagEqualToFalseRendersNegatedFlag() {
         BinaryOperationNode comparison = new(DataType.BOOL, new CpuFlagNode(Flags.Zero), BinaryOperation.EQUAL, new ConstantNode(DataType.BOOL, 0));
 
-        CSharpFragment fragment = comparison.Accept(_emitter).AsExpression();
+        CSharpFragment fragment = _printer.Print(comparison);
 
         fragment.Text.Should().Be("!ZeroFlag");
     }
@@ -121,7 +104,7 @@ public class CSharpAstEmitterFragmentTest {
     public void FlagNotEqualToTrueRendersNegatedFlag() {
         BinaryOperationNode comparison = new(DataType.BOOL, new CpuFlagNode(Flags.Zero), BinaryOperation.NOT_EQUAL, new ConstantNode(DataType.BOOL, 1));
 
-        CSharpFragment fragment = comparison.Accept(_emitter).AsExpression();
+        CSharpFragment fragment = _printer.Print(comparison);
 
         fragment.Text.Should().Be("!ZeroFlag");
     }
@@ -130,7 +113,7 @@ public class CSharpAstEmitterFragmentTest {
     public void TrueEqualToFlagRendersBareFlag() {
         BinaryOperationNode comparison = new(DataType.BOOL, new ConstantNode(DataType.BOOL, 1), BinaryOperation.EQUAL, new CpuFlagNode(Flags.Zero));
 
-        CSharpFragment fragment = comparison.Accept(_emitter).AsExpression();
+        CSharpFragment fragment = _printer.Print(comparison);
 
         fragment.Text.Should().Be("ZeroFlag");
     }
@@ -139,7 +122,7 @@ public class CSharpAstEmitterFragmentTest {
     public void WordEqualToZeroKeepsComparison() {
         BinaryOperationNode comparison = new(DataType.BOOL, new RegisterNode(DataType.UINT16, 1), BinaryOperation.EQUAL, new ConstantNode(DataType.UINT16, 0));
 
-        CSharpFragment fragment = comparison.Accept(_emitter).AsExpression();
+        CSharpFragment fragment = _printer.Print(comparison);
 
         fragment.Text.Should().Be("CX == 0");
     }
@@ -195,13 +178,31 @@ public class CSharpAstEmitterFragmentTest {
     public void Int32MinValueDisplacementKeepsAddition() {
         BinaryOperationNode sum = new(DataType.UINT32, new RegisterNode(DataType.UINT32, 3), BinaryOperation.PLUS, new ConstantNode(DataType.INT32, 0x80000000));
 
-        CSharpFragment fragment = sum.Accept(_emitter).AsExpression();
+        CSharpFragment fragment = _printer.Print(sum);
 
         fragment.Text.Should().Be("EBX + int.MinValue");
     }
 
+    [Fact]
+    public void ExplicitCastKeepsAConstantUnfolded() {
+        ExplicitCastNode cast = new(DataType.UINT8, new ConstantNode(DataType.UINT16, 0x21));
+
+        CSharpFragment fragment = _printer.Print(cast);
+
+        fragment.Text.Should().Be("(byte)0x0021");
+    }
+
+    [Fact]
+    public void ExplicitCastToTheValueTypePrintsTheValue() {
+        ExplicitCastNode cast = new(DataType.UINT16, new RegisterNode(DataType.UINT16, 0));
+
+        CSharpFragment fragment = _printer.Print(cast);
+
+        fragment.Text.Should().Be("AX");
+    }
+
     private CSharpFragment StackWord(ValueNode offset) {
         SegmentedPointerNode pointer = new(DataType.UINT16, new SegmentRegisterNode(2), null, offset);
-        return pointer.Accept(_emitter).AsExpression();
+        return _printer.Print(pointer);
     }
 }

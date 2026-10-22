@@ -28,9 +28,9 @@ internal sealed class CfgCSharpGenerator {
         CfgGeneratorContext context = analysis.Context;
         GenerationPlan plan = GenerationPlanBuilder.Build(context);
         TransferEmitter transferEmitter = new(context);
-        CSharpAstEmitter astEmitter = new(context, transferEmitter);
+        InstructionLowerer lowerer = new(context, transferEmitter);
         CpuFaultWrapper cpuFaultWrapper = new(context, transferEmitter);
-        MethodEmitter methodEmitter = new(context, cpuFaultWrapper, astEmitter, _assemblyRenderer);
+        MethodEmitter methodEmitter = new(context, cpuFaultWrapper, lowerer, _assemblyRenderer);
 
         CSharpSourceWriter writer = new();
         EmitHeader(writer);

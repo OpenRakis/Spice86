@@ -4,7 +4,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 
 /// <summary>
-/// A piece of generated C# emitted by <see cref="CSharpAstEmitter"/> for an execution-AST node. It carries
+/// A piece of generated C# printed by <see cref="CSharpExpressionPrinter"/> for an execution-AST node. It carries
 /// the rendered text plus the context needed to avoid redundant casts and parentheses:
 /// <list type="bullet">
 /// <item><see cref="Type"/>: the C# data type the expression evaluates to, or <c>null</c> when unknown
