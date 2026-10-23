@@ -31,6 +31,8 @@ internal sealed class GotoTargetCollector : ICodeGenerationAstVisitor<GotoTarget
 
     public GotoTargets VisitWhileNode(WhileNode node) => Collect(node.Body);
 
+    public GotoTargets VisitWhileWithExitNode(WhileWithExitNode node) => Collect(node.Body);
+
     public GotoTargets VisitSwitchNode(SwitchNode node) {
         GotoTargets targets = GotoTargets.None;
         foreach (SwitchSection section in node.Sections) {

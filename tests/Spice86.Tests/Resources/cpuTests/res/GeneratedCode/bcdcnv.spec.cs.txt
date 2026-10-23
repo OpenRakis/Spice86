@@ -141,7 +141,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool finalCarryFlag_0036 = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
             AX = (ushort)(AX - 6);
-            AH = (byte)(AH - 1);
+            AH--;
             finalAuxiliaryFlag_0036 = true;
             finalCarryFlag_0036 = true;
         }
@@ -161,7 +161,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool finalCarryFlag_003E = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
             AX = (ushort)(AX - 6);
-            AH = (byte)(AH - 1);
+            AH--;
             finalAuxiliaryFlag_003E = true;
             finalCarryFlag_003E = true;
         }
@@ -186,7 +186,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool finalCarryFlag_0048 = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
             AX = (ushort)(AX - 6);
-            AH = (byte)(AH - 1);
+            AH--;
             finalAuxiliaryFlag_0048 = true;
             finalCarryFlag_0048 = true;
         }
@@ -206,7 +206,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool finalCarryFlag_0050 = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
             AX = (ushort)(AX - 6);
-            AH = (byte)(AH - 1);
+            AH--;
             finalAuxiliaryFlag_0050 = true;
             finalCarryFlag_0050 = true;
         }
@@ -226,7 +226,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool finalCarryFlag_0058 = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
             AX = (ushort)(AX - 6);
-            AH = (byte)(AH - 1);
+            AH--;
             finalAuxiliaryFlag_0058 = true;
             finalCarryFlag_0058 = true;
         }

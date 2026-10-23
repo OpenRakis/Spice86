@@ -49,32 +49,13 @@ public class GeneratedCodeMetricsCollectorTest {
     }
 
     [Fact]
-    public void CountsShouldContinueDeclarationsOnly() {
-        // Arrange
-        string body = """
-            bool shouldContinue_0006 = true;
-            while (CX != 0 && shouldContinue_0006) {
-                shouldContinue_0006 = ZeroFlag;
-            }
-            bool shouldContinue_0008 = true;
-            bool keepGoing = true;
-            """;
-
-        // Act
-        GeneratedCodeMetrics metrics = CollectFromMethodBody(body);
-
-        // Assert
-        metrics.ShouldContinueTemps.Should().Be(2);
-    }
-
-    [Fact]
     public void HeaderPlacesNewColumnsBetweenTriesAndWarnings() {
         // Act
         string[] headers = GeneratedCodeMetrics.Header().Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
         // Assert
         headers.Should().Equal("fixture", "methods", "lines", "labels", "gotos", "gotoTgts", "extEvents",
-            "specGuard", "untested", "unchecked", "casts", "tries", "aluCalls", "flagReads", "contTemps",
+            "specGuard", "untested", "unchecked", "casts", "tries", "aluCalls", "flagReads",
             "warnings", "warningIds");
     }
 

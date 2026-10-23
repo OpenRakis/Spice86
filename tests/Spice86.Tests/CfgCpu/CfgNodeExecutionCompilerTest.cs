@@ -8,12 +8,14 @@ using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Shared.Utils;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
+using Spice86.Core.Emulator.CPU.Registers;
 
 using System.Linq.Expressions;
 using System.Threading;
@@ -30,7 +32,7 @@ public class CfgNodeExecutionCompilerTest {
     private static CfgNodeExecutionCompiler CreateCompiler() {
         ILogger loggerService = Substitute.For<ILogger>();
         CfgNodeExecutionCompilerMonitor monitor = new(loggerService);
-        return new CfgNodeExecutionCompiler(monitor, loggerService, JitMode.InterpretedThenCompiled);
+        return new CfgNodeExecutionCompiler(monitor, loggerService, JitMode.InterpretedThenCompiled, TestJitSettings.AluExpansion);
     }
 
     /// <summary>
@@ -72,6 +74,20 @@ public class CfgNodeExecutionCompilerTest {
         }
     }
 
+    private sealed class AluCallProbeNode : IVisitableAstNode {
+        public Expression? CompiledCall { get; private set; }
+
+        public T Accept<T>(IAstVisitor<T> astVisitor) {
+            if (astVisitor is not AstExpressionBuilder builder) {
+                throw new InvalidOperationException($"Unsupported visitor {astVisitor.GetType().Name}");
+            }
+            RegisterNode ax = new(DataType.UINT16, (int)RegisterIndex.AxIndex);
+            CompiledCall = new MethodCallValueNode(DataType.UINT16, "Alu16", "Add", ax, ax).Accept(builder);
+            object empty = Expression.Empty();
+            return (T)empty;
+        }
+    }
+
     [Fact]
     public void Compile_AssignsCompiledExecution() {
         // A SelectorNode AST produces a simple compiled delegate.
@@ -83,6 +99,38 @@ public class CfgNodeExecutionCompilerTest {
 
         // After Compile, the node should have a non-null CompiledExecution (at least the interpreted one).
         node.CompiledExecution.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Compile_KeepsAluCallsWhenExpansionIsOff() {
+        // Arrange
+        AluCallProbeNode probe = new();
+        FixedAstNode node = new FixedAstNode(new SegmentedAddress(0x6000, 0), probe);
+        ILogger loggerService = Substitute.For<ILogger>();
+        using CfgNodeExecutionCompiler compiler = new(new CfgNodeExecutionCompilerMonitor(loggerService), loggerService,
+            JitMode.InterpretedOnly, false);
+
+        // Act
+        compiler.Compile(node);
+
+        // Assert
+        probe.CompiledCall.Should().BeAssignableTo<MethodCallExpression>();
+    }
+
+    [Fact]
+    public void Compile_ExpandsAluCallsWhenExpansionIsOn() {
+        // Arrange
+        AluCallProbeNode probe = new();
+        FixedAstNode node = new FixedAstNode(new SegmentedAddress(0x6000, 0), probe);
+        ILogger loggerService = Substitute.For<ILogger>();
+        using CfgNodeExecutionCompiler compiler = new(new CfgNodeExecutionCompilerMonitor(loggerService), loggerService,
+            JitMode.InterpretedOnly, true);
+
+        // Act
+        compiler.Compile(node);
+
+        // Assert
+        probe.CompiledCall.Should().BeAssignableTo<BlockExpression>();
     }
 
     [Fact]
@@ -116,7 +164,7 @@ public class CfgNodeExecutionCompilerTest {
         // Inline monitor creation so we can observe TotalSwapped for reliable synchronisation.
         ILogger loggerService = Substitute.For<ILogger>();
         CfgNodeExecutionCompilerMonitor monitor = new(loggerService);
-        using CfgNodeExecutionCompiler compiler = new(monitor, loggerService, JitMode.InterpretedThenCompiled);
+        using CfgNodeExecutionCompiler compiler = new(monitor, loggerService, JitMode.InterpretedThenCompiled, TestJitSettings.AluExpansion);
 
         // Act: first Compile() enqueues background task for ast1.
         compiler.Compile(node);

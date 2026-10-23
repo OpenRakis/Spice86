@@ -51,7 +51,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:000B push CX
         Stack.Push16(CX);
         // F000:000C loop 0x000B
-        CX = (ushort)(CX - 1);
+        CX--;
         if (CX != 0) {
             goto L_000B;
         }
@@ -73,7 +73,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1290 mov CX,0xFFFF
         CX = 0xFFFF;
         // F000:1293 loope 0x1290
-        CX = (ushort)(CX - 1);
+        CX--;
         if (CX != 0 && ZeroFlag) {
             goto L_1290;
         }
@@ -85,7 +85,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(cs2, 0x129A);
         // F000:129A loope 0x129D
-        CX = (ushort)(CX - 1);
+        CX--;
         if (CX != 0 && ZeroFlag) {
             goto L_129D;
         }
@@ -135,12 +135,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // E342:EBE9 mov CX,1
         CX = 1;
         // E342:EBEC loopne 0xEBE9
-        CX = (ushort)(CX - 1);
+        CX--;
         if (CX != 0 && !ZeroFlag) {
             goto L_EBE9;
         }
         // E342:EBEE loopne 0xEBF1
-        CX = (ushort)(CX - 1);
+        CX--;
         if (CX != 0 && !ZeroFlag) {
             goto L_EBF1;
         }

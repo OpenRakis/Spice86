@@ -55,7 +55,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             UInt8[ES, DI] = UInt8[DS, SI];
             SI = (ushort)(SI + (ushort)State.Direction8);
             DI = (ushort)(DI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
+            CX--;
         }
         // F000:0023 mov word ptr ES:[0x9190],0xA55A
         UInt16[ES, 0x9190] = 0xA55A;

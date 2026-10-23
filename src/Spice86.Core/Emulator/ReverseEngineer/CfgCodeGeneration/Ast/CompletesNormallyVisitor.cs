@@ -32,6 +32,8 @@ internal sealed class CompletesNormallyVisitor : ICodeGenerationAstVisitor<bool>
 
     public bool VisitWhileNode(WhileNode node) => true;
 
+    public bool VisitWhileWithExitNode(WhileWithExitNode node) => true;
+
     public bool VisitSwitchNode(SwitchNode node) {
         foreach (SwitchSection section in node.Sections) {
             if (section.Body.Statements is { Count: > 0 } statements && statements[^1] is BreakNode) {

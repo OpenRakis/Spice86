@@ -29,7 +29,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_F000_0013_F0013(int loadOffset) {
         CheckExternalEvents(cs1, 0x0013);
         // F000:0013 inc byte ptr CS:[0x0024]
-        UInt8[CS, 0x0024] = Alu8.Inc(UInt8[CS, 0x0024]);
+        UInt8[CS, 0x0024] = (byte)(UInt8[CS, 0x0024] + 1);
         // F000:0018 cmp byte ptr CS:[0x0024],4
         Alu8.Sub(UInt8[CS, 0x0024], 4);
         // F000:001E jae short 0x0023

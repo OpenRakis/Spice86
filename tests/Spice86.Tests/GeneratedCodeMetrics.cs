@@ -27,8 +27,6 @@ internal sealed record GeneratedCodeMetrics {
     public required int AluCalls { get; init; }
     /// <summary>Reads of the six status flags (C, P, A, Z, S, O); assignments to them are not counted.</summary>
     public required int StatusFlagReads { get; init; }
-    /// <summary>Declarations of <c>shouldContinue*</c> locals emitted for <c>rep</c> loops with a zero-flag condition.</summary>
-    public required int ShouldContinueTemps { get; init; }
     public required int Warnings { get; init; }
     public required ImmutableArray<string> WarningIds { get; init; }
 
@@ -52,7 +50,6 @@ internal sealed record GeneratedCodeMetrics {
         ("tries", NumberWidth),
         ("aluCalls", NumberWidth),
         ("flagReads", NumberWidth),
-        ("contTemps", NumberWidth),
         ("warnings", NumberWidth),
         ("warningIds", 0)
     ];
@@ -78,7 +75,6 @@ internal sealed record GeneratedCodeMetrics {
             TryStatements.ToString(),
             AluCalls.ToString(),
             StatusFlagReads.ToString(),
-            ShouldContinueTemps.ToString(),
             Warnings.ToString(),
             warningIds
         ];

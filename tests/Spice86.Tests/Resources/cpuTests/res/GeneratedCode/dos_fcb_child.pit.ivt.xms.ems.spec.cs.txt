@@ -93,7 +93,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016E:0104 mov DX,0x030A
         DX = 0x030A;
         // 016E:0107 sub DX,0x0100
-        DX = Alu16.Sub(DX, 0x0100);
+        DX = (ushort)(DX - 0x0100);
         // 016E:010B add DX,0x030F
         DX = Alu16.Add(DX, 0x030F);
         // 016E:010F shr DX,4
@@ -218,13 +218,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016E:018B mov CX,0x0010
         CX = 0x0010;
         // 016E:018E repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
-        bool shouldContinue_018E = true;
-        while (CX != 0 && shouldContinue_018E) {
+        while (CX != 0) {
             Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
             SI = (ushort)(SI + (ushort)State.Direction8);
             DI = (ushort)(DI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
-            shouldContinue_018E = ZeroFlag;
+            CX--;
+            if (!ZeroFlag) {
+                break;
+            }
         }
         // 016E:0190 jne short 0x01B0
         if (!ZeroFlag) {
@@ -400,15 +401,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     entrydispatcher:
         CheckExternalEvents(cs3, 0x0090);
         // F000:0090 cmp AH,7
-        Alu8.Sub(AH, 7);
         // F000:0093 je short 0x00A4
-        if (ZeroFlag) {
+        if (AH == 7) {
             goto L_00A4;
         }
         // F000:0095 cmp AH,8
-        Alu8.Sub(AH, 8);
         // F000:0098 je short 0x00A4
-        if (ZeroFlag) {
+        if (AH == 8) {
             goto L_00A4;
         }
         // F000:009A cmp AH,0x0A

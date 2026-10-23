@@ -58,7 +58,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             UInt16[ES, DI] = UInt16[DS, SI];
             SI = (ushort)(SI + (ushort)State.Direction16);
             DI = (ushort)(DI + (ushort)State.Direction16);
-            CX = (ushort)(CX - 1);
+            CX--;
         }
         // F000:001A jmp near 0x1400
         // F000:1400 selector
@@ -96,7 +96,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1400 mov CX,1
         CX = 1;
         // F000:1403 inc CX
-        CX = Alu16.Inc(CX);
+        CX++;
         // F000:1404 inc CX
         CX = Alu16.Inc(CX);
         // F000:1405 push CX

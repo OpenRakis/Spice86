@@ -1,6 +1,7 @@
 ﻿namespace Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
@@ -33,9 +34,19 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     // Each scope is a dictionary mapping variable names to their ParameterExpressions
     private readonly Stack<Dictionary<string, ParameterExpression>> _variableScopes = new();
 
-    public AstExpressionBuilder() {
+    private readonly bool _expandAluCalls;
+
+    /// <summary>Creates a builder that compiles ALU calls as calls to the ALU.</summary>
+    public AstExpressionBuilder() : this(false) {
+    }
+
+    /// <summary>Creates a builder.</summary>
+    /// <param name="expandAluCalls">When true, the ALU calls <see cref="AluExpansionBuilder"/> can expand are compiled
+    /// as that expansion instead of a call to the ALU.</param>
+    public AstExpressionBuilder(bool expandAluCalls) {
         _registerRenderer = new RegisterRenderer(AsmRenderingConfig.CreateSpice86Style());
         _allParameters = [_stateParameter, _memoryParameter];
+        _expandAluCalls = expandAluCalls;
     }
 
     private static Type FromDataType(DataType dataType) {
@@ -349,8 +360,36 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     }
 
     public Expression VisitMethodCallValueNode(MethodCallValueNode node) {
-        // Delegate to the composed MethodCallNode
-        return VisitMethodCallNode(node.CallNode);
+        AluExpansion? expansion = _expandAluCalls ? AluExpansionBuilder.TryExpand(node) : null;
+        if (expansion is null) {
+            // Delegate to the composed MethodCallNode
+            return VisitMethodCallNode(node.CallNode);
+        }
+        return ExpansionToExpression(expansion);
+    }
+
+    private BlockExpression ExpansionToExpression(AluExpansion expansion) {
+        // Operands are built in the enclosing scope so that they cannot resolve to the expansion's own temps.
+        List<Expression> operandValues = expansion.Operands.Select(operand => operand.Initializer.Accept(this)).ToList();
+        Dictionary<string, ParameterExpression> expansionScope = new();
+        _variableScopes.Push(expansionScope);
+        try {
+            List<ParameterExpression> variables = RegisterVariablesInScope([.. expansion.Operands, expansion.Result], expansionScope);
+            List<Expression> expressions = [];
+            for (int i = 0; i < operandValues.Count; i++) {
+                Expression value = operandValues[i];
+                if (value.Type != variables[i].Type) {
+                    value = Expression.Convert(value, variables[i].Type);
+                }
+                expressions.Add(Expression.Assign(variables[i], value));
+            }
+            expressions.Add(expansion.Result.Accept(this));
+            expressions.AddRange(expansion.FlagAssignments.Select(assignment => assignment.ToAssignment().Accept(this)));
+            expressions.Add(variables[^1]);
+            return Expression.Block(variables, expressions);
+        } finally {
+            _variableScopes.Pop();
+        }
     }
 
     public Expression<Action<State, Memory>> ToAction(Expression expression) {
@@ -740,6 +779,23 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
             ),
             breakLabel
         );
+    }
+
+    public Expression VisitWhileWithExitNode(WhileWithExitNode node) {
+        Expression condition = node.Condition.Accept(this);
+        Expression exitCondition = node.ExitCondition.Accept(this);
+        if (condition.Type != typeof(bool) || exitCondition.Type != typeof(bool)) {
+            throw new InvalidOperationException(
+                $"While-with-exit conditions must be boolean, got {condition.Type.Name} and {exitCondition.Type.Name}");
+        }
+        Expression body = node.Body.Accept(this);
+        LabelTarget breakLabel = Expression.Label();
+        return Expression.Loop(
+            Expression.Block(
+                Expression.IfThen(Expression.Not(condition), Expression.Break(breakLabel)),
+                body,
+                Expression.IfThen(exitCondition, Expression.Break(breakLabel))),
+            breakLabel);
     }
 
     private List<ParameterExpression> RegisterVariablesInScope(

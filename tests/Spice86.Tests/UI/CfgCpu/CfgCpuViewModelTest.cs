@@ -85,7 +85,7 @@ public class CfgCpuViewModelTest : IDisposable {
             EmulatorBreakpointsManager breakpointsManager = new(_pauseHandler, State, Memory, memoryBreakpoints, ioBreakpoints);
             InstructionReplacerRegistry replacerRegistry = new();
             _monitor = new CfgNodeExecutionCompilerMonitor(_loggerService);
-            _compiler = new CfgNodeExecutionCompiler(_monitor, _loggerService, JitMode.InterpretedOnly);
+            _compiler = new CfgNodeExecutionCompiler(_monitor, _loggerService, JitMode.InterpretedOnly, false);
             SequentialIdAllocator sharedIdAllocator = new();
             CfgNodeFeeder cfgNodeFeeder = new(Memory, State, breakpointsManager, replacerRegistry, _compiler, sharedIdAllocator, enableSpeculativeExploration: false);
             Linker = new NodeLinker(replacerRegistry, _compiler, sharedIdAllocator);

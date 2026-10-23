@@ -248,9 +248,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:01E4 mov AX,ES
         AX = ES;
         // 016D:01E6 cmp AX,0x9FFF
-        Alu16.Sub(AX, 0x9FFF);
         // 016D:01E9 je short 0x0201
-        if (ZeroFlag) {
+        if (AX == 0x9FFF) {
             goto L_0201;
         }
         // 016D:01EB cmp byte ptr ES:[0],0x4D
@@ -268,7 +267,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:01FB mov ES,DX
         ES = DX;
         // 016D:01FD loop 0x01E4
-        CX = (ushort)(CX - 1);
+        CX--;
         if (CX != 0) {
             goto L_01E4;
         }
@@ -449,15 +448,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_F000_0090_F0090(int loadOffset) {
         CheckExternalEvents(cs2, 0x0090);
         // F000:0090 cmp AH,7
-        Alu8.Sub(AH, 7);
         // F000:0093 je short 0x00A4
-        if (ZeroFlag) {
+        if (AH == 7) {
             goto L_00A4;
         }
         // F000:0095 cmp AH,8
-        Alu8.Sub(AH, 8);
         // F000:0098 je short 0x00A4
-        if (ZeroFlag) {
+        if (AH == 8) {
             goto L_00A4;
         }
         // F000:009A cmp AH,0x0A

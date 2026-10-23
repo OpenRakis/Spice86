@@ -61,13 +61,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:003B mov BX,word ptr CS:[0x0100]
         BX = UInt16[CS, 0x0100];
         // F000:0040 inc BX
-        BX = Alu16.Inc(BX);
+        BX++;
         // F000:0041 mov word ptr CS:[0x0100],BX
         UInt16[CS, 0x0100] = BX;
         // F000:0046 cmp BX,3
-        Alu16.Sub(BX, 3);
         // F000:0049 jne short 0x0052
-        if (!ZeroFlag) {
+        if (BX != 3) {
             goto L_0052;
         }
         // F000:004B mov word ptr CS:[0x0102],5

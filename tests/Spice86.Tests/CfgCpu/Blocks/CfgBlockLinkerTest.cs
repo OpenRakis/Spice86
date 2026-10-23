@@ -33,7 +33,7 @@ public class CfgBlockLinkerTest : IDisposable {
     public CfgBlockLinkerTest() {
         ILogger loggerService = Substitute.For<ILogger>();
         _monitor = new CfgNodeExecutionCompilerMonitor(loggerService);
-        _compiler = new CfgNodeExecutionCompiler(_monitor, loggerService, JitMode.InterpretedOnly);
+        _compiler = new CfgNodeExecutionCompiler(_monitor, loggerService, JitMode.InterpretedOnly, TestJitSettings.AluExpansion);
         _linker = new NodeLinker(new InstructionReplacerRegistry(), _compiler, new SequentialIdAllocator());
     }
 

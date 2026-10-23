@@ -72,7 +72,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:002B mov BX,word ptr DS:[0]
         BX = UInt16[DS, 0];
         // F000:002F inc word ptr DS:[0]
-        UInt16[DS, 0] = Alu16.Inc(UInt16[DS, 0]);
+        UInt16[DS, 0] = (ushort)(UInt16[DS, 0] + 1);
         // F000:0033 cmp BX,0
         Alu16.Sub(BX, 0);
         // F000:0036 je short 0x0042

@@ -84,7 +84,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0108 or AL,AL
         AL = Alu8.Or(AL, AL);
         // 016D:010A je short 0x0100
-        if (ZeroFlag) {
+        if (AL == 0) {
             goto L_0100;
         }
         // 016D:010C mov AH,7

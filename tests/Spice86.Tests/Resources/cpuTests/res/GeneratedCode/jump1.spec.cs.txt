@@ -163,7 +163,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(cs1, 0x0052);
         // F000:0052 jge short 0x0056
-        if (!(SignFlag == OverflowFlag)) {
+        if (SignFlag != OverflowFlag) {
             goto L_0054;
         }
         // F000:0056 jl short 0x0054
@@ -178,7 +178,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(cs1, 0x005D);
         // F000:005D jl short 0x0061
-        if (!(SignFlag != OverflowFlag)) {
+        if (SignFlag == OverflowFlag) {
             goto L_005F;
         }
         // F000:0061 push CX

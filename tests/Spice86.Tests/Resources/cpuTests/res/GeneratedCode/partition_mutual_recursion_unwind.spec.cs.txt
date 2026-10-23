@@ -33,7 +33,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0015 dec CX
         CX = Alu16.Dec(CX);
         // F000:0016 je short 0x001A
-        if (ZeroFlag) {
+        if (CX == 0) {
             goto L_001A;
         }
         // F000:0018 jmp short 0x0025
@@ -59,7 +59,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0025 dec CX
         CX = Alu16.Dec(CX);
         // F000:0026 je short 0x002A
-        if (ZeroFlag) {
+        if (CX == 0) {
             goto L_002A;
         }
         // F000:0028 jmp short 0x0015

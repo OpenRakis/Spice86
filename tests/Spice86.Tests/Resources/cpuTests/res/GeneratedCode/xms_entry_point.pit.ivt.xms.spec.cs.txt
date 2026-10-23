@@ -81,7 +81,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0107 or AX,BX
         AX = Alu16.Or(AX, BX);
         // 016D:0109 je short 0x010F
-        if (ZeroFlag) {
+        if (AX == 0) {
             goto L_010F;
         }
         // 016D:010B mov AL,0

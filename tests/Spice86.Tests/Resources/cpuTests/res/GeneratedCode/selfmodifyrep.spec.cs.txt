@@ -32,7 +32,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 xor AX,AX
-        AX = Alu16.Xor(AX, AX);
+        AX = 0;
         // F000:0002 mov SS,AX
         SS = AX;
         State.InterruptShadowing = true;
@@ -70,7 +70,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             UInt8[ES, DI] = UInt8[DS, SI];
             SI = (ushort)(SI + (ushort)State.Direction8);
             DI = (ushort)(DI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
+            CX--;
         }
         goto L_001E;
     L_001C_14:
@@ -78,11 +78,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         while (CX != 0) {
             UInt8[ES, DI] = AL;
             DI = (ushort)(DI + (ushort)State.Direction8);
-            CX = (ushort)(CX - 1);
+            CX--;
         }
     L_001E:
         // F000:001E inc byte ptr DS:[0x0020]
-        UInt8[DS, 0x0020] = Alu8.Inc(UInt8[DS, 0x0020]);
+        UInt8[DS, 0x0020] = (byte)(UInt8[DS, 0x0020] + 1);
         // F000:0022 cmp byte ptr DS:[0x0020],2
         Alu8.Sub(UInt8[DS, 0x0020], 2);
         // F000:0027 je short 0x0033

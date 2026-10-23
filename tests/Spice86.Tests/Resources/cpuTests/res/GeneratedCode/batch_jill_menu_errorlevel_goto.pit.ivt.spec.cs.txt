@@ -95,22 +95,20 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 0160:0102 int 0x21
         InterruptCall(cs1, 0x0104, 0x21);
         // 0160:0104 cmp AL,0x61
-        Alu8.Sub(AL, 0x61);
         // 0160:0106 jb short 0x010E
-        if (CarryFlag) {
+        if (AL < 0x61) {
             goto L_010E;
         }
         VerifySpeculativeEntryOrFail(cs1, 0x0108, Signature_0108_cmp);
         // 0160:0108 cmp AL,0x7A
-        Alu8.Sub(AL, 0x7A);
         VerifySpeculativeEntryOrFail(cs1, 0x010A, Signature_010A_ja);
         // 0160:010A ja short 0x010E
-        if (!CarryFlag && !ZeroFlag) {
+        if (AL > 0x7A) {
             goto L_010E;
         }
         VerifySpeculativeEntryOrFail(cs1, 0x010C, Signature_010C_sub);
         // 0160:010C sub AL,0x20
-        AL = Alu8.Sub(AL, 0x20);
+        AL = (byte)(AL - 0x20);
     L_010E:
         // 0160:010E cmp AL,0x31
         Alu8.Sub(AL, 0x31);

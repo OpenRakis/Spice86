@@ -365,6 +365,14 @@ public sealed class Configuration : CommandSettings {
     public bool AllowIvtAddress0 { get; init; }
 
     /// <summary>
+    /// When true, the JIT executes the <c>Add</c>, <c>Sub</c>, <c>And</c>, <c>Or</c>, <c>Xor</c>, <c>Inc</c> and
+    /// <c>Dec</c> ALU calls as the inline expansion the code generator uses, instead of calling the ALU. Meant for
+    /// checking that expansion; it makes each compiled instruction bigger. False by default.
+    /// </summary>
+    [CommandOption("--JitAluExpansion")]
+    public bool JitAluExpansion { get; init; }
+
+    /// <summary>
     /// When true (default), the speculative CFG explorer is enabled: after each newly-observed
     /// instruction is parsed, the explorer performs a recursive-descent static decode of all
     /// statically-reachable successors that have not yet been observed, marking the resulting nodes

@@ -85,7 +85,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     L_0031:
         CheckExternalEvents(cs1, 0x0031);
         // F000:0031 loop 0x0031
-        CX = (ushort)(CX - 1);
+        CX--;
         if (CX != 0) {
             goto L_0031;
         }
@@ -115,7 +115,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     L_0045:
         CheckExternalEvents(cs1, 0x0045);
         // F000:0045 loop 0x0045
-        CX = (ushort)(CX - 1);
+        CX--;
         if (CX != 0) {
             goto L_0045;
         }

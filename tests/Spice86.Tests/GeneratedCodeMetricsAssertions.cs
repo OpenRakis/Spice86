@@ -17,7 +17,7 @@ internal static class GeneratedCodeMetricsAssertions {
     private static readonly Dictionary<string, (int GotoStatements, int CheckExternalEvents, int Lines)> UpperBounds = new() {
         ["jump1.spec"] = (48, 21, 402),
         ["partition_cross_function_loop.spec"] = (4, 3, 93),
-        ["rep.spec"] = (6, 12, 706),
+        ["rep.spec"] = (6, 12, 724),
         ["div.spec"] = (0, 13, 744),
         ["selfmodifyje.spec"] = (3, 2, 63)
     };
