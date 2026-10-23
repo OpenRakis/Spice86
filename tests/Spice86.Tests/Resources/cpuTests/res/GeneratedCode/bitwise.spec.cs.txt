@@ -274,19 +274,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt16[DS, 0x0012] = 0x35F6;
         // F000:016B mov word ptr DS:[0x0014],0x4F00
         UInt16[DS, 0x0014] = 0x4F00;
-        // F000:0171 and BX,AX
+        // F000:0171 test BX,AX
         Alu16.And(BX, AX);
         // F000:0173 pushf
         Stack.Push16(FlagRegister16);
         // F000:0174 mov word ptr DS:[0x0044],BX
         UInt16[DS, 0x0044] = BX;
-        // F000:0178 and word ptr DS:[0x0010],CX
+        // F000:0178 test word ptr DS:[0x0010],CX
         Alu16.And(UInt16[DS, 0x0010], CX);
         // F000:017C pushf
         Stack.Push16(FlagRegister16);
         // F000:017D mov word ptr DS:[0x0046],CX
         UInt16[DS, 0x0046] = CX;
-        // F000:0181 and word ptr DS:[0x0012],AX
+        // F000:0181 test word ptr DS:[0x0012],AX
         Alu16.And(UInt16[DS, 0x0012], AX);
         // F000:0185 pushf
         Stack.Push16(FlagRegister16);
@@ -306,19 +306,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Alu16.And(UInt16[DS, 0x0014], 0x96E4);
         // F000:019C pushf
         Stack.Push16(FlagRegister16);
-        // F000:019D and AH,AL
+        // F000:019D test AH,AL
         Alu8.And(AH, AL);
         // F000:019F pushf
         Stack.Push16(FlagRegister16);
         // F000:01A0 mov byte ptr DS:[0x004C],AH
         UInt8[DS, 0x004C] = AH;
-        // F000:01A4 and byte ptr DS:[0x000F],CL
+        // F000:01A4 test byte ptr DS:[0x000F],CL
         Alu8.And(UInt8[DS, 0x000F], CL);
         // F000:01A8 pushf
         Stack.Push16(FlagRegister16);
         // F000:01A9 mov byte ptr DS:[0x004D],CL
         UInt8[DS, 0x004D] = CL;
-        // F000:01AD and byte ptr DS:[0x0010],CH
+        // F000:01AD test byte ptr DS:[0x0010],CH
         Alu8.And(UInt8[DS, 0x0010], CH);
         // F000:01B1 pushf
         Stack.Push16(FlagRegister16);

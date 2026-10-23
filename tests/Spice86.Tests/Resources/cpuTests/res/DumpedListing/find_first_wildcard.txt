@@ -4,7 +4,7 @@
 016D:0107 mov SI,0x0147
 016D:010A mov CX,0
 016D:010D mov BX,word ptr DS:[SI]
-016D:010F and BX,BX
+016D:010F test BX,BX
 016D:0111 je short 0x0140
 016D:0113 push CX
 016D:0114 push SI

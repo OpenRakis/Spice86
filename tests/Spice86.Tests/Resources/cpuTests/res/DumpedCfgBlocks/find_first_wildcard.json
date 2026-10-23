@@ -460,7 +460,7 @@
       ],
       "asm": [
         "8B1C|mov BX,word ptr DS:[SI]",
-        "85DB|and BX,BX",
+        "85DB|test BX,BX",
         "742D|je short 0x0140"
       ]
     },

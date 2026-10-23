@@ -82,7 +82,7 @@
         "42|inc DX",
         "88573C|mov byte ptr DS:[BX\u002B0x3C],DL",
         "39C8|cmp AX,CX",
-        "85C0|and AX,AX",
+        "85C0|test AX,AX",
         "C6473D07|mov byte ptr DS:[BX\u002B0x3D],7",
         "3B060001|cmp AX,word ptr DS:[0x0100]",
         "C6473E09|mov byte ptr DS:[BX\u002B0x3E],9",
@@ -899,7 +899,7 @@
       ],
       "asm": [
         "C6470C01|mov byte ptr DS:[BX\u002B0x0C],1",
-        "85C8|and AX,CX",
+        "85C8|test AX,CX",
         "7404|je short 0x00C8"
       ]
     },
@@ -967,7 +967,7 @@
         "C6470D01|mov byte ptr DS:[BX\u002B0x0D],1",
         "89C2|mov DX,AX",
         "4A|dec DX",
-        "85D2|and DX,DX",
+        "85D2|test DX,DX",
         "7504|jne short 0x00D7"
       ]
     },
@@ -1495,7 +1495,7 @@
       ],
       "asm": [
         "C6471501|mov byte ptr DS:[BX\u002B0x15],1",
-        "85C0|and AX,AX",
+        "85C0|test AX,AX",
         "7804|js short 0x0141"
       ]
     },

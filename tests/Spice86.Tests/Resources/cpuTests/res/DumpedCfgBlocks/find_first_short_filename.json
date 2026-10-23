@@ -474,7 +474,7 @@
       ],
       "asm": [
         "8B1C|mov BX,word ptr DS:[SI]",
-        "85DB|and BX,BX",
+        "85DB|test BX,BX",
         "7448|je short 0x015B"
       ]
     },
@@ -616,7 +616,7 @@
         "51|push CX",
         "56|push SI",
         "8A4404|mov AL,byte ptr DS:[SI\u002B4]",
-        "84C0|and AL,AL",
+        "84C0|test AL,AL",
         "750B|jne short 0x0127"
       ]
     },
@@ -756,7 +756,7 @@
         157
       ],
       "asm": [
-        "84C0|and AL,AL",
+        "84C0|test AL,AL",
         "7414|je short 0x0155"
       ]
     },

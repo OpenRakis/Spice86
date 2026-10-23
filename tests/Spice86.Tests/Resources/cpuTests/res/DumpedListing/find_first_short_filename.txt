@@ -4,12 +4,12 @@
 016D:0107 mov SI,0x0162
 016D:010A mov CX,0
 016D:010D mov BX,word ptr DS:[SI]
-016D:010F and BX,BX
+016D:010F test BX,BX
 016D:0111 je short 0x015B
 016D:0113 push CX
 016D:0114 push SI
 016D:0115 mov AL,byte ptr DS:[SI+4]
-016D:0118 and AL,AL
+016D:0118 test AL,AL
 016D:011A jne short 0x0127
 016D:011C mov DX,BX
 016D:011E mov CX,0
@@ -27,7 +27,7 @@
 016D:0137 mov DL,byte ptr DS:[DI]
 016D:0139 cmp AL,DL
 016D:013B jne short 0x0145
-016D:013D and AL,AL
+016D:013D test AL,AL
 016D:013F je short 0x0155
 016D:0141 inc BX
 016D:0142 inc DI

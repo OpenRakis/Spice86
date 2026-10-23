@@ -470,7 +470,7 @@
       "asm": [
         "8EC3|mov ES,BX",
         "26A12C00|mov AX,word ptr ES:[0x002C]",
-        "85C0|and AX,AX",
+        "85C0|test AX,AX",
         "74EB|je short 0x0124"
       ]
     },

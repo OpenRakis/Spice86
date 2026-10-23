@@ -18,7 +18,7 @@ public class TestRmRegParser : OperationModRmParser {
     protected override void BuildAsts(CfgInstruction instr, DataType dataType, ModRmContext modRmContext) {
         (ValueNode rNode, ValueNode rmNode) = _astBuilder.ModRmOperands(dataType, modRmContext);
         MethodCallValueNode aluCall = _astBuilder.AluCall(dataType, dataType.BitWidth, "And", rmNode, rNode);
-        InstructionNode displayAst = new InstructionNode(InstructionOperation.AND, rmNode, rNode);
+        InstructionNode displayAst = new InstructionNode(InstructionOperation.TEST, rmNode, rNode);
         IVisitableAstNode execAst = _astBuilder.WithIpAdvancement(instr, _astBuilder.ConditionalAssign(dataType, rmNode, aluCall, false));
         instr.AttachAsts(displayAst, execAst);
     }

@@ -121,13 +121,13 @@ F000:015C mov DX,0x5CC4
 F000:015F mov word ptr DS:[0x0010],0xA8A8
 F000:0165 mov word ptr DS:[0x0012],0x35F6
 F000:016B mov word ptr DS:[0x0014],0x4F00
-F000:0171 and BX,AX
+F000:0171 test BX,AX
 F000:0173 pushf
 F000:0174 mov word ptr DS:[0x0044],BX
-F000:0178 and word ptr DS:[0x0010],CX
+F000:0178 test word ptr DS:[0x0010],CX
 F000:017C pushf
 F000:017D mov word ptr DS:[0x0046],CX
-F000:0181 and word ptr DS:[0x0012],AX
+F000:0181 test word ptr DS:[0x0012],AX
 F000:0185 pushf
 F000:0186 test AX,0xDC6F
 F000:0189 pushf
@@ -137,13 +137,13 @@ F000:0191 pushf
 F000:0192 mov word ptr DS:[0x004A],DX
 F000:0196 test word ptr DS:[0x0014],0x96E4
 F000:019C pushf
-F000:019D and AH,AL
+F000:019D test AH,AL
 F000:019F pushf
 F000:01A0 mov byte ptr DS:[0x004C],AH
-F000:01A4 and byte ptr DS:[0x000F],CL
+F000:01A4 test byte ptr DS:[0x000F],CL
 F000:01A8 pushf
 F000:01A9 mov byte ptr DS:[0x004D],CL
-F000:01AD and byte ptr DS:[0x0010],CH
+F000:01AD test byte ptr DS:[0x0010],CH
 F000:01B1 pushf
 F000:01B2 test AL,0xC0
 F000:01B4 pushf
