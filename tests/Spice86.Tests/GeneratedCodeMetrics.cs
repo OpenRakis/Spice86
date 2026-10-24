@@ -27,6 +27,16 @@ internal sealed record GeneratedCodeMetrics {
     public required int AluCalls { get; init; }
     /// <summary>Reads of the six status flags (C, P, A, Z, S, O); assignments to them are not counted.</summary>
     public required int StatusFlagReads { get; init; }
+    /// <summary><c>do ... while</c> statements.</summary>
+    public required int DoLoops { get; init; }
+    /// <summary><c>while (true)</c> statements; other <c>while</c> statements are not counted.</summary>
+    public required int WhileTrueLoops { get; init; }
+    /// <summary><c>if</c> statements; an <c>else if</c> counts as a second one.</summary>
+    public required int IfStatements { get; init; }
+    /// <summary><c>break</c> statements, in loops and in <c>switch</c> sections.</summary>
+    public required int BreakStatements { get; init; }
+    /// <summary><c>continue</c> statements.</summary>
+    public required int ContinueStatements { get; init; }
     public required int Warnings { get; init; }
     public required ImmutableArray<string> WarningIds { get; init; }
 
@@ -50,7 +60,11 @@ internal sealed record GeneratedCodeMetrics {
         ("tries", NumberWidth),
         ("aluCalls", NumberWidth),
         ("flagReads", NumberWidth),
-        ("warnings", NumberWidth),
+        ("doLoops", NumberWidth),
+        ("whileTrue", NumberWidth),
+        ("ifs", NumberWidth),
+        ("breaks", NumberWidth),
+        ("continues", NumberWidth),
         ("warningIds", 0)
     ];
 
@@ -75,6 +89,11 @@ internal sealed record GeneratedCodeMetrics {
             TryStatements.ToString(),
             AluCalls.ToString(),
             StatusFlagReads.ToString(),
+            DoLoops.ToString(),
+            WhileTrueLoops.ToString(),
+            IfStatements.ToString(),
+            BreakStatements.ToString(),
+            ContinueStatements.ToString(),
             Warnings.ToString(),
             warningIds
         ];
