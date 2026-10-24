@@ -53,6 +53,11 @@ internal static class GeneratedCodeMetricsCollector {
             TryStatements = walker.TryStatements,
             AluCalls = walker.AluCalls,
             StatusFlagReads = walker.StatusFlagReads,
+            DoLoops = walker.DoLoops,
+            WhileTrueLoops = walker.WhileTrueLoops,
+            IfStatements = walker.IfStatements,
+            BreakStatements = walker.BreakStatements,
+            ContinueStatements = walker.ContinueStatements,
             Warnings = warnings.Length,
             WarningIds = warningIds
         };
@@ -72,6 +77,11 @@ internal static class GeneratedCodeMetricsCollector {
         public int TryStatements { get; private set; }
         public int AluCalls { get; private set; }
         public int StatusFlagReads { get; private set; }
+        public int DoLoops { get; private set; }
+        public int WhileTrueLoops { get; private set; }
+        public int IfStatements { get; private set; }
+        public int BreakStatements { get; private set; }
+        public int ContinueStatements { get; private set; }
 
         public override void VisitMethodDeclaration(MethodDeclarationSyntax node) {
             Methods++;
@@ -131,6 +141,33 @@ internal static class GeneratedCodeMetricsCollector {
         public override void VisitTryStatement(TryStatementSyntax node) {
             TryStatements++;
             base.VisitTryStatement(node);
+        }
+
+        public override void VisitDoStatement(DoStatementSyntax node) {
+            DoLoops++;
+            base.VisitDoStatement(node);
+        }
+
+        public override void VisitWhileStatement(WhileStatementSyntax node) {
+            if (node.Condition.IsKind(SyntaxKind.TrueLiteralExpression)) {
+                WhileTrueLoops++;
+            }
+            base.VisitWhileStatement(node);
+        }
+
+        public override void VisitIfStatement(IfStatementSyntax node) {
+            IfStatements++;
+            base.VisitIfStatement(node);
+        }
+
+        public override void VisitBreakStatement(BreakStatementSyntax node) {
+            BreakStatements++;
+            base.VisitBreakStatement(node);
+        }
+
+        public override void VisitContinueStatement(ContinueStatementSyntax node) {
+            ContinueStatements++;
+            base.VisitContinueStatement(node);
         }
 
         private static string? GetInvokedName(ExpressionSyntax expression) {

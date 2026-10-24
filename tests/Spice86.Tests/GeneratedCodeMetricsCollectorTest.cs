@@ -49,6 +49,28 @@ public class GeneratedCodeMetricsCollectorTest {
     }
 
     [Fact]
+    public void CountsStructuredStatements() {
+        // Arrange
+        string body = """
+            do { break; } while (CX != 0);
+            while (true) { continue; }
+            while (CX != 0) { }
+            if (ZeroFlag) { } else if (CarryFlag) { }
+            switch (AX) { case 1: break; }
+            """;
+
+        // Act
+        GeneratedCodeMetrics metrics = CollectFromMethodBody(body);
+
+        // Assert
+        metrics.DoLoops.Should().Be(1);
+        metrics.WhileTrueLoops.Should().Be(1);
+        metrics.IfStatements.Should().Be(2);
+        metrics.BreakStatements.Should().Be(2);
+        metrics.ContinueStatements.Should().Be(1);
+    }
+
+    [Fact]
     public void HeaderPlacesNewColumnsBetweenTriesAndWarnings() {
         // Act
         string[] headers = GeneratedCodeMetrics.Header().Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -56,6 +78,7 @@ public class GeneratedCodeMetricsCollectorTest {
         // Assert
         headers.Should().Equal("fixture", "methods", "lines", "labels", "gotos", "gotoTgts", "extEvents",
             "specGuard", "untested", "unchecked", "casts", "tries", "aluCalls", "flagReads",
+            "doLoops", "whileTrue", "ifs", "breaks", "continues",
             "warnings", "warningIds");
     }
 
