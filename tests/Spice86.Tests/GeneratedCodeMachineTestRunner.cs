@@ -115,14 +115,34 @@ internal sealed class GeneratedCodeMachineTestRunner {
         (GeneratedCSharpProgram generatedProgram, AsmFinalState discoveryFinalState) =
             GenerateSourceAndFinalState(discovery);
         using CompiledGeneratedOverride compiledOverride = CompileGeneratedProgram(discoverySettings, generatedProgram);
+        string? probeReportPath = GeneratedCodeProbes.ReportPath;
+        InstrumentedGeneratedSource? instrumented = null;
+        using CompiledGeneratedOverride? probedOverride = CompileProbedProgram(probeReportPath, generatedProgram, out instrumented);
+        IOverrideSupplier supplier = probedOverride?.Supplier ?? compiledOverride.Supplier;
         foreach (AsmRunScope execution in executions) {
-            using AsmFixtureRun run = AsmFixtureRunner.RunWithOverride(execution, compiledOverride.Supplier);
+            using AsmFixtureRun run = AsmFixtureRunner.RunWithOverride(execution, supplier);
             if (IsEquivalentScenarioVariant(discoverySettings, execution.Fixture.Settings)) {
                 GeneratedCodeDifferentialReport.Append(goldenKey, discoveryFinalState, AsmFinalState.Capture(run.Result));
             }
         }
 
+        if (probeReportPath is not null && probedOverride is not null && instrumented is not null) {
+            GeneratedCodeProbes.Append(probeReportPath, goldenKey, instrumented,
+                GeneratedCodeProbes.ReadHits(probedOverride.Supplier.GetType().Assembly));
+        }
+
         return generatedProgram;
+    }
+
+    /// <summary>The instrumented copy of the program for the runs when probing is on, otherwise <c>null</c>.</summary>
+    private static CompiledGeneratedOverride? CompileProbedProgram(string? probeReportPath, GeneratedCSharpProgram generatedProgram,
+        out InstrumentedGeneratedSource? instrumented) {
+        instrumented = null;
+        if (probeReportPath is null) {
+            return null;
+        }
+        instrumented = GeneratedCodeProbes.Instrument(generatedProgram.SourceText);
+        return new GeneratedOverrideCompiler().CompileSupplier(instrumented.Source);
     }
 
     /// <summary>
@@ -264,7 +284,6 @@ internal sealed class GeneratedCodeMachineTestRunner {
         lock (MetricsFileLock) {
             if (!_metricsFileInitialized) {
                 File.Delete(metricsPath);
-                File.AppendAllText(metricsPath, GeneratedCodeMetrics.Header() + Environment.NewLine);
                 _metricsFileInitialized = true;
             }
             File.AppendAllText(metricsPath, metrics.ToLine() + Environment.NewLine);

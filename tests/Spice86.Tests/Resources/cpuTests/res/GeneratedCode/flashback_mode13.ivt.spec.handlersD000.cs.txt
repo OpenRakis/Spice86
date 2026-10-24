@@ -218,7 +218,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AX = 0x1000;
         // F000:4004 mov SS,AX
         SS = AX;
-        State.InterruptShadowing = true;
         // F000:4006 mov SP,0xFFFE
         SP = 0xFFFE;
         // F000:4009 mov AX,0x0013
@@ -237,32 +236,28 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         BX = 0;
         // F000:4018 cld
         DirectionFlag = false;
-    L_4019:
-        CheckExternalEvents(cs2, 0x4019);
-        // F000:4019 mov CX,0x0140
-        CX = 0x0140;
-        // F000:401C mov AX,BX
-        AX = BX;
-    L_401E:
-        CheckExternalEvents(cs2, 0x401E);
-        // F000:401E stos byte ptr ES:[DI],AL
-        UInt8[ES, DI] = AL;
-        DI = (ushort)(DI + (ushort)State.Direction8);
-        // F000:401F inc AL
-        AL++;
-        // F000:4021 loop 0x401E
-        CX--;
-        if (CX != 0) {
-            goto L_401E;
-        }
-        // F000:4023 inc BX
-        BX++;
-        // F000:4024 cmp BX,0x00C8
-        Alu16.Sub(BX, 0x00C8);
-        // F000:4028 jb short 0x4019
-        if (CarryFlag) {
-            goto L_4019;
-        }
+        do {
+            CheckExternalEvents(cs2, 0x4019);
+            // F000:4019 mov CX,0x0140
+            CX = 0x0140;
+            // F000:401C mov AX,BX
+            AX = BX;
+            do {
+                CheckExternalEvents(cs2, 0x401E);
+                // F000:401E stos byte ptr ES:[DI],AL
+                UInt8[ES, DI] = AL;
+                DI = (ushort)(DI + (ushort)State.Direction8);
+                // F000:401F inc AL
+                AL++;
+                // F000:4021 loop 0x401E
+                CX--;
+            } while (CX != 0);
+            // F000:4023 inc BX
+            BX++;
+            // F000:4024 cmp BX,0x00C8
+            Alu16.Sub(BX, 0x00C8);
+            // F000:4028 jb short 0x4019
+        } while (CarryFlag);
         // F000:402A hlt
         return Hlt();
     }

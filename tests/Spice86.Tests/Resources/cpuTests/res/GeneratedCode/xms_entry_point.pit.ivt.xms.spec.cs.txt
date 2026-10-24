@@ -82,17 +82,15 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AX = Alu16.Or(AX, BX);
         // 016D:0109 je short 0x010F
         if (AX == 0) {
-            goto L_010F;
+            VerifySpeculativeEntryOrFail(cs1, 0x010F, Signature_010F_mov);
+            // 016D:010F mov AL,0xFF
+            AL = 0xFF;
         }
-        // 016D:010B mov AL,0
-        AL = 0;
-        // 016D:010D jmp short 0x0111
-        goto L_0111;
-    L_010F:
-        VerifySpeculativeEntryOrFail(cs1, 0x010F, Signature_010F_mov);
-        // 016D:010F mov AL,0xFF
-        AL = 0xFF;
-    L_0111:
+        else {
+            // 016D:010B mov AL,0
+            AL = 0;
+            // 016D:010D jmp short 0x0111
+        }
         // 016D:0111 mov DX,0x0999
         DX = 0x0999;
         // 016D:0114 out DX,AL

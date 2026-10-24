@@ -33,9 +33,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0003 mov DS,AX
         DS = AX;
         // F000:0005 sti
-        if (!InterruptFlag) {
-            State.InterruptShadowing = true;
-        }
         InterruptFlag = true;
         CheckExternalEvents(cs1, 0x0006);
         // F000:0006 mov AX,0x1234

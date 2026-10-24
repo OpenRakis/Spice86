@@ -92,17 +92,15 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Alu8.Sub(AL, 0x41);
         // 016D:010C jne short 0x0112
         if (!ZeroFlag) {
-            goto L_0112;
+            VerifySpeculativeEntryOrFail(cs1, 0x0112, Signature_0112_mov);
+            // 016D:0112 mov AL,0xFF
+            AL = 0xFF;
         }
-        // 016D:010E mov AL,0
-        AL = 0;
-        // 016D:0110 jmp short 0x0114
-        goto L_0114;
-    L_0112:
-        VerifySpeculativeEntryOrFail(cs1, 0x0112, Signature_0112_mov);
-        // 016D:0112 mov AL,0xFF
-        AL = 0xFF;
-    L_0114:
+        else {
+            // 016D:010E mov AL,0
+            AL = 0;
+            // 016D:0110 jmp short 0x0114
+        }
         // 016D:0114 mov DX,0x0999
         DX = 0x0999;
         // 016D:0117 out DX,AL
@@ -225,36 +223,31 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0090 cmp AH,7
         Alu8.Sub(AH, 7);
         // F000:0093 je short 0x00A4
-        if (ZeroFlag) {
-            goto L_00A4;
+        if (!ZeroFlag) {
+            VerifySpeculativeEntryOrFail(cs2, 0x0095, Signature_0095_cmp);
+            // F000:0095 cmp AH,8
+            Alu8.Sub(AH, 8);
+            VerifySpeculativeEntryOrFail(cs2, 0x0098, Signature_0098_je);
+            // F000:0098 je short 0x00A4
+            if (!ZeroFlag) {
+                VerifySpeculativeEntryOrFail(cs2, 0x009A, Signature_009A_cmp);
+                // F000:009A cmp AH,0x0A
+                Alu8.Sub(AH, 0x0A);
+                VerifySpeculativeEntryOrFail(cs2, 0x009D, Signature_009D_je);
+                // F000:009D je short 0x00A4
+                if (ZeroFlag) {
+                    goto L_00A4;
+                }
+                VerifySpeculativeEntryOrFail(cs2, 0x009F, Signature_009F_callback);
+                // F000:009F callback 0x0021
+                Callback(cs2, 0x009F, 0x0021);
+                VerifySpeculativeEntryOrFail(cs2, 0x00A3, Signature_00A3_iret);
+                // F000:00A3 iret
+                return InterruptRet();
+            }
         }
-        VerifySpeculativeEntryOrFail(cs2, 0x0095, Signature_0095_cmp);
-        // F000:0095 cmp AH,8
-        Alu8.Sub(AH, 8);
-        VerifySpeculativeEntryOrFail(cs2, 0x0098, Signature_0098_je);
-        // F000:0098 je short 0x00A4
-        if (ZeroFlag) {
-            goto L_00A4;
-        }
-        VerifySpeculativeEntryOrFail(cs2, 0x009A, Signature_009A_cmp);
-        // F000:009A cmp AH,0x0A
-        Alu8.Sub(AH, 0x0A);
-        VerifySpeculativeEntryOrFail(cs2, 0x009D, Signature_009D_je);
-        // F000:009D je short 0x00A4
-        if (ZeroFlag) {
-            goto L_00A4;
-        }
-        VerifySpeculativeEntryOrFail(cs2, 0x009F, Signature_009F_callback);
-        // F000:009F callback 0x0021
-        Callback(cs2, 0x009F, 0x0021);
-        VerifySpeculativeEntryOrFail(cs2, 0x00A3, Signature_00A3_iret);
-        // F000:00A3 iret
-        return InterruptRet();
     L_00A4:
         // F000:00A4 sti
-        if (!InterruptFlag) {
-            State.InterruptShadowing = true;
-        }
         InterruptFlag = true;
         CheckExternalEvents(cs2, 0x00A5);
         // F000:00A5 callback 0x010A

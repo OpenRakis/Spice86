@@ -59,10 +59,10 @@ public class CfgGraphReloadTest {
     public static IEnumerable<object[]> AllReloadBins => new[] {
         "add", "bcdcnv", "bitwise", "cmpneg", "control", "datatrnf", "div", "div2", "divfaultloop",
         "externalint", "flagconditions", "interrupt", "ioports", "jmpmov", "jump1", "jump2", "linearsamesegmenteddifferent",
-        "lockprefix", "mul", "partition_cross_function_loop", "partition_indirect_call_jump",
-        "partition_jump_into_function_middle", "partition_mixed_activation_cycle",
+        "lockprefix", "mul", "partition_cross_function_loop", "partition_far_dispatch", "partition_indirect_call_jump", "partition_jump_table",
+        "partition_jump_table_mixed", "partition_jump_into_function_middle", "partition_mixed_activation_cycle",
         "partition_multi_entry_dominated_shared", "partition_multi_entry_irreducible_shared",
-        "partition_shared_tail", "rep", "returnedterminator", "romwrite", "rotate", "segpr", "selfmodifycall",
+        "partition_shared_tail", "partition_sign_conditions", "partition_untested_indirect", "rep", "returnedterminator", "romwrite", "rotate", "segpr", "selfmodifycall",
         "selfmodifyinstructions", "selfmodifyrep", "selfmodifyje", "selfmodifyterminator", "selfmodifyvalue", "shifts",
         "sticli", "strings", "sub", "test386",
     }.Select(name => new object[] { name });
@@ -75,7 +75,7 @@ public class CfgGraphReloadTest {
     /// </summary>
     public static IEnumerable<object[]> EndToEndBins => new[] {
         "divfaultloop", "selfmodifyvalue", "selfmodifycall", "selfmodifyterminator", "selfmodifyje",
-        "lockprefix", "partition_indirect_call_jump", "test386",
+        "partition_indirect_call_jump", "partition_jump_table", "test386",
     }.Select(name => new object[] { name });
 
     /// <summary>

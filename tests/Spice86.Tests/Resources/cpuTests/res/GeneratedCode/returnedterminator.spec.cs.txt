@@ -32,7 +32,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AX = 0;
         // F000:0003 mov SS,AX
         SS = AX;
-        State.InterruptShadowing = true;
         // F000:0005 mov SP,8
         SP = 8;
         // F000:0008 jmp short 0x000A

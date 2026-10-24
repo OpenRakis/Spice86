@@ -1,0 +1,81 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+
+    private static readonly byte?[] Signature_0012_add = [0x83, 0xC2, 0x01];
+    private static readonly byte?[] Signature_0032_add = [0x81, 0xC2, 0x00, 0x10];
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0xF000;
+
+        DefineFunctionWithoutInterpreterFallback(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, "unknown");
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        // F000:0000 mov AX,0x1000
+        AX = 0x1000;
+        // F000:0003 mov SS,AX
+        SS = AX;
+        // F000:0005 mov SP,0x0100
+        SP = 0x0100;
+        // F000:0008 xor DX,DX
+        DX = 0;
+        // F000:000A mov AX,5
+        AX = 5;
+        // F000:000D cmp AX,3
+        // F000:0010 jns short 0x0015
+        if ((short)(AX - 3) < 0) {
+            VerifySpeculativeEntryOrFail(cs1, 0x0012, Signature_0012_add);
+            // F000:0012 add DX,1
+            DX = (ushort)(DX + 1);
+        }
+        // F000:0015 mov AX,2
+        AX = 2;
+        // F000:0018 cmp AX,3
+        // F000:001B jns short 0x0020
+        if ((short)(AX - 3) < 0) {
+            // F000:001D add DX,0x0010
+            DX = (ushort)(DX + 0x0010);
+        }
+        // F000:0020 mov AX,0x8000
+        AX = 0x8000;
+        // F000:0023 test AX,AX
+        // F000:0025 jns short 0x002B
+        if ((short)AX < 0) {
+            // F000:0027 add DX,0x0100
+            DX = (ushort)(DX + 0x0100);
+        }
+        // F000:002B mov AX,1
+        AX = 1;
+        // F000:002E test AX,AX
+        Alu16.And(AX, AX);
+        // F000:0030 jns short 0x0036
+        if (SignFlag) {
+            VerifySpeculativeEntryOrFail(cs1, 0x0032, Signature_0032_add);
+            // F000:0032 add DX,0x1000
+            DX = Alu16.Add(DX, 0x1000);
+        }
+        // F000:0036 hlt
+        return Hlt();
+    }
+
+}

@@ -59,7 +59,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt16[DS, 0x2600] = 0x1001;
         // E342:EBF2 mov SS,word ptr DS:[0x2600]
         SS = UInt16[DS, 0x2600];
-        State.InterruptShadowing = true;
         // E342:EBF6 mov word ptr DS:[0x2601],SS
         UInt16[DS, 0x2601] = SS;
         // E342:EBFA mov DL,byte ptr DS:[0x2601]

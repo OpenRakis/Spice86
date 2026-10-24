@@ -173,54 +173,49 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CX = 8;
         // 016E:0164 xor DH,DH
         DH = 0;
-    L_0166:
-        CheckExternalEvents(cs1, 0x0166);
-        // 016E:0166 or DH,byte ptr ES:[BX]
-        DH = (byte)(DH | UInt8[ES, BX]);
-        // 016E:0169 inc BX
-        BX++;
-        // 016E:016A loop 0x0166
-        CX--;
-        if (CX != 0) {
-            goto L_0166;
-        }
+        do {
+            CheckExternalEvents(cs1, 0x0166);
+            // 016E:0166 or DH,byte ptr ES:[BX]
+            DH = (byte)(DH | UInt8[ES, BX]);
+            // 016E:0169 inc BX
+            BX++;
+            // 016E:016A loop 0x0166
+            CX--;
+        } while (CX != 0);
         // 016E:016C or DH,DH
         DH = Alu8.Or(DH, DH);
         // 016E:016E jne short 0x018A
-        if (DH != 0) {
-            goto L_018A;
-        }
-        // 016E:0170 mov BX,0x0140
-        BX = 0x0140;
-        // 016E:0173 mov CX,8
-        CX = 8;
-        // 016E:0176 xor DH,DH
-        DH = 0;
-    L_0178:
-        CheckExternalEvents(cs1, 0x0178);
-        // 016E:0178 or DH,byte ptr ES:[BX]
-        DH = (byte)(DH | UInt8[ES, BX]);
-        // 016E:017B inc BX
-        BX++;
-        // 016E:017C loop 0x0178
-        CX--;
-        if (CX != 0) {
-            goto L_0178;
-        }
-        // 016E:017E or DH,DH
-        DH = Alu8.Or(DH, DH);
-        // 016E:0180 je short 0x018A
         if (DH == 0) {
-            goto L_018A;
+            // 016E:0170 mov BX,0x0140
+            BX = 0x0140;
+            // 016E:0173 mov CX,8
+            CX = 8;
+            // 016E:0176 xor DH,DH
+            DH = 0;
+            do {
+                CheckExternalEvents(cs1, 0x0178);
+                // 016E:0178 or DH,byte ptr ES:[BX]
+                DH = (byte)(DH | UInt8[ES, BX]);
+                // 016E:017B inc BX
+                BX++;
+                // 016E:017C loop 0x0178
+                CX--;
+            } while (CX != 0);
+            // 016E:017E or DH,DH
+            DH = Alu8.Or(DH, DH);
+            // 016E:0180 je short 0x018A
+            if (DH == 0) {
+                goto L_018A;
+            }
+            // 016E:0182 mov AL,0
+            AL = 0;
+            // 016E:0184 mov DX,0x0999
+            DX = 0x0999;
+            // 016E:0187 out DX,AL
+            Out8(DX, AL);
+            // 016E:0188 jmp short 0x0190
+            goto L_0190;
         }
-        // 016E:0182 mov AL,0
-        AL = 0;
-        // 016E:0184 mov DX,0x0999
-        DX = 0x0999;
-        // 016E:0187 out DX,AL
-        Out8(DX, AL);
-        // 016E:0188 jmp short 0x0190
-        goto L_0190;
     L_018A:
         VerifySpeculativeEntryOrFail(cs1, 0x018A, Signature_018A_mov);
         // 016E:018A mov AL,0xFF
@@ -360,31 +355,26 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs2, 0x0090);
         // F000:0090 cmp AH,7
         // F000:0093 je short 0x00A4
-        if (AH == 7) {
-            goto L_00A4;
+        if (AH != 7) {
+            // F000:0095 cmp AH,8
+            // F000:0098 je short 0x00A4
+            if (AH != 8) {
+                // F000:009A cmp AH,0x0A
+                Alu8.Sub(AH, 0x0A);
+                // F000:009D je short 0x00A4
+                if (ZeroFlag) {
+                    goto L_00A4;
+                }
+                // F000:009F callback 0x0021
+                Callback(cs2, 0x009F, 0x0021);
+                VerifySpeculativeEntryOrFail(cs2, 0x00A3, Signature_00A3_iret);
+                // F000:00A3 iret
+                return InterruptRet();
+            }
         }
-        // F000:0095 cmp AH,8
-        // F000:0098 je short 0x00A4
-        if (AH == 8) {
-            goto L_00A4;
-        }
-        // F000:009A cmp AH,0x0A
-        Alu8.Sub(AH, 0x0A);
-        // F000:009D je short 0x00A4
-        if (ZeroFlag) {
-            goto L_00A4;
-        }
-        // F000:009F callback 0x0021
-        Callback(cs2, 0x009F, 0x0021);
-        VerifySpeculativeEntryOrFail(cs2, 0x00A3, Signature_00A3_iret);
-        // F000:00A3 iret
-        return InterruptRet();
     L_00A4:
         VerifySpeculativeEntryOrFail(cs2, 0x00A4, Signature_00A4_sti);
         // F000:00A4 sti
-        if (!InterruptFlag) {
-            State.InterruptShadowing = true;
-        }
         InterruptFlag = true;
         CheckExternalEvents(cs2, 0x00A5);
         throw FailAsUntested("Untested fallthrough after F000:00A4");

@@ -35,7 +35,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AX = 0;
         // F000:0002 mov SS,AX
         SS = AX;
-        State.InterruptShadowing = true;
         // F000:0004 mov SP,0x0100
         SP = 0x0100;
         // F000:0007 mov DS,AX
@@ -50,52 +49,51 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AL = 0xAB;
         // F000:0011 mov byte ptr DS:[0x0020],0
         UInt8[DS, 0x0020] = 0;
-    L_0016:
-        CheckExternalEvents(cs1, 0x0016);
-        // F000:0016 mov SI,0
-        SI = 0;
-        // F000:0019 mov CX,4
-        CX = 4;
-        // F000:001C selector
-        if (SelectorSignatureMatches(cs1, 0x001C, Signature_001C_movs)) {
-            goto L_001C_44;
+        while (true) {
+            CheckExternalEvents(cs1, 0x0016);
+            // F000:0016 mov SI,0
+            SI = 0;
+            // F000:0019 mov CX,4
+            CX = 4;
+            // F000:001C selector
+            if (SelectorSignatureMatches(cs1, 0x001C, Signature_001C_movs)) {
+                goto L_001C_44;
+            }
+            if (SelectorSignatureMatches(cs1, 0x001C, Signature_001C_stos)) {
+                goto L_001C_14;
+            }
+            throw FailAsUntested("Untested code variant at F000:001C");
+        L_001C_44:
+            // F000:001C rep movs byte ptr ES:[DI],byte ptr DS:[SI]
+            while (CX != 0) {
+                UInt8[ES, DI] = UInt8[DS, SI];
+                SI = (ushort)(SI + (ushort)State.Direction8);
+                DI = (ushort)(DI + (ushort)State.Direction8);
+                CX--;
+            }
+            goto L_001E;
+        L_001C_14:
+            // F000:001C rep stos byte ptr ES:[DI],AL
+            while (CX != 0) {
+                UInt8[ES, DI] = AL;
+                DI = (ushort)(DI + (ushort)State.Direction8);
+                CX--;
+            }
+        L_001E:
+            // F000:001E inc byte ptr DS:[0x0020]
+            UInt8[DS, 0x0020] = (byte)(UInt8[DS, 0x0020] + 1);
+            // F000:0022 cmp byte ptr DS:[0x0020],2
+            Alu8.Sub(UInt8[DS, 0x0020], 2);
+            // F000:0027 je short 0x0033
+            if (ZeroFlag) {
+                break;
+            }
+            // F000:0029 mov byte ptr CS:[0x001D],0xA4
+            UInt8[CS, 0x001D] = 0xA4;
+            // F000:002F mov AL,0xCD
+            AL = 0xCD;
+            // F000:0031 jmp short 0x0016
         }
-        if (SelectorSignatureMatches(cs1, 0x001C, Signature_001C_stos)) {
-            goto L_001C_14;
-        }
-        throw FailAsUntested("Untested code variant at F000:001C");
-    L_001C_44:
-        // F000:001C rep movs byte ptr ES:[DI],byte ptr DS:[SI]
-        while (CX != 0) {
-            UInt8[ES, DI] = UInt8[DS, SI];
-            SI = (ushort)(SI + (ushort)State.Direction8);
-            DI = (ushort)(DI + (ushort)State.Direction8);
-            CX--;
-        }
-        goto L_001E;
-    L_001C_14:
-        // F000:001C rep stos byte ptr ES:[DI],AL
-        while (CX != 0) {
-            UInt8[ES, DI] = AL;
-            DI = (ushort)(DI + (ushort)State.Direction8);
-            CX--;
-        }
-    L_001E:
-        // F000:001E inc byte ptr DS:[0x0020]
-        UInt8[DS, 0x0020] = (byte)(UInt8[DS, 0x0020] + 1);
-        // F000:0022 cmp byte ptr DS:[0x0020],2
-        Alu8.Sub(UInt8[DS, 0x0020], 2);
-        // F000:0027 je short 0x0033
-        if (ZeroFlag) {
-            goto L_0033;
-        }
-        // F000:0029 mov byte ptr CS:[0x001D],0xA4
-        UInt8[CS, 0x001D] = 0xA4;
-        // F000:002F mov AL,0xCD
-        AL = 0xCD;
-        // F000:0031 jmp short 0x0016
-        goto L_0016;
-    L_0033:
         // F000:0033 hlt
         return Hlt();
     }

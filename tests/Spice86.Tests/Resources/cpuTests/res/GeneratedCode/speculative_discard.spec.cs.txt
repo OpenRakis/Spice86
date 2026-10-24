@@ -39,19 +39,17 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Alu8.And(AL, AL);
         // F000:000A jne short 0x0013
         if (!ZeroFlag) {
-            goto L_0013;
+            VerifySpeculativeEntryOrFail(cs1, 0x0013, Signature_0013_mov);
+            // F000:0013 mov byte ptr DS:[0x0401],0xEE
+            UInt8[DS, 0x0401] = 0xEE;
+            VerifySpeculativeEntryOrFail(cs1, 0x0018, Signature_0018_jmp);
+            // F000:0018 jmp short 0x001A
         }
-        // F000:000C mov byte ptr DS:[0x0401],0xDD
-        UInt8[DS, 0x0401] = 0xDD;
-        // F000:0011 jmp short 0x001A
-        goto L_001A;
-    L_0013:
-        VerifySpeculativeEntryOrFail(cs1, 0x0013, Signature_0013_mov);
-        // F000:0013 mov byte ptr DS:[0x0401],0xEE
-        UInt8[DS, 0x0401] = 0xEE;
-        VerifySpeculativeEntryOrFail(cs1, 0x0018, Signature_0018_jmp);
-        // F000:0018 jmp short 0x001A
-    L_001A:
+        else {
+            // F000:000C mov byte ptr DS:[0x0401],0xDD
+            UInt8[DS, 0x0401] = 0xDD;
+            // F000:0011 jmp short 0x001A
+        }
         // F000:001A mov byte ptr DS:[0x0402],0xAA
         UInt8[DS, 0x0402] = 0xAA;
         // F000:001F hlt

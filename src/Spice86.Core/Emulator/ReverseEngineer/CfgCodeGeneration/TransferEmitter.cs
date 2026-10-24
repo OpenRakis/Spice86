@@ -6,7 +6,6 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
-using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Shared.Emulator.Memory;
 
@@ -17,15 +16,17 @@ using Spice86.Shared.Emulator.Memory;
 /// actual writing to source text happens elsewhere.
 /// </summary>
 internal sealed class TransferEmitter(CfgGeneratorContext context) {
-    public IVisitableAstNode Emit(ResolvedCfgEdge edge, MethodPlan methodPlan, bool forceSameMethodGoto = false, bool allowCallOutContinuation = false) {
+    /// <summary>
+    /// The transfer along <paramref name="edge"/>: a <c>goto</c> inside the method, a partition return, or a cyclic-flow
+    /// bounce. CPU fault edges never come here: <see cref="CpuFaultWrapper"/> lowers them through <see cref="FaultHandler"/>.
+    /// </summary>
+    /// <param name="edge">The CFG edge to transfer along.</param>
+    /// <param name="allowCallOutContinuation">Whether a call-out edge may be lowered as a partition return (a call continuation).</param>
+    public IVisitableAstNode Emit(ResolvedCfgEdge edge, bool allowCallOutContinuation = false) {
         CfgCodePartition sourcePartition = context.GetPartition(edge.Source);
         CfgCodePartition targetPartition = context.GetPartition(edge.Target);
-        if (edge.PartitionTransferKind == CfgCodePartitionTransferKind.CpuFault && sourcePartition == targetPartition) {
-            throw new NotSupportedException($"CPU fault transfer from {edge.Source.Address} to {edge.Target.Address} cannot be lowered as same-method control flow.");
-        }
-
         if (sourcePartition == targetPartition) {
-            return EmitSameMethodTransfer(edge.Source, edge.Target, methodPlan, forceSameMethodGoto);
+            return new GotoNode(edge.Target);
         }
 
         CfgCodePartitionTransfer? transfer = context.FindTransfer(edge);
@@ -37,11 +38,6 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
         int loadOffset = context.GetEntryLoadOffset(targetPartition, edge.Target);
         switch (transfer.Kind) {
             case CfgCodePartitionTransferKind.CrossPartitionFlow:
-                return PartitionReturn(methodName, loadOffset);
-            case CfgCodePartitionTransferKind.CpuFault:
-                // The fault-specific work (push flags/return address, clear InterruptFlag, set CS/IP) already
-                // ran in the catch block before this transfer, so entering the handler partition is a normal
-                // partition entry.
                 return PartitionReturn(methodName, loadOffset);
             case CfgCodePartitionTransferKind.CyclicCrossPartitionFlow:
                 return new CyclicJumpNode(methodName, loadOffset);
@@ -62,15 +58,15 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
     /// Lowers the fallthrough of a non-terminating instruction or callback: its observed <see cref="InstructionSuccessorType.Normal"/> successor at the next address in memory, or a <c>FailAsUntested</c> throw when discovery never observed it falling through (it only faulted, or discovery stopped on it).
     /// A callback whose handler moved CS:IP elsewhere (DOS EXEC, terminate) also has <see cref="InstructionSuccessorType.Normal"/> successors at those targets; those are dispatched over by the callback lowering itself, and this fallthrough is what runs when the handler kept CS:IP at the callback.
     /// </summary>
-    public IVisitableAstNode EmitFallthroughIfNeeded(CfgInstruction source, MethodPlan methodPlan) {
+    public IVisitableAstNode EmitFallthroughIfNeeded(CfgInstruction source) {
         if (source.UniqueSuccessor is not null) {
             return Emit(new ResolvedCfgEdge(source, source.UniqueSuccessor, InstructionSuccessorType.Normal,
-                context.FindTransfer(source, source.UniqueSuccessor, InstructionSuccessorType.Normal)?.Kind), methodPlan);
+                context.FindTransfer(source, source.UniqueSuccessor, InstructionSuccessorType.Normal)?.Kind));
         }
 
         if (context.TryResolveEdge(source, InstructionSuccessorType.Normal,
                 source.NextInMemoryAddress32.ToSegmentedAddress()) is ResolvedCfgEdge fallthrough) {
-            return Emit(fallthrough, methodPlan);
+            return Emit(fallthrough);
         }
         return UntestedMessages.FallthroughAfter(source.Address);
     }
@@ -80,11 +76,11 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
     /// observed post-call continuation. The helper (NearCall / FarCall) preserves emulated stack behavior and
     /// validates the actual return target against the pushed return address.
     /// </summary>
-    public IVisitableAstNode EmitCallHelperAndContinuation(string helperName, CfgInstruction call, MethodGroupNode function, MethodPlan method, ushort? farCallTargetCs = null) {
+    public IVisitableAstNode EmitCallHelperAndContinuation(string helperName, CfgInstruction call, MethodGroupNode function, ushort? farCallTargetCs = null) {
         CallContinuation continuation = context.ResolveCallContinuation(call);
         return CodeGenerationAst.Sequence(
             CallHelper(helperName, continuation.ExpectedReturnAddress, function, farCallTargetCs),
-            EmitPostCallContinuation(call, continuation, method));
+            EmitPostCallContinuation(call, continuation));
     }
 
     /// <summary>
@@ -110,15 +106,10 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
     /// typed continuation edge is lowered as the post-call continuation. When no continuation was observed
     /// (the callee did not return during discovery, e.g. it exits the program), the post-call path is unobserved,
     /// so generated code fails as untested if it is ever reached.
-    /// <para>
-    /// <paramref name="forceSameMethodGoto"/> must be set when this is emitted inside a runtime-dispatch
-    /// <c>if</c>-branch: a same-method fallthrough would otherwise fall out of the branch into the trailing
-    /// untested-target failure instead of reaching the continuation label.
-    /// </para>
     /// </summary>
-    public IVisitableAstNode EmitPostCallContinuation(CfgInstruction call, CallContinuation continuation, MethodPlan method, bool forceSameMethodGoto = false) {
+    public IVisitableAstNode EmitPostCallContinuation(CfgInstruction call, CallContinuation continuation) {
         if (continuation.ObservedContinuationEdge is ResolvedCfgEdge edge) {
-            return Emit(edge, method, forceSameMethodGoto: forceSameMethodGoto, allowCallOutContinuation: true);
+            return Emit(edge, allowCallOutContinuation: true);
         }
 
         return UntestedMessages.ReturnFromCall(call.Address);
@@ -160,14 +151,6 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
         string methodName = context.GetMethodName(targetPartition);
         int loadOffset = context.GetEntryLoadOffset(targetPartition, edge.Target);
         return new CpuFaultHandler(edge.Target.Address, methodName, loadOffset);
-    }
-
-    private IVisitableAstNode EmitSameMethodTransfer(ICfgNode source, ICfgNode target, MethodPlan methodPlan, bool forceGoto) {
-        ICfgNode? next = methodPlan.GetNextEmittedNode(source);
-        if (!forceGoto && ReferenceEquals(target, next)) {
-            return CodeGenerationAst.Empty();
-        }
-        return new GotoNode(target);
     }
 
     private static IVisitableAstNode PartitionReturn(string methodName, int loadOffset) =>

@@ -103,8 +103,9 @@ internal static class GenerationPlanBuilder {
 
     private static MethodPlan BuildMethodPlan(CfgGeneratorContext context, CfgCodePartition partition) {
         PartitionBlockGraph blockGraph = PartitionBlockGraph.FromPartition(partition, context.GetEntries(partition)[0].Node);
+        // Entry blocks first: a block reached only from a secondary entry is laid out after that entry.
         DepthFirstOrdering<CfgBlock> traversal = new(
-            [blockGraph.PrimaryEntryBlock, .. blockGraph.Blocks],
+            [.. blockGraph.EntryBlocks, .. blockGraph.Blocks],
             block => LayoutSuccessors(block, blockGraph));
 
         if (traversal.PostOrder.Count != blockGraph.Blocks.Count) {
@@ -152,14 +153,9 @@ internal static class GenerationPlanBuilder {
                 isBlockEntry = false;
             }
         }
-        // Successor in emission order; last node has no fallthrough target.
-        Dictionary<ICfgNode, ICfgNode?> nextNodeByNode = new();
-        for (int i = 0; i < nodes.Count; i++) {
-            nextNodeByNode[nodes[i]] = i + 1 < nodes.Count ? nodes[i + 1] : null;
-        }
 
         return new MethodPlan(partition, context.GetMethodName(partition), context.GetEntries(partition), blocks,
-            nodes, nodeEmissionPlans, nextNodeByNode, blockGraph, traversal, labelByNode, localSuffixByInstruction);
+            nodes, nodeEmissionPlans, blockGraph, traversal, labelByNode, localSuffixByInstruction);
     }
 
     /// <summary>

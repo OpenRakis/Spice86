@@ -1,0 +1,75 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0xF000;
+
+        DefineFunctionWithoutInterpreterFallback(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, "unknown");
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        // F000:0000 mov AX,0x1000
+        AX = 0x1000;
+        // F000:0003 mov SS,AX
+        SS = AX;
+        // F000:0005 mov SP,0x0100
+        SP = 0x0100;
+        // F000:0008 xor DX,DX
+        DX = 0;
+        // F000:000A mov CX,3
+        CX = 3;
+        do {
+            CheckExternalEvents(cs1, 0x000D);
+            // F000:000D mov BX,CX
+            BX = CX;
+            // F000:000F dec BX
+            BX--;
+            // F000:0010 shl BX,1
+            BX = Alu16.Shl(BX, 1);
+            // F000:0012 jmp near word ptr CS:[BX+0x27]
+            switch (UInt16[CS, (ushort)(BX + 0x27)]) {
+                case 0x0016:
+                    // F000:0016 add DX,1
+                    DX = Alu16.Add(DX, 1);
+                    // F000:0019 jmp short 0x0024
+                    break;
+                case 0x001B:
+                    // F000:001B add DX,0x0010
+                    DX = Alu16.Add(DX, 0x0010);
+                    // F000:001E jmp short 0x0024
+                    break;
+                case 0x0020:
+                    // F000:0020 add DX,0x0100
+                    DX = Alu16.Add(DX, 0x0100);
+                    break;
+                default:
+                    throw FailAsUntested($"Untested near jump target 0x{UInt16[CS, (ushort)(BX + 0x27)]:X4} at F000:0012");
+            }
+            // F000:0024 loop 0x000D
+            CX--;
+        } while (CX != 0);
+        // F000:0026 hlt
+        return Hlt();
+    }
+
+}

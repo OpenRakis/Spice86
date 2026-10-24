@@ -92,7 +92,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AX = 0x5798;
         // F000:0044 mov SS,AX
         SS = AX;
-        State.InterruptShadowing = true;
         // F000:0046 mov SP,9
         SP = 9;
         // F000:0049 mov CX,0xABCD

@@ -48,7 +48,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AX = 0x1000;
         // F000:0003 mov SS,AX
         SS = AX;
-        State.InterruptShadowing = true;
         // F000:0005 mov SP,0x0100
         SP = 0x0100;
         // F000:0008 call near 0x000F

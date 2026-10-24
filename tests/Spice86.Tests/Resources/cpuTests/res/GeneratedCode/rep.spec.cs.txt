@@ -38,7 +38,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         SP = 0x1000;
         // F000:FFF3 mov SS,SP
         SS = SP;
-        State.InterruptShadowing = true;
         // F000:FFF5 jmp short 0
         // F000:0000 rep movs byte ptr ES:[DI],byte ptr DS:[SI]
         while (CX != 0) {

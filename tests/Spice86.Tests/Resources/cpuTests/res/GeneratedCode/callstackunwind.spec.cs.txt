@@ -100,7 +100,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         DS = AX;
         // F000:0005 mov SS,AX
         SS = AX;
-        State.InterruptShadowing = true;
         // F000:0007 mov SP,0x0100
         SP = 0x0100;
         // F000:000A call near 0x0100

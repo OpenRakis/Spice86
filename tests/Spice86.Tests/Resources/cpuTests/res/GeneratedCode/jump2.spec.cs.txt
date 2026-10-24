@@ -46,15 +46,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AX = 0x1290;
         // F000:0008 mov CX,5
         CX = 5;
-    L_000B:
-        CheckExternalEvents(cs2, 0x000B);
-        // F000:000B push CX
-        Stack.Push16(CX);
-        // F000:000C loop 0x000B
-        CX--;
-        if (CX != 0) {
-            goto L_000B;
-        }
+        do {
+            CheckExternalEvents(cs2, 0x000B);
+            // F000:000B push CX
+            Stack.Push16(CX);
+            // F000:000C loop 0x000B
+            CX--;
+        } while (CX != 0);
         // F000:000E call near AX
         switch (AX) {
             case 0x1290:
@@ -68,15 +66,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_1290_F1290(int loadOffset) {
-    L_1290:
-        CheckExternalEvents(cs2, 0x1290);
-        // F000:1290 mov CX,0xFFFF
-        CX = 0xFFFF;
-        // F000:1293 loope 0x1290
-        CX--;
-        if (CX != 0 && ZeroFlag) {
-            goto L_1290;
-        }
+        do {
+            CheckExternalEvents(cs2, 0x1290);
+            // F000:1290 mov CX,0xFFFF
+            CX = 0xFFFF;
+            // F000:1293 loope 0x1290
+            CX--;
+        } while (CX != 0 && ZeroFlag);
         // F000:1295 mov DX,0x0040
         DX = 0x0040;
         // F000:1298 push DX
@@ -93,13 +89,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:129C hlt
         return Hlt();
     L_129D:
-        CheckExternalEvents(cs2, 0x129D);
-        // F000:129D call far E342:EBE0
-        FarCall(cs2, 0x12A2, cs1, unknown_E342_EBE0_F2000);
-        // F000:12A2 jcxz short 0x129D
-        if (CX == 0) {
-            goto L_129D;
-        }
+        do {
+            CheckExternalEvents(cs2, 0x129D);
+            // F000:129D call far E342:EBE0
+            FarCall(cs2, 0x12A2, cs1, unknown_E342_EBE0_F2000);
+            // F000:12A2 jcxz short 0x129D
+        } while (CX == 0);
         // F000:12A4 mov CX,0
         CX = 0;
         // F000:12A7 jcxz short 0x12AA
@@ -130,15 +125,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Stack.Push16(DX);
         // E342:EBE8 popf
         FlagRegister16 = Stack.Pop16();
-    L_EBE9:
-        CheckExternalEvents(cs1, 0xEBE9);
-        // E342:EBE9 mov CX,1
-        CX = 1;
-        // E342:EBEC loopne 0xEBE9
-        CX--;
-        if (CX != 0 && !ZeroFlag) {
-            goto L_EBE9;
-        }
+        do {
+            CheckExternalEvents(cs1, 0xEBE9);
+            // E342:EBE9 mov CX,1
+            CX = 1;
+            // E342:EBEC loopne 0xEBE9
+            CX--;
+        } while (CX != 0 && !ZeroFlag);
         // E342:EBEE loopne 0xEBF1
         CX--;
         if (CX != 0 && !ZeroFlag) {
@@ -185,7 +178,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         SP = 0x1000;
         // F000:FFF3 mov SS,SP
         SS = SP;
-        State.InterruptShadowing = true;
         // F000:FFF5 call near 0
         NearCall(cs2, 0xFFF8, unknown_F000_0000_F0000);
         // F000:FFF8 mov DS,CX

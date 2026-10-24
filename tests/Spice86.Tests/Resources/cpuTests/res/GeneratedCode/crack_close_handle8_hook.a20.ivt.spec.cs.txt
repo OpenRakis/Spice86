@@ -101,117 +101,111 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0120 call near 0x0196
         NearCall(cs1, 0x0123, unknown_016D_0196_01866);
         // 016D:0123 jb short 0x018F
-        if (CarryFlag) {
-            goto L_018F;
+        if (!CarryFlag) {
+            // 016D:0125 mov DX,0x01DA
+            DX = 0x01DA;
+            // 016D:0128 call near 0x0196
+            NearCall(cs1, 0x012B, unknown_016D_0196_01866);
+            // 016D:012B jb short 0x018F
+            if (!CarryFlag) {
+                // 016D:012D mov DX,0x01E0
+                DX = 0x01E0;
+                // 016D:0130 call near 0x0196
+                NearCall(cs1, 0x0133, unknown_016D_0196_01866);
+                // 016D:0133 jb short 0x018F
+                if (!CarryFlag) {
+                    // 016D:0135 mov DX,0x2000
+                    DX = 0x2000;
+                    // 016D:0138 mov SI,0x0010
+                    SI = 0x0010;
+                    // 016D:013B mov AH,0x55
+                    AH = 0x55;
+                    // 016D:013D int 0x21
+                    InterruptCall(cs1, 0x013F, 0x21);
+                    // 016D:013F mov BX,0x2000
+                    BX = 0x2000;
+                    // 016D:0142 mov AH,0x50
+                    AH = 0x50;
+                    // 016D:0144 int 0x21
+                    InterruptCall(cs1, 0x0146, 0x21);
+                    // 016D:0146 mov CX,0x0013
+                    CX = 0x0013;
+                    do {
+                        CheckExternalEvents(cs1, 0x0149);
+                        // 016D:0149 push CX
+                        Stack.Push16(CX);
+                        // 016D:014A mov DX,0x01E6
+                        DX = 0x01E6;
+                        // 016D:014D call near 0x0196
+                        NearCall(cs1, 0x0150, unknown_016D_0196_01866);
+                        // 016D:0150 pop CX
+                        CX = Stack.Pop16();
+                        // 016D:0151 jb short 0x018F
+                        if (CarryFlag) {
+                            goto L_018F;
+                        }
+                        // 016D:0153 mov BX,AX
+                        BX = AX;
+                        // 016D:0155 mov AH,0x3E
+                        AH = 0x3E;
+                        // 016D:0157 int 0x21
+                        InterruptCall(cs1, 0x0159, 0x21);
+                        // 016D:0159 jb short 0x018F
+                        if (CarryFlag) {
+                            goto L_018F;
+                        }
+                        // 016D:015B loop 0x0149
+                        CX--;
+                    } while (CX != 0);
+                    // 016D:015D call near 0x019C
+                    NearCall(cs1, 0x0160, unknown_016D_019C_0186C);
+                    // 016D:0160 mov BX,word ptr DS:[0x01CC]
+                    BX = UInt16[DS, 0x01CC];
+                    // 016D:0164 mov AH,0x50
+                    AH = 0x50;
+                    // 016D:0166 int 0x21
+                    InterruptCall(cs1, 0x0168, 0x21);
+                    // 016D:0168 call near 0x019C
+                    NearCall(cs1, 0x016B, unknown_016D_019C_0186C);
+                    // 016D:016B push DS
+                    Stack.Push16(DS);
+                    // 016D:016C lds DX,word ptr DS:[0x01CE]
+                    ushort lxsOffset_016C = 0x01CE;
+                    ushort lxsValue_016C = UInt16[DS, lxsOffset_016C];
+                    ushort lxsSegment_016C = UInt16[DS, (ushort)(lxsOffset_016C + 2)];
+                    DX = (ushort)lxsValue_016C;
+                    DS = (ushort)lxsSegment_016C;
+                    // 016D:0170 mov AX,0x2521
+                    AX = 0x2521;
+                    // 016D:0173 int 0x21
+                    InterruptCall(cs1, 0x0175, 0x21);
+                    // 016D:0175 pop DS
+                    DS = UInt16[SS, SP];
+                    SP = (ushort)(SP + 2);
+                    // 016D:0176 mov AL,byte ptr DS:[0x01D2]
+                    AL = UInt8[DS, 0x01D2];
+                    // 016D:0179 mov DX,0x0998
+                    DX = 0x0998;
+                    // 016D:017C out DX,AL
+                    Out8(DX, AL);
+                    // 016D:017D cmp byte ptr DS:[0x01D2],0x13
+                    Alu8.Sub(UInt8[DS, 0x01D2], 0x13);
+                    // 016D:0182 jne short 0x018F
+                    if (ZeroFlag) {
+                        // 016D:0184 cmp byte ptr DS:[0x01D3],0x90
+                        Alu8.Sub(UInt8[DS, 0x01D3], 0x90);
+                        // 016D:0189 jne short 0x018F
+                        if (!ZeroFlag) {
+                            goto L_018F;
+                        }
+                        // 016D:018B mov AL,0
+                        AL = 0;
+                        // 016D:018D jmp short 0x0191
+                        goto L_0191;
+                    }
+                }
+            }
         }
-        // 016D:0125 mov DX,0x01DA
-        DX = 0x01DA;
-        // 016D:0128 call near 0x0196
-        NearCall(cs1, 0x012B, unknown_016D_0196_01866);
-        // 016D:012B jb short 0x018F
-        if (CarryFlag) {
-            goto L_018F;
-        }
-        // 016D:012D mov DX,0x01E0
-        DX = 0x01E0;
-        // 016D:0130 call near 0x0196
-        NearCall(cs1, 0x0133, unknown_016D_0196_01866);
-        // 016D:0133 jb short 0x018F
-        if (CarryFlag) {
-            goto L_018F;
-        }
-        // 016D:0135 mov DX,0x2000
-        DX = 0x2000;
-        // 016D:0138 mov SI,0x0010
-        SI = 0x0010;
-        // 016D:013B mov AH,0x55
-        AH = 0x55;
-        // 016D:013D int 0x21
-        InterruptCall(cs1, 0x013F, 0x21);
-        // 016D:013F mov BX,0x2000
-        BX = 0x2000;
-        // 016D:0142 mov AH,0x50
-        AH = 0x50;
-        // 016D:0144 int 0x21
-        InterruptCall(cs1, 0x0146, 0x21);
-        // 016D:0146 mov CX,0x0013
-        CX = 0x0013;
-    L_0149:
-        CheckExternalEvents(cs1, 0x0149);
-        // 016D:0149 push CX
-        Stack.Push16(CX);
-        // 016D:014A mov DX,0x01E6
-        DX = 0x01E6;
-        // 016D:014D call near 0x0196
-        NearCall(cs1, 0x0150, unknown_016D_0196_01866);
-        // 016D:0150 pop CX
-        CX = Stack.Pop16();
-        // 016D:0151 jb short 0x018F
-        if (CarryFlag) {
-            goto L_018F;
-        }
-        // 016D:0153 mov BX,AX
-        BX = AX;
-        // 016D:0155 mov AH,0x3E
-        AH = 0x3E;
-        // 016D:0157 int 0x21
-        InterruptCall(cs1, 0x0159, 0x21);
-        // 016D:0159 jb short 0x018F
-        if (CarryFlag) {
-            goto L_018F;
-        }
-        // 016D:015B loop 0x0149
-        CX--;
-        if (CX != 0) {
-            goto L_0149;
-        }
-        // 016D:015D call near 0x019C
-        NearCall(cs1, 0x0160, unknown_016D_019C_0186C);
-        // 016D:0160 mov BX,word ptr DS:[0x01CC]
-        BX = UInt16[DS, 0x01CC];
-        // 016D:0164 mov AH,0x50
-        AH = 0x50;
-        // 016D:0166 int 0x21
-        InterruptCall(cs1, 0x0168, 0x21);
-        // 016D:0168 call near 0x019C
-        NearCall(cs1, 0x016B, unknown_016D_019C_0186C);
-        // 016D:016B push DS
-        Stack.Push16(DS);
-        // 016D:016C lds DX,word ptr DS:[0x01CE]
-        ushort lxsOffset_016C = 0x01CE;
-        ushort lxsValue_016C = UInt16[DS, lxsOffset_016C];
-        ushort lxsSegment_016C = UInt16[DS, (ushort)(lxsOffset_016C + 2)];
-        DX = (ushort)lxsValue_016C;
-        DS = (ushort)lxsSegment_016C;
-        // 016D:0170 mov AX,0x2521
-        AX = 0x2521;
-        // 016D:0173 int 0x21
-        InterruptCall(cs1, 0x0175, 0x21);
-        // 016D:0175 pop DS
-        DS = UInt16[SS, SP];
-        SP = (ushort)(SP + 2);
-        // 016D:0176 mov AL,byte ptr DS:[0x01D2]
-        AL = UInt8[DS, 0x01D2];
-        // 016D:0179 mov DX,0x0998
-        DX = 0x0998;
-        // 016D:017C out DX,AL
-        Out8(DX, AL);
-        // 016D:017D cmp byte ptr DS:[0x01D2],0x13
-        Alu8.Sub(UInt8[DS, 0x01D2], 0x13);
-        // 016D:0182 jne short 0x018F
-        if (!ZeroFlag) {
-            goto L_018F;
-        }
-        // 016D:0184 cmp byte ptr DS:[0x01D3],0x90
-        Alu8.Sub(UInt8[DS, 0x01D3], 0x90);
-        // 016D:0189 jne short 0x018F
-        if (!ZeroFlag) {
-            goto L_018F;
-        }
-        // 016D:018B mov AL,0
-        AL = 0;
-        // 016D:018D jmp short 0x0191
-        goto L_0191;
     L_018F:
         VerifySpeculativeEntryOrFail(cs1, 0x018F, Signature_018F_mov);
         // 016D:018F mov AL,0xFF
@@ -239,20 +233,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0x019C);
         // 016D:019C mov BX,5
         BX = 5;
-    L_019F:
-        CheckExternalEvents(cs1, 0x019F);
-        // 016D:019F mov AH,0x3E
-        AH = 0x3E;
-        // 016D:01A1 int 0x21
-        InterruptCall(cs1, 0x01A3, 0x21);
-        // 016D:01A3 inc BX
-        BX++;
-        // 016D:01A4 cmp BX,8
-        Alu16.Sub(BX, 8);
-        // 016D:01A7 jne short 0x019F
-        if (!ZeroFlag) {
-            goto L_019F;
-        }
+        do {
+            CheckExternalEvents(cs1, 0x019F);
+            // 016D:019F mov AH,0x3E
+            AH = 0x3E;
+            // 016D:01A1 int 0x21
+            InterruptCall(cs1, 0x01A3, 0x21);
+            // 016D:01A3 inc BX
+            BX++;
+            // 016D:01A4 cmp BX,8
+            Alu16.Sub(BX, 8);
+            // 016D:01A7 jne short 0x019F
+        } while (!ZeroFlag);
         // 016D:01A9 ret near
         return NearRet();
     }
@@ -262,26 +254,22 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:01AA cmp AH,0x3E
         Alu8.Sub(AH, 0x3E);
         // 016D:01AD jne short 0x01C7
-        if (!ZeroFlag) {
-            goto L_01C7;
+        if (ZeroFlag) {
+            // 016D:01AF cmp BX,8
+            Alu16.Sub(BX, 8);
+            // 016D:01B2 jne short 0x01C7
+            if (ZeroFlag) {
+                // 016D:01B4 inc byte ptr CS:[0x01D2]
+                UInt8[CS, 0x01D2] = (byte)(UInt8[CS, 0x01D2] + 1);
+                // 016D:01B9 cmp byte ptr CS:[0x01D2],0x13
+                Alu8.Sub(UInt8[CS, 0x01D2], 0x13);
+                // 016D:01BF jl short 0x01C7
+                if (SignFlag == OverflowFlag) {
+                    // 016D:01C1 mov byte ptr CS:[0x01D3],0x90
+                    UInt8[CS, 0x01D3] = 0x90;
+                }
+            }
         }
-        // 016D:01AF cmp BX,8
-        Alu16.Sub(BX, 8);
-        // 016D:01B2 jne short 0x01C7
-        if (!ZeroFlag) {
-            goto L_01C7;
-        }
-        // 016D:01B4 inc byte ptr CS:[0x01D2]
-        UInt8[CS, 0x01D2] = (byte)(UInt8[CS, 0x01D2] + 1);
-        // 016D:01B9 cmp byte ptr CS:[0x01D2],0x13
-        Alu8.Sub(UInt8[CS, 0x01D2], 0x13);
-        // 016D:01BF jl short 0x01C7
-        if (SignFlag != OverflowFlag) {
-            goto L_01C7;
-        }
-        // 016D:01C1 mov byte ptr CS:[0x01D3],0x90
-        UInt8[CS, 0x01D3] = 0x90;
-    L_01C7:
         // 016D:01C7 jmp far dword ptr CS:[0x01CE]
         ushort targetSegment_01C7 = UInt16[CS, (ushort)(0x01CE + 2)];
         ushort targetOffset_01C7 = UInt16[CS, 0x01CE];
@@ -404,30 +392,25 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs2, 0x0090);
         // F000:0090 cmp AH,7
         // F000:0093 je short 0x00A4
-        if (AH == 7) {
-            goto L_00A4;
+        if (AH != 7) {
+            // F000:0095 cmp AH,8
+            // F000:0098 je short 0x00A4
+            if (AH != 8) {
+                // F000:009A cmp AH,0x0A
+                Alu8.Sub(AH, 0x0A);
+                // F000:009D je short 0x00A4
+                if (ZeroFlag) {
+                    goto L_00A4;
+                }
+                // F000:009F callback 0x0021
+                Callback(cs2, 0x009F, 0x0021);
+                // F000:00A3 iret
+                return InterruptRet();
+            }
         }
-        // F000:0095 cmp AH,8
-        // F000:0098 je short 0x00A4
-        if (AH == 8) {
-            goto L_00A4;
-        }
-        // F000:009A cmp AH,0x0A
-        Alu8.Sub(AH, 0x0A);
-        // F000:009D je short 0x00A4
-        if (ZeroFlag) {
-            goto L_00A4;
-        }
-        // F000:009F callback 0x0021
-        Callback(cs2, 0x009F, 0x0021);
-        // F000:00A3 iret
-        return InterruptRet();
     L_00A4:
         VerifySpeculativeEntryOrFail(cs2, 0x00A4, Signature_00A4_sti);
         // F000:00A4 sti
-        if (!InterruptFlag) {
-            State.InterruptShadowing = true;
-        }
         InterruptFlag = true;
         CheckExternalEvents(cs2, 0x00A5);
         throw FailAsUntested("Untested fallthrough after F000:00A4");

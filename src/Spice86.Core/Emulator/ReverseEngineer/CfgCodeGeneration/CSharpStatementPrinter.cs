@@ -28,6 +28,12 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
             case WhileNode whileNode:
                 PrintWhile(whileNode);
                 return;
+            case DoWhileNode doWhile:
+                PrintDoWhile(doWhile);
+                return;
+            case InfiniteLoopNode loop:
+                PrintInfiniteLoop(loop);
+                return;
             case ThrowNode throwNode:
                 PrintThrow(throwNode);
                 return;
@@ -64,6 +70,9 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
             case BreakNode:
                 writer.Line("break;");
                 return;
+            case ContinueNode:
+                writer.Line("continue;");
+                return;
             case CommentNode comment:
                 writer.Line($"// {comment.Text}");
                 return;
@@ -89,15 +98,50 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
         }
     }
 
+    /// <summary>
+    /// Writes the body of a braced construct. C# needs a statement after a label, so a body whose last label is followed
+    /// only by comments gets an empty statement.
+    /// </summary>
+    private void PrintBody(IVisitableAstNode body) {
+        Print(body);
+        if (TrailingLabel(body) == true) {
+            writer.Line(";");
+        }
+    }
+
+    /// <summary>
+    /// <c>true</c> when the last thing <paramref name="node"/> prints is a label, <c>false</c> when it is a statement,
+    /// <c>null</c> when it prints only comments or nothing.
+    /// </summary>
+    private static bool? TrailingLabel(IVisitableAstNode node) {
+        switch (node) {
+            case LabelNode:
+                return true;
+            case CommentNode:
+                return null;
+            case BlockNode block:
+                for (int index = block.Statements.Count - 1; index >= 0; index--) {
+                    if (TrailingLabel(block.Statements[index]) is bool result) {
+                        return result;
+                    }
+                }
+                return null;
+            case InstructionBoundaryNode boundary:
+                return TrailingLabel(boundary.Body);
+            default:
+                return false;
+        }
+    }
+
     private void PrintIfElse(IfElseNode node) {
         writer.OpenBlock($"if ({expressions.Print(node.Condition)})");
-        Print(node.TrueCase);
+        PrintBody(node.TrueCase);
         writer.CloseBlock();
         if (IsEmptyBlock(node.FalseCase)) {
             return;
         }
         writer.OpenBlock("else");
-        Print(node.FalseCase);
+        PrintBody(node.FalseCase);
         writer.CloseBlock();
     }
 
@@ -105,7 +149,19 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
 
     private void PrintWhile(WhileNode node) {
         writer.OpenBlock($"while ({expressions.Print(node.Condition)})");
-        Print(node.Body);
+        PrintBody(node.Body);
+        writer.CloseBlock();
+    }
+
+    private void PrintDoWhile(DoWhileNode node) {
+        writer.OpenBlock("do");
+        PrintBody(node.Body);
+        writer.CloseBlock($" while ({expressions.Print(node.Condition)});");
+    }
+
+    private void PrintInfiniteLoop(InfiniteLoopNode node) {
+        writer.OpenBlock("while (true)");
+        PrintBody(node.Body);
         writer.CloseBlock();
     }
 
@@ -117,12 +173,12 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
         foreach (SwitchSection section in node.Sections) {
             writer.Line($"case 0x{section.Label:X4}:");
             writer.Indent();
-            Print(section.Body);
+            PrintBody(section.Body);
             writer.Dedent();
         }
         writer.Line("default:");
         writer.Indent();
-        Print(node.Default);
+        PrintBody(node.Default);
         writer.Dedent();
         writer.CloseBlock();
     }
@@ -137,7 +193,7 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
 
     private void PrintCpuFaultTryCatch(CpuFaultTryCatchNode node) {
         writer.OpenBlock("try");
-        Print(node.Body);
+        PrintBody(node.Body);
         writer.CloseBlock();
         writer.OpenBlock("catch (CpuException cpuException)");
         string resumeSegment = expressions.SegmentVariable(node.FaultingInstruction.Segment);

@@ -84,30 +84,29 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016E:0107 cmp AH,0
         Alu8.Sub(AH, 0);
         // 016E:010A jne short 0x011E
-        if (!ZeroFlag) {
-            goto L_011E;
+        if (ZeroFlag) {
+            // 016E:010C mov CX,DX
+            CX = DX;
+            // 016E:010E mov AL,4
+            AL = 4;
+            // 016E:0110 mov BX,0
+            BX = 0;
+            // 016E:0113 mov DX,CX
+            DX = CX;
+            // 016E:0115 mov AH,0x44
+            AH = 0x44;
+            // 016E:0117 int 0x67
+            InterruptCall(cs1, 0x0119, 0x67);
+            // 016E:0119 cmp AH,0x8B
+            Alu8.Sub(AH, 0x8B);
+            // 016E:011C je short 0x0122
+            if (!ZeroFlag) {
+                goto L_011E;
+            }
+            // 016E:0122 mov AL,0
+            AL = 0;
+            goto L_0124;
         }
-        // 016E:010C mov CX,DX
-        CX = DX;
-        // 016E:010E mov AL,4
-        AL = 4;
-        // 016E:0110 mov BX,0
-        BX = 0;
-        // 016E:0113 mov DX,CX
-        DX = CX;
-        // 016E:0115 mov AH,0x44
-        AH = 0x44;
-        // 016E:0117 int 0x67
-        InterruptCall(cs1, 0x0119, 0x67);
-        // 016E:0119 cmp AH,0x8B
-        Alu8.Sub(AH, 0x8B);
-        // 016E:011C je short 0x0122
-        if (!ZeroFlag) {
-            goto L_011E;
-        }
-        // 016E:0122 mov AL,0
-        AL = 0;
-        goto L_0124;
     L_011E:
         VerifySpeculativeEntryOrFail(cs1, 0x011E, Signature_011E_mov);
         // 016E:011E mov AL,0xFF

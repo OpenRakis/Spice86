@@ -49,7 +49,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AX = 0;
         // F000:0003 mov SS,AX
         SS = AX;
-        State.InterruptShadowing = true;
         // F000:0005 mov SP,0x0100
         SP = 0x0100;
         // F000:0008 mov DS,AX
@@ -82,26 +81,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         DX = 0;
         // F000:002B mov ECX,0x00FFFFFF
         ECX = 0x00FFFFFF;
-    L_0031:
-        CheckExternalEvents(cs1, 0x0031);
-        // F000:0031 loop 0x0031
-        CX--;
-        if (CX != 0) {
-            goto L_0031;
-        }
+        do {
+            CheckExternalEvents(cs1, 0x0031);
+            // F000:0031 loop 0x0031
+            CX--;
+        } while (CX != 0);
         // F000:0033 sti
-        if (!InterruptFlag) {
-            State.InterruptShadowing = true;
-        }
         InterruptFlag = true;
         CheckExternalEvents(cs1, 0x0034);
         // F000:0034 nop
         // F000:0035 mov word ptr DS:[0],DX
         UInt16[DS, 0] = DX;
         // F000:0039 sti
-        if (!InterruptFlag) {
-            State.InterruptShadowing = true;
-        }
         InterruptFlag = true;
         CheckExternalEvents(cs1, 0x003A);
         // F000:003A pushf
@@ -112,13 +103,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         DX = 0;
         // F000:003F mov ECX,0x00FFFFFF
         ECX = 0x00FFFFFF;
-    L_0045:
-        CheckExternalEvents(cs1, 0x0045);
-        // F000:0045 loop 0x0045
-        CX--;
-        if (CX != 0) {
-            goto L_0045;
-        }
+        do {
+            CheckExternalEvents(cs1, 0x0045);
+            // F000:0045 loop 0x0045
+            CX--;
+        } while (CX != 0);
         // F000:0047 popf
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(cs1, 0x0048);

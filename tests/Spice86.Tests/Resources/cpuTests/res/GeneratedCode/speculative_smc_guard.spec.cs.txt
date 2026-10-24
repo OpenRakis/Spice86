@@ -40,22 +40,20 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Alu8.And(AL, AL);
         // F000:000A jne short 0x0013
         if (!ZeroFlag) {
-            goto L_0013;
+            VerifySpeculativeEntryOrFail(cs1, 0x0013, Signature_0013_mov);
+            // F000:0013 mov byte ptr CS:[0x001A],0xEE
+            UInt8[CS, 0x001A] = 0xEE;
+            VerifySpeculativeEntryOrFail(cs1, 0x0019, Signature_0019_mov);
+            // F000:0019 mov byte ptr DS:[0x0401],0
+            UInt8[DS, 0x0401] = 0;
+            VerifySpeculativeEntryOrFail(cs1, 0x001E, Signature_001E_jmp);
+            // F000:001E jmp short 0x0020
         }
-        // F000:000C mov byte ptr DS:[0x0401],0xDD
-        UInt8[DS, 0x0401] = 0xDD;
-        // F000:0011 jmp short 0x0020
-        goto L_0020;
-    L_0013:
-        VerifySpeculativeEntryOrFail(cs1, 0x0013, Signature_0013_mov);
-        // F000:0013 mov byte ptr CS:[0x001A],0xEE
-        UInt8[CS, 0x001A] = 0xEE;
-        VerifySpeculativeEntryOrFail(cs1, 0x0019, Signature_0019_mov);
-        // F000:0019 mov byte ptr DS:[0x0401],0
-        UInt8[DS, 0x0401] = 0;
-        VerifySpeculativeEntryOrFail(cs1, 0x001E, Signature_001E_jmp);
-        // F000:001E jmp short 0x0020
-    L_0020:
+        else {
+            // F000:000C mov byte ptr DS:[0x0401],0xDD
+            UInt8[DS, 0x0401] = 0xDD;
+            // F000:0011 jmp short 0x0020
+        }
         // F000:0020 mov byte ptr DS:[0x0402],0xAA
         UInt8[DS, 0x0402] = 0xAA;
         // F000:0025 hlt
