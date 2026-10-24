@@ -18,7 +18,7 @@
 016D:012D int 0x21
 016D:012F mov ES,BX
 016D:0131 mov AX,word ptr ES:[0x002C]
-016D:0135 and AX,AX
+016D:0135 test AX,AX
 016D:0137 je short 0x0124
 016D:0139 mov ES,AX
 016D:013B ret near

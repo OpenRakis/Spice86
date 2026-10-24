@@ -129,7 +129,7 @@
       ],
       "asm": [
         "A00005|mov AL,byte ptr DS:[0x0500]",
-        "84C0|and AL,AL",
+        "84C0|test AL,AL",
         "7506|jne short 0x040D"
       ]
     },

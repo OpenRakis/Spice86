@@ -77,10 +77,10 @@ SPICE86_JIT_ALU_EXPANSION=1 dotnet test tests/Spice86.Tests
 > Run regeneration serially because several tests can address the same golden (`--maximum-parallel-threads` is not a valid option for this runner):
 >
 > ```text
-> dotnet test tests/Spice86.Tests --no-build -- --filter-class '*GeneratedCodeScenarioTest*' --filter-class '*GeneratedCodeMachineTest*' --filter-class '*SpeculativeCfgTest*' --parallel none
+> dotnet test tests/Spice86.Tests --no-build -- --filter-class 'Spice86.Tests.MachineTest' --filter-class '*GeneratedCodeScenarioTest*' --filter-class '*GeneratedCodeMachineTest*' --filter-class '*SpeculativeCfgTest*' --parallel none
 > ```
 >
-> `GeneratedCodeScenarioTest` covers the catalogue. `GeneratedCodeMachineTest` and `SpeculativeCfgTest` retain focused engine and speculative cases. Treat the generated diff as the primary review artifact; passing tests alone do not prove that regenerated expectations are correct.
+> `GeneratedCodeScenarioTest` covers the catalogue. `GeneratedCodeMachineTest` and `SpeculativeCfgTest` retain focused engine and speculative cases. `MachineTest` also compares listing and CFG goldens, including scenario variants no other class runs (the `.unobserved` speculative variants); leaving it out leaves those goldens stale. Treat the generated diff as the primary review artifact; passing tests alone do not prove that regenerated expectations are correct.
 
 ### Debugging Workflow
 - **GDB Integration**: Server runs on port 10000 by default (`--GdbPort 10000`)
@@ -163,6 +163,7 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 - **Ignore Machine class** - this is a legacy aggregator class; work directly with specific components (`CfgCpu`, `Memory`, `Stack`, etc.) instead
 - **Enforce TDD** - ensure integration tests are present and not passing at first, then make them pass by updating the implementation.
 - **Clear test code style** use explicit Arrange/Act/Assert structure, avoid long setup blocks, and reduce duplication with small helpers.
+- **No unit tests that repeat the goldens** - when a change only alters printed or displayed text (generated C#, listings, CFG JSON, instruction rendering) and the committed goldens already contain that text, the golden diff and its review checks are the test: the golden comparison fails before the change and passes after regeneration, which satisfies the TDD rule. Do not add a unit test that asserts the same text. Write unit tests for what goldens cannot show or do not cover: the conditions under which a rewrite applies or is refused, equivalence against the emulator (ALU, JIT), invariants and generation-time checks, and shapes or edge cases no fixture executes.
 - **Pause-refresh rule for new ViewModels** - view models that refresh from a dispatcher timer must refresh at most once per pause cycle. Gate updates on `IPauseHandler.IsPaused`, track a per-pause boolean flag, and reset it on resume.
 
 ### Avalonia Telemetry

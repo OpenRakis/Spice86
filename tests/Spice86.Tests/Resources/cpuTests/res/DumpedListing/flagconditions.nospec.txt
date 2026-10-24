@@ -63,13 +63,13 @@ F000:00B4 cmp AL,CL
 F000:00B6 jb short 0x00BC
 F000:00B8 mov byte ptr DS:[BX+0x0B],2
 F000:00BC mov byte ptr DS:[BX+0x0C],1
-F000:00C0 and AX,CX
+F000:00C0 test AX,CX
 F000:00C2 je short 0x00C8
 F000:00C4 mov byte ptr DS:[BX+0x0C],2
 F000:00C8 mov byte ptr DS:[BX+0x0D],1
 F000:00CC mov DX,AX
 F000:00CE dec DX
-F000:00CF and DX,DX
+F000:00CF test DX,DX
 F000:00D1 jne short 0x00D7
 F000:00D3 mov byte ptr DS:[BX+0x0D],2
 F000:00D7 mov byte ptr DS:[BX+0x0E],1
@@ -105,7 +105,7 @@ F000:012D cmp AX,CX
 F000:012F js short 0x0135
 F000:0131 mov byte ptr DS:[BX+0x14],2
 F000:0135 mov byte ptr DS:[BX+0x15],1
-F000:0139 and AX,AX
+F000:0139 test AX,AX
 F000:013B js short 0x0141
 F000:013D mov byte ptr DS:[BX+0x15],2
 F000:0141 mov byte ptr DS:[BX+0x16],1
@@ -262,7 +262,7 @@ F000:02CF inc DX
 F000:02D0 inc DX
 F000:02D1 mov byte ptr DS:[BX+0x3C],DL
 F000:02D4 cmp AX,CX
-F000:02D6 and AX,AX
+F000:02D6 test AX,AX
 F000:02D8 mov byte ptr DS:[BX+0x3D],7
 F000:02DC cmp AX,word ptr DS:[0x0100]
 F000:02E0 mov byte ptr DS:[BX+0x3E],9

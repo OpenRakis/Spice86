@@ -81,7 +81,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AH = 0x4D;
         // 016D:0106 int 0x21
         InterruptCall(cs1, 0x0108, 0x21);
-        // 016D:0108 and AX,AX
+        // 016D:0108 test AX,AX
         Alu16.And(AX, AX);
         // 016D:010A jne short 0x0110
         if (!ZeroFlag) {

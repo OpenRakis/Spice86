@@ -35,7 +35,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt8[DS, 0x0400] = 1;
         // F000:0005 mov AL,byte ptr DS:[0x0500]
         AL = UInt8[DS, 0x0500];
-        // F000:0008 and AL,AL
+        // F000:0008 test AL,AL
         Alu8.And(AL, AL);
         // F000:000A jne short 0x0013
         if (!ZeroFlag) {

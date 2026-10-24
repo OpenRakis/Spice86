@@ -208,7 +208,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     L_00BC:
         // F000:00BC mov byte ptr DS:[BX+0x0C],1
         UInt8[DS, (ushort)(BX + 0x0C)] = 1;
-        // F000:00C0 and AX,CX
+        // F000:00C0 test AX,CX
         // F000:00C2 je short 0x00C8
         if ((AX & CX) == 0) {
             goto L_00C8;
@@ -222,7 +222,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         DX = AX;
         // F000:00CE dec DX
         DX--;
-        // F000:00CF and DX,DX
+        // F000:00CF test DX,DX
         // F000:00D1 jne short 0x00D7
         if (DX != 0) {
             goto L_00D7;
@@ -314,7 +314,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     L_0135:
         // F000:0135 mov byte ptr DS:[BX+0x15],1
         UInt8[DS, (ushort)(BX + 0x15)] = 1;
-        // F000:0139 and AX,AX
+        // F000:0139 test AX,AX
         // F000:013B js short 0x0141
         if ((short)AX < 0) {
             goto L_0141;
@@ -717,7 +717,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:02D1 mov byte ptr DS:[BX+0x3C],DL
         UInt8[DS, (ushort)(BX + 0x3C)] = DL;
         // F000:02D4 cmp AX,CX
-        // F000:02D6 and AX,AX
+        // F000:02D6 test AX,AX
         // F000:02D8 mov byte ptr DS:[BX+0x3D],7
         UInt8[DS, (ushort)(BX + 0x3D)] = 7;
         // F000:02DC cmp AX,word ptr DS:[0x0100]

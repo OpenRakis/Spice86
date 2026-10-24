@@ -94,7 +94,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0x010D);
         // 016D:010D mov BX,word ptr DS:[SI]
         BX = UInt16[DS, SI];
-        // 016D:010F and BX,BX
+        // 016D:010F test BX,BX
         Alu16.And(BX, BX);
         // 016D:0111 je short 0x015B
         if (ZeroFlag) {
@@ -106,7 +106,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Stack.Push16(SI);
         // 016D:0115 mov AL,byte ptr DS:[SI+4]
         AL = UInt8[DS, (ushort)(SI + 4)];
-        // 016D:0118 and AL,AL
+        // 016D:0118 test AL,AL
         Alu8.And(AL, AL);
         // 016D:011A jne short 0x0127
         if (!ZeroFlag) {
@@ -152,7 +152,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!ZeroFlag) {
             goto L_0145;
         }
-        // 016D:013D and AL,AL
+        // 016D:013D test AL,AL
         // 016D:013F je short 0x0155
         if (AL == 0) {
             goto L_0155;

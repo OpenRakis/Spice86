@@ -15,7 +15,7 @@ F000:0205 push AX
 F000:0206 ret near
 F000:0300 call near 0x0400
 F000:0400 mov AL,byte ptr DS:[0x0500]
-F000:0403 and AL,AL
+F000:0403 test AL,AL
 F000:0405 jne short 0x040D
 F000:0407 mov byte ptr DS:[0x0012],0xDD
 F000:040C ret near

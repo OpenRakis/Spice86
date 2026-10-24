@@ -2,7 +2,7 @@
 016D:0102 int 0x21
 016D:0104 mov ES,BX
 016D:0106 mov AX,word ptr ES:[0x002C]
-016D:010A and AX,AX
+016D:010A test AX,AX
 016D:010C je short 0x0134
 016D:010E mov ES,AX
 016D:0110 cmp byte ptr ES:[0],0x42

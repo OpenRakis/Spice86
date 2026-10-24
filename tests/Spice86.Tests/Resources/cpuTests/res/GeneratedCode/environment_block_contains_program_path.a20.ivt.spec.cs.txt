@@ -121,7 +121,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         ES = BX;
         // 016D:0131 mov AX,word ptr ES:[0x002C]
         AX = UInt16[ES, 0x002C];
-        // 016D:0135 and AX,AX
+        // 016D:0135 test AX,AX
         Alu16.And(AX, AX);
         // 016D:0137 je short 0x0124
         if (ZeroFlag) {

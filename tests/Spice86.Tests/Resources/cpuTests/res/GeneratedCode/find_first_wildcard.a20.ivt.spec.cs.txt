@@ -91,7 +91,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0x010D);
         // 016D:010D mov BX,word ptr DS:[SI]
         BX = UInt16[DS, SI];
-        // 016D:010F and BX,BX
+        // 016D:010F test BX,BX
         Alu16.And(BX, BX);
         // 016D:0111 je short 0x0140
         if (ZeroFlag) {

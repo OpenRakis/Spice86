@@ -435,7 +435,7 @@
         94
       ],
       "asm": [
-        "85C0|and AX,AX",
+        "85C0|test AX,AX",
         "7504|jne short 0x0110"
       ]
     },
