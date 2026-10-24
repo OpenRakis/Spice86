@@ -75,13 +75,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0225 iret
         return InterruptRet();
     L_0226:
-        CheckExternalEvents(cs1, 0x0226);
-        // F000:0226 cmp byte ptr DS:[0x040C],1
-        Alu8.Sub(UInt8[DS, 0x040C], 1);
-        // F000:022B jne short 0x0226
-        if (!ZeroFlag) {
-            goto L_0226;
-        }
+        do {
+            CheckExternalEvents(cs1, 0x0226);
+            // F000:0226 cmp byte ptr DS:[0x040C],1
+            Alu8.Sub(UInt8[DS, 0x040C], 1);
+            // F000:022B jne short 0x0226
+        } while (!ZeroFlag);
         // F000:022D mov SS,word ptr DS:[0x0408]
         SS = UInt16[DS, 0x0408];
         State.InterruptShadowing = true;
@@ -238,13 +237,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         InterruptFlag = true;
         CheckExternalEvents(cs1, 0x006D);
         // F000:006D nop
-    L_006E:
-        CheckExternalEvents(cs1, 0x006E);
-        // F000:006E cmp byte ptr DS:[0x0401],1
-        // F000:0073 jne short 0x006E
-        if (UInt8[DS, 0x0401] != 1) {
-            goto L_006E;
-        }
+        do {
+            CheckExternalEvents(cs1, 0x006E);
+            // F000:006E cmp byte ptr DS:[0x0401],1
+            // F000:0073 jne short 0x006E
+        } while (UInt8[DS, 0x0401] != 1);
         // F000:0075 cli
         InterruptFlag = false;
         // F000:0076 mov word ptr DS:[0x0020],0x020C
@@ -272,13 +269,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         InterruptFlag = true;
         CheckExternalEvents(cs1, 0x008D);
         // F000:008D nop
-    L_008E:
-        CheckExternalEvents(cs1, 0x008E);
-        // F000:008E cmp byte ptr DS:[0x0401],2
-        // F000:0093 jne short 0x008E
-        if (UInt8[DS, 0x0401] != 2) {
-            goto L_008E;
-        }
+        do {
+            CheckExternalEvents(cs1, 0x008E);
+            // F000:008E cmp byte ptr DS:[0x0401],2
+            // F000:0093 jne short 0x008E
+        } while (UInt8[DS, 0x0401] != 2);
         // F000:0095 cli
         InterruptFlag = false;
         // F000:0096 mov AL,0xFF
@@ -309,16 +304,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AL = 0x0A;
         // F000:00BF out 0x20,AL
         Out8(0x0020, AL);
-    L_00C1:
-        CheckExternalEvents(cs1, 0x00C1);
-        // F000:00C1 in AL,0x20
-        AL = In8(0x0020);
-        // F000:00C3 test AL,1
-        Alu8.And(AL, 1);
-        // F000:00C5 je short 0x00C1
-        if (ZeroFlag) {
-            goto L_00C1;
-        }
+        do {
+            CheckExternalEvents(cs1, 0x00C1);
+            // F000:00C1 in AL,0x20
+            AL = In8(0x0020);
+            // F000:00C3 test AL,1
+            Alu8.And(AL, 1);
+            // F000:00C5 je short 0x00C1
+        } while (ZeroFlag);
         // F000:00C7 sti
         if (!InterruptFlag) {
             State.InterruptShadowing = true;

@@ -83,31 +83,30 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0107 cmp AH,0
         Alu8.Sub(AH, 0);
         // 016D:010A jne short 0x0122
-        if (!ZeroFlag) {
-            goto L_0122;
+        if (ZeroFlag) {
+            // 016D:010C mov CX,DX
+            CX = DX;
+            // 016D:010E mov AL,0
+            AL = 0;
+            // 016D:0110 mov BX,0
+            BX = 0;
+            // 016D:0113 mov DX,CX
+            DX = CX;
+            // 016D:0115 mov AH,0x44
+            AH = 0x44;
+            // 016D:0117 int 0x67
+            InterruptCall(cs1, 0x0119, 0x67);
+            // 016D:0119 cmp AH,0
+            Alu8.Sub(AH, 0);
+            // 016D:011C jne short 0x0122
+            if (!ZeroFlag) {
+                goto L_0122;
+            }
+            // 016D:011E mov AL,0
+            AL = 0;
+            // 016D:0120 jmp short 0x0124
+            goto L_0124;
         }
-        // 016D:010C mov CX,DX
-        CX = DX;
-        // 016D:010E mov AL,0
-        AL = 0;
-        // 016D:0110 mov BX,0
-        BX = 0;
-        // 016D:0113 mov DX,CX
-        DX = CX;
-        // 016D:0115 mov AH,0x44
-        AH = 0x44;
-        // 016D:0117 int 0x67
-        InterruptCall(cs1, 0x0119, 0x67);
-        // 016D:0119 cmp AH,0
-        Alu8.Sub(AH, 0);
-        // 016D:011C jne short 0x0122
-        if (!ZeroFlag) {
-            goto L_0122;
-        }
-        // 016D:011E mov AL,0
-        AL = 0;
-        // 016D:0120 jmp short 0x0124
-        goto L_0124;
     L_0122:
         VerifySpeculativeEntryOrFail(cs1, 0x0122, Signature_0122_mov);
         // 016D:0122 mov AL,0xFF

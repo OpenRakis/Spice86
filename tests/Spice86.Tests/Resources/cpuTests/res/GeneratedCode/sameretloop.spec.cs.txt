@@ -27,20 +27,21 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_0013_F0013(int loadOffset) {
-        CheckExternalEvents(cs1, 0x0013);
-        // F000:0013 inc byte ptr CS:[0x0024]
-        UInt8[CS, 0x0024] = (byte)(UInt8[CS, 0x0024] + 1);
-        // F000:0018 cmp byte ptr CS:[0x0024],4
-        Alu8.Sub(UInt8[CS, 0x0024], 4);
-        // F000:001E jae short 0x0023
-        if (!CarryFlag) {
-            goto L_0023;
+        while (true) {
+            CheckExternalEvents(cs1, 0x0013);
+            // F000:0013 inc byte ptr CS:[0x0024]
+            UInt8[CS, 0x0024] = (byte)(UInt8[CS, 0x0024] + 1);
+            // F000:0018 cmp byte ptr CS:[0x0024],4
+            Alu8.Sub(UInt8[CS, 0x0024], 4);
+            // F000:001E jae short 0x0023
+            if (!CarryFlag) {
+                break;
+            }
+            // F000:0020 push 0x13
+            Stack.Push16(0x0013);
+            // F000:0022 ret near
+            return NearRet();
         }
-        // F000:0020 push 0x13
-        Stack.Push16(0x0013);
-        // F000:0022 ret near
-        return NearRet();
-    L_0023:
         // F000:0023 hlt
         return Hlt();
     }

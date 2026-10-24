@@ -82,19 +82,17 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0x0026);
         // F000:0026 mov ECX,0x00FFFFFF
         ECX = 0x00FFFFFF;
-    L_002C:
-        CheckExternalEvents(cs1, 0x002C);
-        // F000:002C inc AX
-        AX++;
-        // F000:002D mov BX,AX
-        BX = AX;
-        // F000:002F shr BX,1
-        BX = Alu16.Shr(BX, 1);
-        // F000:0031 loop 0x002C
-        CX--;
-        if (CX != 0) {
-            goto L_002C;
-        }
+        do {
+            CheckExternalEvents(cs1, 0x002C);
+            // F000:002C inc AX
+            AX++;
+            // F000:002D mov BX,AX
+            BX = AX;
+            // F000:002F shr BX,1
+            BX = Alu16.Shr(BX, 1);
+            // F000:0031 loop 0x002C
+            CX--;
+        } while (CX != 0);
         // F000:0033 cmp DX,0
         Alu16.Sub(DX, 0);
         // F000:0037 setne AL

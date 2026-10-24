@@ -80,29 +80,27 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0105 cmp word ptr ES:[BX+0x66],0x9FFF
         Alu16.Sub(UInt16[ES, (ushort)(BX + 0x66)], 0x9FFF);
         // 016D:010B jne short 0x0127
-        if (!ZeroFlag) {
-            goto L_0127;
+        if (ZeroFlag) {
+            // 016D:010D mov AX,0xD000
+            AX = 0xD000;
+            // 016D:0110 mov ES,AX
+            ES = AX;
+            // 016D:0112 cmp byte ptr ES:[0],0x5A
+            Alu8.Sub(UInt8[ES, 0], 0x5A);
+            // 016D:0118 jne short 0x0127
+            if (ZeroFlag) {
+                // 016D:011A cmp word ptr ES:[3],0x0FFF
+                Alu16.Sub(UInt16[ES, 3], 0x0FFF);
+                // 016D:0121 jne short 0x0127
+                if (!ZeroFlag) {
+                    goto L_0127;
+                }
+                // 016D:0123 mov AL,0
+                AL = 0;
+                // 016D:0125 jmp short 0x0129
+                goto L_0129;
+            }
         }
-        // 016D:010D mov AX,0xD000
-        AX = 0xD000;
-        // 016D:0110 mov ES,AX
-        ES = AX;
-        // 016D:0112 cmp byte ptr ES:[0],0x5A
-        Alu8.Sub(UInt8[ES, 0], 0x5A);
-        // 016D:0118 jne short 0x0127
-        if (!ZeroFlag) {
-            goto L_0127;
-        }
-        // 016D:011A cmp word ptr ES:[3],0x0FFF
-        Alu16.Sub(UInt16[ES, 3], 0x0FFF);
-        // 016D:0121 jne short 0x0127
-        if (!ZeroFlag) {
-            goto L_0127;
-        }
-        // 016D:0123 mov AL,0
-        AL = 0;
-        // 016D:0125 jmp short 0x0129
-        goto L_0129;
     L_0127:
         VerifySpeculativeEntryOrFail(cs1, 0x0127, Signature_0127_mov);
         // 016D:0127 mov AL,0xFF
@@ -229,24 +227,22 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs2, 0x0090);
         // F000:0090 cmp AH,7
         // F000:0093 je short 0x00A4
-        if (AH == 7) {
-            goto L_00A4;
+        if (AH != 7) {
+            // F000:0095 cmp AH,8
+            // F000:0098 je short 0x00A4
+            if (AH != 8) {
+                // F000:009A cmp AH,0x0A
+                Alu8.Sub(AH, 0x0A);
+                // F000:009D je short 0x00A4
+                if (ZeroFlag) {
+                    goto L_00A4;
+                }
+                // F000:009F callback 0x0021
+                Callback(cs2, 0x009F, 0x0021);
+                // F000:00A3 iret
+                return InterruptRet();
+            }
         }
-        // F000:0095 cmp AH,8
-        // F000:0098 je short 0x00A4
-        if (AH == 8) {
-            goto L_00A4;
-        }
-        // F000:009A cmp AH,0x0A
-        Alu8.Sub(AH, 0x0A);
-        // F000:009D je short 0x00A4
-        if (ZeroFlag) {
-            goto L_00A4;
-        }
-        // F000:009F callback 0x0021
-        Callback(cs2, 0x009F, 0x0021);
-        // F000:00A3 iret
-        return InterruptRet();
     L_00A4:
         VerifySpeculativeEntryOrFail(cs2, 0x00A4, Signature_00A4_sti);
         // F000:00A4 sti

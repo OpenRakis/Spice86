@@ -536,6 +536,9 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     public CSharpFragment VisitReturnNode(ReturnNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitSwitchNode(SwitchNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitBreakNode(BreakNode node) => throw NotAnExpression(node);
+    public CSharpFragment VisitContinueNode(ContinueNode node) => throw NotAnExpression(node);
+    public CSharpFragment VisitInfiniteLoopNode(InfiniteLoopNode node) => throw NotAnExpression(node);
+    public CSharpFragment VisitDoWhileNode(DoWhileNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitCpuFaultTryCatchNode(CpuFaultTryCatchNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitFailAsUntestedNode(FailAsUntestedNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitCommentNode(CommentNode node) => throw NotAnExpression(node);

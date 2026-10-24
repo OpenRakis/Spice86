@@ -13,7 +13,6 @@ using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
-using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
 using Spice86.Shared.Emulator.Memory;
 
 using System.Linq;
@@ -29,8 +28,6 @@ using CfgSelectorNode = Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfM
 /// <see cref="TransferEmitter"/>. Printing the result is <see cref="CSharpStatementPrinter"/>'s job.
 /// </summary>
 internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
-    private MethodPlan? _currentMethod;
-
     /// <summary>
     /// Constructs a lowerer wired with the CFG-aware services it consults when lowering control-flow nodes:
     /// the generation context and the transfer-lowering service.
@@ -43,15 +40,6 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
     private CfgGeneratorContext Context { get; }
 
     private TransferEmitter Transfer { get; }
-
-    private MethodPlan CurrentMethod => _currentMethod
-        ?? throw new InvalidOperationException("No current method is set; call SetCurrentMethod before lowering control-flow nodes.");
-
-    /// <summary>
-    /// Sets the partition method whose body is currently being lowered. The control-flow lowering consults it
-    /// (label resolution, goto-vs-fallthrough decisions, next-emitted-node ordering).
-    /// </summary>
-    public void SetCurrentMethod(MethodPlan method) => _currentMethod = method;
 
     // ----------------------------------------------------------------------------------------------------
     // Per-instruction driving entry. The lowering itself is uniform Accept dispatch; this method only adds
@@ -76,7 +64,7 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
         if (emitExternalEventCheckAfter) {
             eventCheck = new CheckExternalEventsNode(new SegmentedAddress(instruction.Address.Segment, (ushort)instruction.NextInMemoryAddress32.Offset));
         }
-        return Sequence(body, eventCheck, Transfer.EmitFallthroughIfNeeded(instruction, CurrentMethod));
+        return Sequence(body, eventCheck, Transfer.EmitFallthroughIfNeeded(instruction));
     }
 
     private BlockNode LowerBody(CfgInstruction instruction, IVisitableAstNode node, bool emitExternalEventCheckAfter,
@@ -129,11 +117,11 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
     public IVisitableAstNode VisitJumpNearNode(JumpNearNode node) {
         if (TryGetConstantWord(node.Ip) is ushort offset) {
             return Transfer.Emit(Context.ResolveEdge(node.Instruction, InstructionSuccessorType.Normal,
-                new SegmentedAddress(node.Instruction.Address.Segment, offset)), CurrentMethod);
+                new SegmentedAddress(node.Instruction.Address.Segment, offset)));
         }
 
         return BuildNearRuntimeDispatch(node.Instruction, node.Ip, "jump",
-            edge => Transfer.Emit(edge, CurrentMethod));
+            edge => Transfer.Emit(edge));
     }
 
     public IVisitableAstNode VisitJumpFarNode(JumpFarNode node) {
@@ -141,15 +129,12 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
         ushort? offset = TryGetConstantWord(node.TargetAddress.Offset);
         if (segment is not null && offset is not null) {
             return Transfer.Emit(Context.ResolveEdge(node.Instruction, InstructionSuccessorType.Normal,
-                new SegmentedAddress(segment.Value, offset.Value)), CurrentMethod);
+                new SegmentedAddress(segment.Value, offset.Value)));
         }
 
         return BuildFarRuntimeDispatch(node.Instruction, node.TargetAddress.Segment, node.TargetAddress.Offset, "jump",
-            // forceSameMethodGoto: far dispatch is a flat chain of sibling `if`s with the untested-target
-            // throw as the next sibling (unlike the near switch, whose `break` exits past the construct to
-            // the next node). An empty matched branch would fall through the remaining checks into that
-            // throw, so the adjacency-fallthrough optimization cannot apply here.
-            edge => Transfer.Emit(edge, CurrentMethod, forceSameMethodGoto: true));
+            // Every matched branch ends with its own transfer, so it never falls through to the trailing untested-target failure.
+            edge => Transfer.Emit(edge));
     }
 
     public IVisitableAstNode VisitCallNearNode(CallNearNode node) {
@@ -157,12 +142,12 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
         if (TryGetConstantWord(node.TargetIp) is not ushort targetOffset) {
             CallContinuation runtimeContinuation = Context.ResolveCallContinuation(node.Instruction);
             return BuildNearRuntimeDispatch(node.Instruction, node.TargetIp, "call",
-                edge => CallBranchBody(node.Instruction, runtimeContinuation, helperName, edge, isFarCall: false, forceSameMethodGoto: false));
+                edge => CallBranchBody(node.Instruction, runtimeContinuation, helperName, edge, isFarCall: false));
         }
 
         ResolvedCfgEdge targetEdge = Context.ResolveEdge(node.Instruction, InstructionSuccessorType.Normal,
             new SegmentedAddress(node.Instruction.Address.Segment, targetOffset));
-        return Transfer.EmitCallHelperAndContinuation(helperName, node.Instruction, Transfer.FunctionReference(targetEdge), CurrentMethod);
+        return Transfer.EmitCallHelperAndContinuation(helperName, node.Instruction, Transfer.FunctionReference(targetEdge));
     }
 
     public IVisitableAstNode VisitCallFarNode(CallFarNode node) {
@@ -172,12 +157,12 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
         if (targetSegment is null || targetOffset is null) {
             CallContinuation runtimeContinuation = Context.ResolveCallContinuation(node.Instruction);
             return BuildFarRuntimeDispatch(node.Instruction, node.TargetAddress.Segment, node.TargetAddress.Offset, "call",
-                edge => CallBranchBody(node.Instruction, runtimeContinuation, helperName, edge, isFarCall: true, forceSameMethodGoto: true));
+                edge => CallBranchBody(node.Instruction, runtimeContinuation, helperName, edge, isFarCall: true));
         }
 
         SegmentedAddress targetAddress = new SegmentedAddress(targetSegment.Value, targetOffset.Value);
         ResolvedCfgEdge targetEdge = Context.ResolveEdge(node.Instruction, InstructionSuccessorType.Normal, targetAddress);
-        return Transfer.EmitCallHelperAndContinuation(helperName, node.Instruction, Transfer.FunctionReference(targetEdge), CurrentMethod, farCallTargetCs: targetSegment.Value);
+        return Transfer.EmitCallHelperAndContinuation(helperName, node.Instruction, Transfer.FunctionReference(targetEdge), farCallTargetCs: targetSegment.Value);
     }
 
     public IVisitableAstNode VisitInterruptCallNode(InterruptCallNode node) {
@@ -188,7 +173,7 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
                 new SegmentVariableNode(expectedReturn.Segment),
                 new OffsetLiteralNode(expectedReturn.Offset),
                 new ExplicitCastNode(DataType.UINT8, node.VectorNumber)),
-            Transfer.EmitPostCallContinuation(node.Instruction, continuation, CurrentMethod));
+            Transfer.EmitPostCallContinuation(node.Instruction, continuation));
     }
 
     public IVisitableAstNode VisitCallbackNode(CallbackNode node) {
@@ -200,7 +185,7 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
             : BuildCallbackTargetDispatch(node, movedTargets);
         return Sequence(
             callback,
-            Transfer.EmitFallthroughIfNeeded(node.Instruction, CurrentMethod));
+            Transfer.EmitFallthroughIfNeeded(node.Instruction));
     }
 
     /// <summary>
@@ -226,7 +211,7 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
                      .ThenBy(edge => edge.Target.Address.Offset)) {
             targets.Add(new IfElseNode(
                 AddressEquals(new SegmentRegisterNode((int)SegmentRegisterIndex.CsIndex), new InstructionPointerNode(), edge.Target.Address),
-                Sequence(Transfer.Emit(edge, CurrentMethod, forceSameMethodGoto: true)),
+                Sequence(Transfer.Emit(edge)),
                 Empty()));
         }
         targets.Add(UntestedMessages.CallbackTarget(node.Instruction.Address));
@@ -260,7 +245,7 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
                 new OffsetLiteralNode(selectorNode.Address.Offset),
                 new SignatureFieldNode(Context.GetSignatureField(target)));
             items.Add(new IfElseNode(signatureMatches,
-                Sequence(Transfer.Emit(edge, CurrentMethod, forceSameMethodGoto: true)),
+                Sequence(Transfer.Emit(edge)),
                 Empty()));
         }
         items.Add(UntestedMessages.CodeVariant(selectorNode.Address));
@@ -268,9 +253,9 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
     }
 
     // ----------------------------------------------------------------------------------------------------
-    // Conditional control flow. VisitIfElseNode owns the one irreducible orchestration: a MoveIpNextNode
-    // fallthrough arm must exclude the *other* arm's target, context a single arm cannot see, so the two arms
-    // are composed here rather than each lowering itself in isolation.
+    // Conditional control flow. Both arms of a control-flow conditional are lowered to explicit transfers;
+    // FallthroughGotoRemover later drops the arm that reaches the next node and negates the condition when the
+    // taken arm is the one that became empty.
     // ----------------------------------------------------------------------------------------------------
 
     public IVisitableAstNode VisitIfElseNode(IfElseNode node) {
@@ -285,40 +270,8 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
 
         IVisitableAstNode trueArm = LowerConditionalArm(instruction, node.TrueCase);
         IVisitableAstNode falseArm = LowerConditionalArm(instruction, node.FalseCase);
-
-        if (!IsEmpty(trueArm)) {
-            return new IfElseNode(node.Condition, trueArm, falseArm);
-        }
-
-        // The taken arm is empty (e.g. a fallthrough that is the next emitted node). Emit only the
-        // remaining arm under the negated condition rather than an empty `if` with a populated `else`.
-        if (!IsEmpty(falseArm)) {
-            return new IfElseNode(NegatedCondition(node.Condition), falseArm, Empty());
-        }
-
-        return Empty();
+        return new IfElseNode(node.Condition, trueArm, falseArm);
     }
-
-    /// <summary>The negation of a condition: the operand of a <c>!</c>, the opposite comparison, or <c>!</c> around the condition.</summary>
-    internal static ValueNode NegatedCondition(ValueNode condition) {
-        if (condition is UnaryOperationNode { UnaryOperation: UnaryOperation.NOT } notNode) {
-            return notNode.Value;
-        }
-        if (condition is BinaryOperationNode comparison && InvertedComparison(comparison.BinaryOperation) is BinaryOperation inverted) {
-            return new BinaryOperationNode(DataType.BOOL, comparison.Left, inverted, comparison.Right);
-        }
-        return new UnaryOperationNode(DataType.BOOL, UnaryOperation.NOT, condition);
-    }
-
-    private static BinaryOperation? InvertedComparison(BinaryOperation operation) => operation switch {
-        BinaryOperation.EQUAL => BinaryOperation.NOT_EQUAL,
-        BinaryOperation.NOT_EQUAL => BinaryOperation.EQUAL,
-        BinaryOperation.LESS_THAN => BinaryOperation.GREATER_THAN_OR_EQUAL,
-        BinaryOperation.GREATER_THAN_OR_EQUAL => BinaryOperation.LESS_THAN,
-        BinaryOperation.GREATER_THAN => BinaryOperation.LESS_THAN_OR_EQUAL,
-        BinaryOperation.LESS_THAN_OR_EQUAL => BinaryOperation.GREATER_THAN,
-        _ => null
-    };
 
     private static CfgInstruction? FindArmInstruction(IfElseNode node) =>
         FindArmInstruction(node.TrueCase) ?? FindArmInstruction(node.FalseCase);
@@ -342,37 +295,26 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
     };
 
     private IVisitableAstNode LowerConditionalNearJumpArm(JumpNearNode node) {
-        if (TryGetConstantWord(node.Ip) is ushort offset) {
-            // Constant target: transfer to the observed edge when discovery traversed it. When the taken
-            // branch was never observed but its target block was discovered in this same partition, synthesize
-            // the edge and emit a normal goto rather than failing: only the edge is untested, not the target.
+        if (TryGetConstantWord(node.Ip) is not null) {
+            // Constant target: transfer along the CFG edge, or fail as untested when discovery (observed or
+            // speculative) never produced it.
             if (TryResolveNearJump(node) is ResolvedCfgEdge edge) {
-                return Transfer.Emit(edge, CurrentMethod);
-            }
-            SegmentedAddress targetAddress = new(node.Instruction.Address.Segment, offset);
-            if (Context.TryResolveSamePartitionBlockEntry(node.Instruction, targetAddress) is ResolvedCfgEdge blockEntryEdge) {
-                return Transfer.Emit(blockEntryEdge, CurrentMethod);
+                return Transfer.Emit(edge);
             }
             return UntestedMessages.Jump(node.Instruction.Address);
         }
         return BuildNearRuntimeDispatch(node.Instruction, node.Ip, "jump",
-            edge => Transfer.Emit(edge, CurrentMethod));
+            edge => Transfer.Emit(edge));
     }
 
     /// <summary>
-    /// Lowers a <see cref="MoveIpNextNode"/> fallthrough arm. The fallthrough target is, by construction, the
-    /// instruction that statically follows the conditional in memory, so it is resolved directly against that
-    /// address. When that edge was never observed during discovery (the conditional was always taken) but the
-    /// following block was discovered in this same partition, the edge is synthesized and lowered as a normal
-    /// goto; only when no such block exists does the generated code fail as untested.
+    /// Lowers a <see cref="MoveIpNextNode"/> fallthrough arm: the CFG edge to the instruction that statically follows
+    /// the conditional in memory, or a <c>FailAsUntested</c> throw when discovery never produced that edge.
     /// </summary>
     private IVisitableAstNode LowerFallthroughArm(CfgInstruction instruction) {
         SegmentedAddress fallthroughAddress = instruction.NextInMemoryAddress32.ToSegmentedAddress();
         if (TryResolveConstantTarget(instruction, fallthroughAddress) is ResolvedCfgEdge edge) {
-            return Transfer.Emit(edge, CurrentMethod, allowCallOutContinuation: true);
-        }
-        if (Context.TryResolveSamePartitionBlockEntry(instruction, fallthroughAddress) is ResolvedCfgEdge blockEntryEdge) {
-            return Transfer.Emit(blockEntryEdge, CurrentMethod);
+            return Transfer.Emit(edge, allowCallOutContinuation: true);
         }
         return UntestedMessages.ConditionalFallthrough(instruction.Address);
     }
@@ -418,8 +360,7 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
         VariableDeclarationNode offsetDeclaration = new(DataType.UINT16, "targetOffset", offset);
         List<IVisitableAstNode> items = [segmentDeclaration, offsetDeclaration];
         foreach (ResolvedCfgEdge edge in edges.OrderBy(edge => edge.Target.Address.Segment).ThenBy(edge => edge.Target.Address.Offset)) {
-            // The matched branch must transfer explicitly (the body uses forceSameMethodGoto) so it never
-            // falls through to the trailing untested-target failure even when the target is the next node.
+            // Every matched branch ends with its own transfer, so it never falls through to the trailing untested-target failure.
             items.Add(new IfElseNode(
                 AddressEquals(segmentDeclaration.Reference, offsetDeclaration.Reference, edge.Target.Address),
                 Sequence(bodyForEdge(edge)),
@@ -458,11 +399,11 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
     }
 
     private IVisitableAstNode CallBranchBody(CfgInstruction instruction, CallContinuation continuation,
-        string helperName, ResolvedCfgEdge edge, bool isFarCall, bool forceSameMethodGoto) {
+        string helperName, ResolvedCfgEdge edge, bool isFarCall) {
         ushort? targetCs = isFarCall ? edge.Target.Address.Segment : null;
         return Sequence(
             Transfer.CallHelper(helperName, continuation.ExpectedReturnAddress, Transfer.FunctionReference(edge), targetCs),
-            Transfer.EmitPostCallContinuation(instruction, continuation, CurrentMethod, forceSameMethodGoto: forceSameMethodGoto));
+            Transfer.EmitPostCallContinuation(instruction, continuation));
     }
 
     private static ushort? TryGetConstantWord(IVisitableAstNode node) => node switch {

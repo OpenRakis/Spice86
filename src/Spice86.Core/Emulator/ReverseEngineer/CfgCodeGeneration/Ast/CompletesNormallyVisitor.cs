@@ -34,6 +34,11 @@ internal sealed class CompletesNormallyVisitor : ICodeGenerationAstVisitor<bool>
 
     public bool VisitWhileWithExitNode(WhileWithExitNode node) => true;
 
+    public bool VisitInfiniteLoopNode(InfiniteLoopNode node) => LoopExits.HasBreak(node.Body);
+
+    public bool VisitDoWhileNode(DoWhileNode node) =>
+        CompletesNormally(node.Body) || LoopExits.HasBreak(node.Body) || LoopExits.HasContinue(node.Body);
+
     public bool VisitSwitchNode(SwitchNode node) {
         foreach (SwitchSection section in node.Sections) {
             if (section.Body.Statements is { Count: > 0 } statements && statements[^1] is BreakNode) {
@@ -58,6 +63,8 @@ internal sealed class CompletesNormallyVisitor : ICodeGenerationAstVisitor<bool>
     public bool VisitCyclicJumpNode(CyclicJumpNode node) => false;
 
     public bool VisitBreakNode(BreakNode node) => false;
+
+    public bool VisitContinueNode(ContinueNode node) => false;
 
     public bool VisitLabelNode(LabelNode node) => true;
 

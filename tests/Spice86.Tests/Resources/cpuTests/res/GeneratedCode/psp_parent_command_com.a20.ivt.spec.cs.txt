@@ -84,23 +84,22 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:010B cmp BX,0x0060
         Alu16.Sub(BX, 0x0060);
         // 016D:010E jne short 0x0120
-        if (!ZeroFlag) {
-            goto L_0120;
+        if (ZeroFlag) {
+            // 016D:0110 mov ES,BX
+            ES = BX;
+            // 016D:0112 mov BX,word ptr ES:[0x0016]
+            BX = UInt16[ES, 0x0016];
+            // 016D:0117 cmp BX,0x0060
+            Alu16.Sub(BX, 0x0060);
+            // 016D:011A jne short 0x0120
+            if (!ZeroFlag) {
+                goto L_0120;
+            }
+            // 016D:011C mov AL,0
+            AL = 0;
+            // 016D:011E jmp short 0x0122
+            goto L_0122;
         }
-        // 016D:0110 mov ES,BX
-        ES = BX;
-        // 016D:0112 mov BX,word ptr ES:[0x0016]
-        BX = UInt16[ES, 0x0016];
-        // 016D:0117 cmp BX,0x0060
-        Alu16.Sub(BX, 0x0060);
-        // 016D:011A jne short 0x0120
-        if (!ZeroFlag) {
-            goto L_0120;
-        }
-        // 016D:011C mov AL,0
-        AL = 0;
-        // 016D:011E jmp short 0x0122
-        goto L_0122;
     L_0120:
         VerifySpeculativeEntryOrFail(cs1, 0x0120, Signature_0120_mov);
         // 016D:0120 mov AL,0xFF
@@ -227,24 +226,22 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs2, 0x0090);
         // F000:0090 cmp AH,7
         // F000:0093 je short 0x00A4
-        if (AH == 7) {
-            goto L_00A4;
+        if (AH != 7) {
+            // F000:0095 cmp AH,8
+            // F000:0098 je short 0x00A4
+            if (AH != 8) {
+                // F000:009A cmp AH,0x0A
+                Alu8.Sub(AH, 0x0A);
+                // F000:009D je short 0x00A4
+                if (ZeroFlag) {
+                    goto L_00A4;
+                }
+                // F000:009F callback 0x0021
+                Callback(cs2, 0x009F, 0x0021);
+                // F000:00A3 iret
+                return InterruptRet();
+            }
         }
-        // F000:0095 cmp AH,8
-        // F000:0098 je short 0x00A4
-        if (AH == 8) {
-            goto L_00A4;
-        }
-        // F000:009A cmp AH,0x0A
-        Alu8.Sub(AH, 0x0A);
-        // F000:009D je short 0x00A4
-        if (ZeroFlag) {
-            goto L_00A4;
-        }
-        // F000:009F callback 0x0021
-        Callback(cs2, 0x009F, 0x0021);
-        // F000:00A3 iret
-        return InterruptRet();
     L_00A4:
         VerifySpeculativeEntryOrFail(cs2, 0x00A4, Signature_00A4_sti);
         // F000:00A4 sti

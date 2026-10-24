@@ -37,23 +37,21 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         SP = 4;
         // F000:0008 mov BX,0x000A
         BX = 0x000A;
-    L_000B:
-        CheckExternalEvents(cs1, 0x000B);
-        // F000:000B jmp short 0x000D
-        // F000:000D mov AX,word ptr [0x000F000E]
-        AX = UInt16[0x000F000E];
-        // F000:0010 push AX
-        Stack.Push16(AX);
-        // F000:0011 mov word ptr CS:[0x000E],BX
-        UInt16[CS, 0x000E] = BX;
-        // F000:0016 dec BX
-        BX--;
-        // F000:0017 cmp AX,0
-        Alu16.Sub(AX, 0);
-        // F000:001A jne short 0x000B
-        if (!ZeroFlag) {
-            goto L_000B;
-        }
+        do {
+            CheckExternalEvents(cs1, 0x000B);
+            // F000:000B jmp short 0x000D
+            // F000:000D mov AX,word ptr [0x000F000E]
+            AX = UInt16[0x000F000E];
+            // F000:0010 push AX
+            Stack.Push16(AX);
+            // F000:0011 mov word ptr CS:[0x000E],BX
+            UInt16[CS, 0x000E] = BX;
+            // F000:0016 dec BX
+            BX--;
+            // F000:0017 cmp AX,0
+            Alu16.Sub(AX, 0);
+            // F000:001A jne short 0x000B
+        } while (!ZeroFlag);
         // F000:001C hlt
         return Hlt();
     }

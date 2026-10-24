@@ -178,28 +178,27 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CX = 0;
         // 016D:0149 mov DX,0x0388
         DX = 0x0388;
-    L_014C:
-        CheckExternalEvents(cs1, 0x014C);
-        // 016D:014C cmp CX,0x1388
-        Alu16.Sub(CX, 0x1388);
-        // 016D:0150 jae short 0x015A
-        if (!CarryFlag) {
-            goto L_015A;
+        while (true) {
+            CheckExternalEvents(cs1, 0x014C);
+            // 016D:014C cmp CX,0x1388
+            Alu16.Sub(CX, 0x1388);
+            // 016D:0150 jae short 0x015A
+            if (!CarryFlag) {
+                goto L_015A;
+            }
+            // 016D:0152 in AL,DX
+            AL = In8(DX);
+            // 016D:0153 inc CX
+            CX++;
+            // 016D:0154 test AL,0xC0
+            Alu8.And(AL, 0xC0);
+            // 016D:0156 jne short 0x017C
+            if (!ZeroFlag) {
+                break;
+            }
+            VerifySpeculativeEntryOrFail(cs1, 0x0158, Signature_0158_jmp);
+            // 016D:0158 jmp short 0x014C
         }
-        // 016D:0152 in AL,DX
-        AL = In8(DX);
-        // 016D:0153 inc CX
-        CX++;
-        // 016D:0154 test AL,0xC0
-        Alu8.And(AL, 0xC0);
-        // 016D:0156 jne short 0x017C
-        if (!ZeroFlag) {
-            goto L_017C;
-        }
-        VerifySpeculativeEntryOrFail(cs1, 0x0158, Signature_0158_jmp);
-        // 016D:0158 jmp short 0x014C
-        goto L_014C;
-    L_017C:
         // 016D:017C mov DX,0x0998
         DX = 0x0998;
         // 016D:017F mov AL,CL
@@ -323,15 +322,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CX = 6;
         // 016D:01CF mov DX,0x0388
         DX = 0x0388;
-    L_01D2:
-        CheckExternalEvents(cs1, 0x01D2);
-        // 016D:01D2 in AL,DX
-        AL = In8(DX);
-        // 016D:01D3 loop 0x01D2
-        CX--;
-        if (CX != 0) {
-            goto L_01D2;
-        }
+        do {
+            CheckExternalEvents(cs1, 0x01D2);
+            // 016D:01D2 in AL,DX
+            AL = In8(DX);
+            // 016D:01D3 loop 0x01D2
+            CX--;
+        } while (CX != 0);
         // 016D:01D5 pop DX
         DX = Stack.Pop16();
         // 016D:01D6 pop CX
@@ -350,15 +347,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CX = 0x0023;
         // 016D:01DD mov DX,0x0388
         DX = 0x0388;
-    L_01E0:
-        CheckExternalEvents(cs1, 0x01E0);
-        // 016D:01E0 in AL,DX
-        AL = In8(DX);
-        // 016D:01E1 loop 0x01E0
-        CX--;
-        if (CX != 0) {
-            goto L_01E0;
-        }
+        do {
+            CheckExternalEvents(cs1, 0x01E0);
+            // 016D:01E0 in AL,DX
+            AL = In8(DX);
+            // 016D:01E1 loop 0x01E0
+            CX--;
+        } while (CX != 0);
         // 016D:01E3 pop DX
         DX = Stack.Pop16();
         // 016D:01E4 pop CX
@@ -368,26 +363,25 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_016D_01E6_018B6(int loadOffset) {
-    L_01E6:
-        CheckExternalEvents(cs1, 0x01E6);
-        // 016D:01E6 lods AL,byte ptr DS:[SI]
-        AL = UInt8[DS, SI];
-        SI = (ushort)(SI + (ushort)State.Direction8);
-        // 016D:01E7 or AL,AL
-        AL = Alu8.Or(AL, AL);
-        // 016D:01E9 je short 0x01F4
-        if (AL == 0) {
-            goto L_01F4;
+        while (true) {
+            CheckExternalEvents(cs1, 0x01E6);
+            // 016D:01E6 lods AL,byte ptr DS:[SI]
+            AL = UInt8[DS, SI];
+            SI = (ushort)(SI + (ushort)State.Direction8);
+            // 016D:01E7 or AL,AL
+            AL = Alu8.Or(AL, AL);
+            // 016D:01E9 je short 0x01F4
+            if (AL == 0) {
+                break;
+            }
+            // 016D:01EB mov AH,0x0E
+            AH = 0x0E;
+            // 016D:01ED mov BX,7
+            BX = 7;
+            // 016D:01F0 int 0x10
+            InterruptCall(cs1, 0x01F2, 0x10);
+            // 016D:01F2 jmp short 0x01E6
         }
-        // 016D:01EB mov AH,0x0E
-        AH = 0x0E;
-        // 016D:01ED mov BX,7
-        BX = 7;
-        // 016D:01F0 int 0x10
-        InterruptCall(cs1, 0x01F2, 0x10);
-        // 016D:01F2 jmp short 0x01E6
-        goto L_01E6;
-    L_01F4:
         // 016D:01F4 ret near
         return NearRet();
     }
@@ -404,39 +398,35 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CX = 0;
         // 016D:01FA mov BX,0x000A
         BX = 0x000A;
-    L_01FD:
-        CheckExternalEvents(cs1, 0x01FD);
-        // 016D:01FD xor DX,DX
-        DX = 0;
-        // 016D:01FF div BX
-        (AX, DX) = Div16(divisor: BX, dividend: (uint)((uint)DX << 0x00000010 | (uint)AX));
-        // 016D:0201 push DX
-        Stack.Push16(DX);
-        // 016D:0202 inc CX
-        CX++;
-        // 016D:0203 or AX,AX
-        AX = (ushort)(AX | AX);
-        // 016D:0205 jne short 0x01FD
-        if (AX != 0) {
-            goto L_01FD;
-        }
-    L_0207:
-        CheckExternalEvents(cs1, 0x0207);
-        // 016D:0207 pop AX
-        AX = Stack.Pop16();
-        // 016D:0208 add AL,0x30
-        AL = Alu8.Add(AL, 0x30);
-        // 016D:020A mov AH,0x0E
-        AH = 0x0E;
-        // 016D:020C mov BX,7
-        BX = 7;
-        // 016D:020F int 0x10
-        InterruptCall(cs1, 0x0211, 0x10);
-        // 016D:0211 loop 0x0207
-        CX--;
-        if (CX != 0) {
-            goto L_0207;
-        }
+        do {
+            CheckExternalEvents(cs1, 0x01FD);
+            // 016D:01FD xor DX,DX
+            DX = 0;
+            // 016D:01FF div BX
+            (AX, DX) = Div16(divisor: BX, dividend: (uint)((uint)DX << 0x00000010 | (uint)AX));
+            // 016D:0201 push DX
+            Stack.Push16(DX);
+            // 016D:0202 inc CX
+            CX++;
+            // 016D:0203 or AX,AX
+            AX = (ushort)(AX | AX);
+            // 016D:0205 jne short 0x01FD
+        } while (AX != 0);
+        do {
+            CheckExternalEvents(cs1, 0x0207);
+            // 016D:0207 pop AX
+            AX = Stack.Pop16();
+            // 016D:0208 add AL,0x30
+            AL = Alu8.Add(AL, 0x30);
+            // 016D:020A mov AH,0x0E
+            AH = 0x0E;
+            // 016D:020C mov BX,7
+            BX = 7;
+            // 016D:020F int 0x10
+            InterruptCall(cs1, 0x0211, 0x10);
+            // 016D:0211 loop 0x0207
+            CX--;
+        } while (CX != 0);
         // 016D:0213 pop DX
         DX = Stack.Pop16();
         // 016D:0214 pop CX

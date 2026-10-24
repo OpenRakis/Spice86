@@ -209,24 +209,22 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs2, 0x0090);
         // F000:0090 cmp AH,7
         // F000:0093 je short 0x00A4
-        if (AH == 7) {
-            goto L_00A4;
+        if (AH != 7) {
+            // F000:0095 cmp AH,8
+            // F000:0098 je short 0x00A4
+            if (AH != 8) {
+                // F000:009A cmp AH,0x0A
+                Alu8.Sub(AH, 0x0A);
+                // F000:009D je short 0x00A4
+                if (ZeroFlag) {
+                    goto L_00A4;
+                }
+                // F000:009F callback 0x0021
+                Callback(cs2, 0x009F, 0x0021);
+                // F000:00A3 iret
+                return InterruptRet();
+            }
         }
-        // F000:0095 cmp AH,8
-        // F000:0098 je short 0x00A4
-        if (AH == 8) {
-            goto L_00A4;
-        }
-        // F000:009A cmp AH,0x0A
-        Alu8.Sub(AH, 0x0A);
-        // F000:009D je short 0x00A4
-        if (ZeroFlag) {
-            goto L_00A4;
-        }
-        // F000:009F callback 0x0021
-        Callback(cs2, 0x009F, 0x0021);
-        // F000:00A3 iret
-        return InterruptRet();
     L_00A4:
         VerifySpeculativeEntryOrFail(cs2, 0x00A4, Signature_00A4_sti);
         // F000:00A4 sti

@@ -88,165 +88,151 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:010E cmp AX,5
         Alu16.Sub(AX, 5);
         // 016D:0111 jne near 0x01B4
-        if (!ZeroFlag) {
-            goto L_01B4;
+        if (ZeroFlag) {
+            // 016D:0115 mov DX,0x01D7
+            DX = 0x01D7;
+            // 016D:0118 call near 0x01BB
+            NearCall(cs1, 0x011B, unknown_016D_01BB_0188B);
+            // 016D:011B cmp AX,6
+            Alu16.Sub(AX, 6);
+            // 016D:011E jne near 0x01B4
+            if (ZeroFlag) {
+                // 016D:0122 mov DX,0x01DD
+                DX = 0x01DD;
+                // 016D:0125 call near 0x01BB
+                NearCall(cs1, 0x0128, unknown_016D_01BB_0188B);
+                // 016D:0128 cmp AX,7
+                Alu16.Sub(AX, 7);
+                // 016D:012B jne near 0x01B4
+                if (ZeroFlag) {
+                    // 016D:012F mov DX,0x2000
+                    DX = 0x2000;
+                    // 016D:0132 mov SI,0x0010
+                    SI = 0x0010;
+                    // 016D:0135 mov AH,0x55
+                    AH = 0x55;
+                    // 016D:0137 int 0x21
+                    InterruptCall(cs1, 0x0139, 0x21);
+                    // 016D:0139 mov BX,0x2000
+                    BX = 0x2000;
+                    // 016D:013C mov AH,0x50
+                    AH = 0x50;
+                    // 016D:013E int 0x21
+                    InterruptCall(cs1, 0x0140, 0x21);
+                    // 016D:0140 mov SI,0
+                    SI = 0;
+                    do {
+                        CheckExternalEvents(cs1, 0x0143);
+                        // 016D:0143 mov ES,word ptr DS:[0x01CE]
+                        ES = UInt16[DS, 0x01CE];
+                        // 016D:0147 mov AL,byte ptr ES:[SI+0x18]
+                        AL = UInt8[ES, (ushort)(SI + 0x18)];
+                        // 016D:014B mov BX,0x2000
+                        BX = 0x2000;
+                        // 016D:014E mov ES,BX
+                        ES = BX;
+                        // 016D:0150 cmp AL,byte ptr ES:[SI+0x18]
+                        Alu8.Sub(AL, UInt8[ES, (ushort)(SI + 0x18)]);
+                        // 016D:0154 jne short 0x01B4
+                        if (!ZeroFlag) {
+                            goto L_01B4;
+                        }
+                        // 016D:0156 inc SI
+                        SI++;
+                        // 016D:0157 cmp SI,8
+                        Alu16.Sub(SI, 8);
+                        // 016D:015A jne short 0x0143
+                    } while (!ZeroFlag);
+                    // 016D:015C mov BX,5
+                    BX = 5;
+                    // 016D:015F mov CX,1
+                    CX = 1;
+                    // 016D:0162 mov DX,0x01D0
+                    DX = 0x01D0;
+                    // 016D:0165 mov AH,0x3F
+                    AH = 0x3F;
+                    // 016D:0167 int 0x21
+                    InterruptCall(cs1, 0x0169, 0x21);
+                    // 016D:0169 jb short 0x01B4
+                    if (!CarryFlag) {
+                        // 016D:016B cmp AX,1
+                        Alu16.Sub(AX, 1);
+                        // 016D:016E jne short 0x01B4
+                        if (ZeroFlag) {
+                            // 016D:0170 cmp byte ptr DS:[0x01D0],0x41
+                            Alu8.Sub(UInt8[DS, 0x01D0], 0x41);
+                            // 016D:0175 jne short 0x01B4
+                            if (ZeroFlag) {
+                                // 016D:0177 mov DX,0x01E3
+                                DX = 0x01E3;
+                                // 016D:017A call near 0x01BB
+                                NearCall(cs1, 0x017D, unknown_016D_01BB_0188B);
+                                // 016D:017D cmp AX,8
+                                Alu16.Sub(AX, 8);
+                                // 016D:0180 jne short 0x01B4
+                                if (ZeroFlag) {
+                                    // 016D:0182 mov BX,AX
+                                    BX = AX;
+                                    // 016D:0184 mov AH,0x3E
+                                    AH = 0x3E;
+                                    // 016D:0186 int 0x21
+                                    InterruptCall(cs1, 0x0188, 0x21);
+                                    // 016D:0188 jb short 0x01B4
+                                    if (!CarryFlag) {
+                                        // 016D:018A mov BX,5
+                                        BX = 5;
+                                        do {
+                                            CheckExternalEvents(cs1, 0x018D);
+                                            // 016D:018D mov AH,0x3E
+                                            AH = 0x3E;
+                                            // 016D:018F int 0x21
+                                            InterruptCall(cs1, 0x0191, 0x21);
+                                            // 016D:0191 jb short 0x01B4
+                                            if (CarryFlag) {
+                                                goto L_01B4;
+                                            }
+                                            // 016D:0193 inc BX
+                                            BX++;
+                                            // 016D:0194 cmp BX,8
+                                            Alu16.Sub(BX, 8);
+                                            // 016D:0197 jne short 0x018D
+                                        } while (!ZeroFlag);
+                                        // 016D:0199 mov BX,word ptr DS:[0x01CE]
+                                        BX = UInt16[DS, 0x01CE];
+                                        // 016D:019D mov AH,0x50
+                                        AH = 0x50;
+                                        // 016D:019F int 0x21
+                                        InterruptCall(cs1, 0x01A1, 0x21);
+                                        // 016D:01A1 mov BX,5
+                                        BX = 5;
+                                        do {
+                                            CheckExternalEvents(cs1, 0x01A4);
+                                            // 016D:01A4 mov AH,0x3E
+                                            AH = 0x3E;
+                                            // 016D:01A6 int 0x21
+                                            InterruptCall(cs1, 0x01A8, 0x21);
+                                            // 016D:01A8 jb short 0x01B4
+                                            if (CarryFlag) {
+                                                goto L_01B4;
+                                            }
+                                            // 016D:01AA inc BX
+                                            BX++;
+                                            // 016D:01AB cmp BX,8
+                                            Alu16.Sub(BX, 8);
+                                            // 016D:01AE jne short 0x01A4
+                                        } while (!ZeroFlag);
+                                        // 016D:01B0 mov AL,0
+                                        AL = 0;
+                                        // 016D:01B2 jmp short 0x01B6
+                                        goto L_01B6;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
-        // 016D:0115 mov DX,0x01D7
-        DX = 0x01D7;
-        // 016D:0118 call near 0x01BB
-        NearCall(cs1, 0x011B, unknown_016D_01BB_0188B);
-        // 016D:011B cmp AX,6
-        Alu16.Sub(AX, 6);
-        // 016D:011E jne near 0x01B4
-        if (!ZeroFlag) {
-            goto L_01B4;
-        }
-        // 016D:0122 mov DX,0x01DD
-        DX = 0x01DD;
-        // 016D:0125 call near 0x01BB
-        NearCall(cs1, 0x0128, unknown_016D_01BB_0188B);
-        // 016D:0128 cmp AX,7
-        Alu16.Sub(AX, 7);
-        // 016D:012B jne near 0x01B4
-        if (!ZeroFlag) {
-            goto L_01B4;
-        }
-        // 016D:012F mov DX,0x2000
-        DX = 0x2000;
-        // 016D:0132 mov SI,0x0010
-        SI = 0x0010;
-        // 016D:0135 mov AH,0x55
-        AH = 0x55;
-        // 016D:0137 int 0x21
-        InterruptCall(cs1, 0x0139, 0x21);
-        // 016D:0139 mov BX,0x2000
-        BX = 0x2000;
-        // 016D:013C mov AH,0x50
-        AH = 0x50;
-        // 016D:013E int 0x21
-        InterruptCall(cs1, 0x0140, 0x21);
-        // 016D:0140 mov SI,0
-        SI = 0;
-    L_0143:
-        CheckExternalEvents(cs1, 0x0143);
-        // 016D:0143 mov ES,word ptr DS:[0x01CE]
-        ES = UInt16[DS, 0x01CE];
-        // 016D:0147 mov AL,byte ptr ES:[SI+0x18]
-        AL = UInt8[ES, (ushort)(SI + 0x18)];
-        // 016D:014B mov BX,0x2000
-        BX = 0x2000;
-        // 016D:014E mov ES,BX
-        ES = BX;
-        // 016D:0150 cmp AL,byte ptr ES:[SI+0x18]
-        Alu8.Sub(AL, UInt8[ES, (ushort)(SI + 0x18)]);
-        // 016D:0154 jne short 0x01B4
-        if (!ZeroFlag) {
-            goto L_01B4;
-        }
-        // 016D:0156 inc SI
-        SI++;
-        // 016D:0157 cmp SI,8
-        Alu16.Sub(SI, 8);
-        // 016D:015A jne short 0x0143
-        if (!ZeroFlag) {
-            goto L_0143;
-        }
-        // 016D:015C mov BX,5
-        BX = 5;
-        // 016D:015F mov CX,1
-        CX = 1;
-        // 016D:0162 mov DX,0x01D0
-        DX = 0x01D0;
-        // 016D:0165 mov AH,0x3F
-        AH = 0x3F;
-        // 016D:0167 int 0x21
-        InterruptCall(cs1, 0x0169, 0x21);
-        // 016D:0169 jb short 0x01B4
-        if (CarryFlag) {
-            goto L_01B4;
-        }
-        // 016D:016B cmp AX,1
-        Alu16.Sub(AX, 1);
-        // 016D:016E jne short 0x01B4
-        if (!ZeroFlag) {
-            goto L_01B4;
-        }
-        // 016D:0170 cmp byte ptr DS:[0x01D0],0x41
-        Alu8.Sub(UInt8[DS, 0x01D0], 0x41);
-        // 016D:0175 jne short 0x01B4
-        if (!ZeroFlag) {
-            goto L_01B4;
-        }
-        // 016D:0177 mov DX,0x01E3
-        DX = 0x01E3;
-        // 016D:017A call near 0x01BB
-        NearCall(cs1, 0x017D, unknown_016D_01BB_0188B);
-        // 016D:017D cmp AX,8
-        Alu16.Sub(AX, 8);
-        // 016D:0180 jne short 0x01B4
-        if (!ZeroFlag) {
-            goto L_01B4;
-        }
-        // 016D:0182 mov BX,AX
-        BX = AX;
-        // 016D:0184 mov AH,0x3E
-        AH = 0x3E;
-        // 016D:0186 int 0x21
-        InterruptCall(cs1, 0x0188, 0x21);
-        // 016D:0188 jb short 0x01B4
-        if (CarryFlag) {
-            goto L_01B4;
-        }
-        // 016D:018A mov BX,5
-        BX = 5;
-    L_018D:
-        CheckExternalEvents(cs1, 0x018D);
-        // 016D:018D mov AH,0x3E
-        AH = 0x3E;
-        // 016D:018F int 0x21
-        InterruptCall(cs1, 0x0191, 0x21);
-        // 016D:0191 jb short 0x01B4
-        if (CarryFlag) {
-            goto L_01B4;
-        }
-        // 016D:0193 inc BX
-        BX++;
-        // 016D:0194 cmp BX,8
-        Alu16.Sub(BX, 8);
-        // 016D:0197 jne short 0x018D
-        if (!ZeroFlag) {
-            goto L_018D;
-        }
-        // 016D:0199 mov BX,word ptr DS:[0x01CE]
-        BX = UInt16[DS, 0x01CE];
-        // 016D:019D mov AH,0x50
-        AH = 0x50;
-        // 016D:019F int 0x21
-        InterruptCall(cs1, 0x01A1, 0x21);
-        // 016D:01A1 mov BX,5
-        BX = 5;
-    L_01A4:
-        CheckExternalEvents(cs1, 0x01A4);
-        // 016D:01A4 mov AH,0x3E
-        AH = 0x3E;
-        // 016D:01A6 int 0x21
-        InterruptCall(cs1, 0x01A8, 0x21);
-        // 016D:01A8 jb short 0x01B4
-        if (CarryFlag) {
-            goto L_01B4;
-        }
-        // 016D:01AA inc BX
-        BX++;
-        // 016D:01AB cmp BX,8
-        Alu16.Sub(BX, 8);
-        // 016D:01AE jne short 0x01A4
-        if (!ZeroFlag) {
-            goto L_01A4;
-        }
-        // 016D:01B0 mov AL,0
-        AL = 0;
-        // 016D:01B2 jmp short 0x01B6
-        goto L_01B6;
     L_01B4:
         VerifySpeculativeEntryOrFail(cs1, 0x01B4, Signature_01B4_mov);
         // 016D:01B4 mov AL,0xFF
@@ -267,13 +253,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:01BE int 0x21
         InterruptCall(cs1, 0x01C0, 0x21);
         // 016D:01C0 jae short 0x01C5
-        if (!CarryFlag) {
-            goto L_01C5;
+        if (CarryFlag) {
+            VerifySpeculativeEntryOrFail(cs1, 0x01C2, Signature_01C2_mov);
+            // 016D:01C2 mov AX,0xFFFF
+            AX = 0xFFFF;
         }
-        VerifySpeculativeEntryOrFail(cs1, 0x01C2, Signature_01C2_mov);
-        // 016D:01C2 mov AX,0xFFFF
-        AX = 0xFFFF;
-    L_01C5:
         // 016D:01C5 push AX
         Stack.Push16(AX);
         // 016D:01C6 push DX
@@ -403,24 +387,22 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs2, 0x0090);
         // F000:0090 cmp AH,7
         // F000:0093 je short 0x00A4
-        if (AH == 7) {
-            goto L_00A4;
+        if (AH != 7) {
+            // F000:0095 cmp AH,8
+            // F000:0098 je short 0x00A4
+            if (AH != 8) {
+                // F000:009A cmp AH,0x0A
+                Alu8.Sub(AH, 0x0A);
+                // F000:009D je short 0x00A4
+                if (ZeroFlag) {
+                    goto L_00A4;
+                }
+                // F000:009F callback 0x0021
+                Callback(cs2, 0x009F, 0x0021);
+                // F000:00A3 iret
+                return InterruptRet();
+            }
         }
-        // F000:0095 cmp AH,8
-        // F000:0098 je short 0x00A4
-        if (AH == 8) {
-            goto L_00A4;
-        }
-        // F000:009A cmp AH,0x0A
-        Alu8.Sub(AH, 0x0A);
-        // F000:009D je short 0x00A4
-        if (ZeroFlag) {
-            goto L_00A4;
-        }
-        // F000:009F callback 0x0021
-        Callback(cs2, 0x009F, 0x0021);
-        // F000:00A3 iret
-        return InterruptRet();
     L_00A4:
         VerifySpeculativeEntryOrFail(cs2, 0x00A4, Signature_00A4_sti);
         // F000:00A4 sti

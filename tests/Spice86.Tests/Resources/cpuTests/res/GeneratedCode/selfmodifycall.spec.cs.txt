@@ -62,25 +62,24 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         SP = 0x0100;
         // F000:0008 mov byte ptr DS:[0x002B],0
         UInt8[DS, 0x002B] = 0;
-    L_000D:
-        CheckExternalEvents(cs1, 0x000D);
-        // F000:000D call near 0x0017
-        NearCall(cs1, 0x0010, unknown_F000_0017_F0017);
-        // F000:0010 selector
-        if (SelectorSignatureMatches(cs1, 0x0010, Signature_0010_nop)) {
-            goto L_0010_26;
+        while (true) {
+            CheckExternalEvents(cs1, 0x000D);
+            // F000:000D call near 0x0017
+            NearCall(cs1, 0x0010, unknown_F000_0017_F0017);
+            // F000:0010 selector
+            if (SelectorSignatureMatches(cs1, 0x0010, Signature_0010_nop)) {
+                goto L_0010_26;
+            }
+            if (SelectorSignatureMatches(cs1, 0x0010, Signature_0010_hlt)) {
+                break;
+            }
+            throw FailAsUntested("Untested code variant at F000:0010");
+        L_0010_26:
+            // F000:0010 nop
+            // F000:0011 inc byte ptr DS:[0x002B]
+            UInt8[DS, 0x002B] = Alu8.Inc(UInt8[DS, 0x002B]);
+            // F000:0015 jmp short 0x000D
         }
-        if (SelectorSignatureMatches(cs1, 0x0010, Signature_0010_hlt)) {
-            goto L_0010_38;
-        }
-        throw FailAsUntested("Untested code variant at F000:0010");
-    L_0010_26:
-        // F000:0010 nop
-        // F000:0011 inc byte ptr DS:[0x002B]
-        UInt8[DS, 0x002B] = Alu8.Inc(UInt8[DS, 0x002B]);
-        // F000:0015 jmp short 0x000D
-        goto L_000D;
-    L_0010_38:
         // F000:0010 hlt
         return Hlt();
     }

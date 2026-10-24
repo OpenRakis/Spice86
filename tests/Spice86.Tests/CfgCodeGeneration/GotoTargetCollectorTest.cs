@@ -59,6 +59,25 @@ public class GotoTargetCollectorTest {
         targets.EntryDispatcher.Should().BeTrue();
     }
 
+    [Fact]
+    public void CollectsGotosInLoopBodies() {
+        // Arrange
+        ICfgNode inLoop = Node();
+        ICfgNode inDoWhile = Node();
+        BlockNode tree = new(
+            new InfiniteLoopNode(new BlockNode(new GotoNode(inLoop), new ContinueNode())),
+            new DoWhileNode(new BlockNode(new GotoNode(inDoWhile)), Condition));
+
+        // Act
+        GotoTargets targets = GotoTargetCollector.Collect(tree);
+
+        // Assert
+        targets.Labels.Should().HaveCount(2);
+        targets.Labels.Should().Contain(label => ReferenceEquals(label, inLoop));
+        targets.Labels.Should().Contain(label => ReferenceEquals(label, inDoWhile));
+        targets.EntryDispatcher.Should().BeFalse();
+    }
+
     private static ICfgNode Node() {
         return Substitute.For<ICfgNode>();
     }

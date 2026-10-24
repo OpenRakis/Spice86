@@ -85,159 +85,143 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0108 int 0x21
         InterruptCall(cs1, 0x010A, 0x21);
         // 016D:010A jb near 0x01AA
-        if (CarryFlag) {
-            goto L_01AA;
-        }
-        // 016D:010E mov AX,0x5801
-        AX = 0x5801;
-        // 016D:0111 mov BX,0x0040
-        BX = 0x0040;
-        // 016D:0114 int 0x21
-        InterruptCall(cs1, 0x0116, 0x21);
-        // 016D:0116 jb near 0x01AA
-        if (CarryFlag) {
-            goto L_01AA;
-        }
-        // 016D:011A mov AX,0x4800
-        AX = 0x4800;
-        // 016D:011D mov BX,0x2000
-        BX = 0x2000;
-        // 016D:0120 int 0x21
-        InterruptCall(cs1, 0x0122, 0x21);
-        // 016D:0122 jae near 0x01AA
         if (!CarryFlag) {
-            goto L_01AA;
+            // 016D:010E mov AX,0x5801
+            AX = 0x5801;
+            // 016D:0111 mov BX,0x0040
+            BX = 0x0040;
+            // 016D:0114 int 0x21
+            InterruptCall(cs1, 0x0116, 0x21);
+            // 016D:0116 jb near 0x01AA
+            if (!CarryFlag) {
+                // 016D:011A mov AX,0x4800
+                AX = 0x4800;
+                // 016D:011D mov BX,0x2000
+                BX = 0x2000;
+                // 016D:0120 int 0x21
+                InterruptCall(cs1, 0x0122, 0x21);
+                // 016D:0122 jae near 0x01AA
+                if (CarryFlag) {
+                    // 016D:0126 cmp BX,0x1FFF
+                    Alu16.Sub(BX, 0x1FFF);
+                    // 016D:012A jne short 0x01AA
+                    if (ZeroFlag) {
+                        // 016D:012C mov AX,0x4800
+                        AX = 0x4800;
+                        // 016D:012F mov BX,0x1FFF
+                        BX = 0x1FFF;
+                        // 016D:0132 int 0x21
+                        InterruptCall(cs1, 0x0134, 0x21);
+                        // 016D:0134 jb short 0x01AA
+                        if (!CarryFlag) {
+                            // 016D:0136 cmp AX,0xD001
+                            Alu16.Sub(AX, 0xD001);
+                            // 016D:0139 jne short 0x01AA
+                            if (ZeroFlag) {
+                                // 016D:013B mov word ptr DS:[0x01B1],AX
+                                UInt16[DS, 0x01B1] = AX;
+                                // 016D:013E mov AX,0x5801
+                                AX = 0x5801;
+                                // 016D:0141 mov BX,0x0080
+                                BX = 0x0080;
+                                // 016D:0144 int 0x21
+                                InterruptCall(cs1, 0x0146, 0x21);
+                                // 016D:0146 jb short 0x01AA
+                                if (!CarryFlag) {
+                                    // 016D:0148 mov AX,0x4800
+                                    AX = 0x4800;
+                                    // 016D:014B mov BX,0x2000
+                                    BX = 0x2000;
+                                    // 016D:014E int 0x21
+                                    InterruptCall(cs1, 0x0150, 0x21);
+                                    // 016D:0150 jb short 0x01AA
+                                    if (!CarryFlag) {
+                                        // 016D:0152 cmp AX,0xA000
+                                        Alu16.Sub(AX, 0xA000);
+                                        // 016D:0155 jae short 0x01AA
+                                        if (CarryFlag) {
+                                            // 016D:0157 mov word ptr DS:[0x01B3],AX
+                                            UInt16[DS, 0x01B3] = AX;
+                                            // 016D:015A mov AX,0x5801
+                                            AX = 0x5801;
+                                            // 016D:015D mov BX,0x00C3
+                                            BX = 0x00C3;
+                                            // 016D:0160 int 0x21
+                                            InterruptCall(cs1, 0x0162, 0x21);
+                                            // 016D:0162 jae short 0x01AA
+                                            if (CarryFlag) {
+                                                // 016D:0164 cmp AX,1
+                                                Alu16.Sub(AX, 1);
+                                                // 016D:0167 jne short 0x01AA
+                                                if (ZeroFlag) {
+                                                    // 016D:0169 mov AX,0x5801
+                                                    AX = 0x5801;
+                                                    // 016D:016C mov BX,0x00C0
+                                                    BX = 0x00C0;
+                                                    // 016D:016F int 0x21
+                                                    InterruptCall(cs1, 0x0171, 0x21);
+                                                    // 016D:0171 jb short 0x01AA
+                                                    if (!CarryFlag) {
+                                                        // 016D:0173 mov AX,0x4800
+                                                        AX = 0x4800;
+                                                        // 016D:0176 mov BX,0x0100
+                                                        BX = 0x0100;
+                                                        // 016D:0179 int 0x21
+                                                        InterruptCall(cs1, 0x017B, 0x21);
+                                                        // 016D:017B jb short 0x01AA
+                                                        if (!CarryFlag) {
+                                                            // 016D:017D cmp AX,0xA000
+                                                            Alu16.Sub(AX, 0xA000);
+                                                            // 016D:0180 jae short 0x01AA
+                                                            if (CarryFlag) {
+                                                                // 016D:0182 mov word ptr DS:[0x01B5],AX
+                                                                UInt16[DS, 0x01B5] = AX;
+                                                                // 016D:0185 mov AX,0x4900
+                                                                AX = 0x4900;
+                                                                // 016D:0188 mov ES,word ptr DS:[0x01B5]
+                                                                ES = UInt16[DS, 0x01B5];
+                                                                // 016D:018C int 0x21
+                                                                InterruptCall(cs1, 0x018E, 0x21);
+                                                                // 016D:018E jb short 0x01AA
+                                                                if (!CarryFlag) {
+                                                                    // 016D:0190 mov AX,0x4900
+                                                                    AX = 0x4900;
+                                                                    // 016D:0193 mov ES,word ptr DS:[0x01B3]
+                                                                    ES = UInt16[DS, 0x01B3];
+                                                                    // 016D:0197 int 0x21
+                                                                    InterruptCall(cs1, 0x0199, 0x21);
+                                                                    // 016D:0199 jb short 0x01AA
+                                                                    if (!CarryFlag) {
+                                                                        // 016D:019B mov AX,0x4900
+                                                                        AX = 0x4900;
+                                                                        // 016D:019E mov ES,word ptr DS:[0x01B1]
+                                                                        ES = UInt16[DS, 0x01B1];
+                                                                        // 016D:01A2 int 0x21
+                                                                        InterruptCall(cs1, 0x01A4, 0x21);
+                                                                        // 016D:01A4 jb short 0x01AA
+                                                                        if (CarryFlag) {
+                                                                            goto L_01AA;
+                                                                        }
+                                                                        // 016D:01A6 mov AL,0
+                                                                        AL = 0;
+                                                                        // 016D:01A8 jmp short 0x01AC
+                                                                        goto L_01AC;
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
-        // 016D:0126 cmp BX,0x1FFF
-        Alu16.Sub(BX, 0x1FFF);
-        // 016D:012A jne short 0x01AA
-        if (!ZeroFlag) {
-            goto L_01AA;
-        }
-        // 016D:012C mov AX,0x4800
-        AX = 0x4800;
-        // 016D:012F mov BX,0x1FFF
-        BX = 0x1FFF;
-        // 016D:0132 int 0x21
-        InterruptCall(cs1, 0x0134, 0x21);
-        // 016D:0134 jb short 0x01AA
-        if (CarryFlag) {
-            goto L_01AA;
-        }
-        // 016D:0136 cmp AX,0xD001
-        Alu16.Sub(AX, 0xD001);
-        // 016D:0139 jne short 0x01AA
-        if (!ZeroFlag) {
-            goto L_01AA;
-        }
-        // 016D:013B mov word ptr DS:[0x01B1],AX
-        UInt16[DS, 0x01B1] = AX;
-        // 016D:013E mov AX,0x5801
-        AX = 0x5801;
-        // 016D:0141 mov BX,0x0080
-        BX = 0x0080;
-        // 016D:0144 int 0x21
-        InterruptCall(cs1, 0x0146, 0x21);
-        // 016D:0146 jb short 0x01AA
-        if (CarryFlag) {
-            goto L_01AA;
-        }
-        // 016D:0148 mov AX,0x4800
-        AX = 0x4800;
-        // 016D:014B mov BX,0x2000
-        BX = 0x2000;
-        // 016D:014E int 0x21
-        InterruptCall(cs1, 0x0150, 0x21);
-        // 016D:0150 jb short 0x01AA
-        if (CarryFlag) {
-            goto L_01AA;
-        }
-        // 016D:0152 cmp AX,0xA000
-        Alu16.Sub(AX, 0xA000);
-        // 016D:0155 jae short 0x01AA
-        if (!CarryFlag) {
-            goto L_01AA;
-        }
-        // 016D:0157 mov word ptr DS:[0x01B3],AX
-        UInt16[DS, 0x01B3] = AX;
-        // 016D:015A mov AX,0x5801
-        AX = 0x5801;
-        // 016D:015D mov BX,0x00C3
-        BX = 0x00C3;
-        // 016D:0160 int 0x21
-        InterruptCall(cs1, 0x0162, 0x21);
-        // 016D:0162 jae short 0x01AA
-        if (!CarryFlag) {
-            goto L_01AA;
-        }
-        // 016D:0164 cmp AX,1
-        Alu16.Sub(AX, 1);
-        // 016D:0167 jne short 0x01AA
-        if (!ZeroFlag) {
-            goto L_01AA;
-        }
-        // 016D:0169 mov AX,0x5801
-        AX = 0x5801;
-        // 016D:016C mov BX,0x00C0
-        BX = 0x00C0;
-        // 016D:016F int 0x21
-        InterruptCall(cs1, 0x0171, 0x21);
-        // 016D:0171 jb short 0x01AA
-        if (CarryFlag) {
-            goto L_01AA;
-        }
-        // 016D:0173 mov AX,0x4800
-        AX = 0x4800;
-        // 016D:0176 mov BX,0x0100
-        BX = 0x0100;
-        // 016D:0179 int 0x21
-        InterruptCall(cs1, 0x017B, 0x21);
-        // 016D:017B jb short 0x01AA
-        if (CarryFlag) {
-            goto L_01AA;
-        }
-        // 016D:017D cmp AX,0xA000
-        Alu16.Sub(AX, 0xA000);
-        // 016D:0180 jae short 0x01AA
-        if (!CarryFlag) {
-            goto L_01AA;
-        }
-        // 016D:0182 mov word ptr DS:[0x01B5],AX
-        UInt16[DS, 0x01B5] = AX;
-        // 016D:0185 mov AX,0x4900
-        AX = 0x4900;
-        // 016D:0188 mov ES,word ptr DS:[0x01B5]
-        ES = UInt16[DS, 0x01B5];
-        // 016D:018C int 0x21
-        InterruptCall(cs1, 0x018E, 0x21);
-        // 016D:018E jb short 0x01AA
-        if (CarryFlag) {
-            goto L_01AA;
-        }
-        // 016D:0190 mov AX,0x4900
-        AX = 0x4900;
-        // 016D:0193 mov ES,word ptr DS:[0x01B3]
-        ES = UInt16[DS, 0x01B3];
-        // 016D:0197 int 0x21
-        InterruptCall(cs1, 0x0199, 0x21);
-        // 016D:0199 jb short 0x01AA
-        if (CarryFlag) {
-            goto L_01AA;
-        }
-        // 016D:019B mov AX,0x4900
-        AX = 0x4900;
-        // 016D:019E mov ES,word ptr DS:[0x01B1]
-        ES = UInt16[DS, 0x01B1];
-        // 016D:01A2 int 0x21
-        InterruptCall(cs1, 0x01A4, 0x21);
-        // 016D:01A4 jb short 0x01AA
-        if (CarryFlag) {
-            goto L_01AA;
-        }
-        // 016D:01A6 mov AL,0
-        AL = 0;
-        // 016D:01A8 jmp short 0x01AC
-        goto L_01AC;
     L_01AA:
         VerifySpeculativeEntryOrFail(cs1, 0x01AA, Signature_01AA_mov);
         // 016D:01AA mov AL,0xFF
@@ -364,24 +348,22 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs2, 0x0090);
         // F000:0090 cmp AH,7
         // F000:0093 je short 0x00A4
-        if (AH == 7) {
-            goto L_00A4;
+        if (AH != 7) {
+            // F000:0095 cmp AH,8
+            // F000:0098 je short 0x00A4
+            if (AH != 8) {
+                // F000:009A cmp AH,0x0A
+                Alu8.Sub(AH, 0x0A);
+                // F000:009D je short 0x00A4
+                if (ZeroFlag) {
+                    goto L_00A4;
+                }
+                // F000:009F callback 0x0021
+                Callback(cs2, 0x009F, 0x0021);
+                // F000:00A3 iret
+                return InterruptRet();
+            }
         }
-        // F000:0095 cmp AH,8
-        // F000:0098 je short 0x00A4
-        if (AH == 8) {
-            goto L_00A4;
-        }
-        // F000:009A cmp AH,0x0A
-        Alu8.Sub(AH, 0x0A);
-        // F000:009D je short 0x00A4
-        if (ZeroFlag) {
-            goto L_00A4;
-        }
-        // F000:009F callback 0x0021
-        Callback(cs2, 0x009F, 0x0021);
-        // F000:00A3 iret
-        return InterruptRet();
     L_00A4:
         VerifySpeculativeEntryOrFail(cs2, 0x00A4, Signature_00A4_sti);
         // F000:00A4 sti

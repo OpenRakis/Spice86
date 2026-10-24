@@ -192,52 +192,55 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_0090_F0090(int loadOffset) {
-        CheckExternalEvents(cs3, 0x0090);
-        // F000:0090 cmp AH,7
-        // F000:0093 je short 0x00A4
-        if (AH == 7) {
-            goto L_00A4;
-        }
-        // F000:0095 cmp AH,8
-        // F000:0098 je short 0x00A4
-        if (AH == 8) {
-            goto L_00A4;
-        }
-        // F000:009A cmp AH,0x0A
-        Alu8.Sub(AH, 0x0A);
-        // F000:009D je short 0x00A4
-        if (ZeroFlag) {
-            goto L_00A4;
-        }
-        // F000:009F callback 0x0021
-        if (CallbackMovedCsIp(cs3, 0x009F, 0x0021)) {
-            if (CS == cs1 && IP == 0x0100) {
-                goto L_0100;
+        while (true) {
+            CheckExternalEvents(cs3, 0x0090);
+            // F000:0090 cmp AH,7
+            // F000:0093 je short 0x00A4
+            if (AH == 7) {
+                goto L_00A4;
             }
-            throw FailAsUntested($"Untested callback target {CS:X4}:{IP:X4} at F000:009F");
+            // F000:0095 cmp AH,8
+            // F000:0098 je short 0x00A4
+            if (AH == 8) {
+                goto L_00A4;
+            }
+            // F000:009A cmp AH,0x0A
+            Alu8.Sub(AH, 0x0A);
+            // F000:009D je short 0x00A4
+            if (ZeroFlag) {
+                goto L_00A4;
+            }
+            // F000:009F callback 0x0021
+            if (CallbackMovedCsIp(cs3, 0x009F, 0x0021)) {
+                if (CS == cs1 && IP == 0x0100) {
+                    goto L_0100;
+                }
+                throw FailAsUntested($"Untested callback target {CS:X4}:{IP:X4} at F000:009F");
+            }
+            break;
+        L_0100:
+            // 016C:0100 mov AX,0xB800
+            AX = 0xB800;
+            // 016C:0103 mov ES,AX
+            ES = AX;
+            // 016C:0105 mov DI,0
+            DI = 0;
+            // 016C:0108 mov AL,0x45
+            AL = 0x45;
+            // 016C:010A mov AH,7
+            AH = 7;
+            // 016C:010C stos word ptr ES:[DI],AX
+            UInt16[ES, DI] = AX;
+            DI = (ushort)(DI + (ushort)State.Direction16);
+            // 016C:010D mov AX,0x4C00
+            AX = 0x4C00;
+            // 016C:0110 int 0x21
+            InterruptCall(cs1, 0x0112, 0x21);
+            throw FailAsUntested("Untested return from call at 016C:0110");
         }
         VerifySpeculativeEntryOrFail(cs3, 0x00A3, Signature_00A3_iret);
         // F000:00A3 iret
         return InterruptRet();
-    L_0100:
-        // 016C:0100 mov AX,0xB800
-        AX = 0xB800;
-        // 016C:0103 mov ES,AX
-        ES = AX;
-        // 016C:0105 mov DI,0
-        DI = 0;
-        // 016C:0108 mov AL,0x45
-        AL = 0x45;
-        // 016C:010A mov AH,7
-        AH = 7;
-        // 016C:010C stos word ptr ES:[DI],AX
-        UInt16[ES, DI] = AX;
-        DI = (ushort)(DI + (ushort)State.Direction16);
-        // 016C:010D mov AX,0x4C00
-        AX = 0x4C00;
-        // 016C:0110 int 0x21
-        InterruptCall(cs1, 0x0112, 0x21);
-        throw FailAsUntested("Untested return from call at 016C:0110");
     L_00A4:
         VerifySpeculativeEntryOrFail(cs3, 0x00A4, Signature_00A4_sti);
         // F000:00A4 sti

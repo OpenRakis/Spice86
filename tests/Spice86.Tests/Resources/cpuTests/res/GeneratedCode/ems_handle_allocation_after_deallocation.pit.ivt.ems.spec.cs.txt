@@ -84,70 +84,66 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016F:0107 cmp AH,0
         Alu8.Sub(AH, 0);
         // 016F:010A jne short 0x014A
-        if (!ZeroFlag) {
-            goto L_014A;
+        if (ZeroFlag) {
+            // 016F:010C mov DI,DX
+            DI = DX;
+            // 016F:010E mov BX,4
+            BX = 4;
+            // 016F:0111 mov AH,0x43
+            AH = 0x43;
+            // 016F:0113 int 0x67
+            InterruptCall(cs1, 0x0115, 0x67);
+            // 016F:0115 cmp AH,0
+            Alu8.Sub(AH, 0);
+            // 016F:0118 jne short 0x014A
+            if (ZeroFlag) {
+                // 016F:011A mov SI,DX
+                SI = DX;
+                // 016F:011C mov AL,0
+                AL = 0;
+                // 016F:011E mov BX,0
+                BX = 0;
+                // 016F:0121 mov DX,SI
+                DX = SI;
+                // 016F:0123 mov AH,0x44
+                AH = 0x44;
+                // 016F:0125 int 0x67
+                InterruptCall(cs1, 0x0127, 0x67);
+                // 016F:0127 cmp AH,0
+                Alu8.Sub(AH, 0);
+                // 016F:012A jne short 0x014A
+                if (ZeroFlag) {
+                    // 016F:012C mov AX,0xE000
+                    AX = 0xE000;
+                    // 016F:012F mov ES,AX
+                    ES = AX;
+                    // 016F:0131 mov byte ptr ES:[0],0xAA
+                    UInt8[ES, 0] = 0xAA;
+                    // 016F:0137 mov DX,DI
+                    DX = DI;
+                    // 016F:0139 mov AH,0x45
+                    AH = 0x45;
+                    // 016F:013B int 0x67
+                    InterruptCall(cs1, 0x013D, 0x67);
+                    // 016F:013D cmp AH,0
+                    Alu8.Sub(AH, 0);
+                    // 016F:0140 jne short 0x014A
+                    if (ZeroFlag) {
+                        // 016F:0142 mov AL,byte ptr ES:[0]
+                        AL = UInt8[ES, 0];
+                        // 016F:0146 cmp AL,0xAA
+                        Alu8.Sub(AL, 0xAA);
+                        // 016F:0148 je short 0x014E
+                        if (!ZeroFlag) {
+                            goto L_014A;
+                        }
+                        // 016F:014E mov AL,0
+                        AL = 0;
+                        goto L_0150;
+                    }
+                }
+            }
         }
-        // 016F:010C mov DI,DX
-        DI = DX;
-        // 016F:010E mov BX,4
-        BX = 4;
-        // 016F:0111 mov AH,0x43
-        AH = 0x43;
-        // 016F:0113 int 0x67
-        InterruptCall(cs1, 0x0115, 0x67);
-        // 016F:0115 cmp AH,0
-        Alu8.Sub(AH, 0);
-        // 016F:0118 jne short 0x014A
-        if (!ZeroFlag) {
-            goto L_014A;
-        }
-        // 016F:011A mov SI,DX
-        SI = DX;
-        // 016F:011C mov AL,0
-        AL = 0;
-        // 016F:011E mov BX,0
-        BX = 0;
-        // 016F:0121 mov DX,SI
-        DX = SI;
-        // 016F:0123 mov AH,0x44
-        AH = 0x44;
-        // 016F:0125 int 0x67
-        InterruptCall(cs1, 0x0127, 0x67);
-        // 016F:0127 cmp AH,0
-        Alu8.Sub(AH, 0);
-        // 016F:012A jne short 0x014A
-        if (!ZeroFlag) {
-            goto L_014A;
-        }
-        // 016F:012C mov AX,0xE000
-        AX = 0xE000;
-        // 016F:012F mov ES,AX
-        ES = AX;
-        // 016F:0131 mov byte ptr ES:[0],0xAA
-        UInt8[ES, 0] = 0xAA;
-        // 016F:0137 mov DX,DI
-        DX = DI;
-        // 016F:0139 mov AH,0x45
-        AH = 0x45;
-        // 016F:013B int 0x67
-        InterruptCall(cs1, 0x013D, 0x67);
-        // 016F:013D cmp AH,0
-        Alu8.Sub(AH, 0);
-        // 016F:0140 jne short 0x014A
-        if (!ZeroFlag) {
-            goto L_014A;
-        }
-        // 016F:0142 mov AL,byte ptr ES:[0]
-        AL = UInt8[ES, 0];
-        // 016F:0146 cmp AL,0xAA
-        Alu8.Sub(AL, 0xAA);
-        // 016F:0148 je short 0x014E
-        if (!ZeroFlag) {
-            goto L_014A;
-        }
-        // 016F:014E mov AL,0
-        AL = 0;
-        goto L_0150;
     L_014A:
         VerifySpeculativeEntryOrFail(cs1, 0x014A, Signature_014A_mov);
         // 016F:014A mov AL,0xFF
