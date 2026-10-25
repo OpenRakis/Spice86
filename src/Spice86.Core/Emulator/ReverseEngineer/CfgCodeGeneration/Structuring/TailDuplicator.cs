@@ -58,7 +58,7 @@ internal static class TailDuplicator {
         List<IVisitableAstNode> statements = [];
         foreach (IVisitableAstNode statement in block.Statements) {
             if (statement is GotoNode jump && kept.TryGetValue(jump.Target, out LoweredBlock? copy)) {
-                statements.AddRange(Sequence(copy.Body).Statements);
+                statements.AddRange(StatementsOf(copy.Body));
                 continue;
             }
             IVisitableAstNode rewritten = WithRewrittenBodies(statement, held => RewriteBlock(held, kept, keptInstructions));

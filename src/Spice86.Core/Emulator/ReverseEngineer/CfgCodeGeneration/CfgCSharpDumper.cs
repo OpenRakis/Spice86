@@ -31,19 +31,25 @@ internal sealed class CfgCSharpDumper {
         return _generator.Generate(program);
     }
 
-    public void Write(CfgPartitionedProgram program, string path) {
-        File.WriteAllText(path, Generate(program).SourceText);
+    /// <summary>
+    /// Writes <paramref name="generated"/>'s source text to <paramref name="path"/>.
+    /// </summary>
+    /// <param name="generated">The generated program, from <see cref="Generate"/>.</param>
+    /// <param name="path">The target file path.</param>
+    public void Write(GeneratedCSharpProgram generated, string path) {
+        File.WriteAllText(path, generated.SourceText);
     }
 
     /// <summary>
-    /// Emits a self-contained, runnable project (csproj + Program.cs + the generated overrides) into
-    /// <paramref name="projectDirectory"/>. Re-running overwrites the three files in place.
-    /// An empty program (no partitions observed) emits nothing, mirroring the <see cref="Generate"/> guard.
+    /// Emits a self-contained, runnable project (csproj + Program.cs + <paramref name="generated"/>'s source
+    /// text as the overrides file) into <paramref name="projectDirectory"/>. Re-running overwrites the files in
+    /// place. An empty program (no partitions observed) emits nothing, mirroring the <see cref="Generate"/> guard.
     /// </summary>
-    /// <param name="program">The partitioned CFG program to generate overrides for.</param>
+    /// <param name="program">The partitioned CFG program the overrides were generated for.</param>
+    /// <param name="generated">The generated program, from <see cref="Generate"/>.</param>
     /// <param name="projectDirectory">The target project folder; created if missing.</param>
     /// <param name="expectedChecksum">Uppercase SHA-256 hex of the program, baked into Program.cs.</param>
-    public void WriteProject(CfgPartitionedProgram program, string projectDirectory, string expectedChecksum) {
+    public void WriteProject(CfgPartitionedProgram program, GeneratedCSharpProgram generated, string projectDirectory, string expectedChecksum) {
         if (program.Partitions.Count == 0) {
             return;
         }
@@ -56,7 +62,7 @@ internal sealed class CfgCSharpDumper {
 
         File.WriteAllText(csProjPath, BuildCsProjAndPropsForCurrentInstall(projectDirectory));
         File.WriteAllText(programPath, GeneratedProjectScaffolder.BuildProgramCs(expectedChecksum));
-        File.WriteAllText(overridesPath, Generate(program).SourceText);
+        File.WriteAllText(overridesPath, generated.SourceText);
     }
 
     /// <summary>

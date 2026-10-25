@@ -34,6 +34,10 @@ internal static class CodeGenerationAst {
     /// <summary>True when <paramref name="node"/> is a <see cref="BlockNode"/> without statements.</summary>
     public static bool IsEmpty(IVisitableAstNode node) => node is BlockNode { Statements.Count: 0 };
 
+    /// <summary>The statements <see cref="Sequence(IVisitableAstNode[])"/> would give for <paramref name="node"/> alone, without copying: a block's statements, or the node itself.</summary>
+    public static IReadOnlyList<IVisitableAstNode> StatementsOf(IVisitableAstNode node) =>
+        node is BlockNode block ? block.Statements : [node];
+
     /// <summary>
     /// The statements directly inside <paramref name="node"/> when it is a statement container (block, instruction boundary,
     /// if / else, loops, switch sections and default, CPU fault try): each child body, or the statements of a block. Empty for

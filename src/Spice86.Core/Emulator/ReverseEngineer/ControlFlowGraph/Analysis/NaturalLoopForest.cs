@@ -16,6 +16,7 @@ internal sealed class NaturalLoopForest {
     private readonly Dictionary<CfgBlock, NaturalLoop> _loopByHeader;
     private readonly Dictionary<NaturalLoop, NaturalLoop?> _parentByLoop;
     private readonly Dictionary<NaturalLoop, IReadOnlyList<NaturalLoop>> _childrenByLoop;
+    private readonly Dictionary<CfgBlock, NaturalLoop> _innermostByBlock;
 
     private NaturalLoopForest(IReadOnlyList<NaturalLoop> loops, IReadOnlyList<GraphEdge<CfgBlock>> irreducibleEdges,
         PartitionBlockGraph graph, CfgBlockDominatorTree dominators) {
@@ -24,10 +25,26 @@ internal sealed class NaturalLoopForest {
         Graph = graph;
         Dominators = dominators;
         _loopByHeader = loops.ToDictionary(loop => loop.Header);
-        _parentByLoop = loops.ToDictionary(loop => loop, loop => FindParent(loop, loops));
-        _childrenByLoop = loops.ToDictionary(loop => loop,
-            loop => (IReadOnlyList<NaturalLoop>)loops.Where(candidate => _parentByLoop[candidate] == loop).ToList());
-        TopLevelLoops = loops.Where(loop => _parentByLoop[loop] is null).ToList();
+        Dictionary<CfgBlock, List<NaturalLoop>> loopsByBlock = [];
+        foreach (NaturalLoop loop in loops) {
+            foreach (CfgBlock block in loop.Blocks) {
+                if (!loopsByBlock.TryGetValue(block, out List<NaturalLoop>? containing)) {
+                    containing = [];
+                    loopsByBlock.Add(block, containing);
+                }
+                containing.Add(loop);
+            }
+        }
+        _parentByLoop = loops.ToDictionary(loop => loop, loop => FindParent(loop, loopsByBlock[loop.Header]));
+        Dictionary<NaturalLoop, List<NaturalLoop>> childrenByLoop = loops.ToDictionary(loop => loop, _ => new List<NaturalLoop>());
+        List<NaturalLoop> topLevelLoops = [];
+        foreach (NaturalLoop loop in loops) {
+            (_parentByLoop[loop] is NaturalLoop parent ? childrenByLoop[parent] : topLevelLoops).Add(loop);
+        }
+        _childrenByLoop = childrenByLoop.ToDictionary(pair => pair.Key, pair => (IReadOnlyList<NaturalLoop>)pair.Value);
+        TopLevelLoops = topLevelLoops;
+        _innermostByBlock = loopsByBlock.ToDictionary(pair => pair.Key,
+            pair => pair.Value.Aggregate((innermost, loop) => loop.Blocks.Count < innermost.Blocks.Count ? loop : innermost));
     }
 
     /// <summary>Every loop, in the <see cref="PartitionBlockGraph.Blocks"/> order of its header.</summary>
@@ -60,18 +77,7 @@ internal sealed class NaturalLoopForest {
     public IReadOnlyList<NaturalLoop> ChildrenOf(NaturalLoop loop) => _childrenByLoop[loop];
 
     /// <summary>The smallest loop that contains <paramref name="block"/>, or <c>null</c> when no loop does.</summary>
-    public NaturalLoop? InnermostLoopOf(CfgBlock block) {
-        NaturalLoop? innermost = null;
-        foreach (NaturalLoop loop in Loops) {
-            if (!loop.Contains(block)) {
-                continue;
-            }
-            if (innermost is null || loop.Blocks.Count < innermost.Blocks.Count) {
-                innermost = loop;
-            }
-        }
-        return innermost;
-    }
+    public NaturalLoop? InnermostLoopOf(CfgBlock block) => _innermostByBlock.GetValueOrDefault(block);
 
     /// <summary>The natural loops of <paramref name="graph"/>.</summary>
     /// <param name="graph">The block graph; every entry block is a dominator-tree root.</param>
@@ -81,13 +87,16 @@ internal sealed class NaturalLoopForest {
         CfgBlockDominatorTree dominators = new CfgBlockDominatorTreeBuilder()
             .BuildFromEntries(graph.Blocks, graph.EntryBlocks, graph.SuccessorsByBlock);
         HashSet<CfgBlock> reachable = dominators.Blocks.ToHashSet();
+        Dictionary<CfgBlock, int> indexByBlock = graph.Blocks
+            .Select((block, index) => (block, index))
+            .ToDictionary(pair => pair.block, pair => pair.index);
         List<NaturalLoop> loops = [];
         foreach (CfgBlock header in graph.Blocks) {
             List<CfgBlock> latches = graph.GetPredecessors(header)
                 .Where(source => reachable.Contains(source) && dominators.Dominates(header, source))
                 .ToList();
             if (latches.Count > 0) {
-                loops.Add(BuildLoop(graph, header, latches, reachable));
+                loops.Add(BuildLoop(graph, header, latches, reachable, indexByBlock));
             }
         }
         List<GraphEdge<CfgBlock>> irreducibleEdges = retreatingEdges
@@ -97,7 +106,7 @@ internal sealed class NaturalLoopForest {
     }
 
     private static NaturalLoop BuildLoop(PartitionBlockGraph graph, CfgBlock header, IReadOnlyList<CfgBlock> latches,
-        IReadOnlySet<CfgBlock> reachable) {
+        IReadOnlySet<CfgBlock> reachable, IReadOnlyDictionary<CfgBlock, int> indexByBlock) {
         HashSet<CfgBlock> body = [header];
         Stack<CfgBlock> pending = new(latches);
         while (pending.Count > 0) {
@@ -109,7 +118,7 @@ internal sealed class NaturalLoopForest {
                 pending.Push(predecessor);
             }
         }
-        List<CfgBlock> blocks = graph.Blocks.Where(body.Contains).ToList();
+        List<CfgBlock> blocks = body.OrderBy(block => indexByBlock[block]).ToList();
         return new NaturalLoop(header, blocks, latches);
     }
 

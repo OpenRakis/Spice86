@@ -19,6 +19,7 @@ internal sealed class CfgGeneratorContext {
     private readonly Dictionary<CfgCodePartition, string> _methodNames;
     private readonly Dictionary<CfgCodePartition, string> _partitionBaseNames;
     private readonly Dictionary<ResolvedCfgEdge, CfgCodePartitionTransfer> _transfersByEdge;
+    private readonly Dictionary<(ICfgNode Source, ICfgNode Target, InstructionSuccessorType SuccessorType), List<CfgCodePartitionTransfer>> _transfersByNodes;
     private readonly Dictionary<CfgCodePartition, IReadOnlyList<CfgCodePartitionEntry>> _entriesByPartition;
     private readonly Dictionary<CfgInstruction, string> _signatureFieldByInstruction;
 
@@ -37,6 +38,16 @@ internal sealed class CfgGeneratorContext {
         _partitionBaseNames = partitionBaseNames;
         SegmentVariables = segmentVariables;
         _transfersByEdge = transfersByEdge;
+        _transfersByNodes = [];
+        foreach (KeyValuePair<ResolvedCfgEdge, CfgCodePartitionTransfer> entry in transfersByEdge) {
+            (ICfgNode Source, ICfgNode Target, InstructionSuccessorType SuccessorType) key =
+                (entry.Key.Source, entry.Key.Target, entry.Key.SuccessorType);
+            if (!_transfersByNodes.TryGetValue(key, out List<CfgCodePartitionTransfer>? list)) {
+                list = [];
+                _transfersByNodes[key] = list;
+            }
+            list.Add(entry.Value);
+        }
         _entriesByPartition = entriesByPartition;
         SignatureFields = signatureFields;
         _signatureFieldByInstruction = signatureFields.ToDictionary(
@@ -87,13 +98,10 @@ internal sealed class CfgGeneratorContext {
         _transfersByEdge.TryGetValue(edge, out CfgCodePartitionTransfer? transfer) ? transfer : null;
 
     public CfgCodePartitionTransfer? FindTransfer(ICfgNode source, ICfgNode target, InstructionSuccessorType successorType) {
-        List<CfgCodePartitionTransfer> matches = _transfersByEdge
-            .Where(entry => ReferenceEquals(entry.Key.Source, source)
-                && ReferenceEquals(entry.Key.Target, target)
-                && entry.Key.SuccessorType == successorType)
-            .Select(entry => entry.Value)
-            .Distinct()
-            .ToList();
+        if (!_transfersByNodes.TryGetValue((source, target, successorType), out List<CfgCodePartitionTransfer>? list)) {
+            return null;
+        }
+        List<CfgCodePartitionTransfer> matches = list.Distinct().ToList();
         return matches.Count switch {
             0 => null,
             1 => matches[0],

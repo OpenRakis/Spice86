@@ -36,8 +36,8 @@ internal static class WhileConditionLoops {
         statement is InstructionBoundaryNode boundary && boundary.Body.Statements.All(OnlyCheckOrComment);
 
     private static bool IsExitTest(IfElseNode node) =>
-        Sequence(node.TrueCase).Statements is [BreakNode]
-        && IsEmpty(Sequence(node.FalseCase))
+        StatementsOf(node.TrueCase) is [BreakNode]
+        && StatementsOf(node.FalseCase).Count == 0
         && ReadsOnlyMachineState(node.Condition);
 
     private static IVisitableAstNode TryConvert(InfiniteLoopNode loop) {

@@ -55,19 +55,19 @@ internal static class MethodStructurizer {
     }
 
     private static GotoNode? OnlyGoto(IVisitableAstNode arm) =>
-        Sequence(arm).Statements is [GotoNode jump] ? jump : null;
+        StatementsOf(arm) is [GotoNode jump] ? jump : null;
 
     private static ICfgNode? OnlyGotoTarget(IVisitableAstNode arm) => OnlyGoto(arm)?.Target;
 
     private static bool IsOnlyGotoTo(IVisitableAstNode arm, ICfgNode target) =>
-        Sequence(arm).Statements is [GotoNode jump] && ReferenceEquals(jump.Target, target);
+        StatementsOf(arm) is [GotoNode jump] && ReferenceEquals(jump.Target, target);
 
     /// <summary>
     /// The statement after a <c>do</c> loop, when the exit arm is a single <c>goto</c> that does not restart the loop,
     /// or a <c>FailAsUntested</c> whose message reads no value, so it can move after the loop.
     /// </summary>
     private static IVisitableAstNode? ExitStatement(IVisitableAstNode arm, ICfgNode header) {
-        if (Sequence(arm).Statements is not [IVisitableAstNode single]) {
+        if (StatementsOf(arm) is not [IVisitableAstNode single]) {
             return null;
         }
         if (single is GotoNode jump && !ReferenceEquals(jump.Target, header)) {
@@ -80,18 +80,29 @@ internal static class MethodStructurizer {
     }
 
     /// <summary>
-    /// When the last statement of <paramref name="block"/> is an instruction boundary that ends with a <typeparamref name="T"/>:
-    /// that final statement, and the statements before it (the block's other statements, then the boundary without it).
+    /// The last statement of the last instruction boundary of <paramref name="block"/> when it is a <typeparamref name="T"/>,
+    /// else <c>null</c>.
     /// </summary>
-    private static (List<IVisitableAstNode> Head, T Final)? SplitFinal<T>(BlockNode block) where T : IVisitableAstNode {
-        if (block.Statements is not [.., InstructionBoundaryNode last]
-            || last.Body.Statements is not [.., T final]) {
-            return null;
+    private static T? FinalStatement<T>(BlockNode block) where T : class, IVisitableAstNode {
+        if (block.Statements is [.., InstructionBoundaryNode last]
+            && last.Body.Statements is [.., T final]) {
+            return final;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// The statements of <paramref name="block"/> except the last, then the last instruction boundary without its last
+    /// statement.
+    /// </summary>
+    private static List<IVisitableAstNode> HeadBefore(BlockNode block) {
+        if (block.Statements is not [.., InstructionBoundaryNode last]) {
+            return [.. block.Statements];
         }
         InstructionBoundaryNode lastWithoutFinal = last with {
             Body = Sequence(last.Body.Statements.Take(last.Body.Statements.Count - 1))
         };
-        return ([.. block.Statements.Take(block.Statements.Count - 1), lastWithoutFinal], final);
+        return [.. block.Statements.Take(block.Statements.Count - 1), lastWithoutFinal];
     }
 
     private static void CheckLoopHeaders(IReadOnlyList<LoweredBlock> blocks, NaturalLoopForest loops, string methodName) {
@@ -107,6 +118,41 @@ internal static class MethodStructurizer {
     /// <summary>The parts of a <c>do</c> loop: the latch block without its final <c>if</c>, the loop condition and the statement after the loop.</summary>
     private sealed record DoWhileShape(BlockNode LatchBody, ValueNode Condition, IVisitableAstNode Exit);
 
+    /// <summary>
+    /// The blocks one <see cref="RegionWalker.Walk"/> call places, in layout order, indexed by entry node,
+    /// block and position.
+    /// </summary>
+    private sealed class Region {
+        private readonly IReadOnlyDictionary<ICfgNode, LoweredBlock> _memberByEntry;
+        private readonly IReadOnlyDictionary<CfgBlock, LoweredBlock> _memberByBlock;
+        private readonly IReadOnlyDictionary<LoweredBlock, int> _indexByMember;
+
+        public Region(IReadOnlyList<LoweredBlock> members) {
+            Members = members;
+            _memberByEntry = members.ToDictionary(member => member.Block.Entry);
+            _memberByBlock = members.ToDictionary(member => member.Block);
+            Dictionary<LoweredBlock, int> indexByMember = new(ReferenceEqualityComparer.Instance);
+            for (int index = 0; index < members.Count; index++) {
+                indexByMember.Add(members[index], index);
+            }
+            _indexByMember = indexByMember;
+        }
+
+        public IReadOnlyList<LoweredBlock> Members { get; }
+
+        /// <summary>The member whose block's entry is <paramref name="entry"/>, or <c>null</c>.</summary>
+        public LoweredBlock? MemberWithEntry(ICfgNode entry) =>
+            _memberByEntry.TryGetValue(entry, out LoweredBlock? member) ? member : null;
+
+        /// <summary>The member whose block is <paramref name="block"/>, or <c>null</c>.</summary>
+        public LoweredBlock? MemberOf(CfgBlock block) =>
+            _memberByBlock.TryGetValue(block, out LoweredBlock? member) ? member : null;
+
+        /// <summary>The position of <paramref name="member"/> in <see cref="Members"/>, or <see cref="Members"/>' count.</summary>
+        public int LayoutIndex(LoweredBlock member) =>
+            _indexByMember.TryGetValue(member, out int index) ? index : Members.Count;
+    }
+
     /// <summary>Structures the regions of one method: the method body, loop bodies and <c>if</c> arms.</summary>
     private sealed class RegionWalker(NaturalLoopForest loops, IReadOnlySet<ICfgNode> entryNodes,
         IReadOnlyDictionary<ICfgNode, int> gotoCountByTarget, Dictionary<GotoNode, GotoKeepReason> refusals,
@@ -118,6 +164,7 @@ internal static class MethodStructurizer {
         /// </summary>
         /// <param name="enclosing">The loop whose body <paramref name="members"/> are part of, or <c>null</c> outside every loop.</param>
         public BlockNode Walk(IReadOnlyList<LoweredBlock> members, NaturalLoop? enclosing) {
+            Region region = new(members);
             List<LoweredBlock> order = [.. members];
             List<IVisitableAstNode> statements = [];
             HashSet<CfgBlock> placed = [];
@@ -127,24 +174,26 @@ internal static class MethodStructurizer {
                     continue;
                 }
                 if (loops.LoopWithHeader(block.Block) is NaturalLoop loop && loop != enclosing && IsStructurable(loop, entryNodes)) {
-                    List<LoweredBlock> loopMembers = members.Where(member => loop.Contains(member.Block)).ToList();
+                    List<LoweredBlock> loopMembers = loop.Blocks.Select(region.MemberOf).OfType<LoweredBlock>()
+                        .OrderBy(region.LayoutIndex).ToList();
                     if (!ReferenceEquals(loopMembers[0].Block, loop.Header)) {
                         throw new InvalidOperationException(
                             $"Generated method {methodName}: loop header {loop.Header.Entry.Address} is not the first block of its loop in the layout.");
                     }
-                    statements.Add(LoopStatement(loop, loopMembers));
+                    DoWhileShape? shape = DoWhileShapeOf(loop, loopMembers);
+                    statements.Add(LoopStatement(loop, loopMembers, shape));
                     placed.UnionWith(loopMembers.Select(member => member.Block));
                     if (placeLoopExits) {
-                        MoveExitAfterLoop(order, index, loop, loopMembers, placed);
+                        MoveExitAfterLoop(order, index, loop, loopMembers, placed, shape);
                     }
                     continue;
                 }
                 placed.Add(block.Block);
-                if (BranchStatement(block, members, placed, enclosing) is BlockNode withIf) {
+                if (BranchStatement(block, region, placed, enclosing) is BlockNode withIf) {
                     statements.Add(withIf);
                     continue;
                 }
-                if (DispatchStatement(block, members, placed, enclosing) is BlockNode withSwitch) {
+                if (DispatchStatement(block, region, placed, enclosing) is BlockNode withSwitch) {
                     statements.Add(withSwitch);
                     continue;
                 }
@@ -159,8 +208,8 @@ internal static class MethodStructurizer {
             }
         }
 
-        private IVisitableAstNode LoopStatement(NaturalLoop loop, IReadOnlyList<LoweredBlock> members) {
-            if (DoWhileShapeOf(loop, members) is DoWhileShape shape) {
+        private IVisitableAstNode LoopStatement(NaturalLoop loop, IReadOnlyList<LoweredBlock> members, DoWhileShape? shape) {
+            if (shape is not null) {
                 List<LoweredBlock> bodyMembers = [.. members.Take(members.Count - 1), members[^1] with { Body = shape.LatchBody }];
                 BlockNode body = Walk(bodyMembers, loop);
                 return Sequence(new DoWhileNode(body, shape.Condition), shape.Exit);
@@ -182,11 +231,11 @@ internal static class MethodStructurizer {
         /// fewer <c>goto</c>s.
         /// </summary>
         private void MoveExitAfterLoop(List<LoweredBlock> order, int index, NaturalLoop loop,
-            IReadOnlyList<LoweredBlock> loopMembers, HashSet<CfgBlock> placed) {
+            IReadOnlyList<LoweredBlock> loopMembers, HashSet<CfgBlock> placed, DoWhileShape? shape) {
             Dictionary<ICfgNode, int> exitCountByTarget = loopMembers.SelectMany(member => Gotos(member.Body))
                 .CountBy(jump => jump.Target).ToDictionary(pair => pair.Key, pair => pair.Value);
             ICfgNode? preferredTarget = null;
-            if (DoWhileShapeOf(loop, loopMembers) is DoWhileShape shape && shape.Exit is GotoNode exitGoto) {
+            if (shape is not null && shape.Exit is GotoNode exitGoto) {
                 preferredTarget = exitGoto.Target;
             } else {
                 int most = 0;
@@ -238,7 +287,7 @@ internal static class MethodStructurizer {
                 || loops.InnermostLoopOf(latch.Block) != loop) {
                 return null;
             }
-            if (SplitFinal<IfElseNode>(latch.Body) is not (List<IVisitableAstNode> head, IfElseNode branch)
+            if (FinalStatement<IfElseNode>(latch.Body) is not IfElseNode branch
                 || !ReadsOnlyMachineState(branch.Condition)) {
                 return null;
             }
@@ -257,7 +306,7 @@ internal static class MethodStructurizer {
             if (ExitStatement(exitArm, header) is not IVisitableAstNode exit) {
                 return null;
             }
-            BlockNode latchBody = Sequence(head);
+            BlockNode latchBody = Sequence(HeadBefore(latch.Body));
             return new DoWhileShape(latchBody, condition, exit);
         }
 
@@ -267,9 +316,9 @@ internal static class MethodStructurizer {
         /// block, or in an <c>if</c> without <c>else</c> when an arm diverges (the arm whose head is later in layout order
         /// when both do); <c>null</c> otherwise. Marks the nested blocks as placed.
         /// </summary>
-        private BlockNode? BranchStatement(LoweredBlock block, IReadOnlyList<LoweredBlock> members, HashSet<CfgBlock> placed,
+        private BlockNode? BranchStatement(LoweredBlock block, Region region, HashSet<CfgBlock> placed,
             NaturalLoop? enclosing) {
-            if (SplitFinal<IfElseNode>(block.Body) is not (List<IVisitableAstNode> head, IfElseNode branch)) {
+            if (FinalStatement<IfElseNode>(block.Body) is not IfElseNode branch) {
                 return null;
             }
             GotoNode? trueGoto = OnlyGoto(branch.TrueCase);
@@ -291,18 +340,18 @@ internal static class MethodStructurizer {
                 Record(falseGoto, GotoKeepReason.NotNextInLayout);
                 return null;
             }
-            (List<LoweredBlock>? trueArm, GotoKeepReason? trueFailure) = ArmBlocksWithReason(whenTrue, members, placed, enclosing);
-            (List<LoweredBlock>? falseArm, GotoKeepReason? falseFailure) = ArmBlocksWithReason(whenFalse, members, placed, enclosing);
+            (List<LoweredBlock>? trueArm, GotoKeepReason? trueFailure) = ArmBlocksWithReason(whenTrue, region, placed, enclosing);
+            (List<LoweredBlock>? falseArm, GotoKeepReason? falseFailure) = ArmBlocksWithReason(whenFalse, region, placed, enclosing);
             bool trueComesBack = trueArm is not null && ComesBackTo(trueArm, whenFalse);
             bool falseComesBack = falseArm is not null && ComesBackTo(falseArm, whenTrue);
-            if (OneArmComesBack(head, branch, trueArm, falseArm, trueComesBack, falseComesBack, whenTrue, whenFalse,
+            if (OneArmComesBack(block, branch, trueArm, falseArm, trueComesBack, falseComesBack, whenTrue, whenFalse,
                     placed, enclosing) is BlockNode oneArm) {
                 return oneArm;
             }
-            if (IfElseWithJoin(head, branch, trueArm, falseArm, trueComesBack, falseComesBack, placed, enclosing) is BlockNode ifElse) {
+            if (IfElseWithJoin(block, branch, trueArm, falseArm, trueComesBack, falseComesBack, placed, enclosing) is BlockNode ifElse) {
                 return ifElse;
             }
-            if (GuardClause(head, branch, trueArm, falseArm, members, whenTrue, whenFalse, placed, enclosing) is BlockNode guard) {
+            if (GuardClause(block, branch, trueArm, falseArm, region, whenTrue, whenFalse, placed, enclosing) is BlockNode guard) {
                 return guard;
             }
             RecordArmFailure(trueGoto, trueArm, trueFailure, falseArm);
@@ -313,62 +362,52 @@ internal static class MethodStructurizer {
         /// <summary>
         /// One arm comes back to the other target: it nests in an <c>if</c> and the other target follows the <c>if</c>.
         /// </summary>
-        private BlockNode? OneArmComesBack(List<IVisitableAstNode> head, IfElseNode branch, List<LoweredBlock>? trueArm,
+        private BlockNode? OneArmComesBack(LoweredBlock block, IfElseNode branch, List<LoweredBlock>? trueArm,
             List<LoweredBlock>? falseArm, bool trueComesBack, bool falseComesBack, ICfgNode whenTrue, ICfgNode whenFalse,
             HashSet<CfgBlock> placed, NaturalLoop? enclosing) {
             if (trueArm is not null && trueComesBack && !falseComesBack) {
-                return Nested(head, branch.Condition, trueArm, null, whenFalse, placed, enclosing);
+                return Nested(block, branch.Condition, trueArm, null, whenFalse, placed, enclosing);
             }
             if (falseArm is not null && falseComesBack && !trueComesBack) {
-                return Nested(head, NegatedCondition(branch.Condition), falseArm, null, whenTrue, placed, enclosing);
+                return Nested(block, NegatedCondition(branch.Condition), falseArm, null, whenTrue, placed, enclosing);
             }
             return null;
         }
 
         /// <summary>Two arms that neither come back nor diverge and meet at one join nest in an <c>if</c> / <c>else</c>.</summary>
-        private BlockNode? IfElseWithJoin(List<IVisitableAstNode> head, IfElseNode branch, List<LoweredBlock>? trueArm,
+        private BlockNode? IfElseWithJoin(LoweredBlock block, IfElseNode branch, List<LoweredBlock>? trueArm,
             List<LoweredBlock>? falseArm, bool trueComesBack, bool falseComesBack, HashSet<CfgBlock> placed,
             NaturalLoop? enclosing) {
             if (trueComesBack || falseComesBack || trueArm is null || falseArm is null
                 || CommonJoin(trueArm, falseArm) is not ICfgNode join) {
                 return null;
             }
-            return Nested(head, branch.Condition, trueArm, falseArm, join, placed, enclosing);
+            return Nested(block, branch.Condition, trueArm, falseArm, join, placed, enclosing);
         }
 
         /// <summary>
         /// An arm that never leaves (a guard clause) nests in an <c>if</c> without <c>else</c>; when both arms diverge,
         /// the arm whose head is later in layout order.
         /// </summary>
-        private BlockNode? GuardClause(List<IVisitableAstNode> head, IfElseNode branch, List<LoweredBlock>? trueArm,
-            List<LoweredBlock>? falseArm, IReadOnlyList<LoweredBlock> members, ICfgNode whenTrue, ICfgNode whenFalse,
+        private BlockNode? GuardClause(LoweredBlock block, IfElseNode branch, List<LoweredBlock>? trueArm,
+            List<LoweredBlock>? falseArm, Region region, ICfgNode whenTrue, ICfgNode whenFalse,
             HashSet<CfgBlock> placed, NaturalLoop? enclosing) {
-            if (trueArm is not null && Diverges(trueArm) && NestDivergingArm(members, trueArm, falseArm)) {
-                return Nested(head, branch.Condition, trueArm, null, whenFalse, placed, enclosing);
+            if (trueArm is not null && Diverges(trueArm) && NestDivergingArm(region, trueArm, falseArm)) {
+                return Nested(block, branch.Condition, trueArm, null, whenFalse, placed, enclosing);
             }
             if (falseArm is not null && Diverges(falseArm)) {
-                return Nested(head, NegatedCondition(branch.Condition), falseArm, null, whenTrue, placed, enclosing);
+                return Nested(block, NegatedCondition(branch.Condition), falseArm, null, whenTrue, placed, enclosing);
             }
             return null;
         }
 
         private bool Diverges(List<LoweredBlock> arm) => Exits(arm).Count == 0;
 
-        private bool NestDivergingArm(IReadOnlyList<LoweredBlock> members, List<LoweredBlock> arm, List<LoweredBlock>? otherArm) {
+        private bool NestDivergingArm(Region region, List<LoweredBlock> arm, List<LoweredBlock>? otherArm) {
             if (otherArm is null || !Diverges(otherArm)) {
                 return true;
             }
-            return LayoutIndex(members, arm[0]) >= LayoutIndex(members, otherArm[0]);
-        }
-
-        /// <summary>The index of the first member that is <paramref name="block"/>, or <paramref name="members"/>' count.</summary>
-        private static int LayoutIndex(IReadOnlyList<LoweredBlock> members, LoweredBlock block) {
-            for (int index = 0; index < members.Count; index++) {
-                if (ReferenceEquals(members[index], block)) {
-                    return index;
-                }
-            }
-            return members.Count;
+            return region.LayoutIndex(arm[0]) >= region.LayoutIndex(otherArm[0]);
         }
 
         /// <summary>Records why <paramref name="jump"/>'s arm could not nest: <paramref name="failure"/> when it has no
@@ -387,10 +426,11 @@ internal static class MethodStructurizer {
         }
 
         /// <summary>
-        /// <paramref name="head"/>, then <c>if (condition) { then arm } else { else arm }</c> (no <c>else</c> when
-        /// <paramref name="elseArm"/> is <c>null</c>), then <c>goto after</c>. Marks the arms' blocks as placed.
+        /// The statements of <paramref name="block"/> before its final branch, then <c>if (condition) { then arm }
+        /// else { else arm }</c> (no <c>else</c> when <paramref name="elseArm"/> is <c>null</c>), then
+        /// <c>goto after</c>. Marks the arms' blocks as placed.
         /// </summary>
-        private BlockNode Nested(IReadOnlyList<IVisitableAstNode> head, ValueNode condition, List<LoweredBlock> thenArm,
+        private BlockNode Nested(LoweredBlock block, ValueNode condition, List<LoweredBlock> thenArm,
             List<LoweredBlock>? elseArm, ICfgNode after, HashSet<CfgBlock> placed, NaturalLoop? enclosing) {
             placed.UnionWith(thenArm.Select(member => member.Block));
             BlockNode elseBody = Empty();
@@ -399,7 +439,7 @@ internal static class MethodStructurizer {
                 elseBody = Walk(elseArm, enclosing);
             }
             IfElseNode nested = new(condition, Walk(thenArm, enclosing), elseBody);
-            return Sequence(head.Append(nested).Append(new GotoNode(after)));
+            return Sequence(HeadBefore(block.Body).Append(nested).Append(new GotoNode(after)));
         }
 
         /// <summary>
@@ -407,14 +447,14 @@ internal static class MethodStructurizer {
         /// cannot be nested: its head is placed, targeted by more than one <c>goto</c>, a loop header or a partition
         /// entry, or the arm holds a latch of <paramref name="enclosing"/>.
         /// </summary>
-        private List<LoweredBlock>? ArmBlocks(ICfgNode head, IReadOnlyList<LoweredBlock> members, HashSet<CfgBlock> placed,
+        private List<LoweredBlock>? ArmBlocks(ICfgNode head, Region region, HashSet<CfgBlock> placed,
             NaturalLoop? enclosing) =>
-            ArmBlocksWithReason(head, members, placed, enclosing).Arm;
+            ArmBlocksWithReason(head, region, placed, enclosing).Arm;
 
         /// <summary>The arm of <see cref="ArmBlocks"/>, or the reason it cannot be nested.</summary>
         private (List<LoweredBlock>? Arm, GotoKeepReason? Reason) ArmBlocksWithReason(ICfgNode head,
-            IReadOnlyList<LoweredBlock> members, HashSet<CfgBlock> placed, NaturalLoop? enclosing) {
-            LoweredBlock? headBlock = members.FirstOrDefault(member => ReferenceEquals(member.Block.Entry, head));
+            Region region, HashSet<CfgBlock> placed, NaturalLoop? enclosing) {
+            LoweredBlock? headBlock = region.MemberWithEntry(head);
             if (headBlock is null) {
                 return (null, GotoKeepReason.ArmOutsideRegion);
             }
@@ -430,9 +470,10 @@ internal static class MethodStructurizer {
             if (headBlock.Block.Instructions.Any(entryNodes.Contains)) {
                 return (null, GotoKeepReason.TargetIsEntry);
             }
-            List<LoweredBlock> arm = members
-                .Where(member => !placed.Contains(member.Block) && loops.Dominators.Dominates(headBlock.Block, member.Block))
-                .ToList();
+            List<LoweredBlock> arm = loops.Dominators.GetDominatedBlocks(headBlock.Block)
+                .Select(region.MemberOf).OfType<LoweredBlock>()
+                .Where(member => !placed.Contains(member.Block))
+                .OrderBy(region.LayoutIndex).ToList();
             if (enclosing is not null && arm.Any(member => enclosing.Latches.Contains(member.Block))) {
                 return (null, GotoKeepReason.ArmHoldsLatch);
             }
@@ -469,9 +510,9 @@ internal static class MethodStructurizer {
         /// that arm can be nested and never leaves, or leaves only to the join: the only exit shared by every candidate
         /// arm that has exactly one exit. Marks the nested blocks as placed.
         /// </summary>
-        private BlockNode? DispatchStatement(LoweredBlock block, IReadOnlyList<LoweredBlock> members, HashSet<CfgBlock> placed,
+        private BlockNode? DispatchStatement(LoweredBlock block, Region region, HashSet<CfgBlock> placed,
             NaturalLoop? enclosing) {
-            if (SplitFinal<SwitchNode>(block.Body) is not (List<IVisitableAstNode> head, SwitchNode dispatch)) {
+            if (FinalStatement<SwitchNode>(block.Body) is not SwitchNode dispatch) {
                 return null;
             }
             if (!ReadsOnlyMachineState(dispatch.Value)) {
@@ -479,7 +520,7 @@ internal static class MethodStructurizer {
                 return null;
             }
             Dictionary<int, List<LoweredBlock>> armByLabel = dispatch.Sections
-                .SelectMany(section => SectionArm(section, members, placed, enclosing)).ToDictionary();
+                .SelectMany(section => SectionArm(section, region, placed, enclosing)).ToDictionary();
             List<CfgBlock> onlyExits = armByLabel.Values.Select(Exits).Where(exits => exits.Count == 1)
                 .Select(exits => exits.Single()).Distinct().ToList();
             CfgBlock? join = null;
@@ -503,7 +544,7 @@ internal static class MethodStructurizer {
                 }
             }
             RecordFlatSections(sections, nestedLabels);
-            List<IVisitableAstNode> statements = [.. head, dispatch with { Sections = sections }];
+            List<IVisitableAstNode> statements = [.. HeadBefore(block.Body), dispatch with { Sections = sections }];
             if (join is not null) {
                 statements.Add(new GotoNode(join.Entry));
             }
@@ -521,9 +562,9 @@ internal static class MethodStructurizer {
         /// <summary>The label and arm of <paramref name="section"/> when its body is a single <c>goto</c> to an arm
         /// that can be nested (see <see cref="ArmBlocks"/>), otherwise nothing.</summary>
         private IEnumerable<KeyValuePair<int, List<LoweredBlock>>> SectionArm(SwitchSection section,
-            IReadOnlyList<LoweredBlock> members, HashSet<CfgBlock> placed, NaturalLoop? enclosing) {
+            Region region, HashSet<CfgBlock> placed, NaturalLoop? enclosing) {
             if (OnlyGotoTarget(section.Body) is ICfgNode target
-                && ArmBlocks(target, members, placed, enclosing) is List<LoweredBlock> arm) {
+                && ArmBlocks(target, region, placed, enclosing) is List<LoweredBlock> arm) {
                 yield return new(section.Label, arm);
             }
         }
