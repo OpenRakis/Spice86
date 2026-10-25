@@ -20,13 +20,29 @@ internal static class AluExpansionBuilder {
     /// <summary>
     /// The expansion of <paramref name="call"/>, or <c>null</c> when it is not an <c>Add</c>, <c>Sub</c>,
     /// <c>And</c>, <c>Or</c>, <c>Xor</c>, <c>Inc</c>, <c>Dec</c>, <c>Adc</c>, <c>Sbb</c>, a <c>Shl</c>, <c>Shr</c> or
-    /// <c>Sar</c> call by a non-zero masked constant count, or a <c>Rol</c>, <c>Ror</c>, <c>Rcl</c> or <c>Rcr</c>
-    /// call by a constant count that actually rotates, returning the unsigned type of its ALU width.
+    /// <c>Sar</c> call by a non-zero masked constant count, a <c>Rol</c>, <c>Ror</c>, <c>Rcl</c> or <c>Rcr</c>
+    /// call by a constant count that actually rotates, returning the unsigned type of its ALU width, or a
+    /// <c>Mul</c> / <c>Imul</c> call returning the type twice as wide as its ALU width.
     /// </summary>
     public static AluExpansion? TryExpand(MethodCallValueNode call) {
         MethodCallNode callNode = call.CallNode;
         BitWidth? width = AluWidth(call);
-        if (width is null || call.DataType != DataType.UnsignedFromBitWidth(width.Value)) {
+        if (width is null) {
+            return null;
+        }
+        AluExpansion? multiply = (callNode.MethodName, callNode.Arguments) switch {
+            ("Mul", [ValueNode left, ValueNode right])
+                when call.DataType == DataType.UnsignedFromBitWidth(Double(width.Value)) =>
+                ExpandMul(width.Value, left, right),
+            ("Imul", [ValueNode left, ValueNode right])
+                when call.DataType == DataType.SignedFromBitWidth(Double(width.Value)) =>
+                ExpandImul(width.Value, left, right),
+            _ => null
+        };
+        if (multiply is not null) {
+            return multiply;
+        }
+        if (call.DataType != DataType.UnsignedFromBitWidth(width.Value)) {
             return null;
         }
         return (callNode.MethodName, callNode.Arguments) switch {
@@ -65,6 +81,67 @@ internal static class AluExpansionBuilder {
             new ConstantNode(count.DataType, ShiftCountMask));
         return ShiftValue(callNode.MethodName, call.DataType, value, maskedCount);
     }
+
+    private static BitWidth Double(BitWidth width) => (BitWidth)(2 * (int)width);
+
+    /// <summary>
+    /// The expansion of a <c>Mul</c> call: the product of the unsigned operands in the type twice as wide,
+    /// CF = OF = the upper half is not zero, ZF = the lower half is zero.
+    /// </summary>
+    private static AluExpansion ExpandMul(BitWidth width, ValueNode leftValue, ValueNode rightValue) {
+        DataType type = DataType.UnsignedFromBitWidth(width);
+        DataType doubleType = DataType.UnsignedFromBitWidth(Double(width));
+        VariableDeclarationNode left = new(type, "left", leftValue);
+        VariableDeclarationNode right = new(type, "right", rightValue);
+        VariableDeclarationNode result = new(doubleType, "result", new BinaryOperationNode(doubleType,
+            new TypeConversionNode(doubleType, left.Reference), BinaryOperation.MULTIPLY,
+            new TypeConversionNode(doubleType, right.Reference)));
+        VariableReferenceNode r = result.Reference;
+        ulong lowerMask = (1UL << (int)width) - 1;
+        ulong upperMask = lowerMask << (int)width;
+        List<AluFlagAssignment> flags = [
+            new(StatusFlags.Carry, UpperHalfNotZero(r, doubleType, upperMask)),
+            new(StatusFlags.Zero, Relation(And(r, new ConstantNode(doubleType, lowerMask)),
+                BinaryOperation.EQUAL, new ConstantNode(doubleType, 0))),
+            new(StatusFlags.Overflow, UpperHalfNotZero(r, doubleType, upperMask))
+        ];
+        return new AluExpansion([left, right], result, flags);
+    }
+
+    /// <summary>
+    /// The expansion of an <c>Imul</c> call: the product of the signed operands in the signed type twice as wide,
+    /// CF = OF = the product does not fit in the signed type of the width, PF / ZF / SF from its lower half and
+    /// AF clear.
+    /// </summary>
+    private static AluExpansion ExpandImul(BitWidth width, ValueNode leftValue, ValueNode rightValue) {
+        DataType type = DataType.SignedFromBitWidth(width);
+        DataType unsignedType = DataType.UnsignedFromBitWidth(width);
+        DataType doubleType = DataType.SignedFromBitWidth(Double(width));
+        VariableDeclarationNode left = new(type, "left", leftValue);
+        VariableDeclarationNode right = new(type, "right", rightValue);
+        VariableDeclarationNode result = new(doubleType, "result", new BinaryOperationNode(doubleType,
+            new TypeConversionNode(doubleType, left.Reference), BinaryOperation.MULTIPLY,
+            new TypeConversionNode(doubleType, right.Reference)));
+        VariableReferenceNode r = result.Reference;
+        TypeConversionNode low = new(unsignedType, r);
+        List<AluFlagAssignment> flags = [
+            new(StatusFlags.Carry, TruncationLosses(r, type, doubleType)),
+            new(StatusFlags.Parity, EvenParity(low)),
+            new(StatusFlags.Auxiliary, False()),
+            new(StatusFlags.Zero, IsZero(low)),
+            new(StatusFlags.Sign, IsNegative(low)),
+            new(StatusFlags.Overflow, TruncationLosses(r, type, doubleType))
+        ];
+        return new AluExpansion([left, right], result, flags);
+    }
+
+    private static BinaryOperationNode UpperHalfNotZero(VariableReferenceNode r, DataType doubleType, ulong mask) =>
+        Relation(And(r, new ConstantNode(doubleType, mask)), BinaryOperation.NOT_EQUAL,
+            new ConstantNode(doubleType, 0));
+
+    private static BinaryOperationNode TruncationLosses(VariableReferenceNode r, DataType type, DataType doubleType) =>
+        Relation(r, BinaryOperation.NOT_EQUAL,
+            new TypeConversionNode(doubleType, new TypeConversionNode(type, r)));
 
     private static BitWidth? AluWidth(MethodCallValueNode call) => call.CallNode.PropertyPath switch {
         "Alu8" => BitWidth.BYTE_8,

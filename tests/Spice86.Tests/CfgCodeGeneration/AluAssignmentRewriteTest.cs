@@ -22,6 +22,8 @@ public class AluAssignmentRewriteTest {
     private static readonly RegisterNode Ax = new(DataType.UINT16, (int)RegisterIndex.AxIndex);
     private static readonly RegisterNode Bx = new(DataType.UINT16, (int)RegisterIndex.BxIndex);
     private static readonly RegisterNode Cx = new(DataType.UINT16, (int)RegisterIndex.CxIndex);
+    private static readonly RegisterNode Cl = new(DataType.UINT8, (int)RegisterIndex.CxIndex);
+    private static readonly RegisterNode Dx = new(DataType.UINT16, (int)RegisterIndex.DxIndex);
     private static readonly MoveIpNextNode MoveIp = new(new ConstantNode(DataType.UINT16, 0x0102));
 
     private static readonly ushort[] EdgeValues16 = [0x0000, 0x0001, 0x0002, 0x000F, 0x0010, 0x007F, 0x0080, 0x00FF,
@@ -138,7 +140,7 @@ public class AluAssignmentRewriteTest {
     [Fact]
     public void UnusedCallTheExpansionDoesNotCoverKeepsTheCall() {
         // Arrange
-        BlockNode instruction = new(AluCall("Mul", Ax, Bx), MoveIp);
+        BlockNode instruction = new(AluCall("Shld", Ax, Bx, Cl), MoveIp);
 
         // Act
         BlockNode? rewritten = AluAssignmentRewrite.TryRewrite(instruction, StatusFlags.None);
@@ -148,15 +150,168 @@ public class AluAssignmentRewriteTest {
     }
 
     [Fact]
-    public void InstructionWithMoreStatementsIsNotRewritten() {
+    public void NegateWithADeadCarryKeepsItsCarryLine() {
         // Arrange
         ConstantNode zero = new(DataType.UINT16, 0);
         BinaryOperationNode setCarry = new(DataType.BOOL, new CpuFlagNode((ushort)StatusFlags.Carry), BinaryOperation.ASSIGN,
             new BinaryOperationNode(DataType.BOOL, Ax, BinaryOperation.NOT_EQUAL, zero));
-        BlockNode negate = new(Assign(Ax, AluCall("Sub", zero, Ax)), setCarry, MoveIp);
+        BlockNode instruction = new(Assign(Ax, AluCall("Sub", zero, Ax)), setCarry, MoveIp);
 
         // Act
-        BlockNode? rewritten = AluAssignmentRewrite.TryRewrite(negate, StatusFlags.None);
+        BlockNode? rewritten = AluAssignmentRewrite.TryRewrite(instruction, StatusFlags.Carry);
+
+        // Assert
+        rewritten.Should().NotBeNull();
+        StatementsOf(rewritten).Should().Equal(
+            Assign(Ax, new BinaryOperationNode(DataType.UINT16, zero, BinaryOperation.MINUS, Ax)),
+            setCarry,
+            MoveIp);
+    }
+
+    [Fact]
+    public void NegateWithALiveZeroTestsTheDestination() {
+        // Arrange
+        ConstantNode zero = new(DataType.UINT16, 0);
+        BinaryOperationNode setCarry = new(DataType.BOOL, new CpuFlagNode((ushort)StatusFlags.Carry), BinaryOperation.ASSIGN,
+            new BinaryOperationNode(DataType.BOOL, Ax, BinaryOperation.NOT_EQUAL, zero));
+        BlockNode instruction = new(Assign(Ax, AluCall("Sub", zero, Ax)), setCarry, MoveIp);
+        BlockNode rewritten = AluAssignmentRewrite.TryRewrite(instruction, StatusFlags.Zero | StatusFlags.Carry)
+            ?? throw new InvalidOperationException("negate was not rewritten");
+        IReadOnlyList<IVisitableAstNode> statements = rewritten.Statements;
+        BlockNode withoutIpMove = new([.. statements.Take(statements.Count - 1)]);
+        AstExpressionBuilder builder = new();
+        Action<State, Memory> run = builder.ToAction(withoutIpMove.Accept(builder)).Compile();
+        Memory memory = new(new(), new Ram(64), new(), new RealModeMmu386(), false);
+        State rewrittenState = new(CpuModel.INTEL_80286);
+        State aluState = new(CpuModel.INTEL_80286);
+        List<string> mismatches = new();
+
+        // Act
+        for (uint ax = 0; ax <= 0xFFFF; ax++) {
+            rewrittenState.AX = (ushort)ax;
+            run(rewrittenState, memory);
+            ushort expected = new Alu16(aluState).Sub(0, (ushort)ax);
+            aluState.CarryFlag = ax != 0;
+            if (rewrittenState.AX != expected || rewrittenState.ZeroFlag != aluState.ZeroFlag
+                || rewrittenState.CarryFlag != aluState.CarryFlag) {
+                mismatches.Add($"Sub(0, 0x{ax:X4}): AX 0x{rewrittenState.AX:X4} instead of 0x{expected:X4}, " +
+                    $"ZF {rewrittenState.ZeroFlag} instead of {aluState.ZeroFlag}, " +
+                    $"CF {rewrittenState.CarryFlag} instead of {aluState.CarryFlag}");
+            }
+        }
+
+        // Assert
+        statements.Should().HaveCount(4);
+        statements[1].Should().Be(new BinaryOperationNode(DataType.BOOL,
+            new CpuFlagNode((ushort)StatusFlags.Zero), BinaryOperation.ASSIGN,
+            new BinaryOperationNode(DataType.BOOL, Ax, BinaryOperation.EQUAL, zero)));
+        mismatches.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void TrailingStatementThatReadsTheFlagsKeepsTheCall() {
+        // Arrange
+        BlockNode instruction = new(Assign(Ax, AluCall("Add", Ax, Bx)),
+            Assign(Cx, new FlagRegisterNode(DataType.UINT16)), MoveIp);
+
+        // Act
+        BlockNode? rewritten = AluAssignmentRewrite.TryRewrite(instruction, StatusFlags.None);
+
+        // Assert
+        rewritten.Should().BeNull();
+    }
+
+    [Fact]
+    public void MultiplyWithDeadFlagsBecomesAProduct() {
+        // Arrange
+        VariableDeclarationNode declaration = new(DataType.UINT32, "result",
+            new MethodCallValueNode(DataType.UINT32, "Alu16", "Mul", Ax, Cx));
+        VariableReferenceNode result = new(DataType.UINT32, "result");
+        BinaryOperationNode assignDx = Assign(Dx, new TypeConversionNode(DataType.UINT16,
+            new BinaryOperationNode(DataType.UINT32, result, BinaryOperation.RIGHT_SHIFT,
+                new ConstantNode(DataType.INT32, 16))));
+        BinaryOperationNode assignAx = Assign(Ax, new TypeConversionNode(DataType.UINT16, result));
+        BlockNode instruction = new(declaration, assignDx, assignAx, MoveIp);
+        BlockNode rewritten = AluAssignmentRewrite.TryRewrite(instruction, StatusFlags.None)
+            ?? throw new InvalidOperationException("mul was not rewritten");
+        IReadOnlyList<IVisitableAstNode> statements = rewritten.Statements;
+        BlockNode withoutIpMove = new([.. statements.Take(statements.Count - 1)]);
+        AstExpressionBuilder builder = new();
+        Action<State, Memory> run = builder.ToAction(withoutIpMove.Accept(builder)).Compile();
+        Memory memory = new(new(), new Ram(64), new(), new RealModeMmu386(), false);
+        State rewrittenState = new(CpuModel.INTEL_80286);
+        State aluState = new(CpuModel.INTEL_80286);
+        List<string> mismatches = new();
+
+        // Act
+        foreach (ushort ax in EdgeValues16) {
+            foreach (ushort cx in EdgeValues16) {
+                rewrittenState.AX = ax;
+                rewrittenState.CX = cx;
+                run(rewrittenState, memory);
+                uint product = new Alu16(aluState).Mul(ax, cx);
+                if (rewrittenState.AX != (ushort)product || rewrittenState.DX != (ushort)(product >> 16)) {
+                    mismatches.Add($"Mul(0x{ax:X4}, 0x{cx:X4}): DX:AX 0x{rewrittenState.DX:X4}:0x{rewrittenState.AX:X4} " +
+                        $"instead of 0x{(ushort)(product >> 16):X4}:0x{(ushort)product:X4}");
+                }
+            }
+        }
+
+        // Assert
+        statements.Should().HaveCount(4);
+        statements[0].Should().Be(new VariableDeclarationNode(DataType.UINT32, "result",
+            new BinaryOperationNode(DataType.UINT32,
+                new TypeConversionNode(DataType.UINT32, Ax), BinaryOperation.MULTIPLY,
+                new TypeConversionNode(DataType.UINT32, Cx))));
+        mismatches.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void SignedMultiplyByAnImmediateBecomesAProduct() {
+        // Arrange
+        MethodCallValueNode call = new(DataType.INT32, "Alu16", "Imul",
+            new ConstantNode(DataType.INT16, 7), new TypeConversionNode(DataType.INT16, Bx));
+        BlockNode instruction = new(Assign(Ax, new TypeConversionNode(DataType.UINT16, call)), MoveIp);
+        BlockNode rewritten = AluAssignmentRewrite.TryRewrite(instruction, StatusFlags.None)
+            ?? throw new InvalidOperationException("imul was not rewritten");
+        IReadOnlyList<IVisitableAstNode> statements = rewritten.Statements;
+        BlockNode withoutIpMove = new([.. statements.Take(statements.Count - 1)]);
+        AstExpressionBuilder builder = new();
+        Action<State, Memory> run = builder.ToAction(withoutIpMove.Accept(builder)).Compile();
+        Memory memory = new(new(), new Ram(64), new(), new RealModeMmu386(), false);
+        State rewrittenState = new(CpuModel.INTEL_80286);
+        State aluState = new(CpuModel.INTEL_80286);
+        List<string> mismatches = new();
+
+        // Act
+        for (uint bx = 0; bx <= 0xFFFF; bx++) {
+            rewrittenState.BX = (ushort)bx;
+            run(rewrittenState, memory);
+            ushort expected = (ushort)new Alu16(aluState).Imul(7, (short)bx);
+            if (rewrittenState.AX != expected) {
+                mismatches.Add($"Imul(7, 0x{bx:X4}): AX 0x{rewrittenState.AX:X4} instead of 0x{expected:X4}");
+            }
+        }
+
+        // Assert
+        statements.Should().HaveCount(2);
+        mismatches.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void MultiplyWithALiveCarryKeepsTheCall() {
+        // Arrange
+        VariableDeclarationNode declaration = new(DataType.UINT32, "result",
+            new MethodCallValueNode(DataType.UINT32, "Alu16", "Mul", Ax, Cx));
+        VariableReferenceNode result = new(DataType.UINT32, "result");
+        BinaryOperationNode assignDx = Assign(Dx, new TypeConversionNode(DataType.UINT16,
+            new BinaryOperationNode(DataType.UINT32, result, BinaryOperation.RIGHT_SHIFT,
+                new ConstantNode(DataType.INT32, 16))));
+        BinaryOperationNode assignAx = Assign(Ax, new TypeConversionNode(DataType.UINT16, result));
+        BlockNode instruction = new(declaration, assignDx, assignAx, MoveIp);
+
+        // Act
+        BlockNode? rewritten = AluAssignmentRewrite.TryRewrite(instruction, StatusFlags.Carry);
 
         // Assert
         rewritten.Should().BeNull();
@@ -165,7 +320,7 @@ public class AluAssignmentRewriteTest {
     [Fact]
     public void CallTheExpansionDoesNotCoverIsNotRewritten() {
         // Arrange
-        BlockNode instruction = new(Assign(Ax, AluCall("Mul", Ax, Bx)), MoveIp);
+        BlockNode instruction = new(Assign(Ax, AluCall("Shld", Ax, Bx, Cl)), MoveIp);
 
         // Act
         BlockNode? rewritten = AluAssignmentRewrite.TryRewrite(instruction, StatusFlags.None);

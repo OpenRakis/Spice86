@@ -182,7 +182,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:00D6 mov CX,3
             CX = 3;
             // F000:00D9 mul CX
-            uint result_00D9 = Alu16.Mul(AX, (ushort)(short)CX);
+            uint result_00D9 = (uint)((uint)AX * (uint)(ushort)(short)CX);
             DX = (ushort)(result_00D9 >> 0x00000010);
             AX = (ushort)result_00D9;
             // F000:00DB mov word ptr DS:[BX+0x1E],AX
@@ -195,7 +195,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:00E6 mov CX,0xFFFD
             CX = 0xFFFD;
             // F000:00E9 imul CX
-            int result_00E9 = Alu16.Imul((short)AX, (short)CX);
+            int result_00E9 = (int)((int)(short)AX * (int)(short)CX);
             DX = (ushort)(result_00E9 >> 0x00000010);
             AX = (ushort)result_00E9;
             // F000:00EB mov word ptr DS:[BX+0x22],AX
@@ -204,14 +204,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             UInt16[DS, (ushort)(BX + 0x24)] = DX;
             // F000:00F1 cmp DI,DI
             // F000:00F3 imul DX,word ptr CS:[SI],7
-            DX = (ushort)Alu16.Imul(7, (short)UInt16[CS, SI]);
+            DX = (ushort)(7 * (int)(short)UInt16[CS, SI]);
             // F000:00F7 mov word ptr DS:[BX+0x26],DX
             UInt16[DS, (ushort)(BX + 0x26)] = DX;
             // F000:00FA cmp DI,DI
             // F000:00FC mov DX,word ptr CS:[SI]
             DX = UInt16[CS, SI];
             // F000:00FF neg DX
-            DX = Alu16.Sub(0, DX);
+            DX = (ushort)-DX;
             CarryFlag = DX != 0;
             // F000:0101 mov word ptr DS:[BX+0x28],DX
             UInt16[DS, (ushort)(BX + 0x28)] = DX;
@@ -333,7 +333,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:01A3 mov DX,word ptr CS:[SI]
             DX = UInt16[CS, SI];
             // F000:01A6 neg DX
-            DX = Alu16.Sub(0, DX);
+            DX = (ushort)-DX;
             CarryFlag = DX != 0;
             // F000:01A8 jb short 0x01AE
             if (!CarryFlag) {

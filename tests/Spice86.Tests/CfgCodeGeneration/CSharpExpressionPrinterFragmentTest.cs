@@ -34,6 +34,17 @@ public class CSharpExpressionPrinterFragmentTest {
     }
 
     [Fact]
+    public void SubtractionFromZeroIsANegation() {
+        ConstantNode zero = new(DataType.UINT16, 0);
+        RegisterNode ax = new(DataType.UINT16, (int)RegisterIndex.AxIndex);
+        BinaryOperationNode subtract = new(DataType.UINT16, zero, BinaryOperation.MINUS, ax);
+
+        CSharpFragment fragment = _printer.Print(subtract);
+
+        fragment.Text.Should().Be("-AX");
+    }
+
+    [Fact]
     public void FragmentTextEqualsToString() {
         ConstantNode constant = new(DataType.UINT16, 0x2A);
 

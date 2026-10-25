@@ -413,6 +413,155 @@ public class AluExpansionBuilderTest {
         return uint.CreateTruncating(result);
     }
 
+    public static TheoryData<string, BitWidth> MultiplyOperations() {
+        TheoryData<string, BitWidth> data = new();
+        foreach (string operation in new[] { "Mul", "Imul" }) {
+            foreach (BitWidth width in new[] { BitWidth.BYTE_8, BitWidth.WORD_16, BitWidth.DWORD_32 }) {
+                data.Add(operation, width);
+            }
+        }
+        return data;
+    }
+
+    [Theory]
+    [MemberData(nameof(MultiplyOperations))]
+    public void MultiplyExpansionComputesTheSameResultAndFlagsAsTheAlu(string operation, BitWidth width) {
+        // Arrange
+        Action<State, Memory> expansion = CompileMultiplyExpansion(operation, width);
+        Memory memory = new(new(), new Ram(64), new(), new RealModeMmu386(), false);
+        State expansionState = new(CpuModel.INTEL_80286);
+        State aluState = new(CpuModel.INTEL_80286);
+        List<string> mismatches = new();
+
+        // Act
+        foreach ((uint left, uint right) in MultiplyInputs(width)) {
+            foreach (bool preset in new[] { false, true }) {
+                SetStatusFlags(expansionState, preset);
+                SetStatusFlags(aluState, preset);
+                SetOperands(expansionState, width, left, right);
+                expansion(expansionState, memory);
+                (uint expectedLow, uint expectedHigh) = RunAluMultiply(aluState, operation, width, left, right);
+                string? mismatch = Compare(expectedLow, aluState, ReadResult(expansionState, width), expansionState);
+                uint actualHigh = ReadHighResult(expansionState, width);
+                if (expectedHigh != actualHigh) {
+                    mismatch = $"{mismatch}; high 0x{actualHigh:X} instead of 0x{expectedHigh:X}".TrimStart("; ".ToCharArray());
+                }
+                if (mismatch is not null) {
+                    mismatches.Add($"{operation}{(int)width}(0x{left:X}, 0x{right:X}), flags preset {preset}: {mismatch}");
+                }
+            }
+        }
+
+        // Assert
+        mismatches.Count.Should().Be(0, string.Join(Environment.NewLine, mismatches.Take(ReportedMismatches)));
+    }
+
+    [Theory]
+    [MemberData(nameof(MultiplyOperations))]
+    public void MultiplyExpansionWritesTheFlagsOfTheAluFlagTable(string operation, BitWidth width) {
+        // Arrange
+        AluExpansion expansion = ExpandMultiply(operation, width);
+        AluFlagTable.TryGetEffect(operation, width, null, out FlagEffect expected);
+
+        // Act
+        FlagEffect actual = FlagEffectVisitor.Of(new BlockNode([.. expansion.Statements]));
+        StatusFlags assigned = expansion.FlagAssignments.Aggregate(StatusFlags.None, (all, assignment) => all | assignment.Flag);
+
+        // Assert
+        actual.Should().Be(expected);
+        assigned.Should().Be(expected.MustWrite);
+    }
+
+    private static AluExpansion ExpandMultiply(string operation, BitWidth width) {
+        DataType type = DataType.UnsignedFromBitWidth(width);
+        DataType signed = DataType.SignedFromBitWidth(width);
+        BitWidth doubleWidth = (BitWidth)(2 * (int)width);
+        RegisterNode left = new(type, (int)RegisterIndex.BxIndex);
+        RegisterNode right = new(type, (int)RegisterIndex.CxIndex);
+        DataType resultType = operation == "Mul"
+            ? DataType.UnsignedFromBitWidth(doubleWidth)
+            : DataType.SignedFromBitWidth(doubleWidth);
+        MethodCallValueNode call = operation == "Mul"
+            ? new(resultType, $"Alu{(int)width}", operation, left, right)
+            : new(resultType, $"Alu{(int)width}", operation, new TypeConversionNode(signed, left),
+                new TypeConversionNode(signed, right));
+        AluExpansion? expansion = AluExpansionBuilder.TryExpand(call);
+        if (expansion is null) {
+            throw new InvalidOperationException($"{operation}{(int)width} was not expanded");
+        }
+        return expansion;
+    }
+
+    private static Action<State, Memory> CompileMultiplyExpansion(string operation, BitWidth width) {
+        AluExpansion expansion = ExpandMultiply(operation, width);
+        DataType type = DataType.UnsignedFromBitWidth(width);
+        VariableReferenceNode result = expansion.Result.Reference;
+        RegisterNode lowRegister = new(type, (int)RegisterIndex.AxIndex);
+        RegisterNode highRegister = width switch {
+            BitWidth.BYTE_8 => new RegisterNode(DataType.UINT8, 4),
+            _ => new RegisterNode(type, (int)RegisterIndex.DxIndex)
+        };
+        BinaryOperationNode assignLow = new(type, lowRegister, BinaryOperation.ASSIGN,
+            new TypeConversionNode(type, result));
+        BinaryOperationNode assignHigh = new(type, highRegister, BinaryOperation.ASSIGN,
+            new TypeConversionNode(type, new BinaryOperationNode(result.DataType, result, BinaryOperation.RIGHT_SHIFT,
+                new ConstantNode(DataType.INT32, (ulong)(int)width))));
+        BlockNode program = new([.. expansion.Statements, assignLow, assignHigh]);
+        AstExpressionBuilder builder = new();
+        return builder.ToAction(program.Accept(builder)).Compile();
+    }
+
+    private static IEnumerable<(uint Left, uint Right)> MultiplyInputs(BitWidth width) {
+        if (width == BitWidth.BYTE_8) {
+            for (uint left = 0; left < 256; left++) {
+                for (uint right = 0; right < 256; right++) {
+                    yield return (left, right);
+                }
+            }
+            yield break;
+        }
+        uint[] edges = width == BitWidth.WORD_16 ? EdgeValues16 : EdgeValues32;
+        foreach (uint left in edges) {
+            foreach (uint right in edges) {
+                yield return (left, right);
+            }
+        }
+        uint mask = width == BitWidth.WORD_16 ? 0xFFFFu : 0xFFFFFFFFu;
+        Random random = new(RandomSeed);
+        for (int i = 0; i < 20000; i++) {
+            uint left = (uint)random.NextInt64(0, 1L << 32) & mask;
+            uint right = (uint)random.NextInt64(0, 1L << 32) & mask;
+            yield return (left, right);
+        }
+    }
+
+    private static uint ReadHighResult(State state, BitWidth width) => width switch {
+        BitWidth.BYTE_8 => state.AH,
+        BitWidth.WORD_16 => state.DX,
+        _ => state.EDX
+    };
+
+    private static (uint Low, uint High) RunAluMultiply(State state, string operation, BitWidth width,
+        uint left, uint right) => width switch {
+        BitWidth.BYTE_8 => RunAluMultiply(new Alu8(state), operation, (int)width, (byte)left, (byte)right),
+        BitWidth.WORD_16 => RunAluMultiply(new Alu16(state), operation, (int)width, (ushort)left, (ushort)right),
+        _ => RunAluMultiply(new Alu32(state), operation, (int)width, left, right)
+    };
+
+    private static (uint Low, uint High) RunAluMultiply<TUnsigned, TSigned, TUnsignedUpper, TSignedUpper>(
+        Alu<TUnsigned, TSigned, TUnsignedUpper, TSignedUpper> alu, string operation, int width,
+        TUnsigned left, TUnsigned right)
+        where TUnsigned : IUnsignedNumber<TUnsigned>
+        where TSigned : ISignedNumber<TSigned>
+        where TUnsignedUpper : IUnsignedNumber<TUnsignedUpper>
+        where TSignedUpper : ISignedNumber<TSignedUpper> {
+        ulong product = operation == "Mul"
+            ? ulong.CreateTruncating(alu.Mul(left, right))
+            : ulong.CreateTruncating(alu.Imul(TSigned.CreateTruncating(left), TSigned.CreateTruncating(right)));
+        ulong lowMask = (1UL << width) - 1;
+        return ((uint)(product & lowMask), (uint)((product >> width) & lowMask));
+    }
+
     private static AluExpansion ExpandShift(string operation, BitWidth width, int count) {
         DataType type = DataType.UnsignedFromBitWidth(width);
         RegisterNode operand = new(type, (int)RegisterIndex.BxIndex);

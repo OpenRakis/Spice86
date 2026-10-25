@@ -82,12 +82,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:0044 mov DX,word ptr CS:[SI+2]
             DX = UInt16[CS, (ushort)(SI + 2)];
             // F000:0048 neg AX
-            AX = Alu16.Sub(0, AX);
+            AX = (ushort)-AX;
             CarryFlag = AX != 0;
             // F000:004A adc DX,0
             DX = (ushort)(DX + (CarryFlag ? 1 : 0));
             // F000:004D neg DX
-            DX = Alu16.Sub(0, DX);
+            DX = (ushort)-DX;
             CarryFlag = DX != 0;
             // F000:004F mov word ptr DS:[BX+8],AX
             UInt16[DS, (ushort)(BX + 8)] = AX;

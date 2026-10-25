@@ -3479,7 +3479,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                 // F000:049A mov EAX,0x80000001
                                 EAX = 0x80000001u;
                                 // F000:04A0 imul EAX
-                                long result_04A0 = Alu32.Imul((int)EAX, (int)EAX);
+                                long result_04A0 = (long)((long)(int)EAX * (long)(int)EAX);
                                 EDX = (uint)(result_04A0 >> 0x00000020);
                                 EAX = (uint)result_04A0;
                                 // F000:04A3 mov EAX,0x44332211
@@ -3489,7 +3489,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                 // F000:04AC mov ECX,0x88776655
                                 ECX = 0x88776655u;
                                 // F000:04B2 mul ECX
-                                ulong result_04B2 = Alu32.Mul(EAX, (uint)(int)ECX);
+                                ulong result_04B2 = (ulong)((ulong)EAX * (ulong)(uint)(int)ECX);
                                 EDX = (uint)(result_04B2 >> 0x00000020);
                                 EAX = (uint)result_04B2;
                                 // F000:04B5 div ECX

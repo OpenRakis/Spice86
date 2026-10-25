@@ -22,6 +22,7 @@ public class AstExpressionBuilderAluExpansionTest {
     private readonly State _state = new(CpuModel.INTEL_80286);
     private static readonly RegisterNode Ax = new(DataType.UINT16, (int)RegisterIndex.AxIndex);
     private static readonly RegisterNode Bx = new(DataType.UINT16, (int)RegisterIndex.BxIndex);
+    private static readonly RegisterNode Cl = new(DataType.UINT8, (int)RegisterIndex.CxIndex);
 
     [Fact]
     public void AluCallIsAMethodCallWhenExpansionIsOff() {
@@ -54,7 +55,7 @@ public class AstExpressionBuilderAluExpansionTest {
         AstExpressionBuilder builder = new(true);
 
         // Act
-        Expression expression = AluCall("Mul", Ax, Bx).Accept(builder);
+        Expression expression = AluCall("Shld", Ax, Bx, Cl).Accept(builder);
 
         // Assert
         expression.Should().BeAssignableTo<MethodCallExpression>();
@@ -111,8 +112,8 @@ public class AstExpressionBuilderAluExpansionTest {
         _state.AX.Should().Be(8);
     }
 
-    private static MethodCallValueNode AluCall(string operation, ValueNode left, ValueNode right) =>
-        new(DataType.UINT16, "Alu16", operation, left, right);
+    private static MethodCallValueNode AluCall(string operation, params ValueNode[] arguments) =>
+        new(DataType.UINT16, "Alu16", operation, arguments.Cast<IVisitableAstNode>().ToArray());
 
     private void Execute(IVisitableAstNode program, bool preferInterpretation) {
         AstExpressionBuilder builder = new(true);

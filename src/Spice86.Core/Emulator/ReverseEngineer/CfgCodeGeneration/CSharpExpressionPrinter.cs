@@ -251,6 +251,10 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         if (operation == BinaryOperation.PLUS && right.Constant is ConstantNode constant) {
             return TrySimplifyConstantAddition(left, constant);
         }
+        if (operation == BinaryOperation.MINUS && left.Constant is ConstantNode zero
+            && zero.DataType != DataType.BOOL && zero.Value == 0) {
+            return new CSharpFragment($"-{Parenthesize(right, UnaryPrecedence + 1)}", null, UnaryPrecedence);
+        }
         return null;
     }
 
