@@ -51,7 +51,17 @@ public class MachineTest {
         ["partition_signed_min_compare"],
         ["partition_back_edge_fallthrough"],
         ["partition_jump_to_next"],
-        ["partition_two_fault_handlers"]
+        ["partition_two_fault_handlers"],
+        ["dataflow_stack_save_restore"],
+        ["dataflow_flag_definitions"],
+        ["dataflow_partial_registers"],
+        ["dataflow_constant_folding"],
+        ["dataflow_double_precision"],
+        ["dataflow_idioms"],
+        ["alu_dead_flags"],
+        ["dataflow_expression_propagation"],
+        ["dataflow_interrupt_boundaries"],
+        ["instruction_coverage_386"]
     ];
 
     [Theory]

@@ -1,0 +1,192 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0xF000;
+
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x00BD, unknown_F000_00BD_F00BD, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, "unknown");
+    }
+
+    public virtual Action unknown_F000_00BD_F00BD(int loadOffset) {
+        CheckExternalEvents(cs1, 0x00BD);
+        // F000:00BD cmp AX,CX
+        Alu16.Sub(AX, CX);
+        // F000:00BF jb short 0x00C3
+        if (CarryFlag) {
+            // F000:00C3 stc
+            CarryFlag = true;
+            // F000:00C4 ret near
+            return NearRet();
+        }
+        // F000:00C1 clc
+        CarryFlag = false;
+        // F000:00C2 ret near
+        return NearRet();
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        // F000:0000 mov AX,0x2000
+        AX = 0x2000;
+        // F000:0003 mov DS,AX
+        DS = AX;
+        // F000:0005 mov ES,AX
+        ES = AX;
+        // F000:0007 mov SS,AX
+        SS = AX;
+        // F000:0009 mov SP,0x1000
+        SP = 0x1000;
+        // F000:000C cld
+        DirectionFlag = false;
+        // F000:000D xor BX,BX
+        BX = 0;
+        // F000:000F mov SI,0x00C5
+        SI = 0x00C5;
+        // F000:0012 mov word ptr DS:[0x0F00],4
+        UInt16[DS, 0x0F00] = 4;
+        do {
+            CheckExternalEvents(cs1, 0x0018);
+            // F000:0018 mov AX,word ptr CS:[SI]
+            AX = UInt16[CS, SI];
+            // F000:001B mov CX,word ptr CS:[SI+2]
+            CX = UInt16[CS, (ushort)(SI + 2)];
+            // F000:001F mov DX,word ptr CS:[SI+4]
+            DX = UInt16[CS, (ushort)(SI + 4)];
+            // F000:0023 mov byte ptr DS:[BX],1
+            UInt8[DS, BX] = 1;
+            // F000:0026 cmp AX,CX
+            Alu16.Sub(AX, CX);
+            // F000:0028 inc DX
+            DX++;
+            ZeroFlag = DX == 0;
+            // F000:0029 jbe short 0x002E
+            if (!CarryFlag && !ZeroFlag) {
+                // F000:002B mov byte ptr DS:[BX],2
+                UInt8[DS, BX] = 2;
+            }
+            // F000:002E mov word ptr DS:[BX+2],DX
+            UInt16[DS, (ushort)(BX + 2)] = DX;
+            // F000:0031 mov DI,word ptr CS:[SI+6]
+            DI = UInt16[CS, (ushort)(SI + 6)];
+            // F000:0035 test DI,DI
+            // F000:0037 je short 0x003D
+            if (DI == 0) {
+                // F000:003D cmp CX,AX
+                Alu16.Sub(CX, AX);
+            }
+            else {
+                // F000:0039 cmp AX,CX
+                Alu16.Sub(AX, CX);
+                // F000:003B jmp short 0x003F
+            }
+            // F000:003F mov byte ptr DS:[BX+4],1
+            UInt8[DS, (ushort)(BX + 4)] = 1;
+            // F000:0043 jb short 0x0049
+            if (!CarryFlag) {
+                // F000:0045 mov byte ptr DS:[BX+4],2
+                UInt8[DS, (ushort)(BX + 4)] = 2;
+            }
+            // F000:0049 mov CX,word ptr CS:[SI+6]
+            CX = UInt16[CS, (ushort)(SI + 6)];
+            // F000:004D mov DX,word ptr CS:[SI+2]
+            DX = UInt16[CS, (ushort)(SI + 2)];
+            // F000:0051 cmp AX,DX
+            Alu16.Sub(AX, DX);
+            // F000:0053 jcxz short 0x0057
+            if (CX != 0) {
+                // F000:0055 mov AX,DX
+                AX = DX;
+            }
+            // F000:0057 mov byte ptr DS:[BX+5],1
+            UInt8[DS, (ushort)(BX + 5)] = 1;
+            // F000:005B jb short 0x0061
+            if (!CarryFlag) {
+                // F000:005D mov byte ptr DS:[BX+5],2
+                UInt8[DS, (ushort)(BX + 5)] = 2;
+            }
+            // F000:0061 mov word ptr DS:[BX+6],AX
+            UInt16[DS, (ushort)(BX + 6)] = AX;
+            // F000:0064 mov AX,word ptr CS:[SI]
+            AX = UInt16[CS, SI];
+            // F000:0067 mov word ptr DS:[0x0E00],AX
+            UInt16[DS, 0x0E00] = AX;
+            // F000:006A cmp byte ptr DS:[0x0E00],5
+            Alu8.Sub(UInt8[DS, 0x0E00], 5);
+            // F000:006F mov byte ptr DS:[0x0E00],9
+            UInt8[DS, 0x0E00] = 9;
+            // F000:0074 mov byte ptr DS:[BX+8],1
+            UInt8[DS, (ushort)(BX + 8)] = 1;
+            // F000:0078 je short 0x007E
+            if (!ZeroFlag) {
+                // F000:007A mov byte ptr DS:[BX+8],2
+                UInt8[DS, (ushort)(BX + 8)] = 2;
+            }
+            // F000:007E mov CX,word ptr CS:[SI+2]
+            CX = UInt16[CS, (ushort)(SI + 2)];
+            // F000:0082 cmp AX,CX
+            Alu16.Sub(AX, CX);
+            // F000:0084 pushf
+            Stack.Push16(FlagRegister16);
+            // F000:0085 pop DX
+            DX = Stack.Pop16();
+            // F000:0086 and DX,0x08D5
+            DX = Alu16.And(DX, 0x08D5);
+            // F000:008A mov word ptr DS:[BX+0x0A],DX
+            UInt16[DS, (ushort)(BX + 0x0A)] = DX;
+            // F000:008D call near 0x00BD
+            NearCall(cs1, 0x0090, unknown_F000_00BD_F00BD);
+            // F000:0090 mov byte ptr DS:[BX+0x0C],1
+            UInt8[DS, (ushort)(BX + 0x0C)] = 1;
+            // F000:0094 jb short 0x009A
+            if (!CarryFlag) {
+                // F000:0096 mov byte ptr DS:[BX+0x0C],2
+                UInt8[DS, (ushort)(BX + 0x0C)] = 2;
+            }
+            // F000:009A mov DX,word ptr CS:[SI+4]
+            DX = UInt16[CS, (ushort)(SI + 4)];
+            // F000:009E add AX,CX
+            AX = Alu16.Add(AX, CX);
+            // F000:00A0 jcxz short 0x00A5
+            if (CX != 0) {
+                // F000:00A2 mov DX,0x1000
+                DX = 0x1000;
+            }
+            // F000:00A5 adc DX,0
+            DX = Alu16.Adc(DX, 0);
+            // F000:00A8 mov word ptr DS:[BX+0x0E],DX
+            UInt16[DS, (ushort)(BX + 0x0E)] = DX;
+            // F000:00AB mov word ptr DS:[BX+0x10],AX
+            UInt16[DS, (ushort)(BX + 0x10)] = AX;
+            // F000:00AE add BX,0x0040
+            BX = (ushort)(BX + 0x0040);
+            // F000:00B1 add SI,8
+            SI = Alu16.Add(SI, 8);
+            // F000:00B4 dec word ptr DS:[0x0F00]
+            UInt16[DS, 0x0F00] = Alu16.Dec(UInt16[DS, 0x0F00]);
+            // F000:00B8 jne near 0x0018
+        } while (!ZeroFlag);
+        // F000:00BC hlt
+        return Hlt();
+    }
+
+}

@@ -1,0 +1,322 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0xF000;
+
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x006A, unknown_F000_006A_F006A, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x00FB, unknown_F000_00FB_F00FB, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x010E, unknown_F000_010E_F010E, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x011E, unknown_F000_011E_F011E, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0123, unknown_F000_0123_F0123, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0058, unknown_F000_0058_F0058, "unknown");
+    }
+
+    public virtual Action unknown_F000_006A_F006A(int loadOffset) {
+    entrydispatcher:
+        while (true) {
+            CheckExternalEvents(cs1, 0x006A);
+            // F000:006A div CX
+            try {
+                (AX, DX) = Div16(divisor: CX, dividend: (uint)((uint)DX << 0x00000010 | (uint)AX));
+                break;
+            }
+            catch (CpuException cpuException) {
+                return DispatchCpuFault(cpuException, cs1, 0x006A, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x00FB), () => unknown_F000_00FB_F00FB(0x0000))]);
+            }
+        }
+        // F000:006C mov word ptr DS:[BX],AX
+        UInt16[DS, BX] = AX;
+        // F000:006E mov word ptr DS:[BX+2],DX
+        UInt16[DS, (ushort)(BX + 2)] = DX;
+        // F000:0071 mov word ptr DS:[BX+4],CX
+        UInt16[DS, (ushort)(BX + 4)] = CX;
+        // F000:0074 mov AX,word ptr DS:[0x0E00]
+        AX = UInt16[DS, 0x0E00];
+        // F000:0077 mov word ptr DS:[BX+6],AX
+        UInt16[DS, (ushort)(BX + 6)] = AX;
+        // F000:007A mov CX,3
+        CX = 3;
+        // F000:007D mov DI,0x0E10
+        DI = 0x0E10;
+        // F000:0080 mov AX,word ptr CS:[SI+4]
+        AX = UInt16[CS, (ushort)(SI + 4)];
+        while (true) {
+            CheckExternalEvents(cs1, 0x0084);
+            // F000:0084 cmp byte ptr DS:[0x0E02],0
+            // F000:0089 je short 0x0084
+            if (UInt8[DS, 0x0E02] == 0) {
+                continue;
+            }
+            // F000:008B mov byte ptr DS:[0x0E02],0
+            UInt8[DS, 0x0E02] = 0;
+            // F000:0090 stos word ptr ES:[DI],AX
+            UInt16[ES, DI] = AX;
+            DI = (ushort)(DI + (ushort)State.Direction16);
+            // F000:0091 add AX,1
+            AX = Alu16.Add(AX, 1);
+            // F000:0094 loop 0x0084
+            CX--;
+            if (CX == 0) {
+                break;
+            }
+        }
+        // F000:0096 mov word ptr DS:[BX+8],DI
+        UInt16[DS, (ushort)(BX + 8)] = DI;
+        // F000:0099 mov word ptr DS:[BX+0x0A],AX
+        UInt16[DS, (ushort)(BX + 0x0A)] = AX;
+        // F000:009C mov word ptr DS:[BX+0x0C],CX
+        UInt16[DS, (ushort)(BX + 0x0C)] = CX;
+        // F000:009F mov DX,word ptr DS:[0x0E10]
+        DX = UInt16[DS, 0x0E10];
+        // F000:00A3 mov word ptr DS:[BX+0x0E],DX
+        UInt16[DS, (ushort)(BX + 0x0E)] = DX;
+        // F000:00A6 mov DX,word ptr DS:[0x0E14]
+        DX = UInt16[DS, 0x0E14];
+        // F000:00AA mov word ptr DS:[BX+0x10],DX
+        UInt16[DS, (ushort)(BX + 0x10)] = DX;
+        // F000:00AD mov AH,byte ptr CS:[SI+6]
+        AH = UInt8[CS, (ushort)(SI + 6)];
+        // F000:00B1 mov AL,3
+        AL = 3;
+        // F000:00B3 int 0x60
+        InterruptCall(cs1, 0x00B5, 0x60);
+        // F000:00B5 mov word ptr DS:[BX+0x12],AX
+        UInt16[DS, (ushort)(BX + 0x12)] = AX;
+        // F000:00B8 std
+        DirectionFlag = true;
+        // F000:00B9 pushf
+        Stack.Push16(FlagRegister16);
+        // F000:00BA cld
+        DirectionFlag = false;
+        // F000:00BB popf
+        FlagRegister16 = Stack.Pop16();
+        CheckExternalEvents(cs1, 0x00BC);
+        // F000:00BC mov DI,0x0E20
+        DI = 0x0E20;
+        // F000:00BF mov AX,word ptr CS:[SI+8]
+        AX = UInt16[CS, (ushort)(SI + 8)];
+        // F000:00C3 stos word ptr ES:[DI],AX
+        UInt16[ES, DI] = AX;
+        DI = (ushort)(DI + (ushort)State.Direction16);
+        // F000:00C4 mov word ptr DS:[BX+0x14],DI
+        UInt16[DS, (ushort)(BX + 0x14)] = DI;
+        // F000:00C7 cld
+        DirectionFlag = false;
+        // F000:00C8 call near 0x0123
+        NearCall(cs1, 0x00CB, unknown_F000_0123_F0123);
+        // F000:00CB mov DI,0x0E30
+        DI = 0x0E30;
+        // F000:00CE stos word ptr ES:[DI],AX
+        UInt16[ES, DI] = AX;
+        DI = (ushort)(DI + (ushort)State.Direction16);
+        // F000:00CF mov word ptr DS:[BX+0x16],DI
+        UInt16[DS, (ushort)(BX + 0x16)] = DI;
+        // F000:00D2 cld
+        DirectionFlag = false;
+        // F000:00D3 push SI
+        Stack.Push16(SI);
+        // F000:00D4 mov SI,0x0E20
+        SI = 0x0E20;
+        // F000:00D7 mov DI,0x0E40
+        DI = 0x0E40;
+        // F000:00DA mov CX,2
+        CX = 2;
+        do {
+            CheckExternalEvents(cs1, 0x00DD);
+            // F000:00DD movs byte ptr ES:[DI],byte ptr DS:[SI]
+            UInt8[ES, DI] = UInt8[DS, SI];
+            SI = (ushort)(SI + (ushort)State.Direction8);
+            DI = (ushort)(DI + (ushort)State.Direction8);
+            // F000:00DE loop 0x00DD
+            CX--;
+        } while (CX != 0);
+        // F000:00E0 pop SI
+        SI = Stack.Pop16();
+        // F000:00E1 mov word ptr DS:[BX+0x18],DI
+        UInt16[DS, (ushort)(BX + 0x18)] = DI;
+        // F000:00E4 mov DX,word ptr DS:[0x0E40]
+        DX = UInt16[DS, 0x0E40];
+        // F000:00E8 mov word ptr DS:[BX+0x1A],DX
+        UInt16[DS, (ushort)(BX + 0x1A)] = DX;
+        // F000:00EB add BX,0x0040
+        BX = (ushort)(BX + 0x0040);
+        // F000:00EE add SI,0x000A
+        SI = Alu16.Add(SI, 0x000A);
+        // F000:00F1 dec word ptr DS:[0x0F00]
+        UInt16[DS, 0x0F00] = Alu16.Dec(UInt16[DS, 0x0F00]);
+        // F000:00F5 jne near 0x0058
+        if (!ZeroFlag) {
+            if (JumpDispatcher.Jump(unknown_F000_0058_F0058, 0x0000)) {
+                loadOffset = JumpDispatcher.NextEntryAddress;
+                goto entrydispatcher;
+            }
+            return JumpDispatcher.RequiredJumpAsmReturn;
+        }
+        // F000:00F9 cli
+        InterruptFlag = false;
+        // F000:00FA hlt
+        return Hlt();
+    }
+
+    public virtual Action unknown_F000_00FB_F00FB(int loadOffset) {
+        CheckExternalEvents(cs1, 0x00FB);
+        // F000:00FB push BP
+        Stack.Push16(BP);
+        // F000:00FC mov BP,SP
+        BP = SP;
+        // F000:00FE mov word ptr DS:[0x0E00],AX
+        UInt16[DS, 0x0E00] = AX;
+        // F000:0101 mov CX,7
+        CX = 7;
+        // F000:0104 add AX,0x0010
+        AX = (ushort)(AX + 0x0010);
+        // F000:0107 mov word ptr SS:[BP+2],0x006A
+        UInt16[SS, (ushort)(BP + 2)] = 0x006A;
+        // F000:010C pop BP
+        BP = Stack.Pop16();
+        // F000:010D iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_010E_F010E(int loadOffset) {
+        CheckExternalEvents(cs1, 0x010E);
+        // F000:010E push AX
+        Stack.Push16(AX);
+        // F000:010F mov byte ptr DS:[0x0E02],1
+        UInt8[DS, 0x0E02] = 1;
+        // F000:0114 mov AX,0xDEAD
+        AX = 0xDEAD;
+        // F000:0117 std
+        DirectionFlag = true;
+        // F000:0118 mov AL,0x20
+        AL = 0x20;
+        // F000:011A out 0x20,AL
+        Out8(0x0020, AL);
+        // F000:011C pop AX
+        AX = Stack.Pop16();
+        // F000:011D iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_011E_F011E(int loadOffset) {
+        CheckExternalEvents(cs1, 0x011E);
+        // F000:011E add AL,AH
+        AL = (byte)(AL + AH);
+        // F000:0120 mov AH,0x77
+        AH = 0x77;
+        // F000:0122 iret
+        return InterruptRet();
+    }
+
+    public virtual Action unknown_F000_0123_F0123(int loadOffset) {
+        CheckExternalEvents(cs1, 0x0123);
+        // F000:0123 std
+        DirectionFlag = true;
+        // F000:0124 ret near
+        return NearRet();
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        // F000:0000 mov AX,0x2000
+        AX = 0x2000;
+        // F000:0003 mov DS,AX
+        DS = AX;
+        // F000:0005 mov SS,AX
+        SS = AX;
+        // F000:0007 mov SP,0x1000
+        SP = 0x1000;
+        // F000:000A xor AX,AX
+        AX = 0;
+        // F000:000C mov ES,AX
+        ES = AX;
+        // F000:000E mov word ptr ES:[0],0x00FB
+        UInt16[ES, 0] = 0x00FB;
+        // F000:0015 mov word ptr ES:[2],CS
+        UInt16[ES, 2] = CS;
+        // F000:001A mov word ptr ES:[0x0020],0x010E
+        UInt16[ES, 0x0020] = 0x010E;
+        // F000:0021 mov word ptr ES:[0x0022],CS
+        UInt16[ES, 0x0022] = CS;
+        // F000:0026 mov word ptr ES:[0x0180],0x011E
+        UInt16[ES, 0x0180] = 0x011E;
+        // F000:002D mov word ptr ES:[0x0182],CS
+        UInt16[ES, 0x0182] = CS;
+        // F000:0032 mov AX,DS
+        AX = DS;
+        // F000:0034 mov ES,AX
+        ES = AX;
+        // F000:0036 cld
+        DirectionFlag = false;
+        // F000:0037 mov byte ptr DS:[0x0E02],0
+        UInt8[DS, 0x0E02] = 0;
+        // F000:003C mov AL,0x36
+        AL = 0x36;
+        // F000:003E out 0x43,AL
+        Out8(0x0043, AL);
+        // F000:0040 mov AL,0x51
+        AL = 0x51;
+        // F000:0042 out 0x40,AL
+        Out8(0x0040, AL);
+        // F000:0044 mov AL,0x22
+        AL = 0x22;
+        // F000:0046 out 0x40,AL
+        Out8(0x0040, AL);
+        // F000:0048 mov AL,0
+        AL = 0;
+        // F000:004A out 0x21,AL
+        Out8(0x0021, AL);
+        // F000:004C sti
+        InterruptFlag = true;
+        CheckExternalEvents(cs1, 0x004D);
+        // F000:004D xor BX,BX
+        BX = Alu16.Xor(BX, BX);
+        // F000:004F mov SI,0x0125
+        SI = 0x0125;
+        // F000:0052 mov word ptr DS:[0x0F00],2
+        UInt16[DS, 0x0F00] = 2;
+        return unknown_F000_0058_F0058(0x0000);
+    }
+
+    public virtual Action unknown_F000_0058_F0058(int loadOffset) {
+    entrydispatcher:
+        CheckExternalEvents(cs1, 0x0058);
+        // F000:0058 mov word ptr DS:[0x0E00],0
+        UInt16[DS, 0x0E00] = 0;
+        // F000:005E mov AX,word ptr CS:[SI]
+        AX = UInt16[CS, SI];
+        // F000:0061 mov CX,word ptr CS:[SI+2]
+        CX = UInt16[CS, (ushort)(SI + 2)];
+        // F000:0065 xor DX,DX
+        DX = 0;
+        // F000:0067 add AX,1
+        AX = Alu16.Add(AX, 1);
+        if (JumpDispatcher.Jump(unknown_F000_006A_F006A, 0x0000)) {
+            loadOffset = JumpDispatcher.NextEntryAddress;
+            goto entrydispatcher;
+        }
+        return JumpDispatcher.RequiredJumpAsmReturn;
+    }
+
+}

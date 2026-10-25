@@ -22,6 +22,7 @@ using Spice86.Shared.Utils;
 
 using System.Collections.Immutable;
 using System.Linq;
+using System.Numerics;
 
 /// <summary>
 /// Provides a set of properties and methods to facilitate the creation of C# overrides of machine code.
@@ -1149,6 +1150,56 @@ public class CSharpOverrideHelper {
     /// <param name="port">The I/O port to write to.</param>
     /// <param name="value">The double word to write.</param>
     public void Out32(ushort port, uint value) => Machine.IoPortDispatcher.WriteDWord(port, value);
+
+    /// <summary>
+    /// Index of the lowest set bit of a word, like the <c>bsf</c> instruction.
+    /// </summary>
+    /// <param name="value">The value to scan.</param>
+    /// <returns>The bit index (0-15) of the lowest set bit.</returns>
+    public ushort BitScanForward16(ushort value) => (ushort)BitOperations.TrailingZeroCount(value);
+
+    /// <summary>
+    /// Index of the lowest set bit of a double word, like the <c>bsf</c> instruction.
+    /// </summary>
+    /// <param name="value">The value to scan.</param>
+    /// <returns>The bit index (0-31) of the lowest set bit.</returns>
+    public uint BitScanForward32(uint value) => (uint)BitOperations.TrailingZeroCount(value);
+
+    /// <summary>
+    /// Index of the highest set bit of a word, like the <c>bsr</c> instruction.
+    /// </summary>
+    /// <param name="value">The value to scan.</param>
+    /// <returns>The bit index (0-15) of the highest set bit.</returns>
+    public ushort BitScanReverse16(ushort value) => (ushort)BitOperations.Log2(value);
+
+    /// <summary>
+    /// Index of the highest set bit of a double word, like the <c>bsr</c> instruction.
+    /// </summary>
+    /// <param name="value">The value to scan.</param>
+    /// <returns>The bit index (0-31) of the highest set bit.</returns>
+    public uint BitScanReverse32(uint value) => (uint)BitOperations.Log2(value);
+
+    /// <summary>
+    /// Checks that a 16-bit signed index lies within [lower, upper], like the <c>bound</c> instruction.
+    /// </summary>
+    /// <exception cref="CpuBoundRangeExceededException">The index is outside the bounds.</exception>
+    public void CheckBound(short index, short lower, short upper) {
+        if (index < lower || index > upper) {
+            throw new CpuBoundRangeExceededException(
+                $"BOUND check failed: index={index}, lower={lower}, upper={upper}.");
+        }
+    }
+
+    /// <summary>
+    /// Checks that a 32-bit signed index lies within [lower, upper], like the <c>bound</c> instruction.
+    /// </summary>
+    /// <exception cref="CpuBoundRangeExceededException">The index is outside the bounds.</exception>
+    public void CheckBound(int index, int lower, int upper) {
+        if (index < lower || index > upper) {
+            throw new CpuBoundRangeExceededException(
+                $"BOUND check failed: index={index}, lower={lower}, upper={upper}.");
+        }
+    }
 
     /// <summary>
     /// Halt the program.

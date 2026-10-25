@@ -1,0 +1,162 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0xF000;
+
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x00A4, unknown_F000_00A4_F00A4, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, "unknown");
+    }
+
+    public virtual Action unknown_F000_00A4_F00A4(int loadOffset) {
+        CheckExternalEvents(cs1, 0x00A4);
+        // F000:00A4 ret near
+        return NearRet();
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        // F000:0000 mov AX,0x2000
+        AX = 0x2000;
+        // F000:0003 mov DS,AX
+        DS = AX;
+        // F000:0005 mov ES,AX
+        ES = AX;
+        // F000:0007 mov SS,AX
+        SS = AX;
+        // F000:0009 mov SP,0x1000
+        SP = 0x1000;
+        // F000:000C cld
+        DirectionFlag = false;
+        // F000:000D xor BX,BX
+        BX = 0;
+        // F000:000F mov SI,0x00A5
+        SI = 0x00A5;
+        // F000:0012 mov word ptr DS:[0x0F00],2
+        UInt16[DS, 0x0F00] = 2;
+        do {
+            CheckExternalEvents(cs1, 0x0018);
+            // F000:0018 mov AX,word ptr CS:[SI]
+            AX = UInt16[CS, SI];
+            // F000:001B mov AL,byte ptr CS:[SI+2]
+            AL = UInt8[CS, (ushort)(SI + 2)];
+            // F000:001F mov word ptr DS:[BX],AX
+            UInt16[DS, BX] = AX;
+            // F000:0021 mov AX,word ptr CS:[SI]
+            AX = UInt16[CS, SI];
+            // F000:0024 mov AH,byte ptr CS:[SI+3]
+            AH = UInt8[CS, (ushort)(SI + 3)];
+            // F000:0028 mov word ptr DS:[BX+2],AX
+            UInt16[DS, (ushort)(BX + 2)] = AX;
+            // F000:002B mov EAX,dword ptr CS:[SI+4]
+            EAX = UInt32[CS, (ushort)(SI + 4)];
+            // F000:0030 mov AX,word ptr CS:[SI]
+            AX = UInt16[CS, SI];
+            // F000:0033 mov dword ptr DS:[BX+4],EAX
+            UInt32[DS, (ushort)(BX + 4)] = EAX;
+            // F000:0037 mov AX,word ptr CS:[SI+2]
+            AX = UInt16[CS, (ushort)(SI + 2)];
+            // F000:003B xchg AL,AH
+            byte temp_003B = AL;
+            AL = AH;
+            AH = (byte)temp_003B;
+            // F000:003D mov word ptr DS:[BX+8],AX
+            UInt16[DS, (ushort)(BX + 8)] = AX;
+            // F000:0040 mov AX,word ptr CS:[SI]
+            AX = UInt16[CS, SI];
+            // F000:0043 add AX,1
+            AX = Alu16.Add(AX, 1);
+            // F000:0046 mov AH,7
+            AH = 7;
+            // F000:0048 mov CX,AX
+            CX = AX;
+            // F000:004A mov word ptr DS:[BX+0x0A],CX
+            UInt16[DS, (ushort)(BX + 0x0A)] = CX;
+            // F000:004D mov DX,word ptr CS:[SI+2]
+            DX = UInt16[CS, (ushort)(SI + 2)];
+            // F000:0051 mov AX,DX
+            AX = DX;
+            // F000:0053 mov AL,1
+            AL = 1;
+            // F000:0055 mov CX,AX
+            CX = AX;
+            // F000:0057 mov word ptr DS:[BX+0x0C],CX
+            UInt16[DS, (ushort)(BX + 0x0C)] = CX;
+            // F000:005A push DS
+            Stack.Push16(DS);
+            // F000:005B mov AX,0x2200
+            AX = 0x2200;
+            // F000:005E mov DS,AX
+            DS = AX;
+            // F000:0060 mov AX,word ptr CS:[SI]
+            AX = UInt16[CS, SI];
+            // F000:0063 mov word ptr DS:[0],AX
+            UInt16[DS, 0] = AX;
+            // F000:0066 call near 0x00A4
+            NearCall(cs1, 0x0069, unknown_F000_00A4_F00A4);
+            // F000:0069 mov CX,word ptr DS:[0]
+            CX = UInt16[DS, 0];
+            // F000:006D mov DX,DS
+            DX = DS;
+            // F000:006F pop DS
+            DS = UInt16[SS, SP];
+            SP = (ushort)(SP + 2);
+            // F000:0070 mov word ptr DS:[BX+0x0E],CX
+            UInt16[DS, (ushort)(BX + 0x0E)] = CX;
+            // F000:0073 mov word ptr DS:[BX+0x10],DX
+            UInt16[DS, (ushort)(BX + 0x10)] = DX;
+            // F000:0076 mov AX,0x2200
+            AX = 0x2200;
+            // F000:0079 mov ES,AX
+            ES = AX;
+            // F000:007B mov AX,word ptr CS:[SI+2]
+            AX = UInt16[CS, (ushort)(SI + 2)];
+            // F000:007F mov word ptr ES:[2],AX
+            UInt16[ES, 2] = AX;
+            // F000:0083 call near 0x00A4
+            NearCall(cs1, 0x0086, unknown_F000_00A4_F00A4);
+            // F000:0086 mov CX,word ptr ES:[2]
+            CX = UInt16[ES, 2];
+            // F000:008B mov DX,ES
+            DX = ES;
+            // F000:008D push DS
+            Stack.Push16(DS);
+            // F000:008E pop ES
+            ES = UInt16[SS, SP];
+            SP = (ushort)(SP + 2);
+            // F000:008F mov word ptr DS:[BX+0x12],CX
+            UInt16[DS, (ushort)(BX + 0x12)] = CX;
+            // F000:0092 mov word ptr DS:[BX+0x14],DX
+            UInt16[DS, (ushort)(BX + 0x14)] = DX;
+            // F000:0095 add BX,0x0040
+            BX = (ushort)(BX + 0x0040);
+            // F000:0098 add SI,8
+            SI = Alu16.Add(SI, 8);
+            // F000:009B dec word ptr DS:[0x0F00]
+            UInt16[DS, 0x0F00] = Alu16.Dec(UInt16[DS, 0x0F00]);
+            // F000:009F jne near 0x0018
+        } while (!ZeroFlag);
+        // F000:00A3 hlt
+        return Hlt();
+    }
+
+}

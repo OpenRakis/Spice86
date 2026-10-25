@@ -1,0 +1,113 @@
+F000:0000 mov AX,0x2000
+F000:0003 mov DS,AX
+F000:0005 mov ES,AX
+F000:0007 mov SS,AX
+F000:0009 mov SP,0x1000
+F000:000C cld
+F000:000D xor BX,BX
+F000:000F mov DX,0x00F0
+F000:0012 bt DX,4
+F000:0016 setb byte ptr DS:[BX]
+F000:0019 bts DX,0
+F000:001D setb byte ptr DS:[BX+1]
+F000:0021 btr DX,4
+F000:0025 setb byte ptr DS:[BX+2]
+F000:0029 btc DX,8
+F000:002D setb byte ptr DS:[BX+3]
+F000:0031 mov word ptr DS:[BX+4],DX
+F000:0034 mov DX,0x0A00
+F000:0037 bsf CX,DX
+F000:003A mov word ptr DS:[BX+6],CX
+F000:003D bsr CX,DX
+F000:0040 mov word ptr DS:[BX+8],CX
+F000:0043 mov AX,0x1234
+F000:0046 mov DX,0xABCD
+F000:0049 shld AX,DX,4
+F000:004D mov word ptr DS:[BX+0x0A],AX
+F000:0050 mov AX,0x1234
+F000:0053 shrd AX,DX,4
+F000:0057 mov word ptr DS:[BX+0x0C],AX
+F000:005A mov AX,5
+F000:005D mov CX,7
+F000:0060 xadd AX,CX
+F000:0063 mov word ptr DS:[BX+0x0E],AX
+F000:0066 mov word ptr DS:[BX+0x10],CX
+F000:0069 mov AX,3
+F000:006C mov CX,3
+F000:006F mov DX,9
+F000:0072 cmpxchg CX,DX
+F000:0075 mov word ptr DS:[BX+0x12],CX
+F000:0078 mov AX,4
+F000:007B cmpxchg CX,DX
+F000:007E mov word ptr DS:[BX+0x14],AX
+F000:0081 mov EDX,0x12345678
+F000:0087 bswap EDX
+F000:008A mov dword ptr DS:[BX+0x16],EDX
+F000:008E mov BP,0x1234
+F000:0091 mov AX,SP
+F000:0093 enter 4,0
+F000:0097 mov CX,BP
+F000:0099 sub CX,SP
+F000:009B leave
+F000:009C mov DX,SP
+F000:009E sub DX,AX
+F000:00A0 mov word ptr DS:[BX+0x1A],CX
+F000:00A3 mov word ptr DS:[BX+0x1C],DX
+F000:00A6 mov word ptr DS:[BX+0x1E],BP
+F000:00A9 mov word ptr DS:[0x0E00],0
+F000:00AF mov word ptr DS:[0x0E02],0x000A
+F000:00B5 mov DX,5
+F000:00B8 bound DX,word ptr DS:[0x0E00],word ptr DS:[0x0E00+2]
+F000:00BC mov word ptr DS:[BX+0x20],1
+F000:00C1 mov DL,0x85
+F000:00C3 movsz CX,DL
+F000:00C6 mov word ptr DS:[BX+0x22],CX
+F000:00C9 movsx CX,DL
+F000:00CC mov word ptr DS:[BX+0x24],CX
+F000:00CF mov DX,0x8001
+F000:00D2 movsx ECX,DX
+F000:00D6 mov dword ptr DS:[BX+0x26],ECX
+F000:00DA movsz ECX,DX
+F000:00DE mov dword ptr DS:[BX+0x2A],ECX
+F000:00E2 mov AX,0x8000
+F000:00E5 cbwe
+F000:00E7 mov dword ptr DS:[BX+0x2E],EAX
+F000:00EB mov EAX,0x80000000
+F000:00F1 cdq
+F000:00F3 mov dword ptr DS:[BX+0x32],EDX
+F000:00F7 mov AX,1
+F000:00FA mov CX,2
+F000:00FD mov DX,3
+F000:0100 mov BP,5
+F000:0103 mov DI,7
+F000:0106 pusha
+F000:0107 mov BP,SP
+F000:0109 mov AX,word ptr SS:[BP+6]
+F000:010C mov word ptr DS:[BX+0x3C],AX
+F000:010F xor AX,AX
+F000:0111 xor CX,CX
+F000:0113 xor DX,DX
+F000:0115 popa
+F000:0116 mov word ptr DS:[BX+0x36],AX
+F000:0119 mov word ptr DS:[BX+0x38],CX
+F000:011C mov word ptr DS:[BX+0x3A],DX
+F000:011F mov word ptr DS:[BX+0x3E],BP
+F000:0122 mov AX,1
+F000:0125 mov CX,2
+F000:0128 cmp AX,CX
+F000:012A setb byte ptr DS:[BX+0x40]
+F000:012E setae byte ptr DS:[BX+0x41]
+F000:0132 setbe byte ptr DS:[BX+0x42]
+F000:0136 seta byte ptr DS:[BX+0x43]
+F000:013A setl byte ptr DS:[BX+0x44]
+F000:013E setge byte ptr DS:[BX+0x45]
+F000:0142 setle byte ptr DS:[BX+0x46]
+F000:0146 setg byte ptr DS:[BX+0x47]
+F000:014A sets byte ptr DS:[BX+0x48]
+F000:014E setns byte ptr DS:[BX+0x49]
+F000:0152 seto byte ptr DS:[BX+0x4A]
+F000:0156 setno byte ptr DS:[BX+0x4B]
+F000:015A setp byte ptr DS:[BX+0x4C]
+F000:015E setnp byte ptr DS:[BX+0x4D]
+F000:0162 hlt
+F000:FFF0 jmp short 0

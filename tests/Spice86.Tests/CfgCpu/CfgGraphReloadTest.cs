@@ -57,8 +57,11 @@ public class CfgGraphReloadTest {
     /// <c>intchain.com</c> is excluded: it is a DOS COM file with no deterministic graph fixture.
     /// </summary>
     public static IEnumerable<object[]> AllReloadBins => new[] {
-        "add", "bcdcnv", "bitwise", "cmpneg", "control", "datatrnf", "div", "div2", "divfaultloop",
-        "externalint", "flagconditions", "interrupt", "ioports", "jmpmov", "jump1", "jump2", "linearsamesegmenteddifferent",
+        "add", "alu_dead_flags", "bcdcnv", "bitwise", "cmpneg", "control", "datatrnf",
+        "dataflow_constant_folding", "dataflow_double_precision", "dataflow_expression_propagation",
+        "dataflow_flag_definitions", "dataflow_idioms", "dataflow_interrupt_boundaries",
+        "dataflow_partial_registers", "dataflow_stack_save_restore", "div", "div2", "divfaultloop",
+        "externalint", "flagconditions", "instruction_coverage_386", "interrupt", "ioports", "jmpmov", "jump1", "jump2", "linearsamesegmenteddifferent",
         "lockprefix", "mul", "partition_back_edge_fallthrough", "partition_cross_function_loop", "partition_far_dispatch", "partition_indirect_call_jump", "partition_jump_table",
         "partition_jump_table_mixed", "partition_jump_into_function_middle", "partition_jump_to_next", "partition_mixed_activation_cycle",
         "partition_multi_entry_dominated_shared", "partition_multi_entry_irreducible_shared",
