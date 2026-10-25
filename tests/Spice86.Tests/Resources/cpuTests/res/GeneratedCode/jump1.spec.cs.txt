@@ -290,17 +290,15 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                                                         CheckExternalEvents(cs1, 0x00C3);
                                                                         // F000:00C3 js short 0x00C8
                                                                         if (SignFlag) {
-                                                                            goto L_00C8;
+                                                                            // F000:00C8 mov word ptr DS:[0],0x1234
+                                                                            UInt16[DS, 0] = 0x1234;
+                                                                            // F000:00CE hlt
+                                                                            return Hlt();
                                                                         }
                                                                         VerifySpeculativeEntryOrFail(cs1, 0x00C5, Signature_00C5_jmp);
                                                                         // F000:00C5 jmp near 0xFFF2
                                                                         VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
                                                                         // F000:FFF2 hlt
-                                                                        return Hlt();
-                                                                    L_00C8:
-                                                                        // F000:00C8 mov word ptr DS:[0],0x1234
-                                                                        UInt16[DS, 0] = 0x1234;
-                                                                        // F000:00CE hlt
                                                                         return Hlt();
                                                                     }
                                                                 L_00B9:

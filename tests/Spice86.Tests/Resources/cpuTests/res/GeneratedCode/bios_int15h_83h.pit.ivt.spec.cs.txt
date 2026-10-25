@@ -181,23 +181,21 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                             // 016D:0168 int 0x15
                             InterruptCall(cs1, 0x016A, 0x15);
                             // 016D:016A jb short 0x0173
-                            if (CarryFlag) {
-                                goto L_0173;
+                            if (!CarryFlag) {
+                                // 016D:016C mov DX,0x0999
+                                DX = 0x0999;
+                                // 016D:016F mov AL,0
+                                AL = 0;
+                                // 016D:0171 out DX,AL
+                                Out8(DX, AL);
+                                // 016D:0172 hlt
+                                return Hlt();
                             }
-                            // 016D:016C mov DX,0x0999
-                            DX = 0x0999;
-                            // 016D:016F mov AL,0
-                            AL = 0;
-                            // 016D:0171 out DX,AL
-                            Out8(DX, AL);
-                            // 016D:0172 hlt
-                            return Hlt();
                         }
                     }
                 }
             }
         }
-    L_0173:
         VerifySpeculativeEntryOrFail(cs1, 0x0173, Signature_0173_mov);
         // 016D:0173 mov DX,0x0999
         DX = 0x0999;

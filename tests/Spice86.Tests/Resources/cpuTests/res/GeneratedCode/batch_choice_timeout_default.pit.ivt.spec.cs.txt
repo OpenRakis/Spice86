@@ -90,7 +90,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Alu8.Sub(AL, 0);
         // 0160:010D je short 0x0131
         if (ZeroFlag) {
-            goto L_0131;
+            // 0160:0131 mov AX,0x4C01
+            AX = 0x4C01;
+            // 0160:0134 int 0x21
+            InterruptCall(cs1, 0x0136, 0x21);
+            throw FailAsUntested("Untested return from call at 0160:0134");
         }
         VerifySpeculativeEntryOrFail(cs1, 0x010F, Signature_010F_mov);
         // 0160:010F mov AH,8
@@ -99,12 +103,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 0160:0111 int 0x21
         InterruptCall(cs1, 0x0113, 0x21);
         throw FailAsUntested("Untested return from call at 0160:0111");
-    L_0131:
-        // 0160:0131 mov AX,0x4C01
-        AX = 0x4C01;
-        // 0160:0134 int 0x21
-        InterruptCall(cs1, 0x0136, 0x21);
-        throw FailAsUntested("Untested return from call at 0160:0134");
     }
 
     public virtual Action unknown_F000_0006_F0006(int loadOffset) {

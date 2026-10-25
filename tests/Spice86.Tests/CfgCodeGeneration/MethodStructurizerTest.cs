@@ -5,6 +5,7 @@ using FluentAssertions;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
@@ -440,20 +441,26 @@ public class MethodStructurizerTest {
     }
 
     [Fact]
-    public void ArmThatDoesNotComeBackStaysFlat() {
+    public void LaterDivergingArmIsNestedAndTheEarlierStaysFlat() {
         // Arrange
         CfgBlock then = Block(11, 0x40);
         CfgBlock join = Block(12, 0x50);
         NaturalLoopForest loops = Forest([_entry, then, join], new() { [_entry] = [then, join] });
         LoweredBlock thenBlock = new(then, false, new BlockNode(new InstructionBoundaryNode(then.Entry, "",
             new BlockNode(new CommentNode("then"), new FailAsUntestedNode([UntestedMessagePart.Literal("Untested fallthrough at 1000:0040")])))));
-        LoweredBlock[] blocks = [Deciding(_entry, then, join), thenBlock, Lowered(join, false, "join")];
+        LoweredBlock joinBlock = Lowered(join, false, "join");
+        LoweredBlock[] blocks = [Deciding(_entry, then, join), thenBlock, joinBlock];
 
         // Act
         BlockNode method = MethodStructurizer.Structure(blocks, loops, Entries(), "method");
 
         // Assert
-        method.Statements.Should().NotContain(statement => statement is IfElseNode);
+        method.Statements.Should().HaveCount(4);
+        IfElseNode nested = method.Statements[1].Should().BeOfType<IfElseNode>().Which;
+        nested.Condition.Should().BeOfType<UnaryOperationNode>();
+        nested.TrueCase.Should().BeOfType<BlockNode>().Which.Statements.Should().ContainSingle()
+            .Which.Should().BeSameAs(joinBlock.Body.Statements[0]);
+        method.Statements[2].Should().BeOfType<GotoNode>().Which.Target.Should().BeSameAs(then.Entry);
     }
 
     [Fact]
@@ -486,7 +493,7 @@ public class MethodStructurizerTest {
     }
 
     [Fact]
-    public void ArmsThatNeverMeetStayFlat() {
+    public void DivergingArmsNestOnlyTheArmWithTheLaterHead() {
         // Arrange
         CfgBlock left = Block(11, 0x40);
         CfgBlock right = Block(12, 0x50);
@@ -503,7 +510,11 @@ public class MethodStructurizerTest {
         BlockNode method = MethodStructurizer.Structure(blocks, loops, Entries(), "method");
 
         // Assert
-        method.Statements.Should().NotContain(statement => statement is IfElseNode);
+        method.Statements.Should().HaveCount(5);
+        IfElseNode nested = method.Statements[1].Should().BeOfType<IfElseNode>().Which;
+        nested.Condition.Should().BeOfType<UnaryOperationNode>();
+        nested.TrueCase.Should().BeOfType<BlockNode>().Which.Statements.Should().HaveCount(2);
+        method.Statements[2].Should().BeOfType<GotoNode>().Which.Target.Should().BeSameAs(left.Entry);
     }
 
     [Fact]
@@ -801,6 +812,125 @@ public class MethodStructurizerTest {
 
         // Assert
         refusals.Should().BeEmpty();
+    }
+
+    private static LoweredBlock Returning(CfgBlock block, string name) =>
+        new(block, false, new BlockNode(new InstructionBoundaryNode(block.Entry, "",
+            new BlockNode(new CommentNode(name), new ReturnNode(new MethodCallNode(null, "NearRet"))))));
+
+    private static LoweredBlock BranchingTo(CfgBlock block, CfgBlock whenTrue, CfgBlock whenFalse) {
+        IfElseNode branch = new(Zero, new BlockNode(new GotoNode(whenTrue.Entry)), new BlockNode(new GotoNode(whenFalse.Entry)));
+        return new(block, false, new BlockNode(new InstructionBoundaryNode(block.Entry, "",
+            new BlockNode(new CommentNode("decide"), branch))));
+    }
+
+    [Fact]
+    public void DivergingTrueArmIsNestedAndTheOtherTargetFollowsFlat() {
+        // Arrange
+        CfgBlock a = Block(11, 0x40);
+        CfgBlock c = Block(12, 0x50);
+        CfgBlock late = Block(13, 0x60);
+        CfgBlock end = Block(14, 0x70);
+        NaturalLoopForest loops = Forest([_entry, a, c, late, end],
+            new() { [_entry] = [a, c, late], [c] = [end], [late] = [end] });
+        LoweredBlock deadGoto = new(late, false, new BlockNode(new InstructionBoundaryNode(late.Entry, "",
+            new BlockNode(new CommentNode("late"), Untested(), new GotoNode(c.Entry)))));
+        LoweredBlock[] blocks = [
+            BranchingTo(_entry, a, c), Returning(a, "a"), Ending(c, "c"), deadGoto, Lowered(end, false, "end")
+        ];
+        Dictionary<GotoNode, GotoKeepReason> refusals = new(ReferenceEqualityComparer.Instance);
+
+        // Act
+        BlockNode structured = MethodStructurizer.Structure(blocks, loops, Entries(), "method", refusals);
+        BlockNode body = FallthroughGotoRemover.Remove(structured);
+
+        // Assert
+        IfElseNode branch = body.Statements[1].Should().BeOfType<IfElseNode>().Which;
+        branch.TrueCase.Should().BeOfType<BlockNode>().Which.Statements.Should().ContainSingle()
+            .Which.Should().BeOfType<InstructionBoundaryNode>().Which.Node.Should().BeSameAs(a.Entry);
+        body.Statements[2].Should().BeOfType<InstructionBoundaryNode>().Which.Node.Should().BeSameAs(c.Entry);
+        body.Statements[3].Should().BeOfType<InstructionBoundaryNode>().Which.Node.Should().BeSameAs(late.Entry);
+        CountNodes<GotoNode>(body, _ => true).Should().Be(0);
+        refusals.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void DivergingFalseArmIsNestedUnderTheNegatedCondition() {
+        // Arrange
+        CfgBlock b = Block(11, 0x40);
+        CfgBlock c = Block(12, 0x50);
+        CfgBlock late = Block(13, 0x60);
+        CfgBlock end = Block(14, 0x70);
+        NaturalLoopForest loops = Forest([_entry, b, c, late, end],
+            new() { [_entry] = [c, b, late], [c] = [end], [late] = [end] });
+        LoweredBlock deadGoto = new(late, false, new BlockNode(new InstructionBoundaryNode(late.Entry, "",
+            new BlockNode(new CommentNode("late"), Untested(), new GotoNode(c.Entry)))));
+        LoweredBlock[] blocks = [
+            BranchingTo(_entry, c, b), Returning(b, "b"), Ending(c, "c"), deadGoto, Lowered(end, false, "end")
+        ];
+        Dictionary<GotoNode, GotoKeepReason> refusals = new(ReferenceEqualityComparer.Instance);
+
+        // Act
+        BlockNode structured = MethodStructurizer.Structure(blocks, loops, Entries(), "method", refusals);
+        BlockNode body = FallthroughGotoRemover.Remove(structured);
+
+        // Assert
+        IfElseNode branch = body.Statements[1].Should().BeOfType<IfElseNode>().Which;
+        branch.Condition.Should().BeOfType<UnaryOperationNode>();
+        branch.TrueCase.Should().BeOfType<BlockNode>().Which.Statements.Should().ContainSingle()
+            .Which.Should().BeOfType<InstructionBoundaryNode>().Which.Node.Should().BeSameAs(b.Entry);
+        CountNodes<GotoNode>(body, _ => true).Should().Be(0);
+        refusals.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void TwoDivergingArmsNestOnlyTheLaterArm() {
+        // Arrange
+        CfgBlock a = Block(11, 0x40);
+        CfgBlock b = Block(12, 0x50);
+        NaturalLoopForest loops = Forest([_entry, a, b], new() { [_entry] = [a, b] });
+        LoweredBlock[] blocks = [BranchingTo(_entry, a, b), Returning(a, "a"), Returning(b, "b")];
+        Dictionary<GotoNode, GotoKeepReason> refusals = new(ReferenceEqualityComparer.Instance);
+
+        // Act
+        BlockNode structured = MethodStructurizer.Structure(blocks, loops, Entries(), "method", refusals);
+        BlockNode body = FallthroughGotoRemover.Remove(structured);
+
+        // Assert
+        body.Statements.Should().HaveCount(3);
+        IfElseNode branch = body.Statements[1].Should().BeOfType<IfElseNode>().Which;
+        branch.Condition.Should().BeOfType<UnaryOperationNode>();
+        branch.TrueCase.Should().BeOfType<BlockNode>().Which.Statements.Should().ContainSingle()
+            .Which.Should().BeOfType<InstructionBoundaryNode>().Which.Node.Should().BeSameAs(b.Entry);
+        body.Statements[2].Should().BeOfType<InstructionBoundaryNode>().Which.Node.Should().BeSameAs(a.Entry);
+        CountNodes<GotoNode>(body, _ => true).Should().Be(0);
+        refusals.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void DivergingArmHeadTargetedByTwoGotosIsNotNested() {
+        // Arrange
+        CfgBlock late = Block(11, 0x40);
+        CfgBlock a = Block(12, 0x50);
+        CfgBlock c = Block(13, 0x60);
+        CfgBlock end = Block(14, 0x70);
+        NaturalLoopForest loops = Forest([_entry, late, a, c, end],
+            new() { [_entry] = [a, c, late], [late] = [a, end], [c] = [end] });
+        GotoNode trueGoto = new(a.Entry);
+        LoweredBlock decide = new(_entry, false, new BlockNode(new InstructionBoundaryNode(_entry.Entry, "",
+            new BlockNode(new CommentNode("decide"), new IfElseNode(Zero, new BlockNode(trueGoto), new BlockNode(new GotoNode(c.Entry)))))));
+        LoweredBlock[] blocks = [
+            decide, Jumping(late, "late", a), Returning(a, "a"),
+            Ending(c, "c"), Lowered(end, false, "end")
+        ];
+        Dictionary<GotoNode, GotoKeepReason> refusals = new(ReferenceEqualityComparer.Instance);
+
+        // Act
+        BlockNode body = MethodStructurizer.Structure(blocks, loops, Entries(), "method", refusals);
+
+        // Assert
+        body.Statements[2].Should().BeOfType<InstructionBoundaryNode>().Which.Node.Should().BeSameAs(a.Entry);
+        refusals[trueGoto].Should().Be(GotoKeepReason.SharedTarget);
     }
 
     private LoweredBlock[] TwoExitLoopBlocks(CfgBlock head, CfgBlock mid, CfgBlock tail, CfgBlock x, CfgBlock y,

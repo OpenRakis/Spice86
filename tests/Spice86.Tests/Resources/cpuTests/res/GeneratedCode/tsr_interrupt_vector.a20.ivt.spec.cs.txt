@@ -101,18 +101,16 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // 016E:011C cmp AX,0x1234
             Alu16.Sub(AX, 0x1234);
             // 016E:011F jne short 0x0128
-            if (!ZeroFlag) {
-                goto L_0128;
+            if (ZeroFlag) {
+                // 016E:0121 mov AL,0
+                AL = 0;
+                // 016E:0123 mov AX,0x4C00
+                AX = 0x4C00;
+                // 016E:0126 int 0x21
+                InterruptCall(cs1, 0x0128, 0x21);
+                throw FailAsUntested("Untested return from call at 016E:0126");
             }
-            // 016E:0121 mov AL,0
-            AL = 0;
-            // 016E:0123 mov AX,0x4C00
-            AX = 0x4C00;
-            // 016E:0126 int 0x21
-            InterruptCall(cs1, 0x0128, 0x21);
-            throw FailAsUntested("Untested return from call at 016E:0126");
         }
-    L_0128:
         VerifySpeculativeEntryOrFail(cs1, 0x0128, Signature_0128_mov);
         // 016E:0128 mov AX,0x4CFF
         AX = 0x4CFF;
@@ -242,17 +240,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 // F000:009A cmp AH,0x0A
                 Alu8.Sub(AH, 0x0A);
                 // F000:009D je short 0x00A4
-                if (ZeroFlag) {
-                    VerifySpeculativeEntryOrFail(cs2, 0x00A4, Signature_00A4_sti);
-                    // F000:00A4 sti
-                    InterruptFlag = true;
-                    CheckExternalEvents(cs2, 0x00A5);
-                    throw FailAsUntested("Untested fallthrough after F000:00A4");
+                if (!ZeroFlag) {
+                    // F000:009F callback 0x0021
+                    Callback(cs2, 0x009F, 0x0021);
+                    // F000:00A3 iret
+                    return InterruptRet();
                 }
-                // F000:009F callback 0x0021
-                Callback(cs2, 0x009F, 0x0021);
-                // F000:00A3 iret
-                return InterruptRet();
             }
         }
         VerifySpeculativeEntryOrFail(cs2, 0x00A4, Signature_00A4_sti);

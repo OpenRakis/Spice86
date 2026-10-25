@@ -98,7 +98,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Alu8.Sub(AL, 0);
         // 0160:010D je short 0x0131
         if (ZeroFlag) {
-            goto L_0131;
+            VerifySpeculativeEntryOrFail(cs1, 0x0131, Signature_0131_mov);
+            // 0160:0131 mov AX,0x4C02
+            AX = 0x4C02;
+            VerifySpeculativeEntryOrFail(cs1, 0x0134, Signature_0134_int);
+            // 0160:0134 int 0x21
+            InterruptCall(cs1, 0x0136, 0x21);
+            throw FailAsUntested("Untested return from call at 0160:0134");
         }
         while (true) {
             CheckExternalEvents(cs1, 0x010F);
@@ -149,14 +155,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 0160:012A int 0x21
         InterruptCall(cs1, 0x012C, 0x21);
         throw FailAsUntested("Untested return from call at 0160:012A");
-    L_0131:
-        VerifySpeculativeEntryOrFail(cs1, 0x0131, Signature_0131_mov);
-        // 0160:0131 mov AX,0x4C02
-        AX = 0x4C02;
-        VerifySpeculativeEntryOrFail(cs1, 0x0134, Signature_0134_int);
-        // 0160:0134 int 0x21
-        InterruptCall(cs1, 0x0136, 0x21);
-        throw FailAsUntested("Untested return from call at 0160:0134");
     }
 
     public virtual Action unknown_F000_0006_F0006(int loadOffset) {
@@ -327,17 +325,15 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Alu8.Sub(UInt8[CS, 0x008F], 0);
         // F000:00AF jne short 0x00B5
         if (!ZeroFlag) {
-            goto L_00B5;
+            // F000:00B5 callback 0x010B
+            Callback(cs3, 0x00B5, 0x010B);
+            // F000:00B9 iret
+            return InterruptRet();
         }
         VerifySpeculativeEntryOrFail(cs3, 0x00B1, Signature_00B1_int);
         // F000:00B1 int 0x28
         InterruptCall(cs3, 0x00B3, 0x28);
         throw FailAsUntested("Untested return from call at F000:00B1");
-    L_00B5:
-        // F000:00B5 callback 0x010B
-        Callback(cs3, 0x00B5, 0x010B);
-        // F000:00B9 iret
-        return InterruptRet();
     }
 
     public virtual Action unknown_F000_00E2_F00E2(int loadOffset) {

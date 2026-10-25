@@ -191,35 +191,34 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                         // 016D:0174 call near 0x0199
                                         NearCall(cs1, 0x0177, unknown_016D_0199_01869);
                                         // 016D:0177 jb short 0x0192
-                                        if (CarryFlag) {
-                                            goto L_0192;
+                                        if (!CarryFlag) {
+                                            // 016D:0179 mov DX,0x0998
+                                            DX = 0x0998;
+                                            // 016D:017C mov AL,6
+                                            AL = 6;
+                                            // 016D:017E out DX,AL
+                                            Out8(DX, AL);
+                                            // 016D:017F mov AH,5
+                                            AH = 5;
+                                            // 016D:0181 mov CH,0x20
+                                            CH = 0x20;
+                                            // 016D:0183 mov CL,0x24
+                                            CL = 0x24;
+                                            // 016D:0185 mov DH,0x11
+                                            DH = 0x11;
+                                            // 016D:0187 mov DL,0x14
+                                            DL = 0x14;
+                                            // 016D:0189 int 0x1A
+                                            InterruptCall(cs1, 0x018B, 0x1A);
+                                            // 016D:018B mov DX,0x0999
+                                            DX = 0x0999;
+                                            // 016D:018E mov AL,0
+                                            AL = 0;
+                                            // 016D:0190 out DX,AL
+                                            Out8(DX, AL);
+                                            // 016D:0191 hlt
+                                            return Hlt();
                                         }
-                                        // 016D:0179 mov DX,0x0998
-                                        DX = 0x0998;
-                                        // 016D:017C mov AL,6
-                                        AL = 6;
-                                        // 016D:017E out DX,AL
-                                        Out8(DX, AL);
-                                        // 016D:017F mov AH,5
-                                        AH = 5;
-                                        // 016D:0181 mov CH,0x20
-                                        CH = 0x20;
-                                        // 016D:0183 mov CL,0x24
-                                        CL = 0x24;
-                                        // 016D:0185 mov DH,0x11
-                                        DH = 0x11;
-                                        // 016D:0187 mov DL,0x14
-                                        DL = 0x14;
-                                        // 016D:0189 int 0x1A
-                                        InterruptCall(cs1, 0x018B, 0x1A);
-                                        // 016D:018B mov DX,0x0999
-                                        DX = 0x0999;
-                                        // 016D:018E mov AL,0
-                                        AL = 0;
-                                        // 016D:0190 out DX,AL
-                                        Out8(DX, AL);
-                                        // 016D:0191 hlt
-                                        return Hlt();
                                     }
                                 }
                             }
@@ -228,7 +227,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 }
             }
         }
-    L_0192:
         VerifySpeculativeEntryOrFail(cs1, 0x0192, Signature_0192_mov);
         // 016D:0192 mov DX,0x0999
         DX = 0x0999;
@@ -264,19 +262,17 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // 016D:01AA cmp BL,9
             Alu8.Sub(BL, 9);
             // 016D:01AD ja short 0x01B3
-            if (!CarryFlag && !ZeroFlag) {
-                goto L_01B3;
+            if (!(!CarryFlag && !ZeroFlag)) {
+                // 016D:01AF clc
+                CarryFlag = false;
+                // 016D:01B0 pop BX
+                BX = Stack.Pop16();
+                // 016D:01B1 pop AX
+                AX = Stack.Pop16();
+                // 016D:01B2 ret near
+                return NearRet();
             }
-            // 016D:01AF clc
-            CarryFlag = false;
-            // 016D:01B0 pop BX
-            BX = Stack.Pop16();
-            // 016D:01B1 pop AX
-            AX = Stack.Pop16();
-            // 016D:01B2 ret near
-            return NearRet();
         }
-    L_01B3:
         VerifySpeculativeEntryOrFail(cs1, 0x01B3, Signature_01B3_stc);
         // 016D:01B3 stc
         CarryFlag = true;

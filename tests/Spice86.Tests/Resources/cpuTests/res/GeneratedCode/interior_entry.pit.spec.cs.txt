@@ -56,24 +56,22 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt8[DS, 0x0401] = (byte)(UInt8[DS, 0x0401] + 1);
         // F000:0214 cmp byte ptr DS:[0x0403],1
         // F000:0219 je short 0x0226
-        if (UInt8[DS, 0x0403] == 1) {
-            goto L_0226;
+        if (UInt8[DS, 0x0403] != 1) {
+            // F000:021B push AX
+            Stack.Push16(AX);
+            // F000:021C mov AL,0xFF
+            AL = 0xFF;
+            // F000:021E out 0x21,AL
+            Out8(0x0021, AL);
+            // F000:0220 mov AL,0x20
+            AL = 0x20;
+            // F000:0222 out 0x20,AL
+            Out8(0x0020, AL);
+            // F000:0224 pop AX
+            AX = Stack.Pop16();
+            // F000:0225 iret
+            return InterruptRet();
         }
-        // F000:021B push AX
-        Stack.Push16(AX);
-        // F000:021C mov AL,0xFF
-        AL = 0xFF;
-        // F000:021E out 0x21,AL
-        Out8(0x0021, AL);
-        // F000:0220 mov AL,0x20
-        AL = 0x20;
-        // F000:0222 out 0x20,AL
-        Out8(0x0020, AL);
-        // F000:0224 pop AX
-        AX = Stack.Pop16();
-        // F000:0225 iret
-        return InterruptRet();
-    L_0226:
         do {
             CheckExternalEvents(cs1, 0x0226);
             // F000:0226 cmp byte ptr DS:[0x040C],1

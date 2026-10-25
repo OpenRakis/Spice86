@@ -315,7 +315,8 @@ internal static class MethodStructurizer {
         /// <summary>
         /// <paramref name="block"/> with the arms of its final forward branch nested: in an <c>if</c> when exactly one arm
         /// comes back to the other target, in an <c>if</c> / <c>else</c> when neither does and both arms meet at one join
-        /// block; <c>null</c> otherwise. Marks the nested blocks as placed.
+        /// block, or in an <c>if</c> without <c>else</c> when an arm diverges (the arm whose head is later in layout order
+        /// when both do); <c>null</c> otherwise. Marks the nested blocks as placed.
         /// </summary>
         private BlockNode? BranchStatement(LoweredBlock block, IReadOnlyList<LoweredBlock> members, HashSet<CfgBlock> placed,
             NaturalLoop? enclosing) {
@@ -358,6 +359,15 @@ internal static class MethodStructurizer {
             }
             if (trueComesBack || falseComesBack || trueArm is null || falseArm is null
                 || CommonJoin(trueArm, falseArm) is not ICfgNode join) {
+                if (trueArm is not null && Exits(trueArm).Count == 0
+                    && (falseArm is null || Exits(falseArm).Count != 0
+                        || members.TakeWhile(member => !ReferenceEquals(member, trueArm[0])).Count()
+                            >= members.TakeWhile(member => !ReferenceEquals(member, falseArm[0])).Count())) {
+                    return Nested(head, branch.Condition, trueArm, null, whenFalse, placed, enclosing);
+                }
+                if (falseArm is not null && Exits(falseArm).Count == 0) {
+                    return Nested(head, NegatedCondition(branch.Condition), falseArm, null, whenTrue, placed, enclosing);
+                }
                 Record(trueGoto, trueFailure);
                 Record(falseGoto, falseFailure);
                 if (trueArm is not null && falseArm is not null) {

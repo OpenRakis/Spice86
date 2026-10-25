@@ -336,386 +336,374 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt16[SS, (ushort)(BP + SI)] = AX;
         // F000:202A jcxz short 0x202D
         if (CX == 0) {
-            goto L_202D;
+            // F000:202D jmp near word ptr DS:[0x3004]
+            switch (UInt16[DS, 0x3004]) {
+                case 0x0809:
+                    break;
+                default:
+                    throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, 0x3004]:X4} at F000:202D");
+            }
+            // F000:0809 jmp near 0x300D
+            // F000:300D mov AX,0xF000
+            AX = 0xF000;
+            // F000:3010 mov DS,AX
+            DS = AX;
+            // F000:3012 mov CX,1
+            CX = 1;
+            // F000:3015 mov AX,0
+            AX = 0;
+            // F000:3018 push AX
+            Stack.Push16(AX);
+            // F000:3019 popf
+            FlagRegister16 = Stack.Pop16();
+            CheckExternalEvents(cs1, 0x301A);
+            // F000:301A rep movs word ptr ES:[DI],word ptr DS:[SI]
+            while (CX != 0) {
+                UInt16[ES, DI] = UInt16[DS, SI];
+                SI = (ushort)(SI + (ushort)State.Direction16);
+                DI = (ushort)(DI + (ushort)State.Direction16);
+                CX--;
+            }
+            // F000:301C mov AX,0x1000
+            AX = 0x1000;
+            // F000:301F mov DS,AX
+            DS = AX;
+            // F000:3021 mov AX,word ptr DS:[2]
+            AX = UInt16[DS, 2];
+            // F000:3024 mov BP,DI
+            BP = DI;
+            // F000:3026 mov word ptr SS:[BP+SI],AX
+            UInt16[SS, (ushort)(BP + SI)] = AX;
+            // F000:3028 jcxz short 0x302B
+            if (CX == 0) {
+                // F000:302B jmp near word ptr DS:[0x3008]
+                switch (UInt16[DS, 0x3008]) {
+                    case 0x0607:
+                        break;
+                    default:
+                        throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, 0x3008]:X4} at F000:302B");
+                }
+                // F000:0607 jmp near 0x302F
+                // F000:302F mov AX,0xF000
+                AX = 0xF000;
+                // F000:3032 mov DS,AX
+                DS = AX;
+                // F000:3034 mov CX,3
+                CX = 3;
+                // F000:3037 rep lods AL,byte ptr DS:[SI]
+                while (CX != 0) {
+                    AL = UInt8[DS, SI];
+                    SI = (ushort)(SI + (ushort)State.Direction8);
+                    CX--;
+                }
+                // F000:3039 jmp near AX
+                switch (AX) {
+                    case 0xF003:
+                        break;
+                    default:
+                        throw FailAsUntested($"Untested near jump target 0x{AX:X4} at F000:3039");
+                }
+                // F000:F003 jmp near 0x303C
+                // F000:303C mov BX,0x0040
+                BX = 0x0040;
+                // F000:303F push BX
+                Stack.Push16(BX);
+                // F000:3040 popf
+                FlagRegister16 = Stack.Pop16();
+                CheckExternalEvents(cs1, 0x3041);
+                // F000:3041 mov AX,0xF000
+                AX = 0xF000;
+                // F000:3044 mov DS,AX
+                DS = AX;
+                // F000:3046 mov CX,1
+                CX = 1;
+                // F000:3049 rep lods AX,word ptr DS:[SI]
+                while (CX != 0) {
+                    AX = UInt16[DS, SI];
+                    SI = (ushort)(SI + (ushort)State.Direction16);
+                    CX--;
+                }
+                // F000:304B jmp near AX
+                switch (AX) {
+                    case 0x0102:
+                        break;
+                    default:
+                        throw FailAsUntested($"Untested near jump target 0x{AX:X4} at F000:304B");
+                }
+                // F000:0102 jmp near 0x304D
+                // F000:304D mov CX,2
+                CX = 2;
+                // F000:3050 mov AX,0x4000
+                AX = 0x4000;
+                // F000:3053 rep stos word ptr ES:[DI],AX
+                while (CX != 0) {
+                    UInt16[ES, DI] = AX;
+                    DI = (ushort)(DI + (ushort)State.Direction16);
+                    CX--;
+                }
+                // F000:3055 mov AX,0x1000
+                AX = 0x1000;
+                // F000:3058 mov DS,AX
+                DS = AX;
+                // F000:305A jmp near word ptr DS:[6]
+                switch (UInt16[DS, 6]) {
+                    case 0x4000:
+                        break;
+                    default:
+                        throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, 6]:X4} at F000:305A");
+                }
+                // F000:4000 mov BX,0
+                BX = 0;
+                // F000:4003 push BX
+                Stack.Push16(BX);
+                // F000:4004 popf
+                FlagRegister16 = Stack.Pop16();
+                CheckExternalEvents(cs1, 0x4005);
+                // F000:4005 mov CX,4
+                CX = 4;
+                // F000:4008 rep stos word ptr ES:[DI],AX
+                while (CX != 0) {
+                    UInt16[ES, DI] = AX;
+                    DI = (ushort)(DI + (ushort)State.Direction16);
+                    CX--;
+                }
+                // F000:400A jcxz short 0x400D
+                if (CX == 0) {
+                    // F000:400D mov BX,0x0040
+                    BX = 0x0040;
+                    // F000:4010 push BX
+                    Stack.Push16(BX);
+                    // F000:4011 popf
+                    FlagRegister16 = Stack.Pop16();
+                    CheckExternalEvents(cs1, 0x4012);
+                    // F000:4012 mov CX,0x1234
+                    CX = 0x1234;
+                    // F000:4015 mov SI,0x3000
+                    SI = 0x3000;
+                    // F000:4018 mov DI,0
+                    DI = 0;
+                    // F000:401B mov AX,0xF000
+                    AX = 0xF000;
+                    // F000:401E mov DS,AX
+                    DS = AX;
+                    // F000:4020 repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
+                    while (CX != 0) {
+                        bool equal_4020 = UInt8[DS, SI] == UInt8[ES, DI];
+                        SI = (ushort)(SI + (ushort)State.Direction8);
+                        DI = (ushort)(DI + (ushort)State.Direction8);
+                        CX--;
+                        if (!equal_4020) {
+                            break;
+                        }
+                    }
+                    // F000:4022 jmp near CX
+                    switch (CX) {
+                        case 0x122F:
+                            break;
+                        default:
+                            throw FailAsUntested($"Untested near jump target 0x{CX:X4} at F000:4022");
+                    }
+                    // F000:122F jmp near 0x4024
+                    // F000:4024 mov BX,0x0040
+                    BX = 0x0040;
+                    // F000:4027 push BX
+                    Stack.Push16(BX);
+                    // F000:4028 popf
+                    FlagRegister16 = Stack.Pop16();
+                    CheckExternalEvents(cs1, 0x4029);
+                    // F000:4029 mov AX,0x0040
+                    AX = 0x0040;
+                    // F000:402C repe scas AX,word ptr ES:[DI]
+                    while (CX != 0) {
+                        bool equal_402C = AX == UInt16[ES, DI];
+                        DI = (ushort)(DI + (ushort)State.Direction16);
+                        CX--;
+                        if (!equal_402C) {
+                            break;
+                        }
+                    }
+                    // F000:402E jmp near CX
+                    switch (CX) {
+                        case 0x122C:
+                            break;
+                        default:
+                            throw FailAsUntested($"Untested near jump target 0x{CX:X4} at F000:402E");
+                    }
+                    // F000:122C jmp near 0x4030
+                    // F000:4030 mov AX,0x0607
+                    AX = 0x0607;
+                    // F000:4033 mov CX,0x5004
+                    CX = 0x5004;
+                    // F000:4036 repe cmps word ptr DS:[SI],word ptr ES:[DI]
+                    while (CX != 0) {
+                        bool equal_4036 = UInt16[DS, SI] == UInt16[ES, DI];
+                        SI = (ushort)(SI + (ushort)State.Direction16);
+                        DI = (ushort)(DI + (ushort)State.Direction16);
+                        CX--;
+                        if (!equal_4036) {
+                            break;
+                        }
+                    }
+                    // F000:4038 repe scas AX,word ptr ES:[DI]
+                    while (CX != 0) {
+                        bool equal_4038 = AX == UInt16[ES, DI];
+                        DI = (ushort)(DI + (ushort)State.Direction16);
+                        CX--;
+                        if (!equal_4038) {
+                            break;
+                        }
+                    }
+                    // F000:403A mov BX,0x0040
+                    BX = 0x0040;
+                    // F000:403D push BX
+                    Stack.Push16(BX);
+                    // F000:403E popf
+                    FlagRegister16 = Stack.Pop16();
+                    CheckExternalEvents(cs1, 0x403F);
+                    // F000:403F mov SI,0x3000
+                    SI = 0x3000;
+                    // F000:4042 mov DI,0
+                    DI = 0;
+                    // F000:4045 repne cmps word ptr DS:[SI],word ptr ES:[DI]
+                    while (CX != 0) {
+                        Alu16.Sub(UInt16[DS, SI], UInt16[ES, DI]);
+                        SI = (ushort)(SI + (ushort)State.Direction16);
+                        DI = (ushort)(DI + (ushort)State.Direction16);
+                        CX--;
+                        if (ZeroFlag) {
+                            break;
+                        }
+                    }
+                    // F000:4047 repne scas AX,word ptr ES:[DI]
+                    while (CX != 0) {
+                        Alu16.Sub(AX, UInt16[ES, DI]);
+                        DI = (ushort)(DI + (ushort)State.Direction16);
+                        CX--;
+                        if (ZeroFlag) {
+                            break;
+                        }
+                    }
+                    // F000:4049 jmp near CX
+                    switch (CX) {
+                        case 0x5000:
+                            break;
+                        default:
+                            throw FailAsUntested($"Untested near jump target 0x{CX:X4} at F000:4049");
+                    }
+                    // F000:5000 mov CX,2
+                    CX = 2;
+                    // F000:5003 rep movs byte ptr ES:[DI],byte ptr DS:[SI]
+                    while (CX != 0) {
+                        UInt8[ES, DI] = UInt8[DS, SI];
+                        SI = (ushort)(SI + (ushort)State.Direction8);
+                        DI = (ushort)(DI + (ushort)State.Direction8);
+                        CX--;
+                    }
+                    // F000:5005 jcxz short 0x5008
+                    if (CX == 0) {
+                        // F000:5008 mov CX,2
+                        CX = 2;
+                        // F000:500B rep lods AL,byte ptr DS:[SI]
+                        while (CX != 0) {
+                            AL = UInt8[DS, SI];
+                            SI = (ushort)(SI + (ushort)State.Direction8);
+                            CX--;
+                        }
+                        // F000:500D jcxz short 0x5010
+                        if (CX == 0) {
+                            // F000:5010 mov CX,2
+                            CX = 2;
+                            // F000:5013 rep stos byte ptr ES:[DI],AL
+                            while (CX != 0) {
+                                UInt8[ES, DI] = AL;
+                                DI = (ushort)(DI + (ushort)State.Direction8);
+                                CX--;
+                            }
+                            // F000:5015 jcxz short 0x5018
+                            if (CX == 0) {
+                                // F000:5018 mov BX,0
+                                BX = 0;
+                                // F000:501B push BX
+                                Stack.Push16(BX);
+                                // F000:501C popf
+                                FlagRegister16 = Stack.Pop16();
+                                CheckExternalEvents(cs1, 0x501D);
+                                // F000:501D mov CX,0x6023
+                                CX = 0x6023;
+                                // F000:5020 std
+                                DirectionFlag = true;
+                                // F000:5021 mov DI,6
+                                DI = 6;
+                                // F000:5024 mov SI,0x3006
+                                SI = 0x3006;
+                                // F000:5027 repne cmps word ptr DS:[SI],word ptr ES:[DI]
+                                while (CX != 0) {
+                                    bool equal_5027 = UInt16[DS, SI] == UInt16[ES, DI];
+                                    SI = (ushort)(SI + (ushort)State.Direction16);
+                                    DI = (ushort)(DI + (ushort)State.Direction16);
+                                    CX--;
+                                    if (equal_5027) {
+                                        break;
+                                    }
+                                }
+                                // F000:5029 mov AX,0x1000
+                                AX = 0x1000;
+                                // F000:502C mov BX,0
+                                BX = 0;
+                                // F000:502F push BX
+                                Stack.Push16(BX);
+                                // F000:5030 popf
+                                FlagRegister16 = Stack.Pop16();
+                                CheckExternalEvents(cs1, 0x5031);
+                                // F000:5031 cld
+                                DirectionFlag = false;
+                                // F000:5032 repne scas AX,word ptr ES:[DI]
+                                while (CX != 0) {
+                                    Alu16.Sub(AX, UInt16[ES, DI]);
+                                    DI = (ushort)(DI + (ushort)State.Direction16);
+                                    CX--;
+                                    if (ZeroFlag) {
+                                        break;
+                                    }
+                                }
+                                // F000:5034 jmp near CX
+                                switch (CX) {
+                                    case 0x601B:
+                                        break;
+                                    default:
+                                        throw FailAsUntested($"Untested near jump target 0x{CX:X4} at F000:5034");
+                                }
+                                // F000:601B mov DX,0
+                                DX = 0;
+                                // F000:601E mov DS,DX
+                                DS = DX;
+                                // F000:6020 mov word ptr DS:[4],0x1234
+                                UInt16[DS, 4] = 0x1234;
+                                // F000:6026 hlt
+                                return Hlt();
+                            }
+                            VerifySpeculativeEntryOrFail(cs1, 0x5017, Signature_5017_hlt);
+                            // F000:5017 hlt
+                            return Hlt();
+                        }
+                        VerifySpeculativeEntryOrFail(cs1, 0x500F, Signature_500F_hlt);
+                        // F000:500F hlt
+                        return Hlt();
+                    }
+                    VerifySpeculativeEntryOrFail(cs1, 0x5007, Signature_5007_hlt);
+                    // F000:5007 hlt
+                    return Hlt();
+                }
+                VerifySpeculativeEntryOrFail(cs1, 0x400C, Signature_400C_hlt);
+                // F000:400C hlt
+                return Hlt();
+            }
+            VerifySpeculativeEntryOrFail(cs1, 0x302A, Signature_302A_hlt);
+            // F000:302A hlt
+            return Hlt();
         }
         VerifySpeculativeEntryOrFail(cs1, 0x202C, Signature_202C_hlt);
         // F000:202C hlt
-        return Hlt();
-    L_202D:
-        // F000:202D jmp near word ptr DS:[0x3004]
-        switch (UInt16[DS, 0x3004]) {
-            case 0x0809:
-                break;
-            default:
-                throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, 0x3004]:X4} at F000:202D");
-        }
-        // F000:0809 jmp near 0x300D
-        // F000:300D mov AX,0xF000
-        AX = 0xF000;
-        // F000:3010 mov DS,AX
-        DS = AX;
-        // F000:3012 mov CX,1
-        CX = 1;
-        // F000:3015 mov AX,0
-        AX = 0;
-        // F000:3018 push AX
-        Stack.Push16(AX);
-        // F000:3019 popf
-        FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x301A);
-        // F000:301A rep movs word ptr ES:[DI],word ptr DS:[SI]
-        while (CX != 0) {
-            UInt16[ES, DI] = UInt16[DS, SI];
-            SI = (ushort)(SI + (ushort)State.Direction16);
-            DI = (ushort)(DI + (ushort)State.Direction16);
-            CX--;
-        }
-        // F000:301C mov AX,0x1000
-        AX = 0x1000;
-        // F000:301F mov DS,AX
-        DS = AX;
-        // F000:3021 mov AX,word ptr DS:[2]
-        AX = UInt16[DS, 2];
-        // F000:3024 mov BP,DI
-        BP = DI;
-        // F000:3026 mov word ptr SS:[BP+SI],AX
-        UInt16[SS, (ushort)(BP + SI)] = AX;
-        // F000:3028 jcxz short 0x302B
-        if (CX == 0) {
-            goto L_302B;
-        }
-        VerifySpeculativeEntryOrFail(cs1, 0x302A, Signature_302A_hlt);
-        // F000:302A hlt
-        return Hlt();
-    L_302B:
-        // F000:302B jmp near word ptr DS:[0x3008]
-        switch (UInt16[DS, 0x3008]) {
-            case 0x0607:
-                break;
-            default:
-                throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, 0x3008]:X4} at F000:302B");
-        }
-        // F000:0607 jmp near 0x302F
-        // F000:302F mov AX,0xF000
-        AX = 0xF000;
-        // F000:3032 mov DS,AX
-        DS = AX;
-        // F000:3034 mov CX,3
-        CX = 3;
-        // F000:3037 rep lods AL,byte ptr DS:[SI]
-        while (CX != 0) {
-            AL = UInt8[DS, SI];
-            SI = (ushort)(SI + (ushort)State.Direction8);
-            CX--;
-        }
-        // F000:3039 jmp near AX
-        switch (AX) {
-            case 0xF003:
-                break;
-            default:
-                throw FailAsUntested($"Untested near jump target 0x{AX:X4} at F000:3039");
-        }
-        // F000:F003 jmp near 0x303C
-        // F000:303C mov BX,0x0040
-        BX = 0x0040;
-        // F000:303F push BX
-        Stack.Push16(BX);
-        // F000:3040 popf
-        FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x3041);
-        // F000:3041 mov AX,0xF000
-        AX = 0xF000;
-        // F000:3044 mov DS,AX
-        DS = AX;
-        // F000:3046 mov CX,1
-        CX = 1;
-        // F000:3049 rep lods AX,word ptr DS:[SI]
-        while (CX != 0) {
-            AX = UInt16[DS, SI];
-            SI = (ushort)(SI + (ushort)State.Direction16);
-            CX--;
-        }
-        // F000:304B jmp near AX
-        switch (AX) {
-            case 0x0102:
-                break;
-            default:
-                throw FailAsUntested($"Untested near jump target 0x{AX:X4} at F000:304B");
-        }
-        // F000:0102 jmp near 0x304D
-        // F000:304D mov CX,2
-        CX = 2;
-        // F000:3050 mov AX,0x4000
-        AX = 0x4000;
-        // F000:3053 rep stos word ptr ES:[DI],AX
-        while (CX != 0) {
-            UInt16[ES, DI] = AX;
-            DI = (ushort)(DI + (ushort)State.Direction16);
-            CX--;
-        }
-        // F000:3055 mov AX,0x1000
-        AX = 0x1000;
-        // F000:3058 mov DS,AX
-        DS = AX;
-        // F000:305A jmp near word ptr DS:[6]
-        switch (UInt16[DS, 6]) {
-            case 0x4000:
-                break;
-            default:
-                throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, 6]:X4} at F000:305A");
-        }
-        // F000:4000 mov BX,0
-        BX = 0;
-        // F000:4003 push BX
-        Stack.Push16(BX);
-        // F000:4004 popf
-        FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x4005);
-        // F000:4005 mov CX,4
-        CX = 4;
-        // F000:4008 rep stos word ptr ES:[DI],AX
-        while (CX != 0) {
-            UInt16[ES, DI] = AX;
-            DI = (ushort)(DI + (ushort)State.Direction16);
-            CX--;
-        }
-        // F000:400A jcxz short 0x400D
-        if (CX == 0) {
-            goto L_400D;
-        }
-        VerifySpeculativeEntryOrFail(cs1, 0x400C, Signature_400C_hlt);
-        // F000:400C hlt
-        return Hlt();
-    L_400D:
-        // F000:400D mov BX,0x0040
-        BX = 0x0040;
-        // F000:4010 push BX
-        Stack.Push16(BX);
-        // F000:4011 popf
-        FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x4012);
-        // F000:4012 mov CX,0x1234
-        CX = 0x1234;
-        // F000:4015 mov SI,0x3000
-        SI = 0x3000;
-        // F000:4018 mov DI,0
-        DI = 0;
-        // F000:401B mov AX,0xF000
-        AX = 0xF000;
-        // F000:401E mov DS,AX
-        DS = AX;
-        // F000:4020 repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
-        while (CX != 0) {
-            bool equal_4020 = UInt8[DS, SI] == UInt8[ES, DI];
-            SI = (ushort)(SI + (ushort)State.Direction8);
-            DI = (ushort)(DI + (ushort)State.Direction8);
-            CX--;
-            if (!equal_4020) {
-                break;
-            }
-        }
-        // F000:4022 jmp near CX
-        switch (CX) {
-            case 0x122F:
-                break;
-            default:
-                throw FailAsUntested($"Untested near jump target 0x{CX:X4} at F000:4022");
-        }
-        // F000:122F jmp near 0x4024
-        // F000:4024 mov BX,0x0040
-        BX = 0x0040;
-        // F000:4027 push BX
-        Stack.Push16(BX);
-        // F000:4028 popf
-        FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x4029);
-        // F000:4029 mov AX,0x0040
-        AX = 0x0040;
-        // F000:402C repe scas AX,word ptr ES:[DI]
-        while (CX != 0) {
-            bool equal_402C = AX == UInt16[ES, DI];
-            DI = (ushort)(DI + (ushort)State.Direction16);
-            CX--;
-            if (!equal_402C) {
-                break;
-            }
-        }
-        // F000:402E jmp near CX
-        switch (CX) {
-            case 0x122C:
-                break;
-            default:
-                throw FailAsUntested($"Untested near jump target 0x{CX:X4} at F000:402E");
-        }
-        // F000:122C jmp near 0x4030
-        // F000:4030 mov AX,0x0607
-        AX = 0x0607;
-        // F000:4033 mov CX,0x5004
-        CX = 0x5004;
-        // F000:4036 repe cmps word ptr DS:[SI],word ptr ES:[DI]
-        while (CX != 0) {
-            bool equal_4036 = UInt16[DS, SI] == UInt16[ES, DI];
-            SI = (ushort)(SI + (ushort)State.Direction16);
-            DI = (ushort)(DI + (ushort)State.Direction16);
-            CX--;
-            if (!equal_4036) {
-                break;
-            }
-        }
-        // F000:4038 repe scas AX,word ptr ES:[DI]
-        while (CX != 0) {
-            bool equal_4038 = AX == UInt16[ES, DI];
-            DI = (ushort)(DI + (ushort)State.Direction16);
-            CX--;
-            if (!equal_4038) {
-                break;
-            }
-        }
-        // F000:403A mov BX,0x0040
-        BX = 0x0040;
-        // F000:403D push BX
-        Stack.Push16(BX);
-        // F000:403E popf
-        FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x403F);
-        // F000:403F mov SI,0x3000
-        SI = 0x3000;
-        // F000:4042 mov DI,0
-        DI = 0;
-        // F000:4045 repne cmps word ptr DS:[SI],word ptr ES:[DI]
-        while (CX != 0) {
-            Alu16.Sub(UInt16[DS, SI], UInt16[ES, DI]);
-            SI = (ushort)(SI + (ushort)State.Direction16);
-            DI = (ushort)(DI + (ushort)State.Direction16);
-            CX--;
-            if (ZeroFlag) {
-                break;
-            }
-        }
-        // F000:4047 repne scas AX,word ptr ES:[DI]
-        while (CX != 0) {
-            Alu16.Sub(AX, UInt16[ES, DI]);
-            DI = (ushort)(DI + (ushort)State.Direction16);
-            CX--;
-            if (ZeroFlag) {
-                break;
-            }
-        }
-        // F000:4049 jmp near CX
-        switch (CX) {
-            case 0x5000:
-                break;
-            default:
-                throw FailAsUntested($"Untested near jump target 0x{CX:X4} at F000:4049");
-        }
-        // F000:5000 mov CX,2
-        CX = 2;
-        // F000:5003 rep movs byte ptr ES:[DI],byte ptr DS:[SI]
-        while (CX != 0) {
-            UInt8[ES, DI] = UInt8[DS, SI];
-            SI = (ushort)(SI + (ushort)State.Direction8);
-            DI = (ushort)(DI + (ushort)State.Direction8);
-            CX--;
-        }
-        // F000:5005 jcxz short 0x5008
-        if (CX == 0) {
-            goto L_5008;
-        }
-        VerifySpeculativeEntryOrFail(cs1, 0x5007, Signature_5007_hlt);
-        // F000:5007 hlt
-        return Hlt();
-    L_5008:
-        // F000:5008 mov CX,2
-        CX = 2;
-        // F000:500B rep lods AL,byte ptr DS:[SI]
-        while (CX != 0) {
-            AL = UInt8[DS, SI];
-            SI = (ushort)(SI + (ushort)State.Direction8);
-            CX--;
-        }
-        // F000:500D jcxz short 0x5010
-        if (CX == 0) {
-            goto L_5010;
-        }
-        VerifySpeculativeEntryOrFail(cs1, 0x500F, Signature_500F_hlt);
-        // F000:500F hlt
-        return Hlt();
-    L_5010:
-        // F000:5010 mov CX,2
-        CX = 2;
-        // F000:5013 rep stos byte ptr ES:[DI],AL
-        while (CX != 0) {
-            UInt8[ES, DI] = AL;
-            DI = (ushort)(DI + (ushort)State.Direction8);
-            CX--;
-        }
-        // F000:5015 jcxz short 0x5018
-        if (CX == 0) {
-            goto L_5018;
-        }
-        VerifySpeculativeEntryOrFail(cs1, 0x5017, Signature_5017_hlt);
-        // F000:5017 hlt
-        return Hlt();
-    L_5018:
-        // F000:5018 mov BX,0
-        BX = 0;
-        // F000:501B push BX
-        Stack.Push16(BX);
-        // F000:501C popf
-        FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x501D);
-        // F000:501D mov CX,0x6023
-        CX = 0x6023;
-        // F000:5020 std
-        DirectionFlag = true;
-        // F000:5021 mov DI,6
-        DI = 6;
-        // F000:5024 mov SI,0x3006
-        SI = 0x3006;
-        // F000:5027 repne cmps word ptr DS:[SI],word ptr ES:[DI]
-        while (CX != 0) {
-            bool equal_5027 = UInt16[DS, SI] == UInt16[ES, DI];
-            SI = (ushort)(SI + (ushort)State.Direction16);
-            DI = (ushort)(DI + (ushort)State.Direction16);
-            CX--;
-            if (equal_5027) {
-                break;
-            }
-        }
-        // F000:5029 mov AX,0x1000
-        AX = 0x1000;
-        // F000:502C mov BX,0
-        BX = 0;
-        // F000:502F push BX
-        Stack.Push16(BX);
-        // F000:5030 popf
-        FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x5031);
-        // F000:5031 cld
-        DirectionFlag = false;
-        // F000:5032 repne scas AX,word ptr ES:[DI]
-        while (CX != 0) {
-            Alu16.Sub(AX, UInt16[ES, DI]);
-            DI = (ushort)(DI + (ushort)State.Direction16);
-            CX--;
-            if (ZeroFlag) {
-                break;
-            }
-        }
-        // F000:5034 jmp near CX
-        switch (CX) {
-            case 0x601B:
-                break;
-            default:
-                throw FailAsUntested($"Untested near jump target 0x{CX:X4} at F000:5034");
-        }
-        // F000:601B mov DX,0
-        DX = 0;
-        // F000:601E mov DS,DX
-        DS = DX;
-        // F000:6020 mov word ptr DS:[4],0x1234
-        UInt16[DS, 4] = 0x1234;
-        // F000:6026 hlt
         return Hlt();
     }
 

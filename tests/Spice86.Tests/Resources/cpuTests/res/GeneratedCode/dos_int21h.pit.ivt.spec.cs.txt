@@ -321,17 +321,16 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                                                             // 016D:0214 cmp AL,0xFF
                                                                             Alu8.Sub(AL, 0xFF);
                                                                             // 016D:0216 jne short 0x021F
-                                                                            if (!ZeroFlag) {
-                                                                                goto L_021F;
+                                                                            if (ZeroFlag) {
+                                                                                // 016D:0218 mov DX,0x0999
+                                                                                DX = 0x0999;
+                                                                                // 016D:021B mov AL,0
+                                                                                AL = 0;
+                                                                                // 016D:021D out DX,AL
+                                                                                Out8(DX, AL);
+                                                                                // 016D:021E hlt
+                                                                                return Hlt();
                                                                             }
-                                                                            // 016D:0218 mov DX,0x0999
-                                                                            DX = 0x0999;
-                                                                            // 016D:021B mov AL,0
-                                                                            AL = 0;
-                                                                            // 016D:021D out DX,AL
-                                                                            Out8(DX, AL);
-                                                                            // 016D:021E hlt
-                                                                            return Hlt();
                                                                         }
                                                                     }
                                                                 }
@@ -349,7 +348,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 }
             }
         }
-    L_021F:
         VerifySpeculativeEntryOrFail(cs1, 0x021F, Signature_021F_mov);
         // 016D:021F mov DX,0x0999
         DX = 0x0999;
@@ -484,17 +482,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 // F000:009A cmp AH,0x0A
                 Alu8.Sub(AH, 0x0A);
                 // F000:009D je short 0x00A4
-                if (ZeroFlag) {
-                    VerifySpeculativeEntryOrFail(cs2, 0x00A4, Signature_00A4_sti);
-                    // F000:00A4 sti
-                    InterruptFlag = true;
-                    CheckExternalEvents(cs2, 0x00A5);
-                    throw FailAsUntested("Untested fallthrough after F000:00A4");
+                if (!ZeroFlag) {
+                    // F000:009F callback 0x0021
+                    Callback(cs2, 0x009F, 0x0021);
+                    // F000:00A3 iret
+                    return InterruptRet();
                 }
-                // F000:009F callback 0x0021
-                Callback(cs2, 0x009F, 0x0021);
-                // F000:00A3 iret
-                return InterruptRet();
             }
         }
         VerifySpeculativeEntryOrFail(cs2, 0x00A4, Signature_00A4_sti);

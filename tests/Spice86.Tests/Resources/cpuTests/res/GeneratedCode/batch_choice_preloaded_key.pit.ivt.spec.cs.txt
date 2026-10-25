@@ -303,17 +303,15 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Alu8.Sub(UInt8[CS, 0x008F], 0);
         // F000:00AF jne short 0x00B5
         if (!ZeroFlag) {
-            goto L_00B5;
+            // F000:00B5 callback 0x010B
+            Callback(cs3, 0x00B5, 0x010B);
+            // F000:00B9 iret
+            return InterruptRet();
         }
         VerifySpeculativeEntryOrFail(cs3, 0x00B1, Signature_00B1_int);
         // F000:00B1 int 0x28
         InterruptCall(cs3, 0x00B3, 0x28);
         throw FailAsUntested("Untested return from call at F000:00B1");
-    L_00B5:
-        // F000:00B5 callback 0x010B
-        Callback(cs3, 0x00B5, 0x010B);
-        // F000:00B9 iret
-        return InterruptRet();
     }
 
     public virtual Action unknown_F000_00E2_F00E2(int loadOffset) {

@@ -143,32 +143,28 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             Alu8.Sub(AH, 0x10);
             VerifySpeculativeEntryOrFail(cs2, 0x0037, Signature_0037_je);
             // F000:0037 je short 0x003E
-            if (ZeroFlag) {
-                goto L_003E;
+            if (!ZeroFlag) {
+                VerifySpeculativeEntryOrFail(cs2, 0x0039, Signature_0039_callback);
+                // F000:0039 callback 0x0016
+                Callback(cs2, 0x0039, 0x0016);
+                VerifySpeculativeEntryOrFail(cs2, 0x003D, Signature_003D_iret);
+                // F000:003D iret
+                return InterruptRet();
             }
-            VerifySpeculativeEntryOrFail(cs2, 0x0039, Signature_0039_callback);
-            // F000:0039 callback 0x0016
-            Callback(cs2, 0x0039, 0x0016);
-            VerifySpeculativeEntryOrFail(cs2, 0x003D, Signature_003D_iret);
-            // F000:003D iret
-            return InterruptRet();
         }
-    L_003E:
         // F000:003E callback 0x0102
         Callback(cs2, 0x003E, 0x0102);
         // F000:0042 jne short 0x0048
         if (!ZeroFlag) {
-            goto L_0048;
+            // F000:0048 callback 0x0103
+            Callback(cs2, 0x0048, 0x0103);
+            // F000:004C iret
+            return InterruptRet();
         }
         VerifySpeculativeEntryOrFail(cs2, 0x0044, Signature_0044_int);
         // F000:0044 int 9
         InterruptCall(cs2, 0x0046, 9);
         throw FailAsUntested("Untested return from call at F000:0044");
-    L_0048:
-        // F000:0048 callback 0x0103
-        Callback(cs2, 0x0048, 0x0103);
-        // F000:004C iret
-        return InterruptRet();
     }
 
     public virtual Action unknown_F000_0057_F0057(int loadOffset) {

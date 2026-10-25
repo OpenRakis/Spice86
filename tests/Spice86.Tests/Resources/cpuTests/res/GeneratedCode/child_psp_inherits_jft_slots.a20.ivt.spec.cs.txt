@@ -394,17 +394,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 // F000:009A cmp AH,0x0A
                 Alu8.Sub(AH, 0x0A);
                 // F000:009D je short 0x00A4
-                if (ZeroFlag) {
-                    VerifySpeculativeEntryOrFail(cs2, 0x00A4, Signature_00A4_sti);
-                    // F000:00A4 sti
-                    InterruptFlag = true;
-                    CheckExternalEvents(cs2, 0x00A5);
-                    throw FailAsUntested("Untested fallthrough after F000:00A4");
+                if (!ZeroFlag) {
+                    // F000:009F callback 0x0021
+                    Callback(cs2, 0x009F, 0x0021);
+                    // F000:00A3 iret
+                    return InterruptRet();
                 }
-                // F000:009F callback 0x0021
-                Callback(cs2, 0x009F, 0x0021);
-                // F000:00A3 iret
-                return InterruptRet();
             }
         }
         VerifySpeculativeEntryOrFail(cs2, 0x00A4, Signature_00A4_sti);

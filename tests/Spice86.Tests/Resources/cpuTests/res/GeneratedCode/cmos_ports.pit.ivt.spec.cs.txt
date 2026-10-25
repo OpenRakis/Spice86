@@ -190,24 +190,22 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                 // 016D:0172 call near 0x0185
                                 NearCall(cs1, 0x0175, unknown_016D_0185_01855);
                                 // 016D:0175 jb short 0x017E
-                                if (CarryFlag) {
-                                    goto L_017E;
+                                if (!CarryFlag) {
+                                    // 016D:0177 mov DX,0x0999
+                                    DX = 0x0999;
+                                    // 016D:017A mov AL,0
+                                    AL = 0;
+                                    // 016D:017C out DX,AL
+                                    Out8(DX, AL);
+                                    // 016D:017D hlt
+                                    return Hlt();
                                 }
-                                // 016D:0177 mov DX,0x0999
-                                DX = 0x0999;
-                                // 016D:017A mov AL,0
-                                AL = 0;
-                                // 016D:017C out DX,AL
-                                Out8(DX, AL);
-                                // 016D:017D hlt
-                                return Hlt();
                             }
                         }
                     }
                 }
             }
         }
-    L_017E:
         VerifySpeculativeEntryOrFail(cs1, 0x017E, Signature_017E_mov);
         // 016D:017E mov DX,0x0999
         DX = 0x0999;
@@ -243,19 +241,17 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // 016D:0196 cmp BL,9
             Alu8.Sub(BL, 9);
             // 016D:0199 ja short 0x019F
-            if (!CarryFlag && !ZeroFlag) {
-                goto L_019F;
+            if (!(!CarryFlag && !ZeroFlag)) {
+                // 016D:019B clc
+                CarryFlag = false;
+                // 016D:019C pop BX
+                BX = Stack.Pop16();
+                // 016D:019D pop AX
+                AX = Stack.Pop16();
+                // 016D:019E ret near
+                return NearRet();
             }
-            // 016D:019B clc
-            CarryFlag = false;
-            // 016D:019C pop BX
-            BX = Stack.Pop16();
-            // 016D:019D pop AX
-            AX = Stack.Pop16();
-            // 016D:019E ret near
-            return NearRet();
         }
-    L_019F:
         VerifySpeculativeEntryOrFail(cs1, 0x019F, Signature_019F_stc);
         // 016D:019F stc
         CarryFlag = true;

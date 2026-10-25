@@ -138,34 +138,30 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:0034 cmp AH,0x10
             Alu8.Sub(AH, 0x10);
             // F000:0037 je short 0x003E
-            if (ZeroFlag) {
-                goto L_003E;
+            if (!ZeroFlag) {
+                // F000:0039 callback 0x0016
+                Callback(cs2, 0x0039, 0x0016);
+                // F000:003D iret
+                return InterruptRet();
             }
-            // F000:0039 callback 0x0016
-            Callback(cs2, 0x0039, 0x0016);
-            // F000:003D iret
-            return InterruptRet();
         }
-    L_003E:
         VerifySpeculativeEntryOrFail(cs2, 0x003E, Signature_003E_callback);
         // F000:003E callback 0x0102
         Callback(cs2, 0x003E, 0x0102);
         VerifySpeculativeEntryOrFail(cs2, 0x0042, Signature_0042_jne);
         // F000:0042 jne short 0x0048
         if (!ZeroFlag) {
-            goto L_0048;
+            VerifySpeculativeEntryOrFail(cs2, 0x0048, Signature_0048_callback);
+            // F000:0048 callback 0x0103
+            Callback(cs2, 0x0048, 0x0103);
+            VerifySpeculativeEntryOrFail(cs2, 0x004C, Signature_004C_iret);
+            // F000:004C iret
+            return InterruptRet();
         }
         VerifySpeculativeEntryOrFail(cs2, 0x0044, Signature_0044_int);
         // F000:0044 int 9
         InterruptCall(cs2, 0x0046, 9);
         throw FailAsUntested("Untested return from call at F000:0044");
-    L_0048:
-        VerifySpeculativeEntryOrFail(cs2, 0x0048, Signature_0048_callback);
-        // F000:0048 callback 0x0103
-        Callback(cs2, 0x0048, 0x0103);
-        VerifySpeculativeEntryOrFail(cs2, 0x004C, Signature_004C_iret);
-        // F000:004C iret
-        return InterruptRet();
     }
 
     public virtual Action unknown_F000_0057_F0057(int loadOffset) {
@@ -262,18 +258,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 // F000:009A cmp AH,0x0A
                 Alu8.Sub(AH, 0x0A);
                 // F000:009D je short 0x00A4
-                if (ZeroFlag) {
-                    VerifySpeculativeEntryOrFail(cs2, 0x00A4, Signature_00A4_sti);
-                    // F000:00A4 sti
-                    InterruptFlag = true;
-                    CheckExternalEvents(cs2, 0x00A5);
-                    throw FailAsUntested("Untested fallthrough after F000:00A4");
+                if (!ZeroFlag) {
+                    // F000:009F callback 0x0021
+                    Callback(cs2, 0x009F, 0x0021);
+                    VerifySpeculativeEntryOrFail(cs2, 0x00A3, Signature_00A3_iret);
+                    // F000:00A3 iret
+                    return InterruptRet();
                 }
-                // F000:009F callback 0x0021
-                Callback(cs2, 0x009F, 0x0021);
-                VerifySpeculativeEntryOrFail(cs2, 0x00A3, Signature_00A3_iret);
-                // F000:00A3 iret
-                return InterruptRet();
             }
         }
         VerifySpeculativeEntryOrFail(cs2, 0x00A4, Signature_00A4_sti);

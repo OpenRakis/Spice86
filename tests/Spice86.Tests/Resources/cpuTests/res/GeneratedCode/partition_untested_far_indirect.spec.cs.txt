@@ -44,26 +44,22 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:000E cmp AX,0
         // F000:0011 jne short 0x0016
         if (AX != 0) {
-            goto L_0016;
+            // F000:0016 cmp AX,0
+            Alu16.Sub(AX, 0);
+            // F000:0019 jne short 0x001E
+            if (!ZeroFlag) {
+                // F000:001E mov CX,2
+                CX = 2;
+                // F000:0021 hlt
+                return Hlt();
+            }
+            VerifySpeculativeEntryOrFail(cs1, 0x001B, Signature_001B_call);
+            // F000:001B call far dword ptr CS:[BX]
+            throw FailAsUntested("Untested indirect far call at F000:001B");
         }
         VerifySpeculativeEntryOrFail(cs1, 0x0013, Signature_0013_jmp);
         // F000:0013 jmp far dword ptr CS:[BX]
         throw FailAsUntested("Untested indirect far jump at F000:0013");
-    L_0016:
-        // F000:0016 cmp AX,0
-        Alu16.Sub(AX, 0);
-        // F000:0019 jne short 0x001E
-        if (!ZeroFlag) {
-            goto L_001E;
-        }
-        VerifySpeculativeEntryOrFail(cs1, 0x001B, Signature_001B_call);
-        // F000:001B call far dword ptr CS:[BX]
-        throw FailAsUntested("Untested indirect far call at F000:001B");
-    L_001E:
-        // F000:001E mov CX,2
-        CX = 2;
-        // F000:0021 hlt
-        return Hlt();
     }
 
 }
