@@ -131,7 +131,8 @@ internal static class MethodStructurizer {
         return null;
     }
 
-    private static bool ReadsOnlyMachineState(ValueNode node) => node switch {
+    /// <summary>True when <paramref name="node"/> reads only registers, flags and other CPU state: it can move out of a boundary.</summary>
+    internal static bool ReadsOnlyMachineState(ValueNode node) => node switch {
         CpuFlagNode or RegisterNode or ConstantNode or InstructionFieldNode => true,
         UnaryOperationNode unary => ReadsOnlyMachineState(unary.Value),
         ExplicitCastNode { Value: ValueNode inner } => ReadsOnlyMachineState(inner),

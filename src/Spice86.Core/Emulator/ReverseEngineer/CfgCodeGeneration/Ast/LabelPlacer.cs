@@ -52,6 +52,8 @@ internal static class LabelPlacer {
                 return loop with { Body = PlaceInBlock(loop.Body, targets, placed) };
             case DoWhileNode doWhile:
                 return doWhile with { Body = PlaceInBlock(doWhile.Body, targets, placed) };
+            case WhileNode whileNode:
+                return new WhileNode(whileNode.Condition, PlaceInBlock(whileNode.Body, targets, placed));
             case SwitchNode switchNode:
                 return switchNode with {
                     Sections = switchNode.Sections

@@ -68,6 +68,7 @@ internal static class CodeGenerationAst {
         InstructionBoundaryNode boundary => boundary.Node,
         LabelNode label => label.Target,
         InfiniteLoopNode loop => FirstEntryNode(loop.Body),
+        WhileNode loop => FirstEntryNode(loop.Body),
         DoWhileNode doWhile => FirstEntryNode(doWhile.Body),
         _ => null
     };
