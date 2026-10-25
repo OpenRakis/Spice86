@@ -3,6 +3,8 @@
 using FluentAssertions;
 
 using Spice86.Core.CLI;
+using Spice86.Core.Emulator.OperatingSystem;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Tests.AsmFixtures;
 using Spice86.Tests.Dos.FileSystem;
 using Spice86.Tests.Utility;
@@ -71,5 +73,36 @@ public class DosBatchRoutingIntegrationTests {
         spice86.Machine.Memory.UInt8[0x7C00 + 0x41].Should().Be(0xAD, "the mounted boot image must be the one loaded at 0000:7C00");
         spice86.Machine.Memory.UInt8[0x7C00 + 0x42].Should().Be(0xBE, "the mounted boot image must be the one loaded at 0000:7C00");
         spice86.Machine.Memory.UInt8[0x7C00 + 0x43].Should().Be(0xEF, "the mounted boot image must be the one loaded at 0000:7C00");
+    }
+
+    /// <summary>
+    /// A batch file that only runs internal commands is finished by the DOS batch engine while the program loads, so the
+    /// emulation loop must not parse or execute anything at the root COMMAND.COM program area.
+    /// </summary>
+    [Fact]
+    public void HostRequestedBatch_WithOnlyInternalCommands_ParsesNoInstruction() {
+        using TempFile tempFile = new("dos_batch_internal_only");
+        string tempDir = tempFile.Path;
+
+        // Arrange
+        string startBatchPath = Path.Join(tempDir, "START.BAT");
+        File.WriteAllText(startBatchPath, "VER > OUT.TXT\r\n");
+        using Spice86Creator creator = new(
+            binName: startBatchPath,
+            enablePit: false,
+            maxCycles: 1000L,
+            installInterruptVectors: true,
+            cDrive: tempDir);
+        using Spice86DependencyInjection spice86 = creator.Create();
+        spice86.Machine.CpuState.IsRunning.Should().BeFalse("the batch engine ran VER while loading and launched nothing");
+
+        // Act
+        spice86.ProgramExecutor.Run();
+
+        // Assert
+        spice86.Machine.CfgCpu.ExecutionContextManager.ExecutionContextEntryPoints.Keys.Should().NotContain(
+            new SegmentedAddress(DosProcessManager.CommandComSegment, 0x0100),
+            "nothing runs, so the root COMMAND.COM program area must not become an entry point");
+        File.ReadAllText(Path.Join(tempDir, "OUT.TXT")).Should().NotBeEmpty("VER wrote its output through the redirection");
     }
 }
