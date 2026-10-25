@@ -39,13 +39,29 @@ internal static class MethodStructurizer {
     /// <param name="refusals">Filled with the reason each <c>goto</c> arm of a refused branch or <c>switch</c> section
     /// was not nested, keyed by the <see cref="GotoNode"/> instance (later records overwrite earlier ones).</param>
     public static BlockNode Structure(IReadOnlyList<LoweredBlock> blocks, NaturalLoopForest loops, IReadOnlySet<ICfgNode> entryNodes, string methodName,
-        Dictionary<GotoNode, GotoKeepReason> refusals) {
+        Dictionary<GotoNode, GotoKeepReason> refusals) =>
+        Structure(blocks, loops, entryNodes, methodName, refusals, placeLoopExits: false);
+
+    /// <inheritdoc cref="Structure(IReadOnlyList{LoweredBlock}, NaturalLoopForest, IReadOnlySet{ICfgNode}, string)"/>
+    /// <param name="refusals">Filled with the reason each <c>goto</c> arm of a refused branch or <c>switch</c> section
+    /// was not nested, keyed by the <see cref="GotoNode"/> instance (later records overwrite earlier ones).</param>
+    /// <param name="placeLoopExits">When set, the exit of a loop that the loop's <c>goto</c>s target the most is moved
+    /// right after the loop in the printing order, so the <c>goto</c>s to it become <c>break</c>s.</param>
+    public static BlockNode Structure(IReadOnlyList<LoweredBlock> blocks, NaturalLoopForest loops, IReadOnlySet<ICfgNode> entryNodes, string methodName,
+        Dictionary<GotoNode, GotoKeepReason> refusals, bool placeLoopExits) {
         CheckLoopHeaders(blocks, loops, methodName);
         Dictionary<ICfgNode, int> gotoCountByTarget = new();
         foreach (LoweredBlock block in blocks) {
             CountGotos(block.Body, gotoCountByTarget);
         }
-        return new RegionWalker(loops, entryNodes, gotoCountByTarget, refusals, methodName).Walk(blocks, null);
+        return new RegionWalker(loops, entryNodes, gotoCountByTarget, refusals, methodName, placeLoopExits).Walk(blocks, null);
+    }
+
+    /// <summary>The number of <see cref="GotoNode"/>s anywhere in <paramref name="node"/>.</summary>
+    internal static int TotalGotos(IVisitableAstNode node) {
+        Dictionary<ICfgNode, int> counts = new();
+        CountGotos(node, counts);
+        return counts.Values.Sum();
     }
 
     /// <summary>Whether <paramref name="loop"/> can become a structured loop: no partition entry inside it other than its header.</summary>
@@ -142,7 +158,7 @@ internal static class MethodStructurizer {
     /// <summary>Structures the regions of one method: the method body, loop bodies and <c>if</c> arms.</summary>
     private sealed class RegionWalker(NaturalLoopForest loops, IReadOnlySet<ICfgNode> entryNodes,
         IReadOnlyDictionary<ICfgNode, int> gotoCountByTarget, Dictionary<GotoNode, GotoKeepReason> refusals,
-        string methodName) {
+        string methodName, bool placeLoopExits) {
         /// <summary>
         /// The statements of <paramref name="members"/>, blocks in layout order: the header of a structurable loop other
         /// than <paramref name="enclosing"/> starts that loop, built from its blocks among <paramref name="members"/>; a
@@ -150,9 +166,11 @@ internal static class MethodStructurizer {
         /// </summary>
         /// <param name="enclosing">The loop whose body <paramref name="members"/> are part of, or <c>null</c> outside every loop.</param>
         public BlockNode Walk(IReadOnlyList<LoweredBlock> members, NaturalLoop? enclosing) {
+            List<LoweredBlock> order = [.. members];
             List<IVisitableAstNode> statements = [];
             HashSet<CfgBlock> placed = [];
-            foreach (LoweredBlock block in members) {
+            for (int index = 0; index < order.Count; index++) {
+                LoweredBlock block = order[index];
                 if (placed.Contains(block.Block)) {
                     continue;
                 }
@@ -164,6 +182,9 @@ internal static class MethodStructurizer {
                     }
                     statements.Add(LoopStatement(loop, loopMembers));
                     placed.UnionWith(loopMembers.Select(member => member.Block));
+                    if (placeLoopExits) {
+                        MoveExitAfterLoop(order, index, loop, loopMembers, placed);
+                    }
                     continue;
                 }
                 placed.Add(block.Block);
@@ -193,6 +214,69 @@ internal static class MethodStructurizer {
                 return Sequence(new DoWhileNode(body, shape.Condition), shape.Exit);
             }
             return new InfiniteLoopNode(Walk(members, loop));
+        }
+
+        /// <summary>
+        /// Moves the exit of <paramref name="loop"/> that the loop's <c>goto</c>s target the most right after the loop
+        /// in <paramref name="order"/> (in front of the first unplaced block after <paramref name="index"/>), so the
+        /// <c>goto</c>s to it print as <c>break</c>s. The exit of a <c>do</c> loop is the target of the goto after its
+        /// latch; for a <c>while (true)</c> loop it is the block outside the loop the most <c>goto</c>s of the loop
+        /// members' bodies target, ties broken on the earliest in <paramref name="order"/>. The exit is moved only
+        /// when it is an unplaced block of <paramref name="order"/> other than the next block and strictly more
+        /// targeted than that next block (the <c>do</c> loop's exit goto counts as one). Every other unplaced block
+        /// the exit dominates moves with it, keeping their relative order, so its fall-throughs stay fall-throughs.
+        /// </summary>
+        private void MoveExitAfterLoop(List<LoweredBlock> order, int index, NaturalLoop loop,
+            IReadOnlyList<LoweredBlock> loopMembers, HashSet<CfgBlock> placed) {
+            Dictionary<ICfgNode, int> exitCountByTarget = new();
+            foreach (LoweredBlock member in loopMembers) {
+                CountGotos(member.Body, exitCountByTarget);
+            }
+            ICfgNode? preferredTarget = null;
+            if (DoWhileShapeOf(loop, loopMembers) is DoWhileShape shape && shape.Exit is GotoNode exitGoto) {
+                preferredTarget = exitGoto.Target;
+            } else {
+                int most = 0;
+                foreach (LoweredBlock candidate in order) {
+                    if (placed.Contains(candidate.Block) || loop.Contains(candidate.Block)) {
+                        continue;
+                    }
+                    int count = exitCountByTarget.GetValueOrDefault(candidate.Block.Entry);
+                    if (count > most) {
+                        most = count;
+                        preferredTarget = candidate.Block.Entry;
+                    }
+                }
+            }
+            if (preferredTarget is null) {
+                return;
+            }
+            int exitIndex = order.FindIndex(held => ReferenceEquals(held.Block.Entry, preferredTarget));
+            if (exitIndex < 0 || placed.Contains(order[exitIndex].Block)) {
+                return;
+            }
+            int nextIndex = -1;
+            for (int position = index + 1; position < order.Count; position++) {
+                if (!placed.Contains(order[position].Block)) {
+                    nextIndex = position;
+                    break;
+                }
+            }
+            if (nextIndex < 0 || exitIndex == nextIndex) {
+                return;
+            }
+            int preferredCount = exitCountByTarget.GetValueOrDefault(preferredTarget);
+            int nextCount = exitCountByTarget.GetValueOrDefault(order[nextIndex].Block.Entry);
+            if (preferredCount <= nextCount) {
+                return;
+            }
+            LoweredBlock exit = order[exitIndex];
+            List<LoweredBlock> run = order.Skip(index + 1).Where(held => !placed.Contains(held.Block)
+                && (ReferenceEquals(held, exit) || loops.Dominators.Dominates(exit.Block, held.Block))).ToList();
+            foreach (LoweredBlock held in run) {
+                order.Remove(held);
+            }
+            order.InsertRange(nextIndex, run);
         }
 
         private DoWhileShape? DoWhileShapeOf(NaturalLoop loop, IReadOnlyList<LoweredBlock> members) {

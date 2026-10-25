@@ -802,4 +802,116 @@ public class MethodStructurizerTest {
         // Assert
         refusals.Should().BeEmpty();
     }
+
+    private LoweredBlock[] TwoExitLoopBlocks(CfgBlock head, CfgBlock mid, CfgBlock tail, CfgBlock x, CfgBlock y,
+        CfgBlock z, CfgBlock end, bool tie) {
+        IVisitableAstNode midExit = tie ? new GotoNode(x.Entry) : new GotoNode(y.Entry);
+        BlockNode tailExit = tie
+            ? new BlockNode(new CommentNode("still in the loop"))
+            : new BlockNode(new GotoNode(x.Entry), new CommentNode("after the goto"));
+        LoweredBlock headBlock = new(head, true, new BlockNode(new InstructionBoundaryNode(head.Entry, "",
+            new BlockNode(new CommentNode("head"), new IfElseNode(Zero, new BlockNode(new GotoNode(mid.Entry)), new BlockNode(new GotoNode(y.Entry)))))));
+        LoweredBlock midBlock = new(mid, false, new BlockNode(new InstructionBoundaryNode(mid.Entry, "",
+            new BlockNode(new CommentNode("mid"), new IfElseNode(Zero, new BlockNode(new GotoNode(tail.Entry)), new BlockNode(midExit))))));
+        LoweredBlock tailBlock = new(tail, false, new BlockNode(new InstructionBoundaryNode(tail.Entry, "",
+            new BlockNode(new CommentNode("tail"), new IfElseNode(Zero, new BlockNode(new GotoNode(head.Entry)), tailExit)))));
+        return [
+            Lowered(_entry, true, "entry"), headBlock, midBlock, tailBlock,
+            Jumping(x, "x", end), Jumping(y, "y", z), Jumping(z, "z", end), Lowered(end, false, "end")
+        ];
+    }
+
+    private (NaturalLoopForest Loops, CfgBlock Head, CfgBlock Mid, CfgBlock Tail, CfgBlock X, CfgBlock Y, CfgBlock Z, CfgBlock End) TwoExitLoop() {
+        CfgBlock head = Block(11, 0x40);
+        CfgBlock mid = Block(12, 0x50);
+        CfgBlock tail = Block(13, 0x60);
+        CfgBlock x = Block(14, 0x70);
+        CfgBlock y = Block(15, 0x80);
+        CfgBlock z = Block(17, 0xA0);
+        CfgBlock end = Block(16, 0x90);
+        NaturalLoopForest loops = Forest([_entry, head, mid, tail, x, y, z, end],
+            new() { [_entry] = [head], [head] = [mid, y], [mid] = [tail, y], [tail] = [head, x], [x] = [end], [y] = [z], [z] = [end] });
+        return (loops, head, mid, tail, x, y, z, end);
+    }
+
+    private static int CountNodes<T>(IVisitableAstNode node, Func<T, bool> matches) {
+        int count = node is T match && matches(match) ? 1 : 0;
+        switch (node) {
+            case BlockNode block:
+                return count + block.Statements.Sum(statement => CountNodes(statement, matches));
+            case InstructionBoundaryNode boundary:
+                return count + CountNodes(boundary.Body, matches);
+            case IfElseNode ifElse:
+                return count + CountNodes(ifElse.TrueCase, matches) + CountNodes(ifElse.FalseCase, matches);
+            case WhileNode whileNode:
+                return count + CountNodes(whileNode.Body, matches);
+            case InfiniteLoopNode infiniteLoop:
+                return count + CountNodes(infiniteLoop.Body, matches);
+            case DoWhileNode doWhile:
+                return count + CountNodes(doWhile.Body, matches);
+            case SwitchNode switchNode:
+                return count + switchNode.Sections.Sum(section => CountNodes(section.Body, matches))
+                    + CountNodes(switchNode.Default, matches);
+            case CpuFaultTryCatchNode tryCatch:
+                return count + CountNodes(tryCatch.Body, matches);
+            default:
+                return count;
+        }
+    }
+
+    [Fact]
+    public void ExitPlacementMovesTheMostUsedExitRightAfterTheLoop() {
+        // Arrange
+        (NaturalLoopForest loops, CfgBlock head, CfgBlock mid, CfgBlock tail, CfgBlock x, CfgBlock y, CfgBlock z, CfgBlock end) = TwoExitLoop();
+        LoweredBlock[] blocks = TwoExitLoopBlocks(head, mid, tail, x, y, z, end, tie: false);
+        Dictionary<GotoNode, GotoKeepReason> refusals = new(ReferenceEqualityComparer.Instance);
+
+        // Act
+        BlockNode structured = MethodStructurizer.Structure(blocks, loops, Entries(), "method", refusals, true);
+        BlockNode body = FallthroughGotoRemover.Remove(structured);
+
+        // Assert
+        InfiniteLoopNode loop = body.Statements[1].Should().BeOfType<InfiniteLoopNode>().Which;
+        body.Statements[2].Should().BeOfType<InstructionBoundaryNode>().Which.Node.Should().BeSameAs(y.Entry);
+        body.Statements[3].Should().BeOfType<InstructionBoundaryNode>().Which.Node.Should().BeSameAs(z.Entry);
+        CountNodes<GotoNode>(loop.Body, jump => ReferenceEquals(jump.Target, y.Entry)).Should().Be(0);
+        CountNodes<BreakNode>(loop.Body, _ => true).Should().Be(2);
+        CountNodes<GotoNode>(loop.Body, jump => ReferenceEquals(jump.Target, x.Entry)).Should().Be(1);
+        CountNodes<GotoNode>(body, jump => ReferenceEquals(jump.Target, z.Entry)).Should().Be(0);
+    }
+
+    [Fact]
+    public void WithoutExitPlacementTheFirstExitInTheLayoutStaysNext() {
+        // Arrange
+        (NaturalLoopForest loops, CfgBlock head, CfgBlock mid, CfgBlock tail, CfgBlock x, CfgBlock y, CfgBlock z, CfgBlock end) = TwoExitLoop();
+        LoweredBlock[] blocks = TwoExitLoopBlocks(head, mid, tail, x, y, z, end, tie: false);
+        Dictionary<GotoNode, GotoKeepReason> refusals = new(ReferenceEqualityComparer.Instance);
+
+        // Act
+        BlockNode structured = MethodStructurizer.Structure(blocks, loops, Entries(), "method", refusals, false);
+        BlockNode body = FallthroughGotoRemover.Remove(structured);
+
+        // Assert
+        InfiniteLoopNode loop = body.Statements[1].Should().BeOfType<InfiniteLoopNode>().Which;
+        body.Statements[2].Should().BeOfType<InstructionBoundaryNode>().Which.Node.Should().BeSameAs(x.Entry);
+        CountNodes<BreakNode>(loop.Body, _ => true).Should().Be(1);
+        CountNodes<GotoNode>(loop.Body, jump => ReferenceEquals(jump.Target, y.Entry)).Should().Be(2);
+    }
+
+    [Fact]
+    public void ExitPlacementOnATieMovesNothing() {
+        // Arrange
+        (NaturalLoopForest loops, CfgBlock head, CfgBlock mid, CfgBlock tail, CfgBlock x, CfgBlock y, CfgBlock z, CfgBlock end) = TwoExitLoop();
+        LoweredBlock[] blocks = TwoExitLoopBlocks(head, mid, tail, x, y, z, end, tie: true);
+        Dictionary<GotoNode, GotoKeepReason> refusals = new(ReferenceEqualityComparer.Instance);
+
+        // Act
+        BlockNode structured = MethodStructurizer.Structure(blocks, loops, Entries(), "method", refusals, true);
+        BlockNode body = FallthroughGotoRemover.Remove(structured);
+
+        // Assert
+        body.Statements[1].Should().BeOfType<InfiniteLoopNode>();
+        body.Statements[2].Should().BeOfType<InstructionBoundaryNode>().Which.Node.Should().BeSameAs(x.Entry);
+        body.Statements[3].Should().BeOfType<InstructionBoundaryNode>().Which.Node.Should().BeSameAs(y.Entry);
+    }
 }

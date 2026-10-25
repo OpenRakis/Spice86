@@ -46,8 +46,15 @@ internal sealed class MethodEmitter(
         HashSet<ICfgNode> entryNodes = method.Entries.Select(entry => entry.Node).ToHashSet();
         List<LoweredBlock> loweredBlocks = GroupByBlock(method.NodeEmissionPlans, boundaries);
         Dictionary<GotoNode, GotoKeepReason> refusals = new(ReferenceEqualityComparer.Instance);
-        BlockNode structured = MethodStructurizer.Structure(loweredBlocks, loops, entryNodes, method.MethodName, refusals);
-        BlockNode withoutFallthroughGotos = FallthroughGotoRemover.Remove(structured);
+        BlockNode withoutFallthroughGotos = FallthroughGotoRemover.Remove(
+            MethodStructurizer.Structure(loweredBlocks, loops, entryNodes, method.MethodName, refusals, placeLoopExits: false));
+        Dictionary<GotoNode, GotoKeepReason> placedRefusals = new(ReferenceEqualityComparer.Instance);
+        BlockNode placedWithoutFallthroughGotos = FallthroughGotoRemover.Remove(
+            MethodStructurizer.Structure(loweredBlocks, loops, entryNodes, method.MethodName, placedRefusals, placeLoopExits: true));
+        if (MethodStructurizer.TotalGotos(placedWithoutFallthroughGotos) < MethodStructurizer.TotalGotos(withoutFallthroughGotos)) {
+            withoutFallthroughGotos = placedWithoutFallthroughGotos;
+            refusals = placedRefusals;
+        }
         GotoCensus census = GotoCensusClassifier.Classify(entryDispatch, withoutFallthroughGotos, loops, entryNodes,
             loweredBlocks, refusals);
         GotoTargets targets = GotoTargetCollector.Collect(Sequence(entryDispatch, withoutFallthroughGotos));
