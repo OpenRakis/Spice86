@@ -1,6 +1,8 @@
 namespace Spice86.Tests.CfgCpu.Blocks;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph.Analysis;
+using Spice86.Core.Emulator.ReverseEngineer.Graph;
 using Spice86.Shared.Utils;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.Prefix;
@@ -36,6 +38,18 @@ internal static class CfgTestHelpers {
         return new(_allocator.AllocateId(), address, opcodeField, new List<InstructionPrefix>(), maxSuccessorsCount: 1) {
             Kind = kind
         };
+    }
+
+    /// <summary>Builds a <see cref="CfgBlock"/> of one synthetic instruction at <paramref name="offset"/> of segment 0x1000.</summary>
+    public static CfgBlock CreateBlock(int id, ushort offset) =>
+        new(id, CreateInstruction(new SegmentedAddress(0x1000, offset)));
+
+    /// <summary>Builds the natural loop forest of a graph whose only entry is <paramref name="blocks"/>' first block.</summary>
+    public static NaturalLoopForest BuildLoopForest(IReadOnlyList<CfgBlock> blocks,
+        Dictionary<CfgBlock, IReadOnlyList<CfgBlock>> successors) {
+        PartitionBlockGraph graph = new(blocks, [blocks[0]], successors, new Dictionary<CfgBlock, CfgBlock?>());
+        DepthFirstOrdering<CfgBlock> traversal = new([.. graph.EntryBlocks, .. graph.Blocks], graph.GetSuccessors);
+        return NaturalLoopForest.Build(graph, traversal.RetreatingEdges);
     }
 
     /// <summary>

@@ -12,27 +12,23 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Structuring;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph.Analysis;
-using Spice86.Core.Emulator.ReverseEngineer.Graph;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Tests.CfgCpu.Blocks;
 
 using Xunit;
 
 public class MethodStructurizerTest {
-    private readonly CfgBlock _entry = Block(1, 0x00);
-    private readonly CfgBlock _spin = Block(2, 0x10);
-    private readonly CfgBlock _exit = Block(3, 0x20);
+    private readonly CfgBlock _entry = CfgTestHelpers.CreateBlock(1, 0x00);
+    private readonly CfgBlock _spin = CfgTestHelpers.CreateBlock(2, 0x10);
+    private readonly CfgBlock _exit = CfgTestHelpers.CreateBlock(3, 0x20);
     private readonly NaturalLoopForest _loops;
     private static readonly CpuFlagNode Zero = new(Flags.Zero);
     private readonly CfgInstruction _spinTail = CfgTestHelpers.CreateInstruction(new SegmentedAddress(0x1000, 0x0011));
 
     public MethodStructurizerTest() {
         _spin.Append(_spinTail);
-        PartitionBlockGraph graph = new([_entry, _spin, _exit], [_entry],
-            new Dictionary<CfgBlock, IReadOnlyList<CfgBlock>> { [_entry] = [_spin], [_spin] = [_spin, _exit] },
-            new Dictionary<CfgBlock, CfgBlock?>());
-        DepthFirstOrdering<CfgBlock> traversal = new([.. graph.EntryBlocks, .. graph.Blocks], graph.GetSuccessors);
-        _loops = NaturalLoopForest.Build(graph, traversal.RetreatingEdges);
+        _loops = CfgTestHelpers.BuildLoopForest([_entry, _spin, _exit],
+            new() { [_entry] = [_spin], [_spin] = [_spin, _exit] });
     }
 
     [Fact]
@@ -41,7 +37,7 @@ public class MethodStructurizerTest {
         LoweredBlock[] blocks = [Lowered(_entry, true, "entry"), Lowered(_spin, true, "spin"), Lowered(_exit, false, "exit")];
 
         // Act
-        BlockNode body = MethodStructurizer.Structure(blocks, _loops, Entries(), "method");
+        BlockNode body = Structure(blocks, _loops, Entries());
 
         // Assert
         body.Statements.Should().HaveCount(3);
@@ -56,17 +52,11 @@ public class MethodStructurizerTest {
         LoweredBlock[] blocks = [Lowered(_entry, true, "entry"), Lowered(_spin, false, "spin"), Lowered(_exit, false, "exit")];
 
         // Act
-        Action structure = () => MethodStructurizer.Structure(blocks, _loops, Entries(), "method");
+        Action structure = () => Structure(blocks, _loops, Entries());
 
         // Assert
         structure.Should().Throw<InvalidOperationException>().WithMessage("*has no CheckExternalEvents at its entry*");
     }
-
-    private static LoweredBlock Lowered(CfgBlock block, bool hasEntryCheck, string name) =>
-        new(block, hasEntryCheck, new BlockNode(new CommentNode(name)));
-
-    private static CfgBlock Block(int id, ushort offset) =>
-        new(id, CfgTestHelpers.CreateInstruction(new SegmentedAddress(0x1000, offset)));
 
     [Fact]
     public void SelfLoopWithAConditionalBackEdgeBecomesADoWhile() {
@@ -114,31 +104,24 @@ public class MethodStructurizerTest {
         body.Statements[2].Should().BeSameAs(untested);
     }
 
-    [Fact]
-    public void SelfLoopsThatCannotBeADoWhileBecomeAWhileTrue() {
+    [Theory]
+    [InlineData("conditionReadsLocal")]
+    [InlineData("exitArmHasCode")]
+    [InlineData("bothArmsRestart")]
+    [InlineData("noBackEdge")]
+    [InlineData("untestedMessageReadsRegister")]
+    [InlineData("tryCatch")]
+    public void SelfLoopThatCannotBeADoWhileBecomesAWhileTrue(string terminator) {
         // Arrange
-        VariableDeclarationNode equal = new(DataType.BOOL, "equal", Zero);
-        IfElseNode backEdgeToExit = BackEdgeIf(Zero, toHeaderWhenTrue: true, new GotoNode(_exit.Entry));
-        IVisitableAstNode[] terminators = [
-            BackEdgeIf(equal.Reference, toHeaderWhenTrue: true, new GotoNode(_exit.Entry)),
-            new IfElseNode(Zero, new BlockNode(new GotoNode(_spin.Entry)),
-                new BlockNode(new MethodCallNode(null, "Foo"), new GotoNode(_exit.Entry))),
-            new IfElseNode(Zero, new BlockNode(new GotoNode(_spin.Entry)), new BlockNode(new GotoNode(_spin.Entry))),
-            new IfElseNode(Zero, new BlockNode(new GotoNode(_exit.Entry)), new BlockNode(new GotoNode(_entry.Entry))),
-            BackEdgeIf(Zero, toHeaderWhenTrue: true, new FailAsUntestedNode([
-                UntestedMessagePart.Literal("Untested near jump target 0x"),
-                UntestedMessagePart.Hole(new RegisterNode(DataType.UINT16, 0), "X4")])),
-            new CpuFaultTryCatchNode(new BlockNode(backEdgeToExit), new SegmentedAddress(0x1000, 0x0010), [])
-        ];
+        LoweredBlock spin = Spin(Terminator(terminator));
+
+        // Act
+        BlockNode body = StructureWith(spin, Entries());
 
         // Assert
-        foreach (IVisitableAstNode terminator in terminators) {
-            LoweredBlock spin = Spin(terminator);
-            BlockNode body = StructureWith(spin, Entries());
-            body.Statements.Should().HaveCount(3, terminator.GetType().Name);
-            InfiniteLoopNode loop = body.Statements[1].Should().BeOfType<InfiniteLoopNode>().Which;
-            loop.Body.Statements.Should().ContainSingle().Which.Should().BeSameAs(spin.Body.Statements[0]);
-        }
+        body.Statements.Should().HaveCount(3);
+        InfiniteLoopNode loop = body.Statements[1].Should().BeOfType<InfiniteLoopNode>().Which;
+        loop.Body.Statements.Should().ContainSingle().Which.Should().BeSameAs(spin.Body.Statements[0]);
     }
 
     [Fact]
@@ -156,11 +139,11 @@ public class MethodStructurizerTest {
     [Fact]
     public void LoopBlocksMoveTogetherIntoAWhileTrueAtTheHeaderPlace() {
         // Arrange
-        CfgBlock head = Block(11, 0x40);
-        CfgBlock body = Block(12, 0x50);
-        CfgBlock latch = Block(13, 0x60);
-        CfgBlock exit = Block(14, 0x70);
-        NaturalLoopForest loops = Forest([_entry, head, body, latch, exit],
+        CfgBlock head = CfgTestHelpers.CreateBlock(11, 0x40);
+        CfgBlock body = CfgTestHelpers.CreateBlock(12, 0x50);
+        CfgBlock latch = CfgTestHelpers.CreateBlock(13, 0x60);
+        CfgBlock exit = CfgTestHelpers.CreateBlock(14, 0x70);
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([_entry, head, body, latch, exit],
             new() { [_entry] = [head], [head] = [body, exit], [body] = [latch], [latch] = [head] });
         LoweredBlock[] blocks = [
             Lowered(_entry, true, "entry"), Lowered(head, true, "head"), Lowered(exit, false, "exit"),
@@ -168,7 +151,7 @@ public class MethodStructurizerTest {
         ];
 
         // Act
-        BlockNode method = MethodStructurizer.Structure(blocks, loops, Entries(), "method");
+        BlockNode method = Structure(blocks, loops, Entries());
 
         // Assert
         method.Statements.Should().HaveCount(3);
@@ -181,16 +164,16 @@ public class MethodStructurizerTest {
     [Fact]
     public void OnlyLatchLastWithAConditionalBackEdgeGivesAMultiBlockDoWhile() {
         // Arrange
-        CfgBlock head = Block(11, 0x40);
-        CfgBlock latch = Block(12, 0x50);
-        CfgBlock exit = Block(13, 0x60);
-        NaturalLoopForest loops = Forest([_entry, head, latch, exit],
+        CfgBlock head = CfgTestHelpers.CreateBlock(11, 0x40);
+        CfgBlock latch = CfgTestHelpers.CreateBlock(12, 0x50);
+        CfgBlock exit = CfgTestHelpers.CreateBlock(13, 0x60);
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([_entry, head, latch, exit],
             new() { [_entry] = [head], [head] = [latch], [latch] = [head, exit] });
         LoweredBlock latchBlock = Branching(latch, head, new GotoNode(exit.Entry));
         LoweredBlock[] blocks = [Lowered(_entry, true, "entry"), Lowered(head, true, "head"), latchBlock, Lowered(exit, false, "exit")];
 
         // Act
-        BlockNode method = MethodStructurizer.Structure(blocks, loops, Entries(), "method");
+        BlockNode method = Structure(blocks, loops, Entries());
 
         // Assert
         method.Statements.Should().HaveCount(4);
@@ -207,11 +190,11 @@ public class MethodStructurizerTest {
     [Fact]
     public void LatchThatIsNotTheLastLoopBlockGivesAWhileTrue() {
         // Arrange
-        CfgBlock head = Block(11, 0x40);
-        CfgBlock latch = Block(12, 0x50);
-        CfgBlock side = Block(13, 0x60);
-        CfgBlock exit = Block(14, 0x70);
-        NaturalLoopForest loops = Forest([_entry, head, latch, side, exit],
+        CfgBlock head = CfgTestHelpers.CreateBlock(11, 0x40);
+        CfgBlock latch = CfgTestHelpers.CreateBlock(12, 0x50);
+        CfgBlock side = CfgTestHelpers.CreateBlock(13, 0x60);
+        CfgBlock exit = CfgTestHelpers.CreateBlock(14, 0x70);
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([_entry, head, latch, side, exit],
             new() { [_entry] = [head], [head] = [latch, side], [side] = [latch], [latch] = [head, exit] });
         LoweredBlock[] blocks = [
             Lowered(_entry, true, "entry"), Lowered(head, true, "head"), Branching(latch, head, new GotoNode(exit.Entry)),
@@ -219,7 +202,7 @@ public class MethodStructurizerTest {
         ];
 
         // Act
-        BlockNode method = MethodStructurizer.Structure(blocks, loops, Entries(), "method");
+        BlockNode method = Structure(blocks, loops, Entries());
 
         // Assert
         method.Statements.Should().HaveCount(3);
@@ -231,11 +214,11 @@ public class MethodStructurizerTest {
     [Fact]
     public void ParentLoopContainsItsStructuredChild() {
         // Arrange
-        CfgBlock outer = Block(11, 0x40);
-        CfgBlock inner = Block(12, 0x50);
-        CfgBlock latch = Block(13, 0x60);
-        CfgBlock exit = Block(14, 0x70);
-        NaturalLoopForest loops = Forest([_entry, outer, inner, latch, exit],
+        CfgBlock outer = CfgTestHelpers.CreateBlock(11, 0x40);
+        CfgBlock inner = CfgTestHelpers.CreateBlock(12, 0x50);
+        CfgBlock latch = CfgTestHelpers.CreateBlock(13, 0x60);
+        CfgBlock exit = CfgTestHelpers.CreateBlock(14, 0x70);
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([_entry, outer, inner, latch, exit],
             new() { [_entry] = [outer], [outer] = [inner], [inner] = [inner, latch], [latch] = [outer, exit] });
         LoweredBlock[] blocks = [
             Lowered(_entry, true, "entry"), Lowered(outer, true, "outer"), Branching(inner, inner, new GotoNode(latch.Entry)),
@@ -243,7 +226,7 @@ public class MethodStructurizerTest {
         ];
 
         // Act
-        BlockNode method = MethodStructurizer.Structure(blocks, loops, Entries(), "method");
+        BlockNode method = Structure(blocks, loops, Entries());
 
         // Assert
         method.Statements.Should().HaveCount(3);
@@ -260,17 +243,17 @@ public class MethodStructurizerTest {
     [Fact]
     public void LoopHeaderThatIsNotFirstInTheLayoutThrows() {
         // Arrange
-        CfgBlock head = Block(11, 0x40);
-        CfgBlock body = Block(12, 0x50);
-        CfgBlock exit = Block(13, 0x60);
-        NaturalLoopForest loops = Forest([_entry, head, body, exit],
+        CfgBlock head = CfgTestHelpers.CreateBlock(11, 0x40);
+        CfgBlock body = CfgTestHelpers.CreateBlock(12, 0x50);
+        CfgBlock exit = CfgTestHelpers.CreateBlock(13, 0x60);
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([_entry, head, body, exit],
             new() { [_entry] = [head], [head] = [body, exit], [body] = [head] });
         LoweredBlock[] blocks = [
             Lowered(_entry, true, "entry"), Lowered(body, false, "body"), Lowered(head, true, "head"), Lowered(exit, false, "exit")
         ];
 
         // Act
-        Action structure = () => MethodStructurizer.Structure(blocks, loops, Entries(), "method");
+        Action structure = () => Structure(blocks, loops, Entries());
 
         // Assert
         structure.Should().Throw<InvalidOperationException>().WithMessage("*is not the first block of its loop in the layout*");
@@ -279,11 +262,11 @@ public class MethodStructurizerTest {
     [Fact]
     public void ParentWithAConditionalBackEdgeAtTheEndIsADoWhileAroundItsChild() {
         // Arrange
-        CfgBlock outer = Block(11, 0x40);
-        CfgBlock inner = Block(12, 0x50);
-        CfgBlock latch = Block(13, 0x60);
-        CfgBlock exit = Block(14, 0x70);
-        NaturalLoopForest loops = Forest([_entry, outer, inner, latch, exit],
+        CfgBlock outer = CfgTestHelpers.CreateBlock(11, 0x40);
+        CfgBlock inner = CfgTestHelpers.CreateBlock(12, 0x50);
+        CfgBlock latch = CfgTestHelpers.CreateBlock(13, 0x60);
+        CfgBlock exit = CfgTestHelpers.CreateBlock(14, 0x70);
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([_entry, outer, inner, latch, exit],
             new() { [_entry] = [outer], [outer] = [inner], [inner] = [inner, latch], [latch] = [outer, exit] });
         LoweredBlock[] blocks = [
             Lowered(_entry, true, "entry"), Lowered(outer, true, "outer"), Branching(inner, inner, new GotoNode(latch.Entry)),
@@ -291,7 +274,7 @@ public class MethodStructurizerTest {
         ];
 
         // Act
-        BlockNode method = MethodStructurizer.Structure(blocks, loops, Entries(), "method");
+        BlockNode method = Structure(blocks, loops, Entries());
 
         // Assert
         method.Statements.Should().HaveCount(4);
@@ -310,11 +293,11 @@ public class MethodStructurizerTest {
     [Fact]
     public void ParentWhoseLatchIsInsideAChildIsAWhileTrue() {
         // Arrange
-        CfgBlock outer = Block(11, 0x40);
-        CfgBlock first = Block(12, 0x50);
-        CfgBlock second = Block(13, 0x60);
-        CfgBlock exit = Block(14, 0x70);
-        NaturalLoopForest loops = Forest([_entry, outer, first, second, exit],
+        CfgBlock outer = CfgTestHelpers.CreateBlock(11, 0x40);
+        CfgBlock first = CfgTestHelpers.CreateBlock(12, 0x50);
+        CfgBlock second = CfgTestHelpers.CreateBlock(13, 0x60);
+        CfgBlock exit = CfgTestHelpers.CreateBlock(14, 0x70);
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([_entry, outer, first, second, exit],
             new() { [_entry] = [outer], [outer] = [first], [first] = [second], [second] = [first, outer, exit] });
         LoweredBlock[] blocks = [
             Lowered(_entry, true, "entry"), Lowered(outer, true, "outer"), Lowered(first, true, "first"),
@@ -322,7 +305,7 @@ public class MethodStructurizerTest {
         ];
 
         // Act
-        BlockNode method = MethodStructurizer.Structure(blocks, loops, Entries(), "method");
+        BlockNode method = Structure(blocks, loops, Entries());
 
         // Assert
         method.Statements.Should().HaveCount(3);
@@ -334,28 +317,15 @@ public class MethodStructurizerTest {
         method.Statements[2].Should().Be(new CommentNode("exit"));
     }
 
-    private static NaturalLoopForest Forest(IReadOnlyList<CfgBlock> blocks, Dictionary<CfgBlock, IReadOnlyList<CfgBlock>> successors) {
-        PartitionBlockGraph graph = new(blocks, [blocks[0]], successors, new Dictionary<CfgBlock, CfgBlock?>());
-        DepthFirstOrdering<CfgBlock> traversal = new([.. graph.EntryBlocks, .. graph.Blocks], graph.GetSuccessors);
-        return NaturalLoopForest.Build(graph, traversal.RetreatingEdges);
-    }
-
-    private static LoweredBlock Branching(CfgBlock block, CfgBlock header, IVisitableAstNode exit) {
-        IfElseNode branch = new(Zero, new BlockNode(new GotoNode(header.Entry)), new BlockNode(exit));
-        string name = ReferenceEquals(block, header) ? "inner" : "latch";
-        return new(block, ReferenceEquals(block, header),
-            new BlockNode(new InstructionBoundaryNode(block.Entry, "", new BlockNode(new CommentNode(name), branch))));
-    }
-
     [Fact]
     public void TwoBackEdgesToOneHeaderGiveAWhileTrueAroundBothBlocks() {
         // Arrange
-        NaturalLoopForest loops = Forest([_entry, _spin, _exit], new() { [_entry] = [_spin], [_spin] = [_spin, _exit], [_exit] = [_spin] });
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([_entry, _spin, _exit], new() { [_entry] = [_spin], [_spin] = [_spin, _exit], [_exit] = [_spin] });
         LoweredBlock spin = Spin(BackEdgeIf(Zero, toHeaderWhenTrue: true, new GotoNode(_exit.Entry)));
         LoweredBlock[] blocks = [Lowered(_entry, true, "entry"), spin, Lowered(_exit, false, "exit")];
 
         // Act
-        BlockNode body = MethodStructurizer.Structure(blocks, loops, Entries(), "method");
+        BlockNode body = Structure(blocks, loops, Entries());
 
         // Assert
         body.Statements.Should().HaveCount(2);
@@ -365,33 +335,18 @@ public class MethodStructurizerTest {
         loop.Body.Statements[1].Should().Be(new CommentNode("exit"));
     }
 
-    private IfElseNode BackEdgeIf(ValueNode condition, bool toHeaderWhenTrue, IVisitableAstNode exit) {
-        BlockNode backEdge = new(new GotoNode(_spin.Entry));
-        BlockNode exitArm = new(exit);
-        if (toHeaderWhenTrue) {
-            return new IfElseNode(condition, backEdge, exitArm);
-        }
-        return new IfElseNode(condition, exitArm, backEdge);
-    }
-
-    private LoweredBlock Spin(IVisitableAstNode terminator) =>
-        new(_spin, true, new BlockNode(new InstructionBoundaryNode(_spin.Entry, "", new BlockNode(new CommentNode("spin"), terminator))));
-
-    private BlockNode StructureWith(LoweredBlock spin, IReadOnlySet<ICfgNode> entryNodes) =>
-        MethodStructurizer.Structure([Lowered(_entry, true, "entry"), spin, Lowered(_exit, false, "exit")], _loops, entryNodes, "method");
-
     [Fact]
     public void ArmThatComesBackToTheOtherTargetIsNestedInAnIf() {
         // Arrange
-        CfgBlock then = Block(11, 0x40);
-        CfgBlock join = Block(12, 0x50);
-        NaturalLoopForest loops = Forest([_entry, then, join], new() { [_entry] = [then, join], [then] = [join] });
+        CfgBlock then = CfgTestHelpers.CreateBlock(11, 0x40);
+        CfgBlock join = CfgTestHelpers.CreateBlock(12, 0x50);
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([_entry, then, join], new() { [_entry] = [then, join], [then] = [join] });
         LoweredBlock decide = Deciding(_entry, then, join);
         LoweredBlock thenBlock = Jumping(then, "then", join);
         LoweredBlock[] blocks = [decide, thenBlock, Lowered(join, false, "join")];
 
         // Act
-        BlockNode method = MethodStructurizer.Structure(blocks, loops, Entries(), "method");
+        BlockNode method = Structure(blocks, loops, Entries());
 
         // Assert
         method.Statements.Should().HaveCount(4);
@@ -409,13 +364,13 @@ public class MethodStructurizerTest {
     [Fact]
     public void ArmInTheFalseBranchNegatesTheCondition() {
         // Arrange
-        CfgBlock then = Block(11, 0x40);
-        CfgBlock join = Block(12, 0x50);
-        NaturalLoopForest loops = Forest([_entry, then, join], new() { [_entry] = [then, join], [then] = [join] });
+        CfgBlock then = CfgTestHelpers.CreateBlock(11, 0x40);
+        CfgBlock join = CfgTestHelpers.CreateBlock(12, 0x50);
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([_entry, then, join], new() { [_entry] = [then, join], [then] = [join] });
         LoweredBlock[] blocks = [Deciding(_entry, join, then), Jumping(then, "then", join), Lowered(join, false, "join")];
 
         // Act
-        BlockNode method = MethodStructurizer.Structure(blocks, loops, Entries(), "method");
+        BlockNode method = Structure(blocks, loops, Entries());
 
         // Assert
         method.Statements[1].Should().BeOfType<IfElseNode>().Which.Condition.Should().Be(CodeGenerationAst.NegatedCondition(Zero));
@@ -425,15 +380,15 @@ public class MethodStructurizerTest {
     [Fact]
     public void ArmHeadsTargetedByTwoGotosStayFlat() {
         // Arrange
-        CfgBlock then = Block(11, 0x40);
-        CfgBlock other = Block(12, 0x50);
-        NaturalLoopForest loops = Forest([_entry, then, other],
+        CfgBlock then = CfgTestHelpers.CreateBlock(11, 0x40);
+        CfgBlock other = CfgTestHelpers.CreateBlock(12, 0x50);
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([_entry, then, other],
             new() { [_entry] = [then, other], [then] = [other], [other] = [then] });
         LoweredBlock decide = Deciding(_entry, then, other);
         LoweredBlock[] blocks = [decide, Jumping(then, "then", other), Jumping(other, "other", then)];
 
         // Act
-        BlockNode method = MethodStructurizer.Structure(blocks, loops, Entries(), "method");
+        BlockNode method = Structure(blocks, loops, Entries());
 
         // Assert
         method.Statements.Should().NotContain(statement => statement is IfElseNode);
@@ -443,16 +398,16 @@ public class MethodStructurizerTest {
     [Fact]
     public void LaterDivergingArmIsNestedAndTheEarlierStaysFlat() {
         // Arrange
-        CfgBlock then = Block(11, 0x40);
-        CfgBlock join = Block(12, 0x50);
-        NaturalLoopForest loops = Forest([_entry, then, join], new() { [_entry] = [then, join] });
+        CfgBlock then = CfgTestHelpers.CreateBlock(11, 0x40);
+        CfgBlock join = CfgTestHelpers.CreateBlock(12, 0x50);
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([_entry, then, join], new() { [_entry] = [then, join] });
         LoweredBlock thenBlock = new(then, false, new BlockNode(new InstructionBoundaryNode(then.Entry, "",
             new BlockNode(new CommentNode("then"), new FailAsUntestedNode([UntestedMessagePart.Literal("Untested fallthrough at 1000:0040")])))));
         LoweredBlock joinBlock = Lowered(join, false, "join");
         LoweredBlock[] blocks = [Deciding(_entry, then, join), thenBlock, joinBlock];
 
         // Act
-        BlockNode method = MethodStructurizer.Structure(blocks, loops, Entries(), "method");
+        BlockNode method = Structure(blocks, loops, Entries());
 
         // Assert
         method.Statements.Should().HaveCount(4);
@@ -466,17 +421,17 @@ public class MethodStructurizerTest {
     [Fact]
     public void TwoArmsThatMeetAtAThirdBlockBecomeAnIfElse() {
         // Arrange
-        CfgBlock left = Block(11, 0x40);
-        CfgBlock right = Block(12, 0x50);
-        CfgBlock join = Block(13, 0x60);
-        NaturalLoopForest loops = Forest([_entry, left, right, join],
+        CfgBlock left = CfgTestHelpers.CreateBlock(11, 0x40);
+        CfgBlock right = CfgTestHelpers.CreateBlock(12, 0x50);
+        CfgBlock join = CfgTestHelpers.CreateBlock(13, 0x60);
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([_entry, left, right, join],
             new() { [_entry] = [left, right], [left] = [join], [right] = [join] });
         LoweredBlock leftBlock = Jumping(left, "left", join);
         LoweredBlock rightBlock = Jumping(right, "right", join);
         LoweredBlock[] blocks = [Deciding(_entry, left, right), leftBlock, rightBlock, Lowered(join, false, "join")];
 
         // Act
-        BlockNode method = MethodStructurizer.Structure(blocks, loops, Entries(), "method");
+        BlockNode method = Structure(blocks, loops, Entries());
 
         // Assert
         method.Statements.Should().HaveCount(4);
@@ -495,11 +450,11 @@ public class MethodStructurizerTest {
     [Fact]
     public void DivergingArmsNestOnlyTheArmWithTheLaterHead() {
         // Arrange
-        CfgBlock left = Block(11, 0x40);
-        CfgBlock right = Block(12, 0x50);
-        CfgBlock leftTail = Block(13, 0x60);
-        CfgBlock rightTail = Block(14, 0x70);
-        NaturalLoopForest loops = Forest([_entry, left, right, leftTail, rightTail],
+        CfgBlock left = CfgTestHelpers.CreateBlock(11, 0x40);
+        CfgBlock right = CfgTestHelpers.CreateBlock(12, 0x50);
+        CfgBlock leftTail = CfgTestHelpers.CreateBlock(13, 0x60);
+        CfgBlock rightTail = CfgTestHelpers.CreateBlock(14, 0x70);
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([_entry, left, right, leftTail, rightTail],
             new() { [_entry] = [left, right], [left] = [leftTail], [right] = [rightTail] });
         LoweredBlock[] blocks = [
             Deciding(_entry, left, right), Jumping(left, "left", leftTail), Jumping(right, "right", rightTail),
@@ -507,7 +462,7 @@ public class MethodStructurizerTest {
         ];
 
         // Act
-        BlockNode method = MethodStructurizer.Structure(blocks, loops, Entries(), "method");
+        BlockNode method = Structure(blocks, loops, Entries());
 
         // Assert
         method.Statements.Should().HaveCount(5);
@@ -520,11 +475,11 @@ public class MethodStructurizerTest {
     [Fact]
     public void ArmsWithTwoCommonExitsStayFlat() {
         // Arrange
-        CfgBlock left = Block(11, 0x40);
-        CfgBlock right = Block(12, 0x50);
-        CfgBlock first = Block(13, 0x60);
-        CfgBlock second = Block(14, 0x70);
-        NaturalLoopForest loops = Forest([_entry, left, right, first, second],
+        CfgBlock left = CfgTestHelpers.CreateBlock(11, 0x40);
+        CfgBlock right = CfgTestHelpers.CreateBlock(12, 0x50);
+        CfgBlock first = CfgTestHelpers.CreateBlock(13, 0x60);
+        CfgBlock second = CfgTestHelpers.CreateBlock(14, 0x70);
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([_entry, left, right, first, second],
             new() { [_entry] = [left, right], [left] = [first, second], [right] = [first, second] });
         LoweredBlock[] blocks = [
             Deciding(_entry, left, right), Deciding(left, first, second), Deciding(right, first, second),
@@ -532,7 +487,7 @@ public class MethodStructurizerTest {
         ];
 
         // Act
-        BlockNode method = MethodStructurizer.Structure(blocks, loops, Entries(), "method");
+        BlockNode method = Structure(blocks, loops, Entries());
 
         // Assert
         method.Statements.Should().NotContain(statement => statement is IfElseNode);
@@ -541,13 +496,13 @@ public class MethodStructurizerTest {
     [Fact]
     public void DiamondInsideAnArmIsNestedInsideTheOuterIfElse() {
         // Arrange
-        CfgBlock left = Block(11, 0x40);
-        CfgBlock innerTrue = Block(12, 0x50);
-        CfgBlock innerFalse = Block(13, 0x60);
-        CfgBlock innerJoin = Block(14, 0x70);
-        CfgBlock right = Block(15, 0x80);
-        CfgBlock join = Block(16, 0x90);
-        NaturalLoopForest loops = Forest([_entry, left, innerTrue, innerFalse, innerJoin, right, join],
+        CfgBlock left = CfgTestHelpers.CreateBlock(11, 0x40);
+        CfgBlock innerTrue = CfgTestHelpers.CreateBlock(12, 0x50);
+        CfgBlock innerFalse = CfgTestHelpers.CreateBlock(13, 0x60);
+        CfgBlock innerJoin = CfgTestHelpers.CreateBlock(14, 0x70);
+        CfgBlock right = CfgTestHelpers.CreateBlock(15, 0x80);
+        CfgBlock join = CfgTestHelpers.CreateBlock(16, 0x90);
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([_entry, left, innerTrue, innerFalse, innerJoin, right, join],
             new() {
                 [_entry] = [left, right], [left] = [innerTrue, innerFalse], [innerTrue] = [innerJoin],
                 [innerFalse] = [innerJoin], [innerJoin] = [join], [right] = [join]
@@ -559,7 +514,7 @@ public class MethodStructurizerTest {
         ];
 
         // Act
-        BlockNode method = MethodStructurizer.Structure(blocks, loops, Entries(), "method");
+        BlockNode method = Structure(blocks, loops, Entries());
 
         // Assert
         method.Statements.Should().HaveCount(4);
@@ -577,10 +532,10 @@ public class MethodStructurizerTest {
     [Fact]
     public void ArmHoldingTheLatchOfTheEnclosingLoopStaysFlat() {
         // Arrange
-        CfgBlock head = Block(11, 0x40);
-        CfgBlock body = Block(12, 0x50);
-        CfgBlock exit = Block(13, 0x60);
-        NaturalLoopForest loops = Forest([_entry, head, body, exit],
+        CfgBlock head = CfgTestHelpers.CreateBlock(11, 0x40);
+        CfgBlock body = CfgTestHelpers.CreateBlock(12, 0x50);
+        CfgBlock exit = CfgTestHelpers.CreateBlock(13, 0x60);
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([_entry, head, body, exit],
             new() { [_entry] = [head], [head] = [body, exit], [body] = [head, exit] });
         LoweredBlock headBlock = Deciding(head, exit, body) with { HasEntryCheck = true };
         LoweredBlock[] blocks = [
@@ -588,7 +543,7 @@ public class MethodStructurizerTest {
         ];
 
         // Act
-        BlockNode method = MethodStructurizer.Structure(blocks, loops, Entries(), "method");
+        BlockNode method = Structure(blocks, loops, Entries());
 
         // Assert
         DoWhileNode loop = method.Statements[1].Should().BeOfType<DoWhileNode>().Which;
@@ -599,10 +554,10 @@ public class MethodStructurizerTest {
     [Fact]
     public void LoopInsideAnArmIsStructuredInsideTheIf() {
         // Arrange
-        CfgBlock then = Block(11, 0x40);
-        CfgBlock spin = Block(12, 0x50);
-        CfgBlock join = Block(13, 0x60);
-        NaturalLoopForest loops = Forest([_entry, then, spin, join],
+        CfgBlock then = CfgTestHelpers.CreateBlock(11, 0x40);
+        CfgBlock spin = CfgTestHelpers.CreateBlock(12, 0x50);
+        CfgBlock join = CfgTestHelpers.CreateBlock(13, 0x60);
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([_entry, then, spin, join],
             new() { [_entry] = [then, join], [then] = [spin], [spin] = [spin, join] });
         LoweredBlock thenBlock = Jumping(then, "then", spin);
         LoweredBlock[] blocks = [
@@ -610,7 +565,7 @@ public class MethodStructurizerTest {
         ];
 
         // Act
-        BlockNode method = MethodStructurizer.Structure(blocks, loops, Entries(), "method");
+        BlockNode method = Structure(blocks, loops, Entries());
 
         // Assert
         method.Statements.Should().HaveCount(4);
@@ -623,26 +578,14 @@ public class MethodStructurizerTest {
         method.Statements[2].Should().BeOfType<GotoNode>().Which.Target.Should().BeSameAs(join.Entry);
     }
 
-    private static LoweredBlock Deciding(CfgBlock block, CfgBlock whenTrue, CfgBlock whenFalse) {
-        IfElseNode branch = new(Zero, new BlockNode(new GotoNode(whenTrue.Entry)), new BlockNode(new GotoNode(whenFalse.Entry)));
-        return new(block, false, new BlockNode(new InstructionBoundaryNode(block.Entry, "", new BlockNode(new CommentNode("decide"), branch))));
-    }
-
-    private static LoweredBlock Jumping(CfgBlock block, string name, CfgBlock target) =>
-        new(block, false, new BlockNode(new InstructionBoundaryNode(block.Entry, "", new BlockNode(new CommentNode(name), new GotoNode(target.Entry)))));
-
-    private HashSet<ICfgNode> Entries(params ICfgNode[] more) => [_entry.Entry, .. more];
-
-    private static FailAsUntestedNode Untested() => new([UntestedMessagePart.Literal("Untested near jump target at 1000:0000")]);
-
     [Fact]
     public void JumpTableArmsThatMeetAtOneJoinAreNestedInTheirCases() {
         // Arrange
-        CfgBlock first = Block(11, 0x40);
-        CfgBlock second = Block(12, 0x50);
-        CfgBlock third = Block(13, 0x60);
-        CfgBlock join = Block(14, 0x70);
-        NaturalLoopForest loops = Forest([_entry, first, second, third, join],
+        CfgBlock first = CfgTestHelpers.CreateBlock(11, 0x40);
+        CfgBlock second = CfgTestHelpers.CreateBlock(12, 0x50);
+        CfgBlock third = CfgTestHelpers.CreateBlock(13, 0x60);
+        CfgBlock join = CfgTestHelpers.CreateBlock(14, 0x70);
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([_entry, first, second, third, join],
             new() { [_entry] = [first, second, third], [first] = [join], [second] = [join], [third] = [join] });
         LoweredBlock dispatch = Dispatching(_entry, first, second, third);
         LoweredBlock firstBlock = Jumping(first, "first", join);
@@ -650,7 +593,7 @@ public class MethodStructurizerTest {
             Lowered(join, false, "join")];
 
         // Act
-        BlockNode method = MethodStructurizer.Structure(blocks, loops, Entries(), "method");
+        BlockNode method = Structure(blocks, loops, Entries());
 
         // Assert
         method.Statements.Should().HaveCount(4);
@@ -667,13 +610,13 @@ public class MethodStructurizerTest {
     [Fact]
     public void JumpTableArmsThatNeverLeaveAreNestedWithoutAJoin() {
         // Arrange
-        CfgBlock first = Block(11, 0x40);
-        CfgBlock second = Block(12, 0x50);
-        NaturalLoopForest loops = Forest([_entry, first, second], new() { [_entry] = [first, second] });
+        CfgBlock first = CfgTestHelpers.CreateBlock(11, 0x40);
+        CfgBlock second = CfgTestHelpers.CreateBlock(12, 0x50);
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([_entry, first, second], new() { [_entry] = [first, second] });
         LoweredBlock[] blocks = [Dispatching(_entry, first, second), Ending(first, "first"), Ending(second, "second")];
 
         // Act
-        BlockNode method = MethodStructurizer.Structure(blocks, loops, Entries(), "method");
+        BlockNode method = Structure(blocks, loops, Entries());
 
         // Assert
         method.Statements.Should().HaveCount(2);
@@ -684,14 +627,14 @@ public class MethodStructurizerTest {
     [Fact]
     public void DispatchWithOneNestableArmStaysFlat() {
         // Arrange
-        CfgBlock first = Block(11, 0x40);
-        CfgBlock second = Block(12, 0x50);
-        NaturalLoopForest loops = Forest([_entry, first, second], new() { [_entry] = [first, second], [first] = [second] });
+        CfgBlock first = CfgTestHelpers.CreateBlock(11, 0x40);
+        CfgBlock second = CfgTestHelpers.CreateBlock(12, 0x50);
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([_entry, first, second], new() { [_entry] = [first, second], [first] = [second] });
         LoweredBlock dispatch = Dispatching(_entry, first, second);
         LoweredBlock[] blocks = [dispatch, Jumping(first, "first", second), Ending(second, "second")];
 
         // Act
-        BlockNode method = MethodStructurizer.Structure(blocks, loops, Entries(), "method");
+        BlockNode method = Structure(blocks, loops, Entries());
 
         // Assert
         method.Statements[0].Should().BeSameAs(dispatch.Body.Statements[0]);
@@ -701,11 +644,11 @@ public class MethodStructurizerTest {
     [Fact]
     public void JumpTableArmsThatLeaveToDifferentBlocksStayFlat() {
         // Arrange
-        CfgBlock first = Block(11, 0x40);
-        CfgBlock second = Block(12, 0x50);
-        CfgBlock firstExit = Block(13, 0x60);
-        CfgBlock secondExit = Block(14, 0x70);
-        NaturalLoopForest loops = Forest([_entry, first, second, firstExit, secondExit],
+        CfgBlock first = CfgTestHelpers.CreateBlock(11, 0x40);
+        CfgBlock second = CfgTestHelpers.CreateBlock(12, 0x50);
+        CfgBlock firstExit = CfgTestHelpers.CreateBlock(13, 0x60);
+        CfgBlock secondExit = CfgTestHelpers.CreateBlock(14, 0x70);
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([_entry, first, second, firstExit, secondExit],
             new() { [_entry] = [first, second, firstExit, secondExit], [first] = [firstExit], [second] = [secondExit] });
         LoweredBlock dispatch = Dispatching(_entry, first, second, firstExit, secondExit);
         LoweredBlock[] blocks = [
@@ -714,7 +657,7 @@ public class MethodStructurizerTest {
         ];
 
         // Act
-        BlockNode method = MethodStructurizer.Structure(blocks, loops, Entries(), "method");
+        BlockNode method = Structure(blocks, loops, Entries());
 
         // Assert
         method.Statements[0].Should().BeSameAs(dispatch.Body.Statements[0]);
@@ -724,9 +667,9 @@ public class MethodStructurizerTest {
     [Fact]
     public void CallDispatchStaysFlat() {
         // Arrange
-        CfgBlock first = Block(11, 0x40);
-        CfgBlock second = Block(12, 0x50);
-        NaturalLoopForest loops = Forest([_entry, first, second], new() { [_entry] = [first, second] });
+        CfgBlock first = CfgTestHelpers.CreateBlock(11, 0x40);
+        CfgBlock second = CfgTestHelpers.CreateBlock(12, 0x50);
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([_entry, first, second], new() { [_entry] = [first, second] });
         SwitchNode calls = new(new ExplicitCastNode(DataType.UINT16, new RegisterNode(DataType.UINT16, 3)), [
             new SwitchSection(0x0040, new BlockNode(new MethodCallNode(null, "NearCall"), new GotoNode(first.Entry))),
             new SwitchSection(0x0050, new BlockNode(new MethodCallNode(null, "NearCall"), new GotoNode(second.Entry)))
@@ -736,31 +679,21 @@ public class MethodStructurizerTest {
         LoweredBlock[] blocks = [dispatch, Ending(first, "first"), Ending(second, "second")];
 
         // Act
-        BlockNode method = MethodStructurizer.Structure(blocks, loops, Entries(), "method");
+        BlockNode method = Structure(blocks, loops, Entries());
 
         // Assert
         method.Statements[0].Should().BeSameAs(dispatch.Body.Statements[0]);
         method.Statements.Should().NotContain(statement => statement is SwitchNode);
     }
 
-    private static LoweredBlock Dispatching(CfgBlock block, params CfgBlock[] targets) {
-        SwitchNode dispatch = new(new ExplicitCastNode(DataType.UINT16, new RegisterNode(DataType.UINT16, 3)),
-            targets.Select(target => new SwitchSection(target.Entry.Address.Offset, new BlockNode(new GotoNode(target.Entry)))).ToList(),
-            new BlockNode(Untested()));
-        return new(block, false, new BlockNode(new InstructionBoundaryNode(block.Entry, "", new BlockNode(new CommentNode("dispatch"), dispatch))));
-    }
-
-    private static LoweredBlock Ending(CfgBlock block, string name) =>
-        new(block, false, new BlockNode(new InstructionBoundaryNode(block.Entry, "", new BlockNode(new CommentNode(name), Untested()))));
-
     [Fact]
     public void ArmHeadTargetedByTwoGotosRecordsSharedTargetAndTheOtherArmNeverComesBack() {
         // Arrange
-        CfgBlock then = Block(11, 0x40);
-        CfgBlock other = Block(12, 0x50);
-        CfgBlock join = Block(13, 0x60);
-        CfgBlock late = Block(14, 0x70);
-        NaturalLoopForest loops = Forest([_entry, then, other, join, late],
+        CfgBlock then = CfgTestHelpers.CreateBlock(11, 0x40);
+        CfgBlock other = CfgTestHelpers.CreateBlock(12, 0x50);
+        CfgBlock join = CfgTestHelpers.CreateBlock(13, 0x60);
+        CfgBlock late = CfgTestHelpers.CreateBlock(14, 0x70);
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([_entry, then, other, join, late],
             new() { [_entry] = [then, other], [then] = [join], [other] = [join], [late] = [other] });
         GotoNode trueGoto = new(then.Entry);
         GotoNode falseGoto = new(other.Entry);
@@ -773,7 +706,7 @@ public class MethodStructurizerTest {
         Dictionary<GotoNode, GotoKeepReason> refusals = new(ReferenceEqualityComparer.Instance);
 
         // Act
-        MethodStructurizer.Structure(blocks, loops, Entries(), "method", refusals);
+        MethodStructurizer.Structure(blocks, loops, Entries(), "method", refusals, placeLoopExits: false);
 
         // Assert
         refusals.Should().HaveCount(2);
@@ -792,7 +725,7 @@ public class MethodStructurizerTest {
         Dictionary<GotoNode, GotoKeepReason> refusals = new(ReferenceEqualityComparer.Instance);
 
         // Act
-        MethodStructurizer.Structure(blocks, _loops, Entries(), "method", refusals);
+        MethodStructurizer.Structure(blocks, _loops, Entries(), "method", refusals, placeLoopExits: false);
 
         // Assert
         refusals.Should().ContainSingle().Which.Should().Be(new KeyValuePair<GotoNode, GotoKeepReason>(trueGoto, GotoKeepReason.OtherArmNotGoto));
@@ -801,37 +734,27 @@ public class MethodStructurizerTest {
     [Fact]
     public void NestedBranchRecordsNoRefusal() {
         // Arrange
-        CfgBlock then = Block(11, 0x40);
-        CfgBlock join = Block(12, 0x50);
-        NaturalLoopForest loops = Forest([_entry, then, join], new() { [_entry] = [then, join], [then] = [join] });
+        CfgBlock then = CfgTestHelpers.CreateBlock(11, 0x40);
+        CfgBlock join = CfgTestHelpers.CreateBlock(12, 0x50);
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([_entry, then, join], new() { [_entry] = [then, join], [then] = [join] });
         LoweredBlock[] blocks = [Deciding(_entry, then, join), Jumping(then, "then", join), Lowered(join, false, "join")];
         Dictionary<GotoNode, GotoKeepReason> refusals = new(ReferenceEqualityComparer.Instance);
 
         // Act
-        MethodStructurizer.Structure(blocks, loops, Entries(), "method", refusals);
+        MethodStructurizer.Structure(blocks, loops, Entries(), "method", refusals, placeLoopExits: false);
 
         // Assert
         refusals.Should().BeEmpty();
     }
 
-    private static LoweredBlock Returning(CfgBlock block, string name) =>
-        new(block, false, new BlockNode(new InstructionBoundaryNode(block.Entry, "",
-            new BlockNode(new CommentNode(name), new ReturnNode(new MethodCallNode(null, "NearRet"))))));
-
-    private static LoweredBlock BranchingTo(CfgBlock block, CfgBlock whenTrue, CfgBlock whenFalse) {
-        IfElseNode branch = new(Zero, new BlockNode(new GotoNode(whenTrue.Entry)), new BlockNode(new GotoNode(whenFalse.Entry)));
-        return new(block, false, new BlockNode(new InstructionBoundaryNode(block.Entry, "",
-            new BlockNode(new CommentNode("decide"), branch))));
-    }
-
     [Fact]
     public void DivergingTrueArmIsNestedAndTheOtherTargetFollowsFlat() {
         // Arrange
-        CfgBlock a = Block(11, 0x40);
-        CfgBlock c = Block(12, 0x50);
-        CfgBlock late = Block(13, 0x60);
-        CfgBlock end = Block(14, 0x70);
-        NaturalLoopForest loops = Forest([_entry, a, c, late, end],
+        CfgBlock a = CfgTestHelpers.CreateBlock(11, 0x40);
+        CfgBlock c = CfgTestHelpers.CreateBlock(12, 0x50);
+        CfgBlock late = CfgTestHelpers.CreateBlock(13, 0x60);
+        CfgBlock end = CfgTestHelpers.CreateBlock(14, 0x70);
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([_entry, a, c, late, end],
             new() { [_entry] = [a, c, late], [c] = [end], [late] = [end] });
         LoweredBlock deadGoto = new(late, false, new BlockNode(new InstructionBoundaryNode(late.Entry, "",
             new BlockNode(new CommentNode("late"), Untested(), new GotoNode(c.Entry)))));
@@ -841,7 +764,7 @@ public class MethodStructurizerTest {
         Dictionary<GotoNode, GotoKeepReason> refusals = new(ReferenceEqualityComparer.Instance);
 
         // Act
-        BlockNode structured = MethodStructurizer.Structure(blocks, loops, Entries(), "method", refusals);
+        BlockNode structured = MethodStructurizer.Structure(blocks, loops, Entries(), "method", refusals, placeLoopExits: false);
         BlockNode body = FallthroughGotoRemover.Remove(structured);
 
         // Assert
@@ -857,11 +780,11 @@ public class MethodStructurizerTest {
     [Fact]
     public void DivergingFalseArmIsNestedUnderTheNegatedCondition() {
         // Arrange
-        CfgBlock b = Block(11, 0x40);
-        CfgBlock c = Block(12, 0x50);
-        CfgBlock late = Block(13, 0x60);
-        CfgBlock end = Block(14, 0x70);
-        NaturalLoopForest loops = Forest([_entry, b, c, late, end],
+        CfgBlock b = CfgTestHelpers.CreateBlock(11, 0x40);
+        CfgBlock c = CfgTestHelpers.CreateBlock(12, 0x50);
+        CfgBlock late = CfgTestHelpers.CreateBlock(13, 0x60);
+        CfgBlock end = CfgTestHelpers.CreateBlock(14, 0x70);
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([_entry, b, c, late, end],
             new() { [_entry] = [c, b, late], [c] = [end], [late] = [end] });
         LoweredBlock deadGoto = new(late, false, new BlockNode(new InstructionBoundaryNode(late.Entry, "",
             new BlockNode(new CommentNode("late"), Untested(), new GotoNode(c.Entry)))));
@@ -871,7 +794,7 @@ public class MethodStructurizerTest {
         Dictionary<GotoNode, GotoKeepReason> refusals = new(ReferenceEqualityComparer.Instance);
 
         // Act
-        BlockNode structured = MethodStructurizer.Structure(blocks, loops, Entries(), "method", refusals);
+        BlockNode structured = MethodStructurizer.Structure(blocks, loops, Entries(), "method", refusals, placeLoopExits: false);
         BlockNode body = FallthroughGotoRemover.Remove(structured);
 
         // Assert
@@ -886,14 +809,14 @@ public class MethodStructurizerTest {
     [Fact]
     public void TwoDivergingArmsNestOnlyTheLaterArm() {
         // Arrange
-        CfgBlock a = Block(11, 0x40);
-        CfgBlock b = Block(12, 0x50);
-        NaturalLoopForest loops = Forest([_entry, a, b], new() { [_entry] = [a, b] });
+        CfgBlock a = CfgTestHelpers.CreateBlock(11, 0x40);
+        CfgBlock b = CfgTestHelpers.CreateBlock(12, 0x50);
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([_entry, a, b], new() { [_entry] = [a, b] });
         LoweredBlock[] blocks = [BranchingTo(_entry, a, b), Returning(a, "a"), Returning(b, "b")];
         Dictionary<GotoNode, GotoKeepReason> refusals = new(ReferenceEqualityComparer.Instance);
 
         // Act
-        BlockNode structured = MethodStructurizer.Structure(blocks, loops, Entries(), "method", refusals);
+        BlockNode structured = MethodStructurizer.Structure(blocks, loops, Entries(), "method", refusals, placeLoopExits: false);
         BlockNode body = FallthroughGotoRemover.Remove(structured);
 
         // Assert
@@ -910,11 +833,11 @@ public class MethodStructurizerTest {
     [Fact]
     public void DivergingArmHeadTargetedByTwoGotosIsNotNested() {
         // Arrange
-        CfgBlock late = Block(11, 0x40);
-        CfgBlock a = Block(12, 0x50);
-        CfgBlock c = Block(13, 0x60);
-        CfgBlock end = Block(14, 0x70);
-        NaturalLoopForest loops = Forest([_entry, late, a, c, end],
+        CfgBlock late = CfgTestHelpers.CreateBlock(11, 0x40);
+        CfgBlock a = CfgTestHelpers.CreateBlock(12, 0x50);
+        CfgBlock c = CfgTestHelpers.CreateBlock(13, 0x60);
+        CfgBlock end = CfgTestHelpers.CreateBlock(14, 0x70);
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([_entry, late, a, c, end],
             new() { [_entry] = [a, c, late], [late] = [a, end], [c] = [end] });
         GotoNode trueGoto = new(a.Entry);
         LoweredBlock decide = new(_entry, false, new BlockNode(new InstructionBoundaryNode(_entry.Entry, "",
@@ -926,67 +849,11 @@ public class MethodStructurizerTest {
         Dictionary<GotoNode, GotoKeepReason> refusals = new(ReferenceEqualityComparer.Instance);
 
         // Act
-        BlockNode body = MethodStructurizer.Structure(blocks, loops, Entries(), "method", refusals);
+        BlockNode body = MethodStructurizer.Structure(blocks, loops, Entries(), "method", refusals, placeLoopExits: false);
 
         // Assert
         body.Statements[2].Should().BeOfType<InstructionBoundaryNode>().Which.Node.Should().BeSameAs(a.Entry);
         refusals[trueGoto].Should().Be(GotoKeepReason.SharedTarget);
-    }
-
-    private LoweredBlock[] TwoExitLoopBlocks(CfgBlock head, CfgBlock mid, CfgBlock tail, CfgBlock x, CfgBlock y,
-        CfgBlock z, CfgBlock end, bool tie) {
-        IVisitableAstNode midExit = tie ? new GotoNode(x.Entry) : new GotoNode(y.Entry);
-        BlockNode tailExit = tie
-            ? new BlockNode(new CommentNode("still in the loop"))
-            : new BlockNode(new GotoNode(x.Entry), new CommentNode("after the goto"));
-        LoweredBlock headBlock = new(head, true, new BlockNode(new InstructionBoundaryNode(head.Entry, "",
-            new BlockNode(new CommentNode("head"), new IfElseNode(Zero, new BlockNode(new GotoNode(mid.Entry)), new BlockNode(new GotoNode(y.Entry)))))));
-        LoweredBlock midBlock = new(mid, false, new BlockNode(new InstructionBoundaryNode(mid.Entry, "",
-            new BlockNode(new CommentNode("mid"), new IfElseNode(Zero, new BlockNode(new GotoNode(tail.Entry)), new BlockNode(midExit))))));
-        LoweredBlock tailBlock = new(tail, false, new BlockNode(new InstructionBoundaryNode(tail.Entry, "",
-            new BlockNode(new CommentNode("tail"), new IfElseNode(Zero, new BlockNode(new GotoNode(head.Entry)), tailExit)))));
-        return [
-            Lowered(_entry, true, "entry"), headBlock, midBlock, tailBlock,
-            Jumping(x, "x", end), Jumping(y, "y", z), Jumping(z, "z", end), Lowered(end, false, "end")
-        ];
-    }
-
-    private (NaturalLoopForest Loops, CfgBlock Head, CfgBlock Mid, CfgBlock Tail, CfgBlock X, CfgBlock Y, CfgBlock Z, CfgBlock End) TwoExitLoop() {
-        CfgBlock head = Block(11, 0x40);
-        CfgBlock mid = Block(12, 0x50);
-        CfgBlock tail = Block(13, 0x60);
-        CfgBlock x = Block(14, 0x70);
-        CfgBlock y = Block(15, 0x80);
-        CfgBlock z = Block(17, 0xA0);
-        CfgBlock end = Block(16, 0x90);
-        NaturalLoopForest loops = Forest([_entry, head, mid, tail, x, y, z, end],
-            new() { [_entry] = [head], [head] = [mid, y], [mid] = [tail, y], [tail] = [head, x], [x] = [end], [y] = [z], [z] = [end] });
-        return (loops, head, mid, tail, x, y, z, end);
-    }
-
-    private static int CountNodes<T>(IVisitableAstNode node, Func<T, bool> matches) {
-        int count = node is T match && matches(match) ? 1 : 0;
-        switch (node) {
-            case BlockNode block:
-                return count + block.Statements.Sum(statement => CountNodes(statement, matches));
-            case InstructionBoundaryNode boundary:
-                return count + CountNodes(boundary.Body, matches);
-            case IfElseNode ifElse:
-                return count + CountNodes(ifElse.TrueCase, matches) + CountNodes(ifElse.FalseCase, matches);
-            case WhileNode whileNode:
-                return count + CountNodes(whileNode.Body, matches);
-            case InfiniteLoopNode infiniteLoop:
-                return count + CountNodes(infiniteLoop.Body, matches);
-            case DoWhileNode doWhile:
-                return count + CountNodes(doWhile.Body, matches);
-            case SwitchNode switchNode:
-                return count + switchNode.Sections.Sum(section => CountNodes(section.Body, matches))
-                    + CountNodes(switchNode.Default, matches);
-            case CpuFaultTryCatchNode tryCatch:
-                return count + CountNodes(tryCatch.Body, matches);
-            default:
-                return count;
-        }
     }
 
     [Fact]
@@ -1043,5 +910,138 @@ public class MethodStructurizerTest {
         body.Statements[1].Should().BeOfType<InfiniteLoopNode>();
         body.Statements[2].Should().BeOfType<InstructionBoundaryNode>().Which.Node.Should().BeSameAs(x.Entry);
         body.Statements[3].Should().BeOfType<InstructionBoundaryNode>().Which.Node.Should().BeSameAs(y.Entry);
+    }
+
+    private static BlockNode Structure(IReadOnlyList<LoweredBlock> blocks, NaturalLoopForest loops, IReadOnlySet<ICfgNode> entryNodes) =>
+        MethodStructurizer.Structure(blocks, loops, entryNodes, "method",
+            new Dictionary<GotoNode, GotoKeepReason>(ReferenceEqualityComparer.Instance), placeLoopExits: false);
+
+    private static LoweredBlock Lowered(CfgBlock block, bool hasEntryCheck, string name) =>
+        new(block, hasEntryCheck, new BlockNode(new CommentNode(name)));
+
+    private static LoweredBlock Branching(CfgBlock block, CfgBlock header, IVisitableAstNode exit) {
+        IfElseNode branch = new(Zero, new BlockNode(new GotoNode(header.Entry)), new BlockNode(exit));
+        string name = ReferenceEquals(block, header) ? "inner" : "latch";
+        return new(block, ReferenceEquals(block, header),
+            new BlockNode(new InstructionBoundaryNode(block.Entry, "", new BlockNode(new CommentNode(name), branch))));
+    }
+
+    private static LoweredBlock Deciding(CfgBlock block, CfgBlock whenTrue, CfgBlock whenFalse) {
+        IfElseNode branch = new(Zero, new BlockNode(new GotoNode(whenTrue.Entry)), new BlockNode(new GotoNode(whenFalse.Entry)));
+        return new(block, false, new BlockNode(new InstructionBoundaryNode(block.Entry, "", new BlockNode(new CommentNode("decide"), branch))));
+    }
+
+    private static LoweredBlock Jumping(CfgBlock block, string name, CfgBlock target) =>
+        new(block, false, new BlockNode(new InstructionBoundaryNode(block.Entry, "", new BlockNode(new CommentNode(name), new GotoNode(target.Entry)))));
+
+    private static LoweredBlock Dispatching(CfgBlock block, params CfgBlock[] targets) {
+        SwitchNode dispatch = new(new ExplicitCastNode(DataType.UINT16, new RegisterNode(DataType.UINT16, 3)),
+            targets.Select(target => new SwitchSection(target.Entry.Address.Offset, new BlockNode(new GotoNode(target.Entry)))).ToList(),
+            new BlockNode(Untested()));
+        return new(block, false, new BlockNode(new InstructionBoundaryNode(block.Entry, "", new BlockNode(new CommentNode("dispatch"), dispatch))));
+    }
+
+    private static LoweredBlock Ending(CfgBlock block, string name) =>
+        new(block, false, new BlockNode(new InstructionBoundaryNode(block.Entry, "", new BlockNode(new CommentNode(name), Untested()))));
+
+    private static LoweredBlock Returning(CfgBlock block, string name) =>
+        new(block, false, new BlockNode(new InstructionBoundaryNode(block.Entry, "",
+            new BlockNode(new CommentNode(name), new ReturnNode(new MethodCallNode(null, "NearRet"))))));
+
+    private static LoweredBlock BranchingTo(CfgBlock block, CfgBlock whenTrue, CfgBlock whenFalse) {
+        IfElseNode branch = new(Zero, new BlockNode(new GotoNode(whenTrue.Entry)), new BlockNode(new GotoNode(whenFalse.Entry)));
+        return new(block, false, new BlockNode(new InstructionBoundaryNode(block.Entry, "",
+            new BlockNode(new CommentNode("decide"), branch))));
+    }
+
+    private static FailAsUntestedNode Untested() => new([UntestedMessagePart.Literal("Untested near jump target at 1000:0000")]);
+
+    private IfElseNode BackEdgeIf(ValueNode condition, bool toHeaderWhenTrue, IVisitableAstNode exit) {
+        BlockNode backEdge = new(new GotoNode(_spin.Entry));
+        BlockNode exitArm = new(exit);
+        if (toHeaderWhenTrue) {
+            return new IfElseNode(condition, backEdge, exitArm);
+        }
+        return new IfElseNode(condition, exitArm, backEdge);
+    }
+
+    private IVisitableAstNode Terminator(string name) => name switch {
+        "conditionReadsLocal" => BackEdgeIf(new VariableDeclarationNode(DataType.BOOL, "equal", Zero).Reference,
+            toHeaderWhenTrue: true, new GotoNode(_exit.Entry)),
+        "exitArmHasCode" => new IfElseNode(Zero, new BlockNode(new GotoNode(_spin.Entry)),
+            new BlockNode(new MethodCallNode(null, "Foo"), new GotoNode(_exit.Entry))),
+        "bothArmsRestart" => new IfElseNode(Zero, new BlockNode(new GotoNode(_spin.Entry)), new BlockNode(new GotoNode(_spin.Entry))),
+        "noBackEdge" => new IfElseNode(Zero, new BlockNode(new GotoNode(_exit.Entry)), new BlockNode(new GotoNode(_entry.Entry))),
+        "untestedMessageReadsRegister" => BackEdgeIf(Zero, toHeaderWhenTrue: true, new FailAsUntestedNode([
+            UntestedMessagePart.Literal("Untested near jump target 0x"),
+            UntestedMessagePart.Hole(new RegisterNode(DataType.UINT16, 0), "X4")])),
+        "tryCatch" => new CpuFaultTryCatchNode(
+            new BlockNode(BackEdgeIf(Zero, toHeaderWhenTrue: true, new GotoNode(_exit.Entry))),
+            new SegmentedAddress(0x1000, 0x0010), []),
+        _ => throw new ArgumentOutOfRangeException(nameof(name), name, "Unknown terminator.")
+    };
+
+    private LoweredBlock Spin(IVisitableAstNode terminator) =>
+        new(_spin, true, new BlockNode(new InstructionBoundaryNode(_spin.Entry, "", new BlockNode(new CommentNode("spin"), terminator))));
+
+    private BlockNode StructureWith(LoweredBlock spin, IReadOnlySet<ICfgNode> entryNodes) =>
+        Structure([Lowered(_entry, true, "entry"), spin, Lowered(_exit, false, "exit")], _loops, entryNodes);
+
+    private HashSet<ICfgNode> Entries(params ICfgNode[] more) => [_entry.Entry, .. more];
+
+    private LoweredBlock[] TwoExitLoopBlocks(CfgBlock head, CfgBlock mid, CfgBlock tail, CfgBlock x, CfgBlock y,
+        CfgBlock z, CfgBlock end, bool tie) {
+        IVisitableAstNode midExit = tie ? new GotoNode(x.Entry) : new GotoNode(y.Entry);
+        BlockNode tailExit = tie
+            ? new BlockNode(new CommentNode("still in the loop"))
+            : new BlockNode(new GotoNode(x.Entry), new CommentNode("after the goto"));
+        LoweredBlock headBlock = new(head, true, new BlockNode(new InstructionBoundaryNode(head.Entry, "",
+            new BlockNode(new CommentNode("head"), new IfElseNode(Zero, new BlockNode(new GotoNode(mid.Entry)), new BlockNode(new GotoNode(y.Entry)))))));
+        LoweredBlock midBlock = new(mid, false, new BlockNode(new InstructionBoundaryNode(mid.Entry, "",
+            new BlockNode(new CommentNode("mid"), new IfElseNode(Zero, new BlockNode(new GotoNode(tail.Entry)), new BlockNode(midExit))))));
+        LoweredBlock tailBlock = new(tail, false, new BlockNode(new InstructionBoundaryNode(tail.Entry, "",
+            new BlockNode(new CommentNode("tail"), new IfElseNode(Zero, new BlockNode(new GotoNode(head.Entry)), tailExit)))));
+        return [
+            Lowered(_entry, true, "entry"), headBlock, midBlock, tailBlock,
+            Jumping(x, "x", end), Jumping(y, "y", z), Jumping(z, "z", end), Lowered(end, false, "end")
+        ];
+    }
+
+    private (NaturalLoopForest Loops, CfgBlock Head, CfgBlock Mid, CfgBlock Tail, CfgBlock X, CfgBlock Y, CfgBlock Z, CfgBlock End) TwoExitLoop() {
+        CfgBlock head = CfgTestHelpers.CreateBlock(11, 0x40);
+        CfgBlock mid = CfgTestHelpers.CreateBlock(12, 0x50);
+        CfgBlock tail = CfgTestHelpers.CreateBlock(13, 0x60);
+        CfgBlock x = CfgTestHelpers.CreateBlock(14, 0x70);
+        CfgBlock y = CfgTestHelpers.CreateBlock(15, 0x80);
+        CfgBlock z = CfgTestHelpers.CreateBlock(17, 0xA0);
+        CfgBlock end = CfgTestHelpers.CreateBlock(16, 0x90);
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([_entry, head, mid, tail, x, y, z, end],
+            new() { [_entry] = [head], [head] = [mid, y], [mid] = [tail, y], [tail] = [head, x], [x] = [end], [y] = [z], [z] = [end] });
+        return (loops, head, mid, tail, x, y, z, end);
+    }
+
+    private static int CountNodes<T>(IVisitableAstNode node, Func<T, bool> matches) {
+        int count = node is T match && matches(match) ? 1 : 0;
+        switch (node) {
+            case BlockNode block:
+                return count + block.Statements.Sum(statement => CountNodes(statement, matches));
+            case InstructionBoundaryNode boundary:
+                return count + CountNodes(boundary.Body, matches);
+            case IfElseNode ifElse:
+                return count + CountNodes(ifElse.TrueCase, matches) + CountNodes(ifElse.FalseCase, matches);
+            case WhileNode whileNode:
+                return count + CountNodes(whileNode.Body, matches);
+            case InfiniteLoopNode infiniteLoop:
+                return count + CountNodes(infiniteLoop.Body, matches);
+            case DoWhileNode doWhile:
+                return count + CountNodes(doWhile.Body, matches);
+            case SwitchNode switchNode:
+                return count + switchNode.Sections.Sum(section => CountNodes(section.Body, matches))
+                    + CountNodes(switchNode.Default, matches);
+            case CpuFaultTryCatchNode tryCatch:
+                return count + CountNodes(tryCatch.Body, matches);
+            default:
+                return count;
+        }
     }
 }

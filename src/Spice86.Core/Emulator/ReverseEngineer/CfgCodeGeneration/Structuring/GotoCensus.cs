@@ -8,9 +8,12 @@ internal sealed class GotoCensus {
     public int Total { get; private set; }
 
     /// <summary>Adds one <c>goto</c> of <paramref name="reason"/>.</summary>
-    public void Add(GotoKeepReason reason) {
-        _counts[(int)reason]++;
-        Total++;
+    public void Add(GotoKeepReason reason) => Add(reason, 1);
+
+    /// <summary>Adds <paramref name="count"/> <c>goto</c>s of <paramref name="reason"/>.</summary>
+    public void Add(GotoKeepReason reason, int count) {
+        _counts[(int)reason] += count;
+        Total += count;
     }
 
     /// <summary>Adds every count of <paramref name="other"/> to this census.</summary>

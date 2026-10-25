@@ -12,8 +12,6 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph.Analysis;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Structuring;
-using Spice86.Core.Emulator.ReverseEngineer.Graph;
-using Spice86.Shared.Emulator.Memory;
 using Spice86.Tests.CfgCpu.Blocks;
 
 using Xunit;
@@ -22,9 +20,6 @@ using static Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast.CodeGen
 
 public class TailDuplicatorTest {
     private static readonly CpuFlagNode Zero = new(Flags.Zero);
-
-    private static CfgBlock Block(int id, ushort offset) =>
-        new(id, CfgTestHelpers.CreateInstruction(new SegmentedAddress(0x1000, offset)));
 
     private static InstructionBoundaryNode Boundary(CfgBlock block, params IVisitableAstNode[] body) =>
         new(block.Entry, "", new BlockNode(body));
@@ -36,12 +31,6 @@ public class TailDuplicatorTest {
     private static bool IsBoundaryOf(IVisitableAstNode node, ICfgNode target) =>
         node is InstructionBoundaryNode boundary && ReferenceEquals(boundary.Node, target);
 
-    private static NaturalLoopForest Forest(IReadOnlyList<CfgBlock> blocks, Dictionary<CfgBlock, IReadOnlyList<CfgBlock>> successors) {
-        PartitionBlockGraph graph = new(blocks, [blocks[0]], successors, new Dictionary<CfgBlock, CfgBlock?>());
-        DepthFirstOrdering<CfgBlock> traversal = new([.. graph.EntryBlocks, .. graph.Blocks], graph.GetSuccessors);
-        return NaturalLoopForest.Build(graph, traversal.RetreatingEdges);
-    }
-
     /// <summary>A one-boundary block that ends in <c>throw FailAsUntested</c>: the smallest duplicable tail.</summary>
     private static LoweredBlock ThrowTail(CfgBlock block, string name) =>
         new(block, false, new BlockNode(Boundary(block, new CommentNode(name), Untested())));
@@ -52,13 +41,13 @@ public class TailDuplicatorTest {
     [Fact]
     public void GotoToUnreachableThrowTailIsReplacedByTheTailBody() {
         // Arrange
-        CfgBlock source = Block(1, 0x00);
-        CfgBlock tail = Block(2, 0x10);
+        CfgBlock source = CfgTestHelpers.CreateBlock(1, 0x00);
+        CfgBlock tail = CfgTestHelpers.CreateBlock(2, 0x10);
         BlockNode body = Sequence(
             new IfElseNode(Zero, new BlockNode(new GotoNode(tail.Entry)), Empty()),
             Untested(),
             Boundary(tail, new CommentNode("tail"), Untested()));
-        NaturalLoopForest loops = Forest([source, tail], new() { [source] = [tail] });
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([source, tail], new() { [source] = [tail] });
 
         // Act
         BlockNode result = Apply(body, ThrowTail(tail, "tail"), new HashSet<ICfgNode>(), loops);
@@ -75,13 +64,13 @@ public class TailDuplicatorTest {
     [Fact]
     public void GotoToReachableThrowTailIsReplacedButTheTailStays() {
         // Arrange
-        CfgBlock source = Block(1, 0x00);
-        CfgBlock tail = Block(2, 0x10);
+        CfgBlock source = CfgTestHelpers.CreateBlock(1, 0x00);
+        CfgBlock tail = CfgTestHelpers.CreateBlock(2, 0x10);
         BlockNode body = Sequence(
             new IfElseNode(Zero, new BlockNode(new GotoNode(tail.Entry)), Empty()),
             new CommentNode("falls through"),
             Boundary(tail, new CommentNode("tail"), Untested()));
-        NaturalLoopForest loops = Forest([source, tail], new() { [source] = [tail] });
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([source, tail], new() { [source] = [tail] });
 
         // Act
         BlockNode result = Apply(body, ThrowTail(tail, "tail"), new HashSet<ICfgNode>(), loops);
@@ -95,9 +84,9 @@ public class TailDuplicatorTest {
     [Fact]
     public void NonDuplicableTailsKeepTheirGoto() {
         // Arrange
-        CfgBlock source = Block(1, 0x00);
-        CfgBlock tail = Block(2, 0x10);
-        NaturalLoopForest loops = Forest([source, tail], new() { [source] = [tail] });
+        CfgBlock source = CfgTestHelpers.CreateBlock(1, 0x00);
+        CfgBlock tail = CfgTestHelpers.CreateBlock(2, 0x10);
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([source, tail], new() { [source] = [tail] });
         BlockNode MakeBody() => Sequence(
             new IfElseNode(Zero, new BlockNode(new GotoNode(tail.Entry)), Empty()),
             Untested(),
@@ -127,13 +116,13 @@ public class TailDuplicatorTest {
     [Fact]
     public void EveryGotoToTheTailIsReplaced() {
         // Arrange
-        CfgBlock source = Block(1, 0x00);
-        CfgBlock tail = Block(2, 0x10);
+        CfgBlock source = CfgTestHelpers.CreateBlock(1, 0x00);
+        CfgBlock tail = CfgTestHelpers.CreateBlock(2, 0x10);
         BlockNode body = Sequence(
             new IfElseNode(Zero, new BlockNode(new GotoNode(tail.Entry)), new BlockNode(new GotoNode(tail.Entry))),
             Untested(),
             Boundary(tail, new CommentNode("tail"), Untested()));
-        NaturalLoopForest loops = Forest([source, tail], new() { [source] = [tail] });
+        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([source, tail], new() { [source] = [tail] });
 
         // Act
         BlockNode result = Apply(body, ThrowTail(tail, "tail"), new HashSet<ICfgNode>(), loops);

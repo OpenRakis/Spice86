@@ -2,7 +2,6 @@ namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
-using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Structuring;
 
 using System.Linq;
 
@@ -23,21 +22,12 @@ internal static class WhileConditionLoops {
         return new BlockNode(statements.ToArray());
     }
 
-    private static IVisitableAstNode RewriteStatement(IVisitableAstNode statement) => statement switch {
-        BlockNode nested => RewriteBlock(nested),
-        InstructionBoundaryNode boundary => boundary with { Body = RewriteBlock(boundary.Body) },
-        IfElseNode ifElse => new IfElseNode(ifElse.Condition, RewriteBlock(Sequence(ifElse.TrueCase)),
-            RewriteBlock(Sequence(ifElse.FalseCase))),
-        InfiniteLoopNode loop => TryConvert(loop with { Body = RewriteBlock(loop.Body) }),
-        DoWhileNode doWhile => doWhile with { Body = RewriteBlock(doWhile.Body) },
-        WhileNode whileNode => new WhileNode(whileNode.Condition, RewriteBlock(whileNode.Body)),
-        SwitchNode switchNode => switchNode with {
-            Sections = switchNode.Sections.Select(section => section with { Body = RewriteBlock(section.Body) }).ToList(),
-            Default = RewriteBlock(switchNode.Default)
-        },
-        CpuFaultTryCatchNode tryCatch => tryCatch with { Body = RewriteBlock(tryCatch.Body) },
-        _ => statement
-    };
+    private static IVisitableAstNode RewriteStatement(IVisitableAstNode statement) {
+        if (statement is InfiniteLoopNode loop) {
+            return TryConvert(loop with { Body = RewriteBlock(loop.Body) });
+        }
+        return WithRewrittenBodies(statement, RewriteBlock);
+    }
 
     private static bool OnlyCheckOrComment(IVisitableAstNode statement) =>
         statement is CheckExternalEventsNode or CommentNode;
@@ -48,7 +38,7 @@ internal static class WhileConditionLoops {
     private static bool IsExitTest(IfElseNode node) =>
         Sequence(node.TrueCase).Statements is [BreakNode]
         && IsEmpty(Sequence(node.FalseCase))
-        && MethodStructurizer.ReadsOnlyMachineState(node.Condition);
+        && ReadsOnlyMachineState(node.Condition);
 
     private static IVisitableAstNode TryConvert(InfiniteLoopNode loop) {
         List<IVisitableAstNode> statements = [.. loop.Body.Statements];

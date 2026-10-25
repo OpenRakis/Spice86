@@ -143,7 +143,7 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
         if (TryGetConstantWord(node.TargetIp) is not ushort targetOffset) {
             CallContinuation runtimeContinuation = Context.ResolveCallContinuation(node.Instruction);
             return BuildNearRuntimeDispatch(node.Instruction, node.TargetIp, "call",
-                edge => CallBranchBody(node.Instruction, runtimeContinuation, helperName, edge, isFarCall: false));
+                edge => CallBranchBody(node.Instruction, runtimeContinuation, helperName, edge));
         }
 
         ResolvedCfgEdge targetEdge = Context.ResolveEdge(node.Instruction, InstructionSuccessorType.Normal,
@@ -287,7 +287,8 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
     };
 
     /// <summary>
-    /// Whether <paramref name="node"/> only sets <c>State.InterruptShadowing</c>. Generated code drops it: its event checks
+    /// Whether <paramref name="node"/> only sets <c>State.InterruptShadowing</c>: the <c>if (!InterruptFlag)</c> form comes
+    /// from <c>sti</c> and the plain assignment from <c>mov ss</c> / <c>lss</c>. Generated code drops it: its event checks
     /// never read the flag, which would only reach the interpreter stale when control returns to it.
     /// </summary>
     private static bool SetsInterruptShadowing(IVisitableAstNode node) => node switch {
@@ -436,10 +437,9 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
     }
 
     private IVisitableAstNode CallBranchBody(CfgInstruction instruction, CallContinuation continuation,
-        string helperName, ResolvedCfgEdge edge, bool isFarCall) {
-        ushort? targetCs = isFarCall ? edge.Target.Address.Segment : null;
+        string helperName, ResolvedCfgEdge edge) {
         return Sequence(
-            Transfer.CallHelper(helperName, continuation.ExpectedReturnAddress, Transfer.FunctionReference(edge), targetCs),
+            Transfer.CallHelper(helperName, continuation.ExpectedReturnAddress, Transfer.FunctionReference(edge), null),
             Transfer.EmitPostCallContinuation(instruction, continuation));
     }
 

@@ -18,7 +18,11 @@ using static Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast.CodeGen
 /// recorded refusals, the natural loops, the partition entries, the block layout), never from the printed text.
 /// </summary>
 internal static class GotoCensusClassifier {
-    /// <summary>Classifies every <c>goto</c> of one method.</summary>
+    /// <summary>
+    /// Classifies every <c>goto</c> of one method. Reasons found from the graph (entry, non-structurable loop,
+    /// loop restart / exit, irreducible) take precedence over the reason the structurizer recorded, which takes
+    /// precedence over the fallbacks <see cref="GotoKeepReason.SharedTarget"/> and <see cref="GotoKeepReason.NotNextInLayout"/>.
+    /// </summary>
     /// <param name="entryDispatch">The entry dispatch block of the method (<c>switch (loadOffset)</c>), possibly empty.</param>
     /// <param name="body">The method body after the fallthrough <c>goto</c>s were removed.</param>
     /// <param name="loops">The natural loops of the method's block graph.</param>
@@ -30,50 +34,11 @@ internal static class GotoCensusClassifier {
         IReadOnlyDictionary<GotoNode, GotoKeepReason> refusals) {
         Walker walker = new(loops, entryNodes, blocks, refusals);
         GotoCensus census = new();
-        EachGoto(entryDispatch, _ => census.Add(GotoKeepReason.EntryDispatch));
-        Dictionary<ICfgNode, int> printedByTarget = new();
-        EachGoto(body, jump => printedByTarget[jump.Target] = printedByTarget.GetValueOrDefault(jump.Target) + 1);
+        census.Add(GotoKeepReason.EntryDispatch, Gotos(entryDispatch).Count());
+        Dictionary<ICfgNode, int> printedByTarget = Gotos(body).CountBy(jump => jump.Target)
+            .ToDictionary(pair => pair.Key, pair => pair.Value);
         walker.Walk(body, census, printedByTarget);
         return census;
-    }
-
-    /// <summary>Calls <paramref name="action"/> on every <see cref="GotoNode"/> of <paramref name="node"/>, in print order.</summary>
-    private static void EachGoto(IVisitableAstNode node, Action<GotoNode> action) {
-        switch (node) {
-            case GotoNode jump:
-                action(jump);
-                return;
-            case BlockNode block:
-                foreach (IVisitableAstNode statement in block.Statements) {
-                    EachGoto(statement, action);
-                }
-                return;
-            case InstructionBoundaryNode boundary:
-                EachGoto(boundary.Body, action);
-                return;
-            case IfElseNode ifElse:
-                EachGoto(ifElse.TrueCase, action);
-                EachGoto(ifElse.FalseCase, action);
-                return;
-            case WhileNode whileNode:
-                EachGoto(whileNode.Body, action);
-                return;
-            case InfiniteLoopNode infiniteLoop:
-                EachGoto(infiniteLoop.Body, action);
-                return;
-            case DoWhileNode doWhile:
-                EachGoto(doWhile.Body, action);
-                return;
-            case SwitchNode switchNode:
-                foreach (SwitchSection section in switchNode.Sections) {
-                    EachGoto(section.Body, action);
-                }
-                EachGoto(switchNode.Default, action);
-                return;
-            case CpuFaultTryCatchNode tryCatch:
-                EachGoto(tryCatch.Body, action);
-                return;
-        }
     }
 
     /// <summary>Walks the body once, tracking the source instruction and the enclosing structured loops.</summary>
@@ -111,11 +76,6 @@ internal static class GotoCensusClassifier {
                 case CyclicJumpNode:
                     census.Add(GotoKeepReason.CyclicJump);
                     return;
-                case BlockNode block:
-                    foreach (IVisitableAstNode statement in block.Statements) {
-                        Walk(statement, census, printedByTarget);
-                    }
-                    return;
                 case InstructionBoundaryNode boundary: {
                     ICfgNode? outer = _currentNode;
                     _currentNode = boundary.Node;
@@ -123,27 +83,16 @@ internal static class GotoCensusClassifier {
                     _currentNode = outer;
                     return;
                 }
-                case IfElseNode ifElse:
-                    Walk(ifElse.TrueCase, census, printedByTarget);
-                    Walk(ifElse.FalseCase, census, printedByTarget);
-                    return;
-                case WhileNode whileNode:
-                    Walk(whileNode.Body, census, printedByTarget);
-                    return;
                 case InfiniteLoopNode infiniteLoop:
                     WalkLoop(infiniteLoop, infiniteLoop.Body, census, printedByTarget);
                     return;
                 case DoWhileNode doWhile:
                     WalkLoop(doWhile, doWhile.Body, census, printedByTarget);
                     return;
-                case SwitchNode switchNode:
-                    foreach (SwitchSection section in switchNode.Sections) {
-                        Walk(section.Body, census, printedByTarget);
+                default:
+                    foreach (IVisitableAstNode child in ChildStatements(node)) {
+                        Walk(child, census, printedByTarget);
                     }
-                    Walk(switchNode.Default, census, printedByTarget);
-                    return;
-                case CpuFaultTryCatchNode tryCatch:
-                    Walk(tryCatch.Body, census, printedByTarget);
                     return;
             }
         }

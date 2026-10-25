@@ -47,6 +47,8 @@ internal sealed class MethodEmitter(
         HashSet<ICfgNode> entryNodes = method.Entries.Select(entry => entry.Node).ToHashSet();
         List<LoweredBlock> loweredBlocks = GroupByBlock(method.NodeEmissionPlans, boundaries);
         Dictionary<GotoNode, GotoKeepReason> refusals = new(ReferenceEqualityComparer.Instance);
+        // Moving a loop exit after its loop can break fall-throughs of the blocks it jumps over, so the method is
+        // structured both ways and the result with fewer gotos is kept.
         BlockNode withoutFallthroughGotos = FallthroughGotoRemover.Remove(
             MethodStructurizer.Structure(loweredBlocks, loops, entryNodes, method.MethodName, refusals, placeLoopExits: false));
         Dictionary<GotoNode, GotoKeepReason> placedRefusals = new(ReferenceEqualityComparer.Instance);

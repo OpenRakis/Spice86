@@ -5,7 +5,6 @@ using FluentAssertions;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph.Analysis;
 using Spice86.Core.Emulator.ReverseEngineer.Graph;
-using Spice86.Shared.Emulator.Memory;
 
 using Xunit;
 
@@ -13,9 +12,9 @@ public sealed class NaturalLoopForestTest {
     [Fact]
     public void StraightLineHasNoLoop() {
         // Arrange
-        CfgBlock entry = Block(1, 0x00);
-        CfgBlock middle = Block(2, 0x10);
-        CfgBlock exit = Block(3, 0x20);
+        CfgBlock entry = CfgTestHelpers.CreateBlock(1, 0x00);
+        CfgBlock middle = CfgTestHelpers.CreateBlock(2, 0x10);
+        CfgBlock exit = CfgTestHelpers.CreateBlock(3, 0x20);
         PartitionBlockGraph graph = Graph([entry, middle, exit], [entry], new() { [entry] = [middle], [middle] = [exit] });
 
         // Act
@@ -30,9 +29,9 @@ public sealed class NaturalLoopForestTest {
     [Fact]
     public void SelfLoopIsALoopOfOneBlock() {
         // Arrange
-        CfgBlock entry = Block(1, 0x00);
-        CfgBlock spin = Block(2, 0x10);
-        CfgBlock exit = Block(3, 0x20);
+        CfgBlock entry = CfgTestHelpers.CreateBlock(1, 0x00);
+        CfgBlock spin = CfgTestHelpers.CreateBlock(2, 0x10);
+        CfgBlock exit = CfgTestHelpers.CreateBlock(3, 0x20);
         PartitionBlockGraph graph = Graph([entry, spin, exit], [entry], new() { [entry] = [spin], [spin] = [spin, exit] });
 
         // Act
@@ -53,11 +52,11 @@ public sealed class NaturalLoopForestTest {
     [Fact]
     public void LoopIsEveryBlockThatReachesTheLatchWithoutTheHeader() {
         // Arrange
-        CfgBlock entry = Block(1, 0x00);
-        CfgBlock head = Block(2, 0x10);
-        CfgBlock body = Block(3, 0x20);
-        CfgBlock latch = Block(4, 0x30);
-        CfgBlock exit = Block(5, 0x40);
+        CfgBlock entry = CfgTestHelpers.CreateBlock(1, 0x00);
+        CfgBlock head = CfgTestHelpers.CreateBlock(2, 0x10);
+        CfgBlock body = CfgTestHelpers.CreateBlock(3, 0x20);
+        CfgBlock latch = CfgTestHelpers.CreateBlock(4, 0x30);
+        CfgBlock exit = CfgTestHelpers.CreateBlock(5, 0x40);
         PartitionBlockGraph graph = Graph([entry, head, body, latch, exit], [entry],
             new() { [entry] = [head], [head] = [body, exit], [body] = [latch], [latch] = [head] });
 
@@ -77,11 +76,11 @@ public sealed class NaturalLoopForestTest {
     [Fact]
     public void BackEdgesToOneHeaderFormOneLoop() {
         // Arrange
-        CfgBlock entry = Block(1, 0x00);
-        CfgBlock head = Block(2, 0x10);
-        CfgBlock left = Block(3, 0x20);
-        CfgBlock right = Block(4, 0x30);
-        CfgBlock exit = Block(5, 0x40);
+        CfgBlock entry = CfgTestHelpers.CreateBlock(1, 0x00);
+        CfgBlock head = CfgTestHelpers.CreateBlock(2, 0x10);
+        CfgBlock left = CfgTestHelpers.CreateBlock(3, 0x20);
+        CfgBlock right = CfgTestHelpers.CreateBlock(4, 0x30);
+        CfgBlock exit = CfgTestHelpers.CreateBlock(5, 0x40);
         PartitionBlockGraph graph = Graph([entry, head, left, right, exit], [entry],
             new() { [entry] = [head], [head] = [left, right], [left] = [head], [right] = [head, exit] });
 
@@ -98,11 +97,11 @@ public sealed class NaturalLoopForestTest {
     [Fact]
     public void NestedLoopsKnowTheirParentAndChildren() {
         // Arrange
-        CfgBlock entry = Block(1, 0x00);
-        CfgBlock outer = Block(2, 0x10);
-        CfgBlock inner = Block(3, 0x20);
-        CfgBlock latch = Block(4, 0x30);
-        CfgBlock exit = Block(5, 0x40);
+        CfgBlock entry = CfgTestHelpers.CreateBlock(1, 0x00);
+        CfgBlock outer = CfgTestHelpers.CreateBlock(2, 0x10);
+        CfgBlock inner = CfgTestHelpers.CreateBlock(3, 0x20);
+        CfgBlock latch = CfgTestHelpers.CreateBlock(4, 0x30);
+        CfgBlock exit = CfgTestHelpers.CreateBlock(5, 0x40);
         PartitionBlockGraph graph = Graph([entry, outer, inner, latch, exit], [entry],
             new() { [entry] = [outer], [outer] = [inner], [inner] = [inner, latch], [latch] = [outer, exit] });
 
@@ -129,10 +128,10 @@ public sealed class NaturalLoopForestTest {
     [Fact]
     public void CycleEnteredAtTwoBlocksIsIrreducible() {
         // Arrange
-        CfgBlock first = Block(1, 0x00);
-        CfgBlock second = Block(2, 0x08);
-        CfgBlock left = Block(3, 0x10);
-        CfgBlock right = Block(4, 0x20);
+        CfgBlock first = CfgTestHelpers.CreateBlock(1, 0x00);
+        CfgBlock second = CfgTestHelpers.CreateBlock(2, 0x08);
+        CfgBlock left = CfgTestHelpers.CreateBlock(3, 0x10);
+        CfgBlock right = CfgTestHelpers.CreateBlock(4, 0x20);
         PartitionBlockGraph graph = Graph([first, second, left, right], [first, second],
             new() { [first] = [left], [second] = [right], [left] = [right], [right] = [left] });
 
@@ -147,10 +146,10 @@ public sealed class NaturalLoopForestTest {
     [Fact]
     public void PartitionEntryInsideACyclePreventsTheLoop() {
         // Arrange
-        CfgBlock entry = Block(1, 0x00);
-        CfgBlock head = Block(2, 0x10);
-        CfgBlock middle = Block(3, 0x20);
-        CfgBlock exit = Block(4, 0x30);
+        CfgBlock entry = CfgTestHelpers.CreateBlock(1, 0x00);
+        CfgBlock head = CfgTestHelpers.CreateBlock(2, 0x10);
+        CfgBlock middle = CfgTestHelpers.CreateBlock(3, 0x20);
+        CfgBlock exit = CfgTestHelpers.CreateBlock(4, 0x30);
         PartitionBlockGraph graph = Graph([entry, head, middle, exit], [entry, middle],
             new() { [entry] = [head], [head] = [middle], [middle] = [head, exit] });
 
@@ -165,10 +164,10 @@ public sealed class NaturalLoopForestTest {
     [Fact]
     public void EntryBlockCanBeALoopHeader() {
         // Arrange
-        CfgBlock entry = Block(1, 0x00);
-        CfgBlock head = Block(2, 0x10);
-        CfgBlock body = Block(3, 0x20);
-        CfgBlock exit = Block(4, 0x30);
+        CfgBlock entry = CfgTestHelpers.CreateBlock(1, 0x00);
+        CfgBlock head = CfgTestHelpers.CreateBlock(2, 0x10);
+        CfgBlock body = CfgTestHelpers.CreateBlock(3, 0x20);
+        CfgBlock exit = CfgTestHelpers.CreateBlock(4, 0x30);
         PartitionBlockGraph graph = Graph([entry, head, body, exit], [entry, head],
             new() { [entry] = [head], [head] = [body, exit], [body] = [head] });
 
@@ -185,12 +184,12 @@ public sealed class NaturalLoopForestTest {
     [Fact]
     public void BlocksNoEntryReachesAreInNoLoop() {
         // Arrange
-        CfgBlock entry = Block(1, 0x00);
-        CfgBlock head = Block(2, 0x10);
-        CfgBlock body = Block(3, 0x20);
-        CfgBlock exit = Block(4, 0x30);
-        CfgBlock dead = Block(5, 0x40);
-        CfgBlock deadSpin = Block(6, 0x50);
+        CfgBlock entry = CfgTestHelpers.CreateBlock(1, 0x00);
+        CfgBlock head = CfgTestHelpers.CreateBlock(2, 0x10);
+        CfgBlock body = CfgTestHelpers.CreateBlock(3, 0x20);
+        CfgBlock exit = CfgTestHelpers.CreateBlock(4, 0x30);
+        CfgBlock dead = CfgTestHelpers.CreateBlock(5, 0x40);
+        CfgBlock deadSpin = CfgTestHelpers.CreateBlock(6, 0x50);
         PartitionBlockGraph graph = Graph([entry, head, body, exit, dead, deadSpin], [entry],
             new() {
                 [entry] = [head], [head] = [body, exit], [body] = [head],
@@ -211,9 +210,6 @@ public sealed class NaturalLoopForestTest {
         DepthFirstOrdering<CfgBlock> traversal = new([.. graph.EntryBlocks, .. graph.Blocks], graph.GetSuccessors);
         return NaturalLoopForest.Build(graph, traversal.RetreatingEdges);
     }
-
-    private static CfgBlock Block(int id, ushort offset) =>
-        new(id, CfgTestHelpers.CreateInstruction(new SegmentedAddress(0x1000, offset)));
 
     private static PartitionBlockGraph Graph(IReadOnlyList<CfgBlock> blocks, IReadOnlyList<CfgBlock> entries,
         Dictionary<CfgBlock, IReadOnlyList<CfgBlock>> successors) =>
