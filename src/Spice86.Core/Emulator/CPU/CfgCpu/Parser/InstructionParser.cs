@@ -175,7 +175,7 @@ public class InstructionParser {
         try {
             CfgInstruction parsed = ParseCfgInstruction(context);
             ValidateLockPrefix(parsed, prefixes);
-            if (parsed.FallsThroughToNextInMemory && parsed.StaticSuccessorAddresses.Count == 0) {
+            if (!parsed.IsBlockTerminator && parsed.StaticSuccessorAddresses.Count == 0) {
                 // Common case, falltrough to the next instruction in memory.
                 parsed.RegisterStaticSuccessorAddress(parsed.NextInMemoryAddress32.ToSegmentedAddress());
             }

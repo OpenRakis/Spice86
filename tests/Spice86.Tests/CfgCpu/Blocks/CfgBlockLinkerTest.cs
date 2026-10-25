@@ -118,7 +118,7 @@ public class CfgBlockLinkerTest : IDisposable {
         using LinkerHarness harness = new();
         CfgInstruction current = harness.CreateInstruction(new SegmentedAddress(BaseSegment, 0));
         CfgInstruction next = harness.CreateInstruction(new SegmentedAddress(BaseSegment, 1));
-        next.MarkAsBlockTerminator();
+        next.EndBlockAfterFallthrough();
 
         ICfgNode returned = harness.Linker.Link(InstructionSuccessorType.Normal, current, next);
 
@@ -175,7 +175,7 @@ public class CfgBlockLinkerTest : IDisposable {
     public void ColdPath_CurrentIsTerminator_PlacesInSeparateBlocks(InstructionSuccessorType linkType) {
         using LinkerHarness harness = new();
         CfgInstruction current = harness.CreateInstruction(new SegmentedAddress(BaseSegment, 0));
-        current.MarkAsBlockTerminator();
+        current.EndBlockAfterFallthrough();
         CfgInstruction next = harness.CreateInstruction(new SegmentedAddress(BaseSegment, 1));
 
         harness.Linker.Link(linkType, current, next);
@@ -295,7 +295,7 @@ public class CfgBlockLinkerTest : IDisposable {
         CfgInstruction a = CreateInstruction(new SegmentedAddress(BaseSegment, 0));
         CfgInstruction b = CreateInstruction(new SegmentedAddress(BaseSegment, 1));
         CfgInstruction c = CreateInstruction(new SegmentedAddress(BaseSegment, 2));
-        c.MarkAsBlockTerminator();
+        c.EndBlockAfterFallthrough();
 
         // Act: build block [A, B, C] via sequential linking, then create back-edge C->B.
         _linker.Link(InstructionSuccessorType.Normal, a, b);
@@ -329,7 +329,7 @@ public class CfgBlockLinkerTest : IDisposable {
         // split A's block: A is already the entry.
         CfgInstruction a = CreateInstruction(new SegmentedAddress(BaseSegment, 0));
         CfgInstruction b = CreateInstruction(new SegmentedAddress(BaseSegment, 1));
-        b.MarkAsBlockTerminator();
+        b.EndBlockAfterFallthrough();
 
         // Act
         _linker.Link(InstructionSuccessorType.Normal, a, b);
@@ -352,7 +352,7 @@ public class CfgBlockLinkerTest : IDisposable {
         CfgInstruction a = CreateInstruction(new SegmentedAddress(BaseSegment, 0));
         CfgInstruction b = CreateInstruction(new SegmentedAddress(BaseSegment, 1));
         CfgInstruction c = CreateInstruction(new SegmentedAddress(BaseSegment, 2));
-        c.MarkAsBlockTerminator();
+        c.EndBlockAfterFallthrough();
 
         _linker.Link(InstructionSuccessorType.Normal, a, b);
         _linker.Link(InstructionSuccessorType.Normal, b, c);
@@ -381,7 +381,7 @@ public class CfgBlockLinkerTest : IDisposable {
         CfgInstruction b = CreateInstruction(new SegmentedAddress(BaseSegment, 1));
         CfgInstruction c = CreateInstruction(new SegmentedAddress(BaseSegment, 2));
         CfgInstruction d = CreateInstruction(new SegmentedAddress(BaseSegment, 3));
-        d.MarkAsBlockTerminator();
+        d.EndBlockAfterFallthrough();
 
         _linker.Link(InstructionSuccessorType.Normal, a, b);
         _linker.Link(InstructionSuccessorType.Normal, b, c);
@@ -414,7 +414,7 @@ public class CfgBlockLinkerTest : IDisposable {
         CfgInstruction c = CreateInstruction(new SegmentedAddress(BaseSegment, 2));
         CfgInstruction d = CreateInstruction(new SegmentedAddress(BaseSegment, 3));
         CfgInstruction e = CreateInstruction(new SegmentedAddress(BaseSegment, 4));
-        e.MarkAsBlockTerminator();
+        e.EndBlockAfterFallthrough();
 
         _linker.Link(InstructionSuccessorType.Normal, a, b);
         _linker.Link(InstructionSuccessorType.Normal, b, c);
@@ -452,7 +452,7 @@ public class CfgBlockLinkerTest : IDisposable {
         CfgInstruction c = CreateInstruction(new SegmentedAddress(BaseSegment, 2));
         CfgInstruction d = CreateInstruction(new SegmentedAddress(BaseSegment, 3));
         CfgInstruction e = CreateInstruction(new SegmentedAddress(BaseSegment, 4));
-        e.MarkAsBlockTerminator();
+        e.EndBlockAfterFallthrough();
 
         _linker.Link(InstructionSuccessorType.Normal, a, b);
         _linker.Link(InstructionSuccessorType.Normal, b, c);
@@ -503,7 +503,7 @@ public class CfgBlockLinkerTest : IDisposable {
     public void Link_SameTriple_IsIdempotent_Boundary() {
         using LinkerHarness harness = new();
         CfgInstruction current = harness.CreateInstruction(new SegmentedAddress(BaseSegment, 0));
-        current.MarkAsBlockTerminator();
+        current.EndBlockAfterFallthrough();
         CfgInstruction next = harness.CreateInstruction(new SegmentedAddress(BaseSegment, 1));
 
         ICfgNode first = harness.Linker.Link(InstructionSuccessorType.Normal, current, next);
@@ -541,7 +541,7 @@ public class CfgBlockLinkerTest : IDisposable {
         CfgInstruction before = harness.CreateInstruction(new SegmentedAddress(BaseSegment, 0));
         CfgInstruction popf = harness.CreateInstruction(new SegmentedAddress(BaseSegment, 1));
         popf.MarkAsBlockStarter();
-        popf.MarkAsBlockTerminator();
+        popf.EndBlockAfterFallthrough();
         CfgInstruction after = harness.CreateInstruction(new SegmentedAddress(BaseSegment, 2));
 
         harness.Linker.Link(InstructionSuccessorType.Normal, before, popf);
