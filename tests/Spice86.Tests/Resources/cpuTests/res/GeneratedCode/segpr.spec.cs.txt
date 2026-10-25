@@ -156,7 +156,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AX = 1;
         // F000:0049 mov SS,AX
         SS = AX;
-        State.InterruptShadowing = true;
         // F000:004B mov word ptr DS:[0x0010],6
         UInt16[DS, 0x0010] = 6;
         // F000:0051 inc word ptr SS:[0]

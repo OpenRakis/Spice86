@@ -1,0 +1,65 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+
+    private static readonly byte?[] Signature_0013_jmp = [0xFF, 0xE3];
+    private static readonly byte?[] Signature_001A_call = [0xFF, 0xD3];
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0xF000;
+
+        DefineFunctionWithoutInterpreterFallback(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, "unknown");
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        // F000:0000 mov AX,0x1000
+        AX = 0x1000;
+        // F000:0003 mov SS,AX
+        SS = AX;
+        // F000:0005 mov SP,0x0100
+        SP = 0x0100;
+        // F000:0008 mov AX,1
+        AX = 1;
+        // F000:000B mov BX,0x0020
+        BX = 0x0020;
+        // F000:000E cmp AX,0
+        // F000:0011 jne short 0x0015
+        if (AX != 0) {
+            // F000:0015 cmp AX,0
+            Alu16.Sub(AX, 0);
+            // F000:0018 jne short 0x001C
+            if (!ZeroFlag) {
+                // F000:001C mov CX,2
+                CX = 2;
+                // F000:001F hlt
+                return Hlt();
+            }
+            VerifySpeculativeEntryOrFail(cs1, 0x001A, Signature_001A_call);
+            // F000:001A call near BX
+            throw FailAsUntested("Untested indirect call at F000:001A");
+        }
+        VerifySpeculativeEntryOrFail(cs1, 0x0013, Signature_0013_jmp);
+        // F000:0013 jmp near BX
+        throw FailAsUntested("Untested indirect jump at F000:0013");
+    }
+
+}

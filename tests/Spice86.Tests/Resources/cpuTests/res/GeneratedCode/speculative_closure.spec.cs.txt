@@ -43,35 +43,31 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Alu8.And(AL, AL);
         // F000:000A jne short 0x0013
         if (!ZeroFlag) {
-            goto L_0013;
+            VerifySpeculativeEntryOrFail(cs1, 0x0013, Signature_0013_mov);
+            // F000:0013 mov CX,3
+            CX = 3;
+            VerifySpeculativeEntryOrFail(cs1, 0x0016, Signature_0016_mov);
+            // F000:0016 mov byte ptr DS:[0x0401],0
+            UInt8[DS, 0x0401] = 0;
+            do {
+                CheckExternalEvents(cs1, 0x001B);
+                VerifySpeculativeEntryOrFail(cs1, 0x001B, Signature_001B_inc);
+                // F000:001B inc byte ptr DS:[0x0401]
+                UInt8[DS, 0x0401] = (byte)(UInt8[DS, 0x0401] + 1);
+                VerifySpeculativeEntryOrFail(cs1, 0x001F, Signature_001F_dec);
+                // F000:001F dec CX
+                CX = Alu16.Dec(CX);
+                VerifySpeculativeEntryOrFail(cs1, 0x0020, Signature_0020_jne);
+                // F000:0020 jne short 0x001B
+            } while (CX != 0);
+            VerifySpeculativeEntryOrFail(cs1, 0x0022, Signature_0022_jmp);
+            // F000:0022 jmp short 0x0024
         }
-        // F000:000C mov byte ptr DS:[0x0401],0xDD
-        UInt8[DS, 0x0401] = 0xDD;
-        // F000:0011 jmp short 0x0024
-        goto L_0024;
-    L_0013:
-        VerifySpeculativeEntryOrFail(cs1, 0x0013, Signature_0013_mov);
-        // F000:0013 mov CX,3
-        CX = 3;
-        VerifySpeculativeEntryOrFail(cs1, 0x0016, Signature_0016_mov);
-        // F000:0016 mov byte ptr DS:[0x0401],0
-        UInt8[DS, 0x0401] = 0;
-    L_001B:
-        CheckExternalEvents(cs1, 0x001B);
-        VerifySpeculativeEntryOrFail(cs1, 0x001B, Signature_001B_inc);
-        // F000:001B inc byte ptr DS:[0x0401]
-        UInt8[DS, 0x0401] = (byte)(UInt8[DS, 0x0401] + 1);
-        VerifySpeculativeEntryOrFail(cs1, 0x001F, Signature_001F_dec);
-        // F000:001F dec CX
-        CX = Alu16.Dec(CX);
-        VerifySpeculativeEntryOrFail(cs1, 0x0020, Signature_0020_jne);
-        // F000:0020 jne short 0x001B
-        if (CX != 0) {
-            goto L_001B;
+        else {
+            // F000:000C mov byte ptr DS:[0x0401],0xDD
+            UInt8[DS, 0x0401] = 0xDD;
+            // F000:0011 jmp short 0x0024
         }
-        VerifySpeculativeEntryOrFail(cs1, 0x0022, Signature_0022_jmp);
-        // F000:0022 jmp short 0x0024
-    L_0024:
         // F000:0024 mov byte ptr DS:[0x0402],0xBB
         UInt8[DS, 0x0402] = 0xBB;
         // F000:0029 hlt

@@ -32,7 +32,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AX = 0x1000;
         // F000:0003 mov SS,AX
         SS = AX;
-        State.InterruptShadowing = true;
         // F000:0005 mov SP,0x1000
         SP = 0x1000;
         // F000:0008 mov CX,0xFEFF
@@ -67,9 +66,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:001A std
         DirectionFlag = true;
         // F000:001B sti
-        if (!InterruptFlag) {
-            State.InterruptShadowing = true;
-        }
         InterruptFlag = true;
         CheckExternalEvents(cs1, 0x001C);
         // F000:001C pushf

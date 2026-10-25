@@ -1,0 +1,64 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+
+    private static readonly byte?[] Signature_0029_add = [0x83, 0xC2, 0x10];
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0xF000;
+
+        DefineFunctionWithoutInterpreterFallback(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, "unknown");
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        // F000:0000 mov AX,0x1000
+        AX = 0x1000;
+        // F000:0003 mov SS,AX
+        SS = AX;
+        // F000:0005 mov SP,0x0100
+        SP = 0x0100;
+        // F000:0008 xor DX,DX
+        DX = 0;
+        // F000:000A mov EAX,1
+        EAX = 1;
+        // F000:0010 cmp EAX,0x80000000
+        // F000:0016 jl short 0x001B
+        if ((int)EAX >= int.MinValue) {
+            // F000:0018 add DX,1
+            DX = (ushort)(DX + 1);
+        }
+        // F000:001B mov EAX,0x80000000
+        EAX = 0x80000000u;
+        // F000:0021 cmp EAX,0x80000000
+        // F000:0027 jle short 0x002C
+        if ((int)EAX > int.MinValue) {
+            VerifySpeculativeEntryOrFail(cs1, 0x0029, Signature_0029_add);
+            // F000:0029 add DX,0x0010
+            DX = (ushort)(DX + 0x0010);
+        }
+        // F000:002C xor AX,AX
+        AX = Alu16.Xor(AX, AX);
+        // F000:002E hlt
+        return Hlt();
+    }
+
+}

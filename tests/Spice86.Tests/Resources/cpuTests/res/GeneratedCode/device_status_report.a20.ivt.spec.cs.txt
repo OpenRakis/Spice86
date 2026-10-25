@@ -103,21 +103,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         InterruptCall(cs1, 0x011C, 0x21);
         // 016D:011C mov CX,8
         CX = 8;
-    L_011F:
-        CheckExternalEvents(cs1, 0x011F);
-        // 016D:011F mov AH,8
-        AH = 8;
-        // 016D:0121 int 0x21
-        InterruptCall(cs1, 0x0123, 0x21);
-        // 016D:0123 mov DX,0x0998
-        DX = 0x0998;
-        // 016D:0126 out DX,AL
-        Out8(DX, AL);
-        // 016D:0127 loop 0x011F
-        CX--;
-        if (CX != 0) {
-            goto L_011F;
-        }
+        do {
+            CheckExternalEvents(cs1, 0x011F);
+            // 016D:011F mov AH,8
+            AH = 8;
+            // 016D:0121 int 0x21
+            InterruptCall(cs1, 0x0123, 0x21);
+            // 016D:0123 mov DX,0x0998
+            DX = 0x0998;
+            // 016D:0126 out DX,AL
+            Out8(DX, AL);
+            // 016D:0127 loop 0x011F
+            CX--;
+        } while (CX != 0);
         // 016D:0129 mov AL,0
         AL = 0;
         // 016D:012B mov DX,0x0999
@@ -250,30 +248,23 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0090 cmp AH,7
         Alu8.Sub(AH, 7);
         // F000:0093 je short 0x00A4
-        if (ZeroFlag) {
-            goto L_00A4;
+        if (!ZeroFlag) {
+            // F000:0095 cmp AH,8
+            Alu8.Sub(AH, 8);
+            // F000:0098 je short 0x00A4
+            if (!ZeroFlag) {
+                // F000:009A cmp AH,0x0A
+                Alu8.Sub(AH, 0x0A);
+                // F000:009D je short 0x00A4
+                if (!ZeroFlag) {
+                    // F000:009F callback 0x0021
+                    Callback(cs2, 0x009F, 0x0021);
+                    // F000:00A3 iret
+                    return InterruptRet();
+                }
+            }
         }
-        // F000:0095 cmp AH,8
-        Alu8.Sub(AH, 8);
-        // F000:0098 je short 0x00A4
-        if (ZeroFlag) {
-            goto L_00A4;
-        }
-        // F000:009A cmp AH,0x0A
-        Alu8.Sub(AH, 0x0A);
-        // F000:009D je short 0x00A4
-        if (ZeroFlag) {
-            goto L_00A4;
-        }
-        // F000:009F callback 0x0021
-        Callback(cs2, 0x009F, 0x0021);
-        // F000:00A3 iret
-        return InterruptRet();
-    L_00A4:
         // F000:00A4 sti
-        if (!InterruptFlag) {
-            State.InterruptShadowing = true;
-        }
         InterruptFlag = true;
         CheckExternalEvents(cs2, 0x00A5);
         // F000:00A5 callback 0x010A
@@ -282,17 +273,15 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Alu8.Sub(UInt8[CS, 0x008F], 0);
         // F000:00AF jne short 0x00B5
         if (!ZeroFlag) {
-            goto L_00B5;
+            // F000:00B5 callback 0x010B
+            Callback(cs2, 0x00B5, 0x010B);
+            // F000:00B9 iret
+            return InterruptRet();
         }
         VerifySpeculativeEntryOrFail(cs2, 0x00B1, Signature_00B1_int);
         // F000:00B1 int 0x28
         InterruptCall(cs2, 0x00B3, 0x28);
         throw FailAsUntested("Untested return from call at F000:00B1");
-    L_00B5:
-        // F000:00B5 callback 0x010B
-        Callback(cs2, 0x00B5, 0x010B);
-        // F000:00B9 iret
-        return InterruptRet();
     }
 
     public virtual Action unknown_F000_00E2_F00E2(int loadOffset) {

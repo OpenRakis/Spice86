@@ -55,7 +55,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         SP = 0x1000;
         // F000:0009 mov SS,SP
         SS = SP;
-        State.InterruptShadowing = true;
         // F000:000B push BX
         Stack.Push16(BX);
         // F000:000C jmp short 0x0010
@@ -63,336 +62,347 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CarryFlag = true;
         // F000:0011 ja short 0x000E
         if (!CarryFlag && !ZeroFlag) {
-            goto L_000E;
+            VerifySpeculativeEntryOrFail(cs1, 0x000E, Signature_000E_jmp);
+            // F000:000E jmp short 0xFFF2
         }
-        // F000:0013 clc
-        CarryFlag = false;
-        // F000:0014 ja short 0x0018
-        if (!(!CarryFlag && !ZeroFlag)) {
-            goto L_0016;
+        else {
+            // F000:0013 clc
+            CarryFlag = false;
+            // F000:0014 ja short 0x0018
+            if (!CarryFlag && !ZeroFlag) {
+                // F000:0018 stc
+                CarryFlag = true;
+                // F000:0019 jae short 0x0016
+                if (!CarryFlag) {
+                    goto L_0016;
+                }
+                // F000:001B clc
+                CarryFlag = false;
+                // F000:001C jae short 0x0020
+                if (!CarryFlag) {
+                    // F000:0020 jb short 0x001E
+                    if (CarryFlag) {
+                        goto L_001E;
+                    }
+                    // F000:0022 stc
+                    CarryFlag = true;
+                    // F000:0023 jb short 0x0027
+                    if (CarryFlag) {
+                        // F000:0027 clc
+                        CarryFlag = false;
+                        // F000:0028 jbe short 0x0025
+                        if (CarryFlag || ZeroFlag) {
+                            goto L_0025;
+                        }
+                        // F000:002A popf
+                        FlagRegister16 = Stack.Pop16();
+                        CheckExternalEvents(cs1, 0x002B);
+                        // F000:002B jbe short 0x002F
+                        if (CarryFlag || ZeroFlag) {
+                            // F000:002F push CX
+                            Stack.Push16(CX);
+                            // F000:0030 popf
+                            FlagRegister16 = Stack.Pop16();
+                            CheckExternalEvents(cs1, 0x0031);
+                            // F000:0031 je short 0x002D
+                            if (ZeroFlag) {
+                                goto L_002D;
+                            }
+                            // F000:0033 push BX
+                            Stack.Push16(BX);
+                            // F000:0034 popf
+                            FlagRegister16 = Stack.Pop16();
+                            CheckExternalEvents(cs1, 0x0035);
+                            // F000:0035 je short 0x0039
+                            if (ZeroFlag) {
+                                // F000:0039 mov DX,0x08C0
+                                DX = 0x08C0;
+                                // F000:003C push DX
+                                Stack.Push16(DX);
+                                // F000:003D popf
+                                FlagRegister16 = Stack.Pop16();
+                                CheckExternalEvents(cs1, 0x003E);
+                                // F000:003E jg short 0x0037
+                                if (!ZeroFlag && SignFlag == OverflowFlag) {
+                                    goto L_0037;
+                                }
+                                // F000:0040 mov DX,0x0880
+                                DX = 0x0880;
+                                // F000:0043 push DX
+                                Stack.Push16(DX);
+                                // F000:0044 popf
+                                FlagRegister16 = Stack.Pop16();
+                                CheckExternalEvents(cs1, 0x0045);
+                                // F000:0045 jg short 0x0049
+                                if (!ZeroFlag && SignFlag == OverflowFlag) {
+                                    // F000:0049 mov DX,0x0080
+                                    DX = 0x0080;
+                                    // F000:004C push DX
+                                    Stack.Push16(DX);
+                                    // F000:004D popf
+                                    FlagRegister16 = Stack.Pop16();
+                                    CheckExternalEvents(cs1, 0x004E);
+                                    // F000:004E jge short 0x0047
+                                    if (SignFlag == OverflowFlag) {
+                                        goto L_0047;
+                                    }
+                                    // F000:0050 push CX
+                                    Stack.Push16(CX);
+                                    // F000:0051 popf
+                                    FlagRegister16 = Stack.Pop16();
+                                    CheckExternalEvents(cs1, 0x0052);
+                                    // F000:0052 jge short 0x0056
+                                    if (SignFlag == OverflowFlag) {
+                                        // F000:0056 jl short 0x0054
+                                        if (SignFlag != OverflowFlag) {
+                                            goto L_0054;
+                                        }
+                                        // F000:0058 mov DX,0x0800
+                                        DX = 0x0800;
+                                        // F000:005B push DX
+                                        Stack.Push16(DX);
+                                        // F000:005C popf
+                                        FlagRegister16 = Stack.Pop16();
+                                        CheckExternalEvents(cs1, 0x005D);
+                                        // F000:005D jl short 0x0061
+                                        if (SignFlag != OverflowFlag) {
+                                            // F000:0061 push CX
+                                            Stack.Push16(CX);
+                                            // F000:0062 popf
+                                            FlagRegister16 = Stack.Pop16();
+                                            CheckExternalEvents(cs1, 0x0063);
+                                            // F000:0063 jle short 0x005F
+                                            if (ZeroFlag || SignFlag != OverflowFlag) {
+                                                goto L_005F;
+                                            }
+                                            // F000:0065 push BX
+                                            Stack.Push16(BX);
+                                            // F000:0066 popf
+                                            FlagRegister16 = Stack.Pop16();
+                                            CheckExternalEvents(cs1, 0x0067);
+                                            // F000:0067 jle short 0x006B
+                                            if (ZeroFlag || SignFlag != OverflowFlag) {
+                                                // F000:006B jne short 0x0069
+                                                if (!ZeroFlag) {
+                                                    goto L_0069;
+                                                }
+                                                // F000:006D mov DX,0x0CBF
+                                                DX = 0x0CBF;
+                                                // F000:0070 push DX
+                                                Stack.Push16(DX);
+                                                // F000:0071 popf
+                                                FlagRegister16 = Stack.Pop16();
+                                                CheckExternalEvents(cs1, 0x0072);
+                                                // F000:0072 jne short 0x0077
+                                                if (!ZeroFlag) {
+                                                    // F000:0077 mov DX,0x0800
+                                                    DX = 0x0800;
+                                                    // F000:007A push DX
+                                                    Stack.Push16(DX);
+                                                    // F000:007B popf
+                                                    FlagRegister16 = Stack.Pop16();
+                                                    CheckExternalEvents(cs1, 0x007C);
+                                                    // F000:007C jno short 0x0074
+                                                    if (!OverflowFlag) {
+                                                        goto L_0074;
+                                                    }
+                                                    // F000:007E mov DX,0x06FF
+                                                    DX = 0x06FF;
+                                                    // F000:0081 push DX
+                                                    Stack.Push16(DX);
+                                                    // F000:0082 popf
+                                                    FlagRegister16 = Stack.Pop16();
+                                                    CheckExternalEvents(cs1, 0x0083);
+                                                    // F000:0083 jno short 0x0088
+                                                    if (!OverflowFlag) {
+                                                        // F000:0088 mov DX,4
+                                                        DX = 4;
+                                                        // F000:008B push DX
+                                                        Stack.Push16(DX);
+                                                        // F000:008C popf
+                                                        FlagRegister16 = Stack.Pop16();
+                                                        CheckExternalEvents(cs1, 0x008D);
+                                                        // F000:008D jnp short 0x0085
+                                                        if (!ParityFlag) {
+                                                            goto L_0085;
+                                                        }
+                                                        // F000:008F push CX
+                                                        Stack.Push16(CX);
+                                                        // F000:0090 popf
+                                                        FlagRegister16 = Stack.Pop16();
+                                                        CheckExternalEvents(cs1, 0x0091);
+                                                        // F000:0091 jnp short 0x0096
+                                                        if (!ParityFlag) {
+                                                            // F000:0096 mov DX,0x0EFF
+                                                            DX = 0x0EFF;
+                                                            // F000:0099 push DX
+                                                            Stack.Push16(DX);
+                                                            // F000:009A popf
+                                                            FlagRegister16 = Stack.Pop16();
+                                                            CheckExternalEvents(cs1, 0x009B);
+                                                            // F000:009B jns short 0x0093
+                                                            if (!SignFlag) {
+                                                                goto L_0093;
+                                                            }
+                                                            // F000:009D push CX
+                                                            Stack.Push16(CX);
+                                                            // F000:009E popf
+                                                            FlagRegister16 = Stack.Pop16();
+                                                            CheckExternalEvents(cs1, 0x009F);
+                                                            // F000:009F jns short 0x00A4
+                                                            if (!SignFlag) {
+                                                                // F000:00A4 jo short 0x00A1
+                                                                if (OverflowFlag) {
+                                                                    goto L_00A1;
+                                                                }
+                                                                // F000:00A6 mov DX,0x0800
+                                                                DX = 0x0800;
+                                                                // F000:00A9 push DX
+                                                                Stack.Push16(DX);
+                                                                // F000:00AA popf
+                                                                FlagRegister16 = Stack.Pop16();
+                                                                CheckExternalEvents(cs1, 0x00AB);
+                                                                // F000:00AB jo short 0x00B0
+                                                                if (OverflowFlag) {
+                                                                    // F000:00B0 jp short 0x00AD
+                                                                    if (ParityFlag) {
+                                                                        goto L_00AD;
+                                                                    }
+                                                                    // F000:00B2 mov DX,0x0804
+                                                                    DX = 0x0804;
+                                                                    // F000:00B5 push DX
+                                                                    Stack.Push16(DX);
+                                                                    // F000:00B6 popf
+                                                                    FlagRegister16 = Stack.Pop16();
+                                                                    CheckExternalEvents(cs1, 0x00B7);
+                                                                    // F000:00B7 jp short 0x00BC
+                                                                    if (ParityFlag) {
+                                                                        // F000:00BC js short 0x00B9
+                                                                        if (SignFlag) {
+                                                                            goto L_00B9;
+                                                                        }
+                                                                        // F000:00BE mov DX,0x0884
+                                                                        DX = 0x0884;
+                                                                        // F000:00C1 push DX
+                                                                        Stack.Push16(DX);
+                                                                        // F000:00C2 popf
+                                                                        FlagRegister16 = Stack.Pop16();
+                                                                        CheckExternalEvents(cs1, 0x00C3);
+                                                                        // F000:00C3 js short 0x00C8
+                                                                        if (SignFlag) {
+                                                                            // F000:00C8 mov word ptr DS:[0],0x1234
+                                                                            UInt16[DS, 0] = 0x1234;
+                                                                            // F000:00CE hlt
+                                                                            return Hlt();
+                                                                        }
+                                                                        VerifySpeculativeEntryOrFail(cs1, 0x00C5, Signature_00C5_jmp);
+                                                                        // F000:00C5 jmp near 0xFFF2
+                                                                        VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
+                                                                        // F000:FFF2 hlt
+                                                                        return Hlt();
+                                                                    }
+                                                                L_00B9:
+                                                                    VerifySpeculativeEntryOrFail(cs1, 0x00B9, Signature_00B9_jmp);
+                                                                    // F000:00B9 jmp near 0xFFF2
+                                                                    VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
+                                                                    // F000:FFF2 hlt
+                                                                    return Hlt();
+                                                                }
+                                                            L_00AD:
+                                                                VerifySpeculativeEntryOrFail(cs1, 0x00AD, Signature_00AD_jmp);
+                                                                // F000:00AD jmp near 0xFFF2
+                                                                VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
+                                                                // F000:FFF2 hlt
+                                                                return Hlt();
+                                                            }
+                                                        L_00A1:
+                                                            VerifySpeculativeEntryOrFail(cs1, 0x00A1, Signature_00A1_jmp);
+                                                            // F000:00A1 jmp near 0xFFF2
+                                                            VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
+                                                            // F000:FFF2 hlt
+                                                            return Hlt();
+                                                        }
+                                                    L_0093:
+                                                        VerifySpeculativeEntryOrFail(cs1, 0x0093, Signature_0093_jmp);
+                                                        // F000:0093 jmp near 0xFFF2
+                                                        VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
+                                                        // F000:FFF2 hlt
+                                                        return Hlt();
+                                                    }
+                                                L_0085:
+                                                    VerifySpeculativeEntryOrFail(cs1, 0x0085, Signature_0085_jmp);
+                                                    // F000:0085 jmp near 0xFFF2
+                                                    VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
+                                                    // F000:FFF2 hlt
+                                                    return Hlt();
+                                                }
+                                            L_0074:
+                                                VerifySpeculativeEntryOrFail(cs1, 0x0074, Signature_0074_jmp);
+                                                // F000:0074 jmp near 0xFFF2
+                                                VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
+                                                // F000:FFF2 hlt
+                                                return Hlt();
+                                            }
+                                        L_0069:
+                                            VerifySpeculativeEntryOrFail(cs1, 0x0069, Signature_0069_jmp);
+                                            // F000:0069 jmp short 0xFFF2
+                                            VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
+                                            // F000:FFF2 hlt
+                                            return Hlt();
+                                        }
+                                    L_005F:
+                                        VerifySpeculativeEntryOrFail(cs1, 0x005F, Signature_005F_jmp);
+                                        // F000:005F jmp short 0xFFF2
+                                        VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
+                                        // F000:FFF2 hlt
+                                        return Hlt();
+                                    }
+                                L_0054:
+                                    VerifySpeculativeEntryOrFail(cs1, 0x0054, Signature_0054_jmp);
+                                    // F000:0054 jmp short 0xFFF2
+                                    VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
+                                    // F000:FFF2 hlt
+                                    return Hlt();
+                                }
+                            L_0047:
+                                VerifySpeculativeEntryOrFail(cs1, 0x0047, Signature_0047_jmp);
+                                // F000:0047 jmp short 0xFFF2
+                                VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
+                                // F000:FFF2 hlt
+                                return Hlt();
+                            }
+                        L_0037:
+                            VerifySpeculativeEntryOrFail(cs1, 0x0037, Signature_0037_jmp);
+                            // F000:0037 jmp short 0xFFF2
+                            VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
+                            // F000:FFF2 hlt
+                            return Hlt();
+                        }
+                    L_002D:
+                        VerifySpeculativeEntryOrFail(cs1, 0x002D, Signature_002D_jmp);
+                        // F000:002D jmp short 0xFFF2
+                        VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
+                        // F000:FFF2 hlt
+                        return Hlt();
+                    }
+                L_0025:
+                    VerifySpeculativeEntryOrFail(cs1, 0x0025, Signature_0025_jmp);
+                    // F000:0025 jmp short 0xFFF2
+                    VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
+                    // F000:FFF2 hlt
+                    return Hlt();
+                }
+            L_001E:
+                VerifySpeculativeEntryOrFail(cs1, 0x001E, Signature_001E_jmp);
+                // F000:001E jmp short 0xFFF2
+                VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
+                // F000:FFF2 hlt
+                return Hlt();
+            }
+        L_0016:
+            VerifySpeculativeEntryOrFail(cs1, 0x0016, Signature_0016_jmp);
+            // F000:0016 jmp short 0xFFF2
         }
-        // F000:0018 stc
-        CarryFlag = true;
-        // F000:0019 jae short 0x0016
-        if (!CarryFlag) {
-            goto L_0016;
-        }
-        // F000:001B clc
-        CarryFlag = false;
-        // F000:001C jae short 0x0020
-        if (CarryFlag) {
-            goto L_001E;
-        }
-        // F000:0020 jb short 0x001E
-        if (CarryFlag) {
-            goto L_001E;
-        }
-        // F000:0022 stc
-        CarryFlag = true;
-        // F000:0023 jb short 0x0027
-        if (!CarryFlag) {
-            goto L_0025;
-        }
-        // F000:0027 clc
-        CarryFlag = false;
-        // F000:0028 jbe short 0x0025
-        if (CarryFlag || ZeroFlag) {
-            goto L_0025;
-        }
-        // F000:002A popf
-        FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x002B);
-        // F000:002B jbe short 0x002F
-        if (!(CarryFlag || ZeroFlag)) {
-            goto L_002D;
-        }
-        // F000:002F push CX
-        Stack.Push16(CX);
-        // F000:0030 popf
-        FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x0031);
-        // F000:0031 je short 0x002D
-        if (ZeroFlag) {
-            goto L_002D;
-        }
-        // F000:0033 push BX
-        Stack.Push16(BX);
-        // F000:0034 popf
-        FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x0035);
-        // F000:0035 je short 0x0039
-        if (!ZeroFlag) {
-            goto L_0037;
-        }
-        // F000:0039 mov DX,0x08C0
-        DX = 0x08C0;
-        // F000:003C push DX
-        Stack.Push16(DX);
-        // F000:003D popf
-        FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x003E);
-        // F000:003E jg short 0x0037
-        if (!ZeroFlag && SignFlag == OverflowFlag) {
-            goto L_0037;
-        }
-        // F000:0040 mov DX,0x0880
-        DX = 0x0880;
-        // F000:0043 push DX
-        Stack.Push16(DX);
-        // F000:0044 popf
-        FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x0045);
-        // F000:0045 jg short 0x0049
-        if (!(!ZeroFlag && SignFlag == OverflowFlag)) {
-            goto L_0047;
-        }
-        // F000:0049 mov DX,0x0080
-        DX = 0x0080;
-        // F000:004C push DX
-        Stack.Push16(DX);
-        // F000:004D popf
-        FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x004E);
-        // F000:004E jge short 0x0047
-        if (SignFlag == OverflowFlag) {
-            goto L_0047;
-        }
-        // F000:0050 push CX
-        Stack.Push16(CX);
-        // F000:0051 popf
-        FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x0052);
-        // F000:0052 jge short 0x0056
-        if (SignFlag != OverflowFlag) {
-            goto L_0054;
-        }
-        // F000:0056 jl short 0x0054
-        if (SignFlag != OverflowFlag) {
-            goto L_0054;
-        }
-        // F000:0058 mov DX,0x0800
-        DX = 0x0800;
-        // F000:005B push DX
-        Stack.Push16(DX);
-        // F000:005C popf
-        FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x005D);
-        // F000:005D jl short 0x0061
-        if (SignFlag == OverflowFlag) {
-            goto L_005F;
-        }
-        // F000:0061 push CX
-        Stack.Push16(CX);
-        // F000:0062 popf
-        FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x0063);
-        // F000:0063 jle short 0x005F
-        if (ZeroFlag || SignFlag != OverflowFlag) {
-            goto L_005F;
-        }
-        // F000:0065 push BX
-        Stack.Push16(BX);
-        // F000:0066 popf
-        FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x0067);
-        // F000:0067 jle short 0x006B
-        if (!(ZeroFlag || SignFlag != OverflowFlag)) {
-            goto L_0069;
-        }
-        // F000:006B jne short 0x0069
-        if (!ZeroFlag) {
-            goto L_0069;
-        }
-        // F000:006D mov DX,0x0CBF
-        DX = 0x0CBF;
-        // F000:0070 push DX
-        Stack.Push16(DX);
-        // F000:0071 popf
-        FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x0072);
-        // F000:0072 jne short 0x0077
-        if (ZeroFlag) {
-            goto L_0074;
-        }
-        // F000:0077 mov DX,0x0800
-        DX = 0x0800;
-        // F000:007A push DX
-        Stack.Push16(DX);
-        // F000:007B popf
-        FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x007C);
-        // F000:007C jno short 0x0074
-        if (!OverflowFlag) {
-            goto L_0074;
-        }
-        // F000:007E mov DX,0x06FF
-        DX = 0x06FF;
-        // F000:0081 push DX
-        Stack.Push16(DX);
-        // F000:0082 popf
-        FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x0083);
-        // F000:0083 jno short 0x0088
-        if (OverflowFlag) {
-            goto L_0085;
-        }
-        // F000:0088 mov DX,4
-        DX = 4;
-        // F000:008B push DX
-        Stack.Push16(DX);
-        // F000:008C popf
-        FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x008D);
-        // F000:008D jnp short 0x0085
-        if (!ParityFlag) {
-            goto L_0085;
-        }
-        // F000:008F push CX
-        Stack.Push16(CX);
-        // F000:0090 popf
-        FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x0091);
-        // F000:0091 jnp short 0x0096
-        if (ParityFlag) {
-            goto L_0093;
-        }
-        // F000:0096 mov DX,0x0EFF
-        DX = 0x0EFF;
-        // F000:0099 push DX
-        Stack.Push16(DX);
-        // F000:009A popf
-        FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x009B);
-        // F000:009B jns short 0x0093
-        if (!SignFlag) {
-            goto L_0093;
-        }
-        // F000:009D push CX
-        Stack.Push16(CX);
-        // F000:009E popf
-        FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x009F);
-        // F000:009F jns short 0x00A4
-        if (SignFlag) {
-            goto L_00A1;
-        }
-        // F000:00A4 jo short 0x00A1
-        if (OverflowFlag) {
-            goto L_00A1;
-        }
-        // F000:00A6 mov DX,0x0800
-        DX = 0x0800;
-        // F000:00A9 push DX
-        Stack.Push16(DX);
-        // F000:00AA popf
-        FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x00AB);
-        // F000:00AB jo short 0x00B0
-        if (!OverflowFlag) {
-            goto L_00AD;
-        }
-        // F000:00B0 jp short 0x00AD
-        if (ParityFlag) {
-            goto L_00AD;
-        }
-        // F000:00B2 mov DX,0x0804
-        DX = 0x0804;
-        // F000:00B5 push DX
-        Stack.Push16(DX);
-        // F000:00B6 popf
-        FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x00B7);
-        // F000:00B7 jp short 0x00BC
-        if (!ParityFlag) {
-            goto L_00B9;
-        }
-        // F000:00BC js short 0x00B9
-        if (SignFlag) {
-            goto L_00B9;
-        }
-        // F000:00BE mov DX,0x0884
-        DX = 0x0884;
-        // F000:00C1 push DX
-        Stack.Push16(DX);
-        // F000:00C2 popf
-        FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x00C3);
-        // F000:00C3 js short 0x00C8
-        if (SignFlag) {
-            goto L_00C8;
-        }
-        VerifySpeculativeEntryOrFail(cs1, 0x00C5, Signature_00C5_jmp);
-        // F000:00C5 jmp near 0xFFF2
-        goto L_FFF2;
-    L_00C8:
-        // F000:00C8 mov word ptr DS:[0],0x1234
-        UInt16[DS, 0] = 0x1234;
-        // F000:00CE hlt
-        return Hlt();
-    L_00B9:
-        VerifySpeculativeEntryOrFail(cs1, 0x00B9, Signature_00B9_jmp);
-        // F000:00B9 jmp near 0xFFF2
-        goto L_FFF2;
-    L_00AD:
-        VerifySpeculativeEntryOrFail(cs1, 0x00AD, Signature_00AD_jmp);
-        // F000:00AD jmp near 0xFFF2
-        goto L_FFF2;
-    L_00A1:
-        VerifySpeculativeEntryOrFail(cs1, 0x00A1, Signature_00A1_jmp);
-        // F000:00A1 jmp near 0xFFF2
-        goto L_FFF2;
-    L_0093:
-        VerifySpeculativeEntryOrFail(cs1, 0x0093, Signature_0093_jmp);
-        // F000:0093 jmp near 0xFFF2
-        goto L_FFF2;
-    L_0085:
-        VerifySpeculativeEntryOrFail(cs1, 0x0085, Signature_0085_jmp);
-        // F000:0085 jmp near 0xFFF2
-        goto L_FFF2;
-    L_0074:
-        VerifySpeculativeEntryOrFail(cs1, 0x0074, Signature_0074_jmp);
-        // F000:0074 jmp near 0xFFF2
-        goto L_FFF2;
-    L_0069:
-        VerifySpeculativeEntryOrFail(cs1, 0x0069, Signature_0069_jmp);
-        // F000:0069 jmp short 0xFFF2
-        goto L_FFF2;
-    L_005F:
-        VerifySpeculativeEntryOrFail(cs1, 0x005F, Signature_005F_jmp);
-        // F000:005F jmp short 0xFFF2
-        goto L_FFF2;
-    L_0054:
-        VerifySpeculativeEntryOrFail(cs1, 0x0054, Signature_0054_jmp);
-        // F000:0054 jmp short 0xFFF2
-        goto L_FFF2;
-    L_0047:
-        VerifySpeculativeEntryOrFail(cs1, 0x0047, Signature_0047_jmp);
-        // F000:0047 jmp short 0xFFF2
-        goto L_FFF2;
-    L_0037:
-        VerifySpeculativeEntryOrFail(cs1, 0x0037, Signature_0037_jmp);
-        // F000:0037 jmp short 0xFFF2
-        goto L_FFF2;
-    L_002D:
-        VerifySpeculativeEntryOrFail(cs1, 0x002D, Signature_002D_jmp);
-        // F000:002D jmp short 0xFFF2
-        goto L_FFF2;
-    L_0025:
-        VerifySpeculativeEntryOrFail(cs1, 0x0025, Signature_0025_jmp);
-        // F000:0025 jmp short 0xFFF2
-        goto L_FFF2;
-    L_001E:
-        VerifySpeculativeEntryOrFail(cs1, 0x001E, Signature_001E_jmp);
-        // F000:001E jmp short 0xFFF2
-        goto L_FFF2;
-    L_0016:
-        VerifySpeculativeEntryOrFail(cs1, 0x0016, Signature_0016_jmp);
-        // F000:0016 jmp short 0xFFF2
-        goto L_FFF2;
-    L_000E:
-        VerifySpeculativeEntryOrFail(cs1, 0x000E, Signature_000E_jmp);
-        // F000:000E jmp short 0xFFF2
-    L_FFF2:
         VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
         // F000:FFF2 hlt
         return Hlt();

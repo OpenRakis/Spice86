@@ -45,6 +45,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_0080_callback = [0xFE, 0x38, 0x09, 0x01];
     private static readonly byte?[] Signature_0084_iret = [0xCF];
     private static readonly byte?[] Signature_00A4_sti = [0xFB];
+    private static readonly byte?[] Signature_00A5_callback = [0xFE, 0x38, 0x0A, 0x01];
+    private static readonly byte?[] Signature_00A9_cmp = [0x2E, 0x80, 0x3E, 0x8F, 0x00, 0x00];
+    private static readonly byte?[] Signature_00AF_jne = [0x75, 0x04];
+    private static readonly byte?[] Signature_00B1_int = [0xCD, 0x28];
+    private static readonly byte?[] Signature_00B5_callback = [0xFE, 0x38, 0x0B, 0x01];
+    private static readonly byte?[] Signature_00B9_iret = [0xCF];
     private static readonly byte?[] Signature_00E2_ret = [0xCB];
     private static readonly byte?[] Signature_00E3_callback = [0xFE, 0x38, 0x0C, 0x01];
     private static readonly byte?[] Signature_00E7_call = [0x9A, 0xE2, 0x00, 0x00, 0xF0];
@@ -90,33 +96,32 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:010E cmp DL,1
         Alu8.Sub(DL, 1);
         // 016D:0111 jne short 0x012A
-        if (!ZeroFlag) {
-            goto L_012A;
+        if (ZeroFlag) {
+            // 016D:0113 mov AH,0x33
+            AH = 0x33;
+            // 016D:0115 mov AL,1
+            AL = 1;
+            // 016D:0117 mov DL,0
+            DL = 0;
+            // 016D:0119 int 0x21
+            InterruptCall(cs1, 0x011B, 0x21);
+            // 016D:011B mov AH,0x33
+            AH = 0x33;
+            // 016D:011D mov AL,0
+            AL = 0;
+            // 016D:011F int 0x21
+            InterruptCall(cs1, 0x0121, 0x21);
+            // 016D:0121 cmp DL,0
+            Alu8.Sub(DL, 0);
+            // 016D:0124 jne short 0x012A
+            if (!ZeroFlag) {
+                goto L_012A;
+            }
+            // 016D:0126 mov AL,0
+            AL = 0;
+            // 016D:0128 jmp short 0x012C
+            goto L_012C;
         }
-        // 016D:0113 mov AH,0x33
-        AH = 0x33;
-        // 016D:0115 mov AL,1
-        AL = 1;
-        // 016D:0117 mov DL,0
-        DL = 0;
-        // 016D:0119 int 0x21
-        InterruptCall(cs1, 0x011B, 0x21);
-        // 016D:011B mov AH,0x33
-        AH = 0x33;
-        // 016D:011D mov AL,0
-        AL = 0;
-        // 016D:011F int 0x21
-        InterruptCall(cs1, 0x0121, 0x21);
-        // 016D:0121 cmp DL,0
-        Alu8.Sub(DL, 0);
-        // 016D:0124 jne short 0x012A
-        if (!ZeroFlag) {
-            goto L_012A;
-        }
-        // 016D:0126 mov AL,0
-        AL = 0;
-        // 016D:0128 jmp short 0x012C
-        goto L_012C;
     L_012A:
         VerifySpeculativeEntryOrFail(cs1, 0x012A, Signature_012A_mov);
         // 016D:012A mov AL,0xFF
@@ -242,34 +247,48 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_F000_0090_F0090(int loadOffset) {
         CheckExternalEvents(cs2, 0x0090);
         // F000:0090 cmp AH,7
+        Alu8.Sub(AH, 7);
         // F000:0093 je short 0x00A4
-        if (AH == 7) {
-            goto L_00A4;
+        if (!ZeroFlag) {
+            // F000:0095 cmp AH,8
+            Alu8.Sub(AH, 8);
+            // F000:0098 je short 0x00A4
+            if (!ZeroFlag) {
+                // F000:009A cmp AH,0x0A
+                Alu8.Sub(AH, 0x0A);
+                // F000:009D je short 0x00A4
+                if (!ZeroFlag) {
+                    // F000:009F callback 0x0021
+                    Callback(cs2, 0x009F, 0x0021);
+                    // F000:00A3 iret
+                    return InterruptRet();
+                }
+            }
         }
-        // F000:0095 cmp AH,8
-        // F000:0098 je short 0x00A4
-        if (AH == 8) {
-            goto L_00A4;
-        }
-        // F000:009A cmp AH,0x0A
-        Alu8.Sub(AH, 0x0A);
-        // F000:009D je short 0x00A4
-        if (ZeroFlag) {
-            goto L_00A4;
-        }
-        // F000:009F callback 0x0021
-        Callback(cs2, 0x009F, 0x0021);
-        // F000:00A3 iret
-        return InterruptRet();
-    L_00A4:
         VerifySpeculativeEntryOrFail(cs2, 0x00A4, Signature_00A4_sti);
         // F000:00A4 sti
-        if (!InterruptFlag) {
-            State.InterruptShadowing = true;
-        }
         InterruptFlag = true;
         CheckExternalEvents(cs2, 0x00A5);
-        throw FailAsUntested("Untested fallthrough after F000:00A4");
+        VerifySpeculativeEntryOrFail(cs2, 0x00A5, Signature_00A5_callback);
+        // F000:00A5 callback 0x010A
+        Callback(cs2, 0x00A5, 0x010A);
+        VerifySpeculativeEntryOrFail(cs2, 0x00A9, Signature_00A9_cmp);
+        // F000:00A9 cmp byte ptr CS:[0x008F],0
+        Alu8.Sub(UInt8[CS, 0x008F], 0);
+        VerifySpeculativeEntryOrFail(cs2, 0x00AF, Signature_00AF_jne);
+        // F000:00AF jne short 0x00B5
+        if (!ZeroFlag) {
+            VerifySpeculativeEntryOrFail(cs2, 0x00B5, Signature_00B5_callback);
+            // F000:00B5 callback 0x010B
+            Callback(cs2, 0x00B5, 0x010B);
+            VerifySpeculativeEntryOrFail(cs2, 0x00B9, Signature_00B9_iret);
+            // F000:00B9 iret
+            return InterruptRet();
+        }
+        VerifySpeculativeEntryOrFail(cs2, 0x00B1, Signature_00B1_int);
+        // F000:00B1 int 0x28
+        InterruptCall(cs2, 0x00B3, 0x28);
+        throw FailAsUntested("Untested return from call at F000:00B1");
     }
 
     public virtual Action unknown_F000_00E2_F00E2(int loadOffset) {

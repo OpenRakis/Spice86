@@ -46,6 +46,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_0080_callback = [0xFE, 0x38, 0x09, 0x01];
     private static readonly byte?[] Signature_0084_iret = [0xCF];
     private static readonly byte?[] Signature_00A4_sti = [0xFB];
+    private static readonly byte?[] Signature_00A5_callback = [0xFE, 0x38, 0x0A, 0x01];
+    private static readonly byte?[] Signature_00A9_cmp = [0x2E, 0x80, 0x3E, 0x8F, 0x00, 0x00];
+    private static readonly byte?[] Signature_00AF_jne = [0x75, 0x04];
+    private static readonly byte?[] Signature_00B1_int = [0xCD, 0x28];
+    private static readonly byte?[] Signature_00B5_callback = [0xFE, 0x38, 0x0B, 0x01];
+    private static readonly byte?[] Signature_00B9_iret = [0xCF];
     private static readonly byte?[] Signature_00E2_ret = [0xCB];
     private static readonly byte?[] Signature_00E3_callback = [0xFE, 0x38, 0x0C, 0x01];
     private static readonly byte?[] Signature_00E7_call = [0x9A, 0xE2, 0x00, 0x00, 0xF0];
@@ -96,269 +102,245 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         ushort targetOffset_0117 = UInt16[DS, 0x022B];
         if (targetSegment_0117 == cs2 && targetOffset_0117 == 0x0010) {
             FarCall(cs1, 0x011B, cs2, unknown_C8AB_0010_C8AC0);
-            goto L_011B;
         }
-        throw FailAsUntested($"Untested far call target {targetSegment_0117:X4}:{targetOffset_0117:X4} at 016E:0117");
-    L_011B:
+        else {
+            throw FailAsUntested($"Untested far call target {targetSegment_0117:X4}:{targetOffset_0117:X4} at 016E:0117");
+        }
         // 016E:011B cmp AX,0
         Alu16.Sub(AX, 0);
         // 016E:011E jne near 0x0223
-        if (!ZeroFlag) {
-            goto L_0223;
+        if (ZeroFlag) {
+            // 016E:0122 cmp BL,0xB0
+            Alu8.Sub(BL, 0xB0);
+            // 016E:0125 jne near 0x0223
+            if (ZeroFlag) {
+                // 016E:0129 cmp DX,0x1FFF
+                Alu16.Sub(DX, 0x1FFF);
+                // 016E:012D jne near 0x0223
+                if (ZeroFlag) {
+                    // 016E:0131 mov byte ptr DS:[0x0231],2
+                    UInt8[DS, 0x0231] = 2;
+                    // 016E:0136 mov AX,0x5800
+                    AX = 0x5800;
+                    // 016E:0139 int 0x21
+                    InterruptCall(cs1, 0x013B, 0x21);
+                    // 016E:013B cmp AX,0
+                    Alu16.Sub(AX, 0);
+                    // 016E:013E jne near 0x0223
+                    if (ZeroFlag) {
+                        // 016E:0142 mov AX,0x5802
+                        AX = 0x5802;
+                        // 016E:0145 int 0x21
+                        InterruptCall(cs1, 0x0147, 0x21);
+                        // 016E:0147 jb near 0x0223
+                        if (!CarryFlag) {
+                            // 016E:014B cmp AL,0
+                            Alu8.Sub(AL, 0);
+                            // 016E:014D jne near 0x0223
+                            if (ZeroFlag) {
+                                // 016E:0151 mov byte ptr DS:[0x0231],3
+                                UInt8[DS, 0x0231] = 3;
+                                // 016E:0156 mov AH,0x10
+                                AH = 0x10;
+                                // 016E:0158 mov DX,0x1FFF
+                                DX = 0x1FFF;
+                                // 016E:015B call far dword ptr DS:[0x022B]
+                                ushort targetSegment_015B = UInt16[DS, (ushort)(0x022B + 2)];
+                                ushort targetOffset_015B = UInt16[DS, 0x022B];
+                                if (targetSegment_015B == cs2 && targetOffset_015B == 0x0010) {
+                                    FarCall(cs1, 0x015F, cs2, unknown_C8AB_0010_C8AC0);
+                                }
+                                else {
+                                    throw FailAsUntested($"Untested far call target {targetSegment_015B:X4}:{targetOffset_015B:X4} at 016E:015B");
+                                }
+                                // 016E:015F cmp AX,1
+                                Alu16.Sub(AX, 1);
+                                // 016E:0162 jne near 0x0223
+                                if (ZeroFlag) {
+                                    // 016E:0166 mov word ptr DS:[0x022F],BX
+                                    UInt16[DS, 0x022F] = BX;
+                                    // 016E:016A cmp BX,0xD001
+                                    Alu16.Sub(BX, 0xD001);
+                                    // 016E:016E jne near 0x0223
+                                    if (ZeroFlag) {
+                                        // 016E:0172 mov AH,0x10
+                                        AH = 0x10;
+                                        // 016E:0174 mov DX,1
+                                        DX = 1;
+                                        // 016E:0177 call far dword ptr DS:[0x022B]
+                                        ushort targetSegment_0177 = UInt16[DS, (ushort)(0x022B + 2)];
+                                        ushort targetOffset_0177 = UInt16[DS, 0x022B];
+                                        if (targetSegment_0177 == cs2 && targetOffset_0177 == 0x0010) {
+                                            FarCall(cs1, 0x017B, cs2, unknown_C8AB_0010_C8AC0);
+                                        }
+                                        else {
+                                            throw FailAsUntested($"Untested far call target {targetSegment_0177:X4}:{targetOffset_0177:X4} at 016E:0177");
+                                        }
+                                        // 016E:017B cmp AX,0
+                                        Alu16.Sub(AX, 0);
+                                        // 016E:017E jne near 0x0223
+                                        if (ZeroFlag) {
+                                            // 016E:0182 cmp BL,0xB1
+                                            Alu8.Sub(BL, 0xB1);
+                                            // 016E:0185 jne near 0x0223
+                                            if (ZeroFlag) {
+                                                // 016E:0189 cmp DX,0
+                                                Alu16.Sub(DX, 0);
+                                                // 016E:018C jne near 0x0223
+                                                if (ZeroFlag) {
+                                                    // 016E:0190 mov byte ptr DS:[0x0231],4
+                                                    UInt8[DS, 0x0231] = 4;
+                                                    // 016E:0195 mov AX,0x5800
+                                                    AX = 0x5800;
+                                                    // 016E:0198 int 0x21
+                                                    InterruptCall(cs1, 0x019A, 0x21);
+                                                    // 016E:019A cmp AX,0
+                                                    Alu16.Sub(AX, 0);
+                                                    // 016E:019D jne near 0x0223
+                                                    if (ZeroFlag) {
+                                                        // 016E:01A1 mov AX,0x5802
+                                                        AX = 0x5802;
+                                                        // 016E:01A4 int 0x21
+                                                        InterruptCall(cs1, 0x01A6, 0x21);
+                                                        // 016E:01A6 jb short 0x0223
+                                                        if (!CarryFlag) {
+                                                            // 016E:01A8 cmp AL,0
+                                                            Alu8.Sub(AL, 0);
+                                                            // 016E:01AA jne short 0x0223
+                                                            if (ZeroFlag) {
+                                                                // 016E:01AC mov byte ptr DS:[0x0231],5
+                                                                UInt8[DS, 0x0231] = 5;
+                                                                // 016E:01B1 mov AH,0x11
+                                                                AH = 0x11;
+                                                                // 016E:01B3 mov DX,word ptr DS:[0x022F]
+                                                                DX = UInt16[DS, 0x022F];
+                                                                // 016E:01B7 call far dword ptr DS:[0x022B]
+                                                                ushort targetSegment_01B7 = UInt16[DS, (ushort)(0x022B + 2)];
+                                                                ushort targetOffset_01B7 = UInt16[DS, 0x022B];
+                                                                if (targetSegment_01B7 == cs2 && targetOffset_01B7 == 0x0010) {
+                                                                    FarCall(cs1, 0x01BB, cs2, unknown_C8AB_0010_C8AC0);
+                                                                }
+                                                                else {
+                                                                    throw FailAsUntested($"Untested far call target {targetSegment_01B7:X4}:{targetOffset_01B7:X4} at 016E:01B7");
+                                                                }
+                                                                // 016E:01BB cmp AX,1
+                                                                Alu16.Sub(AX, 1);
+                                                                // 016E:01BE jne short 0x0223
+                                                                if (ZeroFlag) {
+                                                                    // 016E:01C0 mov AX,0x5800
+                                                                    AX = 0x5800;
+                                                                    // 016E:01C3 int 0x21
+                                                                    InterruptCall(cs1, 0x01C5, 0x21);
+                                                                    // 016E:01C5 cmp AX,0
+                                                                    Alu16.Sub(AX, 0);
+                                                                    // 016E:01C8 jne short 0x0223
+                                                                    if (ZeroFlag) {
+                                                                        // 016E:01CA mov AX,0x5802
+                                                                        AX = 0x5802;
+                                                                        // 016E:01CD int 0x21
+                                                                        InterruptCall(cs1, 0x01CF, 0x21);
+                                                                        // 016E:01CF jb short 0x0223
+                                                                        if (!CarryFlag) {
+                                                                            // 016E:01D1 cmp AL,0
+                                                                            Alu8.Sub(AL, 0);
+                                                                            // 016E:01D3 jne short 0x0223
+                                                                            if (ZeroFlag) {
+                                                                                // 016E:01D5 mov AH,0x11
+                                                                                AH = 0x11;
+                                                                                // 016E:01D7 mov DX,word ptr DS:[0x022F]
+                                                                                DX = UInt16[DS, 0x022F];
+                                                                                // 016E:01DB call far dword ptr DS:[0x022B]
+                                                                                ushort targetSegment_01DB = UInt16[DS, (ushort)(0x022B + 2)];
+                                                                                ushort targetOffset_01DB = UInt16[DS, 0x022B];
+                                                                                if (targetSegment_01DB == cs2 && targetOffset_01DB == 0x0010) {
+                                                                                    FarCall(cs1, 0x01DF, cs2, unknown_C8AB_0010_C8AC0);
+                                                                                }
+                                                                                else {
+                                                                                    throw FailAsUntested($"Untested far call target {targetSegment_01DB:X4}:{targetOffset_01DB:X4} at 016E:01DB");
+                                                                                }
+                                                                                // 016E:01DF cmp AX,0
+                                                                                Alu16.Sub(AX, 0);
+                                                                                // 016E:01E2 jne short 0x0223
+                                                                                if (ZeroFlag) {
+                                                                                    // 016E:01E4 cmp BL,0xB2
+                                                                                    Alu8.Sub(BL, 0xB2);
+                                                                                    // 016E:01E7 jne short 0x0223
+                                                                                    if (ZeroFlag) {
+                                                                                        // 016E:01E9 mov byte ptr DS:[0x0231],6
+                                                                                        UInt8[DS, 0x0231] = 6;
+                                                                                        // 016E:01EE mov AH,0x12
+                                                                                        AH = 0x12;
+                                                                                        // 016E:01F0 mov BX,0x0100
+                                                                                        BX = 0x0100;
+                                                                                        // 016E:01F3 mov DX,word ptr DS:[0x022F]
+                                                                                        DX = UInt16[DS, 0x022F];
+                                                                                        // 016E:01F7 call far dword ptr DS:[0x022B]
+                                                                                        ushort targetSegment_01F7 = UInt16[DS, (ushort)(0x022B + 2)];
+                                                                                        ushort targetOffset_01F7 = UInt16[DS, 0x022B];
+                                                                                        if (targetSegment_01F7 == cs2 && targetOffset_01F7 == 0x0010) {
+                                                                                            FarCall(cs1, 0x01FB, cs2, unknown_C8AB_0010_C8AC0);
+                                                                                        }
+                                                                                        else {
+                                                                                            throw FailAsUntested($"Untested far call target {targetSegment_01F7:X4}:{targetOffset_01F7:X4} at 016E:01F7");
+                                                                                        }
+                                                                                        // 016E:01FB cmp AX,0
+                                                                                        Alu16.Sub(AX, 0);
+                                                                                        // 016E:01FE jne short 0x0223
+                                                                                        if (ZeroFlag) {
+                                                                                            // 016E:0200 cmp BL,0x80
+                                                                                            Alu8.Sub(BL, 0x80);
+                                                                                            // 016E:0203 jne short 0x0223
+                                                                                            if (ZeroFlag) {
+                                                                                                // 016E:0205 mov byte ptr DS:[0x0231],7
+                                                                                                UInt8[DS, 0x0231] = 7;
+                                                                                                // 016E:020A mov AX,0x5800
+                                                                                                AX = 0x5800;
+                                                                                                // 016E:020D int 0x21
+                                                                                                InterruptCall(cs1, 0x020F, 0x21);
+                                                                                                // 016E:020F cmp AX,0
+                                                                                                Alu16.Sub(AX, 0);
+                                                                                                // 016E:0212 jne short 0x0223
+                                                                                                if (ZeroFlag) {
+                                                                                                    // 016E:0214 mov AX,0x5802
+                                                                                                    AX = 0x5802;
+                                                                                                    // 016E:0217 int 0x21
+                                                                                                    InterruptCall(cs1, 0x0219, 0x21);
+                                                                                                    // 016E:0219 jb short 0x0223
+                                                                                                    if (!CarryFlag) {
+                                                                                                        // 016E:021B cmp AL,0
+                                                                                                        Alu8.Sub(AL, 0);
+                                                                                                        // 016E:021D jne short 0x0223
+                                                                                                        if (!ZeroFlag) {
+                                                                                                            goto L_0223;
+                                                                                                        }
+                                                                                                        // 016E:021F mov AL,0
+                                                                                                        AL = 0;
+                                                                                                        // 016E:0221 jmp short 0x0226
+                                                                                                        goto L_0226;
+                                                                                                    }
+                                                                                                }
+                                                                                            }
+                                                                                        }
+                                                                                    }
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
-        // 016E:0122 cmp BL,0xB0
-        Alu8.Sub(BL, 0xB0);
-        // 016E:0125 jne near 0x0223
-        if (!ZeroFlag) {
-            goto L_0223;
-        }
-        // 016E:0129 cmp DX,0x1FFF
-        Alu16.Sub(DX, 0x1FFF);
-        // 016E:012D jne near 0x0223
-        if (!ZeroFlag) {
-            goto L_0223;
-        }
-        // 016E:0131 mov byte ptr DS:[0x0231],2
-        UInt8[DS, 0x0231] = 2;
-        // 016E:0136 mov AX,0x5800
-        AX = 0x5800;
-        // 016E:0139 int 0x21
-        InterruptCall(cs1, 0x013B, 0x21);
-        // 016E:013B cmp AX,0
-        Alu16.Sub(AX, 0);
-        // 016E:013E jne near 0x0223
-        if (!ZeroFlag) {
-            goto L_0223;
-        }
-        // 016E:0142 mov AX,0x5802
-        AX = 0x5802;
-        // 016E:0145 int 0x21
-        InterruptCall(cs1, 0x0147, 0x21);
-        // 016E:0147 jb near 0x0223
-        if (CarryFlag) {
-            goto L_0223;
-        }
-        // 016E:014B cmp AL,0
-        Alu8.Sub(AL, 0);
-        // 016E:014D jne near 0x0223
-        if (!ZeroFlag) {
-            goto L_0223;
-        }
-        // 016E:0151 mov byte ptr DS:[0x0231],3
-        UInt8[DS, 0x0231] = 3;
-        // 016E:0156 mov AH,0x10
-        AH = 0x10;
-        // 016E:0158 mov DX,0x1FFF
-        DX = 0x1FFF;
-        // 016E:015B call far dword ptr DS:[0x022B]
-        ushort targetSegment_015B = UInt16[DS, (ushort)(0x022B + 2)];
-        ushort targetOffset_015B = UInt16[DS, 0x022B];
-        if (targetSegment_015B == cs2 && targetOffset_015B == 0x0010) {
-            FarCall(cs1, 0x015F, cs2, unknown_C8AB_0010_C8AC0);
-            goto L_015F;
-        }
-        throw FailAsUntested($"Untested far call target {targetSegment_015B:X4}:{targetOffset_015B:X4} at 016E:015B");
-    L_015F:
-        // 016E:015F cmp AX,1
-        Alu16.Sub(AX, 1);
-        // 016E:0162 jne near 0x0223
-        if (!ZeroFlag) {
-            goto L_0223;
-        }
-        // 016E:0166 mov word ptr DS:[0x022F],BX
-        UInt16[DS, 0x022F] = BX;
-        // 016E:016A cmp BX,0xD001
-        Alu16.Sub(BX, 0xD001);
-        // 016E:016E jne near 0x0223
-        if (!ZeroFlag) {
-            goto L_0223;
-        }
-        // 016E:0172 mov AH,0x10
-        AH = 0x10;
-        // 016E:0174 mov DX,1
-        DX = 1;
-        // 016E:0177 call far dword ptr DS:[0x022B]
-        ushort targetSegment_0177 = UInt16[DS, (ushort)(0x022B + 2)];
-        ushort targetOffset_0177 = UInt16[DS, 0x022B];
-        if (targetSegment_0177 == cs2 && targetOffset_0177 == 0x0010) {
-            FarCall(cs1, 0x017B, cs2, unknown_C8AB_0010_C8AC0);
-            goto L_017B;
-        }
-        throw FailAsUntested($"Untested far call target {targetSegment_0177:X4}:{targetOffset_0177:X4} at 016E:0177");
-    L_017B:
-        // 016E:017B cmp AX,0
-        Alu16.Sub(AX, 0);
-        // 016E:017E jne near 0x0223
-        if (!ZeroFlag) {
-            goto L_0223;
-        }
-        // 016E:0182 cmp BL,0xB1
-        Alu8.Sub(BL, 0xB1);
-        // 016E:0185 jne near 0x0223
-        if (!ZeroFlag) {
-            goto L_0223;
-        }
-        // 016E:0189 cmp DX,0
-        Alu16.Sub(DX, 0);
-        // 016E:018C jne near 0x0223
-        if (!ZeroFlag) {
-            goto L_0223;
-        }
-        // 016E:0190 mov byte ptr DS:[0x0231],4
-        UInt8[DS, 0x0231] = 4;
-        // 016E:0195 mov AX,0x5800
-        AX = 0x5800;
-        // 016E:0198 int 0x21
-        InterruptCall(cs1, 0x019A, 0x21);
-        // 016E:019A cmp AX,0
-        Alu16.Sub(AX, 0);
-        // 016E:019D jne near 0x0223
-        if (!ZeroFlag) {
-            goto L_0223;
-        }
-        // 016E:01A1 mov AX,0x5802
-        AX = 0x5802;
-        // 016E:01A4 int 0x21
-        InterruptCall(cs1, 0x01A6, 0x21);
-        // 016E:01A6 jb short 0x0223
-        if (CarryFlag) {
-            goto L_0223;
-        }
-        // 016E:01A8 cmp AL,0
-        Alu8.Sub(AL, 0);
-        // 016E:01AA jne short 0x0223
-        if (!ZeroFlag) {
-            goto L_0223;
-        }
-        // 016E:01AC mov byte ptr DS:[0x0231],5
-        UInt8[DS, 0x0231] = 5;
-        // 016E:01B1 mov AH,0x11
-        AH = 0x11;
-        // 016E:01B3 mov DX,word ptr DS:[0x022F]
-        DX = UInt16[DS, 0x022F];
-        // 016E:01B7 call far dword ptr DS:[0x022B]
-        ushort targetSegment_01B7 = UInt16[DS, (ushort)(0x022B + 2)];
-        ushort targetOffset_01B7 = UInt16[DS, 0x022B];
-        if (targetSegment_01B7 == cs2 && targetOffset_01B7 == 0x0010) {
-            FarCall(cs1, 0x01BB, cs2, unknown_C8AB_0010_C8AC0);
-            goto L_01BB;
-        }
-        throw FailAsUntested($"Untested far call target {targetSegment_01B7:X4}:{targetOffset_01B7:X4} at 016E:01B7");
-    L_01BB:
-        // 016E:01BB cmp AX,1
-        Alu16.Sub(AX, 1);
-        // 016E:01BE jne short 0x0223
-        if (!ZeroFlag) {
-            goto L_0223;
-        }
-        // 016E:01C0 mov AX,0x5800
-        AX = 0x5800;
-        // 016E:01C3 int 0x21
-        InterruptCall(cs1, 0x01C5, 0x21);
-        // 016E:01C5 cmp AX,0
-        Alu16.Sub(AX, 0);
-        // 016E:01C8 jne short 0x0223
-        if (!ZeroFlag) {
-            goto L_0223;
-        }
-        // 016E:01CA mov AX,0x5802
-        AX = 0x5802;
-        // 016E:01CD int 0x21
-        InterruptCall(cs1, 0x01CF, 0x21);
-        // 016E:01CF jb short 0x0223
-        if (CarryFlag) {
-            goto L_0223;
-        }
-        // 016E:01D1 cmp AL,0
-        Alu8.Sub(AL, 0);
-        // 016E:01D3 jne short 0x0223
-        if (!ZeroFlag) {
-            goto L_0223;
-        }
-        // 016E:01D5 mov AH,0x11
-        AH = 0x11;
-        // 016E:01D7 mov DX,word ptr DS:[0x022F]
-        DX = UInt16[DS, 0x022F];
-        // 016E:01DB call far dword ptr DS:[0x022B]
-        ushort targetSegment_01DB = UInt16[DS, (ushort)(0x022B + 2)];
-        ushort targetOffset_01DB = UInt16[DS, 0x022B];
-        if (targetSegment_01DB == cs2 && targetOffset_01DB == 0x0010) {
-            FarCall(cs1, 0x01DF, cs2, unknown_C8AB_0010_C8AC0);
-            goto L_01DF;
-        }
-        throw FailAsUntested($"Untested far call target {targetSegment_01DB:X4}:{targetOffset_01DB:X4} at 016E:01DB");
-    L_01DF:
-        // 016E:01DF cmp AX,0
-        Alu16.Sub(AX, 0);
-        // 016E:01E2 jne short 0x0223
-        if (!ZeroFlag) {
-            goto L_0223;
-        }
-        // 016E:01E4 cmp BL,0xB2
-        Alu8.Sub(BL, 0xB2);
-        // 016E:01E7 jne short 0x0223
-        if (!ZeroFlag) {
-            goto L_0223;
-        }
-        // 016E:01E9 mov byte ptr DS:[0x0231],6
-        UInt8[DS, 0x0231] = 6;
-        // 016E:01EE mov AH,0x12
-        AH = 0x12;
-        // 016E:01F0 mov BX,0x0100
-        BX = 0x0100;
-        // 016E:01F3 mov DX,word ptr DS:[0x022F]
-        DX = UInt16[DS, 0x022F];
-        // 016E:01F7 call far dword ptr DS:[0x022B]
-        ushort targetSegment_01F7 = UInt16[DS, (ushort)(0x022B + 2)];
-        ushort targetOffset_01F7 = UInt16[DS, 0x022B];
-        if (targetSegment_01F7 == cs2 && targetOffset_01F7 == 0x0010) {
-            FarCall(cs1, 0x01FB, cs2, unknown_C8AB_0010_C8AC0);
-            goto L_01FB;
-        }
-        throw FailAsUntested($"Untested far call target {targetSegment_01F7:X4}:{targetOffset_01F7:X4} at 016E:01F7");
-    L_01FB:
-        // 016E:01FB cmp AX,0
-        Alu16.Sub(AX, 0);
-        // 016E:01FE jne short 0x0223
-        if (!ZeroFlag) {
-            goto L_0223;
-        }
-        // 016E:0200 cmp BL,0x80
-        Alu8.Sub(BL, 0x80);
-        // 016E:0203 jne short 0x0223
-        if (!ZeroFlag) {
-            goto L_0223;
-        }
-        // 016E:0205 mov byte ptr DS:[0x0231],7
-        UInt8[DS, 0x0231] = 7;
-        // 016E:020A mov AX,0x5800
-        AX = 0x5800;
-        // 016E:020D int 0x21
-        InterruptCall(cs1, 0x020F, 0x21);
-        // 016E:020F cmp AX,0
-        Alu16.Sub(AX, 0);
-        // 016E:0212 jne short 0x0223
-        if (!ZeroFlag) {
-            goto L_0223;
-        }
-        // 016E:0214 mov AX,0x5802
-        AX = 0x5802;
-        // 016E:0217 int 0x21
-        InterruptCall(cs1, 0x0219, 0x21);
-        // 016E:0219 jb short 0x0223
-        if (CarryFlag) {
-            goto L_0223;
-        }
-        // 016E:021B cmp AL,0
-        Alu8.Sub(AL, 0);
-        // 016E:021D jne short 0x0223
-        if (!ZeroFlag) {
-            goto L_0223;
-        }
-        // 016E:021F mov AL,0
-        AL = 0;
-        // 016E:0221 jmp short 0x0226
-        goto L_0226;
     L_0223:
         VerifySpeculativeEntryOrFail(cs1, 0x0223, Signature_0223_mov);
         // 016E:0223 mov AL,byte ptr DS:[0x0231]
@@ -493,34 +475,48 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_F000_0090_F0090(int loadOffset) {
         CheckExternalEvents(cs3, 0x0090);
         // F000:0090 cmp AH,7
+        Alu8.Sub(AH, 7);
         // F000:0093 je short 0x00A4
-        if (AH == 7) {
-            goto L_00A4;
+        if (!ZeroFlag) {
+            // F000:0095 cmp AH,8
+            Alu8.Sub(AH, 8);
+            // F000:0098 je short 0x00A4
+            if (!ZeroFlag) {
+                // F000:009A cmp AH,0x0A
+                Alu8.Sub(AH, 0x0A);
+                // F000:009D je short 0x00A4
+                if (!ZeroFlag) {
+                    // F000:009F callback 0x0021
+                    Callback(cs3, 0x009F, 0x0021);
+                    // F000:00A3 iret
+                    return InterruptRet();
+                }
+            }
         }
-        // F000:0095 cmp AH,8
-        // F000:0098 je short 0x00A4
-        if (AH == 8) {
-            goto L_00A4;
-        }
-        // F000:009A cmp AH,0x0A
-        Alu8.Sub(AH, 0x0A);
-        // F000:009D je short 0x00A4
-        if (ZeroFlag) {
-            goto L_00A4;
-        }
-        // F000:009F callback 0x0021
-        Callback(cs3, 0x009F, 0x0021);
-        // F000:00A3 iret
-        return InterruptRet();
-    L_00A4:
         VerifySpeculativeEntryOrFail(cs3, 0x00A4, Signature_00A4_sti);
         // F000:00A4 sti
-        if (!InterruptFlag) {
-            State.InterruptShadowing = true;
-        }
         InterruptFlag = true;
         CheckExternalEvents(cs3, 0x00A5);
-        throw FailAsUntested("Untested fallthrough after F000:00A4");
+        VerifySpeculativeEntryOrFail(cs3, 0x00A5, Signature_00A5_callback);
+        // F000:00A5 callback 0x010A
+        Callback(cs3, 0x00A5, 0x010A);
+        VerifySpeculativeEntryOrFail(cs3, 0x00A9, Signature_00A9_cmp);
+        // F000:00A9 cmp byte ptr CS:[0x008F],0
+        Alu8.Sub(UInt8[CS, 0x008F], 0);
+        VerifySpeculativeEntryOrFail(cs3, 0x00AF, Signature_00AF_jne);
+        // F000:00AF jne short 0x00B5
+        if (!ZeroFlag) {
+            VerifySpeculativeEntryOrFail(cs3, 0x00B5, Signature_00B5_callback);
+            // F000:00B5 callback 0x010B
+            Callback(cs3, 0x00B5, 0x010B);
+            VerifySpeculativeEntryOrFail(cs3, 0x00B9, Signature_00B9_iret);
+            // F000:00B9 iret
+            return InterruptRet();
+        }
+        VerifySpeculativeEntryOrFail(cs3, 0x00B1, Signature_00B1_int);
+        // F000:00B1 int 0x28
+        InterruptCall(cs3, 0x00B3, 0x28);
+        throw FailAsUntested("Untested return from call at F000:00B1");
     }
 
     public virtual Action unknown_F000_00C4_F00C4(int loadOffset) {

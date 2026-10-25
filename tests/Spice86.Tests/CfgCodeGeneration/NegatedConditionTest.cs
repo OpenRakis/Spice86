@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 
 using Xunit;
 
@@ -23,25 +24,25 @@ public class NegatedConditionTest {
     [InlineData(BinaryOperation.LESS_THAN_OR_EQUAL, "AX > BX")]
     public void ComparisonIsInverted(BinaryOperation operation, string expected) {
         // Act
-        ValueNode negated = InstructionLowerer.NegatedCondition(new BinaryOperationNode(DataType.BOOL, Ax, operation, Bx));
+        ValueNode negated = CodeGenerationAst.NegatedCondition(new BinaryOperationNode(DataType.BOOL, Ax, operation, Bx));
 
         // Assert
         Print(negated).Should().Be(expected);
     }
 
     [Fact]
-    public void NotIsUnwrappedAndOtherConditionsAreWrapped() {
+    public void NotIsUnwrappedAndLogicalOrDistributes() {
         // Arrange
         CpuFlagNode zero = new(Flags.Zero);
         BinaryOperationNode carryOrZero = new(DataType.BOOL, new CpuFlagNode(Flags.Carry), BinaryOperation.LOGICAL_OR, zero);
 
         // Act
-        ValueNode unwrapped = InstructionLowerer.NegatedCondition(new UnaryOperationNode(DataType.BOOL, UnaryOperation.NOT, zero));
-        ValueNode wrapped = InstructionLowerer.NegatedCondition(carryOrZero);
+        ValueNode unwrapped = CodeGenerationAst.NegatedCondition(new UnaryOperationNode(DataType.BOOL, UnaryOperation.NOT, zero));
+        ValueNode distributed = CodeGenerationAst.NegatedCondition(carryOrZero);
 
         // Assert
         Print(unwrapped).Should().Be("ZeroFlag");
-        Print(wrapped).Should().Be("!(CarryFlag || ZeroFlag)");
+        Print(distributed).Should().Be("!CarryFlag && !ZeroFlag");
     }
 
     private static string Print(ValueNode node) =>

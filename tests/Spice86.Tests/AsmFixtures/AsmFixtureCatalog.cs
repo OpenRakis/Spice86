@@ -490,6 +490,81 @@ internal static class AsmFixtureCatalog {
                     result.State.AX.Should().Be(0x1111, $"{binName}: indirect_target sets AX");
                     result.State.BX.Should().Be(0x0016, $"{binName}: BX holds the address of jump_target");
                 });
+            case "partition_jump_table":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
+                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.State.DX.Should().Be(0x0111, $"{binName}: each of the three cases adds its own digit to DX");
+                    result.State.CX.Should().Be(0x0000, $"{binName}: the loop runs the three table entries");
+                    result.State.BX.Should().Be(0x0000, $"{binName}: the last iteration jumps through table entry 0");
+                });
+            case "partition_untested_indirect":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
+                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.State.CX.Should().Be(0x0002, $"{binName}: the indirect jump and call are never taken");
+                });
+            case "partition_jump_table_mixed":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
+                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.State.DX.Should().Be(0x0011, $"{binName}: case zero and case one each add their digit; the third entry jumps straight to the join");
+                    result.State.CX.Should().Be(0x0000, $"{binName}: the loop runs the three table entries");
+                    result.State.BX.Should().Be(0x0000, $"{binName}: the last iteration jumps through table entry 0");
+                });
+            case "partition_far_dispatch":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
+                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.State.DX.Should().Be(0x1111, $"{binName}: each far call and far jump target adds its own digit");
+                    result.State.CX.Should().Be(0x0000, $"{binName}: both loops run their two table entries");
+                });
+            case "partition_sign_conditions":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
+                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.State.DX.Should().Be(0x0110, $"{binName}: only the negative compare and the negative test add their digit");
+                });
+            case "partition_untested_far_indirect":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
+                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.State.CX.Should().Be(0x0002, $"{binName}: the far indirect jump and call are never taken");
+                });
+            case "partition_untaken_cpuid":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
+                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.State.CX.Should().Be(0x0002, $"{binName}: cpuid is never executed");
+                });
+            case "partition_signed_min_compare":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
+                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.State.DX.Should().Be(0x0001, $"{binName}: 1 is not below int.MinValue, and int.MinValue is below or equal to itself");
+                    result.State.AX.Should().Be(0x0000, $"{binName}: the end clears AX");
+                });
+            case "partition_back_edge_fallthrough":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
+                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.State.DX.Should().Be(0x0003, $"{binName}: the loop body runs three times");
+                    result.State.CX.Should().Be(0x0000, $"{binName}: the latch leaves the loop when CX reaches zero");
+                });
+            case "partition_jump_to_next":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
+                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.State.DX.Should().Be(0x0001, $"{binName}: both arms of the jump reach the next instruction");
+                });
+            case "partition_two_fault_handlers":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
+                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.State.SP.Should().Be(0x0100, $"{binName}: each handler returns with iret");
+                    result.State.SI.Should().Be(0x0011, $"{binName}: the first and the second handler each run once");
+                    result.State.AX.Should().Be(0x0002, $"{binName}: the third division succeeds");
+                    result.State.BX.Should().Be(0x0005, $"{binName}: the second handler sets the divisor");
+                });
             default:
                 throw new ArgumentOutOfRangeException(nameof(binName), binName, "Unknown partition fixture.");
         }

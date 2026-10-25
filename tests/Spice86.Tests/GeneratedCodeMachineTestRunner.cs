@@ -115,14 +115,30 @@ internal sealed class GeneratedCodeMachineTestRunner {
         (GeneratedCSharpProgram generatedProgram, AsmFinalState discoveryFinalState) =
             GenerateSourceAndFinalState(discovery);
         using CompiledGeneratedOverride compiledOverride = CompileGeneratedProgram(discoverySettings, generatedProgram);
+        string? probeReportPath = GeneratedCodeProbes.ReportPath;
+        if (probeReportPath is null) {
+            RunExecutions(executions, compiledOverride.Supplier, discoverySettings, goldenKey, discoveryFinalState);
+            return generatedProgram;
+        }
+
+        InstrumentedGeneratedSource instrumented = GeneratedCodeProbes.Instrument(generatedProgram.SourceText);
+        using CompiledGeneratedOverride probedOverride = new GeneratedOverrideCompiler().CompileSupplier(instrumented.Source);
+        RunExecutions(executions, probedOverride.Supplier, discoverySettings, goldenKey, discoveryFinalState);
+        GeneratedCodeProbes.Append(probeReportPath, goldenKey, instrumented,
+            GeneratedCodeProbes.ReadHits(probedOverride.Supplier.GetType().Assembly));
+        return generatedProgram;
+    }
+
+    /// <summary>Runs every execution with <paramref name="supplier"/> and records a differential for each run of the
+    /// discovery's scenario variant.</summary>
+    private static void RunExecutions(IReadOnlyList<AsmRunScope> executions, IOverrideSupplier supplier,
+        AsmRunSettings discoverySettings, string goldenKey, AsmFinalState discoveryFinalState) {
         foreach (AsmRunScope execution in executions) {
-            using AsmFixtureRun run = AsmFixtureRunner.RunWithOverride(execution, compiledOverride.Supplier);
+            using AsmFixtureRun run = AsmFixtureRunner.RunWithOverride(execution, supplier);
             if (IsEquivalentScenarioVariant(discoverySettings, execution.Fixture.Settings)) {
                 GeneratedCodeDifferentialReport.Append(goldenKey, discoveryFinalState, AsmFinalState.Capture(run.Result));
             }
         }
-
-        return generatedProgram;
     }
 
     /// <summary>
@@ -147,6 +163,9 @@ internal sealed class GeneratedCodeMachineTestRunner {
         GeneratedCodeMetrics metrics = GeneratedCodeMetricsCollector.Collect(
             GoldenKey(settings), compilation.SyntaxTree, compilation.EmitResult.Diagnostics);
         WriteMetrics(metrics);
+        WriteGotoCensus(GotoCensusLine.Format(GoldenKey(settings), generatedProgram.GotoCensus));
+        generatedProgram.GotoCensus.Total.Should().Be(metrics.GotoStatements,
+            $"every printed goto of {GoldenKey(settings)} has exactly one census reason");
         GeneratedCodeMetricsAssertions.AssertInvariants(metrics, generatedProgram.SourceText);
         return compiler.CompileSupplier(compilation);
     }
@@ -264,10 +283,25 @@ internal sealed class GeneratedCodeMachineTestRunner {
         lock (MetricsFileLock) {
             if (!_metricsFileInitialized) {
                 File.Delete(metricsPath);
-                File.AppendAllText(metricsPath, GeneratedCodeMetrics.Header() + Environment.NewLine);
                 _metricsFileInitialized = true;
             }
             File.AppendAllText(metricsPath, metrics.ToLine() + Environment.NewLine);
+        }
+    }
+
+    private static readonly object CensusFileLock = new();
+    private static bool _censusFileInitialized;
+
+    private static void WriteGotoCensus(string line) {
+        string outputDirectory = Path.Join(AppContext.BaseDirectory, "generated-code");
+        Directory.CreateDirectory(outputDirectory);
+        string censusPath = Path.Join(outputDirectory, "goto-census.txt");
+        lock (CensusFileLock) {
+            if (!_censusFileInitialized) {
+                File.Delete(censusPath);
+                _censusFileInitialized = true;
+            }
+            File.AppendAllText(censusPath, line + Environment.NewLine);
         }
     }
 

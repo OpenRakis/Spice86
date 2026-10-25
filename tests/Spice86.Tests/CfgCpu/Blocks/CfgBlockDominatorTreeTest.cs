@@ -149,6 +149,80 @@ public sealed class CfgBlockDominatorTreeTest : IDisposable {
         dominatorTree.GetImmediateDominator(headerBlock).Should().BeSameAs(entryBlock);
     }
 
+    [Fact]
+    public void DominatedBlocksAreTheDominatorSubtreeInPreOrder() {
+        // Arrange: A -> {B, C} -> D -> E, plus unreachable U -> E
+        CfgInstruction instrA = CreateInstruction(0x0000);
+        CfgInstruction instrB = CreateInstruction(0x0010);
+        CfgInstruction instrC = CreateInstruction(0x0020);
+        CfgInstruction instrD = CreateInstruction(0x0030);
+        CfgInstruction instrE = CreateInstruction(0x0040);
+        CfgInstruction instrU = CreateInstruction(0x0050);
+        _harness.Linker.Link(InstructionSuccessorType.Normal, instrA, instrB);
+        _harness.Linker.Link(InstructionSuccessorType.Normal, instrA, instrC);
+        _harness.Linker.Link(InstructionSuccessorType.Normal, instrB, instrD);
+        _harness.Linker.Link(InstructionSuccessorType.Normal, instrC, instrD);
+        _harness.Linker.Link(InstructionSuccessorType.Normal, instrD, instrE);
+        _harness.Linker.Link(InstructionSuccessorType.Normal, instrU, instrE);
+        CfgBlock blockA = CfgTestHelpers.GetContainingBlock(instrA);
+        CfgBlock blockB = CfgTestHelpers.GetContainingBlock(instrB);
+        CfgBlock blockC = CfgTestHelpers.GetContainingBlock(instrC);
+        CfgBlock blockD = CfgTestHelpers.GetContainingBlock(instrD);
+        CfgBlock blockE = CfgTestHelpers.GetContainingBlock(instrE);
+        CfgBlock blockU = CfgTestHelpers.GetContainingBlock(instrU);
+        List<CfgBlock> blocks = [blockA, blockB, blockC, blockD, blockE, blockU];
+        Dictionary<CfgBlock, IReadOnlyList<CfgBlock>> successorsByBlock = new() {
+            [blockA] = [blockB, blockC],
+            [blockB] = [blockD],
+            [blockC] = [blockD],
+            [blockD] = [blockE],
+            [blockU] = [blockE]
+        };
+
+        // Act
+        CfgBlockDominatorTree dominatorTree = _builder.Build(blocks, blockA, successorsByBlock);
+
+        // Assert
+        dominatorTree.GetDominatedBlocks(blockA).Should().Equal(blockA, blockB, blockC, blockD, blockE);
+        dominatorTree.GetDominatedBlocks(blockB).Should().Equal(blockB);
+        dominatorTree.GetDominatedBlocks(blockD).Should().Equal(blockD, blockE);
+        dominatorTree.GetDominatedBlocks(blockU).Should().BeEmpty();
+        dominatorTree.Dominates(blockD, blockE).Should().BeTrue();
+        dominatorTree.Dominates(blockB, blockD).Should().BeFalse();
+        dominatorTree.Dominates(blockU, blockU).Should().BeFalse();
+        dominatorTree.Dominates(blockA, blockA).Should().BeTrue();
+    }
+
+    [Fact]
+    public void IrreducibleCycleBlocksAreDominatedOnlyByTheEntry() {
+        // Arrange: A -> {B, C}, B -> C, C -> B
+        CfgInstruction instrA = CreateInstruction(0x0000);
+        CfgInstruction instrB = CreateInstruction(0x0010);
+        CfgInstruction instrC = CreateInstruction(0x0020);
+        _harness.Linker.Link(InstructionSuccessorType.Normal, instrA, instrB);
+        _harness.Linker.Link(InstructionSuccessorType.Normal, instrA, instrC);
+        _harness.Linker.Link(InstructionSuccessorType.Normal, instrB, instrC);
+        _harness.Linker.Link(InstructionSuccessorType.Normal, instrC, instrB);
+        CfgBlock blockA = CfgTestHelpers.GetContainingBlock(instrA);
+        CfgBlock blockB = CfgTestHelpers.GetContainingBlock(instrB);
+        CfgBlock blockC = CfgTestHelpers.GetContainingBlock(instrC);
+        List<CfgBlock> blocks = [blockA, blockB, blockC];
+        Dictionary<CfgBlock, IReadOnlyList<CfgBlock>> successorsByBlock = new() {
+            [blockA] = [blockB, blockC],
+            [blockB] = [blockC],
+            [blockC] = [blockB]
+        };
+
+        // Act
+        CfgBlockDominatorTree dominatorTree = _builder.Build(blocks, blockA, successorsByBlock);
+
+        // Assert
+        dominatorTree.GetImmediateDominator(blockB).Should().BeSameAs(blockA);
+        dominatorTree.GetImmediateDominator(blockC).Should().BeSameAs(blockA);
+        dominatorTree.Dominates(blockB, blockC).Should().BeFalse();
+        dominatorTree.Dominates(blockC, blockB).Should().BeFalse();
+    }
+
     private CfgInstruction CreateInstruction(ushort offset) =>
         _harness.CreateInstruction(new SegmentedAddress(Seg, offset), 0xEB, 1, InstructionKind.Jump);
 }

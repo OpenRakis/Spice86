@@ -54,7 +54,15 @@ SPICE86_GENERATED_CODE_COVERAGE=$PWD/tmp/generated-code-coverage.tsv dotnet test
 
 # Opt-in: run the tests with the JIT executing the ALU expansion of the code generator instead of the ALU calls (no filter, so SingleStepTest is included)
 SPICE86_JIT_ALU_EXPANSION=1 dotnet test tests/Spice86.Tests
+
+# Opt-in: code coverage of the code generator (ReverseEngineer/CfgCodeGeneration) over the golden tests only; the settings path must be absolute (it is resolved from the test binary folder)
+dotnet test tests/Spice86.Tests --no-build -- --filter-class '*GeneratedCodeScenarioTest*' --filter-class '*GeneratedCodeMachineTest*' --filter-class '*SpeculativeCfgTest*' --coverage --coverage-output-format cobertura --coverage-output generator.cobertura.xml --coverage-settings "$PWD/tests/Spice86.Tests/GeneratorCoverage.config.xml" --results-directory "$PWD/tmp/generator-coverage"
+
+# Opt-in: run an instrumented copy of every generated program and append one row per generated statement (ran or not) to a TSV report (path must be absolute)
+SPICE86_GENERATED_CODE_PROBES=$PWD/tmp/generated-code-probes.tsv dotnet test tests/Spice86.Tests --no-build -- --filter-class '*GeneratedCodeScenarioTest*' --filter-class '*GeneratedCodeMachineTest*' --filter-class '*SpeculativeCfgTest*'
 ```
+
+> **Generator audit tools**: the two commands above measure which generator paths no golden reaches and which generated statements never run. `tasks/phase3/14-generator-coverage-audit.md` ("Measurement runs") has the one-liners that turn their output into lists of uncovered lines and a per-construct table.
 
 > **Test filter syntax rule**: the test project runs on xUnit v3 through Microsoft.Testing.Platform (`TestingPlatformDotnetTestSupport` in `tests/Directory.Build.props`). The VSTest-style `--filter 'FullyQualifiedName~...'` is **silently ignored** (warning `MTP0001`) and runs the whole suite, SingleStepTest included. Always pass filters after `--` using `--filter-class`, `--filter-not-class`, `--filter-method`, `--filter-not-method` with `*` wildcards.
 

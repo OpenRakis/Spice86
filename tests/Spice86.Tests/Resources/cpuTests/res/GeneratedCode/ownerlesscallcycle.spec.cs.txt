@@ -40,7 +40,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AX = 0;
         // F000:0003 mov SS,AX
         SS = AX;
-        State.InterruptShadowing = true;
         // F000:0005 mov SP,0x0100
         SP = 0x0100;
         // F000:0008 mov byte ptr CS:[0x0025],0
@@ -54,24 +53,23 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_0016_F0016(int loadOffset) {
-    L_0016:
-        CheckExternalEvents(cs1, 0x0016);
-        // F000:0016 inc byte ptr CS:[0x0025]
-        UInt8[CS, 0x0025] = (byte)(UInt8[CS, 0x0025] + 1);
-        // F000:001B mov AL,byte ptr CS:[0x0025]
-        AL = UInt8[CS, 0x0025];
-        // F000:001F cmp AL,3
-        Alu8.Sub(AL, 3);
-        // F000:0021 jb short 0x0013
-        if (CarryFlag) {
-            goto L_0013;
+        while (true) {
+            CheckExternalEvents(cs1, 0x0016);
+            // F000:0016 inc byte ptr CS:[0x0025]
+            UInt8[CS, 0x0025] = (byte)(UInt8[CS, 0x0025] + 1);
+            // F000:001B mov AL,byte ptr CS:[0x0025]
+            AL = UInt8[CS, 0x0025];
+            // F000:001F cmp AL,3
+            Alu8.Sub(AL, 3);
+            // F000:0021 jb short 0x0013
+            if (!CarryFlag) {
+                break;
+            }
+            // F000:0013 call near 0x0024
+            NearCall(cs1, 0x0016, unknown_F000_0024_F0024);
         }
         // F000:0023 hlt
         return Hlt();
-    L_0013:
-        // F000:0013 call near 0x0024
-        NearCall(cs1, 0x0016, unknown_F000_0024_F0024);
-        goto L_0016;
     }
 
 }

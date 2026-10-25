@@ -1,0 +1,107 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "F000:FFF0",
+  "totalEntryPoints": 1,
+  "entryPointAddresses": [
+    "F000:FFF0"
+  ],
+  "lastExecutedAddress": "F000:002E",
+  "lastExecutedBlockId": 18,
+  "blocks": [
+    {
+      "id": 18,
+      "entry": "F000:002C",
+      "term": "F000:002E",
+      "pred": [
+        11,
+        20
+      ],
+      "succ": [],
+      "asm": [
+        "31C0|xor AX,AX",
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 2,
+      "entry": "F000:FFF0",
+      "term": "F000:FFF0",
+      "pred": [],
+      "succ": [
+        3
+      ],
+      "asm": [
+        "EB0E|jmp short 0"
+      ]
+    },
+    {
+      "id": 11,
+      "entry": "F000:001B",
+      "term": "F000:0027",
+      "pred": [
+        3,
+        13
+      ],
+      "succ": [
+        18,
+        20
+      ],
+      "asm": [
+        "66B800000080|mov EAX,0x80000000",
+        "663D00000080|cmp EAX,0x80000000",
+        "7E03|jle short 0x002C"
+      ]
+    },
+    {
+      "id": 20,
+      "entry": "F000:0029",
+      "dead": true,
+      "term": "F000:0029",
+      "pred": [
+        11
+      ],
+      "succ": [
+        18
+      ],
+      "asm": [
+        "83C210|add DX,0x0010"
+      ]
+    },
+    {
+      "id": 3,
+      "entry": "F000:0000",
+      "term": "F000:0016",
+      "pred": [
+        2
+      ],
+      "succ": [
+        11,
+        13
+      ],
+      "asm": [
+        "B80010|mov AX,0x1000",
+        "8ED0|mov SS,AX",
+        "BC0001|mov SP,0x0100",
+        "31D2|xor DX,DX",
+        "66B801000000|mov EAX,1",
+        "663D00000080|cmp EAX,0x80000000",
+        "7C03|jl short 0x001B"
+      ]
+    },
+    {
+      "id": 13,
+      "entry": "F000:0018",
+      "term": "F000:0018",
+      "pred": [
+        3
+      ],
+      "succ": [
+        11
+      ],
+      "asm": [
+        "83C201|add DX,1"
+      ]
+    }
+  ],
+  "truncated": false
+}

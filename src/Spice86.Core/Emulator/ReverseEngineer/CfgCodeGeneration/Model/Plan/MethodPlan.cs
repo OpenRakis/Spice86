@@ -7,7 +7,6 @@ using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Core.Emulator.ReverseEngineer.Graph;
 
 internal sealed class MethodPlan {
-    private readonly IReadOnlyDictionary<ICfgNode, ICfgNode?> _nextNodeByNode;
     private readonly IReadOnlyDictionary<ICfgNode, string> _labelByNode;
     private readonly IReadOnlyDictionary<CfgInstruction, string> _localSuffixByInstruction;
 
@@ -18,7 +17,6 @@ internal sealed class MethodPlan {
         IReadOnlyList<CfgBlock> blocks,
         IReadOnlyList<ICfgNode> nodes,
         IReadOnlyList<NodeEmissionPlan> nodeEmissionPlans,
-        IReadOnlyDictionary<ICfgNode, ICfgNode?> nextNodeByNode,
         PartitionBlockGraph blockGraph,
         DepthFirstOrdering<CfgBlock> blockTraversal,
         IReadOnlyDictionary<ICfgNode, string> labelByNode,
@@ -29,7 +27,6 @@ internal sealed class MethodPlan {
         Blocks = blocks;
         Nodes = nodes;
         NodeEmissionPlans = nodeEmissionPlans;
-        _nextNodeByNode = nextNodeByNode;
         BlockGraph = blockGraph;
         BlockTraversal = blockTraversal;
         _labelByNode = labelByNode;
@@ -46,8 +43,6 @@ internal sealed class MethodPlan {
     public PartitionBlockGraph BlockGraph { get; }
     public DepthFirstOrdering<CfgBlock> BlockTraversal { get; }
     public bool NeedsEntryDispatch => Entries.Count > 1;
-
-    public ICfgNode? GetNextEmittedNode(ICfgNode node) => _nextNodeByNode[node];
 
     /// <summary>The goto label of a block entry or method entry of this method.</summary>
     /// <exception cref="InvalidOperationException">The node is not a block entry or method entry of this method (a generator bug).</exception>

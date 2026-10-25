@@ -49,7 +49,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AX = 0;
         // F000:0003 mov SS,AX
         SS = AX;
-        State.InterruptShadowing = true;
         // F000:0005 mov SP,2
         SP = 2;
         // F000:0008 mov DX,0
@@ -75,26 +74,21 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0023 out 0x21,AL
         Out8(0x0021, AL);
         // F000:0025 sti
-        if (!InterruptFlag) {
-            State.InterruptShadowing = true;
-        }
         InterruptFlag = true;
         CheckExternalEvents(cs1, 0x0026);
         // F000:0026 mov ECX,0x00FFFFFF
         ECX = 0x00FFFFFF;
-    L_002C:
-        CheckExternalEvents(cs1, 0x002C);
-        // F000:002C inc AX
-        AX++;
-        // F000:002D mov BX,AX
-        BX = AX;
-        // F000:002F shr BX,1
-        BX = Alu16.Shr(BX, 1);
-        // F000:0031 loop 0x002C
-        CX--;
-        if (CX != 0) {
-            goto L_002C;
-        }
+        do {
+            CheckExternalEvents(cs1, 0x002C);
+            // F000:002C inc AX
+            AX++;
+            // F000:002D mov BX,AX
+            BX = AX;
+            // F000:002F shr BX,1
+            BX = Alu16.Shr(BX, 1);
+            // F000:0031 loop 0x002C
+            CX--;
+        } while (CX != 0);
         // F000:0033 cmp DX,0
         Alu16.Sub(DX, 0);
         // F000:0037 setne AL

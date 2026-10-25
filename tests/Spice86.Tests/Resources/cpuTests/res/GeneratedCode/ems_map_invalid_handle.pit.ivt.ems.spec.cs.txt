@@ -88,17 +88,15 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Alu8.Sub(AH, 0x83);
         // 016E:010F jne short 0x0115
         if (!ZeroFlag) {
-            goto L_0115;
+            VerifySpeculativeEntryOrFail(cs1, 0x0115, Signature_0115_mov);
+            // 016E:0115 mov AL,0xFF
+            AL = 0xFF;
         }
-        // 016E:0111 mov AL,0
-        AL = 0;
-        // 016E:0113 jmp short 0x0117
-        goto L_0117;
-    L_0115:
-        VerifySpeculativeEntryOrFail(cs1, 0x0115, Signature_0115_mov);
-        // 016E:0115 mov AL,0xFF
-        AL = 0xFF;
-    L_0117:
+        else {
+            // 016E:0111 mov AL,0
+            AL = 0;
+            // 016E:0113 jmp short 0x0117
+        }
         // 016E:0117 mov DX,0x0999
         DX = 0x0999;
         // 016E:011A out DX,AL

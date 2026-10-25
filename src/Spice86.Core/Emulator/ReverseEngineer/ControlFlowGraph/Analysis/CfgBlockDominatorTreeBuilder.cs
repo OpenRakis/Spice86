@@ -3,7 +3,6 @@ namespace Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph.Analysis;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.ReverseEngineer.Graph;
 
-using System.Diagnostics;
 using System.Linq;
 
 /// <summary>
@@ -16,6 +15,11 @@ internal sealed class CfgBlockDominatorTreeBuilder {
         IReadOnlyDictionary<CfgBlock, IReadOnlyList<CfgBlock>> successorsByBlock) =>
         BuildFromEntries(blocks, [startBlock], successorsByBlock);
 
+    /// <summary>
+    /// Cooper-Harvey-Kennedy on post-order numbers. A virtual root (number <c>n</c>) parents the entry
+    /// blocks, so a block whose only common dominator is the virtual root, for example the join of two
+    /// entries, gets no immediate dominator.
+    /// </summary>
     public CfgBlockDominatorTree BuildFromEntries(
         IReadOnlyCollection<CfgBlock> blocks,
         IReadOnlyCollection<CfgBlock> entryBlocks,
@@ -23,24 +27,66 @@ internal sealed class CfgBlockDominatorTreeBuilder {
         HashSet<CfgBlock> graphBlocks = blocks.ToHashSet();
         HashSet<CfgBlock> entryBlockSet = entryBlocks.Where(graphBlocks.Contains).ToHashSet();
         List<CfgBlock> reachableBlocks = FindReachableBlocks(graphBlocks, entryBlocks, successorsByBlock);
-        Dictionary<CfgBlock, HashSet<CfgBlock>> dominatorsByBlock = InitializeDominators(reachableBlocks, entryBlockSet);
         Dictionary<CfgBlock, List<CfgBlock>> predecessorsByBlock = BuildPredecessors(graphBlocks, reachableBlocks, successorsByBlock);
+
+        IEnumerable<CfgBlock> roots = entryBlocks
+            .Where(graphBlocks.Contains)
+            .OrderBy(block => block.Entry.Address)
+            .ThenBy(block => block.Id);
+        DepthFirstOrdering<CfgBlock> ordering = new(roots, block => GetSuccessorsInGraph(block, graphBlocks, successorsByBlock));
+        int n = ordering.PostOrder.Count;
+        int[] idom = new int[n + 1];
+        Array.Fill(idom, -1);
+        idom[n] = n;
+        foreach (CfgBlock entry in entryBlockSet) {
+            idom[ordering.PostOrderIndexByNode[entry]] = n;
+        }
 
         bool changed = true;
         while (changed) {
             changed = false;
-            foreach (CfgBlock block in reachableBlocks) {
-                HashSet<CfgBlock> updatedDominators = BuildDominatorsForBlock(block, entryBlockSet, predecessorsByBlock, dominatorsByBlock);
-                if (dominatorsByBlock[block].SetEquals(updatedDominators)) {
+            foreach (CfgBlock block in ordering.ReversePostOrder) {
+                int blockNumber = ordering.PostOrderIndexByNode[block];
+                if (idom[blockNumber] == n) {
                     continue;
                 }
-                dominatorsByBlock[block] = updatedDominators;
-                changed = true;
+                List<int> readyPredecessors = predecessorsByBlock[block]
+                    .Select(predecessor => ordering.PostOrderIndexByNode[predecessor])
+                    .Where(predecessorNumber => idom[predecessorNumber] != -1)
+                    .ToList();
+                if (readyPredecessors.Count == 0) {
+                    continue;
+                }
+                int newIdom = readyPredecessors[0];
+                foreach (int predecessorNumber in readyPredecessors.Skip(1)) {
+                    newIdom = Intersect(idom, predecessorNumber, newIdom);
+                }
+                if (idom[blockNumber] != newIdom) {
+                    idom[blockNumber] = newIdom;
+                    changed = true;
+                }
             }
         }
 
-        IReadOnlyDictionary<CfgBlock, CfgBlock?> immediateDominatorByBlock = BuildImmediateDominators(reachableBlocks, dominatorsByBlock);
-        return new CfgBlockDominatorTree(reachableBlocks, dominatorsByBlock, immediateDominatorByBlock);
+        Dictionary<CfgBlock, CfgBlock?> immediateDominatorByBlock = new();
+        foreach (CfgBlock block in reachableBlocks) {
+            int blockNumber = ordering.PostOrderIndexByNode[block];
+            int dominatorNumber = idom[blockNumber];
+            immediateDominatorByBlock.Add(block, dominatorNumber == n ? null : ordering.PostOrder[dominatorNumber]);
+        }
+        return new CfgBlockDominatorTree(reachableBlocks, immediateDominatorByBlock);
+    }
+
+    private static int Intersect(int[] idom, int a, int b) {
+        while (a != b) {
+            while (a < b) {
+                a = idom[a];
+            }
+            while (b < a) {
+                b = idom[b];
+            }
+        }
+        return a;
     }
 
     private static List<CfgBlock> FindReachableBlocks(
@@ -73,16 +119,6 @@ internal sealed class CfgBlockDominatorTreeBuilder {
             .ThenBy(successor => successor.Id);
     }
 
-    private static Dictionary<CfgBlock, HashSet<CfgBlock>> InitializeDominators(List<CfgBlock> reachableBlocks, HashSet<CfgBlock> entryBlocks) {
-        HashSet<CfgBlock> allBlocks = reachableBlocks.ToHashSet();
-        Dictionary<CfgBlock, HashSet<CfgBlock>> dominatorsByBlock = new();
-        foreach (CfgBlock block in reachableBlocks) {
-            HashSet<CfgBlock> dominators = entryBlocks.Contains(block) ? [block] : allBlocks.ToHashSet();
-            dominatorsByBlock.Add(block, dominators);
-        }
-        return dominatorsByBlock;
-    }
-
     private static Dictionary<CfgBlock, List<CfgBlock>> BuildPredecessors(
         HashSet<CfgBlock> graphBlocks,
         List<CfgBlock> reachableBlocks,
@@ -101,40 +137,5 @@ internal sealed class CfgBlockDominatorTreeBuilder {
             }
         }
         return predecessorsByBlock;
-    }
-
-    private static HashSet<CfgBlock> BuildDominatorsForBlock(
-        CfgBlock block,
-        HashSet<CfgBlock> entryBlocks,
-        Dictionary<CfgBlock, List<CfgBlock>> predecessorsByBlock,
-        Dictionary<CfgBlock, HashSet<CfgBlock>> dominatorsByBlock) {
-        if (entryBlocks.Contains(block)
-            || !predecessorsByBlock.TryGetValue(block, out List<CfgBlock>? predecessors)
-            || predecessors.Count == 0) {
-            return [block];
-        }
-        HashSet<CfgBlock> updatedDominators = dominatorsByBlock[predecessors[0]].ToHashSet();
-        foreach (CfgBlock predecessor in predecessors.Skip(1)) {
-            updatedDominators.IntersectWith(dominatorsByBlock[predecessor]);
-        }
-        updatedDominators.Add(block);
-        return updatedDominators;
-    }
-
-    private static IReadOnlyDictionary<CfgBlock, CfgBlock?> BuildImmediateDominators(
-        List<CfgBlock> reachableBlocks,
-        Dictionary<CfgBlock, HashSet<CfgBlock>> dominatorsByBlock) {
-        Dictionary<CfgBlock, CfgBlock?> result = new();
-        foreach (CfgBlock block in reachableBlocks) {
-            List<CfgBlock> strictDominators = dominatorsByBlock[block]
-                .Where(dominator => !dominator.Equals(block))
-                .ToList();
-            CfgBlock? immediateDominator = strictDominators
-                .OrderByDescending(candidate => dominatorsByBlock[candidate].Count)
-                .FirstOrDefault();
-            Debug.Assert(strictDominators.Count == 0 || immediateDominator != null, "Immediate dominator must exist when strict dominators are present");
-            result.Add(block, immediateDominator);
-        }
-        return result;
     }
 }

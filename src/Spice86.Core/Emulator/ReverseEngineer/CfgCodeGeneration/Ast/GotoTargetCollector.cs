@@ -33,6 +33,10 @@ internal sealed class GotoTargetCollector : ICodeGenerationAstVisitor<GotoTarget
 
     public GotoTargets VisitWhileWithExitNode(WhileWithExitNode node) => Collect(node.Body);
 
+    public GotoTargets VisitInfiniteLoopNode(InfiniteLoopNode node) => Collect(node.Body);
+
+    public GotoTargets VisitDoWhileNode(DoWhileNode node) => Collect(node.Body);
+
     public GotoTargets VisitSwitchNode(SwitchNode node) {
         GotoTargets targets = GotoTargets.None;
         foreach (SwitchSection section in node.Sections) {
@@ -56,6 +60,8 @@ internal sealed class GotoTargetCollector : ICodeGenerationAstVisitor<GotoTarget
     public GotoTargets VisitReturnNode(ReturnNode node) => GotoTargets.None;
 
     public GotoTargets VisitBreakNode(BreakNode node) => GotoTargets.None;
+
+    public GotoTargets VisitContinueNode(ContinueNode node) => GotoTargets.None;
 
     public GotoTargets VisitFailAsUntestedNode(FailAsUntestedNode node) => GotoTargets.None;
 

@@ -99,110 +99,103 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0115 int 0x15
         InterruptCall(cs1, 0x0117, 0x15);
         // 016D:0117 jb short 0x0173
-        if (CarryFlag) {
-            goto L_0173;
-        }
-        // 016D:0119 mov DX,0x0998
-        DX = 0x0998;
-        // 016D:011C mov AL,2
-        AL = 2;
-        // 016D:011E out DX,AL
-        Out8(DX, AL);
-        // 016D:011F mov AH,0x83
-        AH = 0x83;
-        // 016D:0121 mov AL,0
-        AL = 0;
-        // 016D:0123 mov CX,0
-        CX = 0;
-        // 016D:0126 mov DX,0x1000
-        DX = 0x1000;
-        // 016D:0129 mov BX,0
-        BX = 0;
-        // 016D:012C push CS
-        Stack.Push16(CS);
-        // 016D:012D pop ES
-        ES = UInt16[SS, SP];
-        SP = (ushort)(SP + 2);
-        // 016D:012E int 0x15
-        InterruptCall(cs1, 0x0130, 0x15);
-        // 016D:0130 jae short 0x0173
         if (!CarryFlag) {
-            goto L_0173;
+            // 016D:0119 mov DX,0x0998
+            DX = 0x0998;
+            // 016D:011C mov AL,2
+            AL = 2;
+            // 016D:011E out DX,AL
+            Out8(DX, AL);
+            // 016D:011F mov AH,0x83
+            AH = 0x83;
+            // 016D:0121 mov AL,0
+            AL = 0;
+            // 016D:0123 mov CX,0
+            CX = 0;
+            // 016D:0126 mov DX,0x1000
+            DX = 0x1000;
+            // 016D:0129 mov BX,0
+            BX = 0;
+            // 016D:012C push CS
+            Stack.Push16(CS);
+            // 016D:012D pop ES
+            ES = UInt16[SS, SP];
+            SP = (ushort)(SP + 2);
+            // 016D:012E int 0x15
+            InterruptCall(cs1, 0x0130, 0x15);
+            // 016D:0130 jae short 0x0173
+            if (CarryFlag) {
+                // 016D:0132 cmp AH,0x80
+                Alu8.Sub(AH, 0x80);
+                // 016D:0135 jne short 0x0173
+                if (ZeroFlag) {
+                    // 016D:0137 mov DX,0x0998
+                    DX = 0x0998;
+                    // 016D:013A mov AL,3
+                    AL = 3;
+                    // 016D:013C out DX,AL
+                    Out8(DX, AL);
+                    // 016D:013D mov AH,0x83
+                    AH = 0x83;
+                    // 016D:013F mov AL,1
+                    AL = 1;
+                    // 016D:0141 int 0x15
+                    InterruptCall(cs1, 0x0143, 0x15);
+                    // 016D:0143 jb short 0x0173
+                    if (!CarryFlag) {
+                        // 016D:0145 mov DX,0x0998
+                        DX = 0x0998;
+                        // 016D:0148 mov AL,4
+                        AL = 4;
+                        // 016D:014A out DX,AL
+                        Out8(DX, AL);
+                        // 016D:014B mov AH,0x83
+                        AH = 0x83;
+                        // 016D:014D mov AL,0
+                        AL = 0;
+                        // 016D:014F mov CX,0
+                        CX = 0;
+                        // 016D:0152 mov DX,0x2000
+                        DX = 0x2000;
+                        // 016D:0155 mov BX,0
+                        BX = 0;
+                        // 016D:0158 push CS
+                        Stack.Push16(CS);
+                        // 016D:0159 pop ES
+                        ES = UInt16[SS, SP];
+                        SP = (ushort)(SP + 2);
+                        // 016D:015A int 0x15
+                        InterruptCall(cs1, 0x015C, 0x15);
+                        // 016D:015C jb short 0x0173
+                        if (!CarryFlag) {
+                            // 016D:015E mov DX,0x0998
+                            DX = 0x0998;
+                            // 016D:0161 mov AL,5
+                            AL = 5;
+                            // 016D:0163 out DX,AL
+                            Out8(DX, AL);
+                            // 016D:0164 mov AH,0x83
+                            AH = 0x83;
+                            // 016D:0166 mov AL,1
+                            AL = 1;
+                            // 016D:0168 int 0x15
+                            InterruptCall(cs1, 0x016A, 0x15);
+                            // 016D:016A jb short 0x0173
+                            if (!CarryFlag) {
+                                // 016D:016C mov DX,0x0999
+                                DX = 0x0999;
+                                // 016D:016F mov AL,0
+                                AL = 0;
+                                // 016D:0171 out DX,AL
+                                Out8(DX, AL);
+                                // 016D:0172 hlt
+                                return Hlt();
+                            }
+                        }
+                    }
+                }
+            }
         }
-        // 016D:0132 cmp AH,0x80
-        Alu8.Sub(AH, 0x80);
-        // 016D:0135 jne short 0x0173
-        if (!ZeroFlag) {
-            goto L_0173;
-        }
-        // 016D:0137 mov DX,0x0998
-        DX = 0x0998;
-        // 016D:013A mov AL,3
-        AL = 3;
-        // 016D:013C out DX,AL
-        Out8(DX, AL);
-        // 016D:013D mov AH,0x83
-        AH = 0x83;
-        // 016D:013F mov AL,1
-        AL = 1;
-        // 016D:0141 int 0x15
-        InterruptCall(cs1, 0x0143, 0x15);
-        // 016D:0143 jb short 0x0173
-        if (CarryFlag) {
-            goto L_0173;
-        }
-        // 016D:0145 mov DX,0x0998
-        DX = 0x0998;
-        // 016D:0148 mov AL,4
-        AL = 4;
-        // 016D:014A out DX,AL
-        Out8(DX, AL);
-        // 016D:014B mov AH,0x83
-        AH = 0x83;
-        // 016D:014D mov AL,0
-        AL = 0;
-        // 016D:014F mov CX,0
-        CX = 0;
-        // 016D:0152 mov DX,0x2000
-        DX = 0x2000;
-        // 016D:0155 mov BX,0
-        BX = 0;
-        // 016D:0158 push CS
-        Stack.Push16(CS);
-        // 016D:0159 pop ES
-        ES = UInt16[SS, SP];
-        SP = (ushort)(SP + 2);
-        // 016D:015A int 0x15
-        InterruptCall(cs1, 0x015C, 0x15);
-        // 016D:015C jb short 0x0173
-        if (CarryFlag) {
-            goto L_0173;
-        }
-        // 016D:015E mov DX,0x0998
-        DX = 0x0998;
-        // 016D:0161 mov AL,5
-        AL = 5;
-        // 016D:0163 out DX,AL
-        Out8(DX, AL);
-        // 016D:0164 mov AH,0x83
-        AH = 0x83;
-        // 016D:0166 mov AL,1
-        AL = 1;
-        // 016D:0168 int 0x15
-        InterruptCall(cs1, 0x016A, 0x15);
-        // 016D:016A jb short 0x0173
-        if (CarryFlag) {
-            goto L_0173;
-        }
-        // 016D:016C mov DX,0x0999
-        DX = 0x0999;
-        // 016D:016F mov AL,0
-        AL = 0;
-        // 016D:0171 out DX,AL
-        Out8(DX, AL);
-        // 016D:0172 hlt
-        return Hlt();
-    L_0173:
         VerifySpeculativeEntryOrFail(cs1, 0x0173, Signature_0173_mov);
         // 016D:0173 mov DX,0x0999
         DX = 0x0999;

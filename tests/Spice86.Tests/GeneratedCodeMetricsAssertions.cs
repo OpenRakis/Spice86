@@ -15,11 +15,13 @@ internal static class GeneratedCodeMetricsAssertions {
     private static readonly Regex LabelLineRegex = new(@"^\s*L_\w+:$");
 
     private static readonly Dictionary<string, (int GotoStatements, int CheckExternalEvents, int Lines)> UpperBounds = new() {
-        ["jump1.spec"] = (48, 21, 402),
-        ["partition_cross_function_loop.spec"] = (4, 3, 93),
-        ["rep.spec"] = (6, 12, 724),
+        ["jump1.spec"] = (15, 21, 412),
+        ["partition_cross_function_loop.spec"] = (2, 3, 88),
+        ["rep.spec"] = (0, 12, 711),
         ["div.spec"] = (0, 13, 744),
-        ["selfmodifyje.spec"] = (3, 2, 63)
+        ["selfmodifyje.spec"] = (0, 2, 61),
+        ["test386.failport.spec"] = (8, 18, 3833),
+        ["flagconditions"] = (0, 6, 655)
     };
 
     /// <summary>

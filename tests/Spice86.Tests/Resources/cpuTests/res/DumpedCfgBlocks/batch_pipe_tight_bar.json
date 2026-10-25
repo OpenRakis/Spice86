@@ -16,18 +16,18 @@
     "016D:0100"
   ],
   "lastExecutedAddress": "F000:009F",
-  "lastExecutedBlockId": 80,
+  "lastExecutedBlockId": 89,
   "blocks": [
     {
       "id": 58,
       "entry": "016D:0100",
       "term": "016D:010B",
       "pred": [
-        80
+        89
       ],
       "succ": [
         68,
-        92
+        103
       ],
       "asm": [
         "BB____|mov BX,word ptr [0x000017D1]",
@@ -169,15 +169,15 @@
       ]
     },
     {
-      "id": 80,
+      "id": 89,
       "entry": "F000:009F",
       "term": "F000:009F",
       "pred": [
-        76
+        80
       ],
       "succ": [
         58,
-        82
+        93
       ],
       "asm": [
         "FE382100|callback 0x0021"
@@ -189,8 +189,8 @@
       "term": "F000:0093",
       "pred": [
         58,
-        103,
-        111
+        114,
+        122
       ],
       "succ": [
         70,
@@ -202,16 +202,16 @@
       ]
     },
     {
-      "id": 92,
+      "id": 103,
       "entry": "016D:010D",
       "term": "016D:0110",
       "pred": [
         58,
-        82
+        93
       ],
       "succ": [
-        103,
-        111
+        114,
+        122
       ],
       "asm": [
         "B8____|mov AX,word ptr [0x000017DE]",
@@ -368,21 +368,21 @@
       ]
     },
     {
-      "id": 82,
+      "id": 93,
       "entry": "F000:00A3",
       "term": "F000:00A3",
       "pred": [
-        80
+        89
       ],
       "succ": [
-        92
+        103
       ],
       "asm": [
         "CF|iret"
       ]
     },
     {
-      "id": 76,
+      "id": 80,
       "entry": "F000:009A",
       "term": "F000:009D",
       "pred": [
@@ -390,7 +390,7 @@
       ],
       "succ": [
         70,
-        80
+        89
       ],
       "asm": [
         "80FC0A|cmp AH,0x0A",
@@ -405,9 +405,11 @@
       "pred": [
         68,
         72,
-        76
+        80
       ],
-      "succ": [],
+      "succ": [
+        74
+      ],
       "asm": [
         "FB|sti"
       ]
@@ -421,7 +423,7 @@
       ],
       "succ": [
         70,
-        76
+        80
       ],
       "asm": [
         "80FC08|cmp AH,8",
@@ -429,12 +431,12 @@
       ]
     },
     {
-      "id": 111,
+      "id": 122,
       "entry": "016D:0110",
       "dead": true,
       "term": "016D:0110",
       "pred": [
-        92
+        103
       ],
       "succ": [
         68
@@ -444,11 +446,11 @@
       ]
     },
     {
-      "id": 103,
+      "id": 114,
       "entry": "016D:0110",
       "term": "016D:011E",
       "pred": [
-        92
+        103
       ],
       "succ": [
         68
@@ -508,6 +510,21 @@
       ]
     },
     {
+      "id": 74,
+      "entry": "F000:00A5",
+      "dead": true,
+      "term": "F000:00A5",
+      "pred": [
+        70
+      ],
+      "succ": [
+        77
+      ],
+      "asm": [
+        "FE380A01|callback 0x010A"
+      ]
+    },
+    {
       "id": 7,
       "entry": "F000:0010",
       "dead": true,
@@ -549,6 +566,23 @@
       ]
     },
     {
+      "id": 77,
+      "entry": "F000:00A9",
+      "dead": true,
+      "term": "F000:00AF",
+      "pred": [
+        74
+      ],
+      "succ": [
+        84,
+        86
+      ],
+      "asm": [
+        "2E803E8F0000|cmp byte ptr CS:[0x008F],0",
+        "7504|jne short 0x00B5"
+      ]
+    },
+    {
       "id": 31,
       "entry": "F000:00F0",
       "dead": true,
@@ -559,6 +593,47 @@
       "succ": [],
       "asm": [
         "CB|ret far"
+      ]
+    },
+    {
+      "id": 84,
+      "entry": "F000:00B5",
+      "dead": true,
+      "term": "F000:00B5",
+      "pred": [
+        77
+      ],
+      "succ": [
+        91
+      ],
+      "asm": [
+        "FE380B01|callback 0x010B"
+      ]
+    },
+    {
+      "id": 86,
+      "entry": "F000:00B1",
+      "dead": true,
+      "term": "F000:00B1",
+      "pred": [
+        77
+      ],
+      "succ": [],
+      "asm": [
+        "CD28|int 0x28"
+      ]
+    },
+    {
+      "id": 91,
+      "entry": "F000:00B9",
+      "dead": true,
+      "term": "F000:00B9",
+      "pred": [
+        84
+      ],
+      "succ": [],
+      "asm": [
+        "CF|iret"
       ]
     }
   ],

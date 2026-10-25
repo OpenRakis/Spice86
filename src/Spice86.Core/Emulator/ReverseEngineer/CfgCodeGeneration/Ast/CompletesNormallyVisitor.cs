@@ -7,6 +7,8 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 
+using System.Linq;
+
 /// <summary>
 /// Computes whether control can reach the statement after a lowered node. Runtime control-flow nodes are
 /// rejected: a lowered tree only carries code-generation nodes, so seeing one is a generator bug.
@@ -34,14 +36,13 @@ internal sealed class CompletesNormallyVisitor : ICodeGenerationAstVisitor<bool>
 
     public bool VisitWhileWithExitNode(WhileWithExitNode node) => true;
 
-    public bool VisitSwitchNode(SwitchNode node) {
-        foreach (SwitchSection section in node.Sections) {
-            if (section.Body.Statements is { Count: > 0 } statements && statements[^1] is BreakNode) {
-                return true;
-            }
-        }
-        return CompletesNormally(node.Default);
-    }
+    public bool VisitInfiniteLoopNode(InfiniteLoopNode node) => LoopExits.HasBreak(node.Body);
+
+    public bool VisitDoWhileNode(DoWhileNode node) =>
+        CompletesNormally(node.Body) || LoopExits.HasBreak(node.Body) || LoopExits.HasContinue(node.Body);
+
+    public bool VisitSwitchNode(SwitchNode node) =>
+        node.Sections.Any(section => LoopExits.HasBreak(section.Body)) || CompletesNormally(node.Default);
 
     public bool VisitCpuFaultTryCatchNode(CpuFaultTryCatchNode node) => CompletesNormally(node.Body);
 
@@ -58,6 +59,8 @@ internal sealed class CompletesNormallyVisitor : ICodeGenerationAstVisitor<bool>
     public bool VisitCyclicJumpNode(CyclicJumpNode node) => false;
 
     public bool VisitBreakNode(BreakNode node) => false;
+
+    public bool VisitContinueNode(ContinueNode node) => false;
 
     public bool VisitLabelNode(LabelNode node) => true;
 

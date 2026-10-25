@@ -9,6 +9,8 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Conditions;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Liveness;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Structuring;
+using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph.Analysis;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 
 using System.Linq;
@@ -30,16 +32,39 @@ internal sealed class MethodEmitter(
 
     private readonly CSharpExpressionPrinter _expressions = new(context.SegmentVariables);
 
-    public void Emit(CSharpSourceWriter writer, MethodPlan method) {
-        lowerer.SetCurrentMethod(method);
-        FlagLiveness liveness = FlagLiveness.Compute(method, context);
+    /// <summary>Builds the AST of <paramref name="method"/> and prints it as one C# method to <paramref name="writer"/>.</summary>
+    /// <returns>The census of the <c>goto</c>s the printed method holds.</returns>
+    public GotoCensus Emit(CSharpSourceWriter writer, MethodPlan method) {
+        FlagLiveness liveness = FlagLiveness.Compute(method);
         ConditionFusion fusion = ConditionFusionPlanner.Plan(method, liveness);
         // Fused jumps no longer read flags, so the lowering uses the liveness of the code it actually emits.
-        FlagLiveness emittedLiveness = FlagLiveness.Compute(method, context, fusion.ExecutionAstOf);
+        FlagLiveness emittedLiveness = FlagLiveness.Compute(method, fusion.ExecutionAstOf);
         BlockNode entryDispatch = BuildEntryDispatch(method);
-        List<InstructionBoundaryNode> boundaries = method.NodeEmissionPlans.Select(plan => BuildBoundary(plan, method, fusion, emittedLiveness)).ToList();
-        GotoTargets targets = GotoTargetCollector.Collect(Sequence(entryDispatch, Sequence(boundaries)));
-        BlockNode body = WithLabels(boundaries, targets);
+        List<InstructionBoundaryNode> boundaries = method.NodeEmissionPlans
+            .Select(plan => BuildBoundary(plan, method, fusion, emittedLiveness)).ToList();
+        BlockGraphGotoCheck.Check(method.NodeEmissionPlans, boundaries, method.BlockGraph, method.MethodName);
+        NaturalLoopForest loops = NaturalLoopForest.Build(method.BlockGraph, method.BlockTraversal.RetreatingEdges);
+        HashSet<ICfgNode> entryNodes = method.Entries.Select(entry => entry.Node).ToHashSet();
+        List<LoweredBlock> loweredBlocks = GroupByBlock(method.NodeEmissionPlans, boundaries);
+        Dictionary<GotoNode, GotoKeepReason> refusals = new(ReferenceEqualityComparer.Instance);
+        // Moving a loop exit after its loop can break fall-throughs of the blocks it jumps over, so the method is
+        // structured both ways and the result with fewer gotos is kept.
+        BlockNode withoutFallthroughGotos = FallthroughGotoRemover.Remove(
+            MethodStructurizer.Structure(loweredBlocks, loops, entryNodes, method.MethodName, refusals, placeLoopExits: false));
+        Dictionary<GotoNode, GotoKeepReason> placedRefusals = new(ReferenceEqualityComparer.Instance);
+        BlockNode placedWithoutFallthroughGotos = FallthroughGotoRemover.Remove(
+            MethodStructurizer.Structure(loweredBlocks, loops, entryNodes, method.MethodName, placedRefusals, placeLoopExits: true));
+        if (MethodStructurizer.TotalGotos(placedWithoutFallthroughGotos) < MethodStructurizer.TotalGotos(withoutFallthroughGotos)) {
+            withoutFallthroughGotos = placedWithoutFallthroughGotos;
+            refusals = placedRefusals;
+        }
+        withoutFallthroughGotos = TailDuplicator.Apply(withoutFallthroughGotos, loweredBlocks, entryNodes, loops);
+        GotoCensus census = GotoCensusClassifier.Classify(entryDispatch, withoutFallthroughGotos, loops, entryNodes,
+            loweredBlocks, refusals);
+        withoutFallthroughGotos = WhileConditionLoops.Apply(withoutFallthroughGotos);
+        GotoTargets targets = GotoTargetCollector.Collect(Sequence(entryDispatch, withoutFallthroughGotos));
+        BlockNode body = LabelPlacer.Place(withoutFallthroughGotos, targets.Labels);
+        LabelScopeCheck.Verify(Sequence(entryDispatch, body));
         // The last node has no next node, so every same-method fallthrough from it is a goto, and an unobserved
         // fallthrough is a throw: a body that can still fall off its end is a generator bug.
         if (CompletesNormallyVisitor.CompletesNormally(body)) {
@@ -57,17 +82,23 @@ internal sealed class MethodEmitter(
         printer.Print(body);
         writer.CloseBlock();
         writer.Line();
+        return census;
     }
 
-    private static BlockNode WithLabels(IReadOnlyList<InstructionBoundaryNode> boundaries, GotoTargets targets) {
-        List<IVisitableAstNode> items = [];
-        foreach (InstructionBoundaryNode boundary in boundaries) {
-            if (targets.Labels.Contains(boundary.Node)) {
-                items.Add(new LabelNode(boundary.Node));
+    /// <summary>Groups contiguous boundaries sharing one CFG block into <see cref="LoweredBlock"/>s.</summary>
+    private static List<LoweredBlock> GroupByBlock(IReadOnlyList<NodeEmissionPlan> plans, IReadOnlyList<InstructionBoundaryNode> boundaries) {
+        List<LoweredBlock> blocks = [];
+        int start = 0;
+        while (start < plans.Count) {
+            int end = start + 1;
+            while (end < plans.Count && ReferenceEquals(plans[end].Block, plans[start].Block)) {
+                end++;
             }
-            items.Add(boundary);
+            BlockNode body = Sequence(boundaries.Skip(start).Take(end - start));
+            blocks.Add(new LoweredBlock(plans[start].Block, plans[start].EmitsExternalEventCheck, body));
+            start = end;
         }
-        return Sequence(items);
+        return blocks;
     }
 
     private BlockNode BuildEntryDispatch(MethodPlan method) {

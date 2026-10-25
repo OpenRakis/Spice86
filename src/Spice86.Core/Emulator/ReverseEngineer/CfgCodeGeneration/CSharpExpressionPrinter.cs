@@ -146,7 +146,19 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         }
 
         ParameterInfo[] parameters = candidates[0].GetParameters();
-        return node.Arguments.Select((argument, index) => Cast(parameters[index].ParameterType, Expr(argument)));
+        return node.Arguments.Select((argument, index) => Argument(parameters[index].ParameterType, Expr(argument)));
+    }
+
+    /// <summary>
+    /// An argument for a parameter of <paramref name="parameterType"/>. A constant is written as a literal of the
+    /// parameter type, without a cast: C# converts a constant argument implicitly when its value fits.
+    /// </summary>
+    private static string Argument(Type parameterType, CSharpFragment argument) {
+        DataType? parameterDataType = TryToDataType(parameterType);
+        if (argument.Constant is ConstantNode constant && parameterDataType is not null && parameterDataType != DataType.BOOL) {
+            return ConstantLiteral(new ConstantNode(parameterDataType, constant.ConvertAsCSharpCast(parameterDataType))).Text;
+        }
+        return Cast(parameterType, argument);
     }
 
     private static Type? ResolveKnownMethodTargetType(string? propertyPath) => propertyPath switch {
@@ -536,6 +548,9 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     public CSharpFragment VisitReturnNode(ReturnNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitSwitchNode(SwitchNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitBreakNode(BreakNode node) => throw NotAnExpression(node);
+    public CSharpFragment VisitContinueNode(ContinueNode node) => throw NotAnExpression(node);
+    public CSharpFragment VisitInfiniteLoopNode(InfiniteLoopNode node) => throw NotAnExpression(node);
+    public CSharpFragment VisitDoWhileNode(DoWhileNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitCpuFaultTryCatchNode(CpuFaultTryCatchNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitFailAsUntestedNode(FailAsUntestedNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitCommentNode(CommentNode node) => throw NotAnExpression(node);

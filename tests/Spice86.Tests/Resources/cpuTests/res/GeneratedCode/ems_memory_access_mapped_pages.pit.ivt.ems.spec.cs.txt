@@ -83,45 +83,43 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016E:0107 cmp AH,0
         Alu8.Sub(AH, 0);
         // 016E:010A jne short 0x0135
-        if (!ZeroFlag) {
-            goto L_0135;
+        if (ZeroFlag) {
+            // 016E:010C mov CX,DX
+            CX = DX;
+            // 016E:010E mov AL,0
+            AL = 0;
+            // 016E:0110 mov BX,0
+            BX = 0;
+            // 016E:0113 mov DX,CX
+            DX = CX;
+            // 016E:0115 mov AH,0x44
+            AH = 0x44;
+            // 016E:0117 int 0x67
+            InterruptCall(cs1, 0x0119, 0x67);
+            // 016E:0119 cmp AH,0
+            Alu8.Sub(AH, 0);
+            // 016E:011C jne short 0x0135
+            if (ZeroFlag) {
+                // 016E:011E mov AX,0xE000
+                AX = 0xE000;
+                // 016E:0121 mov ES,AX
+                ES = AX;
+                // 016E:0123 mov byte ptr ES:[0],0x42
+                UInt8[ES, 0] = 0x42;
+                // 016E:0129 mov AL,byte ptr ES:[0]
+                AL = UInt8[ES, 0];
+                // 016E:012D cmp AL,0x42
+                Alu8.Sub(AL, 0x42);
+                // 016E:012F jne short 0x0135
+                if (!ZeroFlag) {
+                    goto L_0135;
+                }
+                // 016E:0131 mov AL,0
+                AL = 0;
+                // 016E:0133 jmp short 0x0137
+                goto L_0137;
+            }
         }
-        // 016E:010C mov CX,DX
-        CX = DX;
-        // 016E:010E mov AL,0
-        AL = 0;
-        // 016E:0110 mov BX,0
-        BX = 0;
-        // 016E:0113 mov DX,CX
-        DX = CX;
-        // 016E:0115 mov AH,0x44
-        AH = 0x44;
-        // 016E:0117 int 0x67
-        InterruptCall(cs1, 0x0119, 0x67);
-        // 016E:0119 cmp AH,0
-        Alu8.Sub(AH, 0);
-        // 016E:011C jne short 0x0135
-        if (!ZeroFlag) {
-            goto L_0135;
-        }
-        // 016E:011E mov AX,0xE000
-        AX = 0xE000;
-        // 016E:0121 mov ES,AX
-        ES = AX;
-        // 016E:0123 mov byte ptr ES:[0],0x42
-        UInt8[ES, 0] = 0x42;
-        // 016E:0129 mov AL,byte ptr ES:[0]
-        AL = UInt8[ES, 0];
-        // 016E:012D cmp AL,0x42
-        Alu8.Sub(AL, 0x42);
-        // 016E:012F jne short 0x0135
-        if (!ZeroFlag) {
-            goto L_0135;
-        }
-        // 016E:0131 mov AL,0
-        AL = 0;
-        // 016E:0133 jmp short 0x0137
-        goto L_0137;
     L_0135:
         VerifySpeculativeEntryOrFail(cs1, 0x0135, Signature_0135_mov);
         // 016E:0135 mov AL,0xFF

@@ -77,33 +77,29 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Alu16.Sub(BX, 0);
         // F000:0036 je short 0x0042
         if (ZeroFlag) {
-            goto L_0042;
+            // F000:0042 mov AX,0x0014
+            AX = 0x0014;
+            // F000:0045 push AX
+            Stack.Push16(AX);
+            // F000:0046 ret near
+            return NearRet();
         }
         // F000:0038 cmp BX,1
         Alu16.Sub(BX, 1);
         // F000:003B je short 0x0047
         if (ZeroFlag) {
-            goto L_0047;
+            // F000:0047 mov AX,0x001B
+            AX = 0x001B;
+            // F000:004A push AX
+            Stack.Push16(AX);
+            // F000:004B ret near
+            return NearRet();
         }
         // F000:003D mov AX,0x0022
         AX = 0x0022;
         // F000:0040 push AX
         Stack.Push16(AX);
         // F000:0041 ret near
-        return NearRet();
-    L_0047:
-        // F000:0047 mov AX,0x001B
-        AX = 0x001B;
-        // F000:004A push AX
-        Stack.Push16(AX);
-        // F000:004B ret near
-        return NearRet();
-    L_0042:
-        // F000:0042 mov AX,0x0014
-        AX = 0x0014;
-        // F000:0045 push AX
-        Stack.Push16(AX);
-        // F000:0046 ret near
         return NearRet();
     }
 
@@ -116,7 +112,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         DS = AX;
         // F000:0005 mov SS,AX
         SS = AX;
-        State.InterruptShadowing = true;
         // F000:0007 mov SP,0x0100
         SP = 0x0100;
         // F000:000A mov word ptr DS:[0],0

@@ -38,12 +38,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_F000_02F8_F02F8(int loadOffset) {
         CheckExternalEvents(cs1, 0x02F8);
         // F000:02F8 jb short 0x02FE
-        if (CarryFlag) {
-            goto L_02FE;
+        if (!CarryFlag) {
+            // F000:02FA mov byte ptr DS:[BX+0x27],2
+            UInt8[DS, (ushort)(BX + 0x27)] = 2;
         }
-        // F000:02FA mov byte ptr DS:[BX+0x27],2
-        UInt8[DS, (ushort)(BX + 0x27)] = 2;
-    L_02FE:
         // F000:02FE ret near
         return NearRet();
     }
@@ -55,7 +53,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AX = 0x1000;
         // F000:0003 mov SS,AX
         SS = AX;
-        State.InterruptShadowing = true;
         // F000:0005 mov SP,0x0100
         SP = 0x0100;
         // F000:0008 xor AX,AX
@@ -72,672 +69,584 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         SI = 0x02FF;
         // F000:0015 mov BP,4
         BP = 4;
-    L_0018:
-        CheckExternalEvents(cs1, 0x0018);
-        // F000:0018 mov AX,word ptr CS:[SI]
-        AX = UInt16[CS, SI];
-        // F000:001B mov CX,word ptr CS:[SI+2]
-        CX = UInt16[CS, (ushort)(SI + 2)];
-        // F000:001F mov word ptr DS:[0x0100],CX
-        UInt16[DS, 0x0100] = CX;
-        // F000:0023 mov word ptr DS:[0x0102],AX
-        UInt16[DS, 0x0102] = AX;
-        // F000:0026 mov word ptr DS:[0x0104],AX
-        UInt16[DS, 0x0104] = AX;
-        // F000:0029 mov word ptr DS:[0x0106],CX
-        UInt16[DS, 0x0106] = CX;
-        // F000:002D mov byte ptr DS:[BX],1
-        UInt8[DS, BX] = 1;
-        // F000:0030 cmp AX,CX
-        // F000:0032 jb short 0x0037
-        if (AX < CX) {
-            goto L_0037;
-        }
-        // F000:0034 mov byte ptr DS:[BX],2
-        UInt8[DS, BX] = 2;
-    L_0037:
-        // F000:0037 mov byte ptr DS:[BX+1],1
-        UInt8[DS, (ushort)(BX + 1)] = 1;
-        // F000:003B cmp AX,CX
-        // F000:003D jae short 0x0043
-        if (AX >= CX) {
-            goto L_0043;
-        }
-        // F000:003F mov byte ptr DS:[BX+1],2
-        UInt8[DS, (ushort)(BX + 1)] = 2;
-    L_0043:
-        // F000:0043 mov byte ptr DS:[BX+2],1
-        UInt8[DS, (ushort)(BX + 2)] = 1;
-        // F000:0047 cmp AX,CX
-        // F000:0049 je short 0x004F
-        if (AX == CX) {
-            goto L_004F;
-        }
-        // F000:004B mov byte ptr DS:[BX+2],2
-        UInt8[DS, (ushort)(BX + 2)] = 2;
-    L_004F:
-        // F000:004F mov byte ptr DS:[BX+3],1
-        UInt8[DS, (ushort)(BX + 3)] = 1;
-        // F000:0053 cmp AX,CX
-        // F000:0055 jne short 0x005B
-        if (AX != CX) {
-            goto L_005B;
-        }
-        // F000:0057 mov byte ptr DS:[BX+3],2
-        UInt8[DS, (ushort)(BX + 3)] = 2;
-    L_005B:
-        // F000:005B mov byte ptr DS:[BX+4],1
-        UInt8[DS, (ushort)(BX + 4)] = 1;
-        // F000:005F cmp AX,CX
-        // F000:0061 jbe short 0x0067
-        if (AX <= CX) {
-            goto L_0067;
-        }
-        // F000:0063 mov byte ptr DS:[BX+4],2
-        UInt8[DS, (ushort)(BX + 4)] = 2;
-    L_0067:
-        // F000:0067 mov byte ptr DS:[BX+5],1
-        UInt8[DS, (ushort)(BX + 5)] = 1;
-        // F000:006B cmp AX,CX
-        // F000:006D ja short 0x0073
-        if (AX > CX) {
-            goto L_0073;
-        }
-        // F000:006F mov byte ptr DS:[BX+5],2
-        UInt8[DS, (ushort)(BX + 5)] = 2;
-    L_0073:
-        // F000:0073 mov byte ptr DS:[BX+6],1
-        UInt8[DS, (ushort)(BX + 6)] = 1;
-        // F000:0077 cmp AX,CX
-        // F000:0079 jl short 0x007F
-        if ((short)AX < (short)CX) {
-            goto L_007F;
-        }
-        // F000:007B mov byte ptr DS:[BX+6],2
-        UInt8[DS, (ushort)(BX + 6)] = 2;
-    L_007F:
-        // F000:007F mov byte ptr DS:[BX+7],1
-        UInt8[DS, (ushort)(BX + 7)] = 1;
-        // F000:0083 cmp AX,CX
-        // F000:0085 jge short 0x008B
-        if ((short)AX >= (short)CX) {
-            goto L_008B;
-        }
-        // F000:0087 mov byte ptr DS:[BX+7],2
-        UInt8[DS, (ushort)(BX + 7)] = 2;
-    L_008B:
-        // F000:008B mov byte ptr DS:[BX+8],1
-        UInt8[DS, (ushort)(BX + 8)] = 1;
-        // F000:008F cmp AX,CX
-        // F000:0091 jle short 0x0097
-        if ((short)AX <= (short)CX) {
-            goto L_0097;
-        }
-        // F000:0093 mov byte ptr DS:[BX+8],2
-        UInt8[DS, (ushort)(BX + 8)] = 2;
-    L_0097:
-        // F000:0097 mov byte ptr DS:[BX+9],1
-        UInt8[DS, (ushort)(BX + 9)] = 1;
-        // F000:009B cmp AX,CX
-        // F000:009D jg short 0x00A3
-        if ((short)AX > (short)CX) {
-            goto L_00A3;
-        }
-        // F000:009F mov byte ptr DS:[BX+9],2
-        UInt8[DS, (ushort)(BX + 9)] = 2;
-    L_00A3:
-        // F000:00A3 mov byte ptr DS:[BX+0x0A],1
-        UInt8[DS, (ushort)(BX + 0x0A)] = 1;
-        // F000:00A7 cmp AX,2
-        // F000:00AA jl short 0x00B0
-        if ((short)AX < 2) {
-            goto L_00B0;
-        }
-        // F000:00AC mov byte ptr DS:[BX+0x0A],2
-        UInt8[DS, (ushort)(BX + 0x0A)] = 2;
-    L_00B0:
-        // F000:00B0 mov byte ptr DS:[BX+0x0B],1
-        UInt8[DS, (ushort)(BX + 0x0B)] = 1;
-        // F000:00B4 cmp AL,CL
-        // F000:00B6 jb short 0x00BC
-        if (AL < CL) {
-            goto L_00BC;
-        }
-        // F000:00B8 mov byte ptr DS:[BX+0x0B],2
-        UInt8[DS, (ushort)(BX + 0x0B)] = 2;
-    L_00BC:
-        // F000:00BC mov byte ptr DS:[BX+0x0C],1
-        UInt8[DS, (ushort)(BX + 0x0C)] = 1;
-        // F000:00C0 test AX,CX
-        // F000:00C2 je short 0x00C8
-        if ((AX & CX) == 0) {
-            goto L_00C8;
-        }
-        // F000:00C4 mov byte ptr DS:[BX+0x0C],2
-        UInt8[DS, (ushort)(BX + 0x0C)] = 2;
-    L_00C8:
-        // F000:00C8 mov byte ptr DS:[BX+0x0D],1
-        UInt8[DS, (ushort)(BX + 0x0D)] = 1;
-        // F000:00CC mov DX,AX
-        DX = AX;
-        // F000:00CE dec DX
-        DX--;
-        // F000:00CF test DX,DX
-        // F000:00D1 jne short 0x00D7
-        if (DX != 0) {
-            goto L_00D7;
-        }
-        // F000:00D3 mov byte ptr DS:[BX+0x0D],2
-        UInt8[DS, (ushort)(BX + 0x0D)] = 2;
-    L_00D7:
-        // F000:00D7 mov byte ptr DS:[BX+0x0E],1
-        UInt8[DS, (ushort)(BX + 0x0E)] = 1;
-        // F000:00DB test AH,0x80
-        // F000:00DE jne short 0x00E4
-        if ((AH & 0x80) != 0) {
-            goto L_00E4;
-        }
-        // F000:00E0 mov byte ptr DS:[BX+0x0E],2
-        UInt8[DS, (ushort)(BX + 0x0E)] = 2;
-    L_00E4:
-        // F000:00E4 mov byte ptr DS:[BX+0x0F],1
-        UInt8[DS, (ushort)(BX + 0x0F)] = 1;
-        // F000:00E8 cmp AX,word ptr DS:[0x0100]
-        // F000:00EC jb short 0x00F2
-        if (AX < UInt16[DS, 0x0100]) {
-            goto L_00F2;
-        }
-        // F000:00EE mov byte ptr DS:[BX+0x0F],2
-        UInt8[DS, (ushort)(BX + 0x0F)] = 2;
-    L_00F2:
-        // F000:00F2 mov byte ptr DS:[BX+0x10],1
-        UInt8[DS, (ushort)(BX + 0x10)] = 1;
-        // F000:00F6 mov DX,AX
-        DX = AX;
-        // F000:00F8 dec DX
-        DX--;
-        // F000:00F9 je short 0x00FF
-        if (DX == 0) {
-            goto L_00FF;
-        }
-        // F000:00FB mov byte ptr DS:[BX+0x10],2
-        UInt8[DS, (ushort)(BX + 0x10)] = 2;
-    L_00FF:
-        // F000:00FF mov byte ptr DS:[BX+0x11],1
-        UInt8[DS, (ushort)(BX + 0x11)] = 1;
-        // F000:0103 mov DX,AX
-        DX = AX;
-        // F000:0105 sub DX,CX
-        DX = (ushort)(DX - CX);
-        // F000:0107 js short 0x010D
-        if ((short)DX < 0) {
-            goto L_010D;
-        }
-        // F000:0109 mov byte ptr DS:[BX+0x11],2
-        UInt8[DS, (ushort)(BX + 0x11)] = 2;
-    L_010D:
-        // F000:010D mov byte ptr DS:[BX+0x12],1
-        UInt8[DS, (ushort)(BX + 0x12)] = 1;
-        // F000:0111 mov DX,AX
-        DX = AX;
-        // F000:0113 and DX,CX
-        DX = (ushort)(DX & CX);
-        // F000:0115 jne short 0x011B
-        if (DX != 0) {
-            goto L_011B;
-        }
-        // F000:0117 mov byte ptr DS:[BX+0x12],2
-        UInt8[DS, (ushort)(BX + 0x12)] = 2;
-    L_011B:
-        // F000:011B mov byte ptr DS:[BX+0x13],1
-        UInt8[DS, (ushort)(BX + 0x13)] = 1;
-        // F000:011F mov DX,AX
-        DX = AX;
-        // F000:0121 xor DX,CX
-        DX = (ushort)(DX ^ CX);
-        // F000:0123 je short 0x0129
-        if (DX == 0) {
-            goto L_0129;
-        }
-        // F000:0125 mov byte ptr DS:[BX+0x13],2
-        UInt8[DS, (ushort)(BX + 0x13)] = 2;
-    L_0129:
-        // F000:0129 mov byte ptr DS:[BX+0x14],1
-        UInt8[DS, (ushort)(BX + 0x14)] = 1;
-        // F000:012D cmp AX,CX
-        // F000:012F js short 0x0135
-        if ((short)(AX - CX) < 0) {
-            goto L_0135;
-        }
-        // F000:0131 mov byte ptr DS:[BX+0x14],2
-        UInt8[DS, (ushort)(BX + 0x14)] = 2;
-    L_0135:
-        // F000:0135 mov byte ptr DS:[BX+0x15],1
-        UInt8[DS, (ushort)(BX + 0x15)] = 1;
-        // F000:0139 test AX,AX
-        // F000:013B js short 0x0141
-        if ((short)AX < 0) {
-            goto L_0141;
-        }
-        // F000:013D mov byte ptr DS:[BX+0x15],2
-        UInt8[DS, (ushort)(BX + 0x15)] = 2;
-    L_0141:
-        // F000:0141 mov byte ptr DS:[BX+0x16],1
-        UInt8[DS, (ushort)(BX + 0x16)] = 1;
-        // F000:0145 mov DX,AX
-        DX = AX;
-        // F000:0147 inc DX
-        DX++;
-        // F000:0148 jns short 0x014E
-        if ((short)DX >= 0) {
-            goto L_014E;
-        }
-        // F000:014A mov byte ptr DS:[BX+0x16],2
-        UInt8[DS, (ushort)(BX + 0x16)] = 2;
-    L_014E:
-        // F000:014E mov byte ptr DS:[BX+0x17],1
-        UInt8[DS, (ushort)(BX + 0x17)] = 1;
-        // F000:0152 dec word ptr DS:[0x0102]
-        UInt16[DS, 0x0102] = Alu16.Dec(UInt16[DS, 0x0102]);
-        // F000:0156 je short 0x015C
-        if (ZeroFlag) {
-            goto L_015C;
-        }
-        // F000:0158 mov byte ptr DS:[BX+0x17],2
-        UInt8[DS, (ushort)(BX + 0x17)] = 2;
-    L_015C:
-        // F000:015C mov byte ptr DS:[BX+0x18],1
-        UInt8[DS, (ushort)(BX + 0x18)] = 1;
-        // F000:0160 cmp AX,CX
-        // F000:0162 mov DX,AX
-        DX = AX;
-        // F000:0164 jb short 0x016A
-        if (AX < CX) {
-            goto L_016A;
-        }
-        // F000:0166 mov byte ptr DS:[BX+0x18],2
-        UInt8[DS, (ushort)(BX + 0x18)] = 2;
-    L_016A:
-        // F000:016A mov byte ptr DS:[BX+0x19],1
-        UInt8[DS, (ushort)(BX + 0x19)] = 1;
-        // F000:016E cmp AX,CX
-        // F000:0170 inc DX
-        DX++;
-        // F000:0171 jb short 0x0177
-        if (AX < CX) {
-            goto L_0177;
-        }
-        // F000:0173 mov byte ptr DS:[BX+0x19],2
-        UInt8[DS, (ushort)(BX + 0x19)] = 2;
-    L_0177:
-        // F000:0177 mov byte ptr DS:[BX+0x1A],1
-        UInt8[DS, (ushort)(BX + 0x1A)] = 1;
-        // F000:017B mov DX,AX
-        DX = AX;
-        // F000:017D sub DX,CX
-        DX = (ushort)(DX - CX);
-        // F000:017F mov DI,AX
-        DI = AX;
-        // F000:0181 je short 0x0187
-        if (DX == 0) {
-            goto L_0187;
-        }
-        // F000:0183 mov byte ptr DS:[BX+0x1A],2
-        UInt8[DS, (ushort)(BX + 0x1A)] = 2;
-    L_0187:
-        // F000:0187 mov byte ptr DS:[BX+0x1B],1
-        UInt8[DS, (ushort)(BX + 0x1B)] = 1;
-        // F000:018B xor DX,DX
-        DX = 0;
-        // F000:018D cmp AX,CX
-        Alu16.Sub(AX, CX);
-        // F000:018F jb short 0x0195
-        if (CarryFlag) {
-            goto L_0195;
-        }
-        // F000:0191 mov byte ptr DS:[BX+0x1B],2
-        UInt8[DS, (ushort)(BX + 0x1B)] = 2;
-    L_0195:
-        // F000:0195 adc DL,0
-        DL = Alu8.Adc(DL, 0);
-        // F000:0198 mov byte ptr DS:[BX+0x1C],DL
-        UInt8[DS, (ushort)(BX + 0x1C)] = DL;
-        // F000:019B mov byte ptr DS:[BX+0x1D],1
-        UInt8[DS, (ushort)(BX + 0x1D)] = 1;
-        // F000:019F cmp AX,CX
-        Alu16.Sub(AX, CX);
-        // F000:01A1 jo short 0x01A7
-        if (OverflowFlag) {
-            goto L_01A7;
-        }
-        // F000:01A3 mov byte ptr DS:[BX+0x1D],2
-        UInt8[DS, (ushort)(BX + 0x1D)] = 2;
-    L_01A7:
-        // F000:01A7 mov byte ptr DS:[BX+0x1E],1
-        UInt8[DS, (ushort)(BX + 0x1E)] = 1;
-        // F000:01AB cmp AX,CX
-        Alu16.Sub(AX, CX);
-        // F000:01AD jp short 0x01B3
-        if (ParityFlag) {
-            goto L_01B3;
-        }
-        // F000:01AF mov byte ptr DS:[BX+0x1E],2
-        UInt8[DS, (ushort)(BX + 0x1E)] = 2;
-    L_01B3:
-        // F000:01B3 mov byte ptr DS:[BX+0x1F],1
-        UInt8[DS, (ushort)(BX + 0x1F)] = 1;
-        // F000:01B7 mov DX,AX
-        DX = AX;
-        // F000:01B9 cmp AX,AX
-        Alu16.Sub(AX, AX);
-        // F000:01BB shl DX,CL
-        DX = Alu16.Shl(DX, (int)CL);
-        // F000:01BD je short 0x01C3
-        if (ZeroFlag) {
-            goto L_01C3;
-        }
-        // F000:01BF mov byte ptr DS:[BX+0x1F],2
-        UInt8[DS, (ushort)(BX + 0x1F)] = 2;
-    L_01C3:
-        // F000:01C3 mov byte ptr DS:[BX+0x20],1
-        UInt8[DS, (ushort)(BX + 0x20)] = 1;
-        // F000:01C7 mov DX,AX
-        DX = AX;
-        // F000:01C9 cmp DX,CX
-        Alu16.Sub(DX, CX);
-        // F000:01CB mov DL,0x55
-        DL = 0x55;
-        // F000:01CD jb short 0x01D3
-        if (CarryFlag) {
-            goto L_01D3;
-        }
-        // F000:01CF mov byte ptr DS:[BX+0x20],2
-        UInt8[DS, (ushort)(BX + 0x20)] = 2;
-    L_01D3:
-        // F000:01D3 mov byte ptr DS:[BX+0x21],1
-        UInt8[DS, (ushort)(BX + 0x21)] = 1;
-        // F000:01D7 mov DX,AX
-        DX = AX;
-        // F000:01D9 cmp DX,CX
-        Alu16.Sub(DX, CX);
-        // F000:01DB mov DH,0
-        DH = 0;
-        // F000:01DD jb short 0x01E3
-        if (CarryFlag) {
-            goto L_01E3;
-        }
-        // F000:01DF mov byte ptr DS:[BX+0x21],2
-        UInt8[DS, (ushort)(BX + 0x21)] = 2;
-    L_01E3:
-        // F000:01E3 mov byte ptr DS:[BX+0x22],1
-        UInt8[DS, (ushort)(BX + 0x22)] = 1;
-        // F000:01E7 cmp AX,CX
-        Alu16.Sub(AX, CX);
-        // F000:01E9 pushf
-        Stack.Push16(FlagRegister16);
-        // F000:01EA pop DI
-        DI = Stack.Pop16();
-        // F000:01EB jb short 0x01F1
-        if (CarryFlag) {
-            goto L_01F1;
-        }
-        // F000:01ED mov byte ptr DS:[BX+0x22],2
-        UInt8[DS, (ushort)(BX + 0x22)] = 2;
-    L_01F1:
-        // F000:01F1 mov byte ptr DS:[BX+0x23],1
-        UInt8[DS, (ushort)(BX + 0x23)] = 1;
-        // F000:01F5 cmp AX,word ptr DS:[0x0100]
-        Alu16.Sub(AX, UInt16[DS, 0x0100]);
-        // F000:01F9 mov DX,AX
-        DX = AX;
-        // F000:01FB jb short 0x0201
-        if (CarryFlag) {
-            goto L_0201;
-        }
-        // F000:01FD mov byte ptr DS:[BX+0x23],2
-        UInt8[DS, (ushort)(BX + 0x23)] = 2;
-    L_0201:
-        // F000:0201 mov byte ptr DS:[BX+0x24],1
-        UInt8[DS, (ushort)(BX + 0x24)] = 1;
-        // F000:0205 mov DX,AX
-        DX = AX;
-        // F000:0207 add DX,0x00FF
-        DX = (ushort)(DX + 0x00FF);
-        // F000:020B cmp SP,DX
-        Alu16.Sub(SP, DX);
-        // F000:020D push DX
-        Stack.Push16(DX);
-        // F000:020E je short 0x0214
-        if (ZeroFlag) {
-            goto L_0214;
-        }
-        // F000:0210 mov byte ptr DS:[BX+0x24],2
-        UInt8[DS, (ushort)(BX + 0x24)] = 2;
-    L_0214:
-        // F000:0214 pop DX
-        DX = Stack.Pop16();
-        // F000:0215 mov byte ptr DS:[BX+0x25],1
-        UInt8[DS, (ushort)(BX + 0x25)] = 1;
-        // F000:0219 cmp AX,CX
-        Alu16.Sub(AX, CX);
-        // F000:021B sti
-        if (!InterruptFlag) {
-            State.InterruptShadowing = true;
-        }
-        InterruptFlag = true;
-        CheckExternalEvents(cs1, 0x021C);
-        // F000:021C jb short 0x0222
-        if (CarryFlag) {
-            goto L_0222;
-        }
-        // F000:021E mov byte ptr DS:[BX+0x25],2
-        UInt8[DS, (ushort)(BX + 0x25)] = 2;
-    L_0222:
-        // F000:0222 cli
-        InterruptFlag = false;
-        // F000:0223 mov byte ptr DS:[BX+0x26],1
-        UInt8[DS, (ushort)(BX + 0x26)] = 1;
-        // F000:0227 call near 0x02F5
-        NearCall(cs1, 0x022A, unknown_F000_02F5_F02F5);
-        // F000:022A jb short 0x0230
-        if (CarryFlag) {
-            goto L_0230;
-        }
-        // F000:022C mov byte ptr DS:[BX+0x26],2
-        UInt8[DS, (ushort)(BX + 0x26)] = 2;
-    L_0230:
-        // F000:0230 mov byte ptr DS:[BX+0x27],1
-        UInt8[DS, (ushort)(BX + 0x27)] = 1;
-        // F000:0234 cmp AX,CX
-        Alu16.Sub(AX, CX);
-        // F000:0236 call near 0x02F8
-        NearCall(cs1, 0x0239, unknown_F000_02F8_F02F8);
-        // F000:0239 xor DI,DI
-        DI = 0;
-        // F000:023B mov byte ptr DS:[BX+0x28],1
-        UInt8[DS, (ushort)(BX + 0x28)] = 1;
-        // F000:023F cmp AX,CX
-        Alu16.Sub(AX, CX);
-    L_0241:
-        CheckExternalEvents(cs1, 0x0241);
-        // F000:0241 jb short 0x0247
-        if (CarryFlag) {
-            goto L_0247;
-        }
-        // F000:0243 mov byte ptr DS:[BX+DI+0x28],2
-        UInt8[DS, (ushort)(BX + DI + 0x28)] = 2;
-    L_0247:
-        // F000:0247 inc DI
-        DI++;
-        // F000:0248 cmp DI,2
-        Alu16.Sub(DI, 2);
-        // F000:024B jae short 0x0255
-        if (!CarryFlag) {
-            goto L_0255;
-        }
-        // F000:024D mov byte ptr DS:[BX+0x29],1
-        UInt8[DS, (ushort)(BX + 0x29)] = 1;
-        // F000:0251 cmp CX,AX
-        Alu16.Sub(CX, AX);
-        // F000:0253 jmp short 0x0241
-        goto L_0241;
-    L_0255:
-        // F000:0255 push CX
-        Stack.Push16(CX);
-        // F000:0256 push SI
-        Stack.Push16(SI);
-        // F000:0257 mov byte ptr DS:[BX+0x2B],1
-        UInt8[DS, (ushort)(BX + 0x2B)] = 1;
-        // F000:025B mov SI,0x0104
-        SI = 0x0104;
-        // F000:025E mov DI,0x0106
-        DI = 0x0106;
-        // F000:0261 mov CX,2
-        CX = 2;
-        // F000:0264 repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
-        while (CX != 0) {
-            Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
-            SI = (ushort)(SI + (ushort)State.Direction8);
-            DI = (ushort)(DI + (ushort)State.Direction8);
-            CX--;
+        do {
+            CheckExternalEvents(cs1, 0x0018);
+            // F000:0018 mov AX,word ptr CS:[SI]
+            AX = UInt16[CS, SI];
+            // F000:001B mov CX,word ptr CS:[SI+2]
+            CX = UInt16[CS, (ushort)(SI + 2)];
+            // F000:001F mov word ptr DS:[0x0100],CX
+            UInt16[DS, 0x0100] = CX;
+            // F000:0023 mov word ptr DS:[0x0102],AX
+            UInt16[DS, 0x0102] = AX;
+            // F000:0026 mov word ptr DS:[0x0104],AX
+            UInt16[DS, 0x0104] = AX;
+            // F000:0029 mov word ptr DS:[0x0106],CX
+            UInt16[DS, 0x0106] = CX;
+            // F000:002D mov byte ptr DS:[BX],1
+            UInt8[DS, BX] = 1;
+            // F000:0030 cmp AX,CX
+            // F000:0032 jb short 0x0037
+            if (AX >= CX) {
+                // F000:0034 mov byte ptr DS:[BX],2
+                UInt8[DS, BX] = 2;
+            }
+            // F000:0037 mov byte ptr DS:[BX+1],1
+            UInt8[DS, (ushort)(BX + 1)] = 1;
+            // F000:003B cmp AX,CX
+            // F000:003D jae short 0x0043
+            if (AX < CX) {
+                // F000:003F mov byte ptr DS:[BX+1],2
+                UInt8[DS, (ushort)(BX + 1)] = 2;
+            }
+            // F000:0043 mov byte ptr DS:[BX+2],1
+            UInt8[DS, (ushort)(BX + 2)] = 1;
+            // F000:0047 cmp AX,CX
+            // F000:0049 je short 0x004F
+            if (AX != CX) {
+                // F000:004B mov byte ptr DS:[BX+2],2
+                UInt8[DS, (ushort)(BX + 2)] = 2;
+            }
+            // F000:004F mov byte ptr DS:[BX+3],1
+            UInt8[DS, (ushort)(BX + 3)] = 1;
+            // F000:0053 cmp AX,CX
+            // F000:0055 jne short 0x005B
+            if (AX == CX) {
+                // F000:0057 mov byte ptr DS:[BX+3],2
+                UInt8[DS, (ushort)(BX + 3)] = 2;
+            }
+            // F000:005B mov byte ptr DS:[BX+4],1
+            UInt8[DS, (ushort)(BX + 4)] = 1;
+            // F000:005F cmp AX,CX
+            // F000:0061 jbe short 0x0067
+            if (AX > CX) {
+                // F000:0063 mov byte ptr DS:[BX+4],2
+                UInt8[DS, (ushort)(BX + 4)] = 2;
+            }
+            // F000:0067 mov byte ptr DS:[BX+5],1
+            UInt8[DS, (ushort)(BX + 5)] = 1;
+            // F000:006B cmp AX,CX
+            // F000:006D ja short 0x0073
+            if (AX <= CX) {
+                // F000:006F mov byte ptr DS:[BX+5],2
+                UInt8[DS, (ushort)(BX + 5)] = 2;
+            }
+            // F000:0073 mov byte ptr DS:[BX+6],1
+            UInt8[DS, (ushort)(BX + 6)] = 1;
+            // F000:0077 cmp AX,CX
+            // F000:0079 jl short 0x007F
+            if ((short)AX >= (short)CX) {
+                // F000:007B mov byte ptr DS:[BX+6],2
+                UInt8[DS, (ushort)(BX + 6)] = 2;
+            }
+            // F000:007F mov byte ptr DS:[BX+7],1
+            UInt8[DS, (ushort)(BX + 7)] = 1;
+            // F000:0083 cmp AX,CX
+            // F000:0085 jge short 0x008B
+            if ((short)AX < (short)CX) {
+                // F000:0087 mov byte ptr DS:[BX+7],2
+                UInt8[DS, (ushort)(BX + 7)] = 2;
+            }
+            // F000:008B mov byte ptr DS:[BX+8],1
+            UInt8[DS, (ushort)(BX + 8)] = 1;
+            // F000:008F cmp AX,CX
+            // F000:0091 jle short 0x0097
+            if ((short)AX > (short)CX) {
+                // F000:0093 mov byte ptr DS:[BX+8],2
+                UInt8[DS, (ushort)(BX + 8)] = 2;
+            }
+            // F000:0097 mov byte ptr DS:[BX+9],1
+            UInt8[DS, (ushort)(BX + 9)] = 1;
+            // F000:009B cmp AX,CX
+            // F000:009D jg short 0x00A3
+            if ((short)AX <= (short)CX) {
+                // F000:009F mov byte ptr DS:[BX+9],2
+                UInt8[DS, (ushort)(BX + 9)] = 2;
+            }
+            // F000:00A3 mov byte ptr DS:[BX+0x0A],1
+            UInt8[DS, (ushort)(BX + 0x0A)] = 1;
+            // F000:00A7 cmp AX,2
+            // F000:00AA jl short 0x00B0
+            if ((short)AX >= 2) {
+                // F000:00AC mov byte ptr DS:[BX+0x0A],2
+                UInt8[DS, (ushort)(BX + 0x0A)] = 2;
+            }
+            // F000:00B0 mov byte ptr DS:[BX+0x0B],1
+            UInt8[DS, (ushort)(BX + 0x0B)] = 1;
+            // F000:00B4 cmp AL,CL
+            // F000:00B6 jb short 0x00BC
+            if (AL >= CL) {
+                // F000:00B8 mov byte ptr DS:[BX+0x0B],2
+                UInt8[DS, (ushort)(BX + 0x0B)] = 2;
+            }
+            // F000:00BC mov byte ptr DS:[BX+0x0C],1
+            UInt8[DS, (ushort)(BX + 0x0C)] = 1;
+            // F000:00C0 test AX,CX
+            // F000:00C2 je short 0x00C8
+            if ((AX & CX) != 0) {
+                // F000:00C4 mov byte ptr DS:[BX+0x0C],2
+                UInt8[DS, (ushort)(BX + 0x0C)] = 2;
+            }
+            // F000:00C8 mov byte ptr DS:[BX+0x0D],1
+            UInt8[DS, (ushort)(BX + 0x0D)] = 1;
+            // F000:00CC mov DX,AX
+            DX = AX;
+            // F000:00CE dec DX
+            DX--;
+            // F000:00CF test DX,DX
+            // F000:00D1 jne short 0x00D7
+            if (DX == 0) {
+                // F000:00D3 mov byte ptr DS:[BX+0x0D],2
+                UInt8[DS, (ushort)(BX + 0x0D)] = 2;
+            }
+            // F000:00D7 mov byte ptr DS:[BX+0x0E],1
+            UInt8[DS, (ushort)(BX + 0x0E)] = 1;
+            // F000:00DB test AH,0x80
+            // F000:00DE jne short 0x00E4
+            if ((AH & 0x80) == 0) {
+                // F000:00E0 mov byte ptr DS:[BX+0x0E],2
+                UInt8[DS, (ushort)(BX + 0x0E)] = 2;
+            }
+            // F000:00E4 mov byte ptr DS:[BX+0x0F],1
+            UInt8[DS, (ushort)(BX + 0x0F)] = 1;
+            // F000:00E8 cmp AX,word ptr DS:[0x0100]
+            // F000:00EC jb short 0x00F2
+            if (AX >= UInt16[DS, 0x0100]) {
+                // F000:00EE mov byte ptr DS:[BX+0x0F],2
+                UInt8[DS, (ushort)(BX + 0x0F)] = 2;
+            }
+            // F000:00F2 mov byte ptr DS:[BX+0x10],1
+            UInt8[DS, (ushort)(BX + 0x10)] = 1;
+            // F000:00F6 mov DX,AX
+            DX = AX;
+            // F000:00F8 dec DX
+            DX--;
+            // F000:00F9 je short 0x00FF
+            if (DX != 0) {
+                // F000:00FB mov byte ptr DS:[BX+0x10],2
+                UInt8[DS, (ushort)(BX + 0x10)] = 2;
+            }
+            // F000:00FF mov byte ptr DS:[BX+0x11],1
+            UInt8[DS, (ushort)(BX + 0x11)] = 1;
+            // F000:0103 mov DX,AX
+            DX = AX;
+            // F000:0105 sub DX,CX
+            DX = (ushort)(DX - CX);
+            // F000:0107 js short 0x010D
+            if ((short)DX >= 0) {
+                // F000:0109 mov byte ptr DS:[BX+0x11],2
+                UInt8[DS, (ushort)(BX + 0x11)] = 2;
+            }
+            // F000:010D mov byte ptr DS:[BX+0x12],1
+            UInt8[DS, (ushort)(BX + 0x12)] = 1;
+            // F000:0111 mov DX,AX
+            DX = AX;
+            // F000:0113 and DX,CX
+            DX = (ushort)(DX & CX);
+            // F000:0115 jne short 0x011B
+            if (DX == 0) {
+                // F000:0117 mov byte ptr DS:[BX+0x12],2
+                UInt8[DS, (ushort)(BX + 0x12)] = 2;
+            }
+            // F000:011B mov byte ptr DS:[BX+0x13],1
+            UInt8[DS, (ushort)(BX + 0x13)] = 1;
+            // F000:011F mov DX,AX
+            DX = AX;
+            // F000:0121 xor DX,CX
+            DX = (ushort)(DX ^ CX);
+            // F000:0123 je short 0x0129
+            if (DX != 0) {
+                // F000:0125 mov byte ptr DS:[BX+0x13],2
+                UInt8[DS, (ushort)(BX + 0x13)] = 2;
+            }
+            // F000:0129 mov byte ptr DS:[BX+0x14],1
+            UInt8[DS, (ushort)(BX + 0x14)] = 1;
+            // F000:012D cmp AX,CX
+            // F000:012F js short 0x0135
+            if ((short)(AX - CX) >= 0) {
+                // F000:0131 mov byte ptr DS:[BX+0x14],2
+                UInt8[DS, (ushort)(BX + 0x14)] = 2;
+            }
+            // F000:0135 mov byte ptr DS:[BX+0x15],1
+            UInt8[DS, (ushort)(BX + 0x15)] = 1;
+            // F000:0139 test AX,AX
+            // F000:013B js short 0x0141
+            if ((short)AX >= 0) {
+                // F000:013D mov byte ptr DS:[BX+0x15],2
+                UInt8[DS, (ushort)(BX + 0x15)] = 2;
+            }
+            // F000:0141 mov byte ptr DS:[BX+0x16],1
+            UInt8[DS, (ushort)(BX + 0x16)] = 1;
+            // F000:0145 mov DX,AX
+            DX = AX;
+            // F000:0147 inc DX
+            DX++;
+            // F000:0148 jns short 0x014E
+            if ((short)DX < 0) {
+                // F000:014A mov byte ptr DS:[BX+0x16],2
+                UInt8[DS, (ushort)(BX + 0x16)] = 2;
+            }
+            // F000:014E mov byte ptr DS:[BX+0x17],1
+            UInt8[DS, (ushort)(BX + 0x17)] = 1;
+            // F000:0152 dec word ptr DS:[0x0102]
+            UInt16[DS, 0x0102] = Alu16.Dec(UInt16[DS, 0x0102]);
+            // F000:0156 je short 0x015C
             if (!ZeroFlag) {
-                break;
+                // F000:0158 mov byte ptr DS:[BX+0x17],2
+                UInt8[DS, (ushort)(BX + 0x17)] = 2;
             }
-        }
-        // F000:0266 jne short 0x026C
-        if (!ZeroFlag) {
-            goto L_026C;
-        }
-        // F000:0268 mov byte ptr DS:[BX+0x2B],2
-        UInt8[DS, (ushort)(BX + 0x2B)] = 2;
-    L_026C:
-        // F000:026C mov byte ptr DS:[BX+0x2D],1
-        UInt8[DS, (ushort)(BX + 0x2D)] = 1;
-        // F000:0270 mov DI,0x0106
-        DI = 0x0106;
-        // F000:0273 mov CX,2
-        CX = 2;
-        // F000:0276 repne scas AL,byte ptr ES:[DI]
-        while (CX != 0) {
-            Alu8.Sub(AL, UInt8[ES, DI]);
-            DI = (ushort)(DI + (ushort)State.Direction8);
-            CX--;
+            // F000:015C mov byte ptr DS:[BX+0x18],1
+            UInt8[DS, (ushort)(BX + 0x18)] = 1;
+            // F000:0160 cmp AX,CX
+            // F000:0162 mov DX,AX
+            DX = AX;
+            // F000:0164 jb short 0x016A
+            if (AX >= CX) {
+                // F000:0166 mov byte ptr DS:[BX+0x18],2
+                UInt8[DS, (ushort)(BX + 0x18)] = 2;
+            }
+            // F000:016A mov byte ptr DS:[BX+0x19],1
+            UInt8[DS, (ushort)(BX + 0x19)] = 1;
+            // F000:016E cmp AX,CX
+            // F000:0170 inc DX
+            DX++;
+            // F000:0171 jb short 0x0177
+            if (AX >= CX) {
+                // F000:0173 mov byte ptr DS:[BX+0x19],2
+                UInt8[DS, (ushort)(BX + 0x19)] = 2;
+            }
+            // F000:0177 mov byte ptr DS:[BX+0x1A],1
+            UInt8[DS, (ushort)(BX + 0x1A)] = 1;
+            // F000:017B mov DX,AX
+            DX = AX;
+            // F000:017D sub DX,CX
+            DX = (ushort)(DX - CX);
+            // F000:017F mov DI,AX
+            DI = AX;
+            // F000:0181 je short 0x0187
+            if (DX != 0) {
+                // F000:0183 mov byte ptr DS:[BX+0x1A],2
+                UInt8[DS, (ushort)(BX + 0x1A)] = 2;
+            }
+            // F000:0187 mov byte ptr DS:[BX+0x1B],1
+            UInt8[DS, (ushort)(BX + 0x1B)] = 1;
+            // F000:018B xor DX,DX
+            DX = 0;
+            // F000:018D cmp AX,CX
+            Alu16.Sub(AX, CX);
+            // F000:018F jb short 0x0195
+            if (!CarryFlag) {
+                // F000:0191 mov byte ptr DS:[BX+0x1B],2
+                UInt8[DS, (ushort)(BX + 0x1B)] = 2;
+            }
+            // F000:0195 adc DL,0
+            DL = Alu8.Adc(DL, 0);
+            // F000:0198 mov byte ptr DS:[BX+0x1C],DL
+            UInt8[DS, (ushort)(BX + 0x1C)] = DL;
+            // F000:019B mov byte ptr DS:[BX+0x1D],1
+            UInt8[DS, (ushort)(BX + 0x1D)] = 1;
+            // F000:019F cmp AX,CX
+            Alu16.Sub(AX, CX);
+            // F000:01A1 jo short 0x01A7
+            if (!OverflowFlag) {
+                // F000:01A3 mov byte ptr DS:[BX+0x1D],2
+                UInt8[DS, (ushort)(BX + 0x1D)] = 2;
+            }
+            // F000:01A7 mov byte ptr DS:[BX+0x1E],1
+            UInt8[DS, (ushort)(BX + 0x1E)] = 1;
+            // F000:01AB cmp AX,CX
+            Alu16.Sub(AX, CX);
+            // F000:01AD jp short 0x01B3
+            if (!ParityFlag) {
+                // F000:01AF mov byte ptr DS:[BX+0x1E],2
+                UInt8[DS, (ushort)(BX + 0x1E)] = 2;
+            }
+            // F000:01B3 mov byte ptr DS:[BX+0x1F],1
+            UInt8[DS, (ushort)(BX + 0x1F)] = 1;
+            // F000:01B7 mov DX,AX
+            DX = AX;
+            // F000:01B9 cmp AX,AX
+            Alu16.Sub(AX, AX);
+            // F000:01BB shl DX,CL
+            DX = Alu16.Shl(DX, (int)CL);
+            // F000:01BD je short 0x01C3
+            if (!ZeroFlag) {
+                // F000:01BF mov byte ptr DS:[BX+0x1F],2
+                UInt8[DS, (ushort)(BX + 0x1F)] = 2;
+            }
+            // F000:01C3 mov byte ptr DS:[BX+0x20],1
+            UInt8[DS, (ushort)(BX + 0x20)] = 1;
+            // F000:01C7 mov DX,AX
+            DX = AX;
+            // F000:01C9 cmp DX,CX
+            Alu16.Sub(DX, CX);
+            // F000:01CB mov DL,0x55
+            DL = 0x55;
+            // F000:01CD jb short 0x01D3
+            if (!CarryFlag) {
+                // F000:01CF mov byte ptr DS:[BX+0x20],2
+                UInt8[DS, (ushort)(BX + 0x20)] = 2;
+            }
+            // F000:01D3 mov byte ptr DS:[BX+0x21],1
+            UInt8[DS, (ushort)(BX + 0x21)] = 1;
+            // F000:01D7 mov DX,AX
+            DX = AX;
+            // F000:01D9 cmp DX,CX
+            Alu16.Sub(DX, CX);
+            // F000:01DB mov DH,0
+            DH = 0;
+            // F000:01DD jb short 0x01E3
+            if (!CarryFlag) {
+                // F000:01DF mov byte ptr DS:[BX+0x21],2
+                UInt8[DS, (ushort)(BX + 0x21)] = 2;
+            }
+            // F000:01E3 mov byte ptr DS:[BX+0x22],1
+            UInt8[DS, (ushort)(BX + 0x22)] = 1;
+            // F000:01E7 cmp AX,CX
+            Alu16.Sub(AX, CX);
+            // F000:01E9 pushf
+            Stack.Push16(FlagRegister16);
+            // F000:01EA pop DI
+            DI = Stack.Pop16();
+            // F000:01EB jb short 0x01F1
+            if (!CarryFlag) {
+                // F000:01ED mov byte ptr DS:[BX+0x22],2
+                UInt8[DS, (ushort)(BX + 0x22)] = 2;
+            }
+            // F000:01F1 mov byte ptr DS:[BX+0x23],1
+            UInt8[DS, (ushort)(BX + 0x23)] = 1;
+            // F000:01F5 cmp AX,word ptr DS:[0x0100]
+            Alu16.Sub(AX, UInt16[DS, 0x0100]);
+            // F000:01F9 mov DX,AX
+            DX = AX;
+            // F000:01FB jb short 0x0201
+            if (!CarryFlag) {
+                // F000:01FD mov byte ptr DS:[BX+0x23],2
+                UInt8[DS, (ushort)(BX + 0x23)] = 2;
+            }
+            // F000:0201 mov byte ptr DS:[BX+0x24],1
+            UInt8[DS, (ushort)(BX + 0x24)] = 1;
+            // F000:0205 mov DX,AX
+            DX = AX;
+            // F000:0207 add DX,0x00FF
+            DX = (ushort)(DX + 0x00FF);
+            // F000:020B cmp SP,DX
+            Alu16.Sub(SP, DX);
+            // F000:020D push DX
+            Stack.Push16(DX);
+            // F000:020E je short 0x0214
+            if (!ZeroFlag) {
+                // F000:0210 mov byte ptr DS:[BX+0x24],2
+                UInt8[DS, (ushort)(BX + 0x24)] = 2;
+            }
+            // F000:0214 pop DX
+            DX = Stack.Pop16();
+            // F000:0215 mov byte ptr DS:[BX+0x25],1
+            UInt8[DS, (ushort)(BX + 0x25)] = 1;
+            // F000:0219 cmp AX,CX
+            Alu16.Sub(AX, CX);
+            // F000:021B sti
+            InterruptFlag = true;
+            CheckExternalEvents(cs1, 0x021C);
+            // F000:021C jb short 0x0222
+            if (!CarryFlag) {
+                // F000:021E mov byte ptr DS:[BX+0x25],2
+                UInt8[DS, (ushort)(BX + 0x25)] = 2;
+            }
+            // F000:0222 cli
+            InterruptFlag = false;
+            // F000:0223 mov byte ptr DS:[BX+0x26],1
+            UInt8[DS, (ushort)(BX + 0x26)] = 1;
+            // F000:0227 call near 0x02F5
+            NearCall(cs1, 0x022A, unknown_F000_02F5_F02F5);
+            // F000:022A jb short 0x0230
+            if (!CarryFlag) {
+                // F000:022C mov byte ptr DS:[BX+0x26],2
+                UInt8[DS, (ushort)(BX + 0x26)] = 2;
+            }
+            // F000:0230 mov byte ptr DS:[BX+0x27],1
+            UInt8[DS, (ushort)(BX + 0x27)] = 1;
+            // F000:0234 cmp AX,CX
+            Alu16.Sub(AX, CX);
+            // F000:0236 call near 0x02F8
+            NearCall(cs1, 0x0239, unknown_F000_02F8_F02F8);
+            // F000:0239 xor DI,DI
+            DI = 0;
+            // F000:023B mov byte ptr DS:[BX+0x28],1
+            UInt8[DS, (ushort)(BX + 0x28)] = 1;
+            // F000:023F cmp AX,CX
+            Alu16.Sub(AX, CX);
+            while (true) {
+                CheckExternalEvents(cs1, 0x0241);
+                // F000:0241 jb short 0x0247
+                if (!CarryFlag) {
+                    // F000:0243 mov byte ptr DS:[BX+DI+0x28],2
+                    UInt8[DS, (ushort)(BX + DI + 0x28)] = 2;
+                }
+                // F000:0247 inc DI
+                DI++;
+                // F000:0248 cmp DI,2
+                Alu16.Sub(DI, 2);
+                // F000:024B jae short 0x0255
+                if (!CarryFlag) {
+                    break;
+                }
+                // F000:024D mov byte ptr DS:[BX+0x29],1
+                UInt8[DS, (ushort)(BX + 0x29)] = 1;
+                // F000:0251 cmp CX,AX
+                Alu16.Sub(CX, AX);
+                // F000:0253 jmp short 0x0241
+            }
+            // F000:0255 push CX
+            Stack.Push16(CX);
+            // F000:0256 push SI
+            Stack.Push16(SI);
+            // F000:0257 mov byte ptr DS:[BX+0x2B],1
+            UInt8[DS, (ushort)(BX + 0x2B)] = 1;
+            // F000:025B mov SI,0x0104
+            SI = 0x0104;
+            // F000:025E mov DI,0x0106
+            DI = 0x0106;
+            // F000:0261 mov CX,2
+            CX = 2;
+            // F000:0264 repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
+            while (CX != 0) {
+                Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
+                SI = (ushort)(SI + (ushort)State.Direction8);
+                DI = (ushort)(DI + (ushort)State.Direction8);
+                CX--;
+                if (!ZeroFlag) {
+                    break;
+                }
+            }
+            // F000:0266 jne short 0x026C
             if (ZeroFlag) {
-                break;
+                // F000:0268 mov byte ptr DS:[BX+0x2B],2
+                UInt8[DS, (ushort)(BX + 0x2B)] = 2;
             }
-        }
-        // F000:0278 mov byte ptr DS:[BX+0x2C],CL
-        UInt8[DS, (ushort)(BX + 0x2C)] = CL;
-        // F000:027B je short 0x0281
-        if (ZeroFlag) {
-            goto L_0281;
-        }
-        // F000:027D mov byte ptr DS:[BX+0x2D],2
-        UInt8[DS, (ushort)(BX + 0x2D)] = 2;
-    L_0281:
-        // F000:0281 mov SI,0x0104
-        SI = 0x0104;
-        // F000:0284 mov DI,0x0106
-        DI = 0x0106;
-        // F000:0287 mov CX,2
-        CX = 2;
-        // F000:028A repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
-        while (CX != 0) {
-            bool equal_028A = UInt8[DS, SI] == UInt8[ES, DI];
-            SI = (ushort)(SI + (ushort)State.Direction8);
-            DI = (ushort)(DI + (ushort)State.Direction8);
-            CX--;
-            if (!equal_028A) {
-                break;
+            // F000:026C mov byte ptr DS:[BX+0x2D],1
+            UInt8[DS, (ushort)(BX + 0x2D)] = 1;
+            // F000:0270 mov DI,0x0106
+            DI = 0x0106;
+            // F000:0273 mov CX,2
+            CX = 2;
+            // F000:0276 repne scas AL,byte ptr ES:[DI]
+            while (CX != 0) {
+                Alu8.Sub(AL, UInt8[ES, DI]);
+                DI = (ushort)(DI + (ushort)State.Direction8);
+                CX--;
+                if (ZeroFlag) {
+                    break;
+                }
             }
-        }
-        // F000:028C mov byte ptr DS:[BX+0x2A],CL
-        UInt8[DS, (ushort)(BX + 0x2A)] = CL;
-        // F000:028F pop SI
-        SI = Stack.Pop16();
-        // F000:0290 pop CX
-        CX = Stack.Pop16();
-        // F000:0291 mov DX,AX
-        DX = AX;
-        // F000:0293 add DX,CX
-        DX = (ushort)(DX + CX);
-        // F000:0295 mov word ptr DS:[BX+0x2E],DX
-        UInt16[DS, (ushort)(BX + 0x2E)] = DX;
-        // F000:0298 mov DX,AX
-        DX = AX;
-        // F000:029A sub DX,CX
-        DX = (ushort)(DX - CX);
-        // F000:029C mov word ptr DS:[BX+0x30],DX
-        UInt16[DS, (ushort)(BX + 0x30)] = DX;
-        // F000:029F mov DX,AX
-        DX = AX;
-        // F000:02A1 inc DX
-        DX++;
-        // F000:02A2 mov word ptr DS:[BX+0x32],DX
-        UInt16[DS, (ushort)(BX + 0x32)] = DX;
-        // F000:02A5 mov DX,CX
-        DX = CX;
-        // F000:02A7 dec DX
-        DX--;
-        // F000:02A8 mov word ptr DS:[BX+0x34],DX
-        UInt16[DS, (ushort)(BX + 0x34)] = DX;
-        // F000:02AB mov DX,AX
-        DX = AX;
-        // F000:02AD neg DX
-        DX = Alu16.Sub(0, DX);
-        CarryFlag = DX != 0;
-        // F000:02AF mov word ptr DS:[BX+0x36],DX
-        UInt16[DS, (ushort)(BX + 0x36)] = DX;
-        // F000:02B2 mov DX,AX
-        DX = AX;
-        // F000:02B4 or DX,CX
-        DX = (ushort)(DX | CX);
-        // F000:02B6 mov word ptr DS:[BX+0x38],DX
-        UInt16[DS, (ushort)(BX + 0x38)] = DX;
-        // F000:02B9 mov byte ptr DS:[BX+0x3A],AL
-        UInt8[DS, (ushort)(BX + 0x3A)] = AL;
-        // F000:02BC add byte ptr DS:[BX+0x3A],5
-        UInt8[DS, (ushort)(BX + 0x3A)] = (byte)(UInt8[DS, (ushort)(BX + 0x3A)] + 5);
-        // F000:02C0 mov DI,AX
-        DI = AX;
-        // F000:02C2 add DI,AX
-        DI = Alu16.Add(DI, AX);
-        // F000:02C4 mov DX,0
-        DX = 0;
-        // F000:02C7 adc DL,0
-        DL = Alu8.Adc(DL, 0);
-        // F000:02CA mov byte ptr DS:[BX+0x3B],DL
-        UInt8[DS, (ushort)(BX + 0x3B)] = DL;
-        // F000:02CD mov DX,AX
-        DX = AX;
-        // F000:02CF inc DX
-        DX++;
-        // F000:02D0 inc DX
-        DX++;
-        // F000:02D1 mov byte ptr DS:[BX+0x3C],DL
-        UInt8[DS, (ushort)(BX + 0x3C)] = DL;
-        // F000:02D4 cmp AX,CX
-        // F000:02D6 test AX,AX
-        // F000:02D8 mov byte ptr DS:[BX+0x3D],7
-        UInt8[DS, (ushort)(BX + 0x3D)] = 7;
-        // F000:02DC cmp AX,word ptr DS:[0x0100]
-        Alu16.Sub(AX, UInt16[DS, 0x0100]);
-        // F000:02E0 mov byte ptr DS:[BX+0x3E],9
-        UInt8[DS, (ushort)(BX + 0x3E)] = 9;
-        // F000:02E4 mov DX,BP
-        DX = BP;
-        // F000:02E6 mov byte ptr DS:[BX+0x3F],DL
-        UInt8[DS, (ushort)(BX + 0x3F)] = DL;
-        // F000:02E9 add BX,0x0040
-        BX = (ushort)(BX + 0x0040);
-        // F000:02EC add SI,4
-        SI = Alu16.Add(SI, 4);
-        // F000:02EF dec BP
-        BP = Alu16.Dec(BP);
-        // F000:02F0 jne near 0x0018
-        if (BP != 0) {
-            goto L_0018;
-        }
+            // F000:0278 mov byte ptr DS:[BX+0x2C],CL
+            UInt8[DS, (ushort)(BX + 0x2C)] = CL;
+            // F000:027B je short 0x0281
+            if (!ZeroFlag) {
+                // F000:027D mov byte ptr DS:[BX+0x2D],2
+                UInt8[DS, (ushort)(BX + 0x2D)] = 2;
+            }
+            // F000:0281 mov SI,0x0104
+            SI = 0x0104;
+            // F000:0284 mov DI,0x0106
+            DI = 0x0106;
+            // F000:0287 mov CX,2
+            CX = 2;
+            // F000:028A repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
+            while (CX != 0) {
+                bool equal_028A = UInt8[DS, SI] == UInt8[ES, DI];
+                SI = (ushort)(SI + (ushort)State.Direction8);
+                DI = (ushort)(DI + (ushort)State.Direction8);
+                CX--;
+                if (!equal_028A) {
+                    break;
+                }
+            }
+            // F000:028C mov byte ptr DS:[BX+0x2A],CL
+            UInt8[DS, (ushort)(BX + 0x2A)] = CL;
+            // F000:028F pop SI
+            SI = Stack.Pop16();
+            // F000:0290 pop CX
+            CX = Stack.Pop16();
+            // F000:0291 mov DX,AX
+            DX = AX;
+            // F000:0293 add DX,CX
+            DX = (ushort)(DX + CX);
+            // F000:0295 mov word ptr DS:[BX+0x2E],DX
+            UInt16[DS, (ushort)(BX + 0x2E)] = DX;
+            // F000:0298 mov DX,AX
+            DX = AX;
+            // F000:029A sub DX,CX
+            DX = (ushort)(DX - CX);
+            // F000:029C mov word ptr DS:[BX+0x30],DX
+            UInt16[DS, (ushort)(BX + 0x30)] = DX;
+            // F000:029F mov DX,AX
+            DX = AX;
+            // F000:02A1 inc DX
+            DX++;
+            // F000:02A2 mov word ptr DS:[BX+0x32],DX
+            UInt16[DS, (ushort)(BX + 0x32)] = DX;
+            // F000:02A5 mov DX,CX
+            DX = CX;
+            // F000:02A7 dec DX
+            DX--;
+            // F000:02A8 mov word ptr DS:[BX+0x34],DX
+            UInt16[DS, (ushort)(BX + 0x34)] = DX;
+            // F000:02AB mov DX,AX
+            DX = AX;
+            // F000:02AD neg DX
+            DX = Alu16.Sub(0, DX);
+            CarryFlag = DX != 0;
+            // F000:02AF mov word ptr DS:[BX+0x36],DX
+            UInt16[DS, (ushort)(BX + 0x36)] = DX;
+            // F000:02B2 mov DX,AX
+            DX = AX;
+            // F000:02B4 or DX,CX
+            DX = (ushort)(DX | CX);
+            // F000:02B6 mov word ptr DS:[BX+0x38],DX
+            UInt16[DS, (ushort)(BX + 0x38)] = DX;
+            // F000:02B9 mov byte ptr DS:[BX+0x3A],AL
+            UInt8[DS, (ushort)(BX + 0x3A)] = AL;
+            // F000:02BC add byte ptr DS:[BX+0x3A],5
+            UInt8[DS, (ushort)(BX + 0x3A)] = (byte)(UInt8[DS, (ushort)(BX + 0x3A)] + 5);
+            // F000:02C0 mov DI,AX
+            DI = AX;
+            // F000:02C2 add DI,AX
+            DI = Alu16.Add(DI, AX);
+            // F000:02C4 mov DX,0
+            DX = 0;
+            // F000:02C7 adc DL,0
+            DL = Alu8.Adc(DL, 0);
+            // F000:02CA mov byte ptr DS:[BX+0x3B],DL
+            UInt8[DS, (ushort)(BX + 0x3B)] = DL;
+            // F000:02CD mov DX,AX
+            DX = AX;
+            // F000:02CF inc DX
+            DX++;
+            // F000:02D0 inc DX
+            DX++;
+            // F000:02D1 mov byte ptr DS:[BX+0x3C],DL
+            UInt8[DS, (ushort)(BX + 0x3C)] = DL;
+            // F000:02D4 cmp AX,CX
+            // F000:02D6 test AX,AX
+            // F000:02D8 mov byte ptr DS:[BX+0x3D],7
+            UInt8[DS, (ushort)(BX + 0x3D)] = 7;
+            // F000:02DC cmp AX,word ptr DS:[0x0100]
+            Alu16.Sub(AX, UInt16[DS, 0x0100]);
+            // F000:02E0 mov byte ptr DS:[BX+0x3E],9
+            UInt8[DS, (ushort)(BX + 0x3E)] = 9;
+            // F000:02E4 mov DX,BP
+            DX = BP;
+            // F000:02E6 mov byte ptr DS:[BX+0x3F],DL
+            UInt8[DS, (ushort)(BX + 0x3F)] = DL;
+            // F000:02E9 add BX,0x0040
+            BX = (ushort)(BX + 0x0040);
+            // F000:02EC add SI,4
+            SI = Alu16.Add(SI, 4);
+            // F000:02EF dec BP
+            BP = Alu16.Dec(BP);
+            // F000:02F0 jne near 0x0018
+        } while (BP != 0);
         // F000:02F4 hlt
         return Hlt();
     }

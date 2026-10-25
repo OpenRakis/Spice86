@@ -83,27 +83,26 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016E:0107 cmp AH,0
         Alu8.Sub(AH, 0);
         // 016E:010A jne short 0x011D
-        if (!ZeroFlag) {
-            goto L_011D;
+        if (ZeroFlag) {
+            // 016E:010C mov CX,DX
+            CX = DX;
+            // 016E:010E mov DX,CX
+            DX = CX;
+            // 016E:0110 mov AH,0x45
+            AH = 0x45;
+            // 016E:0112 int 0x67
+            InterruptCall(cs1, 0x0114, 0x67);
+            // 016E:0114 cmp AH,0
+            Alu8.Sub(AH, 0);
+            // 016E:0117 jne short 0x011D
+            if (!ZeroFlag) {
+                goto L_011D;
+            }
+            // 016E:0119 mov AL,0
+            AL = 0;
+            // 016E:011B jmp short 0x011F
+            goto L_011F;
         }
-        // 016E:010C mov CX,DX
-        CX = DX;
-        // 016E:010E mov DX,CX
-        DX = CX;
-        // 016E:0110 mov AH,0x45
-        AH = 0x45;
-        // 016E:0112 int 0x67
-        InterruptCall(cs1, 0x0114, 0x67);
-        // 016E:0114 cmp AH,0
-        Alu8.Sub(AH, 0);
-        // 016E:0117 jne short 0x011D
-        if (!ZeroFlag) {
-            goto L_011D;
-        }
-        // 016E:0119 mov AL,0
-        AL = 0;
-        // 016E:011B jmp short 0x011F
-        goto L_011F;
     L_011D:
         VerifySpeculativeEntryOrFail(cs1, 0x011D, Signature_011D_mov);
         // 016E:011D mov AL,0xFF

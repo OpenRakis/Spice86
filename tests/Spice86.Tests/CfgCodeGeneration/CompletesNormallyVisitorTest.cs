@@ -80,6 +80,20 @@ public class CompletesNormallyVisitorTest {
     }
 
     [Fact]
+    public void SwitchCompletesWhenASectionBreaksAtAnyDepthOutsideLoops() {
+        // Arrange
+        BlockNode failure = new(new FailAsUntestedNode([UntestedMessagePart.Literal("x")]));
+        BlockNode deepBreak = new(new IfElseNode(Condition, new BlockNode(new BreakNode()), new BlockNode(_jump)));
+        BlockNode loopBreak = new(new InfiniteLoopNode(new BlockNode(new BreakNode())), _jump);
+        SwitchNode breaksDeep = new(new LoadOffsetParameterNode(), [new SwitchSection(1, deepBreak)], failure);
+        SwitchNode breaksInLoop = new(new LoadOffsetParameterNode(), [new SwitchSection(1, loopBreak)], failure);
+
+        // Assert
+        CompletesNormallyVisitor.CompletesNormally(breaksDeep).Should().BeTrue();
+        CompletesNormallyVisitor.CompletesNormally(breaksInLoop).Should().BeFalse();
+    }
+
+    [Fact]
     public void TryCatchAndBoundaryFollowTheirBody() {
         // Assert
         CompletesNormallyVisitor.CompletesNormally(new CpuFaultTryCatchNode(new BlockNode(Foo), At, [])).Should().BeTrue();
@@ -97,5 +111,84 @@ public class CompletesNormallyVisitorTest {
 
         // Assert
         analyze.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void ContinueDoesNotCompleteNormally() {
+        // Assert
+        CompletesNormallyVisitor.CompletesNormally(new ContinueNode()).Should().BeFalse();
+    }
+
+    [Fact]
+    public void LoopWithoutBreakNeverCompletes() {
+        // Assert
+        CompletesNormallyVisitor.CompletesNormally(new InfiniteLoopNode(new BlockNode(Foo))).Should().BeFalse();
+        CompletesNormallyVisitor.CompletesNormally(new InfiniteLoopNode(new BlockNode(Foo, _jump))).Should().BeFalse();
+        CompletesNormallyVisitor.CompletesNormally(new BlockNode(new InfiniteLoopNode(new BlockNode(Foo)))).Should().BeFalse();
+    }
+
+    [Fact]
+    public void LoopCompletesWhenABreakLeavesIt() {
+        // Arrange
+        BreakNode leave = new();
+        BlockNode[] bodies = [
+            new BlockNode(new IfElseNode(Condition, new BlockNode(leave), new BlockNode()), _jump),
+            new BlockNode(new InstructionBoundaryNode(Substitute.For<ICfgNode>(), "", new BlockNode(leave)), _jump),
+            new BlockNode(new CpuFaultTryCatchNode(new BlockNode(leave), At, []), _jump)
+        ];
+
+        // Assert
+        foreach (BlockNode body in bodies) {
+            CompletesNormallyVisitor.CompletesNormally(new InfiniteLoopNode(body)).Should().BeTrue();
+        }
+    }
+
+    [Fact]
+    public void BreakCapturedByAnInnerConstructDoesNotLeaveTheLoop() {
+        // Arrange
+        BlockNode breaking = new(new BreakNode());
+        IVisitableAstNode[] inner = [
+            new SwitchNode(new LoadOffsetParameterNode(), [new SwitchSection(1, breaking)], new BlockNode(_jump)),
+            new WhileNode(Condition, breaking),
+            new InfiniteLoopNode(breaking),
+            new DoWhileNode(breaking, Condition)
+        ];
+
+        // Assert
+        foreach (IVisitableAstNode construct in inner) {
+            CompletesNormallyVisitor.CompletesNormally(new InfiniteLoopNode(new BlockNode(construct, _jump)))
+                .Should().BeFalse(construct.GetType().Name);
+        }
+    }
+
+    [Fact]
+    public void DoWhileCompletesWhenItsBodyCompletes() {
+        // Assert
+        CompletesNormallyVisitor.CompletesNormally(new DoWhileNode(new BlockNode(Foo), Condition)).Should().BeTrue();
+        CompletesNormallyVisitor.CompletesNormally(new DoWhileNode(new BlockNode(Foo, _jump), Condition)).Should().BeFalse();
+    }
+
+    [Fact]
+    public void DoWhileCompletesThroughABreakOrAContinue() {
+        // Arrange
+        BlockNode leaving = new(new IfElseNode(Condition, new BlockNode(new BreakNode()), new BlockNode()), _jump);
+        BlockNode restarting = new(new IfElseNode(Condition, new BlockNode(new ContinueNode()), new BlockNode()), _jump);
+        BlockNode restartingFromASwitch = new(
+            new SwitchNode(new LoadOffsetParameterNode(), [new SwitchSection(1, new BlockNode(new ContinueNode()))], new BlockNode(_jump)),
+            _jump);
+
+        // Assert
+        CompletesNormallyVisitor.CompletesNormally(new DoWhileNode(leaving, Condition)).Should().BeTrue();
+        CompletesNormallyVisitor.CompletesNormally(new DoWhileNode(restarting, Condition)).Should().BeTrue();
+        CompletesNormallyVisitor.CompletesNormally(new DoWhileNode(restartingFromASwitch, Condition)).Should().BeTrue();
+    }
+
+    [Fact]
+    public void ContinueOfAnInnerLoopDoesNotReachTheOuterCondition() {
+        // Arrange
+        BlockNode body = new(new WhileNode(Condition, new BlockNode(new ContinueNode())), _jump);
+
+        // Assert
+        CompletesNormallyVisitor.CompletesNormally(new DoWhileNode(body, Condition)).Should().BeFalse();
     }
 }

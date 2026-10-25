@@ -69,15 +69,19 @@ public class EmulationLoop {
     }
 
     /// <summary>
-    /// Starts and waits for the end of the emulation loop.
+    /// Starts and waits for the end of the emulation loop. When the program loader already stopped the machine (for
+    /// example a batch file that ran only internal commands), no instruction is parsed or executed.
     /// </summary>
     /// <exception cref="InvalidVMOperationException">
     /// Thrown when an unhandled exception occurs, typically because the target program is not supported yet.
     /// </exception>
     public void Run() {
         _emulatorBreakpointsManager.OnMachineStart();
+        bool hasProgramToRun = _cpuState.IsRunning;
         try {
-            StartRunLoop(_functionHandler);
+            if (hasProgramToRun) {
+                StartRunLoop(_functionHandler);
+            }
         } catch (HaltRequestedException) {
             // Actually a signal-generated code requested Exit
             _loggerService.LogInformation("Emulation halted by request.");
@@ -93,7 +97,9 @@ public class EmulationLoop {
         }
 
         _emulatorBreakpointsManager.OnMachineStop();
-        _cpu.SignalEnd();
+        if (hasProgramToRun) {
+            _cpu.SignalEnd();
+        }
     }
 
     /// <summary>

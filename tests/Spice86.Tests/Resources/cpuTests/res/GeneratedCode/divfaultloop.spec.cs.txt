@@ -28,17 +28,20 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_0020_F0020(int loadOffset) {
-        CheckExternalEvents(cs1, 0x0020);
-        // F000:0020 mov AX,0x000A
-        AX = 0x000A;
-        // F000:0023 mov BX,word ptr CS:[0x0102]
-        BX = UInt16[CS, 0x0102];
-        // F000:0028 div BX
-        try {
-            (AX, DX) = Div16(divisor: BX, dividend: (uint)((uint)DX << 0x00000010 | (uint)AX));
-        }
-        catch (CpuException cpuException) {
-            return DispatchCpuFault(cpuException, cs1, 0x0028, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x0037), () => unknown_F000_0037_F0037(0x0000))]);
+        while (true) {
+            CheckExternalEvents(cs1, 0x0020);
+            // F000:0020 mov AX,0x000A
+            AX = 0x000A;
+            // F000:0023 mov BX,word ptr CS:[0x0102]
+            BX = UInt16[CS, 0x0102];
+            // F000:0028 div BX
+            try {
+                (AX, DX) = Div16(divisor: BX, dividend: (uint)((uint)DX << 0x00000010 | (uint)AX));
+                break;
+            }
+            catch (CpuException cpuException) {
+                return DispatchCpuFault(cpuException, cs1, 0x0028, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x0037), () => unknown_F000_0037_F0037(0x0000))]);
+            }
         }
         // F000:002A mov BX,word ptr CS:[0x0100]
         BX = UInt16[CS, 0x0100];
@@ -66,12 +69,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt16[CS, 0x0100] = BX;
         // F000:0046 cmp BX,3
         // F000:0049 jne short 0x0052
-        if (BX != 3) {
-            goto L_0052;
+        if (BX == 3) {
+            // F000:004B mov word ptr CS:[0x0102],5
+            UInt16[CS, 0x0102] = 5;
         }
-        // F000:004B mov word ptr CS:[0x0102],5
-        UInt16[CS, 0x0102] = 5;
-    L_0052:
         // F000:0052 mov word ptr SS:[BP+2],0x0020
         UInt16[SS, (ushort)(BP + 2)] = 0x0020;
         // F000:0057 pop BX
@@ -89,7 +90,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AX = 0;
         // F000:0003 mov SS,AX
         SS = AX;
-        State.InterruptShadowing = true;
         // F000:0005 mov SP,0x0200
         SP = 0x0200;
         // F000:0008 mov word ptr DS:[0],0x0037

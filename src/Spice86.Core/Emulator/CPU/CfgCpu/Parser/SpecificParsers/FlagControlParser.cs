@@ -49,7 +49,7 @@ public class FlagControlParser : BaseInstructionParser {
         instr.AttachAsts(displayAst, execAst);
         // STI must terminate its CfgBlock so external interrupt delivery happens at the
         // boundary just after interrupts are enabled (after the one-instruction shadow).
-        instr.MarkAsBlockTerminator();
+        instr.EndBlockAfterFallthrough();
         return instr;
     }
 }

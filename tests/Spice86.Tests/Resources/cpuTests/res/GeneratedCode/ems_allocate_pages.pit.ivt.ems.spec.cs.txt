@@ -83,19 +83,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0107 cmp AH,0
         Alu8.Sub(AH, 0);
         // 016D:010A jne short 0x0115
-        if (!ZeroFlag) {
-            goto L_0115;
+        if (ZeroFlag) {
+            // 016D:010C cmp DX,0
+            Alu16.Sub(DX, 0);
+            // 016D:010F jbe short 0x0115
+            if (CarryFlag || ZeroFlag) {
+                goto L_0115;
+            }
+            // 016D:0111 mov AL,0
+            AL = 0;
+            // 016D:0113 jmp short 0x0117
+            goto L_0117;
         }
-        // 016D:010C cmp DX,0
-        Alu16.Sub(DX, 0);
-        // 016D:010F jbe short 0x0115
-        if (CarryFlag || ZeroFlag) {
-            goto L_0115;
-        }
-        // 016D:0111 mov AL,0
-        AL = 0;
-        // 016D:0113 jmp short 0x0117
-        goto L_0117;
     L_0115:
         VerifySpeculativeEntryOrFail(cs1, 0x0115, Signature_0115_mov);
         // 016D:0115 mov AL,0xFF

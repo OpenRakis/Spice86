@@ -20,6 +20,7 @@ using Spice86.Shared.Emulator.Memory;
 using Xunit;
 
 public class CSharpStatementPrinterTest {
+    private const string TargetLabel = "L_1000_0010";
     private static readonly RegisterNode Ax = new(DataType.UINT16, (int)RegisterIndex.AxIndex);
     private readonly ICfgNode _target = Substitute.For<ICfgNode>();
 
@@ -47,10 +48,16 @@ public class CSharpStatementPrinterTest {
         CSharpExpressionPrinter expressions = CreateExpressionPrinter();
 
         // Act
-        Action print = () => expressions.Print(new GotoNode(_target));
+        IVisitableAstNode[] statements = [
+            new GotoNode(_target), new ContinueNode(), new InfiniteLoopNode(new BlockNode()),
+            new DoWhileNode(new BlockNode(), new ConstantNode(DataType.BOOL, 1))
+        ];
 
         // Assert
-        print.Should().Throw<NotSupportedException>();
+        foreach (IVisitableAstNode statement in statements) {
+            Action print = () => expressions.Print(statement);
+            print.Should().Throw<NotSupportedException>(statement.GetType().Name);
+        }
     }
 
     [Fact]
@@ -71,10 +78,13 @@ public class CSharpStatementPrinterTest {
         IAstVisitor<int> runtimeVisitor = Substitute.For<IAstVisitor<int>>();
 
         // Act
-        Action visit = () => new BreakNode().Accept(runtimeVisitor);
+        IVisitableAstNode[] nodes = [new BreakNode(), new ContinueNode(), new InfiniteLoopNode(new BlockNode())];
 
         // Assert
-        visit.Should().Throw<NotSupportedException>();
+        foreach (IVisitableAstNode node in nodes) {
+            Action visit = () => node.Accept(runtimeVisitor);
+            visit.Should().Throw<NotSupportedException>(node.GetType().Name);
+        }
     }
 
     [Fact]
@@ -149,6 +159,23 @@ public class CSharpStatementPrinterTest {
         printed.Should().Be(Lines("UInt16[DS, 0x0010] = (ushort)(UInt16[DS, 0x0010] + 1);"));
     }
 
+    [Fact]
+    public void LabelEndingALoopBodyGetsAnEmptyStatement() {
+        // Arrange
+        InfiniteLoopNode loop = new(new BlockNode(new LabelNode(_target), new CommentNode("1000:0010 jmp short 0x0000")));
+
+        // Act
+        string printed = Print(loop);
+
+        // Assert
+        printed.Should().Be(Lines(
+            "while (true) {",
+            $"{TargetLabel}:",
+            "    // 1000:0010 jmp short 0x0000",
+            "    ;",
+            "}"));
+    }
+
     private static BinaryOperationNode Assign(ValueNode destination, ValueNode value) =>
         new(DataType.UINT16, destination, BinaryOperation.ASSIGN, value);
 
@@ -166,7 +193,7 @@ public class CSharpStatementPrinterTest {
         if (!ReferenceEquals(node, _target)) {
             throw new InvalidOperationException("Unexpected goto target.");
         }
-        return "L_1000_0010";
+        return TargetLabel;
     }
 
     private static string Lines(params string[] lines) =>

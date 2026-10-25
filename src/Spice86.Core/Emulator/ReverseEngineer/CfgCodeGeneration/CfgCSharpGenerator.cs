@@ -5,6 +5,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Naming;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Structuring;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 
 using System.Linq;
@@ -41,13 +42,15 @@ internal sealed class CfgCSharpGenerator {
         EmitSegmentFields(writer, plan);
         EmitSignatureFields(writer, plan);
         EmitConstructor(writer, plan);
+        GotoCensus census = new();
         foreach (MethodPlan method in plan.Methods) {
-            methodEmitter.Emit(writer, method);
+            census.Merge(methodEmitter.Emit(writer, method));
         }
         writer.CloseBlock();
 
         return new GeneratedCSharpProgram {
-            SourceText = writer.ToString()
+            SourceText = writer.ToString(),
+            GotoCensus = census
         };
     }
 

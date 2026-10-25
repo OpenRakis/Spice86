@@ -22,17 +22,14 @@ internal sealed class FlagLiveness {
         _liveAfter = liveAfter;
     }
 
-    /// <summary>The flag liveness of <paramref name="method"/>, computing each node's facts from <paramref name="context"/>.</summary>
-    public static FlagLiveness Compute(MethodPlan method, CfgGeneratorContext context) =>
-        Compute(method, context, node => node.ExecutionAst);
+    /// <summary>The flag liveness of <paramref name="method"/>, computing each node's facts from its own execution AST.</summary>
+    public static FlagLiveness Compute(MethodPlan method) => Compute(method, node => node.ExecutionAst);
 
     /// <summary>The flag liveness of <paramref name="method"/> when each node executes the AST <paramref name="executionAstOf"/> gives for it.</summary>
-    public static FlagLiveness Compute(MethodPlan method, CfgGeneratorContext context,
-        Func<ICfgNode, IVisitableAstNode> executionAstOf) {
+    public static FlagLiveness Compute(MethodPlan method, Func<ICfgNode, IVisitableAstNode> executionAstOf) {
         HashSet<ICfgNode> methodNodes = method.BlockGraph.Blocks.SelectMany(block => block.Instructions).ToHashSet();
-        InstructionFlagFactsBuilder factsBuilder = new(context);
         return Compute(method.BlockGraph, method.BlockTraversal,
-            node => factsBuilder.Build(node, executionAstOf(node), methodNodes));
+            node => InstructionFlagFactsBuilder.Build(node, executionAstOf(node), methodNodes));
     }
 
     /// <summary>The flag liveness of the blocks of <paramref name="graph"/>, with per-node facts from <paramref name="factsOf"/>.</summary>

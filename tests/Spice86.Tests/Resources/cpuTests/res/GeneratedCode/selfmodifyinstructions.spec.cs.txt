@@ -36,63 +36,61 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AX = 0;
         // F000:0003 mov SS,AX
         SS = AX;
-        State.InterruptShadowing = true;
         // F000:0005 mov SP,6
         SP = 6;
         // F000:0008 mov SI,0x0800
         SI = 0x0800;
-    L_000B:
-        CheckExternalEvents(cs1, 0x000B);
-        // F000:000B mov AX,0xF000
-        AX = 0xF000;
-        // F000:000E mov DS,AX
-        DS = AX;
-        // F000:0010 mov ES,AX
-        ES = AX;
-        // F000:0012 mov DI,0x1400
-        DI = 0x1400;
-        // F000:0015 mov CX,0x03E8
-        CX = 0x03E8;
-        // F000:0018 rep movs word ptr ES:[DI],word ptr DS:[SI]
-        while (CX != 0) {
-            UInt16[ES, DI] = UInt16[DS, SI];
-            SI = (ushort)(SI + (ushort)State.Direction16);
-            DI = (ushort)(DI + (ushort)State.Direction16);
-            CX--;
+        while (true) {
+            CheckExternalEvents(cs1, 0x000B);
+            // F000:000B mov AX,0xF000
+            AX = 0xF000;
+            // F000:000E mov DS,AX
+            DS = AX;
+            // F000:0010 mov ES,AX
+            ES = AX;
+            // F000:0012 mov DI,0x1400
+            DI = 0x1400;
+            // F000:0015 mov CX,0x03E8
+            CX = 0x03E8;
+            // F000:0018 rep movs word ptr ES:[DI],word ptr DS:[SI]
+            while (CX != 0) {
+                UInt16[ES, DI] = UInt16[DS, SI];
+                SI = (ushort)(SI + (ushort)State.Direction16);
+                DI = (ushort)(DI + (ushort)State.Direction16);
+                CX--;
+            }
+            // F000:001A jmp near 0x1400
+            // F000:1400 selector
+            if (SelectorSignatureMatches(cs1, 0x1400, Signature_1400_mov_30227)) {
+                goto L_1400_30227;
+            }
+            if (SelectorSignatureMatches(cs1, 0x1400, Signature_1400_mov_30250)) {
+                break;
+            }
+            if (SelectorSignatureMatches(cs1, 0x1400, Signature_1400_mov_30237)) {
+                goto L_1400_30237;
+            }
+            throw FailAsUntested("Untested code variant at F000:1400");
+        L_1400_30227:
+            // F000:1400 mov AX,1
+            AX = 1;
+            // F000:1403 push AX
+            Stack.Push16(AX);
+            // F000:1404 mov SI,0x0C00
+            SI = 0x0C00;
+            // F000:1407 jmp far F000:000B
+            continue;
+        L_1400_30237:
+            // F000:1400 mov BX,1
+            BX = 1;
+            // F000:1403 shl BX,1
+            BX = Alu16.Shl(BX, 1);
+            // F000:1405 push BX
+            Stack.Push16(BX);
+            // F000:1406 mov SI,0x1000
+            SI = 0x1000;
+            // F000:1409 jmp far F000:000B
         }
-        // F000:001A jmp near 0x1400
-        // F000:1400 selector
-        if (SelectorSignatureMatches(cs1, 0x1400, Signature_1400_mov_30227)) {
-            goto L_1400_30227;
-        }
-        if (SelectorSignatureMatches(cs1, 0x1400, Signature_1400_mov_30250)) {
-            goto L_1400_30250;
-        }
-        if (SelectorSignatureMatches(cs1, 0x1400, Signature_1400_mov_30237)) {
-            goto L_1400_30237;
-        }
-        throw FailAsUntested("Untested code variant at F000:1400");
-    L_1400_30227:
-        // F000:1400 mov AX,1
-        AX = 1;
-        // F000:1403 push AX
-        Stack.Push16(AX);
-        // F000:1404 mov SI,0x0C00
-        SI = 0x0C00;
-        // F000:1407 jmp far F000:000B
-        goto L_000B;
-    L_1400_30237:
-        // F000:1400 mov BX,1
-        BX = 1;
-        // F000:1403 shl BX,1
-        BX = Alu16.Shl(BX, 1);
-        // F000:1405 push BX
-        Stack.Push16(BX);
-        // F000:1406 mov SI,0x1000
-        SI = 0x1000;
-        // F000:1409 jmp far F000:000B
-        goto L_000B;
-    L_1400_30250:
         // F000:1400 mov CX,1
         CX = 1;
         // F000:1403 inc CX

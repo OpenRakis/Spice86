@@ -1,0 +1,119 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0xF000;
+
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0029, unknown_F000_0029_F0029, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x002D, unknown_F000_002D_F002D, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, "unknown");
+    }
+
+    public virtual Action unknown_F000_0029_F0029(int loadOffset) {
+        CheckExternalEvents(cs1, 0x0029);
+        // F000:0029 add DX,1
+        DX = Alu16.Add(DX, 1);
+        // F000:002C ret far
+        return FarRet();
+    }
+
+    public virtual Action unknown_F000_002D_F002D(int loadOffset) {
+        CheckExternalEvents(cs1, 0x002D);
+        // F000:002D add DX,0x0010
+        DX = Alu16.Add(DX, 0x0010);
+        // F000:0030 ret far
+        return FarRet();
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        // F000:0000 mov AX,0x1000
+        AX = 0x1000;
+        // F000:0003 mov SS,AX
+        SS = AX;
+        // F000:0005 mov SP,0x0100
+        SP = 0x0100;
+        // F000:0008 xor DX,DX
+        DX = 0;
+        // F000:000A mov CX,2
+        CX = 2;
+        do {
+            CheckExternalEvents(cs1, 0x000D);
+            // F000:000D mov BX,CX
+            BX = CX;
+            // F000:000F dec BX
+            BX = Alu16.Dec(BX);
+            // F000:0010 shl BX,2
+            BX = Alu16.Shl(BX, 2);
+            // F000:0013 call far dword ptr CS:[BX+0x3D]
+            ushort targetSegment_0013 = UInt16[CS, (ushort)(BX + 0x3D + 2)];
+            ushort targetOffset_0013 = UInt16[CS, (ushort)(BX + 0x3D)];
+            if (targetSegment_0013 == cs1 && targetOffset_0013 == 0x0029) {
+                FarCall(cs1, 0x0017, cs1, unknown_F000_0029_F0029);
+            }
+            else if (targetSegment_0013 == cs1 && targetOffset_0013 == 0x002D) {
+                FarCall(cs1, 0x0017, cs1, unknown_F000_002D_F002D);
+            }
+            else {
+                throw FailAsUntested($"Untested far call target {targetSegment_0013:X4}:{targetOffset_0013:X4} at F000:0013");
+            }
+            // F000:0017 loop 0x000D
+            CX--;
+        } while (CX != 0);
+        // F000:0019 mov CX,2
+        CX = 2;
+        do {
+            CheckExternalEvents(cs1, 0x001C);
+            // F000:001C mov BX,CX
+            BX = CX;
+            // F000:001E dec BX
+            BX--;
+            // F000:001F shl BX,2
+            BX = Alu16.Shl(BX, 2);
+            // F000:0022 jmp far dword ptr CS:[BX+0x45]
+            ushort targetSegment_0022 = UInt16[CS, (ushort)(BX + 0x45 + 2)];
+            ushort targetOffset_0022 = UInt16[CS, (ushort)(BX + 0x45)];
+            if (targetSegment_0022 == cs1 && targetOffset_0022 == 0x0031) {
+                goto L_0031;
+            }
+            if (targetSegment_0022 == cs1 && targetOffset_0022 == 0x0037) {
+                goto L_0037;
+            }
+            throw FailAsUntested($"Untested far jump target {targetSegment_0022:X4}:{targetOffset_0022:X4} at F000:0022");
+        L_0031:
+            // F000:0031 add DX,0x0100
+            DX = Alu16.Add(DX, 0x0100);
+            // F000:0035 jmp short 0x0026
+            goto L_0026;
+        L_0037:
+            // F000:0037 add DX,0x1000
+            DX = Alu16.Add(DX, 0x1000);
+            // F000:003B jmp short 0x0026
+        L_0026:
+            // F000:0026 loop 0x001C
+            CX--;
+        } while (CX != 0);
+        // F000:0028 hlt
+        return Hlt();
+    }
+
+}

@@ -73,21 +73,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Alu8.And(AL, AL);
         // F000:0405 jne short 0x040D
         if (!ZeroFlag) {
-            goto L_040D;
+            VerifySpeculativeEntryOrFail(cs1, 0x040D, Signature_040D_mov);
+            // F000:040D mov byte ptr DS:[0x0012],0xEE
+            UInt8[DS, 0x0012] = 0xEE;
+            VerifySpeculativeEntryOrFail(cs1, 0x0412, Signature_0412_pop);
+            // F000:0412 pop AX
+            AX = Stack.Pop16();
+            VerifySpeculativeEntryOrFail(cs1, 0x0413, Signature_0413_ret);
+            // F000:0413 ret near
+            return NearRet();
         }
         // F000:0407 mov byte ptr DS:[0x0012],0xDD
         UInt8[DS, 0x0012] = 0xDD;
         // F000:040C ret near
-        return NearRet();
-    L_040D:
-        VerifySpeculativeEntryOrFail(cs1, 0x040D, Signature_040D_mov);
-        // F000:040D mov byte ptr DS:[0x0012],0xEE
-        UInt8[DS, 0x0012] = 0xEE;
-        VerifySpeculativeEntryOrFail(cs1, 0x0412, Signature_0412_pop);
-        // F000:0412 pop AX
-        AX = Stack.Pop16();
-        VerifySpeculativeEntryOrFail(cs1, 0x0413, Signature_0413_ret);
-        // F000:0413 ret near
         return NearRet();
     }
 
@@ -100,7 +98,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         DS = AX;
         // F000:0005 mov SS,AX
         SS = AX;
-        State.InterruptShadowing = true;
         // F000:0007 mov SP,0x0100
         SP = 0x0100;
         // F000:000A call near 0x0100

@@ -79,12 +79,10 @@ internal sealed class GeneratorAnalysis {
                 .OrderBy(entry => entry.Address.Linear)
                 .ToList());
 
-        Dictionary<SegmentedAddress, ICfgNode> blockEntryByAddress = BuildBlockEntryIndex(program);
-
         List<SignatureFieldPlan> signatureFields = BuildSignatureFields(program, mnemonic);
 
         CfgGeneratorContext context = new(program, partitionByNode, methodNames, partitionBaseNames,
-            segmentVariables, transfersByEdge, entriesByPartition, blockEntryByAddress, signatureFields);
+            segmentVariables, transfersByEdge, entriesByPartition, signatureFields);
         return new GeneratorAnalysis(program, context);
     }
 
@@ -189,32 +187,6 @@ internal sealed class GeneratorAnalysis {
     private static SegmentedAddress PrimaryEntryAddress(CfgCodePartition partition) => PrimaryEntry(partition).Address;
 
     private static int PrimaryEntryNodeId(CfgCodePartition partition) => PrimaryEntry(partition).Node.Id;
-
-    /// <summary>
-    /// Indexes block-entry nodes by their segmented address so the emitter can resolve a statically-known
-    /// constant jump/fallthrough target that was never observed as a runtime edge but whose target block was
-    /// nonetheless discovered. Only block entries are indexed because they are the only nodes that carry an
-    /// emitted label a <c>goto</c> can target. Addresses shared by more than one block entry (self-modifying
-    /// selector variants) are left out: they are ambiguous and must stay untested rather than pick a variant.
-    /// </summary>
-    private static Dictionary<SegmentedAddress, ICfgNode> BuildBlockEntryIndex(CfgPartitionedProgram program) {
-        Dictionary<SegmentedAddress, ICfgNode> blockEntryByAddress = new();
-        HashSet<SegmentedAddress> ambiguousAddresses = [];
-        foreach (CfgCodePartition partition in program.Partitions) {
-            foreach (CfgBlock block in partition.Blocks) {
-                ICfgNode entry = block.Entry;
-                if (blockEntryByAddress.TryGetValue(entry.Address, out ICfgNode? existing) && !ReferenceEquals(existing, entry)) {
-                    ambiguousAddresses.Add(entry.Address);
-                    continue;
-                }
-                blockEntryByAddress[entry.Address] = entry;
-            }
-        }
-        foreach (SegmentedAddress ambiguous in ambiguousAddresses) {
-            blockEntryByAddress.Remove(ambiguous);
-        }
-        return blockEntryByAddress;
-    }
 
     private static IEnumerable<(ResolvedCfgEdge Edge, CfgCodePartitionTransfer Transfer)> GetTypedTransferEdges(CfgCodePartitionTransfer transfer) {
         // A transfer records only from/to nodes. To attach it to typed CFG edges we look up which successor

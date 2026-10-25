@@ -6,10 +6,10 @@
     "F000:FFF0"
   ],
   "lastExecutedAddress": "F000:01F2",
-  "lastExecutedBlockId": 328,
+  "lastExecutedBlockId": 166,
   "blocks": [
     {
-      "id": 328,
+      "id": 166,
       "entry": "F000:01DA",
       "term": "F000:01F2",
       "pred": [
@@ -50,7 +50,7 @@
         3
       ],
       "succ": [
-        328
+        166
       ],
       "asm": [
         "9D|popf"

@@ -114,7 +114,7 @@ internal static class AsmFixtureRunner {
                 fixtureRun.DependencyInjection.FunctionCatalogue.FunctionInformations.Values
                     .Should().Contain(functionInformation => functionInformation.HasOverride);
             });
-            AssertGeneratedExecution(tracking, observer, scope, settings.ScenarioIdentity);
+            AssertGeneratedExecution(tracking, observer, scope, settings.ScenarioIdentity, run.Machine.CpuState.Cycles);
             transferredToCaller = true;
             return run;
         } finally {
@@ -125,10 +125,17 @@ internal static class AsmFixtureRunner {
         }
     }
 
+    /// <summary>
+    /// Checks that the program ran as generated code: when the machine executed anything, a generated override was entered
+    /// and the interpreter ran no application code. A run that executes nothing (a batch file whose internal commands the
+    /// DOS batch engine finished while loading) enters no override, and that is correct.
+    /// </summary>
     private static void AssertGeneratedExecution(InvocationTrackingOverrideSupplier tracking,
-        ApplicationExecutionObserver observer, AsmRunScope scope, string scenarioIdentity) {
-        tracking.InvokedAddresses.Should().NotBeEmpty(
-            "the override supplier is installed but no generated override was entered, so the program would have run in the interpreter");
+        ApplicationExecutionObserver observer, AsmRunScope scope, string scenarioIdentity, long executedCycles) {
+        if (executedCycles > 0) {
+            tracking.InvokedAddresses.Should().NotBeEmpty(
+                "the override supplier is installed and the machine executed instructions, but no generated override was entered, so the program ran in the interpreter");
+        }
         EmulatorCodeInventory inventory =
             scope.Observations.Get<EmulatorCodeInventory>(AsmRunScope.EmulatorCodeInventoryObservation);
         ApplicationFallbackGuard.AssertNoInterpreterExecutedApplicationCode(

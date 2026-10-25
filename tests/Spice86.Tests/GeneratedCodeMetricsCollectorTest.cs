@@ -71,15 +71,21 @@ public class GeneratedCodeMetricsCollectorTest {
     }
 
     [Fact]
-    public void HeaderPlacesNewColumnsBetweenTriesAndWarnings() {
+    public void LineNamesEveryValueInAFixedOrder() {
+        // Arrange
+        GeneratedCodeMetrics metrics = CollectFromMethodBody("""
+            L_0001:
+            goto L_0001;
+            """);
+
         // Act
-        string[] headers = GeneratedCodeMetrics.Header().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        string[] fields = metrics.ToLine().Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
         // Assert
-        headers.Should().Equal("fixture", "methods", "lines", "labels", "gotos", "gotoTgts", "extEvents",
-            "specGuard", "untested", "unchecked", "casts", "tries", "aluCalls", "flagReads",
-            "doLoops", "whileTrue", "ifs", "breaks", "continues",
-            "warnings", "warningIds");
+        fields.Select(field => field[..field.IndexOf('=')]).Should().Equal("fixture", "methods", "lines", "labels",
+            "gotos", "gotoTgts", "extEvents", "specGuard", "untested", "unchecked", "casts", "tries", "aluCalls",
+            "flagReads", "doLoops", "whileTrue", "ifs", "breaks", "continues", "warnings", "warningIds");
+        fields.Should().Contain("fixture=test").And.Contain("labels=1").And.Contain("gotos=1").And.Contain("warningIds=");
     }
 
     private static GeneratedCodeMetrics CollectFromMethodBody(string body) {

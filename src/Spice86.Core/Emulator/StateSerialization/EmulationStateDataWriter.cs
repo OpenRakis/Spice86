@@ -8,6 +8,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
 using Spice86.Core.Emulator.StateSerialization.CfgReload;
 using Spice86.Shared.Emulator.VM.Breakpoint.Serializable;
@@ -129,9 +130,10 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
             return;
         }
 
-        WriteToFile(CfgGeneratedCSharpFile, () => _cfgCSharpDumper.Write(cfgCpuSnapshot.PartitionedProgram, CfgGeneratedCSharpFile));
+        GeneratedCSharpProgram generated = _cfgCSharpDumper.Generate(cfgCpuSnapshot.PartitionedProgram);
+        WriteToFile(CfgGeneratedCSharpFile, () => _cfgCSharpDumper.Write(generated, CfgGeneratedCSharpFile));
         WriteToFile(GeneratedProjectDirectory, () => _cfgCSharpDumper.WriteProject(
-            cfgCpuSnapshot.PartitionedProgram, GeneratedProjectDirectory, ComputeExpectedChecksum()));
+            cfgCpuSnapshot.PartitionedProgram, generated, GeneratedProjectDirectory, ComputeExpectedChecksum()));
     }
 
     /// <summary>
