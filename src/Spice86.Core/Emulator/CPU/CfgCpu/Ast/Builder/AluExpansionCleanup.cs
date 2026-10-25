@@ -12,12 +12,14 @@ using System.Linq;
 /// <summary>
 /// Shrinks an <see cref="AluExpansion"/> to what its context needs: drops the assignments of dead flags and the
 /// temps nobody reads, and inlines temps where every read still happens once and in the same order. A result that
-/// is an operand xored with or subtracted from itself is zero.
+/// is an operand xored with or subtracted from itself is zero. A flag read is inlined only when no flag assignment
+/// is kept, so no flag is written between the read and its use.
 /// </summary>
 internal static class AluExpansionCleanup {
     private enum ReadKind {
         Pure,
         Memory,
+        Flag,
         Other
     }
 
@@ -33,7 +35,9 @@ internal static class AluExpansionCleanup {
         if (valueUsed) {
             resultUses++;
         }
-        int impureOperands = expansion.Operands.Count(operand => Classify(operand.Initializer) != ReadKind.Pure);
+        int impureOperands = expansion.Operands.Count(operand =>
+            Classify(operand.Initializer) is ReadKind.Memory or ReadKind.Other);
+        bool flagAssignmentsKept = flags.Count != 0;
         Dictionary<VariableReferenceNode, ValueNode> replacements = new();
         List<IVisitableAstNode> statements = [];
         foreach (VariableDeclarationNode operand in expansion.Operands) {
@@ -42,9 +46,9 @@ internal static class AluExpansionCleanup {
                 uses += CountReferences(result.Initializer, operand.Reference);
             }
             ReadKind kind = Classify(operand.Initializer);
-            if (CanInlineOperand(operand.Initializer, kind, uses, impureOperands)) {
+            if (CanInlineOperand(operand.Initializer, kind, uses, impureOperands, flagAssignmentsKept)) {
                 replacements[operand.Reference] = WithType(operand.Initializer, operand.DataType);
-            } else if (uses > 0 || kind != ReadKind.Pure) {
+            } else if (uses > 0 || kind is not (ReadKind.Pure or ReadKind.Flag)) {
                 statements.Add(operand);
             }
         }
@@ -62,7 +66,11 @@ internal static class AluExpansionCleanup {
         return new CleanedAluExpansion(statements, value);
     }
 
-    private static bool CanInlineOperand(ValueNode initializer, ReadKind kind, int uses, int impureOperands) {
+    private static bool CanInlineOperand(ValueNode initializer, ReadKind kind, int uses, int impureOperands,
+        bool flagAssignmentsKept) {
+        if (kind == ReadKind.Flag) {
+            return uses == 1 && !flagAssignmentsKept;
+        }
         bool isPureOrSingleMemory = kind == ReadKind.Pure || (kind == ReadKind.Memory && impureOperands == 1);
         return IsAtom(initializer) || (uses == 1 && isPureOrSingleMemory);
     }
@@ -75,6 +83,7 @@ internal static class AluExpansionCleanup {
 
     private static ReadKind Classify(ValueNode node) => node switch {
         ConstantNode or RegisterNode or VariableReferenceNode => ReadKind.Pure,
+        CpuFlagNode => ReadKind.Flag,
         InstructionFieldNode field => field.ResolvedNode is ConstantNode ? ReadKind.Pure : ReadKind.Memory,
         SegmentedPointerNode pointer => Worst(ReadKind.Memory, Worst(Classify(pointer.Segment), Classify(pointer.Offset))),
         AbsolutePointerNode pointer => Worst(ReadKind.Memory, Classify(pointer.AbsoluteAddress)),
@@ -100,6 +109,7 @@ internal static class AluExpansionCleanup {
         BinaryOperationNode binary => CountReferences(binary.Left, reference) + CountReferences(binary.Right, reference),
         TypeConversionNode conversion => CountReferences(conversion.Value, reference),
         ConstantNode => 0,
+        CpuFlagNode => 0,
         _ => throw UnexpectedNode(node)
     };
 
@@ -111,6 +121,7 @@ internal static class AluExpansionCleanup {
         },
         TypeConversionNode conversion => conversion with { Value = Substitute(conversion.Value, replacements) },
         ConstantNode => node,
+        CpuFlagNode => node,
         _ => throw UnexpectedNode(node)
     };
 

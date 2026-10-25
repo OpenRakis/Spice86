@@ -14,7 +14,8 @@ using System.Numerics;
 
 /// <summary>
 /// Rewrites an instruction whose only work is one ALU call (<c>add</c>, <c>sub</c>, <c>and</c>, <c>or</c>, <c>xor</c>,
-/// <c>inc</c>, <c>dec</c>, <c>shl</c>, <c>shr</c>, <c>sar</c>, and <c>cmp</c> / <c>test</c> whose value is unused) as
+/// <c>inc</c>, <c>dec</c>, <c>shl</c>, <c>shr</c>, <c>sar</c>, <c>rol</c>, <c>ror</c>, <c>rcl</c>, <c>rcr</c>,
+/// <c>adc</c>, <c>sbb</c>, and <c>cmp</c> / <c>test</c> whose value is unused) as
 /// plain code: an assignment becomes plain arithmetic when at most one flag the call writes is live after it and that
 /// flag has a readable form; a shift by a count that is not a constant becomes the masked shift when no flag it may
 /// write is live after it; an unused call disappears when no flag it writes is live after it and its operands read no
@@ -81,6 +82,7 @@ internal static class AluAssignmentRewrite {
             | StatusFlags.Overflow,
         "Inc" or "Dec" => StatusFlags.Zero | StatusFlags.Sign | StatusFlags.Overflow,
         "Shl" or "Shr" or "Sar" => StatusFlags.Carry | StatusFlags.Zero | StatusFlags.Sign,
+        "Rol" or "Ror" => StatusFlags.Carry,
         _ => StatusFlags.None
     };
 

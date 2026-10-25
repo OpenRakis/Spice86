@@ -32,7 +32,7 @@ public class AluExpansionBuilderTest {
 
     public static TheoryData<string, BitWidth> ExpandedOperations() {
         TheoryData<string, BitWidth> data = new();
-        foreach (string operation in new[] { "Add", "Sub", "And", "Or", "Xor", "Inc", "Dec" }) {
+        foreach (string operation in new[] { "Add", "Sub", "And", "Or", "Xor", "Inc", "Dec", "Adc", "Sbb" }) {
             foreach (BitWidth width in new[] { BitWidth.BYTE_8, BitWidth.WORD_16, BitWidth.DWORD_32 }) {
                 data.Add(operation, width);
             }
@@ -128,8 +128,8 @@ public class AluExpansionBuilderTest {
     }
 
     [Theory]
-    [InlineData("Alu16", "Adc", 2)]
-    [InlineData("Alu16", "Sbb", 2)]
+    [InlineData("Alu16", "Adc", 1)]
+    [InlineData("Alu16", "Rol", 2)]
     [InlineData("Alu16", "Shl", 2)]
     [InlineData("Alu16", "Mul", 2)]
     [InlineData("Alu16", "UpdateFlags", 1)]
@@ -294,6 +294,123 @@ public class AluExpansionBuilderTest {
         constant.Should().BeNull();
         rotate.Should().BeNull();
         addition.Should().BeNull();
+    }
+
+    public static TheoryData<string, BitWidth> RotateOperations() {
+        TheoryData<string, BitWidth> data = new();
+        foreach (string operation in new[] { "Rol", "Ror", "Rcl", "Rcr" }) {
+            foreach (BitWidth width in new[] { BitWidth.BYTE_8, BitWidth.WORD_16, BitWidth.DWORD_32 }) {
+                data.Add(operation, width);
+            }
+        }
+        return data;
+    }
+
+    [Theory]
+    [MemberData(nameof(RotateOperations))]
+    public void RotateExpansionComputesTheSameResultAndFlagsAsTheAlu(string operation, BitWidth width) {
+        // Arrange
+        DataType type = DataType.UnsignedFromBitWidth(width);
+        RegisterNode operand = new(type, (int)RegisterIndex.BxIndex);
+        Memory memory = new(new(), new Ram(64), new(), new RealModeMmu386(), false);
+        State expansionState = new(CpuModel.INTEL_80286);
+        State aluState = new(CpuModel.INTEL_80286);
+        List<string> mismatches = new();
+
+        // Act
+        for (int count = 0; count <= 33; count++) {
+            MethodCallValueNode call = new(type, $"Alu{(int)width}", operation, operand,
+                new ConstantNode(DataType.INT32, (ulong)count));
+            AluExpansion? expansion = AluExpansionBuilder.TryExpand(call);
+            (expansion is not null).Should().Be(ShouldExpandRotate(operation, width, count),
+                $"{operation}{(int)width} by {count}");
+            if (expansion is null) {
+                continue;
+            }
+            Action<State, Memory> run = CompileProgram(expansion, width);
+            foreach (uint value in ShiftInputs(width, 2000)) {
+                foreach (bool preset in new[] { false, true }) {
+                    SetStatusFlags(expansionState, preset);
+                    SetStatusFlags(aluState, preset);
+                    SetShiftOperand(expansionState, width, value);
+                    run(expansionState, memory);
+                    uint expected = RunAluRotate(aluState, operation, width, value, count);
+                    string? mismatch = Compare(expected, aluState, ReadResult(expansionState, width), expansionState);
+                    if (mismatch is not null) {
+                        mismatches.Add($"{operation}{(int)width}(0x{value:X}, {count}), flags preset {preset}: {mismatch}");
+                    }
+                }
+            }
+        }
+
+        // Assert
+        mismatches.Count.Should().Be(0, string.Join(Environment.NewLine, mismatches.Take(ReportedMismatches)));
+    }
+
+    [Theory]
+    [MemberData(nameof(RotateOperations))]
+    public void RotateExpansionWritesTheFlagsOfTheAluFlagTable(string operation, BitWidth width) {
+        foreach (int count in new[] { 1, 4, 9 }) {
+            // Arrange
+            DataType type = DataType.UnsignedFromBitWidth(width);
+            RegisterNode operand = new(type, (int)RegisterIndex.BxIndex);
+            AluExpansion? expansion = AluExpansionBuilder.TryExpand(
+                new MethodCallValueNode(type, $"Alu{(int)width}", operation, operand, new ConstantNode(DataType.INT32, (ulong)count)));
+            if (expansion is null) {
+                continue;
+            }
+            AluFlagTable.TryGetEffect(operation, width, (ulong)count, out FlagEffect expected);
+
+            // Act
+            FlagEffect actual = FlagEffectVisitor.Of(new BlockNode([.. expansion.Statements]));
+            StatusFlags assigned = expansion.FlagAssignments.Aggregate(StatusFlags.None, (all, assignment) => all | assignment.Flag);
+
+            // Assert
+            actual.Should().Be(expected);
+            assigned.Should().Be(expected.MustWrite);
+        }
+    }
+
+    private static bool ShouldExpandRotate(string operation, BitWidth width, int count) {
+        int w = (int)width;
+        int m = count & 0x1F;
+        if (m == 0) {
+            return false;
+        }
+        if (operation is "Rol" or "Ror") {
+            return m % w != 0;
+        }
+        return w == 32 || m % (w + 1) != 0;
+    }
+
+    private static Action<State, Memory> CompileProgram(AluExpansion expansion, BitWidth width) {
+        DataType type = DataType.UnsignedFromBitWidth(width);
+        RegisterNode destination = new(type, (int)RegisterIndex.AxIndex);
+        BinaryOperationNode assignResult = new(type, destination, BinaryOperation.ASSIGN, expansion.Result.Reference);
+        BlockNode program = new([.. expansion.Statements, assignResult]);
+        AstExpressionBuilder builder = new();
+        return builder.ToAction(program.Accept(builder)).Compile();
+    }
+
+    private static uint RunAluRotate(State state, string operation, BitWidth width, uint value, int count) => width switch {
+        BitWidth.BYTE_8 => RunAluRotate(new Alu8(state), operation, (byte)value, count),
+        BitWidth.WORD_16 => RunAluRotate(new Alu16(state), operation, (ushort)value, count),
+        _ => RunAluRotate(new Alu32(state), operation, value, count)
+    };
+
+    private static uint RunAluRotate<TUnsigned, TSigned, TUnsignedUpper, TSignedUpper>(
+        Alu<TUnsigned, TSigned, TUnsignedUpper, TSignedUpper> alu, string operation, TUnsigned value, int count)
+        where TUnsigned : IUnsignedNumber<TUnsigned>
+        where TSigned : ISignedNumber<TSigned>
+        where TUnsignedUpper : IUnsignedNumber<TUnsignedUpper>
+        where TSignedUpper : ISignedNumber<TSignedUpper> {
+        TUnsigned result = operation switch {
+            "Rol" => alu.Rol(value, (byte)count),
+            "Ror" => alu.Ror(value, count),
+            "Rcl" => alu.Rcl(value, (byte)count),
+            _ => alu.Rcr(value, count)
+        };
+        return uint.CreateTruncating(result);
     }
 
     private static AluExpansion ExpandShift(string operation, BitWidth width, int count) {
@@ -472,6 +589,8 @@ public class AluExpansionBuilderTest {
             "Xor" => alu.Xor(left, right),
             "Inc" => alu.Inc(left),
             "Dec" => alu.Dec(left),
+            "Adc" => alu.Adc(left, right),
+            "Sbb" => alu.Sbb(left, right),
             _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, null)
         };
         return uint.CreateTruncating(result);

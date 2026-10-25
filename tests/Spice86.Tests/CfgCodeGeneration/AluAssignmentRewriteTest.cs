@@ -138,7 +138,7 @@ public class AluAssignmentRewriteTest {
     [Fact]
     public void UnusedCallTheExpansionDoesNotCoverKeepsTheCall() {
         // Arrange
-        BlockNode instruction = new(AluCall("Adc", Ax, Bx), MoveIp);
+        BlockNode instruction = new(AluCall("Mul", Ax, Bx), MoveIp);
 
         // Act
         BlockNode? rewritten = AluAssignmentRewrite.TryRewrite(instruction, StatusFlags.None);
@@ -165,7 +165,7 @@ public class AluAssignmentRewriteTest {
     [Fact]
     public void CallTheExpansionDoesNotCoverIsNotRewritten() {
         // Arrange
-        BlockNode instruction = new(Assign(Ax, AluCall("Adc", Ax, Bx)), MoveIp);
+        BlockNode instruction = new(Assign(Ax, AluCall("Mul", Ax, Bx)), MoveIp);
 
         // Act
         BlockNode? rewritten = AluAssignmentRewrite.TryRewrite(instruction, StatusFlags.None);
@@ -454,6 +454,111 @@ public class AluAssignmentRewriteTest {
         // Assert
         rewritten.Should().BeNull();
     }
+
+    [Theory]
+    [InlineData("Adc", -1)]
+    [InlineData("Sbb", -1)]
+    [InlineData("Rcl", 1)]
+    [InlineData("Rcl", 5)]
+    [InlineData("Rcr", 1)]
+    [InlineData("Rcr", 16)]
+    public void RewrittenCarryReaderComputesTheDestinationLikeTheAlu(string operation, int count) {
+        // Arrange
+        ValueNode second = count < 0 ? Bx : new ConstantNode(DataType.INT32, (ulong)count);
+        BlockNode instruction = new(Assign(Ax, AluCall(operation, Ax, second)), MoveIp);
+        BlockNode rewritten = AluAssignmentRewrite.TryRewrite(instruction, StatusFlags.None)
+            ?? throw new InvalidOperationException($"{operation} was not rewritten");
+        IReadOnlyList<IVisitableAstNode> statements = rewritten.Statements;
+        BlockNode withoutIpMove = new([.. statements.Take(statements.Count - 1)]);
+        AstExpressionBuilder builder = new();
+        Action<State, Memory> run = builder.ToAction(withoutIpMove.Accept(builder)).Compile();
+        Memory memory = new(new(), new Ram(64), new(), new RealModeMmu386(), false);
+        State rewrittenState = new(CpuModel.INTEL_80286);
+        State aluState = new(CpuModel.INTEL_80286);
+        List<string> mismatches = new();
+
+        // Act
+        foreach (ushort ax in EdgeValues16) {
+            foreach (ushort bx in EdgeValues16) {
+                foreach (bool carry in new[] { false, true }) {
+                    rewrittenState.AX = ax;
+                    rewrittenState.BX = bx;
+                    rewrittenState.CarryFlag = carry;
+                    run(rewrittenState, memory);
+                    aluState.CarryFlag = carry;
+                    ushort expected = RunAluCarryReader(new Alu16(aluState), operation, ax, bx, count);
+                    if (rewrittenState.AX != expected) {
+                        mismatches.Add($"{operation}(0x{ax:X4}, 0x{bx:X4}), CF={carry}: AX 0x{rewrittenState.AX:X4} instead of 0x{expected:X4}");
+                    }
+                }
+            }
+        }
+
+        // Assert
+        statements.Should().HaveCount(2);
+        mismatches.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void CarryReaderWithALiveFlagKeepsTheCall() {
+        // Arrange
+        BlockNode instruction = new(Assign(Ax, AluCall("Adc", Ax, Bx)), MoveIp);
+
+        // Act
+        BlockNode? rewritten = AluAssignmentRewrite.TryRewrite(instruction, StatusFlags.Zero);
+
+        // Assert
+        rewritten.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("Rol", 4, (ushort)StatusFlags.None)]
+    [InlineData("Rol", 1, (ushort)StatusFlags.Carry)]
+    [InlineData("Ror", 4, (ushort)StatusFlags.None)]
+    [InlineData("Ror", 15, (ushort)StatusFlags.Carry)]
+    public void RewrittenRotateComputesTheDestinationAndTheLiveCarryLikeTheAlu(string operation, int count, ushort live) {
+        // Arrange
+        StatusFlags liveFlag = (StatusFlags)live;
+        BlockNode instruction = new(Assign(Ax, AluCall(operation, Ax, new ConstantNode(DataType.INT32, (ulong)count))), MoveIp);
+        BlockNode rewritten = AluAssignmentRewrite.TryRewrite(instruction, liveFlag)
+            ?? throw new InvalidOperationException($"{operation} by {count} was not rewritten");
+        IReadOnlyList<IVisitableAstNode> statements = rewritten.Statements;
+        BlockNode withoutIpMove = new([.. statements.Take(statements.Count - 1)]);
+        AstExpressionBuilder builder = new();
+        Action<State, Memory> run = builder.ToAction(withoutIpMove.Accept(builder)).Compile();
+        Memory memory = new(new(), new Ram(64), new(), new RealModeMmu386(), false);
+        State rewrittenState = new(CpuModel.INTEL_80286);
+        State aluState = new(CpuModel.INTEL_80286);
+        List<string> mismatches = new();
+
+        // Act
+        for (uint ax = 0; ax <= 0xFFFF; ax++) {
+            rewrittenState.AX = (ushort)ax;
+            run(rewrittenState, memory);
+            ushort expected = RunAluRotate(new Alu16(aluState), operation, (ushort)ax, count);
+            if (rewrittenState.AX != expected
+                || (liveFlag != StatusFlags.None && ReadFlag(rewrittenState, liveFlag) != ReadFlag(aluState, liveFlag))) {
+                mismatches.Add($"{operation}(0x{ax:X4}, {count}): AX 0x{rewrittenState.AX:X4} instead of 0x{expected:X4}, " +
+                    $"{liveFlag} {ReadFlag(rewrittenState, liveFlag)} instead of {ReadFlag(aluState, liveFlag)}");
+            }
+        }
+
+        // Assert
+        statements.Should().HaveCount(liveFlag == StatusFlags.None ? 2 : 3);
+        mismatches.Should().BeEmpty();
+    }
+
+    private static ushort RunAluCarryReader(Alu16 alu, string operation, ushort left, ushort right, int count) => operation switch {
+        "Adc" => alu.Adc(left, right),
+        "Sbb" => alu.Sbb(left, right),
+        "Rcl" => alu.Rcl(left, (byte)count),
+        _ => alu.Rcr(left, count)
+    };
+
+    private static ushort RunAluRotate(Alu16 alu, string operation, ushort value, int count) => operation switch {
+        "Rol" => alu.Rol(value, (byte)count),
+        _ => alu.Ror(value, count)
+    };
 
     private static ushort RunAluShift(Alu16 alu, string operation, ushort value, int count) => operation switch {
         "Shl" => alu.Shl(value, count),

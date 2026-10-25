@@ -340,7 +340,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 UInt8[DS, (ushort)(BX + 0x1B)] = 2;
             }
             // F000:0195 adc DL,0
-            DL = Alu8.Adc(DL, 0);
+            DL = (byte)(DL + (CarryFlag ? 1 : 0));
             // F000:0198 mov byte ptr DS:[BX+0x1C],DL
             UInt8[DS, (ushort)(BX + 0x1C)] = DL;
             // F000:019B mov byte ptr DS:[BX+0x1D],1
@@ -616,7 +616,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:02C4 mov DX,0
             DX = 0;
             // F000:02C7 adc DL,0
-            DL = Alu8.Adc(DL, 0);
+            DL = (byte)(DL + (CarryFlag ? 1 : 0));
             // F000:02CA mov byte ptr DS:[BX+0x3B],DL
             UInt8[DS, (ushort)(BX + 0x3B)] = DL;
             // F000:02CD mov DX,AX

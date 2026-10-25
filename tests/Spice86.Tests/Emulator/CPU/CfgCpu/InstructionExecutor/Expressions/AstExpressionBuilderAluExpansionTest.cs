@@ -54,7 +54,7 @@ public class AstExpressionBuilderAluExpansionTest {
         AstExpressionBuilder builder = new(true);
 
         // Act
-        Expression expression = AluCall("Adc", Ax, Bx).Accept(builder);
+        Expression expression = AluCall("Mul", Ax, Bx).Accept(builder);
 
         // Assert
         expression.Should().BeAssignableTo<MethodCallExpression>();

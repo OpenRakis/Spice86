@@ -125,7 +125,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:0086 mov DX,word ptr CS:[SI]
             DX = UInt16[CS, SI];
             // F000:0089 ror DX,0x14
-            DX = Alu16.Ror(DX, 0x00000014);
+            DX = (ushort)(DX >> 4 | DX << 0x0000000C);
             // F000:008C mov word ptr DS:[BX+0x14],DX
             UInt16[DS, (ushort)(BX + 0x14)] = DX;
             // F000:008F cmp DI,DI
@@ -137,7 +137,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:0097 mov DX,word ptr CS:[SI]
             DX = UInt16[CS, SI];
             // F000:009A rcl DX,1
-            DX = Alu16.Rcl(DX, 1);
+            DX = (ushort)(DX << 1 | (CarryFlag ? 1 : 0));
             // F000:009C mov word ptr DS:[BX+0x16],DX
             UInt16[DS, (ushort)(BX + 0x16)] = DX;
             // F000:009F cmp DI,DI
@@ -149,7 +149,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:00A7 mov DX,word ptr CS:[SI]
             DX = UInt16[CS, SI];
             // F000:00AA rcr DX,1
-            DX = Alu16.Rcr(DX, 1);
+            DX = (ushort)(DX >> 1 | (CarryFlag ? 1 : 0) << 0x0000000F);
             // F000:00AC mov word ptr DS:[BX+0x18],DX
             UInt16[DS, (ushort)(BX + 0x18)] = DX;
             // F000:00AF cmp DI,DI
@@ -161,7 +161,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:00B7 mov DX,word ptr CS:[SI]
             DX = UInt16[CS, SI];
             // F000:00BA adc DX,5
-            DX = Alu16.Adc(DX, 5);
+            DX = (ushort)(DX + 5 + (CarryFlag ? 1 : 0));
             // F000:00BD mov word ptr DS:[BX+0x1A],DX
             UInt16[DS, (ushort)(BX + 0x1A)] = DX;
             // F000:00C0 cmp DI,DI
@@ -173,7 +173,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:00C8 mov DX,word ptr CS:[SI]
             DX = UInt16[CS, SI];
             // F000:00CB sbb DX,5
-            DX = Alu16.Sbb(DX, 5);
+            DX = (ushort)(DX - 5 - (CarryFlag ? 1 : 0));
             // F000:00CE mov word ptr DS:[BX+0x1C],DX
             UInt16[DS, (ushort)(BX + 0x1C)] = DX;
             // F000:00D1 cmp DI,DI
@@ -251,7 +251,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:013D clc
             CarryFlag = false;
             // F000:013E adc DX,0
-            DX = Alu16.Adc(DX, 0);
+            DX = (ushort)(DX + (CarryFlag ? 1 : 0));
             // F000:0141 mov word ptr DS:[BX+0x34],DX
             UInt16[DS, (ushort)(BX + 0x34)] = DX;
             // F000:0144 cmp DI,DI
@@ -262,7 +262,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:014A cmc
             CarryFlag = !CarryFlag;
             // F000:014B adc DX,0
-            DX = Alu16.Adc(DX, 0);
+            DX = (ushort)(DX + (CarryFlag ? 1 : 0));
             // F000:014E mov word ptr DS:[BX+0x36],DX
             UInt16[DS, (ushort)(BX + 0x36)] = DX;
             // F000:0151 cmp DI,DI
@@ -274,7 +274,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:0158 sahf
             FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
             // F000:0159 adc DX,0
-            DX = Alu16.Adc(DX, 0);
+            DX = (ushort)(DX + (CarryFlag ? 1 : 0));
             // F000:015C mov word ptr DS:[BX+0x38],DX
             UInt16[DS, (ushort)(BX + 0x38)] = DX;
             // F000:015F cmp DI,DI
@@ -288,7 +288,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:0167 clc
             CarryFlag = false;
             // F000:0168 adc DX,0
-            DX = Alu16.Adc(DX, 0);
+            DX = (ushort)(DX + (CarryFlag ? 1 : 0));
             // F000:016B mov word ptr DS:[BX+0x3A],DX
             UInt16[DS, (ushort)(BX + 0x3A)] = DX;
             // F000:016E cmp DI,DI

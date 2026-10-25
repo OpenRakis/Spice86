@@ -59,7 +59,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:0027 add AX,CX
             AX = Alu16.Add(AX, CX);
             // F000:0029 adc DX,DI
-            DX = Alu16.Adc(DX, DI);
+            DX = (ushort)(DX + DI + (CarryFlag ? 1 : 0));
             // F000:002B mov word ptr DS:[BX],AX
             UInt16[DS, BX] = AX;
             // F000:002D mov word ptr DS:[BX+2],DX
@@ -72,7 +72,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             CarryFlag = AX < CX;
             AX = (ushort)(AX - CX);
             // F000:0039 sbb DX,DI
-            DX = Alu16.Sbb(DX, DI);
+            DX = (ushort)(DX - DI - (CarryFlag ? 1 : 0));
             // F000:003B mov word ptr DS:[BX+4],AX
             UInt16[DS, (ushort)(BX + 4)] = AX;
             // F000:003E mov word ptr DS:[BX+6],DX
@@ -85,7 +85,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             AX = Alu16.Sub(0, AX);
             CarryFlag = AX != 0;
             // F000:004A adc DX,0
-            DX = Alu16.Adc(DX, 0);
+            DX = (ushort)(DX + (CarryFlag ? 1 : 0));
             // F000:004D neg DX
             DX = Alu16.Sub(0, DX);
             CarryFlag = DX != 0;
@@ -101,7 +101,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             CarryFlag = (AX & 0x8000) != 0;
             AX = (ushort)(AX << 1);
             // F000:005E rcl DX,1
-            DX = Alu16.Rcl(DX, 1);
+            DX = (ushort)(DX << 1 | (CarryFlag ? 1 : 0));
             // F000:0060 mov word ptr DS:[BX+0x0C],AX
             UInt16[DS, (ushort)(BX + 0x0C)] = AX;
             // F000:0063 mov word ptr DS:[BX+0x0E],DX
@@ -114,7 +114,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             CarryFlag = (DX & 1) != 0;
             DX = (ushort)(DX >> 1);
             // F000:006F rcr AX,1
-            AX = Alu16.Rcr(AX, 1);
+            AX = (ushort)(AX >> 1 | (CarryFlag ? 1 : 0) << 0x0000000F);
             // F000:0071 mov word ptr DS:[BX+0x10],AX
             UInt16[DS, (ushort)(BX + 0x10)] = AX;
             // F000:0074 mov word ptr DS:[BX+0x12],DX

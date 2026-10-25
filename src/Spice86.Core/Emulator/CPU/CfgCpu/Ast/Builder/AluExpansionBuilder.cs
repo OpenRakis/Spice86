@@ -9,7 +9,8 @@ using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
 /// Writes an <c>Alu8</c> / <c>Alu16</c> / <c>Alu32</c> call as plain nodes that compute the same result and assign
-/// the same status flags as the emulator's ALU. Used by the code generator only; parsers keep the ALU calls.
+/// the same status flags as the emulator's ALU; the operations that read CF get a <c>carry</c> operand. Used by the
+/// code generator only; parsers keep the ALU calls.
 /// </summary>
 internal static class AluExpansionBuilder {
     private const ulong AuxiliaryCarryBit = 0x10;
@@ -18,8 +19,9 @@ internal static class AluExpansionBuilder {
 
     /// <summary>
     /// The expansion of <paramref name="call"/>, or <c>null</c> when it is not an <c>Add</c>, <c>Sub</c>,
-    /// <c>And</c>, <c>Or</c>, <c>Xor</c>, <c>Inc</c>, <c>Dec</c>, or a <c>Shl</c>, <c>Shr</c> or <c>Sar</c> call by a
-    /// non-zero masked constant count returning the unsigned type of its ALU width.
+    /// <c>And</c>, <c>Or</c>, <c>Xor</c>, <c>Inc</c>, <c>Dec</c>, <c>Adc</c>, <c>Sbb</c>, a <c>Shl</c>, <c>Shr</c> or
+    /// <c>Sar</c> call by a non-zero masked constant count, or a <c>Rol</c>, <c>Ror</c>, <c>Rcl</c> or <c>Rcr</c>
+    /// call by a constant count that actually rotates, returning the unsigned type of its ALU width.
     /// </summary>
     public static AluExpansion? TryExpand(MethodCallValueNode call) {
         MethodCallNode callNode = call.CallNode;
@@ -34,6 +36,14 @@ internal static class AluExpansionBuilder {
             ("Shl" or "Shr" or "Sar", [ValueNode value, ValueNode count])
                 when ConstantCount(count) is ulong constant && (constant & ShiftCountMask) != 0 =>
                 ExpandShift(callNode.MethodName, call.DataType, value, count, (int)(constant & ShiftCountMask)),
+            ("Adc" or "Sbb", [ValueNode left, ValueNode right]) =>
+                ExpandWithCarry(callNode.MethodName == "Adc", call.DataType, left, right),
+            ("Rol" or "Ror", [ValueNode value, ValueNode count])
+                when RotateCount(call.DataType, ConstantCount(count)) is int rotation =>
+                ExpandRotate(callNode.MethodName == "Rol", call.DataType, value, count, rotation),
+            ("Rcl" or "Rcr", [ValueNode value, ValueNode count])
+                when RotateThroughCarryCount(call.DataType, ConstantCount(count)) is int rotation =>
+                ExpandRotateThroughCarry(callNode.MethodName == "Rcl", call.DataType, value, count, rotation),
             _ => null
         };
     }
@@ -86,19 +96,11 @@ internal static class AluExpansionBuilder {
         List<AluFlagAssignment> flags = operation switch {
             "Add" => [
                 new(StatusFlags.Carry, Relation(r, BinaryOperation.LESS_THAN, a)),
-                new(StatusFlags.Parity, EvenParity(r)),
-                new(StatusFlags.Auxiliary, BitSet(Xor(Xor(a, b), r), AuxiliaryCarryBit)),
-                new(StatusFlags.Zero, IsZero(r)),
-                new(StatusFlags.Sign, IsNegative(r)),
-                new(StatusFlags.Overflow, BitSet(And(Xor(a, r), Xor(b, r)), SignBit(type)))
+                ..AddSubFlags(false, type, a, b, r)
             ],
             "Sub" => [
                 new(StatusFlags.Carry, Relation(a, BinaryOperation.LESS_THAN, b)),
-                new(StatusFlags.Parity, EvenParity(r)),
-                new(StatusFlags.Auxiliary, BitSet(Xor(Xor(a, b), r), AuxiliaryCarryBit)),
-                new(StatusFlags.Zero, IsZero(r)),
-                new(StatusFlags.Sign, IsNegative(r)),
-                new(StatusFlags.Overflow, BitSet(And(Xor(a, b), Xor(a, r)), SignBit(type)))
+                ..AddSubFlags(true, type, a, b, r)
             ],
             _ => [
                 new(StatusFlags.Carry, False()),
@@ -228,4 +230,156 @@ internal static class AluExpansionBuilder {
         }
         return BitSet(value, 1UL << (shl ? width - count : count - 1));
     }
+
+    /// <summary>
+    /// The parity, auxiliary, zero, sign and overflow assignments an <c>Add</c>- or <c>Sub</c>-like call writes;
+    /// shared by <c>Add</c> / <c>Sub</c> and the carry-in forms <c>Adc</c> / <c>Sbb</c>.
+    /// </summary>
+    private static List<AluFlagAssignment> AddSubFlags(bool subtract, DataType type,
+        VariableReferenceNode a, VariableReferenceNode b, VariableReferenceNode r) => [
+        new(StatusFlags.Parity, EvenParity(r)),
+        new(StatusFlags.Auxiliary, BitSet(Xor(Xor(a, b), r), AuxiliaryCarryBit)),
+        new(StatusFlags.Zero, IsZero(r)),
+        new(StatusFlags.Sign, IsNegative(r)),
+        new(StatusFlags.Overflow, subtract
+            ? BitSet(And(Xor(a, b), Xor(a, r)), SignBit(type))
+            : BitSet(And(Xor(a, r), Xor(b, r)), SignBit(type)))
+    ];
+
+    /// <summary>
+    /// The expansion of an <c>Adc</c> or <c>Sbb</c> call: the old carry flag is a third operand, as a number in the
+    /// value and as a flag in the carry-out formula; all six status flags are written.
+    /// </summary>
+    private static AluExpansion ExpandWithCarry(bool add, DataType type, ValueNode leftValue, ValueNode rightValue) {
+        VariableDeclarationNode left = new(type, "left", leftValue);
+        VariableDeclarationNode right = new(type, "right", rightValue);
+        VariableDeclarationNode carry = new(DataType.BOOL, "carry", new CpuFlagNode((ushort)StatusFlags.Carry));
+        VariableReferenceNode a = left.Reference;
+        VariableReferenceNode b = right.Reference;
+        VariableReferenceNode cf = carry.Reference;
+        ValueNode carryNumber = new TypeConversionNode(type, cf);
+        BinaryOperation operation = add ? BinaryOperation.PLUS : BinaryOperation.MINUS;
+        VariableDeclarationNode result = new(type, "result",
+            new BinaryOperationNode(type, new BinaryOperationNode(type, a, operation, b), operation, carryNumber));
+        VariableReferenceNode r = result.Reference;
+        ValueNode carryOut = add
+            ? LogicalOr(Relation(r, BinaryOperation.LESS_THAN, a),
+                LogicalAnd(cf, Relation(r, BinaryOperation.EQUAL, a)))
+            : LogicalOr(Relation(a, BinaryOperation.LESS_THAN, b),
+                LogicalAnd(cf, Relation(a, BinaryOperation.EQUAL, b)));
+        List<AluFlagAssignment> flags = [
+            new(StatusFlags.Carry, carryOut),
+            ..AddSubFlags(!add, type, a, b, r)
+        ];
+        return new AluExpansion([left, right, carry], result, flags);
+    }
+
+    /// <summary>
+    /// The expansion of a <c>Rol</c> or <c>Ror</c> call by <paramref name="rotation"/> bits, a non-zero remainder of
+    /// the masked count modulo the width; CF and OF are written.
+    /// </summary>
+    private static AluExpansion ExpandRotate(bool rotateLeft, DataType type, ValueNode value, ValueNode count,
+        int rotation) {
+        VariableDeclarationNode left = new(type, "left", value);
+        VariableDeclarationNode right = new(count.DataType, "right", count);
+        VariableReferenceNode a = left.Reference;
+        int width = (int)type.BitWidth;
+        BinaryOperation first = rotateLeft ? BinaryOperation.LEFT_SHIFT : BinaryOperation.RIGHT_SHIFT;
+        BinaryOperation second = rotateLeft ? BinaryOperation.RIGHT_SHIFT : BinaryOperation.LEFT_SHIFT;
+        VariableDeclarationNode result = new(type, "result", new BinaryOperationNode(type,
+            new BinaryOperationNode(type, a, first, new ConstantNode(DataType.INT32, (ulong)rotation)),
+            BinaryOperation.BITWISE_OR,
+            new BinaryOperationNode(type, a, second, new ConstantNode(DataType.INT32, (ulong)(width - rotation)))));
+        VariableReferenceNode r = result.Reference;
+        ValueNode carry = rotateLeft ? BitSet(r, 1) : IsNegative(r);
+        ValueNode otherBit = rotateLeft ? BitSet(r, 1) : BitSet(r, 1UL << (width - 2));
+        ValueNode overflow = Relation(IsNegative(r), BinaryOperation.NOT_EQUAL, otherBit);
+        List<AluFlagAssignment> flags = [
+            new(StatusFlags.Carry, carry),
+            new(StatusFlags.Overflow, overflow)
+        ];
+        return new AluExpansion([left, right], result, flags);
+    }
+
+    /// <summary>
+    /// The expansion of a <c>Rcl</c> or <c>Rcr</c> call by <paramref name="rotation"/> bits through the carry: the old
+    /// carry flag is a third operand, a number inside the rotated value; CF and OF are written.
+    /// </summary>
+    private static AluExpansion ExpandRotateThroughCarry(bool rotateLeft, DataType type, ValueNode value,
+        ValueNode count, int rotation) {
+        VariableDeclarationNode left = new(type, "left", value);
+        VariableDeclarationNode right = new(count.DataType, "right", count);
+        VariableDeclarationNode carry = new(DataType.BOOL, "carry", new CpuFlagNode((ushort)StatusFlags.Carry));
+        VariableReferenceNode a = left.Reference;
+        VariableReferenceNode cf = carry.Reference;
+        int width = (int)type.BitWidth;
+        ValueNode carryNumber = new TypeConversionNode(type, cf);
+        ValueNode operandShift = rotateLeft
+            ? new BinaryOperationNode(type, a, BinaryOperation.LEFT_SHIFT, new ConstantNode(DataType.INT32, (ulong)rotation))
+            : new BinaryOperationNode(type, a, BinaryOperation.RIGHT_SHIFT, new ConstantNode(DataType.INT32, (ulong)rotation));
+        int carryShift = rotateLeft ? rotation - 1 : width - rotation;
+        ValueNode carryShifted = carryShift == 0
+            ? carryNumber
+            : new BinaryOperationNode(type, carryNumber, BinaryOperation.LEFT_SHIFT,
+                new ConstantNode(DataType.INT32, (ulong)carryShift));
+        ValueNode resultValue = new BinaryOperationNode(type, operandShift, BinaryOperation.BITWISE_OR, carryShifted);
+        if (rotation > 1) {
+            ValueNode wrapped = rotateLeft
+                ? new BinaryOperationNode(type, a, BinaryOperation.RIGHT_SHIFT,
+                    new ConstantNode(DataType.INT32, (ulong)(width + 1 - rotation)))
+                : new BinaryOperationNode(type, a, BinaryOperation.LEFT_SHIFT,
+                    new ConstantNode(DataType.INT32, (ulong)(width + 1 - rotation)));
+            resultValue = new BinaryOperationNode(type, resultValue, BinaryOperation.BITWISE_OR, wrapped);
+        }
+        VariableDeclarationNode result = new(type, "result", resultValue);
+        VariableReferenceNode r = result.Reference;
+        ValueNode newCarry = rotateLeft ? BitSet(a, 1UL << (width - rotation)) : BitSet(a, 1UL << (rotation - 1));
+        ValueNode overflow = rotateLeft
+            ? Relation(newCarry, BinaryOperation.NOT_EQUAL, IsNegative(r))
+            : Relation(IsNegative(r), BinaryOperation.NOT_EQUAL, BitSet(r, 1UL << (width - 2)));
+        List<AluFlagAssignment> flags = [
+            new(StatusFlags.Carry, newCarry),
+            new(StatusFlags.Overflow, overflow)
+        ];
+        return new AluExpansion([left, right, carry], result, flags);
+    }
+
+    /// <summary>
+    /// The rotation of a <c>Rol</c> / <c>Ror</c> count: the masked count modulo the width, or <c>null</c> when there
+    /// is no constant count or the rotation is a multiple of the width (the value comes back unchanged).
+    /// </summary>
+    private static int? RotateCount(DataType type, ulong? count) {
+        if (count is null) {
+            return null;
+        }
+        int masked = (int)(count.Value & ShiftCountMask);
+        if (masked == 0) {
+            return null;
+        }
+        int rotation = masked % (int)type.BitWidth;
+        return rotation == 0 ? null : rotation;
+    }
+
+    /// <summary>
+    /// The rotation of a <c>Rcl</c> / <c>Rcr</c> count: the masked count modulo the width plus one (the count itself
+    /// for 32 bits), or <c>null</c> when there is no constant count or no carry moves through the value.
+    /// </summary>
+    private static int? RotateThroughCarryCount(DataType type, ulong? count) {
+        if (count is null) {
+            return null;
+        }
+        int width = (int)type.BitWidth;
+        int masked = (int)(count.Value & ShiftCountMask);
+        if (masked == 0) {
+            return null;
+        }
+        int rotation = width == 32 ? masked : masked % (width + 1);
+        return rotation == 0 ? null : rotation;
+    }
+
+    private static BinaryOperationNode LogicalOr(ValueNode left, ValueNode right) =>
+        new(DataType.BOOL, left, BinaryOperation.LOGICAL_OR, right);
+
+    private static BinaryOperationNode LogicalAnd(ValueNode left, ValueNode right) =>
+        new(DataType.BOOL, left, BinaryOperation.LOGICAL_AND, right);
 }
