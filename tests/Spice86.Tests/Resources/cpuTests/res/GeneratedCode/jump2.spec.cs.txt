@@ -158,10 +158,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         ushort targetOffset_FDE7 = UInt16[DS, (ushort)(BX + SI + 2)];
         if (targetSegment_FDE7 == cs2 && targetOffset_FDE7 == 0x4000) {
             FarCall(cs1, 0xFDEA, cs2, unknown_F000_4000_F4000);
-            goto L_FDEA;
         }
-        throw FailAsUntested($"Untested far call target {targetSegment_FDE7:X4}:{targetOffset_FDE7:X4} at E342:FDE7");
-    L_FDEA:
+        else {
+            throw FailAsUntested($"Untested far call target {targetSegment_FDE7:X4}:{targetOffset_FDE7:X4} at E342:FDE7");
+        }
         // E342:FDEA ret near
         return NearRet();
     }

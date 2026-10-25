@@ -92,10 +92,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         ushort targetOffset_0112 = UInt16[DS, 0x012B];
         if (targetSegment_0112 == cs2 && targetOffset_0112 == 0x0010) {
             FarCall(cs1, 0x0116, cs2, unknown_C8AB_0010_C8AC0);
-            goto L_0116;
         }
-        throw FailAsUntested($"Untested far call target {targetSegment_0112:X4}:{targetOffset_0112:X4} at 016D:0112");
-    L_0116:
+        else {
+            throw FailAsUntested($"Untested far call target {targetSegment_0112:X4}:{targetOffset_0112:X4} at 016D:0112");
+        }
         // 016D:0116 cmp AX,0
         Alu16.Sub(AX, 0);
         // 016D:0119 jne short 0x0124

@@ -2300,10 +2300,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         ushort targetOffset_1401 = UInt16[DS, SI];
         if (targetSegment_1401 == cs1 && targetOffset_1401 == 0x13C5) {
             FarCall(cs1, 0x1403, cs1, unknown_F000_13C5_F13C5);
-            goto L_1403;
         }
-        throw FailAsUntested($"Untested far call target {targetSegment_1401:X4}:{targetOffset_1401:X4} at F000:1401");
-    L_1403:
+        else {
+            throw FailAsUntested($"Untested far call target {targetSegment_1401:X4}:{targetOffset_1401:X4} at F000:1401");
+        }
         // F000:1403 jae near 0x15C7
         if (!CarryFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
@@ -2319,10 +2319,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         ushort targetOffset_1414 = (ushort)UInt32[DS, SI];
         if (targetSegment_1414 == cs1 && targetOffset_1414 == 0x13E5) {
             FarCall32(cs1, 0x1417, cs1, unknown_F000_13E5_F13E5);
-            goto L_1417;
         }
-        throw FailAsUntested($"Untested far call target {targetSegment_1414:X4}:{targetOffset_1414:X4} at F000:1414");
-    L_1417:
+        else {
+            throw FailAsUntested($"Untested far call target {targetSegment_1414:X4}:{targetOffset_1414:X4} at F000:1414");
+        }
         // F000:1417 jae near 0x15C7
         if (!CarryFlag) {
             return unknown_F000_15C7_F15C7(0x0000);

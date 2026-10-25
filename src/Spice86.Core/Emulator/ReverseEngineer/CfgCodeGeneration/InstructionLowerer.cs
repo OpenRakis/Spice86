@@ -157,8 +157,8 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
         ushort? targetOffset = TryGetConstantWord(node.TargetAddress.Offset);
         if (targetSegment is null || targetOffset is null) {
             CallContinuation runtimeContinuation = Context.ResolveCallContinuation(node.Instruction);
-            return BuildFarRuntimeDispatch(node.Instruction, node.TargetAddress.Segment, node.TargetAddress.Offset, "call",
-                edge => CallBranchBody(node.Instruction, runtimeContinuation, helperName, edge, isFarCall: true));
+            return BuildFarCallDispatch(node.Instruction, node.TargetAddress.Segment, node.TargetAddress.Offset, helperName,
+                runtimeContinuation);
         }
 
         SegmentedAddress targetAddress = new SegmentedAddress(targetSegment.Value, targetOffset.Value);
@@ -383,6 +383,28 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
         }
         items.Add(UntestedMessages.FarTarget(targetKind, segmentDeclaration.Reference, offsetDeclaration.Reference, instruction.Address));
         return Sequence(items);
+    }
+
+    /// <summary>
+    /// Lowers a far call through a runtime target: an <c>if</c> / <c>else</c> chain with one arm per observed target that
+    /// only calls it, the untested-target failure as the last <c>else</c>, then the call continuation once. Every target
+    /// shares the continuation, so it follows the chain instead of ending each arm.
+    /// </summary>
+    private IVisitableAstNode BuildFarCallDispatch(CfgInstruction instruction, ValueNode segment, ValueNode offset,
+        string helperName, CallContinuation continuation) {
+        if (!TryGetObservedDispatchEdges(instruction, "far call", out IReadOnlyList<ResolvedCfgEdge> edges, out IVisitableAstNode failure)) {
+            return failure;
+        }
+        VariableDeclarationNode segmentDeclaration = new(DataType.UINT16, "targetSegment", segment);
+        VariableDeclarationNode offsetDeclaration = new(DataType.UINT16, "targetOffset", offset);
+        IVisitableAstNode chain = UntestedMessages.FarTarget("call", segmentDeclaration.Reference, offsetDeclaration.Reference, instruction.Address);
+        foreach (ResolvedCfgEdge edge in edges.OrderByDescending(edge => edge.Target.Address.Segment).ThenByDescending(edge => edge.Target.Address.Offset)) {
+            chain = new IfElseNode(
+                AddressEquals(segmentDeclaration.Reference, offsetDeclaration.Reference, edge.Target.Address),
+                Sequence(Transfer.CallHelper(helperName, continuation.ExpectedReturnAddress, Transfer.FunctionReference(edge), edge.Target.Address.Segment)),
+                Sequence(chain));
+        }
+        return Sequence(segmentDeclaration, offsetDeclaration, chain, Transfer.EmitPostCallContinuation(instruction, continuation));
     }
 
     /// <summary>
