@@ -50,6 +50,12 @@ F000:009D je short 0x00A4
 F000:009F callback 0x0021
 F000:00A3 iret
 F000:00A4 sti
+F000:00A5 callback 0x010A
+F000:00A9 cmp byte ptr CS:[0x008F],0
+F000:00AF jne short 0x00B5
+F000:00B1 int 0x28
+F000:00B5 callback 0x010B
+F000:00B9 iret
 F000:00E2 ret far
 F000:00E3 callback 0x010C
 F000:00E7 call far F000:00E2

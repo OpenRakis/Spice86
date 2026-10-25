@@ -176,6 +176,14 @@ public sealed class CfgInstruction : CfgNode {
         || (Kind & (InstructionKind.Jump | InstructionKind.Call | InstructionKind.Return)) != 0
         || MaxSuccessorsCount != 1;
 
+    /// <summary>
+    /// Execution can continue at the next instruction in memory; true for an instruction that ends its
+    /// block only because of an explicit block terminator mark, such as <c>sti</c>.
+    /// </summary>
+    internal bool FallsThroughToNextInMemory =>
+        (Kind & (InstructionKind.Jump | InstructionKind.Call | InstructionKind.Return)) == 0
+        && MaxSuccessorsCount == 1;
+
     /// <inheritdoc />
     public override bool IsBlockStarter => _isBlockStarter;
 
