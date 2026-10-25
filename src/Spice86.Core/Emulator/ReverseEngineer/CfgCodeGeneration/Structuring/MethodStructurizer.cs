@@ -477,13 +477,8 @@ internal static class MethodStructurizer {
                 RecordFlatSections(dispatch.Sections, []);
                 return null;
             }
-            Dictionary<int, List<LoweredBlock>> armByLabel = [];
-            foreach (SwitchSection section in dispatch.Sections) {
-                if (OnlyGotoTarget(section.Body) is ICfgNode target
-                    && ArmBlocks(target, members, placed, enclosing) is List<LoweredBlock> arm) {
-                    armByLabel[section.Label] = arm;
-                }
-            }
+            Dictionary<int, List<LoweredBlock>> armByLabel = dispatch.Sections
+                .SelectMany(section => SectionArm(section, members, placed, enclosing)).ToDictionary();
             List<CfgBlock> onlyExits = armByLabel.Values.Select(Exits).Where(exits => exits.Count == 1)
                 .Select(exits => exits.Single()).Distinct().ToList();
             CfgBlock? join = null;
@@ -522,10 +517,18 @@ internal static class MethodStructurizer {
         /// <summary>Records <see cref="GotoKeepReason.SwitchSection"/> for each section of <paramref name="sections"/>
         /// whose label is not in <paramref name="nestedLabels"/> and whose body is a single <c>goto</c>.</summary>
         private void RecordFlatSections(IReadOnlyList<SwitchSection> sections, IReadOnlyCollection<int> nestedLabels) {
-            foreach (SwitchSection section in sections) {
-                if (!nestedLabels.Contains(section.Label)) {
-                    Record(OnlyGoto(section.Body), GotoKeepReason.SwitchSection);
-                }
+            foreach (SwitchSection section in sections.Where(section => !nestedLabels.Contains(section.Label))) {
+                Record(OnlyGoto(section.Body), GotoKeepReason.SwitchSection);
+            }
+        }
+
+        /// <summary>The label and arm of <paramref name="section"/> when its body is a single <c>goto</c> to an arm
+        /// that can be nested (see <see cref="ArmBlocks"/>), otherwise nothing.</summary>
+        private IEnumerable<KeyValuePair<int, List<LoweredBlock>>> SectionArm(SwitchSection section,
+            IReadOnlyList<LoweredBlock> members, HashSet<CfgBlock> placed, NaturalLoop? enclosing) {
+            if (OnlyGotoTarget(section.Body) is ICfgNode target
+                && ArmBlocks(target, members, placed, enclosing) is List<LoweredBlock> arm) {
+                yield return new(section.Label, arm);
             }
         }
 

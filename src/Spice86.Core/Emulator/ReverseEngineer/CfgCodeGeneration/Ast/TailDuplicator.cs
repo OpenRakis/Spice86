@@ -32,10 +32,8 @@ internal static class TailDuplicator {
     public static BlockNode Apply(BlockNode body, IReadOnlyList<LoweredBlock> blocks, IReadOnlySet<ICfgNode> entryNodes,
         NaturalLoopForest loops) {
         Dictionary<ICfgNode, LoweredBlock> duplicableByEntry = new();
-        foreach (LoweredBlock block in blocks) {
-            if (IsDuplicable(block, entryNodes, loops)) {
-                duplicableByEntry[block.Block.Entry] = block;
-            }
+        foreach (LoweredBlock block in blocks.Where(block => IsDuplicable(block, entryNodes, loops))) {
+            duplicableByEntry[block.Block.Entry] = block;
         }
         HashSet<ICfgNode> targeted = [];
         EachGoto(body, jump => targeted.Add(jump.Target));

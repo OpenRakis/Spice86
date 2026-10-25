@@ -116,33 +116,29 @@ internal sealed class GeneratedCodeMachineTestRunner {
             GenerateSourceAndFinalState(discovery);
         using CompiledGeneratedOverride compiledOverride = CompileGeneratedProgram(discoverySettings, generatedProgram);
         string? probeReportPath = GeneratedCodeProbes.ReportPath;
-        InstrumentedGeneratedSource? instrumented = null;
-        using CompiledGeneratedOverride? probedOverride = CompileProbedProgram(probeReportPath, generatedProgram, out instrumented);
-        IOverrideSupplier supplier = probedOverride?.Supplier ?? compiledOverride.Supplier;
+        if (probeReportPath is null) {
+            RunExecutions(executions, compiledOverride.Supplier, discoverySettings, goldenKey, discoveryFinalState);
+            return generatedProgram;
+        }
+
+        InstrumentedGeneratedSource instrumented = GeneratedCodeProbes.Instrument(generatedProgram.SourceText);
+        using CompiledGeneratedOverride probedOverride = new GeneratedOverrideCompiler().CompileSupplier(instrumented.Source);
+        RunExecutions(executions, probedOverride.Supplier, discoverySettings, goldenKey, discoveryFinalState);
+        GeneratedCodeProbes.Append(probeReportPath, goldenKey, instrumented,
+            GeneratedCodeProbes.ReadHits(probedOverride.Supplier.GetType().Assembly));
+        return generatedProgram;
+    }
+
+    /// <summary>Runs every execution with <paramref name="supplier"/> and records a differential for each run of the
+    /// discovery's scenario variant.</summary>
+    private static void RunExecutions(IReadOnlyList<AsmRunScope> executions, IOverrideSupplier supplier,
+        AsmRunSettings discoverySettings, string goldenKey, AsmFinalState discoveryFinalState) {
         foreach (AsmRunScope execution in executions) {
             using AsmFixtureRun run = AsmFixtureRunner.RunWithOverride(execution, supplier);
             if (IsEquivalentScenarioVariant(discoverySettings, execution.Fixture.Settings)) {
                 GeneratedCodeDifferentialReport.Append(goldenKey, discoveryFinalState, AsmFinalState.Capture(run.Result));
             }
         }
-
-        if (probeReportPath is not null && probedOverride is not null && instrumented is not null) {
-            GeneratedCodeProbes.Append(probeReportPath, goldenKey, instrumented,
-                GeneratedCodeProbes.ReadHits(probedOverride.Supplier.GetType().Assembly));
-        }
-
-        return generatedProgram;
-    }
-
-    /// <summary>The instrumented copy of the program for the runs when probing is on, otherwise <c>null</c>.</summary>
-    private static CompiledGeneratedOverride? CompileProbedProgram(string? probeReportPath, GeneratedCSharpProgram generatedProgram,
-        out InstrumentedGeneratedSource? instrumented) {
-        instrumented = null;
-        if (probeReportPath is null) {
-            return null;
-        }
-        instrumented = GeneratedCodeProbes.Instrument(generatedProgram.SourceText);
-        return new GeneratedOverrideCompiler().CompileSupplier(instrumented.Source);
     }
 
     /// <summary>

@@ -99,18 +99,14 @@ internal sealed class NaturalLoopForest {
     private static NaturalLoop BuildLoop(PartitionBlockGraph graph, CfgBlock header, IReadOnlyList<CfgBlock> latches,
         IReadOnlySet<CfgBlock> reachable) {
         HashSet<CfgBlock> body = [header];
-        Stack<CfgBlock> pending = new();
-        foreach (CfgBlock latch in latches) {
-            if (body.Add(latch)) {
-                pending.Push(latch);
-            }
-        }
+        Stack<CfgBlock> pending = new(latches);
         while (pending.Count > 0) {
             CfgBlock block = pending.Pop();
-            foreach (CfgBlock predecessor in graph.GetPredecessors(block)) {
-                if (reachable.Contains(predecessor) && body.Add(predecessor)) {
-                    pending.Push(predecessor);
-                }
+            if (!body.Add(block)) {
+                continue;
+            }
+            foreach (CfgBlock predecessor in graph.GetPredecessors(block).Where(reachable.Contains)) {
+                pending.Push(predecessor);
             }
         }
         List<CfgBlock> blocks = graph.Blocks.Where(body.Contains).ToList();

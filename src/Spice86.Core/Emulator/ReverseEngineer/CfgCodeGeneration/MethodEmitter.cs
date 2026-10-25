@@ -32,6 +32,7 @@ internal sealed class MethodEmitter(
 
     private readonly CSharpExpressionPrinter _expressions = new(context.SegmentVariables);
 
+    /// <summary>Builds the AST of <paramref name="method"/> and prints it as one C# method to <paramref name="writer"/>.</summary>
     /// <returns>The census of the <c>goto</c>s the printed method holds.</returns>
     public GotoCensus Emit(CSharpSourceWriter writer, MethodPlan method) {
         FlagLiveness liveness = FlagLiveness.Compute(method);
