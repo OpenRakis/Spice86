@@ -254,7 +254,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:01A0 cmp BL,9
         Alu8.Sub(BL, 9);
         // 016D:01A3 ja short 0x01B3
-        if (!(!CarryFlag && !ZeroFlag)) {
+        if (CarryFlag || ZeroFlag) {
             // 016D:01A5 mov BL,AL
             BL = AL;
             // 016D:01A7 and BL,0x0F
@@ -262,7 +262,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // 016D:01AA cmp BL,9
             Alu8.Sub(BL, 9);
             // 016D:01AD ja short 0x01B3
-            if (!(!CarryFlag && !ZeroFlag)) {
+            if (CarryFlag || ZeroFlag) {
                 // 016D:01AF clc
                 CarryFlag = false;
                 // 016D:01B0 pop BX

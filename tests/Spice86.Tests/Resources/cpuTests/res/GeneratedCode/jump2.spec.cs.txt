@@ -82,7 +82,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs2, 0x129A);
         // F000:129A loope 0x129D
         CX--;
-        if (!(CX != 0 && ZeroFlag)) {
+        if (CX == 0 || !ZeroFlag) {
             VerifySpeculativeEntryOrFail(cs2, 0x129C, Signature_129C_hlt);
             // F000:129C hlt
             return Hlt();

@@ -2856,12 +2856,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                     return Hlt();
                 }
                 // F000:00A8 jbe short 0x00B5
-                if (!(CarryFlag || ZeroFlag)) {
+                if (!CarryFlag && !ZeroFlag) {
                     goto L_00AA;
                 }
             }
             // F000:00B5 jbe short 0x00AA
-            if (!(CarryFlag || ZeroFlag)) {
+            if (!CarryFlag && !ZeroFlag) {
                 goto L_00B7;
             }
         L_00AA:
@@ -2923,7 +2923,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                     // F000:00D5 sahf
                     FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
                     // F000:00D6 ja short 0x00E3
-                    if (!(!CarryFlag && !ZeroFlag)) {
+                    if (CarryFlag || ZeroFlag) {
                         VerifySpeculativeEntryOrFail(cs1, 0x00D8, Signature_00D8_hlt);
                         // F000:00D8 hlt
                         return Hlt();
@@ -2973,7 +2973,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                             return Hlt();
                         }
                         // F000:00F8 jg short 0x0127
-                        if (!(!ZeroFlag && SignFlag == OverflowFlag)) {
+                        if (ZeroFlag || SignFlag != OverflowFlag) {
                             VerifySpeculativeEntryOrFail(cs1, 0x00FA, Signature_00FA_hlt);
                             // F000:00FA hlt
                             return Hlt();
@@ -2995,7 +2995,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                     // F000:0129 jl short 0x0101
                     if (SignFlag != OverflowFlag) {
                         // F000:0101 jle short 0x012B
-                        if (!(ZeroFlag || SignFlag != OverflowFlag)) {
+                        if (!ZeroFlag && SignFlag == OverflowFlag) {
                             VerifySpeculativeEntryOrFail(cs1, 0x0103, Signature_0103_hlt);
                             // F000:0103 hlt
                             return Hlt();
@@ -3125,12 +3125,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                 return Hlt();
                             }
                             // F000:0169 jbe near 0x0201
-                            if (!(CarryFlag || ZeroFlag)) {
+                            if (!CarryFlag && !ZeroFlag) {
                                 goto L_016D;
                             }
                         }
                         // F000:0201 jbe near 0x016D
-                        if (!(CarryFlag || ZeroFlag)) {
+                        if (!CarryFlag && !ZeroFlag) {
                             goto L_0205;
                         }
                     L_016D:
@@ -3192,7 +3192,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                 // F000:022B sahf
                                 FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
                                 // F000:022C ja near 0x02C4
-                                if (!(!CarryFlag && !ZeroFlag)) {
+                                if (CarryFlag || ZeroFlag) {
                                     VerifySpeculativeEntryOrFail(cs1, 0x0230, Signature_0230_hlt);
                                     // F000:0230 hlt
                                     return Hlt();
@@ -3242,7 +3242,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                         return Hlt();
                                     }
                                     // F000:02E5 jg near 0x0383
-                                    if (!(!ZeroFlag && SignFlag == OverflowFlag)) {
+                                    if (ZeroFlag || SignFlag != OverflowFlag) {
                                         VerifySpeculativeEntryOrFail(cs1, 0x02E9, Signature_02E9_hlt);
                                         // F000:02E9 hlt
                                         return Hlt();
@@ -3264,7 +3264,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                 // F000:0387 jl near 0x02F2
                                 if (SignFlag != OverflowFlag) {
                                     // F000:02F2 jle near 0x038B
-                                    if (!(ZeroFlag || SignFlag != OverflowFlag)) {
+                                    if (!ZeroFlag && SignFlag == OverflowFlag) {
                                         VerifySpeculativeEntryOrFail(cs1, 0x02F6, Signature_02F6_hlt);
                                         // F000:02F6 hlt
                                         return Hlt();

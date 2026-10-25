@@ -49,6 +49,14 @@ internal static class CodeGenerationAst {
         if (condition is BinaryOperationNode comparison && InvertedComparison(comparison.BinaryOperation) is BinaryOperation inverted) {
             return new BinaryOperationNode(DataType.BOOL, comparison.Left, inverted, comparison.Right);
         }
+        if (condition is BinaryOperationNode { BinaryOperation: BinaryOperation.LOGICAL_AND } conjunction) {
+            return new BinaryOperationNode(DataType.BOOL, NegatedCondition(conjunction.Left), BinaryOperation.LOGICAL_OR,
+                NegatedCondition(conjunction.Right));
+        }
+        if (condition is BinaryOperationNode { BinaryOperation: BinaryOperation.LOGICAL_OR } disjunction) {
+            return new BinaryOperationNode(DataType.BOOL, NegatedCondition(disjunction.Left), BinaryOperation.LOGICAL_AND,
+                NegatedCondition(disjunction.Right));
+        }
         return new UnaryOperationNode(DataType.BOOL, UnaryOperation.NOT, condition);
     }
 

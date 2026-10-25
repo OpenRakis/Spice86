@@ -31,18 +31,18 @@ public class NegatedConditionTest {
     }
 
     [Fact]
-    public void NotIsUnwrappedAndOtherConditionsAreWrapped() {
+    public void NotIsUnwrappedAndLogicalOrDistributes() {
         // Arrange
         CpuFlagNode zero = new(Flags.Zero);
         BinaryOperationNode carryOrZero = new(DataType.BOOL, new CpuFlagNode(Flags.Carry), BinaryOperation.LOGICAL_OR, zero);
 
         // Act
         ValueNode unwrapped = CodeGenerationAst.NegatedCondition(new UnaryOperationNode(DataType.BOOL, UnaryOperation.NOT, zero));
-        ValueNode wrapped = CodeGenerationAst.NegatedCondition(carryOrZero);
+        ValueNode distributed = CodeGenerationAst.NegatedCondition(carryOrZero);
 
         // Assert
         Print(unwrapped).Should().Be("ZeroFlag");
-        Print(wrapped).Should().Be("!(CarryFlag || ZeroFlag)");
+        Print(distributed).Should().Be("!CarryFlag && !ZeroFlag");
     }
 
     private static string Print(ValueNode node) =>

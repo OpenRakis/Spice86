@@ -48,7 +48,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0013 clc
         CarryFlag = false;
         // F000:0014 ja short 0x0018
-        if (!(!CarryFlag && !ZeroFlag)) {
+        if (CarryFlag || ZeroFlag) {
             throw FailAsUntested("Untested fallthrough at F000:0014");
         }
         // F000:0018 stc
@@ -83,7 +83,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(cs1, 0x002B);
         // F000:002B jbe short 0x002F
-        if (!(CarryFlag || ZeroFlag)) {
+        if (!CarryFlag && !ZeroFlag) {
             throw FailAsUntested("Untested fallthrough at F000:002B");
         }
         // F000:002F push CX
@@ -123,7 +123,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(cs1, 0x0045);
         // F000:0045 jg short 0x0049
-        if (!(!ZeroFlag && SignFlag == OverflowFlag)) {
+        if (ZeroFlag || SignFlag != OverflowFlag) {
             throw FailAsUntested("Untested fallthrough at F000:0045");
         }
         // F000:0049 mov DX,0x0080
@@ -176,7 +176,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(cs1, 0x0067);
         // F000:0067 jle short 0x006B
-        if (!(ZeroFlag || SignFlag != OverflowFlag)) {
+        if (!ZeroFlag && SignFlag == OverflowFlag) {
             throw FailAsUntested("Untested fallthrough at F000:0067");
         }
         // F000:006B jne short 0x0069

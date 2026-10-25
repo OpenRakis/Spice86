@@ -92,7 +92,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // 016D:010B cmp AH,0x44
             Alu8.Sub(AH, 0x44);
             // 016D:010E ja short 0x0115
-            if (!(!CarryFlag && !ZeroFlag)) {
+            if (CarryFlag || ZeroFlag) {
                 // 016D:0110 sub AH,0x3A
                 AH = Alu8.Sub(AH, 0x3A);
                 // 016D:0113 mov AL,AH

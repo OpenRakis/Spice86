@@ -97,7 +97,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 // 016D:0119 cmp DH,0x0C
                 Alu8.Sub(DH, 0x0C);
                 // 016D:011C ja near 0x021F
-                if (!(!CarryFlag && !ZeroFlag)) {
+                if (CarryFlag || ZeroFlag) {
                     // 016D:0120 cmp DL,1
                     Alu8.Sub(DL, 1);
                     // 016D:0123 jb near 0x021F
@@ -105,7 +105,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                         // 016D:0127 cmp DL,0x1F
                         Alu8.Sub(DL, 0x1F);
                         // 016D:012A ja near 0x021F
-                        if (!(!CarryFlag && !ZeroFlag)) {
+                        if (CarryFlag || ZeroFlag) {
                             // 016D:012E mov DX,0x0998
                             DX = 0x0998;
                             // 016D:0131 mov AL,2
@@ -199,19 +199,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                             // 016D:0194 cmp CH,0x17
                                             Alu8.Sub(CH, 0x17);
                                             // 016D:0197 ja near 0x021F
-                                            if (!(!CarryFlag && !ZeroFlag)) {
+                                            if (CarryFlag || ZeroFlag) {
                                                 // 016D:019B cmp CL,0x3B
                                                 Alu8.Sub(CL, 0x3B);
                                                 // 016D:019E ja short 0x021F
-                                                if (!(!CarryFlag && !ZeroFlag)) {
+                                                if (CarryFlag || ZeroFlag) {
                                                     // 016D:01A0 cmp DH,0x3B
                                                     Alu8.Sub(DH, 0x3B);
                                                     // 016D:01A3 ja short 0x021F
-                                                    if (!(!CarryFlag && !ZeroFlag)) {
+                                                    if (CarryFlag || ZeroFlag) {
                                                         // 016D:01A5 cmp DL,0x63
                                                         Alu8.Sub(DL, 0x63);
                                                         // 016D:01A8 ja short 0x021F
-                                                        if (!(!CarryFlag && !ZeroFlag)) {
+                                                        if (CarryFlag || ZeroFlag) {
                                                             // 016D:01AA mov DX,0x0998
                                                             DX = 0x0998;
                                                             // 016D:01AD mov AL,7
