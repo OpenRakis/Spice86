@@ -39,13 +39,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0012 mov SP,0x00A0
         SP = 0x00A0;
         // F000:0015 rcl AX,1
-        AX = Alu16.Rcl(AX, (byte)1);
+        AX = Alu16.Rcl(AX, 1);
         // F000:0017 pushf
         Stack.Push16(FlagRegister16);
         // F000:0018 mov word ptr DS:[0x0020],AX
         UInt16[DS, 0x0020] = AX;
         // F000:001B rcl word ptr DS:[0],1
-        UInt16[DS, 0] = Alu16.Rcl(UInt16[DS, 0], (byte)1);
+        UInt16[DS, 0] = Alu16.Rcl(UInt16[DS, 0], 1);
         // F000:001F pushf
         Stack.Push16(FlagRegister16);
         // F000:0020 mov CX,0x0100
@@ -89,13 +89,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0052 mov word ptr DS:[6],0x6FD8
         UInt16[DS, 6] = 0x6FD8;
         // F000:0058 rcl AH,1
-        AH = Alu8.Rcl(AH, (byte)1);
+        AH = Alu8.Rcl(AH, 1);
         // F000:005A pushf
         Stack.Push16(FlagRegister16);
         // F000:005B mov word ptr DS:[0x0028],AX
         UInt16[DS, 0x0028] = AX;
         // F000:005E rcl byte ptr DS:[5],1
-        UInt8[DS, 5] = Alu8.Rcl(UInt8[DS, 5], (byte)1);
+        UInt8[DS, 5] = Alu8.Rcl(UInt8[DS, 5], 1);
         // F000:0062 pushf
         Stack.Push16(FlagRegister16);
         // F000:0063 mov CL,7
@@ -199,13 +199,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00EB mov word ptr DS:[0x0012],0xD74A
         UInt16[DS, 0x0012] = 0xD74A;
         // F000:00F1 rol AX,1
-        AX = Alu16.Rol(AX, (byte)1);
+        AX = Alu16.Rol(AX, 1);
         // F000:00F3 pushf
         Stack.Push16(FlagRegister16);
         // F000:00F4 mov word ptr DS:[0x0038],AX
         UInt16[DS, 0x0038] = AX;
         // F000:00F7 rol word ptr DS:[0x0010],1
-        UInt16[DS, 0x0010] = Alu16.Rol(UInt16[DS, 0x0010], (byte)1);
+        UInt16[DS, 0x0010] = Alu16.Rol(UInt16[DS, 0x0010], 1);
         // F000:00FB pushf
         Stack.Push16(FlagRegister16);
         // F000:00FC mov CX,0x0100
@@ -249,13 +249,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:012E mov word ptr DS:[0x0016],0x48E8
         UInt16[DS, 0x0016] = 0x48E8;
         // F000:0134 rol AH,1
-        AH = Alu8.Rol(AH, (byte)1);
+        AH = Alu8.Rol(AH, 1);
         // F000:0136 pushf
         Stack.Push16(FlagRegister16);
         // F000:0137 mov word ptr DS:[0x0040],AX
         UInt16[DS, 0x0040] = AX;
         // F000:013A rol byte ptr DS:[0x0015],1
-        UInt8[DS, 0x0015] = Alu8.Rol(UInt8[DS, 0x0015], (byte)1);
+        UInt8[DS, 0x0015] = Alu8.Rol(UInt8[DS, 0x0015], 1);
         // F000:013E pushf
         Stack.Push16(FlagRegister16);
         // F000:013F mov CL,7

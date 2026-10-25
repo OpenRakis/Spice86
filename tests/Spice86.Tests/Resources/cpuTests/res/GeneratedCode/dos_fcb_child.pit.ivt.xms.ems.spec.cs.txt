@@ -97,7 +97,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016E:010B add DX,0x030F
         DX = Alu16.Add(DX, 0x030F);
         // 016E:010F shr DX,4
-        DX = Alu16.Shr(DX, (int)4);
+        DX = Alu16.Shr(DX, 4);
         // 016E:0112 mov BX,DX
         BX = DX;
         // 016E:0114 mov AH,0x4A

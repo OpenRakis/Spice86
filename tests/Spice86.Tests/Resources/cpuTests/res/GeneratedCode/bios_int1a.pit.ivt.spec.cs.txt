@@ -252,7 +252,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:019B mov BL,AL
         BL = AL;
         // 016D:019D shr BL,4
-        BL = Alu8.Shr(BL, (int)4);
+        BL = Alu8.Shr(BL, 4);
         // 016D:01A0 cmp BL,9
         Alu8.Sub(BL, 9);
         // 016D:01A3 ja short 0x01B3

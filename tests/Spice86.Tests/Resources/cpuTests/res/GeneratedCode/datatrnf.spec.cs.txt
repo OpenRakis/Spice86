@@ -134,7 +134,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0071 mov DS,AX
         DS = AX;
         // F000:0073 pop word ptr DS:[SI+1]
-        ushort popStackCheck_0073 = Stack.Peek16((int)0);
+        ushort popStackCheck_0073 = Stack.Peek16(0);
         ushort popDestinationCheck_0073 = UInt16[DS, (ushort)(SI + 1)];
         ushort poppedValue_0073 = Stack.Pop16();
         UInt16[DS, (ushort)(SI + 1)] = (ushort)poppedValue_0073;

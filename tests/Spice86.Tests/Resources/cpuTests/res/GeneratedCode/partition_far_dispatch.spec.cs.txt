@@ -63,7 +63,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:000F dec BX
             BX = Alu16.Dec(BX);
             // F000:0010 shl BX,2
-            BX = Alu16.Shl(BX, (int)2);
+            BX = Alu16.Shl(BX, 2);
             // F000:0013 call far dword ptr CS:[BX+0x3D]
             ushort targetSegment_0013 = UInt16[CS, (ushort)(BX + 0x3D + 2)];
             ushort targetOffset_0013 = UInt16[CS, (ushort)(BX + 0x3D)];
@@ -90,7 +90,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:001E dec BX
             BX--;
             // F000:001F shl BX,2
-            BX = Alu16.Shl(BX, (int)2);
+            BX = Alu16.Shl(BX, 2);
             // F000:0022 jmp far dword ptr CS:[BX+0x45]
             ushort targetSegment_0022 = UInt16[CS, (ushort)(BX + 0x45 + 2)];
             ushort targetOffset_0022 = UInt16[CS, (ushort)(BX + 0x45)];
