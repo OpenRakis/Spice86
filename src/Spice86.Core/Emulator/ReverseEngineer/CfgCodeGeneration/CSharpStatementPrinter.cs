@@ -137,13 +137,27 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
         writer.OpenBlock($"if ({expressions.Print(node.Condition)})");
         PrintBody(node.TrueCase);
         writer.CloseBlock();
-        if (IsEmptyBlock(node.FalseCase)) {
+        IVisitableAstNode falseCase = node.FalseCase;
+        while (OnlyIfElse(falseCase) is IfElseNode elseIf) {
+            writer.OpenBlock($"else if ({expressions.Print(elseIf.Condition)})");
+            PrintBody(elseIf.TrueCase);
+            writer.CloseBlock();
+            falseCase = elseIf.FalseCase;
+        }
+        if (IsEmptyBlock(falseCase)) {
             return;
         }
         writer.OpenBlock("else");
-        PrintBody(node.FalseCase);
+        PrintBody(falseCase);
         writer.CloseBlock();
     }
+
+    /// <summary>The <c>if</c> that is the only statement of <paramref name="node"/>, or <c>null</c>.</summary>
+    private static IfElseNode? OnlyIfElse(IVisitableAstNode node) => node switch {
+        IfElseNode ifElse => ifElse,
+        BlockNode { Statements: [IfElseNode ifElse] } => ifElse,
+        _ => null
+    };
 
     private static bool IsEmptyBlock(IVisitableAstNode node) => node is BlockNode { Statements.Count: 0 };
 

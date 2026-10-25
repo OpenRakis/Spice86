@@ -70,13 +70,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             if (targetSegment_0013 == cs1 && targetOffset_0013 == 0x0029) {
                 FarCall(cs1, 0x0017, cs1, unknown_F000_0029_F0029);
             }
+            else if (targetSegment_0013 == cs1 && targetOffset_0013 == 0x002D) {
+                FarCall(cs1, 0x0017, cs1, unknown_F000_002D_F002D);
+            }
             else {
-                if (targetSegment_0013 == cs1 && targetOffset_0013 == 0x002D) {
-                    FarCall(cs1, 0x0017, cs1, unknown_F000_002D_F002D);
-                }
-                else {
-                    throw FailAsUntested($"Untested far call target {targetSegment_0013:X4}:{targetOffset_0013:X4} at F000:0013");
-                }
+                throw FailAsUntested($"Untested far call target {targetSegment_0013:X4}:{targetOffset_0013:X4} at F000:0013");
             }
             // F000:0017 loop 0x000D
             CX--;
