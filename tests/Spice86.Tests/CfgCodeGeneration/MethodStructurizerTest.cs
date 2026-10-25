@@ -741,4 +741,65 @@ public class MethodStructurizerTest {
 
     private static LoweredBlock Ending(CfgBlock block, string name) =>
         new(block, false, new BlockNode(new InstructionBoundaryNode(block.Entry, "", new BlockNode(new CommentNode(name), Untested()))));
+
+    [Fact]
+    public void ArmHeadTargetedByTwoGotosRecordsSharedTargetAndTheOtherArmNeverComesBack() {
+        // Arrange
+        CfgBlock then = Block(11, 0x40);
+        CfgBlock other = Block(12, 0x50);
+        CfgBlock join = Block(13, 0x60);
+        CfgBlock late = Block(14, 0x70);
+        NaturalLoopForest loops = Forest([_entry, then, other, join, late],
+            new() { [_entry] = [then, other], [then] = [join], [other] = [join], [late] = [other] });
+        GotoNode trueGoto = new(then.Entry);
+        GotoNode falseGoto = new(other.Entry);
+        LoweredBlock decide = new(_entry, false, new BlockNode(new InstructionBoundaryNode(_entry.Entry, "",
+            new BlockNode(new CommentNode("decide"), new IfElseNode(Zero, new BlockNode(trueGoto), new BlockNode(falseGoto))))));
+        LoweredBlock[] blocks = [
+            decide, Jumping(then, "then", join), Jumping(other, "other", join),
+            Jumping(late, "late", other), Lowered(join, false, "join")
+        ];
+        Dictionary<GotoNode, GotoKeepReason> refusals = new(ReferenceEqualityComparer.Instance);
+
+        // Act
+        MethodStructurizer.Structure(blocks, loops, Entries(), "method", refusals);
+
+        // Assert
+        refusals.Should().HaveCount(2);
+        refusals[trueGoto].Should().Be(GotoKeepReason.ArmNeverComesBack);
+        refusals[falseGoto].Should().Be(GotoKeepReason.SharedTarget);
+    }
+
+    [Fact]
+    public void ArmThatIsNotASingleGotoRecordsOtherArmNotGotoOnTheGotoArm() {
+        // Arrange
+        GotoNode trueGoto = new(_exit.Entry);
+        IfElseNode branch = new(Zero, new BlockNode(trueGoto), new BlockNode(Untested()));
+        LoweredBlock decide = new(_entry, false, new BlockNode(new InstructionBoundaryNode(_entry.Entry, "",
+            new BlockNode(new CommentNode("decide"), branch))));
+        LoweredBlock[] blocks = [decide, Lowered(_spin, true, "spin"), Lowered(_exit, false, "exit")];
+        Dictionary<GotoNode, GotoKeepReason> refusals = new(ReferenceEqualityComparer.Instance);
+
+        // Act
+        MethodStructurizer.Structure(blocks, _loops, Entries(), "method", refusals);
+
+        // Assert
+        refusals.Should().ContainSingle().Which.Should().Be(new KeyValuePair<GotoNode, GotoKeepReason>(trueGoto, GotoKeepReason.OtherArmNotGoto));
+    }
+
+    [Fact]
+    public void NestedBranchRecordsNoRefusal() {
+        // Arrange
+        CfgBlock then = Block(11, 0x40);
+        CfgBlock join = Block(12, 0x50);
+        NaturalLoopForest loops = Forest([_entry, then, join], new() { [_entry] = [then, join], [then] = [join] });
+        LoweredBlock[] blocks = [Deciding(_entry, then, join), Jumping(then, "then", join), Lowered(join, false, "join")];
+        Dictionary<GotoNode, GotoKeepReason> refusals = new(ReferenceEqualityComparer.Instance);
+
+        // Act
+        MethodStructurizer.Structure(blocks, loops, Entries(), "method", refusals);
+
+        // Assert
+        refusals.Should().BeEmpty();
+    }
 }

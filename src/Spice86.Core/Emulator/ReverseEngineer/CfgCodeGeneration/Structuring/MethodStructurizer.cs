@@ -32,13 +32,27 @@ internal static class MethodStructurizer {
     /// <param name="methodName">The method name, for error messages.</param>
     /// <exception cref="InvalidOperationException">A natural loop header does not start with <c>CheckExternalEvents</c>.</exception>
     /// <exception cref="InvalidOperationException">A loop header or an arm head is not the first block of its loop or arm in the layout.</exception>
-    public static BlockNode Structure(IReadOnlyList<LoweredBlock> blocks, NaturalLoopForest loops, IReadOnlySet<ICfgNode> entryNodes, string methodName) {
+    public static BlockNode Structure(IReadOnlyList<LoweredBlock> blocks, NaturalLoopForest loops, IReadOnlySet<ICfgNode> entryNodes, string methodName) =>
+        Structure(blocks, loops, entryNodes, methodName, new Dictionary<GotoNode, GotoKeepReason>(ReferenceEqualityComparer.Instance));
+
+    /// <inheritdoc cref="Structure(IReadOnlyList{LoweredBlock}, NaturalLoopForest, IReadOnlySet{ICfgNode}, string)"/>
+    /// <param name="refusals">Filled with the reason each <c>goto</c> arm of a refused branch or <c>switch</c> section
+    /// was not nested, keyed by the <see cref="GotoNode"/> instance (later records overwrite earlier ones).</param>
+    public static BlockNode Structure(IReadOnlyList<LoweredBlock> blocks, NaturalLoopForest loops, IReadOnlySet<ICfgNode> entryNodes, string methodName,
+        Dictionary<GotoNode, GotoKeepReason> refusals) {
         CheckLoopHeaders(blocks, loops, methodName);
         Dictionary<ICfgNode, int> gotoCountByTarget = new();
         foreach (LoweredBlock block in blocks) {
             CountGotos(block.Body, gotoCountByTarget);
         }
-        return new RegionWalker(loops, entryNodes, gotoCountByTarget, methodName).Walk(blocks, null);
+        return new RegionWalker(loops, entryNodes, gotoCountByTarget, refusals, methodName).Walk(blocks, null);
+    }
+
+    /// <summary>Whether <paramref name="loop"/> can become a structured loop: no partition entry inside it other than its header.</summary>
+    internal static bool IsStructurable(NaturalLoop loop, IReadOnlySet<ICfgNode> entryNodes) {
+        ICfgNode header = loop.Header.Entry;
+        return !loop.Blocks.SelectMany(block => block.Instructions)
+            .Any(node => entryNodes.Contains(node) && !ReferenceEquals(node, header));
     }
 
     /// <summary>Adds one per <c>goto</c> of <paramref name="node"/> to the count of its target.</summary>
@@ -80,12 +94,10 @@ internal static class MethodStructurizer {
         }
     }
 
-    private static ICfgNode? OnlyGotoTarget(IVisitableAstNode arm) {
-        if (Sequence(arm).Statements is [GotoNode jump]) {
-            return jump.Target;
-        }
-        return null;
-    }
+    private static GotoNode? OnlyGoto(IVisitableAstNode arm) =>
+        Sequence(arm).Statements is [GotoNode jump] ? jump : null;
+
+    private static ICfgNode? OnlyGotoTarget(IVisitableAstNode arm) => OnlyGoto(arm)?.Target;
 
     private static bool IsOnlyGotoTo(IVisitableAstNode arm, ICfgNode target) =>
         Sequence(arm).Statements is [GotoNode jump] && ReferenceEquals(jump.Target, target);
@@ -129,7 +141,8 @@ internal static class MethodStructurizer {
 
     /// <summary>Structures the regions of one method: the method body, loop bodies and <c>if</c> arms.</summary>
     private sealed class RegionWalker(NaturalLoopForest loops, IReadOnlySet<ICfgNode> entryNodes,
-        IReadOnlyDictionary<ICfgNode, int> gotoCountByTarget, string methodName) {
+        IReadOnlyDictionary<ICfgNode, int> gotoCountByTarget, Dictionary<GotoNode, GotoKeepReason> refusals,
+        string methodName) {
         /// <summary>
         /// The statements of <paramref name="members"/>, blocks in layout order: the header of a structurable loop other
         /// than <paramref name="enclosing"/> starts that loop, built from its blocks among <paramref name="members"/>; a
@@ -143,7 +156,7 @@ internal static class MethodStructurizer {
                 if (placed.Contains(block.Block)) {
                     continue;
                 }
-                if (loops.LoopWithHeader(block.Block) is NaturalLoop loop && loop != enclosing && IsStructurable(loop)) {
+                if (loops.LoopWithHeader(block.Block) is NaturalLoop loop && loop != enclosing && IsStructurable(loop, entryNodes)) {
                     List<LoweredBlock> loopMembers = members.Where(member => loop.Contains(member.Block)).ToList();
                     if (!ReferenceEquals(loopMembers[0].Block, loop.Header)) {
                         throw new InvalidOperationException(
@@ -167,10 +180,10 @@ internal static class MethodStructurizer {
             return Sequence(statements);
         }
 
-        private bool IsStructurable(NaturalLoop loop) {
-            ICfgNode header = loop.Header.Entry;
-            return !loop.Blocks.SelectMany(block => block.Instructions)
-                .Any(node => entryNodes.Contains(node) && !ReferenceEquals(node, header));
+        private void Record(GotoNode? jump, GotoKeepReason? reason) {
+            if (jump is not null && reason is not null) {
+                refusals[jump] = reason.Value;
+            }
         }
 
         private IVisitableAstNode LoopStatement(NaturalLoop loop, IReadOnlyList<LoweredBlock> members) {
@@ -223,15 +236,30 @@ internal static class MethodStructurizer {
         private BlockNode? BranchStatement(LoweredBlock block, IReadOnlyList<LoweredBlock> members, HashSet<CfgBlock> placed,
             NaturalLoop? enclosing) {
             if (block.Body.Statements is not [.., InstructionBoundaryNode last]
-                || last.Body.Statements is not [.., IfElseNode branch]
-                || !ReadsOnlyMachineState(branch.Condition)
-                || OnlyGotoTarget(branch.TrueCase) is not ICfgNode whenTrue
-                || OnlyGotoTarget(branch.FalseCase) is not ICfgNode whenFalse
-                || ReferenceEquals(whenTrue, whenFalse)) {
+                || last.Body.Statements is not [.., IfElseNode branch]) {
                 return null;
             }
-            List<LoweredBlock>? trueArm = ArmBlocks(whenTrue, members, placed, enclosing);
-            List<LoweredBlock>? falseArm = ArmBlocks(whenFalse, members, placed, enclosing);
+            GotoNode? trueGoto = OnlyGoto(branch.TrueCase);
+            GotoNode? falseGoto = OnlyGoto(branch.FalseCase);
+            if (!ReadsOnlyMachineState(branch.Condition)) {
+                Record(trueGoto, GotoKeepReason.ConditionReadsLocals);
+                Record(falseGoto, GotoKeepReason.ConditionReadsLocals);
+                return null;
+            }
+            if (trueGoto is null || falseGoto is null) {
+                Record(trueGoto, GotoKeepReason.OtherArmNotGoto);
+                Record(falseGoto, GotoKeepReason.OtherArmNotGoto);
+                return null;
+            }
+            ICfgNode whenTrue = trueGoto.Target;
+            ICfgNode whenFalse = falseGoto.Target;
+            if (ReferenceEquals(whenTrue, whenFalse)) {
+                Record(trueGoto, GotoKeepReason.NotNextInLayout);
+                Record(falseGoto, GotoKeepReason.NotNextInLayout);
+                return null;
+            }
+            (List<LoweredBlock>? trueArm, GotoKeepReason? trueFailure) = ArmBlocksWithReason(whenTrue, members, placed, enclosing);
+            (List<LoweredBlock>? falseArm, GotoKeepReason? falseFailure) = ArmBlocksWithReason(whenFalse, members, placed, enclosing);
             bool trueComesBack = trueArm is not null && ComesBackTo(trueArm, whenFalse);
             bool falseComesBack = falseArm is not null && ComesBackTo(falseArm, whenTrue);
             InstructionBoundaryNode lastWithoutBranch = last with {
@@ -246,6 +274,16 @@ internal static class MethodStructurizer {
             }
             if (trueComesBack || falseComesBack || trueArm is null || falseArm is null
                 || CommonJoin(trueArm, falseArm) is not ICfgNode join) {
+                Record(trueGoto, trueFailure);
+                Record(falseGoto, falseFailure);
+                if (trueArm is not null && falseArm is not null) {
+                    Record(trueGoto, GotoKeepReason.NoSingleJoin);
+                    Record(falseGoto, GotoKeepReason.NoSingleJoin);
+                } else if (trueArm is not null) {
+                    Record(trueGoto, GotoKeepReason.ArmNeverComesBack);
+                } else if (falseArm is not null) {
+                    Record(falseGoto, GotoKeepReason.ArmNeverComesBack);
+                }
                 return null;
             }
             return Nested(head, branch.Condition, trueArm, falseArm, join, placed, enclosing);
@@ -273,25 +311,39 @@ internal static class MethodStructurizer {
         /// entry, or the arm holds a latch of <paramref name="enclosing"/>.
         /// </summary>
         private List<LoweredBlock>? ArmBlocks(ICfgNode head, IReadOnlyList<LoweredBlock> members, HashSet<CfgBlock> placed,
-            NaturalLoop? enclosing) {
+            NaturalLoop? enclosing) =>
+            ArmBlocksWithReason(head, members, placed, enclosing).Arm;
+
+        /// <summary>The arm of <see cref="ArmBlocks"/>, or the reason it cannot be nested.</summary>
+        private (List<LoweredBlock>? Arm, GotoKeepReason? Reason) ArmBlocksWithReason(ICfgNode head,
+            IReadOnlyList<LoweredBlock> members, HashSet<CfgBlock> placed, NaturalLoop? enclosing) {
             LoweredBlock? headBlock = members.FirstOrDefault(member => ReferenceEquals(member.Block.Entry, head));
-            if (headBlock is null || placed.Contains(headBlock.Block)
-                || gotoCountByTarget.GetValueOrDefault(head) != 1
-                || loops.LoopWithHeader(headBlock.Block) is not null
-                || headBlock.Block.Instructions.Any(entryNodes.Contains)) {
-                return null;
+            if (headBlock is null) {
+                return (null, GotoKeepReason.ArmOutsideRegion);
+            }
+            if (placed.Contains(headBlock.Block)) {
+                return (null, GotoKeepReason.ArmHeadPlaced);
+            }
+            if (gotoCountByTarget.GetValueOrDefault(head) != 1) {
+                return (null, GotoKeepReason.SharedTarget);
+            }
+            if (loops.LoopWithHeader(headBlock.Block) is not null) {
+                return (null, GotoKeepReason.ArmHeadIsLoopHeader);
+            }
+            if (headBlock.Block.Instructions.Any(entryNodes.Contains)) {
+                return (null, GotoKeepReason.TargetIsEntry);
             }
             List<LoweredBlock> arm = members
                 .Where(member => !placed.Contains(member.Block) && loops.Dominators.Dominates(headBlock.Block, member.Block))
                 .ToList();
             if (enclosing is not null && arm.Any(member => enclosing.Latches.Contains(member.Block))) {
-                return null;
+                return (null, GotoKeepReason.ArmHoldsLatch);
             }
             if (!ReferenceEquals(arm[0], headBlock)) {
                 throw new InvalidOperationException(
                     $"Generated method {methodName}: arm head {head.Address} is not the first block of its arm in the layout.");
             }
-            return arm;
+            return (arm, null);
         }
 
         private bool ComesBackTo(List<LoweredBlock> arm, ICfgNode target) =>
@@ -323,8 +375,11 @@ internal static class MethodStructurizer {
         private BlockNode? DispatchStatement(LoweredBlock block, IReadOnlyList<LoweredBlock> members, HashSet<CfgBlock> placed,
             NaturalLoop? enclosing) {
             if (block.Body.Statements is not [.., InstructionBoundaryNode last]
-                || last.Body.Statements is not [.., SwitchNode dispatch]
-                || !ReadsOnlyMachineState(dispatch.Value)) {
+                || last.Body.Statements is not [.., SwitchNode dispatch]) {
+                return null;
+            }
+            if (!ReadsOnlyMachineState(dispatch.Value)) {
+                RecordFlatSections(dispatch.Sections, []);
                 return null;
             }
             Dictionary<int, List<LoweredBlock>> armByLabel = [];
@@ -342,6 +397,7 @@ internal static class MethodStructurizer {
             }
             List<int> nestedLabels = armByLabel.Where(pair => IsCaseArm(pair.Value, join)).Select(pair => pair.Key).ToList();
             if (nestedLabels.Count < 2) {
+                RecordFlatSections(dispatch.Sections, []);
                 return null;
             }
             foreach (int label in nestedLabels) {
@@ -355,6 +411,7 @@ internal static class MethodStructurizer {
                     sections.Add(section);
                 }
             }
+            RecordFlatSections(sections, nestedLabels);
             InstructionBoundaryNode lastWithoutDispatch = last with {
                 Body = Sequence(last.Body.Statements.Take(last.Body.Statements.Count - 1))
             };
@@ -365,6 +422,16 @@ internal static class MethodStructurizer {
                 statements.Add(new GotoNode(join.Entry));
             }
             return Sequence(statements);
+        }
+
+        /// <summary>Records <see cref="GotoKeepReason.SwitchSection"/> for each section of <paramref name="sections"/>
+        /// whose label is not in <paramref name="nestedLabels"/> and whose body is a single <c>goto</c>.</summary>
+        private void RecordFlatSections(IReadOnlyList<SwitchSection> sections, IReadOnlyCollection<int> nestedLabels) {
+            foreach (SwitchSection section in sections) {
+                if (!nestedLabels.Contains(section.Label)) {
+                    Record(OnlyGoto(section.Body), GotoKeepReason.SwitchSection);
+                }
+            }
         }
 
         private bool IsCaseArm(List<LoweredBlock> arm, CfgBlock? join) {

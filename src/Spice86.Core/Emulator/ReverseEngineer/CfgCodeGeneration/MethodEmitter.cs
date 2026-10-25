@@ -32,7 +32,8 @@ internal sealed class MethodEmitter(
 
     private readonly CSharpExpressionPrinter _expressions = new(context.SegmentVariables);
 
-    public void Emit(CSharpSourceWriter writer, MethodPlan method) {
+    /// <returns>The census of the <c>goto</c>s the printed method holds.</returns>
+    public GotoCensus Emit(CSharpSourceWriter writer, MethodPlan method) {
         FlagLiveness liveness = FlagLiveness.Compute(method);
         ConditionFusion fusion = ConditionFusionPlanner.Plan(method, liveness);
         // Fused jumps no longer read flags, so the lowering uses the liveness of the code it actually emits.
@@ -43,9 +44,12 @@ internal sealed class MethodEmitter(
         BlockGraphGotoCheck.Check(method.NodeEmissionPlans, boundaries, method.BlockGraph, method.MethodName);
         NaturalLoopForest loops = NaturalLoopForest.Build(method.BlockGraph, method.BlockTraversal.RetreatingEdges);
         HashSet<ICfgNode> entryNodes = method.Entries.Select(entry => entry.Node).ToHashSet();
-        BlockNode structured = MethodStructurizer.Structure(GroupByBlock(method.NodeEmissionPlans, boundaries), loops,
-            entryNodes, method.MethodName);
+        List<LoweredBlock> loweredBlocks = GroupByBlock(method.NodeEmissionPlans, boundaries);
+        Dictionary<GotoNode, GotoKeepReason> refusals = new(ReferenceEqualityComparer.Instance);
+        BlockNode structured = MethodStructurizer.Structure(loweredBlocks, loops, entryNodes, method.MethodName, refusals);
         BlockNode withoutFallthroughGotos = FallthroughGotoRemover.Remove(structured);
+        GotoCensus census = GotoCensusClassifier.Classify(entryDispatch, withoutFallthroughGotos, loops, entryNodes,
+            loweredBlocks, refusals);
         GotoTargets targets = GotoTargetCollector.Collect(Sequence(entryDispatch, withoutFallthroughGotos));
         BlockNode body = LabelPlacer.Place(withoutFallthroughGotos, targets.Labels);
         LabelScopeCheck.Verify(Sequence(entryDispatch, body));
@@ -66,6 +70,7 @@ internal sealed class MethodEmitter(
         printer.Print(body);
         writer.CloseBlock();
         writer.Line();
+        return census;
     }
 
     /// <summary>Groups contiguous boundaries sharing one CFG block into <see cref="LoweredBlock"/>s.</summary>

@@ -167,6 +167,9 @@ internal sealed class GeneratedCodeMachineTestRunner {
         GeneratedCodeMetrics metrics = GeneratedCodeMetricsCollector.Collect(
             GoldenKey(settings), compilation.SyntaxTree, compilation.EmitResult.Diagnostics);
         WriteMetrics(metrics);
+        WriteGotoCensus(GotoCensusLine.Format(GoldenKey(settings), generatedProgram.GotoCensus));
+        generatedProgram.GotoCensus.Total.Should().Be(metrics.GotoStatements,
+            $"every printed goto of {GoldenKey(settings)} has exactly one census reason");
         GeneratedCodeMetricsAssertions.AssertInvariants(metrics, generatedProgram.SourceText);
         return compiler.CompileSupplier(compilation);
     }
@@ -287,6 +290,22 @@ internal sealed class GeneratedCodeMachineTestRunner {
                 _metricsFileInitialized = true;
             }
             File.AppendAllText(metricsPath, metrics.ToLine() + Environment.NewLine);
+        }
+    }
+
+    private static readonly object CensusFileLock = new();
+    private static bool _censusFileInitialized;
+
+    private static void WriteGotoCensus(string line) {
+        string outputDirectory = Path.Join(AppContext.BaseDirectory, "generated-code");
+        Directory.CreateDirectory(outputDirectory);
+        string censusPath = Path.Join(outputDirectory, "goto-census.txt");
+        lock (CensusFileLock) {
+            if (!_censusFileInitialized) {
+                File.Delete(censusPath);
+                _censusFileInitialized = true;
+            }
+            File.AppendAllText(censusPath, line + Environment.NewLine);
         }
     }
 
