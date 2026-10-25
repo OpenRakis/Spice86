@@ -84,7 +84,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:1400 mov BX,1
             BX = 1;
             // F000:1403 shl BX,1
-            BX = Alu16.Shl(BX, 1);
+            CarryFlag = (BX & 0x8000) != 0;
+            BX = (ushort)(BX << 1);
             // F000:1405 push BX
             Stack.Push16(BX);
             // F000:1406 mov SI,0x1000

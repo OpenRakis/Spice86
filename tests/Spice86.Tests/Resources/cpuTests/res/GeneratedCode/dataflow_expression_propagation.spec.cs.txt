@@ -81,7 +81,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:002D add DX,1
             DX = (ushort)(DX + 1);
             // F000:0030 shr DX,1
-            DX = Alu16.Shr(DX, 1);
+            DX = (ushort)(DX >> 1);
             // F000:0032 mov AX,DX
             AX = DX;
             // F000:0034 mov word ptr DS:[BX],AX
@@ -93,7 +93,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:003C add DX,1
             DX = (ushort)(DX + 1);
             // F000:003F shr DX,1
-            DX = Alu16.Shr(DX, 1);
+            DX = (ushort)(DX >> 1);
             // F000:0041 mov AX,DX
             AX = DX;
             // F000:0043 mov DX,0
@@ -107,7 +107,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:0050 add AL,0x80
             AL = (byte)(AL + 0x80);
             // F000:0052 shr AL,1
-            AL = Alu8.Shr(AL, 1);
+            AL = (byte)(AL >> 1);
             // F000:0054 mov CL,AL
             CL = AL;
             // F000:0056 mov byte ptr DS:[BX+8],CL
@@ -117,7 +117,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:005C add DX,1
             DX = (ushort)(DX + 1);
             // F000:005F sar DX,1
-            DX = Alu16.Sar(DX, 1);
+            DX = (ushort)((short)DX >> 1);
             // F000:0061 mov CX,DX
             CX = DX;
             // F000:0063 mov word ptr DS:[BX+0x0A],CX
@@ -260,7 +260,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:0115 mov byte ptr DS:[BX+0x28],1
             UInt8[DS, (ushort)(BX + 0x28)] = 1;
             // F000:0119 shr DX,1
-            DX = Alu16.Shr(DX, 1);
+            CarryFlag = (DX & 1) != 0;
+            DX = (ushort)(DX >> 1);
             // F000:011B jb short 0x0121
             if (!CarryFlag) {
                 // F000:011D mov byte ptr DS:[BX+0x28],2

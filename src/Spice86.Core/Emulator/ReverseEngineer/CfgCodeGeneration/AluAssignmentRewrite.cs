@@ -14,9 +14,11 @@ using System.Numerics;
 
 /// <summary>
 /// Rewrites an instruction whose only work is one ALU call (<c>add</c>, <c>sub</c>, <c>and</c>, <c>or</c>, <c>xor</c>,
-/// <c>inc</c>, <c>dec</c>, and <c>cmp</c> / <c>test</c> whose value is unused) as plain code: an assignment becomes plain
-/// arithmetic when at most one flag the call writes is live after it and that flag has a readable form; an unused call
-/// disappears when no flag it writes is live after it and its operands read no memory and call nothing.
+/// <c>inc</c>, <c>dec</c>, <c>shl</c>, <c>shr</c>, <c>sar</c>, and <c>cmp</c> / <c>test</c> whose value is unused) as
+/// plain code: an assignment becomes plain arithmetic when at most one flag the call writes is live after it and that
+/// flag has a readable form; a shift by a count that is not a constant becomes the masked shift when no flag it may
+/// write is live after it; an unused call disappears when no flag it writes is live after it and its operands read no
+/// memory and call nothing.
 /// </summary>
 internal static class AluAssignmentRewrite {
     private const int MaxLiveFlags = 1;
@@ -41,7 +43,7 @@ internal static class AluAssignmentRewrite {
         }
         AluExpansion? expansion = AluExpansionBuilder.TryExpand(call);
         if (expansion is null) {
-            return null;
+            return TryRewriteShiftValue(assignment, call, moveIp, flagsLiveAfter);
         }
         StatusFlags written = expansion.FlagAssignments.Aggregate(StatusFlags.None, (all, flag) => all | flag.Flag);
         StatusFlags liveWritten = written & flagsLiveAfter;
@@ -63,12 +65,22 @@ internal static class AluAssignmentRewrite {
         };
     }
 
+    private static BlockNode? TryRewriteShiftValue(BinaryOperationNode assignment, MethodCallValueNode call,
+        MoveIpNextNode moveIp, StatusFlags flagsLiveAfter) {
+        ValueNode? value = AluExpansionBuilder.TryExpandShiftValue(call);
+        if (value is null || (FlagEffectVisitor.Of(call).MayWrite & flagsLiveAfter) != StatusFlags.None) {
+            return null;
+        }
+        return new BlockNode(assignment with { Right = value }, moveIp);
+    }
+
     private static StatusFlags ReadableFlags(string operation) => operation switch {
         "Add" => StatusFlags.Zero | StatusFlags.Sign,
         "Sub" => StatusFlags.Carry | StatusFlags.Zero | StatusFlags.Sign,
         "And" or "Or" or "Xor" => StatusFlags.Carry | StatusFlags.Auxiliary | StatusFlags.Zero | StatusFlags.Sign
             | StatusFlags.Overflow,
         "Inc" or "Dec" => StatusFlags.Zero | StatusFlags.Sign | StatusFlags.Overflow,
+        "Shl" or "Shr" or "Sar" => StatusFlags.Carry | StatusFlags.Zero | StatusFlags.Sign,
         _ => StatusFlags.None
     };
 

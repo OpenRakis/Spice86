@@ -14,19 +14,16 @@ using Spice86.Shared.Emulator.Memory;
 internal static class AluExpansionBuilder {
     private const ulong AuxiliaryCarryBit = 0x10;
     private const ushort OddParityByNibble = 0x6996;
+    private const ulong ShiftCountMask = 0x1F;
 
     /// <summary>
     /// The expansion of <paramref name="call"/>, or <c>null</c> when it is not an <c>Add</c>, <c>Sub</c>,
-    /// <c>And</c>, <c>Or</c>, <c>Xor</c>, <c>Inc</c> or <c>Dec</c> call returning the unsigned type of its ALU width.
+    /// <c>And</c>, <c>Or</c>, <c>Xor</c>, <c>Inc</c>, <c>Dec</c>, or a <c>Shl</c>, <c>Shr</c> or <c>Sar</c> call by a
+    /// non-zero masked constant count returning the unsigned type of its ALU width.
     /// </summary>
     public static AluExpansion? TryExpand(MethodCallValueNode call) {
         MethodCallNode callNode = call.CallNode;
-        BitWidth? width = callNode.PropertyPath switch {
-            "Alu8" => BitWidth.BYTE_8,
-            "Alu16" => BitWidth.WORD_16,
-            "Alu32" => BitWidth.DWORD_32,
-            _ => null
-        };
+        BitWidth? width = AluWidth(call);
         if (width is null || call.DataType != DataType.UnsignedFromBitWidth(width.Value)) {
             return null;
         }
@@ -34,9 +31,43 @@ internal static class AluExpansionBuilder {
             ("Add" or "Sub" or "And" or "Or" or "Xor", [ValueNode left, ValueNode right]) =>
                 ExpandBinary(callNode.MethodName, call.DataType, left, right),
             ("Inc" or "Dec", [ValueNode operand]) => ExpandIncDec(callNode.MethodName == "Inc", call.DataType, operand),
+            ("Shl" or "Shr" or "Sar", [ValueNode value, ValueNode count])
+                when ConstantCount(count) is ulong constant && (constant & ShiftCountMask) != 0 =>
+                ExpandShift(callNode.MethodName, call.DataType, value, count, (int)(constant & ShiftCountMask)),
             _ => null
         };
     }
+
+    /// <summary>
+    /// The value of a <c>Shl</c> / <c>Shr</c> / <c>Sar</c> call whose count is not a constant, as plain nodes;
+    /// valid only where no flag the call may write is read, because the flags are not written; <c>null</c> for any
+    /// other call.
+    /// </summary>
+    public static ValueNode? TryExpandShiftValue(MethodCallValueNode call) {
+        MethodCallNode callNode = call.CallNode;
+        BitWidth? width = AluWidth(call);
+        if (width is null || call.DataType != DataType.UnsignedFromBitWidth(width.Value)
+            || callNode.MethodName is not ("Shl" or "Shr" or "Sar")
+            || callNode.Arguments is not [ValueNode value, ValueNode count] || ConstantCount(count) is not null) {
+            return null;
+        }
+        BinaryOperationNode maskedCount = new(count.DataType, count, BinaryOperation.BITWISE_AND,
+            new ConstantNode(count.DataType, ShiftCountMask));
+        return ShiftValue(callNode.MethodName, call.DataType, value, maskedCount);
+    }
+
+    private static BitWidth? AluWidth(MethodCallValueNode call) => call.CallNode.PropertyPath switch {
+        "Alu8" => BitWidth.BYTE_8,
+        "Alu16" => BitWidth.WORD_16,
+        "Alu32" => BitWidth.DWORD_32,
+        _ => null
+    };
+
+    private static ulong? ConstantCount(ValueNode count) => count switch {
+        ConstantNode constant => constant.Value,
+        InstructionFieldNode { ResolvedNode: ConstantNode resolved } => resolved.Value,
+        _ => null
+    };
 
     private static AluExpansion ExpandBinary(string operation, DataType type, ValueNode leftValue, ValueNode rightValue) {
         VariableDeclarationNode left = new(type, "left", leftValue);
@@ -135,4 +166,66 @@ internal static class AluExpansionBuilder {
     private static ConstantNode False() => new(DataType.BOOL, 0);
 
     private static ulong SignBit(DataType type) => 1UL << ((int)type.BitWidth - 1);
+
+    /// <summary>
+    /// The expansion of a <c>Shl</c> / <c>Shr</c> / <c>Sar</c> call by a non-zero masked constant count.
+    /// </summary>
+    private static AluExpansion ExpandShift(string operation, DataType type, ValueNode valueArgument,
+        ValueNode countArgument, int count) {
+        VariableDeclarationNode left = new(type, "left", valueArgument);
+        VariableDeclarationNode right = new(countArgument.DataType, "right", countArgument);
+        VariableReferenceNode a = left.Reference;
+        VariableDeclarationNode result = new(type, "result",
+            ShiftValue(operation, type, a, new ConstantNode(DataType.INT32, (ulong)count)));
+        VariableReferenceNode r = result.Reference;
+        ValueNode carry = ShiftCarry(operation, type, a, count);
+        ValueNode overflow = operation switch {
+            "Shl" => Relation(IsNegative(r), BinaryOperation.NOT_EQUAL, carry),
+            "Shr" when count == 1 => IsNegative(a),
+            _ => False()
+        };
+        List<AluFlagAssignment> flags = [
+            new(StatusFlags.Carry, carry),
+            new(StatusFlags.Parity, EvenParity(r)),
+            new(StatusFlags.Zero, IsZero(r)),
+            new(StatusFlags.Sign, IsNegative(r)),
+            new(StatusFlags.Overflow, overflow)
+        ];
+        return new AluExpansion([left, right], result, flags);
+    }
+
+    /// <summary>
+    /// The value of a <c>Shl</c> / <c>Shr</c> / <c>Sar</c> call as plain nodes: the <c>Sar</c> operand is shifted
+    /// as the signed type and converted back to the unsigned width; other shifts stay on the operand type.
+    /// </summary>
+    private static ValueNode ShiftValue(string operation, DataType type, ValueNode value, ValueNode count) {
+        if (operation == "Sar") {
+            DataType signedType = DataType.SignedFromBitWidth(type.BitWidth);
+            return new TypeConversionNode(type, new BinaryOperationNode(signedType,
+                new TypeConversionNode(signedType, value), BinaryOperation.RIGHT_SHIFT, count));
+        }
+        BinaryOperation shift = operation == "Shl" ? BinaryOperation.LEFT_SHIFT : BinaryOperation.RIGHT_SHIFT;
+        return new BinaryOperationNode(type, value, shift, count);
+    }
+
+    /// <summary>
+    /// The carry of a constant-count shift: <c>Sar</c> reads bit <c>min(count, width) - 1</c> (the sign bit when the
+    /// count reaches the width); <c>Shl</c> reads bit <c>width - count</c> and <c>Shr</c> bit <c>count - 1</c>; for
+    /// an 8-bit count above the width the bit shifted out exists only when the count is a multiple of the width
+    /// (bit 0 for <c>Shl</c>, the sign bit for <c>Shr</c>), and a 16-bit count above the width loses the carry.
+    /// </summary>
+    private static ValueNode ShiftCarry(string operation, DataType type, ValueNode value, int count) {
+        int width = (int)type.BitWidth;
+        if (operation == "Sar") {
+            return BitSet(value, 1UL << Math.Min(count - 1, width - 1));
+        }
+        bool shl = operation == "Shl";
+        if (width == 8 && count > 8) {
+            return (count & 7) == 0 ? BitSet(value, shl ? 0x01UL : 0x80UL) : False();
+        }
+        if (width == 16 && count > 16) {
+            return False();
+        }
+        return BitSet(value, 1UL << (shl ? width - count : count - 1));
+    }
 }

@@ -98,7 +98,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:0058 mov DX,word ptr CS:[SI+2]
             DX = UInt16[CS, (ushort)(SI + 2)];
             // F000:005C shl AX,1
-            AX = Alu16.Shl(AX, 1);
+            CarryFlag = (AX & 0x8000) != 0;
+            AX = (ushort)(AX << 1);
             // F000:005E rcl DX,1
             DX = Alu16.Rcl(DX, 1);
             // F000:0060 mov word ptr DS:[BX+0x0C],AX
@@ -110,7 +111,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:0069 mov DX,word ptr CS:[SI+2]
             DX = UInt16[CS, (ushort)(SI + 2)];
             // F000:006D shr DX,1
-            DX = Alu16.Shr(DX, 1);
+            CarryFlag = (DX & 1) != 0;
+            DX = (ushort)(DX >> 1);
             // F000:006F rcr AX,1
             AX = Alu16.Rcr(AX, 1);
             // F000:0071 mov word ptr DS:[BX+0x10],AX
