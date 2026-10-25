@@ -1,0 +1,69 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+
+    private static readonly byte?[] Signature_0013_jmp = [0x2E, 0xFF, 0x2F];
+    private static readonly byte?[] Signature_001B_call = [0x2E, 0xFF, 0x1F];
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0xF000;
+
+        DefineFunctionWithoutInterpreterFallback(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, "unknown");
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        // F000:0000 mov AX,0x1000
+        AX = 0x1000;
+        // F000:0003 mov SS,AX
+        SS = AX;
+        // F000:0005 mov SP,0x0100
+        SP = 0x0100;
+        // F000:0008 mov AX,1
+        AX = 1;
+        // F000:000B mov BX,0x0026
+        BX = 0x0026;
+        // F000:000E cmp AX,0
+        // F000:0011 jne short 0x0016
+        if (AX != 0) {
+            goto L_0016;
+        }
+        VerifySpeculativeEntryOrFail(cs1, 0x0013, Signature_0013_jmp);
+        // F000:0013 jmp far dword ptr CS:[BX]
+        throw FailAsUntested("Untested indirect far jump at F000:0013");
+    L_0016:
+        // F000:0016 cmp AX,0
+        Alu16.Sub(AX, 0);
+        // F000:0019 jne short 0x001E
+        if (!ZeroFlag) {
+            goto L_001E;
+        }
+        VerifySpeculativeEntryOrFail(cs1, 0x001B, Signature_001B_call);
+        // F000:001B call far dword ptr CS:[BX]
+        throw FailAsUntested("Untested indirect far call at F000:001B");
+    L_001E:
+        // F000:001E mov CX,2
+        CX = 2;
+        // F000:0021 hlt
+        return Hlt();
+    }
+
+}

@@ -1,0 +1,101 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "F000:FFF0",
+  "totalEntryPoints": 1,
+  "entryPointAddresses": [
+    "F000:FFF0"
+  ],
+  "lastExecutedAddress": "F000:0021",
+  "lastExecutedBlockId": 16,
+  "blocks": [
+    {
+      "id": 16,
+      "entry": "F000:001E",
+      "term": "F000:0021",
+      "pred": [
+        11
+      ],
+      "succ": [],
+      "asm": [
+        "B90200|mov CX,2",
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 2,
+      "entry": "F000:FFF0",
+      "term": "F000:FFF0",
+      "pred": [],
+      "succ": [
+        3
+      ],
+      "asm": [
+        "EB0E|jmp short 0"
+      ]
+    },
+    {
+      "id": 11,
+      "entry": "F000:0016",
+      "term": "F000:0019",
+      "pred": [
+        3
+      ],
+      "succ": [
+        16,
+        18
+      ],
+      "asm": [
+        "83F800|cmp AX,0",
+        "7503|jne short 0x001E"
+      ]
+    },
+    {
+      "id": 3,
+      "entry": "F000:0000",
+      "term": "F000:0011",
+      "pred": [
+        2
+      ],
+      "succ": [
+        11,
+        13
+      ],
+      "asm": [
+        "B80010|mov AX,0x1000",
+        "8ED0|mov SS,AX",
+        "BC0001|mov SP,0x0100",
+        "B80100|mov AX,1",
+        "BB2600|mov BX,0x0026",
+        "83F800|cmp AX,0",
+        "7503|jne short 0x0016"
+      ]
+    },
+    {
+      "id": 18,
+      "entry": "F000:001B",
+      "dead": true,
+      "term": "F000:001B",
+      "pred": [
+        11
+      ],
+      "succ": [],
+      "asm": [
+        "2EFF1F|call far dword ptr CS:[BX]"
+      ]
+    },
+    {
+      "id": 13,
+      "entry": "F000:0013",
+      "dead": true,
+      "term": "F000:0013",
+      "pred": [
+        3
+      ],
+      "succ": [],
+      "asm": [
+        "2EFF2F|jmp far dword ptr CS:[BX]"
+      ]
+    }
+  ],
+  "truncated": false
+}

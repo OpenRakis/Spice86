@@ -45,7 +45,13 @@ public class MachineTest {
         ["partition_untested_indirect"],
         ["partition_jump_table_mixed"],
         ["partition_far_dispatch"],
-        ["partition_sign_conditions"]
+        ["partition_sign_conditions"],
+        ["partition_untested_far_indirect"],
+        ["partition_untaken_cpuid"],
+        ["partition_signed_min_compare"],
+        ["partition_back_edge_fallthrough"],
+        ["partition_jump_to_next"],
+        ["partition_two_fault_handlers"]
     ];
 
     [Theory]
