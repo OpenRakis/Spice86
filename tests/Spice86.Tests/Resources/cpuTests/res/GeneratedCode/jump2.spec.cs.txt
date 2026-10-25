@@ -99,14 +99,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CX = 0;
         // F000:12A7 jcxz short 0x12AA
         if (CX == 0) {
-            goto L_12AA;
+            // F000:12AA ret near 0x000A
+            return NearRet(0x000A);
         }
         VerifySpeculativeEntryOrFail(cs2, 0x12A9, Signature_12A9_hlt);
         // F000:12A9 hlt
         return Hlt();
-    L_12AA:
-        // F000:12AA ret near 0x000A
-        return NearRet(0x000A);
     }
 
     public virtual Action unknown_E342_EBE0_F2000(int loadOffset) {
@@ -135,14 +133,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // E342:EBEE loopne 0xEBF1
         CX--;
         if (CX != 0 && !ZeroFlag) {
-            goto L_EBF1;
+            // E342:EBF1 ret far
+            return FarRet();
         }
         VerifySpeculativeEntryOrFail(cs1, 0xEBF0, Signature_EBF0_hlt);
         // E342:EBF0 hlt
         return Hlt();
-    L_EBF1:
-        // E342:EBF1 ret far
-        return FarRet();
     }
 
     public virtual Action unknown_E342_FDE0_F3200(int loadOffset) {

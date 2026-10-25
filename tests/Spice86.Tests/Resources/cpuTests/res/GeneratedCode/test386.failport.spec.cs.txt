@@ -2796,7 +2796,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
                 // F000:008E jne short 0x00AC
                 if (!ZeroFlag) {
-                    goto L_00AC;
+                    VerifySpeculativeEntryOrFail(cs1, 0x00AC, Signature_00AC_hlt);
+                    // F000:00AC hlt
+                    return Hlt();
                 }
                 // F000:0090 je short 0x00AF
                 if (ZeroFlag) {
@@ -2815,7 +2817,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
                 // F000:0096 jnp short 0x00AC
                 if (!ParityFlag) {
-                    goto L_00AC;
+                    VerifySpeculativeEntryOrFail(cs1, 0x00AC, Signature_00AC_hlt);
+                    // F000:00AC hlt
+                    return Hlt();
                 }
                 // F000:0098 jp short 0x00B1
                 if (ParityFlag) {
@@ -2834,7 +2838,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
                 // F000:009E jns short 0x00AC
                 if (!SignFlag) {
-                    goto L_00AC;
+                    VerifySpeculativeEntryOrFail(cs1, 0x00AC, Signature_00AC_hlt);
+                    // F000:00AC hlt
+                    return Hlt();
                 }
                 // F000:00A0 js short 0x00B3
                 if (SignFlag) {
@@ -2853,7 +2859,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
                 // F000:00A6 ja short 0x00AC
                 if (!CarryFlag && !ZeroFlag) {
-                    goto L_00AC;
+                    VerifySpeculativeEntryOrFail(cs1, 0x00AC, Signature_00AC_hlt);
+                    // F000:00AC hlt
+                    return Hlt();
                 }
                 // F000:00A8 jbe short 0x00B5
                 if (!(CarryFlag || ZeroFlag)) {
@@ -2969,7 +2977,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 if (OverflowFlag) {
                     // F000:00F1 jl short 0x0122
                     if (SignFlag != OverflowFlag) {
-                        goto L_0122;
+                        VerifySpeculativeEntryOrFail(cs1, 0x0122, Signature_0122_hlt);
+                        // F000:0122 hlt
+                        return Hlt();
                     }
                     // F000:00F3 jge short 0x0125
                     if (SignFlag == OverflowFlag) {
@@ -2984,7 +2994,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 if (SignFlag == OverflowFlag) {
                     // F000:00F6 jle short 0x0122
                     if (ZeroFlag || SignFlag != OverflowFlag) {
-                        goto L_0122;
+                        VerifySpeculativeEntryOrFail(cs1, 0x0122, Signature_0122_hlt);
+                        // F000:0122 hlt
+                        return Hlt();
                     }
                     // F000:00F8 jg short 0x0127
                     if (!ZeroFlag && SignFlag == OverflowFlag) {
@@ -3027,7 +3039,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                     ECX = 1;
                     // F000:010A jcxz short 0x0122
                     if (CX == 0) {
-                        goto L_0122;
+                        VerifySpeculativeEntryOrFail(cs1, 0x0122, Signature_0122_hlt);
+                        // F000:0122 hlt
+                        return Hlt();
                     }
                     // F000:010C mov ECX,0x00010000
                     ECX = 0x00010000;
@@ -3043,7 +3057,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             L_0114:
                 // F000:0114 jecxz short 0x0122
                 if (ECX == 0) {
-                    goto L_0122;
+                    VerifySpeculativeEntryOrFail(cs1, 0x0122, Signature_0122_hlt);
+                    // F000:0122 hlt
+                    return Hlt();
                 }
                 // F000:0117 mov ECX,0
                 ECX = 0;
@@ -3081,7 +3097,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                         FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
                         // F000:0141 jne near 0x01F0
                         if (!ZeroFlag) {
-                            goto L_01F0;
+                            VerifySpeculativeEntryOrFail(cs1, 0x01F0, Signature_01F0_hlt);
+                            // F000:01F0 hlt
+                            return Hlt();
                         }
                         // F000:0145 je near 0x01F5
                         if (ZeroFlag) {
@@ -3100,7 +3118,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                         FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
                         // F000:014D jnp near 0x01F0
                         if (!ParityFlag) {
-                            goto L_01F0;
+                            VerifySpeculativeEntryOrFail(cs1, 0x01F0, Signature_01F0_hlt);
+                            // F000:01F0 hlt
+                            return Hlt();
                         }
                         // F000:0151 jp near 0x01F9
                         if (ParityFlag) {
@@ -3119,7 +3139,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                         FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
                         // F000:0159 jns near 0x01F0
                         if (!SignFlag) {
-                            goto L_01F0;
+                            VerifySpeculativeEntryOrFail(cs1, 0x01F0, Signature_01F0_hlt);
+                            // F000:01F0 hlt
+                            return Hlt();
                         }
                         // F000:015D js near 0x01FD
                         if (SignFlag) {
@@ -3138,7 +3160,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                         FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
                         // F000:0165 ja near 0x01F0
                         if (!CarryFlag && !ZeroFlag) {
-                            goto L_01F0;
+                            VerifySpeculativeEntryOrFail(cs1, 0x01F0, Signature_01F0_hlt);
+                            // F000:01F0 hlt
+                            return Hlt();
                         }
                         // F000:0169 jbe near 0x0201
                         if (!(CarryFlag || ZeroFlag)) {
@@ -3254,7 +3278,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                         if (OverflowFlag) {
                             // F000:02D8 jl near 0x037A
                             if (SignFlag != OverflowFlag) {
-                                goto L_037A;
+                                VerifySpeculativeEntryOrFail(cs1, 0x037A, Signature_037A_hlt);
+                                // F000:037A hlt
+                                return Hlt();
                             }
                             // F000:02DC jge near 0x037F
                             if (SignFlag == OverflowFlag) {
@@ -3269,7 +3295,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                         if (SignFlag == OverflowFlag) {
                             // F000:02E1 jle near 0x037A
                             if (ZeroFlag || SignFlag != OverflowFlag) {
-                                goto L_037A;
+                                VerifySpeculativeEntryOrFail(cs1, 0x037A, Signature_037A_hlt);
+                                // F000:037A hlt
+                                return Hlt();
                             }
                             // F000:02E5 jg near 0x0383
                             if (!ZeroFlag && SignFlag == OverflowFlag) {
@@ -3818,22 +3846,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                             return DispatchCpuFault(cpuException, cs1, 0x062E, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x0633), () => unknown_F000_0633_F0633(0x0000))]);
                         }
                     }
-                L_037A:
                     VerifySpeculativeEntryOrFail(cs1, 0x037A, Signature_037A_hlt);
                     // F000:037A hlt
                     return Hlt();
                 }
-            L_01F0:
                 VerifySpeculativeEntryOrFail(cs1, 0x01F0, Signature_01F0_hlt);
                 // F000:01F0 hlt
                 return Hlt();
             }
-        L_0122:
             VerifySpeculativeEntryOrFail(cs1, 0x0122, Signature_0122_hlt);
             // F000:0122 hlt
             return Hlt();
         }
-    L_00AC:
         VerifySpeculativeEntryOrFail(cs1, 0x00AC, Signature_00AC_hlt);
         // F000:00AC hlt
         return Hlt();

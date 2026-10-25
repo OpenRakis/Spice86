@@ -55,6 +55,7 @@ internal sealed class MethodEmitter(
             withoutFallthroughGotos = placedWithoutFallthroughGotos;
             refusals = placedRefusals;
         }
+        withoutFallthroughGotos = TailDuplicator.Apply(withoutFallthroughGotos, loweredBlocks, entryNodes, loops);
         GotoCensus census = GotoCensusClassifier.Classify(entryDispatch, withoutFallthroughGotos, loops, entryNodes,
             loweredBlocks, refusals);
         GotoTargets targets = GotoTargetCollector.Collect(Sequence(entryDispatch, withoutFallthroughGotos));

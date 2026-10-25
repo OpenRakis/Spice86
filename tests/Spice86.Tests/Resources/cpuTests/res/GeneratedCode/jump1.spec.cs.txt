@@ -294,7 +294,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                                                         }
                                                                         VerifySpeculativeEntryOrFail(cs1, 0x00C5, Signature_00C5_jmp);
                                                                         // F000:00C5 jmp near 0xFFF2
-                                                                        goto L_FFF2;
+                                                                        VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
+                                                                        // F000:FFF2 hlt
+                                                                        return Hlt();
                                                                     L_00C8:
                                                                         // F000:00C8 mov word ptr DS:[0],0x1234
                                                                         UInt16[DS, 0] = 0x1234;
@@ -304,78 +306,105 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                                                 L_00B9:
                                                                     VerifySpeculativeEntryOrFail(cs1, 0x00B9, Signature_00B9_jmp);
                                                                     // F000:00B9 jmp near 0xFFF2
-                                                                    goto L_FFF2;
+                                                                    VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
+                                                                    // F000:FFF2 hlt
+                                                                    return Hlt();
                                                                 }
                                                             L_00AD:
                                                                 VerifySpeculativeEntryOrFail(cs1, 0x00AD, Signature_00AD_jmp);
                                                                 // F000:00AD jmp near 0xFFF2
-                                                                goto L_FFF2;
+                                                                VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
+                                                                // F000:FFF2 hlt
+                                                                return Hlt();
                                                             }
                                                         L_00A1:
                                                             VerifySpeculativeEntryOrFail(cs1, 0x00A1, Signature_00A1_jmp);
                                                             // F000:00A1 jmp near 0xFFF2
-                                                            goto L_FFF2;
+                                                            VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
+                                                            // F000:FFF2 hlt
+                                                            return Hlt();
                                                         }
                                                     L_0093:
                                                         VerifySpeculativeEntryOrFail(cs1, 0x0093, Signature_0093_jmp);
                                                         // F000:0093 jmp near 0xFFF2
-                                                        goto L_FFF2;
+                                                        VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
+                                                        // F000:FFF2 hlt
+                                                        return Hlt();
                                                     }
                                                 L_0085:
                                                     VerifySpeculativeEntryOrFail(cs1, 0x0085, Signature_0085_jmp);
                                                     // F000:0085 jmp near 0xFFF2
-                                                    goto L_FFF2;
+                                                    VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
+                                                    // F000:FFF2 hlt
+                                                    return Hlt();
                                                 }
                                             L_0074:
                                                 VerifySpeculativeEntryOrFail(cs1, 0x0074, Signature_0074_jmp);
                                                 // F000:0074 jmp near 0xFFF2
-                                                goto L_FFF2;
+                                                VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
+                                                // F000:FFF2 hlt
+                                                return Hlt();
                                             }
                                         L_0069:
                                             VerifySpeculativeEntryOrFail(cs1, 0x0069, Signature_0069_jmp);
                                             // F000:0069 jmp short 0xFFF2
-                                            goto L_FFF2;
+                                            VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
+                                            // F000:FFF2 hlt
+                                            return Hlt();
                                         }
                                     L_005F:
                                         VerifySpeculativeEntryOrFail(cs1, 0x005F, Signature_005F_jmp);
                                         // F000:005F jmp short 0xFFF2
-                                        goto L_FFF2;
+                                        VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
+                                        // F000:FFF2 hlt
+                                        return Hlt();
                                     }
                                 L_0054:
                                     VerifySpeculativeEntryOrFail(cs1, 0x0054, Signature_0054_jmp);
                                     // F000:0054 jmp short 0xFFF2
-                                    goto L_FFF2;
+                                    VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
+                                    // F000:FFF2 hlt
+                                    return Hlt();
                                 }
                             L_0047:
                                 VerifySpeculativeEntryOrFail(cs1, 0x0047, Signature_0047_jmp);
                                 // F000:0047 jmp short 0xFFF2
-                                goto L_FFF2;
+                                VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
+                                // F000:FFF2 hlt
+                                return Hlt();
                             }
                         L_0037:
                             VerifySpeculativeEntryOrFail(cs1, 0x0037, Signature_0037_jmp);
                             // F000:0037 jmp short 0xFFF2
-                            goto L_FFF2;
+                            VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
+                            // F000:FFF2 hlt
+                            return Hlt();
                         }
                     L_002D:
                         VerifySpeculativeEntryOrFail(cs1, 0x002D, Signature_002D_jmp);
                         // F000:002D jmp short 0xFFF2
-                        goto L_FFF2;
+                        VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
+                        // F000:FFF2 hlt
+                        return Hlt();
                     }
                 L_0025:
                     VerifySpeculativeEntryOrFail(cs1, 0x0025, Signature_0025_jmp);
                     // F000:0025 jmp short 0xFFF2
-                    goto L_FFF2;
+                    VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
+                    // F000:FFF2 hlt
+                    return Hlt();
                 }
             L_001E:
                 VerifySpeculativeEntryOrFail(cs1, 0x001E, Signature_001E_jmp);
                 // F000:001E jmp short 0xFFF2
-                goto L_FFF2;
+                VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
+                // F000:FFF2 hlt
+                return Hlt();
             }
         L_0016:
             VerifySpeculativeEntryOrFail(cs1, 0x0016, Signature_0016_jmp);
             // F000:0016 jmp short 0xFFF2
         }
-    L_FFF2:
         VerifySpeculativeEntryOrFail(cs1, 0xFFF2, Signature_FFF2_hlt);
         // F000:FFF2 hlt
         return Hlt();

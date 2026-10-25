@@ -34,7 +34,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CX = Alu16.Dec(CX);
         // F000:0016 je short 0x001A
         if (CX == 0) {
-            goto L_001A;
+            // F000:001A ret near
+            return NearRet();
         }
         // F000:0018 jmp short 0x001B
         if (JumpDispatcher.Jump(unknown_F000_001B_F001B, 0x0000)) {
@@ -42,9 +43,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             goto entrydispatcher;
         }
         return JumpDispatcher.RequiredJumpAsmReturn;
-    L_001A:
-        // F000:001A ret near
-        return NearRet();
     }
 
     public virtual Action unknown_F000_001B_F001B(int loadOffset) {
@@ -54,7 +52,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CX = Alu16.Dec(CX);
         // F000:001C je short 0x0020
         if (CX == 0) {
-            goto L_0020;
+            // F000:0020 ret near
+            return NearRet();
         }
         // F000:001E jmp short 0x0015
         if (JumpDispatcher.Jump(unknown_F000_0015_F0015, 0x0000)) {
@@ -62,9 +61,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             goto entrydispatcher;
         }
         return JumpDispatcher.RequiredJumpAsmReturn;
-    L_0020:
-        // F000:0020 ret near
-        return NearRet();
     }
 
     public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {

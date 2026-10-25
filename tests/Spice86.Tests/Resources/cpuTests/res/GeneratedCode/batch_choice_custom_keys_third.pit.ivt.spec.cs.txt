@@ -288,7 +288,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 }
                 throw FailAsUntested($"Untested callback target {CS:X4}:{IP:X4} at F000:009F");
             }
-            goto L_00A3;
+            // F000:00A3 iret
+            return InterruptRet();
         L_0100:
             // 016C:0100 mov AX,0xB800
             AX = 0xB800;
@@ -328,9 +329,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00B5 callback 0x010B
         Callback(cs3, 0x00B5, 0x010B);
         // F000:00B9 iret
-        return InterruptRet();
-    L_00A3:
-        // F000:00A3 iret
         return InterruptRet();
     }
 

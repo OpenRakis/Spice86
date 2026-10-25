@@ -473,7 +473,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             Alu16.Sub(CX, 0);
             // 016D:0254 je short 0x029E
             if (ZeroFlag) {
-                goto L_029E;
+                // 016D:029E ret near
+                return NearRet();
             }
             // 016D:0256 dec CX
             CX--;
@@ -549,7 +550,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt8[DS, (ushort)(DI + 3)] = 0x30;
         // 016D:029A mov byte ptr DS:[DI+4],0
         UInt8[DS, (ushort)(DI + 4)] = 0;
-    L_029E:
         // 016D:029E ret near
         return NearRet();
     }

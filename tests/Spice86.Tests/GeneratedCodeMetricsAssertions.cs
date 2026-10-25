@@ -15,7 +15,7 @@ internal static class GeneratedCodeMetricsAssertions {
     private static readonly Regex LabelLineRegex = new(@"^\s*L_\w+:$");
 
     private static readonly Dictionary<string, (int GotoStatements, int CheckExternalEvents, int Lines)> UpperBounds = new() {
-        ["jump1.spec"] = (48, 21, 402),
+        ["jump1.spec"] = (48, 21, 414),
         ["partition_cross_function_loop.spec"] = (4, 3, 93),
         ["rep.spec"] = (6, 12, 724),
         ["div.spec"] = (0, 13, 744),

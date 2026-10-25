@@ -280,7 +280,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 }
                 throw FailAsUntested($"Untested callback target {CS:X4}:{IP:X4} at F000:009F");
             }
-            goto L_00A3;
+            VerifySpeculativeEntryOrFail(cs2, 0x00A3, Signature_00A3_iret);
+            // F000:00A3 iret
+            return InterruptRet();
         L_0100:
             // 016D:0100 mov AX,0xB800
             AX = 0xB800;
@@ -306,10 +308,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         InterruptFlag = true;
         CheckExternalEvents(cs2, 0x00A5);
         throw FailAsUntested("Untested fallthrough after F000:00A4");
-    L_00A3:
-        VerifySpeculativeEntryOrFail(cs2, 0x00A3, Signature_00A3_iret);
-        // F000:00A3 iret
-        return InterruptRet();
     }
 
     public virtual Action unknown_F000_00E2_F00E2(int loadOffset) {

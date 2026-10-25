@@ -424,7 +424,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 }
                 throw FailAsUntested($"Untested callback target {CS:X4}:{IP:X4} at F000:009F");
             }
-            goto L_00A3;
+            // F000:00A3 iret
+            return InterruptRet();
         L_0100:
             // 01CD:0100 mov AH,0x0E
             AH = 0x0E;
@@ -449,9 +450,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         InterruptFlag = true;
         CheckExternalEvents(cs3, 0x00A5);
         throw FailAsUntested("Untested fallthrough after F000:00A4");
-    L_00A3:
-        // F000:00A3 iret
-        return InterruptRet();
     }
 
     public virtual Action unknown_F000_00E2_F00E2(int loadOffset) {
