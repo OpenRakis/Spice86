@@ -40,7 +40,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // E342:EBE6 pop AX
         AX = Stack.Pop16();
         // E342:EBE7 clc
-        CarryFlag = false;
         // E342:EBE8 iret
         return InterruptRet();
     }

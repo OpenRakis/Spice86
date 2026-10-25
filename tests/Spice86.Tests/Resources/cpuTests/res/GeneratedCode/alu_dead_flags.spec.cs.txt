@@ -212,7 +212,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             DX = UInt16[CS, SI];
             // F000:00FF neg DX
             DX = (ushort)-DX;
-            CarryFlag = DX != 0;
             // F000:0101 mov word ptr DS:[BX+0x28],DX
             UInt16[DS, (ushort)(BX + 0x28)] = DX;
             // F000:0104 cmp DI,DI
@@ -247,7 +246,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:0139 mov DX,word ptr CS:[SI]
             DX = UInt16[CS, SI];
             // F000:013C stc
-            CarryFlag = true;
             // F000:013D clc
             CarryFlag = false;
             // F000:013E adc DX,0
@@ -284,7 +282,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:0164 mov AH,1
             AH = 1;
             // F000:0166 sahf
-            FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
             // F000:0167 clc
             CarryFlag = false;
             // F000:0168 adc DX,0

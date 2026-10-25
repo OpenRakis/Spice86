@@ -88,7 +88,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             DX = (ushort)(DX + (CarryFlag ? 1 : 0));
             // F000:004D neg DX
             DX = (ushort)-DX;
-            CarryFlag = DX != 0;
             // F000:004F mov word ptr DS:[BX+8],AX
             UInt16[DS, (ushort)(BX + 8)] = AX;
             // F000:0052 mov word ptr DS:[BX+0x0A],DX

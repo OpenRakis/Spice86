@@ -443,7 +443,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool initialCf_009E = CarryFlag;
         bool finalAuxiliaryFlag_009E = false;
         bool finalCarryFlag_009E = false;
-        CarryFlag = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
             AL = (byte)(AL - 6);
             finalCarryFlag_009E = initialAl_009E < 6 || initialCf_009E;
@@ -468,7 +467,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool initialCf_00A6 = CarryFlag;
         bool finalAuxiliaryFlag_00A6 = false;
         bool finalCarryFlag_00A6 = false;
-        CarryFlag = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
             AL = (byte)(AL - 6);
             finalCarryFlag_00A6 = initialAl_00A6 < 6 || initialCf_00A6;
@@ -498,7 +496,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool initialCf_00B0 = CarryFlag;
         bool finalAuxiliaryFlag_00B0 = false;
         bool finalCarryFlag_00B0 = false;
-        CarryFlag = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
             AL = (byte)(AL - 6);
             finalCarryFlag_00B0 = initialAl_00B0 < 6 || initialCf_00B0;
@@ -528,7 +525,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool initialCf_00BA = CarryFlag;
         bool finalAuxiliaryFlag_00BA = false;
         bool finalCarryFlag_00BA = false;
-        CarryFlag = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
             AL = (byte)(AL - 6);
             finalCarryFlag_00BA = initialAl_00BA < 6 || initialCf_00BA;
@@ -558,7 +554,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool initialCf_00C4 = CarryFlag;
         bool finalAuxiliaryFlag_00C4 = false;
         bool finalCarryFlag_00C4 = false;
-        CarryFlag = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
             AL = (byte)(AL - 6);
             finalCarryFlag_00C4 = initialAl_00C4 < 6 || initialCf_00C4;
@@ -583,7 +578,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool initialCf_00CC = CarryFlag;
         bool finalAuxiliaryFlag_00CC = false;
         bool finalCarryFlag_00CC = false;
-        CarryFlag = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
             AL = (byte)(AL - 6);
             finalCarryFlag_00CC = initialAl_00CC < 6 || initialCf_00CC;
@@ -608,7 +602,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool initialCf_00D4 = CarryFlag;
         bool finalAuxiliaryFlag_00D4 = false;
         bool finalCarryFlag_00D4 = false;
-        CarryFlag = false;
         if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
             AL = (byte)(AL - 6);
             finalCarryFlag_00D4 = initialAl_00D4 < 6 || initialCf_00D4;

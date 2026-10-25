@@ -77,9 +77,9 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
             && RepCompareLoopPattern.TryMatch(node) is RepCompareLoopPattern compare) {
             return Sequence(LowerRepCompareLoop(compare));
         }
-        if (!emitExternalEventCheckAfter && !HasCpuFaultSuccessor(instruction)
-            && AluAssignmentRewrite.TryRewrite(node, flagsLiveAfter) is BlockNode rewritten) {
-            return Sequence(rewritten.Accept(this));
+        if (!emitExternalEventCheckAfter && !HasCpuFaultSuccessor(instruction)) {
+            IVisitableAstNode simplified = AluAssignmentRewrite.TryRewrite(node, flagsLiveAfter) ?? node;
+            return Sequence(DeadFlagAssignmentRemoval.Remove(simplified, flagsLiveAfter).Accept(this));
         }
         return Sequence(node.Accept(this));
     }

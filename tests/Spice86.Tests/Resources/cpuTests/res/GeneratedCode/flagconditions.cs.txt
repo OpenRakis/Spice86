@@ -596,7 +596,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             DX = AX;
             // F000:02AD neg DX
             DX = (ushort)-DX;
-            CarryFlag = DX != 0;
             // F000:02AF mov word ptr DS:[BX+0x36],DX
             UInt16[DS, (ushort)(BX + 0x36)] = DX;
             // F000:02B2 mov DX,AX
