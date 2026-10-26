@@ -369,7 +369,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 // F000:4092 jb short 0x407F
             } while (BX < 0x00E1);
             // F000:4094 shl BP,1
-            BP = Alu16.Shl(BP, 1);
+            BP = (ushort)(BP << 1);
             // F000:4096 cmp BP,0x0010
             // F000:4099 jb short 0x405A
         } while (BP < 0x0010);

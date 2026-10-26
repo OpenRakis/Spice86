@@ -325,6 +325,10 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
     public Expression VisitTypeConversionNode(TypeConversionNode node) {
         Expression value = node.Value.Accept(this);
         Type targetType = FromDataType(node.DataType);
+        if (value.Type == typeof(bool) && targetType != typeof(bool)) {
+            return Expression.Condition(value, Expression.Constant(Convert.ChangeType(1, targetType), targetType),
+                Expression.Constant(Convert.ChangeType(0, targetType), targetType));
+        }
         return Expression.Convert(value, targetType);
     }
     

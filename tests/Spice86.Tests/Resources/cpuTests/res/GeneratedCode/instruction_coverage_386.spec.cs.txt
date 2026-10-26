@@ -126,7 +126,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:005D mov CX,7
         CX = 7;
         // F000:0060 xadd AX,CX
-        ushort sum_0060 = Alu16.Add(CX, AX);
+        ushort sum_0060 = (ushort)(CX + AX);
         ushort oldRm_0060 = AX;
         CX = (ushort)oldRm_0060;
         AX = (ushort)sum_0060;

@@ -251,6 +251,10 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         if (operation == BinaryOperation.PLUS && right.Constant is ConstantNode constant) {
             return TrySimplifyConstantAddition(left, constant);
         }
+        if (operation == BinaryOperation.MINUS && left.Constant is ConstantNode zero
+            && zero.DataType != DataType.BOOL && zero.Value == 0) {
+            return new CSharpFragment($"-{Parenthesize(right, UnaryPrecedence + 1)}", null, UnaryPrecedence);
+        }
         return null;
     }
 
@@ -313,6 +317,9 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         if (inner.Type == node.DataType || node.DataType == DataType.BOOL && inner.Type == DataType.BOOL) {
             // Converting to a type the value already has is a no-op; keep the inner fragment as-is.
             return inner;
+        }
+        if (inner.Type == DataType.BOOL && node.DataType != DataType.BOOL) {
+            return new CSharpFragment($"({inner.Text} ? 1 : 0)", null, CSharpFragment.AtomicPrecedence);
         }
         string text = Cast(node.DataType, inner);
         return new CSharpFragment(text, node.DataType, CastPrecedence);

@@ -45,7 +45,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:000F dec BX
             BX--;
             // F000:0010 shl BX,1
-            BX = Alu16.Shl(BX, 1);
+            BX = (ushort)(BX << 1);
             // F000:0012 jmp near word ptr CS:[BX+0x27]
             switch (UInt16[CS, (ushort)(BX + 0x27)]) {
                 case 0x0016:

@@ -92,7 +92,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:010B mov BX,0x017E
         BX = 0x017E;
         // 016D:010E shr BX,4
-        BX = Alu16.Shr(BX, 4);
+        CarryFlag = (BX & 8) != 0;
+        BX = (ushort)(BX >> 4);
         // 016D:0111 inc BX
         BX = Alu16.Inc(BX);
         // 016D:0112 mov AH,0x4A

@@ -85,7 +85,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:002D mov BX,AX
             BX = AX;
             // F000:002F shr BX,1
-            BX = Alu16.Shr(BX, 1);
+            BX = (ushort)(BX >> 1);
             // F000:0031 loop 0x002C
             CX--;
         } while (CX != 0);

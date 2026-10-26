@@ -60,7 +60,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(cs1, 0x0018);
         // F000:0018 cmc
-        CarryFlag = !CarryFlag;
         // F000:0019 stc
         CarryFlag = true;
         // F000:001A std

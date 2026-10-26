@@ -347,6 +347,48 @@ public class AluExpansionCleanupTest {
         cleaned.Value.Should().BeNull();
     }
 
+    [Fact]
+    public void CarryReadIsInlinedWhenNoFlagIsKept() {
+        // Arrange
+        AluExpansion expansion = Expand(DataType.UINT16, "Adc", Ax, Bx);
+
+        // Act
+        CleanedAluExpansion cleaned = AluExpansionCleanup.Clean(expansion, StatusFlags.None, true);
+
+        // Assert
+        cleaned.Statements.Should().BeEmpty();
+        cleaned.Value.Should().Be(new BinaryOperationNode(DataType.UINT16,
+            new BinaryOperationNode(DataType.UINT16, Ax, BinaryOperation.PLUS, Bx), BinaryOperation.PLUS,
+            new TypeConversionNode(DataType.UINT16, new CpuFlagNode((ushort)StatusFlags.Carry))));
+    }
+
+    [Fact]
+    public void CarryReadStaysATempWhenAFlagIsKept() {
+        // Arrange
+        AluExpansion expansion = Expand(DataType.UINT16, "Adc", Ax, Bx);
+
+        // Act
+        CleanedAluExpansion cleaned = AluExpansionCleanup.Clean(expansion, StatusFlags.Carry, true);
+
+        // Assert
+        cleaned.Statements.Should().NotBeEmpty();
+        cleaned.Statements[0].Should().Be(new VariableDeclarationNode(DataType.BOOL, "carry",
+            new CpuFlagNode((ushort)StatusFlags.Carry)));
+    }
+
+    [Fact]
+    public void MemoryOperandAndCarryAreBothInlinedWhenNoFlagIsKept() {
+        // Arrange
+        SegmentedPointerNode memoryOperand = MemoryOperand(DataType.UINT16, MemoryOffset);
+        AluExpansion expansion = Expand(DataType.UINT16, "Adc", memoryOperand, Bx);
+
+        // Act
+        CleanedAluExpansion cleaned = AluExpansionCleanup.Clean(expansion, StatusFlags.None, true);
+
+        // Assert
+        cleaned.Statements.Should().BeEmpty();
+    }
+
     private static AluExpansion Expand(DataType type, string operation, params ValueNode[] arguments) {
         MethodCallValueNode call = new(type, $"Alu{(int)type.BitWidth}", operation, arguments.Cast<IVisitableAstNode>().ToArray());
         return AluExpansionBuilder.TryExpand(call) ?? throw new InvalidOperationException($"{operation} was not expanded");

@@ -88,7 +88,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:001E dec BX
             BX--;
             // F000:001F shl BX,2
-            BX = Alu16.Shl(BX, 2);
+            BX = (ushort)(BX << 2);
             // F000:0022 jmp far dword ptr CS:[BX+0x45]
             ushort targetSegment_0022 = UInt16[CS, (ushort)(BX + 0x45 + 2)];
             ushort targetOffset_0022 = UInt16[CS, (ushort)(BX + 0x45)];

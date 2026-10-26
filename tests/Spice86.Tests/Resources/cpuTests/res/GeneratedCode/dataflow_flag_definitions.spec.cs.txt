@@ -172,7 +172,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 DX = 0x1000;
             }
             // F000:00A5 adc DX,0
-            DX = Alu16.Adc(DX, 0);
+            DX = (ushort)(DX + (CarryFlag ? 1 : 0));
             // F000:00A8 mov word ptr DS:[BX+0x0E],DX
             UInt16[DS, (ushort)(BX + 0x0E)] = DX;
             // F000:00AB mov word ptr DS:[BX+0x10],AX

@@ -7,6 +7,8 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Visitor;
+using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
@@ -29,6 +31,17 @@ public class CSharpExpressionPrinterFragmentTest {
         CSharpFragment fragment = _printer.Print(negate);
 
         fragment.Text.Should().Be("-(-2)");
+    }
+
+    [Fact]
+    public void SubtractionFromZeroIsANegation() {
+        ConstantNode zero = new(DataType.UINT16, 0);
+        RegisterNode ax = new(DataType.UINT16, (int)RegisterIndex.AxIndex);
+        BinaryOperationNode subtract = new(DataType.UINT16, zero, BinaryOperation.MINUS, ax);
+
+        CSharpFragment fragment = _printer.Print(subtract);
+
+        fragment.Text.Should().Be("-AX");
     }
 
     [Fact]
@@ -83,6 +96,22 @@ public class CSharpExpressionPrinterFragmentTest {
         CSharpFragment fragment = _printer.Print(cast);
 
         fragment.Text.Should().Be("(byte)0x0021");
+    }
+
+    [Fact]
+    public void BoolConvertedToANumberIsAConditional() {
+        // Arrange
+        TypeConversionNode conversion = new(DataType.UINT16, new CpuFlagNode((ushort)StatusFlags.Carry));
+        RegisterNode ax = new(DataType.UINT16, (int)RegisterIndex.AxIndex);
+        BinaryOperationNode sum = new(DataType.UINT16, ax, BinaryOperation.PLUS, conversion);
+
+        // Act
+        CSharpFragment conversionFragment = _printer.Print(conversion);
+        CSharpFragment sumFragment = _printer.Print(sum);
+
+        // Assert
+        conversionFragment.Text.Should().Be("(CarryFlag ? 1 : 0)");
+        sumFragment.Text.Should().Be("AX + (CarryFlag ? 1 : 0)");
     }
 
     private CSharpFragment StackWord(ValueNode offset) {
