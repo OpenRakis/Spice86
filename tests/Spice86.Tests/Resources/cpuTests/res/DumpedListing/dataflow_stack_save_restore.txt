@@ -1,0 +1,96 @@
+F000:0000 mov AX,0x2000
+F000:0003 mov DS,AX
+F000:0005 mov ES,AX
+F000:0007 mov SS,AX
+F000:0009 mov SP,0x1000
+F000:000C cld
+F000:000D xor BX,BX
+F000:000F mov SI,0x00DA
+F000:0012 mov word ptr DS:[0x0F00],2
+F000:0018 mov AX,word ptr CS:[SI]
+F000:001B mov DX,word ptr CS:[SI+2]
+F000:001F mov ES,DX
+F000:0021 push AX
+F000:0022 push ES
+F000:0023 mov AX,1
+F000:0026 mov ES,AX
+F000:0028 mov CX,ES
+F000:002A add CX,AX
+F000:002C pop ES
+F000:002D pop AX
+F000:002E mov word ptr DS:[BX],AX
+F000:0030 mov word ptr DS:[BX+2],ES
+F000:0033 mov word ptr DS:[BX+4],CX
+F000:0036 mov AX,word ptr CS:[SI+4]
+F000:003A push AX
+F000:003B call near 0x00BD
+F000:003E pop CX
+F000:003F mov word ptr DS:[BX+6],DX
+F000:0042 mov word ptr DS:[BX+8],CX
+F000:0045 mov AX,word ptr CS:[SI+6]
+F000:0049 push AX
+F000:004A push BP
+F000:004B mov BP,SP
+F000:004D mov DX,word ptr SS:[BP+2]
+F000:0050 pop BP
+F000:0051 pop AX
+F000:0052 mov word ptr DS:[BX+0x0A],DX
+F000:0055 push AX
+F000:0056 mov CX,SP
+F000:0058 pop AX
+F000:0059 mov word ptr DS:[BX+0x0C],CX
+F000:005C mov AX,word ptr CS:[SI+8]
+F000:0060 push AX
+F000:0061 mov BP,SP
+F000:0063 mov word ptr SS:[BP],0x5A5A
+F000:0068 pop AX
+F000:0069 mov word ptr DS:[BX+0x0E],AX
+F000:006C mov AX,word ptr CS:[SI+8]
+F000:0070 push AX
+F000:0071 mov word ptr DS:[0x0FFE],0x6B6B
+F000:0077 pop DX
+F000:0078 mov word ptr DS:[BX+0x10],DX
+F000:007B mov AX,word ptr CS:[SI+0x0A]
+F000:007F mov CX,word ptr CS:[SI+0x0C]
+F000:0083 xor DX,DX
+F000:0085 xor DI,DI
+F000:0087 push AX
+F000:0088 test CX,CX
+F000:008A je short 0x008F
+F000:008C pop DX
+F000:008D jmp short 0x0090
+F000:008F pop DI
+F000:0090 mov word ptr DS:[BX+0x12],DX
+F000:0093 mov word ptr DS:[BX+0x14],DI
+F000:0096 push ES
+F000:0097 mov AX,word ptr CS:[SI+0x0E]
+F000:009B mov ES,AX
+F000:009D call near 0x00C8
+F000:00A0 pop ES
+F000:00A1 mov word ptr DS:[BX+0x16],DX
+F000:00A4 mov AX,word ptr CS:[SI+0x0C]
+F000:00A8 call near 0x00CB
+F000:00AB mov word ptr DS:[BX+0x18],DX
+F000:00AE add BX,0x0040
+F000:00B1 add SI,0x0010
+F000:00B4 dec word ptr DS:[0x0F00]
+F000:00B8 jne near 0x0018
+F000:00BC hlt
+F000:00BD push BP
+F000:00BE mov BP,SP
+F000:00C0 mov DX,word ptr SS:[BP+4]
+F000:00C3 add DX,3
+F000:00C6 pop BP
+F000:00C7 ret near
+F000:00C8 mov DX,ES
+F000:00CA ret near
+F000:00CB push AX
+F000:00CC test AX,AX
+F000:00CE je short 0x00D5
+F000:00D0 pop DX
+F000:00D1 add DX,0x0010
+F000:00D4 ret near
+F000:00D5 pop DX
+F000:00D6 add DX,0x0020
+F000:00D9 ret near
+F000:FFF0 jmp short 0

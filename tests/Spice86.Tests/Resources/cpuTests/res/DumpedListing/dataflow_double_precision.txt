@@ -1,0 +1,48 @@
+F000:0000 mov AX,0x2000
+F000:0003 mov DS,AX
+F000:0005 mov ES,AX
+F000:0007 mov SS,AX
+F000:0009 mov SP,0x1000
+F000:000C cld
+F000:000D xor BX,BX
+F000:000F mov SI,0x0084
+F000:0012 mov word ptr DS:[0x0F00],4
+F000:0018 mov AX,word ptr CS:[SI]
+F000:001B mov DX,word ptr CS:[SI+2]
+F000:001F mov CX,word ptr CS:[SI+4]
+F000:0023 mov DI,word ptr CS:[SI+6]
+F000:0027 add AX,CX
+F000:0029 adc DX,DI
+F000:002B mov word ptr DS:[BX],AX
+F000:002D mov word ptr DS:[BX+2],DX
+F000:0030 mov AX,word ptr CS:[SI]
+F000:0033 mov DX,word ptr CS:[SI+2]
+F000:0037 sub AX,CX
+F000:0039 sbb DX,DI
+F000:003B mov word ptr DS:[BX+4],AX
+F000:003E mov word ptr DS:[BX+6],DX
+F000:0041 mov AX,word ptr CS:[SI]
+F000:0044 mov DX,word ptr CS:[SI+2]
+F000:0048 neg AX
+F000:004A adc DX,0
+F000:004D neg DX
+F000:004F mov word ptr DS:[BX+8],AX
+F000:0052 mov word ptr DS:[BX+0x0A],DX
+F000:0055 mov AX,word ptr CS:[SI]
+F000:0058 mov DX,word ptr CS:[SI+2]
+F000:005C shl AX,1
+F000:005E rcl DX,1
+F000:0060 mov word ptr DS:[BX+0x0C],AX
+F000:0063 mov word ptr DS:[BX+0x0E],DX
+F000:0066 mov AX,word ptr CS:[SI]
+F000:0069 mov DX,word ptr CS:[SI+2]
+F000:006D shr DX,1
+F000:006F rcr AX,1
+F000:0071 mov word ptr DS:[BX+0x10],AX
+F000:0074 mov word ptr DS:[BX+0x12],DX
+F000:0077 add BX,0x0040
+F000:007A add SI,8
+F000:007D dec word ptr DS:[0x0F00]
+F000:0081 jne short 0x0018
+F000:0083 hlt
+F000:FFF0 jmp short 0
