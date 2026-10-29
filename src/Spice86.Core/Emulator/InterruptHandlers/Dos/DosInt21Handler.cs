@@ -1941,7 +1941,7 @@ public class DosInt21Handler : InterruptHandler {
     public void SelectDefaultDrive() {
         byte driveIndex = State.DL;
         if (driveIndex < DosDriveManager.MaxDriveCount) {
-            if (_dosDriveManager.TryGetDriveAtIndex(driveIndex, out FolderDrive? mountedDrive)) {
+            if (_dosDriveManager.TryGetDriveAtIndex(driveIndex, out DosDriveBase? mountedDrive)) {
                 _dosDriveManager.CurrentDrive = mountedDrive;
             }
         } else if (LoggerService.IsEnabled(LogLevel.Error)) {
