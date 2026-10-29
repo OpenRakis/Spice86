@@ -1383,7 +1383,7 @@ internal sealed partial class DosBatchExecutionEngine {
             byte driveIndex = DosDriveManager.TryGetLetterIndex(driveLetter, out int idx) ? (byte)idx : (byte)3;
             MscdexDriveEntry entry = new MscdexDriveEntry(driveLetter, driveIndex, drive);
             _mscdex.AddDrive(entry);
-            _driveManager.RegisterCdRomDriveLetter(driveLetter, hostPath, volumeLabel);
+            _driveManager.RegisterCdRomDriveLetter(driveLetter, hostPath, volumeLabel, drive);
             return true;
         } catch (IOException ex) {
             WriteToStandardOutput($"MOUNT: failed to create CD-ROM drive from folder: {ex.Message}\r\n");
