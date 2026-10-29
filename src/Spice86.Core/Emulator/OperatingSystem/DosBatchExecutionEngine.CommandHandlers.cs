@@ -1364,7 +1364,7 @@ internal sealed partial class DosBatchExecutionEngine {
             MscdexDriveEntry entry = new MscdexDriveEntry(driveLetter, driveIndex, drive);
             _mscdex.AddDrive(entry);
             string volumeLabel = drive.Image.PrimaryVolume.VolumeIdentifier ?? string.Empty;
-            _driveManager.RegisterCdRomDriveLetter(driveLetter, string.Empty, volumeLabel);
+            _driveManager.RegisterCdRomDriveLetter(driveLetter, string.Empty, volumeLabel, drive);
             string paths = string.Join(", ", imagePaths);
             WriteToStandardOutput($"Drive {driveLetter}: mounted {imagePaths.Count} CD-ROM image(s): {paths}\r\n");
         } catch (IOException ex) {
