@@ -26,9 +26,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_0010_iret = [0xCF];
     private static readonly byte?[] Signature_0011_callback = [0xFE, 0x38, 0x09, 0x00];
     private static readonly byte?[] Signature_0015_iret = [0xCF];
-    private static readonly byte?[] Signature_003E_callback = [0xFE, 0x38, 0x02, 0x01];
-    private static readonly byte?[] Signature_0042_jne = [0x75, 0x04];
-    private static readonly byte?[] Signature_0044_int = [0xCD, 0x09];
+    private static readonly byte?[] Signature_003E_cli = [0xFA];
+    private static readonly byte?[] Signature_003F_callback = [0xFE, 0x38, 0x02, 0x01];
+    private static readonly byte?[] Signature_0043_jne = [0x75, 0x03];
+    private static readonly byte?[] Signature_0045_sti = [0xFB];
+    private static readonly byte?[] Signature_0046_jmp = [0xEB, 0xF6];
     private static readonly byte?[] Signature_0048_callback = [0xFE, 0x38, 0x03, 0x01];
     private static readonly byte?[] Signature_004C_iret = [0xCF];
     private static readonly byte?[] Signature_0057_callback = [0xFE, 0x38, 0x70, 0x00];
@@ -151,23 +153,32 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 return InterruptRet();
             }
         }
-        VerifySpeculativeEntryOrFail(cs2, 0x003E, Signature_003E_callback);
-        // F000:003E callback 0x0102
-        Callback(cs2, 0x003E, 0x0102);
-        VerifySpeculativeEntryOrFail(cs2, 0x0042, Signature_0042_jne);
-        // F000:0042 jne short 0x0048
-        if (!ZeroFlag) {
-            VerifySpeculativeEntryOrFail(cs2, 0x0048, Signature_0048_callback);
-            // F000:0048 callback 0x0103
-            Callback(cs2, 0x0048, 0x0103);
-            VerifySpeculativeEntryOrFail(cs2, 0x004C, Signature_004C_iret);
-            // F000:004C iret
-            return InterruptRet();
+        while (true) {
+            CheckExternalEvents(cs2, 0x003E);
+            VerifySpeculativeEntryOrFail(cs2, 0x003E, Signature_003E_cli);
+            // F000:003E cli
+            InterruptFlag = false;
+            VerifySpeculativeEntryOrFail(cs2, 0x003F, Signature_003F_callback);
+            // F000:003F callback 0x0102
+            Callback(cs2, 0x003F, 0x0102);
+            VerifySpeculativeEntryOrFail(cs2, 0x0043, Signature_0043_jne);
+            // F000:0043 jne short 0x0048
+            if (!ZeroFlag) {
+                break;
+            }
+            VerifySpeculativeEntryOrFail(cs2, 0x0045, Signature_0045_sti);
+            // F000:0045 sti
+            InterruptFlag = true;
+            CheckExternalEvents(cs2, 0x0046);
+            VerifySpeculativeEntryOrFail(cs2, 0x0046, Signature_0046_jmp);
+            // F000:0046 jmp short 0x003E
         }
-        VerifySpeculativeEntryOrFail(cs2, 0x0044, Signature_0044_int);
-        // F000:0044 int 9
-        InterruptCall(cs2, 0x0046, 9);
-        throw FailAsUntested("Untested return from call at F000:0044");
+        VerifySpeculativeEntryOrFail(cs2, 0x0048, Signature_0048_callback);
+        // F000:0048 callback 0x0103
+        Callback(cs2, 0x0048, 0x0103);
+        VerifySpeculativeEntryOrFail(cs2, 0x004C, Signature_004C_iret);
+        // F000:004C iret
+        return InterruptRet();
     }
 
     public virtual Action unknown_F000_0057_F0057(int loadOffset) {

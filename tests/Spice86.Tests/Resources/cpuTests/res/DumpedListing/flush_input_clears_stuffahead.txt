@@ -40,9 +40,11 @@ F000:0034 cmp AH,0x10
 F000:0037 je short 0x003E
 F000:0039 callback 0x0016
 F000:003D iret
-F000:003E callback 0x0102
-F000:0042 jne short 0x0048
-F000:0044 int 9
+F000:003E cli
+F000:003F callback 0x0102
+F000:0043 jne short 0x0048
+F000:0045 sti
+F000:0046 jmp short 0x003E
 F000:0048 callback 0x0103
 F000:004C iret
 F000:0057 callback 0x0070

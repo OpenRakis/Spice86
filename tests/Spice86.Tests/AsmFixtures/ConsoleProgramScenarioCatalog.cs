@@ -70,7 +70,9 @@ internal static class ConsoleProgramScenarioCatalog {
     /// <summary>The enhanced INT 16h keyboard scenarios.</summary>
     public static IReadOnlyList<AsmScenario> Int16Scenarios => [
         Int16Ah10ReturnsExtendedKeyScanCode(),
-        Int16Ah11ReturnsExtendedKeyScanCode()
+        Int16Ah11ReturnsExtendedKeyScanCode(),
+        Int16WaitKeyThroughChainedInt9(),
+        Int16SecondWaitGetsNextKey()
     ];
 
     /// <summary>IOCTL 06 reports whether a keystroke is waiting in the BIOS keyboard buffer.</summary>
@@ -350,6 +352,32 @@ internal static class ConsoleProgramScenarioCatalog {
             .ResourceCopy(ProgramDirectory, "read_extended_key_11.com", "READ11.COM")
             .RunWithKeys("READ11.COM", [0x3C00], result =>
                 VideoByte(result, 0).Should().Be(0x3C, "AH=11h should return the scan code of F2 in AH")));
+    }
+
+    /// <summary>A program that hooks INT 9, reads port 60h itself and chains to the BIOS handler still
+    /// gets the injected key back from a blocking INT 16h AH=00h, because INT 16h waits with interrupts
+    /// enabled and the BIOS INT 9 handler buffers the key the chained handler consumed.</summary>
+    /// <returns>The scenario.</returns>
+    private static AsmScenario Int16WaitKeyThroughChainedInt9() {
+        return Scenario("int16_wait_key_through_chained_int9", run => run
+            .ResourceCopy(ProgramDirectory, "int16_wait_key_through_chained_int9.com", "CHAIN9.COM")
+            .RunWithKeys("CHAIN9.COM", NoKeys, result => {
+                VideoByte(result, 0).Should().Be(0x61, "INT 16h AH=00h should return 'a' in AL");
+                VideoByte(result, 1).Should().Be(0x1E, "INT 16h AH=00h should return the scancode of A in AH");
+                VideoByte(result, 2).Should().Be(0x1E, "the hooked INT 9 handler should have seen the scancode on port 60h");
+            }));
+    }
+
+    /// <summary>A second blocking INT 16h AH=00h call waits with interrupts enabled until the next timer
+    /// tick injects a 'B' key press, so it returns 'b' instead of the stale previous scancode.</summary>
+    /// <returns>The scenario.</returns>
+    private static AsmScenario Int16SecondWaitGetsNextKey() {
+        return Scenario("int16_second_wait_gets_next_key", run => run
+            .ResourceCopy(ProgramDirectory, "int16_second_wait_gets_next_key.com", "NEXTKEY.COM")
+            .RunWithKeys("NEXTKEY.COM", NoKeys, result => {
+                VideoByte(result, 0).Should().Be(0x61, "the first INT 16h AH=00h should return 'a'");
+                VideoByte(result, 1).Should().Be(0x62, "the second INT 16h AH=00h should return 'b', not the stale 'a' again");
+            }));
     }
 
     private static AsmScenario Scenario(string identity, Func<DosProgramRun, AsmFixture> build) {
