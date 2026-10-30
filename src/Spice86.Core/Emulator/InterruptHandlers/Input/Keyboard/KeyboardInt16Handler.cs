@@ -146,11 +146,12 @@ public class KeyboardInt16Handler : InterruptHandler {
     ///     iret
     /// 
     ///     L_GET_KEY:
+    ///     cli        ; check and dequeue run with interrupts disabled
     ///     int 0A0h   ; CallbackHasKey -> sets ZF=0 if a key is present
     ///     jnz have_key
-    ///     int 09h    ; invoke hardware keyboard ISR (IRQ1) to fetch a key
+    ///     sti        ; wait with interrupts enabled so IRQ 1 can deliver the next key
     ///     jmp short L_GET_KEY
-    /// 
+    ///
     ///     have_key:
     ///     int 0A1h   ; CallbackDequeueAndSetAx -> AX = (scan<<8 | ascii)
     ///     iret
@@ -189,14 +190,18 @@ public class KeyboardInt16Handler : InterruptHandler {
         memoryAsmWriter.RegisterAndWriteCallback(VectorNumber, Run);
         memoryAsmWriter.WriteIret();
 
-        // L_GET_KEY:
+        // L_GET_KEY: the buffer check and the dequeue run with interrupts disabled, so an interrupt
+        // handler cannot take the key between them.
+        memoryAsmWriter.WriteCli();
         // callback HasKey (sets ZF=0 when key present)
         memoryAsmWriter.RegisterAndWriteCallback(CallbackNumbers.KeyboardHasKey, CallbackHasKey);
-        // JNZ have_key (+0x04 to skip INT 09h and the backward jump)
-        memoryAsmWriter.WriteJnz(4);
-        // INT 09h
-        memoryAsmWriter.WriteInt(0x09);
-        // JMP short back to L_AH00 (-0x10)
+        // JNZ have_key (+0x03 to skip the STI and the backward jump)
+        memoryAsmWriter.WriteJnz(3);
+        // INT clears IF, but a new key reaches the BIOS buffer only through IRQ 1 (and through any INT 9
+        // handler a program installed), so the empty-buffer wait enables interrupts. The jmp is the STI
+        // shadow instruction: a pending IRQ is delivered at the loop head, before cli runs again.
+        memoryAsmWriter.WriteSti();
+        // JMP short back to L_GET_KEY (-0x0A)
         memoryAsmWriter.WriteJumpShort(-10);
         // have_key: dequeue and set AX, then IRET
         memoryAsmWriter.RegisterAndWriteCallback(CallbackNumbers.KeyboardDequeueAndSetAx, CallbackDequeueAndSetAx);

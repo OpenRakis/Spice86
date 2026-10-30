@@ -207,7 +207,7 @@ public class DosInt21Handler : InterruptHandler {
     ///     C# handler via <c>callback(Run)</c>. For AH=07h, 08h, and 0Ah the stub first
     ///     polls STDIN readiness with INT 28h idle calls before dispatching.
     ///     AH=01h is NOT polled here — it goes through L_DEFAULT to the C# handler which
-    ///     reads via ConsoleDevice → INT 16h (which has its own INT 09h-based keyboard polling).
+    ///     reads via ConsoleDevice → INT 16h (which waits with interrupts enabled for IRQ 1).
     /// </summary>
     /// <remarks><![CDATA[
     ///     A flag byte is reserved in the handler segment, before the entry point.

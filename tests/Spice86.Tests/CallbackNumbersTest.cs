@@ -58,7 +58,7 @@ public class CallbackNumbersTest {
     private static Dictionary<ushort, SegmentedAddress> ExpectedCallbackAddresses() {
         return new Dictionary<ushort, SegmentedAddress> {
             [CallbackNumbers.TimerAfterInt8Execution] = new SegmentedAddress(0xF000, 0x000C),
-            [CallbackNumbers.KeyboardHasKey] = new SegmentedAddress(0xF000, 0x003E),
+            [CallbackNumbers.KeyboardHasKey] = new SegmentedAddress(0xF000, 0x003F),
             [CallbackNumbers.KeyboardDequeueAndSetAx] = new SegmentedAddress(0xF000, 0x0048),
             [CallbackNumbers.DefaultIrq3] = new SegmentedAddress(0xF000, 0x0067),
             [CallbackNumbers.DefaultIrq4] = new SegmentedAddress(0xF000, 0x006C),

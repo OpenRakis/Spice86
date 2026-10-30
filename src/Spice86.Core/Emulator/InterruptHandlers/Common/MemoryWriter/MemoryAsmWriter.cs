@@ -126,6 +126,13 @@ public class MemoryAsmWriter : MemoryWriter {
     }
 
     /// <summary>
+    /// Writes a CLI instruction to memory. Disables hardware interrupts (IF=0).
+    /// </summary>
+    public void WriteCli() {
+        WriteUInt8(0xFA);
+    }
+
+    /// <summary>
     /// Writes a far CALL instruction to the given inMemoryAddressSwitcher default address. <br/>
     /// Throws UnrecoverableException if DefaultAddressValue is not initialized. <br/>
     /// If successful, sets the switcher PhysicalLocation to the location of the far call address, making it possible to change it dynamically.
