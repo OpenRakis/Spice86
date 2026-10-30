@@ -60,9 +60,9 @@ public class CfgGraphReloadTest {
         "add", "alu_dead_flags", "bcdcnv", "bitwise", "cmpneg", "control", "datatrnf",
         "dataflow_constant_folding", "dataflow_double_precision", "dataflow_expression_propagation",
         "dataflow_flag_definitions", "dataflow_idioms", "dataflow_interrupt_boundaries",
-        "dataflow_partial_registers", "dataflow_stack_save_restore", "div", "div2", "divfaultloop",
+        "dataflow_legality_traps", "dataflow_partial_registers", "dataflow_rewrite_traps", "dataflow_stack_save_restore", "div", "div2", "divfaultloop",
         "externalint", "flagconditions", "instruction_coverage_386", "interrupt", "ioports", "jmpmov", "jump1", "jump2", "linearsamesegmenteddifferent",
-        "lockprefix", "mul", "partition_back_edge_fallthrough", "partition_cross_function_loop", "partition_far_dispatch", "partition_indirect_call_jump", "partition_jump_table",
+        "lockprefix", "mul", "partition_back_edge_fallthrough", "partition_cross_function_loop", "partition_far_dispatch", "partition_far_call_chain", "partition_far_jump_segment_change", "partition_indirect_call_jump", "partition_jump_table",
         "partition_jump_table_mixed", "partition_jump_into_function_middle", "partition_jump_to_next", "partition_mixed_activation_cycle",
         "partition_multi_entry_dominated_shared", "partition_multi_entry_irreducible_shared",
         "partition_shared_tail", "partition_sign_conditions", "partition_signed_min_compare", "partition_two_fault_handlers",
@@ -417,7 +417,7 @@ public class CfgGraphReloadTest {
     }
 
     private static CfgNodeExecutionCompiler NewCompiler(ILogger loggerService) {
-        return new CfgNodeExecutionCompiler(new CfgNodeExecutionCompilerMonitor(loggerService), loggerService, JitMode.InterpretedOnly, TestJitSettings.AluExpansion);
+        return new CfgNodeExecutionCompiler(new CfgNodeExecutionCompilerMonitor(loggerService), loggerService, JitMode.InterpretedOnly, TestJitSettings.Rewriter, TestJitSettings.ExpandAluCalls);
     }
 
     private static string SerializeDump(CfgReloadDump dump) {
@@ -467,7 +467,10 @@ public class CfgGraphReloadTest {
         // Partitions are derived; their block lists are sets, so sort for stable comparison.
         if (root["partitions"] is JsonArray partitions) {
             foreach (JsonNode? partition in partitions) {
-                if (partition is JsonObject partitionObject && partitionObject["blocks"] is JsonArray partitionBlocks) {
+                if (partition is not JsonObject partitionObject) {
+                    continue;
+                }
+                if (partitionObject["blocks"] is JsonArray partitionBlocks) {
                     partitionObject["blocks"] = SortIntArray(partitionBlocks);
                 }
             }

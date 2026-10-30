@@ -15,7 +15,7 @@ using static Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast.CodeGen
 /// Attributes one <see cref="GotoKeepReason"/> to every <c>goto</c> the printed method holds: the <c>goto</c>s of the
 /// entry dispatch, the <c>goto entrydispatcher;</c> of cyclic jumps, and every <see cref="GotoNode"/> left in the
 /// body after <see cref="FallthroughGotoRemover"/>. Reasons come from the generator's own data (the structurizer's
-/// recorded refusals, the natural loops, the partition entries, the block layout), never from the printed text.
+/// recorded refusals, the natural loops, the method entries, the block layout), never from the printed text.
 /// </summary>
 internal static class GotoCensusClassifier {
     /// <summary>
@@ -26,94 +26,113 @@ internal static class GotoCensusClassifier {
     /// <param name="entryDispatch">The entry dispatch block of the method (<c>switch (loadOffset)</c>), possibly empty.</param>
     /// <param name="body">The method body after the fallthrough <c>goto</c>s were removed.</param>
     /// <param name="loops">The natural loops of the method's block graph.</param>
-    /// <param name="entryNodes">The partition entry nodes of the method.</param>
+    /// <param name="entryTargets">The goto targets that are method entries.</param>
     /// <param name="blocks">The lowered blocks, in layout order.</param>
+    /// <param name="nodesOf">The CFG nodes each block holds; identifies which block a boundary's node belongs to.</param>
     /// <param name="refusals">The reasons the structurizer recorded per kept <see cref="GotoNode"/> instance.</param>
-    public static GotoCensus Classify(BlockNode entryDispatch, BlockNode body, NaturalLoopForest loops,
-        IReadOnlySet<ICfgNode> entryNodes, IReadOnlyList<LoweredBlock> blocks,
-        IReadOnlyDictionary<GotoNode, GotoKeepReason> refusals) {
-        Walker walker = new(loops, entryNodes, blocks, refusals);
+    public static GotoCensus Classify<TBlock>(BlockNode entryDispatch, BlockNode body, NaturalLoopForest<TBlock> loops,
+        IReadOnlySet<IGotoTarget> entryTargets, IReadOnlyList<LoweredBlock<TBlock>> blocks,
+        Func<TBlock, IEnumerable<ICfgNode>> nodesOf,
+        IReadOnlyDictionary<GotoNode, GotoKeepReason> refusals) where TBlock : class {
+        Walker<TBlock> walker = new(loops, entryTargets, blocks, nodesOf, refusals);
         GotoCensus census = new();
         census.Add(GotoKeepReason.EntryDispatch, Gotos(entryDispatch).Count());
-        Dictionary<ICfgNode, int> printedByTarget = Gotos(body).CountBy(jump => jump.Target)
+        Dictionary<IGotoTarget, int> printedByTarget = Gotos(body).CountBy(jump => jump.Target)
             .ToDictionary(pair => pair.Key, pair => pair.Value);
         walker.Walk(body, census, printedByTarget);
         return census;
     }
 
     /// <summary>Walks the body once, tracking the source instruction and the enclosing structured loops.</summary>
-    private sealed class Walker(NaturalLoopForest loops, IReadOnlySet<ICfgNode> entryNodes,
-        IReadOnlyList<LoweredBlock> blocks, IReadOnlyDictionary<GotoNode, GotoKeepReason> refusals) {
-        private readonly List<NaturalLoop?> _enclosingLoops = [];
-        private readonly Dictionary<ICfgNode, CfgBlock> _blockByNode = NodeToBlock(blocks);
-        private readonly Dictionary<ICfgNode, CfgBlock> _blockByEntry = blocks.ToDictionary(block => block.Block.Entry, block => block.Block);
-        private readonly Dictionary<CfgBlock, int> _layoutIndexByBlock = LayoutIndex(blocks);
+    private sealed class Walker<TBlock>(NaturalLoopForest<TBlock> loops, IReadOnlySet<IGotoTarget> entryTargets,
+        IReadOnlyList<LoweredBlock<TBlock>> blocks, Func<TBlock, IEnumerable<ICfgNode>> nodesOf,
+        IReadOnlyDictionary<GotoNode, GotoKeepReason> refusals)
+        where TBlock : class {
+        private readonly List<NaturalLoop<TBlock>?> _enclosingLoops = [];
+        private readonly Dictionary<IGotoTarget, LoweredBlock<TBlock>> _memberByEntry =
+            blocks.ToDictionary(block => block.Entry);
+        private readonly Dictionary<TBlock, LoweredBlock<TBlock>> _memberByBlock =
+            blocks.ToDictionary(block => block.Block);
+        private readonly Dictionary<ICfgNode, TBlock> _blockByNode = NodeToBlock(blocks, nodesOf);
+        private readonly Dictionary<TBlock, int> _layoutIndexByBlock = LayoutIndex(blocks);
         private ICfgNode? _currentNode;
 
-        private static Dictionary<CfgBlock, int> LayoutIndex(IReadOnlyList<LoweredBlock> blocks) {
-            Dictionary<CfgBlock, int> map = new();
+        private static Dictionary<TBlock, int> LayoutIndex(IReadOnlyList<LoweredBlock<TBlock>> blocks) {
+            Dictionary<TBlock, int> map = new();
             for (int index = 0; index < blocks.Count; index++) {
                 map[blocks[index].Block] = index;
             }
             return map;
         }
 
-        private static Dictionary<ICfgNode, CfgBlock> NodeToBlock(IReadOnlyList<LoweredBlock> blocks) {
-            Dictionary<ICfgNode, CfgBlock> map = new();
-            foreach (LoweredBlock block in blocks) {
-                foreach (ICfgNode node in block.Block.Instructions) {
+        private static Dictionary<ICfgNode, TBlock> NodeToBlock(IReadOnlyList<LoweredBlock<TBlock>> blocks,
+            Func<TBlock, IEnumerable<ICfgNode>> nodesOf) {
+            Dictionary<ICfgNode, TBlock> map = new();
+            foreach (LoweredBlock<TBlock> block in blocks) {
+                foreach (ICfgNode node in nodesOf(block.Block)) {
                     map[node] = block.Block;
                 }
             }
             return map;
         }
 
-        public void Walk(IVisitableAstNode node, GotoCensus census, IReadOnlyDictionary<ICfgNode, int> printedByTarget) {
+        public void Walk(IVisitableAstNode node, GotoCensus census, IReadOnlyDictionary<IGotoTarget, int> printedByTarget) {
+            AstTrampoline.Run(WalkIt(node, census, printedByTarget));
+        }
+
+        private IEnumerable<AstSubcall> WalkIt(IVisitableAstNode node, GotoCensus census,
+            IReadOnlyDictionary<IGotoTarget, int> printedByTarget) {
             switch (node) {
                 case GotoNode jump:
                     census.Add(Classify(jump, printedByTarget));
-                    return;
+                    yield break;
                 case CyclicJumpNode:
                     census.Add(GotoKeepReason.CyclicJump);
-                    return;
+                    yield break;
                 case InstructionBoundaryNode boundary: {
                     ICfgNode? outer = _currentNode;
                     _currentNode = boundary.Node;
-                    Walk(boundary.Body, census, printedByTarget);
+                    yield return AstTrampoline.Call(WalkIt(boundary.Body, census, printedByTarget));
                     _currentNode = outer;
-                    return;
+                    yield break;
                 }
                 case InfiniteLoopNode infiniteLoop:
-                    WalkLoop(infiniteLoop, infiniteLoop.Body, census, printedByTarget);
-                    return;
+                    yield return AstTrampoline.Call(WalkLoopIt(infiniteLoop, infiniteLoop.Body, census, printedByTarget));
+                    yield break;
                 case DoWhileNode doWhile:
-                    WalkLoop(doWhile, doWhile.Body, census, printedByTarget);
-                    return;
+                    yield return AstTrampoline.Call(WalkLoopIt(doWhile, doWhile.Body, census, printedByTarget));
+                    yield break;
+                case WhileNode whileLoop:
+                    yield return AstTrampoline.Call(WalkLoopIt(whileLoop, whileLoop.Body, census, printedByTarget));
+                    yield break;
                 default:
                     foreach (IVisitableAstNode child in ChildStatements(node)) {
-                        Walk(child, census, printedByTarget);
+                        yield return AstTrampoline.Call(WalkIt(child, census, printedByTarget));
                     }
-                    return;
+                    yield break;
             }
         }
 
-        private void WalkLoop(IVisitableAstNode loopNode, BlockNode body, GotoCensus census,
-            IReadOnlyDictionary<ICfgNode, int> printedByTarget) {
+        private IEnumerable<AstSubcall> WalkLoopIt(IVisitableAstNode loopNode, BlockNode body,
+            GotoCensus census, IReadOnlyDictionary<IGotoTarget, int> printedByTarget) {
             _enclosingLoops.Add(NaturalLoopOf(loopNode));
-            Walk(body, census, printedByTarget);
-            _enclosingLoops.RemoveAt(_enclosingLoops.Count - 1);
+            try {
+                yield return AstTrampoline.Call(WalkIt(body, census, printedByTarget));
+            } finally {
+                _enclosingLoops.RemoveAt(_enclosingLoops.Count - 1);
+            }
         }
 
         /// <summary>The natural loop a structured loop node was built from, or <c>null</c> when its header is unknown.</summary>
-        private NaturalLoop? NaturalLoopOf(IVisitableAstNode loopNode) {
-            ICfgNode? entry = EntryNodeOf(loopNode);
-            if (entry is null || !_blockByNode.TryGetValue(entry, out CfgBlock? header)) {
+        private NaturalLoop<TBlock>? NaturalLoopOf(IVisitableAstNode loopNode) {
+            IGotoTarget? entry = AnchorOf(loopNode);
+            if (entry is null || !_memberByEntry.TryGetValue(entry, out LoweredBlock<TBlock>? header)) {
                 return null;
             }
-            return loops.LoopWithHeader(header);
+            return loops.LoopWithHeader(header.Block);
         }
 
-        private NaturalLoop? InnermostEnclosingLoop() {
+        private NaturalLoop<TBlock>? InnermostEnclosingLoop() {
             for (int index = _enclosingLoops.Count - 1; index >= 0; index--) {
                 if (_enclosingLoops[index] is not null) {
                     return _enclosingLoops[index];
@@ -122,29 +141,30 @@ internal static class GotoCensusClassifier {
             return null;
         }
 
-        private GotoKeepReason Classify(GotoNode jump, IReadOnlyDictionary<ICfgNode, int> printedByTarget) {
-            ICfgNode target = jump.Target;
-            CfgBlock? targetBlock = _blockByEntry.GetValueOrDefault(target);
-            if (targetBlock is not null && targetBlock.Instructions.Any(entryNodes.Contains)) {
+        private GotoKeepReason Classify(GotoNode jump, IReadOnlyDictionary<IGotoTarget, int> printedByTarget) {
+            IGotoTarget target = jump.Target;
+            LoweredBlock<TBlock>? targetMember = _memberByEntry.GetValueOrDefault(target);
+            if (targetMember is not null && targetMember.HoldsEntry) {
                 return GotoKeepReason.TargetIsEntry;
             }
-            if (targetBlock is not null && loops.Loops.Any(loop => loop.Contains(targetBlock)
-                && !MethodStructurizer.IsStructurable(loop, entryNodes))) {
+            if (targetMember is not null && loops.Loops.Any(loop => loop.Contains(targetMember.Block)
+                && !MethodStructurizer.IsStructurable(loop, _memberByBlock, entryTargets))) {
                 return GotoKeepReason.LoopWithSecondEntry;
             }
-            NaturalLoop? enclosing = InnermostEnclosingLoop();
+            NaturalLoop<TBlock>? enclosing = InnermostEnclosingLoop();
             if (enclosing is not null) {
-                if (ReferenceEquals(target, enclosing.Header.Entry)) {
+                if (_memberByBlock.TryGetValue(enclosing.Header, out LoweredBlock<TBlock>? headerMember)
+                    && Equals(target, headerMember.Entry)) {
                     return GotoKeepReason.LoopRestart;
                 }
-                if (targetBlock is not null && !enclosing.Contains(targetBlock)) {
+                if (targetMember is not null && !enclosing.Contains(targetMember.Block)) {
                     return GotoKeepReason.LoopExit;
                 }
             }
-            if (targetBlock is not null && _currentNode is not null
-                && _blockByNode.TryGetValue(_currentNode, out CfgBlock? source)
-                && _layoutIndexByBlock[targetBlock] < _layoutIndexByBlock.GetValueOrDefault(source, -1)
-                && !loops.Dominators.Dominates(targetBlock, source)) {
+            if (targetMember is not null && _currentNode is not null
+                && _blockByNode.TryGetValue(_currentNode, out TBlock? source)
+                && _layoutIndexByBlock[targetMember.Block] < _layoutIndexByBlock.GetValueOrDefault(source, -1)
+                && !loops.Dominators.Dominates(targetMember.Block, source)) {
                 return GotoKeepReason.Irreducible;
             }
             if (refusals.TryGetValue(jump, out GotoKeepReason reason)) {

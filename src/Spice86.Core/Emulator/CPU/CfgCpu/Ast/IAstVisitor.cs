@@ -46,4 +46,6 @@ public interface IAstVisitor<T> {
     public T VisitSelectorNode(SelectorNode node);
     public T VisitInvalidInstructionNode(InvalidInstructionNode node);
     public T VisitCpuidNode(CpuidNode node);
+    public T VisitConditionalValueNode(ConditionalValueNode node);
+    public T VisitSetInterruptShadowNode(SetInterruptShadowNode node);
 }

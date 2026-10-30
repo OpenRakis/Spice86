@@ -84,7 +84,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0103 mov AL,1
         AL = 1;
         // 016D:0105 out DX,AL
-        Out8(DX, AL);
+        Out8(0x0998, AL);
         // 016D:0106 mov AL,0
         AL = 0;
         // 016D:0108 out 0x70,AL
@@ -100,7 +100,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // 016D:0114 mov AL,2
             AL = 2;
             // 016D:0116 out DX,AL
-            Out8(DX, AL);
+            Out8(0x0998, AL);
             // 016D:0117 mov AL,2
             AL = 2;
             // 016D:0119 out 0x70,AL
@@ -116,7 +116,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 // 016D:0125 mov AL,3
                 AL = 3;
                 // 016D:0127 out DX,AL
-                Out8(DX, AL);
+                Out8(0x0998, AL);
                 // 016D:0128 mov AL,4
                 AL = 4;
                 // 016D:012A out 0x70,AL
@@ -132,7 +132,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                     // 016D:0136 mov AL,4
                     AL = 4;
                     // 016D:0138 out DX,AL
-                    Out8(DX, AL);
+                    Out8(0x0998, AL);
                     // 016D:0139 mov AL,6
                     AL = 6;
                     // 016D:013B out 0x70,AL
@@ -148,7 +148,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                         // 016D:0147 mov AL,5
                         AL = 5;
                         // 016D:0149 out DX,AL
-                        Out8(DX, AL);
+                        Out8(0x0998, AL);
                         // 016D:014A mov AL,7
                         AL = 7;
                         // 016D:014C out 0x70,AL
@@ -164,7 +164,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                             // 016D:0158 mov AL,6
                             AL = 6;
                             // 016D:015A out DX,AL
-                            Out8(DX, AL);
+                            Out8(0x0998, AL);
                             // 016D:015B mov AL,8
                             AL = 8;
                             // 016D:015D out 0x70,AL
@@ -180,7 +180,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                 // 016D:0169 mov AL,7
                                 AL = 7;
                                 // 016D:016B out DX,AL
-                                Out8(DX, AL);
+                                Out8(0x0998, AL);
                                 // 016D:016C mov AL,9
                                 AL = 9;
                                 // 016D:016E out 0x70,AL
@@ -196,7 +196,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                     // 016D:017A mov AL,0
                                     AL = 0;
                                     // 016D:017C out DX,AL
-                                    Out8(DX, AL);
+                                    Out8(0x0999, AL);
                                     // 016D:017D hlt
                                     return Hlt();
                                 }
@@ -214,7 +214,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AL = 0xFF;
         VerifySpeculativeEntryOrFail(cs1, 0x0183, Signature_0183_out);
         // 016D:0183 out DX,AL
-        Out8(DX, AL);
+        Out8(0x0999, AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0184, Signature_0184_hlt);
         // 016D:0184 hlt
         return Hlt();
@@ -227,21 +227,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0186 push BX
         Stack.Push16(BX);
         // 016D:0187 mov BL,AL
-        BL = AL;
         // 016D:0189 shr BL,4
-        BL = (byte)(BL >> 4);
+        BL = (byte)(AL >> 4);
         // 016D:018C cmp BL,9
         Alu8.Sub(BL, 9);
         // 016D:018F ja short 0x019F
-        if (CarryFlag || ZeroFlag) {
+        if (BL <= 9) {
             // 016D:0191 mov BL,AL
-            BL = AL;
             // 016D:0193 and BL,0x0F
-            BL = (byte)(BL & 0x0F);
+            BL = (byte)(AL & 0x0F);
             // 016D:0196 cmp BL,9
             Alu8.Sub(BL, 9);
             // 016D:0199 ja short 0x019F
-            if (CarryFlag || ZeroFlag) {
+            if (BL <= 9) {
                 // 016D:019B clc
                 CarryFlag = false;
                 // 016D:019C pop BX

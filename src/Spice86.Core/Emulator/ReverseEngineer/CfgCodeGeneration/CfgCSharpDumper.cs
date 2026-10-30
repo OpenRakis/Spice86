@@ -4,6 +4,7 @@ namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
+using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Shared.Interfaces;
 
 using System.IO;
@@ -21,14 +22,18 @@ internal sealed class CfgCSharpDumper {
         _loggerService = loggerService;
     }
 
-    public GeneratedCSharpProgram Generate(CfgPartitionedProgram program) {
+    /// <summary>
+    /// Generates the override source for <paramref name="program"/>, reporting analysis, planning and
+    /// per-method progress through <paramref name="progress"/>.
+    /// </summary>
+    public GeneratedCSharpProgram Generate(CfgPartitionedProgram program, DumpProgressReporter progress) {
         if (program.Partitions.Count == 0) {
             return new GeneratedCSharpProgram {
                 SourceText = "// No CFG partitions were observed.\n"
             };
         }
 
-        return _generator.Generate(program);
+        return _generator.Generate(program, progress);
     }
 
     /// <summary>

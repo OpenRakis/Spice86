@@ -15,10 +15,10 @@ public sealed class NaturalLoopForestTest {
         CfgBlock entry = CfgTestHelpers.CreateBlock(1, 0x00);
         CfgBlock middle = CfgTestHelpers.CreateBlock(2, 0x10);
         CfgBlock exit = CfgTestHelpers.CreateBlock(3, 0x20);
-        PartitionBlockGraph graph = Graph([entry, middle, exit], [entry], new() { [entry] = [middle], [middle] = [exit] });
+        BlockGraph<CfgBlock> graph = Graph([entry, middle, exit], [entry], new() { [entry] = [middle], [middle] = [exit] });
 
         // Act
-        NaturalLoopForest forest = Build(graph);
+        NaturalLoopForest<CfgBlock> forest = Build(graph);
 
         // Assert
         forest.Loops.Should().BeEmpty();
@@ -32,14 +32,14 @@ public sealed class NaturalLoopForestTest {
         CfgBlock entry = CfgTestHelpers.CreateBlock(1, 0x00);
         CfgBlock spin = CfgTestHelpers.CreateBlock(2, 0x10);
         CfgBlock exit = CfgTestHelpers.CreateBlock(3, 0x20);
-        PartitionBlockGraph graph = Graph([entry, spin, exit], [entry], new() { [entry] = [spin], [spin] = [spin, exit] });
+        BlockGraph<CfgBlock> graph = Graph([entry, spin, exit], [entry], new() { [entry] = [spin], [spin] = [spin, exit] });
 
         // Act
-        NaturalLoopForest forest = Build(graph);
+        NaturalLoopForest<CfgBlock> forest = Build(graph);
 
         // Assert
         forest.Loops.Should().HaveCount(1);
-        NaturalLoop loop = forest.Loops[0];
+        NaturalLoop<CfgBlock> loop = forest.Loops[0];
         loop.Header.Should().BeSameAs(spin);
         loop.Blocks.Should().Equal(spin);
         loop.Latches.Should().Equal(spin);
@@ -57,15 +57,15 @@ public sealed class NaturalLoopForestTest {
         CfgBlock body = CfgTestHelpers.CreateBlock(3, 0x20);
         CfgBlock latch = CfgTestHelpers.CreateBlock(4, 0x30);
         CfgBlock exit = CfgTestHelpers.CreateBlock(5, 0x40);
-        PartitionBlockGraph graph = Graph([entry, head, body, latch, exit], [entry],
+        BlockGraph<CfgBlock> graph = Graph([entry, head, body, latch, exit], [entry],
             new() { [entry] = [head], [head] = [body, exit], [body] = [latch], [latch] = [head] });
 
         // Act
-        NaturalLoopForest forest = Build(graph);
+        NaturalLoopForest<CfgBlock> forest = Build(graph);
 
         // Assert
         forest.Loops.Should().HaveCount(1);
-        NaturalLoop loop = forest.Loops[0];
+        NaturalLoop<CfgBlock> loop = forest.Loops[0];
         loop.Header.Should().BeSameAs(head);
         loop.Blocks.Should().Equal(head, body, latch);
         loop.Latches.Should().Equal(latch);
@@ -81,15 +81,15 @@ public sealed class NaturalLoopForestTest {
         CfgBlock left = CfgTestHelpers.CreateBlock(3, 0x20);
         CfgBlock right = CfgTestHelpers.CreateBlock(4, 0x30);
         CfgBlock exit = CfgTestHelpers.CreateBlock(5, 0x40);
-        PartitionBlockGraph graph = Graph([entry, head, left, right, exit], [entry],
+        BlockGraph<CfgBlock> graph = Graph([entry, head, left, right, exit], [entry],
             new() { [entry] = [head], [head] = [left, right], [left] = [head], [right] = [head, exit] });
 
         // Act
-        NaturalLoopForest forest = Build(graph);
+        NaturalLoopForest<CfgBlock> forest = Build(graph);
 
         // Assert
         forest.Loops.Should().HaveCount(1);
-        NaturalLoop loop = forest.Loops[0];
+        NaturalLoop<CfgBlock> loop = forest.Loops[0];
         loop.Blocks.Should().Equal(head, left, right);
         loop.Latches.Should().Equal(left, right);
     }
@@ -102,16 +102,16 @@ public sealed class NaturalLoopForestTest {
         CfgBlock inner = CfgTestHelpers.CreateBlock(3, 0x20);
         CfgBlock latch = CfgTestHelpers.CreateBlock(4, 0x30);
         CfgBlock exit = CfgTestHelpers.CreateBlock(5, 0x40);
-        PartitionBlockGraph graph = Graph([entry, outer, inner, latch, exit], [entry],
+        BlockGraph<CfgBlock> graph = Graph([entry, outer, inner, latch, exit], [entry],
             new() { [entry] = [outer], [outer] = [inner], [inner] = [inner, latch], [latch] = [outer, exit] });
 
         // Act
-        NaturalLoopForest forest = Build(graph);
+        NaturalLoopForest<CfgBlock> forest = Build(graph);
 
         // Assert
         forest.Loops.Should().HaveCount(2);
-        NaturalLoop outerLoop = forest.Loops[0];
-        NaturalLoop innerLoop = forest.Loops[1];
+        NaturalLoop<CfgBlock> outerLoop = forest.Loops[0];
+        NaturalLoop<CfgBlock> innerLoop = forest.Loops[1];
         outerLoop.Header.Should().BeSameAs(outer);
         outerLoop.Blocks.Should().Equal(outer, inner, latch);
         innerLoop.Header.Should().BeSameAs(inner);
@@ -132,11 +132,11 @@ public sealed class NaturalLoopForestTest {
         CfgBlock second = CfgTestHelpers.CreateBlock(2, 0x08);
         CfgBlock left = CfgTestHelpers.CreateBlock(3, 0x10);
         CfgBlock right = CfgTestHelpers.CreateBlock(4, 0x20);
-        PartitionBlockGraph graph = Graph([first, second, left, right], [first, second],
+        BlockGraph<CfgBlock> graph = Graph([first, second, left, right], [first, second],
             new() { [first] = [left], [second] = [right], [left] = [right], [right] = [left] });
 
         // Act
-        NaturalLoopForest forest = Build(graph);
+        NaturalLoopForest<CfgBlock> forest = Build(graph);
 
         // Assert
         forest.Loops.Should().BeEmpty();
@@ -150,11 +150,11 @@ public sealed class NaturalLoopForestTest {
         CfgBlock head = CfgTestHelpers.CreateBlock(2, 0x10);
         CfgBlock middle = CfgTestHelpers.CreateBlock(3, 0x20);
         CfgBlock exit = CfgTestHelpers.CreateBlock(4, 0x30);
-        PartitionBlockGraph graph = Graph([entry, head, middle, exit], [entry, middle],
+        BlockGraph<CfgBlock> graph = Graph([entry, head, middle, exit], [entry, middle],
             new() { [entry] = [head], [head] = [middle], [middle] = [head, exit] });
 
         // Act
-        NaturalLoopForest forest = Build(graph);
+        NaturalLoopForest<CfgBlock> forest = Build(graph);
 
         // Assert
         forest.Loops.Should().BeEmpty();
@@ -168,11 +168,11 @@ public sealed class NaturalLoopForestTest {
         CfgBlock head = CfgTestHelpers.CreateBlock(2, 0x10);
         CfgBlock body = CfgTestHelpers.CreateBlock(3, 0x20);
         CfgBlock exit = CfgTestHelpers.CreateBlock(4, 0x30);
-        PartitionBlockGraph graph = Graph([entry, head, body, exit], [entry, head],
+        BlockGraph<CfgBlock> graph = Graph([entry, head, body, exit], [entry, head],
             new() { [entry] = [head], [head] = [body, exit], [body] = [head] });
 
         // Act
-        NaturalLoopForest forest = Build(graph);
+        NaturalLoopForest<CfgBlock> forest = Build(graph);
 
         // Assert
         forest.Loops.Should().HaveCount(1);
@@ -190,14 +190,14 @@ public sealed class NaturalLoopForestTest {
         CfgBlock exit = CfgTestHelpers.CreateBlock(4, 0x30);
         CfgBlock dead = CfgTestHelpers.CreateBlock(5, 0x40);
         CfgBlock deadSpin = CfgTestHelpers.CreateBlock(6, 0x50);
-        PartitionBlockGraph graph = Graph([entry, head, body, exit, dead, deadSpin], [entry],
+        BlockGraph<CfgBlock> graph = Graph([entry, head, body, exit, dead, deadSpin], [entry],
             new() {
                 [entry] = [head], [head] = [body, exit], [body] = [head],
                 [dead] = [body], [deadSpin] = [deadSpin]
             });
 
         // Act
-        NaturalLoopForest forest = Build(graph);
+        NaturalLoopForest<CfgBlock> forest = Build(graph);
 
         // Assert
         forest.Loops.Should().HaveCount(1);
@@ -206,12 +206,12 @@ public sealed class NaturalLoopForestTest {
         forest.IrreducibleEdges.Should().BeEmpty();
     }
 
-    private static NaturalLoopForest Build(PartitionBlockGraph graph) {
+    private static NaturalLoopForest<CfgBlock> Build(BlockGraph<CfgBlock> graph) {
         DepthFirstOrdering<CfgBlock> traversal = new([.. graph.EntryBlocks, .. graph.Blocks], graph.GetSuccessors);
-        return NaturalLoopForest.Build(graph, traversal.RetreatingEdges);
+        return NaturalLoopForest<CfgBlock>.Build(graph, traversal.RetreatingEdges);
     }
 
-    private static PartitionBlockGraph Graph(IReadOnlyList<CfgBlock> blocks, IReadOnlyList<CfgBlock> entries,
+    private static BlockGraph<CfgBlock> Graph(IReadOnlyList<CfgBlock> blocks, IReadOnlyList<CfgBlock> entries,
         Dictionary<CfgBlock, IReadOnlyList<CfgBlock>> successors) =>
-        new(blocks, entries, successors, new Dictionary<CfgBlock, CfgBlock?>());
+        new(blocks, entries, successors, new Dictionary<CfgBlock, CfgBlock?>(), CfgBlockOrder.Instance, block => block.Entry.Address.ToString());
 }

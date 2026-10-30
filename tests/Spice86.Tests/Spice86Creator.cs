@@ -108,7 +108,7 @@ public sealed class Spice86Creator : IDisposable {
             // 333333 is the value that allowed most wall clock based tests to pass without changing all the expected values.
             InstructionTimeScale = instructionTimeScale ?? 333333,
             JitMode = jitMode,
-            JitAluExpansion = TestJitSettings.AluExpansion,
+            JitGeneratorIr = TestJitSettings.GeneratorIr,
             FailOnInvalidOpcode = failOnInvalidOpcode,
             ReloadCfgGraph = reloadCfgGraph,
             EnableSpeculativeCfgExploration = enableSpeculativeCfgExploration,

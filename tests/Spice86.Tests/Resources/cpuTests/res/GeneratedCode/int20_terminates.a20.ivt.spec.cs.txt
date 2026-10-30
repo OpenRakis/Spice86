@@ -77,7 +77,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0102 mov DX,0x0999
         DX = 0x0999;
         // 016D:0105 out DX,AL
-        Out8(DX, AL);
+        Out8(0x0999, AL);
         // 016D:0106 int 0x20
         InterruptCall(cs1, 0x0108, 0x20);
         throw FailAsUntested("Untested return from call at 016D:0106");

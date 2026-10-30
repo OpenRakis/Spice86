@@ -94,31 +94,29 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AX = UInt16[0x000017DE];
         // 016D:0110 selector
         if (SelectorSignatureMatches(cs1, 0x0110, Signature_0110_mov)) {
-            goto L_0110_112;
+            // 016D:0110 mov ES,AX
+            ES = AX;
+            // 016D:0112 mov DI,0
+            DI = 0;
+            // 016D:0115 mov AL,byte ptr DS:[0x0120]
+            AL = UInt8[DS, 0x0120];
+            // 016D:0118 mov AH,7
+            AH = 7;
+            // 016D:011A stos word ptr ES:[DI],AX
+            UInt16[ES, 0] = AX;
+            DI = (ushort)(DirectionFlag ? -2 : 2);
+            // 016D:011B mov AX,0x4C00
+            AX = 0x4C00;
+            // 016D:011E int 0x21
+            InterruptCall(cs1, 0x0120, 0x21);
+            throw FailAsUntested("Untested return from call at 016D:011E");
         }
-        if (SelectorSignatureMatches(cs1, 0x0110, Signature_0110_int)) {
-            // 016D:0110 int 0x21
-            InterruptCall(cs1, 0x0112, 0x21);
-            throw FailAsUntested("Untested return from call at 016D:0110");
+        if (!SelectorSignatureMatches(cs1, 0x0110, Signature_0110_int)) {
+            throw FailAsUntested("Untested code variant at 016D:0110");
         }
-        throw FailAsUntested("Untested code variant at 016D:0110");
-    L_0110_112:
-        // 016D:0110 mov ES,AX
-        ES = AX;
-        // 016D:0112 mov DI,0
-        DI = 0;
-        // 016D:0115 mov AL,byte ptr DS:[0x0120]
-        AL = UInt8[DS, 0x0120];
-        // 016D:0118 mov AH,7
-        AH = 7;
-        // 016D:011A stos word ptr ES:[DI],AX
-        UInt16[ES, DI] = AX;
-        DI = (ushort)(DI + (ushort)State.Direction16);
-        // 016D:011B mov AX,0x4C00
-        AX = 0x4C00;
-        // 016D:011E int 0x21
-        InterruptCall(cs1, 0x0120, 0x21);
-        throw FailAsUntested("Untested return from call at 016D:011E");
+        // 016D:0110 int 0x21
+        InterruptCall(cs1, 0x0112, 0x21);
+        throw FailAsUntested("Untested return from call at 016D:0110");
     }
 
     public virtual Action unknown_F000_0006_F0006(int loadOffset) {
@@ -231,36 +229,41 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_0090_F0090(int loadOffset) {
+        byte flagOperand_00A9 = 0;
     entrydispatcher:
         CheckExternalEvents(cs2, 0x0090);
         // F000:0090 cmp AH,7
         Alu8.Sub(AH, 7);
         // F000:0093 je short 0x00A4
-        if (!ZeroFlag) {
+        if (AH != 7) {
             // F000:0095 cmp AH,8
             Alu8.Sub(AH, 8);
             // F000:0098 je short 0x00A4
-            if (!ZeroFlag) {
+            if (AH != 8) {
                 // F000:009A cmp AH,0x0A
                 Alu8.Sub(AH, 0x0A);
                 // F000:009D je short 0x00A4
-                if (!ZeroFlag) {
-                    // F000:009F callback 0x0021
-                    if (CallbackMovedCsIp(cs2, 0x009F, 0x0021)) {
-                        if (CS == cs1 && IP == 0x0100) {
-                            if (JumpDispatcher.Jump(unknown_016D_0100_017D0, 0x0000)) {
-                                loadOffset = JumpDispatcher.NextEntryAddress;
-                                goto entrydispatcher;
-                            }
-                            return JumpDispatcher.RequiredJumpAsmReturn;
-                        }
-                        throw FailAsUntested($"Untested callback target {CS:X4}:{IP:X4} at F000:009F");
-                    }
+                if (AH == 0x0A) {
+                    goto L_00A4;
+                }
+                // F000:009F callback 0x0021
+                if (!CallbackMovedCsIp(cs2, 0x009F, 0x0021)) {
                     // F000:00A3 iret
                     return InterruptRet();
                 }
+                if (CS == cs1 && IP == 0x0100) {
+                    if (JumpDispatcher.Jump(unknown_016D_0100_017D0, 0x0000)) {
+                        loadOffset = JumpDispatcher.NextEntryAddress;
+                        goto entrydispatcher;
+                    }
+                    return JumpDispatcher.RequiredJumpAsmReturn;
+                }
+                else {
+                    throw FailAsUntested($"Untested callback target {CS:X4}:{IP:X4} at F000:009F");
+                }
             }
         }
+    L_00A4:
         VerifySpeculativeEntryOrFail(cs2, 0x00A4, Signature_00A4_sti);
         // F000:00A4 sti
         InterruptFlag = true;
@@ -270,10 +273,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Callback(cs2, 0x00A5, 0x010A);
         VerifySpeculativeEntryOrFail(cs2, 0x00A9, Signature_00A9_cmp);
         // F000:00A9 cmp byte ptr CS:[0x008F],0
-        Alu8.Sub(UInt8[CS, 0x008F], 0);
+        flagOperand_00A9 = UInt8[CS, 0x008F];
+        Alu8.Sub(flagOperand_00A9, 0);
         VerifySpeculativeEntryOrFail(cs2, 0x00AF, Signature_00AF_jne);
         // F000:00AF jne short 0x00B5
-        if (!ZeroFlag) {
+        if (flagOperand_00A9 != 0) {
             VerifySpeculativeEntryOrFail(cs2, 0x00B5, Signature_00B5_callback);
             // F000:00B5 callback 0x010B
             Callback(cs2, 0x00B5, 0x010B);

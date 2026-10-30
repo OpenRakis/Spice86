@@ -72,13 +72,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:400C mov word ptr DS:[0x0010],0x5000
         UInt16[DS, 0x0010] = 0x5000;
         // F000:4012 into
-        if (OverflowFlag) {
-            InterruptCall(cs2, 0x4013, 4);
-            throw FailAsUntested("Untested return from call at F000:4012");
-        }
-        else {
+        if (!OverflowFlag) {
             return unknown_F000_4013_F4013(0x0000);
         }
+        InterruptCall(cs2, 0x4013, 4);
+        throw FailAsUntested("Untested return from call at F000:4012");
     }
 
     public virtual Action unknown_F000_4013_F4013(int loadOffset) {
@@ -103,7 +101,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0000 mov DX,0
         DX = 0;
         // F000:0003 mov DS,DX
-        DS = DX;
+        DS = 0;
         // F000:0005 mov SP,0x1000
         SP = 0x1000;
         // F000:0008 mov SP,SS
@@ -151,13 +149,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0CF7 mov word ptr DS:[0x0012],0xF000
         UInt16[DS, 0x0012] = 0xF000;
         // F000:0CFD into
-        if (OverflowFlag) {
-            InterruptCall(cs2, 0x0CFE, 4);
-            return unknown_F000_4002_F4002(0x0000);
-        }
-        else {
+        if (!OverflowFlag) {
             throw FailAsUntested("Untested fallthrough at F000:0CFD");
         }
+        InterruptCall(cs2, 0x0CFE, 4);
+        return unknown_F000_4002_F4002(0x0000);
     }
 
 }

@@ -79,13 +79,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Stack.Push16(CS);
         // 016D:0101 pop DS
         DS = UInt16[SS, SP];
-        SP = (ushort)(SP + 2);
+        SP += 2;
         // 016D:0102 mov DX,0x0998
-        DX = 0x0998;
         // 016D:0105 mov AL,1
         AL = 1;
         // 016D:0107 out DX,AL
-        Out8(DX, AL);
+        Out8(0x0998, AL);
         // 016D:0108 mov byte ptr DS:[0x01A2],0
         UInt8[DS, 0x01A2] = 0;
         // 016D:010D mov AH,0x83
@@ -102,7 +101,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Stack.Push16(CS);
         // 016D:011B pop ES
         ES = UInt16[SS, SP];
-        SP = (ushort)(SP + 2);
+        SP += 2;
         // 016D:011C int 0x15
         InterruptCall(cs1, 0x011E, 0x15);
         // 016D:011E jb short 0x019B
@@ -112,28 +111,28 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // 016D:0123 mov AL,2
             AL = 2;
             // 016D:0125 out DX,AL
-            Out8(DX, AL);
+            Out8(0x0998, AL);
             // 016D:0126 push DS
             Stack.Push16(DS);
             // 016D:0127 mov AX,0x0040
             AX = 0x0040;
             // 016D:012A mov DS,AX
-            DS = AX;
+            DS = 0x0040;
             // 016D:012C mov AL,byte ptr DS:[0x00A0]
             AL = UInt8[DS, 0x00A0];
             // 016D:012F pop DS
             DS = UInt16[SS, SP];
-            SP = (ushort)(SP + 2);
+            SP += 2;
             // 016D:0130 cmp AL,1
             Alu8.Sub(AL, 1);
             // 016D:0132 jne short 0x019B
-            if (ZeroFlag) {
+            if (AL == 1) {
                 // 016D:0134 mov DX,0x0998
                 DX = 0x0998;
                 // 016D:0137 mov AL,3
                 AL = 3;
                 // 016D:0139 out DX,AL
-                Out8(DX, AL);
+                Out8(0x0998, AL);
                 // 016D:013A mov AL,0x0B
                 AL = 0x0B;
                 // 016D:013C out 0x70,AL
@@ -143,40 +142,38 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 // 016D:0140 test AL,0x40
                 Alu8.And(AL, 0x40);
                 // 016D:0142 je short 0x019B
-                if (!ZeroFlag) {
+                if ((AL & 0x40) != 0) {
                     // 016D:0144 mov DX,0x0998
-                    DX = 0x0998;
                     // 016D:0147 mov AL,4
                     AL = 4;
                     // 016D:0149 out DX,AL
-                    Out8(DX, AL);
+                    Out8(0x0998, AL);
                     // 016D:014A push DS
                     Stack.Push16(DS);
                     // 016D:014B mov AX,0x0040
-                    AX = 0x0040;
                     // 016D:014E mov DS,AX
-                    DS = AX;
+                    DS = 0x0040;
                     // 016D:0150 mov AX,word ptr DS:[0x009C]
                     AX = UInt16[DS, 0x009C];
                     // 016D:0153 mov DX,word ptr DS:[0x009E]
                     DX = UInt16[DS, 0x009E];
                     // 016D:0157 pop DS
                     DS = UInt16[SS, SP];
-                    SP = (ushort)(SP + 2);
+                    SP += 2;
                     // 016D:0158 cmp DX,0
                     Alu16.Sub(DX, 0);
                     // 016D:015B jne short 0x019B
-                    if (ZeroFlag) {
+                    if (DX == 0) {
                         // 016D:015D cmp AX,0x2710
                         Alu16.Sub(AX, 0x2710);
                         // 016D:0160 jne short 0x019B
-                        if (ZeroFlag) {
+                        if (AX == 0x2710) {
                             // 016D:0162 mov DX,0x0998
                             DX = 0x0998;
                             // 016D:0165 mov AL,5
                             AL = 5;
                             // 016D:0167 out DX,AL
-                            Out8(DX, AL);
+                            Out8(0x0998, AL);
                             // 016D:0168 mov AH,0x83
                             AH = 0x83;
                             // 016D:016A mov AL,1
@@ -190,28 +187,28 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                 // 016D:0173 mov AL,6
                                 AL = 6;
                                 // 016D:0175 out DX,AL
-                                Out8(DX, AL);
+                                Out8(0x0998, AL);
                                 // 016D:0176 push DS
                                 Stack.Push16(DS);
                                 // 016D:0177 mov AX,0x0040
                                 AX = 0x0040;
                                 // 016D:017A mov DS,AX
-                                DS = AX;
+                                DS = 0x0040;
                                 // 016D:017C mov AL,byte ptr DS:[0x00A0]
                                 AL = UInt8[DS, 0x00A0];
                                 // 016D:017F pop DS
                                 DS = UInt16[SS, SP];
-                                SP = (ushort)(SP + 2);
+                                SP += 2;
                                 // 016D:0180 cmp AL,0
                                 Alu8.Sub(AL, 0);
                                 // 016D:0182 jne short 0x019B
-                                if (ZeroFlag) {
+                                if (AL == 0) {
                                     // 016D:0184 mov DX,0x0998
                                     DX = 0x0998;
                                     // 016D:0187 mov AL,7
                                     AL = 7;
                                     // 016D:0189 out DX,AL
-                                    Out8(DX, AL);
+                                    Out8(0x0998, AL);
                                     // 016D:018A mov AL,0x0B
                                     AL = 0x0B;
                                     // 016D:018C out 0x70,AL
@@ -221,13 +218,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                     // 016D:0190 test AL,0x40
                                     Alu8.And(AL, 0x40);
                                     // 016D:0192 jne short 0x019B
-                                    if (ZeroFlag) {
+                                    if ((AL & 0x40) == 0) {
                                         // 016D:0194 mov DX,0x0999
                                         DX = 0x0999;
                                         // 016D:0197 mov AL,0
                                         AL = 0;
                                         // 016D:0199 out DX,AL
-                                        Out8(DX, AL);
+                                        Out8(0x0999, AL);
                                         // 016D:019A hlt
                                         return Hlt();
                                     }
@@ -246,7 +243,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AL = 0xFF;
         VerifySpeculativeEntryOrFail(cs1, 0x01A0, Signature_01A0_out);
         // 016D:01A0 out DX,AL
-        Out8(DX, AL);
+        Out8(0x0999, AL);
         VerifySpeculativeEntryOrFail(cs1, 0x01A1, Signature_01A1_hlt);
         // 016D:01A1 hlt
         return Hlt();

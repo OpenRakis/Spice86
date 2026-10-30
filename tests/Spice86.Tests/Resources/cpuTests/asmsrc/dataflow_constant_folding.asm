@@ -1,6 +1,7 @@
 ; compile it with fasm
 ; Address and immediate arithmetic that a constant fold must keep exact: a displacement that wraps at 16 bits,
-; sign-extended 8-bit immediates, and the segment word of a far pointer read with a displacement.
+; negative displacements on a zero register, sign-extended 8-bit immediates, and the segment word of a far
+; pointer read with a displacement.
 ; DS = SS = 2000h. Pass p writes its results at offset 40h * p (physical 20000h + 40h * p).
 ; Jump cases write 1 when the jump is taken and 2 when it is not.
 use16
@@ -14,6 +15,8 @@ start:
     xor bx, bx
     mov si, inputs
     mov word [0F00h], 4
+    mov word [96B4h], 5A5Ah
+    mov word [0FFFEh], 6B6Bh
 
 pass_loop:
 ; known words at offsets 0001h and 0013h of segment 2300h, and other words 10000h higher (segment 3300h)
@@ -39,6 +42,13 @@ pass_loop:
     mov [bx+0Ch], ax
     push ds
     pop es
+
+; a negative displacement added to a register known to be zero wraps at 16 bits
+    mov di, 0
+    mov ax, [di-26956]
+    mov [bx+0Eh], ax
+    mov ax, [di-2]
+    mov [bx+10h], ax
 
 ; a sign-extended 8-bit immediate
     mov dx, [cs:si+2]

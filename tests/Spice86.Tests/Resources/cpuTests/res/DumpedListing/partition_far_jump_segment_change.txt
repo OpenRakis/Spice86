@@ -1,0 +1,38 @@
+F000:0000 mov AX,0x2000
+F000:0003 mov DS,AX
+F000:0005 mov SS,AX
+F000:0007 mov SP,0x1000
+F000:000A xor BX,BX
+F000:000C jmp far F100:0000
+F000:0011 jmp far dword ptr CS:[0x001C]
+F000:0016 jmp far F100:0047
+F000:001B hlt
+F100:0000 mov word ptr CS:[0x8000],0xAAAA
+F100:0007 mov AX,word ptr CS:[0x8000]
+F100:000B mov word ptr DS:[BX],AX
+F100:000D mov AX,0xF100
+F100:0010 mov ES,AX
+F100:0012 mov AX,word ptr ES:[0x8000]
+F100:0016 mov word ptr DS:[BX+2],AX
+F100:0019 push CS
+F100:001A pop AX
+F100:001B mov word ptr DS:[BX+4],AX
+F100:001E jmp far F000:0011
+F100:0023 mov word ptr CS:[0x8002],0xBBBB
+F100:002A mov AX,word ptr CS:[0x8002]
+F100:002E mov word ptr DS:[BX+6],AX
+F100:0031 mov AX,0xF100
+F100:0034 mov ES,AX
+F100:0036 mov AX,word ptr ES:[0x8002]
+F100:003A mov word ptr DS:[BX+8],AX
+F100:003D push CS
+F100:003E pop AX
+F100:003F mov word ptr DS:[BX+0x0A],AX
+F100:0042 jmp far F000:0016
+F100:0047 call near 0x004F
+F100:004A jmp far F000:001B
+F100:004F push CS
+F100:0050 pop AX
+F100:0051 mov word ptr DS:[BX+0x0C],AX
+F100:0054 ret near
+F000:FFF0 jmp short 0

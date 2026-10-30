@@ -94,7 +94,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0111 mov DX,0x0999
         DX = 0x0999;
         // 016D:0114 out DX,AL
-        Out8(DX, AL);
+        Out8(0x0999, AL);
         // 016D:0115 hlt
         return Hlt();
     }

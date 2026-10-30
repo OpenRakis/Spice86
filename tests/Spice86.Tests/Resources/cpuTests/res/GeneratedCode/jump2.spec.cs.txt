@@ -41,7 +41,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0000 mov BX,0xF000
         BX = 0xF000;
         // F000:0003 mov DS,BX
-        DS = BX;
+        DS = 0xF000;
         // F000:0005 mov AX,0x1290
         AX = 0x1290;
         // F000:0008 mov CX,5
@@ -71,8 +71,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:1290 mov CX,0xFFFF
             CX = 0xFFFF;
             // F000:1293 loope 0x1290
-            CX--;
-        } while (CX != 0 && ZeroFlag);
+            CX = 0xFFFE;
+        } while (ZeroFlag);
         // F000:1295 mov DX,0x0040
         DX = 0x0040;
         // F000:1298 push DX
@@ -96,13 +96,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:12A4 mov CX,0
         CX = 0;
         // F000:12A7 jcxz short 0x12AA
-        if (CX == 0) {
-            // F000:12AA ret near 0x000A
-            return NearRet(0x000A);
-        }
-        VerifySpeculativeEntryOrFail(cs2, 0x12A9, Signature_12A9_hlt);
-        // F000:12A9 hlt
-        return Hlt();
+        // F000:12AA ret near 0x000A
+        return NearRet(0x000A);
     }
 
     public virtual Action unknown_E342_EBE0_F2000(int loadOffset) {
@@ -121,16 +116,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Stack.Push16(DX);
         // E342:EBE8 popf
         FlagRegister16 = Stack.Pop16();
-        do {
-            CheckExternalEvents(cs1, 0xEBE9);
-            // E342:EBE9 mov CX,1
-            CX = 1;
-            // E342:EBEC loopne 0xEBE9
-            CX--;
-        } while (CX != 0 && !ZeroFlag);
+        CheckExternalEvents(cs1, 0xEBE9);
+        // E342:EBE9 mov CX,1
+        // E342:EBEC loopne 0xEBE9
         // E342:EBEE loopne 0xEBF1
-        CX--;
-        if (CX != 0 && !ZeroFlag) {
+        CX = 0xFFFF;
+        if (!ZeroFlag) {
             // E342:EBF1 ret far
             return FarRet();
         }
@@ -148,14 +139,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // E342:FDE6 push DX
         Stack.Push16(DX);
         // E342:FDE7 call far dword ptr DS:[BX+SI+2]
-        ushort targetSegment_FDE7 = UInt16[DS, (ushort)(BX + SI + 2 + 2)];
+        ushort targetSegment_FDE7 = UInt16[DS, (ushort)(BX + SI + 4)];
         ushort targetOffset_FDE7 = UInt16[DS, (ushort)(BX + SI + 2)];
-        if (targetSegment_FDE7 == cs2 && targetOffset_FDE7 == 0x4000) {
-            FarCall(cs1, 0xFDEA, cs2, unknown_F000_4000_F4000);
-        }
-        else {
+        if (targetSegment_FDE7 != cs2 || targetOffset_FDE7 != 0x4000) {
             throw FailAsUntested($"Untested far call target {targetSegment_FDE7:X4}:{targetOffset_FDE7:X4} at E342:FDE7");
         }
+        FarCall(cs1, 0xFDEA, cs2, unknown_F000_4000_F4000);
         // E342:FDEA ret near
         return NearRet();
     }

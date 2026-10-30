@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
 /// Builder for creating string operation AST nodes, handling REP prefix logic.
@@ -88,8 +89,8 @@ public class StringOperationAstBuilder {
     /// <summary>
     /// Creates an assignment that advances SI by the direction step for the given data size.
     /// </summary>
-    public BinaryOperationNode AdvanceSi(DataType addressType, int dataSize) {
-        ValueNode direction = _typeConversion.Convert(addressType, DirectionNode(dataSize));
+    public BinaryOperationNode AdvanceSi(DataType addressType, BitWidth bitWidth) {
+        ValueNode direction = _typeConversion.Convert(addressType, DirectionNode(bitWidth));
         return _controlFlow.Assign(
             addressType,
             _register.Reg(addressType, RegisterIndex.SiIndex),
@@ -103,8 +104,8 @@ public class StringOperationAstBuilder {
     /// <summary>
     /// Creates an assignment that advances DI by the direction step for the given data size.
     /// </summary>
-    public BinaryOperationNode AdvanceDi(DataType addressType, int dataSize) {
-        ValueNode direction = _typeConversion.Convert(addressType, DirectionNode(dataSize));
+    public BinaryOperationNode AdvanceDi(DataType addressType, BitWidth bitWidth) {
+        ValueNode direction = _typeConversion.Convert(addressType, DirectionNode(bitWidth));
         return _controlFlow.Assign(
             addressType,
             _register.Reg(addressType, RegisterIndex.DiIndex),
@@ -121,7 +122,7 @@ public class StringOperationAstBuilder {
         return new BinaryOperationNode(DataType.BOOL, builder.Flag.Zero(), BinaryOperation.EQUAL, builder.Constant.ToNode(exitZeroFlag));
     }
 
-    private static MethodCallValueNode DirectionNode(int dataSize) {
-        return new MethodCallValueNode(DataType.INT16, "State", $"Direction{dataSize}");
+    private static ConditionalValueNode DirectionNode(BitWidth bitWidth) {
+        return AstBuilder.DirectionStep(bitWidth);
     }
 }

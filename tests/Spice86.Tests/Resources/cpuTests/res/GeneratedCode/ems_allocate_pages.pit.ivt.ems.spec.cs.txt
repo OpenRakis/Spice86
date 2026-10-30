@@ -83,11 +83,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0107 cmp AH,0
         Alu8.Sub(AH, 0);
         // 016D:010A jne short 0x0115
-        if (ZeroFlag) {
+        if (AH == 0) {
             // 016D:010C cmp DX,0
             Alu16.Sub(DX, 0);
             // 016D:010F jbe short 0x0115
-            if (CarryFlag || ZeroFlag) {
+            if (DX <= 0) {
                 goto L_0115;
             }
             // 016D:0111 mov AL,0
@@ -103,7 +103,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0117 mov DX,0x0999
         DX = 0x0999;
         // 016D:011A out DX,AL
-        Out8(DX, AL);
+        Out8(0x0999, AL);
         // 016D:011B hlt
         return Hlt();
     }

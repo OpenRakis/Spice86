@@ -102,7 +102,7 @@ internal static class GenerationPlanBuilder {
     }
 
     private static MethodPlan BuildMethodPlan(CfgGeneratorContext context, CfgCodePartition partition) {
-        PartitionBlockGraph blockGraph = PartitionBlockGraph.FromPartition(partition, context.GetEntries(partition)[0].Node);
+        BlockGraph<CfgBlock> blockGraph = CfgBlockGraphs.FromPartition(partition, context.GetEntries(partition)[0].Node);
         // Entry blocks first: a block reached only from a secondary entry is laid out after that entry.
         DepthFirstOrdering<CfgBlock> traversal = new(
             [.. blockGraph.EntryBlocks, .. blockGraph.Blocks],
@@ -155,13 +155,13 @@ internal static class GenerationPlanBuilder {
         }
 
         return new MethodPlan(partition, context.GetMethodName(partition), context.GetEntries(partition), blocks,
-            nodes, nodeEmissionPlans, blockGraph, traversal, labelByNode, localSuffixByInstruction);
+            nodes, nodeEmissionPlans, traversal, labelByNode, localSuffixByInstruction);
     }
 
     /// <summary>
     /// Returns successors for layout: non-fallthrough successors in descending address order, then the fallthrough successor last.
     /// </summary>
-    private static IEnumerable<CfgBlock> LayoutSuccessors(CfgBlock block, PartitionBlockGraph graph) {
+    private static IEnumerable<CfgBlock> LayoutSuccessors(CfgBlock block, BlockGraph<CfgBlock> graph) {
         CfgBlock? fallthrough = graph.GetFallthroughSuccessor(block);
         foreach (CfgBlock successor in graph.GetSuccessors(block)
             .Where(successor => successor != fallthrough)
@@ -174,7 +174,7 @@ internal static class GenerationPlanBuilder {
         }
     }
 
-    private static bool FallthroughBlockChecks(ICfgNode node, CfgBlock block, PartitionBlockGraph graph, HashSet<CfgBlock> checkedBlocks) {
+    private static bool FallthroughBlockChecks(ICfgNode node, CfgBlock block, BlockGraph<CfgBlock> graph, HashSet<CfgBlock> checkedBlocks) {
         if (!node.Equals(block.Terminator)) {
             return false;
         }

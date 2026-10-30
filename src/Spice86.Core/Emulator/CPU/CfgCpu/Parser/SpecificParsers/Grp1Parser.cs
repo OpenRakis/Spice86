@@ -15,7 +15,7 @@ using Spice86.Shared.Emulator.Memory;
 /// 8 operations: Add, Or, Adc, Sbb, And, Sub, Xor, Cmp.
 /// </summary>
 public class Grp1Parser : BaseGrpOperationParser {
-    private static readonly (string Operation, InstructionOperation DisplayOp, bool Assign)[] Operations =
+    private static readonly (AluOperation Operation, InstructionOperation DisplayOp, bool Assign)[] Operations =
         AluOperationTable.Operations;
 
     public Grp1Parser(ParsingTools parsingTools) : base(parsingTools) {
@@ -25,7 +25,7 @@ public class Grp1Parser : BaseGrpOperationParser {
         if (groupIndex > 7) {
             throw new InvalidGroupIndexException(_state, groupIndex);
         }
-        (string operation, InstructionOperation displayOp, bool assign) = Operations[groupIndex];
+        (AluOperation operation, InstructionOperation displayOp, bool assign) = Operations[groupIndex];
         ushort opCode = context.OpcodeField.Value;
         bool signExtendOp2 = opCode is 0x83;
         BitWidth bitWidth = GetBitWidth(context.OpcodeField, context.HasOperandSize32);

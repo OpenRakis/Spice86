@@ -31,7 +31,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0000 mov AX,0x1000
         AX = 0x1000;
         // F000:0003 mov SS,AX
-        SS = AX;
+        SS = 0x1000;
         // F000:0005 mov SP,0x1000
         SP = 0x1000;
         // F000:0008 mov CX,0xFEFF
@@ -74,7 +74,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:001E mov CX,0
         CX = 0;
         // F000:0021 mov DS,CX
-        DS = CX;
+        DS = 0;
         // F000:0023 mov word ptr DS:[0],AX
         UInt16[DS, 0] = AX;
         // F000:0026 mov word ptr DS:[2],BX

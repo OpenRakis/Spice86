@@ -88,22 +88,20 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:010F mov DX,0x0100
         DX = 0x0100;
         // 016D:0112 call far dword ptr DS:[0x012B]
-        ushort targetSegment_0112 = UInt16[DS, (ushort)(0x012B + 2)];
+        ushort targetSegment_0112 = UInt16[DS, 0x012D];
         ushort targetOffset_0112 = UInt16[DS, 0x012B];
-        if (targetSegment_0112 == cs2 && targetOffset_0112 == 0x0010) {
-            FarCall(cs1, 0x0116, cs2, unknown_C8AB_0010_C8AC0);
-        }
-        else {
+        if (targetSegment_0112 != cs2 || targetOffset_0112 != 0x0010) {
             throw FailAsUntested($"Untested far call target {targetSegment_0112:X4}:{targetOffset_0112:X4} at 016D:0112");
         }
+        FarCall(cs1, 0x0116, cs2, unknown_C8AB_0010_C8AC0);
         // 016D:0116 cmp AX,0
         Alu16.Sub(AX, 0);
         // 016D:0119 jne short 0x0124
-        if (ZeroFlag) {
+        if (AX == 0) {
             // 016D:011B cmp BL,0x80
             Alu8.Sub(BL, 0x80);
             // 016D:011E jne short 0x0124
-            if (!ZeroFlag) {
+            if (BL != 0x80) {
                 goto L_0124;
             }
             // 016D:0120 mov AL,0
@@ -119,7 +117,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0126 mov DX,0x0999
         DX = 0x0999;
         // 016D:0129 out DX,AL
-        Out8(DX, AL);
+        Out8(0x0999, AL);
         // 016D:012A hlt
         return Hlt();
     }

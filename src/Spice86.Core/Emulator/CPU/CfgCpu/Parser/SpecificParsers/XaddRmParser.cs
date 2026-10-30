@@ -19,7 +19,7 @@ public class XaddRmParser : OperationModRmParser {
     protected override void BuildAsts(CfgInstruction instr, DataType dataType, ModRmContext modRmContext) {
         ValueNode rNode = _astBuilder.ModRm.RToNode(dataType, modRmContext);
         ValueNode rmNode = _astBuilder.ModRm.RmToNode(dataType, modRmContext);
-        VariableDeclarationNode sumDecl = _astBuilder.DeclareAluResult(dataType, dataType.BitWidth, "Add", "sum", rNode, rmNode);
+        VariableDeclarationNode sumDecl = _astBuilder.DeclareAluResult(dataType, dataType.BitWidth, AluOperation.Add, "sum", rNode, rmNode);
         VariableDeclarationNode oldRmDecl = _astBuilder.DeclareVariable(dataType, "oldRm", rmNode);
         BinaryOperationNode assignR = _astBuilder.Assign(dataType, rNode, oldRmDecl.Reference);
         BinaryOperationNode assignRm = _astBuilder.Assign(dataType, rmNode, sumDecl.Reference);

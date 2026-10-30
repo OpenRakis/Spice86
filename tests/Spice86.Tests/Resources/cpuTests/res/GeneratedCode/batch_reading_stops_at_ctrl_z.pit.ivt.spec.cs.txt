@@ -82,7 +82,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016C:0100 mov AX,0xB800
         AX = 0xB800;
         // 016C:0103 mov ES,AX
-        ES = AX;
+        ES = 0xB800;
         // 016C:0105 mov DI,0
         DI = 0;
         // 016C:0108 mov AL,0x48
@@ -90,8 +90,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016C:010A mov AH,7
         AH = 7;
         // 016C:010C stos word ptr ES:[DI],AX
-        UInt16[ES, DI] = AX;
-        DI = (ushort)(DI + (ushort)State.Direction16);
+        UInt16[ES, 0] = 0x0748;
+        DI = (ushort)(DirectionFlag ? -2 : 2);
         // 016C:010D mov AX,0x4C00
         AX = 0x4C00;
         // 016C:0110 int 0x21
@@ -209,19 +209,20 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_0090_F0090(int loadOffset) {
+        byte flagOperand_00A9 = 0;
         CheckExternalEvents(cs2, 0x0090);
         // F000:0090 cmp AH,7
         Alu8.Sub(AH, 7);
         // F000:0093 je short 0x00A4
-        if (!ZeroFlag) {
+        if (AH != 7) {
             // F000:0095 cmp AH,8
             Alu8.Sub(AH, 8);
             // F000:0098 je short 0x00A4
-            if (!ZeroFlag) {
+            if (AH != 8) {
                 // F000:009A cmp AH,0x0A
                 Alu8.Sub(AH, 0x0A);
                 // F000:009D je short 0x00A4
-                if (!ZeroFlag) {
+                if (AH != 0x0A) {
                     // F000:009F callback 0x0021
                     Callback(cs2, 0x009F, 0x0021);
                     VerifySpeculativeEntryOrFail(cs2, 0x00A3, Signature_00A3_iret);
@@ -239,10 +240,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Callback(cs2, 0x00A5, 0x010A);
         VerifySpeculativeEntryOrFail(cs2, 0x00A9, Signature_00A9_cmp);
         // F000:00A9 cmp byte ptr CS:[0x008F],0
-        Alu8.Sub(UInt8[CS, 0x008F], 0);
+        flagOperand_00A9 = UInt8[CS, 0x008F];
+        Alu8.Sub(flagOperand_00A9, 0);
         VerifySpeculativeEntryOrFail(cs2, 0x00AF, Signature_00AF_jne);
         // F000:00AF jne short 0x00B5
-        if (!ZeroFlag) {
+        if (flagOperand_00A9 != 0) {
             VerifySpeculativeEntryOrFail(cs2, 0x00B5, Signature_00B5_callback);
             // F000:00B5 callback 0x010B
             Callback(cs2, 0x00B5, 0x010B);

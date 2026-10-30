@@ -3,6 +3,7 @@ namespace Spice86.Tests.CfgCpu.Ast;
 using FluentAssertions;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Visitor;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Shared.Emulator.Memory;
@@ -86,7 +87,7 @@ public class AluFlagTableTest {
         }
 
         // Assert
-        AluFlagTable.TryGetEffect(operation, width, null, out FlagEffect unknownCount).Should().BeTrue();
+        AluFlagTable.TryGetEffect(Enum.Parse<AluOperation>(operation), width, null, out FlagEffect unknownCount).Should().BeTrue();
         unknownCount.Reads.Should().Be(readsForSomeCount);
         unknownCount.MayWrite.Should().Be(writtenForSomeCount);
         unknownCount.MustWrite.Should().Be(writtenForEveryCount);
@@ -102,13 +103,13 @@ public class AluFlagTableTest {
 
         // Assert
         foreach (string name in names) {
-            AluFlagTable.TryGetEffect(name, BitWidth.WORD_16, 1, out _).Should().BeTrue(name);
+            AluFlagTable.TryGetEffect(Enum.Parse<AluOperation>(name), BitWidth.WORD_16, 1, out _).Should().BeTrue(name);
         }
     }
 
     private static void AssertTableMatches(string operation, BitWidth width, ulong? count, ObservedEffect observed) {
         string because = $"{operation} {width} count {count}";
-        AluFlagTable.TryGetEffect(operation, width, count, out FlagEffect expected).Should().BeTrue(because);
+        AluFlagTable.TryGetEffect(Enum.Parse<AluOperation>(operation), width, count, out FlagEffect expected).Should().BeTrue(because);
         expected.Reads.Should().Be(observed.Reads, because);
         expected.MustWrite.Should().Be(observed.Written, because);
         expected.MayWrite.Should().Be(observed.Written, because);

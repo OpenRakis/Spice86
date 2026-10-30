@@ -31,6 +31,9 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 public sealed class Machine : IDisposable {
     private bool _disposed;
 
+    /// <summary>True once <see cref="Dispose()"/> released the machine's devices.</summary>
+    public bool IsDisposed => _disposed;
+
     /// <summary>
     /// Memory mapped BIOS values.
     /// </summary>

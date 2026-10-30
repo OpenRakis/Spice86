@@ -2,7 +2,6 @@ namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
-using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph.Analysis;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Core.Emulator.ReverseEngineer.Graph;
 
@@ -17,7 +16,6 @@ internal sealed class MethodPlan {
         IReadOnlyList<CfgBlock> blocks,
         IReadOnlyList<ICfgNode> nodes,
         IReadOnlyList<NodeEmissionPlan> nodeEmissionPlans,
-        PartitionBlockGraph blockGraph,
         DepthFirstOrdering<CfgBlock> blockTraversal,
         IReadOnlyDictionary<ICfgNode, string> labelByNode,
         IReadOnlyDictionary<CfgInstruction, string> localSuffixByInstruction) {
@@ -27,7 +25,6 @@ internal sealed class MethodPlan {
         Blocks = blocks;
         Nodes = nodes;
         NodeEmissionPlans = nodeEmissionPlans;
-        BlockGraph = blockGraph;
         BlockTraversal = blockTraversal;
         _labelByNode = labelByNode;
         _localSuffixByInstruction = localSuffixByInstruction;
@@ -40,7 +37,6 @@ internal sealed class MethodPlan {
     public IReadOnlyList<CfgBlock> Blocks { get; }
     public IReadOnlyList<ICfgNode> Nodes { get; }
     public IReadOnlyList<NodeEmissionPlan> NodeEmissionPlans { get; }
-    public PartitionBlockGraph BlockGraph { get; }
     public DepthFirstOrdering<CfgBlock> BlockTraversal { get; }
     public bool NeedsEntryDispatch => Entries.Count > 1;
 

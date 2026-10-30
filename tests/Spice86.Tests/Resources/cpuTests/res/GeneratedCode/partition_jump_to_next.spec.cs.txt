@@ -29,9 +29,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov AX,0x1000
-        AX = 0x1000;
         // F000:0003 mov SS,AX
-        SS = AX;
+        SS = 0x1000;
         // F000:0005 mov SP,0x0100
         SP = 0x0100;
         // F000:0008 xor DX,DX
@@ -41,7 +40,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:000D cmp AX,1
         // F000:0010 je short 0x0012
         // F000:0012 add DX,1
-        DX = Alu16.Add(DX, 1);
+        DX = Alu16.Add(0, 1);
         // F000:0015 hlt
         return Hlt();
     }

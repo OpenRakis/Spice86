@@ -321,6 +321,13 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
         Expression value = node.Value.Accept(this);
         return ToExpression(node.UnaryOperation, value);
     }
+
+    public Expression VisitConditionalValueNode(ConditionalValueNode node) {
+        Expression condition = node.Condition.Accept(this);
+        Expression whenTrue = node.WhenTrue.Accept(this);
+        Expression whenFalse = node.WhenFalse.Accept(this);
+        return Expression.Condition(condition, whenTrue, whenFalse);
+    }
     
     public Expression VisitTypeConversionNode(TypeConversionNode node) {
         Expression value = node.Value.Accept(this);
@@ -363,8 +370,15 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
         return VisitConstantNode(node);
     }
 
+    public Expression VisitSetInterruptShadowNode(SetInterruptShadowNode node) {
+        return Expression.Assign(
+            Expression.Property(_stateParameter, nameof(State.InterruptShadowing)),
+            Expression.Constant(true));
+    }
+
     public Expression VisitMethodCallValueNode(MethodCallValueNode node) {
-        AluExpansion? expansion = _expandAluCalls ? AluExpansionBuilder.TryExpand(node) : null;
+        AluExpansion? expansion = _expandAluCalls && node is AluCallValueNode aluCall
+            ? AluExpansionBuilder.TryExpand(aluCall) : null;
         if (expansion is null) {
             // Delegate to the composed MethodCallNode
             return VisitMethodCallNode(node.CallNode);
@@ -465,13 +479,6 @@ public class AstExpressionBuilder : IAstVisitor<Expression> {
         Expression[] argumentExpressions = node.Arguments
             .Select(arg => arg.Accept(this))
             .ToArray();
-
-        if (argumentExpressions.Length == 0) {
-            PropertyInfo? targetProperty = targetType.GetProperty(node.MethodName, BindingFlags.Public | BindingFlags.Instance);
-            if (targetProperty != null) {
-                return Expression.Property(target, targetProperty);
-            }
-        }
 
         (MethodInfo method, Expression[] convertedArguments) = ResolveMethodCall(targetType, node.MethodName, argumentExpressions);
 

@@ -85,17 +85,16 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0103 mov AL,1
         AL = 1;
         // 016D:0105 out DX,AL
-        Out8(DX, AL);
+        Out8(0x0998, AL);
         // 016D:0106 mov AH,0
         AH = 0;
         // 016D:0108 int 0x1A
         InterruptCall(cs1, 0x010A, 0x1A);
         // 016D:010A mov DX,0x0998
-        DX = 0x0998;
         // 016D:010D mov AL,2
         AL = 2;
         // 016D:010F out DX,AL
-        Out8(DX, AL);
+        Out8(0x0998, AL);
         // 016D:0110 mov AH,1
         AH = 1;
         // 016D:0112 mov CX,0x0012
@@ -113,7 +112,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0121 mov AL,3
         AL = 3;
         // 016D:0123 out DX,AL
-        Out8(DX, AL);
+        Out8(0x0998, AL);
         // 016D:0124 mov AH,2
         AH = 2;
         // 016D:0126 int 0x1A
@@ -143,7 +142,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                         // 016D:0142 mov AL,4
                         AL = 4;
                         // 016D:0144 out DX,AL
-                        Out8(DX, AL);
+                        Out8(0x0998, AL);
                         // 016D:0145 mov AH,3
                         AH = 3;
                         // 016D:0147 mov CH,0x12
@@ -161,7 +160,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                         // 016D:0154 mov AL,5
                         AL = 5;
                         // 016D:0156 out DX,AL
-                        Out8(DX, AL);
+                        Out8(0x0998, AL);
                         // 016D:0157 mov AH,4
                         AH = 4;
                         // 016D:0159 int 0x1A
@@ -197,7 +196,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                             // 016D:017C mov AL,6
                                             AL = 6;
                                             // 016D:017E out DX,AL
-                                            Out8(DX, AL);
+                                            Out8(0x0998, AL);
                                             // 016D:017F mov AH,5
                                             AH = 5;
                                             // 016D:0181 mov CH,0x20
@@ -215,7 +214,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                             // 016D:018E mov AL,0
                                             AL = 0;
                                             // 016D:0190 out DX,AL
-                                            Out8(DX, AL);
+                                            Out8(0x0999, AL);
                                             // 016D:0191 hlt
                                             return Hlt();
                                         }
@@ -235,7 +234,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AL = 0xFF;
         VerifySpeculativeEntryOrFail(cs1, 0x0197, Signature_0197_out);
         // 016D:0197 out DX,AL
-        Out8(DX, AL);
+        Out8(0x0999, AL);
         VerifySpeculativeEntryOrFail(cs1, 0x0198, Signature_0198_hlt);
         // 016D:0198 hlt
         return Hlt();
@@ -248,21 +247,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:019A push BX
         Stack.Push16(BX);
         // 016D:019B mov BL,AL
-        BL = AL;
         // 016D:019D shr BL,4
-        BL = (byte)(BL >> 4);
+        BL = (byte)(AL >> 4);
         // 016D:01A0 cmp BL,9
         Alu8.Sub(BL, 9);
         // 016D:01A3 ja short 0x01B3
-        if (CarryFlag || ZeroFlag) {
+        if (BL <= 9) {
             // 016D:01A5 mov BL,AL
-            BL = AL;
             // 016D:01A7 and BL,0x0F
-            BL = (byte)(BL & 0x0F);
+            BL = (byte)(AL & 0x0F);
             // 016D:01AA cmp BL,9
             Alu8.Sub(BL, 9);
             // 016D:01AD ja short 0x01B3
-            if (CarryFlag || ZeroFlag) {
+            if (BL <= 9) {
                 // 016D:01AF clc
                 CarryFlag = false;
                 // 016D:01B0 pop BX

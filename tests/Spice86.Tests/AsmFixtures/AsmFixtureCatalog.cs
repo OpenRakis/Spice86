@@ -383,11 +383,7 @@ internal static class AsmFixtureCatalog {
     public static AsmFixture SpeculativeConvergence(SpeculativeArm arm) {
         byte[] expectedMemory = new byte[0x404];
         expectedMemory[0x400] = 0x01;
-        if (arm == SpeculativeArm.Unobserved) {
-            expectedMemory[0x401] = 0xBB;
-        } else {
-            expectedMemory[0x401] = 0xAA;
-        }
+        expectedMemory[0x401] = arm == SpeculativeArm.Unobserved ? (byte)0xBB : (byte)0xAA;
         expectedMemory[0x402] = 0xCC;
         expectedMemory[0x403] = 0xFF;
         return SpeculativeFixture("speculative_convergence", expectedMemory, arm);
@@ -519,6 +515,21 @@ internal static class AsmFixtureCatalog {
                     result.State.DX.Should().Be(0x1111, $"{binName}: each far call and far jump target adds its own digit");
                     result.State.CX.Should().Be(0x0000, $"{binName}: both loops run their two table entries");
                 });
+            case "partition_far_call_chain":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 2000 }, result => {
+                    AssertResultRegion(result, binName, ResultRegion(0x20,
+                        (0x00, 2, 0xF001), (0x02, 2, 0x3000),
+                        (0x04, 2, 0xF000), (0x06, 2, 0x3000),
+                        (0x08, 2, 0xF010), (0x0A, 2, 0x2000),
+                        (0x0C, 2, 0xF000), (0x0E, 2, 0x1000)));
+                    result.State.DX.Should().Be(0x1111, $"{binName}: each of the four original far call targets adds its own digit");
+                    result.State.CX.Should().Be(0x0000, $"{binName}: the loop runs the eight table entries");
+                });
+            case "partition_far_jump_segment_change":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x40,
+                    (0x00, 2, 0xAAAA), (0x02, 2, 0xAAAA), (0x04, 2, 0xF100),
+                    (0x06, 2, 0xBBBB), (0x08, 2, 0xBBBB), (0x0A, 2, 0xF100),
+                    (0x0C, 2, 0xF100)));
             case "partition_sign_conditions":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
                     result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
@@ -592,13 +603,13 @@ internal static class AsmFixtureCatalog {
             case "dataflow_constant_folding":
                 return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x100,
                     (0x00, 2, 0xA1A1), (0x02, 2, 0x00F4), (0x04, 1, 2), (0x05, 1, 2), (0x06, 1, 1), (0x07, 1, 2),
-                    (0x08, 2, 0x1357), (0x0A, 2, 0x2468), (0x0C, 2, 0xA1A1),
+                    (0x08, 2, 0x1357), (0x0A, 2, 0x2468), (0x0C, 2, 0xA1A1), (0x0E, 2, 0x5A5A), (0x10, 2, 0x6B6B),
                     (0x40, 2, 0xC3C3), (0x42, 2, 0x007F), (0x44, 1, 1), (0x45, 1, 1), (0x46, 1, 1), (0x47, 1, 2),
-                    (0x48, 2, 0x1357), (0x4A, 2, 0x2468), (0x4C, 2, 0xA1A1),
+                    (0x48, 2, 0x1357), (0x4A, 2, 0x2468), (0x4C, 2, 0xA1A1), (0x4E, 2, 0x5A5A), (0x50, 2, 0x6B6B),
                     (0x80, 2, 0xA100), (0x82, 2, 0xFFFE), (0x84, 1, 2), (0x85, 1, 2), (0x86, 1, 1), (0x87, 1, 1),
-                    (0x88, 2, 0x1357), (0x8A, 2, 0x2468), (0x8C, 2, 0xA1A1),
+                    (0x88, 2, 0x1357), (0x8A, 2, 0x2468), (0x8C, 2, 0xA1A1), (0x8E, 2, 0x5A5A), (0x90, 2, 0x6B6B),
                     (0xC0, 2, 0xC3C3), (0xC2, 2, 0x7FFF), (0xC4, 1, 2), (0xC5, 1, 1), (0xC6, 1, 2), (0xC7, 1, 2),
-                    (0xC8, 2, 0x1357), (0xCA, 2, 0x2468), (0xCC, 2, 0xA1A1)));
+                    (0xC8, 2, 0x1357), (0xCA, 2, 0x2468), (0xCC, 2, 0xA1A1), (0xCE, 2, 0x5A5A), (0xD0, 2, 0x6B6B)));
             case "dataflow_double_precision":
                 return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x100,
                     (0x00, 2, 0x0000), (0x02, 2, 0x0001), (0x04, 2, 0xFFFE), (0x06, 2, 0x0000), (0x08, 2, 0x0001),
@@ -667,6 +678,29 @@ internal static class AsmFixtureCatalog {
                     (0x40, 2, 0x0005), (0x42, 2, 0x0000), (0x44, 2, 0x0004), (0x46, 2, 0x0000), (0x48, 2, 0x0E16),
                     (0x4A, 2, 0x0002), (0x4C, 2, 0x0000), (0x4E, 2, 0xFFFF), (0x50, 2, 0x0001), (0x52, 2, 0x7702),
                     (0x54, 2, 0x0E1E), (0x56, 2, 0x0E2E), (0x58, 2, 0x0E42), (0x5A, 2, 0x0102)));
+            case "dataflow_rewrite_traps":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x80,
+                    (0x00, 4, 0x89ABCDEF), (0x04, 4, 0x00001234), (0x08, 2, 0x0005), (0x0A, 1, 0x00),
+                    (0x0C, 2, 0x0000), (0x0E, 2, 0x0001),
+                    (0x40, 4, 0x11223344), (0x44, 4, 0x00005678), (0x48, 2, 0x9905), (0x4A, 1, 0x99),
+                    (0x4C, 2, 0x0001), (0x4E, 2, 0x0000)));
+            case "dataflow_legality_traps":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x80,
+                    (0x00, 2, 0x0001), (0x02, 2, 0x00EF), (0x04, 2, 0x0004), (0x08, 1, 0x01),
+                    (0x0A, 1, 0x97), (0x0C, 2, 0x0001), (0x0E, 2, 0x0002), (0x10, 2, 0x0001),
+                    (0x12, 2, 0xBEEF), (0x14, 2, 0x0000), (0x16, 1, 0x11), (0x18, 2, 0x0012),
+                    (0x06, 2, 0x0041), (0x1A, 2, 0xBBBB), (0x1E, 2, 0x00A1), (0x22, 2, 0x0000),
+                    (0x26, 2, 0x3344), (0x28, 2, 0x0042), (0x2A, 2, 0x0E6F), (0x2C, 2, 0x00A5),
+                    (0x2E, 2, 0x1234), (0x38, 2, 0x1234), (0x3A, 2, 0x0007),
+                    (0x3C, 4, 0x12340009), (0x30, 4, 0xAABB0077),
+                    (0x40, 2, 0x0002), (0x42, 2, 0x01CD), (0x44, 2, 0x0008), (0x48, 1, 0x00),
+                    (0x4A, 1, 0x02), (0x4C, 2, 0x0001), (0x4E, 2, 0x0000), (0x50, 2, 0x0001),
+                    (0x52, 2, 0xBEEF), (0x54, 2, 0x0001), (0x56, 1, 0x99), (0x58, 2, 0x0012),
+                    (0x46, 2, 0x0055), (0x5A, 2, 0xBBBB), (0x5E, 2, 0x00C3), (0x62, 2, 0x0001),
+                    (0x66, 2, 0x3344), (0x68, 2, 0x0042), (0x6A, 2, 0x0E6F), (0x6C, 2, 0x00A5),
+                    (0x6E, 2, 0x1234), (0x78, 2, 0x1234), (0x7A, 2, 0x0007),
+                    (0x74, 2, 0x0000), (0x76, 2, 0x0076),
+                    (0x7C, 4, 0x12340009), (0x70, 4, 0xAABB0077)));
             case "instruction_coverage_386":
                 return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x50,
                     (0x00, 1, 1), (0x01, 1, 0), (0x02, 1, 1), (0x03, 1, 0), (0x04, 2, 0x01E1), (0x06, 2, 0x0009),
@@ -836,15 +870,21 @@ internal static class AsmFixtureCatalog {
     /// </summary>
     private static AsmFixture ResultRegionFixture(AsmRunSettings settings, byte[] expectedRegion) {
         return ResultFixture(settings, result => {
-            byte[] actual = result.Memory.ReadRam((uint)expectedRegion.Length, ResultRegionAddress);
-            List<string> differences = Enumerable.Range(0, expectedRegion.Length)
-                .Where(i => actual[i] != expectedRegion[i])
-                .Select(i => $"[{i:X3}] expected 0x{expectedRegion[i]:X2} actual 0x{actual[i]:X2}")
-                .ToList();
-            differences.Should().BeEmpty($"{settings.BinName}: every byte of the result region at 0x{ResultRegionAddress:X5} is the expected one");
+            AssertResultRegion(result, settings.BinName, expectedRegion);
             result.State.SS.Should().Be(0x2000, $"{settings.BinName}: start sets SS to 0x2000");
             result.State.SP.Should().Be(0x1000, $"{settings.BinName}: the stack is balanced at the end");
         });
+    }
+
+    /// <summary>Asserts that the result region at physical 0x20000 equals <paramref name="expectedRegion"/>,
+    /// listing every differing byte.</summary>
+    private static void AssertResultRegion(AsmFixtureResult result, string binName, byte[] expectedRegion) {
+        byte[] actual = result.Memory.ReadRam((uint)expectedRegion.Length, ResultRegionAddress);
+        List<string> differences = Enumerable.Range(0, expectedRegion.Length)
+            .Where(i => actual[i] != expectedRegion[i])
+            .Select(i => $"[{i:X3}] expected 0x{expectedRegion[i]:X2} actual 0x{actual[i]:X2}")
+            .ToList();
+        differences.Should().BeEmpty($"{binName}: every byte of the result region at 0x{ResultRegionAddress:X5} is the expected one");
     }
 
     /// <summary>

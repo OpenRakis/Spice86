@@ -1,0 +1,46 @@
+F000:0000 mov AX,0x2000
+F000:0003 mov DS,AX
+F000:0005 mov SS,AX
+F000:0007 mov SP,0x1000
+F000:000A xor DX,DX
+F000:000C xor DI,DI
+F000:000E mov CX,8
+F000:0011 mov BX,CX
+F000:0013 dec BX
+F000:0014 shl BX,2
+F000:0017 call far dword ptr CS:[BX+0x3D]
+F000:001B loop 0x0011
+F000:001D hlt
+F000:001E add DX,1
+F000:0021 ret far
+F000:0022 add DX,0x0010
+F000:0025 ret far
+F000:0026 add DX,0x0100
+F000:002A ret far
+F000:002B add DX,0x1000
+F000:002F ret far
+F000:0030 push CS
+F000:0031 pop AX
+F000:0032 mov word ptr DS:[DI],AX
+F000:0034 mov word ptr DS:[DI+2],0x1000
+F000:0039 add DI,4
+F000:003C ret far
+F010:0030 push CS
+F010:0031 pop AX
+F010:0032 mov word ptr DS:[DI],AX
+F010:0034 mov word ptr DS:[DI+2],0x2000
+F010:0039 add DI,4
+F010:003C ret far
+F000:013D push CS
+F001:012D push CS
+F000:013E pop AX
+F001:012E pop AX
+F000:013F mov word ptr DS:[DI],AX
+F001:012F mov word ptr DS:[DI],AX
+F000:0141 mov word ptr DS:[DI+2],0x3000
+F001:0131 mov word ptr DS:[DI+2],0x3000
+F000:0146 add DI,4
+F001:0136 add DI,4
+F000:0149 ret far
+F001:0139 ret far
+F000:FFF0 jmp short 0

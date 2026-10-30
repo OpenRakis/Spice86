@@ -281,14 +281,6 @@ public class InstructionExecutionHelper {
         return (uint)BitOperations.Log2(value);
     }
 
-    /// <summary>
-    /// Sets the InterruptShadowing flag on State, preventing interrupts for one instruction cycle.
-    /// Used by instructions that load SS (e.g., LSS) to ensure SP is also updated safely.
-    /// </summary>
-    public void SetInterruptShadowing() {
-        State.InterruptShadowing = true;
-    }
-
     public void ExecuteCpuid(CfgInstruction instruction) {
         throw new CpuInvalidOpcodeException("Attempted to call CPUID, which is unsupported on CPUs < 486");
     }
@@ -302,16 +294,6 @@ public class InstructionExecutionHelper {
         CallbackHandler.Run(callbackNumber);
         if (State.IpSegmentedAddress == instruction.Address) {
             MoveIpToEndOfInstruction(instruction);
-        }
-    }
-
-    /// <summary>
-    /// Conditionally sets InterruptShadowing when interrupts are currently disabled.
-    /// Per the Intel spec, executing STI when IF=0 blocks maskable interrupts for one additional instruction cycle.
-    /// </summary>
-    public void SetInterruptShadowingIfInterruptDisabled() {
-        if (!State.InterruptFlag) {
-            State.InterruptShadowing = true;
         }
     }
 

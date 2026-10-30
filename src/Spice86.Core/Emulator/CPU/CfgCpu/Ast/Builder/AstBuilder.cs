@@ -4,6 +4,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.ModRm;
 using Spice86.Shared.Emulator.Memory;
@@ -62,6 +63,17 @@ public class AstBuilder {
             return RepPrefix.REPE;
         }
         return RepPrefix.REPNE;
+    }
+
+    /// <summary>
+    /// The direction-flag step of a string operation at <paramref name="width"/>:
+    /// <c>DirectionFlag ? -N : N</c> with N the width in bytes.
+    /// </summary>
+    public static ConditionalValueNode DirectionStep(BitWidth width) {
+        int bytes = width.ToBytes();
+        return new ConditionalValueNode(DataType.INT16, new CpuFlagNode(Flags.Direction),
+            new ConstantNode(DataType.INT16, (ulong)(ushort)(short)-bytes),
+            new ConstantNode(DataType.INT16, (ulong)bytes));
     }
 
     /// <summary>
@@ -166,11 +178,11 @@ public class AstBuilder {
     /// </summary>
     /// <param name="resultType">The data type of the result</param>
     /// <param name="bitWidth">The ALU bit width</param>
-    /// <param name="operation">The operation name (e.g., "Add", "Sub", "Inc", "Shld")</param>
+    /// <param name="operation">The ALU operation (e.g., Add, Sub, Inc, Shld)</param>
     /// <param name="operands">Variable number of operands</param>
-    /// <returns>MethodCallValueNode representing the ALU operation</returns>
-    public MethodCallValueNode AluCall(DataType resultType, BitWidth bitWidth, string operation, params ValueNode[] operands) {
-        return new MethodCallValueNode(resultType, $"Alu{(int)bitWidth}", operation, operands);
+    /// <returns>AluCallValueNode representing the ALU operation</returns>
+    public AluCallValueNode AluCall(DataType resultType, BitWidth bitWidth, AluOperation operation, params ValueNode[] operands) {
+        return new AluCallValueNode(resultType, operation, bitWidth, operands);
     }
 
     /// <summary>
@@ -179,11 +191,11 @@ public class AstBuilder {
     /// </summary>
     /// <param name="resultType">The data type of the result</param>
     /// <param name="bitWidth">The ALU bit width</param>
-    /// <param name="operation">The operation name (e.g., "Mul", "Div")</param>
+    /// <param name="operation">The ALU operation (e.g., Mul, Div)</param>
     /// <param name="variableName">Optional variable name (defaults to "result")</param>
     /// <param name="operands">Variable number of operands</param>
     /// <returns>VariableDeclarationNode with the ALU call as initializer</returns>
-    public VariableDeclarationNode DeclareAluResult(DataType resultType, BitWidth bitWidth, string operation, string variableName, params ValueNode[] operands) {
+    public VariableDeclarationNode DeclareAluResult(DataType resultType, BitWidth bitWidth, AluOperation operation, string variableName, params ValueNode[] operands) {
         MethodCallValueNode aluCall = AluCall(resultType, bitWidth, operation, operands);
         return DeclareVariable(resultType, variableName, aluCall);
     }

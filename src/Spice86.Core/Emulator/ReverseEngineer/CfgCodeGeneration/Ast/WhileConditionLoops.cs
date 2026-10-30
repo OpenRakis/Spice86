@@ -15,18 +15,31 @@ using static Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast.CodeGen
 /// </summary>
 internal static class WhileConditionLoops {
     /// <summary><paramref name="body"/> with every qualifying <c>while (true)</c> rewritten to <c>while (!c)</c>.</summary>
-    public static BlockNode Apply(BlockNode body) => RewriteBlock(body);
-
-    private static BlockNode RewriteBlock(BlockNode block) {
-        List<IVisitableAstNode> statements = block.Statements.Select(RewriteStatement).ToList();
-        return new BlockNode(statements.ToArray());
+    public static BlockNode Apply(BlockNode body) {
+        AstResult<BlockNode> result = new();
+        AstTrampoline.Run(RewriteBlockIt(body, result));
+        return result.Value!;
     }
 
-    private static IVisitableAstNode RewriteStatement(IVisitableAstNode statement) {
-        if (statement is InfiniteLoopNode loop) {
-            return TryConvert(loop with { Body = RewriteBlock(loop.Body) });
+    private static IEnumerable<AstSubcall> RewriteBlockIt(BlockNode block, AstResult<BlockNode> result) {
+        List<IVisitableAstNode> statements = new(block.Statements.Count);
+        foreach (IVisitableAstNode statement in block.Statements) {
+            AstResult<IVisitableAstNode> rewritten = new();
+            yield return AstTrampoline.Call(RewriteStatementIt(statement, rewritten));
+            statements.Add(rewritten.Value!);
         }
-        return WithRewrittenBodies(statement, RewriteBlock);
+        result.Value = new BlockNode(statements.ToArray());
+    }
+
+    private static IEnumerable<AstSubcall> RewriteStatementIt(IVisitableAstNode statement,
+        AstResult<IVisitableAstNode> result) {
+        if (statement is InfiniteLoopNode loop) {
+            AstResult<BlockNode> body = new();
+            yield return AstTrampoline.Call(RewriteBlockIt(loop.Body, body));
+            result.Value = TryConvert(loop with { Body = body.Value! });
+            yield break;
+        }
+        yield return AstTrampoline.Call(WithRewrittenBodiesIt(statement, RewriteBlockIt, result));
     }
 
     private static bool OnlyCheckOrComment(IVisitableAstNode statement) =>

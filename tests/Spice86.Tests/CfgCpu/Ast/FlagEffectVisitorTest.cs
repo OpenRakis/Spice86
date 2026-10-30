@@ -4,11 +4,13 @@ using FluentAssertions;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Visitor;
+using Spice86.Shared.Emulator.Memory;
 
 using Xunit;
 
@@ -76,7 +78,7 @@ public class FlagEffectVisitorTest {
         // Arrange
         BinaryOperationNode sourceNotZero = new(DataType.BOOL, Ax, BinaryOperation.NOT_EQUAL, new ConstantNode(DataType.UINT16, 0));
         IfElseNode bitScan = new(sourceNotZero,
-            new BlockNode(Assign(Bx, new MethodCallValueNode(DataType.UINT16, null, "BitScanForward16", Ax)), Assign(Flag(Flags.Zero), False())),
+            new BlockNode(Assign(Bx, new BitScanCallNode(DataType.UINT16, BitScanDirection.Forward, Ax)), Assign(Flag(Flags.Zero), False())),
             new BlockNode(Assign(Flag(Flags.Zero), True())));
         IfElseNode oneArm = new(sourceNotZero, new BlockNode(Assign(Flag(Flags.Carry), True())), new BlockNode());
 
@@ -135,8 +137,8 @@ public class FlagEffectVisitorTest {
         // Arrange
         FlagRegisterNode flags16 = new(DataType.UINT16);
         FlagRegisterNode flags32 = new(DataType.UINT32);
-        MethodCallNode pushf = new("Stack", "Push16", flags16);
-        BinaryOperationNode popf = Assign(flags16, new MethodCallValueNode(DataType.UINT16, "Stack", "Pop16"));
+        MethodCallNode pushf = new StackCallNode(StackOperation.Push, BitWidth.WORD_16, flags16);
+        BinaryOperationNode popf = Assign(flags16, new StackCallValueNode(StackOperation.Pop, BitWidth.WORD_16));
         BinaryOperationNode keptUpperBits = new(DataType.UINT32, flags32, BinaryOperation.BITWISE_AND, new ConstantNode(DataType.UINT32, 0xFFFFFF00));
         BinaryOperationNode sahf = Assign(flags32, new BinaryOperationNode(DataType.UINT32, keptUpperBits, BinaryOperation.BITWISE_OR,
             new TypeConversionNode(DataType.UINT32, new RegisterNode(DataType.UINT8, 4))));
@@ -157,19 +159,19 @@ public class FlagEffectVisitorTest {
     [Fact]
     public void KnownHelpersAreNeutralAndUnknownCallsAreConservative() {
         // Arrange
-        MethodCallNode output = new(null, "Out8", new ConstantNode(DataType.UINT16, 0x60), new RegisterNode(DataType.UINT8, 0));
-        MethodCallValueNode direction = new(DataType.INT16, "State", "Direction16");
+        MethodCallNode output = new PortWriteCallNode(BitWidth.BYTE_8, new ConstantNode(DataType.UINT16, 0x60), new RegisterNode(DataType.UINT8, 0));
+        ConditionalValueNode direction = AstBuilder.DirectionStep(BitWidth.WORD_16);
         MethodCallNode unknown = new(null, "Foo");
 
         // Assert
         FlagEffectVisitor.Of(output).Should().Be(FlagEffect.None);
         FlagEffectVisitor.Of(direction).Should().Be(FlagEffect.None);
         FlagEffectVisitor.Of(unknown).Should().Be(FlagEffect.Unknown);
-        FlagEffectVisitor.Of(Alu16("Frobnicate", Ax)).Should().Be(FlagEffect.Unknown);
+        FlagEffectVisitor.Of(new MethodCallValueNode(DataType.UINT16, "Alu16", "Frobnicate", Ax)).Should().Be(FlagEffect.Unknown);
     }
 
-    private static MethodCallValueNode Alu16(string operation, params ValueNode[] operands) =>
-        new(DataType.UINT16, "Alu16", operation, operands);
+    private static AluCallValueNode Alu16(string operation, params ValueNode[] operands) =>
+        new(DataType.UINT16, Enum.Parse<AluOperation>(operation), BitWidth.WORD_16, operands);
 
     private static BinaryOperationNode Assign(ValueNode target, ValueNode value) =>
         new(target.DataType, target, BinaryOperation.ASSIGN, value);

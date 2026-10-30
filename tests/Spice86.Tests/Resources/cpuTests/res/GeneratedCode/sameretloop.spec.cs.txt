@@ -27,14 +27,16 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_0013_F0013(int loadOffset) {
+        byte flagOperand_0018 = 0;
         while (true) {
             CheckExternalEvents(cs1, 0x0013);
             // F000:0013 inc byte ptr CS:[0x0024]
-            UInt8[CS, 0x0024] = (byte)(UInt8[CS, 0x0024] + 1);
+            UInt8[CS, 0x0024] += 1;
             // F000:0018 cmp byte ptr CS:[0x0024],4
-            Alu8.Sub(UInt8[CS, 0x0024], 4);
+            flagOperand_0018 = UInt8[CS, 0x0024];
+            Alu8.Sub(flagOperand_0018, 4);
             // F000:001E jae short 0x0023
-            if (!CarryFlag) {
+            if (flagOperand_0018 >= 4) {
                 break;
             }
             // F000:0020 push 0x13
@@ -50,9 +52,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov AX,0
-        AX = 0;
         // F000:0003 mov SS,AX
-        SS = AX;
+        SS = 0;
         // F000:0005 mov SP,0x0100
         SP = 0x0100;
         // F000:0008 mov byte ptr CS:[0x0024],0

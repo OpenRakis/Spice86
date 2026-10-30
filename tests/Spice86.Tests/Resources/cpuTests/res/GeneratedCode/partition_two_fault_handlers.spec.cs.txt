@@ -29,20 +29,17 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_001A_F001A(int loadOffset) {
-        while (true) {
-            CheckExternalEvents(cs1, 0x001A);
-            // F000:001A mov AX,0x000A
-            AX = 0x000A;
-            // F000:001D xor DX,DX
-            DX = Alu16.Xor(DX, DX);
-            // F000:001F div BX
-            try {
-                (AX, DX) = Div16(divisor: BX, dividend: (uint)((uint)DX << 0x00000010 | (uint)AX));
-                break;
-            }
-            catch (CpuException cpuException) {
-                return DispatchCpuFault(cpuException, cs1, 0x001F, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x0022), () => unknown_F000_0022_F0022(0x0000)), new CpuFaultTarget(new SegmentedAddress(cs1, 0x0035), () => unknown_F000_0035_F0035(0x0000))]);
-            }
+        CheckExternalEvents(cs1, 0x001A);
+        // F000:001A mov AX,0x000A
+        AX = 0x000A;
+        // F000:001D xor DX,DX
+        DX = Alu16.Xor(DX, DX);
+        // F000:001F div BX
+        try {
+            (AX, DX) = Div16(divisor: BX, dividend: (uint)((uint)DX << 16 | (uint)AX));
+        }
+        catch (CpuException cpuException) {
+            return DispatchCpuFault(cpuException, cs1, 0x001F, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x0022), () => unknown_F000_0022_F0022(0x0000)), new CpuFaultTarget(new SegmentedAddress(cs1, 0x0035), () => unknown_F000_0035_F0035(0x0000))]);
         }
         // F000:0021 hlt
         return Hlt();
@@ -51,7 +48,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_F000_0022_F0022(int loadOffset) {
         CheckExternalEvents(cs1, 0x0022);
         // F000:0022 add SI,1
-        SI = (ushort)(SI + 1);
+        SI++;
         // F000:0025 mov word ptr DS:[0],0x0035
         UInt16[DS, 0] = 0x0035;
         // F000:002B push BP
@@ -69,7 +66,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_F000_0035_F0035(int loadOffset) {
         CheckExternalEvents(cs1, 0x0035);
         // F000:0035 add SI,0x0010
-        SI = (ushort)(SI + 0x0010);
+        SI += 0x0010;
         // F000:0038 mov BX,5
         BX = 5;
         // F000:003B push BP
@@ -88,15 +85,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov AX,0x1000
-        AX = 0x1000;
         // F000:0003 mov SS,AX
-        SS = AX;
+        SS = 0x1000;
         // F000:0005 mov SP,0x0100
         SP = 0x0100;
         // F000:0008 xor AX,AX
         AX = 0;
         // F000:000A mov DS,AX
-        DS = AX;
+        DS = 0;
         // F000:000C mov word ptr DS:[0],0x0022
         UInt16[DS, 0] = 0x0022;
         // F000:0012 mov word ptr DS:[2],CS

@@ -80,11 +80,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0000 mov AX,0x2000
         AX = 0x2000;
         // F000:0003 mov DS,AX
-        DS = AX;
+        DS = 0x2000;
         // F000:0005 mov ES,AX
-        ES = AX;
+        ES = 0x2000;
         // F000:0007 mov SS,AX
-        SS = AX;
+        SS = 0x2000;
         // F000:0009 mov SP,0x1000
         SP = 0x1000;
         // F000:000C cld
@@ -108,16 +108,15 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:0022 push ES
             Stack.Push16(ES);
             // F000:0023 mov AX,1
-            AX = 1;
             // F000:0026 mov ES,AX
-            ES = AX;
+            ES = 1;
             // F000:0028 mov CX,ES
             CX = ES;
             // F000:002A add CX,AX
-            CX = Alu16.Add(CX, AX);
+            CX = Alu16.Add(CX, 1);
             // F000:002C pop ES
             ES = UInt16[SS, SP];
-            SP = (ushort)(SP + 2);
+            SP += 2;
             // F000:002D pop AX
             AX = Stack.Pop16();
             // F000:002E mov word ptr DS:[BX],AX
@@ -197,7 +196,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:0088 test CX,CX
             Alu16.And(CX, CX);
             // F000:008A je short 0x008F
-            if (ZeroFlag) {
+            if (CX == 0) {
                 // F000:008F pop DI
                 DI = Stack.Pop16();
             }
@@ -220,7 +219,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             NearCall(cs1, 0x00A0, unknown_F000_00C8_F00C8);
             // F000:00A0 pop ES
             ES = UInt16[SS, SP];
-            SP = (ushort)(SP + 2);
+            SP += 2;
             // F000:00A1 mov word ptr DS:[BX+0x16],DX
             UInt16[DS, (ushort)(BX + 0x16)] = DX;
             // F000:00A4 mov AX,word ptr CS:[SI+0x0C]
@@ -230,7 +229,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:00AB mov word ptr DS:[BX+0x18],DX
             UInt16[DS, (ushort)(BX + 0x18)] = DX;
             // F000:00AE add BX,0x0040
-            BX = (ushort)(BX + 0x0040);
+            BX += 0x0040;
             // F000:00B1 add SI,0x0010
             SI = Alu16.Add(SI, 0x0010);
             // F000:00B4 dec word ptr DS:[0x0F00]

@@ -45,6 +45,8 @@ public class MachineTest {
         ["partition_untested_indirect"],
         ["partition_jump_table_mixed"],
         ["partition_far_dispatch"],
+        ["partition_far_call_chain"],
+        ["partition_far_jump_segment_change"],
         ["partition_sign_conditions"],
         ["partition_untested_far_indirect"],
         ["partition_untaken_cpuid"],
@@ -61,6 +63,8 @@ public class MachineTest {
         ["alu_dead_flags"],
         ["dataflow_expression_propagation"],
         ["dataflow_interrupt_boundaries"],
+        ["dataflow_rewrite_traps"],
+        ["dataflow_legality_traps"],
         ["instruction_coverage_386"]
     ];
 

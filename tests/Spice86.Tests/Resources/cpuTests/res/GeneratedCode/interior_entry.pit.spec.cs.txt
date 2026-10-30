@@ -29,6 +29,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_0200_F0200(int loadOffset) {
+        byte flagOperand_0226 = 0;
         switch (loadOffset) {
             case 0x0000:
                 goto L_0200;
@@ -42,7 +43,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     L_0200:
         CheckExternalEvents(cs1, 0x0200);
         // F000:0200 inc byte ptr DS:[0x0400]
-        UInt8[DS, 0x0400] = (byte)(UInt8[DS, 0x0400] + 1);
+        UInt8[DS, 0x0400] += 1;
         // F000:0204 mov AL,0xFE
         AL = 0xFE;
         // F000:0206 out 0x21,AL
@@ -53,10 +54,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:020C mov SP,word ptr DS:[0x0406]
         SP = UInt16[DS, 0x0406];
         // F000:0210 inc byte ptr DS:[0x0401]
-        UInt8[DS, 0x0401] = (byte)(UInt8[DS, 0x0401] + 1);
+        UInt8[DS, 0x0401] += 1;
         // F000:0214 cmp byte ptr DS:[0x0403],1
+        Alu8.Sub(UInt8[DS, 0x0403], 1);
         // F000:0219 je short 0x0226
-        if (UInt8[DS, 0x0403] != 1) {
+        if (!ZeroFlag) {
             // F000:021B push AX
             Stack.Push16(AX);
             // F000:021C mov AL,0xFF
@@ -75,9 +77,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         do {
             CheckExternalEvents(cs1, 0x0226);
             // F000:0226 cmp byte ptr DS:[0x040C],1
-            Alu8.Sub(UInt8[DS, 0x040C], 1);
+            flagOperand_0226 = UInt8[DS, 0x040C];
+            Alu8.Sub(flagOperand_0226, 1);
             // F000:022B jne short 0x0226
-        } while (!ZeroFlag);
+        } while (flagOperand_0226 != 1);
         // F000:022D mov SS,word ptr DS:[0x0408]
         SS = UInt16[DS, 0x0408];
         // F000:0231 mov SP,word ptr DS:[0x040A]
@@ -99,53 +102,47 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:030A mov AX,word ptr DS:[0x040E]
         AX = UInt16[DS, 0x040E];
         // F000:030D cmp AX,0
-        Alu16.Sub(AX, 0);
         // F000:0310 sete BL
-        if (ZeroFlag) {
+        if (AX == 0) {
             BL = 1;
         }
         else {
             BL = 0;
         }
         // F000:0313 cmp word ptr DS:[0x0410],0x7FF8
-        Alu16.Sub(UInt16[DS, 0x0410], 0x7FF8);
         // F000:0319 sete BH
-        if (ZeroFlag) {
+        if (UInt16[DS, 0x0410] == 0x7FF8) {
             BH = 1;
         }
         else {
             BH = 0;
         }
         // F000:031C and BL,BH
-        BL = (byte)(BL & BH);
+        BL &= BH;
         // F000:031E cmp AX,0x1000
-        Alu16.Sub(AX, 0x1000);
         // F000:0321 sete AL
-        if (ZeroFlag) {
+        if (AX == 0x1000) {
             AL = 1;
         }
         else {
             AL = 0;
         }
         // F000:0324 cmp word ptr DS:[0x0410],0x8FFA
-        Alu16.Sub(UInt16[DS, 0x0410], 0x8FFA);
         // F000:032A sete AH
-        if (ZeroFlag) {
+        if (UInt16[DS, 0x0410] == 0x8FFA) {
             AH = 1;
         }
         else {
             AH = 0;
         }
         // F000:032D and AL,AH
-        AL = (byte)(AL & AH);
         // F000:032F or AL,BL
-        AL = (byte)(AL | BL);
         // F000:0331 xor AL,1
-        AL = (byte)(AL ^ 1);
+        AL = (byte)((AL & AH | BL) ^ 1);
         // F000:0333 or byte ptr DS:[0x040D],AL
-        UInt8[DS, 0x040D] = (byte)(UInt8[DS, 0x040D] | AL);
+        UInt8[DS, 0x040D] |= AL;
         // F000:0337 inc byte ptr DS:[0x040C]
-        UInt8[DS, 0x040C] = (byte)(UInt8[DS, 0x040C] + 1);
+        UInt8[DS, 0x040C] += 1;
         // F000:033B mov AL,0xFF
         AL = 0xFF;
         // F000:033D out 0x21,AL
@@ -170,9 +167,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0001 xor AX,AX
         AX = 0;
         // F000:0003 mov DS,AX
-        DS = AX;
+        DS = 0;
         // F000:0005 mov SS,AX
-        SS = AX;
+        SS = 0;
         // F000:0007 mov SP,0x8000
         SP = 0x8000;
         // F000:000A mov AL,0xFF
@@ -300,7 +297,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:00C3 test AL,1
             Alu8.And(AL, 1);
             // F000:00C5 je short 0x00C1
-        } while (ZeroFlag);
+        } while ((AL & 1) == 0);
         // F000:00C7 sti
         InterruptFlag = true;
         CheckExternalEvents(cs1, 0x00C8);

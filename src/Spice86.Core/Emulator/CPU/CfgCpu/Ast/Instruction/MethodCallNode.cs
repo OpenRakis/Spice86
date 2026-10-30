@@ -35,9 +35,16 @@ public record MethodCallNode : IVisitableAstNode {
     /// </summary>
     public IReadOnlyList<IVisitableAstNode> Arguments { get; }
 
+    /// <summary>The same call with new arguments; typed call nodes override it to keep their subtype
+    /// and fields.</summary>
+    /// <param name="arguments">The arguments of the rebuilt call.</param>
+    /// <returns>A call node of the same type as this one.</returns>
+    public virtual MethodCallNode WithArguments(IVisitableAstNode[] arguments) =>
+        new(PropertyPath, MethodName, arguments);
+
     /// <inheritdoc />
     public T Accept<T>(IAstVisitor<T> astVisitor) {
         return astVisitor.VisitMethodCallNode(this);
     }
-    
+
 }

@@ -42,7 +42,7 @@ public class GotoTargetCollectorTest {
 
         // Assert
         targets.Labels.Should().HaveCount(nodes.Length);
-        nodes.Should().OnlyContain(node => targets.Labels.Any(label => ReferenceEquals(label, node)));
+        nodes.Should().OnlyContain(node => targets.Labels.Any(label => ReferenceEquals(((CfgNodeGotoTarget)label).Node, node)));
         targets.EntryDispatcher.Should().BeFalse();
     }
 
@@ -73,8 +73,8 @@ public class GotoTargetCollectorTest {
 
         // Assert
         targets.Labels.Should().HaveCount(2);
-        targets.Labels.Should().Contain(label => ReferenceEquals(label, inLoop));
-        targets.Labels.Should().Contain(label => ReferenceEquals(label, inDoWhile));
+        targets.Labels.Should().Contain(label => ReferenceEquals(((CfgNodeGotoTarget)label).Node, inLoop));
+        targets.Labels.Should().Contain(label => ReferenceEquals(((CfgNodeGotoTarget)label).Node, inDoWhile));
         targets.EntryDispatcher.Should().BeFalse();
     }
 

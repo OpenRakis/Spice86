@@ -8,6 +8,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Visitor;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 
 using System.Linq;
 using System.Numerics;
@@ -27,51 +28,26 @@ internal static class AluAssignmentRewrite {
     private const int MaxLiveFlags = 1;
 
     /// <summary>
-    /// The rewritten AST for an AST <c>{ destination = AluN.Op(...); trailing statements; MoveIpNext; }</c>, or
-    /// <c>null</c>. The rewritten first statement(s) come first, then the trailing statements unchanged, then the
-    /// IP move.
+    /// The replacement statements for an ALU-call statement in one of the four handled forms, or
+    /// <c>null</c>. The IR passes supply <paramref name="liveAfterCall"/> from their SSA.
     /// </summary>
-    /// <param name="node">The execution AST of the instruction.</param>
-    /// <param name="flagsLiveAfter">The status flags live after the instruction.</param>
-    public static BlockNode? TryRewrite(IVisitableAstNode node, StatusFlags flagsLiveAfter) {
-        if (node is not BlockNode block || block.Statements.Count < 2
-            || block.Statements[^1] is not MoveIpNextNode moveIp) {
-            return null;
-        }
-        IReadOnlyList<IVisitableAstNode> trailing =
-            block.Statements.Skip(1).Take(block.Statements.Count - 2).ToList();
-        StatusFlags liveAfterCall = LiveAfterCall(trailing, flagsLiveAfter);
-        IReadOnlyList<IVisitableAstNode>? rewritten = block.Statements[0] switch {
-            MethodCallValueNode unusedCall => TryRemoveUnusedCall(unusedCall, liveAfterCall),
-            BinaryOperationNode { BinaryOperation: BinaryOperation.ASSIGN, Right: MethodCallValueNode call }
-                assignment => TryRewriteAssignment(assignment, call, liveAfterCall),
-            BinaryOperationNode { BinaryOperation: BinaryOperation.ASSIGN,
-                    Right: TypeConversionNode { Value: MethodCallValueNode call } conversion }
-                assignment => TryRewriteWrapped(call, liveAfterCall,
-                    value => assignment with { Right = conversion with { Value = value } }),
-            VariableDeclarationNode { Initializer: MethodCallValueNode call } declaration =>
-                TryRewriteWrapped(call, liveAfterCall,
-                    value => declaration with { Initializer = value }),
-            _ => null
-        };
-        return rewritten is null ? null : new BlockNode([.. rewritten, .. trailing, moveIp]);
-    }
-
-    /// <summary>
-    /// The flags live right after the ALU call: <paramref name="flagsLiveAfter"/> folded backward through the
-    /// trailing statements.
-    /// </summary>
-    private static StatusFlags LiveAfterCall(IReadOnlyList<IVisitableAstNode> trailing, StatusFlags flagsLiveAfter) {
-        StatusFlags live = flagsLiveAfter;
-        for (int i = trailing.Count - 1; i >= 0; i--) {
-            FlagEffect effect = FlagEffectVisitor.Of(trailing[i]);
-            live = (live & ~effect.MustWrite) | effect.Reads;
-        }
-        return live;
-    }
+    internal static IReadOnlyList<IVisitableAstNode>? TryRewriteStatement(IVisitableAstNode statement,
+        StatusFlags liveAfterCall) => statement switch {
+        AluCallValueNode unusedCall => TryRemoveUnusedCall(unusedCall, liveAfterCall),
+        BinaryOperationNode { BinaryOperation: BinaryOperation.ASSIGN, Right: AluCallValueNode call }
+            assignment => TryRewriteAssignment(assignment, call, liveAfterCall),
+        BinaryOperationNode { BinaryOperation: BinaryOperation.ASSIGN,
+                Right: TypeConversionNode { Value: AluCallValueNode call } conversion }
+            assignment => TryRewriteWrapped(call, liveAfterCall,
+                value => assignment with { Right = conversion with { Value = value } }),
+        VariableDeclarationNode { Initializer: AluCallValueNode call } declaration =>
+            TryRewriteWrapped(call, liveAfterCall,
+                value => declaration with { Initializer = value }),
+        _ => null
+    };
 
     private static IReadOnlyList<IVisitableAstNode>? TryRewriteAssignment(BinaryOperationNode assignment,
-        MethodCallValueNode call, StatusFlags liveAfterCall) {
+        AluCallValueNode call, StatusFlags liveAfterCall) {
         AluExpansion? expansion = AluExpansionBuilder.TryExpand(call);
         if (expansion is null) {
             return TryRewriteShiftValue(assignment, call, liveAfterCall);
@@ -93,7 +69,7 @@ internal static class AluAssignmentRewrite {
     /// The cleaned call wrapped by a type conversion or a declaration: only the forms that do not read the result
     /// back are accepted, because the destination is not a register of the result's type.
     /// </summary>
-    private static IReadOnlyList<IVisitableAstNode>? TryRewriteWrapped(MethodCallValueNode call,
+    private static IReadOnlyList<IVisitableAstNode>? TryRewriteWrapped(AluCallValueNode call,
         StatusFlags liveAfterCall, Func<ValueNode, IVisitableAstNode> wrap) {
         AluExpansion? expansion = AluExpansionBuilder.TryExpand(call);
         if (expansion is null) {
@@ -111,19 +87,19 @@ internal static class AluAssignmentRewrite {
         };
     }
 
-    private static CleanedAluExpansion? CleanWithinBudget(AluExpansion expansion, MethodCallValueNode call,
+    private static CleanedAluExpansion? CleanWithinBudget(AluExpansion expansion, AluCallValueNode call,
         StatusFlags liveAfterCall) {
         StatusFlags written = expansion.FlagAssignments.Aggregate(StatusFlags.None, (all, flag) => all | flag.Flag);
         StatusFlags liveWritten = written & liveAfterCall;
         if (BitOperations.PopCount((uint)liveWritten) > MaxLiveFlags
-            || (liveWritten & ~ReadableFlags(call.CallNode.MethodName)) != StatusFlags.None) {
+            || (liveWritten & ~ReadableFlags(call.Operation)) != StatusFlags.None) {
             return null;
         }
         return AluExpansionCleanup.Clean(expansion, liveAfterCall, true);
     }
 
     private static IReadOnlyList<IVisitableAstNode>? TryRewriteShiftValue(BinaryOperationNode assignment,
-        MethodCallValueNode call, StatusFlags liveAfterCall) {
+        AluCallValueNode call, StatusFlags liveAfterCall) {
         ValueNode? value = AluExpansionBuilder.TryExpandShiftValue(call);
         if (value is null || (FlagEffectVisitor.Of(call).MayWrite & liveAfterCall) != StatusFlags.None) {
             return null;
@@ -131,14 +107,14 @@ internal static class AluAssignmentRewrite {
         return [assignment with { Right = value }];
     }
 
-    private static StatusFlags ReadableFlags(string operation) => operation switch {
-        "Add" => StatusFlags.Zero | StatusFlags.Sign,
-        "Sub" => StatusFlags.Carry | StatusFlags.Zero | StatusFlags.Sign,
-        "And" or "Or" or "Xor" => StatusFlags.Carry | StatusFlags.Auxiliary | StatusFlags.Zero | StatusFlags.Sign
-            | StatusFlags.Overflow,
-        "Inc" or "Dec" => StatusFlags.Zero | StatusFlags.Sign | StatusFlags.Overflow,
-        "Shl" or "Shr" or "Sar" => StatusFlags.Carry | StatusFlags.Zero | StatusFlags.Sign,
-        "Rol" or "Ror" => StatusFlags.Carry,
+    private static StatusFlags ReadableFlags(AluOperation operation) => operation switch {
+        AluOperation.Add => StatusFlags.Zero | StatusFlags.Sign,
+        AluOperation.Sub => StatusFlags.Carry | StatusFlags.Zero | StatusFlags.Sign,
+        AluOperation.And or AluOperation.Or or AluOperation.Xor => StatusFlags.Carry | StatusFlags.Auxiliary
+            | StatusFlags.Zero | StatusFlags.Sign | StatusFlags.Overflow,
+        AluOperation.Inc or AluOperation.Dec => StatusFlags.Zero | StatusFlags.Sign | StatusFlags.Overflow,
+        AluOperation.Shl or AluOperation.Shr or AluOperation.Sar => StatusFlags.Carry | StatusFlags.Zero | StatusFlags.Sign,
+        AluOperation.Rol or AluOperation.Ror => StatusFlags.Carry,
         _ => StatusFlags.None
     };
 
@@ -155,18 +131,15 @@ internal static class AluAssignmentRewrite {
     private static bool ReadsOnly(ValueNode node, VariableReferenceNode result) => node switch {
         VariableReferenceNode reference => reference == result,
         ConstantNode => true,
-        TypeConversionNode conversion => ReadsOnly(conversion.Value, result),
-        BinaryOperationNode binary => ReadsOnly(binary.Left, result) && ReadsOnly(binary.Right, result),
+        TypeConversionNode or BinaryOperationNode =>
+            IrAstChildren.ChildrenOf(node).OfType<ValueNode>().All(child => ReadsOnly(child, result)),
         _ => false
     };
 
     private static ValueNode Replace(ValueNode node, VariableReferenceNode result, ValueNode destination) => node switch {
         VariableReferenceNode reference when reference == result => destination,
-        TypeConversionNode conversion => conversion with { Value = Replace(conversion.Value, result, destination) },
-        BinaryOperationNode binary => binary with {
-            Left = Replace(binary.Left, result, destination),
-            Right = Replace(binary.Right, result, destination)
-        },
+        TypeConversionNode or BinaryOperationNode => (ValueNode)IrAstChildren.MapChildren(node,
+            child => child is ValueNode value ? Replace(value, result, destination) : child),
         _ => node
     };
 
@@ -183,17 +156,13 @@ internal static class AluAssignmentRewrite {
     private static bool ReadsNoTemp(ValueNode node, HashSet<string> temps) => node switch {
         VariableReferenceNode reference => !temps.Contains(reference.VariableName),
         ConstantNode or RegisterNode or CpuFlagNode => true,
-        TypeConversionNode conversion => ReadsNoTemp(conversion.Value, temps),
-        UnaryOperationNode unary => ReadsNoTemp(unary.Value, temps),
-        BinaryOperationNode binary => ReadsNoTemp(binary.Left, temps) && ReadsNoTemp(binary.Right, temps),
-        AbsolutePointerNode pointer => ReadsNoTemp(pointer.AbsoluteAddress, temps),
-        SegmentedPointerNode pointer =>
-            (pointer.DefaultSegment is null || ReadsNoTemp(pointer.DefaultSegment, temps))
-            && ReadsNoTemp(pointer.Segment, temps) && ReadsNoTemp(pointer.Offset, temps),
+        TypeConversionNode or UnaryOperationNode or BinaryOperationNode or AbsolutePointerNode
+            or SegmentedPointerNode =>
+            IrAstChildren.ChildrenOf(node).OfType<ValueNode>().All(child => ReadsNoTemp(child, temps)),
         _ => false
     };
 
-    private static IReadOnlyList<IVisitableAstNode>? TryRemoveUnusedCall(MethodCallValueNode call,
+    private static IReadOnlyList<IVisitableAstNode>? TryRemoveUnusedCall(AluCallValueNode call,
         StatusFlags liveAfterCall) {
         AluExpansion? expansion = AluExpansionBuilder.TryExpand(call);
         if (expansion is null) {

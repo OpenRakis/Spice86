@@ -24,6 +24,8 @@ internal partial class MainWindow : Window {
     private double _sdlCapturedMouseY = 0.5;
     private DispatcherTimer? _relativePollTimer;
     private bool _windowClosed;
+    private bool _readyToClose;
+    private bool _closePreparationInProgress;
 
     public void ShowMouseCursor() {
         if (DataContext is MainWindowViewModel mainVm) {
@@ -73,8 +75,14 @@ internal partial class MainWindow : Window {
 
     private async Task StartMainWindowSessionAsync(MainWindowViewModel mainVm) {
         bool shouldCloseWindow = await mainVm.StartEmulatorAsync();
-        if (shouldCloseWindow && !_windowClosed) {
-            Close();
+        if (shouldCloseWindow) {
+            await mainVm.WaitForManualDumpsAsync();
+            if (!_windowClosed) {
+                // The run already completed (dump included): this close is not a user cancel, so the
+                // closing guard must not kick in even if the posted IsRunning = false is still queued.
+                _readyToClose = true;
+                Close();
+            }
         }
     }
 
@@ -297,9 +305,29 @@ internal partial class MainWindow : Window {
     }
 
     protected override void OnClosing(WindowClosingEventArgs e) {
-        ReleaseCapture();
-        (DataContext as MainWindowViewModel)?.OnMainWindowClosing();
+        if (!_readyToClose && DataContext is MainWindowViewModel mainVm && mainVm.MustFinishBeforeClose) {
+            e.Cancel = true;
+            if (!_closePreparationInProgress) {
+                _closePreparationInProgress = true;
+                _ = FinishThenCloseAsync(mainVm);
+            }
+        } else {
+            ReleaseCapture();
+            (DataContext as MainWindowViewModel)?.OnMainWindowClosing();
+        }
         base.OnClosing(e);
+    }
+
+    private async Task FinishThenCloseAsync(MainWindowViewModel mainVm) {
+        try {
+            await mainVm.FinishBeforeCloseAsync();
+        } finally {
+            _closePreparationInProgress = false;
+            _readyToClose = true;
+            if (!_windowClosed) {
+                Close();
+            }
+        }
     }
 
     protected override void OnClosed(EventArgs e) {

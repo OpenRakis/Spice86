@@ -33,16 +33,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
 
     public virtual Action unknown_F000_006A_F006A(int loadOffset) {
     entrydispatcher:
-        while (true) {
-            CheckExternalEvents(cs1, 0x006A);
-            // F000:006A div CX
-            try {
-                (AX, DX) = Div16(divisor: CX, dividend: (uint)((uint)DX << 0x00000010 | (uint)AX));
-                break;
-            }
-            catch (CpuException cpuException) {
-                return DispatchCpuFault(cpuException, cs1, 0x006A, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x00FB), () => unknown_F000_00FB_F00FB(0x0000))]);
-            }
+        CheckExternalEvents(cs1, 0x006A);
+        // F000:006A div CX
+        try {
+            (AX, DX) = Div16(divisor: CX, dividend: (uint)((uint)DX << 16 | (uint)AX));
+        }
+        catch (CpuException cpuException) {
+            return DispatchCpuFault(cpuException, cs1, 0x006A, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x00FB), () => unknown_F000_00FB_F00FB(0x0000))]);
         }
         // F000:006C mov word ptr DS:[BX],AX
         UInt16[DS, BX] = AX;
@@ -71,7 +68,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             UInt8[DS, 0x0E02] = 0;
             // F000:0090 stos word ptr ES:[DI],AX
             UInt16[ES, DI] = AX;
-            DI = (ushort)(DI + (ushort)State.Direction16);
+            DI += (ushort)(DirectionFlag ? -2 : 2);
             // F000:0091 add AX,1
             AX = Alu16.Add(AX, 1);
             // F000:0094 loop 0x0084
@@ -112,12 +109,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(cs1, 0x00BC);
         // F000:00BC mov DI,0x0E20
-        DI = 0x0E20;
         // F000:00BF mov AX,word ptr CS:[SI+8]
         AX = UInt16[CS, (ushort)(SI + 8)];
         // F000:00C3 stos word ptr ES:[DI],AX
-        UInt16[ES, DI] = AX;
-        DI = (ushort)(DI + (ushort)State.Direction16);
+        UInt16[ES, 0x0E20] = AX;
+        DI = (ushort)(0x0E20 + (ushort)(DirectionFlag ? -2 : 2));
         // F000:00C4 mov word ptr DS:[BX+0x14],DI
         UInt16[DS, (ushort)(BX + 0x14)] = DI;
         // F000:00C7 cld
@@ -125,10 +121,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00C8 call near 0x0123
         NearCall(cs1, 0x00CB, unknown_F000_0123_F0123);
         // F000:00CB mov DI,0x0E30
-        DI = 0x0E30;
         // F000:00CE stos word ptr ES:[DI],AX
-        UInt16[ES, DI] = AX;
-        DI = (ushort)(DI + (ushort)State.Direction16);
+        UInt16[ES, 0x0E30] = AX;
+        DI = (ushort)(0x0E30 + (ushort)(DirectionFlag ? -2 : 2));
         // F000:00CF mov word ptr DS:[BX+0x16],DI
         UInt16[DS, (ushort)(BX + 0x16)] = DI;
         // F000:00D2 cld
@@ -145,8 +140,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             CheckExternalEvents(cs1, 0x00DD);
             // F000:00DD movs byte ptr ES:[DI],byte ptr DS:[SI]
             UInt8[ES, DI] = UInt8[DS, SI];
-            SI = (ushort)(SI + (ushort)State.Direction8);
-            DI = (ushort)(DI + (ushort)State.Direction8);
+            SI++;
+            DI++;
             // F000:00DE loop 0x00DD
             CX--;
         } while (CX != 0);
@@ -159,7 +154,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00E8 mov word ptr DS:[BX+0x1A],DX
         UInt16[DS, (ushort)(BX + 0x1A)] = DX;
         // F000:00EB add BX,0x0040
-        BX = (ushort)(BX + 0x0040);
+        BX += 0x0040;
         // F000:00EE add SI,0x000A
         SI = Alu16.Add(SI, 0x000A);
         // F000:00F1 dec word ptr DS:[0x0F00]
@@ -189,7 +184,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0101 mov CX,7
         CX = 7;
         // F000:0104 add AX,0x0010
-        AX = (ushort)(AX + 0x0010);
+        AX += 0x0010;
         // F000:0107 mov word ptr SS:[BP+2],0x006A
         UInt16[SS, (ushort)(BP + 2)] = 0x006A;
         // F000:010C pop BP
@@ -221,7 +216,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_F000_011E_F011E(int loadOffset) {
         CheckExternalEvents(cs1, 0x011E);
         // F000:011E add AL,AH
-        AL = (byte)(AL + AH);
+        AL += AH;
         // F000:0120 mov AH,0x77
         AH = 0x77;
         // F000:0122 iret
@@ -240,17 +235,16 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov AX,0x2000
-        AX = 0x2000;
         // F000:0003 mov DS,AX
-        DS = AX;
+        DS = 0x2000;
         // F000:0005 mov SS,AX
-        SS = AX;
+        SS = 0x2000;
         // F000:0007 mov SP,0x1000
         SP = 0x1000;
         // F000:000A xor AX,AX
         AX = 0;
         // F000:000C mov ES,AX
-        ES = AX;
+        ES = 0;
         // F000:000E mov word ptr ES:[0],0x00FB
         UInt16[ES, 0] = 0x00FB;
         // F000:0015 mov word ptr ES:[2],CS

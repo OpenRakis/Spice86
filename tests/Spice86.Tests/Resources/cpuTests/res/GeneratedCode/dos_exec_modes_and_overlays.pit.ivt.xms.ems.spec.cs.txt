@@ -111,21 +111,22 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_016D_0100_017D0(int loadOffset) {
+        byte flagOperand_0145 = 0;
         CheckExternalEvents(cs1, 0x0100);
         // 016D:0100 push CS
         Stack.Push16(CS);
         // 016D:0101 pop DS
         DS = UInt16[SS, SP];
-        SP = (ushort)(SP + 2);
+        SP += 2;
         // 016D:0102 push DS
         Stack.Push16(DS);
         // 016D:0103 pop ES
         ES = UInt16[SS, SP];
-        SP = (ushort)(SP + 2);
+        SP += 2;
         // 016D:0104 mov DX,0x03A4
         DX = 0x03A4;
         // 016D:0107 sub DX,0x0100
-        DX = (ushort)(DX - 0x0100);
+        DX = 0x02A4;
         // 016D:010B add DX,0x030F
         DX = Alu16.Add(DX, 0x030F);
         // 016D:010F shr DX,4
@@ -156,7 +157,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:012B cmp BX,0
         Alu16.Sub(BX, 0);
         // 016D:012E je short 0x0157
-        if (!ZeroFlag) {
+        if (BX != 0) {
             // 016D:0130 mov ES,BX
             ES = BX;
             // 016D:0132 xor DI,DI
@@ -168,7 +169,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 // 016D:0137 cmp CX,0
                 Alu16.Sub(CX, 0);
                 // 016D:013A je short 0x0157
-                if (ZeroFlag) {
+                if (CX == 0) {
                     goto L_0157;
                 }
                 // 016D:013C dec CX
@@ -183,9 +184,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                     continue;
                 }
                 // 016D:0145 cmp byte ptr ES:[DI],0
-                Alu8.Sub(UInt8[ES, DI], 0);
+                flagOperand_0145 = UInt8[ES, DI];
+                Alu8.Sub(flagOperand_0145, 0);
                 // 016D:0149 jne short 0x0137
-                if (ZeroFlag) {
+                if (flagOperand_0145 == 0) {
                     break;
                 }
             }
@@ -193,7 +195,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             Stack.Push16(DS);
             // 016D:014C pop ES
             ES = UInt16[SS, SP];
-            SP = (ushort)(SP + 2);
+            SP += 2;
             // 016D:014D call near 0x0246
             NearCall(cs1, 0x0150, unknown_016D_0246_01916);
             // 016D:0150 mov AL,0x45
@@ -223,7 +225,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                     Stack.Push16(DS);
                     // 016D:0173 pop ES
                     ES = UInt16[SS, SP];
-                    SP = (ushort)(SP + 2);
+                    SP += 2;
                     // 016D:0174 mov AL,0x4D
                     AL = 0x4D;
                     // 016D:0176 call near 0x02E0
@@ -239,7 +241,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                     Stack.Push16(CS);
                     // 016D:018D pop ES
                     ES = UInt16[SS, SP];
-                    SP = (ushort)(SP + 2);
+                    SP += 2;
                     // 016D:018E mov BX,0x0371
                     BX = 0x0371;
                     // 016D:0191 int 0x21
@@ -253,7 +255,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             VerifySpeculativeEntryOrFail(cs1, 0x017C, Signature_017C_pop);
             // 016D:017C pop ES
             ES = UInt16[SS, SP];
-            SP = (ushort)(SP + 2);
+            SP += 2;
             VerifySpeculativeEntryOrFail(cs1, 0x017D, Signature_017D_mov);
             // 016D:017D mov AL,0x6D
             AL = 0x6D;
@@ -269,7 +271,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         VerifySpeculativeEntryOrFail(cs1, 0x0158, Signature_0158_pop);
         // 016D:0158 pop ES
         ES = UInt16[SS, SP];
-        SP = (ushort)(SP + 2);
+        SP += 2;
         VerifySpeculativeEntryOrFail(cs1, 0x0159, Signature_0159_mov);
         // 016D:0159 mov AL,0x65
         AL = 0x65;
@@ -290,7 +292,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // 016D:0199 cmp AL,0x42
             Alu8.Sub(AL, 0x42);
             // 016D:019B jne short 0x01A4
-            if (ZeroFlag) {
+            if (AL == 0x42) {
                 // 016D:019D mov AL,0x43
                 AL = 0x43;
                 // 016D:019F call near 0x02E0
@@ -306,7 +308,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 Stack.Push16(CS);
                 // 016D:01B6 pop ES
                 ES = UInt16[SS, SP];
-                SP = (ushort)(SP + 2);
+                SP += 2;
                 // 016D:01B7 mov BX,0x0371
                 BX = 0x0371;
                 // 016D:01BA int 0x21
@@ -332,7 +334,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // 016D:01C0 cmp AL,0x5A
             Alu8.Sub(AL, 0x5A);
             // 016D:01C2 jne short 0x01CB
-            if (ZeroFlag) {
+            if (AL == 0x5A) {
                 // 016D:01C4 mov AL,0x54
                 AL = 0x54;
                 // 016D:01C6 call near 0x02E0
@@ -348,7 +350,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 Stack.Push16(CS);
                 // 016D:01DD pop ES
                 ES = UInt16[SS, SP];
-                SP = (ushort)(SP + 2);
+                SP += 2;
                 // 016D:01DE mov BX,0x0371
                 BX = 0x0371;
                 // 016D:01E1 int 0x21
@@ -360,7 +362,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                     // 016D:01E8 cmp AX,0
                     Alu16.Sub(AX, 0);
                     // 016D:01EB je short 0x01F4
-                    if (!ZeroFlag) {
+                    if (AX != 0) {
                         // 016D:01ED mov AL,0x4C
                         AL = 0x4C;
                         // 016D:01EF call near 0x02E0
@@ -388,7 +390,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                             Stack.Push16(CS);
                             // 016D:0218 pop ES
                             ES = UInt16[SS, SP];
-                            SP = (ushort)(SP + 2);
+                            SP += 2;
                             // 016D:0219 mov BX,0x0387
                             BX = 0x0387;
                             // 016D:021C int 0x21
@@ -466,7 +468,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // 016D:0251 cmp CX,0
             Alu16.Sub(CX, 0);
             // 016D:0254 je short 0x029E
-            if (ZeroFlag) {
+            if (CX == 0) {
                 // 016D:029E ret near
                 return NearRet();
             }
@@ -488,9 +490,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             }
         }
         // 016D:0265 inc DI
-        DI++;
         // 016D:0266 add DI,2
-        DI = (ushort)(DI + 2);
+        DI += 3;
         // 016D:0269 mov SI,DI
         SI = DI;
         // 016D:026B lea DI,0x02F1
@@ -515,7 +516,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // 016D:027B cmp DI,0x02F1
             Alu16.Sub(DI, 0x02F1);
             // 016D:027F je short 0x028A
-            if (ZeroFlag) {
+            if (DI == 0x02F1) {
                 break;
             }
             // 016D:0281 dec DI
@@ -525,7 +526,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // 016D:0284 cmp AL,0x2E
             Alu8.Sub(AL, 0x2E);
             // 016D:0286 je short 0x028B
-            if (ZeroFlag) {
+            if (AL == 0x2E) {
                 goto L_028B;
             }
             // 016D:0288 jmp short 0x027B
@@ -604,7 +605,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Stack.Push16(CS);
         // 0226:0001 pop DS
         DS = UInt16[SS, SP];
-        SP = (ushort)(SP + 2);
+        SP += 2;
         // 0226:0002 mov AH,0x0E
         AH = 0x0E;
         // 0226:0004 mov BH,0
@@ -741,46 +742,46 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_0090_F0090(int loadOffset) {
+        byte flagOperand_00A9 = 0;
     entrydispatcher:
         while (true) {
             CheckExternalEvents(cs4, 0x0090);
             // F000:0090 cmp AH,7
             Alu8.Sub(AH, 7);
             // F000:0093 je short 0x00A4
-            if (ZeroFlag) {
+            if (AH == 7) {
                 break;
             }
             // F000:0095 cmp AH,8
             Alu8.Sub(AH, 8);
             // F000:0098 je short 0x00A4
-            if (ZeroFlag) {
+            if (AH == 8) {
                 break;
             }
             // F000:009A cmp AH,0x0A
             Alu8.Sub(AH, 0x0A);
             // F000:009D je short 0x00A4
-            if (ZeroFlag) {
+            if (AH == 0x0A) {
                 break;
             }
             // F000:009F callback 0x0021
-            if (CallbackMovedCsIp(cs4, 0x009F, 0x0021)) {
-                if (CS == cs2 && IP == 0x0100) {
-                    goto L_0100_433;
-                }
+            if (!CallbackMovedCsIp(cs4, 0x009F, 0x0021)) {
+                // F000:00A3 iret
+                return InterruptRet();
+            }
+            if (CS != cs2 || IP != 0x0100) {
                 throw FailAsUntested($"Untested callback target {CS:X4}:{IP:X4} at F000:009F");
             }
-            // F000:00A3 iret
-            return InterruptRet();
+            CS = cs2;
+            goto L_0100_433;
         L_0100_433:
             // 01D6:0100 selector
             if (SelectorSignatureMatches(cs2, 0x0100, Signature_0100_push)) {
                 goto L_0100_427;
             }
-            if (SelectorSignatureMatches(cs2, 0x0100, Signature_0100_mov)) {
-                goto L_0100_373;
+            if (!SelectorSignatureMatches(cs2, 0x0100, Signature_0100_mov)) {
+                throw FailAsUntested("Untested code variant at 01D6:0100");
             }
-            throw FailAsUntested("Untested code variant at 01D6:0100");
-        L_0100_373:
             // 01D6:0100 mov AH,0x0E
             AH = 0x0E;
             // 01D6:0102 mov AL,0x4A
@@ -805,7 +806,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             Stack.Push16(CS);
             // 01D6:0101 pop DS
             DS = UInt16[SS, SP];
-            SP = (ushort)(SP + 2);
+            SP += 2;
             // 01D6:0102 mov DX,0x0118
             DX = 0x0118;
             // 01D6:0105 mov AX,0x2560
@@ -813,9 +814,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // 01D6:0108 int 0x21
             InterruptCall(cs2, 0x010A, 0x21);
             // 01D6:010A mov DX,0x011B
-            DX = 0x011B;
             // 01D6:010D add DX,0x000F
-            DX = Alu16.Add(DX, 0x000F);
+            DX = Alu16.Add(0x011B, 0x000F);
             // 01D6:0110 shr DX,4
             DX = Alu16.Shr(DX, 4);
             // 01D6:0113 mov AX,0x3100
@@ -837,10 +837,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Callback(cs4, 0x00A5, 0x010A);
         VerifySpeculativeEntryOrFail(cs4, 0x00A9, Signature_00A9_cmp);
         // F000:00A9 cmp byte ptr CS:[0x008F],0
-        Alu8.Sub(UInt8[CS, 0x008F], 0);
+        flagOperand_00A9 = UInt8[CS, 0x008F];
+        Alu8.Sub(flagOperand_00A9, 0);
         VerifySpeculativeEntryOrFail(cs4, 0x00AF, Signature_00AF_jne);
         // F000:00AF jne short 0x00B5
-        if (!ZeroFlag) {
+        if (flagOperand_00A9 != 0) {
             VerifySpeculativeEntryOrFail(cs4, 0x00B5, Signature_00B5_callback);
             // F000:00B5 callback 0x010B
             Callback(cs4, 0x00B5, 0x010B);

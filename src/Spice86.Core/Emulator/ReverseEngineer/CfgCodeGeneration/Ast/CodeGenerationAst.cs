@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 
 using System.Collections.Generic;
 using System.Linq;
@@ -48,6 +49,7 @@ internal static class CodeGenerationAst {
         InstructionBoundaryNode boundary => [boundary.Body],
         IfElseNode ifElse => [ifElse.TrueCase, ifElse.FalseCase],
         WhileNode whileNode => [whileNode.Body],
+        PreTestLoopNode preTestLoop => [preTestLoop.Body],
         InfiniteLoopNode loop => [loop.Body],
         DoWhileNode doWhile => [doWhile.Body],
         SwitchNode switchNode => [.. switchNode.Sections.Select(section => section.Body), switchNode.Default],
@@ -56,46 +58,137 @@ internal static class CodeGenerationAst {
     };
 
     /// <summary>Every <see cref="GotoNode"/> of <paramref name="node"/>, in print order.</summary>
-    public static IEnumerable<GotoNode> Gotos(IVisitableAstNode node) =>
-        node is GotoNode jump ? [jump] : ChildStatements(node).SelectMany(Gotos);
+    public static IEnumerable<GotoNode> Gotos(IVisitableAstNode node) {
+        IEnumerable<IVisitableAstNode> roots = [node];
+        Stack<IEnumerator<IVisitableAstNode>> pending = new();
+        pending.Push(roots.GetEnumerator());
+        try {
+            while (pending.Count > 0) {
+                IEnumerator<IVisitableAstNode> top = pending.Peek();
+                if (!top.MoveNext()) {
+                    pending.Pop().Dispose();
+                    continue;
+                }
+                IVisitableAstNode current = top.Current;
+                if (current is GotoNode jump) {
+                    yield return jump;
+                } else {
+                    pending.Push(ChildStatements(current).GetEnumerator());
+                }
+            }
+        } finally {
+            while (pending.Count > 0) {
+                pending.Pop().Dispose();
+            }
+        }
+    }
 
     /// <summary>True when <paramref name="node"/> or one of its nested statements is a <typeparamref name="T"/>.</summary>
-    public static bool ContainsNode<T>(IVisitableAstNode node) =>
-        node is T || ChildStatements(node).Any(ContainsNode<T>);
+    public static bool ContainsNode<T>(IVisitableAstNode node) {
+        Stack<IVisitableAstNode> pending = new();
+        pending.Push(node);
+        while (pending.Count > 0) {
+            IVisitableAstNode current = pending.Pop();
+            if (current is T) {
+                return true;
+            }
+            foreach (IVisitableAstNode child in ChildStatements(current)) {
+                pending.Push(child);
+            }
+        }
+        return false;
+    }
 
     /// <summary>
-    /// <paramref name="node"/> rebuilt with <paramref name="rewriteBlock"/> applied to each of its child bodies (see
-    /// <see cref="ChildStatements"/>); a block is passed to <paramref name="rewriteBlock"/> itself. Any other node is returned as it is.
+    /// <paramref name="node"/> rebuilt with <paramref name="rewrite"/> applied to each of its child bodies (see
+    /// <see cref="ChildStatements"/>), in that order, as one <see cref="AstTrampoline"/> call per body; a block is
+    /// passed to <paramref name="rewrite"/> itself and any other node is kept as it is. <paramref name="result"/>
+    /// gets the rebuilt node.
     /// </summary>
-    public static IVisitableAstNode WithRewrittenBodies(IVisitableAstNode node, Func<BlockNode, BlockNode> rewriteBlock) => node switch {
-        BlockNode block => rewriteBlock(block),
-        InstructionBoundaryNode boundary => boundary with { Body = rewriteBlock(boundary.Body) },
-        IfElseNode ifElse => new IfElseNode(ifElse.Condition, rewriteBlock(Sequence(ifElse.TrueCase)), rewriteBlock(Sequence(ifElse.FalseCase))),
-        WhileNode whileNode => new WhileNode(whileNode.Condition, rewriteBlock(whileNode.Body)),
-        InfiniteLoopNode loop => loop with { Body = rewriteBlock(loop.Body) },
-        DoWhileNode doWhile => doWhile with { Body = rewriteBlock(doWhile.Body) },
-        SwitchNode switchNode => switchNode with {
-            Sections = switchNode.Sections.Select(section => section with { Body = rewriteBlock(section.Body) }).ToList(),
-            Default = rewriteBlock(switchNode.Default)
-        },
-        CpuFaultTryCatchNode tryCatch => tryCatch with { Body = rewriteBlock(tryCatch.Body) },
-        _ => node
-    };
+    public static IEnumerable<AstSubcall> WithRewrittenBodiesIt(IVisitableAstNode node,
+        Func<BlockNode, AstResult<BlockNode>, IEnumerable<AstSubcall>> rewrite,
+        AstResult<IVisitableAstNode> result) {
+        switch (node) {
+            case BlockNode block: {
+                AstResult<BlockNode> body = new();
+                yield return AstTrampoline.Call(rewrite(block, body));
+                result.Value = body.Value!;
+                yield break;
+            }
+            case InstructionBoundaryNode boundary: {
+                AstResult<BlockNode> body = new();
+                yield return AstTrampoline.Call(rewrite(boundary.Body, body));
+                result.Value = boundary with { Body = body.Value! };
+                yield break;
+            }
+            case IfElseNode ifElse: {
+                AstResult<BlockNode> whenTrue = new();
+                yield return AstTrampoline.Call(rewrite(Sequence(ifElse.TrueCase), whenTrue));
+                AstResult<BlockNode> whenFalse = new();
+                yield return AstTrampoline.Call(rewrite(Sequence(ifElse.FalseCase), whenFalse));
+                result.Value = new IfElseNode(ifElse.Condition, whenTrue.Value!, whenFalse.Value!);
+                yield break;
+            }
+            case WhileNode whileNode: {
+                AstResult<BlockNode> body = new();
+                yield return AstTrampoline.Call(rewrite(whileNode.Body, body));
+                result.Value = new WhileNode(whileNode.Condition, body.Value!);
+                yield break;
+            }
+            case PreTestLoopNode preTestLoop: {
+                AstResult<BlockNode> body = new();
+                yield return AstTrampoline.Call(rewrite(preTestLoop.Body, body));
+                result.Value = preTestLoop with { Body = body.Value! };
+                yield break;
+            }
+            case InfiniteLoopNode loop: {
+                AstResult<BlockNode> body = new();
+                yield return AstTrampoline.Call(rewrite(loop.Body, body));
+                result.Value = loop with { Body = body.Value! };
+                yield break;
+            }
+            case DoWhileNode doWhile: {
+                AstResult<BlockNode> body = new();
+                yield return AstTrampoline.Call(rewrite(doWhile.Body, body));
+                result.Value = doWhile with { Body = body.Value! };
+                yield break;
+            }
+            case SwitchNode switchNode: {
+                List<SwitchSection> sections = new(switchNode.Sections.Count);
+                foreach (SwitchSection section in switchNode.Sections) {
+                    AstResult<BlockNode> body = new();
+                    yield return AstTrampoline.Call(rewrite(section.Body, body));
+                    sections.Add(section with { Body = body.Value! });
+                }
+                AstResult<BlockNode> defaultBody = new();
+                yield return AstTrampoline.Call(rewrite(switchNode.Default, defaultBody));
+                result.Value = switchNode with { Sections = sections, Default = defaultBody.Value! };
+                yield break;
+            }
+            case CpuFaultTryCatchNode tryCatch: {
+                AstResult<BlockNode> body = new();
+                yield return AstTrampoline.Call(rewrite(tryCatch.Body, body));
+                result.Value = tryCatch with { Body = body.Value! };
+                yield break;
+            }
+            default:
+                result.Value = node;
+                yield break;
+        }
+    }
 
     /// <summary>True when <paramref name="node"/> reads only registers, flags and other CPU state: it can move out of a boundary.</summary>
     public static bool ReadsOnlyMachineState(ValueNode node) => node switch {
-        CpuFlagNode or RegisterNode or ConstantNode or InstructionFieldNode => true,
-        UnaryOperationNode unary => ReadsOnlyMachineState(unary.Value),
-        ExplicitCastNode { Value: ValueNode inner } => ReadsOnlyMachineState(inner),
-        BinaryOperationNode binary => ReadsOnlyMachineState(binary.Left) && ReadsOnlyMachineState(binary.Right),
-        TypeConversionNode conversion => ReadsOnlyMachineState(conversion.Value),
-        SegmentedPointerNode pointer => ReadsOnlyMachineState(pointer.Segment) && ReadsOnlyMachineState(pointer.Offset)
-            && (pointer.DefaultSegment is null || ReadsOnlyMachineState(pointer.DefaultSegment)),
+        CpuFlagNode or RegisterNode or ConstantNode or InstructionFieldNode
+            or MethodScopedVariableReferenceNode => true,
+        UnaryOperationNode or BinaryOperationNode or TypeConversionNode or SegmentedPointerNode
+            or ExplicitCastNode { Value: ValueNode } =>
+            IrAstChildren.ChildrenOf(node).OfType<ValueNode>().All(ReadsOnlyMachineState),
         _ => false
     };
 
     /// <summary>A switch section whose body ends with <c>break;</c> exactly when it would otherwise complete normally.</summary>
-    public static SwitchSection Section(int label, IVisitableAstNode body) {
+    public static SwitchSection Section(uint label, IVisitableAstNode body) {
         BlockNode statements = Sequence(body);
         if (!CompletesNormallyVisitor.CompletesNormally(statements)) {
             return new SwitchSection(label, statements);
@@ -123,23 +216,24 @@ internal static class CodeGenerationAst {
     }
 
     /// <summary>
-    /// The CFG node control reaches first when it enters <paramref name="statement"/>: the node of a boundary, the
-    /// target of a label, the entry node of the first statement of a loop body; <c>null</c> for any other statement.
+    /// The goto target a jump lands on when it enters <paramref name="statement"/>: the anchor of a boundary, the
+    /// target of a label, the anchor of the first statement of a loop body; <c>null</c> for any other statement.
     /// </summary>
-    public static ICfgNode? EntryNodeOf(IVisitableAstNode statement) => statement switch {
-        InstructionBoundaryNode boundary => boundary.Node,
+    public static IGotoTarget? AnchorOf(IVisitableAstNode statement) => statement switch {
+        InstructionBoundaryNode boundary => boundary.Anchor,
         LabelNode label => label.Target,
-        InfiniteLoopNode loop => FirstEntryNode(loop.Body),
-        WhileNode loop => FirstEntryNode(loop.Body),
-        DoWhileNode doWhile => FirstEntryNode(doWhile.Body),
+        InfiniteLoopNode loop => FirstAnchor(loop.Body),
+        PreTestLoopNode loop => loop.HeaderTarget,
+        WhileNode loop => FirstAnchor(loop.Body),
+        DoWhileNode doWhile => FirstAnchor(doWhile.Body),
         _ => null
     };
 
-    private static ICfgNode? FirstEntryNode(BlockNode body) {
+    private static IGotoTarget? FirstAnchor(BlockNode body) {
         if (body.Statements.Count == 0) {
             return null;
         }
-        return EntryNodeOf(body.Statements[0]);
+        return AnchorOf(body.Statements[0]);
     }
 
     private static BinaryOperation? InvertedComparison(BinaryOperation operation) => operation switch {

@@ -1,12 +1,19 @@
 namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 
+using Microsoft.Extensions.Logging.Abstractions;
+
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Naming;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ssa;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Structuring;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
+using Spice86.Core.Emulator.StateSerialization;
+using Spice86.Shared.Interfaces;
 
 using System.Linq;
 
@@ -16,22 +23,52 @@ using System.Linq;
 /// </summary>
 internal sealed class CfgCSharpGenerator {
     private const string EntrySuffix = "_entry";
+    private const long SlowMethodThresholdMilliseconds = 1000;
 
     private readonly AstInstructionRenderer _assemblyRenderer = new(AsmRenderingConfig.CreateSpice86Style());
+    private readonly bool _collectCensuses;
+    private readonly bool _verify;
 
-    public GeneratedCSharpProgram Generate(CfgPartitionedProgram program) {
+    /// <summary>The production generator: no census collection, no IR verification.</summary>
+    public CfgCSharpGenerator() : this(false, false) {
+    }
+
+    /// <summary>Creates a generator; production uses the parameterless options.</summary>
+    /// <param name="collectCensuses">Whether each emitted method runs the census classifiers the
+    /// generated-program diagnostics read; production skips them.</param>
+    /// <param name="verify">Whether the IR invariants are checked after the passes; tests enable it.
+    /// </param>
+    public CfgCSharpGenerator(bool collectCensuses, bool verify) {
+        _collectCensuses = collectCensuses;
+        _verify = verify;
+    }
+
+    /// <summary>Generates without progress reporting; the overload used by tests and tools.</summary>
+    public GeneratedCSharpProgram Generate(CfgPartitionedProgram program) =>
+        Generate(program, new DumpProgressReporter(NullLogger.Instance, new SystemTimeProvider()));
+
+    /// <summary>
+    /// Generates the override source for <paramref name="program"/>, reporting the analysis, planning
+    /// and per-method emission phases through <paramref name="progress"/>.
+    /// </summary>
+    public GeneratedCSharpProgram Generate(CfgPartitionedProgram program, DumpProgressReporter progress) {
         if (program.Partitions.Count == 0) {
             throw new InvalidOperationException("Cannot generate C# for an empty CFG partitioned program.");
         }
 
+        progress.BeginPhase(DumpPhase.CodeAnalysis);
         InstructionMnemonic instructionMnemonic = new(_assemblyRenderer);
         GeneratorAnalysis analysis = GeneratorAnalysis.Build(program, instructionMnemonic);
+        progress.EndPhase();
+
+        progress.BeginPhase(DumpPhase.CodePlan);
         CfgGeneratorContext context = analysis.Context;
         GenerationPlan plan = GenerationPlanBuilder.Build(context);
         TransferEmitter transferEmitter = new(context);
         InstructionLowerer lowerer = new(context, transferEmitter);
         CpuFaultWrapper cpuFaultWrapper = new(context, transferEmitter);
-        MethodEmitter methodEmitter = new(context, cpuFaultWrapper, lowerer, _assemblyRenderer);
+        IrMethodEmitter methodEmitter = new(context, cpuFaultWrapper, lowerer, _assemblyRenderer,
+            _collectCensuses, _verify);
 
         CSharpSourceWriter writer = new();
         EmitHeader(writer);
@@ -42,16 +79,60 @@ internal sealed class CfgCSharpGenerator {
         EmitSegmentFields(writer, plan);
         EmitSignatureFields(writer, plan);
         EmitConstructor(writer, plan);
+        progress.EndPhase();
+
+        progress.BeginPhase(DumpPhase.CodeMethods);
         GotoCensus census = new();
-        foreach (MethodPlan method in plan.Methods) {
-            census.Merge(methodEmitter.Emit(writer, method));
+        FlagReadCensus flagReadCensus = new();
+        WebCensus webCensus = new();
+        for (int i = 0; i < plan.Methods.Count; i++) {
+            MethodPlan method = plan.Methods[i];
+            progress.Step(i + 1, plan.Methods.Count, method.MethodName);
+            GenerationStepTimer timer = new();
+            MethodCensus methodCensus = methodEmitter.Emit(writer, method, timer);
+            census.Merge(methodCensus.Gotos);
+            flagReadCensus.Merge(methodCensus.FlagReads);
+            webCensus.Merge(methodCensus.Webs);
+            if (timer.TotalMilliseconds >= SlowMethodThresholdMilliseconds) {
+                progress.Detail(SlowMethodLine(i + 1, plan.Methods.Count, method.MethodName,
+                    method.Nodes.OfType<CfgInstruction>().Count(),
+                    methodCensus.LiftedBlocks, methodCensus.LiftedStatements, timer));
+            }
         }
         writer.CloseBlock();
+        progress.EndPhase();
 
         return new GeneratedCSharpProgram {
             SourceText = writer.ToString(),
-            GotoCensus = census
+            GotoCensus = census,
+            FlagReadCensus = flagReadCensus,
+            WebCensus = webCensus
         };
+    }
+
+    /// <summary>
+    /// The detail line a method slower than <see cref="SlowMethodThresholdMilliseconds"/> logs: its
+    /// total time, its instruction, IR block and IR statement counts, and every measured step in
+    /// execution order.
+    /// </summary>
+    internal static string SlowMethodLine(int current, int total, string name, int instructions, int blocks,
+        int statements, GenerationStepTimer timer) =>
+        $"Code generation: method {current} / {total} {name} took {timer.TotalMilliseconds} ms ({instructions} instructions, {blocks} IR blocks, {statements} statements): "
+        + string.Join(", ", timer.Steps.Select(step => $"{step.Step} {step.Milliseconds} ms"));
+
+    /// <summary>
+    /// Lifts every method of <paramref name="program"/> to an <see cref="IrMethod"/>, building the analysis,
+    /// context, plan and lowerer exactly like <see cref="Generate"/>. Only tests call it for now.
+    /// </summary>
+    internal IReadOnlyList<LiftedMethod> LiftMethods(CfgPartitionedProgram program) {
+        InstructionMnemonic instructionMnemonic = new(_assemblyRenderer);
+        GeneratorAnalysis analysis = GeneratorAnalysis.Build(program, instructionMnemonic);
+        CfgGeneratorContext context = analysis.Context;
+        GenerationPlan plan = GenerationPlanBuilder.Build(context);
+        TransferEmitter transferEmitter = new(context);
+        InstructionLowerer lowerer = new(context, transferEmitter);
+        IrLifter lifter = new(context, lowerer, _assemblyRenderer);
+        return plan.Methods.Select(method => new LiftedMethod(lifter.Lift(method), method, lowerer, context)).ToList();
     }
 
     private static void EmitHeader(CSharpSourceWriter writer) {

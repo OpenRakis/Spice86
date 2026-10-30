@@ -37,9 +37,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov AX,0
-        AX = 0;
         // F000:0003 mov SS,AX
-        SS = AX;
+        SS = 0;
         // F000:0005 mov SP,0x0100
         SP = 0x0100;
         // F000:0008 mov byte ptr CS:[0x0025],0
@@ -56,7 +55,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         while (true) {
             CheckExternalEvents(cs1, 0x0016);
             // F000:0016 inc byte ptr CS:[0x0025]
-            UInt8[CS, 0x0025] = (byte)(UInt8[CS, 0x0025] + 1);
+            UInt8[CS, 0x0025] += 1;
             // F000:001B mov AL,byte ptr CS:[0x0025]
             AL = UInt8[CS, 0x0025];
             // F000:001F cmp AL,3

@@ -32,9 +32,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:FFF0 jmp short 0
         // F000:0000 jmp short 0x000E
         // F000:000E mov BX,0xF000
-        BX = 0xF000;
         // F000:0011 mov DS,BX
-        DS = BX;
+        DS = 0xF000;
         // F000:0013 mov AX,word ptr DS:[0xFFF2]
         AX = UInt16[DS, 0xFFF2];
         // F000:0016 jmp near AX
@@ -45,16 +44,15 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 throw FailAsUntested($"Untested near jump target 0x{AX:X4} at F000:0016");
         }
         // F000:1290 jmp far E342:EBE0
+        CS = cs1;
         // E342:EBE0 mov BX,0x1000
-        BX = 0x1000;
         // E342:EBE3 mov DS,BX
-        DS = BX;
+        DS = 0x1000;
         // E342:EBE5 mov AH,0xFB
         AH = 0xFB;
         // E342:EBE7 mov AL,0xE1
-        AL = 0xE1;
         // E342:EBE9 mov word ptr DS:[0x2501],AX
-        UInt16[DS, 0x2501] = AX;
+        UInt16[DS, 0x2501] = 0xFBE1;
         // E342:EBEC mov word ptr DS:[0x2600],0x1001
         UInt16[DS, 0x2600] = 0x1001;
         // E342:EBF2 mov SS,word ptr DS:[0x2600]
@@ -77,47 +75,43 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 throw FailAsUntested($"Untested near jump target 0x{UInt16[SS, (ushort)(BP + DI - 0x16)]:X4} at E342:EC05");
         }
         // E342:FBE1 mov DX,0xF100
-        DX = 0xF100;
         // E342:FBE4 mov AX,0x2536
         AX = 0x2536;
         // E342:FBE7 out DX,AX
-        Out16(DX, AX);
+        Out16(0xF100, AX);
         // E342:FBE8 mov AX,0x4001
-        AX = 0x4001;
         // E342:FBEC mov BX,0x2501
         BX = 0x2501;
         // E342:FBEF mov word ptr DS:[BX],AX
-        UInt16[DS, BX] = AX;
+        UInt16[DS, 0x2501] = 0x4001;
         // E342:FBF1 mov DI,2
         DI = 2;
         // E342:FBF4 mov byte ptr DS:[BX+DI],0
-        UInt8[DS, (ushort)(BX + DI)] = 0;
+        UInt8[DS, 0x2503] = 0;
         // E342:FBF7 mov CH,4
         CH = 4;
         // E342:FBF9 mov CL,CH
-        CL = CH;
+        CL = 4;
         // E342:FBFB mov CH,0
         CH = 0;
         // E342:FBFD mov SI,CX
-        SI = CX;
         // E342:FBFF mov byte ptr DS:[BX+SI-1],0xF0
-        UInt8[DS, (ushort)(BX + SI - 1)] = 0xF0;
+        UInt8[DS, 0x2504] = 0xF0;
         // E342:FC03 mov SI,3
         SI = 3;
         // E342:FC06 jmp far dword ptr SS:[BP+SI-24]
-        ushort targetSegment_FC06 = UInt16[SS, (ushort)(BP + SI - 0x18 + 2)];
+        ushort targetSegment_FC06 = UInt16[SS, (ushort)(BP + SI - 0x0016)];
         ushort targetOffset_FC06 = UInt16[SS, (ushort)(BP + SI - 0x18)];
-        if (targetSegment_FC06 == cs2 && targetOffset_FC06 == 0x4001) {
-            goto L_4001;
+        if (targetSegment_FC06 != cs2 || targetOffset_FC06 != 0x4001) {
+            throw FailAsUntested($"Untested far jump target {targetSegment_FC06:X4}:{targetOffset_FC06:X4} at E342:FC06");
         }
-        throw FailAsUntested($"Untested far jump target {targetSegment_FC06:X4}:{targetOffset_FC06:X4} at E342:FC06");
-    L_4001:
+        CS = cs2;
         // F000:4001 mov AX,word ptr DS:[BX+SI-3]
-        AX = UInt16[DS, (ushort)(BX + SI - 3)];
+        AX = UInt16[DS, 0x2501];
         // F000:4004 mov DX,0
         DX = 0;
         // F000:4007 mov DS,DX
-        DS = DX;
+        DS = 0;
         // F000:4009 mov word ptr DS:[0],AX
         UInt16[DS, 0] = AX;
         // F000:400C hlt

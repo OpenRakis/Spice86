@@ -36,8 +36,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0x0046);
         // F000:0046 cmps byte ptr DS:[SI],byte ptr ES:[DI]
         Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
-        SI = (ushort)(SI + (ushort)State.Direction8);
-        DI = (ushort)(DI + (ushort)State.Direction8);
+        SI += (ushort)(DirectionFlag ? -1 : 1);
+        DI += (ushort)(DirectionFlag ? -1 : 1);
         // F000:0047 pushf
         Stack.Push16(FlagRegister16);
         // F000:0048 ret near
@@ -48,8 +48,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0x0082);
         // F000:0082 cmps byte ptr DS:[SI],byte ptr ES:[DI]
         Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
-        SI = (ushort)(SI + (ushort)State.Direction8);
-        DI = (ushort)(DI + (ushort)State.Direction8);
+        SI += (ushort)(DirectionFlag ? -1 : 1);
+        DI += (ushort)(DirectionFlag ? -1 : 1);
         // F000:0083 pushf
         Stack.Push16(FlagRegister16);
         // F000:0084 ret near
@@ -60,8 +60,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0x0097);
         // F000:0097 cmps byte ptr DS:[SI],byte ptr ES:[DI]
         Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
-        SI = (ushort)(SI + (ushort)State.Direction8);
-        DI = (ushort)(DI + (ushort)State.Direction8);
+        SI += (ushort)(DirectionFlag ? -1 : 1);
+        DI += (ushort)(DirectionFlag ? -1 : 1);
         // F000:0098 pushf
         Stack.Push16(FlagRegister16);
         // F000:0099 ret near
@@ -72,8 +72,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0x0812);
         // F000:0812 cmps word ptr DS:[SI],word ptr ES:[DI]
         Alu16.Sub(UInt16[DS, SI], UInt16[ES, DI]);
-        SI = (ushort)(SI + (ushort)State.Direction16);
-        DI = (ushort)(DI + (ushort)State.Direction16);
+        SI += (ushort)(DirectionFlag ? -2 : 2);
+        DI += (ushort)(DirectionFlag ? -2 : 2);
         // F000:0813 pushf
         Stack.Push16(FlagRegister16);
         // F000:0814 ret near
@@ -81,6 +81,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_0883_F0883(int loadOffset) {
+        ushort flagOperand_1304 = 0;
         CheckExternalEvents(cs1, 0x0883);
         // F000:0883 mov AH,0x10
         AH = 0x10;
@@ -88,7 +89,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         DirectionFlag = true;
         // F000:0886 lods AL,byte ptr DS:[SI]
         AL = UInt8[DS, SI];
-        SI = (ushort)(SI + (ushort)State.Direction8);
+        SI--;
         // F000:0887 jmp near AX
         switch (AX) {
             case 0x10C2:
@@ -98,7 +99,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         // F000:10C2 lods AX,word ptr DS:[SI]
         AX = UInt16[DS, SI];
-        SI = (ushort)(SI + (ushort)State.Direction16);
+        SI -= 2;
         // F000:10C3 jmp near AX
         switch (AX) {
             case 0xC200:
@@ -109,17 +110,16 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:C200 mov DX,0x1000
         DX = 0x1000;
         // F000:C203 mov ES,DX
-        ES = DX;
+        ES = 0x1000;
         // F000:C205 mov DI,0xFFFF
-        DI = 0xFFFF;
         // F000:C208 movs byte ptr ES:[DI],byte ptr DS:[SI]
-        UInt8[ES, DI] = UInt8[DS, SI];
-        SI = (ushort)(SI + (ushort)State.Direction8);
-        DI = (ushort)(DI + (ushort)State.Direction8);
+        UInt8[ES, 0xFFFF] = UInt8[DS, SI];
+        SI--;
+        DI = 0xFFFE;
         // F000:C209 mov DS,DX
-        DS = DX;
+        DS = 0x1000;
         // F000:C20B mov byte ptr DS:[DI],0xC2
-        UInt8[DS, DI] = 0xC2;
+        UInt8[DS, 0xFFFE] = 0xC2;
         // F000:C20E jmp near word ptr DS:[DI]
         switch (UInt16[DS, DI]) {
             case 0x80C2:
@@ -130,11 +130,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:80C2 mov DS,CX
         DS = CX;
         // F000:80C4 movs word ptr ES:[DI],word ptr DS:[SI]
-        UInt16[ES, DI] = UInt16[DS, SI];
-        SI = (ushort)(SI + (ushort)State.Direction16);
-        DI = (ushort)(DI + (ushort)State.Direction16);
+        UInt16[ES, 0xFFFE] = UInt16[DS, SI];
+        SI -= 2;
+        DI = 0xFFFC;
         // F000:80C5 mov DS,DX
-        DS = DX;
+        DS = 0x1000;
         // F000:80C7 jmp near word ptr DS:[DI+2]
         switch (UInt16[DS, (ushort)(DI + 2)]) {
             case 0x80FF:
@@ -143,14 +143,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, (ushort)(DI + 2)]:X4} at F000:80C7");
         }
         // F000:80FF mov DI,0x2002
-        DI = 0x2002;
         // F000:8102 mov ES,CX
         ES = CX;
         // F000:8104 cld
         DirectionFlag = false;
         // F000:8105 scas AL,byte ptr ES:[DI]
-        Alu8.Sub(AL, UInt8[ES, DI]);
-        DI = (ushort)(DI + (ushort)State.Direction8);
+        Alu8.Sub(AL, UInt8[ES, 0x2002]);
+        DI = 0x2003;
         // F000:8106 lahf
         AH = (byte)FlagRegister16;
         // F000:8107 jmp near AX
@@ -161,51 +160,51 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 throw FailAsUntested($"Untested near jump target 0x{AX:X4} at F000:8107");
         }
         // F000:1300 mov word ptr DS:[DI],AX
-        UInt16[DS, DI] = AX;
+        UInt16[DS, 0x2003] = AX;
         // F000:1302 mov ES,DX
-        ES = DX;
+        ES = 0x1000;
         // F000:1304 scas AX,word ptr ES:[DI]
-        Alu16.Sub(AX, UInt16[ES, DI]);
-        DI = (ushort)(DI + (ushort)State.Direction16);
+        flagOperand_1304 = UInt16[ES, 0x2003];
+        Alu16.Sub(AX, flagOperand_1304);
+        DI = 0x2005;
         // F000:1305 je short 0x1350
-        if (ZeroFlag) {
-            // F000:1350 mov AL,0x80
-            AL = 0x80;
-            // F000:1352 std
-            DirectionFlag = true;
-            // F000:1353 stos byte ptr ES:[DI],AL
-            UInt8[ES, DI] = AL;
-            DI = (ushort)(DI + (ushort)State.Direction8);
-            // F000:1354 jmp near word ptr DS:[DI]
-            switch (UInt16[DS, DI]) {
-                case 0x8013:
-                    break;
-                default:
-                    throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, DI]:X4} at F000:1354");
-            }
-            // F000:8013 mov AX,0xD000
-            AX = 0xD000;
-            // F000:8016 stos word ptr ES:[DI],AX
-            UInt16[ES, DI] = AX;
-            DI = (ushort)(DI + (ushort)State.Direction16);
-            // F000:8017 jmp near word ptr DS:[DI+2]
-            switch (UInt16[DS, (ushort)(DI + 2)]) {
-                case 0xD000:
-                    break;
-                default:
-                    throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, (ushort)(DI + 2)]:X4} at F000:8017");
-            }
-            // F000:D000 mov DX,0
-            DX = 0;
-            // F000:D003 mov DS,DX
-            DS = DX;
-            // F000:D005 mov word ptr DS:[2],0x1234
-            UInt16[DS, 2] = 0x1234;
-            // F000:D00B hlt
+        if (AX != flagOperand_1304) {
+            VerifySpeculativeEntryOrFail(cs1, 0x1307, Signature_1307_hlt);
+            // F000:1307 hlt
             return Hlt();
         }
-        VerifySpeculativeEntryOrFail(cs1, 0x1307, Signature_1307_hlt);
-        // F000:1307 hlt
+        // F000:1350 mov AL,0x80
+        // F000:1352 std
+        DirectionFlag = true;
+        // F000:1353 stos byte ptr ES:[DI],AL
+        UInt8[ES, 0x2005] = 0x80;
+        DI = 0x2004;
+        // F000:1354 jmp near word ptr DS:[DI]
+        switch (UInt16[DS, DI]) {
+            case 0x8013:
+                break;
+            default:
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, DI]:X4} at F000:1354");
+        }
+        // F000:8013 mov AX,0xD000
+        AX = 0xD000;
+        // F000:8016 stos word ptr ES:[DI],AX
+        UInt16[ES, 0x2004] = 0xD000;
+        DI = 0x2002;
+        // F000:8017 jmp near word ptr DS:[DI+2]
+        switch (UInt16[DS, (ushort)(DI + 2)]) {
+            case 0xD000:
+                break;
+            default:
+                throw FailAsUntested($"Untested near jump target 0x{UInt16[DS, (ushort)(DI + 2)]:X4} at F000:8017");
+        }
+        // F000:D000 mov DX,0
+        DX = 0;
+        // F000:D003 mov DS,DX
+        DS = 0;
+        // F000:D005 mov word ptr DS:[2],0x1234
+        UInt16[DS, 2] = 0x1234;
+        // F000:D00B hlt
         return Hlt();
     }
 
@@ -215,17 +214,15 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0000 mov CX,0xF000
         CX = 0xF000;
         // F000:0003 mov DS,CX
-        DS = CX;
+        DS = 0xF000;
         // F000:0005 mov ES,CX
-        ES = CX;
+        ES = 0xF000;
         // F000:0007 mov SI,0x1000
-        SI = 0x1000;
         // F000:000A mov DI,0x2001
-        DI = 0x2001;
         // F000:000D cmps byte ptr DS:[SI],byte ptr ES:[DI]
-        Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
-        SI = (ushort)(SI + (ushort)State.Direction8);
-        DI = (ushort)(DI + (ushort)State.Direction8);
+        Alu8.Sub(UInt8[DS, 0x1000], UInt8[ES, 0x2001]);
+        SI = (ushort)(0x1000 + (ushort)(DirectionFlag ? -1 : 1));
+        DI = (ushort)(0x2001 + (ushort)(DirectionFlag ? -1 : 1));
         // F000:000E pushf
         Stack.Push16(FlagRegister16);
         // F000:000F ret near
