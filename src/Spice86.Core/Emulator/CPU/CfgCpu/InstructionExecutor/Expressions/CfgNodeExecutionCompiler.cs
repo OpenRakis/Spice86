@@ -29,6 +29,7 @@ using System.Runtime.CompilerServices;
 /// </summary>
 public class CfgNodeExecutionCompiler : IDisposable {
     private readonly JitMode _jitMode;
+    private readonly IExecutionAstRewriter _rewriter;
     private readonly bool _expandAluCalls;
 
     private readonly BlockingCollection<(Expression<CfgNodeExecutionAction<InstructionExecutionHelper>> Expression,
@@ -43,12 +44,15 @@ public class CfgNodeExecutionCompiler : IDisposable {
     /// Initializes a new instance of <see cref="CfgNodeExecutionCompiler"/> and, when the
     /// <paramref name="jitMode"/> requires it, starts the background compiler threads.
     /// </summary>
+    /// <param name="rewriter">Rewrites each node's execution AST before it is compiled.</param>
     /// <param name="expandAluCalls">When true, ALU calls are compiled as their inline expansion instead of a call to
     /// the ALU (see <see cref="AstExpressionBuilder(bool)"/>).</param>
-    public CfgNodeExecutionCompiler(CfgNodeExecutionCompilerMonitor monitor, ILogger logger, JitMode jitMode, bool expandAluCalls) {
+    public CfgNodeExecutionCompiler(CfgNodeExecutionCompilerMonitor monitor, ILogger logger, JitMode jitMode,
+        IExecutionAstRewriter rewriter, bool expandAluCalls) {
         _monitor = monitor;
         _logger = logger;
         _jitMode = jitMode;
+        _rewriter = rewriter;
         _expandAluCalls = expandAluCalls;
 
         if (_expandAluCalls) {
@@ -118,7 +122,7 @@ public class CfgNodeExecutionCompiler : IDisposable {
     /// configured <see cref="JitMode"/>. Compiled delegates are not shared; each AST produces its own task.
     /// </summary>
     public void Compile(ICfgNode node) {
-        IVisitableAstNode executionAst = node.ExecutionAst;
+        IVisitableAstNode executionAst = _rewriter.Rewrite(node, node.ExecutionAst);
         AstExpressionBuilder expressionBuilder = new(_expandAluCalls);
         Expression expression = executionAst.Accept(expressionBuilder);
         Expression<CfgNodeExecutionAction<InstructionExecutionHelper>> exprWithHelper =

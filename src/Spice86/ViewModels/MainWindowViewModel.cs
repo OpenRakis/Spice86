@@ -34,6 +34,8 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IDis
     private readonly ICyclesLimiter _cyclesLimiter;
     private readonly PerformanceViewModel _performanceViewModel;
     private readonly ICurrentProcessNameProvider _currentProcessNameProvider;
+    private readonly ManualDumpRunner _manualDumpRunner;
+    private readonly ILogger _logger;
     private bool _disposed;
 
     /// <summary>Display-surface child view model that owns the bitmap, cursor, and input dispatch.</summary>
@@ -128,7 +130,9 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IDis
         ITimeMultiplier pit,
         ICyclesLimiter cyclesLimiter,
         IHostStorageProvider hostStorageProvider,
-        ICurrentProcessNameProvider currentProcessNameProvider)
+        ICurrentProcessNameProvider currentProcessNameProvider,
+        ManualDumpRunner manualDumpRunner,
+        ILogger logger)
         : base(uiDispatcher, textClipboard) {
         Display = display;
         Session = session;
@@ -143,6 +147,8 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IDis
         _pit = pit;
         _cyclesLimiter = cyclesLimiter;
         _currentProcessNameProvider = currentProcessNameProvider;
+        _manualDumpRunner = manualDumpRunner;
+        _logger = logger;
 
         TimeMultiplier = Configuration.TimeMultiplier;
         _targetCyclesPerMs = _cyclesLimiter.TargetCpuCyclesPerMs;
@@ -193,6 +199,35 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IDis
     }
 
     internal void OnMainWindowClosing() => Display.NotifyAppClosing();
+
+    /// <summary>Whether closing the window must first wait for the emulator to stop or for a manual
+    /// state dump still in flight to end.</summary>
+    internal bool MustFinishBeforeClose => Session.IsRunning || !_manualDumpRunner.InFlight.IsCompleted;
+
+    /// <summary>Waits for every manual state dump started so far to end.</summary>
+    internal Task WaitForManualDumpsAsync() => _manualDumpRunner.WaitAsync();
+
+    /// <summary>Waits for every manual state dump in flight to end (its own failure is already reported
+    /// by the dump command), then stops the emulator; any stop failure is logged, never thrown.</summary>
+    internal async Task FinishBeforeCloseAsync() {
+        await WaitForManualDumpsAsync();
+        Task stop = StopEmulatorAsync();
+        await stop.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+        if (stop.Exception is { } failure && _logger.IsEnabled(LogLevel.Error)) {
+            _logger.LogError(failure, "Stopping the emulator before closing the main window failed");
+        }
+    }
+
+    /// <summary>
+    /// Resumes a paused emulator so it can observe the stop request, asks the session to stop and
+    /// waits for the emulator thread to finish (including the recorded-data dump).
+    /// </summary>
+    public async Task StopEmulatorAsync() {
+        if (PlayCommand.CanExecute(null)) {
+            PlayCommand.Execute(null);
+        }
+        await Session.RequestStop();
+    }
 
     internal void UpdateMouseCaptureHint(bool isCaptured) {
         IsMouseCaptured = isCaptured;
@@ -297,7 +332,6 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IDis
 
         _pauseHandler.Paused -= OnPaused;
         _pauseHandler.Resumed -= OnResumed;
-        _pauseHandler.Dispose();
         Session.PropertyChanged -= OnSessionPropertyChanged;
 
         Display.Dispose();
@@ -306,8 +340,13 @@ public sealed partial class MainWindowViewModel : ViewModelWithErrorDialog, IDis
             PlayCommand.Execute(null);
         }
         IsEmulatorRunning = false;
-        Disposing?.Invoke();
 
+        // Stop and join the emulator thread before letting the composition root tear down the
+        // machine and the logger: a dump still writing on that thread must never see them disposed.
+        Session.RequestStop();
         Session.Dispose();
+        _pauseHandler.Dispose();
+
+        Disposing?.Invoke();
     }
 }

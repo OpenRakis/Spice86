@@ -32,9 +32,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov AX,0x1000
-        AX = 0x1000;
         // F000:0003 mov SS,AX
-        SS = AX;
+        SS = 0x1000;
         // F000:0005 mov SP,0x0100
         SP = 0x0100;
         // F000:0008 mov AX,1
@@ -43,23 +42,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         BX = 0x0020;
         // F000:000E cmp AX,0
         // F000:0011 jne short 0x0015
-        if (AX != 0) {
-            // F000:0015 cmp AX,0
-            Alu16.Sub(AX, 0);
-            // F000:0018 jne short 0x001C
-            if (!ZeroFlag) {
-                // F000:001C mov CX,2
-                CX = 2;
-                // F000:001F hlt
-                return Hlt();
-            }
-            VerifySpeculativeEntryOrFail(cs1, 0x001A, Signature_001A_call);
-            // F000:001A call near BX
-            throw FailAsUntested("Untested indirect call at F000:001A");
-        }
-        VerifySpeculativeEntryOrFail(cs1, 0x0013, Signature_0013_jmp);
-        // F000:0013 jmp near BX
-        throw FailAsUntested("Untested indirect jump at F000:0013");
+        // F000:0015 cmp AX,0
+        Alu16.Sub(1, 0);
+        // F000:0018 jne short 0x001C
+        // F000:001C mov CX,2
+        CX = 2;
+        // F000:001F hlt
+        return Hlt();
     }
 
 }

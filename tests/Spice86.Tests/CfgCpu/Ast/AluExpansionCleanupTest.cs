@@ -116,30 +116,23 @@ public class AluExpansionCleanupTest {
         cleaned.Value.Should().BeNull();
     }
 
-    [Fact]
-    public void XorOfARegisterWithItselfIsZero() {
+    public static TheoryData<DataType, string, RegisterNode> SelfInverseOperations => new() {
+        { DataType.UINT16, "Xor", Ax },
+        { DataType.UINT8, "Sub", Al }
+    };
+
+    [Theory]
+    [MemberData(nameof(SelfInverseOperations))]
+    public void ARegisterSelfOperationIsZero(DataType dataType, string operation, RegisterNode register) {
         // Arrange
-        AluExpansion expansion = Expand(DataType.UINT16, "Xor", Ax, Ax);
+        AluExpansion expansion = Expand(dataType, operation, register, register);
 
         // Act
         CleanedAluExpansion cleaned = AluExpansionCleanup.Clean(expansion, StatusFlags.None, true);
 
         // Assert
         cleaned.Statements.Should().BeEmpty();
-        cleaned.Value.Should().Be(new ConstantNode(DataType.UINT16, 0));
-    }
-
-    [Fact]
-    public void SubOfARegisterFromItselfIsZero() {
-        // Arrange
-        AluExpansion expansion = Expand(DataType.UINT8, "Sub", Al, Al);
-
-        // Act
-        CleanedAluExpansion cleaned = AluExpansionCleanup.Clean(expansion, StatusFlags.None, true);
-
-        // Assert
-        cleaned.Statements.Should().BeEmpty();
-        cleaned.Value.Should().Be(new ConstantNode(DataType.UINT8, 0));
+        cleaned.Value.Should().Be(new ConstantNode(dataType, 0));
     }
 
     [Fact]
@@ -390,7 +383,7 @@ public class AluExpansionCleanupTest {
     }
 
     private static AluExpansion Expand(DataType type, string operation, params ValueNode[] arguments) {
-        MethodCallValueNode call = new(type, $"Alu{(int)type.BitWidth}", operation, arguments.Cast<IVisitableAstNode>().ToArray());
+        AluCallValueNode call = new(type, Enum.Parse<AluOperation>(operation), type.BitWidth, arguments.Cast<IVisitableAstNode>().ToArray());
         return AluExpansionBuilder.TryExpand(call) ?? throw new InvalidOperationException($"{operation} was not expanded");
     }
 

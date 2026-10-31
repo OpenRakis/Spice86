@@ -29,9 +29,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov AX,0x6EC5
-        AX = 0x6EC5;
         // F000:0003 mov BX,0xB1A8
-        BX = 0xB1A8;
         // F000:0006 mov word ptr DS:[0],0x5338
         UInt16[DS, 0] = 0x5338;
         // F000:000C mov word ptr DS:[2],0x31FE
@@ -39,7 +37,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0012 mov SP,0x0080
         SP = 0x0080;
         // F000:0015 shl AX,1
-        AX = Alu16.Shl(AX, 1);
+        AX = Alu16.Shl(0x6EC5, 1);
         // F000:0017 pushf
         Stack.Push16(FlagRegister16);
         // F000:0018 mov word ptr DS:[0x0020],AX
@@ -49,9 +47,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:001F pushf
         Stack.Push16(FlagRegister16);
         // F000:0020 mov CX,0x0100
-        CX = 0x0100;
         // F000:0023 shl BX,CL
-        BX = Alu16.Shl(BX, (int)CL);
+        BX = Alu16.Shl(0xB1A8, 0);
         // F000:0025 pushf
         Stack.Push16(FlagRegister16);
         // F000:0026 mov word ptr DS:[0x0022],BX
@@ -61,23 +58,21 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:002D mov DX,BX
         DX = BX;
         // F000:002F shl DX,CL
-        DX = Alu16.Shl(DX, (int)CL);
+        DX = Alu16.Shl(DX, 0x000000FF);
         // F000:0031 pushf
         Stack.Push16(FlagRegister16);
         // F000:0032 mov word ptr DS:[0x0024],DX
         UInt16[DS, 0x0024] = DX;
         // F000:0036 mov CL,8
-        CL = 8;
         // F000:0038 shl BX,CL
-        BX = Alu16.Shl(BX, (int)CL);
+        BX = Alu16.Shl(BX, 8);
         // F000:003A pushf
         Stack.Push16(FlagRegister16);
         // F000:003B mov word ptr DS:[0x0026],BX
         UInt16[DS, 0x0026] = BX;
         // F000:003F mov CL,4
-        CL = 4;
         // F000:0041 shl byte ptr DS:[2],CL
-        UInt8[DS, 2] = Alu8.Shl(UInt8[DS, 2], (int)CL);
+        UInt8[DS, 2] = Alu8.Shl(UInt8[DS, 2], 4);
         // F000:0045 pushf
         Stack.Push16(FlagRegister16);
         // F000:0046 mov DX,0x956F
@@ -89,7 +84,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0052 mov word ptr DS:[6],0x64FF
         UInt16[DS, 6] = 0x64FF;
         // F000:0058 shl AH,1
-        AH = Alu8.Shl(AH, 1);
+        AH = Alu8.Shl(0x42, 1);
         // F000:005A pushf
         Stack.Push16(FlagRegister16);
         // F000:005B mov word ptr DS:[0x0028],AX
@@ -99,27 +94,24 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0062 pushf
         Stack.Push16(FlagRegister16);
         // F000:0063 mov CL,7
-        CL = 7;
         // F000:0065 shl DL,CL
-        DL = Alu8.Shl(DL, (int)CL);
+        DL = Alu8.Shl(0x6F, 7);
         // F000:0067 pushf
         Stack.Push16(FlagRegister16);
         // F000:0068 mov word ptr DS:[0x002A],DX
         UInt16[DS, 0x002A] = DX;
         // F000:006C shl byte ptr DS:[6],CL
-        UInt8[DS, 6] = Alu8.Shl(UInt8[DS, 6], (int)CL);
+        UInt8[DS, 6] = Alu8.Shl(UInt8[DS, 6], 7);
         // F000:0070 pushf
         Stack.Push16(FlagRegister16);
         // F000:0071 mov AX,0xFB72
-        AX = 0xFB72;
         // F000:0074 mov BX,0xDFB9
-        BX = 0xDFB9;
         // F000:0077 mov word ptr DS:[8],0x1EBB
         UInt16[DS, 8] = 0x1EBB;
         // F000:007D mov word ptr DS:[0x000A],0x742F
         UInt16[DS, 0x000A] = 0x742F;
         // F000:0083 sar AX,1
-        AX = Alu16.Sar(AX, 1);
+        AX = Alu16.Sar(0xFB72, 1);
         // F000:0085 pushf
         Stack.Push16(FlagRegister16);
         // F000:0086 mov word ptr DS:[0x002C],AX
@@ -129,9 +121,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:008D pushf
         Stack.Push16(FlagRegister16);
         // F000:008E mov CX,0x0100
-        CX = 0x0100;
         // F000:0091 sar BX,CL
-        BX = Alu16.Sar(BX, (int)CL);
+        BX = Alu16.Sar(0xDFB9, 0);
         // F000:0093 pushf
         Stack.Push16(FlagRegister16);
         // F000:0094 mov word ptr DS:[0x002E],BX
@@ -141,23 +132,21 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:009B mov DX,BX
         DX = BX;
         // F000:009D sar DX,CL
-        DX = Alu16.Sar(DX, (int)CL);
+        DX = Alu16.Sar(DX, 0x000000FF);
         // F000:009F pushf
         Stack.Push16(FlagRegister16);
         // F000:00A0 mov word ptr DS:[0x0030],DX
         UInt16[DS, 0x0030] = DX;
         // F000:00A4 mov CL,5
-        CL = 5;
         // F000:00A6 sar BX,CL
-        BX = Alu16.Sar(BX, (int)CL);
+        BX = Alu16.Sar(BX, 5);
         // F000:00A8 pushf
         Stack.Push16(FlagRegister16);
         // F000:00A9 mov word ptr DS:[0x0032],BX
         UInt16[DS, 0x0032] = BX;
         // F000:00AD mov CL,4
-        CL = 4;
         // F000:00AF sar byte ptr DS:[0x000A],CL
-        UInt8[DS, 0x000A] = Alu8.Sar(UInt8[DS, 0x000A], (int)CL);
+        UInt8[DS, 0x000A] = Alu8.Sar(UInt8[DS, 0x000A], 4);
         // F000:00B3 pushf
         Stack.Push16(FlagRegister16);
         // F000:00B4 mov DX,0x93B8
@@ -169,7 +158,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00C0 mov word ptr DS:[0x000E],0x6EC9
         UInt16[DS, 0x000E] = 0x6EC9;
         // F000:00C6 sar AH,1
-        AH = Alu8.Sar(AH, 1);
+        AH = Alu8.Sar(0x66, 1);
         // F000:00C8 pushf
         Stack.Push16(FlagRegister16);
         // F000:00C9 mov word ptr DS:[0x0034],AX
@@ -179,27 +168,24 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00D0 pushf
         Stack.Push16(FlagRegister16);
         // F000:00D1 mov CL,7
-        CL = 7;
         // F000:00D3 sar DL,CL
-        DL = Alu8.Sar(DL, (int)CL);
+        DL = Alu8.Sar(0xB8, 7);
         // F000:00D5 pushf
         Stack.Push16(FlagRegister16);
         // F000:00D6 mov word ptr DS:[0x0036],DX
         UInt16[DS, 0x0036] = DX;
         // F000:00DA sar byte ptr DS:[0x000E],CL
-        UInt8[DS, 0x000E] = Alu8.Sar(UInt8[DS, 0x000E], (int)CL);
+        UInt8[DS, 0x000E] = Alu8.Sar(UInt8[DS, 0x000E], 7);
         // F000:00DE pushf
         Stack.Push16(FlagRegister16);
         // F000:00DF mov AX,0x7BA1
-        AX = 0x7BA1;
         // F000:00E2 mov BX,0x54E8
-        BX = 0x54E8;
         // F000:00E5 mov word ptr DS:[0x0010],0xBAAA
         UInt16[DS, 0x0010] = 0xBAAA;
         // F000:00EB mov word ptr DS:[0x0012],0x3431
         UInt16[DS, 0x0012] = 0x3431;
         // F000:00F1 shr AX,1
-        AX = Alu16.Shr(AX, 1);
+        AX = Alu16.Shr(0x7BA1, 1);
         // F000:00F3 pushf
         Stack.Push16(FlagRegister16);
         // F000:00F4 mov word ptr DS:[0x0038],AX
@@ -209,9 +195,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00FB pushf
         Stack.Push16(FlagRegister16);
         // F000:00FC mov CX,0x0100
-        CX = 0x0100;
         // F000:00FF shr BX,CL
-        BX = Alu16.Shr(BX, (int)CL);
+        BX = Alu16.Shr(0x54E8, 0);
         // F000:0101 pushf
         Stack.Push16(FlagRegister16);
         // F000:0102 mov word ptr DS:[0x003A],BX
@@ -221,23 +206,21 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0109 mov DX,BX
         DX = BX;
         // F000:010B shr DX,CL
-        DX = Alu16.Shr(DX, (int)CL);
+        DX = Alu16.Shr(DX, 0x000000FF);
         // F000:010D pushf
         Stack.Push16(FlagRegister16);
         // F000:010E mov word ptr DS:[0x003C],DX
         UInt16[DS, 0x003C] = DX;
         // F000:0112 mov CL,4
-        CL = 4;
         // F000:0114 shr BX,CL
-        BX = Alu16.Shr(BX, (int)CL);
+        BX = Alu16.Shr(BX, 4);
         // F000:0116 pushf
         Stack.Push16(FlagRegister16);
         // F000:0117 mov word ptr DS:[0x003E],BX
         UInt16[DS, 0x003E] = BX;
         // F000:011B mov CL,4
-        CL = 4;
         // F000:011D shr byte ptr DS:[0x0012],CL
-        UInt8[DS, 0x0012] = Alu8.Shr(UInt8[DS, 0x0012], (int)CL);
+        UInt8[DS, 0x0012] = Alu8.Shr(UInt8[DS, 0x0012], 4);
         // F000:0121 pushf
         Stack.Push16(FlagRegister16);
         // F000:0122 mov DX,0x0410
@@ -249,7 +232,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:012E mov word ptr DS:[0x0016],0x8D0D
         UInt16[DS, 0x0016] = 0x8D0D;
         // F000:0134 shr AH,1
-        AH = Alu8.Shr(AH, 1);
+        AH = Alu8.Shr(0x16, 1);
         // F000:0136 pushf
         Stack.Push16(FlagRegister16);
         // F000:0137 mov word ptr DS:[0x0040],AX
@@ -261,13 +244,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:013F mov CL,7
         CL = 7;
         // F000:0141 shr DL,CL
-        DL = Alu8.Shr(DL, (int)CL);
+        DL = Alu8.Shr(0x10, 7);
         // F000:0143 pushf
         Stack.Push16(FlagRegister16);
         // F000:0144 mov word ptr DS:[0x0042],DX
         UInt16[DS, 0x0042] = DX;
         // F000:0148 shr byte ptr DS:[0x0016],CL
-        UInt8[DS, 0x0016] = Alu8.Shr(UInt8[DS, 0x0016], (int)CL);
+        UInt8[DS, 0x0016] = Alu8.Shr(UInt8[DS, 0x0016], 7);
         // F000:014C pushf
         Stack.Push16(FlagRegister16);
         // F000:014D hlt

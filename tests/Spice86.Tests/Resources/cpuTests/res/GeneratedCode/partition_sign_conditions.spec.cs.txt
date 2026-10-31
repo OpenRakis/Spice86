@@ -32,48 +32,30 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov AX,0x1000
-        AX = 0x1000;
         // F000:0003 mov SS,AX
-        SS = AX;
+        SS = 0x1000;
         // F000:0005 mov SP,0x0100
         SP = 0x0100;
         // F000:0008 xor DX,DX
         DX = 0;
         // F000:000A mov AX,5
-        AX = 5;
         // F000:000D cmp AX,3
         // F000:0010 jns short 0x0015
-        if ((short)(AX - 3) < 0) {
-            VerifySpeculativeEntryOrFail(cs1, 0x0012, Signature_0012_add);
-            // F000:0012 add DX,1
-            DX = (ushort)(DX + 1);
-        }
         // F000:0015 mov AX,2
-        AX = 2;
         // F000:0018 cmp AX,3
         // F000:001B jns short 0x0020
-        if ((short)(AX - 3) < 0) {
-            // F000:001D add DX,0x0010
-            DX = (ushort)(DX + 0x0010);
-        }
+        // F000:001D add DX,0x0010
+        DX = 0x0010;
         // F000:0020 mov AX,0x8000
-        AX = 0x8000;
         // F000:0023 test AX,AX
         // F000:0025 jns short 0x002B
-        if ((short)AX < 0) {
-            // F000:0027 add DX,0x0100
-            DX = (ushort)(DX + 0x0100);
-        }
+        // F000:0027 add DX,0x0100
+        DX += 0x0100;
         // F000:002B mov AX,1
         AX = 1;
         // F000:002E test AX,AX
-        Alu16.And(AX, AX);
+        Alu16.And(1, 1);
         // F000:0030 jns short 0x0036
-        if (SignFlag) {
-            VerifySpeculativeEntryOrFail(cs1, 0x0032, Signature_0032_add);
-            // F000:0032 add DX,0x1000
-            DX = Alu16.Add(DX, 0x1000);
-        }
         // F000:0036 hlt
         return Hlt();
     }

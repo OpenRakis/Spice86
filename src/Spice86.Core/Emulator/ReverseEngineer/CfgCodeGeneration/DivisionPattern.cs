@@ -54,13 +54,17 @@ internal sealed record DivisionPattern(
         if (statements[5] is not MoveIpNextNode) {
             throw Malformed(instructionAddress, "the final statement is not a MoveIpNextNode");
         }
-        if (quotientDecl.Initializer is not MethodCallValueNode aluCall) {
+        if (quotientDecl.Initializer is not AluCallValueNode aluCall) {
             throw Malformed(instructionAddress, "the quotient initializer is not an ALU method call");
         }
 
         MethodCallNode callNode = aluCall.CallNode;
-        BitWidth width = WidthFromAluProperty(callNode.PropertyPath, instructionAddress);
-        bool signed = SignedFromAluMethod(callNode.MethodName, instructionAddress);
+        BitWidth width = aluCall.Width;
+        bool signed = aluCall.Operation switch {
+            AluOperation.Div => false,
+            AluOperation.Idiv => true,
+            _ => throw Malformed(instructionAddress, $"the ALU operation is {aluCall.Operation} instead of Div or Idiv")
+        };
         DataType divisorType = DataType.FromBitWidth(width, signed);
         DataType dividendType = DataType.FromBitWidth(width.Double(), signed);
         DataType unsignedType = DataType.UnsignedFromBitWidth(width);
@@ -97,23 +101,6 @@ internal sealed record DivisionPattern(
         RegisterNode lowOutput = (RegisterNode)quotientAssignment.Left;
         RegisterNode highOutput = (RegisterNode)remainderAssignment.Left;
         return new DivisionPattern(width, signed, dividendDecl.Initializer, divisorDecl.Initializer, lowOutput, highOutput);
-    }
-
-    private static BitWidth WidthFromAluProperty(string? propertyPath, SegmentedAddress instructionAddress) {
-        return propertyPath switch {
-            "Alu8" => BitWidth.BYTE_8,
-            "Alu16" => BitWidth.WORD_16,
-            "Alu32" => BitWidth.DWORD_32,
-            _ => throw Malformed(instructionAddress, $"unknown ALU property path '{propertyPath ?? "null"}'")
-        };
-    }
-
-    private static bool SignedFromAluMethod(string methodName, SegmentedAddress instructionAddress) {
-        return methodName switch {
-            "Div" => false,
-            "Idiv" => true,
-            _ => throw Malformed(instructionAddress, $"unknown ALU method '{methodName}'")
-        };
     }
 
     private static void RequireType(SegmentedAddress instructionAddress, string what, DataType actual, DataType expected) {

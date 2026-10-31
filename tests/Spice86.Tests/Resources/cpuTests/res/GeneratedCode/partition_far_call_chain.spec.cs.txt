@@ -1,0 +1,199 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+    protected readonly ushort cs2;
+    protected readonly ushort cs3;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0xF000;
+        cs2 = 0xF001;
+        cs3 = 0xF010;
+
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x001E, unknown_F000_001E_F001E, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0022, unknown_F000_0022_F0022, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0026, unknown_F000_0026_F0026, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x002B, unknown_F000_002B_F002B, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0030, unknown_F000_0030_F0030, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs3, 0x0030, unknown_F010_0030_F0130, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs2, 0x012D, unknown_F001_012D_F013D, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x013D, unknown_F000_013D_F013D, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, "unknown");
+    }
+
+    public virtual Action unknown_F000_001E_F001E(int loadOffset) {
+        CheckExternalEvents(cs1, 0x001E);
+        // F000:001E add DX,1
+        DX = Alu16.Add(DX, 1);
+        // F000:0021 ret far
+        return FarRet();
+    }
+
+    public virtual Action unknown_F000_0022_F0022(int loadOffset) {
+        CheckExternalEvents(cs1, 0x0022);
+        // F000:0022 add DX,0x0010
+        DX = Alu16.Add(DX, 0x0010);
+        // F000:0025 ret far
+        return FarRet();
+    }
+
+    public virtual Action unknown_F000_0026_F0026(int loadOffset) {
+        CheckExternalEvents(cs1, 0x0026);
+        // F000:0026 add DX,0x0100
+        DX = Alu16.Add(DX, 0x0100);
+        // F000:002A ret far
+        return FarRet();
+    }
+
+    public virtual Action unknown_F000_002B_F002B(int loadOffset) {
+        CheckExternalEvents(cs1, 0x002B);
+        // F000:002B add DX,0x1000
+        DX = Alu16.Add(DX, 0x1000);
+        // F000:002F ret far
+        return FarRet();
+    }
+
+    public virtual Action unknown_F000_0030_F0030(int loadOffset) {
+        CheckExternalEvents(cs1, 0x0030);
+        // F000:0030 push CS
+        Stack.Push16(CS);
+        // F000:0031 pop AX
+        AX = Stack.Pop16();
+        // F000:0032 mov word ptr DS:[DI],AX
+        UInt16[DS, DI] = AX;
+        // F000:0034 mov word ptr DS:[DI+2],0x1000
+        UInt16[DS, (ushort)(DI + 2)] = 0x1000;
+        // F000:0039 add DI,4
+        DI = Alu16.Add(DI, 4);
+        // F000:003C ret far
+        return FarRet();
+    }
+
+    public virtual Action unknown_F010_0030_F0130(int loadOffset) {
+        CheckExternalEvents(cs3, 0x0030);
+        // F010:0030 push CS
+        Stack.Push16(CS);
+        // F010:0031 pop AX
+        AX = Stack.Pop16();
+        // F010:0032 mov word ptr DS:[DI],AX
+        UInt16[DS, DI] = AX;
+        // F010:0034 mov word ptr DS:[DI+2],0x2000
+        UInt16[DS, (ushort)(DI + 2)] = 0x2000;
+        // F010:0039 add DI,4
+        DI = Alu16.Add(DI, 4);
+        // F010:003C ret far
+        return FarRet();
+    }
+
+    public virtual Action unknown_F001_012D_F013D(int loadOffset) {
+        CheckExternalEvents(cs2, 0x012D);
+        // F001:012D push CS
+        Stack.Push16(CS);
+        // F001:012E pop AX
+        AX = Stack.Pop16();
+        // F001:012F mov word ptr DS:[DI],AX
+        UInt16[DS, DI] = AX;
+        // F001:0131 mov word ptr DS:[DI+2],0x3000
+        UInt16[DS, (ushort)(DI + 2)] = 0x3000;
+        // F001:0136 add DI,4
+        DI = Alu16.Add(DI, 4);
+        // F001:0139 ret far
+        return FarRet();
+    }
+
+    public virtual Action unknown_F000_013D_F013D(int loadOffset) {
+        CheckExternalEvents(cs1, 0x013D);
+        // F000:013D push CS
+        Stack.Push16(CS);
+        // F000:013E pop AX
+        AX = Stack.Pop16();
+        // F000:013F mov word ptr DS:[DI],AX
+        UInt16[DS, DI] = AX;
+        // F000:0141 mov word ptr DS:[DI+2],0x3000
+        UInt16[DS, (ushort)(DI + 2)] = 0x3000;
+        // F000:0146 add DI,4
+        DI = Alu16.Add(DI, 4);
+        // F000:0149 ret far
+        return FarRet();
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        // F000:0000 mov AX,0x2000
+        AX = 0x2000;
+        // F000:0003 mov DS,AX
+        DS = 0x2000;
+        // F000:0005 mov SS,AX
+        SS = 0x2000;
+        // F000:0007 mov SP,0x1000
+        SP = 0x1000;
+        // F000:000A xor DX,DX
+        DX = 0;
+        // F000:000C xor DI,DI
+        DI = 0;
+        // F000:000E mov CX,8
+        CX = 8;
+        do {
+            CheckExternalEvents(cs1, 0x0011);
+            // F000:0011 mov BX,CX
+            BX = CX;
+            // F000:0013 dec BX
+            BX = Alu16.Dec(BX);
+            // F000:0014 shl BX,2
+            BX = Alu16.Shl(BX, 2);
+            // F000:0017 call far dword ptr CS:[BX+0x3D]
+            ushort targetSegment_0017 = UInt16[CS, (ushort)(BX + 0x003F)];
+            ushort targetOffset_0017 = UInt16[CS, (ushort)(BX + 0x3D)];
+            switch ((uint)(targetSegment_0017 << 16 | targetOffset_0017)) {
+                case 0xF000_001E:
+                    FarCall(cs1, 0x001B, cs1, unknown_F000_001E_F001E);
+                    break;
+                case 0xF000_0022:
+                    FarCall(cs1, 0x001B, cs1, unknown_F000_0022_F0022);
+                    break;
+                case 0xF000_0026:
+                    FarCall(cs1, 0x001B, cs1, unknown_F000_0026_F0026);
+                    break;
+                case 0xF000_002B:
+                    FarCall(cs1, 0x001B, cs1, unknown_F000_002B_F002B);
+                    break;
+                case 0xF000_0030:
+                    FarCall(cs1, 0x001B, cs1, unknown_F000_0030_F0030);
+                    break;
+                case 0xF000_013D:
+                    FarCall(cs1, 0x001B, cs1, unknown_F000_013D_F013D);
+                    break;
+                case 0xF001_012D:
+                    FarCall(cs1, 0x001B, cs2, unknown_F001_012D_F013D);
+                    break;
+                case 0xF010_0030:
+                    FarCall(cs1, 0x001B, cs3, unknown_F010_0030_F0130);
+                    break;
+                default:
+                    throw FailAsUntested($"Untested far call target {targetSegment_0017:X4}:{targetOffset_0017:X4} at F000:0017");
+            }
+            // F000:001B loop 0x0011
+            CX--;
+        } while (CX != 0);
+        // F000:001D hlt
+        return Hlt();
+    }
+
+}

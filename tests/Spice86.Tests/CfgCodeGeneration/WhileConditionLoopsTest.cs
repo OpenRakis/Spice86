@@ -146,11 +146,11 @@ public class WhileConditionLoopsTest {
         BlockNode input = new(loop);
 
         // Act
-        BlockNode result = LabelPlacer.Place(input, ImmutableHashSet.Create<ICfgNode>(header));
+        BlockNode result = LabelPlacer.Place(input, ImmutableHashSet.Create<IGotoTarget>(new CfgNodeGotoTarget(header)));
 
         // Assert
         result.Statements.Should().HaveCount(2);
-        result.Statements[0].Should().BeOfType<LabelNode>().Which.Target.Should().BeSameAs(header);
+        result.Statements[0].Should().BeOfType<LabelNode>().Which.Target.Should().Be(new CfgNodeGotoTarget(header));
         result.Statements[1].Should().BeOfType<WhileNode>().Which.Body.Statements.Should().ContainSingle()
             .Which.Should().BeOfType<InstructionBoundaryNode>().Which.Node.Should().BeSameAs(header);
     }

@@ -79,7 +79,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016E:0105 cmp AL,0x80
         Alu8.Sub(AL, 0x80);
         // 016E:0107 jne short 0x010D
-        if (!ZeroFlag) {
+        if (AL != 0x80) {
             VerifySpeculativeEntryOrFail(cs1, 0x010D, Signature_010D_mov);
             // 016E:010D mov AL,0xFF
             AL = 0xFF;
@@ -92,7 +92,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016E:010F mov DX,0x0999
         DX = 0x0999;
         // 016E:0112 out DX,AL
-        Out8(DX, AL);
+        Out8(0x0999, AL);
         // 016E:0113 hlt
         return Hlt();
     }

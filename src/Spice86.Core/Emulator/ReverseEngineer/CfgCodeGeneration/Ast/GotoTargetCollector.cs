@@ -9,6 +9,9 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 
 using System.Collections.Immutable;
+using System.Linq;
+
+using static Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast.CodeGenerationAst;
 
 /// <summary>
 /// Collects the labels a lowered tree jumps to, plus whether it re-enters the entry dispatcher. Runtime
@@ -21,8 +24,49 @@ internal sealed class GotoTargetCollector : ICodeGenerationAstVisitor<GotoTarget
     private GotoTargetCollector() {
     }
 
-    /// <summary>The jump targets of <paramref name="node"/>.</summary>
-    public static GotoTargets Collect(IVisitableAstNode node) => node.Accept(Instance);
+    /// <summary>The jump targets of <paramref name="node"/>: its <see cref="GotoNode"/> labels and whether
+    /// a <see cref="CyclicJumpNode"/> re-enters the entry dispatcher. Container nodes are walked on an
+    /// explicit stack so deeply nested <c>if</c> / <c>else</c> chains cannot overflow the thread's stack.</summary>
+    public static GotoTargets Collect(IVisitableAstNode node) {
+        HashSet<IGotoTarget> labels = [];
+        bool entryDispatcher = false;
+        Stack<IVisitableAstNode> pending = new();
+        pending.Push(node);
+        while (pending.Count > 0) {
+            IVisitableAstNode current = pending.Pop();
+            switch (current) {
+                case BlockNode block:
+                    foreach (IVisitableAstNode statement in block.Statements) {
+                        pending.Push(statement);
+                    }
+                    continue;
+                case IfElseNode ifElse:
+                    pending.Push(ifElse.TrueCase);
+                    pending.Push(ifElse.FalseCase);
+                    continue;
+                case WhileNode or InfiniteLoopNode or DoWhileNode
+                    or PreTestLoopNode or CpuFaultTryCatchNode or InstructionBoundaryNode:
+                    pending.Push(ChildStatements(current).Single());
+                    continue;
+                case WhileWithExitNode whileWithExit:
+                    pending.Push(whileWithExit.Body);
+                    continue;
+                case SwitchNode switchNode:
+                    foreach (SwitchSection section in switchNode.Sections) {
+                        pending.Push(section.Body);
+                    }
+                    pending.Push(switchNode.Default);
+                    continue;
+                case OpaqueNode opaque:
+                    pending.Push(opaque.Original);
+                    continue;
+            }
+            GotoTargets found = current.Accept(Instance);
+            labels.UnionWith(found.Labels);
+            entryDispatcher |= found.EntryDispatcher;
+        }
+        return new GotoTargets(labels.ToImmutableHashSet(), entryDispatcher);
+    }
 
     public GotoTargets VisitBlockNode(BlockNode node) => Union(node.Statements);
 
@@ -51,7 +95,7 @@ internal sealed class GotoTargetCollector : ICodeGenerationAstVisitor<GotoTarget
 
     public GotoTargets VisitGotoNode(GotoNode node) => new(ImmutableHashSet.Create(node.Target), false);
 
-    public GotoTargets VisitCyclicJumpNode(CyclicJumpNode node) => new(ImmutableHashSet<ICfgNode>.Empty, true);
+    public GotoTargets VisitCyclicJumpNode(CyclicJumpNode node) => new(ImmutableHashSet<IGotoTarget>.Empty, true);
 
     public GotoTargets VisitLabelNode(LabelNode node) => GotoTargets.None;
 
@@ -103,6 +147,8 @@ internal sealed class GotoTargetCollector : ICodeGenerationAstVisitor<GotoTarget
 
     public GotoTargets VisitUnaryOperationNode(UnaryOperationNode node) => GotoTargets.None;
 
+    public GotoTargets VisitConditionalValueNode(ConditionalValueNode node) => GotoTargets.None;
+
     public GotoTargets VisitTypeConversionNode(TypeConversionNode node) => GotoTargets.None;
 
     public GotoTargets VisitConstantNode(ConstantNode node) => GotoTargets.None;
@@ -114,6 +160,8 @@ internal sealed class GotoTargetCollector : ICodeGenerationAstVisitor<GotoTarget
     public GotoTargets VisitMethodCallValueNode(MethodCallValueNode node) => GotoTargets.None;
 
     public GotoTargets VisitThrowNode(ThrowNode node) => GotoTargets.None;
+
+    public GotoTargets VisitSetInterruptShadowNode(SetInterruptShadowNode node) => GotoTargets.None;
 
     public GotoTargets VisitCpuFlagNode(CpuFlagNode node) => GotoTargets.None;
 
@@ -163,4 +211,14 @@ internal sealed class GotoTargetCollector : ICodeGenerationAstVisitor<GotoTarget
 
     private static GotoTargets Unlowered(IVisitableAstNode node) =>
         throw new InvalidOperationException($"{node.GetType().Name} must be lowered before goto target analysis.");
+
+    public GotoTargets VisitTupleSwapNode(TupleSwapNode node) => GotoTargets.None;
+
+    public GotoTargets VisitAluOperationNode(AluOperationNode node) => node.Call.Accept(this);
+    public GotoTargets VisitAluStatementNode(AluStatementNode node) => node.Call.Accept(this);
+    public GotoTargets VisitOpaqueNode(OpaqueNode node) => node.Original.Accept(this);
+    public GotoTargets VisitInstructionStartNode(InstructionStartNode node) => GotoTargets.None;
+    public GotoTargets VisitInterruptReturnNode(InterruptReturnNode node) => GotoTargets.None;
+    public GotoTargets VisitPreTestLoopNode(PreTestLoopNode node) => Collect(node.Body);
+    public GotoTargets VisitLocalDeclarationNode(LocalDeclarationNode node) => GotoTargets.None;
 }

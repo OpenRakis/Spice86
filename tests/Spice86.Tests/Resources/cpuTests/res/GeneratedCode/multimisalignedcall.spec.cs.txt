@@ -72,11 +72,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:002B mov BX,word ptr DS:[0]
         BX = UInt16[DS, 0];
         // F000:002F inc word ptr DS:[0]
-        UInt16[DS, 0] = (ushort)(UInt16[DS, 0] + 1);
+        UInt16[DS, 0] += 1;
         // F000:0033 cmp BX,0
         Alu16.Sub(BX, 0);
         // F000:0036 je short 0x0042
-        if (ZeroFlag) {
+        if (BX == 0) {
             // F000:0042 mov AX,0x0014
             AX = 0x0014;
             // F000:0045 push AX
@@ -87,7 +87,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0038 cmp BX,1
         Alu16.Sub(BX, 1);
         // F000:003B je short 0x0047
-        if (ZeroFlag) {
+        if (BX == 1) {
             // F000:0047 mov AX,0x001B
             AX = 0x001B;
             // F000:004A push AX
@@ -109,9 +109,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0000 mov AX,0
         AX = 0;
         // F000:0003 mov DS,AX
-        DS = AX;
+        DS = 0;
         // F000:0005 mov SS,AX
-        SS = AX;
+        SS = 0;
         // F000:0007 mov SP,0x0100
         SP = 0x0100;
         // F000:000A mov word ptr DS:[0],0

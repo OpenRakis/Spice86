@@ -7,50 +7,77 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Propagation;
 using Spice86.Shared.Emulator.Memory;
 
 using System.Linq;
+
+using static Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast.CodeGenerationAst;
 
 /// <summary>
 /// Writes a tree of runtime and code-generation AST nodes as C# statements. Expressions are printed by
 /// <see cref="CSharpExpressionPrinter"/>; labels come from <paramref name="labelOf"/>.
 /// </summary>
-internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpExpressionPrinter expressions, Func<ICfgNode, string> labelOf) {
-    /// <summary>Writes <paramref name="node"/> in statement position.</summary>
+internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpExpressionPrinter expressions, Func<IGotoTarget, string> labelOf) {
+    /// <summary>Writes <paramref name="node"/> in statement position. The statement walk runs on an explicit
+    /// stack — nodes to print interleaved with <see cref="Action"/> writer operations — so arbitrarily deep
+    /// <c>if</c> / <c>else</c> chains cannot overflow the thread's stack.</summary>
     public void Print(IVisitableAstNode node) {
+        Stack<object> pending = new();
+        Dispatch(node, pending);
+        while (pending.Count > 0) {
+            switch (pending.Pop()) {
+                case Action action:
+                    action();
+                    break;
+                case IVisitableAstNode next:
+                    Dispatch(next, pending);
+                    break;
+            }
+        }
+    }
+
+    private void Dispatch(IVisitableAstNode node, Stack<object> pending) {
         switch (node) {
             case BlockNode block:
-                PrintBlock(block);
+                for (int index = block.Statements.Count - 1; index >= 0; index--) {
+                    pending.Push(block.Statements[index]);
+                }
                 return;
             case IfElseNode ifElse:
-                PrintIfElse(ifElse);
+                PushIfElse(pending, ifElse);
                 return;
             case WhileNode whileNode:
-                PrintWhile(whileNode);
+                PushBraced(pending, $"while ({expressions.Print(whileNode.Condition)})", whileNode.Body);
                 return;
             case DoWhileNode doWhile:
-                PrintDoWhile(doWhile);
+                PushDoWhile(pending, doWhile);
+                return;
+            case PreTestLoopNode preTestLoop:
+                PushBraced(pending, $"while ({expressions.Print(preTestLoop.Condition)})", preTestLoop.Body);
                 return;
             case InfiniteLoopNode loop:
-                PrintInfiniteLoop(loop);
+                PushBraced(pending, "while (true)", loop.Body);
                 return;
             case ThrowNode throwNode:
                 PrintThrow(throwNode);
                 return;
             case SwitchNode switchNode:
-                PrintSwitch(switchNode);
+                PushSwitch(pending, switchNode);
                 return;
             case CyclicJumpNode cyclicJump:
                 PrintCyclicJump(cyclicJump);
                 return;
             case CpuFaultTryCatchNode cpuFault:
-                PrintCpuFaultTryCatch(cpuFault);
+                PushCpuFaultTryCatch(pending, cpuFault);
                 return;
             case FailAsUntestedNode failAsUntested:
                 PrintFailAsUntested(failAsUntested);
                 return;
             case InstructionBoundaryNode boundary:
-                PrintInstructionBoundary(boundary);
+                PushInstructionBoundary(pending, boundary);
                 return;
             case DivisionNode division:
                 PrintDivision(division);
@@ -67,6 +94,10 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
             case ReturnNode returnNode:
                 writer.Line($"return {expressions.Print(returnNode.Value)};");
                 return;
+            case InterruptReturnNode interruptReturn:
+                writer.Line(interruptReturn.Width == BitWidth.WORD_16
+                    ? "return InterruptRet();" : "return InterruptRet32();");
+                return;
             case BreakNode:
                 writer.Line("break;");
                 return;
@@ -76,15 +107,25 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
             case CommentNode comment:
                 writer.Line($"// {comment.Text}");
                 return;
+            case InstructionStartNode instructionStart:
+                writer.Line($"// {instructionStart.Comment}");
+                return;
             case CheckExternalEventsNode checkExternalEvents:
                 PrintCheckExternalEvents(checkExternalEvents);
                 return;
             case SpeculativeGuardNode speculativeGuard:
                 PrintSpeculativeGuard(speculativeGuard);
                 return;
+            case TupleSwapNode swap:
+                writer.Line($"({expressions.Print(swap.First).Text}, {expressions.Print(swap.Second).Text}) = ({expressions.Print(swap.Second).Text}, {expressions.Print(swap.First).Text});");
+                return;
             case BinaryOperationNode { BinaryOperation: BinaryOperation.ASSIGN, Left: RegisterNode register } assignment
                 when IncrementOrDecrement(register, assignment.Right) is string step:
                 writer.Line($"{expressions.Print(register).Text}{step};");
+                return;
+            case BinaryOperationNode { BinaryOperation: BinaryOperation.ASSIGN } assignment
+                when CompoundAssignment(assignment) is string compound:
+                writer.Line(compound);
                 return;
             default:
                 writer.Line(expressions.Print(node).Text + ";");
@@ -92,20 +133,14 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
         }
     }
 
-    private void PrintBlock(BlockNode node) {
-        foreach (IVisitableAstNode statement in node.Statements) {
-            Print(statement);
-        }
-    }
-
     /// <summary>
-    /// Writes the body of a braced construct. C# needs a statement after a label, so a body whose last label is followed
-    /// only by comments gets an empty statement.
+    /// Queues a body print followed by the empty statement C# needs after a label when
+    /// <paramref name="body"/>'s last label is followed only by comments.
     /// </summary>
-    private void PrintBody(IVisitableAstNode body) {
-        Print(body);
+    private void AppendBody(List<object> items, IVisitableAstNode body) {
+        items.Add(body);
         if (TrailingLabel(body) == true) {
-            writer.Line(";");
+            items.Add((Action)(() => writer.Line(";")));
         }
     }
 
@@ -114,87 +149,111 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
     /// <c>null</c> when it prints only comments or nothing.
     /// </summary>
     private static bool? TrailingLabel(IVisitableAstNode node) {
-        switch (node) {
-            case LabelNode:
-                return true;
-            case CommentNode:
-                return null;
-            case BlockNode block:
-                for (int index = block.Statements.Count - 1; index >= 0; index--) {
-                    if (TrailingLabel(block.Statements[index]) is bool result) {
-                        return result;
+        Stack<IVisitableAstNode> pending = new();
+        pending.Push(node);
+        while (pending.Count > 0) {
+            switch (pending.Pop()) {
+                case LabelNode:
+                    return true;
+                case CommentNode:
+                case InstructionStartNode:
+                    break;
+                case BlockNode block:
+                    foreach (IVisitableAstNode statement in block.Statements) {
+                        pending.Push(statement);
                     }
-                }
-                return null;
-            case InstructionBoundaryNode boundary:
-                return TrailingLabel(boundary.Body);
-            default:
-                return false;
+                    break;
+                case InstructionBoundaryNode boundary:
+                    pending.Push(boundary.Body);
+                    break;
+                default:
+                    return false;
+            }
         }
+        return null;
     }
 
-    private void PrintIfElse(IfElseNode node) {
-        writer.OpenBlock($"if ({expressions.Print(node.Condition)})");
-        PrintBody(node.TrueCase);
-        writer.CloseBlock();
+    private void PushIfElse(Stack<object> pending, IfElseNode node) {
+        List<object> items = [
+            (Action)(() => writer.OpenBlock($"if ({expressions.Print(node.Condition)})"))
+        ];
+        AppendBody(items, node.TrueCase);
+        items.Add((Action)(() => writer.CloseBlock()));
         IVisitableAstNode falseCase = node.FalseCase;
         while (OnlyIfElse(falseCase) is IfElseNode elseIf) {
-            writer.OpenBlock($"else if ({expressions.Print(elseIf.Condition)})");
-            PrintBody(elseIf.TrueCase);
-            writer.CloseBlock();
-            falseCase = elseIf.FalseCase;
+            IfElseNode arm = elseIf;
+            items.Add((Action)(() => writer.OpenBlock($"else if ({expressions.Print(arm.Condition)})")));
+            AppendBody(items, arm.TrueCase);
+            items.Add((Action)(() => writer.CloseBlock()));
+            falseCase = arm.FalseCase;
         }
-        if (IsEmptyBlock(falseCase)) {
-            return;
+        if (!IsEmptyBlock(falseCase)) {
+            items.Add((Action)(() => writer.OpenBlock("else")));
+            AppendBody(items, falseCase);
+            items.Add((Action)(() => writer.CloseBlock()));
         }
-        writer.OpenBlock("else");
-        PrintBody(falseCase);
-        writer.CloseBlock();
+        PushItems(pending, items);
+    }
+
+    private void PushBraced(Stack<object> pending, string header, IVisitableAstNode body) {
+        List<object> items = [
+            (Action)(() => writer.OpenBlock(header))
+        ];
+        AppendBody(items, body);
+        items.Add((Action)(() => writer.CloseBlock()));
+        PushItems(pending, items);
+    }
+
+    private void PushDoWhile(Stack<object> pending, DoWhileNode node) {
+        List<object> items = [
+            (Action)(() => writer.OpenBlock("do"))
+        ];
+        AppendBody(items, node.Body);
+        items.Add((Action)(() => writer.CloseBlock($" while ({expressions.Print(node.Condition)});")));
+        PushItems(pending, items);
+    }
+
+    private static void PushItems(Stack<object> pending, List<object> items) {
+        for (int index = items.Count - 1; index >= 0; index--) {
+            pending.Push(items[index]);
+        }
     }
 
     /// <summary>The <c>if</c> that is the only statement of <paramref name="node"/>, or <c>null</c>.</summary>
-    private static IfElseNode? OnlyIfElse(IVisitableAstNode node) => node switch {
-        IfElseNode ifElse => ifElse,
-        BlockNode { Statements: [IfElseNode ifElse] } => ifElse,
-        _ => null
-    };
+    private static IfElseNode? OnlyIfElse(IVisitableAstNode node) =>
+        StatementsOf(node).ToList() is [IfElseNode ifElse] ? ifElse : null;
 
     private static bool IsEmptyBlock(IVisitableAstNode node) => node is BlockNode { Statements.Count: 0 };
-
-    private void PrintWhile(WhileNode node) {
-        writer.OpenBlock($"while ({expressions.Print(node.Condition)})");
-        PrintBody(node.Body);
-        writer.CloseBlock();
-    }
-
-    private void PrintDoWhile(DoWhileNode node) {
-        writer.OpenBlock("do");
-        PrintBody(node.Body);
-        writer.CloseBlock($" while ({expressions.Print(node.Condition)});");
-    }
-
-    private void PrintInfiniteLoop(InfiniteLoopNode node) {
-        writer.OpenBlock("while (true)");
-        PrintBody(node.Body);
-        writer.CloseBlock();
-    }
 
     private void PrintThrow(ThrowNode node) =>
         writer.Line($"throw new {node.ExceptionType.FullName}(\"{CSharpExpressionPrinter.EscapeString(node.Message)}\");");
 
-    private void PrintSwitch(SwitchNode node) {
-        writer.OpenBlock($"switch ({expressions.Print(node.Value)})");
-        foreach (SwitchSection section in node.Sections) {
-            writer.Line($"case 0x{section.Label:X4}:");
-            writer.Indent();
-            PrintBody(section.Body);
-            writer.Dedent();
+    private void PushSwitch(Stack<object> pending, SwitchNode node) {
+        List<object> items = [
+            (Action)(() => writer.OpenBlock($"switch ({expressions.Print(node.Value)})"))
+        ];
+        foreach (SwitchSection arm in node.Sections) {
+            items.Add((Action)(() => writer.Line($"case {CaseLabel(node, arm.Label)}:")));
+            items.Add((Action)(() => writer.Indent()));
+            AppendBody(items, arm.Body);
+            items.Add((Action)(() => writer.Dedent()));
         }
-        writer.Line("default:");
-        writer.Indent();
-        PrintBody(node.Default);
-        writer.Dedent();
-        writer.CloseBlock();
+        items.Add((Action)(() => writer.Line("default:")));
+        items.Add((Action)(() => writer.Indent()));
+        AppendBody(items, node.Default);
+        items.Add((Action)(() => writer.Dedent()));
+        items.Add((Action)(() => writer.CloseBlock()));
+        PushItems(pending, items);
+    }
+
+    /// <summary>The <c>case</c> label text: a <see cref="DataType.UINT32"/> switch value holds a segmented
+    /// address and prints segment and offset as <c>0xSSSS_OOOO</c>; any other switch keeps
+    /// <c>0x{label:X4}</c>.</summary>
+    private static string CaseLabel(SwitchNode node, uint label) {
+        if (node.Value.DataType == DataType.UINT32) {
+            return $"0x{label >> 16:X4}_{label & 0xFFFF:X4}";
+        }
+        return $"0x{label:X4}";
     }
 
     private void PrintCyclicJump(CyclicJumpNode node) {
@@ -205,14 +264,19 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
         writer.Line("return JumpDispatcher.RequiredJumpAsmReturn;");
     }
 
-    private void PrintCpuFaultTryCatch(CpuFaultTryCatchNode node) {
-        writer.OpenBlock("try");
-        PrintBody(node.Body);
-        writer.CloseBlock();
-        writer.OpenBlock("catch (CpuException cpuException)");
-        string resumeSegment = expressions.SegmentVariable(node.FaultingInstruction.Segment);
-        writer.Line($"return DispatchCpuFault(cpuException, {resumeSegment}, 0x{node.FaultingInstruction.Offset:X4}, [{FaultHandlers(node.Handlers)}]);");
-        writer.CloseBlock();
+    private void PushCpuFaultTryCatch(Stack<object> pending, CpuFaultTryCatchNode node) {
+        List<object> items = [
+            (Action)(() => writer.OpenBlock("try"))
+        ];
+        AppendBody(items, node.Body);
+        items.Add((Action)(() => writer.CloseBlock()));
+        items.Add((Action)(() => writer.OpenBlock("catch (CpuException cpuException)")));
+        items.Add((Action)(() => {
+            string resumeSegment = expressions.SegmentVariable(node.FaultingInstruction.Segment);
+            writer.Line($"return DispatchCpuFault(cpuException, {resumeSegment}, 0x{node.FaultingInstruction.Offset:X4}, [{FaultHandlers(node.Handlers)}]);");
+        }));
+        items.Add((Action)(() => writer.CloseBlock()));
+        PushItems(pending, items);
     }
 
     private string FaultHandlers(IReadOnlyList<CpuFaultHandler> handlers) =>
@@ -258,17 +322,26 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
         return $"{{{expression}{format}}}";
     }
 
-    private void PrintInstructionBoundary(InstructionBoundaryNode node) {
+    private void PushInstructionBoundary(Stack<object> pending, InstructionBoundaryNode node) {
         string savedSuffix = expressions.LocalVariableSuffix;
-        expressions.LocalVariableSuffix = node.LocalVariableSuffix;
-        Print(node.Body);
-        expressions.LocalVariableSuffix = savedSuffix;
+        List<object> items = [
+            (Action)(() => expressions.LocalVariableSuffix = node.LocalVariableSuffix),
+            node.Body,
+            (Action)(() => expressions.LocalVariableSuffix = savedSuffix)
+        ];
+        PushItems(pending, items);
     }
 
     private void PrintDivision(DivisionNode node) {
         DivisionPattern division = node.Division;
-        string prefix = division.Signed ? "IDiv" : "Div";
-        string helperName = $"{prefix}{(int)division.Width}";
+        string helperName = (division.Signed, division.Width) switch {
+            (false, BitWidth.BYTE_8) => nameof(CSharpOverrideHelper.Div8),
+            (false, BitWidth.WORD_16) => nameof(CSharpOverrideHelper.Div16),
+            (false, BitWidth.DWORD_32) => nameof(CSharpOverrideHelper.Div32),
+            (true, BitWidth.BYTE_8) => nameof(CSharpOverrideHelper.IDiv8),
+            (true, BitWidth.WORD_16) => nameof(CSharpOverrideHelper.IDiv16),
+            _ => nameof(CSharpOverrideHelper.IDiv32)
+        };
         DataType divisorType = DataType.FromBitWidth(division.Width, division.Signed);
         DataType dividendType = DataType.FromBitWidth(division.Width.Double(), division.Signed);
         string divisor = CSharpExpressionPrinter.Cast(divisorType, expressions.Print(division.Divisor));
@@ -288,16 +361,125 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
         writer.Line($"VerifySpeculativeEntryOrFail({segment}, 0x{node.Address.Offset:X4}, {node.SignatureField});");
     }
 
+    /// <summary>The <c>X op= y;</c> form of <paramref name="assignment"/> when it is <c>X = X op y</c> in the
+    /// target's own type and C# accepts <paramref name="assignment"/>'s right operand in a compound assignment,
+    /// otherwise <c>null</c>. The right operand prints at assignment precedence.</summary>
+    private string? CompoundAssignment(BinaryOperationNode assignment) {
+        if (assignment.Left.DataType == DataType.BOOL
+            || assignment.Right is not BinaryOperationNode operation
+            || CompoundOperator(operation.BinaryOperation) is not string compoundOperator
+            || !operation.Left.Equals(assignment.Left)
+            || operation.DataType != assignment.Left.DataType
+            || !SimpleTarget(assignment.Left)) {
+            return null;
+        }
+        if (operation.BinaryOperation == BinaryOperation.PLUS
+            && ConstantEvaluation.Resolved(operation.Right) is { } added
+            && ConstantEvaluation.TrySubtractionMagnitude(added, operation.DataType.BitWidth, out ulong subtracted)) {
+            ConstantNode magnitude = new(
+                DataType.UnsignedFromBitWidth(added.DataType.BitWidth), subtracted);
+            return $"{expressions.Print(assignment.Left).Text} -= {expressions.Print(magnitude).Text};";
+        }
+        if (!CompoundOperand(operation, assignment.Left.DataType, out string operand)) {
+            return null;
+        }
+        return $"{expressions.Print(assignment.Left).Text} {compoundOperator}= {operand};";
+    }
+
+    private static string? CompoundOperator(BinaryOperation operation) => operation switch {
+        BinaryOperation.PLUS => "+",
+        BinaryOperation.MINUS => "-",
+        BinaryOperation.BITWISE_AND => "&",
+        BinaryOperation.BITWISE_OR => "|",
+        BinaryOperation.BITWISE_XOR => "^",
+        BinaryOperation.LEFT_SHIFT => "<<",
+        BinaryOperation.RIGHT_SHIFT => ">>",
+        _ => null
+    };
+
+    /// <summary>The right operand of a compound assignment: a shift takes anything, other operators need a
+    /// fragment already of the target type or a constant whose value fits it.</summary>
+    private bool CompoundOperand(BinaryOperationNode operation, DataType targetType, out string operand) {
+        ValueNode right = operation.Right;
+        CSharpFragment fragment = expressions.Print(right);
+        if (operation.BinaryOperation is BinaryOperation.LEFT_SHIFT or BinaryOperation.RIGHT_SHIFT) {
+            operand = ShiftOperandText(right, fragment);
+            return true;
+        }
+        if (fragment.Type != targetType && !FitsInType(ConstantEvaluation.Resolved(right), targetType)) {
+            operand = string.Empty;
+            return false;
+        }
+        operand = ParenthesizedOperand(fragment);
+        return true;
+    }
+
+    /// <summary>The operand text of a shift compound assignment: the resolved count's text, or the
+    /// operand parenthesized for assignment precedence.</summary>
+    private static string ShiftOperandText(ValueNode right, CSharpFragment fragment) {
+        if (ConstantEvaluation.Resolved(right) is { } shiftCount) {
+            return CSharpExpressionPrinter.ShiftCountText(shiftCount);
+        }
+        return ParenthesizedOperand(fragment);
+    }
+
+    /// <summary>The operand parenthesized just above assignment precedence.</summary>
+    private static string ParenthesizedOperand(CSharpFragment fragment) =>
+        CSharpExpressionPrinter.Parenthesize(fragment, CSharpExpressionPrinter.AssignmentPrecedence + 1);
+
+    /// <summary>Whether <paramref name="constant"/>'s value fits <paramref name="targetType"/>, which is what C#
+    /// requires of a compound assignment's constant operand.</summary>
+    private static bool FitsInType(ConstantNode? constant, DataType targetType) {
+        if (constant is null) {
+            return false;
+        }
+        if (!targetType.Signed) {
+            return constant.Value <= ConstantNode.Mask(targetType.BitWidth);
+        }
+        return targetType.BitWidth switch {
+            BitWidth.BYTE_8 => constant.SignedValue >= sbyte.MinValue && constant.SignedValue <= sbyte.MaxValue,
+            BitWidth.WORD_16 => constant.SignedValue >= short.MinValue && constant.SignedValue <= short.MaxValue,
+            _ => constant.SignedValue >= int.MinValue && constant.SignedValue <= int.MaxValue
+        };
+    }
+
+    /// <summary>A target a compound assignment may write: a register or a variable, or a memory slot whose
+    /// address parts are built only from registers, constants, type conversions and non-assignment binary
+    /// operations — evaluating them once, as C# does, cannot differ from evaluating them twice.</summary>
+    private static bool SimpleTarget(ValueNode target) => target switch {
+        RegisterNode or VariableReferenceNode => true,
+        SegmentedPointerNode or AbsolutePointerNode =>
+            IrAstChildren.ChildrenOf(target).OfType<ValueNode>().All(SimpleOperand),
+        _ => false
+    };
+
+    private static bool SimpleOperand(ValueNode node) => node switch {
+        RegisterNode or ConstantNode => true,
+        InstructionFieldNode or TypeConversionNode or ExplicitCastNode { Value: ValueNode }
+            or BinaryOperationNode { BinaryOperation: not BinaryOperation.ASSIGN } =>
+            IrAstChildren.ChildrenOf(node).OfType<ValueNode>().All(SimpleOperand),
+        _ => false
+    };
+
     /// <summary>
     /// <c>++</c> or <c>--</c> when <paramref name="value"/> is <paramref name="register"/> plus or minus one in the
     /// register's own type, otherwise <c>null</c>.
     /// </summary>
     private static string? IncrementOrDecrement(RegisterNode register, ValueNode value) {
         if (value is not BinaryOperationNode { BinaryOperation: BinaryOperation.PLUS or BinaryOperation.MINUS } arithmetic
-            || arithmetic.Left != register || arithmetic.DataType != register.DataType || !IsOne(arithmetic.Right)) {
+            || arithmetic.Left != register || arithmetic.DataType != register.DataType) {
             return null;
         }
-        return arithmetic.BinaryOperation == BinaryOperation.PLUS ? "++" : "--";
+        if (IsOne(arithmetic.Right)) {
+            return arithmetic.BinaryOperation == BinaryOperation.PLUS ? "++" : "--";
+        }
+        if (arithmetic.BinaryOperation == BinaryOperation.PLUS
+            && arithmetic.Right is ConstantNode added
+            && ConstantEvaluation.TrySubtractionMagnitude(added, arithmetic.DataType.BitWidth, out ulong magnitude)
+            && magnitude == 1) {
+            return "--";
+        }
+        return null;
     }
 
     private static bool IsOne(ValueNode node) =>

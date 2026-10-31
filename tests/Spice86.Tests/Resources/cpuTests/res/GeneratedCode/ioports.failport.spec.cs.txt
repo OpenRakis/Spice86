@@ -31,13 +31,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0000 mov AX,0
         AX = 0;
         // F000:0003 mov SS,AX
-        SS = AX;
+        SS = 0;
         // F000:0005 mov SP,0x0100
         SP = 0x0100;
         // F000:0008 mov DS,AX
-        DS = AX;
+        DS = 0;
         // F000:000A mov ES,AX
-        ES = AX;
+        ES = 0;
         // F000:000C cld
         DirectionFlag = false;
         // F000:000D mov AL,0x5A
@@ -45,7 +45,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:000F out 0xE0,AL
         Out8(0x00E0, AL);
         // F000:0011 mov AL,0
-        AL = 0;
         // F000:0013 in AL,0xE0
         AL = In8(0x00E0);
         // F000:0015 mov byte ptr DS:[0],AL
@@ -55,7 +54,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:001B out 0xE0,AX
         Out16(0x00E0, AX);
         // F000:001D mov AX,0
-        AX = 0;
         // F000:0020 in AX,0xE0
         AX = In16(0x00E0);
         // F000:0022 mov word ptr DS:[2],AX
@@ -65,7 +63,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:002B out 0xE0,EAX
         Out32(0x00E0, EAX);
         // F000:002E mov EAX,0
-        EAX = 0;
         // F000:0034 in EAX,0xE0
         EAX = In32(0x00E0);
         // F000:0037 mov dword ptr DS:[4],EAX
@@ -75,64 +72,58 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:003E mov AL,0xC3
         AL = 0xC3;
         // F000:0040 out DX,AL
-        Out8(DX, AL);
+        Out8(0x00E0, AL);
         // F000:0041 mov AL,0
-        AL = 0;
         // F000:0043 in AL,DX
-        AL = In8(DX);
+        AL = In8(0x00E0);
         // F000:0044 mov byte ptr DS:[8],AL
         UInt8[DS, 8] = AL;
         // F000:0047 mov AX,0x3CC3
         AX = 0x3CC3;
         // F000:004A out DX,AX
-        Out16(DX, AX);
+        Out16(0x00E0, AX);
         // F000:004B mov AX,0
-        AX = 0;
         // F000:004E in AX,DX
-        AX = In16(DX);
+        AX = In16(0x00E0);
         // F000:004F mov word ptr DS:[0x000A],AX
         UInt16[DS, 0x000A] = AX;
         // F000:0052 mov EAX,0x87654321
         EAX = 0x87654321u;
         // F000:0058 out DX,EAX
-        Out32(DX, EAX);
+        Out32(0x00E0, EAX);
         // F000:005A mov EAX,0
-        EAX = 0;
         // F000:0060 in EAX,DX
-        EAX = In32(DX);
+        EAX = In32(0x00E0);
         // F000:0062 mov dword ptr DS:[0x000C],EAX
         UInt32[DS, 0x000C] = EAX;
         // F000:0066 mov AL,0x11
         AL = 0x11;
         // F000:0068 out DX,AL
-        Out8(DX, AL);
+        Out8(0x00E0, AL);
         // F000:0069 mov DI,0x0010
-        DI = 0x0010;
         // F000:006C ins byte ptr ES:[DI]
-        UInt8[ES, DI] = In8(DX);
-        DI = (ushort)(DI + (ushort)State.Direction8);
+        UInt8[ES, 0x0010] = In8(0x00E0);
+        DI = 0x0011;
         // F000:006D mov AX,0x2B1A
         AX = 0x2B1A;
         // F000:0070 out DX,AX
-        Out16(DX, AX);
+        Out16(0x00E0, AX);
         // F000:0071 mov DI,0x0012
-        DI = 0x0012;
         // F000:0074 ins word ptr ES:[DI]
-        UInt16[ES, DI] = In16(DX);
-        DI = (ushort)(DI + (ushort)State.Direction16);
+        UInt16[ES, 0x0012] = In16(0x00E0);
+        DI = 0x0014;
         // F000:0075 mov EAX,0x0D0C0B0A
         EAX = 0x0D0C0B0A;
         // F000:007B out DX,EAX
-        Out32(DX, EAX);
+        Out32(0x00E0, EAX);
         // F000:007D mov DI,0x0014
-        DI = 0x0014;
         // F000:0080 ins dword ptr ES:[DI]
-        UInt32[ES, DI] = In32(DX);
-        DI = (ushort)(DI + (ushort)State.Direction32);
+        UInt32[ES, 0x0014] = In32(0x00E0);
+        DI = 0x0018;
         // F000:0082 mov AL,0xEE
         AL = 0xEE;
         // F000:0084 out DX,AL
-        Out8(DX, AL);
+        Out8(0x00E0, AL);
         // F000:0085 mov DI,0x0018
         DI = 0x0018;
         // F000:0088 mov CX,4
@@ -140,7 +131,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:008B rep ins byte ptr ES:[DI]
         while (CX != 0) {
             UInt8[ES, DI] = In8(DX);
-            DI = (ushort)(DI + (ushort)State.Direction8);
+            DI++;
             CX--;
         }
         // F000:008D mov byte ptr DS:[0x0080],0x9A
@@ -148,10 +139,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0092 mov SI,0x0080
         SI = 0x0080;
         // F000:0095 outs byte ptr DS:[SI]
-        Out8(DX, UInt8[DS, SI]);
-        SI = (ushort)(SI + (ushort)State.Direction8);
+        Out8(0x00E0, UInt8[DS, SI]);
+        SI = 0x0081;
         // F000:0096 in AL,DX
-        AL = In8(DX);
+        AL = In8(0x00E0);
         // F000:0097 mov byte ptr DS:[0x001C],AL
         UInt8[DS, 0x001C] = AL;
         // F000:009A mov word ptr DS:[0x0082],0xB7A6
@@ -159,10 +150,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00A0 mov SI,0x0082
         SI = 0x0082;
         // F000:00A3 outs word ptr DS:[SI]
-        Out16(DX, UInt16[DS, SI]);
-        SI = (ushort)(SI + (ushort)State.Direction16);
+        Out16(0x00E0, UInt16[DS, SI]);
+        SI = 0x0084;
         // F000:00A4 in AX,DX
-        AX = In16(DX);
+        AX = In16(0x00E0);
         // F000:00A5 mov word ptr DS:[0x001E],AX
         UInt16[DS, 0x001E] = AX;
         // F000:00A8 mov dword ptr DS:[0x0084],0xF1E2D3C4
@@ -170,10 +161,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00B1 mov SI,0x0084
         SI = 0x0084;
         // F000:00B4 outs dword ptr DS:[SI]
-        Out32(DX, UInt32[DS, SI]);
-        SI = (ushort)(SI + (ushort)State.Direction32);
+        Out32(0x00E0, UInt32[DS, SI]);
+        SI = 0x0088;
         // F000:00B6 in EAX,DX
-        EAX = In32(DX);
+        EAX = In32(0x00E0);
         // F000:00B8 mov dword ptr DS:[0x0020],EAX
         UInt32[DS, 0x0020] = EAX;
         // F000:00BC mov byte ptr DS:[0x0088],1
@@ -189,11 +180,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00D1 rep outs byte ptr DS:[SI]
         while (CX != 0) {
             Out8(DX, UInt8[DS, SI]);
-            SI = (ushort)(SI + (ushort)State.Direction8);
+            SI++;
             CX--;
         }
         // F000:00D3 in AL,DX
-        AL = In8(DX);
+        AL = In8(0x00E0);
         // F000:00D4 mov byte ptr DS:[0x0024],AL
         UInt8[DS, 0x0024] = AL;
         // F000:00D7 hlt

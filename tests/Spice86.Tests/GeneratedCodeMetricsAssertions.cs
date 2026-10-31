@@ -14,14 +14,15 @@ internal static class GeneratedCodeMetricsAssertions {
     private static readonly Regex AsmCommentRegex = new(@"^\s*// [0-9A-F]{4}:[0-9A-F]{4} ");
     private static readonly Regex LabelLineRegex = new(@"^\s*L_\w+:$");
 
-    private static readonly Dictionary<string, (int GotoStatements, int CheckExternalEvents, int Lines)> UpperBounds = new() {
-        ["jump1.spec"] = (15, 21, 412),
-        ["partition_cross_function_loop.spec"] = (2, 3, 88),
-        ["rep.spec"] = (0, 12, 711),
-        ["div.spec"] = (0, 13, 744),
-        ["selfmodifyje.spec"] = (0, 2, 61),
-        ["test386.failport.spec"] = (8, 18, 3833),
-        ["flagconditions"] = (0, 6, 655)
+    private static readonly Dictionary<string, (int GotoStatements, int CheckExternalEvents, int Lines,
+        int AluCalls, int StatusFlagReads, int Casts)> UpperBounds = new() {
+        ["jump1.spec"] = (15, 21, 412, 0, 48, 0),
+        ["partition_cross_function_loop.spec"] = (2, 3, 88, 2, 0, 0),
+        ["rep.spec"] = (0, 12, 711, 3, 3, 61),
+        ["div.spec"] = (0, 13, 757, 43, 0, 74),
+        ["selfmodifyje.spec"] = (0, 2, 61, 1, 0, 0),
+        ["test386.failport.spec"] = (8, 18, 3844, 239, 142, 86),
+        ["flagconditions"] = (0, 6, 655, 20, 15, 137)
     };
 
     /// <summary>
@@ -84,7 +85,8 @@ internal static class GeneratedCodeMetricsAssertions {
     }
 
     private static void AssertUpperBounds(GeneratedCodeMetrics metrics) {
-        if (!UpperBounds.TryGetValue(metrics.Fixture, out (int GotoStatements, int CheckExternalEvents, int Lines) bounds)) {
+        if (!UpperBounds.TryGetValue(metrics.Fixture, out (int GotoStatements, int CheckExternalEvents, int Lines,
+                int AluCalls, int StatusFlagReads, int Casts) bounds)) {
             return;
         }
         metrics.GotoStatements.Should().BeLessThanOrEqualTo(bounds.GotoStatements,
@@ -95,6 +97,15 @@ internal static class GeneratedCodeMetricsAssertions {
             metrics.Fixture);
         metrics.Lines.Should().BeLessThanOrEqualTo(bounds.Lines,
             "the Lines count of {0} exceeded its recorded upper bound; raise it in the UpperBounds table on purpose, in the same PR as the golden diff",
+            metrics.Fixture);
+        metrics.AluCalls.Should().BeLessThanOrEqualTo(bounds.AluCalls,
+            "the AluCalls count of {0} exceeded its recorded upper bound; raise it in the UpperBounds table on purpose, in the same PR as the golden diff",
+            metrics.Fixture);
+        metrics.StatusFlagReads.Should().BeLessThanOrEqualTo(bounds.StatusFlagReads,
+            "the StatusFlagReads count of {0} exceeded its recorded upper bound; raise it in the UpperBounds table on purpose, in the same PR as the golden diff",
+            metrics.Fixture);
+        metrics.Casts.Should().BeLessThanOrEqualTo(bounds.Casts,
+            "the Casts count of {0} exceeded its recorded upper bound; raise it in the UpperBounds table on purpose, in the same PR as the golden diff",
             metrics.Fixture);
     }
 

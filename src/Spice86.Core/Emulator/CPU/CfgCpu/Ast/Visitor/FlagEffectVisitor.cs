@@ -59,13 +59,26 @@ internal sealed class FlagEffectVisitor : IAstVisitor<FlagEffect> {
 
     public FlagEffect VisitUnaryOperationNode(UnaryOperationNode node) => node.Value.Accept(this);
 
+    public FlagEffect VisitConditionalValueNode(ConditionalValueNode node) =>
+        node.Condition.Accept(this)
+            .Then(FlagEffect.Either(node.WhenTrue.Accept(this), node.WhenFalse.Accept(this)));
+
     public FlagEffect VisitTypeConversionNode(TypeConversionNode node) => node.Value.Accept(this);
 
     public FlagEffect VisitCpuFlagNode(CpuFlagNode node) => FlagEffect.Reading(StatusBit(node));
 
     public FlagEffect VisitFlagRegisterNode(FlagRegisterNode node) => FlagEffect.Reading(StatusFlags.All);
 
-    public FlagEffect VisitMethodCallValueNode(MethodCallValueNode node) => node.CallNode.Accept(this);
+    public FlagEffect VisitMethodCallValueNode(MethodCallValueNode node) {
+        if (node is PortReadCallNode or BitScanCallNode) {
+            FlagEffect effect = FlagEffect.None;
+            foreach (IVisitableAstNode argument in node.CallNode.Arguments) {
+                effect = effect.Then(argument.Accept(this));
+            }
+            return effect;
+        }
+        return node.CallNode.Accept(this);
+    }
 
     public FlagEffect VisitMethodCallNode(MethodCallNode node) {
         FlagEffect effect = FlagEffect.None;
@@ -74,6 +87,8 @@ internal sealed class FlagEffectVisitor : IAstVisitor<FlagEffect> {
         }
         return effect.Then(CallEffect(node));
     }
+
+    public FlagEffect VisitSetInterruptShadowNode(SetInterruptShadowNode node) => FlagEffect.None;
 
     public FlagEffect VisitVariableDeclarationNode(VariableDeclarationNode node) => node.Initializer.Accept(this);
 
@@ -136,43 +151,24 @@ internal sealed class FlagEffectVisitor : IAstVisitor<FlagEffect> {
     public FlagEffect VisitCpuidNode(CpuidNode node) => FlagEffect.None;
 
     private static FlagEffect CallEffect(MethodCallNode node) {
-        string? propertyPath = node.PropertyPath;
-        if (propertyPath is "Alu8" or "Alu16" or "Alu32") {
-            return AluEffect(node, WidthOf(propertyPath));
+        if (node is AluCallNode alu) {
+            return AluEffect(alu);
         }
-        if (propertyPath is "Stack" or "State") {
-            return FlagEffect.None;
-        }
-        if (propertyPath is null && IsNeutralRootMethod(node.MethodName)) {
+        if (node is StackCallNode or PortWriteCallNode or BoundCheckCallNode) {
             return FlagEffect.None;
         }
         return FlagEffect.Unknown;
     }
 
-    private static FlagEffect AluEffect(MethodCallNode node, BitWidth width) {
+    private static FlagEffect AluEffect(AluCallNode node) {
         ulong? count = null;
         if (node.Arguments.Count > 0) {
             count = ConstantValue(node.Arguments[^1]);
         }
-        if (AluFlagTable.TryGetEffect(node.MethodName, width, count, out FlagEffect effect)) {
+        if (AluFlagTable.TryGetEffect(node.Operation, node.Width, count, out FlagEffect effect)) {
             return effect;
         }
         return FlagEffect.Unknown;
-    }
-
-    private static BitWidth WidthOf(string propertyPath) {
-        if (propertyPath == "Alu8") {
-            return BitWidth.BYTE_8;
-        }
-        if (propertyPath == "Alu16") {
-            return BitWidth.WORD_16;
-        }
-        return BitWidth.DWORD_32;
-    }
-
-    private static bool IsNeutralRootMethod(string methodName) {
-        return methodName is "In8" or "In16" or "In32" or "Out8" or "Out16" or "Out32"
-            or "CheckBound" or "BitScanForward16" or "BitScanForward32" or "BitScanReverse16" or "BitScanReverse32";
     }
 
     private static ulong? ConstantValue(IVisitableAstNode node) {

@@ -19,7 +19,7 @@ public class ShxdRmParser : BaseInstructionParser {
     /// <summary>
     /// Parses a double-precision shift instruction.
     /// </summary>
-    public CfgInstruction Parse(ParsingContext context, string operation, InstructionOperation displayOp, bool useImm8) {
+    public CfgInstruction Parse(ParsingContext context, AluOperation operation, InstructionOperation displayOp, bool useImm8) {
         (CfgInstruction instr, DataType dataType, _, ModRmContext modRmContext) = ParseModRm(context, false, 1);
         (ValueNode rNode, ValueNode rmNode) = _astBuilder.ModRmOperands(dataType, modRmContext);
         ValueNode countNode;

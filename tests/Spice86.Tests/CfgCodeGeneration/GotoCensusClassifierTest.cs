@@ -18,31 +18,41 @@ using static Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast.CodeGen
 public class GotoCensusClassifierTest {
     private static readonly Dictionary<GotoNode, GotoKeepReason> NoRefusals = new(ReferenceEqualityComparer.Instance);
 
-    private static LoweredBlock Lowered(CfgBlock block) => new(block, false, Empty());
+    private static CfgNodeGotoTarget Target(ICfgNode node) => new(node);
+
+    private static LoweredBlock<CfgBlock> Lowered(CfgBlock block) =>
+        new(block, Target(block.Entry), false, false, true, Empty());
+
+    private static LoweredBlock<CfgBlock> LoweredEntry(CfgBlock block, BlockNode body) =>
+        new(block, Target(block.Entry), false, true, true, body);
 
     private static InstructionBoundaryNode Boundary(CfgBlock block, params IVisitableAstNode[] statements) =>
         new(block.Entry, "", new BlockNode(statements));
 
-    private static GotoCensus Classify(IVisitableAstNode entryDispatch, IVisitableAstNode body, NaturalLoopForest loops,
-        IReadOnlySet<ICfgNode> entryNodes, IReadOnlyList<LoweredBlock> blocks) =>
-        Classify(entryDispatch, body, loops, entryNodes, blocks, NoRefusals);
+    private static IReadOnlySet<IGotoTarget> EntryTargets(params ICfgNode[] nodes) =>
+        nodes.Select(node => (IGotoTarget)Target(node)).ToHashSet();
 
-    private static GotoCensus Classify(IVisitableAstNode entryDispatch, IVisitableAstNode body, NaturalLoopForest loops,
-        IReadOnlySet<ICfgNode> entryNodes, IReadOnlyList<LoweredBlock> blocks,
+    private static GotoCensus Classify(IVisitableAstNode entryDispatch, IVisitableAstNode body, NaturalLoopForest<CfgBlock> loops,
+        IReadOnlySet<IGotoTarget> entryTargets, IReadOnlyList<LoweredBlock<CfgBlock>> blocks) =>
+        Classify(entryDispatch, body, loops, entryTargets, blocks, NoRefusals);
+
+    private static GotoCensus Classify(IVisitableAstNode entryDispatch, IVisitableAstNode body, NaturalLoopForest<CfgBlock> loops,
+        IReadOnlySet<IGotoTarget> entryTargets, IReadOnlyList<LoweredBlock<CfgBlock>> blocks,
         IReadOnlyDictionary<GotoNode, GotoKeepReason> refusals) =>
-        GotoCensusClassifier.Classify(Sequence(entryDispatch), Sequence(body), loops, entryNodes, blocks, refusals);
+        GotoCensusClassifier.Classify(Sequence(entryDispatch), Sequence(body), loops, entryTargets, blocks,
+            block => block.Instructions, refusals);
 
     [Fact]
     public void GotoOfTheEntryDispatchCountsAsEntryDispatch() {
         // Arrange
         CfgBlock entry = CfgTestHelpers.CreateBlock(1, 0x00);
-        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([entry], new());
+        NaturalLoopForest<CfgBlock> loops = CfgTestHelpers.BuildLoopForest([entry], new());
         SwitchNode dispatch = new(new LoadOffsetParameterNode(),
-            [new SwitchSection(0, new BlockNode(new GotoNode(entry.Entry)))], Empty());
+            [new SwitchSection(0, new BlockNode(new GotoNode(Target(entry.Entry))))], Empty());
 
         // Act
         GotoCensus census = Classify(dispatch, Boundary(entry, new CommentNode("entry")), loops,
-            new HashSet<ICfgNode> { entry.Entry }, [Lowered(entry)]);
+            EntryTargets(entry.Entry), [LoweredEntry(entry, Empty())]);
 
         // Assert
         census.Total.Should().Be(1);
@@ -53,11 +63,11 @@ public class GotoCensusClassifierTest {
     public void CyclicJumpCountsAsCyclicJump() {
         // Arrange
         CfgBlock entry = CfgTestHelpers.CreateBlock(1, 0x00);
-        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([entry], new());
+        NaturalLoopForest<CfgBlock> loops = CfgTestHelpers.BuildLoopForest([entry], new());
 
         // Act
         GotoCensus census = Classify(Empty(), Boundary(entry, new CyclicJumpNode("otherMethod", 0)), loops,
-            new HashSet<ICfgNode> { entry.Entry }, [Lowered(entry)]);
+            EntryTargets(entry.Entry), [LoweredEntry(entry, Empty())]);
 
         // Assert
         census.Total.Should().Be(1);
@@ -69,11 +79,11 @@ public class GotoCensusClassifierTest {
         // Arrange
         CfgBlock entry = CfgTestHelpers.CreateBlock(1, 0x00);
         CfgBlock target = CfgTestHelpers.CreateBlock(2, 0x10);
-        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([entry, target], new() { [entry] = [target] });
+        NaturalLoopForest<CfgBlock> loops = CfgTestHelpers.BuildLoopForest([entry, target], new() { [entry] = [target] });
 
         // Act
-        GotoCensus census = Classify(Empty(), Boundary(entry, new GotoNode(target.Entry)), loops,
-            new HashSet<ICfgNode> { entry.Entry, target.Entry }, [Lowered(entry), Lowered(target)]);
+        GotoCensus census = Classify(Empty(), Boundary(entry, new GotoNode(Target(target.Entry))), loops,
+            EntryTargets(entry.Entry, target.Entry), [LoweredEntry(entry, Empty()), LoweredEntry(target, Empty())]);
 
         // Assert
         census.Total.Should().Be(1);
@@ -89,12 +99,14 @@ public class GotoCensusClassifierTest {
         head.Append(secondEntry);
         CfgBlock spin = CfgTestHelpers.CreateBlock(3, 0x20);
         CfgBlock exit = CfgTestHelpers.CreateBlock(4, 0x30);
-        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([entry, head, spin, exit],
+        NaturalLoopForest<CfgBlock> loops = CfgTestHelpers.BuildLoopForest([entry, head, spin, exit],
             new() { [entry] = [head], [head] = [spin], [spin] = [head, exit] });
+        LoweredBlock<CfgBlock> headBlock = LoweredEntry(head,
+            new BlockNode(new InstructionBoundaryNode(secondEntry, "", Empty())));
 
         // Act
-        GotoCensus census = Classify(Empty(), Boundary(entry, new GotoNode(spin.Entry)), loops,
-            new HashSet<ICfgNode> { entry.Entry, secondEntry }, [Lowered(entry), Lowered(head), Lowered(spin), Lowered(exit)]);
+        GotoCensus census = Classify(Empty(), Boundary(entry, new GotoNode(Target(spin.Entry))), loops,
+            EntryTargets(entry.Entry, secondEntry), [LoweredEntry(entry, Empty()), headBlock, Lowered(spin), Lowered(exit)]);
 
         // Assert
         census.Total.Should().Be(1);
@@ -107,13 +119,13 @@ public class GotoCensusClassifierTest {
         CfgBlock entry = CfgTestHelpers.CreateBlock(1, 0x00);
         CfgBlock spin = CfgTestHelpers.CreateBlock(2, 0x10);
         CfgBlock exit = CfgTestHelpers.CreateBlock(3, 0x20);
-        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([entry, spin, exit],
+        NaturalLoopForest<CfgBlock> loops = CfgTestHelpers.BuildLoopForest([entry, spin, exit],
             new() { [entry] = [spin], [spin] = [spin, exit] });
-        InfiniteLoopNode loop = new(new BlockNode(Boundary(spin, new GotoNode(spin.Entry))));
+        InfiniteLoopNode loop = new(new BlockNode(Boundary(spin, new GotoNode(Target(spin.Entry)))));
 
         // Act
         GotoCensus census = Classify(Empty(), Sequence(Boundary(entry, new CommentNode("entry")), loop), loops,
-            new HashSet<ICfgNode> { entry.Entry }, [Lowered(entry), Lowered(spin), Lowered(exit)]);
+            EntryTargets(entry.Entry), [LoweredEntry(entry, Empty()), Lowered(spin), Lowered(exit)]);
 
         // Assert
         census.Total.Should().Be(1);
@@ -126,13 +138,13 @@ public class GotoCensusClassifierTest {
         CfgBlock entry = CfgTestHelpers.CreateBlock(1, 0x00);
         CfgBlock spin = CfgTestHelpers.CreateBlock(2, 0x10);
         CfgBlock exit = CfgTestHelpers.CreateBlock(3, 0x20);
-        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([entry, spin, exit],
+        NaturalLoopForest<CfgBlock> loops = CfgTestHelpers.BuildLoopForest([entry, spin, exit],
             new() { [entry] = [spin], [spin] = [spin, exit] });
-        InfiniteLoopNode loop = new(new BlockNode(Boundary(spin, new GotoNode(exit.Entry))));
+        InfiniteLoopNode loop = new(new BlockNode(Boundary(spin, new GotoNode(Target(exit.Entry)))));
 
         // Act
         GotoCensus census = Classify(Empty(), Sequence(Boundary(entry, new CommentNode("entry")), loop), loops,
-            new HashSet<ICfgNode> { entry.Entry }, [Lowered(entry), Lowered(spin), Lowered(exit)]);
+            EntryTargets(entry.Entry), [LoweredEntry(entry, Empty()), Lowered(spin), Lowered(exit)]);
 
         // Assert
         census.Total.Should().Be(1);
@@ -145,13 +157,13 @@ public class GotoCensusClassifierTest {
         CfgBlock entry = CfgTestHelpers.CreateBlock(1, 0x00);
         CfgBlock source = CfgTestHelpers.CreateBlock(2, 0x10);
         CfgBlock target = CfgTestHelpers.CreateBlock(3, 0x20);
-        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([entry, source, target],
+        NaturalLoopForest<CfgBlock> loops = CfgTestHelpers.BuildLoopForest([entry, source, target],
             new() { [entry] = [source], [source] = [target] });
-        LoweredBlock[] blocks = [Lowered(entry), Lowered(target), Lowered(source)];
+        LoweredBlock<CfgBlock>[] blocks = [LoweredEntry(entry, Empty()), Lowered(target), Lowered(source)];
 
         // Act
-        GotoCensus census = Classify(Empty(), Boundary(source, new GotoNode(target.Entry)), loops,
-            new HashSet<ICfgNode> { entry.Entry }, blocks);
+        GotoCensus census = Classify(Empty(), Boundary(source, new GotoNode(Target(target.Entry))), loops,
+            EntryTargets(entry.Entry), blocks);
 
         // Assert
         census.Total.Should().Be(1);
@@ -163,15 +175,15 @@ public class GotoCensusClassifierTest {
         // Arrange
         CfgBlock entry = CfgTestHelpers.CreateBlock(1, 0x00);
         CfgBlock target = CfgTestHelpers.CreateBlock(2, 0x10);
-        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([entry, target], new() { [entry] = [target] });
-        GotoNode jump = new(target.Entry);
+        NaturalLoopForest<CfgBlock> loops = CfgTestHelpers.BuildLoopForest([entry, target], new() { [entry] = [target] });
+        GotoNode jump = new(Target(target.Entry));
         Dictionary<GotoNode, GotoKeepReason> refusals = new(ReferenceEqualityComparer.Instance) {
             [jump] = GotoKeepReason.NoSingleJoin
         };
 
         // Act
         GotoCensus census = Classify(Empty(), Boundary(entry, jump), loops,
-            new HashSet<ICfgNode> { entry.Entry }, [Lowered(entry), Lowered(target)], refusals);
+            EntryTargets(entry.Entry), [LoweredEntry(entry, Empty()), Lowered(target)], refusals);
 
         // Assert
         census.Total.Should().Be(1);
@@ -184,13 +196,14 @@ public class GotoCensusClassifierTest {
         CfgBlock entry = CfgTestHelpers.CreateBlock(1, 0x00);
         CfgBlock middle = CfgTestHelpers.CreateBlock(2, 0x10);
         CfgBlock target = CfgTestHelpers.CreateBlock(3, 0x20);
-        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([entry, middle, target],
+        NaturalLoopForest<CfgBlock> loops = CfgTestHelpers.BuildLoopForest([entry, middle, target],
             new() { [entry] = [middle], [middle] = [target] });
 
         // Act
         GotoCensus census = Classify(Empty(),
-            Sequence(Boundary(entry, new GotoNode(target.Entry)), Boundary(middle, new GotoNode(target.Entry))), loops,
-            new HashSet<ICfgNode> { entry.Entry }, [Lowered(entry), Lowered(middle), Lowered(target)]);
+            Sequence(Boundary(entry, new GotoNode(Target(target.Entry))),
+                Boundary(middle, new GotoNode(Target(target.Entry)))), loops,
+            EntryTargets(entry.Entry), [LoweredEntry(entry, Empty()), Lowered(middle), Lowered(target)]);
 
         // Assert
         census.Total.Should().Be(2);
@@ -202,11 +215,11 @@ public class GotoCensusClassifierTest {
         // Arrange
         CfgBlock entry = CfgTestHelpers.CreateBlock(1, 0x00);
         CfgBlock target = CfgTestHelpers.CreateBlock(2, 0x10);
-        NaturalLoopForest loops = CfgTestHelpers.BuildLoopForest([entry, target], new() { [entry] = [target] });
+        NaturalLoopForest<CfgBlock> loops = CfgTestHelpers.BuildLoopForest([entry, target], new() { [entry] = [target] });
 
         // Act
-        GotoCensus census = Classify(Empty(), Boundary(entry, new GotoNode(target.Entry)), loops,
-            new HashSet<ICfgNode> { entry.Entry }, [Lowered(entry), Lowered(target)]);
+        GotoCensus census = Classify(Empty(), Boundary(entry, new GotoNode(Target(target.Entry))), loops,
+            EntryTargets(entry.Entry), [LoweredEntry(entry, Empty()), Lowered(target)]);
 
         // Assert
         census.Total.Should().Be(1);

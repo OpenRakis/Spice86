@@ -19,6 +19,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 
 /// <summary>
 /// A class that provides functionality for writing various recorded data to files.
@@ -36,6 +37,8 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
     private readonly ISerializableBreakpointsSource _serializableBreakpointsSource;
     private readonly Configuration _configuration;
     private readonly CfgNodeIndex _nodeIndex;
+    private readonly DumpProgressReporter _progress;
+    private readonly Lock _writeLock = new();
 
     /// <summary>
     /// Initializes a new instance.
@@ -53,6 +56,7 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
     /// <param name="serializableBreakpointsSource">Source for breakpoints to serialize</param>
     /// <param name="configuration">The emulator configuration, used to derive the program checksum baked into the generated project.</param>
     /// <param name="nodeIndex">The persistent graph index whose poison set is serialized with the CFG reload dump.</param>
+    /// <param name="progress">Reports dump phases and steps to the log and to UI subscribers.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     internal EmulationStateDataWriter(State state,
         ExecutionAddressesExtractor executionAddressesExtractor,
@@ -67,6 +71,7 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
         ISerializableBreakpointsSource serializableBreakpointsSource,
         Configuration configuration,
         CfgNodeIndex nodeIndex,
+        DumpProgressReporter progress,
         ILogger loggerService) : base(emulatorStateSerializationFolder, loggerService) {
         _executionAddressesExtractor = executionAddressesExtractor;
         _state = state;
@@ -80,47 +85,56 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
         _serializableBreakpointsSource = serializableBreakpointsSource;
         _configuration = configuration;
         _nodeIndex = nodeIndex;
+        _progress = progress;
     }
 
     /// <summary>
     /// Dumps all recorded data to their respective files.
     /// </summary>
     public void Write() {
-        if (LoggerService.IsEnabled(LogLevel.Information)) {
-            LoggerService.LogInformation("Saving all data to {DumpDirectory}", DataDirectory);
-        }
-        ExecutionAddresses executionAddresses = _executionAddressesExtractor.Extract();
-        WriteToFile(CpuRegistersFile, () => File.WriteAllText(CpuRegistersFile, JsonSerializer.Serialize(_state)));
-        WriteToFile(MemoryFile, () => _memoryDataExporter.Write(MemoryFile));
-        WriteToFile(ListingFile, () => _listingExporter.Write(ListingFile));
-        if (_configuration.CodeOverridesActive) {
-            // The CFG and execution flow jump between overrides and are not representative of the program, so
-            // the snapshot, CFG/reload/execution-flow dumps and the generated C# are all skipped: building the
-            // snapshot or running the generator here would be wasted work on a non-representative graph.
-            if (LoggerService.IsEnabled(LogLevel.Information)) {
-                LoggerService.LogInformation(
-                    "Skipping {CfgBlocksFile}, {CfgPartitionsFile}, {CfgReloadFile}, {ExecutionFlowFile} and generated C#: code overrides are active, so the CFG and execution flow are not representative of the program.",
-                    Path.GetFileName(CfgBlocksFile), Path.GetFileName(CfgPartitionsFile), Path.GetFileName(CfgReloadFile), Path.GetFileName(ExecutionFlowFile));
+        lock (_writeLock) {
+            ExecutionAddresses executionAddresses = _executionAddressesExtractor.Extract();
+            _progress.BeginDump(DataDirectory);
+            bool succeeded = false;
+            try {
+                WritePhase(DumpPhase.CpuRegisters, CpuRegistersFile, () => File.WriteAllText(CpuRegistersFile, JsonSerializer.Serialize(_state)));
+                WritePhase(DumpPhase.Memory, MemoryFile, () => _memoryDataExporter.Write(MemoryFile));
+                WritePhase(DumpPhase.Listing, ListingFile, () => _listingExporter.Write(ListingFile));
+                if (_configuration.CodeOverridesActive) {
+                    // The CFG and execution flow jump between overrides and are not representative of the program, so
+                    // the snapshot, CFG/reload/execution-flow dumps and the generated C# are all skipped: building the
+                    // snapshot or running the generator here would be wasted work on a non-representative graph.
+                    if (LoggerService.IsEnabled(LogLevel.Information)) {
+                        LoggerService.LogInformation(
+                            "Skipping {CfgBlocksFile}, {CfgPartitionsFile}, {CfgReloadFile}, {ExecutionFlowFile} and generated C#: code overrides are active, so the CFG and execution flow are not representative of the program.",
+                            Path.GetFileName(CfgBlocksFile), Path.GetFileName(CfgPartitionsFile), Path.GetFileName(CfgReloadFile), Path.GetFileName(ExecutionFlowFile));
+                    }
+                } else {
+                    _progress.BeginPhase(DumpPhase.CfgSnapshot);
+                    CfgCpuSnapshot cfgCpuSnapshot = _cfgCpuSnapshotBuilder.Build(_executionContextManager, null);
+                    _progress.EndPhase();
+                    // Blocks first: the block graph is always valuable (it is what reload consumes and what an engineer
+                    // inspects), so it must be written before the partition overlay, which is derived from it and may be
+                    // absent when partitioning fails.
+                    WritePhase(DumpPhase.CfgBlocks, CfgBlocksFile, () => _cfgBlocksJsonExporter.WriteBlocks(cfgCpuSnapshot, CfgBlocksFile));
+                    WritePhase(DumpPhase.CfgPartitions, CfgPartitionsFile, () => _cfgBlocksJsonExporter.WritePartitions(cfgCpuSnapshot, CfgPartitionsFile));
+                    WritePhase(DumpPhase.CfgReload, CfgReloadFile, () => WriteCfgReload(CfgReloadFile));
+                    WritePhase(DumpPhase.ExecutionFlow, ExecutionFlowFile, () => new ExecutionAddressesExporter(LoggerService).Write(executionAddresses, ExecutionFlowFile));
+                    WriteGeneratedCSharp(cfgCpuSnapshot);
+                }
+                WritePhase(DumpPhase.Symbols, SymbolsFile, () => new GhidraSymbolsExporter(LoggerService).Write(executionAddresses, _functionCatalogue, SymbolsFile));
+                WritePhase(DumpPhase.Breakpoints, BreakpointsFile, () => WriteBreakpoints(BreakpointsFile));
+                succeeded = true;
+            } finally {
+                _progress.EndDump(succeeded);
             }
-        } else {
-            CfgCpuSnapshot cfgCpuSnapshot = _cfgCpuSnapshotBuilder.Build(_executionContextManager, null);
-            // Blocks first: the block graph is always valuable (it is what reload consumes and what an engineer
-            // inspects), so it must be written before the partition overlay, which is derived from it and may be
-            // absent when partitioning fails.
-            WriteToFile(CfgBlocksFile, () => _cfgBlocksJsonExporter.WriteBlocks(cfgCpuSnapshot, CfgBlocksFile));
-            WriteToFile(CfgPartitionsFile, () => _cfgBlocksJsonExporter.WritePartitions(cfgCpuSnapshot, CfgPartitionsFile));
-            WriteToFile(CfgReloadFile, () => WriteCfgReload(CfgReloadFile));
-            WriteToFile(ExecutionFlowFile, () => new ExecutionAddressesExporter(LoggerService).Write(executionAddresses, ExecutionFlowFile));
-            WriteGeneratedCSharp(cfgCpuSnapshot);
         }
-        WriteToFile(SymbolsFile, () => new GhidraSymbolsExporter(LoggerService).Write(executionAddresses, _functionCatalogue, SymbolsFile));
-        WriteToFile(BreakpointsFile, () => WriteBreakpoints(BreakpointsFile));
     }
 
     private void WriteGeneratedCSharp(CfgCpuSnapshot cfgCpuSnapshot) {
         // The generator must only run on a complete, non-truncated graph. A truncated discovery run has no
         // partitioned program, so the generated-C# dump is skipped rather than aborting the whole state dump.
-        // Genuine generation failures on a full graph still propagate loudly out of WriteToFile.
+        // Genuine generation failures on a full graph still propagate loudly out of WritePhase.
         if (cfgCpuSnapshot.PartitionedProgram is null) {
             if (LoggerService.IsEnabled(LogLevel.Information)) {
                 LoggerService.LogInformation(
@@ -130,9 +144,9 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
             return;
         }
 
-        GeneratedCSharpProgram generated = _cfgCSharpDumper.Generate(cfgCpuSnapshot.PartitionedProgram);
-        WriteToFile(CfgGeneratedCSharpFile, () => _cfgCSharpDumper.Write(generated, CfgGeneratedCSharpFile));
-        WriteToFile(GeneratedProjectDirectory, () => _cfgCSharpDumper.WriteProject(
+        GeneratedCSharpProgram generated = _cfgCSharpDumper.Generate(cfgCpuSnapshot.PartitionedProgram, _progress);
+        WritePhase(DumpPhase.CodeSource, CfgGeneratedCSharpFile, () => _cfgCSharpDumper.Write(generated, CfgGeneratedCSharpFile));
+        WritePhase(DumpPhase.CodeProject, GeneratedProjectDirectory, () => _cfgCSharpDumper.WriteProject(
             cfgCpuSnapshot.PartitionedProgram, generated, GeneratedProjectDirectory, ComputeExpectedChecksum()));
     }
 
@@ -146,14 +160,10 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
         return ConvertUtils.ByteArrayToHexString(SHA256.HashData(File.ReadAllBytes(_configuration.Exe)));
     }
 
-    private void WriteToFile(string path, Action writeAction) {
-        if (LoggerService.IsEnabled(LogLevel.Information)) {
-            LoggerService.LogInformation("Saving file {FileName}", Path.GetFileName(path));
-        }
+    private void WritePhase(DumpPhase phase, string path, Action writeAction) {
+        _progress.BeginPhase(phase, Path.GetFileName(path));
         writeAction();
-        if (LoggerService.IsEnabled(LogLevel.Information)) {
-            LoggerService.LogInformation("Saved file {FileName}", Path.GetFileName(path));
-        }
+        _progress.EndPhase();
     }
 
     private void WriteCfgReload(string filePath) {

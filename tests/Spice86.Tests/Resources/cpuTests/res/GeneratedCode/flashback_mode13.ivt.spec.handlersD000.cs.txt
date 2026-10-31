@@ -215,9 +215,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:4000 cli
         InterruptFlag = false;
         // F000:4001 mov AX,0x1000
-        AX = 0x1000;
         // F000:4004 mov SS,AX
-        SS = AX;
+        SS = 0x1000;
         // F000:4006 mov SP,0xFFFE
         SP = 0xFFFE;
         // F000:4009 mov AX,0x0013
@@ -229,7 +228,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:400F mov AX,0xA000
         AX = 0xA000;
         // F000:4012 mov ES,AX
-        ES = AX;
+        ES = 0xA000;
         // F000:4014 xor DI,DI
         DI = 0;
         // F000:4016 xor BX,BX
@@ -246,7 +245,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 CheckExternalEvents(cs2, 0x401E);
                 // F000:401E stos byte ptr ES:[DI],AL
                 UInt8[ES, DI] = AL;
-                DI = (ushort)(DI + (ushort)State.Direction8);
+                DI++;
                 // F000:401F inc AL
                 AL++;
                 // F000:4021 loop 0x401E
@@ -257,7 +256,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:4024 cmp BX,0x00C8
             Alu16.Sub(BX, 0x00C8);
             // F000:4028 jb short 0x4019
-        } while (CarryFlag);
+        } while (BX < 0x00C8);
         // F000:402A hlt
         return Hlt();
     }

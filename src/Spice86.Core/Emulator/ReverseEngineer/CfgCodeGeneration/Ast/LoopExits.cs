@@ -12,23 +12,64 @@ using System.Linq;
 /// </summary>
 internal static class LoopExits {
     /// <summary>Whether <paramref name="node"/>, a loop body or a statement of one, contains a <c>break</c> that leaves that loop.</summary>
-    public static bool HasBreak(IVisitableAstNode node) => node switch {
-        BreakNode => true,
-        BlockNode block => block.Statements.Any(HasBreak),
-        IfElseNode ifElse => HasBreak(ifElse.TrueCase) || HasBreak(ifElse.FalseCase),
-        InstructionBoundaryNode boundary => HasBreak(boundary.Body),
-        CpuFaultTryCatchNode tryCatch => HasBreak(tryCatch.Body),
-        _ => false
-    };
+    public static bool HasBreak(IVisitableAstNode node) {
+        Stack<IVisitableAstNode> pending = new();
+        pending.Push(node);
+        while (pending.Count > 0) {
+            switch (pending.Pop()) {
+                case BreakNode:
+                    return true;
+                case BlockNode block:
+                    foreach (IVisitableAstNode statement in block.Statements) {
+                        pending.Push(statement);
+                    }
+                    break;
+                case IfElseNode ifElse:
+                    pending.Push(ifElse.TrueCase);
+                    pending.Push(ifElse.FalseCase);
+                    break;
+                case InstructionBoundaryNode boundary:
+                    pending.Push(boundary.Body);
+                    break;
+                case CpuFaultTryCatchNode tryCatch:
+                    pending.Push(tryCatch.Body);
+                    break;
+            }
+        }
+        return false;
+    }
 
     /// <summary>Whether <paramref name="node"/>, a loop body or a statement of one, contains a <c>continue</c> that restarts that loop.</summary>
-    public static bool HasContinue(IVisitableAstNode node) => node switch {
-        ContinueNode => true,
-        BlockNode block => block.Statements.Any(HasContinue),
-        IfElseNode ifElse => HasContinue(ifElse.TrueCase) || HasContinue(ifElse.FalseCase),
-        InstructionBoundaryNode boundary => HasContinue(boundary.Body),
-        CpuFaultTryCatchNode tryCatch => HasContinue(tryCatch.Body),
-        SwitchNode switchNode => switchNode.Sections.Any(section => HasContinue(section.Body)) || HasContinue(switchNode.Default),
-        _ => false
-    };
+    public static bool HasContinue(IVisitableAstNode node) {
+        Stack<IVisitableAstNode> pending = new();
+        pending.Push(node);
+        while (pending.Count > 0) {
+            switch (pending.Pop()) {
+                case ContinueNode:
+                    return true;
+                case BlockNode block:
+                    foreach (IVisitableAstNode statement in block.Statements) {
+                        pending.Push(statement);
+                    }
+                    break;
+                case IfElseNode ifElse:
+                    pending.Push(ifElse.TrueCase);
+                    pending.Push(ifElse.FalseCase);
+                    break;
+                case InstructionBoundaryNode boundary:
+                    pending.Push(boundary.Body);
+                    break;
+                case CpuFaultTryCatchNode tryCatch:
+                    pending.Push(tryCatch.Body);
+                    break;
+                case SwitchNode switchNode:
+                    foreach (SwitchSection section in switchNode.Sections) {
+                        pending.Push(section.Body);
+                    }
+                    pending.Push(switchNode.Default);
+                    break;
+            }
+        }
+        return false;
+    }
 }

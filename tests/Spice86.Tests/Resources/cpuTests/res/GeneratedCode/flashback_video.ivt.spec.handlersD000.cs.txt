@@ -215,9 +215,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:4000 cli
         InterruptFlag = false;
         // F000:4001 mov AX,0x1000
-        AX = 0x1000;
         // F000:4004 mov SS,AX
-        SS = AX;
+        SS = 0x1000;
         // F000:4006 mov SP,0xFFFE
         SP = 0xFFFE;
         // F000:4009 mov AX,0x0013
@@ -227,57 +226,54 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:400E cli
         InterruptFlag = false;
         // F000:400F mov DX,0x03C4
-        DX = 0x03C4;
         // F000:4012 mov AX,0x0604
         AX = 0x0604;
         // F000:4015 out DX,AX
-        Out16(DX, AX);
+        Out16(0x03C4, AX);
         // F000:4016 mov AX,0x0101
         AX = 0x0101;
         // F000:4019 out DX,AX
-        Out16(DX, AX);
+        Out16(0x03C4, AX);
         // F000:401A mov DX,0x03D4
-        DX = 0x03D4;
         // F000:401D mov AX,0x2C11
         AX = 0x2C11;
         // F000:4020 out DX,AX
-        Out16(DX, AX);
+        Out16(0x03D4, AX);
         // F000:4021 mov AX,0x3F01
         AX = 0x3F01;
         // F000:4024 out DX,AX
-        Out16(DX, AX);
+        Out16(0x03D4, AX);
         // F000:4025 mov AX,0x3E07
         AX = 0x3E07;
         // F000:4028 out DX,AX
-        Out16(DX, AX);
+        Out16(0x03D4, AX);
         // F000:4029 mov AX,0x4109
         AX = 0x4109;
         // F000:402C out DX,AX
-        Out16(DX, AX);
+        Out16(0x03D4, AX);
         // F000:402D mov AX,0xBF12
         AX = 0xBF12;
         // F000:4030 out DX,AX
-        Out16(DX, AX);
+        Out16(0x03D4, AX);
         // F000:4031 mov AX,0x2013
         AX = 0x2013;
         // F000:4034 out DX,AX
-        Out16(DX, AX);
+        Out16(0x03D4, AX);
         // F000:4035 mov AX,0x0014
         AX = 0x0014;
         // F000:4038 out DX,AX
-        Out16(DX, AX);
+        Out16(0x03D4, AX);
         // F000:4039 mov AX,0xE317
         AX = 0xE317;
         // F000:403C out DX,AX
-        Out16(DX, AX);
+        Out16(0x03D4, AX);
         // F000:403D mov AX,0xFF18
         AX = 0xFF18;
         // F000:4040 out DX,AX
-        Out16(DX, AX);
+        Out16(0x03D4, AX);
         // F000:4041 mov AX,0xA000
-        AX = 0xA000;
         // F000:4044 mov ES,AX
-        ES = AX;
+        ES = 0xA000;
         // F000:4046 cld
         DirectionFlag = false;
         // F000:4047 mov DX,0x03C4
@@ -285,7 +281,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:404A mov AX,0x0F02
         AX = 0x0F02;
         // F000:404D out DX,AX
-        Out16(DX, AX);
+        Out16(0x03C4, AX);
         // F000:404E xor DI,DI
         DI = 0;
         // F000:4050 xor AX,AX
@@ -295,7 +291,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:4055 rep stos word ptr ES:[DI],AX
         while (CX != 0) {
             UInt16[ES, DI] = AX;
-            DI = (ushort)(DI + (ushort)State.Direction16);
+            DI += 2;
             CX--;
         }
         // F000:4057 mov BP,1
@@ -319,16 +315,15 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 // F000:4065 mov CX,0x0040
                 CX = 0x0040;
                 // F000:4068 mov AX,BX
-                AX = BX;
                 // F000:406A add AX,BP
-                AX = (ushort)(AX + BP);
+                AX = (ushort)(BX + BP);
                 // F000:406C add AL,0x41
-                AL = (byte)(AL + 0x41);
+                AL += 0x41;
                 do {
                     CheckExternalEvents(cs2, 0x406E);
                     // F000:406E stos byte ptr ES:[DI],AL
                     UInt8[ES, DI] = AL;
-                    DI = (ushort)(DI + (ushort)State.Direction8);
+                    DI++;
                     // F000:406F inc AL
                     AL++;
                     // F000:4071 loop 0x406E
@@ -352,12 +347,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 // F000:4084 add AL,1
                 AL++;
                 // F000:4086 add AX,BP
-                AX = (ushort)(AX + BP);
+                AX += BP;
                 do {
                     CheckExternalEvents(cs2, 0x4088);
                     // F000:4088 stos byte ptr ES:[DI],AL
                     UInt8[ES, DI] = AL;
-                    DI = (ushort)(DI + (ushort)State.Direction8);
+                    DI++;
                     // F000:4089 inc AL
                     AL++;
                     // F000:408B loop 0x4088
@@ -369,70 +364,68 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 // F000:4092 jb short 0x407F
             } while (BX < 0x00E1);
             // F000:4094 shl BP,1
-            BP = (ushort)(BP << 1);
+            BP <<= 1;
             // F000:4096 cmp BP,0x0010
             // F000:4099 jb short 0x405A
         } while (BP < 0x0010);
         // F000:409B mov DX,0x03D4
-        DX = 0x03D4;
         // F000:409E xor AX,AX
         AX = Alu16.Xor(AX, AX);
         // F000:40A0 mov DS,AX
-        DS = AX;
+        DS = 0;
         // F000:40A2 mov AH,byte ptr DS:[0x0503]
         AH = UInt8[DS, 0x0503];
         // F000:40A6 mov AL,0x0C
         AL = 0x0C;
         // F000:40A8 out DX,AX
-        Out16(DX, AX);
+        Out16(0x03D4, AX);
         // F000:40A9 mov AX,0x000D
         AX = 0x000D;
         // F000:40AC out DX,AX
-        Out16(DX, AX);
+        Out16(0x03D4, AX);
         // F000:40AD mov AH,byte ptr DS:[0x0501]
         AH = UInt8[DS, 0x0501];
         // F000:40B1 mov AL,9
         AL = 9;
         // F000:40B3 out DX,AX
-        Out16(DX, AX);
+        Out16(0x03D4, AX);
         // F000:40B4 mov AH,byte ptr DS:[0x0502]
         AH = UInt8[DS, 0x0502];
         // F000:40B8 mov AL,0x18
         AL = 0x18;
         // F000:40BA out DX,AX
-        Out16(DX, AX);
+        Out16(0x03D4, AX);
         // F000:40BB mov AH,byte ptr DS:[0x0504]
         AH = UInt8[DS, 0x0504];
         // F000:40BF mov AL,7
         AL = 7;
         // F000:40C1 out DX,AX
-        Out16(DX, AX);
+        Out16(0x03D4, AX);
         // F000:40C2 mov DX,0x03DA
-        DX = 0x03DA;
         // F000:40C5 in AL,DX
-        AL = In8(DX);
+        AL = In8(0x03DA);
         // F000:40C6 mov DX,0x03C0
         DX = 0x03C0;
         // F000:40C9 mov AL,0x30
         AL = 0x30;
         // F000:40CB out DX,AL
-        Out8(DX, AL);
+        Out8(0x03C0, AL);
         // F000:40CC mov AL,0x61
         AL = 0x61;
         // F000:40CE out DX,AL
-        Out8(DX, AL);
+        Out8(0x03C0, AL);
         // F000:40CF mov AL,0x33
         AL = 0x33;
         // F000:40D1 out DX,AL
-        Out8(DX, AL);
+        Out8(0x03C0, AL);
         // F000:40D2 mov AL,byte ptr DS:[0x0500]
         AL = UInt8[DS, 0x0500];
         // F000:40D5 out DX,AL
-        Out8(DX, AL);
+        Out8(0x03C0, AL);
         // F000:40D6 mov AL,0x20
         AL = 0x20;
         // F000:40D8 out DX,AL
-        Out8(DX, AL);
+        Out8(0x03C0, AL);
         // F000:40D9 hlt
         return Hlt();
     }

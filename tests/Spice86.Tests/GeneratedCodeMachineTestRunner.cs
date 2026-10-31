@@ -14,6 +14,7 @@ using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Core.Emulator.VM;
 
 using Spice86.Tests.AsmFixtures;
+using Spice86.Tests.CfgCodeGeneration.Ir;
 
 using System.Runtime.CompilerServices;
 
@@ -166,6 +167,10 @@ internal sealed class GeneratedCodeMachineTestRunner {
         WriteGotoCensus(GotoCensusLine.Format(GoldenKey(settings), generatedProgram.GotoCensus));
         generatedProgram.GotoCensus.Total.Should().Be(metrics.GotoStatements,
             $"every printed goto of {GoldenKey(settings)} has exactly one census reason");
+        WriteFlagReadCensus(FlagReadCensusLine.Format(GoldenKey(settings), generatedProgram.FlagReadCensus));
+        generatedProgram.FlagReadCensus.Total.Should().Be(metrics.StatusFlagReads,
+            $"every printed flag read of {GoldenKey(settings)} has exactly one census line entry");
+        WriteWebCensus(WebCensusLine.Format(GoldenKey(settings), generatedProgram.WebCensus));
         GeneratedCodeMetricsAssertions.AssertInvariants(metrics, generatedProgram.SourceText);
         return compiler.CompileSupplier(compilation);
     }
@@ -226,9 +231,10 @@ internal sealed class GeneratedCodeMachineTestRunner {
         return generatedProgram;
     }
 
+    /// <summary>Compares the generated source to its golden.</summary>
     public void CompareGeneratedSourceWithExpected(string goldenKey, GeneratedCSharpProgram generatedProgram) {
         List<string> actualLines = NormalizeLines(generatedProgram.SourceText);
-        //WriteExpectedGeneratedSource(goldenKey, generatedProgram.SourceText);
+        // WriteExpectedGeneratedSource(goldenKey, generatedProgram.SourceText);
         string resPath = GetGoldenPath(goldenKey + ".cs.txt");
         File.Exists(resPath).Should().BeTrue(
             $"golden '{goldenKey}.cs.txt' is missing; regenerate it by uncommenting the WriteExpectedGeneratedSource call in GeneratedCodeMachineTestRunner.CompareGeneratedSourceWithExpected, running the generated entry points once, then re-commenting it");
@@ -305,9 +311,43 @@ internal sealed class GeneratedCodeMachineTestRunner {
         }
     }
 
+    private static readonly object FlagReadCensusFileLock = new();
+    private static bool _flagReadCensusFileInitialized;
+
+    private static void WriteFlagReadCensus(string line) {
+        string outputDirectory = Path.Join(AppContext.BaseDirectory, "generated-code");
+        Directory.CreateDirectory(outputDirectory);
+        string censusPath = Path.Join(outputDirectory, "flag-read-census.txt");
+        lock (FlagReadCensusFileLock) {
+            if (!_flagReadCensusFileInitialized) {
+                File.Delete(censusPath);
+                _flagReadCensusFileInitialized = true;
+            }
+            File.AppendAllText(censusPath, line + Environment.NewLine);
+        }
+    }
+
+    private static readonly object WebCensusFileLock = new();
+    private static bool _webCensusFileInitialized;
+
+    private static void WriteWebCensus(string line) {
+        string outputDirectory = Path.Join(AppContext.BaseDirectory, "generated-code");
+        Directory.CreateDirectory(outputDirectory);
+        string censusPath = Path.Join(outputDirectory, "web-census.txt");
+        lock (WebCensusFileLock) {
+            if (!_webCensusFileInitialized) {
+                File.Delete(censusPath);
+                _webCensusFileInitialized = true;
+            }
+            File.AppendAllText(censusPath, line + Environment.NewLine);
+        }
+    }
+
     private (GeneratedCSharpProgram GeneratedProgram, AsmFinalState FinalState) GenerateSourceAndFinalState(AsmRunScope scope) {
         (CfgPartitionedProgram program, AsmFinalState finalState) = GenerateProgram(scope);
-        GeneratedCSharpProgram generatedProgram = new CfgCSharpGenerator().Generate(program);
+        GeneratedCSharpProgram generatedProgram =
+            new CfgCSharpGenerator(collectCensuses: true, verify: true).Generate(program);
+        IrLiftCheck.Check(program, GoldenKey(scope.Fixture.Settings));
         WriteGeneratedSource(GoldenKey(scope.Fixture.Settings), generatedProgram);
         return (generatedProgram, finalState);
     }

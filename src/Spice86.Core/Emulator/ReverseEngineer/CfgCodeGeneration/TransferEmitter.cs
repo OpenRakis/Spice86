@@ -2,12 +2,17 @@ namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Shared.Emulator.Memory;
+
+using static Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast.CodeGenerationAst;
 
 /// <summary>
 /// Decides how to jump from one place to another in the generated code. Given a CFG edge (source → target),
@@ -17,7 +22,8 @@ using Spice86.Shared.Emulator.Memory;
 /// </summary>
 internal sealed class TransferEmitter(CfgGeneratorContext context) {
     /// <summary>
-    /// The transfer along <paramref name="edge"/>: a <c>goto</c> inside the method, a partition return, or a cyclic-flow
+    /// The transfer along <paramref name="edge"/>: a <c>goto</c> inside the method, preceded by a CS
+    /// assignment when the edge crosses a segment inside one generated method, a partition return, or a cyclic-flow
     /// bounce. CPU fault edges never come here: <see cref="CpuFaultWrapper"/> lowers them through <see cref="FaultHandler"/>.
     /// </summary>
     /// <param name="edge">The CFG edge to transfer along.</param>
@@ -26,7 +32,14 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
         CfgCodePartition sourcePartition = context.GetPartition(edge.Source);
         CfgCodePartition targetPartition = context.GetPartition(edge.Target);
         if (sourcePartition == targetPartition) {
-            return new GotoNode(edge.Target);
+            GotoNode jump = new(new CfgNodeGotoTarget(edge.Target));
+            if (edge.Source.Address.Segment != edge.Target.Address.Segment) {
+                BinaryOperationNode setCs = new(DataType.UINT16,
+                    new SegmentRegisterNode((int)SegmentRegisterIndex.CsIndex), BinaryOperation.ASSIGN,
+                    new SegmentVariableNode(edge.Target.Address.Segment));
+                return Sequence(setCs, jump);
+            }
+            return jump;
         }
 
         CfgCodePartitionTransfer? transfer = context.FindTransfer(edge);
@@ -76,10 +89,10 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
     /// observed post-call continuation. The helper (NearCall / FarCall) preserves emulated stack behavior and
     /// validates the actual return target against the pushed return address.
     /// </summary>
-    public IVisitableAstNode EmitCallHelperAndContinuation(string helperName, CfgInstruction call, MethodGroupNode function, ushort? farCallTargetCs = null) {
+    public IVisitableAstNode EmitCallHelperAndContinuation(CallDistance distance, BitWidth width, CfgInstruction call, MethodGroupNode function, ushort? farCallTargetCs) {
         CallContinuation continuation = context.ResolveCallContinuation(call);
         return CodeGenerationAst.Sequence(
-            CallHelper(helperName, continuation.ExpectedReturnAddress, function, farCallTargetCs),
+            CallHelper(distance, width, continuation.ExpectedReturnAddress, function, farCallTargetCs),
             EmitPostCallContinuation(call, continuation));
     }
 
@@ -89,7 +102,7 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
     /// callee segment as <paramref name="targetCs"/>; a near call leaves it <c>null</c> and the argument is
     /// omitted.
     /// </summary>
-    public MethodCallNode CallHelper(string helperName, SegmentedAddress expectedReturn, MethodGroupNode function, ushort? targetCs) {
+    public MethodCallNode CallHelper(CallDistance distance, BitWidth width, SegmentedAddress expectedReturn, MethodGroupNode function, ushort? targetCs) {
         List<IVisitableAstNode> arguments = [
             new SegmentVariableNode(expectedReturn.Segment),
             new OffsetLiteralNode(expectedReturn.Offset)
@@ -98,7 +111,7 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
             arguments.Add(new SegmentVariableNode(targetCs.Value));
         }
         arguments.Add(function);
-        return new MethodCallNode(null, helperName, arguments.ToArray());
+        return new ProcedureCallHelperNode(distance, width, arguments.ToArray());
     }
 
     /// <summary>

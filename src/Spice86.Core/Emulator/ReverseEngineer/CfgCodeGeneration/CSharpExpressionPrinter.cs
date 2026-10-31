@@ -10,6 +10,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Propagation;
 using Spice86.Shared.Emulator.Memory;
 
 using System.Globalization;
@@ -21,21 +22,22 @@ using System.Reflection;
 /// the local variable suffix of the instruction being printed.
 /// </summary>
 internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharpFragment> {
-    private const int AssignmentPrecedence = 1;
-    private const int LogicalOrPrecedence = 2;
-    private const int LogicalAndPrecedence = 3;
-    private const int BitwiseOrPrecedence = 4;
-    private const int BitwiseXorPrecedence = 5;
-    private const int BitwiseAndPrecedence = 6;
-    private const int EqualityPrecedence = 7;
-    private const int RelationalPrecedence = 8;
-    private const int ShiftPrecedence = 9;
-    private const int AdditivePrecedence = 10;
-    private const int MultiplicativePrecedence = 11;
+    internal const int AssignmentPrecedence = 1;
+    private const int ConditionalPrecedence = 2;
+    private const int LogicalOrPrecedence = 3;
+    private const int LogicalAndPrecedence = 4;
+    private const int BitwiseOrPrecedence = 5;
+    private const int BitwiseXorPrecedence = 6;
+    private const int BitwiseAndPrecedence = 7;
+    private const int EqualityPrecedence = 8;
+    private const int RelationalPrecedence = 9;
+    private const int ShiftPrecedence = 10;
+    private const int AdditivePrecedence = 11;
+    private const int MultiplicativePrecedence = 12;
 
     /// <summary>Binding strength of a prefix operator such as <c>!</c> or <c>-</c>.</summary>
-    internal const int UnaryPrecedence = 12;
-    private const int CastPrecedence = 12;
+    internal const int UnaryPrecedence = 13;
+    private const int CastPrecedence = 13;
 
     private static readonly Dictionary<Type, ClrTypeInfo> ClrTypesByType = new() {
         [typeof(byte)] = new ClrTypeInfo("byte", DataType.UINT8),
@@ -85,48 +87,16 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     // ----------------------------------------------------------------------------------------------------
 
     public CSharpFragment VisitMethodCallNode(MethodCallNode node) {
-        if (TryEmitIoPortHelperCall(node, out string ioPortCall)) {
-            return ioPortCall;
+        if (node is PortWriteCallNode port) {
+            return PortWrite(port);
         }
-
         string target = node.PropertyPath is null ? string.Empty : node.PropertyPath + ".";
         string arguments = string.Join(", ", FormatMethodArguments(node));
         return $"{target}{node.MethodName}({arguments})";
     }
 
-    /// <summary>
-    /// IN/OUT and INS/OUTS AST nodes are root calls named <c>In8</c>...<c>Out32</c>. They are emitted as
-    /// calls to the <see cref="CSharpOverrideHelper"/> methods of the same names, with the port narrowed to
-    /// <c>ushort</c> and the OUT value narrowed to the operand width.
-    /// </summary>
-    private bool TryEmitIoPortHelperCall(MethodCallNode node, out string result) {
-        if (node.PropertyPath is not null) {
-            result = string.Empty;
-            return false;
-        }
-
-        (bool isIoHelper, DataType? valueType) = node.MethodName switch {
-            "In8" or "In16" or "In32" => (true, null),
-            "Out8" => (true, DataType.UINT8),
-            "Out16" => (true, DataType.UINT16),
-            "Out32" => (true, DataType.UINT32),
-            _ => (false, null)
-        };
-        if (!isIoHelper) {
-            result = string.Empty;
-            return false;
-        }
-
-        string port = Cast(DataType.UINT16, Expr(node.Arguments[0]));
-        if (valueType is null) {
-            result = $"{node.MethodName}({port})";
-            return true;
-        }
-
-        string value = Cast(valueType, Expr(node.Arguments[1]));
-        result = $"{node.MethodName}({port}, {value})";
-        return true;
-    }
+    private static readonly
+        Dictionary<(Type Type, string Name, int ArgumentCount), ParameterInfo[]?> ParametersByCall = [];
 
     private IEnumerable<string> FormatMethodArguments(MethodCallNode node) {
         Type? targetType = ResolveKnownMethodTargetType(node.PropertyPath);
@@ -134,31 +104,46 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
             return node.Arguments.Select(argument => Expr(argument).Text);
         }
 
-        List<MethodInfo> candidates = targetType.GetMethods()
-            .Where(method => method.Name == node.MethodName && method.GetParameters().Length == node.Arguments.Count)
-            .ToList();
-        if (candidates.Count == 0) {
+        ParameterInfo[]? parameters;
+        lock (ParametersByCall) {
+            if (!ParametersByCall.TryGetValue((targetType, node.MethodName, node.Arguments.Count),
+                    out parameters)) {
+                List<MethodInfo> candidates = targetType.GetMethods()
+                    .Where(method => method.Name == node.MethodName
+                        && method.GetParameters().Length == node.Arguments.Count)
+                    .ToList();
+                if (candidates.Count > 1) {
+                    throw new NotSupportedException(
+                        $"{targetType.Name}.{node.MethodName} has {candidates.Count} overloads taking {node.Arguments.Count} arguments; the generator cannot pick parameter types for argument casts.");
+                }
+                parameters = candidates.Count == 1 ? candidates[0].GetParameters() : null;
+                ParametersByCall[(targetType, node.MethodName, node.Arguments.Count)] = parameters;
+            }
+        }
+        if (parameters is null) {
             return node.Arguments.Select(argument => Expr(argument).Text);
         }
-        if (candidates.Count > 1) {
-            throw new NotSupportedException(
-                $"{targetType.Name}.{node.MethodName} has {candidates.Count} overloads taking {node.Arguments.Count} arguments; the generator cannot pick parameter types for argument casts.");
-        }
 
-        ParameterInfo[] parameters = candidates[0].GetParameters();
-        return node.Arguments.Select((argument, index) => Argument(parameters[index].ParameterType, Expr(argument)));
+        return node.Arguments.Select((argument, index) => Argument(parameters[index].ParameterType, argument));
     }
 
     /// <summary>
     /// An argument for a parameter of <paramref name="parameterType"/>. A constant is written as a literal of the
-    /// parameter type, without a cast: C# converts a constant argument implicitly when its value fits.
+    /// parameter type, without a cast: C# converts a constant argument implicitly when its value fits. An
+    /// argument already converted to the signed type of the parameter's width is passed through: casting it
+    /// back to the parameter type is the identity.
     /// </summary>
-    private static string Argument(Type parameterType, CSharpFragment argument) {
+    private string Argument(Type parameterType, IVisitableAstNode argument) {
         DataType? parameterDataType = TryToDataType(parameterType);
-        if (argument.Constant is ConstantNode constant && parameterDataType is not null && parameterDataType != DataType.BOOL) {
+        if (parameterDataType is not null
+            && SameWidthSignRoundTripOperand(parameterDataType, argument) is ValueNode unwrapped) {
+            return Expr(unwrapped).Text;
+        }
+        CSharpFragment fragment = Expr(argument);
+        if (fragment.Constant is ConstantNode constant && parameterDataType is not null && parameterDataType != DataType.BOOL) {
             return ConstantLiteral(new ConstantNode(parameterDataType, constant.ConvertAsCSharpCast(parameterDataType))).Text;
         }
-        return Cast(parameterType, argument);
+        return Cast(parameterType, fragment);
     }
 
     private static Type? ResolveKnownMethodTargetType(string? propertyPath) => propertyPath switch {
@@ -170,12 +155,16 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     };
 
     public CSharpFragment VisitMethodCallValueNode(MethodCallValueNode node) {
-        MethodCallNode callNode = node.CallNode;
-        if (callNode.PropertyPath == nameof(State) && callNode.Arguments.Count == 0) {
-            return $"{callNode.PropertyPath}.{callNode.MethodName}";
+        if (node is PortReadCallNode port) {
+            return PortRead(port);
         }
+        return Atomic(Expr(node.CallNode), node.DataType);
+    }
 
-        return Atomic(Expr(callNode), node.DataType);
+    /// <summary>Prints an <c>InN((ushort)port)</c> read.</summary>
+    private CSharpFragment PortRead(PortReadCallNode node) {
+        string port = Cast(DataType.UINT16, Expr(node.CallNode.Arguments[0]));
+        return Atomic($"In{(int)node.Width}({port})", node.DataType);
     }
 
     public CSharpFragment VisitRegisterNode(RegisterNode node) =>
@@ -194,6 +183,15 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     public CSharpFragment VisitAbsolutePointerNode(AbsolutePointerNode node) =>
         Atomic($"{ToMemoryIndexer(node.DataType)}[{Cast(DataType.UINT32, Expr(node.AbsoluteAddress))}]", node.DataType);
 
+    public CSharpFragment VisitConditionalValueNode(ConditionalValueNode node) {
+        if (node.Condition is ConditionalValueNode) {
+            throw Unsupported(node);
+        }
+        string text = $"{Parenthesize(Expr(node.Condition), ConditionalPrecedence + 1)} ? "
+            + $"{Expr(node.WhenTrue)} : {Expr(node.WhenFalse)}";
+        return new CSharpFragment(text, node.DataType, ConditionalPrecedence);
+    }
+
     public CSharpFragment VisitConstantNode(ConstantNode node) => ConstantLiteral(node);
 
     public CSharpFragment VisitNearAddressNode(NearAddressNode node) => VisitConstantNode(node);
@@ -208,7 +206,7 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
 
         CSharpFragment leftFragment = Expr(node.Left);
         CSharpFragment rightFragment = Expr(node.Right);
-        if (TrySimplifyBinaryOperation(node.BinaryOperation, leftFragment, rightFragment) is CSharpFragment simplified) {
+        if (TrySimplifyBinaryOperation(node.BinaryOperation, node.DataType.BitWidth, leftFragment, rightFragment) is CSharpFragment simplified) {
             return simplified;
         }
 
@@ -238,18 +236,75 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         // right operand needs them when it binds equally or more loosely.
         string left = Parenthesize(leftFragment, precedence);
         string right = Parenthesize(rightFragment, precedence + 1);
+        if (node.BinaryOperation is BinaryOperation.RIGHT_SHIFT or BinaryOperation.DIVIDE
+                or BinaryOperation.MODULO or BinaryOperation.LESS_THAN or BinaryOperation.GREATER_THAN
+                or BinaryOperation.LESS_THAN_OR_EQUAL or BinaryOperation.GREATER_THAN_OR_EQUAL
+                or BinaryOperation.EQUAL or BinaryOperation.NOT_EQUAL) {
+            // These results depend on the bits above the operand width, which C# computes in int:
+            // a promoted operand is truncated back to its own type first.
+            left = TruncatedOperand(node.Left, leftFragment) ?? left;
+            right = TruncatedOperand(node.Right, rightFragment) ?? right;
+        }
+        if (node.BinaryOperation is BinaryOperation.LEFT_SHIFT or BinaryOperation.RIGHT_SHIFT
+            && rightFragment.Constant is ConstantNode shiftCount) {
+            right = ShiftCountText(shiftCount);
+        }
         // C# promotes byte/ushort/short/sbyte arithmetic to int, so the actual evaluated type is not the
         // node's semantic DataType; leave it unknown so a cast back to the operand width is never elided.
         DataType? resultType = node.DataType == DataType.BOOL ? DataType.BOOL : null;
         return new CSharpFragment($"{left} {op} {right}", resultType, precedence);
     }
 
-    private static CSharpFragment? TrySimplifyBinaryOperation(BinaryOperation operation, CSharpFragment left, CSharpFragment right) {
+    /// <summary>The operand text with a cast back to its own width, when the fragment lost its type to
+    /// C# int promotion, the operand is an 8- or 16-bit integer and its value can actually be outside
+    /// that width; otherwise <c>null</c>.</summary>
+    private static string? TruncatedOperand(ValueNode operand, CSharpFragment fragment) {
+        if (fragment.Type is null && operand.DataType.BitWidth is BitWidth.BYTE_8 or BitWidth.WORD_16
+            && MayExceedWidth(operand)) {
+            return Cast(operand.DataType, fragment);
+        }
+        return null;
+    }
+
+    /// <summary>Whether the int value a promoted expression computes can be outside its own
+    /// <see cref="ValueNode.DataType"/>: registers, memory reads, variables and constants that fit are
+    /// bounded; additive, multiplicative and shift-left growth and the sign of <c>~x</c>/<c>-x</c> are
+    /// not; a bitwise <c>&amp;</c> is bounded by either in-range side, <c>|</c>/<c>^</c> only when both
+    /// sides are; <c>&gt;&gt;</c>, <c>/</c> and <c>%</c> keep the left side's range.</summary>
+    private static bool MayExceedWidth(ValueNode node) => node switch {
+        UnaryOperationNode => true,
+        BinaryOperationNode binary => binary.BinaryOperation switch {
+            BinaryOperation.PLUS or BinaryOperation.MINUS or BinaryOperation.MULTIPLY
+                or BinaryOperation.LEFT_SHIFT => true,
+            BinaryOperation.BITWISE_OR or BinaryOperation.BITWISE_XOR =>
+                MayExceedWidth(binary.Left) || MayExceedWidth(binary.Right),
+            BinaryOperation.BITWISE_AND =>
+                MayExceedWidth(binary.Left) && MayExceedWidth(binary.Right),
+            BinaryOperation.RIGHT_SHIFT or BinaryOperation.DIVIDE or BinaryOperation.MODULO =>
+                MayExceedWidth(binary.Left),
+            _ => true
+        },
+        InstructionFieldNode field => MayExceedWidth(field.ResolvedNode),
+        ConstantNode constant => constant.Value > MaxOf(constant.DataType.BitWidth),
+        RegisterNode or SegmentRegisterNode or VariableReferenceNode
+            or SegmentedPointerNode or AbsolutePointerNode => false,
+        TypeConversionNode or ExplicitCastNode => false,
+        _ => true
+    };
+
+    private static ulong MaxOf(BitWidth width) => width switch {
+        BitWidth.BYTE_8 => byte.MaxValue,
+        BitWidth.WORD_16 => ushort.MaxValue,
+        BitWidth.DWORD_32 => uint.MaxValue,
+        _ => ulong.MaxValue
+    };
+
+    private static CSharpFragment? TrySimplifyBinaryOperation(BinaryOperation operation, BitWidth operationWidth, CSharpFragment left, CSharpFragment right) {
         if (operation is BinaryOperation.EQUAL or BinaryOperation.NOT_EQUAL) {
             return TrySimplifyBoolComparison(operation == BinaryOperation.EQUAL, left, right);
         }
         if (operation == BinaryOperation.PLUS && right.Constant is ConstantNode constant) {
-            return TrySimplifyConstantAddition(left, constant);
+            return TrySimplifyConstantAddition(left, constant, operationWidth);
         }
         if (operation == BinaryOperation.MINUS && left.Constant is ConstantNode zero
             && zero.DataType != DataType.BOOL && zero.Value == 0) {
@@ -278,20 +333,16 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         return new CSharpFragment($"!{Parenthesize(operand, UnaryPrecedence)}", DataType.BOOL, UnaryPrecedence);
     }
 
-    private static CSharpFragment? TrySimplifyConstantAddition(CSharpFragment left, ConstantNode constant) {
+    private static CSharpFragment? TrySimplifyConstantAddition(CSharpFragment left, ConstantNode constant, BitWidth operationWidth) {
         if (constant.Value == 0) {
             return left;
         }
-        if (!IsSubtractableNegativeConstant(constant)) {
+        if (!ConstantEvaluation.TrySubtractionMagnitude(constant, operationWidth, out ulong magnitudeValue)) {
             return null;
         }
-        ConstantNode magnitude = new(DataType.UnsignedFromBitWidth(constant.DataType.BitWidth), (ulong)(-constant.SignedValue));
+        ConstantNode magnitude = new(DataType.UnsignedFromBitWidth(constant.DataType.BitWidth),
+            magnitudeValue);
         return new CSharpFragment($"{Parenthesize(left, AdditivePrecedence)} - {ConstantLiteral(magnitude).Text}", null, AdditivePrecedence);
-    }
-
-    private static bool IsSubtractableNegativeConstant(ConstantNode constant) {
-        bool supportedType = constant.DataType == DataType.INT8 || constant.DataType == DataType.INT16 || constant.DataType == DataType.INT32;
-        return supportedType && constant.IsNegative && constant.SignedValue != int.MinValue;
     }
 
     public CSharpFragment VisitUnaryOperationNode(UnaryOperationNode node) {
@@ -317,6 +368,10 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         if (inner.Type == node.DataType || node.DataType == DataType.BOOL && inner.Type == DataType.BOOL) {
             // Converting to a type the value already has is a no-op; keep the inner fragment as-is.
             return inner;
+        }
+        if (SameWidthSignRoundTripOperand(node.DataType, node.Value) is ValueNode unwrapped) {
+            // Conversion to the signed type of the same width and back is the identity.
+            return Expr(unwrapped);
         }
         if (inner.Type == DataType.BOOL && node.DataType != DataType.BOOL) {
             return new CSharpFragment($"({inner.Text} ? 1 : 0)", null, CSharpFragment.AtomicPrecedence);
@@ -344,7 +399,9 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     }, DataType.BOOL);
 
     public CSharpFragment VisitInstructionFieldNode(InstructionFieldNode node) => Expr(node.ResolvedNode);
-    public CSharpFragment VisitVariableReferenceNode(VariableReferenceNode node) => LocalVariableName(node.VariableName);
+    public CSharpFragment VisitVariableReferenceNode(VariableReferenceNode node) =>
+        Atomic(node is MethodScopedVariableReferenceNode ? node.VariableName : LocalVariableName(node.VariableName),
+            node.DataType);
     public CSharpFragment VisitVariableDeclarationNode(VariableDeclarationNode node) =>
         $"{ToCSharpType(node.DataType)} {LocalVariableName(node.VariableName)} = {Cast(node.DataType, Expr(node.Initializer))}";
     public CSharpFragment VisitSegmentedAddressNode(SegmentedAddressNode node) =>
@@ -405,6 +462,10 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     }
 
     private static CSharpFragment Atomic(string text, DataType type) => new(text, type, CSharpFragment.AtomicPrecedence);
+
+    /// <summary>A shift count is a count, not a value of the operand's type: it always prints in decimal.</summary>
+    internal static string ShiftCountText(ConstantNode shiftCount) =>
+        shiftCount.Value.ToString(CultureInfo.InvariantCulture);
 
     /// <summary>
     /// Renders a constant as a C# literal: magnitudes 0-9 in decimal, larger ones in hex zero-padded to the
@@ -512,7 +573,21 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
 
     public CSharpFragment VisitSignatureFieldNode(SignatureFieldNode node) => new(node.FieldName);
 
+    private static ValueNode? SameWidthSignRoundTripOperand(DataType target, IVisitableAstNode value) =>
+        value switch {
+            TypeConversionNode { DataType: var middle, Value: var inner }
+                when middle != DataType.BOOL && target != DataType.BOOL
+                     && middle.BitWidth == target.BitWidth && inner.DataType == target => inner,
+            ExplicitCastNode { DataType: var middle, Value: ValueNode inner }
+                when middle != DataType.BOOL && target != DataType.BOOL
+                     && middle.BitWidth == target.BitWidth && inner.DataType == target => inner,
+            _ => null
+        };
+
     public CSharpFragment VisitExplicitCastNode(ExplicitCastNode node) {
+        if (SameWidthSignRoundTripOperand(node.DataType, node.Value) is ValueNode unwrapped) {
+            return Expr(unwrapped);
+        }
         CSharpFragment inner = Expr(node.Value);
         string text = Cast(node.DataType, inner);
         if (text == inner.Text) {
@@ -527,6 +602,8 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
 
     private static NotSupportedException NotAnExpression(IVisitableAstNode node) =>
         new($"{node.GetType().Name} is not an expression and cannot be printed by {nameof(CSharpExpressionPrinter)}.");
+
+    public CSharpFragment VisitTupleSwapNode(TupleSwapNode node) => throw NotAnExpression(node);
 
     public CSharpFragment VisitBlockNode(BlockNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitIfElseNode(IfElseNode node) => throw NotAnExpression(node);
@@ -565,6 +642,29 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     public CSharpFragment VisitSpeculativeGuardNode(SpeculativeGuardNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitInstructionBoundaryNode(InstructionBoundaryNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitDivisionNode(DivisionNode node) => throw NotAnExpression(node);
+
+    public CSharpFragment VisitAluOperationNode(AluOperationNode node) => node.Call.Accept(this);
+    public CSharpFragment VisitAluStatementNode(AluStatementNode node) => node.Call.Accept(this);
+
+    /// <summary>Prints an <c>OutN((ushort)port, value)</c> write.</summary>
+    private CSharpFragment PortWrite(PortWriteCallNode node) {
+        string port = Cast(DataType.UINT16, Expr(node.Arguments[0]));
+        string value = Cast(PortValueType(node.Width), Expr(node.Arguments[1]));
+        return new CSharpFragment($"Out{(int)node.Width}({port}, {value})");
+    }
+
+    private static DataType PortValueType(BitWidth width) => width switch {
+        BitWidth.BYTE_8 => DataType.UINT8,
+        BitWidth.WORD_16 => DataType.UINT16,
+        _ => DataType.UINT32
+    };
+    public CSharpFragment VisitOpaqueNode(OpaqueNode node) => node.Original.Accept(this);
+    public CSharpFragment VisitInstructionStartNode(InstructionStartNode node) => $"// {node.Comment}";
+    public CSharpFragment VisitInterruptReturnNode(InterruptReturnNode node) => throw NotAnExpression(node);
+    public CSharpFragment VisitSetInterruptShadowNode(SetInterruptShadowNode node) => throw NotAnExpression(node);
+    public CSharpFragment VisitPreTestLoopNode(PreTestLoopNode node) => throw NotAnExpression(node);
+    public CSharpFragment VisitLocalDeclarationNode(LocalDeclarationNode node) =>
+        $"{ToCSharpType(node.DataType)} {LocalVariableName(node.VariableName)}";
 
     private readonly record struct ClrTypeInfo(string Name, DataType? DataType);
 }

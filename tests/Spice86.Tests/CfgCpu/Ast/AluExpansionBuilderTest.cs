@@ -74,7 +74,7 @@ public class AluExpansionBuilderTest {
     public void ExpansionWritesTheFlagsOfTheAluFlagTable(string operation, BitWidth width) {
         // Arrange
         AluExpansion expansion = Expand(operation, width);
-        AluFlagTable.TryGetEffect(operation, width, null, out FlagEffect expected);
+        AluFlagTable.TryGetEffect(Enum.Parse<AluOperation>(operation), width, null, out FlagEffect expected);
 
         // Act
         FlagEffect actual = FlagEffectVisitor.Of(new BlockNode([.. expansion.Statements]));
@@ -95,7 +95,7 @@ public class AluExpansionBuilderTest {
         VariableReferenceNode result = new(DataType.UINT16, "result");
 
         // Act
-        AluExpansion expansion = AluExpansionBuilder.TryExpand(new MethodCallValueNode(DataType.UINT16, "Alu16", "Sub", ax, bx))
+        AluExpansion expansion = AluExpansionBuilder.TryExpand(new AluCallValueNode(DataType.UINT16, AluOperation.Sub, BitWidth.WORD_16, ax, bx))
             ?? throw new InvalidOperationException("expected AluExpansion for 16-bit Sub");
 
         // Assert
@@ -118,7 +118,7 @@ public class AluExpansionBuilderTest {
         RegisterNode cl = new(DataType.UINT8, (int)RegisterIndex.CxIndex);
 
         // Act
-        AluExpansion expansion = AluExpansionBuilder.TryExpand(new MethodCallValueNode(DataType.UINT8, "Alu8", "Inc", cl))
+        AluExpansion expansion = AluExpansionBuilder.TryExpand(new AluCallValueNode(DataType.UINT8, AluOperation.Inc, BitWidth.BYTE_8, cl))
             ?? throw new InvalidOperationException("expected AluExpansion for 8-bit Inc");
 
         // Assert
@@ -128,21 +128,20 @@ public class AluExpansionBuilderTest {
     }
 
     [Theory]
-    [InlineData("Alu16", "Adc", 1)]
-    [InlineData("Alu16", "Rol", 2)]
-    [InlineData("Alu16", "Shl", 2)]
-    [InlineData("Alu16", "Mul", 2)]
-    [InlineData("Alu16", "UpdateFlags", 1)]
-    [InlineData("Alu16", "Add", 1)]
-    [InlineData("Alu16", "Inc", 2)]
-    [InlineData("Stack", "Add", 2)]
-    public void OtherCallsAreNotExpanded(string propertyPath, string operation, int argumentCount) {
+    [InlineData(AluOperation.Adc, 1)]
+    [InlineData(AluOperation.Rol, 2)]
+    [InlineData(AluOperation.Shl, 2)]
+    [InlineData(AluOperation.Mul, 2)]
+    [InlineData(AluOperation.UpdateFlags, 1)]
+    [InlineData(AluOperation.Add, 1)]
+    [InlineData(AluOperation.Inc, 2)]
+    public void OtherCallsAreNotExpanded(AluOperation operation, int argumentCount) {
         // Arrange
         RegisterNode ax = new(DataType.UINT16, (int)RegisterIndex.AxIndex);
         IVisitableAstNode[] arguments = Enumerable.Repeat<IVisitableAstNode>(ax, argumentCount).ToArray();
 
         // Act
-        AluExpansion? expansion = AluExpansionBuilder.TryExpand(new MethodCallValueNode(DataType.UINT16, propertyPath, operation, arguments));
+        AluExpansion? expansion = AluExpansionBuilder.TryExpand(new AluCallValueNode(DataType.UINT16, operation, BitWidth.WORD_16, arguments));
 
         // Assert
         expansion.Should().BeNull();
@@ -154,7 +153,7 @@ public class AluExpansionBuilderTest {
         RegisterNode ax = new(DataType.UINT16, (int)RegisterIndex.AxIndex);
 
         // Act
-        AluExpansion? expansion = AluExpansionBuilder.TryExpand(new MethodCallValueNode(DataType.UINT8, "Alu16", "Add", ax, ax));
+        AluExpansion? expansion = AluExpansionBuilder.TryExpand(new AluCallValueNode(DataType.UINT8, AluOperation.Add, BitWidth.WORD_16, ax, ax));
 
         // Assert
         expansion.Should().BeNull();
@@ -210,7 +209,7 @@ public class AluExpansionBuilderTest {
         foreach (int count in new[] { 1, 9, 17 }) {
             // Arrange
             AluExpansion expansion = ExpandShift(operation, width, count);
-            AluFlagTable.TryGetEffect(operation, width, (ulong)count, out FlagEffect expected);
+            AluFlagTable.TryGetEffect(Enum.Parse<AluOperation>(operation), width, (ulong)count, out FlagEffect expected);
 
             // Act
             FlagEffect actual = FlagEffectVisitor.Of(new BlockNode([.. expansion.Statements]));
@@ -228,7 +227,7 @@ public class AluExpansionBuilderTest {
     public void ShiftByAMaskedZeroCountIsNotExpanded(int count) {
         // Arrange
         RegisterNode bx = new(DataType.UINT16, (int)RegisterIndex.BxIndex);
-        MethodCallValueNode call = new(DataType.UINT16, "Alu16", "Shl", bx, new ConstantNode(DataType.INT32, (ulong)count));
+        AluCallValueNode call = new(DataType.UINT16, AluOperation.Shl, BitWidth.WORD_16, bx, new ConstantNode(DataType.INT32, (ulong)count));
 
         // Act
         AluExpansion? expansion = AluExpansionBuilder.TryExpand(call);
@@ -247,7 +246,7 @@ public class AluExpansionBuilderTest {
         RegisterNode operand = new(type, (int)RegisterIndex.BxIndex);
         RegisterNode cl = new(DataType.UINT8, (int)RegisterIndex.CxIndex);
         ValueNode value = AluExpansionBuilder.TryExpandShiftValue(
-            new MethodCallValueNode(type, $"Alu{(int)width}", operation, operand, cl))
+            new AluCallValueNode(type, Enum.Parse<AluOperation>(operation), width, operand, cl))
             ?? throw new InvalidOperationException($"{operation}{(int)width} by CL was not expanded");
         RegisterNode destination = new(type, (int)RegisterIndex.AxIndex);
         BlockNode program = new(new BinaryOperationNode(type, destination, BinaryOperation.ASSIGN, value));
@@ -284,11 +283,11 @@ public class AluExpansionBuilderTest {
 
         // Act
         ValueNode? constant = AluExpansionBuilder.TryExpandShiftValue(
-            new MethodCallValueNode(DataType.UINT16, "Alu16", "Shl", bx, new ConstantNode(DataType.INT32, 1)));
+            new AluCallValueNode(DataType.UINT16, AluOperation.Shl, BitWidth.WORD_16, bx, new ConstantNode(DataType.INT32, 1)));
         ValueNode? rotate = AluExpansionBuilder.TryExpandShiftValue(
-            new MethodCallValueNode(DataType.UINT16, "Alu16", "Rol", bx, cl));
+            new AluCallValueNode(DataType.UINT16, AluOperation.Rol, BitWidth.WORD_16, bx, cl));
         ValueNode? addition = AluExpansionBuilder.TryExpandShiftValue(
-            new MethodCallValueNode(DataType.UINT16, "Alu16", "Add", ax, bx));
+            new AluCallValueNode(DataType.UINT16, AluOperation.Add, BitWidth.WORD_16, ax, bx));
 
         // Assert
         constant.Should().BeNull();
@@ -319,7 +318,7 @@ public class AluExpansionBuilderTest {
 
         // Act
         for (int count = 0; count <= 33; count++) {
-            MethodCallValueNode call = new(type, $"Alu{(int)width}", operation, operand,
+            AluCallValueNode call = new(type, Enum.Parse<AluOperation>(operation), width, operand,
                 new ConstantNode(DataType.INT32, (ulong)count));
             AluExpansion? expansion = AluExpansionBuilder.TryExpand(call);
             (expansion is not null).Should().Be(ShouldExpandRotate(operation, width, count),
@@ -355,11 +354,11 @@ public class AluExpansionBuilderTest {
             DataType type = DataType.UnsignedFromBitWidth(width);
             RegisterNode operand = new(type, (int)RegisterIndex.BxIndex);
             AluExpansion? expansion = AluExpansionBuilder.TryExpand(
-                new MethodCallValueNode(type, $"Alu{(int)width}", operation, operand, new ConstantNode(DataType.INT32, (ulong)count)));
+                new AluCallValueNode(type, Enum.Parse<AluOperation>(operation), width, operand, new ConstantNode(DataType.INT32, (ulong)count)));
             if (expansion is null) {
                 continue;
             }
-            AluFlagTable.TryGetEffect(operation, width, (ulong)count, out FlagEffect expected);
+            AluFlagTable.TryGetEffect(Enum.Parse<AluOperation>(operation), width, (ulong)count, out FlagEffect expected);
 
             // Act
             FlagEffect actual = FlagEffectVisitor.Of(new BlockNode([.. expansion.Statements]));
@@ -461,7 +460,7 @@ public class AluExpansionBuilderTest {
     public void MultiplyExpansionWritesTheFlagsOfTheAluFlagTable(string operation, BitWidth width) {
         // Arrange
         AluExpansion expansion = ExpandMultiply(operation, width);
-        AluFlagTable.TryGetEffect(operation, width, null, out FlagEffect expected);
+        AluFlagTable.TryGetEffect(Enum.Parse<AluOperation>(operation), width, null, out FlagEffect expected);
 
         // Act
         FlagEffect actual = FlagEffectVisitor.Of(new BlockNode([.. expansion.Statements]));
@@ -481,9 +480,9 @@ public class AluExpansionBuilderTest {
         DataType resultType = operation == "Mul"
             ? DataType.UnsignedFromBitWidth(doubleWidth)
             : DataType.SignedFromBitWidth(doubleWidth);
-        MethodCallValueNode call = operation == "Mul"
-            ? new(resultType, $"Alu{(int)width}", operation, left, right)
-            : new(resultType, $"Alu{(int)width}", operation, new TypeConversionNode(signed, left),
+        AluCallValueNode call = operation == "Mul"
+            ? new(resultType, AluOperation.Mul, width, left, right)
+            : new(resultType, AluOperation.Imul, width, new TypeConversionNode(signed, left),
                 new TypeConversionNode(signed, right));
         AluExpansion? expansion = AluExpansionBuilder.TryExpand(call);
         if (expansion is null) {
@@ -566,7 +565,7 @@ public class AluExpansionBuilderTest {
         DataType type = DataType.UnsignedFromBitWidth(width);
         RegisterNode operand = new(type, (int)RegisterIndex.BxIndex);
         AluExpansion? expansion = AluExpansionBuilder.TryExpand(
-            new MethodCallValueNode(type, $"Alu{(int)width}", operation, operand, new ConstantNode(DataType.INT32, (ulong)count)));
+            new AluCallValueNode(type, Enum.Parse<AluOperation>(operation), width, operand, new ConstantNode(DataType.INT32, (ulong)count)));
         if (expansion is null) {
             throw new InvalidOperationException($"{operation}{(int)width} was not expanded");
         }
@@ -644,7 +643,7 @@ public class AluExpansionBuilderTest {
             arguments.Add(right);
         }
         AluExpansion? expansion = AluExpansionBuilder.TryExpand(
-            new MethodCallValueNode(type, $"Alu{(int)width}", operation, arguments.ToArray()));
+            new AluCallValueNode(type, Enum.Parse<AluOperation>(operation), width, arguments.ToArray()));
         if (expansion is null) {
             throw new InvalidOperationException($"{operation}{(int)width} was not expanded");
         }

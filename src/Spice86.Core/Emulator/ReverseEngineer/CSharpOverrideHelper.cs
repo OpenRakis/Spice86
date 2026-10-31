@@ -557,6 +557,14 @@ public class CSharpOverrideHelper {
     }
 
     /// <summary>
+    /// Returns an <see cref="Action"/> that performs an IRETD instruction (32-bit interrupt return) when invoked.
+    /// </summary>
+    /// <returns>returns an <see cref="Action"/> that performs a 32-bit interrupt return when invoked.</returns>
+    public Action InterruptRet32() {
+        return () => ReturnOperationsHelper.InterruptRet32();
+    }
+
+    /// <summary>
     /// Returns an <see cref="Action"/> that will modify the IP register to the provided value.
     /// </summary>
     /// <param name="ip">The target value for the IP register.</param>

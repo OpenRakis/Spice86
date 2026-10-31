@@ -48,7 +48,7 @@ public class BoundParser : BaseInstructionParser {
             displayLowerPointer,
             displayUpperPointer);
 
-        MethodCallNode checkBound = new MethodCallNode(null, "CheckBound", indexNode, lowerPtr, upperPtr);
+        MethodCallNode checkBound = new BoundCheckCallNode(bitWidth, indexNode, lowerPtr, upperPtr);
         IVisitableAstNode execAst = _astBuilder.WithIpAdvancement(instr, checkBound);
         instr.AttachAsts(displayAst, execAst);
         return instr;

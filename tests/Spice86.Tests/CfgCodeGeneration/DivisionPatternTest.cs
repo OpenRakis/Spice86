@@ -112,23 +112,12 @@ public class DivisionPatternTest {
         DivisionPattern.TryMatch(node, InstructionAddress).Should().BeNull();
     }
 
-    [Fact]
-    public void NopBlockIsNotACandidate() {
-        IVisitableAstNode node = ParsedExecutionAst.Of(0x90);
-
-        DivisionPattern.TryMatch(node, InstructionAddress).Should().BeNull();
-    }
-
-    [Fact]
-    public void MulBlockIsNotACandidate() {
-        IVisitableAstNode node = ParsedExecutionAst.Of(0xF6, 0xE3);
-
-        DivisionPattern.TryMatch(node, InstructionAddress).Should().BeNull();
-    }
-
-    [Fact]
-    public void ImulBlockIsNotACandidate() {
-        IVisitableAstNode node = ParsedExecutionAst.Of(0xF6, 0xEB);
+    [Theory]
+    [InlineData(new byte[] { 0x90 })]
+    [InlineData(new byte[] { 0xF6, 0xE3 })]
+    [InlineData(new byte[] { 0xF6, 0xEB })]
+    public void NonDivisionBlockIsNotACandidate(byte[] bytes) {
+        IVisitableAstNode node = ParsedExecutionAst.Of(bytes);
 
         DivisionPattern.TryMatch(node, InstructionAddress).Should().BeNull();
     }
@@ -176,33 +165,33 @@ public class DivisionPatternTest {
     }
 
     [Fact]
-    public void UnknownAluPropertyIsMalformed() {
+    public void UntypedAluCallIsMalformed() {
         BlockNode division = DivisionBlock(0xF6, 0xF3);
         VariableDeclarationNode quotient = (VariableDeclarationNode)division.Statements[2];
         VariableDeclarationNode dividend = (VariableDeclarationNode)division.Statements[1];
         VariableDeclarationNode divisor = (VariableDeclarationNode)division.Statements[0];
-        MethodCallValueNode unknownProperty = new(quotient.DataType, "Alu64", "Div",
+        MethodCallValueNode untyped = new(quotient.DataType, "Alu8", "Div",
             dividend.Reference, divisor.Reference);
 
         NotSupportedException exception = AssertMalformed(
-            Changing(division, 2, new VariableDeclarationNode(quotient.DataType, "quotient", unknownProperty)));
+            Changing(division, 2, new VariableDeclarationNode(quotient.DataType, "quotient", untyped)));
 
-        exception.Message.Should().Contain("unknown ALU property path 'Alu64'");
+        exception.Message.Should().Contain("the quotient initializer is not an ALU method call");
     }
 
     [Fact]
-    public void UnknownAluMethodIsMalformed() {
+    public void NonDivisionAluOperationIsMalformed() {
         BlockNode division = DivisionBlock(0xF6, 0xF3);
         VariableDeclarationNode quotient = (VariableDeclarationNode)division.Statements[2];
         VariableDeclarationNode dividend = (VariableDeclarationNode)division.Statements[1];
         VariableDeclarationNode divisor = (VariableDeclarationNode)division.Statements[0];
-        MethodCallValueNode unknownMethod = new(quotient.DataType, "Alu8", "Mul",
+        AluCallValueNode wrongOperation = new(quotient.DataType, AluOperation.Mul, BitWidth.BYTE_8,
             dividend.Reference, divisor.Reference);
 
         NotSupportedException exception = AssertMalformed(
-            Changing(division, 2, new VariableDeclarationNode(quotient.DataType, "quotient", unknownMethod)));
+            Changing(division, 2, new VariableDeclarationNode(quotient.DataType, "quotient", wrongOperation)));
 
-        exception.Message.Should().Contain("unknown ALU method 'Mul'");
+        exception.Message.Should().Contain("the ALU operation is Mul instead of Div or Idiv");
     }
 
     [Fact]
@@ -210,7 +199,7 @@ public class DivisionPatternTest {
         BlockNode division = DivisionBlock(0xF6, 0xF3);
         VariableDeclarationNode quotient = (VariableDeclarationNode)division.Statements[2];
         VariableDeclarationNode dividend = (VariableDeclarationNode)division.Statements[1];
-        MethodCallValueNode singleArgument = new(quotient.DataType, "Alu8", "Div", dividend.Reference);
+        AluCallValueNode singleArgument = new(quotient.DataType, AluOperation.Div, BitWidth.BYTE_8, dividend.Reference);
 
         NotSupportedException exception = AssertMalformed(
             Changing(division, 2, new VariableDeclarationNode(quotient.DataType, "quotient", singleArgument)));
@@ -224,7 +213,7 @@ public class DivisionPatternTest {
         VariableDeclarationNode quotient = (VariableDeclarationNode)division.Statements[2];
         VariableDeclarationNode dividend = (VariableDeclarationNode)division.Statements[1];
         VariableDeclarationNode divisor = (VariableDeclarationNode)division.Statements[0];
-        MethodCallValueNode threeArguments = new(quotient.DataType, "Alu8", "Div",
+        AluCallValueNode threeArguments = new(quotient.DataType, AluOperation.Div, BitWidth.BYTE_8,
             dividend.Reference, dividend.Reference, divisor.Reference);
 
         NotSupportedException exception = AssertMalformed(
@@ -239,7 +228,7 @@ public class DivisionPatternTest {
         VariableDeclarationNode quotient = (VariableDeclarationNode)division.Statements[2];
         VariableDeclarationNode dividend = (VariableDeclarationNode)division.Statements[1];
         VariableDeclarationNode divisor = (VariableDeclarationNode)division.Statements[0];
-        MethodCallValueNode swapped = new(quotient.DataType, "Alu8", "Div",
+        AluCallValueNode swapped = new(quotient.DataType, AluOperation.Div, BitWidth.BYTE_8,
             divisor.Reference, dividend.Reference);
 
         NotSupportedException exception = AssertMalformed(
@@ -254,7 +243,7 @@ public class DivisionPatternTest {
         VariableDeclarationNode quotient = (VariableDeclarationNode)division.Statements[2];
         VariableDeclarationNode divisor = (VariableDeclarationNode)division.Statements[0];
         VariableReferenceNode unrelated = new(DataType.UINT16, "cx");
-        MethodCallValueNode withUnrelated = new(quotient.DataType, "Alu8", "Div",
+        AluCallValueNode withUnrelated = new(quotient.DataType, AluOperation.Div, BitWidth.BYTE_8,
             unrelated, divisor.Reference);
 
         NotSupportedException exception = AssertMalformed(
@@ -263,26 +252,22 @@ public class DivisionPatternTest {
         exception.Message.Should().Contain("first ALU argument is not the dividend declaration reference");
     }
 
-    [Fact]
-    public void WrongDivisorDeclarationTypeIsMalformed() {
+    public static TheoryData<int, DataType, string, string> WrongDeclarationTypes => new() {
+        { 0, DataType.INT16, "divisor", "divisor declaration type is INT16 instead of UINT8" },
+        { 1, DataType.UINT32, "dividend", "dividend declaration type is UINT32 instead of UINT16" }
+    };
+
+    [Theory]
+    [MemberData(nameof(WrongDeclarationTypes))]
+    public void WrongDeclarationTypeIsMalformed(int statementIndex, DataType wrongType, string name,
+        string expectedMessage) {
         BlockNode division = DivisionBlock(0xF6, 0xF3);
-        VariableDeclarationNode divisor = (VariableDeclarationNode)division.Statements[0];
+        VariableDeclarationNode declaration = (VariableDeclarationNode)division.Statements[statementIndex];
 
-        NotSupportedException exception = AssertMalformed(Changing(division, 0,
-            new VariableDeclarationNode(DataType.INT16, "divisor", divisor.Initializer)));
+        NotSupportedException exception = AssertMalformed(Changing(division, statementIndex,
+            new VariableDeclarationNode(wrongType, name, declaration.Initializer)));
 
-        exception.Message.Should().Contain("divisor declaration type is INT16 instead of UINT8");
-    }
-
-    [Fact]
-    public void WrongDividendDeclarationTypeIsMalformed() {
-        BlockNode division = DivisionBlock(0xF6, 0xF3);
-        VariableDeclarationNode dividend = (VariableDeclarationNode)division.Statements[1];
-
-        NotSupportedException exception = AssertMalformed(Changing(division, 1,
-            new VariableDeclarationNode(DataType.UINT32, "dividend", dividend.Initializer)));
-
-        exception.Message.Should().Contain("dividend declaration type is UINT32 instead of UINT16");
+        exception.Message.Should().Contain(expectedMessage);
     }
 
     [Fact]
@@ -301,7 +286,7 @@ public class DivisionPatternTest {
         VariableDeclarationNode quotient = (VariableDeclarationNode)division.Statements[2];
         VariableDeclarationNode dividend = (VariableDeclarationNode)division.Statements[1];
         VariableDeclarationNode divisor = (VariableDeclarationNode)division.Statements[0];
-        MethodCallValueNode wrongResultType = new(DataType.UINT16, "Alu8", "Div",
+        AluCallValueNode wrongResultType = new(DataType.UINT16, AluOperation.Div, BitWidth.BYTE_8,
             dividend.Reference, divisor.Reference);
 
         NotSupportedException exception = AssertMalformed(
@@ -482,7 +467,7 @@ public class DivisionPatternTest {
             Transfers = []
         };
 
-        GeneratedCSharpProgram generatedProgram = new CfgCSharpGenerator().Generate(program);
+        GeneratedCSharpProgram generatedProgram = new CfgCSharpGenerator(collectCensuses: true, verify: true).Generate(program);
         GeneratedOverrideCompiler compiler = new();
         GeneratedCompilation compilation = compiler.Compile(generatedProgram.SourceText);
         using CompiledGeneratedOverride compiledOverride = compiler.CompileSupplier(compilation);
@@ -537,7 +522,6 @@ public class DivisionPatternTest {
 
     private static DivisionPattern Match(BlockNode block) {
         DivisionPattern? result = DivisionPattern.TryMatch(block, InstructionAddress);
-        result.Should().NotBeNull("a parsed division instruction is a division candidate");
         if (result is null) {
             throw new InvalidOperationException("DivisionPattern.TryMatch returned null for a parsed division.");
         }

@@ -30,10 +30,10 @@ public class Grp3Parser : BaseGrpOperationParser {
             1 => ParseTest(context, modRmContext, bitWidth, dataType),
             2 => ParseNot(context, modRmContext, bitWidth, dataType),
             3 => ParseNeg(context, modRmContext, bitWidth, dataType),
-            4 => ParseMulImul(context, modRmContext, bitWidth, dataType, "Mul", InstructionOperation.MUL, false),
-            5 => ParseMulImul(context, modRmContext, bitWidth, dataType, "Imul", InstructionOperation.IMUL, true),
-            6 => ParseDiv(context, modRmContext, bitWidth, dataType, "Div", InstructionOperation.DIV, false),
-            7 => ParseDiv(context, modRmContext, bitWidth, dataType, "Idiv", InstructionOperation.IDIV, true),
+            4 => ParseMulImul(context, modRmContext, bitWidth, dataType, AluOperation.Mul, InstructionOperation.MUL, false),
+            5 => ParseMulImul(context, modRmContext, bitWidth, dataType, AluOperation.Imul, InstructionOperation.IMUL, true),
+            6 => ParseDiv(context, modRmContext, bitWidth, dataType, AluOperation.Div, InstructionOperation.DIV, false),
+            7 => ParseDiv(context, modRmContext, bitWidth, dataType, AluOperation.Idiv, InstructionOperation.IDIV, true),
             _ => throw new InvalidGroupIndexException(_state, groupIndex)
         };
     }
@@ -44,7 +44,7 @@ public class Grp3Parser : BaseGrpOperationParser {
         RegisterModRmFields(instr, modRmContext);
         ValueNode immNode = ReadUnsignedImmediate(instr, bitWidth);
         ValueNode rmNode = _astBuilder.ModRm.RmToNode(dataType, modRmContext);
-        MethodCallValueNode andCall = _astBuilder.AluCall(dataType, bitWidth, "And", rmNode, immNode);
+        MethodCallValueNode andCall = _astBuilder.AluCall(dataType, bitWidth, AluOperation.And, rmNode, immNode);
         InstructionNode displayAst = new InstructionNode(InstructionOperation.TEST, rmNode, immNode);
         IVisitableAstNode execAst = _astBuilder.WithIpAdvancement(instr, andCall);
         instr.AttachAsts(displayAst, execAst);
@@ -70,7 +70,7 @@ public class Grp3Parser : BaseGrpOperationParser {
         RegisterModRmFields(instr, modRmContext);
         ValueNode rmNode = _astBuilder.ModRm.RmToNode(dataType, modRmContext);
         ValueNode zeroNode = _astBuilder.Constant.ToNode(dataType, 0UL);
-        MethodCallValueNode subCall = _astBuilder.AluCall(dataType, bitWidth, "Sub", zeroNode, rmNode);
+        MethodCallValueNode subCall = _astBuilder.AluCall(dataType, bitWidth, AluOperation.Sub, zeroNode, rmNode);
         BinaryOperationNode assignment = _astBuilder.Assign(dataType, rmNode, subCall);
         BinaryOperationNode notEqualsZero = new BinaryOperationNode(DataType.BOOL,
             rmNode, BinaryOperation.NOT_EQUAL, zeroNode);
@@ -83,7 +83,7 @@ public class Grp3Parser : BaseGrpOperationParser {
     }
 
     private CfgInstruction ParseMulImul(ParsingContext context, ModRmContext modRmContext,
-        BitWidth bitWidth, DataType dataType, string operation, InstructionOperation displayOp, bool isSigned) {
+        BitWidth bitWidth, DataType dataType, AluOperation operation, InstructionOperation displayOp, bool isSigned) {
         DataType unsignedType = _astBuilder.UType(bitWidth);
         DataType signedType = isSigned ? _astBuilder.SType(bitWidth) : _astBuilder.UType(bitWidth);
         DataType wideType = isSigned ? _astBuilder.SType(bitWidth.Double()) : _astBuilder.UType(bitWidth.Double());
@@ -105,7 +105,7 @@ public class Grp3Parser : BaseGrpOperationParser {
     }
 
     private CfgInstruction ParseDiv(ParsingContext context, ModRmContext modRmContext,
-        BitWidth bitWidth, DataType dataType, string operation, InstructionOperation displayOp, bool isSigned) {
+        BitWidth bitWidth, DataType dataType, AluOperation operation, InstructionOperation displayOp, bool isSigned) {
         DataType unsignedType = _astBuilder.UType(bitWidth);
         DataType signedType = isSigned ? _astBuilder.SType(bitWidth) : _astBuilder.UType(bitWidth);
         DataType wideSignedType = isSigned ? _astBuilder.SType(bitWidth.Double()) : _astBuilder.UType(bitWidth.Double());

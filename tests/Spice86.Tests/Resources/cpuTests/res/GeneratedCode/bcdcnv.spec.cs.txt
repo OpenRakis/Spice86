@@ -35,17 +35,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0006 mov SP,0x0090
         SP = 0x0090;
         // F000:0009 mov AX,0x000A
-        AX = 0x000A;
         // F000:000C aaa
         bool finalAuxiliaryFlag_000C = false;
         bool finalCarryFlag_000C = false;
-        if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AX = (ushort)(AX + 0x0106);
-            finalAuxiliaryFlag_000C = true;
-            finalCarryFlag_000C = true;
-        }
+        AX = 0x0110;
+        finalAuxiliaryFlag_000C = true;
+        finalCarryFlag_000C = true;
         Alu8.UpdateFlags(AL);
-        AL = (byte)(AL & 0x0F);
+        AL &= 0x0F;
         AuxiliaryFlag = finalAuxiliaryFlag_000C;
         CarryFlag = finalCarryFlag_000C;
         OverflowFlag = false;
@@ -58,13 +55,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0014 aaa
         bool finalAuxiliaryFlag_0014 = false;
         bool finalCarryFlag_0014 = false;
-        if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AX = (ushort)(AX + 0x0106);
+        if (AuxiliaryFlag) {
+            AX = 0x00FF;
             finalAuxiliaryFlag_0014 = true;
             finalCarryFlag_0014 = true;
         }
         Alu8.UpdateFlags(AL);
-        AL = (byte)(AL & 0x0F);
+        AL &= 0x0F;
         AuxiliaryFlag = finalAuxiliaryFlag_0014;
         CarryFlag = finalCarryFlag_0014;
         OverflowFlag = false;
@@ -82,13 +79,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:001E aaa
         bool finalAuxiliaryFlag_001E = false;
         bool finalCarryFlag_001E = false;
-        if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AX = (ushort)(AX + 0x0106);
+        if (AuxiliaryFlag) {
+            AX = 0x00FF;
             finalAuxiliaryFlag_001E = true;
             finalCarryFlag_001E = true;
         }
         Alu8.UpdateFlags(AL);
-        AL = (byte)(AL & 0x0F);
+        AL &= 0x0F;
         AuxiliaryFlag = finalAuxiliaryFlag_001E;
         CarryFlag = finalCarryFlag_001E;
         OverflowFlag = false;
@@ -101,13 +98,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0026 aaa
         bool finalAuxiliaryFlag_0026 = false;
         bool finalCarryFlag_0026 = false;
-        if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AX = (ushort)(AX + 0x0106);
+        if (AuxiliaryFlag) {
+            AX = 0x5E56;
             finalAuxiliaryFlag_0026 = true;
             finalCarryFlag_0026 = true;
         }
         Alu8.UpdateFlags(AL);
-        AL = (byte)(AL & 0x0F);
+        AL &= 0x0F;
         AuxiliaryFlag = finalAuxiliaryFlag_0026;
         CarryFlag = finalCarryFlag_0026;
         OverflowFlag = false;
@@ -120,13 +117,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:002E aaa
         bool finalAuxiliaryFlag_002E = false;
         bool finalCarryFlag_002E = false;
-        if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AX = (ushort)(AX + 0x0106);
+        if (AuxiliaryFlag) {
+            AX = 0x482C;
             finalAuxiliaryFlag_002E = true;
             finalCarryFlag_002E = true;
         }
         Alu8.UpdateFlags(AL);
-        AL = (byte)(AL & 0x0F);
+        AL &= 0x0F;
         AuxiliaryFlag = finalAuxiliaryFlag_002E;
         CarryFlag = finalCarryFlag_002E;
         OverflowFlag = false;
@@ -135,18 +132,15 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0032 pushf
         Stack.Push16(FlagRegister16);
         // F000:0033 mov AX,0x000A
-        AX = 0x000A;
         // F000:0036 aas
         bool finalAuxiliaryFlag_0036 = false;
         bool finalCarryFlag_0036 = false;
-        if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AX = (ushort)(AX - 6);
-            AH--;
-            finalAuxiliaryFlag_0036 = true;
-            finalCarryFlag_0036 = true;
-        }
+        AX = 4;
+        AH = 0xFF;
+        finalAuxiliaryFlag_0036 = true;
+        finalCarryFlag_0036 = true;
         Alu8.UpdateFlags(AL);
-        AL = (byte)(AL & 0x0F);
+        AL &= 0x0F;
         AuxiliaryFlag = finalAuxiliaryFlag_0036;
         CarryFlag = finalCarryFlag_0036;
         OverflowFlag = false;
@@ -159,14 +153,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:003E aas
         bool finalAuxiliaryFlag_003E = false;
         bool finalCarryFlag_003E = false;
-        if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AX = (ushort)(AX - 6);
-            AH--;
+        if (AuxiliaryFlag) {
+            AX = 0xFFF3;
+            AH = 0xFE;
             finalAuxiliaryFlag_003E = true;
             finalCarryFlag_003E = true;
         }
         Alu8.UpdateFlags(AL);
-        AL = (byte)(AL & 0x0F);
+        AL &= 0x0F;
         AuxiliaryFlag = finalAuxiliaryFlag_003E;
         CarryFlag = finalCarryFlag_003E;
         OverflowFlag = false;
@@ -184,14 +178,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0048 aas
         bool finalAuxiliaryFlag_0048 = false;
         bool finalCarryFlag_0048 = false;
-        if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AX = (ushort)(AX - 6);
-            AH--;
+        if (AuxiliaryFlag) {
+            AX = 0xFFF3;
+            AH = 0xFE;
             finalAuxiliaryFlag_0048 = true;
             finalCarryFlag_0048 = true;
         }
         Alu8.UpdateFlags(AL);
-        AL = (byte)(AL & 0x0F);
+        AL &= 0x0F;
         AuxiliaryFlag = finalAuxiliaryFlag_0048;
         CarryFlag = finalCarryFlag_0048;
         OverflowFlag = false;
@@ -204,14 +198,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0050 aas
         bool finalAuxiliaryFlag_0050 = false;
         bool finalCarryFlag_0050 = false;
-        if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AX = (ushort)(AX - 6);
-            AH--;
+        if (AuxiliaryFlag) {
+            AX = 0xDCBA;
+            AH = 0xDB;
             finalAuxiliaryFlag_0050 = true;
             finalCarryFlag_0050 = true;
         }
         Alu8.UpdateFlags(AL);
-        AL = (byte)(AL & 0x0F);
+        AL &= 0x0F;
         AuxiliaryFlag = finalAuxiliaryFlag_0050;
         CarryFlag = finalCarryFlag_0050;
         OverflowFlag = false;
@@ -220,18 +214,15 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0054 pushf
         Stack.Push16(FlagRegister16);
         // F000:0055 mov AX,0x5FFB
-        AX = 0x5FFB;
         // F000:0058 aas
         bool finalAuxiliaryFlag_0058 = false;
         bool finalCarryFlag_0058 = false;
-        if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AX = (ushort)(AX - 6);
-            AH--;
-            finalAuxiliaryFlag_0058 = true;
-            finalCarryFlag_0058 = true;
-        }
+        AX = 0x5FF5;
+        AH = 0x5E;
+        finalAuxiliaryFlag_0058 = true;
+        finalCarryFlag_0058 = true;
         Alu8.UpdateFlags(AL);
-        AL = (byte)(AL & 0x0F);
+        AL &= 0x0F;
         AuxiliaryFlag = finalAuxiliaryFlag_0058;
         CarryFlag = finalCarryFlag_0058;
         OverflowFlag = false;
@@ -246,12 +237,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool initialCf_0060 = CarryFlag;
         bool finalAuxiliaryFlag_0060 = false;
         bool finalCarryFlag_0060 = false;
-        if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AL = (byte)(AL + 6);
-            finalAuxiliaryFlag_0060 = true;
-        }
+        AL = 0xB2;
+        finalAuxiliaryFlag_0060 = true;
         if (initialAl_0060 > 0x99 || initialCf_0060) {
-            AL = (byte)(AL + 0x60);
+            AL += 0x60;
             finalCarryFlag_0060 = true;
         }
         else {
@@ -272,12 +261,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool initialCf_0068 = CarryFlag;
         bool finalAuxiliaryFlag_0068 = false;
         bool finalCarryFlag_0068 = false;
-        if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AL = (byte)(AL + 6);
+        if (AuxiliaryFlag) {
+            AL = 0xFF;
             finalAuxiliaryFlag_0068 = true;
         }
         if (initialAl_0068 > 0x99 || initialCf_0068) {
-            AL = (byte)(AL + 0x60);
+            AL += 0x60;
             finalCarryFlag_0068 = true;
         }
         else {
@@ -303,12 +292,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool initialCf_0072 = CarryFlag;
         bool finalAuxiliaryFlag_0072 = false;
         bool finalCarryFlag_0072 = false;
-        if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AL = (byte)(AL + 6);
+        if (AuxiliaryFlag) {
+            AL = 0xFE;
             finalAuxiliaryFlag_0072 = true;
         }
         if (initialAl_0072 > 0x99 || initialCf_0072) {
-            AL = (byte)(AL + 0x60);
+            AL += 0x60;
             finalCarryFlag_0072 = true;
         }
         else {
@@ -334,12 +323,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool initialCf_007C = CarryFlag;
         bool finalAuxiliaryFlag_007C = false;
         bool finalCarryFlag_007C = false;
-        if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AL = (byte)(AL + 6);
-            finalAuxiliaryFlag_007C = true;
-        }
+        AL = 0x91;
+        finalAuxiliaryFlag_007C = true;
         if (initialAl_007C > 0x99 || initialCf_007C) {
-            AL = (byte)(AL + 0x60);
+            AL += 0x60;
             finalCarryFlag_007C = true;
         }
         else {
@@ -365,12 +352,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool initialCf_0086 = CarryFlag;
         bool finalAuxiliaryFlag_0086 = false;
         bool finalCarryFlag_0086 = false;
-        if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AL = (byte)(AL + 6);
+        if (AuxiliaryFlag) {
+            AL = 0x88;
             finalAuxiliaryFlag_0086 = true;
         }
         if (initialAl_0086 > 0x99 || initialCf_0086) {
-            AL = (byte)(AL + 0x60);
+            AL += 0x60;
             finalCarryFlag_0086 = true;
         }
         else {
@@ -391,12 +378,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool initialCf_008E = CarryFlag;
         bool finalAuxiliaryFlag_008E = false;
         bool finalCarryFlag_008E = false;
-        if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AL = (byte)(AL + 6);
-            finalAuxiliaryFlag_008E = true;
-        }
+        AL = 0x42;
+        finalAuxiliaryFlag_008E = true;
         if (initialAl_008E > 0x99 || initialCf_008E) {
-            AL = (byte)(AL + 0x60);
+            AL += 0x60;
             finalCarryFlag_008E = true;
         }
         else {
@@ -417,12 +402,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool initialCf_0096 = CarryFlag;
         bool finalAuxiliaryFlag_0096 = false;
         bool finalCarryFlag_0096 = false;
-        if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AL = (byte)(AL + 6);
+        if (AuxiliaryFlag) {
+            AL = 6;
             finalAuxiliaryFlag_0096 = true;
         }
         if (initialAl_0096 > 0x99 || initialCf_0096) {
-            AL = (byte)(AL + 0x60);
+            AL += 0x60;
             finalCarryFlag_0096 = true;
         }
         else {
@@ -443,13 +428,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool initialCf_009E = CarryFlag;
         bool finalAuxiliaryFlag_009E = false;
         bool finalCarryFlag_009E = false;
-        if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AL = (byte)(AL - 6);
-            finalCarryFlag_009E = initialAl_009E < 6 || initialCf_009E;
-            finalAuxiliaryFlag_009E = true;
-        }
+        AL = 0xA6;
+        finalCarryFlag_009E = initialAl_009E < 6 || initialCf_009E;
+        finalAuxiliaryFlag_009E = true;
         if (initialAl_009E > 0x99 || initialCf_009E) {
-            AL = (byte)(AL - 0x60);
+            AL -= 0x60;
             finalCarryFlag_009E = true;
         }
         Alu8.UpdateFlags(AL);
@@ -467,13 +450,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool initialCf_00A6 = CarryFlag;
         bool finalAuxiliaryFlag_00A6 = false;
         bool finalCarryFlag_00A6 = false;
-        if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AL = (byte)(AL - 6);
+        if (AuxiliaryFlag) {
+            AL = 0xF3;
             finalCarryFlag_00A6 = initialAl_00A6 < 6 || initialCf_00A6;
             finalAuxiliaryFlag_00A6 = true;
         }
         if (initialAl_00A6 > 0x99 || initialCf_00A6) {
-            AL = (byte)(AL - 0x60);
+            AL -= 0x60;
             finalCarryFlag_00A6 = true;
         }
         Alu8.UpdateFlags(AL);
@@ -496,13 +479,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool initialCf_00B0 = CarryFlag;
         bool finalAuxiliaryFlag_00B0 = false;
         bool finalCarryFlag_00B0 = false;
-        if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AL = (byte)(AL - 6);
+        if (AuxiliaryFlag) {
+            AL = 0xF2;
             finalCarryFlag_00B0 = initialAl_00B0 < 6 || initialCf_00B0;
             finalAuxiliaryFlag_00B0 = true;
         }
         if (initialAl_00B0 > 0x99 || initialCf_00B0) {
-            AL = (byte)(AL - 0x60);
+            AL -= 0x60;
             finalCarryFlag_00B0 = true;
         }
         Alu8.UpdateFlags(AL);
@@ -525,13 +508,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool initialCf_00BA = CarryFlag;
         bool finalAuxiliaryFlag_00BA = false;
         bool finalCarryFlag_00BA = false;
-        if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AL = (byte)(AL - 6);
-            finalCarryFlag_00BA = initialAl_00BA < 6 || initialCf_00BA;
-            finalAuxiliaryFlag_00BA = true;
-        }
+        AL = 0x85;
+        finalCarryFlag_00BA = initialAl_00BA < 6 || initialCf_00BA;
+        finalAuxiliaryFlag_00BA = true;
         if (initialAl_00BA > 0x99 || initialCf_00BA) {
-            AL = (byte)(AL - 0x60);
+            AL -= 0x60;
             finalCarryFlag_00BA = true;
         }
         Alu8.UpdateFlags(AL);
@@ -554,13 +535,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool initialCf_00C4 = CarryFlag;
         bool finalAuxiliaryFlag_00C4 = false;
         bool finalCarryFlag_00C4 = false;
-        if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AL = (byte)(AL - 6);
+        if (AuxiliaryFlag) {
+            AL = 0x7C;
             finalCarryFlag_00C4 = initialAl_00C4 < 6 || initialCf_00C4;
             finalAuxiliaryFlag_00C4 = true;
         }
         if (initialAl_00C4 > 0x99 || initialCf_00C4) {
-            AL = (byte)(AL - 0x60);
+            AL -= 0x60;
             finalCarryFlag_00C4 = true;
         }
         Alu8.UpdateFlags(AL);
@@ -578,13 +559,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool initialCf_00CC = CarryFlag;
         bool finalAuxiliaryFlag_00CC = false;
         bool finalCarryFlag_00CC = false;
-        if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AL = (byte)(AL - 6);
-            finalCarryFlag_00CC = initialAl_00CC < 6 || initialCf_00CC;
-            finalAuxiliaryFlag_00CC = true;
-        }
+        AL = 0x94;
+        finalCarryFlag_00CC = initialAl_00CC < 6 || initialCf_00CC;
+        finalAuxiliaryFlag_00CC = true;
         if (initialAl_00CC > 0x99 || initialCf_00CC) {
-            AL = (byte)(AL - 0x60);
+            AL -= 0x60;
             finalCarryFlag_00CC = true;
         }
         Alu8.UpdateFlags(AL);
@@ -602,13 +581,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         bool initialCf_00D4 = CarryFlag;
         bool finalAuxiliaryFlag_00D4 = false;
         bool finalCarryFlag_00D4 = false;
-        if ((AL & 0x0F) > 9 || AuxiliaryFlag) {
-            AL = (byte)(AL - 6);
+        if (AuxiliaryFlag) {
+            AL = 0xF0;
             finalCarryFlag_00D4 = initialAl_00D4 < 6 || initialCf_00D4;
             finalAuxiliaryFlag_00D4 = true;
         }
         if (initialAl_00D4 > 0x99 || initialCf_00D4) {
-            AL = (byte)(AL - 0x60);
+            AL -= 0x60;
             finalCarryFlag_00D4 = true;
         }
         Alu8.UpdateFlags(AL);
@@ -620,63 +599,53 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00D8 pushf
         Stack.Push16(FlagRegister16);
         // F000:00D9 mov AX,0xFF7F
-        AX = 0xFF7F;
         // F000:00DC cbw
-        AX = (ushort)(short)(sbyte)AL;
         // F000:00DD mov word ptr DS:[0x0030],AX
-        UInt16[DS, 0x0030] = AX;
+        UInt16[DS, 0x0030] = 0x007F;
         // F000:00E0 mov word ptr DS:[0x0032],DX
         UInt16[DS, 0x0032] = DX;
         // F000:00E4 pushf
         Stack.Push16(FlagRegister16);
         // F000:00E5 mov AX,0x0080
-        AX = 0x0080;
         // F000:00E8 cbw
-        AX = (ushort)(short)(sbyte)AL;
         // F000:00E9 mov word ptr DS:[0x0034],AX
-        UInt16[DS, 0x0034] = AX;
+        UInt16[DS, 0x0034] = 0xFF80;
         // F000:00EC mov word ptr DS:[0x0036],DX
         UInt16[DS, 0x0036] = DX;
         // F000:00F0 pushf
         Stack.Push16(FlagRegister16);
         // F000:00F1 mov AX,0xF1ED
-        AX = 0xF1ED;
         // F000:00F4 cbw
-        AX = (ushort)(short)(sbyte)AL;
         // F000:00F5 mov word ptr DS:[0x0038],AX
-        UInt16[DS, 0x0038] = AX;
+        UInt16[DS, 0x0038] = 0xFFED;
         // F000:00F8 mov word ptr DS:[0x003A],DX
         UInt16[DS, 0x003A] = DX;
         // F000:00FC pushf
         Stack.Push16(FlagRegister16);
         // F000:00FD mov AX,0x8000
-        AX = 0x8000;
         // F000:0100 cwd
-        DX = (ushort)((short)AX >> 0x0000000F);
         // F000:0101 mov word ptr DS:[0x003C],AX
-        UInt16[DS, 0x003C] = AX;
+        UInt16[DS, 0x003C] = 0x8000;
         // F000:0104 mov word ptr DS:[0x003E],DX
-        UInt16[DS, 0x003E] = DX;
+        UInt16[DS, 0x003E] = 0xFFFF;
         // F000:0108 pushf
         Stack.Push16(FlagRegister16);
         // F000:0109 mov AX,0x7FFF
-        AX = 0x7FFF;
         // F000:010C cwd
-        DX = (ushort)((short)AX >> 0x0000000F);
         // F000:010D mov word ptr DS:[0x0040],AX
-        UInt16[DS, 0x0040] = AX;
+        UInt16[DS, 0x0040] = 0x7FFF;
         // F000:0110 mov word ptr DS:[0x0042],DX
-        UInt16[DS, 0x0042] = DX;
+        UInt16[DS, 0x0042] = 0;
         // F000:0114 pushf
         Stack.Push16(FlagRegister16);
         // F000:0115 mov AX,0x43F1
         AX = 0x43F1;
         // F000:0118 cwd
-        DX = (ushort)((short)AX >> 0x0000000F);
+        DX = 0;
         // F000:0119 mov word ptr DS:[0x0044],AX
-        UInt16[DS, 0x0044] = AX;
+        UInt16[DS, 0x0044] = 0x43F1;
         // F000:011C mov word ptr DS:[0x0046],DX
-        UInt16[DS, 0x0046] = DX;
+        UInt16[DS, 0x0046] = 0;
         // F000:0120 pushf
         Stack.Push16(FlagRegister16);
         // F000:0121 hlt

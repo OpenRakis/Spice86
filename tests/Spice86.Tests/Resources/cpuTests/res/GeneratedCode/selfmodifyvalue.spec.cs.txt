@@ -31,7 +31,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0000 mov AX,0
         AX = 0;
         // F000:0003 mov SS,AX
-        SS = AX;
+        SS = 0;
         // F000:0005 mov SP,4
         SP = 4;
         // F000:0008 mov BX,0x000A
@@ -50,7 +50,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:0017 cmp AX,0
             Alu16.Sub(AX, 0);
             // F000:001A jne short 0x000B
-        } while (!ZeroFlag);
+        } while (AX != 0);
         // F000:001C hlt
         return Hlt();
     }

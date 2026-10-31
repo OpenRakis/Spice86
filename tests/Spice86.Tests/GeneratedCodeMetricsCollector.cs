@@ -20,6 +20,15 @@ internal static class GeneratedCodeMetricsCollector {
     private static readonly HashSet<string> StatusFlagNames = new(StringComparer.Ordinal) {
         "CarryFlag", "ParityFlag", "AuxiliaryFlag", "ZeroFlag", "SignFlag", "OverflowFlag"
     };
+    private static readonly HashSet<string> StackMethodNames = new(StringComparer.Ordinal) {
+        "Push16", "Push32", "Pop16", "Pop32"
+    };
+    private static readonly HashSet<SyntaxKind> CompoundAssignmentKinds = new() {
+        SyntaxKind.AddAssignmentExpression, SyntaxKind.SubtractAssignmentExpression,
+        SyntaxKind.AndAssignmentExpression, SyntaxKind.OrAssignmentExpression,
+        SyntaxKind.ExclusiveOrAssignmentExpression, SyntaxKind.LeftShiftAssignmentExpression,
+        SyntaxKind.RightShiftAssignmentExpression
+    };
 
     public static GeneratedCodeMetrics Collect(string fixture, SyntaxTree tree, ImmutableArray<Diagnostic> diagnostics) {
         SyntaxNode root = tree.GetRoot();
@@ -58,6 +67,11 @@ internal static class GeneratedCodeMetricsCollector {
             IfStatements = walker.IfStatements,
             BreakStatements = walker.BreakStatements,
             ContinueStatements = walker.ContinueStatements,
+            StackCalls = walker.StackCalls,
+            FlagAssignments = walker.FlagAssignments,
+            MethodVariables = walker.MethodVariables,
+            CompoundAssignments = walker.CompoundAssignments,
+            TupleSwaps = walker.TupleSwaps,
             Warnings = warnings.Length,
             WarningIds = warningIds
         };
@@ -82,6 +96,11 @@ internal static class GeneratedCodeMetricsCollector {
         public int IfStatements { get; private set; }
         public int BreakStatements { get; private set; }
         public int ContinueStatements { get; private set; }
+        public int StackCalls { get; private set; }
+        public int FlagAssignments { get; private set; }
+        public int MethodVariables { get; private set; }
+        public int CompoundAssignments { get; private set; }
+        public int TupleSwaps { get; private set; }
 
         public override void VisitMethodDeclaration(MethodDeclarationSyntax node) {
             Methods++;
@@ -112,11 +131,35 @@ internal static class GeneratedCodeMetricsCollector {
             } else if (name == FailAsUntestedName) {
                 FailAsUntested++;
             }
-            if (node.Expression is MemberAccessExpressionSyntax { Expression: IdentifierNameSyntax target }
-                && AluTargetNames.Contains(target.Identifier.ValueText)) {
-                AluCalls++;
+            if (node.Expression is MemberAccessExpressionSyntax { Expression: IdentifierNameSyntax target } member) {
+                if (AluTargetNames.Contains(target.Identifier.ValueText)) {
+                    AluCalls++;
+                } else if (target.Identifier.ValueText == "Stack"
+                    && StackMethodNames.Contains(member.Name.Identifier.ValueText)) {
+                    StackCalls++;
+                }
             }
             base.VisitInvocationExpression(node);
+        }
+
+        public override void VisitAssignmentExpression(AssignmentExpressionSyntax node) {
+            if (node.Left is IdentifierNameSyntax flag && StatusFlagNames.Contains(flag.Identifier.ValueText)) {
+                FlagAssignments++;
+            }
+            if (CompoundAssignmentKinds.Contains(node.Kind())) {
+                CompoundAssignments++;
+            }
+            if (node.Left is TupleExpressionSyntax) {
+                TupleSwaps++;
+            }
+            base.VisitAssignmentExpression(node);
+        }
+
+        public override void VisitLocalDeclarationStatement(LocalDeclarationStatementSyntax node) {
+            if (node.Parent is BlockSyntax { Parent: MethodDeclarationSyntax }) {
+                MethodVariables++;
+            }
+            base.VisitLocalDeclarationStatement(node);
         }
 
         public override void VisitIdentifierName(IdentifierNameSyntax node) {

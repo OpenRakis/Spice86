@@ -4,9 +4,12 @@ using FluentAssertions;
 
 using NSubstitute;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
@@ -21,6 +24,15 @@ public class CompletesNormallyVisitorTest {
     private readonly GotoNode _jump = new(Substitute.For<ICfgNode>());
 
     [Fact]
+    public void ConditionalValueCompletesNormally() {
+        // Arrange: a pure select always completes.
+        ConditionalValueNode step = AstBuilder.DirectionStep(BitWidth.WORD_16);
+
+        // Act / Assert
+        CompletesNormallyVisitor.CompletesNormally(step).Should().BeTrue();
+    }
+
+    [Fact]
     public void EmptyBlockAndExpressionStatementCompleteNormally() {
         // Assert
         CompletesNormallyVisitor.CompletesNormally(new BlockNode()).Should().BeTrue();
@@ -31,7 +43,7 @@ public class CompletesNormallyVisitorTest {
     public void DivergingStatementsDoNotCompleteNormally() {
         // Arrange
         IVisitableAstNode[] diverging = [
-            new ReturnNode(new MethodCallNode(null, "NearRet")),
+            new ReturnNode(new ProcedureReturnHelperNode(CallDistance.Near, BitWidth.WORD_16)),
             _jump,
             new ThrowNode(typeof(InvalidOperationException), "x"),
             new FailAsUntestedNode([UntestedMessagePart.Literal("x")]),

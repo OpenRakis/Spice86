@@ -2,8 +2,6 @@ namespace Spice86.Tests.CfgCodeGeneration;
 
 using FluentAssertions;
 
-using NSubstitute;
-
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
@@ -12,15 +10,16 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Shared.Emulator.Memory;
+using Spice86.Tests.CfgCpu.Blocks;
 
 using Xunit;
 
 public class FallthroughGotoRemoverTest {
     private static readonly CpuFlagNode Zero = new(Flags.Zero);
-    private readonly ICfgNode _first = Substitute.For<ICfgNode>();
-    private readonly ICfgNode _second = Substitute.For<ICfgNode>();
-    private readonly ICfgNode _third = Substitute.For<ICfgNode>();
-    private readonly ICfgNode _fourth = Substitute.For<ICfgNode>();
+    private readonly ICfgNode _first = CfgTestHelpers.CreateInstruction(new SegmentedAddress(0x1000, 0x0000));
+    private readonly ICfgNode _second = CfgTestHelpers.CreateInstruction(new SegmentedAddress(0x1000, 0x0010));
+    private readonly ICfgNode _third = CfgTestHelpers.CreateInstruction(new SegmentedAddress(0x1000, 0x0020));
+    private readonly ICfgNode _fourth = CfgTestHelpers.CreateInstruction(new SegmentedAddress(0x1000, 0x0030));
 
     [Fact]
     public void GotoAfterAStatementThatNeverCompletesIsDropped() {
@@ -211,7 +210,7 @@ public class FallthroughGotoRemoverTest {
             .Which.Body.Statements[^1].Should().BeOfType<SwitchNode>().Which;
         InfiniteLoopNode rewrittenLoop = rewritten.Sections[0].Body.Statements[0].Should().BeOfType<InfiniteLoopNode>().Which;
         Arm(BranchOf(rewrittenLoop.Body.Statements[0]).TrueCase).Should().ContainSingle()
-            .Which.Should().BeOfType<GotoNode>().Which.Target.Should().BeSameAs(_third);
+            .Which.Should().BeOfType<GotoNode>().Which.Target.Should().Be(new CfgNodeGotoTarget(_third));
     }
 
     [Fact]
@@ -335,7 +334,7 @@ public class FallthroughGotoRemoverTest {
         // Assert
         DoWhileNode loop = result.Statements[0].Should().BeOfType<DoWhileNode>().Which;
         IfElseNode branch = BranchOf(loop.Body.Statements[0]);
-        Arm(branch.TrueCase).Should().ContainSingle().Which.Should().BeOfType<GotoNode>().Which.Target.Should().BeSameAs(_first);
+        Arm(branch.TrueCase).Should().ContainSingle().Which.Should().BeOfType<GotoNode>().Which.Target.Should().Be(new CfgNodeGotoTarget(_first));
     }
 
     [Fact]
@@ -373,7 +372,7 @@ public class FallthroughGotoRemoverTest {
         DoWhileNode loop = result.Statements[0].Should().BeOfType<DoWhileNode>().Which;
         IfElseNode branch = BranchOf(loop.Body.Statements[0]);
         Arm(branch.TrueCase).Should().ContainSingle().Which.Should().BeOfType<BreakNode>();
-        result.Statements[1].Should().BeOfType<GotoNode>().Which.Target.Should().BeSameAs(_third);
+        result.Statements[1].Should().BeOfType<GotoNode>().Which.Target.Should().Be(new CfgNodeGotoTarget(_third));
     }
 
     [Fact]
@@ -395,7 +394,7 @@ public class FallthroughGotoRemoverTest {
         SwitchNode rewritten = loop.Body.Statements[0].Should().BeOfType<InstructionBoundaryNode>()
             .Which.Body.Statements[^1].Should().BeOfType<SwitchNode>().Which;
         rewritten.Sections[0].Body.Statements.Should().ContainSingle()
-            .Which.Should().BeOfType<GotoNode>().Which.Target.Should().BeSameAs(_third);
+            .Which.Should().BeOfType<GotoNode>().Which.Target.Should().Be(new CfgNodeGotoTarget(_third));
     }
 
     [Fact]
@@ -415,7 +414,7 @@ public class FallthroughGotoRemoverTest {
         WhileNode instructionLoop = loop.Body.Statements[0].Should().BeOfType<InstructionBoundaryNode>()
             .Which.Body.Statements[^1].Should().BeOfType<WhileNode>().Which;
         instructionLoop.Body.Statements.Should().ContainSingle()
-            .Which.Should().BeOfType<GotoNode>().Which.Target.Should().BeSameAs(_third);
+            .Which.Should().BeOfType<GotoNode>().Which.Target.Should().Be(new CfgNodeGotoTarget(_third));
     }
 
     [Fact]
@@ -438,7 +437,7 @@ public class FallthroughGotoRemoverTest {
         IfElseNode branch = BranchOf(rewrittenInner.Body.Statements[0]);
         Arm(branch.TrueCase).Should().ContainSingle().Which.Should().BeOfType<BreakNode>();
         Arm(branch.FalseCase).Should().ContainSingle()
-            .Which.Should().BeOfType<GotoNode>().Which.Target.Should().BeSameAs(_fourth);
+            .Which.Should().BeOfType<GotoNode>().Which.Target.Should().Be(new CfgNodeGotoTarget(_fourth));
         outer.Body.Statements[2].Should().BeOfType<InstructionBoundaryNode>()
             .Which.Body.Statements.Should().Equal(new CommentNode("third"));
     }
@@ -453,7 +452,8 @@ public class FallthroughGotoRemoverTest {
         return writer.ToString();
     }
 
-    private string LabelOf(ICfgNode node) {
+    private string LabelOf(IGotoTarget target) {
+        ICfgNode node = ((CfgNodeGotoTarget)target).Node;
         if (ReferenceEquals(node, _first)) {
             return "L_first";
         }
@@ -490,7 +490,7 @@ public class FallthroughGotoRemoverTest {
         BlockNode result = FallthroughGotoRemover.Remove(new BlockNode(loop));
 
         // Assert
-        GotoTargetCollector.Collect(result).Labels.Should().ContainSingle().Which.Should().BeSameAs(_first);
+        GotoTargetCollector.Collect(result).Labels.Should().ContainSingle().Which.Should().Be(new CfgNodeGotoTarget(_first));
     }
 
     [Fact]
@@ -507,7 +507,7 @@ public class FallthroughGotoRemoverTest {
         // Assert
         GotoTargets targets = GotoTargetCollector.Collect(result);
         targets.Labels.Should().HaveCount(1);
-        targets.Labels.Should().Contain(label => ReferenceEquals(label, _first));
+        targets.Labels.Should().Contain(label => label.Equals(new CfgNodeGotoTarget(_first)));
         result.Statements[1].Should().BeOfType<InfiniteLoopNode>().Which.Body.Statements[0]
             .Should().BeOfType<InstructionBoundaryNode>().Which.Body.Statements[^1].Should().BeOfType<BreakNode>();
     }
@@ -526,7 +526,7 @@ public class FallthroughGotoRemoverTest {
         // Assert
         GotoTargets targets = GotoTargetCollector.Collect(result);
         targets.Labels.Should().HaveCount(1);
-        targets.Labels.Should().Contain(label => ReferenceEquals(label, _first));
+        targets.Labels.Should().Contain(label => label.Equals(new CfgNodeGotoTarget(_first)));
         result.Statements[1].Should().BeOfType<DoWhileNode>().Which.Body.Statements[0]
             .Should().BeOfType<InstructionBoundaryNode>().Which.Body.Statements[^1].Should().BeOfType<BreakNode>();
     }

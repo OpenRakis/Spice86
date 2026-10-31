@@ -12,6 +12,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Mmu;
+using Spice86.Shared.Emulator.Memory;
 
 using System.Linq.Expressions;
 
@@ -112,8 +113,9 @@ public class AstExpressionBuilderAluExpansionTest {
         _state.AX.Should().Be(8);
     }
 
-    private static MethodCallValueNode AluCall(string operation, params ValueNode[] arguments) =>
-        new(DataType.UINT16, "Alu16", operation, arguments.Cast<IVisitableAstNode>().ToArray());
+    private static AluCallValueNode AluCall(string operation, params ValueNode[] arguments) =>
+        new(DataType.UINT16, Enum.Parse<AluOperation>(operation), BitWidth.WORD_16,
+            arguments.Cast<IVisitableAstNode>().ToArray());
 
     private void Execute(IVisitableAstNode program, bool preferInterpretation) {
         AstExpressionBuilder builder = new(true);

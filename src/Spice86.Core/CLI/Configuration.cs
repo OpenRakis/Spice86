@@ -365,12 +365,12 @@ public sealed class Configuration : CommandSettings {
     public bool AllowIvtAddress0 { get; init; }
 
     /// <summary>
-    /// When true, the JIT executes the <c>Add</c>, <c>Sub</c>, <c>And</c>, <c>Or</c>, <c>Xor</c>, <c>Inc</c> and
-    /// <c>Dec</c> ALU calls as the inline expansion the code generator uses, instead of calling the ALU. Meant for
-    /// checking that expansion; it makes each compiled instruction bigger. False by default.
+    /// When true, the JIT executes each instruction's execution AST after it went through the IR round trip
+    /// the code generator uses: lifted to IR, structured back to a CPU AST, with ALU calls expanded inline.
+    /// Meant for checking that round trip; it makes each compiled instruction bigger. False by default.
     /// </summary>
-    [CommandOption("--JitAluExpansion")]
-    public bool JitAluExpansion { get; init; }
+    [CommandOption("--JitGeneratorIr")]
+    public bool JitGeneratorIr { get; init; }
 
     /// <summary>
     /// When true (default), the speculative CFG explorer is enabled: after each newly-observed

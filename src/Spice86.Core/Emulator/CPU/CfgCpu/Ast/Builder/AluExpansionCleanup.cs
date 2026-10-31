@@ -91,6 +91,8 @@ internal static class AluExpansionCleanup {
         UnaryOperationNode unary => Classify(unary.Value),
         BinaryOperationNode { BinaryOperation: not BinaryOperation.ASSIGN } binary =>
             Worst(Classify(binary.Left), Classify(binary.Right)),
+        ConditionalValueNode conditional => Worst(Classify(conditional.Condition),
+            Worst(Classify(conditional.WhenTrue), Classify(conditional.WhenFalse))),
         _ => ReadKind.Other
     };
 
@@ -107,6 +109,9 @@ internal static class AluExpansionCleanup {
     private static int CountReferences(ValueNode node, VariableReferenceNode reference) => node switch {
         VariableReferenceNode other => other == reference ? 1 : 0,
         BinaryOperationNode binary => CountReferences(binary.Left, reference) + CountReferences(binary.Right, reference),
+        ConditionalValueNode conditional => CountReferences(conditional.Condition, reference)
+            + CountReferences(conditional.WhenTrue, reference)
+            + CountReferences(conditional.WhenFalse, reference),
         TypeConversionNode conversion => CountReferences(conversion.Value, reference),
         ConstantNode => 0,
         CpuFlagNode => 0,
@@ -120,6 +125,11 @@ internal static class AluExpansionCleanup {
             Right = Substitute(binary.Right, replacements)
         },
         TypeConversionNode conversion => conversion with { Value = Substitute(conversion.Value, replacements) },
+        ConditionalValueNode conditional => conditional with {
+            Condition = Substitute(conditional.Condition, replacements),
+            WhenTrue = Substitute(conditional.WhenTrue, replacements),
+            WhenFalse = Substitute(conditional.WhenFalse, replacements)
+        },
         ConstantNode => node,
         CpuFlagNode => node,
         _ => throw UnexpectedNode(node)

@@ -83,13 +83,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016E:0107 cmp AH,0
         Alu8.Sub(AH, 0);
         // 016E:010A jne short 0x015B
-        if (ZeroFlag) {
+        if (AH == 0) {
             // 016E:010C mov SI,DX
             SI = DX;
             // 016E:010E mov AX,0xE000
             AX = 0xE000;
             // 016E:0111 mov ES,AX
-            ES = AX;
+            ES = 0xE000;
             // 016E:0113 mov AL,0
             AL = 0;
             // 016E:0115 mov BX,0
@@ -103,7 +103,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // 016E:011E cmp AH,0
             Alu8.Sub(AH, 0);
             // 016E:0121 jne short 0x015B
-            if (ZeroFlag) {
+            if (AH == 0) {
                 // 016E:0123 mov byte ptr ES:[0],0x11
                 UInt8[ES, 0] = 0x11;
                 // 016E:0129 mov AL,0
@@ -119,7 +119,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 // 016E:0134 cmp AH,0
                 Alu8.Sub(AH, 0);
                 // 016E:0137 jne short 0x015B
-                if (ZeroFlag) {
+                if (AH == 0) {
                     // 016E:0139 mov byte ptr ES:[0],0x22
                     UInt8[ES, 0] = 0x22;
                     // 016E:013F mov AL,0
@@ -135,13 +135,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                     // 016E:014A cmp AH,0
                     Alu8.Sub(AH, 0);
                     // 016E:014D jne short 0x015B
-                    if (ZeroFlag) {
+                    if (AH == 0) {
                         // 016E:014F mov AL,byte ptr ES:[0]
                         AL = UInt8[ES, 0];
                         // 016E:0153 cmp AL,0x11
                         Alu8.Sub(AL, 0x11);
                         // 016E:0155 jne short 0x015B
-                        if (!ZeroFlag) {
+                        if (AL != 0x11) {
                             goto L_015B;
                         }
                         // 016E:0157 mov AL,0
@@ -160,7 +160,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016E:015D mov DX,0x0999
         DX = 0x0999;
         // 016E:0160 out DX,AL
-        Out8(DX, AL);
+        Out8(0x0999, AL);
         // 016E:0161 hlt
         return Hlt();
     }

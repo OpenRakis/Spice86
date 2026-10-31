@@ -1,0 +1,172 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+
+    private static readonly byte?[] Signature_0046_mov = [0xB8, 0x01, 0x00];
+    private static readonly byte?[] Signature_0049_jmp = [0xEB, 0x03];
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0xF000;
+
+        DefineFunctionWithoutInterpreterFallback(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, "unknown");
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        // F000:0000 mov AX,0x2000
+        AX = 0x2000;
+        // F000:0003 mov DS,AX
+        DS = 0x2000;
+        // F000:0005 mov ES,AX
+        ES = 0x2000;
+        // F000:0007 mov SS,AX
+        SS = 0x2000;
+        // F000:0009 mov SP,0x1000
+        SP = 0x1000;
+        // F000:000C cld
+        DirectionFlag = false;
+        // F000:000D xor BX,BX
+        BX = 0;
+        // F000:000F mov SI,0x00BC
+        SI = 0x00BC;
+        // F000:0012 mov word ptr DS:[0x0F00],2
+        UInt16[DS, 0x0F00] = 2;
+        do {
+            CheckExternalEvents(cs1, 0x0018);
+            // F000:0018 mov EAX,dword ptr CS:[SI+4]
+            EAX = UInt32[CS, (ushort)(SI + 4)];
+            // F000:001D mov dword ptr DS:[BX],EAX
+            UInt32[DS, BX] = EAX;
+            // F000:0020 mov dword ptr DS:[BX+0x0080],EAX
+            UInt32[DS, (ushort)(BX + 0x0080)] = EAX;
+            // F000:0025 mov EAX,0
+            EAX = 0;
+            // F000:002B mov AX,word ptr CS:[SI]
+            AX = UInt16[CS, SI];
+            // F000:002E mov dword ptr DS:[BX+4],EAX
+            UInt32[DS, (ushort)(BX + 4)] = EAX;
+            // F000:0032 mov DX,word ptr CS:[SI+8]
+            DX = UInt16[CS, (ushort)(SI + 8)];
+            // F000:0036 test DL,1
+            // F000:0039 je short 0x0052
+            if ((DL & 1) == 0) {
+                // F000:0052 mov EAX,0x12349905
+                EAX = 0x12349905;
+            }
+            else {
+                // F000:003B mov EAX,0x12340000
+                EAX = 0x12340000;
+                // F000:0041 test DH,1
+                // F000:0044 je short 0x004B
+                if ((DH & 1) == 0) {
+                    // F000:004B mov AX,2
+                    AX = 2;
+                }
+                else {
+                    VerifySpeculativeEntryOrFail(cs1, 0x0046, Signature_0046_mov);
+                    // F000:0046 mov AX,1
+                    AX = 1;
+                    VerifySpeculativeEntryOrFail(cs1, 0x0049, Signature_0049_jmp);
+                    // F000:0049 jmp short 0x004E
+                }
+                // F000:004E mov AL,5
+                AL = 5;
+                // F000:0050 jmp short 0x0058
+            }
+            // F000:0058 mov word ptr DS:[BX+8],AX
+            UInt16[DS, (ushort)(BX + 8)] = AX;
+            // F000:005B mov byte ptr DS:[BX+0x0A],AH
+            UInt8[DS, (ushort)(BX + 0x0A)] = AH;
+            // F000:005E mov AX,word ptr CS:[SI+0x0A]
+            AX = UInt16[CS, (ushort)(SI + 0x0A)];
+            // F000:0062 mov BP,word ptr CS:[SI+0x0C]
+            BP = UInt16[CS, (ushort)(SI + 0x0C)];
+            // F000:0066 mov CX,word ptr CS:[SI+0x0E]
+            CX = UInt16[CS, (ushort)(SI + 0x0E)];
+            do {
+                CheckExternalEvents(cs1, 0x006A);
+                // F000:006A test DH,4
+                // F000:006D je short 0x0071
+                if ((DH & 4) != 0) {
+                    goto L_006F;
+                }
+                // F000:0071 dec CX
+                CX--;
+                // F000:0072 jne short 0x006A
+            } while (CX != 0);
+            goto L_0074;
+        L_006F:
+            // F000:006F jmp short 0x0079
+            goto L_0079;
+        L_0074:
+            // F000:0074 cmp AX,1
+            // F000:0077 je short 0x0085
+            if (AX == 1) {
+                goto L_0085;
+            }
+        L_0079:
+            // F000:0079 cmp BP,2
+            // F000:007C je short 0x0085
+            if (BP == 2) {
+                goto L_0085;
+            }
+            // F000:007E mov word ptr DS:[BX+0x0C],0
+            UInt16[DS, (ushort)(BX + 0x0C)] = 0;
+            // F000:0083 jmp short 0x008A
+            goto L_008A;
+        L_0085:
+            // F000:0085 mov word ptr DS:[BX+0x0C],1
+            UInt16[DS, (ushort)(BX + 0x0C)] = 1;
+        L_008A:
+            // F000:008A mov AX,word ptr CS:[SI+0x10]
+            AX = UInt16[CS, (ushort)(SI + 0x10)];
+            // F000:008E mov BP,word ptr CS:[SI+0x12]
+            BP = UInt16[CS, (ushort)(SI + 0x12)];
+            // F000:0092 test DL,2
+            // F000:0095 jne short 0x009C
+            // F000:0097 cmp AX,1
+            // F000:009A jne short 0x00A8
+            // F000:009C cmp BP,2
+            // F000:009F jne short 0x00A8
+            if ((DL & 2) == 0 && AX != 1 || BP != 2) {
+                goto L_00A8;
+            }
+            // F000:00A1 mov word ptr DS:[BX+0x0E],1
+            UInt16[DS, (ushort)(BX + 0x0E)] = 1;
+            // F000:00A6 jmp short 0x00AD
+            goto L_00AD;
+        L_00A8:
+            // F000:00A8 mov word ptr DS:[BX+0x0E],0
+            UInt16[DS, (ushort)(BX + 0x0E)] = 0;
+        L_00AD:
+            // F000:00AD add BX,0x0040
+            BX += 0x0040;
+            // F000:00B0 add SI,0x0016
+            SI = Alu16.Add(SI, 0x0016);
+            // F000:00B3 dec word ptr DS:[0x0F00]
+            UInt16[DS, 0x0F00] = Alu16.Dec(UInt16[DS, 0x0F00]);
+            // F000:00B7 jne near 0x0018
+        } while (!ZeroFlag);
+        // F000:00BB hlt
+        return Hlt();
+    }
+
+}

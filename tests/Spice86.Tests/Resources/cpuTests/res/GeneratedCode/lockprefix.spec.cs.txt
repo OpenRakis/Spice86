@@ -74,7 +74,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0063 pop BP
         BP = Stack.Pop16();
         // F000:0064 inc word ptr DS:[0]
-        UInt16[DS, 0] = (ushort)(UInt16[DS, 0] + 1);
+        UInt16[DS, 0] += 1;
         // F000:0068 iret
         return InterruptRet();
     }
@@ -85,9 +85,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0000 xor AX,AX
         AX = 0;
         // F000:0002 mov DS,AX
-        DS = AX;
+        DS = 0;
         // F000:0004 mov SS,AX
-        SS = AX;
+        SS = 0;
         // F000:0006 mov SP,0x8000
         SP = 0x8000;
         // F000:0009 mov word ptr DS:[0x0018],0x005A
@@ -101,9 +101,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:001F mov word ptr DS:[0x0010],1
         UInt16[DS, 0x0010] = 1;
         // F000:0025 add word ptr DS:[0x0010],AX
-        UInt16[DS, 0x0010] = Alu16.Add(UInt16[DS, 0x0010], AX);
+        UInt16[DS, 0x0010] = Alu16.Add(UInt16[DS, 0x0010], 0);
         // F000:002A inc word ptr DS:[0x0010]
-        UInt16[DS, 0x0010] = (ushort)(UInt16[DS, 0x0010] + 1);
+        UInt16[DS, 0x0010] += 1;
         // F000:002F dec word ptr DS:[0x0010]
         UInt16[DS, 0x0010] = Alu16.Dec(UInt16[DS, 0x0010]);
         // F000:0034 mov word ptr DS:[2],3

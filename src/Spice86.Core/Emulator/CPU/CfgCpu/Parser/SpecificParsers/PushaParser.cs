@@ -20,9 +20,9 @@ public class PushaParser : BaseInstructionParser {
         DataType addressType = _astBuilder.UType(BitWidth.WORD_16);
         CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
 
-        string methodName = bitWidth == BitWidth.DWORD_32 ? nameof(Stack.PushAll32) : nameof(Stack.PushAll16);
+        
 
-        MethodCallNode pushAll = new("Stack", methodName,
+        MethodCallNode pushAll = new StackCallNode(StackOperation.PushAll, bitWidth,
             _astBuilder.Register.Reg(dataType, RegisterIndex.AxIndex),
             _astBuilder.Register.Reg(dataType, RegisterIndex.CxIndex),
             _astBuilder.Register.Reg(dataType, RegisterIndex.DxIndex),

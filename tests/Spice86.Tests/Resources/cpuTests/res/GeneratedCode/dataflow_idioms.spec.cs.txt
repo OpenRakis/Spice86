@@ -31,11 +31,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0000 mov AX,0x2000
         AX = 0x2000;
         // F000:0003 mov DS,AX
-        DS = AX;
+        DS = 0x2000;
         // F000:0005 mov ES,AX
-        ES = AX;
+        ES = 0x2000;
         // F000:0007 mov SS,AX
-        SS = AX;
+        SS = 0x2000;
         // F000:0009 mov SP,0x1000
         SP = 0x1000;
         // F000:000C cld
@@ -53,9 +53,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:001B mov DX,word ptr CS:[SI+2]
             DX = UInt16[CS, (ushort)(SI + 2)];
             // F000:001F xchg CX,DX
-            ushort temp_001F = CX;
-            CX = DX;
-            DX = (ushort)temp_001F;
+            (CX, DX) = (DX, CX);
             // F000:0021 mov word ptr DS:[BX],CX
             UInt16[DS, BX] = CX;
             // F000:0023 mov word ptr DS:[BX+2],DX
@@ -69,25 +67,21 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:002B mov word ptr DS:[BX+4],DI
             UInt16[DS, (ushort)(BX + 4)] = DI;
             // F000:002E mov AL,byte ptr CS:[SI+4]
-            AL = UInt8[CS, (ushort)(SI + 4)];
             // F000:0032 cbw
-            AX = (ushort)(short)(sbyte)AL;
+            AX = (ushort)(short)(sbyte)UInt8[CS, (ushort)(SI + 4)];
             // F000:0033 mov word ptr DS:[BX+6],AX
             UInt16[DS, (ushort)(BX + 6)] = AX;
             // F000:0036 mov AX,word ptr CS:[SI+4]
             AX = UInt16[CS, (ushort)(SI + 4)];
             // F000:003A cwd
-            DX = (ushort)((short)AX >> 0x0000000F);
+            DX = (ushort)((short)AX >> 15);
             // F000:003B mov word ptr DS:[BX+8],DX
             UInt16[DS, (ushort)(BX + 8)] = DX;
             // F000:003E mov word ptr DS:[BX+0x0A],AX
             UInt16[DS, (ushort)(BX + 0x0A)] = AX;
             // F000:0041 les DX,word ptr CS:[SI+6]
-            ushort lxsOffset_0041 = (ushort)(SI + 6);
-            ushort lxsValue_0041 = UInt16[CS, lxsOffset_0041];
-            ushort lxsSegment_0041 = UInt16[CS, (ushort)(lxsOffset_0041 + 2)];
-            DX = (ushort)lxsValue_0041;
-            ES = (ushort)lxsSegment_0041;
+            DX = UInt16[CS, (ushort)(SI + 6)];
+            ES = UInt16[CS, (ushort)(SI + 8)];
             // F000:0045 mov word ptr DS:[BX+0x0C],DX
             UInt16[DS, (ushort)(BX + 0x0C)] = DX;
             // F000:0048 mov word ptr DS:[BX+0x0E],ES
@@ -96,11 +90,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             Stack.Push16(DS);
             // F000:004C pop ES
             ES = UInt16[SS, SP];
-            SP = (ushort)(SP + 2);
+            SP += 2;
             // F000:004D mov AX,0x2200
-            AX = 0x2200;
             // F000:0050 mov ES,AX
-            ES = AX;
+            ES = 0x2200;
             // F000:0052 mov CX,word ptr CS:[SI]
             CX = UInt16[CS, SI];
             // F000:0055 mov word ptr ES:[4],CX
@@ -109,17 +102,16 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             Stack.Push16(DS);
             // F000:005B pop ES
             ES = UInt16[SS, SP];
-            SP = (ushort)(SP + 2);
+            SP += 2;
             // F000:005C mov AX,0x2200
-            AX = 0x2200;
             // F000:005F mov DS,AX
-            DS = AX;
+            DS = 0x2200;
             // F000:0061 mov DX,word ptr DS:[4]
             DX = UInt16[DS, 4];
             // F000:0065 mov AX,0x2000
             AX = 0x2000;
             // F000:0068 mov DS,AX
-            DS = AX;
+            DS = 0x2000;
             // F000:006A mov word ptr DS:[BX+0x10],DX
             UInt16[DS, (ushort)(BX + 0x10)] = DX;
             // F000:006D mov CX,word ptr CS:[SI+2]
@@ -127,17 +119,17 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:0071 xor CX,CX
             CX = 0;
             // F000:0073 mov word ptr DS:[BX+0x12],CX
-            UInt16[DS, (ushort)(BX + 0x12)] = CX;
+            UInt16[DS, (ushort)(BX + 0x12)] = 0;
             // F000:0076 mov DX,word ptr CS:[SI+2]
             DX = UInt16[CS, (ushort)(SI + 2)];
             // F000:007A and DX,DX
-            DX = (ushort)(DX & DX);
+            DX &= DX;
             // F000:007C mov word ptr DS:[BX+0x14],DX
             UInt16[DS, (ushort)(BX + 0x14)] = DX;
             // F000:007F sub DX,DX
             DX = 0;
             // F000:0081 mov word ptr DS:[BX+0x16],DX
-            UInt16[DS, (ushort)(BX + 0x16)] = DX;
+            UInt16[DS, (ushort)(BX + 0x16)] = 0;
             // F000:0084 mov DI,word ptr CS:[SI]
             DI = UInt16[CS, SI];
             // F000:0087 lea DX,DI+5
@@ -145,7 +137,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:008A mov word ptr DS:[BX+0x18],DX
             UInt16[DS, (ushort)(BX + 0x18)] = DX;
             // F000:008D add BX,0x0040
-            BX = (ushort)(BX + 0x0040);
+            BX += 0x0040;
             // F000:0090 add SI,0x000A
             SI = Alu16.Add(SI, 0x000A);
             // F000:0093 dec word ptr DS:[0x0F00]

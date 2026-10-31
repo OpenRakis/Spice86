@@ -31,7 +31,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0000 mov AX,0x1000
         AX = 0x1000;
         // F000:0003 mov SS,AX
-        SS = AX;
+        SS = 0x1000;
         // F000:0005 mov SP,0x0100
         SP = 0x0100;
         // F000:0008 xor DX,DX
@@ -41,11 +41,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         do {
             CheckExternalEvents(cs1, 0x000D);
             // F000:000D mov BX,CX
-            BX = CX;
             // F000:000F dec BX
-            BX--;
             // F000:0010 shl BX,1
-            BX = (ushort)(BX << 1);
+            BX = (ushort)(CX - 1 << 1);
             // F000:0012 jmp near word ptr CS:[BX+0x27]
             switch (UInt16[CS, (ushort)(BX + 0x27)]) {
                 case 0x0016:

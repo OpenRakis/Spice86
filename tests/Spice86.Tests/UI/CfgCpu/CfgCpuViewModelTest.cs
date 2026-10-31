@@ -85,7 +85,7 @@ public class CfgCpuViewModelTest : IDisposable {
             EmulatorBreakpointsManager breakpointsManager = new(_pauseHandler, State, Memory, memoryBreakpoints, ioBreakpoints);
             InstructionReplacerRegistry replacerRegistry = new();
             _monitor = new CfgNodeExecutionCompilerMonitor(_loggerService);
-            _compiler = new CfgNodeExecutionCompiler(_monitor, _loggerService, JitMode.InterpretedOnly, false);
+            _compiler = new CfgNodeExecutionCompiler(_monitor, _loggerService, JitMode.InterpretedOnly, new IdentityExecutionAstRewriter(), false);
             SequentialIdAllocator sharedIdAllocator = new();
             CfgNodeFeeder cfgNodeFeeder = new(Memory, State, breakpointsManager, replacerRegistry, _compiler, sharedIdAllocator, enableSpeculativeExploration: false);
             Linker = new NodeLinker(replacerRegistry, _compiler, sharedIdAllocator);
@@ -370,9 +370,8 @@ public class CfgCpuViewModelTest : IDisposable {
         // Assert — the view model surfaces the IsLive flag on the rendered graph node so the
         // AXAML view can apply stale styling.
         CfgBlock blk0 = nodes.blk0Mov.ContainingBlock ?? throw new InvalidOperationException("blk0Mov.ContainingBlock should not be null");
-        CfgBlock blk1 = nodes.blk1Mov.ContainingBlock ?? throw new InvalidOperationException("blk1Mov.ContainingBlock should not be null");
         CfgGraphNode liveBlk0 = FindGraphNodeForBlock(viewModel, blk0);
-        CfgGraphNode staleBlk1 = FindGraphNodeForBlock(viewModel, blk1);
+        CfgGraphNode staleBlk1 = FindGraphNodeForBlock(viewModel, blk1PreCheck);
         liveBlk0.IsLive.Should().BeTrue(
             "a block whose contained instructions are all live must render with IsLive=true");
         staleBlk1.IsLive.Should().BeFalse(

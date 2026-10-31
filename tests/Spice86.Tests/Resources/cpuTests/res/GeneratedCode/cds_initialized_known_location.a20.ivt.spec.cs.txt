@@ -84,44 +84,41 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0102 int 0x21
         InterruptCall(cs1, 0x0104, 0x21);
         // 016D:0104 les SI,word ptr ES:[BX+0x16]
-        ushort lxsOffset_0104 = (ushort)(BX + 0x16);
-        ushort lxsValue_0104 = UInt16[ES, lxsOffset_0104];
-        ushort lxsSegment_0104 = UInt16[ES, (ushort)(lxsOffset_0104 + 2)];
-        SI = (ushort)lxsValue_0104;
-        ES = (ushort)lxsSegment_0104;
+        SI = UInt16[ES, (ushort)(BX + 0x16)];
+        ES = UInt16[ES, (ushort)(BX + 0x0018)];
         // 016D:0108 push ES
         Stack.Push16(ES);
         // 016D:0109 pop DS
         DS = UInt16[SS, SP];
-        SP = (ushort)(SP + 2);
+        SP += 2;
         // 016D:010A lods AL,byte ptr DS:[SI]
         AL = UInt8[DS, SI];
-        SI = (ushort)(SI + (ushort)State.Direction8);
+        SI += (ushort)(DirectionFlag ? -1 : 1);
         // 016D:010B cmp AL,0x43
         Alu8.Sub(AL, 0x43);
         // 016D:010D jne short 0x0122
-        if (ZeroFlag) {
+        if (AL == 0x43) {
             // 016D:010F lods AL,byte ptr DS:[SI]
             AL = UInt8[DS, SI];
-            SI = (ushort)(SI + (ushort)State.Direction8);
+            SI += (ushort)(DirectionFlag ? -1 : 1);
             // 016D:0110 cmp AL,0x3A
             Alu8.Sub(AL, 0x3A);
             // 016D:0112 jne short 0x0122
-            if (ZeroFlag) {
+            if (AL == 0x3A) {
                 // 016D:0114 lods AL,byte ptr DS:[SI]
                 AL = UInt8[DS, SI];
-                SI = (ushort)(SI + (ushort)State.Direction8);
+                SI += (ushort)(DirectionFlag ? -1 : 1);
                 // 016D:0115 cmp AL,0x5C
                 Alu8.Sub(AL, 0x5C);
                 // 016D:0117 jne short 0x0122
-                if (ZeroFlag) {
+                if (AL == 0x5C) {
                     // 016D:0119 lods AL,byte ptr DS:[SI]
                     AL = UInt8[DS, SI];
-                    SI = (ushort)(SI + (ushort)State.Direction8);
+                    SI += (ushort)(DirectionFlag ? -1 : 1);
                     // 016D:011A cmp AL,0
                     Alu8.Sub(AL, 0);
                     // 016D:011C jne short 0x0122
-                    if (!ZeroFlag) {
+                    if (AL != 0) {
                         goto L_0122;
                     }
                     // 016D:011E mov AL,0
@@ -139,7 +136,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0124 mov DX,0x0999
         DX = 0x0999;
         // 016D:0127 out DX,AL
-        Out8(DX, AL);
+        Out8(0x0999, AL);
         // 016D:0128 hlt
         return Hlt();
     }
@@ -254,19 +251,20 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_0090_F0090(int loadOffset) {
+        byte flagOperand_00A9 = 0;
         CheckExternalEvents(cs2, 0x0090);
         // F000:0090 cmp AH,7
         Alu8.Sub(AH, 7);
         // F000:0093 je short 0x00A4
-        if (!ZeroFlag) {
+        if (AH != 7) {
             // F000:0095 cmp AH,8
             Alu8.Sub(AH, 8);
             // F000:0098 je short 0x00A4
-            if (!ZeroFlag) {
+            if (AH != 8) {
                 // F000:009A cmp AH,0x0A
                 Alu8.Sub(AH, 0x0A);
                 // F000:009D je short 0x00A4
-                if (!ZeroFlag) {
+                if (AH != 0x0A) {
                     // F000:009F callback 0x0021
                     Callback(cs2, 0x009F, 0x0021);
                     // F000:00A3 iret
@@ -283,10 +281,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Callback(cs2, 0x00A5, 0x010A);
         VerifySpeculativeEntryOrFail(cs2, 0x00A9, Signature_00A9_cmp);
         // F000:00A9 cmp byte ptr CS:[0x008F],0
-        Alu8.Sub(UInt8[CS, 0x008F], 0);
+        flagOperand_00A9 = UInt8[CS, 0x008F];
+        Alu8.Sub(flagOperand_00A9, 0);
         VerifySpeculativeEntryOrFail(cs2, 0x00AF, Signature_00AF_jne);
         // F000:00AF jne short 0x00B5
-        if (!ZeroFlag) {
+        if (flagOperand_00A9 != 0) {
             VerifySpeculativeEntryOrFail(cs2, 0x00B5, Signature_00B5_callback);
             // F000:00B5 callback 0x010B
             Callback(cs2, 0x00B5, 0x010B);

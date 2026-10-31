@@ -31,7 +31,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00BD cmp AX,CX
         Alu16.Sub(AX, CX);
         // F000:00BF jb short 0x00C3
-        if (CarryFlag) {
+        if (AX < CX) {
             // F000:00C3 stc
             CarryFlag = true;
             // F000:00C4 ret near
@@ -44,16 +44,17 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        byte flagOperand_006A = 0;
         CheckExternalEvents(cs1, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov AX,0x2000
         AX = 0x2000;
         // F000:0003 mov DS,AX
-        DS = AX;
+        DS = 0x2000;
         // F000:0005 mov ES,AX
-        ES = AX;
+        ES = 0x2000;
         // F000:0007 mov SS,AX
-        SS = AX;
+        SS = 0x2000;
         // F000:0009 mov SP,0x1000
         SP = 0x1000;
         // F000:000C cld
@@ -131,13 +132,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:0067 mov word ptr DS:[0x0E00],AX
             UInt16[DS, 0x0E00] = AX;
             // F000:006A cmp byte ptr DS:[0x0E00],5
-            Alu8.Sub(UInt8[DS, 0x0E00], 5);
+            flagOperand_006A = UInt8[DS, 0x0E00];
             // F000:006F mov byte ptr DS:[0x0E00],9
             UInt8[DS, 0x0E00] = 9;
             // F000:0074 mov byte ptr DS:[BX+8],1
             UInt8[DS, (ushort)(BX + 8)] = 1;
             // F000:0078 je short 0x007E
-            if (!ZeroFlag) {
+            if (flagOperand_006A != 5) {
                 // F000:007A mov byte ptr DS:[BX+8],2
                 UInt8[DS, (ushort)(BX + 8)] = 2;
             }
@@ -165,20 +166,20 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:009A mov DX,word ptr CS:[SI+4]
             DX = UInt16[CS, (ushort)(SI + 4)];
             // F000:009E add AX,CX
-            AX = Alu16.Add(AX, CX);
+            AX += CX;
             // F000:00A0 jcxz short 0x00A5
             if (CX != 0) {
                 // F000:00A2 mov DX,0x1000
                 DX = 0x1000;
             }
             // F000:00A5 adc DX,0
-            DX = (ushort)(DX + (CarryFlag ? 1 : 0));
+            DX = (ushort)(DX + (AX < CX ? 1 : 0));
             // F000:00A8 mov word ptr DS:[BX+0x0E],DX
             UInt16[DS, (ushort)(BX + 0x0E)] = DX;
             // F000:00AB mov word ptr DS:[BX+0x10],AX
             UInt16[DS, (ushort)(BX + 0x10)] = AX;
             // F000:00AE add BX,0x0040
-            BX = (ushort)(BX + 0x0040);
+            BX += 0x0040;
             // F000:00B1 add SI,8
             SI = Alu16.Add(SI, 8);
             // F000:00B4 dec word ptr DS:[0x0F00]

@@ -901,6 +901,28 @@ public class CSharpOverrideHelperTest {
         act.Should().Throw<UnrecoverableException>();
     }
 
+    [Fact]
+    public void InterruptRet32PopsEipCsAndEFlags() {
+        // Arrange: a 32-bit interrupt frame is eip (dword), padded cs (dword), eflags (dword)
+        using Spice86Creator creator = new(binName: "jump2");
+        using Spice86DependencyInjection res = creator.Create();
+        Machine machine = res.Machine;
+        machine.CpuState.SS = 0x3000;
+        machine.CpuState.SP = 0x100;
+        CSharpOverrideHelper helper = CreateHelper(machine);
+        machine.Stack.Push32(0x7202);
+        machine.Stack.Push32(0x500);
+        machine.Stack.Push32(0x1234);
+
+        // Act
+        helper.InterruptRet32()();
+
+        // Assert
+        machine.CpuState.IpSegmentedAddress.Should().Be(new SegmentedAddress(0x500, 0x1234));
+        machine.CpuState.Flags.FlagRegister.Should().Be(0x7202);
+        machine.CpuState.SP.Should().Be(0x100);
+    }
+
     private CSharpOverrideHelper CreateHelper(Machine machine) {
         return new CSharpOverrideHelper(
             new Dictionary<SegmentedAddress, FunctionInformation>(),
@@ -927,7 +949,7 @@ public class CSharpOverrideHelperTest {
 }
 
 class RecursiveJumps : CSharpOverrideHelper {
-    public static int MaxNumberOfJumps = 1;
+    public const int MaxNumberOfJumps = 1;
     public int NumberOfCallsTo1 { get; set; }
     public int NumberOfCallsTo2 { get; set; }
 
@@ -963,7 +985,7 @@ class RecursiveJumps : CSharpOverrideHelper {
 }
 
 class DeepRecursiveJumps : CSharpOverrideHelper {
-    public static int MaxNumberOfJumps = 2;
+    public const int MaxNumberOfJumps = 2;
     public int NumberOfCallsTo1 { get; set; }
     public int NumberOfCallsTo2 { get; set; }
 
@@ -1004,7 +1026,7 @@ class SimpleCallsJumpsOverrideSupplier : IOverrideSupplier {
         Configuration configuration,
         ushort programStartSegment,
         Machine machine) {
-        return new SimpleCallsJumps(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration).FunctionInformations;
+        return SimpleCallsJumps.Create(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration).FunctionInformations;
     }
 }
 
@@ -1018,12 +1040,18 @@ class SimpleCallsJumps : CSharpOverrideHelper {
 
     public SimpleCallsJumps(IDictionary<SegmentedAddress, FunctionInformation> functionInformations,
         Machine machine, ILogger loggerService, Configuration configuration) : base(functionInformations, machine, loggerService, configuration) {
-        CurrentInstance = this;
         // this is the real entry point but other functions are fictional.
         // This is a synthetic test for control flow with stack modification where the whole program is overridden
         DefineFunction(0xF000, 0xFFF0, Entry_F000_FFF0_FFFF0);
         DefineFunction(0, 0x200, Far_callee1_from_stack_0000_0200_00200);
         DefineFunction(0, 0x300, Far_callee2_from_stack_0000_0300_00300);
+    }
+
+    public static SimpleCallsJumps Create(IDictionary<SegmentedAddress, FunctionInformation> functionInformations,
+        Machine machine, ILogger loggerService, Configuration configuration) {
+        SimpleCallsJumps created = new(functionInformations, machine, loggerService, configuration);
+        CurrentInstance = created;
+        return created;
     }
 
     // bios entry point
@@ -1078,7 +1106,7 @@ class VariousOverrideSupplier : IOverrideSupplier {
         Configuration configuration,
         ushort programStartSegment,
         Machine machine) {
-        return new VariousOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration).FunctionInformations;
+        return VariousOverrides.Create(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration).FunctionInformations;
     }
 }
 
@@ -1092,13 +1120,19 @@ class VariousOverrides : CSharpOverrideHelper {
 
     public VariousOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations,
         Machine machine, ILogger loggerService, Configuration configuration) : base(functionInformations, machine, loggerService, configuration) {
-        CurrentInstance = this;
         // those are actual functions called by actual assembly code
         DefineFunction(0xF000, 0x0000, FirstFunction_F000_0000_F0000);
         DefineFunction(0xF000, 0x1290, SecondFunction_F000_1290_F1290);
         DefineFunction(0xE342, 0xEBE0, ThirdFunction_E342_EBE0_F2000);
         OverrideInstruction(0xF000, 0xFFF0, FirstInstructionOverriden);
         DoOnTopOfInstruction(0xF000, 0xFFF3, FirstDoOnTopOfInstruction);
+    }
+
+    public static VariousOverrides Create(IDictionary<SegmentedAddress, FunctionInformation> functionInformations,
+        Machine machine, ILogger loggerService, Configuration configuration) {
+        VariousOverrides created = new(functionInformations, machine, loggerService, configuration);
+        CurrentInstance = created;
+        return created;
     }
 
     public Action FirstInstructionOverriden() {

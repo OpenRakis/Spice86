@@ -50,7 +50,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0008 test AL,AL
         Alu8.And(AL, AL);
         // F000:000A jne short 0x0013
-        if (!ZeroFlag) {
+        if (AL != 0) {
             VerifySpeculativeEntryOrFail(cs1, 0x0013, Signature_0013_call);
             // F000:0013 call near 0x001B
             NearCall(cs1, 0x0016, unknown_F000_001B_F001B);

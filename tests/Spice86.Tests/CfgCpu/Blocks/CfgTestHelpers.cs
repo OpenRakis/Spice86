@@ -45,11 +45,12 @@ internal static class CfgTestHelpers {
         new(id, CreateInstruction(new SegmentedAddress(0x1000, offset)));
 
     /// <summary>Builds the natural loop forest of a graph whose only entry is <paramref name="blocks"/>' first block.</summary>
-    public static NaturalLoopForest BuildLoopForest(IReadOnlyList<CfgBlock> blocks,
+    public static NaturalLoopForest<CfgBlock> BuildLoopForest(IReadOnlyList<CfgBlock> blocks,
         Dictionary<CfgBlock, IReadOnlyList<CfgBlock>> successors) {
-        PartitionBlockGraph graph = new(blocks, [blocks[0]], successors, new Dictionary<CfgBlock, CfgBlock?>());
+        BlockGraph<CfgBlock> graph = new(blocks, [blocks[0]], successors, new Dictionary<CfgBlock, CfgBlock?>(),
+            CfgBlockOrder.Instance, block => block.Entry.Address.ToString());
         DepthFirstOrdering<CfgBlock> traversal = new([.. graph.EntryBlocks, .. graph.Blocks], graph.GetSuccessors);
-        return NaturalLoopForest.Build(graph, traversal.RetreatingEdges);
+        return NaturalLoopForest<CfgBlock>.Build(graph, traversal.RetreatingEdges);
     }
 
     /// <summary>

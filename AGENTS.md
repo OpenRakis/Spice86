@@ -52,8 +52,8 @@ dotnet test tests/Spice86.Tests -- --filter-method '*TestStiPending*'
 # Opt-in: compile the C# every test generates and append one row per test to a TSV coverage report (path must be absolute)
 SPICE86_GENERATED_CODE_COVERAGE=$PWD/tmp/generated-code-coverage.tsv dotnet test tests/Spice86.Tests -- --filter-not-class '*SingleStepTest*' --filter-not-class '*GeneratedCodeCoverageReportTest*'
 
-# Opt-in: run the tests with the JIT executing the ALU expansion of the code generator instead of the ALU calls (no filter, so SingleStepTest is included)
-SPICE86_JIT_ALU_EXPANSION=1 dotnet test tests/Spice86.Tests
+# Opt-in: run the tests with the JIT executing each instruction's execution AST after the IR round trip of the code generator (no filter, so SingleStepTest is included)
+SPICE86_JIT_GENERATOR_IR=1 dotnet test tests/Spice86.Tests
 
 # Opt-in: code coverage of the code generator (ReverseEngineer/CfgCodeGeneration) over the golden tests only; the settings path must be absolute (it is resolved from the test binary folder)
 dotnet test tests/Spice86.Tests --no-build -- --filter-class '*GeneratedCodeScenarioTest*' --filter-class '*GeneratedCodeMachineTest*' --filter-class '*SpeculativeCfgTest*' --coverage --coverage-output-format cobertura --coverage-output generator.cobertura.xml --coverage-settings "$PWD/tests/Spice86.Tests/GeneratorCoverage.config.xml" --results-directory "$PWD/tmp/generator-coverage"
@@ -171,6 +171,7 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 - **Ignore Machine class** - this is a legacy aggregator class; work directly with specific components (`CfgCpu`, `Memory`, `Stack`, etc.) instead
 - **Enforce TDD** - ensure integration tests are present and not passing at first, then make them pass by updating the implementation.
 - **Clear test code style** use explicit Arrange/Act/Assert structure, avoid long setup blocks, and reduce duplication with small helpers.
+- **Generator pass legality** - a new code-generator pass states each legality condition with the IR effects model (`IrValues`, `IrTokens`, `MayFault`, `DeliversInterrupts`; `IrSsa.SameVersions` is the move/merge rule) in its summary, and adds one ASM fixture section per condition whose result region fails when the condition is dropped (a mutation check).
 - **No unit tests that repeat the goldens** - when a change only alters printed or displayed text (generated C#, listings, CFG JSON, instruction rendering) and the committed goldens already contain that text, the golden diff and its review checks are the test: the golden comparison fails before the change and passes after regeneration, which satisfies the TDD rule. Do not add a unit test that asserts the same text. Write unit tests for what goldens cannot show or do not cover: the conditions under which a rewrite applies or is refused, equivalence against the emulator (ALU, JIT), invariants and generation-time checks, and shapes or edge cases no fixture executes.
 - **Pause-refresh rule for new ViewModels** - view models that refresh from a dispatcher timer must refresh at most once per pause cycle. Gate updates on `IPauseHandler.IsPaused`, track a per-pause boolean flag, and reset it on resume.
 

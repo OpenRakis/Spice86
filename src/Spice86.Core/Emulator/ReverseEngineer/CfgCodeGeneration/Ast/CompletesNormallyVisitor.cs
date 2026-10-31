@@ -19,8 +19,59 @@ internal sealed class CompletesNormallyVisitor : ICodeGenerationAstVisitor<bool>
     private CompletesNormallyVisitor() {
     }
 
-    /// <summary>Whether control can reach the statement after <paramref name="node"/>.</summary>
-    public static bool CompletesNormally(IVisitableAstNode node) => node.Accept(Instance);
+    /// <summary>Whether control can reach the statement after <paramref name="node"/>. Container nodes are
+    /// walked through <see cref="AstTrampoline"/> so arbitrarily deep <c>if</c> / <c>else</c> chains cannot
+    /// overflow the thread's stack; leaf nodes go through the visitor as before.</summary>
+    public static bool CompletesNormally(IVisitableAstNode node) {
+        AstResult<bool> result = new();
+        AstTrampoline.Run(Instance.Eval(node, result));
+        return result.Value;
+    }
+
+    private IEnumerable<AstSubcall> Eval(IVisitableAstNode node, AstResult<bool> result) {
+        switch (node) {
+            case BlockNode block:
+                if (block.Statements.Count == 0) {
+                    result.Value = true;
+                    yield break;
+                }
+                yield return AstTrampoline.Call(Eval(block.Statements[^1], result));
+                yield break;
+            case IfElseNode ifElse: {
+                AstResult<bool> whenTrue = new();
+                yield return AstTrampoline.Call(Eval(ifElse.TrueCase, whenTrue));
+                if (whenTrue.Value) {
+                    result.Value = true;
+                    yield break;
+                }
+                yield return AstTrampoline.Call(Eval(ifElse.FalseCase, result));
+                yield break;
+            }
+            case DoWhileNode doWhile: {
+                AstResult<bool> body = new();
+                yield return AstTrampoline.Call(Eval(doWhile.Body, body));
+                result.Value = body.Value || LoopExits.HasBreak(doWhile.Body)
+                    || LoopExits.HasContinue(doWhile.Body);
+                yield break;
+            }
+            case SwitchNode switchNode:
+                if (switchNode.Sections.Any(section => LoopExits.HasBreak(section.Body))) {
+                    result.Value = true;
+                    yield break;
+                }
+                yield return AstTrampoline.Call(Eval(switchNode.Default, result));
+                yield break;
+            case CpuFaultTryCatchNode tryCatch:
+                yield return AstTrampoline.Call(Eval(tryCatch.Body, result));
+                yield break;
+            case InstructionBoundaryNode boundary:
+                yield return AstTrampoline.Call(Eval(boundary.Body, result));
+                yield break;
+            default:
+                result.Value = node.Accept(this);
+                yield break;
+        }
+    }
 
     public bool VisitBlockNode(BlockNode node) {
         if (node.Statements.Count == 0) {
@@ -53,6 +104,8 @@ internal sealed class CompletesNormallyVisitor : ICodeGenerationAstVisitor<bool>
     public bool VisitGotoNode(GotoNode node) => false;
 
     public bool VisitThrowNode(ThrowNode node) => false;
+
+    public bool VisitSetInterruptShadowNode(SetInterruptShadowNode node) => true;
 
     public bool VisitFailAsUntestedNode(FailAsUntestedNode node) => false;
 
@@ -120,6 +173,8 @@ internal sealed class CompletesNormallyVisitor : ICodeGenerationAstVisitor<bool>
 
     public bool VisitUnaryOperationNode(UnaryOperationNode node) => true;
 
+    public bool VisitConditionalValueNode(ConditionalValueNode node) => true;
+
     public bool VisitTypeConversionNode(TypeConversionNode node) => true;
 
     public bool VisitConstantNode(ConstantNode node) => true;
@@ -154,4 +209,14 @@ internal sealed class CompletesNormallyVisitor : ICodeGenerationAstVisitor<bool>
 
     private static bool Unlowered(IVisitableAstNode node) =>
         throw new InvalidOperationException($"{node.GetType().Name} must be lowered before completion analysis.");
+
+    public bool VisitTupleSwapNode(TupleSwapNode node) => true;
+
+    public bool VisitAluOperationNode(AluOperationNode node) => true;
+    public bool VisitAluStatementNode(AluStatementNode node) => true;
+    public bool VisitOpaqueNode(OpaqueNode node) => true;
+    public bool VisitInstructionStartNode(InstructionStartNode node) => true;
+    public bool VisitInterruptReturnNode(InterruptReturnNode node) => false;
+    public bool VisitPreTestLoopNode(PreTestLoopNode node) => true;
+    public bool VisitLocalDeclarationNode(LocalDeclarationNode node) => true;
 }

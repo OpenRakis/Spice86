@@ -71,25 +71,27 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_0633_F0633(int loadOffset) {
+        ushort flagOperand_0641 = 0;
+        ushort flagOperand_0680 = 0;
         CheckExternalEvents(cs1, 0x0633);
         // F000:0633 cmp SP,-7
         Alu16.Sub(SP, 0xFFF9);
         // F000:0636 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (SP != 0xFFF9) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:063A cmp word ptr SS:[0xFFFB],0xF000
         Alu16.Sub(UInt16[SS, 0xFFFB], 0xF000);
         // F000:0641 cmp word ptr SS:[0xFFF9],0x062E
-        Alu16.Sub(UInt16[SS, 0xFFF9], 0x062E);
+        flagOperand_0641 = UInt16[SS, 0xFFF9];
+        Alu16.Sub(flagOperand_0641, 0x062E);
         // F000:0648 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (flagOperand_0641 != 0x062E) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:064C mov AX,0
-        AX = 0;
         // F000:064F mov DS,AX
-        DS = AX;
+        DS = 0;
         // F000:0651 mov word ptr DS:[0x0018],0x15C7
         UInt16[DS, 0x0018] = 0x15C7;
         // F000:0657 mov word ptr DS:[0x001A],0xF000
@@ -101,17 +103,16 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0661 cmp AX,DX
         Alu16.Sub(AX, DX);
         // F000:0663 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (AX != DX) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0667 mov EAX,0xFFFFFFFF
-        EAX = 0xFFFFFFFFu;
         // F000:066D mov EAX,CS
         EAX = (uint)CS;
         // F000:0670 cmp AX,DX
         Alu16.Sub(AX, DX);
         // F000:0672 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (AX != DX) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0676 mov word ptr DS:[0],0xBEEF
@@ -119,15 +120,15 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:067C mov word ptr DS:[0],CS
         UInt16[DS, 0] = CS;
         // F000:0680 cmp word ptr DS:[0],DX
-        Alu16.Sub(UInt16[DS, 0], DX);
+        flagOperand_0680 = UInt16[DS, 0];
+        Alu16.Sub(flagOperand_0680, DX);
         // F000:0684 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (flagOperand_0680 != DX) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0688 mov AX,0
-        AX = 0;
         // F000:068B mov DS,AX
-        DS = AX;
+        DS = 0;
         // F000:068D mov word ptr DS:[0x0018],0x06A8
         UInt16[DS, 0x0018] = 0x06A8;
         // F000:0693 mov word ptr DS:[0x001A],0xF000
@@ -135,7 +136,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0699 mov AX,0x1000
         AX = 0x1000;
         // F000:069C mov SS,AX
-        SS = AX;
+        SS = 0x1000;
         // F000:069E mov SP,0xFFFF
         SP = 0xFFFF;
         // F000:06A1 invalid
@@ -148,43 +149,61 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_06A8_F06A8(int loadOffset) {
+        ushort flagOperand_06B6 = 0;
+        byte flagOperand_06F8 = 0;
+        byte flagOperand_0754 = 0;
+        byte flagOperand_077F = 0;
+        ushort flagOperand_07D6 = 0;
+        ushort flagOperand_0835 = 0;
+        ushort flagOperand_0863 = 0;
+        uint flagOperand_08C4 = 0;
+        uint flagOperand_092D = 0;
+        uint flagOperand_0968 = 0;
+        byte flagOperand_09C8 = 0;
+        byte flagOperand_0A24 = 0;
+        byte flagOperand_0A4F = 0;
+        ushort flagOperand_0AA6 = 0;
+        ushort flagOperand_0B05 = 0;
+        ushort flagOperand_0B33 = 0;
+        uint flagOperand_0B94 = 0;
+        uint flagOperand_0BFD = 0;
+        uint flagOperand_0C38 = 0;
         CheckExternalEvents(cs1, 0x06A8);
         // F000:06A8 cmp SP,-7
         Alu16.Sub(SP, 0xFFF9);
         // F000:06AB jne near 0x15C7
-        if (!ZeroFlag) {
+        if (SP != 0xFFF9) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:06AF cmp word ptr SS:[0xFFFB],0xF000
         Alu16.Sub(UInt16[SS, 0xFFFB], 0xF000);
         // F000:06B6 cmp word ptr SS:[0xFFF9],0x06A1
-        Alu16.Sub(UInt16[SS, 0xFFF9], 0x06A1);
+        flagOperand_06B6 = UInt16[SS, 0xFFF9];
+        Alu16.Sub(flagOperand_06B6, 0x06A1);
         // F000:06BD jne near 0x15C7
-        if (!ZeroFlag) {
+        if (flagOperand_06B6 != 0x06A1) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:06C1 mov AX,0
         AX = 0;
         // F000:06C4 mov DS,AX
-        DS = AX;
+        DS = 0;
         // F000:06C6 mov word ptr DS:[0x0018],0x15C7
         UInt16[DS, 0x0018] = 0x15C7;
         // F000:06CC mov word ptr DS:[0x001A],0xF000
         UInt16[DS, 0x001A] = 0xF000;
         // F000:06D2 mov DX,0x2100
-        DX = 0x2100;
         // F000:06D5 mov DS,DX
-        DS = DX;
+        DS = 0x2100;
         // F000:06D7 mov DX,0x6100
-        DX = 0x6100;
         // F000:06DA mov ES,DX
-        ES = DX;
+        ES = 0x6100;
         // F000:06DC mov AL,4
         AL = 4;
         // F000:06DE mov DX,0x0999
         DX = 0x0999;
         // F000:06E1 out DX,AL
-        Out8(DX, AL);
+        Out8(0x0999, AL);
         // F000:06E2 cld
         DirectionFlag = false;
         // F000:06E3 mov EDI,0x0001FFFF
@@ -192,26 +211,22 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:06E9 mov EBX,0x0000FFFF
         EBX = 0x0000FFFF;
         // F000:06EF mov AL,0
-        AL = 0;
         // F000:06F1 mov byte ptr ES:[EBX],AL
-        UInt8[ES, EBX] = AL;
+        UInt8[ES, 0x0000FFFF] = 0;
         // F000:06F5 mov AL,0x78
         AL = 0x78;
         // F000:06F7 stos byte ptr ES:[DI],AL
-        UInt8[ES, DI] = AL;
-        DI = (ushort)(DI + (ushort)State.Direction8);
+        UInt8[ES, 0xFFFF] = 0x78;
+        DI = 0;
         // F000:06F8 cmp byte ptr ES:[EBX],AL
-        Alu8.Sub(UInt8[ES, EBX], AL);
+        flagOperand_06F8 = UInt8[ES, 0x0000FFFF];
+        Alu8.Sub(flagOperand_06F8, 0x78);
         // F000:06FC jne near 0x15C7
-        if (!ZeroFlag) {
+        if (flagOperand_06F8 != 0x78) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0700 cmp EDI,0x00010000
-        Alu32.Sub(EDI, 0x00010000);
         // F000:0707 jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:070B mov ESI,0x0001FFFF
         ESI = 0x0001FFFF;
         // F000:0711 mov EDI,0x0001FFFF
@@ -219,114 +234,86 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0717 mov EBX,0x0000FFFF
         EBX = 0x0000FFFF;
         // F000:071D mov byte ptr DS:[EBX],AL
-        UInt8[DS, EBX] = AL;
+        UInt8[DS, 0x0000FFFF] = 0x78;
         // F000:0721 mov byte ptr ES:[EBX],AL
-        UInt8[ES, EBX] = AL;
+        UInt8[ES, 0x0000FFFF] = 0x78;
         // F000:0725 cmp AL,0
-        Alu8.Sub(AL, 0);
         // F000:0727 je near 0x15C7
-        if (ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:072B cmps byte ptr DS:[SI],byte ptr ES:[DI]
-        Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
-        SI = (ushort)(SI + (ushort)State.Direction8);
-        DI = (ushort)(DI + (ushort)State.Direction8);
+        Alu8.Sub(UInt8[DS, 0xFFFF], UInt8[ES, 0xFFFF]);
+        SI = 0;
+        DI = 0;
         // F000:072C jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0730 cmp EDI,0x00010000
-        Alu32.Sub(EDI, 0x00010000);
         // F000:0737 jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:073B cmp ESI,0x00010000
-        Alu32.Sub(ESI, 0x00010000);
         // F000:0742 jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:0746 mov EDI,0x0001FFFF
         EDI = 0x0001FFFF;
         // F000:074C mov AL,0x78
         AL = 0x78;
         // F000:074E mov byte ptr ES:[EBX],AL
-        UInt8[ES, EBX] = AL;
+        UInt8[ES, 0x0000FFFF] = 0x78;
         // F000:0752 cmp AL,0
         // F000:0754 scas AL,byte ptr ES:[DI]
-        Alu8.Sub(AL, UInt8[ES, DI]);
-        DI = (ushort)(DI + (ushort)State.Direction8);
+        flagOperand_0754 = UInt8[ES, 0xFFFF];
+        Alu8.Sub(0x78, flagOperand_0754);
+        DI = 0;
         // F000:0755 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (0x78 != flagOperand_0754) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0759 cmp EDI,0x00010000
-        Alu32.Sub(EDI, 0x00010000);
         // F000:0760 jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:0764 mov ESI,0x0001FFFF
         ESI = 0x0001FFFF;
         // F000:076A mov EDI,0x0001FFFF
         EDI = 0x0001FFFF;
         // F000:0770 mov AL,0x78
-        AL = 0x78;
         // F000:0772 mov byte ptr DS:[EBX],AL
-        UInt8[DS, EBX] = AL;
+        UInt8[DS, 0x0000FFFF] = 0x78;
         // F000:0776 mov AL,0
-        AL = 0;
         // F000:0778 mov byte ptr ES:[EBX],AL
-        UInt8[ES, EBX] = AL;
+        UInt8[ES, 0x0000FFFF] = 0;
         // F000:077C movs byte ptr ES:[DI],byte ptr DS:[SI]
-        UInt8[ES, DI] = UInt8[DS, SI];
-        SI = (ushort)(SI + (ushort)State.Direction8);
-        DI = (ushort)(DI + (ushort)State.Direction8);
+        UInt8[ES, 0xFFFF] = UInt8[DS, 0xFFFF];
+        SI = 0;
+        DI = 0;
         // F000:077D mov AL,0x78
         AL = 0x78;
         // F000:077F cmp byte ptr ES:[EBX],AL
-        Alu8.Sub(UInt8[ES, EBX], AL);
+        flagOperand_077F = UInt8[ES, 0x0000FFFF];
+        Alu8.Sub(flagOperand_077F, 0x78);
         // F000:0783 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (flagOperand_077F != 0x78) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0787 cmp EDI,0x00010000
-        Alu32.Sub(EDI, 0x00010000);
         // F000:078E jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:0792 cmp ESI,0x00010000
-        Alu32.Sub(ESI, 0x00010000);
         // F000:0799 jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:079D mov ESI,0x0001FFFF
         ESI = 0x0001FFFF;
         // F000:07A3 mov AL,0x78
         AL = 0x78;
         // F000:07A5 mov byte ptr ES:[EBX],AL
-        UInt8[ES, EBX] = AL;
+        UInt8[ES, 0x0000FFFF] = 0x78;
         // F000:07A9 xor EAX,EAX
         EAX = 0;
         // F000:07AC lods AL,byte ptr DS:[SI]
-        AL = UInt8[DS, SI];
-        SI = (ushort)(SI + (ushort)State.Direction8);
+        AL = UInt8[DS, 0xFFFF];
+        SI = 0;
         // F000:07AD cmp AL,0x78
         Alu8.Sub(AL, 0x78);
         // F000:07AF jne near 0x15C7
-        if (!ZeroFlag) {
+        if (AL != 0x78) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:07B3 cmp ESI,0x00010000
-        Alu32.Sub(ESI, 0x00010000);
         // F000:07BA jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:07BE cld
         DirectionFlag = false;
         // F000:07BF mov EDI,0x0001FFFE
@@ -334,26 +321,22 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:07C5 mov EBX,0x0000FFFE
         EBX = 0x0000FFFE;
         // F000:07CB mov AX,0
-        AX = 0;
         // F000:07CE mov word ptr ES:[EBX],AX
-        UInt16[ES, EBX] = AX;
+        UInt16[ES, 0x0000FFFE] = 0;
         // F000:07D2 mov AX,0x5678
         AX = 0x5678;
         // F000:07D5 stos word ptr ES:[DI],AX
-        UInt16[ES, DI] = AX;
-        DI = (ushort)(DI + (ushort)State.Direction16);
+        UInt16[ES, 0xFFFE] = 0x5678;
+        DI = 0;
         // F000:07D6 cmp word ptr ES:[EBX],AX
-        Alu16.Sub(UInt16[ES, EBX], AX);
+        flagOperand_07D6 = UInt16[ES, 0x0000FFFE];
+        Alu16.Sub(flagOperand_07D6, 0x5678);
         // F000:07DA jne near 0x15C7
-        if (!ZeroFlag) {
+        if (flagOperand_07D6 != 0x5678) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:07DE cmp EDI,0x00010000
-        Alu32.Sub(EDI, 0x00010000);
         // F000:07E5 jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:07E9 mov ESI,0x0001FFFE
         ESI = 0x0001FFFE;
         // F000:07EF mov EDI,0x0001FFFE
@@ -361,114 +344,85 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:07F5 mov EBX,0x0000FFFE
         EBX = 0x0000FFFE;
         // F000:07FB mov word ptr DS:[EBX],AX
-        UInt16[DS, EBX] = AX;
+        UInt16[DS, 0x0000FFFE] = 0x5678;
         // F000:07FF mov word ptr ES:[EBX],AX
-        UInt16[ES, EBX] = AX;
+        UInt16[ES, 0x0000FFFE] = 0x5678;
         // F000:0803 cmp AX,0
-        Alu16.Sub(AX, 0);
         // F000:0806 je near 0x15C7
-        if (ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:080A cmps word ptr DS:[SI],word ptr ES:[DI]
-        Alu16.Sub(UInt16[DS, SI], UInt16[ES, DI]);
-        SI = (ushort)(SI + (ushort)State.Direction16);
-        DI = (ushort)(DI + (ushort)State.Direction16);
+        Alu16.Sub(UInt16[DS, 0xFFFE], UInt16[ES, 0xFFFE]);
+        SI = 0;
+        DI = 0;
         // F000:080B jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:080F cmp EDI,0x00010000
-        Alu32.Sub(EDI, 0x00010000);
         // F000:0816 jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:081A cmp ESI,0x00010000
-        Alu32.Sub(ESI, 0x00010000);
         // F000:0821 jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:0825 mov EDI,0x0001FFFE
         EDI = 0x0001FFFE;
         // F000:082B mov AX,0x5678
         AX = 0x5678;
         // F000:082E mov word ptr ES:[EBX],AX
-        UInt16[ES, EBX] = AX;
+        UInt16[ES, 0x0000FFFE] = 0x5678;
         // F000:0832 cmp AX,0
         // F000:0835 scas AX,word ptr ES:[DI]
-        Alu16.Sub(AX, UInt16[ES, DI]);
-        DI = (ushort)(DI + (ushort)State.Direction16);
+        flagOperand_0835 = UInt16[ES, 0xFFFE];
+        Alu16.Sub(0x5678, flagOperand_0835);
+        DI = 0;
         // F000:0836 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (0x5678 != flagOperand_0835) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:083A cmp EDI,0x00010000
-        Alu32.Sub(EDI, 0x00010000);
         // F000:0841 jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:0845 mov ESI,0x0001FFFE
         ESI = 0x0001FFFE;
         // F000:084B mov EDI,0x0001FFFE
         EDI = 0x0001FFFE;
         // F000:0851 mov AX,0x5678
-        AX = 0x5678;
         // F000:0854 mov word ptr DS:[EBX],AX
-        UInt16[DS, EBX] = AX;
+        UInt16[DS, 0x0000FFFE] = 0x5678;
         // F000:0858 mov AX,0
-        AX = 0;
         // F000:085B mov word ptr ES:[EBX],AX
-        UInt16[ES, EBX] = AX;
+        UInt16[ES, 0x0000FFFE] = 0;
         // F000:085F movs word ptr ES:[DI],word ptr DS:[SI]
-        UInt16[ES, DI] = UInt16[DS, SI];
-        SI = (ushort)(SI + (ushort)State.Direction16);
-        DI = (ushort)(DI + (ushort)State.Direction16);
+        UInt16[ES, 0xFFFE] = UInt16[DS, 0xFFFE];
+        SI = 0;
+        DI = 0;
         // F000:0860 mov AX,0x5678
         AX = 0x5678;
         // F000:0863 cmp word ptr ES:[EBX],AX
-        Alu16.Sub(UInt16[ES, EBX], AX);
+        flagOperand_0863 = UInt16[ES, 0x0000FFFE];
+        Alu16.Sub(flagOperand_0863, 0x5678);
         // F000:0867 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (flagOperand_0863 != 0x5678) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:086B cmp EDI,0x00010000
-        Alu32.Sub(EDI, 0x00010000);
         // F000:0872 jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:0876 cmp ESI,0x00010000
-        Alu32.Sub(ESI, 0x00010000);
         // F000:087D jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:0881 mov ESI,0x0001FFFE
         ESI = 0x0001FFFE;
         // F000:0887 mov AX,0x5678
-        AX = 0x5678;
         // F000:088A mov word ptr ES:[EBX],AX
-        UInt16[ES, EBX] = AX;
+        UInt16[ES, 0x0000FFFE] = 0x5678;
         // F000:088E xor EAX,EAX
         EAX = 0;
         // F000:0891 lods AX,word ptr DS:[SI]
-        AX = UInt16[DS, SI];
-        SI = (ushort)(SI + (ushort)State.Direction16);
+        AX = UInt16[DS, 0xFFFE];
+        SI = 0;
         // F000:0892 cmp AX,0x5678
         Alu16.Sub(AX, 0x5678);
         // F000:0895 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (AX != 0x5678) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0899 cmp ESI,0x00010000
-        Alu32.Sub(ESI, 0x00010000);
         // F000:08A0 jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:08A4 cld
         DirectionFlag = false;
         // F000:08A5 mov EDI,0x0001FFFC
@@ -476,26 +430,22 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:08AB mov EBX,0x0000FFFC
         EBX = 0x0000FFFC;
         // F000:08B1 mov EAX,0
-        EAX = 0;
         // F000:08B7 mov dword ptr ES:[EBX],EAX
-        UInt32[ES, EBX] = EAX;
+        UInt32[ES, 0x0000FFFC] = 0;
         // F000:08BC mov EAX,0x12345678
         EAX = 0x12345678;
         // F000:08C2 stos dword ptr ES:[DI],EAX
-        UInt32[ES, DI] = EAX;
-        DI = (ushort)(DI + (ushort)State.Direction32);
+        UInt32[ES, 0xFFFC] = 0x12345678;
+        DI = 0;
         // F000:08C4 cmp dword ptr ES:[EBX],EAX
-        Alu32.Sub(UInt32[ES, EBX], EAX);
+        flagOperand_08C4 = UInt32[ES, 0x0000FFFC];
+        Alu32.Sub(flagOperand_08C4, 0x12345678);
         // F000:08C9 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (flagOperand_08C4 != 0x12345678) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:08CD cmp EDI,0x00010000
-        Alu32.Sub(EDI, 0x00010000);
         // F000:08D4 jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:08D8 mov ESI,0x0001FFFC
         ESI = 0x0001FFFC;
         // F000:08DE mov EDI,0x0001FFFC
@@ -503,114 +453,85 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:08E4 mov EBX,0x0000FFFC
         EBX = 0x0000FFFC;
         // F000:08EA mov dword ptr DS:[EBX],EAX
-        UInt32[DS, EBX] = EAX;
+        UInt32[DS, 0x0000FFFC] = 0x12345678;
         // F000:08EF mov dword ptr ES:[EBX],EAX
-        UInt32[ES, EBX] = EAX;
+        UInt32[ES, 0x0000FFFC] = 0x12345678;
         // F000:08F4 cmp EAX,0
-        Alu32.Sub(EAX, 0);
         // F000:08F8 je near 0x15C7
-        if (ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:08FC cmps dword ptr DS:[SI],dword ptr ES:[DI]
-        Alu32.Sub(UInt32[DS, SI], UInt32[ES, DI]);
-        SI = (ushort)(SI + (ushort)State.Direction32);
-        DI = (ushort)(DI + (ushort)State.Direction32);
+        Alu32.Sub(UInt32[DS, 0xFFFC], UInt32[ES, 0xFFFC]);
+        SI = 0;
+        DI = 0;
         // F000:08FE jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0902 cmp EDI,0x00010000
-        Alu32.Sub(EDI, 0x00010000);
         // F000:0909 jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:090D cmp ESI,0x00010000
-        Alu32.Sub(ESI, 0x00010000);
         // F000:0914 jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:0918 mov EDI,0x0001FFFC
         EDI = 0x0001FFFC;
         // F000:091E mov EAX,0x12345678
         EAX = 0x12345678;
         // F000:0924 mov dword ptr ES:[EBX],EAX
-        UInt32[ES, EBX] = EAX;
+        UInt32[ES, 0x0000FFFC] = 0x12345678;
         // F000:0929 cmp EAX,0
         // F000:092D scas EAX,dword ptr ES:[DI]
-        Alu32.Sub(EAX, UInt32[ES, DI]);
-        DI = (ushort)(DI + (ushort)State.Direction32);
+        flagOperand_092D = UInt32[ES, 0xFFFC];
+        Alu32.Sub(0x12345678, flagOperand_092D);
+        DI = 0;
         // F000:092F jne near 0x15C7
-        if (!ZeroFlag) {
+        if (0x12345678 != flagOperand_092D) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0933 cmp EDI,0x00010000
-        Alu32.Sub(EDI, 0x00010000);
         // F000:093A jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:093E mov ESI,0x0001FFFC
         ESI = 0x0001FFFC;
         // F000:0944 mov EDI,0x0001FFFC
         EDI = 0x0001FFFC;
         // F000:094A mov EAX,0x12345678
-        EAX = 0x12345678;
         // F000:0950 mov dword ptr DS:[EBX],EAX
-        UInt32[DS, EBX] = EAX;
+        UInt32[DS, 0x0000FFFC] = 0x12345678;
         // F000:0955 mov EAX,0
-        EAX = 0;
         // F000:095B mov dword ptr ES:[EBX],EAX
-        UInt32[ES, EBX] = EAX;
+        UInt32[ES, 0x0000FFFC] = 0;
         // F000:0960 movs dword ptr ES:[DI],dword ptr DS:[SI]
-        UInt32[ES, DI] = UInt32[DS, SI];
-        SI = (ushort)(SI + (ushort)State.Direction32);
-        DI = (ushort)(DI + (ushort)State.Direction32);
+        UInt32[ES, 0xFFFC] = UInt32[DS, 0xFFFC];
+        SI = 0;
+        DI = 0;
         // F000:0962 mov EAX,0x12345678
         EAX = 0x12345678;
         // F000:0968 cmp dword ptr ES:[EBX],EAX
-        Alu32.Sub(UInt32[ES, EBX], EAX);
+        flagOperand_0968 = UInt32[ES, 0x0000FFFC];
+        Alu32.Sub(flagOperand_0968, 0x12345678);
         // F000:096D jne near 0x15C7
-        if (!ZeroFlag) {
+        if (flagOperand_0968 != 0x12345678) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0971 cmp EDI,0x00010000
-        Alu32.Sub(EDI, 0x00010000);
         // F000:0978 jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:097C cmp ESI,0x00010000
-        Alu32.Sub(ESI, 0x00010000);
         // F000:0983 jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:0987 mov ESI,0x0001FFFC
         ESI = 0x0001FFFC;
         // F000:098D mov EAX,0x12345678
-        EAX = 0x12345678;
         // F000:0993 mov dword ptr ES:[EBX],EAX
-        UInt32[ES, EBX] = EAX;
+        UInt32[ES, 0x0000FFFC] = 0x12345678;
         // F000:0998 xor EAX,EAX
         EAX = 0;
         // F000:099B lods EAX,dword ptr DS:[SI]
-        EAX = UInt32[DS, SI];
-        SI = (ushort)(SI + (ushort)State.Direction32);
+        EAX = UInt32[DS, 0xFFFC];
+        SI = 0;
         // F000:099D cmp EAX,0x12345678
         Alu32.Sub(EAX, 0x12345678);
         // F000:09A3 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EAX != 0x12345678) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:09A7 cmp ESI,0x00010000
-        Alu32.Sub(ESI, 0x00010000);
         // F000:09AE jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:09B2 std
         DirectionFlag = true;
         // F000:09B3 mov EDI,0x00010000
@@ -618,26 +539,22 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:09B9 mov EBX,0
         EBX = 0;
         // F000:09BF mov AL,0
-        AL = 0;
         // F000:09C1 mov byte ptr ES:[EBX],AL
-        UInt8[ES, EBX] = AL;
+        UInt8[ES, 0] = 0;
         // F000:09C5 mov AL,0x78
         AL = 0x78;
         // F000:09C7 stos byte ptr ES:[DI],AL
-        UInt8[ES, DI] = AL;
-        DI = (ushort)(DI + (ushort)State.Direction8);
+        UInt8[ES, 0] = 0x78;
+        DI = 0xFFFF;
         // F000:09C8 cmp byte ptr ES:[EBX],AL
-        Alu8.Sub(UInt8[ES, EBX], AL);
+        flagOperand_09C8 = UInt8[ES, 0];
+        Alu8.Sub(flagOperand_09C8, 0x78);
         // F000:09CC jne near 0x15C7
-        if (!ZeroFlag) {
+        if (flagOperand_09C8 != 0x78) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:09D0 cmp EDI,0x0001FFFF
-        Alu32.Sub(EDI, 0x0001FFFF);
         // F000:09D7 jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:09DB mov ESI,0x00010000
         ESI = 0x00010000;
         // F000:09E1 mov EDI,0x00010000
@@ -645,114 +562,86 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:09E7 mov EBX,0
         EBX = 0;
         // F000:09ED mov byte ptr DS:[EBX],AL
-        UInt8[DS, EBX] = AL;
+        UInt8[DS, 0] = 0x78;
         // F000:09F1 mov byte ptr ES:[EBX],AL
-        UInt8[ES, EBX] = AL;
+        UInt8[ES, 0] = 0x78;
         // F000:09F5 cmp AL,0
-        Alu8.Sub(AL, 0);
         // F000:09F7 je near 0x15C7
-        if (ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:09FB cmps byte ptr DS:[SI],byte ptr ES:[DI]
-        Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
-        SI = (ushort)(SI + (ushort)State.Direction8);
-        DI = (ushort)(DI + (ushort)State.Direction8);
+        Alu8.Sub(UInt8[DS, 0], UInt8[ES, 0]);
+        SI = 0xFFFF;
+        DI = 0xFFFF;
         // F000:09FC jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0A00 cmp EDI,0x0001FFFF
-        Alu32.Sub(EDI, 0x0001FFFF);
         // F000:0A07 jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:0A0B cmp ESI,0x0001FFFF
-        Alu32.Sub(ESI, 0x0001FFFF);
         // F000:0A12 jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:0A16 mov EDI,0x00010000
         EDI = 0x00010000;
         // F000:0A1C mov AL,0x78
         AL = 0x78;
         // F000:0A1E mov byte ptr ES:[EBX],AL
-        UInt8[ES, EBX] = AL;
+        UInt8[ES, 0] = 0x78;
         // F000:0A22 cmp AL,0
         // F000:0A24 scas AL,byte ptr ES:[DI]
-        Alu8.Sub(AL, UInt8[ES, DI]);
-        DI = (ushort)(DI + (ushort)State.Direction8);
+        flagOperand_0A24 = UInt8[ES, 0];
+        Alu8.Sub(0x78, flagOperand_0A24);
+        DI = 0xFFFF;
         // F000:0A25 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (0x78 != flagOperand_0A24) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0A29 cmp EDI,0x0001FFFF
-        Alu32.Sub(EDI, 0x0001FFFF);
         // F000:0A30 jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:0A34 mov ESI,0x00010000
         ESI = 0x00010000;
         // F000:0A3A mov EDI,0x00010000
         EDI = 0x00010000;
         // F000:0A40 mov AL,0x78
-        AL = 0x78;
         // F000:0A42 mov byte ptr DS:[EBX],AL
-        UInt8[DS, EBX] = AL;
+        UInt8[DS, 0] = 0x78;
         // F000:0A46 mov AL,0
-        AL = 0;
         // F000:0A48 mov byte ptr ES:[EBX],AL
-        UInt8[ES, EBX] = AL;
+        UInt8[ES, 0] = 0;
         // F000:0A4C movs byte ptr ES:[DI],byte ptr DS:[SI]
-        UInt8[ES, DI] = UInt8[DS, SI];
-        SI = (ushort)(SI + (ushort)State.Direction8);
-        DI = (ushort)(DI + (ushort)State.Direction8);
+        UInt8[ES, 0] = UInt8[DS, 0];
+        SI = 0xFFFF;
+        DI = 0xFFFF;
         // F000:0A4D mov AL,0x78
         AL = 0x78;
         // F000:0A4F cmp byte ptr ES:[EBX],AL
-        Alu8.Sub(UInt8[ES, EBX], AL);
+        flagOperand_0A4F = UInt8[ES, 0];
+        Alu8.Sub(flagOperand_0A4F, 0x78);
         // F000:0A53 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (flagOperand_0A4F != 0x78) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0A57 cmp EDI,0x0001FFFF
-        Alu32.Sub(EDI, 0x0001FFFF);
         // F000:0A5E jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:0A62 cmp ESI,0x0001FFFF
-        Alu32.Sub(ESI, 0x0001FFFF);
         // F000:0A69 jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:0A6D mov ESI,0x00010000
         ESI = 0x00010000;
         // F000:0A73 mov AL,0x78
         AL = 0x78;
         // F000:0A75 mov byte ptr ES:[EBX],AL
-        UInt8[ES, EBX] = AL;
+        UInt8[ES, 0] = 0x78;
         // F000:0A79 xor EAX,EAX
         EAX = 0;
         // F000:0A7C lods AL,byte ptr DS:[SI]
-        AL = UInt8[DS, SI];
-        SI = (ushort)(SI + (ushort)State.Direction8);
+        AL = UInt8[DS, 0];
+        SI = 0xFFFF;
         // F000:0A7D cmp AL,0x78
         Alu8.Sub(AL, 0x78);
         // F000:0A7F jne near 0x15C7
-        if (!ZeroFlag) {
+        if (AL != 0x78) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0A83 cmp ESI,0x0001FFFF
-        Alu32.Sub(ESI, 0x0001FFFF);
         // F000:0A8A jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:0A8E std
         DirectionFlag = true;
         // F000:0A8F mov EDI,0x00010000
@@ -760,26 +649,22 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0A95 mov EBX,0
         EBX = 0;
         // F000:0A9B mov AX,0
-        AX = 0;
         // F000:0A9E mov word ptr ES:[EBX],AX
-        UInt16[ES, EBX] = AX;
+        UInt16[ES, 0] = 0;
         // F000:0AA2 mov AX,0x5678
         AX = 0x5678;
         // F000:0AA5 stos word ptr ES:[DI],AX
-        UInt16[ES, DI] = AX;
-        DI = (ushort)(DI + (ushort)State.Direction16);
+        UInt16[ES, 0] = 0x5678;
+        DI = 0xFFFE;
         // F000:0AA6 cmp word ptr ES:[EBX],AX
-        Alu16.Sub(UInt16[ES, EBX], AX);
+        flagOperand_0AA6 = UInt16[ES, 0];
+        Alu16.Sub(flagOperand_0AA6, 0x5678);
         // F000:0AAA jne near 0x15C7
-        if (!ZeroFlag) {
+        if (flagOperand_0AA6 != 0x5678) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0AAE cmp EDI,0x0001FFFE
-        Alu32.Sub(EDI, 0x0001FFFE);
         // F000:0AB5 jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:0AB9 mov ESI,0x00010000
         ESI = 0x00010000;
         // F000:0ABF mov EDI,0x00010000
@@ -787,114 +672,85 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0AC5 mov EBX,0
         EBX = 0;
         // F000:0ACB mov word ptr DS:[EBX],AX
-        UInt16[DS, EBX] = AX;
+        UInt16[DS, 0] = 0x5678;
         // F000:0ACF mov word ptr ES:[EBX],AX
-        UInt16[ES, EBX] = AX;
+        UInt16[ES, 0] = 0x5678;
         // F000:0AD3 cmp AX,0
-        Alu16.Sub(AX, 0);
         // F000:0AD6 je near 0x15C7
-        if (ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:0ADA cmps word ptr DS:[SI],word ptr ES:[DI]
-        Alu16.Sub(UInt16[DS, SI], UInt16[ES, DI]);
-        SI = (ushort)(SI + (ushort)State.Direction16);
-        DI = (ushort)(DI + (ushort)State.Direction16);
+        Alu16.Sub(UInt16[DS, 0], UInt16[ES, 0]);
+        SI = 0xFFFE;
+        DI = 0xFFFE;
         // F000:0ADB jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0ADF cmp EDI,0x0001FFFE
-        Alu32.Sub(EDI, 0x0001FFFE);
         // F000:0AE6 jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:0AEA cmp ESI,0x0001FFFE
-        Alu32.Sub(ESI, 0x0001FFFE);
         // F000:0AF1 jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:0AF5 mov EDI,0x00010000
         EDI = 0x00010000;
         // F000:0AFB mov AX,0x5678
         AX = 0x5678;
         // F000:0AFE mov word ptr ES:[EBX],AX
-        UInt16[ES, EBX] = AX;
+        UInt16[ES, 0] = 0x5678;
         // F000:0B02 cmp AX,0
         // F000:0B05 scas AX,word ptr ES:[DI]
-        Alu16.Sub(AX, UInt16[ES, DI]);
-        DI = (ushort)(DI + (ushort)State.Direction16);
+        flagOperand_0B05 = UInt16[ES, 0];
+        Alu16.Sub(0x5678, flagOperand_0B05);
+        DI = 0xFFFE;
         // F000:0B06 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (0x5678 != flagOperand_0B05) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0B0A cmp EDI,0x0001FFFE
-        Alu32.Sub(EDI, 0x0001FFFE);
         // F000:0B11 jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:0B15 mov ESI,0x00010000
         ESI = 0x00010000;
         // F000:0B1B mov EDI,0x00010000
         EDI = 0x00010000;
         // F000:0B21 mov AX,0x5678
-        AX = 0x5678;
         // F000:0B24 mov word ptr DS:[EBX],AX
-        UInt16[DS, EBX] = AX;
+        UInt16[DS, 0] = 0x5678;
         // F000:0B28 mov AX,0
-        AX = 0;
         // F000:0B2B mov word ptr ES:[EBX],AX
-        UInt16[ES, EBX] = AX;
+        UInt16[ES, 0] = 0;
         // F000:0B2F movs word ptr ES:[DI],word ptr DS:[SI]
-        UInt16[ES, DI] = UInt16[DS, SI];
-        SI = (ushort)(SI + (ushort)State.Direction16);
-        DI = (ushort)(DI + (ushort)State.Direction16);
+        UInt16[ES, 0] = UInt16[DS, 0];
+        SI = 0xFFFE;
+        DI = 0xFFFE;
         // F000:0B30 mov AX,0x5678
         AX = 0x5678;
         // F000:0B33 cmp word ptr ES:[EBX],AX
-        Alu16.Sub(UInt16[ES, EBX], AX);
+        flagOperand_0B33 = UInt16[ES, 0];
+        Alu16.Sub(flagOperand_0B33, 0x5678);
         // F000:0B37 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (flagOperand_0B33 != 0x5678) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0B3B cmp EDI,0x0001FFFE
-        Alu32.Sub(EDI, 0x0001FFFE);
         // F000:0B42 jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:0B46 cmp ESI,0x0001FFFE
-        Alu32.Sub(ESI, 0x0001FFFE);
         // F000:0B4D jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:0B51 mov ESI,0x00010000
         ESI = 0x00010000;
         // F000:0B57 mov AX,0x5678
-        AX = 0x5678;
         // F000:0B5A mov word ptr ES:[EBX],AX
-        UInt16[ES, EBX] = AX;
+        UInt16[ES, 0] = 0x5678;
         // F000:0B5E xor EAX,EAX
         EAX = 0;
         // F000:0B61 lods AX,word ptr DS:[SI]
-        AX = UInt16[DS, SI];
-        SI = (ushort)(SI + (ushort)State.Direction16);
+        AX = UInt16[DS, 0];
+        SI = 0xFFFE;
         // F000:0B62 cmp AX,0x5678
         Alu16.Sub(AX, 0x5678);
         // F000:0B65 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (AX != 0x5678) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0B69 cmp ESI,0x0001FFFE
-        Alu32.Sub(ESI, 0x0001FFFE);
         // F000:0B70 jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:0B74 std
         DirectionFlag = true;
         // F000:0B75 mov EDI,0x00010000
@@ -902,26 +758,22 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0B7B mov EBX,0
         EBX = 0;
         // F000:0B81 mov EAX,0
-        EAX = 0;
         // F000:0B87 mov dword ptr ES:[EBX],EAX
-        UInt32[ES, EBX] = EAX;
+        UInt32[ES, 0] = 0;
         // F000:0B8C mov EAX,0x12345678
         EAX = 0x12345678;
         // F000:0B92 stos dword ptr ES:[DI],EAX
-        UInt32[ES, DI] = EAX;
-        DI = (ushort)(DI + (ushort)State.Direction32);
+        UInt32[ES, 0] = 0x12345678;
+        DI = 0xFFFC;
         // F000:0B94 cmp dword ptr ES:[EBX],EAX
-        Alu32.Sub(UInt32[ES, EBX], EAX);
+        flagOperand_0B94 = UInt32[ES, 0];
+        Alu32.Sub(flagOperand_0B94, 0x12345678);
         // F000:0B99 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (flagOperand_0B94 != 0x12345678) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0B9D cmp EDI,0x0001FFFC
-        Alu32.Sub(EDI, 0x0001FFFC);
         // F000:0BA4 jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:0BA8 mov ESI,0x00010000
         ESI = 0x00010000;
         // F000:0BAE mov EDI,0x00010000
@@ -929,122 +781,90 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0BB4 mov EBX,0
         EBX = 0;
         // F000:0BBA mov dword ptr DS:[EBX],EAX
-        UInt32[DS, EBX] = EAX;
+        UInt32[DS, 0] = 0x12345678;
         // F000:0BBF mov dword ptr ES:[EBX],EAX
-        UInt32[ES, EBX] = EAX;
+        UInt32[ES, 0] = 0x12345678;
         // F000:0BC4 cmp EAX,0
-        Alu32.Sub(EAX, 0);
         // F000:0BC8 je near 0x15C7
-        if (ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:0BCC cmps dword ptr DS:[SI],dword ptr ES:[DI]
-        Alu32.Sub(UInt32[DS, SI], UInt32[ES, DI]);
-        SI = (ushort)(SI + (ushort)State.Direction32);
-        DI = (ushort)(DI + (ushort)State.Direction32);
+        Alu32.Sub(UInt32[DS, 0], UInt32[ES, 0]);
+        SI = 0xFFFC;
+        DI = 0xFFFC;
         // F000:0BCE jne near 0x15C7
         if (!ZeroFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0BD2 cmp EDI,0x0001FFFC
-        Alu32.Sub(EDI, 0x0001FFFC);
         // F000:0BD9 jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:0BDD cmp ESI,0x0001FFFC
-        Alu32.Sub(ESI, 0x0001FFFC);
         // F000:0BE4 jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:0BE8 mov EDI,0x00010000
         EDI = 0x00010000;
         // F000:0BEE mov EAX,0x12345678
         EAX = 0x12345678;
         // F000:0BF4 mov dword ptr ES:[EBX],EAX
-        UInt32[ES, EBX] = EAX;
+        UInt32[ES, 0] = 0x12345678;
         // F000:0BF9 cmp EAX,0
         // F000:0BFD scas EAX,dword ptr ES:[DI]
-        Alu32.Sub(EAX, UInt32[ES, DI]);
-        DI = (ushort)(DI + (ushort)State.Direction32);
+        flagOperand_0BFD = UInt32[ES, 0];
+        Alu32.Sub(0x12345678, flagOperand_0BFD);
+        DI = 0xFFFC;
         // F000:0BFF jne near 0x15C7
-        if (!ZeroFlag) {
+        if (0x12345678 != flagOperand_0BFD) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0C03 cmp EDI,0x0001FFFC
-        Alu32.Sub(EDI, 0x0001FFFC);
         // F000:0C0A jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:0C0E mov ESI,0x00010000
         ESI = 0x00010000;
         // F000:0C14 mov EDI,0x00010000
         EDI = 0x00010000;
         // F000:0C1A mov EAX,0x12345678
-        EAX = 0x12345678;
         // F000:0C20 mov dword ptr DS:[EBX],EAX
-        UInt32[DS, EBX] = EAX;
+        UInt32[DS, 0] = 0x12345678;
         // F000:0C25 mov EAX,0
-        EAX = 0;
         // F000:0C2B mov dword ptr ES:[EBX],EAX
-        UInt32[ES, EBX] = EAX;
+        UInt32[ES, 0] = 0;
         // F000:0C30 movs dword ptr ES:[DI],dword ptr DS:[SI]
-        UInt32[ES, DI] = UInt32[DS, SI];
-        SI = (ushort)(SI + (ushort)State.Direction32);
-        DI = (ushort)(DI + (ushort)State.Direction32);
+        UInt32[ES, 0] = UInt32[DS, 0];
+        SI = 0xFFFC;
+        DI = 0xFFFC;
         // F000:0C32 mov EAX,0x12345678
         EAX = 0x12345678;
         // F000:0C38 cmp dword ptr ES:[EBX],EAX
-        Alu32.Sub(UInt32[ES, EBX], EAX);
+        flagOperand_0C38 = UInt32[ES, 0];
+        Alu32.Sub(flagOperand_0C38, 0x12345678);
         // F000:0C3D jne near 0x15C7
-        if (!ZeroFlag) {
+        if (flagOperand_0C38 != 0x12345678) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0C41 cmp EDI,0x0001FFFC
-        Alu32.Sub(EDI, 0x0001FFFC);
         // F000:0C48 jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:0C4C cmp ESI,0x0001FFFC
-        Alu32.Sub(ESI, 0x0001FFFC);
         // F000:0C53 jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:0C57 mov ESI,0x00010000
         ESI = 0x00010000;
         // F000:0C5D mov EAX,0x12345678
-        EAX = 0x12345678;
         // F000:0C63 mov dword ptr ES:[EBX],EAX
-        UInt32[ES, EBX] = EAX;
+        UInt32[ES, 0] = 0x12345678;
         // F000:0C68 xor EAX,EAX
         EAX = 0;
         // F000:0C6B lods EAX,dword ptr DS:[SI]
-        EAX = UInt32[DS, SI];
-        SI = (ushort)(SI + (ushort)State.Direction32);
+        EAX = UInt32[DS, 0];
+        SI = 0xFFFC;
         // F000:0C6D cmp EAX,0x12345678
         Alu32.Sub(EAX, 0x12345678);
         // F000:0C73 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EAX != 0x12345678) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0C77 cmp ESI,0x0001FFFC
-        Alu32.Sub(ESI, 0x0001FFFC);
         // F000:0C7E jne near 0x15C7
-        if (!ZeroFlag) {
-            return unknown_F000_15C7_F15C7(0x0000);
-        }
         // F000:0C82 cld
         DirectionFlag = false;
         // F000:0C83 mov EAX,0x12345678
-        EAX = 0x12345678;
         // F000:0C89 mov ESI,0x0001FF00
-        ESI = 0x0001FF00;
         // F000:0C8F mov EDI,0x0001FF00
-        EDI = 0x0001FF00;
         // F000:0C95 mov EAX,0x12345678
         EAX = 0x12345678;
         // F000:0C9B mov ESI,0x0001FF00
@@ -1056,19 +876,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0CAD rep stos byte ptr ES:[DI],AL
         while (CX != 0) {
             UInt8[ES, DI] = AL;
-            DI = (ushort)(DI + (ushort)State.Direction8);
+            DI++;
             CX--;
         }
         // F000:0CAF cmp ECX,0
         Alu32.Sub(ECX, 0);
         // F000:0CB3 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ECX != 0) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0CB7 cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0CBE jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EDI != 0x00010000) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0CC2 mov EDI,0x0001FF00
@@ -1078,23 +898,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0CCA mov CX,DS
         CX = DS;
         // F000:0CCC xchg DX,CX
-        ushort temp_0CCC = DX;
-        DX = CX;
-        CX = (ushort)temp_0CCC;
+        (DX, CX) = (CX, DX);
         // F000:0CCE mov ES,DX
         ES = DX;
         // F000:0CD0 mov DS,CX
         DS = CX;
         // F000:0CD2 xchg EDI,ESI
-        uint temp_0CD2 = EDI;
-        EDI = ESI;
-        ESI = (uint)temp_0CD2;
+        (EDI, ESI) = (ESI, EDI);
         // F000:0CD5 mov ECX,0x00000100
         ECX = 0x00000100;
         // F000:0CDB rep stos byte ptr ES:[DI],AL
         while (CX != 0) {
             UInt8[ES, DI] = AL;
-            DI = (ushort)(DI + (ushort)State.Direction8);
+            DI++;
             CX--;
         }
         // F000:0CDD mov EDI,0x0001FF00
@@ -1104,8 +920,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0CE9 repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
         while (CX != 0) {
             bool equal_0CE9 = UInt8[DS, SI] == UInt8[ES, DI];
-            SI = (ushort)(SI + (ushort)State.Direction8);
-            DI = (ushort)(DI + (ushort)State.Direction8);
+            SI++;
+            DI++;
             CX--;
             if (!equal_0CE9) {
                 break;
@@ -1114,19 +930,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0CEB cmp ECX,0
         Alu32.Sub(ECX, 0);
         // F000:0CEF jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ECX != 0) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0CF3 cmp ESI,0x00010000
         Alu32.Sub(ESI, 0x00010000);
         // F000:0CFA jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ESI != 0x00010000) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0CFE cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0D05 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EDI != 0x00010000) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0D09 mov EDI,0x0001FF00
@@ -1138,7 +954,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0D1B repe scas AL,byte ptr ES:[DI]
         while (CX != 0) {
             bool equal_0D1B = AL == UInt8[ES, DI];
-            DI = (ushort)(DI + (ushort)State.Direction8);
+            DI++;
             CX--;
             if (!equal_0D1B) {
                 break;
@@ -1147,13 +963,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0D1D cmp ECX,0
         Alu32.Sub(ECX, 0);
         // F000:0D21 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ECX != 0) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0D25 cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0D2C jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EDI != 0x00010000) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0D30 mov EDI,0x0001FF00
@@ -1165,7 +981,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0D42 rep stos byte ptr ES:[DI],AL
         while (CX != 0) {
             UInt8[ES, DI] = AL;
-            DI = (ushort)(DI + (ushort)State.Direction8);
+            DI++;
             CX--;
         }
         // F000:0D44 mov EDI,0x0001FF00
@@ -1175,26 +991,26 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0D50 rep movs byte ptr ES:[DI],byte ptr DS:[SI]
         while (CX != 0) {
             UInt8[ES, DI] = UInt8[DS, SI];
-            SI = (ushort)(SI + (ushort)State.Direction8);
-            DI = (ushort)(DI + (ushort)State.Direction8);
+            SI++;
+            DI++;
             CX--;
         }
         // F000:0D52 cmp ECX,0
         Alu32.Sub(ECX, 0);
         // F000:0D56 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ECX != 0) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0D5A cmp ESI,0x00010000
         Alu32.Sub(ESI, 0x00010000);
         // F000:0D61 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ESI != 0x00010000) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0D65 cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0D6C jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EDI != 0x00010000) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0D70 mov ECX,0x00000100
@@ -1206,8 +1022,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0D82 repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
         while (CX != 0) {
             bool equal_0D82 = UInt8[DS, SI] == UInt8[ES, DI];
-            SI = (ushort)(SI + (ushort)State.Direction8);
-            DI = (ushort)(DI + (ushort)State.Direction8);
+            SI++;
+            DI++;
             CX--;
             if (!equal_0D82) {
                 break;
@@ -1216,29 +1032,26 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0D84 cmp ECX,0
         Alu32.Sub(ECX, 0);
         // F000:0D88 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ECX != 0) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0D8C cmp ESI,0x00010000
         Alu32.Sub(ESI, 0x00010000);
         // F000:0D93 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ESI != 0x00010000) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0D97 cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0D9E jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EDI != 0x00010000) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0DA2 cld
         DirectionFlag = false;
         // F000:0DA3 mov EAX,0x12345678
-        EAX = 0x12345678;
         // F000:0DA9 mov ESI,0x0001FF00
-        ESI = 0x0001FF00;
         // F000:0DAF mov EDI,0x0001FF00
-        EDI = 0x0001FF00;
         // F000:0DB5 mov EAX,0x12345678
         EAX = 0x12345678;
         // F000:0DBB mov ESI,0x0001FF00
@@ -1250,19 +1063,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0DCD rep stos word ptr ES:[DI],AX
         while (CX != 0) {
             UInt16[ES, DI] = AX;
-            DI = (ushort)(DI + (ushort)State.Direction16);
+            DI += 2;
             CX--;
         }
         // F000:0DCF cmp ECX,0
         Alu32.Sub(ECX, 0);
         // F000:0DD3 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ECX != 0) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0DD7 cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0DDE jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EDI != 0x00010000) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0DE2 mov EDI,0x0001FF00
@@ -1272,23 +1085,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0DEA mov CX,DS
         CX = DS;
         // F000:0DEC xchg DX,CX
-        ushort temp_0DEC = DX;
-        DX = CX;
-        CX = (ushort)temp_0DEC;
+        (DX, CX) = (CX, DX);
         // F000:0DEE mov ES,DX
         ES = DX;
         // F000:0DF0 mov DS,CX
         DS = CX;
         // F000:0DF2 xchg EDI,ESI
-        uint temp_0DF2 = EDI;
-        EDI = ESI;
-        ESI = (uint)temp_0DF2;
+        (EDI, ESI) = (ESI, EDI);
         // F000:0DF5 mov ECX,0x00000080
         ECX = 0x00000080;
         // F000:0DFB rep stos word ptr ES:[DI],AX
         while (CX != 0) {
             UInt16[ES, DI] = AX;
-            DI = (ushort)(DI + (ushort)State.Direction16);
+            DI += 2;
             CX--;
         }
         // F000:0DFD mov EDI,0x0001FF00
@@ -1298,8 +1107,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0E09 repe cmps word ptr DS:[SI],word ptr ES:[DI]
         while (CX != 0) {
             bool equal_0E09 = UInt16[DS, SI] == UInt16[ES, DI];
-            SI = (ushort)(SI + (ushort)State.Direction16);
-            DI = (ushort)(DI + (ushort)State.Direction16);
+            SI += 2;
+            DI += 2;
             CX--;
             if (!equal_0E09) {
                 break;
@@ -1308,19 +1117,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0E0B cmp ECX,0
         Alu32.Sub(ECX, 0);
         // F000:0E0F jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ECX != 0) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0E13 cmp ESI,0x00010000
         Alu32.Sub(ESI, 0x00010000);
         // F000:0E1A jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ESI != 0x00010000) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0E1E cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0E25 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EDI != 0x00010000) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0E29 mov EDI,0x0001FF00
@@ -1332,7 +1141,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0E3B repe scas AX,word ptr ES:[DI]
         while (CX != 0) {
             bool equal_0E3B = AX == UInt16[ES, DI];
-            DI = (ushort)(DI + (ushort)State.Direction16);
+            DI += 2;
             CX--;
             if (!equal_0E3B) {
                 break;
@@ -1341,13 +1150,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0E3D cmp ECX,0
         Alu32.Sub(ECX, 0);
         // F000:0E41 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ECX != 0) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0E45 cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0E4C jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EDI != 0x00010000) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0E50 mov EDI,0x0001FF00
@@ -1359,7 +1168,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0E62 rep stos word ptr ES:[DI],AX
         while (CX != 0) {
             UInt16[ES, DI] = AX;
-            DI = (ushort)(DI + (ushort)State.Direction16);
+            DI += 2;
             CX--;
         }
         // F000:0E64 mov EDI,0x0001FF00
@@ -1369,26 +1178,26 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0E70 rep movs word ptr ES:[DI],word ptr DS:[SI]
         while (CX != 0) {
             UInt16[ES, DI] = UInt16[DS, SI];
-            SI = (ushort)(SI + (ushort)State.Direction16);
-            DI = (ushort)(DI + (ushort)State.Direction16);
+            SI += 2;
+            DI += 2;
             CX--;
         }
         // F000:0E72 cmp ECX,0
         Alu32.Sub(ECX, 0);
         // F000:0E76 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ECX != 0) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0E7A cmp ESI,0x00010000
         Alu32.Sub(ESI, 0x00010000);
         // F000:0E81 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ESI != 0x00010000) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0E85 cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0E8C jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EDI != 0x00010000) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0E90 mov ECX,0x00000080
@@ -1400,8 +1209,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0EA2 repe cmps word ptr DS:[SI],word ptr ES:[DI]
         while (CX != 0) {
             bool equal_0EA2 = UInt16[DS, SI] == UInt16[ES, DI];
-            SI = (ushort)(SI + (ushort)State.Direction16);
-            DI = (ushort)(DI + (ushort)State.Direction16);
+            SI += 2;
+            DI += 2;
             CX--;
             if (!equal_0EA2) {
                 break;
@@ -1410,29 +1219,26 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0EA4 cmp ECX,0
         Alu32.Sub(ECX, 0);
         // F000:0EA8 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ECX != 0) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0EAC cmp ESI,0x00010000
         Alu32.Sub(ESI, 0x00010000);
         // F000:0EB3 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ESI != 0x00010000) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0EB7 cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0EBE jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EDI != 0x00010000) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0EC2 cld
         DirectionFlag = false;
         // F000:0EC3 mov EAX,0x12345678
-        EAX = 0x12345678;
         // F000:0EC9 mov ESI,0x0001FF00
-        ESI = 0x0001FF00;
         // F000:0ECF mov EDI,0x0001FF00
-        EDI = 0x0001FF00;
         // F000:0ED5 mov EAX,0x12345678
         EAX = 0x12345678;
         // F000:0EDB mov ESI,0x0001FF00
@@ -1444,19 +1250,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0EED rep stos dword ptr ES:[DI],EAX
         while (CX != 0) {
             UInt32[ES, DI] = EAX;
-            DI = (ushort)(DI + (ushort)State.Direction32);
+            DI += 4;
             CX--;
         }
         // F000:0EF0 cmp ECX,0
         Alu32.Sub(ECX, 0);
         // F000:0EF4 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ECX != 0) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0EF8 cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0EFF jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EDI != 0x00010000) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0F03 mov EDI,0x0001FF00
@@ -1466,23 +1272,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0F0B mov CX,DS
         CX = DS;
         // F000:0F0D xchg DX,CX
-        ushort temp_0F0D = DX;
-        DX = CX;
-        CX = (ushort)temp_0F0D;
+        (DX, CX) = (CX, DX);
         // F000:0F0F mov ES,DX
         ES = DX;
         // F000:0F11 mov DS,CX
         DS = CX;
         // F000:0F13 xchg EDI,ESI
-        uint temp_0F13 = EDI;
-        EDI = ESI;
-        ESI = (uint)temp_0F13;
+        (EDI, ESI) = (ESI, EDI);
         // F000:0F16 mov ECX,0x00000040
         ECX = 0x00000040;
         // F000:0F1C rep stos dword ptr ES:[DI],EAX
         while (CX != 0) {
             UInt32[ES, DI] = EAX;
-            DI = (ushort)(DI + (ushort)State.Direction32);
+            DI += 4;
             CX--;
         }
         // F000:0F1F mov EDI,0x0001FF00
@@ -1492,8 +1294,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0F2B repe cmps dword ptr DS:[SI],dword ptr ES:[DI]
         while (CX != 0) {
             bool equal_0F2B = UInt32[DS, SI] == UInt32[ES, DI];
-            SI = (ushort)(SI + (ushort)State.Direction32);
-            DI = (ushort)(DI + (ushort)State.Direction32);
+            SI += 4;
+            DI += 4;
             CX--;
             if (!equal_0F2B) {
                 break;
@@ -1502,19 +1304,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0F2E cmp ECX,0
         Alu32.Sub(ECX, 0);
         // F000:0F32 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ECX != 0) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0F36 cmp ESI,0x00010000
         Alu32.Sub(ESI, 0x00010000);
         // F000:0F3D jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ESI != 0x00010000) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0F41 cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0F48 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EDI != 0x00010000) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0F4C mov EDI,0x0001FF00
@@ -1526,7 +1328,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0F5E repe scas EAX,dword ptr ES:[DI]
         while (CX != 0) {
             bool equal_0F5E = EAX == UInt32[ES, DI];
-            DI = (ushort)(DI + (ushort)State.Direction32);
+            DI += 4;
             CX--;
             if (!equal_0F5E) {
                 break;
@@ -1535,13 +1337,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0F61 cmp ECX,0
         Alu32.Sub(ECX, 0);
         // F000:0F65 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ECX != 0) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0F69 cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0F70 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EDI != 0x00010000) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0F74 mov EDI,0x0001FF00
@@ -1553,7 +1355,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0F86 rep stos dword ptr ES:[DI],EAX
         while (CX != 0) {
             UInt32[ES, DI] = EAX;
-            DI = (ushort)(DI + (ushort)State.Direction32);
+            DI += 4;
             CX--;
         }
         // F000:0F89 mov EDI,0x0001FF00
@@ -1563,26 +1365,26 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0F95 rep movs dword ptr ES:[DI],dword ptr DS:[SI]
         while (CX != 0) {
             UInt32[ES, DI] = UInt32[DS, SI];
-            SI = (ushort)(SI + (ushort)State.Direction32);
-            DI = (ushort)(DI + (ushort)State.Direction32);
+            SI += 4;
+            DI += 4;
             CX--;
         }
         // F000:0F98 cmp ECX,0
         Alu32.Sub(ECX, 0);
         // F000:0F9C jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ECX != 0) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0FA0 cmp ESI,0x00010000
         Alu32.Sub(ESI, 0x00010000);
         // F000:0FA7 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ESI != 0x00010000) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0FAB cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0FB2 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EDI != 0x00010000) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0FB6 mov ECX,0x00000040
@@ -1594,8 +1396,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0FC8 repe cmps dword ptr DS:[SI],dword ptr ES:[DI]
         while (CX != 0) {
             bool equal_0FC8 = UInt32[DS, SI] == UInt32[ES, DI];
-            SI = (ushort)(SI + (ushort)State.Direction32);
-            DI = (ushort)(DI + (ushort)State.Direction32);
+            SI += 4;
+            DI += 4;
             CX--;
             if (!equal_0FC8) {
                 break;
@@ -1604,29 +1406,26 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0FCB cmp ECX,0
         Alu32.Sub(ECX, 0);
         // F000:0FCF jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ECX != 0) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0FD3 cmp ESI,0x00010000
         Alu32.Sub(ESI, 0x00010000);
         // F000:0FDA jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ESI != 0x00010000) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0FDE cmp EDI,0x00010000
         Alu32.Sub(EDI, 0x00010000);
         // F000:0FE5 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EDI != 0x00010000) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:0FE9 std
         DirectionFlag = true;
         // F000:0FEA mov EAX,0x12345678
-        EAX = 0x12345678;
         // F000:0FF0 mov ESI,0x000100FF
-        ESI = 0x000100FF;
         // F000:0FF6 mov EDI,0x000100FF
-        EDI = 0x000100FF;
         // F000:0FFC mov EAX,0x12345678
         EAX = 0x12345678;
         // F000:1002 mov ESI,0x000100FF
@@ -1638,19 +1437,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1014 rep stos byte ptr ES:[DI],AL
         while (CX != 0) {
             UInt8[ES, DI] = AL;
-            DI = (ushort)(DI + (ushort)State.Direction8);
+            DI--;
             CX--;
         }
         // F000:1016 cmp ECX,0
         Alu32.Sub(ECX, 0);
         // F000:101A jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ECX != 0) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:101E cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:1025 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EDI != 0x0001FFFF) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:1029 mov EDI,0x000100FF
@@ -1660,23 +1459,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1031 mov CX,DS
         CX = DS;
         // F000:1033 xchg DX,CX
-        ushort temp_1033 = DX;
-        DX = CX;
-        CX = (ushort)temp_1033;
+        (DX, CX) = (CX, DX);
         // F000:1035 mov ES,DX
         ES = DX;
         // F000:1037 mov DS,CX
         DS = CX;
         // F000:1039 xchg EDI,ESI
-        uint temp_1039 = EDI;
-        EDI = ESI;
-        ESI = (uint)temp_1039;
+        (EDI, ESI) = (ESI, EDI);
         // F000:103C mov ECX,0x00000100
         ECX = 0x00000100;
         // F000:1042 rep stos byte ptr ES:[DI],AL
         while (CX != 0) {
             UInt8[ES, DI] = AL;
-            DI = (ushort)(DI + (ushort)State.Direction8);
+            DI--;
             CX--;
         }
         // F000:1044 mov EDI,0x000100FF
@@ -1686,8 +1481,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1050 repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
         while (CX != 0) {
             bool equal_1050 = UInt8[DS, SI] == UInt8[ES, DI];
-            SI = (ushort)(SI + (ushort)State.Direction8);
-            DI = (ushort)(DI + (ushort)State.Direction8);
+            SI--;
+            DI--;
             CX--;
             if (!equal_1050) {
                 break;
@@ -1696,19 +1491,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1052 cmp ECX,0
         Alu32.Sub(ECX, 0);
         // F000:1056 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ECX != 0) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:105A cmp ESI,0x0001FFFF
         Alu32.Sub(ESI, 0x0001FFFF);
         // F000:1061 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ESI != 0x0001FFFF) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:1065 cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:106C jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EDI != 0x0001FFFF) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:1070 mov EDI,0x000100FF
@@ -1720,7 +1515,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1082 repe scas AL,byte ptr ES:[DI]
         while (CX != 0) {
             bool equal_1082 = AL == UInt8[ES, DI];
-            DI = (ushort)(DI + (ushort)State.Direction8);
+            DI--;
             CX--;
             if (!equal_1082) {
                 break;
@@ -1729,13 +1524,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1084 cmp ECX,0
         Alu32.Sub(ECX, 0);
         // F000:1088 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ECX != 0) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:108C cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:1093 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EDI != 0x0001FFFF) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:1097 mov EDI,0x000100FF
@@ -1747,7 +1542,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:10A9 rep stos byte ptr ES:[DI],AL
         while (CX != 0) {
             UInt8[ES, DI] = AL;
-            DI = (ushort)(DI + (ushort)State.Direction8);
+            DI--;
             CX--;
         }
         // F000:10AB mov EDI,0x000100FF
@@ -1757,26 +1552,26 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:10B7 rep movs byte ptr ES:[DI],byte ptr DS:[SI]
         while (CX != 0) {
             UInt8[ES, DI] = UInt8[DS, SI];
-            SI = (ushort)(SI + (ushort)State.Direction8);
-            DI = (ushort)(DI + (ushort)State.Direction8);
+            SI--;
+            DI--;
             CX--;
         }
         // F000:10B9 cmp ECX,0
         Alu32.Sub(ECX, 0);
         // F000:10BD jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ECX != 0) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:10C1 cmp ESI,0x0001FFFF
         Alu32.Sub(ESI, 0x0001FFFF);
         // F000:10C8 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ESI != 0x0001FFFF) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:10CC cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:10D3 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EDI != 0x0001FFFF) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:10D7 mov ECX,0x00000100
@@ -1788,8 +1583,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:10E9 repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
         while (CX != 0) {
             bool equal_10E9 = UInt8[DS, SI] == UInt8[ES, DI];
-            SI = (ushort)(SI + (ushort)State.Direction8);
-            DI = (ushort)(DI + (ushort)State.Direction8);
+            SI--;
+            DI--;
             CX--;
             if (!equal_10E9) {
                 break;
@@ -1798,29 +1593,26 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:10EB cmp ECX,0
         Alu32.Sub(ECX, 0);
         // F000:10EF jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ECX != 0) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:10F3 cmp ESI,0x0001FFFF
         Alu32.Sub(ESI, 0x0001FFFF);
         // F000:10FA jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ESI != 0x0001FFFF) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:10FE cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:1105 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EDI != 0x0001FFFF) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:1109 std
         DirectionFlag = true;
         // F000:110A mov EAX,0x12345678
-        EAX = 0x12345678;
         // F000:1110 mov ESI,0x000100FF
-        ESI = 0x000100FF;
         // F000:1116 mov EDI,0x000100FF
-        EDI = 0x000100FF;
         // F000:111C mov EAX,0x12345678
         EAX = 0x12345678;
         // F000:1122 mov ESI,0x000100FF
@@ -1832,19 +1624,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1134 rep stos word ptr ES:[DI],AX
         while (CX != 0) {
             UInt16[ES, DI] = AX;
-            DI = (ushort)(DI + (ushort)State.Direction16);
+            DI -= 2;
             CX--;
         }
         // F000:1136 cmp ECX,0
         Alu32.Sub(ECX, 0);
         // F000:113A jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ECX != 0) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:113E cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:1145 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EDI != 0x0001FFFF) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:1149 mov EDI,0x000100FF
@@ -1854,23 +1646,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1151 mov CX,DS
         CX = DS;
         // F000:1153 xchg DX,CX
-        ushort temp_1153 = DX;
-        DX = CX;
-        CX = (ushort)temp_1153;
+        (DX, CX) = (CX, DX);
         // F000:1155 mov ES,DX
         ES = DX;
         // F000:1157 mov DS,CX
         DS = CX;
         // F000:1159 xchg EDI,ESI
-        uint temp_1159 = EDI;
-        EDI = ESI;
-        ESI = (uint)temp_1159;
+        (EDI, ESI) = (ESI, EDI);
         // F000:115C mov ECX,0x00000080
         ECX = 0x00000080;
         // F000:1162 rep stos word ptr ES:[DI],AX
         while (CX != 0) {
             UInt16[ES, DI] = AX;
-            DI = (ushort)(DI + (ushort)State.Direction16);
+            DI -= 2;
             CX--;
         }
         // F000:1164 mov EDI,0x000100FF
@@ -1880,8 +1668,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1170 repe cmps word ptr DS:[SI],word ptr ES:[DI]
         while (CX != 0) {
             bool equal_1170 = UInt16[DS, SI] == UInt16[ES, DI];
-            SI = (ushort)(SI + (ushort)State.Direction16);
-            DI = (ushort)(DI + (ushort)State.Direction16);
+            SI -= 2;
+            DI -= 2;
             CX--;
             if (!equal_1170) {
                 break;
@@ -1890,19 +1678,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1172 cmp ECX,0
         Alu32.Sub(ECX, 0);
         // F000:1176 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ECX != 0) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:117A cmp ESI,0x0001FFFF
         Alu32.Sub(ESI, 0x0001FFFF);
         // F000:1181 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ESI != 0x0001FFFF) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:1185 cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:118C jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EDI != 0x0001FFFF) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:1190 mov EDI,0x000100FF
@@ -1914,7 +1702,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:11A2 repe scas AX,word ptr ES:[DI]
         while (CX != 0) {
             bool equal_11A2 = AX == UInt16[ES, DI];
-            DI = (ushort)(DI + (ushort)State.Direction16);
+            DI -= 2;
             CX--;
             if (!equal_11A2) {
                 break;
@@ -1923,13 +1711,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:11A4 cmp ECX,0
         Alu32.Sub(ECX, 0);
         // F000:11A8 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ECX != 0) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:11AC cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:11B3 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EDI != 0x0001FFFF) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:11B7 mov EDI,0x000100FF
@@ -1941,7 +1729,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:11C9 rep stos word ptr ES:[DI],AX
         while (CX != 0) {
             UInt16[ES, DI] = AX;
-            DI = (ushort)(DI + (ushort)State.Direction16);
+            DI -= 2;
             CX--;
         }
         // F000:11CB mov EDI,0x000100FF
@@ -1951,26 +1739,26 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:11D7 rep movs word ptr ES:[DI],word ptr DS:[SI]
         while (CX != 0) {
             UInt16[ES, DI] = UInt16[DS, SI];
-            SI = (ushort)(SI + (ushort)State.Direction16);
-            DI = (ushort)(DI + (ushort)State.Direction16);
+            SI -= 2;
+            DI -= 2;
             CX--;
         }
         // F000:11D9 cmp ECX,0
         Alu32.Sub(ECX, 0);
         // F000:11DD jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ECX != 0) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:11E1 cmp ESI,0x0001FFFF
         Alu32.Sub(ESI, 0x0001FFFF);
         // F000:11E8 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ESI != 0x0001FFFF) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:11EC cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:11F3 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EDI != 0x0001FFFF) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:11F7 mov ECX,0x00000080
@@ -1982,8 +1770,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1209 repe cmps word ptr DS:[SI],word ptr ES:[DI]
         while (CX != 0) {
             bool equal_1209 = UInt16[DS, SI] == UInt16[ES, DI];
-            SI = (ushort)(SI + (ushort)State.Direction16);
-            DI = (ushort)(DI + (ushort)State.Direction16);
+            SI -= 2;
+            DI -= 2;
             CX--;
             if (!equal_1209) {
                 break;
@@ -1992,29 +1780,26 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:120B cmp ECX,0
         Alu32.Sub(ECX, 0);
         // F000:120F jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ECX != 0) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:1213 cmp ESI,0x0001FFFF
         Alu32.Sub(ESI, 0x0001FFFF);
         // F000:121A jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ESI != 0x0001FFFF) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:121E cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:1225 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EDI != 0x0001FFFF) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:1229 std
         DirectionFlag = true;
         // F000:122A mov EAX,0x12345678
-        EAX = 0x12345678;
         // F000:1230 mov ESI,0x000100FF
-        ESI = 0x000100FF;
         // F000:1236 mov EDI,0x000100FF
-        EDI = 0x000100FF;
         // F000:123C mov EAX,0x12345678
         EAX = 0x12345678;
         // F000:1242 mov ESI,0x000100FF
@@ -2026,19 +1811,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1254 rep stos dword ptr ES:[DI],EAX
         while (CX != 0) {
             UInt32[ES, DI] = EAX;
-            DI = (ushort)(DI + (ushort)State.Direction32);
+            DI -= 4;
             CX--;
         }
         // F000:1257 cmp ECX,0
         Alu32.Sub(ECX, 0);
         // F000:125B jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ECX != 0) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:125F cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:1266 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EDI != 0x0001FFFF) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:126A mov EDI,0x000100FF
@@ -2048,23 +1833,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1272 mov CX,DS
         CX = DS;
         // F000:1274 xchg DX,CX
-        ushort temp_1274 = DX;
-        DX = CX;
-        CX = (ushort)temp_1274;
+        (DX, CX) = (CX, DX);
         // F000:1276 mov ES,DX
         ES = DX;
         // F000:1278 mov DS,CX
         DS = CX;
         // F000:127A xchg EDI,ESI
-        uint temp_127A = EDI;
-        EDI = ESI;
-        ESI = (uint)temp_127A;
+        (EDI, ESI) = (ESI, EDI);
         // F000:127D mov ECX,0x00000040
         ECX = 0x00000040;
         // F000:1283 rep stos dword ptr ES:[DI],EAX
         while (CX != 0) {
             UInt32[ES, DI] = EAX;
-            DI = (ushort)(DI + (ushort)State.Direction32);
+            DI -= 4;
             CX--;
         }
         // F000:1286 mov EDI,0x000100FF
@@ -2074,8 +1855,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1292 repe cmps dword ptr DS:[SI],dword ptr ES:[DI]
         while (CX != 0) {
             bool equal_1292 = UInt32[DS, SI] == UInt32[ES, DI];
-            SI = (ushort)(SI + (ushort)State.Direction32);
-            DI = (ushort)(DI + (ushort)State.Direction32);
+            SI -= 4;
+            DI -= 4;
             CX--;
             if (!equal_1292) {
                 break;
@@ -2084,19 +1865,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1295 cmp ECX,0
         Alu32.Sub(ECX, 0);
         // F000:1299 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ECX != 0) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:129D cmp ESI,0x0001FFFF
         Alu32.Sub(ESI, 0x0001FFFF);
         // F000:12A4 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ESI != 0x0001FFFF) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:12A8 cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:12AF jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EDI != 0x0001FFFF) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:12B3 mov EDI,0x000100FF
@@ -2108,7 +1889,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:12C5 repe scas EAX,dword ptr ES:[DI]
         while (CX != 0) {
             bool equal_12C5 = EAX == UInt32[ES, DI];
-            DI = (ushort)(DI + (ushort)State.Direction32);
+            DI -= 4;
             CX--;
             if (!equal_12C5) {
                 break;
@@ -2117,13 +1898,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:12C8 cmp ECX,0
         Alu32.Sub(ECX, 0);
         // F000:12CC jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ECX != 0) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:12D0 cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:12D7 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EDI != 0x0001FFFF) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:12DB mov EDI,0x000100FF
@@ -2135,7 +1916,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:12ED rep stos dword ptr ES:[DI],EAX
         while (CX != 0) {
             UInt32[ES, DI] = EAX;
-            DI = (ushort)(DI + (ushort)State.Direction32);
+            DI -= 4;
             CX--;
         }
         // F000:12F0 mov EDI,0x000100FF
@@ -2145,26 +1926,26 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:12FC rep movs dword ptr ES:[DI],dword ptr DS:[SI]
         while (CX != 0) {
             UInt32[ES, DI] = UInt32[DS, SI];
-            SI = (ushort)(SI + (ushort)State.Direction32);
-            DI = (ushort)(DI + (ushort)State.Direction32);
+            SI -= 4;
+            DI -= 4;
             CX--;
         }
         // F000:12FF cmp ECX,0
         Alu32.Sub(ECX, 0);
         // F000:1303 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ECX != 0) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:1307 cmp ESI,0x0001FFFF
         Alu32.Sub(ESI, 0x0001FFFF);
         // F000:130E jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ESI != 0x0001FFFF) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:1312 cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:1319 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EDI != 0x0001FFFF) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:131D mov ECX,0x00000040
@@ -2176,8 +1957,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:132F repe cmps dword ptr DS:[SI],dword ptr ES:[DI]
         while (CX != 0) {
             bool equal_132F = UInt32[DS, SI] == UInt32[ES, DI];
-            SI = (ushort)(SI + (ushort)State.Direction32);
-            DI = (ushort)(DI + (ushort)State.Direction32);
+            SI -= 4;
+            DI -= 4;
             CX--;
             if (!equal_132F) {
                 break;
@@ -2186,35 +1967,33 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1332 cmp ECX,0
         Alu32.Sub(ECX, 0);
         // F000:1336 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ECX != 0) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:133A cmp ESI,0x0001FFFF
         Alu32.Sub(ESI, 0x0001FFFF);
         // F000:1341 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (ESI != 0x0001FFFF) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:1345 cmp EDI,0x0001FFFF
         Alu32.Sub(EDI, 0x0001FFFF);
         // F000:134C jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EDI != 0x0001FFFF) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:1350 mov DX,0x2200
-        DX = 0x2200;
         // F000:1353 mov DS,DX
-        DS = DX;
+        DS = 0x2200;
         // F000:1355 mov DX,0x6200
-        DX = 0x6200;
         // F000:1358 mov ES,DX
-        ES = DX;
+        ES = 0x6200;
         // F000:135A mov AL,5
         AL = 5;
         // F000:135C mov DX,0x0999
         DX = 0x0999;
         // F000:135F out DX,AL
-        Out8(DX, AL);
+        Out8(0x0999, AL);
         // F000:1360 mov SI,0
         SI = 0;
         // F000:1363 mov AX,SP
@@ -2298,12 +2077,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1401 call far dword ptr DS:[SI]
         ushort targetSegment_1401 = UInt16[DS, (ushort)(SI + 2)];
         ushort targetOffset_1401 = UInt16[DS, SI];
-        if (targetSegment_1401 == cs1 && targetOffset_1401 == 0x13C5) {
-            FarCall(cs1, 0x1403, cs1, unknown_F000_13C5_F13C5);
-        }
-        else {
+        if (targetSegment_1401 != cs1 || targetOffset_1401 != 0x13C5) {
             throw FailAsUntested($"Untested far call target {targetSegment_1401:X4}:{targetOffset_1401:X4} at F000:1401");
         }
+        FarCall(cs1, 0x1403, cs1, unknown_F000_13C5_F13C5);
         // F000:1403 jae near 0x15C7
         if (!CarryFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
@@ -2317,30 +2094,25 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1414 call far dword ptr DS:[SI]
         ushort targetSegment_1414 = UInt16[DS, (ushort)(SI + 4)];
         ushort targetOffset_1414 = (ushort)UInt32[DS, SI];
-        if (targetSegment_1414 == cs1 && targetOffset_1414 == 0x13E5) {
-            FarCall32(cs1, 0x1417, cs1, unknown_F000_13E5_F13E5);
-        }
-        else {
+        if (targetSegment_1414 != cs1 || targetOffset_1414 != 0x13E5) {
             throw FailAsUntested($"Untested far call target {targetSegment_1414:X4}:{targetOffset_1414:X4} at F000:1414");
         }
+        FarCall32(cs1, 0x1417, cs1, unknown_F000_13E5_F13E5);
         // F000:1417 jae near 0x15C7
         if (!CarryFlag) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:141B mov DX,0x2300
-        DX = 0x2300;
         // F000:141E mov DS,DX
-        DS = DX;
+        DS = 0x2300;
         // F000:1420 mov DX,0x6300
-        DX = 0x6300;
         // F000:1423 mov ES,DX
-        ES = DX;
+        ES = 0x6300;
         // F000:1425 mov AL,6
         AL = 6;
         // F000:1427 mov DX,0x0999
-        DX = 0x0999;
         // F000:142A out DX,AL
-        Out8(DX, AL);
+        Out8(0x0999, AL);
         // F000:142B mov DI,0
         DI = 0;
         // F000:142E mov CX,SS
@@ -2348,53 +2120,47 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1430 mov DX,ES
         DX = ES;
         // F000:1432 mov word ptr ES:[DI],0x1234
-        UInt16[ES, DI] = 0x1234;
+        UInt16[ES, 0] = 0x1234;
         // F000:1437 mov word ptr ES:[DI+2],0xABCD
-        UInt16[ES, (ushort)(DI + 2)] = 0xABCD;
+        UInt16[ES, 2] = 0xABCD;
         // F000:143D lss BX,word ptr ES:[DI]
-        ushort lxsOffset_143D = DI;
-        ushort lxsValue_143D = UInt16[ES, lxsOffset_143D];
-        ushort lxsSegment_143D = UInt16[ES, (ushort)(lxsOffset_143D + 2)];
-        BX = (ushort)lxsValue_143D;
-        SS = (ushort)lxsSegment_143D;
+        BX = UInt16[ES, 0];
+        SS = UInt16[ES, 2];
         // F000:1441 mov AX,SS
         AX = SS;
         // F000:1443 cmp AX,0xABCD
         Alu16.Sub(AX, 0xABCD);
         // F000:1446 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (AX != 0xABCD) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:144A cmp BX,0x1234
         Alu16.Sub(BX, 0x1234);
         // F000:144E jne near 0x15C7
-        if (!ZeroFlag) {
+        if (BX != 0x1234) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:1452 mov ES,DX
         ES = DX;
         // F000:1454 mov dword ptr ES:[DI],0x12345678
-        UInt32[ES, DI] = 0x12345678;
+        UInt32[ES, 0] = 0x12345678;
         // F000:145C mov word ptr ES:[DI+4],0xBCDE
-        UInt16[ES, (ushort)(DI + 4)] = 0xBCDE;
+        UInt16[ES, 4] = 0xBCDE;
         // F000:1462 lss EBX,dword ptr ES:[DI]
-        ushort lxsOffset_1462 = DI;
-        uint lxsValue_1462 = UInt32[ES, lxsOffset_1462];
-        ushort lxsSegment_1462 = UInt16[ES, (ushort)(lxsOffset_1462 + 4)];
-        EBX = (uint)lxsValue_1462;
-        SS = (ushort)lxsSegment_1462;
+        EBX = UInt32[ES, 0];
+        SS = UInt16[ES, 4];
         // F000:1467 mov AX,SS
         AX = SS;
         // F000:1469 cmp AX,0xBCDE
         Alu16.Sub(AX, 0xBCDE);
         // F000:146C jne near 0x15C7
-        if (!ZeroFlag) {
+        if (AX != 0xBCDE) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:1470 cmp EBX,0x12345678
         Alu32.Sub(EBX, 0x12345678);
         // F000:1477 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EBX != 0x12345678) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:147B mov ES,DX
@@ -2406,53 +2172,47 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:1481 mov DX,ES
         DX = ES;
         // F000:1483 mov word ptr ES:[DI],0x1234
-        UInt16[ES, DI] = 0x1234;
+        UInt16[ES, 0] = 0x1234;
         // F000:1488 mov word ptr ES:[DI+2],0xABCD
-        UInt16[ES, (ushort)(DI + 2)] = 0xABCD;
+        UInt16[ES, 2] = 0xABCD;
         // F000:148E lds BX,word ptr ES:[DI]
-        ushort lxsOffset_148E = DI;
-        ushort lxsValue_148E = UInt16[ES, lxsOffset_148E];
-        ushort lxsSegment_148E = UInt16[ES, (ushort)(lxsOffset_148E + 2)];
-        BX = (ushort)lxsValue_148E;
-        DS = (ushort)lxsSegment_148E;
+        BX = UInt16[ES, 0];
+        DS = UInt16[ES, 2];
         // F000:1491 mov AX,DS
         AX = DS;
         // F000:1493 cmp AX,0xABCD
         Alu16.Sub(AX, 0xABCD);
         // F000:1496 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (AX != 0xABCD) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:149A cmp BX,0x1234
         Alu16.Sub(BX, 0x1234);
         // F000:149E jne near 0x15C7
-        if (!ZeroFlag) {
+        if (BX != 0x1234) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:14A2 mov ES,DX
         ES = DX;
         // F000:14A4 mov dword ptr ES:[DI],0x12345678
-        UInt32[ES, DI] = 0x12345678;
+        UInt32[ES, 0] = 0x12345678;
         // F000:14AC mov word ptr ES:[DI+4],0xBCDE
-        UInt16[ES, (ushort)(DI + 4)] = 0xBCDE;
+        UInt16[ES, 4] = 0xBCDE;
         // F000:14B2 lds EBX,dword ptr ES:[DI]
-        ushort lxsOffset_14B2 = DI;
-        uint lxsValue_14B2 = UInt32[ES, lxsOffset_14B2];
-        ushort lxsSegment_14B2 = UInt16[ES, (ushort)(lxsOffset_14B2 + 4)];
-        EBX = (uint)lxsValue_14B2;
-        DS = (ushort)lxsSegment_14B2;
+        EBX = UInt32[ES, 0];
+        DS = UInt16[ES, 4];
         // F000:14B6 mov AX,DS
         AX = DS;
         // F000:14B8 cmp AX,0xBCDE
         Alu16.Sub(AX, 0xBCDE);
         // F000:14BB jne near 0x15C7
-        if (!ZeroFlag) {
+        if (AX != 0xBCDE) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:14BF cmp EBX,0x12345678
         Alu32.Sub(EBX, 0x12345678);
         // F000:14C6 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EBX != 0x12345678) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:14CA mov ES,DX
@@ -2464,57 +2224,50 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:14D0 mov DX,ES
         DX = ES;
         // F000:14D2 mov word ptr ES:[DI],0x1234
-        UInt16[ES, DI] = 0x1234;
+        UInt16[ES, 0] = 0x1234;
         // F000:14D7 mov word ptr ES:[DI+2],0xABCD
-        UInt16[ES, (ushort)(DI + 2)] = 0xABCD;
+        UInt16[ES, 2] = 0xABCD;
         // F000:14DD les BX,word ptr ES:[DI]
-        ushort lxsOffset_14DD = DI;
-        ushort lxsValue_14DD = UInt16[ES, lxsOffset_14DD];
-        ushort lxsSegment_14DD = UInt16[ES, (ushort)(lxsOffset_14DD + 2)];
-        BX = (ushort)lxsValue_14DD;
-        ES = (ushort)lxsSegment_14DD;
+        BX = UInt16[ES, 0];
+        ES = UInt16[ES, 2];
         // F000:14E0 mov AX,ES
         AX = ES;
         // F000:14E2 cmp AX,0xABCD
         Alu16.Sub(AX, 0xABCD);
         // F000:14E5 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (AX != 0xABCD) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:14E9 cmp BX,0x1234
         Alu16.Sub(BX, 0x1234);
         // F000:14ED jne near 0x15C7
-        if (!ZeroFlag) {
+        if (BX != 0x1234) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:14F1 mov ES,DX
         ES = DX;
         // F000:14F3 mov dword ptr ES:[DI],0x12345678
-        UInt32[ES, DI] = 0x12345678;
+        UInt32[ES, 0] = 0x12345678;
         // F000:14FB mov word ptr ES:[DI+4],0xBCDE
-        UInt16[ES, (ushort)(DI + 4)] = 0xBCDE;
+        UInt16[ES, 4] = 0xBCDE;
         // F000:1501 les EBX,dword ptr ES:[DI]
-        ushort lxsOffset_1501 = DI;
-        uint lxsValue_1501 = UInt32[ES, lxsOffset_1501];
-        ushort lxsSegment_1501 = UInt16[ES, (ushort)(lxsOffset_1501 + 4)];
-        EBX = (uint)lxsValue_1501;
-        ES = (ushort)lxsSegment_1501;
+        EBX = UInt32[ES, 0];
+        ES = UInt16[ES, 4];
         // F000:1505 mov AX,ES
         AX = ES;
         // F000:1507 cmp AX,0xBCDE
         Alu16.Sub(AX, 0xBCDE);
         // F000:150A jne near 0x15C7
-        if (!ZeroFlag) {
+        if (AX != 0xBCDE) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:150E cmp EBX,0x12345678
         Alu32.Sub(EBX, 0x12345678);
         // F000:1515 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (EBX != 0x12345678) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:1519 mov ES,DX
-        ES = DX;
         // F000:151B mov ES,CX
         ES = CX;
         // F000:151D mov CX,FS
@@ -2522,53 +2275,47 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:151F mov DX,ES
         DX = ES;
         // F000:1521 mov word ptr ES:[DI],0x1234
-        UInt16[ES, DI] = 0x1234;
+        UInt16[ES, 0] = 0x1234;
         // F000:1526 mov word ptr ES:[DI+2],0xABCD
-        UInt16[ES, (ushort)(DI + 2)] = 0xABCD;
+        UInt16[ES, 2] = 0xABCD;
         // F000:152C lfs BX,word ptr ES:[DI]
-        ushort lxsOffset_152C = DI;
-        ushort lxsValue_152C = UInt16[ES, lxsOffset_152C];
-        ushort lxsSegment_152C = UInt16[ES, (ushort)(lxsOffset_152C + 2)];
-        BX = (ushort)lxsValue_152C;
-        FS = (ushort)lxsSegment_152C;
+        BX = UInt16[ES, 0];
+        FS = UInt16[ES, 2];
         // F000:1530 mov AX,FS
         AX = FS;
         // F000:1532 cmp AX,0xABCD
         Alu16.Sub(AX, 0xABCD);
         // F000:1535 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (AX != 0xABCD) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:1539 cmp BX,0x1234
         Alu16.Sub(BX, 0x1234);
         // F000:153D jne near 0x15C7
-        if (!ZeroFlag) {
+        if (BX != 0x1234) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:1541 mov ES,DX
         ES = DX;
         // F000:1543 mov dword ptr ES:[DI],0x12345678
-        UInt32[ES, DI] = 0x12345678;
+        UInt32[ES, 0] = 0x12345678;
         // F000:154B mov word ptr ES:[DI+4],0xBCDE
-        UInt16[ES, (ushort)(DI + 4)] = 0xBCDE;
+        UInt16[ES, 4] = 0xBCDE;
         // F000:1551 lfs EBX,dword ptr ES:[DI]
-        ushort lxsOffset_1551 = DI;
-        uint lxsValue_1551 = UInt32[ES, lxsOffset_1551];
-        ushort lxsSegment_1551 = UInt16[ES, (ushort)(lxsOffset_1551 + 4)];
-        EBX = (uint)lxsValue_1551;
-        FS = (ushort)lxsSegment_1551;
+        EBX = UInt32[ES, 0];
+        FS = UInt16[ES, 4];
         // F000:1556 mov AX,FS
         AX = FS;
         // F000:1558 cmp AX,0xBCDE
         Alu16.Sub(AX, 0xBCDE);
         // F000:155B jne short 0x15C7
-        if (!ZeroFlag) {
+        if (AX != 0xBCDE) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:155D cmp EBX,0x12345678
         Alu32.Sub(EBX, 0x12345678);
         // F000:1564 jne short 0x15C7
-        if (!ZeroFlag) {
+        if (EBX != 0x12345678) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:1566 mov ES,DX
@@ -2580,73 +2327,64 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:156C mov DX,ES
         DX = ES;
         // F000:156E mov word ptr ES:[DI],0x1234
-        UInt16[ES, DI] = 0x1234;
+        UInt16[ES, 0] = 0x1234;
         // F000:1573 mov word ptr ES:[DI+2],0xABCD
-        UInt16[ES, (ushort)(DI + 2)] = 0xABCD;
+        UInt16[ES, 2] = 0xABCD;
         // F000:1579 lgs BX,word ptr ES:[DI]
-        ushort lxsOffset_1579 = DI;
-        ushort lxsValue_1579 = UInt16[ES, lxsOffset_1579];
-        ushort lxsSegment_1579 = UInt16[ES, (ushort)(lxsOffset_1579 + 2)];
-        BX = (ushort)lxsValue_1579;
-        GS = (ushort)lxsSegment_1579;
+        BX = UInt16[ES, 0];
+        GS = UInt16[ES, 2];
         // F000:157D mov AX,GS
         AX = GS;
         // F000:157F cmp AX,0xABCD
         Alu16.Sub(AX, 0xABCD);
         // F000:1582 jne short 0x15C7
-        if (!ZeroFlag) {
+        if (AX != 0xABCD) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:1584 cmp BX,0x1234
         Alu16.Sub(BX, 0x1234);
         // F000:1588 jne short 0x15C7
-        if (!ZeroFlag) {
+        if (BX != 0x1234) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:158A mov ES,DX
         ES = DX;
         // F000:158C mov dword ptr ES:[DI],0x12345678
-        UInt32[ES, DI] = 0x12345678;
+        UInt32[ES, 0] = 0x12345678;
         // F000:1594 mov word ptr ES:[DI+4],0xBCDE
-        UInt16[ES, (ushort)(DI + 4)] = 0xBCDE;
+        UInt16[ES, 4] = 0xBCDE;
         // F000:159A lgs EBX,dword ptr ES:[DI]
-        ushort lxsOffset_159A = DI;
-        uint lxsValue_159A = UInt32[ES, lxsOffset_159A];
-        ushort lxsSegment_159A = UInt16[ES, (ushort)(lxsOffset_159A + 4)];
-        EBX = (uint)lxsValue_159A;
-        GS = (ushort)lxsSegment_159A;
+        EBX = UInt32[ES, 0];
+        GS = UInt16[ES, 4];
         // F000:159F mov AX,GS
         AX = GS;
         // F000:15A1 cmp AX,0xBCDE
         Alu16.Sub(AX, 0xBCDE);
         // F000:15A4 jne short 0x15C7
-        if (!ZeroFlag) {
+        if (AX != 0xBCDE) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:15A6 cmp EBX,0x12345678
         Alu32.Sub(EBX, 0x12345678);
         // F000:15AD jne short 0x15C7
-        if (!ZeroFlag) {
+        if (EBX != 0x12345678) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:15AF mov ES,DX
-        ES = DX;
         // F000:15B1 mov GS,CX
         GS = CX;
         // F000:15B3 mov DX,0x2400
-        DX = 0x2400;
         // F000:15B6 mov DS,DX
-        DS = DX;
+        DS = 0x2400;
         // F000:15B8 mov DX,0x6400
-        DX = 0x6400;
         // F000:15BB mov ES,DX
-        ES = DX;
+        ES = 0x6400;
         // F000:15BD mov AL,0xFF
         AL = 0xFF;
         // F000:15BF mov DX,0x0999
         DX = 0x0999;
         // F000:15C2 out DX,AL
-        Out8(DX, AL);
+        Out8(0x0999, AL);
         // F000:15C3 cli
         InterruptFlag = false;
         // F000:15C4 hlt
@@ -2656,11 +2394,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_F000_136F_F136F(int loadOffset) {
         CheckExternalEvents(cs1, 0x136F);
         // F000:136F sub AX,2
-        AX = (ushort)(AX - 2);
+        AX -= 2;
         // F000:1372 cmp SP,AX
         Alu16.Sub(SP, AX);
         // F000:1374 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (SP != AX) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:1378 add AX,2
@@ -2674,11 +2412,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_F000_138D_F138D(int loadOffset) {
         CheckExternalEvents(cs1, 0x138D);
         // F000:138D sub AX,4
-        AX = (ushort)(AX - 4);
+        AX -= 4;
         // F000:1390 cmp SP,AX
         Alu16.Sub(SP, AX);
         // F000:1392 jne near 0x15C7
-        if (!ZeroFlag) {
+        if (SP != AX) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:1396 add AX,4
@@ -2692,11 +2430,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_F000_13C5_F13C5(int loadOffset) {
         CheckExternalEvents(cs1, 0x13C5);
         // F000:13C5 sub AX,4
-        AX = (ushort)(AX - 4);
+        AX -= 4;
         // F000:13C8 cmp SP,AX
         Alu16.Sub(SP, AX);
         // F000:13CA jne near 0x15C7
-        if (!ZeroFlag) {
+        if (SP != AX) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:13CE add AX,4
@@ -2710,11 +2448,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public virtual Action unknown_F000_13E5_F13E5(int loadOffset) {
         CheckExternalEvents(cs1, 0x13E5);
         // F000:13E5 sub AX,8
-        AX = (ushort)(AX - 8);
+        AX -= 8;
         // F000:13E8 cmp SP,AX
         Alu16.Sub(SP, AX);
         // F000:13EA jne near 0x15C7
-        if (!ZeroFlag) {
+        if (SP != AX) {
             return unknown_F000_15C7_F15C7(0x0000);
         }
         // F000:13EE add AX,8
@@ -2726,6 +2464,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        ushort flagOperand_04ED = 0;
+        ushort flagOperand_052F = 0;
+        ushort flagOperand_0574 = 0;
+        ushort flagOperand_05B6 = 0;
+        ushort flagOperand_05F8 = 0;
         CheckExternalEvents(cs1, 0xFFF0);
         // F000:FFF0 jmp far F000:0045
         // F000:0045 cli
@@ -2735,18 +2478,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0048 mov DX,0x0999
         DX = 0x0999;
         // F000:004B out DX,AL
-        Out8(DX, AL);
+        Out8(0x0999, AL);
         // F000:004C xor EAX,EAX
         CarryFlag = false;
         EAX = 0;
         // F000:004F mov DS,AX
-        DS = AX;
+        DS = 0;
         // F000:0051 mov CX,0x0011
         CX = 0x0011;
         do {
             CheckExternalEvents(cs1, 0x0054);
             // F000:0054 mov word ptr DS:[4*EAX],0x15C7
-            UInt16[DS, (ushort)(0 + 4 * EAX)] = 0x15C7;
+            UInt16[DS, (ushort)(4 * EAX)] = 0x15C7;
             // F000:005E mov word ptr DS:[2+4*EAX],0xF000
             UInt16[DS, (ushort)(2 + 4 * EAX)] = 0xF000;
             // F000:0068 inc AX
@@ -2757,27 +2500,25 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:006B mov AX,0x1000
         AX = 0x1000;
         // F000:006E mov SS,AX
-        SS = AX;
+        SS = 0x1000;
         // F000:0070 mov SP,0xFFFF
         SP = 0xFFFF;
         // F000:0073 mov DX,0x2000
-        DX = 0x2000;
         // F000:0076 mov DS,DX
-        DS = DX;
+        DS = 0x2000;
         // F000:0078 mov DX,0x6000
-        DX = 0x6000;
         // F000:007B mov ES,DX
-        ES = DX;
+        ES = 0x6000;
         // F000:007D mov AL,1
         AL = 1;
         // F000:007F mov DX,0x0999
         DX = 0x0999;
         // F000:0082 out DX,AL
-        Out8(DX, AL);
+        Out8(0x0999, AL);
         // F000:0083 mov AH,1
         AH = 1;
         // F000:0085 sahf
-        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
+        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 1);
         // F000:0086 jae short 0x00AC
         if (CarryFlag) {
             // F000:0088 jb short 0x00AD
@@ -2791,7 +2532,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 // F000:008B mov AH,0x40
                 AH = 0x40;
                 // F000:008D sahf
-                FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
+                FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x00000040);
                 // F000:008E jne short 0x00AC
                 if (!ZeroFlag) {
                     VerifySpeculativeEntryOrFail(cs1, 0x00AC, Signature_00AC_hlt);
@@ -2810,7 +2551,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 // F000:0093 mov AH,4
                 AH = 4;
                 // F000:0095 sahf
-                FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
+                FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 4);
                 // F000:0096 jnp short 0x00AC
                 if (!ParityFlag) {
                     VerifySpeculativeEntryOrFail(cs1, 0x00AC, Signature_00AC_hlt);
@@ -2829,7 +2570,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 // F000:009B mov AH,0x80
                 AH = 0x80;
                 // F000:009D sahf
-                FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
+                FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x00000080);
                 // F000:009E jns short 0x00AC
                 if (!SignFlag) {
                     VerifySpeculativeEntryOrFail(cs1, 0x00AC, Signature_00AC_hlt);
@@ -2848,7 +2589,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 // F000:00A3 mov AH,0x41
                 AH = 0x41;
                 // F000:00A5 sahf
-                FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
+                FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x00000041);
                 // F000:00A6 ja short 0x00AC
                 if (!CarryFlag && !ZeroFlag) {
                     VerifySpeculativeEntryOrFail(cs1, 0x00AC, Signature_00AC_hlt);
@@ -2870,159 +2611,148 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:00B7 mov AH,0xD4
             AH = 0xD4;
             // F000:00B9 sahf
-            FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
+            FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x000000D4);
             // F000:00BA mov AX,0
             AX = 0;
             // F000:00BD sahf
-            FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
+            FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u);
             // F000:00BE jae short 0x00DB
+            if (CarryFlag) {
+                VerifySpeculativeEntryOrFail(cs1, 0x00C0, Signature_00C0_hlt);
+                // F000:00C0 hlt
+                return Hlt();
+            }
+            // F000:00DB jae short 0x00C1
             if (!CarryFlag) {
-                // F000:00DB jae short 0x00C1
-                if (!CarryFlag) {
-                    // F000:00C1 mov AH,0x95
-                    AH = 0x95;
-                    // F000:00C3 sahf
-                    FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
-                    // F000:00C4 jne short 0x00DD
-                    if (ZeroFlag) {
-                        VerifySpeculativeEntryOrFail(cs1, 0x00C6, Signature_00C6_hlt);
-                        // F000:00C6 hlt
-                        return Hlt();
-                    }
+                // F000:00C1 mov AH,0x95
+                AH = 0x95;
+                // F000:00C3 sahf
+                FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x00000095);
+                // F000:00C4 jne short 0x00DD
+                if (ZeroFlag) {
+                    VerifySpeculativeEntryOrFail(cs1, 0x00C6, Signature_00C6_hlt);
+                    // F000:00C6 hlt
+                    return Hlt();
                 }
-                // F000:00DD jne short 0x00C7
-                if (!ZeroFlag) {
-                    // F000:00C7 mov AH,0xD1
-                    AH = 0xD1;
-                    // F000:00C9 sahf
-                    FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
-                    // F000:00CA jnp short 0x00DF
-                    if (ParityFlag) {
-                        VerifySpeculativeEntryOrFail(cs1, 0x00CC, Signature_00CC_hlt);
-                        // F000:00CC hlt
-                        return Hlt();
-                    }
+            }
+            // F000:00DD jne short 0x00C7
+            if (!ZeroFlag) {
+                // F000:00C7 mov AH,0xD1
+                AH = 0xD1;
+                // F000:00C9 sahf
+                FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x000000D1);
+                // F000:00CA jnp short 0x00DF
+                if (ParityFlag) {
+                    VerifySpeculativeEntryOrFail(cs1, 0x00CC, Signature_00CC_hlt);
+                    // F000:00CC hlt
+                    return Hlt();
                 }
-                // F000:00DF jnp short 0x00CD
-                if (!ParityFlag) {
-                    // F000:00CD mov AH,0x55
-                    AH = 0x55;
-                    // F000:00CF sahf
-                    FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
-                    // F000:00D0 jns short 0x00E1
-                    if (SignFlag) {
-                        VerifySpeculativeEntryOrFail(cs1, 0x00D2, Signature_00D2_hlt);
-                        // F000:00D2 hlt
-                        return Hlt();
-                    }
+            }
+            // F000:00DF jnp short 0x00CD
+            if (!ParityFlag) {
+                // F000:00CD mov AH,0x55
+                AH = 0x55;
+                // F000:00CF sahf
+                FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x00000055);
+                // F000:00D0 jns short 0x00E1
+                if (SignFlag) {
+                    VerifySpeculativeEntryOrFail(cs1, 0x00D2, Signature_00D2_hlt);
+                    // F000:00D2 hlt
+                    return Hlt();
                 }
-                // F000:00E1 jns short 0x00D3
-                if (!SignFlag) {
-                    // F000:00D3 mov AH,0x94
-                    AH = 0x94;
-                    // F000:00D5 sahf
-                    FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
-                    // F000:00D6 ja short 0x00E3
-                    if (CarryFlag || ZeroFlag) {
-                        VerifySpeculativeEntryOrFail(cs1, 0x00D8, Signature_00D8_hlt);
-                        // F000:00D8 hlt
-                        return Hlt();
-                    }
+            }
+            // F000:00E1 jns short 0x00D3
+            if (!SignFlag) {
+                // F000:00D3 mov AH,0x94
+                AH = 0x94;
+                // F000:00D5 sahf
+                FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x00000094);
+                // F000:00D6 ja short 0x00E3
+                if (CarryFlag || ZeroFlag) {
+                    VerifySpeculativeEntryOrFail(cs1, 0x00D8, Signature_00D8_hlt);
+                    // F000:00D8 hlt
+                    return Hlt();
                 }
-                // F000:00E3 ja short 0x00D9
-                if (!CarryFlag && !ZeroFlag) {
-                    // F000:00D9 jmp short 0x00E5
+            }
+            // F000:00E3 ja short 0x00D9
+            if (!CarryFlag && !ZeroFlag) {
+                // F000:00D9 jmp short 0x00E5
+            }
+            // F000:00E5 mov AH,0
+            AH = 0;
+            // F000:00E7 sahf
+            FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u);
+            // F000:00E8 mov AL,0x40
+            // F000:00EA shl AL,1
+            AL = Alu8.Shl(0x40, 1);
+            // F000:00EC jno short 0x0122
+            if (OverflowFlag) {
+                // F000:00EE jo short 0x0123
+                if (!OverflowFlag) {
+                    VerifySpeculativeEntryOrFail(cs1, 0x00F0, Signature_00F0_hlt);
+                    // F000:00F0 hlt
+                    return Hlt();
                 }
-                // F000:00E5 mov AH,0
-                AH = 0;
-                // F000:00E7 sahf
-                FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
-                // F000:00E8 mov AL,0x40
-                AL = 0x40;
-                // F000:00EA shl AL,1
-                AL = Alu8.Shl(AL, 1);
-                // F000:00EC jno short 0x0122
+                // F000:0123 jo short 0x00F1
                 if (OverflowFlag) {
-                    // F000:00EE jo short 0x0123
-                    if (!OverflowFlag) {
-                        VerifySpeculativeEntryOrFail(cs1, 0x00F0, Signature_00F0_hlt);
-                        // F000:00F0 hlt
+                    // F000:00F1 jl short 0x0122
+                    if (SignFlag != OverflowFlag) {
+                        VerifySpeculativeEntryOrFail(cs1, 0x0122, Signature_0122_hlt);
+                        // F000:0122 hlt
                         return Hlt();
                     }
-                    // F000:0123 jo short 0x00F1
-                    if (OverflowFlag) {
-                        // F000:00F1 jl short 0x0122
-                        if (SignFlag != OverflowFlag) {
-                            VerifySpeculativeEntryOrFail(cs1, 0x0122, Signature_0122_hlt);
-                            // F000:0122 hlt
-                            return Hlt();
-                        }
-                        // F000:00F3 jge short 0x0125
-                        if (SignFlag != OverflowFlag) {
-                            VerifySpeculativeEntryOrFail(cs1, 0x00F5, Signature_00F5_hlt);
-                            // F000:00F5 hlt
-                            return Hlt();
-                        }
-                    }
-                    // F000:0125 jge short 0x00F6
-                    if (SignFlag == OverflowFlag) {
-                        // F000:00F6 jle short 0x0122
-                        if (ZeroFlag || SignFlag != OverflowFlag) {
-                            VerifySpeculativeEntryOrFail(cs1, 0x0122, Signature_0122_hlt);
-                            // F000:0122 hlt
-                            return Hlt();
-                        }
-                        // F000:00F8 jg short 0x0127
-                        if (ZeroFlag || SignFlag != OverflowFlag) {
-                            VerifySpeculativeEntryOrFail(cs1, 0x00FA, Signature_00FA_hlt);
-                            // F000:00FA hlt
-                            return Hlt();
-                        }
-                    }
-                    // F000:0127 jg short 0x00FB
-                    if (!ZeroFlag && SignFlag == OverflowFlag) {
-                        // F000:00FB mov AH,0x40
-                        AH = 0x40;
-                        // F000:00FD sahf
-                        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
-                        // F000:00FE jl short 0x0129
-                        if (SignFlag == OverflowFlag) {
-                            VerifySpeculativeEntryOrFail(cs1, 0x0100, Signature_0100_hlt);
-                            // F000:0100 hlt
-                            return Hlt();
-                        }
-                    }
-                    // F000:0129 jl short 0x0101
+                    // F000:00F3 jge short 0x0125
                     if (SignFlag != OverflowFlag) {
-                        // F000:0101 jle short 0x012B
-                        if (!ZeroFlag && SignFlag == OverflowFlag) {
-                            VerifySpeculativeEntryOrFail(cs1, 0x0103, Signature_0103_hlt);
-                            // F000:0103 hlt
-                            return Hlt();
-                        }
+                        VerifySpeculativeEntryOrFail(cs1, 0x00F5, Signature_00F5_hlt);
+                        // F000:00F5 hlt
+                        return Hlt();
                     }
-                    // F000:012B jle short 0x0104
+                }
+                // F000:0125 jge short 0x00F6
+                if (SignFlag == OverflowFlag) {
+                    // F000:00F6 jle short 0x0122
                     if (ZeroFlag || SignFlag != OverflowFlag) {
-                        // F000:0104 mov ECX,1
-                        ECX = 1;
-                        // F000:010A jcxz short 0x0122
-                        if (CX == 0) {
-                            VerifySpeculativeEntryOrFail(cs1, 0x0122, Signature_0122_hlt);
-                            // F000:0122 hlt
-                            return Hlt();
-                        }
-                        // F000:010C mov ECX,0x00010000
-                        ECX = 0x00010000;
-                        // F000:0112 jcxz short 0x012D
-                        if (CX != 0) {
-                            goto L_0114;
-                        }
+                        VerifySpeculativeEntryOrFail(cs1, 0x0122, Signature_0122_hlt);
+                        // F000:0122 hlt
+                        return Hlt();
                     }
-                    // F000:012D jcxz short 0x0114
-                    if (CX != 0) {
-                        goto L_012F;
+                    // F000:00F8 jg short 0x0127
+                    if (ZeroFlag || SignFlag != OverflowFlag) {
+                        VerifySpeculativeEntryOrFail(cs1, 0x00FA, Signature_00FA_hlt);
+                        // F000:00FA hlt
+                        return Hlt();
                     }
-                L_0114:
+                }
+                // F000:0127 jg short 0x00FB
+                if (!ZeroFlag && SignFlag == OverflowFlag) {
+                    // F000:00FB mov AH,0x40
+                    AH = 0x40;
+                    // F000:00FD sahf
+                    FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x00000040);
+                    // F000:00FE jl short 0x0129
+                    if (SignFlag == OverflowFlag) {
+                        VerifySpeculativeEntryOrFail(cs1, 0x0100, Signature_0100_hlt);
+                        // F000:0100 hlt
+                        return Hlt();
+                    }
+                }
+                // F000:0129 jl short 0x0101
+                // F000:0101 jle short 0x012B
+                if (SignFlag != OverflowFlag && (!ZeroFlag && SignFlag == OverflowFlag)) {
+                    VerifySpeculativeEntryOrFail(cs1, 0x0103, Signature_0103_hlt);
+                    // F000:0103 hlt
+                    return Hlt();
+                }
+                // F000:012B jle short 0x0104
+                if (ZeroFlag || SignFlag != OverflowFlag) {
+                    // F000:0104 mov ECX,1
+                    // F000:010A jcxz short 0x0122
+                    // F000:010C mov ECX,0x00010000
+                    ECX = 0x00010000;
+                    // F000:0112 jcxz short 0x012D
+                }
+                // F000:012D jcxz short 0x0114
+                if (CX == 0) {
                     // F000:0114 jecxz short 0x0122
                     if (ECX == 0) {
                         VerifySpeculativeEntryOrFail(cs1, 0x0122, Signature_0122_hlt);
@@ -3032,774 +2762,754 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                     // F000:0117 mov ECX,0
                     ECX = 0;
                     // F000:011D jecxz short 0x012F
-                    if (ECX != 0) {
-                        goto L_0120;
-                    }
-                L_012F:
-                    // F000:012F jecxz short 0x0120
-                    if (ECX != 0) {
-                        goto L_0132;
-                    }
-                L_0120:
+                }
+                // F000:012F jecxz short 0x0120
+                if (ECX == 0) {
                     // F000:0120 jmp short 0x0132
-                L_0132:
-                    // F000:0132 mov AH,1
-                    AH = 1;
-                    // F000:0134 sahf
-                    FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
-                    // F000:0135 jae near 0x01F0
+                }
+                // F000:0132 mov AH,1
+                AH = 1;
+                // F000:0134 sahf
+                FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 1);
+                // F000:0135 jae near 0x01F0
+                if (CarryFlag) {
+                    // F000:0139 jb near 0x01F1
+                    if (!CarryFlag) {
+                        VerifySpeculativeEntryOrFail(cs1, 0x013D, Signature_013D_hlt);
+                        // F000:013D hlt
+                        return Hlt();
+                    }
+                    // F000:01F1 jb near 0x013E
                     if (CarryFlag) {
-                        // F000:0139 jb near 0x01F1
-                        if (!CarryFlag) {
-                            VerifySpeculativeEntryOrFail(cs1, 0x013D, Signature_013D_hlt);
-                            // F000:013D hlt
+                        // F000:013E mov AH,0x40
+                        AH = 0x40;
+                        // F000:0140 sahf
+                        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x00000040);
+                        // F000:0141 jne near 0x01F0
+                        if (!ZeroFlag) {
+                            VerifySpeculativeEntryOrFail(cs1, 0x01F0, Signature_01F0_hlt);
+                            // F000:01F0 hlt
                             return Hlt();
                         }
-                        // F000:01F1 jb near 0x013E
-                        if (CarryFlag) {
-                            // F000:013E mov AH,0x40
-                            AH = 0x40;
-                            // F000:0140 sahf
-                            FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
-                            // F000:0141 jne near 0x01F0
-                            if (!ZeroFlag) {
-                                VerifySpeculativeEntryOrFail(cs1, 0x01F0, Signature_01F0_hlt);
-                                // F000:01F0 hlt
-                                return Hlt();
-                            }
-                            // F000:0145 je near 0x01F5
-                            if (!ZeroFlag) {
-                                VerifySpeculativeEntryOrFail(cs1, 0x0149, Signature_0149_hlt);
-                                // F000:0149 hlt
-                                return Hlt();
-                            }
+                        // F000:0145 je near 0x01F5
+                        if (!ZeroFlag) {
+                            VerifySpeculativeEntryOrFail(cs1, 0x0149, Signature_0149_hlt);
+                            // F000:0149 hlt
+                            return Hlt();
                         }
-                        // F000:01F5 je near 0x014A
-                        if (ZeroFlag) {
-                            // F000:014A mov AH,4
-                            AH = 4;
-                            // F000:014C sahf
-                            FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
-                            // F000:014D jnp near 0x01F0
-                            if (!ParityFlag) {
-                                VerifySpeculativeEntryOrFail(cs1, 0x01F0, Signature_01F0_hlt);
-                                // F000:01F0 hlt
-                                return Hlt();
-                            }
-                            // F000:0151 jp near 0x01F9
-                            if (!ParityFlag) {
-                                VerifySpeculativeEntryOrFail(cs1, 0x0155, Signature_0155_hlt);
-                                // F000:0155 hlt
-                                return Hlt();
-                            }
+                    }
+                    // F000:01F5 je near 0x014A
+                    if (ZeroFlag) {
+                        // F000:014A mov AH,4
+                        AH = 4;
+                        // F000:014C sahf
+                        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 4);
+                        // F000:014D jnp near 0x01F0
+                        if (!ParityFlag) {
+                            VerifySpeculativeEntryOrFail(cs1, 0x01F0, Signature_01F0_hlt);
+                            // F000:01F0 hlt
+                            return Hlt();
                         }
-                        // F000:01F9 jp near 0x0156
-                        if (ParityFlag) {
-                            // F000:0156 mov AH,0x80
-                            AH = 0x80;
-                            // F000:0158 sahf
-                            FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
-                            // F000:0159 jns near 0x01F0
-                            if (!SignFlag) {
-                                VerifySpeculativeEntryOrFail(cs1, 0x01F0, Signature_01F0_hlt);
-                                // F000:01F0 hlt
-                                return Hlt();
-                            }
-                            // F000:015D js near 0x01FD
-                            if (!SignFlag) {
-                                VerifySpeculativeEntryOrFail(cs1, 0x0161, Signature_0161_hlt);
-                                // F000:0161 hlt
-                                return Hlt();
-                            }
+                        // F000:0151 jp near 0x01F9
+                        if (!ParityFlag) {
+                            VerifySpeculativeEntryOrFail(cs1, 0x0155, Signature_0155_hlt);
+                            // F000:0155 hlt
+                            return Hlt();
                         }
-                        // F000:01FD js near 0x0162
-                        if (SignFlag) {
-                            // F000:0162 mov AH,0x41
-                            AH = 0x41;
-                            // F000:0164 sahf
-                            FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
-                            // F000:0165 ja near 0x01F0
-                            if (!CarryFlag && !ZeroFlag) {
-                                VerifySpeculativeEntryOrFail(cs1, 0x01F0, Signature_01F0_hlt);
-                                // F000:01F0 hlt
-                                return Hlt();
-                            }
-                            // F000:0169 jbe near 0x0201
-                            if (!CarryFlag && !ZeroFlag) {
-                                goto L_016D;
-                            }
+                    }
+                    // F000:01F9 jp near 0x0156
+                    if (ParityFlag) {
+                        // F000:0156 mov AH,0x80
+                        AH = 0x80;
+                        // F000:0158 sahf
+                        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x00000080);
+                        // F000:0159 jns near 0x01F0
+                        if (!SignFlag) {
+                            VerifySpeculativeEntryOrFail(cs1, 0x01F0, Signature_01F0_hlt);
+                            // F000:01F0 hlt
+                            return Hlt();
                         }
-                        // F000:0201 jbe near 0x016D
+                        // F000:015D js near 0x01FD
+                        if (!SignFlag) {
+                            VerifySpeculativeEntryOrFail(cs1, 0x0161, Signature_0161_hlt);
+                            // F000:0161 hlt
+                            return Hlt();
+                        }
+                    }
+                    // F000:01FD js near 0x0162
+                    if (SignFlag) {
+                        // F000:0162 mov AH,0x41
+                        AH = 0x41;
+                        // F000:0164 sahf
+                        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x00000041);
+                        // F000:0165 ja near 0x01F0
                         if (!CarryFlag && !ZeroFlag) {
-                            goto L_0205;
-                        }
-                    L_016D:
-                        // F000:016D jmp near 0x0205
-                    L_0205:
-                        // F000:0205 mov AH,0xD4
-                        AH = 0xD4;
-                        // F000:0207 sahf
-                        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
-                        // F000:0208 mov AX,0
-                        AX = 0;
-                        // F000:020B sahf
-                        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
-                        // F000:020C jae near 0x02B4
-                        if (!CarryFlag) {
-                            // F000:02B4 jae near 0x0211
-                            if (!CarryFlag) {
-                                // F000:0211 mov AH,0x95
-                                AH = 0x95;
-                                // F000:0213 sahf
-                                FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
-                                // F000:0214 jne near 0x02B8
-                                if (ZeroFlag) {
-                                    VerifySpeculativeEntryOrFail(cs1, 0x0218, Signature_0218_hlt);
-                                    // F000:0218 hlt
-                                    return Hlt();
-                                }
-                            }
-                            // F000:02B8 jne near 0x0219
-                            if (!ZeroFlag) {
-                                // F000:0219 mov AH,0xD1
-                                AH = 0xD1;
-                                // F000:021B sahf
-                                FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
-                                // F000:021C jnp near 0x02BC
-                                if (ParityFlag) {
-                                    VerifySpeculativeEntryOrFail(cs1, 0x0220, Signature_0220_hlt);
-                                    // F000:0220 hlt
-                                    return Hlt();
-                                }
-                            }
-                            // F000:02BC jnp near 0x0221
-                            if (!ParityFlag) {
-                                // F000:0221 mov AH,0x55
-                                AH = 0x55;
-                                // F000:0223 sahf
-                                FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
-                                // F000:0224 jns near 0x02C0
-                                if (SignFlag) {
-                                    VerifySpeculativeEntryOrFail(cs1, 0x0228, Signature_0228_hlt);
-                                    // F000:0228 hlt
-                                    return Hlt();
-                                }
-                            }
-                            // F000:02C0 jns near 0x0229
-                            if (!SignFlag) {
-                                // F000:0229 mov AH,0x94
-                                AH = 0x94;
-                                // F000:022B sahf
-                                FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
-                                // F000:022C ja near 0x02C4
-                                if (CarryFlag || ZeroFlag) {
-                                    VerifySpeculativeEntryOrFail(cs1, 0x0230, Signature_0230_hlt);
-                                    // F000:0230 hlt
-                                    return Hlt();
-                                }
-                            }
-                            // F000:02C4 ja near 0x0231
-                            if (!CarryFlag && !ZeroFlag) {
-                                // F000:0231 jmp near 0x02C8
-                            }
-                            // F000:02C8 mov AH,0
-                            AH = 0;
-                            // F000:02CA sahf
-                            FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
-                            // F000:02CB mov AL,0x40
-                            AL = 0x40;
-                            // F000:02CD shl AL,1
-                            AL = Alu8.Shl(AL, 1);
-                            // F000:02CF jno near 0x037A
-                            if (OverflowFlag) {
-                                // F000:02D3 jo near 0x037B
-                                if (!OverflowFlag) {
-                                    VerifySpeculativeEntryOrFail(cs1, 0x02D7, Signature_02D7_hlt);
-                                    // F000:02D7 hlt
-                                    return Hlt();
-                                }
-                                // F000:037B jo near 0x02D8
-                                if (OverflowFlag) {
-                                    // F000:02D8 jl near 0x037A
-                                    if (SignFlag != OverflowFlag) {
-                                        VerifySpeculativeEntryOrFail(cs1, 0x037A, Signature_037A_hlt);
-                                        // F000:037A hlt
-                                        return Hlt();
-                                    }
-                                    // F000:02DC jge near 0x037F
-                                    if (SignFlag != OverflowFlag) {
-                                        VerifySpeculativeEntryOrFail(cs1, 0x02E0, Signature_02E0_hlt);
-                                        // F000:02E0 hlt
-                                        return Hlt();
-                                    }
-                                }
-                                // F000:037F jge near 0x02E1
-                                if (SignFlag == OverflowFlag) {
-                                    // F000:02E1 jle near 0x037A
-                                    if (ZeroFlag || SignFlag != OverflowFlag) {
-                                        VerifySpeculativeEntryOrFail(cs1, 0x037A, Signature_037A_hlt);
-                                        // F000:037A hlt
-                                        return Hlt();
-                                    }
-                                    // F000:02E5 jg near 0x0383
-                                    if (ZeroFlag || SignFlag != OverflowFlag) {
-                                        VerifySpeculativeEntryOrFail(cs1, 0x02E9, Signature_02E9_hlt);
-                                        // F000:02E9 hlt
-                                        return Hlt();
-                                    }
-                                }
-                                // F000:0383 jg near 0x02EA
-                                if (!ZeroFlag && SignFlag == OverflowFlag) {
-                                    // F000:02EA mov AH,0x40
-                                    AH = 0x40;
-                                    // F000:02EC sahf
-                                    FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | (uint)AH);
-                                    // F000:02ED jl near 0x0387
-                                    if (SignFlag == OverflowFlag) {
-                                        VerifySpeculativeEntryOrFail(cs1, 0x02F1, Signature_02F1_hlt);
-                                        // F000:02F1 hlt
-                                        return Hlt();
-                                    }
-                                }
-                                // F000:0387 jl near 0x02F2
-                                if (SignFlag != OverflowFlag) {
-                                    // F000:02F2 jle near 0x038B
-                                    if (!ZeroFlag && SignFlag == OverflowFlag) {
-                                        VerifySpeculativeEntryOrFail(cs1, 0x02F6, Signature_02F6_hlt);
-                                        // F000:02F6 hlt
-                                        return Hlt();
-                                    }
-                                }
-                                // F000:038B jle near 0x02F7
-                                if (ZeroFlag || SignFlag != OverflowFlag) {
-                                    // F000:02F7 jmp near 0x038F
-                                }
-                                // F000:038F mov ECX,0x00020000
-                                ECX = 0x00020000;
-                                // F000:0395 mov EAX,0
-                                EAX = 0;
-                                do {
-                                    CheckExternalEvents(cs1, 0x039B);
-                                    // F000:039B inc EAX
-                                    EAX++;
-                                    // F000:039D loop 0x039B
-                                    CX--;
-                                } while (CX != 0);
-                                // F000:039F cmp EAX,0x00010000
-                                Alu32.Sub(EAX, 0x00010000);
-                                // F000:03A5 jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:03A9 cmp ECX,0x00020000
-                                Alu32.Sub(ECX, 0x00020000);
-                                // F000:03B0 jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:03B4 mov ECX,0x00020000
-                                ECX = 0x00020000;
-                                // F000:03BA mov EAX,0
-                                EAX = 0;
-                                do {
-                                    CheckExternalEvents(cs1, 0x03C0);
-                                    // F000:03C0 inc EAX
-                                    EAX++;
-                                    // F000:03C2 loop 0x03C0
-                                    ECX--;
-                                } while (ECX != 0);
-                                // F000:03C5 cmp EAX,0x00020000
-                                Alu32.Sub(EAX, 0x00020000);
-                                // F000:03CB jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:03CF cmp ECX,0
-                                Alu32.Sub(ECX, 0);
-                                // F000:03D3 jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:03D7 mov CX,0xFFFF
-                                CX = 0xFFFF;
-                                // F000:03DA mov AX,0
-                                AX = 0;
-                                do {
-                                    CheckExternalEvents(cs1, 0x03DD);
-                                    // F000:03DD inc AX
-                                    AX++;
-                                    // F000:03DE cmp AH,0
-                                    Alu8.Sub(AH, 0);
-                                    // F000:03E1 loope 0x03DD
-                                    CX--;
-                                } while (CX != 0 && ZeroFlag);
-                                // F000:03E3 cmp AX,0x0100
-                                Alu16.Sub(AX, 0x0100);
-                                // F000:03E6 jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:03EA cmp CX,0xFEFF
-                                Alu16.Sub(CX, 0xFEFF);
-                                // F000:03EE jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:03F2 mov CX,0x00FF
-                                CX = 0x00FF;
-                                // F000:03F5 mov AX,0
-                                AX = 0;
-                                do {
-                                    CheckExternalEvents(cs1, 0x03F8);
-                                    // F000:03F8 inc AX
-                                    AX++;
-                                    // F000:03F9 cmp AH,0
-                                    Alu8.Sub(AH, 0);
-                                    // F000:03FC loope 0x03F8
-                                    CX--;
-                                } while (CX != 0 && ZeroFlag);
-                                // F000:03FE cmp AX,0x00FF
-                                Alu16.Sub(AX, 0x00FF);
-                                // F000:0401 jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:0405 cmp CX,0
-                                Alu16.Sub(CX, 0);
-                                // F000:0408 jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:040C mov ECX,0x00020000
-                                ECX = 0x00020000;
-                                // F000:0412 mov EAX,0
-                                EAX = 0;
-                                do {
-                                    CheckExternalEvents(cs1, 0x0418);
-                                    // F000:0418 inc EAX
-                                    EAX++;
-                                    // F000:041A test EAX,0x00010000
-                                    Alu32.And(EAX, 0x00010000);
-                                    // F000:0420 loope 0x0418
-                                    ECX--;
-                                } while (ECX != 0 && ZeroFlag);
-                                // F000:0423 cmp EAX,0x00010000
-                                Alu32.Sub(EAX, 0x00010000);
-                                // F000:0429 jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:042D cmp ECX,0x00010000
-                                Alu32.Sub(ECX, 0x00010000);
-                                // F000:0434 jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:0438 mov CX,0xFFFF
-                                CX = 0xFFFF;
-                                // F000:043B mov AX,0
-                                AX = 0;
-                                do {
-                                    CheckExternalEvents(cs1, 0x043E);
-                                    // F000:043E inc AX
-                                    AX++;
-                                    // F000:043F test AL,0xFF
-                                    Alu8.And(AL, 0xFF);
-                                    // F000:0441 loopne 0x043E
-                                    CX--;
-                                } while (CX != 0 && !ZeroFlag);
-                                // F000:0443 cmp AX,0x0100
-                                Alu16.Sub(AX, 0x0100);
-                                // F000:0446 jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:044A cmp CX,0xFEFF
-                                Alu16.Sub(CX, 0xFEFF);
-                                // F000:044E jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:0452 mov CX,0x00FF
-                                CX = 0x00FF;
-                                // F000:0455 mov AX,0
-                                AX = 0;
-                                do {
-                                    CheckExternalEvents(cs1, 0x0458);
-                                    // F000:0458 inc AX
-                                    AX++;
-                                    // F000:0459 test AL,0xFF
-                                    Alu8.And(AL, 0xFF);
-                                    // F000:045B loopne 0x0458
-                                    CX--;
-                                } while (CX != 0 && !ZeroFlag);
-                                // F000:045D cmp AX,0x00FF
-                                Alu16.Sub(AX, 0x00FF);
-                                // F000:0460 jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:0464 cmp CX,0
-                                Alu16.Sub(CX, 0);
-                                // F000:0467 jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:046B mov ECX,0x00010000
-                                ECX = 0x00010000;
-                                // F000:0471 mov EAX,0
-                                EAX = 0;
-                                do {
-                                    CheckExternalEvents(cs1, 0x0477);
-                                    // F000:0477 inc EAX
-                                    EAX++;
-                                    // F000:0479 test EAX,0x0000FFFF
-                                    Alu32.And(EAX, 0x0000FFFF);
-                                    // F000:047F loopne 0x0477
-                                    ECX--;
-                                } while (ECX != 0 && !ZeroFlag);
-                                // F000:0482 cmp EAX,0x00010000
-                                Alu32.Sub(EAX, 0x00010000);
-                                // F000:0488 jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:048C cmp ECX,0
-                                Alu32.Sub(ECX, 0);
-                                // F000:0490 jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:0494 mov AL,2
-                                AL = 2;
-                                // F000:0496 mov DX,0x0999
-                                DX = 0x0999;
-                                // F000:0499 out DX,AL
-                                Out8(DX, AL);
-                                // F000:049A mov EAX,0x80000001
-                                EAX = 0x80000001u;
-                                // F000:04A0 imul EAX
-                                long result_04A0 = (long)((long)(int)EAX * (long)(int)EAX);
-                                EDX = (uint)(result_04A0 >> 0x00000020);
-                                EAX = (uint)result_04A0;
-                                // F000:04A3 mov EAX,0x44332211
-                                EAX = 0x44332211;
-                                // F000:04A9 mov EBX,EAX
-                                EBX = EAX;
-                                // F000:04AC mov ECX,0x88776655
-                                ECX = 0x88776655u;
-                                // F000:04B2 mul ECX
-                                ulong result_04B2 = (ulong)((ulong)EAX * (ulong)(uint)(int)ECX);
-                                EDX = (uint)(result_04B2 >> 0x00000020);
-                                EAX = (uint)result_04B2;
-                                // F000:04B5 div ECX
-                                (EAX, EDX) = Div32(divisor: ECX, dividend: (ulong)((ulong)EDX << 0x00000020 | (ulong)EAX));
-                                // F000:04B8 cmp EAX,EBX
-                                Alu32.Sub(EAX, EBX);
-                                // F000:04BB jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:04BF mov AL,3
-                                AL = 3;
-                                // F000:04C1 mov DX,0x0999
-                                DX = 0x0999;
-                                // F000:04C4 out DX,AL
-                                Out8(DX, AL);
-                                // F000:04C5 mov DX,0x2000
-                                DX = 0x2000;
-                                // F000:04C8 mov SS,DX
-                                SS = DX;
-                                // F000:04CA xor AX,AX
-                                AX = 0;
-                                // F000:04CC mov AX,SS
-                                AX = SS;
-                                // F000:04CE cmp AX,DX
-                                Alu16.Sub(AX, DX);
-                                // F000:04D0 jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:04D4 mov EAX,0xFFFFFFFF
-                                EAX = 0xFFFFFFFFu;
-                                // F000:04DA mov EAX,SS
-                                EAX = (uint)SS;
-                                // F000:04DD cmp AX,DX
-                                Alu16.Sub(AX, DX);
-                                // F000:04DF jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:04E3 mov word ptr DS:[0],0xBEEF
-                                UInt16[DS, 0] = 0xBEEF;
-                                // F000:04E9 mov word ptr DS:[0],SS
-                                UInt16[DS, 0] = SS;
-                                // F000:04ED cmp word ptr DS:[0],DX
-                                Alu16.Sub(UInt16[DS, 0], DX);
-                                // F000:04F1 jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:04F5 mov CX,DS
-                                CX = DS;
-                                // F000:04F7 xor AX,AX
-                                AX = 0;
-                                // F000:04F9 mov SS,AX
-                                SS = AX;
-                                // F000:04FB mov SS,word ptr DS:[0]
-                                SS = UInt16[DS, 0];
-                                // F000:04FF mov AX,SS
-                                AX = SS;
-                                // F000:0501 cmp AX,DX
-                                Alu16.Sub(AX, DX);
-                                // F000:0503 jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:0507 mov DX,0x2000
-                                DX = 0x2000;
-                                // F000:050A mov DS,DX
-                                DS = DX;
-                                // F000:050C xor AX,AX
-                                AX = 0;
-                                // F000:050E mov AX,DS
-                                AX = DS;
-                                // F000:0510 cmp AX,DX
-                                Alu16.Sub(AX, DX);
-                                // F000:0512 jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:0516 mov EAX,0xFFFFFFFF
-                                EAX = 0xFFFFFFFFu;
-                                // F000:051C mov EAX,DS
-                                EAX = (uint)DS;
-                                // F000:051F cmp AX,DX
-                                Alu16.Sub(AX, DX);
-                                // F000:0521 jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:0525 mov word ptr DS:[0],0xBEEF
-                                UInt16[DS, 0] = 0xBEEF;
-                                // F000:052B mov word ptr DS:[0],DS
-                                UInt16[DS, 0] = DS;
-                                // F000:052F cmp word ptr DS:[0],DX
-                                Alu16.Sub(UInt16[DS, 0], DX);
-                                // F000:0533 jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:0537 mov CX,DS
-                                CX = DS;
-                                // F000:0539 xor AX,AX
-                                AX = 0;
-                                // F000:053B mov DS,AX
-                                DS = AX;
-                                // F000:053D mov ES,CX
-                                ES = CX;
-                                // F000:053F mov DS,word ptr ES:[0]
-                                DS = UInt16[ES, 0];
-                                // F000:0544 mov AX,DS
-                                AX = DS;
-                                // F000:0546 cmp AX,DX
-                                Alu16.Sub(AX, DX);
-                                // F000:0548 jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:054C mov DX,0x2000
-                                DX = 0x2000;
-                                // F000:054F mov ES,DX
-                                ES = DX;
-                                // F000:0551 xor AX,AX
-                                AX = 0;
-                                // F000:0553 mov AX,ES
-                                AX = ES;
-                                // F000:0555 cmp AX,DX
-                                Alu16.Sub(AX, DX);
-                                // F000:0557 jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:055B mov EAX,0xFFFFFFFF
-                                EAX = 0xFFFFFFFFu;
-                                // F000:0561 mov EAX,ES
-                                EAX = (uint)ES;
-                                // F000:0564 cmp AX,DX
-                                Alu16.Sub(AX, DX);
-                                // F000:0566 jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:056A mov word ptr DS:[0],0xBEEF
-                                UInt16[DS, 0] = 0xBEEF;
-                                // F000:0570 mov word ptr DS:[0],ES
-                                UInt16[DS, 0] = ES;
-                                // F000:0574 cmp word ptr DS:[0],DX
-                                Alu16.Sub(UInt16[DS, 0], DX);
-                                // F000:0578 jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:057C mov CX,DS
-                                CX = DS;
-                                // F000:057E xor AX,AX
-                                AX = 0;
-                                // F000:0580 mov ES,AX
-                                ES = AX;
-                                // F000:0582 mov ES,word ptr DS:[0]
-                                ES = UInt16[DS, 0];
-                                // F000:0586 mov AX,ES
-                                AX = ES;
-                                // F000:0588 cmp AX,DX
-                                Alu16.Sub(AX, DX);
-                                // F000:058A jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:058E mov DX,0x2000
-                                DX = 0x2000;
-                                // F000:0591 mov FS,DX
-                                FS = DX;
-                                // F000:0593 xor AX,AX
-                                AX = 0;
-                                // F000:0595 mov AX,FS
-                                AX = FS;
-                                // F000:0597 cmp AX,DX
-                                Alu16.Sub(AX, DX);
-                                // F000:0599 jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:059D mov EAX,0xFFFFFFFF
-                                EAX = 0xFFFFFFFFu;
-                                // F000:05A3 mov EAX,FS
-                                EAX = (uint)FS;
-                                // F000:05A6 cmp AX,DX
-                                Alu16.Sub(AX, DX);
-                                // F000:05A8 jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:05AC mov word ptr DS:[0],0xBEEF
-                                UInt16[DS, 0] = 0xBEEF;
-                                // F000:05B2 mov word ptr DS:[0],FS
-                                UInt16[DS, 0] = FS;
-                                // F000:05B6 cmp word ptr DS:[0],DX
-                                Alu16.Sub(UInt16[DS, 0], DX);
-                                // F000:05BA jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:05BE mov CX,DS
-                                CX = DS;
-                                // F000:05C0 xor AX,AX
-                                AX = 0;
-                                // F000:05C2 mov FS,AX
-                                FS = AX;
-                                // F000:05C4 mov FS,word ptr DS:[0]
-                                FS = UInt16[DS, 0];
-                                // F000:05C8 mov AX,FS
-                                AX = FS;
-                                // F000:05CA cmp AX,DX
-                                Alu16.Sub(AX, DX);
-                                // F000:05CC jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:05D0 mov DX,0x2000
-                                DX = 0x2000;
-                                // F000:05D3 mov GS,DX
-                                GS = DX;
-                                // F000:05D5 xor AX,AX
-                                AX = 0;
-                                // F000:05D7 mov AX,GS
-                                AX = GS;
-                                // F000:05D9 cmp AX,DX
-                                Alu16.Sub(AX, DX);
-                                // F000:05DB jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:05DF mov EAX,0xFFFFFFFF
-                                EAX = 0xFFFFFFFFu;
-                                // F000:05E5 mov EAX,GS
-                                EAX = (uint)GS;
-                                // F000:05E8 cmp AX,DX
-                                Alu16.Sub(AX, DX);
-                                // F000:05EA jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:05EE mov word ptr DS:[0],0xBEEF
-                                UInt16[DS, 0] = 0xBEEF;
-                                // F000:05F4 mov word ptr DS:[0],GS
-                                UInt16[DS, 0] = GS;
-                                // F000:05F8 cmp word ptr DS:[0],DX
-                                Alu16.Sub(UInt16[DS, 0], DX);
-                                // F000:05FC jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:0600 mov CX,DS
-                                CX = DS;
-                                // F000:0602 xor AX,AX
-                                AX = 0;
-                                // F000:0604 mov GS,AX
-                                GS = AX;
-                                // F000:0606 mov GS,word ptr DS:[0]
-                                GS = UInt16[DS, 0];
-                                // F000:060A mov AX,GS
-                                AX = GS;
-                                // F000:060C cmp AX,DX
-                                Alu16.Sub(AX, DX);
-                                // F000:060E jne near 0x15C7
-                                if (!ZeroFlag) {
-                                    return unknown_F000_15C7_F15C7(0x0000);
-                                }
-                                // F000:0612 mov DX,0xF000
-                                DX = 0xF000;
-                                // F000:0615 mov AX,0
-                                AX = 0;
-                                // F000:0618 mov DS,AX
-                                DS = AX;
-                                // F000:061A mov word ptr DS:[0x0018],0x0633
-                                UInt16[DS, 0x0018] = 0x0633;
-                                // F000:0620 mov word ptr DS:[0x001A],0xF000
-                                UInt16[DS, 0x001A] = 0xF000;
-                                // F000:0626 mov AX,0x1000
-                                AX = 0x1000;
-                                // F000:0629 mov SS,AX
-                                SS = AX;
-                                // F000:062B mov SP,0xFFFF
-                                SP = 0xFFFF;
-                                // F000:062E invalid
-                                try {
-                                    throw new Spice86.Core.Emulator.CPU.Exceptions.CpuInvalidOpcodeException("Attempted to write to CS register with MOV instruction");
-                                }
-                                catch (CpuException cpuException) {
-                                    return DispatchCpuFault(cpuException, cs1, 0x062E, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x0633), () => unknown_F000_0633_F0633(0x0000))]);
-                                }
-                            }
-                            VerifySpeculativeEntryOrFail(cs1, 0x037A, Signature_037A_hlt);
-                            // F000:037A hlt
+                            VerifySpeculativeEntryOrFail(cs1, 0x01F0, Signature_01F0_hlt);
+                            // F000:01F0 hlt
                             return Hlt();
                         }
+                        // F000:0169 jbe near 0x0201
+                        if (!CarryFlag && !ZeroFlag) {
+                            goto L_016D;
+                        }
+                    }
+                    // F000:0201 jbe near 0x016D
+                    if (!CarryFlag && !ZeroFlag) {
+                        goto L_0205;
+                    }
+                L_016D:
+                    // F000:016D jmp near 0x0205
+                L_0205:
+                    // F000:0205 mov AH,0xD4
+                    AH = 0xD4;
+                    // F000:0207 sahf
+                    FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x000000D4);
+                    // F000:0208 mov AX,0
+                    AX = 0;
+                    // F000:020B sahf
+                    FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u);
+                    // F000:020C jae near 0x02B4
+                    if (CarryFlag) {
                         VerifySpeculativeEntryOrFail(cs1, 0x0210, Signature_0210_hlt);
                         // F000:0210 hlt
                         return Hlt();
                     }
-                    VerifySpeculativeEntryOrFail(cs1, 0x01F0, Signature_01F0_hlt);
-                    // F000:01F0 hlt
+                    // F000:02B4 jae near 0x0211
+                    if (!CarryFlag) {
+                        // F000:0211 mov AH,0x95
+                        AH = 0x95;
+                        // F000:0213 sahf
+                        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x00000095);
+                        // F000:0214 jne near 0x02B8
+                        if (ZeroFlag) {
+                            VerifySpeculativeEntryOrFail(cs1, 0x0218, Signature_0218_hlt);
+                            // F000:0218 hlt
+                            return Hlt();
+                        }
+                    }
+                    // F000:02B8 jne near 0x0219
+                    if (!ZeroFlag) {
+                        // F000:0219 mov AH,0xD1
+                        AH = 0xD1;
+                        // F000:021B sahf
+                        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x000000D1);
+                        // F000:021C jnp near 0x02BC
+                        if (ParityFlag) {
+                            VerifySpeculativeEntryOrFail(cs1, 0x0220, Signature_0220_hlt);
+                            // F000:0220 hlt
+                            return Hlt();
+                        }
+                    }
+                    // F000:02BC jnp near 0x0221
+                    if (!ParityFlag) {
+                        // F000:0221 mov AH,0x55
+                        AH = 0x55;
+                        // F000:0223 sahf
+                        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x00000055);
+                        // F000:0224 jns near 0x02C0
+                        if (SignFlag) {
+                            VerifySpeculativeEntryOrFail(cs1, 0x0228, Signature_0228_hlt);
+                            // F000:0228 hlt
+                            return Hlt();
+                        }
+                    }
+                    // F000:02C0 jns near 0x0229
+                    if (!SignFlag) {
+                        // F000:0229 mov AH,0x94
+                        AH = 0x94;
+                        // F000:022B sahf
+                        FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x00000094);
+                        // F000:022C ja near 0x02C4
+                        if (CarryFlag || ZeroFlag) {
+                            VerifySpeculativeEntryOrFail(cs1, 0x0230, Signature_0230_hlt);
+                            // F000:0230 hlt
+                            return Hlt();
+                        }
+                    }
+                    // F000:02C4 ja near 0x0231
+                    if (!CarryFlag && !ZeroFlag) {
+                        // F000:0231 jmp near 0x02C8
+                    }
+                    // F000:02C8 mov AH,0
+                    AH = 0;
+                    // F000:02CA sahf
+                    FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u);
+                    // F000:02CB mov AL,0x40
+                    // F000:02CD shl AL,1
+                    AL = Alu8.Shl(0x40, 1);
+                    // F000:02CF jno near 0x037A
+                    if (OverflowFlag) {
+                        // F000:02D3 jo near 0x037B
+                        if (!OverflowFlag) {
+                            VerifySpeculativeEntryOrFail(cs1, 0x02D7, Signature_02D7_hlt);
+                            // F000:02D7 hlt
+                            return Hlt();
+                        }
+                        // F000:037B jo near 0x02D8
+                        if (OverflowFlag) {
+                            // F000:02D8 jl near 0x037A
+                            if (SignFlag != OverflowFlag) {
+                                VerifySpeculativeEntryOrFail(cs1, 0x037A, Signature_037A_hlt);
+                                // F000:037A hlt
+                                return Hlt();
+                            }
+                            // F000:02DC jge near 0x037F
+                            if (SignFlag != OverflowFlag) {
+                                VerifySpeculativeEntryOrFail(cs1, 0x02E0, Signature_02E0_hlt);
+                                // F000:02E0 hlt
+                                return Hlt();
+                            }
+                        }
+                        // F000:037F jge near 0x02E1
+                        if (SignFlag == OverflowFlag) {
+                            // F000:02E1 jle near 0x037A
+                            if (ZeroFlag || SignFlag != OverflowFlag) {
+                                VerifySpeculativeEntryOrFail(cs1, 0x037A, Signature_037A_hlt);
+                                // F000:037A hlt
+                                return Hlt();
+                            }
+                            // F000:02E5 jg near 0x0383
+                            if (ZeroFlag || SignFlag != OverflowFlag) {
+                                VerifySpeculativeEntryOrFail(cs1, 0x02E9, Signature_02E9_hlt);
+                                // F000:02E9 hlt
+                                return Hlt();
+                            }
+                        }
+                        // F000:0383 jg near 0x02EA
+                        if (!ZeroFlag && SignFlag == OverflowFlag) {
+                            // F000:02EA mov AH,0x40
+                            AH = 0x40;
+                            // F000:02EC sahf
+                            FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 0x00000040);
+                            // F000:02ED jl near 0x0387
+                            if (SignFlag == OverflowFlag) {
+                                VerifySpeculativeEntryOrFail(cs1, 0x02F1, Signature_02F1_hlt);
+                                // F000:02F1 hlt
+                                return Hlt();
+                            }
+                        }
+                        // F000:0387 jl near 0x02F2
+                        // F000:02F2 jle near 0x038B
+                        if (SignFlag != OverflowFlag && (!ZeroFlag && SignFlag == OverflowFlag)) {
+                            VerifySpeculativeEntryOrFail(cs1, 0x02F6, Signature_02F6_hlt);
+                            // F000:02F6 hlt
+                            return Hlt();
+                        }
+                        // F000:038B jle near 0x02F7
+                        if (ZeroFlag || SignFlag != OverflowFlag) {
+                            // F000:02F7 jmp near 0x038F
+                        }
+                        // F000:038F mov ECX,0x00020000
+                        ECX = 0x00020000;
+                        // F000:0395 mov EAX,0
+                        EAX = 0;
+                        do {
+                            CheckExternalEvents(cs1, 0x039B);
+                            // F000:039B inc EAX
+                            EAX++;
+                            // F000:039D loop 0x039B
+                            CX--;
+                        } while (CX != 0);
+                        // F000:039F cmp EAX,0x00010000
+                        Alu32.Sub(EAX, 0x00010000);
+                        // F000:03A5 jne near 0x15C7
+                        if (EAX != 0x00010000) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:03A9 cmp ECX,0x00020000
+                        Alu32.Sub(ECX, 0x00020000);
+                        // F000:03B0 jne near 0x15C7
+                        if (ECX != 0x00020000) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:03B4 mov ECX,0x00020000
+                        ECX = 0x00020000;
+                        // F000:03BA mov EAX,0
+                        EAX = 0;
+                        do {
+                            CheckExternalEvents(cs1, 0x03C0);
+                            // F000:03C0 inc EAX
+                            EAX++;
+                            // F000:03C2 loop 0x03C0
+                            ECX--;
+                        } while (ECX != 0);
+                        // F000:03C5 cmp EAX,0x00020000
+                        Alu32.Sub(EAX, 0x00020000);
+                        // F000:03CB jne near 0x15C7
+                        if (EAX != 0x00020000) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:03CF cmp ECX,0
+                        Alu32.Sub(ECX, 0);
+                        // F000:03D3 jne near 0x15C7
+                        if (ECX != 0) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:03D7 mov CX,0xFFFF
+                        CX = 0xFFFF;
+                        // F000:03DA mov AX,0
+                        AX = 0;
+                        do {
+                            CheckExternalEvents(cs1, 0x03DD);
+                            // F000:03DD inc AX
+                            AX++;
+                            // F000:03DE cmp AH,0
+                            Alu8.Sub(AH, 0);
+                            // F000:03E1 loope 0x03DD
+                            CX--;
+                        } while (CX != 0 && ZeroFlag);
+                        // F000:03E3 cmp AX,0x0100
+                        Alu16.Sub(AX, 0x0100);
+                        // F000:03E6 jne near 0x15C7
+                        if (AX != 0x0100) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:03EA cmp CX,0xFEFF
+                        Alu16.Sub(CX, 0xFEFF);
+                        // F000:03EE jne near 0x15C7
+                        if (CX != 0xFEFF) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:03F2 mov CX,0x00FF
+                        CX = 0x00FF;
+                        // F000:03F5 mov AX,0
+                        AX = 0;
+                        do {
+                            CheckExternalEvents(cs1, 0x03F8);
+                            // F000:03F8 inc AX
+                            AX++;
+                            // F000:03F9 cmp AH,0
+                            Alu8.Sub(AH, 0);
+                            // F000:03FC loope 0x03F8
+                            CX--;
+                        } while (CX != 0 && ZeroFlag);
+                        // F000:03FE cmp AX,0x00FF
+                        Alu16.Sub(AX, 0x00FF);
+                        // F000:0401 jne near 0x15C7
+                        if (AX != 0x00FF) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:0405 cmp CX,0
+                        Alu16.Sub(CX, 0);
+                        // F000:0408 jne near 0x15C7
+                        if (CX != 0) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:040C mov ECX,0x00020000
+                        ECX = 0x00020000;
+                        // F000:0412 mov EAX,0
+                        EAX = 0;
+                        do {
+                            CheckExternalEvents(cs1, 0x0418);
+                            // F000:0418 inc EAX
+                            EAX++;
+                            // F000:041A test EAX,0x00010000
+                            Alu32.And(EAX, 0x00010000);
+                            // F000:0420 loope 0x0418
+                            ECX--;
+                        } while (ECX != 0 && ZeroFlag);
+                        // F000:0423 cmp EAX,0x00010000
+                        Alu32.Sub(EAX, 0x00010000);
+                        // F000:0429 jne near 0x15C7
+                        if (EAX != 0x00010000) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:042D cmp ECX,0x00010000
+                        Alu32.Sub(ECX, 0x00010000);
+                        // F000:0434 jne near 0x15C7
+                        if (ECX != 0x00010000) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:0438 mov CX,0xFFFF
+                        CX = 0xFFFF;
+                        // F000:043B mov AX,0
+                        AX = 0;
+                        do {
+                            CheckExternalEvents(cs1, 0x043E);
+                            // F000:043E inc AX
+                            AX++;
+                            // F000:043F test AL,0xFF
+                            Alu8.And(AL, 0xFF);
+                            // F000:0441 loopne 0x043E
+                            CX--;
+                        } while (CX != 0 && !ZeroFlag);
+                        // F000:0443 cmp AX,0x0100
+                        Alu16.Sub(AX, 0x0100);
+                        // F000:0446 jne near 0x15C7
+                        if (AX != 0x0100) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:044A cmp CX,0xFEFF
+                        Alu16.Sub(CX, 0xFEFF);
+                        // F000:044E jne near 0x15C7
+                        if (CX != 0xFEFF) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:0452 mov CX,0x00FF
+                        CX = 0x00FF;
+                        // F000:0455 mov AX,0
+                        AX = 0;
+                        do {
+                            CheckExternalEvents(cs1, 0x0458);
+                            // F000:0458 inc AX
+                            AX++;
+                            // F000:0459 test AL,0xFF
+                            Alu8.And(AL, 0xFF);
+                            // F000:045B loopne 0x0458
+                            CX--;
+                        } while (CX != 0 && !ZeroFlag);
+                        // F000:045D cmp AX,0x00FF
+                        Alu16.Sub(AX, 0x00FF);
+                        // F000:0460 jne near 0x15C7
+                        if (AX != 0x00FF) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:0464 cmp CX,0
+                        Alu16.Sub(CX, 0);
+                        // F000:0467 jne near 0x15C7
+                        if (CX != 0) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:046B mov ECX,0x00010000
+                        ECX = 0x00010000;
+                        // F000:0471 mov EAX,0
+                        EAX = 0;
+                        do {
+                            CheckExternalEvents(cs1, 0x0477);
+                            // F000:0477 inc EAX
+                            EAX++;
+                            // F000:0479 test EAX,0x0000FFFF
+                            Alu32.And(EAX, 0x0000FFFF);
+                            // F000:047F loopne 0x0477
+                            ECX--;
+                        } while (ECX != 0 && !ZeroFlag);
+                        // F000:0482 cmp EAX,0x00010000
+                        Alu32.Sub(EAX, 0x00010000);
+                        // F000:0488 jne near 0x15C7
+                        if (EAX != 0x00010000) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:048C cmp ECX,0
+                        Alu32.Sub(ECX, 0);
+                        // F000:0490 jne near 0x15C7
+                        if (ECX != 0) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:0494 mov AL,2
+                        AL = 2;
+                        // F000:0496 mov DX,0x0999
+                        // F000:0499 out DX,AL
+                        Out8(0x0999, AL);
+                        // F000:049A mov EAX,0x80000001
+                        EAX = 0x80000001u;
+                        // F000:04A0 imul EAX
+                        long result_04A0 = (long)((long)(int)EAX * (long)(int)EAX);
+                        EDX = (uint)(result_04A0 >> 32);
+                        EAX = (uint)result_04A0;
+                        // F000:04A3 mov EAX,0x44332211
+                        EAX = 0x44332211;
+                        // F000:04A9 mov EBX,EAX
+                        EBX = 0x44332211;
+                        // F000:04AC mov ECX,0x88776655
+                        ECX = 0x88776655u;
+                        // F000:04B2 mul ECX
+                        ulong result_04B2 = (ulong)((ulong)EAX * (ulong)ECX);
+                        EDX = (uint)(result_04B2 >> 32);
+                        EAX = (uint)result_04B2;
+                        // F000:04B5 div ECX
+                        (EAX, EDX) = Div32(divisor: ECX, dividend: (ulong)((ulong)EDX << 32 | (ulong)EAX));
+                        // F000:04B8 cmp EAX,EBX
+                        Alu32.Sub(EAX, 0x44332211);
+                        // F000:04BB jne near 0x15C7
+                        if (EAX != 0x44332211) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:04BF mov AL,3
+                        AL = 3;
+                        // F000:04C1 mov DX,0x0999
+                        // F000:04C4 out DX,AL
+                        Out8(0x0999, AL);
+                        // F000:04C5 mov DX,0x2000
+                        DX = 0x2000;
+                        // F000:04C8 mov SS,DX
+                        SS = 0x2000;
+                        // F000:04CA xor AX,AX
+                        AX = 0;
+                        // F000:04CC mov AX,SS
+                        AX = SS;
+                        // F000:04CE cmp AX,DX
+                        Alu16.Sub(AX, 0x2000);
+                        // F000:04D0 jne near 0x15C7
+                        if (AX != 0x2000) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:04D4 mov EAX,0xFFFFFFFF
+                        // F000:04DA mov EAX,SS
+                        EAX = (uint)SS;
+                        // F000:04DD cmp AX,DX
+                        Alu16.Sub(AX, 0x2000);
+                        // F000:04DF jne near 0x15C7
+                        if (AX != 0x2000) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:04E3 mov word ptr DS:[0],0xBEEF
+                        UInt16[DS, 0] = 0xBEEF;
+                        // F000:04E9 mov word ptr DS:[0],SS
+                        UInt16[DS, 0] = SS;
+                        // F000:04ED cmp word ptr DS:[0],DX
+                        flagOperand_04ED = UInt16[DS, 0];
+                        Alu16.Sub(flagOperand_04ED, 0x2000);
+                        // F000:04F1 jne near 0x15C7
+                        if (flagOperand_04ED != 0x2000) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:04F5 mov CX,DS
+                        CX = DS;
+                        // F000:04F7 xor AX,AX
+                        AX = 0;
+                        // F000:04F9 mov SS,AX
+                        // F000:04FB mov SS,word ptr DS:[0]
+                        SS = UInt16[DS, 0];
+                        // F000:04FF mov AX,SS
+                        AX = SS;
+                        // F000:0501 cmp AX,DX
+                        Alu16.Sub(AX, 0x2000);
+                        // F000:0503 jne near 0x15C7
+                        if (AX != 0x2000) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:0507 mov DX,0x2000
+                        DX = 0x2000;
+                        // F000:050A mov DS,DX
+                        DS = 0x2000;
+                        // F000:050C xor AX,AX
+                        AX = 0;
+                        // F000:050E mov AX,DS
+                        AX = DS;
+                        // F000:0510 cmp AX,DX
+                        Alu16.Sub(AX, 0x2000);
+                        // F000:0512 jne near 0x15C7
+                        if (AX != 0x2000) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:0516 mov EAX,0xFFFFFFFF
+                        // F000:051C mov EAX,DS
+                        EAX = (uint)DS;
+                        // F000:051F cmp AX,DX
+                        Alu16.Sub(AX, 0x2000);
+                        // F000:0521 jne near 0x15C7
+                        if (AX != 0x2000) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:0525 mov word ptr DS:[0],0xBEEF
+                        UInt16[DS, 0] = 0xBEEF;
+                        // F000:052B mov word ptr DS:[0],DS
+                        UInt16[DS, 0] = DS;
+                        // F000:052F cmp word ptr DS:[0],DX
+                        flagOperand_052F = UInt16[DS, 0];
+                        Alu16.Sub(flagOperand_052F, 0x2000);
+                        // F000:0533 jne near 0x15C7
+                        if (flagOperand_052F != 0x2000) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:0537 mov CX,DS
+                        CX = DS;
+                        // F000:0539 xor AX,AX
+                        AX = 0;
+                        // F000:053B mov DS,AX
+                        DS = 0;
+                        // F000:053D mov ES,CX
+                        ES = CX;
+                        // F000:053F mov DS,word ptr ES:[0]
+                        DS = UInt16[ES, 0];
+                        // F000:0544 mov AX,DS
+                        AX = DS;
+                        // F000:0546 cmp AX,DX
+                        Alu16.Sub(AX, 0x2000);
+                        // F000:0548 jne near 0x15C7
+                        if (AX != 0x2000) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:054C mov DX,0x2000
+                        DX = 0x2000;
+                        // F000:054F mov ES,DX
+                        ES = 0x2000;
+                        // F000:0551 xor AX,AX
+                        AX = 0;
+                        // F000:0553 mov AX,ES
+                        AX = ES;
+                        // F000:0555 cmp AX,DX
+                        Alu16.Sub(AX, 0x2000);
+                        // F000:0557 jne near 0x15C7
+                        if (AX != 0x2000) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:055B mov EAX,0xFFFFFFFF
+                        // F000:0561 mov EAX,ES
+                        EAX = (uint)ES;
+                        // F000:0564 cmp AX,DX
+                        Alu16.Sub(AX, 0x2000);
+                        // F000:0566 jne near 0x15C7
+                        if (AX != 0x2000) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:056A mov word ptr DS:[0],0xBEEF
+                        UInt16[DS, 0] = 0xBEEF;
+                        // F000:0570 mov word ptr DS:[0],ES
+                        UInt16[DS, 0] = ES;
+                        // F000:0574 cmp word ptr DS:[0],DX
+                        flagOperand_0574 = UInt16[DS, 0];
+                        Alu16.Sub(flagOperand_0574, 0x2000);
+                        // F000:0578 jne near 0x15C7
+                        if (flagOperand_0574 != 0x2000) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:057C mov CX,DS
+                        CX = DS;
+                        // F000:057E xor AX,AX
+                        AX = 0;
+                        // F000:0580 mov ES,AX
+                        // F000:0582 mov ES,word ptr DS:[0]
+                        ES = UInt16[DS, 0];
+                        // F000:0586 mov AX,ES
+                        AX = ES;
+                        // F000:0588 cmp AX,DX
+                        Alu16.Sub(AX, 0x2000);
+                        // F000:058A jne near 0x15C7
+                        if (AX != 0x2000) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:058E mov DX,0x2000
+                        DX = 0x2000;
+                        // F000:0591 mov FS,DX
+                        FS = 0x2000;
+                        // F000:0593 xor AX,AX
+                        AX = 0;
+                        // F000:0595 mov AX,FS
+                        AX = FS;
+                        // F000:0597 cmp AX,DX
+                        Alu16.Sub(AX, 0x2000);
+                        // F000:0599 jne near 0x15C7
+                        if (AX != 0x2000) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:059D mov EAX,0xFFFFFFFF
+                        // F000:05A3 mov EAX,FS
+                        EAX = (uint)FS;
+                        // F000:05A6 cmp AX,DX
+                        Alu16.Sub(AX, 0x2000);
+                        // F000:05A8 jne near 0x15C7
+                        if (AX != 0x2000) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:05AC mov word ptr DS:[0],0xBEEF
+                        UInt16[DS, 0] = 0xBEEF;
+                        // F000:05B2 mov word ptr DS:[0],FS
+                        UInt16[DS, 0] = FS;
+                        // F000:05B6 cmp word ptr DS:[0],DX
+                        flagOperand_05B6 = UInt16[DS, 0];
+                        Alu16.Sub(flagOperand_05B6, 0x2000);
+                        // F000:05BA jne near 0x15C7
+                        if (flagOperand_05B6 != 0x2000) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:05BE mov CX,DS
+                        CX = DS;
+                        // F000:05C0 xor AX,AX
+                        AX = 0;
+                        // F000:05C2 mov FS,AX
+                        // F000:05C4 mov FS,word ptr DS:[0]
+                        FS = UInt16[DS, 0];
+                        // F000:05C8 mov AX,FS
+                        AX = FS;
+                        // F000:05CA cmp AX,DX
+                        Alu16.Sub(AX, 0x2000);
+                        // F000:05CC jne near 0x15C7
+                        if (AX != 0x2000) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:05D0 mov DX,0x2000
+                        DX = 0x2000;
+                        // F000:05D3 mov GS,DX
+                        GS = 0x2000;
+                        // F000:05D5 xor AX,AX
+                        AX = 0;
+                        // F000:05D7 mov AX,GS
+                        AX = GS;
+                        // F000:05D9 cmp AX,DX
+                        Alu16.Sub(AX, 0x2000);
+                        // F000:05DB jne near 0x15C7
+                        if (AX != 0x2000) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:05DF mov EAX,0xFFFFFFFF
+                        // F000:05E5 mov EAX,GS
+                        EAX = (uint)GS;
+                        // F000:05E8 cmp AX,DX
+                        Alu16.Sub(AX, 0x2000);
+                        // F000:05EA jne near 0x15C7
+                        if (AX != 0x2000) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:05EE mov word ptr DS:[0],0xBEEF
+                        UInt16[DS, 0] = 0xBEEF;
+                        // F000:05F4 mov word ptr DS:[0],GS
+                        UInt16[DS, 0] = GS;
+                        // F000:05F8 cmp word ptr DS:[0],DX
+                        flagOperand_05F8 = UInt16[DS, 0];
+                        Alu16.Sub(flagOperand_05F8, 0x2000);
+                        // F000:05FC jne near 0x15C7
+                        if (flagOperand_05F8 != 0x2000) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:0600 mov CX,DS
+                        CX = DS;
+                        // F000:0602 xor AX,AX
+                        AX = 0;
+                        // F000:0604 mov GS,AX
+                        // F000:0606 mov GS,word ptr DS:[0]
+                        GS = UInt16[DS, 0];
+                        // F000:060A mov AX,GS
+                        AX = GS;
+                        // F000:060C cmp AX,DX
+                        Alu16.Sub(AX, 0x2000);
+                        // F000:060E jne near 0x15C7
+                        if (AX != 0x2000) {
+                            return unknown_F000_15C7_F15C7(0x0000);
+                        }
+                        // F000:0612 mov DX,0xF000
+                        DX = 0xF000;
+                        // F000:0615 mov AX,0
+                        // F000:0618 mov DS,AX
+                        DS = 0;
+                        // F000:061A mov word ptr DS:[0x0018],0x0633
+                        UInt16[DS, 0x0018] = 0x0633;
+                        // F000:0620 mov word ptr DS:[0x001A],0xF000
+                        UInt16[DS, 0x001A] = 0xF000;
+                        // F000:0626 mov AX,0x1000
+                        AX = 0x1000;
+                        // F000:0629 mov SS,AX
+                        SS = 0x1000;
+                        // F000:062B mov SP,0xFFFF
+                        SP = 0xFFFF;
+                        // F000:062E invalid
+                        try {
+                            throw new Spice86.Core.Emulator.CPU.Exceptions.CpuInvalidOpcodeException("Attempted to write to CS register with MOV instruction");
+                        }
+                        catch (CpuException cpuException) {
+                            return DispatchCpuFault(cpuException, cs1, 0x062E, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x0633), () => unknown_F000_0633_F0633(0x0000))]);
+                        }
+                    }
+                    VerifySpeculativeEntryOrFail(cs1, 0x037A, Signature_037A_hlt);
+                    // F000:037A hlt
                     return Hlt();
                 }
-                VerifySpeculativeEntryOrFail(cs1, 0x0122, Signature_0122_hlt);
-                // F000:0122 hlt
+                VerifySpeculativeEntryOrFail(cs1, 0x01F0, Signature_01F0_hlt);
+                // F000:01F0 hlt
                 return Hlt();
             }
-            VerifySpeculativeEntryOrFail(cs1, 0x00C0, Signature_00C0_hlt);
-            // F000:00C0 hlt
+            VerifySpeculativeEntryOrFail(cs1, 0x0122, Signature_0122_hlt);
+            // F000:0122 hlt
             return Hlt();
         }
         VerifySpeculativeEntryOrFail(cs1, 0x00AC, Signature_00AC_hlt);

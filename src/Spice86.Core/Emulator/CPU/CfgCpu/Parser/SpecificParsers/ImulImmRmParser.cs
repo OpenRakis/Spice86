@@ -23,7 +23,7 @@ public class ImulImmRmParser : BaseInstructionParser {
         ValueNode rNode = _astBuilder.ModRm.RToNode(unsignedType, modRmContext);
         ValueNode immSigned = _astBuilder.TypeConversion.Convert(signedType, immNode);
         ValueNode rmSigned = _astBuilder.ModRm.RmToNodeSigned(unsignedType, modRmContext);
-        MethodCallValueNode imulCall = _astBuilder.AluCall(_astBuilder.SType(bitWidth.Double()), bitWidth, "Imul", immSigned, rmSigned);
+        MethodCallValueNode imulCall = _astBuilder.AluCall(_astBuilder.SType(bitWidth.Double()), bitWidth, AluOperation.Imul, immSigned, rmSigned);
         ValueNode resultTruncated = _astBuilder.TypeConversion.Convert(unsignedType, imulCall);
         InstructionNode displayAst = new InstructionNode(InstructionOperation.IMUL,
             rNode, _astBuilder.ModRm.RmToNode(unsignedType, modRmContext), immNode);

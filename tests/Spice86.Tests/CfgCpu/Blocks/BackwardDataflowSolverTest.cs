@@ -16,12 +16,12 @@ public sealed class BackwardDataflowSolverTest {
         CfgBlock first = Block(1, 0x00);
         CfgBlock second = Block(2, 0x10);
         CfgBlock third = Block(3, 0x20);
-        PartitionBlockGraph graph = Graph([first, second, third], new() { [first] = [second], [second] = [third] });
+        BlockGraph<CfgBlock> graph = Graph([first, second, third], new() { [first] = [second], [second] = [third] });
         Dictionary<CfgBlock, int> generated = new() { [second] = 2, [third] = 1 };
         Dictionary<CfgBlock, int> killed = new() { [second] = 1 };
 
         // Act
-        BackwardDataflowResult<int> result = Solve(graph, generated, killed);
+        BackwardDataflowResult<CfgBlock, int> result = Solve(graph, generated, killed);
 
         // Assert
         result.LiveIn[third].Should().Be(1);
@@ -39,12 +39,12 @@ public sealed class BackwardDataflowSolverTest {
         CfgBlock left = Block(2, 0x10);
         CfgBlock right = Block(3, 0x20);
         CfgBlock bottom = Block(4, 0x30);
-        PartitionBlockGraph graph = Graph([top, left, right, bottom],
+        BlockGraph<CfgBlock> graph = Graph([top, left, right, bottom],
             new() { [top] = [left, right], [left] = [bottom], [right] = [bottom] });
         Dictionary<CfgBlock, int> generated = new() { [left] = 1, [right] = 2 };
 
         // Act
-        BackwardDataflowResult<int> result = Solve(graph, generated, new Dictionary<CfgBlock, int>());
+        BackwardDataflowResult<CfgBlock, int> result = Solve(graph, generated, new Dictionary<CfgBlock, int>());
 
         // Assert
         result.LiveOut[top].Should().Be(3);
@@ -58,13 +58,13 @@ public sealed class BackwardDataflowSolverTest {
         CfgBlock head = Block(2, 0x10);
         CfgBlock latch = Block(3, 0x20);
         CfgBlock exit = Block(4, 0x30);
-        PartitionBlockGraph graph = Graph([entry, head, latch, exit],
+        BlockGraph<CfgBlock> graph = Graph([entry, head, latch, exit],
             new() { [entry] = [head], [head] = [latch], [latch] = [head, exit] });
         Dictionary<CfgBlock, int> generated = new() { [head] = 2, [exit] = 1 };
         Dictionary<CfgBlock, int> killed = new() { [latch] = 2 };
 
         // Act
-        BackwardDataflowResult<int> result = Solve(graph, generated, killed);
+        BackwardDataflowResult<CfgBlock, int> result = Solve(graph, generated, killed);
 
         // Assert
         result.LiveIn[head].Should().Be(3);
@@ -79,18 +79,18 @@ public sealed class BackwardDataflowSolverTest {
         // Arrange
         CfgBlock entry = Block(1, 0x00);
         CfgBlock unreached = Block(2, 0x10);
-        PartitionBlockGraph graph = Graph([entry, unreached], new() { [unreached] = [entry] });
+        BlockGraph<CfgBlock> graph = Graph([entry, unreached], new() { [unreached] = [entry] });
         Dictionary<CfgBlock, int> generated = new() { [entry] = 4 };
 
         // Act
-        BackwardDataflowResult<int> result = Solve(graph, generated, new Dictionary<CfgBlock, int>());
+        BackwardDataflowResult<CfgBlock, int> result = Solve(graph, generated, new Dictionary<CfgBlock, int>());
 
         // Assert
         result.LiveOut[unreached].Should().Be(4);
         result.LiveIn[unreached].Should().Be(4);
     }
 
-    private static BackwardDataflowResult<int> Solve(PartitionBlockGraph graph, Dictionary<CfgBlock, int> generated, Dictionary<CfgBlock, int> killed) {
+    private static BackwardDataflowResult<CfgBlock, int> Solve(BlockGraph<CfgBlock> graph, Dictionary<CfgBlock, int> generated, Dictionary<CfgBlock, int> killed) {
         DepthFirstOrdering<CfgBlock> traversal = new([graph.PrimaryEntryBlock], graph.GetSuccessors);
         return BackwardDataflowSolver.Solve(graph, traversal,
             (block, liveOut) => generated.GetValueOrDefault(block) | (liveOut & ~killed.GetValueOrDefault(block)),
@@ -100,6 +100,6 @@ public sealed class BackwardDataflowSolverTest {
     private static CfgBlock Block(int id, ushort offset) =>
         new(id, CfgTestHelpers.CreateInstruction(new SegmentedAddress(0x1000, offset)));
 
-    private static PartitionBlockGraph Graph(IReadOnlyList<CfgBlock> blocks, Dictionary<CfgBlock, IReadOnlyList<CfgBlock>> successors) =>
-        new(blocks, [blocks[0]], successors, new Dictionary<CfgBlock, CfgBlock?>());
+    private static BlockGraph<CfgBlock> Graph(IReadOnlyList<CfgBlock> blocks, Dictionary<CfgBlock, IReadOnlyList<CfgBlock>> successors) =>
+        new(blocks, [blocks[0]], successors, new Dictionary<CfgBlock, CfgBlock?>(), CfgBlockOrder.Instance, block => block.Entry.Address.ToString());
 }

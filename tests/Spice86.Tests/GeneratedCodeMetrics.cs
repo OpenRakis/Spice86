@@ -37,6 +37,16 @@ internal sealed record GeneratedCodeMetrics {
     public required int BreakStatements { get; init; }
     /// <summary><c>continue</c> statements.</summary>
     public required int ContinueStatements { get; init; }
+    /// <summary>Invocations of <c>Stack.Push16/Push32/Pop16/Pop32</c>.</summary>
+    public required int StackCalls { get; init; }
+    /// <summary>Assignments whose target is one of the six status flags.</summary>
+    public required int FlagAssignments { get; init; }
+    /// <summary>Local declarations directly in a method body block (the <c>flagOperand_</c> temporaries).</summary>
+    public required int MethodVariables { get; init; }
+    /// <summary><c>+=</c>, <c>-=</c>, <c>&amp;=</c>, <c>|=</c>, <c>^=</c>, <c>&lt;&lt;=</c>, <c>&gt;&gt;=</c> assignments.</summary>
+    public required int CompoundAssignments { get; init; }
+    /// <summary>Tuple deconstruction assignments (the <c>xchg</c> swap idiom).</summary>
+    public required int TupleSwaps { get; init; }
     public required int Warnings { get; init; }
     public required ImmutableArray<string> WarningIds { get; init; }
 
@@ -69,6 +79,11 @@ internal sealed record GeneratedCodeMetrics {
             ("ifs", IfStatements.ToString()),
             ("breaks", BreakStatements.ToString()),
             ("continues", ContinueStatements.ToString()),
+            ("stackCalls", StackCalls.ToString()),
+            ("flagAssign", FlagAssignments.ToString()),
+            ("methodVars", MethodVariables.ToString()),
+            ("compound", CompoundAssignments.ToString()),
+            ("tupleSwaps", TupleSwaps.ToString()),
             ("warnings", Warnings.ToString()),
             ("warningIds", warningIds)
         ];

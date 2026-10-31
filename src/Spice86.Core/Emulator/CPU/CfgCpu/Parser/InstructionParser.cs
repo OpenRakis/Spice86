@@ -95,8 +95,8 @@ public class InstructionParser {
         _parsingTools = new(memory, state, idAllocator);
         _aluOperationParser = new(_parsingTools);
         _bcdAdjustParser = new(_parsingTools);
-        _bitScanBsfParser = new(_parsingTools, InstructionOperation.BSF, "BitScanForward");
-        _bitScanBsrParser = new(_parsingTools, InstructionOperation.BSR, "BitScanReverse");
+        _bitScanBsfParser = new(_parsingTools, InstructionOperation.BSF, BitScanDirection.Forward);
+        _bitScanBsrParser = new(_parsingTools, InstructionOperation.BSR, BitScanDirection.Reverse);
         _bitTestImmediateParser = new BitTestImmediateParser(_parsingTools);
         _bitTestRmParser = new(_parsingTools);
         _boundParser = new(_parsingTools);
@@ -433,8 +433,8 @@ public class InstructionParser {
     private void PopulateIncDecPushPopRegHandlers() {
         for (int reg = 0; reg < 8; reg++) {
             int capturedReg = reg;
-            _handlers[0x40 + reg] = ctx => _registerOpParser.ParseIncDecReg(ctx, regIndex: capturedReg, aluOperation: "Inc", displayOp: InstructionOperation.INC);
-            _handlers[0x48 + reg] = ctx => _registerOpParser.ParseIncDecReg(ctx, regIndex: capturedReg, aluOperation: "Dec", displayOp: InstructionOperation.DEC);
+            _handlers[0x40 + reg] = ctx => _registerOpParser.ParseIncDecReg(ctx, regIndex: capturedReg, aluOperation: AluOperation.Inc, displayOp: InstructionOperation.INC);
+            _handlers[0x48 + reg] = ctx => _registerOpParser.ParseIncDecReg(ctx, regIndex: capturedReg, aluOperation: AluOperation.Dec, displayOp: InstructionOperation.DEC);
             _handlers[0x50 + reg] = ctx => _registerOpParser.ParsePushReg(ctx, regIndex: capturedReg);
             _handlers[0x58 + reg] = ctx => _registerOpParser.ParsePopReg(ctx, regIndex: capturedReg);
         }
@@ -579,10 +579,10 @@ public class InstructionParser {
     /// mid3 selects SHLD(4)/SHRD(5), lo3=4 → IMM8, lo3=5 → CL.
     /// </summary>
     private void PopulateDoubleShiftHandlers() {
-        _handlers0F[0xA4] = ctx => _shxdRmParser.Parse(ctx, "Shld", InstructionOperation.SHLD, useImm8: true);
-        _handlers0F[0xA5] = ctx => _shxdRmParser.Parse(ctx, "Shld", InstructionOperation.SHLD, useImm8: false);
-        _handlers0F[0xAC] = ctx => _shxdRmParser.Parse(ctx, "Shrd", InstructionOperation.SHRD, useImm8: true);
-        _handlers0F[0xAD] = ctx => _shxdRmParser.Parse(ctx, "Shrd", InstructionOperation.SHRD, useImm8: false);
+        _handlers0F[0xA4] = ctx => _shxdRmParser.Parse(ctx, AluOperation.Shld, InstructionOperation.SHLD, useImm8: true);
+        _handlers0F[0xA5] = ctx => _shxdRmParser.Parse(ctx, AluOperation.Shld, InstructionOperation.SHLD, useImm8: false);
+        _handlers0F[0xAC] = ctx => _shxdRmParser.Parse(ctx, AluOperation.Shrd, InstructionOperation.SHRD, useImm8: true);
+        _handlers0F[0xAD] = ctx => _shxdRmParser.Parse(ctx, AluOperation.Shrd, InstructionOperation.SHRD, useImm8: false);
     }
 
     /// <summary>

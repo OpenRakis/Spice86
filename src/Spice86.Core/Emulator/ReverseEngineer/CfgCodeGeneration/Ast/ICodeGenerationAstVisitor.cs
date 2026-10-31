@@ -25,7 +25,15 @@ internal interface ICodeGenerationAstVisitor<T> : IAstVisitor<T> {
     T VisitMethodGroupNode(MethodGroupNode node);
     T VisitSignatureFieldNode(SignatureFieldNode node);
     T VisitExplicitCastNode(ExplicitCastNode node);
+    T VisitTupleSwapNode(TupleSwapNode node);
     T VisitContinueNode(ContinueNode node);
     T VisitInfiniteLoopNode(InfiniteLoopNode node);
     T VisitDoWhileNode(DoWhileNode node);
+    T VisitAluOperationNode(AluOperationNode node);
+    T VisitAluStatementNode(AluStatementNode node);
+    T VisitOpaqueNode(OpaqueNode node);
+    T VisitInstructionStartNode(InstructionStartNode node);
+    T VisitInterruptReturnNode(InterruptReturnNode node);
+    T VisitPreTestLoopNode(PreTestLoopNode node);
+    T VisitLocalDeclarationNode(LocalDeclarationNode node);
 }

@@ -80,6 +80,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_016D_0100_017D0(int loadOffset) {
+        byte flagOperand_0145 = 0;
+        byte flagOperand_014F = 0;
+        byte flagOperand_0157 = 0;
+        byte flagOperand_0168 = 0;
+        byte flagOperand_018D = 0;
+        byte flagOperand_01A4 = 0;
         CheckExternalEvents(cs1, 0x0100);
         // 016D:0100 mov AH,0x62
         AH = 0x62;
@@ -108,7 +114,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0120 cmp AX,5
         Alu16.Sub(AX, 5);
         // 016D:0123 jne near 0x01D1
-        if (ZeroFlag) {
+        if (AX == 5) {
             // 016D:0127 mov DX,0x01F3
             DX = 0x01F3;
             // 016D:012A call near 0x01D8
@@ -116,7 +122,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // 016D:012D cmp AX,6
             Alu16.Sub(AX, 6);
             // 016D:0130 jne near 0x01D1
-            if (ZeroFlag) {
+            if (AX == 6) {
                 // 016D:0134 mov DX,0x01F9
                 DX = 0x01F9;
                 // 016D:0137 call near 0x01D8
@@ -124,21 +130,24 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 // 016D:013A cmp AX,7
                 Alu16.Sub(AX, 7);
                 // 016D:013D jne near 0x01D1
-                if (ZeroFlag) {
+                if (AX == 7) {
                     // 016D:0141 mov ES,word ptr DS:[0x01EB]
                     ES = UInt16[DS, 0x01EB];
                     // 016D:0145 cmp byte ptr ES:[0x001D],0xFF
-                    Alu8.Sub(UInt8[ES, 0x001D], 0xFF);
+                    flagOperand_0145 = UInt8[ES, 0x001D];
+                    Alu8.Sub(flagOperand_0145, 0xFF);
                     // 016D:014B je near 0x01D1
-                    if (!ZeroFlag) {
+                    if (flagOperand_0145 != 0xFF) {
                         // 016D:014F cmp byte ptr ES:[0x001E],0xFF
-                        Alu8.Sub(UInt8[ES, 0x001E], 0xFF);
+                        flagOperand_014F = UInt8[ES, 0x001E];
+                        Alu8.Sub(flagOperand_014F, 0xFF);
                         // 016D:0155 je short 0x01D1
-                        if (!ZeroFlag) {
+                        if (flagOperand_014F != 0xFF) {
                             // 016D:0157 cmp byte ptr ES:[0x001F],0xFF
-                            Alu8.Sub(UInt8[ES, 0x001F], 0xFF);
+                            flagOperand_0157 = UInt8[ES, 0x001F];
+                            Alu8.Sub(flagOperand_0157, 0xFF);
                             // 016D:015D je short 0x01D1
-                            if (!ZeroFlag) {
+                            if (flagOperand_0157 != 0xFF) {
                                 // 016D:015F mov BX,6
                                 BX = 6;
                                 // 016D:0162 mov AH,0x3E
@@ -148,9 +157,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                 // 016D:0166 jb short 0x01D1
                                 if (!CarryFlag) {
                                     // 016D:0168 cmp byte ptr ES:[0x001E],0xFF
-                                    Alu8.Sub(UInt8[ES, 0x001E], 0xFF);
+                                    flagOperand_0168 = UInt8[ES, 0x001E];
+                                    Alu8.Sub(flagOperand_0168, 0xFF);
                                     // 016D:016E jne short 0x01D1
-                                    if (ZeroFlag) {
+                                    if (flagOperand_0168 == 0xFF) {
                                         // 016D:0170 mov DX,0x01FF
                                         DX = 0x01FF;
                                         // 016D:0173 call near 0x01D8
@@ -158,7 +168,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                         // 016D:0176 cmp AX,6
                                         Alu16.Sub(AX, 6);
                                         // 016D:0179 jne short 0x01D1
-                                        if (ZeroFlag) {
+                                        if (AX == 6) {
                                             // 016D:017B mov BX,5
                                             BX = 5;
                                             // 016D:017E mov AH,0x45
@@ -170,13 +180,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                                 // 016D:0184 cmp AX,8
                                                 Alu16.Sub(AX, 8);
                                                 // 016D:0187 jne short 0x01D1
-                                                if (ZeroFlag) {
+                                                if (AX == 8) {
                                                     // 016D:0189 mov AL,byte ptr ES:[0x001D]
                                                     AL = UInt8[ES, 0x001D];
                                                     // 016D:018D cmp AL,byte ptr ES:[0x0020]
-                                                    Alu8.Sub(AL, UInt8[ES, 0x0020]);
+                                                    flagOperand_018D = UInt8[ES, 0x0020];
+                                                    Alu8.Sub(AL, flagOperand_018D);
                                                     // 016D:0192 jne short 0x01D1
-                                                    if (ZeroFlag) {
+                                                    if (AL == flagOperand_018D) {
                                                         // 016D:0194 mov BX,5
                                                         BX = 5;
                                                         // 016D:0197 mov CX,7
@@ -190,9 +201,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                                             // 016D:01A0 mov AL,byte ptr ES:[0x001D]
                                                             AL = UInt8[ES, 0x001D];
                                                             // 016D:01A4 cmp AL,byte ptr ES:[0x001F]
-                                                            Alu8.Sub(AL, UInt8[ES, 0x001F]);
+                                                            flagOperand_01A4 = UInt8[ES, 0x001F];
+                                                            Alu8.Sub(AL, flagOperand_01A4);
                                                             // 016D:01A9 jne short 0x01D1
-                                                            if (ZeroFlag) {
+                                                            if (AL == flagOperand_01A4) {
                                                                 // 016D:01AB mov BX,5
                                                                 BX = 5;
                                                                 do {
@@ -210,7 +222,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                                                     // 016D:01B5 cmp BX,9
                                                                     Alu16.Sub(BX, 9);
                                                                     // 016D:01B8 jne short 0x01AE
-                                                                } while (!ZeroFlag);
+                                                                } while (BX != 9);
                                                                 // 016D:01BA mov DX,0x01ED
                                                                 DX = 0x01ED;
                                                                 // 016D:01BD call near 0x01D8
@@ -218,7 +230,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                                                 // 016D:01C0 cmp AX,5
                                                                 Alu16.Sub(AX, 5);
                                                                 // 016D:01C3 jne short 0x01D1
-                                                                if (ZeroFlag) {
+                                                                if (AX == 5) {
                                                                     // 016D:01C5 mov BX,AX
                                                                     BX = AX;
                                                                     // 016D:01C7 mov AH,0x3E
@@ -256,7 +268,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:01D3 mov DX,0x0999
         DX = 0x0999;
         // 016D:01D6 out DX,AL
-        Out8(DX, AL);
+        Out8(0x0999, AL);
         // 016D:01D7 hlt
         return Hlt();
     }
@@ -278,9 +290,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:01E3 push DX
         Stack.Push16(DX);
         // 016D:01E4 mov DX,0x0998
-        DX = 0x0998;
         // 016D:01E7 out DX,AL
-        Out8(DX, AL);
+        Out8(0x0998, AL);
         // 016D:01E8 pop DX
         DX = Stack.Pop16();
         // 016D:01E9 pop AX
@@ -399,19 +410,20 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_F000_0090_F0090(int loadOffset) {
+        byte flagOperand_00A9 = 0;
         CheckExternalEvents(cs2, 0x0090);
         // F000:0090 cmp AH,7
         Alu8.Sub(AH, 7);
         // F000:0093 je short 0x00A4
-        if (!ZeroFlag) {
+        if (AH != 7) {
             // F000:0095 cmp AH,8
             Alu8.Sub(AH, 8);
             // F000:0098 je short 0x00A4
-            if (!ZeroFlag) {
+            if (AH != 8) {
                 // F000:009A cmp AH,0x0A
                 Alu8.Sub(AH, 0x0A);
                 // F000:009D je short 0x00A4
-                if (!ZeroFlag) {
+                if (AH != 0x0A) {
                     // F000:009F callback 0x0021
                     Callback(cs2, 0x009F, 0x0021);
                     // F000:00A3 iret
@@ -428,10 +440,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Callback(cs2, 0x00A5, 0x010A);
         VerifySpeculativeEntryOrFail(cs2, 0x00A9, Signature_00A9_cmp);
         // F000:00A9 cmp byte ptr CS:[0x008F],0
-        Alu8.Sub(UInt8[CS, 0x008F], 0);
+        flagOperand_00A9 = UInt8[CS, 0x008F];
+        Alu8.Sub(flagOperand_00A9, 0);
         VerifySpeculativeEntryOrFail(cs2, 0x00AF, Signature_00AF_jne);
         // F000:00AF jne short 0x00B5
-        if (!ZeroFlag) {
+        if (flagOperand_00A9 != 0) {
             VerifySpeculativeEntryOrFail(cs2, 0x00B5, Signature_00B5_callback);
             // F000:00B5 callback 0x010B
             Callback(cs2, 0x00B5, 0x010B);

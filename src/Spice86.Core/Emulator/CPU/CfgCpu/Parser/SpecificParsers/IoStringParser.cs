@@ -28,10 +28,10 @@ public class IoStringParser : BaseInstructionParser {
         RepPrefix? repPrefix = _astBuilder.Rep(instr.RepPrefix, false);
         InstructionNode displayAst;
         if (isInput) {
-            MethodCallValueNode ioRead = new MethodCallValueNode(dataType, null, $"In{(int)bitWidth}", dx);
+            MethodCallValueNode ioRead = new PortReadCallNode(bitWidth, dx);
             ValueNode destPointer = _astBuilder.StringOperation.DestPointerDi(dataType, addressType);
             BinaryOperationNode storeOperation = _astBuilder.Assign(dataType, destPointer, ioRead);
-            BinaryOperationNode advanceDi = _astBuilder.StringOperation.AdvanceDi(addressType, (int)bitWidth);
+            BinaryOperationNode advanceDi = _astBuilder.StringOperation.AdvanceDi(addressType, bitWidth);
             coreOperation = new BlockNode(storeOperation, advanceDi);
             displayAst = new InstructionNode(repPrefix, InstructionOperation.INS,
                 _astBuilder.Pointer.ToSegmentedPointer(dataType, SegmentRegisterIndex.EsIndex,
@@ -40,8 +40,8 @@ public class IoStringParser : BaseInstructionParser {
             int segmentRegisterIndex = GetSegmentRegisterOverrideOrDs(context);
             ValueNode sourcePointer = _astBuilder.StringOperation.SourcePointerSi(dataType, addressType,
                 segmentRegisterIndex, (int)SegmentRegisterIndex.DsIndex);
-            MethodCallNode ioWrite = new MethodCallNode(null, $"Out{(int)bitWidth}", dx, sourcePointer);
-            BinaryOperationNode advanceSi = _astBuilder.StringOperation.AdvanceSi(addressType, (int)bitWidth);
+            MethodCallNode ioWrite = new PortWriteCallNode(bitWidth, dx, sourcePointer);
+            BinaryOperationNode advanceSi = _astBuilder.StringOperation.AdvanceSi(addressType, bitWidth);
             coreOperation = new BlockNode(ioWrite, advanceSi);
             displayAst = new InstructionNode(repPrefix, InstructionOperation.OUTS,
                 _astBuilder.Pointer.ToSegmentedPointer(dataType, segmentRegisterIndex, (int)SegmentRegisterIndex.DsIndex,
