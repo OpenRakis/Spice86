@@ -73,6 +73,85 @@ public class FunctionCallStackTest {
         stack.Current.Should().Be(secondCall);
     }
 
+    [Fact]
+    public void FindStackMatchReturnsTopFrameWithMatchingStackAddress() {
+        FunctionCallStack stack = new();
+        FunctionCall firstCall = CreateCall(0x1000, 0x0100, 0x0200);
+        FunctionCall secondCall = CreateCall(0x2000, 0x0200, 0x0300);
+
+        stack.Push(firstCall);
+        stack.Push(secondCall);
+
+        FunctionCallStackMatch? match = stack.FindStackMatch(new SegmentedAddress(0x3000, 0x0200));
+
+        match.Should().NotBeNull();
+        match.Value.FunctionCall.Should().Be(secondCall);
+        match.Value.IsTop.Should().BeTrue();
+    }
+
+    [Fact]
+    public void FindStackMatchReturnsDeeperFrameWhenTopStackAddressDiffers() {
+        // A live nested frame sits lower on the stack than its caller.
+        FunctionCallStack stack = new();
+        FunctionCall firstCall = CreateCall(0x1000, 0x0200, 0x0200);
+        FunctionCall secondCall = CreateCall(0x2000, 0x0100, 0x0300);
+
+        stack.Push(firstCall);
+        stack.Push(secondCall);
+
+        FunctionCallStackMatch? match = stack.FindStackMatch(new SegmentedAddress(0x3000, 0x0200));
+
+        match.Should().NotBeNull();
+        match.Value.FunctionCall.Should().Be(firstCall);
+        match.Value.IsTop.Should().BeFalse();
+    }
+
+    [Fact]
+    public void FindStackMatchRejectsStaleFrameShadowedByNewerHigherFrame() {
+        // A2 is a stale frame left behind by a stack reset: the newer live frame sits higher on the
+        // same stack segment, so the candidate is rejected and the scan finds nothing.
+        FunctionCallStack stack = new();
+        stack.Push(CreateCall(0x1000, 0x0200, 0x0101));
+        stack.Push(CreateCall(0x2000, 0x0100, 0x0201));
+        stack.Push(CreateCall(0x3000, 0x0200, 0x0301));
+
+        FunctionCallStackMatch? match = stack.FindStackMatch(new SegmentedAddress(0x3000, 0x0100));
+
+        match.Should().BeNull();
+        stack.Count.Should().Be(3);
+    }
+
+    [Fact]
+    public void FindStackMatchIgnoresNewerFramesOnAnotherStackSegment() {
+        // A newer frame on a different SS says nothing about the candidate: it is accepted.
+        FunctionCallStack stack = new();
+        FunctionCall firstCall = CreateCall(0x1000, 0x0100, 0x0200);
+        stack.Push(firstCall);
+        stack.Push(new FunctionCall(
+            CallType.NEAR16,
+            new SegmentedAddress(0xF000, 0x2000),
+            ReturnAddress(0x0201),
+            new SegmentedAddress(0x4000, 0x0300),
+            null));
+
+        FunctionCallStackMatch? match = stack.FindStackMatch(new SegmentedAddress(0x3000, 0x0100));
+
+        match.Should().NotBeNull();
+        match.Value.FunctionCall.Should().Be(firstCall);
+    }
+
+    [Fact]
+    public void FindStackMatchReturnsNullWhenNoFrameMatches() {
+        FunctionCallStack stack = new();
+        stack.Push(CreateCall(0x1000, 0x0100, 0x0200));
+        stack.Push(CreateCall(0x2000, 0x0200, 0x0300));
+
+        FunctionCallStackMatch? match = stack.FindStackMatch(new SegmentedAddress(0x3000, 0x0500));
+
+        match.Should().BeNull();
+        stack.Count.Should().Be(2);
+    }
+
     private static FunctionCall CreateCall(ushort entryOffset, ushort stackOffset, ushort expectedReturnOffset) {
         return new FunctionCall(
             CallType.NEAR16,

@@ -410,6 +410,8 @@ internal static class AsmScenarioCatalog {
             AsmScenario.FromFixture("selfmodifycall", AsmFixtureCatalog.SelfModifyCall),
             AsmScenario.FromFixture("selfmodifycalltarget", AsmFixtureCatalog.SelfModifyCallTarget),
             AsmScenario.FromFixture("multimisalignedcall", AsmFixtureCatalog.MultiMisalignedCall),
+            AsmScenario.FromFixture("redirectedreturn", AsmFixtureCatalog.RedirectedReturn),
+            AsmScenario.FromFixture("stalestackframes", AsmFixtureCatalog.StaleStackFrames),
             AsmScenario.FromFixture("pushcs_callnear_retfar", AsmFixtureCatalog.PushCsCallNearRetFar),
             AsmScenario.FromFixture("externalint", AsmFixtureCatalog.ExternalInt),
             AsmScenario.FromFixture("stipending", AsmFixtureCatalog.StiPending),

@@ -62,7 +62,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         cs2 = 0xF000;
 
         DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016D_0100_017D0, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0155, unknown_016D_0155_01825, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs2, 0x0006, unknown_F000_0006_F0006, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs2, 0x0011, unknown_F000_0011_F0011, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs2, 0x0057, unknown_F000_0057_F0057, "unknown");
@@ -76,11 +75,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         DefineFunctionWithoutInterpreterFallback(cs2, 0x0090, unknown_F000_0090_F0090, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs2, 0x00E2, unknown_F000_00E2_F00E2, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs2, 0x00E3, unknown_F000_00E3_F00E3, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x018B, unknown_016D_018B_0185B, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x018D, _ => unknown_016D_018B_0185B(0x018D), "unknown_entry");
     }
 
     public virtual Action unknown_016D_0100_017D0(int loadOffset) {
+        ushort flagOperand_0159 = 0;
+        ushort flagOperand_015F = 0;
+        ushort flagOperand_0169 = 0;
+        ushort flagOperand_0177 = 0;
+        ushort flagOperand_0181 = 0;
         CheckExternalEvents(cs1, 0x0100);
         // 016D:0100 mov AH,0x62
         AH = 0x62;
@@ -119,94 +121,95 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0130 cmp BX,0x2000
         Alu16.Sub(BX, 0x2000);
         // 016D:0134 jne short 0x018B
-        if (BX != 0x2000) {
-            return unknown_016D_018B_0185B(0x0000);
+        if (BX == 0x2000) {
+            // 016D:0136 mov BX,0x2000
+            BX = 0x2000;
+            // 016D:0139 mov AH,0x50
+            AH = 0x50;
+            // 016D:013B int 0x21
+            InterruptCall(cs1, 0x013D, 0x21);
+            // 016D:013D mov AX,0x2000
+            // 016D:0140 mov ES,AX
+            ES = 0x2000;
+            // 016D:0142 mov word ptr ES:[0x000A],0x0155
+            UInt16[ES, 0x000A] = 0x0155;
+            // 016D:0149 mov word ptr ES:[0x000C],CS
+            UInt16[ES, 0x000C] = CS;
+            // 016D:014E mov AX,0x4C00
+            AX = 0x4C00;
+            // 016D:0151 int 0x21
+            if (!InterruptCallReturnedElsewhere(cs1, 0x0153, 0x21, [new(cs1, 0x0155)])) {
+                throw FailAsUntested("Untested return from call at 016D:0151");
+            }
+            if (CS != cs1 || IP != 0x0155) {
+                throw FailAsUntested("Redirected return target not observed at 016D:0151");
+            }
+            // 016D:0155 push CS
+            Stack.Push16(CS);
+            // 016D:0156 pop DS
+            DS = UInt16[SS, SP];
+            SP += 2;
+            // 016D:0157 mov AX,SS
+            AX = SS;
+            // 016D:0159 cmp AX,word ptr DS:[0x0194]
+            flagOperand_0159 = UInt16[DS, 0x0194];
+            Alu16.Sub(AX, flagOperand_0159);
+            // 016D:015D jne short 0x018B
+            if (AX == flagOperand_0159) {
+                // 016D:015F cmp SP,word ptr DS:[0x0196]
+                flagOperand_015F = UInt16[DS, 0x0196];
+                Alu16.Sub(SP, flagOperand_015F);
+                // 016D:0163 jne short 0x018B
+                if (SP == flagOperand_015F) {
+                    // 016D:0165 mov AH,0x62
+                    AH = 0x62;
+                    // 016D:0167 int 0x21
+                    InterruptCall(cs1, 0x0169, 0x21);
+                    // 016D:0169 cmp BX,word ptr DS:[0x0192]
+                    flagOperand_0169 = UInt16[DS, 0x0192];
+                    Alu16.Sub(BX, flagOperand_0169);
+                    // 016D:016D jne short 0x018B
+                    if (BX == flagOperand_0169) {
+                        // 016D:016F xor AX,AX
+                        AX = 0;
+                        // 016D:0171 mov ES,AX
+                        ES = 0;
+                        // 016D:0173 mov AX,word ptr ES:[0]
+                        AX = UInt16[ES, 0];
+                        // 016D:0177 cmp AX,word ptr DS:[0x0198]
+                        flagOperand_0177 = UInt16[DS, 0x0198];
+                        Alu16.Sub(AX, flagOperand_0177);
+                        // 016D:017B jne short 0x018B
+                        if (AX == flagOperand_0177) {
+                            // 016D:017D mov AX,word ptr ES:[2]
+                            AX = UInt16[ES, 2];
+                            // 016D:0181 cmp AX,word ptr DS:[0x019A]
+                            flagOperand_0181 = UInt16[DS, 0x019A];
+                            Alu16.Sub(AX, flagOperand_0181);
+                            // 016D:0185 jne short 0x018B
+                            if (AX != flagOperand_0181) {
+                                goto L_018B;
+                            }
+                            // 016D:0187 mov AL,0
+                            AL = 0;
+                            // 016D:0189 jmp short 0x018D
+                            goto L_018D;
+                        }
+                    }
+                }
+            }
         }
-        // 016D:0136 mov BX,0x2000
-        BX = 0x2000;
-        // 016D:0139 mov AH,0x50
-        AH = 0x50;
-        // 016D:013B int 0x21
-        InterruptCall(cs1, 0x013D, 0x21);
-        // 016D:013D mov AX,0x2000
-        // 016D:0140 mov ES,AX
-        ES = 0x2000;
-        // 016D:0142 mov word ptr ES:[0x000A],0x0155
-        UInt16[ES, 0x000A] = 0x0155;
-        // 016D:0149 mov word ptr ES:[0x000C],CS
-        UInt16[ES, 0x000C] = CS;
-        // 016D:014E mov AX,0x4C00
-        AX = 0x4C00;
-        // 016D:0151 int 0x21
-        InterruptCall(cs1, 0x0153, 0x21);
-        return unknown_016D_0155_01825(0x0000);
-    }
-
-    public virtual Action unknown_016D_0155_01825(int loadOffset) {
-        ushort flagOperand_0159 = 0;
-        ushort flagOperand_015F = 0;
-        ushort flagOperand_0169 = 0;
-        ushort flagOperand_0177 = 0;
-        ushort flagOperand_0181 = 0;
-        CheckExternalEvents(cs1, 0x0155);
-        // 016D:0155 push CS
-        Stack.Push16(CS);
-        // 016D:0156 pop DS
-        DS = UInt16[SS, SP];
-        SP += 2;
-        // 016D:0157 mov AX,SS
-        AX = SS;
-        // 016D:0159 cmp AX,word ptr DS:[0x0194]
-        flagOperand_0159 = UInt16[DS, 0x0194];
-        Alu16.Sub(AX, flagOperand_0159);
-        // 016D:015D jne short 0x018B
-        if (AX != flagOperand_0159) {
-            return unknown_016D_018B_0185B(0x0000);
-        }
-        // 016D:015F cmp SP,word ptr DS:[0x0196]
-        flagOperand_015F = UInt16[DS, 0x0196];
-        Alu16.Sub(SP, flagOperand_015F);
-        // 016D:0163 jne short 0x018B
-        if (SP != flagOperand_015F) {
-            return unknown_016D_018B_0185B(0x0000);
-        }
-        // 016D:0165 mov AH,0x62
-        AH = 0x62;
-        // 016D:0167 int 0x21
-        InterruptCall(cs1, 0x0169, 0x21);
-        // 016D:0169 cmp BX,word ptr DS:[0x0192]
-        flagOperand_0169 = UInt16[DS, 0x0192];
-        Alu16.Sub(BX, flagOperand_0169);
-        // 016D:016D jne short 0x018B
-        if (BX != flagOperand_0169) {
-            return unknown_016D_018B_0185B(0x0000);
-        }
-        // 016D:016F xor AX,AX
-        AX = 0;
-        // 016D:0171 mov ES,AX
-        ES = 0;
-        // 016D:0173 mov AX,word ptr ES:[0]
-        AX = UInt16[ES, 0];
-        // 016D:0177 cmp AX,word ptr DS:[0x0198]
-        flagOperand_0177 = UInt16[DS, 0x0198];
-        Alu16.Sub(AX, flagOperand_0177);
-        // 016D:017B jne short 0x018B
-        if (AX != flagOperand_0177) {
-            return unknown_016D_018B_0185B(0x0000);
-        }
-        // 016D:017D mov AX,word ptr ES:[2]
-        AX = UInt16[ES, 2];
-        // 016D:0181 cmp AX,word ptr DS:[0x019A]
-        flagOperand_0181 = UInt16[DS, 0x019A];
-        Alu16.Sub(AX, flagOperand_0181);
-        // 016D:0185 jne short 0x018B
-        if (AX != flagOperand_0181) {
-            return unknown_016D_018B_0185B(0x0000);
-        }
-        // 016D:0187 mov AL,0
-        AL = 0;
-        // 016D:0189 jmp short 0x018D
-        return unknown_016D_018B_0185B(0x018D);
+    L_018B:
+        VerifySpeculativeEntryOrFail(cs1, 0x018B, Signature_018B_mov);
+        // 016D:018B mov AL,0xFF
+        AL = 0xFF;
+    L_018D:
+        // 016D:018D mov DX,0x0999
+        DX = 0x0999;
+        // 016D:0190 out DX,AL
+        Out8(0x0999, AL);
+        // 016D:0191 hlt
+        return Hlt();
     }
 
     public virtual Action unknown_F000_0006_F0006(int loadOffset) {
@@ -388,31 +391,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         VerifySpeculativeEntryOrFail(cs2, 0x00F0, Signature_00F0_ret);
         // F000:00F0 ret far
         return FarRet();
-    }
-
-    public virtual Action unknown_016D_018B_0185B(int loadOffset) {
-        switch (loadOffset) {
-            case 0x0000:
-                goto L_018B;
-            case 0x018D:
-                goto L_018D;
-            default:
-                throw FailAsUntested($"Untested entry offset 0x{loadOffset:X4}");
-        }
-
-    L_018B:
-        CheckExternalEvents(cs1, 0x018B);
-        VerifySpeculativeEntryOrFail(cs1, 0x018B, Signature_018B_mov);
-        // 016D:018B mov AL,0xFF
-        AL = 0xFF;
-    L_018D:
-        CheckExternalEvents(cs1, 0x018D);
-        // 016D:018D mov DX,0x0999
-        DX = 0x0999;
-        // 016D:0190 out DX,AL
-        Out8(0x0999, AL);
-        // 016D:0191 hlt
-        return Hlt();
     }
 
 }

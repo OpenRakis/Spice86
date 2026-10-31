@@ -176,10 +176,11 @@ public sealed class GeneratedCodeMachineTest {
     [Fact]
     public void MultipleMisalignedCallContinuationsGeneratedOverrideCompilesAndRuns() {
         // multimisalignedcall has a single shared CALL node whose callee discards its real return address
-        // and returns to a different continuation on each run (an overlay/trampoline thunk). None of those
-        // continuations is the instruction statically following the CALL, so the call node accumulates
-        // several CallToMisalignedReturn successors. The generator must not reject that shape: misaligned
-        // continuations are resolved at runtime by ExecuteCallEnsuringSameStack, so generation must succeed.
+        // and returns to a different continuation on each run (an overlay/trampoline thunk). The returns
+        // are stack-balanced: each ret consumes the call's own frame, so the call node accumulates
+        // CallToRedirectedReturn successors. The continuations stay in the caller's method, and the
+        // generated code runs them by dispatching to the actual landing address when
+        // NearCallReturnedElsewhere reports a redirected return.
         new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.MultiMisalignedCall());
     }
 

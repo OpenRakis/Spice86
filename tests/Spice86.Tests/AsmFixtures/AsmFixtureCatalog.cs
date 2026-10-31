@@ -755,6 +755,34 @@ internal static class AsmFixtureCatalog {
         return MemoryFixture(settings, expectedMemory);
     }
 
+    /// <summary>Runs redirectedreturn: the emulator-style int skipped its operand byte 300 times and every part wrote its marker.</summary>
+    public static AsmFixture RedirectedReturn() {
+        byte[] expectedMemory = new byte[0x13];
+        expectedMemory[0x00] = 0x2C; // loop counter low byte = 300
+        expectedMemory[0x01] = 0x01; // loop counter high byte
+        expectedMemory[0x10] = 0xAA; // int loop marker
+        expectedMemory[0x11] = 0xBB; // near-called int marker
+        expectedMemory[0x12] = 0xCC; // ret 2 marker
+        AsmRunSettings settings = new() {
+            BinName = "redirectedreturn",
+            MaxCycles = 50000
+        };
+        return MemoryFixture(settings, expectedMemory);
+    }
+
+    /// <summary>Runs stalestackframes: a push/ret jump at a stale frame's level links no call, both iterations and both markers complete.</summary>
+    public static AsmFixture StaleStackFrames() {
+        byte[] expectedMemory = new byte[0x12];
+        expectedMemory[0x00] = 0x02; // two main-loop iterations ran
+        expectedMemory[0x10] = 0xAA; // B's push/ret jump target marker
+        expectedMemory[0x11] = 0xBB; // returned from B marker
+        AsmRunSettings settings = new() {
+            BinName = "stalestackframes",
+            MaxCycles = 10000
+        };
+        return MemoryFixture(settings, expectedMemory);
+    }
+
     /// <summary>Runs pushcs_callnear_retfar: AX holds the value the program stored.</summary>
     public static AsmFixture PushCsCallNearRetFar() {
         byte[] expectedMemory = new byte[2];

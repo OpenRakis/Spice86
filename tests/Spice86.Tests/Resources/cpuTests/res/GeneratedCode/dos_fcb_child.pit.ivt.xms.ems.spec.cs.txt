@@ -65,7 +65,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         cs3 = 0xF000;
 
         DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016E_0100_017E0, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x016C, unknown_016E_016C_0184C, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x01C0, unknown_016E_01C0_018A0, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs3, 0x0000, unknown_F000_0000_F0000, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs3, 0x0006, unknown_F000_0006_F0006, "unknown");
@@ -81,7 +80,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         DefineFunctionWithoutInterpreterFallback(cs3, 0x0090, unknown_F000_0090_F0090, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs3, 0x00E2, unknown_F000_00E2_F00E2, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs3, 0x00E3, unknown_F000_00E3_F00E3, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x01B0, unknown_016E_01B0_01890, "unknown");
     }
 
     public virtual Action unknown_016E_0100_017E0(int loadOffset) {
@@ -97,6 +95,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         ES = UInt16[SS, SP];
         SP += 2;
         // 016E:0104 mov DX,0x030A
+        DX = 0x030A;
         // 016E:0107 sub DX,0x0100
         DX = 0x020A;
         // 016E:010B add DX,0x030F
@@ -110,159 +109,154 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016E:0116 int 0x21
         InterruptCall(cs1, 0x0118, 0x21);
         // 016E:0118 jb near 0x01B0
-        if (CarryFlag) {
-            return unknown_016E_01B0_01890(0x0000);
-        }
-        // 016E:011C mov AL,0x53
-        AL = 0x53;
-        // 016E:011E call near 0x01C0
-        NearCall(cs1, 0x0121, unknown_016E_01C0_018A0);
-        // 016E:0121 mov DX,0x01CB
-        DX = 0x01CB;
-        // 016E:0124 mov AH,0x16
-        AH = 0x16;
-        // 016E:0126 int 0x21
-        InterruptCall(cs1, 0x0128, 0x21);
-        // 016E:0128 cmp AL,0
-        Alu8.Sub(AL, 0);
-        // 016E:012A jne near 0x01B0
-        if (AL != 0) {
-            return unknown_016E_01B0_01890(0x0000);
-        }
-        // 016E:012E mov AL,0x43
-        AL = 0x43;
-        // 016E:0130 call near 0x01C0
-        NearCall(cs1, 0x0133, unknown_016E_01C0_018A0);
-        // 016E:0133 mov DX,0x01F0
-        DX = 0x01F0;
-        // 016E:0136 mov AH,0x1A
-        AH = 0x1A;
-        // 016E:0138 int 0x21
-        InterruptCall(cs1, 0x013A, 0x21);
-        // 016E:013A mov DX,0x01CB
-        DX = 0x01CB;
-        // 016E:013D mov AH,0x15
-        AH = 0x15;
-        // 016E:013F int 0x21
-        InterruptCall(cs1, 0x0141, 0x21);
-        // 016E:0141 cmp AL,0
-        Alu8.Sub(AL, 0);
-        // 016E:0143 jne short 0x01B0
-        if (AL != 0) {
-            return unknown_016E_01B0_01890(0x0000);
-        }
-        // 016E:0145 mov AL,0x57
-        AL = 0x57;
-        // 016E:0147 call near 0x01C0
-        NearCall(cs1, 0x014A, unknown_016E_01C0_018A0);
-        // 016E:014A mov DX,0x01CB
-        DX = 0x01CB;
-        // 016E:014D mov AH,0x10
-        AH = 0x10;
-        // 016E:014F int 0x21
-        InterruptCall(cs1, 0x0151, 0x21);
-        // 016E:0151 mov DX,0x01CB
-        DX = 0x01CB;
-        // 016E:0154 mov AH,0x0F
-        AH = 0x0F;
-        // 016E:0156 int 0x21
-        InterruptCall(cs1, 0x0158, 0x21);
-        // 016E:0158 cmp AL,0
-        Alu8.Sub(AL, 0);
-        // 016E:015A jne short 0x01B0
-        if (AL != 0) {
-            return unknown_016E_01B0_01890(0x0000);
-        }
-        // 016E:015C mov AL,0x4F
-        AL = 0x4F;
-        // 016E:015E call near 0x01C0
-        NearCall(cs1, 0x0161, unknown_016E_01C0_018A0);
-        // 016E:0161 mov DX,0x02EF
-        DX = 0x02EF;
-        // 016E:0164 mov BX,0x02FC
-        BX = 0x02FC;
-        // 016E:0167 mov AX,0x4B00
-        AX = 0x4B00;
-        // 016E:016A int 0x21
-        InterruptCall(cs1, 0x016C, 0x21);
-        throw FailAsUntested("Untested return from call at 016E:016A");
-    }
-
-    public virtual Action unknown_016E_016C_0184C(int loadOffset) {
-        CheckExternalEvents(cs1, 0x016C);
-        // 016E:016C jb short 0x01B0
-        if (CarryFlag) {
-            return unknown_016E_01B0_01890(0x0000);
-        }
-        // 016E:016E mov AL,0x45
-        AL = 0x45;
-        // 016E:0170 call near 0x01C0
-        NearCall(cs1, 0x0173, unknown_016E_01C0_018A0);
-        // 016E:0173 mov DX,0x026F
-        DX = 0x026F;
-        // 016E:0176 mov AH,0x1A
-        AH = 0x1A;
-        // 016E:0178 int 0x21
-        InterruptCall(cs1, 0x017A, 0x21);
-        // 016E:017A mov DX,0x01CB
-        DX = 0x01CB;
-        // 016E:017D mov AH,0x14
-        AH = 0x14;
-        // 016E:017F int 0x21
-        InterruptCall(cs1, 0x0181, 0x21);
-        // 016E:0181 cmp AL,0
-        Alu8.Sub(AL, 0);
-        // 016E:0183 jne short 0x01B0
-        if (AL != 0) {
-            return unknown_016E_01B0_01890(0x0000);
-        }
-        // 016E:0185 mov SI,0x026F
-        SI = 0x026F;
-        // 016E:0188 mov DI,0x01F0
-        DI = 0x01F0;
-        // 016E:018B mov CX,0x0010
-        CX = 0x0010;
-        // 016E:018E repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
-        while (CX != 0) {
-            Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
-            SI += (ushort)(DirectionFlag ? -1 : 1);
-            DI += (ushort)(DirectionFlag ? -1 : 1);
-            CX--;
-            if (!ZeroFlag) {
-                break;
+        if (!CarryFlag) {
+            // 016E:011C mov AL,0x53
+            AL = 0x53;
+            // 016E:011E call near 0x01C0
+            NearCall(cs1, 0x0121, unknown_016E_01C0_018A0);
+            // 016E:0121 mov DX,0x01CB
+            DX = 0x01CB;
+            // 016E:0124 mov AH,0x16
+            AH = 0x16;
+            // 016E:0126 int 0x21
+            InterruptCall(cs1, 0x0128, 0x21);
+            // 016E:0128 cmp AL,0
+            Alu8.Sub(AL, 0);
+            // 016E:012A jne near 0x01B0
+            if (AL == 0) {
+                // 016E:012E mov AL,0x43
+                AL = 0x43;
+                // 016E:0130 call near 0x01C0
+                NearCall(cs1, 0x0133, unknown_016E_01C0_018A0);
+                // 016E:0133 mov DX,0x01F0
+                DX = 0x01F0;
+                // 016E:0136 mov AH,0x1A
+                AH = 0x1A;
+                // 016E:0138 int 0x21
+                InterruptCall(cs1, 0x013A, 0x21);
+                // 016E:013A mov DX,0x01CB
+                DX = 0x01CB;
+                // 016E:013D mov AH,0x15
+                AH = 0x15;
+                // 016E:013F int 0x21
+                InterruptCall(cs1, 0x0141, 0x21);
+                // 016E:0141 cmp AL,0
+                Alu8.Sub(AL, 0);
+                // 016E:0143 jne short 0x01B0
+                if (AL == 0) {
+                    // 016E:0145 mov AL,0x57
+                    AL = 0x57;
+                    // 016E:0147 call near 0x01C0
+                    NearCall(cs1, 0x014A, unknown_016E_01C0_018A0);
+                    // 016E:014A mov DX,0x01CB
+                    DX = 0x01CB;
+                    // 016E:014D mov AH,0x10
+                    AH = 0x10;
+                    // 016E:014F int 0x21
+                    InterruptCall(cs1, 0x0151, 0x21);
+                    // 016E:0151 mov DX,0x01CB
+                    DX = 0x01CB;
+                    // 016E:0154 mov AH,0x0F
+                    AH = 0x0F;
+                    // 016E:0156 int 0x21
+                    InterruptCall(cs1, 0x0158, 0x21);
+                    // 016E:0158 cmp AL,0
+                    Alu8.Sub(AL, 0);
+                    // 016E:015A jne short 0x01B0
+                    if (AL == 0) {
+                        // 016E:015C mov AL,0x4F
+                        AL = 0x4F;
+                        // 016E:015E call near 0x01C0
+                        NearCall(cs1, 0x0161, unknown_016E_01C0_018A0);
+                        // 016E:0161 mov DX,0x02EF
+                        DX = 0x02EF;
+                        // 016E:0164 mov BX,0x02FC
+                        BX = 0x02FC;
+                        // 016E:0167 mov AX,0x4B00
+                        AX = 0x4B00;
+                        // 016E:016A int 0x21
+                        InterruptCall(cs1, 0x016C, 0x21);
+                        // 016E:016C jb short 0x01B0
+                        if (!CarryFlag) {
+                            // 016E:016E mov AL,0x45
+                            AL = 0x45;
+                            // 016E:0170 call near 0x01C0
+                            NearCall(cs1, 0x0173, unknown_016E_01C0_018A0);
+                            // 016E:0173 mov DX,0x026F
+                            DX = 0x026F;
+                            // 016E:0176 mov AH,0x1A
+                            AH = 0x1A;
+                            // 016E:0178 int 0x21
+                            InterruptCall(cs1, 0x017A, 0x21);
+                            // 016E:017A mov DX,0x01CB
+                            DX = 0x01CB;
+                            // 016E:017D mov AH,0x14
+                            AH = 0x14;
+                            // 016E:017F int 0x21
+                            InterruptCall(cs1, 0x0181, 0x21);
+                            // 016E:0181 cmp AL,0
+                            Alu8.Sub(AL, 0);
+                            // 016E:0183 jne short 0x01B0
+                            if (AL == 0) {
+                                // 016E:0185 mov SI,0x026F
+                                SI = 0x026F;
+                                // 016E:0188 mov DI,0x01F0
+                                DI = 0x01F0;
+                                // 016E:018B mov CX,0x0010
+                                CX = 0x0010;
+                                // 016E:018E repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
+                                while (CX != 0) {
+                                    Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
+                                    SI += (ushort)(DirectionFlag ? -1 : 1);
+                                    DI += (ushort)(DirectionFlag ? -1 : 1);
+                                    CX--;
+                                    if (!ZeroFlag) {
+                                        break;
+                                    }
+                                }
+                                // 016E:0190 jne short 0x01B0
+                                if (ZeroFlag) {
+                                    // 016E:0192 mov AL,0x52
+                                    AL = 0x52;
+                                    // 016E:0194 call near 0x01C0
+                                    NearCall(cs1, 0x0197, unknown_016E_01C0_018A0);
+                                    // 016E:0197 mov DX,0x01CB
+                                    DX = 0x01CB;
+                                    // 016E:019A mov AH,0x10
+                                    AH = 0x10;
+                                    // 016E:019C int 0x21
+                                    InterruptCall(cs1, 0x019E, 0x21);
+                                    // 016E:019E mov DX,0x01CB
+                                    DX = 0x01CB;
+                                    // 016E:01A1 mov AH,0x13
+                                    AH = 0x13;
+                                    // 016E:01A3 int 0x21
+                                    InterruptCall(cs1, 0x01A5, 0x21);
+                                    // 016E:01A5 mov DX,0x00E9
+                                    DX = 0x00E9;
+                                    // 016E:01A8 mov AL,0x50
+                                    AL = 0x50;
+                                    // 016E:01AA out DX,AL
+                                    Out8(0x00E9, AL);
+                                    // 016E:01AB mov AX,0x4C00
+                                    AX = 0x4C00;
+                                    // 016E:01AE int 0x21
+                                    InterruptCall(cs1, 0x01B0, 0x21);
+                                    throw FailAsUntested("Untested return from call at 016E:01AE");
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
-        // 016E:0190 jne short 0x01B0
-        if (!ZeroFlag) {
-            return unknown_016E_01B0_01890(0x0000);
-        }
-        // 016E:0192 mov AL,0x52
-        AL = 0x52;
-        // 016E:0194 call near 0x01C0
-        NearCall(cs1, 0x0197, unknown_016E_01C0_018A0);
-        // 016E:0197 mov DX,0x01CB
-        DX = 0x01CB;
-        // 016E:019A mov AH,0x10
-        AH = 0x10;
-        // 016E:019C int 0x21
-        InterruptCall(cs1, 0x019E, 0x21);
-        // 016E:019E mov DX,0x01CB
-        DX = 0x01CB;
-        // 016E:01A1 mov AH,0x13
-        AH = 0x13;
-        // 016E:01A3 int 0x21
-        InterruptCall(cs1, 0x01A5, 0x21);
-        // 016E:01A5 mov DX,0x00E9
-        DX = 0x00E9;
-        // 016E:01A8 mov AL,0x50
-        AL = 0x50;
-        // 016E:01AA out DX,AL
-        Out8(0x00E9, AL);
-        // 016E:01AB mov AX,0x4C00
-        AX = 0x4C00;
-        // 016E:01AE int 0x21
-        InterruptCall(cs1, 0x01B0, 0x21);
-        throw FailAsUntested("Untested return from call at 016E:01AE");
+        VerifySpeculativeEntryOrFail(cs1, 0x01B0, Signature_01B0_mov);
+        // 016E:01B0 mov AL,0x46
+        AL = 0x46;
+        VerifySpeculativeEntryOrFail(cs1, 0x01B2, Signature_01B2_call);
+        // 016E:01B2 call near 0x01C0
+        NearCall(cs1, 0x01B5, unknown_016E_01C0_018A0);
+        throw FailAsUntested("Untested return from call at 016E:01B2");
     }
 
     public virtual Action unknown_016E_01C0_018A0(int loadOffset) {
@@ -404,7 +398,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
 
     public virtual Action unknown_F000_0090_F0090(int loadOffset) {
         byte flagOperand_00A9 = 0;
-    entrydispatcher:
         while (true) {
             CheckExternalEvents(cs3, 0x0090);
             // F000:0090 cmp AH,7
@@ -446,11 +439,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             AX = 0x4C00;
             // 01CD:010B int 0x21
             InterruptCall(cs2, 0x010D, 0x21);
-            if (JumpDispatcher.Jump(unknown_016E_016C_0184C, 0x0000)) {
-                loadOffset = JumpDispatcher.NextEntryAddress;
-                goto entrydispatcher;
-            }
-            return JumpDispatcher.RequiredJumpAsmReturn;
+            throw FailAsUntested("Untested return from call at 01CD:010B");
         }
         VerifySpeculativeEntryOrFail(cs3, 0x00A4, Signature_00A4_sti);
         // F000:00A4 sti
@@ -500,17 +489,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         VerifySpeculativeEntryOrFail(cs3, 0x00F0, Signature_00F0_ret);
         // F000:00F0 ret far
         return FarRet();
-    }
-
-    public virtual Action unknown_016E_01B0_01890(int loadOffset) {
-        CheckExternalEvents(cs1, 0x01B0);
-        VerifySpeculativeEntryOrFail(cs1, 0x01B0, Signature_01B0_mov);
-        // 016E:01B0 mov AL,0x46
-        AL = 0x46;
-        VerifySpeculativeEntryOrFail(cs1, 0x01B2, Signature_01B2_call);
-        // 016E:01B2 call near 0x01C0
-        NearCall(cs1, 0x01B5, unknown_016E_01C0_018A0);
-        throw FailAsUntested("Untested return from call at 016E:01B2");
     }
 
 }

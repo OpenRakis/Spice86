@@ -381,24 +381,13 @@
       "target": "F000:0090"
     },
     {
-      "kind": "crossPartitionFlow",
-      "fromPartition": 3,
-      "toPartition": 2,
-      "fromBlock": 195,
-      "toBlock": 201,
-      "from": "01AC:0106",
-      "target": "016D:016A"
-    },
-    {
       "kind": "callOut",
       "fromPartition": 3,
       "toPartition": 14,
       "fromBlock": 195,
       "toBlock": 76,
       "from": "01AC:0106",
-      "target": "F000:0090",
-      "callContinuationBlock": 201,
-      "callContinuationAddress": "016D:016A"
+      "target": "F000:0090"
     },
     {
       "kind": "callOut",

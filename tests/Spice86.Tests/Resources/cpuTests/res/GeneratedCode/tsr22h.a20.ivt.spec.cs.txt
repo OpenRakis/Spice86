@@ -283,7 +283,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AX = 0x31AA;
         // 01AC:0106 int 0x21
         InterruptCall(cs2, 0x0108, 0x21);
-        return unknown_016D_016A_0183A(0x0000);
+        throw FailAsUntested("Untested return from call at 01AC:0106");
     }
 
     public virtual Action unknown_F000_0006_F0006(int loadOffset) {

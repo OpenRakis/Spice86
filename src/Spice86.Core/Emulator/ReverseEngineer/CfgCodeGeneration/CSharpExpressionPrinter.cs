@@ -564,6 +564,9 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     public CSharpFragment VisitInstructionPointerNode(InstructionPointerNode node) => Atomic("IP", node.DataType);
     public CSharpFragment VisitLoadOffsetParameterNode(LoadOffsetParameterNode node) => Atomic("loadOffset", node.DataType);
 
+    public CSharpFragment VisitSegmentedAddressListNode(SegmentedAddressListNode node) =>
+        $"[{string.Join(", ", node.Addresses.Select(address => $"new({SegmentVariable(address.Segment)}, 0x{address.Offset:X4})"))}]";
+
     public CSharpFragment VisitMethodGroupNode(MethodGroupNode node) {
         if (node.LoadOffset == 0) {
             return new CSharpFragment(node.MethodName);

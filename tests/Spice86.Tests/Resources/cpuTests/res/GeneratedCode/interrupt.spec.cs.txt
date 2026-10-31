@@ -26,7 +26,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
 
         DefineFunctionWithoutInterpreterFallback(cs1, 0xEBE0, unknown_E342_EBE0_F2000, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs2, 0x3001, unknown_F000_3001_F3001, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs2, 0x4002, unknown_F000_4002_F4002, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs2, 0x4013, unknown_F000_4013_F4013, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs2, 0xFFF0, unknown_F000_FFF0_FFFF0, "unknown");
     }
@@ -56,27 +55,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         Stack.Push16(CX);
         // F000:300B iret
         return InterruptRet();
-    }
-
-    public virtual Action unknown_F000_4002_F4002(int loadOffset) {
-        CheckExternalEvents(cs2, 0x4002);
-        // F000:4002 mov byte ptr DS:[6],6
-        UInt8[DS, 6] = 6;
-        // F000:4007 mov DX,0x04FF
-        DX = 0x04FF;
-        // F000:400A push DX
-        Stack.Push16(DX);
-        // F000:400B popf
-        FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs2, 0x400C);
-        // F000:400C mov word ptr DS:[0x0010],0x5000
-        UInt16[DS, 0x0010] = 0x5000;
-        // F000:4012 into
-        if (!OverflowFlag) {
-            return unknown_F000_4013_F4013(0x0000);
-        }
-        InterruptCall(cs2, 0x4013, 4);
-        throw FailAsUntested("Untested return from call at F000:4012");
     }
 
     public virtual Action unknown_F000_4013_F4013(int loadOffset) {
@@ -152,8 +130,29 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (!OverflowFlag) {
             throw FailAsUntested("Untested fallthrough at F000:0CFD");
         }
-        InterruptCall(cs2, 0x0CFE, 4);
-        return unknown_F000_4002_F4002(0x0000);
+        if (!InterruptCallReturnedElsewhere(cs2, 0x0CFE, 4, [new(cs2, 0x4002)])) {
+            throw FailAsUntested("Untested return from call at F000:0CFD");
+        }
+        if (CS != cs2 || IP != 0x4002) {
+            throw FailAsUntested("Redirected return target not observed at F000:0CFD");
+        }
+        // F000:4002 mov byte ptr DS:[6],6
+        UInt8[DS, 6] = 6;
+        // F000:4007 mov DX,0x04FF
+        DX = 0x04FF;
+        // F000:400A push DX
+        Stack.Push16(DX);
+        // F000:400B popf
+        FlagRegister16 = Stack.Pop16();
+        CheckExternalEvents(cs2, 0x400C);
+        // F000:400C mov word ptr DS:[0x0010],0x5000
+        UInt16[DS, 0x0010] = 0x5000;
+        // F000:4012 into
+        if (!OverflowFlag) {
+            return unknown_F000_4013_F4013(0x0000);
+        }
+        InterruptCall(cs2, 0x4013, 4);
+        throw FailAsUntested("Untested return from call at F000:4012");
     }
 
 }

@@ -12,6 +12,8 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Shared.Emulator.Memory;
 
+using System.Linq;
+
 using static Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast.CodeGenerationAst;
 
 /// <summary>
@@ -92,7 +94,9 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
     public IVisitableAstNode EmitCallHelperAndContinuation(CallDistance distance, BitWidth width, CfgInstruction call, MethodGroupNode function, ushort? farCallTargetCs) {
         CallContinuation continuation = context.ResolveCallContinuation(call);
         return CodeGenerationAst.Sequence(
-            CallHelper(distance, width, continuation.ExpectedReturnAddress, function, farCallTargetCs),
+            EmitCallWithRedirectedDispatch(call, continuation,
+                CallHelper(distance, width, continuation.ExpectedReturnAddress, function, farCallTargetCs),
+                CallHelperReturnedElsewhere(distance, width, continuation.ExpectedReturnAddress, function, farCallTargetCs, continuation)),
             EmitPostCallContinuation(call, continuation));
     }
 
@@ -102,7 +106,57 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
     /// callee segment as <paramref name="targetCs"/>; a near call leaves it <c>null</c> and the argument is
     /// omitted.
     /// </summary>
-    public MethodCallNode CallHelper(CallDistance distance, BitWidth width, SegmentedAddress expectedReturn, MethodGroupNode function, ushort? targetCs) {
+    public MethodCallNode CallHelper(CallDistance distance, BitWidth width, SegmentedAddress expectedReturn, MethodGroupNode function, ushort? targetCs) =>
+        new ProcedureCallHelperNode(distance, width, CallHelperArguments(expectedReturn, function, targetCs));
+
+    /// <summary>
+    /// The <c>&lt;helper&gt;ReturnedElsewhere</c> variant of <see cref="CallHelper"/>: same arguments plus the
+    /// redirected return addresses of <paramref name="continuation"/>, returning whether the call ended there.
+    /// </summary>
+    public MethodCallValueNode CallHelperReturnedElsewhere(CallDistance distance, BitWidth width,
+        SegmentedAddress expectedReturn, MethodGroupNode function, ushort? targetCs, CallContinuation continuation) =>
+        new ProcedureCallReturnedElsewhereHelperNode(distance, width,
+            [..CallHelperArguments(expectedReturn, function, targetCs), RedirectedAddressList(continuation)]);
+
+    /// <summary>The redirected return addresses of <paramref name="continuation"/> as a
+    /// <c>SegmentedAddress[]</c> argument.</summary>
+    public SegmentedAddressListNode RedirectedAddressList(CallContinuation continuation) =>
+        new(continuation.RedirectedContinuationEdges.Select(edge => edge.Target.Address).ToArray());
+
+    /// <summary>
+    /// The call statement to emit for a call that may return to a redirected target: when the call has
+    /// redirected continuation edges, an <c>if</c> on <paramref name="returnedElsewhereCall"/> whose body
+    /// dispatches to each observed redirected target and fails as untested on a landing discovery never saw;
+    /// <paramref name="plainCall"/> unchanged otherwise. The post-call continuation still follows separately
+    /// through <see cref="EmitPostCallContinuation"/>.
+    /// </summary>
+    public IVisitableAstNode EmitCallWithRedirectedDispatch(CfgInstruction call, CallContinuation continuation,
+        MethodCallNode plainCall, MethodCallValueNode returnedElsewhereCall) {
+        if (continuation.RedirectedContinuationEdges.Count == 0) {
+            return plainCall;
+        }
+        List<IVisitableAstNode> dispatch = [];
+        foreach (ResolvedCfgEdge edge in continuation.RedirectedContinuationEdges) {
+            dispatch.Add(new IfElseNode(
+                AddressEquals(new SegmentRegisterNode((int)SegmentRegisterIndex.CsIndex), new InstructionPointerNode(), edge.Target.Address),
+                CodeGenerationAst.Sequence(Emit(edge, allowCallOutContinuation: true)),
+                CodeGenerationAst.Empty()));
+        }
+        dispatch.Add(UntestedMessages.RedirectedReturnTarget(call.Address));
+        return new IfElseNode(returnedElsewhereCall, CodeGenerationAst.Sequence(dispatch), CodeGenerationAst.Empty());
+    }
+
+    /// <summary>
+    /// Builds the <c>segment == expectedSegment &amp;&amp; offset == 0xOffset</c> test a dispatch uses to
+    /// recognize one observed target.
+    /// </summary>
+    public static ValueNode AddressEquals(ValueNode segment, ValueNode offset, SegmentedAddress expected) =>
+        new BinaryOperationNode(DataType.BOOL,
+            new BinaryOperationNode(DataType.BOOL, segment, BinaryOperation.EQUAL, new SegmentVariableNode(expected.Segment)),
+            BinaryOperation.LOGICAL_AND,
+            new BinaryOperationNode(DataType.BOOL, offset, BinaryOperation.EQUAL, new OffsetLiteralNode(expected.Offset)));
+
+    private static IVisitableAstNode[] CallHelperArguments(SegmentedAddress expectedReturn, MethodGroupNode function, ushort? targetCs) {
         List<IVisitableAstNode> arguments = [
             new SegmentVariableNode(expectedReturn.Segment),
             new OffsetLiteralNode(expectedReturn.Offset)
@@ -111,7 +165,7 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
             arguments.Add(new SegmentVariableNode(targetCs.Value));
         }
         arguments.Add(function);
-        return new ProcedureCallHelperNode(distance, width, arguments.ToArray());
+        return arguments.ToArray();
     }
 
     /// <summary>

@@ -19,6 +19,7 @@ using EmulatedCallback = Spice86.Core.Emulator.InterruptHandlers.Common.Callback
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 using Xunit;
 
@@ -27,6 +28,80 @@ public class CSharpOverrideHelperTest {
     private const ushort SecondTestCallbackNumber = 0x1001;
 
     private readonly ILogger _loggerServiceMock = Substitute.For<ILogger>();
+
+    [Fact]
+    public void ChainRunningAnOverrideBelowCallStackLevelLogsNoWarning() {
+        // Arrange: the handler jumps to another override while the callee's frame is still on the
+        // stack (like a `push label; ret` inside an interrupt handler). That landing runs the
+        // override there, but it is the callee's own control flow, so only a Debug line is logged.
+        _loggerServiceMock.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
+        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection dependencyInjection = creator.Create();
+        Machine machine = dependencyInjection.Machine;
+        machine.CpuState.SS = 0x3000;
+        machine.CpuState.SP = 0x100;
+        CSharpOverrideHelper helper = CreateHelper(machine);
+        SegmentedAddress inner = new(0x2000, 0x0099);
+        int innerRan = 0;
+        FunctionInformation innerInformation =
+            new(inner, "inner", _ => { innerRan++; return helper.InterruptRet(); })
+            { ForbidsInterpreterFallback = true };
+        dependencyInjection.FunctionCatalogue.FunctionInformations[inner] = innerInformation;
+
+        // Act
+        helper.InterruptCall(0x1000, 0x0010, 0x3456, _ => () => {
+            machine.CpuState.CS = inner.Segment;
+            machine.CpuState.IP = inner.Offset;
+        });
+
+        // Assert: the chain ran the inner override, which iret'ed back to the expected return address
+        innerRan.Should().Be(1);
+        machine.CpuState.CS.Should().Be(0x1000);
+        machine.CpuState.IP.Should().Be(0x0010);
+        WarningLogCalls().Should().Be(0);
+    }
+
+    [Fact]
+    public void ChainRunningAnOverrideAtOrAboveCallStackLevelLogsOncePerPair() {
+        // Arrange: the handler consumes its frame and lands at an override that is neither the
+        // expected return nor a redirected return. The nested call is logged at Warning level, but
+        // only once per (expected return, landing) pair; the second occurrence logs at Debug.
+        _loggerServiceMock.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
+        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection dependencyInjection = creator.Create();
+        Machine machine = dependencyInjection.Machine;
+        machine.CpuState.SS = 0x3000;
+        machine.CpuState.SP = 0x100;
+        CSharpOverrideHelper helper = CreateHelper(machine);
+        SegmentedAddress landing = new(0x2000, 0x0099);
+        int landingRan = 0;
+        FunctionInformation landingInformation =
+            new(landing, "landing", _ => { landingRan++; return helper.FarJump(0x1000, 0x0010); })
+            { ForbidsInterpreterFallback = true };
+        dependencyInjection.FunctionCatalogue.FunctionInformations[landing] = landingInformation;
+
+        // Act: the same call site runs the chain twice.
+        for (int i = 0; i < 2; i++) {
+            helper.InterruptCall(0x1000, 0x0010, 0x3456, _ => () => {
+                helper.Stack.Pop16();
+                helper.Stack.Pop16();
+                helper.Stack.Pop16();
+                machine.CpuState.CS = landing.Segment;
+                machine.CpuState.IP = landing.Offset;
+            });
+        }
+
+        // Assert
+        landingRan.Should().Be(2);
+        machine.CpuState.CS.Should().Be(0x1000);
+        machine.CpuState.IP.Should().Be(0x0010);
+        WarningLogCalls().Should().Be(1);
+    }
+
+    private int WarningLogCalls() =>
+        _loggerServiceMock.ReceivedCalls().Count(call =>
+            call.GetMethodInfo().Name == nameof(ILogger.Log)
+            && (LogLevel)call.GetArguments()[0]! == LogLevel.Warning);
 
     [Fact]
     public void TestJumpReturns() {
@@ -923,9 +998,132 @@ public class CSharpOverrideHelperTest {
         machine.CpuState.SP.Should().Be(0x100);
     }
 
-    private CSharpOverrideHelper CreateHelper(Machine machine) {
+    [Fact]
+    public void InterruptCallReturnedElsewhere_RedirectedReturnSkipsLandingOverrideAndReturnsTrue() {
+        // Arrange: an interrupt handler that bumps the stacked return IP by one, like the 8087
+        // emulator, and an override registered at the landing address that must not run.
+        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection res = creator.Create();
+        Machine machine = res.Machine;
+        machine.CpuState.SS = 0x3000;
+        machine.CpuState.SP = 0x0100;
+        SegmentedAddress handlerAddress = new(0x3456, 0x0078);
+        SegmentedAddress redirectedReturn = new(0x2000, 0x0101);
+        CSharpOverrideHelper? helper = null;
+        Dictionary<SegmentedAddress, FunctionInformation> overrides = new() {
+            [handlerAddress] = new FunctionInformation(handlerAddress, "handler", _ => {
+                helper!.Stack.Poke16(0, (ushort)(helper.Stack.Peek16(0) + 1));
+                return helper.InterruptRet();
+            })
+        };
+        helper = CreateHelper(machine, overrides);
+        machine.InterruptVectorTable[0x80] = handlerAddress;
+        int landingRan = 0;
+        res.FunctionCatalogue.FunctionInformations[redirectedReturn] = new FunctionInformation(redirectedReturn, "landing",
+            _ => { landingRan++; return helper.NearRet(); }) { ForbidsInterpreterFallback = true };
+
+        // Act
+        bool result = helper.InterruptCallReturnedElsewhere(0x2000, 0x0100, 0x80, [redirectedReturn]);
+
+        // Assert
+        result.Should().BeTrue();
+        landingRan.Should().Be(0, "a redirected return lands without running the override registered there");
+        helper.CS.Should().Be(redirectedReturn.Segment);
+        helper.IP.Should().Be(redirectedReturn.Offset);
+        helper.SP.Should().Be(0x0100, "the interrupt frame is fully consumed");
+    }
+
+    [Fact]
+    public void InterruptCallReturnedElsewhere_AlignedReturnReturnsFalse() {
+        // Arrange: a handler that irets without touching the stacked return address.
+        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection res = creator.Create();
+        Machine machine = res.Machine;
+        machine.CpuState.SS = 0x3000;
+        machine.CpuState.SP = 0x0100;
+        SegmentedAddress handlerAddress = new(0x3456, 0x0078);
+        CSharpOverrideHelper? helper = null;
+        Dictionary<SegmentedAddress, FunctionInformation> overrides = new() {
+            [handlerAddress] = new FunctionInformation(handlerAddress, "handler", _ => helper!.InterruptRet())
+        };
+        helper = CreateHelper(machine, overrides);
+        machine.InterruptVectorTable[0x80] = handlerAddress;
+
+        // Act
+        bool result = helper.InterruptCallReturnedElsewhere(0x2000, 0x0100, 0x80, [new SegmentedAddress(0x2000, 0x0101)]);
+
+        // Assert
+        result.Should().BeFalse();
+        helper.CS.Should().Be(0x2000);
+        helper.IP.Should().Be(0x0100);
+    }
+
+    [Fact]
+    public void InterruptCallReturnedElsewhere_LandingBelowCallStackLevelRunsTheOverrideThere() {
+        // Arrange: a handler that leaves its interrupt frame on the stack and jumps to the listed
+        // address; the stack is below the pre-call level, so the listed address is not accepted and
+        // the override registered there runs as today's chain does.
+        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection res = creator.Create();
+        Machine machine = res.Machine;
+        machine.CpuState.SS = 0x3000;
+        machine.CpuState.SP = 0x0100;
+        SegmentedAddress handlerAddress = new(0x3456, 0x0078);
+        SegmentedAddress landing = new(0x2000, 0x0101);
+        SegmentedAddress expectedReturn = new(0x2000, 0x0100);
+        CSharpOverrideHelper? helper = null;
+        Dictionary<SegmentedAddress, FunctionInformation> overrides = new() {
+            [handlerAddress] = new FunctionInformation(handlerAddress, "handler",
+                _ => () => {
+                    helper!.State.CS = landing.Segment;
+                    helper.State.IP = landing.Offset;
+                })
+        };
+        helper = CreateHelper(machine, overrides);
+        machine.InterruptVectorTable[0x80] = handlerAddress;
+        int landingRan = 0;
+        res.FunctionCatalogue.FunctionInformations[landing] = new FunctionInformation(landing, "landing",
+            _ => { landingRan++; return helper.FarJump(expectedReturn.Segment, expectedReturn.Offset); }) { ForbidsInterpreterFallback = true };
+
+        // Act
+        bool result = helper.InterruptCallReturnedElsewhere(0x2000, 0x0100, 0x80, [landing]);
+
+        // Assert
+        result.Should().BeFalse("the call ended at the expected return after the nested override ran");
+        landingRan.Should().Be(1, "the landing address is not accepted while the stack stays below the call level");
+    }
+
+    [Fact]
+    public void NearCallReturnedElsewhere_Ret2AboveCallStackLevelReturnsTrue() {
+        // Arrange: a callee that rewrites its stacked return IP and returns with ret 2, so the stack
+        // ends above the call level at the listed landing address.
+        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection res = creator.Create();
+        Machine machine = res.Machine;
+        machine.CpuState.SS = 0x3000;
+        machine.CpuState.SP = 0x0100;
+        machine.CpuState.CS = 0x2000;
+        SegmentedAddress redirectedReturn = new(0x2000, 0x0101);
+        CSharpOverrideHelper helper = CreateHelper(machine);
+
+        // Act
+        bool result = helper.NearCallReturnedElsewhere(0x2000, 0x0100, _ => {
+            helper.Stack.Poke16(0, redirectedReturn.Offset);
+            return helper.NearRet(2);
+        }, [redirectedReturn]);
+
+        // Assert
+        result.Should().BeTrue();
+        helper.IP.Should().Be(redirectedReturn.Offset);
+        helper.SP.Should().Be(0x0102, "ret 2 leaves the stack above the call level");
+    }
+
+    private CSharpOverrideHelper CreateHelper(Machine machine) =>
+        CreateHelper(machine, new Dictionary<SegmentedAddress, FunctionInformation>());
+
+    private CSharpOverrideHelper CreateHelper(Machine machine, IDictionary<SegmentedAddress, FunctionInformation> functionInformations) {
         return new CSharpOverrideHelper(
-            new Dictionary<SegmentedAddress, FunctionInformation>(),
+            functionInformations,
             machine,
             _loggerServiceMock,
             new Configuration { HttpApiPort = 0 });

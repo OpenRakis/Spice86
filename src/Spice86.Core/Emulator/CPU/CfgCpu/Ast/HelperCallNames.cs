@@ -51,6 +51,17 @@ internal static class HelperCallNames {
             _ => throw new ArgumentOutOfRangeException(nameof(width), width, "No call helper for this width.")
         };
 
+    /// <summary>The <c>NearCallReturnedElsewhere</c> / <c>FarCallReturnedElsewhere</c> method name for
+    /// <paramref name="distance"/> at <paramref name="width"/>: the 16-bit helpers carry no width suffix.</summary>
+    public static string ProcedureCallReturnedElsewhereMethodName(CallDistance distance, BitWidth width) =>
+        (distance, width) switch {
+            (CallDistance.Near, BitWidth.WORD_16) => nameof(CSharpOverrideHelper.NearCallReturnedElsewhere),
+            (CallDistance.Near, BitWidth.DWORD_32) => nameof(CSharpOverrideHelper.NearCall32ReturnedElsewhere),
+            (CallDistance.Far, BitWidth.WORD_16) => nameof(CSharpOverrideHelper.FarCallReturnedElsewhere),
+            (CallDistance.Far, BitWidth.DWORD_32) => nameof(CSharpOverrideHelper.FarCall32ReturnedElsewhere),
+            _ => throw new ArgumentOutOfRangeException(nameof(width), width, "No call helper for this width.")
+        };
+
     /// <summary>The <c>NearRet</c> / <c>FarRet</c> method name for <paramref name="distance"/> at
     /// <paramref name="width"/>: the 16-bit helpers carry no width suffix.</summary>
     public static string ProcedureReturnMethodName(CallDistance distance, BitWidth width) =>
@@ -67,6 +78,9 @@ internal static class HelperCallNames {
 
     /// <summary>The <c>InterruptCall</c> method name.</summary>
     public static string InterruptCallMethodName => nameof(CSharpOverrideHelper.InterruptCall);
+
+    /// <summary>The <c>InterruptCallReturnedElsewhere</c> method name.</summary>
+    public static string InterruptCallReturnedElsewhereMethodName => nameof(CSharpOverrideHelper.InterruptCallReturnedElsewhere);
 
     /// <summary>The <c>Callback</c> method name.</summary>
     public static string CallbackMethodName => nameof(CSharpOverrideHelper.Callback);

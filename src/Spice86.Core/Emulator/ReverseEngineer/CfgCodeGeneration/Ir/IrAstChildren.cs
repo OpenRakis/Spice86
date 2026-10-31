@@ -88,7 +88,8 @@ internal static class IrAstChildren {
             or CheckExternalEventsNode or SpeculativeGuardNode or BreakNode or ContinueNode
             or GotoNode or LabelNode or EntryDispatcherLabelNode or CyclicJumpNode
             or MethodGroupNode or LocalDeclarationNode or InterruptReturnNode or SelectorNode
-            or SetInterruptShadowNode or ThrowNode or CfgInstructionNode => [],
+            or SetInterruptShadowNode or ThrowNode or CfgInstructionNode
+            or SegmentedAddressListNode => [],
         _ => throw new NotSupportedException(
             $"{node.GetType().Name} has no AST children enumeration."),
     };
@@ -179,7 +180,8 @@ internal static class IrAstChildren {
             or InstructionStartNode or CheckExternalEventsNode or SpeculativeGuardNode or BreakNode
             or ContinueNode or GotoNode or LabelNode or EntryDispatcherLabelNode or CyclicJumpNode
             or MethodGroupNode or LocalDeclarationNode or InterruptReturnNode or SelectorNode
-            or SetInterruptShadowNode or ThrowNode or CfgInstructionNode => node,
+            or SetInterruptShadowNode or ThrowNode or CfgInstructionNode
+            or SegmentedAddressListNode => node,
         _ => throw new NotSupportedException(
             $"{node.GetType().Name} has no AST children mapping."),
     };

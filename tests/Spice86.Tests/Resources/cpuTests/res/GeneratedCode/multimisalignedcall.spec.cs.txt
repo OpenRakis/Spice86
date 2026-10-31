@@ -22,47 +22,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
         cs1 = 0xF000;
 
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0014, unknown_F000_0014_F0014, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x001B, unknown_F000_001B_F001B, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0022, unknown_F000_0022_F0022, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x002A, unknown_F000_002A_F002A, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0010, unknown_F000_0010_F0010, "unknown");
-    }
-
-    public virtual Action unknown_F000_0014_F0014(int loadOffset) {
-    entrydispatcher:
-        CheckExternalEvents(cs1, 0x0014);
-        // F000:0014 mov byte ptr DS:[0x0010],0xAA
-        UInt8[DS, 0x0010] = 0xAA;
-        // F000:0019 jmp short 0x0010
-        if (JumpDispatcher.Jump(unknown_F000_0010_F0010, 0x0000)) {
-            loadOffset = JumpDispatcher.NextEntryAddress;
-            goto entrydispatcher;
-        }
-        return JumpDispatcher.RequiredJumpAsmReturn;
-    }
-
-    public virtual Action unknown_F000_001B_F001B(int loadOffset) {
-    entrydispatcher:
-        CheckExternalEvents(cs1, 0x001B);
-        // F000:001B mov byte ptr DS:[0x0011],0xBB
-        UInt8[DS, 0x0011] = 0xBB;
-        // F000:0020 jmp short 0x0010
-        if (JumpDispatcher.Jump(unknown_F000_0010_F0010, 0x0000)) {
-            loadOffset = JumpDispatcher.NextEntryAddress;
-            goto entrydispatcher;
-        }
-        return JumpDispatcher.RequiredJumpAsmReturn;
-    }
-
-    public virtual Action unknown_F000_0022_F0022(int loadOffset) {
-        CheckExternalEvents(cs1, 0x0022);
-        // F000:0022 mov byte ptr DS:[0x0012],0xCC
-        UInt8[DS, 0x0012] = 0xCC;
-        // F000:0027 jmp short 0x0029
-        // F000:0029 hlt
-        return Hlt();
     }
 
     public virtual Action unknown_F000_002A_F002A(int loadOffset) {
@@ -116,14 +77,39 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         SP = 0x0100;
         // F000:000A mov word ptr DS:[0],0
         UInt16[DS, 0] = 0;
-        return unknown_F000_0010_F0010(0x0000);
-    }
-
-    public virtual Action unknown_F000_0010_F0010(int loadOffset) {
-        CheckExternalEvents(cs1, 0x0010);
-        // F000:0010 call near 0x002A
-        NearCall(cs1, 0x0013, unknown_F000_002A_F002A);
-        throw FailAsUntested("Untested return from call at F000:0010");
+        while (true) {
+            CheckExternalEvents(cs1, 0x0010);
+            // F000:0010 call near 0x002A
+            if (!NearCallReturnedElsewhere(cs1, 0x0013, unknown_F000_002A_F002A, [new(cs1, 0x0014), new(cs1, 0x001B), new(cs1, 0x0022)])) {
+                throw FailAsUntested("Untested return from call at F000:0010");
+            }
+            if (CS == cs1 && IP == 0x0014) {
+                goto L_0014;
+            }
+            if (CS == cs1 && IP == 0x001B) {
+                goto L_001B;
+            }
+            if (CS == cs1 && IP == 0x0022) {
+                break;
+            }
+            else {
+                throw FailAsUntested("Redirected return target not observed at F000:0010");
+            }
+        L_0014:
+            // F000:0014 mov byte ptr DS:[0x0010],0xAA
+            UInt8[DS, 0x0010] = 0xAA;
+            // F000:0019 jmp short 0x0010
+            continue;
+        L_001B:
+            // F000:001B mov byte ptr DS:[0x0011],0xBB
+            UInt8[DS, 0x0011] = 0xBB;
+            // F000:0020 jmp short 0x0010
+        }
+        // F000:0022 mov byte ptr DS:[0x0012],0xCC
+        UInt8[DS, 0x0012] = 0xCC;
+        // F000:0027 jmp short 0x0029
+        // F000:0029 hlt
+        return Hlt();
     }
 
 }

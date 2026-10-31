@@ -1,0 +1,109 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0xF000;
+
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x002C, unknown_F000_002C_F002C, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0030, unknown_F000_0030_F0030, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0035, unknown_F000_0035_F0035, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0038, unknown_F000_0038_F0038, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0010, unknown_F000_0010_F0010, "unknown");
+    }
+
+    public virtual Action unknown_F000_002C_F002C(int loadOffset) {
+        CheckExternalEvents(cs1, 0x002C);
+        // F000:002C call near 0x0030
+        NearCall(cs1, 0x002F, unknown_F000_0030_F0030);
+        throw FailAsUntested("Untested return from call at F000:002C");
+    }
+
+    public virtual Action unknown_F000_0030_F0030(int loadOffset) {
+    entrydispatcher:
+        CheckExternalEvents(cs1, 0x0030);
+        // F000:0030 mov SP,0x0100
+        SP = 0x0100;
+        // F000:0033 jmp short 0x0010
+        if (JumpDispatcher.Jump(unknown_F000_0010_F0010, 0x0000)) {
+            loadOffset = JumpDispatcher.NextEntryAddress;
+            goto entrydispatcher;
+        }
+        return JumpDispatcher.RequiredJumpAsmReturn;
+    }
+
+    public virtual Action unknown_F000_0035_F0035(int loadOffset) {
+        CheckExternalEvents(cs1, 0x0035);
+        // F000:0035 push 0x38
+        Stack.Push16(0x0038);
+        // F000:0037 ret near
+        return NearRet();
+    }
+
+    public virtual Action unknown_F000_0038_F0038(int loadOffset) {
+        CheckExternalEvents(cs1, 0x0038);
+        // F000:0038 mov byte ptr DS:[0x0010],0xAA
+        UInt8[DS, 0x0010] = 0xAA;
+        // F000:003D ret near
+        return NearRet();
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        // F000:0000 mov AX,0
+        AX = 0;
+        // F000:0003 mov DS,AX
+        DS = 0;
+        // F000:0005 mov SS,AX
+        SS = 0;
+        // F000:0007 mov SP,0x0100
+        SP = 0x0100;
+        // F000:000A mov word ptr DS:[0],0
+        UInt16[DS, 0] = 0;
+        return unknown_F000_0010_F0010(0x0000);
+    }
+
+    public virtual Action unknown_F000_0010_F0010(int loadOffset) {
+        ushort flagOperand_0017 = 0;
+        CheckExternalEvents(cs1, 0x0010);
+        // F000:0010 mov SP,0x0100
+        SP = 0x0100;
+        // F000:0013 inc word ptr DS:[0]
+        UInt16[DS, 0] += 1;
+        // F000:0017 cmp word ptr DS:[0],1
+        flagOperand_0017 = UInt16[DS, 0];
+        Alu16.Sub(flagOperand_0017, 1);
+        // F000:001C je short 0x0027
+        if (flagOperand_0017 == 1) {
+            // F000:0027 call near 0x002C
+            NearCall(cs1, 0x002A, unknown_F000_002C_F002C);
+            throw FailAsUntested("Untested return from call at F000:0027");
+        }
+        // F000:001E call near 0x0035
+        NearCall(cs1, 0x0021, unknown_F000_0035_F0035);
+        // F000:0021 mov byte ptr DS:[0x0011],0xBB
+        UInt8[DS, 0x0011] = 0xBB;
+        // F000:0026 hlt
+        return Hlt();
+    }
+
+}

@@ -183,29 +183,59 @@ public class FunctionHandler {
         }
 
         SegmentedAddress? actualReturnAddress = PeekReturnAddressOnMachineStack(returnCallType);
-        FunctionCallStackMatch? returnMatch = _callerStack.FindReturnMatch(actualReturnAddress);
-        if (returnMatch == null) {
-            if (ret is not null && ret.IsReturn) {
-                ret.CurrentCorrespondingCallInstruction = currentFunctionCall.Initiator;
-            }
-            HandleReturn(returnCallType, currentFunctionCall, false, actualReturnAddress);
+        if (actualReturnAddress != null && actualReturnAddress.Equals(currentFunctionCall.ExpectedReturnAddress)) {
+            SetCorrespondingCall(ret, currentFunctionCall.Initiator, InstructionSuccessorType.CallToReturn);
+            HandleReturn(returnCallType, currentFunctionCall, true, true, actualReturnAddress);
+            _callerStack.TryPop(out _);
             LogVerboseReturn(returnCallType, currentFunctionCall);
             return;
         }
 
-        FunctionCallStackMatch nonNullReturnMatch = returnMatch.Value;
-        bool returnAddressAlignedWithCallStack = nonNullReturnMatch.IsTop;
-        FunctionCall functionCallToRecord = returnAddressAlignedWithCallStack
-            ? nonNullReturnMatch.FunctionCall
-            : currentFunctionCall;
-        if (ret is not null && ret.IsReturn) {
-            // Register the call instruction that probably caused this return
-            ret.CurrentCorrespondingCallInstruction = functionCallToRecord.Initiator;
+        FunctionCallStackMatch? stackMatch = _callerStack.FindStackMatch(CurrentStackAddress);
+        if (stackMatch is { } foundByStack) {
+            FunctionCall matchedCall = foundByStack.FunctionCall;
+            // A fault frame pushes the faulting instruction as its expected return, so the return
+            // landing on the initiator's next-in-memory address is still an aligned continuation.
+            bool stackMatchedAligned = actualReturnAddress != null &&
+                (actualReturnAddress.Equals(matchedCall.ExpectedReturnAddress) ||
+                 actualReturnAddress.Equals(matchedCall.Initiator?.NextInMemoryAddress32.ToSegmentedAddress()));
+            SetCorrespondingCall(ret, matchedCall.Initiator,
+                stackMatchedAligned ? InstructionSuccessorType.CallToReturn : InstructionSuccessorType.CallToRedirectedReturn);
+            if (!stackMatchedAligned && actualReturnAddress != null && _loggerService.IsEnabled(LogLevel.Debug)) {
+                _loggerService.LogDebug(
+                    "Redirected return of the call expecting {ExpectedReturn} to {ActualReturn}: the stack matched the call's frame",
+                    matchedCall.ExpectedReturnAddress, actualReturnAddress);
+            }
+            HandleReturn(returnCallType, matchedCall, stackMatchedAligned, false, actualReturnAddress);
+            _callerStack.PopThrough(foundByStack);
+            LogVerboseReturn(returnCallType, matchedCall);
+            return;
         }
 
-        HandleReturn(returnCallType, functionCallToRecord, returnAddressAlignedWithCallStack, actualReturnAddress);
-        _callerStack.PopThrough(nonNullReturnMatch);
-        LogVerboseReturn(returnCallType, functionCallToRecord);
+        FunctionCallStackMatch? returnMatch = _callerStack.FindReturnMatch(actualReturnAddress);
+        if (returnMatch is { } deeperMatch) {
+            SetCorrespondingCall(ret, currentFunctionCall.Initiator, InstructionSuccessorType.CallToMisalignedReturn);
+            HandleReturn(returnCallType, currentFunctionCall, false, true, actualReturnAddress);
+            _callerStack.PopThrough(deeperMatch);
+            LogVerboseReturn(returnCallType, currentFunctionCall);
+            return;
+        }
+
+        ClearCorrespondingCall(ret);
+        HandleReturn(returnCallType, currentFunctionCall, false, true, actualReturnAddress);
+        LogVerboseReturn(returnCallType, currentFunctionCall);
+    }
+
+    private static void SetCorrespondingCall(CfgInstruction? ret, CfgInstruction? call, InstructionSuccessorType type) {
+        if (ret is not null && ret.IsReturn) {
+            ret.CurrentCorrespondingCall = call is null ? null : new CorrespondingCall(call, type);
+        }
+    }
+
+    private static void ClearCorrespondingCall(CfgInstruction? ret) {
+        if (ret is not null && ret.IsReturn) {
+            ret.CurrentCorrespondingCall = null;
+        }
     }
 
     private void LogVerboseReturn(CallType returnCallType, FunctionCall currentFunctionCall) {
@@ -264,6 +294,9 @@ public class FunctionHandler {
             if (atExpectedReturn && caller.ContinuesAtExpectedReturn) {
                 return;
             }
+            if (caller.AcceptsRedirectedReturn(landedAddress, _state.StackPhysicalAddress)) {
+                return;
+            }
             if (FindOverride(landedAddress) is { FunctionOverride: { } nextOverride } next) {
                 if (caller.RunOverride(next, nextOverride)) {
                     return;
@@ -297,7 +330,7 @@ public class FunctionHandler {
     /// </summary>
     public bool UseCodeOverride { get; set; }
 
-    private void HandleReturn(CallType returnCallType, FunctionCall currentFunctionCall, bool returnAddressAlignedWithCallStack, SegmentedAddress? actualReturnAddress) {
+    private void HandleReturn(CallType returnCallType, FunctionCall currentFunctionCall, bool returnAddressAlignedWithCallStack, bool warnWhenUnaligned, SegmentedAddress? actualReturnAddress) {
         FunctionInformation? currentFunctionInformation = _functionCatalogue.GetFunctionInformation(currentFunctionCall);
         // Do not register functions when they are overriden
         if (currentFunctionInformation != null && !UseOverride(currentFunctionInformation)) {
@@ -307,7 +340,7 @@ public class FunctionHandler {
             if (returnAddressAlignedWithCallStack) {
                 currentFunctionInformation.AddReturn(currentFunctionReturn, addressToRecord);
             } else {
-                if (actualReturnAddress != null) {
+                if (warnWhenUnaligned && actualReturnAddress != null) {
                     LogUnalignedReturn(currentFunctionCall, currentFunctionInformation, returnCallType,
                         currentFunctionCall.ExpectedReturnAddress, actualReturnAddress.Value);
                 }
@@ -386,6 +419,9 @@ public class FunctionHandler {
 
         /// <inheritdoc />
         public bool ContinuesAtExpectedReturn => false;
+
+        /// <inheritdoc />
+        public bool AcceptsRedirectedReturn(SegmentedAddress landedAddress, uint stackPhysicalAddress) => false;
 
         /// <inheritdoc />
         public bool RunOverride(FunctionInformation function, Func<int, Action> functionOverride) {
