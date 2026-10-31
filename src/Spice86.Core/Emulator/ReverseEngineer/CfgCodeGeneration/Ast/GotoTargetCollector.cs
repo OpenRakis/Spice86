@@ -127,6 +127,8 @@ internal sealed class GotoTargetCollector : ICodeGenerationAstVisitor<GotoTarget
 
     public GotoTargets VisitMethodGroupNode(MethodGroupNode node) => GotoTargets.None;
 
+    public GotoTargets VisitSegmentedAddressListNode(SegmentedAddressListNode node) => GotoTargets.None;
+
     public GotoTargets VisitSignatureFieldNode(SignatureFieldNode node) => GotoTargets.None;
 
     public GotoTargets VisitExplicitCastNode(ExplicitCastNode node) => GotoTargets.None;

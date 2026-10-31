@@ -146,11 +146,18 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
     public IVisitableAstNode VisitInterruptCallNode(InterruptCallNode node) {
         CallContinuation continuation = Context.ResolveCallContinuation(node.Instruction);
         SegmentedAddress expectedReturn = continuation.ExpectedReturnAddress;
+        ExplicitCastNode vector = new(DataType.UINT8, node.VectorNumber);
         return Sequence(
-            new InterruptCallHelperNode(
-                new SegmentVariableNode(expectedReturn.Segment),
-                new OffsetLiteralNode(expectedReturn.Offset),
-                new ExplicitCastNode(DataType.UINT8, node.VectorNumber)),
+            Transfer.EmitCallWithRedirectedDispatch(node.Instruction, continuation,
+                new InterruptCallHelperNode(
+                    new SegmentVariableNode(expectedReturn.Segment),
+                    new OffsetLiteralNode(expectedReturn.Offset),
+                    vector),
+                new InterruptCallReturnedElsewhereHelperNode(
+                    new SegmentVariableNode(expectedReturn.Segment),
+                    new OffsetLiteralNode(expectedReturn.Offset),
+                    vector,
+                    Transfer.RedirectedAddressList(continuation))),
             Transfer.EmitPostCallContinuation(node.Instruction, continuation));
     }
 
@@ -188,7 +195,7 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
                      .OrderBy(edge => edge.Target.Address.Segment)
                      .ThenBy(edge => edge.Target.Address.Offset)) {
             targets.Add(new IfElseNode(
-                AddressEquals(new SegmentRegisterNode((int)SegmentRegisterIndex.CsIndex), new InstructionPointerNode(), edge.Target.Address),
+                TransferEmitter.AddressEquals(new SegmentRegisterNode((int)SegmentRegisterIndex.CsIndex), new InstructionPointerNode(), edge.Target.Address),
                 Sequence(Transfer.Emit(edge)),
                 Empty()));
         }
@@ -354,7 +361,7 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
         foreach (ResolvedCfgEdge edge in edges.OrderBy(edge => edge.Target.Address.Segment).ThenBy(edge => edge.Target.Address.Offset)) {
             // Every matched branch ends with its own transfer, so it never falls through to the trailing untested-target failure.
             items.Add(new IfElseNode(
-                AddressEquals(segmentDeclaration.Reference, offsetDeclaration.Reference, edge.Target.Address),
+                TransferEmitter.AddressEquals(segmentDeclaration.Reference, offsetDeclaration.Reference, edge.Target.Address),
                 Sequence(bodyForEdge(edge)),
                 Empty()));
         }
@@ -380,9 +387,12 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
             ResolvedCfgEdge only = edges[0];
             return Sequence(segmentDeclaration, offsetDeclaration,
                 new IfElseNode(
-                    AddressEquals(segmentDeclaration.Reference, offsetDeclaration.Reference, only.Target.Address),
-                    Sequence(Transfer.CallHelper(distance, width, continuation.ExpectedReturnAddress,
-                        Transfer.FunctionReference(only), only.Target.Address.Segment)),
+                    TransferEmitter.AddressEquals(segmentDeclaration.Reference, offsetDeclaration.Reference, only.Target.Address),
+                    Sequence(Transfer.EmitCallWithRedirectedDispatch(instruction, continuation,
+                        Transfer.CallHelper(distance, width, continuation.ExpectedReturnAddress,
+                            Transfer.FunctionReference(only), only.Target.Address.Segment),
+                        Transfer.CallHelperReturnedElsewhere(distance, width, continuation.ExpectedReturnAddress,
+                            Transfer.FunctionReference(only), only.Target.Address.Segment, continuation))),
                     Sequence(UntestedMessages.FarTarget("call", segmentDeclaration.Reference,
                         offsetDeclaration.Reference, instruction.Address))),
                 Transfer.EmitPostCallContinuation(instruction, continuation));
@@ -402,8 +412,11 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
                     $"Far call dispatch at {instruction.Address} has two edges to {edge.Target.Address}.");
             }
             sections.Add(Section(key,
-                Sequence(Transfer.CallHelper(distance, width, continuation.ExpectedReturnAddress,
-                    Transfer.FunctionReference(edge), edge.Target.Address.Segment))));
+                Sequence(Transfer.EmitCallWithRedirectedDispatch(instruction, continuation,
+                    Transfer.CallHelper(distance, width, continuation.ExpectedReturnAddress,
+                        Transfer.FunctionReference(edge), edge.Target.Address.Segment),
+                    Transfer.CallHelperReturnedElsewhere(distance, width, continuation.ExpectedReturnAddress,
+                        Transfer.FunctionReference(edge), edge.Target.Address.Segment, continuation)))));
         }
         SwitchNode dispatch = new(switchValue, sections,
             Sequence(UntestedMessages.FarTarget("call", segmentDeclaration.Reference, offsetDeclaration.Reference,
@@ -411,16 +424,6 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
         return Sequence(segmentDeclaration, offsetDeclaration, dispatch,
             Transfer.EmitPostCallContinuation(instruction, continuation));
     }
-
-    /// <summary>
-    /// Builds the <c>segment == expectedSegment && offset == 0xOffset</c> test a far dispatch uses to recognize
-    /// one observed target.
-    /// </summary>
-    private static ValueNode AddressEquals(ValueNode segment, ValueNode offset, SegmentedAddress expected) =>
-        new BinaryOperationNode(DataType.BOOL,
-            new BinaryOperationNode(DataType.BOOL, segment, BinaryOperation.EQUAL, new SegmentVariableNode(expected.Segment)),
-            BinaryOperation.LOGICAL_AND,
-            new BinaryOperationNode(DataType.BOOL, offset, BinaryOperation.EQUAL, new OffsetLiteralNode(expected.Offset)));
 
     /// <summary>
     /// Resolves the observed normal successor edges that an indirect (computed) jump or call dispatches over.
@@ -443,7 +446,9 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
     private IVisitableAstNode CallBranchBody(CfgInstruction instruction, CallContinuation continuation,
         CallDistance distance, BitWidth width, ResolvedCfgEdge edge) {
         return Sequence(
-            Transfer.CallHelper(distance, width, continuation.ExpectedReturnAddress, Transfer.FunctionReference(edge), null),
+            Transfer.EmitCallWithRedirectedDispatch(instruction, continuation,
+                Transfer.CallHelper(distance, width, continuation.ExpectedReturnAddress, Transfer.FunctionReference(edge), null),
+                Transfer.CallHelperReturnedElsewhere(distance, width, continuation.ExpectedReturnAddress, Transfer.FunctionReference(edge), null, continuation)),
             Transfer.EmitPostCallContinuation(instruction, continuation));
     }
 

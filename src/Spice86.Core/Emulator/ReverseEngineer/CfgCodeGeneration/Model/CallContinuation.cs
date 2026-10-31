@@ -7,6 +7,9 @@ using Spice86.Shared.Emulator.Memory;
 /// call). Always known; the generated call helpers validate against it.</param>
 /// <param name="ObservedContinuationEdge">CFG edge observed after the call returned, or <c>null</c> when the
 /// callee never returned during discovery (the generator then fails as untested if that path runs).</param>
+/// <param name="RedirectedContinuationEdges">The call's <see cref="CPU.CfgCpu.ParsedInstruction.InstructionSuccessorType.CallToRedirectedReturn"/>
+/// edges: returns that consumed the call's own frame but landed elsewhere, ordered by segment then offset.</param>
 internal readonly record struct CallContinuation(
     SegmentedAddress ExpectedReturnAddress,
-    ResolvedCfgEdge? ObservedContinuationEdge);
+    ResolvedCfgEdge? ObservedContinuationEdge,
+    IReadOnlyList<ResolvedCfgEdge> RedirectedContinuationEdges);

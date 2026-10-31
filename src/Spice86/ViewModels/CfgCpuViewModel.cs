@@ -309,7 +309,8 @@ public partial class CfgCpuViewModel : ViewModelBase {
                         .ToList();
                     labelText = string.Join(", ", keys);
                     if (keys.Contains(InstructionSuccessorType.CallToReturn) ||
-                        keys.Contains(InstructionSuccessorType.CallToMisalignedReturn)) {
+                        keys.Contains(InstructionSuccessorType.CallToMisalignedReturn) ||
+                        keys.Contains(InstructionSuccessorType.CallToRedirectedReturn)) {
                         edgeType = CfgEdgeType.CallToReturn;
                     } else if (keys.Contains(InstructionSuccessorType.CpuFault)) {
                         edgeType = CfgEdgeType.CpuFault;

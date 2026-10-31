@@ -23,6 +23,7 @@ internal interface ICodeGenerationAstVisitor<T> : IAstVisitor<T> {
     T VisitInstructionPointerNode(InstructionPointerNode node);
     T VisitLoadOffsetParameterNode(LoadOffsetParameterNode node);
     T VisitMethodGroupNode(MethodGroupNode node);
+    T VisitSegmentedAddressListNode(SegmentedAddressListNode node);
     T VisitSignatureFieldNode(SignatureFieldNode node);
     T VisitExplicitCastNode(ExplicitCastNode node);
     T VisitTupleSwapNode(TupleSwapNode node);

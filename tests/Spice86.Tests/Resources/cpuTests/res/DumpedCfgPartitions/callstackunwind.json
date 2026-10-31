@@ -95,15 +95,6 @@
       "callContinuationAddress": "F000:0103"
     },
     {
-      "kind": "cyclicCrossPartitionFlow",
-      "fromPartition": 1,
-      "toPartition": 3,
-      "fromBlock": 9,
-      "toBlock": 29,
-      "from": "F000:0100",
-      "target": "F000:0300"
-    },
-    {
       "kind": "alignedReturn",
       "fromPartition": 1,
       "toPartition": 5,

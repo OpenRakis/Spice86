@@ -152,7 +152,8 @@ internal static class IrNodeTyper {
                     alu.Operation, alu.Width);
             case StackCallValueNode { Operation: StackOperation.Pop or StackOperation.Peek }:
             case PortReadCallNode or BitScanCallNode or CallbackMovedCsIpHelperNode
-                or SignatureMatchesHelperNode:
+                or SignatureMatchesHelperNode or ProcedureCallReturnedElsewhereHelperNode
+                or InterruptCallReturnedElsewhereHelperNode:
                 return call.WithArguments(arguments);
             default:
                 throw UnknownCall(call.CallNode);

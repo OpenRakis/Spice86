@@ -443,7 +443,8 @@
         229
       ],
       "succ": [
-        64
+        64,
+        166
       ],
       "asm": [
         "51|push CX",
@@ -482,8 +483,7 @@
         149
       ],
       "succ": [
-        64,
-        166
+        64
       ],
       "asm": [
         "B8004C|mov AX,0x4C00",
@@ -756,6 +756,24 @@
       ]
     },
     {
+      "id": 166,
+      "entry": "016D:012E",
+      "term": "016D:0139",
+      "pred": [
+        89,
+        232
+      ],
+      "succ": [
+        170
+      ],
+      "asm": [
+        "FA|cli",
+        "2E8E167701|mov SS,word ptr CS:[0x0177]",
+        "2E8B267501|mov SP,word ptr CS:[0x0175]",
+        "FB|sti"
+      ]
+    },
+    {
       "id": 141,
       "entry": "117B:010B",
       "term": "117B:010B",
@@ -801,24 +819,6 @@
         "41|inc CX",
         "83F908|cmp CX,8",
         "75EF|jne short 0x0106"
-      ]
-    },
-    {
-      "id": 166,
-      "entry": "016D:012E",
-      "term": "016D:0139",
-      "pred": [
-        89,
-        155
-      ],
-      "succ": [
-        170
-      ],
-      "asm": [
-        "FA|cli",
-        "2E8E167701|mov SS,word ptr CS:[0x0177]",
-        "2E8B267501|mov SP,word ptr CS:[0x0175]",
-        "FB|sti"
       ]
     },
     {

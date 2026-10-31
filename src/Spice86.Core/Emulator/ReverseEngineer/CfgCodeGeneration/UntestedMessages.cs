@@ -48,6 +48,9 @@ internal static class UntestedMessages {
     /// <summary>A call that returned but no continuation was observed during discovery.</summary>
     public static FailAsUntestedNode ReturnFromCall(SegmentedAddress at) => Plain($"Untested return from call at {at}");
 
+    /// <summary>A call landed on a redirected return target discovery never observed for it.</summary>
+    public static FailAsUntestedNode RedirectedReturnTarget(SegmentedAddress at) => Plain($"Redirected return target not observed at {at}");
+
     /// <summary>An entry dispatch with an unknown load offset.</summary>
     public static FailAsUntestedNode EntryOffset() => new([
         UntestedMessagePart.Literal("Untested entry offset 0x"), UntestedMessagePart.Hole(new LoadOffsetParameterNode(), "X4")]);

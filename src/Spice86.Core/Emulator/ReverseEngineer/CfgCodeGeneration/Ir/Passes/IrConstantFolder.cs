@@ -43,7 +43,8 @@ internal static class IrConstantFolder {
                     child => ContainsVariableReference(child) ? Fold(child, variableConstants) : child);
             case StackCallNode or StackCallValueNode or BoundCheckCallNode or BitScanCallNode
                 or ProcedureCallHelperNode or InterruptCallHelperNode or CallbackHelperNode
-                or CallbackMovedCsIpHelperNode or SignatureMatchesHelperNode:
+                or CallbackMovedCsIpHelperNode or SignatureMatchesHelperNode
+                or ProcedureCallReturnedElsewhereHelperNode or InterruptCallReturnedElsewhereHelperNode:
                 return node;
             case MethodCallValueNode or MethodCallNode:
                 return IrAstChildren.MapChildren(node, child => Fold(child, variableConstants));

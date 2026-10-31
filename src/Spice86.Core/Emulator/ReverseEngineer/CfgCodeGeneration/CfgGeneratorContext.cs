@@ -165,18 +165,23 @@ internal sealed class CfgGeneratorContext {
     public CallContinuation ResolveCallContinuation(CfgInstruction call) {
         SegmentedAddress expectedReturn = call.NextInMemoryAddress32.ToSegmentedAddress();
 
+        IReadOnlyList<ResolvedCfgEdge> redirected = GetSuccessorEdges(call, InstructionSuccessorType.CallToRedirectedReturn)
+            .OrderBy(edge => edge.Target.Address.Segment)
+            .ThenBy(edge => edge.Target.Address.Offset)
+            .ToList();
+
         IReadOnlyList<ResolvedCfgEdge> aligned = GetSuccessorEdges(call, InstructionSuccessorType.CallToReturn);
         if (aligned.Count > 1) {
             throw new NotSupportedException(
                 $"Call {call.Address} has {aligned.Count} observed aligned continuations; the generator cannot pick one continuation for a single call.");
         }
         if (aligned.Count == 1) {
-            return new CallContinuation(expectedReturn, aligned[0]);
+            return new CallContinuation(expectedReturn, aligned[0], redirected);
         }
 
         IReadOnlyList<ResolvedCfgEdge> misaligned = GetSuccessorEdges(call, InstructionSuccessorType.CallToMisalignedReturn);
         if (misaligned.Count == 1) {
-            return new CallContinuation(expectedReturn, misaligned[0]);
+            return new CallContinuation(expectedReturn, misaligned[0], redirected);
         }
 
         // Several observed misaligned continuations means a shared trampoline-style call whose callee
@@ -184,6 +189,6 @@ internal sealed class CfgGeneratorContext {
         // generator cannot bake a single static post-call edge, but it does not need to: the call helper
         // ExecuteCallEnsuringSameStack resolves the actual return target at runtime and dispatches into
         // whichever continuation partition the stack unwinds to. So no static continuation is recorded here.
-        return new CallContinuation(expectedReturn, ObservedContinuationEdge: null);
+        return new CallContinuation(expectedReturn, ObservedContinuationEdge: null, redirected);
     }
 }

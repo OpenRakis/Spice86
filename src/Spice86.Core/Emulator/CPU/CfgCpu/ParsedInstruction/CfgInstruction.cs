@@ -42,10 +42,10 @@ public sealed class CfgInstruction : CfgNode {
     internal void EnableCanCauseContextRestore() => _canCauseContextRestore = true;
 
     /// <summary>
-    /// The call instruction that corresponds to this return instruction.
-    /// Only meaningful when <see cref="IsReturn"/> is <c>true</c>.
+    /// The call that corresponds to this return instruction, with the successor type the
+    /// call-to-return-target edge must carry. Only meaningful when <see cref="IsReturn"/> is <c>true</c>.
     /// </summary>
-    public CfgInstruction? CurrentCorrespondingCallInstruction { get; set; }
+    public CorrespondingCall? CurrentCorrespondingCall { get; set; }
 
     private InstructionNode? _instructionAst;
     private IVisitableAstNode? _executionAst;
