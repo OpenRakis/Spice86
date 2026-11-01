@@ -66,6 +66,7 @@ public class DosFileManager {
     public VirtualFileBase?[] OpenFiles { get; } = new VirtualFileBase[0xFF];
 
     private readonly byte[] _jobFileTableReferenceCounts = new byte[0xFF];
+    private readonly uint[] _characterDevicePositions = new uint[0xFF];
 
     private readonly IList<IVirtualDevice> _dosVirtualDevices;
 
@@ -613,6 +614,14 @@ public class DosFileManager {
             return FileNotOpenedError(fileHandle);
         }
 
+        if ((int)originOfMove > (int)SeekOrigin.End) {
+            return DosFileOperationResult.LogError(DosErrorCode.FunctionNumberInvalid);
+        }
+
+        if (file is CharacterDevice) {
+            return SeekCharacterDevice(fileHandle, originOfMove, offset);
+        }
+
         if (_loggerService.IsEnabled(LogLevel.Trace)) {
             _loggerService.LogTrace("Moving in file {FileMove}", file.Name);
         }
@@ -630,6 +639,24 @@ public class DosFileManager {
                 _loggerService.LogError(e, "An error occurred while seeking file {Error}", e);
             }
             return DosFileOperationResult.LogError(DosErrorCode.InvalidHandle);
+        }
+    }
+
+    /// <summary>Moves the file position DOS keeps for a character device in its SFT entry. A device has
+    /// size 0, so a move from the end is relative to 0, like a move from the start.</summary>
+    private DosFileOperationResult SeekCharacterDevice(ushort systemFileTableIndex, SeekOrigin origin, int offset) {
+        uint basePosition = origin == SeekOrigin.Current ? _characterDevicePositions[systemFileTableIndex] : 0;
+        uint newPosition = unchecked(basePosition + (uint)offset);
+        _characterDevicePositions[systemFileTableIndex] = newPosition;
+        return DosFileOperationResult.Value32(newPosition);
+    }
+
+    /// <summary>Adds the transferred byte count to the file position DOS keeps for a character device
+    /// in its SFT entry.</summary>
+    private void AdvanceCharacterDevicePosition(ushort systemFileTableIndex, VirtualFileBase file, int byteCount) {
+        if (file is CharacterDevice && byteCount > 0) {
+            _characterDevicePositions[systemFileTableIndex] =
+                unchecked(_characterDevicePositions[systemFileTableIndex] + (uint)byteCount);
         }
     }
 
@@ -759,6 +786,7 @@ public class DosFileManager {
         }
 
         if (actualReadLength > 0) {
+            AdvanceCharacterDevicePosition(fileHandle, file, actualReadLength);
             _memory.LoadData(targetAddress, buffer, actualReadLength);
             if (file is DosFile actualFile) {
                 actualFile.AddMemoryRange(new MemoryRange(targetAddress,
@@ -805,7 +833,7 @@ public class DosFileManager {
             return FileNotOpenedError(fileHandle);
         }
 
-        if (file is DosFile dosFile && IsReadOnlyDrive(dosFile.Drive)) {
+        if (file is DosFile dosFile && (IsReadOnlyDrive(dosFile.Drive) || !dosFile.CanWrite)) {
             return DosFileOperationResult.LogError(DosErrorCode.AccessDenied);
         }
 
@@ -822,6 +850,7 @@ public class DosFileManager {
             throw new UnrecoverableException("IOException while writing file", e);
         }
 
+        AdvanceCharacterDevicePosition(fileHandle, file, writeLength);
         return DosFileOperationResult.Value16(writeLength);
     }
 
@@ -1133,6 +1162,7 @@ public class DosFileManager {
 
     private void SetOpenFile(ushort fileHandle, VirtualFileBase? openFile) {
         OpenFiles[fileHandle] = openFile;
+        _characterDevicePositions[fileHandle] = 0;
         _jobFileTableReferenceCounts[fileHandle] = openFile is null ? (byte)0 : (byte)1;
     }
 
@@ -1331,6 +1361,10 @@ public class DosFileManager {
     /// <param name="dosDirectory">The directory name to create</param>
     /// <returns>A <see cref="DosFileOperationResult"/> with details about the result of the operation.</returns>
     public DosFileOperationResult CreateDirectory(string dosDirectory) {
+        if (dosDirectory.Length == 0) {
+            return PathNotFoundError(dosDirectory);
+        }
+
         if (IsReadOnlyDosPath(dosDirectory)) {
             return DosFileOperationResult.LogError(DosErrorCode.AccessDenied);
         }

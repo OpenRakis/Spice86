@@ -3,6 +3,7 @@
 using FluentAssertions;
 
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
 using Spice86.Shared.Emulator.Memory;
@@ -728,5 +729,81 @@ public sealed class DosFcbManagerTests : IDisposable {
         DosDiskTransferArea dta = new DosDiskTransferArea(_fixture.Memory, dtaAddr);
         dta.FileAttributes.Should().Be((byte)DosFileAttributes.VolumeId);
         dta.FileName.TrimEnd('\0', ' ', '.').Should().Contain("SPICE86");
+    }
+
+    private void SetFixedClock() {
+        _fixture.EmulatedClock.StartTime = new DateTimeOffset(1993, 6, 1, 12, 34, 56, TimeSpan.Zero);
+    }
+
+    private void AssertFcbDateTimeMatchesClock(DosFileControlBlock fcb) {
+        DateTime expected = _fixture.EmulatedClock.CurrentDateTime.DateTime;
+        fcb.Date.Should().Be(DosFileManager.ToDosDate(expected));
+        fcb.Time.Should().Be(DosFileManager.ToDosTime(expected));
+    }
+
+    [Fact]
+    public void SequentialWrite_StampsFcbDateTimeFromEmulatedClock() {
+        // Arrange
+        SetFixedClock();
+        DosFileControlBlock fcb = CreateFcb("SEQTIME", "DAT");
+        _fixture.DosFcbManager.CreateFile(FcbPointer);
+        for (int i = 0; i < 128; i++) {
+            _fixture.Memory.UInt8[DtaAddr + (uint)i] = (byte)'A';
+        }
+
+        // Act
+        FcbStatus status = _fixture.DosFcbManager.SequentialWrite(FcbPointer, DtaAddr);
+
+        // Assert
+        status.Should().Be(FcbStatus.Success);
+        AssertFcbDateTimeMatchesClock(fcb);
+
+        // Cleanup
+        _fixture.DosFcbManager.CloseFile(FcbPointer);
+    }
+
+    [Fact]
+    public void RandomWrite_StampsFcbDateTimeFromEmulatedClock() {
+        // Arrange
+        SetFixedClock();
+        DosFileControlBlock fcb = CreateFcb("RNDTIME", "DAT");
+        _fixture.DosFcbManager.CreateFile(FcbPointer);
+        fcb.RandomRecord = 0;
+        for (int i = 0; i < 128; i++) {
+            _fixture.Memory.UInt8[DtaAddr + (uint)i] = (byte)'B';
+        }
+
+        // Act
+        FcbStatus status = _fixture.DosFcbManager.RandomWrite(FcbPointer, DtaAddr);
+
+        // Assert
+        status.Should().Be(FcbStatus.Success);
+        AssertFcbDateTimeMatchesClock(fcb);
+
+        // Cleanup
+        _fixture.DosFcbManager.CloseFile(FcbPointer);
+    }
+
+    [Fact]
+    public void RandomBlockWrite_StampsFcbDateTimeFromEmulatedClock() {
+        // Arrange
+        SetFixedClock();
+        DosFileControlBlock fcb = CreateFcb("BLKTIME", "DAT");
+        _fixture.DosFcbManager.CreateFile(FcbPointer);
+        fcb.RandomRecord = 0;
+        for (int i = 0; i < 128; i++) {
+            _fixture.Memory.UInt8[DtaAddr + (uint)i] = (byte)'C';
+        }
+
+        // Act
+        (FcbStatus status, ushort recordCount) = _fixture.DosFcbManager.RandomBlockWrite(FcbPointer, DtaAddr, 1);
+
+        // Assert
+        status.Should().Be(FcbStatus.Success);
+        recordCount.Should().Be(1);
+        AssertFcbDateTimeMatchesClock(fcb);
+
+        // Cleanup
+        _fixture.DosFcbManager.CloseFile(FcbPointer);
     }
 }
