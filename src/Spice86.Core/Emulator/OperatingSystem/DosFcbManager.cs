@@ -9,6 +9,7 @@ using System.Text;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -49,13 +50,23 @@ public class DosFcbManager {
     private readonly DosFileManager _dosFileManager;
     private readonly DosDriveManager _dosDriveManager;
     private readonly ILogger _loggerService;
+    private readonly IEmulatedClock _emulatedClock;
 
+    /// <summary>
+    /// Initializes a new instance.
+    /// </summary>
+    /// <param name="memory">The emulator memory.</param>
+    /// <param name="dosFileManager">The DOS file manager used for SFT-backed file operations.</param>
+    /// <param name="dosDriveManager">The DOS drive manager.</param>
+    /// <param name="loggerService">The logger service implementation.</param>
+    /// <param name="emulatedClock">The emulated clock stamped into FCB date/time fields on writes.</param>
     public
-    DosFcbManager(IMemory memory, DosFileManager dosFileManager, DosDriveManager dosDriveManager, ILogger loggerService) {
+    DosFcbManager(IMemory memory, DosFileManager dosFileManager, DosDriveManager dosDriveManager, ILogger loggerService, IEmulatedClock emulatedClock) {
         _memory = memory;
         _dosFileManager = dosFileManager;
         _dosDriveManager = dosDriveManager;
         _loggerService = loggerService;
+        _emulatedClock = emulatedClock;
     }
 
     /// <summary>
@@ -1395,11 +1406,11 @@ public class DosFcbManager {
     }
 
     /// <summary>
-    /// Updates FCB date/time fields to current time.
+    /// Updates FCB date/time fields to the emulated clock's current date and time.
     /// </summary>
     /// <param name="fcb">The FCB to update.</param>
     private void UpdateFcbDateTime(DosFileControlBlock fcb) {
-        DateTime now = DateTime.Now;
+        DateTime now = _emulatedClock.CurrentDateTime.DateTime;
         fcb.Date = DosFileManager.ToDosDate(now);
         fcb.Time = DosFileManager.ToDosTime(now);
     }

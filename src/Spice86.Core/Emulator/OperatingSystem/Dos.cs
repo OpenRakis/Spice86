@@ -21,6 +21,7 @@ using Spice86.Core.Emulator.OperatingSystem.Batch;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.Storage;
 using Spice86.Shared.Interfaces;
@@ -199,6 +200,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
     /// <param name="a20Gate">The A20 gate used by XMS.</param>
     /// <param name="memoryAsmWriter">Writes the XMS callback into emulated memory.</param>
     /// <param name="emsManager">The EMS manager shared with emulator services.</param>
+    /// <param name="emulatedClock">The emulated clock backing the DOS date/time services and FCB timestamps.</param>
     public Dos(DosOptions options, IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         BiosKeyboardBuffer biosKeyboardBuffer, KeyboardInt16Handler keyboardInt16Handler,
@@ -209,7 +211,8 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         IDriveActivityNotifier activityNotifier,
         A20Gate a20Gate,
         MemoryAsmWriter memoryAsmWriter,
-        ExpandedMemoryManager? emsManager) {
+        ExpandedMemoryManager? emsManager,
+        IEmulatedClock emulatedClock) {
         _loggerService = loggerService;
         _biosKeyboardBuffer = biosKeyboardBuffer;
         _memory = memory;
@@ -262,7 +265,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
                 DosTables, MemoryManager, loggerService);
         }
 
-        FcbManager = new(_memory, FileManager, DosDriveManager, _loggerService);
+        FcbManager = new(_memory, FileManager, DosDriveManager, _loggerService, emulatedClock);
         IBatchDisplayCommandHandler batchDisplayCommandHandler = new DosBatchDisplayCommandHandler(_vgaFunctionality);
         _driveStatusProvider = new DosDriveStatusProvider(DosDriveManager, _mscdex);
         ProcessManager = new(_memory, stack, state, MemoryManager, DosTables, FileManager, DosDriveManager, _driveStatusProvider, _mscdex, channelCreator, _activityNotifier, batchDisplayCommandHandler, envVars, _loggerService);
@@ -270,7 +273,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state,
             keyboardInt16Handler, CountryInfo, dosCodePageState, dosStringDecoder,
             MemoryManager, FileManager, DosDriveManager, ProcessManager,
-            ioPortDispatcher, DosTables, DosSysVars, _loggerService, FcbManager);
+            ioPortDispatcher, DosTables, DosSysVars, _loggerService, FcbManager, emulatedClock);
         DosInt23Handler = new DosInt23Handler(_memory, functionHandlerProvider, stack, state, ProcessManager, _loggerService);
         DosInt24Handler = new DosInt24Handler(_memory, functionHandlerProvider, stack, state, _loggerService);
         DosInt20Handler = new DosInt20Handler(_memory, functionHandlerProvider, stack, state, DosInt21Handler, _loggerService);

@@ -4,8 +4,10 @@ using Spice86.Core.Emulator.CPU;
 using NSubstitute;
 
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
+using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
+using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Tests.Utility;
 using Spice86.Shared.Interfaces;
 
@@ -27,6 +29,8 @@ public class DosTestFixture : IDisposable {
     public DosDriveManager DriveManager => Dos.DosDriveManager;
     public DosProcessManager ProcessManager => Dos.ProcessManager;
     public DosInt21Handler DosInt21Handler => _spice86.Machine.Dos.DosInt21Handler;
+    public IEmulatedClock EmulatedClock => _spice86.Machine.RealTimeClock.Clock;
+    public IOPortDispatcher IoPortDispatcher => _spice86.Machine.IoPortDispatcher;
 
     public DosTestFixture(string mountPoint) {
         _tempExeDir = new TempFile("DosTestFixture");

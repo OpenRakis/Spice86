@@ -69,6 +69,10 @@ internal static class Int21ScenarioCatalog {
         CdRomImageRead(),
         FloppyImageRead(),
         SignedSeekOffset(),
+        Simple("create_directory_empty_path.com"),
+        Simple("seek_console_device.com"),
+        Simple("seek_device_per_open.com"),
+        WriteReadOnlyHandle(),
         Simple("set_handle_count_updates_psp.com"),
         ReadOnlyFileAttributes(),
         SetFileAttributesRoundTrip(),
@@ -169,6 +173,14 @@ internal static class Int21ScenarioCatalog {
                     File.WriteAllBytes(Path.Join(directory, "SEEKTEST.BIN"), testData);
                 }
             }, NoDetailAssertions);
+    }
+
+    /// <summary>The program opens the RO.TXT host file read-only and checks that writes to its handle are
+    /// denied, so every run needs the same read-only content file.</summary>
+    private static AsmScenario WriteReadOnlyHandle() {
+        return ProgramScenario("write_read_only_handle", "write_read_only_handle.com", new Int21RunSetup {
+            CreateHostFiles = directory => File.WriteAllText(Path.Join(directory, "RO.TXT"), "data")
+        }, NoDetailAssertions);
     }
 
     /// <summary>The program checks the DOS ReadOnly attribute bit of a read-only file and reports CL, the

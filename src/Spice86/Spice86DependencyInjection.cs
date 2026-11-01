@@ -503,7 +503,7 @@ public class Spice86DependencyInjection : IDisposable {
             new Dictionary<string, string> {
                 { "BLASTER", soundBlaster.BlasterString } }, ioPortDispatcher, loggerService,
             floppyDiskTimingService,
-            mixer, driveActivityNotifier, a20Gate, memoryAsmWriter, emsManager);
+            mixer, driveActivityNotifier, a20Gate, memoryAsmWriter, emsManager, emulatedClock);
 
         if (configuration.Xms is not false && loggerService.IsEnabled(LogLevel.Information)) {
             loggerService.LogInformation("DOS XMS driver created...");
