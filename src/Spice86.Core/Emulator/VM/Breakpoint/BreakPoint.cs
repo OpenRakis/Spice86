@@ -10,9 +10,11 @@ public abstract class BreakPoint {
     /// Constructs a new instance of the BreakPoint class.
     /// </summary>
     /// <param name="breakPointType">The type of the breakpoint.</param>
-    /// <param name="onReached">The action to take when the breakpoint is reached.</param>
+    /// <param name="onReached">The action to take when the breakpoint is reached, with the value that
+    /// matched (a physical address, a port, an interrupt vector or a cycle count, depending on the
+    /// breakpoint type).</param>
     /// <param name="isRemovedOnTrigger">True if the breakpoint should be removed after being triggered, false otherwise.</param>
-    public BreakPoint(BreakPointType breakPointType, Action<BreakPoint> onReached, bool isRemovedOnTrigger) {
+    public BreakPoint(BreakPointType breakPointType, Action<BreakPoint, long> onReached, bool isRemovedOnTrigger) {
         BreakPointType = breakPointType;
         OnReached = onReached;
         IsRemovedOnTrigger = isRemovedOnTrigger;
@@ -42,9 +44,9 @@ public abstract class BreakPoint {
     internal event Action<BreakPoint, bool>? IsEnabledChanged;
 
     /// <summary>
-    /// The action to take when the breakpoint is reached.
+    /// The action to take when the breakpoint is reached, with the value that matched.
     /// </summary>
-    public Action<BreakPoint> OnReached { get; private set; }
+    public Action<BreakPoint, long> OnReached { get; private set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether this breakpoint must be saved/restored to/from a file.
@@ -71,9 +73,11 @@ public abstract class BreakPoint {
     }
 
     /// <summary>
-    /// Triggers the breakpoint, calling the OnReached action.
+    /// Triggers the breakpoint, calling the OnReached action with the value that matched.
     /// </summary>
-    public void Trigger() {
-        OnReached.Invoke(this);
+    /// <param name="value">The value the breakpoint matched: a physical address, a port, an
+    /// interrupt vector or a cycle count, depending on the breakpoint type.</param>
+    public void Trigger(long value) {
+        OnReached.Invoke(this, value);
     }
 }

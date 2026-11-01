@@ -51,14 +51,15 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
 
         string methodName = context.GetMethodName(targetPartition);
         int loadOffset = context.GetEntryLoadOffset(targetPartition, edge.Target);
+        bool singleEntry = targetPartition.Entries.Count == 1;
         switch (transfer.Kind) {
             case CfgCodePartitionTransferKind.CrossPartitionFlow:
-                return PartitionReturn(methodName, loadOffset);
+                return PartitionReturn(methodName, loadOffset, singleEntry);
             case CfgCodePartitionTransferKind.CyclicCrossPartitionFlow:
-                return new CyclicJumpNode(methodName, loadOffset);
+                return new CyclicJumpNode(methodName, loadOffset, singleEntry);
             case CfgCodePartitionTransferKind.CallOut:
                 if (allowCallOutContinuation) {
-                    return PartitionReturn(methodName, loadOffset);
+                    return PartitionReturn(methodName, loadOffset, singleEntry);
                 }
                 throw new NotSupportedException($"Call-out transfer from {edge.Source.Address} to {edge.Target.Address} must be lowered through a generated call helper.");
             case CfgCodePartitionTransferKind.AlignedReturn:
@@ -95,7 +96,7 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
         CallContinuation continuation = context.ResolveCallContinuation(call);
         return CodeGenerationAst.Sequence(
             EmitCallWithRedirectedDispatch(call, continuation,
-                CallHelper(distance, width, continuation.ExpectedReturnAddress, function, farCallTargetCs),
+                CallHelper(distance, width, continuation.ExpectedReturnAddress, function, farCallTargetCs, true, continuation),
                 CallHelperReturnedElsewhere(distance, width, continuation.ExpectedReturnAddress, function, farCallTargetCs, continuation)),
             EmitPostCallContinuation(call, continuation));
     }
@@ -106,8 +107,12 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
     /// callee segment as <paramref name="targetCs"/>; a near call leaves it <c>null</c> and the argument is
     /// omitted.
     /// </summary>
-    public MethodCallNode CallHelper(CallDistance distance, BitWidth width, SegmentedAddress expectedReturn, MethodGroupNode function, ushort? targetCs) =>
-        new ProcedureCallHelperNode(distance, width, CallHelperArguments(expectedReturn, function, targetCs));
+    public MethodCallNode CallHelper(CallDistance distance, BitWidth width, SegmentedAddress expectedReturn, MethodGroupNode function, ushort? targetCs,
+        bool singleObservedTarget, CallContinuation continuation) =>
+        new ProcedureCallHelperNode(distance, width, CallHelperArguments(expectedReturn, function, targetCs)) {
+            SingleObservedTarget = singleObservedTarget,
+            ObservedContinuation = continuation.ObservedContinuationEdge is not null
+        };
 
     /// <summary>
     /// The <c>&lt;helper&gt;ReturnedElsewhere</c> variant of <see cref="CallHelper"/>: same arguments plus the
@@ -190,7 +195,7 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
         CfgCodePartition targetPartition = context.GetPartition(targetEdge.Target);
         string methodName = context.GetMethodName(targetPartition);
         int loadOffset = context.GetEntryLoadOffset(targetPartition, targetEdge.Target);
-        return new MethodGroupNode(methodName, loadOffset);
+        return new MethodGroupNode(methodName, loadOffset, targetPartition.Entries.Count == 1);
     }
 
     /// <summary>
@@ -217,9 +222,13 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
 
         string methodName = context.GetMethodName(targetPartition);
         int loadOffset = context.GetEntryLoadOffset(targetPartition, edge.Target);
-        return new CpuFaultHandler(edge.Target.Address, methodName, loadOffset);
+        return new CpuFaultHandler(edge.Target.Address, methodName, loadOffset, targetPartition.Entries.Count == 1);
     }
 
-    private static IVisitableAstNode PartitionReturn(string methodName, int loadOffset) =>
-        new ReturnNode(new MethodCallNode(null, methodName, new OffsetLiteralNode(loadOffset)));
+    private static IVisitableAstNode PartitionReturn(string methodName, int loadOffset, bool singleEntry) {
+        if (singleEntry) {
+            return new ReturnNode(new MethodCallNode(null, methodName));
+        }
+        return new ReturnNode(new MethodCallNode(null, methodName, new OffsetLiteralNode(loadOffset)));
+    }
 }

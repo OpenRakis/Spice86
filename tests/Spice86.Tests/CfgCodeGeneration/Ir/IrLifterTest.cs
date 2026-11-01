@@ -42,7 +42,8 @@ public class IrLifterTest {
         };
         CfgPartitionedProgram program = new() {
             Partitions = [partition],
-            Transfers = []
+            Transfers = [],
+            Inputs = GeneratorInputs.Empty
         };
         return new CfgCSharpGenerator(collectCensuses: true, verify: true).LiftMethods(program).Should().ContainSingle().Subject.Method;
     }

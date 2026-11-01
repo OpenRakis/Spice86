@@ -1,0 +1,53 @@
+F000:0000 mov AX,0x2000
+F000:0003 mov DS,AX
+F000:0005 mov SS,AX
+F000:0007 mov SP,0x1000
+F000:000A cld
+F000:000B call far F000:1000
+F000:0010 call far F100:1000
+F000:0015 hlt
+F000:1000 mov CX,4
+F000:1003 cmp CX,4
+F000:1006 je short 0x1027
+F000:1008 cmp CX,3
+F000:100B je short 0x1025
+F000:100D mov SI,CX
+F000:100F dec SI
+F000:1010 shl SI,1
+F000:1012 mov AX,0xF000
+F000:1015 mov ES,AX
+F000:1017 cmp SI,2
+F000:101A ja short 0x1024
+F000:101C jmp near word ptr ES:[SI+0x1035]
+F000:1021 dec CX
+F000:1022 jne short 0x1003
+F000:1024 ret far
+F000:1025 jmp short 0x1029
+F000:1027 jmp short 0x102F
+F000:1029 inc word ptr DS:[0x0040]
+F000:102D jmp short 0x1021
+F000:102F inc word ptr DS:[0x0042]
+F000:1033 jmp short 0x1021
+F100:1000 mov CX,4
+F100:1003 cmp CX,4
+F100:1006 je short 0x1027
+F100:1008 cmp CX,3
+F100:100B je short 0x1025
+F100:100D mov SI,CX
+F100:100F dec SI
+F100:1010 shl SI,1
+F100:1012 mov AX,0xF100
+F100:1015 mov ES,AX
+F100:1017 cmp SI,2
+F100:101A ja short 0x1024
+F100:101C jmp near word ptr ES:[SI+0x1035]
+F100:1021 dec CX
+F100:1022 jne short 0x1003
+F100:1024 ret far
+F100:1025 jmp short 0x1029
+F100:1027 jmp short 0x102F
+F100:1029 inc word ptr DS:[0x0044]
+F100:102D jmp short 0x1021
+F100:102F inc word ptr DS:[0x0046]
+F100:1033 jmp short 0x1021
+F000:FFF0 jmp short 0

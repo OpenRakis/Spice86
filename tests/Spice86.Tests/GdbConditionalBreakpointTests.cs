@@ -77,7 +77,7 @@ public class GdbConditionalBreakpointTests : IDisposable {
         AddressBreakPoint testBreakpoint = _fixture.CreateConditionalBreakpoint(
             breakpoint!.BreakPointType,
             breakpoint.Address,
-            _ => triggerCount++,
+            (_, _) => triggerCount++,
             "ax==0x100");
         
         BreakpointsManager.ToggleBreakPoint(testBreakpoint, true);
@@ -115,7 +115,7 @@ public class GdbConditionalBreakpointTests : IDisposable {
         AddressBreakPoint testBreakpoint = _fixture.CreateConditionalBreakpoint(
             breakpoint!.BreakPointType,
             breakpoint.Address,
-            _ => triggerCount++,
+            (_, _) => triggerCount++,
             "ax==0x42");
         
         BreakpointsManager.ToggleBreakPoint(testBreakpoint, true);

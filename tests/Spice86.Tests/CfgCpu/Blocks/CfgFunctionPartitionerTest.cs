@@ -97,7 +97,8 @@ public sealed class CfgFunctionPartitionerTest : IDisposable {
         };
 
         // Act
-        Action act = () => _partitioner.Partition(graph, _contextManager, _functionCatalogue);
+        Action act = () => _partitioner.Partition(graph, _contextManager, _functionCatalogue,
+            GeneratorInputs.Empty);
 
         // Assert
         act.Should().Throw<InvalidOperationException>()
@@ -750,7 +751,8 @@ public sealed class CfgFunctionPartitionerTest : IDisposable {
 
     private CfgPartitionedProgram PartitionFrom(CfgInstruction start) {
         CfgBlockGraph graph = _graphExporter.ExportFromNode(start, null, null);
-        return _partitioner.Partition(graph, _contextManager, _functionCatalogue);
+        return _partitioner.Partition(graph, _contextManager, _functionCatalogue,
+            GeneratorInputs.Empty);
     }
 
     private void RegisterEntry(CfgInstruction instruction) {

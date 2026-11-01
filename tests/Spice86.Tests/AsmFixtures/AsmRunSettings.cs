@@ -1,6 +1,7 @@
 namespace Spice86.Tests.AsmFixtures;
 
 using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Function;
@@ -108,6 +109,10 @@ internal sealed record AsmRunSettings {
 
     /// <summary>Whether DOS upper memory blocks are enabled.</summary>
     public bool EnableUmb { get; init; } = true;
+
+    /// <summary>CPU model the machine emulates, or null for the configuration default. It picks the
+    /// MMU, so only a non-8086 model raises real-mode segment faults.</summary>
+    public CpuModel? CpuModel { get; init; }
 
     /// <summary>Runs on the fresh machine before the program runs. Never null.</summary>
     public Action<Machine> ConfigureMachine { get; init; } = NoMachineConfiguration;

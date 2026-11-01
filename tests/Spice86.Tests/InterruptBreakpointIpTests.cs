@@ -42,7 +42,7 @@ public class InterruptBreakpointIpTests {
         emulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(
             BreakPointType.CPU_INTERRUPT, 
             0xD, 
-            breakpoint => {
+            (breakpoint, _) => {
                 // Capture the current IP when the breakpoint callback is invoked (synchronous)
                 capturedInCallback = state.IpSegmentedAddress;
                 // Call RequestPause like UI would setup

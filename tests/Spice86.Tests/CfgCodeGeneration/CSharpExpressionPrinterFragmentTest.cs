@@ -13,6 +13,8 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 
+using System.Reflection;
+
 using Xunit;
 
 /// <summary>
@@ -77,7 +79,7 @@ public class CSharpExpressionPrinterFragmentTest {
 
         CSharpFragment fragment = StackWord(offset);
 
-        fragment.Text.Should().Be("UInt16[SS, (ushort)(BP - 0x80)]");
+        fragment.Text.Should().Be("SsUInt16[(ushort)(BP - 0x80)]");
     }
 
     [Fact]
@@ -273,6 +275,47 @@ public class CSharpExpressionPrinterFragmentTest {
         CSharpFragment fragment = _printer.Print(sum);
 
         fragment.Text.Should().Be("AX - 0x01C4");
+    }
+
+    public static IEnumerable<object[]> CrossSignedCasts() {
+        yield return [DataType.INT64, unchecked((ulong)-1L), DataType.UINT64, "ulong", ulong.MaxValue];
+        yield return [DataType.UINT64, ulong.MaxValue, DataType.INT64, "long", -1L];
+        yield return [DataType.UINT64, ulong.MaxValue, DataType.INT32, "int", -1];
+        yield return [DataType.INT64, (ulong)long.MaxValue, DataType.UINT64, "ulong", (ulong)long.MaxValue];
+        yield return [DataType.UINT32, (ulong)uint.MaxValue, DataType.INT64, "long", (long)uint.MaxValue];
+    }
+
+    /// <summary>A constant conversion whose literal does not fit the target's range must print the
+    /// already converted constant: <c>(ulong)-1L</c> and <c>(long)0xFFFFFFFFFFFFFFFFUL</c> are
+    /// CS0221 errors, so the emitted text is compiled, not only compared.</summary>
+    [Theory]
+    [MemberData(nameof(CrossSignedCasts))]
+    public void ConstantCastAcrossSignednessCompilesToTheConvertedValue(DataType sourceType,
+        ulong sourceValue, DataType targetType, string csharpType, object expected) {
+        string emitted = _printer.Print(new TypeConversionNode(targetType,
+            new ConstantNode(sourceType, sourceValue))).Text;
+
+        GeneratedCompilation compilation = new GeneratedOverrideCompiler().Compile(
+            [$"public static class Casts {{ public static {csharpType} Value() => {emitted}; }}"]);
+
+        // Act
+        using MemoryStream peStream = compilation.PeStream;
+        compilation.EmitResult.Success.Should().BeTrue(
+            $"cast '{emitted}' to {csharpType} must compile: "
+            + string.Join("; ", compilation.EmitResult.Diagnostics));
+
+        // Assert: the converted literal evaluates to the expected value.
+        CollectibleAssemblyLoadContext context = new();
+        try {
+            peStream.Position = 0;
+            Type type = context.LoadFromStream(peStream).GetType("Casts")
+                ?? throw new InvalidOperationException("Compiled Casts type missing.");
+            MethodInfo method = type.GetMethod("Value")
+                ?? throw new InvalidOperationException("Compiled Value method missing.");
+            method.Invoke(null, null).Should().Be(expected);
+        } finally {
+            context.Unload();
+        }
     }
 
     private CSharpFragment StackWord(ValueNode offset) {

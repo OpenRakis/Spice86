@@ -5,6 +5,7 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Storage;
 using Spice86.Shared.Interfaces;
@@ -56,7 +57,6 @@ public class SystemBiosInt13Handler : InterruptHandler {
         _floppyAccess = floppyAccess;
         _activityNotifier = activityNotifier;
         _timingService = timingService;
-        FillDispatchTable();
     }
 
     /// <inheritdoc />
@@ -77,28 +77,12 @@ public class SystemBiosInt13Handler : InterruptHandler {
         Run(operation);
     }
 
-    private void FillDispatchTable() {
-        AddAction(0x00, () => ResetDiskSystem(true));
-        AddAction(0x01, () => GetLastStatus(true));
-        AddAction(0x02, () => ReadSectors(true));
-        AddAction(0x03, () => WriteSectors(true));
-        AddAction(0x04, () => VerifySectors(true));
-        AddAction(0x05, () => FormatTrack(true));
-        AddAction(0x08, () => GetDriveParameters(true));
-        AddAction(0x0C, () => SeekToCylinder(true));
-        AddAction(0x0D, () => ResetHardDiskController(true));
-        AddAction(0x10, () => TestDriveReady(true));
-        AddAction(0x11, () => Recalibrate(true));
-        AddAction(0x15, () => GetDisketteOrHddType(true));
-        AddAction(0x16, () => GetDiskChangeLineStatus(true));
-        AddAction(0x17, () => HandleDasdTypeForFormat(true));
-        AddAction(0x18, () => HandleMediaTypeForFormat(true));
-    }
 
     /// <summary>
     /// Reset Disk System (AH=0x00). Always succeeds.
     /// </summary>
     /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
+    [InterruptService(0x00, Reads = CpuValues.Ah | CpuValues.Dl, Writes = CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
     public void ResetDiskSystem(bool calledFromVm) {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("BIOS INT13H: Reset Disk DL=0x{Drive:X2}", State.DL);
@@ -111,6 +95,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
     /// Returns the error code stored from the previous operation on that drive.
     /// </summary>
     /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
+    [InterruptService(0x01, Reads = CpuValues.Ah | CpuValues.Dl, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
     public void GetLastStatus(bool calledFromVm) {
         byte driveNumber = State.DL;
         if (IsFloppyDrive(driveNumber) && driveNumber < _lastStatus.Length) {
@@ -128,6 +113,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
     /// Returns an error when AL=0 (zero sectors requested).
     /// </summary>
     /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
+    [InterruptService(0x02, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Cx | CpuValues.Dx | CpuValues.Es | CpuValues.Bx, Writes = CpuValues.Ax | CpuValues.Carry, Memory = ServiceMemoryEffect.Write)]
     public void ReadSectors(bool calledFromVm) {
         byte driveNumber = State.DL;
         if (State.AL == 0) {
@@ -184,6 +170,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
     /// Returns an error when AL=0 (zero sectors requested).
     /// </summary>
     /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
+    [InterruptService(0x03, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Cx | CpuValues.Dx | CpuValues.Es | CpuValues.Bx, Writes = CpuValues.Ax | CpuValues.Carry, Memory = ServiceMemoryEffect.Read)]
     public void WriteSectors(bool calledFromVm) {
         byte driveNumber = State.DL;
         if (State.AL == 0) {
@@ -243,6 +230,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
     /// Shangai II needs this to run.
     /// </remarks>
     /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
+    [InterruptService(0x04, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Cx | CpuValues.Dx, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
     public void VerifySectors(bool calledFromVm) {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("BIOS INT13H: Verify Sectors AL=0x{AL:X2}", State.AL);
@@ -270,6 +258,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
     /// generic hard-disk response for DL=0x80+.
     /// </summary>
     /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
+    [InterruptService(0x08, Reads = CpuValues.Ah | CpuValues.Dl, Writes = CpuValues.Ax | CpuValues.Bx | CpuValues.Cx | CpuValues.Dx | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
     public void GetDriveParameters(bool calledFromVm) {
         byte driveNumber = State.DL;
 
@@ -316,6 +305,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
     /// AH=0x03 for the first hard disk, or sets CF when the drive is not present.
     /// </summary>
     /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
+    [InterruptService(0x15, Reads = CpuValues.Ah | CpuValues.Dl, Writes = CpuValues.Ah | CpuValues.Cx | CpuValues.Dx | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
     public void GetDisketteOrHddType(bool calledFromVm) {
         byte driveNumber = State.DL;
 
@@ -342,6 +332,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
     /// Format Track (AH=0x05). Zeros all sectors in the specified track on floppy.
     /// </summary>
     /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
+    [InterruptService(0x05, Unknown = true)]
     public void FormatTrack(bool calledFromVm) {
         byte driveNumber = State.DL;
         if (!IsFloppyDrive(driveNumber)) {
@@ -379,6 +370,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
     /// Seek to Cylinder (AH=0x0C). Positions the read/write head.
     /// </summary>
     /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
+    [InterruptService(0x0C, Reads = CpuValues.Ah | CpuValues.Cx | CpuValues.Dh | CpuValues.Dl, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
     public void SeekToCylinder(bool calledFromVm) {
         byte driveNumber = State.DL;
         if (IsFloppyDrive(driveNumber)) {
@@ -397,6 +389,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
     /// Reset Hard Disk Controller (AH=0x0D). Equivalent to AH=0x00.
     /// </summary>
     /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
+    [InterruptService(0x0D, Reads = CpuValues.Ah | CpuValues.Dl, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
     public void ResetHardDiskController(bool calledFromVm) {
         ResetDiskSystem(calledFromVm);
     }
@@ -405,6 +398,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
     /// Test Drive Ready (AH=0x10). Returns success when the specified floppy drive has media.
     /// </summary>
     /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
+    [InterruptService(0x10, Reads = CpuValues.Ah | CpuValues.Dl, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
     public void TestDriveReady(bool calledFromVm) {
         byte driveNumber = State.DL;
         FloppyGeometryResult testReadyGeometryResult = _floppyAccess.GetGeometry(driveNumber);
@@ -421,6 +415,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
     /// Recalibrate (AH=0x11). Moves the head to cylinder 0. Drive number is in DL register. Always returns no eror in AH.
     /// </summary>
     /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
+    [InterruptService(0x11, Reads = CpuValues.Ah | CpuValues.Dl, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
     public void Recalibrate(bool calledFromVm) {
         State.AH = ErrorNone;
         SetCarryFlag(false, calledFromVm);
@@ -430,6 +425,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
     /// Get Disk Change Line Status (AH=0x16). Reports whether media has changed since the last I/O.
     /// </summary>
     /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
+    [InterruptService(0x16, Reads = CpuValues.Ah | CpuValues.Dl, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
     public void GetDiskChangeLineStatus(bool calledFromVm) {
         byte driveNumber = State.DL;
         if (!IsFloppyDrive(driveNumber)) {
@@ -451,6 +447,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
     /// Set DASD Type for Format (AH=0x17). Accepts disk type in AL, always succeeds.
     /// </summary>
     /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
+    [InterruptService(0x17, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Dl, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
     public void HandleDasdTypeForFormat(bool calledFromVm) {
         State.AH = ErrorNone;
         SetCarryFlag(false, calledFromVm);
@@ -460,6 +457,7 @@ public class SystemBiosInt13Handler : InterruptHandler {
     /// Set Media Type for Format (AH=0x18). Accepts geometry in CH/CL/DL, always succeeds.
     /// </summary>
     /// <param name="calledFromVm">Whether this was called by internal emulator code or not.</param>
+    [InterruptService(0x18, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Cl | CpuValues.Ch | CpuValues.Dl, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
     public void HandleMediaTypeForFormat(bool calledFromVm) {
         State.AH = ErrorNone;
         SetCarryFlag(false, calledFromVm);

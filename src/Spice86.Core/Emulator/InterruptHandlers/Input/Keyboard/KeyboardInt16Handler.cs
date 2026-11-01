@@ -1,12 +1,12 @@
 using Microsoft.Extensions.Logging;
 namespace Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 
-
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Input.Keyboard;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
@@ -41,17 +41,6 @@ public class KeyboardInt16Handler : InterruptHandler {
         _biosDataArea = biosDataArea;
         _ioPortDispatcher = ioPortDispatcher;
         _biosKeyboardBuffer = biosKeyboardBuffer;
-        FillDispatchTable();
-    }
-
-    private void FillDispatchTable() {
-        AddAction(0x01, () => GetKeystrokeStatus(true));
-        AddAction(0x02, GetShiftFlags);
-        AddAction(0x03, SetTypematicRateAndDelay);
-        AddAction(0x05, () => StoreKeystroke(true));
-        AddAction(0x10, GetEnhancedKeystroke);
-        AddAction(0x11, () => GetEnhancedKeystrokeStatus(true));
-        AddAction(0x1D, () => Unsupported(0x1D));
     }
 
     /// <summary>
@@ -92,6 +81,7 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// source: <a href="https://github.com/gawlas/IBM-PC-BIOS" /> <br/>
     /// Used by (for example): <a href="https://www.the8bitguy.com/product/planet-x3-for-ms-dos-computers/">Planet X3</a>
     /// </remarks>
+    [InterruptService(0x03, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Bx, Writes = CpuValues.None, Memory = ServiceMemoryEffect.None, Io = true)]
     public void SetTypematicRateAndDelay() {
         switch (State.AL) {
             case TypematicFunctionConsts.SetDefaultFunction:
@@ -114,6 +104,9 @@ public class KeyboardInt16Handler : InterruptHandler {
                 break;
         }
     }
+
+    [InterruptService(0x1D, Name = "Unsupported", Reads = CpuValues.Ah)]
+    private void UnsupportedKeyboardService() => Unsupported(0x1D);
 
     private void Unsupported(int operation) {
         if (LoggerService.IsEnabled(LogLevel.Warning)) {
@@ -242,6 +235,7 @@ public class KeyboardInt16Handler : InterruptHandler {
         }
     }
 
+    [InterruptService(0x02, Reads = CpuValues.Ah, Writes = CpuValues.Al, Memory = ServiceMemoryEffect.Read)]
     public void GetShiftFlags() {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("GET SHIFT FLAGS");
@@ -254,6 +248,7 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// Writes the key code in CX (CH=scan code, CL=ASCII character) into the
     /// BIOS keyboard buffer. On success AL=0, CF=0; if the buffer is full, AL=1, CF=1.
     /// </summary>
+    [InterruptService(0x05, Reads = CpuValues.Ah | CpuValues.Cx, Writes = CpuValues.Al | CpuValues.Carry, Memory = ServiceMemoryEffect.ReadWrite)]
     public void StoreKeystroke(bool calledFromVm) {
         ushort keyCode = State.CX;
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
@@ -295,6 +290,7 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// Returns in the AX CPU register the pending key code without removing it from the BIOS keyboard buffer. Returns 0 in AX with the CPU Zero Flag set if there was nothing in the buffer.
     /// </summary>
     /// <param name="calledFromVm"><c>True</c> ff the method was called by internal emulator code, <c>False</c> otherwise.</param>
+    [InterruptService(0x01, Reads = CpuValues.Ah, Writes = CpuValues.Ax | CpuValues.Zero, Memory = ServiceMemoryEffect.Read)]
     public void GetKeystrokeStatus(bool calledFromVm) {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("KEY STROKE STATUS");
@@ -320,6 +316,7 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// INT 16h, AH=10h - Get Enhanced Keystroke (enhanced keyboards).
     /// Returns key in AX (AH=scan, AL=ascii), dequeuing one key if available.
     /// </summary>
+    [InterruptService(0x10, Unknown = true)]
     public void GetEnhancedKeystroke() {
         GetKeystroke();
     }
@@ -329,6 +326,7 @@ public class KeyboardInt16Handler : InterruptHandler {
     /// Returns key in AX without dequeuing and updates ZF like AH=01h.
     /// </summary>
     /// <param name="calledFromVm"><c>True</c> if the method was called by internal emulator code, <c>False</c> otherwise.</param>
+    [InterruptService(0x11, Reads = CpuValues.Ah, Writes = CpuValues.Ax | CpuValues.Zero, Memory = ServiceMemoryEffect.Read)]
     public void GetEnhancedKeystrokeStatus(bool calledFromVm) {
         GetKeystrokeStatus(calledFromVm);
     }

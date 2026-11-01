@@ -274,7 +274,7 @@ public class CSharpStatementPrinterTest {
         string printed = Print(assignment);
 
         // Assert
-        printed.Should().Be(Lines("UInt16[DS, 0x0010] += 1;"));
+        printed.Should().Be(Lines("DsGlobals.Word0010 += 1;"));
     }
 
     [Fact]
@@ -297,15 +297,20 @@ public class CSharpStatementPrinterTest {
     private static BinaryOperationNode Assign(ValueNode destination, ValueNode value) =>
         new(DataType.UINT16, destination, BinaryOperation.ASSIGN, value);
 
-    private string Print(IVisitableAstNode node) {
+    private string Print(IVisitableAstNode node) => Print(node, CreateExpressionPrinter());
+
+    private string Print(IVisitableAstNode node, CSharpExpressionPrinter expressions) {
         CSharpSourceWriter writer = new();
-        CSharpStatementPrinter printer = new(writer, CreateExpressionPrinter(), LabelOf);
+        CSharpStatementPrinter printer = new(writer, expressions, LabelOf);
         printer.Print(node);
         return writer.ToString();
     }
 
+    private static readonly Dictionary<ushort, string> SegmentVariables =
+        new() { [0x1000] = "cs1", [0xF000] = "cs2" };
+
     private static CSharpExpressionPrinter CreateExpressionPrinter() =>
-        new(new Dictionary<ushort, string> { [0x1000] = "cs1", [0xF000] = "cs2" });
+        new(SegmentVariables);
 
     private string LabelOf(IGotoTarget target) {
         if (!ReferenceEquals(((CfgNodeGotoTarget)target).Node, _target)) {

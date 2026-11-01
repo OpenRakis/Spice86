@@ -41,7 +41,7 @@ public class GeneratedCodeProbesTest {
     [Fact]
     public void EveryStatementOfBlocksAndSectionsGetsASiteInPreOrder() {
         // Act
-        InstrumentedGeneratedSource instrumented = GeneratedCodeProbes.Instrument(Source);
+        InstrumentedGeneratedSource instrumented = GeneratedCodeProbes.Instrument([Source]);
 
         // Assert
         instrumented.Sites.Select(site => site.Context).Should().Equal(
@@ -58,8 +58,8 @@ public class GeneratedCodeProbesTest {
     [Fact]
     public void InstrumentedSourceCompilesAndRecordsTheStatementsThatRan() {
         // Arrange
-        InstrumentedGeneratedSource instrumented = GeneratedCodeProbes.Instrument(Source);
-        GeneratedCompilation compilation = new GeneratedOverrideCompiler().Compile(instrumented.Source);
+        InstrumentedGeneratedSource instrumented = GeneratedCodeProbes.Instrument([Source]);
+        GeneratedCompilation compilation = new GeneratedOverrideCompiler().Compile(instrumented.Sources);
         compilation.EmitResult.Success.Should().BeTrue(string.Join(Environment.NewLine, compilation.EmitResult.Diagnostics));
         compilation.PeStream.Position = 0;
         AssemblyLoadContext context = new("probes-test", isCollectible: true);

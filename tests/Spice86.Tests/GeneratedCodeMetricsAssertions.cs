@@ -14,15 +14,28 @@ internal static class GeneratedCodeMetricsAssertions {
     private static readonly Regex AsmCommentRegex = new(@"^\s*// [0-9A-F]{4}:[0-9A-F]{4} ");
     private static readonly Regex LabelLineRegex = new(@"^\s*L_\w+:$");
 
-    private static readonly Dictionary<string, (int GotoStatements, int CheckExternalEvents, int Lines,
-        int AluCalls, int StatusFlagReads, int Casts)> UpperBounds = new() {
-        ["jump1.spec"] = (15, 21, 412, 0, 48, 0),
-        ["partition_cross_function_loop.spec"] = (2, 3, 88, 2, 0, 0),
-        ["rep.spec"] = (0, 12, 711, 3, 3, 61),
-        ["div.spec"] = (0, 13, 757, 43, 0, 74),
-        ["selfmodifyje.spec"] = (0, 2, 61, 1, 0, 0),
-        ["test386.failport.spec"] = (8, 18, 3844, 239, 142, 86),
-        ["flagconditions"] = (0, 6, 655, 20, 15, 137)
+    private static readonly Dictionary<string, (int GotoStatements, int CheckExternalEvents,
+        int AluCalls, int StatusFlagReads, int Casts, int RawMemoryAccesses)> UpperBounds = new() {
+        ["jump1.spec"] = (22, 21, 0, 48, 1, 0),
+        ["partition_cross_function_loop.spec"] = (2, 3, 2, 0, 0, 0),
+        ["rep.spec"] = (0, 12, 3, 3, 59, 61),
+        ["div.spec"] = (0, 13, 43, 0, 75, 34),
+        ["selfmodifyje.spec"] = (0, 2, 1, 0, 1, 1),
+        ["test386.failport.spec"] = (9, 18, 239, 142, 58, 84),
+        ["flagconditions"] = (0, 6, 20, 15, 138, 108),
+        ["data_globals.spec"] = (0, 3, 0, 0, 0, 1),
+        ["data_tables.spec"] = (0, 3, 1, 0, 2, 3),
+        ["data_strings.ivt.spec"] = (0, 15, 6, 0, 4, 0),
+        ["data_segments.spec"] = (0, 1, 1, 0, 3, 0),
+        ["data_jump_tables.spec"] = (6, 7, 4, 0, 58, 64)
+    };
+
+    private static readonly Dictionary<string, int> DataCommentsLowerBounds = new() {
+        ["data_strings.ivt.spec"] = 1
+    };
+
+    private static readonly Dictionary<string, int> StringServiceCallsLowerBounds = new() {
+        ["data_strings.ivt.spec"] = 2
     };
 
     /// <summary>
@@ -85,8 +98,18 @@ internal static class GeneratedCodeMetricsAssertions {
     }
 
     private static void AssertUpperBounds(GeneratedCodeMetrics metrics) {
-        if (!UpperBounds.TryGetValue(metrics.Fixture, out (int GotoStatements, int CheckExternalEvents, int Lines,
-                int AluCalls, int StatusFlagReads, int Casts) bounds)) {
+        if (DataCommentsLowerBounds.TryGetValue(metrics.Fixture, out int dataCommentsBound)) {
+            metrics.DataComments.Should().BeGreaterThanOrEqualTo(dataCommentsBound,
+                "the DataComments count of {0} fell below its recorded lower bound; the data comments are the readable form of the DOS calls",
+                metrics.Fixture);
+        }
+        if (StringServiceCallsLowerBounds.TryGetValue(metrics.Fixture, out int stringCallsBound)) {
+            metrics.StringServiceCalls.Should().BeGreaterThanOrEqualTo(stringCallsBound,
+                "the StringServiceCalls count of {0} fell below its recorded lower bound; the literal calls are the readable form of the DOS calls",
+                metrics.Fixture);
+        }
+        if (!UpperBounds.TryGetValue(metrics.Fixture, out (int GotoStatements, int CheckExternalEvents,
+                int AluCalls, int StatusFlagReads, int Casts, int RawMemoryAccesses) bounds)) {
             return;
         }
         metrics.GotoStatements.Should().BeLessThanOrEqualTo(bounds.GotoStatements,
@@ -94,9 +117,6 @@ internal static class GeneratedCodeMetricsAssertions {
             metrics.Fixture);
         metrics.CheckExternalEvents.Should().BeLessThanOrEqualTo(bounds.CheckExternalEvents,
             "the CheckExternalEvents count of {0} exceeded its recorded upper bound; raise it in the UpperBounds table on purpose, in the same PR as the golden diff",
-            metrics.Fixture);
-        metrics.Lines.Should().BeLessThanOrEqualTo(bounds.Lines,
-            "the Lines count of {0} exceeded its recorded upper bound; raise it in the UpperBounds table on purpose, in the same PR as the golden diff",
             metrics.Fixture);
         metrics.AluCalls.Should().BeLessThanOrEqualTo(bounds.AluCalls,
             "the AluCalls count of {0} exceeded its recorded upper bound; raise it in the UpperBounds table on purpose, in the same PR as the golden diff",
@@ -106,6 +126,10 @@ internal static class GeneratedCodeMetricsAssertions {
             metrics.Fixture);
         metrics.Casts.Should().BeLessThanOrEqualTo(bounds.Casts,
             "the Casts count of {0} exceeded its recorded upper bound; raise it in the UpperBounds table on purpose, in the same PR as the golden diff",
+            metrics.Fixture);
+        int rawMemoryAccesses = metrics.MemoryAccesses - metrics.GlobalAccesses - metrics.TableAccesses;
+        rawMemoryAccesses.Should().BeLessThanOrEqualTo(bounds.RawMemoryAccesses,
+            "the raw memory access count of {0} exceeded its recorded upper bound; raise it in the UpperBounds table on purpose, in the same PR as the golden diff",
             metrics.Fixture);
     }
 

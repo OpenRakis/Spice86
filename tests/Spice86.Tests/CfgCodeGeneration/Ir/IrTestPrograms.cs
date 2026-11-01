@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Shared.Emulator.Memory;
 
@@ -21,6 +22,14 @@ using Spice86.Tests.CfgCpu;
 /// </summary>
 internal static class IrTestPrograms {
     private static readonly SegmentedAddress Segment = new(0xF000, 0x0000);
+
+    /// <summary>Inputs whose hardware interrupt 8 has no known handler: every event check may read
+    /// and change every register a handler can observe.</summary>
+    internal static GeneratorInputs UnknownHardwareHandler { get; } = GeneratorInputs.Empty with {
+        HardwareInterrupts = GeneratorInputs.Empty.HardwareInterrupts with {
+            HardwareVectorNumbers = new HashSet<byte> { 0x08 }
+        }
+    };
 
     /// <summary>Parses <paramref name="bytes"/> into one instruction at <paramref name="offset"/>.</summary>
     public static CfgInstruction Parse(TestInstructionHelper helper, ushort offset, params byte[] bytes) =>
@@ -77,7 +86,7 @@ internal static class IrTestPrograms {
     /// expressions.</summary>
     public static IEnumerable<IVisitableAstNode> Nodes(IrMethod method) => method.Blocks.SelectMany(
         block => block.Statements.SelectMany(statement => IrAstChildren.Descendants(statement.Node))
-            .Concat(IrAstChildren.RootsOf(block.Terminator)));
+            .Concat(IrAstChildren.TerminatorNodes(block.Terminator)));
 
     /// <summary>Lifts the one-partition program of <paramref name="blocks"/> entered at the first
     /// block.</summary>
@@ -89,7 +98,8 @@ internal static class IrTestPrograms {
         CfgCodePartitionTransfer[] transfers) =>
         new CfgCSharpGenerator().LiftMethods(new CfgPartitionedProgram {
             Partitions = partitions,
-            Transfers = transfers
+            Transfers = transfers,
+            Inputs = UnknownHardwareHandler
         });
 
     /// <summary>The single function-entry declaration of a one-partition program.</summary>
@@ -107,17 +117,17 @@ internal static class IrTestPrograms {
             Entries = SingleEntry(blocks[0])
         };
 
-    /// <summary>Generates the source of a one-partition program with explicit entries.</summary>
-    public static string Generate(CfgCodePartitionEntry[] entries, params CfgBlock[] blocks) =>
+    /// <summary>Generates the program of a one-partition program with explicit entries.</summary>
+    public static GeneratedCSharpProgram Generate(CfgCodePartitionEntry[] entries, params CfgBlock[] blocks) =>
         Generate(entries, [], blocks);
 
-    /// <summary>Generates the source of a main partition followed by <paramref name="extraPartitions"/>.</summary>
-    public static string Generate(CfgCodePartitionEntry[] entries, CfgCodePartition[] extraPartitions,
+    /// <summary>Generates the program of a main partition followed by <paramref name="extraPartitions"/>.</summary>
+    public static GeneratedCSharpProgram Generate(CfgCodePartitionEntry[] entries, CfgCodePartition[] extraPartitions,
         params CfgBlock[] blocks) =>
         Generate(entries, extraPartitions, _ => [], blocks);
 
-    /// <summary>Generates the source of a main partition with explicit transfers plus extra partitions.</summary>
-    public static string Generate(CfgCodePartitionEntry[] entries, CfgCodePartition[] extraPartitions,
+    /// <summary>Generates the program of a main partition with explicit transfers plus extra partitions.</summary>
+    public static GeneratedCSharpProgram Generate(CfgCodePartitionEntry[] entries, CfgCodePartition[] extraPartitions,
         Func<CfgCodePartition, CfgCodePartitionTransfer[]> transfers, params CfgBlock[] blocks) {
         CfgCodePartition partition = new() {
             Id = 1,
@@ -129,19 +139,20 @@ internal static class IrTestPrograms {
         return GenerateProgram([partition, .. extraPartitions], transfers(partition));
     }
 
-    /// <summary>Generates the source of an explicitly partitioned program.</summary>
-    public static string GenerateProgram(CfgCodePartition[] partitions,
+    /// <summary>Generates an explicitly partitioned program.</summary>
+    public static GeneratedCSharpProgram GenerateProgram(CfgCodePartition[] partitions,
         CfgCodePartitionTransfer[] transfers) {
         CfgPartitionedProgram program = new() {
             Partitions = partitions,
-            Transfers = transfers
+            Transfers = transfers,
+            Inputs = UnknownHardwareHandler
         };
-        return new CfgCSharpGenerator(collectCensuses: true, verify: true).Generate(program).SourceText;
+        return new CfgCSharpGenerator(collectCensuses: true, verify: true).Generate(program);
     }
 
     /// <summary>The generated source compiles.</summary>
-    public static void AssertCompiles(string source) {
-        GeneratedCompilation compilation = new GeneratedOverrideCompiler().Compile(source);
+    public static void AssertCompiles(GeneratedCSharpProgram program) {
+        GeneratedCompilation compilation = new GeneratedOverrideCompiler().Compile(program);
         compilation.EmitResult.Diagnostics
             .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
             .Should().BeEmpty("the IR pipeline's output must compile");

@@ -15,6 +15,7 @@ using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.SystemClock;
@@ -98,6 +99,12 @@ public sealed class Machine : IDisposable {
     /// The interrupt vector table.
     /// </summary>
     public InterruptVectorTable InterruptVectorTable { get; }
+
+    /// <summary>
+    /// The interrupt handlers installed at startup, with their declared services and
+    /// installed stub addresses.
+    /// </summary>
+    public InstalledInterruptHandlers InstalledInterruptHandlers { get; }
 
     /// <summary>
     /// INT16H handler.
@@ -291,7 +298,8 @@ public sealed class Machine : IDisposable {
         IVgaFunctionality vgaFunctions,
         IPauseHandler pauseHandler,
         InputEventHub inputEventHub,
-        DeviceScheduler.DeviceScheduler emulationLoopScheduler) {
+        DeviceScheduler.DeviceScheduler emulationLoopScheduler,
+        InstalledInterruptHandlers installedInterruptHandlers) {
         BiosDataArea = biosDataArea;
         BiosEquipmentDeterminationInt11Handler = biosEquipmentDeterminationInt11Handler;
         BiosKeyboardInt9Handler = biosKeyboardInt9Handler;
@@ -333,6 +341,7 @@ public sealed class Machine : IDisposable {
         PauseHandler = pauseHandler;
         InputEventHub = inputEventHub;
         EmulationLoopScheduler = emulationLoopScheduler;
+        InstalledInterruptHandlers = installedInterruptHandlers;
     }
 
     /// <summary>

@@ -6,12 +6,21 @@ using Microsoft.Extensions.Logging;
 
 using NSubstitute;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
+using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
+using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.LoadableFile;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning;
+using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
+using Spice86.Core.Emulator.VM.Breakpoint;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Tests.Fixtures;
@@ -54,8 +63,18 @@ public sealed class CfgCpuSnapshotBuilderTest : IDisposable {
         CreateBlock(101, ownerless);
         RegisterEntry(entry);
         _contextManager.CurrentExecutionContext.LastExecuted = ownerless;
+        State state = _contextManagerFactory.State;
+        Memory memory = _contextManagerFactory.Memory;
+        LoadedImageRegistry loadedImageRegistry = new();
         CfgCpuSnapshotBuilder builder = new(new CfgBlockGraphExporter(), new CfgFunctionPartitioner(),
-            _functionCatalogue, _loggerService);
+            _functionCatalogue,
+            new GeneratorInputsCollector(new InstalledInterruptHandlers([]),
+                new InterruptVectorTable(memory), new CallbackHandler(state, _loggerService),
+                loadedImageRegistry, new SharedMouseData(),
+                new ChangedMemoryMap(memory, new AddressReadWriteBreakpoints(), loadedImageRegistry),
+                memory, new IOPortDispatcher(new AddressReadWriteBreakpoints(), state,
+                    _loggerService, false), Seg),
+            _loggerService);
 
         // Act
         CfgCpuSnapshot snapshot = builder.Build(_contextManager, null);

@@ -32,6 +32,9 @@ internal enum GotoKeepReason {
     ArmNeverComesBack,
     /// <summary>Refused branch: both arms could be nested but they have no single common exit, or both come back.</summary>
     NoSingleJoin,
+    /// <summary>A guard <c>goto</c> kept flat: its target is a block that never falls through and that at least two
+    /// branches reach, and nesting the other arm would pass the <c>if</c> depth limit.</summary>
+    SharedDivergingGuard,
     /// <summary>A <c>switch</c> section that was not nested.</summary>
     SwitchSection,
     /// <summary>The target is the target of two or more printed <c>goto</c>s of the method.</summary>

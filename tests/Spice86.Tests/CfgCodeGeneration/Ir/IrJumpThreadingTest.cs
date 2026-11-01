@@ -1,6 +1,7 @@
 namespace Spice86.Tests.CfgCodeGeneration.Ir;
 
 using FluentAssertions;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
@@ -113,7 +114,7 @@ public sealed class IrJumpThreadingTest {
         trampolineOutside.Terminator = new IrJump(first, new IrEdge(outsideTarget, false));
         outsideTarget.Statements.Add(new IrStatement(new InstructionStartNode("start"),
             second,
-            new IrEffects(IrValues.None, IrValues.None, IrValues.None, IrTokens.None,
+            new IrEffects(CpuValues.None, CpuValues.None, CpuValues.None, IrTokens.None,
                 IrTokens.None, false, false)));
         outsideTarget.Terminator = new IrExit(second, ReturnValue());
         IrMethod outside = Method([Entry(first, sourceOutside)], [first, second],

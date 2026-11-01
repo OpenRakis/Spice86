@@ -12,6 +12,8 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
+using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Shared.Emulator.Memory;
@@ -31,16 +33,26 @@ using CfgSelectorNode = Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfM
 internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
     /// <summary>
     /// Constructs a lowerer wired with the CFG-aware services it consults when lowering control-flow nodes:
-    /// the generation context and the transfer-lowering service.
+    /// the generation context, the transfer-lowering service, the hardware interrupt effect builder
+    /// and the effect the emitted event checks assume.
     /// </summary>
-    public InstructionLowerer(CfgGeneratorContext context, TransferEmitter transferEmitter) {
+    public InstructionLowerer(CfgGeneratorContext context, TransferEmitter transferEmitter,
+        HardwareInterruptEffectBuilder effectBuilder, CallEffect hardwareInterruptEffect) {
         Context = context;
         Transfer = transferEmitter;
+        _effectBuilder = effectBuilder;
+        HardwareInterruptEffect = hardwareInterruptEffect;
     }
 
     private CfgGeneratorContext Context { get; }
 
     private TransferEmitter Transfer { get; }
+
+    private readonly HardwareInterruptEffectBuilder _effectBuilder;
+
+    /// <summary>The effect the emitted <c>CheckExternalEvents</c> calls assume for the program's
+    /// hardware interrupt handlers.</summary>
+    internal CallEffect HardwareInterruptEffect { get; }
 
     // ----------------------------------------------------------------------------------------------------
     // Per-instruction driving entry. The lowering itself is uniform Accept dispatch; this method only adds
@@ -60,7 +72,7 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
         }
         IVisitableAstNode eventCheck = Empty();
         if (emitExternalEventCheckAfter) {
-            eventCheck = new CheckExternalEventsNode(new SegmentedAddress(instruction.Address.Segment, (ushort)instruction.NextInMemoryAddress32.Offset));
+            eventCheck = new CheckExternalEventsNode(new SegmentedAddress(instruction.Address.Segment, (ushort)instruction.NextInMemoryAddress32.Offset), HardwareInterruptEffect);
         }
         return Sequence(body, eventCheck, Transfer.EmitFallthroughIfNeeded(instruction));
     }
@@ -147,9 +159,26 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
         CallContinuation continuation = Context.ResolveCallContinuation(node.Instruction);
         SegmentedAddress expectedReturn = continuation.ExpectedReturnAddress;
         ExplicitCastNode vector = new(DataType.UINT8, node.VectorNumber);
+        (InterruptSiteKind kind, InterruptServiceVector? service) =
+            ClassifyInterruptSite(node, continuation);
+        if (kind == InterruptSiteKind.ProgramHandler
+            && _effectBuilder.ProgramHandlerOf(node.Instruction) is { } handler) {
+            return Sequence(
+                new ProgramInterruptCallHelperNode(
+                    [new SegmentVariableNode(expectedReturn.Segment),
+                        new OffsetLiteralNode(expectedReturn.Offset),
+                        vector,
+                        new SegmentVariableNode(handler.Entry.Address.Segment),
+                        new OffsetLiteralNode(handler.Entry.Address.Offset),
+                        new MethodGroupNode(Context.GetMethodName(handler.Partition),
+                            Context.GetEntryLoadOffset(handler.Partition, handler.Entry.Node),
+                            handler.Partition.Entries.Count == 1)],
+                    handler.Effect, HardwareInterruptEffect),
+                Transfer.EmitPostCallContinuation(node.Instruction, continuation));
+        }
         return Sequence(
             Transfer.EmitCallWithRedirectedDispatch(node.Instruction, continuation,
-                new InterruptCallHelperNode(
+                new InterruptCallHelperNode(kind, service, null,
                     new SegmentVariableNode(expectedReturn.Segment),
                     new OffsetLiteralNode(expectedReturn.Offset),
                     vector),
@@ -161,6 +190,43 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
             Transfer.EmitPostCallContinuation(node.Instruction, continuation));
     }
 
+    /// <summary>
+    /// How the <c>int</c> site ends up printed. The site is typed only when discovery observed at
+    /// least one target and every observed target is the installed stub of the call's vector;
+    /// anything else keeps the untyped <c>InterruptCall</c> with the reason as its kind.
+    /// </summary>
+    private (InterruptSiteKind Kind, InterruptServiceVector? Service) ClassifyInterruptSite(
+        InterruptCallNode node, CallContinuation continuation) {
+        if (continuation.RedirectedContinuationEdges.Count != 0) {
+            return (InterruptSiteKind.RedirectedReturn, null);
+        }
+        IVisitableAstNode vectorValue = node.VectorNumber is InstructionFieldNode field ? field.ResolvedNode : node.VectorNumber;
+        if (TryGetConstantWord(vectorValue) is not ushort vectorNumber
+            || vectorNumber > byte.MaxValue) {
+            return (InterruptSiteKind.NotObserved, null);
+        }
+        List<SegmentedAddress> targets = HardwareInterruptEffectBuilder
+            .TransferTargets(node.Instruction).Select(target => target.Address).ToList();
+        if (targets.Count == 0) {
+            return (InterruptSiteKind.NotObserved, null);
+        }
+        return ClassifyObservedSite(Context.Program.Inputs.HardwareInterrupts, (byte)vectorNumber, targets);
+    }
+
+    private static (InterruptSiteKind Kind, InterruptServiceVector? Service) ClassifyObservedSite(
+        HardwareInterruptSetup setup, byte vectorNumber, List<SegmentedAddress> targets) {
+        bool anyInstalled = targets.Any(target =>
+            setup.InstalledInterruptHandlerAddresses.Contains(target));
+        if (!anyInstalled) {
+            return (InterruptSiteKind.ProgramHandler, null);
+        }
+        if (!setup.ServiceVectors.TryGetValue(vectorNumber, out InterruptServiceVector? service)
+            || targets.Any(target => target != service.StubAddress)) {
+            return (InterruptSiteKind.Hooked, null);
+        }
+        return (InterruptSiteKind.BuiltInNotAnalysed, service);
+    }
+
     public IVisitableAstNode VisitCallbackNode(CallbackNode node) {
         IReadOnlyList<ResolvedCfgEdge> movedTargets = Context.GetSuccessorEdges(node.Instruction, InstructionSuccessorType.Normal)
             .Where(edge => edge.Target.Address != node.Instruction.NextInMemoryAddress32.ToSegmentedAddress())
@@ -168,6 +234,11 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
         IVisitableAstNode callback = movedTargets.Count == 0
             ? EmitDirectCallback(node)
             : BuildCallbackTargetDispatch(node, movedTargets);
+        if (TryGetConstantWord(node.CallbackNumber) is ushort callbackNumber
+            && Context.Program.Inputs.HardwareInterrupts.CallbackDescriptions.TryGetValue(
+                callbackNumber, out string? description)) {
+            callback = Sequence(new CommentNode(description), callback);
+        }
         return Sequence(
             callback,
             Transfer.EmitFallthroughIfNeeded(node.Instruction));
@@ -347,7 +418,8 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
         ExplicitCastNode switchValue = new(DataType.UINT16, target);
         List<SwitchSection> sections = edges.OrderBy(edge => edge.Target.Address.Offset)
             .Select(edge => Section(edge.Target.Address.Offset, bodyForEdge(edge))).ToList();
-        return new SwitchNode(switchValue, sections, Sequence(UntestedMessages.NearTarget(targetKind, switchValue, instruction.Address)));
+        return new SwitchNode(switchValue, sections,
+            Sequence(UntestedMessages.NearTarget(targetKind, switchValue, instruction.Address)));
     }
 
     private IVisitableAstNode BuildFarRuntimeDispatch(CfgInstruction instruction, ValueNode segment, ValueNode offset, string targetKind,
@@ -390,7 +462,7 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
                     TransferEmitter.AddressEquals(segmentDeclaration.Reference, offsetDeclaration.Reference, only.Target.Address),
                     Sequence(Transfer.EmitCallWithRedirectedDispatch(instruction, continuation,
                         Transfer.CallHelper(distance, width, continuation.ExpectedReturnAddress,
-                            Transfer.FunctionReference(only), only.Target.Address.Segment),
+                            Transfer.FunctionReference(only), only.Target.Address.Segment, true, continuation),
                         Transfer.CallHelperReturnedElsewhere(distance, width, continuation.ExpectedReturnAddress,
                             Transfer.FunctionReference(only), only.Target.Address.Segment, continuation))),
                     Sequence(UntestedMessages.FarTarget("call", segmentDeclaration.Reference,
@@ -414,7 +486,7 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
             sections.Add(Section(key,
                 Sequence(Transfer.EmitCallWithRedirectedDispatch(instruction, continuation,
                     Transfer.CallHelper(distance, width, continuation.ExpectedReturnAddress,
-                        Transfer.FunctionReference(edge), edge.Target.Address.Segment),
+                        Transfer.FunctionReference(edge), edge.Target.Address.Segment, false, continuation),
                     Transfer.CallHelperReturnedElsewhere(distance, width, continuation.ExpectedReturnAddress,
                         Transfer.FunctionReference(edge), edge.Target.Address.Segment, continuation)))));
         }
@@ -447,7 +519,7 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
         CallDistance distance, BitWidth width, ResolvedCfgEdge edge) {
         return Sequence(
             Transfer.EmitCallWithRedirectedDispatch(instruction, continuation,
-                Transfer.CallHelper(distance, width, continuation.ExpectedReturnAddress, Transfer.FunctionReference(edge), null),
+                Transfer.CallHelper(distance, width, continuation.ExpectedReturnAddress, Transfer.FunctionReference(edge), null, false, continuation),
                 Transfer.CallHelperReturnedElsewhere(distance, width, continuation.ExpectedReturnAddress, Transfer.FunctionReference(edge), null, continuation)),
             Transfer.EmitPostCallContinuation(instruction, continuation));
     }

@@ -5,6 +5,7 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
@@ -30,7 +31,6 @@ public sealed class SystemBiosInt17Handler : InterruptHandler {
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _biosDataArea = biosDataArea;
         InitializeBiosDataArea();
-        FillDispatchTable();
     }
 
     public override byte VectorNumber => 0x17;
@@ -53,11 +53,6 @@ public sealed class SystemBiosInt17Handler : InterruptHandler {
         Run(operation);
     }
 
-    private void FillDispatchTable() {
-        AddAction(0x00, () => WriteCharacter(true));
-        AddAction(0x01, () => InitializePrinterPort(true));
-        AddAction(0x02, () => GetPrinterStatus(true));
-    }
 
     private void InitializeBiosDataArea() {
         if (_biosDataArea.PortLpt[0] == 0) {
@@ -77,6 +72,7 @@ public sealed class SystemBiosInt17Handler : InterruptHandler {
         }
     }
 
+    [InterruptService(0x00, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Dx, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
     private void WriteCharacter(bool calledFromVm) {
         ushort printerIndex = State.DX;
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
@@ -88,6 +84,7 @@ public sealed class SystemBiosInt17Handler : InterruptHandler {
         SetCarryFlag(false, calledFromVm);
     }
 
+    [InterruptService(0x01, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Dx, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
     private void InitializePrinterPort(bool calledFromVm) {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("BIOS INT17H: Initialize printer index {PrinterIndex}", State.DX);
@@ -97,6 +94,7 @@ public sealed class SystemBiosInt17Handler : InterruptHandler {
         SetCarryFlag(false, calledFromVm);
     }
 
+    [InterruptService(0x02, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Dx, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
     private void GetPrinterStatus(bool calledFromVm) {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("BIOS INT17H: Get status for printer index {PrinterIndex}", State.DX);

@@ -57,16 +57,17 @@ public class CfgGraphReloadTest {
     /// <c>intchain.com</c> is excluded: it is a DOS COM file with no deterministic graph fixture.
     /// </summary>
     public static IEnumerable<object[]> AllReloadBins => new[] {
-        "add", "alu_dead_flags", "bcdcnv", "bitwise", "cmpneg", "control", "datatrnf",
+        "add", "alu_dead_flags", "bcdcnv", "bitwise", "cc_call_shapes", "cc_register_leaf", "cc_stack_frames", "cmpneg", "control", "datatrnf",
         "dataflow_constant_folding", "dataflow_double_precision", "dataflow_expression_propagation",
         "dataflow_flag_definitions", "dataflow_idioms", "dataflow_interrupt_boundaries",
-        "dataflow_legality_traps", "dataflow_partial_registers", "dataflow_rewrite_traps", "dataflow_stack_save_restore", "div", "div2", "divfaultloop",
-        "externalint", "flagconditions", "instruction_coverage_386", "interrupt", "ioports", "jmpmov", "jump1", "jump2", "linearsamesegmenteddifferent",
+        "data_globals", "data_jump_tables", "data_segment_values", "data_segments", "data_tables",
+        "dataflow_alias_traps", "dataflow_legality_traps", "dataflow_partial_registers", "dataflow_rewrite_traps", "dataflow_stack_save_restore", "div", "div2", "divfaultloop",
+        "externalint", "flagconditions", "if_conversion", "instruction_coverage_386", "interrupt", "interrupt_contract_unseen_handler", "interrupt_contract_unseen_1c_handler", "ioports", "jmpmov", "jump1", "jump2", "linearsamesegmenteddifferent",
         "lockprefix", "mul", "partition_back_edge_fallthrough", "partition_cross_function_loop", "partition_far_dispatch", "partition_far_call_chain", "partition_far_jump_segment_change", "partition_indirect_call_jump", "partition_jump_table",
         "partition_jump_table_mixed", "partition_jump_into_function_middle", "partition_jump_to_next", "partition_mixed_activation_cycle",
         "partition_multi_entry_dominated_shared", "partition_multi_entry_irreducible_shared",
         "partition_shared_tail", "partition_sign_conditions", "partition_signed_min_compare", "partition_two_fault_handlers",
-        "partition_untaken_cpuid", "partition_untested_far_indirect", "partition_untested_indirect", "rep", "returnedterminator", "romwrite", "rotate", "segpr", "selfmodifycall",
+        "partition_untaken_cpuid", "partition_untested_far_indirect", "partition_untested_indirect", "rep", "returnedterminator", "romwrite", "rotate", "save_restore_pairs", "segpr", "selfmodifycall",
         "selfmodifyinstructions", "selfmodifyrep", "selfmodifyje", "selfmodifyterminator", "selfmodifyvalue", "shifts",
         "sticli", "strings", "sub", "test386",
     }.Select(name => new object[] { name });
@@ -88,6 +89,7 @@ public class CfgGraphReloadTest {
     /// </summary>
     private static (long MaxCycles, bool EnablePit, bool EnableA20Gate) GetBinConfig(string binName) => binName switch {
         "externalint" => (0xFFFFFFF, true, false),
+        "data_segment_values" => (300000L, true, false),
         "linearsamesegmenteddifferent" => (100000L, false, true),
         "test386" => (long.MaxValue, false, false),
         _ => (100000L, false, false),
@@ -121,23 +123,30 @@ public class CfgGraphReloadTest {
     [Theory]
     [MemberData(nameof(RoundTripBins))]
     public void ReloadedGraphReExportsToSameDump(string binName) {
-        // Direct dump-level round-trip: reload the captured dump into a fresh machine, re-export, and
-        // assert the re-exported dump equals the original. Unlike ReloadedGraphMatchesOriginal (which
-        // compares the lossy block-graph projection), this asserts exactly what the reconstructor must
-        // restore: typed instruction edges, per-node MaxSucc, selector dispatch edges and ids.
-        CfgReloadDump original = CaptureDump(binName);
+        // Dump-level round-trip through the real DI path: the first run writes the reload artifact;
+        // a second emulator created with ReloadCfgGraph=true reloads the graph and the
+        // changed-memory snapshot exactly like production. Re-exporting must yield the original
+        // dump: typed instruction edges, per-node MaxSucc, selector dispatch edges, ids, watched
+        // areas and changed ranges. Unlike ReloadedGraphMatchesOriginal (which compares the lossy
+        // block-graph projection), this asserts exactly what the reconstructor must restore.
+        using TempFile recordedDataDirectory = new(nameof(ReloadedGraphReExportsToSameDump));
 
-        ILogger loggerService = Substitute.For<ILogger>();
-        using Spice86Creator creator = CreateCreator(binName);
-        using Spice86DependencyInjection di = creator.Create();
-        using CfgNodeExecutionCompiler compiler = NewCompiler(loggerService);
-        CfgGraphReloader reloader = new(di.Machine.CfgCpu, di.Machine.CpuState, compiler, di.CfgIdAllocator);
-        reloader.Reload(original);
+        CfgReloadDump original;
+        using (Spice86Creator creator = CreateCreator(binName, recordedDataDirectory.Path, reloadCfgGraph: false))
+        using (Spice86DependencyInjection di = creator.Create()) {
+            di.ProgramExecutor.Run();
+            original = new CfgReloadExporter().Export(di.Machine.CfgCpu.ExecutionContextManager, null,
+                di.GeneratorInputsCollector.Capture().ChangedMemory);
+        }
 
-        CfgReloadDump reExported = new CfgReloadExporter().Export(di.Machine.CfgCpu.ExecutionContextManager, null);
-        // Records compare structurally, but the array members are reference-typed, so compare the
-        // canonical (sorted) JSON the exporter already produces deterministically.
-        Assert.Equal(SerializeDump(original), SerializeDump(reExported));
+        using (Spice86Creator creator = CreateCreator(binName, recordedDataDirectory.Path, reloadCfgGraph: true))
+        using (Spice86DependencyInjection di = creator.Create()) {
+            CfgReloadDump reExported = new CfgReloadExporter().Export(di.Machine.CfgCpu.ExecutionContextManager,
+                null, di.GeneratorInputsCollector.Capture().ChangedMemory);
+            // Records compare structurally, but the array members are reference-typed, so compare
+            // the canonical (sorted) JSON the exporter already produces deterministically.
+            Assert.Equal(SerializeDump(original), SerializeDump(reExported));
+        }
     }
 
     [Theory]
@@ -386,7 +395,7 @@ public class CfgGraphReloadTest {
         using Spice86DependencyInjection di = creator.Create();
         di.ProgramExecutor.Run();
         Machine machine = di.Machine;
-        CfgReloadDump dump = new CfgReloadExporter().Export(machine.CfgCpu.ExecutionContextManager, null);
+        CfgReloadDump dump = new CfgReloadExporter().Export(machine.CfgCpu.ExecutionContextManager, null, di.GeneratorInputsCollector.Capture().ChangedMemory);
         return (dump, machine.Memory.ReadRam());
     }
 

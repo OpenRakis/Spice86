@@ -57,7 +57,7 @@ public class ConditionalBreakpointIntegrationTests {
         AddressBreakPoint breakpoint = new(
             BreakPointType.CPU_CYCLES,
             100,  // After 100 cycles
-            bp => {
+            (bp, _) => {
                 breakpointTriggered = true;
                 capturedAddress = state.IpSegmentedAddress;
                 capturedAxValue = state.AX;
@@ -110,7 +110,7 @@ public class ConditionalBreakpointIntegrationTests {
         AddressBreakPoint breakpoint = new(
             BreakPointType.CPU_CYCLES,
             100,
-            bp => {
+            (bp, _) => {
                 breakpointTriggered = true;
                 pauseHandler.RequestPause("Should not trigger");
                 pauseHandler.Resume();
@@ -156,7 +156,7 @@ public class ConditionalBreakpointIntegrationTests {
         AddressBreakPoint breakpoint = new(
             BreakPointType.CPU_CYCLES,
             50,
-            bp => {
+            (bp, _) => {
                 breakpointTriggered = true;
                 pauseHandler.RequestPause("Complex condition met");
                 pauseHandler.Resume();
@@ -197,7 +197,7 @@ public class ConditionalBreakpointIntegrationTests {
         AddressBreakPoint breakpoint = new(
             BreakPointType.CPU_EXECUTION_ADDRESS,
             0xF0000,  // Some address
-            bp => { },
+            (bp, _) => { },
             isRemovedOnTrigger: false,
             condition,
             conditionExpression) {
@@ -252,7 +252,7 @@ public class ConditionalBreakpointIntegrationTests {
         AddressBreakPoint breakpoint = new(
             BreakPointType.MEMORY_READ,
             targetAddress,
-            bp => {
+            (bp, _) => {
                 breakpointTriggered = true;
                 capturedAddress = ((AddressBreakPoint)bp).Address;
                 pauseHandler.RequestPause("Memory read with condition");
@@ -309,7 +309,7 @@ public class ConditionalBreakpointIntegrationTests {
         AddressBreakPoint breakpoint = new(
             BreakPointType.CPU_CYCLES,
             50,
-            bp => {
+            (bp, _) => {
                 pauseHandler.RequestPause("Test pause");
                 pauseHandler.Resume();
             },
@@ -358,7 +358,7 @@ public class ConditionalBreakpointIntegrationTests {
         AddressBreakPoint breakpoint = new(
             BreakPointType.CPU_INTERRUPT,
             0xD,
-            bp => {
+            (bp, _) => {
                 breakpointTriggered = true;
                 capturedIp = state.IpSegmentedAddress;
                 pauseHandler.RequestPause("Interrupt with condition");
@@ -405,7 +405,7 @@ public class ConditionalBreakpointIntegrationTests {
         AddressBreakPoint breakpoint = new(
             BreakPointType.CPU_CYCLES,
             100,
-            bp => {
+            (bp, _) => {
                 breakpointTriggered = true;
                 pauseHandler.RequestPause("Bitwise condition");
                 pauseHandler.Resume();
@@ -451,7 +451,7 @@ public class ConditionalBreakpointIntegrationTests {
         AddressBreakPoint breakpoint = new(
             BreakPointType.CPU_CYCLES,
             100,
-            bp => {
+            (bp, _) => {
                 breakpointTriggered = true;
                 capturedEax = state.EAX;
                 pauseHandler.RequestPause("32-bit condition");

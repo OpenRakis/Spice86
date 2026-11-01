@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.Boot;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.InterruptHandlers.Mscdex;
+using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.LoadableFile.Dos;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
@@ -50,6 +51,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     private readonly State _state;
     private readonly ILogger _loggerService;
     private readonly DosBatchExecutionEngine _batchExecutionEngine;
+    private readonly LoadedImageRegistry _loadedImageRegistry;
 
     private readonly Stack<ResidentBlockInfo> _pendingResidentBlocks = new();
 
@@ -117,6 +119,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
     /// <param name="mixer">The software audio mixer, used to stream CD audio when an image is mounted.</param>
     /// <param name="activityNotifier">Notifier that surfaces per-drive read/write activity to UI subscribers.</param>
     /// <param name="batchDisplayCommandHandler">Batch-specific display command handler used by screen-related builtins such as CLS.</param>
+    /// <param name="loadedImageRegistry">Records every program image the load paths write.</param>
     /// <param name="envVars">The initial host environment variables to seed the master environment block.</param>
     /// <param name="loggerService">Logger for emitting diagnostic information during process lifecycle changes.</param>
     public DosProcessManager(IMemory memory, Stack stack, State state,
@@ -128,6 +131,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         ISoundChannelCreator channelCreator,
         IDriveActivityNotifier activityNotifier,
         IBatchDisplayCommandHandler batchDisplayCommandHandler,
+        LoadedImageRegistry loadedImageRegistry,
         IDictionary<string, string> envVars, ILogger loggerService) {
         _sda = new(memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
         _memory = memory;
@@ -139,6 +143,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         _driveManager = dosDriveManager;
         _state = state;
         _loggerService = loggerService;
+        _loadedImageRegistry = loadedImageRegistry;
         _batchExecutionEngine = new DosBatchExecutionEngine(_fileManager,
             _driveManager,
             driveStatusProvider,
@@ -378,7 +383,8 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         DosExecParameterBlock paramBlock = new(new ByteArrayReaderWriter(new byte[DosExecParameterBlock.Size]), 0);
         return HandleComFileLoading(paramBlock, string.Empty, DosExecLoadType.LoadAndExecute,
             0, 0, 0, _sda.CurrentProgramSegmentPrefix,
-            "BATCH$$$.COM", comBytes, null, _state.SS, (ushort)(_state.SP - IregsFrameSize));
+            "BATCH$$$.COM", LoadedImageKind.InternalBatchProgram,
+            comBytes, null, _state.SS, (ushort)(_state.SP - IregsFrameSize));
     }
 
     internal DosExecResult LoadInitialBootProgram(char driveLetter) {
@@ -393,7 +399,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         }
 
         byte driveNumber = normalizedDriveLetter == 'B' ? (byte)1 : (byte)0;
-        PCBootLoader bootLoader = new(_memory, _state, _loggerService);
+        PCBootLoader bootLoader = new(_memory, _state, _loadedImageRegistry, _loggerService);
         if (!bootLoader.TryBootFromFloppyImage(imageData, driveNumber, floppyDrive.ImagePath)) {
             return DosExecResult.Fail(DosErrorCode.FormatInvalid);
         }
@@ -447,7 +453,7 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
             // This matches FreeDOS behavior
             result = HandleComFileLoading(paramBlock, commandTail, loadType,
                 environmentSegment, callerIP, callerCS, parentPspSegment,
-                hostPath, fileBytes, envBlock, parentSS, parentReservedSP);
+                hostPath, LoadedImageKind.DosProgram, fileBytes, envBlock, parentSS, parentReservedSP);
         }
 
         return result;
@@ -504,12 +510,17 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         // For AL=01 (Load Only), DOS fills the EPB with initial CS:IP and SS:SP.
         FillEPBForLoadOnlyMode(paramBlock, loadType, exeResult);
 
+        _loadedImageRegistry.Register(new LoadedImage(LoadedImageKind.DosProgram, hostPath,
+            block.DataBlockSegment,
+            MemoryUtils.ToPhysicalAddress(loadImageSegment, 0), exeFile.ProgramSize));
+
         return exeResult;
     }
 
     private DosExecResult HandleComFileLoading(DosExecParameterBlock paramBlock,
         string commandTail, DosExecLoadType loadType, ushort environmentSegment,
         ushort callerIP, ushort callerCS, ushort parentPspSegment, string hostPath,
+        LoadedImageKind imageKind,
         byte[] fileBytes, DosMemoryControlBlock? envBlock, ushort parentSS, ushort parentReservedSP) {
         ushort paragraphsNeeded = CalculateParagraphsNeeded(DosProgramSegmentPrefix.PspSize + fileBytes.Length);
 
@@ -551,6 +562,11 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         RestoreParentPspForLoadOnly(loadType, parentPspSegment);
         FillEPBForLoadOnlyMode(paramBlock, loadType, comResult);
         SetupAxAndBxWithFcbValuesForExecute(loadType, comPsp);
+
+        _loadedImageRegistry.Register(new LoadedImage(imageKind, hostPath,
+            comBlock.DataBlockSegment,
+            MemoryUtils.ToPhysicalAddress(comBlock.DataBlockSegment, DosProgramSegmentPrefix.PspSize),
+            (uint)fileBytes.Length));
 
         return comResult;
     }
@@ -641,6 +657,9 @@ public class DosProcessManager : IDosBatchExecutionHost, ICurrentProcessNameProv
         // For overlays, load at loadSegment but relocate using relocationFactor
         // This matches FreeDOS behavior
         LoadExeFileInMemoryAndApplyRelocations(exeFile, loadSegment, relocationFactor);
+
+        _loadedImageRegistry.Register(new LoadedImage(LoadedImageKind.DosOverlay, hostPath,
+            loadSegment, MemoryUtils.ToPhysicalAddress(loadSegment, 0), exeFile.ProgramSize));
 
         // For overlays, DOS doesn't return anything in the parameter block
         // Just return success with AX=0 and DX=0

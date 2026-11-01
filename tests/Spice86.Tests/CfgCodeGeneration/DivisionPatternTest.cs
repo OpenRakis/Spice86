@@ -464,17 +464,21 @@ public class DivisionPatternTest {
         };
         CfgPartitionedProgram program = new() {
             Partitions = [partition],
-            Transfers = []
+            Transfers = [],
+            Inputs = GeneratorInputs.Empty
         };
 
         GeneratedCSharpProgram generatedProgram = new CfgCSharpGenerator(collectCensuses: true, verify: true).Generate(program);
         GeneratedOverrideCompiler compiler = new();
-        GeneratedCompilation compilation = compiler.Compile(generatedProgram.SourceText);
+        GeneratedCompilation compilation = compiler.Compile(generatedProgram);
         using CompiledGeneratedOverride compiledOverride = compiler.CompileSupplier(compilation);
         compiledOverride.Supplier.Should().NotBeNull();
 
-        SyntaxNode root = compilation.SyntaxTree.GetRoot(TestContext.Current.CancellationToken);
-        List<InvocationExpressionSyntax> directInvocations = root.DescendantNodes()
+        List<SyntaxNode> roots = compilation.SyntaxTrees
+            .Select(tree => tree.GetRoot(TestContext.Current.CancellationToken))
+            .ToList();
+        List<InvocationExpressionSyntax> directInvocations = roots
+            .SelectMany(root => root.DescendantNodes())
             .OfType<InvocationExpressionSyntax>()
             .Where(invocation => invocation.Expression is IdentifierNameSyntax identifier
                 && identifier.Identifier.ValueText == expectedHelper)
@@ -482,7 +486,8 @@ public class DivisionPatternTest {
         directInvocations.Should().HaveCount(1,
             "the body must call the {0} helper exactly once through a bare identifier", expectedHelper);
 
-        List<AssignmentExpressionSyntax> helperAssignments = root.DescendantNodes()
+        List<AssignmentExpressionSyntax> helperAssignments = roots
+            .SelectMany(root => root.DescendantNodes())
             .OfType<AssignmentExpressionSyntax>()
             .Where(assignment => assignment.Right is InvocationExpressionSyntax right
                 && right.Expression is IdentifierNameSyntax identifier

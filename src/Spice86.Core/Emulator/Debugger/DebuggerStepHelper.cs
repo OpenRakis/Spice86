@@ -18,7 +18,7 @@ public static class DebuggerStepHelper
     public static void SetupStepIntoBreakpoint(EmulatorBreakpointsManager breakpointsManager, State state, Action onHit)
     {
         long triggerCycle = state.Cycles + 1;
-        AddressBreakPoint breakpoint = new(BreakPointType.CPU_CYCLES, triggerCycle, _ => onHit(), true);
+        AddressBreakPoint breakpoint = new(BreakPointType.CPU_CYCLES, triggerCycle, (_, _) => onHit(), true);
         breakpointsManager.ToggleBreakPoint(breakpoint, on: true);
     }
 
@@ -31,7 +31,7 @@ public static class DebuggerStepHelper
     /// <param name="onHit">Callback invoked on the emulation thread when the breakpoint fires.</param>
     public static void SetupStepOverBreakpoint(EmulatorBreakpointsManager breakpointsManager, uint nextAddress, Action onHit)
     {
-        AddressBreakPoint breakpoint = new(BreakPointType.CPU_EXECUTION_ADDRESS, nextAddress, _ => onHit(), true);
+        AddressBreakPoint breakpoint = new(BreakPointType.CPU_EXECUTION_ADDRESS, nextAddress, (_, _) => onHit(), true);
         breakpointsManager.ToggleBreakPoint(breakpoint, on: true);
     }
 }

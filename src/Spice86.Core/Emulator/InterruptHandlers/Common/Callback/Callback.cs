@@ -8,7 +8,6 @@ using System;
 /// Represents a callback. Used by interrupt handlers.
 /// </summary>
 public class Callback : ICallback {
-    private readonly Action _runnable;
     /// <inheritdoc/>
     public ushort Index { get; }
     /// <inheritdoc />
@@ -22,13 +21,16 @@ public class Callback : ICallback {
     /// <param name="instructionAddress">Physical address of the callback instruction.</param>
     public Callback(ushort index, Action runnable, SegmentedAddress instructionAddress) {
         Index = index;
-        _runnable = runnable;
+        Runnable = runnable;
         InstructionAddress = instructionAddress;
     }
 
+    /// <summary>The code the callback runs.</summary>
+    public Action Runnable { get; }
+
     /// <inheritdoc/>
     public void Run() {
-        _runnable.Invoke();
+        Runnable.Invoke();
     }
 
     /// <inheritdoc/>

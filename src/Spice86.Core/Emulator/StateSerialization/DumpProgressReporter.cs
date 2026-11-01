@@ -87,7 +87,6 @@ public sealed class DumpProgressReporter {
             [DumpPhase.CodeMethods] = "Code generation: method"
         };
 
-    private readonly ILogger _logger;
     private readonly ITimeProvider _timeProvider;
     private readonly Stopwatch _dumpWatch = new();
     private readonly Stopwatch _phaseWatch = new();
@@ -99,9 +98,12 @@ public sealed class DumpProgressReporter {
 
     /// <summary>Creates a reporter logging to <paramref name="logger"/>.</summary>
     public DumpProgressReporter(ILogger logger, ITimeProvider timeProvider) {
-        _logger = logger;
+        Logger = logger;
         _timeProvider = timeProvider;
     }
+
+    /// <summary>The logger the reported lines are written to.</summary>
+    internal ILogger Logger { get; }
 
     /// <summary>Raised once when a dump starts, before the first message.</summary>
     public event Action? DumpStarted;
@@ -198,8 +200,8 @@ public sealed class DumpProgressReporter {
         StepLabels.TryGetValue(phase, out string? label) ? label : $"{LabelFor(phase)}:";
 
     private void Emit(string message) {
-        if (_logger.IsEnabled(LogLevel.Information)) {
-            _logger.LogInformation("{Message}", message);
+        if (Logger.IsEnabled(LogLevel.Information)) {
+            Logger.LogInformation("{Message}", message);
         }
         MessageLogged?.Invoke(message);
     }

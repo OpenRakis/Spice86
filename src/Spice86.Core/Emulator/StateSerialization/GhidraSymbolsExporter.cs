@@ -26,27 +26,45 @@ public class GhidraSymbolsExporter {
     /// </summary>
     /// <param name="executionAddresses">The class that holds machine code execution flow.</param>
     /// <param name="functionCatalogue">List of all functions.</param>
+    /// <param name="dataSymbols">The generated data symbols with a known address; each is written as
+    /// a label, except at an address a function or a jump label already holds.</param>
     /// <param name="destinationFilePath">The path of the file to write the dumped information to.</param>
-    public void Write(ExecutionAddresses executionAddresses, FunctionCatalogue functionCatalogue, string destinationFilePath) {
+    public void Write(ExecutionAddresses executionAddresses, FunctionCatalogue functionCatalogue,
+        IReadOnlyList<(string Name, SegmentedAddress Address)> dataSymbols, string destinationFilePath) {
         ICollection<FunctionInformation> functionInformationsValues = functionCatalogue.FunctionInformations.Values;
         List<string> lines = new();
         // keep addresses in a set in order not to write a label where a function was, ghidra will otherwise overwrite functions with labels and this is not cool.
         HashSet<SegmentedAddress> dumpedAddresses = new HashSet<SegmentedAddress>();
         DumpFunctionInformations(lines, dumpedAddresses, functionInformationsValues);
-        DumpLabels(lines, dumpedAddresses, executionAddresses);
+        HashSet<SegmentedAddress> labelAddresses = DumpLabels(lines, dumpedAddresses, executionAddresses);
+        DumpDataSymbols(lines, dumpedAddresses, labelAddresses, dataSymbols);
         using StreamWriter printWriter = new StreamWriter(destinationFilePath);
         lines.ForEach(line => printWriter.WriteLine(line));
     }
 
-    private void DumpLabels(List<string> lines, HashSet<SegmentedAddress> dumpedAddresses, ExecutionAddresses executionAddresses) {
-        executionAddresses.JumpsFromTo
+    private HashSet<SegmentedAddress> DumpLabels(List<string> lines, HashSet<SegmentedAddress> dumpedAddresses, ExecutionAddresses executionAddresses) {
+        HashSet<SegmentedAddress> labelAddresses = executionAddresses.JumpsFromTo
             .SelectMany(x => x.Value)
+            .ToHashSet();
+        labelAddresses
             .Where(address => !dumpedAddresses.Contains(address))
-            .OrderBy(x => x)
-            .Distinct()
             .OrderBy(x => x)
             .ToList()
             .ForEach(address => lines.Add(DumpLabel(address)));
+        return labelAddresses;
+    }
+
+    private void DumpDataSymbols(List<string> lines, HashSet<SegmentedAddress> functionAddresses,
+        HashSet<SegmentedAddress> labelAddresses,
+        IReadOnlyList<(string Name, SegmentedAddress Address)> dataSymbols) {
+        dataSymbols
+            .Where(symbol => !functionAddresses.Contains(symbol.Address)
+                && !labelAddresses.Contains(symbol.Address))
+            .GroupBy(symbol => symbol.Address)
+            .Select(group => group.First())
+            .OrderBy(symbol => symbol.Address)
+            .ToList()
+            .ForEach(symbol => lines.Add(ToGhidraSymbol(symbol.Name, symbol.Address, "l")));
     }
 
     private string DumpLabel(SegmentedAddress address) {

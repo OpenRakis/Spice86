@@ -1,6 +1,7 @@
 namespace Spice86.Tests.CfgCodeGeneration.Ir;
 
 using FluentAssertions;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
@@ -27,14 +28,14 @@ using Xunit;
 /// may-write, memory operand, operand changed or propagatable.
 /// </summary>
 public sealed class IrFlagReadCensusClassifierTest {
-    private static readonly IrValues Eax = IrSsaValues.MaskOf(IrSsaValue.Eax);
-    private static readonly IrValues Zero = IrSsaValues.MaskOf(IrSsaValue.Zero);
+    private static readonly CpuValues Eax = IrSsaValues.MaskOf(IrSsaValue.Eax);
+    private static readonly CpuValues Zero = IrSsaValues.MaskOf(IrSsaValue.Zero);
 
     [Fact]
     public void ReadRightAfterAnAluSetterIsAdjacentAndPropagatable() {
         // Arrange
         (IrMethod method, BlockNode body) = MethodWithFlagRead(
-            AluSetter(new IrEffects(IrValues.None, Zero, IrValues.None, IrTokens.None,
+            AluSetter(new IrEffects(CpuValues.None, Zero, CpuValues.None, IrTokens.None,
                 IrTokens.None, false, false)));
 
         // Act
@@ -51,10 +52,10 @@ public sealed class IrFlagReadCensusClassifierTest {
     public void SetterEarlierInTheBlockIsSameBlock() {
         // Arrange
         (IrMethod method, BlockNode body) = MethodWithFlagRead(
-            AluSetter(new IrEffects(IrValues.None, Zero, IrValues.None, IrTokens.None,
+            AluSetter(new IrEffects(CpuValues.None, Zero, CpuValues.None, IrTokens.None,
                 IrTokens.None, false, false)),
             new IrStatement(new CommentNode("filler"), Instruction(1),
-                new IrEffects(IrValues.None, IrValues.None, IrValues.None, IrTokens.None,
+                new IrEffects(CpuValues.None, CpuValues.None, CpuValues.None, IrTokens.None,
                     IrTokens.None, false, false)));
 
         // Act
@@ -72,7 +73,7 @@ public sealed class IrFlagReadCensusClassifierTest {
             new RegisterNode(DataType.UINT8, 0), BinaryOperation.ASSIGN,
             new AbsolutePointerNode(DataType.UINT8, new ConstantNode(DataType.UINT16, 0)));
         IrStatement setter = new(read, Instruction(0),
-            new IrEffects(IrValues.None, Zero, IrValues.None, IrTokens.None, IrTokens.None,
+            new IrEffects(CpuValues.None, Zero, CpuValues.None, IrTokens.None, IrTokens.None,
                 false, false));
         (IrMethod method, BlockNode body) = MethodWithFlagRead(setter);
 
@@ -88,10 +89,10 @@ public sealed class IrFlagReadCensusClassifierTest {
     public void ASetterOperandChangedBetweenIsOperandChanged() {
         // Arrange: the setter reads EAX; a statement before the read writes EAX
         (IrMethod method, BlockNode body) = MethodWithFlagRead(
-            AluSetter(new IrEffects(Eax, Zero, IrValues.None, IrTokens.None, IrTokens.None,
+            AluSetter(new IrEffects(Eax, Zero, CpuValues.None, IrTokens.None, IrTokens.None,
                 false, false)),
             new IrStatement(new CommentNode("mov"), Instruction(1),
-                new IrEffects(IrValues.None, Eax, IrValues.None, IrTokens.None, IrTokens.None,
+                new IrEffects(CpuValues.None, Eax, CpuValues.None, IrTokens.None, IrTokens.None,
                     false, false)));
 
         // Act
@@ -105,7 +106,7 @@ public sealed class IrFlagReadCensusClassifierTest {
     public void APartialFlagDefinitionIsMayWrite() {
         // Arrange: the setter may-write Zero (a shift by CL keeps the flag when CL is 0)
         (IrMethod method, BlockNode body) = MethodWithFlagRead(
-            AluSetter(new IrEffects(Zero, IrValues.None, Zero, IrTokens.None, IrTokens.None,
+            AluSetter(new IrEffects(Zero, CpuValues.None, Zero, IrTokens.None, IrTokens.None,
                 false, false)));
 
         // Act
@@ -122,7 +123,7 @@ public sealed class IrFlagReadCensusClassifierTest {
             new FlagRegisterNode(DataType.UINT16), BinaryOperation.ASSIGN,
             new ConstantNode(DataType.UINT16, 0));
         IrStatement setter = new(assign, Instruction(0),
-            new IrEffects(IrValues.None, IrValues.StatusFlags, IrValues.None, IrTokens.None,
+            new IrEffects(CpuValues.None, CpuValues.StatusFlags, CpuValues.None, IrTokens.None,
                 IrTokens.None, false, false));
         (IrMethod method, BlockNode body) = MethodWithFlagRead(setter);
 
@@ -139,7 +140,7 @@ public sealed class IrFlagReadCensusClassifierTest {
         CfgInstruction instruction = Instruction(0);
         IrBlock entry = Block(0);
         IrBlock readBlock = Block(1);
-        entry.Statements.Add(AluSetter(new IrEffects(IrValues.None, Zero, IrValues.None,
+        entry.Statements.Add(AluSetter(new IrEffects(CpuValues.None, Zero, CpuValues.None,
             IrTokens.None, IrTokens.None, false, false), instruction));
         entry.Terminator = new IrJump(instruction, new IrEdge(readBlock, false));
         BinaryOperationNode read = FlagRead();
@@ -178,9 +179,9 @@ public sealed class IrFlagReadCensusClassifierTest {
         IrBlock join = Block(3);
         entry.Terminator = new IrBranch(instruction, new CpuFlagNode(Flags.Carry),
             new IrEdge(trueArm, false), new IrEdge(falseArm, false));
-        trueArm.Statements.Add(AluSetter(new IrEffects(IrValues.None, Zero, IrValues.None,
+        trueArm.Statements.Add(AluSetter(new IrEffects(CpuValues.None, Zero, CpuValues.None,
             IrTokens.None, IrTokens.None, false, false), instruction));
-        falseArm.Statements.Add(AluSetter(new IrEffects(IrValues.None, Zero, IrValues.None,
+        falseArm.Statements.Add(AluSetter(new IrEffects(CpuValues.None, Zero, CpuValues.None,
             IrTokens.None, IrTokens.None, false, false), instruction));
         trueArm.Terminator = new IrJump(instruction, new IrEdge(join, false));
         falseArm.Terminator = new IrJump(instruction, new IrEdge(join, false));
@@ -224,10 +225,10 @@ public sealed class IrFlagReadCensusClassifierTest {
 
     private static IrStatement AluSetter(IrEffects effects, ICfgNode origin) =>
         new(new AluStatementNode(
-                new MethodCallNode("Alu16", "Sub",
+                new AluCallNode(AluOperation.Sub, BitWidth.WORD_16,
                     new RegisterNode(DataType.UINT16, (int)RegisterIndex.AxIndex),
                     new ConstantNode(DataType.UINT16, 1)),
-                FlagEffect.None, AluOperation.Sub, BitWidth.WORD_16),
+                FlagEffect.None),
             origin, effects);
 
     private static IrMethod Method(IrEntry[] entries, ICfgNode[] nodes, params IrBlock[] blocks) =>

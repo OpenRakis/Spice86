@@ -1,15 +1,19 @@
 ; Speculative CFG fixture: sweep of a seeded hardware-interrupt generation root.
 ;
 ; With interrupt vectors installed and speculation on, the emulator seeds the INT 8
-; (IRQ0 / 8254 PIT) handler as a speculative CFG generation root at construction time,
-; decoding the emulator callback + IRET stub sitting at IVT[8].
+; (IRQ0 / 8254 PIT) handler as a speculative CFG generation root at construction time.
+; The stub installed by the emulator at IVT[8] is written first; this 64 KB image is
+; then loaded over F000, overwriting it; and the known-safe seeding runs last, decoding
+; whatever stale bytes the image left at F000:0006.
 ;
-; This BIOS-style image loads into F000 AFTER that seeding, so the bytes at the handler
-; address are replaced. The program copies its own minimal ISR over the seeded handler
-; address and lets the timer fire. On the first INT 8, live memory no longer matches the
-; seeded callback decode, so the reconciler SWEEPS the seeded speculative node - which is
-; still registered as a generation root. This is the exact scenario the RemoveInstruction
-; fan-out fix must handle: the swept root must not linger as a detached, de-indexed ghost.
+; The low pad is NOPs, not zeros: the speculative explorer no longer decodes chains of
+; zero instructions, so a zero pad would seed nothing and the first INT 8 would have no
+; stale speculative node to reconcile. The program copies its own minimal ISR over the
+; seeded handler address and lets the timer fire. On the first INT 8, live memory no
+; longer matches the seeded NOP decode, so the reconciler SWEEPS the seeded speculative
+; node - which is still registered as a generation root. This is the exact scenario the
+; RemoveInstruction fan-out fix must handle: the swept root must not linger as a
+; detached, de-indexed ghost.
 ;
 ; Real code lives high (F000:8000) so the low handler region and the ISR copy never collide
 ; with executing code.
@@ -18,7 +22,7 @@
 
 use16
 
-rb 0x8000 - $           ; leave the low F000 handler region free for the ISR copy
+times 0x8000-$ db 0x90  ; NOP-fill the low F000 handler region (kept non-zero on purpose)
 
 start:
     xor ax, ax

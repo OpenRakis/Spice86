@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Visitor;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 using Spice86.Shared.Emulator.Memory;
@@ -38,7 +39,8 @@ public class IrNodeTyperTest {
             new AluCallNode(AluOperation.UpdateFlags, BitWidth.BYTE_8, Ax));
 
         AluStatementNode alu = typed.Should().BeOfType<AluStatementNode>().Subject;
-        alu.Call.MethodName.Should().Be("UpdateFlags");
+        alu.Call.Should().BeOfType<AluCallNode>()
+            .Which.Operation.Should().Be(AluOperation.UpdateFlags);
         alu.Flags.Should().Be(FlagEffect.Writing(StatusFlags.Zero | StatusFlags.Parity | StatusFlags.Sign));
     }
 
@@ -160,7 +162,8 @@ public class IrNodeTyperTest {
 
     [Fact]
     public void InterruptCallStaysAnInterruptCallHelperNode() {
-        IrNodeTyper.TypeStatement(new InterruptCallHelperNode(Ax))
+        IrNodeTyper.TypeStatement(new InterruptCallHelperNode(InterruptSiteKind.NotObserved, null,
+            null, Ax))
             .Should().BeOfType<InterruptCallHelperNode>();
     }
 
@@ -188,7 +191,8 @@ public class IrNodeTyperTest {
             new AluCallValueNode(DataType.UINT16, AluOperation.Add, BitWidth.WORD_16, Ax, Ax));
 
         AluOperationNode alu = typed.Should().BeOfType<AluOperationNode>().Subject;
-        alu.Call.CallNode.MethodName.Should().Be("Add");
+        alu.Call.Should().BeOfType<AluCallValueNode>()
+            .Which.Operation.Should().Be(AluOperation.Add);
         alu.Flags.Should().Be(FlagEffect.Writing(StatusFlags.All));
     }
 

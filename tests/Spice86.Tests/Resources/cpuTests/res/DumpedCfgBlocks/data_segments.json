@@ -1,0 +1,88 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "F000:FFF0",
+  "totalEntryPoints": 1,
+  "entryPointAddresses": [
+    "F000:FFF0"
+  ],
+  "lastExecutedAddress": "F000:008B",
+  "lastExecutedBlockId": 3,
+  "blocks": [
+    {
+      "id": 3,
+      "entry": "F000:0000",
+      "term": "F000:008B",
+      "pred": [
+        2
+      ],
+      "succ": [],
+      "asm": [
+        "B80020|mov AX,0x2000",
+        "8ED8|mov DS,AX",
+        "8ED0|mov SS,AX",
+        "BC0010|mov SP,0x1000",
+        "FC|cld",
+        "8CC8|mov AX,CS",
+        "050001|add AX,0x0100",
+        "A34000|mov word ptr DS:[0x0040],AX",
+        "8CC8|mov AX,CS",
+        "050002|add AX,0x0200",
+        "A34200|mov word ptr DS:[0x0042],AX",
+        "B84000|mov AX,0x0040",
+        "8EC0|mov ES,AX",
+        "26A01700|mov AL,byte ptr ES:[0x0017]",
+        "A24400|mov byte ptr DS:[0x0044],AL",
+        "BACE03|mov DX,0x03CE",
+        "B006|mov AL,6",
+        "EE|out DX,AL",
+        "BACF03|mov DX,0x03CF",
+        "B00C|mov AL,0x0C",
+        "EE|out DX,AL",
+        "BACE03|mov DX,0x03CE",
+        "B008|mov AL,8",
+        "EE|out DX,AL",
+        "BACF03|mov DX,0x03CF",
+        "B0FF|mov AL,0xFF",
+        "EE|out DX,AL",
+        "BAC403|mov DX,0x03C4",
+        "B002|mov AL,2",
+        "EE|out DX,AL",
+        "BAC503|mov DX,0x03C5",
+        "B00F|mov AL,0x0F",
+        "EE|out DX,AL",
+        "B800B8|mov AX,0xB800",
+        "8EC0|mov ES,AX",
+        "26A10000|mov AX,word ptr ES:[0]",
+        "A34900|mov word ptr DS:[0x0049],AX",
+        "26C606000042|mov byte ptr ES:[0],0x42",
+        "26C606010024|mov byte ptr ES:[1],0x24",
+        "26A00000|mov AL,byte ptr ES:[0]",
+        "A24500|mov byte ptr DS:[0x0045],AL",
+        "26A00100|mov AL,byte ptr ES:[1]",
+        "A24600|mov byte ptr DS:[0x0046],AL",
+        "8CD8|mov AX,DS",
+        "050001|add AX,0x0100",
+        "8EC0|mov ES,AX",
+        "26C7061000CDAB|mov word ptr ES:[0x0010],0xABCD",
+        "26A11000|mov AX,word ptr ES:[0x0010]",
+        "A34700|mov word ptr DS:[0x0047],AX",
+        "B80020|mov AX,0x2000",
+        "8EC0|mov ES,AX",
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 2,
+      "entry": "F000:FFF0",
+      "term": "F000:FFF0",
+      "pred": [],
+      "succ": [
+        3
+      ],
+      "asm": [
+        "EB0E|jmp short 0"
+      ]
+    }
+  ],
+  "truncated": false
+}

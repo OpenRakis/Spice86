@@ -9,6 +9,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Visitor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph.Analysis;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.Graph;
@@ -22,10 +23,12 @@ using System.Linq;
 /// per-byte lattice (undetermined / known value / varying); only edges reachable from an entry are
 /// executable, an <see cref="IrBranch"/> whose condition evaluates to a constant marks only the taken
 /// arm's edge, and phis meet the operands of executable predecessors. Reads of known-clean register
-/// versions are substituted inside <see cref="AluOperationNode"/> / <see cref="AluStatementNode"/>
-/// arguments and the port argument of <see cref="PortReadCallNode"/> / <see cref="PortWriteCallNode"/>, never
-/// on the left of an assignment, never inside a loop block or a division / rep compare shape, and
-/// never in an instruction that can fault or has an after-check. The per-byte result is kept in
+/// versions are substituted by a walk over every value child of each rewritable statement and of
+/// the <see cref="IrBranch"/> condition and <see cref="IrSwitch"/> value, never on a write target
+/// (the left of an assignment, the result registers of a division, multiplication, swap or
+/// write-back, the verbatim children of an opaque or raw instruction node), never inside a loop
+/// block or a division / rep compare shape, and never in an instruction that can fault or has an
+/// after-check. The per-byte result is kept in
 /// <see cref="IrConstantFacts"/> for the branch pass.
 ///
 /// <para>The direction flag is a second lattice value next to the general registers: a one-bit
@@ -44,9 +47,10 @@ using System.Linq;
 /// same way in both places.</para>
 ///
 /// <para>A declaration no statement reads anymore is removed only when the rewritten statement's
-/// stored effects say it is side-effect free: it writes no machine value (<see cref="IrValues"/>),
-/// writes no token (<see cref="IrTokens"/>), cannot fault (<see cref="IrEffects.MayFault"/>) and
-/// delivers no interrupts (<see cref="IrEffects.DeliversInterrupts"/>).</para>
+/// stored effects say it is side-effect free: it writes no machine value (<see cref="CpuValues"/>),
+/// writes or reads no token (<see cref="IrTokens"/>) - a memory read can have a device side effect -
+/// cannot fault (<see cref="IrEffects.MayFault"/>) and delivers no interrupts
+/// (<see cref="IrEffects.DeliversInterrupts"/>).</para>
 /// </summary>
 internal static class IrConstants {
     /// <summary>Computes the constants of <paramref name="method"/>, substitutes the reads they make
@@ -103,9 +107,9 @@ internal static class IrConstants {
 
     private static uint DefinedGeneralRegisters(IrEffects effects) {
         uint mask = 0;
-        IrValues writes = effects.MustWrite | effects.MayWrite;
+        CpuValues writes = effects.MustWrite | effects.MayWrite;
         for (int v = 0; v <= (int)IrSsaValue.Edi; v++) {
-            if ((writes & IrSsaValues.MaskOf((IrSsaValue)v)) != IrValues.None) {
+            if ((writes & IrSsaValues.MaskOf((IrSsaValue)v)) != CpuValues.None) {
                 mask |= 1u << v;
             }
         }
@@ -116,14 +120,15 @@ internal static class IrConstants {
     private static bool UnknownLike(IrEffects effects) =>
         (effects.MayWrite & GeneralRegistersMask) == GeneralRegistersMask;
 
-    private const IrValues GeneralRegistersMask =
-        (IrValues)((1UL << (IrConstantFacts.ByteCount * 8)) - 1);
+    private const CpuValues GeneralRegistersMask =
+        (CpuValues)((1UL << (IrConstantFacts.ByteCount * 8)) - 1);
 
     // Substitution: reads of known versions, in the substitutable places only.
     private static void Substitute(IrMethod method, IrSsa ssa, IrConstantFacts facts) {
         HashSet<IrBlock> loopBlocks = LoopBlocks(method);
         List<(IrBlock Block, int Index, IrStatement Original, IVisitableAstNode Node)> rewritten = [];
-        foreach ((ICfgNode origin, List<IrOrigins.Located> statements) in IrOrigins.ByOrigin(method)) {
+        Dictionary<ICfgNode, List<IrOrigins.Located>> statementsByOrigin = IrOrigins.ByOrigin(method);
+        foreach ((ICfgNode origin, List<IrOrigins.Located> statements) in statementsByOrigin) {
             bool rewritable = IrOrigins.Rewritable(statements, origin)
                 && method.Shapes.GetValueOrDefault(origin) is not IrInstructionShape.Division;
             bool repCompare = method.Shapes.GetValueOrDefault(origin)
@@ -151,6 +156,48 @@ internal static class IrConstants {
             }
         }
         ApplySubstitutions(method, ssa, rewritten);
+        SubstituteTerminators(method, ssa, loopBlocks, statementsByOrigin, facts);
+    }
+
+    /// <summary>Substitutes the reads a terminator makes: the condition of an <see cref="IrBranch"/>
+    /// and the value of an <see cref="IrSwitch"/>, at the version before the terminator (position
+    /// <see cref="List{T}.Count"/> of the statements). The terminator's own origin decides
+    /// rewritability - a jump cannot fault, but an edge inside a faulting instruction's body can
+    /// still land here through its origin - and inside-instruction loop blocks keep the same
+    /// flags-only rule their statements follow.</summary>
+    private static void SubstituteTerminators(IrMethod method, IrSsa ssa,
+        HashSet<IrBlock> loopBlocks,
+        Dictionary<ICfgNode, List<IrOrigins.Located>> statementsByOrigin, IrConstantFacts facts) {
+        foreach (IrBlock block in method.Blocks) {
+            statementsByOrigin.TryGetValue(block.Terminator.Origin,
+                out List<IrOrigins.Located>? terminatorStatements);
+            if (!IrOrigins.Rewritable(terminatorStatements ?? [], block.Terminator.Origin)) {
+                continue;
+            }
+            bool substituteRegisters = !loopBlocks.Contains(block);
+            int position = block.Statements.Count;
+            IrTerminator? replacement = block.Terminator switch {
+                IrBranch branch => RewriteCondition(branch.Condition, block,
+                        position, facts, substituteRegisters) is { } condition
+                    && !ReferenceEquals(condition, branch.Condition)
+                    ? new IrBranch(branch.Origin, (ValueNode)condition,
+                        branch.WhenTrue, branch.WhenFalse)
+                    : null,
+                IrSwitch switchTerminator => RewriteCondition(switchTerminator.Value, block,
+                        position, facts, substituteRegisters) is { } value
+                    && !ReferenceEquals(value, switchTerminator.Value)
+                    ? new IrSwitch(switchTerminator.Origin, (ValueNode)value,
+                        switchTerminator.Cases, switchTerminator.Default)
+                    : null,
+                _ => null
+            };
+            if (replacement is not null) {
+                if (ssa.HasSite(block.Terminator)) {
+                    ssa.ReplaceTerminator(block.Terminator, replacement);
+                }
+                block.Terminator = replacement;
+            }
+        }
     }
 
     /// <summary>Applies <paramref name="rewritten"/>: a declaration nothing reads is removed when its
@@ -171,7 +218,7 @@ internal static class IrConstants {
             in rewritten) {
             if (node is VariableDeclarationNode declaration
                 && references.GetValueOrDefault(declaration.VariableName) == 0
-                && HasNoSideEffect(node, original.Origin)) {
+                && IrStatement.Create(node, original.Origin).IsRemovable) {
                 edits.Add((block, index, null));
                 continue;
             }
@@ -225,23 +272,8 @@ internal static class IrConstants {
                 return new ConstantNode(register.DataType, constant);
             case BinaryOperationNode binary:
                 return RewriteBinary(binary, block, position, facts, substituteRegisters);
-            case UnaryOperationNode or TypeConversionNode or SegmentedPointerNode
-                or AbsolutePointerNode or SegmentedAddressNode:
-                return IrAstChildren.MapChildren(node,
-                    child => Rewrite(child, block, position, facts, substituteRegisters));
             case ConditionalValueNode conditional:
                 return RewriteConditional(conditional, block, position, facts, substituteRegisters);
-            case PortReadCallNode:
-                return IrAstChildren.MapChildren(node,
-                    child => Rewrite(child, block, position, facts, substituteRegisters));
-            case PortWriteCallNode portWrite:
-                return RewriteArguments(portWrite, block, position, facts, substituteRegisters, 1);
-            case MethodCallValueNode:
-            case MethodCallNode:
-                return node;
-            case AluOperationNode or AluStatementNode:
-                return IrAstChildren.MapChildren(node,
-                    child => Rewrite(child, block, position, facts, substituteRegisters));
             case IfElseNode ifElse:
                 IVisitableAstNode condition = RewriteCondition(ifElse.Condition, block, position, facts, substituteRegisters);
                 return ReferenceEquals(condition, ifElse.Condition) ? node
@@ -255,8 +287,20 @@ internal static class IrConstants {
                 return ReferenceEquals(exitBody, whileWithExit.Body) ? node
                     : new WhileWithExitNode(whileWithExit.Condition, exitBody,
                         whileWithExit.ExitCondition);
-            default:
+            case MultiplicationNode multiplication:
+                return RewriteMultiplication(multiplication, block, position, facts,
+                    substituteRegisters);
+            // Children that are not reads: the result targets of a division, multiplication or
+            // swap, the register of a write-back, and the verbatim children of an opaque or raw
+            // instruction node. The children of a structured inside-statement construct are not
+            // rewritten either, as they were not before.
+            case DivisionNode or TupleSwapNode or RegisterWriteBackNode or OpaqueNode
+                or InstructionNode or PreTestLoopNode or DoWhileNode or InfiniteLoopNode
+                or SwitchNode:
                 return node;
+            default:
+                return IrAstChildren.MapChildren(node,
+                    child => Rewrite(child, block, position, facts, substituteRegisters));
         }
     }
 
@@ -267,7 +311,7 @@ internal static class IrConstants {
         // Inside a loop only a bare flag read folds: a register fact could go stale across
         // iterations, a flag version cannot.
         return (substituteRegisters || rebuilt.Condition is CpuFlagNode)
-            && facts.TryEvaluate(rebuilt.Condition, block, position, out ulong taken)
+            && facts.TryEvaluateReplacing(rebuilt.Condition, block, position, out ulong taken)
             ? taken != 0 ? rebuilt.WhenTrue : rebuilt.WhenFalse
             : rebuilt;
     }
@@ -299,28 +343,22 @@ internal static class IrConstants {
         (BlockNode)IrAstChildren.MapChildren(body,
             statement => Rewrite(statement, block, position, facts, false));
 
-    /// <summary>Rewrites the first <paramref name="lastArgument"/> arguments of <paramref name="methodCall"/>.</summary>
-    private static MethodCallNode RewriteArguments(MethodCallNode methodCall, IrBlock block,
-        int position, IrConstantFacts facts, bool substituteRegisters, int lastArgument) {
-        List<IVisitableAstNode> arguments = new(methodCall.Arguments.Count);
-        bool changed = false;
-        for (int index = 0; index < methodCall.Arguments.Count; index++) {
-            IVisitableAstNode argument = methodCall.Arguments[index];
-            IVisitableAstNode rewritten = index < lastArgument
-                ? Rewrite(argument, block, position, facts, substituteRegisters)
-                : argument;
-            arguments.Add(rewritten);
-            changed |= !ReferenceEquals(rewritten, argument);
-        }
-        return changed
-            ? methodCall.WithArguments([.. arguments])
-            : methodCall;
+    /// <summary>Rewrites the operand children of <paramref name="multiplication"/>: its
+    /// <see cref="MultiplicationNode.Low"/> / <see cref="MultiplicationNode.High"/> are write targets.</summary>
+    private static IVisitableAstNode RewriteMultiplication(MultiplicationNode multiplication,
+        IrBlock block, int position, IrConstantFacts facts, bool substituteRegisters) {
+        IVisitableAstNode left = Rewrite(multiplication.Left, block, position, facts, substituteRegisters);
+        IVisitableAstNode right = Rewrite(multiplication.Right, block, position, facts, substituteRegisters);
+        return ReferenceEquals(left, multiplication.Left)
+            && ReferenceEquals(right, multiplication.Right) ? multiplication
+            : multiplication with { Left = (ValueNode)left, Right = (ValueNode)right };
     }
 
     private static void CountVariableReferences(IrTerminator terminator,
         Dictionary<string, int> references) {
-        foreach (IVisitableAstNode node in IrAstChildren.RootsOf(terminator)) {
-            CountVariableReferences(node, references);
+        foreach (VariableReferenceNode reference in IrAstChildren.TerminatorNodes(terminator)
+                .OfType<VariableReferenceNode>()) {
+            references[reference.VariableName] = references.GetValueOrDefault(reference.VariableName) + 1;
         }
     }
 
@@ -331,23 +369,13 @@ internal static class IrConstants {
         }
     }
 
-    /// <summary>Whether a declaration with no reader may be dropped: the rewritten statement's
-    /// stored effects say it is side-effect free — it writes no machine value (<see cref="IrValues"/>),
-    /// writes no token (<see cref="IrTokens"/>), cannot fault (<see cref="IrEffects.MayFault"/>) and
-    /// delivers no interrupts (<see cref="IrEffects.DeliversInterrupts"/>).</summary>
-    private static bool HasNoSideEffect(IVisitableAstNode node, ICfgNode origin) {
-        IrEffects effects = IrStatement.Create(node, origin).Effects;
-        return effects.MayWrite == IrValues.None && effects.TokenWrites == IrTokens.None
-            && !effects.MayFault && !effects.DeliversInterrupts;
-    }
-
     /// <summary>Whether <paramref name="node"/> still depends on machine state after folding: it
-    /// reads a machine value (<see cref="IrValues"/>) or a token (<see cref="IrTokens"/>), writes
+    /// reads a machine value (<see cref="CpuValues"/>) or a token (<see cref="IrTokens"/>), writes
     /// either, or mentions a temporary, which the effects do not track.</summary>
     internal static bool ContainsStateRead(IVisitableAstNode node) {
         IrEffects effects = IrEffectsVisitor.Of(node, false);
-        if (effects.Reads != IrValues.None || effects.TokenReads != IrTokens.None
-            || effects.MayWrite != IrValues.None || effects.TokenWrites != IrTokens.None) {
+        if (effects.Reads != CpuValues.None || effects.TokenReads != IrTokens.None
+            || effects.MayWrite != CpuValues.None || effects.TokenWrites != IrTokens.None) {
             return true;
         }
         return IrAstChildren.Descendants(node).Any(descendant => descendant is VariableReferenceNode);

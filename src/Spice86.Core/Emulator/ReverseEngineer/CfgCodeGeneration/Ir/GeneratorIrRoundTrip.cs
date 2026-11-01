@@ -285,6 +285,7 @@ internal sealed class GeneratorIrRoundTrip : IExecutionAstRewriter {
         if (defaultBody.Count > 0 && defaultBody[^1] is BreakNode) {
             defaultBody.RemoveAt(defaultBody.Count - 1);
         }
-        return new SwitchNode(RestoreValue(dispatch.Value, instruction), sections, Sequence(defaultBody));
+        return new SwitchNode(RestoreValue(dispatch.Value, instruction), sections,
+            Sequence(defaultBody));
     }
 }

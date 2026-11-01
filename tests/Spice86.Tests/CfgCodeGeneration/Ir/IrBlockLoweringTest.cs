@@ -46,7 +46,8 @@ public class IrBlockLoweringTest {
         };
         CfgPartitionedProgram program = new() {
             Partitions = [partition],
-            Transfers = []
+            Transfers = [],
+            Inputs = GeneratorInputs.Empty
         };
         return new CfgCSharpGenerator(collectCensuses: true, verify: true).LiftMethods(program).Should().ContainSingle().Subject.Method;
     }
@@ -64,7 +65,8 @@ public class IrBlockLoweringTest {
         CSharpSourceWriter writer = new();
         new CSharpStatementPrinter(writer, new CSharpExpressionPrinter(new Dictionary<ushort, string> { [0xF000] = "es" }),
             target => target is IrBlock block ? $"b{block.Id}"
-                : throw new InvalidOperationException($"Goto target {target} is not an IR block.")).Print(node);
+                : throw new InvalidOperationException($"Goto target {target} is not an IR block."))
+            .Print(node);
         return writer.ToString();
     }
 

@@ -1,0 +1,79 @@
+{
+  "partitions": [
+    {
+      "id": 1,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        168
+      ],
+      "entries": [
+        {
+          "block": 168,
+          "address": "F000:012B",
+          "kind": "returnTargetEntry"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        162
+      ],
+      "entries": [
+        {
+          "block": 162,
+          "address": "F000:012C",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        3,
+        2
+      ],
+      "entries": [
+        {
+          "block": 2,
+          "address": "F000:FFF0",
+          "kind": "executionContextEntry"
+        }
+      ]
+    }
+  ],
+  "transfers": [
+    {
+      "kind": "dynamicReturn",
+      "fromPartition": 2,
+      "toPartition": 1,
+      "fromBlock": 162,
+      "toBlock": 168,
+      "from": "F000:013E",
+      "target": "F000:012B"
+    },
+    {
+      "kind": "crossPartitionFlow",
+      "fromPartition": 3,
+      "toPartition": 1,
+      "fromBlock": 3,
+      "toBlock": 168,
+      "from": "F000:0124",
+      "target": "F000:012B"
+    },
+    {
+      "kind": "cpuFault",
+      "fromPartition": 3,
+      "toPartition": 2,
+      "fromBlock": 3,
+      "toBlock": 162,
+      "from": "F000:0124",
+      "target": "F000:012C"
+    }
+  ]
+}

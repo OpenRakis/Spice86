@@ -8,7 +8,9 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Visitor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
 
 using System.Linq;
@@ -17,11 +19,13 @@ using System.Linq;
 /// A register version produced by a plain assignment and
 /// read exactly once is merged into its reader, so one statement covers several instructions:
 /// <c>add bx,1</c> followed by <c>shr bx,1</c> emits <c>BX = (ushort)((ushort)(BX + 1) &gt;&gt; 1);</c>.
-/// Legality is the one rule <see cref="IrSsa.SameVersions"/> over the moved expression's reads and token
-/// reads - the memory token covers stores and pushes, the IO token port accesses - plus no faulting
-/// or guard statement between the writer and the reader. An event check needs no refusal of its own:
-/// its may-write re-versions the registers a handler can observe, so the version rule already blocks
-/// a merge across it.
+/// Legality is <see cref="IrSsa.SameVersions"/> over the moved expression's register and IO-token
+/// reads plus no faulting or guard statement between the writer and the reader, and for the memory
+/// token either the version is the same or every memory-writing statement in between is a plain
+/// store or a push (<see cref="IrMemoryAliasAnalysis.IsFullMemoryBoundary"/> refuses the rest) whose
+/// writes are all <see cref="IrAliasRelation.Disjoint"/> known RAM from every memory read the moved
+/// expression makes. An event check needs no refusal of its own: its may-write re-versions the
+/// registers a handler can observe, so the version rule already blocks a merge across it.
 /// </summary>
 internal static class IrExpressionPropagation {
     /// <summary>The AST-node budget of one merged expression.</summary>
@@ -35,18 +39,20 @@ internal static class IrExpressionPropagation {
     /// <summary>Merges the single-use register writes of <paramref name="method"/> into their readers.</summary>
     public static void Apply(IrMethod method, IrSsa ssa) {
         HashSet<ICfgNode> entryNodes = method.Entries.Select(entry => entry.Node).ToHashSet();
+        IrMemoryAliasAnalysis alias = new(ssa);
         foreach (IrBlock block in method.Blocks) {
-            MergeBlock(block, entryNodes, ssa);
+            MergeBlock(block, entryNodes, ssa, alias);
         }
     }
 
-    private static void MergeBlock(IrBlock block, HashSet<ICfgNode> entryNodes, IrSsa ssa) {
+    private static void MergeBlock(IrBlock block, HashSet<ICfgNode> entryNodes, IrSsa ssa,
+        IrMemoryAliasAnalysis alias) {
         int[] covered = new int[block.Statements.Count];
         Array.Fill(covered, 1);
         List<int> removed = [];
         for (int i = 0; i < block.Statements.Count; i++) {
             if (covered[i] > 0
-                && TryMerge(block, i, entryNodes, ssa, covered) is not null) {
+                && TryMerge(block, i, entryNodes, ssa, covered, alias) is not null) {
                 removed.Add(i);
             }
         }
@@ -59,7 +65,7 @@ internal static class IrExpressionPropagation {
     /// <summary>Merges the assignment of statement <paramref name="i"/> into the only statement reading
     /// its register when every condition holds; returns the reader's index.</summary>
     private static int? TryMerge(IrBlock block, int i, HashSet<ICfgNode> entryNodes, IrSsa ssa,
-        int[] covered) {
+        int[] covered, IrMemoryAliasAnalysis alias) {
         IrStatement writer = block.Statements[i];
         if (entryNodes.Contains(writer.Origin)
             || writer.Node is not BinaryOperationNode {
@@ -68,7 +74,7 @@ internal static class IrExpressionPropagation {
                 Right: ValueNode e1
             }
             || r1 is SegmentRegisterNode
-            || (IrValueSets.Of(r1) & IrValues.Sp) != IrValues.None
+            || (IrValueSets.Of(r1) & CpuValues.Sp) != CpuValues.None
             || !Mergeable(e1)) {
             return null;
         }
@@ -130,15 +136,25 @@ internal static class IrExpressionPropagation {
         if (addressRegisters.Any(register => Overlaps(register, r1)) || !MergeableTarget(r2)) {
             return null;
         }
+        // A reader that partially defines r1's value also uses the writer's version implicitly, to
+        // keep the bytes its target does not write. Substitute cannot rewrite that link, so the
+        // merge may run only when the target rewrites every byte r1 wrote.
+        CpuValues r2Mask = r2 is RegisterNode targetRegister ? IrValueSets.Of(targetRegister) : CpuValues.None;
+        if ((IrSsaValues.WriteBits(reader.Effects).Partial & r1Bits) != 0
+            && (IrValueSets.Of(r1) & ~r2Mask) != CpuValues.None) {
+            return null;
+        }
         IrEffects moved = IrEffectsVisitor.Of(e1, false);
-        IrTokens tokens = moved.TokenReads;
+        IrTokens tokens = moved.TokenReads & ~IrTokens.Memory;
         if (moved.TouchesMemory) {
             tokens |= IrTokens.Io;
         }
         // Compare "after the writer" (before the next statement) with "before the reader": the merged
         // register itself legitimately changes at the writer - that is the merge. Anything else
-        // redefined in between refuses.
-        if (!ssa.SameVersions(moved.Reads, tokens, (block, i + 1), (block, j))) {
+        // redefined in between refuses; a changed memory version still merges when the moved read is
+        // proved disjoint from every write in between.
+        if (!ssa.SameVersions(moved.Reads, tokens, (block, i + 1), (block, j))
+            || !MemoryCrossable(block, i, j, moved, ssa, alias)) {
             return null;
         }
         ValueNode merged = Substitute(e2, r1, e1);
@@ -151,6 +167,37 @@ internal static class IrExpressionPropagation {
         covered[j] += covered[i];
         covered[i] = 0;
         return j;
+    }
+
+    /// <summary>Whether the moved expression's memory reads can cross the statements between the
+    /// writer at <paramref name="i"/> and the reader at <paramref name="j"/>: yes when the read does
+    /// not touch memory or the memory version is unchanged; otherwise every memory-writing statement
+    /// strictly between them must be a plain store or a push whose writes are all proved
+    /// <see cref="IrAliasRelation.Disjoint"/> from each moved read, all known RAM.</summary>
+    private static bool MemoryCrossable(IrBlock block, int i, int j, IrEffects moved, IrSsa ssa,
+        IrMemoryAliasAnalysis alias) {
+        if ((moved.TokenReads & IrTokens.Memory) == IrTokens.None
+            || ssa.SameVersions(CpuValues.None, IrTokens.Memory, (block, i + 1), (block, j))) {
+            return true;
+        }
+        IReadOnlyList<IrMemoryAccess> reads = alias.Reads(block, i);
+        for (int k = i + 1; k < j; k++) {
+            if ((block.Statements[k].Effects.TokenWrites & IrTokens.Memory) == IrTokens.None) {
+                continue;
+            }
+            if (alias.IsFullMemoryBoundary(block, k)) {
+                return false;
+            }
+            foreach (IrMemoryAccess write in alias.Writes(block, k)) {
+                foreach (IrMemoryAccess read in reads) {
+                    if (!alias.IsKnownRam(write) || !alias.IsKnownRam(read)
+                        || alias.Relation(write, read) != IrAliasRelation.Disjoint) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
     }
 
     /// <summary>The index of the one statement of <paramref name="block"/> using
@@ -172,7 +219,7 @@ internal static class IrExpressionPropagation {
     }
 
     private static bool Overlaps(RegisterNode register, RegisterNode other) =>
-        (IrValueSets.Of(register) & IrValueSets.Of(other)) != IrValues.None;
+        (IrValueSets.Of(register) & IrValueSets.Of(other)) != CpuValues.None;
 
     /// <summary>Whether <paramref name="node"/> can travel into another statement: a pure read of
     /// registers, constants, conversions, unary and non-assignment binary operations, or a memory

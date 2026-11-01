@@ -58,7 +58,7 @@ internal sealed class ApplicationExecutionObserver : IDisposable {
         Uninstall();
     }
 
-    private void OnNodeAboutToExecute(BreakPoint breakPoint) {
+    private void OnNodeAboutToExecute(BreakPoint breakPoint, long value) {
         Machine? machine = _machine;
         if (machine == null) {
             return;

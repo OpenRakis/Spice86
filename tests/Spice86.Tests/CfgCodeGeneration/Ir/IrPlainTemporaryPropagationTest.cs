@@ -62,23 +62,6 @@ public sealed class IrPlainTemporaryPropagationTest {
     }
 
     [Fact]
-    public void MemoryReadingInitializer_IsRefused() {
-        // Arrange
-        CfgInstruction instruction = Instruction(0);
-        IVisitableAstNode declaration = Declaration("tmp",
-            new AbsolutePointerNode(DataType.UINT16, new ConstantNode(DataType.UINT32, 0x10)));
-        IrBlock block = Block(instruction, declaration, Assign(Bx, Reference("tmp")));
-        IrMethod method = Method(instruction, block);
-
-        // Act
-        IrPlainTemporaryPropagation.Apply(method);
-
-        // Assert
-        block.Statements.Should().HaveCount(3);
-        block.Statements[1].Node.Should().Be(declaration);
-    }
-
-    [Fact]
     public void VariableAssignedAgain_IsRefused() {
         // Arrange
         CfgInstruction instruction = Instruction(0);

@@ -28,7 +28,7 @@ public class AddressBreakPoint : BreakPoint {
     /// <param name="additionalTriggerCondition">Additional condition for triggering. Not used if null.</param>
     /// <param name="conditionExpression">The condition expression string for serialization purposes.</param>
     public AddressBreakPoint(BreakPointType breakPointType, long address,
-        Action<BreakPoint> onReached, bool isRemovedOnTrigger, Func<long, bool>? additionalTriggerCondition = null,
+        Action<BreakPoint, long> onReached, bool isRemovedOnTrigger, Func<long, bool>? additionalTriggerCondition = null,
         string? conditionExpression = null)
         : base(breakPointType, onReached, isRemovedOnTrigger) {
         Address = address;

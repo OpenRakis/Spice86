@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
 
@@ -44,15 +45,19 @@ internal static class IrDeadRegisterWrites {
         }
     }
 
-    /// <summary>The blocks that can reach an exit observing machine state: every transfer except a
-    /// <see cref="FailAsUntestedNode"/>, which aborts the program with nothing observed. Writes in
-    /// pure-abort regions keep their boundary-everything shape instead of being stripped wholesale.</summary>
+    /// <summary>The blocks that can reach an exit observing machine state or a
+    /// statement or terminator that may fault. A fault observes the CPU state even
+    /// when the normal path ends in <see cref="FailAsUntestedNode"/>. Regions with
+    /// only untested aborts and no fault path keep their writes.</summary>
     private static HashSet<IrBlock> ObservingBlocks(IrMethod method) {
         HashSet<IrBlock> observing = [];
         Queue<IrBlock> worklist = [];
         foreach (IrBlock block in method.Blocks) {
-            if (block.Terminator is not IrExit { Transfer: not FailAsUntestedNode }
-                || !observing.Add(block)) {
+            bool observesState =
+                block.Terminator is IrExit { Transfer: not FailAsUntestedNode }
+                || block.Terminator.Effects.MayFault
+                || block.Statements.Any(statement => statement.Effects.MayFault);
+            if (!observesState || !observing.Add(block)) {
                 continue;
             }
             worklist.Enqueue(block);
@@ -98,7 +103,9 @@ internal static class IrDeadRegisterWrites {
             || statement.Node is not BinaryOperationNode {
                 BinaryOperation: BinaryOperation.ASSIGN,
                 Left: RegisterNode register } assign
+            // UINT8 index 4 is AH, not SP; only word/dword index-4 stores are stack writes.
             || (register is not SegmentRegisterNode
+                && register.DataType != DataType.UINT8
                 && register.RegisterIndex == (int)RegisterIndex.SpIndex)
             || !IsPlainValue(assign.Right)) {
             return false;
@@ -132,18 +139,18 @@ internal static class IrDeadRegisterWrites {
             return false;
         }
         (uint _, uint partial) = IrSsaValues.WriteBits(user.Effects);
-        IrValues mask = IrSsaValues.MaskOf(value);
+        CpuValues mask = IrSsaValues.MaskOf(value);
         if ((partial & (1u << (int)value)) == 0
-            || (user.Effects.Reads & mask) != IrValues.None) {
+            || (user.Effects.Reads & mask) != CpuValues.None) {
             return false;
         }
         int userVersion = use.ConditionalNewVersion;
         if (ssa.Info(userVersion).Previous != version) {
             return false;
         }
-        IrValues written = (statement.Effects.MustWrite | statement.Effects.MayWrite) & mask;
-        IrValues overwritten = user.Effects.MustWrite & mask;
-        return (written & ~overwritten) == IrValues.None;
+        CpuValues written = (statement.Effects.MustWrite | statement.Effects.MayWrite) & mask;
+        CpuValues overwritten = user.Effects.MustWrite & mask;
+        return (written & ~overwritten) == CpuValues.None;
     }
 
     private static bool IsPlainValue(ValueNode value) =>

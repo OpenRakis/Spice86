@@ -29,6 +29,6 @@ public sealed record AluCallValueNode : MethodCallValueNode {
     public BitWidth Width { get; }
 
     /// <inheritdoc />
-    public override MethodCallValueNode WithArguments(IVisitableAstNode[] arguments) =>
-        new AluCallValueNode(DataType, Operation, Width, arguments);
+    public override AluCallValueNode WithArguments(IVisitableAstNode[] arguments) =>
+        new(DataType, Operation, Width, arguments);
 }

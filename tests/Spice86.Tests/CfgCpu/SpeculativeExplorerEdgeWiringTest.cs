@@ -22,7 +22,7 @@ public sealed class SpeculativeExplorerEdgeWiringTest : SpeculativeTestBase {
     private readonly SpeculativeExplorer _explorer;
 
     public SpeculativeExplorerEdgeWiringTest() {
-        _explorer = new SpeculativeExplorer(Parser, NodeIndex, NodeLinker);
+        _explorer = new SpeculativeExplorer(Memory, Parser, NodeIndex, NodeLinker);
     }
 
     /// <summary>

@@ -5,6 +5,7 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Interfaces;
@@ -30,11 +31,14 @@ public class MouseInt33Handler : InterruptHandler {
         ILogger loggerService, IMouseDriver mouseDriver)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _mouseDriver = mouseDriver;
-        FillDispatchTable();
     }
 
     /// <inheritdoc />
     public override byte VectorNumber => 0x33;
+
+    /// <inheritdoc />
+    /// <remarks>The service is selected by the full AX value.</remarks>
+    protected override ServiceSelector ServiceSelector => ServiceSelector.Ax;
 
     /// <inheritdoc />
     public override void Run() {
@@ -102,6 +106,7 @@ public class MouseInt33Handler : InterruptHandler {
     ///     • Sets pointer speed ratio to horizontal: 8 to 8; vertical 8 to 16 and sets the maximum doubling threshold to 64
     ///     mickeys (see INT 33H 001aH).
     /// </summary>
+    [InterruptService(0x00, Reads = CpuValues.Ax, Writes = CpuValues.Ax | CpuValues.Bx, Memory = ServiceMemoryEffect.ReadWrite)]
     public void MouseInstalledFlag() {
         State.AX = 0xFFFF; // installed
         State.BX = (ushort)_mouseDriver.ButtonCount;
@@ -129,6 +134,7 @@ public class MouseInt33Handler : InterruptHandler {
     ///
     ///         This function also resets the "exclusion area" set via INT 33H 0010H. TODO: not implemented
     /// </summary>
+    [InterruptService(0x01, Reads = CpuValues.Ax)]
     public void ShowMouseCursor() {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("{ClassName} INT {Int:X2} 01 {MethodName}",
@@ -147,6 +153,7 @@ public class MouseInt33Handler : InterruptHandler {
     ///     Use this function before performing any direct writes to the video display (if doing so will overwrite the mouse
     ///     pointer) and call INT 33H 0001H (show ptr) after writing to the screen.
     /// </summary>
+    [InterruptService(0x02, Reads = CpuValues.Ax)]
     public void HideMouseCursor() {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("{ClassName} INT {Int:X2} 02 {MethodName}",
@@ -172,6 +179,7 @@ public class MouseInt33Handler : InterruptHandler {
     /// Notes: All X,Y coordinates are virtual coordinates and when working with text mode, <br/>
     ///        you must divide each value by 8 to get a character column,row. <br/>
     /// </summary>
+    [InterruptService(0x03, Reads = CpuValues.Ax, Writes = CpuValues.Bx | CpuValues.Cx | CpuValues.Dx)]
     public void GetMousePositionAndStatus() {
         MouseStatusRecord status = _mouseDriver.CurrentMouseStatus;
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
@@ -202,6 +210,7 @@ public class MouseInt33Handler : InterruptHandler {
     /// Notes: All X,Y coordinates are virtual coordinates and when working with text mode, <br/>
     ///        you must divide each value by 8 to get a character column,row. <br/>
     /// </summary>
+    [InterruptService(0x6, Reads = CpuValues.Ax | CpuValues.Bx, Writes = CpuValues.Ax | CpuValues.Bx | CpuValues.Cx | CpuValues.Dx)]
     public void QueryButtonReleasedCounter() {
         if (!TryGetMouseButtonIndex(State.BX, out MouseButton button)) {
             ReturnNothingInCpuRegisters();
@@ -246,6 +255,7 @@ public class MouseInt33Handler : InterruptHandler {
     /// Notes: All X,Y coordinates are virtual coordinates and when working with text mode, <br/>
     ///        you must divide each value by 8 to get a character column,row. <br/>
     /// </summary>
+    [InterruptService(0x0005, Reads = CpuValues.Ax | CpuValues.Bx, Writes = CpuValues.Ax | CpuValues.Bx | CpuValues.Cx | CpuValues.Dx)]
     private void QueryButtonPressedCounter() {
         if (!TryGetMouseButtonIndex(State.BX, out MouseButton button)) {
             ReturnNothingInCpuRegisters();
@@ -283,6 +293,7 @@ public class MouseInt33Handler : InterruptHandler {
     /// Notes: All X,Y coordinates are virtual coordinates and when working with text mode, you must divide each value by 8
     ///     to get a character column,row.
     /// </summary>
+    [InterruptService(0x04, Reads = CpuValues.Ax | CpuValues.Cx | CpuValues.Dx)]
     public void SetMouseCursorPosition() {
         ushort x = State.CX;
         ushort y = State.DX;
@@ -309,6 +320,7 @@ public class MouseInt33Handler : InterruptHandler {
     /// Notes: All X,Y coordinates are virtual coordinates and when working with text mode, you must divide each value by
     ///     8 to get a character column,row.
     /// </summary>
+    [InterruptService(0x07, Reads = CpuValues.Ax | CpuValues.Cx | CpuValues.Dx)]
     public void SetMouseHorizontalMinMaxPosition() {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("{ClassName} INT {Int:X2} 07 {MethodName}: min = {Min}, max = {Max}",
@@ -333,6 +345,7 @@ public class MouseInt33Handler : InterruptHandler {
     /// Notes: All X,Y coordinates are virtual coordinates and when working with text mode, you must divide each value by
     ///     8 to get a character column,row.
     /// </summary>
+    [InterruptService(0x08, Reads = CpuValues.Ax | CpuValues.Cx | CpuValues.Dx)]
     public void SetMouseVerticalMinMaxPosition() {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("{ClassName} INT {Int:X2} 08 {MethodName}: min Y = {MinY}, max Y = {MaxY}",
@@ -391,6 +404,7 @@ public class MouseInt33Handler : InterruptHandler {
     /// Notes: You may prefer to use the more-flexible INT 33H 0014H (exchange handlers) or INT 33H 0018H (install
     ///     mouse+key handler).
     /// </summary>
+    [InterruptService(0x0C, Reads = CpuValues.Ax | CpuValues.Cx | CpuValues.Dx | CpuValues.Es, Memory = ServiceMemoryEffect.Write)]
     public void SetMouseUserDefinedSubroutine() {
         MouseUserCallback callbackInfo = new((MouseEventMask)State.CX, State.ES, State.DX);
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
@@ -431,6 +445,7 @@ public class MouseInt33Handler : InterruptHandler {
     ///
     ///         CX = 25 / desiredPixelsPerInch   (thus, CX=8 moves 200 pixels)
     /// </summary>
+    [InterruptService(0x0F, Reads = CpuValues.Ax | CpuValues.Cx | CpuValues.Dx)]
     public void SetMouseMickeyPixelRatio() {
         ushort horizontal = State.CX;
         ushort vertical = State.DX;
@@ -450,6 +465,7 @@ public class MouseInt33Handler : InterruptHandler {
     /// <summary>
     ///    DX    desired double-speed threshold (mickeys per second)
     /// </summary>
+    [InterruptService(0x13, Reads = CpuValues.Ax | CpuValues.Dx)]
     public void SetMouseDoubleSpeedThreshold() {
         ushort threshold = State.DX;
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
@@ -459,6 +475,7 @@ public class MouseInt33Handler : InterruptHandler {
         _mouseDriver.DoubleSpeedThreshold = threshold;
     }
 
+    [InterruptService(0x1B, Reads = CpuValues.Ax, Writes = CpuValues.Bx | CpuValues.Cx | CpuValues.Dx)]
     private void GetMouseSensitivity() {
         int horizontal = _mouseDriver.HorizontalMickeysPerPixel;
         int vertical = _mouseDriver.VerticalMickeysPerPixel;
@@ -472,6 +489,7 @@ public class MouseInt33Handler : InterruptHandler {
         State.DX = (ushort)threshold;
     }
 
+    [InterruptService(0x1A, Reads = CpuValues.Ax | CpuValues.Bx | CpuValues.Cx | CpuValues.Dx)]
     private void SetMouseSensitivity() {
         ushort horizontal = State.BX;
         ushort vertical = State.CX;
@@ -513,6 +531,7 @@ public class MouseInt33Handler : InterruptHandler {
     ///
     /// Notes: INT 33H 0018H provides a flexible means for installing up to three specialized-event handlers.
     /// </summary>
+    [InterruptService(0x14, Reads = CpuValues.Ax | CpuValues.Cx | CpuValues.Dx | CpuValues.Es, Writes = CpuValues.Cx | CpuValues.Dx | CpuValues.Es, Memory = ServiceMemoryEffect.Write)]
     public void SwapMouseUserDefinedSubroutine() {
         MouseUserCallback newCallback = new((MouseEventMask)State.CX, State.ES, State.DX);
         MouseUserCallback oldCallback = _mouseDriver.GetRegisteredCallback();
@@ -543,6 +562,7 @@ public class MouseInt33Handler : InterruptHandler {
     ///     Increasing the number of interrupts per second provides more accuracy for the mouse, but makes the foreground
     ///     application slow down.
     /// </summary>
+    [InterruptService(0x1C, Reads = CpuValues.Ax | CpuValues.Bx)]
     public void SetInterruptRate() {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("{ClassName} INT {Int:X2} 1C {MethodName}: called with rate {Rate} ",
@@ -572,6 +592,7 @@ public class MouseInt33Handler : InterruptHandler {
     ///
     ///     The value in CH can be used to see if calls to INT 33H 001cH are meaningful.
     /// </summary>
+    [InterruptService(0x24, Reads = CpuValues.Ax, Writes = CpuValues.Ax | CpuValues.Bx | CpuValues.Cx)]
     public void GetSoftwareVersionAndMouseType() {
         if (_mouseDriver.MouseType == MouseType.None) {
             State.AX = 0xFFFF;
@@ -592,28 +613,8 @@ public class MouseInt33Handler : InterruptHandler {
         }
     }
 
-    private void FillDispatchTable() {
-        AddAction(0x00, MouseInstalledFlag);
-        AddAction(0x01, ShowMouseCursor);
-        AddAction(0x02, HideMouseCursor);
-        AddAction(0x03, GetMousePositionAndStatus);
-        AddAction(0x04, SetMouseCursorPosition);
-        AddAction(0x0005, QueryButtonPressedCounter);
-        AddAction(0x6, QueryButtonReleasedCounter);
-        AddAction(0x07, SetMouseHorizontalMinMaxPosition);
-        AddAction(0x08, SetMouseVerticalMinMaxPosition);
-        AddAction(0x0B, GetMotionDistance);
-        AddAction(0x0C, SetMouseUserDefinedSubroutine);
-        AddAction(0x0F, SetMouseMickeyPixelRatio);
-        AddAction(0x13, SetMouseDoubleSpeedThreshold);
-        AddAction(0x14, SwapMouseUserDefinedSubroutine);
-        AddAction(0x1A, SetMouseSensitivity);
-        AddAction(0x1B, GetMouseSensitivity);
-        AddAction(0x1C, SetInterruptRate);
-        AddAction(0x21, Reset);
-        AddAction(0x24, GetSoftwareVersionAndMouseType);
-    }
 
+    [InterruptService(0x21, Reads = CpuValues.Ax, Writes = CpuValues.Ax | CpuValues.Bx, Memory = ServiceMemoryEffect.ReadWrite)]
     private void Reset() {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("{ClassName} INT {Int:X2} 21 {MethodName}: Resetting mouse", nameof(MouseInt33Handler), VectorNumber, nameof(Reset));
@@ -623,6 +624,7 @@ public class MouseInt33Handler : InterruptHandler {
         State.BX = (ushort)_mouseDriver.ButtonCount;
     }
 
+    [InterruptService(0x0B, Reads = CpuValues.Ax, Writes = CpuValues.Cx | CpuValues.Dx)]
     private void GetMotionDistance() {
         short x = _mouseDriver.GetDeltaXMickeys();
         short y = _mouseDriver.GetDeltaYMickeys();

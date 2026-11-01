@@ -1,3 +1,4 @@
+// ==== file: CfgGeneratedOverrideSupplier.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -16,56 +17,111 @@ public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
     }
 }
 
-public class CfgGeneratedOverrides : CSharpOverrideHelper {
-    protected readonly ushort cs1;
+
+// ==== file: CfgGeneratedOverrides.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort biosSegment;
+
+    private readonly Func<int, Action> unknown_F000_002A_F002A_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
+
+    protected readonly DsGlobals DsGlobals;
+    protected readonly Segment0000Globals Segment0000Globals;
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
-        cs1 = 0xF000;
+        biosSegment = 0xF000;
+        DsGlobals = new DsGlobals(Memory, State.SegmentRegisters);
+        Segment0000Globals = new Segment0000Globals(Memory, programStartSegment);
 
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x002A, unknown_F000_002A_F002A, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, "unknown");
+        unknown_F000_002A_F002A_AsmEntry = _ => unknown_F000_002A_F002A_Asm();
+        unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x002A, unknown_F000_002A_F002A_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
     }
 
-    public virtual Action unknown_F000_002A_F002A(int loadOffset) {
-        CheckExternalEvents(cs1, 0x002A);
+}
+
+// ==== file: CfgGeneratedOverrides.F000.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: DS. Outputs: none. Changes: AX, BX, flags.</summary>
+    public virtual void unknown_F000_002A_F002A(ushort ds) {
+        DS = ds;
+        ushort bx1 = 0;
+        CheckExternalEvents(biosSegment, 0x002A);
         // F000:002A pop AX
         AX = Stack.Pop16();
         // F000:002B mov BX,word ptr DS:[0]
-        BX = UInt16[DS, 0];
+        bx1 = DsGlobals.Word0000;
         // F000:002F inc word ptr DS:[0]
-        UInt16[DS, 0] += 1;
+        DsGlobals.Word0000 += 1;
         // F000:0033 cmp BX,0
-        Alu16.Sub(BX, 0);
+        Alu16.Sub(bx1, 0);
         // F000:0036 je short 0x0042
-        if (BX == 0) {
+        if (bx1 == 0) {
             // F000:0042 mov AX,0x0014
             AX = 0x0014;
             // F000:0045 push AX
-            Stack.Push16(AX);
+            Stack.Push16(0x0014);
             // F000:0046 ret near
-            return NearRet();
+            BX = bx1;
+            NearReturn();
+            return;
         }
         // F000:0038 cmp BX,1
-        Alu16.Sub(BX, 1);
+        Alu16.Sub(bx1, 1);
         // F000:003B je short 0x0047
-        if (BX == 1) {
+        if (bx1 == 1) {
             // F000:0047 mov AX,0x001B
             AX = 0x001B;
             // F000:004A push AX
-            Stack.Push16(AX);
+            Stack.Push16(0x001B);
             // F000:004B ret near
-            return NearRet();
+            BX = bx1;
+            NearReturn();
+            return;
         }
         // F000:003D mov AX,0x0022
         AX = 0x0022;
         // F000:0040 push AX
-        Stack.Push16(AX);
+        Stack.Push16(0x0022);
         // F000:0041 ret near
-        return NearRet();
+        BX = bx1;
+        NearReturn();
+        return;
     }
 
-    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
-        CheckExternalEvents(cs1, 0xFFF0);
+    public virtual Action unknown_F000_002A_F002A_Asm() {
+        unknown_F000_002A_F002A(DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, FS, GS, flags, DF. Does not return.</summary>
+    public virtual Action unknown_F000_FFF0_FFFF0() {
+        CheckExternalEvents(biosSegment, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov AX,0
         AX = 0;
@@ -76,20 +132,20 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0007 mov SP,0x0100
         SP = 0x0100;
         // F000:000A mov word ptr DS:[0],0
-        UInt16[DS, 0] = 0;
+        Segment0000Globals.Word0000 = 0;
         while (true) {
-            CheckExternalEvents(cs1, 0x0010);
+            CheckExternalEvents(biosSegment, 0x0010);
             // F000:0010 call near 0x002A
-            if (!NearCallReturnedElsewhere(cs1, 0x0013, unknown_F000_002A_F002A, [new(cs1, 0x0014), new(cs1, 0x001B), new(cs1, 0x0022)])) {
+            if (!NearCallReturnedElsewhere(biosSegment, 0x0013, unknown_F000_002A_F002A_AsmEntry, [new(biosSegment, 0x0014), new(biosSegment, 0x001B), new(biosSegment, 0x0022)])) {
                 throw FailAsUntested("Untested return from call at F000:0010");
             }
-            if (CS == cs1 && IP == 0x0014) {
+            if (CS == biosSegment && IP == 0x0014) {
                 goto L_0014;
             }
-            if (CS == cs1 && IP == 0x001B) {
+            if (CS == biosSegment && IP == 0x001B) {
                 goto L_001B;
             }
-            if (CS == cs1 && IP == 0x0022) {
+            if (CS == biosSegment && IP == 0x0022) {
                 break;
             }
             else {
@@ -97,19 +153,69 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             }
         L_0014:
             // F000:0014 mov byte ptr DS:[0x0010],0xAA
-            UInt8[DS, 0x0010] = 0xAA;
+            DsGlobals.Byte0010 = 0xAA;
             // F000:0019 jmp short 0x0010
             continue;
         L_001B:
             // F000:001B mov byte ptr DS:[0x0011],0xBB
-            UInt8[DS, 0x0011] = 0xBB;
+            DsGlobals.Byte0011 = 0xBB;
             // F000:0020 jmp short 0x0010
         }
         // F000:0022 mov byte ptr DS:[0x0012],0xCC
-        UInt8[DS, 0x0012] = 0xCC;
+        DsGlobals.Byte0012 = 0xCC;
         // F000:0027 jmp short 0x0029
         // F000:0029 hlt
         return Hlt();
     }
 
+}
+
+// ==== file: DsGlobals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class DsGlobals : MemoryBasedDataStructureWithDsBaseAddress {
+    private readonly IMemory _memory;
+    private readonly SegmentRegisters _segmentRegisters;
+
+    private ushort Segment => _segmentRegisters.UInt16[(uint)SegmentRegisterIndex.DsIndex];
+
+    public DsGlobals(IMemory memory, SegmentRegisters segmentRegisters) : base(memory, segmentRegisters) {
+        _memory = memory;
+        _segmentRegisters = segmentRegisters;
+    }
+
+    /// DS:0x0000, whatever DS holds at the access.
+    public ushort Word0000 { get => _memory.UInt16[Segment, 0x0000]; set => _memory.UInt16[Segment, 0x0000] = value; }
+
+    /// DS:0x0010, whatever DS holds at the access.
+    public byte Byte0010 { get => _memory.UInt8[Segment, 0x0010]; set => _memory.UInt8[Segment, 0x0010] = value; }
+
+    /// DS:0x0011, whatever DS holds at the access.
+    public byte Byte0011 { get => _memory.UInt8[Segment, 0x0011]; set => _memory.UInt8[Segment, 0x0011] = value; }
+
+    /// DS:0x0012, whatever DS holds at the access.
+    public byte Byte0012 { get => _memory.UInt8[Segment, 0x0012]; set => _memory.UInt8[Segment, 0x0012] = value; }
+}
+
+// ==== file: Segment0000Globals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class Segment0000Globals : MemoryBasedDataStructure {
+    private readonly IMemory _memory;
+    private readonly ushort Segment;
+
+    public Segment0000Globals(IMemory memory, ushort programStartSegment) : base(memory, 0x0) {
+        _memory = memory;
+        Segment = 0x0000;
+    }
+
+    public ushort Word0000 { get => _memory.UInt16[Segment, 0x0000]; set => _memory.UInt16[Segment, 0x0000] = value; }
 }

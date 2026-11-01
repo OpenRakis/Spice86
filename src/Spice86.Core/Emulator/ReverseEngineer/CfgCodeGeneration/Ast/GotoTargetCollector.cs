@@ -117,6 +117,8 @@ internal sealed class GotoTargetCollector : ICodeGenerationAstVisitor<GotoTarget
 
     public GotoTargets VisitDivisionNode(DivisionNode node) => GotoTargets.None;
 
+    public GotoTargets VisitMultiplicationNode(MultiplicationNode node) => GotoTargets.None;
+
     public GotoTargets VisitSegmentVariableNode(SegmentVariableNode node) => GotoTargets.None;
 
     public GotoTargets VisitOffsetLiteralNode(OffsetLiteralNode node) => GotoTargets.None;
@@ -223,4 +225,6 @@ internal sealed class GotoTargetCollector : ICodeGenerationAstVisitor<GotoTarget
     public GotoTargets VisitInterruptReturnNode(InterruptReturnNode node) => GotoTargets.None;
     public GotoTargets VisitPreTestLoopNode(PreTestLoopNode node) => Collect(node.Body);
     public GotoTargets VisitLocalDeclarationNode(LocalDeclarationNode node) => GotoTargets.None;
+    public GotoTargets VisitRegisterLocalNode(RegisterLocalNode node) => GotoTargets.None;
+    public GotoTargets VisitRegisterWriteBackNode(RegisterWriteBackNode node) => GotoTargets.None;
 }

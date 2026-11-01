@@ -1,0 +1,113 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "F000:FFF0",
+  "totalEntryPoints": 1,
+  "entryPointAddresses": [
+    "F000:FFF0"
+  ],
+  "lastExecutedAddress": "F000:0033",
+  "lastExecutedBlockId": 26,
+  "blocks": [
+    {
+      "id": 26,
+      "entry": "F000:002E",
+      "term": "F000:0033",
+      "pred": [
+        23
+      ],
+      "succ": [],
+      "asm": [
+        "C6060104DD|mov byte ptr DS:[0x0401],0xDD",
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 2,
+      "entry": "F000:FFF0",
+      "term": "F000:FFF0",
+      "pred": [],
+      "succ": [
+        3
+      ],
+      "asm": [
+        "EB0E|jmp short 0"
+      ]
+    },
+    {
+      "id": 23,
+      "entry": "FFFE:0007",
+      "term": "FFFE:0007",
+      "pred": [
+        17
+      ],
+      "succ": [
+        26
+      ],
+      "asm": [
+        "EA2E0000F0|jmp far F000:002E"
+      ]
+    },
+    {
+      "id": 3,
+      "entry": "F000:0000",
+      "term": "F000:0029",
+      "pred": [
+        2
+      ],
+      "succ": [
+        17
+      ],
+      "asm": [
+        "FA|cli",
+        "B80020|mov AX,0x2000",
+        "8ED0|mov SS,AX",
+        "BC0010|mov SP,0x1000",
+        "31C0|xor AX,AX",
+        "8ED8|mov DS,AX",
+        "B90000|mov CX,0",
+        "C606000022|mov byte ptr DS:[0],0x22",
+        "C606010022|mov byte ptr DS:[1],0x22",
+        "C606020041|mov byte ptr DS:[2],0x41",
+        "C6060300F4|mov byte ptr DS:[3],0xF4",
+        "C606000401|mov byte ptr DS:[0x0400],1",
+        "EA0000FEFF|jmp far FFFE:0000"
+      ]
+    },
+    {
+      "id": 17,
+      "entry": "FFFE:0000",
+      "term": "FFFE:0005",
+      "pred": [
+        3
+      ],
+      "succ": [
+        21,
+        23
+      ],
+      "asm": [
+        "A00005|mov AL,byte ptr DS:[0x0500]",
+        "84C0|test AL,AL",
+        "750D|jne short 0x0014"
+      ]
+    },
+    {
+      "id": 21,
+      "entry": "FFFE:0014",
+      "dead": true,
+      "term": "FFFE:0023",
+      "pred": [
+        17
+      ],
+      "succ": [],
+      "asm": [
+        "C606020043|mov byte ptr DS:[2],0x43",
+        "BA1111|mov DX,0x1111",
+        "BB3412|mov BX,0x1234",
+        "B82222|mov AX,0x2222",
+        "41|inc CX",
+        "F4|hlt"
+      ]
+    }
+  ],
+  "truncated": false
+}

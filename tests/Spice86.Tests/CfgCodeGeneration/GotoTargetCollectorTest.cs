@@ -49,7 +49,7 @@ public class GotoTargetCollectorTest {
     [Fact]
     public void CyclicJumpNeedsTheEntryDispatcherLabel() {
         // Arrange
-        IfElseNode tree = new(Condition, new BlockNode(new CyclicJumpNode("loop_1000_0020_10020", 0x0020)), new BlockNode());
+        IfElseNode tree = new(Condition, new BlockNode(new CyclicJumpNode("loop_1000_0020_10020", 0x0020, false)), new BlockNode());
 
         // Act
         GotoTargets targets = GotoTargetCollector.Collect(tree);

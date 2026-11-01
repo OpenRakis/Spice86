@@ -1,3 +1,4 @@
+// ==== file: CfgGeneratedOverrideSupplier.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -16,125 +17,193 @@ public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
     }
 }
 
-public class CfgGeneratedOverrides : CSharpOverrideHelper {
+
+// ==== file: CfgGeneratedOverrides.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort biosSegment;
     protected readonly ushort cs1;
     protected readonly ushort cs2;
-    protected readonly ushort cs3;
+
+    private readonly Func<int, Action> unknown_F000_001E_F001E_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_0022_F0022_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_0026_F0026_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_002B_F002B_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_0030_F0030_AsmEntry;
+    private readonly Func<int, Action> unknown_F010_0030_F0130_AsmEntry;
+    private readonly Func<int, Action> unknown_F001_012D_F013D_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_013D_F013D_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
-        cs1 = 0xF000;
-        cs2 = 0xF001;
-        cs3 = 0xF010;
+        biosSegment = 0xF000;
+        cs1 = 0xF001;
+        cs2 = 0xF010;
 
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x001E, unknown_F000_001E_F001E, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0022, unknown_F000_0022_F0022, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0026, unknown_F000_0026_F0026, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x002B, unknown_F000_002B_F002B, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0030, unknown_F000_0030_F0030, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs3, 0x0030, unknown_F010_0030_F0130, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs2, 0x012D, unknown_F001_012D_F013D, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x013D, unknown_F000_013D_F013D, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, "unknown");
+        unknown_F000_001E_F001E_AsmEntry = _ => unknown_F000_001E_F001E_Asm();
+        unknown_F000_0022_F0022_AsmEntry = _ => unknown_F000_0022_F0022_Asm();
+        unknown_F000_0026_F0026_AsmEntry = _ => unknown_F000_0026_F0026_Asm();
+        unknown_F000_002B_F002B_AsmEntry = _ => unknown_F000_002B_F002B_Asm();
+        unknown_F000_0030_F0030_AsmEntry = _ => unknown_F000_0030_F0030_Asm();
+        unknown_F010_0030_F0130_AsmEntry = _ => unknown_F010_0030_F0130_Asm();
+        unknown_F001_012D_F013D_AsmEntry = _ => unknown_F001_012D_F013D_Asm();
+        unknown_F000_013D_F013D_AsmEntry = _ => unknown_F000_013D_F013D_Asm();
+        unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x001E, unknown_F000_001E_F001E_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0022, unknown_F000_0022_F0022_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0026, unknown_F000_0026_F0026_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x002B, unknown_F000_002B_F002B_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0030, unknown_F000_0030_F0030_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs2, 0x0030, unknown_F010_0030_F0130_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x012D, unknown_F001_012D_F013D_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x013D, unknown_F000_013D_F013D_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
     }
 
-    public virtual Action unknown_F000_001E_F001E(int loadOffset) {
-        CheckExternalEvents(cs1, 0x001E);
+}
+
+// ==== file: CfgGeneratedOverrides.F000.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: DX. Outputs: DX. Changes: DX, flags.</summary>
+    public virtual ushort unknown_F000_001E_F001E(ushort dx) {
+        DX = dx;
+        CheckExternalEvents(biosSegment, 0x001E);
         // F000:001E add DX,1
         DX = Alu16.Add(DX, 1);
         // F000:0021 ret far
-        return FarRet();
+        FarReturn();
+        return DX;
     }
 
-    public virtual Action unknown_F000_0022_F0022(int loadOffset) {
-        CheckExternalEvents(cs1, 0x0022);
+    public virtual Action unknown_F000_001E_F001E_Asm() {
+        DX = unknown_F000_001E_F001E(DX);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DX. Outputs: DX. Changes: DX, flags.</summary>
+    public virtual ushort unknown_F000_0022_F0022(ushort dx) {
+        DX = dx;
+        CheckExternalEvents(biosSegment, 0x0022);
         // F000:0022 add DX,0x0010
         DX = Alu16.Add(DX, 0x0010);
         // F000:0025 ret far
-        return FarRet();
+        FarReturn();
+        return DX;
     }
 
-    public virtual Action unknown_F000_0026_F0026(int loadOffset) {
-        CheckExternalEvents(cs1, 0x0026);
+    public virtual Action unknown_F000_0022_F0022_Asm() {
+        DX = unknown_F000_0022_F0022(DX);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DX. Outputs: DX. Changes: DX, flags.</summary>
+    public virtual ushort unknown_F000_0026_F0026(ushort dx) {
+        DX = dx;
+        CheckExternalEvents(biosSegment, 0x0026);
         // F000:0026 add DX,0x0100
         DX = Alu16.Add(DX, 0x0100);
         // F000:002A ret far
-        return FarRet();
+        FarReturn();
+        return DX;
     }
 
-    public virtual Action unknown_F000_002B_F002B(int loadOffset) {
-        CheckExternalEvents(cs1, 0x002B);
+    public virtual Action unknown_F000_0026_F0026_Asm() {
+        DX = unknown_F000_0026_F0026(DX);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DX. Outputs: DX. Changes: DX, flags.</summary>
+    public virtual ushort unknown_F000_002B_F002B(ushort dx) {
+        DX = dx;
+        CheckExternalEvents(biosSegment, 0x002B);
         // F000:002B add DX,0x1000
         DX = Alu16.Add(DX, 0x1000);
         // F000:002F ret far
-        return FarRet();
+        FarReturn();
+        return DX;
     }
 
-    public virtual Action unknown_F000_0030_F0030(int loadOffset) {
-        CheckExternalEvents(cs1, 0x0030);
+    public virtual Action unknown_F000_002B_F002B_Asm() {
+        DX = unknown_F000_002B_F002B(DX);
+        return Returned;
+    }
+
+    /// <summary>Inputs: DI, DS. Outputs: DI. Changes: AX, DI, flags.</summary>
+    public virtual ushort unknown_F000_0030_F0030(ushort di, ushort ds) {
+        DI = di;
+        DS = ds;
+        CheckExternalEvents(biosSegment, 0x0030);
         // F000:0030 push CS
         Stack.Push16(CS);
         // F000:0031 pop AX
         AX = Stack.Pop16();
         // F000:0032 mov word ptr DS:[DI],AX
-        UInt16[DS, DI] = AX;
+        UInt16[ds, di] = AX;
         // F000:0034 mov word ptr DS:[DI+2],0x1000
-        UInt16[DS, (ushort)(DI + 2)] = 0x1000;
+        UInt16[ds, (ushort)(di + 2)] = 0x1000;
         // F000:0039 add DI,4
         DI = Alu16.Add(DI, 4);
         // F000:003C ret far
-        return FarRet();
+        FarReturn();
+        return DI;
     }
 
-    public virtual Action unknown_F010_0030_F0130(int loadOffset) {
-        CheckExternalEvents(cs3, 0x0030);
-        // F010:0030 push CS
-        Stack.Push16(CS);
-        // F010:0031 pop AX
-        AX = Stack.Pop16();
-        // F010:0032 mov word ptr DS:[DI],AX
-        UInt16[DS, DI] = AX;
-        // F010:0034 mov word ptr DS:[DI+2],0x2000
-        UInt16[DS, (ushort)(DI + 2)] = 0x2000;
-        // F010:0039 add DI,4
-        DI = Alu16.Add(DI, 4);
-        // F010:003C ret far
-        return FarRet();
+    public virtual Action unknown_F000_0030_F0030_Asm() {
+        DI = unknown_F000_0030_F0030(DI, DS);
+        return Returned;
     }
 
-    public virtual Action unknown_F001_012D_F013D(int loadOffset) {
-        CheckExternalEvents(cs2, 0x012D);
-        // F001:012D push CS
-        Stack.Push16(CS);
-        // F001:012E pop AX
-        AX = Stack.Pop16();
-        // F001:012F mov word ptr DS:[DI],AX
-        UInt16[DS, DI] = AX;
-        // F001:0131 mov word ptr DS:[DI+2],0x3000
-        UInt16[DS, (ushort)(DI + 2)] = 0x3000;
-        // F001:0136 add DI,4
-        DI = Alu16.Add(DI, 4);
-        // F001:0139 ret far
-        return FarRet();
-    }
-
-    public virtual Action unknown_F000_013D_F013D(int loadOffset) {
-        CheckExternalEvents(cs1, 0x013D);
+    /// <summary>Inputs: DI, DS. Outputs: DI. Changes: AX, DI, flags.</summary>
+    public virtual ushort unknown_F000_013D_F013D(ushort di, ushort ds) {
+        DI = di;
+        DS = ds;
+        CheckExternalEvents(biosSegment, 0x013D);
         // F000:013D push CS
         Stack.Push16(CS);
         // F000:013E pop AX
         AX = Stack.Pop16();
         // F000:013F mov word ptr DS:[DI],AX
-        UInt16[DS, DI] = AX;
+        UInt16[ds, di] = AX;
         // F000:0141 mov word ptr DS:[DI+2],0x3000
-        UInt16[DS, (ushort)(DI + 2)] = 0x3000;
+        UInt16[ds, (ushort)(di + 2)] = 0x3000;
         // F000:0146 add DI,4
         DI = Alu16.Add(DI, 4);
         // F000:0149 ret far
-        return FarRet();
+        FarReturn();
+        return DI;
     }
 
-    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
-        CheckExternalEvents(cs1, 0xFFF0);
+    public virtual Action unknown_F000_013D_F013D_Asm() {
+        DI = unknown_F000_013D_F013D(DI, DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: none. Does not return.</summary>
+    public virtual Action unknown_F000_FFF0_FFFF0() {
+        CheckExternalEvents(biosSegment, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov AX,0x2000
         AX = 0x2000;
@@ -151,7 +220,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:000E mov CX,8
         CX = 8;
         do {
-            CheckExternalEvents(cs1, 0x0011);
+            CheckExternalEvents(biosSegment, 0x0011);
             // F000:0011 mov BX,CX
             BX = CX;
             // F000:0013 dec BX
@@ -163,28 +232,28 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             ushort targetOffset_0017 = UInt16[CS, (ushort)(BX + 0x3D)];
             switch ((uint)(targetSegment_0017 << 16 | targetOffset_0017)) {
                 case 0xF000_001E:
-                    FarCall(cs1, 0x001B, cs1, unknown_F000_001E_F001E);
+                    FarCall(biosSegment, 0x001B, biosSegment, unknown_F000_001E_F001E_AsmEntry);
                     break;
                 case 0xF000_0022:
-                    FarCall(cs1, 0x001B, cs1, unknown_F000_0022_F0022);
+                    FarCall(biosSegment, 0x001B, biosSegment, unknown_F000_0022_F0022_AsmEntry);
                     break;
                 case 0xF000_0026:
-                    FarCall(cs1, 0x001B, cs1, unknown_F000_0026_F0026);
+                    FarCall(biosSegment, 0x001B, biosSegment, unknown_F000_0026_F0026_AsmEntry);
                     break;
                 case 0xF000_002B:
-                    FarCall(cs1, 0x001B, cs1, unknown_F000_002B_F002B);
+                    FarCall(biosSegment, 0x001B, biosSegment, unknown_F000_002B_F002B_AsmEntry);
                     break;
                 case 0xF000_0030:
-                    FarCall(cs1, 0x001B, cs1, unknown_F000_0030_F0030);
+                    FarCall(biosSegment, 0x001B, biosSegment, unknown_F000_0030_F0030_AsmEntry);
                     break;
                 case 0xF000_013D:
-                    FarCall(cs1, 0x001B, cs1, unknown_F000_013D_F013D);
+                    FarCall(biosSegment, 0x001B, biosSegment, unknown_F000_013D_F013D_AsmEntry);
                     break;
                 case 0xF001_012D:
-                    FarCall(cs1, 0x001B, cs2, unknown_F001_012D_F013D);
+                    FarCall(biosSegment, 0x001B, cs1, unknown_F001_012D_F013D_AsmEntry);
                     break;
                 case 0xF010_0030:
-                    FarCall(cs1, 0x001B, cs3, unknown_F010_0030_F0130);
+                    FarCall(biosSegment, 0x001B, cs2, unknown_F010_0030_F0130_AsmEntry);
                     break;
                 default:
                     throw FailAsUntested($"Untested far call target {targetSegment_0017:X4}:{targetOffset_0017:X4} at F000:0017");
@@ -194,6 +263,88 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         } while (CX != 0);
         // F000:001D hlt
         return Hlt();
+    }
+
+}
+
+// ==== file: CfgGeneratedOverrides.F001.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: DI, DS. Outputs: DI. Changes: AX, DI, flags.</summary>
+    public virtual ushort unknown_F001_012D_F013D(ushort di, ushort ds) {
+        DI = di;
+        DS = ds;
+        CheckExternalEvents(cs1, 0x012D);
+        // F001:012D push CS
+        Stack.Push16(CS);
+        // F001:012E pop AX
+        AX = Stack.Pop16();
+        // F001:012F mov word ptr DS:[DI],AX
+        UInt16[ds, di] = AX;
+        // F001:0131 mov word ptr DS:[DI+2],0x3000
+        UInt16[ds, (ushort)(di + 2)] = 0x3000;
+        // F001:0136 add DI,4
+        DI = Alu16.Add(DI, 4);
+        // F001:0139 ret far
+        FarReturn();
+        return DI;
+    }
+
+    public virtual Action unknown_F001_012D_F013D_Asm() {
+        DI = unknown_F001_012D_F013D(DI, DS);
+        return Returned;
+    }
+
+}
+
+// ==== file: CfgGeneratedOverrides.F010.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: DI, DS. Outputs: DI. Changes: AX, DI, flags.</summary>
+    public virtual ushort unknown_F010_0030_F0130(ushort di, ushort ds) {
+        DI = di;
+        DS = ds;
+        CheckExternalEvents(cs2, 0x0030);
+        // F010:0030 push CS
+        Stack.Push16(CS);
+        // F010:0031 pop AX
+        AX = Stack.Pop16();
+        // F010:0032 mov word ptr DS:[DI],AX
+        UInt16[ds, di] = AX;
+        // F010:0034 mov word ptr DS:[DI+2],0x2000
+        UInt16[ds, (ushort)(di + 2)] = 0x2000;
+        // F010:0039 add DI,4
+        DI = Alu16.Add(DI, 4);
+        // F010:003C ret far
+        FarReturn();
+        return DI;
+    }
+
+    public virtual Action unknown_F010_0030_F0130_Asm() {
+        DI = unknown_F010_0030_F0130(DI, DS);
+        return Returned;
     }
 
 }

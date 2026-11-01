@@ -1,6 +1,7 @@
 namespace Spice86.Tests.CfgCodeGeneration.Ir;
 
 using FluentAssertions;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
@@ -23,8 +24,8 @@ using Xunit;
 /// word, and every version belongs to one of <see cref="IrSsaWebs.WebCount"/> webs.
 /// </summary>
 public sealed class IrSsaWebsTest {
-    private static readonly IrValues Eax = IrSsaValues.MaskOf(IrSsaValue.Eax);
-    private static readonly IrValues Ax = (IrValues)0x3UL;
+    private static readonly CpuValues Eax = IrSsaValues.MaskOf(IrSsaValue.Eax);
+    private static readonly CpuValues Ax = CpuValues.Ax;
 
     [Fact]
     public void TwoWritesJoinedByAPhiShareOneWeb() {
@@ -65,7 +66,7 @@ public sealed class IrSsaWebsTest {
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(0);
         IrStatement partial = new(new CommentNode("partial"), instruction,
-            new IrEffects(Eax, (IrValues)0x1UL, Eax, IrTokens.None, IrTokens.None, false, false));
+            new IrEffects(Eax, CpuValues.Al, Eax, IrTokens.None, IrTokens.None, false, false));
         IrStatement lowWord = new(new CommentNode("ax"), instruction,
             new IrEffects(Eax, Ax, Eax & ~Ax, IrTokens.None, IrTokens.None, false, false));
         block.Statements.Add(partial);
@@ -91,9 +92,9 @@ public sealed class IrSsaWebsTest {
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(0);
         IrStatement partial = new(new CommentNode("partial"), instruction,
-            new IrEffects(Eax, (IrValues)0x1UL, Eax, IrTokens.None, IrTokens.None, false, false));
+            new IrEffects(Eax, CpuValues.Al, Eax, IrTokens.None, IrTokens.None, false, false));
         IrStatement lowByte = new(new CommentNode("al"), instruction,
-            new IrEffects(Eax, (IrValues)0x1UL, Eax, IrTokens.None, IrTokens.None,
+            new IrEffects(Eax, CpuValues.Al, Eax, IrTokens.None, IrTokens.None,
                 false, false));
         block.Statements.Add(partial);
         block.Statements.Add(lowByte);
@@ -143,14 +144,14 @@ public sealed class IrSsaWebsTest {
     private static CfgInstruction Instruction(ushort offset) =>
         CfgTestHelpers.CreateInstruction(new SegmentedAddress(0x1000, offset));
 
-    private static IrStatement Writes(ICfgNode origin, IrValues mask) =>
+    private static IrStatement Writes(ICfgNode origin, CpuValues mask) =>
         new(new CommentNode("w"), origin,
-            new IrEffects(IrValues.None, mask, IrValues.None, IrTokens.None, IrTokens.None,
+            new IrEffects(CpuValues.None, mask, CpuValues.None, IrTokens.None, IrTokens.None,
                 false, false));
 
-    private static IrStatement Reads(ICfgNode origin, IrValues values) =>
+    private static IrStatement Reads(ICfgNode origin, CpuValues values) =>
         new(new CommentNode("r"), origin,
-            new IrEffects(values, IrValues.None, IrValues.None, IrTokens.None, IrTokens.None,
+            new IrEffects(values, CpuValues.None, CpuValues.None, IrTokens.None, IrTokens.None,
                 false, false));
 
     private static ReturnNode ReturnValue() => new(new ConstantNode(DataType.UINT16, 0));

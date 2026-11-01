@@ -1,11 +1,11 @@
 using Microsoft.Extensions.Logging;
 namespace Spice86.Core.Emulator.InterruptHandlers.VGA;
 
-
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Data;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
@@ -305,8 +305,6 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         if (_logger.IsEnabled(LogLevel.Debug)) {
             _logger.LogDebug("Initializing VGA BIOS");
         }
-        FillDispatchTable();
-
         InitializeBiosArea();
         InitializeStaticFunctionalityTable();
     }
@@ -317,6 +315,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     public override byte VectorNumber => 0x10;
 
     /// <inheritdoc />
+    [InterruptService(0x13, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Bx | CpuValues.Cx | CpuValues.Dx | CpuValues.Es | CpuValues.Bp, Memory = ServiceMemoryEffect.ReadWrite, Io = true)]
     public void WriteString() {
         CursorPosition cursorPosition = new(State.DL, State.DH, State.BH);
         ushort length = State.CX;
@@ -335,6 +334,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     }
 
     /// <inheritdoc />
+    [InterruptService(0x1A, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Bl, Writes = CpuValues.Ax | CpuValues.Bx, Memory = ServiceMemoryEffect.ReadWrite)]
     public void GetSetDisplayCombinationCode() {
         switch (State.AL) {
             case 0x00: {
@@ -363,6 +363,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     }
 
     /// <inheritdoc />
+    [InterruptService(0x12, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Bx, Writes = CpuValues.Al | CpuValues.Bx | CpuValues.Cx, Memory = ServiceMemoryEffect.ReadWrite, Io = true)]
     public void VideoSubsystemConfiguration() {
         if (_logger.IsEnabled(LogLevel.Trace)) {
             _logger.LogTrace("{ClassName} INT 10 12 {MethodName} - Sub function 0x{SubFunction:X2}",
@@ -403,6 +404,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     }
 
     /// <inheritdoc />
+    [InterruptService(0x11, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Bx | CpuValues.Cx | CpuValues.Dx | CpuValues.Es | CpuValues.Bp, Writes = CpuValues.Cx | CpuValues.Dl | CpuValues.Es | CpuValues.Bp, Memory = ServiceMemoryEffect.ReadWrite, Io = true)]
     public void LoadFontInfo() {
         if (_logger.IsEnabled(LogLevel.Trace)) {
             _logger.LogTrace("{ClassName} INT 10 11 {MethodName} - Sub function 0x{SubFunction:X2}",
@@ -469,6 +471,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     }
 
     /// <inheritdoc />
+    [InterruptService(0x10, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Bx | CpuValues.Cx | CpuValues.Dx | CpuValues.Es, Writes = CpuValues.Bx | CpuValues.Cx | CpuValues.Dh, Memory = ServiceMemoryEffect.ReadWrite, Io = true)]
     public void SetPaletteRegisters() {
         if (_logger.IsEnabled(LogLevel.Debug)) {
             _logger.LogDebug("{ClassName} INT 10 10 {MethodName} - Sub function 0x{SubFunction:X2}",
@@ -547,6 +550,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     }
 
     /// <inheritdoc />
+    [InterruptService(0x0F, Reads = CpuValues.Ah, Writes = CpuValues.Ax | CpuValues.Bh, Memory = ServiceMemoryEffect.Read)]
     public void GetVideoState() {
         State.BH = _biosDataArea.CurrentVideoPage;
         State.AL = (byte)(_biosDataArea.VideoMode | _biosDataArea.VideoCtl & BiosConstants.VideoControlBitMask);
@@ -558,6 +562,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     }
 
     /// <inheritdoc />
+    [InterruptService(0x0E, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Bx, Memory = ServiceMemoryEffect.ReadWrite, Io = true)]
     public void WriteTextInTeletypeMode() {
         CharacterPlusAttribute characterPlusAttribute = new((char)State.AL, State.BL, false);
         CursorPosition cursorPosition = _vgaFunctions.GetCursorPosition(_biosDataArea.CurrentVideoPage);
@@ -569,6 +574,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     }
 
     /// <inheritdoc />
+    [InterruptService(0x0B, Reads = CpuValues.Ah | CpuValues.Bx, Memory = ServiceMemoryEffect.Write, Io = true)]
     public void SetColorPaletteOrBackGroundColor() {
         if (State.BH == 0x00) {
             _vgaFunctions.SetBorderColor(State.BL);
@@ -591,6 +597,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     }
 
     /// <inheritdoc />
+    [InterruptService(0x0A, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Bx | CpuValues.Cx, Memory = ServiceMemoryEffect.ReadWrite, Io = true)]
     public void WriteCharacterAtCursor() {
         CharacterPlusAttribute characterPlusAttribute = new((char)State.AL, State.BL, false);
         byte currentVideoPage = State.BH;
@@ -605,6 +612,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     }
 
     /// <inheritdoc />
+    [InterruptService(0x09, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Bx | CpuValues.Cx, Memory = ServiceMemoryEffect.ReadWrite, Io = true)]
     public void WriteCharacterAndAttributeAtCursor() {
         CharacterPlusAttribute characterPlusAttribute = new((char)State.AL, State.BL, true);
         byte currentVideoPage = State.BH;
@@ -618,6 +626,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     }
 
     /// <inheritdoc />
+    [InterruptService(0x08, Reads = CpuValues.Ah | CpuValues.Bx, Writes = CpuValues.Ax, Memory = ServiceMemoryEffect.Read)]
     public void ReadCharacterAndAttributeAtCursor() {
         CursorPosition cursorPosition = _vgaFunctions.GetCursorPosition(State.BH);
         CharacterPlusAttribute characterPlusAttribute = _vgaFunctions.ReadChar(cursorPosition);
@@ -630,6 +639,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     }
 
     /// <inheritdoc />
+    [InterruptService(0x07, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Bx | CpuValues.Cx | CpuValues.Dx, Memory = ServiceMemoryEffect.ReadWrite, Io = true)]
     public void ScrollPageDown() {
         _vgaFunctions.VerifyScroll(-1, State.CL, State.CH, State.DL, State.DH, State.AL, State.BH);
         if (_logger.IsEnabled(LogLevel.Debug)) {
@@ -639,6 +649,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     }
 
     /// <inheritdoc />
+    [InterruptService(0x06, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Bx | CpuValues.Cx | CpuValues.Dx, Memory = ServiceMemoryEffect.ReadWrite, Io = true)]
     public void ScrollPageUp() {
         _vgaFunctions.VerifyScroll(1, State.CL, State.CH, State.DL, State.DH, State.AL, State.BH);
         if (_logger.IsEnabled(LogLevel.Debug)) {
@@ -648,6 +659,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     }
 
     /// <inheritdoc />
+    [InterruptService(0x05, Reads = CpuValues.Ah | CpuValues.Al, Memory = ServiceMemoryEffect.ReadWrite, Io = true)]
     public void SelectActiveDisplayPage() {
         byte page = State.AL;
         int address = _vgaFunctions.SetActivePage(page);
@@ -659,6 +671,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     }
 
     /// <inheritdoc />
+    [InterruptService(0x03, Reads = CpuValues.Ah | CpuValues.Bx, Writes = CpuValues.Cx | CpuValues.Dx, Memory = ServiceMemoryEffect.Read)]
     public void GetCursorPosition() {
         byte page = State.BH;
         CursorPosition cursorPosition = _vgaFunctions.GetCursorPosition(page);
@@ -672,6 +685,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     }
 
     /// <inheritdoc />
+    [InterruptService(0x02, Reads = CpuValues.Ah | CpuValues.Bx | CpuValues.Dx, Memory = ServiceMemoryEffect.ReadWrite, Io = true)]
     public void SetCursorPosition() {
         CursorPosition cursorPosition = new(State.DL, State.DH, State.BH);
         _vgaFunctions.SetCursorPosition(cursorPosition);
@@ -682,6 +696,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     }
 
     /// <inheritdoc />
+    [InterruptService(0x01, Reads = CpuValues.Ah | CpuValues.Cx, Memory = ServiceMemoryEffect.ReadWrite, Io = true)]
     public void SetCursorType() {
         _vgaFunctions.SetCursorShape(State.CX);
         if (_logger.IsEnabled(LogLevel.Debug)) {
@@ -691,6 +706,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     }
 
     /// <inheritdoc />
+    [InterruptService(0x0D, Reads = CpuValues.Ah | CpuValues.Cx | CpuValues.Dx, Writes = CpuValues.Al, Memory = ServiceMemoryEffect.Read, Io = true)]
     public void ReadDot() {
         State.AL = _vgaFunctions.ReadPixel(State.CX, State.DX);
         if (_logger.IsEnabled(LogLevel.Debug)) {
@@ -700,6 +716,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     }
 
     /// <inheritdoc />
+    [InterruptService(0x0C, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Cx | CpuValues.Dx, Memory = ServiceMemoryEffect.ReadWrite, Io = true)]
     public void WriteDot() {
         _vgaFunctions.WritePixel(State.AL, State.CX, State.DX);
         if (_logger.IsEnabled(LogLevel.Debug)) {
@@ -709,6 +726,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     }
 
     /// <inheritdoc />
+    [InterruptService(0x00, Reads = CpuValues.Ah | CpuValues.Al, Writes = CpuValues.Al, Memory = ServiceMemoryEffect.ReadWrite, Io = true)]
     public void SetVideoMode() {
         int modeId = State.AL & BiosConstants.VideoModeMask;
         ModeFlags flags = ModeFlags.Legacy | (ModeFlags)_biosDataArea.ModesetCtl & (ModeFlags.NoPalette | ModeFlags.GraySum);
@@ -774,6 +792,7 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
     }
 
     /// <inheritdoc />
+    [InterruptService(0x04, Reads = CpuValues.Ah, Writes = CpuValues.Ax | CpuValues.Bx | CpuValues.Cx | CpuValues.Dx, Memory = ServiceMemoryEffect.None)]
     public void ReadLightPenPosition() {
         if (_logger.IsEnabled(LogLevel.Debug)) {
             _logger.LogDebug("{ClassName} INT 10 04 {MethodName} - Read Light Pen Position, returning 0",
@@ -875,36 +894,14 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         _vgaFunctions.SetFontBlockSpecifier(fontBlock);
     }
 
-    private void FillDispatchTable() {
-        AddAction(0x00, SetVideoMode);
-        AddAction(0x01, SetCursorType);
-        AddAction(0x02, SetCursorPosition);
-        AddAction(0x03, GetCursorPosition);
-        AddAction(0x04, ReadLightPenPosition);
-        AddAction(0x05, SelectActiveDisplayPage);
-        AddAction(0x06, ScrollPageUp);
-        AddAction(0x07, ScrollPageDown);
-        AddAction(0x08, ReadCharacterAndAttributeAtCursor);
-        AddAction(0x09, WriteCharacterAndAttributeAtCursor);
-        AddAction(0x0A, WriteCharacterAtCursor);
-        AddAction(0x0B, SetColorPaletteOrBackGroundColor);
-        AddAction(0x0C, WriteDot);
-        AddAction(0x0D, ReadDot);
-        AddAction(0x0E, WriteTextInTeletypeMode);
-        AddAction(0x0F, GetVideoState);
-        AddAction(0x10, SetPaletteRegisters);
-        AddAction(0x11, LoadFontInfo);
-        AddAction(0x12, VideoSubsystemConfiguration);
-        AddAction(0x13, WriteString);
-        AddAction(0x1A, GetSetDisplayCombinationCode);
-        AddAction(0x1B, () => GetFunctionalityInfo());
-        AddAction(0x4F, VesaFunctions);
-    }
+    [InterruptService(0x1B, Name = "GetFunctionalityInfo", Reads = CpuValues.Ah | CpuValues.Bx | CpuValues.Es | CpuValues.Di, Writes = CpuValues.Al, Memory = ServiceMemoryEffect.ReadWrite, Io = true)]
+    private void FunctionalityInfoService() => GetFunctionalityInfo();
 
     /// <summary>
     /// VESA VBE 1.2 function dispatcher (INT 10h AH=4Fh).
     /// Dispatches to specific VBE functions based on AL subfunction.
     /// </summary>
+    [InterruptService(0x4F, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Bx | CpuValues.Cx | CpuValues.Es | CpuValues.Di, Writes = CpuValues.Ax, Memory = ServiceMemoryEffect.ReadWrite, Io = true)]
     public void VesaFunctions() {
         byte subfunction = State.AL;
         switch ((VbeFunction)subfunction) {
@@ -968,7 +965,6 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
 
         State.AX = (ushort)VbeStatus.Success;
     }
-
 
     /// <inheritdoc cref="IVesaBiosExtension.VbeGetModeInfo"/>
     public void VbeGetModeInfo() {

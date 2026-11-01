@@ -1,11 +1,23 @@
 namespace Spice86.Tests.Utility;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
+using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
+using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.LoadableFile;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Memory.Mmu;
+using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning;
 using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Shared.Interfaces;
+
+using Microsoft.Extensions.Logging.Abstractions;
 
 using NSubstitute;
 
@@ -66,7 +78,18 @@ internal static class CfgBlocksTestJson {
     }
 
     private static CfgCpuSnapshotBuilder CreateSnapshotBuilder() {
+        State state = new(CpuModel.INTEL_80286);
+        Memory memory = new(new AddressReadWriteBreakpoints(), new Ram(0x200000), new A20Gate(),
+            new RealModeMmu386(), false);
+        LoadedImageRegistry loadedImageRegistry = new();
         return new CfgCpuSnapshotBuilder(new CfgBlockGraphExporter(), new CfgFunctionPartitioner(),
-            new FunctionCatalogue(), Substitute.For<ILogger>());
+            new FunctionCatalogue(),
+            new GeneratorInputsCollector(new InstalledInterruptHandlers([]),
+                new InterruptVectorTable(memory), new CallbackHandler(state, NullLogger.Instance),
+                loadedImageRegistry, new SharedMouseData(),
+                new ChangedMemoryMap(memory, new AddressReadWriteBreakpoints(), loadedImageRegistry),
+                memory, new IOPortDispatcher(new(), state, NullLogger.Instance, false),
+                Spice86Creator.ProgramEntryPointSegment),
+            NullLogger.Instance);
     }
 }

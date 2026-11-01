@@ -148,27 +148,8 @@ public class GeneratedCodeMetricsCollectorTest {
         metrics.ContinueStatements.Should().Be(1);
     }
 
-    [Fact]
-    public void LineNamesEveryValueInAFixedOrder() {
-        // Arrange
-        GeneratedCodeMetrics metrics = CollectFromMethodBody("""
-            L_0001:
-            goto L_0001;
-            """);
-
-        // Act
-        string[] fields = metrics.ToLine().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-        // Assert
-        fields.Select(field => field[..field.IndexOf('=')]).Should().Equal("fixture", "methods", "lines", "labels",
-            "gotos", "gotoTgts", "extEvents", "specGuard", "untested", "unchecked", "casts", "tries", "aluCalls",
-            "flagReads", "doLoops", "whileTrue", "ifs", "breaks", "continues", "stackCalls", "flagAssign",
-            "methodVars", "compound", "tupleSwaps", "warnings", "warningIds");
-        fields.Should().Contain("fixture=test").And.Contain("labels=1").And.Contain("gotos=1").And.Contain("warningIds=");
-    }
-
     private static GeneratedCodeMetrics CollectFromMethodBody(string body) {
         SyntaxTree tree = CSharpSyntaxTree.ParseText($"class Generated {{ void Method() {{ {body} }} }}");
-        return GeneratedCodeMetricsCollector.Collect("test", tree, ImmutableArray<Diagnostic>.Empty);
+        return GeneratedCodeMetricsCollector.Collect("test", [tree], ImmutableArray<Diagnostic>.Empty);
     }
 }

@@ -77,7 +77,7 @@ public class DumpProgressTest {
         machineDisposedAtDumpStart.Should().BeTrue(
             "the dump must only run after the shutdown coordinator stopped all devices");
         // The dump lands in a program-hash subdirectory of the recorded-data directory.
-        Directory.EnumerateFiles(dumpDirectory.Path, "spice86dumpCfgGeneratedOverrides.cs",
+        Directory.EnumerateDirectories(dumpDirectory.Path, "spice86dumpCfgGeneratedOverrides",
             SearchOption.AllDirectories).Should().NotBeEmpty(
             "the generated C# dump proves every dump step can run after device shutdown");
     }

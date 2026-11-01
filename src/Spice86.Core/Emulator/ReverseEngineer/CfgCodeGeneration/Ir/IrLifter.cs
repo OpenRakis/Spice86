@@ -130,7 +130,7 @@ internal sealed class IrLifter(
     private void FlattenBoundary(IrFlattener flattener, NodeEmissionPlan plan) {
         ICfgNode node = plan.Node;
         if (plan.EmitsExternalEventCheck) {
-            flattener.Add(new CheckExternalEventsNode(node.Address), node, string.Empty);
+            flattener.Add(new CheckExternalEventsNode(node.Address, lowerer.HardwareInterruptEffect), node, string.Empty);
         }
         IVisitableAstNode guard = InstructionBoundary.SpeculativeGuard(context, node);
         if (!IsEmpty(guard)) {

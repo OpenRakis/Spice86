@@ -66,7 +66,7 @@ public class GotoCensusClassifierTest {
         NaturalLoopForest<CfgBlock> loops = CfgTestHelpers.BuildLoopForest([entry], new());
 
         // Act
-        GotoCensus census = Classify(Empty(), Boundary(entry, new CyclicJumpNode("otherMethod", 0)), loops,
+        GotoCensus census = Classify(Empty(), Boundary(entry, new CyclicJumpNode("otherMethod", 0, false)), loops,
             EntryTargets(entry.Entry), [LoweredEntry(entry, Empty())]);
 
         // Assert

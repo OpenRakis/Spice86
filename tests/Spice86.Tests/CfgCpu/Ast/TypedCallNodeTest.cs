@@ -6,7 +6,9 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 using Spice86.Shared.Emulator.Memory;
 
 using Xunit;
@@ -127,16 +129,6 @@ public class TypedCallNodeTest {
         MethodCallNode rebuilt = call.WithArguments([One]);
 
         rebuilt.Should().BeOfType<HltHelperNode>();
-    }
-
-    [Fact]
-    public void InterruptCallHelperNode_KeepsItsSubtype() {
-        InterruptCallHelperNode call = new(Ax);
-
-        MethodCallNode rebuilt = call.WithArguments([One]);
-
-        rebuilt.Should().BeOfType<InterruptCallHelperNode>().Which.Should().BeEquivalentTo(
-            new InterruptCallHelperNode(One));
     }
 
     [Fact]

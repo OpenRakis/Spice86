@@ -39,7 +39,7 @@ public class InstructionsFeeder : IClearable {
         NodeIndex = new(replacerRegistry);
         if (nodeLinker is not null) {
             // Speculative exploration is enabled when a node linker is provided
-            _speculativeExplorer = new(_instructionParser, NodeIndex, nodeLinker);
+            _speculativeExplorer = new(memory, _instructionParser, NodeIndex, nodeLinker);
             SpeculativePromoter promoter = new(executionCompiler, CurrentInstructions, PreviousInstructions);
             SpeculativeReachabilityPruner pruner = new(replacerRegistry);
             _speculativeReconciler = new(promoter, pruner, _signatureReducer, NodeIndex);

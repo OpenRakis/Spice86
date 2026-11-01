@@ -1,0 +1,115 @@
+F000:0000 mov AX,0x2000
+F000:0003 mov DS,AX
+F000:0005 mov SS,AX
+F000:0007 mov SP,0x1000
+F000:000A xor AX,AX
+F000:000C mov ES,AX
+F000:000E mov word ptr ES:[0x0184],0x013B
+F000:0015 mov word ptr ES:[0x0186],CS
+F000:001A cld
+F000:001B mov DI,0x0040
+F000:001E mov SI,0x013F
+F000:0021 mov AX,word ptr CS:[SI]
+F000:0024 mov CX,AX
+F000:0026 mov DX,AX
+F000:0028 mov word ptr DS:[DI],CX
+F000:002A mov word ptr DS:[DI+0x0C],DX
+F000:002D mov AX,word ptr CS:[SI+2]
+F000:0031 mov CX,AX
+F000:0033 int 0x61
+F000:0035 mov word ptr DS:[DI+0x0E],CX
+F000:0038 mov AX,word ptr CS:[SI+4]
+F000:003C mov CX,AX
+F000:003E mov byte ptr DS:[DI+4],AL
+F000:0041 mov word ptr DS:[DI+0x10],CX
+F000:0044 mov AX,word ptr CS:[SI+6]
+F000:0048 add AX,1
+F000:004B mov word ptr DS:[DI+5],AX
+F000:004E mov AX,word ptr CS:[SI+8]
+F000:0052 mov CX,AX
+F000:0054 mov BX,word ptr CS:[SI+0x0A]
+F000:0058 xchg BX,AX
+F000:0059 mov word ptr DS:[DI+7],AX
+F000:005C mov word ptr DS:[DI+0x12],CX
+F000:005F mov word ptr DS:[DI+0x16],BX
+F000:0062 mov AX,word ptr CS:[SI+0x0C]
+F000:0066 mov CX,AX
+F000:0068 mov byte ptr DS:[DI+0x14],AL
+F000:006B xor DX,DX
+F000:006D div CX
+F000:006F mov word ptr DS:[DI+9],AX
+F000:0072 mov AX,word ptr CS:[SI+0x10]
+F000:0076 mov DS,AX
+F000:0078 mov DX,DS
+F000:007A mov byte ptr DS:[0x0080],0x77
+F000:007F mov AX,word ptr CS:[SI+0x0E]
+F000:0083 mov DS,AX
+F000:0085 mov byte ptr DS:[0x0080],0x11
+F000:008A mov AX,word ptr CS:[SI+0x10]
+F000:008E mov DS,AX
+F000:0090 mov DX,DS
+F000:0092 mov CX,word ptr DS:[0x0080]
+F000:0096 mov AX,word ptr CS:[SI+0x0E]
+F000:009A mov DS,AX
+F000:009C mov byte ptr DS:[DI+0x0B],CL
+F000:009F mov AX,word ptr CS:[SI]
+F000:00A2 mov word ptr DS:[DI+0x18],AX
+F000:00A5 mov AX,word ptr CS:[SI+6]
+F000:00A9 mov word ptr DS:[DI+0x1A],AX
+F000:00AC push AX
+F000:00AD push ES
+F000:00AE mov AX,1
+F000:00B1 mov ES,AX
+F000:00B3 mov word ptr DS:[DI+0x1C],AX
+F000:00B6 pop ES
+F000:00B7 pop AX
+F000:00B8 mov word ptr DS:[DI+0x1E],AX
+F000:00BB mov word ptr DS:[DI+0x20],ES
+F000:00BE movsx AX,byte ptr CS:[SI+0x12]
+F000:00C3 cmp AX,-5
+F000:00C6 jl short 0x00CE
+F000:00C8 mov byte ptr DS:[DI+0x22],0
+F000:00CC jmp short 0x00D2
+F000:00CE mov byte ptr DS:[DI+0x22],1
+F000:00D2 jle short 0x00DA
+F000:00D4 mov byte ptr DS:[DI+0x23],0
+F000:00D8 jmp short 0x00DE
+F000:00DA mov byte ptr DS:[DI+0x23],1
+F000:00DE jg short 0x00E6
+F000:00E0 mov byte ptr DS:[DI+0x24],0
+F000:00E4 jmp short 0x00EA
+F000:00E6 mov byte ptr DS:[DI+0x24],1
+F000:00EA jge short 0x00F2
+F000:00EC mov byte ptr DS:[DI+0x25],0
+F000:00F0 jmp short 0x00F6
+F000:00F2 mov byte ptr DS:[DI+0x25],1
+F000:00F6 cmp AX,-20
+F000:00F9 jl short 0x0101
+F000:00FB mov byte ptr DS:[DI+0x26],0
+F000:00FF jmp short 0x0105
+F000:0101 mov byte ptr DS:[DI+0x26],1
+F000:0105 jle short 0x010D
+F000:0107 mov byte ptr DS:[DI+0x27],0
+F000:010B jmp short 0x0111
+F000:010D mov byte ptr DS:[DI+0x27],1
+F000:0111 jg short 0x0119
+F000:0113 mov byte ptr DS:[DI+0x28],0
+F000:0117 jmp short 0x011D
+F000:0119 mov byte ptr DS:[DI+0x28],1
+F000:011D cmp AX,3
+F000:0120 jb short 0x0128
+F000:0122 mov byte ptr DS:[DI+0x29],1
+F000:0126 jmp short 0x012C
+F000:0128 mov byte ptr DS:[DI+0x29],0
+F000:012C push AX
+F000:012D pop BX
+F000:012E sar BX,1
+F000:0130 mov word ptr DS:[DI+0x2A],BX
+F000:0133 push AX
+F000:0134 pop CX
+F000:0135 shr CX,1
+F000:0137 mov word ptr DS:[DI+0x2C],CX
+F000:013A hlt
+F000:013B mov word ptr DS:[DI+2],AX
+F000:013E iret
+F000:FFF0 jmp short 0

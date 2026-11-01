@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 
 using Spice86.Core.Emulator.Devices.ExternalInput;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Shared.Emulator.Memory;
@@ -61,5 +62,7 @@ public class BiosMouseInt74Handler : IInterruptHandler {
     /// <summary>
     /// Prepares execution before the Mouse handler is called.
     /// </summary>
+    /// <remarks>Far calls the user mouse driver, so its effects are not bounded.</remarks>
+    [InterruptService(Unknown = true)]
     public void AfterMouseDriverExecution() => _hardwareInterruptHandler.AcknowledgeInterrupt(12);
 }

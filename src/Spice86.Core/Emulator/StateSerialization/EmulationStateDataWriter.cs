@@ -7,15 +7,18 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
 using Spice86.Core.Emulator.StateSerialization.CfgReload;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Emulator.VM.Breakpoint.Serializable;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -30,6 +33,7 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
     private readonly MemoryDataExporter _memoryDataExporter;
     private readonly ListingExporter _listingExporter;
     private readonly CfgCpuSnapshotBuilder _cfgCpuSnapshotBuilder;
+    private readonly ChangedMemoryMap _changedMemoryMap;
     private readonly CfgBlocksJsonExporter _cfgBlocksJsonExporter;
     private readonly CfgCSharpDumper _cfgCSharpDumper;
     private readonly ExecutionContextManager _executionContextManager;
@@ -39,6 +43,7 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
     private readonly CfgNodeIndex _nodeIndex;
     private readonly DumpProgressReporter _progress;
     private readonly Lock _writeLock = new();
+
 
     /// <summary>
     /// Initializes a new instance.
@@ -63,6 +68,7 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
         MemoryDataExporter memoryDataExporter,
         ListingExporter listingExporter,
         CfgCpuSnapshotBuilder cfgCpuSnapshotBuilder,
+        ChangedMemoryMap changedMemoryMap,
         CfgBlocksJsonExporter cfgBlocksJsonExporter,
         CfgCSharpDumper cfgCSharpDumper,
         ExecutionContextManager executionContextManager,
@@ -78,6 +84,7 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
         _memoryDataExporter = memoryDataExporter;
         _listingExporter = listingExporter;
         _cfgCpuSnapshotBuilder = cfgCpuSnapshotBuilder;
+        _changedMemoryMap = changedMemoryMap;
         _cfgBlocksJsonExporter = cfgBlocksJsonExporter;
         _cfgCSharpDumper = cfgCSharpDumper;
         _executionContextManager = executionContextManager;
@@ -95,6 +102,7 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
         lock (_writeLock) {
             ExecutionAddresses executionAddresses = _executionAddressesExtractor.Extract();
             _progress.BeginDump(DataDirectory);
+            IReadOnlyList<(string Name, SegmentedAddress Address)> dataSymbolLabels = [];
             bool succeeded = false;
             try {
                 WritePhase(DumpPhase.CpuRegisters, CpuRegistersFile, () => File.WriteAllText(CpuRegistersFile, JsonSerializer.Serialize(_state)));
@@ -120,9 +128,9 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
                     WritePhase(DumpPhase.CfgPartitions, CfgPartitionsFile, () => _cfgBlocksJsonExporter.WritePartitions(cfgCpuSnapshot, CfgPartitionsFile));
                     WritePhase(DumpPhase.CfgReload, CfgReloadFile, () => WriteCfgReload(CfgReloadFile));
                     WritePhase(DumpPhase.ExecutionFlow, ExecutionFlowFile, () => new ExecutionAddressesExporter(LoggerService).Write(executionAddresses, ExecutionFlowFile));
-                    WriteGeneratedCSharp(cfgCpuSnapshot);
+                    dataSymbolLabels = WriteGeneratedCSharp(cfgCpuSnapshot);
                 }
-                WritePhase(DumpPhase.Symbols, SymbolsFile, () => new GhidraSymbolsExporter(LoggerService).Write(executionAddresses, _functionCatalogue, SymbolsFile));
+                WritePhase(DumpPhase.Symbols, SymbolsFile, () => new GhidraSymbolsExporter(LoggerService).Write(executionAddresses, _functionCatalogue, dataSymbolLabels, SymbolsFile));
                 WritePhase(DumpPhase.Breakpoints, BreakpointsFile, () => WriteBreakpoints(BreakpointsFile));
                 succeeded = true;
             } finally {
@@ -131,7 +139,7 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
         }
     }
 
-    private void WriteGeneratedCSharp(CfgCpuSnapshot cfgCpuSnapshot) {
+    private IReadOnlyList<(string Name, SegmentedAddress Address)> WriteGeneratedCSharp(CfgCpuSnapshot cfgCpuSnapshot) {
         // The generator must only run on a complete, non-truncated graph. A truncated discovery run has no
         // partitioned program, so the generated-C# dump is skipped rather than aborting the whole state dump.
         // Genuine generation failures on a full graph still propagate loudly out of WritePhase.
@@ -139,15 +147,18 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
             if (LoggerService.IsEnabled(LogLevel.Information)) {
                 LoggerService.LogInformation(
                     "Skipping {FileName}: the CFG graph is truncated, so no partitioned program is available for C# generation.",
-                    Path.GetFileName(CfgGeneratedCSharpFile));
+                    Path.GetFileName(CfgGeneratedCSharpDirectory));
             }
-            return;
+            return [];
         }
 
         GeneratedCSharpProgram generated = _cfgCSharpDumper.Generate(cfgCpuSnapshot.PartitionedProgram, _progress);
-        WritePhase(DumpPhase.CodeSource, CfgGeneratedCSharpFile, () => _cfgCSharpDumper.Write(generated, CfgGeneratedCSharpFile));
+        WritePhase(DumpPhase.CodeSource, CfgGeneratedCSharpDirectory, () => _cfgCSharpDumper.Write(generated, CfgGeneratedCSharpDirectory));
         WritePhase(DumpPhase.CodeProject, GeneratedProjectDirectory, () => _cfgCSharpDumper.WriteProject(
             cfgCpuSnapshot.PartitionedProgram, generated, GeneratedProjectDirectory, ComputeExpectedChecksum()));
+        return generated.DataSymbolLabels
+            .Select(label => (label.Name, label.Address))
+            .ToList();
     }
 
     /// <summary>
@@ -167,7 +178,8 @@ public class EmulationStateDataWriter : EmulationStateDataIoHandler {
     }
 
     private void WriteCfgReload(string filePath) {
-        CfgReloadDump dump = new CfgReloadExporter().Export(_executionContextManager, _nodeIndex.PoisonSet);
+        CfgReloadDump dump = new CfgReloadExporter().Export(_executionContextManager, _nodeIndex.PoisonSet,
+            _changedMemoryMap.Snapshot());
         string jsonString = JsonSerializer.Serialize(dump, CfgReloadSerialization.Options);
         File.WriteAllText(filePath, jsonString);
     }

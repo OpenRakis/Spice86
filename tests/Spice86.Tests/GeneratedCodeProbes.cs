@@ -4,6 +4,8 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
+
 using System.Reflection;
 
 /// <summary>
@@ -34,11 +36,16 @@ internal static class GeneratedCodeProbes {
         }
     }
 
-    /// <summary><paramref name="source"/> with a probe before every statement of its blocks and switch sections.</summary>
-    public static InstrumentedGeneratedSource Instrument(string source) {
-        SyntaxTree tree = CSharpSyntaxTree.ParseText(source, CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Preview));
+    /// <summary>Every file of <paramref name="sources"/> with a probe before every statement of its
+    /// blocks and switch sections; the hits class is appended to the last file.</summary>
+    public static InstrumentedGeneratedSource Instrument(IReadOnlyList<string> sources) {
         ProbeRewriter rewriter = new();
-        SyntaxNode rewritten = rewriter.Visit(tree.GetRoot()) ?? tree.GetRoot();
+        string[] rewritten = sources
+            .Select(source => {
+                SyntaxTree tree = CSharpSyntaxTree.ParseText(source, CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Preview));
+                return (rewriter.Visit(tree.GetRoot()) ?? tree.GetRoot()).ToFullString();
+            })
+            .ToArray();
         string hitsClass = $$"""
 
             internal static class {{HitsClassName}} {
@@ -47,8 +54,15 @@ internal static class GeneratedCodeProbes {
             }
 
             """;
-        return new InstrumentedGeneratedSource(rewritten.ToFullString() + hitsClass, rewriter.Sites);
+        if (rewritten.Length > 0) {
+            rewritten[^1] += hitsClass;
+        }
+        return new InstrumentedGeneratedSource(rewritten, rewriter.Sites);
     }
+
+    /// <summary>The <see cref="GeneratedSourceFile"/> texts of <paramref name="program"/>, instrumented.</summary>
+    public static InstrumentedGeneratedSource Instrument(GeneratedCSharpProgram program) =>
+        Instrument(GeneratedOverrideCompiler.TextsOf(program));
 
     /// <summary>The hit flags of an instrumented program loaded in <paramref name="assembly"/>, indexed by probe id.</summary>
     public static IReadOnlyList<bool> ReadHits(Assembly assembly) {

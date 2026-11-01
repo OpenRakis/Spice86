@@ -4,6 +4,7 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
@@ -24,6 +25,9 @@ public class DosInt22Handler : InterruptHandler {
 
     public override byte VectorNumber => 0x22;
 
+    /// <inheritdoc />
+
+    [InterruptService(Unknown = true)]
     public override void Run() {
         if (LoggerService.IsEnabled(LogLevel.Information)) {
             LoggerService.LogInformation("INT 22h: Terminate address invoked, terminating current process.");

@@ -10,7 +10,9 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Tests.CfgCpu.Blocks;
 
@@ -26,7 +28,7 @@ public class WhileConditionLoopsTest {
     private static InstructionBoundaryNode Boundary(params IVisitableAstNode[] statements) =>
         new(Substitute.For<ICfgNode>(), "", new BlockNode(statements));
 
-    private static CheckExternalEventsNode Check => new(At);
+    private static CheckExternalEventsNode Check => new(At, HardwareInterruptEffectBuilder.Conservative);
 
     private static IfElseNode ExitIf(ValueNode condition) =>
         new(condition, new BlockNode(new BreakNode()), new BlockNode());
@@ -73,7 +75,7 @@ public class WhileConditionLoopsTest {
     [Fact]
     public void ASpeculativeGuardBeforeTheTestKeepsTheLoopInfinite() {
         // Arrange
-        InstructionBoundaryNode guarded = Boundary(new SpeculativeGuardNode(At, "Sig"), ExitIf(Carry));
+        InstructionBoundaryNode guarded = Boundary(new SpeculativeGuardNode(At, ["Sig"]), ExitIf(Carry));
         BlockNode input = new(new InfiniteLoopNode(new BlockNode(guarded, Boundary(new MethodCallNode(null, "Body")))));
 
         // Act

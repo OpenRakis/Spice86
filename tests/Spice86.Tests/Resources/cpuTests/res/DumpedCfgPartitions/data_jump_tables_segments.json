@@ -1,0 +1,114 @@
+{
+  "partitions": [
+    {
+      "id": 1,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        10,
+        34,
+        16,
+        24,
+        44,
+        26,
+        36,
+        22,
+        14,
+        28,
+        18
+      ],
+      "entries": [
+        {
+          "block": 10,
+          "address": "F000:1000",
+          "kind": "functionEntry"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        76,
+        100,
+        82,
+        90,
+        110,
+        92,
+        102,
+        88,
+        80,
+        94,
+        84
+      ],
+      "entries": [
+        {
+          "block": 76,
+          "address": "F100:1000",
+          "kind": "functionEntry"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        3,
+        75,
+        134,
+        2
+      ],
+      "entries": [
+        {
+          "block": 2,
+          "address": "F000:FFF0",
+          "kind": "executionContextEntry"
+        }
+      ]
+    }
+  ],
+  "transfers": [
+    {
+      "kind": "alignedReturn",
+      "fromPartition": 1,
+      "toPartition": 3,
+      "fromBlock": 36,
+      "toBlock": 75,
+      "from": "F000:1024",
+      "target": "F000:0010"
+    },
+    {
+      "kind": "alignedReturn",
+      "fromPartition": 2,
+      "toPartition": 3,
+      "fromBlock": 102,
+      "toBlock": 134,
+      "from": "F100:1024",
+      "target": "F000:0015"
+    },
+    {
+      "kind": "callOut",
+      "fromPartition": 3,
+      "toPartition": 1,
+      "fromBlock": 3,
+      "toBlock": 10,
+      "from": "F000:000B",
+      "target": "F000:1000",
+      "callContinuationBlock": 75,
+      "callContinuationAddress": "F000:0010"
+    },
+    {
+      "kind": "callOut",
+      "fromPartition": 3,
+      "toPartition": 2,
+      "fromBlock": 75,
+      "toBlock": 76,
+      "from": "F000:0010",
+      "target": "F100:1000",
+      "callContinuationBlock": 134,
+      "callContinuationAddress": "F000:0015"
+    }
+  ]
+}

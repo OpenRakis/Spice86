@@ -76,13 +76,13 @@ internal sealed class ExecutionPolicy : IDisposable {
         }
 
         AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.CPU_CYCLES, targetCycles,
-            _ => _emulationLoop.Exit(), isRemovedOnTrigger: true);
+            (_, _) => _emulationLoop.Exit(), isRemovedOnTrigger: true);
         _emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
     }
 
     private void ToggleStartOrStopBreakpoint(BreakPointType type, string reason) {
         BreakPoint breakPoint = new UnconditionalBreakPoint(type,
-            _ => _pauseHandler.RequestPause(reason), removeOnTrigger: false);
+            (_, _) => _pauseHandler.RequestPause(reason), removeOnTrigger: false);
         _emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
     }
 

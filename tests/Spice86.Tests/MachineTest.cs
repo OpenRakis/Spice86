@@ -54,6 +54,9 @@ public class MachineTest {
         ["partition_back_edge_fallthrough"],
         ["partition_jump_to_next"],
         ["partition_two_fault_handlers"],
+        ["cc_register_leaf"],
+        ["cc_stack_frames"],
+        ["cc_call_shapes"],
         ["dataflow_stack_save_restore"],
         ["dataflow_flag_definitions"],
         ["dataflow_partial_registers"],
@@ -64,7 +67,20 @@ public class MachineTest {
         ["dataflow_expression_propagation"],
         ["dataflow_interrupt_boundaries"],
         ["dataflow_rewrite_traps"],
+        ["dataflow_alias_traps"],
         ["dataflow_legality_traps"],
+        ["data_globals"],
+        ["data_segment_values"],
+        ["data_tables"],
+        ["data_strings"],
+        ["data_segments"],
+        ["data_jump_tables"],
+        ["register_locals"],
+        ["register_locals_across"],
+        ["save_restore_pairs"],
+        ["if_conversion"],
+        ["interrupt_contract_unseen_handler"],
+        ["interrupt_contract_unseen_1c_handler"],
         ["instruction_coverage_386"]
     ];
 
@@ -512,6 +528,18 @@ public class MachineTest {
 
     [Theory]
     [MemberData(nameof(JitModes))]
+    public void TestInterruptHandlerChangesRegister(JitMode jitMode) {
+        TestOneBin(AsmFixtureCatalog.InterruptHandlerChangesRegister(), jitMode);
+    }
+
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestRegisterLocalsAcross(JitMode jitMode) {
+        TestOneBin(AsmFixtureCatalog.Partition("register_locals_across"), jitMode);
+    }
+
+    [Theory]
+    [MemberData(nameof(JitModes))]
     public void TestDivFaultLoop(JitMode jitMode) {
         TestOneBin(AsmFixtureCatalog.DivFaultLoop(), jitMode, machine => {
             CurrentInstructions currentInstructions =
@@ -704,6 +732,20 @@ public class MachineTest {
     [MemberData(nameof(CfgPartitioningGraphFixtures))]
     public void TestCfgPartitioningGraphFixture(string binName) {
         TestOneBin(AsmFixtureCatalog.Partition(binName), JitMode.InterpretedOnly);
+    }
+
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestDataJumpTablesPatched(JitMode jitMode) {
+        // Arrange / Act / Assert
+        TestOneBin(AsmFixtureCatalog.DataJumpTablesPatched(), jitMode);
+    }
+
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestDataflowDoublePrecision386(JitMode jitMode) {
+        // Arrange / Act / Assert
+        TestOneBin(AsmFixtureCatalog.DataflowDoublePrecision386(), jitMode);
     }
 
     [Fact]

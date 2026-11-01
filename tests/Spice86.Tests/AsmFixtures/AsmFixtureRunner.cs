@@ -205,7 +205,7 @@ internal static class AsmFixtureRunner {
                     "HeadlessGui is not available - key injection requires HeadlessType.Minimal");
             run.Machine.EmulatorBreakpointsManager.ToggleBreakPoint(
                 new AddressBreakPoint(BreakPointType.CPU_CYCLES, injection.CycleCount,
-                    _ => injection.InjectKeys(headlessGui), isRemovedOnTrigger: true), true);
+                    (_, _) => injection.InjectKeys(headlessGui), isRemovedOnTrigger: true), true);
         }
     }
 

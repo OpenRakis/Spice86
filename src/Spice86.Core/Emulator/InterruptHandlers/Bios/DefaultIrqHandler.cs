@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -51,6 +52,7 @@ public sealed class DefaultIrqHandler : IInterruptHandler {
     /// <summary>
     ///     Handles an unexpected IRQ by recording it and acknowledging the PIC so the system continues to run.
     /// </summary>
+    [InterruptService(Unknown = true)]
     private void HandleIrq() {
         _logger.LogWarning("BIOS default IRQ handler serviced unhandled IRQ{Irq}", _irq);
 

@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Visitor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Propagation;
@@ -71,8 +72,8 @@ internal static class IrFlagPropagation {
             if (FlagRelationRules.ConditionCodeOf(branch.Condition) is not { } code) {
                 return;
             }
-            IrValues flagReads = IrEffectsVisitor.Of(branch.Condition, false).Reads & IrValues.StatusFlags;
-            if (flagReads == IrValues.None
+            CpuValues flagReads = IrEffectsVisitor.Of(branch.Condition, false).Reads & CpuValues.StatusFlags;
+            if (flagReads == CpuValues.None
                 || SetterSite(flagReads, block, block.Statements.Count) is not { } site
                 || !LegalSite(site)) {
                 return;
@@ -140,7 +141,7 @@ internal static class IrFlagPropagation {
                 temp = found;
             }
             if (relation is null
-                || AluAssignmentRewrite.TryRewriteStatement(untyped,
+                || AluAssignmentRewrite.TryRewriteStatement(untyped, statement.Origin,
                     IrFlagLiveness.LiveAfter(_ssa, block, index)) is not { } plain
                 || FlagReadSubstitution.SubstituteCarry(new BlockNode(plain.ToArray()), relation)
                     is not { } substituted) {
@@ -199,11 +200,11 @@ internal static class IrFlagPropagation {
         /// <summary>The statement every flag version of <paramref name="flagReads"/> used at
         /// (<paramref name="block"/>, <paramref name="index"/>) is defined by, or <c>null</c> when the
         /// versions come from different sites or from phis.</summary>
-        private (IrBlock Block, int Index, IrStatement Statement)? SetterSite(IrValues flagReads,
+        private (IrBlock Block, int Index, IrStatement Statement)? SetterSite(CpuValues flagReads,
             IrBlock block, int index) {
             (IrBlock, int, IrStatement)? site = null;
-            foreach ((StatusFlags _, IrSsaValue value) in IrFlagLiveness.StatusFlagValues) {
-                if ((flagReads & IrSsaValues.MaskOf(value)) == IrValues.None) {
+            foreach ((IrSsaValue value, _, _) in IrValueSets.StatusFlagRows) {
+                if ((flagReads & IrSsaValues.MaskOf(value)) == CpuValues.None) {
                     continue;
                 }
                 IrSsaVersionInfo info = _ssa.Info(_ssa.VersionBefore(block, index, value));
@@ -369,7 +370,7 @@ internal static class IrFlagPropagation {
             IVisitableAstNode[] arguments = shape.Alu.Call.CallNode.Arguments
                 .Select((argument, index) => index == temp.ArgumentIndex ? temp.Reference : argument)
                 .ToArray();
-            MethodCallValueNode call = shape.Alu.Call.WithArguments(arguments);
+            AluCallValueNode call = shape.Alu.Call.WithArguments(arguments);
             return shape.Node switch {
                 AluOperationNode alu => alu with { Call = call },
                 BinaryOperationNode { Right: AluOperationNode alu } assignment =>
@@ -420,7 +421,7 @@ internal static class IrFlagPropagation {
             AluOperationNode bare => bare,
             _ => null
         };
-        return alu?.Operation is AluOperation.Adc or AluOperation.Sbb or AluOperation.Rcl
+        return alu?.Call.Operation is AluOperation.Adc or AluOperation.Sbb or AluOperation.Rcl
             or AluOperation.Rcr;
     }
 

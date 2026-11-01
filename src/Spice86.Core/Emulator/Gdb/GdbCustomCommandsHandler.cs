@@ -28,7 +28,7 @@ public class GdbCustomCommandsHandler {
     private readonly State _state;
     private readonly IMemory _memory;
     private readonly EmulatorBreakpointsManager _emulatorBreakpointsManager;
-    private readonly Action<BreakPoint> _onBreakpointReached;
+    private readonly Action<BreakPoint, long> _onBreakpointReached;
 
     /// <summary>
     /// Initializes a new instance.
@@ -49,7 +49,7 @@ public class GdbCustomCommandsHandler {
         EmulatorStateSerializer emulatorStateSerializer,
         GdbIo gdbIo,
         ILogger loggerService,
-        Action<BreakPoint> onBreakpointReached) {
+        Action<BreakPoint, long> onBreakpointReached) {
         _loggerService = loggerService;
         _state = state;
         _memory = memory;

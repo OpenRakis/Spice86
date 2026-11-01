@@ -99,20 +99,20 @@ public class TailDuplicatorTest {
         LoweredBlock<CfgBlock> tooLong = Lowered(tail, false, new BlockNode(
             Boundary(tail, new CommentNode("one")), Boundary(tail, new CommentNode("two")),
             Boundary(tail, new CommentNode("three")), Boundary(tail, new CommentNode("four"), Untested())));
-        LoweredBlock<CfgBlock> withLocal = Lowered(tail, false, new BlockNode(Boundary(tail,
-            new VariableDeclarationNode(DataType.UINT16, "local", new ConstantNode(DataType.UINT16, 0)), Untested())));
+        LoweredBlock<CfgBlock> withGoto = Lowered(tail, false, new BlockNode(Boundary(tail,
+            new CommentNode("tail"), new GotoNode(Target(source)), Untested())));
         LoweredBlock<CfgBlock> completing = Lowered(tail, false, new BlockNode(Boundary(tail, new CommentNode("tail"))));
         LoweredBlock<CfgBlock> entryTail = Lowered(tail, true, new BlockNode(
             Boundary(tail, new CommentNode("tail"), Untested())));
 
         // Act
         BlockNode longResult = Apply(MakeBody(), tooLong, loops);
-        BlockNode localResult = Apply(MakeBody(), withLocal, loops);
+        BlockNode gotoResult = Apply(MakeBody(), withGoto, loops);
         BlockNode entryResult = Apply(MakeBody(), entryTail, loops);
         BlockNode completingResult = Apply(MakeBody(), completing, loops);
 
         // Assert
-        foreach (BlockNode result in new[] { longResult, localResult, entryResult, completingResult }) {
+        foreach (BlockNode result in new[] { longResult, gotoResult, entryResult, completingResult }) {
             result.Statements.Should().HaveCount(3);
             Sequence(result.Statements[0] is IfElseNode branch ? branch.TrueCase : Empty()).Statements
                 .Should().ContainSingle().Which.Should().BeOfType<GotoNode>();

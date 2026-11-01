@@ -131,7 +131,7 @@ public class MouseDriver : IMouseDriver {
             // No new matching events
             return false;
         }
-        if (_userCallback.Segment == 0 || _userCallback.Offset == 0) {
+        if (_userCallback.Segment == 0 && _userCallback.Offset == 0) {
             // User callback disabled
             return false;
         }
@@ -172,6 +172,9 @@ public class MouseDriver : IMouseDriver {
     /// <inheritdoc />
     public void RegisterCallback(MouseUserCallback callbackInfo) {
         _userCallback = callbackInfo;
+        if (!(callbackInfo.Segment == 0 && callbackInfo.Offset == 0)) {
+            _sharedMouseData.UserSubroutineEverRegistered = true;
+        }
     }
 
     /// <inheritdoc />

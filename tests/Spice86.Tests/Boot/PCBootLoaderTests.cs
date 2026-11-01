@@ -6,6 +6,7 @@ using NSubstitute;
 
 using Spice86.Core.Emulator.Boot;
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Tests.Dos.FileSystem;
@@ -106,7 +107,7 @@ public class PCBootLoaderTests {
         IMemory memory = new Memory(new(), new Ram(0x200000), new A20Gate(), new RealModeMmu386(), false);
         State state = new(CpuModel.INTEL_80286);
         ILogger loggerService = Substitute.For<ILogger>();
-        PCBootLoader loader = new(memory, state, loggerService);
+        PCBootLoader loader = new(memory, state, new LoadedImageRegistry(), loggerService);
         return new PCBootLoaderContext(loader, memory, state);
     }
 

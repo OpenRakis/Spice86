@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 using NSubstitute;
 
+using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.CLI;
@@ -336,6 +337,17 @@ internal static class AsmFixtureCatalog {
         return ResultFixture(settings, AssertInteriorEntryCompleted);
     }
 
+    /// <summary>Runs interrupt_handler_changes_register: a timer handler writes AX through a call that
+    /// keeps it, and the main loop stores it once it sees it.</summary>
+    public static AsmFixture InterruptHandlerChangesRegister() {
+        AsmRunSettings settings = new() {
+            BinName = "interrupt_handler_changes_register",
+            MaxCycles = 0x400000,
+            EnablePit = true
+        };
+        return ResultFixture(settings, AssertInterruptHandlerChangesRegisterCompleted);
+    }
+
     /// <summary>Runs divfaultloop: the fault handler retried once and the division produced 2.</summary>
     public static AsmFixture DivFaultLoop() {
         byte[] expectedMemory = new byte[4];
@@ -407,6 +419,11 @@ internal static class AsmFixtureCatalog {
         return SpeculativeFixture("speculative_invalid_opcode", SpeculativeMemory(0x01, 0xDD, 0xEE), SpeculativeArm.Observed);
     }
 
+    /// <summary>Runs speculative_zero_memory on its observed arm: the code patched over the zero region ran.</summary>
+    public static AsmFixture SpeculativeZeroMemory() {
+        return SpeculativeFixture("speculative_zero_memory", SpeculativeMemory(0x01, 0xDD, 0xEE), SpeculativeArm.Observed);
+    }
+
     /// <summary>Runs speculative_smc_guard on its observed arm: the run completes without self-modification.</summary>
     public static AsmFixture SpeculativeSmcGuard() {
         return SpeculativeFixture("speculative_smc_guard", SpeculativeMemory(0x01, 0xDD, 0xAA), SpeculativeArm.Observed);
@@ -415,6 +432,18 @@ internal static class AsmFixtureCatalog {
     /// <summary>Runs speculative_discard on its observed arm: the run completes without divergence.</summary>
     public static AsmFixture SpeculativeDiscard() {
         return SpeculativeFixture("speculative_discard", SpeculativeMemory(0x01, 0xDD, 0xAA), SpeculativeArm.Observed);
+    }
+
+    /// <summary>Runs speculative_a20_smc_guard on its observed arm: the selector jumps to the
+    /// observed tail, whose bytes the low result region records.</summary>
+    public static AsmFixture SpeculativeA20SmcGuard() {
+        AsmRunSettings settings = new() { BinName = "speculative_a20_smc_guard", MaxCycles = 1000 };
+        return ResultFixture(settings, result => {
+            result.Memory.UInt8[0x0400].Should().Be(1,
+                "speculative_a20_smc_guard: the init marker was written");
+            result.Memory.UInt8[0x0401].Should().Be(0xDD,
+                "speculative_a20_smc_guard: the observed arm wrote its result byte");
+        });
     }
 
     /// <summary>Runs callstackunwind on the given arm: the observed arm returns leaf to recovery, while the
@@ -576,6 +605,24 @@ internal static class AsmFixtureCatalog {
                     result.State.AX.Should().Be(0x0002, $"{binName}: the third division succeeds");
                     result.State.BX.Should().Be(0x0005, $"{binName}: the second handler sets the divisor");
                 });
+            case "cc_register_leaf":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x52,
+                    (0x40, 2, 0x0007), (0x42, 2, 0x0030), (0x44, 1, 0x11), (0x45, 1, 0x22),
+                    (0x46, 2, 0x0000), (0x48, 2, 0x0002), (0x4A, 1, 0x5A),
+                    (0x4C, 2, 0x1111), (0x4E, 2, 0x2222), (0x50, 2, 0x3333)));
+            case "cc_stack_frames":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x64,
+                    (0x40, 2, 0x3333), (0x42, 2, 0x5A5A), (0x44, 2, 0x0003), (0x46, 2, 0x0120),
+                    (0x48, 2, 0x0033), (0x4A, 2, 0x7777), (0x4C, 2, 0x4321), (0x4E, 2, 0x0013),
+                    (0x50, 2, 0x1234), (0x52, 2, 0x1234), (0x54, 2, 0x0FFD), (0x56, 2, 0x0FFD),
+                    (0x58, 2, 0x7777), (0x5A, 2, 0x7777), (0x5C, 2, 0x7777),
+                    (0x5E, 2, 0x7777), (0x60, 2, 0x7777), (0x62, 2, 0x0012)));
+            case "cc_call_shapes":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x59,
+                    (0x40, 2, 0x1111), (0x42, 2, 0x2222), (0x44, 2, 0xAAAA), (0x46, 2, 0xBBBB),
+                    (0x48, 2, 0x000A), (0x4A, 2, 0x3456), (0x4C, 2, 0x1234),
+                    (0x4E, 2, 0x0007), (0x50, 2, 0x7777), (0x52, 2, 0x0041), (0x54, 2, 0x8888),
+                    (0x56, 2, 0xCAFE), (0x58, 1, 0x01)));
             case "dataflow_stack_save_restore":
                 return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x80,
                     (0x00, 2, 0x1234), (0x02, 2, 0x3000), (0x04, 2, 0x0002), (0x06, 2, 0x0103), (0x08, 2, 0x0100),
@@ -601,7 +648,8 @@ internal static class AsmFixtureCatalog {
                     (0x40, 2, 0x0000), (0x42, 2, 0xFFFF), (0x44, 4, 0x000000FF), (0x48, 2, 0x00FF), (0x4A, 2, 0x0700),
                     (0x4C, 2, 0xFF01), (0x4E, 2, 0x00FF), (0x50, 2, 0x2200), (0x52, 2, 0xFF00), (0x54, 2, 0x2200)));
             case "dataflow_constant_folding":
-                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x100,
+                return ResultRegionFixture(new AsmRunSettings {
+                        BinName = binName, CpuModel = CpuModel.INTEL_80286 }, ResultRegion(0xE8,
                     (0x00, 2, 0xA1A1), (0x02, 2, 0x00F4), (0x04, 1, 2), (0x05, 1, 2), (0x06, 1, 1), (0x07, 1, 2),
                     (0x08, 2, 0x1357), (0x0A, 2, 0x2468), (0x0C, 2, 0xA1A1), (0x0E, 2, 0x5A5A), (0x10, 2, 0x6B6B),
                     (0x40, 2, 0xC3C3), (0x42, 2, 0x007F), (0x44, 1, 1), (0x45, 1, 1), (0x46, 1, 1), (0x47, 1, 2),
@@ -609,17 +657,13 @@ internal static class AsmFixtureCatalog {
                     (0x80, 2, 0xA100), (0x82, 2, 0xFFFE), (0x84, 1, 2), (0x85, 1, 2), (0x86, 1, 1), (0x87, 1, 1),
                     (0x88, 2, 0x1357), (0x8A, 2, 0x2468), (0x8C, 2, 0xA1A1), (0x8E, 2, 0x5A5A), (0x90, 2, 0x6B6B),
                     (0xC0, 2, 0xC3C3), (0xC2, 2, 0x7FFF), (0xC4, 1, 2), (0xC5, 1, 1), (0xC6, 1, 2), (0xC7, 1, 2),
-                    (0xC8, 2, 0x1357), (0xCA, 2, 0x2468), (0xCC, 2, 0xA1A1), (0xCE, 2, 0x5A5A), (0xD0, 2, 0x6B6B)));
+                    (0xC8, 2, 0x1357), (0xCA, 2, 0x2468), (0xCC, 2, 0xA1A1), (0xCE, 2, 0x5A5A), (0xD0, 2, 0x6B6B),
+                    (0xD2, 1, 0x5C), (0xD4, 2, 0x7777), (0xD6, 1, 0x01), (0xD8, 2, 0xABCD),
+                    (0xDA, 2, 0x9999), (0xDC, 4, 0x5A5A5A5A),
+                    (0xE0, 2, 0x0847), (0xE2, 2, 0x0013), (0xE4, 2, 0x0047), (0xE6, 2, 0x0046)));
             case "dataflow_double_precision":
-                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x100,
-                    (0x00, 2, 0x0000), (0x02, 2, 0x0001), (0x04, 2, 0xFFFE), (0x06, 2, 0x0000), (0x08, 2, 0x0001),
-                    (0x0A, 2, 0xFFFF), (0x0C, 2, 0xFFFE), (0x0E, 2, 0x0001), (0x10, 2, 0x7FFF), (0x12, 2, 0x0000),
-                    (0x40, 2, 0x0001), (0x42, 2, 0x0001), (0x44, 2, 0xFFFF), (0x46, 2, 0x0000), (0x48, 2, 0x0000),
-                    (0x4A, 2, 0xFFFF), (0x4C, 2, 0x0000), (0x4E, 2, 0x0002), (0x50, 2, 0x8000), (0x52, 2, 0x0000),
-                    (0x80, 2, 0xFFFF), (0x82, 2, 0x7FFF), (0x84, 2, 0x0001), (0x86, 2, 0x8000), (0x88, 2, 0x0000),
-                    (0x8A, 2, 0x8000), (0x8C, 2, 0x0000), (0x8E, 2, 0x0000), (0x90, 2, 0x0000), (0x92, 2, 0x4000),
-                    (0xC0, 2, 0x7FFF), (0xC2, 2, 0x1235), (0xC4, 2, 0x8001), (0xC6, 2, 0x1233), (0xC8, 2, 0x8000),
-                    (0xCA, 2, 0xEDCB), (0xCC, 2, 0x0000), (0xCE, 2, 0x2469), (0xD0, 2, 0x4000), (0xD2, 2, 0x091A)));
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName },
+                    DoublePrecisionRegion());
             case "dataflow_idioms":
                 return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x80,
                     (0x00, 2, 0xABCD), (0x02, 2, 0x1234), (0x04, 2, 0x1234), (0x06, 2, 0xFF80), (0x08, 2, 0x0000),
@@ -684,6 +728,15 @@ internal static class AsmFixtureCatalog {
                     (0x0C, 2, 0x0000), (0x0E, 2, 0x0001),
                     (0x40, 4, 0x11223344), (0x44, 4, 0x00005678), (0x48, 2, 0x9905), (0x4A, 1, 0x99),
                     (0x4C, 2, 0x0001), (0x4E, 2, 0x0000)));
+            case "dataflow_alias_traps":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x58,
+                    (0x00, 1, 0x12), (0x01, 1, 0x34), (0x02, 1, 0x12), (0x10, 1, 0x34),
+                    (0x11, 1, 0x12),
+                    (0x06, 2, 0x2222), (0x08, 2, 0x3333),
+                    (0x40, 2, 0x002A), (0x42, 2, 0x002A), (0x44, 2, 0x002A),
+                    (0x4A, 2, 0x2222), (0x4C, 2, 0x3333), (0x4E, 1, 0x11),
+                    (0x50, 1, 0x11), (0x51, 1, 0x22), (0x52, 1, 0x44), (0x53, 1, 0x88),
+                    (0x54, 2, 0x0055)));
             case "dataflow_legality_traps":
                 return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x80,
                     (0x00, 2, 0x0001), (0x02, 2, 0x00EF), (0x04, 2, 0x0004), (0x08, 1, 0x01),
@@ -693,6 +746,9 @@ internal static class AsmFixtureCatalog {
                     (0x26, 2, 0x3344), (0x28, 2, 0x0042), (0x2A, 2, 0x0E6F), (0x2C, 2, 0x00A5),
                     (0x2E, 2, 0x1234), (0x38, 2, 0x1234), (0x3A, 2, 0x0007),
                     (0x3C, 4, 0x12340009), (0x30, 4, 0xAABB0077),
+                    (0x09, 1, 0x55), (0x0B, 1, 0x66), (0x17, 1, 0x77), (0x1C, 1, 0xAA),
+                    (0x0D, 1, 0x11),
+                    (0x20, 2, 0x0000), (0x24, 2, 0x0000),
                     (0x40, 2, 0x0002), (0x42, 2, 0x01CD), (0x44, 2, 0x0008), (0x48, 1, 0x00),
                     (0x4A, 1, 0x02), (0x4C, 2, 0x0001), (0x4E, 2, 0x0000), (0x50, 2, 0x0001),
                     (0x52, 2, 0xBEEF), (0x54, 2, 0x0001), (0x56, 1, 0x99), (0x58, 2, 0x0012),
@@ -700,7 +756,140 @@ internal static class AsmFixtureCatalog {
                     (0x66, 2, 0x3344), (0x68, 2, 0x0042), (0x6A, 2, 0x0E6F), (0x6C, 2, 0x00A5),
                     (0x6E, 2, 0x1234), (0x78, 2, 0x1234), (0x7A, 2, 0x0007),
                     (0x74, 2, 0x0000), (0x76, 2, 0x0076),
-                    (0x7C, 4, 0x12340009), (0x70, 4, 0xAABB0077)));
+                    (0x7C, 4, 0x12340009), (0x70, 4, 0xAABB0077),
+                    (0x49, 1, 0x55), (0x4B, 1, 0x66), (0x57, 1, 0x77), (0x5C, 1, 0xAA),
+                    (0x4D, 1, 0x11),
+                    (0x60, 2, 0x0000), (0x64, 2, 0x0000)));
+            case "data_globals":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x53,
+                    (0x10, 1, 0x11), (0x11, 1, 0x22), (0x12, 1, 0x33),
+                    (0x20, 1, 0x42), (0x22, 2, 0x1234), (0x24, 4, 0xAABBCCDD), (0x28, 2, 0xBEEF),
+                    (0x30, 1, 0x99), (0x31, 1, 0x77), (0x32, 2, 0x5555),
+                    (0x40, 1, 0x42), (0x41, 2, 0x1234), (0x43, 4, 0xAABBCCDD), (0x47, 1, 0xEF),
+                    (0x48, 2, 0xBEEF), (0x4A, 2, 0x2211), (0x4C, 2, 0x3322), (0x4E, 2, 0x7777),
+                    (0x50, 2, 0x5555), (0x52, 1, 0x99)));
+            case "data_segment_values":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName, EnablePit = true,
+                        MaxCycles = 300000, CpuModel = CpuModel.INTEL_80286,
+                        ConfigureMachine = machine =>
+                            machine.CpuState.Flags.CpuModel = CpuModel.INTEL_80286 },
+                    ResultRegion(0x98,
+                    (0x40, 2, 0x1111), (0x42, 2, 0x1111), (0x44, 1, 0x22), (0x45, 1, 0x33),
+                    (0x46, 1, 0x55), (0x47, 1, 0x55), (0x48, 1, 0x44), (0x49, 1, 0x55),
+                    (0x4A, 1, 0x66), (0x4B, 1, 0x88), (0x4C, 1, 0x99), (0x4D, 1, 0xAA),
+                    (0x4E, 1, 0xBB), (0x4F, 1, 0xDD), (0x50, 1, 0x22), (0x51, 1, 0x44),
+                    (0x52, 1, 0x55), (0x53, 1, 0x44), (0x54, 1, 0x55), (0x55, 1, 0x55),
+                    (0x56, 1, 0x66), (0x57, 1, 0x42), (0x58, 1, 0x77), (0x59, 1, 0x44),
+                    (0x5A, 1, 0xE2), (0x5B, 1, 0x66), (0x5C, 1, 0xD4), (0x10, 1, 0xE1),
+                    (0x60, 2, 0x2211), (0x62, 1, 0x44), (0x63, 1, 0x77), (0x64, 1, 0x99),
+                    (0x65, 1, 0xBB), (0x67, 1, 0xDD), (0x68, 1, 0x11), (0x6A, 4, 0x20015678),
+                    (0x71, 1, 0x33), (0x72, 1, 0x55), (0x73, 1, 0x88), (0x74, 1, 0xAA),
+                    (0x77, 1, 0xCC), (0x78, 1, 0x22), (0x82, 1, 0x66),
+                    (0x83, 1, 0x44), (0x84, 1, 0x0C), (0x85, 1, 0x00),
+                    (0x90, 4, 0x30000000), (0x94, 4, 0x40000000)));
+            case "data_tables":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName,
+                        CpuModel = CpuModel.INTEL_80286,
+                        ConfigureMachine = machine =>
+                            machine.CpuState.Flags.CpuModel = CpuModel.INTEL_80286 },
+                    ResultRegion(0x4D,
+                    (0x40, 1, 0x1E), (0x41, 2, 0x2222), (0x43, 2, 0x1234), (0x45, 2, 0x5678),
+                    (0x47, 1, 0x03), (0x48, 1, 0x0D), (0x49, 1, 0x5C),
+                    (0x4A, 1, 0x01), (0x4B, 2, 0x1234)));
+            case "data_strings":
+                return ResultRegionFixture(new AsmRunSettings {
+                        BinName = Path.GetFullPath("Resources/cpuTests/data_strings.com"),
+                        InstallInterruptVectors = true
+                    }, ResultRegion(0x4A,
+                    (0x40, 2, 0x0900), (0x42, 2, 0x0004), (0x44, 1, 0x00), (0x45, 2, 0x0002),
+                    (0x47, 1, 0x01), (0x48, 2, 0x0901), (0x49, 1, 0x02)));
+            case "data_segments":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x4B,
+                    (0x40, 2, 0xF100), (0x42, 2, 0xF200), (0x44, 1, 0x00), (0x45, 1, 0x42),
+                    (0x46, 1, 0x24), (0x47, 2, 0xABCD), (0x49, 2, 0x0000)));
+            case "data_jump_tables":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, DataJumpTablesRegion(false));
+            case "interrupt_handler_partial_inputs":
+                return ResultRegionFixture(new AsmRunSettings {
+                        BinName = binName, MaxCycles = 0x400000, EnablePit = true },
+                    ResultRegion(0x51,
+                    (0x40, 1, 0x5A), (0x41, 1, 0x6B), (0x42, 1, 0x01),
+                    (0x50, 1, 0x01)));
+            case "data_global_offset_fault":
+                return ResultRegionFixture(new AsmRunSettings {
+                        BinName = binName, CpuModel = CpuModel.INTEL_80386 },
+                    ResultRegion(0x46,
+                    (0x00, 2, 0x1234),
+                    (0x40, 2, 0x0002), (0x42, 2, 0x5678), (0x44, 2, 0x1234)));
+            case "data_jump_tables_segments":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName },
+                    ResultRegion(0x48,
+                    (0x40, 2, 0x0002), (0x42, 2, 0x0002), (0x44, 2, 0x0002), (0x46, 2, 0x0002)));
+            case "register_locals":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x6E,
+                    (0x40, 2, 0x1111), (0x42, 2, 0x2222), (0x44, 1, 0x34), (0x45, 2, 0x4445),
+                    (0x47, 2, 0x6666), (0x49, 2, 0x0001), (0x4B, 1, 0x77), (0x4C, 2, 0x1111),
+                    (0x4E, 2, 0x2222), (0x50, 2, 0x1234), (0x52, 2, 0x5555), (0x54, 1, 0x37),
+                    (0x56, 2, 0x5555), (0x58, 2, 0x1111), (0x5A, 2, 0x4444), (0x5C, 2, 0x0001),
+                    (0x5E, 2, 0x4444), (0x60, 2, 0x0000), (0x62, 1, 0x01), (0x63, 1, 0x01),
+                    (0x64, 1, 0x00), (0x65, 1, 0x00), (0x66, 1, 0x00), (0x67, 1, 0x00),
+                    (0x68, 1, 0x01), (0x69, 1, 0x01), (0x6A, 2, 0xFFF8), (0x6C, 2, 0x7FF8)));
+            case "register_locals_across":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName, MaxCycles = 0xFFFFFFF, EnablePit = true }, ResultRegion(0xB2,
+                    (0x40, 2, 0x2222), (0x42, 2, 0x0060), (0x44, 2, 0x0006), (0x46, 2, 0x4444),
+                    (0x48, 2, 0x5555), (0x4A, 2, 0x7777), (0x4C, 2, 0x8888), (0x4E, 2, 0xBE20),
+                    (0x50, 2, 0x0016), (0x52, 2, 0x000D), (0x54, 2, 0xBEEF),
+                    (0x58, 2, 0x5555), (0x5A, 2, 0x5555), (0x5C, 2, 0x5555), (0x5E, 2, 0x5555),
+                    (0x60, 2, 0x5555), (0x62, 1, 0x01), (0x64, 2, 0x1111), (0x66, 2, 0x1111),
+                    (0x6A, 1, 0x02), (0x6C, 2, 0x2222), (0x6E, 2, 0x2222),
+                    (0x7C, 2, 0x5500), (0x7E, 2, 0x0099),
+                    (0x90, 2, 0x0042), (0x92, 1, 0x8B),
+                    (0x94, 2, 0x0040), (0x96, 2, 0x7777),
+                    (0x9A, 2, 0x0040), (0x9C, 2, 0x0040), (0x9E, 2, 0xBE20)));
+            case "save_restore_pairs":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x68,
+                    (0x40, 2, 0x1111), (0x42, 2, 0x0099), (0x44, 2, 0x3333), (0x46, 2, 0x5555),
+                    (0x48, 2, 0x4444), (0x4A, 2, 0x0FFE), (0x4C, 2, 0x6666), (0x4E, 2, 0x7777),
+                    (0x50, 2, 0x8888), (0x52, 2, 0x1111), (0x54, 2, 0x1113), (0x56, 2, 0x0202),
+                    (0x58, 2, 0x0FFE), (0x5A, 2, 0x1357), (0x5C, 2, 0x2468), (0x5E, 2, 0x3579),
+                    (0x60, 2, 0x9ABC), (0x62, 2, 0x5151), (0x64, 2, 0x6262), (0x66, 2, 0x7373)));
+            case "if_conversion":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x5C,
+                    (0x40, 2, 0x0001), (0x42, 2, 0x1200), (0x44, 1, 0xFF), (0x45, 1, 0x00),
+                    (0x46, 1, 0x00), (0x47, 2, 0x0009), (0x49, 1, 0x01), (0x4A, 2, 0xFFFF),
+                    (0x4C, 2, 0x0100), (0x4E, 2, 0x0046), (0x50, 1, 0x01), (0x51, 2, 0x2222),
+                    (0x53, 2, 0x1111), (0x55, 1, 0x00), (0x56, 2, 0x1234), (0x58, 2, 0x1234),
+                    (0x5A, 2, 0x0001)));
+            case "int_service_calls":
+                return ResultRegionFixture(new AsmRunSettings {
+                        BinName = Path.GetFullPath("Resources/cpuTests/int_service_calls.com"),
+                        InstallInterruptVectors = true
+                    }, ResultRegion(0x86,
+                    (0x40, 2, 0x0005), (0x42, 2, 0xFF00), (0x44, 2, 0x0000),
+                    (0x46, 2, 0x3333), (0x48, 2, 0x4444),
+                    (0x4A, 1, 0x00), (0x4B, 1, 0x02),
+                    (0x4C, 2, 0x0002), (0x4E, 2, 0xF00D),
+                    (0x50, 2, 0xBEEF),
+                    (0x52, 2, 0x018C), (0x54, 2, 0x016D), (0x56, 2, 0x0002),
+                    (0x58, 2, 0x0005), (0x5A, 2, 0x0276),
+                    (0x5C, 2, 0x1234), (0x5E, 2, 0x5678),
+                    (0x60, 2, 0x1234), (0x62, 2, 0x5678),
+                    (0x64, 2, 0x0005), (0x66, 2, 0xFF00),
+                    (0x68, 2, 0xFF01), (0x6A, 2, 0x0000), (0x6C, 2, 0x0000),
+                    (0x6E, 2, 0x4000), (0x70, 2, 0x0000), (0x72, 2, 0x3334),
+                    (0x74, 2, 0x0005), (0x76, 2, 0xFF00), (0x78, 2, 0x1234),
+                    (0x7A, 2, 0x5678), (0x7C, 1, 0xFE), (0x7E, 1, 0x24),
+                    (0x80, 2, 0x80D3), (0x82, 1, 0x59), (0x83, 1, 0x5A),
+                    (0x84, 2, 0xBEEF)));
+            case "interrupt_contract_unseen_handler":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x4A,
+                    (0x40, 2, 0x0042), (0x42, 2, 0x0042), (0x44, 2, 0x0042), (0x46, 2, 0x0042),
+                    (0x48, 2, 0x0042)));
+            case "interrupt_contract_unseen_1c_handler":
+                return ResultRegionFixture(new AsmRunSettings {
+                        BinName = binName, InstallInterruptVectors = true }, ResultRegion(0x4A,
+                    (0x40, 2, 0x0042), (0x42, 2, 0x0042), (0x44, 2, 0x0042), (0x46, 2, 0x0042),
+                    (0x48, 2, 0x0042)));
             case "instruction_coverage_386":
                 return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x50,
                     (0x00, 1, 1), (0x01, 1, 0), (0x02, 1, 1), (0x03, 1, 0), (0x04, 2, 0x01E1), (0x06, 2, 0x0009),
@@ -871,6 +1060,12 @@ internal static class AsmFixtureCatalog {
 
     /// <summary>Shared completion and stack-safety assertions for the interior-entry IRQ fixture.</summary>
     /// <remarks>Requires all three phases to finish without an IRQ observing an incomplete stack switch.</remarks>
+    /// <summary>Asserts the timer handler's AX write crossed its call and reached the main loop.</summary>
+    private static void AssertInterruptHandlerChangesRegisterCompleted(AsmFixtureResult result) {
+        result.Memory.UInt16[0x20080].Should().Be(5,
+            "the handler sets AX = 5 before a call that does not touch AX, and the main loop stores it");
+    }
+
     private static void AssertInteriorEntryCompleted(AsmFixtureResult result) {
         result.Memory.UInt8[HookCountAddress].Should().Be(2);
         result.Memory.UInt8[TailCountAddress].Should().Be(3);
@@ -940,6 +1135,73 @@ internal static class AsmFixtureCatalog {
         }
         settings = settings with { ConfigureMachine = SelectUnobservedArm, VariantName = "unobserved" };
         return MemoryFixture(settings, expectedMemory);
+    }
+
+    /// <summary>Runs data_jump_tables with the first word of the j2_table in the loaded image
+    /// replaced by j2_h1's address: the generated index switch's signature guard must fail and
+    /// fall back to the loaded-word switch, so index 0 reaches the t1 target.</summary>
+    public static AsmFixture DataJumpTablesPatched() {
+        AsmRunSettings settings = new() {
+            BinName = "data_jump_tables",
+            ConfigureMachine = machine => machine.Memory.UInt16[0xF000, 0x02FF] = 0x0264,
+            VariantName = "patched"
+        };
+        return ResultRegionFixture(settings, DataJumpTablesRegion(true));
+    }
+
+    /// <summary>Runs dataflow_double_precision on the 286 memory model, which raises segment faults:
+    /// the over-bound read section works because it stays two word reads inside the 64 KB limit, so a
+    /// wrong dword join there faults instead of silently wrapping.</summary>
+    public static AsmFixture DataflowDoublePrecision386() {
+        AsmRunSettings settings = new() {
+            BinName = "dataflow_double_precision",
+            CpuModel = CpuModel.INTEL_80286,
+            VariantName = "386"
+        };
+        return ResultRegionFixture(settings, DoublePrecisionRegion());
+    }
+
+    private static byte[] DoublePrecisionRegion() {
+        return ResultRegion(0x100,
+            (0x00, 2, 0x0000), (0x02, 2, 0x0001), (0x04, 2, 0xFFFE), (0x06, 2, 0x0000), (0x08, 2, 0x0001),
+            (0x0A, 2, 0xFFFF), (0x0C, 2, 0xFFFE), (0x0E, 2, 0x0001), (0x10, 2, 0x7FFF), (0x12, 2, 0x0000),
+            (0x14, 2, 0x0000), (0x16, 4, 0x00010000), (0x1A, 4, 0x00010000), (0x1E, 2, 0x0001),
+            (0x20, 2, 0x0001), (0x22, 1, 0x00), (0x23, 2, 0x0001), (0x25, 1, 0x01), (0x26, 2, 0xFFFF),
+            (0x40, 2, 0x0001), (0x42, 2, 0x0001), (0x44, 2, 0xFFFF), (0x46, 2, 0x0000), (0x48, 2, 0x0000),
+            (0x4A, 2, 0xFFFF), (0x4C, 2, 0x0000), (0x4E, 2, 0x0002), (0x50, 2, 0x8000), (0x52, 2, 0x0000),
+            (0x54, 2, 0x0001), (0x56, 4, 0x00010001), (0x5A, 4, 0x00010001), (0x5E, 2, 0x0001),
+            (0x60, 2, 0x0002), (0x62, 1, 0x00), (0x63, 2, 0x0001), (0x65, 1, 0x01), (0x66, 2, 0xFFFF),
+            (0x80, 2, 0xFFFF), (0x82, 2, 0x7FFF), (0x84, 2, 0x0001), (0x86, 2, 0x8000), (0x88, 2, 0x0000),
+            (0x8A, 2, 0x8000), (0x8C, 2, 0x0000), (0x8E, 2, 0x0000), (0x90, 2, 0x0000), (0x92, 2, 0x4000),
+            (0x94, 2, 0xFFFF), (0x96, 4, 0x7FFFFFFF), (0x9A, 4, 0x80000000), (0x9E, 2, 0xFFFE),
+            (0xA0, 2, 0x7FFF), (0xA2, 1, 0x01), (0xA3, 2, 0x7FFF), (0xA5, 1, 0x01), (0xA6, 2, 0x8000),
+            (0xC0, 2, 0x7FFF), (0xC2, 2, 0x1235), (0xC4, 2, 0x8001), (0xC6, 2, 0x1233), (0xC8, 2, 0x8000),
+            (0xCA, 2, 0xEDCB), (0xCC, 2, 0x0000), (0xCE, 2, 0x2469), (0xD0, 2, 0x4000), (0xD2, 2, 0x091A),
+            (0xD4, 2, 0x7FFF), (0xD6, 4, 0x12357FFF), (0xDA, 4, 0x12357FFF), (0xDE, 2, 0xFFFF),
+            (0xE0, 2, 0x1233), (0xE2, 1, 0x00), (0xE3, 2, 0x1235), (0xE5, 1, 0x01), (0xE6, 2, 0xEDCB),
+            (0x28, 2, 0x1101), (0x2A, 2, 0x3322), (0x2C, 2, 0x5A5B), (0x2E, 2, 0xA5A5),
+            (0x30, 2, 0x1235), (0x32, 2, 0x5678), (0x34, 2, 0x0000), (0x36, 2, 0x0001),
+            (0x68, 2, 0x4434), (0x6A, 2, 0x6655), (0x6C, 2, 0xA5A6), (0x6E, 2, 0x0000),
+            (0x70, 2, 0x1235), (0x72, 2, 0x5678), (0x74, 2, 0x0101), (0x76, 2, 0x0000),
+            (0xA8, 2, 0x3321), (0xAA, 2, 0x5544), (0xAC, 2, 0xA5A4), (0xAE, 2, 0x0000),
+            (0xB0, 2, 0x1233), (0xB2, 2, 0x5678), (0xB4, 2, 0xFFFF), (0xB6, 2, 0x0000),
+            (0xE8, 2, 0x2210), (0xEA, 2, 0x4434), (0xEC, 2, 0x5A59), (0xEE, 2, 0xA5A6),
+            (0xF0, 2, 0x1233), (0xF2, 2, 0x5679), (0xF4, 2, 0x00FE), (0xF6, 2, 0x0101));
+    }
+
+    private static byte[] DataJumpTablesRegion(bool j2TablePatched) {
+        byte[] region = ResultRegion(0x7E,
+            (0x40, 2, 0x1111), (0x42, 2, 0x2222), (0x44, 2, 0x3333), (0x46, 2, 0x4444),
+            (0x48, 2, 0x9999), (0x4A, 2, 0xAAAA), (0x4C, 2, 0xBBBB), (0x4E, 2, 0x0001),
+            (0x50, 2, 0x0002), (0x52, 2, 0xF0F0), (0x54, 2, 0xF1F1),
+            (0x56, 2, 0x0001), (0x58, 2, 0x0001), (0x5A, 2, 0x0001), (0x5C, 2, 0x0001),
+            (0x62, 2, 0x0001), (0x64, 2, 0x0001), (0x66, 2, 0x0001), (0x6A, 2, 0x1111),
+            (0x74, 2, 0x1155), (0x78, 2, 0x0001), (0x7A, 2, 0x0001), (0x7C, 2, 0x0001));
+        region[0x60] = 0x01;
+        if (!j2TablePatched) {
+            region[0x60] = 0x02;
+        }
+        return region;
     }
 
     private static byte[] SpeculativeMemory(byte b400, byte b401, byte b402) {

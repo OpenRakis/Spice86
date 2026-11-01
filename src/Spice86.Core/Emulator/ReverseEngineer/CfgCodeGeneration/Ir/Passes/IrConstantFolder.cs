@@ -5,6 +5,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Propagation;
@@ -42,7 +43,8 @@ internal static class IrConstantFolder {
                 return IrAstChildren.MapChildren(node,
                     child => ContainsVariableReference(child) ? Fold(child, variableConstants) : child);
             case StackCallNode or StackCallValueNode or BoundCheckCallNode or BitScanCallNode
-                or ProcedureCallHelperNode or InterruptCallHelperNode or CallbackHelperNode
+                or ProcedureCallHelperNode or InterruptCallHelperNode or InterruptServiceCallNode
+                or CallbackHelperNode
                 or CallbackMovedCsIpHelperNode or SignatureMatchesHelperNode
                 or ProcedureCallReturnedElsewhereHelperNode or InterruptCallReturnedElsewhereHelperNode:
                 return node;
@@ -74,8 +76,22 @@ internal static class IrConstantFolder {
                 rebuiltBinary.BinaryOperation == BinaryOperation.LOGICAL_OR) is { } collapsedLogical) {
             return collapsedLogical;
         }
+        if (SelfCancels(rebuiltBinary)) {
+            return new ConstantNode(rebuiltBinary.DataType, 0);
+        }
         return FoldValue(FoldIdentity(rebuiltBinary), variableConstants);
     }
+
+    /// <summary><c>x ^ x</c> and <c>x - x</c> are zero when both operands are the same node and
+    /// <c>x</c> has no token read (a memory read can have a device side effect) and no call.</summary>
+    private static bool SelfCancels(BinaryOperationNode binary) =>
+        binary.BinaryOperation is BinaryOperation.BITWISE_XOR or BinaryOperation.MINUS
+        && binary.Left == binary.Right
+        && IrEffectsVisitor.Of(binary.Left, false).TokenReads == IrTokens.None
+        && !ContainsCall(binary.Left);
+
+    private static bool ContainsCall(IVisitableAstNode node) =>
+        IrAstChildren.Descendants(node).Any(descendant => descendant is MethodCallValueNode);
 
     private static IVisitableAstNode FoldWhile(WhileNode whileNode,
         IReadOnlyDictionary<string, ConstantNode> variableConstants) {
@@ -102,7 +118,7 @@ internal static class IrConstantFolder {
         IReadOnlyDictionary<string, ConstantNode> variableConstants) {
         ConditionalValueNode foldedConditional = (ConditionalValueNode)IrAstChildren.MapChildren(
             conditional, child => Fold(child, variableConstants));
-        if (ConstantEvaluation.TryEvaluate(foldedConditional.Condition,
+        if (ConstantEvaluation.TryEvaluateReplacing(foldedConditional.Condition,
                 leaf => LeafConstant(leaf, variableConstants), out ulong taken)) {
             return taken != 0 ? foldedConditional.WhenTrue : foldedConditional.WhenFalse;
         }
@@ -129,7 +145,7 @@ internal static class IrConstantFolder {
     /// <summary>Folds the additive constant chains <see cref="IrExpressionPropagation"/> merging
     /// creates in every statement and terminator expression of <paramref name="method"/>. Only
     /// constant operands combine, so a rewritten statement reads and writes the same
-    /// <see cref="IrValues"/> and <see cref="IrTokens"/>, cannot newly fault
+    /// <see cref="CpuValues"/> and <see cref="IrTokens"/>, cannot newly fault
     /// (<see cref="IrEffects.MayFault"/>) or deliver interrupts
     /// (<see cref="IrEffects.DeliversInterrupts"/>), and the SSA versions it holds are the same
     /// (<see cref="IrSsa.SameVersions"/>): the statement is replaced through
@@ -263,7 +279,7 @@ internal static class IrConstantFolder {
         IReadOnlyDictionary<string, ConstantNode> variableConstants) {
         if (node is BinaryOperationNode { BinaryOperation: BinaryOperation.ASSIGN }
             || WrapsVariableReference(node)
-            || !ConstantEvaluation.TryEvaluate(node,
+            || !ConstantEvaluation.TryEvaluateReplacing(node,
                 leaf => LeafConstant(leaf, variableConstants), out ulong value)) {
             return node;
         }

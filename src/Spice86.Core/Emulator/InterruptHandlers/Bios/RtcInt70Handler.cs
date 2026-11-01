@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.Devices.Cmos;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
@@ -38,16 +39,14 @@ public sealed class RtcInt70Handler : InterruptHandler {
     public override byte VectorNumber => 0x70;
 
     /// <inheritdoc />
-    public override void Run() {
-        HandleRtcInterrupt();
-    }
-
+    public override void Run() => HandleInterrupt();
 
     /// <summary>
     /// Handles RTC interrupt by reading Status Register C to determine interrupt type (periodic or alarm),
     /// then dispatches to appropriate handler. Acknowledges interrupt to PIC when done.
     /// </summary>
-    public void HandleRtcInterrupt() {
+    [InterruptService(Memory = ServiceMemoryEffect.ReadWrite, Io = true)]
+    public void HandleInterrupt() {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("INT 70h - RTC Alarm/Periodic Interrupt Handler");
         }

@@ -1,3 +1,4 @@
+// ==== file: CfgGeneratedOverrideSupplier.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -16,8 +17,22 @@ public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
     }
 }
 
-public class CfgGeneratedOverrides : CSharpOverrideHelper {
-    protected readonly ushort cs1;
+
+// ==== file: CfgGeneratedOverrides.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort biosSegment;
 
     private static readonly byte?[] Signature_0013_mov = [0xB9, 0x03, 0x00];
     private static readonly byte?[] Signature_0016_mov = [0xC6, 0x06, 0x01, 0x04, 0x00];
@@ -26,52 +41,109 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[] Signature_0020_jne = [0x75, 0xF9];
     private static readonly byte?[] Signature_0022_jmp = [0xEB, 0x00];
 
-    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
-        cs1 = 0xF000;
+    private static readonly byte?[][] SpeculativeRun_0013 = [Signature_0013_mov, Signature_0016_mov];
+    private static readonly byte?[][] SpeculativeRun_001F = [Signature_001F_dec, Signature_0020_jne];
 
-        DefineFunctionWithoutInterpreterFallback(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, "unknown");
+    private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
+
+    protected readonly DsGlobals DsGlobals;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        biosSegment = 0xF000;
+        DsGlobals = new DsGlobals(Memory, State.SegmentRegisters);
+
+        unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
     }
 
-    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
-        CheckExternalEvents(cs1, 0xFFF0);
+}
+
+// ==== file: CfgGeneratedOverrides.F000.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: DS. Does not return.</summary>
+    public virtual Action unknown_F000_FFF0_FFFF0() {
+        byte al1 = 0;
+        CheckExternalEvents(biosSegment, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov byte ptr DS:[0x0400],1
-        UInt8[DS, 0x0400] = 1;
+        DsGlobals.Byte0400 = 1;
         // F000:0005 mov AL,byte ptr DS:[0x0500]
-        AL = UInt8[DS, 0x0500];
+        al1 = DsGlobals.Byte0500;
         // F000:0008 test AL,AL
-        Alu8.And(AL, AL);
+        Alu8.And(al1, al1);
         // F000:000A jne short 0x0013
-        if (AL != 0) {
-            VerifySpeculativeEntryOrFail(cs1, 0x0013, Signature_0013_mov);
+        if (al1 != 0) {
+            VerifySpeculativeRunOrFail(biosSegment, 0x0013, SpeculativeRun_0013);
             // F000:0013 mov CX,3
             CX = 3;
-            VerifySpeculativeEntryOrFail(cs1, 0x0016, Signature_0016_mov);
             // F000:0016 mov byte ptr DS:[0x0401],0
-            UInt8[DS, 0x0401] = 0;
+            DsGlobals.Byte0401 = 0;
             do {
-                CheckExternalEvents(cs1, 0x001B);
-                VerifySpeculativeEntryOrFail(cs1, 0x001B, Signature_001B_inc);
+                CheckExternalEvents(biosSegment, 0x001B);
+                VerifySpeculativeEntryOrFail(biosSegment, 0x001B, Signature_001B_inc);
                 // F000:001B inc byte ptr DS:[0x0401]
-                UInt8[DS, 0x0401] += 1;
-                VerifySpeculativeEntryOrFail(cs1, 0x001F, Signature_001F_dec);
+                DsGlobals.Byte0401 += 1;
+                VerifySpeculativeRunOrFail(biosSegment, 0x001F, SpeculativeRun_001F);
                 // F000:001F dec CX
                 CX = Alu16.Dec(CX);
-                VerifySpeculativeEntryOrFail(cs1, 0x0020, Signature_0020_jne);
                 // F000:0020 jne short 0x001B
             } while (CX != 0);
-            VerifySpeculativeEntryOrFail(cs1, 0x0022, Signature_0022_jmp);
+            VerifySpeculativeEntryOrFail(biosSegment, 0x0022, Signature_0022_jmp);
             // F000:0022 jmp short 0x0024
         }
         else {
             // F000:000C mov byte ptr DS:[0x0401],0xDD
-            UInt8[DS, 0x0401] = 0xDD;
+            DsGlobals.Byte0401 = 0xDD;
             // F000:0011 jmp short 0x0024
         }
         // F000:0024 mov byte ptr DS:[0x0402],0xBB
-        UInt8[DS, 0x0402] = 0xBB;
+        DsGlobals.Byte0402 = 0xBB;
         // F000:0029 hlt
+        AL = al1;
         return Hlt();
     }
 
+}
+
+// ==== file: DsGlobals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class DsGlobals : MemoryBasedDataStructureWithDsBaseAddress {
+    private readonly IMemory _memory;
+    private readonly SegmentRegisters _segmentRegisters;
+
+    private ushort Segment => _segmentRegisters.UInt16[(uint)SegmentRegisterIndex.DsIndex];
+
+    public DsGlobals(IMemory memory, SegmentRegisters segmentRegisters) : base(memory, segmentRegisters) {
+        _memory = memory;
+        _segmentRegisters = segmentRegisters;
+    }
+
+    /// DS:0x0400, whatever DS holds at the access.
+    public byte Byte0400 { get => _memory.UInt8[Segment, 0x0400]; set => _memory.UInt8[Segment, 0x0400] = value; }
+
+    /// DS:0x0401, whatever DS holds at the access.
+    public byte Byte0401 { get => _memory.UInt8[Segment, 0x0401]; set => _memory.UInt8[Segment, 0x0401] = value; }
+
+    /// DS:0x0402, whatever DS holds at the access.
+    public byte Byte0402 { get => _memory.UInt8[Segment, 0x0402]; set => _memory.UInt8[Segment, 0x0402] = value; }
+
+    /// DS:0x0500, whatever DS holds at the access.
+    public byte Byte0500 { get => _memory.UInt8[Segment, 0x0500]; set => _memory.UInt8[Segment, 0x0500] = value; }
 }

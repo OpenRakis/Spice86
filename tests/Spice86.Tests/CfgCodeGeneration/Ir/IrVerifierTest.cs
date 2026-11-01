@@ -10,6 +10,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 using Spice86.Shared.Emulator.Memory;
@@ -176,7 +177,7 @@ public sealed class IrVerifierTest {
         IrBlock entry = StartingBlock(0, first);
         entry.Terminator = new IrExit(first, ReturnValue());
         IrBlock misplaced = new(1);
-        misplaced.Statements.Add(Statement(new CheckExternalEventsNode(second.Address), second));
+        misplaced.Statements.Add(Statement(new CheckExternalEventsNode(second.Address, HardwareInterruptEffectBuilder.Conservative), second));
         misplaced.Statements.Add(Statement(new CommentNode("after"), second));
         misplaced.Terminator = new IrExit(second, ReturnValue());
         IrMethod method = Method(entries: [Entry(first, entry)], nodes: [first, second],
@@ -378,7 +379,7 @@ public sealed class IrVerifierTest {
         IrBlock whenFalse = new(2);
         IrBlock join = new(3);
         IrBlock secondBlock = StartingBlock(4, second);
-        secondBlock.Statements.Insert(0, Statement(new CheckExternalEventsNode(second.Address), second));
+        secondBlock.Statements.Insert(0, Statement(new CheckExternalEventsNode(second.Address, HardwareInterruptEffectBuilder.Conservative), second));
 
         entry.Terminator = new IrBranch(first, new CpuFlagNode(Flags.Carry),
             new IrEdge(whenTrue, true), new IrEdge(whenFalse, true));

@@ -4,6 +4,7 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
@@ -148,7 +149,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
             InterruptEntryPoint = 0,
             NextDevicePointer = new SegmentedAddress(0xFFFF, 0xFFFF)
         };
-        FillDispatchTable();
 
         // Allocation of system handle 0.
         AllocatePages(4);
@@ -214,25 +214,6 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
         return handlerAddress;
     }
 
-    private void FillDispatchTable() {
-        AddAction(0x40, GetStatus);
-        AddAction(0x41, GetPageFrameSegment);
-        AddAction(0x42, GetUnallocatedPageCount);
-        AddAction(0x43, AllocatePages);
-        AddAction(0x44, MapUnmapHandlePage);
-        AddAction(0x45, DeallocatePages);
-        AddAction(0x46, GetEmmVersion);
-        AddAction(0x47, SavePageMap);
-        AddAction(0x48, RestorePageMap);
-        AddAction(0x4B, GetEmmHandleCount);
-        AddAction(0x4C, GetHandlePages);
-        AddAction(0x4D, GetAllHandlePages);
-        AddAction(0x50, MapUnmapMultipleHandlePages);
-        AddAction(0x51, ReallocatePages);
-        AddAction(0x53, GetSetHandleName);
-        AddAction(0x58, GetMappablePhysicalAddressArray);
-        AddAction(0x59, GetExpandedMemoryHardwareInformation);
-    }
 
     public CharacterDevice AsCharacterDevice() => _emmCharacterDevice;
 
@@ -256,6 +237,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     /// <summary>
     /// Returns in _state.AH whether the expanded memory manager is working correctly.
     /// </summary>
+    [InterruptService(0x40, Reads = CpuValues.Ah | CpuValues.Al, Writes = CpuValues.Ah, Memory = ServiceMemoryEffect.None)]
     public void GetStatus() {
         // Return good status in AH.
         State.AH = EmmStatus.EmmNoError;
@@ -267,6 +249,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     /// <summary>
     /// Returns in _state.BX where the 64KB EMM Page Frame is located.
     /// </summary>
+    [InterruptService(0x41, Reads = CpuValues.Ah | CpuValues.Al, Writes = CpuValues.Ah | CpuValues.Bx, Memory = ServiceMemoryEffect.None)]
     public void GetPageFrameSegment() {
         // Return page frame segment in BX.
         State.BX = EmmPageFrameSegment;
@@ -282,6 +265,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     /// unallocated pages (pages available to your program),
     /// and the total number of pages in expanded memory, in _state.DX.
     /// </summary>
+    [InterruptService(0x42, Reads = CpuValues.Ah | CpuValues.Al, Writes = CpuValues.Ah | CpuValues.Bx | CpuValues.Dx, Memory = ServiceMemoryEffect.None)]
     public void GetUnallocatedPageCount() {
         // Return total number of pages in DX.
         State.DX = EmmMemory.TotalPages;
@@ -310,6 +294,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     /// Parameters: <br/>
     /// _state.DX: The number of pages to allocate to the handle.
     /// </summary>
+    [InterruptService(0x43, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Bx, Writes = CpuValues.Ah | CpuValues.Dx, Memory = ServiceMemoryEffect.None)]
     public void AllocatePages() {
         ushort numberOfPagesToAlloc = State.BX;
         if (numberOfPagesToAlloc is 0) {
@@ -383,6 +368,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     /// Logical pages allocated by Function 27 (Allocate Raw Pages subFunction) are
     /// referred to as raw pages and might not be the same size as logical pages.
     /// </remarks>
+    [InterruptService(0x44, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Bx | CpuValues.Dx, Writes = CpuValues.Ah, Memory = ServiceMemoryEffect.None)]
     public void MapUnmapHandlePage() {
         ushort physicalPageNumber = State.AL;
         ushort logicalPageNumber = State.BX;
@@ -489,6 +475,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     /// errors and control-break if there is a chance that the program will
     /// have allocated pages when either of these events occur.
     /// </remarks>
+    [InterruptService(0x45, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Dx, Writes = CpuValues.Ah, Memory = ServiceMemoryEffect.None)]
     public void DeallocatePages() {
         ushort handleId = State.DX;
         if (!IsValidHandle(handleId)) {
@@ -510,6 +497,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     /// Programs that need to use EMS 4.0 functions should check for specific
     /// function support rather than relying solely on the version number.
     /// </summary>
+    [InterruptService(0x46, Reads = CpuValues.Ah | CpuValues.Al, Writes = CpuValues.Ax, Memory = ServiceMemoryEffect.None)]
     public void GetEmmVersion() {
         // Return EMS version 3.2 in BCD format.
         // Note: We implement some EMS 4.0 functions but report 3.2 for broader compatibility.
@@ -543,6 +531,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     /// frame, saving the entire mapping state for a large number of mappable
     /// pages would be inefficient use of memory. <br/>
     /// </summary>
+    [InterruptService(0x47, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Dx, Writes = CpuValues.Ah, Memory = ServiceMemoryEffect.None)]
     public void SavePageMap() {
         State.AH = SavePageMap(State.DX);
     }
@@ -596,6 +585,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     /// register state of only this 64K-byte page frame, restoring the entire mapping state
     /// for a large number of mappable pages would be inefficient use of memory.
     /// </summary>
+    [InterruptService(0x48, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Dx, Writes = CpuValues.Ah, Memory = ServiceMemoryEffect.None)]
     public void RestorePageMap() {
         State.AH = RestorePageMap(State.DX);
     }
@@ -631,6 +621,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     /// Returns in _state.BX the number of open EMM handles.
     /// </summary>
     /// <remarks>This number will not exceed 255.</remarks>
+    [InterruptService(0x4B, Reads = CpuValues.Ah | CpuValues.Al, Writes = CpuValues.Ah | CpuValues.Bx, Memory = ServiceMemoryEffect.None)]
     public void GetEmmHandleCount() {
         State.BX = 0;
         State.BX = (ushort)EmmHandles.Count;
@@ -650,6 +641,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     /// because the memory manager allows a maximum of 512 pages
     /// (8 MB) of expanded memory.
     /// </remarks>
+    [InterruptService(0x4C, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Dx, Writes = CpuValues.Ax | CpuValues.Bx, Memory = ServiceMemoryEffect.None)]
     public void GetHandlePages() {
         State.BX = (ushort)EmmHandles[State.DX].LogicalPages.Count;
         State.AX = EmmStatus.EmmNoError;
@@ -659,6 +651,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     /// The Get All Handle Pages function returns an array of the open EMM
     /// handles and the number of pages allocated to each one.
     /// </summary>
+    [InterruptService(0x4D, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Es | CpuValues.Di, Writes = CpuValues.Ax | CpuValues.Bx, Memory = ServiceMemoryEffect.Write)]
     public void GetAllHandlePages() {
         State.BX = GetAllocatedHandlePagesCount();
         State.AH = GetAllHandlePages(MemoryUtils.ToPhysicalAddress(State.ES, State.DI));
@@ -688,6 +681,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     /// a time.  For applications which do a lot of page mapping, this is the
     /// preferred mapping method.
     /// </summary>
+    [InterruptService(0x50, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Cx | CpuValues.Dx | CpuValues.Ds | CpuValues.Si, Writes = CpuValues.Ah, Memory = ServiceMemoryEffect.Read)]
     public void MapUnmapMultipleHandlePages() {
         byte operation = State.AL;
         ushort handleId = State.DX;
@@ -740,6 +734,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     /// This function allows an application program to increase or decrease
     /// (reallocate) the number of logical pages allocated to an EMM handle.
     /// </summary>
+    [InterruptService(0x51, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Bx | CpuValues.Dx, Writes = CpuValues.Ah, Memory = ServiceMemoryEffect.None)]
     public void ReallocatePages() {
         ushort handleId = State.DX;
         ushort reallocationCount = State.BX;
@@ -797,6 +792,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     /// When a handle is assigned a name, at least one character in the name must be a non-null character,
     /// in order to distinguish it from a handle without a name.
     /// </summary>
+    [InterruptService(0x53, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Dx | CpuValues.Es | CpuValues.Di | CpuValues.Si, Writes = CpuValues.Ah, Memory = ServiceMemoryEffect.ReadWrite)]
     public void GetSetHandleName() {
         ushort handle = State.DX;
         State.AH = GetSetHandleName(handle, State.AL);
@@ -855,6 +851,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     ///   - The corresponding physical page number
     /// </para>
     /// </summary>
+    [InterruptService(0x58, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Es | CpuValues.Di, Writes = CpuValues.Ah | CpuValues.Cx, Memory = ServiceMemoryEffect.Write)]
     public void GetMappablePhysicalAddressArray() {
         uint bufferAddress = MemoryUtils.ToPhysicalAddress(State.ES, State.DI);
         for (ushort i = 0; i < EmmPageFrame.Count; i++) {
@@ -873,6 +870,7 @@ public sealed class ExpandedMemoryManager : InterruptHandler, IVirtualDevice {
     /// be disabled at any time by the operating system. <br/>
     /// Refer to Function 30 for a description of how an operating system does this.
     /// </summary>
+    [InterruptService(0x59, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Es | CpuValues.Di, Writes = CpuValues.Ah | CpuValues.Bx | CpuValues.Dx, Memory = ServiceMemoryEffect.Write)]
     public void GetExpandedMemoryHardwareInformation() {
         switch (State.AL) {
             case EmmSubFunctionsCodes.GetHardwareConfigurationArray:

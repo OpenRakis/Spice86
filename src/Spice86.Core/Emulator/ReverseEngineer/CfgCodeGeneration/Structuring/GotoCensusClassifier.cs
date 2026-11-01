@@ -76,7 +76,8 @@ internal static class GotoCensusClassifier {
             return map;
         }
 
-        public void Walk(IVisitableAstNode node, GotoCensus census, IReadOnlyDictionary<IGotoTarget, int> printedByTarget) {
+        public void Walk(IVisitableAstNode node, GotoCensus census,
+            IReadOnlyDictionary<IGotoTarget, int> printedByTarget) {
             AstTrampoline.Run(WalkIt(node, census, printedByTarget));
         }
 

@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Visitor;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ssa;
@@ -49,7 +50,7 @@ internal static class IrFlagReadCensusClassifier {
                     setterByVersion.TryAdd(version, (statement, index));
                 }
             }
-            foreach (IVisitableAstNode node in IrAstChildren.RootsOf(block.Terminator)) {
+            foreach (IVisitableAstNode node in IrAstChildren.TerminatorNodes(block.Terminator)) {
                 positions[node] = (block, block.Statements.Count);
             }
         }
@@ -164,7 +165,7 @@ internal static class IrFlagReadCensusClassifier {
                     return FlagPropagationBlocker.MemoryOperand;
                 }
                 for (IrSsaValue register = IrSsaValue.Eax; register < IrSsaValue.Carry; register++) {
-                    if ((setter.Effects.Reads & IrSsaValues.MaskOf(register)) != IrValues.None
+                    if ((setter.Effects.Reads & IrSsaValues.MaskOf(register)) != CpuValues.None
                         && ssa.VersionBefore(read.Block, read.Index, register)
                             != ssa.VersionAfter(info.Block, setterIndex, register)) {
                         return FlagPropagationBlocker.OperandChanged;

@@ -50,6 +50,12 @@ public class SharedMouseData {
     public bool IsMiddleButtonDown { get; set; }
 
     /// <summary>
+    ///     True once a user subroutine whose segment and offset are not both zero has been
+    ///     registered during this run; never goes back to false.
+    /// </summary>
+    public bool UserSubroutineEverRegistered { get; set; }
+
+    /// <summary>
     ///     Gets the current emulated mouse status including position and button states.
     /// </summary>
     public MouseStatusRecord CurrentMouseStatus {

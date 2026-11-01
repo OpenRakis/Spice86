@@ -52,7 +52,7 @@ internal static class IrDeadFlagWrites {
         };
 
     private static bool AllMaskFlagsDefinedAndDead(IrSsa ssa, IrStatement statement, ushort mask) {
-        foreach ((StatusFlags flag, IrSsaValue value) in IrFlagLiveness.StatusFlagValues) {
+        foreach ((IrSsaValue value, _, StatusFlags flag) in IrValueSets.StatusFlagRows) {
             if (((ushort)flag & mask) != 0 && !DefinedAndDead(ssa, statement, value)) {
                 return false;
             }

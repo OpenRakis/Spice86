@@ -10,6 +10,7 @@ using Spice86.Core.Emulator.LoadableFile.Bios;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Shared.Emulator.Errors;
+using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
 
@@ -25,6 +26,7 @@ internal sealed class ProgramBootstrapper {
     private readonly IMemory _memory;
     private readonly State _state;
     private readonly DosInt21Handler _int21Handler;
+    private readonly LoadedImageRegistry _loadedImageRegistry;
     private readonly ILogger _loggerService;
 
     public ProgramBootstrapper(
@@ -32,11 +34,13 @@ internal sealed class ProgramBootstrapper {
         IMemory memory,
         State state,
         DosInt21Handler int21Handler,
+        LoadedImageRegistry loadedImageRegistry,
         ILogger loggerService) {
         _options = options;
         _memory = memory;
         _state = state;
         _int21Handler = int21Handler;
+        _loadedImageRegistry = loadedImageRegistry;
         _loggerService = loggerService;
     }
 
@@ -70,11 +74,12 @@ internal sealed class ProgramBootstrapper {
         } catch (IOException e) {
             throw new UnrecoverableException($"Failed to read file {executableFileName}", e);
         }
+        _loadedImageRegistry.ProgramEntryPoint = _state.IpSegmentedAddress;
     }
 
     private ExecutableFileLoader CreateLoader(bool isDosProgram, string upperCaseExtension) {
         if (!isDosProgram) {
-            return new BiosLoader(_memory, _state, _loggerService);
+            return new BiosLoader(_memory, _state, _loadedImageRegistry, _loggerService);
         }
 
         if (upperCaseExtension == ".BAT") {

@@ -1,6 +1,7 @@
 namespace Spice86.Tests.CfgCodeGeneration.Ir;
 
 using FluentAssertions;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
@@ -9,6 +10,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
@@ -22,15 +24,15 @@ using Xunit;
 /// phis at joins and loop headers, entry merges, legality queries and the SSA verifier.
 /// </summary>
 public sealed class IrSsaTest {
-    private static readonly IrValues Eax = (IrValues)0xFUL;
-    private static readonly IrValues Ecx = (IrValues)(0xFUL << 4);
-    private static readonly IrValues Ebx = (IrValues)(0xFUL << 12);
-    private static readonly IrValues Esi = (IrValues)(0xFUL << 24);
-    private static readonly IrValues Edi = (IrValues)(0xFUL << 28);
-    private static readonly IrValues Es = (IrValues)(1UL << 32);
-    private static readonly IrValues Ds = (IrValues)(1UL << 35);
-    private static readonly IrValues Ax = (IrValues)0x3UL;
-    private static readonly IrValues Carry = (IrValues)(1UL << 38);
+    private static readonly CpuValues Eax = CpuValues.Eax;
+    private static readonly CpuValues Ecx = CpuValues.Ecx;
+    private static readonly CpuValues Ebx = CpuValues.Ebx;
+    private static readonly CpuValues Esi = CpuValues.Esi;
+    private static readonly CpuValues Edi = CpuValues.Edi;
+    private static readonly CpuValues Es = CpuValues.Es;
+    private static readonly CpuValues Ds = CpuValues.Ds;
+    private static readonly CpuValues Ax = CpuValues.Ax;
+    private static readonly CpuValues Carry = CpuValues.Carry;
 
     [Fact]
     public void StraightLine_AddUsesMovVersionAndDefinesANewOne() {
@@ -39,7 +41,7 @@ public sealed class IrSsaTest {
         IrBlock block = Block(0);
         IrStatement mov = Writes(instruction, Eax);
         IrStatement add = new(new CommentNode("add"), instruction,
-            new IrEffects(Ax | (IrValues)(0x3UL << 12), Ax, IrValues.None, IrTokens.None, IrTokens.None, false, false));
+            new IrEffects(Ax | CpuValues.Bx, Ax, CpuValues.None, IrTokens.None, IrTokens.None, false, false));
         block.Statements.Add(mov);
         block.Statements.Add(add);
         block.Terminator = new IrExit(instruction, ReturnValue());
@@ -62,7 +64,7 @@ public sealed class IrSsaTest {
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(0);
         IrStatement movEax = Writes(instruction, Eax);
-        IrStatement movAl = Writes(instruction, (IrValues)0x1UL);
+        IrStatement movAl = Writes(instruction, CpuValues.Al);
         block.Statements.Add(movEax);
         block.Statements.Add(movAl);
         block.Terminator = new IrExit(instruction, ReturnValue());
@@ -119,7 +121,7 @@ public sealed class IrSsaTest {
         IrBlock exit = Block(2);
         IrStatement init = Writes(instruction, Ecx);
         IrStatement decrement = new(new CommentNode("dec"), instruction,
-            new IrEffects(Ecx, IrValues.None, Ecx, IrTokens.None, IrTokens.None, false, false));
+            new IrEffects(Ecx, CpuValues.None, Ecx, IrTokens.None, IrTokens.None, false, false));
         entry.Statements.Add(init);
         header.Statements.Add(decrement);
         entry.Terminator = new IrJump(instruction, new IrEdge(header, false));
@@ -147,7 +149,7 @@ public sealed class IrSsaTest {
         IrBlock header = Block(1);
         IrBlock exit = Block(2);
         IrStatement body = new(new CommentNode("movsb"), instruction,
-            new IrEffects(Ecx | Esi | Edi | Ds | Es, IrValues.None, Ecx | Esi | Edi,
+            new IrEffects(Ecx | Esi | Edi | Ds | Es, CpuValues.None, Ecx | Esi | Edi,
                 IrTokens.Memory, IrTokens.Memory, false, false));
         header.Statements.Add(body);
         entry.Terminator = new IrJump(instruction, new IrEdge(header, true));
@@ -172,7 +174,7 @@ public sealed class IrSsaTest {
         IrBlock block = Block(0);
         IrStatement firstLoad = Reads(instruction, IrTokens.Memory);
         IrStatement store = new(new CommentNode("store"), instruction,
-            new IrEffects(IrValues.None, IrValues.None, IrValues.None, IrTokens.None, IrTokens.Memory, false, false));
+            new IrEffects(CpuValues.None, CpuValues.None, CpuValues.None, IrTokens.None, IrTokens.Memory, false, false));
         IrStatement secondLoad = Reads(instruction, IrTokens.Memory);
         block.Statements.Add(firstLoad);
         block.Statements.Add(store);
@@ -198,7 +200,7 @@ public sealed class IrSsaTest {
         IrBlock block = Block(0);
         IrStatement firstIn = Reads(instruction, IrTokens.Io);
         IrStatement ioOut = new(new CommentNode("out"), instruction,
-            new IrEffects(IrValues.None, IrValues.None, IrValues.None, IrTokens.None, IrTokens.Io, false, false));
+            new IrEffects(CpuValues.None, CpuValues.None, CpuValues.None, IrTokens.None, IrTokens.Io, false, false));
         IrStatement secondIn = Reads(instruction, IrTokens.Io);
         block.Statements.Add(firstIn);
         block.Statements.Add(ioOut);
@@ -218,8 +220,8 @@ public sealed class IrSsaTest {
         // Arrange
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(0);
-        IrStatement check = new(new CheckExternalEventsNode(instruction.Address), instruction,
-            new IrEffects(IrValues.None, IrValues.None, IrValues.None, IrTokens.Memory, IrTokens.Memory, false, true));
+        IrStatement check = new(new CheckExternalEventsNode(instruction.Address, HardwareInterruptEffectBuilder.Conservative), instruction,
+            new IrEffects(CpuValues.None, CpuValues.None, CpuValues.None, IrTokens.Memory, IrTokens.Memory, false, true));
         block.Statements.Add(check);
         block.Terminator = new IrExit(instruction, ReturnValue());
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
@@ -238,7 +240,7 @@ public sealed class IrSsaTest {
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(0);
         IrStatement divide = new(new CommentNode("div"), instruction,
-            new IrEffects(Eax | (IrValues)(0xFUL << 8), IrValues.None, Eax | (IrValues)(0xFUL << 8),
+            new IrEffects(Eax | CpuValues.Edx, CpuValues.None, Eax | CpuValues.Edx,
                 IrTokens.None, IrTokens.None, true, false));
         block.Statements.Add(divide);
         block.Terminator = new IrExit(instruction, ReturnValue());
@@ -287,7 +289,7 @@ public sealed class IrSsaTest {
         IrBlock block = Block(0);
         IrStatement setFlag = Writes(instruction, Carry);
         IrStatement shift = new(new CommentNode("shl"), instruction,
-            new IrEffects(Ecx, IrValues.None, IrValues.StatusFlags, IrTokens.None, IrTokens.None,
+            new IrEffects(Ecx, CpuValues.None, CpuValues.StatusFlags, IrTokens.None, IrTokens.None,
                 false, false));
         block.Statements.Add(setFlag);
         block.Statements.Add(shift);
@@ -372,7 +374,7 @@ public sealed class IrSsaTest {
     [MemberData(nameof(SameVersionQueries))]
     public void SameVersions_ReportsWhetherADefinitionLiesBetween(int valueIndex, int from, int to,
         bool expected) {
-        IrValues value = valueIndex == 0 ? Eax : Ebx;
+        CpuValues value = valueIndex == 0 ? Eax : Ebx;
         // Arrange
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(0);
@@ -564,7 +566,7 @@ public sealed class IrSsaTest {
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
         IrSsa ssa = IrSsa.Build(method);
         IrStatement reader = new(new CommentNode("r"), instruction,
-            new IrEffects(Ebx, Eax, IrValues.None, IrTokens.None, IrTokens.None, false, false));
+            new IrEffects(Ebx, Eax, CpuValues.None, IrTokens.None, IrTokens.None, false, false));
         block.Statements[0] = reader;
         ssa.Replace(mov, reader);
 
@@ -629,17 +631,17 @@ public sealed class IrSsaTest {
     private static CfgInstruction Instruction(ushort offset) =>
         CfgTestHelpers.CreateInstruction(new SegmentedAddress(0x1000, offset));
 
-    private static IrStatement Writes(ICfgNode origin, IrValues mask) =>
+    private static IrStatement Writes(ICfgNode origin, CpuValues mask) =>
         new(new CommentNode("w"), origin,
-            new IrEffects(IrValues.None, mask, IrValues.None, IrTokens.None, IrTokens.None, false, false));
+            new IrEffects(CpuValues.None, mask, CpuValues.None, IrTokens.None, IrTokens.None, false, false));
 
     private static IrStatement Reads(ICfgNode origin, IrTokens tokens) =>
         new(new CommentNode("r"), origin,
-            new IrEffects(IrValues.None, IrValues.None, IrValues.None, tokens, IrTokens.None, false, false));
+            new IrEffects(CpuValues.None, CpuValues.None, CpuValues.None, tokens, IrTokens.None, false, false));
 
-    private static IrStatement Reads(ICfgNode origin, IrValues values) =>
+    private static IrStatement Reads(ICfgNode origin, CpuValues values) =>
         new(new CommentNode("r"), origin,
-            new IrEffects(values, IrValues.None, IrValues.None, IrTokens.None, IrTokens.None, false, false));
+            new IrEffects(values, CpuValues.None, CpuValues.None, IrTokens.None, IrTokens.None, false, false));
 
     private static ReturnNode ReturnValue() => new(new ConstantNode(DataType.UINT16, 0));
 

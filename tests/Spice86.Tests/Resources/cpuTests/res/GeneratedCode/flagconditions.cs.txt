@@ -1,3 +1,4 @@
+// ==== file: CfgGeneratedOverrideSupplier.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -16,38 +17,118 @@ public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
     }
 }
 
-public class CfgGeneratedOverrides : CSharpOverrideHelper {
-    protected readonly ushort cs1;
+
+// ==== file: CfgGeneratedOverrides.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort biosSegment;
+
+    private readonly Func<int, Action> unknown_F000_02F5_F02F5_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_02F8_F02F8_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
+
+    protected readonly DsGlobals DsGlobals;
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
-        cs1 = 0xF000;
+        biosSegment = 0xF000;
+        DsGlobals = new DsGlobals(Memory, State.SegmentRegisters);
 
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x02F5, unknown_F000_02F5_F02F5, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x02F8, unknown_F000_02F8_F02F8, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, "unknown");
+        unknown_F000_02F5_F02F5_AsmEntry = _ => unknown_F000_02F5_F02F5_Asm();
+        unknown_F000_02F8_F02F8_AsmEntry = _ => unknown_F000_02F8_F02F8_Asm();
+        unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x02F5, unknown_F000_02F5_F02F5_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x02F8, unknown_F000_02F8_F02F8_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
     }
 
-    public virtual Action unknown_F000_02F5_F02F5(int loadOffset) {
-        CheckExternalEvents(cs1, 0x02F5);
+}
+
+// ==== file: CfgGeneratedOverrides.F000.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: AX, CX, BX, BP, SI, ES, DS. Outputs: AX, CX, BX, BP, SI, ES, DS, CF. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, flags.</summary>
+    public virtual (ushort ax, ushort cx, ushort bx, ushort bp, ushort si, ushort es, ushort ds, bool carryFlag) unknown_F000_02F5_F02F5(ushort ax, ushort cx, ushort bx, ushort bp, ushort si, ushort es, ushort ds) {
+        AX = ax;
+        CX = cx;
+        BX = bx;
+        BP = bp;
+        SI = si;
+        ES = es;
+        DS = ds;
+        CheckExternalEvents(biosSegment, 0x02F5);
         // F000:02F5 cmp AX,CX
         Alu16.Sub(AX, CX);
         // F000:02F7 ret near
-        return NearRet();
+        NearReturn();
+        return (AX, CX, BX, BP, SI, ES, DS, CarryFlag);
     }
 
-    public virtual Action unknown_F000_02F8_F02F8(int loadOffset) {
-        CheckExternalEvents(cs1, 0x02F8);
+    public virtual Action unknown_F000_02F5_F02F5_Asm() {
+        (AX, CX, BX, BP, SI, ES, DS, CarryFlag) = unknown_F000_02F5_F02F5(AX, CX, BX, BP, SI, ES, DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: AX, CX, BX, BP, SI, ES, DS, CF. Outputs: AX, CX, BX, BP, SI, ES, DS. Changes: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS.</summary>
+    public virtual (ushort ax, ushort cx, ushort bx, ushort bp, ushort si, ushort es, ushort ds) unknown_F000_02F8_F02F8(ushort ax, ushort cx, ushort bx, ushort bp, ushort si, ushort es, ushort ds, bool carryFlag) {
+        AX = ax;
+        CX = cx;
+        BX = bx;
+        BP = bp;
+        SI = si;
+        ES = es;
+        DS = ds;
+        CarryFlag = carryFlag;
+        CheckExternalEvents(biosSegment, 0x02F8);
         // F000:02F8 jb short 0x02FE
         if (!CarryFlag) {
             // F000:02FA mov byte ptr DS:[BX+0x27],2
             UInt8[DS, (ushort)(BX + 0x27)] = 2;
         }
         // F000:02FE ret near
-        return NearRet();
+        NearReturn();
+        return (AX, CX, BX, BP, SI, ES, DS);
     }
 
-    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
-        CheckExternalEvents(cs1, 0xFFF0);
+    public virtual Action unknown_F000_02F8_F02F8_Asm() {
+        (AX, CX, BX, BP, SI, ES, DS) = unknown_F000_02F8_F02F8(AX, CX, BX, BP, SI, ES, DS, CarryFlag);
+        return Returned;
+    }
+
+    /// <summary>Inputs: none. Does not return.</summary>
+    public virtual Action unknown_F000_FFF0_FFFF0() {
+        byte dl1 = 0;
+        ushort dx1 = 0;
+        ushort si1 = 0;
+        ushort di1 = 0;
+        ushort cx1 = 0;
+        ushort di2 = 0;
+        ushort cx2 = 0;
+        ushort si2 = 0;
+        ushort cx3 = 0;
+        ushort dx;
+        CheckExternalEvents(biosSegment, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov AX,0x1000
         // F000:0003 mov SS,AX
@@ -69,19 +150,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0015 mov BP,4
         BP = 4;
         do {
-            CheckExternalEvents(cs1, 0x0018);
+            CheckExternalEvents(biosSegment, 0x0018);
             // F000:0018 mov AX,word ptr CS:[SI]
             AX = UInt16[CS, SI];
             // F000:001B mov CX,word ptr CS:[SI+2]
             CX = UInt16[CS, (ushort)(SI + 2)];
             // F000:001F mov word ptr DS:[0x0100],CX
-            UInt16[DS, 0x0100] = CX;
+            DsGlobals.Word0100 = CX;
             // F000:0023 mov word ptr DS:[0x0102],AX
-            UInt16[DS, 0x0102] = AX;
+            DsGlobals.Word0102 = AX;
             // F000:0026 mov word ptr DS:[0x0104],AX
-            UInt16[DS, 0x0104] = AX;
+            DsGlobals.Word0104 = AX;
             // F000:0029 mov word ptr DS:[0x0106],CX
-            UInt16[DS, 0x0106] = CX;
+            DsGlobals.Word0106 = CX;
             // F000:002D mov byte ptr DS:[BX],1
             UInt8[DS, BX] = 1;
             // F000:0030 cmp AX,CX
@@ -209,7 +290,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             UInt8[DS, (ushort)(BX + 0x0F)] = 1;
             // F000:00E8 cmp AX,word ptr DS:[0x0100]
             // F000:00EC jb short 0x00F2
-            if (AX >= UInt16[DS, 0x0100]) {
+            if (AX >= DsGlobals.Word0100) {
                 // F000:00EE mov byte ptr DS:[BX+0x0F],2
                 UInt8[DS, (ushort)(BX + 0x0F)] = 2;
             }
@@ -282,7 +363,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:014E mov byte ptr DS:[BX+0x17],1
             UInt8[DS, (ushort)(BX + 0x17)] = 1;
             // F000:0152 dec word ptr DS:[0x0102]
-            UInt16[DS, 0x0102] = Alu16.Dec(UInt16[DS, 0x0102]);
+            DsGlobals.Word0102 = Alu16.Dec(DsGlobals.Word0102);
             // F000:0156 je short 0x015C
             if (!ZeroFlag) {
                 // F000:0158 mov byte ptr DS:[BX+0x17],2
@@ -330,9 +411,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 UInt8[DS, (ushort)(BX + 0x1B)] = 2;
             }
             // F000:0195 adc DL,0
-            DL = (byte)(AX < CX ? 1 : 0);
+            dl1 = (byte)(AX < CX ? 1 : 0);
             // F000:0198 mov byte ptr DS:[BX+0x1C],DL
-            UInt8[DS, (ushort)(BX + 0x1C)] = DL;
+            UInt8[DS, (ushort)(BX + 0x1C)] = dl1;
             // F000:019B mov byte ptr DS:[BX+0x1D],1
             UInt8[DS, (ushort)(BX + 0x1D)] = 1;
             // F000:019F cmp AX,CX
@@ -406,7 +487,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:01F5 cmp AX,word ptr DS:[0x0100]
             // F000:01F9 mov DX,AX
             // F000:01FB jb short 0x0201
-            if (AX >= UInt16[DS, 0x0100]) {
+            if (AX >= DsGlobals.Word0100) {
                 // F000:01FD mov byte ptr DS:[BX+0x23],2
                 UInt8[DS, (ushort)(BX + 0x23)] = 2;
             }
@@ -414,11 +495,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             UInt8[DS, (ushort)(BX + 0x24)] = 1;
             // F000:0205 mov DX,AX
             // F000:0207 add DX,0x00FF
-            DX = (ushort)(AX + 0x00FF);
+            dx1 = (ushort)(AX + 0x00FF);
             // F000:020B cmp SP,DX
-            Alu16.Sub(SP, DX);
+            Alu16.Sub(SP, dx1);
             // F000:020D push DX
-            Stack.Push16(DX);
+            Stack.Push16(dx1);
             // F000:020E je short 0x0214
             if (!ZeroFlag) {
                 // F000:0210 mov byte ptr DS:[BX+0x24],2
@@ -432,7 +513,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             Alu16.Sub(AX, CX);
             // F000:021B sti
             InterruptFlag = true;
-            CheckExternalEvents(cs1, 0x021C);
+            CheckExternalEvents(biosSegment, 0x021C);
             // F000:021C jb short 0x0222
             if (!CarryFlag) {
                 // F000:021E mov byte ptr DS:[BX+0x25],2
@@ -443,7 +524,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:0223 mov byte ptr DS:[BX+0x26],1
             UInt8[DS, (ushort)(BX + 0x26)] = 1;
             // F000:0227 call near 0x02F5
-            NearCall(cs1, 0x022A, unknown_F000_02F5_F02F5);
+            (AX, CX, BX, BP, SI, ES, DS, CarryFlag) = NearCall(biosSegment, 0x022A, () => unknown_F000_02F5_F02F5(AX, CX, BX, BP, SI, ES, DS));
             // F000:022A jb short 0x0230
             if (!CarryFlag) {
                 // F000:022C mov byte ptr DS:[BX+0x26],2
@@ -454,7 +535,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:0234 cmp AX,CX
             Alu16.Sub(AX, CX);
             // F000:0236 call near 0x02F8
-            NearCall(cs1, 0x0239, unknown_F000_02F8_F02F8);
+            (AX, CX, BX, BP, SI, ES, DS) = NearCall(biosSegment, 0x0239, () => unknown_F000_02F8_F02F8(AX, CX, BX, BP, SI, ES, DS, CarryFlag));
             // F000:0239 xor DI,DI
             DI = 0;
             // F000:023B mov byte ptr DS:[BX+0x28],1
@@ -462,7 +543,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:023F cmp AX,CX
             Alu16.Sub(AX, CX);
             while (true) {
-                CheckExternalEvents(cs1, 0x0241);
+                CheckExternalEvents(biosSegment, 0x0241);
                 // F000:0241 jb short 0x0247
                 if (!CarryFlag) {
                     // F000:0243 mov byte ptr DS:[BX+DI+0x28],2
@@ -489,17 +570,17 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:0257 mov byte ptr DS:[BX+0x2B],1
             UInt8[DS, (ushort)(BX + 0x2B)] = 1;
             // F000:025B mov SI,0x0104
-            SI = 0x0104;
+            si1 = 0x0104;
             // F000:025E mov DI,0x0106
-            DI = 0x0106;
+            di1 = 0x0106;
             // F000:0261 mov CX,2
-            CX = 2;
+            cx1 = 2;
             // F000:0264 repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
-            while (CX != 0) {
-                Alu8.Sub(UInt8[DS, SI], UInt8[ES, DI]);
-                SI += (ushort)(DirectionFlag ? -1 : 1);
-                DI += (ushort)(DirectionFlag ? -1 : 1);
-                CX--;
+            while (cx1 != 0) {
+                Alu8.Sub(UInt8[DS, si1], UInt8[ES, di1]);
+                si1 += (ushort)(DirectionFlag ? -1 : 1);
+                di1 += (ushort)(DirectionFlag ? -1 : 1);
+                cx1--;
                 if (!ZeroFlag) {
                     break;
                 }
@@ -512,19 +593,20 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:026C mov byte ptr DS:[BX+0x2D],1
             UInt8[DS, (ushort)(BX + 0x2D)] = 1;
             // F000:0270 mov DI,0x0106
-            DI = 0x0106;
+            di2 = 0x0106;
             // F000:0273 mov CX,2
-            CX = 2;
+            cx2 = 2;
             // F000:0276 repne scas AL,byte ptr ES:[DI]
-            while (CX != 0) {
-                Alu8.Sub(AL, UInt8[ES, DI]);
-                DI += (ushort)(DirectionFlag ? -1 : 1);
-                CX--;
+            while (cx2 != 0) {
+                Alu8.Sub(AL, UInt8[ES, di2]);
+                di2 += (ushort)(DirectionFlag ? -1 : 1);
+                cx2--;
                 if (ZeroFlag) {
                     break;
                 }
             }
             // F000:0278 mov byte ptr DS:[BX+0x2C],CL
+            CX = cx2;
             UInt8[DS, (ushort)(BX + 0x2C)] = CL;
             // F000:027B je short 0x0281
             if (!ZeroFlag) {
@@ -532,22 +614,23 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 UInt8[DS, (ushort)(BX + 0x2D)] = 2;
             }
             // F000:0281 mov SI,0x0104
-            SI = 0x0104;
+            si2 = 0x0104;
             // F000:0284 mov DI,0x0106
             DI = 0x0106;
             // F000:0287 mov CX,2
-            CX = 2;
+            cx3 = 2;
             // F000:028A repe cmps byte ptr DS:[SI],byte ptr ES:[DI]
-            while (CX != 0) {
-                bool equal_028A = UInt8[DS, SI] == UInt8[ES, DI];
-                SI += (ushort)(DirectionFlag ? -1 : 1);
+            while (cx3 != 0) {
+                bool equal_028A = UInt8[DS, si2] == UInt8[ES, DI];
+                si2 += (ushort)(DirectionFlag ? -1 : 1);
                 DI += (ushort)(DirectionFlag ? -1 : 1);
-                CX--;
+                cx3--;
                 if (!equal_028A) {
                     break;
                 }
             }
             // F000:028C mov byte ptr DS:[BX+0x2A],CL
+            CX = cx3;
             UInt8[DS, (ushort)(BX + 0x2A)] = CL;
             // F000:028F pop SI
             SI = Stack.Pop16();
@@ -580,9 +663,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             UInt16[DS, (ushort)(BX + 0x36)] = DX;
             // F000:02B2 mov DX,AX
             // F000:02B4 or DX,CX
-            DX = (ushort)(AX | CX);
+            dx = (ushort)(AX | CX);
             // F000:02B6 mov word ptr DS:[BX+0x38],DX
-            UInt16[DS, (ushort)(BX + 0x38)] = DX;
+            UInt16[DS, (ushort)(BX + 0x38)] = dx;
             // F000:02B9 mov byte ptr DS:[BX+0x3A],AL
             UInt8[DS, (ushort)(BX + 0x3A)] = AL;
             // F000:02BC add byte ptr DS:[BX+0x3A],5
@@ -607,7 +690,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:02D8 mov byte ptr DS:[BX+0x3D],7
             UInt8[DS, (ushort)(BX + 0x3D)] = 7;
             // F000:02DC cmp AX,word ptr DS:[0x0100]
-            Alu16.Sub(AX, UInt16[DS, 0x0100]);
+            Alu16.Sub(AX, DsGlobals.Word0100);
             // F000:02E0 mov byte ptr DS:[BX+0x3E],9
             UInt8[DS, (ushort)(BX + 0x3E)] = 9;
             // F000:02E4 mov DX,BP
@@ -626,4 +709,35 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         return Hlt();
     }
 
+}
+
+// ==== file: DsGlobals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class DsGlobals : MemoryBasedDataStructureWithDsBaseAddress {
+    private readonly IMemory _memory;
+    private readonly SegmentRegisters _segmentRegisters;
+
+    private ushort Segment => _segmentRegisters.UInt16[(uint)SegmentRegisterIndex.DsIndex];
+
+    public DsGlobals(IMemory memory, SegmentRegisters segmentRegisters) : base(memory, segmentRegisters) {
+        _memory = memory;
+        _segmentRegisters = segmentRegisters;
+    }
+
+    /// DS:0x0100, whatever DS holds at the access.
+    public ushort Word0100 { get => _memory.UInt16[Segment, 0x0100]; set => _memory.UInt16[Segment, 0x0100] = value; }
+
+    /// DS:0x0102, whatever DS holds at the access.
+    public ushort Word0102 { get => _memory.UInt16[Segment, 0x0102]; set => _memory.UInt16[Segment, 0x0102] = value; }
+
+    /// DS:0x0104, whatever DS holds at the access.
+    public ushort Word0104 { get => _memory.UInt16[Segment, 0x0104]; set => _memory.UInt16[Segment, 0x0104] = value; }
+
+    /// DS:0x0106, whatever DS holds at the access.
+    public ushort Word0106 { get => _memory.UInt16[Segment, 0x0106]; set => _memory.UInt16[Segment, 0x0106] = value; }
 }

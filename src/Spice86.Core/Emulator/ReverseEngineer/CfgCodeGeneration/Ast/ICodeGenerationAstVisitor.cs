@@ -18,6 +18,7 @@ internal interface ICodeGenerationAstVisitor<T> : IAstVisitor<T> {
     T VisitSpeculativeGuardNode(SpeculativeGuardNode node);
     T VisitInstructionBoundaryNode(InstructionBoundaryNode node);
     T VisitDivisionNode(DivisionNode node);
+    T VisitMultiplicationNode(MultiplicationNode node);
     T VisitSegmentVariableNode(SegmentVariableNode node);
     T VisitOffsetLiteralNode(OffsetLiteralNode node);
     T VisitInstructionPointerNode(InstructionPointerNode node);
@@ -37,4 +38,6 @@ internal interface ICodeGenerationAstVisitor<T> : IAstVisitor<T> {
     T VisitInterruptReturnNode(InterruptReturnNode node);
     T VisitPreTestLoopNode(PreTestLoopNode node);
     T VisitLocalDeclarationNode(LocalDeclarationNode node);
+    T VisitRegisterLocalNode(RegisterLocalNode node);
+    T VisitRegisterWriteBackNode(RegisterWriteBackNode node);
 }

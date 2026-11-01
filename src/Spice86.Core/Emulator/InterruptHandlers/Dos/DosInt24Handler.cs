@@ -4,6 +4,7 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
@@ -19,7 +20,12 @@ public class DosInt24Handler : InterruptHandler {
 
     public override byte VectorNumber => 0x24;
 
-    public override void Run() {
+    /// <inheritdoc />
+
+    public override void Run() => HandleCriticalError();
+
+    [InterruptService(Writes = CpuValues.Al)]
+    private void HandleCriticalError() {
         if (LoggerService.IsEnabled(LogLevel.Information)) {
             LoggerService.LogInformation("INT 24h: Critical error handler invoked, returning FAIL (AL=3).");
         }

@@ -54,7 +54,7 @@ internal static class IrRepCompareLowering {
         (IrBlock, int, IrStatement, ValueNode, ValueNode)? found = null;
         foreach (IrOrigins.Located located in statements) {
             if (located.Statement.Node is not AluOperationNode {
-                    Operation: AluOperation.Sub,
+                    Call.Operation: AluOperation.Sub,
                     Call.CallNode.Arguments: [ValueNode, ValueNode]
                 } node) {
                 continue;

@@ -1,5 +1,7 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.Ast.Visitor;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
@@ -35,6 +37,27 @@ internal static class AluFlagTable {
         };
         effect = known ?? FlagEffect.Unknown;
         return known is not null;
+    }
+
+    /// <summary>
+    /// The effect of <paramref name="operation"/> at <paramref name="width"/> with the call
+    /// <paramref name="arguments"/> visible: the shift or rotate count is the last argument when it is a
+    /// <see cref="ConstantNode"/> or an <see cref="InstructionFieldNode"/> that resolves to one.
+    /// </summary>
+    public static bool TryGetEffect(AluOperation operation, BitWidth width,
+        IReadOnlyList<IVisitableAstNode> arguments, out FlagEffect effect) {
+        ulong? count = arguments.Count > 0 ? ConstantValue(arguments[^1]) : null;
+        return TryGetEffect(operation, width, count, out effect);
+    }
+
+    private static ulong? ConstantValue(IVisitableAstNode node) {
+        if (node is ConstantNode constant) {
+            return constant.Value;
+        }
+        if (node is InstructionFieldNode { ResolvedNode: ConstantNode resolved }) {
+            return resolved.Value;
+        }
+        return null;
     }
 
     private static FlagEffect CountDependent(ulong? count, StatusFlags writes) {

@@ -16,6 +16,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.Mscdex;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem.Batch;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
@@ -200,6 +201,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
     /// <param name="a20Gate">The A20 gate used by XMS.</param>
     /// <param name="memoryAsmWriter">Writes the XMS callback into emulated memory.</param>
     /// <param name="emsManager">The EMS manager shared with emulator services.</param>
+    /// <param name="loadedImageRegistry">Records every program image the process manager loads.</param>
     /// <param name="emulatedClock">The emulated clock backing the DOS date/time services and FCB timestamps.</param>
     public Dos(DosOptions options, IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
@@ -212,6 +214,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         A20Gate a20Gate,
         MemoryAsmWriter memoryAsmWriter,
         ExpandedMemoryManager? emsManager,
+        LoadedImageRegistry loadedImageRegistry,
         IEmulatedClock emulatedClock) {
         _loggerService = loggerService;
         _biosKeyboardBuffer = biosKeyboardBuffer;
@@ -268,7 +271,7 @@ public sealed class Dos : IDriveStatusProvider, IDiscSwapper, IDriveMountService
         FcbManager = new(_memory, FileManager, DosDriveManager, _loggerService, emulatedClock);
         IBatchDisplayCommandHandler batchDisplayCommandHandler = new DosBatchDisplayCommandHandler(_vgaFunctionality);
         _driveStatusProvider = new DosDriveStatusProvider(DosDriveManager, _mscdex);
-        ProcessManager = new(_memory, stack, state, MemoryManager, DosTables, FileManager, DosDriveManager, _driveStatusProvider, _mscdex, channelCreator, _activityNotifier, batchDisplayCommandHandler, envVars, _loggerService);
+        ProcessManager = new(_memory, stack, state, MemoryManager, DosTables, FileManager, DosDriveManager, _driveStatusProvider, _mscdex, channelCreator, _activityNotifier, batchDisplayCommandHandler, loadedImageRegistry, envVars, _loggerService);
         DosInt22Handler = new DosInt22Handler(_memory, functionHandlerProvider, stack, state, ProcessManager, _loggerService);
         DosInt21Handler = new DosInt21Handler(_memory, functionHandlerProvider, stack, state,
             keyboardInt16Handler, CountryInfo, dosCodePageState, dosStringDecoder,

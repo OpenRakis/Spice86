@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.ExternalInput;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Shared.Emulator.Storage;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
@@ -65,6 +66,7 @@ public class DosDiskInt26Handler : InterruptHandler {
     }
 
     /// <inheritdoc />
+    [InterruptService(Unknown = true)]
     public override void Run() {
         AbsoluteDiskWrite(true);
     }

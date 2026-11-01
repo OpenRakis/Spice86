@@ -1,0 +1,26 @@
+F000:0000 cli
+F000:0001 mov AX,0x2000
+F000:0004 mov SS,AX
+F000:0006 mov SP,0x1000
+F000:0009 xor AX,AX
+F000:000B mov DS,AX
+F000:000D mov CX,0
+F000:0010 mov byte ptr DS:[0],0x22
+F000:0015 mov byte ptr DS:[1],0x22
+F000:001A mov byte ptr DS:[2],0x41
+F000:001F mov byte ptr DS:[3],0xF4
+F000:0024 mov byte ptr DS:[0x0400],1
+F000:0029 jmp far FFFE:0000
+F000:002E mov byte ptr DS:[0x0401],0xDD
+F000:0033 hlt
+FFFE:0000 mov AL,byte ptr DS:[0x0500]
+FFFE:0003 test AL,AL
+FFFE:0005 jne short 0x0014
+FFFE:0007 jmp far F000:002E
+F000:FFF0 jmp short 0
+FFFE:0014 mov byte ptr DS:[2],0x43
+FFFE:0019 mov DX,0x1111
+FFFE:001C mov BX,0x1234
+FFFE:001F mov AX,0x2222
+FFFE:0022 inc CX
+FFFE:0023 hlt

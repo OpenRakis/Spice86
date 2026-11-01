@@ -7,7 +7,6 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Visitor;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
-using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Propagation;
 using Spice86.Shared.Emulator.Memory;
 
 using System.Linq;
@@ -98,7 +97,7 @@ internal static class IrNodeTyper {
                     : new VariableReferenceNode(reference.DataType,
                         Renamed(reference.VariableName, localSuffix));
             // The division pattern binds its own variable names; the originals must stay.
-            case DivisionNode:
+            case DivisionNode or MultiplicationNode:
                 return node;
             default:
                 return IrAstChildren.MapChildren(node, child => Retype(child, localSuffix));
@@ -116,7 +115,8 @@ internal static class IrNodeTyper {
                 return new VariableReferenceNode(reference.DataType,
                     Renamed(reference.VariableName, localSuffix));
             // Untyped call arguments and the division pattern's bound names keep their spelling.
-            case MethodCallNode or MethodCallValueNode or DivisionNode or OpaqueNode:
+            case MethodCallNode or MethodCallValueNode or DivisionNode or MultiplicationNode
+                or OpaqueNode:
                 return node;
             default:
                 return IrAstChildren.MapChildren(node, child => Rename(child, localSuffix));
@@ -131,12 +131,12 @@ internal static class IrNodeTyper {
         switch (call) {
             case AluCallNode alu:
                 AluCallNode typedAlu = new(alu.Operation, alu.Width, arguments);
-                return new AluStatementNode(typedAlu, AluFlags(alu.Operation, alu.Width, typedAlu),
-                    alu.Operation, alu.Width);
+                return new AluStatementNode(typedAlu, AluFlags(alu.Operation, alu.Width, typedAlu));
             case StackCallNode { Operation: StackOperation.Push or StackOperation.Leave
                     or StackOperation.PushAll or StackOperation.PopAll }:
             case PortWriteCallNode or BoundCheckCallNode or ProcedureCallHelperNode
-                or InterruptCallHelperNode or CallbackHelperNode:
+                or InterruptCallHelperNode or InterruptServiceCallNode
+                or ProgramInterruptCallHelperNode or CallbackHelperNode:
                 return call.WithArguments(arguments);
             default:
                 throw UnknownCall(call);
@@ -148,8 +148,7 @@ internal static class IrNodeTyper {
         switch (call) {
             case AluCallValueNode alu:
                 AluCallValueNode typedAlu = new(call.DataType, alu.Operation, alu.Width, arguments);
-                return new AluOperationNode(typedAlu, AluFlags(alu.Operation, alu.Width, typedAlu.CallNode),
-                    alu.Operation, alu.Width);
+                return new AluOperationNode(typedAlu, AluFlags(alu.Operation, alu.Width, typedAlu.CallNode));
             case StackCallValueNode { Operation: StackOperation.Pop or StackOperation.Peek }:
             case PortReadCallNode or BitScanCallNode or CallbackMovedCsIpHelperNode
                 or SignatureMatchesHelperNode or ProcedureCallReturnedElsewhereHelperNode
@@ -173,8 +172,7 @@ internal static class IrNodeTyper {
     }
 
     private static FlagEffect AluFlags(AluOperation operation, BitWidth width, MethodCallNode call) {
-        ulong? count = call.Arguments.Count > 0 ? ConstantEvaluation.Resolved(call.Arguments[^1])?.Value : null;
-        if (AluFlagTable.TryGetEffect(operation, width, count, out FlagEffect effect)) {
+        if (AluFlagTable.TryGetEffect(operation, width, call.Arguments, out FlagEffect effect)) {
             return effect;
         }
         throw new NotSupportedException($"Alu operation {operation} has no flag effect in the table.");

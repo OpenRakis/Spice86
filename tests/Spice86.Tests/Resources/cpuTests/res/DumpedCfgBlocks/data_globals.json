@@ -1,0 +1,140 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "F000:FFF0",
+  "totalEntryPoints": 1,
+  "entryPointAddresses": [
+    "F000:FFF0"
+  ],
+  "lastExecutedAddress": "F000:008B",
+  "lastExecutedBlockId": 87,
+  "blocks": [
+    {
+      "id": 87,
+      "entry": "F000:0075",
+      "term": "F000:008B",
+      "pred": [
+        74,
+        75
+      ],
+      "succ": [],
+      "asm": [
+        "B80120|mov AX,0x2001",
+        "8ED8|mov DS,AX",
+        "C606200099|mov byte ptr DS:[0x0020],0x99",
+        "A02000|mov AL,byte ptr DS:[0x0020]",
+        "BB0020|mov BX,0x2000",
+        "8EC3|mov ES,BX",
+        "26A25200|mov byte ptr ES:[0x0052],AL",
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 2,
+      "entry": "F000:FFF0",
+      "term": "F000:FFF0",
+      "pred": [],
+      "succ": [
+        3
+      ],
+      "asm": [
+        "EB0E|jmp short 0"
+      ]
+    },
+    {
+      "id": 75,
+      "entry": "F000:0093",
+      "term": "F000:009F",
+      "pred": [
+        74
+      ],
+      "succ": [
+        87
+      ],
+      "asm": [
+        "A13200|mov AX,word ptr DS:[0x0032]",
+        "BB0020|mov BX,0x2000",
+        "8EC3|mov ES,BX",
+        "26A35000|mov word ptr ES:[0x0050],AX",
+        "C3|ret near"
+      ]
+    },
+    {
+      "id": 74,
+      "entry": "F000:0072",
+      "term": "F000:0072",
+      "pred": [
+        3,
+        36
+      ],
+      "succ": [
+        75,
+        87
+      ],
+      "asm": [
+        "E81E00|call near 0x0093"
+      ]
+    },
+    {
+      "id": 3,
+      "entry": "F000:0000",
+      "term": "F000:006F",
+      "pred": [
+        2
+      ],
+      "succ": [
+        36,
+        74
+      ],
+      "asm": [
+        "B80020|mov AX,0x2000",
+        "8ED8|mov DS,AX",
+        "8ED0|mov SS,AX",
+        "BC0010|mov SP,0x1000",
+        "FC|cld",
+        "C606200042|mov byte ptr DS:[0x0020],0x42",
+        "C70622003412|mov word ptr DS:[0x0022],0x1234",
+        "66C7062400DDCCBBAA|mov dword ptr DS:[0x0024],0xAABBCCDD",
+        "A02000|mov AL,byte ptr DS:[0x0020]",
+        "A24000|mov byte ptr DS:[0x0040],AL",
+        "A12200|mov AX,word ptr DS:[0x0022]",
+        "A34100|mov word ptr DS:[0x0041],AX",
+        "66A12400|mov EAX,dword ptr DS:[0x0024]",
+        "66A34300|mov dword ptr DS:[0x0043],EAX",
+        "C7062800EFBE|mov word ptr DS:[0x0028],0xBEEF",
+        "A02800|mov AL,byte ptr DS:[0x0028]",
+        "A24700|mov byte ptr DS:[0x0047],AL",
+        "A12800|mov AX,word ptr DS:[0x0028]",
+        "A34800|mov word ptr DS:[0x0048],AX",
+        "C606100011|mov byte ptr DS:[0x0010],0x11",
+        "C606110022|mov byte ptr DS:[0x0011],0x22",
+        "C606120033|mov byte ptr DS:[0x0012],0x33",
+        "A11000|mov AX,word ptr DS:[0x0010]",
+        "A34A00|mov word ptr DS:[0x004A],AX",
+        "A11100|mov AX,word ptr DS:[0x0011]",
+        "A34C00|mov word ptr DS:[0x004C],AX",
+        "1E|push DS",
+        "07|pop ES",
+        "C70630007777|mov word ptr DS:[0x0030],0x7777",
+        "26A13000|mov AX,word ptr ES:[0x0030]",
+        "A34E00|mov word ptr DS:[0x004E],AX",
+        "E81A00|call near 0x008C"
+      ]
+    },
+    {
+      "id": 36,
+      "entry": "F000:008C",
+      "term": "F000:0092",
+      "pred": [
+        3
+      ],
+      "succ": [
+        74
+      ],
+      "asm": [
+        "C70632005555|mov word ptr DS:[0x0032],0x5555",
+        "C3|ret near"
+      ]
+    }
+  ],
+  "truncated": false
+}

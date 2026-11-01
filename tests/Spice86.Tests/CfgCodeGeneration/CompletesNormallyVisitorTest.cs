@@ -47,7 +47,7 @@ public class CompletesNormallyVisitorTest {
             _jump,
             new ThrowNode(typeof(InvalidOperationException), "x"),
             new FailAsUntestedNode([UntestedMessagePart.Literal("x")]),
-            new CyclicJumpNode("loop_1000_0020_10020", 0x0020),
+            new CyclicJumpNode("loop_1000_0020_10020", 0x0020, false),
             new BreakNode()
         ];
 

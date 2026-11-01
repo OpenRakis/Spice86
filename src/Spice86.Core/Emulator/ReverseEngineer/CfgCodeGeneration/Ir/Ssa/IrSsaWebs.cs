@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Visitor;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 
 using System.Linq;
 
@@ -128,7 +129,7 @@ internal sealed class IrSsaWebs {
         if (value > IrSsaValue.Edi) {
             return false;
         }
-        IrValues lowWord = (IrValues)(0x3UL << (4 * (int)value));
+        CpuValues lowWord = IrSsaValues.LowWordMaskOf(value);
         return (effects.MustWrite & lowWord) == lowWord;
     }
 

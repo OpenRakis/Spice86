@@ -2,6 +2,7 @@ namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 
 /// <summary>
@@ -23,6 +24,15 @@ internal sealed class IrStatement {
 
     /// <summary>The statement effects.</summary>
     public IrEffects Effects { get; }
+
+    /// <summary>Whether a statement nobody reads may be dropped: it writes no machine value
+    /// (<see cref="CpuValues"/>), writes or reads no token (<see cref="IrTokens"/> - a memory read can
+    /// have a device side effect, a VGA read loads the latches), cannot fault
+    /// (<see cref="IrEffects.MayFault"/>) and delivers no interrupts
+    /// (<see cref="IrEffects.DeliversInterrupts"/>).</summary>
+    public bool IsRemovable => Effects.MayWrite == CpuValues.None
+        && Effects.TokenWrites == IrTokens.None && !Effects.MayFault
+        && !Effects.DeliversInterrupts && Effects.TokenReads == IrTokens.None;
 
     /// <summary>Creates a statement, computing its effects from <paramref name="node"/> and <paramref name="origin"/>.</summary>
     public static IrStatement Create(IVisitableAstNode node, ICfgNode origin) =>

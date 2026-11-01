@@ -87,7 +87,7 @@ public class AluFlagTableTest {
         }
 
         // Assert
-        AluFlagTable.TryGetEffect(Enum.Parse<AluOperation>(operation), width, null, out FlagEffect unknownCount).Should().BeTrue();
+        AluFlagTable.TryGetEffect(Enum.Parse<AluOperation>(operation), width, (ulong?)null, out FlagEffect unknownCount).Should().BeTrue();
         unknownCount.Reads.Should().Be(readsForSomeCount);
         unknownCount.MayWrite.Should().Be(writtenForSomeCount);
         unknownCount.MustWrite.Should().Be(writtenForEveryCount);
