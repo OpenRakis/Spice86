@@ -8,7 +8,7 @@ using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
-/// Implementation of int8 that just updates a value in the bios data area.
+/// Updates the BIOS timer and calls INT 1Ch while preserving AX, DX and DS.
 /// </summary>
 public sealed class TimerInt8Handler : IInterruptHandler {
     private readonly DualPic _dualPic;
@@ -30,9 +30,15 @@ public sealed class TimerInt8Handler : IInterruptHandler {
         // Increment BIOS tick counter
         memoryAsmWriter.RegisterAndWriteCallback(VectorNumber, IncTickCounterValue);
         // Call user timer hook
+        memoryAsmWriter.WriteUInt8(0x1E); // PUSH DS
+        memoryAsmWriter.WriteUInt8(0x50); // PUSH AX
+        memoryAsmWriter.WriteUInt8(0x52); // PUSH DX
         memoryAsmWriter.WriteInt(0x1C);
         // EOI to PIC after handler execution
         memoryAsmWriter.RegisterAndWriteCallback(CallbackNumbers.TimerAfterInt8Execution, AfterInt8Execution);
+        memoryAsmWriter.WriteUInt8(0x5A); // POP DX
+        memoryAsmWriter.WriteUInt8(0x58); // POP AX
+        memoryAsmWriter.WriteUInt8(0x1F); // POP DS
         memoryAsmWriter.WriteIret();
 
         return interruptHandlerAddress;

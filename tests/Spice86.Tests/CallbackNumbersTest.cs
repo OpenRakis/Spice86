@@ -57,19 +57,19 @@ public class CallbackNumbersTest {
 
     private static Dictionary<ushort, SegmentedAddress> ExpectedCallbackAddresses() {
         return new Dictionary<ushort, SegmentedAddress> {
-            [CallbackNumbers.TimerAfterInt8Execution] = new SegmentedAddress(0xF000, 0x000C),
-            [CallbackNumbers.KeyboardHasKey] = new SegmentedAddress(0xF000, 0x003F),
-            [CallbackNumbers.KeyboardDequeueAndSetAx] = new SegmentedAddress(0xF000, 0x0048),
-            [CallbackNumbers.DefaultIrq3] = new SegmentedAddress(0xF000, 0x0067),
-            [CallbackNumbers.DefaultIrq4] = new SegmentedAddress(0xF000, 0x006C),
-            [CallbackNumbers.DefaultIrq5] = new SegmentedAddress(0xF000, 0x0071),
-            [CallbackNumbers.DefaultIrq7] = new SegmentedAddress(0xF000, 0x0076),
-            [CallbackNumbers.DefaultIrq10] = new SegmentedAddress(0xF000, 0x007B),
-            [CallbackNumbers.DefaultIrq11] = new SegmentedAddress(0xF000, 0x0080),
-            [CallbackNumbers.DosInt21CheckStdinReady] = new SegmentedAddress(0xF000, 0x00A5),
-            [CallbackNumbers.DosInt21StdinInputDispatch] = new SegmentedAddress(0xF000, 0x00B5),
-            [CallbackNumbers.MouseBeforeUserHandler] = new SegmentedAddress(0xF000, 0x00E3),
-            [CallbackNumbers.MouseAfterUserHandler] = new SegmentedAddress(0xF000, 0x00EC)
+            [CallbackNumbers.TimerAfterInt8Execution] = new SegmentedAddress(0xF000, 0x000F),
+            [CallbackNumbers.KeyboardHasKey] = new SegmentedAddress(0xF000, 0x0045),
+            [CallbackNumbers.KeyboardDequeueAndSetAx] = new SegmentedAddress(0xF000, 0x004E),
+            [CallbackNumbers.DefaultIrq3] = new SegmentedAddress(0xF000, 0x006D),
+            [CallbackNumbers.DefaultIrq4] = new SegmentedAddress(0xF000, 0x0072),
+            [CallbackNumbers.DefaultIrq5] = new SegmentedAddress(0xF000, 0x0077),
+            [CallbackNumbers.DefaultIrq7] = new SegmentedAddress(0xF000, 0x007C),
+            [CallbackNumbers.DefaultIrq10] = new SegmentedAddress(0xF000, 0x0081),
+            [CallbackNumbers.DefaultIrq11] = new SegmentedAddress(0xF000, 0x0086),
+            [CallbackNumbers.DosInt21CheckStdinReady] = new SegmentedAddress(0xF000, 0x00AB),
+            [CallbackNumbers.DosInt21StdinInputDispatch] = new SegmentedAddress(0xF000, 0x00BB),
+            [CallbackNumbers.MouseBeforeUserHandler] = new SegmentedAddress(0xF000, 0x00E9),
+            [CallbackNumbers.MouseAfterUserHandler] = new SegmentedAddress(0xF000, 0x00F2)
         };
     }
 }
