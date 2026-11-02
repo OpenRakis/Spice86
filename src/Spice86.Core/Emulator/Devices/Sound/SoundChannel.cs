@@ -1285,6 +1285,8 @@ public sealed class SoundChannel {
             }
             for (int i = 0; i < parts.Length; i += 3) {
                 if (!TrySetCustomFilter(parts[i], parts[i + 1], parts[i + 2], logger)) {
+                    LowPassFilter = FilterState.Off;
+                    HighPassFilter = FilterState.Off;
                     return false;
                 }
             }

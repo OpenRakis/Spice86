@@ -275,10 +275,25 @@ public sealed class GusVoice {
         if (skipLoopOrRestart) { return new CtrlPosUpdate(pos, state, sharedIrqState); }
 
         if ((state & CtrlLoop) != 0) {
-            if ((state & CtrlBidirectional) != 0) {
-                state ^= CtrlDecreasing;
+            int span = end - start;
+            if (span <= 0) {
+                pos = start;
+            } else if ((state & CtrlBidirectional) != 0) {
+                int period = span * 2;
+                int phase = (state & CtrlDecreasing) != 0 ? period - (pos - start) : pos - start;
+                phase %= period;
+                if (phase < span) {
+                    pos = start + phase;
+                    state &= unchecked((byte)~CtrlDecreasing);
+                } else {
+                    pos = end - (phase - span);
+                    state |= CtrlDecreasing;
+                }
+            } else if ((state & CtrlDecreasing) != 0) {
+                pos = end - (remaining % span);
+            } else {
+                pos = start + (remaining % span);
             }
-            pos = (state & CtrlDecreasing) != 0 ? end - remaining : start + remaining;
         } else {
             state |= 1; // stop the voice
             pos = (state & CtrlDecreasing) != 0 ? start : end;

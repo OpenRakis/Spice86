@@ -336,6 +336,7 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
     /// <summary>Applies the DOSBox-staging GUS output filter setting.</summary>
     public void SetFilter(string preferences) {
         if (SoundChannel.TryParseFilterSwitch(preferences, out bool enabled)) {
+            _channel.HighPassFilter = FilterState.Off;
             if (!enabled) {
                 _channel.LowPassFilter = FilterState.Off;
                 return;
@@ -597,6 +598,7 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
             case 0x00: // mix control
                 _mixControl = value;
                 _shouldChangeIrqDma = true;
+                RaiseInterruptRequest();
                 return;
             case 0x08: // AdLib command mirror
                 _adlibCommandReg = value;
@@ -668,12 +670,10 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
     }
 
     private void OnSchedulerTick() {
-        if (_channel.IsEnabled) {
-            _frameCounter += _channel.FramesPerTick;
-            int requestedFrames = (int)Math.Floor(_frameCounter);
-            _frameCounter -= requestedFrames;
-            PicCallback(requestedFrames);
-        }
+        _frameCounter += _channel.FramesPerTick;
+        int requestedFrames = (int)Math.Floor(_frameCounter);
+        _frameCounter -= requestedFrames;
+        PicCallback(requestedFrames);
         _scheduler.AddEvent(_tickEventHandler, 1, 0);
     }
 
@@ -699,8 +699,8 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
             int fromFifo = Math.Min(remaining, _fifo.Count);
             EnsureRenderBuf(fromFifo);
             _fifo.CopyTo(0, _renderBuf, 0, fromFifo);
-            int enqueued = _outputQueue.NonblockingBulkEnqueue(_renderBuf.AsSpan(0, fromFifo), fromFifo);
-            _fifo.RemoveRange(0, enqueued);
+            _outputQueue.NonblockingBulkEnqueue(_renderBuf.AsSpan(0, fromFifo), fromFifo);
+            _fifo.RemoveRange(0, fromFifo);
             remaining -= fromFifo;
         }
         if (remaining > 0) {
@@ -731,8 +731,10 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
         // Global DSP registers
         switch (_selectedReg) {
             case 0x41: { // DMA control register – read clears TC IRQ
-                    byte reg = _dmaControlReg;
-                    _dmaControlReg &= unchecked((byte)~DmaCtrlTcIrqPending);
+                    byte reg = (byte)(_dmaControlReg & ~DmaCtrlTcIrqPending);
+                    if (_dmaTerminalCountIrqPending) {
+                        reg |= DmaCtrlTcIrqPending;
+                    }
                     _dmaTerminalCountIrqPending = false;
                     _irqStatus &= unchecked((byte)~IrqDmaFinished);
                     RaiseInterruptRequest();
@@ -996,7 +998,7 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
 
         if ((_mixControl & MixCtrlIrqCtrlSelected) != 0) {
             if (ch1Selector < IrqAddresses.Length && IrqAddresses[ch1Selector] != 0) {
-                _irq = ToInternalIrq(IrqAddresses[ch1Selector]);
+                SetPlaybackIrq(ToInternalIrq(IrqAddresses[ch1Selector]));
             }
             if (combineChannels) {
                 if (ch2Selector == 0) {
@@ -1005,6 +1007,7 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
             } else if (ch2Selector < IrqAddresses.Length && IrqAddresses[ch2Selector] != 0) {
                 _irq2 = ToInternalIrq(IrqAddresses[ch2Selector]);
             }
+            RaiseInterruptRequest();
         } else {
             if (ch1Selector < DmaAddresses.Length && DmaAddresses[ch1Selector] != 0) {
                 byte newDma = DmaAddresses[ch1Selector];
@@ -1110,6 +1113,7 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
         _shouldChangeIrqDma = false;
         _mixControl = MixControlDefault;
         _activeVoices = 0;
+        _activeVoiceMask = 0;
         _resetReg = 0;
         _fifo.Clear();
     }
@@ -1168,7 +1172,7 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
         }
 
         uint dmaOffset = GetDmaOffset();
-        int desired = channel.CurrentCount + 1;
+        int desired = Math.Min(channel.CurrentCount + 1, DmaTransferSizeBytes >> channel.ShiftCount);
         bool invert = (_dmaControlReg & DmaCtrlInvertHighBit) != 0;
         bool gusToHost = (_dmaControlReg & DmaCtrlGusToHost) != 0;
 
@@ -1235,7 +1239,11 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
         } else {
             adjusted = _dmaAddr;
         }
-        return (adjusted << 4) + _dmaAddressNibble;
+        uint nibble = _dmaAddressNibble;
+        if (IsDmaXfer16Bit()) {
+            nibble <<= 1;
+        }
+        return (adjusted << 4) + nibble;
     }
 
     private void UpdateDmaAddr(uint offset) {
@@ -1268,10 +1276,19 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
             _channel.SampleRate = GetSampleRate();
             _millisecondsPerFrame = 1000.0 / GetSampleRate();
         }
+
         if (_activeVoices != 0 && _previousLoggedVoices != _activeVoices) {
             _loggerService.LogInformation("GUS: Activated {Voices} voices at {SampleRate} Hz.", _activeVoices, _sampleRateHz);
             _previousLoggedVoices = _activeVoices;
         }
+    }
+
+    private void SetPlaybackIrq(byte irq) {
+        if (_irqPreviouslyInterrupted) {
+            _dualPic.DeactivateIrq(_irq);
+        }
+        _irq = irq;
+        _irqPreviouslyInterrupted = false;
     }
 
     private int GetSampleRate() {
