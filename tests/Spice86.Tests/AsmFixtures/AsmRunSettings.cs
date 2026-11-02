@@ -88,6 +88,9 @@ internal sealed record AsmRunSettings {
     /// <summary>OPL synthesis mode the machine exposes.</summary>
     public OplMode OplMode { get; init; } = OplMode.None;
 
+    /// <summary>Whether the machine exposes a Gravis UltraSound card.</summary>
+    public bool EnableGus { get; init; }
+
     /// <summary>Host folders mounted as extra DOS drives, keyed by drive letter, before the program runs.</summary>
     public IReadOnlyDictionary<char, string> MountedFolderDrives { get; init; } = NoMountedFolderDrives;
 

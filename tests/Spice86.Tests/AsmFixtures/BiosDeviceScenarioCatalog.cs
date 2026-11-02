@@ -6,6 +6,8 @@ using Microsoft.Extensions.Logging;
 
 using NSubstitute;
 
+using Spice86.Audio.Backend;
+using Spice86.Audio.Common;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Memory;
@@ -25,12 +27,15 @@ internal static class BiosDeviceScenarioCatalog {
     private const string VgaSubDirectory = "VgaTests";
     private const string SoundSubDirectory = "Sound";
     private const string TestPortResultsObservation = "testPortResults";
+    private const string GusDeviceObservation = "gusDevice";
+    private const string GusPlaybackRecorderObservation = "gusPlaybackRecorder";
     private const byte TestPortSuccess = 0x00;
     private const byte TestPortFailure = 0xFF;
     private const long RtcMaxCycles = 100000L;
     private const long RtcWaitMaxCycles = 500000L;
     private const long VgaMaxCycles = 300000L;
     private const long SoundMaxCycles = 500000L;
+    private const long GusPlaybackMaxCycles = 100000L;
 
     /// <summary>Every BIOS, video and sound scenario, so one entry point can cover them all.</summary>
     public static IReadOnlyList<AsmScenario> Scenarios => [.. RtcScenarios, .. VgaScenarios, .. SoundScenarios];
@@ -51,7 +56,8 @@ internal static class BiosDeviceScenarioCatalog {
 
     /// <summary>Sound programs: the two OPL timer/write-delay programs and the Sound Blaster DSP reset
     /// delay, each run with the sound model the original test exposed to the machine.</summary>
-    public static IReadOnlyList<AsmScenario> SoundScenarios => [.. OplScenarios, SoundBlasterResetDelay()];
+    public static IReadOnlyList<AsmScenario> SoundScenarios =>
+        [.. OplScenarios, SoundBlasterResetDelay(), GusPlaybackSamples()];
 
     /// <summary>The OPL timer/write-delay programs, run with OPL3 synthesis.</summary>
     public static IReadOnlyList<AsmScenario> OplScenarios => [OplWriteDelay(), OplReadDelay()];
@@ -165,6 +171,105 @@ internal static class BiosDeviceScenarioCatalog {
             ReportedWord(testHandler).Should().BeGreaterThan(0,
                 "reset delay should require multiple poll iterations (20us hardware delay)");
         });
+    }
+
+    /// <summary>Programs nonzero 8-bit and 16-bit sample loops through GUS ports and checks their panned output.</summary>
+    /// <returns>The scenario for gus_playback_samples.com.</returns>
+    public static AsmScenario GusPlaybackSamples() {
+        const string fileName = "gus_playback_samples.com";
+        const string identity = "gus_playback_samples";
+        return new AsmScenario(identity, scope => {
+            string directory = scope.CreateWorkingDirectory(identity);
+            string programPath = CopyResourceFile(SoundSubDirectory, fileName, directory);
+            AsmRunSettings settings = new() {
+                BinName = programPath,
+                ScenarioName = identity,
+                EnablePit = true,
+                EnableGus = true,
+                MaxCycles = GusPlaybackMaxCycles,
+                InstallInterruptVectors = true,
+                EnableA20Gate = true,
+                ConfigureMachine = machine => {
+                    RegisterTestPortHandler(scope, machine);
+                    GravisUltraSound gus = machine.GravisUltraSound
+                        ?? throw new InvalidOperationException("GUS was explicitly enabled for this scenario.");
+                    scope.Register(GusDeviceObservation, gus);
+                    GusPlaybackRecorder recorder = new(gus, machine.EmulationLoopScheduler);
+                    scope.Register(GusPlaybackRecorderObservation, recorder);
+                    recorder.Start();
+                }
+            };
+            return new AsmFixture(settings, [], AssertGusPlaybackSamples);
+        }, [$"{SoundSubDirectory}/{fileName}", $"{SoundSubDirectory}/gus_playback_samples.s"]);
+    }
+
+    private static void AssertGusPlaybackSamples(AsmFixtureResult result) {
+        TestIoPortHandler testHandler =
+            result.Observations.Get<TestIoPortHandler>(TestPortResultsObservation);
+        testHandler.Results.Should().Contain(0xA5);
+        testHandler.Results.Should().Contain(0x5A);
+        GravisUltraSound gus = result.Observations.Get<GravisUltraSound>(GusDeviceObservation);
+        GusPlaybackRecorder recorder =
+            result.Observations.Get<GusPlaybackRecorder>(GusPlaybackRecorderObservation);
+        gus.BasePort.Should().Be(0x240);
+        recorder.SelectedRegister.Should().Be(0x8D);
+        recorder.DramAddress.Should().Be(0x2007);
+        recorder.ResetRegister.Should().Be(0x03);
+        recorder.ActiveVoices.Should().BeGreaterThan(0);
+        recorder.Voice0Generated8BitMs.Should().BeGreaterThan(0);
+        recorder.Voice1Generated16BitMs.Should().BeGreaterThan(0);
+        AudioFrame[] capturedFrames = recorder.Frames.ToArray();
+        capturedFrames.Should().Contain(frame => frame.Left > 0,
+            "the guest-programmed 8-bit voice must produce left-channel samples");
+        capturedFrames.Should().Contain(frame => frame.Right > 0,
+            "the guest-programmed 16-bit voice must produce right-channel samples");
+        capturedFrames.Select(frame => frame.Left).Distinct().Should().HaveCountGreaterThan(1,
+            "the looping volume envelope must change the left-channel sample values");
+        capturedFrames.Select(frame => frame.Right).Distinct().Should().HaveCountGreaterThan(1,
+            "the looping volume envelope must change the right-channel sample values");
+    }
+
+    private sealed class GusPlaybackRecorder {
+        private readonly GravisUltraSound _gus;
+        private readonly RWQueue<AudioFrame> _outputQueue;
+        private readonly Spice86.Core.Emulator.VM.DeviceScheduler.DeviceScheduler _scheduler;
+        private readonly AudioFrame[] _buffer = new AudioFrame[4096];
+        private readonly Spice86.Core.Emulator.VM.DeviceScheduler.EventHandler _captureHandler;
+
+        public List<AudioFrame> Frames { get; } = new();
+        public byte SelectedRegister { get; private set; }
+        public int DramAddress { get; private set; }
+        public byte ResetRegister { get; private set; }
+        public int ActiveVoices { get; private set; }
+        public uint Voice0Generated8BitMs { get; private set; }
+        public uint Voice1Generated16BitMs { get; private set; }
+
+        public GusPlaybackRecorder(GravisUltraSound gus,
+            Spice86.Core.Emulator.VM.DeviceScheduler.DeviceScheduler scheduler) {
+            _gus = gus;
+            _outputQueue = gus.OutputQueue;
+            _scheduler = scheduler;
+            _captureHandler = Capture;
+        }
+
+        public void Start() {
+            _scheduler.AddEvent(_captureHandler, 1, 0);
+        }
+
+        private void Capture(uint _) {
+            SelectedRegister = _gus.SelectedRegister;
+            DramAddress = _gus.DramAddress;
+            ResetRegister = _gus.ResetRegister;
+            ActiveVoices = Math.Max(ActiveVoices, _gus.ActiveVoices);
+            Voice0Generated8BitMs = Math.Max(Voice0Generated8BitMs, _gus.Voices[0].Generated8BitMs);
+            Voice1Generated16BitMs = Math.Max(Voice1Generated16BitMs, _gus.Voices[1].Generated16BitMs);
+
+            int frameCount = _outputQueue.BulkDequeue(_buffer, _buffer.Length);
+            for (int i = 0; i < frameCount; i++) {
+                Frames.Add(_buffer[i]);
+            }
+            _scheduler.AddEvent(_captureHandler, 1, 0);
+        }
     }
 
     /// <summary>Runs an RTC program that reports every checked call through the shared test result ports

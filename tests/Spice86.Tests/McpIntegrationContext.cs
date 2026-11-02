@@ -97,6 +97,21 @@ internal sealed class McpIntegrationContext : IAsyncDisposable {
         bool initializeDos,
         SbType sbType,
         OplMode oplMode) {
+        return await CreateAsync(testProgramName, enableXms, enableEms, initializeDos, sbType, oplMode, false);
+    }
+
+    public static async Task<McpIntegrationContext> CreateGusAsync(string testProgramName) {
+        return await CreateAsync(testProgramName, false, false, false, SbType.None, OplMode.None, true);
+    }
+
+    private static async Task<McpIntegrationContext> CreateAsync(
+        string testProgramName,
+        bool enableXms,
+        bool enableEms,
+        bool initializeDos,
+        SbType sbType,
+        OplMode oplMode,
+        bool enableGus) {
         Spice86Creator creator = new(
             testProgramName,
             enablePit: false,
@@ -104,7 +119,8 @@ internal sealed class McpIntegrationContext : IAsyncDisposable {
             enableXms: enableXms,
             enableEms: enableEms,
             sbType: sbType,
-            oplMode: oplMode);
+            oplMode: oplMode,
+            enableGus: enableGus);
         Spice86DependencyInjection spice86 = creator.Create();
         EmulatorMcpServices services = spice86.McpServices;
 
@@ -141,6 +157,7 @@ internal sealed class McpIntegrationContext : IAsyncDisposable {
         services.Opl3Fm = spice86.McpServices.Opl3Fm;
         services.PcSpeaker = spice86.McpServices.PcSpeaker;
         services.Midi = spice86.McpServices.Midi;
+        services.GravisUltraSound = spice86.McpServices.GravisUltraSound;
         services.VgaFunctionality = spice86.McpServices.VgaFunctionality;
         services.BiosDataArea = spice86.McpServices.BiosDataArea;
         services.InterruptVectorTable = spice86.McpServices.InterruptVectorTable;

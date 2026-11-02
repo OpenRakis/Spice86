@@ -158,6 +158,19 @@ public sealed class SoftwareMixer : ISoundChannelCreator, IDisposable {
         _queueNotifiers.Add(notifier);
     }
 
+    /// <summary>Removes a notifier after its audio device has shut down.</summary>
+    public void UnregisterQueueNotifier(IMixerQueueNotifier notifier) {
+        _queueNotifiers.Remove(notifier);
+    }
+
+    /// <summary>Stops and removes a channel while the mixer thread is locked.</summary>
+    public void RemoveChannel(SoundChannel channel) {
+        channel.Enable(false);
+        if (_channels.TryGetValue(channel.Name, out SoundChannel? registered) && ReferenceEquals(registered, channel)) {
+            _channels.Remove(channel.Name);
+        }
+    }
+
     /// <summary>
     /// Locks the mixer thread to prevent mixing during critical operations.
     /// The queues listed here are for audio devices that run on the main thread.
