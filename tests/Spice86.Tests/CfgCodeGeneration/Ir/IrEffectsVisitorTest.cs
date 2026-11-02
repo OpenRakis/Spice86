@@ -33,6 +33,40 @@ public sealed class IrEffectsVisitorTest {
     private static SegmentRegisterNode Ds() => new(3);
     private static ConstantNode Constant() => new(DataType.UINT16, 0x1234);
 
+    [Theory]
+    [InlineData(InstructionOperation.FLDCW)]
+    [InlineData(InstructionOperation.FNINIT)]
+    [InlineData(InstructionOperation.FNDISI)]
+    public void FpuControl_SerializesOpaqueStateWithoutClobberingRegistersOrFlags(InstructionOperation operation) {
+        // Arrange
+        IVisitableAstNode[] arguments = operation == InstructionOperation.FLDCW ? [Constant()] : [];
+        FpuControlCallNode call = new(operation, arguments);
+
+        // Act
+        IVisitableAstNode typed = IrNodeTyper.TypeStatement(call);
+        IrEffects effects = Of(typed);
+
+        // Assert
+        typed.Should().BeOfType<FpuControlCallNode>();
+        effects.Should().Be(new IrEffects(CpuValues.None, CpuValues.None, CpuValues.None,
+            IrTokens.All, IrTokens.All, false, false));
+    }
+
+    [Fact]
+    public void FpuControlWord_ReadsOpaqueStateWithoutClobberingRegistersOrFlags() {
+        // Arrange
+        FpuControlWordNode call = new();
+
+        // Act
+        ValueNode typed = IrNodeTyper.TypeValue(call);
+        IrEffects effects = Of(typed);
+
+        // Assert
+        typed.Should().BeOfType<FpuControlWordNode>();
+        effects.Should().Be(new IrEffects(CpuValues.None, CpuValues.None, CpuValues.None,
+            IrTokens.All, IrTokens.None, false, false));
+    }
+
     [Fact]
     public void RegisterRead_ReadsItsBytes() {
         // Arrange / Act

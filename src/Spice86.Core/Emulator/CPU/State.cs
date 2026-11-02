@@ -33,6 +33,22 @@ using System.Text;
 /// Each of these registers can be accessed as a whole (32 bits), or in parts as AX/BX/CX/DX (lower 16 bits), AH/BH/CH/DH (high 8 bits of the 16-bit register), and AL/BL/CL/DL (low 8 bits of the 16-bit register).
 /// </summary>
 public class State(CpuModel cpuModel) {
+    private const ushort InitialFpuControlWord = 0x03FF;
+    private const ushort FpuInterruptMask = 0x0080;
+    private ushort _fpuControlWord = InitialFpuControlWord;
+
+    /// <summary>Gets the control word of the limited 8087-compatible initialization state.</summary>
+    public ushort GetFpuControlWord() => _fpuControlWord;
+
+    /// <summary>Loads the FPU control word. Floating-point arithmetic is not implemented.</summary>
+    public void SetFpuControlWord(ushort value) => _fpuControlWord = value;
+
+    /// <summary>Resets the FPU control word to the 8087 initial value, including its interrupt mask.</summary>
+    public void InitializeFpu() => _fpuControlWord = InitialFpuControlWord;
+
+    /// <summary>Sets the 8087 interrupt mask, allowing startup probes to distinguish it from later FPUs.</summary>
+    public void DisableFpuInterrupts() => _fpuControlWord |= FpuInterruptMask;
+
     /// <summary>
     /// Gets or sets the second byte (high byte) in the general purpose EAX register
     /// <para>

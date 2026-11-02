@@ -381,6 +381,7 @@ internal static class AsmScenarioCatalog {
 
     private static IReadOnlyList<AsmScenario> BuildCpuScenarios() {
         List<AsmScenario> scenarios = [
+            AsmScenario.FromFixture("fpuinit", AsmFixtureCatalog.FpuInit),
             CpuBin("add"),
             CpuBin("bcdcnv"),
             CpuBin("cmpneg"),
