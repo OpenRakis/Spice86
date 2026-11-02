@@ -1180,13 +1180,11 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
         while (remainingWords > 0) {
             int chunkBytes = Math.Min(remainingWords << channel.ShiftCount, DramSizeBytes - (int)offset);
             int chunkWords = chunkBytes >> channel.ShiftCount;
-            Span<byte> samples = _ram.AsSpan((int)offset, chunkBytes);
-            int chunkTransferred;
-            if (gusToHost) {
-                chunkTransferred = channel.Write(chunkWords, samples);
-            } else {
-                chunkTransferred = channel.Read(chunkWords, samples);
+            if (chunkWords == 0) {
+                break;
             }
+            Span<byte> samples = _ram.AsSpan((int)offset, chunkBytes);
+            int chunkTransferred = gusToHost ? channel.Write(chunkWords, samples) : channel.Read(chunkWords, samples);
             if (!gusToHost && invert) {
                 InvertHighBits(samples[..(chunkTransferred << channel.ShiftCount)], offset);
             }
