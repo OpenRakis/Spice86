@@ -171,6 +171,7 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
     private int _dramAddr;
     private byte _dmaControlReg;
     private bool _dmaSamples16Bit;
+    private bool _dmaTerminalCountIrqPending;
     private byte _irqStatus;
     private ushort _registerData;
     private byte _resetReg;
@@ -437,6 +438,13 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
 
     /// <summary>Sub-paragraph nibble of the current DMA DRAM address.</summary>
     public byte DmaAddressNibble => _dmaAddressNibble;
+
+    /// <summary>
+    /// True while a DMA terminal-count IRQ is pending. The GF1 reports this through bit 6 of the
+    /// DMA control register, which means "samples are 16-bit" when written, so the state is tracked
+    /// separately from the written register value.
+    /// </summary>
+    public bool IsDmaTerminalCountIrqPending => _dmaTerminalCountIrqPending;
 
     /// <summary>True when the DMA control register declares the transferred samples as 16-bit.</summary>
     public bool AreDmaSamples16Bit => _dmaSamples16Bit;
@@ -725,6 +733,7 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
             case 0x41: { // DMA control register – read clears TC IRQ
                     byte reg = _dmaControlReg;
                     _dmaControlReg &= unchecked((byte)~DmaCtrlTcIrqPending);
+                    _dmaTerminalCountIrqPending = false;
                     _irqStatus &= unchecked((byte)~IrqDmaFinished);
                     RaiseInterruptRequest();
                     return (ushort)(reg << 8);
@@ -837,6 +846,9 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
                 _resetReg = (byte)(_registerData >> 8);
                 if ((_resetReg & ResetRegIsRunning) == 0) {
                     DoReset();
+                } else if ((_resetReg & ResetRegDacEnabled) != 0) {
+                    // The GF1 is out of reset with its DAC enabled: start feeding the mixer.
+                    _channel.Enable(true);
                 }
                 return;
             default:
@@ -939,6 +951,9 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
                 _scheduler.AddEvent(_timerEventHandlers[t], timer.Delay, 0);
             } else if (!start) {
                 timer.IsCountingDown = false;
+                // The scheduler keeps queued events until they are explicitly removed, so a
+                // stopped timer would otherwise still expire once more.
+                _scheduler.RemoveEvents(_timerEventHandlers[t]);
             }
         }
     }
@@ -1062,10 +1077,17 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
         foreach (Spice86.Core.Emulator.VM.DeviceScheduler.EventHandler timerEventHandler in _timerEventHandlers) {
             _scheduler.RemoveEvents(timerEventHandler);
         }
+        // Drop any IRQ this card still asserts on the PIC before forgetting that we raised it,
+        // otherwise the request stays latched forever.
+        if (_irqPreviouslyInterrupted) {
+            _dualPic.DeactivateIrq(_irq);
+        }
         _irqStatus = 0;
         _irqPreviouslyInterrupted = false;
         _adlibCommandReg = AdlibCmdDefault;
         _dmaControlReg = 0;
+        _dmaSamples16Bit = false;
+        _dmaTerminalCountIrqPending = false;
         _sampleCtrl = 0;
         _timerCtrl = 0;
         _timers[0] = new GusTimer(Timer1DefaultDelayMs);
@@ -1147,31 +1169,41 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
 
         uint dmaOffset = GetDmaOffset();
         int desired = channel.CurrentCount + 1;
-        int byteCount = desired << channel.ShiftCount;
-        Span<byte> samples = _ram.AsSpan((int)dmaOffset, byteCount);
         bool invert = (_dmaControlReg & DmaCtrlInvertHighBit) != 0;
         bool gusToHost = (_dmaControlReg & DmaCtrlGusToHost) != 0;
-        int transferred;
-        if (gusToHost) {
-            transferred = channel.Write(desired, samples);
-        } else {
-            transferred = channel.Read(desired, samples);
-        }
-        Debug.Assert(transferred == desired);
-        int bytesTransferred = transferred << channel.ShiftCount;
-        UpdateDmaAddr(dmaOffset + (uint)bytesTransferred);
 
-        if (!gusToHost && invert) {
-            int start = _dmaSamples16Bit ? 1 : 0;
-            int skip = _dmaSamples16Bit ? 2 : 1;
-            for (int i = start; i < bytesTransferred; i += skip) {
-                samples[i] ^= 0x80;
+        // The transfer wraps around the end of the 1 MiB DRAM, so it is split into
+        // contiguous chunks the backing array can hold.
+        int remainingWords = desired;
+        uint offset = dmaOffset;
+        int transferred = 0;
+        while (remainingWords > 0) {
+            int chunkBytes = Math.Min(remainingWords << channel.ShiftCount, DramSizeBytes - (int)offset);
+            int chunkWords = chunkBytes >> channel.ShiftCount;
+            Span<byte> samples = _ram.AsSpan((int)offset, chunkBytes);
+            int chunkTransferred;
+            if (gusToHost) {
+                chunkTransferred = channel.Write(chunkWords, samples);
+            } else {
+                chunkTransferred = channel.Read(chunkWords, samples);
+            }
+            if (!gusToHost && invert) {
+                InvertHighBits(samples[..(chunkTransferred << channel.ShiftCount)], offset);
+            }
+            transferred += chunkTransferred;
+            remainingWords -= chunkTransferred;
+            offset = (offset + (uint)(chunkTransferred << channel.ShiftCount)) & (DramSizeBytes - 1);
+            if (chunkTransferred != chunkWords) {
+                break;
             }
         }
+        Debug.Assert(transferred == desired);
+        UpdateDmaAddr(offset);
 
         // The DMA terminal-count IRQ only fires when the channel actually reached TC.
         if (channel.HasReachedTerminalCount) {
             _dmaControlReg |= DmaCtrlTcIrqPending;
+            _dmaTerminalCountIrqPending = true;
             if ((_dmaControlReg & DmaCtrlWantsIrqOnTc) != 0) {
                 _irqStatus |= IrqDmaFinished;
                 RaiseInterruptRequest();
@@ -1180,6 +1212,20 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
         }
 
         return true;
+    }
+
+    private void InvertHighBits(Span<byte> samples, uint startOffset) {
+        // 16-bit samples only have their most significant byte inverted, which lives at
+        // the odd DRAM address of each sample, hence the absolute offset parity.
+        int start = 0;
+        int skip = 1;
+        if (_dmaSamples16Bit) {
+            start = (startOffset & 1) == 0 ? 1 : 0;
+            skip = 2;
+        }
+        for (int i = start; i < samples.Length; i += skip) {
+            samples[i] ^= 0x80;
+        }
     }
 
     private uint GetDmaOffset() {
@@ -1201,7 +1247,9 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
             uint lower = offset & 0x3FFFEu;
             adjusted = upper | (lower >> 1);
         } else {
-            adjusted = offset & 0xFFFF0u;
+            // Keep the full 20-bit DRAM address: the low nibble is held separately so that
+            // transfers that do not land on a 16-byte boundary still advance correctly.
+            adjusted = offset & 0xFFFFFu;
         }
         _dmaAddr = (ushort)(adjusted >> 4);
         _dmaAddressNibble = (byte)(adjusted & 0x0F);

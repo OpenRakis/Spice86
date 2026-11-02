@@ -106,9 +106,10 @@ public sealed class GusVoice {
     /// <param name="frames">The stereo output buffer to accumulate into.</param>
     /// <param name="count">Number of frames to render.</param>
     public void RenderFrames(byte[] ram, float[] volScalars, AudioFrame[] panScalars, AudioFrame[] frames, int count) {
-        // Skip rendering only when BOTH wave AND vol controls are independently disabled,
-        // matching the GF1 hardware behaviour documented in the UltraSound SDK.
-        if ((WaveState & VolState & CtrlDisabled) != 0) {
+        // Skip rendering only when BOTH the wave and the volume control are disabled,
+        // each tested on its own: the two controls can be disabled through different
+        // bits (one reset, the other stopped).
+        if ((WaveState & CtrlDisabled) != 0 && (VolState & CtrlDisabled) != 0) {
             return;
         }
 

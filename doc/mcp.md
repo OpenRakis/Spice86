@@ -211,7 +211,7 @@ For a complete tool list with parameter details, call `tools/list` via the MCP e
 
 ## Gravis UltraSound Tools
 
-The GUS tools require the card to be enabled, which is the default. Disable it with `--GusEnable false`;
+The GUS tools require the card to be enabled, which is not the default. Enable it with `--GusEnable true`;
 the base port, IRQ, DMA channel and patch directory are controlled by `--GusBase`, `--GusIrq`, `--GusDma`
 and `--GusUltradir`. When the card is disabled, every GUS tool returns `Gravis UltraSound is not available`.
 

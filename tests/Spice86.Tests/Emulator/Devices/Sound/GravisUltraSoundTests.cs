@@ -2,6 +2,7 @@ namespace Spice86.Tests.Emulator.Devices.Sound;
 
 using FluentAssertions;
 
+using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Sound;
 
@@ -22,6 +23,17 @@ public sealed class GravisUltraSoundTests {
     private const byte DmaAddressRegister = 0x42;
     private const byte DmaSamplingControlRegister = 0x49;
     private const byte RunningWithDacEnabled = 0x03;
+    private const ushort GusDataWordPort = 0x344;
+    private const byte GusIrq = 5;
+
+    private static void ProgramDmaChannel3(Spice86DependencyInjection dependencyInjection, byte countLow) {
+        dependencyInjection.Machine.DmaSystem.WriteByte(0x0C, 0);
+        dependencyInjection.Machine.DmaSystem.WriteByte(0x06, 0);
+        dependencyInjection.Machine.DmaSystem.WriteByte(0x06, 0);
+        dependencyInjection.Machine.DmaSystem.WriteByte(0x07, countLow);
+        dependencyInjection.Machine.DmaSystem.WriteByte(0x07, 0);
+        dependencyInjection.Machine.DmaSystem.WriteByte(0x82, 0);
+    }
 
     [Fact]
     public void ResetThenStartWithDacEnabled_EnablesMixerChannel() {
@@ -150,15 +162,10 @@ public sealed class GravisUltraSoundTests {
         dependencyInjection.Machine.Memory[1] = 0x22;
         dependencyInjection.Machine.Memory[2] = 0x33;
         dependencyInjection.Machine.Memory[3] = 0x44;
-        dependencyInjection.Machine.DmaSystem.WriteByte(0x0C, 0);
-        dependencyInjection.Machine.DmaSystem.WriteByte(0x06, 0);
-        dependencyInjection.Machine.DmaSystem.WriteByte(0x06, 0);
-        dependencyInjection.Machine.DmaSystem.WriteByte(0x07, 0x03);
-        dependencyInjection.Machine.DmaSystem.WriteByte(0x07, 0);
-        dependencyInjection.Machine.DmaSystem.WriteByte(0x82, 0);
+        ProgramDmaChannel3(dependencyInjection, 0x03);
 
         gus.WriteByte(GusRegisterSelectPort, DmaAddressRegister);
-        gus.WriteWord(0x344, 0);
+        gus.WriteWord(GusDataWordPort, 0);
         gus.WriteByte(GusRegisterSelectPort, DmaControlRegister);
         gus.WriteByte(GusRegisterDataHighPort, 0x01);
         dependencyInjection.Machine.DmaSystem.WriteByte(0x0A, 0x03);
@@ -211,6 +218,130 @@ public sealed class GravisUltraSoundTests {
         // Assert
         gus.Voices[3].WaveRate.Should().Be(0x1234);
         gus.Voices[0].WaveRate.Should().Be(0);
+    }
+
+    [Fact]
+    public void Reset_DeassertsAnAlreadyRaisedIrq() {
+        // Arrange
+        using Spice86Creator creator = new("add", enableGus: true);
+        using Spice86DependencyInjection dependencyInjection = creator.Create();
+        GravisUltraSound gus = dependencyInjection.Machine.GravisUltraSound
+            ?? throw new InvalidOperationException("GUS was explicitly enabled for this scenario.");
+        DualPic dualPic = dependencyInjection.Machine.DualPic;
+        dualPic.SetIrqMask(GusIrq, false);
+        gus.WriteByte(GusRegisterSelectPort, TimerControlRegister);
+        gus.WriteByte(GusRegisterDataHighPort, 0x04);
+        gus.WriteByte(GusTimerControlPort, 0x01);
+        dependencyInjection.Machine.CpuState.Cycles += 100;
+        dependencyInjection.Machine.EmulationLoopScheduler.ProcessEvents();
+        byte raisedRequests = dualPic.GetPicSnapshot(DualPic.PicController.Primary).InterruptRequestRegister;
+
+        // Act
+        gus.WriteByte(GusRegisterSelectPort, ResetRegister);
+        gus.WriteByte(GusRegisterDataHighPort, 0);
+
+        // Assert
+        (raisedRequests & (1 << GusIrq)).Should().Be(1 << GusIrq);
+        byte requestsAfterReset = dualPic.GetPicSnapshot(DualPic.PicController.Primary).InterruptRequestRegister;
+        (requestsAfterReset & (1 << GusIrq)).Should().Be(0);
+    }
+
+    [Fact]
+    public void StoppedTimer_DoesNotExpireFromAnAlreadyQueuedEvent() {
+        // Arrange
+        using Spice86Creator creator = new("add", enableGus: true);
+        using Spice86DependencyInjection dependencyInjection = creator.Create();
+        GravisUltraSound gus = dependencyInjection.Machine.GravisUltraSound
+            ?? throw new InvalidOperationException("GUS was explicitly enabled for this scenario.");
+        gus.WriteByte(GusRegisterSelectPort, TimerControlRegister);
+        gus.WriteByte(GusRegisterDataHighPort, 0x04);
+        gus.WriteByte(GusTimerControlPort, 0x80);
+        gus.WriteByte(GusTimerControlPort, 0x01);
+
+        // Act
+        gus.WriteByte(GusTimerControlPort, 0x00);
+        dependencyInjection.Machine.CpuState.Cycles += 100;
+        dependencyInjection.Machine.EmulationLoopScheduler.ProcessEvents();
+
+        // Assert
+        gus.GetTimerState(0).HasExpired.Should().BeFalse();
+        (gus.ReadByte(GusIrqStatusPort) & 0x04).Should().Be(0);
+    }
+
+    [Fact]
+    public void SamplesAre16BitDmaControl_DoesNotReportAPendingTerminalCountIrq() {
+        // Arrange
+        using Spice86Creator creator = new("add", enableGus: true);
+        using Spice86DependencyInjection dependencyInjection = creator.Create();
+        GravisUltraSound gus = dependencyInjection.Machine.GravisUltraSound
+            ?? throw new InvalidOperationException("GUS was explicitly enabled for this scenario.");
+
+        // Act
+        gus.WriteByte(GusRegisterSelectPort, DmaControlRegister);
+        gus.WriteByte(GusRegisterDataHighPort, 0x40);
+
+        // Assert
+        gus.AreDmaSamples16Bit.Should().BeTrue();
+        gus.IsDmaTerminalCountIrqPending.Should().BeFalse();
+    }
+
+    [Fact]
+    public void EnabledDma_WrapsAroundTheEndOfGusDram() {
+        // Arrange
+        using Spice86Creator creator = new("add", enableGus: true);
+        using Spice86DependencyInjection dependencyInjection = creator.Create();
+        GravisUltraSound gus = dependencyInjection.Machine.GravisUltraSound
+            ?? throw new InvalidOperationException("GUS was explicitly enabled for this scenario.");
+        const int transferLength = 32;
+        for (int i = 0; i < transferLength; i++) {
+            dependencyInjection.Machine.Memory[(uint)i] = (byte)(i + 1);
+        }
+        ProgramDmaChannel3(dependencyInjection, transferLength - 1);
+
+        // The transfer starts in the last paragraph of the 1 MiB DRAM, so it wraps to address zero.
+        const ushort lastParagraph = 0xFFFF;
+        gus.WriteByte(GusRegisterSelectPort, DmaAddressRegister);
+        gus.WriteWord(GusDataWordPort, lastParagraph);
+        gus.WriteByte(GusRegisterSelectPort, DmaControlRegister);
+        gus.WriteByte(GusRegisterDataHighPort, 0x01);
+        dependencyInjection.Machine.DmaSystem.WriteByte(0x0A, 0x03);
+
+        // Act
+        dependencyInjection.Machine.CpuState.Cycles += 1_000;
+        dependencyInjection.Machine.EmulationLoopScheduler.ProcessEvents();
+
+        // Assert
+        for (int i = 0; i < transferLength; i++) {
+            gus.PeekDramByte(0xFFFF0 + i).Should().Be((byte)(i + 1));
+        }
+    }
+
+    [Fact]
+    public void DisabledWaveAndVolumeControls_SkipVoiceRenderingWhenTheirDisabledBitsDiffer() {
+        // Arrange
+        using Spice86Creator creator = new("add", enableGus: true);
+        using Spice86DependencyInjection dependencyInjection = creator.Create();
+        GravisUltraSound gus = dependencyInjection.Machine.GravisUltraSound
+            ?? throw new InvalidOperationException("GUS was explicitly enabled for this scenario.");
+        gus.WriteByte(GusRegisterSelectPort, ResetRegister);
+        gus.WriteByte(GusRegisterDataHighPort, RunningWithDacEnabled);
+        gus.WriteByte(GusRegisterSelectPort, 0x0E);
+        gus.WriteByte(GusRegisterDataHighPort, 13);
+        GusVoice voice = gus.Voices[0];
+        voice.WaveStart = 0;
+        voice.WaveEnd = 100_000;
+        voice.WavePos = 0;
+        voice.WaveInc = 512;
+        voice.WaveState = 0x01;
+        voice.VolPos = GravisUltraSound.VolumeIncScalar * (GravisUltraSound.VolLevels - 1);
+        voice.VolState = 0x02;
+
+        // Act
+        dependencyInjection.Machine.CpuState.Cycles += 1_000;
+        dependencyInjection.Machine.EmulationLoopScheduler.ProcessEvents();
+
+        // Assert
+        voice.VolPos.Should().Be(GravisUltraSound.VolumeIncScalar * (GravisUltraSound.VolLevels - 1));
     }
 
     [Fact]

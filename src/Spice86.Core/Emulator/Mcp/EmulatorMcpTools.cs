@@ -1031,7 +1031,7 @@ internal sealed class EmulatorMcpTools {
                     DmaAddressRegister = gus.DmaAddressRegister,
                     DmaAddressNibble = gus.DmaAddressNibble,
                     DramOffset = gus.DmaDramOffset,
-                    TerminalCountIrqPending = ((GusDmaControl)gus.DmaControlRegister & GusDmaControl.Samples16Bit) != 0
+                    TerminalCountIrqPending = gus.IsDmaTerminalCountIrqPending
                 };
             }
         });

@@ -301,9 +301,9 @@ Also, while in Seer, set Settings/Configuration/Assembly/Disassembly Mode to
 | Gravis Ultrasound | ✅ Full | Ported from DOSBox Staging |
 | General MIDI | ✅ Full | Supported |
 
-Gravis UltraSound emulation is enabled by default. The default card is configured as
-`ULTRASND=240,3,3,5,5`; override it with `--GusBase`, `--GusDma`, and `--GusIrq`, or
-disable the card with `--GusEnable false`. Spice86 exports `ULTRASND` and `ULTRADIR` to
+Gravis UltraSound emulation is disabled by default; enable it with `--GusEnable true`.
+The default card is then configured as `ULTRASND=240,3,3,5,5`; override it with
+`--GusBase`, `--GusDma`, and `--GusIrq`. Spice86 exports `ULTRASND` and `ULTRADIR` to
 the DOS environment. To use real GUS drivers and MIDI patch sets, place the driver files
 and the `MIDI` patch directory under the host folder mounted with `--CDrive`, then set
 `--GusUltradir` to their DOS-visible path (default: `C:\ULTRASND`).
