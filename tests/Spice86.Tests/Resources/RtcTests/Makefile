@@ -17,7 +17,7 @@ ASM = nasm
 ASMFLAGS = -f bin
 
 # Source files
-SOURCES = cmos_ports.asm bios_int1a.asm dos_int21h.asm bios_int15h_83h.asm bios_int70_wait.asm
+SOURCES = cmos_ports.asm bios_int1a.asm dos_int21h.asm bios_int15h_83h.asm bios_int70_wait.asm bios_timer_hook_registers.asm
 
 # Target files
 TARGETS = $(SOURCES:.asm=.com)

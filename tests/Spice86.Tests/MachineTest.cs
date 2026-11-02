@@ -872,24 +872,32 @@ public class MachineTest {
 
         // Inside INT8 handler exact layout:
         // [0] callback at IVT[8] (4 bytes)
-        // [3] INT 1C (2 bytes)
-        // [5] EOI callback (4 bytes)
-        // [8] IRET (1 byte)
+        // [4] PUSH DS, PUSH AX, PUSH DX (3 bytes)
+        // [7] INT 1C (2 bytes)
+        // [9] EOI callback (4 bytes)
+        // [13] POP DX, POP AX, POP DS (3 bytes)
+        // [16] IRET (1 byte)
 
-        SegmentedAddress addrInt1C = int8HandlerEntry.Address + 4;
+        SegmentedAddress addrPushDs = int8HandlerEntry.Address + 4;
+        SegmentedAddress addrInt1C = addrPushDs + 3;
         SegmentedAddress addrEoiCallback = addrInt1C + 2;
-        SegmentedAddress addrIret8 = addrEoiCallback + 4;
+        SegmentedAddress addrPopDx = addrEoiCallback + 4;
+        SegmentedAddress addrIret8 = addrPopDx + 3;
 
+        CfgInstruction? pushDs = currentInstructions.GetAtAddress(addrPushDs);
         CfgInstruction? intNode1C = currentInstructions.GetAtAddress(addrInt1C);
         CfgInstruction? eoiCallback = currentInstructions.GetAtAddress(addrEoiCallback);
+        CfgInstruction? popDx = currentInstructions.GetAtAddress(addrPopDx);
         CfgInstruction? iret8 = currentInstructions.GetAtAddress(addrIret8);
 
+        Assert.NotNull(pushDs);
         Assert.NotNull(intNode1C);
         Assert.NotNull(eoiCallback);
+        Assert.NotNull(popDx);
         Assert.NotNull(iret8);
 
-        // B) Callback (tick++) must fall through to INT 1C node only
-        int8HandlerEntry.Successors.Should().BeEquivalentTo([intNode1C]);
+        // B) Callback (tick++) must fall through to the register saves only
+        int8HandlerEntry.Successors.Should().BeEquivalentTo([pushDs]);
 
         // C) INT 1C node must have exactly two successors:
         //    - INT 1C handler entry (invoke)
@@ -899,8 +907,8 @@ public class MachineTest {
         // D) INT 1C handler (IRET-only) must return to EOI callback only
         int1CHandlerEntry.Successors.Should().BeEquivalentTo([eoiCallback]);
 
-        // E) EOI callback must fall through to IRET of INT8 handler only
-        eoiCallback.Successors.Should().BeEquivalentTo([iret8]);
+        // E) EOI callback must fall through to the register restores only
+        eoiCallback.Successors.Should().BeEquivalentTo([popDx]);
 
         // F) INT8 IRET must return to post-INT8 instruction only
         iret8.Successors.Should().BeEquivalentTo([postInt8]);

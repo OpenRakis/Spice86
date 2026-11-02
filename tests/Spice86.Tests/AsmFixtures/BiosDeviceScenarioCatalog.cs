@@ -42,7 +42,8 @@ internal static class BiosDeviceScenarioCatalog {
         RtcProgram("bios_int1a.com", 0x06, RtcMaxCycles),
         RtcProgram("dos_int21h.com", 0x0B, RtcMaxCycles),
         RtcProgram("bios_int15h_83h.com", 0x05, RtcMaxCycles),
-        RtcProgram("bios_int70_wait.com", 0x07, RtcWaitMaxCycles)
+        RtcProgram("bios_int70_wait.com", 0x07, RtcWaitMaxCycles),
+        RtcProgram("bios_timer_hook_registers.com", 0x02, RtcMaxCycles)
     ];
 
     /// <summary>VGA BIOS programs: the scroll-up that must clear every column of the vacated row,
