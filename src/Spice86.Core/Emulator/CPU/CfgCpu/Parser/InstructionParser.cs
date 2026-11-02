@@ -352,8 +352,8 @@ public class InstructionParser {
         _handlers[0xD7] = _xlatParser.Parse;
 
         // FPU escapes (0xD8-0xDF): only D9, DB, DD have partial support
-        _handlers[0xD9] = ctx => _fpuParser.ParseFpuStoreWordGroup7(ctx, 0x37F, InstructionOperation.FNSTCW);
-        _handlers[0xDB] = _fpuParser.ParseFnInitModRmE3;
+        _handlers[0xD9] = _fpuParser.ParseControlWord;
+        _handlers[0xDB] = _fpuParser.ParseControl;
         _handlers[0xDD] = ctx => _fpuParser.ParseFpuStoreWordGroup7(ctx, 0xFF, InstructionOperation.FNSTSW);
 
         // LOOP/JCXZ + IN/OUT imm

@@ -1,0 +1,65 @@
+F000:0000 cli
+F000:0001 mov AX,0x1000
+F000:0004 mov DS,AX
+F000:0006 mov SS,AX
+F000:0008 mov SP,0xFFFE
+F000:000B fninit
+F000:000D mov CX,0x0014
+F000:0010 loop 0x0010
+F000:0012 fnstcw word ptr DS:[0x0100]
+F000:0016 mov CX,0x000A
+F000:0019 loop 0x0019
+F000:001B xor BX,BX
+F000:001D mov AX,word ptr DS:[0x0100]
+F000:0020 and AH,0x0F
+F000:0023 cmp AH,3
+F000:0026 jne near 0x00C4
+F000:002A fwait
+F000:002B fnstcw word ptr DS:[0x0100]
+F000:002F inc BX
+F000:0030 fwait
+F000:0031 and byte ptr DS:[0x0100],0x7F
+F000:0036 fldcw word ptr DS:[0x0100]
+F000:003A fwait
+F000:003B fndisi
+F000:003D fwait
+F000:003E fnstcw word ptr DS:[0x0100]
+F000:0042 fwait
+F000:0043 test byte ptr DS:[0x0100],0x80
+F000:0048 je short 0x00C4
+F000:004A mov word ptr DS:[0x0100],0x0B7F
+F000:0050 mov word ptr DS:[0x0104],0xA55A
+F000:0056 fldcw word ptr DS:[0x0100]
+F000:005B fnstcw word ptr DS:[0x0102]
+F000:0060 cmp word ptr DS:[0x0102],0x0B7F
+F000:0066 jne short 0x00C4
+F000:0068 cmp word ptr DS:[0x0104],0xA55A
+F000:006E jne short 0x00C4
+F000:0070 fndisi
+F000:0072 fnstcw word ptr DS:[0x0102]
+F000:0076 cmp word ptr DS:[0x0102],0x0BFF
+F000:007C jne short 0x00C4
+F000:007E mov AX,0x2000
+F000:0081 mov ES,AX
+F000:0083 mov EDI,0x00000100
+F000:0089 mov word ptr ES:[DI],0x077F
+F000:008E fldcw word ptr ES:[EDI]
+F000:0092 fnstcw word ptr DS:[0x0102]
+F000:0096 cmp word ptr DS:[0x0102],0x077F
+F000:009C jne short 0x00C4
+F000:009E fninit
+F000:00A0 fnstcw word ptr DS:[0x0102]
+F000:00A4 cmp word ptr DS:[0x0102],0x03FF
+F000:00AA jne short 0x00C4
+F000:00AC fldcw word ptr DS:[0x0100]
+F000:00B0 fwait
+F000:00B1 fninit
+F000:00B3 fwait
+F000:00B4 fnstcw word ptr DS:[0x0102]
+F000:00B8 cmp word ptr DS:[0x0102],0x03FF
+F000:00BE jne short 0x00C4
+F000:00C0 mov AX,0x600D
+F000:00C3 hlt
+F000:00C4 mov AX,0x0BAD
+F000:00C7 hlt
+F000:FFF0 jmp near 0

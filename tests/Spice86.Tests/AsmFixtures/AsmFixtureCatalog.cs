@@ -14,6 +14,14 @@ using Spice86.Core.CLI;
 
 /// <summary>One method per fixture scenario. Every call returns a new fixture, so per-run state stays private.</summary>
 internal static class AsmFixtureCatalog {
+    /// <summary>Runs 8087 startup detection and control-word load, store and reset checks.</summary>
+    public static AsmFixture FpuInit() {
+        return ResultFixture(new AsmRunSettings { BinName = "fpuinit", MaxCycles = 1000 }, result => {
+            result.State.AX.Should().Be(0x600D);
+            result.State.BX.Should().Be(1);
+        });
+    }
+
     /// <summary>Runs byte-string and word writes to mapped ROM without changing its contents.</summary>
     public static AsmFixture RomWrite() {
         byte[] originalRom = [];

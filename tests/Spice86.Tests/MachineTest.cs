@@ -33,6 +33,12 @@ using Xunit;
 public class MachineTest {
     public static IEnumerable<object[]> JitModes => [[JitMode.InterpretedOnly], [JitMode.CompiledOnly]];
 
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestFpuInit(JitMode jitMode) {
+        TestOneBin(AsmFixtureCatalog.FpuInit(), jitMode);
+    }
+
     public static IEnumerable<object[]> CfgPartitioningGraphFixtures => [
         ["partition_jump_into_function_middle"],
         ["partition_shared_tail"],

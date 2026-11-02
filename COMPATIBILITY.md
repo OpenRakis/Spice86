@@ -6,6 +6,10 @@ If it crashes, this is mainly because:
 - Some of DOS kernel interrupts might not implemented.
 - Some BIOS features might not implemented.
 
+FPU support is limited to 8087-compatible control-word initialization (FINIT/FNINIT,
+FLDCW, FSTCW/FNSTCW, FDISI/FNDISI and FWAIT) and status-word storage.
+Floating-point arithmetic is not implemented.
+
 Here is a list of old games I tested with what worked and what didn't:
 
 | Program | State | Comment | Update date |
