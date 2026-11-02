@@ -419,6 +419,8 @@ public sealed class GravisUltraSound : DefaultIOPortHandler, IRequestInterrupt, 
     /// <summary>Pending IRQ status bits, also returned by the non-destructive status port read.</summary>
     public byte IrqStatusRegister => _irqStatus;
 
+    internal int PendingCycleAccurateFrameCount => _fifo.Count;
+
     /// <summary>Timer/AdLib status bits, as reported by a port 0x248 read.</summary>
     public byte TimerStatusRegister => GetTimerStatus();
 

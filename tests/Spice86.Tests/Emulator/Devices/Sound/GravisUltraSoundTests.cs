@@ -2,6 +2,7 @@ namespace Spice86.Tests.Emulator.Devices.Sound;
 
 using FluentAssertions;
 
+using Spice86.Audio.Common;
 using Spice86.Audio.Filters;
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
@@ -41,12 +42,12 @@ public sealed class GravisUltraSoundTests {
         gus.WriteWord(GusDataWordPort, value);
     }
 
-    private static void ProgramDmaChannel5(Spice86DependencyInjection dependencyInjection) {
+    private static void ProgramDmaChannel5(Spice86DependencyInjection dependencyInjection, ushort count) {
         dependencyInjection.Machine.DmaSystem.WriteByte(0xD8, 0);
         dependencyInjection.Machine.DmaSystem.WriteByte(0xC4, 0);
         dependencyInjection.Machine.DmaSystem.WriteByte(0xC4, 0);
-        dependencyInjection.Machine.DmaSystem.WriteByte(0xC6, 0);
-        dependencyInjection.Machine.DmaSystem.WriteByte(0xC6, 0);
+        dependencyInjection.Machine.DmaSystem.WriteByte(0xC6, (byte)count);
+        dependencyInjection.Machine.DmaSystem.WriteByte(0xC6, (byte)(count >> 8));
         dependencyInjection.Machine.DmaSystem.WriteByte(0x8B, 0);
         dependencyInjection.Machine.DmaSystem.WriteByte(0xD6, 0x45);
     }
@@ -526,6 +527,57 @@ public sealed class GravisUltraSoundTests {
     }
 
     [Fact]
+    public void EnabledDma_16BitDmaUsesTheSameMaximumChunkSizeInBytes() {
+        // Arrange
+        using Spice86Creator creator = new("add", enableGus: true);
+        using Spice86DependencyInjection dependencyInjection = creator.Create();
+        GravisUltraSound gus = dependencyInjection.Machine.GravisUltraSound
+            ?? throw new InvalidOperationException("GUS was explicitly enabled for this scenario.");
+        const int transferLengthBytes = 16 * 1024;
+        for (int i = 0; i < transferLengthBytes; i++) {
+            dependencyInjection.Machine.Memory[(uint)i] = (byte)i;
+        }
+        gus.WriteByte(GusMixControlPort, 0);
+        gus.WriteByte(0x24B, 0x03);
+        ProgramDmaChannel5(dependencyInjection, (ushort)(transferLengthBytes / 2 - 1));
+        WriteGusRegister(gus, DmaAddressRegister, 0);
+        WriteGusRegister(gus, DmaControlRegister, 0x0500);
+        dependencyInjection.Machine.DmaSystem.WriteByte(0xD4, 0x01);
+
+        // Act
+        dependencyInjection.Machine.CpuState.Cycles += 82;
+        dependencyInjection.Machine.EmulationLoopScheduler.ProcessEvents();
+
+        // Assert
+        gus.DmaDramOffset.Should().Be(8 * 1024);
+        gus.PeekDramByte(8 * 1024 - 1).Should().Be(0xFF);
+        gus.PeekDramByte(8 * 1024).Should().Be(0);
+    }
+
+    [Fact]
+    public void PicCallback_DropsCycleAccurateFramesWhenOutputQueueIsFull() {
+        // Arrange
+        using Spice86Creator creator = new("add", enableGus: true);
+        using Spice86DependencyInjection dependencyInjection = creator.Create();
+        GravisUltraSound gus = dependencyInjection.Machine.GravisUltraSound
+            ?? throw new InvalidOperationException("GUS was explicitly enabled for this scenario.");
+        WriteGusRegister(gus, ResetRegister, (ushort)(RunningWithDacEnabled << 8));
+        gus.OutputQueue.Resize(1);
+        AudioFrame[] queuedFrame = [new AudioFrame(1.0f, 1.0f)];
+        gus.OutputQueue.NonblockingBulkEnqueue(queuedFrame, queuedFrame.Length).Should().Be(1);
+        gus.WriteByte(GusMixControlPort, 0x0B);
+
+        // Act
+        dependencyInjection.Machine.CpuState.Cycles += 3_000;
+        gus.WriteByte(GusMixControlPort, 0x0B);
+        gus.PendingCycleAccurateFrameCount.Should().BeGreaterThan(0);
+        dependencyInjection.Machine.EmulationLoopScheduler.ProcessEvents();
+
+        // Assert
+        gus.PendingCycleAccurateFrameCount.Should().Be(0);
+    }
+
+    [Fact]
     public void EnabledDma_16BitDmaAddressRetainsByteUnitsInItsLowNibble() {
         // Arrange
         using Spice86Creator creator = new("add", enableGus: true);
@@ -534,9 +586,9 @@ public sealed class GravisUltraSoundTests {
             ?? throw new InvalidOperationException("GUS was explicitly enabled for this scenario.");
         dependencyInjection.Machine.Memory[0] = 0x12;
         dependencyInjection.Machine.Memory[1] = 0x34;
-        ProgramDmaChannel5(dependencyInjection);
         gus.WriteByte(GusMixControlPort, 0);
         gus.WriteByte(0x24B, 0x03);
+        ProgramDmaChannel5(dependencyInjection, 0);
         WriteGusRegister(gus, DmaAddressRegister, 0);
         WriteGusRegister(gus, DmaControlRegister, 0x0500);
         dependencyInjection.Machine.DmaSystem.WriteByte(0xD4, 0x01);

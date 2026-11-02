@@ -47,7 +47,7 @@ public sealed class Spice86Creator : IDisposable {
             0x170, settings.SbType, settings.OplMode, 0x220, 7, 1, 5,
             settings.ExeArgs, settings.InstructionTimeScale, jitMode, false, null, false,
             settings.EnableSpeculativeCfgExploration, settings.RenderingMode, settings.AsmHandlersSegment,
-            false) {
+            settings.EnableGus) {
         EnableUmb = settings.EnableUmb;
     }
 
