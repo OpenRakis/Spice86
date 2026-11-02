@@ -1,0 +1,275 @@
+// ==== file: CfgGeneratedOverrideSupplier.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+
+// ==== file: CfgGeneratedOverrides.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort biosSegment;
+
+    private static readonly byte?[] Signature_00C4_mov = [0xB8, 0xAD, 0x0B];
+    private static readonly byte?[] Signature_00C7_hlt = [0xF4];
+
+    private static readonly byte?[][] SpeculativeRun_00C4 = [Signature_00C4_mov, Signature_00C7_hlt];
+
+    private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
+
+    protected readonly Segment1000Globals Segment1000Globals;
+    protected readonly Segment2000Globals Segment2000Globals;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        biosSegment = 0xF000;
+        Segment1000Globals = new Segment1000Globals(Memory, programStartSegment);
+        Segment2000Globals = new Segment2000Globals(Memory, programStartSegment);
+
+        unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
+    }
+
+}
+
+// ==== file: CfgGeneratedOverrides.F000.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: none. Does not return.</summary>
+    public virtual Action unknown_F000_FFF0_FFFF0() {
+        byte flagOperand_0043 = 0;
+        ushort flagOperand_0060 = 0;
+        ushort flagOperand_0068 = 0;
+        ushort flagOperand_0076 = 0;
+        ushort flagOperand_0096 = 0;
+        ushort flagOperand_00A4 = 0;
+        ushort flagOperand_00B8 = 0;
+        CheckExternalEvents(biosSegment, 0xFFF0);
+        // F000:FFF0 jmp near 0
+        // F000:0000 cli
+        InterruptFlag = false;
+        // F000:0001 mov AX,0x1000
+        // F000:0004 mov DS,AX
+        DS = 0x1000;
+        // F000:0006 mov SS,AX
+        SS = 0x1000;
+        // F000:0008 mov SP,0xFFFE
+        SP = 0xFFFE;
+        // F000:000B fninit
+        State.InitializeFpu();
+        // F000:000D mov CX,0x0014
+        CX = 0x0014;
+        do {
+            CheckExternalEvents(biosSegment, 0x0010);
+            // F000:0010 loop 0x0010
+            CX--;
+        } while (CX != 0);
+        // F000:0012 fnstcw word ptr DS:[0x0100]
+        Segment1000Globals.Word0100 = State.GetFpuControlWord();
+        // F000:0016 mov CX,0x000A
+        CX = 0x000A;
+        do {
+            CheckExternalEvents(biosSegment, 0x0019);
+            // F000:0019 loop 0x0019
+            CX--;
+        } while (CX != 0);
+        // F000:001B xor BX,BX
+        BX = 0;
+        // F000:001D mov AX,word ptr DS:[0x0100]
+        AX = Segment1000Globals.Word0100;
+        // F000:0020 and AH,0x0F
+        AH &= 0x0F;
+        // F000:0023 cmp AH,3
+        Alu8.Sub(AH, 3);
+        // F000:0026 jne near 0x00C4
+        if (AH == 3) {
+            // F000:002A fwait
+            // F000:002B fnstcw word ptr DS:[0x0100]
+            Segment1000Globals.Word0100 = State.GetFpuControlWord();
+            // F000:002F inc BX
+            BX = 1;
+            // F000:0030 fwait
+            // F000:0031 and byte ptr DS:[0x0100],0x7F
+            Segment1000Globals.Byte0100 &= 0x7F;
+            // F000:0036 fldcw word ptr DS:[0x0100]
+            State.SetFpuControlWord(Segment1000Globals.Word0100);
+            // F000:003A fwait
+            // F000:003B fndisi
+            State.DisableFpuInterrupts();
+            // F000:003D fwait
+            // F000:003E fnstcw word ptr DS:[0x0100]
+            Segment1000Globals.Word0100 = State.GetFpuControlWord();
+            // F000:0042 fwait
+            // F000:0043 test byte ptr DS:[0x0100],0x80
+            flagOperand_0043 = Segment1000Globals.Byte0100;
+            Alu8.And(flagOperand_0043, 0x80);
+            // F000:0048 je short 0x00C4
+            if ((flagOperand_0043 & 0x80) != 0) {
+                // F000:004A mov word ptr DS:[0x0100],0x0B7F
+                Segment1000Globals.Word0100 = 0x0B7F;
+                // F000:0050 mov word ptr DS:[0x0104],0xA55A
+                Segment1000Globals.Word0104 = 0xA55A;
+                // F000:0056 fldcw word ptr DS:[0x0100]
+                State.SetFpuControlWord(0x0B7F);
+                // F000:005B fnstcw word ptr DS:[0x0102]
+                Segment1000Globals.Word0102 = State.GetFpuControlWord();
+                // F000:0060 cmp word ptr DS:[0x0102],0x0B7F
+                flagOperand_0060 = Segment1000Globals.Word0102;
+                Alu16.Sub(flagOperand_0060, 0x0B7F);
+                // F000:0066 jne short 0x00C4
+                if (flagOperand_0060 == 0x0B7F) {
+                    // F000:0068 cmp word ptr DS:[0x0104],0xA55A
+                    flagOperand_0068 = Segment1000Globals.Word0104;
+                    Alu16.Sub(flagOperand_0068, 0xA55A);
+                    // F000:006E jne short 0x00C4
+                    if (flagOperand_0068 == 0xA55A) {
+                        // F000:0070 fndisi
+                        State.DisableFpuInterrupts();
+                        // F000:0072 fnstcw word ptr DS:[0x0102]
+                        Segment1000Globals.Word0102 = State.GetFpuControlWord();
+                        // F000:0076 cmp word ptr DS:[0x0102],0x0BFF
+                        flagOperand_0076 = Segment1000Globals.Word0102;
+                        Alu16.Sub(flagOperand_0076, 0x0BFF);
+                        // F000:007C jne short 0x00C4
+                        if (flagOperand_0076 != 0x0BFF) {
+                            goto L_00C4;
+                        }
+                        // F000:007E mov AX,0x2000
+                        AX = 0x2000;
+                        // F000:0081 mov ES,AX
+                        ES = 0x2000;
+                        // F000:0083 mov EDI,0x00000100
+                        EDI = 0x00000100;
+                        // F000:0089 mov word ptr ES:[DI],0x077F
+                        Segment2000Globals.Word0100 = 0x077F;
+                        // F000:008E fldcw word ptr ES:[EDI]
+                        State.SetFpuControlWord(Segment2000Globals.Word0100);
+                        // F000:0092 fnstcw word ptr DS:[0x0102]
+                        Segment1000Globals.Word0102 = State.GetFpuControlWord();
+                        // F000:0096 cmp word ptr DS:[0x0102],0x077F
+                        flagOperand_0096 = Segment1000Globals.Word0102;
+                        Alu16.Sub(flagOperand_0096, 0x077F);
+                        // F000:009C jne short 0x00C4
+                        if (flagOperand_0096 != 0x077F) {
+                            goto L_00C4;
+                        }
+                        // F000:009E fninit
+                        State.InitializeFpu();
+                        // F000:00A0 fnstcw word ptr DS:[0x0102]
+                        Segment1000Globals.Word0102 = State.GetFpuControlWord();
+                        // F000:00A4 cmp word ptr DS:[0x0102],0x03FF
+                        flagOperand_00A4 = Segment1000Globals.Word0102;
+                        Alu16.Sub(flagOperand_00A4, 0x03FF);
+                        // F000:00AA jne short 0x00C4
+                        if (flagOperand_00A4 != 0x03FF) {
+                            goto L_00C4;
+                        }
+                        // F000:00AC fldcw word ptr DS:[0x0100]
+                        State.SetFpuControlWord(Segment1000Globals.Word0100);
+                        // F000:00B0 fwait
+                        // F000:00B1 fninit
+                        State.InitializeFpu();
+                        // F000:00B3 fwait
+                        // F000:00B4 fnstcw word ptr DS:[0x0102]
+                        Segment1000Globals.Word0102 = State.GetFpuControlWord();
+                        // F000:00B8 cmp word ptr DS:[0x0102],0x03FF
+                        flagOperand_00B8 = Segment1000Globals.Word0102;
+                        Alu16.Sub(flagOperand_00B8, 0x03FF);
+                        // F000:00BE jne short 0x00C4
+                        if (flagOperand_00B8 == 0x03FF) {
+                            // F000:00C0 mov AX,0x600D
+                            AX = 0x600D;
+                            // F000:00C3 hlt
+                            return Hlt();
+                        }
+                    }
+                }
+            }
+        }
+    L_00C4:
+        VerifySpeculativeRunOrFail(biosSegment, 0x00C4, SpeculativeRun_00C4);
+        // F000:00C4 mov AX,0x0BAD
+        AX = 0x0BAD;
+        // F000:00C7 hlt
+        return Hlt();
+    }
+
+}
+
+// ==== file: Segment1000Globals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class Segment1000Globals : MemoryBasedDataStructure {
+    private readonly IMemory _memory;
+    private readonly ushort Segment;
+
+    public Segment1000Globals(IMemory memory, ushort programStartSegment) : base(memory, 0x10000) {
+        _memory = memory;
+        Segment = 0x1000;
+    }
+
+    public byte Byte0100 { get => _memory.UInt8[Segment, 0x0100]; set => _memory.UInt8[Segment, 0x0100] = value; }
+
+    public ushort Word0100 { get => _memory.UInt16[Segment, 0x0100]; set => _memory.UInt16[Segment, 0x0100] = value; }
+
+    public ushort Word0102 { get => _memory.UInt16[Segment, 0x0102]; set => _memory.UInt16[Segment, 0x0102] = value; }
+
+    public ushort Word0104 { get => _memory.UInt16[Segment, 0x0104]; set => _memory.UInt16[Segment, 0x0104] = value; }
+}
+
+// ==== file: Segment2000Globals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class Segment2000Globals : MemoryBasedDataStructure {
+    private readonly IMemory _memory;
+    private readonly ushort Segment;
+
+    public Segment2000Globals(IMemory memory, ushort programStartSegment) : base(memory, 0x20000) {
+        _memory = memory;
+        Segment = 0x2000;
+    }
+
+    public ushort Word0100 { get => _memory.UInt16[Segment, 0x0100]; set => _memory.UInt16[Segment, 0x0100] = value; }
+}

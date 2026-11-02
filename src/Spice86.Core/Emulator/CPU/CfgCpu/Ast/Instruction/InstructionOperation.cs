@@ -38,6 +38,8 @@ public enum InstructionOperation {
     DIV,
     ENTER,
     ENTERW,
+    FLDCW,
+    FNDISI,
     FNINIT,
     FNSTCW,
     FNSTSW,
