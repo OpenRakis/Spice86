@@ -27,10 +27,4 @@ internal sealed class AsmFixture {
 
     /// <summary>Extra program-result checks. May be <see cref="NoResultAssertion"/>.</summary>
     public Action<AsmFixtureResult> AssertResult { get; }
-
-    /// <summary>
-    /// Name part that tells this fixture's <c>MachineTest</c> goldens apart from the goldens of another fixture
-    /// of the same bin. Empty for the default fixture of a bin.
-    /// </summary>
-    public string MachineGoldenVariant { get; init; } = "";
 }

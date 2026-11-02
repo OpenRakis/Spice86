@@ -31,8 +31,8 @@ public class Grp45Parser : BaseGrpOperationParser {
 
     private CfgInstruction ParseGrp4(ParsingContext context, ModRmContext modRmContext, int groupIndex) {
         return groupIndex switch {
-            0 => ParseIncDec(context, modRmContext, BitWidth.BYTE_8, "Inc", InstructionOperation.INC),
-            1 => ParseIncDec(context, modRmContext, BitWidth.BYTE_8, "Dec", InstructionOperation.DEC),
+            0 => ParseIncDec(context, modRmContext, BitWidth.BYTE_8, AluOperation.Inc, InstructionOperation.INC),
+            1 => ParseIncDec(context, modRmContext, BitWidth.BYTE_8, AluOperation.Dec, InstructionOperation.DEC),
             7 => ParseCallback(context, modRmContext),
             _ => throw new InvalidGroupIndexException(_state, groupIndex)
         };
@@ -41,8 +41,8 @@ public class Grp45Parser : BaseGrpOperationParser {
     private CfgInstruction ParseGrp5(ParsingContext context, ModRmContext modRmContext, int groupIndex) {
         BitWidth bitWidth = context.DefaultWordOperandBitWidth;
         return groupIndex switch {
-            0 => ParseIncDec(context, modRmContext, bitWidth, "Inc", InstructionOperation.INC),
-            1 => ParseIncDec(context, modRmContext, bitWidth, "Dec", InstructionOperation.DEC),
+            0 => ParseIncDec(context, modRmContext, bitWidth, AluOperation.Inc, InstructionOperation.INC),
+            1 => ParseIncDec(context, modRmContext, bitWidth, AluOperation.Dec, InstructionOperation.DEC),
             2 => ParseCallNear(context, modRmContext, bitWidth),
             3 => ParseCallFar(context, modRmContext, bitWidth),
             4 => ParseJumpNear(context, modRmContext),
@@ -53,7 +53,7 @@ public class Grp45Parser : BaseGrpOperationParser {
     }
 
     private CfgInstruction ParseIncDec(ParsingContext context, ModRmContext modRmContext,
-        BitWidth bitWidth, string operation, InstructionOperation displayOp) {
+        BitWidth bitWidth, AluOperation operation, InstructionOperation displayOp) {
         DataType dataType = _astBuilder.UType(bitWidth);
         CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         RegisterModRmFields(instr, modRmContext);

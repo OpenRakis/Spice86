@@ -7,6 +7,7 @@ using Spice86.Shared.Emulator.Mouse;
 using Spice86.Shared.Interfaces;
 
 using System;
+using System.Collections.Concurrent;
 
 /// <summary>
 /// Represents a queue for handling and processing keyboard and mouse events. <br/>
@@ -20,9 +21,8 @@ using System;
 /// The <see cref="InputEventHub"/> also exposes properties and methods for interacting with mouse  coordinates and
 /// cursor visibility, delegating these operations to the underlying implementation, if available.</remarks>
 public class InputEventHub : IGuiKeyboardEvents, IGuiMouseEvents {
-    private readonly Queue<Action> _eventQueue = new();
-    // a thread-safe queue, accessed by both UI thread and emulation thread, requires a lock.
-    private readonly object _lock = new();
+    // A thread-safe queue shared by UI producers and the emulation thread.
+    private readonly ConcurrentQueue<Action> _eventQueue = new();
     private readonly IGuiMouseEvents? _mouseEvents;
     private readonly IGuiKeyboardEvents? _keyboardEvents;
 
@@ -48,18 +48,30 @@ public class InputEventHub : IGuiKeyboardEvents, IGuiMouseEvents {
     }
 
     private void Enqueue(Action action) {
-        lock (_lock) {
-            _eventQueue.Enqueue(action);
-        }
+        _eventQueue.Enqueue(action);
     }
 
     /// <summary>
     /// Thread-safe hook for non-UI producers (e.g. the MCP server) that need to
-    /// mutate emulator input state. The action is enqueued under the same lock
+    /// mutate emulator input state. The action joins the same queue
     /// as UI events and will run on the emulator thread the next time
     /// <see cref="ProcessAllPendingInputEvents"/> is pumped.
     /// </summary>
     public void PostToEmulatorThread(Action action) => Enqueue(action);
+
+    /// <summary>
+    /// Thread-safe request to release every key the keyboard device still believes is down, emitting a
+    /// proper BREAK frame for each one. Call this when the host's key state can no longer be trusted
+    /// (e.g. the window lost activation and a key-up was never delivered), so the guest does not keep a
+    /// modifier latched. The release is enqueued and runs on the emulator thread with the rest of the input.
+    /// </summary>
+    public void ReleaseAllKeys() =>
+        Enqueue(() => KeyboardDevice?.ReleaseAllKeys());
+
+    /// <summary>
+    /// The PS/2 keyboard device whose held-key state is reconciled by <see cref="ReleaseAllKeys"/>.
+    /// </summary>
+    internal PS2Keyboard? KeyboardDevice { get; set; }
 
     /// <summary>
     /// Enqueues a keyboard event to be fired on the emulator thread, following
@@ -108,13 +120,8 @@ public class InputEventHub : IGuiKeyboardEvents, IGuiMouseEvents {
         Enqueue(() => KeyDown?.Invoke(sender, e));
 
     internal void ProcessAllPendingInputEvents() {
-        if (_eventQueue.Count == 0) {
-            return;
-        }
-        lock (_lock) {
-            while (_eventQueue.TryDequeue(out Action? action)) {
-                action.Invoke();
-            }
+        while (_eventQueue.TryDequeue(out Action? action)) {
+            action.Invoke();
         }
     }
 

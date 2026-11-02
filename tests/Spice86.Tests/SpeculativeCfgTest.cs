@@ -190,7 +190,7 @@ public sealed class SpeculativeCfgTest {
     public void SpeculativeSmcGuardMidBlockSelfModificationGuardFires() {
         AsmFixture fixture = AsmFixtureCatalog.SpeculativeSmcGuard();
         GeneratedCodeMachineTestRunner runner = new();
-        GeneratedCSharpProgram generatedProgram = runner.GenerateProgramAndSource(fixture.Settings);
+        GeneratedCSharpProgram generatedProgram = runner.GenerateProgramAndSource(new AsmRunScope(fixture));
         using CompiledGeneratedOverride compiledOverride = runner.CompileGeneratedProgram(fixture.Settings, generatedProgram);
 
         // Discovery path (selector=0): no SMC on this path, runs to completion.
@@ -223,7 +223,7 @@ public sealed class SpeculativeCfgTest {
     public void SpeculativeDiscardOnDivergenceGuardFires() {
         AsmFixture fixture = AsmFixtureCatalog.SpeculativeDiscard();
         GeneratedCodeMachineTestRunner runner = new();
-        GeneratedCSharpProgram generatedProgram = runner.GenerateProgramAndSource(fixture.Settings);
+        GeneratedCSharpProgram generatedProgram = runner.GenerateProgramAndSource(new AsmRunScope(fixture));
         using CompiledGeneratedOverride compiledOverride = runner.CompileGeneratedProgram(fixture.Settings, generatedProgram);
 
         // Discovery path (selector=0): works fine
@@ -377,7 +377,7 @@ public sealed class SpeculativeCfgTest {
     public void SpeculationOffLeavesUnobservedArmUntestedAndCrashesOnThatPath() {
         AsmFixture fixture = AsmFixtureCatalog.SpeculativeBranchWithoutSpeculation();
         GeneratedCodeMachineTestRunner runner = new();
-        GeneratedCSharpProgram generatedProgram = runner.GenerateProgramAndSource(fixture.Settings);
+        GeneratedCSharpProgram generatedProgram = runner.GenerateProgramAndSource(new AsmRunScope(fixture));
         using CompiledGeneratedOverride compiledOverride = runner.CompileGeneratedProgram(fixture.Settings, generatedProgram);
 
         // Observed path (selector=0): runs to the correct result.

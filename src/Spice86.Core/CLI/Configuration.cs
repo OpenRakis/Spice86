@@ -365,6 +365,14 @@ public sealed class Configuration : CommandSettings {
     public bool AllowIvtAddress0 { get; init; }
 
     /// <summary>
+    /// When true, the JIT executes each instruction's execution AST after it went through the IR round trip
+    /// the code generator uses: lifted to IR, structured back to a CPU AST, with ALU calls expanded inline.
+    /// Meant for checking that round trip; it makes each compiled instruction bigger. False by default.
+    /// </summary>
+    [CommandOption("--JitGeneratorIr")]
+    public bool JitGeneratorIr { get; init; }
+
+    /// <summary>
     /// When true (default), the speculative CFG explorer is enabled: after each newly-observed
     /// instruction is parsed, the explorer performs a recursive-descent static decode of all
     /// statically-reachable successors that have not yet been observed, marking the resulting nodes

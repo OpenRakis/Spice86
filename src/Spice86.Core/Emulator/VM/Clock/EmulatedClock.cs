@@ -6,7 +6,6 @@ using System.Diagnostics;
 /// A real-time clock based on the system's Stopwatch, independent of CPU cycles for its progression.
 /// </summary>
 public class EmulatedClock : ClockBase {
-    private int _ticks;
     private readonly Stopwatch _stopwatch = new();
 
     public EmulatedClock(int? jitterSeed, DateTimeOffset startTime)
@@ -15,16 +14,7 @@ public class EmulatedClock : ClockBase {
     }
 
     /// <inheritdoc/>
-    public override double ElapsedTimeMs {
-        get {
-            // Stopwatch.GetTimestamp can be slow, so we only query it periodically.
-            if (_ticks++ % 100 != 0) {
-                return field;
-            }
-            field = _stopwatch.Elapsed.TotalMilliseconds + _jitter.Advance();
-            return field;
-        }
-    }
+    public override double ElapsedTimeMs => _stopwatch.Elapsed.TotalMilliseconds + _jitter.Advance();
 
     /// <inheritdoc/>
     protected override void OnPauseCore() => _stopwatch.Stop();

@@ -1636,10 +1636,7 @@ internal sealed class EmulatorMcpTools {
 
                 return new CallToolResult {
                     Content = [
-                        new ImageContentBlock {
-                            Data = pngBytes,
-                            MimeType = "image/png"
-                        }
+                        ImageContentBlock.FromBytes(pngBytes, "image/png")
                     ],
                     StructuredContent = structuredContent
                 };

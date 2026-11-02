@@ -23,7 +23,7 @@ public class StackAstBuilder {
     /// <param name="valueNode">The value to push</param>
     /// <returns>MethodCallNode representing Stack.PushN(value)</returns>
     public MethodCallNode Push(BitWidth bitWidth, ValueNode valueNode) {
-        return new MethodCallNode("Stack", $"Push{(int)bitWidth}", valueNode);
+        return new StackCallNode(StackOperation.Push, bitWidth, valueNode);
     }
 
     /// <summary>
@@ -33,13 +33,11 @@ public class StackAstBuilder {
     /// <param name="bitWidth">The bit width determining which pop to use</param>
     /// <returns>MethodCallValueNode representing the pop result</returns>
     public MethodCallValueNode Pop(BitWidth bitWidth) {
-        DataType dataType = DataType.UnsignedFromBitWidth(bitWidth);
-        return new MethodCallValueNode(dataType, "Stack", $"Pop{(int)bitWidth}");
+        return new StackCallValueNode(StackOperation.Pop, bitWidth);
     }
 
     public MethodCallValueNode Peek(BitWidth bitWidth) {
-        DataType dataType = DataType.UnsignedFromBitWidth(bitWidth);
-        return new MethodCallValueNode(dataType, "Stack", $"Peek{(int)bitWidth}", new ConstantNode(DataType.UINT32, 0));
+        return new StackCallValueNode(StackOperation.Peek, bitWidth, new ConstantNode(DataType.UINT32, 0));
     }
 
     /// <summary>
@@ -47,7 +45,7 @@ public class StackAstBuilder {
     /// </summary>
     /// <returns>MethodCallNode representing 32-bit LEAVE.</returns>
     public MethodCallNode Leave32() {
-        return new MethodCallNode("Stack", nameof(Stack.Leave32));
+        return new StackCallNode(StackOperation.Leave, BitWidth.DWORD_32);
     }
 
     /// <summary>
@@ -55,7 +53,7 @@ public class StackAstBuilder {
     /// </summary>
     /// <returns>MethodCallNode representing 16-bit LEAVE.</returns>
     public MethodCallNode Leave16() {
-        return new MethodCallNode("Stack", nameof(Stack.Leave16));
+        return new StackCallNode(StackOperation.Leave, BitWidth.WORD_16);
     }
 
     /// <summary>

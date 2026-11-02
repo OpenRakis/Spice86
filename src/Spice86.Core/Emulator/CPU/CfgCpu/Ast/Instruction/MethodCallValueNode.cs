@@ -23,10 +23,28 @@ public record MethodCallValueNode : ValueNode {
     }
 
     /// <summary>
+    /// Initializes a new instance of the MethodCallValueNode class with an existing call node. Used by the
+    /// typed call nodes that carry the call's operation and width as fields.
+    /// </summary>
+    /// <param name="dataType">The data type of the returned value.</param>
+    /// <param name="callNode">The underlying method call information.</param>
+    protected MethodCallValueNode(DataType dataType, MethodCallNode callNode)
+        : base(dataType) {
+        CallNode = callNode;
+    }
+
+    /// <summary>
     /// The underlying method call information.
     /// Contains the property path, method name, and arguments.
     /// </summary>
     public MethodCallNode CallNode { get; }
+
+    /// <summary>The same call with new arguments; typed call nodes override it to keep their subtype
+    /// and fields.</summary>
+    /// <param name="arguments">The arguments of the rebuilt call.</param>
+    /// <returns>A call node of the same type as this one.</returns>
+    public virtual MethodCallValueNode WithArguments(IVisitableAstNode[] arguments) =>
+        new(DataType, CallNode.PropertyPath, CallNode.MethodName, arguments);
 
     /// <inheritdoc />
     public override T Accept<T>(IAstVisitor<T> astVisitor) {

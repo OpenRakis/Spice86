@@ -22,12 +22,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
         cs1 = 0xF000;
 
-        DefineFunction(cs1, 0x001D, unknown_F000_001D_F001D, name: "unknown");
-        DefineFunction(cs1, 0x0023, unknown_F000_0023_F0023, name: "unknown");
-        DefineFunction(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, name: "unknown");
-        DefineFunction(cs1, 0x0029, unknown_F000_0029_F0029, name: "unknown");
-        DefineFunction(cs1, 0x002E, unknown_F000_002E_F002E, name: "unknown");
-        DefineFunction(cs1, 0x0033, unknown_F000_0033_F0033, name: "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x001D, unknown_F000_001D_F001D, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0023, unknown_F000_0023_F0023, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0029, unknown_F000_0029_F0029, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x002E, unknown_F000_002E_F002E, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0033, unknown_F000_0033_F0033, "unknown");
     }
 
     public virtual Action unknown_F000_001D_F001D(int loadOffset) {
@@ -35,7 +35,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:001D cmp AL,0
         Alu8.Sub(AL, 0);
         // F000:001F je short 0x0029
-        if (ZeroFlag) {
+        if (AL == 0) {
             return unknown_F000_0029_F0029(0x0000);
         }
         // F000:0021 jmp short 0x002E
@@ -47,7 +47,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0023 cmp AL,0
         Alu8.Sub(AL, 0);
         // F000:0025 je short 0x0029
-        if (ZeroFlag) {
+        if (AL == 0) {
             return unknown_F000_0029_F0029(0x0000);
         }
         // F000:0027 jmp short 0x002E
@@ -60,8 +60,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0000 mov AX,0x1000
         AX = 0x1000;
         // F000:0003 mov SS,AX
-        SS = AX;
-        State.InterruptShadowing = true;
+        SS = 0x1000;
         // F000:0005 mov SP,0x0100
         SP = 0x0100;
         // F000:0008 mov AL,0

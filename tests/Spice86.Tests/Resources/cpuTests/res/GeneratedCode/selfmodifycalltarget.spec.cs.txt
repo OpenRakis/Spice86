@@ -22,11 +22,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
         cs1 = 0xF000;
 
-        DefineFunction(cs1, 0x0028, unknown_23_F000_0028_F0028, name: "unknown");
-        DefineFunction(cs1, 0x0040, unknown_F000_0040_F0040, name: "unknown");
-        DefineFunction(cs1, 0x0048, unknown_F000_0048_F0048, name: "unknown");
-        DefineFunction(cs1, 0x0050, unknown_F000_0050_F0050, name: "unknown");
-        DefineFunction(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, name: "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0028, unknown_23_F000_0028_F0028, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0040, unknown_F000_0040_F0040, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0048, unknown_F000_0048_F0048, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0050, unknown_F000_0050_F0050, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, "unknown");
     }
 
     public virtual Action unknown_23_F000_0028_F0028(int loadOffset) {
@@ -84,18 +84,16 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov AX,0
-        AX = 0;
         // F000:0003 mov DS,AX
-        DS = AX;
+        DS = 0;
         // F000:0005 mov SS,AX
-        SS = AX;
-        State.InterruptShadowing = true;
+        SS = 0;
         // F000:0007 mov SP,0x0100
         SP = 0x0100;
         // F000:000A mov AX,0xF000
         AX = 0xF000;
         // F000:000D mov ES,AX
-        ES = AX;
+        ES = 0xF000;
         // F000:000F call near 0x0040
         NearCall(cs1, 0x0012, unknown_F000_0040_F0040);
         // F000:0012 call far F000:0028

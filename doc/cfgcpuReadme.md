@@ -124,6 +124,7 @@ Link types:
 | `Normal` | Sequential or jump-target transition |
 | `CallToReturn` | Return from a call lands at the instruction after the call |
 | `CallToMisalignedReturn` | Return lands elsewhere (tail call, longjmp, etc.) |
+| `CallToRedirectedReturn` | Return consumed the call's own frame but landed elsewhere (rewritten return address) |
 | `CpuFault` | Transition caused by an exception/interrupt |
 
 How linking resolves, depending on node types:

@@ -42,10 +42,10 @@ public sealed class CfgInstruction : CfgNode {
     internal void EnableCanCauseContextRestore() => _canCauseContextRestore = true;
 
     /// <summary>
-    /// The call instruction that corresponds to this return instruction.
-    /// Only meaningful when <see cref="IsReturn"/> is <c>true</c>.
+    /// The call that corresponds to this return instruction, with the successor type the
+    /// call-to-return-target edge must carry. Only meaningful when <see cref="IsReturn"/> is <c>true</c>.
     /// </summary>
-    public CfgInstruction? CurrentCorrespondingCallInstruction { get; set; }
+    public CorrespondingCall? CurrentCorrespondingCall { get; set; }
 
     private InstructionNode? _instructionAst;
     private IVisitableAstNode? _executionAst;
@@ -71,7 +71,7 @@ public sealed class CfgInstruction : CfgNode {
 
     /// <summary>
     /// Explicit block-terminator flag. Set ONLY by the parser via
-    /// <see cref="MarkAsBlockTerminator"/>. Combined with <see cref="Kind"/> and the
+    /// <see cref="EndBlockAfterFallthrough"/>. Combined with <see cref="Kind"/> and the
     /// live <see cref="CfgNode.MaxSuccessorsCount"/> in <see cref="IsBlockTerminator"/>.
     /// </summary>
     private bool _explicitBlockTerminator;
@@ -83,11 +83,14 @@ public sealed class CfgInstruction : CfgNode {
     private bool _isBlockStarter;
 
     /// <summary>
-    /// Marks this instruction as forcing the end of its <see cref="CfgBlock"/>.
-    /// Intended to be called by parsers (e.g. for <c>STI</c>) immediately after parsing
-    /// the instruction. Has no effect on already-set state (the flag is monotonic).
+    /// Forces the end of this instruction's <see cref="CfgBlock"/> while execution still falls through to the next
+    /// instruction in memory (e.g. <c>STI</c>, <c>POPF</c>): marks it as a block terminator and registers that next
+    /// instruction as its static successor. Intended to be called by parsers once the instruction is fully parsed.
     /// </summary>
-    internal void MarkAsBlockTerminator() => _explicitBlockTerminator = true;
+    internal void EndBlockAfterFallthrough() {
+        _explicitBlockTerminator = true;
+        RegisterStaticSuccessorAddress(NextInMemoryAddress32.ToSegmentedAddress());
+    }
 
     /// <summary>
     /// Marks this instruction as forcing the start of a new <see cref="CfgBlock"/>.

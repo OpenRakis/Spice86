@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Video.Registers;
 using Spice86.Core.Emulator.Devices.Video.Registers.Enums;
 using Spice86.Core.Emulator.IOPorts;
+using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
@@ -19,6 +20,7 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
     private readonly GraphicsControllerRegisters _graphicsRegisters;
     private readonly SequencerRegisters _sequencerRegisters;
     private readonly IVideoState _videoState;
+    private readonly IEmulatedClock _clock;
     private bool _attributeDataMode;
 
     /// <summary>
@@ -28,9 +30,10 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
     /// <param name="ioPortDispatcher">The class that is responsible for dispatching ports reads and writes to classes that respond to them.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="videoState">Represents the state of the video card.</param>
+    /// <param name="clock">The emulated clock driving the beam independently of rendering.</param>
     /// <param name="failOnUnhandledPort">Whether we throw an exception when an I/O port wasn't handled.</param>
     public VgaIoPortHandler(State state, IOPortDispatcher ioPortDispatcher, ILogger loggerService,
-        IVideoState videoState, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
+        IVideoState videoState, IEmulatedClock clock, bool failOnUnhandledPort) : base(state, failOnUnhandledPort, loggerService) {
 
         // Initialize registers.
         _attributeRegisters = videoState.AttributeControllerRegisters;
@@ -40,6 +43,8 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
         _generalRegisters = videoState.GeneralRegisters;
         _dacRegisters = videoState.DacRegisters;
         _videoState = videoState;
+        _clock = clock;
+        _videoState.BeamTiming.Refresh(0);
         InitPortHandlers(ioPortDispatcher);
     }
 
@@ -160,7 +165,7 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
                 break;
             case Ports.InputStatus1Read or Ports.InputStatus1ReadAlt:
                 _attributeDataMode = false; // Reset the attribute data mode for port 0x03C0 to "Index"
-                value = _generalRegisters.InputStatusRegister1.Value;
+                value = ReadBeamStatus();
                 if (_loggerService.IsEnabled(LogLevel.Trace)) {
                     _loggerService.LogTrace("[{Port:X4}] Read byte from port InputStatus1Read: {Value:X2} {Binary}", port, value, Convert.ToString(value, 2).PadLeft(8, '0'));
                 }
@@ -189,6 +194,10 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
         }
 
         return value;
+    }
+
+    private byte ReadBeamStatus() {
+        return _videoState.BeamTiming.ReadStatus(_clock.ElapsedTimeMs);
     }
 
     /// <inheritdoc />
@@ -283,6 +292,9 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
                     _loggerService.LogDebug("[{Port:X4}] Write to Sequencer register {Register}: {Value:X2} {Explained}", port, _sequencerRegisters.Address, value, _sequencerRegisters.Address.Explain(value));
                 }
                 _sequencerRegisters.WriteRegister(_sequencerRegisters.Address, value);
+                if (_sequencerRegisters.Address == SequencerRegister.ClockingMode) {
+                    _videoState.BeamTiming.Refresh(_clock.ElapsedTimeMs);
+                }
                 break;
 
             case Ports.AttributeAddress:
@@ -325,10 +337,11 @@ public class VgaIoPortHandler : DefaultIOPortHandler {
                     _loggerService.LogTrace("Setting Video display to 0x{Value:X4}", (_graphicsRegisters.MiscellaneousGraphicsRegister.BaseAddress + _crtRegisters.ScreenStartAddress) >> 4);
                 }
                 _crtRegisters.WriteRegister(_crtRegisters.AddressRegister, value);
-
+                _videoState.BeamTiming.Refresh(_clock.ElapsedTimeMs);
                 break;
             case Ports.MiscOutputWrite:
                 _generalRegisters.MiscellaneousOutput.Value = value;
+                _videoState.BeamTiming.Refresh(_clock.ElapsedTimeMs);
                 if (_loggerService.IsEnabled(LogLevel.Debug)) {
                     _loggerService.LogDebug("[{Port:X4}] Write to MiscOutputWrite: {Value:X2} {@Explained}", port, value, _generalRegisters.MiscellaneousOutput);
                 }

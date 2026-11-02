@@ -52,12 +52,12 @@ internal sealed class EdgeAnnotationIndex {
             .ThenBy(edge => edge.TargetBlock.Id)
             .FirstOrDefault();
 
-    private static int GetContinuationKindOrder(ClassifiedEdgeKind kind) {
-        if (kind == ClassifiedEdgeKind.CallContinuation) {
-            return 0;
-        }
-        return 1;
-    }
+    private static int GetContinuationKindOrder(ClassifiedEdgeKind kind) =>
+        kind switch {
+            ClassifiedEdgeKind.CallContinuation => 0,
+            ClassifiedEdgeKind.RedirectedCallContinuation => 1,
+            _ => 2
+        };
 
     private void IndexByKind(CfgPartitionEdgeRecord edge) {
         if (edge.Kind == ClassifiedEdgeKind.Call) {
@@ -65,7 +65,9 @@ internal sealed class EdgeAnnotationIndex {
             return;
         }
 
-        if (edge.Kind != ClassifiedEdgeKind.CallContinuation && edge.Kind != ClassifiedEdgeKind.MisalignedCallContinuation) {
+        if (edge.Kind != ClassifiedEdgeKind.CallContinuation
+            && edge.Kind != ClassifiedEdgeKind.MisalignedCallContinuation
+            && edge.Kind != ClassifiedEdgeKind.RedirectedCallContinuation) {
             return;
         }
 

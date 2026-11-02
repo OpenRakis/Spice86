@@ -74,6 +74,39 @@ public sealed class FunctionCallStack {
     }
 
     /// <summary>
+    /// Finds the first tracked call whose stack address right after the call matches the observed
+    /// stack address: the return consumes exactly that frame. A candidate is rejected when a newer
+    /// frame on the same stack segment sits at a higher or equal linear address: a live callee
+    /// always pushes below its caller, so such a candidate is a stale frame that code left without
+    /// a return (longjmp-style stack reset). Rejected candidates do not stop the scan.
+    /// </summary>
+    /// <param name="stackAddress">The observed stack address at return time.</param>
+    /// <returns>The matching call stack frame.</returns>
+    public FunctionCallStackMatch? FindStackMatch(SegmentedAddress stackAddress) {
+        for (int index = _calls.Count - 1; index >= 0; index--) {
+            FunctionCall functionCall = _calls[index];
+            if (stackAddress.Equals(functionCall.StackAddressAfterCall) && !HasNewerFrameAbove(index)) {
+                return new FunctionCallStackMatch(index, functionCall, index == Count - 1);
+            }
+        }
+
+        return null;
+    }
+
+    private bool HasNewerFrameAbove(int index) {
+        FunctionCall candidate = _calls[index];
+        for (int newer = index + 1; newer < _calls.Count; newer++) {
+            SegmentedAddress newerStackAddress = _calls[newer].StackAddressAfterCall;
+            if (newerStackAddress.Segment == candidate.StackAddressAfterCall.Segment
+                && newerStackAddress.Linear >= candidate.StackAddressAfterCall.Linear) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// Removes the matched function call and every newer tracked call.
     /// </summary>
     /// <param name="match">The call stack match to pop through.</param>

@@ -4,7 +4,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 
 /// <summary>
-/// A piece of generated C# emitted by <see cref="CSharpAstEmitter"/> for an execution-AST node. It carries
+/// A piece of generated C# printed by <see cref="CSharpExpressionPrinter"/> for an execution-AST node. It carries
 /// the rendered text plus the context needed to avoid redundant casts and parentheses:
 /// <list type="bullet">
 /// <item><see cref="Type"/>: the C# data type the expression evaluates to, or <c>null</c> when unknown
@@ -20,7 +20,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 /// </summary>
 internal readonly record struct CSharpFragment(string Text, DataType? Type, int Precedence) {
     /// <summary>Precedence of a primary expression (literal, identifier, call, indexer, cast, parenthesized).</summary>
-    public const int AtomicPrecedence = 13;
+    public const int AtomicPrecedence = 14;
 
     /// <summary>The constant this fragment renders, or <c>null</c> when the fragment is not a constant literal.</summary>
     public ConstantNode? Constant { get; init; }

@@ -22,9 +22,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
         cs1 = 0xF000;
 
-        DefineFunction(cs1, 0x0015, unknown_F000_0015_F0015, name: "unknown");
-        DefineFunction(cs1, 0x001B, unknown_F000_001B_F001B, name: "unknown");
-        DefineFunction(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, name: "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0015, unknown_F000_0015_F0015, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x001B, unknown_F000_001B_F001B, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, "unknown");
     }
 
     public virtual Action unknown_F000_0015_F0015(int loadOffset) {
@@ -33,8 +33,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0015 dec CX
         CX = Alu16.Dec(CX);
         // F000:0016 je short 0x001A
-        if (ZeroFlag) {
-            goto L_001A;
+        if (CX == 0) {
+            // F000:001A ret near
+            return NearRet();
         }
         // F000:0018 jmp short 0x001B
         if (JumpDispatcher.Jump(unknown_F000_001B_F001B, 0x0000)) {
@@ -42,9 +43,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             goto entrydispatcher;
         }
         return JumpDispatcher.RequiredJumpAsmReturn;
-    L_001A:
-        // F000:001A ret near
-        return NearRet();
     }
 
     public virtual Action unknown_F000_001B_F001B(int loadOffset) {
@@ -53,8 +51,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:001B dec CX
         CX = Alu16.Dec(CX);
         // F000:001C je short 0x0020
-        if (ZeroFlag) {
-            goto L_0020;
+        if (CX == 0) {
+            // F000:0020 ret near
+            return NearRet();
         }
         // F000:001E jmp short 0x0015
         if (JumpDispatcher.Jump(unknown_F000_0015_F0015, 0x0000)) {
@@ -62,9 +61,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             goto entrydispatcher;
         }
         return JumpDispatcher.RequiredJumpAsmReturn;
-    L_0020:
-        // F000:0020 ret near
-        return NearRet();
     }
 
     public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
@@ -73,8 +69,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0000 mov AX,0x1000
         AX = 0x1000;
         // F000:0003 mov SS,AX
-        SS = AX;
-        State.InterruptShadowing = true;
+        SS = 0x1000;
         // F000:0005 mov SP,0x0100
         SP = 0x0100;
         // F000:0008 mov CX,2

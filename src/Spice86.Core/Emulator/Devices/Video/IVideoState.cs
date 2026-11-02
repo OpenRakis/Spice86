@@ -6,6 +6,9 @@ using Spice86.Core.Emulator.Devices.Video.Registers;
 ///     Represents the state of the video card.
 /// </summary>
 public interface IVideoState {
+    /// <summary>Shared programmed video timing and beam phase.</summary>
+    public VgaBeamTiming BeamTiming { get; }
+
     /// <summary>
     ///     Contains the DAC registers.
     /// </summary>

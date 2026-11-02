@@ -68,6 +68,17 @@ public sealed partial class EmulatorSession : ObservableObject, IDisposable {
         return completionSource.Task;
     }
 
+    /// <summary>
+    /// Asks the emulator to stop and returns the task that completes when the worker thread finishes.
+    /// When no run is in flight the returned task is already completed. Callers awaiting the result get
+    /// the run's success flag.
+    /// </summary>
+    public Task<bool> RequestStop() {
+        Task<bool> completion = _completionSource?.Task ?? Task.FromResult(true);
+        _programExecutor.RequestStop();
+        return completion;
+    }
+
     private void EmulatorThread() {
         TaskCompletionSource<bool>? completionSource = _completionSource;
         try {

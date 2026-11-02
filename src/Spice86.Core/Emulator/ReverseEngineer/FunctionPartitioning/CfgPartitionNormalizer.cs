@@ -14,8 +14,6 @@ using SequentialIdAllocator = Spice86.Shared.Utils.SequentialIdAllocator;
 /// Refines assembled partition assignment into simpler single-entry synthetic regions when dominance permits it.
 /// </summary>
 internal sealed class CfgPartitionNormalizer {
-    private readonly CfgBlockDominatorTreeBuilder _dominatorTreeBuilder = new();
-
     public CfgPartitionAssignment Normalize(CfgPartitionAssignment assignment, CfgPartitionEdgeIndex edgeIndex, SequentialIdAllocator idAllocator) {
         List<CfgPartitionDraft> updatedPartitions = new();
         foreach (CfgPartitionDraft partition in assignment.Partitions.OrderBy(partition => partition.Id)) {
@@ -51,7 +49,7 @@ internal sealed class CfgPartitionNormalizer {
 
         // Build a dominator tree restricted to this partition's internal edges.
         Dictionary<CfgBlock, IReadOnlyList<CfgBlock>> successorsByBlock = BuildInternalSuccessors(partition.Blocks, edgeIndex);
-        CfgBlockDominatorTree dominatorTree = _dominatorTreeBuilder.BuildFromEntries(partition.Blocks, entryBlocks, successorsByBlock);
+        DominatorTree<CfgBlock> dominatorTree = DominatorTreeBuilder.BuildFromEntries(partition.Blocks, entryBlocks, successorsByBlock, CfgBlockOrder.Instance);
         List<CfgPartitionDraft> replacements = new();
         HashSet<CfgBlock> assignedBlocks = new();
         // Reuse the original partition ID for the first replacement to keep external references stable.

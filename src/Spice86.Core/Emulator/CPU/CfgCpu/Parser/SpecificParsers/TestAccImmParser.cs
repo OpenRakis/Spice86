@@ -20,7 +20,7 @@ public class TestAccImmParser : BaseInstructionParser {
         CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);
         ValueNode immNode = ReadUnsignedImmediate(instr, bitWidth);
         ValueNode accNode = _astBuilder.Register.Accumulator(dataType);
-        MethodCallValueNode aluCall = _astBuilder.AluCall(dataType, bitWidth, "And", accNode, immNode);
+        MethodCallValueNode aluCall = _astBuilder.AluCall(dataType, bitWidth, AluOperation.And, accNode, immNode);
         InstructionNode displayAst = new InstructionNode(InstructionOperation.TEST, accNode, immNode);
         IVisitableAstNode execAst = _astBuilder.WithIpAdvancement(instr,
             _astBuilder.ConditionalAssign(dataType, accNode, aluCall, false));

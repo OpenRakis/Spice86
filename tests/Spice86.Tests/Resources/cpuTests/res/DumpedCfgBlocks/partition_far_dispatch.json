@@ -1,0 +1,201 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "F000:FFF0",
+  "totalEntryPoints": 1,
+  "entryPointAddresses": [
+    "F000:FFF0"
+  ],
+  "lastExecutedAddress": "F000:0028",
+  "lastExecutedBlockId": 52,
+  "blocks": [
+    {
+      "id": 52,
+      "entry": "F000:0028",
+      "term": "F000:0028",
+      "pred": [
+        48
+      ],
+      "succ": [],
+      "asm": [
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 2,
+      "entry": "F000:FFF0",
+      "term": "F000:FFF0",
+      "pred": [],
+      "succ": [
+        3
+      ],
+      "asm": [
+        "EB0E|jmp short 0"
+      ]
+    },
+    {
+      "id": 48,
+      "entry": "F000:0026",
+      "term": "F000:0026",
+      "pred": [
+        46,
+        57
+      ],
+      "succ": [
+        50,
+        52
+      ],
+      "asm": [
+        "E2F4|loop 0x001C"
+      ]
+    },
+    {
+      "id": 3,
+      "entry": "F000:0000",
+      "term": "F000:000A",
+      "pred": [
+        2
+      ],
+      "succ": [
+        28
+      ],
+      "asm": [
+        "B80010|mov AX,0x1000",
+        "8ED0|mov SS,AX",
+        "BC0001|mov SP,0x0100",
+        "31D2|xor DX,DX",
+        "B90200|mov CX,2"
+      ]
+    },
+    {
+      "id": 50,
+      "entry": "F000:001C",
+      "term": "F000:0022",
+      "pred": [
+        30,
+        48
+      ],
+      "succ": [
+        46,
+        57
+      ],
+      "asm": [
+        "89CB|mov BX,CX",
+        "4B|dec BX",
+        "C1E302|shl BX,2",
+        "2EFF6F45|jmp far dword ptr CS:[BX\u002B0x45]"
+      ]
+    },
+    {
+      "id": 46,
+      "entry": "F000:0037",
+      "term": "F000:003B",
+      "pred": [
+        50
+      ],
+      "succ": [
+        48
+      ],
+      "asm": [
+        "81C20010|add DX,0x1000",
+        "EBE9|jmp short 0x0026"
+      ]
+    },
+    {
+      "id": 57,
+      "entry": "F000:0031",
+      "term": "F000:0035",
+      "pred": [
+        50
+      ],
+      "succ": [
+        48
+      ],
+      "asm": [
+        "81C20001|add DX,0x0100",
+        "EBEF|jmp short 0x0026"
+      ]
+    },
+    {
+      "id": 28,
+      "entry": "F000:000D",
+      "term": "F000:0013",
+      "pred": [
+        3,
+        27
+      ],
+      "succ": [
+        23,
+        27,
+        37
+      ],
+      "asm": [
+        "89CB|mov BX,CX",
+        "4B|dec BX",
+        "C1E302|shl BX,2",
+        "2EFF5F3D|call far dword ptr CS:[BX\u002B0x3D]"
+      ]
+    },
+    {
+      "id": 30,
+      "entry": "F000:0019",
+      "term": "F000:0019",
+      "pred": [
+        27
+      ],
+      "succ": [
+        50
+      ],
+      "asm": [
+        "B90200|mov CX,2"
+      ]
+    },
+    {
+      "id": 23,
+      "entry": "F000:002D",
+      "term": "F000:0030",
+      "pred": [
+        28
+      ],
+      "succ": [
+        27
+      ],
+      "asm": [
+        "83C210|add DX,0x0010",
+        "CB|ret far"
+      ]
+    },
+    {
+      "id": 27,
+      "entry": "F000:0017",
+      "term": "F000:0017",
+      "pred": [
+        23,
+        28,
+        37
+      ],
+      "succ": [
+        28,
+        30
+      ],
+      "asm": [
+        "E2F4|loop 0x000D"
+      ]
+    },
+    {
+      "id": 37,
+      "entry": "F000:0029",
+      "term": "F000:002C",
+      "pred": [
+        28
+      ],
+      "succ": [
+        27
+      ],
+      "asm": [
+        "83C201|add DX,1",
+        "CB|ret far"
+      ]
+    }
+  ],
+  "truncated": false
+}

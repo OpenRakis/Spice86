@@ -32,6 +32,9 @@ using Spice86.Core.Emulator.VM.Breakpoint;
 public sealed class Machine : IDisposable {
     private bool _disposed;
 
+    /// <summary>True once <see cref="Dispose()"/> released the machine's devices.</summary>
+    public bool IsDisposed => _disposed;
+
     /// <summary>
     /// Memory mapped BIOS values.
     /// </summary>
@@ -241,6 +244,13 @@ public sealed class Machine : IDisposable {
     public DeviceScheduler.DeviceScheduler EmulationLoopScheduler { get; }
 
     /// <summary>
+    /// Input events queued by UI and headless producers for processing on the emulation thread.
+    /// Generated/override code pumps this at external-event boundaries because it does not return to the
+    /// interpreter loop between instructions.
+    /// </summary>
+    public InputEventHub InputEventHub { get; }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="Machine"/> class.
     /// </summary>
     public Machine(BiosDataArea biosDataArea,
@@ -282,6 +292,7 @@ public sealed class Machine : IDisposable {
         IMouseDriver mouseDriver,
         IVgaFunctionality vgaFunctions,
         IPauseHandler pauseHandler,
+        InputEventHub inputEventHub,
         DeviceScheduler.DeviceScheduler emulationLoopScheduler) {
         BiosDataArea = biosDataArea;
         BiosEquipmentDeterminationInt11Handler = biosEquipmentDeterminationInt11Handler;
@@ -322,6 +333,7 @@ public sealed class Machine : IDisposable {
         MouseDriver = mouseDriver;
         VgaFunctions = vgaFunctions;
         PauseHandler = pauseHandler;
+        InputEventHub = inputEventHub;
         EmulationLoopScheduler = emulationLoopScheduler;
     }
 

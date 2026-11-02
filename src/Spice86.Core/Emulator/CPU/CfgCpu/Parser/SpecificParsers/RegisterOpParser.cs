@@ -15,7 +15,7 @@ public class RegisterOpParser : BaseInstructionParser {
     public RegisterOpParser(ParsingTools parsingTools) : base(parsingTools) {
     }
 
-    public CfgInstruction ParseIncDecReg(ParsingContext context, int regIndex, string aluOperation, InstructionOperation displayOp) {
+    public CfgInstruction ParseIncDecReg(ParsingContext context, int regIndex, AluOperation aluOperation, InstructionOperation displayOp) {
         BitWidth bitWidth = context.DefaultWordOperandBitWidth;
         DataType dataType = _astBuilder.UType(bitWidth);
         CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);

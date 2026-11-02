@@ -4,6 +4,7 @@ namespace Spice86.Tests.Emulator.CPU.CfgCpu.InstructionExecutor.Expressions;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Builder;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
@@ -761,6 +762,30 @@ public class AstExpressionBuilderTest {
         Assert.Equal(5, _state.AX);
     }
 
+    [Theory]
+    [InlineData(3, 3)]
+    [InlineData(9, 5)]
+    [InlineData(1, 1)]
+    public void TestWhileWithExitLoop(int exitValue, int expectedAx) {
+        // Arrange: uint16 x = 0; while (x < 5) { x = x + 1; if (x == exitValue) break; }; AX = x
+        VariableDeclarationNode varDecl = new VariableDeclarationNode(DataType.UINT16, "x", new ConstantNode(DataType.UINT16, 0));
+        VariableReferenceNode xRef = new VariableReferenceNode(DataType.UINT16, "x");
+        BinaryOperationNode condition = new BinaryOperationNode(DataType.BOOL, xRef, BinaryOperation.LESS_THAN, new ConstantNode(DataType.UINT16, 5));
+        BinaryOperationNode addOne = new BinaryOperationNode(DataType.UINT16, xRef, BinaryOperation.PLUS, new ConstantNode(DataType.UINT16, 1));
+        BlockNode body = new BlockNode(new BinaryOperationNode(DataType.UINT16, xRef, BinaryOperation.ASSIGN, addOne));
+        BinaryOperationNode exitCondition = new BinaryOperationNode(DataType.BOOL, xRef, BinaryOperation.EQUAL, new ConstantNode(DataType.UINT16, (ulong)exitValue));
+        WhileWithExitNode loop = new WhileWithExitNode(condition, body, exitCondition);
+        RegisterNode axReg = new RegisterNode(DataType.UINT16, (int)RegisterIndex.AxIndex);
+        BlockNode outerBlock = new BlockNode(varDecl, loop, new BinaryOperationNode(DataType.UINT16, axReg, BinaryOperation.ASSIGN, xRef));
+
+        // Act
+        _state.AX = 0;
+        Execute(outerBlock);
+
+        // Assert
+        Assert.Equal(expectedAx, _state.AX);
+    }
+
     // ── MoveIpNextNode tests ──
 
     [Fact]
@@ -780,6 +805,15 @@ public class AstExpressionBuilderTest {
     }
 
     [Fact]
+    public void SetInterruptShadowNodeSetsTheFlag() {
+        // Act
+        Execute(new SetInterruptShadowNode());
+
+        // Assert
+        Assert.True(_state.InterruptShadowing);
+    }
+
+    [Fact]
     public void MoveIpNextNodeWithinSegmentShouldSetIpCorrectly() {
         // Arrange: nextIp = 0x1234 (well within segment limit)
         ConstantNode nextIp = new(DataType.UINT32, 0x1234);
@@ -790,6 +824,52 @@ public class AstExpressionBuilderTest {
 
         // Assert: IP should be set to (ushort)0x1234
         Assert.Equal((ushort)0x1234, _state.IP);
+    }
+
+    [Theory]
+    [InlineData(true, 7)]
+    [InlineData(false, 9)]
+    public void TestConditionalValueNodePicksTheTakenArm(bool condition, int expected) {
+        // Arrange
+        ConditionalValueNode node = new(DataType.UINT16,
+            new ConstantNode(DataType.BOOL, condition ? 1UL : 0UL),
+            new ConstantNode(DataType.UINT16, 7), new ConstantNode(DataType.UINT16, 9));
+
+        // Act / Assert
+        Assert.Equal((ushort)expected, ToUint16(node));
+    }
+
+    [Fact]
+    public void TestConditionalValueNodeDoesNotEvaluateTheUntakenArm() {
+        // Arrange: the untaken arm divides by zero - it must never run.
+        BinaryOperationNode divideByZero = new(DataType.UINT16, new ConstantNode(DataType.UINT16, 1),
+            BinaryOperation.DIVIDE, new ConstantNode(DataType.UINT16, 0));
+        ConditionalValueNode node = new(DataType.UINT16, new ConstantNode(DataType.BOOL, 1),
+            new ConstantNode(DataType.UINT16, 7), divideByZero);
+
+        // Act / Assert
+        Assert.Equal(7, ToUint16(node));
+    }
+
+    [Theory]
+    [InlineData(BitWidth.BYTE_8, false, 1)]
+    [InlineData(BitWidth.BYTE_8, true, -1)]
+    [InlineData(BitWidth.WORD_16, false, 2)]
+    [InlineData(BitWidth.WORD_16, true, -2)]
+    [InlineData(BitWidth.DWORD_32, false, 4)]
+    [InlineData(BitWidth.DWORD_32, true, -4)]
+    public void TestDirectionStepFollowsTheDirectionFlag(BitWidth width, bool direction, short expected) {
+        // Arrange
+        _state.DirectionFlag = direction;
+        ConditionalValueNode step = AstBuilder.DirectionStep(width);
+
+        // Act
+        Expression expression = step.Accept(_astExpressionBuilder);
+        Func<State, Memory, short> func = _astExpressionBuilder.ToFuncInt16(expression).Compile();
+        short actual = func(_state, _memory);
+
+        // Assert
+        Assert.Equal(expected, actual);
     }
 
     // ── Helpers ──

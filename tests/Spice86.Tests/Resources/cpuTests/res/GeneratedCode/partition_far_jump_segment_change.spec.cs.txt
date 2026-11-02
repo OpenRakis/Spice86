@@ -1,0 +1,116 @@
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+public class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort cs1;
+    protected readonly ushort cs2;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        cs1 = 0xF000;
+        cs2 = 0xF100;
+
+        DefineFunctionWithoutInterpreterFallback(cs2, 0x004F, unknown_F100_004F_F104F, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, "unknown");
+    }
+
+    public virtual Action unknown_F100_004F_F104F(int loadOffset) {
+        CheckExternalEvents(cs2, 0x004F);
+        // F100:004F push CS
+        Stack.Push16(CS);
+        // F100:0050 pop AX
+        AX = Stack.Pop16();
+        // F100:0051 mov word ptr DS:[BX+0x0C],AX
+        UInt16[DS, (ushort)(BX + 0x0C)] = AX;
+        // F100:0054 ret near
+        return NearRet();
+    }
+
+    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
+        CheckExternalEvents(cs1, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        // F000:0000 mov AX,0x2000
+        // F000:0003 mov DS,AX
+        DS = 0x2000;
+        // F000:0005 mov SS,AX
+        SS = 0x2000;
+        // F000:0007 mov SP,0x1000
+        SP = 0x1000;
+        // F000:000A xor BX,BX
+        BX = Alu16.Xor(BX, BX);
+        // F000:000C jmp far F100:0000
+        CS = cs2;
+        // F100:0000 mov word ptr CS:[0x8000],0xAAAA
+        UInt16[CS, 0x8000] = 0xAAAA;
+        // F100:0007 mov AX,word ptr CS:[0x8000]
+        AX = UInt16[CS, 0x8000];
+        // F100:000B mov word ptr DS:[BX],AX
+        UInt16[DS, 0] = AX;
+        // F100:000D mov AX,0xF100
+        // F100:0010 mov ES,AX
+        ES = 0xF100;
+        // F100:0012 mov AX,word ptr ES:[0x8000]
+        AX = UInt16[ES, 0x8000];
+        // F100:0016 mov word ptr DS:[BX+2],AX
+        UInt16[DS, 2] = AX;
+        // F100:0019 push CS
+        Stack.Push16(CS);
+        // F100:001A pop AX
+        AX = Stack.Pop16();
+        // F100:001B mov word ptr DS:[BX+4],AX
+        UInt16[DS, 4] = AX;
+        // F100:001E jmp far F000:0011
+        CS = cs1;
+        // F000:0011 jmp far dword ptr CS:[0x001C]
+        ushort targetSegment_0011 = UInt16[CS, 0x001E];
+        ushort targetOffset_0011 = UInt16[CS, 0x001C];
+        if (targetSegment_0011 != cs2 || targetOffset_0011 != 0x0023) {
+            throw FailAsUntested($"Untested far jump target {targetSegment_0011:X4}:{targetOffset_0011:X4} at F000:0011");
+        }
+        CS = cs2;
+        // F100:0023 mov word ptr CS:[0x8002],0xBBBB
+        UInt16[CS, 0x8002] = 0xBBBB;
+        // F100:002A mov AX,word ptr CS:[0x8002]
+        AX = UInt16[CS, 0x8002];
+        // F100:002E mov word ptr DS:[BX+6],AX
+        UInt16[DS, 6] = AX;
+        // F100:0031 mov AX,0xF100
+        // F100:0034 mov ES,AX
+        ES = 0xF100;
+        // F100:0036 mov AX,word ptr ES:[0x8002]
+        AX = UInt16[ES, 0x8002];
+        // F100:003A mov word ptr DS:[BX+8],AX
+        UInt16[DS, 8] = AX;
+        // F100:003D push CS
+        Stack.Push16(CS);
+        // F100:003E pop AX
+        AX = Stack.Pop16();
+        // F100:003F mov word ptr DS:[BX+0x0A],AX
+        UInt16[DS, 0x000A] = AX;
+        // F100:0042 jmp far F000:0016
+        CS = cs1;
+        // F000:0016 jmp far F100:0047
+        CS = cs2;
+        // F100:0047 call near 0x004F
+        NearCall(cs2, 0x004A, unknown_F100_004F_F104F);
+        // F100:004A jmp far F000:001B
+        CS = cs1;
+        // F000:001B hlt
+        return Hlt();
+    }
+
+}

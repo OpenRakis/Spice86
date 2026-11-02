@@ -1,0 +1,121 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "F000:FFF0",
+  "totalEntryPoints": 1,
+  "entryPointAddresses": [
+    "F000:FFF0"
+  ],
+  "lastExecutedAddress": "F000:0021",
+  "lastExecutedBlockId": 36,
+  "blocks": [
+    {
+      "id": 36,
+      "entry": "F000:0021",
+      "term": "F000:0021",
+      "pred": [
+        43
+      ],
+      "succ": [],
+      "asm": [
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 2,
+      "entry": "F000:FFF0",
+      "term": "F000:FFF0",
+      "pred": [],
+      "succ": [
+        3
+      ],
+      "asm": [
+        "EB0E|jmp short 0"
+      ]
+    },
+    {
+      "id": 43,
+      "entry": "F000:001A",
+      "term": "F000:001F",
+      "pred": [
+        3,
+        30,
+        43,
+        46
+      ],
+      "succ": [
+        30,
+        36,
+        43,
+        46
+      ],
+      "asm": [
+        "B80A00|mov AX,0x000A",
+        "31D2|xor DX,DX",
+        "F7F3|div BX"
+      ]
+    },
+    {
+      "id": 3,
+      "entry": "F000:0000",
+      "term": "F000:0018",
+      "pred": [
+        2
+      ],
+      "succ": [
+        43
+      ],
+      "asm": [
+        "B80010|mov AX,0x1000",
+        "8ED0|mov SS,AX",
+        "BC0001|mov SP,0x0100",
+        "31C0|xor AX,AX",
+        "8ED8|mov DS,AX",
+        "C70600002200|mov word ptr DS:[0],0x0022",
+        "8C0E0200|mov word ptr DS:[2],CS",
+        "31F6|xor SI,SI",
+        "31DB|xor BX,BX"
+      ]
+    },
+    {
+      "id": 30,
+      "entry": "F000:0022",
+      "term": "F000:0034",
+      "pred": [
+        43
+      ],
+      "succ": [
+        43
+      ],
+      "asm": [
+        "83C601|add SI,1",
+        "C70600003500|mov word ptr DS:[0],0x0035",
+        "55|push BP",
+        "89E5|mov BP,SP",
+        "C746021A00|mov word ptr SS:[BP\u002B2],0x001A",
+        "5D|pop BP",
+        "CF|iret"
+      ]
+    },
+    {
+      "id": 46,
+      "entry": "F000:0035",
+      "term": "F000:0044",
+      "pred": [
+        43
+      ],
+      "succ": [
+        43
+      ],
+      "asm": [
+        "83C610|add SI,0x0010",
+        "BB0500|mov BX,5",
+        "55|push BP",
+        "89E5|mov BP,SP",
+        "C746021A00|mov word ptr SS:[BP\u002B2],0x001A",
+        "5D|pop BP",
+        "CF|iret"
+      ]
+    }
+  ],
+  "truncated": false
+}

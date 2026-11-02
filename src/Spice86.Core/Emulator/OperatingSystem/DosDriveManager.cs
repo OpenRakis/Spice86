@@ -2031,7 +2031,7 @@ public class DosDriveManager : IDictionary<char, DosDriveBase>, IReadOnlyDiction
         return FixedDiskMediaDescriptor;
     }
 
-    private void RegisterCdRomDriveLetter(char driveLetter, string hostFolderPath, string volumeLabel,
+    internal void RegisterCdRomDriveLetter(char driveLetter, string hostFolderPath, string volumeLabel,
         CdRomDrive? contentDrive) {
         char upper = NormalizeDriveLetter(driveLetter);
         string mountPath = string.IsNullOrEmpty(hostFolderPath)

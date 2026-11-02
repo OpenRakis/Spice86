@@ -1,29 +1,47 @@
 namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
-using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
-using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Statement;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Shared.Emulator.Memory;
+
+using System.Linq;
+
+using static Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast.CodeGenerationAst;
 
 /// <summary>
 /// Decides how to jump from one place to another in the generated code. Given a CFG edge (source → target),
 /// it picks the right C# mechanism: a <c>goto</c> within the same method, a <c>return OtherMethod(...)</c>
-/// for cross-partition flow, or a cyclic-flow dispatcher bounce. It only produces code values — the actual
-/// writing to source text happens elsewhere.
+/// for cross-partition flow, or a cyclic-flow dispatcher bounce. It only produces code-generation nodes — the
+/// actual writing to source text happens elsewhere.
 /// </summary>
 internal sealed class TransferEmitter(CfgGeneratorContext context) {
-    public EmittedCode Emit(ResolvedCfgEdge edge, MethodPlan methodPlan, bool forceSameMethodGoto = false, bool allowCallOutContinuation = false) {
+    /// <summary>
+    /// The transfer along <paramref name="edge"/>: a <c>goto</c> inside the method, preceded by a CS
+    /// assignment when the edge crosses a segment inside one generated method, a partition return, or a cyclic-flow
+    /// bounce. CPU fault edges never come here: <see cref="CpuFaultWrapper"/> lowers them through <see cref="FaultHandler"/>.
+    /// </summary>
+    /// <param name="edge">The CFG edge to transfer along.</param>
+    /// <param name="allowCallOutContinuation">Whether a call-out edge may be lowered as a partition return (a call continuation).</param>
+    public IVisitableAstNode Emit(ResolvedCfgEdge edge, bool allowCallOutContinuation = false) {
         CfgCodePartition sourcePartition = context.GetPartition(edge.Source);
         CfgCodePartition targetPartition = context.GetPartition(edge.Target);
-        if (edge.PartitionTransferKind == CfgCodePartitionTransferKind.CpuFault && sourcePartition == targetPartition) {
-            throw new NotSupportedException($"CPU fault transfer from {edge.Source.Address} to {edge.Target.Address} cannot be lowered as same-method control flow.");
-        }
-
         if (sourcePartition == targetPartition) {
-            return EmitSameMethodTransfer(edge.Source, edge.Target, methodPlan, forceSameMethodGoto);
+            GotoNode jump = new(new CfgNodeGotoTarget(edge.Target));
+            if (edge.Source.Address.Segment != edge.Target.Address.Segment) {
+                BinaryOperationNode setCs = new(DataType.UINT16,
+                    new SegmentRegisterNode((int)SegmentRegisterIndex.CsIndex), BinaryOperation.ASSIGN,
+                    new SegmentVariableNode(edge.Target.Address.Segment));
+                return Sequence(setCs, jump);
+            }
+            return jump;
         }
 
         CfgCodePartitionTransfer? transfer = context.FindTransfer(edge);
@@ -36,18 +54,8 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
         switch (transfer.Kind) {
             case CfgCodePartitionTransferKind.CrossPartitionFlow:
                 return PartitionReturn(methodName, loadOffset);
-            case CfgCodePartitionTransferKind.CpuFault:
-                // The fault-specific work (push flags/return address, clear InterruptFlag, set CS/IP) already
-                // ran in the catch block before this transfer, so entering the handler partition is a normal
-                // partition entry.
-                return PartitionReturn(methodName, loadOffset);
             case CfgCodePartitionTransferKind.CyclicCrossPartitionFlow:
-                return EmittedCode.Statements(
-                    new BlockStatement($"if (JumpDispatcher.Jump({methodName}, 0x{loadOffset:X4}))", [
-                        new LineStatement("loadOffset = JumpDispatcher.NextEntryAddress;"),
-                        new GotoEntryDispatcherStatement()
-                    ]),
-                    new LineStatement("return JumpDispatcher.RequiredJumpAsmReturn;", Diverges: true));
+                return new CyclicJumpNode(methodName, loadOffset);
             case CfgCodePartitionTransferKind.CallOut:
                 if (allowCallOutContinuation) {
                     return PartitionReturn(methodName, loadOffset);
@@ -63,19 +71,19 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
 
     /// <summary>
     /// Lowers the fallthrough of a non-terminating instruction or callback: its observed <see cref="InstructionSuccessorType.Normal"/> successor at the next address in memory, or a <c>FailAsUntested</c> throw when discovery never observed it falling through (it only faulted, or discovery stopped on it).
-    /// A callback whose handler moved CS:IP elsewhere (DOS EXEC, terminate) also has <see cref="InstructionSuccessorType.Normal"/> successors at those targets; generated code does not follow them.
+    /// A callback whose handler moved CS:IP elsewhere (DOS EXEC, terminate) also has <see cref="InstructionSuccessorType.Normal"/> successors at those targets; those are dispatched over by the callback lowering itself, and this fallthrough is what runs when the handler kept CS:IP at the callback.
     /// </summary>
-    public EmittedCode EmitFallthroughIfNeeded(CfgInstruction source, MethodPlan methodPlan) {
+    public IVisitableAstNode EmitFallthroughIfNeeded(CfgInstruction source) {
         if (source.UniqueSuccessor is not null) {
             return Emit(new ResolvedCfgEdge(source, source.UniqueSuccessor, InstructionSuccessorType.Normal,
-                context.FindTransfer(source, source.UniqueSuccessor, InstructionSuccessorType.Normal)?.Kind), methodPlan);
+                context.FindTransfer(source, source.UniqueSuccessor, InstructionSuccessorType.Normal)?.Kind));
         }
 
         if (context.TryResolveEdge(source, InstructionSuccessorType.Normal,
                 source.NextInMemoryAddress32.ToSegmentedAddress()) is ResolvedCfgEdge fallthrough) {
-            return Emit(fallthrough, methodPlan);
+            return Emit(fallthrough);
         }
-        return EmittedCode.Diverging(UntestedMessages.FallthroughAfter(source.Address));
+        return UntestedMessages.FallthroughAfter(source.Address);
     }
 
     /// <summary>
@@ -83,23 +91,81 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
     /// observed post-call continuation. The helper (NearCall / FarCall) preserves emulated stack behavior and
     /// validates the actual return target against the pushed return address.
     /// </summary>
-    public EmittedCode EmitCallHelperAndContinuation(string helperName, CfgInstruction call, string functionExpression, MethodPlan method, ushort? farCallTargetCs = null) {
+    public IVisitableAstNode EmitCallHelperAndContinuation(CallDistance distance, BitWidth width, CfgInstruction call, MethodGroupNode function, ushort? farCallTargetCs) {
         CallContinuation continuation = context.ResolveCallContinuation(call);
-        string callLine = BuildCallHelperLine(helperName, continuation.ExpectedReturnAddress, functionExpression, farCallTargetCs);
-        return EmittedCode.Concat(
-            EmittedCode.Line(callLine),
-            EmitPostCallContinuation(call, continuation, method));
+        return CodeGenerationAst.Sequence(
+            EmitCallWithRedirectedDispatch(call, continuation,
+                CallHelper(distance, width, continuation.ExpectedReturnAddress, function, farCallTargetCs),
+                CallHelperReturnedElsewhere(distance, width, continuation.ExpectedReturnAddress, function, farCallTargetCs, continuation)),
+            EmitPostCallContinuation(call, continuation));
     }
 
     /// <summary>
-    /// Builds the generated call-helper invocation line shared by near and far call lowering:
-    /// <c>Helper(returnSegment, 0xReturnOffset[, targetCs], functionExpression);</c>. A far call passes the
+    /// Builds the generated call-helper invocation shared by near and far call lowering:
+    /// <c>Helper(returnSegment, 0xReturnOffset[, targetCs], function);</c>. A far call passes the
     /// callee segment as <paramref name="targetCs"/>; a near call leaves it <c>null</c> and the argument is
     /// omitted.
     /// </summary>
-    public string BuildCallHelperLine(string helperName, SegmentedAddress expectedReturn, string functionExpression, ushort? targetCs) {
-        string targetCsArgument = targetCs is null ? string.Empty : $"{context.GetSegmentVariable(targetCs.Value)}, ";
-        return $"{helperName}({context.GetSegmentVariable(expectedReturn.Segment)}, 0x{expectedReturn.Offset:X4}, {targetCsArgument}{functionExpression});";
+    public MethodCallNode CallHelper(CallDistance distance, BitWidth width, SegmentedAddress expectedReturn, MethodGroupNode function, ushort? targetCs) =>
+        new ProcedureCallHelperNode(distance, width, CallHelperArguments(expectedReturn, function, targetCs));
+
+    /// <summary>
+    /// The <c>&lt;helper&gt;ReturnedElsewhere</c> variant of <see cref="CallHelper"/>: same arguments plus the
+    /// redirected return addresses of <paramref name="continuation"/>, returning whether the call ended there.
+    /// </summary>
+    public MethodCallValueNode CallHelperReturnedElsewhere(CallDistance distance, BitWidth width,
+        SegmentedAddress expectedReturn, MethodGroupNode function, ushort? targetCs, CallContinuation continuation) =>
+        new ProcedureCallReturnedElsewhereHelperNode(distance, width,
+            [..CallHelperArguments(expectedReturn, function, targetCs), RedirectedAddressList(continuation)]);
+
+    /// <summary>The redirected return addresses of <paramref name="continuation"/> as a
+    /// <c>SegmentedAddress[]</c> argument.</summary>
+    public SegmentedAddressListNode RedirectedAddressList(CallContinuation continuation) =>
+        new(continuation.RedirectedContinuationEdges.Select(edge => edge.Target.Address).ToArray());
+
+    /// <summary>
+    /// The call statement to emit for a call that may return to a redirected target: when the call has
+    /// redirected continuation edges, an <c>if</c> on <paramref name="returnedElsewhereCall"/> whose body
+    /// dispatches to each observed redirected target and fails as untested on a landing discovery never saw;
+    /// <paramref name="plainCall"/> unchanged otherwise. The post-call continuation still follows separately
+    /// through <see cref="EmitPostCallContinuation"/>.
+    /// </summary>
+    public IVisitableAstNode EmitCallWithRedirectedDispatch(CfgInstruction call, CallContinuation continuation,
+        MethodCallNode plainCall, MethodCallValueNode returnedElsewhereCall) {
+        if (continuation.RedirectedContinuationEdges.Count == 0) {
+            return plainCall;
+        }
+        List<IVisitableAstNode> dispatch = [];
+        foreach (ResolvedCfgEdge edge in continuation.RedirectedContinuationEdges) {
+            dispatch.Add(new IfElseNode(
+                AddressEquals(new SegmentRegisterNode((int)SegmentRegisterIndex.CsIndex), new InstructionPointerNode(), edge.Target.Address),
+                CodeGenerationAst.Sequence(Emit(edge, allowCallOutContinuation: true)),
+                CodeGenerationAst.Empty()));
+        }
+        dispatch.Add(UntestedMessages.RedirectedReturnTarget(call.Address));
+        return new IfElseNode(returnedElsewhereCall, CodeGenerationAst.Sequence(dispatch), CodeGenerationAst.Empty());
+    }
+
+    /// <summary>
+    /// Builds the <c>segment == expectedSegment &amp;&amp; offset == 0xOffset</c> test a dispatch uses to
+    /// recognize one observed target.
+    /// </summary>
+    public static ValueNode AddressEquals(ValueNode segment, ValueNode offset, SegmentedAddress expected) =>
+        new BinaryOperationNode(DataType.BOOL,
+            new BinaryOperationNode(DataType.BOOL, segment, BinaryOperation.EQUAL, new SegmentVariableNode(expected.Segment)),
+            BinaryOperation.LOGICAL_AND,
+            new BinaryOperationNode(DataType.BOOL, offset, BinaryOperation.EQUAL, new OffsetLiteralNode(expected.Offset)));
+
+    private static IVisitableAstNode[] CallHelperArguments(SegmentedAddress expectedReturn, MethodGroupNode function, ushort? targetCs) {
+        List<IVisitableAstNode> arguments = [
+            new SegmentVariableNode(expectedReturn.Segment),
+            new OffsetLiteralNode(expectedReturn.Offset)
+        ];
+        if (targetCs is not null) {
+            arguments.Add(new SegmentVariableNode(targetCs.Value));
+        }
+        arguments.Add(function);
+        return arguments.ToArray();
     }
 
     /// <summary>
@@ -107,38 +173,33 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
     /// typed continuation edge is lowered as the post-call continuation. When no continuation was observed
     /// (the callee did not return during discovery, e.g. it exits the program), the post-call path is unobserved,
     /// so generated code fails as untested if it is ever reached.
-    /// <para>
-    /// <paramref name="forceSameMethodGoto"/> must be set when this is emitted inside a runtime-dispatch
-    /// <c>if</c>-branch: a same-method fallthrough would otherwise fall out of the branch into the trailing
-    /// untested-target failure instead of reaching the continuation label.
-    /// </para>
     /// </summary>
-    public EmittedCode EmitPostCallContinuation(CfgInstruction call, CallContinuation continuation, MethodPlan method, bool forceSameMethodGoto = false) {
+    public IVisitableAstNode EmitPostCallContinuation(CfgInstruction call, CallContinuation continuation) {
         if (continuation.ObservedContinuationEdge is ResolvedCfgEdge edge) {
-            return Emit(edge, method, forceSameMethodGoto: forceSameMethodGoto, allowCallOutContinuation: true);
+            return Emit(edge, allowCallOutContinuation: true);
         }
 
-        return EmittedCode.Diverging(UntestedMessages.ReturnFromCall(call.Address));
+        return UntestedMessages.ReturnFromCall(call.Address);
     }
 
     /// <summary>
-    /// Builds the function-pointer expression a generated call helper invokes for a resolved target edge,
-    /// accounting for a non-primary entry's <c>loadOffset</c>.
+    /// Builds the function a generated call helper invokes for a resolved target edge, accounting for a
+    /// non-primary entry's <c>loadOffset</c>.
     /// </summary>
-    public string FunctionExpression(ResolvedCfgEdge targetEdge) {
+    public MethodGroupNode FunctionReference(ResolvedCfgEdge targetEdge) {
         CfgCodePartition targetPartition = context.GetPartition(targetEdge.Target);
         string methodName = context.GetMethodName(targetPartition);
         int loadOffset = context.GetEntryLoadOffset(targetPartition, targetEdge.Target);
-        return loadOffset == 0 ? methodName : $"_ => {methodName}(0x{loadOffset:X4})";
+        return new MethodGroupNode(methodName, loadOffset);
     }
 
     /// <summary>
-    /// Builds the direct invocation expression for a partition transfer edge of kind <see cref="CfgCodePartitionTransferKind.CpuFault"/> or <see cref="CfgCodePartitionTransferKind.CrossPartitionFlow"/>.
+    /// Builds the direct invocation for a partition transfer edge of kind <see cref="CfgCodePartitionTransferKind.CpuFault"/> or <see cref="CfgCodePartitionTransferKind.CrossPartitionFlow"/>.
     /// </summary>
     /// <param name="edge">The resolved CFG edge with validated transfer metadata.</param>
-    /// <returns>A method invocation expression with the load offset, e.g., <c>MethodName(0x0000)</c>.</returns>
+    /// <returns>The method entered at the load offset, e.g., <c>MethodName(0x0000)</c>.</returns>
     /// <exception cref="NotSupportedException">Thrown when the edge is a same-partition CPU fault, missing transfer metadata, or has an unsupported transfer kind.</exception>
-    public string PartitionCallExpression(ResolvedCfgEdge edge) {
+    public CpuFaultHandler FaultHandler(ResolvedCfgEdge edge) {
         CfgCodePartition sourcePartition = context.GetPartition(edge.Source);
         CfgCodePartition targetPartition = context.GetPartition(edge.Target);
         if (sourcePartition == targetPartition) {
@@ -156,17 +217,9 @@ internal sealed class TransferEmitter(CfgGeneratorContext context) {
 
         string methodName = context.GetMethodName(targetPartition);
         int loadOffset = context.GetEntryLoadOffset(targetPartition, edge.Target);
-        return $"{methodName}(0x{loadOffset:X4})";
+        return new CpuFaultHandler(edge.Target.Address, methodName, loadOffset);
     }
 
-    private EmittedCode EmitSameMethodTransfer(ICfgNode source, ICfgNode target, MethodPlan methodPlan, bool forceGoto) {
-        ICfgNode? next = methodPlan.GetNextEmittedNode(source);
-        if (!forceGoto && ReferenceEquals(target, next)) {
-            return EmittedCode.None;
-        }
-        return EmittedCode.Statements(new GotoStatement(target));
-    }
-
-    private static EmittedCode PartitionReturn(string methodName, int loadOffset) =>
-        EmittedCode.Diverging($"return {methodName}(0x{loadOffset:X4});");
+    private static IVisitableAstNode PartitionReturn(string methodName, int loadOffset) =>
+        new ReturnNode(new MethodCallNode(null, methodName, new OffsetLiteralNode(loadOffset)));
 }

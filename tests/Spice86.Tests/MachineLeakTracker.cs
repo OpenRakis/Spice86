@@ -27,13 +27,18 @@ internal static class MachineLeakTracker {
     }
 
     public static int CountSurvivingAfterCollection() {
+        CollectUnreachable();
+        lock (SyncRoot) {
+            return TrackedMachines.Count(reference => reference.IsAlive);
+        }
+    }
+
+    /// <summary>Runs the collector enough times for an unreachable machine graph to actually be reclaimed.</summary>
+    public static void CollectUnreachable() {
         for (int i = 0; i < 3; i++) {
             GC.Collect();
             GC.WaitForPendingFinalizers();
             GC.Collect();
-        }
-        lock (SyncRoot) {
-            return TrackedMachines.Count(reference => reference.IsAlive);
         }
     }
 }

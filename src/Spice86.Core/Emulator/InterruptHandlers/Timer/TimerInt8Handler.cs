@@ -2,6 +2,7 @@
 
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Shared.Emulator.Memory;
 
@@ -30,7 +31,7 @@ public sealed class TimerInt8Handler : IInterruptHandler {
         // Call user timer hook
         memoryAsmWriter.WriteInt(0x1C);
         // EOI to PIC after handler execution
-        memoryAsmWriter.RegisterAndWriteCallback(AfterInt8Execution);
+        memoryAsmWriter.RegisterAndWriteCallback(CallbackNumbers.TimerAfterInt8Execution, AfterInt8Execution);
         memoryAsmWriter.WriteIret();
 
         return interruptHandlerAddress;

@@ -1,0 +1,88 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "F000:FFF0",
+  "totalEntryPoints": 1,
+  "entryPointAddresses": [
+    "F000:FFF0"
+  ],
+  "lastExecutedAddress": "F000:0017",
+  "lastExecutedBlockId": 16,
+  "blocks": [
+    {
+      "id": 16,
+      "entry": "F000:0017",
+      "term": "F000:0017",
+      "pred": [
+        13
+      ],
+      "succ": [],
+      "asm": [
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 2,
+      "entry": "F000:FFF0",
+      "term": "F000:FFF0",
+      "pred": [],
+      "succ": [
+        3
+      ],
+      "asm": [
+        "EB0E|jmp short 0"
+      ]
+    },
+    {
+      "id": 13,
+      "entry": "F000:000F",
+      "term": "F000:0010",
+      "pred": [
+        10
+      ],
+      "succ": [
+        10,
+        16
+      ],
+      "asm": [
+        "49|dec CX",
+        "7405|je short 0x0017"
+      ]
+    },
+    {
+      "id": 3,
+      "entry": "F000:0000",
+      "term": "F000:000D",
+      "pred": [
+        2
+      ],
+      "succ": [
+        10
+      ],
+      "asm": [
+        "B80010|mov AX,0x1000",
+        "8ED0|mov SS,AX",
+        "BC0001|mov SP,0x0100",
+        "31D2|xor DX,DX",
+        "B90300|mov CX,3",
+        "EB03|jmp short 0x0012"
+      ]
+    },
+    {
+      "id": 10,
+      "entry": "F000:0012",
+      "term": "F000:0015",
+      "pred": [
+        3,
+        13
+      ],
+      "succ": [
+        13
+      ],
+      "asm": [
+        "83C201|add DX,1",
+        "EBF8|jmp short 0x000F"
+      ]
+    }
+  ],
+  "truncated": false
+}

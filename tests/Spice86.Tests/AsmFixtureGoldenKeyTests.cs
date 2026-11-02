@@ -21,7 +21,7 @@ public sealed class AsmFixtureGoldenKeyTests {
         AsmFixture fixture = new(settings, [0], AsmFixture.NoResultAssertion);
 
         // Act / Assert
-        MachineTest.MachineGoldenKey(fixture).Should().Be(machineKey);
+        MachineGoldens.GoldenKey(fixture).Should().Be(machineKey);
         GeneratedCodeMachineTestRunner.GoldenKey(settings).Should().Be(generatedKey);
     }
 
@@ -32,7 +32,18 @@ public sealed class AsmFixtureGoldenKeyTests {
         AsmFixture fixture = new(settings, [0], AsmFixture.NoResultAssertion);
 
         // Act / Assert
-        MachineTest.MachineGoldenKey(fixture).Should().Be("video");
+        MachineGoldens.GoldenKey(fixture).Should().Be("video");
         GeneratedCodeMachineTestRunner.GoldenKey(settings).Should().Be("video.spec");
+    }
+
+    [Fact]
+    public void DisabledUmbSelectsDistinctGeneratedGolden() {
+        // Arrange
+        AsmRunSettings settings = new() { BinName = "umb", EnableUmb = false };
+        AsmFixture fixture = new(settings, [0], AsmFixture.NoResultAssertion);
+
+        // Act / Assert
+        MachineGoldens.GoldenKey(fixture).Should().Be("umb");
+        GeneratedCodeMachineTestRunner.GoldenKey(settings).Should().Be("umb.noumb.spec");
     }
 }

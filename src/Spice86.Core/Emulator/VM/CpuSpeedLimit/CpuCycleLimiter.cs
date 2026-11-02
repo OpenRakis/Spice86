@@ -6,7 +6,7 @@ using System.Diagnostics;
 
 /// <summary>
 /// Throttles CPU execution to maintain a target number of cycles per millisecond,
-/// using a budget-based approach similar to DOSBox.
+/// using short budget-based slices to keep hardware polling responsive.
 /// </summary>
 public class CpuCycleLimiter : ICyclesLimiter {
     private readonly State _state;
@@ -16,6 +16,7 @@ public class CpuCycleLimiter : ICyclesLimiter {
     private long _targetCyclesForPause;
 
     private static readonly long TicksPerMs = Stopwatch.Frequency / 1000;
+    private const int TimeSlicesPerMs = 40;
 
     private const int CyclesUp = 1000;
     private const int CyclesDown = 1000;
@@ -56,7 +57,10 @@ public class CpuCycleLimiter : ICyclesLimiter {
         }
 
         // We've reached our target, time to regulate speed
-        long targetTicks = _lastTicks + TicksPerMs;
+        // Keep throttle gaps shorter than VGA retrace pulses so polling loops can observe them.
+        int targetCyclesPerMs = TargetCpuCyclesPerMs;
+        int cycleBudget = Math.Max(1, targetCyclesPerMs / TimeSlicesPerMs);
+        long targetTicks = _lastTicks + TicksPerMs * cycleBudget / targetCyclesPerMs;
 
         while (_state.IsRunning && _stopwatch.ElapsedTicks < targetTicks) {
             _spinner.SpinOnce(-1);
@@ -64,13 +68,16 @@ public class CpuCycleLimiter : ICyclesLimiter {
 
         _lastTicks = _stopwatch.ElapsedTicks;
 
-        _targetCyclesForPause = _state.Cycles + TargetCpuCyclesPerMs;
+        _targetCyclesForPause = _state.Cycles + cycleBudget;
 
         _spinner.Reset();
     }
 
     /// <inheritdoc />
-    public int TargetCpuCyclesPerMs { get; set; }
+    public int TargetCpuCyclesPerMs {
+        get;
+        set => field = Math.Clamp(value, MinCyclesPerMs, MaxCyclesPerMs);
+    }
 
     /// <inheritdoc/>
     public void IncreaseCycles() {

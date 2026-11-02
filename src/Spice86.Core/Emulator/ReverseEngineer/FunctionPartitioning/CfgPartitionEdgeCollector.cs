@@ -65,6 +65,7 @@ internal sealed class CfgPartitionEdgeCollector {
             (true, _, _, InstructionSuccessorType.Normal) => ClassifiedEdgeKind.Call,
             (true, _, _, InstructionSuccessorType.CallToReturn) => ClassifiedEdgeKind.CallContinuation,
             (true, _, _, InstructionSuccessorType.CallToMisalignedReturn) => ClassifiedEdgeKind.MisalignedCallContinuation,
+            (true, _, _, InstructionSuccessorType.CallToRedirectedReturn) => ClassifiedEdgeKind.RedirectedCallContinuation,
             (_, true, _, InstructionSuccessorType.Normal) => ClassifiedEdgeKind.RetTarget,
             (_, _, true, InstructionSuccessorType.Normal) => ClassifiedEdgeKind.Jump,
             _ => ClassifiedEdgeKind.FallthroughOrInternal,

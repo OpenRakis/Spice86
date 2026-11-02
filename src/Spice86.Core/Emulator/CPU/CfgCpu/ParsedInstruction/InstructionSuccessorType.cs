@@ -4,5 +4,6 @@ public enum InstructionSuccessorType {
     Normal,
     CallToReturn,
     CallToMisalignedReturn,
+    CallToRedirectedReturn,
     CpuFault
 }

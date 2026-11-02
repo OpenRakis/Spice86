@@ -14,6 +14,7 @@ public class VideoState : IVideoState {
         CrtControllerRegisters = new CrtControllerRegisters();
         GraphicsControllerRegisters = new GraphicsControllerRegisters();
         AttributeControllerRegisters = new AttributeControllerRegisters();
+        BeamTiming = new(this);
     }
 
     /// <inheritdoc />
@@ -36,4 +37,7 @@ public class VideoState : IVideoState {
 
     /// <inheritdoc />
     public bool IsRenderingDirty { get; set; }
+
+    /// <inheritdoc />
+    public VgaBeamTiming BeamTiming { get; }
 }

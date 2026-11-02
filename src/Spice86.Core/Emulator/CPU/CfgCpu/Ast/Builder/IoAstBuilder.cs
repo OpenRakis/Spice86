@@ -20,9 +20,8 @@ public class IoAstBuilder {
     /// The port node is cast to ushort if needed to match the In8/In16/In32 method signatures.
     /// </summary>
     public MethodCallValueNode IoRead(DataType dataType, ValueNode portNode) {
-        string methodName = IoMethodName("In", dataType);
         ValueNode portAsUInt16 = _typeConversion.Convert(DataType.UINT16, portNode);
-        return new MethodCallValueNode(dataType, null, methodName, portAsUInt16);
+        return new PortReadCallNode(dataType.BitWidth, portAsUInt16);
     }
 
     /// <summary>
@@ -30,18 +29,7 @@ public class IoAstBuilder {
     /// The port node is cast to ushort if needed to match the Out8/Out16/Out32 method signatures.
     /// </summary>
     public MethodCallNode IoWrite(DataType dataType, ValueNode portNode, ValueNode valueNode) {
-        string methodName = IoMethodName("Out", dataType);
         ValueNode portAsUInt16 = _typeConversion.Convert(DataType.UINT16, portNode);
-        return new MethodCallNode(null, methodName, portAsUInt16, valueNode);
-    }
-
-    private static string IoMethodName(string prefix, DataType dataType) {
-        int size = dataType.BitWidth switch {
-            BitWidth.BYTE_8 => 8,
-            BitWidth.WORD_16 => 16,
-            BitWidth.DWORD_32 => 32,
-            _ => throw new ArgumentException($"Unsupported data type for I/O operation: {dataType.BitWidth}", nameof(dataType))
-        };
-        return $"{prefix}{size}";
+        return new PortWriteCallNode(dataType.BitWidth, portAsUInt16, valueNode);
     }
 }

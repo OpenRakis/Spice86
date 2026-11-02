@@ -54,7 +54,7 @@ public class BcdAdjustParser : BaseInstructionParser {
             ? new BlockNode()
             : new BlockNode(_astBuilder.Assign(DataType.BOOL, finalCarryDeclaration.Reference, _astBuilder.Constant.ToNode(false)));
         IfElseNode adjustCarryIf = new IfElseNode(adjustCarryCondition, adjustCarryTrueCase, adjustCarryFalseCase);
-        MethodCallNode updateFlags = new MethodCallNode("Alu8", "UpdateFlags", al);
+        MethodCallNode updateFlags = new AluCallNode(AluOperation.UpdateFlags, BitWidth.BYTE_8, al);
         InstructionNode displayAstNode = new InstructionNode(displayOp);
         List<IVisitableAstNode> execStatements = new() {
             initialAlDeclaration,
@@ -100,7 +100,7 @@ public class BcdAdjustParser : BaseInstructionParser {
         adjustStatements.Add(_astBuilder.Assign(DataType.BOOL, finalCarryDeclaration.Reference, _astBuilder.Constant.ToNode(true)));
         BlockNode adjustTrueCase = new BlockNode(adjustStatements.ToArray());
         IfElseNode adjustIf = _astBuilder.ControlFlow.If(adjustCondition, adjustTrueCase);
-        MethodCallNode updateFlags = new MethodCallNode("Alu8", "UpdateFlags", al);
+        MethodCallNode updateFlags = new AluCallNode(AluOperation.UpdateFlags, BitWidth.BYTE_8, al);
         InstructionNode displayAstNode = new InstructionNode(displayOp);
         IVisitableAstNode execAst = _astBuilder.WithIpAdvancement(
             instr,
@@ -129,9 +129,9 @@ public class BcdAdjustParser : BaseInstructionParser {
             DataType.UINT8,
             "result",
             new BinaryOperationNode(DataType.UINT8, alDeclaration.Reference, BinaryOperation.MODULO, valueDeclaration.Reference));
-        MethodCallNode updateFlags = new MethodCallNode("Alu8", "UpdateFlags", resultDeclaration.Reference);
+        MethodCallNode updateFlags = new AluCallNode(AluOperation.UpdateFlags, BitWidth.BYTE_8, resultDeclaration.Reference);
         ValueNode preFaultFlagsValue = new BinaryOperationNode(DataType.UINT8, alDeclaration.Reference, BinaryOperation.RIGHT_SHIFT, _astBuilder.Constant.ToNode((byte)1));
-        MethodCallNode preFaultUpdateFlags = new MethodCallNode("Alu8", "UpdateFlags", preFaultFlagsValue);
+        MethodCallNode preFaultUpdateFlags = new AluCallNode(AluOperation.UpdateFlags, BitWidth.BYTE_8, preFaultFlagsValue);
         ValueNode isZeroCondition = new BinaryOperationNode(DataType.BOOL, valueDeclaration.Reference, BinaryOperation.EQUAL, _astBuilder.Constant.ToNode((byte)0));
         IfElseNode divisionCheck = _astBuilder.ControlFlow.ThrowIf<CpuDivisionErrorException>(isZeroCondition, "Division by zero");
         InstructionNode displayAst = new InstructionNode(InstructionOperation.AAM);
@@ -159,7 +159,7 @@ public class BcdAdjustParser : BaseInstructionParser {
         VariableDeclarationNode valueDeclaration = _astBuilder.DeclareVariable(DataType.UINT8, "v2", valueNode);
         ValueNode mul = new BinaryOperationNode(DataType.UINT8, ah, BinaryOperation.MULTIPLY, valueDeclaration.Reference);
         ValueNode sum = new BinaryOperationNode(DataType.UINT8, al, BinaryOperation.PLUS, mul);
-        MethodCallNode updateFlags = new MethodCallNode("Alu8", "UpdateFlags", al);
+        MethodCallNode updateFlags = new AluCallNode(AluOperation.UpdateFlags, BitWidth.BYTE_8, al);
         InstructionNode displayAst = new InstructionNode(InstructionOperation.AAD);
         IVisitableAstNode execAst = _astBuilder.WithIpAdvancement(
             instr,

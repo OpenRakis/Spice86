@@ -1,0 +1,74 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "F000:FFF0",
+  "totalEntryPoints": 1,
+  "entryPointAddresses": [
+    "F000:FFF0"
+  ],
+  "lastExecutedAddress": "F000:0015",
+  "lastExecutedBlockId": 10,
+  "blocks": [
+    {
+      "id": 10,
+      "entry": "F000:0012",
+      "term": "F000:0015",
+      "pred": [
+        3,
+        12
+      ],
+      "succ": [],
+      "asm": [
+        "B90200|mov CX,2",
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 2,
+      "entry": "F000:FFF0",
+      "term": "F000:FFF0",
+      "pred": [],
+      "succ": [
+        3
+      ],
+      "asm": [
+        "EB0E|jmp short 0"
+      ]
+    },
+    {
+      "id": 3,
+      "entry": "F000:0000",
+      "term": "F000:000E",
+      "pred": [
+        2
+      ],
+      "succ": [
+        10,
+        12
+      ],
+      "asm": [
+        "B80010|mov AX,0x1000",
+        "8ED0|mov SS,AX",
+        "BC0001|mov SP,0x0100",
+        "B80100|mov AX,1",
+        "83F800|cmp AX,0",
+        "7502|jne short 0x0012"
+      ]
+    },
+    {
+      "id": 12,
+      "entry": "F000:0010",
+      "dead": true,
+      "term": "F000:0010",
+      "pred": [
+        3
+      ],
+      "succ": [
+        10
+      ],
+      "asm": [
+        "0FA2|cpuid"
+      ]
+    }
+  ],
+  "truncated": false
+}

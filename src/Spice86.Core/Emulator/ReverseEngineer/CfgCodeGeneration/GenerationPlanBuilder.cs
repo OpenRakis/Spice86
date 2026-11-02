@@ -69,9 +69,9 @@ internal static class GenerationPlanBuilder {
     }
 
     /// <summary>
-    /// Collapses override registrations that resolve to the same <c>DefineFunction</c> address. The override
+    /// Collapses override registrations that resolve to the same <c>DefineFunctionWithoutInterpreterFallback</c> address. The override
     /// catalogue is keyed by segmented address, so only one override can be installed per address; emitting a
-    /// second <c>DefineFunction</c> at the same address throws at runtime.
+    /// second <c>DefineFunctionWithoutInterpreterFallback</c> at the same address throws at runtime.
     /// <para>
     /// Self-modifying code is the source of these collisions: a selector node and its instruction variants
     /// live at one address but become distinct partitions, and several can carry a primary (loadOffset 0)
@@ -102,9 +102,10 @@ internal static class GenerationPlanBuilder {
     }
 
     private static MethodPlan BuildMethodPlan(CfgGeneratorContext context, CfgCodePartition partition) {
-        PartitionBlockGraph blockGraph = PartitionBlockGraph.FromPartition(partition, context.GetEntries(partition)[0].Node);
+        BlockGraph<CfgBlock> blockGraph = CfgBlockGraphs.FromPartition(partition, context.GetEntries(partition)[0].Node);
+        // Entry blocks first: a block reached only from a secondary entry is laid out after that entry.
         DepthFirstOrdering<CfgBlock> traversal = new(
-            [blockGraph.PrimaryEntryBlock, .. blockGraph.Blocks],
+            [.. blockGraph.EntryBlocks, .. blockGraph.Blocks],
             block => LayoutSuccessors(block, blockGraph));
 
         if (traversal.PostOrder.Count != blockGraph.Blocks.Count) {
@@ -152,20 +153,15 @@ internal static class GenerationPlanBuilder {
                 isBlockEntry = false;
             }
         }
-        // Successor in emission order; last node has no fallthrough target.
-        Dictionary<ICfgNode, ICfgNode?> nextNodeByNode = new();
-        for (int i = 0; i < nodes.Count; i++) {
-            nextNodeByNode[nodes[i]] = i + 1 < nodes.Count ? nodes[i + 1] : null;
-        }
 
         return new MethodPlan(partition, context.GetMethodName(partition), context.GetEntries(partition), blocks,
-            nodes, nodeEmissionPlans, nextNodeByNode, blockGraph, traversal, labelByNode, localSuffixByInstruction);
+            nodes, nodeEmissionPlans, traversal, labelByNode, localSuffixByInstruction);
     }
 
     /// <summary>
     /// Returns successors for layout: non-fallthrough successors in descending address order, then the fallthrough successor last.
     /// </summary>
-    private static IEnumerable<CfgBlock> LayoutSuccessors(CfgBlock block, PartitionBlockGraph graph) {
+    private static IEnumerable<CfgBlock> LayoutSuccessors(CfgBlock block, BlockGraph<CfgBlock> graph) {
         CfgBlock? fallthrough = graph.GetFallthroughSuccessor(block);
         foreach (CfgBlock successor in graph.GetSuccessors(block)
             .Where(successor => successor != fallthrough)
@@ -178,7 +174,7 @@ internal static class GenerationPlanBuilder {
         }
     }
 
-    private static bool FallthroughBlockChecks(ICfgNode node, CfgBlock block, PartitionBlockGraph graph, HashSet<CfgBlock> checkedBlocks) {
+    private static bool FallthroughBlockChecks(ICfgNode node, CfgBlock block, BlockGraph<CfgBlock> graph, HashSet<CfgBlock> checkedBlocks) {
         if (!node.Equals(block.Terminator)) {
             return false;
         }

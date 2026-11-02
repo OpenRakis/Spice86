@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.CPU.CfgCpu.Parser.SpecificParsers;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 
 /// <summary>
@@ -9,17 +10,17 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 /// </summary>
 public static class AluOperationTable {
     /// <summary>
-    /// ALU operations: (method name, display operation, whether to assign result back).
-    /// CMP uses "Sub" as its method but does not assign the result.
+    /// ALU operations: (operation, display operation, whether to assign result back).
+    /// CMP uses Sub but does not assign the result.
     /// </summary>
-    public static readonly (string Operation, InstructionOperation DisplayOp, bool Assign)[] Operations = {
-        ("Add", InstructionOperation.ADD, true),
-        ("Or", InstructionOperation.OR, true),
-        ("Adc", InstructionOperation.ADC, true),
-        ("Sbb", InstructionOperation.SBB, true),
-        ("And", InstructionOperation.AND, true),
-        ("Sub", InstructionOperation.SUB, true),
-        ("Xor", InstructionOperation.XOR, true),
-        ("Sub", InstructionOperation.CMP, false),
+    public static readonly (AluOperation Operation, InstructionOperation DisplayOp, bool Assign)[] Operations = {
+        (AluOperation.Add, InstructionOperation.ADD, true),
+        (AluOperation.Or, InstructionOperation.OR, true),
+        (AluOperation.Adc, InstructionOperation.ADC, true),
+        (AluOperation.Sbb, InstructionOperation.SBB, true),
+        (AluOperation.And, InstructionOperation.AND, true),
+        (AluOperation.Sub, InstructionOperation.SUB, true),
+        (AluOperation.Xor, InstructionOperation.XOR, true),
+        (AluOperation.Sub, InstructionOperation.CMP, false),
     };
 }

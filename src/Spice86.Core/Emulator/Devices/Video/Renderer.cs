@@ -316,7 +316,7 @@ public class Renderer : IVgaRenderer {
     }
 
     /// <summary>
-    ///     Called by <see cref="VgaTimingEngine"/> at vertical retrace on the emulation thread.
+    ///     Called by <see cref="VgaTimingEngine"/> at the end of visible display on the emulation thread.
     ///     Publishes the completed back buffer by swapping it with the front buffer.
     /// </summary>
     public void CompleteFrame() {

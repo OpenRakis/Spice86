@@ -1,0 +1,136 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "F000:FFF0",
+  "totalEntryPoints": 1,
+  "entryPointAddresses": [
+    "F000:FFF0"
+  ],
+  "lastExecutedAddress": "F000:0026",
+  "lastExecutedBlockId": 27,
+  "blocks": [
+    {
+      "id": 27,
+      "entry": "F000:0026",
+      "term": "F000:0026",
+      "pred": [
+        33
+      ],
+      "succ": [],
+      "asm": [
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 2,
+      "entry": "F000:FFF0",
+      "term": "F000:FFF0",
+      "pred": [],
+      "succ": [
+        3
+      ],
+      "asm": [
+        "EB0E|jmp short 0"
+      ]
+    },
+    {
+      "id": 33,
+      "entry": "F000:0024",
+      "term": "F000:0024",
+      "pred": [
+        23,
+        31,
+        37
+      ],
+      "succ": [
+        25,
+        27
+      ],
+      "asm": [
+        "E2E7|loop 0x000D"
+      ]
+    },
+    {
+      "id": 3,
+      "entry": "F000:0000",
+      "term": "F000:000A",
+      "pred": [
+        2
+      ],
+      "succ": [
+        25
+      ],
+      "asm": [
+        "B80010|mov AX,0x1000",
+        "8ED0|mov SS,AX",
+        "BC0001|mov SP,0x0100",
+        "31D2|xor DX,DX",
+        "B90300|mov CX,3"
+      ]
+    },
+    {
+      "id": 25,
+      "entry": "F000:000D",
+      "term": "F000:0012",
+      "pred": [
+        3,
+        33
+      ],
+      "succ": [
+        23,
+        31,
+        37
+      ],
+      "asm": [
+        "89CB|mov BX,CX",
+        "4B|dec BX",
+        "D1E3|shl BX,1",
+        "2EFF6727|jmp near word ptr CS:[BX\u002B0x27]"
+      ]
+    },
+    {
+      "id": 23,
+      "entry": "F000:0020",
+      "term": "F000:0020",
+      "pred": [
+        25
+      ],
+      "succ": [
+        33
+      ],
+      "asm": [
+        "81C20001|add DX,0x0100"
+      ]
+    },
+    {
+      "id": 31,
+      "entry": "F000:001B",
+      "term": "F000:001E",
+      "pred": [
+        25
+      ],
+      "succ": [
+        33
+      ],
+      "asm": [
+        "83C210|add DX,0x0010",
+        "EB04|jmp short 0x0024"
+      ]
+    },
+    {
+      "id": 37,
+      "entry": "F000:0016",
+      "term": "F000:0019",
+      "pred": [
+        25
+      ],
+      "succ": [
+        33
+      ],
+      "asm": [
+        "83C201|add DX,1",
+        "EB09|jmp short 0x0024"
+      ]
+    }
+  ],
+  "truncated": false
+}

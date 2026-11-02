@@ -15,6 +15,14 @@ public record FunctionInformation : IComparable<FunctionInformation> {
     public Func<int, Action>? FunctionOverride { get; }
 
     /// <summary>
+    /// Gets a value indicating whether this override owns the complete control flow of its code, so a
+    /// control transfer of its action must land on another override or on the call's expected return
+    /// address and never falls back to the interpreter. Generated overrides set this. Hand-written
+    /// overrides keep it false: after their action, the interpreter continues at whatever CS:IP it left.
+    /// </summary>
+    public bool ForbidsInterpreterFallback { get; init; }
+
+    /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="address">The address of the function in memory.</param>
@@ -71,17 +79,6 @@ public record FunctionInformation : IComparable<FunctionInformation> {
     /// <param name="target">The target address to add to the UnalignedReturns dictionary.</param>
     public void AddUnalignedReturn(FunctionReturn functionReturn, SegmentedAddress? target) {
         AddReturn(UnalignedReturns, functionReturn, target);
-    }
-
-    /// <summary>
-    /// Invokes the C# override of the machine code for the function.
-    /// </summary>
-    public void CallOverride() {
-        if (HasOverride) {
-            Action? retHandler = FunctionOverride?.Invoke(0);
-            // The override returns what to do when going back to emu mode, so let's do it!
-            retHandler?.Invoke();
-        }
     }
 
     /// <inheritdoc />

@@ -920,11 +920,11 @@ public class VgaFunctionality : IVgaFunctionality {
 
     private void GraphicalMoveChars(VgaMode vgaMode, CursorPosition destination, Area area, int lines) {
         GraphicsOperation operation = CreateGraphicsOperation(vgaMode);
-        operation.X = area.Width * 8;
-        operation.Width = destination.X * 8;
         int characterHeight = _biosDataArea.CharacterHeight;
-        operation.Y = area.Height * characterHeight;
-        operation.Height = destination.Y * characterHeight;
+        operation.X = destination.X * 8;
+        operation.Width = area.Width * 8;
+        operation.Y = destination.Y * characterHeight;
+        operation.Height = area.Height * characterHeight;
         operation.Lines = operation.Y + lines * characterHeight;
         operation.MemoryAction = MemoryAction.MemMove;
         HandleGraphicsOperation(operation);

@@ -26,8 +26,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
         cs1 = 0xF000;
 
-        DefineFunction(cs1, 0x001B, unknown_F000_001B_F001B, name: "unknown");
-        DefineFunction(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, name: "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x001B, unknown_F000_001B_F001B, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, "unknown");
     }
 
     public virtual Action unknown_F000_001B_F001B(int loadOffset) {
@@ -47,11 +47,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt8[DS, 0x0400] = 1;
         // F000:0005 mov AL,byte ptr DS:[0x0500]
         AL = UInt8[DS, 0x0500];
-        // F000:0008 and AL,AL
+        // F000:0008 test AL,AL
         Alu8.And(AL, AL);
         // F000:000A jne short 0x0013
-        if (!ZeroFlag) {
-            goto L_0013;
+        if (AL != 0) {
+            VerifySpeculativeEntryOrFail(cs1, 0x0013, Signature_0013_call);
+            // F000:0013 call near 0x001B
+            NearCall(cs1, 0x0016, unknown_F000_001B_F001B);
+            throw FailAsUntested("Untested return from call at F000:0013");
         }
         // F000:000C mov byte ptr DS:[0x0401],0xDD
         UInt8[DS, 0x0401] = 0xDD;
@@ -60,11 +63,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt8[DS, 0x0402] = 0xAA;
         // F000:0023 hlt
         return Hlt();
-    L_0013:
-        VerifySpeculativeEntryOrFail(cs1, 0x0013, Signature_0013_call);
-        // F000:0013 call near 0x001B
-        NearCall(cs1, 0x0016, unknown_F000_001B_F001B);
-        throw FailAsUntested("Untested return from call at F000:0013");
     }
 
 }

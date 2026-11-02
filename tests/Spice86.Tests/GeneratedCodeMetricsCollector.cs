@@ -16,6 +16,19 @@ internal static class GeneratedCodeMetricsCollector {
     private const string CheckExternalEventsName = "CheckExternalEvents";
     private const string VerifySpeculativeEntryOrFailName = "VerifySpeculativeEntryOrFail";
     private const string FailAsUntestedName = "FailAsUntested";
+    private static readonly HashSet<string> AluTargetNames = new(StringComparer.Ordinal) { "Alu8", "Alu16", "Alu32" };
+    private static readonly HashSet<string> StatusFlagNames = new(StringComparer.Ordinal) {
+        "CarryFlag", "ParityFlag", "AuxiliaryFlag", "ZeroFlag", "SignFlag", "OverflowFlag"
+    };
+    private static readonly HashSet<string> StackMethodNames = new(StringComparer.Ordinal) {
+        "Push16", "Push32", "Pop16", "Pop32"
+    };
+    private static readonly HashSet<SyntaxKind> CompoundAssignmentKinds = new() {
+        SyntaxKind.AddAssignmentExpression, SyntaxKind.SubtractAssignmentExpression,
+        SyntaxKind.AndAssignmentExpression, SyntaxKind.OrAssignmentExpression,
+        SyntaxKind.ExclusiveOrAssignmentExpression, SyntaxKind.LeftShiftAssignmentExpression,
+        SyntaxKind.RightShiftAssignmentExpression
+    };
 
     public static GeneratedCodeMetrics Collect(string fixture, SyntaxTree tree, ImmutableArray<Diagnostic> diagnostics) {
         SyntaxNode root = tree.GetRoot();
@@ -47,6 +60,18 @@ internal static class GeneratedCodeMetricsCollector {
             UncheckedExpressions = walker.UncheckedExpressions,
             Casts = walker.Casts,
             TryStatements = walker.TryStatements,
+            AluCalls = walker.AluCalls,
+            StatusFlagReads = walker.StatusFlagReads,
+            DoLoops = walker.DoLoops,
+            WhileTrueLoops = walker.WhileTrueLoops,
+            IfStatements = walker.IfStatements,
+            BreakStatements = walker.BreakStatements,
+            ContinueStatements = walker.ContinueStatements,
+            StackCalls = walker.StackCalls,
+            FlagAssignments = walker.FlagAssignments,
+            MethodVariables = walker.MethodVariables,
+            CompoundAssignments = walker.CompoundAssignments,
+            TupleSwaps = walker.TupleSwaps,
             Warnings = warnings.Length,
             WarningIds = warningIds
         };
@@ -64,6 +89,18 @@ internal static class GeneratedCodeMetricsCollector {
         public int UncheckedExpressions { get; private set; }
         public int Casts { get; private set; }
         public int TryStatements { get; private set; }
+        public int AluCalls { get; private set; }
+        public int StatusFlagReads { get; private set; }
+        public int DoLoops { get; private set; }
+        public int WhileTrueLoops { get; private set; }
+        public int IfStatements { get; private set; }
+        public int BreakStatements { get; private set; }
+        public int ContinueStatements { get; private set; }
+        public int StackCalls { get; private set; }
+        public int FlagAssignments { get; private set; }
+        public int MethodVariables { get; private set; }
+        public int CompoundAssignments { get; private set; }
+        public int TupleSwaps { get; private set; }
 
         public override void VisitMethodDeclaration(MethodDeclarationSyntax node) {
             Methods++;
@@ -94,7 +131,42 @@ internal static class GeneratedCodeMetricsCollector {
             } else if (name == FailAsUntestedName) {
                 FailAsUntested++;
             }
+            if (node.Expression is MemberAccessExpressionSyntax { Expression: IdentifierNameSyntax target } member) {
+                if (AluTargetNames.Contains(target.Identifier.ValueText)) {
+                    AluCalls++;
+                } else if (target.Identifier.ValueText == "Stack"
+                    && StackMethodNames.Contains(member.Name.Identifier.ValueText)) {
+                    StackCalls++;
+                }
+            }
             base.VisitInvocationExpression(node);
+        }
+
+        public override void VisitAssignmentExpression(AssignmentExpressionSyntax node) {
+            if (node.Left is IdentifierNameSyntax flag && StatusFlagNames.Contains(flag.Identifier.ValueText)) {
+                FlagAssignments++;
+            }
+            if (CompoundAssignmentKinds.Contains(node.Kind())) {
+                CompoundAssignments++;
+            }
+            if (node.Left is TupleExpressionSyntax) {
+                TupleSwaps++;
+            }
+            base.VisitAssignmentExpression(node);
+        }
+
+        public override void VisitLocalDeclarationStatement(LocalDeclarationStatementSyntax node) {
+            if (node.Parent is BlockSyntax { Parent: MethodDeclarationSyntax }) {
+                MethodVariables++;
+            }
+            base.VisitLocalDeclarationStatement(node);
+        }
+
+        public override void VisitIdentifierName(IdentifierNameSyntax node) {
+            if (StatusFlagNames.Contains(node.Identifier.ValueText) && !IsAssignmentTarget(node)) {
+                StatusFlagReads++;
+            }
+            base.VisitIdentifierName(node);
         }
 
         public override void VisitCheckedExpression(CheckedExpressionSyntax node) {
@@ -114,6 +186,33 @@ internal static class GeneratedCodeMetricsCollector {
             base.VisitTryStatement(node);
         }
 
+        public override void VisitDoStatement(DoStatementSyntax node) {
+            DoLoops++;
+            base.VisitDoStatement(node);
+        }
+
+        public override void VisitWhileStatement(WhileStatementSyntax node) {
+            if (node.Condition.IsKind(SyntaxKind.TrueLiteralExpression)) {
+                WhileTrueLoops++;
+            }
+            base.VisitWhileStatement(node);
+        }
+
+        public override void VisitIfStatement(IfStatementSyntax node) {
+            IfStatements++;
+            base.VisitIfStatement(node);
+        }
+
+        public override void VisitBreakStatement(BreakStatementSyntax node) {
+            BreakStatements++;
+            base.VisitBreakStatement(node);
+        }
+
+        public override void VisitContinueStatement(ContinueStatementSyntax node) {
+            ContinueStatements++;
+            base.VisitContinueStatement(node);
+        }
+
         private static string? GetInvokedName(ExpressionSyntax expression) {
             if (expression is IdentifierNameSyntax identifier) {
                 return identifier.Identifier.ValueText;
@@ -122,6 +221,14 @@ internal static class GeneratedCodeMetricsCollector {
                 return memberAccess.Name.Identifier.ValueText;
             }
             return null;
+        }
+
+        private static bool IsAssignmentTarget(IdentifierNameSyntax node) {
+            ExpressionSyntax target = node;
+            if (node.Parent is MemberAccessExpressionSyntax memberAccess && memberAccess.Name == node) {
+                target = memberAccess;
+            }
+            return target.Parent is AssignmentExpressionSyntax assignment && assignment.Left == target;
         }
     }
 }

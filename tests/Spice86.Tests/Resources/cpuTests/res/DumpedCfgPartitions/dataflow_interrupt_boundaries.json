@@ -1,0 +1,209 @@
+{
+  "partitions": [
+    {
+      "id": 1,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        118,
+        110,
+        49,
+        51,
+        57,
+        167,
+        171,
+        173,
+        196,
+        206,
+        208,
+        219
+      ],
+      "entries": [
+        {
+          "block": 118,
+          "address": "F000:006A",
+          "kind": "returnTargetEntry"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        103
+      ],
+      "entries": [
+        {
+          "block": 103,
+          "address": "F000:00FB",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        131
+      ],
+      "entries": [
+        {
+          "block": 131,
+          "address": "F000:010E",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        161
+      ],
+      "entries": [
+        {
+          "block": 161,
+          "address": "F000:011E",
+          "kind": "functionEntry"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        180
+      ],
+      "entries": [
+        {
+          "block": 180,
+          "address": "F000:0123",
+          "kind": "functionEntry"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        3,
+        29,
+        2
+      ],
+      "entries": [
+        {
+          "block": 2,
+          "address": "F000:FFF0",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "kind": "synthetic",
+      "name": "unknown",
+      "blocks": [
+        217
+      ],
+      "entries": [
+        {
+          "block": 217,
+          "address": "F000:0058",
+          "kind": "sharedEntry"
+        }
+      ]
+    }
+  ],
+  "transfers": [
+    {
+      "kind": "cpuFault",
+      "fromPartition": 1,
+      "toPartition": 2,
+      "fromBlock": 118,
+      "toBlock": 103,
+      "from": "F000:006A",
+      "target": "F000:00FB"
+    },
+    {
+      "kind": "callOut",
+      "fromPartition": 1,
+      "toPartition": 4,
+      "fromBlock": 57,
+      "toBlock": 161,
+      "from": "F000:00B3",
+      "target": "F000:011E",
+      "callContinuationBlock": 167,
+      "callContinuationAddress": "F000:00B5"
+    },
+    {
+      "kind": "callOut",
+      "fromPartition": 1,
+      "toPartition": 5,
+      "fromBlock": 173,
+      "toBlock": 180,
+      "from": "F000:00C8",
+      "target": "F000:0123",
+      "callContinuationBlock": 196,
+      "callContinuationAddress": "F000:00CB"
+    },
+    {
+      "kind": "cyclicCrossPartitionFlow",
+      "fromPartition": 1,
+      "toPartition": 7,
+      "fromBlock": 208,
+      "toBlock": 217,
+      "from": "F000:00F5",
+      "target": "F000:0058"
+    },
+    {
+      "kind": "dynamicReturn",
+      "fromPartition": 2,
+      "toPartition": 1,
+      "fromBlock": 103,
+      "toBlock": 118,
+      "from": "F000:010D",
+      "target": "F000:006A"
+    },
+    {
+      "kind": "alignedReturn",
+      "fromPartition": 4,
+      "toPartition": 1,
+      "fromBlock": 161,
+      "toBlock": 167,
+      "from": "F000:0122",
+      "target": "F000:00B5"
+    },
+    {
+      "kind": "alignedReturn",
+      "fromPartition": 5,
+      "toPartition": 1,
+      "fromBlock": 180,
+      "toBlock": 196,
+      "from": "F000:0124",
+      "target": "F000:00CB"
+    },
+    {
+      "kind": "crossPartitionFlow",
+      "fromPartition": 6,
+      "toPartition": 7,
+      "fromBlock": 29,
+      "toBlock": 217,
+      "from": "F000:0052",
+      "target": "F000:0058"
+    },
+    {
+      "kind": "cyclicCrossPartitionFlow",
+      "fromPartition": 7,
+      "toPartition": 1,
+      "fromBlock": 217,
+      "toBlock": 118,
+      "from": "F000:0067",
+      "target": "F000:006A"
+    }
+  ]
+}

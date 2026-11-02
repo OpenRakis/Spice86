@@ -22,6 +22,7 @@ using Spice86.Shared.Utils;
 
 using System.Collections.Immutable;
 using System.Linq;
+using System.Numerics;
 
 /// <summary>
 /// Provides a set of properties and methods to facilitate the creation of C# overrides of machine code.
@@ -63,6 +64,8 @@ public class CSharpOverrideHelper {
     public Machine Machine { get; }
 
     private readonly InterruptVectorTable _interruptVectorTable;
+
+    private readonly HashSet<(SegmentedAddress, SegmentedAddress)> _warnedNestedOverrideCalls = new();
 
     /// <summary>
     /// The memory bus of the IBM PC.
@@ -436,6 +439,39 @@ public class CSharpOverrideHelper {
         Func<int, Action> overrideFunc,
         bool failOnExisting = true,
         string? name = null) {
+        RegisterOverride(segment, offset, overrideFunc, failOnExisting, false, name);
+    }
+
+    /// <summary>
+    /// Registers generated code at the specified segmented address. Generated code owns the complete
+    /// control flow of its partitions, so the registration makes every control transfer of the override
+    /// land on another override or on the call's expected return address instead of falling back to the
+    /// interpreter. Fails when a function is already registered at that address.
+    /// </summary>
+    /// <param name="segment">The segment part of the segmented address.</param>
+    /// <param name="offset">The offset part of the segmented address.</param>
+    /// <param name="overrideFunc">The function to register.</param>
+    /// <param name="name">The name of the function.</param>
+    /// <exception cref="UnrecoverableException">A function is already registered at that address.</exception>
+    public void DefineFunctionWithoutInterpreterFallback(ushort segment, ushort offset, Func<int, Action> overrideFunc, string name) {
+        RegisterOverride(segment, offset, overrideFunc, true, true, name);
+    }
+
+    /// <summary>
+    /// Registers an override at the specified segmented address, unless an entry already exists there and
+    /// <paramref name="failOnExisting"/> says that must fail. The name is <paramref name="name"/>, or is
+    /// parsed from the delegate's method name when it is null.
+    /// </summary>
+    /// <param name="segment">The segment part of the segmented address.</param>
+    /// <param name="offset">The offset part of the segmented address.</param>
+    /// <param name="overrideFunc">The function to register.</param>
+    /// <param name="failOnExisting">Whether to fail when a function already exists at the specified address.</param>
+    /// <param name="forbidsInterpreterFallback">Whether the override owns the complete control flow of its code.</param>
+    /// <param name="name">The name of the function, or null to parse it from the delegate's method name.</param>
+    /// <exception cref="UnrecoverableException">A function already exists at the address and
+    /// <paramref name="failOnExisting"/> is set, or the name cannot be parsed.</exception>
+    private void RegisterOverride(ushort segment, ushort offset, Func<int, Action> overrideFunc,
+        bool failOnExisting, bool forbidsInterpreterFallback, string? name) {
         SegmentedAddress address = new(segment, offset);
         FunctionInformation? existing = GetFunctionAtAddress(failOnExisting, address);
         if (existing?.HasOverride is true) {
@@ -457,7 +493,9 @@ public class CSharpOverrideHelper {
             functionName = parsedFunctionInformation.Name;
         }
 
-        FunctionInformations[address] = (new(address, functionName, overrideFunc));
+        FunctionInformations[address] = new FunctionInformation(address, functionName, overrideFunc) {
+            ForbidsInterpreterFallback = forbidsInterpreterFallback
+        };
     }
 
     /// <summary>
@@ -521,6 +559,14 @@ public class CSharpOverrideHelper {
     }
 
     /// <summary>
+    /// Returns an <see cref="Action"/> that performs an IRETD instruction (32-bit interrupt return) when invoked.
+    /// </summary>
+    /// <returns>returns an <see cref="Action"/> that performs a 32-bit interrupt return when invoked.</returns>
+    public Action InterruptRet32() {
+        return () => ReturnOperationsHelper.InterruptRet32();
+    }
+
+    /// <summary>
     /// Returns an <see cref="Action"/> that will modify the IP register to the provided value.
     /// </summary>
     /// <param name="ip">The target value for the IP register.</param>
@@ -549,11 +595,27 @@ public class CSharpOverrideHelper {
     /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
     /// <param name="function">The function to call.</param>
     public void NearCall(ushort expectedReturnCs, ushort expectedReturnIp, Func<int, Action> function) {
-        ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, expectedReturnCs, function, () => {
+        NearCallReturnedElsewhere(expectedReturnCs, expectedReturnIp, function, NoRedirectedReturns);
+    }
+
+    /// <summary>
+    /// Performs a near call and tells whether it returned to one of the addresses the call was observed
+    /// to be redirected to instead of <paramref name="expectedReturnCs"/>:<paramref name="expectedReturnIp"/>.
+    /// The return address pushed on the stack is still the expected one; a callee that rewrites it and
+    /// lands on a listed address ends the call there without running the override registered there.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="function">The function to call.</param>
+    /// <param name="redirectedReturns">Addresses the call was observed to return to besides the expected one.</param>
+    /// <returns><c>true</c> when the call ended at a redirected return address, <c>false</c> when it
+    /// ended at the expected return address.</returns>
+    public bool NearCallReturnedElsewhere(ushort expectedReturnCs, ushort expectedReturnIp, Func<int, Action> function, SegmentedAddress[] redirectedReturns) {
+        return ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, expectedReturnCs, function, () => {
             Stack.Push16(expectedReturnIp);
             Action returnAction = function.Invoke(0);
             returnAction.Invoke();
-        });
+        }, redirectedReturns);
     }
 
     /// <summary>
@@ -564,11 +626,25 @@ public class CSharpOverrideHelper {
     /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
     /// <param name="function">The function to call.</param>
     public void NearCall32(ushort expectedReturnCs, ushort expectedReturnIp, Func<int, Action> function) {
-        ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, expectedReturnCs, function, () => {
+        NearCall32ReturnedElsewhere(expectedReturnCs, expectedReturnIp, function, NoRedirectedReturns);
+    }
+
+    /// <summary>
+    /// Performs a near call with a 32-bit operand size and tells whether it returned to one of the
+    /// redirected return addresses in <paramref name="redirectedReturns"/> instead of the expected one.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="function">The function to call.</param>
+    /// <param name="redirectedReturns">Addresses the call was observed to return to besides the expected one.</param>
+    /// <returns><c>true</c> when the call ended at a redirected return address, <c>false</c> when it
+    /// ended at the expected return address.</returns>
+    public bool NearCall32ReturnedElsewhere(ushort expectedReturnCs, ushort expectedReturnIp, Func<int, Action> function, SegmentedAddress[] redirectedReturns) {
+        return ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, expectedReturnCs, function, () => {
             Stack.Push32(expectedReturnIp);
             Action returnAction = function.Invoke(0);
             returnAction.Invoke();
-        });
+        }, redirectedReturns);
     }
 
     /// <summary>
@@ -579,12 +655,27 @@ public class CSharpOverrideHelper {
     /// <param name="targetCs">The CS value of the callee, executed in for the duration of the call.</param>
     /// <param name="function">The function to call.</param>
     public void FarCall(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Func<int, Action> function) {
-        ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, targetCs, function, () => {
+        FarCallReturnedElsewhere(expectedReturnCs, expectedReturnIp, targetCs, function, NoRedirectedReturns);
+    }
+
+    /// <summary>
+    /// Performs a far call and tells whether it returned to one of the redirected return addresses in
+    /// <paramref name="redirectedReturns"/> instead of the expected one.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="targetCs">The CS value of the callee, executed in for the duration of the call.</param>
+    /// <param name="function">The function to call.</param>
+    /// <param name="redirectedReturns">Addresses the call was observed to return to besides the expected one.</param>
+    /// <returns><c>true</c> when the call ended at a redirected return address, <c>false</c> when it
+    /// ended at the expected return address.</returns>
+    public bool FarCallReturnedElsewhere(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Func<int, Action> function, SegmentedAddress[] redirectedReturns) {
+        return ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, targetCs, function, () => {
             Stack.Push16(expectedReturnCs);
             Stack.Push16(expectedReturnIp);
             Action returnAction = function.Invoke(0);
             returnAction.Invoke();
-        });
+        }, redirectedReturns);
     }
 
     /// <summary>
@@ -597,11 +688,26 @@ public class CSharpOverrideHelper {
     /// <param name="targetCs">The CS value of the callee, executed in for the duration of the call.</param>
     /// <param name="function">The function to call.</param>
     public void FarCall32(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Func<int, Action> function) {
-        ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, targetCs, function, () => {
+        FarCall32ReturnedElsewhere(expectedReturnCs, expectedReturnIp, targetCs, function, NoRedirectedReturns);
+    }
+
+    /// <summary>
+    /// Performs a far call with a 32-bit operand size and tells whether it returned to one of the
+    /// redirected return addresses in <paramref name="redirectedReturns"/> instead of the expected one.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="targetCs">The CS value of the callee, executed in for the duration of the call.</param>
+    /// <param name="function">The function to call.</param>
+    /// <param name="redirectedReturns">Addresses the call was observed to return to besides the expected one.</param>
+    /// <returns><c>true</c> when the call ended at a redirected return address, <c>false</c> when it
+    /// ended at the expected return address.</returns>
+    public bool FarCall32ReturnedElsewhere(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Func<int, Action> function, SegmentedAddress[] redirectedReturns) {
+        return ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, targetCs, function, () => {
             Stack.PushFarPointer32(new SegmentedAddress32(expectedReturnCs, expectedReturnIp));
             Action returnAction = function.Invoke(0);
             returnAction.Invoke();
-        });
+        }, redirectedReturns);
     }
 
     /// <summary>
@@ -613,6 +719,45 @@ public class CSharpOverrideHelper {
     }
 
     /// <summary>
+    /// Runs the callback whose instruction sits at <paramref name="cs"/>:<paramref name="ip"/> and tells
+    /// whether the handler left CS:IP somewhere else.
+    /// CS:IP is set first so handler code that reads it sees the callback's own address, like the interpreter does.
+    /// A handler that stopped the machine (DOS terminate, TSR) exits here, because generated code would otherwise
+    /// keep running the instruction after the callback.
+    /// </summary>
+    /// <param name="cs">The segment of the callback instruction.</param>
+    /// <param name="ip">The offset of the callback instruction.</param>
+    /// <param name="callbackNumber">The callback identifier.</param>
+    /// <returns><c>true</c> when the handler moved CS:IP away from the callback instruction (DOS EXEC, terminate, TSR).</returns>
+    /// <exception cref="HaltRequestedException">The callback stopped the machine.</exception>
+    public bool CallbackMovedCsIp(ushort cs, ushort ip, ushort callbackNumber) {
+        State.CS = cs;
+        State.IP = ip;
+        _callbackHandler.RunFromOverriden(callbackNumber);
+        if (!State.IsRunning) {
+            Exit();
+        }
+        return State.CS != cs || State.IP != ip;
+    }
+
+    /// <summary>
+    /// Runs the callback whose instruction sits at <paramref name="cs"/>:<paramref name="ip"/>, for callbacks
+    /// whose handler is known to keep CS:IP at the callback instruction. A handler that moved CS:IP elsewhere
+    /// fails as untested; generated code emits a dispatch over the observed targets instead (see
+    /// <see cref="CallbackMovedCsIp"/>).
+    /// </summary>
+    /// <param name="cs">The segment of the callback instruction.</param>
+    /// <param name="ip">The offset of the callback instruction.</param>
+    /// <param name="callbackNumber">The callback identifier.</param>
+    /// <exception cref="HaltRequestedException">The callback stopped the machine.</exception>
+    /// <exception cref="UnrecoverableException">The callback moved CS:IP away from the callback instruction.</exception>
+    public void Callback(ushort cs, ushort ip, ushort callbackNumber) {
+        if (CallbackMovedCsIp(cs, ip, callbackNumber)) {
+            throw FailAsUntested($"Untested callback CS:IP change at {cs:X4}:{ip:X4}: moved to {State.CS:X4}:{State.IP:X4}");
+        }
+    }
+
+    /// <summary>
     /// Performs an interrupt call by executing the given function and returning to the specified return address.
     /// </summary>
     /// <param name="expectedReturnCs">The expected value of the CS register after the interrupt call.</param>
@@ -620,14 +765,43 @@ public class CSharpOverrideHelper {
     /// <param name="targetCs">The CS value of the interrupt handler, executed in for the duration of the call.</param>
     /// <param name="function">The function to execute as part of the interrupt call.</param>
     public void InterruptCall(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Func<int, Action> function) {
-        ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, targetCs, function, () => {
+        ExecuteInterruptCall(expectedReturnCs, expectedReturnIp, targetCs, function, NoRedirectedReturns);
+    }
+
+    /// <summary>
+    /// Performs an interrupt call and tells whether the handler returned to one of the addresses the
+    /// call was observed to be redirected to instead of
+    /// <paramref name="expectedReturnCs"/>:<paramref name="expectedReturnIp"/>.
+    /// The return address pushed on the stack is still the expected one, so handlers that read operand
+    /// bytes from it keep working; a handler that rewrites the stacked return address and lands on a
+    /// listed address ends the call there without running the override registered there.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the interrupt call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the interrupt call.</param>
+    /// <param name="vectorNumber">The vector number to call for the interrupt.</param>
+    /// <param name="redirectedReturns">Addresses the call was observed to return to besides the expected one.</param>
+    /// <returns><c>true</c> when the call ended at a redirected return address, <c>false</c> when it
+    /// ended at the expected return address.</returns>
+    /// <exception cref="UnrecoverableException">If the interrupt vector number is not recognized.</exception>
+    public bool InterruptCallReturnedElsewhere(ushort expectedReturnCs, ushort expectedReturnIp, byte vectorNumber, SegmentedAddress[] redirectedReturns) {
+        SegmentedAddress target = Machine.InterruptVectorTable[vectorNumber];
+        Func<int, Action>? function = SearchFunctionOverride(target);
+        if (function is null) {
+            throw FailAsUntested($"Could not find an override at address {target}");
+        }
+
+        return ExecuteInterruptCall(expectedReturnCs, expectedReturnIp, target.Segment, function, redirectedReturns);
+    }
+
+    private bool ExecuteInterruptCall(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Func<int, Action> function, SegmentedAddress[] redirectedReturns) {
+        return ExecuteCallEnsuringSameStack(expectedReturnCs, expectedReturnIp, targetCs, function, () => {
             Stack.Push16(State.Flags.FlagRegister16);
             InterruptFlag = false;
             Stack.Push16(expectedReturnCs);
             Stack.Push16(expectedReturnIp);
             Action returnAction = function.Invoke(0);
             returnAction.Invoke();
-        });
+        }, redirectedReturns);
     }
 
     /// <summary>
@@ -638,13 +812,7 @@ public class CSharpOverrideHelper {
     /// <param name="vectorNumber">The vector number to call for the interrupt.</param>
     /// <exception cref="UnrecoverableException">If the interrupt vector number is not recognized.</exception>
     public void InterruptCall(ushort expectedReturnCs, ushort expectedReturnIp, byte vectorNumber) {
-        SegmentedAddress target = Machine.InterruptVectorTable[vectorNumber];
-        Func<int, Action>? function = SearchFunctionOverride(target);
-        if (function is null) {
-            throw FailAsUntested($"Could not find an override at address {target}");
-        }
-
-        InterruptCall(expectedReturnCs, expectedReturnIp, target.Segment, function);
+        InterruptCallReturnedElsewhere(expectedReturnCs, expectedReturnIp, vectorNumber, NoRedirectedReturns);
     }
 
     /// <summary>
@@ -697,45 +865,75 @@ public class CSharpOverrideHelper {
         return functionInformation.FunctionOverride;
     }
 
-    private void ExecuteCallEnsuringSameStack(ushort expectedReturnCs, ushort expectedReturnIp,
-        ushort targetCs, Func<int, Action> function, Action action) {
+    private static readonly SegmentedAddress[] NoRedirectedReturns = [];
+
+    /// <summary>
+    /// Runs a call dispatch and its override chain, then tells whether the call ended at one of
+    /// <paramref name="redirectedReturns"/> (<c>true</c>) or at the expected return address
+    /// (<c>false</c>).
+    /// </summary>
+    private bool ExecuteCallEnsuringSameStack(ushort expectedReturnCs, ushort expectedReturnIp,
+        ushort targetCs, Func<int, Action> function, Action action, SegmentedAddress[] redirectedReturns) {
         uint expectedStackAddress = State.StackPhysicalAddress;
         // CS is set to the callee's segment for the duration of the call: this is the segment the emulated
         // CPU runs in while inside the callee, so reads of CS (e.g. a "push CS" idiom) observe the right value.
         // For near calls targetCs equals expectedReturnCs so CS is unchanged. IP is set to the expected return
-        // offset as a fallback for the post-call validation below; generated code never reads State.IP mid-call
+        // offset as a fallback for the chain below; generated code never reads State.IP mid-call
         // (CheckExternalEvents takes the offset explicitly), and the callee's return action overwrites CS:IP
-        // with the actual return address before the loop runs.
+        // with the actual return address before the chain runs.
         State.CS = targetCs;
         State.IP = expectedReturnIp;
-        ExecuteCall(function, action);
-        ushort actualReturnCs = State.CS;
-        ushort actualReturnIp = State.IP;
-        uint actualStackAddress = State.StackPhysicalAddress;
-        // Do not return to the caller until we are sure we are at the right place
-        while (actualReturnCs != expectedReturnCs ||
-               actualReturnIp != expectedReturnIp) {
-            SegmentedAddress expectedReturn = new SegmentedAddress(expectedReturnCs, expectedReturnIp);
-            SegmentedAddress actualReturn = new SegmentedAddress(actualReturnCs, actualReturnIp);
-            string message =
-                "The original code is trying to jump via call stack modification. Expected to return at: " +
-                expectedReturn + " but actually returning to: " + actualReturn + " Stack address before: " +
-                expectedStackAddress + " Stack address after: " + actualStackAddress;
-            if (!FunctionInformations.TryGetValue(actualReturn, out FunctionInformation? actualTarget)) {
-                throw FailAsUntested(message);
-            }
+        SegmentedAddress expectedReturn = new SegmentedAddress(expectedReturnCs, expectedReturnIp);
+        ExecuteCallConsumingUnwindTo(function, action, expectedReturn, expectedStackAddress, redirectedReturns);
+        CSharpCallChainCaller caller = new(this, expectedReturn, expectedStackAddress, redirectedReturns);
+        Machine.CfgCpu.FunctionHandlerInUse.RunOverrideChain(caller, null);
+        return caller.EndedAtRedirectedReturn;
+    }
 
-            message += " Found " + actualTarget.Name + " there.";
-            if (actualTarget.FunctionOverride != null) {
-                message += " Calling it.";
-                _loggerService.LogWarning("{Message}", message);
-                ExecuteCall(actualTarget.FunctionOverride, () => actualTarget.FunctionOverride.Invoke(0).Invoke());
-                actualStackAddress = State.StackPhysicalAddress;
-                actualReturnCs = State.CS;
-                actualReturnIp = State.IP;
-            } else {
-                throw FailAsUntested(message);
+    /// <summary>
+    /// Runs a dispatch started by a call and consumes an unwind that landed on the call's expected return
+    /// address, which is how code that unwinds its own call stack frame returns. Any other unwind is not
+    /// this call's return, so it keeps propagating towards the frame that can interpret it.
+    /// </summary>
+    /// <param name="function">Starting point of the dispatch in the jump dispatcher.</param>
+    /// <param name="action">Dispatch to run.</param>
+    /// <param name="expectedReturn">Address the call that started the dispatch expects to return to.</param>
+    /// <param name="expectedStackAddress">Physical stack address before the call's pushes.</param>
+    /// <param name="redirectedReturns">Other addresses the call accepts as its return.</param>
+    private void ExecuteCallConsumingUnwindTo(Func<int, Action> function, Action action, SegmentedAddress expectedReturn,
+        uint expectedStackAddress, SegmentedAddress[] redirectedReturns) {
+        try {
+            ExecuteCall(function, action);
+        } catch (CallStackUnwindException exception) when (IsAcceptedUnwindTarget(exception.Target, expectedReturn, expectedStackAddress, redirectedReturns)) {
+            // The unwound code already left CS:IP at an accepted return address, so the validation loop
+            // of the surrounding call sees it and does not run.
+        }
+    }
+
+    private bool IsAcceptedUnwindTarget(SegmentedAddress target, SegmentedAddress expectedReturn,
+        uint expectedStackAddress, SegmentedAddress[] redirectedReturns) {
+        if (target == expectedReturn) {
+            return true;
+        }
+        return CSharpCallChainCaller.IsRedirectedReturn(redirectedReturns, target, State.StackPhysicalAddress, expectedStackAddress);
+    }
+
+    /// <summary>
+    /// Logs a nested override call: once at warning level per (expected return, landing) pair of this
+    /// helper, then at debug level, since each occurrence grows the C# stack once more.
+    /// </summary>
+    private void LogNestedOverrideCall(SegmentedAddress expectedReturn, SegmentedAddress actualReturn,
+        uint expectedStackAddress, uint actualStackAddress, string? functionName) {
+        if (_warnedNestedOverrideCalls.Add((expectedReturn, actualReturn))) {
+            if (_loggerService.IsEnabled(LogLevel.Warning)) {
+                _loggerService.LogWarning(
+                    "The call expecting to return to {ExpectedReturn} continued at {ActualReturn} (stack {ActualStackAddress}, before the call {ExpectedStackAddress}). Running {FunctionName} inside the call: the C# stack grows each time this happens. Logged once per call and target.",
+                    expectedReturn, actualReturn, actualStackAddress, expectedStackAddress, functionName);
             }
+        } else if (_loggerService.IsEnabled(LogLevel.Debug)) {
+            _loggerService.LogDebug(
+                "The call expecting to return to {ExpectedReturn} continued at {ActualReturn} again. Running {FunctionName} inside the call.",
+                expectedReturn, actualReturn, functionName);
         }
     }
 
@@ -752,8 +950,13 @@ public class CSharpOverrideHelper {
         JumpDispatcher currentJumpDispatcher = JumpDispatcher;
         // Ensure the jump dispatcher has the function we are calling as starting point
         JumpDispatcher = JumpDispatcher.CreateNew(function);
-        action.Invoke();
-        JumpDispatcher = currentJumpDispatcher;
+        try {
+            action.Invoke();
+        } finally {
+            // Restored even when the call throws (e.g. an unwind to an outer frame), so an exception leaves
+            // the dispatcher as it found it.
+            JumpDispatcher = currentJumpDispatcher;
+        }
     }
 
     /// <summary>
@@ -918,9 +1121,13 @@ public class CSharpOverrideHelper {
             Exit();
         }
         State.IncCycles();
-        // Override/generated code runs without returning to the interpreter run loop that normally pumps the
-        // device scheduler, so advance scheduled device events here (e.g. the PIT raising IRQ0). Without this,
-        // external hardware interrupts would never become pending while generated code is executing.
+        // Override/generated code runs without returning to the interpreter run loop that pumps each of
+        // these between instructions, so mirror that order here: increment the cycle, fire cycle
+        // breakpoints (which may enqueue input events), process pending input, advance scheduled device
+        // events (e.g. the PIT raising IRQ0), then deliver a pending PIC interrupt. Without this, queued
+        // UI/headless input and external hardware interrupts would never reach generated code.
+        Machine.EmulatorBreakpointsManager.CheckCpuCycleBreakPoints();
+        Machine.InputEventHub.ProcessAllPendingInputEvents();
         Machine.EmulationLoopScheduler.ProcessEvents();
         if (!InterruptFlag) {
             return;
@@ -1076,6 +1283,56 @@ public class CSharpOverrideHelper {
     public void Out32(ushort port, uint value) => Machine.IoPortDispatcher.WriteDWord(port, value);
 
     /// <summary>
+    /// Index of the lowest set bit of a word, like the <c>bsf</c> instruction.
+    /// </summary>
+    /// <param name="value">The value to scan.</param>
+    /// <returns>The bit index (0-15) of the lowest set bit.</returns>
+    public ushort BitScanForward16(ushort value) => (ushort)BitOperations.TrailingZeroCount(value);
+
+    /// <summary>
+    /// Index of the lowest set bit of a double word, like the <c>bsf</c> instruction.
+    /// </summary>
+    /// <param name="value">The value to scan.</param>
+    /// <returns>The bit index (0-31) of the lowest set bit.</returns>
+    public uint BitScanForward32(uint value) => (uint)BitOperations.TrailingZeroCount(value);
+
+    /// <summary>
+    /// Index of the highest set bit of a word, like the <c>bsr</c> instruction.
+    /// </summary>
+    /// <param name="value">The value to scan.</param>
+    /// <returns>The bit index (0-15) of the highest set bit.</returns>
+    public ushort BitScanReverse16(ushort value) => (ushort)BitOperations.Log2(value);
+
+    /// <summary>
+    /// Index of the highest set bit of a double word, like the <c>bsr</c> instruction.
+    /// </summary>
+    /// <param name="value">The value to scan.</param>
+    /// <returns>The bit index (0-31) of the highest set bit.</returns>
+    public uint BitScanReverse32(uint value) => (uint)BitOperations.Log2(value);
+
+    /// <summary>
+    /// Checks that a 16-bit signed index lies within [lower, upper], like the <c>bound</c> instruction.
+    /// </summary>
+    /// <exception cref="CpuBoundRangeExceededException">The index is outside the bounds.</exception>
+    public void CheckBound(short index, short lower, short upper) {
+        if (index < lower || index > upper) {
+            throw new CpuBoundRangeExceededException(
+                $"BOUND check failed: index={index}, lower={lower}, upper={upper}.");
+        }
+    }
+
+    /// <summary>
+    /// Checks that a 32-bit signed index lies within [lower, upper], like the <c>bound</c> instruction.
+    /// </summary>
+    /// <exception cref="CpuBoundRangeExceededException">The index is outside the bounds.</exception>
+    public void CheckBound(int index, int lower, int upper) {
+        if (index < lower || index > upper) {
+            throw new CpuBoundRangeExceededException(
+                $"BOUND check failed: index={index}, lower={lower}, upper={upper}.");
+        }
+    }
+
+    /// <summary>
     /// Halt the program.
     /// </summary>
     /// <returns>An <see cref="Action"/> that exits the program.</returns>
@@ -1089,5 +1346,81 @@ public class CSharpOverrideHelper {
         _loggerService.LogTrace("Program requested exit. Terminating now");
 
         throw new HaltRequestedException();
+    }
+
+    /// <summary>C# code that called <c>NearCall</c>, <c>FarCall</c> or <c>InterruptCall</c> and waits for
+    /// the chain to come back to the address that call expects to return to.</summary>
+    private sealed class CSharpCallChainCaller : IOverrideChainCaller {
+        private readonly CSharpOverrideHelper _helper;
+        private readonly SegmentedAddress _expectedReturn;
+        private readonly uint _expectedStackAddress;
+        private readonly SegmentedAddress[] _redirectedReturns;
+
+        /// <summary>Creates the caller waiting for a call that expects to return to
+        /// <paramref name="expectedReturn"/>, started with the stack at <paramref name="expectedStackAddress"/>.</summary>
+        /// <param name="helper">Helper that executed the call.</param>
+        /// <param name="expectedReturn">Address the call expects to return to.</param>
+        /// <param name="expectedStackAddress">Stack address before the call.</param>
+        /// <param name="redirectedReturns">Other addresses the call accepts as its return.</param>
+        public CSharpCallChainCaller(CSharpOverrideHelper helper, SegmentedAddress expectedReturn, uint expectedStackAddress, SegmentedAddress[] redirectedReturns) {
+            _helper = helper;
+            _expectedReturn = expectedReturn;
+            _expectedStackAddress = expectedStackAddress;
+            _redirectedReturns = redirectedReturns;
+        }
+
+        /// <summary>True when the chain ended at a redirected return address instead of the expected one.</summary>
+        public bool EndedAtRedirectedReturn { get; private set; }
+
+        /// <summary>A landed address is an accepted redirected return of a call when it is listed in
+        /// <paramref name="redirectedReturns"/> and the stack is back at or above its level before the
+        /// call's pushes (at or above so <c>ret n</c>, which pops more than the frame, also counts).
+        /// The runtime check is looser than discovery: discovery requires an exact stack match to
+        /// record a redirected return, but generated code reads the stack pointer from the CPU state
+        /// at landing time, so continuing at a listed address with a higher stack pointer does what
+        /// the interpreter does. The address itself is always one discovery observed with an exact
+        /// stack match.</summary>
+        public static bool IsRedirectedReturn(SegmentedAddress[] redirectedReturns, SegmentedAddress landedAddress,
+            uint stackPhysicalAddress, uint expectedStackAddress) =>
+            stackPhysicalAddress >= expectedStackAddress && redirectedReturns.Contains(landedAddress);
+
+        /// <inheritdoc />
+        public SegmentedAddress? ExpectedReturnAddress => _expectedReturn;
+
+        /// <inheritdoc />
+        public bool ContinuesAtExpectedReturn => true;
+
+        /// <inheritdoc />
+        public bool AcceptsRedirectedReturn(SegmentedAddress landedAddress, uint stackPhysicalAddress) {
+            bool accepted = IsRedirectedReturn(_redirectedReturns, landedAddress, stackPhysicalAddress, _expectedStackAddress);
+            EndedAtRedirectedReturn |= accepted;
+            return accepted;
+        }
+
+        /// <inheritdoc />
+        public bool RunOverride(FunctionInformation function, Func<int, Action> functionOverride) {
+            SegmentedAddress actualReturn = _helper.State.IpSegmentedAddress;
+            uint actualStackAddress = _helper.State.StackPhysicalAddress;
+            if (actualStackAddress < _expectedStackAddress) {
+                if (_helper._loggerService.IsEnabled(LogLevel.Debug)) {
+                    _helper._loggerService.LogDebug(
+                        "The call expecting to return to {ExpectedReturn} continued at {ActualReturn} while the callee's frame was still on the stack (stack {ActualStackAddress}, before the call {ExpectedStackAddress}). Running {FunctionName} inside the call.",
+                        _expectedReturn, actualReturn, actualStackAddress, _expectedStackAddress, function.Name);
+                }
+            } else {
+                _helper.LogNestedOverrideCall(_expectedReturn, actualReturn, _expectedStackAddress,
+                    actualStackAddress, function.Name);
+            }
+
+            // A consumed unwind leaves CS:IP at an accepted return address, so the next step of the chain ends it.
+            _helper.ExecuteCallConsumingUnwindTo(functionOverride,
+                () => functionOverride.Invoke(0).Invoke(), _expectedReturn, _expectedStackAddress, _redirectedReturns);
+            return false;
+        }
+
+        /// <inheritdoc />
+        public void OnMachineStopped() {
+            _helper.Exit();
+        }
     }
 }

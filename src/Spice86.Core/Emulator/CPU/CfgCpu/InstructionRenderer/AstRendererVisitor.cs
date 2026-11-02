@@ -198,6 +198,15 @@ public class AstRendererVisitor<TOutput> : IAstVisitor<TOutput> {
         return _outputRenderer.Concat(_outputRenderer.Operator(UnaryOperationToString(node.UnaryOperation)), value);
     }
 
+    public TOutput VisitConditionalValueNode(ConditionalValueNode node) {
+        TOutput condition = node.Condition.Accept(this);
+        if (node.Condition is BinaryOperationNode) {
+            condition = _outputRenderer.Concat(_outputRenderer.Punctuation("("), condition, _outputRenderer.Punctuation(")"));
+        }
+        return _outputRenderer.Concat(condition, _outputRenderer.Punctuation(" ? "),
+            node.WhenTrue.Accept(this), _outputRenderer.Punctuation(" : "), node.WhenFalse.Accept(this));
+    }
+
     public TOutput VisitInstructionFieldNode(InstructionFieldNode node) {
         return node.ResolvedNode.Accept(this);
     }
@@ -354,6 +363,10 @@ public class AstRendererVisitor<TOutput> : IAstVisitor<TOutput> {
         throw CreateUnsupportedNodeException(nameof(MethodCallValueNode));
     }
 
+    public TOutput VisitSetInterruptShadowNode(SetInterruptShadowNode node) {
+        throw CreateUnsupportedNodeException(nameof(SetInterruptShadowNode));
+    }
+
     public TOutput VisitMoveIpNextNode(MoveIpNextNode node) {
         throw CreateUnsupportedNodeException(nameof(MoveIpNextNode));
     }
@@ -415,6 +428,10 @@ public class AstRendererVisitor<TOutput> : IAstVisitor<TOutput> {
 
     public TOutput VisitWhileNode(WhileNode node) {
         throw CreateUnsupportedNodeException(nameof(WhileNode));
+    }
+
+    public TOutput VisitWhileWithExitNode(WhileWithExitNode node) {
+        throw CreateUnsupportedNodeException(nameof(WhileWithExitNode));
     }
 
     public TOutput VisitThrowNode(ThrowNode node) {

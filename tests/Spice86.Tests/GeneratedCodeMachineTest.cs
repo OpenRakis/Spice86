@@ -92,6 +92,14 @@ public sealed class GeneratedCodeMachineTest {
     }
 
     [Fact]
+    public void SameretLoopGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        // sameretloop's function returns to its own entry address on every iteration, so the dispatcher
+        // must recognize each unchanged-CS:IP return as a control transfer and dispatch the override
+        // again; the fallback guard rejects any iteration the interpreter would run instead.
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.SameretLoop());
+    }
+
+    [Fact]
     public void DivFaultLoopGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
         new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.DivFaultLoop());
     }
@@ -168,10 +176,11 @@ public sealed class GeneratedCodeMachineTest {
     [Fact]
     public void MultipleMisalignedCallContinuationsGeneratedOverrideCompilesAndRuns() {
         // multimisalignedcall has a single shared CALL node whose callee discards its real return address
-        // and returns to a different continuation on each run (an overlay/trampoline thunk). None of those
-        // continuations is the instruction statically following the CALL, so the call node accumulates
-        // several CallToMisalignedReturn successors. The generator must not reject that shape: misaligned
-        // continuations are resolved at runtime by ExecuteCallEnsuringSameStack, so generation must succeed.
+        // and returns to a different continuation on each run (an overlay/trampoline thunk). The returns
+        // are stack-balanced: each ret consumes the call's own frame, so the call node accumulates
+        // CallToRedirectedReturn successors. The continuations stay in the caller's method, and the
+        // generated code runs them by dispatching to the actual landing address when
+        // NearCallReturnedElsewhere reports a redirected return.
         new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.MultiMisalignedCall());
     }
 
@@ -275,6 +284,18 @@ public sealed class GeneratedCodeMachineTest {
     [Fact]
     public void SpeculativeInvalidOpcodeGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
         new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.SpeculativeInvalidOpcode());
+    }
+
+    [Fact]
+    public void CallStackUnwindGeneratedOverrideUnwindsThroughRecoveryDispatch() {
+        // callstackunwind's observed path returns leaf -> recovery -> inner_return, so the unobserved
+        // generated execution reaches leaf's speculative non-local return: leaf discards its own return
+        // frame and returns straight to inner_return, the address the generated outer call is waiting
+        // for. That unwind is raised while the outer call helper is dispatching the recovery override
+        // from its recovery loop, so the helper must consume it there and resume at inner_return.
+        AsmFixture discovery = AsmFixtureCatalog.CallStackUnwind(SpeculativeArm.Observed);
+        AsmFixture unwindExecution = AsmFixtureCatalog.CallStackUnwind(SpeculativeArm.Unobserved);
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(discovery, [discovery, unwindExecution]);
     }
 
     [Fact]

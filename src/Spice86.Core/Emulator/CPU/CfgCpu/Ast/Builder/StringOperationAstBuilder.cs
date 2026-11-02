@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Shared.Emulator.Memory;
 
 /// <summary>
 /// Builder for creating string operation AST nodes, handling REP prefix logic.
@@ -52,23 +53,10 @@ public class StringOperationAstBuilder {
         // Check if we need flag-based continuation for REPE/REPNE
         if (repPrefix != RepPrefix.REP) {
             // For REPE/REPNE: the flag condition is checked AFTER each iteration, not before.
-            // Structure: while (CX != 0 && shouldContinue) { op; CX--; shouldContinue = flagCondition; }
-            ValueNode flagCondition = CreateFlagCondition(builder, repPrefix.Value);
-
-            VariableDeclarationNode shouldContinue = builder.DeclareVariable(DataType.BOOL, "shouldContinue", builder.Constant.ToNode(true));
-
-            ValueNode combinedCondition = new BinaryOperationNode(
-                DataType.BOOL,
-                cxCondition,
-                BinaryOperation.LOGICAL_AND,
-                shouldContinue.Reference);
-
-            BinaryOperationNode updateContinue = builder.Assign(
-                DataType.BOOL, shouldContinue.Reference, flagCondition);
-
-            BlockNode loopBody = new BlockNode(coreOperation, decrementCx, updateContinue);
-            WhileNode whileLoop = builder.ControlFlow.While(combinedCondition, loopBody);
-            return builder.WithIpAdvancement(instruction, shouldContinue, whileLoop);
+            // Structure: while (CX != 0) { op; CX--; if (exitCondition) break; }
+            ValueNode exitCondition = CreateExitCondition(builder, repPrefix.Value);
+            BlockNode loopBody = new BlockNode(coreOperation, decrementCx);
+            return builder.WithIpAdvancement(instruction, new WhileWithExitNode(cxCondition, loopBody, exitCondition));
         } else {
             // For REP or instructions that don't change flags, no flag check needed
             BlockNode loopBody = new BlockNode(coreOperation, decrementCx);
@@ -101,8 +89,8 @@ public class StringOperationAstBuilder {
     /// <summary>
     /// Creates an assignment that advances SI by the direction step for the given data size.
     /// </summary>
-    public BinaryOperationNode AdvanceSi(DataType addressType, int dataSize) {
-        ValueNode direction = _typeConversion.Convert(addressType, DirectionNode(dataSize));
+    public BinaryOperationNode AdvanceSi(DataType addressType, BitWidth bitWidth) {
+        ValueNode direction = _typeConversion.Convert(addressType, DirectionNode(bitWidth));
         return _controlFlow.Assign(
             addressType,
             _register.Reg(addressType, RegisterIndex.SiIndex),
@@ -116,8 +104,8 @@ public class StringOperationAstBuilder {
     /// <summary>
     /// Creates an assignment that advances DI by the direction step for the given data size.
     /// </summary>
-    public BinaryOperationNode AdvanceDi(DataType addressType, int dataSize) {
-        ValueNode direction = _typeConversion.Convert(addressType, DirectionNode(dataSize));
+    public BinaryOperationNode AdvanceDi(DataType addressType, BitWidth bitWidth) {
+        ValueNode direction = _typeConversion.Convert(addressType, DirectionNode(bitWidth));
         return _controlFlow.Assign(
             addressType,
             _register.Reg(addressType, RegisterIndex.DiIndex),
@@ -128,15 +116,13 @@ public class StringOperationAstBuilder {
                 direction));
     }
 
-    private ValueNode CreateFlagCondition(AstBuilder builder, Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.RepPrefix repPrefix) {
-        // For REPE, continue while ZF == true (ContinueZeroFlagValue = true)
-        // For REPNE, continue while ZF == false (ContinueZeroFlagValue = false)
-        bool expectedZeroFlag = repPrefix == Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.RepPrefix.REPE;
-
-        return new BinaryOperationNode(DataType.BOOL, builder.Flag.Zero(), BinaryOperation.EQUAL, builder.Constant.ToNode(expectedZeroFlag));
+    private ValueNode CreateExitCondition(AstBuilder builder, Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.RepPrefix repPrefix) {
+        // REPE stops after an iteration that clears ZF, REPNE after an iteration that sets it.
+        bool exitZeroFlag = repPrefix == Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.RepPrefix.REPNE;
+        return new BinaryOperationNode(DataType.BOOL, builder.Flag.Zero(), BinaryOperation.EQUAL, builder.Constant.ToNode(exitZeroFlag));
     }
 
-    private static MethodCallValueNode DirectionNode(int dataSize) {
-        return new MethodCallValueNode(DataType.INT16, "State", $"Direction{dataSize}");
+    private static ConditionalValueNode DirectionNode(BitWidth bitWidth) {
+        return AstBuilder.DirectionStep(bitWidth);
     }
 }

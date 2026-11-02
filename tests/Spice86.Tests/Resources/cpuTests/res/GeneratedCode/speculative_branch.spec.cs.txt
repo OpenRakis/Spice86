@@ -25,7 +25,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
         cs1 = 0xF000;
 
-        DefineFunction(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, name: "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, "unknown");
     }
 
     public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
@@ -35,23 +35,21 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         UInt8[DS, 0x0400] = 1;
         // F000:0005 mov AL,byte ptr DS:[0x0500]
         AL = UInt8[DS, 0x0500];
-        // F000:0008 and AL,AL
+        // F000:0008 test AL,AL
         Alu8.And(AL, AL);
         // F000:000A jne short 0x0013
-        if (!ZeroFlag) {
-            goto L_0013;
+        if (AL != 0) {
+            VerifySpeculativeEntryOrFail(cs1, 0x0013, Signature_0013_mov);
+            // F000:0013 mov byte ptr DS:[0x0401],0xEE
+            UInt8[DS, 0x0401] = 0xEE;
+            VerifySpeculativeEntryOrFail(cs1, 0x0018, Signature_0018_jmp);
+            // F000:0018 jmp short 0x001A
         }
-        // F000:000C mov byte ptr DS:[0x0401],0xDD
-        UInt8[DS, 0x0401] = 0xDD;
-        // F000:0011 jmp short 0x001A
-        goto L_001A;
-    L_0013:
-        VerifySpeculativeEntryOrFail(cs1, 0x0013, Signature_0013_mov);
-        // F000:0013 mov byte ptr DS:[0x0401],0xEE
-        UInt8[DS, 0x0401] = 0xEE;
-        VerifySpeculativeEntryOrFail(cs1, 0x0018, Signature_0018_jmp);
-        // F000:0018 jmp short 0x001A
-    L_001A:
+        else {
+            // F000:000C mov byte ptr DS:[0x0401],0xDD
+            UInt8[DS, 0x0401] = 0xDD;
+            // F000:0011 jmp short 0x001A
+        }
         // F000:001A mov byte ptr DS:[0x0402],0xAA
         UInt8[DS, 0x0402] = 0xAA;
         // F000:001F hlt

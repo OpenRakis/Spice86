@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Configuration>
+  <CodeCoverage>
+    <ModulePaths>
+      <Include>
+        <ModulePath>.*Spice86\.Core\.dll$</ModulePath>
+      </Include>
+    </ModulePaths>
+    <Functions>
+      <Include>
+        <Function>^Spice86\.Core\.Emulator\.ReverseEngineer\.CfgCodeGeneration\..*</Function>
+      </Include>
+    </Functions>
+  </CodeCoverage>
+</Configuration>

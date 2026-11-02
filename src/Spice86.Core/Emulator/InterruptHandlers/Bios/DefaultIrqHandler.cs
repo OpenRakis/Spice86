@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -42,7 +43,7 @@ public sealed class DefaultIrqHandler : IInterruptHandler {
     /// <inheritdoc />
     public SegmentedAddress WriteAssemblyInRam(MemoryAsmWriter memoryAsmWriter) {
         SegmentedAddress handlerAddress = memoryAsmWriter.CurrentAddress;
-        memoryAsmWriter.RegisterAndWriteCallback(HandleIrq);
+        memoryAsmWriter.RegisterAndWriteCallback(CallbackNumbers.ForDefaultIrq(_irq), HandleIrq);
         memoryAsmWriter.WriteIret();
         return handlerAddress;
     }

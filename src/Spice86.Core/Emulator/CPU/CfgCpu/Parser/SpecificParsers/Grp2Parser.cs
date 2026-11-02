@@ -17,18 +17,18 @@ using Spice86.Shared.Emulator.Memory;
 /// 3 forms: count=1, count=CL, count=IMM8.
 /// </summary>
 public class Grp2Parser : BaseGrpOperationParser {
-    private static readonly (string Operation, InstructionOperation DisplayOp)[] Operations = {
-        ("Rol", InstructionOperation.ROL),
-        ("Ror", InstructionOperation.ROR),
-        ("Rcl", InstructionOperation.RCL),
-        ("Rcr", InstructionOperation.RCR),
-        ("Shl", InstructionOperation.SHL),
-        ("Shr", InstructionOperation.SHR),
+    private static readonly (AluOperation Operation, InstructionOperation DisplayOp)[] Operations = {
+        (AluOperation.Rol, InstructionOperation.ROL),
+        (AluOperation.Ror, InstructionOperation.ROR),
+        (AluOperation.Rcl, InstructionOperation.RCL),
+        (AluOperation.Rcr, InstructionOperation.RCR),
+        (AluOperation.Shl, InstructionOperation.SHL),
+        (AluOperation.Shr, InstructionOperation.SHR),
         // groupIndex 6 is an undocumented alias of SHL/SAL (groupIndex 4) on
         // 80186/286/386. The real CPU executes it identically. Tests in the
         // SingleStep suite include this encoding, so we map /6 -> SHL.
-        ("Shl", InstructionOperation.SHL),
-        ("Sar", InstructionOperation.SAR),
+        (AluOperation.Shl, InstructionOperation.SHL),
+        (AluOperation.Sar, InstructionOperation.SAR),
     };
 
     private readonly Grp2CountSource _countSource;
@@ -41,7 +41,7 @@ public class Grp2Parser : BaseGrpOperationParser {
         if (groupIndex < 0 || groupIndex > 7) {
             throw new InvalidGroupIndexException(_state, groupIndex);
         }
-        (string operation, InstructionOperation displayOp) = Operations[groupIndex];
+        (AluOperation operation, InstructionOperation displayOp) = Operations[groupIndex];
         BitWidth bitWidth = GetBitWidth(context.OpcodeField, context.HasOperandSize32);
         DataType dataType = _astBuilder.UType(bitWidth);
         CfgInstruction instr = new(_idAllocator.AllocateId(), context.Address, context.OpcodeField, context.Prefixes, 1);

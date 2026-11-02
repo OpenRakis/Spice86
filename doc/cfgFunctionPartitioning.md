@@ -122,6 +122,7 @@ flowchart LR
 - `Jump`
 - `CallContinuation`
 - `MisalignedCallContinuation`
+- `RedirectedCallContinuation`
 
 It stops at calls, CPU faults, return targets, and edges into a different root block. The output is not yet a block-to-partition assignment. It is a map from each block to all roots that can own it.
 
@@ -246,11 +247,14 @@ Return transfer classification is intentionally delayed until this stage. The an
 | `Call` | A call instruction entering its callee. |
 | `CallContinuation` | The post-call continuation reached after an aligned return. |
 | `MisalignedCallContinuation` | A post-call continuation reached after a suspicious or non-standard return. |
+| `RedirectedCallContinuation` | A post-call continuation whose return consumed the call's own frame but landed elsewhere (rewritten return address). |
 | `RetTarget` | A return instruction transferring to an observed return target. |
 | `CpuFault` | A faulting instruction transferring to a CPU fault handler context. |
 | `Jump` | A jump instruction transferring to its target. |
 
 These are internal edge kinds used by the partitioner. They are later converted into serialized partition transfer kinds.
+
+A `RedirectedCallContinuation` edge is recorded only when the return's stack pointer exactly matches the call frame's post-call stack address, which proves the call's own frame was consumed — a newer live frame always sits lower on the same stack segment, so a candidate shadowed by a newer frame at a higher or equal address is a stale frame and does not match. A fault handler that returns to the faulting instruction records `CallToReturn` instead: the CPU's own return address for a fault is the faulting instruction. Known limit: a stack match proves the call's frame was consumed, not that the target is code of the caller — a callee that rewrites its return address to another routine at the same stack level pulls that routine into the caller's partition unless it is already a root. Behaviour stays correct because the generated dispatch emits a real transfer; only the code structure is affected.
 
 ## Root Collection
 
@@ -277,6 +281,7 @@ If several pieces of evidence point to the same block, the partitioner keeps one
 - `Jump`
 - `CallContinuation`
 - `MisalignedCallContinuation`
+- `RedirectedCallContinuation`
 
 It does not traverse:
 

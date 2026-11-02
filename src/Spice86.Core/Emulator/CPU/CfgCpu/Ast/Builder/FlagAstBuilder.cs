@@ -106,11 +106,10 @@ public class FlagAstBuilder {
     }
 
     /// <summary>
-    /// Creates an assignment node that sets State.InterruptShadowing to true.
+    /// Creates the node that sets State.InterruptShadowing to true.
     /// </summary>
-    public BinaryOperationNode SetInterruptShadowing() {
-        MethodCallValueNode shadowingNode = new MethodCallValueNode(DataType.BOOL, nameof(State), nameof(State.InterruptShadowing));
-        return new BinaryOperationNode(DataType.BOOL, shadowingNode, BinaryOperation.ASSIGN, new ConstantNode(DataType.BOOL, 1UL));
+    public SetInterruptShadowNode SetInterruptShadowing() {
+        return new SetInterruptShadowNode();
     }
 
     /// <summary>
@@ -118,9 +117,7 @@ public class FlagAstBuilder {
     /// Equivalent to: if (!State.InterruptFlag) { State.InterruptShadowing = true; }
     /// </summary>
     public IfElseNode SetInterruptShadowingIfInterruptDisabled() {
-        MethodCallValueNode shadowingNode = new MethodCallValueNode(DataType.BOOL, nameof(State), nameof(State.InterruptShadowing));
-        BinaryOperationNode assignment = new BinaryOperationNode(DataType.BOOL, shadowingNode, BinaryOperation.ASSIGN, new ConstantNode(DataType.BOOL, 1UL));
         UnaryOperationNode condition = new UnaryOperationNode(DataType.BOOL, UnaryOperation.NOT, Interrupt());
-        return _controlFlow.If(condition, assignment);
+        return _controlFlow.If(condition, new SetInterruptShadowNode());
     }
 }

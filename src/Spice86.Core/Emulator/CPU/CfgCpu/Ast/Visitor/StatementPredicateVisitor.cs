@@ -33,6 +33,10 @@ internal abstract class StatementPredicateVisitor : IAstVisitor<bool> {
         return node.Body.Accept(this);
     }
 
+    public bool VisitWhileWithExitNode(WhileWithExitNode node) {
+        return node.Body.Accept(this);
+    }
+
     // Every other node returns false; override one in a predicate whose effect it can carry.
     public virtual bool VisitInstructionFieldNode(InstructionFieldNode node) => false;
     public virtual bool VisitSegmentRegisterNode(SegmentRegisterNode node) => false;
@@ -41,6 +45,7 @@ internal abstract class StatementPredicateVisitor : IAstVisitor<bool> {
     public virtual bool VisitAbsolutePointerNode(AbsolutePointerNode node) => false;
     public virtual bool VisitSegmentedAddressNode(SegmentedAddressNode node) => false;
     public virtual bool VisitUnaryOperationNode(UnaryOperationNode node) => false;
+    public virtual bool VisitConditionalValueNode(ConditionalValueNode node) => false;
     public virtual bool VisitTypeConversionNode(TypeConversionNode node) => false;
     public virtual bool VisitConstantNode(ConstantNode node) => false;
     public virtual bool VisitNearAddressNode(NearAddressNode node) => false;
@@ -66,4 +71,5 @@ internal abstract class StatementPredicateVisitor : IAstVisitor<bool> {
     public virtual bool VisitCallbackNode(CallbackNode node) => false;
     public virtual bool VisitSelectorNode(SelectorNode node) => false;
     public virtual bool VisitInvalidInstructionNode(InvalidInstructionNode node) => false;
+    public virtual bool VisitSetInterruptShadowNode(SetInterruptShadowNode node) => false;
 }

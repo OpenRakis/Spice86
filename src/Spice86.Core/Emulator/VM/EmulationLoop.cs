@@ -26,7 +26,6 @@ public class EmulationLoop {
     private readonly ICyclesLimiter _cyclesLimiter;
     private readonly InputEventHub _inputEventQueue;
     private readonly DeviceScheduler.DeviceScheduler _emulationLoopScheduler;
-    private readonly DeviceScheduler.EventHandler _inputEventsHandler;
 
     /// <summary>
     /// Gets or sets whether the emulation is paused.
@@ -67,28 +66,26 @@ public class EmulationLoop {
         _pauseHandler = pauseHandler;
         _inputEventQueue = inputEventQueue;
         _cyclesLimiter = cyclesLimiter;
-        _inputEventsHandler = new DeviceScheduler.EventHandler(InputEventsHandler);
-        _emulationLoopScheduler.AddEvent(_inputEventsHandler, 100);
-    }
-
-    private void InputEventsHandler(uint _) {
-        _inputEventQueue.ProcessAllPendingInputEvents();
-        _emulationLoopScheduler.AddEvent(_inputEventsHandler, 100);
     }
 
     /// <summary>
-    /// Starts and waits for the end of the emulation loop.
+    /// Starts and waits for the end of the emulation loop. When the program loader already stopped the machine (for
+    /// example a batch file that ran only internal commands), no instruction is parsed or executed.
     /// </summary>
     /// <exception cref="InvalidVMOperationException">
     /// Thrown when an unhandled exception occurs, typically because the target program is not supported yet.
     /// </exception>
     public void Run() {
         _emulatorBreakpointsManager.OnMachineStart();
+        bool hasProgramToRun = _cpuState.IsRunning;
         try {
-            StartRunLoop(_functionHandler);
+            if (hasProgramToRun) {
+                StartRunLoop(_functionHandler);
+            }
         } catch (HaltRequestedException) {
             // Actually a signal-generated code requested Exit
             _loggerService.LogInformation("Emulation halted by request.");
+            _emulatorBreakpointsManager.OnMachineStop();
             return;
         } catch (InvalidVMOperationException invalidVmOperationException) {
             _loggerService.LogError(invalidVmOperationException,
@@ -100,7 +97,9 @@ public class EmulationLoop {
         }
 
         _emulatorBreakpointsManager.OnMachineStop();
-        _cpu.SignalEnd();
+        if (hasProgramToRun) {
+            _cpu.SignalEnd();
+        }
     }
 
     /// <summary>
@@ -130,6 +129,7 @@ public class EmulationLoop {
         _cpu.SignalEntry();
         while (_cpuState.IsRunning) {
             _pauseHandler.WaitIfPaused();
+            _inputEventQueue.ProcessAllPendingInputEvents();
             _emulationLoopScheduler.ProcessEvents();
             _cpu.ExecuteNext();
             _cyclesLimiter.RegulateCycles();

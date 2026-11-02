@@ -25,7 +25,7 @@ public class PopFParser : BaseInstructionParser {
         IVisitableAstNode execAst = _astBuilder.WithIpAdvancement(instr, assign);
         instr.AttachAsts(displayAst, execAst);
         instr.MarkAsBlockStarter();
-        instr.MarkAsBlockTerminator();
+        instr.EndBlockAfterFallthrough();
         return instr;
     }
 

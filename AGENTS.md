@@ -35,9 +35,9 @@ The entire emulator is assembled in `Spice86DependencyInjection.cs` (~600 lines)
 ## Critical Workflows
 
 ### Building & Running
-```powershell
-# Build from solution root
-dotnet build
+```text
+# Build from repository root
+dotnet build src/Spice86.sln
 
 # Run with executable
 dotnet run --project src/Spice86 -- -e path\to\program.exe
@@ -48,7 +48,21 @@ dotnet test tests/Spice86.Tests -- --filter-not-class '*SingleStepTest*'
 # Run a single test class / method
 dotnet test tests/Spice86.Tests -- --filter-class '*GeneratedCodeMachineTest*'
 dotnet test tests/Spice86.Tests -- --filter-method '*TestStiPending*'
+
+# Opt-in: compile the C# every test generates and append one row per test to a TSV coverage report (path must be absolute)
+SPICE86_GENERATED_CODE_COVERAGE=$PWD/tmp/generated-code-coverage.tsv dotnet test tests/Spice86.Tests -- --filter-not-class '*SingleStepTest*' --filter-not-class '*GeneratedCodeCoverageReportTest*'
+
+# Opt-in: run the tests with the JIT executing each instruction's execution AST after the IR round trip of the code generator (no filter, so SingleStepTest is included)
+SPICE86_JIT_GENERATOR_IR=1 dotnet test tests/Spice86.Tests
+
+# Opt-in: code coverage of the code generator (ReverseEngineer/CfgCodeGeneration) over the golden tests only; the settings path must be absolute (it is resolved from the test binary folder)
+dotnet test tests/Spice86.Tests --no-build -- --filter-class '*GeneratedCodeScenarioTest*' --filter-class '*GeneratedCodeMachineTest*' --filter-class '*SpeculativeCfgTest*' --coverage --coverage-output-format cobertura --coverage-output generator.cobertura.xml --coverage-settings "$PWD/tests/Spice86.Tests/GeneratorCoverage.config.xml" --results-directory "$PWD/tmp/generator-coverage"
+
+# Opt-in: run an instrumented copy of every generated program and append one row per generated statement (ran or not) to a TSV report (path must be absolute)
+SPICE86_GENERATED_CODE_PROBES=$PWD/tmp/generated-code-probes.tsv dotnet test tests/Spice86.Tests --no-build -- --filter-class '*GeneratedCodeScenarioTest*' --filter-class '*GeneratedCodeMachineTest*' --filter-class '*SpeculativeCfgTest*'
 ```
+
+> **Generator audit tools**: the two commands above measure which generator paths no golden reaches and which generated statements never run. `tasks/phase3/14-generator-coverage-audit.md` ("Measurement runs") has the one-liners that turn their output into lists of uncovered lines and a per-construct table.
 
 > **Test filter syntax rule**: the test project runs on xUnit v3 through Microsoft.Testing.Platform (`TestingPlatformDotnetTestSupport` in `tests/Directory.Build.props`). The VSTest-style `--filter 'FullyQualifiedName~...'` is **silently ignored** (warning `MTP0001`) and runs the whole suite, SingleStepTest included. Always pass filters after `--` using `--filter-class`, `--filter-not-class`, `--filter-method`, `--filter-not-method` with `*` wildcards.
 
@@ -56,9 +70,25 @@ dotnet test tests/Spice86.Tests -- --filter-method '*TestStiPending*'
 
 > **Test output rule (agents only)**: no need to redirect `dotnet test` output to a file. On success the console summary is short (a single `Passed! - Failed: 0, Passed: N ...` line), so run it directly and read the summary. Only capture to a file when a run actually fails and you need the full failure detail.
 
+> **Direct failure diagnostics**: if the MTP summary points to an inaccessible ignored `bin/` log, `dotnet run --project tests/Spice86.Tests --no-build -- -class- '*SingleStepTest*' -reporter quiet -noLogo -noColor` runs the xUnit executable directly and prints failures. This direct runner uses `-class` / `-class-` / `-method`, not the MTP `--filter-*` syntax above.
+
+> **Temporary generated projects**: setting `TMPDIR` inside this repository makes the HTTP generated-client tests' temporary consumer projects inherit ancestor `Directory.Packages.props`; the reviewed tests then fail with NU1008. This is separate from ASM code generation. Do not change package security/settings to hide it.
+
+> **Compile report scope**: `SPICE86_GENERATED_CODE_COVERAGE` only compiles dumps; it does not execute them or enforce golden coverage. Rows represent emulator lifetimes, not unique ASM scenarios. A report with zero compile errors is not proof of generated-mode behavioral coverage.
+
 > **Long-running test rule (Kiro agents only)**: the foreground shell tool (`execute_bash`) enforces a hard wall-clock cap (roughly 25-60s in practice) that fires *before* the `timeout` argument. When it trips it force-returns exit 1 while the detached `dotnet` process keeps running and completes normally, which looks exactly like a crash (abrupt exit 1, no test summary, no dump) but is not one. Any test run expected to exceed ~25s (the full suite is ~2 min; `CfgGraphReloadTest` alone is ~55s) MUST be launched with the background-process tool (which has no such cap), writing a completion marker, then polled with short (<20s) foreground calls until the marker appears. Do not conclude a suite "crashed" from a bare exit 1 with no summary; re-run it in the background and check the real result first. Splitting the run with `--filter-class` so each foreground run stays under the cap also works.
 
-> **Generated-code golden regeneration rule**: every `GeneratedCodeMachineTestRunner.TestGeneratedCode` call in `GeneratedCodeMachineTest` and `SpeculativeCfgTest` compares the generated C# against a committed golden under `tests/Spice86.Tests/Resources/cpuTests/res/GeneratedCode/<key>.cs.txt`, where `<key>` is the bin name plus one suffix per enabled run option (e.g. `jump1.spec`, `test386.failport.spec`, `intchain.ivt.spec`). Any change that alters generated output will fail these tests; that is intended. **Regenerate rather than hand-edit the goldens**: uncomment the `WriteExpectedGeneratedSource(...)` call in `GeneratedCodeMachineTestRunner.CompareGeneratedSourceWithExpected`, run both `GeneratedCodeMachineTest` and `SpeculativeCfgTest`, re-comment the call, then review the golden diff as the primary artefact of the change (the write goes into the source tree via `[CallerFilePath]`, one file per run). With the write enabled, run the two classes single-threaded (`-- --parallel none`; `--maximum-parallel-threads` is not a valid option for this runner, which then prints its help and runs zero tests): the goldens are written and read during the run, and parallel execution can otherwise race on the same file and leave a golden unwritten. There are around fifty goldens; the `speculative_*` and ALU (`add`, `sub`, `mul`, `div`, `shifts`, ...) fixtures mostly repeat the same change, so read `jump1`, `partition_cross_function_loop`, `rep`, `div` and `selfmodifyje` closely and skim the rest as regression guards. This mirrors the existing `WriteExpectedListing`/`WriteExpectedCfgJson` workflow in `MachineTest`.
+> **ASM golden regeneration rule**: normal test runs must never write committed goldens. The three source-tree writer calls (`MachineGoldens.WriteExpectedListing`, `MachineGoldens.WriteExpectedCfgJson`, and `GeneratedCodeMachineTestRunner.WriteExpectedGeneratedSource`) stay commented out except during deliberate regeneration. To regenerate, enable all three writers, rebuild, run the catalogue command below twice serially, require the second pass to make no changes, disable the writers again, rebuild, and review the complete golden diff. Regenerate files instead of editing them by hand.
+>
+> Machine goldens use `MachineGoldens.GoldenKey(fixture)` and live in `DumpedListing`, `DumpedCfgBlocks`, and `DumpedCfgPartitions`. Generated-source goldens use `GeneratedCodeMachineTestRunner.GoldenKey(settings)` and live in `GeneratedCode`; this key intentionally omits the scenario variant because several executions may share one generated program. `AsmFixtureGoldenCoverageTest` derives the expected file sets for both key spaces from the scenario catalogue and rejects missing and orphan files.
+>
+> Run regeneration serially because several tests can address the same golden (`--maximum-parallel-threads` is not a valid option for this runner):
+>
+> ```text
+> dotnet test tests/Spice86.Tests --no-build -- --filter-class 'Spice86.Tests.MachineTest' --filter-class '*GeneratedCodeScenarioTest*' --filter-class '*GeneratedCodeMachineTest*' --filter-class '*SpeculativeCfgTest*' --parallel none
+> ```
+>
+> `GeneratedCodeScenarioTest` covers the catalogue. `GeneratedCodeMachineTest` and `SpeculativeCfgTest` retain focused engine and speculative cases. `MachineTest` also compares listing and CFG goldens, including scenario variants no other class runs (the `.unobserved` speculative variants); leaving it out leaves those goldens stale. Treat the generated diff as the primary review artifact; passing tests alone do not prove that regenerated expectations are correct.
 
 ### Debugging Workflow
 - **GDB Integration**: Server runs on port 10000 by default (`--GdbPort 10000`)
@@ -103,6 +133,8 @@ public class MyOverrides : CSharpOverrideHelper {
 }
 ```
 
+Hand-written overrides registered with `DefineFunction` hand control back to the interpreter at whatever CS:IP their action leaves. Generated code registers with `DefineFunctionWithoutInterpreterFallback`, whose transfers must land on another override or the expected return address and never fall back to the interpreter.
+
 ### CSharpOverrideHelper Capabilities
 - Access CPU state via `State`, `Stack`, `Memory`, `UInt8/16/32` indexers
 - Control flow: `NearRet()`, `FarRet()`, `NearCall()`, `FarCall()`, `FarJump()`, `Hlt()`
@@ -130,7 +162,7 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 - **Use `tmp/` for temporary files** - if a temporary file must be written (e.g., captured command output, intermediate data), place it inside the `tmp/` folder at the root of the repository. Never write to `/tmp` or any path outside the workspace.
 - **Avoid complexity** - keep cyclomatic complexity low, prefer simple, linear code over nested conditionals
 - **No optional parameters** - avoid optional/defaulted method parameters in new code. Prefer non-nullable types; a field or dependency should be nullable only when its absence is a real, distinct state (e.g. a feature disabled by a flag). When a nullable feature-gate would otherwise force `?.`/`is not null` guards across many call sites, prefer a null-object (no-op) implementation or unconditional construction over a nullable reference.
-- **No complex ternary expressions** - avoid nested, chained, or multi-line ternaries; simple single-line ternaries with short operands are allowed (e.g. `int x = a > b ? a : b;`), but non-trivial conditions or non-trivial branches must use explicit `if/else`
+- **No complex ternary expressions** - avoid nested, chained, or multi-line ternaries; simple single-line ternaries with short operands are allowed (e.g. `int x = a > b ? a : b;`). When both branches of an `if`/`else` only assign the same variable and each branch is a single simple expression, write it as a ternary instead: CodeQL flags the `if`/`else` form as a missed ternary opportunity. A condition or a branch that is not a single simple expression must use explicit `if/else`
 - **Minimal comments** - write self-documenting code with clear names; avoid obvious comments
 - **No references to plan/spec sections in code** - never point comments, XML docs, or test names at sections of a plan, spec, or implementation-tracking document (e.g. "Phase 5", "Gap D", "Rule 4", "section S6.1.1", "Test 18", "implementation plan"). Those documents are temporary or drift over time, leaving dangling pointers that mean nothing to a future reader. Describe the actual behavior, invariant, or scenario directly instead.
 - **Test before submit** - always run tests after code changes to verify functionality
@@ -139,6 +171,8 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 - **Ignore Machine class** - this is a legacy aggregator class; work directly with specific components (`CfgCpu`, `Memory`, `Stack`, etc.) instead
 - **Enforce TDD** - ensure integration tests are present and not passing at first, then make them pass by updating the implementation.
 - **Clear test code style** use explicit Arrange/Act/Assert structure, avoid long setup blocks, and reduce duplication with small helpers.
+- **Generator pass legality** - a new code-generator pass states each legality condition with the IR effects model (`IrValues`, `IrTokens`, `MayFault`, `DeliversInterrupts`; `IrSsa.SameVersions` is the move/merge rule) in its summary, and adds one ASM fixture section per condition whose result region fails when the condition is dropped (a mutation check).
+- **No unit tests that repeat the goldens** - when a change only alters printed or displayed text (generated C#, listings, CFG JSON, instruction rendering) and the committed goldens already contain that text, the golden diff and its review checks are the test: the golden comparison fails before the change and passes after regeneration, which satisfies the TDD rule. Do not add a unit test that asserts the same text. Write unit tests for what goldens cannot show or do not cover: the conditions under which a rewrite applies or is refused, equivalence against the emulator (ALU, JIT), invariants and generation-time checks, and shapes or edge cases no fixture executes.
 - **Pause-refresh rule for new ViewModels** - view models that refresh from a dispatcher timer must refresh at most once per pause cycle. Gate updates on `IPauseHandler.IsPaused`, track a per-pause boolean flag, and reset it on resume.
 
 ### Avalonia Telemetry
@@ -198,7 +232,7 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 - **Do not use `#region`**: Avoid `#region`/`#endregion` blocks; keep code organized via clear structure and namespaces
 - **Do not suppress warnings with pragmas**: Never disable warnings using preprocessor directives (e.g., `#pragma warning disable`). Fix the underlying issue instead.
 - **Use `Path.Join`, not `Path.Combine`**: Never use `System.IO.Path.Combine`. It silently discards all earlier segments if a later argument is rooted, and CodeQL flags every call ("Path.Combine may silently drop its earlier arguments") because it cannot prove the arguments are relative. Always use `Path.Join`, which concatenates segments without dropping any. This is a very frequent CodeQL finding - prefer `Path.Join` everywhere paths are assembled.
-- **No complex ternary operator**: Avoid nested, chained, or multi-line ternary expressions. Simple single-line ternaries with short, obvious operands are acceptable. Use explicit `if/else` blocks when the condition or either branch is non-trivial.
+- **No complex ternary operator**: Avoid nested, chained, or multi-line ternary expressions. Simple single-line ternaries with short, obvious operands are acceptable, and so is an `if`/`else` that only assigns the same variable in both branches rewritten as one ternary (CodeQL: missed ternary opportunity). Use explicit `if/else` blocks when the condition or either branch is not a single simple expression.
 - **Async usage restrictions**:
   - **Do NOT let async "infect" the `Spice86.Core` assembly**
   - Keep async code in the UI layer (`Spice86` project) only
@@ -226,12 +260,11 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 - **Prefer ASM-based tests over unit tests** for testing the emulator
   - Unit tests are acceptable for interrupt handlers that don't override `WriteAssemblyInRam` and deal with few dependencies
   - Use assembly-based integration tests for comprehensive emulator validation
-- **Every ASM fixture runs in both `MachineTest` and `GeneratedCodeMachineTest`**
-  - Every ASM fixture has one behavioral oracle (expected memory and/or program-result checks) in `tests/Spice86.Tests/AsmFixtures/AsmFixtureCatalog.cs`. `MachineTest` and `GeneratedCodeMachineTest` both take the fixture from the catalogue; never copy expected values into a test class.
-  - `MachineTest` (`TestOneBin`) only runs the interpreter. It checks the oracle, the listing and CFG goldens, and engine state (CFG nodes, `CS:IP`, `IsRunning`) in its own callbacks. It never invokes the C# generator.
-  - `GeneratedCodeMachineTest` (via `GeneratedCodeMachineTestRunner.TestGeneratedCode`) runs the bin in the interpreter, generates C# from the recorded CFG, compiles it, re-runs the bin with the compiled override installed, checks the same oracle, then compares the generated-code golden.
-  - When adding or changing an ASM fixture, add or update its catalogue method and both tests. Code-generation bugs are only caught by the generated-code path, and emulator CFG changes only by the MachineTest goldens.
-  - This holds for every configuration of a bin: a fixture with speculation off or on the unobserved arm of a speculative bin gets its own MachineTest run, with listing / CFG goldens named <bin>.nospec / <bin>.unobserved (MachineTest.MachineGoldenKey). The only exceptions are engine-only fixtures without an oracle, listed in AsmFixtureGoldenCoverageTest.
+- **Every runnable ASM scenario is catalogue-driven**
+  - Register it in `tests/Spice86.Tests/AsmFixtures/AsmScenarioCatalog.cs` with one behavioral oracle. Keep child programs, overlays, includes, and data files as dependencies of the scenario that loads them, not as standalone scenarios.
+  - `GeneratedCodeScenarioTest.CatalogueCaseRunsAsGeneratedCode` derives its cases from the catalogue. It performs interpreted discovery, checks the machine goldens, generates and compiles C#, executes each registered variant with the same oracle, and checks the generated-source golden. Adding a scenario therefore adds generated coverage automatically.
+  - `MachineTest`, `GeneratedCodeMachineTest`, and `SpeculativeCfgTest` retain focused engine, speculative, and fault-injection checks. They are not the registration source of truth.
+  - Follow the golden-key and regeneration rules above. Do not force machine-golden and generated-source keys to match, and do not add exceptions for missing or orphan files.
 - Use FluentAssertions for assertions: `result.Should().Be(expected)`
 - Mock with NSubstitute: `Substitute.For<IInterface>()`
 - CPU tests in `tests/Spice86.Tests/CpuTests/` use SingleStepTests NuGet packages for validation
@@ -266,6 +299,39 @@ Variants: `MemoryBasedDataStructureWithCsBaseAddress`, `MemoryBasedDataStructure
 - **Breakpoints**: `EmulatorBreakpointsManager` coordinates memory/IO/execution breakpoints
 - **Pause Handling**: `IPauseHandler` allows pausing/resuming from UI or debugger
 - **Function Tracking**: `FunctionHandler` intercepts calls/rets for CFG building and override dispatch
+
+## Writing Task Files for an Implementer (e.g. a local LLM)
+
+Task files (for example under `tasks/phase2/`) are executed by an implementer that does not share the
+author's context. Write them so the implementer executes, not researches or redesigns:
+
+- **Start with the intent**: one short paragraph on what the maintainer wants and why, before any detail.
+- **Settled facts**: put everything the author measured or verified in one section that starts with:
+  "These facts were measured by the task author. Do not re-check or re-derive them. The failing-first
+  test is their check: if it does not fail exactly as described, stop and report." Give each surprising
+  fact its one-line cause, and the path of the raw evidence (command output saved under `tmp/`).
+- **Decisions (do not revisit)**: list the maintainer's choices separately from facts. Leave no options
+  open for the implementer; if something really is open, say so explicitly and say who decides.
+- **Exact design**: give the file, visibility and signature of every new or changed member, and say where
+  each piece goes (a table works well). Show code for the tricky parts. Name the existing helper or seam
+  to reuse.
+- **Exact tests**: give the class, method names, arrange data and assertions; write the code for the
+  central test. For each failing-first test, state the failure expected today.
+- **Behavior changes**: list every intended behavior change. Everything else must stay the same.
+- **Acceptance on behavior, not incidental details**: do not require an existing test to pass "unedited"
+  when it also pins an implementation detail (such as host stack depth) the new design may change.
+- **Stop conditions**: list the situations where the implementer must stop and report instead of working
+  around them, and say what to report.
+- **Golden changes**: describe the expected golden diff and give commands that prove it (for example an
+  `rg` over `git diff -U0` that must print nothing). Never let the implementer edit goldens by hand.
+- **File operations**: list every file the implementer may delete, restore or rename. Nothing else.
+- **Verification**: give the narrowest commands that cover the change, plus one full-suite run. Check
+  that every test class named in a filter exists when writing the task.
+- **No stale references**: check that referenced tasks, classes, line numbers and baselines are current;
+  refer to code by member name, with line numbers only as hints.
+- **Completion report**: say exactly what to append (failing-first output, changed files, check outputs,
+  build and test summary lines). Ask for honest gaps instead of invented evidence.
+- **Plain language**: short sentences, one fact per sentence, ASCII only.
 
 ## Common Gotchas
 - **Segmented addressing**: Use `SegmentedAddress` not raw offsets; linear address = segment * 16 + offset. Avoid computing addresses from `SegmentedAddress.Linear` because segmented addresses can roll over and `.Linear` does not handle this correctly. Use the `IMmu` (`TranslateAddress`) for address translation instead, as it handles rollover and access validation. Passing `.Linear` to an API that already expects a linear address is fine.

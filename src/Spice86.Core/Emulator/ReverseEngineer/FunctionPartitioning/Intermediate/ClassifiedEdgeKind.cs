@@ -8,6 +8,7 @@ internal enum ClassifiedEdgeKind {
     Call,
     CallContinuation,
     MisalignedCallContinuation,
+    RedirectedCallContinuation,
     RetTarget,
     CpuFault,
     Jump

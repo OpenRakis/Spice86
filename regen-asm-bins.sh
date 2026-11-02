@@ -63,6 +63,7 @@ build "$RESOURCES/DosExecTests" "nasm -f bin overlay_driver.asm -o overlay_drive
 
 # --- VgaTests ---
 build "$RESOURCES/VgaTests" "nasm -f bin scroll_up_clears_full_row.asm -o scroll_up_clears_full_row.com"
+build "$RESOURCES/VgaTests" "nasm -f bin graphics_scroll_moves_rows.asm -o graphics_scroll_moves_rows.com"
 
 # --- DosReallocTest: all *.asm -> *.com ---
 for asmfile in "$RESOURCES/DosReallocTest"/*.asm; do

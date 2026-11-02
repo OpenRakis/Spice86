@@ -23,54 +23,81 @@ internal sealed record GeneratedCodeMetrics {
     public required int UncheckedExpressions { get; init; }
     public required int Casts { get; init; }
     public required int TryStatements { get; init; }
+    /// <summary>Invocations of any method on <c>Alu8</c>, <c>Alu16</c> or <c>Alu32</c>.</summary>
+    public required int AluCalls { get; init; }
+    /// <summary>Reads of the six status flags (C, P, A, Z, S, O); assignments to them are not counted.</summary>
+    public required int StatusFlagReads { get; init; }
+    /// <summary><c>do ... while</c> statements.</summary>
+    public required int DoLoops { get; init; }
+    /// <summary><c>while (true)</c> statements; other <c>while</c> statements are not counted.</summary>
+    public required int WhileTrueLoops { get; init; }
+    /// <summary><c>if</c> statements; an <c>else if</c> counts as a second one.</summary>
+    public required int IfStatements { get; init; }
+    /// <summary><c>break</c> statements, in loops and in <c>switch</c> sections.</summary>
+    public required int BreakStatements { get; init; }
+    /// <summary><c>continue</c> statements.</summary>
+    public required int ContinueStatements { get; init; }
+    /// <summary>Invocations of <c>Stack.Push16/Push32/Pop16/Pop32</c>.</summary>
+    public required int StackCalls { get; init; }
+    /// <summary>Assignments whose target is one of the six status flags.</summary>
+    public required int FlagAssignments { get; init; }
+    /// <summary>Local declarations directly in a method body block (the <c>flagOperand_</c> temporaries).</summary>
+    public required int MethodVariables { get; init; }
+    /// <summary><c>+=</c>, <c>-=</c>, <c>&amp;=</c>, <c>|=</c>, <c>^=</c>, <c>&lt;&lt;=</c>, <c>&gt;&gt;=</c> assignments.</summary>
+    public required int CompoundAssignments { get; init; }
+    /// <summary>Tuple deconstruction assignments (the <c>xchg</c> swap idiom).</summary>
+    public required int TupleSwaps { get; init; }
     public required int Warnings { get; init; }
     public required ImmutableArray<string> WarningIds { get; init; }
 
-    // Fixed column widths so rows stay aligned regardless of the order fixtures are appended in. The
-    // last column (warning ids) is left unpadded because it is free text of varying length.
-    private const int FixtureWidth = 48;
-    private const int NumberWidth = 9;
+    // Every value is written as name=value, so a row can be read without counting columns. Fields are padded to fixed
+    // widths so rows stay aligned regardless of the order fixtures are appended in; the last field (warning ids) is
+    // left unpadded because it is free text of varying length.
+    private const int FixtureFieldWidth = 56;
+    private const int FieldWidth = 15;
 
-    private static readonly (string Header, int Width)[] Columns = [
-        ("fixture", FixtureWidth),
-        ("methods", NumberWidth),
-        ("lines", NumberWidth),
-        ("labels", NumberWidth),
-        ("gotos", NumberWidth),
-        ("gotoTgts", NumberWidth),
-        ("extEvents", NumberWidth),
-        ("specGuard", NumberWidth),
-        ("untested", NumberWidth),
-        ("unchecked", NumberWidth),
-        ("casts", NumberWidth),
-        ("tries", NumberWidth),
-        ("warnings", NumberWidth),
-        ("warningIds", 0)
-    ];
-
-    public static string Header() {
-        return string.Concat(Columns.Select(column => Pad(column.Header, column.Width)));
-    }
-
+    /// <summary>The metrics as one line of <c>name=value</c> fields, in a fixed order.</summary>
     public string ToLine() {
         string warningIds = WarningIds.IsDefaultOrEmpty ? "" : string.Join(",", WarningIds);
-        string[] values = [
-            Fixture,
-            Methods.ToString(),
-            Lines.ToString(),
-            Labels.ToString(),
-            GotoStatements.ToString(),
-            DistinctGotoTargets.ToString(),
-            CheckExternalEvents.ToString(),
-            VerifySpeculativeEntryOrFail.ToString(),
-            FailAsUntested.ToString(),
-            UncheckedExpressions.ToString(),
-            Casts.ToString(),
-            TryStatements.ToString(),
-            Warnings.ToString(),
-            warningIds
+        (string Name, string Value)[] fields = [
+            ("fixture", Fixture),
+            ("methods", Methods.ToString()),
+            ("lines", Lines.ToString()),
+            ("labels", Labels.ToString()),
+            ("gotos", GotoStatements.ToString()),
+            ("gotoTgts", DistinctGotoTargets.ToString()),
+            ("extEvents", CheckExternalEvents.ToString()),
+            ("specGuard", VerifySpeculativeEntryOrFail.ToString()),
+            ("untested", FailAsUntested.ToString()),
+            ("unchecked", UncheckedExpressions.ToString()),
+            ("casts", Casts.ToString()),
+            ("tries", TryStatements.ToString()),
+            ("aluCalls", AluCalls.ToString()),
+            ("flagReads", StatusFlagReads.ToString()),
+            ("doLoops", DoLoops.ToString()),
+            ("whileTrue", WhileTrueLoops.ToString()),
+            ("ifs", IfStatements.ToString()),
+            ("breaks", BreakStatements.ToString()),
+            ("continues", ContinueStatements.ToString()),
+            ("stackCalls", StackCalls.ToString()),
+            ("flagAssign", FlagAssignments.ToString()),
+            ("methodVars", MethodVariables.ToString()),
+            ("compound", CompoundAssignments.ToString()),
+            ("tupleSwaps", TupleSwaps.ToString()),
+            ("warnings", Warnings.ToString()),
+            ("warningIds", warningIds)
         ];
-        return string.Concat(values.Select((value, index) => Pad(value, Columns[index].Width)));
+        return string.Concat(fields.Select((field, index) => Pad($"{field.Name}={field.Value}", WidthOf(index, fields.Length))));
+    }
+
+    private static int WidthOf(int index, int count) {
+        if (index == 0) {
+            return FixtureFieldWidth;
+        }
+        if (index == count - 1) {
+            return 0;
+        }
+        return FieldWidth;
     }
 
     private static string Pad(string value, int width) {

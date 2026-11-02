@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.CPU.CfgCpu.Parser.SpecificParsers;
+namespace Spice86.Core.Emulator.CPU.CfgCpu.Parser.SpecificParsers;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
@@ -28,14 +28,14 @@ public class AluOperationParser : BaseInstructionParser {
     /// ALU operations indexed by bits 5-3 of the opcode.
     /// Same order as GRP1 ModRM.reg field (opcodes 0x80-0x83).
     /// </summary>
-    private static readonly (string Operation, InstructionOperation DisplayOp, bool Assign)[] AluOperations =
+    private static readonly (AluOperation Operation, InstructionOperation DisplayOp, bool Assign)[] AluOperations =
         AluOperationTable.Operations;
 
     public AluOperationParser(ParsingTools parsingTools) : base(parsingTools) {
     }
 
     public CfgInstruction Parse(ParsingContext context, int operationIndex) {
-        (string aluOperation, InstructionOperation displayOp, bool assign) = AluOperations[operationIndex];
+        (AluOperation aluOperation, InstructionOperation displayOp, bool assign) = AluOperations[operationIndex];
         ushort opcode = context.OpcodeField.Value;
         bool hasModRm = (opcode & ModRmMask) == 0;
         BitWidth bitWidth = GetBitWidth(context.OpcodeField, context.HasOperandSize32);
@@ -63,7 +63,7 @@ public class AluOperationParser : BaseInstructionParser {
         return BuildAluInstruction(instr, aluOperation, displayOp, assign, dataType, bitWidth, destNode, srcNode);
     }
 
-    private CfgInstruction BuildAluInstruction(CfgInstruction instr, string aluOperation,
+    private CfgInstruction BuildAluInstruction(CfgInstruction instr, AluOperation aluOperation,
         InstructionOperation displayOp, bool assign, DataType dataType, BitWidth bitWidth,
         ValueNode destNode, ValueNode srcNode) {
         MethodCallValueNode aluCall = _astBuilder.AluCall(dataType, bitWidth, aluOperation, destNode, srcNode);

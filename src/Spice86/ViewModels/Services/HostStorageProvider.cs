@@ -8,7 +8,8 @@ using Spice86.Core.Emulator.StateSerialization;
 /// <inheritdoc cref="IHostStorageProvider" />
 public class HostStorageProvider(
     IStorageProvider storageProvider,
-    EmulatorStateSerializer emulatorStateSerializer)
+    EmulatorStateSerializer emulatorStateSerializer,
+    ManualDumpRunner manualDumpRunner)
     : IHostStorageProvider {
 
     /// <inheritdoc />
@@ -98,7 +99,8 @@ public class HostStorageProvider(
             if (!string.IsNullOrWhiteSpace(directoryPath?.AbsolutePath)) {
                 // Update globally the save folder
                 emulatorStateSerializationFolder.Folder = directoryPath.AbsolutePath;
-                emulatorStateSerializer.EmulationStateDataWriter.Write();
+                // Off the UI thread so the dump progress window can render.
+                await manualDumpRunner.RunAsync(emulatorStateSerializer.EmulationStateDataWriter.Write);
             }
         }
     }

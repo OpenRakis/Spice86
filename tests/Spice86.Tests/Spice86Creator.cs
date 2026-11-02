@@ -42,10 +42,13 @@ public sealed class Spice86Creator : IDisposable {
 
     internal Spice86Creator(AsmFixtures.AsmRunSettings settings, JitMode jitMode, IOverrideSupplier? overrideSupplier)
         : this(settings.BinName, settings.EnablePit, settings.MaxCycles, settings.InstallInterruptVectors,
-            settings.FailOnUnhandledPort, settings.EnableA20Gate, false, false, null, null, overrideSupplier,
-            0x170, SbType.None, OplMode.None, 0x220, 7, 1, 5, null, null, jitMode, false, null, false,
+            settings.FailOnUnhandledPort, settings.EnableA20Gate, settings.EnableXms, settings.EnableEms,
+            null, settings.CDrive, overrideSupplier,
+            0x170, settings.SbType, settings.OplMode, 0x220, 7, 1, 5,
+            settings.ExeArgs, settings.InstructionTimeScale, jitMode, false, null, false,
             settings.EnableSpeculativeCfgExploration, settings.RenderingMode, settings.AsmHandlersSegment,
             false) {
+        EnableUmb = settings.EnableUmb;
     }
 
     private Spice86Creator(string binName, bool enablePit, long maxCycles, bool installInterruptVectors,
@@ -109,6 +112,7 @@ public sealed class Spice86Creator : IDisposable {
             // 333333 is the value that allowed most wall clock based tests to pass without changing all the expected values.
             InstructionTimeScale = instructionTimeScale ?? 333333,
             JitMode = jitMode,
+            JitGeneratorIr = TestJitSettings.GeneratorIr,
             FailOnInvalidOpcode = failOnInvalidOpcode,
             ReloadCfgGraph = reloadCfgGraph,
             EnableSpeculativeCfgExploration = enableSpeculativeCfgExploration,
@@ -134,6 +138,9 @@ public sealed class Spice86Creator : IDisposable {
 
     /// <inheritdoc />
     public void Dispose() {
+        if (_configuration.OverrideSupplier is null) {
+            GeneratedCodeCoverageReport.RecordIfEnabled(_exportFolder, _configuration.Exe);
+        }
         if (_ownsExportFolder && Directory.Exists(_exportFolder)) {
             Directory.Delete(_exportFolder, recursive: true);
         }

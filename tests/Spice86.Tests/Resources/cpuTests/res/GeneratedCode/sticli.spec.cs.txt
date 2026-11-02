@@ -22,7 +22,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
         cs1 = 0xF000;
 
-        DefineFunction(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, name: "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, "unknown");
     }
 
     public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
@@ -31,11 +31,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0000 mov AX,0x1000
         AX = 0x1000;
         // F000:0003 mov DS,AX
-        DS = AX;
+        DS = 0x1000;
         // F000:0005 sti
-        if (!InterruptFlag) {
-            State.InterruptShadowing = true;
-        }
         InterruptFlag = true;
         CheckExternalEvents(cs1, 0x0006);
         // F000:0006 mov AX,0x1234
@@ -43,7 +40,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0009 cli
         InterruptFlag = false;
         // F000:000A mov word ptr DS:[SI],AX
-        UInt16[DS, SI] = AX;
+        UInt16[DS, SI] = 0x1234;
         // F000:000C hlt
         return Hlt();
     }

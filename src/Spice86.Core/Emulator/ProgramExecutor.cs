@@ -13,6 +13,7 @@ using Spice86.Shared.Interfaces;
 /// </summary>
 public sealed class ProgramExecutor : IDisposable {
     private bool _disposed;
+    private bool _stopRequested;
     private readonly ILogger _loggerService;
     private readonly EmulationLoop _emulationLoop;
     private readonly EmulatorStateSerializer _emulatorStateSerializer;
@@ -59,10 +60,27 @@ public sealed class ProgramExecutor : IDisposable {
 
             _emulationLoop.Run();
 
+            // Devices (mixer, OPL, PC speaker, MIDI, RTC, VGA timing, emulated clock, CFG compiler
+            // threads) are stopped before the dump: the dump only reads memory, CPU state, the CFG,
+            // the function catalogue and breakpoints, and nothing should run while it writes.
+            _shutdownCoordinator.Shutdown();
             _emulatorStateSerializer.EmulationStateDataWriter.Write();
         } finally {
             _shutdownCoordinator.Shutdown();
         }
+    }
+
+    /// <summary>
+    /// Asks the emulation loop to exit and releases the execution policy (GDB server, breakpoints).
+    /// Idempotent: repeated calls do nothing. Does not wait for the emulator thread to finish.
+    /// </summary>
+    public void RequestStop() {
+        if (_stopRequested) {
+            return;
+        }
+        _stopRequested = true;
+        _executionPolicy.Dispose();
+        _emulationLoop.Exit();
     }
 
     /// <inheritdoc cref="IDisposable" />
@@ -76,8 +94,7 @@ public sealed class ProgramExecutor : IDisposable {
             return;
         }
         if (disposing) {
-            _executionPolicy.Dispose();
-            _emulationLoop.Exit();
+            RequestStop();
         }
         _disposed = true;
     }

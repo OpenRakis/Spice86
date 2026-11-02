@@ -5,31 +5,42 @@ using FluentAssertions;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
+using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Shared.Emulator.Memory;
-
-using System.Collections.Generic;
 
 using Xunit;
 
 public sealed class UntestedMessagesTest {
-    public static IEnumerable<object[]> NearTargetFormatData => new List<object[]> {
-        new object[] { "AX", "throw FailAsUntested($\"Untested near jump target 0x{AX:X4} at F000:0012\");" },
-        new object[] { "(ushort)EBX", "throw FailAsUntested($\"Untested near jump target 0x{(ushort)EBX:X4} at F000:0012\");" },
-        new object[] { "ZeroFlag ? AX : BX", "throw FailAsUntested($\"Untested near jump target 0x{(ZeroFlag ? AX : BX):X4} at F000:0012\");" },
-        new object[] { "global::System.UInt16.MinValue", "throw FailAsUntested($\"Untested near jump target 0x{(global::System.UInt16.MinValue):X4} at F000:0012\");" }
-    };
+    private static readonly SegmentedAddress At = new(0xF000, 0x0012);
 
-    [Theory]
-    [MemberData(nameof(NearTargetFormatData))]
-    public void NearTargetFormatsNormalizedExpression(string expression, string expected) {
-        SegmentedAddress at = new SegmentedAddress(0xF000, 0x0012);
-        string actual = UntestedMessages.NearTarget("jump", expression, at);
+    [Fact]
+    public void IndirectJumpWithoutTargetsKeepsItsText() {
+        AssertPrints(UntestedMessages.IndirectWithoutTargets("far jump", At),
+            "throw FailAsUntested(\"Untested indirect far jump at F000:0012\");");
+    }
 
-        actual.Should().Be(expected);
+    [Fact]
+    public void NearTargetParenthesizesAHoleContainingAColon() {
+        MethodCallValueNode target = new(DataType.UINT16, null, "global::Foo");
 
-        // Verify the generated statement is syntactically valid C#.
-        StatementSyntax parsed = SyntaxFactory.ParseStatement(actual);
+        AssertPrints(UntestedMessages.NearTarget("jump", target, At),
+            "throw FailAsUntested($\"Untested near jump target 0x{(global::Foo()):X4} at F000:0012\");");
+    }
+
+    private static void AssertPrints(FailAsUntestedNode node, string expected) {
+        CSharpSourceWriter writer = new();
+        CSharpStatementPrinter printer = new(writer, new CSharpExpressionPrinter(new Dictionary<ushort, string>()),
+            _ => throw new InvalidOperationException("No label expected."));
+
+        printer.Print(node);
+
+        writer.ToString().Should().Be(expected + Environment.NewLine);
+        StatementSyntax parsed = SyntaxFactory.ParseStatement(expected);
         parsed.GetDiagnostics().Should().BeEmpty();
     }
 }

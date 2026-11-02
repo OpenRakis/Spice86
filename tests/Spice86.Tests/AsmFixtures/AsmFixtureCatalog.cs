@@ -279,6 +279,53 @@ internal static class AsmFixtureCatalog {
         return MemoryFixture(settings, expectedMemory);
     }
 
+    /// <summary>Runs flagconditions: each conditional jump case records 1 when taken and 2 when not, each value case
+    /// records its value, once per input pair; the region holds pass p at offset 0x40 * p.</summary>
+    public static AsmFixture FlagConditions() {
+        byte[] expectedMemory = [
+            0x01, 0x02, 0x02, 0x01, 0x01, 0x02, 0x01, 0x02,
+            0x01, 0x02, 0x01, 0x01, 0x01, 0x02, 0x02, 0x01,
+            0x01, 0x01, 0x02, 0x02, 0x01, 0x02, 0x01, 0x01,
+            0x01, 0x01, 0x02, 0x01, 0x01, 0x02, 0x01, 0x02,
+            0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+            0x01, 0x02, 0x01, 0x01, 0x00, 0x02, 0x03, 0x00,
+            0xFF, 0xFF, 0x02, 0x00, 0x01, 0x00, 0xFF, 0xFF,
+            0x03, 0x00, 0x06, 0x00, 0x03, 0x07, 0x09, 0x04,
+
+            0x02, 0x01, 0x01, 0x02, 0x01, 0x02, 0x02, 0x01,
+            0x01, 0x02, 0x02, 0x02, 0x02, 0x01, 0x02, 0x02,
+            0x02, 0x02, 0x01, 0x01, 0x02, 0x02, 0x01, 0x02,
+            0x02, 0x02, 0x01, 0x02, 0x00, 0x02, 0x01, 0x02,
+            0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02,
+            0x02, 0x02, 0x00, 0x02, 0x01, 0x01, 0x04, 0x00,
+            0x00, 0x00, 0x03, 0x00, 0x01, 0x00, 0xFE, 0xFF,
+            0x02, 0x00, 0x07, 0x00, 0x04, 0x07, 0x09, 0x03,
+
+            0x02, 0x01, 0x02, 0x01, 0x02, 0x01, 0x01, 0x02,
+            0x01, 0x02, 0x01, 0x01, 0x01, 0x01, 0x01, 0x02,
+            0x02, 0x02, 0x02, 0x02, 0x02, 0x01, 0x02, 0x02,
+            0x02, 0x02, 0x02, 0x02, 0x00, 0x01, 0x01, 0x01,
+            0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02,
+            0x02, 0x01, 0x01, 0x01, 0x00, 0x01, 0x01, 0x80,
+            0xFF, 0x7F, 0x01, 0x80, 0x00, 0x00, 0x00, 0x80,
+            0x01, 0x80, 0x05, 0x01, 0x02, 0x07, 0x09, 0x02,
+
+            0x01, 0x02, 0x02, 0x01, 0x01, 0x02, 0x02, 0x01,
+            0x02, 0x01, 0x01, 0x02, 0x01, 0x02, 0x02, 0x01,
+            0x01, 0x01, 0x02, 0x02, 0x01, 0x02, 0x01, 0x01,
+            0x01, 0x01, 0x02, 0x01, 0x01, 0x01, 0x02, 0x01,
+            0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+            0x01, 0x02, 0x01, 0x01, 0x00, 0x02, 0x01, 0x80,
+            0x01, 0x80, 0x02, 0x00, 0xFF, 0x7F, 0xFF, 0xFF,
+            0x01, 0x80, 0x06, 0x00, 0x03, 0x07, 0x09, 0x01,
+        ];
+        AsmRunSettings settings = new() {
+            BinName = "flagconditions",
+            EnableSpeculativeCfgExploration = false
+        };
+        return MemoryFixture(settings, expectedMemory);
+    }
+
     /// <summary>Runs the interior-entry IRQ fixture: all three phases finish without an IRQ seeing a broken stack.</summary>
     public static AsmFixture InteriorEntry() {
         AsmRunSettings settings = new() {
@@ -336,11 +383,7 @@ internal static class AsmFixtureCatalog {
     public static AsmFixture SpeculativeConvergence(SpeculativeArm arm) {
         byte[] expectedMemory = new byte[0x404];
         expectedMemory[0x400] = 0x01;
-        if (arm == SpeculativeArm.Unobserved) {
-            expectedMemory[0x401] = 0xBB;
-        } else {
-            expectedMemory[0x401] = 0xAA;
-        }
+        expectedMemory[0x401] = arm == SpeculativeArm.Unobserved ? (byte)0xBB : (byte)0xAA;
         expectedMemory[0x402] = 0xCC;
         expectedMemory[0x403] = 0xFF;
         return SpeculativeFixture("speculative_convergence", expectedMemory, arm);
@@ -372,6 +415,18 @@ internal static class AsmFixtureCatalog {
     /// <summary>Runs speculative_discard on its observed arm: the run completes without divergence.</summary>
     public static AsmFixture SpeculativeDiscard() {
         return SpeculativeFixture("speculative_discard", SpeculativeMemory(0x01, 0xDD, 0xAA), SpeculativeArm.Observed);
+    }
+
+    /// <summary>Runs callstackunwind on the given arm: the observed arm returns leaf to recovery, while the
+    /// unobserved arm's leaf discards its immediate return and returns straight to inner_return.</summary>
+    /// <param name="arm">Selector arm of the program.</param>
+    /// <returns>The fixture for that arm.</returns>
+    public static AsmFixture CallStackUnwind(SpeculativeArm arm) {
+        byte[] expectedMemory = new byte[0x13];
+        expectedMemory[0x10] = 0xAA;
+        expectedMemory[0x11] = 0xBB;
+        expectedMemory[0x12] = arm == SpeculativeArm.Unobserved ? (byte)0xEE : (byte)0xDD;
+        return SpeculativeFixture("callstackunwind", expectedMemory, arm);
     }
 
     /// <summary>Returns the register oracle of the given partition fixture bin.</summary>
@@ -431,6 +486,231 @@ internal static class AsmFixtureCatalog {
                     result.State.AX.Should().Be(0x1111, $"{binName}: indirect_target sets AX");
                     result.State.BX.Should().Be(0x0016, $"{binName}: BX holds the address of jump_target");
                 });
+            case "partition_jump_table":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
+                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.State.DX.Should().Be(0x0111, $"{binName}: each of the three cases adds its own digit to DX");
+                    result.State.CX.Should().Be(0x0000, $"{binName}: the loop runs the three table entries");
+                    result.State.BX.Should().Be(0x0000, $"{binName}: the last iteration jumps through table entry 0");
+                });
+            case "partition_untested_indirect":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
+                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.State.CX.Should().Be(0x0002, $"{binName}: the indirect jump and call are never taken");
+                });
+            case "partition_jump_table_mixed":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
+                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.State.DX.Should().Be(0x0011, $"{binName}: case zero and case one each add their digit; the third entry jumps straight to the join");
+                    result.State.CX.Should().Be(0x0000, $"{binName}: the loop runs the three table entries");
+                    result.State.BX.Should().Be(0x0000, $"{binName}: the last iteration jumps through table entry 0");
+                });
+            case "partition_far_dispatch":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
+                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.State.DX.Should().Be(0x1111, $"{binName}: each far call and far jump target adds its own digit");
+                    result.State.CX.Should().Be(0x0000, $"{binName}: both loops run their two table entries");
+                });
+            case "partition_far_call_chain":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 2000 }, result => {
+                    AssertResultRegion(result, binName, ResultRegion(0x20,
+                        (0x00, 2, 0xF001), (0x02, 2, 0x3000),
+                        (0x04, 2, 0xF000), (0x06, 2, 0x3000),
+                        (0x08, 2, 0xF010), (0x0A, 2, 0x2000),
+                        (0x0C, 2, 0xF000), (0x0E, 2, 0x1000)));
+                    result.State.DX.Should().Be(0x1111, $"{binName}: each of the four original far call targets adds its own digit");
+                    result.State.CX.Should().Be(0x0000, $"{binName}: the loop runs the eight table entries");
+                });
+            case "partition_far_jump_segment_change":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x40,
+                    (0x00, 2, 0xAAAA), (0x02, 2, 0xAAAA), (0x04, 2, 0xF100),
+                    (0x06, 2, 0xBBBB), (0x08, 2, 0xBBBB), (0x0A, 2, 0xF100),
+                    (0x0C, 2, 0xF100)));
+            case "partition_sign_conditions":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
+                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.State.DX.Should().Be(0x0110, $"{binName}: only the negative compare and the negative test add their digit");
+                });
+            case "partition_untested_far_indirect":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
+                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.State.CX.Should().Be(0x0002, $"{binName}: the far indirect jump and call are never taken");
+                });
+            case "partition_untaken_cpuid":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
+                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.State.CX.Should().Be(0x0002, $"{binName}: cpuid is never executed");
+                });
+            case "partition_signed_min_compare":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
+                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.State.DX.Should().Be(0x0001, $"{binName}: 1 is not below int.MinValue, and int.MinValue is below or equal to itself");
+                    result.State.AX.Should().Be(0x0000, $"{binName}: the end clears AX");
+                });
+            case "partition_back_edge_fallthrough":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
+                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.State.DX.Should().Be(0x0003, $"{binName}: the loop body runs three times");
+                    result.State.CX.Should().Be(0x0000, $"{binName}: the latch leaves the loop when CX reaches zero");
+                });
+            case "partition_jump_to_next":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
+                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.State.DX.Should().Be(0x0001, $"{binName}: both arms of the jump reach the next instruction");
+                });
+            case "partition_two_fault_handlers":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 1000 }, result => {
+                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.State.SP.Should().Be(0x0100, $"{binName}: each handler returns with iret");
+                    result.State.SI.Should().Be(0x0011, $"{binName}: the first and the second handler each run once");
+                    result.State.AX.Should().Be(0x0002, $"{binName}: the third division succeeds");
+                    result.State.BX.Should().Be(0x0005, $"{binName}: the second handler sets the divisor");
+                });
+            case "dataflow_stack_save_restore":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x80,
+                    (0x00, 2, 0x1234), (0x02, 2, 0x3000), (0x04, 2, 0x0002), (0x06, 2, 0x0103), (0x08, 2, 0x0100),
+                    (0x0A, 2, 0xBEEF), (0x0C, 2, 0x0FFE), (0x0E, 2, 0x5A5A), (0x10, 2, 0x6B6B), (0x12, 2, 0x2222),
+                    (0x14, 2, 0x0000), (0x16, 2, 0x4000), (0x18, 2, 0x0011),
+                    (0x40, 2, 0xFFFF), (0x42, 2, 0x5000), (0x44, 2, 0x0002), (0x46, 2, 0x0001), (0x48, 2, 0xFFFE),
+                    (0x4A, 2, 0x0001), (0x4C, 2, 0x0FFE), (0x4E, 2, 0x5A5A), (0x50, 2, 0x6B6B), (0x52, 2, 0x0000),
+                    (0x54, 2, 0x4444), (0x56, 2, 0x6000), (0x58, 2, 0x0020)));
+            case "dataflow_flag_definitions":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x100,
+                    (0x00, 1, 1), (0x02, 2, 0x0004), (0x04, 1, 1), (0x05, 1, 1), (0x06, 2, 0x0002), (0x08, 1, 2),
+                    (0x0A, 2, 0x0095), (0x0C, 1, 1), (0x0E, 2, 0x1000), (0x10, 2, 0x0003),
+                    (0x40, 1, 1), (0x42, 2, 0x0000), (0x44, 1, 1), (0x45, 1, 2), (0x46, 2, 0x0005), (0x48, 1, 1),
+                    (0x4A, 2, 0x0004), (0x4C, 1, 2), (0x4E, 2, 0x1000), (0x50, 2, 0x0007),
+                    (0x80, 1, 2), (0x82, 2, 0x1235), (0x84, 1, 2), (0x85, 1, 2), (0x86, 2, 0x8009), (0x88, 1, 2),
+                    (0x8A, 2, 0x0044), (0x8C, 1, 2), (0x8E, 2, 0x1001), (0x90, 2, 0x0012),
+                    (0xC0, 1, 2), (0xC2, 2, 0x0001), (0xC4, 1, 2), (0xC5, 1, 2), (0xC6, 2, 0x0000), (0xC8, 1, 2),
+                    (0xCA, 2, 0x0084), (0xCC, 1, 2), (0xCE, 2, 0x0000), (0xD0, 2, 0xFFFF)));
+            case "dataflow_partial_registers":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x80,
+                    (0x00, 2, 0x12CD), (0x02, 2, 0xAB34), (0x04, 4, 0x89AB1234), (0x08, 2, 0xCDAB), (0x0A, 2, 0x0735),
+                    (0x0C, 2, 0xAB01), (0x0E, 2, 0x1234), (0x10, 2, 0x2200), (0x12, 2, 0xABCD), (0x14, 2, 0x2200),
+                    (0x40, 2, 0x0000), (0x42, 2, 0xFFFF), (0x44, 4, 0x000000FF), (0x48, 2, 0x00FF), (0x4A, 2, 0x0700),
+                    (0x4C, 2, 0xFF01), (0x4E, 2, 0x00FF), (0x50, 2, 0x2200), (0x52, 2, 0xFF00), (0x54, 2, 0x2200)));
+            case "dataflow_constant_folding":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x100,
+                    (0x00, 2, 0xA1A1), (0x02, 2, 0x00F4), (0x04, 1, 2), (0x05, 1, 2), (0x06, 1, 1), (0x07, 1, 2),
+                    (0x08, 2, 0x1357), (0x0A, 2, 0x2468), (0x0C, 2, 0xA1A1), (0x0E, 2, 0x5A5A), (0x10, 2, 0x6B6B),
+                    (0x40, 2, 0xC3C3), (0x42, 2, 0x007F), (0x44, 1, 1), (0x45, 1, 1), (0x46, 1, 1), (0x47, 1, 2),
+                    (0x48, 2, 0x1357), (0x4A, 2, 0x2468), (0x4C, 2, 0xA1A1), (0x4E, 2, 0x5A5A), (0x50, 2, 0x6B6B),
+                    (0x80, 2, 0xA100), (0x82, 2, 0xFFFE), (0x84, 1, 2), (0x85, 1, 2), (0x86, 1, 1), (0x87, 1, 1),
+                    (0x88, 2, 0x1357), (0x8A, 2, 0x2468), (0x8C, 2, 0xA1A1), (0x8E, 2, 0x5A5A), (0x90, 2, 0x6B6B),
+                    (0xC0, 2, 0xC3C3), (0xC2, 2, 0x7FFF), (0xC4, 1, 2), (0xC5, 1, 1), (0xC6, 1, 2), (0xC7, 1, 2),
+                    (0xC8, 2, 0x1357), (0xCA, 2, 0x2468), (0xCC, 2, 0xA1A1), (0xCE, 2, 0x5A5A), (0xD0, 2, 0x6B6B)));
+            case "dataflow_double_precision":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x100,
+                    (0x00, 2, 0x0000), (0x02, 2, 0x0001), (0x04, 2, 0xFFFE), (0x06, 2, 0x0000), (0x08, 2, 0x0001),
+                    (0x0A, 2, 0xFFFF), (0x0C, 2, 0xFFFE), (0x0E, 2, 0x0001), (0x10, 2, 0x7FFF), (0x12, 2, 0x0000),
+                    (0x40, 2, 0x0001), (0x42, 2, 0x0001), (0x44, 2, 0xFFFF), (0x46, 2, 0x0000), (0x48, 2, 0x0000),
+                    (0x4A, 2, 0xFFFF), (0x4C, 2, 0x0000), (0x4E, 2, 0x0002), (0x50, 2, 0x8000), (0x52, 2, 0x0000),
+                    (0x80, 2, 0xFFFF), (0x82, 2, 0x7FFF), (0x84, 2, 0x0001), (0x86, 2, 0x8000), (0x88, 2, 0x0000),
+                    (0x8A, 2, 0x8000), (0x8C, 2, 0x0000), (0x8E, 2, 0x0000), (0x90, 2, 0x0000), (0x92, 2, 0x4000),
+                    (0xC0, 2, 0x7FFF), (0xC2, 2, 0x1235), (0xC4, 2, 0x8001), (0xC6, 2, 0x1233), (0xC8, 2, 0x8000),
+                    (0xCA, 2, 0xEDCB), (0xCC, 2, 0x0000), (0xCE, 2, 0x2469), (0xD0, 2, 0x4000), (0xD2, 2, 0x091A)));
+            case "dataflow_idioms":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x80,
+                    (0x00, 2, 0xABCD), (0x02, 2, 0x1234), (0x04, 2, 0x1234), (0x06, 2, 0xFF80), (0x08, 2, 0x0000),
+                    (0x0A, 2, 0x0080), (0x0C, 2, 0x5678), (0x0E, 2, 0x9ABC), (0x10, 2, 0x1234), (0x12, 2, 0x0000),
+                    (0x14, 2, 0xABCD), (0x16, 2, 0x0000), (0x18, 2, 0x1239),
+                    (0x40, 2, 0x0000), (0x42, 2, 0xFFFB), (0x44, 2, 0xFFFB), (0x46, 2, 0x007F), (0x48, 2, 0xFFFF),
+                    (0x4A, 2, 0xFF7F), (0x4C, 2, 0x0001), (0x4E, 2, 0x0002), (0x50, 2, 0xFFFB), (0x52, 2, 0x0000),
+                    (0x54, 2, 0x0000), (0x56, 2, 0x0000), (0x58, 2, 0x0000)));
+            case "alu_dead_flags":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x200,
+                    (0x000, 2, 0x0000), (0x002, 2, 0x4000), (0x004, 2, 0xC000), (0x006, 2, 0x0000), (0x008, 2, 0x0000),
+                    (0x00A, 2, 0xFFFF), (0x00C, 2, 0x8000), (0x00E, 2, 0x2000), (0x010, 2, 0x8000), (0x012, 2, 0x8000),
+                    (0x014, 2, 0x0800), (0x016, 2, 0x0001), (0x018, 2, 0xC000), (0x01A, 2, 0x8006), (0x01C, 2, 0x7FFA),
+                    (0x01E, 2, 0x8000), (0x020, 2, 0x0001), (0x022, 2, 0x8000), (0x024, 2, 0x0001), (0x026, 2, 0x8000),
+                    (0x028, 2, 0x8000), (0x02A, 1, 0x00), (0x02B, 1, 0x00), (0x02C, 4, 0x10000000), (0x030, 4, 0xFFFFFFFF),
+                    (0x034, 2, 0x8000), (0x036, 2, 0x8001), (0x038, 2, 0x8001), (0x03A, 2, 0x8000), (0x03C, 2, 0x8000),
+                    (0x03E, 1, 2), (0x03F, 1, 1), (0x040, 1, 1), (0x041, 1, 1), (0x042, 1, 2),
+                    (0x080, 2, 0x0002), (0x082, 2, 0x0000), (0x084, 2, 0x0000), (0x086, 2, 0x0010), (0x088, 2, 0x0000),
+                    (0x08A, 2, 0x0000), (0x08C, 2, 0x0000), (0x08E, 2, 0x0000), (0x090, 2, 0x0001), (0x092, 2, 0x0001),
+                    (0x094, 2, 0x1000), (0x096, 2, 0x0002), (0x098, 2, 0x0000), (0x09A, 2, 0x0006), (0x09C, 2, 0xFFFC),
+                    (0x09E, 2, 0x0003), (0x0A0, 2, 0x0000), (0x0A2, 2, 0xFFFD), (0x0A4, 2, 0xFFFF), (0x0A6, 2, 0x0007),
+                    (0x0A8, 2, 0xFFFF), (0x0AA, 1, 0x02), (0x0AB, 1, 0x00), (0x0AC, 4, 0x02468ACF), (0x0B0, 4, 0x00000000),
+                    (0x0B4, 2, 0x0001), (0x0B6, 2, 0x0002), (0x0B8, 2, 0x0002), (0x0BA, 2, 0x0001), (0x0BC, 2, 0x0001),
+                    (0x0BE, 1, 1), (0x0BF, 1, 2), (0x0C0, 1, 1), (0x0C1, 1, 2), (0x0C2, 1, 1),
+                    (0x100, 2, 0x0000), (0x102, 2, 0x0000), (0x104, 2, 0x0000), (0x106, 2, 0x0000), (0x108, 2, 0x0000),
+                    (0x10A, 2, 0x0000), (0x10C, 2, 0x0000), (0x10E, 2, 0x0000), (0x110, 2, 0x0000), (0x112, 2, 0x0000),
+                    (0x114, 2, 0x0000), (0x116, 2, 0x0001), (0x118, 2, 0x8000), (0x11A, 2, 0x0006), (0x11C, 2, 0xFFFA),
+                    (0x11E, 2, 0x0000), (0x120, 2, 0x0000), (0x122, 2, 0x0000), (0x124, 2, 0x0000), (0x126, 2, 0x0000),
+                    (0x128, 2, 0x0000), (0x12A, 1, 0x00), (0x12B, 1, 0x00), (0x12C, 4, 0x1FFFFFFF), (0x130, 4, 0xFFFFFFFF),
+                    (0x134, 2, 0x0000), (0x136, 2, 0x0001), (0x138, 2, 0x0001), (0x13A, 2, 0x0000), (0x13C, 2, 0x0000),
+                    (0x13E, 1, 2), (0x13F, 1, 2), (0x140, 1, 2), (0x141, 1, 2), (0x142, 1, 1),
+                    (0x180, 2, 0xFFFE), (0x182, 2, 0x3FFF), (0x184, 2, 0x3FFF), (0x186, 2, 0xFFF0), (0x188, 2, 0x0000),
+                    (0x18A, 2, 0x0000), (0x18C, 2, 0x07FF), (0x18E, 2, 0x1FFF), (0x190, 2, 0x7FFF), (0x192, 2, 0x7FFF),
+                    (0x194, 2, 0xF7FF), (0x196, 2, 0xFFFE), (0x198, 2, 0x3FFF), (0x19A, 2, 0x8004), (0x19C, 2, 0x7FFA),
+                    (0x19E, 2, 0x7FFD), (0x1A0, 2, 0x0001), (0x1A2, 2, 0x8003), (0x1A4, 2, 0xFFFE), (0x1A6, 2, 0x7FF9),
+                    (0x1A8, 2, 0x8001), (0x1AA, 1, 0xFE), (0x1AB, 1, 0xFF), (0x1AC, 4, 0x00000000), (0x1B0, 4, 0x00000000),
+                    (0x1B4, 2, 0x7FFF), (0x1B6, 2, 0x8000), (0x1B8, 2, 0x8000), (0x1BA, 2, 0x7FFF), (0x1BC, 2, 0x7FFF),
+                    (0x1BE, 1, 1), (0x1BF, 1, 2), (0x1C0, 1, 1), (0x1C1, 1, 2), (0x1C2, 1, 2)));
+            case "dataflow_expression_propagation":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x80,
+                    (0x00, 2, 0x0000), (0x02, 2, 0x0000), (0x04, 2, 0x0000), (0x06, 2, 0x0000), (0x08, 1, 0x00),
+                    (0x0A, 2, 0x0000), (0x0C, 2, 0xABCD), (0x0E, 2, 0xABCE), (0x10, 2, 0xFFFF), (0x12, 2, 0xABCD),
+                    (0x14, 2, 0xFFFF), (0x16, 2, 0x7777), (0x18, 2, 0x1111), (0x1A, 2, 0x2222), (0x1C, 2, 0xABCC),
+                    (0x1E, 2, 0xABCC), (0x20, 2, 0x0005), (0x22, 2, 0xAB01), (0x24, 2, 0xFFFF), (0x26, 2, 0x2200),
+                    (0x28, 1, 2), (0x2A, 2, 0x55E7), (0x2C, 2, 0x0001), (0x2E, 2, 0x0005), (0x30, 2, 0x0001),
+                    (0x40, 2, 0x4000), (0x42, 2, 0x4000), (0x44, 2, 0x4000), (0x46, 2, 0x0000), (0x48, 1, 0x49),
+                    (0x4A, 2, 0xC000), (0x4C, 2, 0x00FE), (0x4E, 2, 0x00FF), (0x50, 2, 0x7FFF), (0x52, 2, 0x00FE),
+                    (0x54, 2, 0x7FFF), (0x56, 2, 0x7777), (0x58, 2, 0x1111), (0x5A, 2, 0x2222), (0x5C, 2, 0x80FD),
+                    (0x5E, 2, 0x80FD), (0x60, 2, 0x0005), (0x62, 2, 0x0001), (0x64, 2, 0x7FFF), (0x66, 2, 0x2200),
+                    (0x68, 1, 1), (0x6A, 2, 0x007F), (0x6C, 2, 0x8001), (0x6E, 2, 0x0005), (0x70, 2, 0x0001)));
+            case "dataflow_interrupt_boundaries":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName, MaxCycles = 0xFFFFFFF, EnablePit = true }, ResultRegion(0x80,
+                    (0x00, 2, 0x0010), (0x02, 2, 0x0004), (0x04, 2, 0x0007), (0x06, 2, 0x0064), (0x08, 2, 0x0E16),
+                    (0x0A, 2, 0x1003), (0x0C, 2, 0x0000), (0x0E, 2, 0x1000), (0x10, 2, 0x1002), (0x12, 2, 0x7708),
+                    (0x14, 2, 0x0E1E), (0x16, 2, 0x0E2E), (0x18, 2, 0x0E42), (0x1A, 2, 0xBEEF),
+                    (0x40, 2, 0x0005), (0x42, 2, 0x0000), (0x44, 2, 0x0004), (0x46, 2, 0x0000), (0x48, 2, 0x0E16),
+                    (0x4A, 2, 0x0002), (0x4C, 2, 0x0000), (0x4E, 2, 0xFFFF), (0x50, 2, 0x0001), (0x52, 2, 0x7702),
+                    (0x54, 2, 0x0E1E), (0x56, 2, 0x0E2E), (0x58, 2, 0x0E42), (0x5A, 2, 0x0102)));
+            case "dataflow_rewrite_traps":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x80,
+                    (0x00, 4, 0x89ABCDEF), (0x04, 4, 0x00001234), (0x08, 2, 0x0005), (0x0A, 1, 0x00),
+                    (0x0C, 2, 0x0000), (0x0E, 2, 0x0001),
+                    (0x40, 4, 0x11223344), (0x44, 4, 0x00005678), (0x48, 2, 0x9905), (0x4A, 1, 0x99),
+                    (0x4C, 2, 0x0001), (0x4E, 2, 0x0000)));
+            case "dataflow_legality_traps":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x80,
+                    (0x00, 2, 0x0001), (0x02, 2, 0x00EF), (0x04, 2, 0x0004), (0x08, 1, 0x01),
+                    (0x0A, 1, 0x97), (0x0C, 2, 0x0001), (0x0E, 2, 0x0002), (0x10, 2, 0x0001),
+                    (0x12, 2, 0xBEEF), (0x14, 2, 0x0000), (0x16, 1, 0x11), (0x18, 2, 0x0012),
+                    (0x06, 2, 0x0041), (0x1A, 2, 0xBBBB), (0x1E, 2, 0x00A1), (0x22, 2, 0x0000),
+                    (0x26, 2, 0x3344), (0x28, 2, 0x0042), (0x2A, 2, 0x0E6F), (0x2C, 2, 0x00A5),
+                    (0x2E, 2, 0x1234), (0x38, 2, 0x1234), (0x3A, 2, 0x0007),
+                    (0x3C, 4, 0x12340009), (0x30, 4, 0xAABB0077),
+                    (0x40, 2, 0x0002), (0x42, 2, 0x01CD), (0x44, 2, 0x0008), (0x48, 1, 0x00),
+                    (0x4A, 1, 0x02), (0x4C, 2, 0x0001), (0x4E, 2, 0x0000), (0x50, 2, 0x0001),
+                    (0x52, 2, 0xBEEF), (0x54, 2, 0x0001), (0x56, 1, 0x99), (0x58, 2, 0x0012),
+                    (0x46, 2, 0x0055), (0x5A, 2, 0xBBBB), (0x5E, 2, 0x00C3), (0x62, 2, 0x0001),
+                    (0x66, 2, 0x3344), (0x68, 2, 0x0042), (0x6A, 2, 0x0E6F), (0x6C, 2, 0x00A5),
+                    (0x6E, 2, 0x1234), (0x78, 2, 0x1234), (0x7A, 2, 0x0007),
+                    (0x74, 2, 0x0000), (0x76, 2, 0x0076),
+                    (0x7C, 4, 0x12340009), (0x70, 4, 0xAABB0077)));
+            case "instruction_coverage_386":
+                return ResultRegionFixture(new AsmRunSettings { BinName = binName }, ResultRegion(0x50,
+                    (0x00, 1, 1), (0x01, 1, 0), (0x02, 1, 1), (0x03, 1, 0), (0x04, 2, 0x01E1), (0x06, 2, 0x0009),
+                    (0x08, 2, 0x000B), (0x0A, 2, 0x234A), (0x0C, 2, 0xD123), (0x0E, 2, 0x000C), (0x10, 2, 0x0005),
+                    (0x12, 2, 0x0009), (0x14, 2, 0x0009), (0x16, 4, 0x78563412), (0x1A, 2, 0x0004), (0x1C, 2, 0x0000),
+                    (0x1E, 2, 0x1234), (0x20, 2, 0x0001), (0x22, 2, 0x0085), (0x24, 2, 0xFF85), (0x26, 4, 0xFFFF8001),
+                    (0x2A, 4, 0x00008001), (0x2E, 4, 0xFFFF8000), (0x32, 4, 0xFFFFFFFF), (0x36, 2, 0x0001),
+                    (0x38, 2, 0x0002), (0x3A, 2, 0x0003), (0x3C, 2, 0x1000), (0x3E, 2, 0x0005),
+                    (0x40, 1, 1), (0x41, 1, 0), (0x42, 1, 1), (0x43, 1, 0), (0x44, 1, 1), (0x45, 1, 0), (0x46, 1, 1),
+                    (0x47, 1, 0), (0x48, 1, 1), (0x49, 1, 0), (0x4A, 1, 0), (0x4B, 1, 1), (0x4C, 1, 1), (0x4D, 1, 0)));
             default:
                 throw new ArgumentOutOfRangeException(nameof(binName), binName, "Unknown partition fixture.");
         }
@@ -470,6 +750,34 @@ internal static class AsmFixtureCatalog {
         expectedMemory[0x12] = 0xCC; // cont2 marker
         AsmRunSettings settings = new() {
             BinName = "multimisalignedcall",
+            MaxCycles = 10000
+        };
+        return MemoryFixture(settings, expectedMemory);
+    }
+
+    /// <summary>Runs redirectedreturn: the emulator-style int skipped its operand byte 300 times and every part wrote its marker.</summary>
+    public static AsmFixture RedirectedReturn() {
+        byte[] expectedMemory = new byte[0x13];
+        expectedMemory[0x00] = 0x2C; // loop counter low byte = 300
+        expectedMemory[0x01] = 0x01; // loop counter high byte
+        expectedMemory[0x10] = 0xAA; // int loop marker
+        expectedMemory[0x11] = 0xBB; // near-called int marker
+        expectedMemory[0x12] = 0xCC; // ret 2 marker
+        AsmRunSettings settings = new() {
+            BinName = "redirectedreturn",
+            MaxCycles = 50000
+        };
+        return MemoryFixture(settings, expectedMemory);
+    }
+
+    /// <summary>Runs stalestackframes: a push/ret jump at a stale frame's level links no call, both iterations and both markers complete.</summary>
+    public static AsmFixture StaleStackFrames() {
+        byte[] expectedMemory = new byte[0x12];
+        expectedMemory[0x00] = 0x02; // two main-loop iterations ran
+        expectedMemory[0x10] = 0xAA; // B's push/ret jump target marker
+        expectedMemory[0x11] = 0xBB; // returned from B marker
+        AsmRunSettings settings = new() {
+            BinName = "stalestackframes",
             MaxCycles = 10000
         };
         return MemoryFixture(settings, expectedMemory);
@@ -519,6 +827,15 @@ internal static class AsmFixtureCatalog {
             result.State.AL.Should().Be(3, "ownerlesscallcycle: AL holds the last counter value read");
             result.State.SS.Should().Be(0, "ownerlesscallcycle: start sets SS to 0");
             result.State.SP.Should().Be(0x0100, "ownerlesscallcycle: start sets SP to 0x0100");
+        });
+    }
+
+    /// <summary>Runs sameretloop: the same-address return loop ran four times and the hlt ended the run.</summary>
+    public static AsmFixture SameretLoop() {
+        return ResultFixture(new AsmRunSettings { BinName = "sameretloop", MaxCycles = 1000 }, result => {
+            result.Memory.UInt8[0xF000, 0x0024].Should().Be(4, "sameretloop: the counter byte counts the same-address returns");
+            result.State.SS.Should().Be(0, "sameretloop: start sets SS to 0");
+            result.State.SP.Should().Be(0x0100, "sameretloop: every loop iteration pushes one word and the ret pops it back");
         });
     }
 
@@ -573,6 +890,45 @@ internal static class AsmFixtureCatalog {
         return new AsmFixture(settings, [], assertResult);
     }
 
+    private const uint ResultRegionAddress = 0x20000;
+
+    /// <summary>
+    /// A fixture whose oracle compares the result region at physical 0x20000 with <paramref name="expectedRegion"/>,
+    /// listing every differing byte, and checks that the stack at 2000:1000 is balanced at the end.
+    /// </summary>
+    private static AsmFixture ResultRegionFixture(AsmRunSettings settings, byte[] expectedRegion) {
+        return ResultFixture(settings, result => {
+            AssertResultRegion(result, settings.BinName, expectedRegion);
+            result.State.SS.Should().Be(0x2000, $"{settings.BinName}: start sets SS to 0x2000");
+            result.State.SP.Should().Be(0x1000, $"{settings.BinName}: the stack is balanced at the end");
+        });
+    }
+
+    /// <summary>Asserts that the result region at physical 0x20000 equals <paramref name="expectedRegion"/>,
+    /// listing every differing byte.</summary>
+    private static void AssertResultRegion(AsmFixtureResult result, string binName, byte[] expectedRegion) {
+        byte[] actual = result.Memory.ReadRam((uint)expectedRegion.Length, ResultRegionAddress);
+        List<string> differences = Enumerable.Range(0, expectedRegion.Length)
+            .Where(i => actual[i] != expectedRegion[i])
+            .Select(i => $"[{i:X3}] expected 0x{expectedRegion[i]:X2} actual 0x{actual[i]:X2}")
+            .ToList();
+        differences.Should().BeEmpty($"{binName}: every byte of the result region at 0x{ResultRegionAddress:X5} is the expected one");
+    }
+
+    /// <summary>
+    /// An expected result region of <paramref name="length"/> bytes: zero, except for the little-endian values given
+    /// as (offset, size in bytes, value).
+    /// </summary>
+    private static byte[] ResultRegion(int length, params (int Offset, int Size, uint Value)[] values) {
+        byte[] region = new byte[length];
+        foreach ((int offset, int size, uint value) in values) {
+            for (int i = 0; i < size; i++) {
+                region[offset + i] = (byte)(value >> (8 * i));
+            }
+        }
+        return region;
+    }
+
     private static byte[] ReadMemoryDump(string binName) {
         return File.ReadAllBytes($"Resources/cpuTests/res/MemoryDumps/{binName}.bin");
     }
@@ -582,8 +938,8 @@ internal static class AsmFixtureCatalog {
         if (arm == SpeculativeArm.Observed) {
             return MemoryFixture(settings, expectedMemory);
         }
-        settings = settings with { ConfigureMachine = SelectUnobservedArm };
-        return new AsmFixture(settings, expectedMemory, AsmFixture.NoResultAssertion) { MachineGoldenVariant = "unobserved" };
+        settings = settings with { ConfigureMachine = SelectUnobservedArm, VariantName = "unobserved" };
+        return MemoryFixture(settings, expectedMemory);
     }
 
     private static byte[] SpeculativeMemory(byte b400, byte b401, byte b402) {

@@ -22,7 +22,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
         cs1 = 0xF000;
 
-        DefineFunction(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, name: "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, "unknown");
     }
 
     public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
@@ -31,8 +31,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0000 mov AX,0x1000
         AX = 0x1000;
         // F000:0003 mov SS,AX
-        SS = AX;
-        State.InterruptShadowing = true;
+        SS = 0x1000;
         // F000:0005 mov SP,0x1000
         SP = 0x1000;
         // F000:0008 mov CX,0xFEFF
@@ -61,15 +60,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(cs1, 0x0018);
         // F000:0018 cmc
-        CarryFlag = !CarryFlag;
         // F000:0019 stc
         CarryFlag = true;
         // F000:001A std
         DirectionFlag = true;
         // F000:001B sti
-        if (!InterruptFlag) {
-            State.InterruptShadowing = true;
-        }
         InterruptFlag = true;
         CheckExternalEvents(cs1, 0x001C);
         // F000:001C pushf
@@ -79,7 +74,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:001E mov CX,0
         CX = 0;
         // F000:0021 mov DS,CX
-        DS = CX;
+        DS = 0;
         // F000:0023 mov word ptr DS:[0],AX
         UInt16[DS, 0] = AX;
         // F000:0026 mov word ptr DS:[2],BX

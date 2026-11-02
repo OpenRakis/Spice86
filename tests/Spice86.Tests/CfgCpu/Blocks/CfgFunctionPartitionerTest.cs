@@ -127,18 +127,18 @@ public sealed class CfgFunctionPartitionerTest : IDisposable {
 
         // start calls externalCallee, whose ret lands on B (misaligned vs start, so a plain RetTarget into B).
         _harness.Linker.Link(InstructionSuccessorType.Normal, start, externalCallee);
-        externalCallee.CurrentCorrespondingCallInstruction = start;
+        externalCallee.CurrentCorrespondingCall = new CorrespondingCall(start, InstructionSuccessorType.CallToMisalignedReturn);
         _harness.Linker.Link(InstructionSuccessorType.Normal, externalCallee, cycleEntryB);
 
         // A calls inCallee1, whose ret lands on B (aligned: A.next == B), making A -> B a call-continuation.
         _harness.Linker.Link(InstructionSuccessorType.Normal, cycleCallA, inCallee1);
-        inCallee1.CurrentCorrespondingCallInstruction = cycleCallA;
+        inCallee1.CurrentCorrespondingCall = new CorrespondingCall(cycleCallA, InstructionSuccessorType.CallToReturn);
         _harness.Linker.Link(InstructionSuccessorType.Normal, inCallee1, cycleEntryB);
 
         // B -> D, D calls inCallee2 (aligned continuation D -> E), E -> A closes the cycle.
         _harness.Linker.Link(InstructionSuccessorType.Normal, cycleEntryB, cycleCallD);
         _harness.Linker.Link(InstructionSuccessorType.Normal, cycleCallD, inCallee2);
-        inCallee2.CurrentCorrespondingCallInstruction = cycleCallD;
+        inCallee2.CurrentCorrespondingCall = new CorrespondingCall(cycleCallD, InstructionSuccessorType.CallToReturn);
         _harness.Linker.Link(InstructionSuccessorType.Normal, inCallee2, cycleBackE);
         _harness.Linker.Link(InstructionSuccessorType.Normal, cycleBackE, cycleCallA);
         RegisterEntry(start);
@@ -164,7 +164,7 @@ public sealed class CfgFunctionPartitionerTest : IDisposable {
         CfgInstruction calleeReturn = CreateInstruction(0x0100, 0xC3, 1, InstructionKind.Return);
         CfgInstruction continuation = CreateInstruction(0x0003, 0x90, 1, InstructionKind.None);
         _harness.Linker.Link(InstructionSuccessorType.Normal, call, calleeReturn);
-        calleeReturn.CurrentCorrespondingCallInstruction = call;
+        calleeReturn.CurrentCorrespondingCall = new CorrespondingCall(call, InstructionSuccessorType.CallToReturn);
         _harness.Linker.Link(InstructionSuccessorType.Normal, calleeReturn, continuation);
         RegisterEntry(call);
 
@@ -350,7 +350,7 @@ public sealed class CfgFunctionPartitionerTest : IDisposable {
         // A misaligned continuation is not ownership-preserving: dynamicTarget gets its own partition.
         CfgInstruction dynamicTarget = CreateInstruction(0x0005, 0x90, 1, InstructionKind.None);
         _harness.Linker.Link(InstructionSuccessorType.Normal, call, calleeReturn);
-        calleeReturn.CurrentCorrespondingCallInstruction = call;
+        calleeReturn.CurrentCorrespondingCall = new CorrespondingCall(call, InstructionSuccessorType.CallToMisalignedReturn);
         _harness.Linker.Link(InstructionSuccessorType.Normal, calleeReturn, dynamicTarget);
         RegisterEntry(call);
 

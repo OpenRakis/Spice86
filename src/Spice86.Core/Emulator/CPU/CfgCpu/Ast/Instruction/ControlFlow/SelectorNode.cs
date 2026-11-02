@@ -5,7 +5,7 @@ using CfgSelectorNode = Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfM
 /// <summary>
 /// Execution-AST marker for a self-modifying-code selector. It carries a reference to its CFG
 /// <see cref="CfgSelectorNode"/> so consumers (such as the C# generator's value-returning
-/// <c>CSharpAstEmitter</c>) can read the real <c>SuccessorsPerSignature</c> dispatch table; the marker alone
+/// <c>InstructionLowerer</c>) can read the real <c>SuccessorsPerSignature</c> dispatch table; the marker alone
 /// is not enough.
 /// </summary>
 public record SelectorNode : IVisitableAstNode {

@@ -22,7 +22,7 @@ using CfgSelectorNode = Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfM
 /// Self-modifying code can split several partitions onto the same entry address (a selector node and its
 /// instruction variants live at one address but become distinct partitions). This locks in that the
 /// generator (1) gives each such partition a unique C# method name so the source compiles instead of
-/// emitting duplicate methods (CS0111), and (2) emits a single <c>DefineFunction</c> per address - the
+/// emitting duplicate methods (CS0111), and (2) emits a single <c>DefineFunctionWithoutInterpreterFallback</c> per address - the
 /// selector one - so installing the overrides does not throw on a duplicate address registration.
 /// </summary>
 public class SelfModifyingPartitionNamingTest {

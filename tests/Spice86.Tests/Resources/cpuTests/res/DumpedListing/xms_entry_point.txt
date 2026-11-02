@@ -1,0 +1,41 @@
+016D:0100 mov AX,0x4310
+016D:0103 int 0x2F
+016D:0105 mov AX,ES
+016D:0107 or AX,BX
+016D:0109 je short 0x010F
+016D:010B mov AL,0
+016D:010D jmp short 0x0111
+016D:010F mov AL,0xFF
+016D:0111 mov DX,0x0999
+016D:0114 out DX,AL
+016D:0115 hlt
+F000:0006 callback 8
+F000:000A int 0x1C
+F000:000C callback 0x0101
+F000:0010 iret
+F000:0011 callback 9
+F000:0015 iret
+F000:0057 callback 0x0070
+F000:005B iret
+F000:005D call far F000:00E3
+F000:0062 callback 0x0074
+F000:0066 iret
+F000:0067 callback 0x0104
+F000:006B iret
+F000:006C callback 0x0105
+F000:0070 iret
+F000:0071 callback 0x0106
+F000:0075 iret
+F000:0076 callback 0x0107
+F000:007A iret
+F000:007B callback 0x0108
+F000:007F iret
+F000:0080 callback 0x0109
+F000:0084 iret
+F000:00C4 callback 0x002F
+F000:00C8 iret
+F000:00E2 ret far
+F000:00E3 callback 0x010C
+F000:00E7 call far F000:00E2
+F000:00EC callback 0x010D
+F000:00F0 ret far

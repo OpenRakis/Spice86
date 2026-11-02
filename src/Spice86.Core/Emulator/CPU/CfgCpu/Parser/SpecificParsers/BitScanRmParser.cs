@@ -14,11 +14,11 @@ using Spice86.Shared.Emulator.Memory;
 /// <summary>BSF/BSR R, RM (bit scan forward/reverse)</summary>
 public class BitScanRmParser : OperationModRmParser {
     private readonly InstructionOperation _displayOp;
-    private readonly string _scanMethodName;
+    private readonly BitScanDirection _direction;
 
-    public BitScanRmParser(ParsingTools parsingTools, InstructionOperation displayOp, string scanMethodName) : base(parsingTools, false) {
+    public BitScanRmParser(ParsingTools parsingTools, InstructionOperation displayOp, BitScanDirection direction) : base(parsingTools, false) {
         _displayOp = displayOp;
-        _scanMethodName = scanMethodName;
+        _direction = direction;
     }
 
     protected override void BuildAsts(CfgInstruction instr, DataType dataType, ModRmContext modRmContext) {
@@ -29,8 +29,7 @@ public class BitScanRmParser : OperationModRmParser {
         BinaryOperationNode conditionNode = new BinaryOperationNode(
             DataType.BOOL, sourceNode, BinaryOperation.NOT_EQUAL, zeroNode);
 
-        MethodCallValueNode bitScanCall = new MethodCallValueNode(
-            dataType, null, $"{_scanMethodName}{(int)dataType.BitWidth}", sourceNode);
+        MethodCallValueNode bitScanCall = new BitScanCallNode(dataType, _direction, sourceNode);
         BinaryOperationNode assignBitIndex = _astBuilder.Assign(dataType, destNode, bitScanCall);
         BinaryOperationNode setZeroFalse = _astBuilder.Assign(DataType.BOOL, _astBuilder.Flag.Zero(), _astBuilder.Constant.ToNode(false));
         BlockNode trueCase = new BlockNode(assignBitIndex, setZeroFalse);

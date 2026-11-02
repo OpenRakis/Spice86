@@ -46,8 +46,8 @@ public class MemoryStringOpParser : BaseInstructionParser {
                 ValueNode dest = _astBuilder.StringOperation.DestPointerDi(dataType, addressType);
                 coreOperation = new BlockNode(
                     _astBuilder.Assign(dataType, dest, src),
-                    _astBuilder.StringOperation.AdvanceSi(addressType, (int)bitWidth),
-                    _astBuilder.StringOperation.AdvanceDi(addressType, (int)bitWidth));
+                    _astBuilder.StringOperation.AdvanceSi(addressType, bitWidth),
+                    _astBuilder.StringOperation.AdvanceDi(addressType, bitWidth));
                 displayAst = new InstructionNode(repPrefix, InstructionOperation.MOVS,
                     _astBuilder.Pointer.ToSegmentedPointer(dataType, SegmentRegisterIndex.EsIndex,
                         _astBuilder.Register.Reg(addressType, RegisterIndex.DiIndex)),
@@ -60,11 +60,11 @@ public class MemoryStringOpParser : BaseInstructionParser {
                 ValueNode src = _astBuilder.StringOperation.SourcePointerSi(dataType, addressType,
                     segReg, (int)SegmentRegisterIndex.DsIndex);
                 ValueNode dest = _astBuilder.StringOperation.DestPointerDi(dataType, addressType);
-                MethodCallValueNode aluCall = _astBuilder.AluCall(DataType.UINT16, bitWidth, "Sub", src, dest);
+                MethodCallValueNode aluCall = _astBuilder.AluCall(DataType.UINT16, bitWidth, AluOperation.Sub, src, dest);
                 coreOperation = new BlockNode(
                     aluCall,
-                    _astBuilder.StringOperation.AdvanceSi(addressType, (int)bitWidth),
-                    _astBuilder.StringOperation.AdvanceDi(addressType, (int)bitWidth));
+                    _astBuilder.StringOperation.AdvanceSi(addressType, bitWidth),
+                    _astBuilder.StringOperation.AdvanceDi(addressType, bitWidth));
                 displayAst = new InstructionNode(repPrefix, InstructionOperation.CMPS,
                     _astBuilder.Pointer.ToSegmentedPointer(dataType, segReg, (int)SegmentRegisterIndex.DsIndex,
                         _astBuilder.Register.Reg(addressType, RegisterIndex.SiIndex)),
@@ -79,7 +79,7 @@ public class MemoryStringOpParser : BaseInstructionParser {
                 ValueNode accumulator = _astBuilder.Register.Accumulator(dataType);
                 coreOperation = new BlockNode(
                     _astBuilder.Assign(dataType, accumulator, src),
-                    _astBuilder.StringOperation.AdvanceSi(addressType, (int)bitWidth));
+                    _astBuilder.StringOperation.AdvanceSi(addressType, bitWidth));
                 displayAst = new InstructionNode(repPrefix, InstructionOperation.LODS,
                     accumulator,
                     _astBuilder.Pointer.ToSegmentedPointer(dataType, segReg, (int)SegmentRegisterIndex.DsIndex,
@@ -91,7 +91,7 @@ public class MemoryStringOpParser : BaseInstructionParser {
                 ValueNode dest = _astBuilder.StringOperation.DestPointerDi(dataType, addressType);
                 coreOperation = new BlockNode(
                     _astBuilder.Assign(dataType, dest, accumulator),
-                    _astBuilder.StringOperation.AdvanceDi(addressType, (int)bitWidth));
+                    _astBuilder.StringOperation.AdvanceDi(addressType, bitWidth));
                 displayAst = new InstructionNode(repPrefix, InstructionOperation.STOS,
                     _astBuilder.Pointer.ToSegmentedPointer(dataType, SegmentRegisterIndex.EsIndex,
                         _astBuilder.Register.Reg(addressType, RegisterIndex.DiIndex)),
@@ -101,10 +101,10 @@ public class MemoryStringOpParser : BaseInstructionParser {
             case MemoryStringOpKind.Scas: {
                 ValueNode accumulator = _astBuilder.Register.Accumulator(dataType);
                 ValueNode dest = _astBuilder.StringOperation.DestPointerDi(dataType, addressType);
-                MethodCallValueNode aluCall = _astBuilder.AluCall(DataType.UINT16, bitWidth, "Sub", accumulator, dest);
+                MethodCallValueNode aluCall = _astBuilder.AluCall(DataType.UINT16, bitWidth, AluOperation.Sub, accumulator, dest);
                 coreOperation = new BlockNode(
                     aluCall,
-                    _astBuilder.StringOperation.AdvanceDi(addressType, (int)bitWidth));
+                    _astBuilder.StringOperation.AdvanceDi(addressType, bitWidth));
                 displayAst = new InstructionNode(repPrefix, InstructionOperation.SCAS,
                     accumulator,
                     _astBuilder.Pointer.ToSegmentedPointer(dataType, SegmentRegisterIndex.EsIndex,

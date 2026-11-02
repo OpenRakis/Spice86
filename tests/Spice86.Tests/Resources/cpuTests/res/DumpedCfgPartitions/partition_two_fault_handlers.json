@@ -1,0 +1,113 @@
+{
+  "partitions": [
+    {
+      "id": 1,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        43,
+        36
+      ],
+      "entries": [
+        {
+          "block": 43,
+          "address": "F000:001A",
+          "kind": "returnTargetEntry"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        30
+      ],
+      "entries": [
+        {
+          "block": 30,
+          "address": "F000:0022",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        46
+      ],
+      "entries": [
+        {
+          "block": 46,
+          "address": "F000:0035",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        3,
+        2
+      ],
+      "entries": [
+        {
+          "block": 2,
+          "address": "F000:FFF0",
+          "kind": "executionContextEntry"
+        }
+      ]
+    }
+  ],
+  "transfers": [
+    {
+      "kind": "cpuFault",
+      "fromPartition": 1,
+      "toPartition": 2,
+      "fromBlock": 43,
+      "toBlock": 30,
+      "from": "F000:001F",
+      "target": "F000:0022"
+    },
+    {
+      "kind": "cpuFault",
+      "fromPartition": 1,
+      "toPartition": 3,
+      "fromBlock": 43,
+      "toBlock": 46,
+      "from": "F000:001F",
+      "target": "F000:0035"
+    },
+    {
+      "kind": "dynamicReturn",
+      "fromPartition": 2,
+      "toPartition": 1,
+      "fromBlock": 30,
+      "toBlock": 43,
+      "from": "F000:0034",
+      "target": "F000:001A"
+    },
+    {
+      "kind": "dynamicReturn",
+      "fromPartition": 3,
+      "toPartition": 1,
+      "fromBlock": 46,
+      "toBlock": 43,
+      "from": "F000:0044",
+      "target": "F000:001A"
+    },
+    {
+      "kind": "crossPartitionFlow",
+      "fromPartition": 4,
+      "toPartition": 1,
+      "fromBlock": 3,
+      "toBlock": 43,
+      "from": "F000:0018",
+      "target": "F000:001A"
+    }
+  ]
+}

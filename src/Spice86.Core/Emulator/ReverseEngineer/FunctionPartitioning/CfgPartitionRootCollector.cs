@@ -46,11 +46,11 @@ internal sealed class CfgPartitionRootCollector {
             }
         }
 
-        // Only aligned continuations suppress RetTarget root promotion.
+        // Only continuations that stay in the caller's activation suppress RetTarget root promotion.
         // Misaligned continuations are not ownership-preserving, so their target blocks must
         // become roots (via RetTarget below) to avoid ownerless blocks.
         HashSet<int> callContinuationTargets = edgeIndex.EdgeRecords
-            .Where(e => e.Kind == ClassifiedEdgeKind.CallContinuation)
+            .Where(e => e.Kind == ClassifiedEdgeKind.CallContinuation || e.Kind == ClassifiedEdgeKind.RedirectedCallContinuation)
             .Select(e => e.TargetBlock.Id)
             .ToHashSet();
 

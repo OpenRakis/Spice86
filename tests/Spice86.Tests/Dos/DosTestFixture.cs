@@ -4,8 +4,10 @@ using Spice86.Core.Emulator.CPU;
 using NSubstitute;
 
 using Spice86.Core.Emulator.InterruptHandlers.Dos;
+using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.OperatingSystem;
+using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Tests.Utility;
 using Spice86.Shared.Interfaces;
 
@@ -27,12 +29,15 @@ public class DosTestFixture : IDisposable {
     public DosDriveManager DriveManager => Dos.DosDriveManager;
     public DosProcessManager ProcessManager => Dos.ProcessManager;
     public DosInt21Handler DosInt21Handler => _spice86.Machine.Dos.DosInt21Handler;
+    public IEmulatedClock EmulatedClock => _spice86.Machine.RealTimeClock.Clock;
+    public IOPortDispatcher IoPortDispatcher => _spice86.Machine.IoPortDispatcher;
 
     public DosTestFixture(string mountPoint) {
         _tempExeDir = new TempFile("DosTestFixture");
         string exePath = Path.Join(_tempExeDir.Path, "EXIT.COM");
         // MOV AX, 4C00h / INT 21h -- minimal DOS exit stub
-        File.WriteAllBytes(exePath, new byte[] { 0xB8, 0x00, 0x4C, 0xCD, 0x21 });
+        File.Copy(Path.Join(AppContext.BaseDirectory, "Resources", "DosConsoleProgramTests", "exit_code_0.com"),
+            exePath, overwrite: true);
         _creator = new Spice86Creator(
             binName: exePath,
             installInterruptVectors: true,

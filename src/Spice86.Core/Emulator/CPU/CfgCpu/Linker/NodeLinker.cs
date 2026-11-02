@@ -52,16 +52,17 @@ public class NodeLinker : InstructionReplacer {
     private ICfgNode LinkRetInstruction(InstructionSuccessorType linkToNextType, CfgInstruction returnInstruction, ICfgNode next) {
         ICfgNode resolvedForRet = LinkCfgInstructionWithType(linkToNextType, returnInstruction, next);
         // Link the call instruction now that ret target is known
-        CfgInstruction? callInstruction = returnInstruction.CurrentCorrespondingCallInstruction;
-        returnInstruction.CurrentCorrespondingCallInstruction = null;
-        if (callInstruction == null) {
+        CorrespondingCall? correspondingCall = returnInstruction.CurrentCorrespondingCall;
+        returnInstruction.CurrentCorrespondingCall = null;
+        if (correspondingCall == null) {
             // No call associated with this ret. Nothing to do.
             return resolvedForRet;
         }
-        InstructionSuccessorType type = ComputeSuccessorTypeForRet(callInstruction, next);
+        CfgInstruction callInstruction = correspondingCall.Value.Call;
         if (!callInstruction.IsCall) {
             callInstruction.IncreaseMaxSuccessorsCount(next.Address);
         }
+        InstructionSuccessorType type = correspondingCall.Value.Type;
         // call->next is bookkeeping only, do not return the resolved value
         LinkCfgInstructionWithType(type, callInstruction, next);
         return resolvedForRet;
@@ -173,14 +174,6 @@ public class NodeLinker : InstructionReplacer {
             InsertIntermediatePredecessor(instruction1, selectorNode);
         }
         return selectorNode;
-    }
-
-    private InstructionSuccessorType ComputeSuccessorTypeForRet(CfgInstruction call, ICfgNode nextAfterRet) {
-        if (call.NextInMemoryAddress32.ToSegmentedAddress() != nextAfterRet.Address) {
-            // Instruction executed after ret is not the next instruction in memory from the call.
-            return InstructionSuccessorType.CallToMisalignedReturn;
-        }
-        return InstructionSuccessorType.CallToReturn;
     }
 
     private void LinkSelectorNode(SelectorNode current, ICfgNode next) {

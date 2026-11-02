@@ -6,6 +6,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Cmos;
 using Spice86.Core.Emulator.Errors;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.IOPorts;
@@ -14,6 +15,7 @@ using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
 using Spice86.Core.Emulator.OperatingSystem.Enums;
 using Spice86.Core.Emulator.OperatingSystem.Structures;
+using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 using Spice86.Shared.Utils;
@@ -43,6 +45,7 @@ public class DosInt21Handler : InterruptHandler {
     private readonly DosFcbManager _dosFcbManager;
     private readonly DosSysVars _dosSysVars;
     private readonly DosJobFileTable _jobFileTable;
+    private readonly IEmulatedClock _emulatedClock;
     private uint _stdinReadyFlagLinearAddress;
     private bool _isCtrlCFlag;
 
@@ -76,13 +79,15 @@ public class DosInt21Handler : InterruptHandler {
     /// <param name="dosTables">The DOS tables structure containing CDS and DBCS information.</param>
     /// <param name="loggerService">The logger service implementation.</param>
     /// <param name="dosFcbManager">FCB manager shared with the process manager for cleanup.</param>
+    /// <param name="emulatedClock">The emulated clock read by the DOS time service.</param>
     public DosInt21Handler(IMemory memory,
         IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state,
         KeyboardInt16Handler keyboardInt16Handler, CountryInfo countryInfo,
         DosCodePageState dosCodePageState, DosStringDecoder dosStringDecoder, DosMemoryManager dosMemoryManager,
         DosFileManager dosFileManager, DosDriveManager dosDriveManager,
         DosProcessManager dosProcessManager,
-        IOPortDispatcher ioPortDispatcher, DosTables dosTables, DosSysVars dosSysVars, ILogger loggerService, DosFcbManager dosFcbManager)
+        IOPortDispatcher ioPortDispatcher, DosTables dosTables, DosSysVars dosSysVars, ILogger loggerService, DosFcbManager dosFcbManager,
+        IEmulatedClock emulatedClock)
             : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _sda = new(memory, MemoryUtils.ToPhysicalAddress(DosSwappableDataArea.BaseSegment, 0));
         _countryInfo = countryInfo;
@@ -98,6 +103,7 @@ public class DosInt21Handler : InterruptHandler {
         _dosSysVars = dosSysVars;
         _interruptVectorTable = new InterruptVectorTable(memory);
         _dosFcbManager = dosFcbManager;
+        _emulatedClock = emulatedClock;
         _jobFileTable = new DosJobFileTable(memory);
         FillDispatchTable();
     }
@@ -206,7 +212,7 @@ public class DosInt21Handler : InterruptHandler {
     ///     C# handler via <c>callback(Run)</c>. For AH=07h, 08h, and 0Ah the stub first
     ///     polls STDIN readiness with INT 28h idle calls before dispatching.
     ///     AH=01h is NOT polled here — it goes through L_DEFAULT to the C# handler which
-    ///     reads via ConsoleDevice → INT 16h (which has its own INT 09h-based keyboard polling).
+    ///     reads via ConsoleDevice → INT 16h (which waits with interrupts enabled for IRQ 1).
     /// </summary>
     /// <remarks><![CDATA[
     ///     A flag byte is reserved in the handler segment, before the entry point.
@@ -282,7 +288,7 @@ public class DosInt21Handler : InterruptHandler {
         // This matches FreeDOS (INT 21h starts with STI) and DOSBox (idle uses STI+HLT).
         memoryAsmWriter.WriteSti();
         // callback(CheckStdinReady) — writes flag byte, 4 bytes
-        memoryAsmWriter.RegisterAndWriteCallback(CallbackCheckStdinReady);
+        memoryAsmWriter.RegisterAndWriteCallback(CallbackNumbers.DosInt21CheckStdinReady, CallbackCheckStdinReady);
         // CMP byte CS:[flagOffset], 0 — 6 bytes
         memoryAsmWriter.WriteUInt8(0x2E); // CS: segment override
         memoryAsmWriter.WriteUInt8(0x80); // CMP Eb, Ib
@@ -297,7 +303,7 @@ public class DosInt21Handler : InterruptHandler {
         memoryAsmWriter.WriteJumpShort(-17);
 
         // L_DISPATCH: dispatch to C# handler for AH=07h/08h/0Ah
-        memoryAsmWriter.RegisterAndWriteCallback(Run);
+        memoryAsmWriter.RegisterAndWriteCallback(CallbackNumbers.DosInt21StdinInputDispatch, Run);
         memoryAsmWriter.WriteIret();
 
         return handlerAddress;
@@ -1510,20 +1516,15 @@ public class DosInt21Handler : InterruptHandler {
 
     /// <summary>
     /// Returns the current MS-DOS time in CH (hour), CL (minute), DH (second), and DL (hundredths of a second).
-    /// CH, CL and DH come from the CMOS RTC; DL comes from the host clock because the RTC only has one second resolution.
+    /// All four come from one reading of the emulated clock (the clock the CMOS RTC also reads),
+    /// so they describe the same moment whatever the RTC data mode.
     /// </summary>
     public void GetTime() {
-        byte hourBcd = ReadCmosRegister(CmosRegisterAddresses.Hours);
-        byte minuteBcd = ReadCmosRegister(CmosRegisterAddresses.Minutes);
-        byte secondBcd = ReadCmosRegister(CmosRegisterAddresses.Seconds);
-
-        byte hour = BcdConverter.FromBcd(hourBcd);
-        byte minute = BcdConverter.FromBcd(minuteBcd);
-        byte second = BcdConverter.FromBcd(secondBcd);
-
-        // The CMOS RTC only has a one second resolution, so the sub-second part is
-        // taken from the host clock. Games measure short elapsed times with this field.
-        byte hundredths = (byte)(DateTime.Now.Millisecond / 10);
+        DateTimeOffset now = _emulatedClock.CurrentDateTime;
+        byte hour = (byte)now.Hour;
+        byte minute = (byte)now.Minute;
+        byte second = (byte)now.Second;
+        byte hundredths = (byte)(now.Millisecond / 10);
 
         State.CH = hour;
         State.CL = minute;
@@ -1531,7 +1532,7 @@ public class DosInt21Handler : InterruptHandler {
         State.DL = hundredths;
 
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
-            LoggerService.LogTrace("GET DOS TIME from CMOS: {Hour:D2}:{Minute:D2}:{Second:D2}.{Hundredths:D2}",
+            LoggerService.LogTrace("GET DOS TIME from the emulated clock: {Hour:D2}:{Minute:D2}:{Second:D2}.{Hundredths:D2}",
                 hour, minute, second, hundredths);
         }
     }
@@ -1940,7 +1941,7 @@ public class DosInt21Handler : InterruptHandler {
     public void SelectDefaultDrive() {
         byte driveIndex = State.DL;
         if (driveIndex < DosDriveManager.MaxDriveCount) {
-            if (_dosDriveManager.TryGetDriveAtIndex(driveIndex, out FolderDrive? mountedDrive)) {
+            if (_dosDriveManager.TryGetDriveAtIndex(driveIndex, out DosDriveBase? mountedDrive)) {
                 _dosDriveManager.CurrentDrive = mountedDrive;
             }
         } else if (LoggerService.IsEnabled(LogLevel.Error)) {

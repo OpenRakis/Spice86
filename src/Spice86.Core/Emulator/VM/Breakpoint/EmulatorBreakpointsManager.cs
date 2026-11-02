@@ -129,9 +129,18 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
             _executionBreakPoints.TriggerMatchingBreakPoints(physicalAddress);
         }
 
+        CheckCpuCycleBreakPoints();
+    }
+
+    /// <summary>
+    /// Checks CPU cycle breakpoints only, for execution paths that account cycles outside the
+    /// per-instruction stepping of the interpreter: generated/override code runs inside a single
+    /// emulation-loop step, so without this its cycles would never be checked against cycle
+    /// breakpoints.
+    /// </summary>
+    public void CheckCpuCycleBreakPoints() {
         if (_cycleBreakPoints.HasActiveBreakpoints) {
-            long cycles = _state.Cycles;
-            _cycleBreakPoints.TriggerMatchingBreakPoints(cycles);
+            _cycleBreakPoints.TriggerMatchingBreakPoints(_state.Cycles);
         }
     }
 
