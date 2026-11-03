@@ -155,18 +155,31 @@ data, text output and scrolling, shared-RAM aliasing, sound selection, pause and
 resume, and shutdown. An existing FreeDOS XCOPY program produces matching final
 text on the default PC and Tandy platforms.
 
-OutRun has also been checked using MCP against the installed DOSBox Staging
-0.83.0 (7b400), configured with `machine=tandy`. Its 320 x 200 mode 09h credits
-screen matches the reference raw image pixel for pixel. The game reaches the
-race, detects Tandy sound, and executes native PSG and DAC programming.
+Native OutRun has also been checked against the installed DOSBox Staging
+0.83.0 (7b400), configured with `machine=tandy`. Its 320 x 200 mode 09h credits,
+completed title, and music-selection screens match the reference raw images
+pixel for pixel. Title-transition frames must finish before comparison; equal
+wall-clock delays do not produce equivalent frames at different CPU speeds.
+The game reaches the race, detects Tandy sound, and executes native PSG and DAC
+programming.
 Detection requires the complete firmware configuration block at FC000h,
 including its 21h signature; the model byte at FFFFEh alone is insufficient.
 
+An original diagnostic also matches every pixel and image dimension in 19
+captured states against that installed reference. These cover BIOS modes 00h,
+01h, 02h, 03h, 04h, 05h, 06h, 08h, 09h, and 0Ah; reversed gate-array palette;
+CRTC display start; independent processor and display banks; display disable
+and re-enable; and BIOS pixel plotting, graphics characters, and scrolling in
+modes 08h, 09h, and 0Ah. Both diagnostic runs exit normally. Captures and
+comparison results are retained locally under `tmp\tandy-video-reference`.
+
 Exhaustive runtime parity against the pinned DOSBox Staging revision has not
-been established. Other graphics modes, synthesis fidelity, DAC transfer
+been established; the installed reference binary is not verified to be built
+from that revision. Static framebuffer matches do not establish exhaustive
+register, blink, or beam-timing accuracy. Synthesis fidelity, DAC transfer
 completion, BIOS sound callbacks, and DMA ownership transitions still need
-comparative coverage. The OutRun run uses Spice86's default clock; matching
-CPU speed and exact audio output have not been established.
+comparative coverage. Matching OutRun CPU speed, synchronized race frames,
+and exact audio output have not been established.
 
 ## Automated coverage
 
