@@ -87,6 +87,10 @@ The graph grows at runtime:
 3. When memory no longer matches a graph node, selector nodes are injected.
 4. Separate execution contexts (see below) keep their graph segments independent.
 
+Return tracking reads the active stack through the MMU, using the cached SS base and the descriptor's SP/ESP width. Interrupt returns additionally use the instruction's operand width: a 32-bit IRET frame stores EIP and CS in separate dword slots.
+
+Generated overrides preserve these semantics, including stack-access fault classification for SS operands. A return to an active ancestor caller unwinds the abandoned generated calls before resuming that caller; it does not execute their post-call continuations. Unobserved return targets still fail explicitly.
+
 ## Instruction Caching
 
 `InstructionsFeeder` maintains a two-tier cache:

@@ -135,7 +135,7 @@ internal static class IrNodeTyper {
                     alu.Operation, alu.Width);
             case StackCallNode { Operation: StackOperation.Push or StackOperation.Leave
                     or StackOperation.PushAll or StackOperation.PopAll }:
-            case PortWriteCallNode or BoundCheckCallNode or ProcedureCallHelperNode
+            case StackEnterHelperNode or InstructionExecutionHelperCallNode or PortWriteCallNode or BoundCheckCallNode or ProcedureCallHelperNode
                 or InterruptCallHelperNode or CallbackHelperNode:
                 return call.WithArguments(arguments);
             default:
@@ -151,7 +151,7 @@ internal static class IrNodeTyper {
                 return new AluOperationNode(typedAlu, AluFlags(alu.Operation, alu.Width, typedAlu.CallNode),
                     alu.Operation, alu.Width);
             case StackCallValueNode { Operation: StackOperation.Pop or StackOperation.Peek }:
-            case PortReadCallNode or BitScanCallNode or CallbackMovedCsIpHelperNode
+            case InstructionExecutionHelperCallValueNode or PortReadCallNode or BitScanCallNode or CallbackMovedCsIpHelperNode
                 or SignatureMatchesHelperNode or ProcedureCallReturnedElsewhereHelperNode
                 or InterruptCallReturnedElsewhereHelperNode:
                 return call.WithArguments(arguments);

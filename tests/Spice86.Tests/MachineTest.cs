@@ -1029,4 +1029,66 @@ public class MachineTest {
     public void Test386ButNotProtectedMode(JitMode jitMode) {
         TestOneBin(AsmFixtureCatalog.Test386(), jitMode);
     }
+
+    [Fact]
+    public void TestProtectedModeEntry() {
+        TestOneBin(AsmFixtureCatalog.ProtectedModeEntry(), JitMode.InterpretedOnly);
+    }
+
+    [Fact]
+    public void TestUnifiedExtendedMemoryPoolIsAddressable() {
+        TestOneBin(AsmFixtureCatalog.ProtectedModeUnifiedPool(), JitMode.InterpretedOnly);
+    }
+
+    [Fact]
+    public void TestProtectedModeInstructions() {
+        TestOneBin(AsmFixtureCatalog.ProtectedModeInstructions(), JitMode.InterpretedOnly);
+    }
+
+    [Fact]
+    public void TestProtectedModePrivilegeHappyPath() {
+        TestOneBin(AsmFixtureCatalog.ProtectedModePrivilege(), JitMode.InterpretedOnly);
+    }
+
+    [Fact]
+    public void TestProtectedModeIdtDispatch() {
+        TestOneBin(AsmFixtureCatalog.ProtectedModeIdt(), JitMode.InterpretedOnly);
+    }
+
+    [Fact]
+    public void TestProtectedModeFarTransferPrivilegeViolation() {
+        TestOneBin(AsmFixtureCatalog.ProtectedModeFarPrivilege(), JitMode.InterpretedOnly);
+    }
+
+    [Fact]
+    public void TestProtectedModeCallGate() {
+        TestOneBin(AsmFixtureCatalog.ProtectedModeCallGate(), JitMode.InterpretedOnly);
+    }
+
+    [Fact]
+    public void TestProtectedModePaging() {
+        TestOneBin(AsmFixtureCatalog.ProtectedModePaging(), JitMode.InterpretedOnly);
+    }
+
+    [Fact]
+    public void TestProtectedModeTaskSwitch() {
+        TestOneBin(AsmFixtureCatalog.ProtectedModeTaskSwitch(), JitMode.InterpretedOnly);
+    }
+
+    [Fact]
+    public void TestProtectedModeV86() {
+        TestOneBin(AsmFixtureCatalog.ProtectedModeV86(), JitMode.InterpretedOnly);
+    }
+
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void Test386ProtectedMode(JitMode jitMode) {
+        TestOneBin(AsmFixtureCatalog.Test386ProtectedMode(), jitMode);
+    }
+
+    [Fact]
+    public void TestProtectedModeTaskGate() {
+        TestOneBin(AsmFixtureCatalog.ProtectedModeTaskGate(), JitMode.InterpretedOnly);
+    }
+
 }

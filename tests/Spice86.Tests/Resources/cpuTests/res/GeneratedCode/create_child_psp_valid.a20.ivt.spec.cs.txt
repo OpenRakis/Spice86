@@ -1,6 +1,7 @@
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Microsoft.Extensions.Logging;
@@ -90,7 +91,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0104 mov BP,BX
         BP = BX;
         // 016D:0106 mov ES,BX
-        ES = BX;
+        LoadSegmentRegister(0, BX);
         // 016D:0108 mov DI,word ptr ES:[0x002C]
         DI = UInt16[ES, 0x002C];
         // 016D:010D mov DX,0x2000
@@ -122,7 +123,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 // 016D:012B mov AX,0x2000
                 AX = 0x2000;
                 // 016D:012E mov ES,AX
-                ES = 0x2000;
+                LoadSegmentRegister(0, AX);
                 // 016D:0130 cmp byte ptr ES:[0],0xCD
                 flagOperand_0130 = UInt8[ES, 0];
                 Alu8.Sub(flagOperand_0130, 0xCD);
@@ -162,7 +163,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0154 mov DX,0x0999
         DX = 0x0999;
         // 016D:0157 out DX,AL
-        Out8(0x0999, AL);
+        EnsureIoPrivilege();
+        Out8(DX, AL);
         // 016D:0158 hlt
         return Hlt();
     }
@@ -300,6 +302,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         VerifySpeculativeEntryOrFail(cs2, 0x00A4, Signature_00A4_sti);
         // F000:00A4 sti
+        EnsureIoPrivilege();
         InterruptFlag = true;
         CheckExternalEvents(cs2, 0x00A5);
         VerifySpeculativeEntryOrFail(cs2, 0x00A5, Signature_00A5_callback);

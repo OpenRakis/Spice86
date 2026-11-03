@@ -1,6 +1,7 @@
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Microsoft.Extensions.Logging;
@@ -31,17 +32,17 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0000 mov AX,0x2000
         AX = 0x2000;
         // F000:0003 mov DS,AX
-        DS = 0x2000;
+        LoadSegmentRegister(3, AX);
         // F000:0005 mov ES,AX
-        ES = 0x2000;
+        LoadSegmentRegister(0, AX);
         // F000:0007 mov SS,AX
-        SS = 0x2000;
+        LoadSegmentRegister(2, AX);
         // F000:0009 mov SP,0x1000
         SP = 0x1000;
         // F000:000C cld
         DirectionFlag = false;
         // F000:000D xor BX,BX
-        BX = 0;
+        BX = Alu16.Xor(BX, BX);
         // F000:000F mov SI,0x00E2
         SI = 0x00E2;
         // F000:0012 mov word ptr DS:[0x0F00],4
@@ -53,22 +54,25 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         do {
             CheckExternalEvents(cs1, 0x0024);
             // F000:0024 mov AX,0x2300
+            AX = 0x2300;
             // F000:0027 mov ES,AX
-            ES = 0x2300;
+            LoadSegmentRegister(0, AX);
             // F000:0029 mov word ptr ES:[1],0xA1A1
             UInt16[ES, 1] = 0xA1A1;
             // F000:0030 mov word ptr ES:[0x0013],0xC3C3
             UInt16[ES, 0x0013] = 0xC3C3;
             // F000:0037 mov AX,0x3300
+            AX = 0x3300;
             // F000:003A mov ES,AX
-            ES = 0x3300;
+            LoadSegmentRegister(0, AX);
             // F000:003C mov word ptr ES:[1],0xB2B2
             UInt16[ES, 1] = 0xB2B2;
             // F000:0043 mov word ptr ES:[0x0013],0xD4D4
             UInt16[ES, 0x0013] = 0xD4D4;
             // F000:004A mov AX,0x2300
+            AX = 0x2300;
             // F000:004D mov ES,AX
-            ES = 0x2300;
+            LoadSegmentRegister(0, AX);
             // F000:004F mov DI,word ptr CS:[SI]
             DI = UInt16[CS, SI];
             // F000:0052 mov AX,word ptr ES:[DI+3]
@@ -76,6 +80,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:0056 mov word ptr DS:[BX],AX
             UInt16[DS, BX] = AX;
             // F000:0058 mov DI,0xFFFE
+            DI = 0xFFFE;
             // F000:005B mov AX,word ptr ES:[DI+3]
             AX = UInt16[ES, 1];
             // F000:005F mov word ptr DS:[BX+0x0C],AX
@@ -83,8 +88,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:0062 push DS
             Stack.Push16(DS);
             // F000:0063 pop ES
-            ES = UInt16[SS, SP];
-            SP += 2;
+            LoadSegmentRegister(0, Stack.PopSegmentSelector(2));
             // F000:0064 mov DI,0
             // F000:0067 mov AX,word ptr DS:[DI-26956]
             AX = UInt16[DS, 0x96B4];
@@ -130,6 +134,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:00AB mov byte ptr DS:[BX+7],1
             UInt8[DS, (ushort)(BX + 7)] = 1;
             // F000:00AF cmp DX,-2
+            Alu16.Sub(DX, 0xFFFE);
             // F000:00B2 ja short 0x00B8
             if (DX <= 0xFFFE) {
                 // F000:00B4 mov byte ptr DS:[BX+7],2
@@ -142,8 +147,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:00C4 mov DI,word ptr CS:[SI+4]
             DI = UInt16[CS, (ushort)(SI + 4)];
             // F000:00C8 les DX,word ptr DS:[DI+0x3D]
-            DX = UInt16[DS, (ushort)(DI + 0x3D)];
-            ES = UInt16[DS, (ushort)(DI + 0x003F)];
+            ushort lxsValue_00C8 = UInt16[DS, (ushort)(DI + 0x3D)];
+            ushort lxsSegment_00C8 = UInt16[DS, (ushort)(DI + 0x003F)];
+            DX = lxsValue_00C8;
+            LoadSegmentRegister(0, lxsSegment_00C8);
             // F000:00CB mov word ptr DS:[BX+8],DX
             UInt16[DS, (ushort)(BX + 8)] = DX;
             // F000:00CE mov word ptr DS:[BX+0x0A],ES
@@ -151,8 +158,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:00D1 push DS
             Stack.Push16(DS);
             // F000:00D2 pop ES
-            ES = UInt16[SS, SP];
-            SP += 2;
+            LoadSegmentRegister(0, Stack.PopSegmentSelector(2));
             // F000:00D3 add BX,0x0040
             BX += 0x0040;
             // F000:00D6 add SI,6

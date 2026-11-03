@@ -3,8 +3,10 @@ namespace Spice86.Tests.CfgCodeGeneration.Ir;
 using FluentAssertions;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.Registers;
@@ -62,9 +64,6 @@ public sealed class IrExpressionPropagationTest {
 
     private static bool IsMemoryReadAssign(BinaryOperationNode assignment) =>
         assignment.Right is SegmentedPointerNode;
-
-    private static bool IsRegisterReadAssign(BinaryOperationNode assignment) =>
-        assignment.Right is RegisterNode;
 
     private static bool ReadsRegister(BinaryOperationNode assignment, int registerIndex) =>
         assignment.Right is RegisterNode { RegisterIndex: int index } && index == registerIndex;
@@ -255,9 +254,17 @@ public sealed class IrExpressionPropagationTest {
         IrMethod method = Propagated(block);
 
         // Assert
-        AssignmentsTo(method, Es).Should().ContainSingle(assignment =>
-            IsRegisterReadAssign(assignment), "the ES write stays a statement");
-        AssignmentsTo(method, Bx).Should().Contain(assignment => ReadsRegister(assignment, Es));
+        IrStatement loadStatement = method.Blocks.SelectMany(currentBlock => currentBlock.Statements)
+            .Where(statement => statement.Node is InstructionExecutionHelperCallNode {
+                Operation: InstructionExecutionHelperOperation.LoadSegmentRegister
+            }).Should().ContainSingle("the ES load stays a standalone statement").Subject;
+        loadStatement.Origin.Address.Offset.Should().Be(0x0001);
+        InstructionExecutionHelperCallNode load = loadStatement.Node
+            .Should().BeOfType<InstructionExecutionHelperCallNode>().Subject;
+        load.Arguments.Should().Equal(new ConstantNode(DataType.UINT32, (uint)Es),
+            new RegisterNode(DataType.UINT16, (int)RegisterIndex.AxIndex));
+        BinaryOperationNode read = AssignmentsTo(method, Bx).Should().ContainSingle().Subject;
+        read.Right.Should().BeOfType<SegmentRegisterNode>().Which.RegisterIndex.Should().Be(Es);
     }
 
     [Fact]

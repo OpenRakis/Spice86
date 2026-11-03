@@ -1,6 +1,7 @@
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Microsoft.Extensions.Logging;
@@ -29,12 +30,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov AX,0x2000
+        AX = 0x2000;
         // F000:0003 mov DS,AX
-        DS = 0x2000;
+        LoadSegmentRegister(3, AX);
         // F000:0005 mov ES,AX
-        ES = 0x2000;
+        LoadSegmentRegister(0, AX);
         // F000:0007 mov SS,AX
-        SS = 0x2000;
+        LoadSegmentRegister(2, AX);
         // F000:0009 mov SP,0x1000
         SP = 0x1000;
         // F000:000C cld
@@ -136,29 +138,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0091 mov AX,SP
         AX = SP;
         // F000:0093 enter 4,0
-        byte level_0093 = 0;
-        ushort oldBasePointer_0093 = BP;
-        ushort spIndex_0093 = (ushort)(SP - 2);
-        UInt16[SS, spIndex_0093] = oldBasePointer_0093;
-        ushort framePtr_0093 = spIndex_0093;
-        if (level_0093 != 0) {
-            ushort bpIndex_0093 = oldBasePointer_0093;
-            int i_0093 = 1;
-            while (true) {
-                if (i_0093 >= (int)level_0093) {
-                    break;
-                }
-                bpIndex_0093 -= 2;
-                spIndex_0093 -= 2;
-                UInt16[SS, spIndex_0093] = UInt16[SS, bpIndex_0093];
-                i_0093 += 1;
-            }
-            spIndex_0093 -= 2;
-            UInt16[SS, spIndex_0093] = framePtr_0093;
-        }
-        BP = framePtr_0093;
-        spIndex_0093 -= 4;
-        SP = spIndex_0093;
+        Stack.Enter(4, 0, false);
         // F000:0097 mov CX,BP
         // F000:0099 sub CX,SP
         CX = (ushort)(BP - SP);
@@ -223,7 +203,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0107 mov BP,SP
         BP = SP;
         // F000:0109 mov AX,word ptr SS:[BP+6]
-        AX = UInt16[SS, (ushort)(BP + 6)];
+        AX = UInt16[SS, (ushort)(BP + 6), SegmentAccessKind.Stack];
         // F000:010C mov word ptr DS:[BX+0x3C],AX
         UInt16[DS, 0x003C] = AX;
         // F000:010F xor AX,AX

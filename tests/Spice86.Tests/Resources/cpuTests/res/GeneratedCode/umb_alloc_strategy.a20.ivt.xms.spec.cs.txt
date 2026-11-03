@@ -1,6 +1,7 @@
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Microsoft.Extensions.Logging;
@@ -82,8 +83,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0100 push CS
         Stack.Push16(CS);
         // 016D:0101 pop ES
-        ES = UInt16[SS, SP];
-        SP += 2;
+        LoadSegmentRegister(0, Stack.PopSegmentSelector(2));
         // 016D:0102 mov AX,0x4A00
         AX = 0x4A00;
         // 016D:0105 mov BX,0x1000
@@ -185,7 +185,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                                                 // 016D:0185 mov AX,0x4900
                                                                 AX = 0x4900;
                                                                 // 016D:0188 mov ES,word ptr DS:[0x01B5]
-                                                                ES = UInt16[DS, 0x01B5];
+                                                                LoadSegmentRegister(0, UInt16[DS, 0x01B5]);
                                                                 // 016D:018C int 0x21
                                                                 InterruptCall(cs1, 0x018E, 0x21);
                                                                 // 016D:018E jb short 0x01AA
@@ -193,7 +193,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                                                     // 016D:0190 mov AX,0x4900
                                                                     AX = 0x4900;
                                                                     // 016D:0193 mov ES,word ptr DS:[0x01B3]
-                                                                    ES = UInt16[DS, 0x01B3];
+                                                                    LoadSegmentRegister(0, UInt16[DS, 0x01B3]);
                                                                     // 016D:0197 int 0x21
                                                                     InterruptCall(cs1, 0x0199, 0x21);
                                                                     // 016D:0199 jb short 0x01AA
@@ -201,7 +201,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                                                                         // 016D:019B mov AX,0x4900
                                                                         AX = 0x4900;
                                                                         // 016D:019E mov ES,word ptr DS:[0x01B1]
-                                                                        ES = UInt16[DS, 0x01B1];
+                                                                        LoadSegmentRegister(0, UInt16[DS, 0x01B1]);
                                                                         // 016D:01A2 int 0x21
                                                                         InterruptCall(cs1, 0x01A4, 0x21);
                                                                         // 016D:01A4 jb short 0x01AA
@@ -236,7 +236,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:01AC mov DX,0x0999
         DX = 0x0999;
         // 016D:01AF out DX,AL
-        Out8(0x0999, AL);
+        EnsureIoPrivilege();
+        Out8(DX, AL);
         // 016D:01B0 hlt
         return Hlt();
     }
@@ -374,6 +375,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         VerifySpeculativeEntryOrFail(cs2, 0x00A4, Signature_00A4_sti);
         // F000:00A4 sti
+        EnsureIoPrivilege();
         InterruptFlag = true;
         CheckExternalEvents(cs2, 0x00A5);
         VerifySpeculativeEntryOrFail(cs2, 0x00A5, Signature_00A5_callback);

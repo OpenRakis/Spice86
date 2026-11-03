@@ -1,6 +1,7 @@
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Microsoft.Extensions.Logging;
@@ -132,13 +133,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                     do {
                         CheckExternalEvents(cs1, 0x0143);
                         // 016D:0143 mov ES,word ptr DS:[0x01CE]
-                        ES = UInt16[DS, 0x01CE];
+                        LoadSegmentRegister(0, UInt16[DS, 0x01CE]);
                         // 016D:0147 mov AL,byte ptr ES:[SI+0x18]
                         AL = UInt8[ES, (ushort)(SI + 0x18)];
                         // 016D:014B mov BX,0x2000
                         BX = 0x2000;
                         // 016D:014E mov ES,BX
-                        ES = 0x2000;
+                        LoadSegmentRegister(0, BX);
                         // 016D:0150 cmp AL,byte ptr ES:[SI+0x18]
                         flagOperand_0150 = UInt8[ES, (ushort)(SI + 0x18)];
                         Alu8.Sub(AL, flagOperand_0150);
@@ -251,7 +252,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:01B6 mov DX,0x0999
         DX = 0x0999;
         // 016D:01B9 out DX,AL
-        Out8(0x0999, AL);
+        EnsureIoPrivilege();
+        Out8(DX, AL);
         // 016D:01BA hlt
         return Hlt();
     }
@@ -273,8 +275,10 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:01C6 push DX
         Stack.Push16(DX);
         // 016D:01C7 mov DX,0x0998
+        DX = 0x0998;
         // 016D:01CA out DX,AL
-        Out8(0x0998, AL);
+        EnsureIoPrivilege();
+        Out8(DX, AL);
         // 016D:01CB pop DX
         DX = Stack.Pop16();
         // 016D:01CC pop AX
@@ -416,6 +420,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         VerifySpeculativeEntryOrFail(cs2, 0x00A4, Signature_00A4_sti);
         // F000:00A4 sti
+        EnsureIoPrivilege();
         InterruptFlag = true;
         CheckExternalEvents(cs2, 0x00A5);
         VerifySpeculativeEntryOrFail(cs2, 0x00A5, Signature_00A5_callback);

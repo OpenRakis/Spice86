@@ -1,6 +1,7 @@
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Microsoft.Extensions.Logging;
@@ -83,7 +84,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016E:0100 mov AX,0x1234
         AX = 0x1234;
         // 016E:0103 mov DS,AX
-        DS = 0x1234;
+        LoadSegmentRegister(3, AX);
         // 016E:0105 mov DX,0x5678
         DX = 0x5678;
         // 016E:0108 mov AH,0x25
@@ -259,6 +260,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         VerifySpeculativeEntryOrFail(cs2, 0x00A4, Signature_00A4_sti);
         // F000:00A4 sti
+        EnsureIoPrivilege();
         InterruptFlag = true;
         CheckExternalEvents(cs2, 0x00A5);
         VerifySpeculativeEntryOrFail(cs2, 0x00A5, Signature_00A5_callback);

@@ -27,6 +27,27 @@ public sealed class IrMethodEmitterTest {
 
 
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void EnterHelperCallRemainsTypedThroughGeneration(bool operandSize32) {
+        // Arrange
+        TestInstructionHelper helper = new();
+        byte[] bytes = [0xC8, 4, 0, 2];
+        if (operandSize32) {
+            bytes = [0x66, .. bytes];
+        }
+        CfgInstruction enter = Parse(helper, 0, bytes);
+        CfgBlock block = Block(1, enter);
+
+        // Act
+        string source = Generate(SingleEntry(block), block);
+
+        // Assert
+        AssertCompiles(source);
+        source.Should().Contain($"Stack.Enter(4, 2, {operandSize32.ToString().ToLowerInvariant()});");
+    }
+
     [Fact]
     public void AamThrowIfDoesNotNestTheRestOfTheMethod() {
         // Arrange

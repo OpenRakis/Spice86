@@ -1,6 +1,7 @@
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Microsoft.Extensions.Logging;
@@ -213,10 +214,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs2, 0xFFF0);
         // F000:FFF0 jmp near 0x4000
         // F000:4000 cli
+        EnsureIoPrivilege();
         InterruptFlag = false;
         // F000:4001 mov AX,0x1000
+        AX = 0x1000;
         // F000:4004 mov SS,AX
-        SS = 0x1000;
+        LoadSegmentRegister(2, AX);
         // F000:4006 mov SP,0xFFFE
         SP = 0xFFFE;
         // F000:4009 mov AX,0x0013
@@ -224,11 +227,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:400C int 0x10
         InterruptCall(cs2, 0x400E, 0x10);
         // F000:400E cli
+        EnsureIoPrivilege();
         InterruptFlag = false;
         // F000:400F mov AX,0xA000
         AX = 0xA000;
         // F000:4012 mov ES,AX
-        ES = 0xA000;
+        LoadSegmentRegister(0, AX);
         // F000:4014 xor DI,DI
         DI = 0;
         // F000:4016 xor BX,BX

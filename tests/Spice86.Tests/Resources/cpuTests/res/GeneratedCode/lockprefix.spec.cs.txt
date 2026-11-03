@@ -1,6 +1,7 @@
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Microsoft.Extensions.Logging;
@@ -70,7 +71,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:005D mov AX,word ptr DS:[4]
         AX = UInt16[DS, 4];
         // F000:0060 mov word ptr SS:[BP+2],AX
-        UInt16[SS, (ushort)(BP + 2)] = AX;
+        UInt16[SS, (ushort)(BP + 2), SegmentAccessKind.Stack] = AX;
         // F000:0063 pop BP
         BP = Stack.Pop16();
         // F000:0064 inc word ptr DS:[0]
@@ -83,11 +84,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 xor AX,AX
-        AX = 0;
+        AX = Alu16.Xor(AX, AX);
         // F000:0002 mov DS,AX
-        DS = 0;
+        LoadSegmentRegister(3, AX);
         // F000:0004 mov SS,AX
-        SS = 0;
+        LoadSegmentRegister(2, AX);
         // F000:0006 mov SP,0x8000
         SP = 0x8000;
         // F000:0009 mov word ptr DS:[0x0018],0x005A
@@ -101,7 +102,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:001F mov word ptr DS:[0x0010],1
         UInt16[DS, 0x0010] = 1;
         // F000:0025 add word ptr DS:[0x0010],AX
-        UInt16[DS, 0x0010] = Alu16.Add(UInt16[DS, 0x0010], 0);
+        UInt16[DS, 0x0010] = Alu16.Add(UInt16[DS, 0x0010], AX);
         // F000:002A inc word ptr DS:[0x0010]
         UInt16[DS, 0x0010] += 1;
         // F000:002F dec word ptr DS:[0x0010]

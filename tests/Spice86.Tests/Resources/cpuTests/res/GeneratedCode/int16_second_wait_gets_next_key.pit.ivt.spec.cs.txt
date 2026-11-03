@@ -1,6 +1,7 @@
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Microsoft.Extensions.Logging;
@@ -82,7 +83,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0100 xor AX,AX
         AX = Alu16.Xor(AX, AX);
         // 016D:0102 mov ES,AX
-        ES = 0;
+        LoadSegmentRegister(0, AX);
         // 016D:0104 mov AX,word ptr ES:[0x0070]
         AX = UInt16[ES, 0x0070];
         // 016D:0108 mov word ptr CS:[0x0188],AX
@@ -96,15 +97,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:011B mov word ptr ES:[0x0072],CS
         UInt16[ES, 0x0072] = CS;
         // 016D:0120 sti
+        EnsureIoPrivilege();
         InterruptFlag = true;
         CheckExternalEvents(cs1, 0x0121);
         // 016D:0121 mov AL,0xD2
         AL = 0xD2;
         // 016D:0123 out 0x64,AL
+        EnsureIoPrivilege();
         Out8(0x0064, AL);
         // 016D:0125 mov AL,0x1E
         AL = 0x1E;
         // 016D:0127 out 0x60,AL
+        EnsureIoPrivilege();
         Out8(0x0060, AL);
         // 016D:0129 mov AH,0
         AH = 0;
@@ -121,6 +125,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:013B mov byte ptr CS:[0x0187],AL
         UInt8[CS, 0x0187] = AL;
         // 016D:013F cli
+        EnsureIoPrivilege();
         InterruptFlag = false;
         // 016D:0140 mov AX,word ptr CS:[0x0188]
         AX = UInt16[CS, 0x0188];
@@ -133,7 +138,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0150 mov AX,0xB800
         AX = 0xB800;
         // 016D:0153 mov ES,AX
-        ES = 0xB800;
+        LoadSegmentRegister(0, AX);
         // 016D:0155 xor DI,DI
         DI = Alu16.Xor(DI, DI);
         // 016D:0157 mov AH,7
@@ -156,10 +161,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
     }
 
     public virtual Action unknown_016D_0168_01838(int loadOffset) {
+        byte flagOperand_0168 = 0;
         CheckExternalEvents(cs1, 0x0168);
         // 016D:0168 cmp byte ptr CS:[0x0185],0
+        flagOperand_0168 = UInt8[CS, 0x0185];
+        Alu8.Sub(flagOperand_0168, 0);
         // 016D:016E je short 0x0180
-        if (UInt8[CS, 0x0185] != 0) {
+        if (flagOperand_0168 != 0) {
             // 016D:0170 mov byte ptr CS:[0x0185],0
             UInt8[CS, 0x0185] = 0;
             // 016D:0176 push AX
@@ -167,10 +175,12 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // 016D:0177 mov AL,0xD2
             AL = 0xD2;
             // 016D:0179 out 0x64,AL
+            EnsureIoPrivilege();
             Out8(0x0064, AL);
             // 016D:017B mov AL,0x30
             AL = 0x30;
             // 016D:017D out 0x60,AL
+            EnsureIoPrivilege();
             Out8(0x0060, AL);
             // 016D:017F pop AX
             AX = Stack.Pop16();
@@ -181,6 +191,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (targetSegment_0180 != cs2 || targetOffset_0180 != 0x0005) {
             throw FailAsUntested($"Untested far jump target {targetSegment_0180:X4}:{targetOffset_0180:X4} at 016D:0180");
         }
+        ValidateFarCodeSegmentTransfer(0xF000);
+        LoadSegmentRegister(1, 0xF000);
         CS = cs2;
         // F000:0005 iret
         return InterruptRet();
@@ -229,6 +241,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         while (true) {
             CheckExternalEvents(cs2, 0x003E);
             // F000:003E cli
+            EnsureIoPrivilege();
             InterruptFlag = false;
             // F000:003F callback 0x0102
             Callback(cs2, 0x003F, 0x0102);
@@ -237,6 +250,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
                 break;
             }
             // F000:0045 sti
+            EnsureIoPrivilege();
             InterruptFlag = true;
             CheckExternalEvents(cs2, 0x0046);
             // F000:0046 jmp short 0x003E
@@ -355,6 +369,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         }
         VerifySpeculativeEntryOrFail(cs2, 0x00A4, Signature_00A4_sti);
         // F000:00A4 sti
+        EnsureIoPrivilege();
         InterruptFlag = true;
         CheckExternalEvents(cs2, 0x00A5);
         VerifySpeculativeEntryOrFail(cs2, 0x00A5, Signature_00A5_callback);

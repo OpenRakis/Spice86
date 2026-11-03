@@ -1,6 +1,7 @@
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Microsoft.Extensions.Logging;
@@ -35,7 +36,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00BE mov BP,SP
         BP = SP;
         // F000:00C0 mov DX,word ptr SS:[BP+4]
-        DX = UInt16[SS, (ushort)(BP + 4)];
+        DX = UInt16[SS, (ushort)(BP + 4), SegmentAccessKind.Stack];
         // F000:00C3 add DX,3
         DX = Alu16.Add(DX, 3);
         // F000:00C6 pop BP
@@ -80,17 +81,17 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0000 mov AX,0x2000
         AX = 0x2000;
         // F000:0003 mov DS,AX
-        DS = 0x2000;
+        LoadSegmentRegister(3, AX);
         // F000:0005 mov ES,AX
-        ES = 0x2000;
+        LoadSegmentRegister(0, AX);
         // F000:0007 mov SS,AX
-        SS = 0x2000;
+        LoadSegmentRegister(2, AX);
         // F000:0009 mov SP,0x1000
         SP = 0x1000;
         // F000:000C cld
         DirectionFlag = false;
         // F000:000D xor BX,BX
-        BX = 0;
+        BX = Alu16.Xor(BX, BX);
         // F000:000F mov SI,0x00DA
         SI = 0x00DA;
         // F000:0012 mov word ptr DS:[0x0F00],2
@@ -102,21 +103,21 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:001B mov DX,word ptr CS:[SI+2]
             DX = UInt16[CS, (ushort)(SI + 2)];
             // F000:001F mov ES,DX
-            ES = DX;
+            LoadSegmentRegister(0, DX);
             // F000:0021 push AX
             Stack.Push16(AX);
             // F000:0022 push ES
             Stack.Push16(ES);
             // F000:0023 mov AX,1
+            AX = 1;
             // F000:0026 mov ES,AX
-            ES = 1;
+            LoadSegmentRegister(0, AX);
             // F000:0028 mov CX,ES
             CX = ES;
             // F000:002A add CX,AX
-            CX = Alu16.Add(CX, 1);
+            CX = Alu16.Add(CX, AX);
             // F000:002C pop ES
-            ES = UInt16[SS, SP];
-            SP += 2;
+            LoadSegmentRegister(0, Stack.PopSegmentSelector(2));
             // F000:002D pop AX
             AX = Stack.Pop16();
             // F000:002E mov word ptr DS:[BX],AX
@@ -146,7 +147,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:004B mov BP,SP
             BP = SP;
             // F000:004D mov DX,word ptr SS:[BP+2]
-            DX = UInt16[SS, (ushort)(BP + 2)];
+            DX = UInt16[SS, (ushort)(BP + 2), SegmentAccessKind.Stack];
             // F000:0050 pop BP
             BP = Stack.Pop16();
             // F000:0051 pop AX
@@ -168,7 +169,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:0061 mov BP,SP
             BP = SP;
             // F000:0063 mov word ptr SS:[BP],0x5A5A
-            UInt16[SS, BP] = 0x5A5A;
+            UInt16[SS, BP, SegmentAccessKind.Stack] = 0x5A5A;
             // F000:0068 pop AX
             AX = Stack.Pop16();
             // F000:0069 mov word ptr DS:[BX+0x0E],AX
@@ -214,12 +215,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:0097 mov AX,word ptr CS:[SI+0x0E]
             AX = UInt16[CS, (ushort)(SI + 0x0E)];
             // F000:009B mov ES,AX
-            ES = AX;
+            LoadSegmentRegister(0, AX);
             // F000:009D call near 0x00C8
             NearCall(cs1, 0x00A0, unknown_F000_00C8_F00C8);
             // F000:00A0 pop ES
-            ES = UInt16[SS, SP];
-            SP += 2;
+            LoadSegmentRegister(0, Stack.PopSegmentSelector(2));
             // F000:00A1 mov word ptr DS:[BX+0x16],DX
             UInt16[DS, (ushort)(BX + 0x16)] = DX;
             // F000:00A4 mov AX,word ptr CS:[SI+0x0C]

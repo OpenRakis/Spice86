@@ -1,6 +1,7 @@
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Microsoft.Extensions.Logging;
@@ -86,7 +87,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0109 mov AL,1
         AL = 1;
         // 016D:010B out DX,AL
-        Out8(0x0226, AL);
+        EnsureIoPrivilege();
+        Out8(DX, AL);
         // 016D:010C nop
         // 016D:010D nop
         // 016D:010E nop
@@ -95,7 +97,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0112 mov AL,0
         AL = 0;
         // 016D:0114 out DX,AL
-        Out8(0x0226, AL);
+        EnsureIoPrivilege();
+        Out8(DX, AL);
         // 016D:0115 xor CX,CX
         CX = 0;
         while (true) {
@@ -109,14 +112,17 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // 016D:011D mov DX,0x022E
             DX = 0x022E;
             // 016D:0120 in AL,DX
-            AL = In8(0x022E);
+            EnsureIoPrivilege();
+            AL = In8(DX);
             // 016D:0121 test AL,0x80
+            Alu8.And(AL, 0x80);
             // 016D:0123 je short 0x012D
             if ((AL & 0x80) != 0) {
                 // 016D:0125 mov DX,0x022A
                 DX = 0x022A;
                 // 016D:0128 in AL,DX
-                AL = In8(0x022A);
+                EnsureIoPrivilege();
+                AL = In8(DX);
                 // 016D:0129 cmp AL,0xAA
                 Alu8.Sub(AL, 0xAA);
                 // 016D:012B je short 0x0152
@@ -145,17 +151,20 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // 016D:0166 mov AL,CL
         AL = CL;
         // 016D:0168 out DX,AL
-        Out8(0x0998, AL);
+        EnsureIoPrivilege();
+        Out8(DX, AL);
         // 016D:0169 mov AL,CH
         AL = CH;
         // 016D:016B out DX,AL
-        Out8(0x0998, AL);
+        EnsureIoPrivilege();
+        Out8(DX, AL);
         // 016D:016C mov DX,0x0999
         DX = 0x0999;
         // 016D:016F mov AL,0
         AL = 0;
         // 016D:0171 out DX,AL
-        Out8(0x0999, AL);
+        EnsureIoPrivilege();
+        Out8(DX, AL);
         // 016D:0172 int 0x20
         InterruptCall(cs1, 0x0174, 0x20);
         throw FailAsUntested("Untested return from call at 016D:0172");

@@ -1,6 +1,7 @@
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.ReverseEngineer;
 using Spice86.Core.Emulator.VM;
 using Microsoft.Extensions.Logging;
@@ -168,6 +169,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             return JumpDispatcher.RequiredJumpAsmReturn;
         }
         // F000:00F9 cli
+        EnsureIoPrivilege();
         InterruptFlag = false;
         // F000:00FA hlt
         return Hlt();
@@ -186,7 +188,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0104 add AX,0x0010
         AX += 0x0010;
         // F000:0107 mov word ptr SS:[BP+2],0x006A
-        UInt16[SS, (ushort)(BP + 2)] = 0x006A;
+        UInt16[SS, (ushort)(BP + 2), SegmentAccessKind.Stack] = 0x006A;
         // F000:010C pop BP
         BP = Stack.Pop16();
         // F000:010D iret
@@ -206,6 +208,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0118 mov AL,0x20
         AL = 0x20;
         // F000:011A out 0x20,AL
+        EnsureIoPrivilege();
         Out8(0x0020, AL);
         // F000:011C pop AX
         AX = Stack.Pop16();
@@ -235,16 +238,17 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CheckExternalEvents(cs1, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov AX,0x2000
+        AX = 0x2000;
         // F000:0003 mov DS,AX
-        DS = 0x2000;
+        LoadSegmentRegister(3, AX);
         // F000:0005 mov SS,AX
-        SS = 0x2000;
+        LoadSegmentRegister(2, AX);
         // F000:0007 mov SP,0x1000
         SP = 0x1000;
         // F000:000A xor AX,AX
-        AX = 0;
+        AX = Alu16.Xor(AX, AX);
         // F000:000C mov ES,AX
-        ES = 0;
+        LoadSegmentRegister(0, AX);
         // F000:000E mov word ptr ES:[0],0x00FB
         UInt16[ES, 0] = 0x00FB;
         // F000:0015 mov word ptr ES:[2],CS
@@ -260,7 +264,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0032 mov AX,DS
         AX = DS;
         // F000:0034 mov ES,AX
-        ES = AX;
+        LoadSegmentRegister(0, AX);
         // F000:0036 cld
         DirectionFlag = false;
         // F000:0037 mov byte ptr DS:[0x0E02],0
@@ -268,20 +272,25 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:003C mov AL,0x36
         AL = 0x36;
         // F000:003E out 0x43,AL
+        EnsureIoPrivilege();
         Out8(0x0043, AL);
         // F000:0040 mov AL,0x51
         AL = 0x51;
         // F000:0042 out 0x40,AL
+        EnsureIoPrivilege();
         Out8(0x0040, AL);
         // F000:0044 mov AL,0x22
         AL = 0x22;
         // F000:0046 out 0x40,AL
+        EnsureIoPrivilege();
         Out8(0x0040, AL);
         // F000:0048 mov AL,0
         AL = 0;
         // F000:004A out 0x21,AL
+        EnsureIoPrivilege();
         Out8(0x0021, AL);
         // F000:004C sti
+        EnsureIoPrivilege();
         InterruptFlag = true;
         CheckExternalEvents(cs1, 0x004D);
         // F000:004D xor BX,BX
