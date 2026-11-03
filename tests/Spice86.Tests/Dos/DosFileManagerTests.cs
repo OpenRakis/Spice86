@@ -11,6 +11,36 @@ using Xunit;
 public class DosFileManagerTests {
     private static readonly string MountPoint = Path.Join(AppContext.BaseDirectory, "Resources", "MountPoint");
 
+    [Fact]
+    public void CommitFile_MakesBufferedWritesVisibleWithoutClosingTheFile() {
+        // Arrange
+        using TempFile directory = new("Spice86_CommitFile_Tests");
+        using DosTestFixture fixture = new(directory.Path);
+        DosFileOperationResult created = fixture.DosFileManager.CreateFileUsingHandle("COMMIT.DAT", 0);
+        created.IsError.Should().BeFalse();
+        ushort handle = (ushort)(created.Value ?? throw new InvalidOperationException("No file handle returned"));
+        using VirtualFileBase file = fixture.DosFileManager.OpenFiles[handle]
+            ?? throw new InvalidOperationException("No file opened");
+        byte[] payload = [0x44, 0x41, 0x54, 0x41];
+        const uint bufferAddress = 0x10000;
+        fixture.Memory.LoadData(bufferAddress, payload);
+        fixture.DosFileManager.WriteToFileOrDevice(handle, (ushort)payload.Length, bufferAddress).IsError.Should().BeFalse();
+
+        // Act
+        DosFileOperationResult committed = fixture.DosFileManager.CommitFile(handle);
+
+        // Assert
+        committed.IsError.Should().BeFalse();
+        using FileStream observer = new(Path.Join(directory.Path, "COMMIT.DAT"),
+            FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        byte[] visibleData = new byte[payload.Length];
+        observer.ReadExactly(visibleData);
+        visibleData.Should().Equal(payload);
+        file.Position.Should().Be(payload.Length);
+        file.CanWrite.Should().BeTrue();
+        fixture.DosFileManager.CloseFileOrDevice(handle).IsError.Should().BeFalse();
+    }
+
     [Theory]
     [InlineData(@"\FoO", "FOO")]
     [InlineData(@"/FOo", "FOO")]

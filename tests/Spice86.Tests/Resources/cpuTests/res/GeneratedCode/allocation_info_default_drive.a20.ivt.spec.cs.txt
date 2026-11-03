@@ -165,10 +165,10 @@ public partial class CfgGeneratedOverrides {
         Alu8.Sub(AL, 0xFF);
         // 016D:0108 je short 0x012F
         if (AL != 0xFF) {
-            // 016D:010A cmp AH,0
-            Alu8.Sub(AH, 0);
+            // 016D:010A cmp AH,0x1C
+            Alu8.Sub(AH, 0x1C);
             // 016D:010D jne short 0x012F
-            if (AH == 0) {
+            if (AH == 0x1C) {
                 // 016D:010F cmp AL,0x20
                 Alu8.Sub(AL, 0x20);
                 // 016D:0111 jne short 0x012F
