@@ -113,9 +113,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:009E mov dword ptr DS:[0x063A],0x00000900
         UInt32[DS, 0x063A] = 0x00000900;
         // F000:00A7 lgdt dword ptr DS:[0x0630]
-        LoadGdtr(DS, 0x00000630);
+        LoadGdtr(DS, 0x00000630, false);
         // F000:00AC lidt dword ptr DS:[0x0638]
-        LoadIdtr(DS, 0x00000638);
+        LoadIdtr(DS, 0x00000638, false);
         // F000:00B1 mov EAX,0
         EAX = ReadControlRegister(0);
         // F000:00B4 or EAX,1

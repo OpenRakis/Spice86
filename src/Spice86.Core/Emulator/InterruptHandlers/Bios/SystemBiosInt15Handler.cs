@@ -95,6 +95,13 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// <inheritdoc />
     public override void Run() {
         byte operation = State.AH;
+        if (!HasRunnable(operation)) {
+            if (LoggerService.IsEnabled(LogLevel.Warning)) {
+                LoggerService.LogWarning("INT 15h: unsupported function AH={AH:X2}, AL={AL:X2}", operation, State.AL);
+            }
+            Unsupported();
+            return;
+        }
         Run(operation);
     }
 

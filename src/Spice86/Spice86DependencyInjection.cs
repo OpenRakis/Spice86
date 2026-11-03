@@ -520,7 +520,7 @@ public class Spice86DependencyInjection : IDisposable {
             biosKeyboardBuffer);
 
         ExpandedMemoryManager? emsManager = null;
-        if (configuration.Ems is not false || configuration.Xms is not false) {
+        if (configuration.Ems is not false) {
             emsManager = new ExpandedMemoryManager(memory, cfgCpu, stack, state, loggerService);
         }
 
