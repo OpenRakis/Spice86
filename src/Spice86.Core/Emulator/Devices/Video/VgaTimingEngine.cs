@@ -1,3 +1,8 @@
+// Native Tandy resize scheduling adapted from DOSBox Staging.
+// SPDX-FileCopyrightText: 2020-2026 The DOSBox Staging Team
+// SPDX-FileCopyrightText: 2002-2021 The DOSBox Team
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 namespace Spice86.Core.Emulator.Devices.Video;
 
 using Spice86.Core.Emulator.VM.Clock;
@@ -17,6 +22,7 @@ public class VgaTimingEngine {
     private readonly IEmulatedClock _clock;
     private readonly Renderer _renderer;
     private readonly VgaBlinkState _blinkState;
+    private readonly TandyVideoState? _tandy;
 
     private VgaTimingParameters _timing;
     private int _visibleScanlines;
@@ -44,6 +50,11 @@ public class VgaTimingEngine {
         _clock = clock;
         _renderer = renderer;
         _blinkState = blinkState;
+        _tandy = (state as VideoState)?.Tandy;
+        if (_tandy != null) {
+            _tandy.CommitResize();
+            _tandy.ResizeRequested += RequestNativeResize;
+        }
         _timing = state.BeamTiming.Refresh(0);
         _scheduler.AddEvent(OnFrameStart, 0);
         _scheduler.AddEvent(OnBlinkToggle, BlinkPeriodMs);
@@ -121,15 +132,40 @@ public class VgaTimingEngine {
         if (ReferenceEquals(timing, _timing)) {
             return false;
         }
+        CancelFrameEvents();
+        _timing = timing;
+        _state.IsRenderingDirty = true;
+        _scheduler.AddEvent(OnFrameStart, 0);
+        return true;
+    }
+
+    private void CancelFrameEvents() {
         _scheduler.RemoveEvents(OnFrameStart);
         _scheduler.RemoveEvents(OnScanlineActive);
         _scheduler.RemoveEvents(OnScanlineHBlank);
         _scheduler.RemoveEvents(OnDisplayEnd);
         _scheduler.RemoveEvents(OnBeamStatusChange);
-        _timing = timing;
+    }
+
+    private void RequestNativeResize(int delayMs) {
+        _scheduler.RemoveEvents(OnNativeResize);
+        if (delayMs == 0) {
+            OnNativeResize(0);
+        } else {
+            _scheduler.AddEvent(OnNativeResize, delayMs);
+        }
+    }
+
+    private void OnNativeResize(uint value) {
+        if (_tandy == null) {
+            return;
+        }
+        _scheduler.RemoveEvents(OnNativeResize);
+        _tandy.CommitResize();
+        CancelFrameEvents();
+        _timing = _state.BeamTiming.Refresh(_scheduler.EventTimeMs);
         _state.IsRenderingDirty = true;
-        _scheduler.AddEvent(OnFrameStart, 0);
-        return true;
+        OnFrameStart(0);
     }
 
     private void OnBlinkToggle(uint value) {

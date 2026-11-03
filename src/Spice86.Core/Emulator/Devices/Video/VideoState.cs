@@ -1,13 +1,21 @@
 namespace Spice86.Core.Emulator.Devices.Video;
 
 using Spice86.Core.Emulator.Devices.Video.Registers;
+using Spice86.Core.Emulator.Platform;
 
 /// <inheritdoc cref="IVideoState" />
 public class VideoState : IVideoState {
     /// <summary>
     ///     Creates a new instance of the <see cref="VideoState" /> class.
     /// </summary>
-    public VideoState() {
+    public VideoState() : this(MachineProfile.For(MachineType.Pc)) {
+    }
+
+    /// <summary>Creates video state for the selected machine.</summary>
+    public VideoState(MachineProfile profile) {
+        if (profile.IsTandy) {
+            Tandy = new TandyVideoState();
+        }
         DacRegisters = new DacRegisters();
         GeneralRegisters = new GeneralRegisters();
         SequencerRegisters = new SequencerRegisters();
@@ -40,4 +48,7 @@ public class VideoState : IVideoState {
 
     /// <inheritdoc />
     public VgaBeamTiming BeamTiming { get; }
+
+    /// <summary>Native gate array state, absent on VGA machines.</summary>
+    public TandyVideoState? Tandy { get; }
 }

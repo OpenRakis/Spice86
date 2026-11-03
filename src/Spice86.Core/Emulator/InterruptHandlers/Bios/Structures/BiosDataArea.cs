@@ -2,6 +2,7 @@
 
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.ReaderWriter;
+using Spice86.Core.Emulator.Platform;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
 using Spice86.Core.Emulator.ReverseEngineer.DataStructure.Array;
 using Spice86.Shared.Emulator.Memory;
@@ -11,8 +12,7 @@ using Spice86.Shared.Utils;
 /// Provides access to emulated memory mapped BIOS values. <br/>
 /// <see href="https://flint.cs.yale.edu/feng/cos/resources/BIOS/Resources/biosdata.htm" />
 /// </summary>
-public sealed class BiosDataArea : MemoryBasedDataStructure
-{
+public sealed class BiosDataArea : MemoryBasedDataStructure {
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
@@ -20,6 +20,18 @@ public sealed class BiosDataArea : MemoryBasedDataStructure
     /// <param name="conventionalMemorySizeKb">The size of conventional memory for DOS applications, in kilobytes.</param>
     public BiosDataArea(IByteReaderWriter byteReaderWriter, ushort conventionalMemorySizeKb) : base(byteReaderWriter, MemoryUtils.ToPhysicalAddress(MemoryMap.BiosDataSegment, 0)) {
         ConventionalMemorySizeKb = conventionalMemorySizeKb;
+    }
+
+    /// <summary>
+    /// Initializes the BIOS memory report without changing physical RAM or the DOS allocation ceiling.
+    /// </summary>
+    /// <param name="byteReaderWriter">The memory bus.</param>
+    /// <param name="machineProfile">The selected platform.</param>
+    public BiosDataArea(IByteReaderWriter byteReaderWriter, MachineProfile machineProfile)
+        : this(byteReaderWriter, machineProfile.BiosReportedMemoryKb) {
+        if (machineProfile.IsTandy) {
+            TrueConventionalMemorySizeKb = machineProfile.TrueMemoryKb;
+        }
     }
 
     /// <summary>
@@ -49,7 +61,11 @@ public sealed class BiosDataArea : MemoryBasedDataStructure
     /// </summary>
     public ushort ConventionalMemorySizeKb { get => UInt16[0x13]; init => UInt16[0x13] = value; }
 
-    // Padding at 0x15
+    /// <summary>
+    /// Gets or sets Tandy's true conventional-memory size at physical address 0415h.
+    /// This word overlaps the PC PS/2 control byte.
+    /// </summary>
+    public ushort TrueConventionalMemorySizeKb { get => UInt16[0x15]; set => UInt16[0x15] = value; }
 
     /// <summary>
     /// Gets or sets the PS/2 CTRL flag.

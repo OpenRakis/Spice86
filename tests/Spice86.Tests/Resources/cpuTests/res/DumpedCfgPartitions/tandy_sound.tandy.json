@@ -1,0 +1,341 @@
+{
+  "partitions": [
+    {
+      "id": 1,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        58,
+        67,
+        70,
+        76,
+        86,
+        92,
+        129,
+        134,
+        141,
+        143,
+        152,
+        149,
+        154,
+        147,
+        162,
+        167,
+        68,
+        177
+      ],
+      "entries": [
+        {
+          "block": 58,
+          "address": "016D:0100",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        241
+      ],
+      "entries": [
+        {
+          "block": 241,
+          "address": "016D:01CB",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        2,
+        3,
+        5,
+        7
+      ],
+      "entries": [
+        {
+          "block": 2,
+          "address": "F000:0006",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        10,
+        11
+      ],
+      "entries": [
+        {
+          "block": 10,
+          "address": "F000:0011",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        62,
+        63
+      ],
+      "entries": [
+        {
+          "block": 62,
+          "address": "F000:0063",
+          "kind": "functionEntry"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        14,
+        15
+      ],
+      "entries": [
+        {
+          "block": 14,
+          "address": "F000:006D",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        18,
+        21,
+        25
+      ],
+      "entries": [
+        {
+          "block": 18,
+          "address": "F000:0073",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        34,
+        35
+      ],
+      "entries": [
+        {
+          "block": 34,
+          "address": "F000:007D",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        38,
+        39
+      ],
+      "entries": [
+        {
+          "block": 38,
+          "address": "F000:0082",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        42,
+        43
+      ],
+      "entries": [
+        {
+          "block": 42,
+          "address": "F000:0087",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        46,
+        47
+      ],
+      "entries": [
+        {
+          "block": 46,
+          "address": "F000:008C",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        50,
+        51
+      ],
+      "entries": [
+        {
+          "block": 50,
+          "address": "F000:0091",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        54,
+        55
+      ],
+      "entries": [
+        {
+          "block": 54,
+          "address": "F000:0096",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        275,
+        279,
+        287,
+        296,
+        300,
+        277,
+        281,
+        284,
+        293,
+        291,
+        298
+      ],
+      "entries": [
+        {
+          "block": 275,
+          "address": "F000:00B9",
+          "kind": "functionEntry"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        27
+      ],
+      "entries": [
+        {
+          "block": 27,
+          "address": "F000:010B",
+          "kind": "functionEntry"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        19,
+        23,
+        29,
+        31
+      ],
+      "entries": [
+        {
+          "block": 19,
+          "address": "F000:010C",
+          "kind": "functionEntry"
+        }
+      ]
+    }
+  ],
+  "transfers": [
+    {
+      "kind": "callOut",
+      "fromPartition": 1,
+      "toPartition": 5,
+      "fromBlock": 58,
+      "toBlock": 62,
+      "from": "016D:0102",
+      "target": "F000:0063",
+      "callContinuationBlock": 67,
+      "callContinuationAddress": "016D:0104"
+    },
+    {
+      "kind": "callOut",
+      "fromPartition": 1,
+      "toPartition": 14,
+      "fromBlock": 177,
+      "toBlock": 275,
+      "from": "016D:01C9",
+      "target": "F000:00B9"
+    },
+    {
+      "kind": "alignedReturn",
+      "fromPartition": 5,
+      "toPartition": 1,
+      "fromBlock": 63,
+      "toBlock": 67,
+      "from": "F000:0067",
+      "target": "016D:0104"
+    },
+    {
+      "kind": "callOut",
+      "fromPartition": 7,
+      "toPartition": 16,
+      "fromBlock": 18,
+      "toBlock": 19,
+      "from": "F000:0073",
+      "target": "F000:010C",
+      "callContinuationBlock": 21,
+      "callContinuationAddress": "F000:0078"
+    },
+    {
+      "kind": "callOut",
+      "fromPartition": 16,
+      "toPartition": 15,
+      "fromBlock": 23,
+      "toBlock": 27,
+      "from": "F000:0110",
+      "target": "F000:010B",
+      "callContinuationBlock": 29,
+      "callContinuationAddress": "F000:0115"
+    }
+  ]
+}

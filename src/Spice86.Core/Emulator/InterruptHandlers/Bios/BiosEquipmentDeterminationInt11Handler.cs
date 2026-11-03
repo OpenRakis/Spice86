@@ -6,12 +6,15 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.Platform;
 using Spice86.Shared.Interfaces;
 
 /// <summary>
-/// Very basic implementation of int 11 that basically does nothing.
+/// Returns the guest-visible BIOS equipment word for interrupt 11h.
 /// </summary>
 public class BiosEquipmentDeterminationInt11Handler : InterruptHandler {
+    private readonly MachineProfile _machineProfile;
+
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
@@ -21,7 +24,22 @@ public class BiosEquipmentDeterminationInt11Handler : InterruptHandler {
     /// <param name="state">The CPU state.</param>
     /// <param name="loggerService">The logger service implementation</param>
     public BiosEquipmentDeterminationInt11Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, ILogger loggerService)
+        : this(memory, functionHandlerProvider, stack, state, loggerService, MachineProfile.For(MachineType.Pc)) {
+    }
+
+    /// <summary>
+    /// Initializes platform equipment reporting while preserving the legacy PC result.
+    /// </summary>
+    /// <param name="memory">The memory bus.</param>
+    /// <param name="functionHandlerProvider">The call-flow handler provider.</param>
+    /// <param name="stack">The CPU stack.</param>
+    /// <param name="state">The CPU state.</param>
+    /// <param name="loggerService">The logger.</param>
+    /// <param name="machineProfile">The selected platform.</param>
+    public BiosEquipmentDeterminationInt11Handler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider,
+        Stack stack, State state, ILogger loggerService, MachineProfile machineProfile)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
+        _machineProfile = machineProfile;
     }
 
     /// <inheritdoc />
@@ -32,6 +50,6 @@ public class BiosEquipmentDeterminationInt11Handler : InterruptHandler {
 
     [InterruptService(Writes = CpuValues.Ax)]
     private void GetEquipmentList() {
-        State.AX = 0;
+        State.AX = _machineProfile.IsTandy ? Memory.UInt16[MemoryMap.BiosDataSegment, 0x10] : (ushort)0;
     }
 }

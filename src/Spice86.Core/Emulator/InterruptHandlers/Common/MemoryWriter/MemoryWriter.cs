@@ -9,6 +9,7 @@ using Spice86.Shared.Emulator.Memory;
 /// </summary>
 public class MemoryWriter {
     private readonly IIndexable _memory;
+    private readonly List<(uint Start, uint End)> _reservedRanges = new();
     /// <summary>
     /// Where next data will be written
     /// </summary>
@@ -25,10 +26,33 @@ public class MemoryWriter {
     }
 
     /// <summary>
+    /// Protects a fixed physical-memory region from sequential routine installation.
+    /// Reservations must be added before installing routines.
+    /// </summary>
+    /// <param name="startAddress">The first reserved physical address.</param>
+    /// <param name="length">The number of reserved bytes.</param>
+    public void ReserveRange(uint startAddress, uint length) {
+        if (length == 0 || startAddress > uint.MaxValue - length) {
+            throw new ArgumentOutOfRangeException(nameof(length));
+        }
+        _reservedRanges.Add((startAddress, startAddress + length));
+    }
+
+    private void CheckWritable(uint length) {
+        uint address = CurrentAddress.Linear;
+        foreach ((uint start, uint end) in _reservedRanges) {
+            if (address < end && address + length > start) {
+                throw new InvalidOperationException($"Assembly routine at {CurrentAddress} overlaps reserved firmware memory.");
+            }
+        }
+    }
+
+    /// <summary>
     /// Writes the given byte at CurrentAddress to emulated memory bus, increments CurrentAddress offset to next byte.
     /// </summary>
     /// <param name="b">data to write</param>
     public void WriteUInt8(byte b) {
+        CheckWritable(1);
         _memory.UInt8[CurrentAddress.Segment, CurrentAddress.Offset] = b;
         CurrentAddress += 1;
     }
@@ -38,6 +62,7 @@ public class MemoryWriter {
     /// </summary>
     /// <param name="b">data to write</param>
     public void WriteInt8(sbyte b) {
+        CheckWritable(1);
         _memory.Int8[CurrentAddress.Segment, CurrentAddress.Offset] = b;
         CurrentAddress += 1;
     }
@@ -47,15 +72,17 @@ public class MemoryWriter {
     /// </summary>
     /// <param name="w">data to write</param>
     public void WriteUInt16(ushort w) {
+        CheckWritable(2);
         _memory.UInt16[CurrentAddress.Segment, CurrentAddress.Offset] = w;
         CurrentAddress += 2;
     }
-    
+
     /// <summary>
     /// Writes the given signed word at CurrentAddress to emulated memory bus, increments CurrentAddress offset to next word.
     /// </summary>
     /// <param name="w">data to write</param>
     public void WriteInt16(short w) {
+        CheckWritable(2);
         _memory.Int16[CurrentAddress.Segment, CurrentAddress.Offset] = w;
         CurrentAddress += 2;
     }
@@ -65,6 +92,7 @@ public class MemoryWriter {
     /// </summary>
     /// <param name="dw">data to write</param>
     public void WriteUInt32(uint dw) {
+        CheckWritable(4);
         _memory.UInt32[CurrentAddress.Segment, CurrentAddress.Offset] = dw;
         CurrentAddress += 4;
     }
@@ -75,6 +103,7 @@ public class MemoryWriter {
     /// </summary>
     /// <param name="address">data to write</param>
     public void WriteSegmentedAddress(SegmentedAddress address) {
+        CheckWritable(4);
         _memory.SegmentedAddress16[CurrentAddress.Segment, CurrentAddress.Offset] = address;
         CurrentAddress += 4;
     }

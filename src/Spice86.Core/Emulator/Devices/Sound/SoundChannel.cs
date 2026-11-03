@@ -1,8 +1,15 @@
+// SPDX-FileCopyrightText: 2019-2025 The DOSBox Staging Team
+// SPDX-FileCopyrightText: 2002-2018 The DOSBox Team
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 namespace Spice86.Core.Emulator.Devices.Sound;
 
 using Spice86.Audio.Common;
 using Spice86.Audio.Filters;
 using Spice86.Audio.Filters.Speex;
+using Spice86.Core.Emulator.Devices.Sound.Tandy;
+using Spice86.Core.Emulator.VM.Clock;
+using System.Globalization;
 
 using HighPass = Audio.Filters.IirFilters.Filters.Butterworth.HighPass;
 using LowPass = Audio.Filters.IirFilters.Filters.Butterworth.LowPass;
@@ -1241,6 +1248,21 @@ public sealed class SoundChannel {
         }
     }
 
+    /// <summary>Uses the device clock for a newly created channel's sleep timer.</summary>
+    internal void ConfigureEmulatedSleepClock(IEmulatedClock clock) {
+        lock (_mutex) {
+            _sleeper.SetClock(clock);
+        }
+    }
+
+    /// <summary>Configures upstream WAIT FADE syntax using the emulated clock.</summary>
+    internal bool ConfigureFadeOut(string preference, IEmulatedClock clock) {
+        lock (_mutex) {
+            _sleeper.SetClock(clock);
+            return _sleeper.ConfigureFadeOut(preference);
+        }
+    }
+
     /// <summary>
     /// Nested class that manages channel sleep/wake behavior with optional fade-out.
     /// </summary>
@@ -1253,9 +1275,13 @@ public sealed class SoundChannel {
         private const int MaxWaitMs = 5000;
 
         private AudioFrame _lastFrame;
-        private long _wokenAtMs;
-        private readonly int _fadeoutOrSleepAfterMs;
+        private double _wokenAtMs;
+        private int _fadeoutOrSleepAfterMs;
         private bool _hadSignal;
+        private Func<double> _nowMs = () => Environment.TickCount64;
+        private bool _wantsFadeout;
+        private float _fadeoutDecrementPerMs;
+        private float _fadeoutLevel = 1.0f;
 
         public Sleeper(SoundChannel channel, int sleepAfterMs = DefaultWaitMs) {
             _channel = channel ?? throw new ArgumentNullException(nameof(channel));
@@ -1268,10 +1294,41 @@ public sealed class SoundChannel {
             }
         }
 
+        internal void SetClock(IEmulatedClock clock) {
+            _nowMs = () => clock.ElapsedTimeMs;
+            _wokenAtMs = _nowMs();
+        }
+
+        internal bool ConfigureFadeOut(string preference) {
+            _wantsFadeout = false;
+            bool? enabled = TandyAudioSettings.ParseBoolean(preference);
+            if (enabled == false) {
+                return true;
+            }
+            int waitMs = DefaultWaitMs;
+            int fadeMs = DefaultWaitMs;
+            if (enabled != true) {
+                string[] words = preference.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+                if (words.Length != 2 ||
+                    !int.TryParse(words[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out waitMs) ||
+                    !int.TryParse(words[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out fadeMs) ||
+                    waitMs is < MinWaitMs or > MaxWaitMs || fadeMs is < 10 or > 3000) {
+                    return false;
+                }
+            }
+            _fadeoutOrSleepAfterMs = waitMs;
+            _fadeoutDecrementPerMs = 1.0f / fadeMs;
+            _wantsFadeout = true;
+            return true;
+        }
+
         /// <summary>
         /// Either fades the frame or checks if the channel had any signal output.
         /// </summary>
         public AudioFrame MaybeFadeOrListen(AudioFrame frame) {
+            if (_wantsFadeout) {
+                return frame * _fadeoutLevel;
+            }
             if (!_hadSignal) {
                 // Otherwise, we inspect the running signal for changes
                 const float ChangeThreshold = 1.0f;
@@ -1287,14 +1344,19 @@ public sealed class SoundChannel {
         /// </summary>
         public void MaybeSleep() {
             // A signed integer can hold a duration of ~24 days in milliseconds
-            long awakeForMs = Environment.TickCount64 - _wokenAtMs;
+            double awakeForMs = _nowMs() - _wokenAtMs;
 
             // Not enough time has passed... try to sleep later
             if (awakeForMs < _fadeoutOrSleepAfterMs) {
                 return;
             }
 
-            if (_hadSignal) {
+            if (_wantsFadeout && _fadeoutLevel > 0) {
+                float elapsedFadeMs = (float)(awakeForMs - _fadeoutOrSleepAfterMs);
+                _fadeoutLevel = Math.Clamp(1.0f - _fadeoutDecrementPerMs * elapsedFadeMs, 0.0f, 1.0f);
+                return;
+            }
+            if (!_wantsFadeout && _hadSignal) {
                 // The channel is still producing a signal... so stay awake
                 WakeUp();
                 return;
@@ -1311,7 +1373,8 @@ public sealed class SoundChannel {
         /// <returns>True when actually awoken, false if already awake</returns>
         public bool WakeUp() {
             // Always reset for another round of awakeness
-            _wokenAtMs = Environment.TickCount64;
+            _wokenAtMs = _nowMs();
+            _fadeoutLevel = 1.0f;
             _hadSignal = false;
 
             bool wasSleeping = !_channel.IsEnabled;

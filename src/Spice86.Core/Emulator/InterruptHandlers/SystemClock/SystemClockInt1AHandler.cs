@@ -7,6 +7,7 @@ using Spice86.Core.Emulator.Devices.Cmos;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.InterruptHandlers;
+using Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -19,6 +20,7 @@ using Spice86.Shared.Utils;
 public class SystemClockInt1AHandler : InterruptHandler {
     private readonly BiosDataArea _biosDataArea;
     private readonly RealTimeClock _realTimeClock;
+    private TandySoundBios? _tandySoundBios;
 
     /// <summary>
     /// Initializes a new instance.
@@ -34,6 +36,31 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// <inheritdoc />
     public override byte VectorNumber => 0x1A;
 
+    /// <summary>Attaches optional Tandy sound services without changing ordinary clock construction.</summary>
+    public void AttachTandySoundBios(TandySoundBios bios) {
+        _tandySoundBios = bios;
+        EnableTandySoundFunctions();
+    }
+
+    /// <summary>
+    /// Recognizes Tandy sound functions even without a DAC, preserving registers and flags in that case.
+    /// Does not construct sound hardware or install sound IRQ callbacks.
+    /// </summary>
+    public void EnableTandySoundFunctions() {
+        for (byte function = 0x81; function <= 0x85; function++) {
+            byte operation = function;
+            if (!HasRunnable(operation)) {
+                AddAction(operation, () => HandleTandySound(operation));
+            }
+        }
+    }
+
+    private void HandleTandySound(byte operation) {
+        // Upstream leaves registers and flags unchanged when no BIOS DAC exists.
+        if (_tandySoundBios?.TryHandle(operation, false) == true) {
+            SetCarryFlag(State.CarryFlag, true);
+        }
+    }
 
     /// <inheritdoc />
     public override void Run() {

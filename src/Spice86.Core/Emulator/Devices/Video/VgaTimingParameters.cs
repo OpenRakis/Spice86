@@ -43,6 +43,9 @@ public sealed record VgaTimingParameters {
 
     /// <summary>Calculates the timing model without modifying registers.</summary>
     public static VgaTimingParameters Calculate(IVideoState state) {
+        if ((state as VideoState)?.Tandy is TandyVideoState tandy) {
+            return tandy.CalculateTiming();
+        }
         return Calculate(VgaTimingRegisters.Read(state));
     }
 

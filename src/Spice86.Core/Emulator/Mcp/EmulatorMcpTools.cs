@@ -21,6 +21,7 @@ using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Devices.Sound.Midi;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Devices.Video;
+using Spice86.Core.Emulator.InterruptHandlers.VGA;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
@@ -948,6 +949,9 @@ internal sealed class EmulatorMcpTools {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
                 IVgaFunctionality vgaFunctionality = GetVgaFunctionality();
+                if (vgaFunctionality is VgaFunctionality { IsTandy: true } && TandyVideoMode.Find(modeId) == null) {
+                    return Error("The selected video mode is not supported by the native Tandy BIOS.");
+                }
                 ModeFlags modeFlags = clearVideoMemory ? 0 : ModeFlags.NoClearMem;
                 vgaFunctionality.VgaSetMode(modeId, modeFlags);
                 return new EmulatorControlResponse {
@@ -1042,6 +1046,9 @@ internal sealed class EmulatorMcpTools {
         return ExecuteTool(() => {
             lock (_services.ToolsLock) {
                 IVgaFunctionality vgaFunctionality = GetVgaFunctionality();
+                if (vgaFunctionality is VgaFunctionality { IsTandy: true }) {
+                    return Error("EGA/VGA palette inspection is unavailable on the native Tandy video device.");
+                }
                 byte[] registers = vgaFunctionality.GetAllPaletteRegisters();
                 return new {
                     Registers = registers.Select(static x => (int)x).ToArray(),

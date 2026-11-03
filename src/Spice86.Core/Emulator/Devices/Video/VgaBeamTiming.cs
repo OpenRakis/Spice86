@@ -1,3 +1,8 @@
+// Native Tandy light pen positioning adapted from DOSBox Staging.
+// SPDX-FileCopyrightText: 2020-2026 The DOSBox Staging Team
+// SPDX-FileCopyrightText: 2002-2021 The DOSBox Team
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 namespace Spice86.Core.Emulator.Devices.Video;
 
 using System.Threading;
@@ -14,11 +19,22 @@ public sealed class VgaBeamTiming {
     public VgaBeamTiming(IVideoState state) {
         _state = state;
         VgaTimingRegisters registers = VgaTimingRegisters.Read(state);
-        _snapshot = new(registers, VgaTimingParameters.Calculate(registers), 0);
+        VgaTimingParameters timing = (state as VideoState)?.Tandy?.CalculateTiming() ?? VgaTimingParameters.Calculate(registers);
+        _snapshot = new(registers, timing, 0);
     }
 
     /// <summary>Refreshes changed timing registers and starts their new frame epoch.</summary>
     public VgaTimingParameters Refresh(double elapsedTimeMs) {
+        if ((_state as VideoState)?.Tandy is TandyVideoState tandy) {
+            lock (_lock) {
+                VgaTimingParameters timing = tandy.CalculateTiming();
+                Snapshot current = _snapshot;
+                if (current.Parameters != timing) {
+                    Volatile.Write(ref _snapshot, current with { Parameters = timing, FrameStartMs = elapsedTimeMs });
+                }
+                return _snapshot.Parameters;
+            }
+        }
         VgaTimingRegisters registers = VgaTimingRegisters.Read(_state);
         Snapshot snapshot = Volatile.Read(ref _snapshot);
         if (registers == snapshot.Registers) {
@@ -69,6 +85,19 @@ public sealed class VgaBeamTiming {
             status |= DisplayDisabledBit;
         }
         return status;
+    }
+
+    internal ushort GetLightPenAddress(double elapsedTimeMs, int addressAdd) {
+        Snapshot snapshot = Volatile.Read(ref _snapshot);
+        VgaTimingParameters timing = snapshot.Parameters;
+        double framePosition = PositiveRemainder(elapsedTimeMs - snapshot.FrameStartMs, timing.FrameDurationMs);
+        int scanline = (int)(framePosition / timing.LineDurationMs);
+        double linePosition = framePosition % timing.LineDurationMs;
+        int address = addressAdd / 2 * (scanline / 2);
+        if (timing.HorizontalDisplayEndMs > 0) {
+            address += (int)(linePosition / timing.HorizontalDisplayEndMs * (addressAdd / 2));
+        }
+        return (ushort)address;
     }
 
     private static double PositiveRemainder(double value, double period) {

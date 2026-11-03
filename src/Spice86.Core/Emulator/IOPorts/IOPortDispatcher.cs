@@ -41,6 +41,13 @@ public class IOPortDispatcher : DefaultIOPortHandler {
         _ioPortHandlers.Add(port, ioPortHandler);
     }
 
+    /// <summary>Removes a port only while it is still owned by the supplied handler.</summary>
+    public bool RemoveIOPortHandler(int port, IIOPortHandler owner) {
+        return _ioPortHandlers.TryGetValue(port, out IIOPortHandler? current)
+            && ReferenceEquals(current, owner)
+            && _ioPortHandlers.Remove(port);
+    }
+
     /// <summary>
     /// Replaces (or adds) an I/O port handler for the given port.
     /// Used by test harnesses to override device handlers.

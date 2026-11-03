@@ -5,6 +5,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Sound;
 using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Platform;
 using Spice86.Core.Emulator.VM;
 
 /// <summary>Run settings of an ASM fixture: the bin to run, the cycle failsafe and the machine configuration.</summary>
@@ -20,6 +21,12 @@ internal sealed record AsmRunSettings {
 
     /// <summary>Bin name or rooted path of the program to run, as <see cref="Spice86Creator"/> accepts it.</summary>
     public required string BinName { get; init; }
+
+    /// <summary>Guest platform used for discovery and generated execution.</summary>
+    public MachineType MachineType { get; init; } = MachineType.Pc;
+
+    /// <summary>Golden suffix distinguishing platform-specific firmware and hardware.</summary>
+    public string PlatformGoldenSuffix => MachineType == MachineType.Pc ? "" : ".tandy";
 
     /// <summary>
     /// Stable logical name of the scenario, independent of host paths. Empty means the bin file name

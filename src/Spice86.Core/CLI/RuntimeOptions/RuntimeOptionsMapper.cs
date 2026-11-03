@@ -1,9 +1,24 @@
 namespace Spice86.Core.CLI.RuntimeOptions;
 
+using Spice86.Core.Emulator.Platform;
+
 /// <summary>
 /// Projects command-line configuration into runtime option records consumed by specific subsystems.
 /// </summary>
 public static class RuntimeOptionsMapper {
+    /// <summary>Resolves the selected guest platform before constructing devices.</summary>
+    public static MachineProfile ToMachineProfile(Configuration configuration) {
+        ArgumentNullException.ThrowIfNull(configuration);
+        return MachineProfile.For(configuration.MachineType);
+    }
+
+    /// <summary>Projects native Tandy sound settings.</summary>
+    public static TandyAudioOptions ToTandyAudioOptions(Configuration configuration) {
+        ArgumentNullException.ThrowIfNull(configuration);
+        return new TandyAudioOptions(configuration.MachineType, configuration.TandySoundMode,
+            configuration.TandyFadeout, configuration.TandyFilter, configuration.TandyDacFilter);
+    }
+
     /// <summary>
     /// Creates shared mutable DOS runtime state from command-line configuration.
     /// </summary>

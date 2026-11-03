@@ -31,7 +31,7 @@ internal static class AsmScenarioCatalog {
     /// <summary>Every registered scenario: the CPU fixtures first, then the DOS scenarios, then the
     /// BIOS, video and sound scenarios.</summary>
     public static IReadOnlyList<AsmScenario> All =>
-        [.. BuildCpuScenarios(), .. DosScenarios, .. BiosDeviceScenarios];
+        [.. BuildCpuScenarios(), .. DosScenarios, .. BiosDeviceScenarios, .. TandyScenarioCatalog.Scenarios];
 
     /// <summary>Every DOS program scenario, so one entry point can cover them all.</summary>
     public static IReadOnlyList<AsmScenario> DosScenarios => [

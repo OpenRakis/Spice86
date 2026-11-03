@@ -66,6 +66,11 @@ public static class CmosRegisterAddresses {
     public const byte ShutdownStatus = 0x0F;
 
     /// <summary>
+    /// BIOS equipment byte (0x14).
+    /// </summary>
+    public const byte Equipment = 0x14;
+
+    /// <summary>
     /// Century register (0x32). Stores current century in BCD or binary format (19 or 20).
     /// </summary>
     public const byte Century = 0x32;
