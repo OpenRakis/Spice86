@@ -15,6 +15,8 @@ public class PrivilegeChecksTests {
         state.ControlRegisters.Cr0 = 1; // PE=1
         state.Flags.SetFlag(Flags.Virtual8086Mode, virtual8086);
         state.CS = (ushort)((1 << 3) | cpl);
+        state.SegmentDescriptorCaches[SegmentRegisterIndex.CsIndex] = new SegmentDescriptorCache(
+            0, 0xFFFFFFFF, (byte)(0b1001_1010 | (cpl << 5)), defaultBig: true, granularity4K: true, present: true);
         state.IoPrivilegeLevel = iopl;
         return state;
     }

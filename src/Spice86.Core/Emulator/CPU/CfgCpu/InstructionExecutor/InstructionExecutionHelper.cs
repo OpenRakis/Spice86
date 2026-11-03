@@ -90,9 +90,9 @@ public class InstructionExecutionHelper {
         SegmentAndControlRegisterOperations.LoadSegmentRegister(State, Memory, segmentRegisterIndex, selector);
     }
 
-    /// <summary>LGDT: loads GDTR from a 6-byte memory pointer (2-byte limit, 4-byte base).</summary>
-    public void LoadGdtr(ushort segment, uint offset) {
-        SegmentAndControlRegisterOperations.LoadGdtr(State, Memory, segment, offset);
+    /// <summary>LGDT: loads GDTR from a 6-byte memory pointer (2-byte limit, 4-byte base; 24-bit base with a 16-bit operand).</summary>
+    public void LoadGdtr(ushort segment, uint offset, bool operandSize32) {
+        SegmentAndControlRegisterOperations.LoadGdtr(State, Memory, segment, offset, operandSize32);
     }
 
     /// <summary>SGDT: stores GDTR to a 6-byte memory pointer (2-byte limit, 4-byte base).</summary>
@@ -100,9 +100,9 @@ public class InstructionExecutionHelper {
         SegmentAndControlRegisterOperations.StoreGdtr(State, Memory, segment, offset);
     }
 
-    /// <summary>LIDT: loads IDTR from a 6-byte memory pointer (2-byte limit, 4-byte base).</summary>
-    public void LoadIdtr(ushort segment, uint offset) {
-        SegmentAndControlRegisterOperations.LoadIdtr(State, Memory, segment, offset);
+    /// <summary>LIDT: loads IDTR from a 6-byte memory pointer (2-byte limit, 4-byte base; 24-bit base with a 16-bit operand).</summary>
+    public void LoadIdtr(ushort segment, uint offset, bool operandSize32) {
+        SegmentAndControlRegisterOperations.LoadIdtr(State, Memory, segment, offset, operandSize32);
     }
 
     /// <summary>SIDT: stores IDTR to a 6-byte memory pointer (2-byte limit, 4-byte base).</summary>

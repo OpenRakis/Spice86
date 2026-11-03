@@ -15634,9 +15634,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         EnsureIoPrivilege();
         InterruptFlag = false;
         // F000:1D20 lidt dword ptr CS:[0x1BD3]
-        LoadIdtr(CS, 0x00001BD3);
+        LoadIdtr(CS, 0x00001BD3, true);
         // F000:1D27 lgdt dword ptr CS:[0x1BD9]
-        LoadGdtr(CS, 0x00001BD9);
+        LoadGdtr(CS, 0x00001BD9, true);
         // F000:1D2E mov 3,ESI
         WriteControlRegister(3, ESI);
         // F000:1D31 mov EAX,0

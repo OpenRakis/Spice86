@@ -1,4 +1,4 @@
-﻿namespace Spice86.Core.Emulator.CPU;
+namespace Spice86.Core.Emulator.CPU;
 
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Shared.Emulator.Memory;
@@ -186,32 +186,44 @@ public class State(CpuModel cpuModel) {
     /// <summary>
     /// Code Segment Register. CS:IP points to the current instruction being executed.
     /// </summary>
-    public ushort CS { get => SegmentRegisters.UInt16[(uint)SegmentRegisterIndex.CsIndex]; set => SegmentRegisters.UInt16[(uint)SegmentRegisterIndex.CsIndex] = value; }
+    public ushort CS { get => SegmentRegisters.UInt16[(uint)SegmentRegisterIndex.CsIndex]; set => SetSegmentRegister(SegmentRegisterIndex.CsIndex, value); }
 
     /// <summary>
     /// Gets or sets the DS Register value. (DATA SEGMENT)
     /// </summary>
-    public ushort DS { get => SegmentRegisters.UInt16[(uint)SegmentRegisterIndex.DsIndex]; set => SegmentRegisters.UInt16[(uint)SegmentRegisterIndex.DsIndex] = value; }
+    public ushort DS { get => SegmentRegisters.UInt16[(uint)SegmentRegisterIndex.DsIndex]; set => SetSegmentRegister(SegmentRegisterIndex.DsIndex, value); }
 
     /// <summary>
     /// Gets or sets the Extra segment register value. (DATA SEGMENT)
     /// </summary>
-    public ushort ES { get => SegmentRegisters.UInt16[(uint)SegmentRegisterIndex.EsIndex]; set => SegmentRegisters.UInt16[(uint)SegmentRegisterIndex.EsIndex] = value; }
+    public ushort ES { get => SegmentRegisters.UInt16[(uint)SegmentRegisterIndex.EsIndex]; set => SetSegmentRegister(SegmentRegisterIndex.EsIndex, value); }
 
     /// <summary>
     /// Gets or sets the FS segment register value. (DATA SEGMENT)
     /// </summary>
-    public ushort FS { get => SegmentRegisters.UInt16[(uint)SegmentRegisterIndex.FsIndex]; set => SegmentRegisters.UInt16[(uint)SegmentRegisterIndex.FsIndex] = value; }
+    public ushort FS { get => SegmentRegisters.UInt16[(uint)SegmentRegisterIndex.FsIndex]; set => SetSegmentRegister(SegmentRegisterIndex.FsIndex, value); }
 
     /// <summary>
     /// Gets or sets the GS segment register value. (DATA SEGMENT)
     /// </summary>
-    public ushort GS { get => SegmentRegisters.UInt16[(uint)SegmentRegisterIndex.GsIndex]; set => SegmentRegisters.UInt16[(uint)SegmentRegisterIndex.GsIndex] = value; }
+    public ushort GS { get => SegmentRegisters.UInt16[(uint)SegmentRegisterIndex.GsIndex]; set => SetSegmentRegister(SegmentRegisterIndex.GsIndex, value); }
 
     /// <summary>
     /// Gets or sets the Stack Segment Register value.
     /// </summary>
-    public ushort SS { get => SegmentRegisters.UInt16[(uint)SegmentRegisterIndex.SsIndex]; set => SegmentRegisters.UInt16[(uint)SegmentRegisterIndex.SsIndex] = value; }
+    public ushort SS { get => SegmentRegisters.UInt16[(uint)SegmentRegisterIndex.SsIndex]; set => SetSegmentRegister(SegmentRegisterIndex.SsIndex, value); }
+
+    /// <summary>
+    /// Writes a segment register. Outside protected mode the hidden descriptor cache is refreshed as a
+    /// real-mode segment load would, so emulated DOS/BIOS code writing registers directly never leaves
+    /// a stale base behind. In protected mode the caller owns the cache.
+    /// </summary>
+    private void SetSegmentRegister(SegmentRegisterIndex index, ushort value) {
+        SegmentRegisters.UInt16[(uint)index] = value;
+        if (CpuMode != CpuMode.Protected) {
+            SegmentDescriptorCaches[index] = SegmentDescriptorCache.CreateRealMode(value);
+        }
+    }
 
     /// <summary>
     /// Gets or sets the low 16 bits of the instruction pointer (a view over <see cref="EIP"/>, mirroring
@@ -393,12 +405,13 @@ public class State(CpuModel cpuModel) {
 
     /// <summary>
     /// The Current Privilege Level: 0 outside protected mode, the CS selector's RPL in protected mode
-    /// (kept in sync with CPL by every control transfer), or 3 in Virtual-8086 mode.
+    /// (kept in sync with CPL by every control transfer), or 3 in Virtual-8086 mode. Right after CR0.PE
+    /// is set, CS still holds its real-mode cache until the far jump reloads it, and CPL stays 0.
     /// </summary>
     public byte Cpl => CpuMode switch {
         CpuMode.Real => 0,
         CpuMode.Virtual8086 => 3,
-        _ => new SegmentSelector(CS).RequestedPrivilegeLevel
+        _ => SegmentDescriptorCaches[SegmentRegisterIndex.CsIndex].IsCode ? new SegmentSelector(CS).RequestedPrivilegeLevel : (byte)0
     };
 
     /// <summary>
