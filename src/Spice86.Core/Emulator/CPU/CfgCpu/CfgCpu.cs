@@ -38,7 +38,7 @@ public class CfgCpu : IFunctionHandlerProvider, IClearable {
         DualPic dualPic, EmulatorBreakpointsManager emulatorBreakpointsManager,
         IPauseHandler pauseHandler,
         FunctionCatalogue functionCatalogue,
-        bool useCodeOverride, bool failOnInvalidOpcode, bool allowIvtAddress0, bool enableSpeculativeExploration, ILogger loggerService, Spice86LoggerState loggerState, CfgNodeExecutionCompiler executionCompiler, SequentialIdAllocator idAllocator, CpuHeavyLogger? cpuHeavyLogger = null) {
+        bool useCodeOverride, bool failOnInvalidOpcode, bool allowIvtAddress0, bool hltStopsEmulation, bool enableSpeculativeExploration, ILogger loggerService, Spice86LoggerState loggerState, CfgNodeExecutionCompiler executionCompiler, SequentialIdAllocator idAllocator, CpuHeavyLogger? cpuHeavyLogger = null) {
         _loggerService = loggerService;
         _loggerState = loggerState;
         _state = state;
@@ -48,7 +48,7 @@ public class CfgCpu : IFunctionHandlerProvider, IClearable {
         _pauseHandler = pauseHandler;
         CfgNodeFeeder = new(memory, state, emulatorBreakpointsManager, _replacerRegistry, executionCompiler, idAllocator, enableSpeculativeExploration);
         _executionContextManager = new(memory, state, CfgNodeFeeder, _replacerRegistry, functionCatalogue, useCodeOverride, loggerService, loggerState, cpuHeavyLogger);
-        _instructionExecutionHelper = new(state, memory, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager, _executionContextManager, failOnInvalidOpcode, allowIvtAddress0, loggerService);
+        _instructionExecutionHelper = new(state, memory, ioPortDispatcher, callbackHandler, emulatorBreakpointsManager, _executionContextManager, failOnInvalidOpcode, allowIvtAddress0, hltStopsEmulation, loggerService);
     }
 
     /// <summary>
@@ -89,9 +89,16 @@ public class CfgCpu : IFunctionHandlerProvider, IClearable {
     /// Resolves the next node via the cold-path entry edge, then dispatches hot or cold based
     /// on whether the node belongs to a discovered, live block. Hot path runs the block walker;
     /// cold path steps a single node. <see cref="HandleExternalInterrupt"/> fires exactly once
-    /// at the boundary, on the last node actually executed.
+    /// at the boundary, on the last node actually executed. While the CPU is halted by HLT, no node runs:
+    /// cycles still advance and the CPU waits for a hardware interrupt.
     /// </summary>
     public void ExecuteNext() {
+        if (_state.IsHalted) {
+            _state.IncCycles();
+            DeliverExternalInterrupt();
+            return;
+        }
+
         ICfgNode next = ToExecute();
         ICfgNode lastExecuted;
 
@@ -211,6 +218,13 @@ public class CfgCpu : IFunctionHandlerProvider, IClearable {
             _executionContextManager.RestoreExecutionContextIfNeeded(_state.IpSegmentedAddress);
         }
 
+        DeliverExternalInterrupt();
+    }
+
+    /// <summary>
+    /// Delivers the pending PIC interrupt when interrupts are enabled and not shadowed. A delivered interrupt ends HLT.
+    /// </summary>
+    private void DeliverExternalInterrupt() {
         if (_state.InterruptShadowing) {
             // Interrupts are inhibited for this instruction only.
             // Is set either via POP SS, MOV SS/sreg or STI.
@@ -226,6 +240,7 @@ public class CfgCpu : IFunctionHandlerProvider, IClearable {
         if (externalInterruptVectorNumber == null) {
             return;
         }
+        _state.IsHalted = false;
         (SegmentedAddress target, SegmentedAddress expectedReturn) = _instructionExecutionHelper.DoInterrupt(externalInterruptVectorNumber.Value);
 
         _executionContextManager.SignalNewExecutionContext(target, expectedReturn);
