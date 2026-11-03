@@ -28,6 +28,7 @@ public class InstructionExecutionHelper {
     private readonly ReturnOperationsHelper _returnOperationsHelper;
     private readonly bool _failOnInvalidOpcode;
     private readonly bool _allowIvtAddress0;
+    private readonly bool _hltStopsEmulation;
     public InstructionExecutionHelper(State state,
         IMemory memory,
         IOPortDispatcher ioPortDispatcher,
@@ -36,6 +37,7 @@ public class InstructionExecutionHelper {
         ExecutionContextManager executionContextManager,
         bool failOnInvalidOpcode,
         bool allowIvtAddress0,
+        bool hltStopsEmulation,
         ILogger loggerService) {
         _loggerService = loggerService;
         State = state;
@@ -51,6 +53,7 @@ public class InstructionExecutionHelper {
         _executionContextManager = executionContextManager;
         _failOnInvalidOpcode = failOnInvalidOpcode;
         _allowIvtAddress0 = allowIvtAddress0;
+        _hltStopsEmulation = hltStopsEmulation;
         _returnOperationsHelper = new(state, Stack);
     }
     public State State { get; }
@@ -196,9 +199,17 @@ public class InstructionExecutionHelper {
         State.IP = (ushort)instruction.NextInMemoryAddress32.Offset;
     }
 
+    /// <summary>
+    /// Executes HLT. With interrupts enabled the CPU waits for the next hardware interrupt, whose return address
+    /// is the instruction after HLT. With interrupts disabled nothing can wake the CPU, so the emulation stops.
+    /// </summary>
     public void ExecuteHlt(CfgInstruction instruction) {
-        State.IsRunning = false;
         MoveIpToEndOfInstruction(instruction);
+        if (_hltStopsEmulation || !State.InterruptFlag) {
+            State.IsRunning = false;
+            return;
+        }
+        State.IsHalted = true;
     }
 
     public byte In8(ushort port) {

@@ -357,6 +357,11 @@ public class State(CpuModel cpuModel) {
     public bool IsRunning { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets a value indicating whether the CPU executed HLT and waits for a hardware interrupt.
+    /// </summary>
+    public bool IsHalted { get; set; }
+
+    /// <summary>
     /// Sets <see cref="ContinueZeroFlagValue"/> and <see cref="SegmentOverrideIndex"/> to <c>null</c>.
     /// </summary>
     public void ClearPrefixes() {
