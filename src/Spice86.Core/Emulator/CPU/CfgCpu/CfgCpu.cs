@@ -94,6 +94,7 @@ public class CfgCpu : IFunctionHandlerProvider, IClearable {
     /// </summary>
     public void ExecuteNext() {
         if (_state.IsHalted) {
+            _emulatorBreakpointsManager.CheckCpuCycleBreakPoints();
             _state.IncCycles();
             DeliverExternalInterrupt();
             return;

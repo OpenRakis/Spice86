@@ -3,6 +3,8 @@ namespace Spice86.Tests;
 using FluentAssertions;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.VM.Breakpoint;
+using Spice86.Shared.Emulator.VM.Breakpoint;
 
 using Xunit;
 
@@ -35,6 +37,18 @@ public class HltTest {
         0xBA, 0x01, 0x00,                   // 002A handler: mov dx,1
         0xB0, 0x20, 0xE6, 0x20,             // 002D mov al,0x20 / out 0x20,al
         0xCF                                // 0031 iret
+    ];
+
+    private const long HaltedCycleBreakpoint = 1000;
+
+    /// <summary>
+    /// BIOS image: masks every PIC line, then runs STI, HLT. No interrupt can wake the CPU.
+    /// </summary>
+    private static readonly byte[] MaskedIrqHltProgram = [
+        0xFA,                               // 0000 cli
+        0xB0, 0xFF, 0xE6, 0x21,             // 0001 mov al,0xFF / out 0x21,al
+        0xFB,                               // 0005 sti
+        0xF4                                // 0006 hlt
     ];
 
     [Fact]
@@ -78,9 +92,39 @@ public class HltTest {
         }
     }
 
+    [Fact]
+    public void CycleBreakpointTriggersWhileHalted() {
+        // Arrange
+        string binPath = WriteBiosImage(MaskedIrqHltProgram);
+        try {
+            using Spice86Creator creator = new(binPath, enablePit: true) { HltStopsEmulation = false };
+            using Spice86DependencyInjection spice86 = creator.Create();
+            State state = spice86.Machine.CpuState;
+            bool triggered = false;
+            spice86.Machine.EmulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CPU_CYCLES,
+                HaltedCycleBreakpoint, (_, _) => {
+                    triggered = true;
+                    state.IsRunning = false;
+                }, true), true);
+
+            // Act
+            spice86.ProgramExecutor.Run();
+
+            // Assert
+            triggered.Should().BeTrue();
+            state.IsHalted.Should().BeTrue();
+        } finally {
+            File.Delete(binPath);
+        }
+    }
+
     private static string WriteBiosImage() {
+        return WriteBiosImage(StiHltProgram);
+    }
+
+    private static string WriteBiosImage(byte[] program) {
         byte[] image = new byte[0x10000];
-        StiHltProgram.CopyTo(image, 0);
+        program.CopyTo(image, 0);
         byte[] resetJump = [0xEA, 0x00, 0x00, 0x00, 0xF0];
         resetJump.CopyTo(image, 0xFFF0);
         string path = Path.Join(Path.GetTempPath(), $"hlt-{Guid.NewGuid()}.bin");
