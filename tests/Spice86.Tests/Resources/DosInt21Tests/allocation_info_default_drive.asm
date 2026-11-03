@@ -13,7 +13,7 @@ start:
     int 21h
     cmp al, 0FFh
     je failed
-    cmp ah, 00h
+    cmp ah, 1Ch
     jne failed
     cmp al, 20h
     jne failed

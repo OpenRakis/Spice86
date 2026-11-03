@@ -835,4 +835,13 @@ public sealed class DosServices : InterruptServiceGroup {
         State.BX = bx;
         Call(expectedReturnCs, expectedReturnIp, 0x67);
     }
+
+    /// <summary>
+    /// INT 21h AH=68h: commits buffered data for the file handle in BX.
+    /// </summary>
+    public void CommitFile(ushort expectedReturnCs, ushort expectedReturnIp, ushort bx) {
+        CheckVector();
+        State.BX = bx;
+        Call(expectedReturnCs, expectedReturnIp, 0x68);
+    }
 }

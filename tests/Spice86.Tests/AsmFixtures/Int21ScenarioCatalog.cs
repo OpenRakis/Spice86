@@ -66,6 +66,7 @@ internal static class Int21ScenarioCatalog {
         StandardFileHandlesInherited(),
         Simple("select_default_drive.com"),
         Simple("allocation_info_default_drive.com"),
+        Simple("commit_file_buffers.com"),
         CdRomImageRead(),
         FloppyImageRead(),
         SignedSeekOffset(),

@@ -171,6 +171,28 @@ public class DosFileManager {
     }
 
     /// <summary>
+    /// Flushes a file's buffered data without closing it or changing its position.
+    /// Character devices have no file data to commit.
+    /// </summary>
+    /// <param name="fileHandle">The system file table handle.</param>
+    /// <returns>The operation result, or an invalid-handle error if the handle is not open.</returns>
+    /// <exception cref="UnrecoverableException">If the host OS refuses to flush the file.</exception>
+    public DosFileOperationResult CommitFile(ushort fileHandle) {
+        VirtualFileBase? file = GetOpenFile(fileHandle);
+        if (file is null) {
+            return FileNotOpenedError(fileHandle);
+        }
+        if (file is DosFile dosFile) {
+            try {
+                dosFile.Flush();
+            } catch (IOException e) {
+                throw new UnrecoverableException("IOException while committing file", e);
+            }
+        }
+        return DosFileOperationResult.NoValue();
+    }
+
+    /// <summary>
     /// Creates a file and returns the handle to the file.
     /// </summary>
     /// <param name="fileName">The target file name.</param>

@@ -681,7 +681,6 @@ public class DosInt21Handler : InterruptHandler {
     private void SetAllocationInfoRegisters(byte driveIndex) {
         State.CX = DefaultBytesPerSector;
         State.AL = DefaultSectorsPerCluster;
-        State.AH = 0;
         State.DX = DefaultTotalClusters;
         State.DS = _dosDriveManager.MediaIdTableSegment;
         State.BX = _dosDriveManager.MediaIdEntryOffset(driveIndex);
@@ -803,6 +802,20 @@ public class DosInt21Handler : InterruptHandler {
         if (!dosFileOperationResult.IsError) {
             State.AL = dosFileOperationResult.RefCount;
         }
+    }
+
+    /// <summary>
+    /// INT 21h, AH=68h - Commit buffered file data.
+    /// Commits buffered data for the file handle in BX without closing it or changing its position.
+    /// </summary>
+    /// <param name="calledFromVm">Whether this was called by the emulator.</param>
+    [InterruptService(0x68, Reads = CpuValues.Ah | CpuValues.Bx | CpuValues.Ss | CpuValues.Sp, Writes = CpuValues.Ax | CpuValues.Carry, Memory = ServiceMemoryEffect.ReadWrite)]
+    public void CommitFile(bool calledFromVm) {
+        if (!TryResolveFileHandle(State.BX, out byte systemFileTableIndex)) {
+            SetStateFromDosFileOperationResult(calledFromVm, DosFileOperationResult.LogError(DosErrorCode.InvalidHandle));
+            return;
+        }
+        SetStateFromDosFileOperationResult(calledFromVm, _dosFileManager.CommitFile(systemFileTableIndex));
     }
 
     /// <summary>

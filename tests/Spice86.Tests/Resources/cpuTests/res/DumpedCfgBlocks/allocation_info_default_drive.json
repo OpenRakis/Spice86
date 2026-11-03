@@ -445,7 +445,7 @@
         115
       ],
       "asm": [
-        "80FC00|cmp AH,0",
+        "80FC1C|cmp AH,0x1C",
         "7520|jne short 0x012F"
       ]
     },
