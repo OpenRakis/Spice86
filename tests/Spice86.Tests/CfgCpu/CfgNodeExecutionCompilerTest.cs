@@ -175,8 +175,8 @@ public class CfgNodeExecutionCompilerTest {
         compiler.Compile(node);
         CfgNodeExecutionAction<InstructionExecutionHelper> afterSecondCompile = node.CompiledExecution;
 
-        SpinWait.SpinUntil(() => monitor.TotalSwapped >= 1, TimeSpan.FromSeconds(30)).Should().BeTrue(
-            "the second background compilation should complete and swap the delegate within 30 seconds");
+        SpinWait.SpinUntil(() => !ReferenceEquals(node.CompiledExecution, afterSecondCompile), TimeSpan.FromSeconds(30)).Should().BeTrue(
+            "the second background compilation should swap the delegate within 30 seconds");
 
         // Assert: the final delegate must be the optimised one from the second Compile() call.
         // Use ReferenceEquals booleans rather than NotBeSameAs to avoid a FluentAssertions crash
