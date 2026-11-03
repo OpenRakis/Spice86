@@ -365,6 +365,15 @@ public sealed class Configuration : CommandSettings {
     public bool AllowIvtAddress0 { get; init; }
 
     /// <summary>
+    /// Controls what HLT does when interrupts are enabled.
+    /// When false (default), HLT idles the CPU until the next hardware interrupt, like real hardware.
+    /// When true, HLT always stops the emulation, which test programs use as an end marker.
+    /// HLT with interrupts disabled always stops the emulation.
+    /// </summary>
+    [CommandOption("--HltStopsEmulation")]
+    public bool HltStopsEmulation { get; set; }
+
+    /// <summary>
     /// When true, the JIT executes each instruction's execution AST after it went through the IR round trip
     /// the code generator uses: lifted to IR, structured back to a CPU AST, with ALU calls expanded inline.
     /// Meant for checking that round trip; it makes each compiled instruction bigger. False by default.

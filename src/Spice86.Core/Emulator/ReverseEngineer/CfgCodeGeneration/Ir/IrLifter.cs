@@ -61,7 +61,7 @@ internal sealed class IrLifter(
             lifted.LocalSuffixes[instruction] = method.GetLocalSuffix(instruction);
         }
         foreach (IrBlock block in lifted.Blocks) {
-            if (block.Terminator is not IrExit { Transfer: not MoveIpNextNode }) {
+            if (block.Terminator is not IrExit { Transfer: not MoveIpNextNode } exit || IsHlt(exit)) {
                 continue;
             }
             foreach (ICfgNode successor in block.Terminator.Origin.Successors) {
@@ -79,6 +79,12 @@ internal sealed class IrLifter(
         MoveInstructionExitTailsLast(lifted);
         return lifted;
     }
+
+    /// <summary>
+    /// Generated <c>Hlt</c> exits the program, so the instruction the interpreter resumes at after an
+    /// interrupt wakes the CPU is not a successor of the generated method.
+    /// </summary>
+    private static bool IsHlt(IrExit exit) => exit.Transfer is ReturnNode { Value: HltHelperNode };
 
     /// <summary>
     /// An inner block of an instruction that ends in <see cref="IrExit"/> (a throw-if arm, an untested
