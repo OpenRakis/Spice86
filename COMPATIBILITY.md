@@ -23,6 +23,7 @@ Here is a list of old games I tested with what worked and what didn't:
 | Betrayal at Krondor | :sunglasses: Fully playable | | 2023/06/25 |
 | Cryo Dune | :sunglasses: Fully playable | | 2021/09/26 |
 | Cryo Dune demo (DUNEDEM.EXE) | Startup and starfield verified | OK. | 2026/11/02 |
+| Dark Sun: Shattered Lands | Starts game | Requires Sound Blaster IRQ 5 (`--SbIrq 5`) to match the GOG configuration; the default IRQ 7 causes an early exit. Tested with `--SbType SB16 --Cycles 7000`. Launch and Start Game verified; no full playthrough. | 2026/11/03 |
 | Day of the Tentacle | :sunglasses: Fully playable | Disable logs with -s to not disturb game Adlib OPL music driver startup with unexpected delays | 2026/02/22 |
 | Doom8088 | :sunglasses: Fully playable | | 2026/02/22 |
 | Double dragon 3 | :see_no_evil: Crashes | Int 10.3 (text mode) not implemented. | 2021/09/26 |
