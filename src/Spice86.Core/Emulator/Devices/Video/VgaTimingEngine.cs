@@ -148,7 +148,13 @@ public class VgaTimingEngine {
     }
 
     private void RequestNativeResize(int delayMs) {
+        double deadlineMs = _clock.ElapsedTimeMs + delayMs;
+        _scheduler.Dispatch(() => ScheduleNativeResize(deadlineMs));
+    }
+
+    private void ScheduleNativeResize(double deadlineMs) {
         _scheduler.RemoveEvents(OnNativeResize);
+        double delayMs = Math.Max(0, deadlineMs - _scheduler.EventTimeMs);
         if (delayMs == 0) {
             OnNativeResize(0);
         } else {

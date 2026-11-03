@@ -104,11 +104,20 @@ Sound Blaster is independently configurable. BIOS sound services prefer an
 available Sound Blaster DAC over the native Tandy DAC. This is distinct from
 ownership of the direct native hardware.
 
+With built-in BIOS services enabled, Tandy sound reserves F000:A084-A093 for
+its silence buffer on either platform. Custom `--ProvidedAsmHandlersSegment`
+placements must not overlap that buffer; overlapping routine writes are rejected.
+
 The secondary DMA controller and Tandy sound cannot own their overlapping
 C0h ports simultaneously. Tandy initialization releases the secondary
 controller after Sound Blaster initialization. A later high-DMA request can
 reactivate the secondary controller and evict Tandy sound. Arbitrary SB16
 high-DMA operation and native Tandy sound are not guaranteed to coexist.
+
+Removing the secondary controller invalidates the SB16 BIOS DAC route even if
+its low-DMA reservation remains. The reference evicts Sound Blaster on either
+DMA reservation's eviction. As in that reference, native Tandy DAC reads do not
+pause when DMA channel 1 is masked; this is not hardware-accurate DMA masking.
 
 Native recording and joystick/DAC modes retain the limitations of the reference
 implementation; this feature does not add host microphone capture.

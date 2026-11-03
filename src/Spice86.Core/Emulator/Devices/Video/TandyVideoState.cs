@@ -6,7 +6,7 @@ namespace Spice86.Core.Emulator.Devices.Video;
 
 /// <summary>Native Tandy gate array and 6845 registers.</summary>
 public sealed class TandyVideoState {
-    private bool _resizePending;
+    private volatile bool _resizePending;
 
     /// <summary>Initializes the native scanout latch.</summary>
     public TandyVideoState() {
@@ -260,7 +260,7 @@ public sealed class TandyVideoState {
         double lineMs = horizontalTotal * characterMs;
         int totalLines = (Crtc[4] + 1) * CharacterHeight + Crtc[5];
         double displayEnd = Math.Min(Crtc[1], horizontalTotal) * characterMs;
-        double syncStart = Crtc[7] * CharacterHeight * lineMs;
+        double syncStart = (double)Crtc[7] * CharacterHeight * lineMs;
         return new VgaTimingParameters {
             PixelClockHz = oscillator / 2,
             HorizontalTotal = horizontalTotal,

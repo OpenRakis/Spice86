@@ -11,9 +11,34 @@ using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.DeviceScheduler;
 using Spice86.Shared.Interfaces;
 
+using System.Threading;
+
 using Xunit;
 
 public sealed class DeviceSchedulerTests {
+    [Fact]
+    public void DispatchFromAnotherThreadWaitsForOwnerPumpEvenWithNoEvents() {
+        // Arrange
+        _scheduler.ProcessEvents();
+        int ownerThreadId = Environment.CurrentManagedThreadId;
+        int actionThreadId = 0;
+        bool eventInvoked = false;
+        Thread producer = new(() => _scheduler.Dispatch(() => {
+            actionThreadId = Environment.CurrentManagedThreadId;
+            _scheduler.AddEvent(_ => eventInvoked = true, 0);
+        }));
+
+        // Act
+        producer.Start();
+        producer.Join();
+        actionThreadId.Should().Be(0);
+        _scheduler.ProcessEvents();
+
+        // Assert
+        actionThreadId.Should().Be(ownerThreadId);
+        eventInvoked.Should().BeTrue();
+    }
+
     private readonly ILogger _logger;
     private readonly State _state;
     private readonly CyclesClock _cyclesClock;

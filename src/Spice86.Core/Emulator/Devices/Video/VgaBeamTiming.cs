@@ -93,9 +93,10 @@ public sealed class VgaBeamTiming {
         double framePosition = PositiveRemainder(elapsedTimeMs - snapshot.FrameStartMs, timing.FrameDurationMs);
         int scanline = (int)(framePosition / timing.LineDurationMs);
         double linePosition = framePosition % timing.LineDurationMs;
-        int address = addressAdd / 2 * (scanline / 2);
+        int wordsPerRow = addressAdd >> 1;
+        int address = wordsPerRow * (scanline >> 1);
         if (timing.HorizontalDisplayEndMs > 0) {
-            address += (int)(linePosition / timing.HorizontalDisplayEndMs * (addressAdd / 2));
+            address += (int)(linePosition / timing.HorizontalDisplayEndMs * wordsPerRow);
         }
         return (ushort)address;
     }

@@ -24,6 +24,7 @@ public sealed class TandySoundBios : IAssemblyRoutineWriter, IDisposable {
     private const ushort SavedVectorOffset = 0xd6;
     private const ushort SilenceSegment = 0xf000;
     private const ushort SilenceOffset = 0xa084;
+    private const ushort SilenceLength = 16;
     private readonly State _state;
     private readonly IMemory _memory;
     private readonly Stack _stack;
@@ -50,6 +51,12 @@ public sealed class TandySoundBios : IAssemblyRoutineWriter, IDisposable {
         _installer = installer;
         _sound = sound;
         _blaster = blaster;
+    }
+
+    /// <summary>Protects the fixed BIOS DAC buffer before interrupt routines are installed on either platform.</summary>
+    /// <param name="writer">The shared firmware routine writer.</param>
+    public static void ReserveSoundBuffer(MemoryWriter writer) {
+        writer.ReserveRange(((uint)SilenceSegment << 4) + SilenceOffset, SilenceLength);
     }
 
     /// <summary>Configures callbacks after the built-in BIOS has installed its IRQ vectors.</summary>
@@ -109,7 +116,7 @@ public sealed class TandySoundBios : IAssemblyRoutineWriter, IDisposable {
         DelayAmplitude = 0;
         PageStatus = 0xff;
         SavedVector = _vectors[route.Vector];
-        for (ushort index = 0; index < 16; index++) {
+        for (ushort index = 0; index < SilenceLength; index++) {
             _memory.UInt8[SilenceSegment, (ushort)(SilenceOffset + index)] = 0x80;
         }
     }

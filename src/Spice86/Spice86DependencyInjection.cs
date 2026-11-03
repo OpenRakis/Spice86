@@ -425,8 +425,13 @@ public class Spice86DependencyInjection : IDisposable {
         AssemblyRoutineInstaller assemblyRoutineInstaller = new(memoryAsmWriter, functionCatalogue);
         TandyBios tandyBios = new(memory, biosDataArea, interruptVectorTable,
             machineProfile, assemblyRoutineInstaller);
+        bool enableTandySound = configuration.TandySoundMode is TandySoundMode.On or TandySoundMode.Psg
+            || (configuration.TandySoundMode == TandySoundMode.Auto && machineProfile.IsTandy);
         if (configuration.InitializeDOS is not false) {
             tandyBios.ReserveFirmware(memoryAsmWriter);
+            if (enableTandySound) {
+                TandySoundBios.ReserveSoundBuffer(memoryAsmWriter);
+            }
         }
 
         SharedMouseData sharedMouseData = new();
@@ -479,8 +484,6 @@ public class Spice86DependencyInjection : IDisposable {
             configuration.FailOnUnhandledPort, loggerService);
 
         TandySoundDevice? tandySoundDevice = null;
-        bool enableTandySound = configuration.TandySoundMode is TandySoundMode.On or TandySoundMode.Psg
-            || (configuration.TandySoundMode == TandySoundMode.Auto && machineProfile.IsTandy);
         if (enableTandySound) {
             TandyAudioOptions tandyAudioOptions = RuntimeOptionsMapper.ToTandyAudioOptions(configuration);
             tandySoundDevice = new TandySoundDevice(state, ioPortDispatcher, dmaSystem, dualPic,

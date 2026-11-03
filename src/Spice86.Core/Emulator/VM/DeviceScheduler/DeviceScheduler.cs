@@ -5,7 +5,9 @@ using Microsoft.Extensions.Logging;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Shared.Collections;
 
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading;
 
 /// <summary>
 ///     Represents the callback signature invoked when a queued event fires.
@@ -25,12 +27,14 @@ public class DeviceScheduler {
 
     private readonly TimePriorityQueue<ScheduledEntry> _queue = new(MaxQueueSize);
     private readonly Stack<ScheduledEntry> _entryPool = new(MaxQueueSize);
+    private readonly ConcurrentQueue<Action> _pendingActions = new();
 
     private readonly DeviceSchedulerMonitor? _monitor;
 
     private bool _isServicingEvents;
     private double _activeEventScheduledTime;
     private double _loopEntryTime;
+    private int _ownerThreadId;
 
     /// <summary>Deadline of the active callback, or current clock time outside event service.</summary>
     internal double EventTimeMs => _isServicingEvents ? _activeEventScheduledTime : _clock.ElapsedTimeMs;
@@ -50,6 +54,16 @@ public class DeviceScheduler {
         _clock = clock;
         _logger = logger;
         _monitor = _logger.IsEnabled(LogLevel.Debug) ? new DeviceSchedulerMonitor(logger, instanceName) : null;
+    }
+
+    /// <summary>Runs work on the scheduler thread, queueing it until the next pump when called elsewhere.</summary>
+    /// <param name="action">Work that may access the scheduler and its device state.</param>
+    public void Dispatch(Action action) {
+        if (Volatile.Read(ref _ownerThreadId) == Environment.CurrentManagedThreadId) {
+            action();
+        } else {
+            _pendingActions.Enqueue(action);
+        }
     }
 
     /// <summary>
@@ -120,6 +134,10 @@ public class DeviceScheduler {
     ///     Executes a bounded batch of due events, preserving remaining deadlines for the next pump.
     /// </summary>
     public void ProcessEvents() {
+        Volatile.Write(ref _ownerThreadId, Environment.CurrentManagedThreadId);
+        while (_pendingActions.TryDequeue(out Action? action)) {
+            action();
+        }
         if (_queue.Count == 0) {
             return;
         }

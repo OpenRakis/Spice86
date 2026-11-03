@@ -854,8 +854,8 @@ public class VgaBios : InterruptHandler, IVideoInt10Handler, IVesaBiosExtension 
         // Set the basic modeset options
         if (!_isTandy) {
             _biosDataArea.ModesetCtl = BiosConstants.DefaultModeSetControl;
+            _biosDataArea.DisplayCombinationCode = BiosConstants.DefaultDisplayCombinationCode;
         }
-        _biosDataArea.DisplayCombinationCode = _isTandy ? (byte)0 : BiosConstants.DefaultDisplayCombinationCode;
     }
 
     private void VideoScreenOnOff() {
