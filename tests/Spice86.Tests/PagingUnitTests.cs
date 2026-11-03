@@ -4,6 +4,7 @@ using FluentAssertions;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Mmu;
 
@@ -30,6 +31,13 @@ public class PagingUnitTests {
         return (state, ram, unit);
     }
 
+    private static void LoadCodeSegment(State state, ushort selector) {
+        byte dpl = (byte)(selector & 0b11);
+        state.CS = selector;
+        state.SegmentDescriptorCaches[SegmentRegisterIndex.CsIndex] = new SegmentDescriptorCache(
+            0, 0xFFFFFFFF, (byte)(0b1001_1010 | (dpl << 5)), defaultBig: true, granularity4K: true, present: true);
+    }
+
     private static void WriteUInt32(Ram ram, uint address, uint value) {
         ram.Write(address, (byte)value);
         ram.Write(address + 1, (byte)(value >> 8));
@@ -41,7 +49,7 @@ public class PagingUnitTests {
     public void Translate_PresentEntries_ReturnsPhysicalAddressWithOffset() {
         (State state, _, PagingUnit unit) = CreateIdentityMappedSetup(userAccessible: true);
         state.ControlRegisters.Cr0 = 1; // PE=1
-        state.CS = 0; // CPL 0
+        LoadCodeSegment(state, 0); // CPL 0
 
         uint physicalAddress = unit.Translate(0x0234, isWrite: false);
 
@@ -97,7 +105,7 @@ public class PagingUnitTests {
     public void Translate_SupervisorOnlyPageAccessedFromUserMode_ThrowsPageFaultWithProtectionAndUserBits() {
         (State state, _, PagingUnit unit) = CreateIdentityMappedSetup(userAccessible: false);
         state.ControlRegisters.Cr0 = 1; // PE=1
-        state.CS = 3; // CPL 3
+        LoadCodeSegment(state, 3); // CPL 3
 
         Action act = () => unit.Translate(0x0234, isWrite: false);
 
@@ -109,7 +117,7 @@ public class PagingUnitTests {
     public void Translate_SupervisorOnlyPageAccessedFromSupervisorMode_Succeeds() {
         (State state, _, PagingUnit unit) = CreateIdentityMappedSetup(userAccessible: false);
         state.ControlRegisters.Cr0 = 1; // PE=1
-        state.CS = 0; // CPL 0
+        LoadCodeSegment(state, 0); // CPL 0
 
         uint physicalAddress = unit.Translate(0x0234, isWrite: false);
 
@@ -120,7 +128,7 @@ public class PagingUnitTests {
     public void Translate_UserAccessiblePageAccessedFromUserMode_Succeeds() {
         (State state, _, PagingUnit unit) = CreateIdentityMappedSetup(userAccessible: true);
         state.ControlRegisters.Cr0 = 1; // PE=1
-        state.CS = 3; // CPL 3
+        LoadCodeSegment(state, 3); // CPL 3
 
         uint physicalAddress = unit.Translate(0x0234, isWrite: false);
 
@@ -131,7 +139,7 @@ public class PagingUnitTests {
     public void Translate_SuccessfulAccess_SetsAccessedBitOnBothEntriesButNotDirty() {
         (State state, Ram ram, PagingUnit unit) = CreateIdentityMappedSetup(userAccessible: true);
         state.ControlRegisters.Cr0 = 1; // PE=1
-        state.CS = 0; // CPL 0
+        LoadCodeSegment(state, 0); // CPL 0
 
         unit.Translate(0x0234, isWrite: false);
 
@@ -144,7 +152,7 @@ public class PagingUnitTests {
     public void Translate_WriteAccess_SetsDirtyBitOnPageTableEntryOnly() {
         (State state, Ram ram, PagingUnit unit) = CreateIdentityMappedSetup(userAccessible: true);
         state.ControlRegisters.Cr0 = 1; // PE=1
-        state.CS = 0; // CPL 0
+        LoadCodeSegment(state, 0); // CPL 0
         WriteUInt32(ram, PageDirectoryBase, ReadUInt32(ram, PageDirectoryBase) | WriteBit);
         WriteUInt32(ram, PageTableBase, ReadUInt32(ram, PageTableBase) | WriteBit);
 
@@ -158,7 +166,7 @@ public class PagingUnitTests {
     public void Translate_FaultingAccess_LeavesAccessedAndDirtyBitsUntouchedOnBothEntries() {
         (State state, Ram ram, PagingUnit unit) = CreateIdentityMappedSetup(userAccessible: false);
         state.ControlRegisters.Cr0 = 1; // PE=1
-        state.CS = 3; // CPL 3 - not user-accessible, so this access must fault
+        LoadCodeSegment(state, 3); // CPL 3 - not user-accessible, so this access must fault
 
         Action act = () => unit.Translate(0x0234, isWrite: false);
 
@@ -171,7 +179,7 @@ public class PagingUnitTests {
     public void Translate_UserModeWriteToReadOnlyPage_ThrowsPageFaultWithWriteAndUserBits() {
         (State state, _, PagingUnit unit) = CreateIdentityMappedSetup(userAccessible: true);
         state.ControlRegisters.Cr0 = 1; // PE=1
-        state.CS = 3; // CPL 3 - both entries are user-accessible but neither is writable
+        LoadCodeSegment(state, 3); // CPL 3 - both entries are user-accessible but neither is writable
 
         Action act = () => unit.Translate(0x0234, isWrite: true);
 
@@ -183,7 +191,7 @@ public class PagingUnitTests {
     public void Translate_SupervisorModeWriteToReadOnlyPage_SucceedsRegardlessOfWriteBit() {
         (State state, _, PagingUnit unit) = CreateIdentityMappedSetup(userAccessible: true);
         state.ControlRegisters.Cr0 = 1; // PE=1
-        state.CS = 0; // CPL 0 - supervisor writes ignore the Read/Write bit (CR0.WP is not implemented)
+        LoadCodeSegment(state, 0); // CPL 0 - supervisor writes ignore the Read/Write bit (CR0.WP is not implemented)
 
         uint physicalAddress = unit.Translate(0x0234, isWrite: true);
 
@@ -194,7 +202,7 @@ public class PagingUnitTests {
     public void Translate_UserModeWriteRequiresBothEntriesWritable() {
         (State state, Ram ram, PagingUnit unit) = CreateIdentityMappedSetup(userAccessible: true);
         state.ControlRegisters.Cr0 = 1; // PE=1
-        state.CS = 3; // CPL 3
+        LoadCodeSegment(state, 3); // CPL 3
         WriteUInt32(ram, PageDirectoryBase, ReadUInt32(ram, PageDirectoryBase) | WriteBit); // PDE writable, PTE still read-only
 
         Action act = () => unit.Translate(0x0234, isWrite: true);

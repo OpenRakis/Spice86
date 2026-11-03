@@ -97,9 +97,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00A2 mov 3,EAX
         WriteControlRegister(3, EAX);
         // F000:00A5 lgdt dword ptr DS:[0x0630]
-        LoadGdtr(DS, 0x00000630);
+        LoadGdtr(DS, 0x00000630, false);
         // F000:00AA lidt dword ptr DS:[0x0638]
-        LoadIdtr(DS, 0x00000638);
+        LoadIdtr(DS, 0x00000638, false);
         // F000:00AF mov EAX,0
         EAX = ReadControlRegister(0);
         // F000:00B2 or EAX,1

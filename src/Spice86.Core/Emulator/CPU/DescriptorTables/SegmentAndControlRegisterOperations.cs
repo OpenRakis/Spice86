@@ -49,10 +49,12 @@ public static class SegmentAndControlRegisterOperations {
         state.SegmentDescriptorCaches[index] = descriptorCache;
     }
 
-    /// <summary>LGDT: loads GDTR from a 6-byte memory pointer (2-byte limit, 4-byte base).</summary>
-    public static void LoadGdtr(State state, IMemory memory, ushort segment, uint offset) {
+    private const uint Base24BitMask = 0x00FFFFFF;
+
+    /// <summary>LGDT: loads GDTR from a 6-byte memory pointer (2-byte limit, 4-byte base; only 24 base bits with a 16-bit operand).</summary>
+    public static void LoadGdtr(State state, IMemory memory, ushort segment, uint offset, bool operandSize32) {
         state.Gdtr.Limit = memory.UInt16[segment, offset];
-        state.Gdtr.Base = memory.UInt32[segment, offset + 2];
+        state.Gdtr.Base = ReadPseudoDescriptorBase(memory, segment, offset, operandSize32);
     }
 
     /// <summary>SGDT: stores GDTR to a 6-byte memory pointer (2-byte limit, 4-byte base).</summary>
@@ -61,10 +63,15 @@ public static class SegmentAndControlRegisterOperations {
         memory.UInt32[segment, offset + 2] = state.Gdtr.Base;
     }
 
-    /// <summary>LIDT: loads IDTR from a 6-byte memory pointer (2-byte limit, 4-byte base).</summary>
-    public static void LoadIdtr(State state, IMemory memory, ushort segment, uint offset) {
+    /// <summary>LIDT: loads IDTR from a 6-byte memory pointer (2-byte limit, 4-byte base; only 24 base bits with a 16-bit operand).</summary>
+    public static void LoadIdtr(State state, IMemory memory, ushort segment, uint offset, bool operandSize32) {
         state.Idtr.Limit = memory.UInt16[segment, offset];
-        state.Idtr.Base = memory.UInt32[segment, offset + 2];
+        state.Idtr.Base = ReadPseudoDescriptorBase(memory, segment, offset, operandSize32);
+    }
+
+    private static uint ReadPseudoDescriptorBase(IMemory memory, ushort segment, uint offset, bool operandSize32) {
+        uint pseudoDescriptorBase = memory.UInt32[segment, offset + 2];
+        return operandSize32 ? pseudoDescriptorBase : pseudoDescriptorBase & Base24BitMask;
     }
 
     /// <summary>SIDT: stores IDTR to a 6-byte memory pointer (2-byte limit, 4-byte base).</summary>

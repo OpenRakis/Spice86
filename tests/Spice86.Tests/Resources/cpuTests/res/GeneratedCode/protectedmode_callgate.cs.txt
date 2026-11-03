@@ -152,7 +152,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00DB mov word ptr DS:[0x0908],0x0010
         UInt16[DS, 0x0908] = 0x0010;
         // F000:00E1 lgdt dword ptr DS:[0x0660]
-        LoadGdtr(DS, 0x00000660);
+        LoadGdtr(DS, 0x00000660, false);
         // F000:00E6 mov AX,0x0030
         AX = 0x0030;
         // F000:00E9 ltr AX

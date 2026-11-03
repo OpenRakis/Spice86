@@ -14,16 +14,16 @@ using Spice86.Core.Emulator.CPU.Registers;
 /// <remarks>
 /// <see cref="IMmu"/> callers only pass the raw selector currently held by a segment register, not
 /// which register it came from. This MMU recovers the register identity by matching the raw value
-/// against the CPU's live segment register contents and uses that register's cache; if two registers
-/// coincidentally hold the same selector, using either cache is harmless because both were decoded
-/// from the same descriptor unless it was edited between the two loads (an edge case out of scope
-/// here). If no register currently holds a matching selector — e.g. a stale/literal value used right
+/// against the CPU's live segment register contents and uses that register's cache. CS is checked
+/// first: emulated DOS/BIOS handlers write data segment registers directly without refreshing their
+/// caches, so a data register holding the same selector as CS may carry a stale base and must not
+/// redirect instruction fetches. If no register currently holds a matching selector — e.g. a stale/literal value used right
 /// after CR0.PE flips before the mandatory far jump reloads CS — the descriptor is decoded directly
 /// from the live GDT/LDT as a fallback.
 /// </remarks>
 public sealed class ProtectedModeMmu386 : IMmu {
     private static readonly SegmentRegisterIndex[] AllSegmentRegisterIndices = [
-        SegmentRegisterIndex.EsIndex, SegmentRegisterIndex.CsIndex, SegmentRegisterIndex.SsIndex,
+        SegmentRegisterIndex.CsIndex, SegmentRegisterIndex.EsIndex, SegmentRegisterIndex.SsIndex,
         SegmentRegisterIndex.DsIndex, SegmentRegisterIndex.FsIndex, SegmentRegisterIndex.GsIndex
     ];
 
