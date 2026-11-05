@@ -46,6 +46,10 @@ public class MouseDriver : IMouseDriver {
     private readonly IVgaFunctionality _vgaFunctions;
     private readonly InMemoryAddressSwitcher _userHandlerAddressSwitcher;
 
+    // One entry per driver pass in progress, innermost last: whether that pass called the user routine.
+    // The user routine runs with interrupts enabled, so IRQ 12 can re-enter the driver stub while it runs.
+    private readonly Stack<bool> _passCalledUserRoutine = new();
+
     private int _mouseCursorHidden;
     private MouseRegisters? _savedRegisters;
     private MouseUserCallback _userCallback;
@@ -118,7 +122,9 @@ public class MouseDriver : IMouseDriver {
 
     /// <inheritdoc />
     public void BeforeUserHandlerExecution() {
-        if (CanCallUserRoutine()) {
+        bool callUserRoutine = CanCallUserRoutine();
+        _passCalledUserRoutine.Push(callUserRoutine);
+        if (callUserRoutine) {
             PrepareUserRoutineCall();
             EnsureUserRoutineWillBeCalledNextInstruction();
         } else {
@@ -304,6 +310,11 @@ public class MouseDriver : IMouseDriver {
 
     /// <inheritdoc />
     public void AfterUserHandlerExecution() {
+        // A pass that did not call the user routine saved nothing. When it is nested inside the pass that
+        // did, the saved registers and the in-progress flag belong to that outer pass and must stay intact.
+        if (!_passCalledUserRoutine.TryPop(out bool calledUserRoutine) || !calledUserRoutine) {
+            return;
+        }
         RestoreRegisters();
         _userHandlerIsBeingCalled = false;
     }
