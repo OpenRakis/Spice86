@@ -96,8 +96,7 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
 
     public IVisitableAstNode VisitJumpNearNode(JumpNearNode node) {
         if (TryGetConstantWord(node.Ip) is ushort offset) {
-            return Transfer.Emit(Context.ResolveEdge(node.Instruction, InstructionSuccessorType.Normal,
-                new SegmentedAddress(node.Instruction.Address.Segment, offset)));
+            return EmitConstantJump(node.Instruction, new SegmentedAddress(node.Instruction.Address.Segment, offset));
         }
 
         return BuildNearRuntimeDispatch(node.Instruction, node.Ip, "jump",
@@ -108,8 +107,7 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
         ushort? segment = TryGetConstantWord(node.TargetAddress.Segment);
         ushort? offset = TryGetConstantWord(node.TargetAddress.Offset);
         if (segment is not null && offset is not null) {
-            return Transfer.Emit(Context.ResolveEdge(node.Instruction, InstructionSuccessorType.Normal,
-                new SegmentedAddress(segment.Value, offset.Value)));
+            return EmitConstantJump(node.Instruction, new SegmentedAddress(segment.Value, offset.Value));
         }
 
         return BuildFarRuntimeDispatch(node.Instruction, node.TargetAddress.Segment, node.TargetAddress.Offset, "jump",
@@ -124,8 +122,10 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
                 edge => CallBranchBody(node.Instruction, runtimeContinuation, CallDistance.Near, node.CallBitWidth, edge));
         }
 
-        ResolvedCfgEdge targetEdge = Context.ResolveEdge(node.Instruction, InstructionSuccessorType.Normal,
-            new SegmentedAddress(node.Instruction.Address.Segment, targetOffset));
+        SegmentedAddress targetAddress = new SegmentedAddress(node.Instruction.Address.Segment, targetOffset);
+        if (TryResolveConstantTarget(node.Instruction, targetAddress) is not ResolvedCfgEdge targetEdge) {
+            return UntestedMessages.Call(node.Instruction.Address);
+        }
         return Transfer.EmitCallHelperAndContinuation(CallDistance.Near, node.CallBitWidth, node.Instruction, Transfer.FunctionReference(targetEdge), null);
     }
 
@@ -139,8 +139,22 @@ internal sealed class InstructionLowerer : IAstVisitor<IVisitableAstNode> {
         }
 
         SegmentedAddress targetAddress = new SegmentedAddress(targetSegment.Value, targetOffset.Value);
-        ResolvedCfgEdge targetEdge = Context.ResolveEdge(node.Instruction, InstructionSuccessorType.Normal, targetAddress);
+        if (TryResolveConstantTarget(node.Instruction, targetAddress) is not ResolvedCfgEdge targetEdge) {
+            return UntestedMessages.Call(node.Instruction.Address);
+        }
         return Transfer.EmitCallHelperAndContinuation(CallDistance.Far, node.CallBitWidth, node.Instruction, Transfer.FunctionReference(targetEdge), targetSegment.Value);
+    }
+
+    /// <summary>
+    /// A direct jump transfers along its CFG edge. Discovery leaves no edge when the target was never reached
+    /// and could not be decoded (for example a never-taken arm jumping into data), so that jump fails as
+    /// untested at run time.
+    /// </summary>
+    private IVisitableAstNode EmitConstantJump(CfgInstruction instruction, SegmentedAddress targetAddress) {
+        if (TryResolveConstantTarget(instruction, targetAddress) is ResolvedCfgEdge edge) {
+            return Transfer.Emit(edge);
+        }
+        return UntestedMessages.Jump(instruction.Address);
     }
 
     public IVisitableAstNode VisitInterruptCallNode(InterruptCallNode node) {

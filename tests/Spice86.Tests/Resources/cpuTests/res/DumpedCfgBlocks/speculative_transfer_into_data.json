@@ -1,0 +1,171 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "F000:FFF0",
+  "totalEntryPoints": 1,
+  "entryPointAddresses": [
+    "F000:FFF0"
+  ],
+  "lastExecutedAddress": "F000:003B",
+  "lastExecutedBlockId": 29,
+  "blocks": [
+    {
+      "id": 29,
+      "entry": "F000:0036",
+      "term": "F000:003B",
+      "pred": [
+        26
+      ],
+      "succ": [],
+      "asm": [
+        "C6060204EE|mov byte ptr DS:[0x0402],0xEE",
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 2,
+      "entry": "F000:FFF0",
+      "term": "F000:FFF0",
+      "pred": [],
+      "succ": [
+        3
+      ],
+      "asm": [
+        "EB0E|jmp short 0"
+      ]
+    },
+    {
+      "id": 26,
+      "entry": "F000:0018",
+      "term": "F000:001D",
+      "pred": [
+        21
+      ],
+      "succ": [
+        29
+      ],
+      "asm": [
+        "C6060104DD|mov byte ptr DS:[0x0401],0xDD",
+        "EB17|jmp short 0x0036"
+      ]
+    },
+    {
+      "id": 3,
+      "entry": "F000:0000",
+      "term": "F000:000A",
+      "pred": [
+        2
+      ],
+      "succ": [
+        8,
+        10
+      ],
+      "asm": [
+        "C606000401|mov byte ptr DS:[0x0400],1",
+        "A00005|mov AL,byte ptr DS:[0x0500]",
+        "84C0|test AL,AL",
+        "7513|jne short 0x001F"
+      ]
+    },
+    {
+      "id": 21,
+      "entry": "F000:0014",
+      "term": "F000:0016",
+      "pred": [
+        16
+      ],
+      "succ": [
+        24,
+        26
+      ],
+      "asm": [
+        "84C0|test AL,AL",
+        "7513|jne short 0x002B"
+      ]
+    },
+    {
+      "id": 8,
+      "entry": "F000:001F",
+      "dead": true,
+      "term": "F000:001F",
+      "pred": [
+        3
+      ],
+      "succ": [],
+      "asm": [
+        "EB11|jmp short 0x0032"
+      ]
+    },
+    {
+      "id": 10,
+      "entry": "F000:000C",
+      "term": "F000:000E",
+      "pred": [
+        3
+      ],
+      "succ": [
+        14,
+        16
+      ],
+      "asm": [
+        "84C0|test AL,AL",
+        "7511|jne short 0x0021"
+      ]
+    },
+    {
+      "id": 24,
+      "entry": "F000:002B",
+      "dead": true,
+      "term": "F000:002B",
+      "pred": [
+        21
+      ],
+      "succ": [],
+      "asm": [
+        "9A320000F0|call far F000:0032"
+      ]
+    },
+    {
+      "id": 16,
+      "entry": "F000:0010",
+      "term": "F000:0012",
+      "pred": [
+        10
+      ],
+      "succ": [
+        19,
+        21
+      ],
+      "asm": [
+        "84C0|test AL,AL",
+        "7512|jne short 0x0026"
+      ]
+    },
+    {
+      "id": 14,
+      "entry": "F000:0021",
+      "dead": true,
+      "term": "F000:0021",
+      "pred": [
+        10
+      ],
+      "succ": [],
+      "asm": [
+        "E80E00|call near 0x0032"
+      ]
+    },
+    {
+      "id": 19,
+      "entry": "F000:0026",
+      "dead": true,
+      "term": "F000:0026",
+      "pred": [
+        16
+      ],
+      "succ": [],
+      "asm": [
+        "EA320000F0|jmp far F000:0032"
+      ]
+    }
+  ],
+  "truncated": false
+}

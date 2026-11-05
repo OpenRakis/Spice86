@@ -618,7 +618,7 @@
       ],
       "asm": [
         "B40C|mov AH,0x0C",
-        "B001|mov AL,1",
+        "B000|mov AL,0",
         "CD21|int 0x21"
       ]
     },

@@ -1,0 +1,19 @@
+F000:0000 mov byte ptr DS:[0x0400],1
+F000:0005 mov AL,byte ptr DS:[0x0500]
+F000:0008 test AL,AL
+F000:000A jne short 0x001F
+F000:000C test AL,AL
+F000:000E jne short 0x0021
+F000:0010 test AL,AL
+F000:0012 jne short 0x0026
+F000:0014 test AL,AL
+F000:0016 jne short 0x002B
+F000:0018 mov byte ptr DS:[0x0401],0xDD
+F000:001D jmp short 0x0036
+F000:001F jmp short 0x0032
+F000:0021 call near 0x0032
+F000:0026 jmp far F000:0032
+F000:002B call far F000:0032
+F000:0036 mov byte ptr DS:[0x0402],0xEE
+F000:003B hlt
+F000:FFF0 jmp short 0
