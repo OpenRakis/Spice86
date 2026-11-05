@@ -125,11 +125,6 @@ internal sealed class CfgGeneratorContext {
             .ToList();
     }
 
-    public ResolvedCfgEdge ResolveEdge(CfgInstruction source, InstructionSuccessorType type, SegmentedAddress targetAddress) {
-        return TryResolveEdge(source, type, targetAddress)
-            ?? throw new NotSupportedException($"Instruction {source.Address} has no observed {type} successor to {targetAddress}.");
-    }
-
     /// <summary>
     /// Resolves the single observed successor of <paramref name="source"/> of the given <paramref name="type"/>
     /// whose target is <paramref name="targetAddress"/>. Returns <c>null</c> when none was observed, and throws

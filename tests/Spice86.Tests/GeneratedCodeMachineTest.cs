@@ -479,6 +479,14 @@ public sealed class GeneratedCodeMachineTest {
     }
 
     [Fact]
+    public void SpeculativeTransferIntoDataGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        // Each never-taken arm ends in a direct jump or call whose target holds invalid opcodes, so the
+        // transfer has no successor in the CFG. The generator must fail that transfer as untested at run
+        // time instead of throwing while it generates the whole program.
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.SpeculativeTransferIntoData());
+    }
+
+    [Fact]
     public void CallStackUnwindGeneratedOverrideUnwindsThroughRecoveryDispatch() {
         // callstackunwind's observed path returns leaf -> recovery -> inner_return, so the unobserved
         // generated execution reaches leaf's speculative non-local return: leaf discards its own return
