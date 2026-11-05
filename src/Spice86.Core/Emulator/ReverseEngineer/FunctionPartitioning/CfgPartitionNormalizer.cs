@@ -70,14 +70,17 @@ internal sealed class CfgPartitionNormalizer {
         }
 
         // Blocks not dominated by any single entry block (e.g., shared exit paths reachable from
-        // multiple entries) are collected into a residual partition rather than dropped.
+        // multiple entries) are collected into residual partitions rather than dropped. The partition was
+        // connected through the entry regions just split off, so what is left can fall apart: two shared
+        // exits that each entry reaches but that never reach each other. Each connected region of the
+        // residual becomes its own partition.
         HashSet<CfgBlock> residualBlocks = partition.Blocks.Where(block => !assignedBlocks.Contains(block)).ToHashSet();
-        if (residualBlocks.Count > 0) {
-            EnsureResidualBlocksConnected(residualBlocks, edgeIndex);
-            CfgBlock residualEntryBlock = GetFirstBlock(residualBlocks);
+        foreach (HashSet<CfgBlock> residualRegion in GetConnectedRegions(residualBlocks, edgeIndex)) {
+            CfgBlock residualEntryBlock = GetFirstBlock(residualRegion);
             int id = useOriginalId ? partition.Id : idAllocator.AllocateId();
-            List<CfgCodePartitionEntry> residualEntries = GetResidualEntries(residualBlocks, edgeIndex);
-            CfgPartitionDraft residualPartition = CfgPartitionDraftFactory.CreateSynthetic(id, residualEntryBlock, residualBlocks, residualEntries);
+            useOriginalId = false;
+            List<CfgCodePartitionEntry> residualEntries = GetResidualEntries(residualRegion, edgeIndex);
+            CfgPartitionDraft residualPartition = CfgPartitionDraftFactory.CreateSynthetic(id, residualEntryBlock, residualRegion, residualEntries);
             replacements.Add(residualPartition);
         }
 
@@ -129,18 +132,17 @@ internal sealed class CfgPartitionNormalizer {
 
     private static CfgBlock GetFirstBlock(HashSet<CfgBlock> blocks) => CfgPartitionOrdering.BlocksByAddressAndId(blocks).First();
 
-    private static void EnsureResidualBlocksConnected(HashSet<CfgBlock> residualBlocks, CfgPartitionEdgeIndex edgeIndex) {
-        if (residualBlocks.Count <= 1) {
-            return;
-        }
-        Dictionary<CfgBlock, HashSet<CfgBlock>> neighbors = BuildUndirectedNeighbors(residualBlocks, edgeIndex);
-        CfgBlock start = GetFirstBlock(residualBlocks);
-        int reachableCount = BreadthFirstSearch.Enumerate(start, block => neighbors.GetValueOrDefault(block) ?? []).Count();
-        if (reachableCount != residualBlocks.Count) {
-            throw new InvalidOperationException(
-                $"Residual partition contains {residualBlocks.Count} blocks but only {reachableCount} are reachable from the first block. " +
-                "The partition assembler placed blocks from unrelated execution paths in the same partition.");
-        }
+    /// <summary>
+    /// Splits <paramref name="blocks"/> into the regions connected by ownership-preserving edges between them,
+    /// ignoring edge direction, in address order of each region's first block.
+    /// </summary>
+    private static List<HashSet<CfgBlock>> GetConnectedRegions(HashSet<CfgBlock> blocks, CfgPartitionEdgeIndex edgeIndex) {
+        Dictionary<CfgBlock, HashSet<CfgBlock>> neighbors = BuildUndirectedNeighbors(blocks, edgeIndex);
+        HashSet<CfgBlock> visited = new();
+        return CfgPartitionOrdering.BlocksByAddressAndId(blocks)
+            .Select(block => BreadthFirstSearch.Enumerate(block, current => neighbors.GetValueOrDefault(current) ?? [], visited).ToHashSet())
+            .Where(region => region.Count > 0)
+            .ToList();
     }
 
     private static Dictionary<CfgBlock, HashSet<CfgBlock>> BuildUndirectedNeighbors(HashSet<CfgBlock> blocks, CfgPartitionEdgeIndex edgeIndex) {
