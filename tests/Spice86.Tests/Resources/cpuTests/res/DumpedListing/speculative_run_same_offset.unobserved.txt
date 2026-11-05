@@ -1,0 +1,24 @@
+F000:0000 mov byte ptr DS:[0x0400],1
+F000:0005 mov SP,0x8000
+F000:0008 call far F000:0100
+F000:000D call far F010:0100
+F000:0012 hlt
+F000:0100 cmp byte ptr DS:[0x0500],0
+F000:0105 jne short 0x010D
+F000:0107 mov byte ptr DS:[0x0401],0xDD
+F000:010C ret far
+F000:010D mov AL,0xE0
+F000:010F mov BL,0x0E
+F000:0111 add AL,BL
+F000:0113 mov byte ptr DS:[0x0401],AL
+F000:0116 ret far
+F010:0100 cmp byte ptr DS:[0x0500],0
+F010:0105 jne short 0x010D
+F010:0107 mov byte ptr DS:[0x0402],0xBB
+F010:010C ret far
+F010:010D mov AL,0xC0
+F010:010F mov BL,0x0C
+F010:0111 add AL,BL
+F010:0113 mov byte ptr DS:[0x0402],AL
+F010:0116 ret far
+F000:FFF0 jmp short 0

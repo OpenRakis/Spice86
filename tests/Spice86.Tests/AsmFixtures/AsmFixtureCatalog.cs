@@ -383,6 +383,14 @@ internal static class AsmFixtureCatalog {
         return SpeculativeFixture("speculative_branch", SpeculativeMemory(0x01, 0xDD, 0xAA), arm);
     }
 
+    /// <summary>Runs speculative arms at the same offset in two segments and checks both results.</summary>
+    public static AsmFixture SpeculativeRunSameOffset(SpeculativeArm arm) {
+        if (arm == SpeculativeArm.Unobserved) {
+            return SpeculativeFixture("speculative_run_same_offset", SpeculativeMemory(0x01, 0xEE, 0xCC), arm);
+        }
+        return SpeculativeFixture("speculative_run_same_offset", SpeculativeMemory(0x01, 0xDD, 0xBB), arm);
+    }
+
     /// <summary>Runs speculative_closure on the given arm: the unobserved arm loops once more.</summary>
     public static AsmFixture SpeculativeClosure(SpeculativeArm arm) {
         if (arm == SpeculativeArm.Unobserved) {

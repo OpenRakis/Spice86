@@ -407,8 +407,8 @@ internal sealed class CfgCSharpGenerator {
     /// One <c>SpeculativeRun_{offset}</c> plan per distinct merged speculative run of the prepared bodies:
     /// the runs the <c>VerifySpeculativeRunOrFail</c> call sites reference by field name instead of passing
     /// each signature inline. Runs are keyed by address and field list, so identical runs in different
-    /// methods share one field; two runs sharing an offset get the first signature field appended, like
-    /// <see cref="GeneratorAnalysis"/> does for colliding signature names.
+    /// methods share one field. Runs sharing an offset append their signature field names joined by
+    /// underscores, so each name remains a valid C# identifier.
     /// </summary>
     private static IReadOnlyList<SpeculativeRunFieldPlan> NameSpeculativeRunFields(
         List<PreparedMethod> prepared) {
@@ -426,7 +426,7 @@ internal sealed class CfgCSharpGenerator {
             DisambiguatedNames.Build(
                 ordered,
                 entry => $"SpeculativeRun_{entry.Key.Item1.Offset:X4}",
-                entry => entry.Key.Item2);
+                entry => string.Join("_", entry.Value));
         Dictionary<(SegmentedAddress, string), string> nameByRun =
             ordered.ToDictionary(entry => entry.Key, entry => names[entry]);
         for (int i = 0; i < prepared.Count; i++) {
