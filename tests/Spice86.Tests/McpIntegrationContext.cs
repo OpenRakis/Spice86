@@ -144,6 +144,7 @@ internal sealed class McpIntegrationContext : IAsyncDisposable {
         services.VgaFunctionality = spice86.McpServices.VgaFunctionality;
         services.BiosDataArea = spice86.McpServices.BiosDataArea;
         services.InterruptVectorTable = spice86.McpServices.InterruptVectorTable;
+        services.BiosKeyboardBuffer = spice86.McpServices.BiosKeyboardBuffer;
         services.Dos = spice86.McpServices.Dos;
 
         int port = GetFreeTcpPort();
