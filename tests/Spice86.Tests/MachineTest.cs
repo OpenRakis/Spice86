@@ -635,6 +635,18 @@ public class MachineTest {
 
     [Theory]
     [MemberData(nameof(JitModes))]
+    public void TestSpeculativeRunSameOffset(JitMode jitMode) {
+        TestOneBin(AsmFixtureCatalog.SpeculativeRunSameOffset(SpeculativeArm.Observed), jitMode);
+    }
+
+    [Theory]
+    [MemberData(nameof(JitModes))]
+    public void TestSpeculativeRunSameOffsetUnobservedArm(JitMode jitMode) {
+        TestOneBin(AsmFixtureCatalog.SpeculativeRunSameOffset(SpeculativeArm.Unobserved), jitMode);
+    }
+
+    [Theory]
+    [MemberData(nameof(JitModes))]
     public void TestSpeculativeClosure(JitMode jitMode) {
         TestOneBin(AsmFixtureCatalog.SpeculativeClosure(SpeculativeArm.Observed), jitMode);
     }

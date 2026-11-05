@@ -430,6 +430,8 @@ internal static class AsmScenarioCatalog {
             AsmScenario.FromFixture("speculative_branch", () => AsmFixtureCatalog.SpeculativeBranch(SpeculativeArm.Observed)),
             AsmScenario.FromFixture("speculative_branch", () => AsmFixtureCatalog.SpeculativeBranch(SpeculativeArm.Unobserved)),
             AsmScenario.FromFixture("speculative_branch", AsmFixtureCatalog.SpeculativeBranchWithoutSpeculation),
+            AsmScenario.FromFixture("speculative_run_same_offset", () => AsmFixtureCatalog.SpeculativeRunSameOffset(SpeculativeArm.Observed)),
+            AsmScenario.FromFixture("speculative_run_same_offset", () => AsmFixtureCatalog.SpeculativeRunSameOffset(SpeculativeArm.Unobserved)),
             AsmScenario.FromFixture("speculative_closure", () => AsmFixtureCatalog.SpeculativeClosure(SpeculativeArm.Observed)),
             AsmScenario.FromFixture("speculative_closure", () => AsmFixtureCatalog.SpeculativeClosure(SpeculativeArm.Unobserved)),
             AsmScenario.FromFixture("speculative_convergence", () => AsmFixtureCatalog.SpeculativeConvergence(SpeculativeArm.Observed)),
