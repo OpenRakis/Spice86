@@ -22,6 +22,7 @@ using Spice86.Core.Emulator.Devices.Sound.Midi;
 using Spice86.Core.Emulator.Devices.Timer;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
+using Spice86.Core.Emulator.InterruptHandlers.Input.Keyboard;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Ems;
@@ -554,6 +555,38 @@ internal sealed class EmulatorMcpTools {
                 return new EmulatorControlResponse {
                     Success = true,
                     Message = $"Keyboard event sent: {parsedKey} {action}"
+                };
+            }
+        });
+    }
+
+    [McpServerTool(Name = "press_key", UseStructuredContent = true), Description("Press a key by writing its BIOS key code directly into the BIOS keyboard buffer (BDA ring at 0040:001E). Parameters: ascii (0-255), scancode (0-255). For extended keys (arrows, function keys): ascii=0, scancode=0x48/0x50/0x4B/0x4D (up/down/left/right). The key code is (scancode<<8)|ascii, exactly what INT 09h stores and INT 16h dequeues, so it works headless with no GUI. No key-up event is generated (the BIOS buffer holds press codes only). Fails when the buffer is full (the game has not consumed pending keys). Prefer this over send_keyboard_key when you need exact scan codes or GUI-independent delivery.")]
+    public CallToolResult PressKey(int ascii, int scanCode) {
+        return ExecuteTool(() => {
+            lock (_services.ToolsLock) {
+                if (ascii is < 0 or > 255) {
+                    throw new ArgumentException("ascii must be 0-255");
+                }
+
+                if (scanCode is < 0 or > 255) {
+                    throw new ArgumentException("scancode must be 0-255");
+                }
+
+                BiosKeyboardBuffer? buffer = _services.BiosKeyboardBuffer;
+                if (buffer == null) {
+                    throw new InvalidOperationException("BiosKeyboardBuffer is not wired");
+                }
+
+                ushort keyCode = (ushort)((scanCode << 8) | ascii);
+                if (!buffer.EnqueueKeyCode(keyCode)) {
+                    throw new InvalidOperationException("BIOS keyboard buffer is full; the emulated program has not consumed pending keys.");
+                }
+
+                return new {
+                    KeyCode = $"0x{keyCode:X4}",
+                    Ascii = ascii,
+                    ScanCode = scanCode,
+                    Success = true
                 };
             }
         });

@@ -1667,4 +1667,49 @@ public class McpServerToolStateTests {
         result.TryGetProperty("isError", out JsonElement isError).Should().BeTrue();
         isError.GetBoolean().Should().BeTrue();
     }
+
+    [Fact]
+    public async Task PressKey_ShouldEnqueueBiosKeyCodeInBdaRingAsync() {
+        // Arrange
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await context.InitializeAsync();
+        byte[] headTailBefore = context.Services.Memory.ReadRam(4, 0x41A);
+        ushort tailBefore = (ushort)(headTailBefore[2] | (headTailBefore[3] << 8));
+
+        // Act — 'A' (0x41) with its PC scan code (0x1E)
+        using JsonDocument response = await context.CallToolAsync("press_key", new Dictionary<string, object?> {
+            ["ascii"] = 0x41,
+            ["scanCode"] = 0x1E
+        });
+
+        // Assert — key code lands in the BDA slot the tail pointed at, tail advances one slot
+        JsonElement content = GetSuccessfulStructuredContent(response);
+        McpJsonRpcAssertions.TryGetPropertyIgnoreCase(content, "keyCode", out JsonElement keyCode).Should().BeTrue();
+        keyCode.GetString().Should().Be("0x1E41");
+        byte[] slot = context.Services.Memory.ReadRam(2, tailBefore);
+        slot.Should().Equal(new byte[] { 0x41, 0x1E });
+        byte[] headTailAfter = context.Services.Memory.ReadRam(4, 0x41A);
+        ushort tailAfter = (ushort)(headTailAfter[2] | (headTailAfter[3] << 8));
+        ushort expectedTail = (ushort)(tailBefore + 2 >= 0x43E ? 0x41E : tailBefore + 2);
+        tailAfter.Should().Be(expectedTail);
+    }
+
+    [Fact]
+    public async Task PressKey_ShouldRejectOutOfRangeCodesAsync() {
+        // Arrange
+        await using McpIntegrationContext context = await McpIntegrationContext.CreateAsync(TestProgramName);
+        await context.InitializeAsync();
+
+        // Act
+        using JsonDocument response = await context.CallToolAsync("press_key", new Dictionary<string, object?> {
+            ["ascii"] = 256,
+            ["scanCode"] = 0x1E
+        });
+
+        // Assert
+        JsonElement result = McpJsonRpcAssertions.GetJsonRpcResult(response);
+        result.TryGetProperty("isError", out JsonElement isError).Should().BeTrue();
+        isError.GetBoolean().Should().BeTrue();
+        McpJsonRpcAssertions.GetToolErrorMessage(result).Should().Contain("ascii must be 0-255");
+    }
 }

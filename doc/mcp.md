@@ -162,6 +162,7 @@ Spice86 ships with **65+ MCP tools** organized into these capability scopes:
 
 ### Input Automation
 - `send_keyboard_key`: Send a keystroke (press + release or hold)
+- `press_key`: Write a BIOS key code straight into the BDA keyboard ring (`ascii`, `scancode`; extended keys use `ascii=0`). Takes effect on the next INT 16h read with no GUI involvement — use it when you need exact scan codes or headless delivery.
 - `send_mouse_packet`: Send raw mouse data packet
 - `send_mouse_move`: Move mouse cursor
 - `send_mouse_button`: Press/release mouse button
