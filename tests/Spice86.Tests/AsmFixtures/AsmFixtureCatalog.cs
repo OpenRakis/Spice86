@@ -451,6 +451,11 @@ internal static class AsmFixtureCatalog {
         return SpeculativeFixture("speculative_zero_memory", SpeculativeMemory(0x01, 0xDD, 0xEE), SpeculativeArm.Observed);
     }
 
+    /// <summary>Runs speculative_transfer_into_data on its observed arm: none of the four transfers into data is taken.</summary>
+    public static AsmFixture SpeculativeTransferIntoData() {
+        return SpeculativeFixture("speculative_transfer_into_data", SpeculativeMemory(0x01, 0xDD, 0xEE), SpeculativeArm.Observed);
+    }
+
     /// <summary>Runs speculative_smc_guard on its observed arm: the run completes without self-modification.</summary>
     public static AsmFixture SpeculativeSmcGuard() {
         return SpeculativeFixture("speculative_smc_guard", SpeculativeMemory(0x01, 0xDD, 0xAA), SpeculativeArm.Observed);
