@@ -40,15 +40,7 @@ internal class DosProgramLoader : DosFileLoader {
             cDrive = Path.GetDirectoryName(file) ?? "C:\\";
         }
 
-        // Convert host file path to DOS path relative to C drive
-        string absoluteDosPath;
-
-        if (file.Length >= cDrive.Length) {
-            absoluteDosPath = $"C:{file[cDrive.Length..]}";
-        } else {
-            string fileName = Path.GetFileName(file);
-            absoluteDosPath = $"C:{fileName}";
-        }
+        string absoluteDosPath = ToDosPathOnCDrive(file, cDrive);
 
         string commandTail = arguments ?? string.Empty;
         _processManager.BatchExecutionEngine.ConfigureHostStartupProgram(absoluteDosPath, commandTail);
@@ -63,6 +55,10 @@ internal class DosProgramLoader : DosFileLoader {
             DosExecResult result = LoadLaunchRequest(launchRequest, paramBlock);
 
             if (!result.Success) {
+                if (_loggerService.IsEnabled(LogLevel.Error)) {
+                    _loggerService.LogError("Could not start {DosPath} (host file {HostFile}, C: drive {CDrive}): {ErrorCode}",
+                        absoluteDosPath, file, cDrive, result.ErrorCode);
+                }
                 _processManager.BatchExecutionEngine.RestoreStandardHandlesAfterLaunch();
                 _state.IsRunning = false;
                 return File.ReadAllBytes(file);
@@ -77,6 +73,25 @@ internal class DosProgramLoader : DosFileLoader {
         }
 
         return File.ReadAllBytes(file);
+    }
+
+    /// <summary>
+    /// Maps the host path of the startup program to its DOS path on C:. Both paths are made absolute first,
+    /// because the C: drive folder can be given relative to the working directory while the program path is
+    /// absolute. A program outside the C: drive folder keeps the previous fallback: its file name on C:.
+    /// </summary>
+    private static string ToDosPathOnCDrive(string file, string cDrive) {
+        string pathInCDrive = Path.GetRelativePath(Path.GetFullPath(cDrive), Path.GetFullPath(file));
+        if (IsOutsideOfFolder(pathInCDrive)) {
+            return $"C:{Path.GetFileName(file)}";
+        }
+        return $"C:{Path.DirectorySeparatorChar}{pathInCDrive}";
+    }
+
+    private static bool IsOutsideOfFolder(string relativePath) {
+        return Path.IsPathRooted(relativePath)
+            || relativePath == ".."
+            || relativePath.StartsWith($"..{Path.DirectorySeparatorChar}", StringComparison.Ordinal);
     }
 
     protected virtual DosExecResult LoadLaunchRequest(LaunchRequest launchRequest,
