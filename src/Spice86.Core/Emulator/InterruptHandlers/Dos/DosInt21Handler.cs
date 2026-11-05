@@ -844,7 +844,8 @@ public class DosInt21Handler : InterruptHandler {
     }
 
     /// <summary>
-    /// Clears the keyboard buffer and calls the INT21H function number from AL.
+    /// Clears the keyboard buffer, then calls the INT21H input function whose number is in AL.
+    /// DOS only runs functions 01h, 06h, 07h, 08h and 0Ah here; any other AL, 00h included, only flushes.
     /// </summary>
     [InterruptService(0x0C, Unknown = true)]
     public void ClearKeyboardBufferAndInvokeKeyboardFunction() {
@@ -855,7 +856,7 @@ public class DosInt21Handler : InterruptHandler {
         _keyboardInt16Handler.FlushKeyboardBuffer();
         // NANSI dosfn7: also clears all device-level stuffahead buffers.
         GetStandardFile(DosStandardHandle.Stdin)?.Flush();
-        if (operation is not 0x0 and not 0x6 and not 0x7 and not 0x8 and not 0xA) {
+        if (operation is not 0x1 and not 0x6 and not 0x7 and not 0x8 and not 0xA) {
             return;
         }
         Run(operation);
