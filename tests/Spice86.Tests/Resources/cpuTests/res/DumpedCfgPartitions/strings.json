@@ -74,7 +74,16 @@
         71,
         79,
         57,
-        116
+        116,
+        120,
+        146,
+        157,
+        172,
+        183,
+        201,
+        218,
+        222,
+        278
       ],
       "entries": [
         {
@@ -86,6 +95,68 @@
     },
     {
       "id": 6,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        129
+      ],
+      "entries": [
+        {
+          "block": 129,
+          "address": "F000:E100",
+          "kind": "functionEntry"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        162
+      ],
+      "entries": [
+        {
+          "block": 162,
+          "address": "F000:E102",
+          "kind": "functionEntry"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        186,
+        191,
+        189
+      ],
+      "entries": [
+        {
+          "block": 186,
+          "address": "F000:E104",
+          "kind": "functionEntry"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        250
+      ],
+      "entries": [
+        {
+          "block": 250,
+          "address": "F000:E300",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 10,
       "kind": "observed",
       "name": "unknown",
       "blocks": [
@@ -139,8 +210,108 @@
       "target": "F000:0883"
     },
     {
-      "kind": "dynamicReturn",
+      "kind": "callOut",
+      "fromPartition": 5,
+      "toPartition": 6,
+      "fromBlock": 120,
+      "toBlock": 129,
+      "from": "F000:E00F",
+      "target": "F000:E100",
+      "callContinuationBlock": 146,
+      "callContinuationAddress": "F000:E012"
+    },
+    {
+      "kind": "callOut",
+      "fromPartition": 5,
+      "toPartition": 6,
+      "fromBlock": 146,
+      "toBlock": 129,
+      "from": "F000:E01E",
+      "target": "F000:E100",
+      "callContinuationBlock": 157,
+      "callContinuationAddress": "F000:E021"
+    },
+    {
+      "kind": "callOut",
+      "fromPartition": 5,
+      "toPartition": 7,
+      "fromBlock": 157,
+      "toBlock": 162,
+      "from": "F000:E02D",
+      "target": "F000:E102",
+      "callContinuationBlock": 172,
+      "callContinuationAddress": "F000:E030"
+    },
+    {
+      "kind": "callOut",
+      "fromPartition": 5,
+      "toPartition": 7,
+      "fromBlock": 172,
+      "toBlock": 162,
+      "from": "F000:E03C",
+      "target": "F000:E102",
+      "callContinuationBlock": 183,
+      "callContinuationAddress": "F000:E03F"
+    },
+    {
+      "kind": "callOut",
+      "fromPartition": 5,
+      "toPartition": 8,
+      "fromBlock": 183,
+      "toBlock": 186,
+      "from": "F000:E045",
+      "target": "F000:E104",
+      "callContinuationBlock": 201,
+      "callContinuationAddress": "F000:E048"
+    },
+    {
+      "kind": "alignedReturn",
       "fromPartition": 6,
+      "toPartition": 5,
+      "fromBlock": 129,
+      "toBlock": 146,
+      "from": "F000:E101",
+      "target": "F000:E012"
+    },
+    {
+      "kind": "alignedReturn",
+      "fromPartition": 6,
+      "toPartition": 5,
+      "fromBlock": 129,
+      "toBlock": 157,
+      "from": "F000:E101",
+      "target": "F000:E021"
+    },
+    {
+      "kind": "alignedReturn",
+      "fromPartition": 7,
+      "toPartition": 5,
+      "fromBlock": 162,
+      "toBlock": 172,
+      "from": "F000:E103",
+      "target": "F000:E030"
+    },
+    {
+      "kind": "alignedReturn",
+      "fromPartition": 7,
+      "toPartition": 5,
+      "fromBlock": 162,
+      "toBlock": 183,
+      "from": "F000:E103",
+      "target": "F000:E03F"
+    },
+    {
+      "kind": "alignedReturn",
+      "fromPartition": 8,
+      "toPartition": 5,
+      "fromBlock": 189,
+      "toBlock": 201,
+      "from": "F000:E10A",
+      "target": "F000:E048"
+    },
+    {
+      "kind": "dynamicReturn",
+      "fromPartition": 10,
       "toPartition": 3,
       "fromBlock": 3,
       "toBlock": 21,

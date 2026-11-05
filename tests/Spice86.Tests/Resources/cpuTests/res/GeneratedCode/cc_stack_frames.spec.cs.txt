@@ -1,0 +1,848 @@
+// ==== file: CfgGeneratedOverrideSupplier.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+
+// ==== file: CfgGeneratedOverrides.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort biosSegment;
+
+    private readonly Func<int, Action> unknown_F000_0145_F0145_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_0150_F0150_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_015D_F015D_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_016A_F016A_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_0187_F0187_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_018E_F018EEntry;
+    private readonly Func<int, Action> unknown_F000_0198_F0198_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_01AF_F01AF_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_01B9_F01B9_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_01C0_F01C0Entry;
+    private readonly Func<int, Action> unknown_F000_01CA_F01CAEntry;
+    private readonly Func<int, Action> unknown_F000_01DD_F01DD_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_01EA_F01EA_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_01F6_F01F6Entry;
+    private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
+
+    protected readonly Segment2000Globals Segment2000Globals;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        biosSegment = 0xF000;
+        Segment2000Globals = new Segment2000Globals(Memory, programStartSegment);
+
+        unknown_F000_0145_F0145_AsmEntry = _ => unknown_F000_0145_F0145_Asm();
+        unknown_F000_0150_F0150_AsmEntry = _ => unknown_F000_0150_F0150_Asm();
+        unknown_F000_015D_F015D_AsmEntry = _ => unknown_F000_015D_F015D_Asm();
+        unknown_F000_016A_F016A_AsmEntry = _ => unknown_F000_016A_F016A_Asm();
+        unknown_F000_0187_F0187_AsmEntry = _ => unknown_F000_0187_F0187_Asm();
+        unknown_F000_018E_F018EEntry = _ => unknown_F000_018E_F018E();
+        unknown_F000_0198_F0198_AsmEntry = _ => unknown_F000_0198_F0198_Asm();
+        unknown_F000_01AF_F01AF_AsmEntry = _ => unknown_F000_01AF_F01AF_Asm();
+        unknown_F000_01B9_F01B9_AsmEntry = _ => unknown_F000_01B9_F01B9_Asm();
+        unknown_F000_01C0_F01C0Entry = _ => unknown_F000_01C0_F01C0();
+        unknown_F000_01CA_F01CAEntry = _ => unknown_F000_01CA_F01CA();
+        unknown_F000_01DD_F01DD_AsmEntry = _ => unknown_F000_01DD_F01DD_Asm();
+        unknown_F000_01EA_F01EA_AsmEntry = _ => unknown_F000_01EA_F01EA_Asm();
+        unknown_F000_01F6_F01F6Entry = _ => unknown_F000_01F6_F01F6();
+        unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0145, unknown_F000_0145_F0145_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0150, unknown_F000_0150_F0150_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x015D, unknown_F000_015D_F015D_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x016A, unknown_F000_016A_F016A_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0187, unknown_F000_0187_F0187_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x018E, unknown_F000_018E_F018EEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0198, unknown_F000_0198_F0198_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01AF, unknown_F000_01AF_F01AF_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01B9, unknown_F000_01B9_F01B9_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01C0, unknown_F000_01C0_F01C0Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01CA, unknown_F000_01CA_F01CAEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01DD, unknown_F000_01DD_F01DD_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01EA, unknown_F000_01EA_F01EA_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01F6, unknown_F000_01F6_F01F6Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
+    }
+
+}
+
+// ==== file: CfgGeneratedOverrides.F000.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: none. Outputs: AX. Changes: AX, flags.</summary>
+    /// Segment values at entry, from every call site: DS = 0x2000.
+    /// Direction flag at entry, from every call site: clear.
+    public virtual ushort unknown_F000_0145_F0145() {
+        unknown_F000_0145_F0145Frame frame = new(Memory, State.SegmentRegisters, SP);
+        CheckExternalEvents(biosSegment, 0x0145);
+        // F000:0145 push BP
+        Stack.Push16(BP);
+        // F000:0146 mov BP,SP
+        // F000:0148 mov AX,word ptr SS:[BP+4]
+        AX = frame.Arg0;
+        // F000:014B add AX,word ptr SS:[BP+6]
+        AX = Alu16.Add(AX, frame.Arg2);
+        // F000:014E pop BP
+        BP = Stack.Pop16();
+        // F000:014F ret near
+        NearReturn();
+        return AX;
+    }
+
+    public virtual Action unknown_F000_0145_F0145_Asm() {
+        AX = unknown_F000_0145_F0145();
+        return Returned;
+    }
+
+    public readonly struct unknown_F000_0145_F0145Frame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
+        private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
+
+        /// <summary>Word at SS:[entry SP + 0x0002].</summary>
+        public ushort Arg0 { get => _slots.GetWord(0x0002); set => _slots.SetWord(0x0002, value); }
+
+        /// <summary>Word at SS:[entry SP + 0x0004].</summary>
+        public ushort Arg2 { get => _slots.GetWord(0x0004); set => _slots.SetWord(0x0004, value); }
+    }
+
+    /// <summary>Inputs: none. Outputs: AX. Changes: AX, flags.</summary>
+    /// Segment values at entry, from every call site: DS = 0x2000.
+    /// Direction flag at entry, from every call site: clear.
+    public virtual ushort unknown_F000_0150_F0150() {
+        unknown_F000_0150_F0150Frame frame = new(Memory, State.SegmentRegisters, SP);
+        CheckExternalEvents(biosSegment, 0x0150);
+        // F000:0150 push BP
+        Stack.Push16(BP);
+        // F000:0151 mov BP,SP
+        // F000:0153 mov AX,word ptr SS:[BP+4]
+        AX = frame.Arg0;
+        // F000:0156 add AX,word ptr SS:[BP+6]
+        AX = Alu16.Add(AX, frame.Arg2);
+        // F000:0159 pop BP
+        BP = Stack.Pop16();
+        // F000:015A ret near 4
+        NearReturn(4);
+        return AX;
+    }
+
+    public virtual Action unknown_F000_0150_F0150_Asm() {
+        AX = unknown_F000_0150_F0150();
+        return Returned;
+    }
+
+    public readonly struct unknown_F000_0150_F0150Frame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
+        private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
+
+        /// <summary>Word at SS:[entry SP + 0x0002].</summary>
+        public ushort Arg0 { get => _slots.GetWord(0x0002); set => _slots.SetWord(0x0002, value); }
+
+        /// <summary>Word at SS:[entry SP + 0x0004].</summary>
+        public ushort Arg2 { get => _slots.GetWord(0x0004); set => _slots.SetWord(0x0004, value); }
+    }
+
+    /// <summary>Inputs: none. Outputs: AX. Changes: AX, flags.</summary>
+    /// Segment values at entry, from every call site: DS = 0x2000.
+    /// Direction flag at entry, from every call site: clear.
+    public virtual ushort unknown_F000_015D_F015D() {
+        unknown_F000_015D_F015DFrame frame = new(Memory, State.SegmentRegisters, SP);
+        CheckExternalEvents(biosSegment, 0x015D);
+        // F000:015D push BP
+        Stack.Push16(BP);
+        // F000:015E mov BP,SP
+        // F000:0160 mov AX,word ptr SS:[BP+6]
+        AX = frame.Arg0;
+        // F000:0163 add AX,word ptr SS:[BP+8]
+        AX = Alu16.Add(AX, frame.Arg2);
+        // F000:0166 pop BP
+        BP = Stack.Pop16();
+        // F000:0167 ret far 4
+        FarReturn(4);
+        return AX;
+    }
+
+    public virtual Action unknown_F000_015D_F015D_Asm() {
+        AX = unknown_F000_015D_F015D();
+        return Returned;
+    }
+
+    public readonly struct unknown_F000_015D_F015DFrame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
+        private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
+
+        /// <summary>Word at SS:[entry SP + 0x0004].</summary>
+        public ushort Arg0 { get => _slots.GetWord(0x0004); set => _slots.SetWord(0x0004, value); }
+
+        /// <summary>Word at SS:[entry SP + 0x0006].</summary>
+        public ushort Arg2 { get => _slots.GetWord(0x0006); set => _slots.SetWord(0x0006, value); }
+    }
+
+    /// <summary>Inputs: none. Outputs: AX. Changes: AX, flags.</summary>
+    /// Segment values at entry, from every call site: DS = 0x2000.
+    /// Direction flag at entry, from every call site: clear.
+    public virtual ushort unknown_F000_016A_F016A() {
+        unknown_F000_016A_F016AFrame frame = new(Memory, State.SegmentRegisters, SP);
+        CheckExternalEvents(biosSegment, 0x016A);
+        // F000:016A push BP
+        Stack.Push16(BP);
+        // F000:016B mov BP,SP
+        BP = SP;
+        // F000:016D sub SP,4
+        SP -= 4;
+        // F000:0170 mov word ptr SS:[BP-2],0x0010
+        frame.Local4 = 0x0010;
+        // F000:0175 mov word ptr SS:[BP-4],0x0020
+        frame.Local6 = 0x0020;
+        // F000:017A mov AX,word ptr SS:[BP-2]
+        // F000:017D add AX,word ptr SS:[BP-4]
+        AX = (ushort)(frame.Local4 + frame.Local6);
+        // F000:0180 add AX,word ptr SS:[BP+4]
+        AX = Alu16.Add(AX, frame.Arg0);
+        // F000:0183 mov SP,BP
+        SP = BP;
+        // F000:0185 pop BP
+        BP = Stack.Pop16();
+        // F000:0186 ret near
+        NearReturn();
+        return AX;
+    }
+
+    public virtual Action unknown_F000_016A_F016A_Asm() {
+        AX = unknown_F000_016A_F016A();
+        return Returned;
+    }
+
+    public readonly struct unknown_F000_016A_F016AFrame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
+        private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
+
+        /// <summary>Word at SS:[entry SP - 0x0006].</summary>
+        public ushort Local6 { get => _slots.GetWord(-0x0006); set => _slots.SetWord(-0x0006, value); }
+
+        /// <summary>Word at SS:[entry SP - 0x0004].</summary>
+        public ushort Local4 { get => _slots.GetWord(-0x0004); set => _slots.SetWord(-0x0004, value); }
+
+        /// <summary>Word at SS:[entry SP + 0x0002].</summary>
+        public ushort Arg0 { get => _slots.GetWord(0x0002); set => _slots.SetWord(0x0002, value); }
+    }
+
+    /// <summary>Inputs: none. Outputs: AX. Changes: AX, BX.</summary>
+    /// Segment values at entry, from every call site: DS = 0x2000.
+    /// Direction flag at entry, from every call site: clear.
+    public virtual ushort unknown_F000_0187_F0187() {
+        unknown_F000_0187_F0187Frame frame = new(Memory, State.SegmentRegisters, SP);
+        CheckExternalEvents(biosSegment, 0x0187);
+        // F000:0187 mov BX,SP
+        BX = SP;
+        // F000:0189 mov AX,word ptr SS:[BX+2]
+        AX = frame.Arg0;
+        // F000:018D ret near
+        NearReturn();
+        return AX;
+    }
+
+    public virtual Action unknown_F000_0187_F0187_Asm() {
+        AX = unknown_F000_0187_F0187();
+        return Returned;
+    }
+
+    public readonly struct unknown_F000_0187_F0187Frame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
+        private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
+
+        /// <summary>Word at SS:[entry SP + 0x0002].</summary>
+        public ushort Arg0 { get => _slots.GetWord(0x0002); set => _slots.SetWord(0x0002, value); }
+    }
+
+    /// <summary>Inputs: none. Outputs: none. Changes: none.</summary>
+    /// Segment values at entry, from every call site: DS = 0x2000.
+    /// Direction flag at entry, from every call site: clear.
+    public virtual Action unknown_F000_018E_F018E() {
+        unknown_F000_018E_F018EFrame frame = new(Memory, State.SegmentRegisters, SP);
+        CheckExternalEvents(biosSegment, 0x018E);
+        // F000:018E push BP
+        Stack.Push16(BP);
+        // F000:018F mov BP,SP
+        // F000:0191 mov word ptr SS:[BP+4],0x4321
+        frame.Arg0 = 0x4321;
+        // F000:0196 pop BP
+        BP = Stack.Pop16();
+        // F000:0197 ret near
+        return NearRet();
+    }
+
+    public readonly struct unknown_F000_018E_F018EFrame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
+        private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
+
+        /// <summary>Word at SS:[entry SP + 0x0002].</summary>
+        public ushort Arg0 { get => _slots.GetWord(0x0002); set => _slots.SetWord(0x0002, value); }
+    }
+
+    /// <summary>Inputs: BP. Outputs: AX. Changes: AX, BP, flags.</summary>
+    /// Segment values at entry, from every call site: DS = 0x2000.
+    /// Direction flag at entry, from every call site: clear.
+    public virtual ushort unknown_F000_0198_F0198(ushort bp) {
+        BP = bp;
+        ushort bp1 = 0;
+        unknown_F000_0198_F0198Frame frame = new(Memory, State.SegmentRegisters, SP);
+        CheckExternalEvents(biosSegment, 0x0198);
+        // F000:0198 push BP
+        Stack.Push16(bp);
+        // F000:0199 mov BP,SP
+        bp1 = SP;
+        // F000:019B mov AX,word ptr SS:[BP+4]
+        AX = frame.Arg0;
+        // F000:019E add AX,5
+        AX = Alu16.Add(AX, 5);
+        // F000:01A1 push AX
+        Stack.Push16(AX);
+        // F000:01A2 call near 0x01AF
+        BP = bp1;
+        AX = NearCall(biosSegment, 0x01A5, () => unknown_F000_01AF_F01AF());
+        // F000:01A5 add SP,2
+        SP += 2;
+        // F000:01A8 add AX,word ptr SS:[BP+4]
+        AX = Alu16.Add(AX, frame.Arg0);
+        // F000:01AB mov SP,BP
+        SP = bp1;
+        // F000:01AD pop BP
+        BP = Stack.Pop16();
+        // F000:01AE ret near
+        NearReturn();
+        return AX;
+    }
+
+    public virtual Action unknown_F000_0198_F0198_Asm() {
+        AX = unknown_F000_0198_F0198(BP);
+        return Returned;
+    }
+
+    public readonly struct unknown_F000_0198_F0198Frame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
+        private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
+
+        /// <summary>Word at SS:[entry SP + 0x0002].</summary>
+        public ushort Arg0 { get => _slots.GetWord(0x0002); set => _slots.SetWord(0x0002, value); }
+    }
+
+    /// <summary>Inputs: none. Outputs: AX. Changes: AX.</summary>
+    /// Segment values at entry, from every call site: DS = 0x2000.
+    /// Direction flag at entry, from every call site: clear.
+    public virtual ushort unknown_F000_01AF_F01AF() {
+        ushort bp;
+        unknown_F000_01AF_F01AFFrame frame = new(Memory, State.SegmentRegisters, SP);
+        CheckExternalEvents(biosSegment, 0x01AF);
+        // F000:01AF push BP
+        Stack.Push16(BP);
+        // F000:01B0 mov BP,SP
+        bp = SP;
+        // F000:01B2 mov AX,word ptr SS:[BP+4]
+        AX = frame.Arg0;
+        // F000:01B5 mov SP,BP
+        SP = bp;
+        // F000:01B7 pop BP
+        BP = Stack.Pop16();
+        // F000:01B8 ret near
+        NearReturn();
+        return AX;
+    }
+
+    public virtual Action unknown_F000_01AF_F01AF_Asm() {
+        AX = unknown_F000_01AF_F01AF();
+        return Returned;
+    }
+
+    public readonly struct unknown_F000_01AF_F01AFFrame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
+        private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
+
+        /// <summary>Word at SS:[entry SP + 0x0002].</summary>
+        public ushort Arg0 { get => _slots.GetWord(0x0002); set => _slots.SetWord(0x0002, value); }
+    }
+
+    /// <summary>Inputs: none. Outputs: AX. Changes: AX, BX.</summary>
+    /// Direction flag at entry, from every call site: clear.
+    public virtual ushort unknown_F000_01B9_F01B9() {
+        unknown_F000_01B9_F01B9Frame frame = new(Memory, State.SegmentRegisters, SP);
+        CheckExternalEvents(biosSegment, 0x01B9);
+        // F000:01B9 mov BX,SP
+        BX = SP;
+        // F000:01BB mov AX,word ptr SS:[BX+2]
+        AX = frame.Arg0;
+        // F000:01BF ret near
+        NearReturn();
+        return AX;
+    }
+
+    public virtual Action unknown_F000_01B9_F01B9_Asm() {
+        AX = unknown_F000_01B9_F01B9();
+        return Returned;
+    }
+
+    public readonly struct unknown_F000_01B9_F01B9Frame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
+        private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
+
+        /// <summary>Word at SS:[entry SP + 0x0002].</summary>
+        public ushort Arg0 { get => _slots.GetWord(0x0002); set => _slots.SetWord(0x0002, value); }
+    }
+
+    /// <summary>Inputs: BP. Outputs: BP. Changes: BP, flags.</summary>
+    /// Segment values at entry, from every call site: DS = 0x2000.
+    /// Direction flag at entry, from every call site: clear.
+    public virtual Action unknown_F000_01C0_F01C0() {
+        CheckExternalEvents(biosSegment, 0x01C0);
+        // F000:01C0 push BP
+        Stack.Push16(BP);
+        // F000:01C1 mov BP,SP
+        // F000:01C3 inc BP
+        BP = (ushort)(SP + 1);
+        // F000:01C4 mov SP,BP
+        SP = BP;
+        // F000:01C6 add SP,1
+        SP = Alu16.Add(SP, 1);
+        // F000:01C9 ret near
+        return NearRet();
+    }
+
+    /// <summary>Inputs: BP. Outputs: BP. Changes: AX, CX, BP, flags.</summary>
+    /// Segment values at entry, from every call site: DS = 0x2000.
+    /// Direction flag at entry, from every call site: clear.
+    public virtual Action unknown_F000_01CA_F01CA() {
+        CheckExternalEvents(biosSegment, 0x01CA);
+        // F000:01CA push BP
+        Stack.Push16(BP);
+        // F000:01CB mov BP,SP
+        // F000:01CD mov CX,SS
+        CX = SS;
+        // F000:01CF mov AX,0x3000
+        AX = 0x3000;
+        // F000:01D2 mov SS,AX
+        // F000:01D4 mov SS,CX
+        SS = CX;
+        // F000:01D6 inc BP
+        BP = (ushort)(SP + 1);
+        // F000:01D7 mov SP,BP
+        SP = BP;
+        // F000:01D9 add SP,1
+        SP = Alu16.Add(SP, 1);
+        // F000:01DC ret near
+        return NearRet();
+    }
+
+    /// <summary>Inputs: BP. Outputs: BP. Changes: AX, BP.</summary>
+    /// Segment values at entry, from every call site: DS = 0x2000.
+    /// Direction flag at entry, from every call site: clear.
+    public virtual ushort unknown_F000_01DD_F01DD(ushort bp) {
+        BP = bp;
+        unknown_F000_01DD_F01DDFrame frame = new(Memory, State.SegmentRegisters, SP);
+        CheckExternalEvents(biosSegment, 0x01DD);
+        // F000:01DD push BP
+        Stack.Push16(bp);
+        // F000:01DE mov BP,SP
+        BP = SP;
+        // F000:01E0 mov AX,0x7777
+        AX = 0x7777;
+        // F000:01E3 mov word ptr SS:[BP],AX
+        frame.SavedBp = 0x7777;
+        // F000:01E6 mov SP,BP
+        SP = BP;
+        // F000:01E8 pop BP
+        BP = Stack.Pop16();
+        // F000:01E9 ret near
+        NearReturn();
+        return BP;
+    }
+
+    public virtual Action unknown_F000_01DD_F01DD_Asm() {
+        BP = unknown_F000_01DD_F01DD(BP);
+        return Returned;
+    }
+
+    public readonly struct unknown_F000_01DD_F01DDFrame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
+        private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
+
+        /// <summary>Word at SS:[entry SP - 0x0002].</summary>
+        public ushort SavedBp { get => _slots.GetWord(-0x0002); set => _slots.SetWord(-0x0002, value); }
+    }
+
+    /// <summary>Inputs: SI. Outputs: SI. Changes: SI.</summary>
+    /// Segment values at entry, from every call site: DS = 0x2000.
+    /// Direction flag at entry, from every call site: clear.
+    public virtual ushort unknown_F000_01EA_F01EA(ushort si) {
+        SI = si;
+        unknown_F000_01EA_F01EAFrame frame = new(Memory, State.SegmentRegisters, SP);
+        CheckExternalEvents(biosSegment, 0x01EA);
+        // F000:01EA push BP
+        Stack.Push16(BP);
+        // F000:01EB mov BP,SP
+        // F000:01ED push SI
+        Stack.Push16(si);
+        // F000:01EE mov word ptr SS:[BP-2],0x7777
+        frame.Local4 = 0x7777;
+        // F000:01F3 pop SI
+        SI = Stack.Pop16();
+        // F000:01F4 pop BP
+        BP = Stack.Pop16();
+        // F000:01F5 ret near
+        NearReturn();
+        return SI;
+    }
+
+    public virtual Action unknown_F000_01EA_F01EA_Asm() {
+        SI = unknown_F000_01EA_F01EA(SI);
+        return Returned;
+    }
+
+    public readonly struct unknown_F000_01EA_F01EAFrame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
+        private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
+
+        /// <summary>Word at SS:[entry SP - 0x0004].</summary>
+        public ushort Local4 { get => _slots.GetWord(-0x0004); set => _slots.SetWord(-0x0004, value); }
+    }
+
+    /// <summary>Inputs: SI, DI. Outputs: SI. Changes: BP, SI, PF, AF, ZF, SF, OF.</summary>
+    /// Segment values at entry, from every call site: DS = 0x2000.
+    /// Direction flag at entry, from every call site: clear.
+    public virtual Action unknown_F000_01F6_F01F6() {
+        CheckExternalEvents(biosSegment, 0x01F6);
+        // F000:01F6 push SI
+        Stack.Push16(SI);
+        // F000:01F7 mov BP,SP
+        BP = SP;
+        // F000:01F9 push DI
+        Stack.Push16(DI);
+        // F000:01FA inc BP
+        BP++;
+        // F000:01FB mov SP,BP
+        SP = BP;
+        // F000:01FD pop SI
+        SI = Stack.Pop16();
+        // F000:01FE dec SP
+        SP = Alu16.Dec(SP);
+        // F000:01FF ret near
+        return NearRet();
+    }
+
+    /// <summary>Inputs: BP, DI. Does not return.</summary>
+    public virtual Action unknown_F000_FFF0_FFFF0() {
+        ushort ax;
+        ushort si;
+        CheckExternalEvents(biosSegment, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        // F000:0000 mov AX,0x2000
+        // F000:0003 mov DS,AX
+        DS = 0x2000;
+        // F000:0005 mov SS,AX
+        SS = 0x2000;
+        // F000:0007 mov SP,0x1000
+        SP = 0x1000;
+        // F000:000A cld
+        DirectionFlag = false;
+        // F000:000B mov word ptr DS:[0x0080],0x1234
+        Segment2000Globals.Word0080 = 0x1234;
+        // F000:0011 mov AX,0x1111
+        // F000:0014 push AX
+        Stack.Push16(0x1111);
+        // F000:0015 mov AX,0x2222
+        // F000:0018 push AX
+        Stack.Push16(0x2222);
+        // F000:0019 mov AX,0xFFFF
+        AX = 0xFFFF;
+        // F000:001C call near 0x0145
+        AX = NearCall(biosSegment, 0x001F, () => unknown_F000_0145_F0145());
+        // F000:001F add SP,4
+        SP = Alu16.Add(SP, 4);
+        // F000:0022 mov word ptr DS:[0x0040],AX
+        Segment2000Globals.Word0040 = AX;
+        // F000:0025 mov AX,0x5A5A
+        // F000:0028 push AX
+        Stack.Push16(0x5A5A);
+        // F000:0029 mov AX,1
+        // F000:002C push AX
+        Stack.Push16(1);
+        // F000:002D mov AX,2
+        AX = 2;
+        // F000:0030 push AX
+        Stack.Push16(2);
+        // F000:0031 call near 0x0150
+        AX = NearCall(biosSegment, 0x0034, () => unknown_F000_0150_F0150());
+        // F000:0034 mov word ptr DS:[0x0044],AX
+        Segment2000Globals.Word0044 = AX;
+        // F000:0037 pop AX
+        AX = Stack.Pop16();
+        // F000:0038 mov word ptr DS:[0x0042],AX
+        Segment2000Globals.Word0042 = AX;
+        // F000:003B mov AX,0x0100
+        // F000:003E push AX
+        Stack.Push16(0x0100);
+        // F000:003F mov AX,0x0020
+        AX = 0x0020;
+        // F000:0042 push AX
+        Stack.Push16(0x0020);
+        // F000:0043 call far F000:015D
+        AX = FarCall(biosSegment, 0x0048, biosSegment, () => unknown_F000_015D_F015D());
+        // F000:0048 mov word ptr DS:[0x0046],AX
+        Segment2000Globals.Word0046 = AX;
+        // F000:004B mov AX,3
+        AX = 3;
+        // F000:004E push AX
+        Stack.Push16(3);
+        // F000:004F call near 0x016A
+        AX = NearCall(biosSegment, 0x0052, () => unknown_F000_016A_F016A());
+        // F000:0052 add SP,2
+        SP = Alu16.Add(SP, 2);
+        // F000:0055 mov word ptr DS:[0x0048],AX
+        Segment2000Globals.Word0048 = AX;
+        // F000:0058 push 0x7777
+        Stack.Push16(0x7777);
+        // F000:005B call near 0x0187
+        AX = NearCall(biosSegment, 0x005E, () => unknown_F000_0187_F0187());
+        // F000:005E add SP,2
+        SP = Alu16.Add(SP, 2);
+        // F000:0061 mov word ptr DS:[0x004A],AX
+        Segment2000Globals.Word004A = AX;
+        // F000:0064 mov AX,0x9999
+        AX = 0x9999;
+        // F000:0067 push AX
+        Stack.Push16(0x9999);
+        // F000:0068 call near 0x018E
+        NearCall(biosSegment, 0x006B, unknown_F000_018E_F018EEntry);
+        // F000:006B mov BX,SP
+        BX = SP;
+        // F000:006D mov AX,word ptr SS:[BX]
+        ax = SsUInt16[BX];
+        // F000:0070 mov word ptr DS:[0x004C],AX
+        Segment2000Globals.Word004C = ax;
+        // F000:0073 add SP,2
+        SP = Alu16.Add(SP, 2);
+        // F000:0076 mov AX,7
+        AX = 7;
+        // F000:0079 push AX
+        Stack.Push16(7);
+        // F000:007A call near 0x0198
+        AX = NearCall(biosSegment, 0x007D, () => unknown_F000_0198_F0198(BP));
+        // F000:007D add SP,2
+        SP = Alu16.Add(SP, 2);
+        // F000:0080 mov word ptr DS:[0x004E],AX
+        Segment2000Globals.Word004E = AX;
+        // F000:0083 mov AX,0x2000
+        AX = 0x2000;
+        // F000:0086 mov DS,AX
+        DS = 0x2000;
+        // F000:0088 push 0x1234
+        Stack.Push16(0x1234);
+        // F000:008B call near 0x01B9
+        AX = NearCall(biosSegment, 0x008E, () => unknown_F000_01B9_F01B9());
+        // F000:008E add SP,2
+        SP = Alu16.Add(SP, 2);
+        // F000:0091 mov word ptr DS:[0x0050],AX
+        Segment2000Globals.Word0050 = AX;
+        // F000:0094 mov AX,0x3000
+        AX = 0x3000;
+        // F000:0097 mov DS,AX
+        DS = 0x3000;
+        // F000:0099 push 0x1234
+        Stack.Push16(0x1234);
+        // F000:009C call near 0x01B9
+        AX = NearCall(biosSegment, 0x009F, () => unknown_F000_01B9_F01B9());
+        // F000:009F add SP,2
+        SP = Alu16.Add(SP, 2);
+        // F000:00A2 mov BX,0x2000
+        BX = 0x2000;
+        // F000:00A5 mov DS,BX
+        DS = 0x2000;
+        // F000:00A7 mov word ptr DS:[0x0052],AX
+        Segment2000Globals.Word0052 = AX;
+        // F000:00AA mov BP,0x4321
+        BP = 0x4321;
+        // F000:00AD call near 0x01C0
+        NearCall(biosSegment, 0x00B0, unknown_F000_01C0_F01C0Entry);
+        // F000:00B0 mov word ptr DS:[0x0054],BP
+        Segment2000Globals.Word0054 = BP;
+        // F000:00B4 mov BP,0x4321
+        BP = 0x4321;
+        // F000:00B7 call near 0x01CA
+        NearCall(biosSegment, 0x00BA, unknown_F000_01CA_F01CAEntry);
+        // F000:00BA mov word ptr DS:[0x0056],BP
+        Segment2000Globals.Word0056 = BP;
+        // F000:00BE mov BP,0x4321
+        BP = 0x4321;
+        // F000:00C1 call near 0x01DD
+        BP = NearCall(biosSegment, 0x00C4, () => unknown_F000_01DD_F01DD(BP));
+        // F000:00C4 mov word ptr DS:[0x0058],BP
+        Segment2000Globals.Word0058 = BP;
+        // F000:00C8 mov SI,word ptr DS:[0x0080]
+        si = Segment2000Globals.Word0080;
+        // F000:00CC mov word ptr DS:[0x0084],SI
+        Segment2000Globals.Word0084 = si;
+        // F000:00D0 mov word ptr DS:[0x0086],SI
+        Segment2000Globals.Word0086 = si;
+        // F000:00D4 mov word ptr DS:[0x0088],SI
+        Segment2000Globals.Word0088 = si;
+        // F000:00D8 mov word ptr DS:[0x008A],SI
+        Segment2000Globals.Word008A = si;
+        // F000:00DC call near 0x01EA
+        SI = si;
+        SI = NearCall(biosSegment, 0x00DF, () => unknown_F000_01EA_F01EA(SI));
+        // F000:00DF mov word ptr DS:[0x005A],SI
+        Segment2000Globals.Word005A = SI;
+        // F000:00E3 mov word ptr DS:[0x005C],SI
+        Segment2000Globals.Word005C = SI;
+        // F000:00E7 mov word ptr DS:[0x008C],SI
+        Segment2000Globals.Word008C = SI;
+        // F000:00EB mov SP,4
+        SP = 4;
+        // F000:00EE mov SI,word ptr DS:[0x0080]
+        si = Segment2000Globals.Word0080;
+        // F000:00F2 mov word ptr DS:[0x0084],SI
+        Segment2000Globals.Word0084 = si;
+        // F000:00F6 mov word ptr DS:[0x0086],SI
+        Segment2000Globals.Word0086 = si;
+        // F000:00FA mov word ptr DS:[0x0088],SI
+        Segment2000Globals.Word0088 = si;
+        // F000:00FE mov word ptr DS:[0x008A],SI
+        Segment2000Globals.Word008A = si;
+        // F000:0102 call near 0x01EA
+        SI = si;
+        SI = NearCall(biosSegment, 0x0105, () => unknown_F000_01EA_F01EA(SI));
+        // F000:0105 mov SP,0x1000
+        SP = 0x1000;
+        // F000:0108 mov word ptr DS:[0x005E],SI
+        Segment2000Globals.Word005E = SI;
+        // F000:010C mov word ptr DS:[0x0060],SI
+        Segment2000Globals.Word0060 = SI;
+        // F000:0110 mov word ptr DS:[0x008E],SI
+        Segment2000Globals.Word008E = SI;
+        // F000:0114 mov word ptr DS:[0],0
+        Segment2000Globals.Word0000 = 0;
+        // F000:011A mov word ptr DS:[2],0
+        Segment2000Globals.Word0002 = 0;
+        // F000:0120 mov SI,word ptr DS:[0x0080]
+        si = Segment2000Globals.Word0080;
+        // F000:0124 mov word ptr DS:[0x0084],SI
+        Segment2000Globals.Word0084 = si;
+        // F000:0128 mov word ptr DS:[0x0086],SI
+        Segment2000Globals.Word0086 = si;
+        // F000:012C mov word ptr DS:[0x0088],SI
+        Segment2000Globals.Word0088 = si;
+        // F000:0130 mov word ptr DS:[0x008A],SI
+        Segment2000Globals.Word008A = si;
+        // F000:0134 call near 0x01F6
+        SI = si;
+        NearCall(biosSegment, 0x0137, unknown_F000_01F6_F01F6Entry);
+        // F000:0137 mov word ptr DS:[0x0062],SI
+        Segment2000Globals.Word0062 = SI;
+        // F000:013B mov word ptr DS:[0x0090],SI
+        Segment2000Globals.Word0090 = SI;
+        // F000:013F mov byte ptr DS:[0x0063],0
+        Segment2000Globals.Byte0063 = 0;
+        // F000:0144 hlt
+        return Hlt();
+    }
+
+}
+
+// ==== file: Segment2000Globals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class Segment2000Globals : MemoryBasedDataStructure {
+    private readonly IMemory _memory;
+    private readonly ushort Segment;
+
+    public Segment2000Globals(IMemory memory, ushort programStartSegment) : base(memory, 0x20000) {
+        _memory = memory;
+        Segment = 0x2000;
+    }
+
+    public ushort Word0000 { get => _memory.UInt16[Segment, 0x0000]; set => _memory.UInt16[Segment, 0x0000] = value; }
+
+    public ushort Word0002 { get => _memory.UInt16[Segment, 0x0002]; set => _memory.UInt16[Segment, 0x0002] = value; }
+
+    public ushort Word0040 { get => _memory.UInt16[Segment, 0x0040]; set => _memory.UInt16[Segment, 0x0040] = value; }
+
+    public ushort Word0042 { get => _memory.UInt16[Segment, 0x0042]; set => _memory.UInt16[Segment, 0x0042] = value; }
+
+    public ushort Word0044 { get => _memory.UInt16[Segment, 0x0044]; set => _memory.UInt16[Segment, 0x0044] = value; }
+
+    public ushort Word0046 { get => _memory.UInt16[Segment, 0x0046]; set => _memory.UInt16[Segment, 0x0046] = value; }
+
+    public ushort Word0048 { get => _memory.UInt16[Segment, 0x0048]; set => _memory.UInt16[Segment, 0x0048] = value; }
+
+    public ushort Word004A { get => _memory.UInt16[Segment, 0x004A]; set => _memory.UInt16[Segment, 0x004A] = value; }
+
+    public ushort Word004C { get => _memory.UInt16[Segment, 0x004C]; set => _memory.UInt16[Segment, 0x004C] = value; }
+
+    public ushort Word004E { get => _memory.UInt16[Segment, 0x004E]; set => _memory.UInt16[Segment, 0x004E] = value; }
+
+    public ushort Word0050 { get => _memory.UInt16[Segment, 0x0050]; set => _memory.UInt16[Segment, 0x0050] = value; }
+
+    public ushort Word0052 { get => _memory.UInt16[Segment, 0x0052]; set => _memory.UInt16[Segment, 0x0052] = value; }
+
+    public ushort Word0054 { get => _memory.UInt16[Segment, 0x0054]; set => _memory.UInt16[Segment, 0x0054] = value; }
+
+    public ushort Word0056 { get => _memory.UInt16[Segment, 0x0056]; set => _memory.UInt16[Segment, 0x0056] = value; }
+
+    public ushort Word0058 { get => _memory.UInt16[Segment, 0x0058]; set => _memory.UInt16[Segment, 0x0058] = value; }
+
+    public ushort Word005A { get => _memory.UInt16[Segment, 0x005A]; set => _memory.UInt16[Segment, 0x005A] = value; }
+
+    public ushort Word005C { get => _memory.UInt16[Segment, 0x005C]; set => _memory.UInt16[Segment, 0x005C] = value; }
+
+    public ushort Word005E { get => _memory.UInt16[Segment, 0x005E]; set => _memory.UInt16[Segment, 0x005E] = value; }
+
+    public ushort Word0060 { get => _memory.UInt16[Segment, 0x0060]; set => _memory.UInt16[Segment, 0x0060] = value; }
+
+    public ushort Word0062 { get => _memory.UInt16[Segment, 0x0062]; set => _memory.UInt16[Segment, 0x0062] = value; }
+
+    public byte Byte0063 { get => _memory.UInt8[Segment, 0x0063]; set => _memory.UInt8[Segment, 0x0063] = value; }
+
+    public ushort Word0080 { get => _memory.UInt16[Segment, 0x0080]; set => _memory.UInt16[Segment, 0x0080] = value; }
+
+    public ushort Word0084 { get => _memory.UInt16[Segment, 0x0084]; set => _memory.UInt16[Segment, 0x0084] = value; }
+
+    public ushort Word0086 { get => _memory.UInt16[Segment, 0x0086]; set => _memory.UInt16[Segment, 0x0086] = value; }
+
+    public ushort Word0088 { get => _memory.UInt16[Segment, 0x0088]; set => _memory.UInt16[Segment, 0x0088] = value; }
+
+    public ushort Word008A { get => _memory.UInt16[Segment, 0x008A]; set => _memory.UInt16[Segment, 0x008A] = value; }
+
+    public ushort Word008C { get => _memory.UInt16[Segment, 0x008C]; set => _memory.UInt16[Segment, 0x008C] = value; }
+
+    public ushort Word008E { get => _memory.UInt16[Segment, 0x008E]; set => _memory.UInt16[Segment, 0x008E] = value; }
+
+    public ushort Word0090 { get => _memory.UInt16[Segment, 0x0090]; set => _memory.UInt16[Segment, 0x0090] = value; }
+}

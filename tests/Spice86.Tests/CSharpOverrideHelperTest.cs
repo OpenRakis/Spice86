@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using NSubstitute;
 
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.VM;
 using Spice86.Shared.Emulator.Memory;
 
@@ -699,6 +700,46 @@ public class CSharpOverrideHelperTest {
     }
 
     [Fact]
+    public void VerifySpeculativeRunOrFailNamesTheFirstChangedInstruction() {
+        // Arrange: a two-instruction run at F000:0010 (lengths 2 and 3). Memory matches the first
+        // signature but differs on the second, so the failure must name F000:0012, not the run entry.
+        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection res = creator.Create();
+        Machine machine = res.Machine;
+        CSharpOverrideHelper helper = CreateHelper(machine);
+        machine.Memory.UInt8[0xF000, 0x0010] = 0xAA;
+        machine.Memory.UInt8[0xF000, 0x0011] = 0xBB;
+        machine.Memory.UInt8[0xF000, 0x0012] = 0xCC;
+        machine.Memory.UInt8[0xF000, 0x0013] = 0xDD;
+        machine.Memory.UInt8[0xF000, 0x0014] = 0x00;
+
+        // Act & Assert
+        Action act = () => helper.VerifySpeculativeRunOrFail(0xF000, 0x0010,
+            [new byte?[] { 0xAA, 0xBB }, new byte?[] { 0xCC, 0xDD, 0xEE }]);
+        act.Should().Throw<UnrecoverableException>()
+            .WithMessage("*Speculative code at F000:0012 no longer matches memory*");
+    }
+
+    [Fact]
+    public void VerifySpeculativeRunOrFailPassesWhenAllMatch() {
+        // Arrange: the same two-instruction run with every byte matching.
+        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection res = creator.Create();
+        Machine machine = res.Machine;
+        CSharpOverrideHelper helper = CreateHelper(machine);
+        machine.Memory.UInt8[0xF000, 0x0010] = 0xAA;
+        machine.Memory.UInt8[0xF000, 0x0011] = 0xBB;
+        machine.Memory.UInt8[0xF000, 0x0012] = 0xCC;
+        machine.Memory.UInt8[0xF000, 0x0013] = 0xDD;
+        machine.Memory.UInt8[0xF000, 0x0014] = 0xEE;
+
+        // Act & Assert
+        Action act = () => helper.VerifySpeculativeRunOrFail(0xF000, 0x0010,
+            [new byte?[] { 0xAA, 0xBB }, new byte?[] { 0xCC, 0xDD, 0xEE }]);
+        act.Should().NotThrow();
+    }
+
+    [Fact]
     public void CallbackThatStopsTheMachineExits() {
         // Arrange
         using Spice86Creator creator = new Spice86Creator(binName: "jump2");
@@ -1118,6 +1159,308 @@ public class CSharpOverrideHelperTest {
         helper.SP.Should().Be(0x0102, "ret 2 leaves the stack above the call level");
     }
 
+    [Fact]
+    public void InterruptCallToProgramHandler_PushesFlagsCsIpAndRunsTheHandler() {
+        // Arrange: the vector points at the program handler the generated code calls directly.
+        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection res = creator.Create();
+        Machine machine = res.Machine;
+        machine.CpuState.SS = 0x3000;
+        machine.CpuState.SP = 0x0100;
+        machine.CpuState.InterruptFlag = true;
+        ushort originalFlags = machine.CpuState.Flags.FlagRegister16;
+        SegmentedAddress handlerAddress = new(0x3456, 0x0078);
+        machine.InterruptVectorTable[0x62] = handlerAddress;
+        CSharpOverrideHelper helper = CreateHelper(machine);
+        int handlerRan = 0;
+
+        // Act
+        helper.InterruptCall(0x2000, 0x0100, 0x62, handlerAddress.Segment, handlerAddress.Offset, _ => {
+            handlerRan++;
+            helper.SP.Should().Be(0x00FA, "the interrupt frame pushed FLAGS, CS and IP");
+            helper.Stack.Peek16(0).Should().Be(0x0100, "the stacked return IP is the expected return");
+            helper.Stack.Peek16(2).Should().Be(0x2000, "the stacked return CS is the expected return");
+            helper.Stack.Peek16(4).Should().Be(originalFlags);
+            machine.CpuState.InterruptFlag.Should().BeFalse("an int clears IF for the handler");
+            return helper.InterruptRet();
+        });
+
+        // Assert
+        handlerRan.Should().Be(1);
+        helper.CS.Should().Be(0x2000);
+        helper.IP.Should().Be(0x0100);
+        helper.SP.Should().Be(0x0100, "the interrupt frame is fully consumed");
+    }
+
+    [Fact]
+    public void InterruptCallToProgramHandler_VectorChanged_FailsAsUntested() {
+        // Arrange: the vector no longer points at the handler the generated code calls.
+        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection res = creator.Create();
+        Machine machine = res.Machine;
+        machine.CpuState.SS = 0x3000;
+        machine.CpuState.SP = 0x0100;
+        machine.InterruptVectorTable[0x62] = new SegmentedAddress(0x9999, 0x0001);
+        CSharpOverrideHelper helper = CreateHelper(machine);
+        int handlerRan = 0;
+
+        // Act
+        Action act = () => helper.InterruptCall(0x2000, 0x0100, 0x62, 0x3456, 0x0078,
+            _ => { handlerRan++; return helper.InterruptRet(); });
+
+        // Assert
+        act.Should().Throw<UnrecoverableException>().Which.Message.Should().Contain("0x62");
+        handlerRan.Should().Be(0);
+        helper.SP.Should().Be(0x0100, "nothing was pushed");
+    }
+
+    [Fact]
+    public void TypedNearCall_MatchesUntypedCallAndRet() {
+        // Arrange: two machines with the same state; one runs the untyped call + ret pair,
+        // the other the typed call + return pair.
+        using Spice86Creator creator1 = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection res1 = creator1.Create();
+        Machine machine1 = res1.Machine;
+        machine1.CpuState.SS = 0x3000;
+        machine1.CpuState.SP = 0x0100;
+        machine1.CpuState.AX = 0x0005;
+        machine1.CpuState.BX = 0x0007;
+        CSharpOverrideHelper helper1 = CreateHelper(machine1);
+
+        using Spice86Creator creator2 = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection res2 = creator2.Create();
+        Machine machine2 = res2.Machine;
+        machine2.CpuState.SS = 0x3000;
+        machine2.CpuState.SP = 0x0100;
+        machine2.CpuState.AX = 0x0005;
+        machine2.CpuState.BX = 0x0007;
+        CSharpOverrideHelper helper2 = CreateHelper(machine2);
+
+        // Act
+        helper1.NearCall(0x2000, 0x0100, _ => {
+            helper1.AX = (ushort)(helper1.AX + helper1.BX);
+            return helper1.NearRet(4);
+        });
+        ushort returned = helper2.NearCall(0x2000, 0x0100, () => {
+            helper2.AX = (ushort)(helper2.AX + helper2.BX);
+            helper2.NearReturn(4);
+            return helper2.AX;
+        });
+
+        // Assert
+        returned.Should().Be(helper2.AX, "the typed call returns the callee's value");
+        helper2.SP.Should().Be(helper1.SP, "ret 4 / NearReturn(4) leaves the same SP");
+        helper2.CS.Should().Be(helper1.CS);
+        helper2.IP.Should().Be(helper1.IP);
+        helper2.AX.Should().Be(helper1.AX);
+        for (int offset = -2; offset >= -8; offset -= 2) {
+            helper2.Stack.Peek16(offset).Should().Be(helper1.Stack.Peek16(offset),
+                $"the pushed return frame below SP matches at {offset}");
+        }
+    }
+
+    [Fact]
+    public void TypedFarCall_MatchesUntypedCallAndRet() {
+        // Arrange
+        using Spice86Creator creator1 = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection res1 = creator1.Create();
+        Machine machine1 = res1.Machine;
+        machine1.CpuState.SS = 0x3000;
+        machine1.CpuState.SP = 0x0100;
+        machine1.CpuState.AX = 0x0005;
+        machine1.CpuState.BX = 0x0007;
+        CSharpOverrideHelper helper1 = CreateHelper(machine1);
+
+        using Spice86Creator creator2 = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection res2 = creator2.Create();
+        Machine machine2 = res2.Machine;
+        machine2.CpuState.SS = 0x3000;
+        machine2.CpuState.SP = 0x0100;
+        machine2.CpuState.AX = 0x0005;
+        machine2.CpuState.BX = 0x0007;
+        CSharpOverrideHelper helper2 = CreateHelper(machine2);
+
+        // Act
+        helper1.FarCall(0x2000, 0x0100, 0x3456, _ => {
+            helper1.AX = (ushort)(helper1.AX + helper1.BX);
+            return helper1.FarRet(2);
+        });
+        ushort returned = helper2.FarCall(0x2000, 0x0100, 0x3456, () => {
+            helper2.AX = (ushort)(helper2.AX + helper2.BX);
+            helper2.FarReturn(2);
+            return helper2.AX;
+        });
+
+        // Assert
+        returned.Should().Be(helper2.AX, "the typed call returns the callee's value");
+        helper2.SP.Should().Be(helper1.SP, "retf 2 / FarReturn(2) leaves the same SP");
+        helper2.CS.Should().Be(helper1.CS);
+        helper2.IP.Should().Be(helper1.IP);
+        helper2.AX.Should().Be(helper1.AX);
+        for (int offset = -2; offset >= -8; offset -= 2) {
+            helper2.Stack.Peek16(offset).Should().Be(helper1.Stack.Peek16(offset),
+                $"the pushed return frame below SP matches at {offset}");
+        }
+    }
+
+    [Fact]
+    public void TypedCall_ReturningElsewhere_FailsAsUntested() {
+        // Arrange: a typed callee that rewrites its stacked return address before NearReturn(0).
+        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection res = creator.Create();
+        Machine machine = res.Machine;
+        machine.CpuState.SS = 0x3000;
+        machine.CpuState.SP = 0x0100;
+        CSharpOverrideHelper helper = CreateHelper(machine);
+
+        // Act
+        Action act = () => helper.NearCall(0x2000, 0x0100, () => {
+            helper.Stack.Poke16(0, 0x0101);
+            helper.NearReturn(0);
+        });
+
+        // Assert
+        act.Should().Throw<UnrecoverableException>().Which.Message.Should().Contain("2000:0101");
+    }
+
+    [Fact]
+    public void EntryWrapper_UntypedCallOfTypedMethod_MatchesClassicReturn() {
+        // Arrange: an untyped NearCall of the entry wrapper a typed method gets
+        // ({ AX = Typed(AX, BX); return Returned; }) must leave the same state as a classic
+        // NearRet callee, because the typed method already performed the return.
+        using Spice86Creator creator1 = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection res1 = creator1.Create();
+        Machine machine1 = res1.Machine;
+        machine1.CpuState.SS = 0x3000;
+        machine1.CpuState.SP = 0x0100;
+        machine1.CpuState.AX = 0x0005;
+        machine1.CpuState.BX = 0x0007;
+        CSharpOverrideHelper helper1 = CreateHelper(machine1);
+
+        using Spice86Creator creator2 = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection res2 = creator2.Create();
+        Machine machine2 = res2.Machine;
+        machine2.CpuState.SS = 0x3000;
+        machine2.CpuState.SP = 0x0100;
+        machine2.CpuState.AX = 0x0005;
+        machine2.CpuState.BX = 0x0007;
+        CSharpOverrideHelper helper2 = CreateHelper(machine2);
+
+        // Act
+        helper1.NearCall(0x2000, 0x0100, _ => {
+            helper1.AX = (ushort)(helper1.AX + helper1.BX);
+            return helper1.NearRet();
+        });
+        helper2.NearCall(0x2000, 0x0100, _ => {
+            helper2.AX = Typed(helper2.AX, helper2.BX, helper2);
+            return CSharpOverrideHelper.Returned;
+        });
+
+        // Assert
+        helper2.SP.Should().Be(helper1.SP);
+        helper2.CS.Should().Be(helper1.CS);
+        helper2.IP.Should().Be(helper1.IP);
+        helper2.AX.Should().Be(helper1.AX);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TypedCallLeavesTheSameCsIpConventionAsTheUntypedHelper(bool isFar) {
+        // Arrange
+        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection dependencyInjection = creator.Create();
+        Machine machine = dependencyInjection.Machine;
+        machine.CpuState.SS = 0x3000;
+        machine.CpuState.SP = 0x100;
+        CSharpOverrideHelper helper = CreateHelper(machine);
+        ushort seenCs = 0;
+        ushort seenIp = 0;
+
+        // Act: the typed callee records the CS:IP it was entered with, then returns through the
+        // helper - which pops the pushed frame and lands CS:IP on the expected return address.
+        Func<int> typedCall = () => {
+            seenCs = machine.CpuState.CS;
+            seenIp = machine.CpuState.IP;
+            if (isFar) {
+                helper.FarReturn(0);
+            } else {
+                helper.NearReturn(0);
+            }
+            return 7;
+        };
+        int result = isFar ? helper.FarCall(0x1000, 0x0010, 0x3456, typedCall) : helper.NearCall(0x1000, 0x0010, typedCall);
+
+        // Assert: the callee runs with CS set to its segment and IP holding the expected return
+        // offset - the same convention the untyped call helpers use.
+        result.Should().Be(7);
+        seenCs.Should().Be(isFar ? (ushort)0x3456 : (ushort)0x1000);
+        seenIp.Should().Be(0x0010);
+    }
+
+    private static ushort Typed(ushort ax, ushort bx, CSharpOverrideHelper helper) {
+        ushort result = (ushort)(ax + bx);
+        helper.NearReturn(0);
+        return result;
+    }
+
+    [Fact]
+    public void SingleEntryMutualCycle_ThroughEntry_UnwindsWithoutThrowing() {
+        // Arrange
+        using Spice86Creator creator = new Spice86Creator(binName: "jump2");
+        using Spice86DependencyInjection res = creator.Create();
+        res.Machine.CpuState.SS = 0x3000;
+        res.Machine.CpuState.SP = 0x100;
+        Machine machine = res.Machine;
+        SingleEntryCycle cycle = new(new Dictionary<SegmentedAddress, FunctionInformation>(),
+            machine, _loggerServiceMock, new Configuration { HttpApiPort = 0 });
+
+        // Act
+        cycle.JumpTarget1();
+
+        // Assert
+        Assert.Equal(SingleEntryCycle.MaxNumberOfJumps, cycle.NumberOfCallsTo1);
+        Assert.Equal(SingleEntryCycle.MaxNumberOfJumps, cycle.NumberOfCallsTo2);
+    }
+
+    [Fact]
+    public void SsIndexers_ReadAndWriteWhatTheCpuStackPathAccesses() {
+        // Arrange: a 286 model gives the real-mode 386 MMU that checks segment limits
+        using Spice86Creator creator = new(new AsmFixtures.AsmRunSettings {
+            BinName = "jump2", CpuModel = Spice86.Core.Emulator.CPU.CpuModel.INTEL_80286 },
+            JitMode.InterpretedOnly, null);
+        using Spice86DependencyInjection res = creator.Create();
+        Machine machine = res.Machine;
+        machine.CpuState.SS = 0x2000;
+        CSharpOverrideHelper helper = CreateHelper(machine);
+        machine.Memory.UInt16[0x2000, (ushort)0x1000, SegmentAccessKind.Stack] = 0x4321;
+
+        // Act + Assert: reads observe the stack-kind writes, writes are seen by the stack path
+        helper.SsUInt16[0x1000].Should().Be(0x4321);
+        helper.SsUInt16[0x1000] = 0xBEEF;
+        machine.Memory.UInt16[0x2000, (ushort)0x1000, SegmentAccessKind.Stack].Should().Be(0xBEEF);
+    }
+
+    [Fact]
+    public void SsIndexers_WordAtSegmentLimitRaisesStackFault() {
+        // Arrange
+        using Spice86Creator creator = new(new AsmFixtures.AsmRunSettings {
+            BinName = "jump2", CpuModel = Spice86.Core.Emulator.CPU.CpuModel.INTEL_80286 },
+            JitMode.InterpretedOnly, null);
+        using Spice86DependencyInjection res = creator.Create();
+        Machine machine = res.Machine;
+        machine.CpuState.SS = 0x2000;
+        CSharpOverrideHelper helper = CreateHelper(machine);
+
+        // Act
+        Action ssRead = () => _ = helper.SsUInt16[0xFFFF];
+        Action dsRead = () => _ = helper.UInt16[0x2000, 0xFFFF];
+
+        // Assert: the SS-relative access faults #SS where the same offset as data faults #GP
+        ssRead.Should().Throw<CpuStackSegmentFaultException>();
+        dsRead.Should().Throw<CpuGeneralProtectionFaultException>();
+    }
+
     private CSharpOverrideHelper CreateHelper(Machine machine) =>
         CreateHelper(machine, new Dictionary<SegmentedAddress, FunctionInformation>());
 
@@ -1211,6 +1554,44 @@ class DeepRecursiveJumps : CSharpOverrideHelper {
 
         if (JumpDispatcher.Jump(JumpTarget1, 0)) {
             loadOffset = JumpDispatcher.NextEntryAddress;
+            goto entrydispatcher;
+        }
+
+        return JumpDispatcher.RequiredJumpAsmReturn;
+    }
+}
+
+class SingleEntryCycle : CSharpOverrideHelper {
+    public const int MaxNumberOfJumps = 2;
+    private readonly Func<int, Action> _jumpTarget1Entry;
+    private readonly Func<int, Action> _jumpTarget2Entry;
+    public int NumberOfCallsTo1 { get; set; }
+    public int NumberOfCallsTo2 { get; set; }
+
+    public SingleEntryCycle(IDictionary<SegmentedAddress, FunctionInformation> functionInformations,
+        Machine machine, ILogger loggerService, Configuration configuration) : base(functionInformations, machine, loggerService, new()) {
+        _jumpTarget1Entry = _ => JumpTarget1();
+        _jumpTarget2Entry = _ => JumpTarget2();
+    }
+
+    public Action JumpTarget1() {
+    entrydispatcher:
+        NumberOfCallsTo1++;
+        if (JumpDispatcher.Jump(_jumpTarget2Entry, 0)) {
+            goto entrydispatcher;
+        }
+
+        return JumpDispatcher.RequiredJumpAsmReturn;
+    }
+
+    public Action JumpTarget2() {
+    entrydispatcher:
+        NumberOfCallsTo2++;
+        if (NumberOfCallsTo2 == MaxNumberOfJumps) {
+            return NearRet();
+        }
+
+        if (JumpDispatcher.Jump(_jumpTarget1Entry, 0)) {
             goto entrydispatcher;
         }
 

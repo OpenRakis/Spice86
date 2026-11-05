@@ -95,7 +95,99 @@ unsigned_word_end:
     add si, 6
     dec word [0F00h]
     jnz pass_loop
+
+; a constant value into a port write reads back through the PIC0 mask latch
+    mov dx, 0021h
+    mov al, 5Ch
+    out dx, al
+    in al, dx
+    mov [0D2h], al
+
+; a constant push argument the callee reads back
+    mov ax, 7777h
+    push ax
+    call cf_callee
+    add sp, 2
+    mov [0D4h], ax
+
+; a terminator condition whose operand is a constant
+    mov byte [0D6h], 2
+    mov bx, 5
+    test bx, bx
+    jz cf_zero_taken
+    mov byte [0D6h], 1
+cf_zero_taken:
+
+; a group-2 constant used as an offset: shl bx,1 is evaluated after lowering
+    mov word [200h], 0ABCDh
+    mov bx, 1
+    shl bx, 1
+    mov ax, [bx+1FEh]
+    mov [0D8h], ax
+
+; Keep BX un-substituted inside the faulting instruction. The fault handler changes
+; BX; the interpreter retry reads that updated register.
+    mov word [120h], 9999h
+    xor ax, ax
+    mov ds, ax
+    mov word [34h], cf_fault_handler
+    mov word [36h], cs
+    mov ax, 2000h
+    mov ds, ax
+    mov bx, 0FFFFh
+    mov ax, [bx]
+    mov [0DAh], ax
+
+; CR-3 trap: di read inside a rep body is not the entry constant
+    mov di, 0DCh
+    mov al, 5Ah
+    mov cx, 4
+    rep stosb
+
+; an add on constants that carries and overflows: the flags pushf reads are the
+; constants the emulator's ALU computes
+    mov ax, 8000h
+    add ax, 8000h
+    pushf
+    pop dx
+    mov [0E0h], dx
+
+; an adc on constants after stc: the carry input is a known constant
+    stc
+    mov ax, 0FFFFh
+    adc ax, 1
+    pushf
+    pop dx
+    mov [0E2h], dx
+
+; a shift by 0 writes no flag: the flags set before it must be the ones pushf reads
+    xor dx, dx
+    stc
+    mov bx, 1234h
+    shl bx, 0
+    pushf
+    pop dx
+    mov [0E4h], dx
+
+; a shift by more than 1 leaves OF undefined: the emulator's value is the one pushf reads
+    clc
+    mov bx, 8000h
+    shl bx, 2
+    pushf
+    pop dx
+    mov [0E6h], dx
     hlt
+
+cf_callee:
+    push bp
+    mov bp, sp
+    mov ax, [bp+4]
+    pop bp
+    ret
+
+cf_fault_handler:
+    mov bx, 0120h
+    iret
 
 ; per pass: register offset, compared value, far pointer base
 inputs:

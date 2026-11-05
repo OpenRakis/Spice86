@@ -129,7 +129,10 @@ public sealed class SpeculativeCfgTest {
         // Export and reload
         Spice86.Core.Emulator.StateSerialization.CfgReload.CfgReloadDump dump =
             new Spice86.Core.Emulator.StateSerialization.CfgReload.CfgReloadExporter()
-                .Export(discoveryMachine.CfgCpu.ExecutionContextManager, nodeIndex.PoisonSet);
+                .Export(discoveryMachine.CfgCpu.ExecutionContextManager, nodeIndex.PoisonSet,
+                    new Spice86.Core.Emulator.LoadableFile.ChangedMemorySnapshot {
+                        WatchedAreas = [], ChangedRanges = []
+                    });
 
         dump.PoisonedAddresses.Should().NotBeNull();
         dump.PoisonedAddresses.Should().Contain(poisonedAddr.ToString());
@@ -395,5 +398,32 @@ public sealed class SpeculativeCfgTest {
             .WithMessage("*Untested code reached*");
 
         runner.CompareGeneratedSourceWithExpected(GeneratedCodeMachineTestRunner.GoldenKey(fixture.Settings), generatedProgram);
+    }
+
+    /// <summary>A store in a speculative run changes a later instruction through A20 wrapping.
+    /// A guard after the store must detect the change before the stale instruction executes.</summary>
+    [Fact]
+    public void SpeculativeA20WrapSelfModificationGuardFires() {
+        AsmFixture fixture = AsmFixtureCatalog.SpeculativeA20SmcGuard();
+        GeneratedCodeMachineTestRunner runner = new();
+        GeneratedCSharpProgram generatedProgram = runner.GenerateProgramAndSource(new AsmRunScope(fixture));
+        using CompiledGeneratedOverride compiledOverride = runner.CompileGeneratedProgram(fixture.Settings, generatedProgram);
+
+        // Discovery path (selector=0): the observed arm runs to completion.
+        AsmFixtureRunner.RunWithOverride(fixture, compiledOverride.Supplier).Dispose();
+
+        // Speculative path (selector=1): the store at FFFE:0014 changes the instruction
+        // at FFFE:0022 through low RAM.
+        AsmRunSettings unobservedSettings = fixture.Settings with { ConfigureMachine = AsmFixtureCatalog.SelectUnobservedArm };
+        Action act = () => {
+            using AsmFixtureRun run = AsmFixtureRunner.RunSettingsWithOverride(unobservedSettings, compiledOverride.Supplier);
+        };
+
+        act.Should().Throw<Spice86.Core.Emulator.Errors.InvalidVMOperationException>()
+            .WithInnerException<Spice86.Shared.Emulator.Errors.UnrecoverableException>()
+            .WithMessage("*Speculative code at FFFE:0022 no longer matches memory*");
+
+        runner.CompareGeneratedSourceWithExpected(
+            GeneratedCodeMachineTestRunner.GoldenKey(fixture.Settings), generatedProgram);
     }
 }

@@ -48,13 +48,11 @@ internal sealed class GeneratorAnalysis {
         // Method name = base name + the lowest entry address, so the symbol carries exactly one address.
         Dictionary<CfgCodePartition, string> methodNames = BuildMethodNames(program.Partitions, partitionBaseNames);
 
-        // Stable cs1, cs2, ... field names assigned in segment order so output is deterministic across runs.
-        Dictionary<ushort, string> segmentVariables = partitionByNode.Keys
-            .Select(node => node.Address.Segment)
-            .Distinct()
-            .OrderBy(segment => segment)
-            .Select((segment, index) => new { segment, name = $"cs{index + 1}" })
-            .ToDictionary(entry => entry.segment, entry => entry.name);
+        // Stable field names assigned in segment order so output is deterministic across runs: named
+        // fields for the BIOS and video BIOS segments, cs1, cs2, ... for everything else.
+        Dictionary<ushort, string> segmentVariables = SegmentFieldPlan
+            .BuildAll(partitionByNode.Keys.Select(node => node.Address.Segment), program.Inputs.ProgramImages)
+            .ToDictionary(field => field.Segment, field => field.FieldName);
 
         // Re-key transfers from (from,to) onto the typed CFG edges they correspond to. One transfer can
         // fan out to several typed successor edges; an empty fan-out means the recorded transfer has no

@@ -4,6 +4,7 @@ using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Visitor;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Propagation;
 
@@ -55,7 +56,7 @@ internal sealed class IrConstantFacts {
     /// mask. The direction flag is one bit: lane 0.</summary>
     internal static uint WrittenBytes(IrEffects effects, IrSsaValue value) {
         if (value == IrSsaValue.Direction) {
-            return ((effects.MustWrite | effects.MayWrite) & IrValues.Direction) != IrValues.None ? 1u : 0u;
+            return ((effects.MustWrite | effects.MayWrite) & CpuValues.Direction) != CpuValues.None ? 1u : 0u;
         }
         return (uint)(((ulong)((effects.MustWrite | effects.MayWrite) & IrSsaValues.MaskOf(value))
             >> (ByteCount * (int)value)) & AllBytes);
@@ -121,6 +122,20 @@ internal sealed class IrConstantFacts {
     /// of <paramref name="block"/> as leaves.</summary>
     public bool TryEvaluate(IVisitableAstNode node, IrBlock block, int position, out ulong value) =>
         ConstantEvaluation.TryEvaluate(node,
+            leaf => leaf switch {
+                RegisterNode register
+                    when TryGetBefore(block, position, register, out ulong leafValue) => leafValue,
+                CpuFlagNode { FlagMask: Flags.Direction }
+                    when TryGetDirection(block, position, out bool direction) => direction ? 1UL : 0UL,
+                _ => null
+            },
+            out value);
+
+    /// <summary>Like <see cref="TryEvaluate"/>, for a caller that replaces the node with the
+    /// constant - see <see cref="ConstantEvaluation.TryEvaluateReplacing"/>.</summary>
+    public bool TryEvaluateReplacing(IVisitableAstNode node, IrBlock block, int position,
+        out ulong value) =>
+        ConstantEvaluation.TryEvaluateReplacing(node,
             leaf => leaf switch {
                 RegisterNode register
                     when TryGetBefore(block, position, register, out ulong leafValue) => leafValue,

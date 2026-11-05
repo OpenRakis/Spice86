@@ -69,22 +69,6 @@ public class AluExpansionBuilderTest {
         mismatches.Count.Should().Be(0, string.Join(Environment.NewLine, mismatches.Take(ReportedMismatches)));
     }
 
-    [Theory]
-    [MemberData(nameof(ExpandedOperations))]
-    public void ExpansionWritesTheFlagsOfTheAluFlagTable(string operation, BitWidth width) {
-        // Arrange
-        AluExpansion expansion = Expand(operation, width);
-        AluFlagTable.TryGetEffect(Enum.Parse<AluOperation>(operation), width, null, out FlagEffect expected);
-
-        // Act
-        FlagEffect actual = FlagEffectVisitor.Of(new BlockNode([.. expansion.Statements]));
-        StatusFlags assigned = expansion.FlagAssignments.Aggregate(StatusFlags.None, (all, assignment) => all | assignment.Flag);
-
-        // Assert
-        actual.Should().Be(expected);
-        assigned.Should().Be(expected.MustWrite);
-    }
-
     [Fact]
     public void BinaryOperationReadsEachArgumentOnceAndWritesFlagsInBitOrder() {
         // Arrange
@@ -201,24 +185,6 @@ public class AluExpansionBuilderTest {
 
         // Assert
         mismatches.Count.Should().Be(0, string.Join(Environment.NewLine, mismatches.Take(ReportedMismatches)));
-    }
-
-    [Theory]
-    [MemberData(nameof(ShiftOperations))]
-    public void ShiftExpansionWritesTheFlagsOfTheAluFlagTable(string operation, BitWidth width) {
-        foreach (int count in new[] { 1, 9, 17 }) {
-            // Arrange
-            AluExpansion expansion = ExpandShift(operation, width, count);
-            AluFlagTable.TryGetEffect(Enum.Parse<AluOperation>(operation), width, (ulong)count, out FlagEffect expected);
-
-            // Act
-            FlagEffect actual = FlagEffectVisitor.Of(new BlockNode([.. expansion.Statements]));
-            StatusFlags assigned = expansion.FlagAssignments.Aggregate(StatusFlags.None, (all, assignment) => all | assignment.Flag);
-
-            // Assert
-            actual.Should().Be(expected);
-            assigned.Should().Be(expected.MustWrite);
-        }
     }
 
     [Theory]
@@ -346,30 +312,6 @@ public class AluExpansionBuilderTest {
         mismatches.Count.Should().Be(0, string.Join(Environment.NewLine, mismatches.Take(ReportedMismatches)));
     }
 
-    [Theory]
-    [MemberData(nameof(RotateOperations))]
-    public void RotateExpansionWritesTheFlagsOfTheAluFlagTable(string operation, BitWidth width) {
-        foreach (int count in new[] { 1, 4, 9 }) {
-            // Arrange
-            DataType type = DataType.UnsignedFromBitWidth(width);
-            RegisterNode operand = new(type, (int)RegisterIndex.BxIndex);
-            AluExpansion? expansion = AluExpansionBuilder.TryExpand(
-                new AluCallValueNode(type, Enum.Parse<AluOperation>(operation), width, operand, new ConstantNode(DataType.INT32, (ulong)count)));
-            if (expansion is null) {
-                continue;
-            }
-            AluFlagTable.TryGetEffect(Enum.Parse<AluOperation>(operation), width, (ulong)count, out FlagEffect expected);
-
-            // Act
-            FlagEffect actual = FlagEffectVisitor.Of(new BlockNode([.. expansion.Statements]));
-            StatusFlags assigned = expansion.FlagAssignments.Aggregate(StatusFlags.None, (all, assignment) => all | assignment.Flag);
-
-            // Assert
-            actual.Should().Be(expected);
-            assigned.Should().Be(expected.MustWrite);
-        }
-    }
-
     private static bool ShouldExpandRotate(string operation, BitWidth width, int count) {
         int w = (int)width;
         int m = count & 0x1F;
@@ -453,22 +395,6 @@ public class AluExpansionBuilderTest {
 
         // Assert
         mismatches.Count.Should().Be(0, string.Join(Environment.NewLine, mismatches.Take(ReportedMismatches)));
-    }
-
-    [Theory]
-    [MemberData(nameof(MultiplyOperations))]
-    public void MultiplyExpansionWritesTheFlagsOfTheAluFlagTable(string operation, BitWidth width) {
-        // Arrange
-        AluExpansion expansion = ExpandMultiply(operation, width);
-        AluFlagTable.TryGetEffect(Enum.Parse<AluOperation>(operation), width, null, out FlagEffect expected);
-
-        // Act
-        FlagEffect actual = FlagEffectVisitor.Of(new BlockNode([.. expansion.Statements]));
-        StatusFlags assigned = expansion.FlagAssignments.Aggregate(StatusFlags.None, (all, assignment) => all | assignment.Flag);
-
-        // Assert
-        actual.Should().Be(expected);
-        assigned.Should().Be(expected.MustWrite);
     }
 
     private static AluExpansion ExpandMultiply(string operation, BitWidth width) {

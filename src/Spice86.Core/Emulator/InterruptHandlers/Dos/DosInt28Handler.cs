@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -29,7 +30,10 @@ public class DosInt28Handler : InterruptHandler {
     public override byte VectorNumber => 0x28;
 
     /// <inheritdoc />
-    public override void Run() {
+    public override void Run() => Idle();
+
+    [InterruptService]
+    private void Idle() {
         LoggerService.LogTrace("DOS IDLE");
     }
 }

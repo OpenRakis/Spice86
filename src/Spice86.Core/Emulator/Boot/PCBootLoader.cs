@@ -3,6 +3,7 @@ namespace Spice86.Core.Emulator.Boot;
 
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
@@ -24,14 +25,20 @@ public sealed class PCBootLoader {
 
     private readonly IMemory _memory;
     private readonly State _state;
+    private readonly LoadedImageRegistry _loadedImageRegistry;
     private readonly ILogger _loggerService;
 
     /// <summary>
     /// Creates a new boot loader for floppy-based PC boot images.
     /// </summary>
-    public PCBootLoader(IMemory memory, State state, ILogger loggerService) {
+    /// <param name="memory">The memory bus the boot sector is written to.</param>
+    /// <param name="state">The CPU state prepared for the BIOS boot protocol.</param>
+    /// <param name="loadedImageRegistry">Records the loaded boot sector image.</param>
+    /// <param name="loggerService">The logger service to log messages to.</param>
+    public PCBootLoader(IMemory memory, State state, LoadedImageRegistry loadedImageRegistry, ILogger loggerService) {
         _memory = memory;
         _state = state;
+        _loadedImageRegistry = loadedImageRegistry;
         _loggerService = loggerService;
     }
 
@@ -52,6 +59,8 @@ public sealed class PCBootLoader {
         }
 
         _memory.LoadData(BootSectorLoadAddress, imageData, BootSectorSize);
+        _loadedImageRegistry.Register(new LoadedImage(LoadedImageKind.BootSector, imagePathForLogging,
+            0x07C0, BootSectorLoadAddress, BootSectorSize));
         PrepareCpuRegistersForBoot(_state, driveNumber);
         if (_loggerService.IsEnabled(LogLevel.Information)) {
             _loggerService.LogInformation("PCBOOT: loaded {Bytes} bytes from floppy '{Path}' at 0000:7C00, DL={DL:X2}",

@@ -8,6 +8,7 @@ using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Shared.Interfaces;
 
 using System.IO;
+using System.Linq;
 
 /// <summary>
 /// Writes the generated C# override file to the recording directory. Thin adapter between the
@@ -28,27 +29,51 @@ internal sealed class CfgCSharpDumper {
     /// </summary>
     public GeneratedCSharpProgram Generate(CfgPartitionedProgram program, DumpProgressReporter progress) {
         if (program.Partitions.Count == 0) {
-            return new GeneratedCSharpProgram {
-                SourceText = "// No CFG partitions were observed.\n"
-            };
+            return new GeneratedCSharpProgram { Files = [] };
         }
 
         return _generator.Generate(program, progress);
     }
 
     /// <summary>
-    /// Writes <paramref name="generated"/>'s source text to <paramref name="path"/>.
+    /// Writes every file of <paramref name="generated"/> into <paramref name="directory"/>, under the
+    /// file's own name. An empty program writes its single comment text under the overrides file name.
     /// </summary>
     /// <param name="generated">The generated program, from <see cref="Generate"/>.</param>
-    /// <param name="path">The target file path.</param>
-    public void Write(GeneratedCSharpProgram generated, string path) {
-        File.WriteAllText(path, generated.SourceText);
+    /// <param name="directory">The target directory; created if missing.</param>
+    public void Write(GeneratedCSharpProgram generated, string directory) {
+        Directory.CreateDirectory(directory);
+        DeleteStaleGeneratedFiles(directory, generated);
+        if (generated.Files.Count == 0) {
+            File.WriteAllText(Path.Join(directory, GeneratedOverrideNames.DumpFileSuffix), generated.SourceText);
+            return;
+        }
+        foreach (GeneratedSourceFile file in generated.Files) {
+            File.WriteAllText(Path.Join(directory, file.Name), file.Text);
+        }
+    }
+
+    /// <summary>Deletes the generated source files an earlier dump left directly in
+    /// <paramref name="directory"/> that <paramref name="generated"/> does not rewrite: a re-dump
+    /// with another segment set would otherwise leave a partial class that no longer compiles.</summary>
+    private static void DeleteStaleGeneratedFiles(string directory, GeneratedCSharpProgram generated) {
+        HashSet<string> kept = generated.Files.Select(file => file.Name).ToHashSet();
+        foreach (string path in Directory.EnumerateFiles(directory)) {
+            string name = Path.GetFileName(path);
+            bool isGenerated = name == GeneratedOverrideNames.SupplierFileName
+                || (name.StartsWith(GeneratedOverrideNames.OverrideClassName, StringComparison.Ordinal)
+                    && name.EndsWith(".cs", StringComparison.Ordinal));
+            if (isGenerated && !kept.Contains(name)) {
+                File.Delete(path);
+            }
+        }
     }
 
     /// <summary>
     /// Emits a self-contained, runnable project (csproj + Program.cs + <paramref name="generated"/>'s source
     /// text as the overrides file) into <paramref name="projectDirectory"/>. Re-running overwrites the files in
-    /// place. An empty program (no partitions observed) emits nothing, mirroring the <see cref="Generate"/> guard.
+    /// place and removes the generated files of an earlier dump. An empty program (no partitions observed)
+    /// emits nothing, mirroring the <see cref="Generate"/> guard.
     /// </summary>
     /// <param name="program">The partitioned CFG program the overrides were generated for.</param>
     /// <param name="generated">The generated program, from <see cref="Generate"/>.</param>
@@ -63,11 +88,13 @@ internal sealed class CfgCSharpDumper {
 
         string csProjPath = Path.Join(projectDirectory, GeneratedProjectScaffolder.CsProjFileName);
         string programPath = Path.Join(projectDirectory, GeneratedProjectScaffolder.ProgramFileName);
-        string overridesPath = Path.Join(projectDirectory, GeneratedOverrideNames.DumpFileSuffix);
 
         File.WriteAllText(csProjPath, BuildCsProjAndPropsForCurrentInstall(projectDirectory));
         File.WriteAllText(programPath, GeneratedProjectScaffolder.BuildProgramCs(expectedChecksum));
-        File.WriteAllText(overridesPath, generated.SourceText);
+        DeleteStaleGeneratedFiles(projectDirectory, generated);
+        foreach (GeneratedSourceFile file in generated.Files) {
+            File.WriteAllText(Path.Join(projectDirectory, file.Name), file.Text);
+        }
     }
 
     /// <summary>

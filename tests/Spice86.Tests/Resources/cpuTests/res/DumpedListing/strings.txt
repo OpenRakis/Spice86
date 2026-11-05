@@ -56,5 +56,80 @@ F000:C20E jmp near word ptr DS:[DI]
 F000:D000 mov DX,0
 F000:D003 mov DS,DX
 F000:D005 mov word ptr DS:[2],0x1234
-F000:D00B hlt
+F000:D00B jmp near 0xE000
+F000:E000 mov AX,CS
+F000:E002 mov DS,AX
+F000:E004 xor AX,AX
+F000:E006 mov ES,AX
+F000:E008 cld
+F000:E009 mov SI,0xE319
+F000:E00C mov DI,0x0020
+F000:E00F call near 0xE100
+F000:E012 mov word ptr ES:[4],DI
+F000:E017 cld
+F000:E018 mov SI,0xE319
+F000:E01B mov DI,0x0024
+F000:E01E call near 0xE100
+F000:E021 mov word ptr ES:[6],DI
+F000:E026 cld
+F000:E027 mov SI,0xE319
+F000:E02A mov DI,0x0028
+F000:E02D call near 0xE102
+F000:E030 mov word ptr ES:[8],DI
+F000:E035 std
+F000:E036 mov SI,0xE319
+F000:E039 mov DI,0x002C
+F000:E03C call near 0xE102
+F000:E03F mov word ptr ES:[0x000A],DI
+F000:E044 cld
+F000:E045 call near 0xE104
+F000:E048 mov SI,0xE319
+F000:E04B mov DI,0x0030
+F000:E04E movs word ptr ES:[DI],word ptr DS:[SI]
+F000:E04F mov word ptr ES:[0x000C],DI
+F000:E054 mov word ptr ES:[0x0020],0xE300
+F000:E05B mov word ptr ES:[0x0022],CS
+F000:E060 mov byte ptr ES:[0x0300],0
+F000:E066 mov AL,0x36
+F000:E068 out 0x43,AL
+F000:E06A mov AL,0x51
+F000:E06C out 0x40,AL
+F000:E06E mov AL,0x22
+F000:E070 out 0x40,AL
+F000:E072 mov AL,0xFE
+F000:E074 out 0x21,AL
+F000:E076 std
+F000:E077 sti
+F000:E078 cmp byte ptr ES:[0x0300],0
+F000:E07E je short 0xE078
+F000:E080 cli
+F000:E081 mov AL,0xFF
+F000:E083 out 0x21,AL
+F000:E085 mov AX,0xE200
+F000:E088 std
+F000:E089 mov SI,0xE319
+F000:E08C mov DI,0x0038
+F000:E08F jmp near AX
+F000:E100 movs word ptr ES:[DI],word ptr DS:[SI]
+F000:E101 ret near
+F000:E102 movs word ptr ES:[DI],word ptr DS:[SI]
+F000:E103 ret near
+F000:E104 test AL,1
+F000:E106 je short 0xE109
+F000:E108 ret near
+F000:E109 std
+F000:E10A ret near
+F000:E200 movs word ptr ES:[DI],word ptr DS:[SI]
+F000:E201 mov word ptr ES:[0x000E],DI
+F000:E206 hlt
+F000:E300 mov SI,0xE319
+F000:E303 mov DI,0x0044
+F000:E306 movs word ptr ES:[DI],word ptr DS:[SI]
+F000:E307 mov word ptr ES:[0],DI
+F000:E30C mov byte ptr ES:[0x0300],1
+F000:E312 push AX
+F000:E313 mov AL,0x20
+F000:E315 out 0x20,AL
+F000:E317 pop AX
+F000:E318 iret
 F000:FFF0 jmp short 0

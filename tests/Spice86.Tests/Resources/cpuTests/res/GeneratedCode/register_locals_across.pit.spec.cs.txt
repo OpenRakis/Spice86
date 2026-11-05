@@ -1,0 +1,798 @@
+// ==== file: CfgGeneratedOverrideSupplier.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+
+// ==== file: CfgGeneratedOverrides.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort biosSegment;
+
+    private static readonly byte?[] Signature_001E_mov = [0x2E, 0x8B, 0x5C, 0x04];
+    private static readonly byte?[] Signature_00DF_mov = [0x26, 0xA0, 0x41, 0x00];
+    private static readonly byte?[] Signature_01B9_inc = [0x46];
+    private static readonly byte?[] Signature_01BA_hlt = [0xF4];
+    private static readonly byte?[] Signature_01D6_inc = [0x46];
+    private static readonly byte?[] Signature_01D7_hlt = [0xF4];
+
+    private static readonly byte?[][] SpeculativeRun_01B9 = [Signature_01B9_inc, Signature_01BA_hlt];
+    private static readonly byte?[][] SpeculativeRun_01D6 = [Signature_01D6_inc, Signature_01D7_hlt];
+
+    private readonly Func<int, Action> unknown_F000_0196_F0196_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_0197_F0197_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_019A_F019AEntry;
+    private readonly Func<int, Action> unknown_F000_01D8_F01D8_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_01DC_F01DC_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_01E6_F01E6_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_01EA_F01EAEntry;
+    private readonly Func<int, Action> unknown_F000_01F1_F01F1Entry;
+    private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
+
+    protected readonly DsGlobals DsGlobals;
+    protected readonly EsGlobals EsGlobals;
+    protected readonly Segment0000Globals Segment0000Globals;
+    protected readonly Segment2000Globals Segment2000Globals;
+    protected readonly SegmentF000Globals SegmentF000Globals;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        biosSegment = 0xF000;
+        DsGlobals = new DsGlobals(Memory, State.SegmentRegisters);
+        EsGlobals = new EsGlobals(Memory, State.SegmentRegisters);
+        Segment0000Globals = new Segment0000Globals(Memory, programStartSegment);
+        Segment2000Globals = new Segment2000Globals(Memory, programStartSegment);
+        SegmentF000Globals = new SegmentF000Globals(Memory, programStartSegment);
+
+        unknown_F000_0196_F0196_AsmEntry = _ => unknown_F000_0196_F0196_Asm();
+        unknown_F000_0197_F0197_AsmEntry = _ => unknown_F000_0197_F0197_Asm();
+        unknown_F000_019A_F019AEntry = _ => unknown_F000_019A_F019A();
+        unknown_F000_01D8_F01D8_AsmEntry = _ => unknown_F000_01D8_F01D8_Asm();
+        unknown_F000_01DC_F01DC_AsmEntry = _ => unknown_F000_01DC_F01DC_Asm();
+        unknown_F000_01E6_F01E6_AsmEntry = _ => unknown_F000_01E6_F01E6_Asm();
+        unknown_F000_01EA_F01EAEntry = _ => unknown_F000_01EA_F01EA();
+        unknown_F000_01F1_F01F1Entry = _ => unknown_F000_01F1_F01F1();
+        unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0196, unknown_F000_0196_F0196_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0197, unknown_F000_0197_F0197_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x019A, unknown_F000_019A_F019AEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01D8, unknown_F000_01D8_F01D8_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01DC, unknown_F000_01DC_F01DC_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01E6, unknown_F000_01E6_F01E6_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01EA, unknown_F000_01EA_F01EAEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01F1, unknown_F000_01F1_F01F1Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
+    }
+
+}
+
+// ==== file: CfgGeneratedOverrides.F000.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: AX, DX, BP, ES. Outputs: AX, DX, BP, ES. Changes: AX, DX, BP, ES.</summary>
+    public virtual (ushort ax, ushort dx, ushort bp, ushort es) unknown_F000_0196_F0196(ushort ax, ushort dx, ushort bp, ushort es) {
+        AX = ax;
+        DX = dx;
+        BP = bp;
+        ES = es;
+        CheckExternalEvents(biosSegment, 0x0196);
+        // F000:0196 ret near
+        NearReturn();
+        return (AX, DX, BP, ES);
+    }
+
+    public virtual Action unknown_F000_0196_F0196_Asm() {
+        (AX, DX, BP, ES) = unknown_F000_0196_F0196(AX, DX, BP, ES);
+        return Returned;
+    }
+
+    /// <summary>Inputs: AX, DX, BP, ES. Outputs: AX, DX, BP, ES. Changes: AX, DX, BP, ES.</summary>
+    public virtual (ushort ax, ushort dx, ushort bp, ushort es) unknown_F000_0197_F0197(ushort ax, ushort dx, ushort bp, ushort es) {
+        AX = ax;
+        DX = dx;
+        BP = bp;
+        ES = es;
+        CheckExternalEvents(biosSegment, 0x0197);
+        // F000:0197 sti
+        InterruptFlag = true;
+        CheckExternalEvents(biosSegment, 0x0198);
+        // F000:0198 nop
+        // F000:0199 ret near
+        NearReturn();
+        return (AX, DX, BP, ES);
+    }
+
+    public virtual Action unknown_F000_0197_F0197_Asm() {
+        (AX, DX, BP, ES) = unknown_F000_0197_F0197(AX, DX, BP, ES);
+        return Returned;
+    }
+
+    /// <summary>Inputs: AX, SI, DI, ES, DS. Outputs: BX, ES. Changes: EAX, ECX, EDX, BX, EBP, ES, flags.</summary>
+    public virtual Action unknown_F000_019A_F019A() {
+        CheckExternalEvents(biosSegment, 0x019A);
+        // F000:019A cmp AX,0
+        // F000:019D jne short 0x01BB
+        if (AX != 0) {
+            // F000:01BB mov BX,word ptr CS:[SI+2]
+            BX = UInt16[CS, (ushort)(SI + 2)];
+            // F000:01BF mov byte ptr DS:[DI+0x22],2
+            UInt8[DS, (ushort)(DI + 0x22)] = 2;
+            // F000:01C3 mov word ptr DS:[DI+0x24],BX
+            UInt16[DS, (ushort)(DI + 0x24)] = BX;
+            // F000:01C6 mov CX,2
+            CX = 2;
+            while (true) {
+                CheckExternalEvents(biosSegment, 0x01C9);
+                // F000:01C9 cmp CX,9
+                Alu16.Sub(CX, 9);
+                // F000:01CC je short 0x01D6
+                if (CX == 9) {
+                    break;
+                }
+                // F000:01CE cmp CX,1
+                Alu16.Sub(CX, 1);
+                // F000:01D1 je short 0x0209
+                if (CX == 1) {
+                    // F000:0209 ret near
+                    return NearRet();
+                }
+                // F000:01D3 dec CX
+                CX--;
+                // F000:01D4 jmp short 0x01C9
+            }
+            VerifySpeculativeRunOrFail(biosSegment, 0x01D6, SpeculativeRun_01D6);
+            // F000:01D6 inc SI
+            SI = Alu16.Inc(SI);
+            // F000:01D7 hlt
+            return Hlt();
+        }
+        else {
+            // F000:019F mov BX,word ptr CS:[SI]
+            BX = UInt16[CS, SI];
+            // F000:01A2 mov byte ptr DS:[DI+0x22],1
+            UInt8[DS, (ushort)(DI + 0x22)] = 1;
+            // F000:01A6 mov word ptr DS:[DI+0x24],BX
+            UInt16[DS, (ushort)(DI + 0x24)] = BX;
+            // F000:01A9 mov CX,3
+            CX = 3;
+            while (true) {
+                CheckExternalEvents(biosSegment, 0x01AC);
+                // F000:01AC cmp CX,9
+                Alu16.Sub(CX, 9);
+                // F000:01AF je short 0x01B9
+                if (CX == 9) {
+                    break;
+                }
+                // F000:01B1 cmp CX,1
+                Alu16.Sub(CX, 1);
+                // F000:01B4 je short 0x0209
+                if (CX == 1) {
+                    // F000:0209 ret near
+                    return NearRet();
+                }
+                // F000:01B6 dec CX
+                CX--;
+                // F000:01B7 jmp short 0x01AC
+            }
+            VerifySpeculativeRunOrFail(biosSegment, 0x01B9, SpeculativeRun_01B9);
+            // F000:01B9 inc SI
+            SI = Alu16.Inc(SI);
+            // F000:01BA hlt
+            return Hlt();
+        }
+    }
+
+    /// <summary>Inputs: AX, DX, BX, BP, DI, ES, DS. Outputs: AX, DX, BP, ES. Changes: AX, DX, BP, ES.</summary>
+    /// Segment values at entry, from every call site: DS = 0x2000.
+    /// Direction flag at entry, from every call site: clear.
+    public virtual (ushort ax, ushort dx, ushort bp, ushort es) unknown_F000_01D8_F01D8(ushort ax, ushort dx, ushort bx, ushort bp, ushort di, ushort es, ushort ds) {
+        AX = ax;
+        DX = dx;
+        BX = bx;
+        BP = bp;
+        DI = di;
+        ES = es;
+        DS = ds;
+        CheckExternalEvents(biosSegment, 0x01D8);
+        // F000:01D8 mov word ptr DS:[DI+8],BX
+        UInt16[ds, (ushort)(di + 8)] = bx;
+        // F000:01DB ret near
+        NearReturn();
+        return (AX, DX, BP, ES);
+    }
+
+    public virtual Action unknown_F000_01D8_F01D8_Asm() {
+        (AX, DX, BP, ES) = unknown_F000_01D8_F01D8(AX, DX, BX, BP, DI, ES, DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: BX, DI, DS. Outputs: none. Changes: AX, DX, BP, ES.</summary>
+    public virtual void unknown_F000_01DC_F01DC(ushort bx, ushort di, ushort ds) {
+        BX = bx;
+        DI = di;
+        DS = ds;
+        CheckExternalEvents(biosSegment, 0x01DC);
+        // F000:01DC mov word ptr DS:[DI+0x50],BX
+        UInt16[ds, (ushort)(di + 0x50)] = bx;
+        // F000:01DF ret near
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_01DC_F01DC_Asm() {
+        unknown_F000_01DC_F01DC(BX, DI, DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: AX, DX, BP, ES. Outputs: AX, DX, BX, BP, ES. Changes: AX, DX, BX, BP, ES.</summary>
+    public virtual (ushort ax, ushort dx, ushort bx, ushort bp, ushort es) unknown_F000_01E6_F01E6(ushort ax, ushort dx, ushort bp, ushort es) {
+        AX = ax;
+        DX = dx;
+        BP = bp;
+        ES = es;
+        CheckExternalEvents(biosSegment, 0x01E6);
+        // F000:01E6 mov BX,0x7777
+        BX = 0x7777;
+        // F000:01E9 ret near
+        NearReturn();
+        return (AX, DX, BX, BP, ES);
+    }
+
+    public virtual Action unknown_F000_01E6_F01E6_Asm() {
+        (AX, DX, BX, BP, ES) = unknown_F000_01E6_F01E6(AX, DX, BP, ES);
+        return Returned;
+    }
+
+    /// <summary>Inputs: none. Outputs: none. Changes: AX, DX, BP, ES, flags.</summary>
+    /// Segment values at entry, from every call site: DS = 0x2000.
+    /// Direction flag at entry, from every call site: clear.
+    public virtual Action unknown_F000_01EA_F01EA() {
+        ushort bp;
+        unknown_F000_01EA_F01EAFrame frame = new(Memory, State.SegmentRegisters, SP);
+        CheckExternalEvents(biosSegment, 0x01EA);
+        // F000:01EA mov BP,SP
+        bp = SP;
+        // F000:01EC add word ptr SS:[BP],1
+        frame.ReturnIp = Alu16.Add(frame.ReturnIp, 1);
+        // F000:01F0 ret near
+        BP = bp;
+        return NearRet();
+    }
+
+    public readonly struct unknown_F000_01EA_F01EAFrame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
+        private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
+
+        /// <summary>Word at SS:[entry SP + 0x0000].</summary>
+        public ushort ReturnIp { get => _slots.GetWord(0x0000); set => _slots.SetWord(0x0000, value); }
+    }
+
+    /// <summary>Inputs: AX, DS. Outputs: AX, DX, BP, ES, flags, DF. Changes: AX, DX, BP, ES, flags, DF.</summary>
+    public virtual Action unknown_F000_01F1_F01F1() {
+        CheckExternalEvents(biosSegment, 0x01F1);
+        // F000:01F1 mov word ptr DS:[0x0E64],AX
+        DsGlobals.Word0E64 = AX;
+        // F000:01F4 mov AX,0xBEEF
+        AX = 0xBEEF;
+        // F000:01F7 mov DX,0xBEEF
+        DX = 0xBEEF;
+        // F000:01FA mov BP,0x2001
+        BP = 0x2001;
+        // F000:01FD mov ES,BP
+        ES = 0x2001;
+        // F000:01FF mov byte ptr DS:[0x0E60],1
+        DsGlobals.Byte0E60 = 1;
+        // F000:0204 mov AL,0x20
+        AL = 0x20;
+        // F000:0206 out 0x20,AL
+        PicPorts.WritePrimaryCommand(0x20);
+        // F000:0208 iret
+        return InterruptRet();
+    }
+
+    /// <summary>Inputs: ECX, EDX, EBX, EBP, EDI, ES, FS, GS. Does not return.</summary>
+    public virtual Action unknown_F000_FFF0_FFFF0() {
+        ushort bx1 = 0;
+        ushort dx1 = 0;
+        byte al;
+        ushort cx1 = 0;
+        ushort bx;
+        ushort di1 = 0;
+        ushort cx2 = 0;
+        byte flagOperand_0094 = 0;
+        byte flagOperand_0115 = 0;
+        CheckExternalEvents(biosSegment, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        // F000:0000 mov AX,0x2000
+        // F000:0003 mov DS,AX
+        DS = 0x2000;
+        // F000:0005 mov SS,AX
+        SS = 0x2000;
+        // F000:0007 mov SP,0x1000
+        SP = 0x1000;
+        // F000:000A cld
+        DirectionFlag = false;
+        // F000:000B mov DI,0x0040
+        DI = 0x0040;
+        // F000:000E mov SI,0x0218
+        // F000:0011 mov BX,word ptr CS:[SI]
+        BX = SegmentF000Globals.Word0218;
+        // F000:0014 cmp AX,AX
+        // F000:0016 jne short 0x001E
+        // F000:0018 mov BX,word ptr CS:[SI+2]
+        bx1 = SegmentF000Globals.Word021A;
+        // F000:001C jmp short 0x0022
+        // F000:0022 mov word ptr DS:[DI],BX
+        Segment2000Globals.Word0040 = bx1;
+        // F000:0024 xor SI,SI
+        SI = 0;
+        // F000:0026 xor AX,AX
+        AX = 0;
+        do {
+            CheckExternalEvents(biosSegment, 0x0028);
+            // F000:0028 mov CX,word ptr CS:[SI+0x020A]
+            CX = UInt16[CS, (ushort)(SI + 0x020A)];
+            // F000:002D add AX,CX
+            AX += CX;
+            // F000:002F add SI,2
+            SI += 2;
+            // F000:0032 cmp SI,6
+            Alu16.Sub(SI, 6);
+            // F000:0035 jne short 0x0028
+        } while (SI != 6);
+        // F000:0037 mov word ptr DS:[DI+2],AX
+        Segment2000Globals.Word0042 = AX;
+        // F000:003A mov word ptr DS:[DI+4],SI
+        Segment2000Globals.Word0044 = SI;
+        // F000:003D mov SI,0x0218
+        SI = 0x0218;
+        // F000:0040 mov BX,word ptr CS:[SI+8]
+        BX = SegmentF000Globals.Word0220;
+        // F000:0044 call near 0x0196
+        (AX, DX, BP, ES) = NearCall(biosSegment, 0x0047, () => unknown_F000_0196_F0196(AX, DX, BP, ES));
+        // F000:0047 mov word ptr DS:[DI+6],BX
+        UInt16[DS, (ushort)(DI + 6)] = BX;
+        // F000:004A mov BX,word ptr CS:[SI+0x0A]
+        BX = UInt16[CS, (ushort)(SI + 0x0A)];
+        // F000:004E call near 0x01D8
+        (AX, DX, BP, ES) = NearCall(biosSegment, 0x0051, () => unknown_F000_01D8_F01D8(AX, DX, BX, BP, DI, ES, DS));
+        // F000:0051 mov BX,word ptr CS:[SI+0x0C]
+        BX = UInt16[CS, (ushort)(SI + 0x0C)];
+        // F000:0055 call near 0x01E6
+        (AX, DX, BX, BP, ES) = NearCall(biosSegment, 0x0058, () => unknown_F000_01E6_F01E6(AX, DX, BP, ES));
+        // F000:0058 mov word ptr DS:[DI+0x0A],BX
+        UInt16[DS, (ushort)(DI + 0x0A)] = BX;
+        // F000:005B mov BX,word ptr CS:[SI+0x0E]
+        BX = UInt16[CS, (ushort)(SI + 0x0E)];
+        // F000:005F call near 0x01EA
+        if (!NearCallReturnedElsewhere(biosSegment, 0x0062, unknown_F000_01EA_F01EAEntry, [new(biosSegment, 0x0063)])) {
+            throw FailAsUntested("Untested return from call at F000:005F");
+        }
+        if (CS != biosSegment || IP != 0x0063) {
+            throw FailAsUntested("Redirected return target not observed at F000:005F");
+        }
+        // F000:0063 mov word ptr DS:[DI+0x0C],BX
+        UInt16[DS, (ushort)(DI + 0x0C)] = BX;
+        // F000:0066 xor AX,AX
+        AX = 0;
+        // F000:0068 mov ES,AX
+        ES = 0;
+        // F000:006A mov word ptr ES:[0x0020],0x01F1
+        Segment0000Globals.Word0020 = 0x01F1;
+        // F000:0071 mov word ptr ES:[0x0022],CS
+        Segment0000Globals.Word0022 = CS;
+        // F000:0076 mov AX,DS
+        AX = DS;
+        // F000:0078 mov ES,AX
+        ES = AX;
+        // F000:007A mov byte ptr DS:[0x0E60],0
+        DsGlobals.Byte0E60 = 0;
+        // F000:007F mov AL,0x36
+        // F000:0081 out 0x43,AL
+        PitPorts.WriteControlWord(0x36);
+        // F000:0083 mov AL,0x51
+        // F000:0085 out 0x40,AL
+        PitPorts.WriteChannel0Data(0x51);
+        // F000:0087 mov AL,0x22
+        // F000:0089 out 0x40,AL
+        PitPorts.WriteChannel0Data(0x22);
+        // F000:008B xor AL,AL
+        AL = 0;
+        // F000:008D out 0x21,AL
+        PicPorts.WritePrimaryData(0);
+        // F000:008F sti
+        InterruptFlag = true;
+        CheckExternalEvents(biosSegment, 0x0090);
+        // F000:0090 mov AX,word ptr CS:[SI+6]
+        AX = UInt16[CS, (ushort)(SI + 6)];
+        do {
+            CheckExternalEvents(biosSegment, 0x0094);
+            // F000:0094 cmp byte ptr DS:[0x0E60],0
+            flagOperand_0094 = DsGlobals.Byte0E60;
+            Alu8.Sub(flagOperand_0094, 0);
+            // F000:0099 je short 0x0094
+        } while (flagOperand_0094 == 0);
+        // F000:009B cli
+        InterruptFlag = false;
+        // F000:009C mov word ptr DS:[DI+0x0E],AX
+        UInt16[DS, (ushort)(DI + 0x0E)] = AX;
+        // F000:009F mov CX,0xFFFF
+        CX = 0xFFFF;
+        do {
+            CheckExternalEvents(biosSegment, 0x00A2);
+            // F000:00A2 dec CX
+            CX = Alu16.Dec(CX);
+            // F000:00A3 jne short 0x00A2
+        } while (CX != 0);
+        // F000:00A5 mov DX,word ptr CS:[SI+8]
+        DX = UInt16[CS, (ushort)(SI + 8)];
+        // F000:00A9 call near 0x0197
+        (AX, DX, BP, ES) = NearCall(biosSegment, 0x00AC, () => unknown_F000_0197_F0197(AX, DX, BP, ES));
+        // F000:00AC mov word ptr DS:[DI+0x14],DX
+        UInt16[DS, (ushort)(DI + 0x14)] = DX;
+        // F000:00AF cli
+        InterruptFlag = false;
+        // F000:00B0 mov DX,0
+        DX = 0;
+        // F000:00B3 mov BX,0x0040
+        BX = 0x0040;
+        // F000:00B6 call near 0x0196
+        (AX, DX, BP, ES) = NearCall(biosSegment, 0x00B9, () => unknown_F000_0196_F0196(AX, DX, BP, ES));
+        // F000:00B9 mov CX,3
+        CX = 3;
+        do {
+            CheckExternalEvents(biosSegment, 0x00BC);
+            // F000:00BC call near 0x01DC
+            NearCall(biosSegment, 0x00BF, () => unknown_F000_01DC_F01DC(BX, DI, DS));
+            // F000:00BF push BX
+            Stack.Push16(BX);
+            // F000:00C0 pop AX
+            AX = Stack.Pop16();
+            // F000:00C1 add AX,1
+            AX = Alu16.Add(AX, 1);
+            // F000:00C4 mov BX,AX
+            BX = AX;
+            // F000:00C6 dec CX
+            CX = Alu16.Dec(CX);
+            // F000:00C7 jne short 0x00BC
+        } while (CX != 0);
+        // F000:00C9 mov BP,0xF000
+        BP = 0xF000;
+        // F000:00CC mov ES,BP
+        ES = 0xF000;
+        // F000:00CE mov CX,ES
+        CX = ES;
+        // F000:00D0 mov DX,word ptr CS:[SI]
+        dx1 = UInt16[CS, SI];
+        // F000:00D3 cmp DX,1
+        Alu16.Sub(dx1, 1);
+        // F000:00D6 je short 0x00DF
+        if (dx1 == 1) {
+            VerifySpeculativeEntryOrFail(biosSegment, 0x00DF, Signature_00DF_mov);
+            // F000:00DF mov AL,byte ptr ES:[0x0041]
+            AL = SegmentF000Globals.Byte0041;
+        }
+        else {
+            // F000:00D8 mov BP,0xF001
+            BP = 0xF001;
+            // F000:00DB mov ES,BP
+            ES = 0xF001;
+            // F000:00DD jmp short 0x00E3
+        }
+        // F000:00E3 mov AL,byte ptr ES:[0x0042]
+        al = EsGlobals.Byte0042;
+        // F000:00E7 mov byte ptr DS:[DI+0x52],AL
+        UInt8[DS, (ushort)(DI + 0x52)] = al;
+        // F000:00EA mov BX,0x0040
+        BX = 0x0040;
+        // F000:00ED push BX
+        Stack.Push16(0x0040);
+        // F000:00EE pop AX
+        AX = Stack.Pop16();
+        // F000:00EF mov word ptr DS:[DI+0x54],AX
+        UInt16[DS, (ushort)(DI + 0x54)] = AX;
+        // F000:00F2 call near 0x0196
+        DX = dx1;
+        (AX, DX, BP, ES) = NearCall(biosSegment, 0x00F5, () => unknown_F000_0196_F0196(AX, DX, BP, ES));
+        // F000:00F5 call near 0x01E6
+        (AX, DX, BX, BP, ES) = NearCall(biosSegment, 0x00F8, () => unknown_F000_01E6_F01E6(AX, DX, BP, ES));
+        // F000:00F8 push BX
+        // F000:00F9 pop AX
+        AX = BX;
+        // F000:00FA mov BX,AX
+        BX = AX;
+        // F000:00FC push BX
+        Stack.Push16(BX);
+        // F000:00FD pop CX
+        CX = Stack.Pop16();
+        // F000:00FE mov word ptr DS:[DI+0x56],CX
+        UInt16[DS, (ushort)(DI + 0x56)] = CX;
+        // F000:0101 call near 0x0196
+        (AX, DX, BP, ES) = NearCall(biosSegment, 0x0104, () => unknown_F000_0196_F0196(AX, DX, BP, ES));
+        // F000:0104 mov AX,0x0040
+        AX = 0x0040;
+        // F000:0107 push AX
+        Stack.Push16(0x0040);
+        // F000:0108 pop CX
+        cx1 = Stack.Pop16();
+        // F000:0109 mov word ptr DS:[DI+0x5A],CX
+        UInt16[DS, (ushort)(DI + 0x5A)] = cx1;
+        // F000:010C mov word ptr DS:[DI+0x5C],AX
+        UInt16[DS, (ushort)(DI + 0x5C)] = 0x0040;
+        // F000:010F mov byte ptr DS:[0x0E60],0
+        DsGlobals.Byte0E60 = 0;
+        // F000:0114 sti
+        InterruptFlag = true;
+        do {
+            CheckExternalEvents(biosSegment, 0x0115);
+            // F000:0115 cmp byte ptr DS:[0x0E60],0
+            flagOperand_0115 = DsGlobals.Byte0E60;
+            Alu8.Sub(flagOperand_0115, 0);
+            // F000:011A je short 0x0115
+        } while (flagOperand_0115 == 0);
+        // F000:011C cli
+        InterruptFlag = false;
+        // F000:011D push AX
+        // F000:011E pop CX
+        CX = AX;
+        // F000:011F mov AX,CX
+        AX = CX;
+        // F000:0121 push AX
+        Stack.Push16(AX);
+        // F000:0122 pop DX
+        DX = Stack.Pop16();
+        // F000:0123 mov word ptr DS:[DI+0x5E],DX
+        UInt16[DS, (ushort)(DI + 0x5E)] = DX;
+        // F000:0126 call near 0x0196
+        (AX, DX, BP, ES) = NearCall(biosSegment, 0x0129, () => unknown_F000_0196_F0196(AX, DX, BP, ES));
+        // F000:0129 mov DX,0
+        DX = 0;
+        // F000:012C push DX
+        Stack.Push16(0);
+        // F000:012D pop CX
+        CX = Stack.Pop16();
+        // F000:012E add CX,0x0100
+        CX += 0x0100;
+        // F000:0132 mov AX,word ptr CS:[SI+8]
+        AX = UInt16[CS, (ushort)(SI + 8)];
+        // F000:0136 div CX
+        (AX, DX) = Div16(divisor: CX, dividend: (uint)((uint)DX << 16 | (uint)AX));
+        // F000:0138 mov DL,0x55
+        DL = 0x55;
+        // F000:013A push DX
+        // F000:013B pop BX
+        bx = DX;
+        // F000:013C mov DX,BX
+        DX = bx;
+        // F000:013E push DX
+        Stack.Push16(DX);
+        // F000:013F pop BX
+        BX = Stack.Pop16();
+        // F000:0140 add AX,BX
+        AX += BX;
+        // F000:0142 div CX
+        (AX, DX) = Div16(divisor: CX, dividend: (uint)((uint)DX << 16 | (uint)AX));
+        // F000:0144 mov word ptr DS:[DI+0x3C],AX
+        UInt16[DS, (ushort)(DI + 0x3C)] = AX;
+        // F000:0147 mov word ptr DS:[DI+0x3E],DX
+        UInt16[DS, (ushort)(DI + 0x3E)] = DX;
+        // F000:014A mov AX,0x2000
+        // F000:014D mov ES,AX
+        ES = 0x2000;
+        // F000:014F xor AX,AX
+        AX = 0;
+        // F000:0151 xor SI,SI
+        SI = 0;
+        // F000:0153 xor BX,BX
+        BX = 0;
+        while (true) {
+            CheckExternalEvents(biosSegment, 0x0155);
+            // F000:0155 cmp BX,0x000A
+            // F000:0158 jae short 0x016D
+            if (BX >= 0x000A) {
+                break;
+            }
+            // F000:015A add BX,word ptr CS:[SI+0x0210]
+            BX += UInt16[CS, (ushort)(SI + 0x0210)];
+            // F000:015F add SI,2
+            SI += 2;
+            // F000:0162 add AX,BX
+            AX += BX;
+            // F000:0164 test BX,1
+            // F000:0168 jne short 0x0155
+            if ((BX & 1) != 0) {
+                continue;
+            }
+            // F000:016A inc BX
+            BX++;
+            // F000:016B jmp short 0x0155
+        }
+        // F000:016D mov word ptr DS:[DI+0x10],AX
+        UInt16[DS, (ushort)(DI + 0x10)] = AX;
+        // F000:0170 mov word ptr DS:[DI+0x12],BX
+        UInt16[DS, (ushort)(DI + 0x12)] = BX;
+        // F000:0173 mov SI,0x0218
+        SI = 0x0218;
+        // F000:0176 xor AX,AX
+        AX = Alu16.Xor(AX, AX);
+        // F000:0178 call near 0x019A
+        NearCall(biosSegment, 0x017B, unknown_F000_019A_F019AEntry);
+        // F000:017B mov word ptr DS:[DI+0x26],BX
+        UInt16[DS, (ushort)(DI + 0x26)] = BX;
+        // F000:017E add DI,8
+        DI = Alu16.Add(DI, 8);
+        // F000:0181 mov AX,1
+        AX = 1;
+        // F000:0184 call near 0x019A
+        NearCall(biosSegment, 0x0187, unknown_F000_019A_F019AEntry);
+        // F000:0187 mov word ptr DS:[DI+0x26],BX
+        UInt16[DS, (ushort)(DI + 0x26)] = BX;
+        // F000:018A mov AX,0x5555
+        AX = 0x5555;
+        // F000:018D mov DI,0x0058
+        di1 = 0x0058;
+        // F000:0190 mov CX,5
+        // F000:0193 rep stos word ptr ES:[DI],AX
+        for (cx2 = 5; cx2 != 0; cx2--) {
+            UInt16[ES, di1] = AX;
+            di1 += (ushort)(DirectionFlag ? -2 : 2);
+        }
+        // F000:0195 hlt
+        DI = di1;
+        CX = cx2;
+        return Hlt();
+    }
+
+}
+
+// ==== file: DsGlobals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class DsGlobals : MemoryBasedDataStructureWithDsBaseAddress {
+    private readonly IMemory _memory;
+    private readonly SegmentRegisters _segmentRegisters;
+
+    private ushort Segment => _segmentRegisters.UInt16[(uint)SegmentRegisterIndex.DsIndex];
+
+    public DsGlobals(IMemory memory, SegmentRegisters segmentRegisters) : base(memory, segmentRegisters) {
+        _memory = memory;
+        _segmentRegisters = segmentRegisters;
+    }
+
+    /// DS:0x0E60, whatever DS holds at the access.
+    public byte Byte0E60 { get => _memory.UInt8[Segment, 0x0E60]; set => _memory.UInt8[Segment, 0x0E60] = value; }
+
+    /// DS:0x0E64, whatever DS holds at the access.
+    public ushort Word0E64 { get => _memory.UInt16[Segment, 0x0E64]; set => _memory.UInt16[Segment, 0x0E64] = value; }
+}
+
+// ==== file: EsGlobals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class EsGlobals : MemoryBasedDataStructureWithEsBaseAddress {
+    private readonly IMemory _memory;
+    private readonly SegmentRegisters _segmentRegisters;
+
+    private ushort Segment => _segmentRegisters.UInt16[(uint)SegmentRegisterIndex.EsIndex];
+
+    public EsGlobals(IMemory memory, SegmentRegisters segmentRegisters) : base(memory, segmentRegisters) {
+        _memory = memory;
+        _segmentRegisters = segmentRegisters;
+    }
+
+    /// ES:0x0042, whatever ES holds at the access.
+    public byte Byte0042 { get => _memory.UInt8[Segment, 0x0042]; set => _memory.UInt8[Segment, 0x0042] = value; }
+}
+
+// ==== file: Segment0000Globals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class Segment0000Globals : MemoryBasedDataStructure {
+    private readonly IMemory _memory;
+    private readonly ushort Segment;
+
+    public Segment0000Globals(IMemory memory, ushort programStartSegment) : base(memory, 0x0) {
+        _memory = memory;
+        Segment = 0x0000;
+    }
+
+    public ushort Word0020 { get => _memory.UInt16[Segment, 0x0020]; set => _memory.UInt16[Segment, 0x0020] = value; }
+
+    public ushort Word0022 { get => _memory.UInt16[Segment, 0x0022]; set => _memory.UInt16[Segment, 0x0022] = value; }
+}
+
+// ==== file: Segment2000Globals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class Segment2000Globals : MemoryBasedDataStructure {
+    private readonly IMemory _memory;
+    private readonly ushort Segment;
+
+    public Segment2000Globals(IMemory memory, ushort programStartSegment) : base(memory, 0x20000) {
+        _memory = memory;
+        Segment = 0x2000;
+    }
+
+    public ushort Word0040 { get => _memory.UInt16[Segment, 0x0040]; set => _memory.UInt16[Segment, 0x0040] = value; }
+
+    public ushort Word0042 { get => _memory.UInt16[Segment, 0x0042]; set => _memory.UInt16[Segment, 0x0042] = value; }
+
+    public ushort Word0044 { get => _memory.UInt16[Segment, 0x0044]; set => _memory.UInt16[Segment, 0x0044] = value; }
+}
+
+// ==== file: SegmentF000Globals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class SegmentF000Globals : MemoryBasedDataStructure {
+    private readonly IMemory _memory;
+    private readonly ushort Segment;
+
+    public SegmentF000Globals(IMemory memory, ushort programStartSegment) : base(memory, 0xF0000) {
+        _memory = memory;
+        Segment = 0xF000;
+    }
+
+    public byte Byte0041 { get => _memory.UInt8[Segment, 0x0041]; set => _memory.UInt8[Segment, 0x0041] = value; }
+
+    public ushort Word0218 { get => _memory.UInt16[Segment, 0x0218]; set => _memory.UInt16[Segment, 0x0218] = value; }
+
+    public ushort Word021A { get => _memory.UInt16[Segment, 0x021A]; set => _memory.UInt16[Segment, 0x021A] = value; }
+
+    public ushort Word0220 { get => _memory.UInt16[Segment, 0x0220]; set => _memory.UInt16[Segment, 0x0220] = value; }
+}

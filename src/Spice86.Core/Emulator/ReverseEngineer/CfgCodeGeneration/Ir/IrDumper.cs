@@ -3,7 +3,9 @@ namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
+using Spice86.Shared.Emulator.Memory;
 
 using System.Linq;
 using System.Text;
@@ -102,30 +104,30 @@ internal static class IrDumper {
         return builder.Length == 0 ? "-" : builder.ToString();
     }
 
-    private static string Values(IrValues values) {
-        if (values == IrValues.None) {
+    private static string Values(CpuValues values) {
+        if (values == CpuValues.None) {
             return "-";
         }
-        StringBuilder builder = new((values & IrValues.Registers).ToString("X"));
-        if (values.HasFlag(IrValues.Carry)) {
+        StringBuilder builder = new((values & CpuValues.Registers).ToString("X"));
+        if (values.HasFlag(CpuValues.Carry)) {
             builder.Append(",CF");
         }
-        if (values.HasFlag(IrValues.Parity)) {
+        if (values.HasFlag(CpuValues.Parity)) {
             builder.Append(",PF");
         }
-        if (values.HasFlag(IrValues.Auxiliary)) {
+        if (values.HasFlag(CpuValues.Auxiliary)) {
             builder.Append(",AF");
         }
-        if (values.HasFlag(IrValues.Zero)) {
+        if (values.HasFlag(CpuValues.Zero)) {
             builder.Append(",ZF");
         }
-        if (values.HasFlag(IrValues.Sign)) {
+        if (values.HasFlag(CpuValues.Sign)) {
             builder.Append(",SF");
         }
-        if (values.HasFlag(IrValues.Overflow)) {
+        if (values.HasFlag(CpuValues.Overflow)) {
             builder.Append(",OF");
         }
-        if (values.HasFlag(IrValues.Direction)) {
+        if (values.HasFlag(CpuValues.Direction)) {
             builder.Append(",DF");
         }
         return builder.ToString();

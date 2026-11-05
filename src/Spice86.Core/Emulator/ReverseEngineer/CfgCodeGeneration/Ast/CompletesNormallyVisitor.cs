@@ -127,6 +127,8 @@ internal sealed class CompletesNormallyVisitor : ICodeGenerationAstVisitor<bool>
 
     public bool VisitDivisionNode(DivisionNode node) => true;
 
+    public bool VisitMultiplicationNode(MultiplicationNode node) => true;
+
     public bool VisitInstructionNode(InstructionNode node) => Unlowered(node);
 
     public bool VisitMoveIpNextNode(MoveIpNextNode node) => Unlowered(node);
@@ -221,4 +223,6 @@ internal sealed class CompletesNormallyVisitor : ICodeGenerationAstVisitor<bool>
     public bool VisitInterruptReturnNode(InterruptReturnNode node) => false;
     public bool VisitPreTestLoopNode(PreTestLoopNode node) => true;
     public bool VisitLocalDeclarationNode(LocalDeclarationNode node) => true;
+    public bool VisitRegisterLocalNode(RegisterLocalNode node) => true;
+    public bool VisitRegisterWriteBackNode(RegisterWriteBackNode node) => true;
 }

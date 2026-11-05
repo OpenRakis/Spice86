@@ -3,6 +3,7 @@
 using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Shared.Emulator.Memory;
 
@@ -37,6 +38,8 @@ public sealed class TimerInt8Handler : IInterruptHandler {
         return interruptHandlerAddress;
     }
 
+    /// <summary>Runs an <c>int 1Ch</c> a program can hook, so its effects are not bounded.</summary>
+    [InterruptService(Unknown = true)]
     private void IncTickCounterValue() {
         _biosDataArea.TimerCounter++;
         if (_biosDataArea.FloppyMotorCounter > 0) {
@@ -49,4 +52,7 @@ public sealed class TimerInt8Handler : IInterruptHandler {
     }
 
     public byte VectorNumber => 0x8;
+
+    /// <inheritdoc />
+    public IReadOnlySet<byte> ChainedVectorNumbers { get; } = new HashSet<byte> { 0x1C };
 }

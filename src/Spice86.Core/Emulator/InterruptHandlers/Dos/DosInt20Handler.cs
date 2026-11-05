@@ -4,6 +4,7 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
@@ -31,6 +32,7 @@ public class DosInt20Handler : InterruptHandler {
     public override byte VectorNumber => 0x20;
 
     /// <inheritdoc />
+    [InterruptService(Unknown = true)]
     public override void Run() {
         if (LoggerService.IsEnabled(LogLevel.Information)) {
             LoggerService.LogInformation("INT 20h: PROGRAM TERMINATE (legacy CP/M INT20H handler)");

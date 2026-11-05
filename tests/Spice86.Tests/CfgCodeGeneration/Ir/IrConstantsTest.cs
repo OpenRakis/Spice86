@@ -1,6 +1,7 @@
 namespace Spice86.Tests.CfgCodeGeneration.Ir;
 
 using FluentAssertions;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
@@ -13,14 +14,18 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Visitor;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Passes;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Propagation;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Tests.CfgCpu;
 using Spice86.Tests.CfgCpu.Blocks;
+
+using System.Collections.Concurrent;
 
 using Xunit;
 
@@ -55,7 +60,7 @@ public sealed class IrConstantsTest {
         IrBlock block = Block(0);
         block.Statements.Add(AssignAx(instruction, Const(0x1234)));
         block.Statements.Add(IrStatement.Create(
-            new CheckExternalEventsNode(instruction.Address), instruction));
+            new CheckExternalEventsNode(instruction.Address, HardwareInterruptEffectBuilder.Conservative), instruction));
         block.Statements.Add(AssignAx(instruction, AluAdd(Ax(), Const(1))));
         block.Terminator = new IrExit(instruction, ReturnValue());
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
@@ -74,7 +79,9 @@ public sealed class IrConstantsTest {
         IrBlock block = Block(0);
         block.Statements.Add(AssignAx(instruction, Const(0x1234)));
         block.Statements.Add(new IrStatement(new CommentNode("opaque"), instruction,
-            new IrEffects(IrValues.None, IrValues.None, (IrValues)0xFFFFFFFFUL,
+            new IrEffects(CpuValues.None, CpuValues.None,
+                CpuValues.Eax | CpuValues.Ecx | CpuValues.Edx | CpuValues.Ebx | CpuValues.Esp
+                    | CpuValues.Ebp | CpuValues.Esi | CpuValues.Edi,
                 IrTokens.None, IrTokens.None, false, false)));
         block.Statements.Add(AssignAx(instruction, AluAdd(Ax(), Const(1))));
         block.Terminator = new IrExit(instruction, ReturnValue());
@@ -88,7 +95,7 @@ public sealed class IrConstantsTest {
     }
 
     [Fact]
-    public void NonPortCall_ArgumentsAreNotSubstituted() {
+    public void MethodCall_ArgumentsAreSubstituted() {
         // Arrange
         CfgInstruction instruction = Instruction(0);
         IrBlock block = Block(0);
@@ -102,7 +109,7 @@ public sealed class IrConstantsTest {
         RunConstants(method);
 
         // Assert
-        ((MethodCallNode)block.Statements[1].Node).Arguments[0].Should().BeOfType<RegisterNode>();
+        ((MethodCallNode)block.Statements[1].Node).Arguments[0].Should().BeOfType<ConstantNode>();
     }
 
     [Fact]
@@ -243,11 +250,11 @@ public sealed class IrConstantsTest {
         movsb.SuccessorsPerType[InstructionSuccessorType.Normal] = new HashSet<ICfgNode> { nop };
 
         // Act
-        string source = IrTestPrograms.Generate(IrTestPrograms.SingleEntry(head), head, clearArm, setArm, join);
+        GeneratedCSharpProgram program = IrTestPrograms.Generate(IrTestPrograms.SingleEntry(head), head, clearArm, setArm, join);
 
         // Assert
-        IrTestPrograms.AssertCompiles(source);
-        source.Should().Contain("DirectionFlag ? -1 : 1",
+        IrTestPrograms.AssertCompiles(program);
+        program.SourceText.Should().Contain("DirectionFlag ? -1 : 1",
             "the join merges cld and std so the direction varies");
     }
 
@@ -336,7 +343,7 @@ public sealed class IrConstantsTest {
             new BinaryOperationNode(DataType.BOOL, new CpuFlagNode(Flags.Direction),
                 BinaryOperation.ASSIGN, new ConstantNode(DataType.BOOL, 1)), instruction));
         block.Statements.Add(IrStatement.Create(
-            new CheckExternalEventsNode(instruction.Address), instruction));
+            new CheckExternalEventsNode(instruction.Address, HardwareInterruptEffectBuilder.Conservative), instruction));
         block.Statements.Add(AssignAx(instruction, DirectionStep16()));
         block.Terminator = new IrExit(instruction, ReturnValue());
         IrMethod method = Method([Entry(instruction, block)], [instruction], block);
@@ -403,6 +410,48 @@ public sealed class IrConstantsTest {
         value.Should().Be(3);
     }
 
+    [Fact]
+    public void ConcurrentAluFlagEvaluationsStayIsolated() {
+        // Two constant adds whose six-flag results differ: 0 + 0 gives Parity and Zero,
+        // 0x8000 + 0x8000 gives Carry, Parity, Zero and Overflow. With one shared scratch state a
+        // concurrent evaluation's flag writes leak between the two runs of the other; each
+        // evaluation must be isolated. Value-only evaluations interleave to cover that path too.
+        const int iterations = 4096;
+        ConcurrentBag<string> failures = [];
+        Parallel.For(0, iterations, i => {
+            bool big = (i & 1) == 1;
+            ushort operand = big ? (ushort)0x8000 : (ushort)0;
+            AluOperationNode operation = AluAdd(Const(operand), Const(operand));
+            if (!ConstantEvaluation.TryEvaluateAluFlags(operation.Call, _ => null, null,
+                    out ulong value, out List<(StatusFlags Flag, bool Set)> flags)) {
+                failures.Add($"iteration {i}: the flag evaluation was refused");
+                return;
+            }
+            if (flags.Count != IrValueSets.StatusFlagRows.Length) {
+                failures.Add($"iteration {i}: {flags.Count} flags returned, "
+                    + $"expected {IrValueSets.StatusFlagRows.Length}");
+                return;
+            }
+            if (!ConstantEvaluation.TryEvaluate(operation, _ => null, out ulong valueOnly)
+                || valueOnly != 0) {
+                failures.Add($"iteration {i}: the value-only evaluation failed, "
+                    + $"value={valueOnly:X4}");
+                return;
+            }
+            StatusFlags expected = StatusFlags.Parity | StatusFlags.Zero;
+            if (big) {
+                expected |= StatusFlags.Carry | StatusFlags.Overflow;
+            }
+            StatusFlags actual = flags.Where(flag => flag.Set)
+                .Aggregate((StatusFlags)0, (mask, flag) => mask | flag.Flag);
+            if (value != 0 || actual != expected) {
+                failures.Add($"iteration {i}: value={value:X4}, flags={actual}, "
+                    + $"expected={expected}");
+            }
+        });
+        failures.Should().BeEmpty();
+    }
+
     private static ConditionalValueNode DirectionStep16() =>
         AstBuilder.DirectionStep(BitWidth.WORD_16);
 
@@ -427,8 +476,8 @@ public sealed class IrConstantsTest {
             BinaryOperation.ASSIGN, value), origin);
 
     private static AluOperationNode AluAdd(ValueNode left, ValueNode right) =>
-        new(new MethodCallValueNode(DataType.UINT16, "Alu16", "Add", left, right),
-            FlagEffect.None, AluOperation.Add, BitWidth.WORD_16);
+        new(new AluCallValueNode(DataType.UINT16, AluOperation.Add, BitWidth.WORD_16, left, right),
+            FlagEffect.None);
 
     private static RegisterNode Ax() => new(DataType.UINT16, (int)RegisterIndex.AxIndex);
 

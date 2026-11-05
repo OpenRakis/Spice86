@@ -33,7 +33,8 @@ public sealed class GeneratedCodeCoverageReportTest {
         // Arrange
         using TempFile folder = new("coverage");
         string exportFolder = folder.CreateDirectory("hash");
-        string generatedFile = Path.Join(exportFolder, GeneratedCodeCoverageReport.GeneratedFileName);
+        string generatedFile = Path.Join(
+            CreateGeneratedDirectory(exportFolder), "CfgGeneratedOverrides.cs");
         File.WriteAllText(generatedFile, "// No CFG partitions were observed.\n");
 
         // Act
@@ -53,9 +54,9 @@ public sealed class GeneratedCodeCoverageReportTest {
         // Arrange
         using TempFile folder = new("coverage");
         string exportFolder = folder.CreateDirectory("hash");
-        string generatedFile = Path.Join(exportFolder, GeneratedCodeCoverageReport.GeneratedFileName);
+        string generatedDirectory = CreateGeneratedDirectory(exportFolder);
         string source = File.ReadAllText(Path.Join("Resources", "cpuTests", "res", "GeneratedCode", "add.spec.cs.txt"));
-        File.WriteAllText(generatedFile, source);
+        WriteGoldenFiles(generatedDirectory, source);
 
         // Act
         string row = GeneratedCodeCoverageReport.BuildRow("fact", "/x/prog.com", folder.Path);
@@ -74,7 +75,8 @@ public sealed class GeneratedCodeCoverageReportTest {
         // Arrange
         using TempFile folder = new("coverage");
         string exportFolder = folder.CreateDirectory("hash");
-        string generatedFile = Path.Join(exportFolder, GeneratedCodeCoverageReport.GeneratedFileName);
+        string generatedFile = Path.Join(
+            CreateGeneratedDirectory(exportFolder), "CfgGeneratedOverrides.cs");
         File.WriteAllText(generatedFile, "public class Broken {");
 
         // Act
@@ -84,5 +86,37 @@ public sealed class GeneratedCodeCoverageReportTest {
         string[] columns = row.Split('\t');
         columns[2].Should().Be("compile-error");
         columns[3].Should().Contain("CS1513");
+    }
+
+    private static string CreateGeneratedDirectory(string exportFolder) =>
+        Directory.CreateDirectory(Path.Join(exportFolder, GeneratedCodeCoverageReport.GeneratedDirectoryName)).FullName;
+
+    /// <summary>Writes the files of a golden text (each section behind its
+    /// <c>// ==== file: &lt;name&gt; ====</c> marker) into <paramref name="directory"/>.</summary>
+    private static void WriteGoldenFiles(string directory, string goldenText) {
+        string[] lines = goldenText.Split('\n');
+        string? name = null;
+        List<string> content = [];
+        void Flush() {
+            if (name is null) {
+                return;
+            }
+            File.WriteAllText(Path.Join(directory, name), string.Join('\n', content));
+            content.Clear();
+        }
+        foreach (string line in lines) {
+            const string marker = "// ==== file: ";
+            if (line.StartsWith(marker, StringComparison.Ordinal)) {
+                Flush();
+                name = line[marker.Length..].TrimEnd().TrimEnd('=').TrimEnd();
+            } else if (name is not null) {
+                content.Add(line);
+            }
+        }
+        if (name is null) {
+            File.WriteAllText(Path.Join(directory, "CfgGeneratedOverrides.cs"), goldenText);
+            return;
+        }
+        Flush();
     }
 }

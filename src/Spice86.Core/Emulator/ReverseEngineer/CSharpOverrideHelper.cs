@@ -5,13 +5,22 @@ using Microsoft.Extensions.Logging;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Devices.Cmos;
+using Spice86.Core.Emulator.Devices.DirectMemoryAccess;
 using Spice86.Core.Emulator.Devices.ExternalInput;
+using Spice86.Core.Emulator.Devices.Input.Joystick;
+using Spice86.Core.Emulator.Devices.Input.Keyboard;
+using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.Devices.Sound.Blaster;
+using Spice86.Core.Emulator.Devices.Sound.Midi;
 using Spice86.Core.Emulator.Devices.Timer;
+using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Indexer;
 using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.ReverseEngineer.InterruptServices;
 using Spice86.Core.Emulator.StateSerialization;
 using Spice86.Core.Emulator.VM;
 using Spice86.Core.Emulator.VM.Breakpoint;
@@ -106,6 +115,37 @@ public class CSharpOverrideHelper {
     /// Gets the signed 32-bit indexer of the memory bus.
     /// </summary>
     public Int32Indexer Int32 => Memory.Int32;
+
+    /// <summary>
+    /// Gets the SS-relative 8-bit indexer of the memory bus: stack accesses, so a segment-limit
+    /// fault raises #SS like the CPU's own SS-relative access.
+    /// </summary>
+    public SsIndexer<byte> SsUInt8 { get; }
+
+    /// <summary>
+    /// Gets the SS-relative 16-bit indexer of the memory bus, a stack access.
+    /// </summary>
+    public SsIndexer<ushort> SsUInt16 { get; }
+
+    /// <summary>
+    /// Gets the SS-relative 32-bit indexer of the memory bus, a stack access.
+    /// </summary>
+    public SsIndexer<uint> SsUInt32 { get; }
+
+    /// <summary>
+    /// Gets the SS-relative signed 8-bit indexer of the memory bus, a stack access.
+    /// </summary>
+    public SsIndexer<sbyte> SsInt8 { get; }
+
+    /// <summary>
+    /// Gets the SS-relative signed 16-bit indexer of the memory bus, a stack access.
+    /// </summary>
+    public SsIndexer<short> SsInt16 { get; }
+
+    /// <summary>
+    /// Gets the SS-relative signed 32-bit indexer of the memory bus, a stack access.
+    /// </summary>
+    public SsIndexer<int> SsInt32 { get; }
 
     /// <summary>
     /// Gets the 16-bit segmented address indexer of the memory bus.
@@ -380,6 +420,71 @@ public class CSharpOverrideHelper {
     public ReturnOperationsHelper ReturnOperationsHelper { get; }
 
     /// <summary>
+    /// Typed wrappers for the VGA I/O ports.
+    /// </summary>
+    protected VgaPorts VgaPorts { get; }
+
+    /// <summary>
+    /// Typed wrappers for the programmable interval timer I/O ports.
+    /// </summary>
+    protected PitPorts PitPorts { get; }
+
+    /// <summary>
+    /// Typed wrappers for the interrupt controller I/O ports.
+    /// </summary>
+    protected PicPorts PicPorts { get; }
+
+    /// <summary>
+    /// Typed wrappers for the DMA controller I/O ports.
+    /// </summary>
+    protected DmaPorts DmaPorts { get; }
+
+    /// <summary>
+    /// Typed wrappers for the keyboard controller I/O ports.
+    /// </summary>
+    protected KeyboardControllerPorts KeyboardControllerPorts { get; }
+
+    /// <summary>
+    /// Typed wrappers for the CMOS/RTC I/O ports.
+    /// </summary>
+    protected RealTimeClockPorts RealTimeClockPorts { get; }
+
+    /// <summary>
+    /// Typed wrappers for the PC speaker PPI port.
+    /// </summary>
+    protected PcSpeakerPorts PcSpeakerPorts { get; }
+
+    /// <summary>
+    /// Typed wrappers for the Sound Blaster I/O ports.
+    /// </summary>
+    protected SoundBlasterPorts SoundBlasterPorts { get; }
+
+    /// <summary>
+    /// Typed wrappers for the OPL I/O ports.
+    /// </summary>
+    protected Opl3Ports Opl3Ports { get; }
+
+    /// <summary>
+    /// Typed wrappers for the MIDI I/O ports.
+    /// </summary>
+    protected MidiPorts MidiPorts { get; }
+
+    /// <summary>
+    /// Typed wrappers for the Gravis Ultrasound I/O ports.
+    /// </summary>
+    protected GravisUltrasoundPorts GravisUltrasoundPorts { get; }
+
+    /// <summary>
+    /// Typed wrappers for the joystick game port.
+    /// </summary>
+    protected JoystickPorts JoystickPorts { get; }
+
+    /// <summary>
+    /// Typed wrappers for the floppy disk controller I/O ports.
+    /// </summary>
+    protected FloppyControllerPorts FloppyControllerPorts { get; }
+
+    /// <summary>
     /// Initializes a new instance.
     /// </summary>
     /// <param name="functionInformations">The dictionary of functions information. Each one can define an optional C# code override of the machine code.</param>
@@ -400,11 +505,102 @@ public class CSharpOverrideHelper {
         Machine = machine;
         _interruptVectorTable = machine.InterruptVectorTable;
         JumpDispatcher = new();
+        SsUInt8 = new(Memory.UInt8, machine.CpuState.SegmentRegisters);
+        SsUInt16 = new(Memory.UInt16, machine.CpuState.SegmentRegisters);
+        SsUInt32 = new(Memory.UInt32, machine.CpuState.SegmentRegisters);
+        SsInt8 = new(Memory.Int8, machine.CpuState.SegmentRegisters);
+        SsInt16 = new(Memory.Int16, machine.CpuState.SegmentRegisters);
+        SsInt32 = new(Memory.Int32, machine.CpuState.SegmentRegisters);
         Alu8 = new(machine.CpuState);
         Alu16 = new(machine.CpuState);
         Alu32 = new(machine.CpuState);
         ReturnOperationsHelper = new(State, Stack);
+        VgaPorts = new(machine.IoPortDispatcher);
+        PitPorts = new(machine.IoPortDispatcher);
+        PicPorts = new(machine.IoPortDispatcher);
+        DmaPorts = new(machine.IoPortDispatcher);
+        KeyboardControllerPorts = new(machine.IoPortDispatcher);
+        RealTimeClockPorts = new(machine.IoPortDispatcher);
+        PcSpeakerPorts = new(machine.IoPortDispatcher);
+        SoundBlasterPorts = new(machine.IoPortDispatcher);
+        Opl3Ports = new(machine.IoPortDispatcher);
+        MidiPorts = new(machine.IoPortDispatcher);
+        GravisUltrasoundPorts = new(machine.IoPortDispatcher);
+        JoystickPorts = new(machine.IoPortDispatcher);
+        FloppyControllerPorts = new(machine.IoPortDispatcher);
+        Video = new VideoServices(this);
+        Equipment = new EquipmentServices(this);
+        MemorySize = new MemorySizeServices(this);
+        Disk = new DiskServices(this);
+        Serial = new SerialServices(this);
+        SystemBios = new SystemBiosServices(this);
+        Keyboard = new KeyboardServices(this);
+        Printer = new PrinterServices(this);
+        Clock = new ClockServices(this);
+        UserTimer = new UserTimerServices(this);
+        Dos = new DosServices(this);
+        CriticalError = new CriticalErrorServices(this);
+        DosIdle = new DosIdleServices(this);
+        DosNetwork = new DosNetworkServices(this);
+        DosMultiplex = new DosMultiplexServices(this);
+        Mouse = new MouseServices(this);
+        Ems = new EmsServices(this);
+        Rtc = new RtcServices(this);
     }
+
+    /// <summary>Typed helpers for the INT 10h video services.</summary>
+    public VideoServices Video { get; }
+
+    /// <summary>Typed helpers for the INT 11h equipment list service.</summary>
+    public EquipmentServices Equipment { get; }
+
+    /// <summary>Typed helpers for the INT 12h conventional memory size service.</summary>
+    public MemorySizeServices MemorySize { get; }
+
+    /// <summary>Typed helpers for the INT 13h disk services.</summary>
+    public DiskServices Disk { get; }
+
+    /// <summary>Typed helpers for the INT 14h serial port services.</summary>
+    public SerialServices Serial { get; }
+
+    /// <summary>Typed helpers for the INT 15h system BIOS services.</summary>
+    public SystemBiosServices SystemBios { get; }
+
+    /// <summary>Typed helpers for the INT 16h keyboard services.</summary>
+    public KeyboardServices Keyboard { get; }
+
+    /// <summary>Typed helpers for the INT 17h printer services.</summary>
+    public PrinterServices Printer { get; }
+
+    /// <summary>Typed helpers for the INT 1Ah clock services.</summary>
+    public ClockServices Clock { get; }
+
+    /// <summary>Typed helpers for the INT 1Ch user timer tick.</summary>
+    public UserTimerServices UserTimer { get; }
+
+    /// <summary>Typed helpers for the INT 21h DOS services.</summary>
+    public DosServices Dos { get; }
+
+    /// <summary>Typed helpers for the INT 24h critical error handler.</summary>
+    public CriticalErrorServices CriticalError { get; }
+
+    /// <summary>Typed helpers for the INT 28h DOS idle service.</summary>
+    public DosIdleServices DosIdle { get; }
+
+    /// <summary>Typed helpers for the INT 2Ah DOS network services.</summary>
+    public DosNetworkServices DosNetwork { get; }
+
+    /// <summary>Typed helpers for the INT 2Fh DOS multiplex services.</summary>
+    public DosMultiplexServices DosMultiplex { get; }
+
+    /// <summary>Typed helpers for the INT 33h mouse services.</summary>
+    public MouseServices Mouse { get; }
+
+    /// <summary>Typed helpers for the INT 67h expanded memory services.</summary>
+    public EmsServices Ems { get; }
+
+    /// <summary>Typed helpers for the INT 70h real-time clock interrupt.</summary>
+    public RtcServices Rtc { get; }
 
     /// <summary>
     /// Registers a function at the specified segmented address. <br/>
@@ -711,6 +907,150 @@ public class CSharpOverrideHelper {
     }
 
     /// <summary>
+    /// Performs a typed near call: pushes <paramref name="expectedReturnIp"/> on the stack exactly like
+    /// <see cref="NearCall(ushort, ushort, Func{int, Action})"/>, runs the typed callee and then requires
+    /// CS:IP to be the expected return address.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="typedCall">The typed callee. It ends with <see cref="NearReturn"/> or
+    /// <see cref="FarReturn"/>, which pops the pushed return address, then returns its value.</param>
+    /// <typeparam name="T">The return type of the typed callee.</typeparam>
+    /// <returns>The value the typed callee returned.</returns>
+    /// <remarks>
+    /// No dispatcher identity is taken and no override chain runs: typed calls are only emitted for callees
+    /// without a cyclic jump that always return to their caller, and every call helper inside a typed callee
+    /// opens its own dispatcher scope. A <see cref="CallStackUnwindException"/> is not caught: a typed
+    /// callee that returns to a different address than pushed unwinds to the outer call expecting it.
+    /// Typed callees are eligible only when their return exits provably leave SP at its entry delta
+    /// and never write their own return frame, so the unwind is a safety net for the cases that
+    /// defeat those static checks at run time (for example an aliasing write through another
+    /// segment), not the normal path.
+    /// </remarks>
+    /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
+    public T NearCall<T>(ushort expectedReturnCs, ushort expectedReturnIp, Func<T> typedCall) {
+        return ExecuteTypedCall(expectedReturnCs, expectedReturnIp, expectedReturnCs, false, typedCall);
+    }
+
+    /// <summary>
+    /// Performs a typed near call of a callee that returns no value: same stack contract as
+    /// <see cref="NearCall{T}(ushort, ushort, Func{T})"/>.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="typedCall">The typed callee, ending with <see cref="NearReturn"/> or <see cref="FarReturn"/>.</param>
+    /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
+    public void NearCall(ushort expectedReturnCs, ushort expectedReturnIp, Action typedCall) {
+        ExecuteTypedCall(expectedReturnCs, expectedReturnIp, expectedReturnCs, false, typedCall);
+    }
+
+    /// <summary>
+    /// Performs a typed far call: pushes <paramref name="expectedReturnCs"/> then
+    /// <paramref name="expectedReturnIp"/> on the stack exactly like
+    /// <see cref="FarCall(ushort, ushort, ushort, Func{int, Action})"/>, sets CS to
+    /// <paramref name="targetCs"/>, runs the typed callee and then requires CS:IP to be the expected return
+    /// address.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="targetCs">The CS value of the callee, executed in for the duration of the call.</param>
+    /// <param name="typedCall">The typed callee, ending with <see cref="NearReturn"/> or <see cref="FarReturn"/>.</param>
+    /// <typeparam name="T">The return type of the typed callee.</typeparam>
+    /// <returns>The value the typed callee returned.</returns>
+    /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
+    public T FarCall<T>(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Func<T> typedCall) {
+        return ExecuteTypedCall(expectedReturnCs, expectedReturnIp, targetCs, true, typedCall);
+    }
+
+    /// <summary>
+    /// Performs a typed far call of a callee that returns no value: same stack contract as
+    /// <see cref="FarCall{T}(ushort, ushort, ushort, Func{T})"/>.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the call.</param>
+    /// <param name="targetCs">The CS value of the callee, executed in for the duration of the call.</param>
+    /// <param name="typedCall">The typed callee, ending with <see cref="NearReturn"/> or <see cref="FarReturn"/>.</param>
+    /// <exception cref="UnrecoverableException">The typed callee did not return to the expected return address.</exception>
+    public void FarCall(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, Action typedCall) {
+        ExecuteTypedCall(expectedReturnCs, expectedReturnIp, targetCs, true, typedCall);
+    }
+
+    /// <summary>
+    /// Pops the stacked near return address (IP) immediately, with the same operand bytes as a
+    /// <c>ret n</c>: the return of a typed callee, which has no <see cref="Action"/> to return.
+    /// </summary>
+    /// <param name="numberOfBytesToPop">Bytes to pop after the return address (0 for a plain <c>ret</c>).</param>
+    public void NearReturn(ushort numberOfBytesToPop) => ReturnOperationsHelper.NearRet16(numberOfBytesToPop);
+
+    /// <summary>
+    /// Pops the stacked near return address (IP) immediately, the plain <c>ret</c> of a typed callee that
+    /// pops no parameter bytes.
+    /// </summary>
+    public void NearReturn() => NearReturn(0);
+
+    /// <summary>
+    /// Pops the stacked far return address (CS:IP) immediately, with the same operand bytes as a
+    /// <c>retf n</c>: the return of a typed callee, which has no <see cref="Action"/> to return.
+    /// </summary>
+    /// <param name="numberOfBytesToPop">Bytes to pop after the return address (0 for a plain <c>retf</c>).</param>
+    public void FarReturn(ushort numberOfBytesToPop) => ReturnOperationsHelper.FarRet16(numberOfBytesToPop);
+
+    /// <summary>
+    /// Pops the stacked far return address (CS:IP) immediately, the plain <c>retf</c> of a typed callee
+    /// that pops no parameter bytes.
+    /// </summary>
+    public void FarReturn() => FarReturn(0);
+
+    /// <summary>
+    /// The no-op <see cref="Action"/> an entry wrapper returns after its typed method already performed
+    /// the return (<see cref="NearReturn"/> / <see cref="FarReturn"/> popped the stacked return address and
+    /// set CS:IP). Returning it is exact: the wrapper adds no frame and the action does nothing.
+    /// </summary>
+    public static Action Returned { get; } = () => { };
+
+    /// <summary>
+    /// Runs a typed call dispatch: pushes the return frame the untyped helpers push, then requires the
+    /// callee to have returned to the expected return address with the stack at or above the level it had
+    /// before the pushes.
+    /// </summary>
+    private T ExecuteTypedCall<T>(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs,
+        bool isFar, Func<T> typedCall) {
+        uint expectedStackAddress = PrepareTypedCall(expectedReturnCs, expectedReturnIp, targetCs, isFar);
+        T result = typedCall.Invoke();
+        CheckTypedCallReturn(expectedReturnCs, expectedReturnIp, expectedStackAddress);
+        return result;
+    }
+
+    private void ExecuteTypedCall(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs,
+        bool isFar, Action typedCall) {
+        uint expectedStackAddress = PrepareTypedCall(expectedReturnCs, expectedReturnIp, targetCs, isFar);
+        typedCall.Invoke();
+        CheckTypedCallReturn(expectedReturnCs, expectedReturnIp, expectedStackAddress);
+    }
+
+    private uint PrepareTypedCall(ushort expectedReturnCs, ushort expectedReturnIp, ushort targetCs, bool isFar) {
+        uint expectedStackAddress = State.StackPhysicalAddress;
+        if (isFar) {
+            Stack.Push16(expectedReturnCs);
+        }
+        Stack.Push16(expectedReturnIp);
+        State.CS = targetCs;
+        State.IP = expectedReturnIp;
+        return expectedStackAddress;
+    }
+
+    private void CheckTypedCallReturn(ushort expectedReturnCs, ushort expectedReturnIp, uint expectedStackAddress) {
+        if (State.StackPhysicalAddress < expectedStackAddress) {
+            throw FailAsUntested($"Typed call consumed the stack down to {State.StackPhysicalAddress:X5}, below {expectedStackAddress:X5}");
+        }
+        if (State.CS != expectedReturnCs || State.IP != expectedReturnIp) {
+            SegmentedAddress actual = new(State.CS, State.IP);
+            throw new CallStackUnwindException(actual,
+                $"Typed call returned to {actual} instead of {expectedReturnCs:X4}:{expectedReturnIp:X4}");
+        }
+    }
+
+    /// <summary>
     /// Call the given callback number
     /// </summary>
     /// <param name="callbackNumber">The callback identifier.</param>
@@ -813,6 +1153,59 @@ public class CSharpOverrideHelper {
     /// <exception cref="UnrecoverableException">If the interrupt vector number is not recognized.</exception>
     public void InterruptCall(ushort expectedReturnCs, ushort expectedReturnIp, byte vectorNumber) {
         InterruptCallReturnedElsewhere(expectedReturnCs, expectedReturnIp, vectorNumber, NoRedirectedReturns);
+    }
+
+    /// <summary>
+    /// Checks that the interrupt vector <paramref name="vectorNumber"/> still points to the stub of
+    /// the interrupt service the emulator installed at startup. A program that hooked the vector
+    /// points it elsewhere, and calling the built-in service implementation would be wrong.
+    /// </summary>
+    /// <param name="vectorNumber">The interrupt vector number to check.</param>
+    /// <exception cref="UnrecoverableException">The vector does not point to the installed stub.</exception>
+    public void CheckInterruptServiceVector(byte vectorNumber) {
+        SegmentedAddress current = Machine.InterruptVectorTable[vectorNumber];
+        if (!Machine.InstalledInterruptHandlers.TryGetInstalledAddress(vectorNumber, out SegmentedAddress installed)
+            || installed != current) {
+            throw FailAsUntested(
+                $"Interrupt vector 0x{vectorNumber:X2} no longer points to the built-in handler at {installed}: it points to {current}");
+        }
+    }
+
+    /// <summary>
+    /// Performs an interrupt call after checking the vector still points to the built-in handler's
+    /// stub. Used by the typed service helpers before writing their parameters into the registers.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the interrupt call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the interrupt call.</param>
+    /// <param name="vectorNumber">The vector number to call for the interrupt.</param>
+    /// <exception cref="UnrecoverableException">The vector was hooked, or the interrupt vector number is not recognized.</exception>
+    public void InterruptServiceCall(ushort expectedReturnCs, ushort expectedReturnIp, byte vectorNumber) {
+        CheckInterruptServiceVector(vectorNumber);
+        InterruptCall(expectedReturnCs, expectedReturnIp, vectorNumber);
+    }
+
+    /// <summary>
+    /// Performs an interrupt call to a handler of the generated program itself. The generated code
+    /// calls <paramref name="handler"/> directly because the observed vector target was the handler;
+    /// when the vector no longer points to <paramref name="handlerCs"/>:<paramref name="handlerIp"/>
+    /// the call cannot deliver that handler and fails as untested. Otherwise the same
+    /// pushed-FLAGS / cleared-IF / pushed-return-address frame as
+    /// <see cref="InterruptCall(ushort, ushort, byte)"/> applies.
+    /// </summary>
+    /// <param name="expectedReturnCs">The expected value of the CS register after the interrupt call.</param>
+    /// <param name="expectedReturnIp">The expected value of the IP register after the interrupt call.</param>
+    /// <param name="vectorNumber">The vector number to call for the interrupt.</param>
+    /// <param name="handlerCs">The CS of the handler entry the vector must point to.</param>
+    /// <param name="handlerIp">The IP of the handler entry the vector must point to.</param>
+    /// <param name="handler">The generated method of the handler, executed as part of the interrupt call.</param>
+    /// <exception cref="UnrecoverableException">If the interrupt vector no longer points to the handler.</exception>
+    public void InterruptCall(ushort expectedReturnCs, ushort expectedReturnIp, byte vectorNumber,
+        ushort handlerCs, ushort handlerIp, Func<int, Action> handler) {
+        SegmentedAddress target = Machine.InterruptVectorTable[vectorNumber];
+        if (target.Segment != handlerCs || target.Offset != handlerIp) {
+            throw FailAsUntested($"Interrupt vector 0x{vectorNumber:X2} points to {target}, not to the handler {handlerCs:X4}:{handlerIp:X4} the generated code calls");
+        }
+        ExecuteInterruptCall(expectedReturnCs, expectedReturnIp, handlerCs, handler, NoRedirectedReturns);
     }
 
     /// <summary>
@@ -971,7 +1364,7 @@ public class CSharpOverrideHelper {
             MemoryUtils.ToPhysicalAddress(
                 segment,
                 offset),
-            _ => renamedOverride.Invoke().Invoke()
+            (_, _) => renamedOverride.Invoke().Invoke()
             , false);
         EmulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
     }
@@ -988,7 +1381,7 @@ public class CSharpOverrideHelper {
             MemoryUtils.ToPhysicalAddress(
                 segment,
                 offset),
-            _ => action.Invoke()
+            (_, _) => action.Invoke()
             , false);
         EmulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
     }
@@ -1003,7 +1396,7 @@ public class CSharpOverrideHelper {
         AddressBreakPoint breakPoint = new(
             BreakPointType.MEMORY_WRITE,
             MemoryUtils.ToPhysicalAddress(segment, offset),
-            _ => action.Invoke()
+            (_, _) => action.Invoke()
             , false);
         EmulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
     }
@@ -1018,7 +1411,7 @@ public class CSharpOverrideHelper {
         AddressBreakPoint breakPoint = new(
             BreakPointType.MEMORY_READ,
             MemoryUtils.ToPhysicalAddress(segment, offset),
-            _ => action.Invoke()
+            (_, _) => action.Invoke()
             , false);
         EmulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
     }
@@ -1095,6 +1488,26 @@ public class CSharpOverrideHelper {
         IList<byte> bytes = Memory.GetSlice((int)linearAddress, runSignature.Length);
         if (!new Signature(ImmutableList.CreateRange(runSignature)).ListEquivalent(bytes)) {
             throw FailAsUntested($"Speculative code at {segment:X4}:{offset:X4} no longer matches memory");
+        }
+    }
+
+    /// <summary>
+    /// Verifies the signatures of a straight-line run of speculative instructions, checked in memory
+    /// order before the first instruction of the run executes. The generator emits this instead of one
+    /// <see cref="VerifySpeculativeEntryOrFail"/> per instruction when it proves nothing between the run
+    /// entry and a later instruction can change the run's bytes or leave the run. The failure message
+    /// names the first instruction whose bytes differ, so a mid-run mutation is reported at the
+    /// instruction that actually changed.
+    /// </summary>
+    /// <param name="segment">The segment of the run's first instruction.</param>
+    /// <param name="offset">The offset of the run's first instruction.</param>
+    /// <param name="runSignatures">The signature of each instruction of the run, in memory order;
+    /// each signature's length is its instruction's length in bytes.</param>
+    /// <exception cref="UnrecoverableException">Thrown when memory at any instruction of the run does not match its expected signature.</exception>
+    public void VerifySpeculativeRunOrFail(ushort segment, ushort offset, byte?[][] runSignatures) {
+        foreach (byte?[] signature in runSignatures) {
+            VerifySpeculativeEntryOrFail(segment, offset, signature);
+            offset = (ushort)(offset + signature.Length);
         }
     }
 
@@ -1238,6 +1651,50 @@ public class CSharpOverrideHelper {
     public (uint Quotient, uint Remainder) IDiv32(long dividend, int divisor) {
         int quotient = Alu32.Idiv(dividend, divisor);
         return (unchecked((uint)quotient), unchecked((uint)(dividend % divisor)));
+    }
+
+    /// <summary>
+    /// Performs unsigned 16-bit multiplication.
+    /// </summary>
+    /// <param name="value1">The 16-bit multiplicand (AX).</param>
+    /// <param name="value2">The 16-bit multiplier.</param>
+    /// <returns>A tuple containing the 16-bit low half (AX) and 16-bit high half (DX) of the 32-bit product.</returns>
+    public (ushort Low, ushort High) Mul16(ushort value1, ushort value2) {
+        uint result = Alu16.Mul(value1, value2);
+        return ((ushort)result, (ushort)(result >> 16));
+    }
+
+    /// <summary>
+    /// Performs unsigned 32-bit multiplication.
+    /// </summary>
+    /// <param name="value1">The 32-bit multiplicand (EAX).</param>
+    /// <param name="value2">The 32-bit multiplier.</param>
+    /// <returns>A tuple containing the 32-bit low half (EAX) and 32-bit high half (EDX) of the 64-bit product.</returns>
+    public (uint Low, uint High) Mul32(uint value1, uint value2) {
+        ulong result = Alu32.Mul(value1, value2);
+        return ((uint)result, (uint)(result >> 32));
+    }
+
+    /// <summary>
+    /// Performs signed 16-bit multiplication.
+    /// </summary>
+    /// <param name="value1">The 16-bit signed multiplicand (AX).</param>
+    /// <param name="value2">The 16-bit signed multiplier.</param>
+    /// <returns>A tuple containing the 16-bit low half (AX) and 16-bit high half (DX) of the 32-bit product as unsigned register bits.</returns>
+    public (ushort Low, ushort High) IMul16(short value1, short value2) {
+        int result = Alu16.Imul(value1, value2);
+        return (unchecked((ushort)result), unchecked((ushort)(result >> 16)));
+    }
+
+    /// <summary>
+    /// Performs signed 32-bit multiplication.
+    /// </summary>
+    /// <param name="value1">The 32-bit signed multiplicand (EAX).</param>
+    /// <param name="value2">The 32-bit signed multiplier.</param>
+    /// <returns>A tuple containing the 32-bit low half (EAX) and 32-bit high half (EDX) of the 64-bit product as unsigned register bits.</returns>
+    public (uint Low, uint High) IMul32(int value1, int value2) {
+        long result = Alu32.Imul(value1, value2);
+        return (unchecked((uint)result), unchecked((uint)(result >> 32)));
     }
 
     /// <summary>

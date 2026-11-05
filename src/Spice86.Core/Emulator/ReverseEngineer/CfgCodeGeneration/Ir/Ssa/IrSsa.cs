@@ -1,5 +1,6 @@
 namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
 
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph.Analysis;
 
 using System.Linq;
@@ -74,6 +75,26 @@ internal sealed class IrSsa {
             ? definitions
             : [];
 
+    /// <summary>The statement whose definitions include <paramref name="version"/>, or
+    /// <c>null</c> when the site is not a still-present statement (terminator, phi, method entry
+    /// or a statement a pass removed). Statement indices in <see cref="IrSsaVersionInfo"/> go stale
+    /// when a pass edits the list, so the site is found by the definitions table, not by position.
+    /// </summary>
+    internal IrStatement? DefiningStatement(int version) {
+        if (version < 0) {
+            return null;
+        }
+        IrSsaVersionInfo info = _infos[version];
+        foreach (IrStatement statement in info.Block.Statements) {
+            foreach ((IrSsaValue defined, int definedVersion) in Definitions(statement)) {
+                if (defined == info.Value && definedVersion == version) {
+                    return statement;
+                }
+            }
+        }
+        return null;
+    }
+
     /// <summary>Whether a site of this SSA still defines <paramref name="version"/> of
     /// <paramref name="value"/>: <see cref="Remove"/> and <see cref="Replace(IrStatement, IrStatement)"/>
     /// can leave a version recorded as the previous link of a partial definition while no position
@@ -146,11 +167,29 @@ internal sealed class IrSsa {
             _definitionsBySite[replacements[i]] = [.. definitionsByReplacement[i]];
             _usesBySite[replacements[i]] = uses;
         }
+        // The use records keep pointing at the statement that reads their version: the first
+        // replacement whose effects read it, else the first replacement.
+        foreach ((IrSsaValue value, int version) in uses) {
+            CpuValues mask = IrSsaValues.MaskOf(value);
+            IrStatement target = replacements[0];
+            foreach (IrStatement candidate in replacements) {
+                if ((candidate.Effects.Reads & mask) != CpuValues.None) {
+                    target = candidate;
+                    break;
+                }
+            }
+            UpdateUseRecords(version, old, target);
+        }
     }
 
     /// <summary>Whether <paramref name="statement"/> was present when this SSA was built, so a pass
     /// knows it can call <see cref="Replace(IrStatement, IrStatement)"/> or <see cref="Remove"/> on it.</summary>
     public bool HasSite(IrStatement statement) => _usesBySite.ContainsKey(statement);
+
+    /// <summary>Whether <paramref name="terminator"/> is a site of this SSA: a terminator that reads or
+    /// writes no machine value has none, and <see cref="ReplaceTerminator"/> would throw on it.</summary>
+    internal bool HasSite(IrTerminator terminator) => _usesBySite.ContainsKey(terminator)
+        && _definitionsBySite.ContainsKey(terminator);
 
     /// <summary>
     /// Drops the site of <paramref name="statement"/>: its definitions stay recorded as versions but
@@ -159,6 +198,31 @@ internal sealed class IrSsa {
     public void Remove(IrStatement statement) {
         _definitionsBySite.Remove(statement);
         _usesBySite.Remove(statement);
+    }
+
+    /// <summary>Points the use records of <paramref name="version"/> that referenced
+    /// <paramref name="old"/> at <paramref name="replacement"/> instead. The recorded and the live
+    /// use lists can be the same list instance, so each list is touched once.</summary>
+    private void UpdateUseRecords(int version, object old, object replacement) {
+        HashSet<List<IrSsaUse>> seen = new(ReferenceEqualityComparer.Instance);
+        List<IrSsaUse>?[] lists =
+            [_usesByVersionId.GetValueOrDefault(version),
+                _liveUsesByVersionId.GetValueOrDefault(version)];
+        foreach (List<IrSsaUse>? list in lists) {
+            if (list is null || !seen.Add(list)) {
+                continue;
+            }
+            for (int i = 0; i < list.Count; i++) {
+                IrSsaUse use = list[i];
+                if (replacement is IrStatement statement
+                        && ReferenceEquals(use.Statement, old)) {
+                    list[i] = use with { Statement = statement };
+                } else if (replacement is IrTerminator terminator
+                        && ReferenceEquals(use.Terminator, old)) {
+                    list[i] = use with { Terminator = terminator };
+                }
+            }
+        }
     }
 
     /// <summary>Moves the site of a replaced terminator: <paramref name="replacement"/> gets the
@@ -181,6 +245,9 @@ internal sealed class IrSsa {
         }
         _definitionsBySite[replacement] = definitions;
         _usesBySite[replacement] = uses;
+        foreach ((IrSsaValue _, int version) in uses) {
+            UpdateUseRecords(version, old, replacement);
+        }
     }
 
     /// <summary>The values <paramref name="terminator"/> defines, with their new versions.</summary>
@@ -267,7 +334,7 @@ internal sealed class IrSsa {
     /// same version before position <paramref name="from"/> and before position <paramref name="to"/>:
     /// the legality rule for moving or merging an expression between the two places.
     /// </summary>
-    public bool SameVersions(IrValues reads, IrTokens tokenReads, (IrBlock Block, int Index) from,
+    public bool SameVersions(CpuValues reads, IrTokens tokenReads, (IrBlock Block, int Index) from,
         (IrBlock Block, int Index) to) {
         uint values = IrSsaValues.ValueBits(reads) | IrSsaValues.TokenBits(tokenReads);
         for (int v = 0; v < ValueCount; v++) {

@@ -34,4 +34,16 @@ internal sealed record CfgReloadDump {
     /// across runs (a speculative-only instability leaves no graph trace otherwise).
     /// </summary>
     [JsonPropertyName("poisonedAddresses")] public string[]? PoisonedAddresses { get; init; }
+
+    /// <summary>
+    /// Merged <c>[start, end)</c> physical-address ranges the loaded images occupied, as
+    /// <c>"0xSTART-0xEND"</c> pairs; omitted when nothing was watched.
+    /// </summary>
+    [JsonPropertyName("watchedAreas")] public string[]? WatchedAreas { get; init; }
+
+    /// <summary>
+    /// Merged <c>[start, end)</c> physical-address ranges of image bytes the program changed after
+    /// its loader finished, as <c>"0xSTART-0xEND"</c> pairs; omitted when nothing changed.
+    /// </summary>
+    [JsonPropertyName("changedRanges")] public string[]? ChangedRanges { get; init; }
 }

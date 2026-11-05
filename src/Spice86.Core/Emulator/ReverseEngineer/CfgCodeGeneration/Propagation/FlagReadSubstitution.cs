@@ -3,11 +3,11 @@ namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Propagation;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
-using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Visitor;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 
 using System.Linq;
@@ -37,9 +37,9 @@ internal static class FlagReadSubstitution {
     }
 
     private static bool WritesCarry(IVisitableAstNode statement) {
-        FlagEffect effect = FlagEffectVisitor.Of(statement);
-        return (effect.MustWrite & StatusFlags.Carry) != StatusFlags.None
-            || (effect.MayWrite & StatusFlags.Carry) != StatusFlags.None;
+        IrEffects effect = IrEffectsVisitor.Of(statement, false);
+        return (effect.MustWrite & CpuValues.Carry) != CpuValues.None
+            || (effect.MayWrite & CpuValues.Carry) != CpuValues.None;
     }
 
     private static IVisitableAstNode? SubstituteStatement(IVisitableAstNode statement, ValueNode relation) =>
@@ -53,7 +53,6 @@ internal static class FlagReadSubstitution {
                 SubstituteValue(declaration.Initializer, relation) is { } initializer
                     ? declaration with { Initializer = initializer }
                     : null,
-            MethodCallNode or MoveIpNextNode => statement,
             _ => null
         };
 

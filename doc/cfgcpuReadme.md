@@ -87,6 +87,8 @@ The graph grows at runtime:
 3. When memory no longer matches a graph node, selector nodes are injected.
 4. Separate execution contexts (see below) keep their graph segments independent.
 
+The `SpeculativeExplorer` also decodes statically-reachable successors ahead of execution so unobserved arms exist in the graph; it stops at poisoned addresses, at instructions with no static successors, at call continuations (unless seeded known-safe), and at a `00 00` instruction whose two following bytes are also zero - a zero-filled buffer is not decoded and nothing is remembered, so memory a program later fills with code still is.
+
 ## Instruction Caching
 
 `InstructionsFeeder` maintains a two-tier cache:
@@ -161,6 +163,12 @@ After:   PredA → SelectorNode → Instruction1
 When an instruction becomes the current one at its address (`CurrentInstructions.SetAsCurrent`), a `MEMORY_WRITE` breakpoint is registered for every byte with a non-null signature value. Wildcard bytes don't get breakpoints - changes there are expected and don't invalidate anything.
 
 When the CPU writes to a monitored byte and the new value differs from the old, `ClearCurrentInstruction` fires: breakpoints are unregistered, the instruction is evicted from `CurrentInstructions`, and `IsLive` is set to false. The instruction stays in `PreviousInstructions`.
+
+### Changed Bytes of the Loaded Images
+
+`ChangedMemoryMap` records which bytes of the loaded program images changed after their loader finished, so generated code can treat never-modified image bytes as constants. It subscribes to `LoadedImageRegistry.ImageLoaded` and installs one `AddressSetBreakPoint` (a `BreakPointHolder` breakpoint matching a set of addresses kept in a bitmap, checked after the per-address dictionary lookup) holding every watched byte that has not changed yet; a byte is marked and leaves the set the first time a write stores a value different from the stored one, so a write outside the images, or to an already-changed byte, costs one bit test. The write paths that bypass breakpoints (`Memory.WriteRam`, `Memory.SneakilyWrite`) reach the map through `Memory.UnmonitoredWriteObserver`; the monitored indexer path must not call it, or the byte would be marked twice. The watched areas and the merged changed ranges ride along in the reload dump so a reloaded run restores the same snapshot for the generator.
+
+The per-address dictionary itself is guarded by a bitmap filter in `BreakPointHolder`: for every address below 2 MiB a bit says whether the dictionary holds that key, so the self-modifying-code breakpoints above never cost a dictionary lookup on a miss.
 
 ### Graph Reconciliation at Execution Time
 

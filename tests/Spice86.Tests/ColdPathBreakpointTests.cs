@@ -24,7 +24,7 @@ public class ColdPathBreakpointTests {
         uint addressAtBreakpoint = 0;
 
         emulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(
-            BreakPointType.CPU_EXECUTION_ADDRESS, targetAddress, _ => {
+            BreakPointType.CPU_EXECUTION_ADDRESS, targetAddress, (_, _) => {
                 breakpointFired = true;
                 addressAtBreakpoint = state.IpPhysicalAddress;
             }, true), true);

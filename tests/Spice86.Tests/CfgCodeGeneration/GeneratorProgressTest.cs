@@ -31,7 +31,8 @@ public class GeneratorProgressTest {
         CfgBlock block = Block(1, first, ret);
         CfgPartitionedProgram program = new() {
             Partitions = [Partition(1, block)],
-            Transfers = []
+            Transfers = [],
+            Inputs = GeneratorInputs.Empty
         };
         DumpProgressReporter reporter = new(NullLogger.Instance, new SystemTimeProvider());
         List<(DumpPhase Phase, int Current, int Total, string Item)> steps = new();
@@ -61,7 +62,8 @@ public class GeneratorProgressTest {
         CfgCodePartition other = Partition(2, Block(2, target, ret));
         CfgPartitionedProgram program = new() {
             Partitions = [main, other],
-            Transfers = []
+            Transfers = [],
+            Inputs = GeneratorInputs.Empty
         };
         DumpProgressReporter reporter = new(NullLogger.Instance, new SystemTimeProvider());
         List<(DumpPhase Phase, int Current, int Total, string Item)> steps = new();

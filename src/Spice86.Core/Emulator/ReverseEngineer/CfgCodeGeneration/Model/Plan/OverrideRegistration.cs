@@ -12,4 +12,6 @@ namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model.Plan;
 /// through the symbol file without accumulating duplicate triplets or node ids across generate cycles.
 /// </para>
 /// </summary>
-internal sealed record OverrideRegistration(string SegmentVariable, ushort Offset, string MethodName, int LoadOffset, string BaseName);
+/// <param name="SingleEntry"><c>true</c> when the method has one entry: its registration passes the cached
+/// <c>Entry(M)</c> wrapper so the override delegate shares the dispatcher identity.</param>
+internal sealed record OverrideRegistration(string SegmentVariable, ushort Offset, string MethodName, int LoadOffset, string BaseName, bool SingleEntry);

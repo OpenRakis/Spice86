@@ -4,6 +4,7 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Dos.Xms;
 using Spice86.Core.Emulator.InterruptHandlers.Mscdex;
@@ -48,7 +49,6 @@ public class DosInt2fHandler : InterruptHandler {
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _xms = xms;
         _mscdexService = mscdexService;
-        FillDispatchTable();
     }
 
     /// <inheritdoc />
@@ -69,16 +69,8 @@ public class DosInt2fHandler : InterruptHandler {
         Run(multiplexServiceId);
     }
 
-    private void FillDispatchTable() {
-        AddAction(0x10, ShareExeServices);
-        AddAction(0x1A, AnsiConsoleServices);
-        AddAction(0x16, DosVirtualMachineServices);
-        AddAction(0x15, () => MscdexServices(true));
-        AddAction(0x43, () => XmsServices(true));
-        AddAction(0x46, WindowsVirtualMachineServices);
-        AddAction(0x4A, HighMemoryAreaServices);
-    }
 
+    [InterruptService(0x10, Reads = CpuValues.Ah | CpuValues.Al, Writes = CpuValues.Al, Memory = ServiceMemoryEffect.None)]
     public void ShareExeServices() {
         switch (State.AL) {
             case 0x0:
@@ -93,6 +85,7 @@ public class DosInt2fHandler : InterruptHandler {
         }
     }
 
+    [InterruptService(0x1A, Reads = CpuValues.Ah | CpuValues.Al, Writes = CpuValues.Al, Memory = ServiceMemoryEffect.None)]
     public void AnsiConsoleServices() {
         switch (State.AL) {
             case 0x0:
@@ -107,6 +100,7 @@ public class DosInt2fHandler : InterruptHandler {
         }
     }
 
+    [InterruptService(0x43, Reads = CpuValues.Ah | CpuValues.Al, Writes = CpuValues.Al | CpuValues.Bx | CpuValues.Es | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
     public void XmsServices(bool calledFromVm) {
         switch (State.AL) {
             //Is XMS Driver installed
@@ -128,6 +122,7 @@ public class DosInt2fHandler : InterruptHandler {
         SetCarryFlag(false, calledFromVm);
     }
 
+    [InterruptService(0x4A, Reads = CpuValues.Ah | CpuValues.Al, Writes = CpuValues.Bx | CpuValues.Es | CpuValues.Di, Memory = ServiceMemoryEffect.None)]
     public void HighMemoryAreaServices() {
         switch (State.AL) {
             case 0x1 or 0x2: // Query Free HMA Space or Allocate HMA Space
@@ -146,6 +141,7 @@ public class DosInt2fHandler : InterruptHandler {
     /// <summary>
     /// A service that does nothing.
     /// </summary>
+    [InterruptService(0x16, Reads = CpuValues.Ax, Writes = CpuValues.None, Memory = ServiceMemoryEffect.None)]
     public void DosVirtualMachineServices() {
         //Do nothing,not even set CX or CF...
         if (LoggerService.IsEnabled(LogLevel.Warning)) {
@@ -153,6 +149,7 @@ public class DosInt2fHandler : InterruptHandler {
         }
     }
 
+    [InterruptService(0x46, Reads = CpuValues.Ah | CpuValues.Al, Writes = CpuValues.Ax, Memory = ServiceMemoryEffect.None)]
     public void WindowsVirtualMachineServices() {
         switch (State.AL) {
             case 0x80: //MS Windows v3.0 - INSTALLATION CHECK {undocumented} (AX: 4680h)
@@ -169,6 +166,7 @@ public class DosInt2fHandler : InterruptHandler {
     /// <summary>
     /// Handles MSCDEX INT 2Fh AH=15h subfunctions. Delegates to <see cref="Mscdex"/>.
     /// </summary>
+    [InterruptService(0x15, Unknown = true)]
     public void MscdexServices(bool calledFromVm) {
         if (_mscdexService.Dispatch()) {
             SetCarryFlag(true, calledFromVm);

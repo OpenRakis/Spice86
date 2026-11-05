@@ -26,7 +26,7 @@ public class BreakpointCheckBenchmark {
         AddressBreakPoint disabledBreakpoint = new(
             BreakPointType.CPU_EXECUTION_ADDRESS,
             0x1000,
-            _ => { },
+            (_, _) => { },
             false) {
             IsEnabled = false
         };
@@ -37,7 +37,7 @@ public class BreakpointCheckBenchmark {
         AddressBreakPoint enabledBreakpoint = new(
             BreakPointType.CPU_EXECUTION_ADDRESS,
             0x1000,
-            _ => { },
+            (_, _) => { },
             false);
         _holderWithEnabledBreakpoint.ToggleBreakPoint(enabledBreakpoint, true);
     }

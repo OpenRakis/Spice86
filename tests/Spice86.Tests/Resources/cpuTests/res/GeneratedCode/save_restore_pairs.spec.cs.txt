@@ -1,0 +1,600 @@
+// ==== file: CfgGeneratedOverrideSupplier.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+
+// ==== file: CfgGeneratedOverrides.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort biosSegment;
+
+    private static readonly byte?[] Signature_003C_pop = [0x58];
+    private static readonly byte?[] Signature_00C6_mov = [0xB8, 0xD0, 0xBA];
+    private static readonly byte?[] Signature_00C9_jmp = [0xEB, 0x03];
+    private static readonly byte?[] Signature_00E9_mov = [0xB8, 0xD1, 0xBA];
+    private static readonly byte?[] Signature_00EC_jmp = [0xEB, 0x03];
+    private static readonly byte?[] Signature_010D_mov = [0xB8, 0xD2, 0xBA];
+    private static readonly byte?[] Signature_0110_jmp = [0xEB, 0x03];
+    private static readonly byte?[] Signature_0131_mov = [0xB8, 0xD3, 0xBA];
+    private static readonly byte?[] Signature_0134_jmp = [0xEB, 0x03];
+    private static readonly byte?[] Signature_0153_mov = [0xB8, 0xD4, 0xBA];
+    private static readonly byte?[] Signature_0156_jmp = [0xEB, 0x03];
+    private static readonly byte?[] Signature_0175_mov = [0xB8, 0xD5, 0xBA];
+    private static readonly byte?[] Signature_0178_jmp = [0xEB, 0x03];
+    private static readonly byte?[] Signature_0197_mov = [0xB8, 0xD6, 0xBA];
+    private static readonly byte?[] Signature_019A_jmp = [0xEB, 0x03];
+
+    private static readonly byte?[][] SpeculativeRun_00C6 = [Signature_00C6_mov, Signature_00C9_jmp];
+    private static readonly byte?[][] SpeculativeRun_00E9 = [Signature_00E9_mov, Signature_00EC_jmp];
+    private static readonly byte?[][] SpeculativeRun_010D = [Signature_010D_mov, Signature_0110_jmp];
+    private static readonly byte?[][] SpeculativeRun_0131 = [Signature_0131_mov, Signature_0134_jmp];
+    private static readonly byte?[][] SpeculativeRun_0153 = [Signature_0153_mov, Signature_0156_jmp];
+    private static readonly byte?[][] SpeculativeRun_0175 = [Signature_0175_mov, Signature_0178_jmp];
+    private static readonly byte?[][] SpeculativeRun_0197 = [Signature_0197_mov, Signature_019A_jmp];
+
+    private readonly Func<int, Action> unknown_F000_01A7_F01A7_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
+
+    protected readonly Segment2000Globals Segment2000Globals;
+    protected readonly SegmentF000Globals SegmentF000Globals;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        biosSegment = 0xF000;
+        Segment2000Globals = new Segment2000Globals(Memory, programStartSegment);
+        SegmentF000Globals = new SegmentF000Globals(Memory, programStartSegment);
+
+        unknown_F000_01A7_F01A7_AsmEntry = _ => unknown_F000_01A7_F01A7_Asm();
+        unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x01A7, unknown_F000_01A7_F01A7_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
+    }
+
+}
+
+// ==== file: CfgGeneratedOverrides.F000.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: DI, DS. Outputs: none. Changes: CX, BP.</summary>
+    /// Segment values at entry, from every call site: DS = 0x2000.
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_01A7_F01A7(ushort di, ushort ds) {
+        DI = di;
+        DS = ds;
+        unknown_F000_01A7_F01A7Frame frame = new(Memory, State.SegmentRegisters, SP);
+        CheckExternalEvents(biosSegment, 0x01A7);
+        // F000:01A7 mov BP,SP
+        BP = SP;
+        // F000:01A9 mov CX,word ptr SS:[BP+2]
+        CX = frame.Arg0;
+        // F000:01AC mov word ptr DS:[DI+8],CX
+        UInt16[ds, (ushort)(di + 8)] = CX;
+        // F000:01AF ret near
+        NearReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_01A7_F01A7_Asm() {
+        unknown_F000_01A7_F01A7(DI, DS);
+        return Returned;
+    }
+
+    public readonly struct unknown_F000_01A7_F01A7Frame(IMemory memory, SegmentRegisters segmentRegisters, ushort entrySp) {
+        private readonly GeneratedStackFrame _slots = new(memory, segmentRegisters, entrySp);
+
+        /// <summary>Word at SS:[entry SP + 0x0002].</summary>
+        public ushort Arg0 { get => _slots.GetWord(0x0002); set => _slots.SetWord(0x0002, value); }
+    }
+
+    /// <summary>Inputs: none. Does not return.</summary>
+    public virtual Action unknown_F000_FFF0_FFFF0() {
+        ushort di1 = 0;
+        ushort bx;
+        ushort ax1 = 0;
+        ushort cx1 = 0;
+        ushort bx1 = 0;
+        ushort bp1 = 0;
+        ushort dx1 = 0;
+        ushort es;
+        ushort di;
+        ushort cx;
+        ushort cx2 = 0;
+        ushort ax2 = 0;
+        ushort bx2 = 0;
+        ushort ax3 = 0;
+        ushort bx3 = 0;
+        ushort ax4 = 0;
+        ushort bx4 = 0;
+        ushort ax5 = 0;
+        ushort bx5 = 0;
+        ushort ax6 = 0;
+        ushort bx6 = 0;
+        ushort ax7 = 0;
+        ushort bx7 = 0;
+        ushort ax8 = 0;
+        CheckExternalEvents(biosSegment, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        // F000:0000 mov AX,0x2000
+        // F000:0003 mov DS,AX
+        DS = 0x2000;
+        // F000:0005 mov SS,AX
+        SS = 0x2000;
+        // F000:0007 mov SP,0x1000
+        SP = 0x1000;
+        // F000:000A cld
+        DirectionFlag = false;
+        // F000:000B mov DI,0x0040
+        di1 = 0x0040;
+        // F000:000E mov SI,0x01B0
+        SI = 0x01B0;
+        // F000:0011 mov AX,0x1111
+        // F000:0014 push AX
+        // F000:0015 mov CX,0x2222
+        // F000:0018 pop AX
+        AX = 0x1111;
+        // F000:0019 push BX
+        // F000:001A pop BX
+        bx = BX;
+        // F000:001B mov word ptr DS:[DI],AX
+        Segment2000Globals.Word0040 = AX;
+        // F000:001D mov BP,SP
+        BP = SP;
+        // F000:001F mov AX,0x2222
+        // F000:0022 push AX
+        Stack.Push16(0x2222);
+        // F000:0023 mov word ptr SS:[BP-2],0x0099
+        SsUInt16[(ushort)(BP - 2)] = 0x0099;
+        // F000:0028 pop AX
+        AX = Stack.Pop16();
+        // F000:0029 push BX
+        // F000:002A pop BX
+        BX = bx;
+        // F000:002B mov word ptr DS:[DI+2],AX
+        Segment2000Globals.Word0042 = AX;
+        // F000:002E mov AX,0x3333
+        // F000:0031 push AX
+        Stack.Push16(0x3333);
+        // F000:0032 mov AX,0x5555
+        ax1 = 0x5555;
+        // F000:0035 mov CX,word ptr CS:[SI]
+        cx1 = SegmentF000Globals.Word01B0;
+        // F000:0038 test CX,CX
+        Alu16.And(cx1, cx1);
+        // F000:003A je short 0x003D
+        if (cx1 != 0) {
+            VerifySpeculativeEntryOrFail(biosSegment, 0x003C, Signature_003C_pop);
+            // F000:003C pop AX
+            ax1 = Stack.Pop16();
+        }
+        // F000:003D pop BX
+        bx1 = Stack.Pop16();
+        // F000:003E mov word ptr DS:[DI+4],BX
+        Segment2000Globals.Word0044 = bx1;
+        // F000:0041 mov word ptr DS:[DI+6],AX
+        Segment2000Globals.Word0046 = ax1;
+        // F000:0044 mov AX,0x4444
+        AX = 0x4444;
+        // F000:0047 push AX
+        Stack.Push16(0x4444);
+        // F000:0048 call near 0x01A7
+        DI = di1;
+        CX = cx1;
+        BX = bx1;
+        NearCall(biosSegment, 0x004B, () => unknown_F000_01A7_F01A7(DI, DS));
+        // F000:004B pop AX
+        AX = Stack.Pop16();
+        // F000:004C push BX
+        // F000:004D pop BX
+        BX = bx1;
+        // F000:004E mov AX,0x5555
+        // F000:0051 push AX
+        Stack.Push16(0x5555);
+        // F000:0052 mov BX,SP
+        bx = SP;
+        // F000:0054 pop AX
+        AX = Stack.Pop16();
+        // F000:0055 push CX
+        // F000:0056 pop CX
+        CX = CX;
+        // F000:0057 mov word ptr DS:[DI+0x0A],BX
+        UInt16[DS, (ushort)(di1 + 0x0A)] = bx;
+        // F000:005A mov AX,0x6666
+        // F000:005D push AX
+        Stack.Push16(0x6666);
+        // F000:005E mov CX,word ptr DS:[0x0FFE]
+        CX = Segment2000Globals.Word0FFE;
+        // F000:0062 pop AX
+        AX = Stack.Pop16();
+        // F000:0063 push BX
+        // F000:0064 pop BX
+        BX = bx;
+        // F000:0065 mov word ptr DS:[DI+0x0C],CX
+        UInt16[DS, (ushort)(di1 + 0x0C)] = CX;
+        // F000:0068 mov BP,SP
+        bp1 = SP;
+        // F000:006A mov AX,0x7777
+        // F000:006D push AX
+        Stack.Push16(0x7777);
+        // F000:006E mov CX,AX
+        // F000:0070 pop AX
+        AX = Stack.Pop16();
+        // F000:0071 mov DX,word ptr SS:[BP-2]
+        dx1 = SsUInt16[(ushort)(bp1 - 2)];
+        // F000:0074 mov word ptr DS:[DI+0x0E],DX
+        UInt16[DS, (ushort)(di1 + 0x0E)] = dx1;
+        // F000:0077 mov AX,0x8888
+        // F000:007A push AX
+        // F000:007B pop BX
+        BX = 0x8888;
+        // F000:007C push CX
+        // F000:007D pop CX
+        CX = 0x7777;
+        // F000:007E mov word ptr DS:[DI+0x10],BX
+        UInt16[DS, (ushort)(di1 + 0x10)] = BX;
+        // F000:0081 mov AX,0x1111
+        // F000:0084 mov ES,AX
+        es = 0x1111;
+        // F000:0086 push ES
+        Stack.Push16(es);
+        // F000:0087 popf
+        FlagRegister16 = Stack.Pop16();
+        CheckExternalEvents(biosSegment, 0x0088);
+        // F000:0088 mov BX,0x1000
+        // F000:008B mov SI,0x002C
+        // F000:008E les DI,word ptr DS:[BX+SI-46]
+        di = Segment2000Globals.Word0FFE;
+        ES = Segment2000Globals.Word1000;
+        // F000:0091 mov BP,DI
+        BP = di;
+        // F000:0093 mov DI,0x0040
+        DI = 0x0040;
+        // F000:0096 mov word ptr DS:[DI+0x12],BP
+        Segment2000Globals.Word0052 = BP;
+        // F000:0099 pushf
+        // F000:009A pop AX
+        AX = FlagRegister16;
+        // F000:009B push BX
+        // F000:009C pop BX
+        BX = 0x1000;
+        // F000:009D mov word ptr DS:[DI+0x14],AX
+        Segment2000Globals.Word0054 = AX;
+        // F000:00A0 mov AX,0x0200
+        // F000:00A3 push AX
+        Stack.Push16(0x0200);
+        // F000:00A4 popf
+        FlagRegister16 = Stack.Pop16();
+        CheckExternalEvents(biosSegment, 0x00A5);
+        // F000:00A5 pushf
+        // F000:00A6 pop CX
+        cx = FlagRegister16;
+        // F000:00A7 mov word ptr DS:[DI+0x16],CX
+        Segment2000Globals.Word0056 = cx;
+        // F000:00AA mov AX,0x9999
+        // F000:00AD push AX
+        Stack.Push16(0x9999);
+        // F000:00AE mov BX,SP
+        BX = SP;
+        // F000:00B0 pop CX
+        cx2 = Stack.Pop16();
+        // F000:00B1 push DX
+        // F000:00B2 pop DX
+        DX = dx1;
+        // F000:00B3 mov word ptr DS:[DI+0x18],BX
+        Segment2000Globals.Word0058 = BX;
+        // F000:00B6 mov BX,SP
+        // F000:00B8 sub BX,2
+        BX = (ushort)(SP - 2);
+        // F000:00BB mov SI,0x1234
+        // F000:00BE push SI
+        Stack.Push16(0x1234);
+        // F000:00BF cmp word ptr SS:[BX],0x1234
+        // F000:00C4 je short 0x00CB
+        if (SsUInt16[BX] == 0x1234) {
+            // F000:00CB mov AX,0x1357
+            ax2 = 0x1357;
+        }
+        else {
+            VerifySpeculativeRunOrFail(biosSegment, 0x00C6, SpeculativeRun_00C6);
+            // F000:00C6 mov AX,0xBAD0
+            ax2 = 0xBAD0;
+            // F000:00C9 jmp short 0x00CE
+        }
+        // F000:00CE pop SI
+        SI = Stack.Pop16();
+        // F000:00CF push CX
+        // F000:00D0 pop CX
+        CX = cx2;
+        // F000:00D1 mov word ptr DS:[DI+0x1A],AX
+        Segment2000Globals.Word005A = ax2;
+        // F000:00D4 mov BX,SP
+        // F000:00D6 sub BX,2
+        bx2 = (ushort)(SP - 2);
+        // F000:00D9 mov DX,0x2222
+        // F000:00DC push DX
+        Stack.Push16(0x2222);
+        // F000:00DD mov CX,DX
+        // F000:00DF pop DX
+        DX = Stack.Pop16();
+        // F000:00E0 jmp short 0x00E2
+        // F000:00E2 cmp word ptr SS:[BX],0x2222
+        // F000:00E7 je short 0x00EE
+        if (SsUInt16[bx2] == 0x2222) {
+            // F000:00EE mov AX,0x2468
+            ax3 = 0x2468;
+        }
+        else {
+            VerifySpeculativeRunOrFail(biosSegment, 0x00E9, SpeculativeRun_00E9);
+            // F000:00E9 mov AX,0xBAD1
+            ax3 = 0xBAD1;
+            // F000:00EC jmp short 0x00F1
+        }
+        // F000:00F1 mov word ptr DS:[DI+0x1C],AX
+        Segment2000Globals.Word005C = ax3;
+        // F000:00F4 xor DX,DX
+        DX = 0;
+        // F000:00F6 push BX
+        // F000:00F7 pop BX
+        BX = bx2;
+        // F000:00F8 mov BX,SP
+        // F000:00FA sub BX,2
+        bx3 = (ushort)(SP - 2);
+        // F000:00FD mov DX,0x3333
+        // F000:0100 push DX
+        Stack.Push16(0x3333);
+        // F000:0101 mov CX,DX
+        // F000:0103 pop ES
+        ES = Stack.Pop16();
+        // F000:0104 jmp short 0x0106
+        // F000:0106 cmp word ptr SS:[BX],0x3333
+        // F000:010B je short 0x0112
+        if (SsUInt16[bx3] == 0x3333) {
+            // F000:0112 mov AX,0x3579
+            ax4 = 0x3579;
+        }
+        else {
+            VerifySpeculativeRunOrFail(biosSegment, 0x010D, SpeculativeRun_010D);
+            // F000:010D mov AX,0xBAD2
+            ax4 = 0xBAD2;
+            // F000:0110 jmp short 0x0115
+        }
+        // F000:0115 mov word ptr DS:[DI+0x1E],AX
+        Segment2000Globals.Word005E = ax4;
+        // F000:0118 xor DX,DX
+        // F000:011A push BX
+        // F000:011B pop BX
+        BX = bx3;
+        // F000:011C mov BX,SP
+        // F000:011E sub BX,2
+        bx4 = (ushort)(SP - 2);
+        // F000:0121 mov DX,0x4646
+        // F000:0124 push DX
+        Stack.Push16(0x4646);
+        // F000:0125 mov CX,DX
+        CX = 0x4646;
+        // F000:0127 popf
+        FlagRegister16 = Stack.Pop16();
+        CheckExternalEvents(biosSegment, 0x0128);
+        // F000:0128 jmp short 0x012A
+        // F000:012A cmp word ptr SS:[BX],0x4646
+        // F000:012F je short 0x0136
+        if (SsUInt16[bx4] == 0x4646) {
+            // F000:0136 mov AX,0x9ABC
+            ax5 = 0x9ABC;
+        }
+        else {
+            VerifySpeculativeRunOrFail(biosSegment, 0x0131, SpeculativeRun_0131);
+            // F000:0131 mov AX,0xBAD3
+            ax5 = 0xBAD3;
+            // F000:0134 jmp short 0x0139
+        }
+        // F000:0139 mov word ptr DS:[DI+0x20],AX
+        Segment2000Globals.Word0060 = ax5;
+        // F000:013C xor DX,DX
+        // F000:013E push BX
+        // F000:013F pop BX
+        BX = bx4;
+        // F000:0140 mov BX,SP
+        // F000:0142 sub BX,2
+        bx5 = (ushort)(SP - 2);
+        // F000:0145 mov DX,0x5555
+        // F000:0148 push DX
+        Stack.Push16(0x5555);
+        // F000:0149 pop DX
+        DX = Stack.Pop16();
+        // F000:014A jmp short 0x014C
+        // F000:014C cmp word ptr SS:[BX],0x5555
+        // F000:0151 je short 0x0158
+        if (SsUInt16[bx5] == 0x5555) {
+            // F000:0158 mov AX,0x5151
+            ax6 = 0x5151;
+        }
+        else {
+            VerifySpeculativeRunOrFail(biosSegment, 0x0153, SpeculativeRun_0153);
+            // F000:0153 mov AX,0xBAD4
+            ax6 = 0xBAD4;
+            // F000:0156 jmp short 0x015B
+        }
+        // F000:015B mov word ptr DS:[DI+0x22],AX
+        Segment2000Globals.Word0062 = ax6;
+        // F000:015E xor DX,DX
+        DX = 0;
+        // F000:0160 push BX
+        // F000:0161 pop BX
+        BX = bx5;
+        // F000:0162 mov BX,SP
+        // F000:0164 sub BX,2
+        bx6 = (ushort)(SP - 2);
+        // F000:0167 mov DX,0x6666
+        // F000:016A push DX
+        Stack.Push16(0x6666);
+        // F000:016B pop ES
+        ES = Stack.Pop16();
+        // F000:016C jmp short 0x016E
+        // F000:016E cmp word ptr SS:[BX],0x6666
+        // F000:0173 je short 0x017A
+        if (SsUInt16[bx6] == 0x6666) {
+            // F000:017A mov AX,0x6262
+            ax7 = 0x6262;
+        }
+        else {
+            VerifySpeculativeRunOrFail(biosSegment, 0x0175, SpeculativeRun_0175);
+            // F000:0175 mov AX,0xBAD5
+            ax7 = 0xBAD5;
+            // F000:0178 jmp short 0x017D
+        }
+        // F000:017D mov word ptr DS:[DI+0x24],AX
+        Segment2000Globals.Word0064 = ax7;
+        // F000:0180 xor DX,DX
+        // F000:0182 push BX
+        // F000:0183 pop BX
+        BX = bx6;
+        // F000:0184 mov BX,SP
+        // F000:0186 sub BX,2
+        bx7 = (ushort)(SP - 2);
+        // F000:0189 mov DX,0x4646
+        // F000:018C push DX
+        Stack.Push16(0x4646);
+        // F000:018D popf
+        FlagRegister16 = Stack.Pop16();
+        CheckExternalEvents(biosSegment, 0x018E);
+        // F000:018E jmp short 0x0190
+        // F000:0190 cmp word ptr SS:[BX],0x4646
+        // F000:0195 je short 0x019C
+        if (SsUInt16[bx7] == 0x4646) {
+            // F000:019C mov AX,0x7373
+            ax8 = 0x7373;
+        }
+        else {
+            VerifySpeculativeRunOrFail(biosSegment, 0x0197, SpeculativeRun_0197);
+            // F000:0197 mov AX,0xBAD6
+            ax8 = 0xBAD6;
+            // F000:019A jmp short 0x019F
+        }
+        // F000:019F mov word ptr DS:[DI+0x26],AX
+        Segment2000Globals.Word0066 = ax8;
+        // F000:01A2 xor DX,DX
+        DX = 0;
+        CarryFlag = false;
+        ParityFlag = true;
+        AuxiliaryFlag = false;
+        ZeroFlag = true;
+        SignFlag = false;
+        OverflowFlag = false;
+        // F000:01A4 push BX
+        Stack.Push16(bx7);
+        // F000:01A5 pop BX
+        BX = Stack.Pop16();
+        // F000:01A6 hlt
+        AX = ax8;
+        return Hlt();
+    }
+
+}
+
+// ==== file: Segment2000Globals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class Segment2000Globals : MemoryBasedDataStructure {
+    private readonly IMemory _memory;
+    private readonly ushort Segment;
+
+    public Segment2000Globals(IMemory memory, ushort programStartSegment) : base(memory, 0x20000) {
+        _memory = memory;
+        Segment = 0x2000;
+    }
+
+    public ushort Word0040 { get => _memory.UInt16[Segment, 0x0040]; set => _memory.UInt16[Segment, 0x0040] = value; }
+
+    public ushort Word0042 { get => _memory.UInt16[Segment, 0x0042]; set => _memory.UInt16[Segment, 0x0042] = value; }
+
+    public ushort Word0044 { get => _memory.UInt16[Segment, 0x0044]; set => _memory.UInt16[Segment, 0x0044] = value; }
+
+    public ushort Word0046 { get => _memory.UInt16[Segment, 0x0046]; set => _memory.UInt16[Segment, 0x0046] = value; }
+
+    public ushort Word0052 { get => _memory.UInt16[Segment, 0x0052]; set => _memory.UInt16[Segment, 0x0052] = value; }
+
+    public ushort Word0054 { get => _memory.UInt16[Segment, 0x0054]; set => _memory.UInt16[Segment, 0x0054] = value; }
+
+    public ushort Word0056 { get => _memory.UInt16[Segment, 0x0056]; set => _memory.UInt16[Segment, 0x0056] = value; }
+
+    public ushort Word0058 { get => _memory.UInt16[Segment, 0x0058]; set => _memory.UInt16[Segment, 0x0058] = value; }
+
+    public ushort Word005A { get => _memory.UInt16[Segment, 0x005A]; set => _memory.UInt16[Segment, 0x005A] = value; }
+
+    public ushort Word005C { get => _memory.UInt16[Segment, 0x005C]; set => _memory.UInt16[Segment, 0x005C] = value; }
+
+    public ushort Word005E { get => _memory.UInt16[Segment, 0x005E]; set => _memory.UInt16[Segment, 0x005E] = value; }
+
+    public ushort Word0060 { get => _memory.UInt16[Segment, 0x0060]; set => _memory.UInt16[Segment, 0x0060] = value; }
+
+    public ushort Word0062 { get => _memory.UInt16[Segment, 0x0062]; set => _memory.UInt16[Segment, 0x0062] = value; }
+
+    public ushort Word0064 { get => _memory.UInt16[Segment, 0x0064]; set => _memory.UInt16[Segment, 0x0064] = value; }
+
+    public ushort Word0066 { get => _memory.UInt16[Segment, 0x0066]; set => _memory.UInt16[Segment, 0x0066] = value; }
+
+    public ushort Word0FFE { get => _memory.UInt16[Segment, 0x0FFE]; set => _memory.UInt16[Segment, 0x0FFE] = value; }
+
+    public ushort Word1000 { get => _memory.UInt16[Segment, 0x1000]; set => _memory.UInt16[Segment, 0x1000] = value; }
+}
+
+// ==== file: SegmentF000Globals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class SegmentF000Globals : MemoryBasedDataStructure {
+    private readonly IMemory _memory;
+    private readonly ushort Segment;
+
+    public SegmentF000Globals(IMemory memory, ushort programStartSegment) : base(memory, 0xF0000) {
+        _memory = memory;
+        Segment = 0xF000;
+    }
+
+    public ushort Word01B0 { get => _memory.UInt16[Segment, 0x01B0]; set => _memory.UInt16[Segment, 0x01B0] = value; }
+}

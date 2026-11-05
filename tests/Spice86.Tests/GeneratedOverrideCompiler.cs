@@ -7,6 +7,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Emit;
 
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 
 using System.Reflection;
 using System.Runtime.Loader;
@@ -14,11 +15,13 @@ using System.Runtime.Loader;
 internal sealed class GeneratedOverrideCompiler {
     private static readonly MetadataReference[] PlatformMetadataReferences = CreateMetadataReferences();
 
-    public GeneratedCompilation Compile(string source) {
-        SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(source, CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Preview));
+    public GeneratedCompilation Compile(IReadOnlyList<string> sources) {
+        SyntaxTree[] syntaxTrees = sources
+            .Select(source => CSharpSyntaxTree.ParseText(source, CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Preview)))
+            .ToArray();
         CSharpCompilation compilation = CSharpCompilation.Create(
             assemblyName: "Spice86.GeneratedCode.Tests." + Guid.NewGuid().ToString("N"),
-            syntaxTrees: [syntaxTree],
+            syntaxTrees: syntaxTrees,
             references: PlatformMetadataReferences,
             options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
                 .WithGeneralDiagnosticOption(ReportDiagnostic.Error)
@@ -26,12 +29,21 @@ internal sealed class GeneratedOverrideCompiler {
 
         MemoryStream peStream = new();
         EmitResult emitResult = compilation.Emit(peStream);
-        return new GeneratedCompilation(source, syntaxTree, emitResult, peStream);
+        return new GeneratedCompilation(sources, syntaxTrees, emitResult, peStream);
     }
 
-    public CompiledGeneratedOverride CompileSupplier(string source) {
-        return CompileSupplier(Compile(source));
+    public GeneratedCompilation Compile(GeneratedCSharpProgram program) => Compile(TextsOf(program));
+
+    public CompiledGeneratedOverride CompileSupplier(IReadOnlyList<string> sources) {
+        return CompileSupplier(Compile(sources));
     }
+
+    public CompiledGeneratedOverride CompileSupplier(GeneratedCSharpProgram program) {
+        return CompileSupplier(Compile(program));
+    }
+
+    internal static IReadOnlyList<string> TextsOf(GeneratedCSharpProgram program) =>
+        program.Files.Select(file => file.Text).ToArray();
 
     public CompiledGeneratedOverride CompileSupplier(GeneratedCompilation compiled) {
         using MemoryStream peStream = compiled.PeStream;

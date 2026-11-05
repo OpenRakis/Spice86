@@ -4,6 +4,8 @@ namespace Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
 
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.LoadableFile;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Shared.Interfaces;
@@ -17,13 +19,15 @@ internal sealed class CfgCpuSnapshotBuilder {
     private readonly CfgBlockGraphExporter _graphExporter;
     private readonly CfgFunctionPartitioner _functionPartitioner;
     private readonly FunctionCatalogue _functionCatalogue;
+    private readonly GeneratorInputsCollector _inputsCollector;
     private readonly ILogger _loggerService;
 
     public CfgCpuSnapshotBuilder(CfgBlockGraphExporter graphExporter, CfgFunctionPartitioner functionPartitioner,
-        FunctionCatalogue functionCatalogue, ILogger loggerService) {
+        FunctionCatalogue functionCatalogue, GeneratorInputsCollector inputsCollector, ILogger loggerService) {
         _graphExporter = graphExporter;
         _functionPartitioner = functionPartitioner;
         _functionCatalogue = functionCatalogue;
+        _inputsCollector = inputsCollector;
         _loggerService = loggerService;
     }
 
@@ -46,7 +50,8 @@ internal sealed class CfgCpuSnapshotBuilder {
     /// </summary>
     private CfgPartitionedProgram? TryPartition(CfgExecutionContextGraph exported, ExecutionContextManager contextManager) {
         try {
-            return _functionPartitioner.Partition(exported.Graph, contextManager, _functionCatalogue);
+            return _functionPartitioner.Partition(exported.Graph, contextManager, _functionCatalogue,
+                _inputsCollector.Capture());
         } catch (InvalidOperationException partitioningFailure) {
             if (_loggerService.IsEnabled(LogLevel.Error)) {
                 _loggerService.LogError(partitioningFailure,

@@ -26,7 +26,17 @@ internal sealed record ProcedureCallHelperNode : MethodCallNode {
     /// <summary>The call width.</summary>
     public BitWidth Width { get; }
 
+    /// <summary>Whether the call's only observed target is the one <see cref="MethodCallNode.Arguments"/>
+    /// names: a dispatch over several observed targets is not.</summary>
+    public bool SingleObservedTarget { get; init; }
+
+    /// <summary>Whether a continuation was observed after the call during discovery.</summary>
+    public bool ObservedContinuation { get; init; }
+
     /// <inheritdoc />
     public override MethodCallNode WithArguments(IVisitableAstNode[] arguments) =>
-        new ProcedureCallHelperNode(Distance, Width, arguments);
+        new ProcedureCallHelperNode(Distance, Width, arguments) {
+            SingleObservedTarget = SingleObservedTarget,
+            ObservedContinuation = ObservedContinuation
+        };
 }

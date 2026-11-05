@@ -86,7 +86,7 @@ public class CurrentInstructions : InstructionReplacer, IClearable {
 
                 uint byteAddress = (uint)(field.PhysicalAddress + i);
                 AddressBreakPoint breakPoint = new AddressBreakPoint(BreakPointType.MEMORY_WRITE, byteAddress,
-                    b => { OnBreakPointReached((AddressBreakPoint)b, instruction); }, false);
+                    (b, _) => { OnBreakPointReached((AddressBreakPoint)b, instruction); }, false);
                 breakpoints.Add(breakPoint);
                 _emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
             }

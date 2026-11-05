@@ -16,7 +16,7 @@ internal sealed record FlagSetter(AluOperation Operation, BitWidth Width, int? C
     /// The setter of <paramref name="node"/>, or <c>null</c> when its operation has no flag relation rule.
     /// </summary>
     public static FlagSetter? Of(AluOperationNode node) {
-        AluOperation operation = node.Operation;
+        AluOperation operation = node.Call.Operation;
         if (operation is not (AluOperation.Sub or AluOperation.And or AluOperation.Or or AluOperation.Xor
             or AluOperation.Add or AluOperation.Inc or AluOperation.Dec or AluOperation.Adc or AluOperation.Sbb
             or AluOperation.Shl or AluOperation.Shr or AluOperation.Sar or AluOperation.Rol
@@ -29,7 +29,7 @@ internal sealed record FlagSetter(AluOperation Operation, BitWidth Width, int? C
             && node.Call.CallNode.Arguments.Count > 1) {
             count = Constant(node.Call.CallNode.Arguments[1]);
         }
-        return new FlagSetter(operation, node.Width, count);
+        return new FlagSetter(operation, node.Call.Width, count);
     }
 
     private static int? Constant(IVisitableAstNode node) => node switch {

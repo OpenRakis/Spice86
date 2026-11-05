@@ -1,9 +1,9 @@
 using Microsoft.Extensions.Logging;
 namespace Spice86.Core.Emulator.InterruptHandlers.Bios;
 
-
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Enums;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
@@ -53,26 +53,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
         if (initializeResetVector) {
             memory.UInt16[0xF000, 0xFFF0] = 0xF4;
         }
-        FillDispatchTable();
     }
-
-    private void FillDispatchTable() {
-        AddAction(0x50, () => DosVFontSubsystemAccess(true));
-        AddAction(0x24, () => ToggleA20GateOrGetStatus(true));
-        AddAction(0x6, Unsupported);
-        AddAction(0x41, Unsupported);
-        AddAction(0x86, () => BiosWait(true));
-        AddAction(0x90, () => DeviceBusy(true));
-        AddAction(0x91, () => DevicePost(true));
-        AddAction(0xC0, Unsupported);
-        AddAction(0xC2, Unsupported);
-        AddAction(0xC4, Unsupported);
-        AddAction(0x88, () => GetExtendedMemorySize(true));
-        AddAction(0x87, () => CopyExtendedMemory(true));
-        AddAction(0x83, () => WaitFunction(true));
-        AddAction(0x4F, () => KeyboardIntercept(true));
-    }
-
 
     /// <summary>
     /// INT 15h, AH=50h - DOS/V Font Subsystem Access.
@@ -96,6 +77,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
     ///   AH = error code (01h = invalid font type, 02h = BL not zero, 03h = invalid font size,
     ///   04h = invalid code page, 80h = unsupported on PC, 86h = unsupported on XT)<br/>
     /// </remarks>
+    [InterruptService(0x50, Reads = CpuValues.Ah, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
     public void DosVFontSubsystemAccess(bool calledFromVm) {
         SetCarryFlag(true, calledFromVm);
         //Makes Knights of Xentar work on MS-DOS (Western port for IBM PC)
@@ -116,6 +98,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// Sets up RTC periodic interrupt for timed delay. ES:BX points to a flag byte whose bit 7 will be set when the wait completes.
     /// AL=00h to set, AL=01h to cancel. Returns CF=1 + AH=80h if event already in progress.
     /// </summary>
+    [InterruptService(0x83, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Cx | CpuValues.Dx | CpuValues.Es | CpuValues.Bx, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.Write, Io = true)]
     public void WaitFunction(bool calledFromVm) {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("INT 15h, AH=83h - WAIT FUNCTION, AL={AL:X2}", State.AL);
@@ -167,6 +150,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
     ///   <li>3: Get A20 support</li><br/>
     /// </ul>
     /// </summary>
+    [InterruptService(0x24, Reads = CpuValues.Ah | CpuValues.Al, Writes = CpuValues.Al | CpuValues.Ah | CpuValues.Bx | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
     public void ToggleA20GateOrGetStatus(bool calledFromVm) {
         switch (State.AL) {
             case 0:
@@ -210,6 +194,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// They are then free to use the memory between the new and old sizes at will. <br/><br/>
     /// The standard BIOS only returns memory between 1MB and 16MB; use AH=0xC7 for memory beyond 16MB.
     /// </remarks>
+    [InterruptService(0x88, Reads = CpuValues.Ah, Writes = CpuValues.Ax | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
     public void GetExtendedMemorySize(bool calledFromVm) {
         if (_a20Gate.IsEnabled || _configuration.Xms is true) {
             State.AX = 0; //Either the HMA is not accessible, or the DOS driver protects it.
@@ -234,6 +219,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// CF clear if successful<br/>
     /// AH = status (see RBIL #00498)<br/>
     /// </summary>
+    [InterruptService(0x87, Reads = CpuValues.Ah | CpuValues.Cx | CpuValues.Es | CpuValues.Si, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.ReadWrite)]
     public void CopyExtendedMemory(bool calledFromVm) {
         // Save current A20 state and enable it for extended memory access
         bool prevA20Enable = _a20Gate.IsEnabled;
@@ -318,11 +304,15 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// <summary>
     /// This function tells to the emulated program that we are an IBM PC AT, not a IBM PS/2.
     /// </summary>
+    [InterruptService(0x06, Name = "Unsupported06", Reads = CpuValues.Ah, Writes = CpuValues.Ah | CpuValues.Carry)]
+    [InterruptService(0x41, Name = "Unsupported41", Reads = CpuValues.Ah, Writes = CpuValues.Ah | CpuValues.Carry)]
+    [InterruptService(0xC0, Name = "UnsupportedC0", Reads = CpuValues.Ah, Writes = CpuValues.Ah | CpuValues.Carry)]
+    [InterruptService(0xC2, Name = "UnsupportedC2", Reads = CpuValues.Ah, Writes = CpuValues.Ah | CpuValues.Carry)]
+    [InterruptService(0xC4, Name = "UnsupportedC4", Reads = CpuValues.Ah, Writes = CpuValues.Ah | CpuValues.Carry)]
     public void Unsupported() {
         SetCarryFlag(true, true);
         State.AH = 0x86;
     }
-
 
     private void ModifyCmosRegister(byte register, Func<byte, byte> modifier) {
         _ioPortDispatcher.WriteByte(Devices.Cmos.CmosPorts.Address, register);
@@ -336,6 +326,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// INT 15h, AH=86h - BIOS Wait.
     /// Waits for CX:DX microseconds. Returns CF=1 + AH=83h if timer already in use.
     /// </summary>
+    [InterruptService(0x86, Reads = CpuValues.Ah | CpuValues.Cx | CpuValues.Dx, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.ReadWrite)]
     public void BiosWait(bool calledFromVm) {
         if (_biosDataArea.RtcWaitFlag != 0) {
             State.AH = 0x83;
@@ -356,7 +347,6 @@ public class SystemBiosInt15Handler : InterruptHandler {
         SetCarryFlag(false, calledFromVm);
     }
 
-
     private void OnWaitComplete(uint value) {
         _biosDataArea.RtcWaitFlag = 0;
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
@@ -368,6 +358,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// INT 15h, AH=4Fh - Keyboard Intercept.
     /// Allows translation or filtering of keyboard scan codes. Returns CF=1 to process, CF=0 to ignore.
     /// </summary>
+    [InterruptService(0x4F, Reads = CpuValues.Ah | CpuValues.Al, Writes = CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
     public void KeyboardIntercept(bool calledFromVm) {
         byte scanCode = State.AL;
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
@@ -380,6 +371,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// <summary>
     /// INT 15h, AH=90h - Device Busy.
     /// </summary>
+    [InterruptService(0x90, Reads = CpuValues.Ah, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
     public void DeviceBusy(bool calledFromVm) {
         SetCarryFlag(false, calledFromVm);
         State.AH = 0;
@@ -388,6 +380,7 @@ public class SystemBiosInt15Handler : InterruptHandler {
     /// <summary>
     /// INT 15h, AH=91h - Device Post.
     /// </summary>
+    [InterruptService(0x91, Reads = CpuValues.Ah, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
     public void DevicePost(bool calledFromVm) {
         SetCarryFlag(false, calledFromVm);
         State.AH = 0;

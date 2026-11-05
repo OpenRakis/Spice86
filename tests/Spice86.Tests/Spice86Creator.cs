@@ -22,30 +22,37 @@ public sealed class Spice86Creator : IDisposable {
 
     public bool EnableUmb { get; set; } = true;
 
+    /// <summary>The program load segment every fixture run is configured with unless a caller
+    /// passes a different one.</summary>
+    internal const ushort ProgramEntryPointSegment = 0x170;
+
     public Spice86Creator(string binName, bool enablePit = false,
         long maxCycles = 100000, bool installInterruptVectors = false, bool failOnUnhandledPort = false, bool enableA20Gate = false,
         bool enableXms = false, bool enableEms = false, string? overrideSupplierClassName = null, string? cDrive = null,
         IOverrideSupplier? overrideSupplier = null,
-        ushort programEntryPointSegment = 0x170,
+        ushort programEntryPointSegment = ProgramEntryPointSegment,
         SbType sbType = SbType.None, OplMode oplMode = OplMode.None,
         ushort sbBase = 0x220, byte sbIrq = 7, byte sbDma = 1, byte sbHdma = 5,
         string? exeArgs = null, long? instructionTimeScale = null,
         JitMode jitMode = JitMode.InterpretedOnly, bool failOnInvalidOpcode = false,
         string? recordedDataDirectory = null, bool reloadCfgGraph = false,
-        bool enableSpeculativeCfgExploration = true) : this(binName, enablePit, maxCycles,
+        bool enableSpeculativeCfgExploration = true, DateTimeOffset? clockStartTime = null)
+        : this(binName, enablePit, maxCycles,
             installInterruptVectors, failOnUnhandledPort, enableA20Gate, enableXms, enableEms,
             overrideSupplierClassName, cDrive, overrideSupplier, programEntryPointSegment, sbType, oplMode,
             sbBase, sbIrq, sbDma, sbHdma, exeArgs, instructionTimeScale, jitMode, failOnInvalidOpcode,
-            recordedDataDirectory, reloadCfgGraph, enableSpeculativeCfgExploration, RenderingMode.Async, 0xF000) {
+            recordedDataDirectory, reloadCfgGraph, RenderingMode.Async, 0xF000, null,
+            enableSpeculativeCfgExploration, clockStartTime) {
     }
 
     internal Spice86Creator(AsmFixtures.AsmRunSettings settings, JitMode jitMode, IOverrideSupplier? overrideSupplier)
         : this(settings.BinName, settings.EnablePit, settings.MaxCycles, settings.InstallInterruptVectors,
             settings.FailOnUnhandledPort, settings.EnableA20Gate, settings.EnableXms, settings.EnableEms,
             null, settings.CDrive, overrideSupplier,
-            0x170, settings.SbType, settings.OplMode, 0x220, 7, 1, 5,
+            ProgramEntryPointSegment, settings.SbType, settings.OplMode, 0x220, 7, 1, 5,
             settings.ExeArgs, settings.InstructionTimeScale, jitMode, false, null, false,
-            settings.EnableSpeculativeCfgExploration, settings.RenderingMode, settings.AsmHandlersSegment) {
+            settings.RenderingMode, settings.AsmHandlersSegment, settings.CpuModel,
+            settings.EnableSpeculativeCfgExploration, null) {
         EnableUmb = settings.EnableUmb;
     }
 
@@ -55,7 +62,8 @@ public sealed class Spice86Creator : IDisposable {
         ushort programEntryPointSegment, SbType sbType, OplMode oplMode, ushort sbBase, byte sbIrq,
         byte sbDma, byte sbHdma, string? exeArgs, long? instructionTimeScale, JitMode jitMode,
         bool failOnInvalidOpcode, string? recordedDataDirectory, bool reloadCfgGraph,
-        bool enableSpeculativeCfgExploration, RenderingMode renderingMode, ushort asmHandlersSegment) {
+        RenderingMode renderingMode, ushort asmHandlersSegment, CpuModel? cpuModel,
+        bool enableSpeculativeCfgExploration, DateTimeOffset? clockStartTime) {
         string executablePath = Path.IsPathRooted(binName) ? binName : $"Resources/cpuTests/{binName}.bin";
         if (overrideSupplierClassName != null && overrideSupplier != null) {
             throw new ArgumentException("Provide either an override supplier instance or an override supplier class name, not both.");
@@ -75,6 +83,7 @@ public sealed class Spice86Creator : IDisposable {
         _exportFolder = exportFolder;
         _configuration = new Configuration {
             Exe = executablePath,
+            CpuModel = cpuModel ?? CpuModel.ZET_86,
             // Don't expect any hash for the exe
             ExpectedChecksumValue = [],
             // when false: making sure int8 is not going to be triggered during the tests
@@ -111,8 +120,9 @@ public sealed class Spice86Creator : IDisposable {
             JitGeneratorIr = TestJitSettings.GeneratorIr,
             FailOnInvalidOpcode = failOnInvalidOpcode,
             ReloadCfgGraph = reloadCfgGraph,
-            EnableSpeculativeCfgExploration = enableSpeculativeCfgExploration,
             RenderingMode = renderingMode,
+            EnableSpeculativeCfgExploration = enableSpeculativeCfgExploration,
+            ClockStartTime = clockStartTime,
         };
 
         _maxCycles = maxCycles;
@@ -125,7 +135,7 @@ public sealed class Spice86Creator : IDisposable {
         res.Machine.CpuState.Flags.CpuModel = CpuModel.ZET_86;
         // Add a breakpoint after some cycles to ensure no infinite loop can lock the tests
         res.Machine.EmulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CPU_CYCLES, _maxCycles,
-            (breakpoint) => Assert.Fail($"Test ran for {((AddressBreakPoint)breakpoint).Address} cycles, something is wrong."), true), true);
+            (breakpoint, _) => Assert.Fail($"Test ran for {((AddressBreakPoint)breakpoint).Address} cycles, something is wrong."), true), true);
         // Init VGA card to map some addresses correctly otherwise there will be errors when saving the ram image
         res.Machine.IoPortDispatcher.WriteByte(Ports.GraphicsControllerAddress, 0x6);
         res.Machine.IoPortDispatcher.WriteByte(Ports.GraphicsControllerData, 0xE);

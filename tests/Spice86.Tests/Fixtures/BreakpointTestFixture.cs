@@ -108,7 +108,7 @@ public class BreakpointTestFixture : IDisposable {
     public AddressBreakPoint CreateConditionalBreakpoint(
         BreakPointType type,
         long address,
-        Action<BreakPoint> onReached,
+        Action<BreakPoint, long> onReached,
         string conditionExpression,
         bool isRemovedOnTrigger = false) {
         Func<long, bool> condition = CompileCondition(conditionExpression);

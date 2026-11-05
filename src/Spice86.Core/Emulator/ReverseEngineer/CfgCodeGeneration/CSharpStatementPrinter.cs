@@ -12,6 +12,7 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Propagation;
 using Spice86.Shared.Emulator.Memory;
 
+using System.Globalization;
 using System.Linq;
 
 using static Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast.CodeGenerationAst;
@@ -21,8 +22,13 @@ using static Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast.CodeGen
 /// <see cref="CSharpExpressionPrinter"/>; labels come from <paramref name="labelOf"/>.
 /// </summary>
 internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpExpressionPrinter expressions, Func<IGotoTarget, string> labelOf) {
+    /// <summary>The goto targets of the whole method being printed. A
+    /// <c>for</c> rewrite refuses a loop when any statement of the method - not only of the block
+    /// being dispatched - jumps to its header or its step.</summary>
+    public GotoTargets MethodGotoTargets => expressions.MethodGotoTargets;
+
     /// <summary>Writes <paramref name="node"/> in statement position. The statement walk runs on an explicit
-    /// stack — nodes to print interleaved with <see cref="Action"/> writer operations — so arbitrarily deep
+    /// stack - nodes to print interleaved with <see cref="Action"/> writer operations - so arbitrarily deep
     /// <c>if</c> / <c>else</c> chains cannot overflow the thread's stack.</summary>
     public void Print(IVisitableAstNode node) {
         Stack<object> pending = new();
@@ -35,6 +41,12 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
                 case IVisitableAstNode next:
                     Dispatch(next, pending);
                     break;
+                case CountedLoop countedLoop:
+                    PushCountedLoop(pending, countedLoop);
+                    break;
+                case BoundaryPrint boundaryPrint:
+                    PushBoundaryPrint(pending, boundaryPrint);
+                    break;
             }
         }
     }
@@ -42,9 +54,7 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
     private void Dispatch(IVisitableAstNode node, Stack<object> pending) {
         switch (node) {
             case BlockNode block:
-                for (int index = block.Statements.Count - 1; index >= 0; index--) {
-                    pending.Push(block.Statements[index]);
-                }
+                PushBlockStatements(pending, block);
                 return;
             case IfElseNode ifElse:
                 PushIfElse(pending, ifElse);
@@ -82,6 +92,9 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
             case DivisionNode division:
                 PrintDivision(division);
                 return;
+            case MultiplicationNode multiplication:
+                PrintMultiplication(multiplication);
+                return;
             case GotoNode gotoNode:
                 writer.Line($"goto {labelOf(gotoNode.Target)};");
                 return;
@@ -90,6 +103,10 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
                 return;
             case EntryDispatcherLabelNode:
                 writer.Label("entrydispatcher");
+                return;
+            case ReturnNode { Value: ProcedureReturnHelperNode helper } when
+                    expressions.TypedSignature is { } typed:
+                PrintTypedReturn(helper, typed);
                 return;
             case ReturnNode returnNode:
                 writer.Line($"return {expressions.Print(returnNode.Value)};");
@@ -219,6 +236,306 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
         }
     }
 
+    /// <summary>A <c>while</c> loop (<see cref="PreTestLoopNode"/> or <see cref="WhileNode"/>) that prints as
+    /// <c>for</c>: <paramref name="Init"/> runs once before the first test, <paramref name="Step"/> runs at
+    /// the end of every iteration (removed from <paramref name="Body"/>), the condition is the loop's own.</summary>
+    private sealed record CountedLoop(ValueNode Condition, IVisitableAstNode Init, IVisitableAstNode Step, BlockNode Body);
+
+    /// <summary>An <see cref="InstructionBoundaryNode"/> whose body is queued as <paramref name="Items"/>,
+    /// which can hold <see cref="CountedLoop"/> markers; prints with the boundary's local variable
+    /// suffix like <see cref="PushInstructionBoundary"/>.</summary>
+    private sealed record BoundaryPrint(InstructionBoundaryNode Boundary, IReadOnlyList<object> Items);
+
+    /// <summary>The condition, step and rewritten body of a <see cref="PreTestLoopNode"/> eligible for the
+    /// <c>for</c> form, before its init statement is located.</summary>
+    private sealed record CountedLoopShape(string Counter, IVisitableAstNode Step, BlockNode Body);
+
+    private static readonly ISet<BinaryOperation> CountedLoopComparisons = new HashSet<BinaryOperation> {
+        BinaryOperation.EQUAL, BinaryOperation.NOT_EQUAL,
+        BinaryOperation.LESS_THAN, BinaryOperation.GREATER_THAN,
+        BinaryOperation.LESS_THAN_OR_EQUAL, BinaryOperation.GREATER_THAN_OR_EQUAL
+    };
+
+    /// <summary>Queues the statements of <paramref name="block"/>; a <see cref="PreTestLoopNode"/> whose
+    /// counter is a register local initialized right before the loop, tested against a constant and stepped
+    /// by a constant as the body's last statement is queued as <c>for (init; test; step)</c> instead of
+    /// <c>while</c>.</summary>
+    private void PushBlockStatements(Stack<object> pending, BlockNode block) {
+        IReadOnlyList<IVisitableAstNode> statements = block.Statements;
+        if (expressions.LocalReads is null) {
+            for (int index = statements.Count - 1; index >= 0; index--) {
+                pending.Push(statements[index]);
+            }
+            return;
+        }
+        object?[] slots = new object?[statements.Count];
+        for (int index = 0; index < statements.Count; index++) {
+            slots[index] = statements[index];
+        }
+        for (int index = 0; index < statements.Count; index++) {
+            switch (statements[index]) {
+                case PreTestLoopNode loop:
+                    if (CountedLoopShapeOf(block, MethodGotoTargets, loop.Condition, loop.Body, loop.HeaderTarget) is { } shape
+                        && InitBefore(slots, statements, index, shape.Counter) is { } init) {
+                        slots[index] = new CountedLoop(loop.Condition, init, shape.Step, shape.Body);
+                    }
+                    break;
+                case WhileNode whileNode:
+                    if (CountedLoopShapeOf(block, MethodGotoTargets, whileNode.Condition, whileNode.Body, null) is { } whileShape
+                        && InitBefore(slots, statements, index, whileShape.Counter) is { } whileInit) {
+                        slots[index] = new CountedLoop(whileNode.Condition, whileInit, whileShape.Step, whileShape.Body);
+                    }
+                    break;
+                case InstructionBoundaryNode boundary:
+                    BoundaryCountedLoops(block, MethodGotoTargets, slots, index, boundary);
+                    break;
+            }
+        }
+        for (int index = statements.Count - 1; index >= 0; index--) {
+            if (slots[index] is { } item) {
+                pending.Push(item);
+            }
+        }
+    }
+
+    /// <summary>Queues a boundary body's statements in which every counted loop whose init is the last
+    /// statement of the previous sibling boundary became a <see cref="CountedLoop"/> marker.</summary>
+    private void BoundaryCountedLoops(BlockNode block, GotoTargets targets, object?[] slots, int index,
+        InstructionBoundaryNode boundary) {
+        IReadOnlyList<IVisitableAstNode> inner = boundary.Body.Statements;
+        List<object>? items = null;
+        for (int position = 0; position < inner.Count; position++) {
+            if (inner[position] is not (PreTestLoopNode or WhileNode)) {
+                continue;
+            }
+            (ValueNode condition, BlockNode body, IGotoTarget? header) = inner[position] switch {
+                PreTestLoopNode preTestLoop => (preTestLoop.Condition, preTestLoop.Body, preTestLoop.HeaderTarget),
+                WhileNode whileNode => (whileNode.Condition, whileNode.Body, null),
+                _ => throw new InvalidOperationException()
+            };
+            int previous = position - 1;
+            while (previous >= 0 && CommentOnly(inner[previous])) {
+                previous--;
+            }
+            // A real statement inside the boundary precedes the loop: it, not a sibling boundary, is the
+            // only possible init, and the body block itself decides that case when it is dispatched.
+            if (previous >= 0
+                || CountedLoopShapeOf(block, targets, condition, body, header) is not { } shape
+                || InitBefore(slots, block.Statements, index, shape.Counter) is not { } init) {
+                continue;
+            }
+            items ??= inner.Cast<object>().ToList();
+            items[position] = new CountedLoop(condition, init, shape.Step, shape.Body);
+        }
+        if (items is not null) {
+            slots[index] = new BoundaryPrint(boundary, items);
+        }
+    }
+
+    /// <summary>The statement right before position <paramref name="index"/> of <paramref name="statements"/>
+    /// (only comment lines are skipped) when it assigns the local
+    /// <paramref name="counter"/>: the statement itself, or the last statement of the previous instruction
+    /// boundary. Consumed slots are replaced so the init is not printed twice.</summary>
+    private IVisitableAstNode? InitBefore(object?[] slots, IReadOnlyList<IVisitableAstNode> statements, int index,
+        string counter) {
+        int previous = index - 1;
+        while (previous >= 0 && CommentOnly(statements[previous])) {
+            previous--;
+        }
+        if (previous < 0 || slots[previous] is not IVisitableAstNode candidate) {
+            return null;
+        }
+        if (AssignTo(candidate, counter) is { } init) {
+            slots[previous] = null;
+            return init;
+        }
+        if (candidate is InstructionBoundaryNode boundary) {
+            IReadOnlyList<IVisitableAstNode> inner = boundary.Body.Statements;
+            if (inner.Count > 0 && AssignTo(inner[^1], counter) is { } boundaryInit) {
+                slots[previous] = boundary with { Body = new BlockNode(inner.Take(inner.Count - 1).ToArray()) };
+                return boundaryInit;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>A line that only prints a comment: an <see cref="InstructionStartNode"/>, a
+    /// <see cref="CommentNode"/>, or an instruction boundary left with only its comment lines.</summary>
+    private static bool CommentOnly(IVisitableAstNode statement) =>
+        statement is InstructionStartNode or CommentNode
+        || statement is InstructionBoundaryNode boundary
+            && boundary.Body.Statements.All(inner => inner is InstructionStartNode or CommentNode);
+
+    /// <summary>The condition, step and rewritten body making <paramref name="loop"/> a counted loop,
+    /// or <c>null</c>: the condition compares a register local with a constant; the body's last statement
+    /// (possibly the last statement of its last instruction boundary) adds or subtracts a constant to that
+    /// local; no <see cref="ContinueNode"/> binds to the loop, no goto of the method targets its header,
+    /// and nothing jumps to the step.</summary>
+    private CountedLoopShape? CountedLoopShapeOf(BlockNode block, GotoTargets targets, ValueNode condition,
+        BlockNode loopBody, IGotoTarget? headerTarget) {
+        if (CounterName(condition) is not { } counter) {
+            return null;
+        }
+        IReadOnlyList<IVisitableAstNode> body = loopBody.Statements;
+        if (body.Count == 0) {
+            return null;
+        }
+        IVisitableAstNode last = body[^1];
+        InstructionBoundaryNode? stepBoundary = last as InstructionBoundaryNode;
+        IReadOnlyList<IVisitableAstNode> stepList = stepBoundary?.Body.Statements ?? body;
+        IVisitableAstNode step = stepList[^1];
+        if (stepBoundary is not null && stepList.Count - 1 <= InstructionStartIndex(stepList)) {
+            return null;
+        }
+        if (!IsStep(step, counter)) {
+            return null;
+        }
+        if (headerTarget is not null && targets.Labels.Contains(headerTarget)) {
+            return null;
+        }
+        if (StepIsJumpedInto(stepBoundary, stepList, targets)) {
+            return null;
+        }
+        if (BindsContinue(loopBody)) {
+            return null;
+        }
+        return new CountedLoopShape(counter, step, ForBody(body, stepBoundary, stepList));
+    }
+
+    private static BlockNode ForBody(IReadOnlyList<IVisitableAstNode> body,
+        InstructionBoundaryNode? stepBoundary, IReadOnlyList<IVisitableAstNode> stepList) {
+        if (stepBoundary is null) {
+            return new BlockNode(body.Take(body.Count - 1).ToArray());
+        }
+        return new BlockNode([
+            .. body.Take(body.Count - 1),
+            stepBoundary with { Body = new BlockNode(stepList.Take(stepList.Count - 1).ToArray()) }]);
+    }
+
+    /// <summary>Whether the method jumps to the step's boundary anchor or to a label inside the
+    /// boundary just before the step: either jump would land past the step in the <c>while</c> but
+    /// at the step in the <c>for</c>.</summary>
+    private static bool StepIsJumpedInto(InstructionBoundaryNode? stepBoundary,
+        IReadOnlyList<IVisitableAstNode> stepList, GotoTargets targets) {
+        if (stepBoundary?.Anchor is { } anchor && targets.Labels.Contains(anchor)) {
+            return true;
+        }
+        return stepList.Count > 1 && stepList[^2] is LabelNode beforeStep
+            && targets.Labels.Contains(beforeStep.Target);
+    }
+
+    private static int InstructionStartIndex(IReadOnlyList<IVisitableAstNode> statements) {
+        for (int index = 0; index < statements.Count; index++) {
+            if (statements[index] is InstructionStartNode) {
+                return index;
+            }
+        }
+        return -1;
+    }
+
+    /// <summary>A <see cref="ContinueNode"/> directly inside <paramref name="body"/> - one outside any nested
+    /// loop binds to the loop being rewritten, and in a <c>for</c> it would wrongly run the step.</summary>
+    private static bool BindsContinue(BlockNode body) {
+        Stack<IVisitableAstNode> pending = new();
+        foreach (IVisitableAstNode statement in body.Statements) {
+            pending.Push(statement);
+        }
+        while (pending.Count > 0) {
+            IVisitableAstNode current = pending.Pop();
+            if (current is ContinueNode) {
+                return true;
+            }
+            if (current is not (WhileNode or WhileWithExitNode or InfiniteLoopNode or DoWhileNode or PreTestLoopNode)) {
+                foreach (IVisitableAstNode child in ChildStatements(current)) {
+                    pending.Push(child);
+                }
+            }
+        }
+        return false;
+    }
+
+    /// <summary>The local name a comparison operand of <paramref name="condition"/> substitutes to, when the
+    /// other operand resolves to a constant; <c>null</c> when neither side matches.</summary>
+    private string? CounterName(ValueNode condition) {
+        if (condition is not BinaryOperationNode comparison
+            || !CountedLoopComparisons.Contains(comparison.BinaryOperation)) {
+            return null;
+        }
+        return CounterOperand(comparison.Left, comparison.Right) ?? CounterOperand(comparison.Right, comparison.Left);
+    }
+
+    private string? CounterOperand(ValueNode localSide, ValueNode constantSide) {
+        if (ConstantEvaluation.Resolved(constantSide) is not null) {
+            return LocalNameOf(UnwrapConversions(localSide));
+        }
+        return null;
+    }
+
+    /// <summary>The name of the local <paramref name="node"/> prints as; <c>null</c> when the plan does not
+    /// substitute it.</summary>
+    private string? LocalNameOf(IVisitableAstNode node) {
+        IReadOnlyDictionary<IVisitableAstNode, SubstitutedRead>? reads = expressions.LocalReads;
+        if (reads is null || !reads.TryGetValue(node, out SubstitutedRead? read) || read is null) {
+            return null;
+        }
+        int castEnd = read.Text.LastIndexOf(')');
+        return castEnd < 0 ? read.Text : read.Text[(castEnd + 1)..];
+    }
+
+    private static ValueNode UnwrapConversions(ValueNode node) => node switch {
+        TypeConversionNode conversion => UnwrapConversions(conversion.Value),
+        ExplicitCastNode { Value: ValueNode value } => UnwrapConversions(value),
+        _ => node
+    };
+
+    /// <summary><paramref name="statement"/> when it assigns the local <paramref name="counter"/>, else
+    /// <c>null</c>.</summary>
+    private IVisitableAstNode? AssignTo(IVisitableAstNode statement, string counter) =>
+        statement is BinaryOperationNode { BinaryOperation: BinaryOperation.ASSIGN } assignment
+        && LocalNameOf(assignment.Left) == counter ? statement : null;
+
+    /// <summary>Whether <paramref name="statement"/> assigns the local <paramref name="counter"/> from itself
+    /// plus or minus a constant.</summary>
+    private bool IsStep(IVisitableAstNode statement, string counter) =>
+        statement is BinaryOperationNode { BinaryOperation: BinaryOperation.ASSIGN } assignment
+        && LocalNameOf(assignment.Left) == counter
+        && UnwrapConversions(assignment.Right) is BinaryOperationNode {
+            BinaryOperation: BinaryOperation.PLUS or BinaryOperation.MINUS } arithmetic
+        && LocalNameOf(UnwrapConversions(arithmetic.Left)) == counter
+        && ConstantEvaluation.Resolved(arithmetic.Right) is not null;
+
+    /// <summary>The text <paramref name="statement"/> prints, without its trailing semicolon, for a
+    /// <c>for</c> header slot.</summary>
+    private string StatementText(IVisitableAstNode statement) => statement switch {
+        BinaryOperationNode { BinaryOperation: BinaryOperation.ASSIGN, Left: RegisterNode register } assignment
+            when IncrementOrDecrement(register, assignment.Right) is { } step =>
+            expressions.Print(register).Text + step,
+        BinaryOperationNode { BinaryOperation: BinaryOperation.ASSIGN } assignment
+            when CompoundAssignment(assignment) is { } compound =>
+            compound[..^1],
+        _ => expressions.Print(statement).Text
+    };
+
+    private void PushCountedLoop(Stack<object> pending, CountedLoop loop) {
+        List<object> items = [
+            (Action)(() => writer.OpenBlock(
+                $"for ({StatementText(loop.Init)}; {expressions.Print(loop.Condition)}; {StatementText(loop.Step)})"))
+        ];
+        AppendBody(items, loop.Body);
+        items.Add((Action)(() => writer.CloseBlock()));
+        PushItems(pending, items);
+    }
+
+    private void PushBoundaryPrint(Stack<object> pending, BoundaryPrint boundaryPrint) {
+        string savedSuffix = expressions.LocalVariableSuffix;
+        List<object> items = [
+            (Action)(() => expressions.LocalVariableSuffix = boundaryPrint.Boundary.LocalVariableSuffix)
+        ];
+        items.AddRange(boundaryPrint.Items);
+        items.Add((Action)(() => expressions.LocalVariableSuffix = savedSuffix));
+        PushItems(pending, items);
+    }
+
     /// <summary>The <c>if</c> that is the only statement of <paramref name="node"/>, or <c>null</c>.</summary>
     private static IfElseNode? OnlyIfElse(IVisitableAstNode node) =>
         StatementsOf(node).ToList() is [IfElseNode ifElse] ? ifElse : null;
@@ -256,9 +573,39 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
         return $"0x{label:X4}";
     }
 
+    /// <summary>A typed method's <c>ret</c> / <c>retf</c>: the <c>NearReturn(n)</c> /
+    /// <c>FarReturn(n)</c> statement, then <c>return</c> of the signature's outputs. A count of
+    /// <c>0</c> prints the parameterless overload.</summary>
+    private void PrintTypedReturn(ProcedureReturnHelperNode helper, TypedSignature typed) {
+        string helperName = helper.Distance == CallDistance.Near ? "NearReturn" : "FarReturn";
+        string arguments = TypedReturnArguments(helper);
+        writer.Line(arguments == "0" ? $"{helperName}();" : $"{helperName}({arguments});");
+        writer.Line(typed.ReturnStatement);
+    }
+
+    private string TypedReturnArguments(ProcedureReturnHelperNode helper) {
+        if (helper.Arguments.Count == 0) {
+            return "0";
+        }
+        return string.Join(", ", helper.Arguments.Select(TypedReturnArgumentText));
+    }
+
+    private string TypedReturnArgumentText(IVisitableAstNode argument) {
+        if (ConstantEvaluation.Resolved(argument) is { } constant) {
+            return constant.Value.ToString(CultureInfo.InvariantCulture);
+        }
+        return expressions.Print(argument).Text;
+    }
+
     private void PrintCyclicJump(CyclicJumpNode node) {
-        writer.OpenBlock($"if (JumpDispatcher.Jump({node.MethodName}, 0x{node.LoadOffset:X4}))");
-        writer.Line("loadOffset = JumpDispatcher.NextEntryAddress;");
+        string delegateName = expressions.TypedSignatures?.DelegateNameOf(node.MethodName) ?? node.MethodName;
+        string target = node.SingleEntry
+            ? GeneratedOverrideNames.EntryFieldNameOf(delegateName)
+            : delegateName;
+        writer.OpenBlock($"if (JumpDispatcher.Jump({target}, 0x{node.LoadOffset:X4}))");
+        if (!node.SingleEntry) {
+            writer.Line("loadOffset = JumpDispatcher.NextEntryAddress;");
+        }
         writer.Line("goto entrydispatcher;");
         writer.CloseBlock();
         writer.Line("return JumpDispatcher.RequiredJumpAsmReturn;");
@@ -284,7 +631,15 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
 
     private string FaultHandler(CpuFaultHandler handler) {
         string handlerSegment = expressions.SegmentVariable(handler.Handler.Segment);
-        return $"new CpuFaultTarget(new SegmentedAddress({handlerSegment}, 0x{handler.Handler.Offset:X4}), () => {handler.MethodName}(0x{handler.LoadOffset:X4}))";
+        string invoke = FaultInvoke(handler);
+        return $"new CpuFaultTarget(new SegmentedAddress({handlerSegment}, 0x{handler.Handler.Offset:X4}), {invoke})";
+    }
+
+    private string FaultInvoke(CpuFaultHandler handler) {
+        if (handler.SingleEntry) {
+            return expressions.TypedSignatures?.DelegateNameOf(handler.MethodName) ?? handler.MethodName;
+        }
+        return $"() => {handler.MethodName}(0x{handler.LoadOffset:X4})";
     }
 
     private void PrintFailAsUntested(FailAsUntestedNode node) {
@@ -351,6 +706,21 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
         writer.Line($"({low}, {high}) = {helperName}(divisor: {divisor}, dividend: {dividend});");
     }
 
+    private void PrintMultiplication(MultiplicationNode node) {
+        string helperName = (node.Signed, node.Width) switch {
+            (false, BitWidth.WORD_16) => nameof(CSharpOverrideHelper.Mul16),
+            (false, BitWidth.DWORD_32) => nameof(CSharpOverrideHelper.Mul32),
+            (true, BitWidth.WORD_16) => nameof(CSharpOverrideHelper.IMul16),
+            _ => nameof(CSharpOverrideHelper.IMul32)
+        };
+        DataType operandType = DataType.FromBitWidth(node.Width, node.Signed);
+        string left = CSharpExpressionPrinter.Cast(operandType, expressions.Print(node.Left));
+        string right = CSharpExpressionPrinter.Cast(operandType, expressions.Print(node.Right));
+        string low = expressions.Print(node.Low);
+        string high = expressions.Print(node.High);
+        writer.Line($"({low}, {high}) = {helperName}({left}, {right});");
+    }
+
     private void PrintCheckExternalEvents(CheckExternalEventsNode node) {
         string resumeSegment = expressions.SegmentVariable(node.ResumeAddress.Segment);
         writer.Line($"CheckExternalEvents({resumeSegment}, 0x{node.ResumeAddress.Offset:X4});");
@@ -358,7 +728,11 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
 
     private void PrintSpeculativeGuard(SpeculativeGuardNode node) {
         string segment = expressions.SegmentVariable(node.Address.Segment);
-        writer.Line($"VerifySpeculativeEntryOrFail({segment}, 0x{node.Address.Offset:X4}, {node.SignatureField});");
+        if (node.SignatureFields.Count == 1) {
+            writer.Line($"VerifySpeculativeEntryOrFail({segment}, 0x{node.Address.Offset:X4}, {node.SignatureFields[0]});");
+            return;
+        }
+        writer.Line($"VerifySpeculativeRunOrFail({segment}, 0x{node.Address.Offset:X4}, {node.RunFieldName});");
     }
 
     /// <summary>The <c>X op= y;</c> form of <paramref name="assignment"/> when it is <c>X = X op y</c> in the
@@ -368,9 +742,9 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
         if (assignment.Left.DataType == DataType.BOOL
             || assignment.Right is not BinaryOperationNode operation
             || CompoundOperator(operation.BinaryOperation) is not string compoundOperator
-            || !operation.Left.Equals(assignment.Left)
             || operation.DataType != assignment.Left.DataType
-            || !SimpleTarget(assignment.Left)) {
+            || !SimpleTarget(assignment.Left)
+            || expressions.Print(operation.Left).Text != expressions.Print(assignment.Left).Text) {
             return null;
         }
         if (operation.BinaryOperation == BinaryOperation.PLUS
@@ -445,7 +819,7 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
 
     /// <summary>A target a compound assignment may write: a register or a variable, or a memory slot whose
     /// address parts are built only from registers, constants, type conversions and non-assignment binary
-    /// operations — evaluating them once, as C# does, cannot differ from evaluating them twice.</summary>
+    /// operations - evaluating them once, as C# does, cannot differ from evaluating them twice.</summary>
     private static bool SimpleTarget(ValueNode target) => target switch {
         RegisterNode or VariableReferenceNode => true,
         SegmentedPointerNode or AbsolutePointerNode =>
@@ -465,9 +839,10 @@ internal sealed class CSharpStatementPrinter(CSharpSourceWriter writer, CSharpEx
     /// <c>++</c> or <c>--</c> when <paramref name="value"/> is <paramref name="register"/> plus or minus one in the
     /// register's own type, otherwise <c>null</c>.
     /// </summary>
-    private static string? IncrementOrDecrement(RegisterNode register, ValueNode value) {
+    private string? IncrementOrDecrement(RegisterNode register, ValueNode value) {
         if (value is not BinaryOperationNode { BinaryOperation: BinaryOperation.PLUS or BinaryOperation.MINUS } arithmetic
-            || arithmetic.Left != register || arithmetic.DataType != register.DataType) {
+            || arithmetic.DataType != register.DataType
+            || expressions.Print(arithmetic.Left).Text != expressions.Print(register).Text) {
             return null;
         }
         if (IsOne(arithmetic.Right)) {

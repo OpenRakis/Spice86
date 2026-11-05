@@ -1,6 +1,7 @@
 namespace Spice86.Tests.CfgCodeGeneration.Ir;
 
 using FluentAssertions;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
@@ -23,7 +24,7 @@ using Xunit;
 /// exit is a through web.
 /// </summary>
 public sealed class IrWebCensusClassifierTest {
-    private static readonly IrValues Eax = IrSsaValues.MaskOf(IrSsaValue.Eax);
+    private static readonly CpuValues Eax = IrSsaValues.MaskOf(IrSsaValue.Eax);
 
     [Fact]
     public void ADefinitionReadByAnExitIsStoreOnly() {
@@ -106,14 +107,14 @@ public sealed class IrWebCensusClassifierTest {
     private static CfgInstruction Instruction(ushort offset) =>
         CfgTestHelpers.CreateInstruction(new SegmentedAddress(0x1000, offset));
 
-    private static IrStatement Writes(ICfgNode origin, IrValues mask) =>
+    private static IrStatement Writes(ICfgNode origin, CpuValues mask) =>
         new(new CommentNode("w"), origin,
-            new IrEffects(IrValues.None, mask, IrValues.None, IrTokens.None, IrTokens.None,
+            new IrEffects(CpuValues.None, mask, CpuValues.None, IrTokens.None, IrTokens.None,
                 false, false));
 
-    private static IrStatement Reads(ICfgNode origin, IrValues values) =>
+    private static IrStatement Reads(ICfgNode origin, CpuValues values) =>
         new(new CommentNode("r"), origin,
-            new IrEffects(values, IrValues.None, IrValues.None, IrTokens.None, IrTokens.None,
+            new IrEffects(values, CpuValues.None, CpuValues.None, IrTokens.None, IrTokens.None,
                 false, false));
 
     private static ReturnNode ReturnValue() => new(new ConstantNode(DataType.UINT16, 0));

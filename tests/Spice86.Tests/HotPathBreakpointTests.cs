@@ -38,7 +38,7 @@ public class HotPathBreakpointTests {
         AddressBreakPoint breakpoint = new(
             BreakPointType.CPU_EXECUTION_ADDRESS,
             expectedPhysicalAddress,
-            bp => {
+            (bp, _) => {
                 breakpointTriggered = true;
                 capturedIpPhysicalAddress = state.IpPhysicalAddress;
                 capturedCycles = state.Cycles;
@@ -94,7 +94,7 @@ public class HotPathBreakpointTests {
         AddressBreakPoint movBxAxBreakpoint = new(
             BreakPointType.CPU_EXECUTION_ADDRESS,
             movBxAxAddress,
-            bp => {
+            (bp, _) => {
                 movBxAxHit = true;
                 capturedAxAtMovBxAx = state.AX;
 
@@ -102,7 +102,7 @@ public class HotPathBreakpointTests {
                 AddressBreakPoint shrBreakpoint = new(
                     BreakPointType.CPU_EXECUTION_ADDRESS,
                     shrBx1Address,
-                    bp2 => {
+                    (bp2, _) => {
                         shrBx1Hit = true;
                         capturedBxAtShrBx1 = state.BX;
                         pauseHandler.RequestPause("shr bx,1 breakpoint hit");
@@ -146,7 +146,7 @@ public class HotPathBreakpointTests {
         AddressBreakPoint breakpoint = new(
             BreakPointType.CPU_EXECUTION_ADDRESS,
             incAxAddress,
-            bp => {
+            (bp, _) => {
                 breakpointFired = true;
                 capturedAddress = state.IpPhysicalAddress;
                 pauseHandler.RequestPause("inc ax breakpoint hit");
@@ -181,7 +181,7 @@ public class HotPathBreakpointTests {
         AddressBreakPoint breakpoint = new(
             BreakPointType.CPU_CYCLES,
             targetCycle,
-            bp => {
+            (bp, _) => {
                 breakpointTriggered = true;
                 capturedCycles = state.Cycles;
                 pauseHandler.RequestPause("Cycle breakpoint hit");

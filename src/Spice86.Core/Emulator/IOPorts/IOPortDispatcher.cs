@@ -27,6 +27,12 @@ public class IOPortDispatcher : DefaultIOPortHandler {
     }
 
     /// <summary>
+    /// The port / handler pairs registered through <see cref="AddIOPortHandler"/> or
+    /// <see cref="ReplaceIOPortHandler"/>.
+    /// </summary>
+    internal IEnumerable<KeyValuePair<int, IIOPortHandler>> RegisteredHandlers => _ioPortHandlers;
+
+    /// <summary>
     /// Adds an I/O port handler to the dispatcher.
     /// </summary>
     /// <param name="port">The port number.</param>

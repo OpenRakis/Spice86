@@ -413,8 +413,15 @@ internal static class MethodStructurizer {
         IReadOnlyDictionary<TBlock, (int Preorder, TBlock Block)[]> reachablePredecessors,
         IReadOnlyDictionary<TBlock, int> subtreeMemberCount,
         IReadOnlyDictionary<TBlock, int> subtreeFirstPosition) where TBlock : class {
+        /// <summary>The number of <c>if</c> levels an arm may be nested into before a branch to a shared
+        /// diverging block stays a flat guard.</summary>
+        private const int MaxIfDepth = 4;
+
         private readonly IReadOnlyDictionary<TBlock, LoweredBlock<TBlock>> _memberByBlock = memberByBlock;
         private readonly IReadOnlyDictionary<TBlock, HashSet<string>> _declaredInDominatingBlocks = declaredInDominating;
+
+        /// <summary>The <c>if</c> nesting level the current arm walk emits into.</summary>
+        private int _ifDepth;
 
         /// <summary>Whether <see cref="MoveExitAfterLoop"/> changed the layout order.</summary>
         internal bool MovedLoopExit { get; private set; }
@@ -725,7 +732,7 @@ internal static class MethodStructurizer {
             (Arm<TBlock>? falseArm, GotoKeepReason? falseFailure) = ArmBlocksWithReason(whenFalse, region, placed, enclosing);
             bool trueComesBack = trueArm is not null && ComesBackTo(trueArm, whenFalse, region, placed);
             bool falseComesBack = falseArm is not null && ComesBackTo(falseArm, whenTrue, region, placed);
-            yield return AstTrampoline.Call(OneArmComesBackIt(block, branch, trueArm, falseArm,
+            yield return AstTrampoline.Call(OneArmComesBackIt(block, branch, trueGoto, falseGoto, trueArm, falseArm,
                 trueComesBack, falseComesBack, whenTrue, whenFalse, placed, enclosing, result));
             if (result.Value is not null) {
                 yield break;
@@ -824,7 +831,7 @@ internal static class MethodStructurizer {
                     or ConstantNode or RegisterNode or SegmentRegisterNode or CpuFlagNode
                     or FlagRegisterNode or InstructionPointerNode or LoadOffsetParameterNode
                     or SegmentVariableNode or OffsetLiteralNode or SignatureFieldNode
-                    or NearAddressNode => true,
+                    or NearAddressNode or RegisterLocalNode or RegisterWriteBackNode => true,
                 _ => false
             });
 
@@ -850,18 +857,55 @@ internal static class MethodStructurizer {
 
         /// <summary>
         /// One arm comes back to the other target: it nests in an <c>if</c> and the other target follows the <c>if</c>.
+        /// Past the <c>if</c> depth limit, when the other target is a block that never falls through and at least two
+        /// branches reach, the arm stays flat instead: the branch prints as a guard
+        /// <c>if (condition) { goto target; }</c> and the arm's blocks follow in the layout.
         /// </summary>
         private IEnumerable<AstSubcall> OneArmComesBackIt(LoweredBlock<TBlock> block, IfElseNode branch,
-            Arm<TBlock>? trueArm, Arm<TBlock>? falseArm, bool trueComesBack, bool falseComesBack,
+            GotoNode trueGoto, GotoNode falseGoto, Arm<TBlock>? trueArm, Arm<TBlock>? falseArm,
+            bool trueComesBack, bool falseComesBack,
             IGotoTarget whenTrue, IGotoTarget whenFalse, PlacedBlocks<TBlock> placed,
             NaturalLoop<TBlock>? enclosing, AstResult<BlockNode> result) {
             if (trueArm is not null && trueComesBack && !falseComesBack) {
+                if (SharedDivergingGuardApplies(whenFalse)) {
+                    result.Value = GuardToDiverging(block, NegatedCondition(branch.Condition), falseGoto, trueGoto);
+                    yield break;
+                }
                 yield return AstTrampoline.Call(NestedIt(block, branch.Condition, trueArm, null, whenFalse, placed, enclosing, result));
                 yield break;
             }
             if (falseArm is not null && falseComesBack && !trueComesBack) {
+                if (SharedDivergingGuardApplies(whenTrue)) {
+                    result.Value = GuardToDiverging(block, branch.Condition, trueGoto, falseGoto);
+                    yield break;
+                }
                 yield return AstTrampoline.Call(NestedIt(block, NegatedCondition(branch.Condition), falseArm, null, whenTrue, placed, enclosing, result));
             }
+        }
+
+        /// <summary>
+        /// Whether a branch to <paramref name="target"/> stays a guard <c>goto</c>: the <c>if</c> nesting is at the
+        /// depth limit and <paramref name="target"/> is a block of the method that never falls through and that at
+        /// least two branches reach (so it cannot be an arm: <see cref="ArmBlocks"/> refuses a shared head).
+        /// </summary>
+        private bool SharedDivergingGuardApplies(IGotoTarget target) =>
+            _ifDepth >= MaxIfDepth
+            && gotoCountByTarget.GetValueOrDefault(target) >= 2
+            && blockByEntry.TryGetValue(target, out TBlock? targetBlock)
+            && _memberByBlock.TryGetValue(targetBlock, out LoweredBlock<TBlock>? member)
+            && !CompletesNormallyVisitor.CompletesNormally(member.Body);
+
+        /// <summary>
+        /// <paramref name="block"/> with its final branch kept flat: the head statements, then
+        /// <c>if (guard) { diverging goto }</c>, then the goto of the arm the walk continues with. The diverging
+        /// block's goto gets <see cref="GotoKeepReason.SharedDivergingGuard"/>.
+        /// </summary>
+        private BlockNode GuardToDiverging(LoweredBlock<TBlock> block, ValueNode guard,
+            GotoNode divergingGoto, GotoNode continueGoto) {
+            Record(divergingGoto, GotoKeepReason.SharedDivergingGuard);
+            return Sequence(HeadBefore(block.Body)
+                .Append(new IfElseNode(guard, Sequence(divergingGoto), Empty()))
+                .Append(continueGoto));
         }
 
         /// <summary>Two arms that neither come back nor diverge and meet at one join nest in an <c>if</c> / <c>else</c>.</summary>
@@ -931,11 +975,21 @@ internal static class MethodStructurizer {
             if (elseArm is not null) {
                 PlaceArm(elseArm, placed);
                 AstResult<BlockNode> elseResult = new();
-                yield return AstTrampoline.Call(WalkArmIt(elseArm, enclosing, elseResult));
+                _ifDepth++;
+                try {
+                    yield return AstTrampoline.Call(WalkArmIt(elseArm, enclosing, elseResult));
+                } finally {
+                    _ifDepth--;
+                }
                 elseBody = elseResult.Value!;
             }
             AstResult<BlockNode> thenResult = new();
-            yield return AstTrampoline.Call(WalkArmIt(thenArm, enclosing, thenResult));
+            _ifDepth++;
+            try {
+                yield return AstTrampoline.Call(WalkArmIt(thenArm, enclosing, thenResult));
+            } finally {
+                _ifDepth--;
+            }
             IfElseNode nested = new(condition, thenResult.Value!, elseBody);
             result.Value = Sequence(HeadBefore(block.Body).Append(nested).Append(new GotoNode(after)));
         }

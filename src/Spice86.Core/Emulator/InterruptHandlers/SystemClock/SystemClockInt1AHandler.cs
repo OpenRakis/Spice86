@@ -5,6 +5,7 @@ namespace Spice86.Core.Emulator.InterruptHandlers.SystemClock;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Devices.Cmos;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.Memory;
@@ -28,20 +29,11 @@ public class SystemClockInt1AHandler : InterruptHandler {
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
         _biosDataArea = biosDataArea;
         _realTimeClock = realTimeClock;
-        FillDispatchTable();
     }
 
     /// <inheritdoc />
     public override byte VectorNumber => 0x1A;
 
-    private void FillDispatchTable() {
-        AddAction(0x00, GetSystemClockCounter);
-        AddAction(0x01, SetSystemClockCounter);
-        AddAction(0x02, () => ReadTimeFromRTC(true));
-        AddAction(0x03, () => SetRTCTime(true));
-        AddAction(0x04, () => ReadDateFromRTC(true));
-        AddAction(0x05, () => SetRTCDate(true));
-    }
 
     /// <inheritdoc />
     public override void Run() {
@@ -54,6 +46,7 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// Returns the number of clock ticks since midnight.
     /// Clock ticks at 18.2 Hz (approximately 1,193,180 / 65,536 times per second).
     /// </summary>
+    [InterruptService(0x00, Reads = CpuValues.Ah, Writes = CpuValues.Al | CpuValues.Cx | CpuValues.Dx, Memory = ServiceMemoryEffect.ReadWrite)]
     public void GetSystemClockCounter() {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("INT 1A, AH=00h - Get System Clock Counter");
@@ -71,6 +64,7 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// INT 1A, AH=01h - Set System Clock Counter.
     /// Sets the system clock counter to the specified value.
     /// </summary>
+    [InterruptService(0x01, Reads = CpuValues.Ah | CpuValues.Cx | CpuValues.Dx, Writes = CpuValues.None, Memory = ServiceMemoryEffect.Write)]
     public void SetSystemClockCounter() {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("INT 1A, AH=01h - Set System Clock Counter");
@@ -85,6 +79,7 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// INT 1A, AH=02h - Read Time from RTC.
     /// Returns time in BCD format from the Real-Time Clock.
     /// </summary>
+    [InterruptService(0x02, Reads = CpuValues.Ah, Writes = CpuValues.Cx | CpuValues.Dx | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
     public void ReadTimeFromRTC(bool calledFromVm) {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("INT 1A, AH=02h - Read Time from RTC");
@@ -103,6 +98,7 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// Returns error as modifying the host system time is not permitted for security and consistency reasons.
     /// Programs should not rely on being able to set the system time in an emulated environment.
     /// </summary>
+    [InterruptService(0x03, Reads = CpuValues.Ah, Writes = CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
     public void SetRTCTime(bool calledFromVm) {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("INT 1A, AH=03h - Set RTC Time (not permitted, returning error)");
@@ -114,6 +110,7 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// INT 1A, AH=04h - Read Date from RTC.
     /// Returns date in BCD format from the Real-Time Clock.
     /// </summary>
+    [InterruptService(0x04, Reads = CpuValues.Ah, Writes = CpuValues.Cx | CpuValues.Dx | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
     public void ReadDateFromRTC(bool calledFromVm) {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("INT 1A, AH=04h - Read Date from RTC");
@@ -132,6 +129,7 @@ public class SystemClockInt1AHandler : InterruptHandler {
     /// Returns error as modifying the host system date is not permitted for security and consistency reasons.
     /// Programs should not rely on being able to set the system date in an emulated environment.
     /// </summary>
+    [InterruptService(0x05, Reads = CpuValues.Ah, Writes = CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
     public void SetRTCDate(bool calledFromVm) {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("INT 1A, AH=05h - Set RTC Date (not permitted, returning error)");

@@ -290,6 +290,97 @@ wait_df:
     mov [bx+30h], edx
     mov edx, 0
 
+; PT-5: a declaration nobody reads stays when its initializer reads memory - the VGA read loads the
+; latches, and dropping it would make the write-mode-1 copy write stale latches. Planar memory at
+; A000h: one CPU address spans the 4 planes; a read loads the 4 latches, a write-mode-1 write copies
+; them back out. A word read loads the latches once per byte, so the new plane bytes sit at [es:1]:
+; the probe read of [es:0] leaves stale latches, and the second byte of the unread destination check
+; of `pop word [es:0]` is the only read that reloads them before the copy. The result region shows
+; the copied plane bytes.
+    push es
+    mov dx, 03C4h
+    mov ax, 0F02h
+    out dx, ax
+    mov ax, 0604h
+    out dx, ax
+    mov dx, 03CEh
+    mov ax, 0006h
+    out dx, ax
+    mov ax, 0FF08h
+    out dx, ax
+    mov ax, 0A000h
+    mov es, ax
+    mov dx, 03C4h
+    mov ax, 0102h
+    out dx, ax
+    mov byte [es:0], 11h
+    mov ax, 0202h
+    out dx, ax
+    mov byte [es:0], 22h
+    mov ax, 0402h
+    out dx, ax
+    mov byte [es:0], 44h
+    mov ax, 0802h
+    out dx, ax
+    mov byte [es:0], 88h
+    mov ax, 0F02h
+    out dx, ax
+    mov dx, 03CEh
+    mov ax, 0004h
+    out dx, ax
+    mov al, [es:0]
+    mov [bx+0Dh], al
+    mov dx, 03C4h
+    mov ax, 0102h
+    out dx, ax
+    mov byte [es:1], 55h
+    mov ax, 0202h
+    out dx, ax
+    mov byte [es:1], 66h
+    mov ax, 0402h
+    out dx, ax
+    mov byte [es:1], 77h
+    mov ax, 0802h
+    out dx, ax
+    mov byte [es:1], 0AAh
+    mov ax, 0F02h
+    out dx, ax
+    mov dx, 03CEh
+    mov ax, 0105h
+    out dx, ax
+    pop word [es:0]
+    sub sp, 2
+    mov byte [es:10h], 0
+    mov ax, 0005h
+    out dx, ax
+    mov ax, 0004h
+    out dx, ax
+    mov al, [es:10h]
+    mov [bx+09h], al
+    mov ax, 0104h
+    out dx, ax
+    mov al, [es:10h]
+    mov [bx+0Bh], al
+    mov ax, 0204h
+    out dx, ax
+    mov al, [es:10h]
+    mov [bx+17h], al
+    mov ax, 0304h
+    out dx, ax
+    mov al, [es:10h]
+    mov [bx+1Ch], al
+    mov ax, 0E06h
+    out dx, ax
+    pop es
+
+; CF-1: a value xored with or subtracted from itself folds to zero
+    mov ax, [cs:si+6]
+    xor ax, ax
+    mov [bx+20h], ax
+    mov cx, [cs:si+6]
+    sub cx, cx
+    mov [bx+24h], cx
+
     add bx, 40h
     add si, 54
     dec word [0F00h]

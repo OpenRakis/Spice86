@@ -3,8 +3,6 @@ namespace Spice86.Tests;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Text;
-
 using System.Collections.Immutable;
 
 /// <summary>
@@ -14,15 +12,66 @@ using System.Collections.Immutable;
 /// </summary>
 internal static class GeneratedCodeMetricsCollector {
     private const string CheckExternalEventsName = "CheckExternalEvents";
+    private const string InterruptCallName = "InterruptCall";
+    private const string InterruptCallReturnedElsewhereName = "InterruptCallReturnedElsewhere";
+    private static readonly HashSet<string> InterruptServiceGroupNames = new(StringComparer.Ordinal) {
+        "Video", "Equipment", "MemorySize", "Disk", "Serial", "SystemBios", "Keyboard",
+        "Printer", "Clock", "UserTimer", "Dos", "CriticalError", "DosIdle", "DosNetwork",
+        "DosMultiplex", "Mouse", "Ems", "Rtc"
+    };
     private const string VerifySpeculativeEntryOrFailName = "VerifySpeculativeEntryOrFail";
+    private const string VerifySpeculativeRunOrFailName = "VerifySpeculativeRunOrFail";
     private const string FailAsUntestedName = "FailAsUntested";
     private static readonly HashSet<string> AluTargetNames = new(StringComparer.Ordinal) { "Alu8", "Alu16", "Alu32" };
     private static readonly HashSet<string> StatusFlagNames = new(StringComparer.Ordinal) {
         "CarryFlag", "ParityFlag", "AuxiliaryFlag", "ZeroFlag", "SignFlag", "OverflowFlag"
     };
+    private static readonly HashSet<string> TypedFlagParameterNames = new(StringComparer.Ordinal) {
+        "carryFlag", "parityFlag", "auxiliaryFlag", "zeroFlag", "signFlag", "overflowFlag"
+    };
     private static readonly HashSet<string> StackMethodNames = new(StringComparer.Ordinal) {
         "Push16", "Push32", "Pop16", "Pop32"
     };
+    private static readonly HashSet<string> MemoryIndexerNames = new(StringComparer.Ordinal) {
+        "UInt8", "UInt16", "UInt32", "Int8", "Int16", "Int32",
+        "SsUInt8", "SsUInt16", "SsUInt32", "SsInt8", "SsInt16", "SsInt32"
+    };
+    private static readonly HashSet<string> GlobalsClassNames = new(StringComparer.Ordinal) {
+        "DsGlobals", "EsGlobals", "CsGlobals", "FsGlobals", "GsGlobals"
+    };
+    private static readonly System.Text.RegularExpressions.Regex LocationClassName = new(
+        @"^(Segment[0-9A-F]{4}|Image(Minus)?[0-9A-F]{4})Globals$");
+    private static readonly HashSet<string> TableClassNames = new(StringComparer.Ordinal) {
+        "DsTables", "EsTables", "CsTables", "FsTables", "GsTables"
+    };
+    private static readonly System.Text.RegularExpressions.Regex LocationTableClassName = new(
+        @"^(Segment[0-9A-F]{4}|Image(Minus)?[0-9A-F]{4})Tables$");
+    private static readonly HashSet<string> RegisterLocalNames = new(StringComparer.Ordinal) {
+        "ax", "cx", "dx", "bx", "bp", "si", "di", "es", "ds",
+        "al", "cl", "dl", "bl", "ah", "ch", "dh", "bh",
+        "eax", "ecx", "edx", "ebx", "ebp", "esi", "edi"
+    };
+    private static readonly HashSet<string> RegisterNames = new(StringComparer.Ordinal) {
+        "AX", "CX", "DX", "BX", "SP", "BP", "SI", "DI",
+        "ES", "CS", "SS", "DS", "FS", "GS",
+        "AL", "CL", "DL", "BL", "AH", "CH", "DH", "BH",
+        "EAX", "ECX", "EDX", "EBX", "ESP", "EBP", "ESI", "EDI"
+    };
+
+    /// <summary>The register local name <paramref name="name"/> starts from, trailing digits removed
+    /// (<c>cx1</c> gives <c>cx</c>).</summary>
+    private static string RegisterLocalBase(string name) {
+        int end = name.Length;
+        while (end > 0 && char.IsAsciiDigit(name[end - 1])) {
+            end--;
+        }
+        return name[..end];
+    }
+
+    /// <summary>Whether <paramref name="name"/> is a numbered register local (<c>cx1</c>, <c>ax2</c>).</summary>
+    private static bool IsNumberedRegisterLocal(string name) =>
+        name.Length > 0 && char.IsAsciiDigit(name[^1])
+        && RegisterLocalNames.Contains(RegisterLocalBase(name));
     private static readonly HashSet<SyntaxKind> CompoundAssignmentKinds = new() {
         SyntaxKind.AddAssignmentExpression, SyntaxKind.SubtractAssignmentExpression,
         SyntaxKind.AndAssignmentExpression, SyntaxKind.OrAssignmentExpression,
@@ -30,13 +79,21 @@ internal static class GeneratedCodeMetricsCollector {
         SyntaxKind.RightShiftAssignmentExpression
     };
 
-    public static GeneratedCodeMetrics Collect(string fixture, SyntaxTree tree, ImmutableArray<Diagnostic> diagnostics) {
-        SyntaxNode root = tree.GetRoot();
+    /// <summary>Sums the metrics over every syntax tree of one generated program; per-file invariants
+    /// (for example every label being a goto target) are computed on the merged walk, which is the
+    /// same as per-tree here because every counted construct is local to one method.</summary>
+    public static GeneratedCodeMetrics Collect(string fixture, IReadOnlyList<SyntaxTree> trees, ImmutableArray<Diagnostic> diagnostics) {
         MetricsWalker walker = new();
-        walker.Visit(root);
-
-        SourceText text = tree.GetText();
-        int lines = text.Lines.Count;
+        int lines = 0;
+        int dataComments = 0;
+        foreach (SyntaxTree tree in trees) {
+            SyntaxNode root = tree.GetRoot();
+            walker.Visit(root);
+            lines += tree.GetText().Lines.Count;
+            dataComments += root.DescendantTrivia()
+                .Count(trivia => trivia.IsKind(SyntaxKind.SingleLineCommentTrivia)
+                    && trivia.ToString().TrimStart().StartsWith("// DOS ", StringComparison.Ordinal));
+        }
 
         ImmutableArray<Diagnostic> warnings = diagnostics
             .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Warning)
@@ -64,6 +121,7 @@ internal static class GeneratedCodeMetricsCollector {
             StatusFlagReads = walker.StatusFlagReads,
             DoLoops = walker.DoLoops,
             WhileTrueLoops = walker.WhileTrueLoops,
+            ForLoops = walker.ForLoops,
             IfStatements = walker.IfStatements,
             BreakStatements = walker.BreakStatements,
             ContinueStatements = walker.ContinueStatements,
@@ -72,6 +130,21 @@ internal static class GeneratedCodeMetricsCollector {
             MethodVariables = walker.MethodVariables,
             CompoundAssignments = walker.CompoundAssignments,
             TupleSwaps = walker.TupleSwaps,
+            MemoryAccesses = walker.MemoryAccesses,
+            GlobalAccesses = walker.GlobalAccesses,
+            LocationAccesses = walker.LocationAccesses,
+            TableAccesses = walker.TableAccesses,
+            DataComments = dataComments,
+            InterruptCalls = walker.InterruptCalls,
+            InterruptCallReturnedElsewhere = walker.InterruptCallReturnedElsewhere,
+            TypedServiceCalls = walker.TypedServiceCalls,
+            StringServiceCalls = walker.StringServiceCalls,
+            RegisterLocals = walker.RegisterLocals,
+            RegisterLocalsMulti = walker.RegisterLocalsMulti,
+            SignedLocals = walker.SignedLocals,
+            WriteBacks = walker.WriteBacks,
+            FrameAccesses = walker.FrameAccesses,
+            SavedPairs = walker.SavedPairs,
             Warnings = warnings.Length,
             WarningIds = warningIds
         };
@@ -93,6 +166,7 @@ internal static class GeneratedCodeMetricsCollector {
         public int StatusFlagReads { get; private set; }
         public int DoLoops { get; private set; }
         public int WhileTrueLoops { get; private set; }
+        public int ForLoops { get; private set; }
         public int IfStatements { get; private set; }
         public int BreakStatements { get; private set; }
         public int ContinueStatements { get; private set; }
@@ -101,6 +175,20 @@ internal static class GeneratedCodeMetricsCollector {
         public int MethodVariables { get; private set; }
         public int CompoundAssignments { get; private set; }
         public int TupleSwaps { get; private set; }
+        public int MemoryAccesses { get; private set; }
+        public int GlobalAccesses { get; private set; }
+        public int LocationAccesses { get; private set; }
+        public int TableAccesses { get; private set; }
+        public int InterruptCalls { get; private set; }
+        public int InterruptCallReturnedElsewhere { get; private set; }
+        public int TypedServiceCalls { get; private set; }
+        public int StringServiceCalls { get; private set; }
+        public int RegisterLocals { get; private set; }
+        public int RegisterLocalsMulti { get; private set; }
+        public int SignedLocals { get; private set; }
+        public int WriteBacks { get; private set; }
+        public int FrameAccesses { get; private set; }
+        public int SavedPairs { get; private set; }
 
         public override void VisitMethodDeclaration(MethodDeclarationSyntax node) {
             Methods++;
@@ -126,12 +214,25 @@ internal static class GeneratedCodeMetricsCollector {
             string? name = GetInvokedName(node.Expression);
             if (name == CheckExternalEventsName) {
                 CheckExternalEvents++;
-            } else if (name == VerifySpeculativeEntryOrFailName) {
+            } else if (name == VerifySpeculativeEntryOrFailName
+                || name == VerifySpeculativeRunOrFailName) {
                 VerifySpeculativeEntryOrFail++;
             } else if (name == FailAsUntestedName) {
                 FailAsUntested++;
+            } else if (name == InterruptCallName) {
+                InterruptCalls++;
+            } else if (name == InterruptCallReturnedElsewhereName) {
+                InterruptCallReturnedElsewhere++;
             }
             if (node.Expression is MemberAccessExpressionSyntax { Expression: IdentifierNameSyntax target } member) {
+                if (InterruptServiceGroupNames.Contains(target.Identifier.ValueText)) {
+                    TypedServiceCalls++;
+                    if (node.ArgumentList.Arguments.Count > 0
+                        && node.ArgumentList.Arguments[^1].Expression
+                            .IsKind(SyntaxKind.StringLiteralExpression)) {
+                        StringServiceCalls++;
+                    }
+                }
                 if (AluTargetNames.Contains(target.Identifier.ValueText)) {
                     AluCalls++;
                 } else if (target.Identifier.ValueText == "Stack"
@@ -152,21 +253,83 @@ internal static class GeneratedCodeMetricsCollector {
             if (node.Left is TupleExpressionSyntax) {
                 TupleSwaps++;
             }
+            if (node.Left is IdentifierNameSyntax writeBackTarget
+                && RegisterNames.Contains(writeBackTarget.Identifier.ValueText)
+                && node.Right is IdentifierNameSyntax local
+                && RegisterLocalBase(local.Identifier.ValueText)
+                    == writeBackTarget.Identifier.ValueText.ToLowerInvariant()) {
+                WriteBacks++;
+            }
             base.VisitAssignmentExpression(node);
+        }
+
+        public override void VisitElementAccessExpression(ElementAccessExpressionSyntax node) {
+            if (node.Expression is IdentifierNameSyntax identifier
+                && MemoryIndexerNames.Contains(identifier.Identifier.ValueText)) {
+                MemoryAccesses++;
+            }
+            base.VisitElementAccessExpression(node);
+        }
+
+        public override void VisitMemberAccessExpression(MemberAccessExpressionSyntax node) {
+            if (node.Expression is IdentifierNameSyntax identifier
+                && node.Name is IdentifierNameSyntax) {
+                string className = identifier.Identifier.ValueText;
+                if (GlobalsClassNames.Contains(className) || LocationClassName.IsMatch(className)) {
+                    MemoryAccesses++;
+                    GlobalAccesses++;
+                    if (LocationClassName.IsMatch(className)) {
+                        LocationAccesses++;
+                    }
+                } else if (TableClassNames.Contains(className) || LocationTableClassName.IsMatch(className)) {
+                    MemoryAccesses++;
+                    TableAccesses++;
+                    if (LocationTableClassName.IsMatch(className)) {
+                        LocationAccesses++;
+                    }
+                } else if (className == "frame") {
+                    MemoryAccesses++;
+                    FrameAccesses++;
+                }
+            }
+            base.VisitMemberAccessExpression(node);
         }
 
         public override void VisitLocalDeclarationStatement(LocalDeclarationStatementSyntax node) {
             if (node.Parent is BlockSyntax { Parent: MethodDeclarationSyntax }) {
                 MethodVariables++;
+                if (node.Declaration.Variables.Any(variable =>
+                        RegisterLocalNames.Contains(variable.Identifier.ValueText)
+                        || IsNumberedRegisterLocal(variable.Identifier.ValueText))) {
+                    RegisterLocals++;
+                    if (node.Declaration.Variables.Any(variable =>
+                            IsNumberedRegisterLocal(variable.Identifier.ValueText))) {
+                        RegisterLocalsMulti++;
+                    }
+                    if (node.Declaration.Type is PredefinedTypeSyntax { Keyword.ValueText: "short" or "sbyte" or "int" }) {
+                        SignedLocals++;
+                    }
+                }
+                SavedPairs += node.Declaration.Variables.Count(variable =>
+                    variable.Identifier.ValueText.StartsWith("saved", StringComparison.Ordinal));
             }
             base.VisitLocalDeclarationStatement(node);
         }
 
         public override void VisitIdentifierName(IdentifierNameSyntax node) {
-            if (StatusFlagNames.Contains(node.Identifier.ValueText) && !IsAssignmentTarget(node)) {
+            if (IsCountedFlagName(node) && !IsAssignmentTarget(node)) {
                 StatusFlagReads++;
             }
             base.VisitIdentifierName(node);
+        }
+
+        /// <summary>Whether <paramref name="node"/> names a flag the IR actually reads: a status
+        /// flag name that is not a generated flag use, or a typed flag parameter that is not the
+        /// entry assignment to its flag.</summary>
+        private static bool IsCountedFlagName(IdentifierNameSyntax node) {
+            string name = node.Identifier.ValueText;
+            return (StatusFlagNames.Contains(name) && !IsGeneratedFlagUse(node))
+                || (TypedFlagParameterNames.Contains(name) && !IsFlagParameterEntryAssignment(node));
         }
 
         public override void VisitCheckedExpression(CheckedExpressionSyntax node) {
@@ -189,6 +352,11 @@ internal static class GeneratedCodeMetricsCollector {
         public override void VisitDoStatement(DoStatementSyntax node) {
             DoLoops++;
             base.VisitDoStatement(node);
+        }
+
+        public override void VisitForStatement(ForStatementSyntax node) {
+            ForLoops++;
+            base.VisitForStatement(node);
         }
 
         public override void VisitWhileStatement(WhileStatementSyntax node) {
@@ -223,10 +391,32 @@ internal static class GeneratedCodeMetricsCollector {
             return null;
         }
 
+        /// <summary>Whether <paramref name="node"/> is a typed flag parameter in the entry
+        /// assignment <c>Flag = parameter;</c> the signature surface prints before the body: a
+        /// flag write, not a flag read the IR performs.</summary>
+        private static bool IsFlagParameterEntryAssignment(IdentifierNameSyntax node) =>
+            node.Parent is AssignmentExpressionSyntax assignment
+            && assignment.Right == node
+            && assignment.Left is IdentifierNameSyntax flag
+            && StatusFlagNames.Contains(flag.Identifier.ValueText);
+
+        /// <summary>Whether <paramref name="node"/> is a flag name the typed-signature surface
+        /// prints without a matching IR flag read: a flag output in a <c>return</c>, a flag
+        /// argument of a typed call's <c>() => f(...)</c> lambda, or a flag argument of an
+        /// <c>_Asm</c> entry wrapper's call.</summary>
+        private static bool IsGeneratedFlagUse(IdentifierNameSyntax node) =>
+            node.Ancestors().Any(ancestor => ancestor switch {
+                ReturnStatementSyntax or SimpleLambdaExpressionSyntax or ParenthesizedLambdaExpressionSyntax => true,
+                MethodDeclarationSyntax method => method.Identifier.ValueText.EndsWith("_Asm", StringComparison.Ordinal),
+                _ => false
+            });
+
         private static bool IsAssignmentTarget(IdentifierNameSyntax node) {
-            ExpressionSyntax target = node;
-            if (node.Parent is MemberAccessExpressionSyntax memberAccess && memberAccess.Name == node) {
-                target = memberAccess;
+            SyntaxNode target = node;
+            while (target.Parent is MemberAccessExpressionSyntax memberAccess && memberAccess.Name == target
+                   || target.Parent is ArgumentSyntax
+                   || target.Parent is TupleExpressionSyntax) {
+                target = target.Parent;
             }
             return target.Parent is AssignmentExpressionSyntax assignment && assignment.Left == target;
         }

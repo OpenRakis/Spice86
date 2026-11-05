@@ -1,3 +1,4 @@
+// ==== file: CfgGeneratedOverrideSupplier.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -16,17 +17,55 @@ public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
     }
 }
 
-public class CfgGeneratedOverrides : CSharpOverrideHelper {
-    protected readonly ushort cs1;
+
+// ==== file: CfgGeneratedOverrides.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort biosSegment;
+
+    private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
+
+    protected readonly Segment2000Globals Segment2000Globals;
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
-        cs1 = 0xF000;
+        biosSegment = 0xF000;
+        Segment2000Globals = new Segment2000Globals(Memory, programStartSegment);
 
-        DefineFunctionWithoutInterpreterFallback(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, "unknown");
+        unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
     }
 
-    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
-        CheckExternalEvents(cs1, 0xFFF0);
+}
+
+// ==== file: CfgGeneratedOverrides.F000.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: DI. Does not return.</summary>
+    public virtual Action unknown_F000_FFF0_FFFF0() {
+        ushort dx;
+        CheckExternalEvents(biosSegment, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov AX,0x2000
         AX = 0x2000;
@@ -45,9 +84,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:000F mov SI,0x01DF
         SI = 0x01DF;
         // F000:0012 mov word ptr DS:[0x0F00],4
-        UInt16[DS, 0x0F00] = 4;
+        Segment2000Globals.Word0F00 = 4;
         do {
-            CheckExternalEvents(cs1, 0x0018);
+            CheckExternalEvents(biosSegment, 0x0018);
             // F000:0018 mov DX,word ptr CS:[SI]
             // F000:001B shl DX,1
             DX = (ushort)(UInt16[CS, SI] << 1);
@@ -95,9 +134,9 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:0064 mov DX,word ptr CS:[SI]
             // F000:0067 shr DX,1
             // F000:0069 shr DX,1
-            DX = (ushort)(UInt16[CS, SI] >> 1 >> 1);
+            dx = (ushort)(UInt16[CS, SI] >> 1 >> 1);
             // F000:006B mov word ptr DS:[BX+0x0E],DX
-            UInt16[DS, (ushort)(BX + 0x0E)] = DX;
+            UInt16[DS, (ushort)(BX + 0x0E)] = dx;
             // F000:006E cmp DI,DI
             // F000:0070 mov DX,word ptr CS:[SI]
             DX = UInt16[CS, SI];
@@ -171,11 +210,8 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:00D3 mov AX,word ptr CS:[SI]
             AX = UInt16[CS, SI];
             // F000:00D6 mov CX,3
-            CX = 3;
             // F000:00D9 mul CX
-            uint result_00D9 = (uint)((uint)AX * (uint)CX);
-            DX = (ushort)(result_00D9 >> 16);
-            AX = (ushort)result_00D9;
+            (AX, DX) = Mul16(AX, 3);
             // F000:00DB mov word ptr DS:[BX+0x1E],AX
             UInt16[DS, (ushort)(BX + 0x1E)] = AX;
             // F000:00DE mov word ptr DS:[BX+0x20],DX
@@ -186,9 +222,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:00E6 mov CX,0xFFFD
             CX = 0xFFFD;
             // F000:00E9 imul CX
-            int result_00E9 = (int)((int)(short)AX * (int)(short)CX);
-            DX = (ushort)(result_00E9 >> 16);
-            AX = (ushort)result_00E9;
+            (AX, DX) = IMul16((short)AX, (short)-3);
             // F000:00EB mov word ptr DS:[BX+0x22],AX
             UInt16[DS, (ushort)(BX + 0x22)] = AX;
             // F000:00EE mov word ptr DS:[BX+0x24],DX
@@ -252,7 +286,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:0153 mov DX,word ptr CS:[SI]
             DX = UInt16[CS, SI];
             // F000:0156 mov AH,1
-            AH = 1;
             // F000:0158 sahf
             FlagRegister = (uint)(FlagRegister & 0xFFFFFF00u | 1);
             // F000:0159 adc DX,0
@@ -264,7 +297,6 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:0161 mov DX,word ptr CS:[SI]
             DX = UInt16[CS, SI];
             // F000:0164 mov AH,1
-            AH = 1;
             // F000:0166 sahf
             // F000:0167 clc
             CarryFlag = false;
@@ -346,11 +378,30 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             // F000:01D3 add SI,0x000A
             SI = Alu16.Add(SI, 0x000A);
             // F000:01D6 dec word ptr DS:[0x0F00]
-            UInt16[DS, 0x0F00] = Alu16.Dec(UInt16[DS, 0x0F00]);
+            Segment2000Globals.Word0F00 = Alu16.Dec(Segment2000Globals.Word0F00);
             // F000:01DA jne near 0x0018
         } while (!ZeroFlag);
         // F000:01DE hlt
         return Hlt();
     }
 
+}
+
+// ==== file: Segment2000Globals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class Segment2000Globals : MemoryBasedDataStructure {
+    private readonly IMemory _memory;
+    private readonly ushort Segment;
+
+    public Segment2000Globals(IMemory memory, ushort programStartSegment) : base(memory, 0x20000) {
+        _memory = memory;
+        Segment = 0x2000;
+    }
+
+    public ushort Word0F00 { get => _memory.UInt16[Segment, 0x0F00]; set => _memory.UInt16[Segment, 0x0F00] = value; }
 }

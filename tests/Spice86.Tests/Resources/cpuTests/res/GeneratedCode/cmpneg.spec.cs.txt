@@ -1,3 +1,4 @@
+// ==== file: CfgGeneratedOverrideSupplier.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -16,17 +17,54 @@ public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
     }
 }
 
-public class CfgGeneratedOverrides : CSharpOverrideHelper {
-    protected readonly ushort cs1;
+
+// ==== file: CfgGeneratedOverrides.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort biosSegment;
+
+    private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
+
+    protected readonly DsGlobals DsGlobals;
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
-        cs1 = 0xF000;
+        biosSegment = 0xF000;
+        DsGlobals = new DsGlobals(Memory, State.SegmentRegisters);
 
-        DefineFunctionWithoutInterpreterFallback(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, "unknown");
+        unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
     }
 
-    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
-        CheckExternalEvents(cs1, 0xFFF0);
+}
+
+// ==== file: CfgGeneratedOverrides.F000.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: DS, DF. Does not return.</summary>
+    public virtual Action unknown_F000_FFF0_FFFF0() {
+        CheckExternalEvents(biosSegment, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov SP,0x0060
         SP = 0x0060;
@@ -34,181 +72,334 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0006 mov BX,2
         BX = 2;
         // F000:0009 cmp AX,BX
-        Alu16.Sub(1, 2);
+        CarryFlag = true;
+        ParityFlag = true;
+        AuxiliaryFlag = true;
+        ZeroFlag = false;
+        SignFlag = true;
+        OverflowFlag = false;
         // F000:000B mov word ptr DS:[0],AX
-        UInt16[DS, 0] = 1;
+        DsGlobals.Word0000 = 1;
         // F000:000E mov word ptr DS:[2],BX
-        UInt16[DS, 2] = 2;
+        DsGlobals.Word0002 = 2;
         // F000:0012 pushf
         Stack.Push16(FlagRegister16);
         // F000:0013 mov DX,0xFFFF
         DX = 0xFFFF;
         // F000:0016 mov word ptr DS:[4],0xFFFF
-        UInt16[DS, 4] = 0xFFFF;
+        DsGlobals.Word0004 = 0xFFFF;
         // F000:001C cmp word ptr DS:[4],DX
-        Alu16.Sub(UInt16[DS, 4], 0xFFFF);
+        Alu16.Sub(DsGlobals.Word0004, 0xFFFF);
         // F000:0020 mov word ptr DS:[6],DX
-        UInt16[DS, 6] = 0xFFFF;
+        DsGlobals.Word0006 = 0xFFFF;
         // F000:0024 pushf
         Stack.Push16(FlagRegister16);
         // F000:0025 mov CX,0xFFFF
         CX = 0xFFFF;
         // F000:0028 mov word ptr DS:[8],1
-        UInt16[DS, 8] = 1;
+        DsGlobals.Word0008 = 1;
         // F000:002E cmp word ptr DS:[8],CX
-        Alu16.Sub(UInt16[DS, 8], 0xFFFF);
+        Alu16.Sub(DsGlobals.Word0008, 0xFFFF);
         // F000:0032 mov word ptr DS:[0x000A],CX
-        UInt16[DS, 0x000A] = 0xFFFF;
+        DsGlobals.Word000A = 0xFFFF;
         // F000:0036 pushf
         Stack.Push16(FlagRegister16);
         // F000:0037 mov AX,0x8000
         AX = 0x8000;
         // F000:003A cmp AX,1
-        Alu16.Sub(0x8000, 1);
+        CarryFlag = false;
+        ParityFlag = true;
+        AuxiliaryFlag = true;
+        ZeroFlag = false;
+        SignFlag = false;
+        OverflowFlag = true;
         // F000:003D mov word ptr DS:[0x000C],AX
-        UInt16[DS, 0x000C] = 0x8000;
+        DsGlobals.Word000C = 0x8000;
         // F000:0040 pushf
         Stack.Push16(FlagRegister16);
         // F000:0041 mov BP,0x8000
         // F000:0044 cmp BP,-1
-        Alu16.Sub(0x8000, 0xFFFF);
+        CarryFlag = true;
+        ParityFlag = false;
+        AuxiliaryFlag = true;
+        ZeroFlag = false;
+        SignFlag = true;
+        OverflowFlag = false;
         // F000:0047 mov word ptr DS:[0x000E],BP
-        UInt16[DS, 0x000E] = 0x8000;
+        DsGlobals.Word000E = 0x8000;
         // F000:004B pushf
         Stack.Push16(FlagRegister16);
         // F000:004C mov SI,0x7F81
         SI = 0x7F81;
         // F000:004F cmp SI,0x903C
-        Alu16.Sub(0x7F81, 0x903C);
+        CarryFlag = true;
+        ParityFlag = false;
+        AuxiliaryFlag = true;
+        ZeroFlag = false;
+        SignFlag = true;
+        OverflowFlag = true;
         // F000:0053 mov word ptr DS:[0x0010],SI
-        UInt16[DS, 0x0010] = 0x7F81;
+        DsGlobals.Word0010 = 0x7F81;
         // F000:0057 pushf
         Stack.Push16(FlagRegister16);
         // F000:0058 mov word ptr DS:[0x0012],0xEFC3
-        UInt16[DS, 0x0012] = 0xEFC3;
+        DsGlobals.Word0012 = 0xEFC3;
         // F000:005E cmp word ptr DS:[0x0012],0xC664
-        Alu16.Sub(UInt16[DS, 0x0012], 0xC664);
+        Alu16.Sub(DsGlobals.Word0012, 0xC664);
         // F000:0064 pushf
         Stack.Push16(FlagRegister16);
         // F000:0065 mov word ptr DS:[0x0014],0xE933
-        UInt16[DS, 0x0014] = 0xE933;
+        DsGlobals.Word0014 = 0xE933;
         // F000:006B cmp word ptr DS:[0x0014],0x0064
-        Alu16.Sub(UInt16[DS, 0x0014], 0x0064);
+        Alu16.Sub(DsGlobals.Word0014, 0x0064);
         // F000:0070 pushf
         Stack.Push16(FlagRegister16);
         // F000:0071 mov byte ptr DS:[0x0016],1
-        UInt8[DS, 0x0016] = 1;
+        DsGlobals.Byte0016 = 1;
         // F000:0076 cmp byte ptr DS:[0x0016],2
-        Alu8.Sub(UInt8[DS, 0x0016], 2);
+        Alu8.Sub(DsGlobals.Byte0016, 2);
         // F000:007B pushf
         Stack.Push16(FlagRegister16);
         // F000:007C mov DH,0xFF
         DH = 0xFF;
         // F000:007E cmp DH,0xFF
-        Alu8.Sub(0xFF, 0xFF);
+        CarryFlag = false;
+        ParityFlag = true;
+        AuxiliaryFlag = false;
+        ZeroFlag = true;
+        SignFlag = false;
+        OverflowFlag = false;
         // F000:0081 mov word ptr DS:[0x0017],DX
-        UInt16[DS, 0x0017] = 0xFFFF;
+        DsGlobals.Word0017 = 0xFFFF;
         // F000:0085 pushf
         Stack.Push16(FlagRegister16);
         // F000:0086 mov AL,0xFF
         // F000:0088 cmp AL,1
-        Alu8.Sub(0xFF, 1);
+        CarryFlag = false;
+        ParityFlag = false;
+        AuxiliaryFlag = false;
+        ZeroFlag = false;
+        SignFlag = true;
+        OverflowFlag = false;
         // F000:008A mov word ptr DS:[0x0019],AX
-        UInt16[DS, 0x0019] = 0x80FF;
+        DsGlobals.Word0019 = 0x80FF;
         // F000:008D pushf
         Stack.Push16(FlagRegister16);
         // F000:008E mov byte ptr DS:[0x001B],0x80
-        UInt8[DS, 0x001B] = 0x80;
+        DsGlobals.Byte001B = 0x80;
         // F000:0093 mov CH,1
         // F000:0095 cmp CH,byte ptr DS:[0x001B]
-        Alu8.Sub(1, UInt8[DS, 0x001B]);
+        Alu8.Sub(1, DsGlobals.Byte001B);
         // F000:0099 mov word ptr DS:[0x001C],CX
-        UInt16[DS, 0x001C] = 0x01FF;
+        DsGlobals.Word001C = 0x01FF;
         // F000:009D pushf
         Stack.Push16(FlagRegister16);
         // F000:009E mov BL,0x80
         BL = 0x80;
         // F000:00A0 mov byte ptr DS:[0x001E],0x7F
-        UInt8[DS, 0x001E] = 0x7F;
+        DsGlobals.Byte001E = 0x7F;
         // F000:00A5 cmp byte ptr DS:[0x001E],BL
-        Alu8.Sub(UInt8[DS, 0x001E], 0x80);
+        Alu8.Sub(DsGlobals.Byte001E, 0x80);
         // F000:00A9 mov word ptr DS:[0x001F],BX
-        UInt16[DS, 0x001F] = 0x0080;
+        DsGlobals.Word001F = 0x0080;
         // F000:00AD pushf
         Stack.Push16(FlagRegister16);
         // F000:00AE mov AL,0xBC
         AL = 0xBC;
         // F000:00B0 mov AH,0x8E
-        AH = 0x8E;
         // F000:00B2 cmp AH,AL
-        Alu8.Sub(0x8E, 0xBC);
+        CarryFlag = true;
+        ParityFlag = true;
+        AuxiliaryFlag = false;
+        ZeroFlag = false;
+        SignFlag = true;
+        OverflowFlag = false;
         // F000:00B4 mov word ptr DS:[0x0021],AX
-        UInt16[DS, 0x0021] = 0x8EBC;
+        DsGlobals.Word0021 = 0x8EBC;
         // F000:00B7 pushf
         Stack.Push16(FlagRegister16);
         // F000:00B8 mov CX,0
         // F000:00BB neg CX
-        CX = Alu16.Sub(0, 0);
-        CarryFlag = CX != 0;
+        CX = 0;
+        ParityFlag = true;
+        AuxiliaryFlag = false;
+        ZeroFlag = true;
+        SignFlag = false;
+        OverflowFlag = false;
+        CarryFlag = false;
         // F000:00BD mov word ptr DS:[0x0022],CX
-        UInt16[DS, 0x0022] = CX;
+        DsGlobals.Word0022 = 0;
         // F000:00C1 pushf
         Stack.Push16(FlagRegister16);
         // F000:00C2 mov word ptr DS:[0x0024],0x7FFF
-        UInt16[DS, 0x0024] = 0x7FFF;
+        DsGlobals.Word0024 = 0x7FFF;
         // F000:00C8 neg word ptr DS:[0x0024]
-        UInt16[DS, 0x0024] = Alu16.Sub(0, UInt16[DS, 0x0024]);
-        CarryFlag = UInt16[DS, 0x0024] != 0;
+        DsGlobals.Word0024 = Alu16.Sub(0, DsGlobals.Word0024);
+        CarryFlag = DsGlobals.Word0024 != 0;
         // F000:00CC pushf
         Stack.Push16(FlagRegister16);
         // F000:00CD mov BP,0x8000
         // F000:00D0 neg BP
-        BP = Alu16.Sub(0, 0x8000);
-        CarryFlag = BP != 0;
+        BP = 0x8000;
+        ParityFlag = true;
+        AuxiliaryFlag = false;
+        ZeroFlag = false;
+        SignFlag = true;
+        OverflowFlag = true;
+        CarryFlag = true;
         // F000:00D2 mov word ptr DS:[0x0026],BP
-        UInt16[DS, 0x0026] = BP;
+        DsGlobals.Word0026 = 0x8000;
         // F000:00D6 pushf
         Stack.Push16(FlagRegister16);
         // F000:00D7 mov word ptr DS:[0x0028],0xACE9
-        UInt16[DS, 0x0028] = 0xACE9;
+        DsGlobals.Word0028 = 0xACE9;
         // F000:00DD neg word ptr DS:[0x0028]
-        UInt16[DS, 0x0028] = Alu16.Sub(0, UInt16[DS, 0x0028]);
-        CarryFlag = UInt16[DS, 0x0028] != 0;
+        DsGlobals.Word0028 = Alu16.Sub(0, DsGlobals.Word0028);
+        CarryFlag = DsGlobals.Word0028 != 0;
         // F000:00E1 pushf
         Stack.Push16(FlagRegister16);
         // F000:00E2 mov AH,0
-        AH = 0;
         // F000:00E4 neg AH
-        AH = Alu8.Sub(0, 0);
-        CarryFlag = AH != 0;
+        AH = 0;
+        ParityFlag = true;
+        AuxiliaryFlag = false;
+        ZeroFlag = true;
+        SignFlag = false;
+        OverflowFlag = false;
+        CarryFlag = false;
         // F000:00E6 mov word ptr DS:[0x002A],AX
-        UInt16[DS, 0x002A] = AX;
+        DsGlobals.Word002A = 0x00BC;
         // F000:00E9 pushf
         Stack.Push16(FlagRegister16);
         // F000:00EA mov byte ptr DS:[0x002C],0x7F
-        UInt8[DS, 0x002C] = 0x7F;
+        DsGlobals.Byte002C = 0x7F;
         // F000:00EF neg byte ptr DS:[0x002C]
-        UInt8[DS, 0x002C] = Alu8.Sub(0, UInt8[DS, 0x002C]);
-        CarryFlag = UInt8[DS, 0x002C] != 0;
+        DsGlobals.Byte002C = Alu8.Sub(0, DsGlobals.Byte002C);
+        CarryFlag = DsGlobals.Byte002C != 0;
         // F000:00F3 pushf
         Stack.Push16(FlagRegister16);
         // F000:00F4 mov CL,0xC9
         // F000:00F6 neg CL
-        CL = Alu8.Sub(0, 0xC9);
-        CarryFlag = CL != 0;
+        CL = 0x37;
+        ParityFlag = false;
+        AuxiliaryFlag = true;
+        ZeroFlag = false;
+        SignFlag = false;
+        OverflowFlag = false;
+        CarryFlag = true;
         // F000:00F8 mov word ptr DS:[0x002D],CX
-        UInt16[DS, 0x002D] = CX;
+        DsGlobals.Word002D = 0x0037;
         // F000:00FC pushf
         Stack.Push16(FlagRegister16);
         // F000:00FD mov byte ptr DS:[0x002F],0x80
-        UInt8[DS, 0x002F] = 0x80;
+        DsGlobals.Byte002F = 0x80;
         // F000:0102 neg byte ptr DS:[0x002F]
-        UInt8[DS, 0x002F] = Alu8.Sub(0, UInt8[DS, 0x002F]);
-        CarryFlag = UInt8[DS, 0x002F] != 0;
+        DsGlobals.Byte002F = Alu8.Sub(0, DsGlobals.Byte002F);
+        CarryFlag = DsGlobals.Byte002F != 0;
         // F000:0106 pushf
         Stack.Push16(FlagRegister16);
         // F000:0107 hlt
         return Hlt();
     }
 
+}
+
+// ==== file: DsGlobals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class DsGlobals : MemoryBasedDataStructureWithDsBaseAddress {
+    private readonly IMemory _memory;
+    private readonly SegmentRegisters _segmentRegisters;
+
+    private ushort Segment => _segmentRegisters.UInt16[(uint)SegmentRegisterIndex.DsIndex];
+
+    public DsGlobals(IMemory memory, SegmentRegisters segmentRegisters) : base(memory, segmentRegisters) {
+        _memory = memory;
+        _segmentRegisters = segmentRegisters;
+    }
+
+    /// DS:0x0000, whatever DS holds at the access.
+    public ushort Word0000 { get => _memory.UInt16[Segment, 0x0000]; set => _memory.UInt16[Segment, 0x0000] = value; }
+
+    /// DS:0x0002, whatever DS holds at the access.
+    public ushort Word0002 { get => _memory.UInt16[Segment, 0x0002]; set => _memory.UInt16[Segment, 0x0002] = value; }
+
+    /// DS:0x0004, whatever DS holds at the access.
+    public ushort Word0004 { get => _memory.UInt16[Segment, 0x0004]; set => _memory.UInt16[Segment, 0x0004] = value; }
+
+    /// DS:0x0006, whatever DS holds at the access.
+    public ushort Word0006 { get => _memory.UInt16[Segment, 0x0006]; set => _memory.UInt16[Segment, 0x0006] = value; }
+
+    /// DS:0x0008, whatever DS holds at the access.
+    public ushort Word0008 { get => _memory.UInt16[Segment, 0x0008]; set => _memory.UInt16[Segment, 0x0008] = value; }
+
+    /// DS:0x000A, whatever DS holds at the access.
+    public ushort Word000A { get => _memory.UInt16[Segment, 0x000A]; set => _memory.UInt16[Segment, 0x000A] = value; }
+
+    /// DS:0x000C, whatever DS holds at the access.
+    public ushort Word000C { get => _memory.UInt16[Segment, 0x000C]; set => _memory.UInt16[Segment, 0x000C] = value; }
+
+    /// DS:0x000E, whatever DS holds at the access.
+    public ushort Word000E { get => _memory.UInt16[Segment, 0x000E]; set => _memory.UInt16[Segment, 0x000E] = value; }
+
+    /// DS:0x0010, whatever DS holds at the access.
+    public ushort Word0010 { get => _memory.UInt16[Segment, 0x0010]; set => _memory.UInt16[Segment, 0x0010] = value; }
+
+    /// DS:0x0012, whatever DS holds at the access.
+    public ushort Word0012 { get => _memory.UInt16[Segment, 0x0012]; set => _memory.UInt16[Segment, 0x0012] = value; }
+
+    /// DS:0x0014, whatever DS holds at the access.
+    public ushort Word0014 { get => _memory.UInt16[Segment, 0x0014]; set => _memory.UInt16[Segment, 0x0014] = value; }
+
+    /// DS:0x0016, whatever DS holds at the access.
+    public byte Byte0016 { get => _memory.UInt8[Segment, 0x0016]; set => _memory.UInt8[Segment, 0x0016] = value; }
+
+    /// DS:0x0017, whatever DS holds at the access.
+    public ushort Word0017 { get => _memory.UInt16[Segment, 0x0017]; set => _memory.UInt16[Segment, 0x0017] = value; }
+
+    /// DS:0x0019, whatever DS holds at the access.
+    public ushort Word0019 { get => _memory.UInt16[Segment, 0x0019]; set => _memory.UInt16[Segment, 0x0019] = value; }
+
+    /// DS:0x001B, whatever DS holds at the access.
+    public byte Byte001B { get => _memory.UInt8[Segment, 0x001B]; set => _memory.UInt8[Segment, 0x001B] = value; }
+
+    /// DS:0x001C, whatever DS holds at the access.
+    public ushort Word001C { get => _memory.UInt16[Segment, 0x001C]; set => _memory.UInt16[Segment, 0x001C] = value; }
+
+    /// DS:0x001E, whatever DS holds at the access.
+    public byte Byte001E { get => _memory.UInt8[Segment, 0x001E]; set => _memory.UInt8[Segment, 0x001E] = value; }
+
+    /// DS:0x001F, whatever DS holds at the access.
+    public ushort Word001F { get => _memory.UInt16[Segment, 0x001F]; set => _memory.UInt16[Segment, 0x001F] = value; }
+
+    /// DS:0x0021, whatever DS holds at the access.
+    public ushort Word0021 { get => _memory.UInt16[Segment, 0x0021]; set => _memory.UInt16[Segment, 0x0021] = value; }
+
+    /// DS:0x0022, whatever DS holds at the access.
+    public ushort Word0022 { get => _memory.UInt16[Segment, 0x0022]; set => _memory.UInt16[Segment, 0x0022] = value; }
+
+    /// DS:0x0024, whatever DS holds at the access.
+    public ushort Word0024 { get => _memory.UInt16[Segment, 0x0024]; set => _memory.UInt16[Segment, 0x0024] = value; }
+
+    /// DS:0x0026, whatever DS holds at the access.
+    public ushort Word0026 { get => _memory.UInt16[Segment, 0x0026]; set => _memory.UInt16[Segment, 0x0026] = value; }
+
+    /// DS:0x0028, whatever DS holds at the access.
+    public ushort Word0028 { get => _memory.UInt16[Segment, 0x0028]; set => _memory.UInt16[Segment, 0x0028] = value; }
+
+    /// DS:0x002A, whatever DS holds at the access.
+    public ushort Word002A { get => _memory.UInt16[Segment, 0x002A]; set => _memory.UInt16[Segment, 0x002A] = value; }
+
+    /// DS:0x002C, whatever DS holds at the access.
+    public byte Byte002C { get => _memory.UInt8[Segment, 0x002C]; set => _memory.UInt8[Segment, 0x002C] = value; }
+
+    /// DS:0x002D, whatever DS holds at the access.
+    public ushort Word002D { get => _memory.UInt16[Segment, 0x002D]; set => _memory.UInt16[Segment, 0x002D] = value; }
+
+    /// DS:0x002F, whatever DS holds at the access.
+    public byte Byte002F { get => _memory.UInt8[Segment, 0x002F]; set => _memory.UInt8[Segment, 0x002F] = value; }
 }

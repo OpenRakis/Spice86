@@ -34,7 +34,7 @@ public class BreakpointTests {
 
         // read / write with remove
         int readWrite0Triggered = 0;
-        AddressBreakPoint readWrite0 = new AddressBreakPoint(BreakPointType.MEMORY_ACCESS, 0, breakpoint => { readWrite0Triggered++; }, false);
+        AddressBreakPoint readWrite0 = new AddressBreakPoint(BreakPointType.MEMORY_ACCESS, 0, (breakpoint, _) => { readWrite0Triggered++; }, false);
         emulatorBreakpointsManager.ToggleBreakPoint(readWrite0, true);
         _ = memory.UInt8[0];
         memory.UInt8[0] = 0;
@@ -117,7 +117,7 @@ public class BreakpointTests {
     [AssertionMethod]
     private void AssertAddressMemoryBreakPoint(EmulatorBreakpointsManager emulatorBreakpointsManager, BreakPointType breakPointType, uint address, int expectedTriggers, bool isRemovedOnTrigger, Action action) {
         int count = 0;
-        AddressBreakPoint breakPoint = new AddressBreakPoint(breakPointType, address, breakpoint => { count++; }, isRemovedOnTrigger);
+        AddressBreakPoint breakPoint = new AddressBreakPoint(breakPointType, address, (breakpoint, _) => { count++; }, isRemovedOnTrigger);
         emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, true);
         action.Invoke();
         emulatorBreakpointsManager.ToggleBreakPoint(breakPoint, false);
@@ -133,16 +133,16 @@ public class BreakpointTests {
         ProgramExecutor programExecutor = spice86DependencyInjection.ProgramExecutor;
         EmulatorBreakpointsManager emulatorBreakpointsManager = spice86DependencyInjection.Machine.EmulatorBreakpointsManager;
         int triggers = 0;
-        emulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CPU_CYCLES, 10, breakpoint => {
+        emulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CPU_CYCLES, 10, (breakpoint, _) => {
             Assert.Equal(10, state.Cycles);
             triggers++;
         }, true), true);
         // Address of cycle 10 to test multiple breakpoints
-        emulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CPU_EXECUTION_ADDRESS, 0xF001C, breakpoint => {
+        emulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CPU_EXECUTION_ADDRESS, 0xF001C, (breakpoint, _) => {
             Assert.Equal(0xF001C, (int)state.IpPhysicalAddress);
             triggers++;
         }, true), true);
-        emulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.MACHINE_STOP, 0, breakpoint => {
+        emulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.MACHINE_STOP, 0, (breakpoint, _) => {
             Assert.Equal(0xF01A9, (int)state.IpPhysicalAddress);
             Assert.False(machine.CpuState.IsRunning);
             triggers++;
@@ -160,7 +160,7 @@ public class BreakpointTests {
         IOPortDispatcher ioPortDispatcher = spice86DependencyInjection.Machine.IoPortDispatcher;
         ProgramExecutor programExecutor = spice86DependencyInjection.ProgramExecutor;
         int triggers = 0;
-        emulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.IO_WRITE, 0x43, breakpoint => {
+        emulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.IO_WRITE, 0x43, (breakpoint, _) => {
             Assert.Equal(8, state.Cycles);
             Assert.Equal(0x43, ioPortDispatcher.LastPortWritten);
             Assert.Equal((uint)0b00110110, ioPortDispatcher.LastPortWrittenValue);
@@ -177,7 +177,7 @@ public class BreakpointTests {
         EmulatorBreakpointsManager emulatorBreakpointsManager = spice86DependencyInjection.Machine.EmulatorBreakpointsManager;
         ProgramExecutor programExecutor = spice86DependencyInjection.ProgramExecutor;
         int triggers = 0;
-        emulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CPU_INTERRUPT, 0x8, breakpoint => {
+        emulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CPU_INTERRUPT, 0x8, (breakpoint, _) => {
             triggers++;
         }, false), true);
         programExecutor.Run();
@@ -193,11 +193,11 @@ public class BreakpointTests {
         ProgramExecutor programExecutor = spice86DependencyInjection.ProgramExecutor;
         int intDtriggers = 0;
         int intOtriggers = 0;
-        emulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CPU_INTERRUPT, 0xD, breakpoint => {
+        emulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CPU_INTERRUPT, 0xD, (breakpoint, _) => {
             intDtriggers++;
         }, false), true);
         // Int on overflow
-        emulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CPU_INTERRUPT, 0x4, breakpoint => {
+        emulatorBreakpointsManager.ToggleBreakPoint(new AddressBreakPoint(BreakPointType.CPU_INTERRUPT, 0x4, (breakpoint, _) => {
             intOtriggers++;
         }, false), true);
         programExecutor.Run();

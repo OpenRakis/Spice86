@@ -39,7 +39,7 @@ public class ConditionalBreakpointTests : IDisposable {
         AddressBreakPoint breakpoint = _fixture.CreateConditionalBreakpoint(
             BreakPointType.MEMORY_READ,
             0x100,
-            _ => triggerCount++,
+            (_, _) => triggerCount++,
             "ax == 0x100");
         
         BreakpointsManager.ToggleBreakPoint(breakpoint, true);
@@ -71,7 +71,7 @@ public class ConditionalBreakpointTests : IDisposable {
         AddressBreakPoint breakpoint = new AddressBreakPoint(
             BreakPointType.MEMORY_READ,
             0x200,
-            _ => { },
+            (_, _) => { },
             false,
             condition,
             conditionExpression) {
@@ -118,7 +118,7 @@ public class ConditionalBreakpointTests : IDisposable {
         AddressBreakPoint breakpoint = _fixture.CreateConditionalBreakpoint(
             BreakPointType.MEMORY_WRITE,
             0x300,
-            _ => triggerCount++,
+            (_, _) => triggerCount++,
             "ax == 0x30 && bx > 0x10");
         
         BreakpointsManager.ToggleBreakPoint(breakpoint, true);

@@ -506,7 +506,7 @@ public partial class BreakpointsViewModel : ViewModelWithErrorDialogAndMemoryBre
         _emulatorBreakpointsManager.ToggleBreakPoint(
             new UnconditionalBreakPoint(
                 BreakPointType.CPU_EXECUTION_ADDRESS,
-                (_) => onReached(),
+                (_, _) => onReached(),
                 removedOnTrigger) { IsUserBreakpoint = true },
             on: true);
     }

@@ -31,6 +31,28 @@ public class AddressReadWriteBreakpoints {
         }
     }
 
+    /// <summary>
+    ///     Enable or disable a memory breakpoint at one address.
+    /// </summary>
+    /// <param name="breakPoint">The breakpoint to enable or disable</param>
+    /// <param name="trigger">Trigger for the breakpoint</param>
+    /// <param name="address">The address to register it at or remove it from</param>
+    /// <param name="on">true to enable a breakpoint, false to disable it</param>
+    public void ToggleBreakPointAt(BreakPoint breakPoint, AddressOperation trigger, long address, bool on) {
+        switch (trigger) {
+            case AddressOperation.READ:
+                _readBreakPoints.ToggleBreakPointAt(breakPoint, address, on);
+                break;
+            case AddressOperation.WRITE:
+                _writeBreakPoints.ToggleBreakPointAt(breakPoint, address, on);
+                break;
+            case AddressOperation.ACCESS:
+                _readBreakPoints.ToggleBreakPointAt(breakPoint, address, on);
+                _writeBreakPoints.ToggleBreakPointAt(breakPoint, address, on);
+                break;
+        }
+    }
+
     internal IEnumerable<AddressBreakPoint> SerializableBreakpoints => _readBreakPoints.
         SerializableBreakpoints.Concat(_writeBreakPoints.SerializableBreakpoints);
 

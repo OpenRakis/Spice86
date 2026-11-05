@@ -69,7 +69,7 @@ public partial class BreakpointViewModel : ViewModelBase {
         Comment = comment;
         Parameter = "*";
         _conditionExpression = null;
-        UnconditionalBreakPoint bp = new(type, _ => onReached(), removeOnTrigger: false) { IsUserBreakpoint = true };
+        UnconditionalBreakPoint bp = new(type, (_, _) => onReached(), removeOnTrigger: false) { IsUserBreakpoint = true };
         bp.IsEnabled = true;
         _emulatorBreakpointsManager.ToggleBreakPoint(bp, on: true);
         _breakpoints.Add(bp);
@@ -135,7 +135,7 @@ public partial class BreakpointViewModel : ViewModelBase {
     }
 
     protected AddressBreakPoint CreateBreakpointWithAddressAndCondition(long address, Func<long, bool>? additionalTriggerCondition) {
-        AddressBreakPoint bp = new AddressBreakPoint(Type, address, _ => _onReached(), IsRemovedOnTrigger, additionalTriggerCondition, _conditionExpression);
+        AddressBreakPoint bp = new AddressBreakPoint(Type, address, (_, _) => _onReached(), IsRemovedOnTrigger, additionalTriggerCondition, _conditionExpression);
         bp.IsUserBreakpoint = true;
         return bp;
     }

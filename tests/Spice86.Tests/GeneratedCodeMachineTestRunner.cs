@@ -8,6 +8,7 @@ using Spice86.Core.Emulator.Devices.Sound.Blaster;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ssa;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
@@ -122,8 +123,8 @@ internal sealed class GeneratedCodeMachineTestRunner {
             return generatedProgram;
         }
 
-        InstrumentedGeneratedSource instrumented = GeneratedCodeProbes.Instrument(generatedProgram.SourceText);
-        using CompiledGeneratedOverride probedOverride = new GeneratedOverrideCompiler().CompileSupplier(instrumented.Source);
+        InstrumentedGeneratedSource instrumented = GeneratedCodeProbes.Instrument(generatedProgram);
+        using CompiledGeneratedOverride probedOverride = new GeneratedOverrideCompiler().CompileSupplier(instrumented.Sources);
         RunExecutions(executions, probedOverride.Supplier, discoverySettings, goldenKey, discoveryFinalState);
         GeneratedCodeProbes.Append(probeReportPath, goldenKey, instrumented,
             GeneratedCodeProbes.ReadHits(probedOverride.Supplier.GetType().Assembly));
@@ -160,9 +161,9 @@ internal sealed class GeneratedCodeMachineTestRunner {
     /// <returns>The compiled override, which the caller must dispose.</returns>
     public CompiledGeneratedOverride CompileGeneratedProgram(AsmRunSettings settings, GeneratedCSharpProgram generatedProgram) {
         GeneratedOverrideCompiler compiler = new();
-        GeneratedCompilation compilation = compiler.Compile(generatedProgram.SourceText);
+        GeneratedCompilation compilation = compiler.Compile(generatedProgram);
         GeneratedCodeMetrics metrics = GeneratedCodeMetricsCollector.Collect(
-            GoldenKey(settings), compilation.SyntaxTree, compilation.EmitResult.Diagnostics);
+            GoldenKey(settings), compilation.SyntaxTrees, compilation.EmitResult.Diagnostics);
         WriteMetrics(metrics);
         WriteGotoCensus(GotoCensusLine.Format(GoldenKey(settings), generatedProgram.GotoCensus));
         generatedProgram.GotoCensus.Total.Should().Be(metrics.GotoStatements,
@@ -352,7 +353,9 @@ internal sealed class GeneratedCodeMachineTestRunner {
         return (generatedProgram, finalState);
     }
 
-    private static (CfgPartitionedProgram Program, AsmFinalState FinalState) GenerateProgram(AsmRunScope scope) {
+    /// <summary>The recorded program and finished-machine state of <paramref name="scope"/>'s
+    /// discovery run: interpreter oracle and machine goldens checked, no generated C# written.</summary>
+    internal static (CfgPartitionedProgram Program, AsmFinalState FinalState) GenerateProgram(AsmRunScope scope) {
         // The discovery run checks the scenario's oracle before anything is generated: a wrong expected
         // value fails discovery instead of surfacing later as a generated-code difference. The finished
         // machine is then compared with the listing and CFG goldens before the graph is exported.
@@ -366,7 +369,9 @@ internal sealed class GeneratedCodeMachineTestRunner {
         CfgBlockGraph graph = new CfgBlockGraphExporter().ExportFromExecutionContext(machine.CfgCpu.ExecutionContextManager, null).Graph;
         graph.Truncated.Should().BeFalse();
 
-        CfgPartitionedProgram program = new CfgFunctionPartitioner().Partition(graph, machine.CfgCpu.ExecutionContextManager, new FunctionCatalogue());
+        GeneratorInputs inputs = run.DependencyInjection.GeneratorInputsCollector.Capture();
+        CfgPartitionedProgram program = new CfgFunctionPartitioner().Partition(graph,
+            machine.CfgCpu.ExecutionContextManager, new FunctionCatalogue(), inputs);
         AsmFinalState finalState = AsmFinalState.Capture(run.Result);
         return (program, finalState);
     }

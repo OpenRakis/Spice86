@@ -1,0 +1,96 @@
+F000:0000 mov AX,0x2000
+F000:0003 mov DS,AX
+F000:0005 mov SS,AX
+F000:0007 mov SP,0x1000
+F000:000A cld
+F000:000B call near 0x00C9
+F000:000E mov word ptr DS:[0x0040],AX
+F000:0011 xor AX,AX
+F000:0013 xor DX,DX
+F000:0015 call near 0x00C9
+F000:0018 mov word ptr DS:[0x0042],DX
+F000:001C mov CX,0
+F000:001F call near 0x00D0
+F000:0022 mov word ptr DS:[0x0044],AX
+F000:0025 mov CX,1
+F000:0028 call near 0x00D0
+F000:002B mov word ptr DS:[0x0046],BX
+F000:002F mov CX,4
+F000:0032 call near 0x00DC
+F000:0035 mov word ptr DS:[0x0048],AX
+F000:0038 call near 0x00EC
+F000:003B mov word ptr DS:[0x004A],AX
+F000:003E call near 0x00F2
+F000:0047 mov word ptr DS:[0x004C],0x1234
+F000:004D xor AX,AX
+F000:004F mov ES,AX
+F000:0051 mov word ptr ES:[0x0184],0x00F6
+F000:0058 mov word ptr ES:[0x0186],CS
+F000:005D mov AX,0x2000
+F000:0060 mov ES,AX
+F000:0062 mov AX,9
+F000:0065 mov AX,3
+F000:0068 mov CX,0x7777
+F000:006B int 0x61
+F000:006D mov word ptr DS:[0x004E],AX
+F000:0070 mov word ptr DS:[0x0050],CX
+F000:0074 mov AX,0x0020
+F000:0077 mov CX,0x8888
+F000:007A int 0x61
+F000:007C mov word ptr DS:[0x0052],AX
+F000:007F mov word ptr DS:[0x0054],CX
+F000:0083 mov word ptr DS:[0x005C],0xCAFE
+F000:0089 xor AX,AX
+F000:008B mov ES,AX
+F000:008D mov word ptr ES:[0x0188],0x00FA
+F000:0094 mov word ptr ES:[0x018A],CS
+F000:0099 mov word ptr ES:[0x018C],0x00FD
+F000:00A0 mov word ptr ES:[0x018E],CS
+F000:00A5 mov AX,0x2000
+F000:00A8 mov ES,AX
+F000:00AA mov BX,0x005C
+F000:00AD int 0x62
+F000:00AF mov word ptr DS:[0x0056],AX
+F000:00B2 mov BX,0x5678
+F000:00B5 cmp BX,0
+F000:00B8 int 0x63
+F000:00BA jb short 0x00C3
+F000:00BC mov byte ptr DS:[0x0058],0
+F000:00C1 jmp short 0x00C8
+F000:00C3 mov byte ptr DS:[0x0058],1
+F000:00C8 hlt
+F000:00C9 mov AX,0x1111
+F000:00CC mov DX,0x2222
+F000:00CF ret near
+F000:00D0 test CX,CX
+F000:00D2 je short 0x00D8
+F000:00D4 mov BX,0xBBBB
+F000:00D7 ret near
+F000:00D8 mov AX,0xAAAA
+F000:00DB ret near
+F000:00DC test CX,CX
+F000:00DE je short 0x00E9
+F000:00E0 push CX
+F000:00E1 dec CX
+F000:00E2 call near 0x00DC
+F000:00E5 pop CX
+F000:00E6 add AX,CX
+F000:00E8 ret near
+F000:00E9 xor AX,AX
+F000:00EB ret near
+F000:00EC jmp short 0x00EE
+F000:00EE mov AX,0x3456
+F000:00F1 ret near
+F000:00F2 pop AX
+F000:00F3 jmp near 0x0047
+F000:00F6 shl AX,1
+F000:00F8 inc AX
+F000:00F9 iret
+F000:00FA mov AX,word ptr DS:[BX]
+F000:00FC iret
+F000:00FD push BP
+F000:00FE mov BP,SP
+F000:0100 or word ptr SS:[BP+6],1
+F000:0104 pop BP
+F000:0105 iret
+F000:FFF0 jmp short 0

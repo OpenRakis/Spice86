@@ -5,6 +5,7 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Bios;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.IOPorts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
@@ -39,7 +40,6 @@ public sealed class SystemBiosInt14Handler : InterruptHandler {
         _biosDataArea = biosDataArea;
         _ioPortDispatcher = ioPortDispatcher;
         InitializeBiosDataArea();
-        FillDispatchTable();
     }
 
     public override byte VectorNumber => 0x14;
@@ -62,12 +62,6 @@ public sealed class SystemBiosInt14Handler : InterruptHandler {
         Run(operation);
     }
 
-    private void FillDispatchTable() {
-        AddAction(0x00, () => InitializePort(true));
-        AddAction(0x01, () => TransmitCharacter(true));
-        AddAction(0x02, () => ReceiveCharacter(true));
-        AddAction(0x03, () => GetPortStatus(true));
-    }
 
     private void InitializeBiosDataArea() {
         if (_biosDataArea.PortCom[0] == 0) {
@@ -90,6 +84,7 @@ public sealed class SystemBiosInt14Handler : InterruptHandler {
         }
     }
 
+    [InterruptService(0x00, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Dx, Writes = CpuValues.Ax | CpuValues.Carry, Memory = ServiceMemoryEffect.Read, Io = true)]
     private void InitializePort(bool calledFromVm) {
         if (!TryGetPort(State.DX, out ushort port)) {
             SetCarryFlag(false, calledFromVm);
@@ -108,6 +103,7 @@ public sealed class SystemBiosInt14Handler : InterruptHandler {
         SetCarryFlag(false, calledFromVm);
     }
 
+    [InterruptService(0x01, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Dx, Writes = CpuValues.Ah | CpuValues.Carry, Memory = ServiceMemoryEffect.Read, Io = true)]
     private void TransmitCharacter(bool calledFromVm) {
         if (!TryGetPort(State.DX, out ushort port)) {
             SetCarryFlag(false, calledFromVm);
@@ -126,6 +122,7 @@ public sealed class SystemBiosInt14Handler : InterruptHandler {
         SetCarryFlag(false, calledFromVm);
     }
 
+    [InterruptService(0x02, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Dx, Writes = CpuValues.Ax | CpuValues.Carry, Memory = ServiceMemoryEffect.Read, Io = true)]
     private void ReceiveCharacter(bool calledFromVm) {
         if (!TryGetPort(State.DX, out ushort port)) {
             SetCarryFlag(false, calledFromVm);
@@ -144,6 +141,7 @@ public sealed class SystemBiosInt14Handler : InterruptHandler {
         SetCarryFlag(false, calledFromVm);
     }
 
+    [InterruptService(0x03, Reads = CpuValues.Ah | CpuValues.Al | CpuValues.Dx, Writes = CpuValues.Ax | CpuValues.Carry, Memory = ServiceMemoryEffect.Read, Io = true)]
     private void GetPortStatus(bool calledFromVm) {
         if (!TryGetPort(State.DX, out ushort port)) {
             SetCarryFlag(false, calledFromVm);

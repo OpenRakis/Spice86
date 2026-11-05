@@ -17,8 +17,8 @@ internal static class GeneratedCodeCoverageReport {
     /// <summary>Environment variable holding the path of the TSV report file. Unset or empty disables the report.</summary>
     public const string ReportPathVariable = "SPICE86_GENERATED_CODE_COVERAGE";
 
-    /// <summary>Name of the generated C# dump compiled by the report. The copy under GeneratedProject is a duplicate and is ignored.</summary>
-    public const string GeneratedFileName = "spice86dumpCfgGeneratedOverrides.cs";
+    /// <summary>Name of the directory holding the generated C# dump files compiled by the report. The copy under GeneratedProject is a duplicate and is ignored.</summary>
+    public const string GeneratedDirectoryName = "spice86dumpCfgGeneratedOverrides";
 
     private const string NoPartitionsMarker = "// No CFG partitions were observed.";
     private const string NoGeneratedCodeStatus = "no-generated-code";
@@ -65,15 +65,19 @@ internal static class GeneratedCodeCoverageReport {
     /// <returns>The row, without a trailing newline.</returns>
     public static string BuildRow(string testName, string exePath, string exportFolder) {
         string program = Path.GetFileName(exePath);
-        string? generatedFile = FindGeneratedFile(exportFolder);
-        if (generatedFile == null) {
+        string? generatedDirectory = FindGeneratedDirectory(exportFolder);
+        if (generatedDirectory == null) {
             return JoinColumns(testName, program, NoGeneratedCodeStatus, "", "", "");
         }
-        string source = File.ReadAllText(generatedFile);
-        if (source.StartsWith(NoPartitionsMarker, StringComparison.Ordinal)) {
+        string[] generatedFiles = Directory.EnumerateFiles(generatedDirectory, "*.cs").Order().ToArray();
+        if (generatedFiles.Length == 0) {
+            return JoinColumns(testName, program, NoGeneratedCodeStatus, "", "", "");
+        }
+        string[] sources = generatedFiles.Select(File.ReadAllText).ToArray();
+        if (sources.Length == 1 && sources[0].StartsWith(NoPartitionsMarker, StringComparison.Ordinal)) {
             return JoinColumns(testName, program, EmptyStatus, "", "", "");
         }
-        GeneratedCompilation compilation = new GeneratedOverrideCompiler().Compile(source);
+        GeneratedCompilation compilation = new GeneratedOverrideCompiler().Compile(sources);
         using MemoryStream peStream = compilation.PeStream;
         bool success = compilation.EmitResult.Success;
         string status = OkStatus;
@@ -83,15 +87,15 @@ internal static class GeneratedCodeCoverageReport {
             errorIds = JoinErrorIds(compilation.EmitResult.Diagnostics);
         }
         GeneratedCodeMetrics metrics = GeneratedCodeMetricsCollector.Collect(
-            testName, compilation.SyntaxTree, compilation.EmitResult.Diagnostics);
+            testName, compilation.SyntaxTrees, compilation.EmitResult.Diagnostics);
         return JoinColumns(testName, program, status, errorIds, metrics.Methods.ToString(), metrics.Lines.ToString());
     }
 
-    private static string? FindGeneratedFile(string exportFolder) {
+    private static string? FindGeneratedDirectory(string exportFolder) {
         if (!Directory.Exists(exportFolder)) {
             return null;
         }
-        return Directory.EnumerateFiles(exportFolder, GeneratedFileName, SearchOption.AllDirectories).FirstOrDefault();
+        return Directory.EnumerateDirectories(exportFolder, GeneratedDirectoryName, SearchOption.AllDirectories).FirstOrDefault();
     }
 
     private static string Header() {

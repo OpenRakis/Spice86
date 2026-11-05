@@ -8,6 +8,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Shared.Emulator.Memory;
 
@@ -38,12 +39,12 @@ public sealed class IrMethodEmitterTest {
         CfgBlock block = Block(1, aam, next);
 
         // Act
-        string source = Generate(SingleEntry(block), block);
+        GeneratedCSharpProgram program = Generate(SingleEntry(block), block);
 
         // Assert
-        AssertCompiles(source);
-        source.Should().Contain("if (v2_0000 == 0)");
-        source.Should().Contain("        // F000:0002");
+        AssertCompiles(program);
+        program.SourceText.Should().Contain("if (v2_0000 == 0)");
+        program.SourceText.Should().Contain("        // F000:0002");
     }
 
     [Fact]

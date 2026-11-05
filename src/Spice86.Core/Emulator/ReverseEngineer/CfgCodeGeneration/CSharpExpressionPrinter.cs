@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction.ControlFlow;
@@ -9,6 +10,9 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Data;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Propagation;
 using Spice86.Shared.Emulator.Memory;
@@ -16,6 +20,7 @@ using Spice86.Shared.Emulator.Memory;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 
 /// <summary>
 /// Prints an AST expression node as a <see cref="CSharpFragment"/>. Reads no CFG context; the only state is
@@ -53,16 +58,77 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
 
     private readonly RegisterRenderer _registerRenderer = new(AsmRenderingConfig.CreateSpice86Style());
     private readonly IReadOnlyDictionary<ushort, string> _segmentVariables;
+    private readonly AnalyzedMethod? _method;
+    private readonly ProgramAnalysis? _analysis;
 
     /// <summary>
-    /// Constructs a printer wired with the segment-variable names generated code refers to.
+    /// Constructs a printer wired with the segment-variable names generated code refers to, the
+    /// method being printed and the program-wide values of the generation run.
     /// </summary>
-    public CSharpExpressionPrinter(IReadOnlyDictionary<ushort, string> segmentVariables) {
+    /// <param name="segmentVariables">The names generated code refers to, keyed by segment.</param>
+    /// <param name="ioPorts">The ports the machine the program was dumped from had a registered
+    /// device handler for; <see langword="null"/> suppresses the <c>no device</c> comment.</param>
+    /// <param name="method">The analyzed method being printed.</param>
+    /// <param name="analysis">The program-wide values of the generation run.</param>
+    public CSharpExpressionPrinter(IReadOnlyDictionary<ushort, string> segmentVariables,
+        IReadOnlySet<ushort>? ioPorts, AnalyzedMethod method, ProgramAnalysis analysis)
+        : this(method, analysis, segmentVariables, ioPorts) {
+    }
+
+    /// <summary>Constructs a printer for a print that is not a generated method (dumps, tests).</summary>
+    public CSharpExpressionPrinter(IReadOnlyDictionary<ushort, string> segmentVariables)
+        : this(null, null, segmentVariables, null) {
+    }
+
+    private CSharpExpressionPrinter(AnalyzedMethod? method, ProgramAnalysis? analysis,
+        IReadOnlyDictionary<ushort, string> segmentVariables, IReadOnlySet<ushort>? ioPorts) {
         _segmentVariables = segmentVariables;
+        IoPorts = ioPorts;
+        _method = method;
+        _analysis = analysis;
     }
 
     /// <summary>The suffix appended to local variable names of the instruction being printed; empty for none.</summary>
     public string LocalVariableSuffix { get; set; } = string.Empty;
+
+    /// <summary>The ports the machine the program was dumped from had a registered device handler
+    /// for; <see langword="null"/> when the program was built without a machine, which suppresses
+    /// the <c>no device</c> comment.</summary>
+    internal IReadOnlySet<ushort>? IoPorts { get; }
+
+    /// <summary>The class every global access prints through; unset, every global prints through
+    /// the register class of its segment register.</summary>
+    internal GlobalAccessClassification? GlobalClasses => _analysis?.GlobalClasses;
+
+    /// <summary>The program's typed signatures, set before any method is printed: delegate
+    /// references and partition returns of a typed method use its <c>_Asm</c> wrapper name, and a
+    /// single-target call site to a typed entry prints the typed call form.</summary>
+    internal Ir.TypedSignatures? TypedSignatures => _analysis?.TypedSignatures;
+
+    /// <summary>The frame slot plan of the method being printed: pointer nodes of its table print
+    /// as <c>frame.&lt;Name&gt;</c>.</summary>
+    internal Ir.Memory.FrameSlotPlan? FramePlan => _method?.Prepared.FramePlan;
+
+    /// <summary>The signature of the typed method being printed, <see langword="null"/> for
+    /// untyped methods: its <c>ret</c> / <c>retf</c> returns print the return value.</summary>
+    internal Ir.TypedSignature? TypedSignature => _method?.Signature;
+
+    /// <summary>The read-position register and flag occurrences of the typed method being printed
+    /// that substitute with their parameter name, keyed by node reference; <see langword="null"/>
+    /// outside a typed method. Assignment targets are never in the table.</summary>
+    internal IReadOnlyDictionary<IVisitableAstNode, string>? ParameterReads => _method?.ParameterReads;
+
+    /// <summary>The register occurrences of the method being printed that substitute with a register
+    /// local's printed text and fragment type, keyed by node reference; <see langword="null"/> when the
+    /// method promotes no web. Definition targets are in the table: they print the bare name so the
+    /// assignment's right side casts to the local's type.</summary>
+    internal IReadOnlyDictionary<IVisitableAstNode, SubstitutedRead>? LocalReads =>
+        _method?.RegisterLocals is { Reads.Count: > 0 } locals ? locals.Reads : null;
+
+    /// <summary>The goto targets of the whole method being printed. A <c>for</c> rewrite refuses
+    /// a loop when any statement of the method - not only of the block being dispatched - jumps to
+    /// its header or its step.</summary>
+    internal GotoTargets MethodGotoTargets => _method?.Prepared.Targets ?? GotoTargets.None;
 
     /// <summary>Prints <paramref name="node"/>, which must be an expression.</summary>
     public CSharpFragment Print(IVisitableAstNode node) => node.Accept(this);
@@ -90,9 +156,52 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         if (node is PortWriteCallNode port) {
             return PortWrite(port);
         }
+        if (node is ProcedureCallHelperNode call
+            && TypedSignatures?.TypedCallOf(call) is { } signature
+            && call.Arguments[^1] is MethodGroupNode targetGroup) {
+            return TypedCall(call, signature, targetGroup.MethodName);
+        }
         string target = node.PropertyPath is null ? string.Empty : node.PropertyPath + ".";
         string arguments = string.Join(", ", FormatMethodArguments(node));
-        return $"{target}{node.MethodName}({arguments})";
+        if (node is InterruptServiceCallNode { StringLiteral: { } literal }) {
+            arguments += ", " + StringLiteral(literal);
+        }
+        return $"{target}{MethodName(node)}({arguments})";
+    }
+
+    /// <summary>The method <paramref name="node"/> calls: the <c>_Asm</c> wrapper when the target
+    /// method is typed (a partition return or an untyped call-site reference never reaches the
+    /// typed method itself).</summary>
+    private string MethodName(MethodCallNode node) =>
+        TypedSignatures?.DelegateNameOf(node.MethodName) ?? node.MethodName;
+
+    /// <summary>The typed call-site form of <paramref name="call"/>:
+    /// <c>AX = NearCall(retCs, retIp, () => f(AX, BX))</c>, the bare call for a void method.</summary>
+    private CSharpFragment TypedCall(ProcedureCallHelperNode call, Ir.TypedSignature signature,
+        string methodName) {
+        string prefix = string.Join(", ", call.Arguments.Take(call.Arguments.Count - 1)
+            .Select(argument => Expr(argument).Text));
+        string invocation = $"{call.MethodName}({prefix}, () => {methodName}({signature.ArgumentList}))";
+        return signature.Outputs.Count switch {
+            0 => invocation,
+            1 => $"{signature.Outputs[0].Register} = {invocation}",
+            _ => $"({string.Join(", ", signature.Outputs.Select(output => output.Register))}) = {invocation}"
+        };
+    }
+
+    private static string StringLiteral(string text) {
+        StringBuilder literal = new("\"");
+        foreach (char c in text) {
+            literal.Append(c switch {
+                '"' => "\\\"",
+                '\\' => "\\\\",
+                '\t' => "\\t",
+                '\n' => "\\n",
+                '\r' => "\\r",
+                _ => c
+            });
+        }
+        return literal.Append('"').ToString();
     }
 
     private static readonly
@@ -124,16 +233,17 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
             return node.Arguments.Select(argument => Expr(argument).Text);
         }
 
-        return node.Arguments.Select((argument, index) => Argument(parameters[index].ParameterType, argument));
+        return node.Arguments.Select((argument, index) => Argument(parameters[index], argument));
     }
 
     /// <summary>
-    /// An argument for a parameter of <paramref name="parameterType"/>. A constant is written as a literal of the
+    /// An argument for <paramref name="parameter"/>. A constant is written as a literal of the
     /// parameter type, without a cast: C# converts a constant argument implicitly when its value fits. An
     /// argument already converted to the signed type of the parameter's width is passed through: casting it
     /// back to the parameter type is the identity.
     /// </summary>
-    private string Argument(Type parameterType, IVisitableAstNode argument) {
+    private string Argument(ParameterInfo parameter, IVisitableAstNode argument) {
+        Type parameterType = parameter.ParameterType;
         DataType? parameterDataType = TryToDataType(parameterType);
         if (parameterDataType is not null
             && SameWidthSignRoundTripOperand(parameterDataType, argument) is ValueNode unwrapped) {
@@ -141,9 +251,34 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         }
         CSharpFragment fragment = Expr(argument);
         if (fragment.Constant is ConstantNode constant && parameterDataType is not null && parameterDataType != DataType.BOOL) {
-            return ConstantLiteral(new ConstantNode(parameterDataType, constant.ConvertAsCSharpCast(parameterDataType))).Text;
+            return parameter.Name == "count"
+                ? ArgumentConstant(constant, parameterDataType)
+                : ConstantLiteral(new ConstantNode(parameterDataType,
+                    constant.ConvertAsCSharpCast(parameterDataType))).Text;
         }
         return Cast(parameterType, fragment);
+    }
+
+    /// <summary>
+    /// A shift/rotate count argument written as a literal of <paramref name="parameterDataType"/>, hex-padded only
+    /// to the smallest even width that holds the value: an x86 count is an 8-bit operand, so it prints
+    /// <c>0xFF</c> instead of the <c>0x000000FF</c> its 32-bit AST node would give.
+    /// </summary>
+    private static string ArgumentConstant(ConstantNode constant, DataType parameterDataType) {
+        ConstantNode converted = new(parameterDataType, constant.ConvertAsCSharpCast(parameterDataType));
+        if (MinValueName(converted) is { } minValueName) {
+            return minValueName;
+        }
+        bool negative = converted.IsNegative;
+        ulong magnitude = negative ? (ulong)(-converted.SignedValue) : converted.Value;
+        BitWidth width = magnitude switch {
+            <= byte.MaxValue => BitWidth.BYTE_8,
+            <= ushort.MaxValue => BitWidth.WORD_16,
+            <= uint.MaxValue => BitWidth.DWORD_32,
+            _ => BitWidth.QWORD_64
+        };
+        return (negative ? "-" : "") + FormatMagnitude(magnitude, width)
+            + LiteralSuffix(parameterDataType, converted.Value);
     }
 
     private static Type? ResolveKnownMethodTargetType(string? propertyPath) => propertyPath switch {
@@ -161,22 +296,69 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         return Atomic(Expr(node.CallNode), node.DataType);
     }
 
-    /// <summary>Prints an <c>InN((ushort)port)</c> read.</summary>
+    /// <summary>
+    /// Prints a port read: the typed port wrapper when one is declared for the constant port, an
+    /// <c>InN(port)</c> call with a <c>no device</c> comment when the dumped machine had no device
+    /// registered for the port, and the raw <c>InN(port)</c> call otherwise. A program built
+    /// without a machine prints no comment.
+    /// </summary>
     private CSharpFragment PortRead(PortReadCallNode node) {
-        string port = Cast(DataType.UINT16, Expr(node.CallNode.Arguments[0]));
+        CSharpFragment portFragment = Expr(node.CallNode.Arguments[0]);
+        if (portFragment.Constant is ConstantNode constant
+            && PortWrapperRegistry.TryFind((ushort)constant.Value, node.Width, PortDirection.In,
+                out string? call)) {
+            return Atomic($"{call}()", node.DataType);
+        }
+        string port = Cast(DataType.UINT16, portFragment) + NoDeviceComment(portFragment);
         return Atomic($"In{(int)node.Width}({port})", node.DataType);
     }
 
-    public CSharpFragment VisitRegisterNode(RegisterNode node) =>
-        Atomic(_registerRenderer.ToStringRegister(node.DataType.BitWidth, node.RegisterIndex), node.DataType);
+    public CSharpFragment VisitRegisterNode(RegisterNode node) {
+        if (LocalReads is not null && LocalReads.TryGetValue(node, out SubstitutedRead? read)) {
+            return Atomic(read.Text, read.Type ?? node.DataType);
+        }
+        if (ParameterReads is not null && ParameterReads.TryGetValue(node, out string? parameter)) {
+            return Atomic(parameter, node.DataType);
+        }
+        return Atomic(_registerRenderer.ToStringRegister(node.DataType.BitWidth, node.RegisterIndex), node.DataType);
+    }
 
-    public CSharpFragment VisitSegmentRegisterNode(SegmentRegisterNode node) =>
-        Atomic(_registerRenderer.ToStringSegmentRegister(node.RegisterIndex), DataType.UINT16);
+    public CSharpFragment VisitSegmentRegisterNode(SegmentRegisterNode node) {
+        if (LocalReads is not null && LocalReads.TryGetValue(node, out SubstitutedRead? read)) {
+            return Atomic(read.Text, read.Type ?? node.DataType);
+        }
+        if (ParameterReads is not null && ParameterReads.TryGetValue(node, out string? parameter)) {
+            return Atomic(parameter, node.DataType);
+        }
+        return Atomic(_registerRenderer.ToStringSegmentRegister(node.RegisterIndex), DataType.UINT16);
+    }
 
     public CSharpFragment VisitSegmentedPointer(SegmentedPointerNode node) {
+        if (FramePlan is { } framePlan
+            && framePlan.Names.TryGetValue(node, out string? frameSlot)) {
+            return Atomic($"{framePlan.VariableName}.{frameSlot}", node.DataType);
+        }
+        if (IrGlobalAccesses.TryAccess(node, out ConstantMemoryAccess global)) {
+            if (GlobalClasses is not null
+                && GlobalClasses.TryTarget(node, out GlobalAccessClassification.Target? target)) {
+                return Atomic($"{target.Class.Name}.{IrGlobalAccesses.PropertyName(target.Key.Offset, target.Key.Width)}",
+                    node.DataType);
+            }
+            return Atomic($"{IrGlobalAccesses.ClassName(global.Segment)}.{IrGlobalAccesses.PropertyName(global)}",
+                node.DataType);
+        }
+        if (GlobalClasses is not null
+            && GlobalClasses.TryTableTarget(node, out GlobalAccessClassification.TableTarget? table)) {
+            return Atomic($"{table.Class.Name}.{IrGlobalAccesses.PropertyName(table.Property.Base, table.Property.Width)}[{Expr(table.Index)}]",
+                node.DataType);
+        }
         string indexer = ToMemoryIndexer(node.DataType);
-        string segment = Expr(node.Segment);
         CSharpFragment offset = Expr(node.Offset);
+        if (node.Segment is SegmentRegisterNode
+                { RegisterIndex: (int)SegmentRegisterIndex.SsIndex }) {
+            return Atomic($"Ss{indexer}[{MemoryOffset(offset)}]", node.DataType);
+        }
+        string segment = Expr(node.Segment);
         return Atomic($"{indexer}[{segment}, {MemoryOffset(offset)}]", node.DataType);
     }
 
@@ -187,9 +369,28 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         if (node.Condition is ConditionalValueNode) {
             throw Unsupported(node);
         }
+        CSharpFragment whenTrue = Expr(node.WhenTrue);
+        CSharpFragment whenFalse = Expr(node.WhenFalse);
         string text = $"{Parenthesize(Expr(node.Condition), ConditionalPrecedence + 1)} ? "
-            + $"{Expr(node.WhenTrue)} : {Expr(node.WhenFalse)}";
-        return new CSharpFragment(text, node.DataType, ConditionalPrecedence);
+            + $"{whenTrue} : {whenFalse}";
+        return new CSharpFragment(text, SelectType(node, whenTrue, whenFalse), ConditionalPrecedence);
+    }
+
+    /// <summary>The C# type a printed select may claim: <see cref="ValueNode.DataType"/> when the
+    /// conditional already evaluates to it - a <see cref="DataType.BOOL"/> select, or two
+    /// non-literal arms of exactly that type - and <see langword="null"/> otherwise, so an
+    /// assignment casts the int-promoted or differently typed C# result (C# types
+    /// <c>c ? 1 : 0</c> as <c>int</c>, and a literal arm prints no type).</summary>
+    private static DataType? SelectType(ConditionalValueNode node, CSharpFragment whenTrue,
+        CSharpFragment whenFalse) {
+        if (node.DataType == DataType.BOOL) {
+            return DataType.BOOL;
+        }
+        if (whenTrue.Constant is null && whenFalse.Constant is null
+            && whenTrue.Type == node.DataType && whenFalse.Type == node.DataType) {
+            return node.DataType;
+        }
+        return null;
     }
 
     public CSharpFragment VisitConstantNode(ConstantNode node) => ConstantLiteral(node);
@@ -363,7 +564,14 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     public CSharpFragment VisitTypeConversionNode(TypeConversionNode node) {
         CSharpFragment inner = Expr(node.Value);
         if (inner.Constant is ConstantNode constant) {
-            return ConstantLiteral(new ConstantNode(node.DataType, constant.ConvertAsCSharpCast(node.DataType)));
+            ConstantNode converted = new(node.DataType, constant.ConvertAsCSharpCast(node.DataType));
+            if (node.DataType == DataType.BOOL) {
+                return ConstantLiteral(converted);
+            }
+            // A literal alone is an int to C#: keep the cast so the conversion still pins the type
+            // where the argument resolves an overload.
+            return new CSharpFragment(Cast(node.DataType, ConstantLiteral(constant)),
+                node.DataType, CastPrecedence) { Constant = converted };
         }
         if (inner.Type == node.DataType || node.DataType == DataType.BOOL && inner.Type == DataType.BOOL) {
             // Converting to a type the value already has is a no-op; keep the inner fragment as-is.
@@ -380,12 +588,21 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         return new CSharpFragment(text, node.DataType, CastPrecedence);
     }
 
-    public CSharpFragment VisitFlagRegisterNode(FlagRegisterNode node) =>
-        node.DataType.BitWidth == BitWidth.WORD_16
-            ? Atomic("FlagRegister16", DataType.UINT16)
-            : Atomic("FlagRegister", DataType.UINT32);
+    public CSharpFragment VisitFlagRegisterNode(FlagRegisterNode node) {
+        if (node.DataType.BitWidth == BitWidth.WORD_16) {
+            return Atomic("FlagRegister16", DataType.UINT16);
+        }
+        return Atomic("FlagRegister", DataType.UINT32);
+    }
 
-    public CSharpFragment VisitCpuFlagNode(CpuFlagNode node) => Atomic(node.FlagMask switch {
+    public CSharpFragment VisitCpuFlagNode(CpuFlagNode node) {
+        if (ParameterReads is not null && ParameterReads.TryGetValue(node, out string? parameter)) {
+            return Atomic(parameter, DataType.BOOL);
+        }
+        return Atomic(FlagName(node), DataType.BOOL);
+    }
+
+    private static string FlagName(CpuFlagNode node) => node.FlagMask switch {
         Flags.Carry => "CarryFlag",
         Flags.Parity => "ParityFlag",
         Flags.Auxiliary => "AuxiliaryFlag",
@@ -396,7 +613,7 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         Flags.Direction => "DirectionFlag",
         Flags.Overflow => "OverflowFlag",
         _ => throw Unsupported(node)
-    }, DataType.BOOL);
+    };
 
     public CSharpFragment VisitInstructionFieldNode(InstructionFieldNode node) => Expr(node.ResolvedNode);
     public CSharpFragment VisitVariableReferenceNode(VariableReferenceNode node) =>
@@ -408,6 +625,13 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         $"new SegmentedAddress({Cast(DataType.UINT16, Expr(node.Segment))}, {Cast(DataType.UINT16, Expr(node.Offset))})";
 
     private string EmitAssignmentRight(BinaryOperationNode assignment) {
+        if (LocalReads is not null && LocalReads.TryGetValue(assignment.Left, out SubstitutedRead? read)
+            && read.Type is { } localType) {
+            // The target is a local of another type than its register: the right side casts to the
+            // local's type, and a conversion from that type inside it is the identity.
+            ValueNode right = SameWidthSignRoundTripOperand(localType, assignment.Right) ?? assignment.Right;
+            return Cast(localType, Expr(right));
+        }
         CSharpFragment expression = Expr(assignment.Right);
         return Cast(assignment.Left.DataType, expression);
     }
@@ -419,7 +643,7 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         _ => throw new NotSupportedException($"Unsupported memory data type {dataType}.")
     };
 
-    private static string ToCSharpType(DataType dataType) {
+    internal static string ToCSharpType(DataType dataType) {
         if (dataType == DataType.BOOL) {
             return "bool";
         }
@@ -442,10 +666,35 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
             // Already the target type: no cast needed.
             return expression.Text;
         }
+        if (expression.Constant is ConstantNode constant) {
+            // The checked cast compiles only on an in-range literal, and it pins the type where the
+            // argument resolves an overload. The original literal is kept when it fits (it carries the
+            // operand's own width padding); out of range, the converted value of the target type prints.
+            string literal = Fits(constant, dataType)
+                ? ConstantLiteral(constant).Text
+                : ConstantLiteral(new ConstantNode(dataType,
+                    constant.ConvertAsCSharpCast(dataType))).Text;
+            return $"({ToCSharpType(dataType)}){literal}";
+        }
 
         string targetType = ToCSharpType(dataType);
         string inner = Parenthesize(expression, CastPrecedence);
         return $"({targetType}){inner}";
+    }
+
+    /// <summary>Whether <paramref name="constant"/>'s literal value is inside
+    /// <paramref name="dataType"/>'s range, so a checked cast on it compiles.</summary>
+    private static bool Fits(ConstantNode constant, DataType dataType) {
+        int bits = (int)dataType.BitWidth;
+        if (constant.DataType.Signed && constant.SignedValue < 0) {
+            if (!dataType.Signed) {
+                return false;
+            }
+            long minimum = bits == 64 ? long.MinValue : -(1L << (bits - 1));
+            return constant.SignedValue >= minimum;
+        }
+        ulong maximum = dataType.Signed ? (1UL << (bits - 1)) - 1 : ConstantNode.Mask(dataType.BitWidth);
+        return constant.Value <= maximum;
     }
 
     private static string Cast(Type targetType, CSharpFragment expression) {
@@ -522,15 +771,18 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     }
 
     /// <summary>
-    /// Renders a memory-indexer offset. A constant or single register/variable offset is emitted directly
-    /// (the indexer has a <c>ushort</c> overload); a compound arithmetic offset is wrapped in
-    /// <c>(ushort)(...)</c> so wrap-around matches real-mode 16-bit offset arithmetic.
+    /// Renders a memory-indexer offset. An atomic offset (a constant or a single register/variable)
+    /// is emitted directly; a compound offset is wrapped in an explicit cast: <c>(ushort)(...)</c>
+    /// when it is 16-bit address arithmetic that must wrap at 64 KiB, <c>(uint)(...)</c> when its
+    /// type is wider than 16 bits so the offset keeps its full value and binds the indexer's
+    /// <c>uint</c> overload (which performs the CPU's segment-limit check).
     /// </summary>
     private static string MemoryOffset(CSharpFragment offset) {
         if (offset.Precedence >= CSharpFragment.AtomicPrecedence) {
             return offset.Text;
         }
-        return $"(ushort)({offset.Text})";
+        string type = offset.Type?.BitWidth > BitWidth.WORD_16 ? "uint" : "ushort";
+        return $"({type})({offset.Text})";
     }
 
     /// <summary>
@@ -568,6 +820,10 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         $"[{string.Join(", ", node.Addresses.Select(address => $"new({SegmentVariable(address.Segment)}, 0x{address.Offset:X4})"))}]";
 
     public CSharpFragment VisitMethodGroupNode(MethodGroupNode node) {
+        if (node.SingleEntry) {
+            string delegateName = TypedSignatures?.DelegateNameOf(node.MethodName) ?? node.MethodName;
+            return new CSharpFragment(GeneratedOverrideNames.EntryFieldNameOf(delegateName));
+        }
         if (node.LoadOffset == 0) {
             return new CSharpFragment(node.MethodName);
         }
@@ -645,15 +901,35 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     public CSharpFragment VisitSpeculativeGuardNode(SpeculativeGuardNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitInstructionBoundaryNode(InstructionBoundaryNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitDivisionNode(DivisionNode node) => throw NotAnExpression(node);
+    public CSharpFragment VisitMultiplicationNode(MultiplicationNode node) => throw NotAnExpression(node);
 
     public CSharpFragment VisitAluOperationNode(AluOperationNode node) => node.Call.Accept(this);
     public CSharpFragment VisitAluStatementNode(AluStatementNode node) => node.Call.Accept(this);
 
-    /// <summary>Prints an <c>OutN((ushort)port, value)</c> write.</summary>
+    /// <summary>
+    /// Prints a port write: the typed port wrapper when one is declared for the constant port, an
+    /// <c>OutN(port, value)</c> call with a <c>no device</c> comment when the dumped machine had no
+    /// device registered for the port, and the raw <c>OutN(port, value)</c> call otherwise. A
+    /// program built without a machine prints no comment.
+    /// </summary>
     private CSharpFragment PortWrite(PortWriteCallNode node) {
-        string port = Cast(DataType.UINT16, Expr(node.Arguments[0]));
+        CSharpFragment portFragment = Expr(node.Arguments[0]);
         string value = Cast(PortValueType(node.Width), Expr(node.Arguments[1]));
+        if (portFragment.Constant is ConstantNode constant
+            && PortWrapperRegistry.TryFind((ushort)constant.Value, node.Width, PortDirection.Out,
+                out string? call)) {
+            return new CSharpFragment($"{call}({value})");
+        }
+        string port = Cast(DataType.UINT16, portFragment) + NoDeviceComment(portFragment);
         return new CSharpFragment($"Out{(int)node.Width}({port}, {value})");
+    }
+
+    private string NoDeviceComment(CSharpFragment portFragment) {
+        if (IoPorts is not null && portFragment.Constant is ConstantNode constant
+            && !IoPorts.Contains((ushort)constant.Value)) {
+            return " /* no device */";
+        }
+        return string.Empty;
     }
 
     private static DataType PortValueType(BitWidth width) => width switch {
@@ -666,8 +942,17 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     public CSharpFragment VisitInterruptReturnNode(InterruptReturnNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitSetInterruptShadowNode(SetInterruptShadowNode node) => throw NotAnExpression(node);
     public CSharpFragment VisitPreTestLoopNode(PreTestLoopNode node) => throw NotAnExpression(node);
-    public CSharpFragment VisitLocalDeclarationNode(LocalDeclarationNode node) =>
-        $"{ToCSharpType(node.DataType)} {LocalVariableName(node.VariableName)}";
+    public CSharpFragment VisitLocalDeclarationNode(LocalDeclarationNode node) {
+        if (node.Initializer is { } initializer) {
+            return $"{ToCSharpType(node.DataType)} {LocalVariableName(node.VariableName)} = {Cast(node.DataType, Expr(initializer))}";
+        }
+        return $"{ToCSharpType(node.DataType)} {LocalVariableName(node.VariableName)}";
+    }
+    public CSharpFragment VisitRegisterLocalNode(RegisterLocalNode node) =>
+        Atomic(node.VariableName, node.DataType);
+    public CSharpFragment VisitRegisterWriteBackNode(RegisterWriteBackNode node) =>
+        new CSharpFragment($"{Expr(node.Register)} = {Cast(node.Register.DataType, Expr(node.Local))}",
+            node.Register.DataType, AssignmentPrecedence);
 
     private readonly record struct ClrTypeInfo(string Name, DataType? DataType);
 }

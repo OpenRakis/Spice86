@@ -1,3 +1,4 @@
+// ==== file: CfgGeneratedOverrideSupplier.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -16,20 +17,58 @@ public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
     }
 }
 
-public class CfgGeneratedOverrides : CSharpOverrideHelper {
-    protected readonly ushort cs1;
+
+// ==== file: CfgGeneratedOverrides.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort biosSegment;
+
+    private readonly Func<int, Action> unknown_F000_0015_F0015Entry;
+    private readonly Func<int, Action> unknown_F000_001B_F001BEntry;
+    private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
-        cs1 = 0xF000;
+        biosSegment = 0xF000;
 
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0015, unknown_F000_0015_F0015, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x001B, unknown_F000_001B_F001B, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, "unknown");
+        unknown_F000_0015_F0015Entry = _ => unknown_F000_0015_F0015();
+        unknown_F000_001B_F001BEntry = _ => unknown_F000_001B_F001B();
+        unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0015, unknown_F000_0015_F0015Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x001B, unknown_F000_001B_F001BEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
     }
 
-    public virtual Action unknown_F000_0015_F0015(int loadOffset) {
+}
+
+// ==== file: CfgGeneratedOverrides.F000.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: EAX, CX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, CF, DF. Outputs: all. Changes: all.</summary>
+    public virtual Action unknown_F000_0015_F0015() {
     entrydispatcher:
-        CheckExternalEvents(cs1, 0x0015);
+        CheckExternalEvents(biosSegment, 0x0015);
         // F000:0015 dec CX
         CX = Alu16.Dec(CX);
         // F000:0016 je short 0x001A
@@ -38,16 +77,16 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             return NearRet();
         }
         // F000:0018 jmp short 0x001B
-        if (JumpDispatcher.Jump(unknown_F000_001B_F001B, 0x0000)) {
-            loadOffset = JumpDispatcher.NextEntryAddress;
+        if (JumpDispatcher.Jump(unknown_F000_001B_F001BEntry, 0x0000)) {
             goto entrydispatcher;
         }
         return JumpDispatcher.RequiredJumpAsmReturn;
     }
 
-    public virtual Action unknown_F000_001B_F001B(int loadOffset) {
+    /// <summary>Inputs: EAX, CX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, CF, DF. Outputs: all. Changes: all.</summary>
+    public virtual Action unknown_F000_001B_F001B() {
     entrydispatcher:
-        CheckExternalEvents(cs1, 0x001B);
+        CheckExternalEvents(biosSegment, 0x001B);
         // F000:001B dec CX
         CX = Alu16.Dec(CX);
         // F000:001C je short 0x0020
@@ -56,15 +95,15 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             return NearRet();
         }
         // F000:001E jmp short 0x0015
-        if (JumpDispatcher.Jump(unknown_F000_0015_F0015, 0x0000)) {
-            loadOffset = JumpDispatcher.NextEntryAddress;
+        if (JumpDispatcher.Jump(unknown_F000_0015_F0015Entry, 0x0000)) {
             goto entrydispatcher;
         }
         return JumpDispatcher.RequiredJumpAsmReturn;
     }
 
-    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
-        CheckExternalEvents(cs1, 0xFFF0);
+    /// <summary>Inputs: EAX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, CF, DF. Does not return.</summary>
+    public virtual Action unknown_F000_FFF0_FFFF0() {
+        CheckExternalEvents(biosSegment, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov AX,0x1000
         AX = 0x1000;
@@ -75,11 +114,11 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0008 mov CX,2
         CX = 2;
         // F000:000B call near 0x0015
-        NearCall(cs1, 0x000E, unknown_F000_0015_F0015);
+        NearCall(biosSegment, 0x000E, unknown_F000_0015_F0015Entry);
         // F000:000E mov CX,2
         CX = 2;
         // F000:0011 call near 0x001B
-        NearCall(cs1, 0x0014, unknown_F000_001B_F001B);
+        NearCall(biosSegment, 0x0014, unknown_F000_001B_F001BEntry);
         // F000:0014 hlt
         return Hlt();
     }

@@ -1,0 +1,104 @@
+{
+  "currentContextDepth": 1,
+  "currentContextEntryPoint": "F000:FFF0",
+  "totalEntryPoints": 1,
+  "entryPointAddresses": [
+    "F000:FFF0"
+  ],
+  "lastExecutedAddress": "F000:003C",
+  "lastExecutedBlockId": 47,
+  "blocks": [
+    {
+      "id": 47,
+      "entry": "F000:0033",
+      "term": "F000:003C",
+      "pred": [
+        34,
+        39
+      ],
+      "succ": [],
+      "asm": [
+        "67A100000000|mov AX,word ptr DS:[0]",
+        "A34400|mov word ptr DS:[0x0044],AX",
+        "F4|hlt"
+      ]
+    },
+    {
+      "id": 2,
+      "entry": "F000:FFF0",
+      "term": "F000:FFF0",
+      "pred": [],
+      "succ": [
+        3
+      ],
+      "asm": [
+        "EB0E|jmp short 0"
+      ]
+    },
+    {
+      "id": 39,
+      "entry": "F000:002A",
+      "term": "F000:002D",
+      "pred": [
+        3,
+        34
+      ],
+      "succ": [
+        34,
+        47
+      ],
+      "asm": [
+        "A34200|mov word ptr DS:[0x0042],AX",
+        "67A300000100|mov word ptr DS:[0x00010000],AX"
+      ]
+    },
+    {
+      "id": 34,
+      "entry": "F000:003D",
+      "term": "F000:0049",
+      "pred": [
+        3,
+        39
+      ],
+      "succ": [
+        39,
+        47
+      ],
+      "asm": [
+        "FF064000|inc word ptr DS:[0x0040]",
+        "55|push BP",
+        "89E5|mov BP,SP",
+        "83460206|add word ptr SS:[BP\u002B2],6",
+        "5D|pop BP",
+        "CF|iret"
+      ]
+    },
+    {
+      "id": 3,
+      "entry": "F000:0000",
+      "term": "F000:0024",
+      "pred": [
+        2
+      ],
+      "succ": [
+        34,
+        39
+      ],
+      "asm": [
+        "FA|cli",
+        "B80020|mov AX,0x2000",
+        "8ED8|mov DS,AX",
+        "8ED0|mov SS,AX",
+        "BC0010|mov SP,0x1000",
+        "31C0|xor AX,AX",
+        "8EC0|mov ES,AX",
+        "26C70634003D00|mov word ptr ES:[0x0034],0x003D",
+        "268C0E3600|mov word ptr ES:[0x0036],CS",
+        "C70600003412|mov word ptr DS:[0],0x1234",
+        "B87856|mov AX,0x5678",
+        "67A100000100|mov AX,word ptr DS:[0x00010000]"
+      ]
+    }
+  ],
+  "truncated": false
+}

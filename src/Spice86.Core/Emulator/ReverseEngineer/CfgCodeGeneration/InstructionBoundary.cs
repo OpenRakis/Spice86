@@ -21,7 +21,9 @@ internal static class InstructionBoundary {
     /// speculative instruction (rather than a single block-entry guard covering the whole run) is what lets
     /// the generated code detect self-modifying code that an earlier instruction in the same block performs
     /// against a later speculative instruction: an entry-only guard runs before any instruction executes and
-    /// so cannot observe such a mutation.
+    /// so cannot observe such a mutation. The per-instruction guard is what the lifter emits; the speculative
+    /// guard merge pass keeps it wherever it cannot prove the merge safe, and only joins the guards of a
+    /// straight-line run into one <c>VerifySpeculativeRunOrFail</c> at its first instruction.
     /// </remarks>
     public static IVisitableAstNode SpeculativeGuard(CfgGeneratorContext context, ICfgNode node) {
         if (node is not CfgInstruction { IsSpeculative: true } speculativeInstruction) {
@@ -33,7 +35,7 @@ internal static class InstructionBoundary {
             return CodeGenerationAst.Empty();
         }
         string fieldName = context.GetSignatureField(speculativeInstruction);
-        return new SpeculativeGuardNode(speculativeInstruction.Address, fieldName);
+        return new SpeculativeGuardNode(speculativeInstruction.Address, [fieldName]);
     }
 
     /// <summary>The asm comment text identifying <paramref name="node"/>, or <c>null</c> for a node kind

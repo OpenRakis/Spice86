@@ -1,6 +1,7 @@
 namespace Spice86.Tests.CfgCodeGeneration.Ir;
 
 using FluentAssertions;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
@@ -38,8 +39,8 @@ public sealed class IrEffectsVisitorTest {
         IrEffects effects = Of(Ax());
 
         // Assert
-        effects.Should().Be(new IrEffects(IrValues.Ax,
-            IrValues.None, IrValues.None, IrTokens.None, IrTokens.None, false, false));
+        effects.Should().Be(new IrEffects(CpuValues.Ax,
+            CpuValues.None, CpuValues.None, IrTokens.None, IrTokens.None, false, false));
     }
 
     [Fact]
@@ -48,7 +49,7 @@ public sealed class IrEffectsVisitorTest {
         IrEffects effects = Of(Ds());
 
         // Assert
-        effects.Reads.Should().Be(IrValues.Ds);
+        effects.Reads.Should().Be(CpuValues.Ds);
     }
 
     [Fact]
@@ -60,8 +61,8 @@ public sealed class IrEffectsVisitorTest {
         IrEffects effects = Of(assign);
 
         // Assert
-        effects.Should().Be(new IrEffects(IrValues.None,
-            IrValues.Ax, IrValues.None, IrTokens.None, IrTokens.None, false, false));
+        effects.Should().Be(new IrEffects(CpuValues.None,
+            CpuValues.Ax, CpuValues.None, IrTokens.None, IrTokens.None, false, false));
     }
 
     [Fact]
@@ -74,7 +75,7 @@ public sealed class IrEffectsVisitorTest {
         IrEffects effects = Of(assign);
 
         // Assert
-        effects.Reads.Should().Be(IrValues.Ds | IrValues.Ax);
+        effects.Reads.Should().Be(CpuValues.Ds | CpuValues.Ax);
         effects.TokenReads.Should().Be(IrTokens.None);
         effects.TokenWrites.Should().Be(IrTokens.Memory);
     }
@@ -88,7 +89,7 @@ public sealed class IrEffectsVisitorTest {
         IrEffects effects = Of(pointer);
 
         // Assert
-        effects.Reads.Should().Be(IrValues.Ds);
+        effects.Reads.Should().Be(CpuValues.Ds);
         effects.TokenReads.Should().Be(IrTokens.Memory);
     }
 
@@ -101,7 +102,7 @@ public sealed class IrEffectsVisitorTest {
         IrEffects effects = Of(pointer);
 
         // Assert
-        effects.Reads.Should().Be(IrValues.None);
+        effects.Reads.Should().Be(CpuValues.None);
         effects.TokenReads.Should().Be(IrTokens.Memory);
     }
 
@@ -114,7 +115,7 @@ public sealed class IrEffectsVisitorTest {
         IrEffects effects = Of(assign);
 
         // Assert
-        effects.MustWrite.Should().Be(IrValues.Carry);
+        effects.MustWrite.Should().Be(CpuValues.Carry);
     }
 
     [Fact]
@@ -126,7 +127,7 @@ public sealed class IrEffectsVisitorTest {
         IrEffects effects = Of(assign);
 
         // Assert
-        effects.MustWrite.Should().Be(IrValues.Direction);
+        effects.MustWrite.Should().Be(CpuValues.Direction);
     }
 
     [Fact]
@@ -138,7 +139,7 @@ public sealed class IrEffectsVisitorTest {
         IrEffects effects = Of(assign);
 
         // Assert
-        effects.MustWrite.Should().Be(IrValues.StatusFlags | IrValues.Direction);
+        effects.MustWrite.Should().Be(CpuValues.StatusFlags | CpuValues.Direction);
     }
 
     [Fact]
@@ -147,7 +148,7 @@ public sealed class IrEffectsVisitorTest {
         IrEffects effects = Of(new CpuFlagNode(Flags.Zero));
 
         // Assert
-        effects.Reads.Should().Be(IrValues.Zero);
+        effects.Reads.Should().Be(CpuValues.Zero);
     }
 
     [Fact]
@@ -156,7 +157,7 @@ public sealed class IrEffectsVisitorTest {
         IrEffects effects = Of(new FlagRegisterNode(DataType.UINT16));
 
         // Assert
-        effects.Reads.Should().Be(IrValues.StatusFlags | IrValues.Direction);
+        effects.Reads.Should().Be(CpuValues.StatusFlags | CpuValues.Direction);
     }
 
     [Fact]
@@ -169,8 +170,8 @@ public sealed class IrEffectsVisitorTest {
         IrEffects effects = Of(assign);
 
         // Assert
-        effects.Should().Be(new IrEffects(IrValues.Ax,
-            IrValues.None, IrValues.None, IrTokens.None, IrTokens.None, false, false));
+        effects.Should().Be(new IrEffects(CpuValues.Ax,
+            CpuValues.None, CpuValues.None, IrTokens.None, IrTokens.None, false, false));
     }
 
     [Fact]
@@ -200,31 +201,30 @@ public sealed class IrEffectsVisitorTest {
     [Fact]
     public void AluOperation_ReadsArgumentsAndAppliesFlags() {
         // Arrange
-        MethodCallValueNode call = new(DataType.UINT16, "Alu16", "Add", Ax(), Constant());
-        AluOperationNode node = new(call, FlagEffect.Writing(StatusFlags.All), AluOperation.Add,
-            BitWidth.WORD_16);
+        AluCallValueNode call = new(DataType.UINT16, AluOperation.Add, BitWidth.WORD_16, Ax(), Constant());
+        AluOperationNode node = new(call, FlagEffect.Writing(StatusFlags.All));
 
         // Act
         IrEffects effects = Of(node);
 
         // Assert
-        effects.Reads.Should().Be(IrValues.Ax);
-        effects.MustWrite.Should().Be(IrValues.StatusFlags);
+        effects.Reads.Should().Be(CpuValues.Ax);
+        effects.MustWrite.Should().Be(CpuValues.StatusFlags);
     }
 
     [Fact]
     public void AluStatement_ReadsArgumentsAndAppliesFlags() {
         // Arrange
-        MethodCallNode call = new("Alu8", "UpdateFlags", new RegisterNode(DataType.UINT8, 0));
+        AluCallNode call = new(AluOperation.UpdateFlags, BitWidth.BYTE_8,
+            new RegisterNode(DataType.UINT8, 0));
         AluStatementNode node = new(call, new FlagEffect(StatusFlags.None,
-            StatusFlags.Zero | StatusFlags.Parity | StatusFlags.Sign, StatusFlags.None),
-            AluOperation.UpdateFlags, BitWidth.BYTE_8);
+            StatusFlags.Zero | StatusFlags.Parity | StatusFlags.Sign, StatusFlags.None));
 
         // Act
         IrEffects effects = Of(node);
 
         // Assert
-        effects.MustWrite.Should().Be(IrValues.Zero | IrValues.Parity | IrValues.Sign);
+        effects.MustWrite.Should().Be(CpuValues.Zero | CpuValues.Parity | CpuValues.Sign);
     }
 
     [Fact]
@@ -236,8 +236,8 @@ public sealed class IrEffectsVisitorTest {
         IrEffects effects = Of(node);
 
         // Assert
-        effects.Reads.Should().Be(IrValues.Ax | IrValues.Sp | IrValues.Ss);
-        effects.MustWrite.Should().Be(IrValues.Sp);
+        effects.Reads.Should().Be(CpuValues.Ax | CpuValues.Sp | CpuValues.Ss);
+        effects.MustWrite.Should().Be(CpuValues.Sp);
         effects.TokenWrites.Should().Be(IrTokens.Memory);
     }
 
@@ -250,7 +250,7 @@ public sealed class IrEffectsVisitorTest {
         IrEffects effects = Of(node);
 
         // Assert
-        effects.MustWrite.Should().Be((IrValues)(0xFUL << 16));
+        effects.MustWrite.Should().Be(CpuValues.Esp);
         effects.TokenReads.Should().Be(IrTokens.Memory);
     }
 
@@ -263,7 +263,7 @@ public sealed class IrEffectsVisitorTest {
         IrEffects effects = Of(node);
 
         // Assert
-        effects.MustWrite.Should().Be(IrValues.None);
+        effects.MustWrite.Should().Be(CpuValues.None);
         effects.TokenReads.Should().Be(IrTokens.Memory);
     }
 
@@ -276,8 +276,8 @@ public sealed class IrEffectsVisitorTest {
         IrEffects effects = Of(node);
 
         // Assert
-        effects.Reads.Should().Be(IrValues.Bp | IrValues.Ss);
-        effects.MustWrite.Should().Be(IrValues.Sp | IrValues.Bp);
+        effects.Reads.Should().Be(CpuValues.Bp | CpuValues.Ss);
+        effects.MustWrite.Should().Be(CpuValues.Sp | CpuValues.Bp);
         effects.TokenReads.Should().Be(IrTokens.Memory);
     }
 
@@ -290,8 +290,8 @@ public sealed class IrEffectsVisitorTest {
         IrEffects effects = Of(node);
 
         // Assert
-        effects.Reads.Should().Be(IrValues.Ax | IrValues.Sp | IrValues.Ss);
-        effects.MustWrite.Should().Be(IrValues.Sp);
+        effects.Reads.Should().Be(CpuValues.Ax | CpuValues.Sp | CpuValues.Ss);
+        effects.MustWrite.Should().Be(CpuValues.Sp);
         effects.TokenWrites.Should().Be(IrTokens.Memory);
     }
 
@@ -304,10 +304,10 @@ public sealed class IrEffectsVisitorTest {
         IrEffects effects = Of(node);
 
         // Assert
-        effects.Reads.Should().Be(IrValues.Sp | IrValues.Ss);
+        effects.Reads.Should().Be(CpuValues.Sp | CpuValues.Ss);
         effects.MustWrite.Should().Be(
-            IrValues.Ax | IrValues.Cx | IrValues.Dx | IrValues.Bx
-                | IrValues.Sp | IrValues.Bp | IrValues.Si | IrValues.Di);
+            CpuValues.Ax | CpuValues.Cx | CpuValues.Dx | CpuValues.Bx
+                | CpuValues.Sp | CpuValues.Bp | CpuValues.Si | CpuValues.Di);
         effects.TokenReads.Should().Be(IrTokens.Memory);
     }
 
@@ -320,8 +320,8 @@ public sealed class IrEffectsVisitorTest {
         IrEffects effects = Of(node);
 
         // Assert
-        effects.MustWrite.Should().Be((IrValues)(0xF | (0xFUL << 4) | (0xFUL << 8) | (0xFUL << 12)
-            | (0xFUL << 16) | (0xFUL << 20) | (0xFUL << 24) | (0xFUL << 28)));
+        effects.MustWrite.Should().Be(CpuValues.Eax | CpuValues.Ecx | CpuValues.Edx
+            | CpuValues.Ebx | CpuValues.Esp | CpuValues.Ebp | CpuValues.Esi | CpuValues.Edi);
     }
 
     [Fact]
@@ -335,7 +335,7 @@ public sealed class IrEffectsVisitorTest {
         // Assert
         effects.TokenReads.Should().Be(IrTokens.Io);
         effects.TokenWrites.Should().Be(IrTokens.Io);
-        effects.Reads.Should().Be(IrValues.Ax);
+        effects.Reads.Should().Be(CpuValues.Ax);
     }
 
     [Fact]
@@ -360,7 +360,7 @@ public sealed class IrEffectsVisitorTest {
         IrEffects effects = Of(node);
 
         // Assert
-        effects.Reads.Should().Be(IrValues.Direction);
+        effects.Reads.Should().Be(CpuValues.Direction);
     }
 
     [Fact]
@@ -372,7 +372,7 @@ public sealed class IrEffectsVisitorTest {
         IrEffects effects = Of(node);
 
         // Assert
-        effects.Reads.Should().Be(IrValues.Ax);
+        effects.Reads.Should().Be(CpuValues.Ax);
         effects.TokenWrites.Should().Be(IrTokens.None);
     }
 
@@ -385,7 +385,7 @@ public sealed class IrEffectsVisitorTest {
         IrEffects effects = Of(node);
 
         // Assert
-        effects.Reads.Should().Be(IrValues.Ax);
+        effects.Reads.Should().Be(CpuValues.Ax);
     }
 
     [Fact]
@@ -397,8 +397,8 @@ public sealed class IrEffectsVisitorTest {
         IrEffects effects = Of(node);
 
         // Assert
-        effects.Reads.Should().Be(IrValues.Ax | IrValues.Bx);
-        effects.MustWrite.Should().Be(IrValues.Ax | IrValues.Bx);
+        effects.Reads.Should().Be(CpuValues.Ax | CpuValues.Bx);
+        effects.MustWrite.Should().Be(CpuValues.Ax | CpuValues.Bx);
     }
 
     [Fact]
@@ -410,8 +410,8 @@ public sealed class IrEffectsVisitorTest {
         IrEffects effects = Of(node);
 
         // Assert
-        effects.Reads.Should().Be(IrValues.Ax | IrValues.Bx);
-        effects.MustWrite.Should().Be(IrValues.Ax | IrValues.Bx);
+        effects.Reads.Should().Be(CpuValues.Ax | CpuValues.Bx);
+        effects.MustWrite.Should().Be(CpuValues.Ax | CpuValues.Bx);
     }
 
     [Fact]
@@ -433,8 +433,8 @@ public sealed class IrEffectsVisitorTest {
         IrEffects effects = Of(node);
 
         // Assert
-        effects.MustWrite.Should().Be(IrValues.Cx);
-        effects.MayWrite.Should().Be(IrValues.All);
+        effects.MustWrite.Should().Be(CpuValues.Cx);
+        effects.MayWrite.Should().Be(CpuValues.All);
     }
 
     [Fact]
@@ -442,33 +442,33 @@ public sealed class IrEffectsVisitorTest {
         // Arrange / Act / Assert
         Of(new SignatureMatchesHelperNode())
             .Should().Be(ReadMemoryOnly());
-        Of(new SpeculativeGuardNode(new SegmentedAddress(0x1000, 0x20), "sig")).Should().Be(ReadMemoryOnly());
+        Of(new SpeculativeGuardNode(new SegmentedAddress(0x1000, 0x20), ["sig"])).Should().Be(ReadMemoryOnly());
     }
 
     [Fact]
     public void CheckExternalEvents_ReadsAndMayWriteHandlerVisibleRegistersButNoFlags() {
         // Arrange
-        IrValues handlerRegisters = IrValues.Eax | IrValues.Ecx
-            | IrValues.Edx | IrValues.Ebx | IrValues.Ebp | IrValues.Esi
-            | IrValues.Edi | IrValues.Es | IrValues.Cs | IrValues.Ds
-            | IrValues.Fs | IrValues.Gs;
+        CpuValues handlerRegisters = CpuValues.Eax | CpuValues.Ecx
+            | CpuValues.Edx | CpuValues.Ebx | CpuValues.Ebp | CpuValues.Esi
+            | CpuValues.Edi | CpuValues.Es | CpuValues.Cs | CpuValues.Ds
+            | CpuValues.Fs | CpuValues.Gs;
 
         // Act
-        IrEffects effects = Of(new CheckExternalEventsNode(new SegmentedAddress(0x1000, 0x20)));
+        IrEffects effects = Of(new CheckExternalEventsNode(new SegmentedAddress(0x1000, 0x20), HardwareInterruptEffectBuilder.Conservative));
 
         // Assert
         effects.Reads.Should().Be(handlerRegisters);
-        effects.MustWrite.Should().Be(IrValues.None);
+        effects.MustWrite.Should().Be(CpuValues.None);
         effects.MayWrite.Should().Be(handlerRegisters);
         effects.TokenReads.Should().Be(IrTokens.All);
         effects.TokenWrites.Should().Be(IrTokens.All);
         effects.DeliversInterrupts.Should().BeTrue();
         effects.MayFault.Should().BeFalse();
-        (effects.Reads & (IrValues.StatusFlags | IrValues.Direction)).Should().Be(IrValues.None);
-        (effects.MayWrite & (IrValues.StatusFlags | IrValues.Direction)).Should().Be(IrValues.None);
-        IrValues stackRegisters = IrValues.Sp | IrValues.Ss;
-        (effects.Reads & stackRegisters).Should().Be(IrValues.None);
-        (effects.MayWrite & stackRegisters).Should().Be(IrValues.None);
+        (effects.Reads & (CpuValues.StatusFlags | CpuValues.Direction)).Should().Be(CpuValues.None);
+        (effects.MayWrite & (CpuValues.StatusFlags | CpuValues.Direction)).Should().Be(CpuValues.None);
+        CpuValues stackRegisters = CpuValues.Sp | CpuValues.Ss;
+        (effects.Reads & stackRegisters).Should().Be(CpuValues.None);
+        (effects.MayWrite & stackRegisters).Should().Be(CpuValues.None);
     }
 
     [Fact]
@@ -476,7 +476,7 @@ public sealed class IrEffectsVisitorTest {
         // Arrange / Act / Assert
         Of(new ReturnNode(Ax())).Should().Be(IrEffects.ExitUse);
         Of(new ThrowNode(typeof(InvalidOperationException), "x")).Should().Be(IrEffects.ExitUse);
-        Of(new CyclicJumpNode("m", 0)).Should().Be(IrEffects.ExitUse);
+        Of(new CyclicJumpNode("m", 0, false)).Should().Be(IrEffects.ExitUse);
     }
 
     [Fact]
@@ -515,31 +515,31 @@ public sealed class IrEffectsVisitorTest {
     [Fact]
     public void Then_HidesAReadBehindAMustWrite() {
         // Arrange
-        IrEffects write = new(IrValues.None, IrValues.Carry, IrValues.None, IrTokens.None, IrTokens.None, false, false);
-        IrEffects read = new(IrValues.Carry | IrValues.Zero, IrValues.None, IrValues.None, IrTokens.None, IrTokens.None, false, false);
+        IrEffects write = new(CpuValues.None, CpuValues.Carry, CpuValues.None, IrTokens.None, IrTokens.None, false, false);
+        IrEffects read = new(CpuValues.Carry | CpuValues.Zero, CpuValues.None, CpuValues.None, IrTokens.None, IrTokens.None, false, false);
 
         // Act
         IrEffects combined = write.Then(read);
 
         // Assert
-        combined.Reads.Should().Be(IrValues.Zero);
-        combined.MustWrite.Should().Be(IrValues.Carry);
+        combined.Reads.Should().Be(CpuValues.Zero);
+        combined.MustWrite.Should().Be(CpuValues.Carry);
     }
 
     [Fact]
     public void Either_IntersectsMustWrites() {
         // Arrange
-        IrEffects first = new(IrValues.None, IrValues.Carry | IrValues.Zero, IrValues.None, IrTokens.None, IrTokens.None, false, false);
-        IrEffects second = new(IrValues.None, IrValues.Carry | IrValues.Sign, IrValues.None, IrTokens.None, IrTokens.None, false, false);
+        IrEffects first = new(CpuValues.None, CpuValues.Carry | CpuValues.Zero, CpuValues.None, IrTokens.None, IrTokens.None, false, false);
+        IrEffects second = new(CpuValues.None, CpuValues.Carry | CpuValues.Sign, CpuValues.None, IrTokens.None, IrTokens.None, false, false);
 
         // Act
         IrEffects either = IrEffects.Either(first, second);
 
         // Assert
-        either.MustWrite.Should().Be(IrValues.Carry);
-        either.MayWrite.Should().Be(IrValues.Carry | IrValues.Zero | IrValues.Sign);
+        either.MustWrite.Should().Be(CpuValues.Carry);
+        either.MayWrite.Should().Be(CpuValues.Carry | CpuValues.Zero | CpuValues.Sign);
     }
 
     private static IrEffects ReadMemoryOnly() =>
-        new(IrValues.None, IrValues.None, IrValues.None, IrTokens.Memory, IrTokens.None, false, false);
+        new(CpuValues.None, CpuValues.None, CpuValues.None, IrTokens.Memory, IrTokens.None, false, false);
 }

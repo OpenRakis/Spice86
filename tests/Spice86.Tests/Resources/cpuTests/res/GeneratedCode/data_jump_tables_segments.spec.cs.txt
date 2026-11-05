@@ -1,0 +1,293 @@
+// ==== file: CfgGeneratedOverrideSupplier.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+
+// ==== file: CfgGeneratedOverrides.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort biosSegment;
+    protected readonly ushort cs1;
+
+    private readonly Func<int, Action> unknown_F000_1000_F1000_AsmEntry;
+    private readonly Func<int, Action> unknown_F100_1000_F2000_AsmEntry;
+    private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
+
+    protected readonly DsGlobals DsGlobals;
+    protected readonly Segment2000Globals Segment2000Globals;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        biosSegment = 0xF000;
+        cs1 = 0xF100;
+        DsGlobals = new DsGlobals(Memory, State.SegmentRegisters);
+        Segment2000Globals = new Segment2000Globals(Memory, programStartSegment);
+
+        unknown_F000_1000_F1000_AsmEntry = _ => unknown_F000_1000_F1000_Asm();
+        unknown_F100_1000_F2000_AsmEntry = _ => unknown_F100_1000_F2000_Asm();
+        unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x1000, unknown_F000_1000_F1000_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x1000, unknown_F100_1000_F2000_AsmEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
+    }
+
+}
+
+// ==== file: CfgGeneratedOverrides.F000.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: DS. Outputs: none. Changes: EAX, ECX, ESI, ES, flags.</summary>
+    /// Segment values at entry, from every call site: DS = 0x2000.
+    /// Direction flag at entry, from every call site: clear.
+    public virtual void unknown_F000_1000_F1000(ushort ds) {
+        DS = ds;
+        CheckExternalEvents(biosSegment, 0x1000);
+        // F000:1000 mov CX,4
+        CX = 4;
+        do {
+            CheckExternalEvents(biosSegment, 0x1003);
+            // F000:1003 cmp CX,4
+            Alu16.Sub(CX, 4);
+            // F000:1006 je short 0x1027
+            if (CX != 4) {
+                // F000:1008 cmp CX,3
+                Alu16.Sub(CX, 3);
+                // F000:100B je short 0x1025
+                if (CX != 3) {
+                    // F000:100D mov SI,CX
+                    // F000:100F dec SI
+                    // F000:1010 shl SI,1
+                    SI = (ushort)(CX - 1 << 1);
+                    // F000:1012 mov AX,0xF000
+                    AX = 0xF000;
+                    // F000:1015 mov ES,AX
+                    ES = 0xF000;
+                    // F000:1017 cmp SI,2
+                    Alu16.Sub(SI, 2);
+                    // F000:101A ja short 0x1024
+                    if (SI > 2) {
+                        break;
+                    }
+                    // F000:101C jmp near word ptr ES:[SI+0x1035]
+                    switch (UInt16[ES, (ushort)(SI + 0x1035)]) {
+                        case 0x1025:
+                            break;
+                        case 0x1027:
+                            goto L_1027;
+                        default:
+                            throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, (ushort)(SI + 0x1035)]:X4} at F000:101C");
+                    }
+                }
+                // F000:1025 jmp short 0x1029
+                // F000:1029 inc word ptr DS:[0x0040]
+                Segment2000Globals.Word0040 += 1;
+                // F000:102D jmp short 0x1021
+                goto L_1021;
+            }
+        L_1027:
+            // F000:1027 jmp short 0x102F
+            // F000:102F inc word ptr DS:[0x0042]
+            Segment2000Globals.Word0042 += 1;
+            // F000:1033 jmp short 0x1021
+        L_1021:
+            // F000:1021 dec CX
+            CX = Alu16.Dec(CX);
+            // F000:1022 jne short 0x1003
+        } while (CX != 0);
+        // F000:1024 ret far
+        FarReturn();
+        return;
+    }
+
+    public virtual Action unknown_F000_1000_F1000_Asm() {
+        unknown_F000_1000_F1000(DS);
+        return Returned;
+    }
+
+    /// <summary>Inputs: none. Does not return.</summary>
+    public virtual Action unknown_F000_FFF0_FFFF0() {
+        CheckExternalEvents(biosSegment, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        // F000:0000 mov AX,0x2000
+        AX = 0x2000;
+        // F000:0003 mov DS,AX
+        DS = 0x2000;
+        // F000:0005 mov SS,AX
+        SS = 0x2000;
+        // F000:0007 mov SP,0x1000
+        SP = 0x1000;
+        // F000:000A cld
+        DirectionFlag = false;
+        // F000:000B call far F000:1000
+        FarCall(biosSegment, 0x0010, biosSegment, () => unknown_F000_1000_F1000(DS));
+        // F000:0010 call far F100:1000
+        FarCall(biosSegment, 0x0015, cs1, () => unknown_F100_1000_F2000(DS));
+        // F000:0015 hlt
+        return Hlt();
+    }
+
+}
+
+// ==== file: CfgGeneratedOverrides.F100.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: DS. Outputs: none. Changes: EAX, ECX, ESI, ES, flags.</summary>
+    public virtual void unknown_F100_1000_F2000(ushort ds) {
+        DS = ds;
+        CheckExternalEvents(cs1, 0x1000);
+        // F100:1000 mov CX,4
+        CX = 4;
+        do {
+            CheckExternalEvents(cs1, 0x1003);
+            // F100:1003 cmp CX,4
+            Alu16.Sub(CX, 4);
+            // F100:1006 je short 0x1027
+            if (CX != 4) {
+                // F100:1008 cmp CX,3
+                Alu16.Sub(CX, 3);
+                // F100:100B je short 0x1025
+                if (CX != 3) {
+                    // F100:100D mov SI,CX
+                    // F100:100F dec SI
+                    // F100:1010 shl SI,1
+                    SI = (ushort)(CX - 1 << 1);
+                    // F100:1012 mov AX,0xF100
+                    AX = 0xF100;
+                    // F100:1015 mov ES,AX
+                    ES = 0xF100;
+                    // F100:1017 cmp SI,2
+                    Alu16.Sub(SI, 2);
+                    // F100:101A ja short 0x1024
+                    if (SI > 2) {
+                        break;
+                    }
+                    // F100:101C jmp near word ptr ES:[SI+0x1035]
+                    switch (UInt16[ES, (ushort)(SI + 0x1035)]) {
+                        case 0x1025:
+                            break;
+                        case 0x1027:
+                            goto L_1027;
+                        default:
+                            throw FailAsUntested($"Untested near jump target 0x{UInt16[ES, (ushort)(SI + 0x1035)]:X4} at F100:101C");
+                    }
+                }
+                // F100:1025 jmp short 0x1029
+                // F100:1029 inc word ptr DS:[0x0044]
+                DsGlobals.Word0044 += 1;
+                // F100:102D jmp short 0x1021
+                goto L_1021;
+            }
+        L_1027:
+            // F100:1027 jmp short 0x102F
+            // F100:102F inc word ptr DS:[0x0046]
+            DsGlobals.Word0046 += 1;
+            // F100:1033 jmp short 0x1021
+        L_1021:
+            // F100:1021 dec CX
+            CX = Alu16.Dec(CX);
+            // F100:1022 jne short 0x1003
+        } while (CX != 0);
+        // F100:1024 ret far
+        FarReturn();
+        return;
+    }
+
+    public virtual Action unknown_F100_1000_F2000_Asm() {
+        unknown_F100_1000_F2000(DS);
+        return Returned;
+    }
+
+}
+
+// ==== file: DsGlobals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class DsGlobals : MemoryBasedDataStructureWithDsBaseAddress {
+    private readonly IMemory _memory;
+    private readonly SegmentRegisters _segmentRegisters;
+
+    private ushort Segment => _segmentRegisters.UInt16[(uint)SegmentRegisterIndex.DsIndex];
+
+    public DsGlobals(IMemory memory, SegmentRegisters segmentRegisters) : base(memory, segmentRegisters) {
+        _memory = memory;
+        _segmentRegisters = segmentRegisters;
+    }
+
+    /// DS:0x0044, whatever DS holds at the access.
+    public ushort Word0044 { get => _memory.UInt16[Segment, 0x0044]; set => _memory.UInt16[Segment, 0x0044] = value; }
+
+    /// DS:0x0046, whatever DS holds at the access.
+    public ushort Word0046 { get => _memory.UInt16[Segment, 0x0046]; set => _memory.UInt16[Segment, 0x0046] = value; }
+}
+
+// ==== file: Segment2000Globals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class Segment2000Globals : MemoryBasedDataStructure {
+    private readonly IMemory _memory;
+    private readonly ushort Segment;
+
+    public Segment2000Globals(IMemory memory, ushort programStartSegment) : base(memory, 0x20000) {
+        _memory = memory;
+        Segment = 0x2000;
+    }
+
+    public ushort Word0040 { get => _memory.UInt16[Segment, 0x0040]; set => _memory.UInt16[Segment, 0x0040] = value; }
+
+    public ushort Word0042 { get => _memory.UInt16[Segment, 0x0042]; set => _memory.UInt16[Segment, 0x0042] = value; }
+}

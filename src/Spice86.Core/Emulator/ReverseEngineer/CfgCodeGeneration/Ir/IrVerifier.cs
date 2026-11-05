@@ -44,7 +44,7 @@ internal static class IrVerifier {
                 Fail(method, block, statement.Origin,
                     "conditional value arm is not a pure value (conditional arms)");
             }
-            if (IrAstChildren.RootsOf(block.Terminator).OfType<ConditionalValueNode>()
+            if (IrAstChildren.TerminatorNodes(block.Terminator).OfType<ConditionalValueNode>()
                     .Any(conditional => !IsPureArm(conditional.WhenTrue)
                         || !IsPureArm(conditional.WhenFalse))) {
                 Fail(method, block, block.Terminator.Origin,
@@ -57,7 +57,11 @@ internal static class IrVerifier {
         IrAstChildren.Descendants(node).OfType<ConditionalValueNode>()
             .Any(conditional => !IsPureArm(conditional.WhenTrue) || !IsPureArm(conditional.WhenFalse));
 
-    private static bool IsPureArm(ValueNode node) =>
+    /// <summary>Whether <paramref name="node"/> evaluates without side effects: constants, registers,
+    /// flags, variables and operations on them, but no memory read, helper call or anything that can
+    /// fault. Shared with <see cref="Passes.IrIfConversion"/>, which applies the same rule to the values it
+    /// moves into a conditional arm.</summary>
+    internal static bool IsPureArm(ValueNode node) =>
         IrAstChildren.Descendants(node).All(IsPureArmNode);
 
     private static bool IsPureArmNode(IVisitableAstNode node) => node switch {
@@ -66,7 +70,7 @@ internal static class IrVerifier {
         ConstantNode or RegisterNode or SegmentRegisterNode or CpuFlagNode or FlagRegisterNode
             or VariableReferenceNode or UnaryOperationNode or BinaryOperationNode
             or TypeConversionNode or ExplicitCastNode or ConditionalValueNode or NearAddressNode
-            or InstructionFieldNode => true,
+            or InstructionFieldNode or RegisterLocalNode => true,
         _ => false
     };
 
@@ -180,9 +184,10 @@ internal static class IrVerifier {
         DominatorTree<IrBlock>? dominators = null;
         foreach (IrBlock block in method.Blocks) {
             for (int index = 0; index <= block.Statements.Count; index++) {
-                IEnumerable<IVisitableAstNode> nodes = index < block.Statements.Count
-                    ? IrAstChildren.Descendants(block.Statements[index].Node)
-                    : IrAstChildren.RootsOf(block.Terminator);
+                IEnumerable<IVisitableAstNode> nodes = IrAstChildren.TerminatorNodes(block.Terminator);
+                if (index < block.Statements.Count) {
+                    nodes = IrAstChildren.Descendants(block.Statements[index].Node);
+                }
                 foreach (IVisitableAstNode node in nodes) {
                     if (node is not VariableReferenceNode reference
                         || node is MethodScopedVariableReferenceNode) {

@@ -3,16 +3,22 @@ namespace Spice86.Tests.CfgCodeGeneration.Ir;
 using FluentAssertions;
 
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast;
+using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
+using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Passes;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
 using Spice86.Shared.Emulator.Memory;
 
 using Spice86.Tests.CfgCpu;
+using Spice86.Tests.CfgCpu.Blocks;
 
 using Xunit;
 
@@ -56,6 +62,56 @@ public sealed class IrDeadRegisterWritesTest {
         node is BinaryOperationNode { BinaryOperation: BinaryOperation.ASSIGN, Left: RegisterNode register }
             assignment && register.RegisterIndex == Bx && AssignsConstant(assignment, value);
 
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    public void AbortRegionsOnlyDropDeadWritesWhenAFaultObservesState(
+        bool hasFault, bool separateBlock) {
+        // Arrange
+        CfgInstruction entry = CfgTestHelpers.CreateInstruction(new SegmentedAddress(0x1000, 0));
+        CfgInstruction firstWrite = CfgTestHelpers.CreateInstruction(new SegmentedAddress(0x1000, 1));
+        CfgInstruction secondWrite = CfgTestHelpers.CreateInstruction(new SegmentedAddress(0x1000, 2));
+        CfgInstruction access = CfgTestHelpers.CreateInstruction(new SegmentedAddress(0x1000, 3));
+        IrBlock head = new(0);
+        IrBlock tail = separateBlock ? new IrBlock(1) : head;
+        IrStatement dead = IrStatement.Create(
+            new BinaryOperationNode(DataType.UINT16, new RegisterNode(DataType.UINT16, Bx),
+                BinaryOperation.ASSIGN, new ConstantNode(DataType.UINT16, 5)), firstWrite);
+        IrStatement live = IrStatement.Create(
+            new BinaryOperationNode(DataType.UINT16, new RegisterNode(DataType.UINT16, Bx),
+                BinaryOperation.ASSIGN, new ConstantNode(DataType.UINT16, 7)), secondWrite);
+        SegmentedPointerNode pointer = new(DataType.UINT8,
+            new SegmentRegisterNode((int)SegmentRegisterIndex.SsIndex), null,
+            new ConstantNode(DataType.UINT32, 0x10000));
+        BinaryOperationNode read = new(DataType.UINT8, new RegisterNode(DataType.UINT8, 0),
+            BinaryOperation.ASSIGN, pointer);
+        IrStatement observer = new(read, access, IrEffectsVisitor.Of(read, hasFault));
+        head.Statements.Add(IrStatement.Create(new InstructionStartNode("entry"), entry));
+        head.Statements.Add(dead);
+        head.Statements.Add(live);
+        tail.Statements.Add(observer);
+        tail.Terminator = new IrExit(access,
+            new FailAsUntestedNode([UntestedMessagePart.Literal("unobserved fallthrough")]));
+        List<IrBlock> blocks = [head];
+        if (separateBlock) {
+            head.Terminator = new IrJump(secondWrite, new IrEdge(tail, false));
+            blocks.Add(tail);
+        }
+        IrMethod method = new("FaultBeforeAbort", blocks, [new IrEntry(entry, head)],
+            new HashSet<ICfgNode> { entry, firstWrite, secondWrite, access },
+            new Dictionary<ICfgNode, IrInstructionShape>());
+        IrSsa ssa = IrSsa.Build(method);
+
+        // Act
+        IrDeadRegisterWrites.Apply(method, ssa);
+
+        // Assert
+        head.Statements.Contains(dead).Should().Be(!hasFault);
+        head.Statements.Should().Contain(live);
+        tail.Statements.Should().Contain(observer);
+    }
+
     [Fact]
     public void MovWhoseRegisterIsRewrittenBeforeAnyReadIsRemoved() {
         // Arrange: nop / mov bx, 5 / mov bx, 7 / ret - the nop is the entry
@@ -91,7 +147,7 @@ public sealed class IrDeadRegisterWritesTest {
             statement => IsBxAssignment(statement.Node, 7)));
         ICfgNode origin = irBlock.Statements.First(statement => IsBxAssignment(statement.Node, 7)).Origin;
         irBlock.Statements.Insert(0, IrStatement.Create(
-            new CheckExternalEventsNode(origin.Address), origin));
+            new CheckExternalEventsNode(origin.Address, HardwareInterruptEffectBuilder.Conservative), origin));
 
         // Act
         IrPassPipeline.Run(method, IrPass.DeadRegisterWrites, verify: true);

@@ -1,0 +1,104 @@
+{
+  "partitions": [
+    {
+      "id": 1,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        2
+      ],
+      "entries": [
+        {
+          "block": 2,
+          "address": "F000:0006",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        23,
+        24
+      ],
+      "entries": [
+        {
+          "block": 23,
+          "address": "F000:0011",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        39,
+        38
+      ],
+      "entries": [
+        {
+          "block": 38,
+          "address": "F000:FFF0",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "kind": "synthetic",
+      "name": "unknown",
+      "blocks": [
+        44,
+        27,
+        10,
+        17,
+        19
+      ],
+      "entries": [
+        {
+          "block": 27,
+          "address": "F000:0015",
+          "kind": "sharedEntry"
+        },
+        {
+          "block": 44,
+          "address": "F000:000A",
+          "kind": "sharedEntry"
+        }
+      ]
+    }
+  ],
+  "transfers": [
+    {
+      "kind": "crossPartitionFlow",
+      "fromPartition": 1,
+      "toPartition": 4,
+      "fromBlock": 2,
+      "toBlock": 44,
+      "from": "F000:0006",
+      "target": "F000:000A"
+    },
+    {
+      "kind": "crossPartitionFlow",
+      "fromPartition": 2,
+      "toPartition": 4,
+      "fromBlock": 24,
+      "toBlock": 27,
+      "from": "F000:0013",
+      "target": "F000:0015"
+    },
+    {
+      "kind": "crossPartitionFlow",
+      "fromPartition": 3,
+      "toPartition": 4,
+      "fromBlock": 39,
+      "toBlock": 44,
+      "from": "F000:0007",
+      "target": "F000:000A"
+    }
+  ]
+}

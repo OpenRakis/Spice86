@@ -3,7 +3,6 @@ namespace Spice86.Core.Emulator.LoadableFile.Bios;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Shared.Interfaces;
 
-using Spice86.Core.Emulator.LoadableFile;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Utils;
 
@@ -30,13 +29,17 @@ public class BiosLoader : ExecutableFileLoader {
     /// </summary>
     public override bool DosInitializationNeeded => false;
 
+    private readonly LoadedImageRegistry _loadedImageRegistry;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="BiosLoader"/> class
     /// </summary>
     /// <param name="memory">The memory bus.</param>
     /// <param name="state">The CPU state.</param>
+    /// <param name="loadedImageRegistry">Records the loaded BIOS image.</param>
     /// <param name="loggerService">The logger service to log messages to.</param>
-    public BiosLoader(IMemory memory, State state, ILogger loggerService) : base(memory, state, loggerService) {
+    public BiosLoader(IMemory memory, State state, LoadedImageRegistry loadedImageRegistry, ILogger loggerService) : base(memory, state, loggerService) {
+        _loadedImageRegistry = loadedImageRegistry;
     }
 
     /// <summary>
@@ -49,6 +52,8 @@ public class BiosLoader : ExecutableFileLoader {
         byte[] bios = ReadFile(file);
         uint physicalStartAddress = MemoryUtils.ToPhysicalAddress(CodeSegment, 0);
         _memory.LoadData(physicalStartAddress, bios);
+        _loadedImageRegistry.Register(new LoadedImage(LoadedImageKind.BiosBinary, file,
+            CodeSegment, physicalStartAddress, (uint)bios.Length));
         SetEntryPoint(CodeSegment, CodeOffset);
         return bios;
     }

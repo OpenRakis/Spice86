@@ -14,6 +14,9 @@ internal sealed record InterruptCallReturnedElsewhereHelperNode : MethodCallValu
             new MethodCallNode(null, HelperCallNames.InterruptCallReturnedElsewhereMethodName, arguments)) {
     }
 
+    /// <summary>How the site ends up printed: always a redirected-return dispatch.</summary>
+    public InterruptSiteKind Kind => InterruptSiteKind.RedirectedReturn;
+
     /// <inheritdoc />
     public override MethodCallValueNode WithArguments(IVisitableAstNode[] arguments) =>
         new InterruptCallReturnedElsewhereHelperNode(arguments);

@@ -36,15 +36,15 @@ public class DosVolumeInfo : MemoryBasedDataStructure {
     /// Gets or sets the 11-byte volume label.
     /// </summary>
     public string VolumeLabel {
-        get => GetZeroTerminatedString(0x06, VolumeLabelLength);
-        set => SetZeroTerminatedString(0x06, value.PadRight(VolumeLabelLength), VolumeLabelLength);
+        get => GetSpacePaddedString(0x06, VolumeLabelLength);
+        set => SetSpacePaddedString(0x06, value, VolumeLabelLength);
     }
 
     /// <summary>
     /// Gets or sets the 8-byte filesystem type (e.g., "FAT16   ").
     /// </summary>
     public string FileSystemType {
-        get => GetZeroTerminatedString(0x11, FileSystemTypeLength);
-        set => SetZeroTerminatedString(0x11, value.PadRight(FileSystemTypeLength), FileSystemTypeLength);
+        get => GetSpacePaddedString(0x11, FileSystemTypeLength);
+        set => SetSpacePaddedString(0x11, value, FileSystemTypeLength);
     }
 }

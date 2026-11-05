@@ -52,7 +52,7 @@ public class GdbBreakpointCommandParser {
     /// <param name="gdbCommand">The parsed GDB command.</param>
     /// <param name="onBreakPointReached">Callback when breakpoint is reached.</param>
     /// <returns>A BreakPoint object, or null if conversion fails.</returns>
-    public BreakPoint? CreateBreakPoint(GdbBreakpointCommand gdbCommand, Action<BreakPoint> onBreakPointReached) {
+    public BreakPoint? CreateBreakPoint(GdbBreakpointCommand gdbCommand, Action<BreakPoint, long> onBreakPointReached) {
         BreakPointType? breakPointType = MapGdbTypeToBreakPointType(gdbCommand.Type);
         if (breakPointType is null) {
             return null;

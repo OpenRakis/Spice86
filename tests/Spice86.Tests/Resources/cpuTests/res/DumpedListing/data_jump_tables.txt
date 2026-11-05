@@ -1,0 +1,211 @@
+F000:0000 mov AX,0x2000
+F000:0003 mov DS,AX
+F000:0005 mov SS,AX
+F000:0007 mov SP,0x1000
+F000:000A cld
+F000:000B mov word ptr DS:[0x0080],0
+F000:0011 mov BX,word ptr DS:[0x0080]
+F000:0015 mov AX,0xF000
+F000:0018 mov ES,AX
+F000:001A mov SI,BX
+F000:001C shl SI,1
+F000:001E cmp SI,6
+F000:0021 ja short 0x0028
+F000:0023 jmp near word ptr ES:[SI+0x02ED]
+F000:0028 mov word ptr DS:[0x0080],1
+F000:002E mov BX,word ptr DS:[0x0080]
+F000:0032 mov AX,0xF000
+F000:0035 mov ES,AX
+F000:0037 mov SI,BX
+F000:0039 shl SI,1
+F000:003B cmp SI,6
+F000:003E ja short 0x0045
+F000:0040 jmp near word ptr ES:[SI+0x02ED]
+F000:0045 mov word ptr DS:[0x0080],2
+F000:004B mov BX,word ptr DS:[0x0080]
+F000:004F mov AX,0xF000
+F000:0052 mov ES,AX
+F000:0054 mov SI,BX
+F000:0056 shl SI,1
+F000:0058 cmp SI,6
+F000:005B ja short 0x0062
+F000:005D jmp near word ptr ES:[SI+0x02ED]
+F000:0062 mov word ptr DS:[0x0080],3
+F000:0068 mov BX,word ptr DS:[0x0080]
+F000:006C mov AX,0xF000
+F000:006F mov ES,AX
+F000:0071 mov SI,BX
+F000:0073 shl SI,1
+F000:0075 cmp SI,6
+F000:0078 ja short 0x007F
+F000:007A jmp near word ptr ES:[SI+0x02ED]
+F000:007F mov word ptr DS:[0x0080],2
+F000:0085 mov BX,word ptr DS:[0x0080]
+F000:0089 mov AX,0xF000
+F000:008C mov ES,AX
+F000:008E mov SI,BX
+F000:0090 shl SI,1
+F000:0092 cmp SI,4
+F000:0095 jb short 0x00E5
+F000:0097 cmp SI,8
+F000:009A ja short 0x00E5
+F000:009C jmp near word ptr ES:[SI+0x02F5]
+F000:00A1 mov word ptr DS:[0x0080],3
+F000:00A7 mov BX,word ptr DS:[0x0080]
+F000:00AB mov AX,0xF000
+F000:00AE mov ES,AX
+F000:00B0 mov SI,BX
+F000:00B2 shl SI,1
+F000:00B4 cmp SI,4
+F000:00B7 jb short 0x00E5
+F000:00B9 cmp SI,8
+F000:00BC ja short 0x00E5
+F000:00BE jmp near word ptr ES:[SI+0x02F5]
+F000:00C3 mov word ptr DS:[0x0080],4
+F000:00C9 mov BX,word ptr DS:[0x0080]
+F000:00CD mov AX,0xF000
+F000:00D0 mov ES,AX
+F000:00D2 mov SI,BX
+F000:00D4 shl SI,1
+F000:00D6 cmp SI,4
+F000:00D9 jb short 0x00E5
+F000:00DB cmp SI,8
+F000:00DE ja short 0x00E5
+F000:00E0 jmp near word ptr ES:[SI+0x02F5]
+F000:00E5 mov CX,4
+F000:00E8 cmp CX,4
+F000:00EB je near 0x0264
+F000:00EF cmp CX,3
+F000:00F2 je near 0x0262
+F000:00F6 mov SI,CX
+F000:00F8 dec SI
+F000:00F9 shl SI,1
+F000:00FB mov AX,0xF000
+F000:00FE mov ES,AX
+F000:0100 cmp SI,2
+F000:0103 ja short 0x010D
+F000:0105 jmp near word ptr ES:[SI+0x02FF]
+F000:010A dec CX
+F000:010B jne short 0x00E8
+F000:010D mov word ptr DS:[0x0080],1
+F000:0113 mov BX,word ptr DS:[0x0080]
+F000:0117 mov AX,0xF000
+F000:011A mov ES,AX
+F000:011C mov SI,BX
+F000:011E shl SI,1
+F000:0120 cmp SI,4
+F000:0123 ja short 0x012A
+F000:0125 jmp near word ptr ES:[SI+0x0347]
+F000:012A mov word ptr DS:[0x0080],5
+F000:0130 mov BX,word ptr DS:[0x0080]
+F000:0134 mov AX,0xF000
+F000:0137 mov ES,AX
+F000:0139 mov SI,BX
+F000:013B shl SI,1
+F000:013D cmp SI,8
+F000:0140 jb short 0x014C
+F000:0142 cmp SI,0x000C
+F000:0145 ja short 0x014C
+F000:0147 jmp near word ptr ES:[SI+0x0347]
+F000:014C xor BX,BX
+F000:014E mov CX,5
+F000:0151 cmp BX,3
+F000:0154 ja short 0x017F
+F000:0156 mov SI,BX
+F000:0158 shl SI,1
+F000:015A jmp near word ptr CS:[SI+0x02E5]
+F000:015F mov word ptr DS:[0x0040],0x1111
+F000:0165 jmp short 0x0185
+F000:0167 mov word ptr DS:[0x0042],0x2222
+F000:016D jmp short 0x0185
+F000:016F mov word ptr DS:[0x0044],0x3333
+F000:0175 jmp short 0x0185
+F000:0177 mov word ptr DS:[0x0046],0x4444
+F000:017D jmp short 0x0185
+F000:017F mov word ptr DS:[0x0048],0x9999
+F000:0185 inc BX
+F000:0186 loop 0x0151
+F000:0188 mov word ptr DS:[0x0100],0x019A
+F000:018E mov word ptr DS:[0x0102],0x01A2
+F000:0194 xor BX,BX
+F000:0196 jmp near word ptr DS:[BX+0x0100]
+F000:019A mov word ptr DS:[0x004A],0xAAAA
+F000:01A0 jmp short 0x01AA
+F000:01A2 mov word ptr DS:[0x004C],0xBBBB
+F000:01A8 jmp short 0x01AA
+F000:01AA add BX,2
+F000:01AD cmp BX,4
+F000:01B0 jb short 0x0196
+F000:01B2 mov word ptr DS:[0x0104],0x01BE
+F000:01B8 xor BX,BX
+F000:01BA jmp near word ptr DS:[BX+0x0104]
+F000:01BE mov word ptr DS:[0x004E],1
+F000:01C4 mov word ptr DS:[0x0104],0x01CE
+F000:01CA jmp near word ptr DS:[BX+0x0104]
+F000:01CE mov word ptr DS:[0x0050],2
+F000:01D4 mov word ptr DS:[0x0106],0x02D7
+F000:01DA mov word ptr DS:[0x0108],0x02DE
+F000:01E0 xor BX,BX
+F000:01E2 call near word ptr DS:[BX+0x0106]
+F000:01E6 mov BX,2
+F000:01E9 call near word ptr DS:[BX+0x0106]
+F000:01ED mov word ptr DS:[0x0080],0x8000
+F000:01F3 mov CX,2
+F000:01F6 cmp CX,3
+F000:01F9 je short 0x0278
+F000:01FB cmp CX,4
+F000:01FE je short 0x0276
+F000:0200 mov BX,word ptr DS:[0x0080]
+F000:0204 sar BX,9
+F000:0207 sub DX,DX
+F000:0209 mov AX,0xF000
+F000:020C mov ES,AX
+F000:020E jmp near word ptr ES:[BX+0x0343]
+F000:0213 mov word ptr DS:[0x0080],0x0400
+F000:0219 dec CX
+F000:021A jne short 0x01F6
+F000:021C hlt
+F000:021D jmp short 0x0225
+F000:021F jmp short 0x022C
+F000:0221 jmp short 0x0233
+F000:0223 jmp short 0x023A
+F000:0225 inc word ptr DS:[0x0056]
+F000:0229 jmp near 0x0028
+F000:022C inc word ptr DS:[0x0058]
+F000:0230 jmp near 0x0045
+F000:0233 inc word ptr DS:[0x005A]
+F000:0237 jmp near 0x0062
+F000:023A inc word ptr DS:[0x005C]
+F000:023E jmp near 0x007F
+F000:0241 jmp short 0x0247
+F000:0243 jmp short 0x0250
+F000:0245 jmp short 0x0259
+F000:0247 mov word ptr DS:[0x0064],1
+F000:024D jmp near 0x00A1
+F000:0250 mov word ptr DS:[0x0066],1
+F000:0256 jmp near 0x00C3
+F000:0259 mov word ptr DS:[0x0078],1
+F000:025F jmp near 0x00E5
+F000:0262 jmp short 0x0266
+F000:0264 jmp short 0x026D
+F000:0266 inc word ptr DS:[0x0060]
+F000:026A jmp near 0x010A
+F000:026D mov word ptr DS:[0x0062],1
+F000:0273 jmp near 0x010A
+F000:0276 jmp short 0x027A
+F000:0278 jmp short 0x0282
+F000:027A mov word ptr DS:[0x007A],1
+F000:0280 jmp short 0x0213
+F000:0282 mov word ptr DS:[0x007C],1
+F000:0288 jmp short 0x0213
+F000:028C jmp short 0x02A1
+F000:0294 jmp short 0x02C5
+F000:02A1 mov word ptr DS:[0x006A],0x1111
+F000:02A7 jmp near 0x012A
+F000:02C5 mov word ptr DS:[0x0074],0x1155
+F000:02CB jmp near 0x014C
+F000:02D7 mov word ptr DS:[0x0052],0xF0F0
+F000:02DD ret near
+F000:02DE mov word ptr DS:[0x0054],0xF1F1
+F000:02E4 ret near
+F000:FFF0 jmp short 0

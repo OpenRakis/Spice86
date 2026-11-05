@@ -1,0 +1,181 @@
+// ==== file: CfgGeneratedOverrideSupplier.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
+    public IDictionary<SegmentedAddress, FunctionInformation> GenerateFunctionInformations(ILogger loggerService, Configuration configuration, ushort programStartAddress, Machine machine) {
+        return new CfgGeneratedOverrides(new Dictionary<SegmentedAddress, FunctionInformation>(), machine, loggerService, configuration, programStartAddress).FunctionInformations;
+    }
+}
+
+
+// ==== file: CfgGeneratedOverrides.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort biosSegment;
+
+    private static readonly byte?[] Signature_0030_add = [0x00, 0x00];
+    private static readonly byte?[] Signature_0032_mov = [0xC6, 0x06, 0x03, 0x04, 0x77];
+    private static readonly byte?[] Signature_0037_jmp = [0xEB, 0x0F];
+
+    private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
+
+    protected readonly DsGlobals DsGlobals;
+    protected readonly SegmentF000Globals SegmentF000Globals;
+
+    public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
+        biosSegment = 0xF000;
+        DsGlobals = new DsGlobals(Memory, State.SegmentRegisters);
+        SegmentF000Globals = new SegmentF000Globals(Memory, programStartSegment);
+
+        unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
+    }
+
+}
+
+// ==== file: CfgGeneratedOverrides.F000.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: BX, SI, DS. Does not return.</summary>
+    public virtual Action unknown_F000_FFF0_FFFF0() {
+        byte al1 = 0;
+        CheckExternalEvents(biosSegment, 0xFFF0);
+        // F000:FFF0 jmp short 0
+        // F000:0000 mov byte ptr DS:[0x0400],1
+        DsGlobals.Byte0400 = 1;
+        // F000:0005 mov AL,byte ptr DS:[0x0500]
+        al1 = DsGlobals.Byte0500;
+        // F000:0008 test AL,AL
+        // F000:000A jne short 0x0039
+        if (al1 != 0) {
+            throw FailAsUntested("Untested jump at F000:000A");
+        }
+        // F000:000C test AL,AL
+        Alu8.And(al1, al1);
+        // F000:000E jne short 0x0030
+        if (al1 != 0) {
+            VerifySpeculativeEntryOrFail(biosSegment, 0x0030, Signature_0030_add);
+            // F000:0030 add byte ptr DS:[BX+SI],AL
+            UInt8[DS, (ushort)(BX + SI)] = Alu8.Add(UInt8[DS, (ushort)(BX + SI)], al1);
+            VerifySpeculativeEntryOrFail(biosSegment, 0x0032, Signature_0032_mov);
+            // F000:0032 mov byte ptr DS:[0x0403],0x77
+            DsGlobals.Byte0403 = 0x77;
+            VerifySpeculativeEntryOrFail(biosSegment, 0x0037, Signature_0037_jmp);
+            // F000:0037 jmp short 0x0048
+        }
+        else {
+            // F000:0010 mov byte ptr CS:[0x0043],0xC6
+            SegmentF000Globals.Byte0043 = 0xC6;
+            // F000:0016 mov byte ptr CS:[0x0044],6
+            SegmentF000Globals.Byte0044 = 6;
+            // F000:001C mov byte ptr CS:[0x0045],1
+            SegmentF000Globals.Byte0045 = 1;
+            // F000:0022 mov byte ptr CS:[0x0046],4
+            SegmentF000Globals.Byte0046 = 4;
+            // F000:0028 mov byte ptr CS:[0x0047],0xDD
+            SegmentF000Globals.Byte0047 = 0xDD;
+            // F000:002E jmp short 0x0043
+            // F000:0043 mov byte ptr DS:[0x0401],0xDD
+            DsGlobals.Byte0401 = 0xDD;
+        }
+        // F000:0048 mov byte ptr DS:[0x0402],0xEE
+        DsGlobals.Byte0402 = 0xEE;
+        // F000:004D hlt
+        AL = al1;
+        return Hlt();
+    }
+
+}
+
+// ==== file: DsGlobals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class DsGlobals : MemoryBasedDataStructureWithDsBaseAddress {
+    private readonly IMemory _memory;
+    private readonly SegmentRegisters _segmentRegisters;
+
+    private ushort Segment => _segmentRegisters.UInt16[(uint)SegmentRegisterIndex.DsIndex];
+
+    public DsGlobals(IMemory memory, SegmentRegisters segmentRegisters) : base(memory, segmentRegisters) {
+        _memory = memory;
+        _segmentRegisters = segmentRegisters;
+    }
+
+    /// DS:0x0400, whatever DS holds at the access.
+    public byte Byte0400 { get => _memory.UInt8[Segment, 0x0400]; set => _memory.UInt8[Segment, 0x0400] = value; }
+
+    /// DS:0x0401, whatever DS holds at the access.
+    public byte Byte0401 { get => _memory.UInt8[Segment, 0x0401]; set => _memory.UInt8[Segment, 0x0401] = value; }
+
+    /// DS:0x0402, whatever DS holds at the access.
+    public byte Byte0402 { get => _memory.UInt8[Segment, 0x0402]; set => _memory.UInt8[Segment, 0x0402] = value; }
+
+    /// DS:0x0403, whatever DS holds at the access.
+    public byte Byte0403 { get => _memory.UInt8[Segment, 0x0403]; set => _memory.UInt8[Segment, 0x0403] = value; }
+
+    /// DS:0x0500, whatever DS holds at the access.
+    public byte Byte0500 { get => _memory.UInt8[Segment, 0x0500]; set => _memory.UInt8[Segment, 0x0500] = value; }
+}
+
+// ==== file: SegmentF000Globals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class SegmentF000Globals : MemoryBasedDataStructure {
+    private readonly IMemory _memory;
+    private readonly ushort Segment;
+
+    public SegmentF000Globals(IMemory memory, ushort programStartSegment) : base(memory, 0xF0000) {
+        _memory = memory;
+        Segment = 0xF000;
+    }
+
+    public byte Byte0043 { get => _memory.UInt8[Segment, 0x0043]; set => _memory.UInt8[Segment, 0x0043] = value; }
+
+    public byte Byte0044 { get => _memory.UInt8[Segment, 0x0044]; set => _memory.UInt8[Segment, 0x0044] = value; }
+
+    public byte Byte0045 { get => _memory.UInt8[Segment, 0x0045]; set => _memory.UInt8[Segment, 0x0045] = value; }
+
+    public byte Byte0046 { get => _memory.UInt8[Segment, 0x0046]; set => _memory.UInt8[Segment, 0x0046] = value; }
+
+    public byte Byte0047 { get => _memory.UInt8[Segment, 0x0047]; set => _memory.UInt8[Segment, 0x0047] = value; }
+}

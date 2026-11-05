@@ -2,9 +2,22 @@ namespace Spice86.Tests;
 
 using FluentAssertions;
 
+using NSubstitute;
+
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
+using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Model;
+using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
+using Spice86.Core.Emulator.VM;
+using Spice86.Shared.Emulator.Memory;
+
+using Microsoft.Extensions.Logging;
 
 using Spice86.Tests.AsmFixtures;
+
+using System.Reflection;
 
 using Xunit;
 
@@ -51,6 +64,139 @@ public sealed class GeneratedCodeMachineTest {
     }
 
     [Fact]
+    public void TypedMethodComputesFromItsArgumentsNotTheRegisters() {
+        // Arrange: cc_register_leaf's leaf prints as a typed method taking ax and bx and
+        // adding them; a direct C# call must compute from the arguments, not from
+        // whatever the registers hold when the caller is not generated code.
+        using AsmRunScope scope = new(AsmFixtureCatalog.Partition("cc_register_leaf"));
+        using CompiledGeneratedOverride compiled = CompileLeaf(scope);
+        using Spice86Creator creator = new(binName: "cc_register_leaf");
+        using Spice86DependencyInjection dependencyInjection = creator.Create();
+        (Machine machine, object overrides, MethodInfo method) =
+            DirectCallHarness(compiled, "Spice86.Generated.CfgGeneratedOverrides", dependencyInjection);
+
+        // Act
+        object? result = method.Invoke(overrides, [(ushort)5, (ushort)6]);
+
+        // Assert
+        result.Should().Be((ushort)11, "the typed method computes 5 + 6 from its arguments");
+        machine.CpuState.AX.Should().Be(11);
+        machine.CpuState.IP.Should().Be(0x1234, "the ret pops the pushed return address");
+    }
+
+    [Fact]
+    public void TypedMethodOverrideComputesFromItsArgumentsNotTheRegisters() {
+        // Arrange: the same direct-call contract through a hand-written subclass that
+        // overrides the typed method and forwards both arguments to base: the public
+        // virtual signature keeps both parameters.
+        using AsmRunScope scope = new(AsmFixtureCatalog.Partition("cc_register_leaf"));
+        GeneratedCodeMachineTestRunner runner = new();
+        GeneratedCSharpProgram generatedProgram = runner.GenerateProgramAndSource(scope);
+        List<string> sources = [.. GeneratedOverrideCompiler.TextsOf(generatedProgram),
+            """
+            namespace Spice86.Generated;
+
+            using Microsoft.Extensions.Logging;
+            using Spice86.Core.CLI;
+            using Spice86.Core.Emulator.Function;
+            using Spice86.Core.Emulator.VM;
+            using Spice86.Shared.Emulator.Memory;
+            using System.Collections.Generic;
+
+            public sealed class CfgGeneratedOverridesSubclass : CfgGeneratedOverrides {
+                public CfgGeneratedOverridesSubclass(
+                    IDictionary<SegmentedAddress, FunctionInformation> functionInformations,
+                    Machine machine, ILogger loggerService, Configuration configuration,
+                    ushort programStartAddress)
+                    : base(functionInformations, machine, loggerService, configuration,
+                        programStartAddress) {
+                }
+
+                public override ushort unknown_F000_00AB_F00AB(ushort ax, ushort bx) =>
+                    base.unknown_F000_00AB_F00AB(ax, bx);
+            }
+            """];
+        using CompiledGeneratedOverride compiled =
+            new GeneratedOverrideCompiler().CompileSupplier(sources);
+        using Spice86Creator creator = new(binName: "cc_register_leaf");
+        using Spice86DependencyInjection dependencyInjection = creator.Create();
+        (Machine machine, object overrides, MethodInfo method) =
+            DirectCallHarness(compiled, "Spice86.Generated.CfgGeneratedOverridesSubclass",
+                dependencyInjection);
+
+        // Act
+        object? result = method.Invoke(overrides, [(ushort)5, (ushort)6]);
+
+        // Assert
+        result.Should().Be((ushort)11, "the override computes 5 + 6 from its arguments");
+        machine.CpuState.AX.Should().Be(11);
+        machine.CpuState.IP.Should().Be(0x1234, "the ret pops the pushed return address");
+    }
+
+    [Fact]
+    public void GeneratingIndependentProgramsConcurrentlyKeepsTheirResults() {
+        // Arrange: several independent alu_dead_flags discoveries prepared serially. Generating
+        // them concurrently exercises the constant evaluation's ALU scratch state, which must be
+        // per evaluation: a shared one lets another generator's flag writes leak into a result.
+        const int count = 4;
+        AsmRunScope[] scopes = new AsmRunScope[count];
+        try {
+            CfgPartitionedProgram[] programs = new CfgPartitionedProgram[count];
+            for (int i = 0; i < count; i++) {
+                scopes[i] = new AsmRunScope(AsmFixtureCatalog.Partition("alu_dead_flags"));
+                programs[i] = GeneratedCodeMachineTestRunner.GenerateProgram(scopes[i]).Program;
+            }
+            GeneratedCSharpProgram[] generated = new GeneratedCSharpProgram[count];
+            Parallel.For(0, count,
+                i => generated[i] = new CfgCSharpGenerator(collectCensuses: true, verify: true)
+                    .Generate(programs[i]));
+
+            // Assert: each concurrently generated program compiles and passes the fixture oracle.
+            GeneratedCodeMachineTestRunner runner = new();
+            for (int i = 0; i < count; i++) {
+                using AsmRunScope execution = new(AsmFixtureCatalog.Partition("alu_dead_flags"));
+                using CompiledGeneratedOverride compiled =
+                    runner.CompileGeneratedProgram(scopes[i].Fixture.Settings, generated[i]);
+                using AsmFixtureRun run = AsmFixtureRunner.RunWithOverride(execution, compiled.Supplier);
+            }
+        } finally {
+            foreach (AsmRunScope? scope in scopes) {
+                scope?.Dispose();
+            }
+        }
+    }
+
+    /// <summary>The cc_register_leaf leaf's generated program compiled into an override.</summary>
+    private static CompiledGeneratedOverride CompileLeaf(AsmRunScope scope) {
+        GeneratedCodeMachineTestRunner runner = new();
+        return runner.CompileGeneratedProgram(scope.Fixture.Settings,
+            runner.GenerateProgramAndSource(scope));
+    }
+
+    /// <summary>The <see cref="Machine"/>, overrides instance and leaf method of one direct-call
+    /// harness: SS:SP with a pushed return offset, live AX = 3 and BX = 5 distinct from the call's
+    /// arguments.</summary>
+    private static (Machine Machine, object Overrides, MethodInfo Method) DirectCallHarness(
+        CompiledGeneratedOverride compiled, string overridesTypeName,
+        Spice86DependencyInjection dependencyInjection) {
+        Machine machine = dependencyInjection.Machine;
+        Type overridesType = compiled.Supplier.GetType().Assembly.GetType(overridesTypeName)
+            ?? throw new InvalidOperationException($"{overridesTypeName} missing from the compiled assembly");
+        object overrides = Activator.CreateInstance(overridesType,
+            new Dictionary<SegmentedAddress, FunctionInformation>(), machine,
+            Substitute.For<ILogger>(), new Configuration { HttpApiPort = 0 }, (ushort)0x170)
+            ?? throw new InvalidOperationException($"{overridesTypeName} could not be instantiated");
+        machine.CpuState.SS = 0x3000;
+        machine.CpuState.SP = 0x0100;
+        machine.Stack.Push16(0x1234);
+        machine.CpuState.AX = 3;
+        machine.CpuState.BX = 5;
+        MethodInfo method = overridesType.GetMethod("unknown_F000_00AB_F00AB")
+            ?? throw new InvalidOperationException("unknown_F000_00AB_F00AB method missing");
+        return (machine, overrides, method);
+    }
+
+    [Fact]
     public void Jump1GeneratedOverrideCompilesAndMatchesMachineTestOracle() {
         new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.Dump("jump1"));
     }
@@ -64,6 +210,20 @@ public sealed class GeneratedCodeMachineTest {
         // FailAsUntested is now visible in the `jump1` golden (no suffix); the run checks the `jump1`
         // memory dump.
         new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.Jump1WithoutSpeculation());
+    }
+
+    [Fact]
+    public void DataGlobalsGeneratedProgramExposesConstantMemoryAccesses() {
+        // Arrange: data_globals reads and writes globals at constant DS offsets in several widths;
+        // the collector must surface them on the generated program.
+        GeneratedCodeMachineTestRunner runner = new();
+        using AsmRunScope scope = new(AsmFixtureCatalog.Partition("data_globals"));
+
+        // Act
+        GeneratedCSharpProgram program = runner.GenerateProgramAndSource(scope);
+
+        // Assert
+        program.ConstantMemoryAccesses.Entries.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -261,6 +421,33 @@ public sealed class GeneratedCodeMachineTest {
     [Fact]
     public void InteriorEntryIrqGeneratedOverrideMatchesMachineTestOracle() {
         new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.InteriorEntry());
+    }
+
+    [Fact]
+    public void InterruptHandlerChangesRegisterGeneratedOverrideMatchesMachineTestOracle() {
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.InterruptHandlerChangesRegister());
+    }
+
+    /// <summary>The hardware effect keeps incoming bytes read after partial writes or a branch join.</summary>
+    [Fact]
+    public void HardwareInterruptSummaryKeepsPartialRegisterInputs() {
+        // Arrange
+        using AsmRunScope scope = new(AsmFixtureCatalog.Partition("interrupt_handler_partial_inputs"));
+        CfgPartitionedProgram program = GeneratedCodeMachineTestRunner.GenerateProgram(scope).Program;
+
+        // Act
+        CallEffect effect = new CfgCSharpGenerator(collectCensuses: true, verify: true)
+            .LiftMethods(program)[0].Lowerer.HardwareInterruptEffect;
+
+        // Assert
+        CpuValues inputs = CpuValues.Ah | CpuValues.Bh | CpuValues.Ch;
+        (effect.Reads & inputs).Should().Be(inputs,
+            "the IRQ reads AH after writing AL, BH through a branch join, and CH in JCXZ after writing CL");
+    }
+
+    [Fact]
+    public void RegisterLocalsAcrossGeneratedOverrideMatchesMachineTestOracle() {
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.Partition("register_locals_across"));
     }
 
     [Fact]

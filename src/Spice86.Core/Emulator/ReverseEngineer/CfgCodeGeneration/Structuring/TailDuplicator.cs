@@ -16,8 +16,11 @@ using static Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast.CodeGen
 /// Replaces every <c>goto</c> to a tiny diverging block by a copy of the block's statements: a speculative stub that
 /// throws (<c>VerifySpeculativeEntryOrFail</c> then <c>FailAsUntested</c>) or a short epilogue is pasted at each of its
 /// <c>goto</c>s, so <c>if (c) { goto L_X; }</c> becomes <c>if (c) { ...; throw FailAsUntested(...); }</c> and the label
-/// disappears. A block is duplicable when it has at most 3 instruction boundaries, declares no local variable and holds
-/// no <c>goto</c>, never completes normally, holds no method entry and is not a loop header. The block's own
+/// disappears. A block is duplicable when it has at most 3 instruction boundaries and holds
+/// no <c>goto</c>, never completes normally, holds no method entry and is not a loop header. A block that
+/// declares local variables is duplicable too: every copy gets its own
+/// <see cref="InstructionBoundaryNode.LocalVariableSuffix"/> - the original suffix plus a copy number
+/// per method - so no two copies declare the same temporary name in one scope. The block's own
 /// statements are removed from their original place when the statement right before them never completes normally
 /// (they are unreachable); otherwise they stay, without a label because nothing targets them.
 /// One pass, after the fallthrough <c>goto</c>s were removed; copies are not re-examined.
@@ -42,8 +45,9 @@ internal static class TailDuplicator {
             return body;
         }
         HashSet<ICfgNode> keptInstructions = [.. kept.Values.SelectMany(BoundaryNodes)];
+        int[] copies = [0];
         AstResult<BlockNode> result = new();
-        AstTrampoline.Run(RewriteBlockIt(body, kept, keptInstructions, result));
+        AstTrampoline.Run(RewriteBlockIt(body, kept, keptInstructions, copies, result));
         return result.Value!;
     }
 
@@ -53,11 +57,10 @@ internal static class TailDuplicator {
     private static bool IsDuplicable<TBlock>(LoweredBlock<TBlock> block, NaturalLoopForest<TBlock> loops)
         where TBlock : class {
         int boundaries = block.Body.Statements.OfType<InstructionBoundaryNode>().Count();
-        bool locals = ContainsNode<VariableDeclarationNode>(block.Body);
         bool gotos = ContainsNode<GotoNode>(block.Body);
         bool completes = CompletesNormallyVisitor.CompletesNormally(block.Body);
         bool loopHeader = loops.LoopWithHeader(block.Block) is not null;
-        return boundaries <= 3 && !locals && !gotos && !SpansMultipleInstructions(block.Block)
+        return boundaries <= 3 && !gotos && !SpansMultipleInstructions(block.Block)
             && !completes && !block.HoldsEntry && !loopHeader;
     }
 
@@ -74,16 +77,18 @@ internal static class TailDuplicator {
 
     private static IEnumerable<AstSubcall> RewriteBlockIt<TBlock>(BlockNode block,
         IReadOnlyDictionary<IGotoTarget, LoweredBlock<TBlock>> kept, HashSet<ICfgNode> keptInstructions,
-        AstResult<BlockNode> result) where TBlock : class {
+        int[] copies, AstResult<BlockNode> result) where TBlock : class {
         List<IVisitableAstNode> statements = [];
         foreach (IVisitableAstNode statement in block.Statements) {
             if (statement is GotoNode jump && kept.TryGetValue(jump.Target, out LoweredBlock<TBlock>? copy)) {
-                statements.AddRange(StatementsOf(copy.Body));
+                int copyNumber = ++copies[0];
+                statements.AddRange(StatementsOf(copy.Body)
+                    .Select(copied => RenamedBoundaries(copied, copyNumber)));
                 continue;
             }
             AstResult<IVisitableAstNode> rewritten = new();
             yield return AstTrampoline.Call(WithRewrittenBodiesIt(statement,
-                (held, child) => RewriteBlockIt(held, kept, keptInstructions, child), rewritten));
+                (held, child) => RewriteBlockIt(held, kept, keptInstructions, copies, child), rewritten));
             if (rewritten.Value is InstructionBoundaryNode boundary && keptInstructions.Contains(boundary.Node)
                 && statements.Count > 0 && !CompletesNormallyVisitor.CompletesNormally(statements[^1])) {
                 continue;
@@ -91,5 +96,17 @@ internal static class TailDuplicator {
             statements.Add(rewritten.Value!);
         }
         result.Value = new BlockNode(statements.ToArray());
+    }
+
+    /// <summary><paramref name="node"/> with a fresh <see cref="InstructionBoundaryNode.LocalVariableSuffix"/>
+    /// on every instruction boundary inside it - the original suffix plus <paramref name="copyNumber"/>,
+    /// so a copy's temporaries print under names no other copy or the original uses.</summary>
+    private static IVisitableAstNode RenamedBoundaries(IVisitableAstNode node, int copyNumber) {
+        if (node is InstructionBoundaryNode boundary) {
+            return boundary with {
+                LocalVariableSuffix = $"{boundary.LocalVariableSuffix}c{copyNumber}"
+            };
+        }
+        return IrAstChildren.MapChildren(node, child => RenamedBoundaries(child, copyNumber));
     }
 }

@@ -51,6 +51,9 @@ internal static class MethodBodyEmitter {
         HashSet<IGotoTarget> jumpTargets = new(GotoTargetCollector.Collect(body).Labels);
         jumpTargets.UnionWith(entryTargets);
         body = ConditionCombiner.Apply(body, jumpTargets);
+        // TailDuplicator and ConditionCombiner can move or delete the boundaries a goto's follow was
+        // computed against, leaving a goto directly before its target's anchor.
+        body = FallthroughGotoRemover.Remove(body);
         GotoCensus census = GotoCensusClassifier.Classify(entryDispatch, body, loops,
             entryTargets, loweredBlocks, nodesOf, refusals);
         body = WhileConditionLoops.Apply(body);

@@ -99,7 +99,8 @@ public class GdbCommandBreakpointHandler {
     /// Handles a breakpoint being hit.
     /// </summary>
     /// <param name="breakPoint">The <see cref="BreakPoint"/> object representing the breakpoint that was hit.</param>
-    public void OnBreakPointReached(BreakPoint breakPoint) {
+    /// <param name="value">The value the breakpoint matched.</param>
+    public void OnBreakPointReached(BreakPoint breakPoint, long value) {
         if (_loggerService.IsEnabled(LogLevel.Debug)) {
             _loggerService.LogDebug("Breakpoint reached!\n@{@BreakPoint}", breakPoint);
         }

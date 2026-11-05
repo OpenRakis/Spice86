@@ -14,6 +14,9 @@ using Spice86.Core.Emulator.Memory.Indexable;
 using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
 using Spice86.Core.Emulator.InterruptHandlers.VGA;
+using Spice86.Core.Emulator.LoadableFile;
+using Spice86.Core.Emulator.LoadableFile.Dos;
+using Spice86.Core.Emulator.Memory.ReaderWriter;
 using Spice86.Core.Emulator.OperatingSystem;
 using Spice86.Core.Emulator.OperatingSystem.Batch;
 using Spice86.Core.Emulator.OperatingSystem.Devices;
@@ -369,6 +372,168 @@ public class DosProcessManagerTests {
         execResult.Success.Should().BeTrue("EXEC should provide {0} paragraphs for the child process", desiredMinimumParagraphs);
     }
 
+    [Fact]
+    public void ExecLoadAndExecuteCom_RegistersDosProgramImage() {
+        // Arrange
+        DosProcessManagerTestContext context = CreateContext();
+        context.ProcessManager.CreateRootCommandComPsp();
+
+        using TempFile tempFile = new("DosProcessManagerTests");
+        string comFilePath = CreateFileFromResource(tempFile, "child.com", "nop_sled_ret_1.com");
+
+        // Act
+        DosExecResult result = context.ProcessManager.LoadOrLoadAndExecute(
+            comFilePath, CreateParameterBlock(), string.Empty,
+            DosExecLoadType.LoadAndExecute, environmentSegment: 0);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        LoadedImage image = context.Registry.Images.Should().ContainSingle().Subject;
+        image.Kind.Should().Be(LoadedImageKind.DosProgram);
+        image.Name.Should().Be(comFilePath);
+        image.FirstSegment.Should().Be(result.InitialCS);
+        image.StartAddress.Should().Be(
+            MemoryUtils.ToPhysicalAddress(result.InitialCS, DosProgramSegmentPrefix.PspSize));
+        image.SizeInBytes.Should().Be((uint)new FileInfo(comFilePath).Length);
+    }
+
+    [Fact]
+    public void ExecLoadOnlyCom_RegistersDosProgramImage() {
+        // Arrange
+        DosProcessManagerTestContext context = CreateContext();
+        context.ProcessManager.CreateRootCommandComPsp();
+
+        using TempFile tempFile = new("DosProcessManagerTests");
+        string comFilePath = CreateFileFromResource(tempFile, "child.com", "nop_sled_ret_1.com");
+
+        // Act
+        DosExecResult result = context.ProcessManager.LoadOrLoadAndExecute(
+            comFilePath, CreateParameterBlock(), string.Empty,
+            DosExecLoadType.LoadOnly, environmentSegment: 0);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        LoadedImage image = context.Registry.Images.Should().ContainSingle().Subject;
+        image.Kind.Should().Be(LoadedImageKind.DosProgram);
+        image.Name.Should().Be(comFilePath);
+        image.FirstSegment.Should().Be(result.InitialCS);
+        image.StartAddress.Should().Be(
+            MemoryUtils.ToPhysicalAddress(result.InitialCS, DosProgramSegmentPrefix.PspSize));
+        image.SizeInBytes.Should().Be((uint)new FileInfo(comFilePath).Length);
+    }
+
+    [Fact]
+    public void ExecLoadAndExecuteExe_RegistersDosProgramImage() {
+        // Arrange
+        DosProcessManagerTestContext context = CreateContext();
+        context.ProcessManager.CreateRootCommandComPsp();
+
+        using TempFile tempFile = new("DosProcessManagerTests");
+        string exeFilePath = CreateFileFromResource(tempFile, "program.exe", "exe_image_0_ffff.bin");
+
+        // Act
+        DosExecResult result = context.ProcessManager.LoadOrLoadAndExecute(
+            exeFilePath, CreateParameterBlock(), string.Empty,
+            DosExecLoadType.LoadAndExecute, environmentSegment: 0);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        DosExeFile exeFile = new(new ByteArrayReaderWriter(File.ReadAllBytes(exeFilePath)));
+        LoadedImage image = context.Registry.Images.Should().ContainSingle().Subject;
+        image.Kind.Should().Be(LoadedImageKind.DosProgram);
+        image.Name.Should().Be(exeFilePath);
+        image.FirstSegment.Should().Be(context.CurrentPspSegment);
+        ushort loadImageSegment = (ushort)(result.InitialCS - exeFile.InitCS);
+        image.StartAddress.Should().Be(MemoryUtils.ToPhysicalAddress(loadImageSegment, 0));
+        image.SizeInBytes.Should().Be(exeFile.ProgramSize);
+    }
+
+    [Fact]
+    public void LoadOverlay_RegistersOverlayImage() {
+        // Arrange
+        DosProcessManagerTestContext context = CreateContext();
+        context.ProcessManager.CreateRootCommandComPsp();
+
+        using TempFile tempFile = new("DosProcessManagerTests");
+        string overlayFilePath =
+            CreateFileFromResource(tempFile, "overlay.exe", "overlay_exe_image_with_relocation.bin");
+
+        // Act
+        const ushort loadSegment = 0x4000;
+        DosExecResult result = context.ProcessManager.LoadOverlay(overlayFilePath, loadSegment, 0x1234);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        DosExeFile exeFile = new(new ByteArrayReaderWriter(File.ReadAllBytes(overlayFilePath)));
+        LoadedImage image = context.Registry.Images.Should().ContainSingle().Subject;
+        image.Kind.Should().Be(LoadedImageKind.DosOverlay);
+        image.Name.Should().Be(overlayFilePath);
+        image.FirstSegment.Should().Be(loadSegment);
+        image.StartAddress.Should().Be(MemoryUtils.ToPhysicalAddress(loadSegment, 0));
+        image.SizeInBytes.Should().Be(exeFile.ProgramSize);
+    }
+
+    [Fact]
+    public void LoadInitialProgramFromBytes_RegistersInternalBatchProgramImage() {
+        // Arrange
+        DosProcessManagerTestContext context = CreateContext();
+        context.ProcessManager.CreateRootCommandComPsp();
+
+        // Act
+        byte[] comBytes = [0x90, 0x90, 0xC3];
+        DosExecResult result = context.ProcessManager.LoadInitialProgramFromBytes(comBytes);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        LoadedImage image = context.Registry.Images.Should().ContainSingle().Subject;
+        image.Kind.Should().Be(LoadedImageKind.InternalBatchProgram);
+        image.Name.Should().Be("BATCH$$$.COM");
+        image.FirstSegment.Should().Be(result.InitialCS);
+        image.StartAddress.Should().Be(
+            MemoryUtils.ToPhysicalAddress(result.InitialCS, DosProgramSegmentPrefix.PspSize));
+        image.SizeInBytes.Should().Be((uint)comBytes.Length);
+    }
+
+    [Fact]
+    public void FailedExec_RegistersNoImage() {
+        // Arrange
+        DosProcessManagerTestContext context = CreateContext();
+        context.ProcessManager.CreateRootCommandComPsp();
+
+        // Act
+        DosExecResult result = context.ProcessManager.LoadOrLoadAndExecute(
+            "missing_program.com", CreateParameterBlock(), string.Empty,
+            DosExecLoadType.LoadAndExecute, environmentSegment: 0);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        context.Registry.Images.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ImageLoaded_FiresAfterRelocationsAreApplied() {
+        // Arrange
+        DosProcessManagerTestContext context = CreateContext();
+        context.ProcessManager.CreateRootCommandComPsp();
+
+        using TempFile tempFile = new("DosProcessManagerTests");
+        string overlayFilePath =
+            CreateFileFromResource(tempFile, "overlay.exe", "overlay_exe_image_with_relocation.bin");
+
+        const ushort loadSegment = 0x4000;
+        const ushort relocationFactor = 0x1234;
+        ushort? relocatedWordAtEvent = null;
+        context.Registry.ImageLoaded += (_, _) =>
+            relocatedWordAtEvent = context.Memory.UInt16[MemoryUtils.ToPhysicalAddress(loadSegment, 0)];
+
+        // Act
+        DosExecResult result = context.ProcessManager.LoadOverlay(overlayFilePath, loadSegment, relocationFactor);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        relocatedWordAtEvent.Should().Be((ushort)(0x0042 + relocationFactor));
+    }
+
     private static DosProcessManagerTestContext CreateContext(ushort? programEntryPointSegment = null) {
         ILogger loggerService = Substitute.For<ILogger>();
 
@@ -418,6 +583,7 @@ public class DosProcessManagerTests {
             });
         IDriveActivityNotifier activityNotifier = Substitute.For<IDriveActivityNotifier>();
 
+        LoadedImageRegistry registry = new();
         DosProcessManager processManager = new(
             memory,
             stack,
@@ -431,10 +597,11 @@ public class DosProcessManagerTests {
             channelCreator,
             activityNotifier,
             batchDisplayCommandHandler,
+            registry,
             new Dictionary<string, string>(),
             loggerService);
 
-        return new DosProcessManagerTestContext(memory, processManager, state, memoryManager);
+        return new DosProcessManagerTestContext(memory, processManager, state, memoryManager, registry);
     }
 
     private static DosProgramSegmentPrefix GetRootPsp(DosProcessManagerTestContext context) {
@@ -527,17 +694,19 @@ public class DosProcessManagerTests {
 
     private sealed class DosProcessManagerTestContext {
         public DosProcessManagerTestContext(Memory memory, DosProcessManager processManager,
-            State state, DosMemoryManager memoryManager) {
+            State state, DosMemoryManager memoryManager, LoadedImageRegistry registry) {
             Memory = memory;
             ProcessManager = processManager;
             State = state;
             MemoryManager = memoryManager;
+            Registry = registry;
         }
 
         public Memory Memory { get; }
         public DosProcessManager ProcessManager { get; }
         public State State { get; }
         public DosMemoryManager MemoryManager { get; }
+        public LoadedImageRegistry Registry { get; }
 
         /// <summary>
         /// Gets the current PSP segment directly from the DOS SDA.

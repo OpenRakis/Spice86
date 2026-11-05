@@ -35,9 +35,8 @@ internal static class GenerationPlanBuilder {
     }
 
     private static List<SegmentFieldPlan> BuildSegmentFields(CfgGeneratorContext context) {
-        List<SegmentFieldPlan> fields = context.SegmentVariables
-            .Select(entry => new SegmentFieldPlan(entry.Key, entry.Value))
-            .OrderBy(field => field.Segment)
+        List<SegmentFieldPlan> fields = SegmentFieldPlan
+            .BuildAll(context.SegmentVariables.Keys, context.Program.Inputs.ProgramImages)
             .ToList();
         // GeneratorAnalysis guarantees one variable per distinct segment; fail if two distinct segments ever
         // collide on the same generated field name.
@@ -62,7 +61,8 @@ internal static class GenerationPlanBuilder {
                     entry.Address.Offset,
                     method.MethodName,
                     loadOffset,
-                    context.GetPartitionBaseName(method.Partition)));
+                    context.GetPartitionBaseName(method.Partition),
+                    method.Entries.Count == 1));
             }
         }
         return DeduplicateByAddress(methods, registrations);

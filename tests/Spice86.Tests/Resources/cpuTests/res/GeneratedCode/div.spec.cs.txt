@@ -1,3 +1,4 @@
+// ==== file: CfgGeneratedOverrideSupplier.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -16,37 +17,98 @@ public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
     }
 }
 
-public class CfgGeneratedOverrides : CSharpOverrideHelper {
-    protected readonly ushort cs1;
+
+// ==== file: CfgGeneratedOverrides.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort biosSegment;
+
+    private readonly Func<int, Action> unknown_F000_0061_F0061Entry;
+    private readonly Func<int, Action> unknown_F000_0085_F0085Entry;
+    private readonly Func<int, Action> unknown_F000_00A0_F00A0Entry;
+    private readonly Func<int, Action> unknown_F000_010F_F010FEntry;
+    private readonly Func<int, Action> unknown_F000_012C_F012CEntry;
+    private readonly Func<int, Action> unknown_F000_019B_F019BEntry;
+    private readonly Func<int, Action> unknown_F000_0211_F0211Entry;
+    private readonly Func<int, Action> unknown_F000_024D_F024DEntry;
+    private readonly Func<int, Action> unknown_F000_02B1_F02B1Entry;
+    private readonly Func<int, Action> unknown_F000_02C6_F02C6Entry;
+    private readonly Func<int, Action> unknown_F000_02F6_F02F6Entry;
+    private readonly Func<int, Action> unknown_F000_1000_F1000Entry;
+    private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
+
+    protected readonly DsGlobals DsGlobals;
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
-        cs1 = 0xF000;
+        biosSegment = 0xF000;
+        DsGlobals = new DsGlobals(Memory, State.SegmentRegisters);
 
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0061, unknown_F000_0061_F0061, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0085, unknown_F000_0085_F0085, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x00A0, unknown_F000_00A0_F00A0, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x010F, unknown_F000_010F_F010F, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x012C, unknown_F000_012C_F012C, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x019B, unknown_F000_019B_F019B, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0211, unknown_F000_0211_F0211, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x024D, unknown_F000_024D_F024D, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x02B1, unknown_F000_02B1_F02B1, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x02C6, unknown_F000_02C6_F02C6, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x02F6, unknown_F000_02F6_F02F6, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x1000, unknown_F000_1000_F1000, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, "unknown");
+        unknown_F000_0061_F0061Entry = _ => unknown_F000_0061_F0061();
+        unknown_F000_0085_F0085Entry = _ => unknown_F000_0085_F0085();
+        unknown_F000_00A0_F00A0Entry = _ => unknown_F000_00A0_F00A0();
+        unknown_F000_010F_F010FEntry = _ => unknown_F000_010F_F010F();
+        unknown_F000_012C_F012CEntry = _ => unknown_F000_012C_F012C();
+        unknown_F000_019B_F019BEntry = _ => unknown_F000_019B_F019B();
+        unknown_F000_0211_F0211Entry = _ => unknown_F000_0211_F0211();
+        unknown_F000_024D_F024DEntry = _ => unknown_F000_024D_F024D();
+        unknown_F000_02B1_F02B1Entry = _ => unknown_F000_02B1_F02B1();
+        unknown_F000_02C6_F02C6Entry = _ => unknown_F000_02C6_F02C6();
+        unknown_F000_02F6_F02F6Entry = _ => unknown_F000_02F6_F02F6();
+        unknown_F000_1000_F1000Entry = _ => unknown_F000_1000_F1000();
+        unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0061, unknown_F000_0061_F0061Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0085, unknown_F000_0085_F0085Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00A0, unknown_F000_00A0_F00A0Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x010F, unknown_F000_010F_F010FEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x012C, unknown_F000_012C_F012CEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x019B, unknown_F000_019B_F019BEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0211, unknown_F000_0211_F0211Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x024D, unknown_F000_024D_F024DEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x02B1, unknown_F000_02B1_F02B1Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x02C6, unknown_F000_02C6_F02C6Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x02F6, unknown_F000_02F6_F02F6Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0x1000, unknown_F000_1000_F1000Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
     }
 
-    public virtual Action unknown_F000_0061_F0061(int loadOffset) {
-        CheckExternalEvents(cs1, 0x0061);
+}
+
+// ==== file: CfgGeneratedOverrides.F000.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: AX, CX, DX, BP, DS, DF. Does not return.</summary>
+    public virtual Action unknown_F000_0061_F0061() {
+        CheckExternalEvents(biosSegment, 0x0061);
         // F000:0061 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:0064 mov word ptr DS:[0x000C],AX
-        UInt16[DS, 0x000C] = AX;
+        DsGlobals.Word000C = AX;
         // F000:0067 mov word ptr DS:[0x000E],CX
-        UInt16[DS, 0x000E] = CX;
+        DsGlobals.Word000E = CX;
         // F000:006B mov word ptr DS:[0x0010],DX
-        UInt16[DS, 0x0010] = DX;
+        DsGlobals.Word0010 = DX;
         // F000:006F pushf
         Stack.Push16(FlagRegister16);
         // F000:0070 mov DX,0xFFFF
@@ -54,27 +116,28 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0073 mov AX,0xFFFF
         AX = 0xFFFF;
         // F000:0076 mov word ptr DS:[0x0012],0xFFFF
-        UInt16[DS, 0x0012] = 0xFFFF;
+        DsGlobals.Word0012 = 0xFFFF;
         // F000:007C mov word ptr SS:[BP],4
-        UInt16[SS, BP] = 4;
+        SsUInt16[BP] = 4;
         // F000:0081 div word ptr DS:[0x0012]
         try {
-            (AX, DX) = Div16(divisor: UInt16[DS, 0x0012], dividend: (uint)((uint)DX << 16 | (uint)AX));
+            (AX, DX) = Div16(divisor: DsGlobals.Word0012, dividend: (uint)((uint)DX << 16 | (uint)AX));
             throw FailAsUntested("Untested fallthrough after F000:0081");
         }
         catch (CpuException cpuException) {
-            return DispatchCpuFault(cpuException, cs1, 0x0081, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x1000), () => unknown_F000_1000_F1000(0x0000))]);
+            return DispatchCpuFault(cpuException, biosSegment, 0x0081, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x1000), unknown_F000_1000_F1000)]);
         }
     }
 
-    public virtual Action unknown_F000_0085_F0085(int loadOffset) {
-        CheckExternalEvents(cs1, 0x0085);
+    /// <summary>Inputs: AX, DX, BP, DS, DF. Does not return.</summary>
+    public virtual Action unknown_F000_0085_F0085() {
+        CheckExternalEvents(biosSegment, 0x0085);
         // F000:0085 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:0088 mov word ptr DS:[0x0014],AX
-        UInt16[DS, 0x0014] = AX;
+        DsGlobals.Word0014 = AX;
         // F000:008B mov word ptr DS:[0x0016],DX
-        UInt16[DS, 0x0016] = DX;
+        DsGlobals.Word0016 = DX;
         // F000:008F pushf
         Stack.Push16(FlagRegister16);
         // F000:0090 mov DX,0xFBB4
@@ -84,27 +147,29 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0096 mov CX,0xAE8E
         CX = 0xAE8E;
         // F000:0099 mov word ptr SS:[BP],2
-        UInt16[SS, BP] = 2;
+        SsUInt16[BP] = 2;
         // F000:009E div CX
         try {
             (AX, DX) = Div16(divisor: CX, dividend: (uint)((uint)DX << 16 | (uint)AX));
             throw FailAsUntested("Untested fallthrough after F000:009E");
         }
         catch (CpuException cpuException) {
-            return DispatchCpuFault(cpuException, cs1, 0x009E, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x1000), () => unknown_F000_1000_F1000(0x0000))]);
+            return DispatchCpuFault(cpuException, biosSegment, 0x009E, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x1000), unknown_F000_1000_F1000)]);
         }
     }
 
-    public virtual Action unknown_F000_00A0_F00A0(int loadOffset) {
-        CheckExternalEvents(cs1, 0x00A0);
+    /// <summary>Inputs: AX, CX, DX, BP, DS, DF. Does not return.</summary>
+    public virtual Action unknown_F000_00A0_F00A0() {
+        ushort ax;
+        CheckExternalEvents(biosSegment, 0x00A0);
         // F000:00A0 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:00A3 mov word ptr DS:[0x0018],AX
-        UInt16[DS, 0x0018] = AX;
+        DsGlobals.Word0018 = AX;
         // F000:00A6 mov word ptr DS:[0x001A],CX
-        UInt16[DS, 0x001A] = CX;
+        DsGlobals.Word001A = CX;
         // F000:00AA mov word ptr DS:[0x001C],DX
-        UInt16[DS, 0x001C] = DX;
+        DsGlobals.Word001C = DX;
         // F000:00AE pushf
         Stack.Push16(FlagRegister16);
         // F000:00AF mov DX,0x25C9
@@ -112,51 +177,51 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:00B2 mov AX,0xF110
         AX = 0xF110;
         // F000:00B5 mov word ptr SS:[BP],2
-        UInt16[SS, BP] = 2;
+        SsUInt16[BP] = 2;
         // F000:00BA div AX
         (AX, DX) = Div16(divisor: AX, dividend: (uint)((uint)DX << 16 | (uint)AX));
         // F000:00BC add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:00BF mov word ptr DS:[0x001E],AX
-        UInt16[DS, 0x001E] = AX;
+        DsGlobals.Word001E = AX;
         // F000:00C2 mov word ptr DS:[0x0020],DX
-        UInt16[DS, 0x0020] = DX;
+        DsGlobals.Word0020 = DX;
         // F000:00C6 pushf
         Stack.Push16(FlagRegister16);
         // F000:00C7 mov AX,0x0014
-        AX = 0x0014;
+        ax = 0x0014;
         // F000:00CA mov BX,5
         BX = 5;
         // F000:00CD mov word ptr SS:[BP],2
-        UInt16[SS, BP] = 2;
+        SsUInt16[BP] = 2;
         // F000:00D2 div BL
-        (AL, AH) = Div8(divisor: BL, dividend: AX);
+        (AL, AH) = Div8(divisor: BL, dividend: ax);
         // F000:00D4 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:00D7 mov word ptr DS:[0x0022],AX
-        UInt16[DS, 0x0022] = AX;
+        DsGlobals.Word0022 = AX;
         // F000:00DA mov word ptr DS:[0x0024],BX
-        UInt16[DS, 0x0024] = 5;
+        DsGlobals.Word0024 = 5;
         // F000:00DE mov word ptr DS:[0x0026],DX
-        UInt16[DS, 0x0026] = DX;
+        DsGlobals.Word0026 = DX;
         // F000:00E2 pushf
         Stack.Push16(FlagRegister16);
         // F000:00E3 mov DX,0xA320
         DX = 0xA320;
         // F000:00E6 mov AX,0xC3DA
-        AX = 0xC3DA;
+        ax = 0xC3DA;
         // F000:00E9 mov word ptr DS:[0x0028],0x00FF
-        UInt16[DS, 0x0028] = 0x00FF;
+        DsGlobals.Word0028 = 0x00FF;
         // F000:00EF mov word ptr SS:[BP],4
-        UInt16[SS, BP] = 4;
+        SsUInt16[BP] = 4;
         // F000:00F4 div byte ptr DS:[0x0028]
-        (AL, AH) = Div8(divisor: UInt8[DS, 0x0028], dividend: AX);
+        (AL, AH) = Div8(divisor: DsGlobals.Byte0028, dividend: ax);
         // F000:00F8 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:00FB mov word ptr DS:[0x002A],AX
-        UInt16[DS, 0x002A] = AX;
+        DsGlobals.Word002A = AX;
         // F000:00FE mov word ptr DS:[0x002C],DX
-        UInt16[DS, 0x002C] = 0xA320;
+        DsGlobals.Word002C = 0xA320;
         // F000:0102 pushf
         Stack.Push16(FlagRegister16);
         // F000:0103 mov AX,0xFFFF
@@ -164,83 +229,85 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0106 mov DH,1
         DH = 1;
         // F000:0108 mov word ptr SS:[BP],2
-        UInt16[SS, BP] = 2;
+        SsUInt16[BP] = 2;
         // F000:010D div DH
         try {
             (AL, AH) = Div8(divisor: DH, dividend: AX);
             throw FailAsUntested("Untested fallthrough after F000:010D");
         }
         catch (CpuException cpuException) {
-            return DispatchCpuFault(cpuException, cs1, 0x010D, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x1000), () => unknown_F000_1000_F1000(0x0000))]);
+            return DispatchCpuFault(cpuException, biosSegment, 0x010D, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x1000), unknown_F000_1000_F1000)]);
         }
     }
 
-    public virtual Action unknown_F000_010F_F010F(int loadOffset) {
-        CheckExternalEvents(cs1, 0x010F);
+    /// <summary>Inputs: AX, DX, BP, DS, DF. Does not return.</summary>
+    public virtual Action unknown_F000_010F_F010F() {
+        CheckExternalEvents(biosSegment, 0x010F);
         // F000:010F add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:0112 mov word ptr DS:[0x002E],AX
-        UInt16[DS, 0x002E] = AX;
+        DsGlobals.Word002E = AX;
         // F000:0115 mov word ptr DS:[0x0030],DX
-        UInt16[DS, 0x0030] = DX;
+        DsGlobals.Word0030 = DX;
         // F000:0119 pushf
         Stack.Push16(FlagRegister16);
         // F000:011A mov AX,0xFFFF
         AX = 0xFFFF;
         // F000:011D mov word ptr DS:[0x0032],0xFFFF
-        UInt16[DS, 0x0032] = 0xFFFF;
+        DsGlobals.Word0032 = 0xFFFF;
         // F000:0123 mov word ptr SS:[BP],4
-        UInt16[SS, BP] = 4;
+        SsUInt16[BP] = 4;
         // F000:0128 div byte ptr DS:[0x0033]
         try {
-            (AL, AH) = Div8(divisor: UInt8[DS, 0x0033], dividend: AX);
+            (AL, AH) = Div8(divisor: DsGlobals.Byte0033, dividend: AX);
             throw FailAsUntested("Untested fallthrough after F000:0128");
         }
         catch (CpuException cpuException) {
-            return DispatchCpuFault(cpuException, cs1, 0x0128, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x1000), () => unknown_F000_1000_F1000(0x0000))]);
+            return DispatchCpuFault(cpuException, biosSegment, 0x0128, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x1000), unknown_F000_1000_F1000)]);
         }
     }
 
-    public virtual Action unknown_F000_012C_F012C(int loadOffset) {
-        CheckExternalEvents(cs1, 0x012C);
+    /// <summary>Inputs: AX, DX, BP, DS, DF. Does not return.</summary>
+    public virtual Action unknown_F000_012C_F012C() {
+        ushort ax;
+        CheckExternalEvents(biosSegment, 0x012C);
         // F000:012C add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:012F mov word ptr DS:[0x0034],AX
-        UInt16[DS, 0x0034] = AX;
+        DsGlobals.Word0034 = AX;
         // F000:0132 mov word ptr DS:[0x0036],DX
-        UInt16[DS, 0x0036] = DX;
+        DsGlobals.Word0036 = DX;
         // F000:0136 pushf
         Stack.Push16(FlagRegister16);
         // F000:0137 mov AX,0x008A
-        AX = 0x008A;
+        ax = 0x008A;
         // F000:013A mov CX,0xAE8E
         CX = 0xAE8E;
         // F000:013D mov word ptr SS:[BP],2
-        UInt16[SS, BP] = 2;
+        SsUInt16[BP] = 2;
         // F000:0142 div CL
-        (AL, AH) = Div8(divisor: CL, dividend: AX);
+        (AL, AH) = Div8(divisor: CL, dividend: ax);
         // F000:0144 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:0147 mov word ptr DS:[0x0038],AX
-        UInt16[DS, 0x0038] = AX;
+        DsGlobals.Word0038 = AX;
         // F000:014A mov word ptr DS:[0x003A],CX
-        UInt16[DS, 0x003A] = 0xAE8E;
+        DsGlobals.Word003A = 0xAE8E;
         // F000:014E pushf
         Stack.Push16(FlagRegister16);
         // F000:014F mov DX,0x0669
-        DX = 0x0669;
         // F000:0152 mov AX,0x89F3
         AX = 0x89F3;
         // F000:0155 mov word ptr SS:[BP],2
-        UInt16[SS, BP] = 2;
+        SsUInt16[BP] = 2;
         // F000:015A div AL
         (AL, AH) = Div8(divisor: AL, dividend: AX);
         // F000:015C add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:015F mov word ptr DS:[0x003C],AX
-        UInt16[DS, 0x003C] = AX;
+        DsGlobals.Word003C = AX;
         // F000:0162 mov word ptr DS:[0x003E],DX
-        UInt16[DS, 0x003E] = 0x0669;
+        DsGlobals.Word003E = 0x0669;
         // F000:0166 pushf
         Stack.Push16(FlagRegister16);
         // F000:0167 mov DX,0
@@ -250,17 +317,17 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:016D mov BX,0x00FA
         BX = 0x00FA;
         // F000:0170 mov word ptr SS:[BP],2
-        UInt16[SS, BP] = 2;
+        SsUInt16[BP] = 2;
         // F000:0175 idiv BX
         (AX, DX) = IDiv16(divisor: (short)BX, dividend: (int)((uint)DX << 16 | (uint)AX));
         // F000:0177 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:017A mov word ptr DS:[0x0040],AX
-        UInt16[DS, 0x0040] = AX;
+        DsGlobals.Word0040 = AX;
         // F000:017D mov word ptr DS:[0x0042],BX
-        UInt16[DS, 0x0042] = 0x00FA;
+        DsGlobals.Word0042 = 0x00FA;
         // F000:0181 mov word ptr DS:[0x0044],DX
-        UInt16[DS, 0x0044] = DX;
+        DsGlobals.Word0044 = DX;
         // F000:0185 pushf
         Stack.Push16(FlagRegister16);
         // F000:0186 mov DX,0xA320
@@ -268,27 +335,29 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0189 mov AX,0xC3DA
         AX = 0xC3DA;
         // F000:018C mov word ptr DS:[0x0046],0xFFFF
-        UInt16[DS, 0x0046] = 0xFFFF;
+        DsGlobals.Word0046 = 0xFFFF;
         // F000:0192 mov word ptr SS:[BP],4
-        UInt16[SS, BP] = 4;
+        SsUInt16[BP] = 4;
         // F000:0197 idiv word ptr DS:[0x0046]
         try {
-            (AX, DX) = IDiv16(divisor: (short)UInt16[DS, 0x0046], dividend: (int)((uint)DX << 16 | (uint)AX));
+            (AX, DX) = IDiv16(divisor: (short)DsGlobals.Word0046, dividend: (int)((uint)DX << 16 | (uint)AX));
             throw FailAsUntested("Untested fallthrough after F000:0197");
         }
         catch (CpuException cpuException) {
-            return DispatchCpuFault(cpuException, cs1, 0x0197, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x1000), () => unknown_F000_1000_F1000(0x0000))]);
+            return DispatchCpuFault(cpuException, biosSegment, 0x0197, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x1000), unknown_F000_1000_F1000)]);
         }
     }
 
-    public virtual Action unknown_F000_019B_F019B(int loadOffset) {
-        CheckExternalEvents(cs1, 0x019B);
+    /// <summary>Inputs: AX, DX, BP, DS, DF. Does not return.</summary>
+    public virtual Action unknown_F000_019B_F019B() {
+        ushort cx;
+        CheckExternalEvents(biosSegment, 0x019B);
         // F000:019B add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:019E mov word ptr DS:[0x0048],AX
-        UInt16[DS, 0x0048] = AX;
+        DsGlobals.Word0048 = AX;
         // F000:01A1 mov word ptr DS:[0x004A],DX
-        UInt16[DS, 0x004A] = DX;
+        DsGlobals.Word004A = DX;
         // F000:01A5 pushf
         Stack.Push16(FlagRegister16);
         // F000:01A6 mov DX,0xFFFF
@@ -296,19 +365,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:01A9 mov AX,0xFFFF
         AX = 0xFFFF;
         // F000:01AC mov CX,1
-        CX = 1;
+        cx = 1;
         // F000:01AF mov word ptr SS:[BP],2
-        UInt16[SS, BP] = 2;
+        SsUInt16[BP] = 2;
         // F000:01B4 idiv CX
-        (AX, DX) = IDiv16(divisor: (short)CX, dividend: (int)((uint)DX << 16 | (uint)AX));
+        (AX, DX) = IDiv16(divisor: (short)cx, dividend: (int)((uint)DX << 16 | (uint)AX));
         // F000:01B6 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:01B9 mov word ptr DS:[0x004C],AX
-        UInt16[DS, 0x004C] = AX;
+        DsGlobals.Word004C = AX;
         // F000:01BC mov word ptr DS:[0x004E],CX
-        UInt16[DS, 0x004E] = 1;
+        DsGlobals.Word004E = 1;
         // F000:01C0 mov word ptr DS:[0x0050],DX
-        UInt16[DS, 0x0050] = DX;
+        DsGlobals.Word0050 = DX;
         // F000:01C4 pushf
         Stack.Push16(FlagRegister16);
         // F000:01C5 mov DX,0xFFFF
@@ -316,17 +385,17 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:01C8 mov AX,0xFFFF
         AX = 0xFFFF;
         // F000:01CB mov word ptr DS:[0x0052],0xFFFF
-        UInt16[DS, 0x0052] = 0xFFFF;
+        DsGlobals.Word0052 = 0xFFFF;
         // F000:01D1 mov word ptr SS:[BP],4
-        UInt16[SS, BP] = 4;
+        SsUInt16[BP] = 4;
         // F000:01D6 idiv word ptr DS:[0x0052]
-        (AX, DX) = IDiv16(divisor: (short)UInt16[DS, 0x0052], dividend: (int)((uint)DX << 16 | (uint)AX));
+        (AX, DX) = IDiv16(divisor: (short)DsGlobals.Word0052, dividend: (int)((uint)DX << 16 | (uint)AX));
         // F000:01DA add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:01DD mov word ptr DS:[0x0054],AX
-        UInt16[DS, 0x0054] = AX;
+        DsGlobals.Word0054 = AX;
         // F000:01E0 mov word ptr DS:[0x0056],DX
-        UInt16[DS, 0x0056] = DX;
+        DsGlobals.Word0056 = DX;
         // F000:01E4 pushf
         Stack.Push16(FlagRegister16);
         // F000:01E5 mov DX,0xFBB4
@@ -336,17 +405,17 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:01EB mov CX,0xAE8E
         CX = 0xAE8E;
         // F000:01EE mov word ptr SS:[BP],2
-        UInt16[SS, BP] = 2;
+        SsUInt16[BP] = 2;
         // F000:01F3 idiv CX
         (AX, DX) = IDiv16(divisor: (short)CX, dividend: (int)((uint)DX << 16 | (uint)AX));
         // F000:01F5 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:01F8 mov word ptr DS:[0x0058],AX
-        UInt16[DS, 0x0058] = AX;
+        DsGlobals.Word0058 = AX;
         // F000:01FB mov word ptr DS:[0x005A],CX
-        UInt16[DS, 0x005A] = 0xAE8E;
+        DsGlobals.Word005A = 0xAE8E;
         // F000:01FF mov word ptr DS:[0x005C],DX
-        UInt16[DS, 0x005C] = DX;
+        DsGlobals.Word005C = DX;
         // F000:0203 pushf
         Stack.Push16(FlagRegister16);
         // F000:0204 mov DX,0x25C9
@@ -354,43 +423,45 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0207 mov AX,0xF110
         AX = 0xF110;
         // F000:020A mov word ptr SS:[BP],2
-        UInt16[SS, BP] = 2;
+        SsUInt16[BP] = 2;
         // F000:020F idiv AX
         try {
             (AX, DX) = IDiv16(divisor: (short)AX, dividend: (int)((uint)DX << 16 | (uint)AX));
             throw FailAsUntested("Untested fallthrough after F000:020F");
         }
         catch (CpuException cpuException) {
-            return DispatchCpuFault(cpuException, cs1, 0x020F, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x1000), () => unknown_F000_1000_F1000(0x0000))]);
+            return DispatchCpuFault(cpuException, biosSegment, 0x020F, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x1000), unknown_F000_1000_F1000)]);
         }
     }
 
-    public virtual Action unknown_F000_0211_F0211(int loadOffset) {
-        CheckExternalEvents(cs1, 0x0211);
+    /// <summary>Inputs: AX, DX, BP, DS, DF. Does not return.</summary>
+    public virtual Action unknown_F000_0211_F0211() {
+        ushort ax;
+        CheckExternalEvents(biosSegment, 0x0211);
         // F000:0211 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:0214 mov word ptr DS:[0x005E],AX
-        UInt16[DS, 0x005E] = AX;
+        DsGlobals.Word005E = AX;
         // F000:0217 mov word ptr DS:[0x0060],DX
-        UInt16[DS, 0x0060] = DX;
+        DsGlobals.Word0060 = DX;
         // F000:021B pushf
         Stack.Push16(FlagRegister16);
         // F000:021C mov AX,0x0014
-        AX = 0x0014;
+        ax = 0x0014;
         // F000:021F mov BX,5
         BX = 5;
         // F000:0222 mov word ptr SS:[BP],2
-        UInt16[SS, BP] = 2;
+        SsUInt16[BP] = 2;
         // F000:0227 idiv BL
-        (AL, AH) = IDiv8(divisor: (sbyte)BL, dividend: (short)AX);
+        (AL, AH) = IDiv8(divisor: (sbyte)BL, dividend: (short)ax);
         // F000:0229 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:022C mov word ptr DS:[0x0062],AX
-        UInt16[DS, 0x0062] = AX;
+        DsGlobals.Word0062 = AX;
         // F000:022F mov word ptr DS:[0x0064],BX
-        UInt16[DS, 0x0064] = 5;
+        DsGlobals.Word0064 = 5;
         // F000:0233 mov word ptr DS:[0x0066],DX
-        UInt16[DS, 0x0066] = DX;
+        DsGlobals.Word0066 = DX;
         // F000:0237 pushf
         Stack.Push16(FlagRegister16);
         // F000:0238 mov DX,0xA320
@@ -398,75 +469,77 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:023B mov AX,0xC3DA
         AX = 0xC3DA;
         // F000:023E mov word ptr DS:[0x0068],0x00FF
-        UInt16[DS, 0x0068] = 0x00FF;
+        DsGlobals.Word0068 = 0x00FF;
         // F000:0244 mov word ptr SS:[BP],4
-        UInt16[SS, BP] = 4;
+        SsUInt16[BP] = 4;
         // F000:0249 idiv byte ptr DS:[0x0068]
         try {
-            (AL, AH) = IDiv8(divisor: (sbyte)UInt8[DS, 0x0068], dividend: (short)AX);
+            (AL, AH) = IDiv8(divisor: (sbyte)DsGlobals.Byte0068, dividend: (short)AX);
             throw FailAsUntested("Untested fallthrough after F000:0249");
         }
         catch (CpuException cpuException) {
-            return DispatchCpuFault(cpuException, cs1, 0x0249, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x1000), () => unknown_F000_1000_F1000(0x0000))]);
+            return DispatchCpuFault(cpuException, biosSegment, 0x0249, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x1000), unknown_F000_1000_F1000)]);
         }
     }
 
-    public virtual Action unknown_F000_024D_F024D(int loadOffset) {
-        CheckExternalEvents(cs1, 0x024D);
+    /// <summary>Inputs: AX, DX, BP, DS, DF. Does not return.</summary>
+    public virtual Action unknown_F000_024D_F024D() {
+        ushort ax;
+        CheckExternalEvents(biosSegment, 0x024D);
         // F000:024D add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:0250 mov word ptr DS:[0x006A],AX
-        UInt16[DS, 0x006A] = AX;
+        DsGlobals.Word006A = AX;
         // F000:0253 mov word ptr DS:[0x006C],DX
-        UInt16[DS, 0x006C] = DX;
+        DsGlobals.Word006C = DX;
         // F000:0257 pushf
         Stack.Push16(FlagRegister16);
         // F000:0258 mov AX,0xFFFF
-        AX = 0xFFFF;
+        ax = 0xFFFF;
         // F000:025B mov DH,1
         DH = 1;
         // F000:025D mov word ptr SS:[BP],2
-        UInt16[SS, BP] = 2;
+        SsUInt16[BP] = 2;
         // F000:0262 idiv DH
-        (AL, AH) = IDiv8(divisor: (sbyte)DH, dividend: (short)AX);
+        (AL, AH) = IDiv8(divisor: (sbyte)DH, dividend: (short)ax);
         // F000:0264 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:0267 mov word ptr DS:[0x006E],AX
-        UInt16[DS, 0x006E] = AX;
+        DsGlobals.Word006E = AX;
         // F000:026A mov word ptr DS:[0x0070],DX
-        UInt16[DS, 0x0070] = DX;
+        DsGlobals.Word0070 = DX;
         // F000:026E pushf
         Stack.Push16(FlagRegister16);
         // F000:026F mov AX,0xFFFF
-        AX = 0xFFFF;
+        ax = 0xFFFF;
         // F000:0272 mov word ptr DS:[0x0072],0xFFFF
-        UInt16[DS, 0x0072] = 0xFFFF;
+        DsGlobals.Word0072 = 0xFFFF;
         // F000:0278 mov word ptr SS:[BP],4
-        UInt16[SS, BP] = 4;
+        SsUInt16[BP] = 4;
         // F000:027D idiv byte ptr DS:[0x0073]
-        (AL, AH) = IDiv8(divisor: (sbyte)UInt8[DS, 0x0073], dividend: (short)AX);
+        (AL, AH) = IDiv8(divisor: (sbyte)DsGlobals.Byte0073, dividend: (short)ax);
         // F000:0281 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:0284 mov word ptr DS:[0x0074],AX
-        UInt16[DS, 0x0074] = AX;
+        DsGlobals.Word0074 = AX;
         // F000:0287 mov word ptr DS:[0x0076],DX
-        UInt16[DS, 0x0076] = DX;
+        DsGlobals.Word0076 = DX;
         // F000:028B pushf
         Stack.Push16(FlagRegister16);
         // F000:028C mov AX,0x008A
-        AX = 0x008A;
+        ax = 0x008A;
         // F000:028F mov CX,0xAE8E
         CX = 0xAE8E;
         // F000:0292 mov word ptr SS:[BP],2
-        UInt16[SS, BP] = 2;
+        SsUInt16[BP] = 2;
         // F000:0297 idiv CL
-        (AL, AH) = IDiv8(divisor: (sbyte)CL, dividend: (short)AX);
+        (AL, AH) = IDiv8(divisor: (sbyte)CL, dividend: (short)ax);
         // F000:0299 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:029C mov word ptr DS:[0x0078],AX
-        UInt16[DS, 0x0078] = AX;
+        DsGlobals.Word0078 = AX;
         // F000:029F mov word ptr DS:[0x007A],CX
-        UInt16[DS, 0x007A] = 0xAE8E;
+        DsGlobals.Word007A = 0xAE8E;
         // F000:02A3 pushf
         Stack.Push16(FlagRegister16);
         // F000:02A4 mov DX,0x0669
@@ -474,31 +547,32 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:02A7 mov AX,0x89F3
         AX = 0x89F3;
         // F000:02AA mov word ptr SS:[BP],2
-        UInt16[SS, BP] = 2;
+        SsUInt16[BP] = 2;
         // F000:02AF idiv AL
         try {
             (AL, AH) = IDiv8(divisor: (sbyte)AL, dividend: (short)AX);
             throw FailAsUntested("Untested fallthrough after F000:02AF");
         }
         catch (CpuException cpuException) {
-            return DispatchCpuFault(cpuException, cs1, 0x02AF, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x1000), () => unknown_F000_1000_F1000(0x0000))]);
+            return DispatchCpuFault(cpuException, biosSegment, 0x02AF, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x1000), unknown_F000_1000_F1000)]);
         }
     }
 
-    public virtual Action unknown_F000_02B1_F02B1(int loadOffset) {
-        CheckExternalEvents(cs1, 0x02B1);
+    /// <summary>Inputs: AX, DX, BP, DS, DF. Does not return.</summary>
+    public virtual Action unknown_F000_02B1_F02B1() {
+        CheckExternalEvents(biosSegment, 0x02B1);
         // F000:02B1 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:02B4 mov word ptr DS:[0x007C],AX
-        UInt16[DS, 0x007C] = AX;
+        DsGlobals.Word007C = AX;
         // F000:02B7 mov word ptr DS:[0x007E],DX
-        UInt16[DS, 0x007E] = DX;
+        DsGlobals.Word007E = DX;
         // F000:02BB pushf
         Stack.Push16(FlagRegister16);
         // F000:02BC mov AX,0xFFFF
         AX = 0xFFFF;
         // F000:02BF mov word ptr SS:[BP],2
-        UInt16[SS, BP] = 2;
+        SsUInt16[BP] = 2;
         // F000:02C4 aam
         byte v2_02C4;
         byte v1_02C4;
@@ -511,31 +585,30 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             }
         }
         catch (CpuException cpuException) {
-            return DispatchCpuFault(cpuException, cs1, 0x02C4, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x1000), () => unknown_F000_1000_F1000(0x0000))]);
+            return DispatchCpuFault(cpuException, biosSegment, 0x02C4, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x1000), unknown_F000_1000_F1000)]);
         }
-        byte result_02C4;
         try {
-            result_02C4 = (byte)(v1_02C4 % v2_02C4);
             AH = (byte)(v1_02C4 / v2_02C4);
-            AL = result_02C4;
-            Alu8.UpdateFlags(result_02C4);
+            AL = (byte)(v1_02C4 % v2_02C4);
+            Alu8.UpdateFlags(AL);
             throw FailAsUntested("Untested fallthrough after F000:02C4");
         }
         catch (CpuException cpuException) {
-            return DispatchCpuFault(cpuException, cs1, 0x02C4, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x1000), () => unknown_F000_1000_F1000(0x0000))]);
+            return DispatchCpuFault(cpuException, biosSegment, 0x02C4, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x1000), unknown_F000_1000_F1000)]);
         }
     }
 
-    public virtual Action unknown_F000_02C6_F02C6(int loadOffset) {
-        CheckExternalEvents(cs1, 0x02C6);
+    /// <summary>Inputs: AX, BP, DS, DF. Does not return.</summary>
+    public virtual Action unknown_F000_02C6_F02C6() {
+        CheckExternalEvents(biosSegment, 0x02C6);
         // F000:02C6 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:02C9 mov word ptr DS:[0x0084],AX
-        UInt16[DS, 0x0084] = AX;
+        DsGlobals.Word0084 = AX;
         // F000:02CC pushf
         Stack.Push16(FlagRegister16);
         // F000:02CD mov word ptr SS:[BP],2
-        UInt16[SS, BP] = 2;
+        SsUInt16[BP] = 2;
         // F000:02D2 aam
         byte v2_02D2 = 1;
         byte v1_02D2 = AL;
@@ -543,41 +616,39 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (v2_02D2 == 0) {
             throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
         }
-        byte result_02D2 = (byte)(v1_02D2 % v2_02D2);
         AH = (byte)(v1_02D2 / v2_02D2);
-        AL = result_02D2;
-        Alu8.UpdateFlags(result_02D2);
+        AL = (byte)(v1_02D2 % v2_02D2);
+        Alu8.UpdateFlags(AL);
         // F000:02D4 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:02D7 mov word ptr DS:[0x0086],AX
-        UInt16[DS, 0x0086] = AX;
+        DsGlobals.Word0086 = AX;
         // F000:02DA pushf
         Stack.Push16(FlagRegister16);
         // F000:02DB mov AX,0xFFFF
         AX = 0xFFFF;
         // F000:02DE mov word ptr SS:[BP],2
-        UInt16[SS, BP] = 2;
+        SsUInt16[BP] = 2;
         // F000:02E3 aam
         byte v2_02E3 = 0x0A;
-        byte v1_02E3 = AL;
-        Alu8.UpdateFlags((byte)(v1_02E3 >> 1));
+        byte v1_02E3 = 0xFF;
+        Alu8.UpdateFlags(0x7F);
         if (v2_02E3 == 0) {
             throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
         }
-        byte result_02E3 = (byte)(v1_02E3 % v2_02E3);
         AH = (byte)(v1_02E3 / v2_02E3);
-        AL = result_02E3;
-        Alu8.UpdateFlags(result_02E3);
+        AL = (byte)(v1_02E3 % v2_02E3);
+        Alu8.UpdateFlags(AL);
         // F000:02E5 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:02E8 mov word ptr DS:[0x0088],AX
-        UInt16[DS, 0x0088] = AX;
+        DsGlobals.Word0088 = AX;
         // F000:02EB pushf
         Stack.Push16(FlagRegister16);
         // F000:02EC mov AX,0xFF00
         AX = 0xFF00;
         // F000:02EF mov word ptr SS:[BP],2
-        UInt16[SS, BP] = 2;
+        SsUInt16[BP] = 2;
         // F000:02F4 aam
         byte v2_02F4;
         byte v1_02F4;
@@ -590,31 +661,30 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
             }
         }
         catch (CpuException cpuException) {
-            return DispatchCpuFault(cpuException, cs1, 0x02F4, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x1000), () => unknown_F000_1000_F1000(0x0000))]);
+            return DispatchCpuFault(cpuException, biosSegment, 0x02F4, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x1000), unknown_F000_1000_F1000)]);
         }
-        byte result_02F4;
         try {
-            result_02F4 = (byte)(v1_02F4 % v2_02F4);
             AH = (byte)(v1_02F4 / v2_02F4);
-            AL = result_02F4;
-            Alu8.UpdateFlags(result_02F4);
+            AL = (byte)(v1_02F4 % v2_02F4);
+            Alu8.UpdateFlags(AL);
             throw FailAsUntested("Untested fallthrough after F000:02F4");
         }
         catch (CpuException cpuException) {
-            return DispatchCpuFault(cpuException, cs1, 0x02F4, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x1000), () => unknown_F000_1000_F1000(0x0000))]);
+            return DispatchCpuFault(cpuException, biosSegment, 0x02F4, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x1000), unknown_F000_1000_F1000)]);
         }
     }
 
-    public virtual Action unknown_F000_02F6_F02F6(int loadOffset) {
-        CheckExternalEvents(cs1, 0x02F6);
+    /// <summary>Inputs: AX, BP, DS, DF. Does not return.</summary>
+    public virtual Action unknown_F000_02F6_F02F6() {
+        CheckExternalEvents(biosSegment, 0x02F6);
         // F000:02F6 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:02F9 mov word ptr DS:[0x008A],AX
-        UInt16[DS, 0x008A] = AX;
+        DsGlobals.Word008A = AX;
         // F000:02FC pushf
         Stack.Push16(FlagRegister16);
         // F000:02FD mov word ptr SS:[BP],2
-        UInt16[SS, BP] = 2;
+        SsUInt16[BP] = 2;
         // F000:0302 aam
         byte v2_0302 = 1;
         byte v1_0302 = AL;
@@ -622,62 +692,63 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         if (v2_0302 == 0) {
             throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
         }
-        byte result_0302 = (byte)(v1_0302 % v2_0302);
         AH = (byte)(v1_0302 / v2_0302);
-        AL = result_0302;
-        Alu8.UpdateFlags(result_0302);
+        AL = (byte)(v1_0302 % v2_0302);
+        Alu8.UpdateFlags(AL);
         // F000:0304 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:0307 mov word ptr DS:[0x008C],AX
-        UInt16[DS, 0x008C] = AX;
+        DsGlobals.Word008C = AX;
         // F000:030A pushf
         Stack.Push16(FlagRegister16);
         // F000:030B mov AX,0x3FFB
         AX = 0x3FFB;
         // F000:030E mov word ptr SS:[BP],2
-        UInt16[SS, BP] = 2;
+        SsUInt16[BP] = 2;
         // F000:0313 aam
         byte v2_0313 = 0x0A;
-        byte v1_0313 = AL;
-        Alu8.UpdateFlags((byte)(v1_0313 >> 1));
+        byte v1_0313 = 0xFB;
+        Alu8.UpdateFlags(0x7D);
         if (v2_0313 == 0) {
             throw new Spice86.Core.Emulator.CPU.Exceptions.CpuDivisionErrorException("Division by zero");
         }
-        byte result_0313 = (byte)(v1_0313 % v2_0313);
         AH = (byte)(v1_0313 / v2_0313);
-        AL = result_0313;
-        Alu8.UpdateFlags(result_0313);
+        AL = (byte)(v1_0313 % v2_0313);
+        Alu8.UpdateFlags(AL);
         // F000:0315 add BP,2
         BP = Alu16.Add(BP, 2);
         // F000:0318 mov word ptr DS:[0x008E],AX
-        UInt16[DS, 0x008E] = AX;
+        DsGlobals.Word008E = AX;
         // F000:031B pushf
         Stack.Push16(FlagRegister16);
         // F000:031C hlt
         return Hlt();
     }
 
-    public virtual Action unknown_F000_1000_F1000(int loadOffset) {
-        CheckExternalEvents(cs1, 0x1000);
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, DI, ES, DS, FS, GS. Outputs: all. Changes: all.</summary>
+    public virtual Action unknown_F000_1000_F1000() {
+        ushort ax;
+        ushort di;
+        CheckExternalEvents(biosSegment, 0x1000);
         // F000:1000 push AX
         Stack.Push16(AX);
         // F000:1001 push DI
         Stack.Push16(DI);
         // F000:1002 mov AX,word ptr SS:[BP]
-        AX = UInt16[SS, BP];
+        ax = SsUInt16[BP];
         // F000:1005 mov SI,SP
         // F000:1007 add SI,4
         // F000:100A mov SI,word ptr DS:[SI]
         SI = UInt16[DS, (ushort)(SP + 4)];
         // F000:100C mov word ptr SS:[BP],SI
-        UInt16[SS, BP] = SI;
+        SsUInt16[BP] = SI;
         // F000:100F add SI,AX
-        SI += AX;
+        SI += ax;
         // F000:1011 mov DI,SP
         // F000:1013 add DI,4
-        DI = (ushort)(SP + 4);
+        di = (ushort)(SP + 4);
         // F000:1016 mov word ptr DS:[DI],SI
-        UInt16[DS, DI] = SI;
+        UInt16[DS, di] = SI;
         // F000:1018 pop DI
         DI = Stack.Pop16();
         // F000:1019 pop AX
@@ -686,17 +757,17 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         return InterruptRet();
     }
 
-    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
-        CheckExternalEvents(cs1, 0xFFF0);
+    /// <summary>Inputs: DS, DF. Does not return.</summary>
+    public virtual Action unknown_F000_FFF0_FFFF0() {
+        CheckExternalEvents(biosSegment, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov SP,0x00D0
         SP = 0x00D0;
         // F000:0003 mov word ptr DS:[0],0x1000
-        UInt16[DS, 0] = 0x1000;
+        DsGlobals.Word0000 = 0x1000;
         // F000:0009 mov word ptr DS:[2],0xF000
-        UInt16[DS, 2] = 0xF000;
+        DsGlobals.Word0002 = 0xF000;
         // F000:000F mov BP,0x00D0
-        BP = 0x00D0;
         // F000:0012 mov DX,0
         DX = 0;
         // F000:0015 mov AX,0x0014
@@ -704,17 +775,23 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0018 mov BX,5
         BX = 5;
         // F000:001B mov word ptr SS:[BP],2
-        UInt16[SS, 0x00D0] = 2;
+        SsUInt16[0x00D0] = 2;
         // F000:0020 div BX
         (AX, DX) = Div16(divisor: BX, dividend: (uint)((uint)DX << 16 | (uint)AX));
         // F000:0022 add BP,2
-        BP = Alu16.Add(0x00D0, 2);
+        BP = 0x00D2;
+        CarryFlag = false;
+        ParityFlag = true;
+        AuxiliaryFlag = false;
+        ZeroFlag = false;
+        SignFlag = false;
+        OverflowFlag = false;
         // F000:0025 mov word ptr DS:[0x0080],AX
-        UInt16[DS, 0x0080] = AX;
+        DsGlobals.Word0080 = AX;
         // F000:0028 mov word ptr DS:[0x0082],BX
-        UInt16[DS, 0x0082] = 5;
+        DsGlobals.Word0082 = 5;
         // F000:002C mov word ptr DS:[4],DX
-        UInt16[DS, 4] = DX;
+        DsGlobals.Word0004 = DX;
         // F000:0030 pushf
         Stack.Push16(FlagRegister16);
         // F000:0031 mov DX,0xA320
@@ -722,17 +799,23 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0034 mov AX,0xC3DA
         AX = 0xC3DA;
         // F000:0037 mov word ptr DS:[6],0xFFFF
-        UInt16[DS, 6] = 0xFFFF;
+        DsGlobals.Word0006 = 0xFFFF;
         // F000:003D mov word ptr SS:[BP],4
-        UInt16[SS, BP] = 4;
+        SsUInt16[0x00D2] = 4;
         // F000:0042 div word ptr DS:[6]
-        (AX, DX) = Div16(divisor: UInt16[DS, 6], dividend: (uint)((uint)DX << 16 | (uint)AX));
+        (AX, DX) = Div16(divisor: DsGlobals.Word0006, dividend: (uint)((uint)DX << 16 | (uint)AX));
         // F000:0046 add BP,2
-        BP = Alu16.Add(BP, 2);
+        BP = 0x00D4;
+        CarryFlag = false;
+        ParityFlag = true;
+        AuxiliaryFlag = false;
+        ZeroFlag = false;
+        SignFlag = false;
+        OverflowFlag = false;
         // F000:0049 mov word ptr DS:[8],AX
-        UInt16[DS, 8] = AX;
+        DsGlobals.Word0008 = AX;
         // F000:004C mov word ptr DS:[0x000A],DX
-        UInt16[DS, 0x000A] = DX;
+        DsGlobals.Word000A = DX;
         // F000:0050 pushf
         Stack.Push16(FlagRegister16);
         // F000:0051 mov DX,0xFFFF
@@ -742,15 +825,262 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0057 mov CX,1
         CX = 1;
         // F000:005A mov word ptr SS:[BP],2
-        UInt16[SS, BP] = 2;
+        SsUInt16[0x00D4] = 2;
         // F000:005F div CX
         try {
             (AX, DX) = Div16(divisor: CX, dividend: (uint)((uint)DX << 16 | (uint)AX));
             throw FailAsUntested("Untested fallthrough after F000:005F");
         }
         catch (CpuException cpuException) {
-            return DispatchCpuFault(cpuException, cs1, 0x005F, [new CpuFaultTarget(new SegmentedAddress(cs1, 0x1000), () => unknown_F000_1000_F1000(0x0000))]);
+            return DispatchCpuFault(cpuException, biosSegment, 0x005F, [new CpuFaultTarget(new SegmentedAddress(biosSegment, 0x1000), unknown_F000_1000_F1000)]);
         }
     }
 
+}
+
+// ==== file: DsGlobals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class DsGlobals : MemoryBasedDataStructureWithDsBaseAddress {
+    private readonly IMemory _memory;
+    private readonly SegmentRegisters _segmentRegisters;
+
+    private ushort Segment => _segmentRegisters.UInt16[(uint)SegmentRegisterIndex.DsIndex];
+
+    public DsGlobals(IMemory memory, SegmentRegisters segmentRegisters) : base(memory, segmentRegisters) {
+        _memory = memory;
+        _segmentRegisters = segmentRegisters;
+    }
+
+    /// DS:0x0000, whatever DS holds at the access.
+    public ushort Word0000 { get => _memory.UInt16[Segment, 0x0000]; set => _memory.UInt16[Segment, 0x0000] = value; }
+
+    /// DS:0x0002, whatever DS holds at the access.
+    public ushort Word0002 { get => _memory.UInt16[Segment, 0x0002]; set => _memory.UInt16[Segment, 0x0002] = value; }
+
+    /// DS:0x0004, whatever DS holds at the access.
+    public ushort Word0004 { get => _memory.UInt16[Segment, 0x0004]; set => _memory.UInt16[Segment, 0x0004] = value; }
+
+    /// DS:0x0006, whatever DS holds at the access.
+    public ushort Word0006 { get => _memory.UInt16[Segment, 0x0006]; set => _memory.UInt16[Segment, 0x0006] = value; }
+
+    /// DS:0x0008, whatever DS holds at the access.
+    public ushort Word0008 { get => _memory.UInt16[Segment, 0x0008]; set => _memory.UInt16[Segment, 0x0008] = value; }
+
+    /// DS:0x000A, whatever DS holds at the access.
+    public ushort Word000A { get => _memory.UInt16[Segment, 0x000A]; set => _memory.UInt16[Segment, 0x000A] = value; }
+
+    /// DS:0x000C, whatever DS holds at the access.
+    public ushort Word000C { get => _memory.UInt16[Segment, 0x000C]; set => _memory.UInt16[Segment, 0x000C] = value; }
+
+    /// DS:0x000E, whatever DS holds at the access.
+    public ushort Word000E { get => _memory.UInt16[Segment, 0x000E]; set => _memory.UInt16[Segment, 0x000E] = value; }
+
+    /// DS:0x0010, whatever DS holds at the access.
+    public ushort Word0010 { get => _memory.UInt16[Segment, 0x0010]; set => _memory.UInt16[Segment, 0x0010] = value; }
+
+    /// DS:0x0012, whatever DS holds at the access.
+    public ushort Word0012 { get => _memory.UInt16[Segment, 0x0012]; set => _memory.UInt16[Segment, 0x0012] = value; }
+
+    /// DS:0x0014, whatever DS holds at the access.
+    public ushort Word0014 { get => _memory.UInt16[Segment, 0x0014]; set => _memory.UInt16[Segment, 0x0014] = value; }
+
+    /// DS:0x0016, whatever DS holds at the access.
+    public ushort Word0016 { get => _memory.UInt16[Segment, 0x0016]; set => _memory.UInt16[Segment, 0x0016] = value; }
+
+    /// DS:0x0018, whatever DS holds at the access.
+    public ushort Word0018 { get => _memory.UInt16[Segment, 0x0018]; set => _memory.UInt16[Segment, 0x0018] = value; }
+
+    /// DS:0x001A, whatever DS holds at the access.
+    public ushort Word001A { get => _memory.UInt16[Segment, 0x001A]; set => _memory.UInt16[Segment, 0x001A] = value; }
+
+    /// DS:0x001C, whatever DS holds at the access.
+    public ushort Word001C { get => _memory.UInt16[Segment, 0x001C]; set => _memory.UInt16[Segment, 0x001C] = value; }
+
+    /// DS:0x001E, whatever DS holds at the access.
+    public ushort Word001E { get => _memory.UInt16[Segment, 0x001E]; set => _memory.UInt16[Segment, 0x001E] = value; }
+
+    /// DS:0x0020, whatever DS holds at the access.
+    public ushort Word0020 { get => _memory.UInt16[Segment, 0x0020]; set => _memory.UInt16[Segment, 0x0020] = value; }
+
+    /// DS:0x0022, whatever DS holds at the access.
+    public ushort Word0022 { get => _memory.UInt16[Segment, 0x0022]; set => _memory.UInt16[Segment, 0x0022] = value; }
+
+    /// DS:0x0024, whatever DS holds at the access.
+    public ushort Word0024 { get => _memory.UInt16[Segment, 0x0024]; set => _memory.UInt16[Segment, 0x0024] = value; }
+
+    /// DS:0x0026, whatever DS holds at the access.
+    public ushort Word0026 { get => _memory.UInt16[Segment, 0x0026]; set => _memory.UInt16[Segment, 0x0026] = value; }
+
+    /// DS:0x0028, whatever DS holds at the access.
+    public byte Byte0028 { get => _memory.UInt8[Segment, 0x0028]; set => _memory.UInt8[Segment, 0x0028] = value; }
+
+    /// DS:0x0028, whatever DS holds at the access.
+    public ushort Word0028 { get => _memory.UInt16[Segment, 0x0028]; set => _memory.UInt16[Segment, 0x0028] = value; }
+
+    /// DS:0x002A, whatever DS holds at the access.
+    public ushort Word002A { get => _memory.UInt16[Segment, 0x002A]; set => _memory.UInt16[Segment, 0x002A] = value; }
+
+    /// DS:0x002C, whatever DS holds at the access.
+    public ushort Word002C { get => _memory.UInt16[Segment, 0x002C]; set => _memory.UInt16[Segment, 0x002C] = value; }
+
+    /// DS:0x002E, whatever DS holds at the access.
+    public ushort Word002E { get => _memory.UInt16[Segment, 0x002E]; set => _memory.UInt16[Segment, 0x002E] = value; }
+
+    /// DS:0x0030, whatever DS holds at the access.
+    public ushort Word0030 { get => _memory.UInt16[Segment, 0x0030]; set => _memory.UInt16[Segment, 0x0030] = value; }
+
+    /// DS:0x0032, whatever DS holds at the access.
+    public ushort Word0032 { get => _memory.UInt16[Segment, 0x0032]; set => _memory.UInt16[Segment, 0x0032] = value; }
+
+    /// DS:0x0033, whatever DS holds at the access.
+    public byte Byte0033 { get => _memory.UInt8[Segment, 0x0033]; set => _memory.UInt8[Segment, 0x0033] = value; }
+
+    /// DS:0x0034, whatever DS holds at the access.
+    public ushort Word0034 { get => _memory.UInt16[Segment, 0x0034]; set => _memory.UInt16[Segment, 0x0034] = value; }
+
+    /// DS:0x0036, whatever DS holds at the access.
+    public ushort Word0036 { get => _memory.UInt16[Segment, 0x0036]; set => _memory.UInt16[Segment, 0x0036] = value; }
+
+    /// DS:0x0038, whatever DS holds at the access.
+    public ushort Word0038 { get => _memory.UInt16[Segment, 0x0038]; set => _memory.UInt16[Segment, 0x0038] = value; }
+
+    /// DS:0x003A, whatever DS holds at the access.
+    public ushort Word003A { get => _memory.UInt16[Segment, 0x003A]; set => _memory.UInt16[Segment, 0x003A] = value; }
+
+    /// DS:0x003C, whatever DS holds at the access.
+    public ushort Word003C { get => _memory.UInt16[Segment, 0x003C]; set => _memory.UInt16[Segment, 0x003C] = value; }
+
+    /// DS:0x003E, whatever DS holds at the access.
+    public ushort Word003E { get => _memory.UInt16[Segment, 0x003E]; set => _memory.UInt16[Segment, 0x003E] = value; }
+
+    /// DS:0x0040, whatever DS holds at the access.
+    public ushort Word0040 { get => _memory.UInt16[Segment, 0x0040]; set => _memory.UInt16[Segment, 0x0040] = value; }
+
+    /// DS:0x0042, whatever DS holds at the access.
+    public ushort Word0042 { get => _memory.UInt16[Segment, 0x0042]; set => _memory.UInt16[Segment, 0x0042] = value; }
+
+    /// DS:0x0044, whatever DS holds at the access.
+    public ushort Word0044 { get => _memory.UInt16[Segment, 0x0044]; set => _memory.UInt16[Segment, 0x0044] = value; }
+
+    /// DS:0x0046, whatever DS holds at the access.
+    public ushort Word0046 { get => _memory.UInt16[Segment, 0x0046]; set => _memory.UInt16[Segment, 0x0046] = value; }
+
+    /// DS:0x0048, whatever DS holds at the access.
+    public ushort Word0048 { get => _memory.UInt16[Segment, 0x0048]; set => _memory.UInt16[Segment, 0x0048] = value; }
+
+    /// DS:0x004A, whatever DS holds at the access.
+    public ushort Word004A { get => _memory.UInt16[Segment, 0x004A]; set => _memory.UInt16[Segment, 0x004A] = value; }
+
+    /// DS:0x004C, whatever DS holds at the access.
+    public ushort Word004C { get => _memory.UInt16[Segment, 0x004C]; set => _memory.UInt16[Segment, 0x004C] = value; }
+
+    /// DS:0x004E, whatever DS holds at the access.
+    public ushort Word004E { get => _memory.UInt16[Segment, 0x004E]; set => _memory.UInt16[Segment, 0x004E] = value; }
+
+    /// DS:0x0050, whatever DS holds at the access.
+    public ushort Word0050 { get => _memory.UInt16[Segment, 0x0050]; set => _memory.UInt16[Segment, 0x0050] = value; }
+
+    /// DS:0x0052, whatever DS holds at the access.
+    public ushort Word0052 { get => _memory.UInt16[Segment, 0x0052]; set => _memory.UInt16[Segment, 0x0052] = value; }
+
+    /// DS:0x0054, whatever DS holds at the access.
+    public ushort Word0054 { get => _memory.UInt16[Segment, 0x0054]; set => _memory.UInt16[Segment, 0x0054] = value; }
+
+    /// DS:0x0056, whatever DS holds at the access.
+    public ushort Word0056 { get => _memory.UInt16[Segment, 0x0056]; set => _memory.UInt16[Segment, 0x0056] = value; }
+
+    /// DS:0x0058, whatever DS holds at the access.
+    public ushort Word0058 { get => _memory.UInt16[Segment, 0x0058]; set => _memory.UInt16[Segment, 0x0058] = value; }
+
+    /// DS:0x005A, whatever DS holds at the access.
+    public ushort Word005A { get => _memory.UInt16[Segment, 0x005A]; set => _memory.UInt16[Segment, 0x005A] = value; }
+
+    /// DS:0x005C, whatever DS holds at the access.
+    public ushort Word005C { get => _memory.UInt16[Segment, 0x005C]; set => _memory.UInt16[Segment, 0x005C] = value; }
+
+    /// DS:0x005E, whatever DS holds at the access.
+    public ushort Word005E { get => _memory.UInt16[Segment, 0x005E]; set => _memory.UInt16[Segment, 0x005E] = value; }
+
+    /// DS:0x0060, whatever DS holds at the access.
+    public ushort Word0060 { get => _memory.UInt16[Segment, 0x0060]; set => _memory.UInt16[Segment, 0x0060] = value; }
+
+    /// DS:0x0062, whatever DS holds at the access.
+    public ushort Word0062 { get => _memory.UInt16[Segment, 0x0062]; set => _memory.UInt16[Segment, 0x0062] = value; }
+
+    /// DS:0x0064, whatever DS holds at the access.
+    public ushort Word0064 { get => _memory.UInt16[Segment, 0x0064]; set => _memory.UInt16[Segment, 0x0064] = value; }
+
+    /// DS:0x0066, whatever DS holds at the access.
+    public ushort Word0066 { get => _memory.UInt16[Segment, 0x0066]; set => _memory.UInt16[Segment, 0x0066] = value; }
+
+    /// DS:0x0068, whatever DS holds at the access.
+    public byte Byte0068 { get => _memory.UInt8[Segment, 0x0068]; set => _memory.UInt8[Segment, 0x0068] = value; }
+
+    /// DS:0x0068, whatever DS holds at the access.
+    public ushort Word0068 { get => _memory.UInt16[Segment, 0x0068]; set => _memory.UInt16[Segment, 0x0068] = value; }
+
+    /// DS:0x006A, whatever DS holds at the access.
+    public ushort Word006A { get => _memory.UInt16[Segment, 0x006A]; set => _memory.UInt16[Segment, 0x006A] = value; }
+
+    /// DS:0x006C, whatever DS holds at the access.
+    public ushort Word006C { get => _memory.UInt16[Segment, 0x006C]; set => _memory.UInt16[Segment, 0x006C] = value; }
+
+    /// DS:0x006E, whatever DS holds at the access.
+    public ushort Word006E { get => _memory.UInt16[Segment, 0x006E]; set => _memory.UInt16[Segment, 0x006E] = value; }
+
+    /// DS:0x0070, whatever DS holds at the access.
+    public ushort Word0070 { get => _memory.UInt16[Segment, 0x0070]; set => _memory.UInt16[Segment, 0x0070] = value; }
+
+    /// DS:0x0072, whatever DS holds at the access.
+    public ushort Word0072 { get => _memory.UInt16[Segment, 0x0072]; set => _memory.UInt16[Segment, 0x0072] = value; }
+
+    /// DS:0x0073, whatever DS holds at the access.
+    public byte Byte0073 { get => _memory.UInt8[Segment, 0x0073]; set => _memory.UInt8[Segment, 0x0073] = value; }
+
+    /// DS:0x0074, whatever DS holds at the access.
+    public ushort Word0074 { get => _memory.UInt16[Segment, 0x0074]; set => _memory.UInt16[Segment, 0x0074] = value; }
+
+    /// DS:0x0076, whatever DS holds at the access.
+    public ushort Word0076 { get => _memory.UInt16[Segment, 0x0076]; set => _memory.UInt16[Segment, 0x0076] = value; }
+
+    /// DS:0x0078, whatever DS holds at the access.
+    public ushort Word0078 { get => _memory.UInt16[Segment, 0x0078]; set => _memory.UInt16[Segment, 0x0078] = value; }
+
+    /// DS:0x007A, whatever DS holds at the access.
+    public ushort Word007A { get => _memory.UInt16[Segment, 0x007A]; set => _memory.UInt16[Segment, 0x007A] = value; }
+
+    /// DS:0x007C, whatever DS holds at the access.
+    public ushort Word007C { get => _memory.UInt16[Segment, 0x007C]; set => _memory.UInt16[Segment, 0x007C] = value; }
+
+    /// DS:0x007E, whatever DS holds at the access.
+    public ushort Word007E { get => _memory.UInt16[Segment, 0x007E]; set => _memory.UInt16[Segment, 0x007E] = value; }
+
+    /// DS:0x0080, whatever DS holds at the access.
+    public ushort Word0080 { get => _memory.UInt16[Segment, 0x0080]; set => _memory.UInt16[Segment, 0x0080] = value; }
+
+    /// DS:0x0082, whatever DS holds at the access.
+    public ushort Word0082 { get => _memory.UInt16[Segment, 0x0082]; set => _memory.UInt16[Segment, 0x0082] = value; }
+
+    /// DS:0x0084, whatever DS holds at the access.
+    public ushort Word0084 { get => _memory.UInt16[Segment, 0x0084]; set => _memory.UInt16[Segment, 0x0084] = value; }
+
+    /// DS:0x0086, whatever DS holds at the access.
+    public ushort Word0086 { get => _memory.UInt16[Segment, 0x0086]; set => _memory.UInt16[Segment, 0x0086] = value; }
+
+    /// DS:0x0088, whatever DS holds at the access.
+    public ushort Word0088 { get => _memory.UInt16[Segment, 0x0088]; set => _memory.UInt16[Segment, 0x0088] = value; }
+
+    /// DS:0x008A, whatever DS holds at the access.
+    public ushort Word008A { get => _memory.UInt16[Segment, 0x008A]; set => _memory.UInt16[Segment, 0x008A] = value; }
+
+    /// DS:0x008C, whatever DS holds at the access.
+    public ushort Word008C { get => _memory.UInt16[Segment, 0x008C]; set => _memory.UInt16[Segment, 0x008C] = value; }
+
+    /// DS:0x008E, whatever DS holds at the access.
+    public ushort Word008E { get => _memory.UInt16[Segment, 0x008E]; set => _memory.UInt16[Segment, 0x008E] = value; }
 }

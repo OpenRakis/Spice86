@@ -1,3 +1,4 @@
+// ==== file: CfgGeneratedOverrideSupplier.cs ====
 using Spice86.Core.CLI;
 using Spice86.Core.Emulator.CPU.Exceptions;
 using Spice86.Core.Emulator.Function;
@@ -16,17 +17,54 @@ public sealed class CfgGeneratedOverrideSupplier : IOverrideSupplier {
     }
 }
 
-public class CfgGeneratedOverrides : CSharpOverrideHelper {
-    protected readonly ushort cs1;
+
+// ==== file: CfgGeneratedOverrides.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
+    protected readonly ushort biosSegment;
+
+    private readonly Func<int, Action> unknown_F000_FFF0_FFFF0Entry;
+
+    protected readonly DsGlobals DsGlobals;
 
     public CfgGeneratedOverrides(IDictionary<SegmentedAddress, FunctionInformation> functionInformations, Machine machine, ILogger loggerService, Configuration configuration, ushort programStartSegment) : base(functionInformations, machine, loggerService, configuration) {
-        cs1 = 0xF000;
+        biosSegment = 0xF000;
+        DsGlobals = new DsGlobals(Memory, State.SegmentRegisters);
 
-        DefineFunctionWithoutInterpreterFallback(cs1, 0xFFF0, unknown_F000_FFF0_FFFF0, "unknown");
+        unknown_F000_FFF0_FFFF0Entry = _ => unknown_F000_FFF0_FFFF0();
+        DefineFunctionWithoutInterpreterFallback(biosSegment, 0xFFF0, unknown_F000_FFF0_FFFF0Entry, "unknown");
     }
 
-    public virtual Action unknown_F000_FFF0_FFFF0(int loadOffset) {
-        CheckExternalEvents(cs1, 0xFFF0);
+}
+
+// ==== file: CfgGeneratedOverrides.F000.cs ====
+using Spice86.Core.CLI;
+using Spice86.Core.Emulator.CPU.Exceptions;
+using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.ReverseEngineer;
+using Spice86.Core.Emulator.VM;
+using Microsoft.Extensions.Logging;
+using Spice86.Shared.Emulator.Memory;
+using System;
+using System.Collections.Generic;
+
+namespace Spice86.Generated;
+
+public partial class CfgGeneratedOverrides {
+    /// <summary>Inputs: DX, DS, DF. Does not return.</summary>
+    public virtual Action unknown_F000_FFF0_FFFF0() {
+        CheckExternalEvents(biosSegment, 0xFFF0);
         // F000:FFF0 jmp short 0
         // F000:0000 mov BX,1
         BX = 1;
@@ -41,13 +79,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AX = 0x0110;
         finalAuxiliaryFlag_000C = true;
         finalCarryFlag_000C = true;
-        Alu8.UpdateFlags(AL);
-        AL &= 0x0F;
+        Alu8.UpdateFlags(0x10);
+        AL = 0;
         AuxiliaryFlag = finalAuxiliaryFlag_000C;
         CarryFlag = finalCarryFlag_000C;
         OverflowFlag = false;
         // F000:000D mov word ptr DS:[0],AX
-        UInt16[DS, 0] = AX;
+        DsGlobals.Word0000 = 0x0100;
         // F000:0010 pushf
         Stack.Push16(FlagRegister16);
         // F000:0011 mov AX,0xFFF9
@@ -66,14 +104,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CarryFlag = finalCarryFlag_0014;
         OverflowFlag = false;
         // F000:0015 mov word ptr DS:[2],AX
-        UInt16[DS, 2] = AX;
+        DsGlobals.Word0002 = AX;
         // F000:0018 pushf
         Stack.Push16(FlagRegister16);
         // F000:0019 push BX
-        Stack.Push16(BX);
+        Stack.Push16(1);
         // F000:001A popf
         FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x001B);
+        CheckExternalEvents(biosSegment, 0x001B);
         // F000:001B mov AX,0xFFF9
         AX = 0xFFF9;
         // F000:001E aaa
@@ -90,7 +128,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CarryFlag = finalCarryFlag_001E;
         OverflowFlag = false;
         // F000:001F mov word ptr DS:[4],AX
-        UInt16[DS, 4] = AX;
+        DsGlobals.Word0004 = AX;
         // F000:0022 pushf
         Stack.Push16(FlagRegister16);
         // F000:0023 mov AX,0x5D50
@@ -109,7 +147,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CarryFlag = finalCarryFlag_0026;
         OverflowFlag = false;
         // F000:0027 mov word ptr DS:[6],AX
-        UInt16[DS, 6] = AX;
+        DsGlobals.Word0006 = AX;
         // F000:002A pushf
         Stack.Push16(FlagRegister16);
         // F000:002B mov AX,0x4726
@@ -128,7 +166,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CarryFlag = finalCarryFlag_002E;
         OverflowFlag = false;
         // F000:002F mov word ptr DS:[8],AX
-        UInt16[DS, 8] = AX;
+        DsGlobals.Word0008 = AX;
         // F000:0032 pushf
         Stack.Push16(FlagRegister16);
         // F000:0033 mov AX,0x000A
@@ -139,13 +177,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AH = 0xFF;
         finalAuxiliaryFlag_0036 = true;
         finalCarryFlag_0036 = true;
-        Alu8.UpdateFlags(AL);
-        AL &= 0x0F;
+        Alu8.UpdateFlags(4);
+        AL = 4;
         AuxiliaryFlag = finalAuxiliaryFlag_0036;
         CarryFlag = finalCarryFlag_0036;
         OverflowFlag = false;
         // F000:0037 mov word ptr DS:[0x000A],AX
-        UInt16[DS, 0x000A] = AX;
+        DsGlobals.Word000A = 0xFF04;
         // F000:003A pushf
         Stack.Push16(FlagRegister16);
         // F000:003B mov AX,0xFFF9
@@ -165,14 +203,14 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CarryFlag = finalCarryFlag_003E;
         OverflowFlag = false;
         // F000:003F mov word ptr DS:[0x000C],AX
-        UInt16[DS, 0x000C] = AX;
+        DsGlobals.Word000C = AX;
         // F000:0042 pushf
         Stack.Push16(FlagRegister16);
         // F000:0043 push BX
         Stack.Push16(BX);
         // F000:0044 popf
         FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x0045);
+        CheckExternalEvents(biosSegment, 0x0045);
         // F000:0045 mov AX,0xFFF9
         AX = 0xFFF9;
         // F000:0048 aas
@@ -190,7 +228,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CarryFlag = finalCarryFlag_0048;
         OverflowFlag = false;
         // F000:0049 mov word ptr DS:[0x000E],AX
-        UInt16[DS, 0x000E] = AX;
+        DsGlobals.Word000E = AX;
         // F000:004C pushf
         Stack.Push16(FlagRegister16);
         // F000:004D mov AX,0xDCC0
@@ -210,7 +248,7 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CarryFlag = finalCarryFlag_0050;
         OverflowFlag = false;
         // F000:0051 mov word ptr DS:[0x0010],AX
-        UInt16[DS, 0x0010] = AX;
+        DsGlobals.Word0010 = AX;
         // F000:0054 pushf
         Stack.Push16(FlagRegister16);
         // F000:0055 mov AX,0x5FFB
@@ -221,26 +259,26 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         AH = 0x5E;
         finalAuxiliaryFlag_0058 = true;
         finalCarryFlag_0058 = true;
-        Alu8.UpdateFlags(AL);
-        AL &= 0x0F;
+        Alu8.UpdateFlags(0xF5);
+        AL = 5;
         AuxiliaryFlag = finalAuxiliaryFlag_0058;
         CarryFlag = finalCarryFlag_0058;
         OverflowFlag = false;
         // F000:0059 mov word ptr DS:[0x0012],AX
-        UInt16[DS, 0x0012] = AX;
+        DsGlobals.Word0012 = 0x5E05;
         // F000:005C pushf
         Stack.Push16(FlagRegister16);
         // F000:005D mov AX,0x00AC
         AX = 0x00AC;
         // F000:0060 daa
-        byte initialAl_0060 = AL;
+        byte initialAl_0060 = 0xAC;
         bool initialCf_0060 = CarryFlag;
         bool finalAuxiliaryFlag_0060 = false;
         bool finalCarryFlag_0060 = false;
         AL = 0xB2;
         finalAuxiliaryFlag_0060 = true;
         if (initialAl_0060 > 0x99 || initialCf_0060) {
-            AL += 0x60;
+            AL = 0x12;
             finalCarryFlag_0060 = true;
         }
         else {
@@ -251,13 +289,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CarryFlag = finalCarryFlag_0060;
         OverflowFlag = false;
         // F000:0061 mov word ptr DS:[0x0014],AX
-        UInt16[DS, 0x0014] = AX;
+        DsGlobals.Word0014 = AX;
         // F000:0064 pushf
         Stack.Push16(FlagRegister16);
         // F000:0065 mov AX,0xFFF9
         AX = 0xFFF9;
         // F000:0068 daa
-        byte initialAl_0068 = AL;
+        byte initialAl_0068 = 0xF9;
         bool initialCf_0068 = CarryFlag;
         bool finalAuxiliaryFlag_0068 = false;
         bool finalCarryFlag_0068 = false;
@@ -277,18 +315,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CarryFlag = finalCarryFlag_0068;
         OverflowFlag = false;
         // F000:0069 mov word ptr DS:[0x0016],AX
-        UInt16[DS, 0x0016] = AX;
+        DsGlobals.Word0016 = AX;
         // F000:006C pushf
         Stack.Push16(FlagRegister16);
         // F000:006D push BX
         Stack.Push16(BX);
         // F000:006E popf
         FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x006F);
+        CheckExternalEvents(biosSegment, 0x006F);
         // F000:006F mov AX,0xFFF8
         AX = 0xFFF8;
         // F000:0072 daa
-        byte initialAl_0072 = AL;
+        byte initialAl_0072 = 0xF8;
         bool initialCf_0072 = CarryFlag;
         bool finalAuxiliaryFlag_0072 = false;
         bool finalCarryFlag_0072 = false;
@@ -308,25 +346,25 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CarryFlag = finalCarryFlag_0072;
         OverflowFlag = false;
         // F000:0073 mov word ptr DS:[0x0018],AX
-        UInt16[DS, 0x0018] = AX;
+        DsGlobals.Word0018 = AX;
         // F000:0076 pushf
         Stack.Push16(FlagRegister16);
         // F000:0077 push CX
         Stack.Push16(CX);
         // F000:0078 popf
         FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x0079);
+        CheckExternalEvents(biosSegment, 0x0079);
         // F000:0079 mov AX,0xFF8B
         AX = 0xFF8B;
         // F000:007C daa
-        byte initialAl_007C = AL;
+        byte initialAl_007C = 0x8B;
         bool initialCf_007C = CarryFlag;
         bool finalAuxiliaryFlag_007C = false;
         bool finalCarryFlag_007C = false;
         AL = 0x91;
         finalAuxiliaryFlag_007C = true;
         if (initialAl_007C > 0x99 || initialCf_007C) {
-            AL += 0x60;
+            AL = 0xF1;
             finalCarryFlag_007C = true;
         }
         else {
@@ -337,18 +375,18 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CarryFlag = finalCarryFlag_007C;
         OverflowFlag = false;
         // F000:007D mov word ptr DS:[0x001A],AX
-        UInt16[DS, 0x001A] = AX;
+        DsGlobals.Word001A = AX;
         // F000:0080 pushf
         Stack.Push16(FlagRegister16);
         // F000:0081 push CX
         Stack.Push16(CX);
         // F000:0082 popf
         FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x0083);
+        CheckExternalEvents(biosSegment, 0x0083);
         // F000:0083 mov AX,0x0082
         AX = 0x0082;
         // F000:0086 daa
-        byte initialAl_0086 = AL;
+        byte initialAl_0086 = 0x82;
         bool initialCf_0086 = CarryFlag;
         bool finalAuxiliaryFlag_0086 = false;
         bool finalCarryFlag_0086 = false;
@@ -368,20 +406,20 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CarryFlag = finalCarryFlag_0086;
         OverflowFlag = false;
         // F000:0087 mov word ptr DS:[0x001C],AX
-        UInt16[DS, 0x001C] = AX;
+        DsGlobals.Word001C = AX;
         // F000:008A pushf
         Stack.Push16(FlagRegister16);
         // F000:008B mov AX,0xCD3C
         AX = 0xCD3C;
         // F000:008E daa
-        byte initialAl_008E = AL;
+        byte initialAl_008E = 0x3C;
         bool initialCf_008E = CarryFlag;
         bool finalAuxiliaryFlag_008E = false;
         bool finalCarryFlag_008E = false;
         AL = 0x42;
         finalAuxiliaryFlag_008E = true;
         if (initialAl_008E > 0x99 || initialCf_008E) {
-            AL += 0x60;
+            AL = 0xA2;
             finalCarryFlag_008E = true;
         }
         else {
@@ -392,13 +430,13 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CarryFlag = finalCarryFlag_008E;
         OverflowFlag = false;
         // F000:008F mov word ptr DS:[0x001E],AX
-        UInt16[DS, 0x001E] = AX;
+        DsGlobals.Word001E = AX;
         // F000:0092 pushf
         Stack.Push16(FlagRegister16);
         // F000:0093 mov AX,0x3F00
         AX = 0x3F00;
         // F000:0096 daa
-        byte initialAl_0096 = AL;
+        byte initialAl_0096 = 0;
         bool initialCf_0096 = CarryFlag;
         bool finalAuxiliaryFlag_0096 = false;
         bool finalCarryFlag_0096 = false;
@@ -418,21 +456,21 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CarryFlag = finalCarryFlag_0096;
         OverflowFlag = false;
         // F000:0097 mov word ptr DS:[0x0020],AX
-        UInt16[DS, 0x0020] = AX;
+        DsGlobals.Word0020 = AX;
         // F000:009A pushf
         Stack.Push16(FlagRegister16);
         // F000:009B mov AX,0x00AC
         AX = 0x00AC;
         // F000:009E das
-        byte initialAl_009E = AL;
+        byte initialAl_009E = 0xAC;
         bool initialCf_009E = CarryFlag;
         bool finalAuxiliaryFlag_009E = false;
         bool finalCarryFlag_009E = false;
         AL = 0xA6;
-        finalCarryFlag_009E = initialAl_009E < 6 || initialCf_009E;
+        finalCarryFlag_009E = initialCf_009E;
         finalAuxiliaryFlag_009E = true;
         if (initialAl_009E > 0x99 || initialCf_009E) {
-            AL -= 0x60;
+            AL = 0x46;
             finalCarryFlag_009E = true;
         }
         Alu8.UpdateFlags(AL);
@@ -440,19 +478,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CarryFlag = finalCarryFlag_009E;
         OverflowFlag = false;
         // F000:009F mov word ptr DS:[0x0022],AX
-        UInt16[DS, 0x0022] = AX;
+        DsGlobals.Word0022 = AX;
         // F000:00A2 pushf
         Stack.Push16(FlagRegister16);
         // F000:00A3 mov AX,0xFFF9
         AX = 0xFFF9;
         // F000:00A6 das
-        byte initialAl_00A6 = AL;
+        byte initialAl_00A6 = 0xF9;
         bool initialCf_00A6 = CarryFlag;
         bool finalAuxiliaryFlag_00A6 = false;
         bool finalCarryFlag_00A6 = false;
         if (AuxiliaryFlag) {
             AL = 0xF3;
-            finalCarryFlag_00A6 = initialAl_00A6 < 6 || initialCf_00A6;
+            finalCarryFlag_00A6 = initialCf_00A6;
             finalAuxiliaryFlag_00A6 = true;
         }
         if (initialAl_00A6 > 0x99 || initialCf_00A6) {
@@ -464,24 +502,24 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CarryFlag = finalCarryFlag_00A6;
         OverflowFlag = false;
         // F000:00A7 mov word ptr DS:[0x0024],AX
-        UInt16[DS, 0x0024] = AX;
+        DsGlobals.Word0024 = AX;
         // F000:00AA pushf
         Stack.Push16(FlagRegister16);
         // F000:00AB push BX
         Stack.Push16(BX);
         // F000:00AC popf
         FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x00AD);
+        CheckExternalEvents(biosSegment, 0x00AD);
         // F000:00AD mov AX,0xFFF8
         AX = 0xFFF8;
         // F000:00B0 das
-        byte initialAl_00B0 = AL;
+        byte initialAl_00B0 = 0xF8;
         bool initialCf_00B0 = CarryFlag;
         bool finalAuxiliaryFlag_00B0 = false;
         bool finalCarryFlag_00B0 = false;
         if (AuxiliaryFlag) {
             AL = 0xF2;
-            finalCarryFlag_00B0 = initialAl_00B0 < 6 || initialCf_00B0;
+            finalCarryFlag_00B0 = initialCf_00B0;
             finalAuxiliaryFlag_00B0 = true;
         }
         if (initialAl_00B0 > 0x99 || initialCf_00B0) {
@@ -493,26 +531,26 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CarryFlag = finalCarryFlag_00B0;
         OverflowFlag = false;
         // F000:00B1 mov word ptr DS:[0x0026],AX
-        UInt16[DS, 0x0026] = AX;
+        DsGlobals.Word0026 = AX;
         // F000:00B4 pushf
         Stack.Push16(FlagRegister16);
         // F000:00B5 push CX
         Stack.Push16(CX);
         // F000:00B6 popf
         FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x00B7);
+        CheckExternalEvents(biosSegment, 0x00B7);
         // F000:00B7 mov AX,0xFF8B
         AX = 0xFF8B;
         // F000:00BA das
-        byte initialAl_00BA = AL;
+        byte initialAl_00BA = 0x8B;
         bool initialCf_00BA = CarryFlag;
         bool finalAuxiliaryFlag_00BA = false;
         bool finalCarryFlag_00BA = false;
         AL = 0x85;
-        finalCarryFlag_00BA = initialAl_00BA < 6 || initialCf_00BA;
+        finalCarryFlag_00BA = initialCf_00BA;
         finalAuxiliaryFlag_00BA = true;
         if (initialAl_00BA > 0x99 || initialCf_00BA) {
-            AL -= 0x60;
+            AL = 0x25;
             finalCarryFlag_00BA = true;
         }
         Alu8.UpdateFlags(AL);
@@ -520,24 +558,24 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CarryFlag = finalCarryFlag_00BA;
         OverflowFlag = false;
         // F000:00BB mov word ptr DS:[0x0028],AX
-        UInt16[DS, 0x0028] = AX;
+        DsGlobals.Word0028 = AX;
         // F000:00BE pushf
         Stack.Push16(FlagRegister16);
         // F000:00BF push CX
         Stack.Push16(CX);
         // F000:00C0 popf
         FlagRegister16 = Stack.Pop16();
-        CheckExternalEvents(cs1, 0x00C1);
+        CheckExternalEvents(biosSegment, 0x00C1);
         // F000:00C1 mov AX,0x0082
         AX = 0x0082;
         // F000:00C4 das
-        byte initialAl_00C4 = AL;
+        byte initialAl_00C4 = 0x82;
         bool initialCf_00C4 = CarryFlag;
         bool finalAuxiliaryFlag_00C4 = false;
         bool finalCarryFlag_00C4 = false;
         if (AuxiliaryFlag) {
             AL = 0x7C;
-            finalCarryFlag_00C4 = initialAl_00C4 < 6 || initialCf_00C4;
+            finalCarryFlag_00C4 = initialCf_00C4;
             finalAuxiliaryFlag_00C4 = true;
         }
         if (initialAl_00C4 > 0x99 || initialCf_00C4) {
@@ -549,21 +587,21 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CarryFlag = finalCarryFlag_00C4;
         OverflowFlag = false;
         // F000:00C5 mov word ptr DS:[0x002A],AX
-        UInt16[DS, 0x002A] = AX;
+        DsGlobals.Word002A = AX;
         // F000:00C8 pushf
         Stack.Push16(FlagRegister16);
         // F000:00C9 mov AX,0x059A
         AX = 0x059A;
         // F000:00CC das
-        byte initialAl_00CC = AL;
+        byte initialAl_00CC = 0x9A;
         bool initialCf_00CC = CarryFlag;
         bool finalAuxiliaryFlag_00CC = false;
         bool finalCarryFlag_00CC = false;
         AL = 0x94;
-        finalCarryFlag_00CC = initialAl_00CC < 6 || initialCf_00CC;
+        finalCarryFlag_00CC = initialCf_00CC;
         finalAuxiliaryFlag_00CC = true;
         if (initialAl_00CC > 0x99 || initialCf_00CC) {
-            AL -= 0x60;
+            AL = 0x34;
             finalCarryFlag_00CC = true;
         }
         Alu8.UpdateFlags(AL);
@@ -571,19 +609,19 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CarryFlag = finalCarryFlag_00CC;
         OverflowFlag = false;
         // F000:00CD mov word ptr DS:[0x002C],AX
-        UInt16[DS, 0x002C] = AX;
+        DsGlobals.Word002C = AX;
         // F000:00D0 pushf
         Stack.Push16(FlagRegister16);
         // F000:00D1 mov AX,0x54F6
         AX = 0x54F6;
         // F000:00D4 das
-        byte initialAl_00D4 = AL;
+        byte initialAl_00D4 = 0xF6;
         bool initialCf_00D4 = CarryFlag;
         bool finalAuxiliaryFlag_00D4 = false;
         bool finalCarryFlag_00D4 = false;
         if (AuxiliaryFlag) {
             AL = 0xF0;
-            finalCarryFlag_00D4 = initialAl_00D4 < 6 || initialCf_00D4;
+            finalCarryFlag_00D4 = initialCf_00D4;
             finalAuxiliaryFlag_00D4 = true;
         }
         if (initialAl_00D4 > 0x99 || initialCf_00D4) {
@@ -595,47 +633,47 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         CarryFlag = finalCarryFlag_00D4;
         OverflowFlag = false;
         // F000:00D5 mov word ptr DS:[0x002E],AX
-        UInt16[DS, 0x002E] = AX;
+        DsGlobals.Word002E = AX;
         // F000:00D8 pushf
         Stack.Push16(FlagRegister16);
         // F000:00D9 mov AX,0xFF7F
         // F000:00DC cbw
         // F000:00DD mov word ptr DS:[0x0030],AX
-        UInt16[DS, 0x0030] = 0x007F;
+        DsGlobals.Word0030 = 0x007F;
         // F000:00E0 mov word ptr DS:[0x0032],DX
-        UInt16[DS, 0x0032] = DX;
+        DsGlobals.Word0032 = DX;
         // F000:00E4 pushf
         Stack.Push16(FlagRegister16);
         // F000:00E5 mov AX,0x0080
         // F000:00E8 cbw
         // F000:00E9 mov word ptr DS:[0x0034],AX
-        UInt16[DS, 0x0034] = 0xFF80;
+        DsGlobals.Word0034 = 0xFF80;
         // F000:00EC mov word ptr DS:[0x0036],DX
-        UInt16[DS, 0x0036] = DX;
+        DsGlobals.Word0036 = DX;
         // F000:00F0 pushf
         Stack.Push16(FlagRegister16);
         // F000:00F1 mov AX,0xF1ED
         // F000:00F4 cbw
         // F000:00F5 mov word ptr DS:[0x0038],AX
-        UInt16[DS, 0x0038] = 0xFFED;
+        DsGlobals.Word0038 = 0xFFED;
         // F000:00F8 mov word ptr DS:[0x003A],DX
-        UInt16[DS, 0x003A] = DX;
+        DsGlobals.Word003A = DX;
         // F000:00FC pushf
         Stack.Push16(FlagRegister16);
         // F000:00FD mov AX,0x8000
         // F000:0100 cwd
         // F000:0101 mov word ptr DS:[0x003C],AX
-        UInt16[DS, 0x003C] = 0x8000;
+        DsGlobals.Word003C = 0x8000;
         // F000:0104 mov word ptr DS:[0x003E],DX
-        UInt16[DS, 0x003E] = 0xFFFF;
+        DsGlobals.Word003E = 0xFFFF;
         // F000:0108 pushf
         Stack.Push16(FlagRegister16);
         // F000:0109 mov AX,0x7FFF
         // F000:010C cwd
         // F000:010D mov word ptr DS:[0x0040],AX
-        UInt16[DS, 0x0040] = 0x7FFF;
+        DsGlobals.Word0040 = 0x7FFF;
         // F000:0110 mov word ptr DS:[0x0042],DX
-        UInt16[DS, 0x0042] = 0;
+        DsGlobals.Word0042 = 0;
         // F000:0114 pushf
         Stack.Push16(FlagRegister16);
         // F000:0115 mov AX,0x43F1
@@ -643,13 +681,140 @@ public class CfgGeneratedOverrides : CSharpOverrideHelper {
         // F000:0118 cwd
         DX = 0;
         // F000:0119 mov word ptr DS:[0x0044],AX
-        UInt16[DS, 0x0044] = 0x43F1;
+        DsGlobals.Word0044 = 0x43F1;
         // F000:011C mov word ptr DS:[0x0046],DX
-        UInt16[DS, 0x0046] = 0;
+        DsGlobals.Word0046 = 0;
         // F000:0120 pushf
         Stack.Push16(FlagRegister16);
         // F000:0121 hlt
         return Hlt();
     }
 
+}
+
+// ==== file: DsGlobals.cs ====
+using Spice86.Core.Emulator.CPU.Registers;
+using Spice86.Core.Emulator.Memory;
+using Spice86.Core.Emulator.ReverseEngineer.DataStructure;
+
+namespace Spice86.Generated;
+
+public sealed class DsGlobals : MemoryBasedDataStructureWithDsBaseAddress {
+    private readonly IMemory _memory;
+    private readonly SegmentRegisters _segmentRegisters;
+
+    private ushort Segment => _segmentRegisters.UInt16[(uint)SegmentRegisterIndex.DsIndex];
+
+    public DsGlobals(IMemory memory, SegmentRegisters segmentRegisters) : base(memory, segmentRegisters) {
+        _memory = memory;
+        _segmentRegisters = segmentRegisters;
+    }
+
+    /// DS:0x0000, whatever DS holds at the access.
+    public ushort Word0000 { get => _memory.UInt16[Segment, 0x0000]; set => _memory.UInt16[Segment, 0x0000] = value; }
+
+    /// DS:0x0002, whatever DS holds at the access.
+    public ushort Word0002 { get => _memory.UInt16[Segment, 0x0002]; set => _memory.UInt16[Segment, 0x0002] = value; }
+
+    /// DS:0x0004, whatever DS holds at the access.
+    public ushort Word0004 { get => _memory.UInt16[Segment, 0x0004]; set => _memory.UInt16[Segment, 0x0004] = value; }
+
+    /// DS:0x0006, whatever DS holds at the access.
+    public ushort Word0006 { get => _memory.UInt16[Segment, 0x0006]; set => _memory.UInt16[Segment, 0x0006] = value; }
+
+    /// DS:0x0008, whatever DS holds at the access.
+    public ushort Word0008 { get => _memory.UInt16[Segment, 0x0008]; set => _memory.UInt16[Segment, 0x0008] = value; }
+
+    /// DS:0x000A, whatever DS holds at the access.
+    public ushort Word000A { get => _memory.UInt16[Segment, 0x000A]; set => _memory.UInt16[Segment, 0x000A] = value; }
+
+    /// DS:0x000C, whatever DS holds at the access.
+    public ushort Word000C { get => _memory.UInt16[Segment, 0x000C]; set => _memory.UInt16[Segment, 0x000C] = value; }
+
+    /// DS:0x000E, whatever DS holds at the access.
+    public ushort Word000E { get => _memory.UInt16[Segment, 0x000E]; set => _memory.UInt16[Segment, 0x000E] = value; }
+
+    /// DS:0x0010, whatever DS holds at the access.
+    public ushort Word0010 { get => _memory.UInt16[Segment, 0x0010]; set => _memory.UInt16[Segment, 0x0010] = value; }
+
+    /// DS:0x0012, whatever DS holds at the access.
+    public ushort Word0012 { get => _memory.UInt16[Segment, 0x0012]; set => _memory.UInt16[Segment, 0x0012] = value; }
+
+    /// DS:0x0014, whatever DS holds at the access.
+    public ushort Word0014 { get => _memory.UInt16[Segment, 0x0014]; set => _memory.UInt16[Segment, 0x0014] = value; }
+
+    /// DS:0x0016, whatever DS holds at the access.
+    public ushort Word0016 { get => _memory.UInt16[Segment, 0x0016]; set => _memory.UInt16[Segment, 0x0016] = value; }
+
+    /// DS:0x0018, whatever DS holds at the access.
+    public ushort Word0018 { get => _memory.UInt16[Segment, 0x0018]; set => _memory.UInt16[Segment, 0x0018] = value; }
+
+    /// DS:0x001A, whatever DS holds at the access.
+    public ushort Word001A { get => _memory.UInt16[Segment, 0x001A]; set => _memory.UInt16[Segment, 0x001A] = value; }
+
+    /// DS:0x001C, whatever DS holds at the access.
+    public ushort Word001C { get => _memory.UInt16[Segment, 0x001C]; set => _memory.UInt16[Segment, 0x001C] = value; }
+
+    /// DS:0x001E, whatever DS holds at the access.
+    public ushort Word001E { get => _memory.UInt16[Segment, 0x001E]; set => _memory.UInt16[Segment, 0x001E] = value; }
+
+    /// DS:0x0020, whatever DS holds at the access.
+    public ushort Word0020 { get => _memory.UInt16[Segment, 0x0020]; set => _memory.UInt16[Segment, 0x0020] = value; }
+
+    /// DS:0x0022, whatever DS holds at the access.
+    public ushort Word0022 { get => _memory.UInt16[Segment, 0x0022]; set => _memory.UInt16[Segment, 0x0022] = value; }
+
+    /// DS:0x0024, whatever DS holds at the access.
+    public ushort Word0024 { get => _memory.UInt16[Segment, 0x0024]; set => _memory.UInt16[Segment, 0x0024] = value; }
+
+    /// DS:0x0026, whatever DS holds at the access.
+    public ushort Word0026 { get => _memory.UInt16[Segment, 0x0026]; set => _memory.UInt16[Segment, 0x0026] = value; }
+
+    /// DS:0x0028, whatever DS holds at the access.
+    public ushort Word0028 { get => _memory.UInt16[Segment, 0x0028]; set => _memory.UInt16[Segment, 0x0028] = value; }
+
+    /// DS:0x002A, whatever DS holds at the access.
+    public ushort Word002A { get => _memory.UInt16[Segment, 0x002A]; set => _memory.UInt16[Segment, 0x002A] = value; }
+
+    /// DS:0x002C, whatever DS holds at the access.
+    public ushort Word002C { get => _memory.UInt16[Segment, 0x002C]; set => _memory.UInt16[Segment, 0x002C] = value; }
+
+    /// DS:0x002E, whatever DS holds at the access.
+    public ushort Word002E { get => _memory.UInt16[Segment, 0x002E]; set => _memory.UInt16[Segment, 0x002E] = value; }
+
+    /// DS:0x0030, whatever DS holds at the access.
+    public ushort Word0030 { get => _memory.UInt16[Segment, 0x0030]; set => _memory.UInt16[Segment, 0x0030] = value; }
+
+    /// DS:0x0032, whatever DS holds at the access.
+    public ushort Word0032 { get => _memory.UInt16[Segment, 0x0032]; set => _memory.UInt16[Segment, 0x0032] = value; }
+
+    /// DS:0x0034, whatever DS holds at the access.
+    public ushort Word0034 { get => _memory.UInt16[Segment, 0x0034]; set => _memory.UInt16[Segment, 0x0034] = value; }
+
+    /// DS:0x0036, whatever DS holds at the access.
+    public ushort Word0036 { get => _memory.UInt16[Segment, 0x0036]; set => _memory.UInt16[Segment, 0x0036] = value; }
+
+    /// DS:0x0038, whatever DS holds at the access.
+    public ushort Word0038 { get => _memory.UInt16[Segment, 0x0038]; set => _memory.UInt16[Segment, 0x0038] = value; }
+
+    /// DS:0x003A, whatever DS holds at the access.
+    public ushort Word003A { get => _memory.UInt16[Segment, 0x003A]; set => _memory.UInt16[Segment, 0x003A] = value; }
+
+    /// DS:0x003C, whatever DS holds at the access.
+    public ushort Word003C { get => _memory.UInt16[Segment, 0x003C]; set => _memory.UInt16[Segment, 0x003C] = value; }
+
+    /// DS:0x003E, whatever DS holds at the access.
+    public ushort Word003E { get => _memory.UInt16[Segment, 0x003E]; set => _memory.UInt16[Segment, 0x003E] = value; }
+
+    /// DS:0x0040, whatever DS holds at the access.
+    public ushort Word0040 { get => _memory.UInt16[Segment, 0x0040]; set => _memory.UInt16[Segment, 0x0040] = value; }
+
+    /// DS:0x0042, whatever DS holds at the access.
+    public ushort Word0042 { get => _memory.UInt16[Segment, 0x0042]; set => _memory.UInt16[Segment, 0x0042] = value; }
+
+    /// DS:0x0044, whatever DS holds at the access.
+    public ushort Word0044 { get => _memory.UInt16[Segment, 0x0044]; set => _memory.UInt16[Segment, 0x0044] = value; }
+
+    /// DS:0x0046, whatever DS holds at the access.
+    public ushort Word0046 { get => _memory.UInt16[Segment, 0x0046]; set => _memory.UInt16[Segment, 0x0046] = value; }
 }

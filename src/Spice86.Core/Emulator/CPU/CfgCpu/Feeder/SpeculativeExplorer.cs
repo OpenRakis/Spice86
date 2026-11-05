@@ -4,6 +4,7 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Linker;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Parser;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
 
 using System.Linq;
@@ -26,6 +27,9 @@ using System.Linq;
 ///     A node with a different opcode at the same address (self-modified variant) does not converge;
 ///     a distinct variant is minted instead.</description></item>
 ///   <item><description>Addresses in the <see cref="CfgNodeIndex.PoisonSet"/>.</description></item>
+///   <item><description>A zero instruction (<c>00 00</c>) whose two following bytes are also zero: the
+///     run is walking a zero-filled buffer. Nothing is remembered, so memory a program later fills
+///     with code is decoded normally. A lone zero instruction followed by code is still decoded.</description></item>
 ///   <item><description>Instructions with no static successors (indirect jumps, RET, IRET, invalid).</description></item>
 ///   <item><description>CALL successors: the callee entry is enqueued but call-continuations are not
 ///     (unless under known-safe trust).</description></item>
@@ -52,11 +56,13 @@ public class SpeculativeExplorer {
         InstructionSuccessorType EdgeType,
         bool FollowContinuations);
 
+    private readonly IMemory _memory;
     private readonly InstructionParser _instructionParser;
     private readonly CfgNodeIndex _nodeIndex;
     private readonly NodeLinker _nodeLinker;
 
-    public SpeculativeExplorer(InstructionParser instructionParser, CfgNodeIndex nodeIndex, NodeLinker nodeLinker) {
+    public SpeculativeExplorer(IMemory memory, InstructionParser instructionParser, CfgNodeIndex nodeIndex, NodeLinker nodeLinker) {
+        _memory = memory;
         _instructionParser = instructionParser;
         _nodeIndex = nodeIndex;
         _nodeLinker = nodeLinker;
@@ -124,6 +130,9 @@ public class SpeculativeExplorer {
                 }
                 continue;
             }
+            if (StartsZeroChain(candidate)) {
+                continue;
+            }
             candidate.SetSpeculative(true);
             _nodeIndex.Insert(candidate);
             if (item.Predecessor is not null) {
@@ -131,6 +140,29 @@ public class SpeculativeExplorer {
             }
             EnqueueSuccessorsForNode(candidate, worklist, item.FollowContinuations);
         }
+    }
+
+    /// <summary>
+    /// Whether <paramref name="candidate"/> is a <c>00 00</c> instruction whose two bytes in memory
+    /// after it are also zero: the start of a zero-filled region rather than real code.
+    /// </summary>
+    private bool StartsZeroChain(CfgInstruction candidate) {
+        if (candidate.Length != 2
+            || candidate.Signature.SignatureValue[0] != 0
+            || candidate.Signature.SignatureValue[1] != 0) {
+            return false;
+        }
+        SegmentedAddress32 next = candidate.NextInMemoryAddress32;
+        return SneakilyReadCodeByte(next.Segment, next.Offset) == 0
+            && SneakilyReadCodeByte(next.Segment, next.Offset + 1) == 0;
+    }
+
+    /// <summary>Reads one byte at the physical address the CPU would fetch it from: the offset is
+    /// translated like a code access (the 8086 MMU wraps it to 16 bits), the A20 gate is applied,
+    /// and no memory read breakpoint fires.</summary>
+    private byte SneakilyReadCodeByte(ushort segment, uint offset) {
+        uint physical = _memory.Mmu.TranslateAddress(segment, offset);
+        return _memory.SneakilyRead(_memory.A20Gate.TransformAddress(physical));
     }
 
     /// <summary>

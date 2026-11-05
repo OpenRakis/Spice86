@@ -4,6 +4,7 @@ namespace Spice86.Core.Emulator.InterruptHandlers.Dos;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
@@ -18,15 +19,11 @@ public class DosInt2aHandler : InterruptHandler {
     /// </summary>
     public DosInt2aHandler(IMemory memory, IFunctionHandlerProvider functionHandlerProvider, Stack stack, State state, ILogger loggerService)
         : base(memory, functionHandlerProvider, stack, state, loggerService) {
-        FillDispatchTable();
     }
 
     /// <inheritdoc />
     public override byte VectorNumber => 0x2A;
 
-    private void FillDispatchTable() {
-        AddAction(0x0, NetworkInstallationQuery);
-    }
 
     /// <summary>
     /// Stub - If AH == 0, return 0 in AH (network is not installed)
@@ -36,6 +33,7 @@ public class DosInt2aHandler : InterruptHandler {
     /// (network installation query), the output 0 notifies that no network HW
     /// is detected.
     /// </summary>
+    [InterruptService(0x0, Reads = CpuValues.Ah, Writes = CpuValues.Ah, Memory = ServiceMemoryEffect.None)]
     public void NetworkInstallationQuery() {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("INT 2Ah AH=00: Network Installation Query");

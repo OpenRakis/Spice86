@@ -192,22 +192,22 @@ public class FlagRelationRulesTest {
 
         // Act & Assert
         FlagSetter.Of(new AluOperationNode(
-                new MethodCallValueNode(DataType.UINT8, "Alu8", "Sub", al,
+                new AluCallValueNode(DataType.UINT8, AluOperation.Sub, BitWidth.BYTE_8, al,
                     new ConstantNode(DataType.UINT8, 7)),
-                FlagEffect.None, AluOperation.Sub, BitWidth.BYTE_8))
+                FlagEffect.None))
             .Should().Be(new FlagSetter(AluOperation.Sub, BitWidth.BYTE_8, null));
         FlagSetter.Of(new AluOperationNode(
-                new MethodCallValueNode(DataType.UINT16, "Alu16", "Shl", ax,
+                new AluCallValueNode(DataType.UINT16, AluOperation.Shl, BitWidth.WORD_16, ax,
                     new ConstantNode(DataType.INT32, 1)),
-                FlagEffect.None, AluOperation.Shl, BitWidth.WORD_16))
+                FlagEffect.None))
             .Should().Be(new FlagSetter(AluOperation.Shl, BitWidth.WORD_16, 1));
         FlagSetter.Of(new AluOperationNode(
-                new MethodCallValueNode(DataType.UINT16, "Alu16", "Shl", ax, cl),
-                FlagEffect.None, AluOperation.Shl, BitWidth.WORD_16))
+                new AluCallValueNode(DataType.UINT16, AluOperation.Shl, BitWidth.WORD_16, ax, cl),
+                FlagEffect.None))
             .Should().Be(new FlagSetter(AluOperation.Shl, BitWidth.WORD_16, null));
         FlagSetter.Of(new AluOperationNode(
-                new MethodCallValueNode(DataType.UINT32, "Alu16", "Mul", ax, bx),
-                FlagEffect.None, AluOperation.Mul, BitWidth.WORD_16))
+                new AluCallValueNode(DataType.UINT32, AluOperation.Mul, BitWidth.WORD_16, ax, bx),
+                FlagEffect.None))
             .Should().BeNull();
     }
 

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
@@ -27,7 +28,10 @@ public class BiosEquipmentDeterminationInt11Handler : InterruptHandler {
     public override byte VectorNumber => 0x11;
 
     /// <inheritdoc />
-    public override void Run() {
+    public override void Run() => GetEquipmentList();
+
+    [InterruptService(Writes = CpuValues.Ax)]
+    private void GetEquipmentList() {
         State.AX = 0;
     }
 }

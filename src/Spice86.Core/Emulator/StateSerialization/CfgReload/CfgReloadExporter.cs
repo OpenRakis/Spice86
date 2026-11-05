@@ -5,6 +5,8 @@ using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.CfgCpu.Feeder;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.ParsedInstruction.SelfModifying;
+using Spice86.Core.Emulator.LoadableFile;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.Graph;
 using Spice86.Shared.Emulator.Memory;
 
@@ -24,7 +26,8 @@ internal sealed class CfgReloadExporter {
     /// When <paramref name="poisonSet"/> is provided, includes poisoned addresses in the dump for
     /// monotonic persistence across runs.
     /// </summary>
-    public CfgReloadDump Export(ExecutionContextManager contextManager, HashSet<SegmentedAddress>? poisonSet) {
+    public CfgReloadDump Export(ExecutionContextManager contextManager, HashSet<SegmentedAddress>? poisonSet,
+        ChangedMemorySnapshot changedMemory) {
         HashSet<ICfgNode> reachable = TraverseReachableNodes(contextManager);
 
         List<CfgReloadNodeInfo> nodes = new();
@@ -66,6 +69,9 @@ internal sealed class CfgReloadExporter {
                 .ToArray()
             : null;
 
+        string[]? watchedAreas = ChangedMemorySnapshot.SerializeRanges(changedMemory.WatchedAreas);
+        string[]? changedRanges = ChangedMemorySnapshot.SerializeRanges(changedMemory.ChangedRanges);
+
         return new CfgReloadDump {
             IdAllocatorNext = maxId + 1,
             EntryPoints = entryPoints,
@@ -74,7 +80,9 @@ internal sealed class CfgReloadExporter {
                 .OrderBy(e => e.From).ThenBy(e => e.To).ThenBy(e => e.Type, StringComparer.Ordinal)
                 .ToArray(),
             Blocks = blockInfos.OrderBy(b => b.Id).ToArray(),
-            PoisonedAddresses = poisonedAddresses
+            PoisonedAddresses = poisonedAddresses,
+            WatchedAreas = watchedAreas,
+            ChangedRanges = changedRanges
         };
     }
 

@@ -63,7 +63,7 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
 
     private void WaitSingleBreakpoint(BreakPoint? breakPoint) {
         if (breakPoint is not null) {
-            breakPoint.Trigger();
+            breakPoint.Trigger(_state.IpPhysicalAddress);
             _pauseHandler.WaitIfPaused();
         }
     }
@@ -239,7 +239,7 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
     public void RestoreBreakpoints(SerializableUserBreakpointCollection serializableUserBreakpointCollection) {
         foreach (SerializableUserBreakpoint serializableBreakpoint in serializableUserBreakpointCollection.Breakpoints) {
             if (serializableBreakpoint.IsWildcard) {
-                Action<BreakPoint> wildcardOnReached = b => _pauseHandler.RequestPause($"Breakpoint {b.BreakPointType} reached");
+                Action<BreakPoint, long> wildcardOnReached = (b, _) => _pauseHandler.RequestPause($"Breakpoint {b.BreakPointType} reached");
                 UnconditionalBreakPoint wildcard = new(serializableBreakpoint.Type, wildcardOnReached, removeOnTrigger: false) {
                     IsEnabled = serializableBreakpoint.IsEnabled,
                     IsUserBreakpoint = true
@@ -255,7 +255,7 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
     }
 
     private IEnumerable<AddressBreakPoint> FromSerializedBreakpoints(SerializableUserBreakpoint serializableBreakpoint) {
-        Action<BreakPoint> onReached = b => _pauseHandler.RequestPause($"Breakpoint {b.BreakPointType} reached");
+        Action<BreakPoint, long> onReached = (b, _) => _pauseHandler.RequestPause($"Breakpoint {b.BreakPointType} reached");
         bool removeOnTrigger = false;
 
         // If it's a range (end != start), expand inclusively; otherwise single
@@ -271,7 +271,7 @@ public sealed class EmulatorBreakpointsManager : ISerializableBreakpointsSource 
 
     private AddressBreakPoint FromSerializable(
         SerializableUserBreakpoint serializableBreakpoint,
-        Action<BreakPoint> onReached, bool removeOnTrigger) {
+        Action<BreakPoint, long> onReached, bool removeOnTrigger) {
         Func<long, bool>? condition = null;
         string? conditionExpression = serializableBreakpoint.ConditionExpression;
 

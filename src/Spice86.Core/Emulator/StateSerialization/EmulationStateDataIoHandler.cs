@@ -73,9 +73,9 @@ public abstract class EmulationStateDataIoHandler {
     protected string CfgReloadFile => GenerateDumpFileName("CfgReload.json");
 
     /// <summary>
-    /// Gets name of the generated CFG C# override dump.
+    /// Gets the directory the generated CFG C# override dump files are written to.
     /// </summary>
-    protected string CfgGeneratedCSharpFile => GenerateDumpFileName("CfgGeneratedOverrides.cs");
+    protected string CfgGeneratedCSharpDirectory => GenerateDumpFileName("CfgGeneratedOverrides");
 
     /// <summary>
     /// Gets the directory of the self-contained, runnable generated project (csproj + Program.cs + overrides).

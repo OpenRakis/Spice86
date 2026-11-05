@@ -1920,7 +1920,7 @@ internal sealed class EmulatorMcpTools {
                 }
 
                 string id = _services.GetNextBreakpointId().ToString();
-                Action<BreakPoint> onReached = _ => {
+                Action<BreakPoint, long> onReached = (_, _) => {
                     _services.PauseHandler.RequestPause($"MCP Breakpoint {id} hit");
                 };
 

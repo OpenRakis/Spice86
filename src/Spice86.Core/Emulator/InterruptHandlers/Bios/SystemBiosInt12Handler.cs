@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Function;
 using Spice86.Core.Emulator.InterruptHandlers.Bios.Structures;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Interfaces;
 
@@ -35,7 +36,10 @@ public class SystemBiosInt12Handler : InterruptHandler {
     public override byte VectorNumber => 0x12;
 
     /// <inheritdoc />
-    public override void Run() {
+    public override void Run() => GetConventionalMemorySize();
+
+    [InterruptService(Writes = CpuValues.Ax, Memory = ServiceMemoryEffect.Read)]
+    private void GetConventionalMemorySize() {
         State.AX = _biosDataArea.ConventionalMemorySizeKb;
     }
 }

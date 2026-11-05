@@ -3,6 +3,8 @@ namespace Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning;
 using Spice86.Core.Emulator.CPU.CfgCpu;
 using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.LoadableFile;
+using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.ReverseEngineer.ControlFlowGraph;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Intermediate;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
@@ -29,11 +31,13 @@ public sealed class CfgFunctionPartitioner {
     internal CfgPartitionedProgram Partition(
         CfgBlockGraph graph,
         ExecutionContextManager contextManager,
-        FunctionCatalogue? functionCatalogue) {
+        FunctionCatalogue? functionCatalogue,
+        GeneratorInputs inputs) {
         if (graph.Blocks.Length == 0) {
             return new CfgPartitionedProgram {
                 Partitions = [],
-                Transfers = []
+                Transfers = [],
+                Inputs = inputs
             };
         }
 
@@ -75,7 +79,8 @@ public sealed class CfgFunctionPartitioner {
 
         return new CfgPartitionedProgram {
             Partitions = partitions,
-            Transfers = transfers
+            Transfers = transfers,
+            Inputs = inputs
         };
     }
 

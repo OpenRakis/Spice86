@@ -11,6 +11,8 @@ using Spice86.Core.Emulator.Devices.ExternalInput;
 using Spice86.Core.Emulator.Devices.Input.Mouse;
 using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.Function;
+using Spice86.Core.Emulator.InterruptHandlers.Common.Callback;
+using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.InterruptHandlers.Input.Mouse;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Enums;
 using Spice86.Core.Emulator.InterruptHandlers.VGA.Records;
@@ -19,6 +21,7 @@ using Spice86.Core.Emulator.Memory;
 using Spice86.Core.Emulator.Memory.Mmu;
 using Spice86.Core.Emulator.VM.Clock;
 using Spice86.Core.Emulator.VM.DeviceScheduler;
+using Spice86.Shared.Emulator.Memory;
 
 using Xunit;
 
@@ -91,6 +94,53 @@ public sealed class MouseDriverTests {
         _driver.CurrentMaxY.Should().Be(199);
         _sharedMouseData.MouseXRelative.Should().Be(320.0 / 639);
         _sharedMouseData.MouseYRelative.Should().Be(100.0 / 199);
+    }
+
+    [Fact]
+    public void UserSubroutineEverRegistered_StaysTrueOnceANonZeroSubroutineIsRegistered() {
+        // Arrange / Assert: a fresh driver reports false.
+        _sharedMouseData.UserSubroutineEverRegistered.Should().BeFalse();
+
+        // Act / Assert: registering a non-zero subroutine sets it.
+        _driver.RegisterCallback(new MouseUserCallback(MouseEventMask.Movement, 0x1234, 0x5678));
+        _sharedMouseData.UserSubroutineEverRegistered.Should().BeTrue();
+
+        // Act / Assert: registering a zero subroutine afterwards keeps it true.
+        _driver.RegisterCallback(new MouseUserCallback(MouseEventMask.Movement, 0, 0));
+        _sharedMouseData.UserSubroutineEverRegistered.Should().BeTrue();
+    }
+
+    [Fact]
+    public void UserRoutineRegisteredAtSegmentZeroOffsetIsCalledOnMatchingEvent() {
+        // Arrange: a mouse reporting a movement event, a driver bound to it with its stub
+        // written in RAM, and the int 33h handler registering a routine at 0x1234:0x0000.
+        IMouseDevice mouse = Substitute.For<IMouseDevice>();
+        mouse.LastTrigger.Returns(MouseEventMask.Movement);
+        IVgaFunctionality video = Substitute.For<IVgaFunctionality>();
+        video.GetCurrentMode().Returns(new VgaMode(MemoryModel.Packed, 320, 200, 8, 8, 8, 0xA000, 1.0));
+        Memory memory = new(new(), new Ram(A20Gate.EndOfHighMemoryArea), new A20Gate(false),
+            new RealModeMmu386(), false);
+        MouseDriver driver = new(_state, _sharedMouseData, memory, mouse, video, NullLogger.Instance);
+        MouseInt33Handler handler = new(memory, Substitute.For<IFunctionHandlerProvider>(),
+            new Stack(memory, _state), _state, NullLogger.Instance, driver);
+        MemoryAsmWriter asmWriter = new(memory, new SegmentedAddress(0xC000, 0),
+            new CallbackHandler(_state, NullLogger.Instance));
+        SegmentedAddress driverAddress = driver.WriteAssemblyInRam(asmWriter);
+        _state.CX = (ushort)MouseEventMask.Movement;
+        _state.ES = 0x1234;
+        _state.DX = 0;
+        handler.SetMouseUserDefinedSubroutine();
+
+        // Act: a movement event fires, so the driver points the far call of its stub at the
+        // registered routine.
+        driver.BeforeUserHandlerExecution();
+
+        // Assert: the stub is "far ret (default); callback; far call <target>; callback; far ret"
+        // starting at driverAddress-1, so the far call target sits at driverAddress+5. A routine
+        // registered at 0x1234:0x0000 is enabled (only 0:0 disables), so the call must reach it.
+        memory.SegmentedAddress16[driverAddress.Linear + 5].Should()
+            .Be(new SegmentedAddress(0x1234, 0), "the routine at 0x1234:0x0000 is called");
+        _sharedMouseData.UserSubroutineEverRegistered.Should().BeTrue();
     }
 
     private void SetRanges(ushort firstX, ushort secondX, ushort firstY, ushort secondY) {

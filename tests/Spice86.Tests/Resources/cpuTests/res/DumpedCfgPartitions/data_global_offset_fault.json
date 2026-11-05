@@ -1,0 +1,121 @@
+{
+  "partitions": [
+    {
+      "id": 1,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        39
+      ],
+      "entries": [
+        {
+          "block": 39,
+          "address": "F000:002A",
+          "kind": "returnTargetEntry"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        47
+      ],
+      "entries": [
+        {
+          "block": 47,
+          "address": "F000:0033",
+          "kind": "returnTargetEntry"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        34
+      ],
+      "entries": [
+        {
+          "block": 34,
+          "address": "F000:003D",
+          "kind": "executionContextEntry"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "kind": "observed",
+      "name": "unknown",
+      "blocks": [
+        3,
+        2
+      ],
+      "entries": [
+        {
+          "block": 2,
+          "address": "F000:FFF0",
+          "kind": "executionContextEntry"
+        }
+      ]
+    }
+  ],
+  "transfers": [
+    {
+      "kind": "crossPartitionFlow",
+      "fromPartition": 1,
+      "toPartition": 2,
+      "fromBlock": 39,
+      "toBlock": 47,
+      "from": "F000:002D",
+      "target": "F000:0033"
+    },
+    {
+      "kind": "cpuFault",
+      "fromPartition": 1,
+      "toPartition": 3,
+      "fromBlock": 39,
+      "toBlock": 34,
+      "from": "F000:002D",
+      "target": "F000:003D"
+    },
+    {
+      "kind": "dynamicReturn",
+      "fromPartition": 3,
+      "toPartition": 1,
+      "fromBlock": 34,
+      "toBlock": 39,
+      "from": "F000:0049",
+      "target": "F000:002A"
+    },
+    {
+      "kind": "dynamicReturn",
+      "fromPartition": 3,
+      "toPartition": 2,
+      "fromBlock": 34,
+      "toBlock": 47,
+      "from": "F000:0049",
+      "target": "F000:0033"
+    },
+    {
+      "kind": "crossPartitionFlow",
+      "fromPartition": 4,
+      "toPartition": 1,
+      "fromBlock": 3,
+      "toBlock": 39,
+      "from": "F000:0024",
+      "target": "F000:002A"
+    },
+    {
+      "kind": "cpuFault",
+      "fromPartition": 4,
+      "toPartition": 3,
+      "fromBlock": 3,
+      "toBlock": 34,
+      "from": "F000:0024",
+      "target": "F000:003D"
+    }
+  ]
+}

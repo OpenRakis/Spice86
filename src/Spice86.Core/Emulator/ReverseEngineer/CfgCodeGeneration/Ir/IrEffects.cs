@@ -1,5 +1,7 @@
 namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
+
 /// <summary>
 /// The machine values and tokens one statement reads before writing them, always writes and may
 /// write, plus whether it can fault and whether it delivers hardware interrupts.
@@ -7,7 +9,7 @@ namespace Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
 /// </summary>
 internal readonly record struct IrEffects {
     /// <summary>Creates an effect; <paramref name="mustWrite"/> is added to <paramref name="mayWrite"/>.</summary>
-    public IrEffects(IrValues reads, IrValues mustWrite, IrValues mayWrite, IrTokens tokenReads,
+    public IrEffects(CpuValues reads, CpuValues mustWrite, CpuValues mayWrite, IrTokens tokenReads,
         IrTokens tokenWrites, bool mayFault, bool deliversInterrupts) {
         Reads = reads;
         MustWrite = mustWrite;
@@ -19,13 +21,13 @@ internal readonly record struct IrEffects {
     }
 
     /// <summary>Values whose value before the statement can change what it does.</summary>
-    public IrValues Reads { get; }
+    public CpuValues Reads { get; }
 
     /// <summary>Values written on every path.</summary>
-    public IrValues MustWrite { get; }
+    public CpuValues MustWrite { get; }
 
     /// <summary>Values written on at least one path; contains <see cref="MustWrite"/>.</summary>
-    public IrValues MayWrite { get; }
+    public CpuValues MayWrite { get; }
 
     /// <summary>Tokens whose version before the statement is read.</summary>
     public IrTokens TokenReads { get; }
@@ -41,16 +43,16 @@ internal readonly record struct IrEffects {
 
     /// <summary>No effect.</summary>
     public static IrEffects None { get; } =
-        new(IrValues.None, IrValues.None, IrValues.None, IrTokens.None, IrTokens.None, false, false);
+        new(CpuValues.None, CpuValues.None, CpuValues.None, IrTokens.None, IrTokens.None, false, false);
 
     /// <summary>The conservative effect of code the analysis does not know: reads all values, may
     /// write all values, reads and writes both tokens.</summary>
     public static IrEffects Unknown { get; } =
-        new(IrValues.All, IrValues.None, IrValues.All, IrTokens.All, IrTokens.All, false, false);
+        new(CpuValues.All, CpuValues.None, CpuValues.All, IrTokens.All, IrTokens.All, false, false);
 
     /// <summary>The effect of a transfer out of the method: it uses every value and both tokens.</summary>
     public static IrEffects ExitUse { get; } =
-        new(IrValues.All, IrValues.None, IrValues.None, IrTokens.All, IrTokens.None, false, false);
+        new(CpuValues.All, CpuValues.None, CpuValues.None, IrTokens.All, IrTokens.None, false, false);
 
     /// <summary>This effect followed by <paramref name="next"/>.</summary>
     public IrEffects Then(IrEffects next) =>

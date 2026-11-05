@@ -2,6 +2,7 @@
 
 using Microsoft.Extensions.Logging;
 
+using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Logging;
 using Spice86.Core.Emulator.CPU;
 using Spice86.Core.Emulator.Errors;
@@ -11,6 +12,8 @@ using Spice86.Core.Emulator.InterruptHandlers.Common.MemoryWriter;
 using Spice86.Core.Emulator.Memory;
 using Spice86.Shared.Emulator.Memory;
 using Spice86.Shared.Interfaces;
+
+using System.Reflection;
 
 /// <summary>
 /// Base class for interrupt handlers.
@@ -36,6 +39,8 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     /// </summary>
     private bool _interruptStackPresent = true;
     private IEmulatorLoggerState _loggerState = new Spice86LoggerState();
+    private readonly InterruptServiceDeclarations _declarations;
+    private HandlerServices? _services;
 
     /// <summary>
     /// Initializes a new instance.
@@ -49,6 +54,18 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
         Memory = memory;
         FunctionHandlerProvider = functionHandlerProvider;
         Stack = stack;
+        _declarations = InterruptServiceAttributes.Of(GetType());
+        foreach (InterruptServiceEntry entry in _declarations.Services) {
+            AddServiceAction(entry.SelectorValue, ServiceActionOf(entry.Method), entry.Contract);
+        }
+    }
+
+    private Action ServiceActionOf(MethodInfo method) {
+        if (method.GetParameters().Length == 0) {
+            return (Action)method.CreateDelegate(typeof(Action), this);
+        }
+        Action<bool> action = (Action<bool>)method.CreateDelegate(typeof(Action<bool>), this);
+        return () => action(true);
     }
 
     public void SetLoggerState(IEmulatorLoggerState loggerState) {
@@ -57,6 +74,22 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
 
     /// <inheritdoc />
     public abstract byte VectorNumber { get; }
+
+    /// <summary>Register the handler reads to select the service to run. Used only when the
+    /// type declares its services with the selector form of
+    /// <see cref="InterruptServiceAttribute"/>.</summary>
+    protected virtual ServiceSelector ServiceSelector => ServiceSelector.Ah;
+
+    /// <inheritdoc />
+    public HandlerServices Services => _services ??= BuildServices();
+
+    private HandlerServices BuildServices() {
+        return _declarations.SingleContract is { } single
+            ? new HandlerServices.SingleService(single)
+            : new HandlerServices.SelectedServices(ServiceSelector, _serviceContracts);
+    }
+
+    private readonly Dictionary<int, ServiceContract> _serviceContracts = new();
 
     /// <summary>
     /// Runs the runnables at the given index.
@@ -78,12 +111,23 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     }
 
     /// <summary>
-    /// Stores the Action at the given index
+    /// Stores the Action at the given index, with <see cref="ServiceContract.Unknown"/> as its contract.
     /// </summary>
     /// <param name="index">The identifier for the action. Typically, it's the value in the AH register.</param>
     /// <param name="action">The C# method that implements the function called via the interrupt.</param>
     public void AddAction(int index, Action action) {
+        AddServiceAction(index, action, ServiceContract.Unknown);
+    }
+
+    /// <summary>
+    /// Stores the Action at the given index along with its service contract.
+    /// </summary>
+    /// <param name="index">The identifier for the action. Typically, it's the value in the AH register.</param>
+    /// <param name="action">The C# method that implements the function called via the interrupt.</param>
+    /// <param name="contract">The declared contract of the service.</param>
+    private void AddServiceAction(int index, Action action, ServiceContract contract) {
         AddRunnable(index, new RunnableAction(action));
+        _serviceContracts[index] = contract;
     }
 
     /// <inheritdoc />
