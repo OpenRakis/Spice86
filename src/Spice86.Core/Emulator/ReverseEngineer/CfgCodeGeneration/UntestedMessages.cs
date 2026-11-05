@@ -12,8 +12,11 @@ using Spice86.Shared.Emulator.Memory;
 /// address because the runtime log is where it is read.
 /// </summary>
 internal static class UntestedMessages {
-    /// <summary>A conditional jump arm whose target was never observed.</summary>
+    /// <summary>A direct jump, or a conditional jump arm, whose target was never observed.</summary>
     public static FailAsUntestedNode Jump(SegmentedAddress at) => Plain($"Untested jump at {at}");
+
+    /// <summary>A direct call whose target was never observed.</summary>
+    public static FailAsUntestedNode Call(SegmentedAddress at) => Plain($"Untested call at {at}");
 
     /// <summary>A conditional fallthrough arm that was never observed.</summary>
     public static FailAsUntestedNode ConditionalFallthrough(SegmentedAddress at) => Plain($"Untested fallthrough at {at}");

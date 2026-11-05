@@ -437,6 +437,7 @@ internal static class AsmScenarioCatalog {
             AsmScenario.FromFixture("speculative_mixed_block", () => AsmFixtureCatalog.SpeculativeMixedBlock(SpeculativeArm.Unobserved)),
             AsmScenario.FromFixture("speculative_call_entry", AsmFixtureCatalog.SpeculativeCallEntry),
             AsmScenario.FromFixture("speculative_invalid_opcode", AsmFixtureCatalog.SpeculativeInvalidOpcode),
+            AsmScenario.FromFixture("speculative_transfer_into_data", AsmFixtureCatalog.SpeculativeTransferIntoData),
             AsmScenario.FromFixture("speculative_smc_guard", AsmFixtureCatalog.SpeculativeSmcGuard),
             AsmScenario.FromFixture("speculative_discard", AsmFixtureCatalog.SpeculativeDiscard),
             AsmScenario.FromFixture("callstackunwind",
