@@ -237,6 +237,13 @@ public sealed class GeneratedCodeMachineTest {
     }
 
     [Fact]
+    public void PartitionMultiEntryDisconnectedSharedGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        // The shared region's two exits are each reached from both entries and do not reach each other, so
+        // the blocks no single entry dominates form two unconnected regions. Partitioning must keep both.
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.Partition("partition_multi_entry_disconnected_shared"));
+    }
+
+    [Fact]
     public void PartitionIndirectCallJumpGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
         new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.Partition("partition_indirect_call_jump"));
     }

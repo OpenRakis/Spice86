@@ -526,6 +526,14 @@ internal static class AsmFixtureCatalog {
                     result.State.AX.Should().Be(0x1000, $"{binName}: start sets AX to 0x1000 and no call changes it");
                     result.State.CX.Should().Be(0x0001, $"{binName}: the last root entry leaves CX = 1");
                 });
+            case "partition_multi_entry_disconnected_shared":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 10000 }, result => {
+                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.State.AX.Should().Be(0x1001, $"{binName}: the last root entry leaves AL = 1");
+                    result.State.BX.Should().Be(0x0002, $"{binName}: both shared entries reach shared_exit_x once");
+                    result.State.CX.Should().Be(0x0020, $"{binName}: both shared entries reach shared_exit_y once");
+                });
             case "partition_cross_function_loop":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 10000 }, result => {
                     result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");

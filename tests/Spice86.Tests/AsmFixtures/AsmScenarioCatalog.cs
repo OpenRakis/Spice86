@@ -454,6 +454,7 @@ internal static class AsmScenarioCatalog {
             PartitionScenario("partition_shared_tail"),
             PartitionScenario("partition_multi_entry_dominated_shared"),
             PartitionScenario("partition_multi_entry_irreducible_shared"),
+            PartitionScenario("partition_multi_entry_disconnected_shared"),
             PartitionScenario("partition_cross_function_loop"),
             PartitionScenario("partition_mixed_activation_cycle"),
             PartitionScenario("partition_indirect_call_jump"),
