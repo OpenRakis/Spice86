@@ -424,6 +424,11 @@ internal static class AsmFixtureCatalog {
         return SpeculativeFixture("speculative_zero_memory", SpeculativeMemory(0x01, 0xDD, 0xEE), SpeculativeArm.Observed);
     }
 
+    /// <summary>Runs speculative_transfer_into_data on its observed arm: none of the four transfers into data is taken.</summary>
+    public static AsmFixture SpeculativeTransferIntoData() {
+        return SpeculativeFixture("speculative_transfer_into_data", SpeculativeMemory(0x01, 0xDD, 0xEE), SpeculativeArm.Observed);
+    }
+
     /// <summary>Runs speculative_smc_guard on its observed arm: the run completes without self-modification.</summary>
     public static AsmFixture SpeculativeSmcGuard() {
         return SpeculativeFixture("speculative_smc_guard", SpeculativeMemory(0x01, 0xDD, 0xAA), SpeculativeArm.Observed);
@@ -493,6 +498,14 @@ internal static class AsmFixtureCatalog {
                     result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
                     result.State.AX.Should().Be(0x1000, $"{binName}: start sets AX to 0x1000 and no call changes it");
                     result.State.CX.Should().Be(0x0001, $"{binName}: the last root entry leaves CX = 1");
+                });
+            case "partition_multi_entry_disconnected_shared":
+                return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 10000 }, result => {
+                    result.State.SS.Should().Be(0x1000, $"{binName}: start sets SS to 0x1000");
+                    result.State.SP.Should().Be(0x0100, $"{binName}: start sets SP to 0x0100");
+                    result.State.AX.Should().Be(0x1001, $"{binName}: the last root entry leaves AL = 1");
+                    result.State.BX.Should().Be(0x0002, $"{binName}: both shared entries reach shared_exit_x once");
+                    result.State.CX.Should().Be(0x0020, $"{binName}: both shared entries reach shared_exit_y once");
                 });
             case "partition_cross_function_loop":
                 return ResultFixture(new AsmRunSettings { BinName = binName, MaxCycles = 10000 }, result => {

@@ -85,6 +85,8 @@ internal static class Int21ScenarioCatalog {
         BufferedStdinRead(),
         KeyboardReassignmentReset(),
         FlushInputClearsStuffahead(),
+        Simple("flush_input_al00_returns.com"),
+        FlushInputThenReadWithEcho(),
         DeviceStatusReportCursorPosition(),
         FindFirstWildcard(),
         FindFirstShortFilename(),
@@ -267,6 +269,15 @@ internal static class Int21ScenarioCatalog {
                 testHandler.Details[0].Should().Be((byte)'Z',
                     "flush should have discarded the DSR response; next read should get 'Z' from the buffer");
             });
+    }
+
+    /// <summary>The program calls INT 21h AH=0Ch with AL=01h, so after the flush DOS must run function 01h and
+    /// read the 'A' its redirected standard input holds.</summary>
+    private static AsmScenario FlushInputThenReadWithEcho() {
+        return ProgramScenario("flush_input_then_read_ah01", "flush_input_then_read_ah01.com", new Int21RunSetup {
+            ConfigureMachine = machine => RedirectStdin(machine, new byte[] { 0x41 })
+        }, testHandler => testHandler.Details.Should().Equal(new byte[] { 0x41 },
+            "AH=0Ch AL=01h should run function 01h after the flush and return the redirected byte in AL"));
     }
 
     /// <summary>The program positions the cursor and reads the Device Status Report bytes back through

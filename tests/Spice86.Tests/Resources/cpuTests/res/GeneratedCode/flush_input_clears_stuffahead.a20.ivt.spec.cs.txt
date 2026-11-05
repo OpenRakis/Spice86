@@ -181,8 +181,8 @@ public partial class CfgGeneratedOverrides {
         InterruptCall(cs1, 0x011C, 0x21);
         // 016D:011C mov AH,0x0C
         AH = 0x0C;
-        // 016D:011E mov AL,1
-        AL = 1;
+        // 016D:011E mov AL,0
+        AL = 0;
         // 016D:0120 int 0x21
         InterruptCall(cs1, 0x0122, 0x21);
         // 016D:0122 mov AH,5

@@ -25,9 +25,9 @@ start:
     mov dl, 'n'
     int 21h
 
-    ; AH=0Ch with AL=01h flushes input buffers; AL=01h is not an allowed follow-up here.
+    ; AH=0Ch with AL=00h flushes input buffers without running a follow-up input function.
     mov ah, 0Ch
-    mov al, 01h
+    mov al, 00h
     int 21h
 
     ; Stuff Z after the flush. The next DOS read must return Z, not leftover DSR bytes.

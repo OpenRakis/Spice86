@@ -232,6 +232,13 @@ public sealed class GeneratedCodeMachineTest {
     }
 
     [Fact]
+    public void PartitionMultiEntryDisconnectedSharedGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        // The shared region's two exits are each reached from both entries and do not reach each other, so
+        // the blocks no single entry dominates form two unconnected regions. Partitioning must keep both.
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.Partition("partition_multi_entry_disconnected_shared"));
+    }
+
+    [Fact]
     public void PartitionIndirectCallJumpGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
         new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.Partition("partition_indirect_call_jump"));
     }
@@ -471,6 +478,14 @@ public sealed class GeneratedCodeMachineTest {
     [Fact]
     public void SpeculativeInvalidOpcodeGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
         new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.SpeculativeInvalidOpcode());
+    }
+
+    [Fact]
+    public void SpeculativeTransferIntoDataGeneratedOverrideCompilesAndMatchesMachineTestOracle() {
+        // Each never-taken arm ends in a direct jump or call whose target holds invalid opcodes, so the
+        // transfer has no successor in the CFG. The generator must fail that transfer as untested at run
+        // time instead of throwing while it generates the whole program.
+        new GeneratedCodeMachineTestRunner().TestGeneratedCode(AsmFixtureCatalog.SpeculativeTransferIntoData());
     }
 
     [Fact]
