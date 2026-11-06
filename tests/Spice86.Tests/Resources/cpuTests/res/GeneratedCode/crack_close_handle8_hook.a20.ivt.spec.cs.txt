@@ -172,21 +172,18 @@ public partial class CfgGeneratedOverrides {
         // 016D:0100 mov AH,0x62
         AH = 0x62;
         // 016D:0102 int 0x21
-        Dos.GetPspAddress(cs1, 0x0104);
+        BX = Dos.GetPspAddress(cs1, 0x0104);
         // 016D:0104 mov word ptr DS:[0x01CC],BX
         ImageMinus0003Globals.Word01CC = BX;
         // 016D:0108 mov AX,0x3521
-        AX = 0x3521;
         // 016D:010B int 0x21
-        Dos.GetInterruptVector(cs1, 0x010D, 0x21);
+        (BX, ES) = Dos.GetInterruptVector(cs1, 0x010D, 0x21);
         // 016D:010D mov word ptr DS:[0x01CE],BX
         ImageMinus0003Globals.Word01CE = BX;
         // 016D:0111 mov word ptr DS:[0x01D0],ES
         ImageMinus0003Globals.Word01D0 = ES;
         // 016D:0115 mov DX,0x01AA
-        DX = 0x01AA;
         // 016D:0118 mov AX,0x2521
-        AX = 0x2521;
         // 016D:011B int 0x21
         Dos.SetInterruptVector(cs1, 0x011D, 0x21, 0x01AA, DS);
         // 016D:011D mov DX,0x01D4

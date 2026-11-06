@@ -153,6 +153,8 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, DS, FS, GS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
+        ushort ax1 = 0;
+        ushort dx1 = 0;
         ushort di;
         byte al;
         CheckExternalEvents(cs1, 0x0100);
@@ -163,11 +165,11 @@ public partial class CfgGeneratedOverrides {
         // 016D:0104 mov BX,0x001A
         BX = 0x001A;
         // 016D:0107 int 0x21
-        Dos.IoControl(cs1, 0x0109, 0x0E, CX, DX, 0x001A, DS);
+        (ax1, dx1, CarryFlag) = Dos.IoControl(cs1, 0x0109, 0x0E, CX, DX, 0x001A, DS);
         // 016D:0109 push AX
-        Stack.Push16(AX);
+        Stack.Push16(ax1);
         // 016D:010A push DX
-        Stack.Push16(DX);
+        Stack.Push16(dx1);
         // 016D:010B mov AX,0xB800
         AX = 0xB800;
         // 016D:010E mov ES,AX
@@ -384,7 +386,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: AX, EDX. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: AX, ECX, EDX, EBX, DS. Changes: all.</summary>
     /// Segment values at entry, from every call site: DS = 0x016D.
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;

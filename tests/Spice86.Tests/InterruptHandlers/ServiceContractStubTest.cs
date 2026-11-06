@@ -19,4 +19,19 @@ public class ServiceContractStubTest {
         // Arrange / Act / Assert
         ServiceContractHarness.AssertContractThroughStub(testCase);
     }
+
+    /// <summary>The whole post-service machine of every contract case, frozen before the typed
+    /// service refactor. The captured line is committed; it is regenerated deliberately only
+    /// when the pre-refactor behavior itself is meant to change.</summary>
+    [Fact]
+    public void ServicesMatchRecordedBaseline() {
+        // Arrange / Act
+        string[] actual = ServiceContractCoverageTest.AllCases.Select((testCase, index) =>
+            $"{index:D4}\t{testCase}\t{ServiceContractHarness.CaptureBaseline(testCase)}").ToArray();
+        string path = Path.Join(MachineGoldens.SourceResourcesDirectory(), "service-contract-baseline.tsv");
+        // File.WriteAllLines(path, actual);
+
+        // Assert
+        Assert.Equal(File.ReadAllLines(path), actual);
+    }
 }

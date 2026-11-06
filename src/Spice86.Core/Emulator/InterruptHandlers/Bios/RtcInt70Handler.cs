@@ -45,7 +45,7 @@ public sealed class RtcInt70Handler : InterruptHandler {
     /// Handles RTC interrupt by reading Status Register C to determine interrupt type (periodic or alarm),
     /// then dispatches to appropriate handler. Acknowledges interrupt to PIC when done.
     /// </summary>
-    [InterruptService(Memory = ServiceMemoryEffect.ReadWrite, Io = true)]
+    [InterruptService(Memory = ServiceMemoryEffect.ReadWrite, Io = true, ExecutionPath = ServiceExecutionPath.Direct)]
     public void HandleInterrupt() {
         if (LoggerService.IsEnabled(LogLevel.Trace)) {
             LoggerService.LogTrace("INT 70h - RTC Alarm/Periodic Interrupt Handler");

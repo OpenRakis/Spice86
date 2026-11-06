@@ -158,7 +158,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:0100 mov AH,0x4D
         AH = 0x4D;
         // 016D:0102 int 0x21
-        Dos.GetReturnCode(cs1, 0x0104);
+        AX = Dos.GetReturnCode(cs1, 0x0104);
         // 016D:0104 mov AL,AH
         al1 = AH;
         // 016D:0106 cmp AL,0

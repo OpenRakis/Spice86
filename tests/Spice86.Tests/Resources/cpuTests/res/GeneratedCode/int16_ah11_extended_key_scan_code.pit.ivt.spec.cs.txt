@@ -169,7 +169,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:0100 mov AH,0x11
         AH = 0x11;
         // 016D:0102 int 0x16
-        Keyboard.GetEnhancedKeystrokeStatus(cs1, 0x0104);
+        (AX, ZeroFlag) = Keyboard.GetEnhancedKeystrokeStatus(cs1, 0x0104);
         // 016D:0104 mov AL,AH
         AL = AH;
         // 016D:0106 mov AH,7

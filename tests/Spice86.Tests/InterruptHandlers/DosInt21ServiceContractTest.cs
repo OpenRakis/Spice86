@@ -25,6 +25,17 @@ public class DosInt21ServiceContractTest {
             foreach (int selector in selectors) {
                 yield return new ServiceContractCase { Vector = 0x21, SelectorValue = selector };
             }
+            // Commit an open file without closing it, or reject an invalid DOS handle.
+            yield return new ServiceContractCase {
+                Vector = 0x21, SelectorValue = 0x68,
+                Setup = machine => {
+                    machine.Spice86.Machine.CpuState.BX = OpenFile(machine, "COMMIT.DAT", "DATA", 2);
+                }
+            };
+            yield return new ServiceContractCase {
+                Vector = 0x21, SelectorValue = 0x68,
+                Setup = machine => machine.Spice86.Machine.CpuState.BX = 0xFFFF
+            };
             // DS:DX points at a "$"-terminated string.
             yield return new ServiceContractCase {
                 Vector = 0x21, SelectorValue = 0x09,

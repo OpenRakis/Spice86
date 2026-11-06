@@ -156,17 +156,18 @@ namespace Spice86.Generated;
 public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
     public virtual Action unknown_016D_0100_017D0() {
+        ushort dx;
         CheckExternalEvents(cs1, 0x0100);
         // 016D:0100 mov BX,0
         BX = 0;
         // 016D:0103 mov DX,word ptr [0x000017D4]
-        DX = UInt16[0x000017D4];
+        dx = UInt16[0x000017D4];
         // 016D:0106 mov CX,1
         CX = 1;
         // 016D:0109 mov AH,0x3F
         AH = 0x3F;
         // 016D:010B int 0x21
-        Dos.ReadFileOrDevice(cs1, 0x010D, 1, DX, 0, DS);
+        (AX, CarryFlag) = Dos.ReadFileOrDevice(cs1, 0x010D, 1, dx, 0, DS);
         // 016D:010D selector
         if (SelectorSignatureMatches(cs1, 0x010D, Signature_010D_mov_123)) {
             // 016D:010D mov AX,0xB800
@@ -200,7 +201,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:0116 mov AH,0x40
         AH = 0x40;
         // 016D:0118 int 0x21
-        Dos.WriteToFileOrDevice(cs1, 0x011A, 1, 0x011F, 1, DS);
+        (AX, CarryFlag) = Dos.WriteToFileOrDevice(cs1, 0x011A, 1, 0x011F, 1, DS);
         // 016D:011A mov AX,0x4C00
         AX = 0x4C00;
         // 016D:011D int 0x21
@@ -369,7 +370,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, DS. Changes: all.</summary>
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;
     entrydispatcher:

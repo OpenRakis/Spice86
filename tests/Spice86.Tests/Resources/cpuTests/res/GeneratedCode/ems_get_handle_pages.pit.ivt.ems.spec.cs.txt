@@ -143,14 +143,16 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, EDX, EBX, flags, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
+        ushort bx1 = 0;
+        ushort dx1 = 0;
         byte al1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         // 016E:0100 mov BX,8
-        BX = 8;
+        bx1 = 8;
         // 016E:0103 mov AH,0x43
         AH = 0x43;
         // 016E:0105 int 0x67
-        Ems.AllocatePages(cs1, 0x0107, AL, 8);
+        (AH, dx1) = Ems.AllocatePages(cs1, 0x0107, AL, 8);
         // 016E:0107 cmp AH,0
         Alu8.Sub(AH, 0);
         // 016E:010A jne short 0x011E
@@ -158,15 +160,16 @@ public partial class CfgGeneratedOverrides {
             // 016E:010C mov AH,0x4C
             AH = 0x4C;
             // 016E:010E int 0x67
-            Ems.GetHandlePages(cs1, 0x0110, AL, DX);
+            BX = bx1;
+            (AX, bx1) = Ems.GetHandlePages(cs1, 0x0110, AL, dx1);
             // 016E:0110 cmp AH,0
             Alu8.Sub(AH, 0);
             // 016E:0113 jne short 0x011E
             if (AH == 0) {
                 // 016E:0115 cmp BX,8
-                Alu16.Sub(BX, 8);
+                Alu16.Sub(bx1, 8);
                 // 016E:0118 jne short 0x011E
-                if (BX != 8) {
+                if (bx1 != 8) {
                     goto L_011E;
                 }
                 // 016E:011A mov AL,0
@@ -185,6 +188,7 @@ public partial class CfgGeneratedOverrides {
         // 016E:0123 out DX,AL
         Out8(0x0999, al1);
         // 016E:0124 hlt
+        BX = bx1;
         AL = al1;
         return Hlt();
     }

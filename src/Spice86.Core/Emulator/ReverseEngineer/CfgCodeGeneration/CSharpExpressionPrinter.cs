@@ -9,6 +9,10 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
 using Spice86.Core.Emulator.CPU.CfgCpu.InstructionRenderer;
+using Spice86.Core.Emulator.Devices.Cmos;
+using Spice86.Core.Emulator.Devices.Sound;
+using Spice86.Core.Emulator.Devices.Timer;
+using Spice86.Core.Emulator.Devices.Video;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Data;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir;
@@ -67,11 +71,12 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     /// </summary>
     /// <param name="segmentVariables">The names generated code refers to, keyed by segment.</param>
     /// <param name="ioPorts">The ports the machine the program was dumped from had a registered
-    /// device handler for; <see langword="null"/> suppresses the <c>no device</c> comment.</param>
+    /// device handler for, keyed by port to the handler's type; <see langword="null"/> suppresses
+    /// the <c>no device</c> comment.</param>
     /// <param name="method">The analyzed method being printed.</param>
     /// <param name="analysis">The program-wide values of the generation run.</param>
     public CSharpExpressionPrinter(IReadOnlyDictionary<ushort, string> segmentVariables,
-        IReadOnlySet<ushort>? ioPorts, AnalyzedMethod method, ProgramAnalysis analysis)
+        IReadOnlyDictionary<ushort, Type>? ioPorts, AnalyzedMethod method, ProgramAnalysis analysis)
         : this(method, analysis, segmentVariables, ioPorts) {
     }
 
@@ -81,7 +86,7 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     }
 
     private CSharpExpressionPrinter(AnalyzedMethod? method, ProgramAnalysis? analysis,
-        IReadOnlyDictionary<ushort, string> segmentVariables, IReadOnlySet<ushort>? ioPorts) {
+        IReadOnlyDictionary<ushort, string> segmentVariables, IReadOnlyDictionary<ushort, Type>? ioPorts) {
         _segmentVariables = segmentVariables;
         IoPorts = ioPorts;
         _method = method;
@@ -92,9 +97,9 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
     public string LocalVariableSuffix { get; set; } = string.Empty;
 
     /// <summary>The ports the machine the program was dumped from had a registered device handler
-    /// for; <see langword="null"/> when the program was built without a machine, which suppresses
-    /// the <c>no device</c> comment.</summary>
-    internal IReadOnlySet<ushort>? IoPorts { get; }
+    /// for, keyed by port to the handler's type; <see langword="null"/> when the program was built
+    /// without a machine, which suppresses the <c>no device</c> comment.</summary>
+    internal IReadOnlyDictionary<ushort, Type>? IoPorts { get; }
 
     /// <summary>The class every global access prints through; unset, every global prints through
     /// the register class of its segment register.</summary>
@@ -286,6 +291,10 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
         nameof(Alu16) => typeof(Alu16),
         nameof(Alu32) => typeof(Alu32),
         nameof(Stack) => typeof(Stack),
+        "Cmos" => typeof(RealTimeClock),
+        "Pit" => typeof(PitTimer),
+        "Vga" => typeof(VgaIoPortHandler),
+        "Opl" => typeof(Opl3Fm),
         _ => null
     };
 
@@ -926,7 +935,7 @@ internal sealed class CSharpExpressionPrinter : ICodeGenerationAstVisitor<CSharp
 
     private string NoDeviceComment(CSharpFragment portFragment) {
         if (IoPorts is not null && portFragment.Constant is ConstantNode constant
-            && !IoPorts.Contains((ushort)constant.Value)) {
+            && !IoPorts.ContainsKey((ushort)constant.Value)) {
             return " /* no device */";
         }
         return string.Empty;

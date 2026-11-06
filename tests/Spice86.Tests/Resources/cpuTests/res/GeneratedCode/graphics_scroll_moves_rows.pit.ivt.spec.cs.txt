@@ -156,14 +156,14 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, DS, FS, GS, flags, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, EBX, EBP, ESI, EDI, DS, FS, GS, flags, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
         CheckExternalEvents(cs1, 0x0100);
         // 016E:0100 mov AX,4
         AX = 4;
         // 016E:0103 int 0x10
-        Video.SetVideoMode(cs1, 0x0105, 4);
+        AL = Video.SetVideoMode(cs1, 0x0105, 4);
         // 016E:0105 mov AH,2
         AH = 2;
         // 016E:0107 mov BH,0

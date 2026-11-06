@@ -146,7 +146,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:0100 mov AX,0x4310
         AX = 0x4310;
         // 016D:0103 int 0x2F
-        DosMultiplex.XmsServices(cs1, 0x0105, 0x10);
+        (AL, BX, ES, CarryFlag) = DosMultiplex.XmsServices(cs1, 0x0105, 0x10);
         // 016D:0105 mov AX,ES
         AX = ES;
         // 016D:0107 or AX,BX

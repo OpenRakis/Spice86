@@ -14,7 +14,7 @@ internal sealed record GeneratorInputs(
     ProgramImages ProgramImages,
     ChangedMemorySnapshot ChangedMemory,
     byte[] MemorySnapshot,
-    IReadOnlySet<ushort> IoPorts,
+    IReadOnlyDictionary<ushort, Type> IoPorts,
     SegmentedAddress? ProgramEntryPoint) {
     /// <summary>The inputs of a program built without a machine: no handler, no image, no changed
     /// bytes, no memory and no entry point.</summary>
@@ -31,6 +31,6 @@ internal sealed record GeneratorInputs(
         new ProgramImages(0, []),
         new ChangedMemorySnapshot { WatchedAreas = [], ChangedRanges = [] },
         [],
-        new HashSet<ushort>(),
+        new Dictionary<ushort, Type>(),
         null);
 }

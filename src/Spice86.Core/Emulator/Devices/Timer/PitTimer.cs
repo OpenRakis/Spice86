@@ -24,10 +24,10 @@ public sealed class PitTimer : DefaultIOPortHandler, IPitControl, ITimeMultiplie
     private const double PeriodOf1KPitTicks = 1000.0 / PitTickRate;
     private const double BinaryCounterMaxValue = 0xffff; // Highest binary count for 16-bit PIT counters
     private const int ByteMask = 0xff; // Eight-bit mask used by the data port state machine
-    private const ushort PitChannel0Port = 0x40; // Read/Write handlers install port 0x40
+    internal const ushort PitChannel0Port = 0x40; // Read/Write handlers install port 0x40
     private const ushort PitChannel1Port = 0x41; // Read handler installs 0x41 (write handler intentionally omitted)
-    private const ushort PitChannel2Port = 0x42; // Read/Write handlers install port 0x42
-    private const ushort PitControlPort = 0x43; // Write handler installs port 0x43
+    internal const ushort PitChannel2Port = 0x42; // Read/Write handlers install port 0x42
+    internal const ushort PitControlPort = 0x43; // Write handler installs port 0x43
 
     // Zero reloads represent the full binary range (65536 ticks), while BCD mode is capped at 9999.
     private const int MaxBcdCount = 9999;
@@ -113,7 +113,7 @@ public sealed class PitTimer : DefaultIOPortHandler, IPitControl, ITimeMultiplie
     /// <inheritdoc />
     public override byte ReadByte(ushort port) {
         return port switch {
-            PitChannel0Port or PitChannel1Port or PitChannel2Port => (byte)ReadLatch(port),
+            PitChannel0Port or PitChannel1Port or PitChannel2Port => ReadChannelData(port - PitChannel0Port),
             _ => base.ReadByte(port)
         };
     }
@@ -122,16 +122,91 @@ public sealed class PitTimer : DefaultIOPortHandler, IPitControl, ITimeMultiplie
     public override void WriteByte(ushort port, byte value) {
         switch (port) {
             case PitChannel0Port:
+                WriteChannelData(0, value);
+                break;
             case PitChannel2Port:
-                WriteLatch(port, value);
+                WriteChannelData(2, value);
                 break;
             case PitControlPort:
-                HandleControlPortWrite(port, value);
+                WriteControlWord(value);
                 break;
             default:
                 base.WriteByte(port, value);
                 break;
         }
+    }
+
+    /// <summary>
+    ///     Reads the counter of channel <paramref name="channel"/> through its data port, applying the
+    ///     two-step read state machine (status byte first when latched, BCD conversion, access-mode
+    ///     transitions).
+    /// </summary>
+    /// <param name="channel">The channel index, 0 to 2.</param>
+    /// <returns>The byte the channel's data port returns.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="channel"/> is not 0, 1 or 2.</exception>
+    public byte ReadChannelData(int channel) {
+        if (channel is < 0 or > 2) {
+            throw new ArgumentOutOfRangeException(nameof(channel), channel,
+                "The PIT has channels 0 to 2.");
+        }
+        return (byte)ReadLatch((ushort)(PitChannel0Port + channel));
+    }
+
+    /// <summary>
+    ///     Writes a byte to the data port of channel <paramref name="channel"/>: updates the staged
+    ///     write latch per the access mode and, once a full word is loaded, reloads the running counter
+    ///     and notifies the channel consumer (IRQ0 events for channel 0, the PC speaker for channel 2).
+    ///     Channel 1 has no write handler and is refused.
+    /// </summary>
+    /// <param name="channel">The channel index, 0 or 2.</param>
+    /// <param name="value">The byte to write.</param>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="channel"/> is not 0 or 2.</exception>
+    public void WriteChannelData(int channel, byte value) {
+        if (channel is not (0 or 2)) {
+            throw new ArgumentOutOfRangeException(nameof(channel), channel,
+                "Only PIT channels 0 and 2 have a writable data port.");
+        }
+        WriteLatch((ushort)(PitChannel0Port + channel), value);
+    }
+
+    /// <summary>
+    ///     Writes a control word to the mode/control register (port 0x43): a channel-select command
+    ///     programs one channel, a read-back command latches counters or status bytes.
+    /// </summary>
+    /// <param name="value">The control word to write.</param>
+    public void WriteControlWord(byte value) {
+        HandleControlPortWrite(PitControlPort, value);
+    }
+
+    /// <summary>
+    ///     Programs channel <paramref name="channel"/> with <paramref name="controlWord"/> then loads
+    ///     <paramref name="divisor"/> low byte first, as the port sequence
+    ///     <c>out 0x43, controlWord; out 0x40+channel, low; out 0x40+channel, high</c> does.
+    /// </summary>
+    /// <param name="channel">The channel index, 0 or 2.</param>
+    /// <param name="controlWord">The control word selecting the channel, low/high access and mode.</param>
+    /// <param name="divisor">The 16-bit reload value; zero means 65536.</param>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="channel"/> is not 0 or 2.</exception>
+    /// <exception cref="ArgumentException"><paramref name="controlWord"/> does not select
+    ///     <paramref name="channel"/> with low/high access.</exception>
+    public void ProgramChannel(int channel, byte controlWord, ushort divisor) {
+        if (channel is not (0 or 2)) {
+            throw new ArgumentOutOfRangeException(nameof(channel), channel,
+                "Only PIT channels 0 and 2 can be programmed.");
+        }
+        if ((controlWord >> 6) != channel) {
+            throw new ArgumentException(
+                $"Control word 0x{controlWord:X2} selects channel {controlWord >> 6}, not {channel}.",
+                nameof(controlWord));
+        }
+        if (((controlWord >> 4) & 0x03) != 0x03) {
+            throw new ArgumentException(
+                $"Control word 0x{controlWord:X2} does not select low/high access.",
+                nameof(controlWord));
+        }
+        WriteControlWord(controlWord);
+        WriteChannelData(channel, (byte)divisor);
+        WriteChannelData(channel, (byte)(divisor >> 8));
     }
 
     /// <summary>

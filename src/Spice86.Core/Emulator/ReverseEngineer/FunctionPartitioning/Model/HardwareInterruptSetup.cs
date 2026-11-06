@@ -71,9 +71,8 @@ internal sealed record HardwareInterruptSetup {
             if (!installed.TryGetInstalledAddress(vector, out SegmentedAddress stub)) {
                 continue;
             }
-            InterruptServiceGroups.TryGetPropertyName(vector, out string? groupPropertyName);
             vectors[vector] = new InterruptServiceVector(vector, stub, handler.Services,
-                groupPropertyName);
+                handler.GetType());
         }
         return vectors;
     }

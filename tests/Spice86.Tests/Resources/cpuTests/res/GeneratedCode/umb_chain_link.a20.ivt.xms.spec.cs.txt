@@ -195,7 +195,7 @@ public partial class CfgGeneratedOverrides {
             // 016D:0110 mov AX,0x5200
             AX = 0x5200;
             // 016D:0113 int 0x21
-            Dos.GetListOfLists(cs1, 0x0115);
+            (BX, ES) = Dos.GetListOfLists(cs1, 0x0115);
             // 016D:0115 mov DX,word ptr ES:[BX-2]
             DX = UInt16[ES, (ushort)(BX - 2)];
             // 016D:0119 cmp DX,0x015F
@@ -226,7 +226,7 @@ public partial class CfgGeneratedOverrides {
                     // 016D:013D mov AX,0x5200
                     AX = 0x5200;
                     // 016D:0140 int 0x21
-                    Dos.GetListOfLists(cs1, 0x0142);
+                    (BX, ES) = Dos.GetListOfLists(cs1, 0x0142);
                     // 016D:0142 cmp word ptr ES:[BX+0x66],0x9FFF
                     flagOperand_0142 = UInt16[ES, (ushort)(BX + 0x66)];
                     Alu16.Sub(flagOperand_0142, 0x9FFF);
@@ -311,9 +311,8 @@ public partial class CfgGeneratedOverrides {
                             goto L_022C;
                         }
                         // 016D:01B7 mov AX,0x5800
-                        AX = 0x5800;
                         // 016D:01BA int 0x21
-                        Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x01BC, 0, BX);
+                        (AX, CarryFlag) = Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x01BC, 0, BX);
                         // 016D:01BC cmp AX,0
                         Alu16.Sub(AX, 0);
                         // 016D:01BF jne short 0x022C
@@ -321,9 +320,8 @@ public partial class CfgGeneratedOverrides {
                             goto L_022C;
                         }
                         // 016D:01C1 mov AX,0x5802
-                        AX = 0x5802;
                         // 016D:01C4 int 0x21
-                        Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x01C6, 2, BX);
+                        (AX, CarryFlag) = Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x01C6, 2, BX);
                         // 016D:01C6 jb short 0x022C
                         if (CarryFlag) {
                             goto L_022C;
@@ -335,11 +333,9 @@ public partial class CfgGeneratedOverrides {
                             goto L_022C;
                         }
                         // 016D:01CC mov AX,0x5803
-                        AX = 0x5803;
                         // 016D:01CF mov BX,1
-                        BX = 1;
                         // 016D:01D2 int 0x21
-                        Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x01D4, 3, 1);
+                        (AX, CarryFlag) = Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x01D4, 3, 1);
                         // 016D:01D4 jb short 0x022C
                         if (CarryFlag) {
                             goto L_022C;
@@ -347,7 +343,7 @@ public partial class CfgGeneratedOverrides {
                         // 016D:01D6 mov AX,0x5200
                         AX = 0x5200;
                         // 016D:01D9 int 0x21
-                        Dos.GetListOfLists(cs1, 0x01DB);
+                        (BX, ES) = Dos.GetListOfLists(cs1, 0x01DB);
                         // 016D:01DB mov AX,word ptr ES:[BX-2]
                         AX = UInt16[ES, (ushort)(BX - 2)];
                         // 016D:01DF mov ES,AX
@@ -393,9 +389,8 @@ public partial class CfgGeneratedOverrides {
                             goto L_022C;
                         }
                         // 016D:0209 mov AX,0x5802
-                        AX = 0x5802;
                         // 016D:020C int 0x21
-                        Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x020E, 2, BX);
+                        (AX, CarryFlag) = Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x020E, 2, BX);
                         // 016D:020E jb short 0x022C
                         if (CarryFlag) {
                             goto L_022C;
@@ -407,19 +402,17 @@ public partial class CfgGeneratedOverrides {
                             goto L_022C;
                         }
                         // 016D:0214 mov AX,0x5803
-                        AX = 0x5803;
                         // 016D:0217 xor BX,BX
                         BX = Alu16.Xor(BX, BX);
                         // 016D:0219 int 0x21
-                        Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x021B, 3, 0);
+                        (AX, CarryFlag) = Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x021B, 3, 0);
                         // 016D:021B jb short 0x022C
                         if (CarryFlag) {
                             goto L_022C;
                         }
                         // 016D:021D mov AX,0x5802
-                        AX = 0x5802;
                         // 016D:0220 int 0x21
-                        Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x0222, 2, 0);
+                        (AX, CarryFlag) = Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x0222, 2, BX);
                         // 016D:0222 jb short 0x022C
                         if (CarryFlag) {
                             goto L_022C;

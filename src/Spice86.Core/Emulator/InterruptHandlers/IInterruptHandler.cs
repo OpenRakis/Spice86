@@ -16,16 +16,17 @@ public interface IInterruptHandler : IAssemblyRoutineWriter {
     public byte VectorNumber { get; }
 
     /// <summary>
-    /// The services the handler exposes on its vector: one contract when the whole vector has a
-    /// single behavior, or the contracts the selector register chooses between. The default
+    /// The services the handler exposes on its vector: one service when the whole vector has a
+    /// single behavior, or the services the selector register chooses between. The default
     /// implementation builds a <see cref="HandlerServices.SingleService"/> from the parameterless
     /// <see cref="InterruptServiceAttribute"/> of the type, or from
-    /// <see cref="ServiceContract.Unknown"/> when it has none.
+    /// <see cref="InterruptServiceEntry.Unknown"/> when it has none.
     /// </summary>
     public HandlerServices Services {
         get {
-            ServiceContract? contract = InterruptServiceAttributes.Of(GetType()).SingleContract;
-            return new HandlerServices.SingleService(contract ?? ServiceContract.Unknown);
+            InterruptServiceEntry? entry =
+                InterruptServiceAttributes.Of(GetType()).SingleService?.Entry;
+            return new HandlerServices.SingleService(entry ?? InterruptServiceEntry.Unknown);
         }
     }
 

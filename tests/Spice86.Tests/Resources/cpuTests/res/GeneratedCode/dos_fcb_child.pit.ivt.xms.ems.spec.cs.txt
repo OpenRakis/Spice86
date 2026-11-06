@@ -162,6 +162,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, FS, GS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
+        ushort es;
         CheckExternalEvents(cs1, 0x0100);
         // 016E:0100 push CS
         // 016E:0101 pop DS
@@ -169,7 +170,7 @@ public partial class CfgGeneratedOverrides {
         // 016E:0102 push DS
         Stack.Push16(DS);
         // 016E:0103 pop ES
-        ES = Stack.Pop16();
+        es = Stack.Pop16();
         // 016E:0104 mov DX,0x030A
         DX = 0x030A;
         // 016E:0107 sub DX,0x0100
@@ -189,7 +190,7 @@ public partial class CfgGeneratedOverrides {
         // 016E:0114 mov AH,0x4A
         AH = 0x4A;
         // 016E:0116 int 0x21
-        Dos.ModifyMemoryBlock(cs1, 0x0118, 0x0051, ES);
+        (AX, BX, CarryFlag) = Dos.ModifyMemoryBlock(cs1, 0x0118, 0x0051, es);
         // 016E:0118 jb near 0x01B0
         if (!CarryFlag) {
             // 016E:011C mov AL,0x53
@@ -201,7 +202,7 @@ public partial class CfgGeneratedOverrides {
             // 016E:0124 mov AH,0x16
             AH = 0x16;
             // 016E:0126 int 0x21
-            Dos.FcbCreateFile(cs1, 0x0128, 0x01CB, DS);
+            AL = Dos.FcbCreateFile(cs1, 0x0128, 0x01CB, DS);
             // 016E:0128 cmp AL,0
             Alu8.Sub(AL, 0);
             // 016E:012A jne near 0x01B0
@@ -221,7 +222,7 @@ public partial class CfgGeneratedOverrides {
                 // 016E:013D mov AH,0x15
                 AH = 0x15;
                 // 016E:013F int 0x21
-                Dos.FcbSequentialWrite(cs1, 0x0141, 0x01CB, DS);
+                AL = Dos.FcbSequentialWrite(cs1, 0x0141, 0x01CB, DS);
                 // 016E:0141 cmp AL,0
                 Alu8.Sub(AL, 0);
                 // 016E:0143 jne short 0x01B0
@@ -235,13 +236,13 @@ public partial class CfgGeneratedOverrides {
                     // 016E:014D mov AH,0x10
                     AH = 0x10;
                     // 016E:014F int 0x21
-                    Dos.FcbCloseFile(cs1, 0x0151, 0x01CB, DS);
+                    AL = Dos.FcbCloseFile(cs1, 0x0151, 0x01CB, DS);
                     // 016E:0151 mov DX,0x01CB
                     DX = 0x01CB;
                     // 016E:0154 mov AH,0x0F
                     AH = 0x0F;
                     // 016E:0156 int 0x21
-                    Dos.FcbOpenFile(cs1, 0x0158, 0x01CB, DS);
+                    AL = Dos.FcbOpenFile(cs1, 0x0158, 0x01CB, DS);
                     // 016E:0158 cmp AL,0
                     Alu8.Sub(AL, 0);
                     // 016E:015A jne short 0x01B0
@@ -278,7 +279,7 @@ public partial class CfgGeneratedOverrides {
                         // 016E:017D mov AH,0x14
                         AH = 0x14;
                         // 016E:017F int 0x21
-                        Dos.FcbSequentialRead(cs1, 0x0181, 0x01CB, DS);
+                        AL = Dos.FcbSequentialRead(cs1, 0x0181, 0x01CB, DS);
                         // 016E:0181 cmp AL,0
                         Alu8.Sub(AL, 0);
                         // 016E:0183 jne short 0x01B0
@@ -312,13 +313,13 @@ public partial class CfgGeneratedOverrides {
                             // 016E:019A mov AH,0x10
                             AH = 0x10;
                             // 016E:019C int 0x21
-                            Dos.FcbCloseFile(cs1, 0x019E, 0x01CB, DS);
+                            AL = Dos.FcbCloseFile(cs1, 0x019E, 0x01CB, DS);
                             // 016E:019E mov DX,0x01CB
                             DX = 0x01CB;
                             // 016E:01A1 mov AH,0x13
                             AH = 0x13;
                             // 016E:01A3 int 0x21
-                            Dos.FcbDeleteFile(cs1, 0x01A5, 0x01CB, DS);
+                            AL = Dos.FcbDeleteFile(cs1, 0x01A5, 0x01CB, DS);
                             // 016E:01A5 mov DX,0x00E9
                             DX = 0x00E9;
                             // 016E:01A8 mov AL,0x50
@@ -344,7 +345,7 @@ public partial class CfgGeneratedOverrides {
         throw FailAsUntested("Untested return from call at 016E:01B2");
     }
 
-    /// <summary>Inputs: EAX, EBX, flags, DF. Outputs: EAX, BX. Changes: EAX, BX.</summary>
+    /// <summary>Inputs: EAX, EBX, flags, DF. Outputs: AL, BX. Changes: AX, BX.</summary>
     public virtual Action unknown_016E_01C0_018A0() {
         CheckExternalEvents(cs1, 0x01C0);
         // 016E:01C0 push AX
@@ -381,7 +382,7 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: all. Outputs: EAX. Changes: all.</summary>
+    /// <summary>Inputs: all. Outputs: none. Changes: all.</summary>
     public virtual Action unknown_F000_0000_F0000() {
         CheckExternalEvents(biosSegment, 0x0000);
         // F000:0000 callback 0x0010

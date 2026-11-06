@@ -251,6 +251,8 @@ start:
     int 21h
     mov [es:84h], dx
 
+    call preserved_output
+
     hlt
 
 ; int 21h subroutine: the site sees AH=30h, AH=02h and later the program handler
@@ -310,3 +312,18 @@ str_w:
 missing_name db 'NOFILE.XYZ', 0
 saved_off    dw 0
 saved_seg    dw 0
+
+; AH=67h with a handle table size equal to the current one clears CF and preserves AX:
+; storing AX and the carry bit afterwards catches a generated call that forgets the
+; output registers the service does not write on this path
+preserved_output:
+    nop
+    mov ax, 675Ah
+    mov bx, 20
+    int 21h
+    mov [es:86h], ax
+    pushf
+    pop ax
+    and ax, 1
+    mov [es:88h], ax
+    ret

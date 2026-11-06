@@ -142,9 +142,11 @@ using System.Collections.Generic;
 namespace Spice86.Generated;
 
 public partial class CfgGeneratedOverrides {
-    /// <summary>Inputs: EAX, EDX, EBX, flags, DF. Does not return.</summary>
+    /// <summary>Inputs: EAX, EDX, flags, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016E, DS = 0x016E.
     public virtual Action unknown_016E_0100_017E0() {
+        byte ah1 = 0;
+        ushort dx1 = 0;
         byte al1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         // 016E:0100 mov BX,4
@@ -152,36 +154,38 @@ public partial class CfgGeneratedOverrides {
         // 016E:0103 mov AH,0x43
         AH = 0x43;
         // 016E:0105 int 0x67
-        Ems.AllocatePages(cs1, 0x0107, AL, 4);
+        (ah1, dx1) = Ems.AllocatePages(cs1, 0x0107, AL, 4);
         // 016E:0107 cmp AH,0
-        Alu8.Sub(AH, 0);
+        Alu8.Sub(ah1, 0);
         // 016E:010A jne short 0x011E
-        if (AH == 0) {
+        if (ah1 == 0) {
             // 016E:010C mov CX,DX
-            CX = DX;
+            CX = dx1;
             // 016E:010E mov AL,4
+            AH = ah1;
             AL = 4;
             // 016E:0110 mov BX,0
             BX = 0;
             // 016E:0113 mov DX,CX
-            DX = CX;
+            dx1 = CX;
             // 016E:0115 mov AH,0x44
-            AH = 0x44;
             // 016E:0117 int 0x67
-            Ems.MapUnmapHandlePage(cs1, 0x0119, 4, DX, 0);
+            ah1 = Ems.MapUnmapHandlePage(cs1, 0x0119, 4, dx1, 0);
             // 016E:0119 cmp AH,0x8B
-            Alu8.Sub(AH, 0x8B);
+            Alu8.Sub(ah1, 0x8B);
             // 016E:011C je short 0x0122
-            if (AH != 0x8B) {
+            if (ah1 != 0x8B) {
                 goto L_011E;
             }
             // 016E:0122 mov AL,0
+            AH = ah1;
             al1 = 0;
             goto L_0124;
         }
     L_011E:
         VerifySpeculativeRunOrFail(cs1, 0x011E, SpeculativeRun_011E);
         // 016E:011E mov AL,0xFF
+        AH = ah1;
         al1 = 0xFF;
         // 016E:0120 jmp short 0x0124
     L_0124:

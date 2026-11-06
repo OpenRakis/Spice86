@@ -15,7 +15,7 @@ public class DummyInt1CHandler : IInterruptHandler {
 
     /// <summary>The handler is a bare <c>iret</c>: it has no effect.</summary>
     [InterruptService]
-    private void Tick() {
+    public void Tick() {
     }
 
     public SegmentedAddress WriteAssemblyInRam(MemoryAsmWriter memoryAsmWriter) {

@@ -221,6 +221,26 @@ public class Opl3Fm : DefaultIOPortHandler, IDisposable {
     }
 
     public override void WriteByte(ushort port, byte value) {
+        WritePort(port, value);
+    }
+
+    /// <summary>
+    ///     Writes OPL register <paramref name="register"/> on the bank <paramref name="addressPort"/>
+    ///     selects, as the port pair <c>out addressPort, register; out addressPort + 1, value</c> does:
+    ///     the address latch keeps <paramref name="register"/> selected. The address port stays an
+    ///     explicit argument because the aliases and banks differ across <see cref="OplMode"/> and the
+    ///     configured Sound Blaster base.
+    /// </summary>
+    /// <param name="addressPort">The address port the register is selected through
+    ///     (0x388, 0x38A or a Sound Blaster base alias).</param>
+    /// <param name="register">The register index to select.</param>
+    /// <param name="value">The value to write.</param>
+    public void WriteRegister(ushort addressPort, byte register, byte value) {
+        WritePort(addressPort, register);
+        WritePort((ushort)(addressPort + 1), value);
+    }
+
+    private void WritePort(ushort port, byte value) {
         if (_disposed) {
             return;
         }

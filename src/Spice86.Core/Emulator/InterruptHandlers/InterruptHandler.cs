@@ -55,8 +55,8 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
         FunctionHandlerProvider = functionHandlerProvider;
         Stack = stack;
         _declarations = InterruptServiceAttributes.Of(GetType());
-        foreach (InterruptServiceEntry entry in _declarations.Services) {
-            AddServiceAction(entry.SelectorValue, ServiceActionOf(entry.Method), entry.Contract);
+        foreach ((MethodInfo method, InterruptServiceEntry entry) in _declarations.Services) {
+            AddServiceAction(entry.SelectorValue, ServiceActionOf(method), entry);
         }
     }
 
@@ -84,12 +84,12 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     public HandlerServices Services => _services ??= BuildServices();
 
     private HandlerServices BuildServices() {
-        return _declarations.SingleContract is { } single
-            ? new HandlerServices.SingleService(single)
-            : new HandlerServices.SelectedServices(ServiceSelector, _serviceContracts);
+        return _declarations.SingleService is { } single
+            ? new HandlerServices.SingleService(single.Entry)
+            : new HandlerServices.SelectedServices(ServiceSelector, _serviceEntries);
     }
 
-    private readonly Dictionary<int, ServiceContract> _serviceContracts = new();
+    private readonly Dictionary<int, InterruptServiceEntry> _serviceEntries = new();
 
     /// <summary>
     /// Runs the runnables at the given index.
@@ -111,23 +111,24 @@ public abstract class InterruptHandler : IndexBasedDispatcher<IRunnable>, IInter
     }
 
     /// <summary>
-    /// Stores the Action at the given index, with <see cref="ServiceContract.Unknown"/> as its contract.
+    /// Stores the Action at the given index, with <see cref="InterruptServiceEntry.Unknown"/> effects.
     /// </summary>
     /// <param name="index">The identifier for the action. Typically, it's the value in the AH register.</param>
     /// <param name="action">The C# method that implements the function called via the interrupt.</param>
     public void AddAction(int index, Action action) {
-        AddServiceAction(index, action, ServiceContract.Unknown);
+        AddServiceAction(index, action, new InterruptServiceEntry(index, action.Method.Name,
+            ServiceContract.Unknown, ServiceStringArgument.None, ServiceExecutionPath.Stub));
     }
 
     /// <summary>
-    /// Stores the Action at the given index along with its service contract.
+    /// Stores the Action at the given index along with its service entry.
     /// </summary>
     /// <param name="index">The identifier for the action. Typically, it's the value in the AH register.</param>
     /// <param name="action">The C# method that implements the function called via the interrupt.</param>
-    /// <param name="contract">The declared contract of the service.</param>
-    private void AddServiceAction(int index, Action action, ServiceContract contract) {
+    /// <param name="entry">The declared entry of the service.</param>
+    private void AddServiceAction(int index, Action action, InterruptServiceEntry entry) {
         AddRunnable(index, new RunnableAction(action));
-        _serviceContracts[index] = contract;
+        _serviceEntries[index] = entry;
     }
 
     /// <inheritdoc />

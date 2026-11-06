@@ -90,11 +90,12 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
     private static readonly byte?[][] SpeculativeRun_00AF = [Signature_00AF_cmp, Signature_00B5_jne];
 
     private readonly Func<int, Action> unknown_016D_0100_017D0Entry;
-    private readonly Func<int, Action> unknown_016D_0329_019F9Entry;
     private readonly Func<int, Action> unknown_016D_032C_019FCEntry;
-    private readonly Func<int, Action> unknown_016D_0331_01A01Entry;
-    private readonly Func<int, Action> unknown_016D_0342_01A12Entry;
-    private readonly Func<int, Action> unknown_016D_0344_01A14Entry;
+    private readonly Func<int, Action> unknown_016D_032F_019FFEntry;
+    private readonly Func<int, Action> unknown_016D_0334_01A04Entry;
+    private readonly Func<int, Action> unknown_016D_0345_01A15Entry;
+    private readonly Func<int, Action> unknown_016D_0347_01A17Entry;
+    private readonly Func<int, Action> unknown_016D_037F_01A4FEntry;
     private readonly Func<int, Action> unknown_F000_0006_F0006Entry;
     private readonly Func<int, Action> unknown_F000_0017_F0017Entry;
     private readonly Func<int, Action> unknown_F000_005D_F005DEntry;
@@ -127,11 +128,12 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         Segment3000Globals = new Segment3000Globals(Memory, programStartSegment);
 
         unknown_016D_0100_017D0Entry = _ => unknown_016D_0100_017D0();
-        unknown_016D_0329_019F9Entry = _ => unknown_016D_0329_019F9();
         unknown_016D_032C_019FCEntry = _ => unknown_016D_032C_019FC();
-        unknown_016D_0331_01A01Entry = _ => unknown_016D_0331_01A01();
-        unknown_016D_0342_01A12Entry = _ => unknown_016D_0342_01A12();
-        unknown_016D_0344_01A14Entry = _ => unknown_016D_0344_01A14();
+        unknown_016D_032F_019FFEntry = _ => unknown_016D_032F_019FF();
+        unknown_016D_0334_01A04Entry = _ => unknown_016D_0334_01A04();
+        unknown_016D_0345_01A15Entry = _ => unknown_016D_0345_01A15();
+        unknown_016D_0347_01A17Entry = _ => unknown_016D_0347_01A17();
+        unknown_016D_037F_01A4FEntry = _ => unknown_016D_037F_01A4F();
         unknown_F000_0006_F0006Entry = _ => unknown_F000_0006_F0006();
         unknown_F000_0017_F0017Entry = _ => unknown_F000_0017_F0017();
         unknown_F000_005D_F005DEntry = _ => unknown_F000_005D_F005D();
@@ -146,11 +148,12 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         unknown_F000_00E8_F00E8Entry = _ => unknown_F000_00E8_F00E8();
         unknown_F000_00E9_F00E9Entry = _ => unknown_F000_00E9_F00E9();
         DefineFunctionWithoutInterpreterFallback(cs1, 0x0100, unknown_016D_0100_017D0Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0329, unknown_016D_0329_019F9Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(cs1, 0x032C, unknown_016D_032C_019FCEntry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0331, unknown_016D_0331_01A01Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0342, unknown_016D_0342_01A12Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0344, unknown_016D_0344_01A14Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x032F, unknown_016D_032F_019FFEntry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0334, unknown_016D_0334_01A04Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0345, unknown_016D_0345_01A15Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0347, unknown_016D_0347_01A17Entry, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x037F, unknown_016D_037F_01A4FEntry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0006, unknown_F000_0006_F0006Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0017, unknown_F000_0017_F0017Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x005D, unknown_F000_005D_F005DEntry, "unknown");
@@ -164,8 +167,8 @@ public partial class CfgGeneratedOverrides : CSharpOverrideHelper {
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x0096, unknown_F000_0096_F0096Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00E8, unknown_F000_00E8_F00E8Entry, "unknown");
         DefineFunctionWithoutInterpreterFallback(biosSegment, 0x00E9, unknown_F000_00E9_F00E9Entry, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x034B, unknown_016D_034B_01A1B, "unknown");
-        DefineFunctionWithoutInterpreterFallback(cs1, 0x0351, _ => unknown_016D_034B_01A1B(0x0351), "unknown_entry");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x034E, unknown_016D_034E_01A1E, "unknown");
+        DefineFunctionWithoutInterpreterFallback(cs1, 0x0354, _ => unknown_016D_034E_01A1E(0x0354), "unknown_entry");
     }
 
 }
@@ -187,10 +190,12 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, DS, FS, GS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
+        ushort ax1 = 0;
         ushort bp1 = 0;
         ushort ax;
-        byte bl1 = 0;
-        byte al;
+        ushort es1 = 0;
+        ushort cx1 = 0;
+        ushort ds;
         CheckExternalEvents(cs1, 0x0100);
         // 016D:0100 mov AX,0x2000
         AX = 0x2000;
@@ -205,8 +210,9 @@ public partial class CfgGeneratedOverrides {
         // 016D:010D mov CX,0x2222
         CX = 0x2222;
         // 016D:0110 mov AH,0x30
+        AH = 0x30;
         // 016D:0112 int 0x21
-        Dos.GetDosVersion(cs1, 0x0114);
+        (AX, CX, BX) = Dos.GetDosVersion(cs1, 0x0114);
         // 016D:0114 mov word ptr ES:[0x0040],AX
         Segment2000Globals.Word0040 = AX;
         // 016D:0118 mov word ptr ES:[0x0042],BX
@@ -216,54 +222,54 @@ public partial class CfgGeneratedOverrides {
         // 016D:0122 mov SI,0x3333
         // 016D:0125 mov BP,0x4444
         // 016D:0128 mov DL,0x2A
-        DL = 0x2A;
         // 016D:012A mov AH,2
+        AH = 2;
         // 016D:012C int 0x21
-        Dos.DisplayOutput(cs1, 0x012E, 0x2A);
+        AL = Dos.DisplayOutput(cs1, 0x012E, 0x2A);
         // 016D:012E mov word ptr ES:[0x0046],SI
         Segment2000Globals.Word0046 = 0x3333;
         // 016D:0133 mov word ptr ES:[0x0048],BP
         Segment2000Globals.Word0048 = 0x4444;
         // 016D:0138 mov AH,0x30
+        AH = 0x30;
         // 016D:013A int 0x21
-        Dos.GetDosVersion(cs1, 0x013C);
+        (AX, CX, BX) = Dos.GetDosVersion(cs1, 0x013C);
         // 016D:013C mov byte ptr ES:[0x004A],AH
         Segment2000Globals.Byte004A = AH;
         // 016D:0141 mov AH,2
+        AH = 2;
         // 016D:0143 mov DL,0x24
-        DL = 0x24;
         // 016D:0145 int 0x21
-        Dos.DisplayOutput(cs1, 0x0147, 0x24);
+        AL = Dos.DisplayOutput(cs1, 0x0147, 0x24);
         // 016D:0147 mov byte ptr ES:[0x004B],AH
         Segment2000Globals.Byte004B = AH;
-        // 016D:014C mov DX,0x036D
-        DX = 0x036D;
+        // 016D:014C mov DX,0x0370
         // 016D:014F mov AL,0
         AL = 0;
         // 016D:0151 mov AH,0x3D
-        AH = 0x3D;
         // 016D:0153 int 0x21
-        Dos.OpenFileOrDevice(cs1, 0x0155, 0, 0x036D, DS, "NOFILE.XYZ");
+        (ax1, CarryFlag) = Dos.OpenFileOrDevice(cs1, 0x0155, 0, 0x0370, DS, "NOFILE.XYZ");
         // 016D:0155 jb short 0x015D
         if (CarryFlag) {
             // 016D:015D mov word ptr ES:[0x004C],AX
-            Segment2000Globals.Word004C = AX;
+            Segment2000Globals.Word004C = ax1;
             // 016D:0161 mov word ptr ES:[0x004E],0xF00D
             Segment2000Globals.Word004E = 0xF00D;
         }
         else {
             VerifySpeculativeRunOrFail(cs1, 0x0157, SpeculativeRun_0157);
             // 016D:0157 mov word ptr ES:[0x004C],AX
-            Segment2000Globals.Word004C = AX;
+            Segment2000Globals.Word004C = ax1;
             // 016D:015B jmp short 0x0168
         }
         // 016D:0168 stc
         CarryFlag = true;
         // 016D:0169 mov AH,2
+        AX = ax1;
+        AH = 2;
         // 016D:016B mov DL,0x2B
-        DL = 0x2B;
         // 016D:016D int 0x21
-        Dos.DisplayOutput(cs1, 0x016F, 0x2B);
+        AL = Dos.DisplayOutput(cs1, 0x016F, 0x2B);
         // 016D:016F jb short 0x017A
         if (CarryFlag) {
             // 016D:017A mov word ptr ES:[0x0050],0xBEEF
@@ -283,10 +289,10 @@ public partial class CfgGeneratedOverrides {
         FlagRegister16 = Stack.Pop16();
         CheckExternalEvents(cs1, 0x0186);
         // 016D:0186 mov AH,2
+        AH = 2;
         // 016D:0188 mov DL,0x23
-        DL = 0x23;
         // 016D:018A int 0x21
-        Dos.DisplayOutput(cs1, 0x018C, 0x23);
+        AL = Dos.DisplayOutput(cs1, 0x018C, 0x23);
         // 016D:018C mov BP,SP
         bp1 = SP;
         // 016D:018E mov AX,word ptr SS:[BP-6]
@@ -306,8 +312,9 @@ public partial class CfgGeneratedOverrides {
         // 016D:01A6 mov CX,0x2222
         CX = 0x2222;
         // 016D:01A9 mov AH,0x30
+        AH = 0x30;
         // 016D:01AB int 0x21
-        Dos.GetDosVersion(cs1, 0x01AD);
+        (AX, CX, BX) = Dos.GetDosVersion(cs1, 0x01AD);
         // 016D:01AD add BX,1
         BX++;
         // 016D:01B0 mov word ptr ES:[0x0068],BX
@@ -342,8 +349,9 @@ public partial class CfgGeneratedOverrides {
         // 016D:01E2 mov DL,0
         DL = 0;
         // 016D:01E4 mov AH,0x36
+        AH = 0x36;
         // 016D:01E6 int 0x21
-        Dos.GetFreeDiskSpace(cs1, 0x01E8, 0);
+        (AX, CX, DX, BX) = Dos.GetFreeDiskSpace(cs1, 0x01E8, 0);
         // 016D:01E8 add DX,1
         DX++;
         // 016D:01EB mov word ptr ES:[0x006E],DX
@@ -363,10 +371,10 @@ public partial class CfgGeneratedOverrides {
         }
         // 016D:0206 mov SI,0x3333
         // 016D:0209 mov AH,2
+        AH = 2;
         // 016D:020B mov DL,0x7E
-        DL = 0x7E;
         // 016D:020D int 0x21
-        Dos.DisplayOutput(cs1, 0x020F, 0x7E);
+        AL = Dos.DisplayOutput(cs1, 0x020F, 0x7E);
         // 016D:020F add SI,1
         SI = 0x3334;
         CarryFlag = false;
@@ -377,77 +385,74 @@ public partial class CfgGeneratedOverrides {
         OverflowFlag = false;
         // 016D:0212 mov word ptr ES:[0x0072],SI
         Segment2000Globals.Word0072 = 0x3334;
-        // 016D:0217 call near 0x032C
+        // 016D:0217 call near 0x032F
         BP = bp1;
-        NearCall(cs1, 0x021A, unknown_016D_032C_019FCEntry);
+        NearCall(cs1, 0x021A, unknown_016D_032F_019FFEntry);
         // 016D:021A mov word ptr ES:[0x0074],AX
         EsGlobals.Word0074 = AX;
         // 016D:021E mov word ptr ES:[0x0076],BX
         EsGlobals.Word0076 = BX;
         // 016D:0223 mov AH,0x30
         AH = 0x30;
-        // 016D:0225 call near 0x0329
-        NearCall(cs1, 0x0228, unknown_016D_0329_019F9Entry);
+        // 016D:0225 call near 0x032C
+        NearCall(cs1, 0x0228, unknown_016D_032C_019FCEntry);
         // 016D:0228 mov word ptr ES:[0x0058],AX
         EsGlobals.Word0058 = AX;
         // 016D:022C mov AH,2
         AH = 2;
         // 016D:022E mov DL,0x76
         DL = 0x76;
-        // 016D:0230 call near 0x0329
-        NearCall(cs1, 0x0233, unknown_016D_0329_019F9Entry);
+        // 016D:0230 call near 0x032C
+        NearCall(cs1, 0x0233, unknown_016D_032C_019FCEntry);
         // 016D:0233 mov word ptr ES:[0x005A],AX
         EsGlobals.Word005A = AX;
         // 016D:0237 mov AH,0x35
         AH = 0x35;
         // 016D:0239 mov AL,0x21
-        AL = 0x21;
         // 016D:023B int 0x21
-        Dos.GetInterruptVector(cs1, 0x023D, 0x21);
+        (BX, es1) = Dos.GetInterruptVector(cs1, 0x023D, 0x21);
         // 016D:023D mov AX,ES
-        ax = ES;
-        // 016D:023F mov word ptr CS:[0x0378],BX
-        CsGlobals.Word0378 = BX;
-        // 016D:0244 mov word ptr CS:[0x037A],AX
-        CsGlobals.Word037A = ax;
+        ax = es1;
+        // 016D:023F mov word ptr CS:[0x037B],BX
+        CsGlobals.Word037B = BX;
+        // 016D:0244 mov word ptr CS:[0x037D],AX
+        CsGlobals.Word037D = ax;
         // 016D:0248 mov AX,0x2000
         AX = 0x2000;
         // 016D:024B mov ES,AX
         ES = 0x2000;
-        // 016D:024D mov DX,0x0331
-        DX = 0x0331;
+        // 016D:024D mov DX,0x0334
         // 016D:0250 mov AH,0x25
         AH = 0x25;
         // 016D:0252 mov AL,0x21
-        AL = 0x21;
         // 016D:0254 int 0x21
-        Dos.SetInterruptVector(cs1, 0x0256, 0x21, 0x0331, DS);
+        Dos.SetInterruptVector(cs1, 0x0256, 0x21, 0x0334, DS);
         // 016D:0256 mov AH,0x30
         AH = 0x30;
         // 016D:0258 int 0x21
-        InterruptCall(cs1, 0x025A, 0x21, cs1, 0x0331, unknown_016D_0331_01A01Entry);
+        InterruptCall(cs1, 0x025A, 0x21, cs1, 0x0334, unknown_016D_0334_01A04Entry);
         // 016D:025A mov word ptr ES:[0x005C],AX
         EsGlobals.Word005C = AX;
         // 016D:025E mov word ptr ES:[0x005E],BX
         EsGlobals.Word005E = BX;
         // 016D:0263 mov AH,0x30
         AH = 0x30;
-        // 016D:0265 call near 0x0329
-        NearCall(cs1, 0x0268, unknown_016D_0329_019F9Entry);
+        // 016D:0265 call near 0x032C
+        NearCall(cs1, 0x0268, unknown_016D_032C_019FCEntry);
         // 016D:0268 mov word ptr ES:[0x0060],AX
         EsGlobals.Word0060 = AX;
         // 016D:026C mov word ptr ES:[0x0062],BX
         EsGlobals.Word0062 = BX;
-        // 016D:0271 call near 0x032C
-        NearCall(cs1, 0x0274, unknown_016D_032C_019FCEntry);
+        // 016D:0271 call near 0x032F
+        NearCall(cs1, 0x0274, unknown_016D_032F_019FFEntry);
         // 016D:0274 mov word ptr ES:[0x0078],AX
         EsGlobals.Word0078 = AX;
         // 016D:0278 mov word ptr ES:[0x007A],BX
         EsGlobals.Word007A = BX;
-        // 016D:027D mov DX,word ptr CS:[0x0378]
-        DX = CsGlobals.Word0378;
-        // 016D:0282 mov AX,word ptr CS:[0x037A]
-        AX = CsGlobals.Word037A;
+        // 016D:027D mov DX,word ptr CS:[0x037B]
+        DX = CsGlobals.Word037B;
+        // 016D:0282 mov AX,word ptr CS:[0x037D]
+        AX = CsGlobals.Word037D;
         // 016D:0286 mov DS,AX
         DS = AX;
         // 016D:0288 mov AH,0x25
@@ -455,14 +460,15 @@ public partial class CfgGeneratedOverrides {
         // 016D:028A mov AL,0x21
         AL = 0x21;
         // 016D:028C int 0x21
-        InterruptCall(cs1, 0x028E, 0x21, cs1, 0x0331, unknown_016D_0331_01A01Entry);
+        InterruptCall(cs1, 0x028E, 0x21, cs1, 0x0334, unknown_016D_0334_01A04Entry);
         // 016D:028E push CS
         Stack.Push16(CS);
         // 016D:028F pop DS
         DS = Stack.Pop16();
         // 016D:0290 mov AH,0x30
+        AH = 0x30;
         // 016D:0292 int 0x21
-        Dos.GetDosVersion(cs1, 0x0294);
+        (AX, cx1, BX) = Dos.GetDosVersion(cs1, 0x0294);
         // 016D:0294 mov word ptr ES:[0x0064],AX
         EsGlobals.Word0064 = AX;
         // 016D:0298 mov word ptr ES:[0x0066],BX
@@ -471,39 +477,34 @@ public partial class CfgGeneratedOverrides {
         // 016D:02A0 mov ES,AX
         ES = 0x2000;
         // 016D:02A2 mov AX,0x3521
-        AX = 0x3521;
         // 016D:02A5 int 0x21
-        Dos.GetInterruptVector(cs1, 0x02A7, 0x21);
+        (BX, ES) = Dos.GetInterruptVector(cs1, 0x02A7, 0x21);
         // 016D:02A7 mov BL,byte ptr ES:[0]
-        bl1 = EsGlobals.Byte0000;
+        BL = EsGlobals.Byte0000;
         // 016D:02AC mov AX,0x2000
         // 016D:02AF mov ES,AX
         ES = 0x2000;
         // 016D:02B1 mov byte ptr ES:[0x007C],BL
-        Segment2000Globals.Byte007C = bl1;
+        Segment2000Globals.Byte007C = BL;
         // 016D:02B6 mov AX,0x2000
         AX = 0x2000;
         // 016D:02B9 mov DS,AX
-        DS = 0x2000;
+        ds = 0x2000;
         // 016D:02BB mov byte ptr ES:[0x00F0],0x24
         Segment2000Globals.Byte00F0 = 0x24;
         // 016D:02C1 mov DX,0x00F0
-        DX = 0x00F0;
         // 016D:02C4 mov AH,9
         // 016D:02C6 int 0x21
-        Dos.PrintString(cs1, 0x02C8, 0x00F0, DS);
+        Dos.PrintString(cs1, 0x02C8, 0x00F0, ds);
         // 016D:02C8 mov AL,byte ptr DS:[0x00F0]
-        al = Segment2000Globals.Byte00F0;
+        AL = Segment2000Globals.Byte00F0;
         // 016D:02CB mov byte ptr ES:[0x007E],AL
-        Segment2000Globals.Byte007E = al;
+        Segment2000Globals.Byte007E = AL;
         // 016D:02CF mov DX,0xBEEF
-        DX = 0xBEEF;
         // 016D:02D2 mov AX,0x4400
-        AX = 0x4400;
         // 016D:02D5 mov BX,1
-        BX = 1;
         // 016D:02D8 int 0x21
-        Dos.IoControl(cs1, 0x02DA, 0, CX, 0xBEEF, 1, DS);
+        (AX, DX, CarryFlag) = Dos.IoControl(cs1, 0x02DA, 0, cx1, 0xBEEF, 1, DS);
         // 016D:02DA mov word ptr ES:[0x0080],DX
         Segment2000Globals.Word0080 = DX;
         // 016D:02DF mov AX,0x2000
@@ -526,14 +527,14 @@ public partial class CfgGeneratedOverrides {
         DS = 0x2000;
         // 016D:0302 mov CX,0
         CX = 0;
-        // 016D:0305 call near 0x0342
-        NearCall(cs1, 0x0308, unknown_016D_0342_01A12Entry);
+        // 016D:0305 call near 0x0345
+        NearCall(cs1, 0x0308, unknown_016D_0345_01A15Entry);
         // 016D:0308 mov byte ptr ES:[0x0082],AL
         EsGlobals.Byte0082 = AL;
         // 016D:030C mov CX,1
         CX = 1;
-        // 016D:030F call near 0x0344
-        NearCall(cs1, 0x0312, unknown_016D_0344_01A14Entry);
+        // 016D:030F call near 0x0347
+        NearCall(cs1, 0x0312, unknown_016D_0347_01A17Entry);
         // 016D:0312 mov byte ptr ES:[0x0083],AL
         EsGlobals.Byte0083 = AL;
         // 016D:0316 mov AX,0x2000
@@ -547,124 +548,149 @@ public partial class CfgGeneratedOverrides {
         InterruptCall(cs1, 0x0323, 0x21);
         // 016D:0323 mov word ptr ES:[0x0084],DX
         EsGlobals.Word0084 = DX;
-        // 016D:0328 hlt
+        // 016D:0328 call near 0x037F
+        NearCall(cs1, 0x032B, unknown_016D_037F_01A4FEntry);
+        // 016D:032B hlt
         return Hlt();
-    }
-
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Changes: all.</summary>
-    public virtual Action unknown_016D_0329_019F9() {
-        CheckExternalEvents(cs1, 0x0329);
-        // 016D:0329 int 0x21
-        InterruptCall(cs1, 0x032B, 0x21);
-        // 016D:032B ret near
-        return NearRet();
     }
 
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Changes: all.</summary>
     public virtual Action unknown_016D_032C_019FC() {
         CheckExternalEvents(cs1, 0x032C);
-        // 016D:032C mov AH,0x30
+        // 016D:032C int 0x21
+        InterruptCall(cs1, 0x032E, 0x21);
+        // 016D:032E ret near
+        return NearRet();
+    }
+
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Changes: all.</summary>
+    public virtual Action unknown_016D_032F_019FF() {
+        CheckExternalEvents(cs1, 0x032F);
+        // 016D:032F mov AH,0x30
         AH = 0x30;
-        // 016D:032E int 0x21
-        InterruptCall(cs1, 0x0330, 0x21);
-        // 016D:0330 ret near
+        // 016D:0331 int 0x21
+        InterruptCall(cs1, 0x0333, 0x21);
+        // 016D:0333 ret near
         return NearRet();
     }
 
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, PF, AF, ZF, SF, OF, DF. Changes: all.</summary>
-    public virtual Action unknown_016D_0331_01A01() {
-        CheckExternalEvents(cs1, 0x0331);
-        // 016D:0331 cmp AH,0x30
+    public virtual Action unknown_016D_0334_01A04() {
+        CheckExternalEvents(cs1, 0x0334);
+        // 016D:0334 cmp AH,0x30
         Alu8.Sub(AH, 0x30);
-        // 016D:0334 je short 0x033B
+        // 016D:0337 je short 0x033E
         if (AH == 0x30) {
-            // 016D:033B mov AX,0x1234
+            // 016D:033E mov AX,0x1234
             AX = 0x1234;
-            // 016D:033E mov BX,0x5678
+            // 016D:0341 mov BX,0x5678
             BX = 0x5678;
-            // 016D:0341 iret
+            // 016D:0344 iret
             return InterruptRet();
         }
-        // 016D:0336 jmp far dword ptr CS:[0x0378]
-        ushort targetSegment_0336 = ImageMinus0003Globals.Word037A;
-        ushort targetOffset_0336 = ImageMinus0003Globals.Word0378;
-        if (targetSegment_0336 == biosSegment && targetOffset_0336 == 0x0096) {
+        // 016D:0339 jmp far dword ptr CS:[0x037B]
+        ushort targetSegment_0339 = ImageMinus0003Globals.Word037D;
+        ushort targetOffset_0339 = ImageMinus0003Globals.Word037B;
+        if (targetSegment_0339 == biosSegment && targetOffset_0339 == 0x0096) {
             return unknown_F000_0096_F0096();
         }
         else {
-            throw FailAsUntested($"Untested far jump target {targetSegment_0336:X4}:{targetOffset_0336:X4} at 016D:0336");
+            throw FailAsUntested($"Untested far jump target {targetSegment_0339:X4}:{targetOffset_0339:X4} at 016D:0339");
         }
     }
 
     /// <summary>Inputs: all. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x2000, DS = 0x2000.
-    public virtual Action unknown_016D_0342_01A12() {
-        CheckExternalEvents(cs1, 0x0342);
-        // 016D:0342 jmp short 0x034B
-        return unknown_016D_034B_01A1B(0x0000);
+    public virtual Action unknown_016D_0345_01A15() {
+        CheckExternalEvents(cs1, 0x0345);
+        // 016D:0345 jmp short 0x034E
+        return unknown_016D_034E_01A1E(0x0000);
     }
 
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, FS, GS, flags, DF. Does not return.</summary>
-    public virtual Action unknown_016D_0344_01A14() {
-        CheckExternalEvents(cs1, 0x0344);
-        // 016D:0344 mov AX,0x3000
+    public virtual Action unknown_016D_0347_01A17() {
+        CheckExternalEvents(cs1, 0x0347);
+        // 016D:0347 mov AX,0x3000
         AX = 0x3000;
-        // 016D:0347 mov DS,AX
+        // 016D:034A mov DS,AX
         DS = 0x3000;
-        // 016D:0349 jmp short 0x0351
-        return unknown_016D_034B_01A1B(0x0351);
+        // 016D:034C jmp short 0x0354
+        return unknown_016D_034E_01A1E(0x0354);
+    }
+
+    /// <summary>Inputs: EAX, EBX, ES, PF, AF, ZF, SF, OF, DF. Outputs: none. Changes: EAX, EBX, flags.</summary>
+    public virtual Action unknown_016D_037F_01A4F() {
+        ushort ax1 = 0;
+        CheckExternalEvents(cs1, 0x037F);
+        // 016D:037F nop
+        // 016D:0380 mov AX,0x675A
+        AX = 0x675A;
+        // 016D:0383 mov BX,0x0014
+        // 016D:0386 int 0x21
+        (ax1, CarryFlag) = Dos.SetHandleCount(cs1, 0x0388, 0x0014);
+        // 016D:0388 mov word ptr ES:[0x0086],AX
+        EsGlobals.Word0086 = ax1;
+        // 016D:038C pushf
+        Stack.Push16(FlagRegister16);
+        // 016D:038D pop AX
+        AX = Stack.Pop16();
+        // 016D:038E and AX,1
+        AX = Alu16.And(AX, 1);
+        // 016D:0391 mov word ptr ES:[0x0088],AX
+        EsGlobals.Word0088 = AX;
+        // 016D:0395 ret near
+        return NearRet();
     }
 
     /// <summary>
-    /// Entry 016D:034B: inputs EAX, CX, EDX, DS; outputs EAX, EDX, DS, flags; changes EAX, EDX, DS, flags.
-    /// Entry 016D:0351: inputs EAX, CX, EDX, DS, DF; outputs EAX, EDX, DS, flags; changes EAX, EDX, DS, flags.
+    /// Entry 016D:034E: inputs EAX, CX, EDX, DS; outputs EAX, EDX, DS, flags; changes EAX, EDX, DS, flags.
+    /// Entry 016D:0354: inputs EAX, CX, EDX, DS, DF; outputs EAX, EDX, DS, flags; changes EAX, EDX, DS, flags.
     /// </summary>
-    public virtual Action unknown_016D_034B_01A1B(int loadOffset) {
+    public virtual Action unknown_016D_034E_01A1E(int loadOffset) {
         switch (loadOffset) {
             case 0x0000:
-                goto L_034B;
-            case 0x0351:
-                goto L_0351;
+                goto L_034E;
+            case 0x0354:
+                goto L_0354;
             default:
                 throw FailAsUntested($"Untested entry offset 0x{loadOffset:X4}");
         }
 
-    L_034B:
-        CheckExternalEvents(cs1, 0x034B);
-        // 016D:034B cmp CX,0
+    L_034E:
+        CheckExternalEvents(cs1, 0x034E);
+        // 016D:034E cmp CX,0
         Alu16.Sub(CX, 0);
-        // 016D:034E je short 0x0366
+        // 016D:0351 je short 0x0369
         if (!ZeroFlag) {
-            // 016D:0350 ret near
+            // 016D:0353 ret near
             return NearRet();
         }
-        // 016D:0366 mov AX,0x2000
+        // 016D:0369 mov AX,0x2000
         AX = 0x2000;
-        // 016D:0369 mov DS,AX
+        // 016D:036C mov DS,AX
         DS = 0x2000;
-        // 016D:036B jmp short 0x0351
-    L_0351:
-        CheckExternalEvents(cs1, 0x0351);
-        // 016D:0351 mov AL,byte ptr DS:[0x00E8]
+        // 016D:036E jmp short 0x0354
+    L_0354:
+        CheckExternalEvents(cs1, 0x0354);
+        // 016D:0354 mov AL,byte ptr DS:[0x00E8]
         AL = DsGlobals.Byte00E8;
-        // 016D:0354 cmp CX,2
+        // 016D:0357 cmp CX,2
         Alu16.Sub(CX, 2);
-        // 016D:0357 je short 0x034B
+        // 016D:035A je short 0x034E
         if (!ZeroFlag) {
-            // 016D:0359 mov DX,0x00E8
-            DX = 0x00E8;
-            // 016D:035C mov AH,9
-            // 016D:035E int 0x21
-            Dos.PrintString(cs1, 0x0360, 0x00E8, DS);
-            // 016D:0360 cmp CX,1
+            // 016D:035C mov DX,0x00E8
+            // 016D:035F mov AH,9
+            // 016D:0361 int 0x21
+            Dos.PrintString(cs1, 0x0363, 0x00E8, DS);
+            // 016D:0363 cmp CX,1
             Alu16.Sub(CX, 1);
-            // 016D:0363 je short 0x034B
+            // 016D:0366 je short 0x034E
             if (CX != 1) {
-                // 016D:0365 ret near
+                // 016D:0368 ret near
                 return NearRet();
             }
         }
-        goto L_034B;
+        goto L_034E;
     }
 
 }
@@ -996,6 +1022,12 @@ public sealed class EsGlobals : MemoryBasedDataStructureWithEsBaseAddress {
 
     /// ES:0x0084, whatever ES holds at the access.
     public ushort Word0084 { get => _memory.UInt16[Segment, 0x0084]; set => _memory.UInt16[Segment, 0x0084] = value; }
+
+    /// ES:0x0086, whatever ES holds at the access.
+    public ushort Word0086 { get => _memory.UInt16[Segment, 0x0086]; set => _memory.UInt16[Segment, 0x0086] = value; }
+
+    /// ES:0x0088, whatever ES holds at the access.
+    public ushort Word0088 { get => _memory.UInt16[Segment, 0x0088]; set => _memory.UInt16[Segment, 0x0088] = value; }
 }
 
 // ==== file: CsGlobals.cs ====
@@ -1019,11 +1051,11 @@ public sealed class CsGlobals : MemoryBasedDataStructureWithCsBaseAddress {
     /// CS:0x0095, whatever CS holds at the access.
     public byte Byte0095 { get => _memory.UInt8[Segment, 0x0095]; set => _memory.UInt8[Segment, 0x0095] = value; }
 
-    /// CS:0x0378, whatever CS holds at the access.
-    public ushort Word0378 { get => _memory.UInt16[Segment, 0x0378]; set => _memory.UInt16[Segment, 0x0378] = value; }
+    /// CS:0x037B, whatever CS holds at the access.
+    public ushort Word037B { get => _memory.UInt16[Segment, 0x037B]; set => _memory.UInt16[Segment, 0x037B] = value; }
 
-    /// CS:0x037A, whatever CS holds at the access.
-    public ushort Word037A { get => _memory.UInt16[Segment, 0x037A]; set => _memory.UInt16[Segment, 0x037A] = value; }
+    /// CS:0x037D, whatever CS holds at the access.
+    public ushort Word037D { get => _memory.UInt16[Segment, 0x037D]; set => _memory.UInt16[Segment, 0x037D] = value; }
 }
 
 // ==== file: ImageMinus0003Globals.cs ====
@@ -1042,9 +1074,9 @@ public sealed class ImageMinus0003Globals : MemoryBasedDataStructure {
         Segment = (ushort)(programStartSegment - 0x0003);
     }
 
-    public ushort Word0378 { get => _memory.UInt16[Segment, 0x0378]; set => _memory.UInt16[Segment, 0x0378] = value; }
+    public ushort Word037B { get => _memory.UInt16[Segment, 0x037B]; set => _memory.UInt16[Segment, 0x037B] = value; }
 
-    public ushort Word037A { get => _memory.UInt16[Segment, 0x037A]; set => _memory.UInt16[Segment, 0x037A] = value; }
+    public ushort Word037D { get => _memory.UInt16[Segment, 0x037D]; set => _memory.UInt16[Segment, 0x037D] = value; }
 }
 
 // ==== file: Segment2000Globals.cs ====

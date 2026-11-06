@@ -171,7 +171,7 @@ public partial class CfgGeneratedOverrides {
         // 016E:0105 mov AX,0x4310
         AX = 0x4310;
         // 016E:0108 int 0x2F
-        DosMultiplex.XmsServices(cs1, 0x010A, 0x10);
+        (AL, BX, ES, CarryFlag) = DosMultiplex.XmsServices(cs1, 0x010A, 0x10);
         // 016E:010A mov word ptr DS:[0x022B],BX
         ImageMinus0002Globals.Word022B = BX;
         // 016E:010E mov word ptr DS:[0x022D],ES
@@ -202,17 +202,15 @@ public partial class CfgGeneratedOverrides {
                     // 016E:0131 mov byte ptr DS:[0x0231],2
                     DsGlobals.Byte0231 = 2;
                     // 016E:0136 mov AX,0x5800
-                    AX = 0x5800;
                     // 016E:0139 int 0x21
-                    Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x013B, 0, BX);
+                    (AX, CarryFlag) = Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x013B, 0, BX);
                     // 016E:013B cmp AX,0
                     Alu16.Sub(AX, 0);
                     // 016E:013E jne near 0x0223
                     if (AX == 0) {
                         // 016E:0142 mov AX,0x5802
-                        AX = 0x5802;
                         // 016E:0145 int 0x21
-                        Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x0147, 2, BX);
+                        (AX, CarryFlag) = Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x0147, 2, BX);
                         // 016E:0147 jb near 0x0223
                         if (CarryFlag) {
                             goto L_0223;
@@ -282,9 +280,8 @@ public partial class CfgGeneratedOverrides {
                         // 016E:0190 mov byte ptr DS:[0x0231],4
                         DsGlobals.Byte0231 = 4;
                         // 016E:0195 mov AX,0x5800
-                        AX = 0x5800;
                         // 016E:0198 int 0x21
-                        Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x019A, 0, BX);
+                        (AX, CarryFlag) = Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x019A, 0, BX);
                         // 016E:019A cmp AX,0
                         Alu16.Sub(AX, 0);
                         // 016E:019D jne near 0x0223
@@ -292,9 +289,8 @@ public partial class CfgGeneratedOverrides {
                             goto L_0223;
                         }
                         // 016E:01A1 mov AX,0x5802
-                        AX = 0x5802;
                         // 016E:01A4 int 0x21
-                        Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x01A6, 2, BX);
+                        (AX, CarryFlag) = Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x01A6, 2, BX);
                         // 016E:01A6 jb short 0x0223
                         if (CarryFlag) {
                             goto L_0223;
@@ -325,9 +321,8 @@ public partial class CfgGeneratedOverrides {
                             goto L_0223;
                         }
                         // 016E:01C0 mov AX,0x5800
-                        AX = 0x5800;
                         // 016E:01C3 int 0x21
-                        Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x01C5, 0, BX);
+                        (AX, CarryFlag) = Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x01C5, 0, BX);
                         // 016E:01C5 cmp AX,0
                         Alu16.Sub(AX, 0);
                         // 016E:01C8 jne short 0x0223
@@ -335,9 +330,8 @@ public partial class CfgGeneratedOverrides {
                             goto L_0223;
                         }
                         // 016E:01CA mov AX,0x5802
-                        AX = 0x5802;
                         // 016E:01CD int 0x21
-                        Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x01CF, 2, BX);
+                        (AX, CarryFlag) = Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x01CF, 2, BX);
                         // 016E:01CF jb short 0x0223
                         if (CarryFlag) {
                             goto L_0223;
@@ -401,9 +395,8 @@ public partial class CfgGeneratedOverrides {
                         // 016E:0205 mov byte ptr DS:[0x0231],7
                         DsGlobals.Byte0231 = 7;
                         // 016E:020A mov AX,0x5800
-                        AX = 0x5800;
                         // 016E:020D int 0x21
-                        Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x020F, 0, BX);
+                        (AX, CarryFlag) = Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x020F, 0, BX);
                         // 016E:020F cmp AX,0
                         Alu16.Sub(AX, 0);
                         // 016E:0212 jne short 0x0223
@@ -411,9 +404,8 @@ public partial class CfgGeneratedOverrides {
                             goto L_0223;
                         }
                         // 016E:0214 mov AX,0x5802
-                        AX = 0x5802;
                         // 016E:0217 int 0x21
-                        Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x0219, 2, BX);
+                        (AX, CarryFlag) = Dos.AllocationStrategyOrUpperMemoryLinkState(cs1, 0x0219, 2, BX);
                         // 016E:0219 jb short 0x0223
                         if (CarryFlag) {
                             goto L_0223;
@@ -634,7 +626,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, CF. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, EBX, CF. Changes: all.</summary>
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;
         CheckExternalEvents(biosSegment, 0x0096);

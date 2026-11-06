@@ -157,9 +157,8 @@ public partial class CfgGeneratedOverrides {
         // 016D:0100 mov DX,0x0120
         DX = 0x0120;
         // 016D:0103 mov AX,0x4300
-        AX = 0x4300;
         // 016D:0106 int 0x21
-        Dos.GetSetFileAttributes(cs1, 0x0108, 0, CX, 0x0120, DS, "TESTATTR.TXT");
+        (AX, CX, CarryFlag) = Dos.GetSetFileAttributes(cs1, 0x0108, 0, CX, 0x0120, DS, "TESTATTR.TXT");
         // 016D:0108 jb short 0x0119
         if (!CarryFlag) {
             // 016D:010A mov AL,CL

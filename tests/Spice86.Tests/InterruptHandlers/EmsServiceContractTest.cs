@@ -106,7 +106,7 @@ public class EmsServiceContractTest {
 
     private static ushort AllocateHandle(ServiceContractMachine machine) {
         machine.Spice86.Machine.CpuState.BX = 4;
-        Emm(machine).AllocatePages();
+        Emm(machine).WriteAllocatedPages();
         return machine.Spice86.Machine.CpuState.DX;
     }
 }

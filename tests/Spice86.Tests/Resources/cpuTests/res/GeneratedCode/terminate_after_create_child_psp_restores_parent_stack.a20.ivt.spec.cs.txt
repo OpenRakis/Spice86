@@ -171,7 +171,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:0100 mov AH,0x62
         AH = 0x62;
         // 016D:0102 int 0x21
-        Dos.GetPspAddress(cs1, 0x0104);
+        BX = Dos.GetPspAddress(cs1, 0x0104);
         // 016D:0104 mov word ptr DS:[0x0192],BX
         ImageMinus0003Globals.Word0192 = BX;
         // 016D:0108 xor AX,AX
@@ -187,25 +187,23 @@ public partial class CfgGeneratedOverrides {
         // 016D:0117 mov word ptr DS:[0x019A],AX
         ImageMinus0003Globals.Word019A = AX;
         // 016D:011A mov DX,0x2000
-        DX = 0x2000;
         // 016D:011D mov SI,0x0010
-        SI = 0x0010;
         // 016D:0120 mov word ptr DS:[0x0194],SS
         ImageMinus0003Globals.Word0194 = SS;
         // 016D:0124 mov word ptr DS:[0x0196],SP
         ImageMinus0003Globals.Word0196 = SP;
         // 016D:0128 mov AH,0x55
+        AH = 0x55;
         // 016D:012A int 0x21
-        Dos.CreateChildPsp(cs1, 0x012C, 0x2000, 0x0010);
+        AL = Dos.CreateChildPsp(cs1, 0x012C, 0x2000, 0x0010);
         // 016D:012C mov AH,0x62
         // 016D:012E int 0x21
-        Dos.GetPspAddress(cs1, 0x0130);
+        BX = Dos.GetPspAddress(cs1, 0x0130);
         // 016D:0130 cmp BX,0x2000
         Alu16.Sub(BX, 0x2000);
         // 016D:0134 jne short 0x018B
         if (BX == 0x2000) {
             // 016D:0136 mov BX,0x2000
-            BX = 0x2000;
             // 016D:0139 mov AH,0x50
             // 016D:013B int 0x21
             Dos.SetCurrentPsp(cs1, 0x013D, 0x2000);
@@ -243,7 +241,7 @@ public partial class CfgGeneratedOverrides {
                 if (SP == flagOperand_015F) {
                     // 016D:0165 mov AH,0x62
                     // 016D:0167 int 0x21
-                    Dos.GetPspAddress(cs1, 0x0169);
+                    BX = Dos.GetPspAddress(cs1, 0x0169);
                     // 016D:0169 cmp BX,word ptr DS:[0x0192]
                     flagOperand_0169 = DsGlobals.Word0192;
                     Alu16.Sub(BX, flagOperand_0169);
@@ -454,7 +452,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, EBX. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, EDX, EBX, ESI. Changes: all.</summary>
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;
         CheckExternalEvents(biosSegment, 0x0096);

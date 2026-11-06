@@ -32,6 +32,15 @@ public class DosInt2fHandler : InterruptHandler {
     private readonly ExtendedMemoryManager? _xms;
     private readonly Mscdex _mscdexService;
 
+    /// <summary>DOS virtual machine multiplex services; logs and does nothing.
+    /// </summary>
+    public void ReportDosVirtualMachineService(ushort function) {
+        //Do nothing,not even set CX or CF...
+        if (LoggerService.IsEnabled(LogLevel.Warning)) {
+            LoggerService.LogWarning("Unhandled INT2F DOS VM subfunction: {AL:X2}", function & 0xFF);
+        }
+    }
+
     /// <summary>
     /// Initializes a new instance of the <see cref="DosInt2fHandler"/> class.
     /// </summary>
@@ -70,96 +79,110 @@ public class DosInt2fHandler : InterruptHandler {
     }
 
 
-    [InterruptService(0x10, Reads = CpuValues.Ah | CpuValues.Al, Writes = CpuValues.Al, Memory = ServiceMemoryEffect.None)]
+    /// <summary>SHARE.EXE multiplex services; returns 0xFF for the installation check,
+    /// the input AL otherwise.</summary>
+    public byte ShareExeServices(byte al) {
+        if (al == 0x0) {
+            //report SHARE.EXE as installed...
+            return 0xFF;
+        }
+        if (LoggerService.IsEnabled(LogLevel.Warning)) {
+            LoggerService.LogWarning("{MethodName}: value {AL:X2} not supported", nameof(ShareExeServices), al);
+        }
+        return al;
+    }
+
+    [InterruptService(0x10, Reads = CpuValues.Ah | CpuValues.Al, Writes = CpuValues.Al, Memory = ServiceMemoryEffect.None, ExecutionPath = ServiceExecutionPath.Direct)]
     public void ShareExeServices() {
-        switch (State.AL) {
-            case 0x0:
-                //report SHARE.EXE as installed...
-                State.AL = 0xFF;
-                break;
-            default:
-                if (LoggerService.IsEnabled(LogLevel.Warning)) {
-                    LoggerService.LogWarning("{MethodName}: value {AX:X2} not supported", nameof(ShareExeServices), State.AX);
-                }
-                break;
-        }
+        State.AL = ShareExeServices(State.AL);
     }
 
-    [InterruptService(0x1A, Reads = CpuValues.Ah | CpuValues.Al, Writes = CpuValues.Al, Memory = ServiceMemoryEffect.None)]
+    /// <summary>ANSI.SYS multiplex services; returns 0xFF for the installation check,
+    /// the input AL otherwise.</summary>
+    public byte AnsiConsoleServices(byte al) {
+        if (al == 0x0) {
+            //Our ANSI console driver is installed
+            return 0xFF;
+        }
+        if (LoggerService.IsEnabled(LogLevel.Warning)) {
+            LoggerService.LogWarning("{MethodName}: value {AL:X2} not supported", nameof(AnsiConsoleServices), al);
+        }
+        return al;
+    }
+
+    [InterruptService(0x1A, Reads = CpuValues.Ah | CpuValues.Al, Writes = CpuValues.Al, Memory = ServiceMemoryEffect.None, ExecutionPath = ServiceExecutionPath.Direct)]
     public void AnsiConsoleServices() {
-        switch (State.AL) {
-            case 0x0:
-                //Our ANSI console driver is installed
-                State.AL = 0xFF;
-                break;
-            default:
-                if (LoggerService.IsEnabled(LogLevel.Warning)) {
-                    LoggerService.LogWarning("{MethodName}: value {AX:X2} not supported", nameof(AnsiConsoleServices), State.AX);
-                }
-                break;
-        }
+        State.AL = AnsiConsoleServices(State.AL);
     }
 
-    [InterruptService(0x43, Reads = CpuValues.Ah | CpuValues.Al, Writes = CpuValues.Al | CpuValues.Bx | CpuValues.Es | CpuValues.Carry, Memory = ServiceMemoryEffect.None)]
-    public void XmsServices(bool calledFromVm) {
-        switch (State.AL) {
+    /// <summary>XMS driver multiplex services; BX/ES keep their preserved values except
+    /// on the callback-address query.</summary>
+    public (byte al, ushort bx, ushort es, bool carryFlag) XmsServices(
+        byte al, ushort preservedBx, ushort preservedEs) {
+        switch (al) {
             //Is XMS Driver installed
             case (byte)XmsInt2FFunctionsCodes.InstallationCheck:
-                State.AL = (byte)(_xms is null ? 0x0 : 0x80);
-                break;
+                return ((byte)(_xms is null ? 0x0 : 0x80), preservedBx, preservedEs, false);
             //Get XMS Control Function Address
             case (byte)XmsInt2FFunctionsCodes.GetCallbackAddress:
                 SegmentedAddress segmentedAddress = _xms?.CallbackAddress ?? new(0, 0);
-                State.ES = segmentedAddress.Segment;
-                State.BX = segmentedAddress.Offset;
-                break;
+                return (al, segmentedAddress.Offset, segmentedAddress.Segment, false);
             default:
                 if (LoggerService.IsEnabled(LogLevel.Warning)) {
-                    LoggerService.LogWarning("{MethodName}: value {AL} not supported", nameof(XmsServices), State.AL);
+                    LoggerService.LogWarning("{MethodName}: value {AL} not supported", nameof(XmsServices), al);
                 }
-                break;
+                return (al, preservedBx, preservedEs, false);
         }
-        SetCarryFlag(false, calledFromVm);
     }
 
-    [InterruptService(0x4A, Reads = CpuValues.Ah | CpuValues.Al, Writes = CpuValues.Bx | CpuValues.Es | CpuValues.Di, Memory = ServiceMemoryEffect.None)]
-    public void HighMemoryAreaServices() {
-        switch (State.AL) {
-            case 0x1 or 0x2: // Query Free HMA Space or Allocate HMA Space
-                State.BX = 0; // Number of bytes available / Amount allocated
-                State.ES = A20Gate.SegmentStartOfHighMemoryArea;
-                State.DI = 0xFFFF; // Amount of allocated HMA memory
-                break;
-            default:
-                if (LoggerService.IsEnabled(LogLevel.Warning)) {
-                    LoggerService.LogWarning("Unhandled INT2F HMA subfunction: {AX:X2}", State.AX);
-                }
-                break;
+    [InterruptService(0x43, Reads = CpuValues.Ah | CpuValues.Al, Writes = CpuValues.Al | CpuValues.Bx | CpuValues.Es | CpuValues.Carry, Memory = ServiceMemoryEffect.None, ExecutionPath = ServiceExecutionPath.Direct)]
+    public void XmsServices(bool calledFromVm) {
+        (State.AL, State.BX, State.ES, bool carryFlag) = XmsServices(State.AL, State.BX, State.ES);
+        SetCarryFlag(carryFlag, calledFromVm);
+    }
+
+    /// <summary>High memory area multiplex services; outputs keep their preserved values
+    /// except on the query/allocate sub-functions.</summary>
+    public (ushort bx, ushort di, ushort es) HighMemoryAreaServices(
+        byte al, ushort preservedBx, ushort preservedDi, ushort preservedEs) {
+        if (al is 0x1 or 0x2) { // Query Free HMA Space or Allocate HMA Space
+            return (0, 0xFFFF, A20Gate.SegmentStartOfHighMemoryArea);
         }
+        if (LoggerService.IsEnabled(LogLevel.Warning)) {
+            LoggerService.LogWarning("Unhandled INT2F HMA subfunction: {AL:X2}", al);
+        }
+        return (preservedBx, preservedDi, preservedEs);
+    }
+
+    [InterruptService(0x4A, Reads = CpuValues.Ah | CpuValues.Al, Writes = CpuValues.Bx | CpuValues.Es | CpuValues.Di, Memory = ServiceMemoryEffect.None, ExecutionPath = ServiceExecutionPath.Direct)]
+    public void HighMemoryAreaServices() {
+        (State.BX, State.DI, State.ES) = HighMemoryAreaServices(State.AL, State.BX, State.DI, State.ES);
     }
 
     /// <summary>
     /// A service that does nothing.
     /// </summary>
-    [InterruptService(0x16, Reads = CpuValues.Ax, Writes = CpuValues.None, Memory = ServiceMemoryEffect.None)]
+    [InterruptService(0x16, Reads = CpuValues.Ax, Writes = CpuValues.None, Memory = ServiceMemoryEffect.None, ExecutionPath = ServiceExecutionPath.Direct)]
     public void DosVirtualMachineServices() {
-        //Do nothing,not even set CX or CF...
-        if (LoggerService.IsEnabled(LogLevel.Warning)) {
-            LoggerService.LogWarning("Unhandled INT2F DOS VM subfunction: {AX:X2}", State.AX);
-        }
+        ReportDosVirtualMachineService(State.AX);
     }
 
-    [InterruptService(0x46, Reads = CpuValues.Ah | CpuValues.Al, Writes = CpuValues.Ax, Memory = ServiceMemoryEffect.None)]
+    /// <summary>Windows virtual machine multiplex services; returns 1 for the
+    /// installation check, null (AX preserved) otherwise.</summary>
+    public ushort? WindowsVirtualMachineServices(byte al) {
+        if (al == 0x80) { //MS Windows v3.0 - INSTALLATION CHECK {undocumented} (AX: 4680h)
+            return 1; //We are not Windows, but plain ol' MS-DOS.
+        }
+        if (LoggerService.IsEnabled(LogLevel.Warning)) {
+            LoggerService.LogWarning("Unhandled INT2F Windows VM subfunction: {AL:X2}", al);
+        }
+        return null;
+    }
+
+    [InterruptService(0x46, Reads = CpuValues.Ah | CpuValues.Al, Writes = CpuValues.Ax, Memory = ServiceMemoryEffect.None, ExecutionPath = ServiceExecutionPath.Direct)]
     public void WindowsVirtualMachineServices() {
-        switch (State.AL) {
-            case 0x80: //MS Windows v3.0 - INSTALLATION CHECK {undocumented} (AX: 4680h)
-                State.AX = 1; //We are not Windows, but plain ol' MS-DOS.
-                break;
-            default:
-                if (LoggerService.IsEnabled(LogLevel.Warning)) {
-                    LoggerService.LogWarning("Unhandled INT2F Windows VM subfunction: {AX:X2}", State.AX);
-                }
-                break;
+        if (WindowsVirtualMachineServices(State.AL) is { } ax) {
+            State.AX = ax;
         }
     }
 

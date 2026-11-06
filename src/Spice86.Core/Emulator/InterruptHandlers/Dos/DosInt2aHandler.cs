@@ -14,6 +14,17 @@ using Spice86.Shared.Interfaces;
 /// returning 0 (no network hardware installed).
 /// </summary>
 public class DosInt2aHandler : InterruptHandler {
+    /// <summary>Reports in AH whether a network is installed; always reports none.
+    /// </summary>
+    public byte NetworkInstallationQuery() {
+        if (LoggerService.IsEnabled(LogLevel.Trace)) {
+            LoggerService.LogTrace("INT 2Ah AH=00: Network Installation Query");
+        }
+        bool isNetworkInstalled = false; // Stub
+
+        return (byte)(isNetworkInstalled ? 0x01 : 0x00);
+    }
+
     /// <summary>
     /// Initializes a new instance.
     /// </summary>
@@ -33,14 +44,9 @@ public class DosInt2aHandler : InterruptHandler {
     /// (network installation query), the output 0 notifies that no network HW
     /// is detected.
     /// </summary>
-    [InterruptService(0x0, Reads = CpuValues.Ah, Writes = CpuValues.Ah, Memory = ServiceMemoryEffect.None)]
-    public void NetworkInstallationQuery() {
-        if (LoggerService.IsEnabled(LogLevel.Trace)) {
-            LoggerService.LogTrace("INT 2Ah AH=00: Network Installation Query");
-        }
-        bool isNetworkInstalled = false; // Stub
-
-        State.AH = (byte)(isNetworkInstalled ? 0x01 : 0x00);
+    [InterruptService(0x0, Name = nameof(NetworkInstallationQuery), Reads = CpuValues.Ah, Writes = CpuValues.Ah, Memory = ServiceMemoryEffect.None, ExecutionPath = ServiceExecutionPath.Direct)]
+    public void WriteNetworkInstallationQuery() {
+        State.AH = NetworkInstallationQuery();
     }
 
     /// <inheritdoc />

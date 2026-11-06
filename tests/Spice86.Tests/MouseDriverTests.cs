@@ -66,7 +66,7 @@ public sealed class MouseDriverTests {
         _state.CX = x;
         _state.DX = y;
         _handler.SetMouseCursorPosition();
-        _handler.GetMousePositionAndStatus();
+        _handler.WriteMousePositionAndStatus();
 
         // Assert
         _state.CX.Should().Be(expectedX);

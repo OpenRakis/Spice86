@@ -490,9 +490,9 @@ public partial class CfgGeneratedOverrides {
         // F000:00B1 mov word ptr DS:[0x0040],AX
         Segment2000Globals.Word0040 = 0x1111;
         // F000:00B4 mov AX,DS
-        AX = DS;
+        ax = DS;
         // F000:00B6 mov ES,AX
-        ES = AX;
+        ES = ax;
         // F000:00B8 mov AX,0x2001
         // F000:00BB mov DS,AX
         // F000:00BD mov AX,word ptr ES:[0x0060]
@@ -824,13 +824,11 @@ public partial class CfgGeneratedOverrides {
         DsGlobals.Byte0E60 = 0;
         // F000:025A mov AL,0x36
         // F000:025C out 0x43,AL
-        PitPorts.WriteControlWord(0x36);
         // F000:025E mov AL,0x51
         // F000:0260 out 0x40,AL
-        PitPorts.WriteChannel0Data(0x51);
         // F000:0262 mov AL,0x22
         // F000:0264 out 0x40,AL
-        PitPorts.WriteChannel0Data(0x22);
+        Pit.ProgramChannel(0, 0x36, 0x2251);
         // F000:0266 xor AL,AL
         AL = 0;
         CarryFlag = false;

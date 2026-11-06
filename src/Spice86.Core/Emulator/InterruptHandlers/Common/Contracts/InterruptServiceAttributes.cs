@@ -5,22 +5,6 @@ using System.Linq;
 using System.Reflection;
 
 /// <summary>
-/// One selector-chosen interrupt service: the selector value, the method implementing
-/// it and its contract.
-/// </summary>
-public sealed record InterruptServiceEntry(int SelectorValue, MethodInfo Method, ServiceContract Contract);
-
-/// <summary>
-/// The services declared by <see cref="InterruptServiceAttribute"/> on a type:
-/// at most one single contract (for handlers without a selector register) and the
-/// selector-chosen services.
-/// </summary>
-public sealed record InterruptServiceDeclarations(
-    MethodInfo? SingleMethod,
-    ServiceContract? SingleContract,
-    IReadOnlyList<InterruptServiceEntry> Services);
-
-/// <summary>
 /// Reads the <see cref="InterruptServiceAttribute"/> declarations of a handler type,
 /// walking the type hierarchy up to (not including) <see cref="object"/>.
 /// </summary>
@@ -50,9 +34,9 @@ public static class InterruptServiceAttributes {
             }
         }
 
-        List<(MethodInfo Method, ServiceContract Contract)> singles = attributes
+        List<(MethodInfo Method, InterruptServiceEntry Entry)> singles = attributes
             .Where(pair => pair.Attribute.SelectorValue is null)
-            .Select(pair => (pair.Method, Contract: pair.Attribute.ToContract(
+            .Select(pair => (pair.Method, pair.Attribute.ToEntry(
                 pair.Method.Name, type.Name)))
             .ToList();
         if (singles.Count > 1) {
@@ -61,12 +45,10 @@ public static class InterruptServiceAttributes {
                 $"({singles[0].Method.Name}, {singles[1].Method.Name})");
         }
 
-        List<InterruptServiceEntry> services = attributes
+        List<(MethodInfo Method, InterruptServiceEntry Entry)> services = attributes
             .Where(pair => pair.Attribute.SelectorValue is not null)
-            .Select(pair => new InterruptServiceEntry(
-                pair.Attribute.SelectorValue!.Value,
-                pair.Method,
-                pair.Attribute.ToContract(pair.Method.Name, type.Name)))
+            .Select(pair => (pair.Method, pair.Attribute.ToEntry(
+                pair.Method.Name, type.Name)))
             .ToList();
         if (singles.Count == 1 && services.Count > 0) {
             throw new InvalidOperationException(
@@ -74,7 +56,7 @@ public static class InterruptServiceAttributes {
                 "with the selector form");
         }
         int duplicate = services
-            .GroupBy(entry => entry.SelectorValue)
+            .GroupBy(pair => pair.Entry.SelectorValue)
             .Where(group => group.Count() > 1)
             .Select(group => group.Key)
             .FirstOrDefault(-1);
@@ -83,13 +65,12 @@ public static class InterruptServiceAttributes {
                 $"{type.Name}: selector value {duplicate} is declared more than once");
         }
 
-        foreach (MethodInfo method in services.Select(entry => entry.Method)) {
+        foreach (MethodInfo method in services.Select(pair => pair.Method)) {
             CheckShape(method, type.Name);
         }
 
         return new InterruptServiceDeclarations(
-            singles.Count == 1 ? singles[0].Method : null,
-            singles.Count == 1 ? singles[0].Contract : null,
+            singles.Count == 1 ? singles[0] : null,
             services);
     }
 

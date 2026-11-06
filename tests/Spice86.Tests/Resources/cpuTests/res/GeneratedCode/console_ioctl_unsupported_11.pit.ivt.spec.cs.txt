@@ -162,7 +162,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:0104 xor BX,BX
         BX = Alu16.Xor(BX, BX);
         // 016D:0106 int 0x21
-        Dos.IoControl(cs1, 0x0108, 0x11, CX, DX, 0, DS);
+        (AX, DX, CarryFlag) = Dos.IoControl(cs1, 0x0108, 0x11, CX, DX, 0, DS);
         // 016D:0108 mov DL,AL
         DL = AL;
         // 016D:010A pushf
@@ -357,7 +357,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: AL, EDX, CF. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: AL, ECX, EDX, EBX, DS, CF. Changes: all.</summary>
     /// Segment values at entry, from every call site: DS = 0x016D.
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;

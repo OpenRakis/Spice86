@@ -158,6 +158,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x0160, DS = 0x0160.
     public virtual Action unknown_0160_0100_01700() {
+        byte al1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         // 0160:0100 mov AH,9
         AH = 9;
@@ -168,11 +169,11 @@ public partial class CfgGeneratedOverrides {
         // 0160:0107 mov AH,0x0B
         AH = 0x0B;
         // 0160:0109 int 0x21
-        Dos.CheckStandardInputStatus(cs1, 0x010B);
+        al1 = Dos.CheckStandardInputStatus(cs1, 0x010B);
         // 0160:010B cmp AL,0
-        Alu8.Sub(AL, 0);
+        Alu8.Sub(al1, 0);
         // 0160:010D je short 0x0131
-        if (AL == 0) {
+        if (al1 == 0) {
             // 0160:0131 mov AX,0x4C01
             AX = 0x4C01;
             // 0160:0134 int 0x21
@@ -181,6 +182,7 @@ public partial class CfgGeneratedOverrides {
         }
         VerifySpeculativeRunOrFail(cs1, 0x010F, SpeculativeRun_010F);
         // 0160:010F mov AH,8
+        AL = al1;
         AH = 8;
         // 0160:0111 int 0x21
         InterruptCall(cs1, 0x0113, 0x21);
@@ -348,7 +350,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, EDX, DS. Changes: all.</summary>
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;
         while (true) {

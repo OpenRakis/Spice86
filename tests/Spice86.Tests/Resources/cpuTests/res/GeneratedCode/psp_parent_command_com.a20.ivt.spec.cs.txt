@@ -155,28 +155,29 @@ public partial class CfgGeneratedOverrides {
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
         ushort bx1 = 0;
+        ushort bx2 = 0;
         byte al1 = 0;
         CheckExternalEvents(cs1, 0x0100);
         // 016D:0100 mov AH,0x62
         AH = 0x62;
         // 016D:0102 int 0x21
-        Dos.GetPspAddress(cs1, 0x0104);
+        bx1 = Dos.GetPspAddress(cs1, 0x0104);
         // 016D:0104 mov ES,BX
-        ES = BX;
+        ES = bx1;
         // 016D:0106 mov BX,word ptr ES:[0x0016]
-        bx1 = EsGlobals.Word0016;
+        bx2 = EsGlobals.Word0016;
         // 016D:010B cmp BX,0x0060
-        Alu16.Sub(bx1, 0x0060);
+        Alu16.Sub(bx2, 0x0060);
         // 016D:010E jne short 0x0120
-        if (bx1 == 0x0060) {
+        if (bx2 == 0x0060) {
             // 016D:0110 mov ES,BX
-            ES = bx1;
+            ES = bx2;
             // 016D:0112 mov BX,word ptr ES:[0x0016]
-            bx1 = EsGlobals.Word0016;
+            bx2 = EsGlobals.Word0016;
             // 016D:0117 cmp BX,0x0060
-            Alu16.Sub(bx1, 0x0060);
+            Alu16.Sub(bx2, 0x0060);
             // 016D:011A jne short 0x0120
-            if (bx1 != 0x0060) {
+            if (bx2 != 0x0060) {
                 goto L_0120;
             }
             // 016D:011C mov AL,0
@@ -194,7 +195,7 @@ public partial class CfgGeneratedOverrides {
         // 016D:0125 out DX,AL
         Out8(0x0999, al1);
         // 016D:0126 hlt
-        BX = bx1;
+        BX = bx2;
         AL = al1;
         return Hlt();
     }

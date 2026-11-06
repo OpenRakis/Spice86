@@ -157,6 +157,7 @@ public partial class CfgGeneratedOverrides {
     /// <summary>Inputs: EAX, ECX, EDX, EBX, DS, DF. Does not return.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_016D_0100_017D0() {
+        ushort bx;
         byte flagOperand_011D = 0;
         byte flagOperand_0124 = 0;
         byte flagOperand_012B = 0;
@@ -169,9 +170,8 @@ public partial class CfgGeneratedOverrides {
         // 016D:0100 mov DX,0x016A
         DX = 0x016A;
         // 016D:0103 mov AX,0x3D00
-        AX = 0x3D00;
         // 016D:0106 int 0x21
-        Dos.OpenFileOrDevice(cs1, 0x0108, 0, 0x016A, DS, "D:\\README.TXT");
+        (AX, CarryFlag) = Dos.OpenFileOrDevice(cs1, 0x0108, 0, 0x016A, DS, "D:\\README.TXT");
         // 016D:0108 jb short 0x0159
         if (CarryFlag) {
             VerifySpeculativeRunOrFail(cs1, 0x0159, SpeculativeRun_0159);
@@ -181,14 +181,13 @@ public partial class CfgGeneratedOverrides {
         }
         else {
             // 016D:010A mov BX,AX
-            BX = AX;
+            bx = AX;
             // 016D:010C mov CX,8
-            CX = 8;
             // 016D:010F mov DX,0x0178
-            DX = 0x0178;
             // 016D:0112 mov AH,0x3F
+            AH = 0x3F;
             // 016D:0114 int 0x21
-            Dos.ReadFileOrDevice(cs1, 0x0116, 8, 0x0178, BX, DS);
+            (AX, CarryFlag) = Dos.ReadFileOrDevice(cs1, 0x0116, 8, 0x0178, bx, DS);
             // 016D:0116 jb short 0x015D
             if (!CarryFlag) {
                 // 016D:0118 cmp AX,8
@@ -264,8 +263,9 @@ public partial class CfgGeneratedOverrides {
             // 016D:015F push AX
             Stack.Push16(AX);
             // 016D:0160 mov AH,0x3E
+            AH = 0x3E;
             // 016D:0162 int 0x21
-            Dos.CloseFileOrDevice(cs1, 0x0164, BX);
+            (AX, CarryFlag) = Dos.CloseFileOrDevice(cs1, 0x0164, BX);
             // 016D:0164 pop AX
             AX = Stack.Pop16();
         }
@@ -438,7 +438,7 @@ public partial class CfgGeneratedOverrides {
         return InterruptRet();
     }
 
-    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, CF. Changes: all.</summary>
+    /// <summary>Inputs: EAX, ECX, EDX, EBX, EBP, ESI, EDI, ES, DS, FS, GS, DF. Outputs: EAX, EDX, EBX, DS, CF. Changes: all.</summary>
     /// Segment values at entry, from every call site: ES = 0x016D, DS = 0x016D.
     public virtual Action unknown_F000_0096_F0096() {
         byte flagOperand_00AF = 0;

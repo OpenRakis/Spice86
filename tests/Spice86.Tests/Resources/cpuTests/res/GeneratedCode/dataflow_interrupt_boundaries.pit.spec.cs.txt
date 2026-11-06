@@ -350,13 +350,11 @@ public partial class CfgGeneratedOverrides {
         Segment2000Globals.Byte0E02 = 0;
         // F000:003C mov AL,0x36
         // F000:003E out 0x43,AL
-        PitPorts.WriteControlWord(0x36);
         // F000:0040 mov AL,0x51
         // F000:0042 out 0x40,AL
-        PitPorts.WriteChannel0Data(0x51);
         // F000:0044 mov AL,0x22
         // F000:0046 out 0x40,AL
-        PitPorts.WriteChannel0Data(0x22);
+        Pit.ProgramChannel(0, 0x36, 0x2251);
         // F000:0048 mov AL,0
         AL = 0;
         // F000:004A out 0x21,AL

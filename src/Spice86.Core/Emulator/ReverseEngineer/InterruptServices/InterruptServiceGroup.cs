@@ -1,6 +1,7 @@
 namespace Spice86.Core.Emulator.ReverseEngineer.InterruptServices;
 
 using Spice86.Core.Emulator.CPU;
+using Spice86.Core.Emulator.InterruptHandlers;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Shared.Emulator.Errors;
 using Spice86.Shared.Utils;
@@ -8,28 +9,32 @@ using Spice86.Shared.Utils;
 /// <summary>
 /// Base class of the typed interrupt service helpers generated code calls instead of
 /// <see cref="CSharpOverrideHelper.InterruptCall(ushort, ushort, byte)"/>: one subclass per
-/// interrupt vector, one method per service. Each method checks the vector still points
-/// to the built-in handler's stub, writes its parameters into the registers they read,
-/// writes the selector register and performs the interrupt call. Outputs stay in the
-/// registers and flags, as after the <c>int</c> instruction.
+/// interrupt handler type, one method per service. Each method checks the vector still points
+/// to the built-in handler's stub and then either performs the interrupt call on the stub
+/// (the service's parameters and selector are written to the registers first and its outputs
+/// stay in registers and flags, as after the <c>int</c> instruction) or invokes the service's
+/// implementation directly inside an <c>int</c>-equivalent frame for the services declared
+/// <see cref="ServiceExecutionPath.Direct"/>.
 /// </summary>
-public abstract class InterruptServiceGroup {
+/// <typeparam name="THandler">The interrupt handler the group serves.</typeparam>
+public abstract class InterruptServiceGroup<THandler> where THandler : class, IInterruptHandler {
     private readonly CSharpOverrideHelper _helper;
-    private readonly byte _vector;
-    private readonly ServiceSelector? _selector;
+    private readonly Lazy<THandler> _handler;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="InterruptServiceGroup"/> class.
+    /// Initializes a new instance of the <see cref="InterruptServiceGroup{THandler}"/> class.
     /// </summary>
-    /// <param name="helper">The override helper the interrupt call goes through.</param>
-    /// <param name="vector">The interrupt vector number of the group.</param>
-    /// <param name="selector">The selector register of the vector's handler, or
-    /// <see langword="null"/> for a selector-less vector.</param>
-    protected InterruptServiceGroup(CSharpOverrideHelper helper, byte vector, ServiceSelector? selector) {
+    /// <param name="helper">The override helper the interrupt calls go through.</param>
+    protected InterruptServiceGroup(CSharpOverrideHelper helper) {
         _helper = helper;
-        _vector = vector;
-        _selector = selector;
+        _handler = new Lazy<THandler>(helper.GetInterruptHandler<THandler>);
     }
+
+    /// <summary>
+    /// The installed interrupt handler the group serves, resolved on the first actual call:
+    /// an optional handler can be absent while the group is unused.
+    /// </summary>
+    protected THandler Handler => _handler.Value;
 
     /// <summary>
     /// The emulated CPU state the service parameters are written to.
@@ -42,7 +47,7 @@ public abstract class InterruptServiceGroup {
     /// </summary>
     /// <exception cref="UnrecoverableException">The vector does not point to the installed stub.</exception>
     protected void CheckVector() {
-        _helper.CheckInterruptServiceVector(_vector);
+        _helper.CheckInterruptServiceVector(Handler.VectorNumber);
     }
 
     /// <summary>
@@ -70,25 +75,86 @@ public abstract class InterruptServiceGroup {
         }
     }
 
+    /// <summary>The declared entry of the service named <paramref name="serviceName"/>.</summary>
+    protected InterruptServiceEntry EntryOf(string serviceName) {
+        switch (Handler.Services) {
+            case HandlerServices.SingleService single:
+                return single.Service;
+            case HandlerServices.SelectedServices selected:
+                foreach (InterruptServiceEntry entry in selected.Services.Values) {
+                    if (entry.Name == serviceName) {
+                        return entry;
+                    }
+                }
+                break;
+        }
+        throw new InvalidOperationException(
+            $"{Handler.GetType().Name}: no declared service named {serviceName}");
+    }
+
     /// <summary>
-    /// Writes the selector register for <paramref name="selectorValue"/> and performs
-    /// the interrupt call.
+    /// Writes the selector register the handler's services declare for the service named
+    /// <paramref name="serviceName"/> and performs the interrupt call on the stub.
     /// </summary>
     /// <param name="expectedReturnCs">The expected value of the CS register after the interrupt call.</param>
     /// <param name="expectedReturnIp">The expected value of the IP register after the interrupt call.</param>
-    /// <param name="selectorValue">The value of the selector register for the called service.</param>
-    protected void Call(ushort expectedReturnCs, ushort expectedReturnIp, int selectorValue) {
-        switch (_selector) {
-            case ServiceSelector.Ah:
-                State.AH = (byte)selectorValue;
-                break;
-            case ServiceSelector.Al:
-                State.AL = (byte)selectorValue;
-                break;
-            case ServiceSelector.Ax:
-                State.AX = (ushort)selectorValue;
-                break;
+    /// <param name="serviceName">The name of the called service (the declaring method's name).</param>
+    protected void Call(ushort expectedReturnCs, ushort expectedReturnIp, string serviceName) {
+        InterruptServiceEntry entry = EntryOf(serviceName);
+        if (Handler.Services is HandlerServices.SelectedServices selected) {
+            switch (selected.Selector) {
+                case ServiceSelector.Ah:
+                    State.AH = (byte)entry.SelectorValue;
+                    break;
+                case ServiceSelector.Al:
+                    State.AL = (byte)entry.SelectorValue;
+                    break;
+                case ServiceSelector.Ax:
+                    State.AX = (ushort)entry.SelectorValue;
+                    break;
+            }
         }
-        _helper.InterruptServiceCall(expectedReturnCs, expectedReturnIp, _vector);
+        _helper.InterruptServiceCall(expectedReturnCs, expectedReturnIp, Handler.VectorNumber);
+    }
+
+    /// <summary>
+    /// Runs the service named <paramref name="serviceName"/> by invoking
+    /// <paramref name="invoke"/> inside an <c>int</c>-equivalent frame, and returns its result.
+    /// </summary>
+    /// <typeparam name="T">The result type of the service implementation.</typeparam>
+    protected T CallDirect<T>(ushort expectedReturnCs, ushort expectedReturnIp,
+        string serviceName, Func<T> invoke) {
+        return _helper.DirectInterruptServiceCall(expectedReturnCs, expectedReturnIp,
+            Handler, EntryOf(serviceName), invoke, _ => { });
+    }
+
+    /// <summary>
+    /// Runs the service named <paramref name="serviceName"/> by invoking
+    /// <paramref name="invoke"/> inside an <c>int</c>-equivalent frame, writes the Carry bit of
+    /// the stacked flags from <paramref name="carry"/>, and returns the result.
+    /// </summary>
+    /// <typeparam name="T">The result type of the service implementation.</typeparam>
+    protected T CallDirectWithCarry<T>(ushort expectedReturnCs, ushort expectedReturnIp,
+        string serviceName, Func<T> invoke, Func<T, bool?> carry) {
+        return _helper.DirectInterruptServiceCall(expectedReturnCs, expectedReturnIp,
+            Handler, EntryOf(serviceName), invoke,
+            result => {
+                if (carry(result) is { } carryFlag) {
+                    _helper.Stack.SetFlagOnInterruptStack(Flags.Carry, carryFlag);
+                }
+            });
+    }
+
+    /// <summary>
+    /// Runs the service named <paramref name="serviceName"/> by invoking
+    /// <paramref name="invoke"/> inside an <c>int</c>-equivalent frame.
+    /// </summary>
+    protected void CallDirect(ushort expectedReturnCs, ushort expectedReturnIp,
+        string serviceName, Action invoke) {
+        _helper.DirectInterruptServiceCall(expectedReturnCs, expectedReturnIp,
+            Handler, EntryOf(serviceName), () => {
+                invoke();
+                return true;
+            }, _ => { });
     }
 }

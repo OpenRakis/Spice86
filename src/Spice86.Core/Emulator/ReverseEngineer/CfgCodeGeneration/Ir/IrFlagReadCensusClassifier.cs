@@ -92,6 +92,15 @@ internal static class IrFlagReadCensusClassifier {
                 yield return (assign.Right, false);
                 yield break;
             }
+            if (node is InterruptServiceCallNode serviceCall) {
+                foreach (IVisitableAstNode argument in serviceCall.Arguments) {
+                    yield return (argument, false);
+                }
+                foreach (IVisitableAstNode result in serviceCall.Results) {
+                    yield return (result, true);
+                }
+                yield break;
+            }
             foreach (IVisitableAstNode child in IrAstChildren.ChildrenOf(node)) {
                 yield return (child, false);
             }

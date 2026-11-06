@@ -5,12 +5,16 @@ using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Instruction;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Operations;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value;
 using Spice86.Core.Emulator.CPU.CfgCpu.Ast.Value.Constant;
+using Spice86.Core.Emulator.CPU.CfgCpu.ControlFlowGraph;
 using Spice86.Core.Emulator.CPU.Registers;
 using Spice86.Core.Emulator.InterruptHandlers.Common.Contracts;
 using Spice86.Core.Emulator.ReverseEngineer.FunctionPartitioning.Model;
 using Spice86.Core.Emulator.ReverseEngineer.Contracts;
+using Spice86.Core.Emulator.ReverseEngineer.InterruptServices;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ast;
 using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
+
+using System.Linq;
 
 /// <summary>
 /// Turns an <c>int</c> site whose observed targets are all the installed stub of its vector
@@ -32,22 +36,29 @@ using Spice86.Core.Emulator.ReverseEngineer.CfgCodeGeneration.Ir.Ssa;
 /// <c>Unknown</c> contract or a missing entry keeps <c>InterruptCall</c> as
 /// <see cref="InterruptSiteKind.NoContract"/>.</item>
 /// <item>IS-4: the typed call's effects are the contract's: reads are the arguments plus
-/// <c>Reads</c> minus the selector register, SS, SP and every flag (the frame push and
-/// <c>iret</c> cover them); must-write is the selector register (the helper stores its
-/// constant); may-write is <c>Writes</c>; tokens are Memory
+/// <c>Reads</c> minus the supplied registers, plus the result targets' current values (the
+/// contract only may-writes them, so a path preserving an output reads the pre-call value), SS,
+/// SP and every flag (the frame push and <c>iret</c> cover them). On <c>Stub</c>, must-write
+/// includes the supplied registers and the result targets. On <c>Direct</c>, only result
+/// targets are must-written; may-write is <c>Writes</c>; tokens are Memory
 /// always and Io when the service does I/O; <c>DeliversInterrupts</c> is not set: the
 /// <c>int</c> frame clears IF and no precise service sets it again (the only services that do,
 /// int 21h 4Bh and the int 74h mouse call, are <c>Unknown</c>), so no hardware handler runs
 /// inside a typed call and its registers are not part of the effect; delivery after the call
 /// is the separate event-check statement.</item>
-/// <item>IS-5: the selector register is in must-write, never in reads: the helper writes the
-/// selector constant itself, so a write the program made to it before the call is dead.</item>
+/// <item>IS-5: on the stub path the parameter registers and the selector are in must-write,
+/// never in reads: the helper stores every argument it is passed (and the selector constant)
+/// into <c>State</c> before running the stub, so a write the program made to them before the
+/// call is dead. On the direct path the helper invokes the core without storing them, so only
+/// the result targets are must-written.</item>
 /// </list>
 /// </summary>
 internal static class IrInterruptServiceCalls {
     /// <summary>Replaces every analysable <c>int</c> statement of <paramref name="method"/> by its
     /// typed service call or by the same call with its refined kind; returns the number of
-    /// statements that became typed calls.</summary>
+    /// statements that became typed calls. The SSA sites of the changed statements are replaced
+    /// too: a typed call's effects are narrower than the untyped one's, so verification never sees
+    /// a stale site even when no statement became typed.</summary>
     public static int Apply(IrMethod method, IrSsa ssa, IrConstantFacts facts) {
         int typed = 0;
         foreach (IrBlock block in method.Blocks) {
@@ -77,27 +88,34 @@ internal static class IrInterruptServiceCalls {
 
     private static IVisitableAstNode Classify(InterruptCallHelperNode call,
         InterruptServiceVector service, IrBlock block, int index, IrConstantFacts facts) {
-        ServiceContract? contract;
+        InterruptServiceEntry? entry;
         ServiceSelector? selector = null;
-        int selectorValue = 0;
+        int? selectorValue = null;
         if (service.Services is HandlerServices.SingleService single) {
-            contract = single.Contract;
+            entry = single.Service;
         } else {
             HandlerServices.SelectedServices selected =
                 (HandlerServices.SelectedServices)service.Services;
-            if (!TrySelectorValue(selected.Selector, block, index, facts, out selectorValue)) {
+            if (!TrySelectorValue(selected.Selector, block, index, facts, out int value)) {
                 return new InterruptCallHelperNode(InterruptSiteKind.SelectorUnknown, service, null,
                     [.. call.Arguments]);
             }
             selector = selected.Selector;
-            contract = selected.Contracts.GetValueOrDefault(selectorValue);
+            selectorValue = value;
+            entry = selected.Services.GetValueOrDefault(value);
         }
-        if (contract is null || contract.IsUnknown || service.GroupPropertyName is null) {
+        if (entry is null
+            || ReferenceEquals(entry.Contract, ServiceContract.Unknown)
+            || !InterruptServiceGroups.TryGetPropertyName(service.HandlerType,
+                out string? groupPropertyName)) {
             return new InterruptCallHelperNode(InterruptSiteKind.NoContract, service,
-                selector is null ? null : selectorValue, [.. call.Arguments]);
+                selectorValue, [.. call.Arguments]);
         }
-        return new InterruptServiceCallNode(service.VectorNumber, selector, selectorValue, contract,
-            service.GroupPropertyName, Arguments(call, selector, contract));
+        return new InterruptServiceCallNode(service.VectorNumber, selector, entry,
+            groupPropertyName, Arguments(call, selector, entry.Contract)) {
+            Results = [.. ServiceCallSignature.Outputs(entry.Contract)
+                .Select(output => IrValueSets.NodeOf(output.Mask))]
+        };
     }
 
     private static bool TrySelectorValue(ServiceSelector selector, IrBlock block, int index,
